@@ -1,0 +1,4 @@
+gfortran -O3 -march=nocona -o atom.x atomic.f
+rm *.o *.mod
+
+

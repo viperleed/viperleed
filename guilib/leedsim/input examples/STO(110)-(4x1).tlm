@@ -1,0 +1,5 @@
+eMax=400
+surfBasis=[[15.62,0],[0,5.5225039610669361655705944680389]]
+superlattice=[[4,0],[0,1]]
+surfGroup=pm[0 1]
+bulkGroup=pmm

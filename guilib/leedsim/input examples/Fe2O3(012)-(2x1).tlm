@@ -1,0 +1,5 @@
+eMax=700.0
+SUPERLATTICE=[[2,0],[0,1]]
+surfBasis=[[10.07,0.],[0.,5.4266]]
+surfGroup=pg[0 1]
+bulkGroup=pg[0 1]

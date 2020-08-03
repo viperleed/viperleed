@@ -1,0 +1,14 @@
+"""
+===========================
+        ViPErLEED
+===========================
+ *** module vprglobals ***
+
+Created: 2020-02-04
+Author: Michele Riva
+
+This module contains global variables
+"""
+
+GLOBALS = {'USE_GUI': None,
+			}

@@ -1,0 +1,10 @@
+INFO - Starting new log: GenerateAUXNONSTRUCT.log
+Time of execution (UTC): 2019-07-04 16:48:17
+
+INFO - PARAMETERS file was read successfully
+INFO - IVBEAMS file was read successfully
+INFO - BEAMLIST was read successfully
+INFO - Wrote to AUXNONSTRUCT successfully.
+INFO - Finishing GenerateAUXNONSTRUCT.log at 2019-07-04 16:48:18. 
+Elapsed time: 0.09296926766600405 seconds.
+

@@ -1,0 +1,14 @@
+C  For use with TensErLEED v1.2
+
+C  To become effective, this block must be compiled into main source files
+C  as well as libraries lib.tleed.f, lib.delta.f, lib.search.f
+C  set some fundamental quantities once and for all
+
+C  EMACH is machine accuracy - used in matrix inversion routines
+C  HARTREE is value of 1 H (atomic unit) in eV
+C  BOHR is bohr radius in Angstroem
+
+      REAL MEMACH,HARTREE,BOHR
+      PARAMETER (MEMACH  = 1.0E-6)
+      PARAMETER (HARTREE = 27.21)
+      PARAMETER (BOHR    = 0.529)

@@ -1,0 +1,875 @@
+i
+Ag
+47 2000                   !Z, #points in radial grid.
+d
+1                         !1=relativistic, 0=nonrel.
+x
+1.0d0                     !0 is HF, 1 is LDA, <0 is xalfa.
+a
+0 15 0.3 0.0005 100 0     !nfc(fixed),nel,SCFratio,etol,xnum(fixed),ifil(fixed)
+1 0 0 -0.5 1  2.00000000  !no,nl,nm,-xnj(atomic quantum numbers),1,occ
+2 0 0 -0.5 1  2.00000000
+2 1 1 -0.5 1  2.00000000
+2 1 1 -1.5 1  4.00000000  !2p6 Ne10
+3 0 0 -0.5 1  2.00000000  !3s2
+3 1 1 -0.5 1  2.00000000
+3 1 1 -1.5 1  4.00000000  !3p6 Ar18
+3 2 2 -1.5 1  4.00000000 
+3 2 2 -2.5 1  6.00000000  !3d10
+4 0 0 -0.5 1  2.00000000  !4s2
+4 1 1 -0.5 1  2.00000000
+4 1 1 -1.5 1  4.00000000  !4p6 Kr36
+4 2 2 -1.5 1  4.
+4 2 2 -2.5 1  6.          !4d10
+5 0 0 -0.5 1  1.          !5s1
+w
+
+i
+Al
+13 2000                !Z NR (number of points in radial grid)
+d
+1                      !1=rel, 0=nonrel
+x
+1                      !0 is HF, 1 is LDA, <0 is xalfa.
+a
+0 07 0.2 0.0005 100 0  !nfc(fixed),nel,SCFratio,etol,xnum(fixed),ifil(fixed)
+1 0 0 -0.5 1 2.        !no,nl,nm,-xnj(atomic quantum numbers),1,occupation 
+2 0 0 -0.5 1 2.
+2 1 1 -0.5 1 2.
+2 1 1 -1.5 1 4. /Ne
+3 0 0 -0.5 1 2.
+3 1 1 -0.5 1 0.5
+3 1 1 -1.5 1 0.5
+w
+
+i
+Ar
+18 2000  !z, nr
+d
+1        !1=rel, 0=nonrel
+x
+1        !0 is HF, 1 is LDA, <0 is xalfa.
+a
+0 7 0.5 0.00001 100 0   !nfc(fixed),nel,SCFratio,etol,xnum(fixed),ifil(fixed)
+1 0 0 -0.5 1 2.         !no,nl,nm,-xnj(atomic quantum numbers),1,occupation
+2 0 0 -0.5 1 2. 
+2 1 1 -0.5 1 2. 
+2 1 1 -1.5 1 4.         !Ne
+3 0 0 -0.5 1 2.
+3 1 1 -0.5 1 2.
+3 1 1 -1.5 1 4.
+
+i
+As
+33 2000               !Z, #points in radial grid.
+d
+1                     !1=relativistic, 0=nonrel.
+x
+1.0d0                 !0 is HF, 1 is LDA, <0 is xalfa.
+a
+0 12 0.5 0.0001 100 0 !nfc(fixed),nel,SCFratio,etol,xnum(fixed),ifil(fixed)
+1 0 0 -0.5 1  2.      !no,nl,nm,-xnj(atomic quantum numbers),1,occupation
+2 0 0 -0.5 1  2.
+2 1 1 -0.5 1  2.
+2 1 1 -1.5 1  4.      !2p6 Ne10
+3 0 0 -0.5 1  2.      !3s2
+3 1 1 -0.5 1  2.
+3 1 1 -1.5 1  4.      !3p6 Ar18
+3 2 2 -1.5 1  4. 
+3 2 2 -2.5 1  6.      !3d10
+4 0 0 -0.5 1  2.      !4s2
+4 1 1 -0.5 1  1.
+4 1 1 -1.5 1  2. 
+w
+
+i
+Au
+79 2000               !Z, #points in radial grid.
+d
+1                     !1=relativistic, 0=nonrel.
+x
+1.0d0                 !0 is HF, 1 is LDA, <0 is xalfa.
+a
+0 22 0.5 0.0001 100 0 !nfc(fixed),nel,SCFratio,etol,xnum(fixed),ifil(fixed)
+1 0 0 -0.5 1  2.      !no,nl,nm,-xnj(atomic quantum numbers),1,occ
+2 0 0 -0.5 1  2.
+2 1 1 -0.5 1  2.
+2 1 1 -1.5 1  4.  !2p6 Ne10
+3 0 0 -0.5 1  2.  !3s2
+3 1 1 -0.5 1  2.
+3 1 1 -1.5 1  4.  !3p6 Ar18
+3 2 2 -1.5 1  4. 
+3 2 2 -2.5 1  6.  !3d10
+4 0 0 -0.5 1  2.  !4s2
+4 1 1 -0.5 1  2.
+4 1 1 -1.5 1  4.  !4p6 Kr36
+4 2 2 -1.5 1  4.
+4 2 2 -2.5 1  6.  !4d10
+5 0 0 -0.5 1  2.  !5s2
+5 1 1 -0.5 1  2.
+5 1 1 -1.5 1  4.  !5p6 Xe54
+4 3 3 -2.5 1  6.
+4 3 3 -3.5 1  8.  !4f14
+5 2 2 -1.5 1  4.
+5 2 2 -2.5 1  6.  !5d10
+6 0 0 -0.5 1  1.  !6s1 Au79
+w
+
+i
+Ba
+56 2000   !z, nr
+d
+1         !1=rel, 0=nonrel
+x
+1         !0 is HF, 1 is LDA, <0 is xalfa.
+a
+0 18 0.5 0.0005 100 0 !nfc(fixed),nel,SCFratio,etol,xnum(fixed),ifil(fixed)
+1 0 0 -0.5 1  2.     !no,nl,nm,-xnj(atomic quantum numbers),1,occupation
+2 0 0 -0.5 1  2.
+2 1 1 -0.5 1  2.
+2 1 1 -1.5 1  4.     !2p6 Ne10
+3 0 0 -0.5 1  2.     !3s2
+3 1 1 -0.5 1  2.
+3 1 1 -1.5 1  4.     !3p6 Ar18
+3 2 2 -1.5 1  4. 
+3 2 2 -2.5 1  6.     !3d10
+4 0 0 -0.5 1  2.     !4s2
+4 1 1 -0.5 1  2.
+4 1 1 -1.5 1  4.     !4p6 Kr36
+4 2 2 -1.5 1  4.
+4 2 2 -2.5 1  6.     !4d10
+5 0 0 -0.5 1  2.     !5s2
+5 1 1 -0.5 1  2.
+5 1 1 -1.5 1  4.     !5p6 Xe54
+6 0 0 -0.5 1  2.     !6s1 Ba56
+w
+
+i
+Be
+04 2000  !z, nr
+d
+1        !1=rel, 0=nonrel
+x
+1        !0 is HF, 1 is LDA, <0 is xalfa.
+a
+0 2 0.5 0.0005 100 0   !nfc(fixed),nel,SCFratio,etol,xnum(fixed),ifil(fixed)
+1 0 0 -0.5 1 2.        !no,nl,nm,-xnj(atomic quantum numbers),1,occupation
+2 0 0 -0.5 1 2.
+w
+
+i
+Br
+35 2000               !Z, #points in radial grid.
+d
+1                     !1=relativistic, 0=nonrel.
+x
+1.0d0                 !0 is HF, 1 is LDA, <0 is xalfa.
+a
+0 12 0.5 0.0001 100 0 !nfc(fixed),nel,SCFratio,etol,xnum(fixed),ifil(fixed)
+1 0 0 -0.5 1  2.      !no,nl,nm,-xnj(atomic quantum numbers),1,occupation
+2 0 0 -0.5 1  2.
+2 1 1 -0.5 1  2.
+2 1 1 -1.5 1  4.      !2p6 Ne10
+3 0 0 -0.5 1  2.      !3s2
+3 1 1 -0.5 1  2.
+3 1 1 -1.5 1  4.      !3p6 Ar18
+3 2 2 -1.5 1  4. 
+3 2 2 -2.5 1  6.      !3d10
+4 0 0 -0.5 1  2.      !4s2
+4 1 1 -0.5 1  2.      alternatively, 1.7
+4 1 1 -1.5 1  3.      alternatively, 3.3  !4p5
+w
+
+i
+C
+06 2000  !z, nr
+d
+1        !1=rel, 0=nonrel
+x
+1        !0 is HF, 1 is LDA, <0 is xalfa.
+a
+0 4 0.5 0.0005 100 0    !nfc(fixed),nel,SCFratio,etol,xnum(fixed),ifil(fixed)
+1 0 0 -0.5 1  2.0       !no,nl,nm,-xnj(atomic quantum numbers),1,occupation
+2 0 0 -0.5 1  2.0
+2 1 1 -0.5 1  0.66666666
+2 1 1 -1.5 1  1.33333334
+w
+
+i
+Ca
+20 2000   !z, nr
+d
+1         !1=rel, 0=nonrel
+x
+1         !0 is HF, 1 is LDA, <0 is xalfa.
+a
+0 08 0.2 0.0005 100 0  !nfc(relic),nel,SCFratio,etol,xnum???,ifil
+1 0 0 -0.5 1 2.        !no,nl,nm,-xnj(atomic quantum numbers),1,occupation
+2 0 0 -0.5 1 2.
+2 1 1 -0.5 1 2.
+2 1 1 -1.5 1 4.  !2p6 Ne10
+3 0 0 -0.5 1 2.
+3 1 1 -0.5 1 2.
+3 1 1 -1.5 1 4.  !3p6 Ar18
+4 0 0 -0.5 1 2.
+w
+
+i
+Co
+27 2000               !Z, #points in radial grid.
+d
+1                     !1=relativistic, 0=nonrel.
+x
+1.0d0                 !0 is HF, 1 is LDA, <0 is xalfa.
+a
+0 10 0.5 0.0001 100 0 !nfc(fixed),nel,SCFratio,etol,xnum(fixed),ifil(fixed)
+1 0 0 -0.5 1  2.      !no,nl,nm,-xnj(atomic quantum numbers),1,occupation
+2 0 0 -0.5 1  2.
+2 1 1 -0.5 1  2.
+2 1 1 -1.5 1  4.  !2p6 Ne10
+3 0 0 -0.5 1  2.  !3s2
+3 1 1 -0.5 1  2.
+3 1 1 -1.5 1  4.  !3p6 Ar18
+3 2 2 -1.5 1  2.8 
+3 2 2 -2.5 1  4.2 !3d10
+4 0 0 -0.5 1  2.  !4s2
+w
+
+i
+Cr
+24 2000   !z, nr
+d
+1         !1=rel, 0=nonrel
+x
+1         !0 is HF, 1 is LDA, <0 is xalfa.
+a
+0 10 0.2 0.0001 100 0  !nfc(relic),nel,SCFratio,etol,xnum???,ifil
+1 0 0 -0.5 1 2.        !no,nl,nm,-xnj(atomic quantum numbers),1,occupation
+2 0 0 -0.5 1 2.
+2 1 1 -0.5 1 2.
+2 1 1 -1.5 1 4.    !2p6 Ne10
+3 0 0 -0.5 1 2.
+3 1 1 -0.5 1 2.
+3 1 1 -1.5 1 4.    !3p6 Ar18
+3 2 2 -1.5 1 2.
+3 2 2 -2.5 1 3.    !3d5
+4 0 0 -0.5 1 1.
+w
+
+i
+Cs
+55 2000   !z, nr
+d
+1         !1=rel, 0=nonrel
+x
+1         !0 is HF, 1 is LDA, <0 is xalfa.
+a
+0 18 0.5 0.0005 100 0 !nfc(fixed),nel,SCFratio,etol,xnum(fixed),ifil(fixed)
+1 0 0 -0.5 1  2.      !no,nl,nm,-xnj(atomic quantum numbers),1,occupation
+2 0 0 -0.5 1  2.
+2 1 1 -0.5 1  2.
+2 1 1 -1.5 1  4.     !2p6 Ne10
+3 0 0 -0.5 1  2.     !3s2
+3 1 1 -0.5 1  2.
+3 1 1 -1.5 1  4.     !3p6 Ar18
+3 2 2 -1.5 1  4. 
+3 2 2 -2.5 1  6.     !3d10
+4 0 0 -0.5 1  2.     !4s2
+4 1 1 -0.5 1  2.
+4 1 1 -1.5 1  4.     !4p6 Kr36
+4 2 2 -1.5 1  4.
+4 2 2 -2.5 1  6.     !4d10
+5 0 0 -0.5 1  2.     !5s2
+5 1 1 -0.5 1  2.
+5 1 1 -1.5 1  4.     !5p6 Xe54
+6 0 0 -0.5 1  1.     !6s1 Cs55
+w
+
+Cu
+29 2000   !z, nr
+d
+1         !1=rel, 0=nonrel
+x
+1         !0 is HF, 1 is LDA, <0 is xalfa.
+a
+0 10 0.2 0.0005 100 0  !nfc(relic),nel,SCFratio,etol,xnum???,ifil
+1 0 0 -0.5 1 2.        !no,nl,nm,-xnj(atomic quantum numbers),1,occupation
+2 0 0 -0.5 1 2.
+2 1 1 -0.5 1 2.
+2 1 1 -1.5 1 4.
+3 0 0 -0.5 1 2.
+3 1 1 -0.5 1 2.
+3 1 1 -1.5 1 4.
+3 2 2 -1.5 1 4.
+3 2 2 -2.5 1 6.
+4 0 0 -0.5 1 1.
+w
+
+i
+F
+09 2000  !z, nr
+d
+1        !1=rel, 0=nonrel
+x
+1        !0 is HF, 1 is LDA, <0 is xalfa.
+a
+0 4 0.5 0.00001 100 0   !nfc(fixed),nel,SCFratio,etol,xnum(fixed),ifil(fixed)
+1 0 0 -0.5 1  2.0       !no,nl,nm,-xnj(atomic quantum numbers),1,occupation
+2 0 0 -0.5 1  2.0
+2 1 1 -0.5 1  2.0
+2 1 1 -1.5 1  3.0
+w
+
+i
+Fe
+26 2000               !Z, #points in radial grid.
+d
+1                     !1=relativistic, 0=nonrel.
+x
+1.0d0                 !0 is HF, 1 is LDA, <0 is xalfa.
+a
+0 10 0.5 0.0001 100 0 !nfc(fixed),nel,SCFratio,etol,xnum(fixed),ifil(fixed)
+1 0 0 -0.5 1  2.      !no,nl,nm,-xnj(atomic quantum numbers),1,occupation
+2 0 0 -0.5 1  2.
+2 1 1 -0.5 1  2.
+2 1 1 -1.5 1  4.  !2p6 Ne10
+3 0 0 -0.5 1  2.  !3s2
+3 1 1 -0.5 1  2.
+3 1 1 -1.5 1  4.  !3p6 Ar18
+3 2 2 -1.5 1  2.4 
+3 2 2 -2.5 1  3.6 !3d10
+4 0 0 -0.5 1  2.  !4s2
+w
+
+i
+Ga
+31 2000   !z, nr
+d
+1         !1=rel, 0=nonrel
+x
+1         !0 is HF, 1 is LDA, <0 is xalfa.
+a
+0 11 0.2 0.0005 100 0  !nfc(relic),nel,SCFratio,etol,xnum=1,ifil
+1 0 0 -0.5 1 2.        !no,nl,nm,-xnj(atomic quantum numbers),1,occupation
+2 0 0 -0.5 1 2.
+2 1 1 -0.5 1 2.
+2 1 1 -1.5 1 4.        !Ne
+3 0 0 -0.5 1 2.
+3 1 1 -0.5 1 2.
+3 1 1 -1.5 1 4.        !Ar
+3 2 2 -1.5 1 4.
+3 2 2 -2.5 1 6.
+4 0 0 -0.5 1 2.
+4 1 1 -1.5 1 1.       !4p1
+w
+
+i
+Ir
+77 2000               !Z, #points in radial grid. 
+d
+1                     !1=relativistic, 0=nonrel.
+x
+1.0d0                 !0 is HF, 1 is LDA, <0 is xalfa.
+a
+0 22 0.5 0.0001 100 0 !nfc(fixed),nel,SCFratio,etol,xnum(fixed),ifil(fixed)
+1 0 0 -0.5 1  2.      !no,nl,nm,-xnj(atomic quantum numbers),1,occupation
+2 0 0 -0.5 1  2.
+2 1 1 -0.5 1  2.
+2 1 1 -1.5 1  4.  !2p6 Ne10
+3 0 0 -0.5 1  2.  !3s2
+3 1 1 -0.5 1  2.
+3 1 1 -1.5 1  4.  !3p6 Ar18
+3 2 2 -1.5 1  4. 
+3 2 2 -2.5 1  6.  !3d10
+4 0 0 -0.5 1  2.  !4s2
+4 1 1 -0.5 1  2.
+4 1 1 -1.5 1  4.  !4p6 Kr36
+4 2 2 -1.5 1  4.
+4 2 2 -2.5 1  6.  !4d10
+5 0 0 -0.5 1  2.  !5s2
+5 1 1 -0.5 1  2.
+5 1 1 -1.5 1  4.  !5p6 Xe54
+4 3 3 -2.5 1  6.
+4 3 3 -3.5 1  8.  !4f14
+5 2 2 -1.5 1  2.8
+5 2 2 -2.5 1  4.2 !5d7
+6 0 0 -0.5 1  2   !6s2 Ir78
+w
+
+i
+K
+19 2000   !z, nr
+d
+1         !1=rel, 0=nonrel
+x
+1         !0 is HF, 1 is LDA, <0 is xalfa.
+a
+0 08 0.2 0.0005 100 0  !nfc(relic),nel,SCFratio,etol,xnum???,ifil
+1 0 0 -0.5 1 2.        !no,nl,nm,-xnj(atomic quantum numbers),1,occupation
+2 0 0 -0.5 1 2.
+2 1 1 -0.5 1 2.
+2 1 1 -1.5 1 4.  !2p6 Ne10
+3 0 0 -0.5 1 2.
+3 1 1 -0.5 1 2.
+3 1 1 -1.5 1 4.  !3p6 Ar18
+4 0 0 -0.5 1 1.
+w
+
+i
+La
+57 2000   !z, nr
+d
+1         !1=rel, 0=nonrel
+x
+1         !0 is HF, 1 is LDA, <0 is xalfa.
+a
+0 20 0.5 0.0001 100 0 !nfc(fixed),nel,SCFratio,etol,xnum(fixed),ifil(fixed)
+1 0 0 -0.5 1  2.      !no,nl,nm,-xnj(atomic quantum numbers),1,occupation
+2 0 0 -0.5 1  2.
+2 1 1 -0.5 1  2.
+2 1 1 -1.5 1  4.     !2p6 Ne10
+3 0 0 -0.5 1  2.     !3s2
+3 1 1 -0.5 1  2.
+3 1 1 -1.5 1  4.     !3p6 Ar18
+3 2 2 -1.5 1  4. 
+3 2 2 -2.5 1  6.     !3d10
+4 0 0 -0.5 1  2.     !4s2
+4 1 1 -0.5 1  2.
+4 1 1 -1.5 1  4.     !4p6 Kr36
+4 2 2 -1.5 1  4.
+4 2 2 -2.5 1  6.     !4d10
+5 0 0 -0.5 1  2.     !5s2
+5 1 1 -0.5 1  2.
+5 1 1 -1.5 1  4.     !5p6 Xe54
+5 2 2 -1.5 1  0.4
+5 2 2 -2.5 1  0.6   !5d2
+6 0 0 -0.5 1  2.     !6s1 Cs55
+w
+
+i
+Mn
+25 2000   !z, nr
+d
+1         !1=rel, 0=nonrel
+x
+1         !0 is HF, 1 is LDA, <0 is xalfa.
+a
+0 10 0.2 0.0001 100 0  !nfc(relic),nel,SCFratio,etol,xnum???,ifil
+1 0 0 -0.5 1 2.        !no,nl,nm,-xnj(atomic quantum numbers),1,occupation
+2 0 0 -0.5 1 2.
+2 1 1 -0.5 1 2.
+2 1 1 -1.5 1 4.    !2p6 Ne10
+3 0 0 -0.5 1 2.
+3 1 1 -0.5 1 2.
+3 1 1 -1.5 1 4.    !3p6 Ar18
+3 2 2 -1.5 1 2.
+3 2 2 -2.5 1 3.    !3d5
+4 0 0 -0.5 1 2.
+w
+
+i
+Mo
+42 2000               !Z, #points in radial grid. 
+d
+1                     !1=relativistic, 0=nonrel.
+x
+1.0d0                 !0 is HF, 1 is LDA, <0 is xalfa.
+a
+0 15 0.5 0.0001 100 0 !nfc(fixed),nel,SCFratio,etol,xnum(fixed),ifil(fixed)
+1 0 0 -0.5 1  2.      !no,nl,nm,-xnj(atomic quantum numbers),1,occupation
+2 0 0 -0.5 1  2.
+2 1 1 -0.5 1  2.
+2 1 1 -1.5 1  4.  !2p6 Ne10
+3 0 0 -0.5 1  2.  !3s2
+3 1 1 -0.5 1  2.
+3 1 1 -1.5 1  4.  !3p6 Ar18
+3 2 2 -1.5 1  4.
+3 2 2 -2.5 1  6.  !3d10
+4 0 0 -0.5 1  2.  !4s2
+4 1 1 -0.5 1  2.
+4 1 1 -1.5 1  4.  !4p6 Kr36
+4 2 2 -1.5 1  2.
+4 2 2 -2.5 1  3.
+5 0 0 -0.5 1  1.
+w
+
+i
+Ne
+10 2000  !z, nr
+d
+1        !1=rel, 0=nonrel
+x
+1        !0 is HF, 1 is LDA, <0 is xalfa.
+a
+0 4 0.5 0.00001 100 0   !nfc(fixed),nel,SCFratio,etol,xnum(fixed),ifil(fixed)
+1 0 0 -0.5 1  2.0       !no,nl,nm,-xnj(atomic quantum numbers),1,occupation
+2 0 0 -0.5 1  2.0
+2 1 1 -0.5 1  2.0
+2 1 1 -1.5 1  4.0
+w
+
+i
+Ni
+28 2000               !Z, #points in radial grid.
+d
+1                     !1=relativistic, 0=nonrel.
+x
+1.0d0                 !0 is HF, 1 is LDA, <0 is xalfa.
+a
+0 10 0.5 0.0001 100 0 !nfc(fixed),nel,SCFratio,etol,xnum(fixed),ifil(fixed)
+1 0 0 -0.5 1  2.      !no,nl,nm,-xnj(atomic quantum numbers),1,occupation
+2 0 0 -0.5 1  2.
+2 1 1 -0.5 1  2.
+2 1 1 -1.5 1  4.  !2p6 Ne10
+3 0 0 -0.5 1  2.  !3s2
+3 1 1 -0.5 1  2.
+3 1 1 -1.5 1  4.  !3p6 Ar18
+3 2 2 -1.5 1  3.2 
+3 2 2 -2.5 1  4.8 !3d10
+4 0 0 -0.5 1  2.  !4s2
+w
+
+i
+O
+08 2000  !z, nr
+d
+1        !1=rel, 0=nonrel
+x
+1        !0 is HF, 1 is LDA, <0 is xalfa.
+a
+0 4 0.5 0.00001 100 0   !nfc(fixed),nel,SCFratio,etol,xnum(fixed),ifil(fixed)
+1 0 0 -0.5 1  2.0       !no,nl,nm,-xnj(atomic quantum numbers),1,occupation
+2 0 0 -0.5 1  2.0
+2 1 1 -0.5 1  1.333333
+2 1 1 -1.5 1  2.666667
+w
+
+i
+Pd
+46 2000               !Z, #points in radial grid.
+d
+1                     !1=relativistic, 0=nonrel.
+x
+1.0d0                 !0 is HF, 1 is LDA, <0 is xalfa.
+a
+0 14 0.5 0.0001 100 0 !nfc(fixed),nel,SCFratio,etol,xnum(fixed),ifil(fixed)
+1 0 0 -0.5 1  2.      !no,nl,nm,-xnj(atomic quantum numbers),1,occupation
+2 0 0 -0.5 1  2.
+2 1 1 -0.5 1  2.
+2 1 1 -1.5 1  4.  !2p6 Ne10
+3 0 0 -0.5 1  2.  !3s2
+3 1 1 -0.5 1  2.
+3 1 1 -1.5 1  4.  !3p6 Ar18
+3 2 2 -1.5 1  4. 
+3 2 2 -2.5 1  6.  !3d10
+4 0 0 -0.5 1  2.  !4s2
+4 1 1 -0.5 1  2.
+4 1 1 -1.5 1  4.  !4p6 Kr36
+4 2 2 -1.5 1  4.
+4 2 2 -2.5 1  6.  !4d10
+w
+
+i
+Pt
+78 2000               !Z, #points in radial grid. 
+d
+1                     !1=relativistic, 0=nonrel.
+x
+1.0d0                 !0 is HF, 1 is LDA, <0 is xalfa.
+a
+0 22 0.5 0.0001 100 0 !nfc(fixed),nel,SCFratio,etol,xnum(fixed),ifil(fixed)
+1 0 0 -0.5 1  2.      !no,nl,nm,-xnj(atomic quantum numbers),1,occupation
+2 0 0 -0.5 1  2.
+2 1 1 -0.5 1  2.
+2 1 1 -1.5 1  4.  !2p6 Ne10
+3 0 0 -0.5 1  2.  !3s2
+3 1 1 -0.5 1  2.
+3 1 1 -1.5 1  4.  !3p6 Ar18
+3 2 2 -1.5 1  4. 
+3 2 2 -2.5 1  6.  !3d10
+4 0 0 -0.5 1  2.  !4s2
+4 1 1 -0.5 1  2.
+4 1 1 -1.5 1  4.  !4p6 Kr36
+4 2 2 -1.5 1  4.
+4 2 2 -2.5 1  6.  !4d10
+5 0 0 -0.5 1  2.  !5s2
+5 1 1 -0.5 1  2.
+5 1 1 -1.5 1  4.  !5p6 Xe54
+4 3 3 -2.5 1  6.
+4 3 3 -3.5 1  8.  !4f14
+5 2 2 -1.5 1  3.636363636
+5 2 2 -2.5 1  5.454545454   !5d9
+6 0 0 -0.5 1  0.909090910   !6s1 Pt78
+w
+
+i
+45 2000               !Z, #points in radial grid. 
+d
+1                     !1=relativistic, 0=nonrel.
+x
+1.0d0                 !0 is HF, 1 is LDA, <0 is xalfa.
+a
+0 15 0.5 0.0001 100 0 !nfc(fixed),nel,SCFratio,etol,xnum(fixed),ifil(fixed)
+1 0 0 -0.5 1  2.      !no,nl,nm,-xnj(atomic quantum numbers),1,occupation
+2 0 0 -0.5 1  2.
+2 1 1 -0.5 1  2.
+2 1 1 -1.5 1  4.  !2p6 Ne10
+3 0 0 -0.5 1  2.  !3s2
+3 1 1 -0.5 1  2.
+3 1 1 -1.5 1  4.  !3p6 Ar18
+3 2 2 -1.5 1  4.
+3 2 2 -2.5 1  6.  !3d10
+4 0 0 -0.5 1  2.  !4s2
+4 1 1 -0.5 1  2.
+4 1 1 -1.5 1  4.  !4p6 Kr36
+4 2 2 -1.5 1  3.2
+4 2 2 -2.5 1  4.8
+5 0 0 -0.5 1  1.
+w
+
+i
+Ru
+44 2000               !Z, #points in radial grid. 
+d
+1                     !1=relativistic, 0=nonrel.
+x
+1.0d0                 !0 is HF, 1 is LDA, <0 is xalfa.
+a
+0 15 0.5 0.0001 100 0 !nfc(fixed),nel,SCFratio,etol,xnum(fixed),ifil(fixed)
+1 0 0 -0.5 1  2.      !no,nl,nm,-xnj(atomic quantum numbers),1,occupation
+2 0 0 -0.5 1  2.
+2 1 1 -0.5 1  2.
+2 1 1 -1.5 1  4.  !2p6 Ne10
+3 0 0 -0.5 1  2.  !3s2
+3 1 1 -0.5 1  2.
+3 1 1 -1.5 1  4.  !3p6 Ar18
+3 2 2 -1.5 1  4.
+3 2 2 -2.5 1  6.  !3d10
+4 0 0 -0.5 1  2.  !4s2
+4 1 1 -0.5 1  2.
+4 1 1 -1.5 1  4.  !4p6 Kr36
+4 2 2 -1.5 1  2.8
+4 2 2 -2.5 1  4.2
+5 0 0 -0.5 1  1.
+w
+
+i
+S
+16 2000  !z, nr
+d
+1        !1=rel, 0=nonrel
+x
+1        !0 is HF, 1 is LDA, <0 is xalfa.
+a
+0 7 0.5 0.00001 100 0   !nfc(fixed),nel,SCFratio,etol,xnum(fixed),ifil(fixed)
+1 0 0 -0.5 1 2.         !no,nl,nm,-xnj(atomic quantum numbers),1,occupation
+2 0 0 -0.5 1 2. 
+2 1 1 -0.5 1 2. 
+2 1 1 -1.5 1 4.         !Ne
+3 0 0 -0.5 1 2.
+3 1 1 -0.5 1 1.
+3 1 1 -1.5 1 3.
+w
+
+i
+Sc
+21 2000   !z, nr
+d
+1         !1=rel, 0=nonrel
+x
+1         !0 is HF, 1 is LDA, <0 is xalfa.
+a
+0 09 0.2 0.0005 100 0  !nfc(relic),nel,SCFratio,etol,xnum???,ifil
+1 0 0 -0.5 1 2.        !no,nl,nm,-xnj(atomic quantum numbers),1,occupation
+2 0 0 -0.5 1 2.
+2 1 1 -0.5 1 2.
+2 1 1 -1.5 1 4.  !2p6 Ne10
+3 0 0 -0.5 1 2.
+3 1 1 -0.5 1 2.
+3 1 1 -1.5 1 4.  !3p6 Ar18
+3 2 2 -1.5 1 1
+4 0 0 -0.5 1 2.
+w
+
+i
+Se
+34 2000               !Z, #points in radial grid.
+d
+1                     !1=relativistic, 0=nonrel.
+x
+1.0d0                 !0 is HF, 1 is LDA, <0 is xalfa.
+a
+0 12 0.5 0.0001 100 0 !nfc(fixed),nel,SCFratio,etol,xnum(fixed),ifil(fixed)
+1 0 0 -0.5 1  2.      !no,nl,nm,-xnj(atomic quantum numbers),1,occupation
+2 0 0 -0.5 1  2.
+2 1 1 -0.5 1  2.
+2 1 1 -1.5 1  4.      !2p6 Ne10
+3 0 0 -0.5 1  2.      !3s2
+3 1 1 -0.5 1  2.
+3 1 1 -1.5 1  4.      !3p6 Ar18
+3 2 2 -1.5 1  4. 
+3 2 2 -2.5 1  6.      !3d10
+4 0 0 -0.5 1  2.      !4s2
+4 1 1 -0.5 1  1.6
+4 1 1 -1.5 1  2.4     !4p4
+w
+
+i
+Si
+14 2000  !z, nr
+d
+1        !1=rel, 0=nonrel
+x
+1        !0 is HF, 1 is LDA, <0 is xalfa.
+a
+0 5 0.5 0.00001 100 0 !nfc(fixed),nel,SCFratio,etol,xnum(fixed),ifil(fixed)
+1 0 0 -0.5 1  2.0     !no,nl,nm,-xnj(atomic quantum numbers),1,occupation
+2 0 0 -0.5 1  2.0
+2 1 1 -1.0 1  6.0
+3 0 0 -0.5 1  2.0
+3 1 1 -1.5 1  2.0
+w
+
+i
+38 2000               !Z, #points in radial grid. 
+d
+1                     !1=relativistic, 0=nonrel.
+x
+1.0d0                 !0 is HF, 1 is LDA, <0 is xalfa.
+a
+0 13 0.5 0.0001 100 0 !nfc(fixed),nel,SCFratio,etol,xnum(fixed),ifil(fixed)
+1 0 0 -0.5 1  2.      !no,nl,nm,-xnj(atomic quantum numbers),1,occupation
+2 0 0 -0.5 1  2.
+2 1 1 -0.5 1  2.
+2 1 1 -1.5 1  4.  !2p6 Ne10
+3 0 0 -0.5 1  2.  !3s2
+3 1 1 -0.5 1  2.
+3 1 1 -1.5 1  4.  !3p6 Ar18
+3 2 2 -1.5 1  4.
+3 2 2 -2.5 1  6.  !3d10
+4 0 0 -0.5 1  2.  !4s2
+4 1 1 -0.5 1  2.
+4 1 1 -1.5 1  4.  !4p6 Kr36
+5 0 0 -0.5 1  2.
+w
+
+i
+Ti
+22 2000   !z, nr
+d
+1         !1=rel, 0=nonrel
+x
+1         !0 is HF, 1 is LDA, <0 is xalfa.
+a
+0 10 0.2 0.0005 100 0  !nfc(relic),nel,SCFratio,etol,xnum???,ifil
+1 0 0 -0.5 1 2.        !no,nl,nm,-xnj(atomic quantum numbers),1,occupation
+2 0 0 -0.5 1 2.
+2 1 1 -0.5 1 2.
+2 1 1 -1.5 1 4.  !2p6 Ne10
+3 0 0 -0.5 1 2.
+3 1 1 -0.5 1 2.
+3 1 1 -1.5 1 4.  !3p6 Ar18
+3 2 2 -1.5 1 0.8
+3 2 2 -2.5 1 1.2
+4 0 0 -0.5 1 2.
+w
+
+V
+23 2000   !z, nr
+d
+1         !1=rel, 0=nonrel
+x
+1         !0 is HF, 1 is LDA, <0 is xalfa.
+a
+0 10 0.2 0.0005 100 0  !nfc(relic),nel,SCFratio,etol,xnum???,ifil
+1 0 0 -0.5 1 2.        !no,nl,nm,-xnj(atomic quantum numbers),1,occupation
+2 0 0 -0.5 1 2.
+2 1 1 -0.5 1 2.
+2 1 1 -1.5 1 4.  !2p6 Ne10
+3 0 0 -0.5 1 2.
+3 1 1 -0.5 1 2.
+3 1 1 -1.5 1 4.  !3p6 Ar18
+3 2 2 -1.5 1 1.2
+3 2 2 -2.5 1 1.8
+4 0 0 -0.5 1 2.
+w
+
+i
+W
+74 2000               !Z, #points in radial grid. 
+d
+1                     !1=relativistic, 0=nonrel.
+x
+1.0d0                 !0 is HF, 1 is LDA, <0 is xalfa.
+a
+0 22 0.5 0.0001 100 0 !nfc(fixed),nel,SCFratio,etol,xnum(fixed),ifil(fixed)
+1 0 0 -0.5 1  2.      !no,nl,nm,-xnj(atomic quantum numbers),1,occupation
+2 0 0 -0.5 1  2.
+2 1 1 -0.5 1  2.
+2 1 1 -1.5 1  4.  !2p6 Ne10
+3 0 0 -0.5 1  2.  !3s2
+3 1 1 -0.5 1  2.
+3 1 1 -1.5 1  4.  !3p6 Ar18
+3 2 2 -1.5 1  4. 
+3 2 2 -2.5 1  6.  !3d10
+4 0 0 -0.5 1  2.  !4s2
+4 1 1 -0.5 1  2.
+4 1 1 -1.5 1  4.  !4p6 Kr36
+4 2 2 -1.5 1  4.
+4 2 2 -2.5 1  6.  !4d10
+5 0 0 -0.5 1  2.  !5s2
+5 1 1 -0.5 1  2.
+5 1 1 -1.5 1  4.  !5p6 Xe54
+4 3 3 -2.5 1  6.
+4 3 3 -3.5 1  8.  !4f14
+5 2 2 -1.5 1  1.6
+5 2 2 -2.5 1  2.4 !5d7
+6 0 0 -0.5 1  2   !6s2 Ir78
+w
+
+i
+Y
+39 2000               !Z, #points in radial grid. 
+d
+1                     !1=relativistic, 0=nonrel.
+x
+1.0d0                 !0 is HF, 1 is LDA, <0 is xalfa.
+a
+0 14 0.5 0.0001 100 0 !nfc(fixed),nel,SCFratio,etol,xnum(fixed),ifil(fixed)
+1 0 0 -0.5 1  2.      !no,nl,nm,-xnj(atomic quantum numbers),1,occupation
+2 0 0 -0.5 1  2.
+2 1 1 -0.5 1  2.
+2 1 1 -1.5 1  4.  !2p6 Ne10
+3 0 0 -0.5 1  2.  !3s2
+3 1 1 -0.5 1  2.
+3 1 1 -1.5 1  4.  !3p6 Ar18
+3 2 2 -1.5 1  4.
+3 2 2 -2.5 1  6.  !3d10
+4 0 0 -0.5 1  2.  !4s2
+4 1 1 -0.5 1  2.
+4 1 1 -1.5 1  4.  !4p6 Kr36
+4 2 2 -1.5 1  1.
+5 0 0 -0.5 1  2.
+w
+
+i
+Zn
+30 2000   !z, nr
+d
+1         !1=rel, 0=nonrel
+x
+1         !0 is HF, 1 is LDA, <0 is xalfa.
+a
+0 10 0.2 0.0005 100 0  !nfc(relic),nel,SCFratio,etol,xnum=1,ifil
+1 0 0 -0.5 1 2.        !no,nl,nm,-xnj(atomic quantum numbers),1,occupation
+2 0 0 -0.5 1 2.
+2 1 1 -0.5 1 2.
+2 1 1 -1.5 1 4.        !Ne
+3 0 0 -0.5 1 2.
+3 1 1 -0.5 1 2.
+3 1 1 -1.5 1 4.        !Ar
+3 2 2 -1.5 1 4.
+3 2 2 -2.5 1 6.
+4 0 0 -0.5 1 2.
+w
+

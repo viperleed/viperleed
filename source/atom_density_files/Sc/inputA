@@ -1,0 +1,21 @@
+i
+Sc
+21 2000                   !Z, #points in radial grid.
+d
+1                         !1=relativistic, 0=nonrel.
+x
+1.0d0                     !0 is HF, 1 is LDA, <0 is xalfa.
+a
+0 10 0.3 0.0005 100 0     !nfc(fixed),nel,SCFratio,etol,xnum(fixed),ifil(fixed)
+1 0 0 -0.5 1  2.          !no,nl,nm,-xnj(atomic quantum numbers),1,occ
+2 0 0 -0.5 1  2.
+2 1 1 -0.5 1  2.
+2 1 1 -1.5 1  4.          !2p6 Ne10
+3 0 0 -0.5 1  2.          !3s2
+3 1 1 -0.5 1  2.
+3 1 1 -1.5 1  4.          !3p6 Ar18
+3 2 2 -1.5 1  0.4 
+3 2 2 -2.5 1  0.6         !3d1
+4 0 0 -0.5 1  2.          !4s2
+w
+
