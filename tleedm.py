@@ -299,7 +299,7 @@ def runSection(index, sl, rp):
                           "VIBROCC", "DISPLACEMENTS"]}
                 # files that need to be there for the different parts to run
     o = "\nSTARTING SECTION: "+sectionNames[index]
-    if index == 3 and rp.disp_blocks[rp.search_index][1]:
+    if index == 3 and rp.disp_blocks and rp.disp_blocks[rp.search_index][1]:
         o += " "+rp.disp_blocks[rp.search_index][1]  # displacement block name
     logger.info(o)
     sectionStartTime = timer()
@@ -946,13 +946,16 @@ def runSection(index, sl, rp):
                     rfaclist = [-1]*len(rp.expbeams)
                 if index == 11:
                     outname = "Rfactor_plots_refcalc.pdf"
+                    aname = "Rfactor_analysis_refcalc.pdf"
                 else:
                     outname = "Rfactor_plots_superpos.pdf"
+                    aname = "Rfactor_analysis_superpos.pdf"
                 try:
                     r = tl.writeRfactorPdf([(b.label, rfaclist[i]) for (i, b) 
                                                     in enumerate(rp.expbeams)],
                                            plotcolors = rp.PLOT_COLORS_RFACTOR,
-                                           outName = outname)
+                                           outName=outname, analysisFile=aname,
+                                           v0i = rp.V0_IMAG)
                 except:
                     logger.warning("Error plotting R-factors.")
                 else:
@@ -1053,12 +1056,12 @@ def runSection(index, sl, rp):
                         break
             if not found:
                 for el in at.disp_vib:
-                    if at.disp_vib[el][0] != 0.:
+                    if abs(at.disp_vib[el][0]) >= 1e-4:
                         found = True
                         break
             if not found:
                 for el in at.disp_geo:
-                    if np.linalg.norm(at.disp_geo[el][0]) > 0.:
+                    if np.linalg.norm(at.disp_geo[el][0]) >= 1e-4:
                         found = True
                         break
             if not found:
@@ -1932,7 +1935,9 @@ def sortfiles(tensorIndex, delete_unzipped = False, tensors = True,
                 "Rfactor_plots_refcalc.pdf", "control.chem", 
                 "Search-progress.pdf", "Search-progress.csv", 
                 "Search-report.pdf", "FITBEAMS.csv", "FITBEAMS_norm.csv", 
-                "superpos-spec.out", "Rfactor_plots_superpos.pdf"]
+                "superpos-spec.out", "Rfactor_plots_superpos.pdf",
+                "Rfactor_analysis_refcalc.pdf", 
+                "Rfactor_analysis_superpos.pdf"]
     # outfiles with variable names:
     outfiles.extend([f for f in os.listdir(".") if 
                          (f.startswith("POSCAR_OUT") or

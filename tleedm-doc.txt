@@ -643,3 +643,8 @@
 - still issues with jobs running from old Tensor files (see 18.06.), fixed 
     same issue again, hopefully correct now.
 - made readOUTBEAMS tolerant to different separators
+
+04.08.2020
+- fixed issue with unnecessary (zero-displacement) delta files being created 
+    due to rounding errors
+- added R-factor analysis pdf, which plots the Y-function with the I(V) curves

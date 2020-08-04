@@ -2834,7 +2834,7 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False):
     return 0
 
 def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf', 
-                    plotcolors = None):
+                    plotcolors = None, analysisFile='', v0i=0.):
     '''
     Creates a single PDF file containing the plots of R-factors
     
@@ -2853,6 +2853,13 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
              name of the file (with or without extension) to which the plots
              will be saved.
              default: 'Rfactor_plots.pdf'
+    analysisFile: kwarg, string
+             if not empty, a more extensive R-factor analysis pdf with 
+             calculated Y-functions and absolute errors will be written to the 
+             given file name.
+    v0i: kwarg, float
+             imaginary part of the inner potential for calculating Y-functions.
+             Should always be passed if analysisFile is passed.
     
     Returns
     -------
@@ -2991,6 +2998,89 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
             plt.close(fig)
     except:
         logger.error("writeRfactorPdf: Error while writing rfactor pdf: ",
+                      exc_info = True)
+    finally:
+        pdf.close()
+        logger.setLevel(loglevel)
+    
+    if not analysisFile:
+        return 0
+    
+    # write R-factor analysis
+    try:
+        pdf = PdfPages(analysisFile)
+    except PermissionError:
+        logger.error("writeRfactorPdf: Cannot open file {}. Aborting."
+                      .format(analysisFile))
+        return None
+    
+    figsize = (5.8, 8.3)
+    figs = []
+    # the following will spam the logger with debug messages; disable.
+    loglevel = logger.level
+    logger.setLevel(logging.INFO)
+    try:
+        for i, (name, rfact, theo, exp) in enumerate(zip(*zip(*beams),
+                                                           xyTheo, xyExp)):
+            fig, axs = plt.subplots(3, figsize=figsize, 
+                                                   squeeze=True)
+            fig.subplots_adjust(left=0.08, right=0.92,
+                                bottom=0.07, top=0.98,
+                                wspace=0, hspace=0.08)
+            figs.append(fig)
+            [ax.set_xlim(*xlims) for ax in axs]
+            axs[0].set_ylim(*ylims)
+            [ax.get_yaxis().set_ticks([]) for ax in axs]
+            [ax.tick_params(bottom=True,
+                            top=True,
+                            axis='x', direction='in') for ax in axs]
+            [ax.xaxis.set_major_locator(tickloc) for ax in axs]
+            axs[0].set_ylabel("Intensity (arb. units)")
+            axs[1].set_ylabel("Y")
+            axs[2].set_ylabel("\u0394Y\u00b2")  # delta Y squared
+            axs[2].set_xlabel("Energy (eV)")
+            
+            ytheo = tl.getYfunc(theo, v0i)
+            yexp = tl.getYfunc(exp, v0i)
+            dy = np.array([(ytheo[j, 0], yexp[j, 1] - ytheo[j, 1]) 
+                           for j in range(0, len(ytheo))])
+            dysq = np.copy(dy)
+            dysq[:,1] = dysq[:,1]**2
+            
+            axs[1].plot(xlims, [0., 0.], color='grey', alpha=0.2)
+            if plotcolors is not None:
+                if not all([matplotlib.colors.is_color_like(s) 
+                            for s in plotcolors]):
+                    plotcolors = None
+                    logger.warning("writeRfactorPdf: Specified colors not "
+                        "recognized, reverting to default colors")
+            if plotcolors is None:
+                axs[0].plot(theo[:, 0], theo[:, 1], label='Theoretical')
+                axs[0].plot(exp[:, 0], exp[:, 1], label='Experimental')
+                axs[1].plot(ytheo[:, 0], ytheo[:, 1], label='Theoretical')
+                axs[1].plot(yexp[:, 0], yexp[:, 1], label="Experimental")
+            else:
+                axs[0].plot(theo[:, 0], theo[:, 1], label='Theoretical',
+                              color=plotcolors[0])
+                axs[0].plot(exp[:, 0], exp[:, 1], label='Experimental',
+                              color=plotcolors[1])
+                axs[1].plot(ytheo[:, 0], ytheo[:, 1], label='Theoretical',
+                            color=plotcolors[0])
+                axs[1].plot(yexp[:, 0], yexp[:, 1], label="Experimental",
+                            color=plotcolors[0])
+            axs[1].plot(dy[:, 0], dy[:, 1], label="\u0394Y", color="black")
+            axs[2].plot(dysq[:, 0], dysq[:, 1], color="black")
+            
+            axs[0].annotate(name, namePos, fontsize=11)
+            axs[0].annotate("R = {:.4f}".format(rfact), rPos, fontsize=11)
+            axs[0].legend()
+            axs[1].legend()
+            
+        for fig in figs:
+            pdf.savefig(fig)
+            plt.close(fig)
+    except:
+        logger.error("writeRfactorPdf: Error while writing analysis pdf: ",
                       exc_info = True)
     finally:
         pdf.close()
