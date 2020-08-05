@@ -3024,7 +3024,7 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
                                                            xyTheo, xyExp)):
             fig, axs = plt.subplots(3, figsize=figsize, 
                                                    squeeze=True)
-            fig.subplots_adjust(left=0.08, right=0.92,
+            fig.subplots_adjust(left=0.06, right=0.94,
                                 bottom=0.07, top=0.98,
                                 wspace=0, hspace=0.08)
             figs.append(fig)
@@ -3037,7 +3037,7 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
             [ax.xaxis.set_major_locator(tickloc) for ax in axs]
             axs[0].set_ylabel("Intensity (arb. units)")
             axs[1].set_ylabel("Y")
-            axs[2].set_ylabel("\u0394Y\u00b2")  # delta Y squared
+            axs[2].set_ylabel("\u2211(\u0394Y)\u00b2")    # sum delta Y ^2
             axs[2].set_xlabel("Energy (eV)")
             
             ytheo = tl.getYfunc(theo, v0i)
@@ -3046,6 +3046,10 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
                            for j in range(0, len(ytheo))])
             dysq = np.copy(dy)
             dysq[:,1] = dysq[:,1]**2
+            idysq = np.array([dysq[0]])
+            for j in range(1, len(dysq)):
+                idysq = np.append(idysq, [[dysq[j,0], idysq[j-1,1]+dysq[j,1]]], 
+                                  axis=0)
             
             axs[1].plot(xlims, [0., 0.], color='grey', alpha=0.2)
             if plotcolors is not None:
@@ -3065,14 +3069,16 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
                 axs[0].plot(exp[:, 0], exp[:, 1], label='Experimental',
                               color=plotcolors[1])
                 axs[1].plot(ytheo[:, 0], ytheo[:, 1], label='Theoretical',
-                            color=plotcolors[0])
+                            color=plotcolors[0], linewidth=0.75)
                 axs[1].plot(yexp[:, 0], yexp[:, 1], label="Experimental",
-                            color=plotcolors[0])
-            axs[1].plot(dy[:, 0], dy[:, 1], label="\u0394Y", color="black")
-            axs[2].plot(dysq[:, 0], dysq[:, 1], color="black")
+                            color=plotcolors[0], linewidth=0.75)
+            axs[1].plot(dy[:, 0], dy[:, 1], label="\u0394Y", color="black",
+                        linewidth=0.5)
+            axs[2].plot(idysq[:, 0], idysq[:, 1], color="black", 
+                        drawstyle="steps-mid")
             
-            axs[0].annotate(name, namePos, fontsize=11)
-            axs[0].annotate("R = {:.4f}".format(rfact), rPos, fontsize=11)
+            axs[0].annotate(name, namePos, fontsize=10)
+            axs[0].annotate("R = {:.4f}".format(rfact), rPos, fontsize=10)
             axs[0].legend()
             axs[1].legend()
             

@@ -648,3 +648,6 @@
 - fixed issue with unnecessary (zero-displacement) delta files being created 
     due to rounding errors
 - added R-factor analysis pdf, which plots the Y-function with the I(V) curves
+
+05.08.2020
+- minor changes to Rfactor analysis pdf layout
