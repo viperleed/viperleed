@@ -234,6 +234,18 @@ def main():
             i -= 1
         if runinfo:
             hi += "# RUN ".ljust(spacing) + runinfo + "\n"
+        # now try to read final R-factors
+        for j in range(i+1, len(lastLogLines)):
+            l = lastLogLines[j]
+            if l.startswith("Final R"):
+                t = ""
+                if "refcalc" in l:
+                    t = "# R REF ".ljust(spacing)
+                elif "superpos" in l:
+                    t = "# R SUPER ".ljust(spacing)
+                if t:
+                    hi += t + l.split(":", maxsplit=1)[1].strip() + "\n"
+                
     hi += "# TIME ".ljust(spacing) + translateTimestamp(oldTimeStamp) + "\n"
     hi += "# FOLDER ".ljust(spacing) + dirname + "\n"
 

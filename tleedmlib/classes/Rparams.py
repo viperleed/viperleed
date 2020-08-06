@@ -154,6 +154,7 @@ class Rparams:
         self.superlattice_defined = False
         self.ivbeams_sorted = False
         self.last_R = None
+        self.stored_R = {"refcalc": None, "superpos": None}
 
         # data from files
         self.beamlist = []  # lines as strings from _BEAMLIST

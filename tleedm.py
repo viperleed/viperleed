@@ -907,7 +907,7 @@ def runSection(index, sl, rp):
             rp.setHaltingLevel(2)
         else:
             try:
-                rfac, v0rshift, rfaclist = tl.readROUT()
+                (rfac, r_int, r_frac), v0rshift, rfaclist = tl.readROUT()
             except:
                 logger.error("Error reading ROUT file")
                 rp.setHaltingLevel(2)
@@ -935,6 +935,10 @@ def runSection(index, sl, rp):
                 else:
                     fn = "R_OUT_"+rp.timestamp+"_R={:.4f}".format(rfac)
                     rp.last_R = rfac
+                    if index == 11:
+                        rp.stored_R["refcalc"] = (rfac, r_int, r_frac)
+                    else:
+                        rp.stored_R["superpos"] = (rfac, r_int, r_frac)
                 try:
                     os.rename("ROUT",fn)
                 except:
@@ -2180,7 +2184,16 @@ def cleanup(manifest, rp = None):
         s = ""
         for ind in history:
             s += (str(ind)+" ")
-        logger.info("Executed segments: "+s[:-1]+"\n")
+        logger.info("Executed segments: "+s[:-1])
+    if rp is not None:
+        for t in ["refcalc", "superpos"]:
+            if rp.stored_R[t] is not None:
+                o = "Final R ({}): {:.4f}".format(t, rp.stored_R[t][0])
+                if rp.stored_R[t][1] > 0 and rp.stored_R[t][2] > 0:
+                    o += " ({:.4f} / {:.4f})".format(rp.stored_R[t][1], 
+                                                     rp.stored_R[t][2])
+                logger.info(o)
+    logger.info("")
     # shut down logger
     while logger.handlers:
         logger.removeHandler(logger.handlers[0])

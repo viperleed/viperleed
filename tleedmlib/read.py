@@ -3230,9 +3230,26 @@ def readROUT_end(filename="ROUT"):      # UNUSED
     return rfac, v0rshift
 
 def readROUT(filename="ROUT"):
-    """Reads the ROUT file, returns the average R-factor as float, the best
-    inner potential shift, and the average R-factors per beam as list of
-    floats, in the order of the expermiental beams."""
+    """
+    Reads the ROUT file.
+
+    Parameters
+    ----------
+    filename : string, optional
+        DESCRIPTION. Pass if you want to read from a file other than the 
+        default 'ROUT'
+
+    Returns
+    -------
+    tuple (r, r_int, r_frac), float v0rshift, list rfaclist
+        r, r_int, r_frac: tuple of floats:
+            average R-factor for all beams, integer-order beams and 
+            fractional order beams.
+        v0rshift: inner potential shift corresponding to r, r_int, r_frac
+        rfaclist: list of floats, r-factors per beam in order of experimental
+            beams
+
+    """
     with open(filename, 'r') as rf:
         lines = rf.readlines()
     line = ""
@@ -3243,6 +3260,8 @@ def readROUT(filename="ROUT"):
     if line == "":
         return 0, 0, []
     rfac = 0
+    rfac_int = -1
+    rfac_frac = -1
     v0rshift = 0
     rgx = re.compile(r'.+SHIFT\s*(?P<shift>[-0-9.]+).+=\s*(?P<rfac>[-0-9.]+)')
     m = rgx.match(line)
@@ -3257,7 +3276,7 @@ def readROUT(filename="ROUT"):
             logger.error("Could not read inner potential shift from "
                           + filename)
     else:
-        return 0, 0, []
+        return (0,0,0), 0, []
     # now read the R-factors per beam at v0rshift
     rfaclist = []
     for line in [l for l in lines if len(l) >= 70]:
@@ -3266,7 +3285,7 @@ def readROUT(filename="ROUT"):
         try:
             index = int(values[0])
             v0r = float(values[2])
-            rav = float(values[6])
+            rav = float(values[-1])
         except:
             pass    # ignore line
         else:
@@ -3276,7 +3295,14 @@ def readROUT(filename="ROUT"):
                                     "Reading R-factors per beam will fail.")
                 else:
                     rfaclist.append(rav)
-    return rfac, v0rshift, rfaclist
+            elif v0r == v0rshift and index == -1:
+                if line.startswith("AV.-INT"):
+                    rfac_int = rav
+                    logger.debug(rfac_int)   # !!! TMPDEBUG
+                elif line.startswith("AV.-FRAC"):
+                    rfac_frac = rav
+                    logger.debug(rfac_frac)   # !!! TMPDEBUG
+    return (rfac, rfac_int, rfac_frac), v0rshift, rfaclist
 
 def getTensorOriStates(sl, path):
     """Reads POSCAR, PARAMETERS and VIBROCC from the target path, gets the 
