@@ -651,3 +651,13 @@
 
 05.08.2020
 - minor changes to Rfactor analysis pdf layout
+
+06.08.2020
+- added printing of final R-factors to tleedm log and history.info
+
+07.08.2020
+- added waiting time for SD.TL when search is stopped by SEARCH_KILL
+
+11.08.2020
+- major module re-organization: moved most of the tleedm execution logic from 
+    tleedm runSection to sub-modules in tleedmlib.sections

@@ -3298,10 +3298,8 @@ def readROUT(filename="ROUT"):
             elif v0r == v0rshift and index == -1:
                 if line.startswith("AV.-INT"):
                     rfac_int = rav
-                    logger.debug(rfac_int)   # !!! TMPDEBUG
                 elif line.startswith("AV.-FRAC"):
                     rfac_frac = rav
-                    logger.debug(rfac_frac)   # !!! TMPDEBUG
     return (rfac, rfac_int, rfac_frac), v0rshift, rfaclist
 
 def getTensorOriStates(sl, path):

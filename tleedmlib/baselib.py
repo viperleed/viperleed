@@ -16,6 +16,7 @@ import itertools
 import subprocess
 import multiprocessing
 import os
+import shutil
 
 logger = logging.getLogger("tleedm.base")
 
@@ -242,6 +243,55 @@ def getMaxTensorIndex(home=""):
                 indlist.append(int(m.group(0)[-3:]))
         if indlist:
             return max(indlist)
+    return 0
+
+def getTensors(index, required=True):
+    """Fetches Tensor files from Tensors or archive with specified tensor 
+    index. If required is set True, an error will be printed if no Delta files 
+    are found."""
+    dn = "Tensors_"+str(index).zfill(3)
+    if not os.path.isdir(os.path.join(".","Tensors",dn)):
+        if os.path.isfile(os.path.join(".","Tensors",dn+".zip")):
+            try:
+                logger.info("Unpacking {}.zip...".format(dn))
+                os.mkdir(os.path.join(".","Tensors",dn))
+                shutil.unpack_archive(os.path.join(".","Tensors",
+                                                   dn+".zip"),
+                                      os.path.join(".","Tensors",dn))
+            except:
+                logger.error("Failed to unpack {}.zip".format(dn))
+                raise
+        else:
+            logger.error("Tensors not found")
+            return ("Tensors not found")
+    return 0
+
+def getDeltas(index, required=True):
+    """Fetches Delta files from Deltas or archive with specified tensor index. 
+    If required is set True, an error will be printed if no Delta files are 
+    found."""
+    dn = "Deltas_"+str(index).zfill(3)
+    if os.path.isdir(os.path.join(".","Deltas",dn)):
+        for f in [f for f in os.listdir(os.path.join(".","Deltas",dn))
+                  if (os.path.isfile(os.path.join(".","Deltas",dn,f)) 
+                      and f.startswith("DEL_"))]:
+            try:
+                shutil.copy2(os.path.join(".","Deltas",dn,f), ".")
+            except:
+                logger.error("Could not copy existing delta files to "
+                              "work directory")
+                raise
+    elif os.path.isfile(os.path.join(".","Deltas",dn+".zip")):
+        try:
+            logger.info("Unpacking {}.zip...".format(dn))
+            shutil.unpack_archive(os.path.join(".","Deltas",dn+".zip"),
+                                  ".")
+        except:
+            logger.error("Failed to unpack {}.zip".dn)
+            raise
+    elif required:
+        logger.error("Deltas not found")
+        return ("Deltas not found")
     return 0
 
 def fortranContLine(s):
