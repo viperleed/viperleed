@@ -167,7 +167,7 @@ def superpos(sl, rp):
         raise
     logger.info("Finished Superpos calculation. Processing files...")
     try:
-        theobeams, rp.superpos_specout = tl.readFdOut(outname)
+        rp.theobeams["superpos"], rp.superpos_specout = tl.readFdOut(outname)
     except FileNotFoundError:
         logger.error(outname + " not found after superpos calculation.")
         raise
@@ -176,8 +176,8 @@ def superpos(sl, rp):
                       " calculation.")
         raise
     try:
-        tl.writeOUTBEAMS(theobeams, filename="FITBEAMS.csv")
-        theobeams_norm = copy.deepcopy(theobeams)
+        tl.writeOUTBEAMS(rp.theobeams["superpos"], filename="FITBEAMS.csv")
+        theobeams_norm = copy.deepcopy(rp.theobeams["superpos"])
         for b in theobeams_norm:
             b.normMax()
         tl.writeOUTBEAMS(theobeams_norm,filename="FITBEAMS_norm.csv")

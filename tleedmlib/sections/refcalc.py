@@ -131,7 +131,7 @@ def refcalc(sl, rp):
         raise
     logger.info("Finished reference calculation. Processing files...")
     try:
-        theobeams, rp.refcalc_fdout = tl.readFdOut()
+        rp.theobeams["refcalc"], rp.refcalc_fdout = tl.readFdOut()
     except FileNotFoundError:
         logger.error("fd.out not found after reference calculation. "
                       "Check settings and refcalc log.")
@@ -143,19 +143,19 @@ def refcalc(sl, rp):
     # compare beam sets:
     eq = True
     eps = 1e-3
-    if len(rp.ivbeams) != len(theobeams):
+    if len(rp.ivbeams) != len(rp.theobeams["refcalc"]):
         eq = False
     else:
-        eq = all([rp.ivbeams[i].isEqual(theobeams[i], eps=eps) for i in 
-                                            range(0, len(rp.ivbeams))])
+        eq = all([rp.ivbeams[i].isEqual(rp.theobeams["refcalc"][i], eps=eps) 
+                      for i in range(0, len(rp.ivbeams))])
     if not eq:
         logger.error("The list of beams read from IVBEAMS is not "
             "equivalent to the list of beams in the fd.out file "
             "produced by the reference calculation!")
         rp.setHaltingLevel(2)
     try:
-        tl.writeOUTBEAMS(theobeams, filename="THEOBEAMS.csv")
-        theobeams_norm = copy.deepcopy(theobeams)
+        tl.writeOUTBEAMS(rp.theobeams["refcalc"], filename="THEOBEAMS.csv")
+        theobeams_norm = copy.deepcopy(rp.theobeams["refcalc"])
         for b in theobeams_norm:
             b.normMax()
         tl.writeOUTBEAMS(theobeams_norm,filename="THEOBEAMS_norm.csv")

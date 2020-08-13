@@ -533,7 +533,7 @@ def readWoodsNotation(s, ucell):
     g2 = parseMathSqrt(m.group('g2'))
     # get surface unit cell vectors from bulk unit cell (has surface 
     #  periodicity!!):
-    if alpha == 0.0:
+    if alpha == 0.0 and t == 'p':
         mat = np.array([[g1, 0.], [0., g2]], dtype=float)
     else:
         r = [ucell[:2,0],ucell[:2,1]]

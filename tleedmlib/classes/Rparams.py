@@ -15,6 +15,13 @@ import os
 import random
 import shutil
 
+try:
+    import matplotlib.pyplot as plt
+except:
+    plotting = False
+else:
+    plotting = True
+
 import tleedmlib as tl
 
 logger = logging.getLogger("tleedm.rparams")
@@ -158,8 +165,10 @@ class Rparams:
 
         # data from files
         self.beamlist = []  # lines as strings from _BEAMLIST
-        self.ivbeams = []   # uses Beam class
-        self.expbeams = []  # uses Beam class
+        self.ivbeams = []   # uses Beam class; list of beams only
+        self.expbeams = []  # uses Beam class; contains intensities
+        self.theobeams = {"refcalc": [], "superpos": None} # uses Beam class; 
+                                                        #  contains intensities
         self.phaseshifts = []
         self.phaseshifts_firstline = "" # contains parameters for MUFTIN
         self.refcalc_fdout = ""
@@ -478,6 +487,18 @@ class Rparams:
             logger.error("Rparams.getOffspringConfig failed: {}".format(l))
             return []
         return l
+    
+    def closePdfReportFigs(self):
+        global plotting
+        if not plotting:
+            return 0
+        
+        for searchname in self.lastParScatterFigs:
+            for f in self.lastParScatterFigs[searchname]:
+                try:
+                    plt.close(f)
+                except:
+                    pass
 
     def generateSearchPars(self, sl, rp):
         """Initializes a list of searchpar objects, and assigns delta files to

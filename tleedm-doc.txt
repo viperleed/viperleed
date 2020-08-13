@@ -661,3 +661,9 @@
 11.08.2020
 - major module re-organization: moved most of the tleedm execution logic from 
     tleedm runSection to sub-modules in tleedmlib.sections
+
+12.08.2020
+- fixed minor issue with readWoodsNotation
+- fixed issues in R-factor calculation: PARAM file now takes number of 
+    theoretical data points from the calculated beams, instead of the current 
+    energy range, while WEXPEL takes current (may be reduced) energy range.

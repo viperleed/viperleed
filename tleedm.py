@@ -450,7 +450,7 @@ def cleanup(manifest, rp = None):
         history = rp.runHistory
         newTensors = ("Tensors" in rp.manifest)
         newDeltas = ("Deltas" in rp.manifest)
-        tl.closePdfReportFigs(rp)
+        rp.closePdfReportFigs()
         tind = rp.TENSOR_INDEX
 
     try:

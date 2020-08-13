@@ -41,8 +41,10 @@ def rfactor(sl, rp, index):
                 theobeams, theospec = tl.readFdOut(readfile = path)
                 if index == 11: 
                     rp.refcalc_fdout = theospec
+                    rp.theobeams["refcalc"] = theobeams
                 else:
                     rp.superpos_specout = theospec
+                    rp.theobeams["superpos"] = theobeams
             except:
                 logger.error("Failed to read "+path)
                 raise
@@ -55,8 +57,10 @@ def rfactor(sl, rp, index):
                 theobeams, theospec = tl.readFdOut(readfile = path)
                 if index == 11: 
                     rp.refcalc_fdout = theospec
+                    rp.theobeams["refcalc"] = theobeams
                 else:
                     rp.superpos_specout = theospec
+                    rp.theobeams["superpos"] = theobeams
             except:
                 logger.error("Failed to read "+path)
                 raise
@@ -80,16 +84,18 @@ def rfactor(sl, rp, index):
             return("Contradiction in beam sets")
     if index == 11:
         theospec = rp.refcalc_fdout
+        theobeams = rp.theobeams["refcalc"]
     elif index == 12:
         theospec = rp.superpos_specout
+        theobeams = rp.theobeams["superpos"]
     # WEXPEL before PARAM, to make sure number of exp. beams is correct
     try:
-        tl.writeWEXPEL(sl, rp)
+        tl.writeWEXPEL(sl, rp, theobeams)
     except:
         logger.error("Exception during writeWEXPEL: ")
         raise
     try:
-        tl.writeRfactPARAM(rp)
+        tl.writeRfactPARAM(rp, theobeams)
     except:
         logger.error("Exception during writeRfactPARAM: ")
         raise

@@ -902,14 +902,18 @@ def writeRfInfo(sl, rp, filename="rf.info"):
     logger.debug("Wrote to "+filename+" successfully")
     return output
 
-def writeWEXPEL(sl, rp, filename="WEXPEL"):
+def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL"):
     """Writes input file WEXPEL for R-factor calculation."""
+    theoEnergies = []
+    for b in theobeams:
+        theoEnergies.extend([k for k in b.intens if k not in theoEnergies])
+    theoEnergies.sort()
     expEnergies = []
     for b in rp.expbeams:
         expEnergies.extend([k for k in b.intens if k not in expEnergies])
     expEnergies.sort()
-    minen = min(min(expEnergies), rp.THEO_ENERGIES[0])
-    maxen = max(max(expEnergies), rp.THEO_ENERGIES[1])
+    minen = max(min(expEnergies), rp.THEO_ENERGIES[0])
+    maxen = min(max(expEnergies), rp.THEO_ENERGIES[1])
     # extend energy range if they are close together
     if abs(min(expEnergies) - rp.THEO_ENERGIES[0]) < abs(rp.IV_SHIFT_RANGE[0]):
         minen = (max(min(expEnergies), rp.THEO_ENERGIES[0]) 
@@ -917,7 +921,7 @@ def writeWEXPEL(sl, rp, filename="WEXPEL"):
     if abs(max(expEnergies) - rp.THEO_ENERGIES[1]) < abs(rp.IV_SHIFT_RANGE[1]):
         maxen = (min(max(expEnergies), rp.THEO_ENERGIES[1]) 
                  + rp.IV_SHIFT_RANGE[1]) + 0.01
-    step = min(expEnergies[1]-expEnergies[0], rp.THEO_ENERGIES[2])
+    step = min(expEnergies[1]-expEnergies[0], theoEnergies[1]-theoEnergies[0])
     if rp.IV_SHIFT_RANGE[2] > 0:
         vincr = rp.IV_SHIFT_RANGE[2]
         step = min(step, vincr)
@@ -987,16 +991,18 @@ def writeWEXPEL(sl, rp, filename="WEXPEL"):
         raise
     logger.debug("Wrote to R-factor input file "+filename+" successfully")
 
-def writeRfactPARAM(rp):
+def writeRfactPARAM(rp, theobeams):
     """Generates the PARAM file for the rfactor calculation."""
-    theoEnergies = int((rp.THEO_ENERGIES[1]-rp.THEO_ENERGIES[0])
-                       / rp.THEO_ENERGIES[2]) + 1
+    theoEnergies = []
+    for b in theobeams:
+        theoEnergies.extend([k for k in b.intens if k not in theoEnergies])
+    theoEnergies.sort()
     expEnergies = []
     for b in rp.expbeams:
         expEnergies.extend([k for k in b.intens if k not in expEnergies])
     expEnergies.sort()
-    minen = min(min(expEnergies), rp.THEO_ENERGIES[0])
-    maxen = max(max(expEnergies), rp.THEO_ENERGIES[1])
+    minen = min(min(expEnergies), min(theoEnergies))
+    maxen = max(max(expEnergies), max(theoEnergies))
     if rp.IV_SHIFT_RANGE[2] > 0:
         step = rp.IV_SHIFT_RANGE[2]
     else:
@@ -1007,7 +1013,7 @@ C  MNBED  : number of beams in experimental spectra before averaging
 C  MNBTD  : number of beams in theoretical spectra before averaging
 
       PARAMETER (MNBED = {}, MNBTD = {})""".format(len(rp.expbeams), 
-                                                   len(rp.ivbeams))
+                                                   len(theobeams))
     output += """
 
 C  MNET   : number of energies in theoretical beam at time of reading in
@@ -1015,7 +1021,7 @@ C  MNGP   : greater equal number of grid points in energy working grid (ie after
 C           interpolation)
 C  MNS    : number of geometries including those, that are skipped
 
-      PARAMETER (MNET = {}, MNGP = {})""".format(theoEnergies, ngrid)
+      PARAMETER (MNET = {}, MNGP = {})""".format(len(theoEnergies), ngrid)
     output += """
       PARAMETER (MNS = 1)
 
@@ -3463,14 +3469,14 @@ def writeSearchReportPdf(rp, outname = "Search-report.pdf"):
             pass
     return 0
 
-def closePdfReportFigs(rp):
-    global plotting
-    if not plotting:
-        return 0
+# def closePdfReportFigs(rp):           # !!! CLEANUP
+#     global plotting
+#     if not plotting:
+#         return 0
     
-    for searchname in rp.lastParScatterFigs:
-        for f in rp.lastParScatterFigs[searchname]:
-            try:
-                plt.close(f)
-            except:
-                pass
+#     for searchname in rp.lastParScatterFigs:
+#         for f in rp.lastParScatterFigs[searchname]:
+#             try:
+#                 plt.close(f)
+#             except:
+#                 pass
