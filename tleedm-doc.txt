@@ -667,3 +667,7 @@
 - fixed issues in R-factor calculation: PARAM file now takes number of 
     theoretical data points from the calculated beams, instead of the current 
     energy range, while WEXPEL takes current (may be reduced) energy range.
+    
+17.08.2020
+- split baselib to base and leedbase, changed references in other modules
+- moved beamgen and phaseshiftgen (psgen) functions to their own modules

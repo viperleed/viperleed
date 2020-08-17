@@ -10,16 +10,13 @@ Contains functions for writing the output files of the TensErLEED interface
 import logging
 import numpy as np
 import fortranformat as ff
-import subprocess
 import os
 import copy
 import random
 import shutil
-import re
-from fractions import Fraction
 
 import tleedmlib as tl
-from guilib.base import get_equivalent_beams, project_to_first_domain
+from guilib.base import project_to_first_domain
 
 logger = logging.getLogger("tleedm.write")
 
@@ -103,494 +100,7 @@ def modifyPARAMETERS(rp, modpar, new="", comment=""):
         raise
     return
 
-def runBeamGen(sl,rp,beamgensource=os.path.join('.','source','beamgen3.out')):
-    """Writes necessary input for the beamgen3 code, the runs it. The relevant 
-    output file will be renamed to _BEAMLIST."""
-    output = ''
-    f74x2 = ff.FortranRecordWriter('2F7.4')
-    # ucbulk = np.transpose(np.dot(np.linalg.inv(np.transpose(rp.SUPERLATTICE)),
-    #                              sl.ucell[:2,:2]))
-    if sl.bulkslab == tl.DEFAULT:
-        sl.bulkslab = sl.makeBulkSlab(rp)
-    ucbulk = np.transpose(sl.bulkslab.ucell[:2,:2])
-    ol = f74x2.write(ucbulk[0])
-    ol = ol.ljust(36)
-    output += ol + 'ARA1\n'
-    ol = f74x2.write(ucbulk[1])
-    ol = ol.ljust(36)
-    output += ol + 'ARA2\n'
-    i3x2 = ff.FortranRecordWriter('2I3')
-    ol = i3x2.write([int(round(f)) for f in rp.SUPERLATTICE[0]])
-    ol = ol.ljust(36)
-    output += ol + 'LATMAT - overlayer\n'
-    ol = i3x2.write([int(round(f)) for f in rp.SUPERLATTICE[1]])
-    ol = ol.ljust(36)
-    output += ol + 'LATMAT -  matrix\n'
-    output +=('  1                                 SSYM - symmetry code - cf. '
-              'van Hove / Tong 1979, always 1\n')
-    sl.getCartesianCoordinates()
-    mindist = sl.layers[1].carttopz - sl.layers[0].cartbotz
-    for i in range(2,len(sl.layers)):
-        d = sl.layers[i].carttopz - sl.layers[i-1].cartbotz
-        if d < mindist: mindist = d
-    dmin = mindist*0.7
-    f71 = ff.FortranRecordWriter('F7.1')
-    f41 = ff.FortranRecordWriter('F4.1')
-    ol = f71.write([rp.THEO_ENERGIES[1]]) + f41.write([dmin])
-    ol = ol.ljust(36)
-    output += (ol + 'EMAX,DMIN - max. energy, min. interlayer distance for '
-              'layer doubling\n')
-    output += ('   {:.4f}                           TST - convergence '
-              'criterion for fd. reference calculation\n'
-              .format(rp.ATTENUATION_EPS))
-    output += ('9999                                KNBMAX - max. number of '
-              'beams to be written (may be a format problem!)')
-    try:
-        with open('DATA', 'w') as wf:
-            wf.write(output)
-    except:
-        logger.error("Failed to write DATA for _BEAMLIST generation.")
-        raise
-    if os.name == 'nt':
-        logger.error("Beamlist generation is currently not "
-                         "supported on Windows. Use a linux shell to run "
-                         "beamlist generation script.")
-        raise EnvironmentError("Beamlist generation is currently not "
-                               "supported on Windows.")
-    else:
-        try:
-            subprocess.call(beamgensource)
-        except:
-            logger.error("Failed to execute beamgen script.")
-            raise
-    # clean up folder, rename files
-    try:
-        os.remove('BELIST')
-        os.remove('PROT')
-    except:
-        logger.warning("_BEAMLIST generation: Failed to remove BELIST or "
-                        "PROT file")
-    try:
-        os.rename('DATA','beamgen3-input')
-    except:
-        logger.warning("Failed to rename beamlist generation input file "
-                        "DATA to beamgen3-input")
-    try:
-        os.rename('NBLIST','_BEAMLIST')
-    except:
-        logger.error("Failed to rename beamlist generation output file "
-                      "NBLIST to _BEAMLIST")
-        raise
-    logger.debug("Wrote to _BEAMLIST successfully.")
 
-def runPhaseshiftGen(sl,rp,psgensource=os.path.join('.','source','EEASiSSS.x'),
-                     excosource=os.path.join('.','source','seSernelius'),
-                     atdenssource=os.path.join('.','source', 
-                                               'atom_density_files')):
-    """Creates required input for EEASiSSS.x, then runs it. Reads the output 
-    files and extracts information for _PHASESHIFTS file, then returns that 
-    information (without writing _PHASESHIFTS)."""
-    lmax = 16   # this could be a variable, for now set fixed...
-
-    nsl = copy.deepcopy(sl)
-    nsl.getFractionalCoordinates()
-    # bulk calculation:
-    blayers = [l for l in nsl.layers if l.isBulk]
-    # construct bulk slab
-    # bsl = copy.deepcopy(nsl)    #this makes the site different objects... 
-    # bsl.atlist = [at for at in bsl.atlist if at.layer.isBulk]
-    # bsl.layers = [l for l in bsl.layers if l.isBulk]
-    
-    if type(rp.BULK_REPEAT) == np.ndarray:
-        bulkc = rp.BULK_REPEAT
-        if bulkc[2] < 0:
-            bulkc = -bulkc
-    else:
-        cvec = nsl.ucell[:,2]
-        if rp.BULK_REPEAT is None:
-            # assume that interlayer vector from bottom non-bulk to top 
-            #  bulk layer is the same as between bulk units
-            zdiff = (blayers[-1].cartbotz 
-                     - nsl.layers[blayers[0].num-1].cartbotz)
-        elif type(rp.BULK_REPEAT) == float:
-            zdiff = rp.BULK_REPEAT
-        bulkc = cvec * zdiff / cvec[2]
-
-    # bsl.ucell[:,2] = bulkc
-    # bsl.collapseCartesianCoordinates()
-    
-    # add a bulk layer to the slab
-    nsl.getCartesianCoordinates()
-    cfact = (nsl.ucell[2,2] + abs(bulkc[2])) / nsl.ucell[2,2]
-    nsl.ucell[:,2] = nsl.ucell[:,2] * cfact
-    nsl.getFractionalCoordinates()
-    newbulkats = []
-    tmplist = nsl.atlist[:]
-    for at in tmplist:
-        if at.layer.isBulk: 
-            newbulkats.append(at.duplicate())
-        at.cartpos = at.cartpos - bulkc
-    nsl.collapseCartesianCoordinates(updateOrigin=True)
-    nsl.sortByZ()
-    
-    outvals = {}    # dict containing lists of values to output. 
-                    #   format outvals[energy][block][L]
-                    
-    # The following originally calculated phaseshifts first for only the bulk,
-    #   then for the slab, taking phaseshifts from the bulk calculations if the
-    #   site is present at all in the bulk. However, this means that different
-    #   muffin tin parameters are applied for the different phaseshifts. 
-    # New solution:
-    #   Take phaseshifts from the slab calculation only. Average only over 
-    #   atoms NOT added as "new bulk" ("newbulkats" list above) to avoid 
-    #   influence of the (false) bottom "surface".
-#    for bulk in [True,False]:
-#    wsl = bsl if bulk else nsl  # working slab for this iteration
-    # before starting on unit cell, determine whether supercell is needed:
-    blocks = []  #tuples of sites (with poscar elements) and elements 
-        #  (same as POSCAR if no ELEMENT_MIX, ELEMENT_MIX elements if not)
-    for site in nsl.sitelist:
-        if site.el in rp.ELEMENT_MIX:
-            for el in rp.ELEMENT_MIX[site.el]:
-                blocks.append((site,el))
-        else:
-            blocks.append((site,site.el))
-    scsize = 1 
-    if len(rp.ELEMENT_MIX) > 0:
-        minnum = -1
-        for (site, el) in [(site, el) for (site, el) in blocks if site.el 
-                          in rp.ELEMENT_MIX and site.occ[el] > 0.]:
-            al = [at for at in nsl.atlist if at.site == site]
-            atcount = len(al)*site.occ[el]
-            if minnum < 0 or (minnum > atcount > 0):
-                minnum = atcount
-        # we want at least 2 atoms of each element in each site type:
-        if 0 < minnum < 2.0:
-            scsize = int(np.ceil(2.0/minnum))
-    if scsize > 1:  # some checks to make sure it doesn't get too large
-        maxcells = 20  # upper limit on supercell size
-        maxats = 500   # upper limit on atoms in supercell
-        if scsize > maxcells:
-            scsize = maxcells
-            # don't warn - this is a large unit cell either way.
-        if len(nsl.atlist) * scsize > maxats:
-            logger.debug("Phaseshift generation: Given element "
-                "concentrations would require a very large supercell. "
-                "Element concentrations for low-occupancy elements will be "
-                "increased to avoid this. This only concerns the phaseshifts "
-                "calculation and should not cause problems.")
-            # determine minimum size to have 2 of each element
-            minsize = 1
-            for site in [s for s in nsl.sitelist if s.el in rp.ELEMENT_MIX]:
-                ats = len([at for at in nsl.atlist if at.site == site])
-                els = len([el for el in rp.ELEMENT_MIX[site.el] if 
-                                   site.occ[el] > 0.])
-                minsize = max(minsize, int(np.ceil(2*els / ats)))
-            scsize = max(minsize, int(maxats / len(nsl.atlist)))
-                
-    subatlists = {}     # atlist per block tuple
-    if scsize > 1:  #construct supercell to get enough atoms
-        xsize = int(np.ceil(np.sqrt(scsize)))  # if scsize is not prime, try 
-        while scsize % xsize != 0:             #   making it close to square 
-            xsize += 1
-        ysize = int(scsize / xsize)
-        cpatlist = nsl.atlist[:]
-        for at in cpatlist:
-            for i in range(0,xsize):
-                for j in range(0, ysize):
-                    if i == j == 0:
-                        continue
-                    tmpat = at.duplicate()
-                    tmpat.pos[0] += i
-                    tmpat.pos[1] += j
-        nsl.getCartesianCoordinates()
-        nsl.ucell = np.dot(np.array([[xsize,0,0],[0,ysize,0],[0,0,1]]),
-                           nsl.ucell)
-        nsl.getFractionalCoordinates()
-      
-    for site in nsl.sitelist:
-        if site.el in rp.ELEMENT_MIX:
-            occdict = {}
-            for (k, v) in site.occ.items(): 
-                if v > 0.0: occdict[k] = v
-            occdict = dict(sorted(occdict.items(), 
-                                  key = lambda kv:(kv[1],kv[0])))  
-                                    #sort by occupancy values
-            al = [at for at in nsl.atlist if at.site == site]
-            totats = len(al)
-            for el in occdict:
-                subatlists[(site,el)] = []
-                reqats = int(np.ceil(totats * site.occ[el]))
-                reqats = max(2, reqats)
-                while reqats > 0 and len(al) > 0:
-                    at = random.choice(al)
-                    subatlists[(site,el)].append(at)
-                    al.remove(at)
-                    reqats -= 1
-            if len(al) > 0: #should never happen
-                logger.warning("Error in _PHASESHIFTS file "
-                        "generation: Not all atoms were distributed!")
-        else:
-            subatlists[(site,site.el)] = [at for at in nsl.atlist 
-                                          if at.site == site]
-    blocks = [(site,el) for (site,el) in blocks 
-              if len(subatlists[(site,el)]) > 0]
-
-#    if bulk: 
-#        bulksites = [site for (site,el) in blocks]
-#    else:
-#        # site objects are different in the new slab; copy to equivalent
-#        oldbulksites = bulksites[:]
-#        bulksites = []
-#        for oldsite in oldbulksites:
-#            for newsite in [site for (site,el) in blocks]:
-#                if newsite.isEquivalent(oldsite):
-#                    bulksites.append(newsite)
-    # start writing output, will be input for EEASiSSS code:
-    output = ''
-    output += "STRUCTURE:\n"
-    output += rp.systemName+" "+rp.timestamp+"\n"
-#    if bulk:
-#        output += ("'b'  1.00 16      BulkOrSlab('b' or 's'), "
-#                  "LatticeConstant(Angstroms), nshell\n")
-#    else:
-    output += ("'s'  1.00 16      BulkOrSlab('b' or 's'), "
-              "LatticeConstant(Angstroms), nshell\n")
-    uct = nsl.ucell.transpose()
-    for i in range(0,3):
-        ol = ''
-        for j in range(0,3):
-            s = str(round(uct[i,j],4))+' '
-            ol += s.ljust(8)
-        if i == 0:
-            ol += '      CoordinatesOfUnitCell(LCunits)\n'
-        else:
-            ol += '\n'
-        output += ol
-
-    output += (str(len(nsl.atlist))+"  "+str(len(nsl.atlist))
-               +"                  #AtomTypes,#OccupiedAtomTypes\n")
-    ptl = [el.lower() for el in tl.periodic_table]
-
-    chemels = {}
-    chemelspaths = {}
-    for (site, el) in blocks:
-        if el in rp.ELEMENT_RENAME:
-            chemel = rp.ELEMENT_RENAME[el]
-        elif el.lower() in ptl:
-            chemel = el.capitalize()
-        else:
-            logger.error("Error generating _PHASESHIFTS file: Could not "
-                          "identify "+el+" as a chemical element. Define "
-                          "ELEMENT_RENAME or ELEMENT_MIX parameter.")
-            raise
-        chgdenrelpath = os.path.join(atdenssource,chemel,"chgden"+chemel)
-        if os.name == 'nt':     #windows - replace the backslashes.
-            chgdenrelpath = chgdenrelpath.replace('/','\\')
-        chemels[el] = chemel
-        chemelspaths[el] = chgdenrelpath
-    
-    nsl.sortByZ(botToTop=True)
-    for at in nsl.atlist:
-        # realcartpos = np.dot(nsl.ucell, at.pos)   
-              # use the "real" cartesian system, with Z going up
-        for (site,el) in blocks:
-            if at in subatlists[(site,el)]:
-                chemel = chemels[el]
-                chgdenpath = chemelspaths[el]
-        output += ("1 "+str(tl.periodic_table.index(chemel)+1)
-                   + ".  0.  0.  '"+chgdenpath+"'\n")
-        ol = ""
-        for j in range(0,3):
-            # ol += str(round(realcartpos[j],4))+" "
-            ol += str(round(at.cartpos[j],4))+" "
-        output += ol + "     Coordinates(LCunits)\n"
-    output += "SCATTERING: \n"
-    output += "'"+excosource+"' |exchange-correlation file\n"
-    output += str(lmax)+"  |lmax\n"
-    output += "'r' |SelectCalculation: 'relativistic'/'nonrelativistic'\n"
-    output += "'p' |SelectOutput: 'phaseshift'/'sigma'/'dataflow'\n"
-    output += "'n' |phaseshift: print_SpinPhaseShift? 'yes'/no'\n"
-    output += ("'n' |phaseshift,sigma: print_log10(DsigmaDomega)? "
-              "'yes'/'no'\n")
-    output += "'n' |phaseshift,sigma: print_DsigmaDtheta? 'yes'/'no'\n"
-    output += "'n' |phaseshift,sigma: print_Sherman? 'yes'/'no'\n"
-    output += ("'n' |phaseshift,sigma: print_TotalCrossSection? "
-              "'yes'/'no'\n")
-    output += "'n' |dataflow: print_RhoPot? 'yes'/'no'\n"
-    output += "'n' |dataflow: print_PSvsE? 'yes'/'no'\n"
-    output += "'n' |dataflow: print_WaveFunction? 'yes'/'no'\n"
-    output += ("0.0," + str(round(float(rp.THEO_ENERGIES[1]) + 20, 1))
-               +","+str(round(float(rp.THEO_ENERGIES[2]),1))
-               +" |'phaseshift'/'dataflow' run: E1->E2,PS_Estep\n")
-    output += "100.,100.,1  |'sigma' run: E1->E2,NumVals\n"
-    # TODO - check the following, do they need to be changed?
-    output += "MT OPTIMIZATION (Nelder-Mead):\n"
-    output += "'*'           | NMselect: '*' or '+'\n"
-    output += "0.05d0   | NMlambda, simplex point shift.\n"
-    output += "3            | NMiter, no. of simplex calls.\n"
-    output += "1.d-04    ! NMeps,  simplex epsilon.\n"
-    output += "0.125d0 | NMepsit, epsilon iteration, eps=eps*epsit.\n"
-#    outfilename = 'eeasisss-input-bulk' if bulk else 'eeasisss-input-slab'
-    outfilename = 'eeasisss-input'
-    try:
-        with open(outfilename, 'w') as wf:
-            wf.write(output)
-    except:
-        logger.error("Phaseshift data generation: Failed to write "
-                      +outfilename+". Proceeding with execution...")
-    if os.name == 'nt':
-        logger.error("Phaseshift generation is currently not "
-                         "supported on Windows. Use a linux shell to run "
-                         "phaseshift generation script.")
-        raise EnvironmentError("Phaseshift generation is currently not "
-                               "supported on Windows.")
-    else:
-        subprocess.run(psgensource,input=output,encoding='ascii')
-    # go through all the files that were generated by EEASiSSS and read
-    filelist = [filename for filename in os.listdir('.') if 
-                filename.startswith('PS.r.')]
-    rgx = re.compile(r'PS\.r\.[0-9]+\.[0-9]+')
-    remlist = []
-    for filename in filelist:
-        m = rgx.match(filename)
-        if not m:
-            remlist.append(filename)
-        else:
-            if m.group(0) != filename:
-                remlist.append(filename)
-            else:
-                try:
-                    int(filename.split('.')[-1])
-                except:
-                    remlist.append(filename)
-    for filename in remlist:
-        filelist.remove(filename)
-    filelist.sort(key=lambda filename: int(filename.split('.')[-1]))
-                                                #now sorted by atom number
-    firstline = ""
-    atoms_phaseshifts = [[] for i in range(0,len(filelist))]    
-                                                #data from all the PS files                                               
-    for (i,filename) in enumerate(filelist):
-#        if bulk or wsl.atlist[i].site not in bulksites: 
-        if nsl.atlist[i] not in newbulkats:
-            psfile = open(filename, 'r')
-            reade = -1.
-            pslist = []
-            ps_of_e = {}    #dictionary of pslist for energy, where pslist 
-                            # is a list of floats as read from the PS-file
-            for (j,line) in enumerate(psfile):
-                if j == 0:
-#                    if not bulk: 
-                    if firstline == "":
-                        firstline = line[2:] #ignore I2 at beginning
-                else:   #line should contain data
-                    values = [float(s) for s in tl.linelist(line)]
-                    if reade < 0 or values[0] == reade + rp.THEO_ENERGIES[2]:     
-                        #new energy value, start phaseshift value list
-                        if reade >= 0:
-                            ps_of_e[reade] = pslist
-                        reade = values[0]
-                        pslist = values[1:]
-                    else:
-                        pslist.extend(values)
-            ps_of_e[reade] = pslist
-            psfile.close()
-            atoms_phaseshifts[i] = ps_of_e
-        os.remove(os.path.join('.',filename))   #delete files
-    for (site,el) in blocks:
-        writeblock = False
-        pssum = tl.DEFAULT
-        for (i,at) in enumerate(nsl.atlist):
-            if at not in newbulkats:
-#            if bulk or at.site not in bulksites: 
-                if at in subatlists[(site,el)]:
-                    if pssum == tl.DEFAULT:
-                        writeblock = True
-                        pel = at.el #POSCAR element for block
-                        pssum = atoms_phaseshifts[i]
-                        n = 1
-                    else:
-                        for en in atoms_phaseshifts[i]:
-                            for j in range(0,
-                                           len(atoms_phaseshifts[i][en])):
-                                pssum[en][j] += atoms_phaseshifts[i][en][j]
-                        n += 1
-        if writeblock:
-            # append the values for the whole block to outvals:
-            for en in pssum:
-                pssum[en] = [v/n for v in pssum[en]]
-                if not en in outvals: 
-                    outvals[en] = []
-                outvals[en].append((pel,el,site,pssum[en]))
-    # clean up
-#    bss = "-bulk" if bulk else "-slab"
-    bss = ""
-    try:
-        os.rename('logfile','eeasisss-logfile'+bss)
-    except:
-        logger.warning("Failed to rename phaseshift generation file "
-                        "'logfile' to 'eeasisss-logfile"+bss+"'")
-    try:
-        os.rename('QMTvsE','eeasisss-QMTvsE'+bss)
-    except:
-        logger.warning("Failed to rename phaseshift generation file "
-                        "'QMTvsE' to 'eeasisss-QMTvsE"+bss+"'")
-    try:
-        os.rename('RMTvsE','eeasisss-RMTvsE'+bss)
-    except:
-        logger.warning("Failed to rename phaseshift generation file "
-                        "'RMTvsE' to 'eeasisss-RMTvsE"+bss+"'")
-    try:
-        os.rename('V0vsE','eeasisss-V0vsE'+bss)
-    except:
-        logger.warning("Failed to rename phaseshift generation file "
-                        "'V0vsE' to 'eeasisss-V0vsE"+bss+"'")
-    # sort blocks in outvals:
-    outvalsSorted = {}
-    outvalLength = 0    # Due to a bug in eeasisss, it does not generate 
-            # exactly the energies it is asked to; this can result in 
-            # different energies being present for the bulk and the slab
-            # calculations. Workaround: Discard energies where not all sites 
-            # are present.
-    for en in outvals:
-        outvalsSorted[en] = []
-        if len(outvals[en]) > outvalLength:
-            outvalLength = len(outvals[en])
-    # first sort by POSCAR elements, same order as POSCAR:
-    for el in sl.elements:
-        if el in rp.ELEMENT_MIX:
-            chemelList = rp.ELEMENT_MIX[el]
-        else:
-            chemelList = [el]
-        siteList = [site for site in sl.sitelist if site.el == el]
-        for cel in chemelList:
-            for site in siteList:
-                for en in outvalsSorted:
-                    for (o_el,o_cel,o_site,pslist) in outvals[en]:
-                        if (o_el == el and o_cel == cel 
-                              and o_site.isEquivalent(site)):
-                            outvalsSorted[en].append(pslist)
-    # return:
-    # writePHASESHIFTS wants values as list of tuples and energies in Hartree:
-    phaseshifts = []
-    for en in outvalsSorted:
-        if len(outvalsSorted[en]) == outvalLength:    # drop energies where
-                        # phaseshift was not calculated for all sites
-            phaseshifts.append((en/27.2116,outvalsSorted[en]))
-    if firstline == "":
-        logger.error("Could not find first line for PHASESHIFTS file "
-                         "(should contain MUFTIN parameters).")
-        firstline = "ERROR: first line not found in EEASiSSS.x output\n"
-        rp.setHaltingLevel(2)
-    else:
-        # add number of blocks to firstline
-        nblocks = len(phaseshifts[0][1])
-        firstline = str(nblocks).rjust(3)+"  "+firstline
-        # remove the "PS.r.**.**"
-        firstline = re.sub("PS\.r\.[0-9]+\.[0-9]+", "", firstline)
-    
-    return (firstline, phaseshifts)
 
 def writePHASESHIFTS(firstline, phaseshifts, filename='_PHASESHIFTS'):
     """Takes phaseshift data and writes it to a _PHASESHIFTS file."""
@@ -612,111 +122,6 @@ def writePHASESHIFTS(firstline, phaseshifts, filename='_PHASESHIFTS'):
                       exc_info=True)
         raise
     return 0
-
-def getLEEDdict(sl, rp):
-    """Returns a LEED dict containing information needed by guilib functions"""
-    if sl.planegroup in ["pm", "pg", "cm", "rcm", "pmg"]:
-        pgstring = sl.planegroup+"[{} {}]".format(sl.orisymplane.par[0], 
-                                                  sl.orisymplane.par[1])
-    else:
-        pgstring = sl.planegroup
-    if not (abs(np.round(rp.SUPERLATTICE).astype(int) - rp.SUPERLATTICE) 
-                                                                < 1e-3).all():
-        logger.error("getLEEDdict: SUPERLATTICE contains non-integer-valued "
-                      "entries.")
-        return None
-    d = {"eMax": rp.THEO_ENERGIES[1], 
-         "SUPERLATTICE": rp.SUPERLATTICE.astype(int),
-          "surfBasis": np.transpose(sl.ucell[:2,:2]), 
-          "surfGroup": pgstring, "bulkGroup": sl.bulkslab.foundplanegroup,
-          "bulk3Dsym": sl.bulkslab.getBulk3Dstr()}
-    return d
-
-def getSymEqBeams(sl, rp):
-    """Returns a list of tuples ((hf,kf), index), where (hf,kf) are beams and 
-    index is the group of other beams they are equivalent to"""
-    symeqnames = get_equivalent_beams(getLEEDdict(sl, rp))
-    symeq = []
-    rgx = re.compile(r'(?P<h>[-0-9/]+)\s*,\s*(?P<k>[-0-9/]+)')
-    for (name, index) in symeqnames:
-        m = rgx.match(name)
-        if m:
-            h, k = m.group("h"), m.group("k")
-            try:
-                hf, kf = float(Fraction(h)), float(Fraction(k))
-            except:
-                logger.error("getBeamCorrespondence: Could not convert beam "
-                    "names from getEquivalentBeams to h,k floats")
-                raise
-            symeq.append(((hf,kf),index))
-        else:
-            logger.warning("getBeamCorrespondence: Beam name from "
-                            "getEquivalentBeams not recognized: "+name)
-    return symeq
-
-def getBeamCorrespondence(sl, rp):
-    """Compares theoretical and experimental beams, returns a list containing 
-    a number for each theoretical beam, indicating which experimental beam it 
-    corresponds to."""
-    eps = 1e-5  # for comparing beams
-    #   initialize to "no corresponding beam" for all theoretical beams:
-    beamcorr = [-1]*len(rp.ivbeams)
-    # get symmetry-equivalence list:
-    symeq = getSymEqBeams(sl, rp)
-    # first, go through experimental beams and assign theoreticals if clear:
-    remlist = []
-    for (ne, eb) in enumerate(rp.expbeams):
-        found = False
-        for (nt, tb) in enumerate(rp.ivbeams):
-            if eb.isEqual(tb, eps=eps):
-                beamcorr[nt] = ne
-                found = True
-                break
-        if not found:
-            # check symmetry equivalent ones to exp beam
-            eqbl = []   # hk of equivalent beams
-            for (hk, i) in symeq:
-                if eb.isEqual_hk(hk, eps=eps):
-                    eqbl.extend([hk2 for (hk2, j) in symeq if i == j])
-            for hk in eqbl:
-                for (nt, tb) in enumerate(rp.ivbeams):
-                    if tb.isEqual_hk(hk, eps=eps):
-                        beamcorr[nt] = ne
-                        found = True
-                        break
-                if found:
-                    break
-        if not found:
-            logger.warning("Experimental beam "+eb.label+" does not have a "
-                    "theoretical counterpart. Consider adding it to IVBEAMS.")
-            rp.setHaltingLevel(1)
-            remlist.append(eb)
-    for b in remlist:
-        rp.expbeams.remove(b)
-        logger.warning("Beam "+b.label+" was removed from set of "
-                        "experimental beams!")
-    # NUMBER OF EXPERIMENTAL BEAMS MUST BE STATIC FROM HERE ON OUT
-    # now, for theoretical beams without assignment, see if there is a 
-    #   symmetry-equivalent beam to assign them to
-    for (nt, tb) in enumerate(rp.ivbeams):
-        if beamcorr[nt] == -1:
-            found = False
-            eqbl = []   # hk of equivalent beams
-            for (hk, i) in symeq:
-                if tb.isEqual_hk(hk, eps=eps):
-                    eqbl.extend([hk2 for (hk2, j) in symeq if i == j])
-            for hk in eqbl:
-                for (ne, eb) in enumerate(rp.expbeams):
-                    if eb.isEqual_hk(hk, eps=eps):
-                        beamcorr[nt] = ne
-                        found = True
-                        break
-                if found:
-                    break
-        if not found:
-            logger.debug("No experimental beam found for calculated beam "
-                          + tb.label)
-    return beamcorr
 
 def writeSuperposPARAM(rp, filename = "PARAM"):
     """Writes a PARAM file for the Superpos calculation."""
@@ -854,7 +259,7 @@ def writeRfInfo(sl, rp, filename="rf.info"):
     else:
         vincr = step
     # find correspondence experimental to theoretical beams:
-    beamcorr = getBeamCorrespondence(sl, rp)
+    beamcorr = tl.leedbase.getBeamCorrespondence(sl, rp)
     # integer & fractional beams
     iorf = []
     for beam in rp.expbeams:
@@ -928,7 +333,7 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL"):
     else:
         vincr = step
     # find correspondence experimental to theoretical beams:
-    beamcorr = getBeamCorrespondence(sl, rp)
+    beamcorr = tl.leedbase.getBeamCorrespondence(sl, rp)
     # integer & fractional beams
     iorf = []
     for (i, beam) in enumerate(rp.ivbeams):
@@ -1352,7 +757,7 @@ SD.TL           name of search document file (max. 10 characters)
                 csurvive = []
                 if rp.SEARCH_CULL_TYPE == "genetic":  # prepare readable clines
                     try:
-                        csurvive = [tl.readIntLine(s, width=3) 
+                        csurvive = [tl.base.readIntLine(s, width=3) 
                                     for s in clines[:nsurvive]]
                     except:
                         logger.warning("SEARCH_CULL: Failed to read old "
@@ -1640,7 +1045,7 @@ def generateDeltaBasic(sl, rp):
     output += ol.ljust(24) + "EI,EF\n"
     f74x2 = ff.FortranRecordWriter('2F7.4')
     ucsurf = np.transpose(sl.ucell[:2,:2])
-    if sl.bulkslab == tl.DEFAULT:
+    if sl.bulkslab is None:
         sl.bulkslab = sl.makeBulkSlab(rp)
     ucbulk = np.transpose(sl.bulkslab.ucell[:2,:2])
     ol = f74x2.write(ucbulk[0])
@@ -1679,7 +1084,7 @@ def writePARAM(sl, rp):
     if m[1,1] != 0:     # m[1] not parallel to a_bulk
         if m[0,1] != 0: # m[0] not parallel to a_bulk
             # find basis in which m[0] is parallel to a_bulk
-            f = tl.lcm(abs(int(m[0,1])),abs(int(m[1,1])))
+            f = tl.base.lcm(abs(int(m[0,1])),abs(int(m[1,1])))
             m[0] *= f/m[0,1]
             m[1] *= f/m[1,1]
             m[0] -= m[1]*np.sign(m[0,1])*np.sign(m[1,1])
@@ -1717,7 +1122,7 @@ def writePARAM(sl, rp):
     mnbrav = 0
     mnsub = 0
     mnstack = 0
-    if sl.bulkslab == tl.DEFAULT:
+    if sl.bulkslab is None:
         sl.bulkslab = sl.makeBulkSlab(rp)
     for layer in [l for l in sl.layers if not l.isBulk]:
         mnstack += 1
@@ -1774,7 +1179,7 @@ def writeAUXLATGEO(sl, rp):
     output += ol + 'EI,EF,DE\n'
     f74x2 = ff.FortranRecordWriter('2F7.4')
     ucsurf = np.transpose(sl.ucell[:2,:2])
-    if sl.bulkslab == tl.DEFAULT:
+    if sl.bulkslab is None:
         sl.bulkslab = sl.makeBulkSlab(rp)
     ucbulk = np.transpose(sl.bulkslab.ucell[:2,:2])
     ol = f74x2.write(ucbulk[0]).ljust(24)
@@ -1879,7 +1284,7 @@ def writeAUXBEAMS(ivbeams=[], beamlist=[], beamsfile='IVBEAMS',
     blocks = 0
     totalbeams = 0
     for line in beamlist:
-        llist = tl.linelist(line)
+        llist = line.split()
         if len(llist) > 1:
             totalbeams += 1
             for b in ivbeams:
@@ -1962,7 +1367,7 @@ def writeAUXGEO(sl, rp):
     blayers = [l for l in sl.layers if l.isBulk]
     nblayers = [l for l in sl.layers if not l.isBulk]
     layerOffsets = [np.array([0.,0.,0.]) for i in range(0, len(sl.layers)+1)]
-    if sl.bulkslab == tl.DEFAULT:
+    if sl.bulkslab is None:
         sl.bulkslab = sl.makeBulkSlab(rp)
     for i, layer in enumerate(sl.layers):
         output += '-   layer type '+str(i+1)+' ---\n'
@@ -2217,7 +1622,7 @@ C  set real part of inner potential
 
 """
     oline = "      VV = "+rp.V0_REAL
-    output += tl.fortranContLine(oline) + "\n"
+    output += tl.base.fortranContLine(oline) + "\n"
     output += """
       write(6,*) workfn, EEV
       write(6,*) VV
@@ -2230,15 +1635,15 @@ c  set imaginary part of inner potential - energy independent value used here
 
 """
     oline = "      VPI = "+str(rp.V0_IMAG)
-    output += tl.fortranContLine(oline) + "\n"
+    output += tl.base.fortranContLine(oline) + "\n"
     output += """
 C  set substrate / overlayer imaginary part of inner potential
 
 """
     oline = "      VPIS = "+str(rp.V0_IMAG)
-    output += tl.fortranContLine(oline) + "\n"
+    output += tl.base.fortranContLine(oline) + "\n"
     oline = "      VPIO = "+str(rp.V0_IMAG)
-    output += tl.fortranContLine(oline) + "\n"
+    output += tl.base.fortranContLine(oline) + "\n"
     output += """
       return
       end"""
@@ -2255,7 +1660,7 @@ C  set substrate / overlayer imaginary part of inner potential
 def writeIVBEAMS(sl, rp, filename="IVBEAMS"):
     """Writes an IVBEAMS file based on rp.exbeams. Returns 
     those beams in IVBEAMS form."""
-    d = getLEEDdict(sl, rp)
+    d = tl.leedbase.getLEEDdict(sl, rp)
     if d is None:
         logger.error("Failed to write IVBEAMS")
         return []
@@ -2567,7 +1972,7 @@ def writePatternInfo(sl, rp, filename="PatternInfo.tlm"):
     else:
         pgstring = sl.planegroup
     output += "surfGroup = "+pgstring+"\n"
-    if sl.bulkslab == tl.DEFAULT:
+    if sl.bulkslab is None:
         logger.error("PatternInfo.tlm: bulk slab has not been initialized.")
         return 1
     output += "bulkGroup = "+sl.bulkslab.foundplanegroup+"\n"
@@ -2581,130 +1986,6 @@ def writePatternInfo(sl, rp, filename="PatternInfo.tlm"):
         raise
     logger.debug("Wrote to "+filename+" successfully")
     return 0
-
-def processSearchResults(sl, rp, final=True):
-    """Looks at the SD.TL file and gets the data from the best structure in 
-    the last generation into the slab. The "final" tag defines whether this is 
-    the final interpretation that *must* work and should go into the log, or 
-    if this will be repeated anyway. Then calls writeSearchOutput to write 
-    POSCAR_OUT, VIBROCC_OUT, and modify data in sl and rp."""
-    # get the last block from SD.TL:
-    try:
-        lines = tl.readSDTL_end()
-    except FileNotFoundError:
-        logger.error("Could not process Search results: SD.TL file not "
-                      "found.")
-        raise
-    except:
-        logger.error("Failed to get last block from SD.TL file.")
-        raise
-    # read the block
-    pops = [] # tuples (r, pars) with 
-              #   r..rfactor, pars..list of parameter indices
-    popcount = []   # how often a given population is there
-    parlist = []    # for control.chem
-    data = False
-    for (ln, line) in enumerate(lines):
-        if ln == 0:
-            generation = 0
-            try:
-                generation = int(tl.linelist(line)[2])
-                if final:
-                    logger.info("Reading search results from SD.TL, "
-                                 "generation {}".format(generation))
-            except:
-                if final:
-                    logger.warning("Reading search results from SD.TL, could "
-                                "not determine final generation number. "
-                                "Reading last block.")
-                    rp.setHaltingLevel(1)
-        elif "|" in line and line[:3] != "IND":
-            # this is a line with data in it
-            try:
-                rav = float(line.split("|")[2 + rp.SEARCH_BEAMS]) # R-factor
-                valstring = line.split("|")[-1].rstrip()
-                pars = tl.readIntLine(valstring, width=4)
-                parlist.append(pars)
-            except:
-                if final:
-                    logger.error("Could not read line in SD.TL:\n"+line)
-                    raise
-                else:
-                    return("Line read error in SD.TL")
-            data = True
-            if (rav, pars) in pops:
-                popcount[pops.index((rav, pars))] += 1
-            else:
-                pops.append((rav,pars))
-                popcount.append(1)
-    if not data:
-        if final:
-            logger.error("No data found in SD.TL file!")
-            rp.setHaltingLevel(2)
-        return("No data in SD.TL")
-    
-    writeControlChem = False
-    if not os.path.isfile("control.chem"):
-        writeControlChem = True
-    else:
-        # check file, which generation
-        try:
-            with open("control.chem", "r") as rf:
-                rf.readline() # first line is empty.
-                s = rf.readline()
-                s = s.split("No.")[-1].split(":")[0]
-                if int(s) != generation:
-                    writeControlChem = True
-                if len(rf.readlines()) < rp.SEARCH_POPULATION:
-                    writeControlChem = True
-        except:
-            # try overwriting, just to be safe
-            writeControlChem = True
-    # write backup file
-    output = ("\nParameters of generation No." + str(generation).rjust(6)
-              + ":\n")
-    for l in parlist:
-        ol = ""
-        for ind in l:
-            ol += str(ind).rjust(3)
-        ol += "  1\n" # !!! to check: why does this sometimes have value 2?
-                      # !!! DOMAINS: Last value is domain configuration
-        output += ol
-    rp.controlChemBackup = output
-    if writeControlChem:
-        try:
-            with open("control.chem", "w") as wf:
-                wf.write(output)
-        except:
-            # if final:
-            logger.error("Failed to write control.chem")
-            rp.setHaltingLevel(1)
-        
-    # info for log:
-    maxpop = max(popcount)
-    if final:
-        if len(pops) == 1:
-            logger.info("All trial structures converged to the same "
-                    "configuration (R = {:.4f})".format(pops[0][0]))
-        elif any([v > rp.SEARCH_POPULATION/2 for v in popcount]):
-            info = ("The search outcome is dominated by one configuration "
-                    "(population {} of {}, R = {:.4f})\n".format(maxpop, 
-                    rp.SEARCH_POPULATION, pops[popcount.index(maxpop)][0]))
-        else:
-            info = ("The search outcome is not dominated by any "
-                    "configuration. The best result has population {} (of {})"
-                    ", R = {:.4f}\n".format(popcount[0], rp.SEARCH_POPULATION, 
-                                            pops[0][0]))
-        if len(pops) > 1:
-            info += ("The best configurations are:\n"
-                     "POP       R | PARAMETERS\n")
-            for i in range(0,min(5,len(pops))):
-                info += "{:>3}  {:.4f} | ".format(popcount[i], pops[i][0])
-                for v in pops[i][1]:
-                    info += "{:>3}".format(v)
-                info += "\n"
-            logger.info(info)
-    return writeSearchOutput(sl, rp, pops[0][1], silent=(not final))
 
 def writeSearchOutput(sl, rp, parinds=None, silent=False):
     """Modifies data in sl and rp to reflect the search result given by 
@@ -3046,8 +2327,8 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
             axs[2].set_ylabel("\u2211(\u0394Y)\u00b2")    # sum delta Y ^2
             axs[2].set_xlabel("Energy (eV)")
             
-            ytheo = tl.getYfunc(theo, v0i)
-            yexp = tl.getYfunc(exp, v0i)
+            ytheo = tl.leedbase.getYfunc(theo, v0i)
+            yexp = tl.leedbase.getYfunc(exp, v0i)
             dy = np.array([(ytheo[j, 0], yexp[j, 1] - ytheo[j, 1]) 
                            for j in range(0, len(ytheo))])
             dysq = np.copy(dy)

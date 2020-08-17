@@ -18,6 +18,8 @@ import re
 import scipy.spatial as sps
 import itertools
 
+from tleedmlib.base import angle, rotMatrix
+from tleedmlib.leedbase import periodic_table, elementCovalentRadii
 import tleedmlib as tl
 from tleedmlib import DEFAULT
 
@@ -63,7 +65,7 @@ class SymPlane:
             complist.append(complist[1]+complist[2]-complist[0])
 
         for p in complist:
-            if tl.distanceLineThroughPointsFromPoint(pl2.pos,
+            if tl.base.distanceLineThroughPointsFromPoint(pl2.pos,
                                                      pl2.pos+pl2.dir,p) < eps:
                 return True
         return False
@@ -115,7 +117,7 @@ class Slab:
                                      #   the 'Plane group = XY' comment
         self.deltasInitialized = False
 
-        self.bulkslab = DEFAULT    # Slab object containing only bulk layers
+        self.bulkslab = None       # Slab object containing only bulk layers
         self.bulkScrews = []       # only assigned to the bulkslab object!
                     # Integer list of rotation orders present in the bulk
         self.bulkGlides = []       # only assigned to the bulkslab object!
@@ -596,9 +598,9 @@ class Slab:
         elif order == -6:
             m = np.array([[0.5,-np.sqrt(3)/2],[np.sqrt(3)/2,0.5]])
         else:
-            angle = 2*np.pi/order
-            m = np.array([[np.cos(angle),-np.sin(angle)],
-                           [np.sin(angle),np.cos(angle)]])
+            ang = 2*np.pi/order
+            m = np.array([[np.cos(ang),-np.sin(ang)],
+                           [np.sin(ang),np.cos(ang)]])
         for at in self.atlist:
             at.cartpos[0:2] -= axis    # translate origin to candidate point
             at.cartpos[0:2] = np.dot(m, at.cartpos[0:2])    # rotation
@@ -607,10 +609,11 @@ class Slab:
     def mirror(self, symplane, glide=False):
         """Translates the atoms in the slab to have the symplane in the
         origin, applies a mirror or glide matrix, then translates back"""
-        angle = tl.angle(np.array([1,0]),symplane.dir)
-        if symplane.dir[1] > 0: angle *= -1
-        rotm = np.array([[np.cos(angle),-np.sin(angle)],
-                          [np.sin(angle),np.cos(angle)]])
+        ang = angle(np.array([1,0]),symplane.dir)
+        if symplane.dir[1] > 0: 
+            ang *= -1
+        rotm = np.array([[np.cos(ang),-np.sin(ang)],
+                          [np.sin(ang),np.cos(ang)]])
         rotmirm = np.dot(np.linalg.inv(rotm),
                          np.dot(np.array([[1,0],[0,-1]]),rotm))
                             #rotates to have plane in x direction, mirrors on x
@@ -638,7 +641,7 @@ class Slab:
     def isRotationSymmetric(self,axis,order,eps):
         """Evaluates whether the slab is equivalent to itself when rotated
         around the axis with the given rotational order"""
-        m = tl.rotMatrix(order)
+        m = rotMatrix(order)
         ab = self.ucell[0:2,0:2]
         abt = np.transpose(ab)
         releps = np.array([0.0,0.0])
@@ -818,7 +821,7 @@ class Slab:
         """Evaluates whether the slab has a screw axis of the given order when 
         translated by the given number of sublayers."""
         m = np.array([[1,0,0],[0,1,0],[0,0,1]], dtype=float)
-        m[:2, :2] = tl.rotMatrix(order)
+        m[:2, :2] = rotMatrix(order)
         return self.isBulkTransformSymmetric(m, sldisp, eps)
 
     
@@ -826,10 +829,11 @@ class Slab:
         """Evaluates whether the bulk has a glide plane along a given 
         direction, i.e. mirror at this direction, then some translation."""
         m = np.array([[1,0,0],[0,1,0],[0,0,1]], dtype=float)
-        angle = tl.angle(np.array([1,0]),symplane.dir)
-        if symplane.dir[1] > 0: angle *= -1
-        rotm = np.array([[np.cos(angle),-np.sin(angle)],
-                          [np.sin(angle),np.cos(angle)]])
+        ang = angle(np.array([1,0]),symplane.dir)
+        if symplane.dir[1] > 0: 
+            ang *= -1
+        rotm = np.array([[np.cos(ang),-np.sin(ang)],
+                          [np.sin(ang),np.cos(ang)]])
         m[:2, :2] = np.dot(np.linalg.inv(rotm),
                          np.dot(np.array([[1,0],[0,-1]]),rotm))
         return self.isBulkTransformSymmetric(m, sldisp, eps)
@@ -837,10 +841,11 @@ class Slab:
     def isMirrorSymmetric(self, symplane, eps, glide=False):
         """Evaluates whether the slab is equivalent to itself when applying a
         mirror or glide operation at a given plane"""
-        angle = tl.angle(np.array([1,0]),symplane.dir)
-        if symplane.dir[1] > 0: angle *= -1
-        rotm = np.array([[np.cos(angle),-np.sin(angle)],
-                          [np.sin(angle),np.cos(angle)]])
+        ang = angle(np.array([1,0]),symplane.dir)
+        if symplane.dir[1] > 0: 
+            ang *= -1
+        rotm = np.array([[np.cos(ang),-np.sin(ang)],
+                          [np.sin(ang),np.cos(ang)]])
         rotmirm = np.dot(np.linalg.inv(rotm),
                          np.dot(np.array([[1,0],[0,-1]]),rotm))
                             #rotates to have plane in x direction, mirrors on x
@@ -996,7 +1001,7 @@ class Slab:
         if not smaller:
             return(False, abst)
         else:
-            mincell, _, _ = tl.reduceUnitCell(mincell, eps)
+            mincell, _, _ = tl.leedbase.reduceUnitCell(mincell, eps)
             # cosmetic corrections
             if abs(mincell[0,0]) < eps and abs(mincell[1,1]) < eps:
                 # if matrix is diagonal, swap a and b
@@ -1219,7 +1224,6 @@ class Slab:
                           ", ".join([str(gl.par) for gl in glidesfound]))
         return 0
 
-
     def findSymmetry(self, rp, bulk=False, output=True):
         """Reduces the unit cell if necessary and finds the plane group of the
         slab. Stores the plane group and the higher-symmetry direction of the
@@ -1231,13 +1235,13 @@ class Slab:
         # reduce surface unit cell
         abst = np.transpose(self.ucell[0:2,0:2]) #surface unit cell, transposed
 #        usurf = np.array([[1,0],[0,1]])
-        abst, usurf, celltype = tl.reduceUnitCell(abst, eps)
+        abst, usurf, celltype = tl.leedbase.reduceUnitCell(abst, eps)
                                             # usurf tracks unit cell changes
         # reduce bulk unit cell
         if not bulk:
             abbt = np.dot(np.linalg.inv(rp.SUPERLATTICE),abst)
                                                 #bulk ab unit cell, transposed
-            abbt, ubulk, _ = tl.reduceUnitCell(abbt, eps)
+            abbt, ubulk, _ = tl.leedbase.reduceUnitCell(abbt, eps)
                                                # ubulk tracks unit cell changes
         utr = np.array([[0,0,0],[0,0,0],[0,0,1]])
         utr[0:2,0:2] = usurf
@@ -1291,7 +1295,7 @@ class Slab:
                 celltype = "rectangular"
         elif np.linalg.norm(abst[0]) - np.linalg.norm(abst[1]) >= eps:
             celltype = "oblique"
-        elif tl.angle(abst[0],abst[1]) - (2*np.pi/3) < eps:
+        elif angle(abst[0],abst[1]) - (2*np.pi/3) < eps:
             celltype = "hexagonal"
         else:
             celltype = "rhombic"
@@ -1347,8 +1351,8 @@ class Slab:
             pl = [at.cartpos[0:2] for at in lowocclayer.atlist]
             symposlist, hexsymposlist = self.getSymPosLists(rp, pl, output)
 
-        comsymposlist = tl.addUnequalPoints(symposlist,hexsymposlist,eps,
-                                            uniqueLists=True)
+        comsymposlist = tl.base.addUnequalPoints(symposlist,hexsymposlist,eps,
+                                                 uniqueLists=True)
 
         # we're done with the bigger slab, actually testing symmetry operations
         #   can be done just on the basic one.
@@ -1469,9 +1473,9 @@ class Slab:
             if oriplane != DEFAULT:
                 # shift to closest point on oriplane
                 shiftv = (np.array([oriplane.dir[1], -oriplane.dir[0]])
-                    * tl.distanceLineThroughPointsFromPoint(oriplane.pos,
+                    * tl.base.distanceLineThroughPointsFromPoint(oriplane.pos,
                                 oriplane.pos+oriplane.dir, np.array([0,0])))
-                if tl.distanceLineThroughPointsFromPoint(oriplane.pos,
+                if tl.base.distanceLineThroughPointsFromPoint(oriplane.pos,
                                     oriplane.pos+oriplane.dir,shiftv) > eps:
                     shiftv = -1*shiftv
                 for at in self.atlist:
@@ -2139,9 +2143,9 @@ class Slab:
                 tmpslab = copy.deepcopy(self)
                 tmpslab.rotate(np.array([0,0]),toprotsym)
                 tmpslab.collapseCartesianCoordinates()
-                angle = 2*np.pi/toprotsym
-                m = np.array([[np.cos(angle),-np.sin(angle)],[np.sin(angle),
-                               np.cos(angle)]])
+                ang = 2*np.pi/toprotsym
+                m = np.array([[np.cos(ang),-np.sin(ang)],[np.sin(ang),
+                               np.cos(ang)]])
                 for (sli,sl1) in enumerate(self.sublayers):
                     for (ati,at1) in enumerate(sl1.atlist):
                         for (atj,at2) in enumerate(tmpslab.sublayers[sli]
@@ -2184,10 +2188,11 @@ class Slab:
                 tmpslab = copy.deepcopy(self)
                 tmpslab.mirror(testplane, glide=g)
                 tmpslab.collapseCartesianCoordinates()
-                angle = tl.angle(np.array([1,0]),testplane.dir)
-                if testplane.dir[1] > 0: angle *= -1
-                rotm = np.array([[np.cos(angle),-np.sin(angle)],
-                                 [np.sin(angle),np.cos(angle)]])
+                ang = angle(np.array([1,0]),testplane.dir)
+                if testplane.dir[1] > 0: 
+                    ang *= -1
+                rotm = np.array([[np.cos(ang),-np.sin(ang)],
+                                 [np.sin(ang),np.cos(ang)]])
                 m = np.dot(np.linalg.inv(rotm),np.dot(np.array([[1,0],[0,-1]]),
                                                       rotm))
                 for (sli,sl1) in enumerate(self.sublayers):
@@ -2317,14 +2322,14 @@ class Slab:
             # then if not locked yet, check planes
             if not at.freedir == 0:
                 for pl in lockplanes:
-                    d = tl.distanceLineThroughPointsFromPoint(pl.pos,
+                    d = tl.base.distanceLineThroughPointsFromPoint(pl.pos,
                                                 pl.pos+pl.dir,at.cartpos[0:2])
                     if d < eps:
                         at.freedir = pl.par
                         if not nomove:  #shift atom onto plane
                             shiftv = np.array([pl.dir[1], -pl.dir[0]])*d
-                            if (tl.distanceLineThroughPointsFromPoint(pl.pos,
-                                        pl.pos+pl.dir,at.cartpos[0:2]+shiftv)
+                            if (tl.base.distanceLineThroughPointsFromPoint(
+                                  pl.pos,pl.pos+pl.dir,at.cartpos[0:2]+shiftv)
                                    > d*1.1):
                                 shiftv = -1*shiftv
                             at.cartpos[0:2] += shiftv
@@ -2419,10 +2424,11 @@ class Slab:
                     if abs(np.dot(np.array([1,0]),d)-1) < 0.001:
                         found = True
             if not found:
-                angle = tl.angle(np.array([1,0]),mirrordirs[0])
-                if mirrordirs[0][1] > 0: angle *= -1
-                rotm = np.array([[np.cos(angle),-np.sin(angle),0],
-                                  [np.sin(angle),np.cos(angle),0],[0,0,1]])
+                ang = angle(np.array([1,0]),mirrordirs[0])
+                if mirrordirs[0][1] > 0: 
+                    ang *= -1
+                rotm = np.array([[np.cos(ang),-np.sin(ang),0],
+                                  [np.sin(ang),np.cos(ang),0],[0,0,1]])
                 self.ucell = np.dot(rotm,self.ucell)
                 for i in range(0,3):
                     for j in range(0,3):
@@ -2431,7 +2437,7 @@ class Slab:
                 self.getCartesianCoordinates()
                 # modify BEAM_INCIDENCE
                 if rp.THETA != 0:
-                    rp.PHI += np.degrees(angle)
+                    rp.PHI += np.degrees(ang)
                     tl.modifyPARAMETERS(rp, "BEAM_INCIDENCE",
                        "BEAM_INCIDENCE = {:.3f} {:.3f}".format(rp.THETA,
                                                                rp.PHI))
@@ -2555,7 +2561,7 @@ class Slab:
         testats.sort(key=lambda atom: -atom.pos[2])
         covered = []
         surfats = []
-        ptl = [el.lower() for el in tl.periodic_table]
+        ptl = [el.lower() for el in periodic_table]
         for ta in testats:
             if ta.el in rp.ELEMENT_MIX:
                 # radius as weighted average
@@ -2564,7 +2570,7 @@ class Slab:
                 for chemel in rp.ELEMENT_MIX[ta.el]:
                     if chemel.lower() in ptl:
                         if chemel in ta.site.occ:
-                            r += (tl.elementCovalentRadii[chemel.capitalize()]
+                            r += (elementCovalentRadii[chemel.capitalize()]
                                   * ta.site.occ[chemel])
                             totalocc += ta.site.occ[chemel]
                     else:
@@ -2579,7 +2585,7 @@ class Slab:
                     r /= totalocc
             else:
                 if ta.el.lower() in ptl:
-                    r = tl.elementCovalentRadii[ta.el.capitalize()]
+                    r = elementCovalentRadii[ta.el.capitalize()]
                 else:
                     logger.error("Error identifying surface atoms: Could not "
                          "identify "+ta.el+" as a chemical element.")

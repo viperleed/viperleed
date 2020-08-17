@@ -17,9 +17,134 @@ from timeit import default_timer as timer
 import numpy as np
 import signal
 
+from tleedmlib.leedbase import fortranCompile
 import tleedmlib as tl
 
 logger = logging.getLogger("tleedm.search")
+
+def processSearchResults(sl, rp, final=True):
+    """Looks at the SD.TL file and gets the data from the best structure in 
+    the last generation into the slab. The "final" tag defines whether this is 
+    the final interpretation that *must* work and should go into the log, or 
+    if this will be repeated anyway. Then calls writeSearchOutput to write 
+    POSCAR_OUT, VIBROCC_OUT, and modify data in sl and rp."""
+    # get the last block from SD.TL:
+    try:
+        lines = tl.readSDTL_end()
+    except FileNotFoundError:
+        logger.error("Could not process Search results: SD.TL file not "
+                      "found.")
+        raise
+    except:
+        logger.error("Failed to get last block from SD.TL file.")
+        raise
+    # read the block
+    pops = [] # tuples (r, pars) with 
+              #   r..rfactor, pars..list of parameter indices
+    popcount = []   # how often a given population is there
+    parlist = []    # for control.chem
+    data = False
+    for (ln, line) in enumerate(lines):
+        if ln == 0:
+            generation = 0
+            try:
+                generation = int(line.split()[2])
+                if final:
+                    logger.info("Reading search results from SD.TL, "
+                                 "generation {}".format(generation))
+            except:
+                if final:
+                    logger.warning("Reading search results from SD.TL, could "
+                                "not determine final generation number. "
+                                "Reading last block.")
+                    rp.setHaltingLevel(1)
+        elif "|" in line and line[:3] != "IND":
+            # this is a line with data in it
+            try:
+                rav = float(line.split("|")[2 + rp.SEARCH_BEAMS]) # R-factor
+                valstring = line.split("|")[-1].rstrip()
+                pars = tl.base.readIntLine(valstring, width=4)
+                parlist.append(pars)
+            except:
+                if final:
+                    logger.error("Could not read line in SD.TL:\n"+line)
+                    raise
+                else:
+                    return("Line read error in SD.TL")
+            data = True
+            if (rav, pars) in pops:
+                popcount[pops.index((rav, pars))] += 1
+            else:
+                pops.append((rav,pars))
+                popcount.append(1)
+    if not data:
+        if final:
+            logger.error("No data found in SD.TL file!")
+            rp.setHaltingLevel(2)
+        return("No data in SD.TL")
+    
+    writeControlChem = False
+    if not os.path.isfile("control.chem"):
+        writeControlChem = True
+    else:
+        # check file, which generation
+        try:
+            with open("control.chem", "r") as rf:
+                rf.readline() # first line is empty.
+                s = rf.readline()
+                s = s.split("No.")[-1].split(":")[0]
+                if int(s) != generation:
+                    writeControlChem = True
+                if len(rf.readlines()) < rp.SEARCH_POPULATION:
+                    writeControlChem = True
+        except:
+            # try overwriting, just to be safe
+            writeControlChem = True
+    # write backup file
+    output = ("\nParameters of generation No." + str(generation).rjust(6)
+              + ":\n")
+    for l in parlist:
+        ol = ""
+        for ind in l:
+            ol += str(ind).rjust(3)
+        ol += "  1\n" # !!! to check: why does this sometimes have value 2?
+                      # !!! DOMAINS: Last value is domain configuration
+        output += ol
+    rp.controlChemBackup = output
+    if writeControlChem:
+        try:
+            with open("control.chem", "w") as wf:
+                wf.write(output)
+        except:
+            # if final:
+            logger.error("Failed to write control.chem")
+            rp.setHaltingLevel(1)
+        
+    # info for log:
+    maxpop = max(popcount)
+    if final:
+        if len(pops) == 1:
+            logger.info("All trial structures converged to the same "
+                    "configuration (R = {:.4f})".format(pops[0][0]))
+        elif any([v > rp.SEARCH_POPULATION/2 for v in popcount]):
+            info = ("The search outcome is dominated by one configuration "
+                    "(population {} of {}, R = {:.4f})\n".format(maxpop, 
+                    rp.SEARCH_POPULATION, pops[popcount.index(maxpop)][0]))
+        else:
+            info = ("The search outcome is not dominated by any "
+                    "configuration. The best result has population {} (of {})"
+                    ", R = {:.4f}\n".format(popcount[0], rp.SEARCH_POPULATION, 
+                                            pops[0][0]))
+        if len(pops) > 1:
+            info += ("The best configurations are:\n"
+                     "POP       R | PARAMETERS\n")
+            for i in range(0,min(5,len(pops))):
+                info += "{:>3}  {:.4f} | ".format(popcount[i], pops[i][0])
+                for v in pops[i][1]:
+                    info += "{:>3}".format(v)
+                info += "\n"
+            logger.info(info)
+    return tl.writeSearchOutput(sl, rp, pops[0][1], silent=(not final))
 
 def search(sl, rp):
     """Runs the search. Returns 0 when finishing without errors, or an error 
@@ -36,7 +161,7 @@ def search(sl, rp):
                           "files were generated. Cannot execute search.")
             return ("Delta calculations was not run for current tensors.")
         try:
-            r = tl.getDeltas(rp.TENSOR_INDEX, required=True)
+            r = tl.leedbase.getDeltas(rp.TENSOR_INDEX, required=True)
         except:
             raise
         if r != 0:
@@ -44,7 +169,7 @@ def search(sl, rp):
     # if number of cores is not defined, try to find it
     if rp.N_CORES == 0:
         try:
-            rp.N_CORES = tl.available_cpu_count()
+            rp.N_CORES = tl.base.available_cpu_count()
         except:
             logger.error("Failed to detect number of cores.")
         logger.info("Automatically detected number of available CPUs: {}"
@@ -123,7 +248,7 @@ def search(sl, rp):
                 return ("Fortran compile error")
     # get fortran files
     try:
-        tldir = tl.getTLEEDdir()
+        tldir = tl.leedbase.getTLEEDdir()
         srcpath = os.path.join(tldir,'src')
         srcname = [f for f in os.listdir(srcpath) 
                       if f.startswith('search.mpi')][0]
@@ -151,23 +276,23 @@ def search(sl, rp):
         fcomp = rp.FORTRAN_COMP
     logger.info("Compiling fortran input files...")
     try:
-        r=tl.fortranCompile(fcomp[0]+" -o lib.search.o -c", 
+        r=fortranCompile(fcomp[0]+" -o lib.search.o -c", 
                             libname, fcomp[1])
         if r:
             logger.error("Error compiling "+libname+", cancelling...")
             return ("Fortran compile error")
-        r=tl.fortranCompile(fcomp[0]+" -o restrict.o -c", 
+        r=fortranCompile(fcomp[0]+" -o restrict.o -c", 
                             "restrict.f", fcomp[1])
         if r:
             logger.error("Error compiling restrict.f, cancelling...")
             return ("Fortran compile error")
-        r=tl.fortranCompile(fcomp[0]+" -o search.o -c", srcname,
+        r=fortranCompile(fcomp[0]+" -o search.o -c", srcname,
                             fcomp[1])
         if r:
             logger.error("Error compiling "+srcname+", cancelling...")
             return ("Fortran compile error")
         # combine
-        r=tl.fortranCompile(fcomp[0]+" -o "+ searchname, "search.o "
+        r=fortranCompile(fcomp[0]+" -o "+ searchname, "search.o "
                             "random_.o lib.search.o restrict.o", fcomp[1])
         if r:
             logger.error("Error compiling fortran files, cancelling...")
@@ -353,8 +478,7 @@ def search(sl, rp):
                     if (len(gens) > 1 and os.path.isfile("SD.TL") and 
                                                 (repeat or not stop)):
                         try:
-                            r = tl.processSearchResults(sl, rp, 
-                                                        final=False)
+                            r = processSearchResults(sl, rp, final=False)
                         except Exception as e:
                             r = repr(e)
                         if r != 0:
@@ -474,7 +598,7 @@ def search(sl, rp):
             logger.warning("Error writing Search-report.pdf",
                             exc_info = True)
     # process SD.TL to get POSCAR_OUT, VIBROCC_OUT
-    r = tl.processSearchResults(sl, rp)
+    r = processSearchResults(sl, rp)
     if r != 0:
         logger.error("Error processing search results: "+r)
         return r

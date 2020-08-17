@@ -14,6 +14,7 @@ import shutil
 import subprocess
 
 import tleedmlib as tl
+from tleedmlib.leedbase import fortranCompile
 
 logger = logging.getLogger("tleedm.rfactor")
 
@@ -101,7 +102,7 @@ def rfactor(sl, rp, index):
         raise
     # get fortran files and compile
     try:
-        tldir = tl.getTLEEDdir()
+        tldir = tl.leedbase.getTLEEDdir()
         libpath = os.path.join(tldir,'lib')
         libname = [f for f in os.listdir(libpath) 
                       if f.startswith('rfacsb')][0]
@@ -126,17 +127,17 @@ def rfactor(sl, rp, index):
             logger.error("No fortran compiler found, cancelling...")
             return ("Fortran compile error")
     try:
-        r=tl.fortranCompile(rp.FORTRAN_COMP[0]+" -o rfacsb.o -c", 
+        r=fortranCompile(rp.FORTRAN_COMP[0]+" -o rfacsb.o -c", 
                             libname, rp.FORTRAN_COMP[1])
         if r:
             logger.error("Error compiling "+libname+", cancelling...")
             return ("Fortran compile error")
-        r=tl.fortranCompile(rp.FORTRAN_COMP[0]+" -o main.o -c", srcname,
+        r=fortranCompile(rp.FORTRAN_COMP[0]+" -o main.o -c", srcname,
                             rp.FORTRAN_COMP[1])
         if r:
             logger.error("Error compiling "+srcname+", cancelling...")
             return ("Fortran compile error")
-        r=tl.fortranCompile(rp.FORTRAN_COMP[0]+" -o "+rfacname, "rfacsb.o "
+        r=fortranCompile(rp.FORTRAN_COMP[0]+" -o "+rfacname, "rfacsb.o "
                           "main.o", rp.FORTRAN_COMP[1])
         if r:
             logger.error("Error compiling fortran files, cancelling...")

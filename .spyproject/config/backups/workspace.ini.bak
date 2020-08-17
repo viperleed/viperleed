@@ -6,5 +6,5 @@ save_non_project_files = False
 
 [main]
 version = 0.2.0
-recent_files = ['tleedm-doc.txt', 'tleedm.py', 'tleedmlib\\sections\\rfactor.py', 'tleedmlib\\sections\\deltas.py', 'tleedmlib\\baselib.py', 'tleedmlib\\sections\\search.py', 'tleedmlib\\sections\\superpos.py']
+recent_files = ['tleedm-doc.txt', 'tleedmlib\\baselib.py', 'tleedmlib\\write.py', 'tleedmlib\\read.py', 'tleedmlib\\classes\\Atom.py', 'tleedmlib\\classes\\Beam.py', 'tleedmlib\\classes\\Layer.py', 'tleedmlib\\classes\\Slab.py']
 

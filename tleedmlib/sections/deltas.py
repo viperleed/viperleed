@@ -146,7 +146,7 @@ def compileDelta(comptask):
                 + "while trying to write PARAM file.")
     # get Fortran source files
     try:
-        tldir = tl.getTLEEDdir(home=home)
+        tldir = tl.leedbase.getTLEEDdir(home=home)
         libpath = os.path.join(tldir,'lib')
         libname1 = [f for f in os.listdir(libpath) 
                       if f.startswith('lib.tleed')][0]
@@ -170,13 +170,14 @@ def compileDelta(comptask):
         for (fname, oname) in [(srcname, "main.o"), 
                                (libname1, "lib.tleed.o"), 
                                (libname2, "lib.delta.o")]:
-            r = tl.fortranCompile(comptask.fortran_comp[0]+" -o "
-                    +oname+" -c", fname, comptask.fortran_comp[1])
+            r = tl.leedbase.fortranCompile(comptask.fortran_comp[0]+" -o "
+                                +oname+" -c", fname, comptask.fortran_comp[1])
             if r:
                 logger.error("Error compiling "+srcname)
                 return ("Fortran compile error in DeltaCompileTask "
                         + comptask.foldername)
-        r=tl.fortranCompile(comptask.fortran_comp[0]+" -o " + comptask.exename
+        r=tl.leedbase.fortranCompile(comptask.fortran_comp[0]+" -o " 
+                            + comptask.exename
                             +" main.o lib.tleed.o lib.delta.o",
                             comptask.fortran_comp[1])
         if r:
@@ -202,20 +203,20 @@ def deltas(sl, rp):
         logger.error("No Tensors directory found.")
         return("Tensors not found")
     try:
-        tl.getTensors(rp.TENSOR_INDEX)
+        tl.leedbase.getTensors(rp.TENSOR_INDEX)
     except:
         raise
     if not 1 in rp.runHistory:
         dn = "Tensors_"+str(rp.TENSOR_INDEX).zfill(3)
         logger.debug("Running without reference calculation, checking "
             "input files in "+dn+" to determine original configuration.")
-        r = tl.getTensorOriStates(sl, os.path.join(".","Tensors",dn))
+        r = tl.leedbase.getTensorOriStates(sl, os.path.join(".","Tensors",dn))
         if r != 0:
             return r
         sl.restoreOriState(keepDisp=True)
     # if there are old deltas, fetch them
     try:
-        tl.getDeltas(rp.TENSOR_INDEX, required=False)
+        tl.leedbase.getDeltas(rp.TENSOR_INDEX, required=False)
     except:
         raise
     dbasic = tl.generateDeltaBasic(sl, rp)
@@ -451,7 +452,7 @@ def deltas(sl, rp):
     # if number of cores is not defined, try to find it
     if rp.N_CORES == 0:
         try:
-            rp.N_CORES = tl.available_cpu_count()
+            rp.N_CORES = tl.base.available_cpu_count()
         except:
             logger.error("Failed to detect number of cores.")
         logger.info("Automatically detected number of available CPUs: {}"

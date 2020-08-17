@@ -15,7 +15,6 @@ import copy
 
 import fortranformat as ff
 import tleedmlib as tl
-from tleedmlib import DEFAULT
 
 logger = logging.getLogger("tleedm.read")
 
@@ -65,10 +64,10 @@ def readPOSCAR(filename='POSCAR'):
         if linenum == 1:
             pass
         elif linenum == 2:
-            scaling = float(tl.linelist(line)[0])
+            scaling = float(line.split()[0])
         elif linenum <= 5:
             if linenum == 3: ucellList = []
-            llist = [float(i) for i in tl.linelist(line)]
+            llist = [float(i) for i in line.split()]
             ucellList.append(llist)
             if linenum == 5:
                 sl.ucell = scaling * np.transpose(np.array(ucellList))
@@ -82,11 +81,11 @@ def readPOSCAR(filename='POSCAR'):
                                 'not have an out-of-surface (Z) component!')
                         raise
         elif linenum == 6:
-            sl.elements = tl.linelist(line)			# element labels
+            sl.elements = line.split()       		# element labels
             sl.oriels = sl.elements[:]              # copy
             sl.nelem = len(sl.elements)			# number of different elements
         elif linenum == 7:
-            sl.nperelem = [int(i) for i in tl.linelist(line)]
+            sl.nperelem = [int(i) for i in line.split()]
             if len(sl.nperelem) != sl.nelem:
                 logger.warning('\nPOSSIBLE PROBLEM: lenght of element list '
                   'does not match length of atoms-per-element list\n')
@@ -100,7 +99,7 @@ def readPOSCAR(filename='POSCAR'):
         elif linenum == 9:
             # this line might already contain coordinates, or not, depending
             # on whether the "Selective dynamics" line was there
-            llist = tl.linelist(line)
+            llist = line.split()
             try:
                 pos = np.array([float(llist[0]), float(llist[1]),
                                 float(llist[2])])
@@ -118,7 +117,7 @@ def readPOSCAR(filename='POSCAR'):
                 # exception was raised because of the 'Selective dynamics'
                 # line; this is fine, move on.
         elif read:
-            llist = tl.linelist(line)
+            llist = line.split()
             if len(llist) == 0:
                 read = False
                 logger.debug("POSCAR: Empty line found; stopping position "
@@ -201,7 +200,7 @@ def updatePARAMETERS_searchOnly(rp, filename='PARAMETERS'):
                 param = plist[0]
         try:
             value = line.split('=', maxsplit=1)[1].rstrip()
-            llist = tl.linelist(value)  #read the stuff to the right of "="
+            llist = value.split()  #read the stuff to the right of "="
         except IndexError:
             llist = []
         if not llist:
@@ -240,7 +239,7 @@ def updatePARAMETERS_searchOnly(rp, filename='PARAMETERS'):
                         rp.SEARCH_MAX_DGEN_SCALING[target] = fl[1]
 
 
-def readPARAMETERS(filename='PARAMETERS', slab=DEFAULT, silent=False):
+def readPARAMETERS(filename='PARAMETERS', slab=None, silent=False):
     """Reads a PARAMETERS file and returns an Rparams object with the
     information"""
     # open input file
@@ -274,7 +273,7 @@ def readPARAMETERS(filename='PARAMETERS', slab=DEFAULT, silent=False):
             param = plist[0]
         try:
             value = line.split('=', maxsplit=1)[1].rstrip()
-            llist = tl.linelist(value)  #read the stuff to the right of "="
+            llist = value.split()  #read the stuff to the right of "="
         except IndexError:
             llist = []
         if not llist:
@@ -298,7 +297,7 @@ def readPARAMETERS(filename='PARAMETERS', slab=DEFAULT, silent=False):
         elif param == 'BEAM_INCIDENCE':
             if ',' in value:
                 try:
-                    sublists = tl.splitSublists(llist, ',')
+                    sublists = tl.base.splitSublists(llist, ',')
                     for sl in sublists:
                         if sl[0].lower() == 'theta':
                             theta = float(sl[1])
@@ -397,7 +396,7 @@ def readPARAMETERS(filename='PARAMETERS', slab=DEFAULT, silent=False):
                             else:  #c
                                 rpars.BULK_REPEAT = slab.ucell[2,2] * v
             else:  # vector
-                vec = tl.readVector(s, slab.ucell)
+                vec = tl.leedbase.readVector(s, slab.ucell)
                 if vec is None:
                     logger.warning('PARAMETERS file: BULK_REPEAT: '
                         'Could not parse input expression. Input will '
@@ -405,7 +404,7 @@ def readPARAMETERS(filename='PARAMETERS', slab=DEFAULT, silent=False):
                 else:
                     rpars.BULK_REPEAT = vec
         elif param == 'ELEMENT_MIX':
-            ptl = [el.lower() for el in tl.periodic_table]
+            ptl = [el.lower() for el in tl.leedbase.periodic_table]
             found = False
             for el in llist:
                 if el.lower() not in ptl:
@@ -418,7 +417,7 @@ def readPARAMETERS(filename='PARAMETERS', slab=DEFAULT, silent=False):
                 rpars.ELEMENT_MIX[plist[1]] = [el.capitalize()
                                             for el in llist]
         elif param == 'ELEMENT_RENAME':
-            ptl = [el.lower() for el in tl.periodic_table]
+            ptl = [el.lower() for el in tl.leedbase.periodic_table]
             if llist[0].lower() not in ptl:
                 logger.warning('PARAMETERS file: ELEMENT_RENAME for '
                         +plist[1]+': '+llist[0]+' not found in periodic table.'
@@ -665,7 +664,7 @@ def readPARAMETERS(filename='PARAMETERS', slab=DEFAULT, silent=False):
         elif param == 'RUN':
             rl = []
             for s in llist:
-                l = tl.readIntRange(s)
+                l = tl.base.readIntRange(s)
                 if len(l) > 0:
                     rl.extend(l)
                 else:
@@ -876,15 +875,15 @@ def readPARAMETERS(filename='PARAMETERS', slab=DEFAULT, silent=False):
                 rpars.setHaltingLevel(1)
         elif param == 'SITE_DEF':
             newdict = {}
-            sublists = tl.splitSublists(llist, ',')
+            sublists = tl.base.splitSublists(llist, ',')
             for sl in sublists:
                 atnums = []
                 for i in range(1, len(sl)):
-                    l = tl.readIntRange(sl[i])
+                    l = tl.base.readIntRange(sl[i])
                     if len(l) > 0:
                         atnums.extend(l)
                     elif "top(" in sl[i]:
-                        if slab == DEFAULT:
+                        if slab is None:
                             logger.warning('PARAMETERS file: SITE_DEF '
                                 'parameter contains a top() function, '
                                 'but no slab was passed. The atoms '
@@ -908,18 +907,18 @@ def readPARAMETERS(filename='PARAMETERS', slab=DEFAULT, silent=False):
             rpars.SITE_DEF[plist[1]]=newdict
         elif param == 'SUPERLATTICE':
             if not 'M' in plist:
-                if slab == DEFAULT:
+                if slab is None:
                     logger.warning('PARAMETERS file: SUPERLATTICE '
                             'parameter appears to be in Wood notation, '
                             'but no slab was passed; cannot calculate '
                             'bulk unit cell!')
                     rpars.setHaltingLevel(2)
                 else:
-                    rpars.SUPERLATTICE = tl.readWoodsNotation(value,
+                    rpars.SUPERLATTICE = tl.leedbase.readWoodsNotation(value,
                                                               slab.ucell)
                     rpars.superlattice_defined = True
             else:
-                sublists = tl.splitSublists(llist, ',')
+                sublists = tl.base.splitSublists(llist, ',')
                 if not len(sublists) == 2:
                     logger.warning('PARAMETERS file: error reading '
                                      'SUPERLATTICE matrix: number of '
@@ -1082,7 +1081,7 @@ def readPARAMETERS(filename='PARAMETERS', slab=DEFAULT, silent=False):
                                 'positive integer.')
                 rpars.setHaltingLevel(1)
         elif param == 'TENSOR_OUTPUT':
-            nl = tl.recombineListElements(llist, '*')
+            nl = tl.base.recombineListElements(llist, '*')
             for s in nl:
                 try:
                     v = int(s)
@@ -1421,7 +1420,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock):
                 pside = line.split('=')[0].strip()
                 if pside:
                      #get rid of spaces and check the leftmost entry.
-                    plist = tl.linelist(pside)
+                    plist = pside.split()
                     if plist:
                         param = plist[0]
                         if param[0] == '!':
@@ -1432,7 +1431,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock):
             continue
         value = line.split('=')[1].strip()
         try:
-            llist = tl.linelist(value)
+            llist = value.split()
         except IndexError:
             logger.warning("DISPLACEMENTS file: " + param + " appears to "
                             "have no value")
@@ -1576,7 +1575,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock):
         targetAtEls = []
         _break = True
         for (sname, nums) in ats:
-            numlist = tl.linelist(nums)
+            numlist = nums.split()
             if numlist:
                 # get proper numlist as integers
                 # first need to recombine expressions like "L(2 3)"
@@ -1599,7 +1598,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock):
                 numlist = []
                 for s in nl:
                     if not "l(" in s:
-                        l = tl.readIntRange(s)
+                        l = tl.base.readIntRange(s)
                         if len(l) > 0:
                             numlist.extend(l)
                         else:
@@ -1615,7 +1614,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock):
                                     +pside)
                             rp.setHaltingLevel(2)
                             break
-                        l = tl.readIntRange(m.group("laynum"))
+                        l = tl.base.readIntRange(m.group("laynum"))
                         if len(l) == 0:
                             logger.warning('DISPLACEMENTS file: could '
                                     'not parse layer expression, skipping '
@@ -1885,7 +1884,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock):
                     at.assignDisp(mode, drange, targetel)
         elif mode == 3:
             # occupations, get ranges:
-            sublists = tl.splitSublists(llist, ',')
+            sublists = tl.base.splitSublists(llist, ',')
             maxsteps = 0
             _break = True
             for subl in sublists:
@@ -2268,7 +2267,7 @@ def readVIBROCC(rp, slab, filename='VIBROCC'):
                         continue
         if mode in [1,2]:
             try:
-                llist = tl.linelist(line.split('=')[1])
+                llist = line.split('=')[1].split()
             except IndexError:
                 logger.warning('VIBROCC file: ' + param + ' appears to have '
                                 'no value')
@@ -2280,7 +2279,7 @@ def readVIBROCC(rp, slab, filename='VIBROCC'):
                 rp.setHaltingLevel(1)
                 continue
             # first get values on the right
-            sublists = tl.splitSublists(tl.readToExc(llist), ',')
+            sublists = tl.base.splitSublists(tl.base.readToExc(llist), ',')
             # read parameter on the left
             targetsites = []
             for site in slab.sitelist:
@@ -2416,7 +2415,7 @@ def readIVBEAMS(filename='IVBEAMS'):
         line = line.replace("(", " ")
         line = line.replace(")", " ")
         line = line.replace("|", " ")
-        llist = tl.linelist(line)
+        llist = line.split()
         if len(llist) == 1 and linenum != 1:
             logger.warning('A line with only one element was found in '
                             'IVBEAMS and will be skipped: '+line)
@@ -2470,11 +2469,11 @@ def sortIVBEAMS(sl, rp):
             logger.error("_BEAMLIST not found.")
             raise
     err = 1e-3           #since beams are saved as floats, give error tolerance
-    symeq = tl.getSymEqBeams(sl, rp)
+    symeq = tl.leedbase.getSymEqBeams(sl, rp)
     # first, get beamlist as floats
     blfs = []
     for line in rp.beamlist:
-        llist = tl.linelist(line)
+        llist = line.split()
         if len(llist) > 1:
             fl = []
             for i in range(0,2):
@@ -2619,7 +2618,7 @@ def readPHASESHIFTS(sl, rp, readfile='_PHASESHIFTS', check=True):
             psblocks += n*len([s for s in sl.sitelist if s.el == el])
         # check for MUFTIN parameters:
         muftin = True
-        llist = tl.linelist(firstline)
+        llist = firstline.split()
         if len(llist) >= 6:
             for i in range(1,5):
                 try:
@@ -2675,7 +2674,7 @@ def readPHASESHIFTS(sl, rp, readfile='_PHASESHIFTS', check=True):
         psmin = round(phaseshifts[0][0]*27.2116, 2)
         psmax = round(phaseshifts[-1][0]*27.2116, 2)
         if rp.V0_REAL == "default":
-            llist = tl.linelist(firstline)
+            llist = firstline.split()
             c = []
             try:
                 for i in range(0,4):
@@ -2740,7 +2739,7 @@ def readFdOut(readfile="fd.out"):
     i = 1   # number lines as in text editor - be careful about indexing!
     nbeams = 1e10   # some large number, just to enter the while loop
     while i < nbeams+3:
-        llist = tl.linelist(filelines[i-1])
+        llist = filelines[i-1].split()
         if i == 1:
             pass #header - skip
         elif i == 2:
@@ -2759,7 +2758,7 @@ def readFdOut(readfile="fd.out"):
     # Collect them, skipping empty lines
     blocks = []
     for line in filelines[i-1:]:
-        llist = tl.linelist(line)
+        llist = line.split()
         if len(llist) > 0:  # skip empty lines
             try:
                 float(llist[0])
@@ -3037,7 +3036,7 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=";", enrange=[]):
 
 def checkEXPBEAMS(sl, rp):
     remlist = []
-    symeq = tl.getSymEqBeams(sl, rp)
+    symeq = tl.leedbase.getSymEqBeams(sl, rp)
     for (bi, b) in enumerate(rp.expbeams):
         if b in remlist:
             continue
@@ -3089,8 +3088,8 @@ def readAUXEXPBEAMS(filename="AUXEXPBEAMS", interactive=False):
                 sh = m.group("h")   #string h
                 sk = m.group("k")   #string k
                 try:
-                    h = tl.parseMathSqrt(sh)
-                    k = tl.parseMathSqrt(sk)
+                    h = tl.base.parseMathSqrt(sh)
+                    k = tl.base.parseMathSqrt(sk)
                 except:
                     failedToRead = True
                 else:
@@ -3116,8 +3115,8 @@ def readAUXEXPBEAMS(filename="AUXEXPBEAMS", interactive=False):
                             return []
                         if hks and len(hks.split()) > 1:
                             try:
-                                h = tl.parseMathSqrt(hks.split()[0])
-                                k = tl.parseMathSqrt(hks.split()[1])
+                                h = tl.base.parseMathSqrt(hks.split()[0])
+                                k = tl.base.parseMathSqrt(hks.split()[1])
                             except:
                                 print("Could not parse h/k")
                             else:
@@ -3126,7 +3125,7 @@ def readAUXEXPBEAMS(filename="AUXEXPBEAMS", interactive=False):
                                 break
         elif read and topline:
             topline = False
-            llist = tl.linelist(line)
+            llist = line.split()
             try:
                 scaling = float(llist[1])
             except:
@@ -3198,7 +3197,7 @@ def readSDTL_blocks(content, whichR = 0):
 def readSDTL_end(filename="SD.TL"):
     """Reads the last generation block from the SD.TL file."""
     # get the last block from SD.TL:
-    bwr = tl.BackwardsReader(filename)
+    bwr = tl.base.BackwardsReader(filename)
     lines = [""]
     while not "CCCCCCCCCCC    GENERATION" in lines[-1] and len(bwr.data) > 0:
         lines.append(bwr.readline())
@@ -3208,7 +3207,7 @@ def readSDTL_end(filename="SD.TL"):
 
 def readROUT_end(filename="ROUT"):      # UNUSED
     """Reads the last line of ROUT, returns the average R-factor as float."""
-    bwr = tl.BackwardsReader(filename)
+    bwr = tl.base.BackwardsReader(filename)
     line = ""
     while not "AVERAGE R-FACTOR =" in line and len(bwr.data) > 0:
         line = bwr.readline()
@@ -3302,53 +3301,3 @@ def readROUT(filename="ROUT"):
                     rfac_frac = rav
     return (rfac, rfac_int, rfac_frac), v0rshift, rfaclist
 
-def getTensorOriStates(sl, path):
-    """Reads POSCAR, PARAMETERS and VIBROCC from the target path, gets the 
-    original state of the atoms and sites, and stores them in the given 
-    slab's atom/site oriState variables."""
-    for fn in ["POSCAR", "PARAMETERS", "VIBROCC"]:
-        if not os.path.isfile(os.path.join(path, fn)):
-            logger.error("File "+fn+" is missing in "+path)
-            return("Could not check Tensors: File missing")
-    # loglevel = logging.getLogger("tleedm").level
-    loglevel = logger.level
-    logger.setLevel(logging.ERROR)
-    dn = os.path.basename(path)
-    try:
-        tsl = tl.readPOSCAR(os.path.join(path, "POSCAR"))
-        trp = tl.readPARAMETERS(slab = tsl, filename = 
-                                os.path.join(path, "PARAMETERS"))
-        tsl.fullUpdate(trp)
-        tl.readVIBROCC(trp, tsl, filename = os.path.join(path, "VIBROCC"))
-        tsl.fullUpdate(trp)
-    except:
-        logger.error("Error checking Tensors: Error while reading "
-                      "input files in "+dn)
-        return("Could not check Tensors: Error loading old input "
-               "files")
-    finally:
-        # logging.getLogger("tleedm").setLevel(loglevel)
-        logger.setLevel(loglevel)
-    if len(tsl.atlist) != len(sl.atlist):
-        logger.error("POSCAR from "+dn+" is incompatible with "
-                      "current POSCAR.")
-        return("Tensors file incompatible")
-    for at in sl.atlist:
-        tal = [tat for tat in tsl.atlist if at.oriN == tat.oriN]
-        if len(tal) != 1:
-            logger.error("POSCAR from "+dn+" is incompatible with "
-                          "current POSCAR.")
-            return("Tensors file incompatible")
-        at.copyOriState(tal[0])
-    if len(tsl.sitelist) != len(sl.sitelist):
-        logger.error("Sites from "+dn+" input differ from current "
-                      "input.")
-        return("Tensors file incompatible")
-    for site in sl.sitelist:
-        tsitel = [s for s in tsl.sitelist if site.label == s.label]
-        if len(tsitel) != 1:
-            logger.error("Sites from "+dn+" input differ from "
-                          "current input.")
-            return("Tensors file incompatible")
-        site.oriState = copy.deepcopy(tsitel[0])
-    return 0

@@ -15,6 +15,7 @@ import shutil
 import subprocess
 
 import tleedmlib as tl
+from tleedmlib.leedbase import fortranCompile
 
 logger = logging.getLogger("tleedm.refcalc")
 
@@ -67,7 +68,7 @@ def refcalc(sl, rp):
         logger.error("Exception during writeMuftin: ")
         raise
     try:
-        tldir = tl.getTLEEDdir()
+        tldir = tl.leedbase.getTLEEDdir()
         libpath = os.path.join(tldir,'lib')
         libname = [f for f in os.listdir(libpath) 
                       if f.startswith('lib.tleed')][0]
@@ -93,22 +94,22 @@ def refcalc(sl, rp):
             logger.error("No fortran compiler found, cancelling...")
             return ("Fortran compile error")
     try:
-        r=tl.fortranCompile(rp.FORTRAN_COMP[0]+" -o muftin.o -c", 
-                            "muftin.f", rp.FORTRAN_COMP[1])
+        r=fortranCompile(rp.FORTRAN_COMP[0]+" -o muftin.o -c", 
+                         "muftin.f", rp.FORTRAN_COMP[1])
         if r:
             logger.error("Error compiling muftin.f, cancelling...")
             return ("Fortran compile error")
-        r=tl.fortranCompile(rp.FORTRAN_COMP[0]+" -o lib.tleed.o -c", 
-                            libname, rp.FORTRAN_COMP[1])
+        r=fortranCompile(rp.FORTRAN_COMP[0]+" -o lib.tleed.o -c", 
+                                     libname, rp.FORTRAN_COMP[1])
         if r:
             logger.error("Error compiling "+libname+", cancelling...")
             return ("Fortran compile error")
-        r=tl.fortranCompile(rp.FORTRAN_COMP[0]+" -o main.o -c", srcname,
+        r=fortranCompile(rp.FORTRAN_COMP[0]+" -o main.o -c", srcname,
                             rp.FORTRAN_COMP[1])
         if r:
             logger.error("Error compiling "+srcname+", cancelling...")
             return ("Fortran compile error")
-        r=tl.fortranCompile(rp.FORTRAN_COMP[0]+" -o "+rcname, "muftin.o "
+        r=fortranCompile(rp.FORTRAN_COMP[0]+" -o "+rcname, "muftin.o "
                           "lib.tleed.o main.o", rp.FORTRAN_COMP[1])
         if r:
             logger.error("Error compiling fortran files, cancelling...")
@@ -177,7 +178,7 @@ def refcalc(sl, rp):
     # move and zip tensor files
     if not os.path.isdir(os.path.join(".","Tensors")):
         os.mkdir(os.path.join(".","Tensors"))
-    rp.TENSOR_INDEX = tl.getMaxTensorIndex() + 1
+    rp.TENSOR_INDEX = tl.leedbase.getMaxTensorIndex() + 1
     rp.manifest.append("Tensors")
     dn = "Tensors_"+str(rp.TENSOR_INDEX).zfill(3)
     if not os.path.isdir(os.path.join(".","Tensors",dn)):

@@ -220,7 +220,7 @@ class Rparams:
         initialization) can be calculated now"""
         # TENSOR_INDEX:
         if self.TENSOR_INDEX is None:
-            self.TENSOR_INDEX = tl.getMaxTensorIndex()
+            self.TENSOR_INDEX = tl.leedbase.getMaxTensorIndex()
         # SEARCH_CONVERGENCE:
         if self.searchConvInit["gaussian"] is None:
             self.searchConvInit["gaussian"] = self.GAUSSIAN_WIDTH
@@ -274,7 +274,7 @@ class Rparams:
                     self.setHaltingLevel(1)
             # V0_REAL
             if self.V0_REAL == "default":
-                llist = tl.linelist(self.phaseshifts_firstline)
+                llist = self.phaseshifts_firstline.split()
                 c = []
                 try:
                     for i in range(0,4):

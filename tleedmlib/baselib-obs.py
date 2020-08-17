@@ -7,12 +7,14 @@ Created on Jun 13 2019
 Contains generic functions used in the TensErLEED scripts.
 """
 
+# !!! OBSOLETE
+
 import logging
 import numpy as np
 import re
 # import math
-import scipy.spatial as sps
-import itertools
+# import scipy.spatial as sps
+# import itertools
 import subprocess
 import multiprocessing
 import os
@@ -315,7 +317,7 @@ def fortranCompile(pre="", filename="", post="",
     """Assembles pre+filename+post to a filename, tries to execute via 
     subprocess.run, raises an exception if it fails."""
     fc = pre+" "+filename+" "+post
-    fcl = linelist(fc)
+    fcl = fc.split()
     sep = ""
     if os.path.isfile(logname):
         sep = "\n\n"
@@ -569,20 +571,6 @@ def readWoodsNotation(s, ucell):
         logger.warning("SUPERLATTICE values do not round to "
                         "integer values. Check SUPERLATTICE parameter.")
     return mat
-     
-def linelist(line):
-    """Splits a line at whitespace, deletes empty elements and line breaks, 
-    then returns elements as a list"""
-    llist1 = line.split()
-    llist = []
-    for part in llist1:
-        if part != "":    # get rid of empty elements
-            if part[-1][-1:] != '\n':   # get rid of line breaks
-                llist.append(part)
-            else:
-                if part != '\n':
-                    llist.append(part[:-1])
-    return llist
 
 def readToExc(llist):
     """For reading PARAMETERS files; takes a list, returns elements until the 
@@ -752,42 +740,42 @@ def reduceUnitCell(ab, eps = 0.001):
         t = np.dot(t2,t)
     return ab, t, lat
 
-def addUnequalPoints(l1,l2,eps,uniqueLists=False):
-    """Adds all points from l1 to l2, if they are not already in l2 
-    (+- epsilon)."""
-    nl2 = l2[:]
-    nl1 = l1[:]
-    if len(l2) == 0:
-        nl2 = nl1
-    else:
-        if not uniqueLists:
-            #first get rid of duplicates in nl1
-            tree = sps.KDTree(nl1)
-            usepoint = [True]*len(nl1)
-            for (i,p) in enumerate(nl1):
-                if usepoint[i]:
-                    for j in tree.query_ball_point(p, eps)[1:]: 
-                        usepoint[j] = False
-            nl1 = list(itertools.compress(nl1,usepoint))
-        #then add remaining elements to l2:
-        dl = sps.distance.cdist(np.vstack(tuple(l1)), np.vstack(tuple(l2)), 
-                                'euclidean')
-        for (i,sublist) in enumerate(dl):
-            if min(sublist) >= eps:
-                nl2.append(l1[i])
-    return nl2
+# def addUnequalPoints(l1,l2,eps,uniqueLists=False):            # !!! OBSOLETE?
+#     """Adds all points from l1 to l2, if they are not already in l2 
+#     (+- epsilon)."""
+#     nl2 = l2[:]
+#     nl1 = l1[:]
+#     if len(l2) == 0:
+#         nl2 = nl1
+#     else:
+#         if not uniqueLists:
+#             #first get rid of duplicates in nl1
+#             tree = sps.KDTree(nl1)
+#             usepoint = [True]*len(nl1)
+#             for (i,p) in enumerate(nl1):
+#                 if usepoint[i]:
+#                     for j in tree.query_ball_point(p, eps)[1:]: 
+#                         usepoint[j] = False
+#             nl1 = list(itertools.compress(nl1,usepoint))
+#         #then add remaining elements to l2:
+#         dl = sps.distance.cdist(np.vstack(tuple(l1)), np.vstack(tuple(l2)), 
+#                                 'euclidean')
+#         for (i,sublist) in enumerate(dl):
+#             if min(sublist) >= eps:
+#                 nl2.append(l1[i])
+#     return nl2
 
-def pointIsInList(p,l,eps):
-    """Checks whether a point is contained in a list of points, given an 
-    epsilon."""
-    if len(l) == 0: 
-        return False
-    dl = sps.distance.cdist(np.array([list(p)]), np.vstack(tuple(l)), 
-                            'euclidean')
-    if min(dl[0]) < eps:
-        return True
-    else:
-        return False
+# def pointIsInList(p,l,eps):                                   # !!! OBSOLETE?
+#     """Checks whether a point is contained in a list of points, given an 
+#     epsilon."""
+#     if len(l) == 0: 
+#         return False
+#     dl = sps.distance.cdist(np.array([list(p)]), np.vstack(tuple(l)), 
+#                             'euclidean')
+#     if min(dl[0]) < eps:
+#         return True
+#     else:
+#         return False
     
 def available_cpu_count():
     """ Number of available virtual or physical CPUs on this system, i.e.

@@ -27,7 +27,7 @@ def superpos(sl, rp):
         rp.disp_block_read = True
     if not (2 in rp.runHistory or 3 in rp.runHistory):
         try:
-            r = tl.getDeltas(rp.TENSOR_INDEX, required=True)
+            r = tl.leedbase.getDeltas(rp.TENSOR_INDEX, required=True)
         except:
             raise
         if r != 0:
@@ -128,7 +128,7 @@ def superpos(sl, rp):
             return ("Fortran compile error")
     # get fortran files
     try:
-        tldir = tl.getTLEEDdir()
+        tldir = tl.leedbase.getTLEEDdir()
         srcpath = os.path.join(tldir,'src')
         srcname = [f for f in os.listdir(srcpath) 
                       if f.startswith('superpos')][0]
@@ -146,7 +146,7 @@ def superpos(sl, rp):
     sposname = "superpos-"+rp.timestamp
     logger.info("Compiling fortran input files...")
     try:
-        r=tl.fortranCompile(rp.FORTRAN_COMP[0]+" -o", sposname+" "
+        r=tl.leedbase.fortranCompile(rp.FORTRAN_COMP[0]+" -o", sposname+" "
                           + srcname + " " + libname, rp.FORTRAN_COMP[1])
         if r:
             logger.error("Error compiling fortran files, cancelling...")

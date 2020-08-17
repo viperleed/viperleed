@@ -12,6 +12,8 @@ import os
 import logging
 import copy
 
+from tleedmlib.beamgen import runBeamGen
+from tleedmlib.psgen import runPhaseshiftGen
 import tleedmlib as tl
 
 logger = logging.getLogger("tleedm.initialization")
@@ -54,7 +56,7 @@ def initialization(sl, rp):
             serneliuspath = os.path.join('.', 'source', 'seSernelius')
             logger.info("Generating phaseshifts data... ")
             (rp.phaseshifts_firstline, 
-                        rp.phaseshifts) = tl.runPhaseshiftGen(sl, rp,
+                        rp.phaseshifts) = runPhaseshiftGen(sl, rp,
                                                psgensource = rundgrenpath, 
                                                excosource = serneliuspath)
             logger.debug("Finished generating phaseshift data")
@@ -94,7 +96,7 @@ def initialization(sl, rp):
                       "execution will continue...")
 
     # create bulk slab:
-    if sl.bulkslab == tl.DEFAULT:
+    if sl.bulkslab is None:
         sl.bulkslab = sl.makeBulkSlab(rp)
     bsl = sl.bulkslab
     # find minimum in-plane unit cell for bulk:
@@ -104,7 +106,7 @@ def initialization(sl, rp):
         sl.changeBulkCell(rp, mincell)
         bsl = sl.bulkslab
     if not rp.superlattice_defined:
-        ws = tl.writeWoodsNotation(rp.SUPERLATTICE) 
+        ws = tl.leedbase.writeWoodsNotation(rp.SUPERLATTICE) 
                 # !!! replace the writeWoodsNotation from baselib with 
                 #   the one from guilib
         si = rp.SUPERLATTICE.astype(int)
@@ -134,7 +136,7 @@ def initialization(sl, rp):
     logger.info("Generating _BEAMLIST...")
     try:
         bgenpath = os.path.join('.', 'source', 'beamgen3.out')
-        tl.runBeamGen(sl,rp,beamgensource = bgenpath)
+        runBeamGen(sl,rp,beamgensource = bgenpath)
         # this does NOT read the resulting file!
     except:
         logger.error("Exception occurred while calling beamgen.")
