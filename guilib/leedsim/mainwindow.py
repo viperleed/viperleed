@@ -42,7 +42,7 @@ class LEED_GUI(qtw.QMainWindow):
     # these are the parameters to read from the LEED file
     inputParams = ('eMax', 'surfBasis', 'SUPERLATTICE', 'surfGroup',
                    'bulkGroup')
-    optionalParams = ('bulk3Dsym',)
+    optionalParams = ('bulk3Dsym', 'screenAperture')
     
     def __init__(self):
         super().__init__()
@@ -321,6 +321,13 @@ class LEED_GUI(qtw.QMainWindow):
         par_dict['SUPERLATTICE'] = gl.string_matrix_to_numpy(
             par_dict['SUPERLATTICE'], int, needs_shape=(2, 2))
         
+        try:
+            par_dic['screenAperture'] = float(par_dict['screenAperture'])
+        except ValueError:
+            self.fileErr += ("Warning: screenAperture not found, or value "
+                             " not acceptable. Will use default 110 deg.")
+            par_dict['screenAperture'] = 110.0
+        
         # Now handle the exit conditions
         try:
             gl.PlaneGroup(par_dict['bulkGroup'])
@@ -344,8 +351,7 @@ class LEED_GUI(qtw.QMainWindow):
                             + 'surface unit vectors or SUPERLATTICE. '
                             + self.fileErr)
             return dict()
-        else:
-            return par_dict
+        return par_dict
     
     def exportCSV(self, lines):
         # Ask if the user wants to save the input if it isn't

@@ -69,7 +69,8 @@ class RealSpace():
 class LEEDPattern():
     def __init__(self, params):
         self.maxEnergy = params['eMax']
-        self.maxScreenRadius = self.get_ScreenRadius(self.maxEnergy)
+        aperture = params.get('screenAperture', 110)
+        self.maxScreenRadius = self.get_ScreenRadius(self.maxEnergy, aperture)
         self.superlatticeM = params['SUPERLATTICE']
         self.surfGroup = gl.PlaneGroup(params['surfGroup'])
 
@@ -364,10 +365,17 @@ class LEEDPattern():
     def get_BulkBasis(self):
         return np.dot(self.superlatticeM.transpose(), self.surfR.basis)
 
-    def get_ScreenRadius(self, en):
-        aperture = 110  # degrees ErLEED; our MCP looks more like 80!#
+    def get_ScreenRadius(self, en, aperture=110.0):
+        """
+        aperture: float, default=110.0
+                  degrees of aperture of the solid angle captured by the
+                  LEED screen. The current (2020-08-17) default value is taken
+                  from the dimensions of the screen of the ErLEED optics. The
+                  MCP SpectaLEED from Omicron appears to have an equivalent
+                  aperture of ~80°
+        """
         elMass = 9.109e-31  # kg
-        elQ = 1.60218e-19  # C
+        elQ = 1.60218e-19   # C
         hbar = 1.05457e-34  # J*s
         # The next one is the prefactor in AA^-1 eV^(-1/2)
         rt2me_hbar = np.sqrt(2*elMass*elQ) / hbar*1e-10

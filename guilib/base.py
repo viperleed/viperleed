@@ -79,6 +79,10 @@ def get_equivalent_beams(leed_parameters, domains=None):
                to int).
             NB: by 2020-06-24, no check is performed on whether the operations
                 above are actually compatible with the shape of the unit cell!
+      - 'screenAperture': float
+            This parameter can be used to define the aperture of the solid angle
+            captured by the LEED screen in degrees. Acceptable values are
+            between zero and 180
 
     domains: iterable or None, default=None
              List of domain indices for which the beams get exported
@@ -219,8 +223,32 @@ def project_to_first_domain(leed_parameters, beam_list, domains=None):
                 try:
                     beams_dict[beam]
                 except KeyError:
-                    raise ValueError(f"Beam {beam} is incompatible with the "
-                                     f"current SUPERLATTICE matrix \n{m}")
+                    err = (f"Beam {beam} is incompatible with the current "
+                           f"SUPERLATTICE matrix \n{m}")
+
+                    # Check if the reason why the beam was not found is that
+                    # it would lie outside the LEED screen
+                    leed = LEEDPattern(leed_parameters)
+                    b = leed.get_BulkBasis()
+                    g = np.linalg.norm(np.dot(beam, b))
+                    el_m = 9.109e-31    # kg
+                    el_q = 1.60218e-19  # C
+                    hbar = 1.05457e-34  # J*s
+                    
+                    # calculate the exit angle
+                    s_angle = np.sqrt(hbar**2 * g**2
+                                      /(2 * el_m * el_q * leed.maxEnergy))
+                    ang = 2*np.degrees(np.arcsin(s_angle))
+                    aperture = leed_parameters.get('screenAperture', 110)
+                    if ang > aperture:
+                        err += ("\nThe beam would need a minimum LEED screen "
+                                f"aperture of {ang} deg at Emax="
+                                f"{leed.maxEnergy} eV, while you are using "
+                                f"{aperture} deg. You may have swapped the "
+                                "in-plane unit vectors, or you may want to "
+                                "set a larger aperture with the "
+                                "SCREEN_APERTURE PARAMETER")
+                    raise ValueError(err)
         return [tuple(beam) for beam in ineq_beams]
 
     projected = []
@@ -323,8 +351,12 @@ def check_leed_params(leed_parameters):
                         "instead")
     for group in (leed_parameters['surfGroup'], leed_parameters['bulkGroup']):
         if not check_type(group, 'str'):
-            raise TypeError("Plane group should be an string. "
+            raise TypeError("Plane group should be a string. "
                             f"found {type(group)} instead")
+
+    aperture = leed_parameters.get('screenAperture', 110.0)
+    if not isinstance(aperture, (int, float)):
+        raise TypeError("screenAperture should be a floating point number")
 
     # Then check some requirements on the values
     if leed_parameters['eMax'] < 0:
@@ -337,6 +369,9 @@ def check_leed_params(leed_parameters):
         raise ValueError("SUPERLATTICE needs to have a (2, 2) shape. "
                          f"Found {np.shape(leed_parameters['SUPERLATTICE'])} "
                          "instead")
+    if aperture < 0 or aperture > 180:
+        raise ValueError("screenAperture should be between 0 and 180. "
+                         f"Found {aperture} instead.") 
     # type and format checking for the plane groups is done in the PlaneGroup
     # instance constructor directly
 
