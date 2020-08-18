@@ -1,5 +1,6 @@
 eMax=700.0
-SUPERLATTICE=[[3,0],[1,2]]
-surfBasis=[[8.6529,0.],[0.,4.99575414]]
-surfGroup=pm[0 1]
+SUPERLATTICE=[[2,1],[0,3]]
+surfBasis=[[4.32645,2.49787707],[-4.32645,7.49363122]]
+surfGroup=pm[1 0]
 bulkGroup=p3m1
+bulk3Dsym=None
