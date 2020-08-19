@@ -7,10 +7,11 @@ Created on Jun 13 2019
 Class storing properties of a site
 """
 
-import tleedmlib as tl
 import logging
 import re
 import numpy as np
+
+import tleedmlib as tl
 
 logger = logging.getLogger("tleedm.sitetype")
 
@@ -31,8 +32,8 @@ class Sitetype:
         """Checks whether two sites are equivalent, i.e. have the same label 
         and the same values for vibrational amplitudes and occupations."""
         if (self.label == site2.label 
-              and tl.dict_equal(self.vibamp,site2.vibamp) 
-              and tl.dict_equal(self.occ,site2.occ)): 
+              and tl.base.dict_equal(self.vibamp,site2.vibamp) 
+              and tl.base.dict_equal(self.occ,site2.occ)): 
             return True
         return False
     
@@ -48,11 +49,11 @@ class Sitetype:
             el = rp.ELEMENT_RENAME[chemel].capitalize()
         else:
             el = chemel.capitalize()
-        if el not in tl.periodic_table:
+        if el not in tl.leedbase.periodic_table:
             logger.error("Cannot generate default vibrational amplitude for "
                     "site "+self.label+": Element "+el+" not recognized.")
             return 1
-        if el not in tl.elementAtomicMass:
+        if el not in tl.leedbase.elementAtomicMass:
             logger.error("Cannot generate default vibrational amplitude for "
                     "site "+self.label+": Element"+el+" atomic mass unknown.")
             return 1
@@ -81,6 +82,6 @@ class Sitetype:
         self.vibamp[chemel] = round(scaling * 
                                     (np.sqrt(np.sqrt(1+16*((rp.T_EXPERIMENT
                                                             / rp.T_DEBYE)**2)) 
-                                         * 109.15 / (tl.elementAtomicMass[el] 
+                                 * 109.15 / (tl.leedbase.elementAtomicMass[el] 
                                                           * rp.T_DEBYE))), 3)
         return 0

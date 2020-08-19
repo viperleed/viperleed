@@ -651,3 +651,27 @@
 
 05.08.2020
 - minor changes to Rfactor analysis pdf layout
+
+06.08.2020
+- added printing of final R-factors to tleedm log and history.info
+
+07.08.2020
+- added waiting time for SD.TL when search is stopped by SEARCH_KILL
+
+11.08.2020
+- major module re-organization: moved most of the tleedm execution logic from 
+    tleedm runSection to sub-modules in tleedmlib.sections
+
+12.08.2020
+- fixed minor issue with readWoodsNotation
+- fixed issues in R-factor calculation: PARAM file now takes number of 
+    theoretical data points from the calculated beams, instead of the current 
+    energy range, while WEXPEL takes current (may be reduced) energy range.
+    
+17.08.2020
+- split baselib to base and leedbase, changed references in other modules
+- moved beamgen and phaseshiftgen (psgen) functions to their own modules
+
+18.-19.08.2020
+- further split big modules (read, write, Slab) to many smaller files
+- got rid of the DEFAULT object, replaced by None everywhere

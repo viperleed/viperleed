@@ -8,7 +8,7 @@ Class storing position and atom list of a layer
 """
 
 import numpy as np
-from tleedmlib import DEFAULT
+# from tleedmlib import DEFAULT
         
 class Layer:
     """To be used with Slab; has origin, atoms (a subset of the ones in slab), 
@@ -18,10 +18,10 @@ class Layer:
         self.num = num      # consecutive layer numbering, 0 being highest
         self.isBulk = isBulk    # defined by BLAY in PARAMETERS file
         self.atlist = []    # atoms in this layer
-        self.cartori = DEFAULT  # origin: xy from POSCAR with possible 
+        self.cartori = None     # origin: xy from POSCAR with possible 
                                 #   displacements, z is highest atom
-        self.cartbotz = DEFAULT  # z position of lowest atom
-        self.carttopz = DEFAULT  # z position of highest atom
+        self.cartbotz = None    # z position of lowest atom
+        self.carttopz = None    # z position of highest atom
         if sublayer:  #only used by sublayers in the symmetry detection routine
             self.symposlist = []    #list of candidate positions for 
                                     #  rotation / mirror / glide planes

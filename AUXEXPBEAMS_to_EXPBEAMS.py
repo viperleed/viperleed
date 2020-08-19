@@ -7,8 +7,7 @@ Created on Wed Dec 16 17:45 2019
 Reads an AUXEXPBEAMS file and writes the contents in EXPBEAMS.csv format.
 """
 
-import tleedmlib as tl
-
+from tleedmlib.files.beams import readAUXEXPBEAMS, writeOUTBEAMS
 
 ###############################################
 #                  MAIN                       #
@@ -29,7 +28,7 @@ def main():
         if filename == "":
             filename = "AUXEXPBEAMS"
         try:
-            beams = tl.readAUXEXPBEAMS(filename, interactive=True)
+            beams = readAUXEXPBEAMS(filename, interactive=True)
         except FileNotFoundError:
             print("File "+filename+" not found.")
             filename = ""
@@ -57,7 +56,7 @@ def main():
     
     # write new file
     try:
-        tl.writeOUTBEAMS(beams, filename)
+        writeOUTBEAMS(beams, filename)
         print("Wrote output as "+filename)
     except:
         print("Error writing new file "+filename)

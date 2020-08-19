@@ -10,9 +10,10 @@ the appropriate N_BULK_LAYERS and BULK_REPEAT values.
 """
 
 import copy
-import tleedmlib as tl
 import numpy as np
 
+from tleedmlib.files.poscar import readPOSCAR, writeCONTCAR
+import tleedmlib as tl
 
 ###############################################
 #                  MAIN                       #
@@ -34,7 +35,7 @@ def main():
         if filename == "":
             filename = "POSCAR"
         try:
-            sl = tl.readPOSCAR(filename=filename)
+            sl = readPOSCAR(filename=filename)
         except FileNotFoundError:
             print("File "+filename+" not found.")
             filename = ""
@@ -90,7 +91,7 @@ def main():
         sl.changeBulkCell(rp, mincell)
         bsl = sl.bulkslab
     if not rp.superlattice_defined:
-        ws = tl.writeWoodsNotation(rp.SUPERLATTICE)
+        ws = tl.leedbase.writeWoodsNotation(rp.SUPERLATTICE)
                 # !!! replace the writeWoodsNotation from baselib with
                 #   the one from guilib
         si = rp.SUPERLATTICE.astype(int)
@@ -150,7 +151,7 @@ def main():
     # write POSCAR_bulk
     newbsl.sortOriginal()
     try:
-        tl.writeCONTCAR(newbsl, filename='POSCAR_bulk', comments='none')
+        writeCONTCAR(newbsl, filename='POSCAR_bulk', comments='none')
         print("Wrote POSCAR_bulk. Check file to see if periodicity is "
               "correct.")
     except:
@@ -180,7 +181,7 @@ def main():
     # write POSCAR_min
     newsl.sortOriginal()
     try:
-        tl.writeCONTCAR(newsl, filename='POSCAR_min', comments='none')
+        writeCONTCAR(newsl, filename='POSCAR_min', comments='none')
         print("Wrote POSCAR_min, to be used with parameters below.")
     except:
         print("Exception occurred while writing POSCAR_min")

@@ -12,7 +12,7 @@ import logging
 import numpy as np
 import copy
 
-from tleedmlib import DEFAULT
+# from tleedmlib import DEFAULT
 
 logger = logging.getLogger("tleedm.atom")
       
@@ -25,12 +25,12 @@ class Atom:
         self.slab = slab     #which slab the atom belongs to
         self.layer = None     #which layer the atom belongs to. None if 
                               #  no layer was assigned yet.
-        self.site = DEFAULT   #the site type that the atom is in, supplied by 
+        self.site = None      #the site type that the atom is in, supplied by 
                               #  the SITEDEF parameter, assigned by the 
                               #  updateSites routine of Slab
-        self.cartpos = DEFAULT  #position in cartesian coordinates, with the 
+        self.cartpos = None   #position in cartesian coordinates, with the 
                                 #  highest atom as z = 0, z going down
-        self.posInLayer = DEFAULT   #same as cartpos, but from the layer origin
+        self.posInLayer = None   #same as cartpos, but from the layer origin
         self.linklist = []   #defines to which other atoms the atom is linked 
                              #  by symmetry
         self.displist = []   #like linklist, but keeps track of which symmetry
@@ -84,7 +84,7 @@ class Atom:
     def initDisp(self, force=False):
         """"Initializes disp_vib, disp_geo and disp_occ, based on the atoms 
         site. Site needs to be assigned first."""
-        if (not self.dispInitialized or force) and self.site != DEFAULT:
+        if (not self.dispInitialized or force) and self.site is not None:
             self.dispInitialized = True
             self.disp_vib = {"all": [0.0]}
             self.disp_geo = {"all": [np.array([0.0,0.0,0.0])]}

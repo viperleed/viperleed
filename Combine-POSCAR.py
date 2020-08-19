@@ -10,9 +10,11 @@ Takes a slab POSCAR and adds a bulk POSCAR on the bottom, rescaling the unit cel
 import time
 import logging
 import copy
-import tleedmlib as tl
+# import tleedmlib as tl
 import numpy as np
 from timeit import default_timer as timer
+
+from tleedmlib.files.poscar import readPOSCAR, writeCONTCAR
 
 ###############################################
 #                  MAIN                       #
@@ -42,7 +44,7 @@ def main():
             print("Input failed. Please try again.")
         else:
             try:
-                slab = tl.readPOSCAR(filename)
+                slab = readPOSCAR(filename)
                 logging.info('Slab POSCAR was read successfully.')
             except FileNotFoundError:
                 logging.error(filename+" not found.")
@@ -57,7 +59,7 @@ def main():
             print("Input failed. Please try again.")
         else:
             try:
-                bulk = tl.readPOSCAR(filename)
+                bulk = readPOSCAR(filename)
                 logging.info('Bulk POSCAR was read successfully.')
             except FileNotFoundError:
                 logging.error(filename+" not found.")
@@ -103,7 +105,7 @@ def main():
     slab.sortByEl()
     
     try:
-        tl.writeCONTCAR(slab, reorder=False)
+        writeCONTCAR(slab, reorder=False)
     except:
         logging.error("Exception occured:", exc_info=True)
 #    print(cfact)
