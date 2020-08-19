@@ -671,3 +671,7 @@
 17.08.2020
 - split baselib to base and leedbase, changed references in other modules
 - moved beamgen and phaseshiftgen (psgen) functions to their own modules
+
+18.-19.08.2020
+- further split big modules (read, write, Slab) to many smaller files
+- got rid of the DEFAULT object, replaced by None everywhere

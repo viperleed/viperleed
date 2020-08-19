@@ -9,7 +9,7 @@ Reads a _PHASESHIFTS file and allows the user to copy and rearrange the blocks.
 
 import time
 
-import tleedmlib as tl
+from tleedmlib.files.phaseshifts import readPHASESHIFTS, writePHASESHIFTS
 
 
 ###############################################
@@ -27,7 +27,7 @@ def main():
     
     # read the phaseshifts file
     try:
-        (firstline, ps, _, _) = tl.readPHASESHIFTS(None, None, check=False)
+        (firstline, ps, _, _) = readPHASESHIFTS(None, None, check=False)
     except FileNotFoundError:
         print("_PHASESHIFTS file not found.")
         filename = ""
@@ -37,7 +37,7 @@ def main():
                 print("Input failed. Please try again.")
             else:
                 try:
-                    (firstline, ps, _, _) = tl.readPHASESHIFTS(None, 
+                    (firstline, ps, _, _) = readPHASESHIFTS(None, 
                                         None, readfile=filename, check=False)
                     print("Phaseshifts file read successfully.")
                 except FileNotFoundError:
@@ -69,7 +69,7 @@ def main():
             print("Input failed. Please try again.")
         else:
             try:
-                ol = [int(s) for s in tl.linelist(neworder)]
+                ol = [int(s) for s in neworder.split()]
             except:
                 print("Could not parse input. Please try again.")
                 neworder = ""
@@ -108,7 +108,7 @@ def main():
     try:
         timestamp = time.strftime("%y%m%d-%H%M%S", time.localtime())
         fn = "_PHASESHIFTS_mod_"+timestamp
-        tl.writePHASESHIFTS(firstline, ps, filename=fn)
+        writePHASESHIFTS(firstline, ps, filename=fn)
         print("Wrote new phaseshifts file as "+fn)
     except:
         print("Error writing new phaseshifts file.")

@@ -14,7 +14,12 @@ import copy
 import shutil
 import subprocess
 
-import tleedmlib as tl
+import tleedmlib.files.iosuperpos as io
+from tleedmlib.leedbase import getDeltas, getTLEEDdir, fortranCompile
+from tleedmlib.files.beams import writeOUTBEAMS
+from tleedmlib.files.displacements import readDISPLACEMENTS_block
+from tleedmlib.files.iosearch import readSDTL_end
+from tleedmlib.files.iorefcalc import readFdOut
 
 logger = logging.getLogger("tleedm.superpos")
 
@@ -23,11 +28,11 @@ def superpos(sl, rp):
     errors, or an error message otherwise."""
     # read DISPLACEMENTS block
     if not rp.disp_block_read:
-        tl.readDISPLACEMENTS_block(rp, sl, rp.disp_blocks[rp.search_index])
+        readDISPLACEMENTS_block(rp, sl, rp.disp_blocks[rp.search_index])
         rp.disp_block_read = True
     if not (2 in rp.runHistory or 3 in rp.runHistory):
         try:
-            r = tl.leedbase.getDeltas(rp.TENSOR_INDEX, required=True)
+            r = getDeltas(rp.TENSOR_INDEX, required=True)
         except:
             raise
         if r != 0:
@@ -41,15 +46,14 @@ def superpos(sl, rp):
         sdtl = None
         if os.path.isfile("SD.TL"):
             try:
-                sdtl = tl.readSDTL_end(filename="SD.TL")
+                sdtl = readSDTL_end(filename="SD.TL")
             except:
                 logger.error("Superpos: Error reading SD.TL")
                 rp.setHaltingLevel(2)
                 return 0
         elif os.path.isfile(os.path.join("OUT","SD.TL")):
             try:
-                sdtl = tl.readSDTL_end(filename = os.path.join("OUT",
-                                                               "SD.TL"))
+                sdtl = readSDTL_end(filename = os.path.join("OUT", "SD.TL"))
             except:
                 logger.error("Superpos: Error reading SD.TL")
                 rp.setHaltingLevel(2)
@@ -97,7 +101,7 @@ def superpos(sl, rp):
     # now we have configuration and parameters, create input:
     contrin = ""
     try:
-        contrin = tl.writeCONTRIN(sl, rp, config)
+        contrin = io.writeCONTRIN(sl, rp, config)
         logger.debug("Wrote to Superpos-CONTRIN successfully")
     except:
         logger.error("Error getting input data for Superpos: ", 
@@ -110,7 +114,7 @@ def superpos(sl, rp):
         rp.setHaltingLevel(2)
         return 0
     try:
-        tl.writeSuperposPARAM(rp)
+        io.writeSuperposPARAM(rp)
     except:
         logger.error("Error writing PARAM file for Superpos: ",
                       exc_info = True)
@@ -128,7 +132,7 @@ def superpos(sl, rp):
             return ("Fortran compile error")
     # get fortran files
     try:
-        tldir = tl.leedbase.getTLEEDdir()
+        tldir = getTLEEDdir()
         srcpath = os.path.join(tldir,'src')
         srcname = [f for f in os.listdir(srcpath) 
                       if f.startswith('superpos')][0]
@@ -146,7 +150,7 @@ def superpos(sl, rp):
     sposname = "superpos-"+rp.timestamp
     logger.info("Compiling fortran input files...")
     try:
-        r=tl.leedbase.fortranCompile(rp.FORTRAN_COMP[0]+" -o", sposname+" "
+        r=fortranCompile(rp.FORTRAN_COMP[0]+" -o", sposname+" "
                           + srcname + " " + libname, rp.FORTRAN_COMP[1])
         if r:
             logger.error("Error compiling fortran files, cancelling...")
@@ -167,7 +171,7 @@ def superpos(sl, rp):
         raise
     logger.info("Finished Superpos calculation. Processing files...")
     try:
-        rp.theobeams["superpos"], rp.superpos_specout = tl.readFdOut(outname)
+        rp.theobeams["superpos"], rp.superpos_specout = readFdOut(outname)
     except FileNotFoundError:
         logger.error(outname + " not found after superpos calculation.")
         raise
@@ -176,11 +180,11 @@ def superpos(sl, rp):
                       " calculation.")
         raise
     try:
-        tl.writeOUTBEAMS(rp.theobeams["superpos"], filename="FITBEAMS.csv")
+        writeOUTBEAMS(rp.theobeams["superpos"], filename="FITBEAMS.csv")
         theobeams_norm = copy.deepcopy(rp.theobeams["superpos"])
         for b in theobeams_norm:
             b.normMax()
-        tl.writeOUTBEAMS(theobeams_norm,filename="FITBEAMS_norm.csv")
+        writeOUTBEAMS(theobeams_norm,filename="FITBEAMS_norm.csv")
     except:
         logger.error("Error writing FITBEAMS after superpos calculation.")
     # rename and move files

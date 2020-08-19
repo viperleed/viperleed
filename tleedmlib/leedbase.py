@@ -18,7 +18,9 @@ from fractions import Fraction
 
 from guilib.base import get_equivalent_beams
 from tleedmlib.base import parseMathSqrt, angle, cosvec
-from tleedmlib.read import readPOSCAR, readVIBROCC, readPARAMETERS   # !!! UPDATE MODULE
+from tleedmlib.files.parameters import readPARAMETERS
+from tleedmlib.files.poscar import readPOSCAR
+from tleedmlib.files.vibrocc import readVIBROCC
 
 logger = logging.getLogger("tleedm.leedbase")
 

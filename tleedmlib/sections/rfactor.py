@@ -13,8 +13,9 @@ import logging
 import shutil
 import subprocess
 
-import tleedmlib as tl
-from tleedmlib.leedbase import fortranCompile
+from tleedmlib.files.iorefcalc import readFdOut
+from tleedmlib.leedbase import fortranCompile, getTLEEDdir
+import tleedmlib.files.iorfactor as io
 
 logger = logging.getLogger("tleedm.rfactor")
 
@@ -39,7 +40,7 @@ def rfactor(sl, rp, index):
                 + " in work folder...")
             path = os.path.join(".",fn)
             try:
-                theobeams, theospec = tl.readFdOut(readfile = path)
+                theobeams, theospec = readFdOut(readfile = path)
                 if index == 11: 
                     rp.refcalc_fdout = theospec
                     rp.theobeams["refcalc"] = theobeams
@@ -55,7 +56,7 @@ def rfactor(sl, rp, index):
                 + "in OUT folder...")
             path = os.path.join(".","OUT",fn)
             try:
-                theobeams, theospec = tl.readFdOut(readfile = path)
+                theobeams, theospec = readFdOut(readfile = path)
                 if index == 11: 
                     rp.refcalc_fdout = theospec
                     rp.theobeams["refcalc"] = theobeams
@@ -91,18 +92,18 @@ def rfactor(sl, rp, index):
         theobeams = rp.theobeams["superpos"]
     # WEXPEL before PARAM, to make sure number of exp. beams is correct
     try:
-        tl.writeWEXPEL(sl, rp, theobeams)
+        io.writeWEXPEL(sl, rp, theobeams)
     except:
         logger.error("Exception during writeWEXPEL: ")
         raise
     try:
-        tl.writeRfactPARAM(rp, theobeams)
+        io.writeRfactPARAM(rp, theobeams)
     except:
         logger.error("Exception during writeRfactPARAM: ")
         raise
     # get fortran files and compile
     try:
-        tldir = tl.leedbase.getTLEEDdir()
+        tldir = getTLEEDdir()
         libpath = os.path.join(tldir,'lib')
         libname = [f for f in os.listdir(libpath) 
                       if f.startswith('rfacsb')][0]
@@ -165,7 +166,7 @@ def rfactor(sl, rp, index):
         rp.setHaltingLevel(2)
     else:
         try:
-            (rfac, r_int, r_frac), v0rshift, rfaclist = tl.readROUT()
+            (rfac, r_int, r_frac), v0rshift, rfaclist = io.readROUT()
         except:
             logger.error("Error reading ROUT file")
             rp.setHaltingLevel(2)
@@ -213,13 +214,13 @@ def rfactor(sl, rp, index):
                 outname = "Rfactor_plots_superpos.pdf"
                 aname = "Rfactor_analysis_superpos.pdf"
             try:
-                r = tl.writeRfactorPdf([(b.label, rfaclist[i]) for (i, b) 
+                r = io.writeRfactorPdf([(b.label, rfaclist[i]) for (i, b) 
                                                 in enumerate(rp.expbeams)],
                                        plotcolors = rp.PLOT_COLORS_RFACTOR,
                                        outName=outname, analysisFile=aname,
                                        v0i = rp.V0_IMAG)
             except:
-                logger.warning("Error plotting R-factors.")
+                logger.warning("Error plotting R-factors.", exc_info=True)
             else:
                 if r != 0:
                     logger.warning("Error plotting R-factors.")

@@ -2,7 +2,7 @@
 """
 Created on Mon Aug 17 15:32:12 2020
 
-@author: FF
+@author: Florian Kraushofer
 """
 
 import os

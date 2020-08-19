@@ -17,8 +17,11 @@ import multiprocessing
 import numpy as np
 
 import tleedmlib as tl
+import tleedmlib.files.iodeltas as io
+from tleedmlib.files.beams import writeAUXBEAMS
+from tleedmlib.files.displacements import readDISPLACEMENTS_block
 
-logger = logging.getLogger("tleedm.delta")
+logger = logging.getLogger("tleedm.deltas")
 
 class DeltaCompileTask():
     """Stores information for a worker to compile a delta file, and keeps 
@@ -196,7 +199,7 @@ def deltas(sl, rp):
     errors, or an error message otherwise."""
     # read DISPLACEMENTS block
     if not rp.disp_block_read:
-        tl.readDISPLACEMENTS_block(rp, sl, rp.disp_blocks[rp.search_index])
+        readDISPLACEMENTS_block(rp, sl, rp.disp_blocks[rp.search_index])
         rp.disp_block_read = True
     # get Tensors
     if not os.path.isdir(os.path.join(".","Tensors")):
@@ -219,7 +222,7 @@ def deltas(sl, rp):
         tl.leedbase.getDeltas(rp.TENSOR_INDEX, required=False)
     except:
         raise
-    dbasic = tl.generateDeltaBasic(sl, rp)
+    dbasic = io.generateDeltaBasic(sl, rp)
     # get AUXBEAMS; if AUXBEAMS is not in work folder, check AUX folder 
     if not os.path.isfile(os.path.join(".","AUXBEAMS")):
         if os.path.isfile(os.path.join(".","AUX","AUXBEAMS")):
@@ -230,14 +233,14 @@ def deltas(sl, rp):
                 logger.warning("Failed to copy AUXBEAMS from AUX folder. "
                                 "Generating new file...")
                 try:
-                    tl.writeAUXBEAMS(ivbeams=rp.ivbeams, 
+                    writeAUXBEAMS(ivbeams=rp.ivbeams, 
                                      beamlist=rp.beamlist)
                 except:
                     logger.error("Exception during writeAUXBEAMS: ")
                     raise
         else:
             try:
-                tl.writeAUXBEAMS(ivbeams=rp.ivbeams, beamlist=rp.beamlist)
+                writeAUXBEAMS(ivbeams=rp.ivbeams, beamlist=rp.beamlist)
             except:
                 logger.error("Exception during writeAUXBEAMS: ")
                 raise
@@ -331,7 +334,7 @@ def deltas(sl, rp):
                       if f.startswith("DEL_{}_".format(at.oriN) + el)]
             found = False
             for df in dfiles:
-                if tl.checkDelta(df, at, el, rp):
+                if io.checkDelta(df, at, el, rp):
                     found = True
                     at.deltasGenerated.append(df)
                     countExisting += 1
@@ -380,7 +383,7 @@ def deltas(sl, rp):
     deltaRunTasks = [] # which deltas to run
     tensordir = "Tensors_"+str(rp.TENSOR_INDEX).zfill(3)
     for (at, el) in atElTodo:
-        din, din_short, param = tl.generateDeltaInput(at, el, sl, rp, 
+        din, din_short, param = io.generateDeltaInput(at, el, sl, rp, 
                                         dbasic, auxbeams, phaseshifts)
         h = hashlib.md5(param.encode()).digest()
         found = False

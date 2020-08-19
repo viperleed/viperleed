@@ -14,8 +14,9 @@ import copy
 import shutil
 import subprocess
 
-import tleedmlib as tl
-from tleedmlib.leedbase import fortranCompile
+from tleedmlib.leedbase import fortranCompile, getTLEEDdir, getMaxTensorIndex
+import tleedmlib.files.beams as beams
+import tleedmlib.files.iorefcalc as io
 
 logger = logging.getLogger("tleedm.refcalc")
 
@@ -25,32 +26,32 @@ def refcalc(sl, rp):
     sl.getCartesianCoordinates(updateOrigin=True)
     sl.updateLayerCoordinates()
     try:
-        tl.writePARAM(sl, rp)
+        io.writePARAM(sl, rp)
     except:
         logger.error("Exception during writePARAM: ")
         raise
     try:
-        tl.writeAUXLATGEO(sl, rp)
+        io.writeAUXLATGEO(sl, rp)
     except:
         logger.error("Exception during writeAUXLATGEO: ")
         raise
     try:
-        tl.writeAUXNONSTRUCT(sl, rp)
+        io.writeAUXNONSTRUCT(sl, rp)
     except:
         logger.error("Exception during writeAUXNONSTRUCT: ")
         raise
     try:
-        tl.writeAUXBEAMS(ivbeams=rp.ivbeams, beamlist=rp.beamlist)
+        beams.writeAUXBEAMS(ivbeams=rp.ivbeams, beamlist=rp.beamlist)
     except:
         logger.error("Exception during writeAUXBEAMS: ")
         raise
     try:
-        tl.writeAUXGEO(sl, rp)
+        io.writeAUXGEO(sl, rp)
     except:
         logger.error("Exception during writeAUXGEO: ")
         raise
     try:
-        fin = tl.collectFIN()
+        fin = io.collectFIN()
     except:
         logger.error("Exception while trying to collect input for "
                       "refcalc FIN: ")
@@ -63,12 +64,12 @@ def refcalc(sl, rp):
         logger.error("Exception while trying to write refcalc-FIN file. "
             "Execution will proceed. The exception was: ", exc_info=True)
     try:
-        tl.writeMuftin(sl, rp)
+        io.writeMuftin(sl, rp)
     except:
         logger.error("Exception during writeMuftin: ")
         raise
     try:
-        tldir = tl.leedbase.getTLEEDdir()
+        tldir = getTLEEDdir()
         libpath = os.path.join(tldir,'lib')
         libname = [f for f in os.listdir(libpath) 
                       if f.startswith('lib.tleed')][0]
@@ -132,7 +133,7 @@ def refcalc(sl, rp):
         raise
     logger.info("Finished reference calculation. Processing files...")
     try:
-        rp.theobeams["refcalc"], rp.refcalc_fdout = tl.readFdOut()
+        rp.theobeams["refcalc"], rp.refcalc_fdout = io.readFdOut()
     except FileNotFoundError:
         logger.error("fd.out not found after reference calculation. "
                       "Check settings and refcalc log.")
@@ -155,11 +156,11 @@ def refcalc(sl, rp):
             "produced by the reference calculation!")
         rp.setHaltingLevel(2)
     try:
-        tl.writeOUTBEAMS(rp.theobeams["refcalc"], filename="THEOBEAMS.csv")
+        beams.writeOUTBEAMS(rp.theobeams["refcalc"], filename="THEOBEAMS.csv")
         theobeams_norm = copy.deepcopy(rp.theobeams["refcalc"])
         for b in theobeams_norm:
             b.normMax()
-        tl.writeOUTBEAMS(theobeams_norm,filename="THEOBEAMS_norm.csv")
+        beams.writeOUTBEAMS(theobeams_norm,filename="THEOBEAMS_norm.csv")
     except:
         logger.error("Error writing THEOBEAMS after reference "
                       "calculation: ", exc_info = True)
@@ -178,7 +179,7 @@ def refcalc(sl, rp):
     # move and zip tensor files
     if not os.path.isdir(os.path.join(".","Tensors")):
         os.mkdir(os.path.join(".","Tensors"))
-    rp.TENSOR_INDEX = tl.leedbase.getMaxTensorIndex() + 1
+    rp.TENSOR_INDEX = getMaxTensorIndex() + 1
     rp.manifest.append("Tensors")
     dn = "Tensors_"+str(rp.TENSOR_INDEX).zfill(3)
     if not os.path.isdir(os.path.join(".","Tensors",dn)):

@@ -8,7 +8,6 @@ Class containing parameters read from the PARAMETERS file, and some parameters
 defined at runtime. Most default values are defined here.
 """
 
-
 import numpy as np
 import logging
 import os
@@ -22,7 +21,8 @@ except:
 else:
     plotting = True
 
-import tleedmlib as tl
+from tleedmlib.files.iodeltas import checkDelta
+from tleedmlib.leedbase import getMaxTensorIndex
 
 logger = logging.getLogger("tleedm.rparams")
 
@@ -220,7 +220,7 @@ class Rparams:
         initialization) can be calculated now"""
         # TENSOR_INDEX:
         if self.TENSOR_INDEX is None:
-            self.TENSOR_INDEX = tl.leedbase.getMaxTensorIndex()
+            self.TENSOR_INDEX = getMaxTensorIndex()
         # SEARCH_CONVERGENCE:
         if self.searchConvInit["gaussian"] is None:
             self.searchConvInit["gaussian"] = self.GAUSSIAN_WIDTH
@@ -557,7 +557,7 @@ class Rparams:
                     found = False
                     for df in [f for f in deltaCandidates 
                                                if f.split("_")[2] == el]:
-                        if tl.checkDelta(df, at, el, rp):
+                        if checkDelta(df, at, el, rp):
                             found = True
                             at.deltasGenerated.append(df)
                             break
@@ -621,7 +621,7 @@ class Rparams:
             for fn in at.deltasGenerated:
                 el = fn.split("_")[2]
                 if el == "vac":
-                    self.searchpars.append(tl.SearchPar(at, "geo", "vac", fn))
+                    self.searchpars.append(SearchPar(at, "geo", "vac", fn))
                 else:
                     mult = 1
                     pars = 0
@@ -637,7 +637,7 @@ class Rparams:
                                               or (mode == "vib" and 
                                                           d[k][0] != 0.))):
                             pars += 1
-                            sp = tl.SearchPar(at, mode, el, fn)
+                            sp = SearchPar(at, mode, el, fn)
                             self.searchpars.append(sp)
                             if el in at.constraints[md[mode]]:
                                 k2 = el
@@ -662,10 +662,10 @@ class Rparams:
                                         sp.linkedTo = spl[0]
                         mult *= len(d[k])
                     if pars == 0:
-                        self.searchpars.append(tl.SearchPar(at, "geo", el, fn))
+                        self.searchpars.append(SearchPar(at, "geo", el, fn))
                     if mult > self.mncstep:
                         self.mncstep = mult
-            sp = tl.SearchPar(at, "occ", "", fn)
+            sp = SearchPar(at, "occ", "", fn)
             self.searchpars.append(sp)
             occsteps = len(next(iter(at.disp_occ.values())))
             if occsteps > 1:

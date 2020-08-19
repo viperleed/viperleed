@@ -17,8 +17,13 @@ from timeit import default_timer as timer
 import numpy as np
 import signal
 
-from tleedmlib.leedbase import fortranCompile
+import tleedmlib.files.iosearch as io
 import tleedmlib as tl
+from tleedmlib.leedbase import fortranCompile
+from tleedmlib.files.parameters import updatePARAMETERS_searchOnly
+from tleedmlib.files.displacements import readDISPLACEMENTS_block
+from tleedmlib.files.searchpdf import (writeSearchProgressPdf, 
+                                       writeSearchReportPdf)
 
 logger = logging.getLogger("tleedm.search")
 
@@ -30,7 +35,7 @@ def processSearchResults(sl, rp, final=True):
     POSCAR_OUT, VIBROCC_OUT, and modify data in sl and rp."""
     # get the last block from SD.TL:
     try:
-        lines = tl.readSDTL_end()
+        lines = io.readSDTL_end()
     except FileNotFoundError:
         logger.error("Could not process Search results: SD.TL file not "
                       "found.")
@@ -144,14 +149,14 @@ def processSearchResults(sl, rp, final=True):
                     info += "{:>3}".format(v)
                 info += "\n"
             logger.info(info)
-    return tl.writeSearchOutput(sl, rp, pops[0][1], silent=(not final))
+    return io.writeSearchOutput(sl, rp, pops[0][1], silent=(not final))
 
 def search(sl, rp):
     """Runs the search. Returns 0 when finishing without errors, or an error 
     message otherwise."""
     # read DISPLACEMENTS block
     if not rp.disp_block_read:
-        tl.readDISPLACEMENTS_block(rp, sl, rp.disp_blocks[rp.search_index])
+        readDISPLACEMENTS_block(rp, sl, rp.disp_blocks[rp.search_index])
         rp.disp_block_read = True
     rp.searchResultConfig = None
     # get Deltas
@@ -179,14 +184,14 @@ def search(sl, rp):
         return("N_CORES undefined, automatic detection failed")
     # generate rf.info
     try:
-        rfinfo = tl.writeRfInfo(sl, rp, filename="rf.info")
+        rfinfo = io.writeRfInfo(sl, rp, filename="rf.info")
     except:
         logger.error("Error generating search input file rf.info")
         raise
     # generate PARAM and search.steu
     #   needs to go AFTER rf.info, as writeRfInfo may remove expbeams!
     try:
-        r = tl.generateSearchInput(sl, rp)
+        r = io.generateSearchInput(sl, rp)
         if r != 0:
             logger.error("Error generating search input")
             return ("generateSearchInput failed")
@@ -206,7 +211,7 @@ def search(sl, rp):
             elif type(sp.linkedTo) == tl.SearchPar:
                 rp.searchResultsConfig[i] = (rp.searchpars.index(
                                                     sp.linkedTo) + 1)
-        tl.writeSearchOutput(sl, rp)
+        io.writeSearchOutput(sl, rp)
         return 0
     if rp.SUPPRESS_EXECUTION:
         logger.warning("SUPPRESS_EXECUTION parameter is on. Search "
@@ -391,7 +396,7 @@ def search(sl, rp):
             while proc.poll() == None:
                 time.sleep(timestep)
                 # re-read PARAMETERS
-                tl.updatePARAMETERS_searchOnly(rp)
+                updatePARAMETERS_searchOnly(rp)
                 # check convergence criteria
                 stop = False
                 checkrepeat = True
@@ -437,10 +442,10 @@ def search(sl, rp):
                     lastEval = t
                     newData = []
                     if os.path.isfile("SD.TL"):
-                        filepos, content = tl.readSDTL_next(
+                        filepos, content = io.readSDTL_next(
                                                          offset = filepos)
                         if content != "":
-                            newData = tl.readSDTL_blocks(content, 
+                            newData = io.readSDTL_blocks(content, 
                                                   whichR = rp.SEARCH_BEAMS)
                     for (gen, rfacs, configs) in newData:
                         gens.append(gen + genOffset)
@@ -465,13 +470,13 @@ def search(sl, rp):
                         lastconfig = newData[-1][2]
                     if len(gens) > 1:
                         try:
-                            tl.writeSearchProgressPdf(rp, gens, rfaclist, 
+                            writeSearchProgressPdf(rp, gens, rfaclist, 
                                                lastconfig, markers=markers)
                         except:
                             logger.warning("Error writing "
                                             "Search-progress.pdf")
                         try:
-                            tl.writeSearchReportPdf(rp)
+                            writeSearchReportPdf(rp)
                         except:
                             logger.warning("Error writing "
                                             "Search-report.pdf")
@@ -565,7 +570,7 @@ def search(sl, rp):
                 rp.SEARCH_MAX_GEN -= sdtlGenNum
                 markers.append((genOffset, comment))
             try:
-                r = tl.generateSearchInput(sl, rp, steuOnly=True, 
+                r = io.generateSearchInput(sl, rp, steuOnly=True, 
                                            cull=True)
                 if r != 0:
                     logger.error("Error re-generating search input")
@@ -587,13 +592,13 @@ def search(sl, rp):
     # write pdf one more time
     if len(gens) > 1:
         try:
-            tl.writeSearchProgressPdf(rp, gens, rfaclist, lastconfig,
+            writeSearchProgressPdf(rp, gens, rfaclist, lastconfig,
                                       markers=markers)
         except:
             logger.warning("Error writing Search-progress.pdf", 
                             exc_info = True)
         try:
-            tl.writeSearchReportPdf(rp)
+            writeSearchReportPdf(rp)
         except:
             logger.warning("Error writing Search-report.pdf",
                             exc_info = True)

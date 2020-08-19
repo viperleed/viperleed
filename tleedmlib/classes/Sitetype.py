@@ -7,10 +7,11 @@ Created on Jun 13 2019
 Class storing properties of a site
 """
 
-import tleedmlib as tl
 import logging
 import re
 import numpy as np
+
+import tleedmlib as tl
 
 logger = logging.getLogger("tleedm.sitetype")
 

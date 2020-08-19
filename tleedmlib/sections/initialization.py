@@ -12,9 +12,14 @@ import os
 import logging
 import copy
 
-from tleedmlib.beamgen import runBeamGen
-from tleedmlib.psgen import runPhaseshiftGen
 import tleedmlib as tl
+import tleedmlib.beamgen
+import tleedmlib.psgen
+from tleedmlib.files.poscar import writeCONTCAR
+from tleedmlib.files.phaseshifts import readPHASESHIFTS, writePHASESHIFTS
+from tleedmlib.files.beams import (readOUTBEAMS, readBEAMLIST, checkEXPBEAMS, 
+                                   sortIVBEAMS, writeIVBEAMS)
+from tleedmlib.files.patterninfo import writePatternInfo
 
 logger = logging.getLogger("tleedm.initialization")
 
@@ -33,7 +38,7 @@ def initialization(sl, rp):
             er = rp.THEO_ENERGIES[:2]
         if not rp.fileLoaded["EXPBEAMS"]:
             try:
-                rp.expbeams = tl.readOUTBEAMS(fn, enrange=er)
+                rp.expbeams = readOUTBEAMS(fn, enrange=er)
                 rp.fileLoaded["EXPBEAMS"] = True
             except:
                 logger.error("Error while reading file "+fn, exc_info=True)
@@ -44,7 +49,7 @@ def initialization(sl, rp):
     if os.path.isfile(os.path.join(".","_PHASESHIFTS")):
         try:
             (rp.phaseshifts_firstline, rp.phaseshifts,
-                 newpsGen, newpsWrite) = tl.readPHASESHIFTS(sl, rp)
+                 newpsGen, newpsWrite) = readPHASESHIFTS(sl, rp)
         except:
             logger.warning("Found a _PHASESHIFTS file but could not "
                 "read it. A new _PHASESHIFTS file will be generated."
@@ -56,7 +61,7 @@ def initialization(sl, rp):
             serneliuspath = os.path.join('.', 'source', 'seSernelius')
             logger.info("Generating phaseshifts data... ")
             (rp.phaseshifts_firstline, 
-                        rp.phaseshifts) = runPhaseshiftGen(sl, rp,
+                        rp.phaseshifts) = tl.psgen.runPhaseshiftGen(sl, rp,
                                                psgensource = rundgrenpath, 
                                                excosource = serneliuspath)
             logger.debug("Finished generating phaseshift data")
@@ -65,7 +70,7 @@ def initialization(sl, rp):
             raise
     if newpsWrite:
         try:
-            tl.writePHASESHIFTS(rp.phaseshifts_firstline, rp.phaseshifts)
+            writePHASESHIFTS(rp.phaseshifts_firstline, rp.phaseshifts)
         except:
             logger.error("Exception during writePHASESHIFTS: ")
             raise
@@ -75,14 +80,14 @@ def initialization(sl, rp):
 
     # if necessary, run findSymmetry:
     if sl.planegroup == "unknown":
-        sl.findSymmetry(rp)
-        sl.enforceSymmetry(rp)
+        tl.symmetry.findSymmetry(sl, rp)
+        tl.symmetry.enforceSymmetry(sl, rp)
     
     # generate new POSCAR
     tmpslab = copy.deepcopy(sl)
     tmpslab.sortOriginal()
     try:
-        tl.writeCONTCAR(tmpslab, filename='POSCAR', comments='all')
+        writeCONTCAR(tmpslab, filename='POSCAR', comments='all')
     except:
         logger.error("Exception occurred while writing new POSCAR")
         raise
@@ -90,7 +95,7 @@ def initialization(sl, rp):
     # generate POSCAR_oricell
     tmpslab.revertUnitCell()
     try:
-        tl.writeCONTCAR(tmpslab, filename='POSCAR_oricell', comments='nodir')
+        writeCONTCAR(tmpslab, filename='POSCAR_oricell', comments='nodir')
     except:
         logger.error("Exception occurred while writing POSCAR_oricell, "
                       "execution will continue...")
@@ -118,16 +123,16 @@ def initialization(sl, rp):
     
     # bulk plane group detection:
     logger.info("Initializing bulk symmetry search...")
-    bsl.findSymmetry(rp, bulk=True, output=False)
+    tl.symmetry.findSymmetry(bsl, rp, bulk=True, output=False)
     bsl.revertUnitCell() # keep origin matched with main slab
     logger.info("Found bulk plane group: "+bsl.foundplanegroup)
-    bsl.findBulkSymmetry(rp)
+    tl.symmetry.findBulkSymmetry(bsl, rp)
     
     # write POSCAR_bulk
     bsl = copy.deepcopy(sl.bulkslab)
     bsl.sortOriginal()
     try:
-        tl.writeCONTCAR(bsl, filename='POSCAR_bulk', comments='bulk')
+        writeCONTCAR(bsl, filename='POSCAR_bulk', comments='bulk')
     except:
         logger.error("Exception occurred while writing POSCAR_bulk")
         raise
@@ -136,28 +141,28 @@ def initialization(sl, rp):
     logger.info("Generating _BEAMLIST...")
     try:
         bgenpath = os.path.join('.', 'source', 'beamgen3.out')
-        runBeamGen(sl,rp,beamgensource = bgenpath)
+        tl.beamgen.runBeamGen(sl,rp,beamgensource = bgenpath)
         # this does NOT read the resulting file!
     except:
         logger.error("Exception occurred while calling beamgen.")
         raise
     rp.manifest.append("_BEAMLIST")
     try:
-        rp.beamlist = tl.readBEAMLIST()
+        rp.beamlist = readBEAMLIST()
         rp.fileLoaded["BEAMLIST"] = True
     except:
         logger.error("Error while reading required file _BEAMLIST")
         raise
     
-    tl.writePatternInfo(sl, rp)
+    writePatternInfo(sl, rp)
     
     # if EXPBEAMS was loaded, it hasn't been check yet - check now
     if rp.fileLoaded["EXPBEAMS"]:
-        tl.checkEXPBEAMS(sl, rp)
+        checkEXPBEAMS(sl, rp)
     # write and sort IVBEAMS
     if not rp.fileLoaded["IVBEAMS"]:
         try:
-            rp.ivbeams = tl.writeIVBEAMS(sl, rp)
+            rp.ivbeams = writeIVBEAMS(sl, rp)
             rp.ivbeams_sorted = False
             rp.fileLoaded["IVBEAMS"] = True
             rp.manifest.append("IVBEAMS")
@@ -166,6 +171,6 @@ def initialization(sl, rp):
                           "EXPBEAMS data.")
             raise
     if not rp.ivbeams_sorted:
-        rp.ivbeams = tl.sortIVBEAMS(sl, rp)
+        rp.ivbeams = sortIVBEAMS(sl, rp)
         rp.ivbeams_sorted = True
     return 0

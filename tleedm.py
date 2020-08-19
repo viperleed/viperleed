@@ -21,12 +21,16 @@ tleedmap_path = os.path.realpath(os.path.join(cd, '..'))
 if tleedmap_path not in sys.path:
     sys.path.append(tleedmap_path)
 
-import tleedmlib as tl
 import tleedmlib.sections as sections
+from tleedmlib.files.parameters import readPARAMETERS, modifyPARAMETERS
+from tleedmlib.files.phaseshifts import readPHASESHIFTS
+from tleedmlib.files.poscar import readPOSCAR
+from tleedmlib.files.beams import (readBEAMLIST, readIVBEAMS, readOUTBEAMS, 
+                                   checkEXPBEAMS)
+from tleedmlib.files.vibrocc import readVIBROCC, writeVIBROCC
+from tleedmlib.files.displacements import readDISPLACEMENTS
 
 logger = logging.getLogger("tleedm")
-
-
 starttime = 0.0
 
 class CustomLogFormatter(logging.Formatter):
@@ -92,12 +96,12 @@ def runSection(index, sl, rp):
                 else:
                     er = rp.THEO_ENERGIES[:2]
                 try:
-                    rp.expbeams = tl.readOUTBEAMS("EXPBEAMS.csv", enrange=er)
+                    rp.expbeams = readOUTBEAMS("EXPBEAMS.csv", enrange=er)
                     rp.fileLoaded["EXPBEAMS"] = True
                 except FileNotFoundError:
                     try:
                         # try without the .csv extension
-                        rp.expbeams = tl.readOUTBEAMS("EXPBEAMS", enrange=er)
+                        rp.expbeams = readOUTBEAMS("EXPBEAMS", enrange=er)
                         rp.fileLoaded["EXPBEAMS"] = True
                     except:
                         logger.error("Error while reading required file "
@@ -107,10 +111,10 @@ def runSection(index, sl, rp):
                     logger.error("Error while reading required file EXPBEAMS")
                     raise
                 if index != 0:
-                    tl.checkEXPBEAMS(sl, rp)
+                    checkEXPBEAMS(sl, rp)
             elif filename == "IVBEAMS":
                 try:
-                    rp.ivbeams = tl.readIVBEAMS()
+                    rp.ivbeams = readIVBEAMS()
                     rp.ivbeams_sorted = False
                     rp.fileLoaded["IVBEAMS"] = True
                 except FileNotFoundError:
@@ -129,7 +133,7 @@ def runSection(index, sl, rp):
                     raise
             elif filename == "BEAMLIST":
                 try:
-                    rp.beamlist = tl.readBEAMLIST()
+                    rp.beamlist = readBEAMLIST()
                     rp.fileLoaded["BEAMLIST"] = True
                 except:
                     logger.error("Error while reading required file "
@@ -137,7 +141,7 @@ def runSection(index, sl, rp):
                     raise
             elif filename == "VIBROCC":
                 try:
-                    changeVIBROCC = tl.readVIBROCC(rp,sl)
+                    changeVIBROCC = readVIBROCC(rp,sl)
                     rp.fileLoaded["VIBROCC"] = True
                 except:
                     logger.error("Error while reading required file VIBROCC")
@@ -149,18 +153,18 @@ def runSection(index, sl, rp):
                         rp.manifest.append("VIBROCC_user")
                         logger.info("VIBROCC file was modified with "
                             "automatically generated vibrational amplitudes.")
-                    tl.writeVIBROCC_OUT(sl, rp, "VIBROCC")
+                    writeVIBROCC(sl, rp, "VIBROCC")
                     rp.manifest.append("VIBROCC")
                 if rp.T_EXPERIMENT is not None:
-                    tl.modifyPARAMETERS(rp, "T_EXPERIMENT", new="")
+                    modifyPARAMETERS(rp, "T_EXPERIMENT", new="")
                 if rp.T_DEBYE is not None:
-                    tl.modifyPARAMETERS(rp, "T_DEBYE", new="")
+                    modifyPARAMETERS(rp, "T_DEBYE", new="")
                 if len(rp.VIBR_AMP_SCALE) > 0:
-                    tl.modifyPARAMETERS(rp, "VIBR_AMP_SCALE", new="")
+                    modifyPARAMETERS(rp, "VIBR_AMP_SCALE", new="")
             elif filename == "PHASESHIFTS":
                 try:
                     (rp.phaseshifts_firstline, rp.phaseshifts,
-                     newpsGen, newpsWrite) = tl.readPHASESHIFTS(sl, rp)
+                     newpsGen, newpsWrite) = readPHASESHIFTS(sl, rp)
                     if newpsGen:
                         logging.critical("_PHASESHIFT file generation is only "
                             "supported during initialization. Stopping "
@@ -180,7 +184,7 @@ def runSection(index, sl, rp):
                     raise
             elif filename == "DISPLACEMENTS":
                 try:
-                    r = tl.readDISPLACEMENTS(rp)
+                    r = readDISPLACEMENTS(rp)
                     rp.fileLoaded["DISPLACEMENTS"] = True
                 except:
                     logger.error("Error while reading required file "
@@ -533,7 +537,7 @@ def main():
         poscarfile = os.path.join(".","POSCAR")
         logger.info("Reading structure from file POSCAR")
         try:
-            sl = tl.readPOSCAR(filename = poscarfile)
+            sl = readPOSCAR(filename = poscarfile)
         except:
             logger.error("Exception while reading POSCAR", exc_info=True)
             cleanup(tmpmanifest)
@@ -556,7 +560,7 @@ def main():
             return 1
 
     try:
-        rp = tl.readPARAMETERS(slab=sl)
+        rp = readPARAMETERS(slab=sl)
         if rp.LOG_DEBUG:
             logger.setLevel(logging.DEBUG)
             logger.debug("PARAMETERS file was read successfully")
