@@ -501,7 +501,8 @@ def getLEEDdict(sl, rp):
          "SUPERLATTICE": rp.SUPERLATTICE.astype(int),
           "surfBasis": np.transpose(sl.ucell[:2,:2]), 
           "surfGroup": pgstring, "bulkGroup": sl.bulkslab.foundplanegroup,
-          "bulk3Dsym": sl.bulkslab.getBulk3Dstr()}
+          "bulk3Dsym": sl.bulkslab.getBulk3Dstr(),
+          "screenAperture": rp.SCREEN_APERTURE}
     return d
 
 def getSymEqBeams(sl, rp):

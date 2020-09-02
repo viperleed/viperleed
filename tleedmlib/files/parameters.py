@@ -592,6 +592,22 @@ def readPARAMETERS(filename='PARAMETERS', slab=None, silent=False):
                 logger.warning('PARAMETERS file: SEARCH_BEAMS: value not '
                                 'recognized. Input will be ignored.')
                 rpars.setHaltingLevel(1)
+        elif param == 'SCREEN_APERTURE':
+            try:
+                f = float(llist[0])
+            except:
+                logger.warning('PARAMETERS file: SCREEN_APERTURE: could not '
+                               'convern value to float. Input will be '
+                               'ignored.')
+                rpars.setHaltingLevel(1)
+            else:
+                if 0 <= f <= 180:
+                    rpars.SCREEN_APERTURE = f
+                else:
+                    logger.warning('PARAMETERS file: SCREEN_APERTURE value '
+                        'must be between 0 and 180 degrees. Input {} will be '
+                        'ignored.'.format(llist[0]))
+                    rpars.setHaltingLevel(1)
         elif param == 'SEARCH_CONVERGENCE':
             if len(plist) == 1:
                 if value.lower().strip() == 'off':

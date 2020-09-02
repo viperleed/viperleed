@@ -92,6 +92,7 @@ class Rparams:
         self.R_FACTOR_TYPE = 1  # which R-factor to use; 1: Pendry, 2: R2,
                                 #   3: Zanazzi-Jona
         self.R_FACTOR_SMOOTH = 0
+        self.SCREEN_APERTURE = 110.
         self.SEARCH_BEAMS = 0   # which beams to use for search. 0: average,
                                 #   1: integer, 2: fractional
         self.SEARCH_CULL = 0.1  # kill off worst part of population during 

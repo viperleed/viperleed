@@ -675,3 +675,6 @@
 18.-19.08.2020
 - further split big modules (read, write, Slab) to many smaller files
 - got rid of the DEFAULT object, replaced by None everywhere
+
+02.09.2020
+# FK: This log file will not be updated any more. See Github project log. #
