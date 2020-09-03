@@ -252,7 +252,7 @@ def readPARAMETERS(filename='PARAMETERS', slab=None, silent=False):
                             else:  #c
                                 rpars.BULK_REPEAT = slab.ucell[2,2] * v
             else:  # vector
-                vec = tl.leedbase.readVector(s, slab.ucell)
+                vec = tl.base.readVector(s, slab.ucell)
                 if vec is None:
                     logger.warning('PARAMETERS file: BULK_REPEAT: '
                         'Could not parse input expression. Input will '

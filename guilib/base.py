@@ -230,7 +230,7 @@ def project_to_first_domain(leed_parameters, beam_list, domains=None):
                     # it would lie outside the LEED screen
                     leed = LEEDPattern(leed_parameters)
                     b = leed.get_BulkBasis()
-                    g = np.linalg.norm(np.dot(beam, b))
+                    g = np.linalg.norm(np.dot(beam, b)) * 1e10
                     el_m = 9.109e-31    # kg
                     el_q = 1.60218e-19  # C
                     hbar = 1.05457e-34  # J*s
@@ -242,7 +242,7 @@ def project_to_first_domain(leed_parameters, beam_list, domains=None):
                     aperture = leed_parameters.get('screenAperture', 110)
                     if ang > aperture:
                         err += ("\nThe beam would need a minimum LEED screen "
-                                f"aperture of {ang} deg at Emax="
+                                f"aperture of {ang:.1f} deg at Emax="
                                 f"{leed.maxEnergy} eV, while you are using "
                                 f"{aperture} deg. You may have swapped the "
                                 "in-plane unit vectors, or you may want to "

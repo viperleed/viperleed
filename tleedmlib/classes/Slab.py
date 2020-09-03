@@ -1009,6 +1009,9 @@ class Slab:
             if abs(mincell[1,0]) < eps and abs(mincell[0,1]) < eps:
                 # if matrix is diagonal, make elements positive
                 mincell = abs(mincell)
+            # by convention, make the shorter vector the first one
+            if np.linalg.norm(mincell[0]) > np.linalg.norm(mincell[1]) + eps:
+                mincell = np.dot(np.array([[0,1],[-1,0]]), mincell)
             return(True, mincell)
 
     def getMinC(self, rp, z_periodic=True):
@@ -1157,6 +1160,12 @@ class Slab:
         sl = np.array([[0,0,0],[0,0,0],[0,0,1]],dtype=float)
         sl[:2,:2] = np.transpose(rp.SUPERLATTICE)
         bsl.ucell = np.dot(bsl.ucell, np.linalg.inv(sl))
+        if (rp.superlattice_defined and np.linalg.norm(bsl.ucell[:2,0]) > 
+                                       np.linalg.norm(bsl.ucell[:2,1]) + 1e-4):
+            logger.warning("The bulk unit cell defined by SUPERLATTICE does "
+                "not follow standard convention: the first vector is larger "
+                "than the second. Make sure beams are labelled correctly.")
+            rp.setHaltingLevel(1)
         bsl.collapseCartesianCoordinates(updateOrigin=True)
         bsl.uCellMod = [] # if self.uCellMod is not empty, don't drag that into
                           #  the bulk slab.
