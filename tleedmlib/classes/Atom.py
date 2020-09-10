@@ -66,6 +66,9 @@ class Atom:
                                 #   a tuple (atom, element)
         self.oriState = None    # deep copy of self before a search is applied
         
+    def __str__(self):
+        return ("Atom({} {})".format(self.oriN, self.el))
+    
     def storeOriState(self):
         """Stores the initial values from the input files for this atom."""
         if self.oriState is None:

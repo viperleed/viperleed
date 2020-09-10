@@ -16,6 +16,23 @@ import tleedmlib as tl
 
 logger = logging.getLogger("tleedm.files.parameters")
 
+# list of allowed parameters
+knownParams = ['ATTENUATION_EPS', 'BEAM_INCIDENCE', 'BULKDOUBLING_EPS',
+    'BULKDOUBLING_MAX', 'BULK_REPEAT', 'ELEMENT_MIX', 'ELEMENT_RENAME',
+    'FILAMENT_WF', 'FORTRAN_COMP', 'HALTING', 'IV_SHIFT_RANGE', 'LAYER_CUTS', 
+    'LAYER_STACK_VERTICAL', 'LMAX', 'LOG_DEBUG', 'LOG_SEARCH', 
+    'N_BULK_LAYERS', 'N_CORES', 'PHASESHIFT_EPS', 'PLOT_COLORS_RFACTOR', 
+    'RUN', 'R_FACTOR_SMOOTH', 'R_FACTOR_TYPE', 'SCREEN_APERTURE', 
+    'SEARCH_BEAMS', 'SEARCH_CONVERGENCE', 'SEARCH_CULL', 'SEARCH_MAX_GEN', 
+    'SEARCH_POPULATION', 'SEARCH_START', 'SITE_DEF', 'SUPERLATTICE', 
+    'SUPPRESS_EXECUTION', 'SYMMETRIZE_INPUT', 'SYMMETRY_EPS', 
+    'SYMMETRY_FIND_ORI', 'SYMMETRY_FIX', 'TENSOR_INDEX', 'TENSOR_OUTPUT', 
+    'THEO_ENERGIES', 'T_DEBYE', 'T_EXPERIMENT', 'V0_IMAG', 'V0_REAL', 
+    'V0_Z_ONSET', 'VIBR_AMP_SCALE']
+paramAlias = {}
+for p in knownParams:
+    paramAlias[p.lower().replace("_","")] = p
+
 def updatePARAMETERS_searchOnly(rp, filename='PARAMETERS'):
     """
     Reads PARAMETERS file again, but ignores everything not concerning the 
@@ -54,6 +71,11 @@ def updatePARAMETERS_searchOnly(rp, filename='PARAMETERS'):
             plist = param.split()
             if plist:
                 param = plist[0]
+        if (param not in knownParams and 
+                param.lower().replace("_","") in paramAlias):
+            param = paramAlias[param.lower().replace("_","")]
+        if param not in knownParams:
+            continue
         try:
             value = line.split('=', maxsplit=1)[1].rstrip()
             llist = value.split()  #read the stuff to the right of "="
@@ -107,6 +129,8 @@ def readPARAMETERS(filename='PARAMETERS', slab=None, silent=False):
     except FileNotFoundError:
         logger.error("PARAMETERS not found.")
         raise
+    # track some parameters while reading
+    searchConvRead = False
     #read PARAMETERS:
     rpars = tl.Rparams()
     for line in rf:
@@ -127,6 +151,14 @@ def readPARAMETERS(filename='PARAMETERS', slab=None, silent=False):
         plist = param.split()
         if plist:
             param = plist[0]
+        if (param not in knownParams and 
+                param.lower().replace("_","") in paramAlias):
+            param = paramAlias(param.lower().replace("_",""))
+        if param not in knownParams:
+            logger.warning('PARAMETERS file: Parameter '+param+' not '
+                            'recognized.')
+            rpars.setHaltingLevel(1)
+            continue
         try:
             value = line.split('=', maxsplit=1)[1].rstrip()
             llist = value.split()  #read the stuff to the right of "="
@@ -581,17 +613,6 @@ def readPARAMETERS(filename='PARAMETERS', slab=None, silent=False):
                                 'Value was set to 1 (default).')
                 rpars.setHaltingLevel(1)
                 rpars.R_FACTOR_TYPE = 1
-        elif param == 'SEARCH_BEAMS':
-            if llist[0][0].lower() in ["0","a"]:
-                rpars.SEARCH_BEAMS = 0
-            elif llist[0][0].lower() in ["1","i"]:
-                rpars.SEARCH_BEAMS = 1
-            elif llist[0][0].lower() in ["2","f"]:
-                rpars.SEARCH_BEAMS = 2
-            else:
-                logger.warning('PARAMETERS file: SEARCH_BEAMS: value not '
-                                'recognized. Input will be ignored.')
-                rpars.setHaltingLevel(1)
         elif param == 'SCREEN_APERTURE':
             try:
                 f = float(llist[0])
@@ -608,6 +629,17 @@ def readPARAMETERS(filename='PARAMETERS', slab=None, silent=False):
                         'must be between 0 and 180 degrees. Input {} will be '
                         'ignored.'.format(llist[0]))
                     rpars.setHaltingLevel(1)
+        elif param == 'SEARCH_BEAMS':
+            if llist[0][0].lower() in ["0","a"]:
+                rpars.SEARCH_BEAMS = 0
+            elif llist[0][0].lower() in ["1","i"]:
+                rpars.SEARCH_BEAMS = 1
+            elif llist[0][0].lower() in ["2","f"]:
+                rpars.SEARCH_BEAMS = 2
+            else:
+                logger.warning('PARAMETERS file: SEARCH_BEAMS: value not '
+                                'recognized. Input will be ignored.')
+                rpars.setHaltingLevel(1)
         elif param == 'SEARCH_CONVERGENCE':
             if len(plist) == 1:
                 if value.lower().strip() == 'off':
@@ -657,6 +689,9 @@ def readPARAMETERS(filename='PARAMETERS', slab=None, silent=False):
                     rpars.setHaltingLevel(1)
                     continue
                 if fl[0] is not None and fl[0] > 0:
+                    if not searchConvRead:  # clear default values
+                        rpars.SEARCH_MAX_DGEN = {"all": 0, "best": 0, "dec": 0}
+                        searchConvRead = True
                     rpars.SEARCH_MAX_DGEN[target] = fl[0]
                 else:
                     logger.warning('PARAMETERS file: SEARCH_CONVERGENCE '
@@ -1126,11 +1161,6 @@ def readPARAMETERS(filename='PARAMETERS', slab=None, silent=False):
         elif param == 'VIBR_AMP_SCALE':
             rpars.VIBR_AMP_SCALE.extend(value.split(","))
                                 # taken at face value, interpreted later
-        else:
-            logger.warning('PARAMETERS file: Parameter '+param+' not '
-                            'recognized.')
-            rpars.setHaltingLevel(1)
-
     rf.close()
     logger.setLevel(loglevel)
     return(rpars)

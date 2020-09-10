@@ -45,6 +45,9 @@ class SymPlane:
                   / (np.linalg.norm(self.dir)
                      * np.linalg.norm(i*abt[0]+j*abt[1])))-1.0) < 0.001:
                 self.par = np.array([i,j])
+    
+    def __str__(self):
+        return ("SymPlane(pos = {}, par = {})".format(self.pos, self.par))
 
     def isEquivalent(self,pl2,abt,eps=0.001):
         """Checks whether two symmetry planes have the same position and
