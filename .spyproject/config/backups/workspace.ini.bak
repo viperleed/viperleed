@@ -6,5 +6,5 @@ save_non_project_files = False
 
 [main]
 version = 0.2.0
-recent_files = ['tleedm.py']
+recent_files = ['tleedm.py', 'tleedmlib\\classes\\rparams.py', 'tleedmlib\\files\\parameters.py', 'guilib\\base.py', 'tleedmlib\\symmetry.py', 'tleedmlib\\classes\\slab.py', 'tleedmlib\\classes\\atom.py', 'tleedmlib\\sections\\initialization.py', 'tleedmlib\\files\\beams.py', 'tleedmlib\\leedbase.py']
 

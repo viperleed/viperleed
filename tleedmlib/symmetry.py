@@ -300,7 +300,7 @@ def findSymmetry(sl, rp, bulk=False, output=True):
     #test potential rotation axes:
     toprotsym = 0   # keep track of the highest rotational symmetry so far
     topsympoint = symposlist[0]
-
+    
     for p in comsymposlist:
         rotsymorder = 0
         if ts.isRotationSymmetric(p,2,eps):
@@ -422,7 +422,7 @@ def findSymmetry(sl, rp, bulk=False, output=True):
         #start by checking special case: in cmm, there are two inequivalent
         #  2fold axes, one of which would not have been found yet -> shift
         #  there (potentially), test
-        if toprotsym == 2:
+        if toprotsym == 2 and celltype in ["hexagonal", "rhombic"]:
             shiftslab = copy.deepcopy(ts)
             for at in shiftslab.atlist:
                 at.cartpos[0:2] -= abst[0]/2
