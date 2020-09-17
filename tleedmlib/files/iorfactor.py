@@ -155,13 +155,12 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL"):
     beamcorr = getBeamCorrespondence(sl, rp)
     # integer & fractional beams
     iorf = []
-    for (i, beam) in enumerate(rp.ivbeams):
-        if beamcorr[i] == -1:
-            iorf.append(0)
-        elif beam.hk[0] % 1.0 != 0.0 or beam.hk[1] % 1.0 != 0.0:
+    for (i, beam) in enumerate(rp.expbeams):
+        if beam.hk[0] % 1.0 != 0.0 or beam.hk[1] % 1.0 != 0.0:
             iorf.append(2)
         else:
             iorf.append(1)
+    iorf.extend([0]*(len(rp.ivbeams)-len(rp.expbeams)))
 
     f72 = ff.FortranRecordWriter("F7.2")
     i3x25 = ff.FortranRecordWriter("25I3")

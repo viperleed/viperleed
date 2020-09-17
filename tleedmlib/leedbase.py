@@ -591,7 +591,7 @@ def getBeamCorrespondence(sl, rp):
                         break
                 if found:
                     break
-        if not found:
-            logger.debug("No experimental beam found for calculated beam "
-                          + tb.label)
+            if not found:
+                logger.debug("No experimental beam found for calculated beam "
+                              + tb.label)
     return beamcorr
