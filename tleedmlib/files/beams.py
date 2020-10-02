@@ -488,9 +488,11 @@ def writeAUXEXPBEAMS(beams, filename="AUXEXPBEAMS", header="Unknown system",
     i4 = ff.FortranRecordWriter('I4')
     for beam in beams:
         # renormalize
-        scaling = 999.99 / max(beam.intens.values())
+        minintens = min(beam.intens.values())
+        offset = max(0, -minintens)  # if beams contain negative values, offset 
+        scaling = 999.99 / (max(beam.intens.values()) + offset)
         for k in beam.intens:
-            beam.intens[k] *= scaling
+            beam.intens[k] = (beam.intens[k] + offset) * scaling
         # write
         output += "*"+beam.label.replace("|"," ") + "*\n"
         ol = i4.write([len(beam.intens)]).ljust(8)
