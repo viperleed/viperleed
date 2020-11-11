@@ -136,6 +136,7 @@ def readPARAMETERS(filename='PARAMETERS', slab=None, silent=False):
     for line in rf:
         if "!" in line:
             line = line.split("!")[0].rstrip()
+        line = line.lstrip()
         if line.lstrip().startswith("SEARCH_KILL"):
             if not re.match(r"\s*SEARCH_KILL\s*=\s*[Ff](alse)?", line):
                 logger.warning('PARAMETERS file: SEARCH_KILL is set at start '
@@ -144,13 +145,12 @@ def readPARAMETERS(filename='PARAMETERS', slab=None, silent=False):
                         'PARAMETERS to avoid this.')
         if not "=" in line:
             continue     #ignore all lines that don't have an "=" sign at all
-        param = line.split('=')[0]        #parameter is defined left of "="
+        param = line.split('=')[0]      #parameter is defined left of "="
         if not param:
             continue
         #get rid of spaces and check the leftmost entry.
         plist = param.split()
-        if plist:
-            param = plist[0]
+        param = plist[0]
         if (param not in knownParams and 
                 param.lower().replace("_","") in paramAlias):
             param = paramAlias(param.lower().replace("_",""))
@@ -159,16 +159,30 @@ def readPARAMETERS(filename='PARAMETERS', slab=None, silent=False):
                             'recognized.')
             rpars.setHaltingLevel(1)
             continue
-        try:
-            value = line.split('=', maxsplit=1)[1].rstrip()
-            llist = value.split()  #read the stuff to the right of "="
-        except IndexError:
-            llist = []
-        if not llist:
+        value = line.split('=', maxsplit=1)[1].rstrip()
+        if not value:
             logger.warning('PARAMETERS file: ' + param + ' appears to '
                             'have no value')
             rpars.setHaltingLevel(1)
             continue
+        if not param in rpars.readParams:
+            rpars.readParams[param] = []
+        rpars.readParams[param].append((plist, value))
+    rf.close()
+    # define order that parameters should be read in
+    orderedParams = ["RUN"]
+    checkParams = [p for p in orderedParams if p in rpars.readParams]
+    checkParams.extend([p for p in knownParams if (p in rpars.readParams and 
+                                                     not p in checkParams)])
+    domainsIgnoreParams = ['BULK_REPEAT', 'ELEMENT_MIX', 'ELEMENT_RENAME',
+        'LAYER_CUTS', 'N_BULK_LAYERS', 'SITE_DEF', 'TENSOR_INDEX', 
+        'TENSOR_OUTPUT']
+    for (param, plist, value) in [(param, lel[0], lel[1]) 
+                                  for param in checkParams
+                                  for lel in rpars.readParams[param]]:
+        if rpars.domains and param in domainsIgnoreParams:
+            continue
+        llist = value.split()
         if param == 'ATTENUATION_EPS':
             try:
                 f = float(llist[0])
@@ -560,9 +574,12 @@ def readPARAMETERS(filename='PARAMETERS', slab=None, silent=False):
                             'interpret value '+s+', skipping value...')
                     rpars.setHaltingLevel(2)
             if len(rl) > 0:
+                if 4 in rl:
+                    logger.info('Found domain search.')
+                    rpars.domains = True
                 i = 0
                 while i < len(rl):
-                    if rl[i] not in [0,1,2,3,11,31]:
+                    if rl[i] not in [0,1,2,3,4,11,31]:
                         logger.warning('PARAMETERS file: RUN: Value '
                             +str(rl[i])+' does not correspond to a segment '
                             'and will be skipped.')
@@ -1161,7 +1178,7 @@ def readPARAMETERS(filename='PARAMETERS', slab=None, silent=False):
         elif param == 'VIBR_AMP_SCALE':
             rpars.VIBR_AMP_SCALE.extend(value.split(","))
                                 # taken at face value, interpreted later
-    rf.close()
+    
     logger.setLevel(loglevel)
     return(rpars)
 

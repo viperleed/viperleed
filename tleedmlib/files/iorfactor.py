@@ -185,7 +185,7 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL"):
     for i in range(0,2):   # redundant since indices are already taken care of
         output += i3x25.write([n+1 for n in range(0,len(rp.expbeams))]) + "\n"
     output += i3x25.write(iorf) + "\n"
-    output += "\n&NL2\n"
+    output += "&NL2\n"
     output += " NSSK=    0,\n"
     if rp.R_FACTOR_TYPE == 1:
         output += " WR=      0.,0.,1.,\n" # Pendry

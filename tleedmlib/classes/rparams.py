@@ -60,6 +60,8 @@ class Rparams:
     """Stores the parameters found in a PARAMETERS file (default values in
     __init__), as well as some parameters defined at runtime."""
     def __init__(self):
+        self.readParams = {}    # original parameters as read from file
+        
         self.ATTENUATION_EPS = 0.0001
         self.BULKDOUBLING_EPS = 0.001
         self.BULKDOUBLING_MAX = 10
@@ -149,6 +151,7 @@ class Rparams:
                               "dgen": {"all": None, "best": None, "dec": None}}
         self.searchMaxGenInit = self.SEARCH_MAX_GEN
         # script progress tracking
+        self.domains = False
         self.halt = 0
         self.systemName = ""
         self.timestamp = ""
