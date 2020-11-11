@@ -9,13 +9,15 @@ Tensor LEED Manager section Initialization
 """
 
 import os
+import shutil
 import logging
 import copy
 
 import tleedmlib as tl
 import tleedmlib.beamgen
 import tleedmlib.psgen
-from tleedmlib.files.poscar import writeCONTCAR
+from tleedmlib.files.poscar import readPOSCAR, writeCONTCAR
+from tleedmlib.files.parameters import readPARAMETERS, interpretPARAMETERS
 from tleedmlib.files.phaseshifts import readPHASESHIFTS, writePHASESHIFTS
 from tleedmlib.files.beams import (readOUTBEAMS, readBEAMLIST, checkEXPBEAMS, 
                                    sortIVBEAMS, writeIVBEAMS)
@@ -23,26 +25,38 @@ from tleedmlib.files.patterninfo import writePatternInfo
 
 logger = logging.getLogger("tleedm.initialization")
 
-def initialization(sl, rp):
+
+def initialization(sl, rp, subdomain=False):
     """Runs the initialization. Returns 0 on success."""
-    # check for experimental beams:
-    expbeamsname = ""
-    for fn in ["EXPBEAMS.csv", "EXPBEAMS"]:
-        if os.path.isfile(fn):
-            expbeamsname = fn
-            break
-    if expbeamsname:
-        if len(rp.THEO_ENERGIES) == 0:
-            er = []
-        else:
-            er = rp.THEO_ENERGIES[:2]
-        if not rp.fileLoaded["EXPBEAMS"]:
-            try:
-                rp.expbeams = readOUTBEAMS(fn, enrange=er)
-                rp.fileLoaded["EXPBEAMS"] = True
-            except:
-                logger.error("Error while reading file "+fn, exc_info=True)
+    if not subdomain:
+        # check for experimental beams:
+        expbeamsname = ""
+        for fn in ["EXPBEAMS.csv", "EXPBEAMS"]:
+            if os.path.isfile(fn):
+                expbeamsname = fn
+                break
+        if expbeamsname:
+            if len(rp.THEO_ENERGIES) == 0:
+                er = []
+            else:
+                er = rp.THEO_ENERGIES[:2]
+            if not rp.fileLoaded["EXPBEAMS"]:
+                try:
+                    rp.expbeams = readOUTBEAMS(fn, enrange=er)
+                    rp.fileLoaded["EXPBEAMS"] = True
+                except:
+                    logger.error("Error while reading file "+fn, exc_info=True)
     rp.initTheoEnergies()  # may be initialized based on exp. beams
+    
+    if rp.hasDomains and not subdomain:
+        try:
+            r = init_domains(rp)
+        except:
+            raise
+        if r != 0:
+            return r
+        return 0
+    
     # check whether _PHASESHIFTS are present & consistent:
     newpsGen, newpsWrite = True, True
                           # new phaseshifts need to be generated/written
@@ -154,23 +168,138 @@ def initialization(sl, rp):
         logger.error("Error while reading required file _BEAMLIST")
         raise
     
-    writePatternInfo(sl, rp)
-    
-    # if EXPBEAMS was loaded, it hasn't been check yet - check now
-    if rp.fileLoaded["EXPBEAMS"]:
-        checkEXPBEAMS(sl, rp)
-    # write and sort IVBEAMS
-    if not rp.fileLoaded["IVBEAMS"]:
+    if not subdomain:
+        writePatternInfo(sl, rp)
+        
+        # if EXPBEAMS was loaded, it hasn't been checked yet - check now
+        if rp.fileLoaded["EXPBEAMS"]:
+            checkEXPBEAMS(sl, rp)
+        # write and sort IVBEAMS
+        if not rp.fileLoaded["IVBEAMS"]:
+            try:
+                rp.ivbeams = writeIVBEAMS(sl, rp)
+                rp.ivbeams_sorted = False
+                rp.fileLoaded["IVBEAMS"] = True
+                rp.manifest.append("IVBEAMS")
+            except:
+                logger.error("Error while writing IVBEAMS file based on "
+                              "EXPBEAMS data.")
+                raise
+        if not rp.ivbeams_sorted:
+            rp.ivbeams = sortIVBEAMS(sl, rp)
+            rp.ivbeams_sorted = True
+        return 0
+
+def init_domains(rp):
+    """Runs an alternative initialization for the domain search. This will 
+    include running the 'normal' initialization for each domain."""
+    if len(rp.DOMAINS) < 2:
+        logger.error("A domain search was defined, but less than two domains "
+                     "are defined. Execution will stop.")
+        rp.setHaltingLevel(3)
+        return 0
+    checkFiles = ["POSCAR", "PARAMETERS", "VIBROCC", "_PHASESHIFTS"]
+    home = os.getcwd()
+    for (name, path) in rp.DOMAINS:
+        # determine the target path
+        target = os.path.abspath("Domain_"+name)
+        dp = tl.DomainParameters(target, home)
+        if os.path.isdir(target):
+            logger.warning("Folder "+target+" already exists. "
+                           "Contents may get overwritten.")
+        else:
+            os.mkdir(target)
+        logger.info("Fetching input files for domain {}".format(name))
+        if os.path.isdir(path):
+            # check the path for Tensors
+            tensorIndex = tl.leedbase.getMaxTensorIndex(path)
+            if tensorIndex != 0:
+                try:
+                    r = tl.leedbase.getTensors(tensorIndex, basedir=path, 
+                                               targetdir=target)
+                except:
+                    tensorIndex = 0
+                if r != 0:
+                    tensorIndex = 0
+            if tensorIndex != 0:
+                tensorDir = os.path.join(target, "Tensors", 
+                                         "Tensors_"+str(tensorIndex).zfill(3))
+                for file in (checkFiles + ["IVBEAMS"]):
+                    if os.path.isfile(os.path.join(tensorDir, file)):
+                        shutil.copy2(os.path.join(tensorDir, file),
+                                     os.path.join(target,file))
+                    else:
+                        tensorIndex = 0
+                        break
+            if tensorIndex != 0:
+                dp.tensorDir = tensorDir
+            else:       # no usable tensors in that dir; get input
+                dp.refcalcRequired = True
+                for file in checkFiles:
+                    if os.path.isfile(os.path.join(path, file)):
+                        try:
+                            shutil.copy(os.path.join(path,file),
+                                        os.path.join(target,file))
+                        except:
+                            if file != "_PHASESHIFTS":
+                                logger.error("Error copying required file {}"
+                                        "for domain {} from origin folder {}"
+                                        .format(file, name, path))
+                                return "Error getting domain input files"
+                    elif file != "_PHASESHIFTS":
+                        logger.error("Required file {} for domain {} not "
+                                     "found in origin folder {}"
+                                     .format(file, name, path))
+                        return "Error getting domain input files"
+        elif os.path.isfile(path):
+            if not os.path.isdir(os.path.join(target, "Tensors")):
+                os.mkdir(os.path.join(target, "Tensors"))
+            tensorDir = os.path.join(target, "Tensors", 
+                                     os.path.basename(path)[:-4])
+            if not os.path.isdir(os.path.join(target,"Tensors",tensorDir)):
+                os.mkdir(os.path.join(target,"Tensors",tensorDir))
+            try:
+                shutil.unpack_archive(path,tensorDir)
+            except:
+                logger.error("Failed to unpack Tensors for domain {} from "
+                             "file {}".format(name, path))
+                return "Error getting domain input files"
+            for file in (checkFiles + ["IVBEAMS"]):
+                if os.path.isfile(os.path.join(tensorDir, file)):
+                    shutil.copy2(os.path.join(tensorDir, file),
+                                 os.path.join(target,file))
+                else:
+                    logger.error("Required file {} for domain {} not found in "
+                                 "Tensor directory {}".format(file, name, 
+                                                              tensorDir))
+                    return "Error getting domain input files"
+            dp.tensorDir = tensorDir
         try:
-            rp.ivbeams = writeIVBEAMS(sl, rp)
-            rp.ivbeams_sorted = False
-            rp.fileLoaded["IVBEAMS"] = True
-            rp.manifest.append("IVBEAMS")
+            # initialize for that domain
+            os.chdir(target)
+            logger.info("Reading input files for domain {}".format(name))
+            try:
+                dp.sl = readPOSCAR()
+                dp.rp = readPARAMETERS()
+                interpretPARAMETERS(dp.rp, slab=dp.sl, silent=True)
+                dp.sl.fullUpdate(rp)   #gets PARAMETERS data into slab
+                dp.rp.fileLoaded["POSCAR"] = True
+                if dp.sl.preprocessed:
+                    dp.rp.SYMMETRY_FIND_ORI = False
+                dp.rp.updateDerivedParams()
+            except:
+                logger.error("Error loading POSCAR and PARAMETERS for domain "
+                             "{}".format(name))
+                raise
+            logger.info("Running initialization for domain {}".format(name))
+            try:
+                initialization(dp.sl, dp.rp)
+            except:
+                logger.error("Error running initialization for domain {}"
+                             .format(name))
+            rp.domainParams.append(dp)
         except:
-            logger.error("Error while writing IVBEAMS file based on "
-                          "EXPBEAMS data.")
+            logger.error("Error while initializing domain {}".format(name))
             raise
-    if not rp.ivbeams_sorted:
-        rp.ivbeams = sortIVBEAMS(sl, rp)
-        rp.ivbeams_sorted = True
-    return 0
+        finally:
+            os.chdir(home)

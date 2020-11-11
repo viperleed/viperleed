@@ -145,24 +145,24 @@ def getTLEEDdir(home=""):
     else:
         return ''
 
-def getMaxTensorIndex(home=""):
+def getMaxTensorIndex(home="."):
     """Checks the Tensors folder for the highest Tensor index there, 
     returns that value, or zero if there is no Tensors folder or no valid 
     Tensors zip file."""
-    if not os.path.isdir(os.path.join(home,".","Tensors")):
+    if not os.path.isdir(os.path.join(home,"Tensors")):
         return 0
     else:
         indlist = []
         rgx = re.compile(r'Tensors_[0-9]{3}\.zip')
-        for f in [f for f in os.listdir(os.path.join(home,".","Tensors")) 
-                  if (os.path.isfile(os.path.join(home,".","Tensors",f))
+        for f in [f for f in os.listdir(os.path.join(home,"Tensors")) 
+                  if (os.path.isfile(os.path.join(home,"Tensors",f))
                       and rgx.match(f))]:
             m = rgx.match(f)
             if m.span()[1] == 15:  # exact match
                 indlist.append(int(m.group(0)[-7:-4]))
         rgx = re.compile(r'Tensors_[0-9]{3}')
-        for f in [f for f in os.listdir(os.path.join(home,".","Tensors")) 
-                  if (os.path.isdir(os.path.join(home,".","Tensors",f))
+        for f in [f for f in os.listdir(os.path.join(home,"Tensors")) 
+                  if (os.path.isdir(os.path.join(home,"Tensors",f))
                       and rgx.match(f))]:
             m = rgx.match(f)
             if m.span()[1] == 11:  # exact match
@@ -171,25 +171,41 @@ def getMaxTensorIndex(home=""):
             return max(indlist)
     return 0
 
-def getTensors(index, required=True):
+def getTensors(index, basedir=".", targetdir=".", required=True):
     """Fetches Tensor files from Tensors or archive with specified tensor 
-    index. If required is set True, an error will be printed if no Delta files 
-    are found."""
+    index. If required is set True, an error will be printed if no Tensor 
+    files are found.
+    basedir is the directory in which the Tensor files are based.
+    targetdir is the directory to which the Tensor files should be moves."""
     dn = "Tensors_"+str(index).zfill(3)
-    if not os.path.isdir(os.path.join(".","Tensors",dn)):
-        if os.path.isfile(os.path.join(".","Tensors",dn+".zip")):
+    if not os.path.isdir(os.path.join(basedir,"Tensors",dn)):
+        if os.path.isfile(os.path.join(basedir,"Tensors",dn+".zip")):
             try:
                 logger.info("Unpacking {}.zip...".format(dn))
-                os.mkdir(os.path.join(".","Tensors",dn))
-                shutil.unpack_archive(os.path.join(".","Tensors",
+                if not os.path.isdir(os.path.join(targetdir, "Tensors")):
+                    os.makedir(os.path.join(targetdir, "Tensors"))
+                if not os.path.isdir(os.path.join(targetdir, "Tensors", dn)):
+                    os.mkdir(os.path.join(targetdir,"Tensors",dn))
+                shutil.unpack_archive(os.path.join(basedir,"Tensors",
                                                    dn+".zip"),
-                                      os.path.join(".","Tensors",dn))
+                                      os.path.join(targetdir,"Tensors",dn))
             except:
                 logger.error("Failed to unpack {}.zip".format(dn))
                 raise
         else:
             logger.error("Tensors not found")
             return ("Tensors not found")
+    elif basedir != targetdir:
+        try:
+            if not os.path.isdir(os.path.join(targetdir, "Tensors")):
+                os.makedir(os.path.join(targetdir, "Tensors"))
+            if not os.path.isdir(os.path.join(targetdir,"Tensors",dn)):
+                os.mkdir(os.path.join(targetdir,"Tensors",dn))
+            for file in os.path.listdir(os.path.join(basedir,"Tensors",dn)):
+                shutil.copy2(file, os.path.join(targetdir,"Tensors",dn))
+        except:
+            logger.error("Failed to move Tensors from {}".format(dn))
+            raise
     return 0
 
 def getDeltas(index, required=True):
@@ -245,7 +261,6 @@ def getTensorOriStates(sl, path):
         return("Could not check Tensors: Error loading old input "
                "files")
     finally:
-        # logging.getLogger("tleedm").setLevel(loglevel)
         logger.setLevel(loglevel)
     if len(tsl.atlist) != len(sl.atlist):
         logger.error("POSCAR from "+dn+" is incompatible with "

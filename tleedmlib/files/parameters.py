@@ -11,6 +11,7 @@ import logging
 import numpy as np
 import re
 import shutil
+import os
 
 import tleedmlib as tl
 
@@ -18,14 +19,14 @@ logger = logging.getLogger("tleedm.files.parameters")
 
 # list of allowed parameters
 knownParams = ['ATTENUATION_EPS', 'BEAM_INCIDENCE', 'BULKDOUBLING_EPS',
-    'BULKDOUBLING_MAX', 'BULK_REPEAT', 'ELEMENT_MIX', 'ELEMENT_RENAME',
-    'FILAMENT_WF', 'FORTRAN_COMP', 'HALTING', 'IV_SHIFT_RANGE', 'LAYER_CUTS', 
-    'LAYER_STACK_VERTICAL', 'LMAX', 'LOG_DEBUG', 'LOG_SEARCH', 
-    'N_BULK_LAYERS', 'N_CORES', 'PHASESHIFT_EPS', 'PLOT_COLORS_RFACTOR', 
-    'RUN', 'R_FACTOR_SMOOTH', 'R_FACTOR_TYPE', 'SCREEN_APERTURE', 
-    'SEARCH_BEAMS', 'SEARCH_CONVERGENCE', 'SEARCH_CULL', 'SEARCH_MAX_GEN', 
-    'SEARCH_POPULATION', 'SEARCH_START', 'SITE_DEF', 'SUPERLATTICE', 
-    'SUPPRESS_EXECUTION', 'SYMMETRIZE_INPUT', 'SYMMETRY_EPS', 
+    'BULKDOUBLING_MAX', 'BULK_REPEAT', 'DOMAIN', 'ELEMENT_MIX', 
+    'ELEMENT_RENAME', 'FILAMENT_WF', 'FORTRAN_COMP', 'HALTING', 
+    'IV_SHIFT_RANGE', 'LAYER_CUTS', 'LAYER_STACK_VERTICAL', 'LMAX', 
+    'LOG_DEBUG', 'LOG_SEARCH', 'N_BULK_LAYERS', 'N_CORES', 'PHASESHIFT_EPS', 
+    'PLOT_COLORS_RFACTOR', 'RUN', 'R_FACTOR_SMOOTH', 'R_FACTOR_TYPE', 
+    'SCREEN_APERTURE', 'SEARCH_BEAMS', 'SEARCH_CONVERGENCE', 'SEARCH_CULL', 
+    'SEARCH_MAX_GEN', 'SEARCH_POPULATION', 'SEARCH_START', 'SITE_DEF', 
+    'SUPERLATTICE', 'SUPPRESS_EXECUTION', 'SYMMETRIZE_INPUT', 'SYMMETRY_EPS', 
     'SYMMETRY_FIND_ORI', 'SYMMETRY_FIX', 'TENSOR_INDEX', 'TENSOR_OUTPUT', 
     'THEO_ENERGIES', 'T_DEBYE', 'T_EXPERIMENT', 'V0_IMAG', 'V0_REAL', 
     'V0_Z_ONSET', 'VIBR_AMP_SCALE']
@@ -117,20 +118,15 @@ def updatePARAMETERS_searchOnly(rp, filename='PARAMETERS'):
                         rp.SEARCH_MAX_DGEN_SCALING[target] = fl[1]
 
 
-def readPARAMETERS(filename='PARAMETERS', slab=None, silent=False):
+def readPARAMETERS(filename='PARAMETERS'):
     """Reads a PARAMETERS file and returns an Rparams object with the
-    information"""
+    raw input, without interpretation"""
     # open input file
-    loglevel = logger.level
-    if silent:
-        logger.setLevel(logging.ERROR)
     try:
         rf = open(filename, 'r')
     except FileNotFoundError:
         logger.error("PARAMETERS not found.")
         raise
-    # track some parameters while reading
-    searchConvRead = False
     #read PARAMETERS:
     rpars = tl.Rparams()
     for line in rf:
@@ -169,8 +165,18 @@ def readPARAMETERS(filename='PARAMETERS', slab=None, silent=False):
             rpars.readParams[param] = []
         rpars.readParams[param].append((plist, value))
     rf.close()
+    return rpars
+    
+def interpretPARAMETERS(rpars, slab=None, silent=False):
+    """Interprets the string values in an Rparams object, read previously by 
+    readPARAMETERS, to fill the parameter variables. Returns 0 on success."""
+    loglevel = logger.level
+    if silent:
+        logger.setLevel(logging.ERROR)
+    # track some parameters while reading
+    searchConvRead = False
     # define order that parameters should be read in
-    orderedParams = ["RUN"]
+    orderedParams = ["LOG_DEBUG", "RUN"]
     checkParams = [p for p in orderedParams if p in rpars.readParams]
     checkParams.extend([p for p in knownParams if (p in rpars.readParams and 
                                                      not p in checkParams)])
@@ -180,7 +186,7 @@ def readPARAMETERS(filename='PARAMETERS', slab=None, silent=False):
     for (param, plist, value) in [(param, lel[0], lel[1]) 
                                   for param in checkParams
                                   for lel in rpars.readParams[param]]:
-        if rpars.domains and param in domainsIgnoreParams:
+        if rpars.hasDomains and param in domainsIgnoreParams:
             continue
         llist = value.split()
         if param == 'ATTENUATION_EPS':
@@ -305,6 +311,35 @@ def readPARAMETERS(filename='PARAMETERS', slab=None, silent=False):
                         'be ignored.')
                 else:
                     rpars.BULK_REPEAT = vec
+        elif param == 'DOMAIN':
+            # check name
+            if len(plist) > 1:
+                name = plist[1]
+            else:
+                name = ""
+            names = [n for (n, _) in rpars.DOMAINS]
+            if name in names:
+                logger.warning('PARAMETERS file: Multiple sources defined '
+                    'for DOMAIN {}. Last entry will be ignored.'.format(name))
+                rpars.setHaltingLevel(2)
+                continue
+            if not name:  # get unique name
+                i = 1
+                while str(i) in names:
+                    i += 1
+                name = str(i)
+            # check path
+            if os.path.exists(value):
+                path = value
+            elif os.path.isfile(value + ".zip"):
+                path = value + ".zip"
+            else:
+                logger.warning('PARAMETERS file: Value for DOMAIN {} could '
+                        'not be interpreted as either a path or a .zip file.'
+                        .format(name))
+                rpars.setHaltingLevel(2)
+                continue
+            rpars.DOMAINS.append((name, path))
         elif param == 'ELEMENT_MIX':
             ptl = [el.lower() for el in tl.leedbase.periodic_table]
             found = False
@@ -481,6 +516,8 @@ def readPARAMETERS(filename='PARAMETERS', slab=None, silent=False):
                 rpars.LOG_DEBUG = False
             elif s in ['true','t']:
                 rpars.LOG_DEBUG = True
+                if not silent:
+                    logger.setLevel(logging.DEBUG)
             else:
                 logger.warning('PARAMETERS file: LOG_DEBUG: Could not parse '
                                 'given value. Input will be ignored.')
@@ -576,7 +613,7 @@ def readPARAMETERS(filename='PARAMETERS', slab=None, silent=False):
             if len(rl) > 0:
                 if 4 in rl:
                     logger.info('Found domain search.')
-                    rpars.domains = True
+                    rpars.hasDomains = True
                 i = 0
                 while i < len(rl):
                     if rl[i] not in [0,1,2,3,4,11,31]:
@@ -1178,9 +1215,8 @@ def readPARAMETERS(filename='PARAMETERS', slab=None, silent=False):
         elif param == 'VIBR_AMP_SCALE':
             rpars.VIBR_AMP_SCALE.extend(value.split(","))
                                 # taken at face value, interpreted later
-    
     logger.setLevel(loglevel)
-    return(rpars)
+    return 0
 
 def modifyPARAMETERS(rp, modpar, new="", comment=""):
     """Looks for 'modpar' in the PARAMETERS file, comments that line out, and 

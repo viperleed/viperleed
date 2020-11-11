@@ -1,4 +1,4 @@
-from .classes.rparams import Rparams, SearchPar
+from .classes.rparams import Rparams, DomainParameters, SearchPar
 from .classes.sitetype import Sitetype
 from .classes.atom import Atom
 from .classes.layer import Layer
