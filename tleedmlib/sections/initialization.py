@@ -154,6 +154,14 @@ def initialization(sl, rp, subdomain=False):
         logger.error("Exception occurred while writing POSCAR_bulk")
         raise
     
+    # write POSCAR_bulk_appended
+    try:
+        writeCONTCAR(sl.addBulkLayers(rp)[0], filename='POSCAR_bulk_appended')
+    except:
+        logger.warning("Exception occurred while writing POSCAR_bulk_appended")
+    
+    # generate beamlist
+
     if not subdomain:
         # generate beamlist
         logger.info("Generating _BEAMLIST...")
@@ -395,6 +403,7 @@ def init_domains(rp):
     # ...
     
     # run beamgen for the whole system
+
     logger.info("Generating _BEAMLIST...")
     try:
         bgenpath = os.path.join('source', 'beamgen3.out')

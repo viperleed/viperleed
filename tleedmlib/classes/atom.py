@@ -50,8 +50,8 @@ class Atom:
         self.dispInitialized = False
           # disp_ variables get initialized after readVIBROCC by Atom.initDisp
         
-        self.deltasGenerated = []    # keeps track of which elements delta 
-                                     #   files were generated for
+        self.deltasGenerated = []   # list of filenames as strings: delta 
+                                    #  files found or generated for this atom
         
         self.offset_geo = {}    # offset of position per element, compared to
                                 #   self.cartpos

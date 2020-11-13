@@ -6,7 +6,6 @@ Created on Mon Aug 17 15:32:12 2020
 """
 
 import os
-import copy
 import numpy as np
 import logging
 import random
@@ -29,47 +28,7 @@ def runPhaseshiftGen(sl,rp, psgensource=os.path.join('source','EEASiSSS.x'),
     atdenssource = os.path.join(rp.workdir, atdenssource)
     
     lmax = 16   # this could be a variable, for now set fixed...
-
-    nsl = copy.deepcopy(sl)
-    nsl.getFractionalCoordinates()
-    # bulk calculation:
-    blayers = [l for l in nsl.layers if l.isBulk]
-    # construct bulk slab
-    # bsl = copy.deepcopy(nsl)    #this makes the site different objects... 
-    # bsl.atlist = [at for at in bsl.atlist if at.layer.isBulk]
-    # bsl.layers = [l for l in bsl.layers if l.isBulk]
-    
-    if type(rp.BULK_REPEAT) == np.ndarray:
-        bulkc = rp.BULK_REPEAT
-        if bulkc[2] < 0:
-            bulkc = -bulkc
-    else:
-        cvec = nsl.ucell[:,2]
-        if rp.BULK_REPEAT is None:
-            # assume that interlayer vector from bottom non-bulk to top 
-            #  bulk layer is the same as between bulk units
-            zdiff = (blayers[-1].cartbotz 
-                     - nsl.layers[blayers[0].num-1].cartbotz)
-        elif type(rp.BULK_REPEAT) == float:
-            zdiff = rp.BULK_REPEAT
-        bulkc = cvec * zdiff / cvec[2]
-
-    # bsl.ucell[:,2] = bulkc
-    # bsl.collapseCartesianCoordinates()
-    
-    # add a bulk layer to the slab
-    nsl.getCartesianCoordinates()
-    cfact = (nsl.ucell[2,2] + abs(bulkc[2])) / nsl.ucell[2,2]
-    nsl.ucell[:,2] = nsl.ucell[:,2] * cfact
-    nsl.getFractionalCoordinates()
-    newbulkats = []
-    tmplist = nsl.atlist[:]
-    for at in tmplist:
-        if at.layer.isBulk: 
-            newbulkats.append(at.duplicate())
-        at.cartpos = at.cartpos - bulkc
-    nsl.collapseCartesianCoordinates(updateOrigin=True)
-    nsl.sortByZ()
+    nsl, newbulkats = sl.addBulkLayers(rp)
     
     outvals = {}    # dict containing lists of values to output. 
                     #   format outvals[energy][block][L]

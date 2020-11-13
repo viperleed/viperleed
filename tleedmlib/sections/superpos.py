@@ -101,8 +101,8 @@ def superpos(sl, rp):
     # now we have configuration and parameters, create input:
     contrin = ""
     try:
-        contrin = io.writeCONTRIN(sl, rp, config)
-        logger.debug("Wrote to Superpos-CONTRIN successfully")
+        contrin = io.writeSuperposInput(sl, rp, config)
+        logger.debug("Wrote Superpos input successfully")
     except:
         logger.error("Error getting input data for Superpos: ", 
                       exc_info = True)
@@ -110,14 +110,8 @@ def superpos(sl, rp):
         return 0
     if contrin == "":
         logger.error("Error getting input data for Superpos: "
-                     "writeCONTRIN returned empty. Cancelling Superpos...")
-        rp.setHaltingLevel(2)
-        return 0
-    try:
-        io.writeSuperposPARAM(rp)
-    except:
-        logger.error("Error writing PARAM file for Superpos: ",
-                      exc_info = True)
+                     "writeSuperposInput returned empty. Cancelling "
+                     "Superpos...")
         rp.setHaltingLevel(2)
         return 0
     # if execution is suppressed, stop here:

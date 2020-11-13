@@ -28,6 +28,10 @@ def rfactor(sl, rp, index):
         logger.info("Only one theoretical energy found: Cannot calculate "
                      "a meaningful R-Factor. Stopping...")
         return 0
+    if index == 11:
+        name = "refcalc"
+    else:
+        name = "superpos"
     if ((index == 11 and len(rp.refcalc_fdout) == 0) 
                 or (index == 12 and len(rp.superpos_specout) == 0)):
         if index == 11:
@@ -43,10 +47,9 @@ def rfactor(sl, rp, index):
                 theobeams, theospec = readFdOut(readfile = path)
                 if index == 11: 
                     rp.refcalc_fdout = theospec
-                    rp.theobeams["refcalc"] = theobeams
                 else:
                     rp.superpos_specout = theospec
-                    rp.theobeams["superpos"] = theobeams
+                rp.theobeams[name] = theobeams
             except:
                 logger.error("Failed to read "+path)
                 raise
@@ -59,10 +62,9 @@ def rfactor(sl, rp, index):
                 theobeams, theospec = readFdOut(readfile = path)
                 if index == 11: 
                     rp.refcalc_fdout = theospec
-                    rp.theobeams["refcalc"] = theobeams
                 else:
                     rp.superpos_specout = theospec
-                    rp.theobeams["superpos"] = theobeams
+                rp.theobeams[name] = theobeams
             except:
                 logger.error("Failed to read "+path)
                 raise
@@ -86,10 +88,9 @@ def rfactor(sl, rp, index):
             return("Contradiction in beam sets")
     if index == 11:
         theospec = rp.refcalc_fdout
-        theobeams = rp.theobeams["refcalc"]
     elif index == 12:
         theospec = rp.superpos_specout
-        theobeams = rp.theobeams["superpos"]
+    theobeams = rp.theobeams[name]
     # WEXPEL before PARAM, to make sure number of exp. beams is correct
     try:
         io.writeWEXPEL(sl, rp, theobeams)
@@ -190,14 +191,11 @@ def rfactor(sl, rp, index):
                         "something went wrong in the reference "
                         "calculation or in the R-factor calculation.")
                 rp.setHaltingLevel(2)
-                fn = "R_OUT_"+rp.timestamp
+                fn = "R_OUT_"+name+"_"+rp.timestamp
             else:
-                fn = "R_OUT_"+rp.timestamp+"_R={:.4f}".format(rfac)
+                fn = "R_OUT_"+name+"_"+rp.timestamp+"_R={:.4f}".format(rfac)
                 rp.last_R = rfac
-                if index == 11:
-                    rp.stored_R["refcalc"] = (rfac, r_int, r_frac)
-                else:
-                    rp.stored_R["superpos"] = (rfac, r_int, r_frac)
+                rp.stored_R[name] = (rfac, r_int, r_frac)
             try:
                 os.rename("ROUT",fn)
             except:
@@ -207,12 +205,8 @@ def rfactor(sl, rp, index):
                 logger.warning("Failed to read R-Factors per beam from "
                                 "R-factor output file ROUT.")
                 rfaclist = [-1]*len(rp.expbeams)
-            if index == 11:
-                outname = "Rfactor_plots_refcalc.pdf"
-                aname = "Rfactor_analysis_refcalc.pdf"
-            else:
-                outname = "Rfactor_plots_superpos.pdf"
-                aname = "Rfactor_analysis_superpos.pdf"
+            outname = "Rfactor_plots_{}.pdf".format(name)
+            aname = "Rfactor_analysis_{}.pdf".format(name)
             try:
                 r = io.writeRfactorPdf([(b.label, rfaclist[i]) for (i, b) 
                                                 in enumerate(rp.expbeams)],

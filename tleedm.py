@@ -239,7 +239,7 @@ def sortfiles(tensorIndex, delete_unzipped = False, tensors = True,
                 "rfactor-PARAM", "delta-input", "search.steu",
                 "search-rf.info", "seach-PARAM", "AUXEXPBEAMS",
                 "eeasisss-input", "searchpars.info", "superpos-PARAM",
-                "superpos-CONTRIN"]
+                "superpos-CONTRIN", "POSCAR_bulk_appended"]
     outfiles = ["THEOBEAMS.csv", "THEOBEAMS_norm.csv",
                 "PatternInfo.tlm", "SD.TL", "refcalc-fd.out",
                 "Rfactor_plots_refcalc.pdf", "control.chem",
@@ -615,6 +615,25 @@ def main():
             shutil.rmtree(os.path.join(".","workhistory"))
         except:
             logger.warning("Failed to clear workhistory folder.")
+    # get rid of old POSCAR_OUT, VIBROCC_OUT and R_OUT files:
+    for d in [".", os.path.join(".","OUT")]:
+        if os.path.isdir(d):
+            for s in ["POSCAR_OUT", "VIBROCC_OUT", "R_OUT"]:
+                for f in [fn for fn in os.listdir(d) if fn.startswith(s)]:
+                    try:
+                        os.remove(os.path.join(d,f))
+                    except:
+                        logger.debug("Failed to delete file {}"
+                                     .format(os.path.join(d,f)))
+    # clean up old executable files:
+    for fn in ["refcalc", "rfactor", "search", "superpos"]:
+        p = re.compile(fn+r'-\d{6}-\d{6}')
+        for f in [f for f in os.listdir() if len(f) == len(fn)+14 
+                                          and p.match(f)]:
+            try:
+                os.remove(f)
+            except:
+                logger.debug("Failed to delete file {}".format(f))
     # see if there are old logfiles
     oldlogs = [f for f in os.listdir() if os.path.isfile(f) and
                f.endswith(".log") and f != logname]
