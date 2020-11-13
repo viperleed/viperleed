@@ -329,6 +329,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                     i += 1
                 name = str(i)
             # check path
+            value = value.strip()
             if os.path.exists(value):
                 path = value
             elif os.path.isfile(value + ".zip"):

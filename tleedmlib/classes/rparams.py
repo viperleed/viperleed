@@ -58,9 +58,10 @@ class SearchPar:
 
 class DomainParameters:
     """Stores workdir, slab and runparams objects for each domain"""
-    def __init__(self, workdir, homedir):
+    def __init__(self, workdir, homedir, name):
         self.workdir = workdir
         self.homedir = homedir
+        self.name = name
         self.sl = None
         self.rp = None
         
@@ -159,6 +160,7 @@ class Rparams:
         #                                         #  ignore & warn
 
         # variable states
+        self.workdir = ""   # MAIN WORK DIRECTORY; where to look for files
         self.searchConvInit = {"gaussian": None, 
                               "dgen": {"all": None, "best": None, "dec": None}}
         self.searchMaxGenInit = self.SEARCH_MAX_GEN
@@ -181,6 +183,7 @@ class Rparams:
         # domains
         self.hasDomains = False
         self.domainParams = []
+        self.pseudoSlab = None
 
         # data from files
         self.beamlist = []  # lines as strings from _BEAMLIST

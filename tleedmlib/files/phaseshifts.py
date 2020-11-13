@@ -14,7 +14,8 @@ import fortranformat as ff
 
 logger = logging.getLogger("tleedm.files.phaseshifts")
 
-def readPHASESHIFTS(sl, rp, readfile='_PHASESHIFTS', check=True):
+def readPHASESHIFTS(sl, rp, readfile='_PHASESHIFTS', check=True, 
+                    ignoreEnRange=False):
     """Reads from a _PHASESHIFTS file, returns the data as a list of tuples
     (E, enps), where enps is a list of lists, containing one list of values
     (for different L) for each element. Therefore, len(phaseshifts) is the
@@ -160,6 +161,7 @@ def readPHASESHIFTS(sl, rp, readfile='_PHASESHIFTS', check=True):
                 "will be generated.")
             rp.setHaltingLevel(1)
 
+    if check and not ignoreEnRange:
         # check whether energy range is large enough:
         checkfail = False
         er = np.arange(rp.THEO_ENERGIES[0], rp.THEO_ENERGIES[1]+1e-4, 

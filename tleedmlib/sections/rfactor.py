@@ -103,7 +103,7 @@ def rfactor(sl, rp, index):
         raise
     # get fortran files and compile
     try:
-        tldir = getTLEEDdir()
+        tldir = getTLEEDdir(home=rp.workdir)
         libpath = os.path.join(tldir,'lib')
         libname = [f for f in os.listdir(libpath) 
                       if f.startswith('rfacsb')][0]

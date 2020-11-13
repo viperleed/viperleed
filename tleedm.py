@@ -65,7 +65,8 @@ def runSection(index, sl, rp):
                     3: "SEARCH",
                     11: "R-FACTOR CALCULATION",
                     12: "R-FACTOR CALCULATION",
-                    31: "SUPERPOS"}
+                    31: "SUPERPOS",
+                    4: "DOMAIN SEARCH"}
     requiredFiles = {0: ["POSCAR", "PARAMETERS", "VIBROCC", "IVBEAMS"],
                      1: ["BEAMLIST", "PHASESHIFTS", "POSCAR", "PARAMETERS",
                          "IVBEAMS", "VIBROCC"],
@@ -78,7 +79,8 @@ def runSection(index, sl, rp):
                      12: ["BEAMLIST", "PHASESHIFTS", "POSCAR", "PARAMETERS",
                          "IVBEAMS", "EXPBEAMS"],
                      31: ["BEAMLIST", "POSCAR", "PARAMETERS", "IVBEAMS",
-                          "VIBROCC", "DISPLACEMENTS"]}
+                          "VIBROCC", "DISPLACEMENTS"],
+                     4: []}  # !!! required files for domain search?
                 # files that need to be there for the different parts to run
     if rp.hasDomains:
         requiredFiles[0] = ["PARAMETERS", "IVBEAMS"]
@@ -629,7 +631,7 @@ def main():
         except:
             pass
 
-    sectionorder = [0, 1, 11, 2, 3, 31, 12]
+    sectionorder = [0, 1, 11, 2, 3, 31, 12, 4]
     searchLoopR = None
     searchLoopLevel = 0
     initHalt = False

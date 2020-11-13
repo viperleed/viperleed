@@ -392,6 +392,15 @@ class Slab:
         for (i,sl) in enumerate(self.sublayers): 
             sl.num = i
 
+    def getMinLayerSpacing(self):
+        """Returns the minimum distance (cartesian) between two layers in the 
+        slab. Returns zero if there is only one layer, or none are defined."""
+        if len(self.layers) < 2:
+            return 0
+        self.getCartesianCoordinates()
+        return min([(self.layers[i].carttopz - self.layers[i-1].cartbotz) 
+                    for i in range(1, len(self.layers))])
+
     def updateElements(self,rp):
         """Updates nelem based on the ELEMENT_MIX parameter, and warns in case 
         of a naming conflict."""

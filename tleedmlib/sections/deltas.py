@@ -32,6 +32,7 @@ class DeltaCompileTask():
         self.foldername = "Delta_Compile_{}".format(index)
         self.exename = "delta-{}".format(index)
         self.fortran_comp = ["",""]
+        self.sourcedir = "" # where the fortran files are
         
 class DeltaRunTask():
     """Stores information needed to copy the correct delta executable and 
@@ -149,7 +150,7 @@ def compileDelta(comptask):
                 + "while trying to write PARAM file.")
     # get Fortran source files
     try:
-        tldir = tl.leedbase.getTLEEDdir(home=home)
+        tldir = tl.leedbase.getTLEEDdir(home=comptask.sourcedir)
         libpath = os.path.join(tldir,'lib')
         libname1 = [f for f in os.listdir(libpath) 
                       if f.startswith('lib.tleed')][0]
@@ -451,6 +452,7 @@ def deltas(sl, rp):
             return ("No Fortran compiler")
     for ct in deltaCompTasks:
         ct.fortran_comp = rp.FORTRAN_COMP
+        ct.sourcedir = rp.workdir
         
     # if number of cores is not defined, try to find it
     if rp.N_CORES == 0:
