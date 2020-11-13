@@ -1094,7 +1094,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                     else:
                         logger.warning('PARAMETERS file: Unexpected '
                             'input for THEO_ENERGIES. Input will be ignored.')
-                    rpars.setHaltingLevel(1)
+                        rpars.setHaltingLevel(1)
             elif len(llist) == 3:
                 fl = []
                 defined = 0
