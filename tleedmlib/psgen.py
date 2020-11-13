@@ -16,13 +16,17 @@ import tleedmlib as tl
 
 logger = logging.getLogger("tleedm.psgen")
 
-def runPhaseshiftGen(sl,rp,psgensource=os.path.join('.','source','EEASiSSS.x'),
-                     excosource=os.path.join('.','source','seSernelius'),
-                     atdenssource=os.path.join('.','source', 
-                                               'atom_density_files')):
+def runPhaseshiftGen(sl,rp, psgensource=os.path.join('source','EEASiSSS.x'),
+                            excosource=os.path.join('source','seSernelius'),
+                            atdenssource=os.path.join('source', 
+                                                      'atom_density_files')):
     """Creates required input for EEASiSSS.x, then runs it. Reads the output 
     files and extracts information for _PHASESHIFTS file, then returns that 
     information (without writing _PHASESHIFTS)."""
+    psgensource = os.path.join(rp.workdir, psgensource)
+    excosource = os.path.join(rp.workdir, excosource)
+    atdenssource = os.path.join(rp.workdir, atdenssource)
+    
     lmax = 16   # this could be a variable, for now set fixed...
     nsl, newbulkats = sl.addBulkLayers(rp)
     

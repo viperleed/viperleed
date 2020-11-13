@@ -9,13 +9,17 @@ Tensor LEED Manager section Initialization
 """
 
 import os
+import shutil
 import logging
 import copy
+import numpy as np
 
 import tleedmlib as tl
-import tleedmlib.beamgen
-import tleedmlib.psgen
-from tleedmlib.files.poscar import writeCONTCAR
+from tleedmlib.base import angle
+from tleedmlib.beamgen import runBeamGen
+from tleedmlib.psgen import runPhaseshiftGen
+from tleedmlib.files.poscar import readPOSCAR, writeCONTCAR
+from tleedmlib.files.parameters import readPARAMETERS, interpretPARAMETERS
 from tleedmlib.files.phaseshifts import readPHASESHIFTS, writePHASESHIFTS
 from tleedmlib.files.beams import (readOUTBEAMS, readBEAMLIST, checkEXPBEAMS, 
                                    sortIVBEAMS, writeIVBEAMS)
@@ -23,33 +27,46 @@ from tleedmlib.files.patterninfo import writePatternInfo
 
 logger = logging.getLogger("tleedm.initialization")
 
-def initialization(sl, rp):
+
+def initialization(sl, rp, subdomain=False):
     """Runs the initialization. Returns 0 on success."""
-    # check for experimental beams:
-    expbeamsname = ""
-    for fn in ["EXPBEAMS.csv", "EXPBEAMS"]:
-        if os.path.isfile(fn):
-            expbeamsname = fn
-            break
-    if expbeamsname:
-        if len(rp.THEO_ENERGIES) == 0:
-            er = []
-        else:
-            er = rp.THEO_ENERGIES[:2]
-        if not rp.fileLoaded["EXPBEAMS"]:
-            try:
-                rp.expbeams = readOUTBEAMS(fn, enrange=er)
-                rp.fileLoaded["EXPBEAMS"] = True
-            except:
-                logger.error("Error while reading file "+fn, exc_info=True)
+    if not subdomain:
+        # check for experimental beams:
+        expbeamsname = ""
+        for fn in ["EXPBEAMS.csv", "EXPBEAMS"]:
+            if os.path.isfile(fn):
+                expbeamsname = fn
+                break
+        if expbeamsname:
+            if len(rp.THEO_ENERGIES) == 0:
+                er = []
+            else:
+                er = rp.THEO_ENERGIES[:2]
+            if not rp.fileLoaded["EXPBEAMS"]:
+                try:
+                    rp.expbeams = readOUTBEAMS(fn, enrange=er)
+                    rp.fileLoaded["EXPBEAMS"] = True
+                except:
+                    logger.error("Error while reading file "+fn, exc_info=True)
     rp.initTheoEnergies()  # may be initialized based on exp. beams
+
+    if rp.hasDomains and not subdomain:
+        try:
+            r = init_domains(rp)
+        except:
+            raise
+        if r != 0:
+            return r
+        return 0
+
     # check whether _PHASESHIFTS are present & consistent:
     newpsGen, newpsWrite = True, True
                           # new phaseshifts need to be generated/written
-    if os.path.isfile(os.path.join(".","_PHASESHIFTS")):
+    if os.path.isfile("_PHASESHIFTS"):
         try:
             (rp.phaseshifts_firstline, rp.phaseshifts,
-                 newpsGen, newpsWrite) = readPHASESHIFTS(sl, rp)
+                 newpsGen, newpsWrite) = readPHASESHIFTS(sl, rp, 
+                                                    ignoreEnRange = subdomain)
         except:
             logger.warning("Found a _PHASESHIFTS file but could not "
                 "read it. A new _PHASESHIFTS file will be generated."
@@ -57,11 +74,11 @@ def initialization(sl, rp):
             rp.setHaltingLevel(1)
     if newpsGen:
         try:
-            rundgrenpath = os.path.join('.', 'source', 'EEASiSSS.x')
-            serneliuspath = os.path.join('.', 'source', 'seSernelius')
+            rundgrenpath = os.path.join('source', 'EEASiSSS.x')
+            serneliuspath = os.path.join('source', 'seSernelius')
             logger.info("Generating phaseshifts data... ")
             (rp.phaseshifts_firstline, 
-                        rp.phaseshifts) = tl.psgen.runPhaseshiftGen(sl, rp,
+                        rp.phaseshifts) = runPhaseshiftGen(sl, rp,
                                                psgensource = rundgrenpath, 
                                                excosource = serneliuspath)
             logger.debug("Finished generating phaseshift data")
@@ -144,10 +161,253 @@ def initialization(sl, rp):
         logger.warning("Exception occurred while writing POSCAR_bulk_appended")
     
     # generate beamlist
+
+    if not subdomain:
+        # generate beamlist
+        logger.info("Generating _BEAMLIST...")
+        try:
+            bgenpath = os.path.join('source', 'beamgen3.out')
+            runBeamGen(sl,rp,beamgensource = bgenpath)
+            # this does NOT read the resulting file!
+        except:
+            logger.error("Exception occurred while calling beamgen.")
+            raise
+        rp.manifest.append("_BEAMLIST")
+        try:
+            rp.beamlist = readBEAMLIST()
+            rp.fileLoaded["BEAMLIST"] = True
+        except:
+            logger.error("Error while reading required file _BEAMLIST")
+            raise
+    
+        writePatternInfo(sl, rp)
+        
+        # if EXPBEAMS was loaded, it hasn't been checked yet - check now
+        if rp.fileLoaded["EXPBEAMS"]:
+            checkEXPBEAMS(sl, rp)
+        # write and sort IVBEAMS
+        if not rp.fileLoaded["IVBEAMS"]:
+            try:
+                rp.ivbeams = writeIVBEAMS(sl, rp)
+                rp.ivbeams_sorted = False
+                rp.fileLoaded["IVBEAMS"] = True
+                rp.manifest.append("IVBEAMS")
+            except:
+                logger.error("Error while writing IVBEAMS file based on "
+                              "EXPBEAMS data.")
+                raise
+        if not rp.ivbeams_sorted:
+            rp.ivbeams = sortIVBEAMS(sl, rp)
+            rp.ivbeams_sorted = True
+    return 0
+
+def init_domains(rp):
+    """Runs an alternative initialization for the domain search. This will 
+    include running the 'normal' initialization for each domain."""
+    if len(rp.DOMAINS) < 2:
+        logger.error("A domain search was defined, but less than two domains "
+                     "are defined. Execution will stop.")
+        rp.setHaltingLevel(3)
+        return 0
+    checkFiles = ["POSCAR", "PARAMETERS", "VIBROCC", "_PHASESHIFTS"]
+    home = os.getcwd()
+    for (name, path) in rp.DOMAINS:
+        # determine the target path
+        target = os.path.abspath("Domain_"+name)
+        dp = tl.DomainParameters(target, home, name)
+        if os.path.isdir(target):
+            logger.warning("Folder "+target+" already exists. "
+                           "Contents may get overwritten.")
+        else:
+            os.mkdir(target)
+        logger.info("Fetching input files for domain {}".format(name))
+        if os.path.isdir(path):
+            # check the path for Tensors
+            tensorIndex = tl.leedbase.getMaxTensorIndex(path)
+            if tensorIndex != 0:
+                try:
+                    r = tl.leedbase.getTensors(tensorIndex, basedir=path, 
+                                               targetdir=target)
+                except:
+                    tensorIndex = 0
+                if r != 0:
+                    tensorIndex = 0
+            if tensorIndex != 0:
+                tensorDir = os.path.join(target, "Tensors", 
+                                         "Tensors_"+str(tensorIndex).zfill(3))
+                for file in (checkFiles + ["IVBEAMS"]):
+                    if os.path.isfile(os.path.join(tensorDir, file)):
+                        shutil.copy2(os.path.join(tensorDir, file),
+                                     os.path.join(target,file))
+                    else:
+                        tensorIndex = 0
+                        break
+            if tensorIndex != 0:
+                dp.tensorDir = tensorDir
+            else:       # no usable tensors in that dir; get input
+                dp.refcalcRequired = True
+                for file in checkFiles:
+                    if os.path.isfile(os.path.join(path, file)):
+                        try:
+                            shutil.copy(os.path.join(path,file),
+                                        os.path.join(target,file))
+                        except:
+                            if file != "_PHASESHIFTS":
+                                logger.error("Error copying required file {}"
+                                        "for domain {} from origin folder {}"
+                                        .format(file, name, path))
+                                return "Error getting domain input files"
+                    elif file != "_PHASESHIFTS":
+                        logger.error("Required file {} for domain {} not "
+                                     "found in origin folder {}"
+                                     .format(file, name, path))
+                        return "Error getting domain input files"
+        elif os.path.isfile(path):
+            if not os.path.isdir(os.path.join(target, "Tensors")):
+                os.mkdir(os.path.join(target, "Tensors"))
+            tensorDir = os.path.join(target, "Tensors", 
+                                     os.path.basename(path)[:-4])
+            if not os.path.isdir(os.path.join(target,"Tensors",tensorDir)):
+                os.mkdir(os.path.join(target,"Tensors",tensorDir))
+            try:
+                shutil.unpack_archive(path,tensorDir)
+            except:
+                logger.error("Failed to unpack Tensors for domain {} from "
+                             "file {}".format(name, path))
+                return "Error getting domain input files"
+            for file in (checkFiles + ["IVBEAMS"]):
+                if os.path.isfile(os.path.join(tensorDir, file)):
+                    shutil.copy2(os.path.join(tensorDir, file),
+                                 os.path.join(target,file))
+                else:
+                    logger.error("Required file {} for domain {} not found in "
+                                 "Tensor directory {}".format(file, name, 
+                                                              tensorDir))
+                    return "Error getting domain input files"
+            dp.tensorDir = tensorDir
+        try:
+            # initialize for that domain
+            os.chdir(target)
+            logger.info("Reading input files for domain {}".format(name))
+            try:
+                dp.sl = readPOSCAR()
+                dp.rp = readPARAMETERS()
+                interpretPARAMETERS(dp.rp, slab=dp.sl, silent=True)
+                dp.sl.fullUpdate(dp.rp)   #gets PARAMETERS data into slab
+                dp.rp.fileLoaded["POSCAR"] = True
+                if dp.sl.preprocessed:
+                    dp.rp.SYMMETRY_FIND_ORI = False
+                dp.rp.updateDerivedParams()
+            except:
+                logger.error("Error loading POSCAR and PARAMETERS for domain "
+                             "{}".format(name))
+                raise
+            logger.info("Running initialization for domain {}".format(name))
+            # psgen has problems with long paths -> try to shorten
+            shortpath = home
+            if len(os.path.relpath(home)) < len(shortpath):
+                shortpath = os.path.relpath(home)
+            dp.rp.workdir = shortpath
+            try:
+                initialization(dp.sl, dp.rp, subdomain=True)
+            except:
+                logger.error("Error running initialization for domain {}"
+                             .format(name))
+                raise
+            rp.domainParams.append(dp)
+        except:
+            logger.error("Error while initializing domain {}".format(name))
+            raise
+        finally:
+            os.chdir(home)
+    if len(rp.domainParams) < len(rp.DOMAINS):
+        return "Failed to read domain parameters"
+    # check whether bulk unit cells match
+    logger.info("Starting domain consistency check...")
+    bulkuc0 = np.transpose(rp.domainParams[0].sl.bulkslab.ucell[:2,:2])
+    for dp in rp.domainParams[1:]:
+        bulkuc = np.transpose(dp.sl.bulkslab.ucell[:2,:2])
+        if np.all(abs(bulkuc-bulkuc0) < 1e-4):
+            continue
+        # if the unit cells don't match right away, try if rotation matches
+        found = False
+        for i in [0,1]:
+            ang = angle(bulkuc0[i], bulkuc[0])
+            rotm = np.array([[np.cos(ang),-np.sin(ang)],
+                             [np.sin(ang),np.cos(ang)]])
+            rotuc = np.dot(rotm, bulkuc)
+            if np.all(abs(bulkuc0-rotuc) < 1e-4):
+                logger.info("Bulk unit cells of domain {0} and domain {1} are "
+                    "mismatched, but can be matched by rotating domain {1}."
+                    .format(rp.domainParams[0].name, dp.name))
+                rotm3d = np.array([[0,0,0],[0,0,0],[0,0,1]])
+                rotm3d[:2,:2] = rotm
+                dp.sl.ucell = np.dot(rotm3d, dp.sl.ucell)
+                dp.sl.getCartesianCoordinates()
+                dp.sl.bulkslab.ucell = np.dot(rotm3d, dp.sl.bulkslab.ucell)
+                dp.sl.bulkslab.getCartesianCoordinates()
+                found = True
+                break
+        if found:
+            continue
+        logger.error("Bulk unit cells of domain {0} and domain {1} are "
+                    "mismatched, and cannot be matched by rotation. Domain "
+                    "search cannot proceed. Execution will stop."
+                    .format(rp.domainParams[0].name, dp.name))
+        rp.setHaltingLevel(3)
+        return 0
+    logger.debug("Domain bulk unit cells are compatible.")
+    uc0 = np.transpose(rp.domainParams[0].sl.ucell[:2,:2])
+    largestDomain = rp.domainParams[0]
+    allMatched = all([np.all(abs(np.transpose(dp.sl.ucell[:2,:2])-uc0) < 1e-4) 
+                      for dp in rp.domainParams[1:]])
+    if allMatched:
+        logger.debug("Domain surface unit cells are matched.")
+    else:
+        maxArea = abs(np.linalg.det(uc0))
+        for dp in rp.domainParams[1:]:
+            uc = np.transpose(dp.sl.ucell[:2,:2])
+            if abs(np.linalg.det(uc)) > maxArea:
+                maxArea = abs(np.linalg.det(uc))
+                largestDomain = dp
+        uc0 = np.transpose(largestDomain.sl.ucell[:2,:2])
+        for dp in [p for p in rp.domainParams if p != largestDomain]:
+            uc = np.transpose(dp.sl.ucell[:2,:2])
+            if not np.all(abs(uc-uc0) < 1e-4):
+                dp.refcalcRequired = True
+                trans = uc0 * np.linalg.inv(uc)
+                if np.any(abs(trans - np.round(trans)) > 1e-4):
+                    logger.error("Surface unit cell of domain {0} cannot be "
+                        "transformed to the largest surface unit cell (domain "
+                        "{1}) by an integer transformation. Execution will "
+                        "stop. Please supply all domain structures as "
+                        "matching supercells.".format(dp.name, 
+                                                      largestDomain.name))
+                    rp.setHaltingLevel(3)
+                    return 0
+        logger.info("Domain surface unit cells are mismatched, but can be "
+                    "matched by integer transformations.")
+    # store some information about the supercell in rp:
+    rp.SUPERLATTICE = copy.copy(largestDomain.rp.SUPERLATTICE)
+    rp.pseudoSlab = tl.Slab()
+    rp.pseudoSlab.ucell = copy.copy(largestDomain.sl.ucell)
+    rp.pseudoSlab.bulkslab = tl.Slab()
+    rp.pseudoSlab.bulkslab.ucell = copy.copy(largestDomain.sl.bulkslab.ucell)
+    # now more extensive compatibility check
+    
+    
+    
+    # ...
+    
+    
+    # ...
+    
+    # run beamgen for the whole system
+
     logger.info("Generating _BEAMLIST...")
     try:
-        bgenpath = os.path.join('.', 'source', 'beamgen3.out')
-        tl.beamgen.runBeamGen(sl,rp,beamgensource = bgenpath)
+        bgenpath = os.path.join('source', 'beamgen3.out')
+        runBeamGen(rp.pseudoSlab, rp, beamgensource = bgenpath, domains = True)
         # this does NOT read the resulting file!
     except:
         logger.error("Exception occurred while calling beamgen.")
@@ -160,23 +420,3 @@ def initialization(sl, rp):
         logger.error("Error while reading required file _BEAMLIST")
         raise
     
-    writePatternInfo(sl, rp)
-    
-    # if EXPBEAMS was loaded, it hasn't been check yet - check now
-    if rp.fileLoaded["EXPBEAMS"]:
-        checkEXPBEAMS(sl, rp)
-    # write and sort IVBEAMS
-    if not rp.fileLoaded["IVBEAMS"]:
-        try:
-            rp.ivbeams = writeIVBEAMS(sl, rp)
-            rp.ivbeams_sorted = False
-            rp.fileLoaded["IVBEAMS"] = True
-            rp.manifest.append("IVBEAMS")
-        except:
-            logger.error("Error while writing IVBEAMS file based on "
-                          "EXPBEAMS data.")
-            raise
-    if not rp.ivbeams_sorted:
-        rp.ivbeams = sortIVBEAMS(sl, rp)
-        rp.ivbeams_sorted = True
-    return 0

@@ -13,9 +13,11 @@ import fortranformat as ff
 
 logger = logging.getLogger("tleedm.beamgen")
 
-def runBeamGen(sl,rp,beamgensource=os.path.join('.','source','beamgen3.out')):
+def runBeamGen(sl, rp, beamgensource = os.path.join('source','beamgen3.out'),
+               domains = False):
     """Writes necessary input for the beamgen3 code, the runs it. The relevant 
     output file will be renamed to _BEAMLIST."""
+    beamgensource = os.path.join(rp.workdir, beamgensource)
     output = ''
     f74x2 = ff.FortranRecordWriter('2F7.4')
     if sl.bulkslab is None:
@@ -36,12 +38,10 @@ def runBeamGen(sl,rp,beamgensource=os.path.join('.','source','beamgen3.out')):
     output += ol + 'LATMAT -  matrix\n'
     output +=('  1                                 SSYM - symmetry code - cf. '
               'van Hove / Tong 1979, always 1\n')
-    sl.getCartesianCoordinates()
-    mindist = sl.layers[1].carttopz - sl.layers[0].cartbotz
-    for i in range(2,len(sl.layers)):
-        d = sl.layers[i].carttopz - sl.layers[i-1].cartbotz
-        if d < mindist: mindist = d
-    dmin = mindist*0.7
+    if not domains:
+        dmin = sl.getMinLayerSpacing() * 0.7
+    else:
+        dmin = min([dp.sl.getMinLayerSpacing() for dp in rp.domainParams])*0.7
     f71 = ff.FortranRecordWriter('F7.1')
     f41 = ff.FortranRecordWriter('F4.1')
     ol = f71.write([rp.THEO_ENERGIES[1]]) + f41.write([dmin])

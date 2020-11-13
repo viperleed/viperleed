@@ -253,7 +253,7 @@ def search(sl, rp):
                 return ("Fortran compile error")
     # get fortran files
     try:
-        tldir = tl.leedbase.getTLEEDdir()
+        tldir = tl.leedbase.getTLEEDdir(home=rp.workdir)
         srcpath = os.path.join(tldir,'src')
         srcname = [f for f in os.listdir(srcpath) 
                       if f.startswith('search.mpi')][0]

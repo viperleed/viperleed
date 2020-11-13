@@ -22,7 +22,9 @@ if tleedmap_path not in sys.path:
     sys.path.append(tleedmap_path)
 
 import tleedmlib.sections as sections
-from tleedmlib.files.parameters import readPARAMETERS, modifyPARAMETERS
+from tleedmlib.base import readIntRange
+from tleedmlib.files.parameters import (readPARAMETERS, interpretPARAMETERS, 
+                                        modifyPARAMETERS)
 from tleedmlib.files.phaseshifts import readPHASESHIFTS
 from tleedmlib.files.poscar import readPOSCAR
 from tleedmlib.files.beams import (readBEAMLIST, readIVBEAMS, readOUTBEAMS,
@@ -63,7 +65,8 @@ def runSection(index, sl, rp):
                     3: "SEARCH",
                     11: "R-FACTOR CALCULATION",
                     12: "R-FACTOR CALCULATION",
-                    31: "SUPERPOS"}
+                    31: "SUPERPOS",
+                    4: "DOMAIN SEARCH"}
     requiredFiles = {0: ["POSCAR", "PARAMETERS", "VIBROCC", "IVBEAMS"],
                      1: ["BEAMLIST", "PHASESHIFTS", "POSCAR", "PARAMETERS",
                          "IVBEAMS", "VIBROCC"],
@@ -76,8 +79,11 @@ def runSection(index, sl, rp):
                      12: ["BEAMLIST", "PHASESHIFTS", "POSCAR", "PARAMETERS",
                          "IVBEAMS", "EXPBEAMS"],
                      31: ["BEAMLIST", "POSCAR", "PARAMETERS", "IVBEAMS",
-                          "VIBROCC", "DISPLACEMENTS"]}
+                          "VIBROCC", "DISPLACEMENTS"],
+                     4: []}  # !!! required files for domain search?
                 # files that need to be there for the different parts to run
+    if rp.hasDomains:
+        requiredFiles[0] = ["PARAMETERS", "IVBEAMS"]
     o = "\nSTARTING SECTION: "+sectionNames[index]
     if index == 3 and rp.disp_blocks and rp.disp_blocks[rp.search_index][1]:
         o += " "+rp.disp_blocks[rp.search_index][1]  # displacement block name
@@ -530,37 +536,53 @@ def main():
 
     tmpmanifest = ["AUX","OUT",logname]
 
-    # read POSCAR and PARAMETERS first; they need to be there for everything
-    #   anyway, and PARAMETERS contains information on what to run
-
-    if os.path.isfile(os.path.join(".","POSCAR")):
-        poscarfile = os.path.join(".","POSCAR")
-        logger.info("Reading structure from file POSCAR")
-        try:
-            sl = readPOSCAR(filename = poscarfile)
-        except:
-            logger.error("Exception while reading POSCAR", exc_info=True)
-            cleanup(tmpmanifest)
-            return 2
-    else:
-        logger.error("POSCAR not found. Stopping execution...")
+    try:
+        rp = readPARAMETERS()
+    except:
+        logger.error("Exception while reading PARAMETERS file", exc_info=True)
         cleanup(tmpmanifest)
-        return 1
+        return 2
+    
+    # check if this is going to be a domain search
+    domains = False
+    if "RUN" in rp.readParams:
+        _, value = rp.readParams["RUN"][-1]
+        for s in value.split():
+            if 4 in readIntRange(s):
+                domains = True
+                break
 
-    if not sl.preprocessed:
-        logger.info("The POSCAR file will be processed and overwritten. "
-                     "Copying the original POSCAR to POSCAR_user...")
-        try:
-            shutil.copy2(poscarfile, "POSCAR_user")
-            tmpmanifest.append("POSCAR_user")
-        except:
-            logger.error("Failed to copy POSCAR to POSCAR_user. Stopping "
-                          "execution...")
+    if domains:  # no POSCAR in main folder for domain searches
+        sl = None
+    else:
+        if os.path.isfile(os.path.join(".","POSCAR")):
+            poscarfile = os.path.join(".","POSCAR")
+            logger.info("Reading structure from file POSCAR")
+            try:
+                sl = readPOSCAR(filename = poscarfile)
+            except:
+                logger.error("Exception while reading POSCAR", exc_info=True)
+                cleanup(tmpmanifest)
+                return 2
+        else:
+            logger.error("POSCAR not found. Stopping execution...")
             cleanup(tmpmanifest)
             return 1
+        
+        if not sl.preprocessed:
+            logger.info("The POSCAR file will be processed and overwritten. "
+                         "Copying the original POSCAR to POSCAR_user...")
+            try:
+                shutil.copy2(poscarfile, "POSCAR_user")
+                tmpmanifest.append("POSCAR_user")
+            except:
+                logger.error("Failed to copy POSCAR to POSCAR_user. Stopping "
+                              "execution...")
+                cleanup(tmpmanifest)
+                return 1
 
     try:
-        rp = readPARAMETERS(slab=sl)
+        interpretPARAMETERS(rp, slab=sl)
         if rp.LOG_DEBUG:
             logger.setLevel(logging.DEBUG)
             logger.debug("PARAMETERS file was read successfully")
@@ -571,10 +593,11 @@ def main():
 
     rp.timestamp = timestamp
     rp.manifest = tmpmanifest
-    sl.fullUpdate(rp)   #gets PARAMETERS data into slab
-    rp.fileLoaded["POSCAR"] = True
-    if sl.preprocessed:
-        rp.SYMMETRY_FIND_ORI = False
+    if not domains:
+        sl.fullUpdate(rp)   #gets PARAMETERS data into slab
+        rp.fileLoaded["POSCAR"] = True
+        if sl.preprocessed:
+            rp.SYMMETRY_FIND_ORI = False
 
     # get name of parent folder, use as system name (for file headers):
     rp.systemName = os.path.basename(os.path.abspath(os.path.join(os.getcwd(),
@@ -627,8 +650,7 @@ def main():
         except:
             pass
 
-    sectionorder = [0, 1, 11, 2, 3, 31, 12]
-    # searchLoopRfacs = []
+    sectionorder = [0, 1, 11, 2, 3, 31, 12, 4]
     searchLoopR = None
     searchLoopLevel = 0
     initHalt = False
@@ -645,8 +667,8 @@ def main():
                 logger.error("Error in tleedm execution: "+str(r))
                 cleanup(rp.manifest, rp)
                 return 1
-            elif (sec == 0 and not sl.preprocessed and rp.HALTING <= 2
-                  and len(rp.RUN) > 0):
+            elif (sec == 0 and not rp.hasDomains and not sl.preprocessed 
+                  and rp.HALTING <= 2 and len(rp.RUN) > 0):
                 logger.info("Initialization finished. Execution will stop. "
                     "Please check whether comments in POSCAR are correct, "
                     "then restart.")

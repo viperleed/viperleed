@@ -56,6 +56,18 @@ class SearchPar:
                 k = "all"
             self.steps = len(d[k])
 
+class DomainParameters:
+    """Stores workdir, slab and runparams objects for each domain"""
+    def __init__(self, workdir, homedir, name):
+        self.workdir = workdir
+        self.homedir = homedir
+        self.name = name
+        self.sl = None
+        self.rp = None
+        
+        self.refcalcRequired = False
+        self.tensorDir = None
+
 class Rparams:
     """Stores the parameters found in a PARAMETERS file (default values in
     __init__), as well as some parameters defined at runtime."""
@@ -66,6 +78,7 @@ class Rparams:
         self.BULKDOUBLING_EPS = 0.001
         self.BULKDOUBLING_MAX = 10
         self.BULK_REPEAT = None
+        self.DOMAINS = []       # list of domains (name, path)
         self.ELEMENT_MIX = {}   #if any ELEMENT_MIX is defined, it will be
                     #  added to the dictionary with the element name as the
                     #  label and the splitlist as the value
@@ -147,11 +160,11 @@ class Rparams:
         #                                         #  ignore & warn
 
         # variable states
+        self.workdir = ""   # MAIN WORK DIRECTORY; where to look for files
         self.searchConvInit = {"gaussian": None, 
                               "dgen": {"all": None, "best": None, "dec": None}}
         self.searchMaxGenInit = self.SEARCH_MAX_GEN
         # script progress tracking
-        self.domains = False
         self.halt = 0
         self.systemName = ""
         self.timestamp = ""
@@ -166,6 +179,11 @@ class Rparams:
         self.ivbeams_sorted = False
         self.last_R = None
         self.stored_R = {"refcalc": None, "superpos": None}
+        
+        # domains
+        self.hasDomains = False
+        self.domainParams = []
+        self.pseudoSlab = None
 
         # data from files
         self.beamlist = []  # lines as strings from _BEAMLIST
@@ -181,7 +199,6 @@ class Rparams:
         self.disp_block_read = False # current displacements block read?
         self.disp_loops = []       # list of tuples (loopStart, loopEnd)
         self.controlChemBackup = None
-
 
         # search parameters
         self.searchpars = []
