@@ -186,7 +186,7 @@ class Rparams:
         # search parameters
         self.searchpars = []
         self.searchResultConfig = None
-        self.search_atlist = []  # atoms that are relevant for the search
+        self.search_atlist = []    # atoms that are relevant for the search
         self.search_maxfiles = 0   # maximum number of delta files for one atom
         self.search_maxconc = 1    # maximum number of concentration steps
         # self.nPars = 1         # number of parameters (even if no variation)
@@ -567,7 +567,7 @@ class Rparams:
                             break
                     if not found:
                         logger.error("No appropriate Delta file found for "
-                                      "atom "+str(at.oriN))
+                                      "{}, element {}".format(at, el))
                         return("Missing Delta file")
             # sanity check: are displacements defined but deltas missing?
             for at in sl.atlist:

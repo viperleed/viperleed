@@ -137,6 +137,12 @@ def initialization(sl, rp):
         logger.error("Exception occurred while writing POSCAR_bulk")
         raise
     
+    # write POSCAR_bulk_appended
+    try:
+        writeCONTCAR(sl.addBulkLayers(rp)[0], filename='POSCAR_bulk_appended')
+    except:
+        logger.warning("Exception occurred while writing POSCAR_bulk_appended")
+    
     # generate beamlist
     logger.info("Generating _BEAMLIST...")
     try:

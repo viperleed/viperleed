@@ -1118,6 +1118,39 @@ class Slab:
         else:
             rp.SUPERLATTICE = newSL
             self.bulkslab = self.makeBulkSlab(rp)
+     
+    def addBulkLayers(self, rp):
+        """Returns a copy of the slab with one bulk unit appended at the 
+        bottom, and a list of the new atoms that were added."""
+        ts = copy.deepcopy(self)
+        blayers = [l for l in ts.layers if l.isBulk]
+        if type(rp.BULK_REPEAT) == np.ndarray:
+            bulkc = rp.BULK_REPEAT
+            if bulkc[2] < 0:
+                bulkc = -bulkc
+        else:
+            cvec = ts.ucell[:,2]
+            if rp.BULK_REPEAT is None:
+                # assume that interlayer vector from bottom non-bulk to top 
+                #  bulk layer is the same as between bulk units
+                zdiff = (blayers[-1].cartbotz 
+                         - ts.layers[blayers[0].num-1].cartbotz)
+            elif type(rp.BULK_REPEAT) == float:
+                zdiff = rp.BULK_REPEAT
+            bulkc = cvec * zdiff / cvec[2]
+        ts.getCartesianCoordinates()
+        cfact = (ts.ucell[2,2] + abs(bulkc[2])) / ts.ucell[2,2]
+        ts.ucell[:,2] = ts.ucell[:,2] * cfact
+        ts.getFractionalCoordinates()
+        newbulkats = []
+        tmplist = ts.atlist[:]
+        for at in tmplist:
+            if at.layer.isBulk: 
+                newbulkats.append(at.duplicate())
+            at.cartpos = at.cartpos - bulkc
+        ts.collapseCartesianCoordinates(updateOrigin=True)
+        ts.sortByZ()
+        return ts, newbulkats
 
     def doubleBulkSlab(self):
         """Returns a copy of the bulk slab which is doubled in thickness."""
