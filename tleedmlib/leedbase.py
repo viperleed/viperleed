@@ -244,9 +244,6 @@ def getTensorOriStates(sl, path):
         if not os.path.isfile(os.path.join(path, fn)):
             logger.error("File "+fn+" is missing in "+path)
             return("Could not check Tensors: File missing")
-    # loglevel = logging.getLogger("tleedm").level
-    loglevel = logger.level
-    logger.setLevel(logging.ERROR)
     dn = os.path.basename(path)
     try:
         tsl = readPOSCAR(os.path.join(path, "POSCAR"))
@@ -254,7 +251,8 @@ def getTensorOriStates(sl, path):
                                 os.path.join(path, "PARAMETERS"))
         interpretPARAMETERS(trp, slab=tsl, silent=True)
         tsl.fullUpdate(trp)
-        readVIBROCC(trp, tsl, filename = os.path.join(path, "VIBROCC"))
+        readVIBROCC(trp, tsl, filename = os.path.join(path, "VIBROCC"),
+                    silent=True)
         tsl.fullUpdate(trp)
     except:
         logger.error("Error checking Tensors: Error while reading "
@@ -262,8 +260,6 @@ def getTensorOriStates(sl, path):
         logger.debug("Exception:", exc_info=True)
         return("Could not check Tensors: Error loading old input "
                "files")
-    finally:
-        logger.setLevel(loglevel)
     if len(tsl.atlist) != len(sl.atlist):
         logger.error("POSCAR from "+dn+" is incompatible with "
                       "current POSCAR.")
