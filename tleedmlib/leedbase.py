@@ -18,7 +18,7 @@ from fractions import Fraction
 
 from guilib.base import get_equivalent_beams
 from tleedmlib.base import parseMathSqrt, angle, cosvec
-from tleedmlib.files.parameters import readPARAMETERS
+from tleedmlib.files.parameters import readPARAMETERS, interpretPARAMETERS
 from tleedmlib.files.poscar import readPOSCAR
 from tleedmlib.files.vibrocc import readVIBROCC
 
@@ -250,14 +250,16 @@ def getTensorOriStates(sl, path):
     dn = os.path.basename(path)
     try:
         tsl = readPOSCAR(os.path.join(path, "POSCAR"))
-        trp = readPARAMETERS(slab = tsl, filename = 
+        trp = readPARAMETERS(filename = 
                                 os.path.join(path, "PARAMETERS"))
+        interpretPARAMETERS(trp, slab=tsl, silent=True)
         tsl.fullUpdate(trp)
         readVIBROCC(trp, tsl, filename = os.path.join(path, "VIBROCC"))
         tsl.fullUpdate(trp)
     except:
         logger.error("Error checking Tensors: Error while reading "
                       "input files in "+dn)
+        logger.debug("Exception:", exc_info=True)
         return("Could not check Tensors: Error loading old input "
                "files")
     finally:
