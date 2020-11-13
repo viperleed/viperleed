@@ -15,7 +15,7 @@ from tleedmlib.base import splitSublists, readToExc
 
 logger = logging.getLogger("tleedm.files.vibrocc")
 
-def readVIBROCC(rp, slab, filename='VIBROCC'):
+def readVIBROCC(rp, slab, filename='VIBROCC', silent=False):
     """Reads VIBROCC and adds the information to all sites in the slab.
     If vibrational amplitudes are automatically calculated here, returns True,
     else returns False."""
@@ -216,9 +216,10 @@ def readVIBROCC(rp, slab, filename='VIBROCC'):
             else:
                 value = values[0]
             targetdict[el] = value
-    logger.debug("VIBROCC file was read successfully")
+    if not silent:
+        logger.debug("VIBROCC file was read successfully")
     # now fill up default values & do consistency checks:
-    vibAmpGenerated = checkVIBROCC(rp, slab, generate=generate)
+    vibAmpGenerated = checkVIBROCC(rp, slab, generate=generate, silent=silent)
     if vibAmpGenerated:
         return True
     else:
@@ -228,7 +229,7 @@ def readVIBROCC(rp, slab, filename='VIBROCC'):
             logger.warning("Parameter T_DEBYE is defined but unused.")
     return False
 
-def checkVIBROCC(rp, slab, generate=False):
+def checkVIBROCC(rp, slab, generate=False, silent=False):
     """Fills default values and does consistency check of site vibrational
     amplitudes and occupations. If vibrational amplitudes are automatically
     calculated here, returns True, else returns False."""
@@ -338,7 +339,8 @@ def checkVIBROCC(rp, slab, generate=False):
                 dl.append[el]
         for el in dl:
             site.occ.pop(el, None)
-    logger.debug("VIBROCC value consistency check finished")
+    if not silent:
+        logger.debug("VIBROCC value consistency check finished")
     return vibAmpGenerated
 
 def writeVIBROCC(sl, rp, filename="VIBROCC_OUT", silent=False):

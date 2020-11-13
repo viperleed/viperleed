@@ -481,8 +481,8 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                         logger.warning('PARAMETERS file: LAYER_CUTS '
                                 'parameter: Error parsing values. Input will '
                                 'be ignored.')
-                    rpars.setHaltingLevel(1)
-                    continue
+                        rpars.setHaltingLevel(1)
+                        continue
             rpars.LAYER_CUTS = llist
         elif param == 'LAYER_STACK_VERTICAL':
             s = llist[0].lower()
@@ -650,11 +650,9 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                     if i < 0:
                         logger.warning('PARAMETERS file: R_FACTOR_SMOOTH '
                                         'should be >= 0')
-                        rpars.setHaltingLevel(1)
                     else:
                         logger.warning('PARAMETERS file: R_FACTOR_SMOOTH '
                                         'should be < 1000')
-                        rpars.setHaltingLevel(1)
                     rpars.setHaltingLevel(1)
         elif param == 'R_FACTOR_TYPE':
             try:
