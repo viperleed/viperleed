@@ -254,6 +254,7 @@ class LEEDPattern():
             # now, only in case extDoms is of length 1, i.e., one domain
             # only gives rise to the extinct beam, the group index goes
             # negative
+            # !!! Perhaps will be changed with the better version in base.py !!!
             if len(extDoms) == 1:
                 beamsWithIndices[b][1] *= -1
 

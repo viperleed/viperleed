@@ -169,46 +169,11 @@ def get_equivalent_beams(leed_parameters, *other_leed_parameters, domains=None):
                          f"Expected {len(leed_parameters)}, found "
                          f"len(domains)")
     
-    # check that each single parameter passed has all the necessary contents,
-    # and:
-    # - take the largest energy as eMax for all
-    # - take the largest screenAperture as the screenAperture for all
-    emax = 0
-    aperture = 0
-    for params in leed_parameters:
-        if not check_leed_params(params):
-            return None
-        emax = max(params['eMax'], emax)
-        aperture = max(params.get('screenAperture', 0), aperture)
+    leed_parameters, all_leed = check_multi_leed_params(leed_parameters)
     
-    all_leed = []
-    for i, params in enumerate(leed_parameters):
-        # update eMax and screenAperture
-        params['eMax'] = emax
-        if aperture > 0:
-            params['screenAperture'] = aperture
-        # generate the LEED and process the domains
-        leed = LEEDPattern(params)
+    for i, leed in enumerate(all_leed):
         if domains[i] is None:
             domains[i] = range(leed.nDoms)
-        all_leed.append(leed)
-    
-    # check consistency of bulk
-    bulk = all_leed[0].bulkR
-    b_ops = set(bulk.group.group_ops(include_3d=True))
-    for leed in all_leed[1:]:
-        this_bulk = leed.bulkR
-        # bulk lattices should be the same
-        if not np.allclose(bulk.basis, this_bulk.basis):
-            raise ValueError("Inconsistent bulk bases found in the input "
-                             "parameters")
-        # bulk groups also should be the same. Not sure how to handle the
-        # case in which some of the parameters does not contain the bulk3Dsym
-        # but others do. Right now it raises errors.
-        if (not bulk.group == this_bulk.group
-            or not b_ops == set(this_bulk.group.group_ops(include_3d=True))):
-            raise ValueError("Inconsistent symmetry operations of bulk lattices"
-                             " in the input parameters")
 
     # Now use a logic similar to the one in LEEDPattern.get_equivalentSpots
     # for figuring out which superimposed beams are indeed equivalent (i.e.,
@@ -425,7 +390,8 @@ def get_equivalent_beams(leed_parameters, *other_leed_parameters, domains=None):
     # return list(zip(fract, groups))
     
 
-def project_to_first_domain(leed_parameters, beam_list, domains=None):
+def project_to_first_domain(beam_list, leed_parameters, *other_leed_parameters,
+                            domains=None):
     """
     Given a list of beams and a dictionary of parameters defining the LEED
     geometry, returns a list of beams that 'projects' the input onto the first
@@ -447,18 +413,28 @@ def project_to_first_domain(leed_parameters, beam_list, domains=None):
         Duplicates are removed, and only one of the symmetry-equivalent beams is
         retained (according to the symmetry group of the first domain)
     """
-    leed = LEEDPattern(leed_parameters)
+    # process arguments to allow the function to accept the LEED parameters
+    # being passed as a single "list" of dictionaries, or as an unpacked "list"
+    # of dictionaries
+    if isinstance(leed_parameters, dict):
+        leed_parameters = (leed_parameters, *other_leed_parameters)
+    
+    leed_parameters, (leed, *_) = check_multi_leed_params(leed_parameters)
+    
     ops = leed.bulkR.group.group_ops(include_3d=True)
-    m = leed_parameters['SUPERLATTICE']
+    superlattices = [params['SUPERLATTICE'] for params in leed_parameters]
 
     def is_in_first_domain(beam):
         """
         Returns True if beam belongs to the first domain, False otherwise
         """
-        # only those beams that, processed through the superlattice
-        # matrix give integer indices belong to the first domain
-        indices = np.dot(beam, m.T)
-        return all(i.denominator == 1 for i in indices)
+        # only those beams that, processed through one of the superlattice
+        # matrices give integer indices belong to the first domain
+        for m in superlattices:
+            indices = np.dot(beam, m.T)
+            if all(i.denominator == 1 for i in indices):
+                return True
+        return False
     
     def group_beams(beams_in):
         """
@@ -479,7 +455,7 @@ def project_to_first_domain(leed_parameters, beam_list, domains=None):
         """
         # get the list of all equivalent beams for the first domain only
         # It's a list of tuples of the form ('index', group)
-        eq_beams = get_equivalent_beams(leed_parameters, domains=[0])
+        eq_beams = get_equivalent_beams(leed_parameters, domains=0)
         
         # construct a dictionary of the form beam_group: [*beams].
         group_dict = group_beams(eq_beams)
@@ -511,9 +487,8 @@ def project_to_first_domain(leed_parameters, beam_list, domains=None):
 
                     # Check if the reason why the beam was not found is that
                     # it would lie outside the LEED screen
-                    leed = LEEDPattern(leed_parameters)
                     b = leed.get_BulkBasis()
-                    g = np.linalg.norm(np.dot(beam, b)) * 1e10
+                    g = np.linalg.norm(np.dot(beam, b)) * 1e10  # 1/m
                     el_m = 9.109e-31    # kg
                     el_q = 1.60218e-19  # C
                     hbar = 1.05457e-34  # J*s
@@ -522,7 +497,7 @@ def project_to_first_domain(leed_parameters, beam_list, domains=None):
                     s_angle = np.sqrt(hbar**2 * g**2
                                       /(2 * el_m * el_q * leed.maxEnergy))
                     ang = 2*np.degrees(np.arcsin(s_angle))
-                    aperture = leed_parameters.get('screenAperture', 110)
+                    aperture = leed_parameters[0].get('screenAperture', 110)
                     if ang > aperture:
                         err += ("\nThe beam would need a minimum LEED screen "
                                 f"aperture of {ang:.1f} deg at Emax="
@@ -659,6 +634,69 @@ def check_leed_params(leed_parameters):
     # instance constructor directly
 
     return True
+
+
+def check_multi_leed_params(leed_parameters):
+    """
+    Checks consistency of the LEED parameters passed as a list of dictionaries,
+    and returns a consistent version. The returned version has the same eMax and
+    screenAperture for all (both the max among the values). Aside from
+    checking acceptable values for the parameters (as in check_leed_params, it
+    also checks that the bulk lattices are the same for all. Raises errors
+    otherwise.
+    
+    Parameters
+    ----------
+    leed_parameters: list of dictionaries
+    
+    
+    Returns
+    -------
+    (consistent_leed_parameters, leed_patterns)
+    
+    - consistent_leed_parameters: list of dictionaries with eMax and
+                                  ScreenApertures equal for all
+    - leed_patterns: list of gl.LEEDPattern
+                     patterns generated from consistent_leed_parameters
+    """
+    
+    # check that each single parameter passed has all the necessary contents,
+    # and:
+    # - take the largest energy as eMax for all
+    # - take the largest screenAperture as the screenAperture for all
+    emax = 0
+    aperture = 0
+    for params in leed_parameters:
+        if not check_leed_params(params):
+            return None
+        emax = max(params['eMax'], emax)
+        aperture = max(params.get('screenAperture', 0), aperture)
+    
+    leed_patterns = []
+    for i, params in enumerate(leed_parameters):
+        # update eMax and screenAperture
+        params['eMax'] = emax
+        if aperture > 0:
+            params['screenAperture'] = aperture
+        leed_patterns.append(LEEDPattern(params))
+    
+    # check consistency of bulk
+    bulk = leed_patterns[0].bulkR
+    b_ops = set(bulk.group.group_ops(include_3d=True))
+    for leed in leed_patterns[1:]:
+        this_bulk = leed.bulkR
+        # bulk lattices should be the same
+        if not np.allclose(bulk.basis, this_bulk.basis):
+            raise ValueError("Inconsistent bulk bases found in the input "
+                             "parameters")
+        # bulk groups also should be the same. Not sure how to handle the
+        # case in which some of the parameters does not contain the bulk3Dsym
+        # but others do. Right now it raises errors.
+        if (not bulk.group == this_bulk.group
+            or not b_ops == set(this_bulk.group.group_ops(include_3d=True))):
+            raise ValueError("Inconsistent symmetry operations of bulk lattices"
+                             " in the input parameters")
+    return (leed_parameters, leed_patterns)
 
 
 def catch_gui_crash():
