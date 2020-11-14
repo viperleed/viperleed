@@ -10,8 +10,9 @@ Author: Michele Riva
 This module contains base functions and classes shared by the whole GUI
 """
 
-import sys
 import ast
+import copy
+import sys
 import re
 from fractions import Fraction
 from collections import defaultdict
@@ -25,7 +26,7 @@ from guilib.leedsim.classes import LEEDPattern
 ###############################################################################
 
 
-def get_equivalent_beams(leed_parameters, domains=None):
+def get_equivalent_beams(leed_parameters, *other_leed_parameters, domains=None):
     """
     Generates a sorted list of LEED beams, including their fractional
     indices and their symmetry-equivalence
@@ -83,9 +84,24 @@ def get_equivalent_beams(leed_parameters, domains=None):
             This parameter can be used to define the aperture of the solid angle
             captured by the LEED screen in degrees. Acceptable values are
             between zero and 180
+    
+    *other_leed_parameters: dictionaries, optional
+      unpacked list of LEED parameters for additional reconstructions
+      that may be present on the surface as an incoherent superposition with the
+      mandatory first argument. See the leed_parameters argument for details of
+      the keys. The function will return the list of equivalent superposed
+      beams, i.e., superposed beams are symmetry-equivalent only if they are the
+      sum of beams equivalent in each of the single structures. When multiple
+      parameters are passed:
+      - the maximum energy used is the largest among the eMax values among the
+        parameters
+      - the same screenAperture will be used for all, corresponding to the
+        largest among the values passed
+      - consistency of the bulk unit cells, symmetry groups and bulk3Dsym is
+        checked
 
-    domains: iterable or None, default=None
-             List of domain indices for which the beams get exported
+    domains: iterable, int or None, default=None
+             Domain indices for which the beams get exported
              The indices (zero-based) follow the following convention:
              - dom = 0 -> domain whose SUPERLATTICE is passed as a key of
                           leedParameters
@@ -101,7 +117,14 @@ def get_equivalent_beams(leed_parameters, domains=None):
                             not C4 at cell center)
              Since the ordering of the domains is not necessarily the same as
              the order of operations, one needs to rely on the user making the
-             right choice when asking for domains
+             right choice when asking for domains.
+
+             If None, all domains are used. If a single integer, only that
+             domain is considered. 
+
+             If multiple LEED parameter dictionaries are passed, domains should
+             be a list of lists with as many entries as there are LEED
+             parameters, None or a single integer.
 
     Returns
     -------
@@ -123,24 +146,284 @@ def get_equivalent_beams(leed_parameters, domains=None):
               ids are generated based on the (h, k) values, so that beams
               closer to the (0, 0) spot have smaller abs(id)
 
-        The entries in the list are sorted in this order: id, h, k
+        The entries in the list are sorted in this order: abs(id), h, k << NOT ANYMORE!
     """
-
-    if not check_leed_params(leed_parameters):
-        return None
-
-    leed = LEEDPattern(leed_parameters)
-
+    # process arguments to allow the function to accept the LEED parameters
+    # being passed as a single "list" of dictionaries, or as an unpacked "list"
+    # of dictionaries
+    if isinstance(leed_parameters, dict):
+        leed_parameters = (leed_parameters, *other_leed_parameters)
+    
+    # check that the domains keyword argument is consistent with the number of
+    # parameters passed
     if domains is None:
-        domains = range(leed.nDoms)
+        domains = [None]*len(leed_parameters)
+    elif isinstance(domains, int):
+        domains = [[domains]]*len(leed_parameters)
     elif not hasattr(domains, '__len__'):
-        raise ValueError(f"The keyword argument 'domains' should be either "
-                         f"an iterable or None. Found {type(domains)} "
-                         "instead.")
+        raise TypeError("The keyword argument 'domains' should be either an "
+                        f"iterable, an integer or None. Found {type(domains)} "
+                        "instead.")
+    elif len(domains) != len(leed_parameters):
+        raise ValueError("Not as many domains as LEED parameters passed."
+                         f"Expected {len(leed_parameters)}, found "
+                         f"len(domains)")
+    
+    # check that each single parameter passed has all the necessary contents,
+    # and:
+    # - take the largest energy as eMax for all
+    # - take the largest screenAperture as the screenAperture for all
+    emax = 0
+    aperture = 0
+    for params in leed_parameters:
+        if not check_leed_params(params):
+            return None
+        emax = max(params['eMax'], emax)
+        aperture = max(params.get('screenAperture', 0), aperture)
+    
+    all_leed = []
+    for i, params in enumerate(leed_parameters):
+        # update eMax and screenAperture
+        params['eMax'] = emax
+        if aperture > 0:
+            params['screenAperture'] = aperture
+        # generate the LEED and process the domains
+        leed = LEEDPattern(params)
+        if domains[i] is None:
+            domains[i] = range(leed.nDoms)
+        all_leed.append(leed)
+    
+    # check consistency of bulk
+    bulk = all_leed[0].bulkR
+    b_ops = set(bulk.group.group_ops(include_3d=True))
+    for leed in all_leed[1:]:
+        this_bulk = leed.bulkR
+        # bulk lattices should be the same
+        if not np.allclose(bulk.basis, this_bulk.basis):
+            raise ValueError("Inconsistent bulk bases found in the input "
+                             "parameters")
+        # bulk groups also should be the same. Not sure how to handle the
+        # case in which some of the parameters does not contain the bulk3Dsym
+        # but others do. Right now it raises errors.
+        if (not bulk.group == this_bulk.group
+            or not b_ops == set(this_bulk.group.group_ops(include_3d=True))):
+            raise ValueError("Inconsistent symmetry operations of bulk lattices"
+                             " in the input parameters")
 
-    fract, groups, *_ = zip(*leed.get_equivalentSpots(domains=domains))
-    return list(zip(fract, groups))
+    # Now use a logic similar to the one in LEEDPattern.get_equivalentSpots
+    # for figuring out which superimposed beams are indeed equivalent (i.e.,
+    # they are superposition of equivalent beams), starting from all the beams
+    # of each structure. Also, keep track of which beams are extinct, as this
+    # information needs to pass on to the end.
+    all_beams = []
+    all_extinct = []
+    for doms, leed in zip(domains, all_leed):
+        fract, groups, *_ = zip(*leed.get_equivalentSpots(domains=doms))
+        
+        # use the group indices to create dictionaries of index: beams
+        beams = defaultdict(set)
+        extinct = []
+        for beam, group in zip(fract, groups):
+            if group < 0:
+                extinct.append(beam)
+            beams[group].add(beam)
+        
+        # now re-index the dictionaries such that there are as many keys as
+        # beams and each entry is
+        #    beam: list of equivalent beams (including beam itself)
+        all_beams.append({beam: eq_beams
+                          for eq_beams in beams.values()
+                          for beam in eq_beams})
+        all_extinct.append(extinct)
+    
+    all_beams_cp = copy.deepcopy(all_beams)
+    
+    # Flatten the list of all beams, keeping only uniques
+    flat_beams = set(beam for beams in all_beams for beam in beams)
+    
+    # and iterate through each with the same logics as in
+    # LEEDPattern.get_equivalentSpots
+    # Example on square bulk:
+    #   p(2x2)-pmm + c(2x2)-pm[1 0]
+    #   overlapping spots are {1 | 0}, {1/2 | 1/2}, and {1 | 1}
+    #   
+    #   p(2x2): ( 1 | 1), (-1 |  1), (-1 | -1), (1 | -1) equivalent
+    #   c(2x2): ( 1 | 1), ( 1 | -1) equivalent
+    #           (-1 | 1), (-1 | -1) equivalent
+    #   -> ( 1 | 1), ( 1 | -1) equivalent
+    #      (-1 | 1), (-1 | -1) equivalent, but not equivalent to the others
+    #   
+    #   
+    #   THIS IS THE SAME CODE AS IN LEEDPattern, probably will consolidate the
+    #   two later on
+    #   
+    eq_beams = []
+    for beam in flat_beams:
+        # from each structure, if there is a beam <beam>, take the list of all
+        # those equivalent to it.
+        # Example: beam = (1 | 1)
+        #   -> take [[( 1 | 1), (-1 |  1), (-1 | -1), (1 | -1)],
+        #            [( 1 | 1), ( 1 | -1)]]
+        beam_lists = [beams_dict[beam]
+                      for beams_dict in all_beams_cp
+                      if beam in beams_dict]
+        if beam_lists:
+            # if there are beams to process in the list, take the set
+            # intersection of the elements of the list, i.e., all those in
+            # common to all structures
+            common_beams = set.intersection(*beam_lists)
+            
+            # now "mark as processed" in all the structures the beams coming
+            # from the intersection by removing them
+            for beams_dict in all_beams_cp:
+                for processed_beam in common_beams:
+                    beams_dict.pop(processed_beam, None)
+            eq_beams.append(common_beams)
 
+    # sort within each equivalence group
+    llst = [sorted(list(beams), key=all_leed[0].beamsSortCriterion)
+            for beams in eq_beams]
+    # and by energy
+    sorted_beams = sorted(llst, key=all_leed[0].sortEnergy)
+    
+    # and fix the indices, also accounting for extinct beams
+    beams_with_indices = []
+    for i, beams in enumerate(sorted_beams):
+        for beam in beams:
+            # find which structures overlap
+            overlapping_structs = [s + 1 for s in range(len(all_leed))
+                                   if beam in all_beams[s]]
+            group_idx = i
+            
+            # figure out whether the beam is extinct in all the structures, in
+            # which case the index goes negative
+            n_extinct = len([1 for s in overlapping_structs
+                             if beam in all_extinct[s-1]])
+            if n_extinct == len(overlapping_structs) and n_extinct > 0:
+                group_idx *= -1
+            beams_with_indices.append((beam, group_idx))
+    return beams_with_indices
+
+# Follows in the next comment the version of get_equivalent_beams before the
+# edits (2020-11-14) needed to handle multiple reconstructions
+
+# def get_equivalent_beams(leed_parameters, domains=None):
+    # """
+    # Generates a sorted list of LEED beams, including their fractional
+    # indices and their symmetry-equivalence
+
+    # Parameters
+    # ----------
+    # leedParameters: dictionary
+      # The following keys are needed
+      # - 'eMax': float
+                # maximum primary beam energy used in the TensErLEED calculation
+
+      # - 'surfBasis': 2x2 numpy array of floats
+                     # unit vectors in Cartesian coordinates defining the basis
+                     # vectors aS and bS of the surface unit cell.
+                     # aS = basis[0], bS = basis[1]
+
+      # - 'SUPERLATTICE': 2x2 numpy array of ints
+                        # Superlattice matrix that defines the relation between
+                        # the bulk unit vectors (aB, bB) and the surface ones.
+                        # m = [[m11, m12],[m21, m22]]
+                        # aS = m11*aB + m12*bB
+                        # bS = m12*aB + m22*bB
+
+      # - 'surfGroup': string
+                     # plane group of the surface
+
+      # - 'bulkGroup': string
+                     # plane group of the bulk
+
+      # The following keys are optional
+      # - 'bulk3Dsym': string or array-like
+            # This parameter is used to describe the isomorphic part (i.e.,
+            # neglecting translations) of screw axes and glide planes orthogonal
+            # to the surface. 
+            # -- when passing a string, one the following formats is
+               # required (with or without white spaces):
+                   # * "r(#, #, ...), m([#, #], ...)"
+                   # * "m([#, #], ...), r(#, #, ...)"
+                   # * "r(#, #, ...)"
+                   # * "m([#, #], ...)"
+               # The quantities above are:
+                   # * "r(...)" -- list of rotation orders for screw axes
+                                # (acceptable: 2, 3, 4, 6)
+                   # * "m(...)" -- list of in-plane directions lying on the glide
+                                 # plane, expressed in 'fractional coordinates' of
+                                 # the bulk unit vectors, i.e., "[i,j]" represents
+                                 # the vector i*a + j*b. Acceptable: [1,0], [0,1],
+                                 # [1,1], [1,-1], [1,2], [2,1]
+            # -- when passing an array-like, it should be a 'list' of 2x2
+               # 'matrices' with integer entries (floats will be rounded and cast
+               # to int).
+            # NB: by 2020-06-24, no check is performed on whether the operations
+                # above are actually compatible with the shape of the unit cell!
+      # - 'screenAperture': float
+            # This parameter can be used to define the aperture of the solid angle
+            # captured by the LEED screen in degrees. Acceptable values are
+            # between zero and 180
+
+    # domains: iterable or None, default=None
+             # Domain indices for which the beams get exported
+             # The indices (zero-based) follow the following convention:
+             # - dom = 0 -> domain whose SUPERLATTICE is passed as a key of
+                          # leedParameters
+             # - dom = 1 ... -> domains generated from SUPERLATTICE as a result
+                              # of mirror operations.
+                              # Glide planes count as mirrors;
+                              # Only one mirror/glide is used among those
+                              # parallel to each other
+             # - dom = ... -> domains generated from SUPERLATTICE as a result of
+                            # rotation operations.
+                            # Only one rotation axis is used among the those
+                            # equivalent to each other (e.g., only C4 at origin,
+                            # not C4 at cell center)
+             # Since the ordering of the domains is not necessarily the same as
+             # the order of operations, one needs to rely on the user making the
+             # right choice when asking for domains.
+             # If None, all domains are used.
+
+    # Returns
+    # -------
+    # list of tuples [(name_0, id_0), (name_1, id_1), ...]
+
+        # name_i: str
+                # fractional indices of the beam in the form
+                # '(num_h/den_h, num_k/den_k)'
+
+        # id_i: int
+              # representing the grouping index for symmetry-equivalent beams.
+              # All symmetry-equivalent beams share the same abs(id).
+                # id < 0 for glide-extinct beams,
+                # id = 0 for spot (0, 0),
+                # id > 0 for non-extinct beams
+              # For spots originating from the superposition of different
+              # domains, id is positive even if some of the domains contribute
+              # with glide-extinct beams.
+              # ids are generated based on the (h, k) values, so that beams
+              # closer to the (0, 0) spot have smaller abs(id)
+
+        # The entries in the list are sorted in this order: abs(id), h, k << NOT ANYMORE!
+    # """
+    
+    # if not check_leed_params(leed_parameters):
+        # return None
+
+    # leed = LEEDPattern(leed_parameters)
+
+    # if domains is None:
+        # domains = range(leed.nDoms)
+    # elif not hasattr(domains, '__len__'):
+        # raise ValueError(f"The keyword argument 'domains' should be either "
+                         # f"an iterable or None. Found {type(domains)} "
+                         # "instead.")
+
+    # fract, groups, *_ = zip(*leed.get_equivalentSpots(domains=domains))
+    # return list(zip(fract, groups))
+    
 
 def project_to_first_domain(leed_parameters, beam_list, domains=None):
     """
@@ -671,6 +954,9 @@ class PlaneGroup():
     def __eq__(self, other):
         """
         Equality method for PlaneGroup instances.
+        
+        Most likely one would like to also check the set of symmetry operations,
+        as this would allow to include checks of the screws and glides as well
         """
         if not isinstance(other, PlaneGroup):
             # Other instances are never equal
