@@ -362,7 +362,7 @@ def writeIVBEAMS(sl, rp, filename="IVBEAMS"):
     if d is None:
         logger.error("Failed to write IVBEAMS")
         return []
-    makebeams = project_to_first_domain(d, [b.hkfrac for b in rp.expbeams])
+    makebeams = project_to_first_domain([b.hkfrac for b in rp.expbeams], d)
     output = "This IVBEAMS file was automatically generated from EXPBEAMS\n"
     ivbeams = [tl.Beam(hk) for hk in makebeams]
     for b in ivbeams:

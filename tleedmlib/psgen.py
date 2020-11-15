@@ -23,9 +23,12 @@ def runPhaseshiftGen(sl,rp, psgensource=os.path.join('source','EEASiSSS.x'),
     """Creates required input for EEASiSSS.x, then runs it. Reads the output 
     files and extracts information for _PHASESHIFTS file, then returns that 
     information (without writing _PHASESHIFTS)."""
-    psgensource = os.path.join(rp.workdir, psgensource)
-    excosource = os.path.join(rp.workdir, excosource)
-    atdenssource = os.path.join(rp.workdir, atdenssource)
+    shortpath = rp.workdir
+    if len(os.path.relpath(rp.workdir)) < len(shortpath):
+        shortpath = os.path.relpath(rp.workdir)
+    psgensource = os.path.join(shortpath, psgensource)
+    excosource = os.path.join(shortpath, excosource)
+    atdenssource = os.path.join(shortpath, atdenssource)
     
     lmax = 16   # this could be a variable, for now set fixed...
     nsl, newbulkats = sl.addBulkLayers(rp)

@@ -452,7 +452,7 @@ def deltas(sl, rp):
             return ("No Fortran compiler")
     for ct in deltaCompTasks:
         ct.fortran_comp = rp.FORTRAN_COMP
-        ct.sourcedir = rp.workdir
+        ct.sourcedir = os.path.abspath(rp.workdir)
         
     # if number of cores is not defined, try to find it
     if rp.N_CORES == 0:

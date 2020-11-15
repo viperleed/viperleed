@@ -292,6 +292,7 @@ def init_domains(rp):
             try:
                 dp.sl = readPOSCAR()
                 dp.rp = readPARAMETERS()
+                dp.rp.workdir = home
                 interpretPARAMETERS(dp.rp, slab=dp.sl, silent=True)
                 dp.sl.fullUpdate(dp.rp)   #gets PARAMETERS data into slab
                 dp.rp.fileLoaded["POSCAR"] = True
@@ -303,11 +304,6 @@ def init_domains(rp):
                              "{}".format(name))
                 raise
             logger.info("Running initialization for domain {}".format(name))
-            # psgen has problems with long paths -> try to shorten
-            shortpath = home
-            if len(os.path.relpath(home)) < len(shortpath):
-                shortpath = os.path.relpath(home)
-            dp.rp.workdir = shortpath
             try:
                 initialization(dp.sl, dp.rp, subdomain=True)
             except:

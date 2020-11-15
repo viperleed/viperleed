@@ -160,7 +160,8 @@ class Rparams:
         #                                         #  ignore & warn
 
         # variable states
-        self.workdir = ""   # MAIN WORK DIRECTORY; where to look for files
+        self.workdir = os.getcwd() 
+                                # MAIN WORK DIRECTORY; where to look for files
         self.searchConvInit = {"gaussian": None, 
                               "dgen": {"all": None, "best": None, "dec": None}}
         self.searchMaxGenInit = self.SEARCH_MAX_GEN
