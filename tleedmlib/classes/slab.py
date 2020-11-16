@@ -425,7 +425,8 @@ class Slab:
         self.chemelem = []
         for el in self.elements:
             if el in rp.ELEMENT_MIX:
-                self.chemelem.extend(rp.ELEMENT_MIX[el])
+                self.chemelem.extend([e for e in rp.ELEMENT_MIX[el] 
+                                      if not e in self.chemelem])
             else:
                 self.chemelem.append(el)
         self.lastupdateelmix = rp.ELEMENT_MIX
@@ -479,6 +480,8 @@ class Slab:
                     found = True
             if found:
                 sl.append(newsite)
+        for site in [s for s in sl if s.el in rparams.ELEMENT_MIX]:
+            site.mixedEls = rparams.ELEMENT_MIX[el][:]
         self.sitelist = sl
 
     def sortByZ(self, botToTop=False):

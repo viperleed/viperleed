@@ -93,7 +93,7 @@ class Atom:
             self.disp_geo = {"all": [np.array([0.0,0.0,0.0])]}
             self.disp_occ = {}
             for k, v in self.site.occ.items():
-                if v > 0:
+                if v > 0 or k in self.site.mixedEls:
                     self.disp_occ[k] = [v]
         return 0
   

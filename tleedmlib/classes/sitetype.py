@@ -27,6 +27,10 @@ class Sitetype:
         self.occ = {}       #occupation per element
         
         self.oriState = None    # deep copy of self before a search is applied
+        self.mixedEls = []      # stores the relevant rparams.ELEMENT_MIX
+    
+    def __str__(self):
+        return self.label
     
     def isEquivalent(self,site2):
         """Checks whether two sites are equivalent, i.e. have the same label 

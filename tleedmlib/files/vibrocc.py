@@ -260,10 +260,11 @@ def checkVIBROCC(rp, slab, generate=False, silent=False):
                             vibAmpGenerated = True
                             v = site.vibamp[subel]
                 if v == -1:
-                    logger.warning('VIBROCC file: No vibrational amplitude '
+                    logger.error('VIBROCC file: No vibrational amplitude '
                                 'defined for any of the main elements in site '
-                                +site.el+'_'+site.name)
-                    rp.setHaltingLevel(2)
+                                +site.label)
+                    rp.setHaltingLevel(3)
+                    # !!! raise exception
                 else:
                     # vibrational amplitudes were defined for some of the
                     #  main elements but not all. Fill the other values
@@ -271,7 +272,7 @@ def checkVIBROCC(rp, slab, generate=False, silent=False):
                         if not subel in site.vibamp:
                             logger.warning('VIBROCC file: No '+subel
                                     +' vibrational amplitude defined for site '
-                                    +site.el+'_'+site.name+'. Using '
+                                    +site.label+'. Using '
                                     'vibrational amplitude from other element '
                                     'in site.')
                             rp.setHaltingLevel(1)
@@ -350,7 +351,8 @@ def writeVIBROCC(sl, rp, filename="VIBROCC_OUT", silent=False):
     output = "= Vibrational Amplitudes\n"
     for site in sl.sitelist:
         ol = site.label + " = "
-        targetels = [el for el in site.vibamp if site.occ[el] != 0]
+        targetels = [el for el in site.vibamp if (site.occ[el] != 0
+                                              or el in site.mixedEls)]
         if len(targetels) == 1:
             ol += "{:.4g}".format(site.vibamp[targetels[0]])
         else:
@@ -367,7 +369,8 @@ def writeVIBROCC(sl, rp, filename="VIBROCC_OUT", silent=False):
         targetels = [el for el in site.occ if site.occ[el] != 0]
         if len(targetels) == 1:
             ol += "{:.4g}".format(site.occ[targetels[0]])
-            if site.occ[targetels[0]] == 1 and site.el == targetels[0]:
+            if (site.occ[targetels[0]] == 1 and site.el == targetels[0] 
+                                            and not site.mixedEls):
                 write = False
         else:
             for i, el in enumerate(targetels):

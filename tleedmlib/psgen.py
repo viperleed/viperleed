@@ -111,10 +111,11 @@ def runPhaseshiftGen(sl,rp, psgensource=os.path.join('source','EEASiSSS.x'),
     for site in nsl.sitelist:
         if site.el in rp.ELEMENT_MIX:
             occdict = {}
-            for (k, v) in site.occ.items(): 
-                if v > 0.0: occdict[k] = v
+            for (k, v) in site.occ.items():
+                if v > 0.0 or k in rp.ELEMENT_MIX[site.el]:
+                    occdict[k] = v
             occdict = dict(sorted(occdict.items(), 
-                                  key = lambda kv:(kv[1],kv[0])))  
+                                  key = lambda kv:(kv[1],kv[0])))
                                     #sort by occupancy values
             al = [at for at in nsl.atlist if at.site == site]
             totats = len(al)
