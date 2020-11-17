@@ -160,26 +160,25 @@ def initialization(sl, rp, subdomain=False):
     except:
         logger.warning("Exception occurred while writing POSCAR_bulk_appended")
     
-    # generate beamlist
 
-    if not subdomain:
-        # generate beamlist
-        logger.info("Generating _BEAMLIST...")
-        try:
-            bgenpath = os.path.join('source', 'beamgen3.out')
-            runBeamGen(sl,rp,beamgensource = bgenpath)
-            # this does NOT read the resulting file!
-        except:
-            logger.error("Exception occurred while calling beamgen.")
-            raise
-        rp.manifest.append("_BEAMLIST")
-        try:
-            rp.beamlist = readBEAMLIST()
-            rp.fileLoaded["BEAMLIST"] = True
-        except:
-            logger.error("Error while reading required file _BEAMLIST")
-            raise
+    # generate beamlist
+    logger.info("Generating _BEAMLIST...")
+    try:
+        bgenpath = os.path.join('source', 'beamgen3.out')
+        runBeamGen(sl,rp,beamgensource = bgenpath)
+        # this does NOT read the resulting file!
+    except:
+        logger.error("Exception occurred while calling beamgen.")
+        raise
+    rp.manifest.append("_BEAMLIST")
+    try:
+        rp.beamlist = readBEAMLIST()
+        rp.fileLoaded["BEAMLIST"] = True
+    except:
+        logger.error("Error while reading required file _BEAMLIST")
+        raise
     
+    if not subdomain:
         writePatternInfo(sl, rp)
         
         # if EXPBEAMS was loaded, it hasn't been checked yet - check now
@@ -196,14 +195,32 @@ def initialization(sl, rp, subdomain=False):
                 logger.error("Error while writing IVBEAMS file based on "
                               "EXPBEAMS data.")
                 raise
-        if not rp.ivbeams_sorted:
-            rp.ivbeams = sortIVBEAMS(sl, rp)
-            rp.ivbeams_sorted = True
+    if rp.fileLoaded["IVBEAMS"] and not rp.ivbeams_sorted:
+        rp.ivbeams = sortIVBEAMS(sl, rp)
+        rp.ivbeams_sorted = True
     return 0
 
 def init_domains(rp):
     """Runs an alternative initialization for the domain search. This will 
     include running the 'normal' initialization for each domain."""
+    # check for experimental beams:
+    expbeamsname = ""
+    for fn in ["EXPBEAMS.csv", "EXPBEAMS"]:
+        if os.path.isfile(fn):
+            expbeamsname = fn
+            break
+    if expbeamsname:
+        if len(rp.THEO_ENERGIES) == 0:
+            er = []
+        else:
+            er = rp.THEO_ENERGIES[:2]
+        if not rp.fileLoaded["EXPBEAMS"]:
+            try:
+                rp.expbeams = readOUTBEAMS(fn, enrange=er)
+                rp.fileLoaded["EXPBEAMS"] = True
+            except:
+                logger.error("Error while reading file "+fn, exc_info=True)
+    rp.initTheoEnergies()  # may be initialized based on exp. beams
     if len(rp.DOMAINS) < 2:
         logger.error("A domain search was defined, but less than two domains "
                      "are defined. Execution will stop.")
@@ -389,17 +406,7 @@ def init_domains(rp):
     rp.pseudoSlab.ucell = copy.copy(largestDomain.sl.ucell)
     rp.pseudoSlab.bulkslab = tl.Slab()
     rp.pseudoSlab.bulkslab.ucell = copy.copy(largestDomain.sl.bulkslab.ucell)
-    # now more extensive compatibility check
-    
-    
-    
-    # ...
-    
-    
-    # ...
-    
     # run beamgen for the whole system
-
     logger.info("Generating _BEAMLIST...")
     try:
         bgenpath = os.path.join('source', 'beamgen3.out')
@@ -415,4 +422,72 @@ def init_domains(rp):
     except:
         logger.error("Error while reading required file _BEAMLIST")
         raise
+    # if EXPBEAMS was loaded, it hasn't been checked yet - check now
+    if rp.fileLoaded["EXPBEAMS"]:
+        checkEXPBEAMS(None, rp, domains=True)
+    # write and sort IVBEAMS
+    if not rp.fileLoaded["IVBEAMS"]:
+        try:
+            rp.ivbeams = writeIVBEAMS(None, rp, domains=True)
+            rp.ivbeams_sorted = False
+            rp.fileLoaded["IVBEAMS"] = True
+            rp.manifest.append("IVBEAMS")
+        except:
+            logger.error("Error while writing IVBEAMS file based on "
+                          "EXPBEAMS data.")
+            raise
+    if not rp.ivbeams_sorted:
+        rp.ivbeams = sortIVBEAMS(None, rp, domains=True)
+        rp.ivbeams_sorted = True
+
+    rp.updateDerivedParams()
+    rp.LMAX = max([dp.rp.LMAX for dp in rp.domainParams])
+    for dp in rp.domainParams:
+        if dp.refcalcRequired:
+            continue
+        cmessage = ("Reference calculation required for domain {}: "
+                    .format(dp.name))
+        # check energies
+        if (rp.THEO_ENERGIES[0] < dp.rp.THEO_ENERGIES[0] or
+               rp.THEO_ENERGIES[1] > dp.rp.THEO_ENERGIES[1] or
+               rp.THEO_ENERGIES[2] != dp.rp.THEO_ENERGIES[2] or
+               (rp.THEO_ENERGIES[0] % rp.THEO_ENERGIES[2]
+                 != dp.rp.THEO_ENERGIES[0] % dp.rp.THEO_ENERGIES[2])):
+            logger.info(cmessage+"Energy range is mismatched.")
+            dp.refcalcRequired = True
+            dp.rp.THEO_ENERGIES = copy.copy(rp.THEO_ENERGIES)
+            continue
+        # check LMAX
+        if rp.LMAX != dp.rp.LMAX:
+            logger.info(cmessage+"LMAX is mismatched.")
+            dp.refcalcRequired = True
+            dp.rp.LMAX = rp.LMAX
+        # check beam incidence
+        if rp.THETA != dp.rp.THETA or rp.PHI != dp.rp.PHI:
+            logger.info(cmessage+"BEAM_INCIDENCE is mismatched.")
+            dp.refcalcRequired = True
+            dp.rp.THETA = rp.THETA
+            dp.rp.PHI = rp.PHI
+        # check IVBEAMS
+        if not dp.rp.fileLoaded["IVBEAMS"]:
+            logger.info(cmessage+"No IVBEAMS file loaded")
+            dp.refcalcRequired = True
+            dp.rp.ivbeams = copy.deepcopy(rp.ivbeams)
+            continue
+        if (len(rp.ivbeams) != len(dp.rp.ivbeams)
+                or not all([dp.rp.ivbeams[i].isEqual(rp.ivbeams[i]) 
+                            for i in range(0,len(rp.ivbeams))])):
+            logger.info(cmessage+"IVBEAMS file mismatched with supercell.")
+            dp.refcalcRequired = True
+            dp.rp.ivbeams = copy.deepcopy(rp.ivbeams)
+            continue
     
+    rr = [dp for dp in rp.domainParams if dp.refcalcRequired]
+    if rr:
+        logger.info("The following domains require new reference "
+                    "calculations: "+", ".join([d.name for d in rr]))
+        logger.warning("Automatic reference calculations are not supported in "
+                       "this version of ViPErLEED. Please manually execute "
+                       "appropriate reference calculations, and start a "
+                       "domain search based on the Tensors.zip files.")
+        rp.setHaltingLevel(3)

@@ -59,14 +59,17 @@ def runPhaseshiftGen(sl,rp, psgensource=os.path.join('source','EEASiSSS.x'),
     if len(rp.ELEMENT_MIX) > 0:
         minnum = -1
         for (site, el) in [(site, el) for (site, el) in blocks if site.el 
-                          in rp.ELEMENT_MIX and site.occ[el] > 0.]:
+                          in rp.ELEMENT_MIX and (site.occ[el] > 0. or
+                                                 el in site.mixedEls)]:
             al = [at for at in nsl.atlist if at.site == site]
             atcount = len(al)*site.occ[el]
-            if minnum < 0 or (minnum > atcount > 0):
+            if minnum < 0 or (minnum > atcount >= 0):
                 minnum = atcount
         # we want at least 2 atoms of each element in each site type:
         if 0 < minnum < 2.0:
             scsize = int(np.ceil(2.0/minnum))
+        elif minnum == 0:
+            scsize = 100  # large number, will be decreased below
     if scsize > 1:  # some checks to make sure it doesn't get too large
         maxcells = 20  # upper limit on supercell size
         maxats = 500   # upper limit on atoms in supercell
@@ -136,7 +139,6 @@ def runPhaseshiftGen(sl,rp, psgensource=os.path.join('source','EEASiSSS.x'),
                                           if at.site == site]
     blocks = [(site,el) for (site,el) in blocks 
               if len(subatlists[(site,el)]) > 0]
-
 #    if bulk: 
 #        bulksites = [site for (site,el) in blocks]
 #    else:

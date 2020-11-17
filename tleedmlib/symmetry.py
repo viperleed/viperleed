@@ -195,7 +195,7 @@ def findSymmetry(sl, rp, bulk=False, output=True):
             newsl = ("SUPERLATTICE M = {:.0f} {:.0f}, {:.0f} {:.0f}"
                      .format(rp.SUPERLATTICE[0,0], rp.SUPERLATTICE[0,1],
                              rp.SUPERLATTICE[1,0], rp.SUPERLATTICE[1,1]))
-            modifyPARAMETERS(rp, "SUPERLATTICE", newsl)
+            modifyPARAMETERS(rp, "SUPERLATTICE", newsl, include_left=True)
         # MODIFY SYMMETRY_FIX PARAMETER
         if "[" in rp.SYMMETRY_FIX and not bulk:
             rgx = re.compile(r'\s*(?P<group>(pm|pg|cm|rcm|pmg))\s*\[\s*'
@@ -207,8 +207,7 @@ def findSymmetry(sl, rp, bulk=False, output=True):
             newab = np.dot(sl.ucell[0:2,0:2], np.transpose(usurf))
             newdir = np.dot(np.linalg.inv(newab),cartdir)
             newdir = newdir / min(newdir)
-            s = ("SYMMETRY_FIX = "+targetsym+"[{:.0f} {:.0f}]"
-                                             .format(newdir[0], newdir[1]))
+            s = (targetsym+"[{:.0f} {:.0f}]".format(newdir[0], newdir[1]))
             modifyPARAMETERS(rp, "SYMMETRY_FIX", s)
         # MODIFY UNIT CELL
         sl.getCartesianCoordinates()
@@ -1367,6 +1366,5 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
             if rp.THETA != 0:
                 rp.PHI += np.degrees(ang)
                 modifyPARAMETERS(rp, "BEAM_INCIDENCE",
-                   "BEAM_INCIDENCE = {:.3f} {:.3f}".format(rp.THETA,
-                                                           rp.PHI))
+                                 "{:.3f} {:.3f}".format(rp.THETA, rp.PHI))
     return 0

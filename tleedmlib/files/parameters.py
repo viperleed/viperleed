@@ -1217,24 +1217,27 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
     logger.setLevel(loglevel)
     return 0
 
-def modifyPARAMETERS(rp, modpar, new="", comment=""):
+def modifyPARAMETERS(rp, modpar, new="", comment="", path="", 
+                     suppress_ori=False, include_left=False):
     """Looks for 'modpar' in the PARAMETERS file, comments that line out, and 
     replaces it by the string specified by 'new'"""
+    file = os.path.join(path, "PARAMETERS")
     oriname = "PARAMETERS_ori_"+rp.timestamp
-    if not oriname in rp.manifest:
+    ori = os.path.join(path, oriname)
+    if not oriname in rp.manifest and not suppress_ori:
         try:
-            shutil.copy2("PARAMETERS", oriname)
+            shutil.copy2(file, ori)
         except:
             logger.error("modifyPARAMETERS: Could not copy PARAMETERS file "
                 "to PARAMETERS_ori. Proceeding, original file will be lost.")
         rp.manifest.append(oriname)
-    if not "PARAMETERS" in rp.manifest:
+    if not "PARAMETERS" in rp.manifest and not path:
         rp.manifest.append("PARAMETERS")
     output = ""
     headerPrinted = False
 
     try:
-        with open("PARAMETERS", "r") as rf:
+        with open(file, "r") as rf:
             plines = rf.readlines()
     except:
         logger.error("Error reading PARAMETERS file.")
@@ -1257,10 +1260,16 @@ def modifyPARAMETERS(rp, modpar, new="", comment=""):
         if valid and param == modpar:
             found = True
             if new:
-                if comment == "":
-                    comment = "line automatically changed to:"
-                output += "!"+line[:-1] + " ! " + comment + "\n"
-                output += new + "\n"
+                if new.strip() == line.split("!")[0].strip():
+                    output += line
+                else:
+                    if comment == "":
+                        comment = "line automatically changed to:"
+                    output += "!"+line[:-1] + " ! " + comment + "\n"
+                    if not include_left:
+                        output += modpar + " = " + new + "\n"
+                    else:
+                        output += new + "\n"
             else:
                 if comment == "":
                     comment = "line commented out automatically"
@@ -1276,9 +1285,11 @@ def modifyPARAMETERS(rp, modpar, new="", comment=""):
 ! ######################################################
 """
             headerPrinted = True
-        output += "\n" + modpar + " = " + new + " ! " + comment
+        output += "\n" + modpar + " = " + new
+        if comment:
+            output += " ! " + comment
     try:
-        with open("PARAMETERS", "w") as wf:
+        with open(file, "w") as wf:
             wf.write(output)
     except:
         logger.error("modifyPARAMETERS: Failed to write PARAMETERS file.")

@@ -505,6 +505,9 @@ def reduceUnitCell(ab, eps = 0.001):
 
 def getLEEDdict(sl, rp):
     """Returns a LEED dict containing information needed by guilib functions"""
+    if sl.planegroup == "unknown":
+        logger.warning("Generating LEED dictionary for slab with unknown "
+                       "plane group!")
     if sl.planegroup in ["pm", "pg", "cm", "rcm", "pmg"]:
         pgstring = sl.planegroup+"[{} {}]".format(sl.orisymplane.par[0], 
                                                   sl.orisymplane.par[1])
@@ -523,10 +526,17 @@ def getLEEDdict(sl, rp):
           "screenAperture": rp.SCREEN_APERTURE}
     return d
 
-def getSymEqBeams(sl, rp):
+def getSymEqBeams(sl, rp, domains=False):
     """Returns a list of tuples ((hf,kf), index), where (hf,kf) are beams and 
     index is the group of other beams they are equivalent to"""
-    symeqnames = get_equivalent_beams(getLEEDdict(sl, rp))
+    if not domains:
+        d = [getLEEDdict(sl, rp)]
+    else:
+        d = [getLEEDdict(dp.sl, dp.rp) for dp in rp.domainParams]
+    if any([v is None for v in d]):
+        logger.error("Failed to get beam equivalence list")
+        return []
+    symeqnames = get_equivalent_beams(*d)
     symeq = []
     rgx = re.compile(r'(?P<h>[-0-9/]+)\s*,\s*(?P<k>[-0-9/]+)')
     for (name, index) in symeqnames:

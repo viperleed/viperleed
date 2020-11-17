@@ -87,7 +87,7 @@ def readIVBEAMS(filename='IVBEAMS'):
     logger.debug("IVBEAMS file was read successfully")
     return beams
 
-def sortIVBEAMS(sl, rp):
+def sortIVBEAMS(sl, rp, domains=False):
     """Sorts the beams in IVBEAMS such that they appear in the same order as
     in the _BEAMLIST. Returns the sorted list."""
     # read BEAMLIST
@@ -101,7 +101,7 @@ def sortIVBEAMS(sl, rp):
             logger.error("_BEAMLIST not found.")
             raise
     err = 1e-3           #since beams are saved as floats, give error tolerance
-    symeq = tl.leedbase.getSymEqBeams(sl, rp)
+    symeq = tl.leedbase.getSymEqBeams(sl, rp, domains=domains)
     # first, get beamlist as floats
     blfs = []
     for line in rp.beamlist:
@@ -247,9 +247,9 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=";", enrange=[]):
                 "range: {:.2g} eV).".format(len(beams), totalrange))
     return beams
 
-def checkEXPBEAMS(sl, rp):
+def checkEXPBEAMS(sl, rp, domains=False):
     remlist = []
-    symeq = tl.leedbase.getSymEqBeams(sl, rp)
+    symeq = tl.leedbase.getSymEqBeams(sl, rp, domains=domains)
     for (bi, b) in enumerate(rp.expbeams):
         if b in remlist:
             continue
@@ -355,14 +355,17 @@ def readAUXEXPBEAMS(filename="AUXEXPBEAMS", interactive=False):
                 i += 2
     return expbeams
 
-def writeIVBEAMS(sl, rp, filename="IVBEAMS"):
+def writeIVBEAMS(sl, rp, filename="IVBEAMS", domains=False):
     """Writes an IVBEAMS file based on rp.exbeams. Returns 
     those beams in IVBEAMS form."""
-    d = tl.leedbase.getLEEDdict(sl, rp)
-    if d is None:
+    if not domains:
+        d = [tl.leedbase.getLEEDdict(sl, rp)]
+    else:
+        d = [tl.leedbase.getLEEDdict(dp.sl, dp.rp) for dp in rp.domainParams]
+    if any([v is None for v in d]):
         logger.error("Failed to write IVBEAMS")
         return []
-    makebeams = project_to_first_domain([b.hkfrac for b in rp.expbeams], d)
+    makebeams = project_to_first_domain([b.hkfrac for b in rp.expbeams], *d)
     output = "This IVBEAMS file was automatically generated from EXPBEAMS\n"
     ivbeams = [tl.Beam(hk) for hk in makebeams]
     for b in ivbeams:

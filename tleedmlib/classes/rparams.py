@@ -59,9 +59,9 @@ class SearchPar:
 class DomainParameters:
     """Stores workdir, slab and runparams objects for each domain"""
     def __init__(self, workdir, homedir, name):
-        self.workdir = workdir
-        self.homedir = homedir
-        self.name = name
+        self.workdir = workdir  # path do sub-directory for domain calculation
+        self.homedir = homedir  # path to main tleedm working directory
+        self.name = name        # domain name as defined by user
         self.sl = None
         self.rp = None
         

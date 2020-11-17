@@ -15,6 +15,7 @@ import shutil
 import subprocess
 
 from tleedmlib.leedbase import fortranCompile, getTLEEDdir, getMaxTensorIndex
+from tleedmlib.files.parameters import modifyPARAMETERS
 import tleedmlib.files.beams as beams
 import tleedmlib.files.iorefcalc as io
 
@@ -199,10 +200,19 @@ def refcalc(sl, rp):
                         and os.path.isfile(fn + "_OUT_" + rp.timestamp)):
                 of = fn + "_OUT_" + rp.timestamp
         try:
-            shutil.copy2(of, os.path.join(".","Tensors",dn,f))
+            shutil.copy2(of, os.path.join("Tensors",dn,f))
         except:
             logger.warning("Failed to add input file " + f
                             + " to Tensors folder.")
+    # modify PARAMETERS to contain the energies and LMAX that were really used
+    if os.path.isfile(os.path.join("Tensors",dn,"PARAMETERS")):
+        modifyPARAMETERS(rp, "THEO_ENERGIES", 
+                         new=" ".join(["{:.4g}".format(v) 
+                                       for v in rp.THEO_ENERGIES]),
+                         path=os.path.join("Tensors",dn),
+                         suppress_ori=True)
+        modifyPARAMETERS(rp, "LMAX", new=str(rp.LMAX),
+                         path=os.path.join("Tensors",dn), suppress_ori=True)
     # delete old delta files in main work folder, if necessary
     #   (there should not be any, unless there was an error)
     for df in [f for f in os.listdir(".") if f.startswith("DEL_") and 
