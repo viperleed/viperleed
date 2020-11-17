@@ -674,7 +674,7 @@ def check_multi_leed_params(leed_parameters):
         aperture = max(params.get('screenAperture', 0), aperture)
     
     leed_patterns = []
-    for i, params in enumerate(leed_parameters):
+    for params in leed_parameters:
         # update eMax and screenAperture
         params['eMax'] = emax
         if aperture > 0:
