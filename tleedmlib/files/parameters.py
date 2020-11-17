@@ -1260,7 +1260,7 @@ def modifyPARAMETERS(rp, modpar, new="", comment="", path="",
         if valid and param == modpar:
             found = True
             if new:
-                if new.strip() == line.split("!")[0].strip():
+                if (modpar+" = "+new.strip()) == line.split("!")[0].strip():
                     output += line
                 else:
                     if comment == "":

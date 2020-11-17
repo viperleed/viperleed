@@ -183,7 +183,7 @@ def getTensors(index, basedir=".", targetdir=".", required=True):
             try:
                 logger.info("Unpacking {}.zip...".format(dn))
                 if not os.path.isdir(os.path.join(targetdir, "Tensors")):
-                    os.makedir(os.path.join(targetdir, "Tensors"))
+                    os.mkdir(os.path.join(targetdir, "Tensors"))
                 if not os.path.isdir(os.path.join(targetdir, "Tensors", dn)):
                     os.mkdir(os.path.join(targetdir,"Tensors",dn))
                 shutil.unpack_archive(os.path.join(basedir,"Tensors",

@@ -22,7 +22,7 @@ from tleedmlib.files.poscar import readPOSCAR, writeCONTCAR
 from tleedmlib.files.parameters import readPARAMETERS, interpretPARAMETERS
 from tleedmlib.files.phaseshifts import readPHASESHIFTS, writePHASESHIFTS
 from tleedmlib.files.beams import (readOUTBEAMS, readBEAMLIST, checkEXPBEAMS, 
-                                   sortIVBEAMS, writeIVBEAMS)
+                                   readIVBEAMS, sortIVBEAMS, writeIVBEAMS)
 from tleedmlib.files.patterninfo import writePatternInfo
 
 logger = logging.getLogger("tleedm.initialization")
@@ -247,8 +247,9 @@ def init_domains(rp):
                                                targetdir=target)
                 except:
                     tensorIndex = 0
-                if r != 0:
-                    tensorIndex = 0
+                else:
+                    if r != 0:
+                        tensorIndex = 0
             if tensorIndex != 0:
                 tensorDir = os.path.join(target, "Tensors", 
                                          "Tensors_"+str(tensorIndex).zfill(3))
@@ -316,6 +317,15 @@ def init_domains(rp):
                 if dp.sl.preprocessed:
                     dp.rp.SYMMETRY_FIND_ORI = False
                 dp.rp.updateDerivedParams()
+                try:
+                    dp.rp.ivbeams = readIVBEAMS()
+                    dp.rp.ivbeams_sorted = False
+                    dp.rp.fileLoaded["IVBEAMS"] = True
+                except FileNotFoundError:
+                    pass
+                except:
+                    logger.error("Error while reading IVBEAMS for domain {}"
+                                 .format(name))
             except:
                 logger.error("Error loading POSCAR and PARAMETERS for domain "
                              "{}".format(name))
@@ -481,7 +491,7 @@ def init_domains(rp):
             dp.refcalcRequired = True
             dp.rp.ivbeams = copy.deepcopy(rp.ivbeams)
             continue
-    
+
     rr = [dp for dp in rp.domainParams if dp.refcalcRequired]
     if rr:
         logger.info("The following domains require new reference "
@@ -491,3 +501,4 @@ def init_domains(rp):
                        "appropriate reference calculations, and start a "
                        "domain search based on the Tensors.zip files.")
         rp.setHaltingLevel(3)
+    return 0
