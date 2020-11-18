@@ -131,7 +131,7 @@ def readDISPLACEMENTS(rp, filename="DISPLACEMENTS"):
         logger.warning("DISPLACEMENTS file: Unmatched <loop> flags found, "
                         "loops are still open at end of file.")
         rp.setHaltingLevel(2)
-    if not rp.hasDomains:
+    if not rp.domainParams:
         return 0
     # in case of domains, now split blocks to domains
     for dp in rp.domainParams:

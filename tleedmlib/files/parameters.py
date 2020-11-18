@@ -186,7 +186,8 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
     for (param, plist, value) in [(param, lel[0], lel[1]) 
                                   for param in checkParams
                                   for lel in rpars.readParams[param]]:
-        if rpars.hasDomains and param in domainsIgnoreParams:
+        if (4 in rpars.RUN or rpars.domainParams) and (param in 
+                                                       domainsIgnoreParams):
             continue
         llist = value.split()
         if param == 'ATTENUATION_EPS':
@@ -614,7 +615,6 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
             if len(rl) > 0:
                 if 4 in rl:
                     logger.info('Found domain search.')
-                    rpars.hasDomains = True
                 i = 0
                 while i < len(rl):
                     if rl[i] not in [0,1,2,3,4,11,31]:

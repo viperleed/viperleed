@@ -82,7 +82,7 @@ def runSection(index, sl, rp):
                           "VIBROCC", "DISPLACEMENTS"],
                      4: ["PARAMETERS", "IVBEAMS", "DISPLACEMENTS"]}
                 # files that need to be there for the different parts to run
-    if rp.hasDomains:
+    if (4 in rp.RUN or rp.domainParams):
         requiredFiles[0] = ["PARAMETERS", "IVBEAMS"]
     o = "\nSTARTING SECTION: "+sectionNames[index]
     if index == 3 and rp.disp_blocks and rp.disp_blocks[rp.search_index][1]:
@@ -669,7 +669,7 @@ def main():
                 logger.error("Error in tleedm execution: "+str(r))
                 cleanup(rp.manifest, rp)
                 return 1
-            elif (sec == 0 and not rp.hasDomains and not sl.preprocessed 
+            elif (sec == 0 and not rp.domainParams and not sl.preprocessed 
                   and rp.HALTING <= 2 and len(rp.RUN) > 0):
                 logger.info("Initialization finished. Execution will stop. "
                     "Please check whether comments in POSCAR are correct, "

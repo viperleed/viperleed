@@ -19,7 +19,7 @@ from tleedmlib.base import angle
 from tleedmlib.beamgen import runBeamGen
 from tleedmlib.psgen import runPhaseshiftGen
 from tleedmlib.files.poscar import readPOSCAR, writeCONTCAR
-from tleedmlib.files.vibrocc import readVIBROCC, writeVIBROCC
+from tleedmlib.files.vibrocc import readVIBROCC
 from tleedmlib.files.parameters import readPARAMETERS, interpretPARAMETERS
 from tleedmlib.files.phaseshifts import readPHASESHIFTS, writePHASESHIFTS
 from tleedmlib.files.beams import (readOUTBEAMS, readBEAMLIST, checkEXPBEAMS, 
@@ -51,7 +51,7 @@ def initialization(sl, rp, subdomain=False):
                     logger.error("Error while reading file "+fn, exc_info=True)
     rp.initTheoEnergies()  # may be initialized based on exp. beams
 
-    if rp.hasDomains and not subdomain:
+    if (4 in rp.RUN or rp.domainParams) and not subdomain:
         try:
             r = init_domains(rp)
         except:
