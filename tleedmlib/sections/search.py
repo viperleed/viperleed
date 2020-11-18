@@ -171,17 +171,9 @@ def search(sl, rp):
             raise
         if r != 0:
             return r
-    # if number of cores is not defined, try to find it
-    if rp.N_CORES == 0:
-        try:
-            rp.N_CORES = tl.base.available_cpu_count()
-        except:
-            logger.error("Failed to detect number of cores.")
-        logger.info("Automatically detected number of available CPUs: {}"
-                     .format(rp.N_CORES))
-    if rp.N_CORES == 0:
-        logger.error("Failed to detect number of cores.")
-        return("N_CORES undefined, automatic detection failed")
+    r = rp.updateCores()
+    if r != 0:
+        return r
     # generate rf.info
     try:
         rfinfo = io.writeRfInfo(sl, rp, filename="rf.info")
@@ -236,7 +228,7 @@ def search(sl, rp):
             rp.FORTRAN_COMP_MPI[0] = "mpiifort -Ofast"
             
             
-    if shutil.which("mpirun", os.X_OK) == None:
+    if usempi and shutil.which("mpirun", os.X_OK) == None:
         usempi = False
         logger.warning("mpirun is not present. Search will be compiled "
             "and executed without parallelization. This will be much "

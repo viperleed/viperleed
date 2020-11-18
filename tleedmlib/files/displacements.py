@@ -75,6 +75,8 @@ def readDISPLACEMENTS(rp, filename="DISPLACEMENTS"):
                 except:
                     name = ""
                 names = [n for (_, n) in rp.disp_blocks]
+                names.extend([n[:-6] for (_, n) in rp.disp_blocks 
+                              if n.endswith(" [0 1]") or n.endswith(" [1 0]")])
                 if not name or name in names:  # get unique name
                     if not name:
                         i = 1
@@ -129,6 +131,54 @@ def readDISPLACEMENTS(rp, filename="DISPLACEMENTS"):
         logger.warning("DISPLACEMENTS file: Unmatched <loop> flags found, "
                         "loops are still open at end of file.")
         rp.setHaltingLevel(2)
+    if not rp.hasDomains:
+        return 0
+    # in case of domains, now split blocks to domains
+    for dp in rp.domainParams:
+        dp.rp.disp_blocks = []
+    for (lines, blockname) in rp.disp_blocks:
+        d = ""
+        dlines = {}
+        dnum = 1
+        names = [dp.name for dp in rp.domainParams]
+        skipblock = False
+        for name in names:
+            dlines[name] = []
+        for line in lines:
+            if not '=' in line:
+                continue
+            if re.match(r'==\s*d', line.lower()):  # start domain block
+                skipblock = False
+                try:
+                    d = (line[re.match(r'==\s*d(omain)?\s+', 
+                                          line.lower()).span()[1]:].strip())
+                except:
+                    if str(dnum) in names:
+                        d = str(dnum)
+                        dnum += 1
+                    else:
+                        logger.warning("DISPLACEMENTS file: found start of "
+                            "domain block with missing domain name. Block "
+                            "will be skipped.")
+                        rp.setHaltingLevel(2)
+                        d = ""
+                        skipblock = True
+                if d and not d in names:
+                    logger.warning("DISPLACEMENTS file: found start of domain "
+                        "block with invalid domain name {}. Block will be "
+                        "skipped.".format(d))
+                    d = ""
+                    skipblock = True
+            elif skipblock:
+                continue
+            elif '=' in line:
+                if not d:
+                    logger.warning("DISPLACEMENTS file: found line outside "
+                        "of a domain block, line will be skipped: "+line)
+                else:
+                    dlines[d].append(line)
+        for dp in rp.domainParams:
+            dp.rp.disp_blocks.append((dlines[dp.name], blockname))
     return 0
 
 def readDISPLACEMENTS_block(rp, sl, dispblock):

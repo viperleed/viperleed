@@ -19,6 +19,7 @@ from tleedmlib.base import angle
 from tleedmlib.beamgen import runBeamGen
 from tleedmlib.psgen import runPhaseshiftGen
 from tleedmlib.files.poscar import readPOSCAR, writeCONTCAR
+from tleedmlib.files.vibrocc import readVIBROCC, writeVIBROCC
 from tleedmlib.files.parameters import readPARAMETERS, interpretPARAMETERS
 from tleedmlib.files.phaseshifts import readPHASESHIFTS, writePHASESHIFTS
 from tleedmlib.files.beams import (readOUTBEAMS, readBEAMLIST, checkEXPBEAMS, 
@@ -311,12 +312,20 @@ def init_domains(rp):
                 dp.sl = readPOSCAR()
                 dp.rp = readPARAMETERS()
                 dp.rp.workdir = home
+                dp.rp.timestamp = rp.timestamp
                 interpretPARAMETERS(dp.rp, slab=dp.sl, silent=True)
                 dp.sl.fullUpdate(dp.rp)   #gets PARAMETERS data into slab
                 dp.rp.fileLoaded["POSCAR"] = True
                 if dp.sl.preprocessed:
                     dp.rp.SYMMETRY_FIND_ORI = False
                 dp.rp.updateDerivedParams()
+                try:
+                    readVIBROCC(dp.rp,dp.sl)
+                    dp.rp.fileLoaded["VIBROCC"] = True
+                except:
+                    logger.error("Error while reading required file VIBROCC")
+                    raise
+                dp.sl.fullUpdate(dp.rp)
                 try:
                     dp.rp.ivbeams = readIVBEAMS()
                     dp.rp.ivbeams_sorted = False

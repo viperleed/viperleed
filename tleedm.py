@@ -80,7 +80,7 @@ def runSection(index, sl, rp):
                          "IVBEAMS", "EXPBEAMS"],
                      31: ["BEAMLIST", "POSCAR", "PARAMETERS", "IVBEAMS",
                           "VIBROCC", "DISPLACEMENTS"],
-                     4: []}  # !!! required files for domain search?
+                     4: ["PARAMETERS", "IVBEAMS", "DISPLACEMENTS"]}
                 # files that need to be there for the different parts to run
     if rp.hasDomains:
         requiredFiles[0] = ["PARAMETERS", "IVBEAMS"]
@@ -218,6 +218,8 @@ def runSection(index, sl, rp):
         r = sections.search(sl, rp)
     elif index == 31:
         r = sections.superpos(sl, rp)
+    elif index == 4:
+        r = sections.deltas_domains(rp)
     if r != 0:
         return r
 
@@ -228,7 +230,7 @@ def runSection(index, sl, rp):
     return 0
 
 def sortfiles(tensorIndex, delete_unzipped = False, tensors = True,
-              deltas = True):
+              deltas = True, path = ""):
     """Makes Tensors and Deltas zip files. Copies files to AUX and OUT folders
     as appropriate. If delete_unzipped is set to True, deletes unzipped Deltas
     and Tensors directories."""
@@ -249,94 +251,82 @@ def sortfiles(tensorIndex, delete_unzipped = False, tensors = True,
                 "Rfactor_analysis_refcalc.pdf",
                 "Rfactor_analysis_superpos.pdf"]
     # outfiles with variable names:
-    outfiles.extend([f for f in os.listdir(".") if
+    if not path:
+        path = "."
+    outfiles.extend([f for f in os.listdir(path) if
                          (f.startswith("POSCAR_OUT") or
                           f.startswith("VIBROCC_OUT") or
                           f.startswith("R_OUT"))])
     # clean up deltas
-    deltalist = [f for f in os.listdir('.') if f.startswith("DEL_")]
+    deltalist = [f for f in os.listdir(path) if f.startswith("DEL_")]
     if len(deltalist) > 0:
         fn = "Deltas_"+str(tensorIndex).zfill(3)
-        if not os.path.isdir(os.path.join(".","Deltas")):
-            os.mkdir(os.path.join(".","Deltas"))
-        if not os.path.isdir(os.path.join(".","Deltas",fn)):
-            os.mkdir(os.path.join(".","Deltas",fn))
+        if not os.path.isdir(os.path.join(path, "Deltas")):
+            os.mkdir(os.path.join(path, "Deltas"))
+        if not os.path.isdir(os.path.join(path, "Deltas", fn)):
+            os.mkdir(os.path.join(path, "Deltas", fn))
         try:
             for df in deltalist:
-                shutil.move(df, os.path.join(".","Deltas",fn,df))
+                shutil.move(os.path.join(path, df), 
+                            os.path.join(path,"Deltas",fn,df))
         except:
             logger.error("Error moving Delta files: ", exc_info = True)
+    
     # if there are unzipped Tensors or Deltas directories, zip them:
-    if os.path.isdir(os.path.join(".","Tensors")) and (tensors or
-                                                       delete_unzipped):
-        rgx = re.compile(r'Tensors_[0-9]{3}')
-        for d in [d for d in os.listdir(os.path.join(".","Tensors"))
-                  if (os.path.isdir(os.path.join(".","Tensors",d))
+    for t in ["Tensors", "Deltas"]:
+        if t == "Tensors":
+            do = tensors
+        else:
+            do = deltas
+        rgx = re.compile(t+r'_[0-9]{3}')
+        if not os.path.isdir(os.path.join(path, t)):
+            continue
+        if not (do or delete_unzipped):
+            continue
+        for d in [d for d in os.listdir(os.path.join(path, t))
+                  if (os.path.isdir(os.path.join(path, t, d))
                       and rgx.match(d))]:
-            if not rgx.match(d).span()[1] == 11:
+            if not rgx.match(d).span()[1] == len(t)+4:
                 continue
             delete = delete_unzipped
-            if tensors:
-                logger.info("Packing {}.zip...".format(d))
+            if do:
+                if not path:
+                    o = d
+                else:
+                    o = os.path.relpath(os.path.join(path, t, d))
+                logger.info("Packing {}.zip...".format(o))
                 try:
-                    shutil.make_archive(os.path.join("Tensors",d),"zip",
-                                        os.path.join("Tensors",d))
+                    shutil.make_archive(os.path.join(path, t, d),"zip",
+                                        os.path.join(path, t, d))
                 except:
-                    logger.error("Error packing {}.zip file: ".format(d))
+                    logger.error("Error packing {}.zip file: ".format(o))
                     delete = False
             if delete:
                 try:
-                    shutil.rmtree(os.path.join(".","Tensors",d))
+                    shutil.rmtree(os.path.join(path, t, d))
                 except:
-                    logger.warning("Error deleting unzipped Tensors "
-                        "directory. This will increase the size of the work "
-                        "folder, but not cause any problems.")
-    if os.path.isdir(os.path.join(".","Deltas")) and (deltas or
-                                                      delete_unzipped):
-        rgx = re.compile(r'Deltas_[0-9]{3}')
-        for d in [d for d in os.listdir(os.path.join(".","Deltas"))
-                  if (os.path.isdir(os.path.join(".","Deltas",d))
-                      and rgx.match(d))]:
-            if not rgx.match(d).span()[1] == 10:
-                continue
-            delete = delete_unzipped
-            if deltas:
-                logger.info("Packing {}.zip...".format(d))
-                try:
-                    shutil.make_archive(os.path.join("Deltas",d),"zip",
-                                        os.path.join("Deltas",d))
-                except:
-                    logger.error("Error packing {}.zip file.".format(d))
-                    delete = False
-            if delete:
-                try:
-                    shutil.rmtree(os.path.join(".","Deltas",d))
-                except:
-                    logger.warning("Error deleting unzipped Deltas "
-                        "directory. This will increase the size of the work "
-                        "folder, but not cause any problems.")
+                    logger.warning("Error deleting unzipped {} directory. "
+                        "This will increase the size of the work folder, "
+                        "but not cause any problems.".format(t))
     # sort AUX and OUT files:
-    try:
-        if not os.path.isdir(os.path.join(".","AUX")):
-            os.mkdir(os.path.join(".","AUX"))
-        if not os.path.isdir(os.path.join(".","OUT")):
-            os.mkdir(os.path.join(".","OUT"))
-    except:
-        logger.error("Error creating AUX and OUT folders: ", exc_info = True)
-    for f in auxfiles:
-        if os.path.isfile(os.path.join(".",f)):
+    for t in ["AUX", "OUT"]:
+        try:
+            if not os.path.isdir(os.path.join(path, t)):
+                os.mkdir(os.path.join(path, t))
+        except:
+            logger.error("Error creating {} folder: ".format(t), 
+                         exc_info = True)
+        if t == "AUX":
+            filelist = auxfiles
+        else:
+            filelist = outfiles
+        for f in [f for f in filelist 
+                  if os.path.isfile(os.path.join(path, f))]:
             try:
-                shutil.copy2(f, os.path.join(".","AUX",f))
+                shutil.copy2(os.path.join(path, f), os.path.join(path, t, f))
             except:
-                logger.error("Error moving AUX file "+f+": ", exc_info = True)
-    for f in outfiles:
-        if os.path.isfile(os.path.join(".",f)):
-            try:
-                shutil.copy2(f, os.path.join(".","OUT",f))
-            except:
-                logger.error("Error copying OUT file "+f+": ",
-                              exc_info = True)
-
+                logger.error("Error moving {} file {}: ".format(t, f), 
+                             exc_info = True)
 
 ###############################################
 #            CLEANUP FUNCTIONS                #
@@ -404,6 +394,9 @@ def moveoldruns(rp, prerun = False):
     if not prerun:
         sortfiles(rp.TENSOR_INDEX, delete_unzipped=False,
                   tensors = False, deltas = False)
+        for dp in rp.domainParams:
+            sortfiles(dp.rp.TENSOR_INDEX, delete_unzipped=False,
+                      tensors = False, deltas = False)
     if prerun:
         filelist = [f for f in os.listdir() if os.path.isfile(f) and
                     f.endswith(".log") and f not in rp.manifest]
@@ -453,22 +446,31 @@ def cleanup(manifest, rp = None):
     logger.info("\nStarting cleanup...")
     if rp is None:
         history = []
-        newTensors = False
-        newDeltas = False
-        tind = 0
+        to_sort = [{"newTensors": False, "newDeltas": False, "tind": 0,
+                    "path": ""}]
     else:
         history = rp.runHistory
-        newTensors = ("Tensors" in rp.manifest)
-        newDeltas = ("Deltas" in rp.manifest)
         rp.closePdfReportFigs()
-        tind = rp.TENSOR_INDEX
-
-    try:
-        sortfiles(tind, delete_unzipped=True, tensors=newTensors,
-                                                         deltas=newDeltas)
-    except:
-        logger.warning("Error sorting files to AUX/OUT folders: ",
-                        exc_info = True)
+        if not rp.domainParams:
+            to_sort = [{"newTensors": ("Tensors" in rp.manifest), 
+                       "newDeltas": ("Deltas" in rp.manifest), 
+                       "tind": rp.TENSOR_INDEX, "path": ""}]
+        else:
+            to_sort = [{"newTensors": False, "newDeltas": False, "tind": 0,
+                        "path": ""}]
+            for dp in rp.domainParams:
+                to_sort.append({"newTensors": ("Tensors" in dp.rp.manifest), 
+                                "newDeltas": ("Deltas" in dp.rp.manifest), 
+                                "tind": dp.rp.TENSOR_INDEX, 
+                                "path": dp.workdir})
+    for d in to_sort:
+        try:
+            sortfiles(d["tind"], delete_unzipped=True, 
+                      tensors = d["newTensors"],
+                      deltas = d["newDeltas"], path = d["path"])
+        except:
+            logger.warning("Error sorting files to AUX/OUT folders: ",
+                            exc_info = True)
     # write manifest
     written = []
     try:

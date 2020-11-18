@@ -23,6 +23,7 @@ else:
 
 from tleedmlib.files.iodeltas import checkDelta
 from tleedmlib.leedbase import getMaxTensorIndex
+from tleedmlib.base import available_cpu_count
 
 logger = logging.getLogger("tleedm.rparams")
 
@@ -308,7 +309,22 @@ class Rparams:
                 self.V0_REAL = ("workfn-max("+str(round(c[0],2))
                         +", (("+str(round(c[1],2))+")+("+str(round(c[2],2))
                         +")/sqrt(EEV+workfn+("+str(round(c[3],2))+"))))")
-       
+    
+    def updateCores(self):
+        # if N_CORES is undefined, tries to find it
+        if self.N_CORES != 0:
+            return 0
+        try:
+            self.N_CORES = available_cpu_count()
+        except:
+            logger.error("Failed to detect number of cores.")
+        logger.info("Automatically detected number of available CPUs: {}"
+                     .format(self.N_CORES))
+        if self.N_CORES == 0:
+            logger.error("Failed to detect number of cores.")
+            return("N_CORES undefined, automatic detection failed")
+        return 0
+        
     def resetSearchConv(self):
         """Sets the search convergence and tracking parameters back to their 
         initial values."""
