@@ -66,7 +66,10 @@ def runSection(index, sl, rp):
                     11: "R-FACTOR CALCULATION",
                     12: "R-FACTOR CALCULATION",
                     31: "SUPERPOS",
-                    4: "DOMAIN SEARCH"}
+                    42: "DELTA-AMPLITUDES (DOMAINS)",
+                    43: "SEARCH (DOMAINS)",
+                    431: "SUPERPOS (DOMAINS)",
+                    412: "R-FACTOR CALCULATION"}
     requiredFiles = {0: ["POSCAR", "PARAMETERS", "VIBROCC", "IVBEAMS"],
                      1: ["BEAMLIST", "PHASESHIFTS", "POSCAR", "PARAMETERS",
                          "IVBEAMS", "VIBROCC"],
@@ -74,13 +77,17 @@ def runSection(index, sl, rp):
                          "IVBEAMS", "VIBROCC", "DISPLACEMENTS"],
                      3: ["BEAMLIST", "PHASESHIFTS", "POSCAR", "PARAMETERS",
                          "IVBEAMS", "VIBROCC", "DISPLACEMENTS","EXPBEAMS"],
-                     11: ["BEAMLIST", "PHASESHIFTS", "POSCAR", "PARAMETERS",
-                         "IVBEAMS", "EXPBEAMS"],
-                     12: ["BEAMLIST", "PHASESHIFTS", "POSCAR", "PARAMETERS",
-                         "IVBEAMS", "EXPBEAMS"],
+                     11: ["BEAMLIST", "PARAMETERS", "IVBEAMS", "EXPBEAMS"],
+                     12: ["BEAMLIST", "PARAMETERS", "IVBEAMS", "EXPBEAMS"],
+                     412: ["BEAMLIST", "PARAMETERS", "IVBEAMS", "EXPBEAMS"],
                      31: ["BEAMLIST", "POSCAR", "PARAMETERS", "IVBEAMS",
                           "VIBROCC", "DISPLACEMENTS"],
-                     4: ["PARAMETERS", "IVBEAMS", "DISPLACEMENTS"]}
+                     42: ["BEAMLIST", "PARAMETERS", "IVBEAMS", 
+                          "DISPLACEMENTS"],
+                     43: ["BEAMLIST", "PARAMETERS", "IVBEAMS", "DISPLACEMENTS", 
+                          "EXPBEAMS"],
+                     431: ["BEAMLIST", "PARAMETERS", "IVBEAMS", 
+                           "DISPLACEMENTS"]}
                 # files that need to be there for the different parts to run
     if (4 in rp.RUN or rp.domainParams):
         requiredFiles[0] = ["PARAMETERS", "IVBEAMS"]
@@ -210,15 +217,18 @@ def runSection(index, sl, rp):
         sections.initialization(sl, rp)
     elif index == 1:
         r = sections.refcalc(sl, rp)
-    elif index == 11 or index == 12:
-        r = sections.rfactor(sl, rp, index)
+    elif index in [11, 12, 412]:
+        if index == 412:
+            index = 12
+        else:   # !!! TMP
+            r = sections.rfactor(sl, rp, index)   # !!! UNINDENT ONCE SEARCH WORKS
     elif index == 2:
         r = sections.deltas(sl, rp)
     elif index == 3:
         r = sections.search(sl, rp)
     elif index == 31:
         r = sections.superpos(sl, rp)
-    elif index == 4:
+    elif index == 42:
         r = sections.deltas_domains(rp)
     if r != 0:
         return r
@@ -652,7 +662,7 @@ def main():
         except:
             pass
 
-    sectionorder = [0, 1, 11, 2, 3, 31, 12, 4]
+    sectionorder = [0, 1, 11, 2, 3, 31, 12, 4, 41, 42, 43, 431, 412]
     searchLoopR = None
     searchLoopLevel = 0
     initHalt = False
@@ -682,10 +692,16 @@ def main():
             elif (sec == 3 and rp.fileLoaded["EXPBEAMS"]):
                 if rp.RUN[:1] != [31]:  # superpos after search
                     rp.RUN.insert(0, 31)
+            elif (sec == 43 and rp.fileLoaded["EXPBEAMS"]):
+                if rp.RUN[:1] != [431]:  # domain superpos after domain search
+                    rp.RUN.insert(0, 431)
             elif sec == 31 and rp.fileLoaded["EXPBEAMS"]:
                 if rp.RUN[:1] != [12]:   # r-factor after superpos
                     rp.RUN.insert(0, 12)
-            elif sec == 12 and not rp.SEARCH_KILL:
+            elif sec == 431 and rp.fileLoaded["EXPBEAMS"]:
+                if rp.RUN[:1] != [412]:   # r-factor after domain superpos
+                    rp.RUN.insert(0, 412)
+            elif sec in [12, 412] and not rp.SEARCH_KILL:
                 loops = [t for t in rp.disp_loops if t[1] == rp.search_index]
                 if loops:
                     if searchLoopLevel == 0 or searchLoopR > rp.last_R:
@@ -706,13 +722,23 @@ def main():
                         logger.info(o)
                 else:
                     rp.search_index += 1
+                for dp in rp.domainParams:
+                    dp.rp.search_index = rp.search_index
                 if len(rp.disp_blocks) > rp.search_index:
-                    sl.restoreOriState()
+                    if sec != 412:
+                        sl.restoreOriState()
                     rp.resetSearchConv()
+                    for dp in rp.domainParams:
+                        dp.sl.restoreOriState()
+                        dp.rp.resetSearchConv()
                     if rp.SEARCH_START == "control":
                         rp.SEARCH_START = "crandom"
-                    if rp.RUN[:2] != [2,3]:
-                        rp.RUN = [2,3] + rp.RUN
+                    if sec == 412:
+                        if rp.RUN[:2] != [42,43]:
+                            rp.RUN = [42,43] + rp.RUN
+                    else:
+                        if rp.RUN[:2] != [2,3]:
+                            rp.RUN = [2,3] + rp.RUN
         except KeyboardInterrupt:
             logger.warning("Stopped by keyboard interrupt, attempting "
                             "clean exit...")

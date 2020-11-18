@@ -183,7 +183,6 @@ class Rparams:
         self.stored_R = {"refcalc": None, "superpos": None}
         
         # domains
-        # self.hasDomains = False
         self.domainParams = []
         self.pseudoSlab = None
 

@@ -500,7 +500,7 @@ def init_domains(rp):
             dp.refcalcRequired = True
             dp.rp.ivbeams = copy.deepcopy(rp.ivbeams)
             continue
-
+    
     rr = [dp for dp in rp.domainParams if dp.refcalcRequired]
     if rr:
         logger.info("The following domains require new reference "
@@ -510,4 +510,11 @@ def init_domains(rp):
                        "appropriate reference calculations, and start a "
                        "domain search based on the Tensors.zip files.")
         rp.setHaltingLevel(3)
+        
+    # replace index 4 in rp as required
+    while 4 in rp.RUN:
+        # insert 41 here if refcalcs required
+        rp.RUN.insert(rp.RUN.index(4), 42)
+        rp.RUN.insert(rp.RUN.index(4), 43)
+        rp.RUN.remove(4)
     return 0
