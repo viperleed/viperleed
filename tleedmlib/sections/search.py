@@ -87,7 +87,7 @@ def processSearchResults(sl, rp, final=True):
             logger.error("No data found in SD.TL file!")
             rp.setHaltingLevel(2)
         return("No data in SD.TL")
-    
+
     writeControlChem = False
     if not os.path.isfile("control.chem"):
         writeControlChem = True
@@ -149,28 +149,37 @@ def processSearchResults(sl, rp, final=True):
                     info += "{:>3}".format(v)
                 info += "\n"
             logger.info(info)
+    # !!! IF DOMAINS: instead of calling writeSearchOutput for master rp,
+    #   call it for the dp.rp instead
     return io.writeSearchOutput(sl, rp, pops[0][1], silent=(not final))
 
 def search(sl, rp):
     """Runs the search. Returns 0 when finishing without errors, or an error 
     message otherwise."""
-    # read DISPLACEMENTS block
-    if not rp.disp_block_read:
-        readDISPLACEMENTS_block(rp, sl, rp.disp_blocks[rp.search_index])
-        rp.disp_block_read = True
     rp.searchResultConfig = None
-    # get Deltas
-    if not 2 in rp.runHistory:
-        if "Tensors" in rp.manifest:
-            logger.error("New tensors were calculated, but no new delta "
-                          "files were generated. Cannot execute search.")
-            return ("Delta calculations was not run for current tensors.")
-        try:
-            r = tl.leedbase.getDeltas(rp.TENSOR_INDEX, required=True)
-        except:
-            raise
-        if r != 0:
-            return r
+    if rp.domainParams:
+        initToDo = [(dp.rp, dp.sl, dp.workdir) for dp in rp.domainParams]
+    else:
+        initToDo = [(rp, sl, ".")]
+    for (rpt, slt, path) in initToDo:
+        # read DISPLACEMENTS block
+        if not rpt.disp_block_read:
+            readDISPLACEMENTS_block(rpt, slt, 
+                                    rpt.disp_blocks[rpt.search_index])
+            rpt.disp_block_read = True
+        # get Deltas
+        if not 2 in rpt.runHistory:
+            if "Tensors" in rpt.manifest:
+                logger.error("New tensors were calculated, but no new delta "
+                              "files were generated. Cannot execute search.")
+                return ("Delta calculations was not run for current tensors.")
+            try:
+                r = tl.leedbase.getDeltas(rpt.TENSOR_INDEX, basedir=path, 
+                                          targetdir=path, required=True)
+            except:
+                raise
+            if r != 0:
+                return r
     r = rp.updateCores()
     if r != 0:
         return r
@@ -190,7 +199,7 @@ def search(sl, rp):
     except:
         logger.error("Error generating search input")
         raise
-    if rp.indyPars == 0:
+    if rp.indyPars == 0:  # never for calculations with domains # !!! CHECK
         logger.info("Found nothing to vary in search. Will proceed "
                 "directly to writing output and starting SUPERPOS.")
         rp.searchResultConfig = [[1] * len(rp.searchpars)]

@@ -165,10 +165,9 @@ def generateSearchInput(sl, rp, steuOnly=False, cull=False):
     part of the population (given by rp.SEARCH_CULL) will be removed and 
     replaced by copies of random surviving members of the population."""
     # first generate list of SearchPar objects and figure out search parameters
-    r = rp.generateSearchPars(sl, rp)
+    r = rp.generateSearchPars(sl)
     if r != 0:
-        logger.debug(r)
-        logger.error("Error getting search parameters.")
+        logger.error("Error getting search parameters: {}".format(r))
         return 1
     
     # if search population is undefined, calculate a default:
@@ -187,12 +186,16 @@ def generateSearchInput(sl, rp, steuOnly=False, cull=False):
                         "experimental beams")
         rp.setHaltingLevel(1)
         # TODO: will this crash? If so, return here
-    
-    # determine which atoms are "at the surface"
-    surfats = sl.getSurfaceAtoms(rp)
 
+    
     # merge offsets with displacement lists
-    for at in rp.search_atlist:
+    if rp.domainParams:
+        attodo = [at for dp in rp.searchPars for at in dp.rp.search_atlist]
+        ndom = len(rp.domainParams)
+    else:
+        attodo = rp.search_atlist
+        ndom = 1
+    for at in attodo:
         if at.oriState is None:
             for el in at.offset_occ:
                 if el not in at.disp_occ:
@@ -240,10 +243,11 @@ C MPS IS POPULATION SIZE (number of independent trial structures)
       PARAMETER(MPS = {})""".format(rp.SEARCH_POPULATION)
     output += """
 C MNDOM is number of domains to be incoherently averaged
-      parameter (MNDOM = 1)"""  # !!! HARDCODED FOR NOW - ADD LATER !!!
+      parameter (MNDOM = {})""".format(ndom)
     output += """
 C MNPLACES IS NUMBER OF DIFFERENT ATOMIC SITES IN CURRENT VARIATION
-      PARAMETER(MNPLACES = {})""".format(len(rp.search_atlist))
+      PARAMETER(MNPLACES = {})""".format(len(rp.search_atlist))  
+                      # !!! len(attodo) or max of (atlists per domain)?
     output += """
 C MNFILES IS MAXIMUM NUMBER OF TLEED-FILES PER SITE
       PARAMETER(MNFILES = {})""".format(rp.search_maxfiles)
@@ -252,8 +256,7 @@ C MNCONCS IS MAX NUMBER OF CONCENTRATION STEPS PER SITE
       PARAMETER(MNCONCS = {})\n""".format(rp.search_maxconc)
     output += ("C MNPRMK IS NUMBER OF PARAMETERS - INCL ONE CONC PARAMETER "
                "PER SITE - incl. 1 per domain!\n")
-    output += "      PARAMETER(MNPRMK = {})".format(len(rp.searchpars)+1)
-                                # !!! the "+1" comes from hardcoding domains!
+    output += "      PARAMETER(MNPRMK = {})".format(len(rp.searchpars))
     output += """
 C MNCSTEP IS MAX NUMBER OF VARIATIONS (geo. times therm.) IN 1 FILE
 C MNATOMS IS RELICT FROM OLDER VERSIONS 
@@ -294,13 +297,15 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                "generations to be performed\n")
     output += """100             area fraction step width (%)
 SD.TL           name of search document file (max. 10 characters)
-  1             Number of domains under consideration
-"""             # !!! some more hardcoded domain parameters here
+{:>3}             Number of domains under consideration
+""".format(ndom)             # !!! todo: area fraction width
+    # !!! DOMAIN LOOP STARTS HERE
     output += ("======= Information about Domain 1: =========================="
                "==================\n")
     output += (i3.write([len(rp.search_atlist)]).ljust(16)
                + "Number of atomic sites in variation: Domain 1\n")
     displistcount = len(sl.displists)+1
+    surfats = sl.getSurfaceAtoms(rp)
     for (i, at) in enumerate(rp.search_atlist):
         printvac = False
         output += ("------- Information about site {}: -----------------------"
@@ -412,6 +417,7 @@ SD.TL           name of search document file (max. 10 characters)
                  + str(at.oriN).rjust(7) + "-".rjust(7) + "occ".rjust(7)
                  + str(occsteps).rjust(7) + constr.rjust(7) + "\n")
         nsteps.append(occsteps)
+    # !!! DOMAIN LOOP ENDS HERE
     output += ("Information about start configuration: (Parameters for each "
                "place, conc for each place)\n")
     
@@ -578,7 +584,7 @@ C  end restrictions
 
       RETURN
 
-      END           
+      END
 """)
     # write restrict.f
     try:
@@ -587,7 +593,7 @@ C  end restrictions
     except:
         logger.error("Failed to write restrict.f file for search.")
         raise
-    
+
     logger.debug("Wrote input files for search: PARAM, search.steu, "
                  "restrict.f")
     return 0

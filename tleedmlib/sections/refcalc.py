@@ -14,6 +14,7 @@ import copy
 import shutil
 import subprocess
 
+from tleedmlib.base import mkdir_recursive
 from tleedmlib.leedbase import fortranCompile, getTLEEDdir, getMaxTensorIndex
 from tleedmlib.files.parameters import modifyPARAMETERS
 import tleedmlib.files.beams as beams
@@ -178,13 +179,10 @@ def refcalc(sl, rp):
         logger.warning("Failed to rename refcalc input file PARAM to "
                         "refcalc-PARAM")
     # move and zip tensor files
-    if not os.path.isdir(os.path.join(".","Tensors")):
-        os.mkdir(os.path.join(".","Tensors"))
     rp.TENSOR_INDEX = getMaxTensorIndex() + 1
     rp.manifest.append("Tensors")
     dn = "Tensors_"+str(rp.TENSOR_INDEX).zfill(3)
-    if not os.path.isdir(os.path.join(".","Tensors",dn)):
-        os.mkdir(os.path.join(".","Tensors",dn))
+    mkdir_recursive(os.path.join(".","Tensors",dn))
     try:
         for tf in [f for f in os.listdir('.') if f.startswith("T_")]:
             shutil.move(tf, os.path.join(".","Tensors",dn,tf))

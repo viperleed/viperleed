@@ -22,7 +22,7 @@ if tleedmap_path not in sys.path:
     sys.path.append(tleedmap_path)
 
 import tleedmlib.sections as sections
-from tleedmlib.base import readIntRange
+from tleedmlib.base import readIntRange, mkdir_recursive
 from tleedmlib.files.parameters import (readPARAMETERS, interpretPARAMETERS, 
                                         modifyPARAMETERS)
 from tleedmlib.files.phaseshifts import readPHASESHIFTS
@@ -97,6 +97,8 @@ def runSection(index, sl, rp):
     logger.info(o)
     sectionStartTime = timer()
     rp.runHistory.append(index)
+    for dp in rp.domainParams:
+        dp.rp.runHistory = rp.runHistory
     i = 0
     while i < len(requiredFiles[index]):
         filename = requiredFiles[index][i]
@@ -271,10 +273,7 @@ def sortfiles(tensorIndex, delete_unzipped = False, tensors = True,
     deltalist = [f for f in os.listdir(path) if f.startswith("DEL_")]
     if len(deltalist) > 0:
         fn = "Deltas_"+str(tensorIndex).zfill(3)
-        if not os.path.isdir(os.path.join(path, "Deltas")):
-            os.mkdir(os.path.join(path, "Deltas"))
-        if not os.path.isdir(os.path.join(path, "Deltas", fn)):
-            os.mkdir(os.path.join(path, "Deltas", fn))
+        mkdir_recursive(os.path.join(path, "Deltas", fn))
         try:
             for df in deltalist:
                 shutil.move(os.path.join(path, df), 
@@ -321,8 +320,7 @@ def sortfiles(tensorIndex, delete_unzipped = False, tensors = True,
     # sort AUX and OUT files:
     for t in ["AUX", "OUT"]:
         try:
-            if not os.path.isdir(os.path.join(path, t)):
-                os.mkdir(os.path.join(path, t))
+            mkdir_recursive(os.path.join(path, t))
         except:
             logger.error("Error creating {} folder: ".format(t), 
                          exc_info = True)
@@ -348,13 +346,12 @@ def moveoldruns(rp, prerun = False):
     instead of using the manifest, all potentially interesting files will be
     copied, and the new folder will get index 0."""
     sectionabbrv = {1: "R", 2: "D", 3: "S"}
-    if not os.path.isdir(os.path.join(".","workhistory")):
-        try:
-            os.mkdir(os.path.join(".","workhistory"))
-        except:
-            logger.error("Error creating workhistory folder: ",
-                          exc_info = True)
-            return 1
+    try:
+        mkdir_recursive(os.path.join(".","workhistory"))
+    except:
+        logger.error("Error creating workhistory folder: ",
+                      exc_info = True)
+        return 1
     if not prerun:
         rp.manifest.append("workhistory")
     dl = [n for n in os.listdir("workhistory")
@@ -679,6 +676,8 @@ def main():
                 logger.error("Error in tleedm execution: "+str(r))
                 cleanup(rp.manifest, rp)
                 return 1
+            if domains and sl is None:
+                sl = rp.pseudoSlab
             elif (sec == 0 and not rp.domainParams and not sl.preprocessed 
                   and rp.HALTING <= 2 and len(rp.RUN) > 0):
                 logger.info("Initialization finished. Execution will stop. "

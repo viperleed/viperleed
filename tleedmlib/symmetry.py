@@ -227,7 +227,7 @@ def findSymmetry(sl, rp, bulk=False, output=True):
             celltype = "rectangular"
     elif np.linalg.norm(abst[0]) - np.linalg.norm(abst[1]) >= eps:
         celltype = "oblique"
-    elif angle(abst[0],abst[1]) - (2*np.pi/3) < eps:
+    elif abs(abs(angle(abst[0],abst[1])) - (2*np.pi/3)) < eps:
         celltype = "hexagonal"
     else:
         celltype = "rhombic"
@@ -1116,10 +1116,8 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
             tmpslab.mirror(testplane, glide=g)
             tmpslab.collapseCartesianCoordinates()
             ang = angle(np.array([1,0]),testplane.dir)
-            if testplane.dir[1] > 0: 
-                ang *= -1
-            rotm = np.array([[np.cos(ang),-np.sin(ang)],
-                             [np.sin(ang),np.cos(ang)]])
+            rotm = np.array([[np.cos(ang),np.sin(ang)],
+                             [-np.sin(ang),np.cos(ang)]])
             m = np.dot(np.linalg.inv(rotm),np.dot(np.array([[1,0],[0,-1]]),
                                                   rotm))
             for (sli,sl1) in enumerate(sl.sublayers):
@@ -1352,10 +1350,8 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
                     found = True
         if not found:
             ang = angle(np.array([1,0]),mirrordirs[0])
-            if mirrordirs[0][1] > 0: 
-                ang *= -1
-            rotm = np.array([[np.cos(ang),-np.sin(ang),0],
-                              [np.sin(ang),np.cos(ang),0],[0,0,1]])
+            rotm = np.array([[np.cos(ang),np.sin(ang),0],
+                              [-np.sin(ang),np.cos(ang),0],[0,0,1]])
             sl.ucell = np.dot(rotm,sl.ucell)
             for i in range(0,3):
                 for j in range(0,3):

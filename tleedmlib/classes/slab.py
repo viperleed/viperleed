@@ -623,10 +623,8 @@ class Slab:
         """Translates the atoms in the slab to have the symplane in the
         origin, applies a mirror or glide matrix, then translates back"""
         ang = angle(np.array([1,0]),symplane.dir)
-        if symplane.dir[1] > 0: 
-            ang *= -1
-        rotm = np.array([[np.cos(ang),-np.sin(ang)],
-                          [np.sin(ang),np.cos(ang)]])
+        rotm = np.array([[np.cos(ang),np.sin(ang)],
+                          [-np.sin(ang),np.cos(ang)]])
         rotmirm = np.dot(np.linalg.inv(rotm),
                          np.dot(np.array([[1,0],[0,-1]]),rotm))
                             #rotates to have plane in x direction, mirrors on x
@@ -843,10 +841,8 @@ class Slab:
         direction, i.e. mirror at this direction, then some translation."""
         m = np.array([[1,0,0],[0,1,0],[0,0,1]], dtype=float)
         ang = angle(np.array([1,0]),symplane.dir)
-        if symplane.dir[1] > 0: 
-            ang *= -1
-        rotm = np.array([[np.cos(ang),-np.sin(ang)],
-                          [np.sin(ang),np.cos(ang)]])
+        rotm = np.array([[np.cos(ang),np.sin(ang)],
+                          [-np.sin(ang),np.cos(ang)]])
         m[:2, :2] = np.dot(np.linalg.inv(rotm),
                          np.dot(np.array([[1,0],[0,-1]]),rotm))
         return self.isBulkTransformSymmetric(m, sldisp, eps)
@@ -854,11 +850,9 @@ class Slab:
     def isMirrorSymmetric(self, symplane, eps, glide=False):
         """Evaluates whether the slab is equivalent to itself when applying a
         mirror or glide operation at a given plane"""
-        ang = angle(np.array([1,0]),symplane.dir)
-        if symplane.dir[1] > 0: 
-            ang *= -1
-        rotm = np.array([[np.cos(ang),-np.sin(ang)],
-                          [np.sin(ang),np.cos(ang)]])
+        ang = angle(np.array([1,0]), symplane.dir)
+        rotm = np.array([[np.cos(ang),np.sin(ang)],
+                          [-np.sin(ang),np.cos(ang)]])
         rotmirm = np.dot(np.linalg.inv(rotm),
                          np.dot(np.array([[1,0],[0,-1]]),rotm))
                             #rotates to have plane in x direction, mirrors on x
@@ -1027,6 +1021,9 @@ class Slab:
             # by convention, make the shorter vector the first one
             if np.linalg.norm(mincell[0]) > np.linalg.norm(mincell[1]) + eps:
                 mincell = np.dot(np.array([[0,1],[-1,0]]), mincell)
+            # finally, make sure it's right-handed
+            if angle(mincell[0], mincell[1]) < 0:
+                mincell = np.dot(np.array([[1,0],[0,-1]]), mincell)
             return(True, mincell)
 
     def getMinC(self, rp, z_periodic=True):
@@ -1103,6 +1100,43 @@ class Slab:
             else:
                 i += 1
         return(cl)
+
+    def makeSupercell(self, transform):
+        """Returns a copy of the slab with the unit cell transformed by the 
+        given integer-valued, (2x2) transformation matrix."""
+        if np.any(abs(np.round(transform) - transform) > 1e-6):
+            raise ValueError("Slab.makeSupercell: transformation matrix "
+                             "contains non-integer elements")
+        transform = np.round(transform).astype(int)
+        transformSize = int(round(abs(np.linalg.det(transform))))
+        ts = copy.deepcopy(self)
+        if transformSize > 1:
+            transformDiag = [1,1]
+            if np.max(transform[:,0]) > np.max(transform[:,1]):
+                longSide = 0
+            else:
+                longSide = 1
+            transformDiag[longSide] = np.max(transform)
+            while transformSize / transformDiag[longSide] % 1 != 0:
+                transformDiag[longSide] -= 1
+            transformDiag[1-longSide] = int(transformSize
+                                            / transformDiag[longSide])
+            cpatlist = ts.atlist[:]
+            for at in cpatlist:
+                for i in range(0,transformDiag[0]):
+                    for j in range(0, transformDiag[1]):
+                        if i == j == 0:
+                            continue
+                        tmpat = at.duplicate()
+                        tmpat.pos[0] += i
+                        tmpat.pos[1] += j
+        ts.getCartesianCoordinates()
+        tm = np.identity(3)
+        tm[:2,:2] = transform
+        ts.ucell = np.transpose(np.dot(tm, np.transpose(ts.ucell)))
+        ts.getFractionalCoordinates()
+        return ts
+        
 
     def changeBulkCell(self, rp, newcell):
         """Takes a unit cell (a,b), calculates a new SUPERLATTICE parameter

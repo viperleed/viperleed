@@ -537,21 +537,22 @@ class Rparams:
                 except:
                     pass
 
-    def generateSearchPars(self, sl, rp):
+    def generateSearchPars(self, sl):
         """Initializes a list of searchpar objects, and assigns delta files to
         atoms if required."""
+        if self.domainParams:
+            return(self.generateSearchPars_domains(sl))
         self.searchpars = []
         self.search_maxfiles = 0   # maximum number of delta files for one atom
         self.search_maxconc = 1
-        # nPars = 1           # number of parameters (even if no variation)
-               # !!! starts out as 1 for domain now, until domains are implemented
         self.indyPars = 0        # number of independent parameters
         self.mncstep = 0     # MAX NUMBER OF VARIATIONS (geo. times therm.)
                              #   IN 1 FILE
         eqlist = []     # track which atoms are symmetry-linked to the ones already
                         #   done to not double-count indyPars
         # get list of atoms that appear in the search
-        if 2 in self.runHistory or sl.deltasInitialized:
+        if (2 in self.runHistory or 42 in self.runHistory 
+                                 or sl.deltasInitialized):
             # if delta has been run, information what deltas exist is stored
             atlist = [at for at in sl.atlist if (not at.layer.isBulk and
                                                  len(at.deltasGenerated) > 0)]
@@ -594,7 +595,7 @@ class Rparams:
                     found = False
                     for df in [f for f in deltaCandidates 
                                                if f.split("_")[2] == el]:
-                        if checkDelta(df, at, el, rp):
+                        if checkDelta(df, at, el, self):
                             found = True
                             at.deltasGenerated.append(df)
                             break
@@ -744,4 +745,38 @@ class Rparams:
                 "search parameter (atom {}, element {})."
                 .format(sp.atom.oriN, sp.el, sp.mode, at.oriN, el))
         self.search_atlist = atlist
+        self.searchpars.append(SearchPar(None, "dom", "", ""))
         return 0
+
+    def generateSearchPars_domains(self, sl, rp):
+        """Runs generateSearchPars for every domain, then collates results."""
+        self.searchpars = []
+        self.indyPars = 1  # number of independent parameters. 1: Domain areas
+                            # !!! CORRECT? WHAT IF MULTIPLE?
+        home = os.getcwd()
+        for dp in self.domainParams:
+            try:
+                os.chdir(dp.workdir)
+                r = dp.rp.generateSearchPars(dp.sl)
+            except:
+                logger.error("Error while creating delta input for domain {}"
+                             .format(dp.name))
+                raise
+            finally:
+                os.chdir(home)
+            if r != 0:
+                logger.error("Error getting search parameters for domain {}: "
+                             "{}".format(dp.name, r))
+                return ("Error getting search parameters")
+            for sp in [sp for sp in dp.rp.searchpars 
+                       if type(sp.restrictTo) == int]:
+                sp.restrictTo += len(self.searchpars)
+            self.searchpars.extend(dp.rp.searchpars)
+            self.searchpars.append(SearchPar(None, "dom", "", ""))
+            self.indyPars += dp.rp.indyPars
+        self.search_maxfiles = max([dp.rp.search_maxfiles 
+                                    for dp in self.domainParams])
+        self.search_maxconc = max([dp.rp.search_maxconc 
+                                    for dp in self.domainParams])
+        self.mncstep = max([dp.rp.mncstep for dp in self.domainParams])
+        

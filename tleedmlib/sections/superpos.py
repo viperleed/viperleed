@@ -93,7 +93,7 @@ def superpos(sl, rp):
     if not 3 in rp.runHistory:
         logger.debug("Superpos calculation executed without search. "
                      "Search parameters will be inferred from input files.")
-        r = rp.generateSearchPars(sl, rp)
+        r = rp.generateSearchPars(sl)
         if r != 0:
             logger.error("Error getting search parameters. Superpos will "
                           "stop.")

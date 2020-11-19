@@ -15,7 +15,7 @@ import copy
 import numpy as np
 
 import tleedmlib as tl
-from tleedmlib.base import angle
+from tleedmlib.base import angle, mkdir_recursive
 from tleedmlib.beamgen import runBeamGen
 from tleedmlib.psgen import runPhaseshiftGen
 from tleedmlib.files.poscar import readPOSCAR, writeCONTCAR
@@ -282,12 +282,12 @@ def init_domains(rp):
                                      .format(file, name, path))
                         return "Error getting domain input files"
         elif os.path.isfile(path):
-            if not os.path.isdir(os.path.join(target, "Tensors")):
-                os.mkdir(os.path.join(target, "Tensors"))
             tensorDir = os.path.join(target, "Tensors", 
                                      os.path.basename(path)[:-4])
-            if not os.path.isdir(os.path.join(target,"Tensors",tensorDir)):
-                os.mkdir(os.path.join(target,"Tensors",tensorDir))
+            try:
+                mkdir_recursive(os.path.join(target, "Tensors", tensorDir))
+            except:
+                raise
             try:
                 shutil.unpack_archive(path,tensorDir)
             except:
@@ -357,37 +357,39 @@ def init_domains(rp):
     # check whether bulk unit cells match
     logger.info("Starting domain consistency check...")
     bulkuc0 = np.transpose(rp.domainParams[0].sl.bulkslab.ucell[:2,:2])
+    eps = 1e-4
     for dp in rp.domainParams[1:]:
         bulkuc = np.transpose(dp.sl.bulkslab.ucell[:2,:2])
-        if np.all(abs(bulkuc-bulkuc0) < 1e-4):
+        if np.all(abs(bulkuc-bulkuc0) < eps):
             continue
         # if the unit cells don't match right away, try if rotation matches
-        found = False
-        for i in [0,1]:
-            ang = angle(bulkuc0[i], bulkuc[0])
-            rotm = np.array([[np.cos(ang),-np.sin(ang)],
-                             [np.sin(ang),np.cos(ang)]])
-            rotuc = np.dot(rotm, bulkuc)
-            if np.all(abs(bulkuc0-rotuc) < 1e-4):
-                logger.info("Bulk unit cells of domain {0} and domain {1} are "
+        if (all([abs(np.linalg.norm(bulkuc0[i])-np.linalg.norm(bulkuc[i])) 
+                                                 < eps for i in range(0,2)])
+                and abs(angle(bulkuc[0],bulkuc[1])
+                        - angle(bulkuc0[0],bulkuc0[1])) < eps):
+            logger.info("Bulk unit cells of domain {0} and domain {1} are "
                     "mismatched, but can be matched by rotating domain {1}."
                     .format(rp.domainParams[0].name, dp.name))
-                rotm3d = np.array([[0,0,0],[0,0,0],[0,0,1]])
-                rotm3d[:2,:2] = rotm
-                dp.sl.ucell = np.dot(rotm3d, dp.sl.ucell)
-                dp.sl.getCartesianCoordinates()
-                dp.sl.bulkslab.ucell = np.dot(rotm3d, dp.sl.bulkslab.ucell)
-                dp.sl.bulkslab.getCartesianCoordinates()
-                found = True
-                break
-        if found:
-            continue
-        logger.error("Bulk unit cells of domain {0} and domain {1} are "
-                    "mismatched, and cannot be matched by rotation. Domain "
-                    "search cannot proceed. Execution will stop."
-                    .format(rp.domainParams[0].name, dp.name))
-        rp.setHaltingLevel(3)
-        return 0
+            ang = angle(bulkuc[0], bulkuc0[0])
+            rotm = np.array([[np.cos(ang),np.sin(ang)],
+                             [-np.sin(ang),np.cos(ang)]])
+            rotm = np.identity(3)
+            rotm[:2,:2] = np.array([[np.cos(ang),np.sin(ang)],
+                                    [-np.sin(ang),np.cos(ang)]])
+            rotm_t = np.transpose(rotm)
+            # dp.sl.ucell = np.transpose(np.dot(np.transpose(dp.sl.ucell),
+            #                                   rotuc))
+            dp.sl.ucell = np.dot(rotm_t, dp.sl.ucell)
+            dp.sl.getCartesianCoordinates()
+            dp.sl.bulkslab.ucell = np.dot(rotm_t, dp.sl.bulkslab.ucell)
+            dp.sl.bulkslab.getCartesianCoordinates()
+        else:
+            logger.error("Bulk unit cells of domain {0} and domain {1} are "
+                        "mismatched, and cannot be matched by rotation. "
+                        "Domain search cannot proceed. Execution will stop."
+                        .format(rp.domainParams[0].name, dp.name))
+            rp.setHaltingLevel(3)
+            return 0
     logger.debug("Domain bulk unit cells are compatible.")
     uc0 = np.transpose(rp.domainParams[0].sl.ucell[:2,:2])
     largestDomain = rp.domainParams[0]
@@ -407,7 +409,7 @@ def init_domains(rp):
             uc = np.transpose(dp.sl.ucell[:2,:2])
             if not np.all(abs(uc-uc0) < 1e-4):
                 dp.refcalcRequired = True
-                trans = uc0 * np.linalg.inv(uc)
+                trans = np.dot(uc0, np.linalg.inv(uc))
                 if np.any(abs(trans - np.round(trans)) > 1e-4):
                     logger.error("Surface unit cell of domain {0} cannot be "
                         "transformed to the largest surface unit cell (domain "
@@ -417,6 +419,10 @@ def init_domains(rp):
                                                       largestDomain.name))
                     rp.setHaltingLevel(3)
                     return 0
+                else:  # !!! Temporary - just generate a POSCAR_supercell file
+                    writeCONTCAR(dp.sl.makeSupercell(np.round(trans)), 
+                                 filename=os.path.join(dp.workdir,
+                                                       "POSCAR_supercell"))
         logger.info("Domain surface unit cells are mismatched, but can be "
                     "matched by integer transformations.")
     # store some information about the supercell in rp:
@@ -456,7 +462,7 @@ def init_domains(rp):
                           "EXPBEAMS data.")
             raise
     if not rp.ivbeams_sorted:
-        rp.ivbeams = sortIVBEAMS(None, rp, domains=True)
+        rp.ivbeams = sortIVBEAMS(None, rp)
         rp.ivbeams_sorted = True
 
     rp.updateDerivedParams()

@@ -87,7 +87,7 @@ def readIVBEAMS(filename='IVBEAMS'):
     logger.debug("IVBEAMS file was read successfully")
     return beams
 
-def sortIVBEAMS(sl, rp, domains=False):
+def sortIVBEAMS(sl, rp):
     """Sorts the beams in IVBEAMS such that they appear in the same order as
     in the _BEAMLIST. Returns the sorted list."""
     # read BEAMLIST
@@ -101,7 +101,7 @@ def sortIVBEAMS(sl, rp, domains=False):
             logger.error("_BEAMLIST not found.")
             raise
     err = 1e-3           #since beams are saved as floats, give error tolerance
-    symeq = tl.leedbase.getSymEqBeams(sl, rp, domains=domains)
+    symeq = tl.leedbase.getSymEqBeams(sl, rp)
     # first, get beamlist as floats
     blfs = []
     for line in rp.beamlist:
@@ -249,7 +249,7 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=";", enrange=[]):
 
 def checkEXPBEAMS(sl, rp, domains=False):
     remlist = []
-    symeq = tl.leedbase.getSymEqBeams(sl, rp, domains=domains)
+    symeq = tl.leedbase.getSymEqBeams(sl, rp)
     for (bi, b) in enumerate(rp.expbeams):
         if b in remlist:
             continue
