@@ -379,10 +379,12 @@ def findSymmetry(sl, rp, bulk=False, output=True):
                 for spl in symplanelist:
                     if oriplane is None:
                         oriplane = spl
-                    elif (np.linalg.norm(spl.pos-abst[0]-abst[1])
-                           < np.linalg.norm(oriplane.pos-abst[0]-abst[1])):
-                    #prioritize planes close to the origin of cell (1,1)
+                    elif (spl.distanceFromOrigin(abst) < 
+                          oriplane.distanceFromOrigin(abst)):
+                        #prioritize planes close to the origin of cell (1,1)
                         oriplane = spl
+                        
+                        
         else:
             if not glide:
                 planegroup = "pm"
@@ -392,19 +394,18 @@ def findSymmetry(sl, rp, bulk=False, output=True):
                 if spl.type == "mirror":
                     if oriplane is None:
                         oriplane = spl
-                    elif (np.linalg.norm(spl.pos-abst[0]-abst[1])
-                           < np.linalg.norm(oriplane.pos-abst[0]-abst[1])):
+                    elif (spl.distanceFromOrigin(abst) < 
+                          oriplane.distanceFromOrigin(abst)):
                         oriplane = spl
                        #prioritize planes close to the origin of cell (1,1)
             if planegroup == "cm":
                 #both mirrors and glides. if parallel to unit vectors: rcm
                 if tuple(oriplane.par) in [(1,0),(0,1)]:
                     planegroup = "rcm"
-        if oriplane is not None:
+        if oriplane is not None and oriplane.distanceFromOrigin(abst) > eps:
             # shift to closest point on oriplane
             shiftv = (np.array([oriplane.dir[1], -oriplane.dir[0]])
-                * tl.base.distanceLineThroughPointsFromPoint(oriplane.pos,
-                            oriplane.pos+oriplane.dir, np.array([0,0])))
+                      * oriplane.distanceFromOrigin(abst))
             if tl.base.distanceLineThroughPointsFromPoint(oriplane.pos,
                                 oriplane.pos+oriplane.dir,shiftv) > eps:
                 shiftv = -1*shiftv
@@ -414,6 +415,7 @@ def findSymmetry(sl, rp, bulk=False, output=True):
             #  would have to be shifted as well.
             sl.uCellMod.append(('add',-shiftv))
             sl.getFractionalCoordinates()
+        if oriplane:
             oriplane.pos = np.array([0,0])
             sl.orisymplane = oriplane
 

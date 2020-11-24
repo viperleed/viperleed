@@ -80,6 +80,7 @@ class Rparams:
         self.BULKDOUBLING_MAX = 10
         self.BULK_REPEAT = None
         self.DOMAINS = []       # list of domains (name, path)
+        self.DOMAIN_STEP = 1   # area step in percent for domain search
         self.ELEMENT_MIX = {}   #if any ELEMENT_MIX is defined, it will be
                     #  added to the dictionary with the element name as the
                     #  label and the splitlist as the value
@@ -207,8 +208,7 @@ class Rparams:
         self.search_atlist = []    # atoms that are relevant for the search
         self.search_maxfiles = 0   # maximum number of delta files for one atom
         self.search_maxconc = 1    # maximum number of concentration steps
-        # self.nPars = 1         # number of parameters (even if no variation)
-            # !!! starts out as 1 for domain now, until domains are implemented
+
         self.indyPars = 0        # number of independent parameters
         self.mncstep = 0    # MAX NUMBER OF VARIATIONS (geo. times therm.)
                             #   IN 1 FILE
@@ -455,14 +455,12 @@ class Rparams:
     def getCenteredConfig(self):
         """Returns a list of 'centered' parameter indices, i.e. all in the 
         middle of their respective range"""
-        return ([int((sp.steps + 1)/2) for sp in self.searchpars] + [1])
-                # !!! the 1 at the end is currently domains - correct later
+        return ([int((sp.steps + 1)/2) for sp in self.searchpars])
     
     def getRandomConfig(self):
         """Returns a list of 'random' parameter indices, but makes sure that 
         linked parameters have the same value"""
-        l = [-1] * len(self.searchpars) + [1]
-            # !!! the 1 at the end is currently domains - correct later
+        l = [-1] * len(self.searchpars)
         for i, sp in enumerate(self.searchpars):
             if sp.restrictTo is None and sp.linkedTo is None:
                 l[i] = random.randint(1, sp.steps)
@@ -474,7 +472,7 @@ class Rparams:
                     l[i] = l[self.searchpars.index(sp.restrictTo)+1]
             elif sp.linkedTo is not None:
                 l[i] = l[self.searchpars.index(sp.linkedTo)+1]
-        if any([v == -1 for v in l]):
+        if -1 in l:
             logger.error("Rparams.getRandomConfig failed: {}".format(l))
             return []
         return l
@@ -504,11 +502,9 @@ class Rparams:
                 break
             i = random.randint(0, len(parents)-1)
             p = parents.pop(i)
-            if not p2[0][:-1] == p[:-1]:    # !!! the [:-1] is about domains,
-                                            #   remove later
+            if p2[0] != p:
                 p2.append(p)
-        l = [-1] * len(self.searchpars) + [1]
-            # !!! the 1 at the end is currently domains - correct later
+        l = [-1] * len(self.searchpars)
         for i, sp in enumerate(self.searchpars):
             if sp.restrictTo is None and sp.linkedTo is None:
                 l[i] = p2[random.randint(0,1)][i]
@@ -520,7 +516,7 @@ class Rparams:
                     l[i] = l[self.searchpars.index(sp.restrictTo)+1]
             elif sp.linkedTo is not None:
                 l[i] = l[self.searchpars.index(sp.linkedTo)+1]
-        if any([v == -1 for v in l]):
+        if -1 in l:
             logger.error("Rparams.getOffspringConfig failed: {}".format(l))
             return []
         return l
@@ -537,7 +533,7 @@ class Rparams:
                 except:
                     pass
 
-    def generateSearchPars(self, sl):
+    def generateSearchPars(self, sl, subdomain=False):
         """Initializes a list of searchpar objects, and assigns delta files to
         atoms if required."""
         if self.domainParams:
@@ -745,19 +741,20 @@ class Rparams:
                 "search parameter (atom {}, element {})."
                 .format(sp.atom.oriN, sp.el, sp.mode, at.oriN, el))
         self.search_atlist = atlist
-        self.searchpars.append(SearchPar(None, "dom", "", ""))
+        if not subdomain:
+            self.searchpars.append(SearchPar(None, "dom", "", ""))
+            self.searchpars[-1].steps = 2
         return 0
 
-    def generateSearchPars_domains(self, sl, rp):
+    def generateSearchPars_domains(self, sl):
         """Runs generateSearchPars for every domain, then collates results."""
         self.searchpars = []
-        self.indyPars = 1  # number of independent parameters. 1: Domain areas
-                            # !!! CORRECT? WHAT IF MULTIPLE?
+        self.indyPars = len(self.domainParams) - 1
         home = os.getcwd()
         for dp in self.domainParams:
             try:
                 os.chdir(dp.workdir)
-                r = dp.rp.generateSearchPars(dp.sl)
+                r = dp.rp.generateSearchPars(dp.sl, subdomain=True)
             except:
                 logger.error("Error while creating delta input for domain {}"
                              .format(dp.name))
@@ -772,11 +769,13 @@ class Rparams:
                        if type(sp.restrictTo) == int]:
                 sp.restrictTo += len(self.searchpars)
             self.searchpars.extend(dp.rp.searchpars)
-            self.searchpars.append(SearchPar(None, "dom", "", ""))
             self.indyPars += dp.rp.indyPars
+        for dp in self.domainParams:
+            self.searchpars.append(SearchPar(None, "dom", "", ""))
+            self.searchpars[-1].steps = int(100 / self.DOMAIN_STEP) + 1
         self.search_maxfiles = max([dp.rp.search_maxfiles 
                                     for dp in self.domainParams])
         self.search_maxconc = max([dp.rp.search_maxconc 
                                     for dp in self.domainParams])
         self.mncstep = max([dp.rp.mncstep for dp in self.domainParams])
-        
+        return 0

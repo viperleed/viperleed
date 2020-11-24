@@ -66,9 +66,11 @@ def runSection(index, sl, rp):
                     11: "R-FACTOR CALCULATION",
                     12: "R-FACTOR CALCULATION",
                     31: "SUPERPOS",
+                    41: "REFERENCE CALCULATION (DOMAINS)",
                     42: "DELTA-AMPLITUDES (DOMAINS)",
                     43: "SEARCH (DOMAINS)",
                     431: "SUPERPOS (DOMAINS)",
+                    411: "R-FACTOR CALCULATION",
                     412: "R-FACTOR CALCULATION"}
     requiredFiles = {0: ["POSCAR", "PARAMETERS", "VIBROCC", "IVBEAMS"],
                      1: ["BEAMLIST", "PHASESHIFTS", "POSCAR", "PARAMETERS",
@@ -79,9 +81,11 @@ def runSection(index, sl, rp):
                          "IVBEAMS", "VIBROCC", "DISPLACEMENTS","EXPBEAMS"],
                      11: ["BEAMLIST", "PARAMETERS", "IVBEAMS", "EXPBEAMS"],
                      12: ["BEAMLIST", "PARAMETERS", "IVBEAMS", "EXPBEAMS"],
-                     412: ["BEAMLIST", "PARAMETERS", "IVBEAMS", "EXPBEAMS"],
                      31: ["BEAMLIST", "POSCAR", "PARAMETERS", "IVBEAMS",
                           "VIBROCC", "DISPLACEMENTS"],
+                     41: ["BEAMLIST", "PARAMETERS", "IVBEAMS"],
+                     411: ["BEAMLIST", "PARAMETERS", "IVBEAMS", "EXPBEAMS"],
+                     412: ["BEAMLIST", "PARAMETERS", "IVBEAMS", "EXPBEAMS"],
                      42: ["BEAMLIST", "PARAMETERS", "IVBEAMS", 
                           "DISPLACEMENTS"],
                      43: ["BEAMLIST", "PARAMETERS", "IVBEAMS", "DISPLACEMENTS", 
@@ -222,13 +226,12 @@ def runSection(index, sl, rp):
     elif index in [11, 12, 412]:
         if index == 412:
             index = 12
-        else:   # !!! TMP
-            r = sections.rfactor(sl, rp, index)   # !!! UNINDENT ONCE SEARCH WORKS
+        r = sections.rfactor(sl, rp, index)
     elif index == 2:
         r = sections.deltas(sl, rp)
-    elif index == 3:
+    elif index in [3, 43]:
         r = sections.search(sl, rp)
-    elif index == 31:
+    elif index in [31, 431]:
         r = sections.superpos(sl, rp)
     elif index == 42:
         r = sections.deltas_domains(rp)
@@ -659,7 +662,7 @@ def main():
         except:
             pass
 
-    sectionorder = [0, 1, 11, 2, 3, 31, 12, 4, 41, 42, 43, 431, 412]
+    sectionorder = [0, 1, 11, 2, 3, 31, 12, 4, 41, 411, 42, 43, 431, 412]
     searchLoopR = None
     searchLoopLevel = 0
     initHalt = False
@@ -688,6 +691,9 @@ def main():
             elif (sec == 1 and rp.fileLoaded["EXPBEAMS"]):
                 if rp.RUN[:1] != [11]:   # r-factor after refcalc
                     rp.RUN.insert(0, 11)
+            elif (sec == 41 and rp.fileLoaded["EXPBEAMS"]):
+                if rp.RUN[:1] != [411]:   # r-factor after domain refcalc
+                    rp.RUN.insert(0, 411)
             elif (sec == 3 and rp.fileLoaded["EXPBEAMS"]):
                 if rp.RUN[:1] != [31]:  # superpos after search
                     rp.RUN.insert(0, 31)

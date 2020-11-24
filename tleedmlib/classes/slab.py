@@ -17,7 +17,7 @@ import re
 import scipy.spatial as sps
 import itertools
 
-from tleedmlib.base import angle, rotMatrix
+from tleedmlib.base import angle, rotMatrix, distanceLineThroughPointsFromPoint
 import tleedmlib as tl
 # from tleedmlib import DEFAULT
 
@@ -45,6 +45,13 @@ class SymPlane:
                   / (np.linalg.norm(self.dir)
                      * np.linalg.norm(i*abt[0]+j*abt[1])))-1.0) < 0.001:
                 self.par = np.array([i,j])
+    
+    def distanceFromOrigin(self, abt):
+        pointlist = [(0,0), (1,0), (0,1), (1,1)]
+        return min([distanceLineThroughPointsFromPoint(
+                                self.pos, self.pos+self.dir, 
+                                p[0]*abt[0]+p[1]*abt[1])
+                    for p in pointlist])
     
     def __str__(self):
         return ("SymPlane(pos = {}, par = {})".format(self.pos, self.par))

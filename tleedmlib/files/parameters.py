@@ -19,7 +19,7 @@ logger = logging.getLogger("tleedm.files.parameters")
 
 # list of allowed parameters
 knownParams = ['ATTENUATION_EPS', 'BEAM_INCIDENCE', 'BULKDOUBLING_EPS',
-    'BULKDOUBLING_MAX', 'BULK_REPEAT', 'DOMAIN', 'ELEMENT_MIX', 
+    'BULKDOUBLING_MAX', 'BULK_REPEAT', 'DOMAIN', 'DOMAIN_STEP', 'ELEMENT_MIX', 
     'ELEMENT_RENAME', 'FILAMENT_WF', 'FORTRAN_COMP', 'HALTING', 
     'IV_SHIFT_RANGE', 'LAYER_CUTS', 'LAYER_STACK_VERTICAL', 'LMAX', 
     'LOG_DEBUG', 'LOG_SEARCH', 'N_BULK_LAYERS', 'N_CORES', 'PHASESHIFT_EPS', 
@@ -342,6 +342,29 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                 rpars.setHaltingLevel(2)
                 continue
             rpars.DOMAINS.append((name, path))
+        elif param == 'DOMAIN_STEP':
+            try:
+                i = int(llist[0])
+            except ValueError:
+                logger.warning('PARAMETERS file: DOMAIN_STEP: Could not '
+                            'convert value to integer. Input will be ignored.')
+                rpars.setHaltingLevel(1)
+            if not (1 <= i <= 100):
+                logger.warning('PARAMETERS file: DOMAIN_STEP: Invalid '
+                               'value given. Input will be ignored.')
+                rpars.setHaltingLevel(1)
+                continue
+            if 100 % i != 0:
+                j = i-1
+                while 100 % j != 0:
+                    j -= 1
+                logger.warning('PARAMETERS file: DOMAIN_STEP: 100 is not '
+                    'divisible by given value {}. DOMAIN_STEP will be set to '
+                    '{} instead.'.format(i,j))
+                rpars.setHaltingLevel(1)
+                rpars.DOMAIN_STEP = j
+            else:
+                rpars.DOMAIN_STEP = i
         elif param == 'ELEMENT_MIX':
             ptl = [el.lower() for el in tl.leedbase.periodic_table]
             found = False

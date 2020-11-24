@@ -516,10 +516,11 @@ def init_domains(rp):
                        "appropriate reference calculations, and start a "
                        "domain search based on the Tensors.zip files.")
         rp.setHaltingLevel(3)
-        
-    # replace index 4 in rp as required
+    
     while 4 in rp.RUN:
         # insert 41 here if refcalcs required
+        if rr:
+            rp.RUN.insert(rp.RUN.index(4), 41)
         rp.RUN.insert(rp.RUN.index(4), 42)
         rp.RUN.insert(rp.RUN.index(4), 43)
         rp.RUN.remove(4)

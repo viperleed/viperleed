@@ -13,6 +13,7 @@ import fortranformat as ff
 import copy
 import os
 import random
+import shutil
 
 from tleedmlib.files.beams import writeAUXEXPBEAMS
 from tleedmlib.files.poscar import writeCONTCAR
@@ -35,7 +36,7 @@ def readSDTL_next(filename="SD.TL", offset=0):
         logger.error("Error reading SD.TL file")
         return (offset, "")     # return old offset, no content
 
-def readSDTL_blocks(content, whichR = 0):
+def readSDTL_blocks(content, whichR = 0, logInfo = False):
     """Attempts to interpret a given string as one or more blocks of an SD.TL
     file. Returns a list with one entry per block: (gen, rfacs, configs),
     where gen is the generation number and rfacs is a list of R-factors in
@@ -48,26 +49,39 @@ def readSDTL_blocks(content, whichR = 0):
         gen = 0
         try:
             gen = int(block[:13])
+            if logInfo:
+                logger.info("Reading search results from SD.TL, "
+                             "generation {}".format(gen))
         except:
             logger.warning("While reading SD.TL, could not interpret "
                 "generation number "+block[:13])
         lines = block.split("\n")
         rfacs = []
         configs = []
+        dpars = []  # list of (list of (percent, parameters)) by domain
         for line in lines:
             if "|" in line and line[:3] != "IND":
                 # this is a line with data in it
+                if line.split("|")[0].strip():
+                    # first line - contains R-factor
+                    if dpars:
+                        configs.append(dpars)
+                        dpars = []
+                    try:
+                        rav = float(line.split("|")[2 + whichR]) #average R
+                        rfacs.append(rav)
+                    except:
+                        logger.error("Could not read R-factor in SD.TL line:\n"
+                                     +line)
                 try:
-                    rav = float(line.split("|")[2 + whichR]) #average R-factor
-                    rfacs.append(rav)
+                    percent = int(line.split("|")[-2].strip()[:-1])
                     valstring = line.split("|")[-1].rstrip()
-                    pars = []
-                    while len(valstring) > 0:
-                        pars.append(int(valstring[:4]))
-                        valstring = valstring[4:]
-                    configs.append(pars)
+                    pars = readIntLine(valstring, width=4)
+                    dpars.append((percent, pars))
                 except:
-                    logger.error("Could not read line in SD.TL:\n"+line)
+                    logger.error("Could not read values in SD.TL line:\n"+line)
+        if dpars:
+            configs.append(dpars)
         if gen != 0 and len(rfacs) > 0 and len(configs) > 0:
             returnList.append((gen, rfacs, configs))
         else:
@@ -80,7 +94,7 @@ def readSDTL_end(filename="SD.TL"):
     bwr = BackwardsReader(filename)
     lines = [""]
     while not "CCCCCCCCCCC    GENERATION" in lines[-1] and len(bwr.data) > 0:
-        lines.append(bwr.readline())
+        lines.append(bwr.readline().rstrip())
     lines.reverse()
     bwr.close()
     return lines
@@ -186,15 +200,18 @@ def generateSearchInput(sl, rp, steuOnly=False, cull=False):
                         "experimental beams")
         rp.setHaltingLevel(1)
         # TODO: will this crash? If so, return here
-
     
     # merge offsets with displacement lists
     if rp.domainParams:
-        attodo = [at for dp in rp.searchPars for at in dp.rp.search_atlist]
+        attodo = [at for dp in rp.domainParams for at in dp.rp.search_atlist]
         ndom = len(rp.domainParams)
+        astep = rp.DOMAIN_STEP
+        nplaces = max([len(dp.rp.search_atlist) for dp in rp.domainParams])
     else:
         attodo = rp.search_atlist
         ndom = 1
+        astep = 100
+        nplaces = len(rp.search_atlist)
     for at in attodo:
         if at.oriState is None:
             for el in at.offset_occ:
@@ -246,8 +263,7 @@ C MNDOM is number of domains to be incoherently averaged
       parameter (MNDOM = {})""".format(ndom)
     output += """
 C MNPLACES IS NUMBER OF DIFFERENT ATOMIC SITES IN CURRENT VARIATION
-      PARAMETER(MNPLACES = {})""".format(len(rp.search_atlist))  
-                      # !!! len(attodo) or max of (atlists per domain)?
+      PARAMETER(MNPLACES = {})""".format(nplaces)
     output += """
 C MNFILES IS MAXIMUM NUMBER OF TLEED-FILES PER SITE
       PARAMETER(MNFILES = {})""".format(rp.search_maxfiles)
@@ -295,132 +311,171 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
     output += " 1000           output intervall\n"
     output += (str(rp.SEARCH_MAX_GEN).ljust(16) + "desired number of "
                "generations to be performed\n")
-    output += """100             area fraction step width (%)
-SD.TL           name of search document file (max. 10 characters)
-{:>3}             Number of domains under consideration
-""".format(ndom)             # !!! todo: area fraction width
-    # !!! DOMAIN LOOP STARTS HERE
-    output += ("======= Information about Domain 1: =========================="
-               "==================\n")
-    output += (i3.write([len(rp.search_atlist)]).ljust(16)
-               + "Number of atomic sites in variation: Domain 1\n")
-    displistcount = len(sl.displists)+1
-    surfats = sl.getSurfaceAtoms(rp)
-    for (i, at) in enumerate(rp.search_atlist):
-        printvac = False
-        output += ("------- Information about site {}: -----------------------"
-                   "-----------------------\n".format(i+1))
-        surf = 1 if at in surfats else 0
-        output += (i3.write([surf]).ljust(16) + "Surface (0/1)\n")
-        if at.displist in sl.displists:
-            dlind = sl.displists.index(at.displist) + 1
+    output += i3.write([astep]).ljust(16) + "area fraction step width (%)\n"
+    output += ("SD.TL           name of search document file "
+                               "(max. 10 characters)\n")
+    output += i3.write([ndom]).ljust(16) + ("Number of domains under "
+                                            "consideration\n")
+    uniquenames = []
+    for k in range(0,ndom):
+        if ndom == 1:
+            crp = rp
+            csl = sl
+            frompath = ""
         else:
-            dlind = displistcount
-            displistcount += 1
-        output += (i3.write([dlind]).ljust(16) + "Atom number\n")
-        output += (i3.write([len(at.deltasGenerated)]).ljust(16) 
-                   + "No. of different files for Atom no. {}\n".format(i+1))
-        for (j, deltafile) in enumerate(at.deltasGenerated):
-            output += "****Information about file {}:\n".format(j+1)
-            output += (deltafile.ljust(16) + "Name of file {} (max. 15 "
-                       "characters)\n".format(j+1))
-            output += "  1             Formatted(0/1)\n"
-            el = deltafile.split("_")[2]
-            if el.lower() == "vac":
-                geo = 1
-                vib = 0
-                types = 1
-                printvac = True
+            crp = rp.domainParams[k].rp
+            csl = rp.domainParams[k].sl
+            frompath = rp.domainParams[k].workdir
+        output += ("======= Information about Domain {}: ====================="
+                   "=======================\n").format(k+1)
+        output += (i3.write([len(crp.search_atlist)]).ljust(16)
+              + "Number of atomic sites in variation: Domain {}\n".format(k+1))
+        displistcount = len(csl.displists)+1
+        surfats = csl.getSurfaceAtoms(crp)
+        for (i, at) in enumerate(crp.search_atlist):
+            printvac = False
+            output += ("------- Information about site {}: -----------------------"
+                       "-----------------------\n".format(i+1))
+            surf = 1 if at in surfats else 0
+            output += (i3.write([surf]).ljust(16) + "Surface (0/1)\n")
+            if at.displist in csl.displists:
+                dlind = csl.displists.index(at.displist) + 1
             else:
-                geo0 = True
-                vib0 = True
-                for (mode, d) in [(1, at.disp_geo), (2, at.disp_vib)]:
-                    if el in d:
-                        dl = d[el]
-                    else:
-                        dl = d["all"]
-                    if mode == 1:
-                        geo = len(dl)
-                        if geo == 1 and np.linalg.norm(dl[0]) != 0.:
-                            geo0 = False
-                    else:
-                        vib = len(dl)
-                        if vib == 1 and dl[0] != 0.:
-                            vib0 = False
-                if vib == 1 and vib0:
+                dlind = displistcount
+                displistcount += 1
+            output += (i3.write([dlind]).ljust(16) + "Atom number\n")
+            output += (i3.write([len(at.deltasGenerated)]).ljust(16) 
+                      + "No. of different files for Atom no. {}\n".format(i+1))
+            for (j, deltafile) in enumerate(at.deltasGenerated):
+                name = deltafile
+                if frompath:  # need to get the file
+                    name = "D{}_".format(k+1) + deltafile
+                    if len(name) > 15:
+                        un = 1
+                        while "D{}_DEL_{}".format(k+1, un) in uniquenames:
+                            un += 1
+                        name = "D{}_DEL_{}".format(k+1, un)
+                        uniquenames.append(name)
+                    try:
+                        shutil.copy2(os.path.join(frompath,deltafile), name)
+                    except:
+                        logger.error("Error getting Delta file {} for search"
+                                     .format(os.path.relpath(
+                                         os.path.join(frompath,deltafile))))
+                        raise
+                output += "****Information about file {}:\n".format(j+1)
+                output += (name.ljust(16) + "Name of file {} (max. 15 "
+                           "characters)\n".format(j+1))
+                output += "  1             Formatted(0/1)\n"
+                el = deltafile.split("_")[2]
+                if el.lower() == "vac":
+                    geo = 1
                     vib = 0
-                elif geo == 1 and geo0:
-                    geo = 0
-                if geo > 0 and vib > 0:
-                    types = 2
-                else:
                     types = 1
-            output += (i3.write([types]).ljust(16) + "Types of parameters in "
-                       "file {}\n".format(j+1))
-            label = i1.write([i+1])+i1.write([j+1])
-            constr = {"vib": "-", "geo": "-"}
-            for mode in ["vib", "geo"]:
-                spl = [s for s in rp.searchpars if s.el == el 
-                      and s.atom == at and s.mode == mode]
-                if spl and spl[0].restrictTo is not None:
-                    sp = spl[0]
-                    if type(sp.restrictTo) == int:
-                        constr[mode] = str(sp.restrictTo)
+                    printvac = True
+                else:
+                    geo0 = True
+                    vib0 = True
+                    for (mode, d) in [(1, at.disp_geo), (2, at.disp_vib)]:
+                        if el in d:
+                            dl = d[el]
+                        else:
+                            dl = d["all"]
+                        if mode == 1:
+                            geo = len(dl)
+                            if geo == 1 and np.linalg.norm(dl[0]) != 0.:
+                                geo0 = False
+                        else:
+                            vib = len(dl)
+                            if vib == 1 and dl[0] != 0.:
+                                vib0 = False
+                    if vib == 1 and vib0:
+                        vib = 0
+                    elif geo == 1 and geo0:
+                        geo = 0
+                    if geo > 0 and vib > 0:
+                        types = 2
                     else:
-                        constr[mode] = "#"+str(rp.searchpars.index(
-                                                            sp.restrictTo)+1)
-                elif spl and spl[0].linkedTo is not None:
-                    constr[mode] = "#"+str(rp.searchpars.index(
-                                                            spl[0].linkedTo)+1)
-            if vib > 0:
-                output += (i3.write([vib]).ljust(16) + "vibrational steps\n")
-                parcount += 1
-
-                info += (str(parcount).rjust(4) + ("P"+label).rjust(7) 
-                         + str(at.oriN).rjust(7) + el.rjust(7) + "vib".rjust(7)
-                         + str(vib).rjust(7) + constr["vib"].rjust(7) + "\n")
-                nsteps.append(vib)
-            if geo > 0:
-                output += (i3.write([geo]).ljust(16) + "geometrical steps\n")
-                parcount += 1
-                info += (str(parcount).rjust(4) + ("P"+label).rjust(7) 
-                         + str(at.oriN).rjust(7) + el.rjust(7) + "geo".rjust(7)
-                         + str(geo).rjust(7) + constr["geo"].rjust(7) + "\n")
-                nsteps.append(geo)
-        output += "****concentration steps for site no. {}\n".format(i+1)
-        occsteps = len(next(iter(at.disp_occ.values())))
-        output += (i3.write([occsteps]).ljust(16) + "no. of concentration "
-                   "steps - sum must equal 1 !\n")
-        for j in range(0, occsteps):
-            ol = ""
-            totalocc = 0
-            for el in at.disp_occ:
-                ol += f74.write([at.disp_occ[el][j]])
-                totalocc += at.disp_occ[el][j]
-            if printvac:
-                ol += f74.write([1 - totalocc])
-            output += (ol.ljust(16) 
-                       + "   concentration step no. {}\n".format(j+1))
-        label = i1.write([i+1])+i1.write([i+1])
+                        types = 1
+                output += (i3.write([types]).ljust(16) + "Types of parameters "
+                           "in file {}\n".format(j+1))
+                label = i1.write([i+1])+i1.write([j+1])
+                constr = {"vib": "-", "geo": "-"}
+                for mode in ["vib", "geo"]:
+                    spl = [s for s in crp.searchpars if s.el == el 
+                          and s.atom == at and s.mode == mode]
+                    if spl and spl[0].restrictTo is not None:
+                        sp = spl[0]
+                        if type(sp.restrictTo) == int:
+                            constr[mode] = str(sp.restrictTo)
+                        else:
+                            constr[mode] = "#"+str(crp.searchpars.index(
+                                                        sp.restrictTo)+1)
+                    elif spl and spl[0].linkedTo is not None:
+                        constr[mode] = "#"+str(crp.searchpars.index(
+                                                      spl[0].linkedTo)+1)
+                if vib > 0:
+                    output += (i3.write([vib]).ljust(16) + 
+                               "vibrational steps\n")
+                    parcount += 1
+                    info += (str(parcount).rjust(4) + ("P"+label).rjust(7) 
+                             + str(at.oriN).rjust(7) + el.rjust(7)
+                             + "vib".rjust(7) + str(vib).rjust(7)
+                             + constr["vib"].rjust(7) + "\n")
+                    nsteps.append(vib)
+                if geo > 0:
+                    output += (i3.write([geo]).ljust(16) + 
+                               "geometrical steps\n")
+                    parcount += 1
+                    info += (str(parcount).rjust(4) + ("P"+label).rjust(7) 
+                             + str(at.oriN).rjust(7) + el.rjust(7) 
+                             + "geo".rjust(7) + str(geo).rjust(7)
+                             + constr["geo"].rjust(7) + "\n")
+                    nsteps.append(geo)
+            output += "****concentration steps for site no. {}\n".format(i+1)
+            occsteps = len(next(iter(at.disp_occ.values())))
+            output += (i3.write([occsteps]).ljust(16) + "no. of concentration "
+                       "steps - sum must equal 1 !\n")
+            for j in range(0, occsteps):
+                ol = ""
+                totalocc = 0
+                for el in at.disp_occ:
+                    ol += f74.write([at.disp_occ[el][j]])
+                    totalocc += at.disp_occ[el][j]
+                if printvac:
+                    ol += f74.write([1 - totalocc])
+                output += (ol.ljust(16) 
+                           + "   concentration step no. {}\n".format(j+1))
+            label = i1.write([i+1])+i1.write([i+1])
+            parcount += 1
+            constr = "-"
+            spl = [s for s in crp.searchpars if s.atom == at and 
+                   s.mode == "occ"]
+            if spl and spl[0].restrictTo is not None:
+                sp = spl[0]
+                if type(sp.restrictTo) == int:
+                    constr = str(sp.restrictTo)
+                else:
+                    constr = "#"+str(crp.searchpars.index(sp.restrictTo)+1)
+            elif spl and spl[0].linkedTo is not None:
+                constr = "#"+str(crp.searchpars.index(spl[0].linkedTo)+1)
+            info += (str(parcount).rjust(4) + ("C"+label).rjust(7) 
+                     + str(at.oriN).rjust(7) + "-".rjust(7) + "occ".rjust(7)
+                     + str(occsteps).rjust(7) + constr.rjust(7) + "\n")
+            nsteps.append(occsteps)
+    # add info for domain step parameters
+    for k in range(0, ndom):
         parcount += 1
-        constr = "-"
-        spl = [s for s in rp.searchpars if s.atom == at and s.mode == "occ"]
-        if spl and spl[0].restrictTo is not None:
-            sp = spl[0]
-            if type(sp.restrictTo) == int:
-                constr = str(sp.restrictTo)
-            else:
-                constr = "#"+str(rp.searchpars.index(sp.restrictTo)+1)
-        elif spl and spl[0].linkedTo is not None:
-            constr = "#"+str(rp.searchpars.index(spl[0].linkedTo)+1)
-        info += (str(parcount).rjust(4) + ("C"+label).rjust(7) 
-                 + str(at.oriN).rjust(7) + "-".rjust(7) + "occ".rjust(7)
-                 + str(occsteps).rjust(7) + constr.rjust(7) + "\n")
-        nsteps.append(occsteps)
-    # !!! DOMAIN LOOP ENDS HERE
+        if ndom == 1:
+            astepnum = 1
+        else:
+            astepnum = int(100 / astep) + 1
+        info += (str(parcount).rjust(4) + ("-".rjust(7)*3) + "dom".rjust(7)
+                     + str(astepnum).rjust(7) + "-".rjust(7).rjust(7) + "\n")
+        nsteps.append(astepnum)
+    # now starting configuration
     output += ("Information about start configuration: (Parameters for each "
                "place, conc for each place)\n")
-    
     if rp.SEARCH_START == "control":
         controlpath = ""
         if os.path.isfile("control.chem"):
@@ -512,9 +567,7 @@ SD.TL           name of search document file (max. 10 characters)
                 ol = ""
                 for n in nsteps:
                     ol += i3.write([(n+1)/2])
-                output += ol + "  1\n"
-                        # !!! to check: why does this sometimes have value 2?
-                        # !!! DOMAINS: Last value is domain configuration
+                output += ol + "\n"
         else:    # rp.SEARCH_START == "crandom"
             pop = [rp.getCenteredConfig()]
             for i in range(1, rp.SEARCH_POPULATION):

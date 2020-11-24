@@ -16,27 +16,16 @@ import subprocess
 
 import tleedmlib.files.iosuperpos as io
 from tleedmlib.leedbase import getDeltas, getTLEEDdir, fortranCompile
-from tleedmlib.files.beams import writeOUTBEAMS
+from tleedmlib.files.beams import writeOUTBEAMS, averageBeams, writeFdOut
 from tleedmlib.files.displacements import readDISPLACEMENTS_block
-from tleedmlib.files.iosearch import readSDTL_end
+from tleedmlib.files.iosearch import readSDTL_end, readSDTL_blocks
 from tleedmlib.files.iorefcalc import readFdOut
 
 logger = logging.getLogger("tleedm.superpos")
 
-def superpos(sl, rp):
+def superpos(sl, rp, subdomain=False):
     """Runs the superpos calculation. Returns 0 when finishing without 
     errors, or an error message otherwise."""
-    # read DISPLACEMENTS block
-    if not rp.disp_block_read:
-        readDISPLACEMENTS_block(rp, sl, rp.disp_blocks[rp.search_index])
-        rp.disp_block_read = True
-    if not (2 in rp.runHistory or 3 in rp.runHistory):
-        try:
-            r = getDeltas(rp.TENSOR_INDEX, required=True)
-        except:
-            raise
-        if r != 0:
-            return r
     # check whether there is anything to evaluate
     if rp.searchResultConfig != None:
         config = rp.searchResultConfig[0]
@@ -67,30 +56,42 @@ def superpos(sl, rp):
             logger.error("Superpos: No data found in SD.TL")
             rp.setHaltingLevel(2)
             return 0
-        else:
-            config = None
-            for line in sdtl:
-                if "|" in line and line[:3] != "IND":
-                    # this is a line with data in it
-                    try:
-                        valstring = line.split("|")[-1].rstrip()
-                        pars = []
-                        while len(valstring) > 0:
-                            pars.append(int(valstring[:4]))
-                            valstring = valstring[4:]
-                        config = pars
-                    except:
-                        logger.error("Could not read line in SD.TL:\n"
-                                      +line)
-                    if config:
-                        break # we're only interested in the best config
-        if not config:
+        sdtlContent = readSDTL_blocks("\n".join(sdtl), 
+                                      whichR = rp.SEARCH_BEAMS)
+        if not sdtlContent:
+            logger.error("Superpos: No data found in SD.TL")
+            rp.setHaltingLevel(2)
+            return 0
+        try:
+            config = sdtlContent[0][2][0]  # first block, config, best only
+        except:
             logger.error("Superpos: Failed to read best "
                           "configuration from SD.TL")
             rp.setHaltingLevel(2)
             return 0
+    
+    if rp.domainParams:
+        try:
+            r = superpos_domains(rp, config)
+        except:
+            raise
+        if r != 0:
+            return r
+        return 0
+    
+    # read DISPLACEMENTS block and fetch deltas
+    if not rp.disp_block_read:
+        readDISPLACEMENTS_block(rp, sl, rp.disp_blocks[rp.search_index])
+        rp.disp_block_read = True
+    if not any([ind in rp.runHistory for ind in [2, 3, 42, 43]]):
+        try:
+            r = getDeltas(rp.TENSOR_INDEX, required=True)
+        except:
+            raise
+        if r != 0:
+            return r
     # make sure search parameters are initialized
-    if not 3 in rp.runHistory:
+    if not 3 in rp.runHistory and not subdomain:
         logger.debug("Superpos calculation executed without search. "
                      "Search parameters will be inferred from input files.")
         r = rp.generateSearchPars(sl)
@@ -101,7 +102,7 @@ def superpos(sl, rp):
     # now we have configuration and parameters, create input:
     contrin = ""
     try:
-        contrin = io.writeSuperposInput(sl, rp, config)
+        contrin = io.writeSuperposInput(sl, rp, config[0][1])
         logger.debug("Wrote Superpos input successfully")
     except:
         logger.error("Error getting input data for Superpos: ", 
@@ -191,4 +192,56 @@ def superpos(sl, rp):
         os.rename('DOC','superpos-DOC')
     except:
         pass
+    return 0
+
+def superpos_domains(rp, config):
+    """Runs the normal superpos function for each subdomain, collects the 
+    results and averages over the beams to get an overall result."""
+    # make sure search parameters are initialized
+    if not 43 in rp.runHistory:
+        logger.debug("Superpos calculation executed without search. "
+                     "Search parameters will be inferred from input files.")
+        r = rp.generateSearchPars(None)
+        if r != 0:
+            logger.error("Error getting search parameters. Superpos will "
+                          "stop.")
+            return 0
+    home = os.getcwd()
+    percentages = []
+    for (i, dp) in enumerate(rp.domainParams):
+        (percent, params) = config[i]
+        percentages.append(percent)
+        dp.rp.searchResultConfig = [[(100, params)]]
+        logger.info("Running superpos calculation for domain {}"
+                    .format(dp.name))
+        try:
+            os.chdir(dp.workdir)
+            r = superpos(dp.sl, dp.rp, subdomain=True)
+        except:
+            logger.error("Error while running superpos calculation for domain "
+                         "{}".format(dp.name))
+            raise
+        finally:
+            os.chdir(home)
+        if r != 0:
+            return r
+    logger.info("Getting weighted average over domain beams...")
+    rp.theobeams["superpos"] = averageBeams([dp.rp.theobeams["superpos"] 
+                            for dp in rp.domainParams], weights=percentages)
+    try:
+        writeOUTBEAMS(rp.theobeams["superpos"], filename="FITBEAMS.csv")
+        theobeams_norm = copy.deepcopy(rp.theobeams["superpos"])
+        for b in theobeams_norm:
+            b.normMax()
+        writeOUTBEAMS(theobeams_norm,filename="FITBEAMS_norm.csv")
+    except:
+        logger.error("Error writing FITBEAMS after superpos calculation.",
+                     exc_info = rp.LOG_DEBUG)
+    try:
+        rp.superpos_specout = writeFdOut(rp.theobeams["superpos"], rp.beamlist,
+                                         filename="superpos-spec.out", 
+                                         header=rp.systemName)
+    except:
+        logger.error("Error writing averaged superpos-spec.out for R-factor "
+                     "calculation.", exc_info = rp.LOG_DEBUG)
     return 0
