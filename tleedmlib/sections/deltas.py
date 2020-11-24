@@ -50,7 +50,7 @@ class DeltaRunTask():
 def runDelta(runtask):
     """Function meant to be executed by parallelized workers. Executes a 
     DeltaRunTask."""
-    logger = logging.getLogger("tleedm.delta")
+    logger = logging.getLogger("tleedm.deltas")
     home = os.getcwd()
     base = runtask.comptask.basedir
     workname = "calculating_"+runtask.deltaname
@@ -528,7 +528,7 @@ def deltas_domains(rp):
         rp.setHaltingLevel(3)
         return 0
     
-    # make sure there's a compiler ready:
+    # make sure there's a compiler ready, and we know the number of cores:
     if rp.FORTRAN_COMP[0] == "":
         if rp.getFortranComp() != 0:    #returns 0 on success
             logger.error("No fortran compiler found, cancelling...")

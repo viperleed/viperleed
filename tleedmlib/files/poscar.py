@@ -11,11 +11,30 @@ import logging
 import numpy as np
 
 from tleedmlib.classes.slab import Slab
+from tleedmlib.classes.atom import Atom
 
 logger = logging.getLogger("tleedm.files.poscar")
 
 def readPOSCAR(filename='POSCAR'):
     """Reads a POSCAR and returns a Slab object with the information."""
+
+    def initAtomList(slab, poslist):
+        """Creates a list of Atom objects based on the data read previously"""
+        n = 0
+        for nat in slab.nperelem:
+            n += nat
+        slab.atlist = []
+        elnum = 0
+        atcount = 0
+        for i in range(0,n):
+            slab.atlist.append(Atom(slab.elements[elnum], poslist[i], i+1, 
+                                    slab))
+            atcount += 1
+            if atcount == slab.nperelem[elnum]:
+                elnum += 1
+                atcount = 0
+        slab.getCartesianCoordinates()
+
     # open input file
     try:
         rf = open(filename, 'r')
@@ -30,6 +49,7 @@ def readPOSCAR(filename='POSCAR'):
     c0 = False  # atom close to c=0
     c1 = False  # atom close to c=1
     eps = 1e-4
+    poslist = []
     for line in rf:
         if linenum == 1:
             pass
@@ -80,7 +100,7 @@ def readPOSCAR(filename='POSCAR'):
                 for i in range(0,2):
                     # in a and b, make sure the values are between 0 and 1
                     pos[i] = pos[i] % 1.0
-                sl.atpos.append(pos)
+                poslist.append(pos)
             except:
                 logger.debug("POSCAR contains 'Selective dynamics' line, "
                               "skipping line 9")
@@ -102,10 +122,10 @@ def readPOSCAR(filename='POSCAR'):
                 for i in range(0,2):
                     # in a and b, make sure the values are between 0 and 1
                     pos[i] = pos[i] % 1.0
-                sl.atpos.append(pos)
+                poslist.append(pos)
         linenum += 1
     rf.close()
-    sl.initAtomList()
+    initAtomList(sl, poslist)
     # if atoms are very close to c=0 or c=1, move all to avoid edge conflicts
     if c0 == True and c1 == False:
         # move up by epsilon
@@ -169,8 +189,7 @@ def writeCONTCAR(sl, filename='CONTCAR', reorder=False, comments='none',
     m = np.transpose(sl.ucell)
     for vec in m:
         for val in vec:
-            s = '%.16f'%val
-            output += '{:>22}'.format(s)
+            output += '{:22.16f}'.format(val)
         output += '\n'
     #atom types and numbers
     for el in sl.oriels:
@@ -216,8 +235,7 @@ def writeCONTCAR(sl, filename='CONTCAR', reorder=False, comments='none',
         #     NperElCount += 1
         ol = ''
         for coord in at.pos:
-            s = '%.16f'%coord
-            ol += '{:>20}'.format(s)
+            ol += '{:20.16f}'.format(coord)
         if comments != 'none' and comments != 'bulk':
             ol += str(i+1).rjust(5)                         #N
             # ol += (at.el+str(NperElCount)).rjust(9)         #NperEl

@@ -448,7 +448,9 @@ class Atom:
                      self.slab)
         if addToAtlists:
             self.slab.atlist.append(newat)
-            if self.layer is not None: self.layer.atlist.append(newat)
+            if self.layer is not None: 
+                self.layer.atlist.append(newat)
+                newat.layer = self.layer
             self.slab.nperelem[self.slab.elements.index(self.el)] += 1
         newat.site = self.site
         newat.dispInitialized = True

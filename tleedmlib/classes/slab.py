@@ -84,8 +84,6 @@ class Slab:
     objects."""
     def __init__(self):
         self.ucell = np.array([])         # unit cell
-        self.atpos = []	        # list of atom positions as read from POSCAR
-                                #   (list of arrays)
         self.oriels = []        # element labels as read from POSCAR
         self.elements = []      # element labels as read from POSCAR, with
                                 #   potential modifications after ELEMENT_MIX
@@ -131,6 +129,20 @@ class Slab:
         self.bulkGlides = []       # only assigned to the bulkslab object!
                     # List of symplanes present in the bulk
 
+    def resetSymmetry(self):
+        """Sets all symmetry information back to default values."""
+        self.uCellMod = []
+        self.uCellOri = self.ucell
+        self.celltype = "unknown"
+        self.planegroup = "unknown"
+        self.foundplanegroup = "unknown"
+        self.orisymplane = None
+    
+    def resetAtomOriN(self):
+        """Gets new 'original' numbers for atoms in the slab"""
+        self.sortOriginal()
+        for (i, at) in enumerate(self.atlist):
+            at.oriN = i+1
 
     def fullUpdate(self,rparams):
         """readPOSCAR initializes the slab with information from POSCAR;
@@ -159,23 +171,6 @@ class Slab:
             self.nperelem[i] = 0
             for at in self.atlist:
                 if at.el == self.elements[i]: self.nperelem[i] += 1
-
-    def initAtomList(self):
-        """Creates a list of Atom objects based on the data read previously"""
-        n = 0
-        for nat in self.nperelem:
-            n += nat
-        self.atlist = []
-        elnum = 0
-        atcount = 0
-        for i in range(0,n):
-            self.atlist.append(tl.Atom(self.elements[elnum],self.atpos[i],
-                                       i+1,self))
-            atcount += 1
-            if atcount == self.nperelem[elnum]:
-                elnum += 1
-                atcount = 0
-        self.getCartesianCoordinates()
 
     def getCartesianCoordinates(self, updateOrigin=False):
         """Assigns absolute cartesian coordinates to all atoms, with x,y using
@@ -1137,11 +1132,13 @@ class Slab:
                         tmpat = at.duplicate()
                         tmpat.pos[0] += i
                         tmpat.pos[1] += j
-        ts.getCartesianCoordinates()
+        ts.resetAtomOriN()
+        ts.getCartesianCoordinates(updateOrigin=True)
         tm = np.identity(3)
         tm[:2,:2] = transform
         ts.ucell = np.transpose(np.dot(tm, np.transpose(ts.ucell)))
         ts.getFractionalCoordinates()
+        ts.getCartesianCoordinates(updateOrigin=True)
         return ts
         
 
@@ -1194,13 +1191,13 @@ class Slab:
         ts.getCartesianCoordinates()
         cfact = (ts.ucell[2,2] + abs(bulkc[2])) / ts.ucell[2,2]
         ts.ucell[:,2] = ts.ucell[:,2] * cfact
-        ts.getFractionalCoordinates()
+        bulkc[2] = -bulkc[2]
         newbulkats = []
         tmplist = ts.atlist[:]
         for at in tmplist:
             if at.layer.isBulk: 
                 newbulkats.append(at.duplicate())
-            at.cartpos = at.cartpos - bulkc
+            at.cartpos = at.cartpos + bulkc
         ts.collapseCartesianCoordinates(updateOrigin=True)
         ts.sortByZ()
         return ts, newbulkats
@@ -1224,6 +1221,7 @@ class Slab:
         bulk layers is deleted. Returns that bulk slab."""
         # construct bulk slab
         bsl = copy.deepcopy(self)
+        bsl.resetSymmetry()
         bsl.atlist = [at for at in bsl.atlist if at.layer.isBulk]
         bsl.layers = [l for l in bsl.layers if l.isBulk]
         bsl.getCartesianCoordinates()

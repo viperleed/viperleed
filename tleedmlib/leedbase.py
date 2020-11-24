@@ -178,6 +178,9 @@ def getTensors(index, basedir=".", targetdir=".", required=True):
     basedir is the directory in which the Tensor directory is based.
     targetdir is the directory to which the Tensor files should be moved."""
     dn = "Tensors_"+str(index).zfill(3)
+    if (os.path.basename(basedir) == "Tensors" 
+            and not os.path.isdir(os.path.join(basedir, "Tensors"))):
+        basedir = os.path.dirname(basedir)
     if not os.path.isdir(os.path.join(basedir,"Tensors",dn)):
         if os.path.isfile(os.path.join(basedir,"Tensors",dn+".zip")):
             try:

@@ -217,6 +217,7 @@ def findSymmetry(sl, rp, bulk=False, output=True):
         sl.collapseCartesianCoordinates(updateOrigin=True)
                 #gets fractional coordinates in the new unit cell and
                 #  collapses appropriately
+
     # check cell type again
     abst = np.transpose(sl.ucell[0:2,0:2])
     dp = np.dot(abst[0],abst[1])
@@ -1144,7 +1145,6 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
         if len(at.linklist) > 1 and not at.linklist in sl.linklists:
             #don't keep the linklists of length 1
             sl.linklists.append(at.linklist)
-
     # FIND ALLOWED MOVE DIRECTIONS FOR ATOMS
     lockpoints = []     #full list of rotation points (no duplication)
     ori = np.array([0.0,0.0])
@@ -1243,7 +1243,8 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
         # first check points
         for p in lockpoints:
             if at.isSameXY(p,eps):
-                if not nomove: at.cartpos[0:2] = p
+                if not nomove: 
+                    at.cartpos[0:2] = p
                 at.freedir = 0  #lock completely
                 break
         # then if not locked yet, check planes
@@ -1318,10 +1319,10 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
                                 pn += 1
                                 found = True
                                 break
-                        if found: break
+                        if found: 
+                            break
                 at.cartpos = psum / pn
-    sl.collapseCartesianCoordinates()   #also gets fractional coordinates
-
+    sl.collapseCartesianCoordinates(updateOrigin=True)
     if not rotcell:
         return 0
     # after everything else is done, rotate unit cell (in x,y without

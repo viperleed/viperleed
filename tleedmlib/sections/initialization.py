@@ -122,45 +122,46 @@ def initialization(sl, rp, subdomain=False):
     if sl.bulkslab is None:
         sl.bulkslab = sl.makeBulkSlab(rp)
     bsl = sl.bulkslab
-    # find minimum in-plane unit cell for bulk:
-    logger.info("Checking bulk unit cell...")
-    changecell, mincell = bsl.getMinUnitCell(rp)
-    if changecell:
-        sl.changeBulkCell(rp, mincell)
-        bsl = sl.bulkslab
-    if not rp.superlattice_defined:
-        ws = tl.leedbase.writeWoodsNotation(rp.SUPERLATTICE) 
-                # !!! replace the writeWoodsNotation from baselib with 
-                #   the one from guilib
-        si = rp.SUPERLATTICE.astype(int)
-        if ws:
-            logger.info("Found SUPERLATTICE = "+ws)
-        else:
-            logger.info("Found SUPERLATTICE M = {} {}, {} {}".format(
-                                    si[0,0], si[0,1], si[1,0], si[1,1]))
-    
-    # bulk plane group detection:
-    logger.info("Initializing bulk symmetry search...")
-    tl.symmetry.findSymmetry(bsl, rp, bulk=True, output=False)
-    bsl.revertUnitCell() # keep origin matched with main slab
-    logger.info("Found bulk plane group: "+bsl.foundplanegroup)
-    tl.symmetry.findBulkSymmetry(bsl, rp)
-    
-    # write POSCAR_bulk
-    bsl = copy.deepcopy(sl.bulkslab)
-    bsl.sortOriginal()
-    try:
-        writeCONTCAR(bsl, filename='POSCAR_bulk', comments='bulk')
-    except:
-        logger.error("Exception occurred while writing POSCAR_bulk")
-        raise
-    
+
+    if bsl.planegroup == "unknown":
+        # find minimum in-plane unit cell for bulk:
+        logger.info("Checking bulk unit cell...")
+        changecell, mincell = bsl.getMinUnitCell(rp)
+        if changecell:
+            sl.changeBulkCell(rp, mincell)
+            bsl = sl.bulkslab
+        if not rp.superlattice_defined:
+            ws = tl.leedbase.writeWoodsNotation(rp.SUPERLATTICE) 
+                    # !!! replace the writeWoodsNotation from baselib with 
+                    #   the one from guilib
+            si = rp.SUPERLATTICE.astype(int)
+            if ws:
+                logger.info("Found SUPERLATTICE = "+ws)
+            else:
+                logger.info("Found SUPERLATTICE M = {} {}, {} {}".format(
+                                        si[0,0], si[0,1], si[1,0], si[1,1]))
+
+        # bulk plane group detection:
+        logger.info("Initializing bulk symmetry search...")
+        tl.symmetry.findSymmetry(bsl, rp, bulk=True, output=False)
+        bsl.revertUnitCell() # keep origin matched with main slab
+        logger.info("Found bulk plane group: "+bsl.foundplanegroup)
+        tl.symmetry.findBulkSymmetry(bsl, rp)
+
+        # write POSCAR_bulk
+        bsl = copy.deepcopy(sl.bulkslab)
+        bsl.sortOriginal()
+        try:
+            writeCONTCAR(bsl, filename='POSCAR_bulk', comments='bulk')
+        except:
+            logger.error("Exception occurred while writing POSCAR_bulk")
+            raise
+
     # write POSCAR_bulk_appended
     try:
         writeCONTCAR(sl.addBulkLayers(rp)[0], filename='POSCAR_bulk_appended')
     except:
         logger.warning("Exception occurred while writing POSCAR_bulk_appended")
-    
 
     # generate beamlist
     logger.info("Generating _BEAMLIST...")
@@ -395,6 +396,7 @@ def init_domains(rp):
     largestDomain = rp.domainParams[0]
     allMatched = all([np.all(abs(np.transpose(dp.sl.ucell[:2,:2])-uc0) < 1e-4) 
                       for dp in rp.domainParams[1:]])
+    supercellRequired = []
     if allMatched:
         logger.debug("Domain surface unit cells are matched.")
     else:
@@ -419,10 +421,11 @@ def init_domains(rp):
                                                       largestDomain.name))
                     rp.setHaltingLevel(3)
                     return 0
-                else:  # !!! Temporary - just generate a POSCAR_supercell file
-                    writeCONTCAR(dp.sl.makeSupercell(np.round(trans)), 
-                                 filename=os.path.join(dp.workdir,
-                                                       "POSCAR_supercell"))
+                else:
+                    supercellRequired.append(dp)
+                    dp.sl = dp.sl.makeSupercell(np.round(trans))
+                    dp.rp.SUPERLATTICE = copy.copy(largestDomain
+                                                   .rp.SUPERLATTICE)
         logger.info("Domain surface unit cells are mismatched, but can be "
                     "matched by integer transformations.")
     # store some information about the supercell in rp:
@@ -480,42 +483,56 @@ def init_domains(rp):
                  != dp.rp.THEO_ENERGIES[0] % dp.rp.THEO_ENERGIES[2])):
             logger.info(cmessage+"Energy range is mismatched.")
             dp.refcalcRequired = True
-            dp.rp.THEO_ENERGIES = copy.copy(rp.THEO_ENERGIES)
             continue
         # check LMAX
         if rp.LMAX != dp.rp.LMAX:
             logger.info(cmessage+"LMAX is mismatched.")
             dp.refcalcRequired = True
-            dp.rp.LMAX = rp.LMAX
         # check beam incidence
         if rp.THETA != dp.rp.THETA or rp.PHI != dp.rp.PHI:
             logger.info(cmessage+"BEAM_INCIDENCE is mismatched.")
             dp.refcalcRequired = True
-            dp.rp.THETA = rp.THETA
-            dp.rp.PHI = rp.PHI
         # check IVBEAMS
         if not dp.rp.fileLoaded["IVBEAMS"]:
             logger.info(cmessage+"No IVBEAMS file loaded")
             dp.refcalcRequired = True
-            dp.rp.ivbeams = copy.deepcopy(rp.ivbeams)
             continue
         if (len(rp.ivbeams) != len(dp.rp.ivbeams)
                 or not all([dp.rp.ivbeams[i].isEqual(rp.ivbeams[i]) 
                             for i in range(0,len(rp.ivbeams))])):
             logger.info(cmessage+"IVBEAMS file mismatched with supercell.")
             dp.refcalcRequired = True
-            dp.rp.ivbeams = copy.deepcopy(rp.ivbeams)
             continue
     
+
     rr = [dp for dp in rp.domainParams if dp.refcalcRequired]
     if rr:
         logger.info("The following domains require new reference "
                     "calculations: "+", ".join([d.name for d in rr]))
-        logger.warning("Automatic reference calculations are not supported in "
-                       "this version of ViPErLEED. Please manually execute "
-                       "appropriate reference calculations, and start a "
-                       "domain search based on the Tensors.zip files.")
-        rp.setHaltingLevel(3)
+        for dp in rp.domainParams:
+            for var in ["THEO_ENERGIES", "LMAX", "THETA", "PHI", "ivbeams"]:
+                setattr(dp.rp, var, copy.deepcopy(getattr(rp, var)))
+        # logger.warning("Automatic reference calculations are not supported in "
+        #                "this version of ViPErLEED. Please manually execute "
+        #                "appropriate reference calculations, and start a "
+        #                "domain search based on the Tensors.zip files.")
+        # rp.setHaltingLevel(3)
+    
+    # repeat initialization for all slabs that require a supercell
+    for dp in supercellRequired:
+        logger.info("Re-running intialization with supercell slab for domain "
+                    "{}".format(dp.name))
+        try:
+            os.chdir(dp.workdir)
+            dp.sl.resetSymmetry()
+            # dp.sl.bulkslab = None  # needs to be redone to get alignment right
+            dp.rp.SYMMETRY_FIND_ORI = True
+            initialization(dp.sl, dp.rp, subdomain=True)
+        except:
+            logger.error("Error while re-initializing domain {}".format(name))
+            raise
+        finally:
+            os.chdir(home)
     
     while 4 in rp.RUN:
         # insert 41 here if refcalcs required

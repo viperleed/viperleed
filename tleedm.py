@@ -70,7 +70,7 @@ def runSection(index, sl, rp):
                     42: "DELTA-AMPLITUDES (DOMAINS)",
                     43: "SEARCH (DOMAINS)",
                     431: "SUPERPOS (DOMAINS)",
-                    411: "R-FACTOR CALCULATION",
+                    # 411: "R-FACTOR CALCULATION",
                     412: "R-FACTOR CALCULATION"}
     requiredFiles = {0: ["POSCAR", "PARAMETERS", "VIBROCC", "IVBEAMS"],
                      1: ["BEAMLIST", "PHASESHIFTS", "POSCAR", "PARAMETERS",
@@ -84,7 +84,7 @@ def runSection(index, sl, rp):
                      31: ["BEAMLIST", "POSCAR", "PARAMETERS", "IVBEAMS",
                           "VIBROCC", "DISPLACEMENTS"],
                      41: ["BEAMLIST", "PARAMETERS", "IVBEAMS"],
-                     411: ["BEAMLIST", "PARAMETERS", "IVBEAMS", "EXPBEAMS"],
+                     # 411: ["BEAMLIST", "PARAMETERS", "IVBEAMS", "EXPBEAMS"],
                      412: ["BEAMLIST", "PARAMETERS", "IVBEAMS", "EXPBEAMS"],
                      42: ["BEAMLIST", "PARAMETERS", "IVBEAMS", 
                           "DISPLACEMENTS"],
@@ -221,7 +221,7 @@ def runSection(index, sl, rp):
     r = 0
     if index == 0:
         sections.initialization(sl, rp)
-    elif index == 1:
+    elif index in [1, 41]:
         r = sections.refcalc(sl, rp)
     elif index in [11, 12, 412]:
         if index == 412:
@@ -691,9 +691,9 @@ def main():
             elif (sec == 1 and rp.fileLoaded["EXPBEAMS"]):
                 if rp.RUN[:1] != [11]:   # r-factor after refcalc
                     rp.RUN.insert(0, 11)
-            elif (sec == 41 and rp.fileLoaded["EXPBEAMS"]):
-                if rp.RUN[:1] != [411]:   # r-factor after domain refcalc
-                    rp.RUN.insert(0, 411)
+            # elif (sec == 41 and rp.fileLoaded["EXPBEAMS"]):
+            #     if rp.RUN[:1] != [411]:   # r-factor after domain refcalc
+            #         rp.RUN.insert(0, 411)
             elif (sec == 3 and rp.fileLoaded["EXPBEAMS"]):
                 if rp.RUN[:1] != [31]:  # superpos after search
                     rp.RUN.insert(0, 31)

@@ -13,6 +13,7 @@ import logging
 import copy
 import shutil
 import subprocess
+import multiprocessing
 
 from tleedmlib.base import mkdir_recursive
 from tleedmlib.leedbase import fortranCompile, getTLEEDdir, getMaxTensorIndex
@@ -25,6 +26,14 @@ logger = logging.getLogger("tleedm.refcalc")
 def refcalc(sl, rp):
     """Runs the reference calculation. Returns 0 when finishing without 
     errors, or an error message otherwise."""
+    if rp.domainParams:
+        try:
+            r = refcalc_domains(rp)
+        except:
+            raise
+        if r != 0:
+            return r
+        return 0
     sl.getCartesianCoordinates(updateOrigin=True)
     sl.updateLayerCoordinates()
     try:
@@ -222,4 +231,53 @@ def refcalc(sl, rp):
                     "directory. This may cause the delta file to "
                     "incorrectly be labelled as belonging with the new "
                     "set of tensors.")
+    return 0
+
+def runDomainRefcalc(dp):
+    """Runs the reference calculation for one domain, based on the 
+    DomainParameters object."""
+    logger = logging.getLogger("tleedm.refcalc")
+    home = os.getcwd()
+    try:
+        os.chdir(dp.workdir)
+        r = refcalc(dp.sl, dp.rp)
+    except:
+        logger.error("Exception during reference calculation for domain {}: "
+                     .format(dp.name), exc_info = True)
+        return ("Exception during reference calculation for domain {}"
+                .format(dp.name))
+    finally:
+        os.chdir(home)
+    if r != 0:
+        return r
+    return 0
+
+def refcalc_domains(rp):
+    """Runs reference calculations for the domains that require them."""
+    rr = [dp for dp in rp.domainParams if dp.refcalcRequired]
+    if not rr:
+        logger.info("Found no domain which requires a reference calculation.")
+        return 0
+    # make sure there's a compiler ready, and we know the number of cores:
+    if rp.FORTRAN_COMP[0] == "":
+        if rp.getFortranComp() != 0:    #returns 0 on success
+            logger.error("No fortran compiler found, cancelling...")
+            return ("No Fortran compiler")
+    for dp in rp.domainParams:
+        dp.rp.FORTRAN_COMP = rp.FORTRAN_COMP
+    r = rp.updateCores()  # if number of cores is not defined, try to find it
+    if r != 0:
+        return r
+    logger.info("Running reference calculations for domains in subfolders.")
+    rr = [dp for dp in rp.domainParams if dp.refcalcRequired]
+    poolsize = min(len(rr), rp.N_CORES)
+    try:
+        with multiprocessing.Pool(poolsize) as pool:
+            r = pool.map(runDomainRefcalc, rr)
+    except:
+        raise
+    for v in [v for v in r if v != 0]:
+        logger.error(v)
+        return ("Error during domain reference calculations")
+    logger.info("Domain reference calculations finished.")
     return 0
