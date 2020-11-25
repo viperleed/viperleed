@@ -221,7 +221,7 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
                             el = par.el
                         else:
                             el = par.atom.el
-                        xlabels.append("#"+str(par.atom.oriN)+"\n"+el)
+                        xlabels.append("#{}\n{}".format(par.atom.oriN, el))
                     if vals:
                         offsets.append(np.std(vals))
                         # mean = np.mean(vals)

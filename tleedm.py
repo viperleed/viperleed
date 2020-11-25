@@ -22,7 +22,7 @@ if tleedmap_path not in sys.path:
     sys.path.append(tleedmap_path)
 
 import tleedmlib.sections as sections
-from tleedmlib.base import readIntRange, mkdir_recursive
+from tleedmlib.base import mkdir_recursive
 from tleedmlib.files.parameters import (readPARAMETERS, interpretPARAMETERS, 
                                         modifyPARAMETERS)
 from tleedmlib.files.phaseshifts import readPHASESHIFTS
@@ -65,13 +65,7 @@ def runSection(index, sl, rp):
                     3: "SEARCH",
                     11: "R-FACTOR CALCULATION",
                     12: "R-FACTOR CALCULATION",
-                    31: "SUPERPOS",
-                    41: "REFERENCE CALCULATION (DOMAINS)",
-                    42: "DELTA-AMPLITUDES (DOMAINS)",
-                    43: "SEARCH (DOMAINS)",
-                    431: "SUPERPOS (DOMAINS)",
-                    # 411: "R-FACTOR CALCULATION",
-                    412: "R-FACTOR CALCULATION"}
+                    31: "SUPERPOS",}
     requiredFiles = {0: ["POSCAR", "PARAMETERS", "VIBROCC", "IVBEAMS"],
                      1: ["BEAMLIST", "PHASESHIFTS", "POSCAR", "PARAMETERS",
                          "IVBEAMS", "VIBROCC"],
@@ -82,30 +76,28 @@ def runSection(index, sl, rp):
                      11: ["BEAMLIST", "PARAMETERS", "IVBEAMS", "EXPBEAMS"],
                      12: ["BEAMLIST", "PARAMETERS", "IVBEAMS", "EXPBEAMS"],
                      31: ["BEAMLIST", "POSCAR", "PARAMETERS", "IVBEAMS",
-                          "VIBROCC", "DISPLACEMENTS"],
-                     41: ["BEAMLIST", "PARAMETERS", "IVBEAMS"],
-                     # 411: ["BEAMLIST", "PARAMETERS", "IVBEAMS", "EXPBEAMS"],
-                     412: ["BEAMLIST", "PARAMETERS", "IVBEAMS", "EXPBEAMS"],
-                     42: ["BEAMLIST", "PARAMETERS", "IVBEAMS", 
-                          "DISPLACEMENTS"],
-                     43: ["BEAMLIST", "PARAMETERS", "IVBEAMS", "DISPLACEMENTS", 
-                          "EXPBEAMS"],
-                     431: ["BEAMLIST", "PARAMETERS", "IVBEAMS", 
-                           "DISPLACEMENTS"]}
+                          "VIBROCC", "DISPLACEMENTS"],}
                 # files that need to be there for the different parts to run
-    if (4 in rp.RUN or rp.domainParams):
-        requiredFiles[0] = ["PARAMETERS", "IVBEAMS"]
+    
+    checkfiles = requiredFiles[index][:]
     o = "\nSTARTING SECTION: "+sectionNames[index]
     if index == 3 and rp.disp_blocks and rp.disp_blocks[rp.search_index][1]:
         o += " "+rp.disp_blocks[rp.search_index][1]  # displacement block name
+    if rp.domainParams or rp.DOMAINS:
+        o += " (DOMAINS)"
+        for fn in ["POSCAR", "VIBROCC", "PHASESHIFTS"]:
+            try:
+                checkfiles.remove(fn)
+            except:
+                pass
     logger.info(o)
     sectionStartTime = timer()
     rp.runHistory.append(index)
     for dp in rp.domainParams:
         dp.rp.runHistory = rp.runHistory
     i = 0
-    while i < len(requiredFiles[index]):
-        filename = requiredFiles[index][i]
+    while i < len(checkfiles):
+        filename = checkfiles[i]
         ignoreError = False
         if not rp.fileLoaded[filename]:
             # try loading files
@@ -139,7 +131,7 @@ def runSection(index, sl, rp):
                 except FileNotFoundError:
                     if (os.path.isfile("EXPBEAMS") or
                              os.path.isfile("EXPBEAMS.csv")):
-                        requiredFiles[index].insert(i+1, "EXPBEAMS")
+                        checkfiles.insert(i+1, "EXPBEAMS")
                         logger.warning("IVBEAMS file not found. Will attempt "
                                 "generating IVBEAMS from EXBEAMS.")
                         ignoreError = True
@@ -221,20 +213,16 @@ def runSection(index, sl, rp):
     r = 0
     if index == 0:
         sections.initialization(sl, rp)
-    elif index in [1, 41]:
+    elif index == 1:
         r = sections.refcalc(sl, rp)
-    elif index in [11, 12, 412]:
-        if index == 412:
-            index = 12
+    elif index in [11, 12]:
         r = sections.rfactor(sl, rp, index)
     elif index == 2:
         r = sections.deltas(sl, rp)
-    elif index in [3, 43]:
+    elif index == 3:
         r = sections.search(sl, rp)
-    elif index in [31, 431]:
+    elif index == 31:
         r = sections.superpos(sl, rp)
-    elif index == 42:
-        r = sections.deltas_domains(rp)
     if r != 0:
         return r
 
@@ -557,12 +545,8 @@ def main():
     
     # check if this is going to be a domain search
     domains = False
-    if "RUN" in rp.readParams:
-        _, value = rp.readParams["RUN"][-1]
-        for s in value.split():
-            if 4 in readIntRange(s):
-                domains = True
-                break
+    if "DOMAIN" in rp.readParams:
+        domains = True
 
     if domains:  # no POSCAR in main folder for domain searches
         sl = None
@@ -662,7 +646,7 @@ def main():
         except:
             pass
 
-    sectionorder = [0, 1, 11, 2, 3, 31, 12, 4, 41, 411, 42, 43, 431, 412]
+    sectionorder = [0, 1, 11, 2, 3, 31, 12, 4]
     searchLoopR = None
     searchLoopLevel = 0
     initHalt = False
@@ -681,7 +665,9 @@ def main():
                 return 1
             if domains and sl is None:
                 sl = rp.pseudoSlab
-            elif (sec == 0 and not rp.domainParams and not sl.preprocessed 
+            if rp.domainParams:
+                rp.setHaltingLevel(max([dp.rp.halt for dp in rp.domainParams]))
+            if (sec == 0 and not domains and not sl.preprocessed 
                   and rp.HALTING <= 2 and len(rp.RUN) > 0):
                 logger.info("Initialization finished. Execution will stop. "
                     "Please check whether comments in POSCAR are correct, "
@@ -689,24 +675,16 @@ def main():
                 rp.setHaltingLevel(2)
                 initHalt = True
             elif (sec == 1 and rp.fileLoaded["EXPBEAMS"]):
-                if rp.RUN[:1] != [11]:   # r-factor after refcalc
+                if (rp.RUN[:1] != [11] and          # r-factor after refcalc
+                        (not rp.domainParams or 3 in rp.runHistory)):
                     rp.RUN.insert(0, 11)
-            # elif (sec == 41 and rp.fileLoaded["EXPBEAMS"]):
-            #     if rp.RUN[:1] != [411]:   # r-factor after domain refcalc
-            #         rp.RUN.insert(0, 411)
             elif (sec == 3 and rp.fileLoaded["EXPBEAMS"]):
                 if rp.RUN[:1] != [31]:  # superpos after search
                     rp.RUN.insert(0, 31)
-            elif (sec == 43 and rp.fileLoaded["EXPBEAMS"]):
-                if rp.RUN[:1] != [431]:  # domain superpos after domain search
-                    rp.RUN.insert(0, 431)
             elif sec == 31 and rp.fileLoaded["EXPBEAMS"]:
                 if rp.RUN[:1] != [12]:   # r-factor after superpos
                     rp.RUN.insert(0, 12)
-            elif sec == 431 and rp.fileLoaded["EXPBEAMS"]:
-                if rp.RUN[:1] != [412]:   # r-factor after domain superpos
-                    rp.RUN.insert(0, 412)
-            elif sec in [12, 412] and not rp.SEARCH_KILL:
+            elif sec == 12 and not rp.SEARCH_KILL:
                 loops = [t for t in rp.disp_loops if t[1] == rp.search_index]
                 if loops:
                     if searchLoopLevel == 0 or searchLoopR > rp.last_R:
@@ -730,7 +708,7 @@ def main():
                 for dp in rp.domainParams:
                     dp.rp.search_index = rp.search_index
                 if len(rp.disp_blocks) > rp.search_index:
-                    if sec != 412:
+                    if not rp.domainParams:
                         sl.restoreOriState()
                     rp.resetSearchConv()
                     for dp in rp.domainParams:
@@ -738,12 +716,12 @@ def main():
                         dp.rp.resetSearchConv()
                     if rp.SEARCH_START == "control":
                         rp.SEARCH_START = "crandom"
-                    if sec == 412:
-                        if rp.RUN[:2] != [42,43]:
-                            rp.RUN = [42,43] + rp.RUN
-                    else:
-                        if rp.RUN[:2] != [2,3]:
-                            rp.RUN = [2,3] + rp.RUN
+                    # if sec == 412:
+                    #     if rp.RUN[:2] != [42,43]:
+                    #         rp.RUN = [42,43] + rp.RUN
+                    # else:
+                    if rp.RUN[:2] != [2,3]:
+                        rp.RUN = [2,3] + rp.RUN
         except KeyboardInterrupt:
             logger.warning("Stopped by keyboard interrupt, attempting "
                             "clean exit...")

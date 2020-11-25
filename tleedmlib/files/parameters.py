@@ -640,7 +640,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                     logger.info('Found domain search.')
                 i = 0
                 while i < len(rl):
-                    if rl[i] not in [0,1,2,3,4,11,31]:
+                    if rl[i] not in [0,1,2,3,4,11,12,31]:
                         logger.warning('PARAMETERS file: RUN: Value '
                             +str(rl[i])+' does not correspond to a segment '
                             'and will be skipped.')

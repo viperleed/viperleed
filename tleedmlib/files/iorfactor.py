@@ -30,29 +30,6 @@ else:
 
 logger = logging.getLogger("tleedm.files.iorfactor")
 
-# def readROUT_end(filename="ROUT"):      # UNUSED
-#     """Reads the last line of ROUT, returns the average R-factor as float."""
-#     bwr = tl.base.BackwardsReader(filename)
-#     line = ""
-#     while not "AVERAGE R-FACTOR =" in line and len(bwr.data) > 0:
-#         line = bwr.readline()
-#     bwr.close()
-#     rfac = 0
-#     v0rshift = 0
-#     rgx = re.compile(r'.+SHIFT\s*(?P<shift>[-0-9.]+).+=\s*(?P<rfac>[-0-9.]+)')
-#     m = rgx.match(line)
-#     if m:
-#         try:
-#             rfac = float(m.group("rfac"))
-#         except:
-#             logger.error("Could not read R-factor from "+filename)
-#         try:
-#             v0rshift = float(m.group("shift"))
-#         except:
-#             logger.error("Could not read inner potential shift from "
-#                           + filename)
-#     return rfac, v0rshift
-
 def readROUT(filename="ROUT"):
     """
     Reads the ROUT file.

@@ -326,6 +326,8 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
             crp = rp.domainParams[k].rp
             csl = rp.domainParams[k].sl
             frompath = rp.domainParams[k].workdir
+            info += "---- DOMAIN {} ----\n".format(k+1)
+        prev_parcount = parcount
         output += ("======= Information about Domain {}: ====================="
                    "=======================\n").format(k+1)
         output += (i3.write([len(crp.search_atlist)]).ljust(16)
@@ -410,10 +412,12 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                             constr[mode] = str(sp.restrictTo)
                         else:
                             constr[mode] = "#"+str(crp.searchpars.index(
-                                                        sp.restrictTo)+1)
+                                                                sp.restrictTo)
+                                                   + prev_parcount + 1)
                     elif spl and spl[0].linkedTo is not None:
                         constr[mode] = "#"+str(crp.searchpars.index(
-                                                      spl[0].linkedTo)+1)
+                                                              spl[0].linkedTo)
+                                                + prev_parcount + 1)
                 if vib > 0:
                     output += (i3.write([vib]).ljust(16) + 
                                "vibrational steps\n")
@@ -624,6 +628,7 @@ C  etc.
 C  begin restrictions
 
 """)
+
     for (i, sp) in enumerate(rp.searchpars):
         if sp.restrictTo is None:
             continue

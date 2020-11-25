@@ -139,10 +139,21 @@ class Slab:
         self.orisymplane = None
     
     def resetAtomOriN(self):
-        """Gets new 'original' numbers for atoms in the slab"""
+        """Gets new 'original' numbers for atoms in the slab. If a bulkslab 
+        is defined, also updates the numbers there to keep the two consistent.
+        """
         self.sortOriginal()
+        self.sortByEl()
+        bulkAtsRenumbered = []
         for (i, at) in enumerate(self.atlist):
+            if self.bulkslab is not None:
+                for bat in [a for a in self.bulkslab.atlist 
+                            if a.oriN == at.oriN
+                            and a not in bulkAtsRenumbered]:
+                    bat.oriN = i+1
+                    bulkAtsRenumbered.append(bat)
             at.oriN = i+1
+
 
     def fullUpdate(self,rparams):
         """readPOSCAR initializes the slab with information from POSCAR;
@@ -520,8 +531,7 @@ class Slab:
                 logger.error("Unexpected point encountered in Slab.sortByEl: "
                               "Could not find element in element list")
             else:
-                for at in isoLists[i]:
-                    sortedlist.append(at)
+                sortedlist.extend(isoLists[i])
         self.atlist = sortedlist
 
     def sortOriginal(self):
@@ -1129,7 +1139,7 @@ class Slab:
                     for j in range(0, transformDiag[1]):
                         if i == j == 0:
                             continue
-                        tmpat = at.duplicate()
+                        tmpat = at.duplicate(addConstraints=True)
                         tmpat.pos[0] += i
                         tmpat.pos[1] += j
         ts.resetAtomOriN()

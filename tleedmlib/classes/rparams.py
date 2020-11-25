@@ -462,16 +462,15 @@ class Rparams:
         linked parameters have the same value"""
         l = [-1] * len(self.searchpars)
         for i, sp in enumerate(self.searchpars):
-            if sp.restrictTo is None and sp.linkedTo is None:
-                l[i] = random.randint(1, sp.steps)
+            l[i] = random.randint(1, sp.steps)
         for i, sp in enumerate(self.searchpars):
-            if sp.restrictTo is not None:
+            if sp.linkedTo is not None:
+                l[i] = l[self.searchpars.index(sp.linkedTo)]
+            elif sp.restrictTo is not None:
                 if type(sp.restrictTo) == int:
                     l[i] = sp.restrictTo
                 else:
-                    l[i] = l[self.searchpars.index(sp.restrictTo)+1]
-            elif sp.linkedTo is not None:
-                l[i] = l[self.searchpars.index(sp.linkedTo)+1]
+                    l[i] = l[self.searchpars.index(sp.restrictTo)]
         if -1 in l:
             logger.error("Rparams.getRandomConfig failed: {}".format(l))
             return []
@@ -656,49 +655,48 @@ class Rparams:
                 el = fn.split("_")[2]
                 if el == "vac":
                     self.searchpars.append(SearchPar(at, "geo", "vac", fn))
-                else:
-                    mult = 1
-                    pars = 0
-                    for (mode, d) in [("vib", at.disp_vib),
-                                      ("geo", at.disp_geo)]:
-                        if el in d:
-                            k = el
+                    continue
+                mult = 1
+                pars = 0
+                for (mode, d) in [("vib", at.disp_vib),
+                                  ("geo", at.disp_geo)]:
+                    if el in d:
+                        k = el
+                    else:
+                        k = "all"
+                    if len(d[k]) > 1 or (len(d[k]) == 1 and 
+                                         ((mode == "geo" and 
+                                             np.linalg.norm(d[k][0]) > 0.)
+                                          or (mode == "vib" and 
+                                                      d[k][0] != 0.))):
+                        pars += 1
+                        sp = SearchPar(at, mode, el, fn)
+                        self.searchpars.append(sp)
+                        if el in at.constraints[md[mode]]:
+                            k2 = el
                         else:
-                            k = "all"
-                        if len(d[k]) > 1 or (len(d[k]) == 1 and 
-                                             ((mode == "geo" and 
-                                                 np.linalg.norm(d[k][0]) > 0.)
-                                              or (mode == "vib" and 
-                                                          d[k][0] != 0.))):
-                            pars += 1
-                            sp = SearchPar(at, mode, el, fn)
-                            self.searchpars.append(sp)
-                            if el in at.constraints[md[mode]]:
-                                k2 = el
+                            k2 = "all"
+                        if k2 in at.constraints[md[mode]]:
+                            c = at.constraints[md[mode]][k2]
+                            if type(c) == int:
+                                sp.restrictTo = c + 1
                             else:
-                                k2 = "all"
-                            if k2 in at.constraints[md[mode]]:
-                                c = at.constraints[md[mode]][k2]
-                                if type(c) == int:
-                                    sp.restrictTo = c + 1
-                                else:
-                                    splToRestrict.append((sp, c))
-                            elif len(d[k]) > 1:
-                                if not at in eqlist:
-                                    self.indyPars += 1
-                                else:
-                                    spl = [s for s in self.searchpars 
-                                           if at in s.atom.displist 
-                                            and s.mode == sp.mode 
-                                            and (s.el == el 
-                                                 or el in ["", "all"])]
-                                    if spl:
-                                        sp.linkedTo = spl[0]
-                        mult *= len(d[k])
-                    if pars == 0:
-                        self.searchpars.append(SearchPar(at, "geo", el, fn))
-                    if mult > self.mncstep:
-                        self.mncstep = mult
+                                splToRestrict.append((sp, c))
+                        elif len(d[k]) > 1 and not at in eqlist:
+                            self.indyPars += 1
+                        if len(d[k]) > 1 and at in eqlist:
+                            spl = [s for s in self.searchpars 
+                                   if at in s.atom.displist 
+                                   and s.mode == sp.mode 
+                                   and (s.el == el 
+                                        or el in ["", "all"])]
+                            if spl:
+                                sp.linkedTo = spl[0]
+                    mult *= len(d[k])
+                if pars == 0:
+                    self.searchpars.append(SearchPar(at, "geo", el, fn))
+                if mult > self.mncstep:
+                    self.mncstep = mult
             sp = SearchPar(at, "occ", "", fn)
             self.searchpars.append(sp)
             occsteps = len(next(iter(at.disp_occ.values())))
@@ -714,11 +712,11 @@ class Rparams:
                 else:
                     if not at in eqlist:  # occupation will actually vary
                         self.indyPars += 1  
-                    else:
-                        spl = [s for s in self.searchpars if at 
-                               in s.atom.displist and s.mode == 3]
-                        if spl:
-                            sp.linkedTo = spl[0]
+                if at in eqlist:
+                    spl = [s for s in self.searchpars if at 
+                           in s.atom.displist and s.mode == 3]
+                    if spl:
+                        sp.linkedTo = spl[0]
             eqlist.extend(at.displist)  # do not consider those for future
                                         #    indyPars
         # if self.indyPars == 0:
@@ -740,6 +738,27 @@ class Rparams:
                 "element {}, mode {} failed: Could not identify target "
                 "search parameter (atom {}, element {})."
                 .format(sp.atom.oriN, sp.el, sp.mode, at.oriN, el))
+        for (i, sp) in enumerate(self.searchpars):
+            # restrict to lowest number index, resolve conflicts
+            if sp.restrictTo not in self.searchpars:
+                continue
+            sp2 = None
+            while sp2 != sp.restrictTo:
+                sp2 = sp.restrictTo
+                ind = self.searchpars.index(sp2)
+                if (sp2.linkedTo in self.searchpars and 
+                          self.searchpars.index(sp2.linkedTo) < ind):
+                    sp.restrictTo = sp2.linkedTo
+                elif (sp2.restrictTo in self.searchpars and 
+                          self.searchpars.index(sp2.restrictTo) < ind):
+                    sp.restrictTo = sp2.restrictTo
+            if self.searchpars.index(sp.restrictTo) >= i:
+                if sp.restrictTo.restrictTo is None:
+                    sp.restrictTo.restrictTo = sp   # invert direction
+                if type(sp.restrictTo.restrictTo) == int:
+                    sp.restrictTo = sp.restrictTo.restrictTo
+                else:
+                    sp.restrictTo = None  # remove references to higher indices
         self.search_atlist = atlist
         if not subdomain:
             self.searchpars.append(SearchPar(None, "dom", "", ""))

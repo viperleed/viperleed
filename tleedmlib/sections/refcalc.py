@@ -13,7 +13,6 @@ import logging
 import copy
 import shutil
 import subprocess
-import multiprocessing
 
 from tleedmlib.base import mkdir_recursive
 from tleedmlib.leedbase import fortranCompile, getTLEEDdir, getMaxTensorIndex
@@ -268,16 +267,74 @@ def refcalc_domains(rp):
     r = rp.updateCores()  # if number of cores is not defined, try to find it
     if r != 0:
         return r
-    logger.info("Running reference calculations for domains in subfolders.")
     rr = [dp for dp in rp.domainParams if dp.refcalcRequired]
-    poolsize = min(len(rr), rp.N_CORES)
-    try:
-        with multiprocessing.Pool(poolsize) as pool:
-            r = pool.map(runDomainRefcalc, rr)
-    except:
-        raise
-    for v in [v for v in r if v != 0]:
-        logger.error(v)
-        return ("Error during domain reference calculations")
+    logger.info("Running reference calculations in subfolders for domains: "
+                +", ".join([d.name for d in rr]))
+    #    PARALELLIZED VERSION - doesn't work like this, because the dp objects
+    #       don't get written to (probably blocked by being attached to rp?).
+    #       Could be made to work, but serial execution works just as well.
+    # poolsize = min(len(rr), rp.N_CORES)
+    # loglevel = logger.level
+    # try:
+    #     logger.setLevel(logging.WARNING)
+    #     logging.getLogger("tleedm.files.iorefcalc").setLevel(logging.WARNING)
+    #     logging.getLogger("tleedm.files.beams").setLevel(logging.WARNING)
+    #     with multiprocessing.Pool(poolsize) as pool:
+    #         r = pool.map(runDomainRefcalc, rr)
+    # except:
+    #     raise
+    # finally:
+    #     logger.setLevel(loglevel)
+    #     logging.getLogger("tleedm.files.iorefcalc").setLevel(loglevel)
+    #     logging.getLogger("tleedm.files.beams").setLevel(loglevel)
+    # for v in [v for v in r if v != 0]:
+    #     logger.error(v)
+    #     return ("Error during domain reference calculations")
+
+    for dp in rr:
+        logger.info("Starting reference calculation for domain {}"
+                    .format(dp.name))
+        try:
+            r = runDomainRefcalc(dp)
+        except:
+            raise
+        if r != 0:
+            logger.error(r)
+            return("Error during reference calculation for domain {}"
+                   .format(dp.name))
     logger.info("Domain reference calculations finished.")
+    
+    if len(rr) < len(rp.domainParams):
+        return 0
+    # if refcalcs were done for all domains, get averaged beams
+    if 3 in rp.runHistory and rp.searchResultConfig:
+        weights = [rp.searchResultConfig[0][i][0] 
+                   for i in range(0, len(rp.domainParams))]
+        logger.info("Reference calculations were done for all domains. "
+                "Getting weighted average over domain beams, using "
+                "weights from last search result...")
+    else:
+        weights = []
+        logger.info("Reference calculations were done for all domains, but no "
+                "area weights for the different domains are available yet. "
+                "Getting unweighted average over domain beams...")
+    rp.theobeams["refcalc"] = beams.averageBeams([dp.rp.theobeams["refcalc"] 
+                            for dp in rp.domainParams], weights=weights)
+    try:
+        beams.writeOUTBEAMS(rp.theobeams["refcalc"], filename="THEOBEAMS.csv")
+        theobeams_norm = copy.deepcopy(rp.theobeams["refcalc"])
+        for b in theobeams_norm:
+            b.normMax()
+        beams.writeOUTBEAMS(theobeams_norm,filename="THEOBEAMS_norm.csv")
+    except:
+        logger.error("Error writing THEOBEAMS after reference calculation.",
+                     exc_info = rp.LOG_DEBUG)
+    try:
+        rp.superpos_specout = beams.writeFdOut(rp.theobeams["refcalc"], 
+                                               rp.beamlist,
+                                               filename="refcalc-fd.out", 
+                                               header=rp.systemName)
+    except:
+        logger.error("Error writing averaged refcalc-fd.out for R-factor "
+                     "calculation.", exc_info = rp.LOG_DEBUG)
     return 0

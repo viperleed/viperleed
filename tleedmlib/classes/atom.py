@@ -438,9 +438,8 @@ class Atom:
             for el in els:
                 self.constraints[mode][el] = linkAtEl
         return
-        
-        
-    def duplicate(self, addToAtlists = True):
+
+    def duplicate(self, addToAtlists = True, addConstraints = False):
         """Creates a new instance of this atom, using deepcopy for attributes 
         like position and elements, but without making copies of the slab or 
         layer, instead adding the new atom to the existing objects."""
@@ -458,8 +457,16 @@ class Atom:
         newat.disp_geo = self.disp_geo
         newat.disp_occ = self.disp_occ
         newat.cartpos = np.copy(self.cartpos)
+        if addConstraints:
+            for (mode, td) in [(1, self.disp_geo), (2, self.disp_vib), 
+                               (3, self.disp_occ)]:
+                for el in td.keys():
+                    # have contraint point in both directions for now, 
+                    #   resolve later
+                    newat.constraints[mode][el] = (self, el)
+                    self.constraints[mode][el] = (newat, el)
         return newat
-    
+
     def isSameXY(self,pos,eps=0.001):
         """Checks whether the atom is at the given x/y coordinates 
         (+- epsilon), taking shifts by one unit vector into account if the 

@@ -83,7 +83,7 @@ def superpos(sl, rp, subdomain=False):
     if not rp.disp_block_read:
         readDISPLACEMENTS_block(rp, sl, rp.disp_blocks[rp.search_index])
         rp.disp_block_read = True
-    if not any([ind in rp.runHistory for ind in [2, 3, 42, 43]]):
+    if not any([ind in rp.runHistory for ind in [2, 3]]):
         try:
             r = getDeltas(rp.TENSOR_INDEX, required=True)
         except:
@@ -198,7 +198,7 @@ def superpos_domains(rp, config):
     """Runs the normal superpos function for each subdomain, collects the 
     results and averages over the beams to get an overall result."""
     # make sure search parameters are initialized
-    if not 43 in rp.runHistory:
+    if not 3 in rp.runHistory:
         logger.debug("Superpos calculation executed without search. "
                      "Search parameters will be inferred from input files.")
         r = rp.generateSearchPars(None)

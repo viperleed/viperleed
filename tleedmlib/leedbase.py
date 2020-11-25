@@ -151,24 +151,23 @@ def getMaxTensorIndex(home="."):
     Tensors zip file."""
     if not os.path.isdir(os.path.join(home,"Tensors")):
         return 0
-    else:
-        indlist = []
-        rgx = re.compile(r'Tensors_[0-9]{3}\.zip')
-        for f in [f for f in os.listdir(os.path.join(home,"Tensors")) 
-                  if (os.path.isfile(os.path.join(home,"Tensors",f))
-                      and rgx.match(f))]:
-            m = rgx.match(f)
-            if m.span()[1] == 15:  # exact match
-                indlist.append(int(m.group(0)[-7:-4]))
-        rgx = re.compile(r'Tensors_[0-9]{3}')
-        for f in [f for f in os.listdir(os.path.join(home,"Tensors")) 
-                  if (os.path.isdir(os.path.join(home,"Tensors",f))
-                      and rgx.match(f))]:
-            m = rgx.match(f)
-            if m.span()[1] == 11:  # exact match
-                indlist.append(int(m.group(0)[-3:]))
-        if indlist:
-            return max(indlist)
+    indlist = []
+    rgx = re.compile(r'Tensors_[0-9]{3}\.zip')
+    for f in [f for f in os.listdir(os.path.join(home,"Tensors")) 
+              if (os.path.isfile(os.path.join(home,"Tensors",f))
+                  and rgx.match(f))]:
+        m = rgx.match(f)
+        if m.span()[1] == 15:  # exact match
+            indlist.append(int(m.group(0)[-7:-4]))
+    rgx = re.compile(r'Tensors_[0-9]{3}')
+    for f in [f for f in os.listdir(os.path.join(home,"Tensors")) 
+              if (os.path.isdir(os.path.join(home,"Tensors",f))
+                  and rgx.match(f))]:
+        m = rgx.match(f)
+        if m.span()[1] == 11:  # exact match
+            indlist.append(int(m.group(0)[-3:]))
+    if indlist:
+        return max(indlist)
     return 0
 
 def getTensors(index, basedir=".", targetdir=".", required=True):

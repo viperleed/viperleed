@@ -51,7 +51,7 @@ def initialization(sl, rp, subdomain=False):
                     logger.error("Error while reading file "+fn, exc_info=True)
     rp.initTheoEnergies()  # may be initialized based on exp. beams
 
-    if (4 in rp.RUN or rp.domainParams) and not subdomain:
+    if (rp.DOMAINS or rp.domainParams) and not subdomain:
         try:
             r = init_domains(rp)
         except:
@@ -469,7 +469,8 @@ def init_domains(rp):
         rp.ivbeams_sorted = True
 
     rp.updateDerivedParams()
-    rp.LMAX = max([dp.rp.LMAX for dp in rp.domainParams])
+    if rp.LMAX == 0:
+        rp.LMAX = max([dp.rp.LMAX for dp in rp.domainParams])
     for dp in rp.domainParams:
         if dp.refcalcRequired:
             continue
@@ -504,7 +505,6 @@ def init_domains(rp):
             dp.refcalcRequired = True
             continue
     
-
     rr = [dp for dp in rp.domainParams if dp.refcalcRequired]
     if rr:
         logger.info("The following domains require new reference "
@@ -517,7 +517,7 @@ def init_domains(rp):
         #                "appropriate reference calculations, and start a "
         #                "domain search based on the Tensors.zip files.")
         # rp.setHaltingLevel(3)
-    
+
     # repeat initialization for all slabs that require a supercell
     for dp in supercellRequired:
         logger.info("Re-running intialization with supercell slab for domain "
@@ -533,12 +533,18 @@ def init_domains(rp):
             raise
         finally:
             os.chdir(home)
-    
+
+    if not 4 in rp.RUN and not 1 in rp.RUN and rr:
+        logger.error("Some domains require new reference calculations before "
+                "a domain search can be executed. Please either manually "
+                "execute appropriate reference calculations, or set RUN = 4")
+        rp.setHaltingLevel(3)
+        return 0
+
     while 4 in rp.RUN:
-        # insert 41 here if refcalcs required
         if rr:
-            rp.RUN.insert(rp.RUN.index(4), 41)
-        rp.RUN.insert(rp.RUN.index(4), 42)
-        rp.RUN.insert(rp.RUN.index(4), 43)
+            rp.RUN.insert(rp.RUN.index(4), 1)
+        rp.RUN.insert(rp.RUN.index(4), 2)
+        rp.RUN.insert(rp.RUN.index(4), 3)
         rp.RUN.remove(4)
     return 0

@@ -200,6 +200,14 @@ def compileDelta(comptask):
 def deltas(sl, rp, subdomain=False):
     """Runs the delta-amplitudes calculation. Returns 0 when finishing without 
     errors, or an error message otherwise."""
+    if rp.domainParams:
+        try:
+            r = deltas_domains(rp)
+        except:
+            raise
+        if r != 0:
+            return r
+        return 0
     # read DISPLACEMENTS block
     if not rp.disp_block_read:
         readDISPLACEMENTS_block(rp, sl, rp.disp_blocks[rp.search_index])

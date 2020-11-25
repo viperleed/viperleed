@@ -179,7 +179,7 @@ def search(sl, rp):
                                     rpt.disp_blocks[rpt.search_index])
             rpt.disp_block_read = True
         # get Deltas
-        if not 2 in rpt.runHistory and not 42 in rpt.runHistory:
+        if not 2 in rpt.runHistory:
             if "Tensors" in rpt.manifest:
                 logger.error("New tensors were calculated, but no new delta "
                               "files were generated. Cannot execute search.")
