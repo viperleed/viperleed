@@ -23,7 +23,7 @@ if tleedmap_path not in sys.path:
 
 import tleedmlib.sections as sections
 from tleedmlib.base import mkdir_recursive
-from tleedmlib.files.parameters import (readPARAMETERS, interpretPARAMETERS, 
+from tleedmlib.files.parameters import (readPARAMETERS, interpretPARAMETERS,
                                         modifyPARAMETERS)
 from tleedmlib.files.phaseshifts import readPHASESHIFTS
 from tleedmlib.files.poscar import readPOSCAR
@@ -65,20 +65,20 @@ def runSection(index, sl, rp):
                     3: "SEARCH",
                     11: "R-FACTOR CALCULATION",
                     12: "R-FACTOR CALCULATION",
-                    31: "SUPERPOS",}
+                    31: "SUPERPOS"}
     requiredFiles = {0: ["POSCAR", "PARAMETERS", "VIBROCC", "IVBEAMS"],
                      1: ["BEAMLIST", "PHASESHIFTS", "POSCAR", "PARAMETERS",
                          "IVBEAMS", "VIBROCC"],
                      2: ["BEAMLIST", "PHASESHIFTS", "POSCAR", "PARAMETERS",
                          "IVBEAMS", "VIBROCC", "DISPLACEMENTS"],
                      3: ["BEAMLIST", "PHASESHIFTS", "POSCAR", "PARAMETERS",
-                         "IVBEAMS", "VIBROCC", "DISPLACEMENTS","EXPBEAMS"],
+                         "IVBEAMS", "VIBROCC", "DISPLACEMENTS", "EXPBEAMS"],
                      11: ["BEAMLIST", "PARAMETERS", "IVBEAMS", "EXPBEAMS"],
                      12: ["BEAMLIST", "PARAMETERS", "IVBEAMS", "EXPBEAMS"],
                      31: ["BEAMLIST", "POSCAR", "PARAMETERS", "IVBEAMS",
-                          "VIBROCC", "DISPLACEMENTS"],}
+                          "VIBROCC", "DISPLACEMENTS"]}
                 # files that need to be there for the different parts to run
-    
+
     checkfiles = requiredFiles[index][:]
     o = "\nSTARTING SECTION: "+sectionNames[index]
     if index == 3 and rp.disp_blocks and rp.disp_blocks[rp.search_index][1]:
@@ -267,11 +267,11 @@ def sortfiles(tensorIndex, delete_unzipped = False, tensors = True,
         mkdir_recursive(os.path.join(path, "Deltas", fn))
         try:
             for df in deltalist:
-                shutil.move(os.path.join(path, df), 
+                shutil.move(os.path.join(path, df),
                             os.path.join(path,"Deltas",fn,df))
         except:
             logger.error("Error moving Delta files: ", exc_info = True)
-    
+
     # if there are unzipped Tensors or Deltas directories, zip them:
     for t in ["Tensors", "Deltas"]:
         if t == "Tensors":
@@ -313,18 +313,18 @@ def sortfiles(tensorIndex, delete_unzipped = False, tensors = True,
         try:
             mkdir_recursive(os.path.join(path, t))
         except:
-            logger.error("Error creating {} folder: ".format(t), 
+            logger.error("Error creating {} folder: ".format(t),
                          exc_info = True)
         if t == "AUX":
             filelist = auxfiles
         else:
             filelist = outfiles
-        for f in [f for f in filelist 
+        for f in [f for f in filelist
                   if os.path.isfile(os.path.join(path, f))]:
             try:
                 shutil.copy2(os.path.join(path, f), os.path.join(path, t, f))
             except:
-                logger.error("Error moving {} file {}: ".format(t, f), 
+                logger.error("Error moving {} file {}: ".format(t, f),
                              exc_info = True)
 
 ###############################################
@@ -450,20 +450,20 @@ def cleanup(manifest, rp = None):
         history = rp.runHistory
         rp.closePdfReportFigs()
         if not rp.domainParams:
-            to_sort = [{"newTensors": ("Tensors" in rp.manifest), 
-                       "newDeltas": ("Deltas" in rp.manifest), 
+            to_sort = [{"newTensors": ("Tensors" in rp.manifest),
+                       "newDeltas": ("Deltas" in rp.manifest),
                        "tind": rp.TENSOR_INDEX, "path": ""}]
         else:
             to_sort = [{"newTensors": False, "newDeltas": False, "tind": 0,
                         "path": ""}]
             for dp in rp.domainParams:
-                to_sort.append({"newTensors": ("Tensors" in dp.rp.manifest), 
-                                "newDeltas": ("Deltas" in dp.rp.manifest), 
-                                "tind": dp.rp.TENSOR_INDEX, 
+                to_sort.append({"newTensors": ("Tensors" in dp.rp.manifest),
+                                "newDeltas": ("Deltas" in dp.rp.manifest),
+                                "tind": dp.rp.TENSOR_INDEX,
                                 "path": dp.workdir})
     for d in to_sort:
         try:
-            sortfiles(d["tind"], delete_unzipped=True, 
+            sortfiles(d["tind"], delete_unzipped=True,
                       tensors = d["newTensors"],
                       deltas = d["newDeltas"], path = d["path"])
         except:
@@ -542,7 +542,7 @@ def main():
         logger.error("Exception while reading PARAMETERS file", exc_info=True)
         cleanup(tmpmanifest)
         return 2
-    
+
     # check if this is going to be a domain search
     domains = False
     if "DOMAIN" in rp.readParams:
@@ -564,7 +564,7 @@ def main():
             logger.error("POSCAR not found. Stopping execution...")
             cleanup(tmpmanifest)
             return 1
-        
+
         if not sl.preprocessed:
             logger.info("The POSCAR file will be processed and overwritten. "
                          "Copying the original POSCAR to POSCAR_user...")
@@ -624,7 +624,7 @@ def main():
     # clean up old executable files:
     for fn in ["refcalc", "rfactor", "search", "superpos"]:
         p = re.compile(fn+r'-\d{6}-\d{6}')
-        for f in [f for f in os.listdir() if len(f) == len(fn)+14 
+        for f in [f for f in os.listdir() if len(f) == len(fn)+14
                                           and p.match(f)]:
             try:
                 os.remove(f)
@@ -667,7 +667,7 @@ def main():
                 sl = rp.pseudoSlab
             if rp.domainParams:
                 rp.setHaltingLevel(max([dp.rp.halt for dp in rp.domainParams]))
-            if (sec == 0 and not domains and not sl.preprocessed 
+            if (sec == 0 and not domains and not sl.preprocessed
                   and rp.HALTING <= 2 and len(rp.RUN) > 0):
                 logger.info("Initialization finished. Execution will stop. "
                     "Please check whether comments in POSCAR are correct, "

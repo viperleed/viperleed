@@ -135,6 +135,7 @@ class Rparams:
         self.SUPERLATTICE = np.array([[1,0],[0,1]],dtype=float)
         self.SUPPRESS_EXECUTION = False
         self.SYMMETRIZE_INPUT = True
+        self.SYMMETRY_CELL_TRANSFORM = np.array([[1,0],[0,1]],dtype=float)
         self.SYMMETRY_EPS = 0.1
         self.SYMMETRY_EPS_Z = 0.1
         self.SYMMETRY_FIND_ORI = True

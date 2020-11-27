@@ -257,6 +257,7 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
                                            arrowprops=dict(arrowstyle="wedge",
                                                            facecolor="black",
                                                            alpha=alpha))
+                xlabels.extend([""] * (parsPerFig - len(xlabels)))
                 axs[figcount].set_xlim([0, parsPerFig+1])
                 axs[figcount].set_ylim([0, 1])
                 axs[figcount].set_xticks(list(range(1,parsPerFig+1)))

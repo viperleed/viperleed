@@ -603,33 +603,65 @@ class Slab:
             at.constraints = {1: {}, 2: {}, 3: {}}
         return 0
 
-    def rotate(self, axis, order):
+    def rotateAtoms(self, axis, order):
         """Translates the atoms in the slab to have the axis in the origin,
-        applies an order-fold rotation matrix, then translates back"""
+        applies an order-fold rotation matrix to the atom positions, then 
+        translates back"""
         #these explicit definitions are likely useless, but sqrts might be
         #  marginally more accurate than sin/cos
+        self.getCartesianCoordinates()
         if order == 2:
             m = np.array([[-1,0],[0,-1]])
-        elif order == 3:
-            m = np.array([[-0.5,-np.sqrt(3)/2],[np.sqrt(3)/2,-0.5]])
         elif order == -3:
+            m = np.array([[-0.5,-np.sqrt(3)/2],[np.sqrt(3)/2,-0.5]])
+        elif order == 3:
             m = np.array([[-0.5,np.sqrt(3)/2],[-np.sqrt(3)/2,-0.5]])
-        elif order == 4:
-            m = np.array([[0,1],[-1,0]])
         elif order == -4:
+            m = np.array([[0,1],[-1,0]])
+        elif order == 4:
             m = np.array([[0,-1],[1,0]])
-        elif order == 6:
-            m = np.array([[0.5,np.sqrt(3)/2],[-np.sqrt(3)/2,0.5]])
         elif order == -6:
+            m = np.array([[0.5,np.sqrt(3)/2],[-np.sqrt(3)/2,0.5]])
+        elif order == 6:
             m = np.array([[0.5,-np.sqrt(3)/2],[np.sqrt(3)/2,0.5]])
         else:
             ang = 2*np.pi/order
-            m = np.array([[np.cos(ang),-np.sin(ang)],
-                           [np.sin(ang),np.cos(ang)]])
+            m = np.array([[np.cos(ang),np.sin(ang)],
+                           [-np.sin(ang),np.cos(ang)]])
         for at in self.atlist:
-            at.cartpos[0:2] -= axis    # translate origin to candidate point
-            at.cartpos[0:2] = np.dot(m, at.cartpos[0:2])    # rotation
-            at.cartpos[0:2] += axis    # undo translation
+            # translate origin to candidate point, rotate, translate back
+            at.cartpos[0:2] = np.dot(m, at.cartpos[0:2] - axis) + axis
+        self.getFractionalCoordinates()
+        
+    def rotateUnitCell(self, order, append_uCellMod = True):
+        """Rotates the unit cell (around the origin), leaving atom positions 
+        the same. Note that this rotates in the opposite direction as 
+        rotateAtoms."""
+        self.getCartesianCoordinates()
+        if order == 2:
+            m = np.array([[-1,0],[0,-1]])
+        elif order == -3:
+            m = np.array([[-0.5,-np.sqrt(3)/2],[np.sqrt(3)/2,-0.5]])
+        elif order == 3:
+            m = np.array([[-0.5,np.sqrt(3)/2],[-np.sqrt(3)/2,-0.5]])
+        elif order == -4:
+            m = np.array([[0,1],[-1,0]])
+        elif order == 4:
+            m = np.array([[0,-1],[1,0]])
+        elif order == -6:
+            m = np.array([[0.5,np.sqrt(3)/2],[-np.sqrt(3)/2,0.5]])
+        elif order == 6:
+            m = np.array([[0.5,-np.sqrt(3)/2],[np.sqrt(3)/2,0.5]])
+        else:
+            ang = 2*np.pi/order
+            m = np.array([[np.cos(ang),np.sin(ang)],
+                           [-np.sin(ang),np.cos(ang)]])
+        m3 = np.identity(3)
+        m3[:2,:2] = m
+        self.ucell = np.dot(m3, self.ucell)
+        if append_uCellMod:
+            self.uCellMod.append(('lmul', m3))
+        self.getFractionalCoordinates()
 
     def mirror(self, symplane, glide=False):
         """Translates the atoms in the slab to have the symplane in the

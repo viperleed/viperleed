@@ -26,10 +26,11 @@ knownParams = ['ATTENUATION_EPS', 'BEAM_INCIDENCE', 'BULKDOUBLING_EPS',
     'PLOT_COLORS_RFACTOR', 'RUN', 'R_FACTOR_SMOOTH', 'R_FACTOR_TYPE', 
     'SCREEN_APERTURE', 'SEARCH_BEAMS', 'SEARCH_CONVERGENCE', 'SEARCH_CULL', 
     'SEARCH_MAX_GEN', 'SEARCH_POPULATION', 'SEARCH_START', 'SITE_DEF', 
-    'SUPERLATTICE', 'SUPPRESS_EXECUTION', 'SYMMETRIZE_INPUT', 'SYMMETRY_EPS', 
-    'SYMMETRY_FIND_ORI', 'SYMMETRY_FIX', 'TENSOR_INDEX', 'TENSOR_OUTPUT', 
-    'THEO_ENERGIES', 'T_DEBYE', 'T_EXPERIMENT', 'V0_IMAG', 'V0_REAL', 
-    'V0_Z_ONSET', 'VIBR_AMP_SCALE']
+    'SUPERLATTICE', 'SUPPRESS_EXECUTION', 'SYMMETRIZE_INPUT', 
+    'SYMMETRY_CELL_TRANSFORM', 'SYMMETRY_EPS', 'SYMMETRY_FIND_ORI', 
+    'SYMMETRY_FIX', 'TENSOR_INDEX', 'TENSOR_OUTPUT', 'THEO_ENERGIES', 
+    'T_DEBYE', 'T_EXPERIMENT', 'V0_IMAG', 'V0_REAL', 'V0_Z_ONSET', 
+    'VIBR_AMP_SCALE']
 paramAlias = {}
 for p in knownParams:
     paramAlias[p.lower().replace("_","")] = p
@@ -170,6 +171,160 @@ def readPARAMETERS(filename='PARAMETERS'):
 def interpretPARAMETERS(rpars, slab=None, silent=False):
     """Interprets the string values in an Rparams object, read previously by 
     readPARAMETERS, to fill the parameter variables. Returns 0 on success."""
+    
+    def setBoolParameter(rp, param, value, varname=None,
+                         addAllowedValues = {False: [], True: []},
+                         haltingOnFail = 1):
+        """
+        Generic function for setting a given parameter to a boolean value.
+
+        Parameters
+        ----------
+        rp : Rparams
+            The Rparams object for which the parameter should be set
+        param : str
+            The name of the parameter in PARAMETERS
+        value : str
+            The value as found in the PARAMETERS file
+        varname : str, optional
+            The variable name in the Rparams class, if it differs from 'param'
+        addAllowedValues : dict, optional
+            Additional string values which should be interpreted as False or 
+            True. By default, 'f' and 'false' are False, 't' and 'true' are 
+            True.
+        haltingOnFail : int, optional
+            What halting level should be set if the 'fail' event is triggered.
+
+        Returns
+        ----------
+        0 if the parameter was set, 1 otherwise.
+        """
+        s = value.lower()
+        allowedValues = {False: ['false', 'f'], True: ['true', 't']}
+        for key in allowedValues:
+            allowedValues[key].extend(addAllowedValues[key])
+            if s in allowedValues[key]:
+                v = key
+                break
+        else:
+            logger.warning('PARAMETERS file: {}: Could not interpret given '
+                           'value. Input will be ignored.'.format(param))
+            rpars.setHaltingLevel(haltingOnFail)
+            return 1
+        if not varname:
+            varname = param
+        setattr(rp, varname, v)
+        return 0
+    
+    def setNumericalParameter(rp, param, value, varname=None, type_=float, 
+                             range_=(None, None), range_exclude=(False,False),
+                             outOfRangeEvent = ('fail', 'fail'), 
+                             haltingOnFail = 1):
+        """
+        Generic function for setting a given parameter to an integer or float
+        value.
+
+        Parameters
+        ----------
+        rp : Rparams
+            The Rparams object for which the parameter should be set
+        param : str
+            The name of the parameter in PARAMETERS
+        value : str
+            The value as found in the PARAMETERS file
+        varname : str, optional
+            The variable name in the Rparams class, if it differs from 'param'
+        type_ : int or float, optional
+            Which type the variable must take
+        range_ : tuple, values can be int or float or None, optional
+            Defines upper and lower limits for the value. If either is set to 
+            None, only the other one will be interpreted. The default is None 
+            for both.
+        range_exclude : tuple (bool, bool), optional
+            Whether the upper and lower limits themselves are allowed values 
+            or not. The default is False for both (range is inclusive).
+        outOfRangeEvent : str 'fail' or 'set', optional
+            What to do if the given value lies outside the range. For 'fail', 
+            the value will be ignored. For 'modulo', the value will be 
+            brought within the range by '%' operation. For 'set', the value 
+            will be set to the lowest allowed value. The default is 
+            ('fail', 'fail').
+        haltingOnFail : int, optional
+            What halting level should be set if the 'fail' event is triggered.
+
+        Returns
+        ----------
+        0 if the parameter was set, 1 otherwise.
+        """
+
+        try:
+            v = type_(value)
+        except ValueError:
+            logger.warning('PARAMETERS file: {}: Could not convert value to '
+                           '{}. Input will be ignored.'
+                           .format(param, type_.__name__))
+            rpars.setHaltingLevel(haltingOnFail)
+            return 1
+        outOfRange = (False, False)
+        if range_[0] is not None and (v < range_[0] or 
+                                      (range_exclude[0] and v == range_[0])):
+            outOfRange[0] = True
+        if range_[1] is not None and (v > range_[1] or 
+                                      (range_exclude[1] and v == range_[1])):
+            outOfRange[1] = True
+        rangeChars = ({False: "[", True: "]"}, {False: "]", True: "["})
+        if all([v is not None for v in range_]):
+            outOfRangeStr = 'not in range {}{}, {}{}'.format(
+                                        rangeChars[0][range_exclude[0]], 
+                                        range_[0], range_[1], 
+                                        rangeChars[1][range_exclude[1]])
+        elif range_[0] is not None:
+            if range_exclude[0]:
+                outOfRangeStr = 'less than or equal to {}'.format(range_[0])
+            else:
+                'less than {}'.format(range_[0])
+        else:
+            if range_exclude[1]:
+                outOfRangeStr = 'larger than or equal to {}'.format(range_[1])
+            else:
+                'larger than {}'.format(range_[1])
+        if any([outOfRange[i] and outOfRangeEvent[i] == 'fail'
+                                                    for i in range(0,2)]):
+            logger.warning('PARAMETERS file: {}: Value {} is {}. Input will '
+                           'be ignored.'.format(param, v, outOfRangeStr))
+            rpars.setHaltingLevel(haltingOnFail)
+            return 1
+        else:
+            for i in range(0,2):
+                if outOfRange[i]:
+                    if outOfRangeEvent == 'modulo':
+                        if not range_[1]:
+                            raise ValueError('Cannot use outOfRangeEvent '
+                                        'modulo if upper limit is undefined.')
+                        if not range_[0]:
+                            range_[0] = 0
+                        setTo = (((v - range_[0]) % (range_[1] - range_[0]))
+                                 + range_[0])
+                    elif range_exclude[i]:
+                        mult = 1
+                        if i == 1:
+                            mult = -1
+                        if type_ == float:
+                            setTo = range_[i] + mult*1e-4
+                        else:
+                            setTo = range_[i] + mult
+                    else:
+                        setTo = range_[i]
+                    logger.warning('PARAMETERS file: {}: Value {} is {}. '
+                                   'Value will be set to {}.'
+                                   .format(param, v, outOfRangeStr, setTo))
+                    v = setTo
+                    break
+        if not varname:
+            varname = param
+        setattr(rp, varname, v)
+        return 0
+
     loglevel = logger.level
     if silent:
         logger.setLevel(logging.ERROR)
@@ -181,8 +336,8 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
     checkParams.extend([p for p in knownParams if (p in rpars.readParams and 
                                                      not p in checkParams)])
     domainsIgnoreParams = ['BULK_REPEAT', 'ELEMENT_MIX', 'ELEMENT_RENAME',
-        'LAYER_CUTS', 'N_BULK_LAYERS', 'SITE_DEF', 'TENSOR_INDEX', 
-        'TENSOR_OUTPUT']
+        'LAYER_CUTS', 'N_BULK_LAYERS', 'SITE_DEF', 'SUPERLATTICE', 
+        'SYMMETRY_CELL_TRANSFORM', 'TENSOR_INDEX', 'TENSOR_OUTPUT']
     for (param, plist, value) in [(param, lel[0], lel[1]) 
                                   for param in checkParams
                                   for lel in rpars.readParams[param]]:
@@ -190,90 +345,117 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                                                        domainsIgnoreParams):
             continue
         llist = value.split()
-        if param == 'ATTENUATION_EPS':
-            try:
-                f = float(llist[0])
-                if f >= 0.0001 and f < 1:
-                    rpars.ATTENUATION_EPS = f
-                else:
-                    logger.warning('PARAMETERS file: Unexpected input for '
-                                    'ATTENUATION_EPS. Input will be ignored.')
-                    rpars.setHaltingLevel(1)
-            except ValueError:
-                logger.warning('PARAMETERS file: ATTENUATION_EPS: Could not '
-                            'convert value to float. Input will be ignored.')
-                rpars.setHaltingLevel(1)
-        elif param == 'BEAM_INCIDENCE':
-            if ',' in value:
-                try:
-                    sublists = tl.base.splitSublists(llist, ',')
-                    for sl in sublists:
-                        if sl[0].lower() == 'theta':
-                            theta = float(sl[1])
-                            if 0 <= theta and theta <= 90:
-                                rpars.THETA = float(theta)
-                            else:
-                                logger.warning('PARAMETERS file: '
-                                    'BEAM_INCIDENCE: Unexpected value for '
-                                    'theta (should be between 0 and 90). '
-                                    'Input will be ignored.')
-                                rpars.setHaltingLevel(1)
-                        elif sl[0].lower() == 'phi':
-                            rpars.PHI = float(sl[1])%360
-                        else:
-                            logger.warning('PARAMETERS file: '
-                                    'BEAM_INCIDENCE: Unknown flag found. '
-                                    'Input will be ignored.')
-                            rpars.setHaltingLevel(1)
-                except ValueError:
-                    logger.warning('PARAMETERS file: BEAM_INCIDENCE: '
-                                    'Could not convert value to float. '
-                                    'Input will be ignored.')
-                    rpars.setHaltingLevel(1)
-            else:
-                try:
-                    theta = float(llist[0])
-                    if 0 <= theta and theta <= 90:
-                        rpars.THETA = float(theta)
-                    else:
-                        logger.warning('PARAMETERS file: BEAM_INCIDENCE: '
-                                'Unexpected value for theta (should be '
-                                'between 0 and 90). Input will be ignored.')
-                        rpars.setHaltingLevel(1)
-                    rpars.PHI = float(llist[1])
-                except ValueError:
-                    logger.warning('PARAMETERS file: BEAM_INCIDENCE: '
-                                    'Could not convert value to float. '
-                                    'Input will be ignored.')
-                    rpars.setHaltingLevel(1)
+        # parameters not interpreted right now
+        if param == 'VIBR_AMP_SCALE':
+            rpars.VIBR_AMP_SCALE.extend(value.split(","))
+        # simple bool parameters
+        elif param in ['LOG_DEBUG', 'LOG_SEARCH', 'SUPPRESS_EXECUTION', 
+                       'SYMMETRIZE_INPUT', 'SYMMETRY_FIND_ORI']:
+            setBoolParameter(rpars, param, llist[0])
+        # slightly more complicated bools
+        elif param == 'LAYER_STACK_VERTICAL':
+            setBoolParameter(rpars, param, llist[0], 
+                             addAllowedValues = {False: ['c'], True: ['z']})
+        # positive-only integers
+        elif param in ['BULKDOUBLING_MAX', 'N_CORES', 'SEARCH_MAX_GEN',
+                       'TENSOR_INDEX']:
+            setNumericalParameter(rpars, param, llist[0], type_=int, 
+                                  range_ = (1, None))
+        # positive-only floats
+        elif param in ['T_DEBYE', 'T_EXPERIMENT', 'V0_IMAG']:
+            setNumericalParameter(rpars, param, llist[0], range_ = (0, None))
+        # simple numericals
+        elif param == 'V0_Z_ONSET':
+            setNumericalParameter(rpars, param, llist[0])
+        elif param == 'ATTENUATION_EPS':
+            setNumericalParameter(rpars, param, llist[0], range_=(0.0001, 1), 
+                                  range_exclude=(False,True))
         elif param == 'BULKDOUBLING_EPS':
-            try:
-                rpars.BULKDOUBLING_EPS = float(llist[0])
-            except ValueError:
-                logger.warning('PARAMETERS file: BULKDOUBLING_EPS: '
-                                'Could not convert value to float. Input '
-                                'will be ignored.')
+            setNumericalParameter(rpars, param, llist[0], 
+                                  range_ = (0.0001, None), 
+                                  outOfRangeEvent = ('set', 'fail'))
+
+        elif param == 'HALTING':
+            setNumericalParameter(rpars, param, llist[0], type_ = int, 
+                                  range_ = (1, 3))
+        elif param == 'LMAX':
+            r = setNumericalParameter(rpars, param, llist[0], type_=int, 
+                                  range_=(1,15), outOfRangeEvent=('set','set'))
+            if r == 0 and rpars.PHASESHIFT_EPS != 0:
+                logger.warning('PARAMETERS file: Both LMAX and '
+                    'PHASESHIFT_EPS are being defined. PHASESHIFT_EPS '
+                    'will be ignored.')
+        elif param == 'N_BULK_LAYERS':
+            setNumericalParameter(rpars, param, llist[0], type_=int,
+                                  range_ = (1, 2), haltingOnFail = 2)
+        elif param == 'R_FACTOR_SMOOTH':
+            setNumericalParameter(rpars, param, llist[0], type_ = int,
+                                  range_ = (0, 999))
+        elif param == 'R_FACTOR_TYPE':
+            setNumericalParameter(rpars, param, llist[0], type_ = int,
+                                  range_ = (1, 2))
+        elif param == 'SCREEN_APERTURE':
+            setNumericalParameter(rpars, param, llist[0], range_ = (0, 180))
+        elif param == 'SEARCH_POPULATION':
+            r = setNumericalParameter(rpars, param, llist[0], type_ = int,
+                                      range_ = (1, None))
+            if r == 0 and rpars.SEARCH_POPULATION < 16:
+                logger.warning('SEARCH_POPULATION is very small. A '
+                                'minimum value of 16 is recommended.')
+        elif param == 'SYMMETRY_EPS':
+            r = setNumericalParameter(rpars, param, llist[0], 
+                                      range_ = (1e-10, None))
+            if r and rpars.SYMMETRY_EPS > 1.0:
+                logger.warning('PARAMETERS file: SYMMETRY_EPS: Given '
+                    'value is greater than one Ångström. This is a '
+                    'very loose constraint and might lead to '
+                    'incorrect symmetry detection. Be sure to check '
+                    'the output!')
                 rpars.setHaltingLevel(1)
-            if rpars.BULKDOUBLING_EPS < 0.0001:
-                rpars.BULKDOUBLING_EPS = 0.0001
-                logger.warning('PARAMETERS file: BULKDOUBLING_EPS cannot be '
-                    'smaller than 0.001 due to fortran reading it as an F7.4; '
-                    'value was changed to 0.0001')
-                rpars.setHaltingLevel(1)
-        elif param == 'BULKDOUBLING_MAX':
-            try:
-                i = int(llist[0])
-            except ValueError:
-                logger.warning('PARAMETERS file: BULKDOUBLING_MAX: Could not '
-                        'convert value to integer. Input will be ignored.')
-                rpars.setHaltingLevel(1)
-            if i > 0:
-                rpars.BULKDOUBLING_MAX = i
+            if len(llist) > 1:
+                r = setNumericalParameter(rpars, param, llist[0], 
+                                          range_ = (1e-10, None),
+                                          varname='SYMMETRY_EPS_Z')
+                if r == 0 and rpars.SYMMETRY_EPS_Z > 1.0:
+                    logger.warning('PARAMETERS file: SYMMETRY_EPS: Given '
+                        'value for z is greater than one Ångström. This is a '
+                        'very loose constraint and might lead to '
+                        'incorrect symmetry detection. Be sure to check '
+                        'the output!')
+                    rpars.setHaltingLevel(1)
+                if r != 0:
+                    rpars.SYMMETRY_EPS_Z = rpars.SYMMETRY_EPS
             else:
-                logger.warning('PARAMETERS file: BULKDOUBLING_MAX: '
-                                'Unexpected input (0 or negative). Input '
-                                'will be ignored.')
-                rpars.setHaltingLevel(1)
+                rpars.SYMMETRY_EPS_Z = rpars.SYMMETRY_EPS
+        # non-trivial parameters
+        elif param == 'BEAM_INCIDENCE':
+            range_ = {'THETA': (0,90), 'PHI': (0,360)}
+            outOfRangeEvent = {'THETA': ('fail', 'fail'),
+                              'PHI': ('modulo', 'modulo')}
+            if ',' in value:
+                sublists = tl.base.splitSublists(llist, ',')
+                for sl in sublists:
+                    for name in ['THETA', 'PHI']:
+
+                        if sl[0].upper() == name:
+                            setNumericalParameter(rpars, 
+                                    'BEAM_INCIDENCE {}'.format(name), 
+                                    sl[1], range_ = range_[name], 
+                                    outOfRangeEvent = outOfRangeEvent[name],
+                                    varname=name)
+                            break
+                    else:
+                        logger.warning('PARAMETERS file: '
+                                'BEAM_INCIDENCE: Unknown flag found. '
+                                'Input will be ignored.')
+                        rpars.setHaltingLevel(1)
+            else:
+                for ind, name in enumerate(['THETA', 'PHI']):
+                    setNumericalParameter(rpars, 
+                                    'BEAM_INCIDENCE {}'.format(name), 
+                                    llist[ind], range_ = range_[name], 
+                                    outOfRangeEvent = outOfRangeEvent[name],
+                                    varname=name)
         elif param == 'BULK_REPEAT':
             s = value.lower()
             if not "[" in s:
@@ -393,12 +575,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
             elif llist[0].lower() == 'lab6':
                 rpars.FILAMENT_WF = 2.65
             else:
-                try:
-                    rpars.FILAMENT_WF = float(llist[0])
-                except:
-                    logger.warning('PARAMETERS file: FILAMENT_WF parameter: '
-                            'Error parsing values. Input will be ignored.')
-                    rpars.setHaltingLevel(1)
+                setNumericalParameter(rpars, param, llist[0])
         elif param == 'FORTRAN_COMP':
             if len(plist) <= 1 and llist[0].lower() in ["ifort","gfortran"]:
                 rpars.getFortranComp(comp=llist[0].lower())
@@ -426,19 +603,6 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                     logger.warning('PARAMETERS file: FORTRAN_COMP parameter: '
                         'Could not interpret flags. Value will be ignored.')
                     rpars.setHaltingLevel(1)
-        elif param == 'HALTING':
-            try:
-                i = int(llist[0])
-                if 1 <= i <= 3:
-                    rpars.HALTING = i
-                else:
-                    logger.warning('PARAMETERS file: HALTING: Invalid '
-                                'value given. Input will be ignored.')
-                    rpars.setHaltingLevel(1)
-            except ValueError:
-                logger.warning('PARAMETERS file: HALTING: Could not convert '
-                                'value to integer. Input will be ignored.')
-                rpars.setHaltingLevel(1)
         elif param == 'IV_SHIFT_RANGE':
             if len(llist) in [2, 3]:
                 fl = []
@@ -508,80 +672,6 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                         rpars.setHaltingLevel(1)
                         continue
             rpars.LAYER_CUTS = llist
-        elif param == 'LAYER_STACK_VERTICAL':
-            s = llist[0].lower()
-            if s in ['false','f','c']:
-                rpars.LAYER_STACK_VERTICAL = False
-            elif s in ['true','t','z']:
-                rpars.LAYER_STACK_VERTICAL = True
-            else:
-                logger.warning('PARAMETERS file: LAYER_STACK_VERTICAL: Could '
-                        'not parse given value. Input will be ignored.')
-                rpars.setHaltingLevel(1)
-        elif param == 'LMAX':
-            try:
-                i = int(llist[0])
-            except ValueError:
-                logger.warning('PARAMETERS file: LMAX: Could not convert '
-                                'value to integer. Input will be ignored.')
-                rpars.setHaltingLevel(1)
-            if 1 <= i <= 15:
-                if rpars.PHASESHIFT_EPS != 0:
-                    logger.warning('PARAMETERS file: Both LMAX and '
-                        'PHASESHIFT_EPS are being defined. PHASESHIFT_EPS '
-                        'will be ignored.')
-                rpars.LMAX = i
-            else:
-                logger.warning('PARAMETERS file: LMAX: Value has to be '
-                                'between 1 and 15. Input will be ignored.')
-                rpars.setHaltingLevel(1)
-        elif param == 'LOG_DEBUG':
-            s = llist[0].lower()
-            if s in ['false','f']:
-                rpars.LOG_DEBUG = False
-            elif s in ['true','t']:
-                rpars.LOG_DEBUG = True
-                if not silent:
-                    logger.setLevel(logging.DEBUG)
-            else:
-                logger.warning('PARAMETERS file: LOG_DEBUG: Could not parse '
-                                'given value. Input will be ignored.')
-                rpars.setHaltingLevel(1)
-        elif param == 'LOG_SEARCH':
-            s = llist[0].lower()
-            if s in ['false','f']:
-                rpars.LOG_SEARCH = False
-            elif s in ['true','t']:
-                rpars.LOG_SEARCH = True
-            else:
-                logger.warning('PARAMETERS file: LOG_SEARCH: Could not parse '
-                                'given value. Input will be ignored.')
-                rpars.setHaltingLevel(1)
-        elif param == 'N_BULK_LAYERS':
-            try:
-                rpars.N_BULK_LAYERS = int(llist[0])
-            except:
-                logger.warning('PARAMETERS file: N_BULK_LAYERS: could '
-                                'not convert value to integer.')
-            if rpars.N_BULK_LAYERS != 1 and rpars.N_BULK_LAYERS != 2:
-                logger.warning('PARAMETERS file: N_BULK_LAYERS was set to '
-                                +rpars.N_BULK_LAYERS+', 1 or 2 expected. '
-                                'Value was set to 1 (default).')
-                rpars.setHaltingLevel(2)
-                rpars.N_BULK_LAYERS = 1
-        elif param == 'N_CORES':
-            i = 0
-            try:
-                i = int(llist[0])
-            except:
-                logger.warning('PARAMETERS file: N_CORES: could not '
-                                'convert value to integer.')
-            if i > 0:
-                rpars.N_CORES = i
-            else:
-                logger.warning('PARAMETERS file: N_CORES should be a '
-                                'positive integer.')
-                rpars.setHaltingLevel(1)
         elif param == 'PHASESHIFT_EPS':
             if rpars.LMAX != 0:
                 logger.warning('PARAMETERS file: Both LMAX and '
@@ -659,52 +749,6 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                 logger.warning('PARAMETERS file: RUN was defined, but '
                         'no values were read. Execution will stop.')
                 rpars.setHaltingLevel(3)
-        elif param == 'R_FACTOR_SMOOTH':
-            try:
-                i = int(llist[0])
-            except:
-                logger.warning('PARAMETERS file: R_FACTOR_SMOOTH: '
-                                'could not convert value to integer.')
-                rpars.setHaltingLevel(1)
-            else:
-                if 1000 > i >= 0:
-                    rpars.R_FACTOR_SMOOTH = i
-                else:
-                    if i < 0:
-                        logger.warning('PARAMETERS file: R_FACTOR_SMOOTH '
-                                        'should be >= 0')
-                    else:
-                        logger.warning('PARAMETERS file: R_FACTOR_SMOOTH '
-                                        'should be < 1000')
-                    rpars.setHaltingLevel(1)
-        elif param == 'R_FACTOR_TYPE':
-            try:
-                rpars.R_FACTOR_TYPE = int(llist[0])
-            except:
-                logger.warning('PARAMETERS file: R_FACTOR_TYPE: could '
-                                'not convert value to integer.')
-            if rpars.R_FACTOR_TYPE != 1 and rpars.R_FACTOR_TYPE != 2:
-                logger.warning('PARAMETERS file: R_FACTOR_TYPE was set to '
-                                +rpars.R_FACTOR_TYPE+', 1 or 2 expected. '
-                                'Value was set to 1 (default).')
-                rpars.setHaltingLevel(1)
-                rpars.R_FACTOR_TYPE = 1
-        elif param == 'SCREEN_APERTURE':
-            try:
-                f = float(llist[0])
-            except:
-                logger.warning('PARAMETERS file: SCREEN_APERTURE: could not '
-                               'convern value to float. Input will be '
-                               'ignored.')
-                rpars.setHaltingLevel(1)
-            else:
-                if 0 <= f <= 180:
-                    rpars.SCREEN_APERTURE = f
-                else:
-                    logger.warning('PARAMETERS file: SCREEN_APERTURE value '
-                        'must be between 0 and 180 degrees. Input {} will be '
-                        'ignored.'.format(llist[0]))
-                    rpars.setHaltingLevel(1)
         elif param == 'SEARCH_BEAMS':
             if llist[0][0].lower() in ["0","a"]:
                 rpars.SEARCH_BEAMS = 0
@@ -811,36 +855,6 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                     logger.warning('PARAMETERS file: SEARCH_CULL type '
                                     'not recognized.')
                     rpars.setHaltingLevel(1)
-        elif param == 'SEARCH_MAX_GEN':
-            i = 0
-            try:
-                i = int(llist[0])
-            except:
-                logger.warning('PARAMETERS file: SEARCH_MAX_GEN: '
-                                'could not convert value to integer.')
-                rpars.setHaltingLevel(1)
-            if i > 0:
-                rpars.SEARCH_MAX_GEN = i
-            else:
-                logger.warning('PARAMETERS file: SEARCH_MAX_GEN should '
-                                'be a positive integer.')
-                rpars.setHaltingLevel(1)
-        elif param == 'SEARCH_POPULATION':
-            i = 0
-            try:
-                i = int(llist[0])
-            except:
-                logger.warning('PARAMETERS file: SEARCH_POPULATION: '
-                                'could not convert value to integer.')
-            if i > 0:
-                rpars.SEARCH_POPULATION = i
-            else:
-                logger.warning('PARAMETERS file: SEARCH_POPULATION should '
-                                'be a positive integer.')
-                rpars.setHaltingLevel(1)
-            if i < 16:
-                logger.warning('SEARCH_POPULATION is very small. A '
-                                'minimum value of 16 is recommended.')
         elif param == 'SEARCH_START':
             s = llist[0].lower()
             if s in ["random", "rand", "centered", "center", "control"]:
@@ -888,24 +902,25 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                         raise
                 newdict[sl[0]] = atnums
             rpars.SITE_DEF[plist[1]]=newdict
-        elif param == 'SUPERLATTICE':
+        elif param in ['SUPERLATTICE', 'SYMMETRY_CELL_TRANSFORM']:
             if not 'M' in plist:
                 if slab is None:
-                    logger.warning('PARAMETERS file: SUPERLATTICE '
+                    logger.warning('PARAMETERS file: {} '
                             'parameter appears to be in Wood notation, '
                             'but no slab was passed; cannot calculate '
-                            'bulk unit cell!')
+                            'bulk unit cell!'.format(param))
                     rpars.setHaltingLevel(2)
                 else:
-                    rpars.SUPERLATTICE = tl.leedbase.readWoodsNotation(value,
-                                                              slab.ucell)
-                    rpars.superlattice_defined = True
+                    setattr(rpars, param, tl.leedbase.readWoodsNotation(value, 
+                                                                slab.ucell))
+                    if param == 'SUPERLATTICE':
+                        rpars.superlattice_defined = True
             else:
                 sublists = tl.base.splitSublists(llist, ',')
                 if not len(sublists) == 2:
-                    logger.warning('PARAMETERS file: error reading '
-                                     'SUPERLATTICE matrix: number of '
-                                     'lines is not equal 2.')
+                    logger.warning('PARAMETERS file: error reading {} '
+                                    'matrix: number of lines is not equal 2.'
+                                    .format(param))
                     rpars.setHaltingLevel(2)
                 else:
                     write=True
@@ -916,91 +931,20 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                                 nl.append([float(s) for s in sl])
                             except ValueError:
                                 logger.warning('PARAMETERS file: error '
-                                    'reading SUPERLATTICE matrix: could '
-                                    'not convert '+str(sl)+' to floats.')
+                                    'reading {} matrix: could not convert {} '
+                                    'to floats.'.format(param, sl))
                                 rpars.setHaltingLevel(2)
                                 write = False
                         else:
                             logger.warning('PARAMETERS file: error '
-                                    'reading SUPERLATTICE matrix: number '
-                                    'of columns is not equal 2.')
+                                    'reading {} matrix: number of columns '
+                                    'is not equal 2.'.format(param))
                             rpars.setHaltingLevel(2)
                             write = False
                     if write:
-                        rpars.SUPERLATTICE = np.array(nl,dtype=float)
-                        rpars.superlattice_defined = True
-        elif param == 'SUPPRESS_EXECUTION':
-            s = llist[0].lower()
-            if s in ['false','f']:
-                rpars.SUPPRESS_EXECUTION = False
-            elif s in ['true','t']:
-                rpars.SUPPRESS_EXECUTION = True
-            else:
-                logger.warning('PARAMETERS file: SUPPRESS_EXECUTION: '
-                                'Could not parse given value. Input will '
-                                'be ignored.')
-                rpars.setHaltingLevel(1)
-        elif param == 'SYMMETRIZE_INPUT':
-            s = llist[0].lower()
-            if s in ['false','f']:
-                rpars.SYMMETRIZE_INPUT = False
-            elif s in ['true','t']:
-                rpars.SYMMETRIZE_INPUT = True
-            else:
-                logger.warning('PARAMETERS file: SYMMETRIZE_INPUT: Could '
-                           'not parse given value. Input will be ignored.')
-                rpars.setHaltingLevel(1)
-        elif param == 'SYMMETRY_EPS':
-            try:
-                f = float(llist[0])
-                if f > 0:
-                    rpars.SYMMETRY_EPS = f
-                    if f > 1.0:
-                        logger.warning('PARAMETERS file: SYMMETRY_EPS: Given '
-                            'value is greater than one Ångström. This is a '
-                            'very loose constraint and might lead to '
-                            'incorrect symmetry detection. Be sure to check '
-                            'the output!')
-                        rpars.setHaltingLevel(1)
-                else:
-                    logger.warning('PARAMETERS file: SYMMETRY_EPS: Input '
-                                'is not positive. Input will be ignored.')
-                    rpars.setHaltingLevel(1)
-            except ValueError:
-                logger.warning('PARAMETERS file: SYMMETRY_EPS: Could not '
-                        'convert value to float. Input will be ignored.')
-                rpars.setHaltingLevel(1)
-            if len(llist) > 1:
-                try:
-                    f = float(llist[1])
-                    if f > 0:
-                        rpars.SYMMETRY_EPS_Z = f
-                        if f > 1.0:
-                            logger.warning('PARAMETERS file: SYMMETRY_EPS: '
-                             'Given value is greater than one Ångström. This '
-                             'is a very loose constraint and might lead to '
-                             'incorrect symmetry detection. Be sure to check '
-                             'the output!')
-                            rpars.setHaltingLevel(1)
-                    else:
-                        logger.warning('PARAMETERS file: SYMMETRY_EPS: '
-                           'Input is not positive. Input will be ignored.')
-                        rpars.setHaltingLevel(1)
-                        rpars.SYMMETRY_EPS_Z = rpars.SYMMETRY_EPS
-                except ValueError:
-                    rpars.SYMMETRY_EPS_Z = rpars.SYMMETRY_EPS
-            else:
-                rpars.SYMMETRY_EPS_Z = rpars.SYMMETRY_EPS
-        elif param == 'SYMMETRY_FIND_ORI':
-            s = llist[0].lower()
-            if s in ['false','f']:
-                rpars.SYMMETRY_FIND_ORI = False
-            elif s in ['true','t']:
-                rpars.SYMMETRY_FIND_ORI = True
-            else:
-                logger.warning('PARAMETERS file: SYMMETRY_FIND_ORI: '
-                    'Could not parse given value. Input will be ignored.')
-                rpars.setHaltingLevel(1)
+                        setattr(rpars, param, np.array(nl,dtype=float))
+                        if param == 'SUPERLATTICE':
+                            rpars.superlattice_defined = True
         elif param == 'SYMMETRY_FIX':
             s = llist[0].lower()
             grouplist = ["p1","p2","pm","pg","cm","rcm","pmm","pmg","pgg",
@@ -1049,19 +993,6 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
             else:
                 logger.warning('PARAMETERS file: SYMMETRY_FIX: Could not '
                                'parse given value. Input will be ignored.')
-                rpars.setHaltingLevel(1)
-        elif param == 'TENSOR_INDEX':
-            i = 0
-            try:
-                i = int(llist[0])
-            except:
-                logger.warning('PARAMETERS file: TENSOR_INDEX: could not '
-                                'convert value to integer.')
-            if i > 0:
-                rpars.TENSOR_INDEX = i
-            else:
-                logger.warning('PARAMETERS file: TENSOR_INDEX should be a '
-                                'positive integer.')
                 rpars.setHaltingLevel(1)
         elif param == 'TENSOR_OUTPUT':
             nl = tl.base.recombineListElements(llist, '*')
@@ -1167,47 +1098,6 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                 logger.warning('PARAMETERS file: Unexpected input for '
                                 'THEO_ENERGIES. Input will be ignored.')
                 rpars.setHaltingLevel(1)
-        elif param == 'T_DEBYE':
-            try:
-                rpars.T_DEBYE = float(llist[0])
-            except ValueError:
-                logger.warning('PARAMETERS file: T_DEBYE: '
-                                'Could not convert value to float. Input '
-                                'will be ignored.')
-                rpars.setHaltingLevel(1)
-            else:
-                if rpars.T_DEBYE < 0:
-                    rpars.T_DEBYE = None
-                    logger.warning('PARAMETERS file: T_DEBYE must '
-                                    'be positive. Input will be ignored.')
-                    rpars.setHaltingLevel(1)
-        elif param == 'T_EXPERIMENT':
-            try:
-                rpars.T_EXPERIMENT = float(llist[0])
-            except ValueError:
-                logger.warning('PARAMETERS file: T_EXPERIMENT: '
-                                'Could not convert value to float. Input '
-                                'will be ignored.')
-                rpars.setHaltingLevel(1)
-            else:
-                if rpars.T_EXPERIMENT < 0:
-                    rpars.T_EXPERIMENT = None
-                    logger.warning('PARAMETERS file: T_EXPERIMENT must '
-                                    'be positive. Input will be ignored.')
-                    rpars.setHaltingLevel(1)
-        elif param == 'V0_IMAG':
-            try:
-                f = float(llist[0])
-            except:
-                logger.warning('PARAMETERS file: Failed to convert '
-                        'V0_IMAG input to float. Input will be ignored.')
-            else:
-                if f < 0:
-                    logger.warning('PARAMETERS file: V0_IMAG should be '
-                        'positive real value. Input '+llist[0]+' not '
-                        'accepted. Input will be ignored.')
-                else:
-                    rpars.V0_IMAG = f
         elif param == 'V0_REAL':
             if llist[0].lower() == 'rundgren':
                 try:
@@ -1227,16 +1117,6 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                 setTo = re.sub("(?i)EE","EEV+workfn",value)
             setTo = setTo.rstrip()
             rpars.V0_REAL = setTo
-        elif param == 'V0_Z_ONSET':
-            try:
-                rpars.V0_Z_ONSET = float(llist[0])
-            except ValueError:
-                logger.warning('PARAMETERS file: V0_Z_ONSET: Could not '
-                            'convert value to float. Input will be ignored.')
-                rpars.setHaltingLevel(1)
-        elif param == 'VIBR_AMP_SCALE':
-            rpars.VIBR_AMP_SCALE.extend(value.split(","))
-                                # taken at face value, interpreted later
     logger.setLevel(loglevel)
     return 0
 
