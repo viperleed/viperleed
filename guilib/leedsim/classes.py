@@ -254,6 +254,7 @@ class LEEDPattern():
             # now, only in case extDoms is of length 1, i.e., one domain
             # only gives rise to the extinct beam, the group index goes
             # negative
+            # !!! Perhaps will be changed with the better version in base.py !!!
             if len(extDoms) == 1:
                 beamsWithIndices[b][1] *= -1
 
@@ -458,9 +459,6 @@ class LEEDPattern():
         """
         # New version written on 2020-06-22. The old version is kept at the end
         # in commented form.
-        # Current version does not yet take into account screw/glides in the
-        # bulk, which will be simply added to the set of operations of the bulk
-        # group
         #
         # The current version is based on the concept of co-sets of a group.
         # Given a group G and a subgroup H, the left co-set of H with respect

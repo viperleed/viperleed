@@ -14,7 +14,9 @@ import copy
 import shutil
 import subprocess
 
+from tleedmlib.base import mkdir_recursive
 from tleedmlib.leedbase import fortranCompile, getTLEEDdir, getMaxTensorIndex
+from tleedmlib.files.parameters import modifyPARAMETERS
 import tleedmlib.files.beams as beams
 import tleedmlib.files.iorefcalc as io
 
@@ -23,6 +25,14 @@ logger = logging.getLogger("tleedm.refcalc")
 def refcalc(sl, rp):
     """Runs the reference calculation. Returns 0 when finishing without 
     errors, or an error message otherwise."""
+    if rp.domainParams:
+        try:
+            r = refcalc_domains(rp)
+        except:
+            raise
+        if r != 0:
+            return r
+        return 0
     sl.getCartesianCoordinates(updateOrigin=True)
     sl.updateLayerCoordinates()
     try:
@@ -177,13 +187,10 @@ def refcalc(sl, rp):
         logger.warning("Failed to rename refcalc input file PARAM to "
                         "refcalc-PARAM")
     # move and zip tensor files
-    if not os.path.isdir(os.path.join(".","Tensors")):
-        os.mkdir(os.path.join(".","Tensors"))
     rp.TENSOR_INDEX = getMaxTensorIndex() + 1
     rp.manifest.append("Tensors")
     dn = "Tensors_"+str(rp.TENSOR_INDEX).zfill(3)
-    if not os.path.isdir(os.path.join(".","Tensors",dn)):
-        os.mkdir(os.path.join(".","Tensors",dn))
+    mkdir_recursive(os.path.join(".","Tensors",dn))
     try:
         for tf in [f for f in os.listdir('.') if f.startswith("T_")]:
             shutil.move(tf, os.path.join(".","Tensors",dn,tf))
@@ -199,10 +206,19 @@ def refcalc(sl, rp):
                         and os.path.isfile(fn + "_OUT_" + rp.timestamp)):
                 of = fn + "_OUT_" + rp.timestamp
         try:
-            shutil.copy2(of, os.path.join(".","Tensors",dn,f))
+            shutil.copy2(of, os.path.join("Tensors",dn,f))
         except:
             logger.warning("Failed to add input file " + f
                             + " to Tensors folder.")
+    # modify PARAMETERS to contain the energies and LMAX that were really used
+    if os.path.isfile(os.path.join("Tensors",dn,"PARAMETERS")):
+        modifyPARAMETERS(rp, "THEO_ENERGIES", 
+                         new=" ".join(["{:.4g}".format(v) 
+                                       for v in rp.THEO_ENERGIES]),
+                         path=os.path.join("Tensors",dn),
+                         suppress_ori=True)
+        modifyPARAMETERS(rp, "LMAX", new=str(rp.LMAX),
+                         path=os.path.join("Tensors",dn), suppress_ori=True)
     # delete old delta files in main work folder, if necessary
     #   (there should not be any, unless there was an error)
     for df in [f for f in os.listdir(".") if f.startswith("DEL_") and 
@@ -214,4 +230,111 @@ def refcalc(sl, rp):
                     "directory. This may cause the delta file to "
                     "incorrectly be labelled as belonging with the new "
                     "set of tensors.")
+    return 0
+
+def runDomainRefcalc(dp):
+    """Runs the reference calculation for one domain, based on the 
+    DomainParameters object."""
+    logger = logging.getLogger("tleedm.refcalc")
+    home = os.getcwd()
+    try:
+        os.chdir(dp.workdir)
+        r = refcalc(dp.sl, dp.rp)
+    except:
+        logger.error("Exception during reference calculation for domain {}: "
+                     .format(dp.name), exc_info = True)
+        return ("Exception during reference calculation for domain {}"
+                .format(dp.name))
+    finally:
+        os.chdir(home)
+    if r != 0:
+        return r
+    return 0
+
+def refcalc_domains(rp):
+    """Runs reference calculations for the domains that require them."""
+    rr = [dp for dp in rp.domainParams if dp.refcalcRequired]
+    if not rr:
+        logger.info("Found no domain which requires a reference calculation.")
+        return 0
+    # make sure there's a compiler ready, and we know the number of cores:
+    if rp.FORTRAN_COMP[0] == "":
+        if rp.getFortranComp() != 0:    #returns 0 on success
+            logger.error("No fortran compiler found, cancelling...")
+            return ("No Fortran compiler")
+    for dp in rp.domainParams:
+        dp.rp.FORTRAN_COMP = rp.FORTRAN_COMP
+    r = rp.updateCores()  # if number of cores is not defined, try to find it
+    if r != 0:
+        return r
+    rr = [dp for dp in rp.domainParams if dp.refcalcRequired]
+    logger.info("Running reference calculations in subfolders for domains: "
+                +", ".join([d.name for d in rr]))
+    #    PARALELLIZED VERSION - doesn't work like this, because the dp objects
+    #       don't get written to (probably blocked by being attached to rp?).
+    #       Could be made to work, but serial execution works just as well.
+    # poolsize = min(len(rr), rp.N_CORES)
+    # loglevel = logger.level
+    # try:
+    #     logger.setLevel(logging.WARNING)
+    #     logging.getLogger("tleedm.files.iorefcalc").setLevel(logging.WARNING)
+    #     logging.getLogger("tleedm.files.beams").setLevel(logging.WARNING)
+    #     with multiprocessing.Pool(poolsize) as pool:
+    #         r = pool.map(runDomainRefcalc, rr)
+    # except:
+    #     raise
+    # finally:
+    #     logger.setLevel(loglevel)
+    #     logging.getLogger("tleedm.files.iorefcalc").setLevel(loglevel)
+    #     logging.getLogger("tleedm.files.beams").setLevel(loglevel)
+    # for v in [v for v in r if v != 0]:
+    #     logger.error(v)
+    #     return ("Error during domain reference calculations")
+
+    for dp in rr:
+        logger.info("Starting reference calculation for domain {}"
+                    .format(dp.name))
+        try:
+            r = runDomainRefcalc(dp)
+        except:
+            raise
+        if r != 0:
+            logger.error(r)
+            return("Error during reference calculation for domain {}"
+                   .format(dp.name))
+    logger.info("Domain reference calculations finished.")
+    
+    if len(rr) < len(rp.domainParams):
+        return 0
+    # if refcalcs were done for all domains, get averaged beams
+    if 3 in rp.runHistory and rp.searchResultConfig:
+        weights = [rp.searchResultConfig[0][i][0] 
+                   for i in range(0, len(rp.domainParams))]
+        logger.info("Reference calculations were done for all domains. "
+                "Getting weighted average over domain beams, using "
+                "weights from last search result...")
+    else:
+        weights = []
+        logger.info("Reference calculations were done for all domains, but no "
+                "area weights for the different domains are available yet. "
+                "Getting unweighted average over domain beams...")
+    rp.theobeams["refcalc"] = beams.averageBeams([dp.rp.theobeams["refcalc"] 
+                            for dp in rp.domainParams], weights=weights)
+    try:
+        beams.writeOUTBEAMS(rp.theobeams["refcalc"], filename="THEOBEAMS.csv")
+        theobeams_norm = copy.deepcopy(rp.theobeams["refcalc"])
+        for b in theobeams_norm:
+            b.normMax()
+        beams.writeOUTBEAMS(theobeams_norm,filename="THEOBEAMS_norm.csv")
+    except:
+        logger.error("Error writing THEOBEAMS after reference calculation.",
+                     exc_info = rp.LOG_DEBUG)
+    try:
+        rp.superpos_specout = beams.writeFdOut(rp.theobeams["refcalc"], 
+                                               rp.beamlist,
+                                               filename="refcalc-fd.out", 
+                                               header=rp.systemName)
+    except:
+        logger.error("Error writing averaged refcalc-fd.out for R-factor "
+                     "calculation.", exc_info = rp.LOG_DEBUG)
     return 0

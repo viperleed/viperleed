@@ -22,8 +22,8 @@ if tleedmap_path not in sys.path:
     sys.path.append(tleedmap_path)
 
 import tleedmlib.sections as sections
-from tleedmlib.base import readIntRange
-from tleedmlib.files.parameters import (readPARAMETERS, interpretPARAMETERS, 
+from tleedmlib.base import mkdir_recursive
+from tleedmlib.files.parameters import (readPARAMETERS, interpretPARAMETERS,
                                         modifyPARAMETERS)
 from tleedmlib.files.phaseshifts import readPHASESHIFTS
 from tleedmlib.files.poscar import readPOSCAR
@@ -65,34 +65,39 @@ def runSection(index, sl, rp):
                     3: "SEARCH",
                     11: "R-FACTOR CALCULATION",
                     12: "R-FACTOR CALCULATION",
-                    31: "SUPERPOS",
-                    4: "DOMAIN SEARCH"}
+                    31: "SUPERPOS"}
     requiredFiles = {0: ["POSCAR", "PARAMETERS", "VIBROCC", "IVBEAMS"],
                      1: ["BEAMLIST", "PHASESHIFTS", "POSCAR", "PARAMETERS",
                          "IVBEAMS", "VIBROCC"],
                      2: ["BEAMLIST", "PHASESHIFTS", "POSCAR", "PARAMETERS",
                          "IVBEAMS", "VIBROCC", "DISPLACEMENTS"],
                      3: ["BEAMLIST", "PHASESHIFTS", "POSCAR", "PARAMETERS",
-                         "IVBEAMS", "VIBROCC", "DISPLACEMENTS","EXPBEAMS"],
-                     11: ["BEAMLIST", "PHASESHIFTS", "POSCAR", "PARAMETERS",
-                         "IVBEAMS", "EXPBEAMS"],
-                     12: ["BEAMLIST", "PHASESHIFTS", "POSCAR", "PARAMETERS",
-                         "IVBEAMS", "EXPBEAMS"],
+                         "IVBEAMS", "VIBROCC", "DISPLACEMENTS", "EXPBEAMS"],
+                     11: ["BEAMLIST", "PARAMETERS", "IVBEAMS", "EXPBEAMS"],
+                     12: ["BEAMLIST", "PARAMETERS", "IVBEAMS", "EXPBEAMS"],
                      31: ["BEAMLIST", "POSCAR", "PARAMETERS", "IVBEAMS",
-                          "VIBROCC", "DISPLACEMENTS"],
-                     4: []}  # !!! required files for domain search?
+                          "VIBROCC", "DISPLACEMENTS"]}
                 # files that need to be there for the different parts to run
-    if rp.hasDomains:
-        requiredFiles[0] = ["PARAMETERS", "IVBEAMS"]
+
+    checkfiles = requiredFiles[index][:]
     o = "\nSTARTING SECTION: "+sectionNames[index]
     if index == 3 and rp.disp_blocks and rp.disp_blocks[rp.search_index][1]:
         o += " "+rp.disp_blocks[rp.search_index][1]  # displacement block name
+    if rp.domainParams or rp.DOMAINS:
+        o += " (DOMAINS)"
+        for fn in ["POSCAR", "VIBROCC", "PHASESHIFTS"]:
+            try:
+                checkfiles.remove(fn)
+            except:
+                pass
     logger.info(o)
     sectionStartTime = timer()
     rp.runHistory.append(index)
+    for dp in rp.domainParams:
+        dp.rp.runHistory = rp.runHistory
     i = 0
-    while i < len(requiredFiles[index]):
-        filename = requiredFiles[index][i]
+    while i < len(checkfiles):
+        filename = checkfiles[i]
         ignoreError = False
         if not rp.fileLoaded[filename]:
             # try loading files
@@ -126,7 +131,7 @@ def runSection(index, sl, rp):
                 except FileNotFoundError:
                     if (os.path.isfile("EXPBEAMS") or
                              os.path.isfile("EXPBEAMS.csv")):
-                        requiredFiles[index].insert(i+1, "EXPBEAMS")
+                        checkfiles.insert(i+1, "EXPBEAMS")
                         logger.warning("IVBEAMS file not found. Will attempt "
                                 "generating IVBEAMS from EXBEAMS.")
                         ignoreError = True
@@ -210,7 +215,7 @@ def runSection(index, sl, rp):
         sections.initialization(sl, rp)
     elif index == 1:
         r = sections.refcalc(sl, rp)
-    elif index == 11 or index == 12:
+    elif index in [11, 12]:
         r = sections.rfactor(sl, rp, index)
     elif index == 2:
         r = sections.deltas(sl, rp)
@@ -228,7 +233,7 @@ def runSection(index, sl, rp):
     return 0
 
 def sortfiles(tensorIndex, delete_unzipped = False, tensors = True,
-              deltas = True):
+              deltas = True, path = ""):
     """Makes Tensors and Deltas zip files. Copies files to AUX and OUT folders
     as appropriate. If delete_unzipped is set to True, deletes unzipped Deltas
     and Tensors directories."""
@@ -249,94 +254,78 @@ def sortfiles(tensorIndex, delete_unzipped = False, tensors = True,
                 "Rfactor_analysis_refcalc.pdf",
                 "Rfactor_analysis_superpos.pdf"]
     # outfiles with variable names:
-    outfiles.extend([f for f in os.listdir(".") if
+    if not path:
+        path = "."
+    outfiles.extend([f for f in os.listdir(path) if
                          (f.startswith("POSCAR_OUT") or
                           f.startswith("VIBROCC_OUT") or
                           f.startswith("R_OUT"))])
     # clean up deltas
-    deltalist = [f for f in os.listdir('.') if f.startswith("DEL_")]
+    deltalist = [f for f in os.listdir(path) if f.startswith("DEL_")]
     if len(deltalist) > 0:
         fn = "Deltas_"+str(tensorIndex).zfill(3)
-        if not os.path.isdir(os.path.join(".","Deltas")):
-            os.mkdir(os.path.join(".","Deltas"))
-        if not os.path.isdir(os.path.join(".","Deltas",fn)):
-            os.mkdir(os.path.join(".","Deltas",fn))
+        mkdir_recursive(os.path.join(path, "Deltas", fn))
         try:
             for df in deltalist:
-                shutil.move(df, os.path.join(".","Deltas",fn,df))
+                shutil.move(os.path.join(path, df),
+                            os.path.join(path,"Deltas",fn,df))
         except:
             logger.error("Error moving Delta files: ", exc_info = True)
-    # if there are unzipped Tensors or Deltas directories, zip them:
-    if os.path.isdir(os.path.join(".","Tensors")) and (tensors or
-                                                       delete_unzipped):
-        rgx = re.compile(r'Tensors_[0-9]{3}')
-        for d in [d for d in os.listdir(os.path.join(".","Tensors"))
-                  if (os.path.isdir(os.path.join(".","Tensors",d))
-                      and rgx.match(d))]:
-            if not rgx.match(d).span()[1] == 11:
-                continue
-            delete = delete_unzipped
-            if tensors:
-                logger.info("Packing {}.zip...".format(d))
-                try:
-                    shutil.make_archive(os.path.join("Tensors",d),"zip",
-                                        os.path.join("Tensors",d))
-                except:
-                    logger.error("Error packing {}.zip file: ".format(d))
-                    delete = False
-            if delete:
-                try:
-                    shutil.rmtree(os.path.join(".","Tensors",d))
-                except:
-                    logger.warning("Error deleting unzipped Tensors "
-                        "directory. This will increase the size of the work "
-                        "folder, but not cause any problems.")
-    if os.path.isdir(os.path.join(".","Deltas")) and (deltas or
-                                                      delete_unzipped):
-        rgx = re.compile(r'Deltas_[0-9]{3}')
-        for d in [d for d in os.listdir(os.path.join(".","Deltas"))
-                  if (os.path.isdir(os.path.join(".","Deltas",d))
-                      and rgx.match(d))]:
-            if not rgx.match(d).span()[1] == 10:
-                continue
-            delete = delete_unzipped
-            if deltas:
-                logger.info("Packing {}.zip...".format(d))
-                try:
-                    shutil.make_archive(os.path.join("Deltas",d),"zip",
-                                        os.path.join("Deltas",d))
-                except:
-                    logger.error("Error packing {}.zip file.".format(d))
-                    delete = False
-            if delete:
-                try:
-                    shutil.rmtree(os.path.join(".","Deltas",d))
-                except:
-                    logger.warning("Error deleting unzipped Deltas "
-                        "directory. This will increase the size of the work "
-                        "folder, but not cause any problems.")
-    # sort AUX and OUT files:
-    try:
-        if not os.path.isdir(os.path.join(".","AUX")):
-            os.mkdir(os.path.join(".","AUX"))
-        if not os.path.isdir(os.path.join(".","OUT")):
-            os.mkdir(os.path.join(".","OUT"))
-    except:
-        logger.error("Error creating AUX and OUT folders: ", exc_info = True)
-    for f in auxfiles:
-        if os.path.isfile(os.path.join(".",f)):
-            try:
-                shutil.copy2(f, os.path.join(".","AUX",f))
-            except:
-                logger.error("Error moving AUX file "+f+": ", exc_info = True)
-    for f in outfiles:
-        if os.path.isfile(os.path.join(".",f)):
-            try:
-                shutil.copy2(f, os.path.join(".","OUT",f))
-            except:
-                logger.error("Error copying OUT file "+f+": ",
-                              exc_info = True)
 
+    # if there are unzipped Tensors or Deltas directories, zip them:
+    for t in ["Tensors", "Deltas"]:
+        if t == "Tensors":
+            do = tensors
+        else:
+            do = deltas
+        rgx = re.compile(t+r'_[0-9]{3}')
+        if not os.path.isdir(os.path.join(path, t)):
+            continue
+        if not (do or delete_unzipped):
+            continue
+        for d in [d for d in os.listdir(os.path.join(path, t))
+                  if (os.path.isdir(os.path.join(path, t, d))
+                      and rgx.match(d))]:
+            if not rgx.match(d).span()[1] == len(t)+4:
+                continue
+            delete = delete_unzipped
+            if do:
+                if not path:
+                    o = d
+                else:
+                    o = os.path.relpath(os.path.join(path, t, d))
+                logger.info("Packing {}.zip...".format(o))
+                try:
+                    shutil.make_archive(os.path.join(path, t, d),"zip",
+                                        os.path.join(path, t, d))
+                except:
+                    logger.error("Error packing {}.zip file: ".format(o))
+                    delete = False
+            if delete:
+                try:
+                    shutil.rmtree(os.path.join(path, t, d))
+                except:
+                    logger.warning("Error deleting unzipped {} directory. "
+                        "This will increase the size of the work folder, "
+                        "but not cause any problems.".format(t))
+    # sort AUX and OUT files:
+    for t in ["AUX", "OUT"]:
+        try:
+            mkdir_recursive(os.path.join(path, t))
+        except:
+            logger.error("Error creating {} folder: ".format(t),
+                         exc_info = True)
+        if t == "AUX":
+            filelist = auxfiles
+        else:
+            filelist = outfiles
+        for f in [f for f in filelist
+                  if os.path.isfile(os.path.join(path, f))]:
+            try:
+                shutil.copy2(os.path.join(path, f), os.path.join(path, t, f))
+            except:
+                logger.error("Error moving {} file {}: ".format(t, f),
+                             exc_info = True)
 
 ###############################################
 #            CLEANUP FUNCTIONS                #
@@ -348,13 +337,12 @@ def moveoldruns(rp, prerun = False):
     instead of using the manifest, all potentially interesting files will be
     copied, and the new folder will get index 0."""
     sectionabbrv = {1: "R", 2: "D", 3: "S"}
-    if not os.path.isdir(os.path.join(".","workhistory")):
-        try:
-            os.mkdir(os.path.join(".","workhistory"))
-        except:
-            logger.error("Error creating workhistory folder: ",
-                          exc_info = True)
-            return 1
+    try:
+        mkdir_recursive(os.path.join(".","workhistory"))
+    except:
+        logger.error("Error creating workhistory folder: ",
+                      exc_info = True)
+        return 1
     if not prerun:
         rp.manifest.append("workhistory")
     dl = [n for n in os.listdir("workhistory")
@@ -404,6 +392,9 @@ def moveoldruns(rp, prerun = False):
     if not prerun:
         sortfiles(rp.TENSOR_INDEX, delete_unzipped=False,
                   tensors = False, deltas = False)
+        for dp in rp.domainParams:
+            sortfiles(dp.rp.TENSOR_INDEX, delete_unzipped=False,
+                      tensors = False, deltas = False)
     if prerun:
         filelist = [f for f in os.listdir() if os.path.isfile(f) and
                     f.endswith(".log") and f not in rp.manifest]
@@ -453,22 +444,31 @@ def cleanup(manifest, rp = None):
     logger.info("\nStarting cleanup...")
     if rp is None:
         history = []
-        newTensors = False
-        newDeltas = False
-        tind = 0
+        to_sort = [{"newTensors": False, "newDeltas": False, "tind": 0,
+                    "path": ""}]
     else:
         history = rp.runHistory
-        newTensors = ("Tensors" in rp.manifest)
-        newDeltas = ("Deltas" in rp.manifest)
         rp.closePdfReportFigs()
-        tind = rp.TENSOR_INDEX
-
-    try:
-        sortfiles(tind, delete_unzipped=True, tensors=newTensors,
-                                                         deltas=newDeltas)
-    except:
-        logger.warning("Error sorting files to AUX/OUT folders: ",
-                        exc_info = True)
+        if not rp.domainParams:
+            to_sort = [{"newTensors": ("Tensors" in rp.manifest),
+                       "newDeltas": ("Deltas" in rp.manifest),
+                       "tind": rp.TENSOR_INDEX, "path": ""}]
+        else:
+            to_sort = [{"newTensors": False, "newDeltas": False, "tind": 0,
+                        "path": ""}]
+            for dp in rp.domainParams:
+                to_sort.append({"newTensors": ("Tensors" in dp.rp.manifest),
+                                "newDeltas": ("Deltas" in dp.rp.manifest),
+                                "tind": dp.rp.TENSOR_INDEX,
+                                "path": dp.workdir})
+    for d in to_sort:
+        try:
+            sortfiles(d["tind"], delete_unzipped=True,
+                      tensors = d["newTensors"],
+                      deltas = d["newDeltas"], path = d["path"])
+        except:
+            logger.warning("Error sorting files to AUX/OUT folders: ",
+                            exc_info = True)
     # write manifest
     written = []
     try:
@@ -542,15 +542,11 @@ def main():
         logger.error("Exception while reading PARAMETERS file", exc_info=True)
         cleanup(tmpmanifest)
         return 2
-    
+
     # check if this is going to be a domain search
     domains = False
-    if "RUN" in rp.readParams:
-        _, value = rp.readParams["RUN"][-1]
-        for s in value.split():
-            if 4 in readIntRange(s):
-                domains = True
-                break
+    if "DOMAIN" in rp.readParams:
+        domains = True
 
     if domains:  # no POSCAR in main folder for domain searches
         sl = None
@@ -568,7 +564,7 @@ def main():
             logger.error("POSCAR not found. Stopping execution...")
             cleanup(tmpmanifest)
             return 1
-        
+
         if not sl.preprocessed:
             logger.info("The POSCAR file will be processed and overwritten. "
                          "Copying the original POSCAR to POSCAR_user...")
@@ -628,7 +624,7 @@ def main():
     # clean up old executable files:
     for fn in ["refcalc", "rfactor", "search", "superpos"]:
         p = re.compile(fn+r'-\d{6}-\d{6}')
-        for f in [f for f in os.listdir() if len(f) == len(fn)+14 
+        for f in [f for f in os.listdir() if len(f) == len(fn)+14
                                           and p.match(f)]:
             try:
                 os.remove(f)
@@ -667,7 +663,11 @@ def main():
                 logger.error("Error in tleedm execution: "+str(r))
                 cleanup(rp.manifest, rp)
                 return 1
-            elif (sec == 0 and not rp.hasDomains and not sl.preprocessed 
+            if domains and sl is None:
+                sl = rp.pseudoSlab
+            if rp.domainParams:
+                rp.setHaltingLevel(max([dp.rp.halt for dp in rp.domainParams]))
+            if (sec == 0 and not domains and not sl.preprocessed
                   and rp.HALTING <= 2 and len(rp.RUN) > 0):
                 logger.info("Initialization finished. Execution will stop. "
                     "Please check whether comments in POSCAR are correct, "
@@ -675,7 +675,8 @@ def main():
                 rp.setHaltingLevel(2)
                 initHalt = True
             elif (sec == 1 and rp.fileLoaded["EXPBEAMS"]):
-                if rp.RUN[:1] != [11]:   # r-factor after refcalc
+                if (rp.RUN[:1] != [11] and          # r-factor after refcalc
+                        (not rp.domainParams or 3 in rp.runHistory)):
                     rp.RUN.insert(0, 11)
             elif (sec == 3 and rp.fileLoaded["EXPBEAMS"]):
                 if rp.RUN[:1] != [31]:  # superpos after search
@@ -704,11 +705,21 @@ def main():
                         logger.info(o)
                 else:
                     rp.search_index += 1
+                for dp in rp.domainParams:
+                    dp.rp.search_index = rp.search_index
                 if len(rp.disp_blocks) > rp.search_index:
-                    sl.restoreOriState()
+                    if not rp.domainParams:
+                        sl.restoreOriState()
                     rp.resetSearchConv()
+                    for dp in rp.domainParams:
+                        dp.sl.restoreOriState()
+                        dp.rp.resetSearchConv()
                     if rp.SEARCH_START == "control":
                         rp.SEARCH_START = "crandom"
+                    # if sec == 412:
+                    #     if rp.RUN[:2] != [42,43]:
+                    #         rp.RUN = [42,43] + rp.RUN
+                    # else:
                     if rp.RUN[:2] != [2,3]:
                         rp.RUN = [2,3] + rp.RUN
         except KeyboardInterrupt:

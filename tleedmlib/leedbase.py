@@ -17,7 +17,7 @@ import copy
 from fractions import Fraction
 
 from guilib.base import get_equivalent_beams
-from tleedmlib.base import parseMathSqrt, angle, cosvec
+from tleedmlib.base import parseMathSqrt, angle, cosvec, mkdir_recursive
 from tleedmlib.files.parameters import readPARAMETERS, interpretPARAMETERS
 from tleedmlib.files.poscar import readPOSCAR
 from tleedmlib.files.vibrocc import readVIBROCC
@@ -151,41 +151,40 @@ def getMaxTensorIndex(home="."):
     Tensors zip file."""
     if not os.path.isdir(os.path.join(home,"Tensors")):
         return 0
-    else:
-        indlist = []
-        rgx = re.compile(r'Tensors_[0-9]{3}\.zip')
-        for f in [f for f in os.listdir(os.path.join(home,"Tensors")) 
-                  if (os.path.isfile(os.path.join(home,"Tensors",f))
-                      and rgx.match(f))]:
-            m = rgx.match(f)
-            if m.span()[1] == 15:  # exact match
-                indlist.append(int(m.group(0)[-7:-4]))
-        rgx = re.compile(r'Tensors_[0-9]{3}')
-        for f in [f for f in os.listdir(os.path.join(home,"Tensors")) 
-                  if (os.path.isdir(os.path.join(home,"Tensors",f))
-                      and rgx.match(f))]:
-            m = rgx.match(f)
-            if m.span()[1] == 11:  # exact match
-                indlist.append(int(m.group(0)[-3:]))
-        if indlist:
-            return max(indlist)
+    indlist = []
+    rgx = re.compile(r'Tensors_[0-9]{3}\.zip')
+    for f in [f for f in os.listdir(os.path.join(home,"Tensors")) 
+              if (os.path.isfile(os.path.join(home,"Tensors",f))
+                  and rgx.match(f))]:
+        m = rgx.match(f)
+        if m.span()[1] == 15:  # exact match
+            indlist.append(int(m.group(0)[-7:-4]))
+    rgx = re.compile(r'Tensors_[0-9]{3}')
+    for f in [f for f in os.listdir(os.path.join(home,"Tensors")) 
+              if (os.path.isdir(os.path.join(home,"Tensors",f))
+                  and rgx.match(f))]:
+        m = rgx.match(f)
+        if m.span()[1] == 11:  # exact match
+            indlist.append(int(m.group(0)[-3:]))
+    if indlist:
+        return max(indlist)
     return 0
 
 def getTensors(index, basedir=".", targetdir=".", required=True):
     """Fetches Tensor files from Tensors or archive with specified tensor 
     index. If required is set True, an error will be printed if no Tensor 
     files are found.
-    basedir is the directory in which the Tensor files are based.
-    targetdir is the directory to which the Tensor files should be moves."""
+    basedir is the directory in which the Tensor directory is based.
+    targetdir is the directory to which the Tensor files should be moved."""
     dn = "Tensors_"+str(index).zfill(3)
+    if (os.path.basename(basedir) == "Tensors" 
+            and not os.path.isdir(os.path.join(basedir, "Tensors"))):
+        basedir = os.path.dirname(basedir)
     if not os.path.isdir(os.path.join(basedir,"Tensors",dn)):
         if os.path.isfile(os.path.join(basedir,"Tensors",dn+".zip")):
             try:
                 logger.info("Unpacking {}.zip...".format(dn))
-                if not os.path.isdir(os.path.join(targetdir, "Tensors")):
-                    os.makedir(os.path.join(targetdir, "Tensors"))
-                if not os.path.isdir(os.path.join(targetdir, "Tensors", dn)):
-                    os.mkdir(os.path.join(targetdir,"Tensors",dn))
+                mkdir_recursive(os.path.join(targetdir,"Tensors",dn))
                 shutil.unpack_archive(os.path.join(basedir,"Tensors",
                                                    dn+".zip"),
                                       os.path.join(targetdir,"Tensors",dn))
@@ -197,10 +196,7 @@ def getTensors(index, basedir=".", targetdir=".", required=True):
             return ("Tensors not found")
     elif basedir != targetdir:
         try:
-            if not os.path.isdir(os.path.join(targetdir, "Tensors")):
-                os.makedir(os.path.join(targetdir, "Tensors"))
-            if not os.path.isdir(os.path.join(targetdir,"Tensors",dn)):
-                os.mkdir(os.path.join(targetdir,"Tensors",dn))
+            mkdir_recursive(os.path.join(targetdir,"Tensors",dn))
             for file in os.path.listdir(os.path.join(basedir,"Tensors",dn)):
                 shutil.copy2(file, os.path.join(targetdir,"Tensors",dn))
         except:
@@ -208,26 +204,28 @@ def getTensors(index, basedir=".", targetdir=".", required=True):
             raise
     return 0
 
-def getDeltas(index, required=True):
+def getDeltas(index, basedir=".", targetdir=".", required=True):
     """Fetches Delta files from Deltas or archive with specified tensor index. 
     If required is set True, an error will be printed if no Delta files are 
-    found."""
+    found.
+    basedir is the directory in which the Delta directory is based.
+    targetdir is the directory to which the Tensor files should be moved."""
     dn = "Deltas_"+str(index).zfill(3)
-    if os.path.isdir(os.path.join(".","Deltas",dn)):
-        for f in [f for f in os.listdir(os.path.join(".","Deltas",dn))
-                  if (os.path.isfile(os.path.join(".","Deltas",dn,f)) 
+    if os.path.isdir(os.path.join(basedir,"Deltas",dn)):
+        for f in [f for f in os.listdir(os.path.join(basedir,"Deltas",dn))
+                  if (os.path.isfile(os.path.join(basedir,"Deltas",dn,f)) 
                       and f.startswith("DEL_"))]:
             try:
-                shutil.copy2(os.path.join(".","Deltas",dn,f), ".")
+                shutil.copy2(os.path.join(basedir,"Deltas",dn,f), targetdir)
             except:
                 logger.error("Could not copy existing delta files to "
                               "work directory")
                 raise
-    elif os.path.isfile(os.path.join(".","Deltas",dn+".zip")):
+    elif os.path.isfile(os.path.join(basedir,"Deltas",dn+".zip")):
         try:
             logger.info("Unpacking {}.zip...".format(dn))
-            shutil.unpack_archive(os.path.join(".","Deltas",dn+".zip"),
-                                  ".")
+            shutil.unpack_archive(os.path.join(basedir,"Deltas",dn+".zip"),
+                                  targetdir)
         except:
             logger.error("Failed to unpack {}.zip".dn)
             raise
@@ -360,7 +358,7 @@ def readWoodsNotation(s, ucell):
         #q = np.linalg.norm(r[1])/np.linalg.norm(r[0])  
         # this would be to get from bulk vectors to surface, we have to reverse
         q = 1/(np.linalg.norm(r[1])/np.linalg.norm(r[0]))
-        omega = angle(r[0],r[1])
+        omega = abs(angle(r[0],r[1]))
                  #this is always constant in Wood notation, no need to reverse.
         if t == 'p':    
             #matrices from: Klaus Hermann; Crystallography and Surface 
@@ -505,6 +503,9 @@ def reduceUnitCell(ab, eps = 0.001):
 
 def getLEEDdict(sl, rp):
     """Returns a LEED dict containing information needed by guilib functions"""
+    if sl.planegroup == "unknown":
+        logger.warning("Generating LEED dictionary for slab with unknown "
+                       "plane group!")
     if sl.planegroup in ["pm", "pg", "cm", "rcm", "pmg"]:
         pgstring = sl.planegroup+"[{} {}]".format(sl.orisymplane.par[0], 
                                                   sl.orisymplane.par[1])
@@ -526,7 +527,14 @@ def getLEEDdict(sl, rp):
 def getSymEqBeams(sl, rp):
     """Returns a list of tuples ((hf,kf), index), where (hf,kf) are beams and 
     index is the group of other beams they are equivalent to"""
-    symeqnames = get_equivalent_beams(getLEEDdict(sl, rp))
+    if not rp.domainParams:
+        d = [getLEEDdict(sl, rp)]
+    else:
+        d = [getLEEDdict(dp.sl, dp.rp) for dp in rp.domainParams]
+    if any([v is None for v in d]):
+        logger.error("Failed to get beam equivalence list")
+        return []
+    symeqnames = get_equivalent_beams(*d)
     symeq = []
     rgx = re.compile(r'(?P<h>[-0-9/]+)\s*,\s*(?P<k>[-0-9/]+)')
     for (name, index) in symeqnames:

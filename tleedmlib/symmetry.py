@@ -21,48 +21,46 @@ from tleedmlib.files.parameters import modifyPARAMETERS
 
 logger = logging.getLogger("tleedm.symmetry")
 
-def uniqueSymPosList(sl, rp, spl, verbose, description=""):
-    eps = rp.SYMMETRY_EPS
-    abst = np.transpose(sl.ucell[0:2,0:2])
-    tree = sps.KDTree(spl)
-    if len(spl) > 1e6:
-        logger.warning("Approximate search for symmetry positions will be "
-            "applied due to very large number of candidates - check result "
-            "for errors! If the search fails, consider lowering the "
-            "SYMMETRY_EPS z component or setting the SYMMETRY_FIND_ORI "
-            "parameter to False.")
-        rp.setHaltingLevel(2)
-        approximate = min([np.linalg.norm(abst[0]),
-                           np.linalg.norm(abst[1])])/100
-                    # significantly speeds up the search especially for
-                    #   large unit cells, but might give some errors.
-    else:
-        approximate = 0
-    usepoint = [True]*len(spl)
-    if verbose: t = int(len(spl)/10.0)
-    for (i,p) in enumerate(spl):
-        if verbose:
-            if (i+1) % t == 0:
-                logger.debug(description+": "
-                              +str(int((i+1)/t)*10)+"%")
-        if usepoint[i]:
-            for j in tree.query_ball_point(p, eps,
-                                           eps=approximate)[1:]:
-                usepoint[j] = False
-    spl = list(itertools.compress(spl,usepoint))
-    return(spl)
+
 
 def getSymPosLists(sl, rp, pointlist, output=False):
     """Generates and returns a symposlist and hexsymposlist based on the
     pointlist, for example the list of cartesian in-plane atom positions
     in the lowest-occupied layer."""
-    # eps = rp.SYMMETRY_EPS
-    # abst = np.transpose(sl.ucell[0:2,0:2]) #surface unit cell, transposed
-    # lowocclayer = sl.getLowOccLayer()
-    symposlist = [np.array([0.0,0.0])]
-                #always check the origin, even if it was not found.
+    
+    def uniqueSymPosList(sl, rp, spl, verbose, description=""):
+        eps = rp.SYMMETRY_EPS
+        abst = np.transpose(sl.ucell[0:2,0:2])
+        tree = sps.KDTree(spl)
+        if len(spl) > 1e6:
+            logger.warning("Approximate search for symmetry positions will "
+                "be applied due to very large number of candidates - check "
+                "result for errors! If the search fails, consider lowering "
+                "the SYMMETRY_EPS z component or setting the "
+                "SYMMETRY_FIND_ORI parameter to False.")
+            rp.setHaltingLevel(2)
+            approximate = min([np.linalg.norm(abst[0]),
+                               np.linalg.norm(abst[1])])/100
+                        # significantly speeds up the search especially for
+                        #   large unit cells, but might give some errors.
+        else:
+            approximate = 0
+        usepoint = [True]*len(spl)
+        if verbose: t = int(len(spl)/10.0)
+        for (i,p) in enumerate(spl):
+            if verbose:
+                if (i+1) % t == 0:
+                    logger.debug(description+": "
+                                  +str(int((i+1)/t)*10)+"%")
+            if usepoint[i]:
+                for j in tree.query_ball_point(p, eps,
+                                               eps=approximate)[1:]:
+                    usepoint[j] = False
+        spl = list(itertools.compress(spl,usepoint))
+        return(spl)
+
+    symposlist = [np.array([0.0,0.0])]    # always check the origin
     hexsymposlist = []
-    # plist = [at.cartpos[0:2] for at in lowocclayer.atlist]
     symposlist.extend(pointlist)
     symposlist.extend([(p1+p2)/2 for (p1,p2) in
                        itertools.combinations(pointlist,2)])
@@ -82,8 +80,9 @@ def getSymPosLists(sl, rp, pointlist, output=False):
     # remove duplicates:
     verbose = (False if (len(symposlist)+len(hexsymposlist) < 1e5
                          or not output) else True)
-    if verbose: logger.debug("Found "+str(len(symposlist)
-            +len(hexsymposlist))+" candidates, removing duplicates...")
+    if verbose: 
+        logger.debug("Found {} candidates, removing duplicates..."
+                     .format(len(symposlist)+len(hexsymposlist)))
     #symposlist:
     symposlist = uniqueSymPosList(sl, rp, symposlist, verbose,
                                         description = "Atoms and pairs")
@@ -195,7 +194,7 @@ def findSymmetry(sl, rp, bulk=False, output=True):
             newsl = ("SUPERLATTICE M = {:.0f} {:.0f}, {:.0f} {:.0f}"
                      .format(rp.SUPERLATTICE[0,0], rp.SUPERLATTICE[0,1],
                              rp.SUPERLATTICE[1,0], rp.SUPERLATTICE[1,1]))
-            modifyPARAMETERS(rp, "SUPERLATTICE", newsl)
+            modifyPARAMETERS(rp, "SUPERLATTICE", newsl, include_left=True)
         # MODIFY SYMMETRY_FIX PARAMETER
         if "[" in rp.SYMMETRY_FIX and not bulk:
             rgx = re.compile(r'\s*(?P<group>(pm|pg|cm|rcm|pmg))\s*\[\s*'
@@ -207,8 +206,7 @@ def findSymmetry(sl, rp, bulk=False, output=True):
             newab = np.dot(sl.ucell[0:2,0:2], np.transpose(usurf))
             newdir = np.dot(np.linalg.inv(newab),cartdir)
             newdir = newdir / min(newdir)
-            s = ("SYMMETRY_FIX = "+targetsym+"[{:.0f} {:.0f}]"
-                                             .format(newdir[0], newdir[1]))
+            s = (targetsym+"[{:.0f} {:.0f}]".format(newdir[0], newdir[1]))
             modifyPARAMETERS(rp, "SYMMETRY_FIX", s)
         # MODIFY UNIT CELL
         sl.getCartesianCoordinates()
@@ -218,6 +216,7 @@ def findSymmetry(sl, rp, bulk=False, output=True):
         sl.collapseCartesianCoordinates(updateOrigin=True)
                 #gets fractional coordinates in the new unit cell and
                 #  collapses appropriately
+
     # check cell type again
     abst = np.transpose(sl.ucell[0:2,0:2])
     dp = np.dot(abst[0],abst[1])
@@ -228,7 +227,7 @@ def findSymmetry(sl, rp, bulk=False, output=True):
             celltype = "rectangular"
     elif np.linalg.norm(abst[0]) - np.linalg.norm(abst[1]) >= eps:
         celltype = "oblique"
-    elif angle(abst[0],abst[1]) - (2*np.pi/3) < eps:
+    elif abs(abs(angle(abst[0],abst[1])) - (2*np.pi/3)) < eps:
         celltype = "hexagonal"
     else:
         celltype = "rhombic"
@@ -380,10 +379,12 @@ def findSymmetry(sl, rp, bulk=False, output=True):
                 for spl in symplanelist:
                     if oriplane is None:
                         oriplane = spl
-                    elif (np.linalg.norm(spl.pos-abst[0]-abst[1])
-                           < np.linalg.norm(oriplane.pos-abst[0]-abst[1])):
-                    #prioritize planes close to the origin of cell (1,1)
+                    elif (spl.distanceFromOrigin(abst) < 
+                          oriplane.distanceFromOrigin(abst)):
+                        #prioritize planes close to the origin of cell (1,1)
                         oriplane = spl
+                        
+                        
         else:
             if not glide:
                 planegroup = "pm"
@@ -393,19 +394,18 @@ def findSymmetry(sl, rp, bulk=False, output=True):
                 if spl.type == "mirror":
                     if oriplane is None:
                         oriplane = spl
-                    elif (np.linalg.norm(spl.pos-abst[0]-abst[1])
-                           < np.linalg.norm(oriplane.pos-abst[0]-abst[1])):
+                    elif (spl.distanceFromOrigin(abst) < 
+                          oriplane.distanceFromOrigin(abst)):
                         oriplane = spl
                        #prioritize planes close to the origin of cell (1,1)
             if planegroup == "cm":
                 #both mirrors and glides. if parallel to unit vectors: rcm
                 if tuple(oriplane.par) in [(1,0),(0,1)]:
                     planegroup = "rcm"
-        if oriplane is not None:
+        if oriplane is not None and oriplane.distanceFromOrigin(abst) > eps:
             # shift to closest point on oriplane
             shiftv = (np.array([oriplane.dir[1], -oriplane.dir[0]])
-                * tl.base.distanceLineThroughPointsFromPoint(oriplane.pos,
-                            oriplane.pos+oriplane.dir, np.array([0,0])))
+                      * oriplane.distanceFromOrigin(abst))
             if tl.base.distanceLineThroughPointsFromPoint(oriplane.pos,
                                 oriplane.pos+oriplane.dir,shiftv) > eps:
                 shiftv = -1*shiftv
@@ -415,6 +415,7 @@ def findSymmetry(sl, rp, bulk=False, output=True):
             #  would have to be shifted as well.
             sl.uCellMod.append(('add',-shiftv))
             sl.getFractionalCoordinates()
+        if oriplane:
             oriplane.pos = np.array([0,0])
             sl.orisymplane = oriplane
 
@@ -604,6 +605,13 @@ def setSymmetry(sl, rp, targetsym):
     """Sets the symmetry of the slab, based on the one found by
     findSymmetry. Can be the planegroup from findSymmetry, or a reduction
     from it."""
+    
+    def invalidDirectionMessage(rp, planegroup, targetsym, setHaltingTo=2):
+        logger.warning("Invalid direction given for symmetry reduction "
+            "from {} to {}. Input will be ignored, proceeding without "
+            "symmetry reduction.".format(planegroup, targetsym))
+        rp.setHaltingLevel(setHaltingTo)
+        
     abst = np.transpose(sl.ucell[0:2,0:2]) #surface unit cell, transposed
     # set high symmetry
     if not "[" in sl.foundplanegroup:
@@ -699,11 +707,7 @@ def setSymmetry(sl, rp, targetsym):
                         sl.orisymplane= SymPlane(np.array([0,0]),
                                            np.dot(tspar,abst),abst)
                     else:
-                        logger.warning("Invalid direction given for "
-                            "symmetry reduction from "+planegroup+" to "
-                            +targetsym+". Input will be ignored, "
-                            "proceeding without symmetry reduction.")
-                        rp.setHaltingLevel(2)
+                        invalidDirectionMessage(rp, planegroup, targetsym)
                 else:
                     sl.planegroup = targetsym
                     logger.warning("Unexpected point encountered "
@@ -732,22 +736,14 @@ def setSymmetry(sl, rp, targetsym):
                     sl.orisymplane.type = "glide"
                     sl.planegroup = targetsym
                 else:
-                    logger.warning("Invalid direction given for "
-                            "symmetry reduction from "+planegroup+" to "
-                            +targetsym+". Input will be ignored, "
-                            "proceeding without symmetry reduction.")
-                    rp.setHaltingLevel(2)
+                    invalidDirectionMessage(rp, planegroup, targetsym)
             elif planegroup == 'cmm':   #reducing to: cm
                 if (tspar[0],tspar[1]) in [(1,1),(1,-1),(-1,-1),(-1,1)]:
                     sl.orisymplane = SymPlane(np.array([0,0]),
                                                 np.dot(tspar,abst),abst)
                     sl.planegroup = targetsym
                 else:
-                    logger.warning("Invalid direction given for "
-                           "symmetry reduction from "+planegroup+" to "
-                           +targetsym+". Input will be ignored, "
-                           "proceeding without symmetry reduction.")
-                    rp.setHaltingLevel(2)
+                    invalidDirectionMessage(rp, planegroup, targetsym)
             elif planegroup == 'rcmm':
                 #reducing to: pm, pg, rcm, pmg
                 if (tspar[0],tspar[1]) in [(1,0),(0,1),(-1,0),(0,-1)]:
@@ -775,11 +771,7 @@ def setSymmetry(sl, rp, targetsym):
                         sl.orisymplane.type = "glide"
                     sl.planegroup = targetsym
                 else:
-                    logger.warning("Invalid direction given for "
-                           "symmetry reduction from "+planegroup+" to "
-                           +targetsym+". Input will be ignored, "
-                           "proceeding without symmetry reduction.")
-                    rp.setHaltingLevel(2)
+                    invalidDirectionMessage(rp, planegroup, targetsym)
             elif planegroup == 'p4m':   #reducing to: pm, cm, cmm
                 if targetsym == 'cmm':
                     sl.planegroup = targetsym
@@ -789,12 +781,7 @@ def setSymmetry(sl, rp, targetsym):
                                                    np.dot(tspar,abst),abst)
                         sl.planegroup = targetsym
                     else:
-                        logger.warning("Invalid direction given "
-                                "for symmetry reduction from "
-                                +planegroup+" to "+targetsym+". Input "
-                                "will be ignored, proceeding without "
-                                "symmetry reduction.")
-                        rp.setHaltingLevel(2)
+                        invalidDirectionMessage(rp, planegroup, targetsym)
                 elif targetsym == 'cm':
                     if (tspar[0],tspar[1]) in [(1,1),(1,-1),
                                                (-1,-1),(-1,1)]:
@@ -802,12 +789,7 @@ def setSymmetry(sl, rp, targetsym):
                                                    np.dot(tspar,abst),abst)
                         sl.planegroup = targetsym
                     else:
-                        logger.warning("Invalid direction given "
-                                "for symmetry reduction from "
-                                +planegroup+" to "+targetsym+". Input "
-                                "will be ignored, proceeding without "
-                                "symmetry reduction.")
-                        rp.setHaltingLevel(2)
+                        invalidDirectionMessage(rp, planegroup, targetsym)
             elif planegroup == 'p4g':   #reducing to: pg, cm, cmm
                 allowed = True
                 if targetsym == 'cmm':
@@ -834,11 +816,7 @@ def setSymmetry(sl, rp, targetsym):
                     sl.getFractionalCoordinates()
                     sl.planegroup = targetsym
                 else:
-                    logger.warning("Invalid direction given for "
-                           "symmetry reduction from "+planegroup+" to "
-                           +targetsym+". Input will be ignored, "
-                           "proceeding without symmetry reduction.")
-                    rp.setHaltingLevel(2)
+                    invalidDirectionMessage(rp, planegroup, targetsym)
             elif planegroup == 'p3m1':  #reducing to: cm
                 if (tspar[0],tspar[1]) in [(1,-1),(-1,1),(1,2),
                                            (-1,-2),(2,1),(-2,-1)]:
@@ -847,42 +825,17 @@ def setSymmetry(sl, rp, targetsym):
                              np.dot(np.array([[-0.5,-np.sqrt(3)/2],
                                              [np.sqrt(3)/2,-0.5]]),
                                     abst[0]))) > 0.01):
-                        chir = -1   #left-handed unit cell
+                        chir = -1   #left-handed unit cell -> invert rotations
                     if (tspar[0],tspar[1]) in [(2,1),(-2,-1)]:
-                        # rotate 60° clockwise; invert if system is left-handed
-                        sl.getCartesianCoordinates()
-                        sl.ucell = np.dot(np.array(
-                                               [[0.5,chir*np.sqrt(3)/2,0],
-                                                [-chir*np.sqrt(3)/2,0.5,0],
-                                                [0,0,1]]), sl.ucell)
-                        sl.uCellMod.append(('lmul',np.array(
-                                               [[0.5,chir*np.sqrt(3)/2,0],
-                                                [-chir*np.sqrt(3)/2,0.5,0],
-                                                [0,0,1]])))
-                        abst = np.transpose(sl.ucell[0:2,0:2])
-                        sl.getFractionalCoordinates()
+                        sl.rotateUnitCell(6*chir) # rotate 60° clockwise
                     elif (tspar[0],tspar[1]) in [(1,2),(-1,-2)]:
-                        # rotate 60° counterclockwise; invert if left-handed
-                        sl.getCartesianCoordinates()
-                        sl.ucell = np.dot(np.array(
-                                              [[0.5,-chir*np.sqrt(3)/2,0],
-                                               [chir*np.sqrt(3)/2,0.5,0],
-                                               [0,0,1]]),sl.ucell)
-                        sl.uCellMod.append(('lmul',np.array(
-                                              [[0.5,-chir*np.sqrt(3)/2,0],
-                                               [chir*np.sqrt(3)/2,0.5,0],
-                                               [0,0,1]])))
-                        abst = np.transpose(sl.ucell[0:2,0:2])
-                        sl.getFractionalCoordinates()
+                        sl.rotateUnitCell(-6*chir) # rotate 60° countercl.
+                    abst = np.transpose(sl.ucell[0:2,0:2])
                     sl.orisymplane = SymPlane(np.array([0,0]),
                                                 abst[0]-abst[1], abst)
                     sl.planegroup = targetsym
                 else:
-                    logger.warning("Invalid direction given for "
-                            "symmetry reduction from "+planegroup+" to "
-                            +targetsym+". Input will be ignored, "
-                            "proceeding without symmetry reduction.")
-                    rp.setHaltingLevel(2)
+                    invalidDirectionMessage(rp, planegroup, targetsym)
             elif planegroup == 'p31m':  #reducing to: cm
                 if (tspar[0],tspar[1]) in [(1,0),(-1,0),(0,1),(0,-1),
                                            (1,1),(-1,-1)]:
@@ -892,39 +845,15 @@ def setSymmetry(sl, rp, targetsym):
                             abst[0]))) > 0.01:
                         chir = -1   #left-handed unit cell
                     if (tspar[0],tspar[1]) in [(1,0),(-1,0)]:
-                        # rotate 60° clockwise (invert if left-handed)
-                        sl.getCartesianCoordinates()
-                        sl.ucell = np.dot(np.array(
-                                        [[0.5,chir*np.sqrt(3)/2,0],
-                                         [-chir*np.sqrt(3)/2,0.5,0],
-                                         [0,0,1]]), sl.ucell)
-                        sl.uCellMod.append(('lmul',np.array(
-                                        [[0.5,chir*np.sqrt(3)/2,0],
-                                         [-chir*np.sqrt(3)/2,0.5,0],
-                                         [0,0,1]])))
-                        abst = np.transpose(sl.ucell[0:2,0:2])
+                        sl.rotateUnitCell(6*chir) # rotate 60° clockwise
                     elif (tspar[0],tspar[1]) in [(0,1),(0,-1)]:
-                        #rotate 60° c.clockwise (invert if left-handed)
-                        sl.getCartesianCoordinates()
-                        sl.ucell = np.dot(np.array(
-                                        [[0.5,-chir*np.sqrt(3)/2,0],
-                                         [chir*np.sqrt(3)/2,0.5,0],
-                                         [0,0,1]]),sl.ucell)
-                        sl.uCellMod.append(('lmul',np.array(
-                                        [[0.5,-chir*np.sqrt(3)/2,0],
-                                         [chir*np.sqrt(3)/2,0.5,0],
-                                         [0,0,1]])))
-                        abst = np.transpose(sl.ucell[0:2,0:2])
-                        sl.getFractionalCoordinates()
+                        sl.rotateUnitCell(-6*chir) # rotate 60° countercl.
+                    abst = np.transpose(sl.ucell[0:2,0:2])
                     sl.orisymplane = SymPlane(np.array([0,0]),
                                                 abst[0]+abst[1], abst)
                     sl.planegroup = targetsym
                 else:
-                    logger.warning("Invalid direction given for "
-                            "symmetry reduction from "+planegroup+" to "
-                            +targetsym+". Input will be ignored, "
-                            "proceeding without symmetry reduction.")
-                    rp.setHaltingLevel(2)
+                    invalidDirectionMessage(rp, planegroup, targetsym)
             elif planegroup == 'p6m':   #reducing to: cm, cmm
                 if targetsym == 'cmm':
                     sl.planegroup = targetsym
@@ -944,68 +873,23 @@ def setSymmetry(sl, rp, targetsym):
                     elif (tspar[0],tspar[1]) in [(1,2),(-1,-2),
                                                  (2,1),(-2,-1)]:
                         if (tspar[0],tspar[1]) in [(2,1),(-2,-1)]:
-                            # rotate 60° clockwise (invert if left-handed)
-                            sl.getCartesianCoordinates()
-                            sl.ucell = np.dot(np.array(
-                                            [[0.5,chir*np.sqrt(3)/2,0],
-                                             [-chir*np.sqrt(3)/2,0.5,0],
-                                             [0,0,1]]),sl.ucell)
-                            sl.uCellMod.append(('lmul',np.array(
-                                            [[0.5,chir*np.sqrt(3)/2,0],
-                                             [-chir*np.sqrt(3)/2,0.5,0],
-                                             [0,0,1]])))
-                            abst = np.transpose(sl.ucell[0:2,0:2])
-                            sl.getFractionalCoordinates()
+                            sl.rotateUnitCell(6*chir) # rotate 60° clockwise
                         elif (tspar[0],tspar[1]) in [(1,2),(-1,-2)]:
-                            #rotate 60° c.clockwise (invert if left-handed)
-                            sl.getCartesianCoordinates()
-                            sl.ucell = np.dot(np.array(
-                                            [[0.5,-chir*np.sqrt(3)/2,0],
-                                             [chir*np.sqrt(3)/2,0.5,0],
-                                             [0,0,1]]),sl.ucell)
-                            sl.uCellMod.append(('lmul',np.array(
-                                            [[0.5,-chir*np.sqrt(3)/2,0],
-                                             [chir*np.sqrt(3)/2,0.5,0],
-                                             [0,0,1]])))
-                            abst = np.transpose(sl.ucell[0:2,0:2])
-                            sl.getFractionalCoordinates()
+                            sl.rotateUnitCell(-6*chir) # rotate 60° countercl.
+                        abst = np.transpose(sl.ucell[0:2,0:2])
                         sl.orisymplane = SymPlane(np.array([0,0]),
                                                 abst[0]-abst[1],abst)
                     elif (tspar[0],tspar[1]) in [(1,0),(-1,0),
                                                  (0,1),(0,-1)]:
                         if (tspar[0],tspar[1]) in [(1,0),(-1,0)]:
-                        # rotate 60° clockwise (invert if left-handed)
-                            sl.getCartesianCoordinates()
-                            sl.ucell = np.dot(np.array(
-                                            [[0.5,chir*np.sqrt(3)/2,0],
-                                             [-chir*np.sqrt(3)/2,0.5,0],
-                                             [0,0,1]]), sl.ucell)
-                            sl.uCellMod.append(('lmul',np.array(
-                                            [[0.5,chir*np.sqrt(3)/2,0],
-                                             [-chir*np.sqrt(3)/2,0.5,0],
-                                             [0,0,1]])))
-                            abst = np.transpose(sl.ucell[0:2,0:2])
+                            sl.rotateUnitCell(6*chir) # rotate 60° clockwise
                         elif (tspar[0],tspar[1]) in [(0,1),(0,-1)]:
-                        #rotate 60° c.clockwise (invert if left-handed)
-                            sl.getCartesianCoordinates()
-                            sl.ucell = np.dot(np.array(
-                                            [[0.5,-chir*np.sqrt(3)/2,0],
-                                             [chir*np.sqrt(3)/2,0.5,0],
-                                             [0,0,1]]), sl.ucell)
-                            sl.uCellMod.append(('lmul',np.array(
-                                            [[0.5,-chir*np.sqrt(3)/2,0],
-                                             [chir*np.sqrt(3)/2,0.5,0],
-                                             [0,0,1]])))
-                            abst = np.transpose(sl.ucell[0:2,0:2])
-                            sl.getFractionalCoordinates()
+                            sl.rotateUnitCell(-6*chir) # rotate 60° countercl.
+                        abst = np.transpose(sl.ucell[0:2,0:2])
                         sl.orisymplane = SymPlane(np.array([0,0]),
                                                 abst[0]+abst[1],abst)
                 else:
-                    logger.warning("Invalid direction given for "
-                           "symmetry reduction from "+planegroup+" to "
-                           +targetsym+". Input will be ignored, "
-                           "proceeding without symmetry reduction.")
-                    rp.setHaltingLevel(2)
+                    invalidDirectionMessage(rp, planegroup, targetsym)
             else:
                 logger.warning("Unexpected point encountered in "
                                 "findSymmetry routine: FS005")
@@ -1069,7 +953,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
                                 "enforceSymmetry routine: ES001")
                 rp.setHaltingLevel(1)
             tmpslab = copy.deepcopy(sl)
-            tmpslab.rotate(np.array([0,0]),toprotsym)
+            tmpslab.rotateAtoms(np.array([0,0]),toprotsym)
             tmpslab.collapseCartesianCoordinates()
             ang = 2*np.pi/toprotsym
             m = np.array([[np.cos(ang),-np.sin(ang)],[np.sin(ang),
@@ -1117,10 +1001,8 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
             tmpslab.mirror(testplane, glide=g)
             tmpslab.collapseCartesianCoordinates()
             ang = angle(np.array([1,0]),testplane.dir)
-            if testplane.dir[1] > 0: 
-                ang *= -1
-            rotm = np.array([[np.cos(ang),-np.sin(ang)],
-                             [np.sin(ang),np.cos(ang)]])
+            rotm = np.array([[np.cos(ang),np.sin(ang)],
+                             [-np.sin(ang),np.cos(ang)]])
             m = np.dot(np.linalg.inv(rotm),np.dot(np.array([[1,0],[0,-1]]),
                                                   rotm))
             for (sli,sl1) in enumerate(sl.sublayers):
@@ -1145,7 +1027,6 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
         if len(at.linklist) > 1 and not at.linklist in sl.linklists:
             #don't keep the linklists of length 1
             sl.linklists.append(at.linklist)
-
     # FIND ALLOWED MOVE DIRECTIONS FOR ATOMS
     lockpoints = []     #full list of rotation points (no duplication)
     ori = np.array([0.0,0.0])
@@ -1244,7 +1125,8 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
         # first check points
         for p in lockpoints:
             if at.isSameXY(p,eps):
-                if not nomove: at.cartpos[0:2] = p
+                if not nomove: 
+                    at.cartpos[0:2] = p
                 at.freedir = 0  #lock completely
                 break
         # then if not locked yet, check planes
@@ -1281,7 +1163,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
                     tmpslab = copy.deepcopy(sl)
                 else:
                     tmpslab = copy.deepcopy(mvslabs[-1])
-                tmpslab.rotate(ori,toprotsym)
+                tmpslab.rotateAtoms(ori,toprotsym)
                 tmpslab.collapseCartesianCoordinates()
                 mvslabs.append(tmpslab)
         if not planegroup in ["p2","p3","p4","p6"]:
@@ -1292,7 +1174,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
         if not planegroup in ["pm","pg","cm","rcm"]:
             for i in range(0,toprotsym-1):
                 tmpslab = copy.deepcopy(mvslabs[-1])
-                tmpslab.rotate(ori,toprotsym)
+                tmpslab.rotateAtoms(ori,toprotsym)
                 tmpslab.collapseCartesianCoordinates()
                 mvslabs.append(tmpslab)
         for (llind,ll) in enumerate(sl.linklists):
@@ -1319,10 +1201,10 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
                                 pn += 1
                                 found = True
                                 break
-                        if found: break
+                        if found: 
+                            break
                 at.cartpos = psum / pn
-    sl.collapseCartesianCoordinates()   #also gets fractional coordinates
-
+    sl.collapseCartesianCoordinates(updateOrigin=True)
     if not rotcell:
         return 0
     # after everything else is done, rotate unit cell (in x,y without
@@ -1353,10 +1235,8 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
                     found = True
         if not found:
             ang = angle(np.array([1,0]),mirrordirs[0])
-            if mirrordirs[0][1] > 0: 
-                ang *= -1
-            rotm = np.array([[np.cos(ang),-np.sin(ang),0],
-                              [np.sin(ang),np.cos(ang),0],[0,0,1]])
+            rotm = np.array([[np.cos(ang),np.sin(ang),0],
+                              [-np.sin(ang),np.cos(ang),0],[0,0,1]])
             sl.ucell = np.dot(rotm,sl.ucell)
             for i in range(0,3):
                 for j in range(0,3):
@@ -1367,6 +1247,5 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
             if rp.THETA != 0:
                 rp.PHI += np.degrees(ang)
                 modifyPARAMETERS(rp, "BEAM_INCIDENCE",
-                   "BEAM_INCIDENCE = {:.3f} {:.3f}".format(rp.THETA,
-                                                           rp.PHI))
+                                 "{:.3f} {:.3f}".format(rp.THETA, rp.PHI))
     return 0

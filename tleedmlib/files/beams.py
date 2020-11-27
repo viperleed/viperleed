@@ -12,11 +12,32 @@ import logging
 import numpy as np
 import re
 import fortranformat as ff
+import copy
 
 import tleedmlib as tl
 from guilib.base import project_to_first_domain
 
-logger = logging.getLogger("tleedm.files.logging")
+logger = logging.getLogger("tleedm.files.beams")
+
+def averageBeams(beams, weights=[]):
+    """Takes a list of parcentages and a list of lists of Beam objects. 
+    Returns a new list of Beam obects with weighted averaged intensities."""
+    if not weights:
+        weights = [1/len(beams)] * len(beams)
+    avbeams = copy.deepcopy(beams[0])
+    for (i, b) in enumerate(avbeams):
+        if not all([beams[j][i].isEqual(b) for j in range(1, len(beams))]):
+            logger.error("averageBeams: Beam lists are mismatched.")
+            return []
+        if not all([set(beams[j][i].intens.keys()) == set(b.intens.keys())
+                    for j in range(1, len(beams))]):
+            logger.error("averageBeams: Beams have different energy ranges.")
+            return []
+        for en in b.intens:
+            b.intens[en] *= weights[0]
+            for j in range(1, len(beams)):
+                b.intens[en] += beams[j][i].intens[en] * weights[j]
+    return avbeams
 
 def readBEAMLIST(filename="_BEAMLIST"):
     """Reads the _BEAMLIST file and returns the contents as a list of the
@@ -247,7 +268,7 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=";", enrange=[]):
                 "range: {:.2g} eV).".format(len(beams), totalrange))
     return beams
 
-def checkEXPBEAMS(sl, rp):
+def checkEXPBEAMS(sl, rp, domains=False):
     remlist = []
     symeq = tl.leedbase.getSymEqBeams(sl, rp)
     for (bi, b) in enumerate(rp.expbeams):
@@ -355,14 +376,17 @@ def readAUXEXPBEAMS(filename="AUXEXPBEAMS", interactive=False):
                 i += 2
     return expbeams
 
-def writeIVBEAMS(sl, rp, filename="IVBEAMS"):
+def writeIVBEAMS(sl, rp, filename="IVBEAMS", domains=False):
     """Writes an IVBEAMS file based on rp.exbeams. Returns 
     those beams in IVBEAMS form."""
-    d = tl.leedbase.getLEEDdict(sl, rp)
-    if d is None:
+    if not domains:
+        d = [tl.leedbase.getLEEDdict(sl, rp)]
+    else:
+        d = [tl.leedbase.getLEEDdict(dp.sl, dp.rp) for dp in rp.domainParams]
+    if any([v is None for v in d]):
         logger.error("Failed to write IVBEAMS")
         return []
-    makebeams = project_to_first_domain(d, [b.hkfrac for b in rp.expbeams])
+    makebeams = project_to_first_domain([b.hkfrac for b in rp.expbeams], *d)
     output = "This IVBEAMS file was automatically generated from EXPBEAMS\n"
     ivbeams = [tl.Beam(hk) for hk in makebeams]
     for b in ivbeams:
@@ -511,3 +535,54 @@ def writeAUXEXPBEAMS(beams, filename="AUXEXPBEAMS", header="Unknown system",
             logger.warning("Failed to write "+filename)
         logger.debug("Wrote to "+filename+" successfully")
     return output
+
+def writeFdOut(beams, beamlist=[], filename="refcalc-fd.out", 
+               header="Unknown system"):
+    """Writes an fd.out file for the given beams. Also returns the file "
+    "contents as string."""
+    out = header+"\n"
+    # read BEAMLIST
+    if not beamlist:
+        logger.warning("writeFdOut: no beamlist passed, attempting to read "
+                       "_BEAMLIST directly.")
+        try:
+            beamlist = readBEAMLIST("_BEAMLIST")
+        except:
+            logger.error("Error getting beamlist: file not found.")
+            raise
+    out += "{:>3}\n".format(len(beams))
+    energies = set()
+    for b in beams:
+        for (i, line) in enumerate(beamlist[1:]):
+            llist = line.split()
+            if (len(llist) > 1 and 
+                        b.isEqual_hk((float(llist[0]), float(llist[1])))):
+                out += "{:>4}".format(i+1) + line[:23] + "\n"
+                break
+        else:
+            logger.error("writeFdOut: passed beams contain beam {}, which "
+                           "was not found in _BEAMLIST.".format(b.label))
+            raise ValueError("writeFdOut: beam {} is not in _BEAMLIST."
+                             .format(b.label))
+        energies.update(b.intens.keys())
+    for en in sorted(list(energies)):
+        o = "{:7.2f} 0.0001".format(en)
+        line_len = 1
+        for b in beams:
+            if en in b.intens:
+                o += "{:14.5E}".format(b.intens[en])
+            else:
+                o += "{:14.5E}".format(0)
+            line_len += 1
+            if line_len == 5:
+                o += "\n"
+                line_len = 0
+        out += o+"\n"
+    try:
+        with open(filename, "w") as wf:
+            wf.write(out)
+    except:
+        logger.warning("writeFdOut: Failed to write output to file {}."
+                       .format(filename))
+        raise
+    return out

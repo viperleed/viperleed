@@ -17,7 +17,7 @@ import re
 import scipy.spatial as sps
 import itertools
 
-from tleedmlib.base import angle, rotMatrix
+from tleedmlib.base import angle, rotMatrix, distanceLineThroughPointsFromPoint
 import tleedmlib as tl
 # from tleedmlib import DEFAULT
 
@@ -45,6 +45,13 @@ class SymPlane:
                   / (np.linalg.norm(self.dir)
                      * np.linalg.norm(i*abt[0]+j*abt[1])))-1.0) < 0.001:
                 self.par = np.array([i,j])
+    
+    def distanceFromOrigin(self, abt):
+        pointlist = [(0,0), (1,0), (0,1), (1,1)]
+        return min([distanceLineThroughPointsFromPoint(
+                                self.pos, self.pos+self.dir, 
+                                p[0]*abt[0]+p[1]*abt[1])
+                    for p in pointlist])
     
     def __str__(self):
         return ("SymPlane(pos = {}, par = {})".format(self.pos, self.par))
@@ -77,8 +84,6 @@ class Slab:
     objects."""
     def __init__(self):
         self.ucell = np.array([])         # unit cell
-        self.atpos = []	        # list of atom positions as read from POSCAR
-                                #   (list of arrays)
         self.oriels = []        # element labels as read from POSCAR
         self.elements = []      # element labels as read from POSCAR, with
                                 #   potential modifications after ELEMENT_MIX
@@ -124,6 +129,31 @@ class Slab:
         self.bulkGlides = []       # only assigned to the bulkslab object!
                     # List of symplanes present in the bulk
 
+    def resetSymmetry(self):
+        """Sets all symmetry information back to default values."""
+        self.uCellMod = []
+        self.uCellOri = self.ucell
+        self.celltype = "unknown"
+        self.planegroup = "unknown"
+        self.foundplanegroup = "unknown"
+        self.orisymplane = None
+    
+    def resetAtomOriN(self):
+        """Gets new 'original' numbers for atoms in the slab. If a bulkslab 
+        is defined, also updates the numbers there to keep the two consistent.
+        """
+        self.sortOriginal()
+        self.sortByEl()
+        bulkAtsRenumbered = []
+        for (i, at) in enumerate(self.atlist):
+            if self.bulkslab is not None:
+                for bat in [a for a in self.bulkslab.atlist 
+                            if a.oriN == at.oriN
+                            and a not in bulkAtsRenumbered]:
+                    bat.oriN = i+1
+                    bulkAtsRenumbered.append(bat)
+            at.oriN = i+1
+
 
     def fullUpdate(self,rparams):
         """readPOSCAR initializes the slab with information from POSCAR;
@@ -152,23 +182,6 @@ class Slab:
             self.nperelem[i] = 0
             for at in self.atlist:
                 if at.el == self.elements[i]: self.nperelem[i] += 1
-
-    def initAtomList(self):
-        """Creates a list of Atom objects based on the data read previously"""
-        n = 0
-        for nat in self.nperelem:
-            n += nat
-        self.atlist = []
-        elnum = 0
-        atcount = 0
-        for i in range(0,n):
-            self.atlist.append(tl.Atom(self.elements[elnum],self.atpos[i],
-                                       i+1,self))
-            atcount += 1
-            if atcount == self.nperelem[elnum]:
-                elnum += 1
-                atcount = 0
-        self.getCartesianCoordinates()
 
     def getCartesianCoordinates(self, updateOrigin=False):
         """Assigns absolute cartesian coordinates to all atoms, with x,y using
@@ -425,7 +438,8 @@ class Slab:
         self.chemelem = []
         for el in self.elements:
             if el in rp.ELEMENT_MIX:
-                self.chemelem.extend(rp.ELEMENT_MIX[el])
+                self.chemelem.extend([e for e in rp.ELEMENT_MIX[el] 
+                                      if not e in self.chemelem])
             else:
                 self.chemelem.append(el)
         self.lastupdateelmix = rp.ELEMENT_MIX
@@ -479,6 +493,8 @@ class Slab:
                     found = True
             if found:
                 sl.append(newsite)
+        for site in [s for s in sl if s.el in rparams.ELEMENT_MIX]:
+            site.mixedEls = rparams.ELEMENT_MIX[el][:]
         self.sitelist = sl
 
     def sortByZ(self, botToTop=False):
@@ -515,8 +531,7 @@ class Slab:
                 logger.error("Unexpected point encountered in Slab.sortByEl: "
                               "Could not find element in element list")
             else:
-                for at in isoLists[i]:
-                    sortedlist.append(at)
+                sortedlist.extend(isoLists[i])
         self.atlist = sortedlist
 
     def sortOriginal(self):
@@ -588,42 +603,72 @@ class Slab:
             at.constraints = {1: {}, 2: {}, 3: {}}
         return 0
 
-    def rotate(self, axis, order):
+    def rotateAtoms(self, axis, order):
         """Translates the atoms in the slab to have the axis in the origin,
-        applies an order-fold rotation matrix, then translates back"""
+        applies an order-fold rotation matrix to the atom positions, then 
+        translates back"""
         #these explicit definitions are likely useless, but sqrts might be
         #  marginally more accurate than sin/cos
+        self.getCartesianCoordinates()
         if order == 2:
             m = np.array([[-1,0],[0,-1]])
-        elif order == 3:
-            m = np.array([[-0.5,-np.sqrt(3)/2],[np.sqrt(3)/2,-0.5]])
         elif order == -3:
+            m = np.array([[-0.5,-np.sqrt(3)/2],[np.sqrt(3)/2,-0.5]])
+        elif order == 3:
             m = np.array([[-0.5,np.sqrt(3)/2],[-np.sqrt(3)/2,-0.5]])
-        elif order == 4:
-            m = np.array([[0,1],[-1,0]])
         elif order == -4:
+            m = np.array([[0,1],[-1,0]])
+        elif order == 4:
             m = np.array([[0,-1],[1,0]])
-        elif order == 6:
-            m = np.array([[0.5,np.sqrt(3)/2],[-np.sqrt(3)/2,0.5]])
         elif order == -6:
+            m = np.array([[0.5,np.sqrt(3)/2],[-np.sqrt(3)/2,0.5]])
+        elif order == 6:
             m = np.array([[0.5,-np.sqrt(3)/2],[np.sqrt(3)/2,0.5]])
         else:
             ang = 2*np.pi/order
-            m = np.array([[np.cos(ang),-np.sin(ang)],
-                           [np.sin(ang),np.cos(ang)]])
+            m = np.array([[np.cos(ang),np.sin(ang)],
+                           [-np.sin(ang),np.cos(ang)]])
         for at in self.atlist:
-            at.cartpos[0:2] -= axis    # translate origin to candidate point
-            at.cartpos[0:2] = np.dot(m, at.cartpos[0:2])    # rotation
-            at.cartpos[0:2] += axis    # undo translation
+            # translate origin to candidate point, rotate, translate back
+            at.cartpos[0:2] = np.dot(m, at.cartpos[0:2] - axis) + axis
+        self.getFractionalCoordinates()
+        
+    def rotateUnitCell(self, order, append_uCellMod = True):
+        """Rotates the unit cell (around the origin), leaving atom positions 
+        the same. Note that this rotates in the opposite direction as 
+        rotateAtoms."""
+        self.getCartesianCoordinates()
+        if order == 2:
+            m = np.array([[-1,0],[0,-1]])
+        elif order == -3:
+            m = np.array([[-0.5,-np.sqrt(3)/2],[np.sqrt(3)/2,-0.5]])
+        elif order == 3:
+            m = np.array([[-0.5,np.sqrt(3)/2],[-np.sqrt(3)/2,-0.5]])
+        elif order == -4:
+            m = np.array([[0,1],[-1,0]])
+        elif order == 4:
+            m = np.array([[0,-1],[1,0]])
+        elif order == -6:
+            m = np.array([[0.5,np.sqrt(3)/2],[-np.sqrt(3)/2,0.5]])
+        elif order == 6:
+            m = np.array([[0.5,-np.sqrt(3)/2],[np.sqrt(3)/2,0.5]])
+        else:
+            ang = 2*np.pi/order
+            m = np.array([[np.cos(ang),np.sin(ang)],
+                           [-np.sin(ang),np.cos(ang)]])
+        m3 = np.identity(3)
+        m3[:2,:2] = m
+        self.ucell = np.dot(m3, self.ucell)
+        if append_uCellMod:
+            self.uCellMod.append(('lmul', m3))
+        self.getFractionalCoordinates()
 
     def mirror(self, symplane, glide=False):
         """Translates the atoms in the slab to have the symplane in the
         origin, applies a mirror or glide matrix, then translates back"""
         ang = angle(np.array([1,0]),symplane.dir)
-        if symplane.dir[1] > 0: 
-            ang *= -1
-        rotm = np.array([[np.cos(ang),-np.sin(ang)],
-                          [np.sin(ang),np.cos(ang)]])
+        rotm = np.array([[np.cos(ang),np.sin(ang)],
+                          [-np.sin(ang),np.cos(ang)]])
         rotmirm = np.dot(np.linalg.inv(rotm),
                          np.dot(np.array([[1,0],[0,-1]]),rotm))
                             #rotates to have plane in x direction, mirrors on x
@@ -840,10 +885,8 @@ class Slab:
         direction, i.e. mirror at this direction, then some translation."""
         m = np.array([[1,0,0],[0,1,0],[0,0,1]], dtype=float)
         ang = angle(np.array([1,0]),symplane.dir)
-        if symplane.dir[1] > 0: 
-            ang *= -1
-        rotm = np.array([[np.cos(ang),-np.sin(ang)],
-                          [np.sin(ang),np.cos(ang)]])
+        rotm = np.array([[np.cos(ang),np.sin(ang)],
+                          [-np.sin(ang),np.cos(ang)]])
         m[:2, :2] = np.dot(np.linalg.inv(rotm),
                          np.dot(np.array([[1,0],[0,-1]]),rotm))
         return self.isBulkTransformSymmetric(m, sldisp, eps)
@@ -851,11 +894,9 @@ class Slab:
     def isMirrorSymmetric(self, symplane, eps, glide=False):
         """Evaluates whether the slab is equivalent to itself when applying a
         mirror or glide operation at a given plane"""
-        ang = angle(np.array([1,0]),symplane.dir)
-        if symplane.dir[1] > 0: 
-            ang *= -1
-        rotm = np.array([[np.cos(ang),-np.sin(ang)],
-                          [np.sin(ang),np.cos(ang)]])
+        ang = angle(np.array([1,0]), symplane.dir)
+        rotm = np.array([[np.cos(ang),np.sin(ang)],
+                          [-np.sin(ang),np.cos(ang)]])
         rotmirm = np.dot(np.linalg.inv(rotm),
                          np.dot(np.array([[1,0],[0,-1]]),rotm))
                             #rotates to have plane in x direction, mirrors on x
@@ -1024,6 +1065,9 @@ class Slab:
             # by convention, make the shorter vector the first one
             if np.linalg.norm(mincell[0]) > np.linalg.norm(mincell[1]) + eps:
                 mincell = np.dot(np.array([[0,1],[-1,0]]), mincell)
+            # finally, make sure it's right-handed
+            if angle(mincell[0], mincell[1]) < 0:
+                mincell = np.dot(np.array([[1,0],[0,-1]]), mincell)
             return(True, mincell)
 
     def getMinC(self, rp, z_periodic=True):
@@ -1101,6 +1145,45 @@ class Slab:
                 i += 1
         return(cl)
 
+    def makeSupercell(self, transform):
+        """Returns a copy of the slab with the unit cell transformed by the 
+        given integer-valued, (2x2) transformation matrix."""
+        if np.any(abs(np.round(transform) - transform) > 1e-6):
+            raise ValueError("Slab.makeSupercell: transformation matrix "
+                             "contains non-integer elements")
+        transform = np.round(transform).astype(int)
+        transformSize = int(round(abs(np.linalg.det(transform))))
+        ts = copy.deepcopy(self)
+        if transformSize > 1:
+            transformDiag = [1,1]
+            if np.max(transform[:,0]) > np.max(transform[:,1]):
+                longSide = 0
+            else:
+                longSide = 1
+            transformDiag[longSide] = np.max(transform)
+            while transformSize / transformDiag[longSide] % 1 != 0:
+                transformDiag[longSide] -= 1
+            transformDiag[1-longSide] = int(transformSize
+                                            / transformDiag[longSide])
+            cpatlist = ts.atlist[:]
+            for at in cpatlist:
+                for i in range(0,transformDiag[0]):
+                    for j in range(0, transformDiag[1]):
+                        if i == j == 0:
+                            continue
+                        tmpat = at.duplicate(addConstraints=True)
+                        tmpat.pos[0] += i
+                        tmpat.pos[1] += j
+        ts.resetAtomOriN()
+        ts.getCartesianCoordinates(updateOrigin=True)
+        tm = np.identity(3)
+        tm[:2,:2] = transform
+        ts.ucell = np.transpose(np.dot(tm, np.transpose(ts.ucell)))
+        ts.getFractionalCoordinates()
+        ts.getCartesianCoordinates(updateOrigin=True)
+        return ts
+        
+
     def changeBulkCell(self, rp, newcell):
         """Takes a unit cell (a,b), calculates a new SUPERLATTICE parameter
         from it and creates a new bulk slab with that cell. If a different
@@ -1150,13 +1233,13 @@ class Slab:
         ts.getCartesianCoordinates()
         cfact = (ts.ucell[2,2] + abs(bulkc[2])) / ts.ucell[2,2]
         ts.ucell[:,2] = ts.ucell[:,2] * cfact
-        ts.getFractionalCoordinates()
+        bulkc[2] = -bulkc[2]
         newbulkats = []
         tmplist = ts.atlist[:]
         for at in tmplist:
             if at.layer.isBulk: 
                 newbulkats.append(at.duplicate())
-            at.cartpos = at.cartpos - bulkc
+            at.cartpos = at.cartpos + bulkc
         ts.collapseCartesianCoordinates(updateOrigin=True)
         ts.sortByZ()
         return ts, newbulkats
@@ -1180,6 +1263,7 @@ class Slab:
         bulk layers is deleted. Returns that bulk slab."""
         # construct bulk slab
         bsl = copy.deepcopy(self)
+        bsl.resetSymmetry()
         bsl.atlist = [at for at in bsl.atlist if at.layer.isBulk]
         bsl.layers = [l for l in bsl.layers if l.isBulk]
         bsl.getCartesianCoordinates()

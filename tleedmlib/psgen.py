@@ -23,9 +23,12 @@ def runPhaseshiftGen(sl,rp, psgensource=os.path.join('source','EEASiSSS.x'),
     """Creates required input for EEASiSSS.x, then runs it. Reads the output 
     files and extracts information for _PHASESHIFTS file, then returns that 
     information (without writing _PHASESHIFTS)."""
-    psgensource = os.path.join(rp.workdir, psgensource)
-    excosource = os.path.join(rp.workdir, excosource)
-    atdenssource = os.path.join(rp.workdir, atdenssource)
+    shortpath = rp.workdir
+    if len(os.path.relpath(rp.workdir)) < len(shortpath):
+        shortpath = os.path.relpath(rp.workdir)
+    psgensource = os.path.join(shortpath, psgensource)
+    excosource = os.path.join(shortpath, excosource)
+    atdenssource = os.path.join(shortpath, atdenssource)
     
     lmax = 16   # this could be a variable, for now set fixed...
     nsl, newbulkats = sl.addBulkLayers(rp)
@@ -56,14 +59,17 @@ def runPhaseshiftGen(sl,rp, psgensource=os.path.join('source','EEASiSSS.x'),
     if len(rp.ELEMENT_MIX) > 0:
         minnum = -1
         for (site, el) in [(site, el) for (site, el) in blocks if site.el 
-                          in rp.ELEMENT_MIX and site.occ[el] > 0.]:
+                          in rp.ELEMENT_MIX and (site.occ[el] > 0. or
+                                                 el in site.mixedEls)]:
             al = [at for at in nsl.atlist if at.site == site]
             atcount = len(al)*site.occ[el]
-            if minnum < 0 or (minnum > atcount > 0):
+            if minnum < 0 or (minnum > atcount >= 0):
                 minnum = atcount
         # we want at least 2 atoms of each element in each site type:
         if 0 < minnum < 2.0:
             scsize = int(np.ceil(2.0/minnum))
+        elif minnum == 0:
+            scsize = 100  # large number, will be decreased below
     if scsize > 1:  # some checks to make sure it doesn't get too large
         maxcells = 20  # upper limit on supercell size
         maxats = 500   # upper limit on atoms in supercell
@@ -108,10 +114,11 @@ def runPhaseshiftGen(sl,rp, psgensource=os.path.join('source','EEASiSSS.x'),
     for site in nsl.sitelist:
         if site.el in rp.ELEMENT_MIX:
             occdict = {}
-            for (k, v) in site.occ.items(): 
-                if v > 0.0: occdict[k] = v
+            for (k, v) in site.occ.items():
+                if v > 0.0 or k in rp.ELEMENT_MIX[site.el]:
+                    occdict[k] = v
             occdict = dict(sorted(occdict.items(), 
-                                  key = lambda kv:(kv[1],kv[0])))  
+                                  key = lambda kv:(kv[1],kv[0])))
                                     #sort by occupancy values
             al = [at for at in nsl.atlist if at.site == site]
             totats = len(al)
@@ -132,7 +139,6 @@ def runPhaseshiftGen(sl,rp, psgensource=os.path.join('source','EEASiSSS.x'),
                                           if at.site == site]
     blocks = [(site,el) for (site,el) in blocks 
               if len(subatlists[(site,el)]) > 0]
-
 #    if bulk: 
 #        bulksites = [site for (site,el) in blocks]
 #    else:

@@ -77,6 +77,45 @@ class BackwardsReader:
 #                FUNCTIONS                    #
 ###############################################
 
+def mkdir_recursive(targetpath):
+    """
+    Tries creating a directory with the given path. Recursively iterates 
+    to generate the directories above as well, if necessary.
+
+    Parameters
+    ----------
+    targetpath : str
+        Absolute or relative path to the directory that should be created.
+
+    Raises
+    ------
+    OSError
+        If the path cannot be created because the root of the path does not 
+        exist.
+
+    Returns
+    -------
+    int
+        0 on success
+
+    """
+    if os.path.isdir(targetpath):
+        return 0
+    try:
+        os.mkdir(targetpath)
+        return 0
+    except:
+        pass
+    p = os.path.split(targetpath)
+    if not p[1]:
+        raise OSError("Base directory '{}' does not exist".format(p[0]))
+    try:
+        mkdir_recursive(p[0])
+        os.mkdir(targetpath)
+    except:
+        raise
+    return 0
+
 def rotMatrix(order):
     """Returns a (2x2) matrix for in-plane rotation of the given rotation 
     order."""
@@ -194,10 +233,42 @@ def readIntLine(line, width=3):
     return l
 
 def cosvec(x,y):
-    """Returns the cosine of the angle between two vectors"""
+    """
+    Returns the cosine of the angle between two vectors
+
+    Parameters
+    ----------
+    x : numpy.array
+        First vector
+    y : numpy.array
+        Second vector
+
+    Returns
+    -------
+    float
+        Cosine of the angle between the two vectors
+
+    """
     return np.dot(x,y)/(np.linalg.norm(x)*np.linalg.norm(y))
 
 def dict_equal(d1,d2):
+    """
+    Checks whether two dictionaries are equal, i.e. contain the same set of 
+    keys with the same values
+
+    Parameters
+    ----------
+    d1 : dict
+        First dictionary
+    d2 : TYPE
+        Second dictionary
+
+    Returns
+    -------
+    bool
+        True if all keys and values match, False otherwise
+
+    """
     """Returns true the dictionaries contain the same keys with the same 
     values"""
     if len({k: d1[k] for k in d1 if k in d2 and d1[k] == d2[k]})-len(d1) == 0:
@@ -251,14 +322,23 @@ def parseMathSqrt(s):
                         raise
     return f
 
-def angle(v1, v2, acute=True):
-    """Returns the angle between two vectors"""
-    angle = np.arccos(np.dot(v1, v2) / (np.linalg.norm(v1)*np.linalg.norm(v2)))
-    if acute == True:
-        return angle
-    else:
-        return 2 * np.pi - angle
-    
+# def angle(v1, v2, acute=True):
+#     """Returns the angle between two vectors"""
+#  !! UNSIGNED!
+#     angle = np.arccos(np.dot(v1, v2) / (np.linalg.norm(v1)*np.linalg.norm(v2)))
+#     if acute == True:
+#         return angle
+#     else:
+#         return 2 * np.pi - angle
+
+def angle(v1, v2):
+    """Returns the angle between two 2D vectors"""
+    # angle = np.arctan2(v2[1],v2[0]) - np.arctan2(v1[1],v1[0])
+    # if abs(angle) > np.pi:
+    #     angle += -np.sign(angle) * 2*np.pi
+    # return angle
+    return np.arctan2(v1[0]*v2[1] - v1[1]*v2[0], v1[0]*v2[0] + v1[1]*v2[1])
+
 def distanceLineThroughPointsFromPoint(p1,p2,r):
     """Gives the distance of point r from the line defined by p1 and p2 
     (in 2 or 3 dimensions)"""

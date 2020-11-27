@@ -33,6 +33,7 @@ class DeltaCompileTask():
         self.exename = "delta-{}".format(index)
         self.fortran_comp = ["",""]
         self.sourcedir = "" # where the fortran files are
+        self.basedir = "" # where the calculation is based
         
 class DeltaRunTask():
     """Stores information needed to copy the correct delta executable and 
@@ -49,10 +50,11 @@ class DeltaRunTask():
 def runDelta(runtask):
     """Function meant to be executed by parallelized workers. Executes a 
     DeltaRunTask."""
-    logger = logging.getLogger("tleedm.delta")
+    logger = logging.getLogger("tleedm.deltas")
     home = os.getcwd()
+    base = runtask.comptask.basedir
     workname = "calculating_"+runtask.deltaname
-    workfolder = os.path.join(home, workname)
+    workfolder = os.path.join(base, workname)
     # make folder and go there:
     if os.path.isdir(workfolder):
         logger.warning("Folder "+workname+" already exists. "
@@ -61,9 +63,9 @@ def runDelta(runtask):
         os.mkdir(workfolder)
     os.chdir(workfolder)
     # get tensor file
-    if os.path.isfile(os.path.join(home,"Tensors",runtask.tensorname)):
+    if os.path.isfile(os.path.join(base,"Tensors",runtask.tensorname)):
         try:
-            shutil.copy2(os.path.join(home,"Tensors",runtask.tensorname),"AMP")
+            shutil.copy2(os.path.join(base,"Tensors",runtask.tensorname),"AMP")
         except:
             logger.error("Error copying Tensor file: ", exc_info = True)
             return ("Error encountered by DeltaRunTask " + runtask.deltaname
@@ -75,7 +77,7 @@ def runDelta(runtask):
     # get executable
     exename = runtask.comptask.exename
     try:
-        shutil.copy2(os.path.join(home, runtask.comptask.foldername, exename),
+        shutil.copy2(os.path.join(base, runtask.comptask.foldername, exename),
                      os.path.join(workfolder, exename))
     except:
         logger.error("Error getting delta executable: ", exc_info = True)
@@ -96,7 +98,7 @@ def runDelta(runtask):
     # copy delta file out
     try:
         shutil.copy2(os.path.join(workfolder, "DELWV"), 
-                     os.path.join(home, runtask.deltaname))
+                     os.path.join(base, runtask.deltaname))
     except:
         logger.error("Failed to copy delta output file DELWV"
                         " to main folder as" + runtask.deltaname)
@@ -111,7 +113,7 @@ def runDelta(runtask):
         logger.warning("Could not read local delta log for "
                         + runtask.deltaname)
     if log != "":
-        deltalog = os.path.join(home, runtask.deltalogname)
+        deltalog = os.path.join(base, runtask.deltalogname)
         try:
             with open(deltalog, "a") as wf:
                 wf.write("\n\n### STARTING LOG FOR " + runtask.deltaname 
@@ -132,7 +134,7 @@ def compileDelta(comptask):
     """Function meant to be executed by parallelized workers. Executes a 
     DeltaCompileTask."""
     home = os.getcwd()
-    workfolder = os.path.join(home, comptask.foldername)
+    workfolder = os.path.join(comptask.basedir, comptask.foldername)
     # make folder and go there:
     if os.path.isdir(workfolder):
         logger.warning("Folder "+comptask.foldername+" already exists. "
@@ -195,9 +197,17 @@ def compileDelta(comptask):
     os.chdir(home)
     return 0
 
-def deltas(sl, rp):
+def deltas(sl, rp, subdomain=False):
     """Runs the delta-amplitudes calculation. Returns 0 when finishing without 
     errors, or an error message otherwise."""
+    if rp.domainParams:
+        try:
+            r = deltas_domains(rp)
+        except:
+            raise
+        if r != 0:
+            return r
+        return 0
     # read DISPLACEMENTS block
     if not rp.disp_block_read:
         readDISPLACEMENTS_block(rp, sl, rp.disp_blocks[rp.search_index])
@@ -356,9 +366,10 @@ def deltas(sl, rp):
     # create log file:
     deltaname = "delta-"+rp.timestamp
     deltalogname = deltaname+".log"
-    logger.info("Generating delta files...\n"
-        "Delta log will be written to local subfolders, and collected in "
-        +deltalogname)
+    if not subdomain:
+        logger.info("Generating delta files...\n"
+            "Delta log will be written to local subfolders, and collected in "
+            +deltalogname)
     rp.manifest.append(deltalogname)
     try:
         with open(deltalogname, "w") as wf:
@@ -438,34 +449,33 @@ def deltas(sl, rp):
     except:
         logger.warning("Failed to write file 'delta-input'. This will "
                         "not affect TensErLEED execution, proceeding...")
-        
+    
     # if execution is suppressed, stop here
-    if rp.SUPPRESS_EXECUTION:
+    if rp.SUPPRESS_EXECUTION and not subdomain:
         rp.setHaltingLevel(3)
         return 0
     
     # make sure there's a compiler ready:
-    if rp.FORTRAN_COMP[0] == "":
+    if rp.FORTRAN_COMP[0] == "" and not subdomain:
         if rp.getFortranComp() != 0:    #returns 0 on success
             logger.error("No fortran compiler found, "
                           "cancelling...")
             return ("No Fortran compiler")
     for ct in deltaCompTasks:
         ct.fortran_comp = rp.FORTRAN_COMP
-        ct.sourcedir = rp.workdir
-        
+        ct.sourcedir = os.path.abspath(rp.workdir)
+        ct.basedir = os.getcwd()
+
+    if subdomain:   # actual calculations done in deltas_domains
+        if len(deltaRunTasks) > 0:
+            rp.manifest.append("Deltas")
+        return (deltaCompTasks, deltaRunTasks)
+
     # if number of cores is not defined, try to find it
-    if rp.N_CORES == 0:
-        try:
-            rp.N_CORES = tl.base.available_cpu_count()
-        except:
-            logger.error("Failed to detect number of cores.")
-        logger.info("Automatically detected number of available CPUs: {}"
-                     .format(rp.N_CORES))
-    if rp.N_CORES == 0:
-        logger.error("Failed to detect number of cores.")
-        return("N_CORES undefined, automatic detection failed")
-    
+    r = rp.updateCores()
+    if r != 0:
+        return r
+
     # compile files
     logger.info("Compiling fortran files...")
     poolsize = min(len(deltaCompTasks), rp.N_CORES)
@@ -488,9 +498,83 @@ def deltas(sl, rp):
     # clean up
     for ct in deltaCompTasks:
         try:
-            shutil.rmtree(os.path.join(".", ct.foldername))
+            shutil.rmtree(os.path.join(ct.basedir, ct.foldername))
         except:
             logger.warning("Error deleting delta compile folder "
                             + ct.foldername)
     rp.manifest.append("Deltas")
+    return 0
+
+def deltas_domains(rp):
+    """Define and run delta calculations for all domains."""
+    home = os.getcwd()
+    deltaCompTasks = []
+    deltaRunTasks = []
+    # get input for all domains
+    for dp in rp.domainParams:
+        logger.info("Getting input for delta calculations: domain {}"
+                    .format(dp.name))
+        try:
+            os.chdir(dp.workdir)
+            r = deltas(dp.sl, dp.rp, subdomain=True)
+        except:
+            logger.error("Error while creating delta input for domain {}"
+                         .format(dp.name))
+            raise
+        finally:
+            os.chdir(home)
+        if type(r) == str:
+            logger.error("Error while creating delta input for domain {}"
+                         .format(dp.name))
+            return r
+        elif r != 0:    # if no deltas need to be calculated, 0 is returned
+            deltaCompTasks.extend(r[0])
+            deltaRunTasks.extend(r[1])
+    
+    # if execution is suppressed, stop here
+    if rp.SUPPRESS_EXECUTION:
+        rp.setHaltingLevel(3)
+        return 0
+    
+    # make sure there's a compiler ready, and we know the number of cores:
+    if rp.FORTRAN_COMP[0] == "":
+        if rp.getFortranComp() != 0:    #returns 0 on success
+            logger.error("No fortran compiler found, cancelling...")
+            return ("No Fortran compiler")
+    for ct in deltaCompTasks:
+        ct.fortran_comp = rp.FORTRAN_COMP
+    r = rp.updateCores()  # if number of cores is not defined, try to find it
+    if r != 0:
+        return r
+
+    # compile files
+    if len(deltaCompTasks) > 0:
+        logger.info("Compiling fortran files...")
+        poolsize = min(len(deltaCompTasks), rp.N_CORES)
+        with multiprocessing.Pool(poolsize) as pool:
+            r = pool.map(compileDelta, deltaCompTasks)
+        for v in [v for v in r if v != 0]:
+            logger.error(v)
+            return ("Fortran compile error")
+
+    # run executions
+    if len(deltaRunTasks) > 0:
+        logger.info("Running delta calculations...")
+        poolsize = min(len(deltaRunTasks), rp.N_CORES)
+        with multiprocessing.Pool(poolsize) as pool:
+            r = pool.map(runDelta, deltaRunTasks)
+        for v in [v for v in r if v != 0]:
+            logger.error(v)
+            return ("Error during delta execution")
+        logger.info("Delta calculations finished.")
+    
+    # clean up
+    for ct in deltaCompTasks:
+        d = os.path.join(ct.basedir, ct.foldername)
+        try:
+            shutil.rmtree(d)
+        except:
+            logger.warning("Error deleting delta compile folder "
+                            + os.path.relpath(d))
+    
     return 0

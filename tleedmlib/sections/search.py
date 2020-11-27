@@ -16,6 +16,7 @@ import time
 from timeit import default_timer as timer
 import numpy as np
 import signal
+import re
 
 import tleedmlib.files.iosearch as io
 import tleedmlib as tl
@@ -44,50 +45,26 @@ def processSearchResults(sl, rp, final=True):
         logger.error("Failed to get last block from SD.TL file.")
         raise
     # read the block
-    pops = [] # tuples (r, pars) with 
-              #   r..rfactor, pars..list of parameter indices
-    popcount = []   # how often a given population is there
-    parlist = []    # for control.chem
-    data = False
-    for (ln, line) in enumerate(lines):
-        if ln == 0:
-            generation = 0
-            try:
-                generation = int(line.split()[2])
-                if final:
-                    logger.info("Reading search results from SD.TL, "
-                                 "generation {}".format(generation))
-            except:
-                if final:
-                    logger.warning("Reading search results from SD.TL, could "
-                                "not determine final generation number. "
-                                "Reading last block.")
-                    rp.setHaltingLevel(1)
-        elif "|" in line and line[:3] != "IND":
-            # this is a line with data in it
-            try:
-                rav = float(line.split("|")[2 + rp.SEARCH_BEAMS]) # R-factor
-                valstring = line.split("|")[-1].rstrip()
-                pars = tl.base.readIntLine(valstring, width=4)
-                parlist.append(pars)
-            except:
-                if final:
-                    logger.error("Could not read line in SD.TL:\n"+line)
-                    raise
-                else:
-                    return("Line read error in SD.TL")
-            data = True
-            if (rav, pars) in pops:
-                popcount[pops.index((rav, pars))] += 1
-            else:
-                pops.append((rav,pars))
-                popcount.append(1)
-    if not data:
+    sdtlContent = io.readSDTL_blocks("\n".join(lines), 
+                                     whichR = rp.SEARCH_BEAMS, logInfo = final)
+    if not sdtlContent:
         if final:
             logger.error("No data found in SD.TL file!")
             rp.setHaltingLevel(2)
         return("No data in SD.TL")
-    
+    (generation, rfacs, configs) = sdtlContent[0]
+    # collect equal entries
+    pops = [] # tuples (r, pars) with 
+              #   r..rfactor, pars..list of parameter indices
+    popcount = []   # how often a given population is there
+    dparlist = []    # for control.chem
+    for i in range(0, len(rfacs)):
+        if (rfacs[i], configs[i]) in pops:
+            popcount[pops.index((rfacs[i], configs[i]))] += 1
+        else:
+            pops.append((rfacs[i], configs[i]))
+            popcount.append(1)
+        dparlist.append(configs[i])
     writeControlChem = False
     if not os.path.isfile("control.chem"):
         writeControlChem = True
@@ -108,13 +85,20 @@ def processSearchResults(sl, rp, final=True):
     # write backup file
     output = ("\nParameters of generation No." + str(generation).rjust(6)
               + ":\n")
-    for l in parlist:
+    if rp.domainParams:
+        astep = rp.DOMAIN_STEP
+    else:
+        astep = 100
+    for dpars in dparlist:
         ol = ""
-        for ind in l:
-            ol += str(ind).rjust(3)
-        ol += "  1\n" # !!! to check: why does this sometimes have value 2?
-                      # !!! DOMAINS: Last value is domain configuration
-        output += ol
+        areapars = []
+        for (percent, l) in dpars:
+            for ind in l:
+                ol += str(ind).rjust(3)
+            areapars.append(int(percent/astep)+1)
+        for ap in areapars:
+            ol += str(ap).rjust(3)
+        output += ol + "\n"
     rp.controlChemBackup = output
     if writeControlChem:
         try:
@@ -141,47 +125,75 @@ def processSearchResults(sl, rp, final=True):
                     ", R = {:.4f}\n".format(popcount[0], rp.SEARCH_POPULATION, 
                                             pops[0][0]))
         if len(pops) > 1:
-            info += ("The best configurations are:\n"
-                     "POP       R | PARAMETERS\n")
+            info += ("The best configurations are:\nPOP       R |")
+            if rp.domainParams:
+                info += " area |"
+            info += " PARAMETERS\n"
             for i in range(0,min(5,len(pops))):
-                info += "{:>3}  {:.4f} | ".format(popcount[i], pops[i][0])
-                for v in pops[i][1]:
-                    info += "{:>3}".format(v)
-                info += "\n"
+                for (j, (percent, pars)) in enumerate(pops[i][1]):
+                    if j == 0:
+                        info += "{:>3}  {:.4f} |".format(popcount[i], 
+                                                         pops[i][0])
+                    else:
+                        info += "            |"
+                    if rp.domainParams:
+                        info += " {:>3}% |".format(percent)
+                    for v in pars:
+                        info += "{:>3}".format(v)
+                    info += "\n"
             logger.info(info)
-    return io.writeSearchOutput(sl, rp, pops[0][1], silent=(not final))
+    # now writeSearchOutput:
+    if not rp.domainParams:
+        result = io.writeSearchOutput(sl, rp, pops[0][1][0][1], 
+                                      silent=(not final))
+    else:
+        home = os.getcwd()
+        result = 0
+        for (i, dp) in enumerate(rp.domainParams):
+            try:
+                os.chdir(dp.workdir)
+                r = io.writeSearchOutput(dp.sl, dp.rp, pops[0][1][i][1], 
+                                         silent=(not final))
+            except:
+                logger.error("Error while writing search output for domain {}"
+                             .format(dp.name))
+                rp.setHaltingLevel(2)
+            finally:
+                os.chdir(home)
+            if r != 0:
+                result = r
+    return result
 
 def search(sl, rp):
     """Runs the search. Returns 0 when finishing without errors, or an error 
     message otherwise."""
-    # read DISPLACEMENTS block
-    if not rp.disp_block_read:
-        readDISPLACEMENTS_block(rp, sl, rp.disp_blocks[rp.search_index])
-        rp.disp_block_read = True
     rp.searchResultConfig = None
-    # get Deltas
-    if not 2 in rp.runHistory:
-        if "Tensors" in rp.manifest:
-            logger.error("New tensors were calculated, but no new delta "
-                          "files were generated. Cannot execute search.")
-            return ("Delta calculations was not run for current tensors.")
-        try:
-            r = tl.leedbase.getDeltas(rp.TENSOR_INDEX, required=True)
-        except:
-            raise
-        if r != 0:
-            return r
-    # if number of cores is not defined, try to find it
-    if rp.N_CORES == 0:
-        try:
-            rp.N_CORES = tl.base.available_cpu_count()
-        except:
-            logger.error("Failed to detect number of cores.")
-        logger.info("Automatically detected number of available CPUs: {}"
-                     .format(rp.N_CORES))
-    if rp.N_CORES == 0:
-        logger.error("Failed to detect number of cores.")
-        return("N_CORES undefined, automatic detection failed")
+    if rp.domainParams:
+        initToDo = [(dp.rp, dp.sl, dp.workdir) for dp in rp.domainParams]
+    else:
+        initToDo = [(rp, sl, ".")]
+    for (rpt, slt, path) in initToDo:
+        # read DISPLACEMENTS block
+        if not rpt.disp_block_read:
+            readDISPLACEMENTS_block(rpt, slt, 
+                                    rpt.disp_blocks[rpt.search_index])
+            rpt.disp_block_read = True
+        # get Deltas
+        if not 2 in rpt.runHistory:
+            if "Tensors" in rpt.manifest:
+                logger.error("New tensors were calculated, but no new delta "
+                              "files were generated. Cannot execute search.")
+                return ("Delta calculations was not run for current tensors.")
+            try:
+                r = tl.leedbase.getDeltas(rpt.TENSOR_INDEX, basedir=path, 
+                                          targetdir=path, required=True)
+            except:
+                raise
+            if r != 0:
+                return r
+    r = rp.updateCores()
+    if r != 0:
+        return r
     # generate rf.info
     try:
         rfinfo = io.writeRfInfo(sl, rp, filename="rf.info")
@@ -198,10 +210,10 @@ def search(sl, rp):
     except:
         logger.error("Error generating search input")
         raise
-    if rp.indyPars == 0:
+    if rp.indyPars == 0:  # never for calculations with domains # !!! CHECK
         logger.info("Found nothing to vary in search. Will proceed "
                 "directly to writing output and starting SUPERPOS.")
-        rp.searchResultConfig = [[1] * len(rp.searchpars)]
+        rp.searchResultConfig = [(100, [1] * (len(rp.searchpars))-1)]
         for (i, sp) in enumerate(rp.searchpars):
             if type(sp.restrictTo) == int:
                 rp.searchResultsConfig[i] = sp.restrictTo
@@ -236,7 +248,7 @@ def search(sl, rp):
             rp.FORTRAN_COMP_MPI[0] = "mpiifort -Ofast"
             
             
-    if shutil.which("mpirun", os.X_OK) == None:
+    if usempi and shutil.which("mpirun", os.X_OK) == None:
         usempi = False
         logger.warning("mpirun is not present. Search will be compiled "
             "and executed without parallelization. This will be much "
@@ -444,7 +456,7 @@ def search(sl, rp):
                     if os.path.isfile("SD.TL"):
                         filepos, content = io.readSDTL_next(
                                                          offset = filepos)
-                        if content != "":
+                        if content:
                             newData = io.readSDTL_blocks(content, 
                                                   whichR = rp.SEARCH_BEAMS)
                     for (gen, rfacs, configs) in newData:
@@ -471,15 +483,15 @@ def search(sl, rp):
                     if len(gens) > 1:
                         try:
                             writeSearchProgressPdf(rp, gens, rfaclist, 
-                                               lastconfig, markers=markers)
+                                                lastconfig, markers=markers)
                         except:
-                            logger.warning("Error writing "
-                                            "Search-progress.pdf")
+                            logger.warning("Error writing Search-progress.pdf", 
+                                            exc_info = rp.LOG_DEBUG)
                         try:
                             writeSearchReportPdf(rp)
                         except:
-                            logger.warning("Error writing "
-                                            "Search-report.pdf")
+                            logger.warning("Error writing Search-report.pdf",
+                                           exc_info = rp.LOG_DEBUG)
                     if (len(gens) > 1 and os.path.isfile("SD.TL") and 
                                                 (repeat or not stop)):
                         try:
@@ -607,6 +619,15 @@ def search(sl, rp):
     if r != 0:
         logger.error("Error processing search results: "+r)
         return r
+    # if deltas were copied from domain folders, clean them up
+    if rp.domainParams:
+        rgx = re.compile(r'D\d+_DEL_')
+        for file in [f for f in os.listdir() if rgx.match(f)]:
+            try:
+                os.remove(file)
+            except:
+                logger.warning('Failed to deleted redundant domain delta file '
+                               +file)
     # process files
     try:
         os.rename('PARAM','search-PARAM')

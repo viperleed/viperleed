@@ -23,6 +23,7 @@ else:
 
 from tleedmlib.files.iodeltas import checkDelta
 from tleedmlib.leedbase import getMaxTensorIndex
+from tleedmlib.base import available_cpu_count
 
 logger = logging.getLogger("tleedm.rparams")
 
@@ -59,9 +60,9 @@ class SearchPar:
 class DomainParameters:
     """Stores workdir, slab and runparams objects for each domain"""
     def __init__(self, workdir, homedir, name):
-        self.workdir = workdir
-        self.homedir = homedir
-        self.name = name
+        self.workdir = workdir  # path do sub-directory for domain calculation
+        self.homedir = homedir  # path to main tleedm working directory
+        self.name = name        # domain name as defined by user
         self.sl = None
         self.rp = None
         
@@ -79,6 +80,7 @@ class Rparams:
         self.BULKDOUBLING_MAX = 10
         self.BULK_REPEAT = None
         self.DOMAINS = []       # list of domains (name, path)
+        self.DOMAIN_STEP = 1   # area step in percent for domain search
         self.ELEMENT_MIX = {}   #if any ELEMENT_MIX is defined, it will be
                     #  added to the dictionary with the element name as the
                     #  label and the splitlist as the value
@@ -133,6 +135,7 @@ class Rparams:
         self.SUPERLATTICE = np.array([[1,0],[0,1]],dtype=float)
         self.SUPPRESS_EXECUTION = False
         self.SYMMETRIZE_INPUT = True
+        self.SYMMETRY_CELL_TRANSFORM = np.array([[1,0],[0,1]],dtype=float)
         self.SYMMETRY_EPS = 0.1
         self.SYMMETRY_EPS_Z = 0.1
         self.SYMMETRY_FIND_ORI = True
@@ -160,7 +163,8 @@ class Rparams:
         #                                         #  ignore & warn
 
         # variable states
-        self.workdir = ""   # MAIN WORK DIRECTORY; where to look for files
+        self.workdir = os.getcwd() 
+                                # MAIN WORK DIRECTORY; where to look for files
         self.searchConvInit = {"gaussian": None, 
                               "dgen": {"all": None, "best": None, "dec": None}}
         self.searchMaxGenInit = self.SEARCH_MAX_GEN
@@ -181,7 +185,6 @@ class Rparams:
         self.stored_R = {"refcalc": None, "superpos": None}
         
         # domains
-        self.hasDomains = False
         self.domainParams = []
         self.pseudoSlab = None
 
@@ -206,8 +209,7 @@ class Rparams:
         self.search_atlist = []    # atoms that are relevant for the search
         self.search_maxfiles = 0   # maximum number of delta files for one atom
         self.search_maxconc = 1    # maximum number of concentration steps
-        # self.nPars = 1         # number of parameters (even if no variation)
-            # !!! starts out as 1 for domain now, until domains are implemented
+
         self.indyPars = 0        # number of independent parameters
         self.mncstep = 0    # MAX NUMBER OF VARIATIONS (geo. times therm.)
                             #   IN 1 FILE
@@ -307,7 +309,22 @@ class Rparams:
                 self.V0_REAL = ("workfn-max("+str(round(c[0],2))
                         +", (("+str(round(c[1],2))+")+("+str(round(c[2],2))
                         +")/sqrt(EEV+workfn+("+str(round(c[3],2))+"))))")
-       
+    
+    def updateCores(self):
+        # if N_CORES is undefined, tries to find it
+        if self.N_CORES != 0:
+            return 0
+        try:
+            self.N_CORES = available_cpu_count()
+        except:
+            logger.error("Failed to detect number of cores.")
+        logger.info("Automatically detected number of available CPUs: {}"
+                     .format(self.N_CORES))
+        if self.N_CORES == 0:
+            logger.error("Failed to detect number of cores.")
+            return("N_CORES undefined, automatic detection failed")
+        return 0
+        
     def resetSearchConv(self):
         """Sets the search convergence and tracking parameters back to their 
         initial values."""
@@ -439,26 +456,23 @@ class Rparams:
     def getCenteredConfig(self):
         """Returns a list of 'centered' parameter indices, i.e. all in the 
         middle of their respective range"""
-        return ([int((sp.steps + 1)/2) for sp in self.searchpars] + [1])
-                # !!! the 1 at the end is currently domains - correct later
+        return ([int((sp.steps + 1)/2) for sp in self.searchpars])
     
     def getRandomConfig(self):
         """Returns a list of 'random' parameter indices, but makes sure that 
         linked parameters have the same value"""
-        l = [-1] * len(self.searchpars) + [1]
-            # !!! the 1 at the end is currently domains - correct later
+        l = [-1] * len(self.searchpars)
         for i, sp in enumerate(self.searchpars):
-            if sp.restrictTo is None and sp.linkedTo is None:
-                l[i] = random.randint(1, sp.steps)
+            l[i] = random.randint(1, sp.steps)
         for i, sp in enumerate(self.searchpars):
-            if sp.restrictTo is not None:
+            if sp.linkedTo is not None:
+                l[i] = l[self.searchpars.index(sp.linkedTo)]
+            elif sp.restrictTo is not None:
                 if type(sp.restrictTo) == int:
                     l[i] = sp.restrictTo
                 else:
-                    l[i] = l[self.searchpars.index(sp.restrictTo)+1]
-            elif sp.linkedTo is not None:
-                l[i] = l[self.searchpars.index(sp.linkedTo)+1]
-        if any([v == -1 for v in l]):
+                    l[i] = l[self.searchpars.index(sp.restrictTo)]
+        if -1 in l:
             logger.error("Rparams.getRandomConfig failed: {}".format(l))
             return []
         return l
@@ -488,11 +502,9 @@ class Rparams:
                 break
             i = random.randint(0, len(parents)-1)
             p = parents.pop(i)
-            if not p2[0][:-1] == p[:-1]:    # !!! the [:-1] is about domains,
-                                            #   remove later
+            if p2[0] != p:
                 p2.append(p)
-        l = [-1] * len(self.searchpars) + [1]
-            # !!! the 1 at the end is currently domains - correct later
+        l = [-1] * len(self.searchpars)
         for i, sp in enumerate(self.searchpars):
             if sp.restrictTo is None and sp.linkedTo is None:
                 l[i] = p2[random.randint(0,1)][i]
@@ -504,7 +516,7 @@ class Rparams:
                     l[i] = l[self.searchpars.index(sp.restrictTo)+1]
             elif sp.linkedTo is not None:
                 l[i] = l[self.searchpars.index(sp.linkedTo)+1]
-        if any([v == -1 for v in l]):
+        if -1 in l:
             logger.error("Rparams.getOffspringConfig failed: {}".format(l))
             return []
         return l
@@ -521,21 +533,22 @@ class Rparams:
                 except:
                     pass
 
-    def generateSearchPars(self, sl, rp):
+    def generateSearchPars(self, sl, subdomain=False):
         """Initializes a list of searchpar objects, and assigns delta files to
         atoms if required."""
+        if self.domainParams:
+            return(self.generateSearchPars_domains(sl))
         self.searchpars = []
         self.search_maxfiles = 0   # maximum number of delta files for one atom
         self.search_maxconc = 1
-        # nPars = 1           # number of parameters (even if no variation)
-               # !!! starts out as 1 for domain now, until domains are implemented
         self.indyPars = 0        # number of independent parameters
         self.mncstep = 0     # MAX NUMBER OF VARIATIONS (geo. times therm.)
                              #   IN 1 FILE
         eqlist = []     # track which atoms are symmetry-linked to the ones already
                         #   done to not double-count indyPars
         # get list of atoms that appear in the search
-        if 2 in self.runHistory or sl.deltasInitialized:
+        if (2 in self.runHistory or 42 in self.runHistory 
+                                 or sl.deltasInitialized):
             # if delta has been run, information what deltas exist is stored
             atlist = [at for at in sl.atlist if (not at.layer.isBulk and
                                                  len(at.deltasGenerated) > 0)]
@@ -578,7 +591,7 @@ class Rparams:
                     found = False
                     for df in [f for f in deltaCandidates 
                                                if f.split("_")[2] == el]:
-                        if checkDelta(df, at, el, rp):
+                        if checkDelta(df, at, el, self):
                             found = True
                             at.deltasGenerated.append(df)
                             break
@@ -643,49 +656,48 @@ class Rparams:
                 el = fn.split("_")[2]
                 if el == "vac":
                     self.searchpars.append(SearchPar(at, "geo", "vac", fn))
-                else:
-                    mult = 1
-                    pars = 0
-                    for (mode, d) in [("vib", at.disp_vib),
-                                      ("geo", at.disp_geo)]:
-                        if el in d:
-                            k = el
+                    continue
+                mult = 1
+                pars = 0
+                for (mode, d) in [("vib", at.disp_vib),
+                                  ("geo", at.disp_geo)]:
+                    if el in d:
+                        k = el
+                    else:
+                        k = "all"
+                    if len(d[k]) > 1 or (len(d[k]) == 1 and 
+                                         ((mode == "geo" and 
+                                             np.linalg.norm(d[k][0]) > 0.)
+                                          or (mode == "vib" and 
+                                                      d[k][0] != 0.))):
+                        pars += 1
+                        sp = SearchPar(at, mode, el, fn)
+                        self.searchpars.append(sp)
+                        if el in at.constraints[md[mode]]:
+                            k2 = el
                         else:
-                            k = "all"
-                        if len(d[k]) > 1 or (len(d[k]) == 1 and 
-                                             ((mode == "geo" and 
-                                                 np.linalg.norm(d[k][0]) > 0.)
-                                              or (mode == "vib" and 
-                                                          d[k][0] != 0.))):
-                            pars += 1
-                            sp = SearchPar(at, mode, el, fn)
-                            self.searchpars.append(sp)
-                            if el in at.constraints[md[mode]]:
-                                k2 = el
+                            k2 = "all"
+                        if k2 in at.constraints[md[mode]]:
+                            c = at.constraints[md[mode]][k2]
+                            if type(c) == int:
+                                sp.restrictTo = c + 1
                             else:
-                                k2 = "all"
-                            if k2 in at.constraints[md[mode]]:
-                                c = at.constraints[md[mode]][k2]
-                                if type(c) == int:
-                                    sp.restrictTo = c + 1
-                                else:
-                                    splToRestrict.append((sp, c))
-                            elif len(d[k]) > 1:
-                                if not at in eqlist:
-                                    self.indyPars += 1
-                                else:
-                                    spl = [s for s in self.searchpars 
-                                           if at in s.atom.displist 
-                                            and s.mode == sp.mode 
-                                            and (s.el == el 
-                                                 or el in ["", "all"])]
-                                    if spl:
-                                        sp.linkedTo = spl[0]
-                        mult *= len(d[k])
-                    if pars == 0:
-                        self.searchpars.append(SearchPar(at, "geo", el, fn))
-                    if mult > self.mncstep:
-                        self.mncstep = mult
+                                splToRestrict.append((sp, c))
+                        elif len(d[k]) > 1 and not at in eqlist:
+                            self.indyPars += 1
+                        if len(d[k]) > 1 and at in eqlist:
+                            spl = [s for s in self.searchpars 
+                                   if at in s.atom.displist 
+                                   and s.mode == sp.mode 
+                                   and (s.el == el 
+                                        or el in ["", "all"])]
+                            if spl:
+                                sp.linkedTo = spl[0]
+                    mult *= len(d[k])
+                if pars == 0:
+                    self.searchpars.append(SearchPar(at, "geo", el, fn))
+                if mult > self.mncstep:
+                    self.mncstep = mult
             sp = SearchPar(at, "occ", "", fn)
             self.searchpars.append(sp)
             occsteps = len(next(iter(at.disp_occ.values())))
@@ -701,11 +713,11 @@ class Rparams:
                 else:
                     if not at in eqlist:  # occupation will actually vary
                         self.indyPars += 1  
-                    else:
-                        spl = [s for s in self.searchpars if at 
-                               in s.atom.displist and s.mode == 3]
-                        if spl:
-                            sp.linkedTo = spl[0]
+                if at in eqlist:
+                    spl = [s for s in self.searchpars if at 
+                           in s.atom.displist and s.mode == 3]
+                    if spl:
+                        sp.linkedTo = spl[0]
             eqlist.extend(at.displist)  # do not consider those for future
                                         #    indyPars
         # if self.indyPars == 0:
@@ -727,5 +739,63 @@ class Rparams:
                 "element {}, mode {} failed: Could not identify target "
                 "search parameter (atom {}, element {})."
                 .format(sp.atom.oriN, sp.el, sp.mode, at.oriN, el))
+        for (i, sp) in enumerate(self.searchpars):
+            # restrict to lowest number index, resolve conflicts
+            if sp.restrictTo not in self.searchpars:
+                continue
+            sp2 = None
+            while sp2 != sp.restrictTo:
+                sp2 = sp.restrictTo
+                ind = self.searchpars.index(sp2)
+                if (sp2.linkedTo in self.searchpars and 
+                          self.searchpars.index(sp2.linkedTo) < ind):
+                    sp.restrictTo = sp2.linkedTo
+                elif (sp2.restrictTo in self.searchpars and 
+                          self.searchpars.index(sp2.restrictTo) < ind):
+                    sp.restrictTo = sp2.restrictTo
+            if self.searchpars.index(sp.restrictTo) >= i:
+                if sp.restrictTo.restrictTo is None:
+                    sp.restrictTo.restrictTo = sp   # invert direction
+                if type(sp.restrictTo.restrictTo) == int:
+                    sp.restrictTo = sp.restrictTo.restrictTo
+                else:
+                    sp.restrictTo = None  # remove references to higher indices
         self.search_atlist = atlist
+        if not subdomain:
+            self.searchpars.append(SearchPar(None, "dom", "", ""))
+            self.searchpars[-1].steps = 2
+        return 0
+
+    def generateSearchPars_domains(self, sl):
+        """Runs generateSearchPars for every domain, then collates results."""
+        self.searchpars = []
+        self.indyPars = len(self.domainParams) - 1
+        home = os.getcwd()
+        for dp in self.domainParams:
+            try:
+                os.chdir(dp.workdir)
+                r = dp.rp.generateSearchPars(dp.sl, subdomain=True)
+            except:
+                logger.error("Error while creating delta input for domain {}"
+                             .format(dp.name))
+                raise
+            finally:
+                os.chdir(home)
+            if r != 0:
+                logger.error("Error getting search parameters for domain {}: "
+                             "{}".format(dp.name, r))
+                return ("Error getting search parameters")
+            for sp in [sp for sp in dp.rp.searchpars 
+                       if type(sp.restrictTo) == int]:
+                sp.restrictTo += len(self.searchpars)
+            self.searchpars.extend(dp.rp.searchpars)
+            self.indyPars += dp.rp.indyPars
+        for dp in self.domainParams:
+            self.searchpars.append(SearchPar(None, "dom", "", ""))
+            self.searchpars[-1].steps = int(100 / self.DOMAIN_STEP) + 1
+        self.search_maxfiles = max([dp.rp.search_maxfiles 
+                                    for dp in self.domainParams])
+        self.search_maxconc = max([dp.rp.search_maxconc 
+                                    for dp in self.domainParams])
+        self.mncstep = max([dp.rp.mncstep for dp in self.domainParams])
         return 0

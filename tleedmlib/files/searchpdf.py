@@ -11,6 +11,7 @@ import numpy as np
 import logging
 
 logger = logging.getLogger("tleedm.files.searchpdf")
+logger.setLevel(logging.INFO)
 
 try:
     import matplotlib
@@ -70,9 +71,7 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
         if deltagens[i] >= maxdgy[-1]:
             maxdgx.append(gens[i+1])
             maxdgy.append(deltagens[i])
-
-    sps = [sp for sp in rp.searchpars if sp.el != "vac" and sp.steps > 1]
-
+            
     figsize = (5.8, 8.3)
     figs = []
     
@@ -101,62 +100,71 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
     except:
         logger.warning("Failed to write "+csvname)
     
-    # the following will spam the logger with debug messages; disable.
-    loglevel = logger.level
-    logger.setLevel(logging.INFO)
-    try:
-        # R-FACTOR AND GENERATION DELTA
-        # create figure
-        fig, (rfp, dgp) = plt.subplots(2, 1, sharex=True, figsize = figsize)
-        dgp.set_xlabel('Generations')
-        rfp.set_ylabel('R-Factor')
-        dgp.set_ylabel('Generation delta')
-        #plot markers
-        part = 0
-        for (i, g) in enumerate(gens):
-            if g > gens[-1] * 0.2:
-                part = len(gens) - i
-                break
-        part = max(100, part)
-        rfmin, rfmax = min(rfacsMin[-part:]), max(rfacsMax[-part:])
-        rYrange = [rfmin-(rfmax-rfmin)*0.1, rfmax+(rfmax-rfmin)*0.1]
-        
-        labely = rYrange[0] + (rYrange[1]-rYrange[0])*0.99
-        xoff = gens[-1]*0.005
-        for (xpos, label) in markers:
-            rfp.axvline(x = xpos, lw = 0.5, c = "black")
-            dgp.axvline(x = xpos, lw = 0.5, c = "black")
-            rfp.text(xpos + xoff, labely, label, rotation=-90, 
-                     verticalalignment="top", size=4)
-        # plot data
-        rfp.plot(gens, rfacsMin, '-', color='black', label = "Best")
-        rfp.fill_between(gens, rfacsMin, rfacsMax, facecolor='grey', 
-                         alpha=0.2, label="Range")
-        rfp.plot(gens, rfacsMean, label = "Mean")
-        # rfp.fill_between(gens, rfacsMean - rfacsStd/2, rfacsMean + rfacsStd/2, 
-        #                  alpha=0.2, label="Sigma")
-        (x,y,s,c) = list(zip(*rp.rfacscatter))
-        rfp.scatter(x, y, s=s, c=c)
-        # rfp.scatter([gens[-1]]*len(rlastunique), rlastunique, 
-        #             s = lastpops, c = colors)
-        dgp.scatter(gens[1:], deltagens, s = 4, c='black', label="Every")
-        dgp.plot(maxdgx, maxdgy, '-', color='royalblue', label="Max")
-        # layout
-        rfp.set_ylim(rYrange)
-        dgp.set_ylim([0, max(deltagens)*1.1])
-        dgp.ticklabel_format(axis="x", style="sci", scilimits=(0,4))
-        fig.tight_layout()
-        rfp.legend(loc="lower left")
-        dgp.legend(loc="upper left")
-        figs.append(fig)
-        
-        # SEARCH PARAMETER SCATTER
-        fig, axs = plt.subplots(figsPerPage, figsize=figsize, squeeze=True)
-        figcount = 0
-        labels = {"geo": "GEOMETRY", "vib": "VIBRATION", 
-                  "occ": "OCCUPATION"}
-        offsets = []
-        for mode in ["geo", "vib", "occ"]:
+    # R-FACTOR AND GENERATION DELTA
+    # create figure
+    fig, (rfp, dgp) = plt.subplots(2, 1, sharex=True, figsize = figsize)
+    dgp.set_xlabel('Generations')
+    rfp.set_ylabel('R-Factor')
+    dgp.set_ylabel('Generation delta')
+    #plot markers
+    part = 0
+    for (i, g) in enumerate(gens):
+        if g > gens[-1] * 0.2:
+            part = len(gens) - i
+            break
+    part = max(100, part)
+    rfmin, rfmax = min(rfacsMin[-part:]), max(rfacsMax[-part:])
+    rYrange = [rfmin-(rfmax-rfmin)*0.1, rfmax+(rfmax-rfmin)*0.1]
+    
+    labely = rYrange[0] + (rYrange[1]-rYrange[0])*0.99
+    xoff = gens[-1]*0.005
+    for (xpos, label) in markers:
+        rfp.axvline(x = xpos, lw = 0.5, c = "black")
+        dgp.axvline(x = xpos, lw = 0.5, c = "black")
+        rfp.text(xpos + xoff, labely, label, rotation=-90, 
+                 verticalalignment="top", size=4)
+    # plot data
+    rfp.plot(gens, rfacsMin, '-', color='black', label = "Best")
+    rfp.fill_between(gens, rfacsMin, rfacsMax, facecolor='grey', 
+                     alpha=0.2, label="Range")
+    rfp.plot(gens, rfacsMean, label = "Mean")
+    # rfp.fill_between(gens, rfacsMean - rfacsStd/2, rfacsMean + rfacsStd/2, 
+    #                  alpha=0.2, label="Sigma")
+    (x,y,s,c) = list(zip(*rp.rfacscatter))
+    rfp.scatter(x, y, s=s, c=c)
+    # rfp.scatter([gens[-1]]*len(rlastunique), rlastunique, 
+    #             s = lastpops, c = colors)
+    dgp.scatter(gens[1:], deltagens, s = 4, c='black', label="Every")
+    dgp.plot(maxdgx, maxdgy, '-', color='royalblue', label="Max")
+    # layout
+    rfp.set_ylim(rYrange)
+    dgp.set_ylim([0, max(deltagens)*1.1])
+    dgp.ticklabel_format(axis="x", style="sci", scilimits=(0,4))
+    fig.tight_layout()
+    rfp.legend(loc="lower left")
+    dgp.legend(loc="upper left")
+    figs.append(fig)
+    
+    # SEARCH PARAMETER SCATTER
+    fig, axs = plt.subplots(figsPerPage, figsize=figsize, squeeze=True)
+    figcount = 0
+    labels = {"geo": "GEOMETRY", "vib": "VIBRATION", 
+              "occ": "OCCUPATION", "dom": "DOMAIN AREAS"}
+    offsets = []
+    rpToDo = [rp]
+    if rp.domainParams:
+        rpToDo.extend([dp.rp for dp in rp.domainParams])
+    for (k, crp) in enumerate(rpToDo):
+        sps = [sp for sp in crp.searchpars if sp.el != "vac" and sp.steps > 1]
+        if not rp.domainParams:
+            confindex = 0
+        elif crp != rp:
+            confindex = k-1
+        for mode in ["dom", "geo", "vib", "occ"]:
+            if rp.domainParams and crp == rp and mode != "dom":
+                continue
+            if not rp.domainParams and mode == "dom":
+                continue
             spm = [sp for sp in sps if sp.mode == mode]
             while len(spm) > 0:
                 if figcount >= figsPerPage:
@@ -168,17 +176,33 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
                 plotpars = spm[:parsPerFig]
                 spm = spm[parsPerFig:]
                 title = labels[mode]
-                if len(rp.disp_blocks) > 1:
-                    title += " (search {})".format(searchname[:20])
+                addinfo = []
+                if mode != "dom" and rp.domainParams:
+                    addinfo.append("domain {}"
+                                   .format(rp.domainParams[k-1].name))
+                if len(crp.disp_blocks) > 1:
+                    addinfo.append("search {}".format(searchname[:20]))
+                if addinfo:
+                    title += " ("
+                    while addinfo:
+                        title += addinfo.pop(0)
+                        if addinfo:
+                            title += ", "
+                        else:
+                            title += ")"
                 axs[figcount].set_title(title)
                 pltpoints = [] # x, y, color, size, alpha
                 bestpoints = []
                 xlabels = []
                 for (i, par) in enumerate(plotpars):
-                    ind = rp.searchpars.index(par)
                     vals = []
                     for (j, conf) in enumerate(lastconfig):
-                        val = (conf[ind]-1) / (par.steps-1)
+                        if mode != "dom":
+                            val = ((conf[confindex][1][crp.searchpars
+                                                       .index(par)]-1) 
+                                   / (par.steps-1))
+                        else:
+                            val = conf[i][0] / 100
                         r, g, b, alpha = allcolors[j]
                         if par.linkedTo is None and par.restrictTo is None:
                             alpha = 1.0
@@ -189,11 +213,15 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
                         pltpoints.append((i+1, val, color, 1))
                         if j == 0:
                             bestpoints.append((i+1, val, alpha))
-                    if mode != "occ":
-                        el = par.el
+                    if mode == "dom":
+                        xlabels.append("#{}\n{}".format(i+1, 
+                                                      rp.domainParams[i].name))
                     else:
-                        el = par.atom.el
-                    xlabels.append("#"+str(par.atom.oriN)+"\n"+el)
+                        if mode != "occ":
+                            el = par.el
+                        else:
+                            el = par.atom.el
+                        xlabels.append("#{}\n{}".format(par.atom.oriN, el))
                     if vals:
                         offsets.append(np.std(vals))
                         # mean = np.mean(vals)
@@ -229,6 +257,7 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
                                            arrowprops=dict(arrowstyle="wedge",
                                                            facecolor="black",
                                                            alpha=alpha))
+                xlabels.extend([""] * (parsPerFig - len(xlabels)))
                 axs[figcount].set_xlim([0, parsPerFig+1])
                 axs[figcount].set_ylim([0, 1])
                 axs[figcount].set_xticks(list(range(1,parsPerFig+1)))
@@ -236,47 +265,45 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
                 axs[figcount].tick_params(axis='y', which='both', left=False, 
                                 right=False, labelleft=False)
                 figcount += 1
-        if offsets:
-            rp.parScatter[-1].append((gens[-1],np.mean(offsets),max(offsets)))
-        for i in range(figcount, figsPerPage):
-            axs[i].axis('off')
-        if not fig in figs:
-            fig.tight_layout()
-            figs.append(fig)
-            
-        # save
-        if searchname in rp.lastParScatterFigs:
-            for f in rp.lastParScatterFigs[searchname]:
-                try:
-                    plt.close(f)
-                except:
-                    pass
-        rp.lastParScatterFigs[searchname] = figs[1:]
-        try:
-            pdf = PdfPages(outname)
-            for fig in figs:
-                pdf.savefig(fig)
-        except PermissionError:
-            logger.warning("Failed to write to " + outname
-                            + ": Permission denied.")
-            return 1
-        except:
-            logger.warning("Failed to write to "+outname)
-            return 1
-        finally:
+    if offsets:
+        rp.parScatter[-1].append((gens[-1],np.mean(offsets),max(offsets)))
+    for i in range(figcount, figsPerPage):
+        axs[i].axis('off')
+    if not fig in figs:
+        fig.tight_layout()
+        figs.append(fig)
+        
+    # save
+    if searchname in rp.lastParScatterFigs:
+        for f in rp.lastParScatterFigs[searchname]:
             try:
-                pdf.close()
+                plt.close(f)
             except:
                 pass
+    rp.lastParScatterFigs[searchname] = figs[1:]
+    try:
+        pdf = PdfPages(outname)
+        for fig in figs:
+            pdf.savefig(fig)
+    except PermissionError:
+        logger.warning("Failed to write to " + outname
+                        + ": Permission denied.")
+        return 1
+    except:
+        logger.warning("Failed to write to "+outname)
+        return 1
     finally:
-        logger.setLevel(loglevel)
-        for fig in [f for f in figs if 
-                    not searchname in rp.lastParScatterFigs or
-                    not f in rp.lastParScatterFigs[searchname]]:
-            try:
-                plt.close(fig)
-            except:
-                pass
+        try:
+            pdf.close()
+        except:
+            pass
+    for fig in [f for f in figs if 
+                not searchname in rp.lastParScatterFigs or
+                not f in rp.lastParScatterFigs[searchname]]:
+        try:
+            plt.close(fig)
+        except:
+            pass
     return 0
 
 def writeSearchReportPdf(rp, outname = "Search-report.pdf"):
@@ -306,89 +333,83 @@ def writeSearchReportPdf(rp, outname = "Search-report.pdf"):
         
     figsize = (5.8, 8.3)
     figs = []
-    # the following will spam the logger with debug messages; disable.
-    loglevel = logger.level
-    logger.setLevel(logging.INFO)
+    # R-FACTORS AND MEAN SCATTER
+    # create figure
+    fig, (rfp, msp) = plt.subplots(2, 1, sharex=True, figsize = figsize)
+    msp.set_xlabel('Generations')
+    rfp.set_ylabel('R-Factor')
+    msp.set_ylabel('Parameter scatter')
+    #plot markers
+    part = 0
+    for (i, g) in enumerate(allgens):
+        if g > allgens[-1] * 0.2:
+            part = len(allgens) - i
+            break
+    part = max(50, part)
+    rfmin, rfmax = min(allmin[-part:]), max(allmean[-part:])
+    if rfmax == rfmin:
+        rfmin *= 0.95
+        rfmax *= 1.05
+    rYrange = [rfmin-(rfmax-rfmin)*0.1, rfmax+(rfmax-rfmin)*0.1]
+    rYrange[1] = min(rYrange[1], 2*max(allmin) - rYrange[0])
+    
+    labely = rYrange[0] + (rYrange[1]-rYrange[0])*0.99
+    xoff = allgens[-1]*0.005
+    for (xpos, label) in markers:
+        rfp.axvline(x = xpos, lw = 0.5, c = "black")
+        msp.axvline(x = xpos, lw = 0.5, c = "black")
+        rfp.text(xpos + xoff, labely, label, rotation=-90, 
+                 verticalalignment="top", size=4)
+    # plot data
+    
+    rfp.fill_between(allgens, allmin, allmax, facecolor='grey', 
+                     alpha=0.2, label="Range")
+    rfp.plot(allgens, allmean, label = "Mean")
+    rfp.plot(allgens, allmin, '-', color='black', label = "Best")
+
+    labelled = False
+    scattermax = 0
+    for (allgens, psmean, psmax) in parScatterLines:
+        meanline, = msp.plot(allgens, psmean, '-', color="tab:blue")
+        maxline, = msp.plot(allgens, psmax, '-', color="black")
+        scattermax = max(scattermax, max(psmax))
+        if not labelled:
+            meanline.set_label('Mean')
+            maxline.set_label('Max')
+            labelled = True
+
+    # layout
+    rfp.set_ylim(rYrange)
+    msp.set_ylim([0, scattermax*1.1])
+    msp.ticklabel_format(axis="x", style="sci", scilimits=(0,4))
+    fig.tight_layout()
+    rfp.legend(loc="lower left")
+    msp.legend(loc="lower left")
+    
+    # ADD SCATTERS
+    for k in rp.lastParScatterFigs.keys():
+        figs.append(rp.lastParScatterFigs[k])
+    # save
     try:
-        # R-FACTORS AND MEAN SCATTER
-        # create figure
-        fig, (rfp, msp) = plt.subplots(2, 1, sharex=True, figsize = figsize)
-        msp.set_xlabel('Generations')
-        rfp.set_ylabel('R-Factor')
-        msp.set_ylabel('Parameter scatter')
-        #plot markers
-        part = 0
-        for (i, g) in enumerate(allgens):
-            if g > allgens[-1] * 0.2:
-                part = len(allgens) - i
-                break
-        part = max(50, part)
-        rfmin, rfmax = min(allmin[-part:]), max(allmean[-part:])
-        if rfmax == rfmin:
-            rfmin *= 0.95
-            rfmax *= 1.05
-        rYrange = [rfmin-(rfmax-rfmin)*0.1, rfmax+(rfmax-rfmin)*0.1]
-        rYrange[1] = min(rYrange[1], 2*max(allmin) - rYrange[0])
-        
-        labely = rYrange[0] + (rYrange[1]-rYrange[0])*0.99
-        xoff = allgens[-1]*0.005
-        for (xpos, label) in markers:
-            rfp.axvline(x = xpos, lw = 0.5, c = "black")
-            msp.axvline(x = xpos, lw = 0.5, c = "black")
-            rfp.text(xpos + xoff, labely, label, rotation=-90, 
-                     verticalalignment="top", size=4)
-        # plot data
-        
-        rfp.fill_between(allgens, allmin, allmax, facecolor='grey', 
-                         alpha=0.2, label="Range")
-        rfp.plot(allgens, allmean, label = "Mean")
-        rfp.plot(allgens, allmin, '-', color='black', label = "Best")
-
-        labelled = False
-        scattermax = 0
-        for (allgens, psmean, psmax) in parScatterLines:
-            meanline, = msp.plot(allgens, psmean, '-', color="tab:blue")
-            maxline, = msp.plot(allgens, psmax, '-', color="black")
-            scattermax = max(scattermax, max(psmax))
-            if not labelled:
-                meanline.set_label('Mean')
-                maxline.set_label('Max')
-                labelled = True
-
-        # layout
-        rfp.set_ylim(rYrange)
-        msp.set_ylim([0, scattermax*1.1])
-        msp.ticklabel_format(axis="x", style="sci", scilimits=(0,4))
-        fig.tight_layout()
-        rfp.legend(loc="lower left")
-        msp.legend(loc="lower left")
-        
-        # ADD SCATTERS
+        pdf = PdfPages(outname)
+        pdf.savefig(fig)
         for k in rp.lastParScatterFigs.keys():
-            figs.append(rp.lastParScatterFigs[k])
-        # save
-        try:
-            pdf = PdfPages(outname)
-            pdf.savefig(fig)
-            for k in rp.lastParScatterFigs.keys():
-                for f in rp.lastParScatterFigs[k]:
-                    pdf.savefig(f)
-        except PermissionError:
-            logger.warning("Failed to write to " + outname
-                            + ": Permission denied.")
-            return 1
-        except:
-            logger.warning("Failed to write to "+outname)
-            return 1
-        finally:
-            try:
-                pdf.close()
-            except:
-                pass
+            for f in rp.lastParScatterFigs[k]:
+                pdf.savefig(f)
+    except PermissionError:
+        logger.warning("Failed to write to " + outname
+                        + ": Permission denied.")
+        return 1
+    except:
+        logger.warning("Failed to write to "+outname)
+        return 1
     finally:
-        logger.setLevel(loglevel)
         try:
-            plt.close(fig)
+            pdf.close()
         except:
             pass
+    try:
+        plt.close(fig)
+    except:
+        pass
     return 0
