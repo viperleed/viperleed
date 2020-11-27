@@ -610,53 +610,19 @@ class Slab:
         #these explicit definitions are likely useless, but sqrts might be
         #  marginally more accurate than sin/cos
         self.getCartesianCoordinates()
-        if order == 2:
-            m = np.array([[-1,0],[0,-1]])
-        elif order == -3:
-            m = np.array([[-0.5,-np.sqrt(3)/2],[np.sqrt(3)/2,-0.5]])
-        elif order == 3:
-            m = np.array([[-0.5,np.sqrt(3)/2],[-np.sqrt(3)/2,-0.5]])
-        elif order == -4:
-            m = np.array([[0,1],[-1,0]])
-        elif order == 4:
-            m = np.array([[0,-1],[1,0]])
-        elif order == -6:
-            m = np.array([[0.5,np.sqrt(3)/2],[-np.sqrt(3)/2,0.5]])
-        elif order == 6:
-            m = np.array([[0.5,-np.sqrt(3)/2],[np.sqrt(3)/2,0.5]])
-        else:
-            ang = 2*np.pi/order
-            m = np.array([[np.cos(ang),np.sin(ang)],
-                           [-np.sin(ang),np.cos(ang)]])
+        m = rotMatrix(order)
         for at in self.atlist:
             # translate origin to candidate point, rotate, translate back
             at.cartpos[0:2] = np.dot(m, at.cartpos[0:2] - axis) + axis
         self.getFractionalCoordinates()
-        
+
     def rotateUnitCell(self, order, append_uCellMod = True):
         """Rotates the unit cell (around the origin), leaving atom positions 
         the same. Note that this rotates in the opposite direction as 
         rotateAtoms."""
         self.getCartesianCoordinates()
-        if order == 2:
-            m = np.array([[-1,0],[0,-1]])
-        elif order == -3:
-            m = np.array([[-0.5,-np.sqrt(3)/2],[np.sqrt(3)/2,-0.5]])
-        elif order == 3:
-            m = np.array([[-0.5,np.sqrt(3)/2],[-np.sqrt(3)/2,-0.5]])
-        elif order == -4:
-            m = np.array([[0,1],[-1,0]])
-        elif order == 4:
-            m = np.array([[0,-1],[1,0]])
-        elif order == -6:
-            m = np.array([[0.5,np.sqrt(3)/2],[-np.sqrt(3)/2,0.5]])
-        elif order == 6:
-            m = np.array([[0.5,-np.sqrt(3)/2],[np.sqrt(3)/2,0.5]])
-        else:
-            ang = 2*np.pi/order
-            m = np.array([[np.cos(ang),np.sin(ang)],
-                           [-np.sin(ang),np.cos(ang)]])
-        m3 = np.identity(3)
+        m = rotMatrix(order)
+        m3 = np.identity(3, dtype=float)
         m3[:2,:2] = m
         self.ucell = np.dot(m3, self.ucell)
         if append_uCellMod:
@@ -875,7 +841,7 @@ class Slab:
     def isBulkScrewSymmetric(self, order, sldisp, eps):
         """Evaluates whether the slab has a screw axis of the given order when 
         translated by the given number of sublayers."""
-        m = np.array([[1,0,0],[0,1,0],[0,0,1]], dtype=float)
+        m = np.identity(3, dtype=float)
         m[:2, :2] = rotMatrix(order)
         return self.isBulkTransformSymmetric(m, sldisp, eps)
 
@@ -1176,7 +1142,7 @@ class Slab:
                         tmpat.pos[1] += j
         ts.resetAtomOriN()
         ts.getCartesianCoordinates(updateOrigin=True)
-        tm = np.identity(3)
+        tm = np.identity(3, dtype=float)
         tm[:2,:2] = transform
         ts.ucell = np.transpose(np.dot(tm, np.transpose(ts.ucell)))
         ts.getFractionalCoordinates()

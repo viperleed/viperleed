@@ -123,22 +123,22 @@ def rotMatrix(order):
     #  marginally more accurate than sin/cos
     if order == 2:
         return np.array([[-1,0],[0,-1]])
-    elif order == 3:
-        return np.array([[-0.5,-np.sqrt(3)/2],[np.sqrt(3)/2,-0.5]])
     elif order == -3:
+        return np.array([[-0.5,-np.sqrt(3)/2],[np.sqrt(3)/2,-0.5]])
+    elif order == 3:
         return np.array([[-0.5,np.sqrt(3)/2],[-np.sqrt(3)/2,-0.5]])
-    elif order == 4:
-       return np.array([[0,1],[-1,0]])
     elif order == -4:
+       return np.array([[0,1],[-1,0]])
+    elif order == 4:
         return np.array([[0,-1],[1,0]])
-    elif order == 6:
-        return np.array([[0.5,np.sqrt(3)/2],[-np.sqrt(3)/2,0.5]])
     elif order == -6:
+        return np.array([[0.5,np.sqrt(3)/2],[-np.sqrt(3)/2,0.5]])
+    elif order == 6:
         return np.array([[0.5,-np.sqrt(3)/2],[np.sqrt(3)/2,0.5]])
     else:
         angle = 2*np.pi/order
-        return np.array([[np.cos(angle),-np.sin(angle)],
-                       [np.sin(angle),np.cos(angle)]])
+        return np.array([[np.cos(angle),np.sin(angle)],
+                         [-np.sin(angle),np.cos(angle)]])
 
 def fortranContLine(s):
     """Takes a sting that might be too long to fit on a single line of fortran 
