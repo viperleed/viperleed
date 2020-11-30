@@ -132,10 +132,10 @@ class Rparams:
         self.SITE_DEF = {}      #labels are the element names, content is
                                #  dictionaries of format {sitename, list of
                                #  atom numbers in POSCAR}
-        self.SUPERLATTICE = np.array([[1,0],[0,1]],dtype=float)
+        self.SUPERLATTICE = np.identity(2, dtype=float)
         self.SUPPRESS_EXECUTION = False
         self.SYMMETRIZE_INPUT = True
-        self.SYMMETRY_CELL_TRANSFORM = np.array([[1,0],[0,1]],dtype=float)
+        self.SYMMETRY_CELL_TRANSFORM = np.identity(2, dtype=float)
         self.SYMMETRY_EPS = 0.1
         self.SYMMETRY_EPS_Z = 0.1
         self.SYMMETRY_FIND_ORI = True

@@ -123,6 +123,7 @@ class Slab:
                                      #   the 'Plane group = XY' comment
         self.deltasInitialized = False
 
+        self.symbaseslab = None    # Slab object collapsed to base cell
         self.bulkslab = None       # Slab object containing only bulk layers
         self.bulkScrews = []       # only assigned to the bulkslab object!
                     # Integer list of rotation orders present in the bulk
@@ -665,9 +666,7 @@ class Slab:
         m = rotMatrix(order)
         ab = self.ucell[0:2,0:2]
         abt = np.transpose(ab)
-        releps = np.array([0.0,0.0])
-        for j in range(0,2):
-            releps[j] = eps / np.linalg.norm(abt[j])
+        releps = [eps / np.linalg.norm(abt[j]) for j in range(0,2)]
         shiftv = axis.reshape(2,1)
         for sl in self.sublayers:
             coordlist = [at.cartpos[0:2] for at in sl.atlist]
@@ -715,9 +714,7 @@ class Slab:
         uc = copy.copy(self.ucell)
         uc[:,2] *= -1   # mirror c vector down
         uct = np.transpose(uc)
-        releps = np.array([0.,0.,0.])
-        for j in range(0,3):
-            releps[j] = eps / np.linalg.norm(uct[j])
+        releps = [eps / np.linalg.norm(uct[j]) for j in range(0,3)]
         shiftv = tv.reshape(3,1)
         # unlike in-plane operations, this one cannot be done sublayer-internal
         coordlist = [at.cartpos for at in self.atlist]
@@ -771,9 +768,7 @@ class Slab:
         operation, and subsequent translation by a given number of sublayers"""
         uc = self.ucell
         uct = np.transpose(uc)
-        releps = np.array([0.,0.,0.])
-        for j in range(0,3):
-            releps[j] = eps / np.linalg.norm(uct[j])
+        releps = [eps / np.linalg.norm(uct[j]) for j in range(0,3)]
         # get translation vectors to check
         transVecs = []
         lowocclayer = self.getLowOccLayer()
@@ -868,9 +863,7 @@ class Slab:
                             #rotates to have plane in x direction, mirrors on x
         ab = self.ucell[0:2,0:2]
         abt = np.transpose(ab)
-        releps = np.array([0.0,0.0])
-        for j in range(0,2):
-            releps[j] = eps / np.linalg.norm(abt[j])
+        releps = [eps / np.linalg.norm(abt[j]) for j in range(0,2)]
         shiftv = symplane.pos.reshape(2,1)
         if glide:
             glidev = ((symplane.par[0]*abt[0]+symplane.par[1]*abt[1])
@@ -1137,7 +1130,7 @@ class Slab:
                     for j in range(0, transformDiag[1]):
                         if i == j == 0:
                             continue
-                        tmpat = at.duplicate(addConstraints=True)
+                        tmpat = at.duplicate()
                         tmpat.pos[0] += i
                         tmpat.pos[1] += j
         ts.resetAtomOriN()
@@ -1252,7 +1245,7 @@ class Slab:
             bulkc = cvec * zdiff / cvec[2]
         bsl.ucell[:,2] = bulkc
         # reduce dimensions in xy
-        sl = np.array([[0,0,0],[0,0,0],[0,0,1]],dtype=float)
+        sl = np.identity(3, dtype=float)
         sl[:2,:2] = np.transpose(rp.SUPERLATTICE)
         bsl.ucell = np.dot(bsl.ucell, np.linalg.inv(sl))
         if (rp.superlattice_defined and np.linalg.norm(bsl.ucell[:2,0]) > 
@@ -1301,6 +1294,56 @@ class Slab:
             layer.atlist = [at for at in layer.atlist if at in bsl.atlist]
         return bsl
 
+    def makeSymBaseSlab(self, rp, transform=None):
+        """Copies self to create a symmetry base slab by collapsing to the 
+        cell defined by rp.SYMMETRY_CELL_TRANSFORM, then removing duplicates. 
+        Also assigns the duplicateOf variable for all atoms in self.atlist. 
+        By default, the transformation matrix will be taken from rp, but a 
+        different matrix can also be passed."""
+        ssl = copy.deepcopy(self)
+        # ssl.resetSymmetry()
+        ssl.getCartesianCoordinates()
+        # reduce dimensions in xy
+        transform3 = np.identity(3, dtype=float)
+        if transform is not None:
+            transform3[:2, :2] = transform
+        else:
+            transform3[:2, :2] = rp.SYMMETRY_CELL_TRANSFORM
+        ssl.ucell = np.dot(ssl.ucell, np.linalg.inv(np.transpose(transform3)))
+        ssl.collapseCartesianCoordinates(updateOrigin=True)
+        ssl.uCellMod = [] # if self.uCellMod is not empty, don't drag that into
+                          #  the new slab.
+        # remove duplicates
+        ssl.createSublayers(rp.SYMMETRY_EPS_Z)
+        newatlist = []
+        for subl in ssl.sublayers:
+            i = 0
+            while i < len(subl.atlist):
+                j = i+1
+                baseat = [a for a in self.atlist 
+                          if a.oriN == subl.atlist[i].oriN][0]
+                while j < len(subl.atlist):
+                    if subl.atlist[i].isSameXY(subl.atlist[j].cartpos[:2],
+                                               eps = rp.SYMMETRY_EPS):
+                        for a in [a for a in self.atlist 
+                                  if a.oriN == subl.atlist[j].oriN]:
+                            a.duplicateOf = baseat
+                        subl.atlist.pop(j)
+                    else:
+                        j += 1
+                i += 1
+            newatlist.extend(subl.atlist)
+        ssl.atlist = newatlist
+        ssl.updateElementCount()   # update number of atoms per element again
+        # update the layers. Don't use Slab.createLayers here to keep it
+        #   consistent with the slab layers
+        for i, layer in enumerate(ssl.layers):
+            layer.slab = ssl
+            layer.getLayerPos()
+            layer.num = i
+            layer.atlist = [at for at in layer.atlist if at in ssl.atlist]
+        return ssl
+        
     def getSurfaceAtoms(self, rp):
         """Checks which atoms are 'at the surface', returns them as a list."""
         abst = np.transpose(self.ucell[0:2,0:2])

@@ -156,7 +156,7 @@ def findBulkSymmetry(sl, rp):
                       ", ".join([str(gl.par) for gl in glidesfound]))
     return 0
 
-def findSymmetry(sl, rp, bulk=False, output=True):
+def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
     """Reduces the unit cell if necessary and finds the plane group of the
     slab. Stores the plane group and the higher-symmetry direction of the
     unit cell, if there is one."""
@@ -177,7 +177,7 @@ def findSymmetry(sl, rp, bulk=False, output=True):
                                            # ubulk tracks unit cell changes
     utr = np.array([[0,0,0],[0,0,0],[0,0,1]])
     utr[0:2,0:2] = usurf
-    if not np.array_equal(utr, np.array([[1,0,0],[0,1,0],[0,0,1]])):
+    if not np.array_equal(utr, np.identity(3, dtype=int)):
         if (np.array_equal(utr, np.array([[0,-1,0],[1,0,0],[0,0,1]]))
                 and output):
             logger.info("The POSCAR unit cell was changed from an acute "
@@ -266,7 +266,7 @@ def findSymmetry(sl, rp, bulk=False, output=True):
     minlen = len(lowocclayer.atlist)
 
     # find candidate positions for symmetry points / planes:
-    if (not rp.SYMMETRY_FIND_ORI) and (not bulk):
+    if not rp.SYMMETRY_FIND_ORI and not forceFindOri and not bulk:
         symposlist = [np.array([0.0,0.0])]  #only check origin, planes are
                                         #  defined explicitly for this case
         hexsymposlist = []
@@ -293,7 +293,7 @@ def findSymmetry(sl, rp, bulk=False, output=True):
     del bigslab
 
     #find potential rotation axes:
-    if rp.SYMMETRY_FIND_ORI and output:
+    if (rp.SYMMETRY_FIND_ORI or forceFindOri) and output:
         logger.debug("Checking for rotation axes: "
                       +str(len(comsymposlist))+" candidates...")
     #test potential rotation axes:
@@ -342,7 +342,7 @@ def findSymmetry(sl, rp, bulk=False, output=True):
         mirror = False
         glide = False
         symplanelist = []
-        if not rp.SYMMETRY_FIND_ORI:
+        if not rp.SYMMETRY_FIND_ORI and not forceFindOri:
             for (pa,pb) in [(0,0),(0.25,0.25),(0.25,-0.25)]:
                 for (i,j) in [(1,0),(0,1),(1,1),(1,-1)]:
                     symplanelist.append(SymPlane(pa*abst[0]+pb*abst[1],
@@ -383,8 +383,6 @@ def findSymmetry(sl, rp, bulk=False, output=True):
                           oriplane.distanceFromOrigin(abst)):
                         #prioritize planes close to the origin of cell (1,1)
                         oriplane = spl
-                        
-                        
         else:
             if not glide:
                 planegroup = "pm"
@@ -596,7 +594,7 @@ def findSymmetry(sl, rp, bulk=False, output=True):
 
     # CHECK IF USER WANTS TO MANUALLY REDUCE THE SLAB SYMMETRY, AND
     #    WHETHER THE GIVEN REDUCTION IS LEGAL
-    if rp.SYMMETRY_FIX and not bulk:
+    if rp.SYMMETRY_FIX and not bulk and sl.symbaseslab is None:
         planegroup = sl.setSymmetry(rp, rp.SYMMETRY_FIX)
 
     return planegroup
@@ -904,7 +902,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
     """Finds how atoms are linked to each other based on the planegroup.
     If the planegroup argument is not given, the planegroup assigned to
     the slab will be used. Otherwise, the given planegroup has to be a
-    subgroup of the highest symmetry planegroup found for the slab. Set
+    subgroup of the highest symmetry planegroup found for the slab. Sets
     movement = True or False to force or suppress recalculating atom
     positions to perfectly fit the symmetry; keep at default to follow
     SYMMETRIZE_INPUT parameter. Set rotcell = False to avoid rotating the
@@ -1124,7 +1122,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
     for at in ts.atlist:
         # first check points
         for p in lockpoints:
-            if at.isSameXY(p,eps):
+            if at.isSameXY(p, eps):
                 if not nomove: 
                     at.cartpos[0:2] = p
                 at.freedir = 0  #lock completely
@@ -1133,29 +1131,25 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
         if not at.freedir == 0:
             for pl in lockplanes:
                 d = tl.base.distanceLineThroughPointsFromPoint(pl.pos,
-                                            pl.pos+pl.dir,at.cartpos[0:2])
+                                            pl.pos+pl.dir, at.cartpos[0:2])
                 if d < eps:
                     at.freedir = pl.par
                     if not nomove:  #shift atom onto plane
-                        shiftv = np.array([pl.dir[1], -pl.dir[0]])*d
+                        shiftv = np.array([pl.dir[1], -pl.dir[0]]) * d
                         if (tl.base.distanceLineThroughPointsFromPoint(
-                              pl.pos,pl.pos+pl.dir,at.cartpos[0:2]+shiftv)
-                               > d*1.1):
-                            shiftv = -1*shiftv
-                        at.cartpos[0:2] += shiftv
+                              pl.pos, pl.pos+pl.dir, at.cartpos[:2] + shiftv)
+                               > d * 1.1):
+                            shiftv = -1 * shiftv
+                        at.cartpos[:2] += shiftv
                     break
     for at in sl.atlist:
-        for at2 in ts.atlist:
-            if at2.oriN == at.oriN:
-                at.freedir = at2.freedir
-                at.cartpos = at2.cartpos
-                break
+        at2 = [a for a in ts.atlist if a.oriN == at.oriN][0]
+        at.freedir = at2.freedir
+        at.cartpos = at2.cartpos
     #average positions for linked atoms
     if not nomove and not planegroup == "p1":
         sl.collapseCartesianCoordinates()
-        releps = [0.0,0.0]
-        for j in range(0,2):
-            releps[j] = eps / np.linalg.norm(abst[j])
+        releps = [eps / np.linalg.norm(abst[j]) for j in range(0,2)]
         mvslabs = []
         if not planegroup in ["pm","pg","cm","rcm"]:
             for i in range(0,toprotsym-1):
@@ -1249,3 +1243,37 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
                 modifyPARAMETERS(rp, "BEAM_INCIDENCE",
                                  "{:.3f} {:.3f}".format(rp.THETA, rp.PHI))
     return 0
+
+def getSymBaseSymmetry(sl, rp):
+    """Runs the symmetry search for the symbaseslab, then transfers atom 
+    linking to translationally equivalent atoms in the extended slab."""
+    if sl.symbaseslab is None:
+        logger.error("getSymBaseSymmetry: Not symmetry base slab defined.")
+        return 1
+    if sl.symbaseslab.planegroup == "unknown":
+        findSymmetry(sl.symbaseslab, rp, forceFindOri = True)
+        enforceSymmetry(sl.symbaseslab, rp, rotcell = False)
+    sl.getCartesianCoordinates()
+    for ll in sl.symbaseslab.linklists:
+        newll = []
+        for ssl_at in ll:
+            at = [a for a in sl.atlist if a.oriN == ssl_at.oriN][0]
+            newll.append(at)
+            at.linklist = newll
+            at.symrefm = np.copy(ssl_at.symrefm)
+    for at in [at for at in sl.atlist if at.duplicateOf is not None]:
+        at.duplicateOf.linklist.append(at)
+        at.linklist = at.duplicateOf.linklist
+        at.symrefm = np.copy(at.duplicateOf.symrefm)
+        if rp.SYMMETRIZE_INPUT:
+            cv = at.cartpos[:2] - at.duplicateOf.cartpos[:2]
+            v = np.append(np.round(np.dot(np.linalg.inv(
+                                     sl.symbaseslab.ucell[:2,:2]), cv)), 0.)
+            at.cartpos = (at.duplicateOf.cartpos 
+                          + np.dot(sl.symbaseslab.ucell, v))
+    sl.getFractionalCoordinates()
+    sl.linklists = []
+    for at in sl.atlist:
+        if len(at.linklist) > 1 and not at.linklist in sl.linklists:
+            sl.linklists.append(at.linklist)
+    

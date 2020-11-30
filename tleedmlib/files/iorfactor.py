@@ -314,18 +314,19 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
         # for each beam, get rid of the points that have (en, intens) = (0, 0)
         # so that they don't screw up the plots later
         xy = [coords[~np.all(coords < 1e-3, axis=1)]  for coords in xy]
-        xxyy.append(xy)
+        if xy:
+            xxyy.append(xy)
     
     xyTheo = xxyy[0]
     xyExp = xxyy[1]
       
     # find min and max values of x and y for plotting all curves
     # on the same horizontal scale and leaving a little y space for the legend
-    xmin = min(min(xy[:, 0]) for xy in [*xyTheo, *xyExp])
-    xmax = max(max(xy[:, 0]) for xy in [*xyTheo, *xyExp])
+    xmin = min(min(xy[:, 0]) for xy in [*xyTheo, *xyExp] if len(xy) != 0)
+    xmax = max(max(xy[:, 0]) for xy in [*xyTheo, *xyExp] if len(xy) != 0)
     
-    ymin = min(min(xy[:, 1]) for xy in [*xyTheo, *xyExp])
-    ymax = max(max(xy[:, 1]) for xy in [*xyTheo, *xyExp])
+    ymin = min(min(xy[:, 1]) for xy in [*xyTheo, *xyExp] if len(xy) != 0)
+    ymax = max(max(xy[:, 1]) for xy in [*xyTheo, *xyExp] if len(xy) != 0)
     dy = ymax - ymin
     
     # Set up stuff needed for the plots
@@ -358,6 +359,8 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
     try:
         for ct, (name, rfact, theo, exp) in enumerate(zip(*zip(*beams),
                                                            xyTheo, xyExp)):
+            if len(exp) == 0:
+                continue
             if ct % 2 == 0:
                 # need a new figure
                 # squeeze=True returns the 2 axes as a 1D (instead of 2D) array
@@ -429,6 +432,8 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
     try:
         for i, (name, rfact, theo, exp) in enumerate(zip(*zip(*beams),
                                                            xyTheo, xyExp)):
+            if len(exp) == 0:
+                continue
             fig, axs = plt.subplots(3, figsize=figsize, 
                                                    squeeze=True)
             fig.subplots_adjust(left=0.06, right=0.94,

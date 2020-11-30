@@ -153,7 +153,7 @@ class LEEDPattern():
         for dom in domains: 
             beamsRefs.append([crossRef + dom*self.nBeams
                               for crossRef in self.firstDomRefs])
-        return np.array(beamsRefs)
+        return np.array(beamsRefs, dtype=object)   # TODO: check dtype=object
 
     def get_equivalentSpots(self, domains=None):
         if not hasattr(domains, '__len__') and domains is not None:
@@ -414,7 +414,8 @@ class LEEDPattern():
 
         # then convert each set to a np.array of int, so that it's iterable
         # and it's easy to process later
-        return np.array([np.array(list(x), dtype='int') for x in crossRefs])
+        return np.array([np.array(list(x), dtype=int) for x in crossRefs], 
+                        dtype=object)   # TODO: check dtype=object
 
     def get_ExtinctFirstDomain(self):
         """

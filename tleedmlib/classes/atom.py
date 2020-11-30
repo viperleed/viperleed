@@ -65,6 +65,11 @@ class Atom:
                                 #   be integer-valued index in disp range or 
                                 #   a tuple (atom, element)
         self.oriState = None    # deep copy of self before a search is applied
+        self.duplicateOf = None  # if this atom is identical to another one 
+                            # by translational symmetry (through 
+                            # SYMMETRY_CELL_TRANSFORM or domain supercell 
+                            # creation), this points to the atom in the 
+                            # base cell.
         
     def __str__(self):
         return ("Atom({} {})".format(self.oriN, self.el))
@@ -305,7 +310,7 @@ class Atom:
                 self.slab.displists.append(self.displist)
             for at in [at for at in self.linklist if at != self]:
                 if mode == 1 or mode == 4:
-                    tm = np.array([[1,0,0],[0,1,0],[0,0,1]])
+                    tm = np.identity(3)
                     tm[:2,:2] = np.dot(at.symrefm, np.linalg.inv(self.symrefm))
                     newdr = [np.dot(tm, v) for v in dr]
                 else:
@@ -439,7 +444,7 @@ class Atom:
                 self.constraints[mode][el] = linkAtEl
         return
 
-    def duplicate(self, addToAtlists = True, addConstraints = False):
+    def duplicate(self, addToAtlists = True):
         """Creates a new instance of this atom, using deepcopy for attributes 
         like position and elements, but without making copies of the slab or 
         layer, instead adding the new atom to the existing objects."""
@@ -451,20 +456,13 @@ class Atom:
                 self.layer.atlist.append(newat)
                 newat.layer = self.layer
             self.slab.nperelem[self.slab.elements.index(self.el)] += 1
+        newat.duplicateOf = self
         newat.site = self.site
         newat.dispInitialized = True
         newat.disp_vib = self.disp_vib
         newat.disp_geo = self.disp_geo
         newat.disp_occ = self.disp_occ
         newat.cartpos = np.copy(self.cartpos)
-        if addConstraints:
-            for (mode, td) in [(1, self.disp_geo), (2, self.disp_vib), 
-                               (3, self.disp_occ)]:
-                for el in td.keys():
-                    # have contraint point in both directions for now, 
-                    #   resolve later
-                    newat.constraints[mode][el] = (self, el)
-                    self.constraints[mode][el] = (newat, el)
         return newat
 
     def isSameXY(self,pos,eps=0.001):

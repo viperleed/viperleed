@@ -95,12 +95,54 @@ def initialization(sl, rp, subdomain=False):
     rp.fileLoaded["PHASESHIFTS"] = True
     rp.updateDerivedParams()
     rp.manifest.append("_PHASESHIFTS")
-
+    
     # if necessary, run findSymmetry:
     if sl.planegroup == "unknown":
         tl.symmetry.findSymmetry(sl, rp)
         tl.symmetry.enforceSymmetry(sl, rp)
-    
+
+    # check whether the slab unit cell is minimal:
+    changecell, mincell = sl.getMinUnitCell(rp)
+    transform = np.dot(np.transpose(sl.ucell[:2,:2]), 
+                       np.linalg.inv(mincell)).round()
+    ws = tl.leedbase.writeWoodsNotation(transform)
+    if changecell and np.isclose(rp.SYMMETRY_CELL_TRANSFORM, 
+                                 np.identity(2)).all():
+        if ws: 
+            ws = "= "+ws
+        else:
+            ws = "M = {} {}, {} {}".format(*[x for y in transform.astype(int) 
+                                             for x in y])
+        ssl = sl.makeSymBaseSlab(rp, transform=transform)
+        if subdomain:
+            rp.SYMMETRY_CELL_TRANSFORM = transform
+            logger.info("Found SYMMETRY_CELL_TRANSFORM "+ws)
+            sl.symbaseslab = ssl
+        else:
+            logger.warning("POSCAR unit cell is not minimal (supercell {}). "
+                    "A minimal POSCAR will be written as POSCAR_mincell for "
+                    "information. Consider calculating with POSCAR_mincell, "
+                    "or setting SYMMETRY_CELL_TRANSFORM to conserve "
+                    "translational symmetry.".format(ws))
+            writeCONTCAR(ssl, filename="POSCAR_mincell")
+            rp.setHaltingLevel(1)
+    elif not np.isclose(rp.SYMMETRY_CELL_TRANSFORM, np.identity(2)).all():
+        if not np.isclose(rp.SYMMETRY_CELL_TRANSFORM, transform).all():
+            logger.warning("SYMMETRY_CELL_TRANSFORM parameter differs from "
+                           "automatically detected supercell "+ws)
+            rp.setHaltingLevel(1)
+        if sl.symbaseslab is None:
+            sl.symbaseslab = sl.makeSymBaseSlab(rp)
+    if sl.symbaseslab is not None:
+        logger.info("A symmetry cell transformation was found. Re-running "
+                    "slab symmetry search using base unit cell...")
+        tl.symmetry.getSymBaseSymmetry(sl, rp)
+        try:
+            writeCONTCAR(sl.symbaseslab, filename='POSCAR_mincell', 
+                         comments='all')
+        except:
+            logger.warning("Exception occurred while writing POSCAR_mincell")
+
     # generate new POSCAR
     tmpslab = copy.deepcopy(sl)
     tmpslab.sortOriginal()
@@ -134,12 +176,11 @@ def initialization(sl, rp, subdomain=False):
             ws = tl.leedbase.writeWoodsNotation(rp.SUPERLATTICE) 
                     # !!! replace the writeWoodsNotation from baselib with 
                     #   the one from guilib
-            si = rp.SUPERLATTICE.astype(int)
             if ws:
                 logger.info("Found SUPERLATTICE = "+ws)
             else:
                 logger.info("Found SUPERLATTICE M = {} {}, {} {}".format(
-                                        si[0,0], si[0,1], si[1,0], si[1,1]))
+                        *[x for y in rp.SUPERLATTICE.astype(int) for x in y]))
 
         # bulk plane group detection:
         logger.info("Initializing bulk symmetry search...")
@@ -423,9 +464,12 @@ def init_domains(rp):
                     return 0
                 else:
                     supercellRequired.append(dp)
+                    oldslab = dp.sl
                     dp.sl = dp.sl.makeSupercell(np.round(trans))
                     dp.rp.SUPERLATTICE = copy.copy(largestDomain
                                                    .rp.SUPERLATTICE)
+                    dp.sl.symbaseslab = oldslab
+                    dp.rp.SYMMETRY_CELL_TRANSFORM = trans
         logger.info("Domain surface unit cells are mismatched, but can be "
                     "matched by integer transformations.")
     # store some information about the supercell in rp:
@@ -525,7 +569,6 @@ def init_domains(rp):
         try:
             os.chdir(dp.workdir)
             dp.sl.resetSymmetry()
-            # dp.sl.bulkslab = None  # needs to be redone to get alignment right
             dp.rp.SYMMETRY_FIND_ORI = True
             initialization(dp.sl, dp.rp, subdomain=True)
         except:
