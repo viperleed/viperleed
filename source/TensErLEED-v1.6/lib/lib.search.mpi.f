@@ -273,7 +273,7 @@ C  FOR EXP. AND THEORY, RESP.
 
       IF (NT2.GT.NT1) GO TO 71                                          040280
 
-      WRITE(6,705)IBE                                                     .
+C     WRITE(6,705)IBE                                                     .
 705   FORMAT(48H0 **** NO OVERLAP THEOR./EXP. IN (EXP.) BEAM NO.,1I3)
 C                WRITE(7,4444) (BENAME(I,IBE),I=1,3),IBE,D12,DCO1,
 C     *          DCO2,V0R,EMIN,EMAX,0.,0.
@@ -1447,7 +1447,7 @@ C  NPTS IS NO. OF POINTS USED ON THE INTERPOLATION GRID
 C  TOO FEW ENERGY VALUES FOR INTERPOLATION. THIS BEAM WILL BE SKIPPED
 C  FROM NOW ON
 9     NE(IB)=0                                                           200480
-      WRITE(6,6)                                                         230480
+C     WRITE(6,6)                                                         230480
 C     WRITE(8,6)
 6     FORMAT(59H0** IN PRESENT BEAM TOO FEW ENERGY VALUES FOR INTERPOLAT 230480
      1ION)

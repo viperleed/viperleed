@@ -20,7 +20,8 @@ from tleedmlib.beamgen import runBeamGen
 from tleedmlib.psgen import runPhaseshiftGen
 from tleedmlib.files.poscar import readPOSCAR, writeCONTCAR
 from tleedmlib.files.vibrocc import readVIBROCC
-from tleedmlib.files.parameters import readPARAMETERS, interpretPARAMETERS
+from tleedmlib.files.parameters import (readPARAMETERS, interpretPARAMETERS, 
+                                        modifyPARAMETERS)
 from tleedmlib.files.phaseshifts import readPHASESHIFTS, writePHASESHIFTS
 from tleedmlib.files.beams import (readOUTBEAMS, readBEAMLIST, checkEXPBEAMS, 
                                    readIVBEAMS, sortIVBEAMS, writeIVBEAMS)
@@ -118,6 +119,15 @@ def initialization(sl, rp, subdomain=False):
             rp.SYMMETRY_CELL_TRANSFORM = transform
             logger.info("Found SYMMETRY_CELL_TRANSFORM "+ws)
             sl.symbaseslab = ssl
+            if not "M = " in ws:
+                modifyPARAMETERS(rp, "SYMMETRY_CELL_TRANSFORM", new = ws)
+            else:
+                modifyPARAMETERS(rp, "SYMMETRY_CELL_TRANSFORM", 
+                            new = ("SYMMETRY_CELL_TRANSFORM M = "
+                                   "{:.0f} {:.0f}, {:.0f} {:.0f}".format(
+                                       *[x for y in rp.SYMMETRY_CELL_TRANSFORM 
+                                         for x in y])), 
+                            include_left = True)
         else:
             logger.warning("POSCAR unit cell is not minimal (supercell {}). "
                     "A minimal POSCAR will be written as POSCAR_mincell for "
@@ -173,7 +183,7 @@ def initialization(sl, rp, subdomain=False):
             sl.changeBulkCell(rp, mincell)
             bsl = sl.bulkslab
         if not rp.superlattice_defined:
-            ws = tl.leedbase.writeWoodsNotation(rp.SUPERLATTICE) 
+            ws = tl.leedbase.writeWoodsNotation(rp.SUPERLATTICE)
                     # !!! replace the writeWoodsNotation from baselib with 
                     #   the one from guilib
             if ws:
@@ -470,6 +480,17 @@ def init_domains(rp):
                                                    .rp.SUPERLATTICE)
                     dp.sl.symbaseslab = oldslab
                     dp.rp.SYMMETRY_CELL_TRANSFORM = trans
+                    ws = tl.leedbase.writeWoodsNotation(rp.SUPERLATTICE)
+                    if ws:
+                        modifyPARAMETERS(dp.rp, "SYMMETRY_CELL_TRANSFORM", 
+                                         new = ws, path = dp.workdir)
+                    else:
+                        modifyPARAMETERS(dp.rp, "SYMMETRY_CELL_TRANSFORM", 
+                                new = ("SYMMETRY_CELL_TRANSFORM M = "
+                                    "{:.0f} {:.0f}, {:.0f} {:.0f}".format(
+                                       *[x for y in rp.SYMMETRY_CELL_TRANSFORM 
+                                         for x in y])), path = dp.workdir,
+                                include_left = True)
         logger.info("Domain surface unit cells are mismatched, but can be "
                     "matched by integer transformations.")
     # store some information about the supercell in rp:

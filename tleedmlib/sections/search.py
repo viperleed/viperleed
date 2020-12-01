@@ -484,11 +484,15 @@ def search(sl, rp):
                         try:
                             writeSearchProgressPdf(rp, gens, rfaclist, 
                                                 lastconfig, markers=markers)
+                        except KeyboardInterrupt:
+                            raise
                         except:
                             logger.warning("Error writing Search-progress.pdf", 
                                             exc_info = rp.LOG_DEBUG)
                         try:
                             writeSearchReportPdf(rp)
+                        except KeyboardInterrupt:
+                            raise
                         except:
                             logger.warning("Error writing Search-report.pdf",
                                            exc_info = rp.LOG_DEBUG)

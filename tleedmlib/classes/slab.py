@@ -1301,7 +1301,7 @@ class Slab:
         By default, the transformation matrix will be taken from rp, but a 
         different matrix can also be passed."""
         ssl = copy.deepcopy(self)
-        # ssl.resetSymmetry()
+        ssl.resetSymmetry()
         ssl.getCartesianCoordinates()
         # reduce dimensions in xy
         transform3 = np.identity(3, dtype=float)

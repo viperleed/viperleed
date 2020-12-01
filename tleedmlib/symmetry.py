@@ -192,8 +192,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
             rp.SUPERLATTICE = np.dot(usurf,np.dot(rp.SUPERLATTICE,
                                                   np.linalg.inv(ubulk)))
             newsl = ("SUPERLATTICE M = {:.0f} {:.0f}, {:.0f} {:.0f}"
-                     .format(rp.SUPERLATTICE[0,0], rp.SUPERLATTICE[0,1],
-                             rp.SUPERLATTICE[1,0], rp.SUPERLATTICE[1,1]))
+                     .format(*[x for y in rp.SUPERLATTICE for x in y]))
             modifyPARAMETERS(rp, "SUPERLATTICE", newsl, include_left=True)
         # MODIFY SYMMETRY_FIX PARAMETER
         if "[" in rp.SYMMETRY_FIX and not bulk:
@@ -1248,7 +1247,7 @@ def getSymBaseSymmetry(sl, rp):
     """Runs the symmetry search for the symbaseslab, then transfers atom 
     linking to translationally equivalent atoms in the extended slab."""
     if sl.symbaseslab is None:
-        logger.error("getSymBaseSymmetry: Not symmetry base slab defined.")
+        logger.error("getSymBaseSymmetry: No symmetry base slab defined.")
         return 1
     if sl.symbaseslab.planegroup == "unknown":
         findSymmetry(sl.symbaseslab, rp, forceFindOri = True)
