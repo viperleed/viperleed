@@ -125,8 +125,7 @@ def initialization(sl, rp, subdomain=False):
                 modifyPARAMETERS(rp, "SYMMETRY_CELL_TRANSFORM", 
                             new = ("SYMMETRY_CELL_TRANSFORM M = "
                                    "{:.0f} {:.0f}, {:.0f} {:.0f}".format(
-                                       *[x for y in rp.SYMMETRY_CELL_TRANSFORM 
-                                         for x in y])), 
+                                       *[x for y in transform for x in y])), 
                             include_left = True)
         else:
             logger.warning("POSCAR unit cell is not minimal (supercell {}). "
@@ -480,7 +479,7 @@ def init_domains(rp):
                                                    .rp.SUPERLATTICE)
                     dp.sl.symbaseslab = oldslab
                     dp.rp.SYMMETRY_CELL_TRANSFORM = trans
-                    ws = tl.leedbase.writeWoodsNotation(rp.SUPERLATTICE)
+                    ws = tl.leedbase.writeWoodsNotation(trans)
                     if ws:
                         modifyPARAMETERS(dp.rp, "SYMMETRY_CELL_TRANSFORM", 
                                          new = ws, path = dp.workdir)
@@ -488,9 +487,8 @@ def init_domains(rp):
                         modifyPARAMETERS(dp.rp, "SYMMETRY_CELL_TRANSFORM", 
                                 new = ("SYMMETRY_CELL_TRANSFORM M = "
                                     "{:.0f} {:.0f}, {:.0f} {:.0f}".format(
-                                       *[x for y in rp.SYMMETRY_CELL_TRANSFORM 
-                                         for x in y])), path = dp.workdir,
-                                include_left = True)
+                                       *[x for y in trans for x in y])), 
+                                path = dp.workdir, include_left = True)
         logger.info("Domain surface unit cells are mismatched, but can be "
                     "matched by integer transformations.")
     # store some information about the supercell in rp:

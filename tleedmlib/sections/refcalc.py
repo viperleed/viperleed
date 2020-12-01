@@ -22,7 +22,7 @@ import tleedmlib.files.iorefcalc as io
 
 logger = logging.getLogger("tleedm.refcalc")
 
-def refcalc(sl, rp):
+def refcalc(sl, rp, subdomain = False):
     """Runs the reference calculation. Returns 0 when finishing without 
     errors, or an error message otherwise."""
     if rp.domainParams:
@@ -166,12 +166,13 @@ def refcalc(sl, rp):
             "produced by the reference calculation!")
         rp.setHaltingLevel(2)
     # check for beams with very low values
-    for b in [b for b in rp.theobeams["refcalc"] 
-              if max(b.intens.values()) < 1e-10]:
-        logger.warning("Beam {} only contains very small intensities. "
-                "This may indicate that the beam does not exist for this "
-                "structure. Consider removing it from IVBEAMS."
-                .format(b.label))
+    if not subdomain:
+        for b in [b for b in rp.theobeams["refcalc"] 
+                  if max(b.intens.values()) < 1e-10]:
+            logger.warning("Beam {} only contains very small intensities. "
+                    "This may indicate that the beam does not exist for this "
+                    "structure. Consider removing it from IVBEAMS."
+                    .format(b.label))
     try:
         beams.writeOUTBEAMS(rp.theobeams["refcalc"], filename="THEOBEAMS.csv")
         theobeams_norm = copy.deepcopy(rp.theobeams["refcalc"])
@@ -246,7 +247,7 @@ def runDomainRefcalc(dp):
     home = os.getcwd()
     try:
         os.chdir(dp.workdir)
-        r = refcalc(dp.sl, dp.rp)
+        r = refcalc(dp.sl, dp.rp, subdomain = True)
     except:
         logger.error("Exception during reference calculation for domain {}: "
                      .format(dp.name), exc_info = True)

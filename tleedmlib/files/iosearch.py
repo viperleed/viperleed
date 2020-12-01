@@ -769,24 +769,28 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False):
                     at.offset_occ[el] -= offset_occ
                 if el in at.offset_vib:
                     at.offset_vib[el] -= offset_vib
-    # write POSCAR_OUT
-    # fn = "POSCAR_OUT_N={}_R={:.4f}".format(popcount[0], pops[0][0])
     fn = "POSCAR_OUT_"+rp.timestamp
     tmpslab = copy.deepcopy(sl)
     tmpslab.sortOriginal()
     try:
         writeCONTCAR(tmpslab, filename=fn, comments="all", silent=silent)
     except:
-        logger.error("Exception occured while writing POSCAR_OUT: ", 
-                      exc_info=True)
+        logger.error("Exception occured while writing POSCAR_OUT.", 
+                      exc_info = rp.LOG_DEBUG)
         rp.setHaltingLevel(2)
-    # write VIRBOCC_OUT
-    # fn = "VIBROCC_OUT_N={}_R={:.4f}".format(popcount[0], pops[0][0])
+    if not np.isclose(rp.SYMMETRY_CELL_TRANSFORM, np.identity(2)).all():
+        tmpslab = sl.makeSymBaseSlab(rp)
+        fn="POSCAR_OUT_mincell_"+rp.timestamp
+        try:
+            writeCONTCAR(tmpslab, filename=fn, silent=silent)
+        except:
+            logger.warning("Exception occured while writing "
+                    "POSCAR_OUT_mincell.", exc_info = rp.LOG_DEBUG)
     fn = "VIBROCC_OUT_"+rp.timestamp
     try:
         writeVIBROCC(sl, rp, filename=fn, silent=silent)
     except:
-        logger.error("Exception occured while writing VIBROCC_OUT: ", 
-                      exc_info=True)
+        logger.error("Exception occured while writing VIBROCC_OUT.", 
+                      exc_info = rp.LOG_DEBUG)
         rp.setHaltingLevel(2)
     return 0

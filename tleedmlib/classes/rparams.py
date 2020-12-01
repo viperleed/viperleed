@@ -452,6 +452,25 @@ class Rparams:
             self.FORTRAN_COMP_MPI = ["mpifort -Ofast -no-pie", ""]
             logger.debug("Using fortran compiler: mpifort")
         return 0
+    
+    def renormalizeDomainParams(self, config):
+        """Takes a list of parameter indices as produced by e.g. 
+        getRandomConfig, and checks it for domain parameters. If the domain 
+        parameters can be multiplied by an integer value and still be in 
+        range, returns the list with multiplied values; else, returns the 
+        unchanged list."""
+        domain_indices = [i for (i, sp) in enumerate(self.searchpars) 
+                          if sp.mode == "dom"]
+        if not domain_indices:
+            return config
+        mult = 1
+        domain_steps = self.searchpars[domain_indices[0]].steps
+        while (sum([config[i] for i in domain_indices]) * (mult+1) 
+                                                           <= domain_steps):
+            mult += 1
+        for i in domain_indices:
+            config[i] *= mult
+        return config
 
     def getCenteredConfig(self):
         """Returns a list of 'centered' parameter indices, i.e. all in the 
@@ -475,7 +494,7 @@ class Rparams:
         if -1 in l:
             logger.error("Rparams.getRandomConfig failed: {}".format(l))
             return []
-        return l
+        return self.renormalizeDomainParams(l)
     
     def getOffspringConfig(self, parents):
         """Returns a list of parameter indices generated as a random mix of 
@@ -519,7 +538,7 @@ class Rparams:
         if -1 in l:
             logger.error("Rparams.getOffspringConfig failed: {}".format(l))
             return []
-        return l
+        return self.renormalizeDomainParams(l)
     
     def closePdfReportFigs(self):
         global plotting
