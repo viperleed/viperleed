@@ -124,7 +124,6 @@ class Rparams:
                 #    0: don't use parameter
         self.SEARCH_MAX_DGEN_SCALING = {"all": None, "best": None, "dec": None}
                                                         # derived
-        self.SEARCH_KILL = False
         self.SEARCH_LOOP = False    # repeat displacements blocks until no 
                                     #   further improvement?
         self.SEARCH_POPULATION = 0  # trial structures in search
@@ -132,6 +131,7 @@ class Rparams:
         self.SITE_DEF = {}      #labels are the element names, content is
                                #  dictionaries of format {sitename, list of
                                #  atom numbers in POSCAR}
+        self.STOP = False
         self.SUPERLATTICE = np.identity(2, dtype=float)
         self.SUPPRESS_EXECUTION = False
         self.SYMMETRIZE_INPUT = True

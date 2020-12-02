@@ -15,11 +15,13 @@ import subprocess
 import hashlib
 import multiprocessing
 import numpy as np
+import time
 
 import tleedmlib as tl
 import tleedmlib.files.iodeltas as io
 from tleedmlib.files.beams import writeAUXBEAMS
 from tleedmlib.files.displacements import readDISPLACEMENTS_block
+from tleedmlib.files.parameters import updatePARAMETERS
 
 logger = logging.getLogger("tleedm.deltas")
 
@@ -34,7 +36,7 @@ class DeltaCompileTask():
         self.fortran_comp = ["",""]
         self.sourcedir = "" # where the fortran files are
         self.basedir = "" # where the calculation is based
-        
+
 class DeltaRunTask():
     """Stores information needed to copy the correct delta executable and 
     tensor file to a subfolder, execute the delta-calculation there, and copy 
@@ -46,6 +48,62 @@ class DeltaRunTask():
         self.deltaname = ""
         self.comptask = comptask
         self.deltalogname = ""
+
+def monitoredPool(rp, poolsize, function, tasks):
+    """
+    The 'function' and 'tasks' arguments are passed on to a multiprocessing 
+    pool of size 'poolsize' with apply_async. While waiting for the pool to 
+    finish, the PARAMETERS file is read every second to check whether there is 
+    a STOP command. If so, the pool is terminated.
+
+    Parameters
+    ----------
+    rp : Rparams object
+        Needed for the parameter update
+    poolsize : int
+        passed on to multiprocessing.Pool
+    function : function
+        passed on to multiprocessing.Pool.apply_async
+    tasks : list of arguments
+        treated like the arguments of pool.map, i.e. each element is passed on 
+        in a seperate call of 'function' via multiprocessing.Pool.apply_async
+
+    Returns
+    -------
+    0 or string
+        0 on success or termination by rp.STOP, error message otherwise
+
+    """
+
+    def checkPoolResult(r):
+        nonlocal pool
+        if r != 0:
+            pool.terminate()
+        return r
+
+    pool = multiprocessing.Pool(poolsize)
+    results = []
+    for task in tasks:
+        r = pool.apply_async(function, (task,), callback=checkPoolResult)
+        results.append(r)
+    pool.close()
+    while not all(r.ready() for r in results):
+        updatePARAMETERS(rp)
+        if rp.STOP:
+            pool.terminate()
+            return 0
+        time.sleep(1)
+    pool.join()
+    for r in results:
+        try:
+            v = r.get(timeout=1)
+        except TimeoutError:
+            return ("Error getting multiprocessing return values")
+        if v != 0:
+            logger.error(v)
+            return v
+    return 0
+    
 
 def runDelta(runtask):
     """Function meant to be executed by parallelized workers. Executes a 
@@ -200,6 +258,7 @@ def compileDelta(comptask):
 def deltas(sl, rp, subdomain=False):
     """Runs the delta-amplitudes calculation. Returns 0 when finishing without 
     errors, or an error message otherwise."""
+    
     if rp.domainParams:
         try:
             r = deltas_domains(rp)
@@ -479,20 +538,20 @@ def deltas(sl, rp, subdomain=False):
     # compile files
     logger.info("Compiling fortran files...")
     poolsize = min(len(deltaCompTasks), rp.N_CORES)
-    with multiprocessing.Pool(poolsize) as pool:
-        r = pool.map(compileDelta, deltaCompTasks)
-    for v in [v for v in r if v != 0]:
-        logger.error(v)
-        return ("Fortran compile error")
+    r = monitoredPool(rp, poolsize, compileDelta, deltaCompTasks)
+    if r:
+        return("Fortran compile error")
+    if rp.STOP:
+        return 0
     
     # run executions
     logger.info("Running delta calculations...")
     poolsize = min(len(deltaRunTasks), rp.N_CORES)
-    with multiprocessing.Pool(poolsize) as pool:
-        r = pool.map(runDelta, deltaRunTasks)
-    for v in [v for v in r if v != 0]:
-        logger.error(v)
-        return ("Error during delta execution")
+    r = monitoredPool(rp, poolsize, runDelta, deltaRunTasks)
+    if r:
+        return("Error during delta execution")
+    if rp.STOP:
+        return 0
     logger.info("Delta calculations finished.")
     
     # clean up
@@ -551,23 +610,23 @@ def deltas_domains(rp):
     if len(deltaCompTasks) > 0:
         logger.info("Compiling fortran files...")
         poolsize = min(len(deltaCompTasks), rp.N_CORES)
-        with multiprocessing.Pool(poolsize) as pool:
-            r = pool.map(compileDelta, deltaCompTasks)
-        for v in [v for v in r if v != 0]:
-            logger.error(v)
-            return ("Fortran compile error")
+        r = monitoredPool(rp, poolsize, compileDelta, deltaCompTasks)
+        if r:
+            return("Fortran compile error")
+        if rp.STOP:
+            return 0
 
     # run executions
     if len(deltaRunTasks) > 0:
         logger.info("Running delta calculations...")
         poolsize = min(len(deltaRunTasks), rp.N_CORES)
-        with multiprocessing.Pool(poolsize) as pool:
-            r = pool.map(runDelta, deltaRunTasks)
-        for v in [v for v in r if v != 0]:
-            logger.error(v)
-            return ("Error during delta execution")
+        r = monitoredPool(rp, poolsize, runDelta, deltaRunTasks)
+        if r:
+            return("Error during delta execution")
+        if rp.STOP:
+            return 0
         logger.info("Delta calculations finished.")
-    
+
     # clean up
     for ct in deltaCompTasks:
         d = os.path.join(ct.basedir, ct.foldername)

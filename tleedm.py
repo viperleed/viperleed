@@ -24,7 +24,7 @@ if tleedmap_path not in sys.path:
 import tleedmlib.sections as sections
 from tleedmlib.base import mkdir_recursive
 from tleedmlib.files.parameters import (readPARAMETERS, interpretPARAMETERS,
-                                        modifyPARAMETERS)
+                                        modifyPARAMETERS, updatePARAMETERS)
 from tleedmlib.files.phaseshifts import readPHASESHIFTS
 from tleedmlib.files.poscar import readPOSCAR
 from tleedmlib.files.beams import (readBEAMLIST, readIVBEAMS, readOUTBEAMS,
@@ -684,7 +684,7 @@ def main():
             elif sec == 31 and rp.fileLoaded["EXPBEAMS"]:
                 if rp.RUN[:1] != [12]:   # r-factor after superpos
                     rp.RUN.insert(0, 12)
-            elif sec == 12 and not rp.SEARCH_KILL:
+            elif sec == 12 and not rp.STOP:
                 loops = [t for t in rp.disp_loops if t[1] == rp.search_index]
                 if loops:
                     if searchLoopLevel == 0 or searchLoopR > rp.last_R:
@@ -736,6 +736,10 @@ def main():
                 logger.info("# An exception occured that meets the halting "
                     "criteria defined by the HALTING parameter. Execution "
                     "will stop, check log for warnings and errors.")
+            break
+        updatePARAMETERS(rp)
+        if rp.RUN and rp.STOP and not rp.RUN[0] in [11, 12, 31]:
+            logger.info("# Stopped by user STOP command.")
             break
     cleanup(rp.manifest, rp)
     return 0

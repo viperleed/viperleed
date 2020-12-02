@@ -333,8 +333,12 @@ def init_domains(rp):
                                      .format(file, name, path))
                         return "Error getting domain input files"
         elif os.path.isfile(path):
+            try:
+                tensorIndex = tl.leedbase.getMaxTensorIndex(target)
+            except:
+                tensorIndex = 0
             tensorDir = os.path.join(target, "Tensors", 
-                                     os.path.basename(path)[:-4])
+                                     "Tensors_"+str(tensorIndex+1).zfill(3))
             try:
                 mkdir_recursive(os.path.join(target, "Tensors", tensorDir))
             except:

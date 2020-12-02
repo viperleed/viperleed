@@ -31,14 +31,14 @@ knownParams = ['ATTENUATION_EPS', 'BEAM_INCIDENCE', 'BULKDOUBLING_EPS',
     'SYMMETRY_FIX', 'TENSOR_INDEX', 'TENSOR_OUTPUT', 'THEO_ENERGIES', 
     'T_DEBYE', 'T_EXPERIMENT', 'V0_IMAG', 'V0_REAL', 'V0_Z_ONSET', 
     'VIBR_AMP_SCALE']
-paramAlias = {}
+paramAlias = {}  # keys should be all lowercase, with no underscores
 for p in knownParams:
     paramAlias[p.lower().replace("_","")] = p
 
-def updatePARAMETERS_searchOnly(rp, filename='PARAMETERS'):
+def updatePARAMETERS(rp, filename='PARAMETERS'):
     """
     Reads PARAMETERS file again, but ignores everything not concerning the 
-    search. Updates the given Rparams object accordingly.
+    search or STOP. Updates the given Rparams object accordingly.
     
     Parameters
     ----------
@@ -57,14 +57,15 @@ def updatePARAMETERS_searchOnly(rp, filename='PARAMETERS'):
         with open(filename, 'r') as rf:
             lines = rf.readlines()
     except FileNotFoundError:
-        logger.error("PARAMETERS not found.")
-        raise
+        logger.warning("updatePARAMETERS routine: PARAMETERS file not found.")
+        return
     for line in lines:
         if "!" in line:
             line = line.split("!")[0].rstrip()
-        if line.lstrip().startswith("SEARCH_KILL"):
-            if not re.match(r"\s*SEARCH_KILL\s*=\s*[Ff](alse)?", line):
-                rp.SEARCH_KILL = True
+        for param in ["SEARCH_KILL", "STOP"]:  # SEARCH_KILL is legacy name
+            if line.lstrip().upper().startswith(param):
+                if not re.match(r"\s*"+param+r"\s*=\s*[Ff](alse)?", line):
+                    rp.STOP = True
         if not "=" in line:
             continue #ignore all lines that don't have an "=" sign at all
         param = line.split('=')[0]        #parameter is defined left of "="
@@ -134,12 +135,15 @@ def readPARAMETERS(filename='PARAMETERS'):
         if "!" in line:
             line = line.split("!")[0].rstrip()
         line = line.lstrip()
-        if line.lstrip().startswith("SEARCH_KILL"):
-            if not re.match(r"\s*SEARCH_KILL\s*=\s*[Ff](alse)?", line):
-                logger.warning('PARAMETERS file: SEARCH_KILL is set at start '
-                        'of program. This means the search will be stopped as '
-                        'soon as it starts. Delete SEARCH_KILL from '
-                        'PARAMETERS to avoid this.')
+        for param in ["STOP", "SEARCH_KILL"]:
+            if line.lstrip().upper().startswith(param) and not re.match(r"\s*"
+                                        +param+r"\s*=\s*[Ff](alse)?", line):
+                logger.warning('PARAMETERS file: {0} was set at start of '
+                    'program. Modifying PARAMETERS to disable {0}; re-insert '
+                    'it if you actually want to stop.'.format(param))
+                modifyPARAMETERS(rpars, param, comment='Disabled at program '
+                                 'start', path=os.path.dirname(filename),
+                                 suppress_ori=True)
         if not "=" in line:
             continue     #ignore all lines that don't have an "=" sign at all
         param = line.split('=')[0]      #parameter is defined left of "="
@@ -1160,6 +1164,11 @@ def modifyPARAMETERS(rp, modpar, new="", comment="", path="",
                     param = plist[0]
                 if param[0] == '!': 
                     valid = False
+        else:
+            for p in ["STOP", "SEARCH_KILL"]:
+                if line.lstrip().upper().startswith(p):
+                    valid = True
+                    param = p
         if valid and param == modpar:
             found = True
             if new:
@@ -1179,7 +1188,7 @@ def modifyPARAMETERS(rp, modpar, new="", comment="", path="",
                 output += ("!"+line.rstrip()).ljust(35)+ " ! " + comment + "\n"
         else:
             output += line
-    if not found:
+    if new and not found:
         if not headerPrinted:
             output += """
 

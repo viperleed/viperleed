@@ -21,7 +21,7 @@ import re
 import tleedmlib.files.iosearch as io
 import tleedmlib as tl
 from tleedmlib.leedbase import fortranCompile
-from tleedmlib.files.parameters import updatePARAMETERS_searchOnly
+from tleedmlib.files.parameters import updatePARAMETERS
 from tleedmlib.files.displacements import readDISPLACEMENTS_block
 from tleedmlib.files.searchpdf import (writeSearchProgressPdf, 
                                        writeSearchReportPdf)
@@ -156,7 +156,7 @@ def processSearchResults(sl, rp, final=True):
                                          silent=(not final))
             except:
                 logger.error("Error while writing search output for domain {}"
-                             .format(dp.name))
+                             .format(dp.name), exc_info = rp.LOG_DEBUG)
                 rp.setHaltingLevel(2)
             finally:
                 os.chdir(home)
@@ -407,15 +407,14 @@ def search(sl, rp):
         try:
             while proc.poll() == None:
                 time.sleep(timestep)
-                # re-read PARAMETERS
-                updatePARAMETERS_searchOnly(rp)
+                updatePARAMETERS(rp)
                 # check convergence criteria
                 stop = False
                 checkrepeat = True
-                if rp.SEARCH_KILL == True:
+                if rp.STOP == True:
                     stop = True
                     checkrepeat = False
-                    logger.info("Search stopped by SEARCH_KILL command.")
+                    logger.info("Search stopped by STOP command.")
                     if not os.path.isfile("SD.TL"):
                         # try saving by waiting for SD.TL to be created...
                         logger.warning("SD.TL file not found. Trying to "
@@ -564,7 +563,7 @@ def search(sl, rp):
                 except KeyboardInterrupt:
                     pass # user insisted, give up
             interrupted = True
-            rp.SEARCH_KILL = True
+            rp.STOP = True
             try:
                 pgid = os.getpgid(proc.pid)
                 proc.kill()
