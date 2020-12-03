@@ -352,6 +352,7 @@ def search(sl, rp):
     convergedConfig = {"all": None, "best": None, "dec": None}
     lastconfig = None
     rp.searchMaxGenInit = rp.SEARCH_MAX_GEN
+    absstarttime = timer()
     while repeat:
         if first:
             logger.info("Starting search. See files Search-progress.pdf "
@@ -395,6 +396,7 @@ def search(sl, rp):
             logger.error("Error starting search. Check SD.TL file.")
         # MONITOR SEARCH
         searchStartTime = timer()
+        printt = searchStartTime
         filepos = 0
         timestep = 1 # time step to check files
         evaluationTime = 30 # how often should SD.TL be evaluated
@@ -403,7 +405,6 @@ def search(sl, rp):
         comment = ""
         sdtlGenNum = 0
         gaussianWidthOri = rp.GAUSSIAN_WIDTH
-        
         try:
             while proc.poll() == None:
                 time.sleep(timestep)
@@ -463,8 +464,11 @@ def search(sl, rp):
                         sdtlGenNum = gen
                         rfaclist.append(np.array(rfacs))
                         if gen % 1000 == 0:
-                            logger.debug("R = {:.4f} (Generation {})"
-                                  .format(min(rfacs), gens[-1]))
+                            speed = 1000*(timer() - absstarttime)/gens[-1]
+                            logger.debug("R = {:.4f} (Generation {}, {:.1f} s "
+                                "since last, {:.1f} s/kG overall)".format(
+                                min(rfacs), gens[-1], timer()-printt, speed))
+                            printt = timer()
                         if configs != realLastConfig["all"]:
                             realLastConfig["all"] = configs
                             realLastConfigGen["all"] = gens[-1]

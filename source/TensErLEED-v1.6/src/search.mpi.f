@@ -130,9 +130,10 @@ C       INIT > 0 -> init is used as initialising value for random, useful when t
 C  PARIND contains parameter value for each parameter (incl. concentration) and each
 C         individual in current generation
 C  PAROLD is similar for last generation
+C  PARDEP stores whether a parameter should be set to the same value as another one
 
-      INTEGER PARIND,PAROLD
-      DIMENSION PARIND(MNPRMK,MPS),PAROLD(MNPRMK,MPS)
+      INTEGER PARIND,PAROLD,PARDEP
+      DIMENSION PARIND(MNPRMK,MPS),PAROLD(MNPRMK,MPS),PARDEP(MNPRMK)
 
 C  Variables for r-factor determination obtained from input (WEXPEL)
 
@@ -739,6 +740,10 @@ C   current individual number; IPARAM will mean current parameter
       
       AVERNEW=4.
 
+C  intialize PARDEP
+      CALL GetDependency(NDOM,NPLACES,NFILES,NPRMK,NPRAS,NPS,
+     +                         NFIL,PARTYP,FILREL,PARDEP)
+
 C  determine parameters for first generation
 
 C  If certain starting position is wanted (STAFLA = 1)
@@ -751,7 +756,7 @@ C  skip randomizing of parameters
 C  Determine parameters of new population
 
             CALL SEA_RCD(NDOM,NPS,NPRMK,NSTEP,PNUM,VARST,PARIND,RPEIND,
-     +                   WSK,WIDT,RMUT,NPAR)
+     +                   WSK,WIDT,RMUT,NPAR,PARDEP)
             
          END IF
       END IF
@@ -787,6 +792,7 @@ C  successful
         PMOLD(NDOM,IPOP) = VARST(NPRMK)-1-NDSL1
 
       ENDDO
+
 
 *************************************************************************
 
@@ -831,6 +837,8 @@ C START FOR POPULATION LOOP - STAFLA=0 from now on
       DO 1848 IPOP=RANK+1,MPS,NUMTASK
 
 C  possibly restrict individual parameters in subroutine restrict
+C  !!! possible todo: restrict could easily also set PARDEP for efficiency
+C  !!! (but breaks backward compatibility because PARDEP needs to be passed)
 
       CALL restrict(NPRMK,NPS,PARIND,IPOP)
 
@@ -840,9 +848,11 @@ C  compute TLEED intensities for different domains
 
 C  generate delta amp numbers in each file, IFNUM, and concentration step
 C  numbers for each place, NPARC, in subroutine GetGrid, for later use in GetInt
+C  Also imposes the restrictions defined by "atom number" FILREL
 
         CALL GetGrid(NDOM,NPLACES,NFILES,NPRMK,NPRAS,NPS,IDOM,IPOP,
-     .               NFIL,IFNUM,PARTYP,PARIND,VARST,NPARC,FILREL)
+     .               NFIL,IFNUM,PARTYP,PARIND,VARST,NPARC,FILREL,
+     .               PARDEP)
 
 
 C  Compute intensities for current parameter values from delta amplitudes
@@ -1074,7 +1084,7 @@ C  Determine parameters of next population
 
          IF (RANK.EQ.0) THEN
             CALL SEA_RCD(NDOM,NPS,NPRMK,NSTEP,PNUM,VARST,PARIND,RPEIND,
-     +                   WSK,WIDT,RMUT,NPAR)
+     +                   WSK,WIDT,RMUT,NPAR,PARDEP)
             
          END IF
          DO IPOP = 1,NPS
