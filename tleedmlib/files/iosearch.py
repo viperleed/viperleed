@@ -369,7 +369,7 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                 output += (name.ljust(16) + "Name of file {} (max. 15 "
                            "characters)\n".format(j+1))
                 output += "  1             Formatted(0/1)\n"
-                el = deltafile.split("_")[2]
+                el = deltafile.split("_")[-2]
                 if el.lower() == "vac":
                     geo = 1
                     vib = 0

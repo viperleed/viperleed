@@ -33,9 +33,7 @@ def readDISPLACEMENTS(rp, filename="DISPLACEMENTS"):
         logger.error("Error reading DISPLACEMENTS file.")
         raise
     for (i, line) in enumerate(lines):
-        if "!" in line:
-            line = line.split("!")[0]
-        line = line.strip()
+        line = line.split("!")[0].strip()
         if re.search(r'<\s*/?\s*loop\s*>', line.lower()):
             if "=" in line:
                 logger.warning("DISPLACEMENTS file: One line cannot contain "
@@ -171,7 +169,7 @@ def readDISPLACEMENTS(rp, filename="DISPLACEMENTS"):
                     skipblock = True
             elif skipblock:
                 continue
-            elif '=' in line:
+            else:
                 if not d:
                     logger.warning("DISPLACEMENTS file: found line outside "
                         "of a domain block, line will be skipped: "+line)

@@ -461,15 +461,15 @@ class Rparams:
         unchanged list."""
         domain_indices = [i for (i, sp) in enumerate(self.searchpars) 
                           if sp.mode == "dom"]
-        if not domain_indices:
+        if not domain_indices or all([config[i] == 1 for i in domain_indices]):
             return config
         mult = 1
         domain_steps = self.searchpars[domain_indices[0]].steps
-        while (sum([config[i] for i in domain_indices]) * (mult+1) 
-                                                           <= domain_steps):
+        while (sum([config[i]-1 for i in domain_indices]) * (mult+1) 
+                                                           <= domain_steps-1):
             mult += 1
         for i in domain_indices:
-            config[i] *= mult
+            config[i] = ((config[i] - 1) * mult) + 1
         return config
 
     def getCenteredConfig(self):

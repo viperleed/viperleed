@@ -576,7 +576,7 @@ C Modul 4: Readin control information for search algorithm
 
       ENDIF
 
-      NPLACES = MNPLACES
+C      NPLACES = MNPLACES
 
 C  Broadcast input data to other processes
 
