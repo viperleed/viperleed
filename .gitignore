@@ -1,3 +1,4 @@
 # Ignore workspace and pycache:
 **/__pycache__
 .spyproject
+*.ini

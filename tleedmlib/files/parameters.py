@@ -29,8 +29,8 @@ knownParams = ['ATTENUATION_EPS', 'BEAM_INCIDENCE', 'BULKDOUBLING_EPS',
     'SUPERLATTICE', 'SUPPRESS_EXECUTION', 'SYMMETRIZE_INPUT', 
     'SYMMETRY_CELL_TRANSFORM', 'SYMMETRY_EPS', 'SYMMETRY_FIND_ORI', 
     'SYMMETRY_FIX', 'TENSOR_INDEX', 'TENSOR_OUTPUT', 'THEO_ENERGIES', 
-    'T_DEBYE', 'T_EXPERIMENT', 'V0_IMAG', 'V0_REAL', 'V0_Z_ONSET', 
-    'VIBR_AMP_SCALE']
+    'TL_VERSION', 'T_DEBYE', 'T_EXPERIMENT', 'V0_IMAG', 'V0_REAL', 
+    'V0_Z_ONSET', 'VIBR_AMP_SCALE']
 paramAlias = {}  # keys should be all lowercase, with no underscores
 for p in knownParams:
     paramAlias[p.lower().replace("_","")] = p
@@ -366,7 +366,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
             setNumericalParameter(rpars, param, llist[0], type_=int, 
                                   range_ = (1, None))
         # positive-only floats
-        elif param in ['T_DEBYE', 'T_EXPERIMENT', 'V0_IMAG']:
+        elif param in ['T_DEBYE', 'T_EXPERIMENT', 'V0_IMAG', 'TL_VERSION']:
             setNumericalParameter(rpars, param, llist[0], range_ = (0, None))
         # simple numericals
         elif param == 'V0_Z_ONSET':

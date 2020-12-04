@@ -79,7 +79,7 @@ def refcalc(sl, rp, subdomain = False):
         logger.error("Exception during writeMuftin: ")
         raise
     try:
-        tldir = getTLEEDdir(home=rp.workdir)
+        tldir = getTLEEDdir(home=rp.workdir, version=rp.TL_VERSION)
         libpath = os.path.join(tldir,'lib')
         libname = [f for f in os.listdir(libpath) 
                       if f.startswith('lib.tleed')][0]

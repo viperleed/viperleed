@@ -210,15 +210,14 @@ def compileDelta(comptask):
                 + "while trying to write PARAM file.")
     # get Fortran source files
     try:
-        tldir = tl.leedbase.getTLEEDdir(home=comptask.sourcedir)
-        libpath = os.path.join(tldir,'lib')
+        libpath = os.path.join(comptask.sourcedir,'lib')
         libname1 = [f for f in os.listdir(libpath) 
                       if f.startswith('lib.tleed')][0]
         shutil.copy2(os.path.join(libpath,libname1), libname1)
         libname2 = [f for f in os.listdir(libpath) 
                       if f.startswith('lib.delta')][0]
         shutil.copy2(os.path.join(libpath,libname2), libname2)
-        srcpath = os.path.join(tldir,'src')
+        srcpath = os.path.join(comptask.sourcedir,'src')
         srcname = [f for f in os.listdir(srcpath) 
                       if f.startswith('delta')][0]
         shutil.copy2(os.path.join(srcpath,srcname), srcname)
@@ -522,7 +521,8 @@ def deltas(sl, rp, subdomain=False):
             return ("No Fortran compiler")
     for ct in deltaCompTasks:
         ct.fortran_comp = rp.FORTRAN_COMP
-        ct.sourcedir = os.path.abspath(rp.workdir)
+        ct.sourcedir = tl.leedbase.getTLEEDdir(os.path.abspath(rp.workdir),
+                                               version = rp.TL_VERSION)
         ct.basedir = os.getcwd()
 
     if subdomain:   # actual calculations done in deltas_domains

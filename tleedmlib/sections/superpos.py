@@ -127,7 +127,7 @@ def superpos(sl, rp, subdomain=False):
             return ("Fortran compile error")
     # get fortran files
     try:
-        tldir = getTLEEDdir(home=rp.workdir)
+        tldir = getTLEEDdir(home=rp.workdir, version=rp.TL_VERSION)
         srcpath = os.path.join(tldir,'src')
         srcname = [f for f in os.listdir(srcpath) 
                       if f.startswith('superpos')][0]

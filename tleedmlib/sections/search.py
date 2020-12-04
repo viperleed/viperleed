@@ -265,7 +265,7 @@ def search(sl, rp):
                 return ("Fortran compile error")
     # get fortran files
     try:
-        tldir = tl.leedbase.getTLEEDdir(home=rp.workdir)
+        tldir = tl.leedbase.getTLEEDdir(home=rp.workdir, version=rp.TL_VERSION)
         srcpath = os.path.join(tldir,'src')
         srcname = [f for f in os.listdir(srcpath) 
                       if f.startswith('search.mpi')][0]
@@ -273,7 +273,14 @@ def search(sl, rp):
         libpath = os.path.join(tldir,'lib')
         libname = [f for f in os.listdir(libpath) 
                       if f.startswith('lib.search.mpi')][0]
-        shutil.copy2(os.path.join(libpath,libname), libname)           
+        shutil.copy2(os.path.join(libpath,libname), libname)
+        hashing_files = [f for f in os.listdir(libpath) 
+                      if f.startswith('intarr_hashing')]
+        if hashing_files:
+            hashname = hashing_files[0]
+            shutil.copy2(os.path.join(libpath,hashname), hashname)
+        else:
+            hashname = ""
         if usempi: # these are short C scripts - use pre-compiled versions
             randnamefrom = "MPIrandom_.o"
         else:
@@ -298,19 +305,26 @@ def search(sl, rp):
         if r:
             logger.error("Error compiling "+libname+", cancelling...")
             return ("Fortran compile error")
+        if hashname:
+            r=fortranCompile(fcomp[0]+" -c", hashname, fcomp[1])
+            if r:
+                logger.error("Error compiling "+hashname+", cancelling...")
+                return ("Fortran compile error")
         r=fortranCompile(fcomp[0]+" -o restrict.o -c", 
                             "restrict.f", fcomp[1])
         if r:
             logger.error("Error compiling restrict.f, cancelling...")
             return ("Fortran compile error")
-        r=fortranCompile(fcomp[0]+" -o search.o -c", srcname,
+        r=fortranCompile(fcomp[0]+" -o search.o -c -fixed", srcname,
                             fcomp[1])
         if r:
             logger.error("Error compiling "+srcname+", cancelling...")
             return ("Fortran compile error")
         # combine
-        r=fortranCompile(fcomp[0]+" -o "+ searchname, "search.o "
-                            "random_.o lib.search.o restrict.o", fcomp[1])
+        to_link = "search.o random_.o lib.search.o restrict.o"
+        if hashname:
+            to_link += " intarr_hashing.o"
+        r=fortranCompile(fcomp[0]+" -o "+ searchname, to_link, fcomp[1])
         if r:
             logger.error("Error compiling fortran files, cancelling...")
             return ("Fortran compile error")
