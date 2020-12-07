@@ -128,6 +128,8 @@ def superpos(sl, rp, subdomain=False):
     # get fortran files
     try:
         tldir = getTLEEDdir(home=rp.workdir, version=rp.TL_VERSION)
+        if not tldir:
+            return("TensErLEED code not found.")
         srcpath = os.path.join(tldir,'src')
         srcname = [f for f in os.listdir(srcpath) 
                       if f.startswith('superpos')][0]

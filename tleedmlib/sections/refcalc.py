@@ -80,6 +80,8 @@ def refcalc(sl, rp, subdomain = False):
         raise
     try:
         tldir = getTLEEDdir(home=rp.workdir, version=rp.TL_VERSION)
+        if not tldir:
+            return("TensErLEED code not found.")
         libpath = os.path.join(tldir,'lib')
         libname = [f for f in os.listdir(libpath) 
                       if f.startswith('lib.tleed')][0]

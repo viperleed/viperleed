@@ -266,6 +266,8 @@ def search(sl, rp):
     # get fortran files
     try:
         tldir = tl.leedbase.getTLEEDdir(home=rp.workdir, version=rp.TL_VERSION)
+        if not tldir:
+            return("TensErLEED code not found.")
         srcpath = os.path.join(tldir,'src')
         srcname = [f for f in os.listdir(srcpath) 
                       if f.startswith('search.mpi')][0]
@@ -413,7 +415,7 @@ def search(sl, rp):
         printt = searchStartTime
         filepos = 0
         timestep = 1 # time step to check files
-        evaluationTime = 30 # how often should SD.TL be evaluated
+        evaluationTime = 5 # how often should SD.TL be evaluated
         lastEval = 0 # last evaluation time, counting in seconds from 
                      #   searchStartTime
         comment = ""

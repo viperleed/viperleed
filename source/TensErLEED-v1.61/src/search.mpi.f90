@@ -129,8 +129,10 @@ C       INIT > 0 -> init is used as initialising value for random, useful when t
       INTEGER INIT
 
 C  HASHTAB is the hashtable containing sets of PARINDS as keys and R-factors as values
+C  USEHASH defines whether HASHTAB should be used - turn on only if not much change is happening
 
       TYPE(dictionary_t) HASHTAB
+      LOGICAL USEHASH
 
 C  PARIND contains parameter value for each parameter (incl. concentration) and each
 C         individual in current generation
@@ -343,6 +345,7 @@ C  BRHAS is the half-order rfactor
 C  ending 'OLD' means the appropriate parameter for the previous calculation
 C  TCHANGE checks whether or not r-factor has improved since last generation
 C  NDSL1, Norm,PARSUM for PMOLD initialisation
+C  LASTGEN is the last generation that had an improvement anywhere
 
       REAL RMUT,AVERNEW
       REAL RPEIND,RPEOLD
@@ -358,6 +361,7 @@ C  NDSL1, Norm,PARSUM for PMOLD initialisation
       LOGICAL TCHANGE
       INTEGER PARSUM,NDSL1
       REAL Norm
+      INTEGER LASTGEN
 
 C  Variables for randomizing of parameter values
 
@@ -616,6 +620,7 @@ C  initialize hash table
 
       call HASHTAB%init(MIN(MAXGEN,10000000))
 C      call HASHTAB%init(1024)
+      USEHASH=.false.
 
 C  Modul 5: Read in delta amplitudes from files
 
@@ -735,8 +740,10 @@ C  Open output file and write header (trivial but long if included here)
 C  Modul 6: INITIALIZE SOME VALUES
 
 C  IGEN is number of current generation
+C  LASTGEN is last generation that had an improvement
 
       IGEN=0
+      LASTGEN=0
 
 C   Throughout the main program, IPOP will always be counter for
 C   current individual number; IPARAM will mean current parameter
@@ -866,17 +873,18 @@ C  Also imposes the restrictions defined by "atom number" FILREL
 
  3000 continue
 
-C  before actually calculating anything, check if this combination was done before
+C  before actually calculating anything, check if this combination was done before;
 C  if we already know the R-factor and it was worse, skip computations
 
-      RPEIND(IPOP) = HASHTAB%get(NPRMK, PARIND(:,IPOP))
+      IF (USEHASH) THEN
+        RPEIND(IPOP) = HASHTAB%get(NPRMK, PARIND(:,IPOP))
 
-      IF (RPEIND(IPOP).EQ.0.0 ) THEN
-        RPEIND(IPOP)=1.0
-      ENDIF
-
-      IF (RPEIND(IPOP).GE.RPEOLD(IPOP)) THEN
-        GOTO 1900
+        IF (RPEIND(IPOP).EQ.0.0 ) THEN
+          RPEIND(IPOP)=1.0
+        ELSEIF (RPEIND(IPOP).GE.RPEOLD(IPOP)) THEN
+C        write(6,'("Skip computation: RANK=",I3,", GEN=",I6)') RANK,IGEN
+          GOTO 1900
+        ENDIF
       ENDIF
 
       do 3010 IDOM = 1, NDOM
@@ -943,8 +951,9 @@ C  renew dimension sizes just to make sure
      +             WHICHR,RPEIND(IPOP),OVLG)
 
 C  store the R-factor for this configuration
-
-      CALL HASHTAB%set(NPRMK,PARIND(:,IPOP),RPEIND(IPOP))
+      IF (USEHASH) THEN
+        CALL HASHTAB%set(NPRMK,PARIND(:,IPOP),RPEIND(IPOP))
+      ENDIF
 
 C  test statement
 C      write(6,'("Rfaktor",I5," ",I2," ok. node:",I3)') IGEN,IPOP,RANK
@@ -1110,6 +1119,21 @@ C  Here ends a (nearly) endless loop - next generation
 
       END IF
 
+C  threshold for using hash table storage: if there are no changes for a while, turn on USEHASH
+      IF (.NOT. USEHASH) THEN
+
+        IF ((LASTGEN-IGEN) .GE. 500) THEN
+          USEHASH = .true.
+          IF (RANK .eq. 0) THEN
+           write(6,'("Starting hash table storage of populations at 
+     +                       generation ",I8)') IGEN
+          END IF
+        ENDIF
+
+        LASTGEN=IGEN
+
+      ENDIF
+
       if ((MAXGEN .eq. 0) .or. (IGEN .lt. MAXGEN)) THEN
 
 C  Determine parameters of next population
@@ -1121,6 +1145,8 @@ C  Determine parameters of next population
          END IF
          DO IPOP = 1,NPS
             CALL MPI_BCAST(PARIND(1,IPOP),NPRMK,MPI_INTEGER,0,
+     *           MPI_COMM_WORLD,IERR)
+            CALL MPI_BCAST(RPEOLD(IPOP),1,MPI_REAL,0,
      *           MPI_COMM_WORLD,IERR)
          ENDDO
 

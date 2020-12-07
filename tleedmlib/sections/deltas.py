@@ -519,10 +519,13 @@ def deltas(sl, rp, subdomain=False):
             logger.error("No fortran compiler found, "
                           "cancelling...")
             return ("No Fortran compiler")
+    tlp = tl.leedbase.getTLEEDdir(os.path.abspath(rp.workdir),
+                                               version = rp.TL_VERSION)
+    if not tlp:
+        return("TensErLEED code not found.")
     for ct in deltaCompTasks:
         ct.fortran_comp = rp.FORTRAN_COMP
-        ct.sourcedir = tl.leedbase.getTLEEDdir(os.path.abspath(rp.workdir),
-                                               version = rp.TL_VERSION)
+        ct.sourcedir = tlp
         ct.basedir = os.getcwd()
 
     if subdomain:   # actual calculations done in deltas_domains

@@ -88,7 +88,7 @@ def updatePARAMETERS(rp, filename='PARAMETERS'):
             continue   
         if param == 'SEARCH_CONVERGENCE':
             flags = plist[1:]
-            if flags[0].lower() not in ['dgen', 'gaussian']:
+            if not flags or flags[0].lower() not in ['dgen', 'gaussian']:
                 continue
             fl = [None,None]
             for (i, s) in enumerate(llist[:2]):
@@ -768,6 +768,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
             if len(plist) == 1:
                 if value.lower().strip() == 'off':
                     rpars.GAUSSIAN_WIDTH_SCALING = 1.
+                    continue
                 else:
                     logger.warning('PARAMETERS file: SEARCH_CONVERGENCE: '
                         'no flag given, value '+value+' not recognized.')
