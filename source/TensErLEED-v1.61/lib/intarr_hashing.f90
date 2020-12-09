@@ -90,12 +90,14 @@ contains
     integer :: r
 
     integer :: i
-
-    r = 5381
-
+    
+    r = 33
+    
     do i = 1, nk
-       r = modulo(r*1009 + k(i), this%dict_size)
+       r = r*31 + k(i)
     end do
+  
+  r = modulo(r, this%dict_size)
 
   end function iahash
 

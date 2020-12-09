@@ -82,6 +82,10 @@ def readSDTL_blocks(content, whichR = 0, logInfo = False):
                     logger.error("Could not read values in SD.TL line:\n"+line)
         if dpars:
             configs.append(dpars)
+        if not all([len(dp) == len(configs[0]) for dp in configs]):
+            logger.warning("A line in SD.TL contains fewer values than "
+                           "the others. Skipping SD.TL block.")
+            continue
         if gen != 0 and len(rfacs) > 0 and len(configs) > 0:
             returnList.append((gen, rfacs, configs))
         else:

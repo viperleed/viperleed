@@ -97,6 +97,8 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
     try:
         with open(csvname, "w") as wf:
             wf.write(output)
+    except KeyboardInterrupt:
+        raise
     except:
         logger.warning("Failed to write "+csvname)
     
@@ -289,6 +291,8 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
         logger.warning("Failed to write to " + outname
                         + ": Permission denied.")
         return 1
+    except KeyboardInterrupt:
+        raise
     except:
         logger.warning("Failed to write to "+outname)
         return 1
@@ -400,6 +404,8 @@ def writeSearchReportPdf(rp, outname = "Search-report.pdf"):
         logger.warning("Failed to write to " + outname
                         + ": Permission denied.")
         return 1
+    except KeyboardInterrupt:
+        raise
     except:
         logger.warning("Failed to write to "+outname)
         return 1

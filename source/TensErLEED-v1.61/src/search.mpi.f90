@@ -130,9 +130,10 @@ C       INIT > 0 -> init is used as initialising value for random, useful when t
 
 C  HASHTAB is the hashtable containing sets of PARINDS as keys and R-factors as values
 C  USEHASH defines whether HASHTAB should be used - turn on only if not much change is happening
+C  HASHINI tracks whether the hash table has been initialized
 
       TYPE(dictionary_t) HASHTAB
-      LOGICAL USEHASH
+      LOGICAL USEHASH,HASHINI
 
 C  PARIND contains parameter value for each parameter (incl. concentration) and each
 C         individual in current generation
@@ -616,11 +617,10 @@ C  only use randominit if random() is used
 
       call randominit(INIT)
 
-C  initialize hash table
+C  initialize variables for HASHTAB
 
-      call HASHTAB%init(MIN(MAXGEN,10000000))
-C      call HASHTAB%init(1024)
       USEHASH=.false.
+      HASHINI=.false.
 
 C  Modul 5: Read in delta amplitudes from files
 
@@ -875,16 +875,25 @@ C  Also imposes the restrictions defined by "atom number" FILREL
 
 C  before actually calculating anything, check if this combination was done before;
 C  if we already know the R-factor and it was worse, skip computations
+C  Comment to size: (MAXGEN-IGEN)*MPS/NUMTASK is the maximum number of entries to come.
+C  Some collisions won't slow things down too much -> reduce size again by factor 5.
 
       IF (USEHASH) THEN
+       IF (.NOT. HASHINI) THEN
+        HASHINI=.true.
+        call HASHTAB%init(MIN((MAXGEN-IGEN)*MPS/(5*NUMTASK),1000000))
+       ELSE
         RPEIND(IPOP) = HASHTAB%get(NPRMK, PARIND(:,IPOP))
+C        write(6,'("Found stored R=",F7.4,", old R=",F7.4)') 
+C     +             RPEIND(IPOP),RPEOLD(IPOP)
 
         IF (RPEIND(IPOP).EQ.0.0 ) THEN
-          RPEIND(IPOP)=1.0
+         RPEIND(IPOP)=1.0
         ELSEIF (RPEIND(IPOP).GE.RPEOLD(IPOP)) THEN
 C        write(6,'("Skip computation: RANK=",I3,", GEN=",I6)') RANK,IGEN
-          GOTO 1900
+         GOTO 1900
         ENDIF
+       ENDIF
       ENDIF
 
       do 3010 IDOM = 1, NDOM
@@ -1101,6 +1110,20 @@ C order list of structures as function of (increasing) R-factor
      +  RPEHELP,BRGESHELP,BRINSHELP,BRHASHELP,BV0HELP,PARHELP,
      +  PMISCH)
 
+C  threshold for using hash table storage: if there are no changes for a while, turn on USEHASH
+
+        IF (.NOT. USEHASH) THEN
+
+          IF ((IGEN-LASTGEN) .GE. 1e6*(RMUT**2)) THEN
+            USEHASH = .true.
+            write(6,'("Starting hash table storage of populations at ",
+     +                       "generation ",I8)') IGEN
+          ENDIF
+
+          LASTGEN=IGEN
+
+        END IF
+
       END IF
 
 C  write rfactors to file if improvement was made or output forced
@@ -1119,21 +1142,6 @@ C  Here ends a (nearly) endless loop - next generation
 
       END IF
 
-C  threshold for using hash table storage: if there are no changes for a while, turn on USEHASH
-      IF (.NOT. USEHASH) THEN
-
-        IF ((LASTGEN-IGEN) .GE. 500) THEN
-          USEHASH = .true.
-          IF (RANK .eq. 0) THEN
-           write(6,'("Starting hash table storage of populations at 
-     +                       generation ",I8)') IGEN
-          END IF
-        ENDIF
-
-        LASTGEN=IGEN
-
-      ENDIF
-
       if ((MAXGEN .eq. 0) .or. (IGEN .lt. MAXGEN)) THEN
 
 C  Determine parameters of next population
@@ -1141,12 +1149,14 @@ C  Determine parameters of next population
          IF (RANK.EQ.0) THEN
             CALL SEA_RCD(NDOM,NPS,NPRMK,NSTEP,PNUM,VARST,PARIND,RPEIND,
      +                   WSK,WIDT,RMUT,NPAR,PARDEP)
-            
+
          END IF
+
+         CALL MPI_BCAST(USEHASH,1,MPI_LOGICAL,0,MPI_COMM_WORLD,IERR)
+         CALL MPI_BCAST(RPEOLD,NPS,MPI_REAL,0,MPI_COMM_WORLD,IERR)
+
          DO IPOP = 1,NPS
             CALL MPI_BCAST(PARIND(1,IPOP),NPRMK,MPI_INTEGER,0,
-     *           MPI_COMM_WORLD,IERR)
-            CALL MPI_BCAST(RPEOLD(IPOP),1,MPI_REAL,0,
      *           MPI_COMM_WORLD,IERR)
          ENDDO
 
