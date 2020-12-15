@@ -319,7 +319,7 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
     
     xyTheo = xxyy[0]
     xyExp = xxyy[1]
-      
+
     # find min and max values of x and y for plotting all curves
     # on the same horizontal scale and leaving a little y space for the legend
     xmin = min(min(xy[:, 0]) for xy in [*xyTheo, *xyExp] if len(xy) != 0)
@@ -343,8 +343,10 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
     # set ticks spacing to 50 eV and round the x limits to a multiple of it
     tick = 50
     tickloc = plticker.MultipleLocator(base=tick)
-    xlims = (np.round((xmin - 10)/tick)*tick,
-             np.round((xmax + 10)/tick)*tick)
+    # xlims = (min(xmin, np.round((xmin - 10)/tick)*tick),
+    #          max(xmax, np.round((xmax + 10)/tick)*tick))
+    xlims = (np.floor(xmin/tick)*tick,
+             np.ceil(xmax/tick)*tick)
     dx = xlims[1] - xlims[0]
     
     ylims = (ymin - 0.02*dy, ymax + 0.22*dy)
