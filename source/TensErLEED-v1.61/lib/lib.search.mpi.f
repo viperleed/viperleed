@@ -683,7 +683,7 @@ c         write(8,*)"probability of value",IPVAL," is",WSK(IPVAL)
 c      write(8,*) "distribution normalised"
 
 C  Determination of new random number
-C  not that if name of random subroutine is changed, integer declaration of
+C  note that if name of random subroutine is changed, integer declaration of
 C  random (see above) must also be changed!
 
       FMKRN=random()
@@ -2997,8 +2997,8 @@ C it should always be equivalent to another parameter via the "Atom number"
 C FILREL, the PARDEP(IPARAM) will be set to the index of that parameter. For 
 C all other parameters, PARDEP will be 0, and only those parameters need to be 
 C calculated by SEA_RCD.
-C Added 2020-12 by Florian Kraushofer; largely a copy of GetGrid that stores 
-C the information instead of having to run in every iteration of the optimization
+C Added 2020-12 by F. Kraushofer; largely a copy of GetGrid that stores the 
+C information instead of having to run in every iteration of the optimization
 C loop.
 
       Subroutine GetDependency(NDOM,NPLACES,NFILES,NPRMK,NPRAS,NPS,

@@ -1114,7 +1114,7 @@ C  threshold for using hash table storage: if there are no changes for a while, 
 
         IF (.NOT. USEHASH) THEN
 
-          IF ((IGEN-LASTGEN) .GE. 1e6*(RMUT**2)) THEN
+          IF ((IGEN-LASTGEN) .GE. 1e4*(RMUT**2)*NPAR) THEN
             USEHASH = .true.
             write(6,'("Starting hash table storage of populations at ",
      +                       "generation ",I8)') IGEN
