@@ -244,7 +244,8 @@ def sortfiles(tensorIndex, delete_unzipped = False, tensors = True,
                 "rfactor-PARAM", "delta-input", "search.steu",
                 "search-rf.info", "seach-PARAM", "AUXEXPBEAMS",
                 "eeasisss-input", "searchpars.info", "superpos-PARAM",
-                "superpos-CONTRIN", "POSCAR_bulk_appended", "POSCAR_mincell"]
+                "superpos-CONTRIN", "POSCAR_bulk_appended", "POSCAR_mincell",
+                "restrict.f"]
     outfiles = ["THEOBEAMS.csv", "THEOBEAMS_norm.csv",
                 "PatternInfo.tlm", "SD.TL", "refcalc-fd.out",
                 "Rfactor_plots_refcalc.pdf", "control.chem",

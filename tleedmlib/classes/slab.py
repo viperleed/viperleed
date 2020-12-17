@@ -560,14 +560,8 @@ class Slab:
                     if el in at.offset_vib:
                         o += at.offset_vib[el]
                     at.offset_vib[el] = o
-                    # o = site.occ[el] - site.oriState.occ[el]
-                    # if el in at.offset_occ:
-                    #     o += at.offset_occ[el]
-                    # at.offset_occ[el] = o
                     if abs(at.offset_vib[el]) < 1e-6:
                         del at.offset_vib[el]
-                    # if abs(at.offset_occ[el]) < 1e-6:
-                    #     del at.offset_occ[el]
                 site.vibamp[el] = site.oriState.vibamp[el]
                 site.occ[el] = site.oriState.occ[el]
         uci = np.linalg.inv(self.ucell)

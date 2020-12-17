@@ -862,15 +862,14 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                     rpars.setHaltingLevel(1)
         elif param == 'SEARCH_START':
             s = llist[0].lower()
-            if s in ["random", "rand", "centered", "center", "control"]:
-                if s in ["random, rand"]:
-                    rpars.SEARCH_START = "random"
-                elif s in ["centered", "center"]:
-                    rpars.SEARCH_START = "centered"
-                elif s == "control":
-                    rpars.SEARCH_START = "control"
-                elif s in ["cr", "crand", "crandom"]:
-                    rpars.SEARCH_START = "crandom"
+            if s in ["random, rand"]:
+                rpars.SEARCH_START = "random"
+            elif s in ["centered", "center"]:
+                rpars.SEARCH_START = "centered"
+            elif s == "control":
+                rpars.SEARCH_START = "control"
+            elif s in ["cr", "crand", "crandom"]:
+                rpars.SEARCH_START = "crandom"
             else:
                 logger.warning('PARAMETERS file: SEARCH_START: flag '
                                 'not recognized.')
