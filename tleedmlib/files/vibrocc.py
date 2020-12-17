@@ -197,7 +197,7 @@ def readVIBROCC(rp, slab, filename='VIBROCC', silent=False):
                                   'sublist '+l)
                     continue
                 else:
-                    el = ll[0]
+                    el = ll[0].capitalize()
                     if not el in slab.chemelem:
                         logger.error('VIBROCC file: Element '+el+' not '
                                       'recognized')

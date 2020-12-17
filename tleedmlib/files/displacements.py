@@ -469,7 +469,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock):
                 break
             else:
                 # check ELEMENT_MIX elements:
-                el = sname.split("_")[0]
+                el = sname.split("_")[0].capitalize()
                 s = el
                 if not regex:
                     s = re.escape(s)   #double-slash
@@ -737,72 +737,72 @@ def readDISPLACEMENTS_block(rp, sl, dispblock):
                 mid = (fl[1]+fl[0]) / 2
                 drange = np.arange(mid-((steps-1)/2*fl[2]),
                                mid+((steps-1)/2*fl[2])+1e-5, fl[2])
-                if fl[1] < fl[0]:
-                    drange = drange[::-1]  #reverse
+                # if fl[1] < fl[0]:
+                #     drange = drange[::-1]  #reverse
                 # get element
-                if not "+" in "".join(subl):
-                    if subl[0] in sl.chemelem:
-                        targetel = subl[0]
-                    else:
-                        logger.warning('DISPLACEMENTS file: '+subl[0]+'not '
-                                    'found in element list. No assignment '
-                                    'will be made.')
-                        rp.setHaltingLevel(1)
-                        continue
-                    for (at, _) in targetAtEls:
-                        if targetel in at.disp_occ:
-                            at.assignDisp(mode, drange, targetel)
-                        else:
-                            logger.warning('DISPLACEMENTS file: '
-                                'trying to address atom number '
-                                +str(at.oriN)+' with wrong element. '
-                                'Atom will be skipped.')
-                            rp.setHaltingLevel(1)
+                # if not "+" in "".join(subl):
+                if subl[0].capitalize() in sl.chemelem:
+                    targetel = subl[0]
                 else:
-                    # !!! currently unused, not in wiki - delete?
-                    elparts = "".join(subl[:-3]).split("+")
-                    elweights = []
-                    elsum = 0.0
-                    rgx = re.compile(r'\s*(?P<number>[0-9\.]+)\s*'
-                                     +r'(?P<name>[a-zA-Z]+)')
-                    for part in elparts:
-                        m = rgx.match(part)
-                        if not m:
-                            logger.warning('DISPLACEMENTS file: could '
-                                'not parse '+part+' as number and '
-                                'element. No assignment will be made.')
-                            rp.setHaltingLevel(1)
-                            break
-                        try:
-                            f = float(m.group("number"))
-                        except ValueError:
-                            logger.warning('DISPLACEMENTS file: '
-                             'could not parse '+m.group("number")
-                             +' as float. No assignment will be made.')
-                            rp.setHaltingLevel(1)
-                            break
-                        el = m.group("name")
-                        if not el in sl.chemelem:
-                            logger.warning('DISPLACEMENTS file: '+el
-                                +' not found in element list. No '
-                                'assignment will be made.')
-                            rp.setHaltingLevel(1)
-                            break
-                        else:
-                            elweights.append((el, f))
-                            elsum += f
-                    else:  # loop finished without break
-                        for (el, f) in elweights:
-                            ndr = [v*f/elsum for v in drange]
-                            for (at, targetel) in targetAtEls:
-                                if el in at.disp_occ:
-                                    at.assignDisp(mode, ndr, el)
-                                else:
-                                    logger.warning('DISPLACEMENTS file: '
-                                        'trying to address atom number '
-                                        +str(at.oriN)+' with wrong element. '
-                                        'Atom will be skipped.')
-                                    rp.setHaltingLevel(1)
+                    logger.warning('DISPLACEMENTS file: '+subl[0]+'not '
+                                'found in element list. No assignment '
+                                'will be made.')
+                    rp.setHaltingLevel(1)
+                    continue
+                for (at, _) in targetAtEls:
+                    if targetel in at.disp_occ:
+                        at.assignDisp(mode, drange, targetel)
+                    else:
+                        logger.warning('DISPLACEMENTS file: '
+                            'trying to address atom number '
+                            +str(at.oriN)+' with wrong element. '
+                            'Atom will be skipped.')
+                        rp.setHaltingLevel(1)
+                # else:
+                #     # !!! currently unused, not in wiki - delete?
+                #     elparts = "".join(subl[:-3]).split("+")
+                #     elweights = []
+                #     elsum = 0.0
+                #     rgx = re.compile(r'\s*(?P<number>[0-9\.]+)\s*'
+                #                      +r'(?P<name>[a-zA-Z]+)')
+                #     for part in elparts:
+                #         m = rgx.match(part)
+                #         if not m:
+                #             logger.warning('DISPLACEMENTS file: could '
+                #                 'not parse '+part+' as number and '
+                #                 'element. No assignment will be made.')
+                #             rp.setHaltingLevel(1)
+                #             break
+                #         try:
+                #             f = float(m.group("number"))
+                #         except ValueError:
+                #             logger.warning('DISPLACEMENTS file: '
+                #              'could not parse '+m.group("number")
+                #              +' as float. No assignment will be made.')
+                #             rp.setHaltingLevel(1)
+                #             break
+                #         el = m.group("name").capitalize()
+                #         if not el in sl.chemelem:
+                #             logger.warning('DISPLACEMENTS file: '+el
+                #                 +' not found in element list. No '
+                #                 'assignment will be made.')
+                #             rp.setHaltingLevel(1)
+                #             break
+                #         else:
+                #             elweights.append((el, f))
+                #             elsum += f
+                #     else:  # loop finished without break
+                #         for (el, f) in elweights:
+                #             ndr = [v*f/elsum for v in drange]
+                #             for (at, targetel) in targetAtEls:
+                #                 if el in at.disp_occ:
+                #                     at.assignDisp(mode, ndr, el)
+                #                 else:
+                #                     logger.warning('DISPLACEMENTS file: '
+                #                         'trying to address atom number '
+                #                         +str(at.oriN)+' with wrong element. '
+                #                         'Atom will be skipped.')
+                #                     rp.setHaltingLevel(1)
         elif mode == 4:
             constraints.append((targetAtEls, ctype, value))
     sl.revertUnitCell(uCellState)  # if modified by SYM_DELTA, go back

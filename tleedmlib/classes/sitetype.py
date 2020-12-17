@@ -20,7 +20,7 @@ class Sitetype:
     """Site types are identified by (main) element and name, and store 
     vibrational amplitude and occupation"""
     def __init__(self,el,name):
-        self.el = el
+        self.el = el.capitalize()
         self.name = name
         self.label = self.el + '_' + self.name
         self.vibamp = {}    #vibrational amplitude per element

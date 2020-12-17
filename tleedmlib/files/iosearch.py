@@ -227,7 +227,7 @@ def generateSearchInput(sl, rp, steuOnly=False, cull=False):
                 else:
                     at.disp_occ[el] = [v + at.offset_occ[el] 
                                        for v in at.disp_occ[el]]
-                del at.disp_occ[el]
+                    del at.disp_occ[el]
             for (d, o) in [(at.disp_geo, at.offset_geo),
                            (at.disp_vib, at.offset_vib),
                            (at.disp_geo, at.disp_geo_offset)]:

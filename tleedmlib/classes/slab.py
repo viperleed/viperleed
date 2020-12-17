@@ -439,10 +439,11 @@ class Slab:
         self.chemelem = []
         for el in self.elements:
             if el in rp.ELEMENT_MIX:
-                self.chemelem.extend([e for e in rp.ELEMENT_MIX[el] 
-                                      if not e in self.chemelem])
+                self.chemelem.extend([e.capitalize() 
+                                      for e in rp.ELEMENT_MIX[el] 
+                                      if not e.capitalize() in self.chemelem])
             else:
-                self.chemelem.append(el)
+                self.chemelem.append(el.capitalize())
         self.lastupdateelmix = rp.ELEMENT_MIX
 
     def updateElementCount(self):
@@ -559,14 +560,14 @@ class Slab:
                     if el in at.offset_vib:
                         o += at.offset_vib[el]
                     at.offset_vib[el] = o
-                    o = site.occ[el] - site.oriState.occ[el]
-                    if el in at.offset_occ:
-                        o += at.offset_occ[el]
-                    at.offset_occ[el] = o
+                    # o = site.occ[el] - site.oriState.occ[el]
+                    # if el in at.offset_occ:
+                    #     o += at.offset_occ[el]
+                    # at.offset_occ[el] = o
                     if abs(at.offset_vib[el]) < 1e-6:
                         del at.offset_vib[el]
-                    if abs(at.offset_occ[el]) < 1e-6:
-                        del at.offset_occ[el]
+                    # if abs(at.offset_occ[el]) < 1e-6:
+                    #     del at.offset_occ[el]
                 site.vibamp[el] = site.oriState.vibamp[el]
                 site.occ[el] = site.oriState.occ[el]
         uci = np.linalg.inv(self.ucell)

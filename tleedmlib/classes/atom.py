@@ -132,7 +132,7 @@ class Atom:
                 if offsetlist != self.disp_geo_offset:
                     del offsetlist[el]
             if offsetlist == self.disp_geo_offset:
-                self.disp_geo_offset = {"all": [np.array([0.0,0.0,0.0])]}
+                self.disp_geo_offset = {"all": [np.array([0.,0.,0.])]}
     
     def clearOffset(self, mode, targetel = "", primary = True, displist = []):
         """
@@ -238,7 +238,7 @@ class Atom:
             return
         eps = 1e-5  #tolerance for comparing displacements
         dr = copy.copy(disprange)  # to make sure multiple atoms do not get 
-                                   #  the same array object 
+                                   #  the same list object 
         if mode == 1:
             td = self.disp_geo
         elif mode == 2:

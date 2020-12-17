@@ -484,7 +484,21 @@ def deltas(sl, rp, subdomain=False):
         rt.deltaname = nameBase + "_{}".format(n)
         rt.deltalogname = deltalogname
         at.deltasGenerated.append(rt.deltaname)
-        
+
+    # sort deltasGenerated
+    for at in attodo:
+        checkEls = list(at.disp_occ.keys())
+        if at in vaclist:
+            checkEls.append("vac")
+        copydel = at.deltasGenerated[:]
+        at.deltasGenerated = []
+        for el in checkEls:
+            at.deltasGenerated.append([df for df in copydel if 
+                                df.split("_")[-2].lower() == el.lower()][0])
+        if len(at.deltasGenerated) != len(copydel):
+            logger.error("Failed to sort delta files for {}".format(at))
+            return ("Inconsistent delta files")
+
     # write delta-input file
     dinput = ("""# ABOUT THIS FILE:
 # Input for the delta-calculations is collected here. The blocks of data are
