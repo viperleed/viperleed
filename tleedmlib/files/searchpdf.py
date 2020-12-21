@@ -27,7 +27,8 @@ else:
 def writeSearchProgressPdf(rp, gens, rfacs, lastconfig, 
                            outname = "Search-progress.pdf",
                            csvname = "Search-progress.csv",
-                           markers = []):
+                           markers = [],
+                           rfac_predict = []):
     global plotting
     if not plotting:
         return 0
@@ -71,7 +72,7 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
         if deltagens[i] >= maxdgy[-1]:
             maxdgx.append(gens[i+1])
             maxdgy.append(deltagens[i])
-            
+
     figsize = (5.8, 8.3)
     figs = []
     
@@ -116,8 +117,13 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
             break
     part = max(100, part)
     rfmin, rfmax = min(rfacsMin[-part:]), max(rfacsMax[-part:])
-    rYrange = [rfmin-(rfmax-rfmin)*0.1, rfmax+(rfmax-rfmin)*0.1]
-    
+    if rfac_predict:
+        (pred_x, pred_y) = tuple(zip(*rfac_predict))
+        lowbound = min(min(pred_y[int(len(pred_y)/10):]), rfmin)
+    else:
+        lowbound = rfmin
+    rYrange = [lowbound-(rfmax-lowbound)*0.1, rfmax+(rfmax-rfmin)*0.1]
+
     labely = rYrange[0] + (rYrange[1]-rYrange[0])*0.99
     xoff = gens[-1]*0.005
     for (xpos, label) in markers:
@@ -126,6 +132,9 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
         rfp.text(xpos + xoff, labely, label, rotation=-90, 
                  verticalalignment="top", size=4)
     # plot data
+    if rfac_predict:
+        rfp.step(pred_x, pred_y, where="post", color="seagreen", 
+                 label = "Prediction")
     rfp.plot(gens, rfacsMin, '-', color='black', label = "Best")
     rfp.fill_between(gens, rfacsMin, rfacsMax, facecolor='grey', 
                      alpha=0.2, label="Range")
@@ -196,6 +205,7 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
                 pltpoints = [] # x, y, color, size, alpha
                 bestpoints = []
                 xlabels = []
+                predict = []
                 for (i, par) in enumerate(plotpars):
                     vals = []
                     for (j, conf) in enumerate(lastconfig):
@@ -229,6 +239,13 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
                         # mean = np.mean(vals)
                         # offsets.append(np.mean([abs(v - mean) for v in vals])
                         #                * 2)
+                    if par.parabolaFit["min"] is not None:
+                        # alpha = 0.5
+                        # if par.linkedTo is None and par.rstrictTo is None:
+                        #     alpha = 1.0
+                        predict.append((i+1, (par.parabolaFit["min"] - 1)
+                                              / (par.steps - 1), alpha))
+                        
                 # combine duplicates:
                 i = 0
                 while i < len(pltpoints):
@@ -245,6 +262,12 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
                             j += 1
                     pltpoints[i] = (x,y,c,s)
                     i += 1
+                if predict:
+                    for alpha in set([p[2] for p in predict]):
+                        (px, py, _) = tuple(zip(*[p for p in predict 
+                                                  if p[2] == alpha]))
+                        axs[figcount].scatter(px, py, color="seagreen", 
+                                              alpha=alpha)
                 x, y = [p[0] for p in pltpoints], [p[1] for p in pltpoints]
                 c, s = [p[2] for p in pltpoints], [p[3] for p in pltpoints]
                 axs[figcount].plot([0, parsPerFig+2], [0.5, 0.5], color='grey', 

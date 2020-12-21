@@ -219,7 +219,7 @@ def readIntLine(line, width=3):
 
     Returns
     -------
-    List of integers
+    Tuple of integers
 
     """
     line = line.rstrip()
@@ -230,7 +230,7 @@ def readIntLine(line, width=3):
             line = line[width:]
     except:
         raise
-    return l
+    return tuple(l)
 
 def cosvec(x,y):
     """

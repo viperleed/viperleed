@@ -930,6 +930,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
     #   TO ASSIGN PROPERTIES TO INDIVIDUAL ATOMS
     for at in sl.atlist:  #first put all atoms in a list of their own
         at.linklist = [at]
+        at.symrefm = np.identity(2)
     if not planegroup == "p1":  #p1 has no symmetry to check for
         sl.createSublayers(epsz)
         sl.sortOriginal()

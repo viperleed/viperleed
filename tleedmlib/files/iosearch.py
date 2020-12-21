@@ -65,7 +65,7 @@ def readSDTL_blocks(content, whichR = 0, logInfo = False):
                 if line.split("|")[0].strip():
                     # first line - contains R-factor
                     if dpars:
-                        configs.append(dpars)
+                        configs.append(tuple(dpars))
                         dpars = []
                     try:
                         rav = float(line.split("|")[2 + whichR]) #average R
@@ -81,13 +81,13 @@ def readSDTL_blocks(content, whichR = 0, logInfo = False):
                 except:
                     logger.error("Could not read values in SD.TL line:\n"+line)
         if dpars:
-            configs.append(dpars)
+            configs.append(tuple(dpars))
         if not all([len(dp) == len(configs[0]) for dp in configs]):
             logger.warning("A line in SD.TL contains fewer values than "
                            "the others. Skipping SD.TL block.")
             continue
         if gen != 0 and len(rfacs) > 0 and len(configs) > 0:
-            returnList.append((gen, rfacs, configs))
+            returnList.append((gen, rfacs, tuple(configs)))
         else:
             logger.warning("A block in SD.TL was read but not understood.")
     return returnList
@@ -537,6 +537,12 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                             "would cull entire population. Culling will be "
                             "skipped.")
                         ncull = 0
+                if any([sp.parabolaFit["min"] is not None 
+                        for sp in rp.searchpars]):
+                    # replace one by predicted best
+                    getPredicted = True
+                else:
+                    getPredicted = False
                 nsurvive = rp.SEARCH_POPULATION - ncull
                 clines = controllines[2:]
                 csurvive = []
@@ -555,8 +561,12 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                     if i < nsurvive:
                         output += line
                     elif (rp.SEARCH_CULL_TYPE == "random" or 
-                          (rp.SEARCH_CULL_TYPE == "genetic" and csurvive)):
-                        if rp.SEARCH_CULL_TYPE == "random":
+                          (rp.SEARCH_CULL_TYPE == "genetic" and csurvive)
+                          or getPredicted):
+                        if getPredicted:
+                            nc = rp.getPredictConfig()
+                            getPredicted = False
+                        elif rp.SEARCH_CULL_TYPE == "random":
                             nc = rp.getRandomConfig()
                         else:  # "genetic"
                             nc = rp.getOffspringConfig(csurvive)

@@ -42,6 +42,7 @@ class SearchPar:
         self.steps = -1     # not used for interpretation, info only
         self.restrictTo = None  # None, Index, or other search par
         self.linkedTo = None    # other search par linked via 'atom number'
+        self.parabolaFit = {"min": None, "curv": None} # parabolic fit
         d = {}
         if mode == "occ":
             self.steps = len(next(iter(atom.disp_occ.values())))
@@ -477,6 +478,21 @@ class Rparams:
         """Returns a list of 'centered' parameter indices, i.e. all in the 
         middle of their respective range"""
         return ([int((sp.steps + 1)/2) for sp in self.searchpars])
+    
+    def getPredictConfig(self, curv_cutoff = 1e-4):
+        """Returns a list of parameter indices as determined by the parabola 
+        fit, if a good fit was achieved for a given parameter; all other 
+        parameters are returned centered. curv_cutoff defines the minimal 
+        curvature of the parabolas to be used."""
+        l = []
+        for sp in self.searchpars:
+            if (sp.parabolaFit["min"] is not None and 
+                    sp.parabolaFit["curv"] is not None and
+                    sp.parabolaFit["curv"] > curv_cutoff):
+                l.append(int(round(sp.parabolaFit["min"])))
+            else:
+                l.append(int((sp.steps + 1)/2))
+        return self.renormalizeDomainParams(l)
     
     def getRandomConfig(self):
         """Returns a list of 'random' parameter indices, but makes sure that 

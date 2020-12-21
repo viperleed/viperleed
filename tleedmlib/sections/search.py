@@ -17,6 +17,11 @@ from timeit import default_timer as timer
 import numpy as np
 import signal
 import re
+import copy
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.linear_model import LinearRegression
+from sklearn.pipeline import make_pipeline
+import scipy
 
 import tleedmlib.files.iosearch as io
 import tleedmlib as tl
@@ -163,6 +168,98 @@ def processSearchResults(sl, rp, final=True):
             if r != 0:
                 result = r
     return result
+
+def parabolaFit(rp, r_configs, x0=None, localize=True):
+    """
+    Performs a parabola fit to all rfactor/configuration data in r_configs.
+    Stores the result in the rp searchpar objects.
+
+    Parameters
+    ----------
+    rp : Rparams
+        The Rparams object containing runtime information
+    r_configs : set of (rfactor, configuration) tuples
+        The data to be fitted.
+    dense : TYPE, optional
+        DESCRIPTION. The default is 10.
+
+    Returns
+    -------
+    None.
+
+    """
+    def optimizerHelper(array, func):
+        return func(array.reshape(1,-1))
+
+    # unpack the data
+    rc = np.array([*r_configs], dtype=object)
+    rfacs, configs = rc[:,0], rc[:,1]
+    # reduce to independent parameters during fit
+    if not rp.domainParams:
+        sps = [sp for sp in rp.searchpars if sp.el != "vac" and 
+               sp.mode != "dom" and sp.steps > 1 and
+               sp.linkedTo is None and sp.restrictTo is None]
+        indep_pars = np.array([*np.array([*np.array(configs,dtype=object)],
+                                         dtype=object)
+                               .reshape(-1,1,2)[:,0,1]])
+        indep_pars = np.delete(indep_pars, [i for i in 
+                                            range(len(rp.searchpars)-1)
+                                            if rp.searchpars[i] not in sps], 1)
+    else:
+        # first the percentages:
+        sps = [sp for sp in rp.searchpars if sp.mode == "dom"]
+        reshaped = (np.array([*np.array(configs,dtype=object)],dtype=object)
+                                          .reshape(-1,len(rp.domainParams),2))
+        indep_pars = reshaped[:,0,0].astype(int) # contains the percentages
+        # first the 'real' parameters:
+        for (j, dp) in enumerate(rp.domainParams):
+            new_sps = [sp for sp in dp.rp.searchpars if 
+                       sp.el != "vac" and sp.steps > 1 and
+                       sp.linkedTo is None and sp.restrictTo is None]
+            new_ip = np.array([*reshaped[:,j,1]])
+            new_ip = np.delete(new_ip,[i for i in range(len(dp.rp.searchpars))
+                                     if dp.rp.searchpars[i] not in new_sps], 1)
+            sps.extend(new_sps)
+            indep_pars = np.append(indep_pars, new_ip, axis=1)
+    polyreg = make_pipeline(PolynomialFeatures(degree=2), LinearRegression())
+    weights = None
+    if localize:
+        base = indep_pars[np.argmin(rfacs)]
+        dist = np.linalg.norm(indep_pars - base, axis=1)
+        cutoff = np.percentile(dist, 30)
+        weights = [1 if d <= cutoff else 0.1 for d in dist]
+    polyreg.fit(indep_pars, rfacs, linearregression__sample_weight=weights)
+    bounds = []
+    for (i, sp) in enumerate(sps):
+        curv = (polyreg.named_steps['linearregression']
+                .coef_[polyreg.named_steps['polynomialfeatures']
+                .get_feature_names().index('x{}^2'.format(i))])
+        if curv > 1e-4:
+            sp.parabolaFit["curv"] = curv
+            bounds.append((1,sp.steps))
+        else:
+            sp.parabolaFit["curv"] = None
+            sp.parabolaFit["min"] = None
+            bounds.append((1,sp.steps))
+            # bounds.append((int((sp.steps + 1)/2)-1e-6, 
+            #                int((sp.steps + 1)/2)+1e-6))
+    if x0 is None:
+        x0 = [int((sp.steps + 1)/2) for sp in sps]
+    X_min = scipy.optimize.minimize(optimizerHelper, x0, 
+                                args=(polyreg.predict,),method='L-BFGS-B',
+                                bounds=bounds)
+    predictR = X_min.fun[0]
+    for (i, sp) in enumerate(sps):
+        if sp.parabolaFit["curv"] is not None:
+            sp.parabolaFit["min"] = X_min.x[i]
+    for sp in [sp for sp in rp.searchpars if type(sp.linkedTo) == tl.SearchPar 
+               or type(sp.restrictTo) == tl.SearchPar]:
+        if type(sp.linkedTo) == tl.SearchPar:
+            sp.parabolaFit = copy.copy(sp.linkedTo.parabolaFit)
+        elif type(sp.restrictTo) == tl.SearchPar:
+            sp.parabolaFit = copy.copy(sp.restrictTo.parabolaFit)
+    return (X_min.x, predictR)
+        
 
 def search(sl, rp):
     """Runs the search. Returns 0 when finishing without errors, or an error 
@@ -363,6 +460,9 @@ def search(sl, rp):
                         #   search restarts
     markers = []
     rfaclist = []
+    all_r_configs = set()  # tuples (r, config) for parabola fit
+    parab_x0 = None     # starting guess for parabola
+    rfac_predict = []  # tuples (gen, r) from parabola fit
     realLastConfig = {"all": [], "best": [], "dec": []}
     realLastConfigGen = {"all": 0, "best": 0, "dec": 0}
     convergedConfig = {"all": None, "best": None, "dec": None}
@@ -415,7 +515,7 @@ def search(sl, rp):
         printt = searchStartTime
         filepos = 0
         timestep = 1 # time step to check files
-        evaluationTime = 5 # how often should SD.TL be evaluated
+        evaluationTime = 10 # how often should SD.TL be evaluated
         lastEval = 0 # last evaluation time, counting in seconds from 
                      #   searchStartTime
         comment = ""
@@ -479,6 +579,7 @@ def search(sl, rp):
                         gens.append(gen + genOffset)
                         sdtlGenNum = gen
                         rfaclist.append(np.array(rfacs))
+                        all_r_configs.update(list(zip(rfacs, configs)))
                         if gen % 1000 == 0:
                             speed = 1000*(timer() - absstarttime)/gens[-1]
                             logger.debug("R = {:.4f} (Generation {}, {:.1f} s "
@@ -500,9 +601,26 @@ def search(sl, rp):
                     if len(newData) > 0:
                         lastconfig = newData[-1][2]
                     if len(gens) > 1:
+                        if len(all_r_configs) >= 20*rp.indyPars:
+                            if rfac_predict and (rfac_predict[-1][1] > 
+                                                 rfaclist[-1][0]):
+                                # if current prediction is bad, reset x0
+                                parab_x0 = None
+                            if not rfac_predict:
+                                logger.debug("Starting parabola fits to "
+                                             "R-factor data.")
+                            try:
+                                parab_x0, predictR = parabolaFit(rp, 
+                                                    all_r_configs, x0=parab_x0,
+                                                    localize=True)
+                                rfac_predict.append((gens[-1], predictR))
+                            except:
+                                logger.warning("Parabolic fit of R-factor "
+                                        "data failed", exc_info=rp.LOG_DEBUG)
                         try:
                             writeSearchProgressPdf(rp, gens, rfaclist, 
-                                                lastconfig, markers=markers)
+                                                lastconfig, markers=markers,
+                                                rfac_predict=rfac_predict)
                         except KeyboardInterrupt:
                             raise
                         except:
@@ -596,8 +714,15 @@ def search(sl, rp):
                             "analysis of results...")
         except:
             logger.error("Error during search. Check SD.TL file.")
+            try:
+                pgid = os.getpgid(proc.pid)
+                proc.kill()
+                proc.wait()
+                os.killpg(pgid, signal.SIGTERM)
+                                    # needed to kill mpirun children
+            except ProcessLookupError:
+                pass # already dead
             raise
-        
         if repeat:
             rp.SEARCH_START = "control"
             if gens:
@@ -628,7 +753,7 @@ def search(sl, rp):
     if len(gens) > 1:
         try:
             writeSearchProgressPdf(rp, gens, rfaclist, lastconfig,
-                                      markers=markers)
+                                   markers=markers, rfac_predict=rfac_predict)
         except:
             logger.warning("Error writing Search-progress.pdf", 
                             exc_info = True)

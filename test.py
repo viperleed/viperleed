@@ -1,111 +1,55 @@
-import sympy
 import numpy as np
-from tleedmlib.leedbase import reduceUnitCell
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.linear_model import LinearRegression
+from sklearn.pipeline import make_pipeline
+import scipy
 
-def leftmult2(m, i0, i1, a, b, c, d):
-    for j in range(m.cols):
-        x, y = m[i0, j], m[i1, j]
-        m[i0, j] = a * x + b * y
-        m[i1, j] = c * x + d * y
+def optimizerHelper(array, func):
+    """Reshapes a 1D array to 2D and passes it on to func"""
+    return func(array.reshape(1,-1))
 
-def rightmult2(m, j0, j1, a, b, c, d):
-    for i in range(m.rows):
-        x, y = m[i, j0], m[i, j1]
-        m[i, j0] = a * x + c * y
-        m[i, j1] = b * x + d * y
+dim = 3
+# fake data
+xvals = []
+y = []
+for i in range(0,100):
+    x = np.random.rand(dim)*30-15
+    xvals.append(x)
+    y.append((10 * x[0] ** 2 - 20 * x[0] + 
+              3 * x[1] ** 2 + 12 * x[1] + 
+              0.03 * x[2] ** 2 +
+              np.random.rand()*200-100))
+X = np.array(xvals).reshape(-1, dim)
+# y = [(5 * x ** 2 - 3 * x + 10 + np.random.rand()*100) for x in X]
 
-def smithNormalForm(m, domain=sympy.ZZ):
-    m = sympy.Matrix(m)
-    s = sympy.eye(m.rows)
-    t = sympy.eye(m.cols)
-    last_j = -1
-    for i in range(m.rows):
-        for j in range(last_j+1, m.cols):
-            if not m.col(j).is_zero:
-                break
-        else:
-            break
-        if m[i,j] == 0:
-            for ii in range(m.rows):
-                if m[ii,j] != 0:
-                    break
-            leftmult2(m, i, ii, 0, 1, 1, 0)
-            rightmult2(s, i, ii, 0, 1, 1, 0)
-        rightmult2(m, j, i, 0, 1, 1, 0)
-        leftmult2(t, j, i, 0, 1, 1, 0)
-        j = i
-        upd = True
-        while upd:
-            upd = False
-            for ii in range(i+1, m.rows):
-                if m[ii, j] == 0:
-                    continue
-                upd = True
-                if domain.rem(m[ii, j], m[i, j]) != 0:
-                    coef1, coef2, g = domain.gcdex(int(m[i,j]), int(m[ii, j]))
-                    coef3 = domain.quo(m[ii, j], g)
-                    coef4 = domain.quo(m[i, j], g)
-                    leftmult2(m, i, ii, coef1, coef2, -coef3, coef4)
-                    rightmult2(s, i, ii, coef4, -coef2, coef3, coef1)
-                coef5 = domain.quo(m[ii, j], m[i, j])
-                leftmult2(m, i, ii, 1, 0, -coef5, 1)
-                rightmult2(s, i, ii, 1, 0, coef5, 1)
-            for jj in range(j+1, m.cols):
-                if m[i, jj] == 0:
-                    continue
-                upd = True
-                if domain.rem(m[i, jj], m[i, j]) != 0:
-                    coef1, coef2, g = domain.gcdex(int(m[i,j]), int(m[i, jj]))
-                    coef3 = domain.quo(m[i, jj], g)
-                    coef4 = domain.quo(m[i, j], g)
-                    rightmult2(m, j, jj, coef1, -coef3, coef2, coef4)
-                    leftmult2(t, j, jj, coef4, coef3, -coef2, coef1)
-                coef5 = domain.quo(m[i, jj], m[i, j])
-                rightmult2(m, j, jj, 1, -coef5, 0, 1)
-                leftmult2(t, j, jj, 1, coef5, 0, 1)
-        last_j = j
-    for i1 in range(min(m.rows, m.cols)):
-        for i0 in reversed(range(i1)):
-            coef1, coef2, g = domain.gcdex(int(m[i0, i0]), int(m[i1,i1]))
-            if g == 0:
-                continue
-            coef3 = domain.quo(m[i1, i1], g)
-            coef4 = domain.quo(m[i0, i0], g)
-            leftmult2(m, i0, i1, 1, coef2, coef3, coef2*coef3-1)
-            rightmult2(s, i0, i1, 1-coef2*coef3, coef2, coef3, -1)
-            rightmult2(m, i0, i1, coef1, 1-coef1*coef4, 1, -coef4)
-            leftmult2(t, i0, i1, coef4, 1-coef1*coef4, 1, -coef1)
-    return (s, m, t)
+polyreg = make_pipeline(
+        PolynomialFeatures(degree=2),
+        LinearRegression()
+        )
+polyreg.fit(X, y)
+X_min = scipy.optimize.minimize(optimizerHelper, np.zeros(3), 
+                                args=(polyreg.predict,),method='L-BFGS-B',
+                                bounds=[(-10,10) for i in range(0,dim)])
+print(X_min.x)
+print(polyreg.score())
 
-def getSmallestSupercell(sl1, sl2):
-    m1 = sympy.Matrix(sl1)
-    m2 = sympy.Matrix(sl2)
-    if all([(abs(v) >= 1 or v == 0) for v in m1*m2.inv()]):
-        return np.array(m1).astype(int)
-    if all([(abs(v) >= 1 or v == 0) for v in m2*m1.inv()]):
-        return np.array(m2).astype(int)
-    at = 0
-    while at < 2:
-        a = m2.inv()*m1
-        print("a = {}".format(a))
-        n = 1 / min(min([abs(v) for v in a if v != 0]), 1)
-        n = n / sympy.igcd(*[v for v in a*n])
-        a *= n      # smallest integer form of a
-        (b, s, t) = smithNormalForm(a)
-        print("s = {}".format(s))
-        if abs(s[1,1]) > abs(s[0,0]):
-            break
-        else:
-            m1 = sympy.Matrix([[1,0],[0,-1]])*m1
-            at += 1
-            print("reversing..")
-    r = sympy.diag(*[n/np.gcd(s[i,i],n) for i in (0,1)])
-    sc = m1*t.inv()*r
-    ab, _, _ = reduceUnitCell(np.array(sc).astype(int))
-    return ab
-    
-sl1 = np.array([[1,1],[1,-1]])
-sl2 = np.array([[1,2],[1,-2]])
+# prediction and plot along the two axes
+for i in range(dim):
+    vals = 500
+    X_test = np.tile(X_min.x, (vals,1))
+    X_test[:,i] = np.linspace(-20,20,num=vals)
+    y_pred = polyreg.predict(X_test)
+    curv = (polyreg.named_steps['linearregression'].coef_[
+            polyreg.named_steps['polynomialfeatures']
+            .get_feature_names().index('x{}^2'.format(i))])
 
-ab = getSmallestSupercell(sl1,sl2)
-print(ab)
+    plt.scatter(X[:,i], y, label="data")
+    plt.plot(X_test[:,i], y_pred, label="prediction, min = ({:.2f}, {:.2f})"
+             .format(X_test[:,i][np.where(
+                        y_pred == np.amin(y_pred))[0][0]], np.amin(y_pred)))
+
+    plt.title("Dimension {}: curvature = {:.3f}".format(i, curv))
+    plt.legend(loc='upper left')
+    plt.show()
+
