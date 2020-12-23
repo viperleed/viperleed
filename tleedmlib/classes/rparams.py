@@ -479,19 +479,23 @@ class Rparams:
         middle of their respective range"""
         return ([int((sp.steps + 1)/2) for sp in self.searchpars])
     
-    def getPredictConfig(self, curv_cutoff = 1e-4):
+    def getPredictConfig(self, best_config=None, curv_cutoff = 1e-4):
         """Returns a list of parameter indices as determined by the parabola 
         fit, if a good fit was achieved for a given parameter; all other 
-        parameters are returned centered. curv_cutoff defines the minimal 
-        curvature of the parabolas to be used."""
+        parameters are cloned from the best configuration if passed, or 
+        centered if not. curv_cutoff defines the minimal curvature of the 
+        parabolas to be used."""
         l = []
-        for sp in self.searchpars:
+        for (i,sp) in enumerate(self.searchpars):
             if (sp.parabolaFit["min"] is not None and 
                     sp.parabolaFit["curv"] is not None and
                     sp.parabolaFit["curv"] > curv_cutoff):
                 l.append(int(round(sp.parabolaFit["min"])))
             else:
-                l.append(int((sp.steps + 1)/2))
+                if best_config is not None:
+                    l.append(best_config[i])
+                else:
+                    l.append(int((sp.steps + 1)/2))
         return self.renormalizeDomainParams(l)
     
     def getRandomConfig(self):

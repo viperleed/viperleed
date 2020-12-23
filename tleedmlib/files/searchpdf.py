@@ -119,7 +119,7 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
     rfmin, rfmax = min(rfacsMin[-part:]), max(rfacsMax[-part:])
     if rfac_predict:
         (pred_x, pred_y) = tuple(zip(*rfac_predict))
-        lowbound = min(min(pred_y[int(len(pred_y)/10):]), rfmin)
+        lowbound = max(min(min(pred_y[int(len(pred_y)*0.5):]), rfmin), 0)
     else:
         lowbound = rfmin
     rYrange = [lowbound-(rfmax-lowbound)*0.1, rfmax+(rfmax-rfmin)*0.1]
@@ -267,7 +267,7 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
                         (px, py, _) = tuple(zip(*[p for p in predict 
                                                   if p[2] == alpha]))
                         axs[figcount].scatter(px, py, color="seagreen", 
-                                              alpha=alpha)
+                                              alpha=alpha, marker="_", s=120)
                 x, y = [p[0] for p in pltpoints], [p[1] for p in pltpoints]
                 c, s = [p[2] for p in pltpoints], [p[3] for p in pltpoints]
                 axs[figcount].plot([0, parsPerFig+2], [0.5, 0.5], color='grey', 

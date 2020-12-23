@@ -546,17 +546,19 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                 nsurvive = rp.SEARCH_POPULATION - ncull
                 clines = controllines[2:]
                 csurvive = []
-                if rp.SEARCH_CULL_TYPE == "genetic":  # prepare readable clines
+                if (rp.SEARCH_CULL_TYPE == "genetic" or 
+                        getPredicted):  # prepare readable clines
                     try:
                         csurvive = [readIntLine(s, width=3) 
                                     for s in clines[:nsurvive]]
                     except:
-                        logger.warning("SEARCH_CULL: Failed to read old "
-                                "configuration from control.chem, cannot "
-                                "run genetic algorithm. Defaulting to "
-                                "cloning.")
-                        rp.setHaltingLevel(1)
-                        csurvive = []
+                        if rp.SEARCH_CULL_TYPE == "genetic":
+                            logger.warning("SEARCH_CULL: Failed to read old "
+                                    "configuration from control.chem, cannot "
+                                    "run genetic algorithm. Defaulting to "
+                                    "cloning.")
+                            rp.setHaltingLevel(1)
+                            csurvive = []
                 for (i, line) in enumerate(clines):
                     if i < nsurvive:
                         output += line
@@ -564,7 +566,10 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                           (rp.SEARCH_CULL_TYPE == "genetic" and csurvive)
                           or getPredicted):
                         if getPredicted:
-                            nc = rp.getPredictConfig()
+                            bc = None
+                            if csurvive:
+                                bc = csurvive[0]
+                            nc = rp.getPredictConfig(best_config=bc)
                             getPredicted = False
                         elif rp.SEARCH_CULL_TYPE == "random":
                             nc = rp.getRandomConfig()

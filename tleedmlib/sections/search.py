@@ -169,7 +169,7 @@ def processSearchResults(sl, rp, final=True):
                 result = r
     return result
 
-def parabolaFit(rp, r_configs, x0=None, localize=True):
+def parabolaFit(rp, r_configs, x0=None, localize=True, mincurv=1e-4):
     """
     Performs a parabola fit to all rfactor/configuration data in r_configs.
     Stores the result in the rp searchpar objects.
@@ -180,14 +180,29 @@ def parabolaFit(rp, r_configs, x0=None, localize=True):
         The Rparams object containing runtime information
     r_configs : set of (rfactor, configuration) tuples
         The data to be fitted.
-    dense : TYPE, optional
-        DESCRIPTION. The default is 10.
+    x0 : numpy.array, optional
+        A starting guess for the optimization
+    localize : bool, optional
+        Whether r_configs should be reduced to only use points close to the 
+        current best result. The default is True.
+    mincurv : float, optional
+        The minimum curvature that the N-dimensional paraboloid is required 
+        to have along the axis of a given parameter, in order for the minimum 
+        and curvature to be saved for that parameter. The default is 1e-4.
 
     Returns
     -------
-    None.
+    np.array
+        The result vector in parameter space, consisting of the coordinates of 
+        the parabola minimum for those dimensions where the parabola curvature 
+        is greater than mincurv, and the values from the configuration with 
+        the lowest R-factor for all dimensions.
+    float
+        Predicted minimum R-factor.
 
     """
+
+    # !!! Work in progress
     def optimizerHelper(array, func):
         return func(array.reshape(1,-1))
 
@@ -211,54 +226,103 @@ def parabolaFit(rp, r_configs, x0=None, localize=True):
         reshaped = (np.array([*np.array(configs,dtype=object)],dtype=object)
                                           .reshape(-1,len(rp.domainParams),2))
         indep_pars = reshaped[:,0,0].astype(int) # contains the percentages
-        # first the 'real' parameters:
+        # then the 'real' parameters:
         for (j, dp) in enumerate(rp.domainParams):
             new_sps = [sp for sp in dp.rp.searchpars if 
                        sp.el != "vac" and sp.steps > 1 and
                        sp.linkedTo is None and sp.restrictTo is None]
             new_ip = np.array([*reshaped[:,j,1]])
-            new_ip = np.delete(new_ip,[i for i in range(len(dp.rp.searchpars))
+            new_ip = np.delete(new_ip, [i for i in range(len(dp.rp.searchpars))
                                      if dp.rp.searchpars[i] not in new_sps], 1)
             sps.extend(new_sps)
             indep_pars = np.append(indep_pars, new_ip, axis=1)
+
     polyreg = make_pipeline(PolynomialFeatures(degree=2), LinearRegression())
+
+    # curvs = [np.polynomial.polynomial.polyfit(indep_pars[:,i].astype(float),
+    #                                           rfacs.astype(float), 2)[0] 
+    #          for i in range(len(sps))]
+
     weights = None
     if localize:
+        # first check curvature of the parabolas per parameter, using data as-is
+        polyreg.fit(indep_pars.astype(float), rfacs.astype(float))
+        curvs = [(polyreg.named_steps['linearregression']
+                  .coef_[polyreg.named_steps['polynomialfeatures']
+                  .get_feature_names().index('x{}^2'.format(i))]) 
+                 for i in range(len(sps))]
         base = indep_pars[np.argmin(rfacs)]
-        dist = np.linalg.norm(indep_pars - base, axis=1)
-        cutoff = np.percentile(dist, 30)
-        weights = [1 if d <= cutoff else 0.1 for d in dist]
-    polyreg.fit(indep_pars, rfacs, linearregression__sample_weight=weights)
+        dist_norm = np.array([1/(sp.steps-1) for sp in sps])
+        dist = np.abs(dist_norm*(indep_pars - base))
+        # for parameters with a reasonable curvature, get rid of the data 
+        #   points that are far away from the best. We don't care about 
+        #   parameters with very large scatter here, since those won't be used
+        #   anyway.
+        maxdist = np.max(np.delete(dist, [i for i in range(len(curvs)) 
+                                          if curvs[i] < mincurv], 1), 1)
+        # dist = np.linalg.norm(dist_norm*(indep_pars - base), axis=1)
+        # logger.debug(dist/np.max(dist)) # !!! TMPDEBUG
+        # cutoff = np.percentile(dist, 30)
+        # cutoff = np.max(dist) * 0.75
+        cutoff = 0.25
+        # weights = [1 if d <= cutoff else 0.1 for d in dist]
+        to_del = [i for i in range(len(maxdist)) if maxdist[i] > cutoff]
+        
+        indep_pars = np.delete(indep_pars, to_del, axis=0)
+        rfacs = np.delete(rfacs, (to_del), axis=0)
+    
+    # logger.debug(rfacs)
+    # logger.debug(maxdist)
+    if len(rfacs) < 300:  # not enough data to fit
+        return None, None
+    
+    # now fit again with reduced data set and weights
+    polyreg.fit(indep_pars.astype(float), rfacs.astype(float), 
+                linearregression__sample_weight=weights)
+    # logger.debug("N-D FIT:")
+    # logger.debug(["{:.2e}".format(polyreg.named_steps['linearregression']
+    #             .coef_[polyreg.named_steps['polynomialfeatures']
+    #             .get_feature_names().index('x{}^2'.format(i))]) 
+    #               for i in range(len(sps))])  # !!! TMPDEBUG
     bounds = []
     for (i, sp) in enumerate(sps):
         curv = (polyreg.named_steps['linearregression']
                 .coef_[polyreg.named_steps['polynomialfeatures']
                 .get_feature_names().index('x{}^2'.format(i))])
-        if curv > 1e-4:
+        if curv >= mincurv:
             sp.parabolaFit["curv"] = curv
             bounds.append((1,sp.steps))
         else:
             sp.parabolaFit["curv"] = None
             sp.parabolaFit["min"] = None
-            bounds.append((1,sp.steps))
+            # bounds.append((1,sp.steps))
+            b = indep_pars[np.argmin(rfacs), i]  # take from current best
+            bounds.append((b - 1e-6, b + 1e-6))
             # bounds.append((int((sp.steps + 1)/2)-1e-6, 
             #                int((sp.steps + 1)/2)+1e-6))
+
+    if all([sp.parabolaFit["curv"] is None for sp in sps]):
+        return None, None   # no good parabola -> no prediction
+
     if x0 is None:
-        x0 = [int((sp.steps + 1)/2) for sp in sps]
+        # x0 = [int((sp.steps + 1)/2) for sp in sps]
+        x0 = indep_pars[np.argmin(rfacs)][:]
     X_min = scipy.optimize.minimize(optimizerHelper, x0, 
                                 args=(polyreg.predict,),method='L-BFGS-B',
                                 bounds=bounds)
     predictR = X_min.fun[0]
+    result = indep_pars[np.argmin(rfacs)][:]
     for (i, sp) in enumerate(sps):
         if sp.parabolaFit["curv"] is not None:
             sp.parabolaFit["min"] = X_min.x[i]
+            result[i] = X_min.x[i]
     for sp in [sp for sp in rp.searchpars if type(sp.linkedTo) == tl.SearchPar 
                or type(sp.restrictTo) == tl.SearchPar]:
         if type(sp.linkedTo) == tl.SearchPar:
             sp.parabolaFit = copy.copy(sp.linkedTo.parabolaFit)
         elif type(sp.restrictTo) == tl.SearchPar:
             sp.parabolaFit = copy.copy(sp.restrictTo.parabolaFit)
-    return (X_min.x, predictR)
+    return (result, predictR)
         
 
 def search(sl, rp):
@@ -601,19 +665,24 @@ def search(sl, rp):
                     if len(newData) > 0:
                         lastconfig = newData[-1][2]
                     if len(gens) > 1:
-                        if len(all_r_configs) >= 20*rp.indyPars:
+                        if len(all_r_configs) >= 10*rp.indyPars:
                             if rfac_predict and (rfac_predict[-1][1] > 
                                                  rfaclist[-1][0]):
                                 # if current prediction is bad, reset x0
                                 parab_x0 = None
-                            if not rfac_predict:
-                                logger.debug("Starting parabola fits to "
-                                             "R-factor data.")
+
                             try:
+                                # !!! WORK IN PROGRESS
                                 parab_x0, predictR = parabolaFit(rp, 
                                                     all_r_configs, x0=parab_x0,
                                                     localize=True)
-                                rfac_predict.append((gens[-1], predictR))
+                                if predictR is not None:
+                                    if not rfac_predict:
+                                        logger.debug("Starting parabola fits "
+                                                     "to R-factor data.")
+                                    rfac_predict.append((gens[-1], predictR))
+                            except KeyboardInterrupt:
+                                raise
                             except:
                                 logger.warning("Parabolic fit of R-factor "
                                         "data failed", exc_info=rp.LOG_DEBUG)
