@@ -208,11 +208,11 @@ def parabolaFit(rp, r_configs, x0=None, localize=True, mincurv=1e-4):
 
     # unpack the data
     rc = np.array([*r_configs], dtype=object)
-    rfacs, configs = rc[:,0], rc[:,1]
+    rfacs, configs = rc[:,0].astype(float), rc[:,1]
     # reduce to independent parameters during fit
     if not rp.domainParams:
         sps = [sp for sp in rp.searchpars if sp.el != "vac" and 
-               sp.mode != "dom" and sp.steps > 1 and
+               sp.mode != "dom" and sp.steps >= 3 and
                sp.linkedTo is None and sp.restrictTo is None]
         indep_pars = np.array([*np.array([*np.array(configs,dtype=object)],
                                          dtype=object)
@@ -229,100 +229,91 @@ def parabolaFit(rp, r_configs, x0=None, localize=True, mincurv=1e-4):
         # then the 'real' parameters:
         for (j, dp) in enumerate(rp.domainParams):
             new_sps = [sp for sp in dp.rp.searchpars if 
-                       sp.el != "vac" and sp.steps > 1 and
+                       sp.el != "vac" and sp.steps >= 3 and
                        sp.linkedTo is None and sp.restrictTo is None]
             new_ip = np.array([*reshaped[:,j,1]])
             new_ip = np.delete(new_ip, [i for i in range(len(dp.rp.searchpars))
                                      if dp.rp.searchpars[i] not in new_sps], 1)
             sps.extend(new_sps)
             indep_pars = np.append(indep_pars, new_ip, axis=1)
+    
+    indep_pars = indep_pars.astype(float)
+    best_config = np.copy(indep_pars[np.argmin(rfacs)])
+    sps_original = sps[:]
 
     polyreg = make_pipeline(PolynomialFeatures(degree=2), LinearRegression())
+    # weights = None
 
-    # curvs = [np.polynomial.polynomial.polyfit(indep_pars[:,i].astype(float),
-    #                                           rfacs.astype(float), 2)[0] 
-    #          for i in range(len(sps))]
-
-    weights = None
-    if localize:
-        # first check curvature of the parabolas per parameter, using data as-is
-        polyreg.fit(indep_pars.astype(float), rfacs.astype(float))
+    deletedPars = []
+    while True:
+        ip_tofit = np.copy(indep_pars)
+        rf_tofit = np.copy(rfacs)
+        if localize:
+            # discard points that are far from global min in any dimension
+            base = ip_tofit[np.argmin(rfacs)] # parameter vector of best conf
+            dist_norm = np.array([1/(sp.steps-1) for sp in sps])
+            dist = np.abs(dist_norm*(ip_tofit - base))
+            maxdist = np.max(dist, 1)
+            # dist = np.linalg.norm(dist_norm*(indep_pars - base), axis=1)
+            # logger.debug(dist/np.max(dist)) # !!! TMPDEBUG
+            # cutoff = np.percentile(dist, 30)
+            # cutoff = np.max(dist) * 0.75
+            cutoff = 0.25
+            # weights = [1 if d <= cutoff else 0.1 for d in dist]
+            to_del = [i for i in range(len(maxdist)) if maxdist[i] > cutoff]
+            ip_tofit = np.delete(ip_tofit, to_del, axis=0)
+            rf_tofit = np.delete(rf_tofit, to_del, axis=0)
+        # check curvature of the parabolas per parameter
+        polyreg.fit(ip_tofit, rf_tofit)
         curvs = [(polyreg.named_steps['linearregression']
                   .coef_[polyreg.named_steps['polynomialfeatures']
                   .get_feature_names().index('x{}^2'.format(i))]) 
                  for i in range(len(sps))]
-        base = indep_pars[np.argmin(rfacs)]
-        dist_norm = np.array([1/(sp.steps-1) for sp in sps])
-        dist = np.abs(dist_norm*(indep_pars - base))
-        # for parameters with a reasonable curvature, get rid of the data 
-        #   points that are far away from the best. We don't care about 
-        #   parameters with very large scatter here, since those won't be used
-        #   anyway.
-        maxdist = np.max(np.delete(dist, [i for i in range(len(curvs)) 
-                                          if curvs[i] < mincurv], 1), 1)
-        # dist = np.linalg.norm(dist_norm*(indep_pars - base), axis=1)
-        # logger.debug(dist/np.max(dist)) # !!! TMPDEBUG
-        # cutoff = np.percentile(dist, 30)
-        # cutoff = np.max(dist) * 0.75
-        cutoff = 0.25
-        # weights = [1 if d <= cutoff else 0.1 for d in dist]
-        to_del = [i for i in range(len(maxdist)) if maxdist[i] > cutoff]
-        
-        indep_pars = np.delete(indep_pars, to_del, axis=0)
-        rfacs = np.delete(rfacs, (to_del), axis=0)
-    
-    # logger.debug(rfacs)
-    # logger.debug(maxdist)
-    if len(rfacs) < 300:  # not enough data to fit
-        return None, None
-    
-    # now fit again with reduced data set and weights
-    polyreg.fit(indep_pars.astype(float), rfacs.astype(float), 
-                linearregression__sample_weight=weights)
-    # logger.debug("N-D FIT:")
-    # logger.debug(["{:.2e}".format(polyreg.named_steps['linearregression']
-    #             .coef_[polyreg.named_steps['polynomialfeatures']
-    #             .get_feature_names().index('x{}^2'.format(i))]) 
-    #               for i in range(len(sps))])  # !!! TMPDEBUG
-    bounds = []
+        if min(curvs) >= mincurv:
+            if len(rf_tofit) < 300:  # found too few points for good fit
+                # logger.debug("{} points - too few for fit"
+                #              .format(len(rf_tofit)))    # !!! TMPDEBUG
+                return None, None
+            break  # all parabola dimensions now have reasonable shape
+        if len(sps) == 1:
+            return None, None  # found no parameter with parabola shape
+        # throw out the parameter with lowest curvature; repeat
+        i = curvs.index(min(curvs))
+        sps[i].parabolaFit["curv"] = None
+        sps[i].parabolaFit["min"] = None
+        deletedPars.append(sps_original.index(sps[i]))
+        sps.pop(i)
+        indep_pars = np.delete(indep_pars, i, axis=1)
+    # indep_pars = ip_tofit
+    # rfacs = rf_tofit
     for (i, sp) in enumerate(sps):
-        curv = (polyreg.named_steps['linearregression']
-                .coef_[polyreg.named_steps['polynomialfeatures']
-                .get_feature_names().index('x{}^2'.format(i))])
-        if curv >= mincurv:
-            sp.parabolaFit["curv"] = curv
-            bounds.append((1,sp.steps))
-        else:
-            sp.parabolaFit["curv"] = None
-            sp.parabolaFit["min"] = None
-            # bounds.append((1,sp.steps))
-            b = indep_pars[np.argmin(rfacs), i]  # take from current best
-            bounds.append((b - 1e-6, b + 1e-6))
-            # bounds.append((int((sp.steps + 1)/2)-1e-6, 
-            #                int((sp.steps + 1)/2)+1e-6))
+        sp.parabolaFit["curv"] = curvs[i]
+    # logger.debug("Parabola fit: {} parameters were fit with {} points"
+    #              .format(len(sps), len(rf_tofit)))   # !!! TMPDEBUG
+    
+    bounds = [(1,sp.steps) for sp in sps]
 
-    if all([sp.parabolaFit["curv"] is None for sp in sps]):
-        return None, None   # no good parabola -> no prediction
+    # if all([sp.parabolaFit["curv"] is None for sp in sps]):
+    #     return None, None   # no good parabola -> no prediction
 
     if x0 is None:
         # x0 = [int((sp.steps + 1)/2) for sp in sps]
-        x0 = indep_pars[np.argmin(rfacs)][:]
+        x0 = np.copy(best_config)
+    x0 = np.delete(x0, deletedPars)
     X_min = scipy.optimize.minimize(optimizerHelper, x0, 
                                 args=(polyreg.predict,),method='L-BFGS-B',
                                 bounds=bounds)
     predictR = X_min.fun[0]
-    result = indep_pars[np.argmin(rfacs)][:]
     for (i, sp) in enumerate(sps):
-        if sp.parabolaFit["curv"] is not None:
-            sp.parabolaFit["min"] = X_min.x[i]
-            result[i] = X_min.x[i]
+        sp.parabolaFit["min"] = X_min.x[i]
+        best_config[sps_original.index(sp)] = X_min.x[i]
     for sp in [sp for sp in rp.searchpars if type(sp.linkedTo) == tl.SearchPar 
                or type(sp.restrictTo) == tl.SearchPar]:
         if type(sp.linkedTo) == tl.SearchPar:
             sp.parabolaFit = copy.copy(sp.linkedTo.parabolaFit)
         elif type(sp.restrictTo) == tl.SearchPar:
             sp.parabolaFit = copy.copy(sp.restrictTo.parabolaFit)
-    return (result, predictR)
+    return (best_config, predictR)
         
 
 def search(sl, rp):
