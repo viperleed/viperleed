@@ -269,6 +269,10 @@ def runPhaseshiftGen(sl,rp, psgensource=os.path.join('source','EEASiSSS.x'),
                     remlist.append(filename)
     for filename in remlist:
         filelist.remove(filename)
+    if not filelist:
+        logger.error("Phaseshift generation failed: No output files found.")
+        raise RuntimeError("Phaseshift generation failed.")
+        
     filelist.sort(key=lambda filename: int(filename.split('.')[-1]))
                                                 #now sorted by atom number
     firstline = ""
@@ -305,20 +309,19 @@ def runPhaseshiftGen(sl,rp, psgensource=os.path.join('source','EEASiSSS.x'),
         writeblock = False
         pssum = None
         for (i,at) in enumerate(nsl.atlist):
-            if at not in newbulkats:
-#            if bulk or at.site not in bulksites: 
-                if at in subatlists[(site,el)]:
-                    if pssum is None:
-                        writeblock = True
-                        pel = at.el #POSCAR element for block
-                        pssum = atoms_phaseshifts[i]
-                        n = 1
-                    else:
-                        for en in atoms_phaseshifts[i]:
-                            for j in range(0,
-                                           len(atoms_phaseshifts[i][en])):
-                                pssum[en][j] += atoms_phaseshifts[i][en][j]
-                        n += 1
+            if at in newbulkats or at not in subatlists[(site,el)]:
+                continue
+#            if bulk or at.site not in bulksites:
+            if pssum is None:
+                writeblock = True
+                pel = at.el #POSCAR element for block
+                pssum = atoms_phaseshifts[i]
+                n = 1
+            else:
+                for en in atoms_phaseshifts[i]:
+                    for j in range(0, len(atoms_phaseshifts[i][en])):
+                        pssum[en][j] += atoms_phaseshifts[i][en][j]
+                n += 1
         if writeblock:
             # append the values for the whole block to outvals:
             for en in pssum:
