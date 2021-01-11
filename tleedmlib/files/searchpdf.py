@@ -32,7 +32,7 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
                            rfac_predict = []):
     global plotting
     if not plotting:
-        return 0
+        return None
     
     figsPerPage = 5
     parsPerFig = 8
@@ -316,12 +316,12 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
     except PermissionError:
         logger.warning("Failed to write to " + outname
                         + ": Permission denied.")
-        return 1
+        raise
     except KeyboardInterrupt:
         raise
     except:
         logger.warning("Failed to write to "+outname)
-        return 1
+        raise
     finally:
         try:
             pdf.close()
@@ -334,12 +334,12 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
             plt.close(fig)
         except:
             pass
-    return 0
+    return None
 
 def writeSearchReportPdf(rp, outname = "Search-report.pdf"):
     global plotting
     if not plotting:
-        return 0
+        return None
     
     allmin = []
     allmax = []
@@ -429,12 +429,12 @@ def writeSearchReportPdf(rp, outname = "Search-report.pdf"):
     except PermissionError:
         logger.warning("Failed to write to " + outname
                         + ": Permission denied.")
-        return 1
+        raise
     except KeyboardInterrupt:
         raise
     except:
         logger.warning("Failed to write to "+outname)
-        return 1
+        raise
     finally:
         try:
             pdf.close()
@@ -444,4 +444,4 @@ def writeSearchReportPdf(rp, outname = "Search-report.pdf"):
         plt.close(fig)
     except:
         pass
-    return 0
+    return None

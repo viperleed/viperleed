@@ -34,11 +34,26 @@ from tleedmlib.files.searchpdf import (writeSearchProgressPdf,
 logger = logging.getLogger("tleedm.search")
 
 def processSearchResults(sl, rp, final=True):
-    """Looks at the SD.TL file and gets the data from the best structure in 
-    the last generation into the slab. The "final" tag defines whether this is 
-    the final interpretation that *must* work and should go into the log, or 
-    if this will be repeated anyway. Then calls writeSearchOutput to write 
-    POSCAR_OUT, VIBROCC_OUT, and modify data in sl and rp."""
+    """
+    Looks at the final block in the SD.TL file and gets the data from the 
+    best structure in into the slab.
+
+    Parameters
+    ----------
+    sl : Slab
+        The Slab object to be modified
+    rp : Rparams
+        Run parameters.
+    final : bool, optional
+        Defines whether this is the final interpretation that *must* work and 
+        should go into the log, or if this will be repeated anyway. The 
+        default is True.
+
+    Returns
+    -------
+    None
+
+    """
     # get the last block from SD.TL:
     try:
         lines = io.readSDTL_end()
@@ -56,7 +71,7 @@ def processSearchResults(sl, rp, final=True):
         if final:
             logger.error("No data found in SD.TL file!")
             rp.setHaltingLevel(2)
-        return("No data in SD.TL")
+        raise RuntimeError("No data in SD.TL")
     (generation, rfacs, configs) = sdtlContent[0]
     # collect equal entries
     pops = [] # tuples (r, pars) with 
@@ -149,27 +164,24 @@ def processSearchResults(sl, rp, final=True):
             logger.info(info)
     # now writeSearchOutput:
     if not rp.domainParams:
-        result = io.writeSearchOutput(sl, rp, pops[0][1][0][1], 
-                                      silent=(not final))
+        io.writeSearchOutput(sl, rp, pops[0][1][0][1], silent=(not final))
     else:
         home = os.getcwd()
-        result = 0
         for (i, dp) in enumerate(rp.domainParams):
             try:
                 os.chdir(dp.workdir)
-                r = io.writeSearchOutput(dp.sl, dp.rp, pops[0][1][i][1], 
+                io.writeSearchOutput(dp.sl, dp.rp, pops[0][1][i][1], 
                                          silent=(not final))
             except:
                 logger.error("Error while writing search output for domain {}"
                              .format(dp.name), exc_info = rp.LOG_DEBUG)
                 rp.setHaltingLevel(2)
+                raise
             finally:
                 os.chdir(home)
-            if r != 0:
-                result = r
-    return result
+    return None
 
-def parabolaFit(rp, r_configs, x0=None, localize=True, mincurv=1e-4,
+def parabolaFit(rp, r_configs, x0=None, localize=0.33, mincurv=1e-4,
                 whichRegression='linearregression'):
     """
     Performs a parabola fit to all rfactor/configuration data in r_configs.
@@ -179,13 +191,15 @@ def parabolaFit(rp, r_configs, x0=None, localize=True, mincurv=1e-4,
     ----------
     rp : Rparams
         The Rparams object containing runtime information
-    r_configs : set of (rfactor, configuration) tuples
-        The data to be fitted.
+    r_configs : set 
+        The data to fit, as (rfactor, configuration) tuples
     x0 : numpy.array, optional
-        A starting guess for the optimization
-    localize : bool, optional
-        Whether r_configs should be reduced to only use points close to the 
-        current best result. The default is True.
+        A starting guess for the minimum
+    localize : real, optional
+        If not zero, r_configs will be reduced to only use points close to the 
+        current best result. The value determines the region to be used as 
+        compared to the full data, i.e. 0.5 would use only half of the space in 
+        each dimesion. The default is 0.33.
     mincurv : float, optional
         The minimum curvature that the N-dimensional paraboloid is required 
         to have along the axis of a given parameter, in order for the minimum 
@@ -197,7 +211,8 @@ def parabolaFit(rp, r_configs, x0=None, localize=True, mincurv=1e-4,
         The result vector in parameter space, consisting of the coordinates of 
         the parabola minimum for those dimensions where the parabola curvature 
         is greater than mincurv, and the values from the configuration with 
-        the lowest R-factor for all dimensions.
+        the lowest R-factor for all dimensions. Can be passed back as x0 in 
+        the next iteration.
     float
         Predicted minimum R-factor.
 
@@ -206,14 +221,17 @@ def parabolaFit(rp, r_configs, x0=None, localize=True, mincurv=1e-4,
     # !!! Work in progress
     def optimizerHelper(array, func):
         return func(array.reshape(1,-1))
-
+    
     # unpack the data
     rc = np.array([*r_configs], dtype=object)
     rfacs, configs = rc[:,0].astype(float), rc[:,1]
+    localizeFactor = localize
+    if localizeFactor == 0:
+        localizeFactor = 1  # no localization
     # reduce to independent parameters during fit
     if not rp.domainParams:
         sps = [sp for sp in rp.searchpars if sp.el != "vac" and 
-               sp.mode != "dom" and sp.steps >= 3 and
+               sp.mode != "dom" and sp.steps*localizeFactor >= 3 and
                sp.linkedTo is None and sp.restrictTo is None]
         indep_pars = np.array([*np.array([*np.array(configs,dtype=object)],
                                          dtype=object)
@@ -230,7 +248,7 @@ def parabolaFit(rp, r_configs, x0=None, localize=True, mincurv=1e-4,
         # then the 'real' parameters:
         for (j, dp) in enumerate(rp.domainParams):
             new_sps = [sp for sp in dp.rp.searchpars if 
-                       sp.el != "vac" and sp.steps >= 3 and
+                       sp.el != "vac" and sp.steps*localizeFactor >= 3 and
                        sp.linkedTo is None and sp.restrictTo is None]
             new_ip = np.array([*reshaped[:,j,1]])
             new_ip = np.delete(new_ip, [i for i in range(len(dp.rp.searchpars))
@@ -242,7 +260,7 @@ def parabolaFit(rp, r_configs, x0=None, localize=True, mincurv=1e-4,
     best_config = np.copy(indep_pars[np.argmin(rfacs)])
     sps_original = sps[:]
 
-    if whichRegression.lower() == 'lasso':
+    if whichRegression.lower() == 'lasso':  # !!! Parameter for alpha?
         polyreg = make_pipeline(PolynomialFeatures(degree=2), Lasso(alpha=0.1))
     elif whichRegression.lower() == 'linearregression':
         polyreg = make_pipeline(PolynomialFeatures(degree=2), 
@@ -257,9 +275,17 @@ def parabolaFit(rp, r_configs, x0=None, localize=True, mincurv=1e-4,
     while True:
         ip_tofit = np.copy(indep_pars)
         rf_tofit = np.copy(rfacs)
-        if localize:
+        if localize != 0:
             # discard points that are far from global min in any dimension
             base = ip_tofit[np.argmin(rfacs)] # parameter vector of best conf
+            logger.debug(base)
+            for i in range(len(base)):
+                r = sps[i].steps*localizeFactor*0.5
+                if base[i] - r < 1:
+                    base[i] = 1 + r
+                elif base[i] + r > sps[i].steps:
+                    base[i] = sps[i].steps - r
+            logger.debug(base)
             dist_norm = np.array([1/(sp.steps-1) for sp in sps])
             dist = np.abs(dist_norm*(ip_tofit - base))
             maxdist = np.max(dist, 1)
@@ -267,7 +293,7 @@ def parabolaFit(rp, r_configs, x0=None, localize=True, mincurv=1e-4,
             # logger.debug(dist/np.max(dist)) # !!! TMPDEBUG
             # cutoff = np.percentile(dist, 30)
             # cutoff = np.max(dist) * 0.75
-            cutoff = 0.25
+            cutoff = 0.5*localizeFactor
             # weights = [1 if d <= cutoff else 0.1 for d in dist]
             to_del = [i for i in range(len(maxdist)) if maxdist[i] > cutoff]
             ip_tofit = np.delete(ip_tofit, to_del, axis=0)
@@ -279,7 +305,7 @@ def parabolaFit(rp, r_configs, x0=None, localize=True, mincurv=1e-4,
                   .get_feature_names().index('x{}^2'.format(i))]) 
                  for i in range(len(sps))]
         if min(curvs) >= mincurv:
-            if len(rf_tofit) < 300:  # found too few points for good fit
+            if len(rf_tofit) < 1e3:  # found too few points for good fit
                 logger.debug("{} points - too few for fit"
                               .format(len(rf_tofit)))    # !!! TMPDEBUG
                 return None, None
@@ -326,8 +352,7 @@ def parabolaFit(rp, r_configs, x0=None, localize=True, mincurv=1e-4,
         
 
 def search(sl, rp):
-    """Runs the search. Returns 0 when finishing without errors, or an error 
-    message otherwise."""
+    """Runs the search. Returns None when finishing without errors."""
     rp.searchResultConfig = None
     if rp.domainParams:
         initToDo = [(dp.rp, dp.sl, dp.workdir) for dp in rp.domainParams]
@@ -344,17 +369,11 @@ def search(sl, rp):
             if "Tensors" in rpt.manifest:
                 logger.error("New tensors were calculated, but no new delta "
                               "files were generated. Cannot execute search.")
-                return ("Delta calculations was not run for current tensors.")
-            try:
-                r = tl.leedbase.getDeltas(rpt.TENSOR_INDEX, basedir=path, 
-                                          targetdir=path, required=True)
-            except:
-                raise
-            if r != 0:
-                return r
-    r = rp.updateCores()
-    if r != 0:
-        return r
+                raise RuntimeError("Delta calculations was not run for "
+                                   "current tensors.")
+            tl.leedbase.getDeltas(rpt.TENSOR_INDEX, basedir=path, 
+                                      targetdir=path, required=True)
+    rp.updateCores()
     # generate rf.info
     try:
         rfinfo = io.writeRfInfo(sl, rp, filename="rf.info")
@@ -364,10 +383,7 @@ def search(sl, rp):
     # generate PARAM and search.steu
     #   needs to go AFTER rf.info, as writeRfInfo may remove expbeams!
     try:
-        r = io.generateSearchInput(sl, rp)
-        if r != 0:
-            logger.error("Error generating search input")
-            return ("generateSearchInput failed")
+        io.generateSearchInput(sl, rp)
     except:
         logger.error("Error generating search input")
         raise
@@ -385,12 +401,12 @@ def search(sl, rp):
                 rp.searchResultsConfig[i] = (rp.searchpars.index(
                                                     sp.linkedTo) + 1)
         io.writeSearchOutput(sl, rp)
-        return 0
+        return None
     if rp.SUPPRESS_EXECUTION:
         logger.warning("SUPPRESS_EXECUTION parameter is on. Search "
             " will not proceed. Stopping...")
         rp.setHaltingLevel(3)
-        return 0
+        return None
     # check for mpirun, decide whether to use parallelization
     usempi = True
     
@@ -401,9 +417,11 @@ def search(sl, rp):
             "will be compiled and executed without parallelization. "
             "This will be much slower!")
         if rp.FORTRAN_COMP[0] == "":
-            if rp.getFortranComp() != 0:    #returns 0 on success
+            try:
+                rp.getFortranComp()
+            except:
                 logger.error("No fortran compiler found, cancelling...")
-                return ("Fortran compile error")
+                raise RuntimeError("Fortran compile error")
     else:
         if rp.FORTRAN_COMP_MPI[0] == "":
             rp.FORTRAN_COMP_MPI[0] = "mpiifort -Ofast"
@@ -415,20 +433,24 @@ def search(sl, rp):
             "and executed without parallelization. This will be much "
             "slower!")
         if rp.FORTRAN_COMP[0] == "":
-            if rp.getFortranComp() != 0:    #returns 0 on success
+            try:
+                rp.getFortranComp()
+            except:
                 logger.error("No fortran compiler found, cancelling...")
-                return ("Fortran compile error")
+                raise RuntimeError("Fortran compile error")
     else:
         if rp.FORTRAN_COMP_MPI[0] == "":
-            if rp.getFortranMpiComp() != 0:    #returns 0 on success
+            try:
+                rp.getFortranMpiComp()
+            except:
                 logger.error("No fortran mpi compiler found, "
                               "cancelling...")
-                return ("Fortran compile error")
+                raise RuntimeError("Fortran compile error")
     # get fortran files
     try:
         tldir = tl.leedbase.getTLEEDdir(home=rp.workdir, version=rp.TL_VERSION)
         if not tldir:
-            return("TensErLEED code not found.")
+            raise RuntimeError("TensErLEED code not found.")
         srcpath = os.path.join(tldir,'src')
         srcname = [f for f in os.listdir(srcpath) 
                       if f.startswith('search.mpi')][0]
@@ -463,38 +485,39 @@ def search(sl, rp):
         fcomp = rp.FORTRAN_COMP
     logger.info("Compiling fortran input files...")
     try:
-        r=fortranCompile(fcomp[0]+" -o lib.search.o -c", 
-                            libname, fcomp[1])
-        if r:
-            logger.error("Error compiling "+libname+", cancelling...")
-            return ("Fortran compile error")
-        if hashname:
-            r=fortranCompile(fcomp[0]+" -c", hashname, fcomp[1])
-            if r:
-                logger.error("Error compiling "+hashname+", cancelling...")
-                return ("Fortran compile error")
-        r=fortranCompile(fcomp[0]+" -o restrict.o -c", 
-                            "restrict.f", fcomp[1])
-        if r:
-            logger.error("Error compiling restrict.f, cancelling...")
-            return ("Fortran compile error")
-        r=fortranCompile(fcomp[0]+" -o search.o -c -fixed", srcname,
-                            fcomp[1])
-        if r:
-            logger.error("Error compiling "+srcname+", cancelling...")
-            return ("Fortran compile error")
-        # combine
-        to_link = "search.o random_.o lib.search.o restrict.o"
-        if hashname:
-            to_link += " intarr_hashing.o"
-        r=fortranCompile(fcomp[0]+" -o "+ searchname, to_link, fcomp[1])
-        if r:
-            logger.error("Error compiling fortran files, cancelling...")
-            return ("Fortran compile error")
-        logger.debug("Compiled fortran files successfully")
+        fortranCompile(fcomp[0]+" -o lib.search.o -c", 
+                        libname, fcomp[1])
     except:
-        logger.error("Error compiling fortran files: ")
-        raise
+        logger.error("Error compiling "+libname+", cancelling...")
+        raise RuntimeError("Fortran compile error")
+    if hashname:
+        try:
+            fortranCompile(fcomp[0]+" -c", hashname, fcomp[1])
+        except:
+            logger.error("Error compiling "+hashname+", cancelling...")
+            raise RuntimeError("Fortran compile error")
+    try:
+        fortranCompile(fcomp[0]+" -o restrict.o -c", 
+                        "restrict.f", fcomp[1])
+    except:
+        logger.error("Error compiling restrict.f, cancelling...")
+        raise RuntimeError("Fortran compile error")
+    try:
+        fortranCompile(fcomp[0]+" -o search.o -c -fixed", srcname,
+                        fcomp[1])
+    except:
+        logger.error("Error compiling "+srcname+", cancelling...")
+        raise RuntimeError("Fortran compile error")
+    # combine
+    to_link = "search.o random_.o lib.search.o restrict.o"
+    if hashname:
+        to_link += " intarr_hashing.o"
+    try:
+        fortranCompile(fcomp[0]+" -o "+ searchname, to_link, fcomp[1])
+    except:
+        logger.error("Error compiling fortran files, cancelling...")
+        raise RuntimeError("Fortran compile error")
+    logger.debug("Compiled fortran files successfully")
     if rp.LOG_SEARCH:
         searchlogname = searchname+".log"
         logger.info("Search log will be written to file "+searchlogname)
@@ -574,7 +597,7 @@ def search(sl, rp):
             raise
         if proc == None:
             logger.error("Error starting search subprocess... Stopping.")
-            return("Error running search")
+            raise RuntimeError("Error running search")
         # FEED INPUT
         try:
             proc.communicate(input = rfinfo, timeout = 0.1)
@@ -695,7 +718,7 @@ def search(sl, rp):
                                              .format(len(all_r_configs)))
                                 parab_x0, predictR = parabolaFit(rp, 
                                                     all_r_configs, x0=parab_x0,
-                                                    localize=False)
+                                                    localize=0)
                                 if predictR is not None:
                                     if not rfac_predict:
                                         logger.debug("Starting parabola fits "
@@ -819,11 +842,8 @@ def search(sl, rp):
                 rp.SEARCH_MAX_GEN -= sdtlGenNum
                 markers.append((genOffset, comment))
             try:
-                r = io.generateSearchInput(sl, rp, steuOnly=True, 
+                io.generateSearchInput(sl, rp, steuOnly=True, 
                                            cull=True)
-                if r != 0:
-                    logger.error("Error re-generating search input")
-                    return ("generateSearchInput failed")
             except:
                 logger.error("Error re-generating search input")
                 raise
@@ -852,10 +872,11 @@ def search(sl, rp):
             logger.warning("Error writing Search-report.pdf",
                             exc_info = True)
     # process SD.TL to get POSCAR_OUT, VIBROCC_OUT
-    r = processSearchResults(sl, rp)
-    if r != 0:
-        logger.error("Error processing search results: "+r)
-        return r
+    try:
+        processSearchResults(sl, rp)
+    except:
+        logger.error("Error processing search results: ", exc_info=True)
+        raise
     # if deltas were copied from domain folders, clean them up
     if rp.domainParams:
         rgx = re.compile(r'D\d+_DEL_')
@@ -878,4 +899,4 @@ def search(sl, rp):
                         "search-rf.info")
     if lastconfig != None:
         rp.searchResultConfig = lastconfig
-    return 0
+    return None

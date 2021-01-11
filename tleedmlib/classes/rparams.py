@@ -324,8 +324,8 @@ class Rparams:
                      .format(self.N_CORES))
         if self.N_CORES == 0:
             logger.error("Failed to detect number of cores.")
-            return("N_CORES undefined, automatic detection failed")
-        return 0
+            raise RuntimeError("N_CORES undefined, automatic detection failed")
+        return
         
     def resetSearchConv(self):
         """Sets the search convergence and tracking parameters back to their 
@@ -341,7 +341,7 @@ class Rparams:
         for k in ["best", "all", "dec"]:
             if self.searchConvInit["dgen"][k] is not None:
                 self.SEARCH_MAX_DGEN[k] = self.searchConvInit["dgen"][k]
-        return 0
+        return
         
     def setHaltingLevel(self, set_to):
         """Sets the halting level self.halt to value set_to, if that value is 
@@ -352,7 +352,7 @@ class Rparams:
 
     def initTheoEnergies(self):
         if not -1 in self.THEO_ENERGIES:
-            return 0
+            return
         info = False
         if self.fileLoaded["EXPBEAMS"]:
             minen = min(self.expbeams[0].intens)
@@ -383,8 +383,7 @@ class Rparams:
         """Checks whether ifort or gfortran are present, and sets FORTRAN_COMP
         accordingly. If the 'comp' parameter is set to 'auto', will check
         ifort first, then gfortran. If 'comp' is set to 'ifort' or 'gfortran',
-        only that compiler will be checked. Returns 0 on success, 1 if the
-        requested compiler was not found."""
+        only that compiler will be checked. Returns None."""
         supported = ["ifort", "gfortran"]   #supported compilers, in order of
                                             #  priority
         found = ""
@@ -395,7 +394,7 @@ class Rparams:
         else:
             logger.error("Rparams.getFortranComp: requested compiler is not "
                           "supported.")
-            return 1
+            raise RuntimeError("Fortran compiler not supported.")
         for c in check:
             if shutil.which(c, os.X_OK) != None:
                 found = c
@@ -407,7 +406,7 @@ class Rparams:
             else:
                 logger.error("Rparams.getFortranComp: Requested fortran "
                               "compiler not found.")
-            return 1
+            raise RuntimeError("Fortran compiler not found.")
         if found == "ifort":
             self.FORTRAN_COMP = ["ifort -O2 -I/opt/intel/mkl/include",
                 "-L/opt/intel/mkl/lib/intel64 -lmkl_intel_lp64 "
@@ -416,14 +415,14 @@ class Rparams:
         elif found == "gfortran":
             self.FORTRAN_COMP = ["gfortran -O2", "-llapack -lpthread"]
             logger.debug("Using fortran compiler: gfortran")
-        return 0
+        return
     
     def getFortranMpiComp(self, comp="auto"):
         """Checks whether mpiifort or mpifort are present, and sets 
         FORTRAN_COMP mpi accordingly. If the 'comp' parameter is set to 'auto',
          will check mpifort first, then mpiifort. If 'comp' is set to 
          'mpiifort' or 'mpifort', only that compiler will be checked. Returns 
-         0 on success, 1 if the requested compiler was not found."""
+         None."""
         supported = ["mpiifort", "mpifort"]   #supported compilers, in order of
                                               #  priority
         found = ""
@@ -434,7 +433,7 @@ class Rparams:
         else:
             logger.error("Rparams.getFortranMpiComp: requested compiler is "
                           "not supported.")
-            return 1
+            raise RuntimeError("Fortran MPI compiler not supported.")
         for c in check:
             if shutil.which(c, os.X_OK) != None:
                 found = c
@@ -446,14 +445,14 @@ class Rparams:
             else:
                 logger.error("Rparams.getFortranMpiComp: Requested fortran "
                               "compiler not found.")
-            return 1
+            raise RuntimeError("Fortran MPI compiler not found.")
         if found == "mpiifort":
             self.FORTRAN_COMP_MPI = ["mpiifort -Ofast", ""]
             logger.debug("Using fortran compiler: mpiifort")
         elif found == "mpifort":
             self.FORTRAN_COMP_MPI = ["mpifort -Ofast -no-pie", ""]
             logger.debug("Using fortran compiler: mpifort")
-        return 0
+        return
     
     def renormalizeDomainParams(self, config):
         """Takes a list of parameter indices as produced by e.g. 
@@ -564,7 +563,7 @@ class Rparams:
     def closePdfReportFigs(self):
         global plotting
         if not plotting:
-            return 0
+            return
         
         for searchname in self.lastParScatterFigs:
             for f in self.lastParScatterFigs[searchname]:
@@ -620,7 +619,7 @@ class Rparams:
                         if len(l) <= i:
                             logger.error("Inconsistent occupancy lists for "
                                           "atom "+str(at.oriN))
-                            return ("Inconsistent input")
+                            raise ValueError("Inconsistent input")
                         else:
                             totalocc += l[i]
                     if totalocc < 1 - 1e-4:
@@ -638,7 +637,7 @@ class Rparams:
                     if not found:
                         logger.error("No appropriate Delta file found for "
                                       "{}, element {}".format(at, el))
-                        return("Missing Delta file")
+                        raise RuntimeError("Missing Delta file")
             # sanity check: are displacements defined but deltas missing?
             for at in sl.atlist:
                 # check whether at has non-trivial displacements:
@@ -676,7 +675,7 @@ class Rparams:
                     logger.error("Atom {} has displacements defined, but no "
                                   "delta file was found! Run Delta-Amplitudes."
                                   .format(at.oriN))
-                    return 1
+                    raise RuntimeError("Delta file not found")
                 elif not found and at in atlist:
                     atlist.remove(at) # delta file is there, but no
                                       #   displacements
@@ -804,7 +803,7 @@ class Rparams:
         if not subdomain:
             self.searchpars.append(SearchPar(None, "dom", "", ""))
             self.searchpars[-1].steps = 2
-        return 0
+        return
 
     def generateSearchPars_domains(self, sl):
         """Runs generateSearchPars for every domain, then collates results."""
@@ -824,7 +823,7 @@ class Rparams:
             if r != 0:
                 logger.error("Error getting search parameters for domain {}: "
                              "{}".format(dp.name, r))
-                return ("Error getting search parameters")
+                raise RuntimeError("Error getting search parameters")
             for sp in [sp for sp in dp.rp.searchpars 
                        if type(sp.restrictTo) == int]:
                 sp.restrictTo += len(self.searchpars)
@@ -838,4 +837,4 @@ class Rparams:
         self.search_maxconc = max([dp.rp.search_maxconc 
                                     for dp in self.domainParams])
         self.mncstep = max([dp.rp.mncstep for dp in self.domainParams])
-        return 0
+        return

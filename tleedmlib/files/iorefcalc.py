@@ -195,7 +195,7 @@ def writePARAM(sl, rp):
         logger.error("Failed to write PARAM file")
         raise
     logger.debug("Wrote to PARAM successfully.")
-    return 0
+    return
 
 def writeAUXLATGEO(sl, rp):
     """Writes AUXLATGEO, which is part of the input FIN for the refcalc."""
@@ -237,7 +237,7 @@ def writeAUXLATGEO(sl, rp):
         logger.error("Failed to write AUXLATGEO file")
         raise
     logger.debug("Wrote to AUXLATGEO successfully.")
-    return 0
+    return
 
 def writeAUXNONSTRUCT(sl, rp):
     """Writes AUXNONSTRUCT, which is part of the input FIN for the refcalc."""
@@ -275,7 +275,7 @@ def writeAUXNONSTRUCT(sl, rp):
         logger.error("Failed to write AUXNONSTRUCT file")
         raise
     logger.debug("Wrote to AUXNONSTRUCT successfully.")
-    return 0
+    return
 
 def writeAUXGEO(sl, rp):
     """Writes AUXGEO, which is part of the input FIN for the refcalc."""
@@ -536,7 +536,7 @@ def writeAUXGEO(sl, rp):
         logger.error("Failed to write AUXGEO file")
         raise
     logger.debug("Wrote to AUXGEO successfully.")
-    return 0
+    return
 
 def writeMuftin(sl, rp):
     """Writes a muftin.f file, which will be compiled for the refcalc."""
@@ -620,5 +620,4 @@ C  set substrate / overlayer imaginary part of inner potential
         logger.error("Exception while writing muftin.f file: ", 
                       exc_info=True)
         raise
-    return 0
-
+    return

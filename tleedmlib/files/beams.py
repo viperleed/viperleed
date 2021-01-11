@@ -431,7 +431,7 @@ def writeOUTBEAMS(beams, filename="THEOBEAMS.csv", sep="; "):
         logger.error("Failed to write "+filename)
         raise
     logger.debug("Wrote to "+filename+" successfully")
-    return 0
+    return
 
 def writeAUXBEAMS(ivbeams=[], beamlist=[], beamsfile='IVBEAMS', 
                   readfile='_BEAMLIST', writefile='AUXBEAMS', write=True):

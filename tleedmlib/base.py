@@ -95,15 +95,14 @@ def mkdir_recursive(targetpath):
 
     Returns
     -------
-    int
-        0 on success
+    None
 
     """
     if os.path.isdir(targetpath):
-        return 0
+        return None
     try:
         os.mkdir(targetpath)
-        return 0
+        return None
     except:
         pass
     p = os.path.split(targetpath)
@@ -114,7 +113,7 @@ def mkdir_recursive(targetpath):
         os.mkdir(targetpath)
     except:
         raise
-    return 0
+    return None
 
 def rotMatrix(order):
     """Returns a (2x2) matrix for in-plane rotation of the given rotation 

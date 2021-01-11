@@ -59,7 +59,8 @@ class SymPlane:
     def isEquivalent(self,pl2,abt,eps=0.001):
         """Checks whether two symmetry planes have the same position and
         direction (including duplicates in next unit cell)"""
-        if not np.array_equal(self.par,pl2.par): return False
+        if not np.array_equal(self.par,pl2.par): 
+            return False
         complist = [self.pos]
         fpos = np.dot(np.linalg.inv(np.transpose(abt)), self.pos) % 1.0
         # if we're close to an edge or corner, also check translations
@@ -592,12 +593,12 @@ class Slab:
         self.getCartesianCoordinates()
         self.updateLayerCoordinates()
         if keepDisp:
-            return 0
+            return
         for at in self.atlist:
             at.deltasGenerated = []
             at.initDisp(force=True)
             at.constraints = {1: {}, 2: {}, 3: {}}
-        return 0
+        return
 
     def rotateAtoms(self, axis, order):
         """Translates the atoms in the slab to have the axis in the origin,

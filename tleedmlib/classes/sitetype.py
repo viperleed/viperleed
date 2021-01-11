@@ -48,7 +48,7 @@ class Sitetype:
         if rp.T_DEBYE is None or rp.T_EXPERIMENT is None:
             logger.error("Cannot generate default vibrational amplitudes: "
                           "Temperature or Debye temperature undefined.")
-            return 1
+            raise ValueError("Temperature and Debye temperature must be float")
         if chemel in rp.ELEMENT_RENAME:
             el = rp.ELEMENT_RENAME[chemel].capitalize()
         else:
@@ -56,11 +56,11 @@ class Sitetype:
         if el not in tl.leedbase.periodic_table:
             logger.error("Cannot generate default vibrational amplitude for "
                     "site "+self.label+": Element "+el+" not recognized.")
-            return 1
+            raise ValueError("Element "+el+" not recognized.")
         if el not in tl.leedbase.elementAtomicMass:
             logger.error("Cannot generate default vibrational amplitude for "
                     "site "+self.label+": Element"+el+" atomic mass unknown.")
-            return 1
+            raise NotImplementedError("Element"+el+" atomic mass unknown.")
         scaling = 1.0
         for s in rp.VIBR_AMP_SCALE:
             try:
@@ -88,4 +88,4 @@ class Sitetype:
                                                             / rp.T_DEBYE)**2)) 
                                  * 109.15 / (tl.leedbase.elementAtomicMass[el] 
                                                           * rp.T_DEBYE))), 3)
-        return 0
+        return

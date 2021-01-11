@@ -190,7 +190,7 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL"):
         logger.error("Failed to write "+filename)
         raise
     logger.debug("Wrote to R-factor input file "+filename+" successfully")
-    return 0
+    return
 
 def writeRfactPARAM(rp, theobeams):
     """Generates the PARAM file for the rfactor calculation."""
@@ -238,7 +238,7 @@ C           gaps in the spectra set MNGAP to 1 to avoid zero-sized arrays)
     except:
         logger.error("Failed at writing PARAM file for R-factor calculation.")
         raise
-    return 0
+    return
 
 def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf', 
                     plotcolors = None, analysisFile='', v0i=0.):
@@ -270,21 +270,21 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
     
     Returns
     -------
-    None if error, 0 if successful
+    None
     
     '''
     global plotting
     if not plotting:
         logger.debug("Necessary modules for plotting not found. Skipping "
                       "R-factor plotting.")
-        return 0
+        return
     
     fnames = ['theo.column', 'exp.column']
     
     if not hasattr(beams, '__len__'):
         logger.error("writeRfactorPdf: First argument should be list, not "
                       +str(type(beams)))
-        return None
+        return
     
     xxyy=[]
     for fname in fnames:
@@ -293,18 +293,18 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
         except FileNotFoundError:
             logger.error("writeRfactorPdf: File {} not found. Aborting."
                           .format(fname))
-            return None
+            return
         except PermissionError:
             logger.error("writeRfactorPdf: Cannot open file {}. Aborting."
                           .format(fname))
-            return None
+            return
         
         cols = [[float(col) for col in line.split()] for line in f]
         
         if(np.shape(cols)[1] != 2*len(beams)):
             logger.error("writeRfactorPdf: Number of beams in file {} does "
                           "not match the input. Aborting.".format(fname))
-            return None
+            return
         
         cols = np.array(cols)
         xy = np.split(cols, len(beams), axis=1)
@@ -337,7 +337,7 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
     except PermissionError:
         logger.error("writeRfactorPdf: Cannot open file {}. Aborting."
                       .format(outName))
-        return None
+        return
     
     figsize = (7, 7)
     # set ticks spacing to 50 eV and round the x limits to a multiple of it
@@ -416,7 +416,7 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
         logger.setLevel(loglevel)
     
     if not analysisFile:
-        return 0
+        return
     
     # write R-factor analysis
     try:
@@ -424,7 +424,7 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
     except PermissionError:
         logger.error("writeRfactorPdf: Cannot open file {}. Aborting."
                       .format(analysisFile))
-        return None
+        return
     
     figsize = (5.8, 8.3)
     figs = []
@@ -505,4 +505,4 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
     finally:
         pdf.close()
         logger.setLevel(loglevel)
-    return 0
+    return

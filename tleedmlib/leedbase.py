@@ -200,7 +200,7 @@ def getTensors(index, basedir=".", targetdir=".", required=True):
                 raise
         else:
             logger.error("Tensors not found")
-            return ("Tensors not found")
+            raise RuntimeError("Tensors not found")
     elif basedir != targetdir:
         try:
             mkdir_recursive(os.path.join(targetdir,"Tensors",dn))
@@ -209,7 +209,7 @@ def getTensors(index, basedir=".", targetdir=".", required=True):
         except:
             logger.error("Failed to move Tensors from {}".format(dn))
             raise
-    return 0
+    return None
 
 def getDeltas(index, basedir=".", targetdir=".", required=True):
     """Fetches Delta files from Deltas or archive with specified tensor index. 
@@ -238,8 +238,8 @@ def getDeltas(index, basedir=".", targetdir=".", required=True):
             raise
     elif required:
         logger.error("Deltas not found")
-        return ("Deltas not found")
-    return 0
+        raise RuntimeError("Deltas not found")
+    return None
 
 def getTensorOriStates(sl, path):
     """Reads POSCAR, PARAMETERS and VIBROCC from the target path, gets the 
@@ -248,7 +248,7 @@ def getTensorOriStates(sl, path):
     for fn in ["POSCAR", "PARAMETERS", "VIBROCC"]:
         if not os.path.isfile(os.path.join(path, fn)):
             logger.error("File "+fn+" is missing in "+path)
-            return("Could not check Tensors: File missing")
+            raise RuntimeError("Could not check Tensors: File missing")
     dn = os.path.basename(path)
     try:
         tsl = readPOSCAR(os.path.join(path, "POSCAR"))
@@ -263,31 +263,31 @@ def getTensorOriStates(sl, path):
         logger.error("Error checking Tensors: Error while reading "
                       "input files in "+dn)
         logger.debug("Exception:", exc_info=True)
-        return("Could not check Tensors: Error loading old input "
+        raise RuntimeError("Could not check Tensors: Error loading old input "
                "files")
     if len(tsl.atlist) != len(sl.atlist):
         logger.error("POSCAR from "+dn+" is incompatible with "
                       "current POSCAR.")
-        return("Tensors file incompatible")
+        raise RuntimeError("Tensors file incompatible")
     for at in sl.atlist:
         tal = [tat for tat in tsl.atlist if at.oriN == tat.oriN]
         if len(tal) != 1:
             logger.error("POSCAR from "+dn+" is incompatible with "
                           "current POSCAR.")
-            return("Tensors file incompatible")
+            raise RuntimeError("Tensors file incompatible")
         at.copyOriState(tal[0])
     if len(tsl.sitelist) != len(sl.sitelist):
         logger.error("Sites from "+dn+" input differ from current "
                       "input.")
-        return("Tensors file incompatible")
+        raise RuntimeError("Tensors file incompatible")
     for site in sl.sitelist:
         tsitel = [s for s in tsl.sitelist if site.label == s.label]
         if len(tsitel) != 1:
             logger.error("Sites from "+dn+" input differ from "
                           "current input.")
-            return("Tensors file incompatible")
+            raise RuntimeError("Tensors file incompatible")
         site.oriState = copy.deepcopy(tsitel[0])
-    return 0
+    return None
 
 def fortranCompile(pre="", filename="", post="", 
                    logname = "fortran-compile.log"):
@@ -307,8 +307,10 @@ def fortranCompile(pre="", filename="", post="",
     except:
         logger.error("Error compiling "+filename)
         raise
-    return r.returncode
-
+    if r.returncode != 0:
+        raise RuntimeError(r.returncode)
+    return None
+    
 def writeWoodsNotation(ucell):
     """Takes a unit cell (as a (2x2) matrix) and attempts to write it in Woods 
     Notation. Returns empty string if no Woods notation is found."""
@@ -339,7 +341,7 @@ def readWoodsNotation(s, ucell):
     m = p.match(s)
     if not m:
         logging.error('Could not read woods notation input '+s)
-        return
+        return None
     if not m.group('type'):
         t = 'p'
     else:

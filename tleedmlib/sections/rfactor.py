@@ -201,16 +201,13 @@ def rfactor(sl, rp, index):
             outname = "Rfactor_plots_{}.pdf".format(name)
             aname = "Rfactor_analysis_{}.pdf".format(name)
             try:
-                r = io.writeRfactorPdf([(b.label, rfaclist[i]) for (i, b) 
+                io.writeRfactorPdf([(b.label, rfaclist[i]) for (i, b) 
                                                 in enumerate(rp.expbeams)],
                                        plotcolors = rp.PLOT_COLORS_RFACTOR,
                                        outName=outname, analysisFile=aname,
                                        v0i = rp.V0_IMAG)
             except:
                 logger.warning("Error plotting R-factors.", exc_info=True)
-            else:
-                if r != 0:
-                    logger.warning("Error plotting R-factors.")
     # rename and move files
     try:
         os.rename('WEXPEL','rfactor-WEXPEL')

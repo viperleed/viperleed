@@ -97,7 +97,7 @@ def readDISPLACEMENTS(rp, filename="DISPLACEMENTS"):
             logger.error("DISPLACEMENTS file line {}: Line with <loop> or "
                           "</loop> flags must be followed by a new search "
                           "block or end of file!".format(i+1))
-            return("Syntax error")
+            raise RuntimeError("Misplaced <loop> flag in DISPLACEMENTS file.")
         loopLine = False
         if len(rp.disp_blocks) == 0:
             rp.disp_blocks.append(([], ""))
@@ -130,7 +130,7 @@ def readDISPLACEMENTS(rp, filename="DISPLACEMENTS"):
                         "loops are still open at end of file.")
         rp.setHaltingLevel(2)
     if not rp.domainParams:
-        return 0
+        return
     # in case of domains, now split blocks to domains
     for dp in rp.domainParams:
         dp.rp.disp_blocks = []
@@ -177,7 +177,7 @@ def readDISPLACEMENTS(rp, filename="DISPLACEMENTS"):
                     dlines[d].append(line)
         for dp in rp.domainParams:
             dp.rp.disp_blocks.append((dlines[dp.name], blockname))
-    return 0
+    return
 
 def readDISPLACEMENTS_block(rp, sl, dispblock):
     """Reads a block from the DISPLACEMENTS file and adds the information to 
@@ -845,7 +845,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock):
             logger.error('DISPLACEMENTS file: Atom '+str(at.oriN)+' has '
                 'occupations defined for more than 5 elements, which is not '
                 'supported by TensErLEED.')
-            return 1
+            raise RuntimeError("Too many elements")
         occlists = []
         error = False
         for k in at.disp_occ:
@@ -861,15 +861,17 @@ def readDISPLACEMENTS_block(rp, sl, dispblock):
             if error:
                 logger.error('DISPLACEMENTS file: Lengths of occupation '
                     'lists per element differ for atom '+at.oriN)
-                return 1
+                raise ValueError("Occupation lists per element must have same "
+                                 "length.")
             if totalocc > 1 + 1e-4:    # some tolerance
                 logger.error('DISPLACEMENTS file: Occupations for atom '
                     +str(at.oriN)+' sum to more than 1 for step '+str(i+1)+'.')
-                return 1
+                raise ValueError("Occupations must sum to 1 or less.")
             elif totalocc < 1 - 1e-4 and len(at.disp_occ) > 4:
                 logger.error('DISPLACEMENTS file: Occupations for atom '
                     +str(at.oriN)+' sum to less than 1 for step '+str(i+1)+', '
                     'but a vacancy cannot be added since there are already '
                     '5 elements.')
-                return 1
-    return 0
+                raise ValueError("Occupations must sum to exactly 1 if five "
+                                 "elements are already defined.")
+    return

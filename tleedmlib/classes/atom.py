@@ -100,7 +100,7 @@ class Atom:
             for k, v in self.site.occ.items():
                 if v > 0 or k in self.site.mixedEls:
                     self.disp_occ[k] = [v]
-        return 0
+        return None
   
     def mergeDisp(self, el):
         """Merges the offsets from VIBROCC and DISPLACEMENTS into the 
