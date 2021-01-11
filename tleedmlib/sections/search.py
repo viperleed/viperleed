@@ -169,7 +169,8 @@ def processSearchResults(sl, rp, final=True):
                 result = r
     return result
 
-def parabolaFit(rp, r_configs, x0=None, localize=True, mincurv=1e-4):
+def parabolaFit(rp, r_configs, x0=None, localize=True, mincurv=1e-4,
+                whichRegression='linearregression'):
     """
     Performs a parabola fit to all rfactor/configuration data in r_configs.
     Stores the result in the rp searchpar objects.
@@ -241,12 +242,15 @@ def parabolaFit(rp, r_configs, x0=None, localize=True, mincurv=1e-4):
     best_config = np.copy(indep_pars[np.argmin(rfacs)])
     sps_original = sps[:]
 
-    whichRegression = 'lasso'
-    if whichRegression == 'lasso':
-        polyreg = make_pipeline(PolynomialFeatures(degree=2), Lasso(alpha=1.0))
-    else:
+    if whichRegression.lower() == 'lasso':
+        polyreg = make_pipeline(PolynomialFeatures(degree=2), Lasso(alpha=0.1))
+    elif whichRegression.lower() == 'linearregression':
         polyreg = make_pipeline(PolynomialFeatures(degree=2), 
                                 LinearRegression())
+    else:
+        logger.warning("Regression model {} not found, parabola fit failed."
+                       .format(whichRegression))
+        return None, None
     # weights = None
 
     deletedPars = []
@@ -276,8 +280,8 @@ def parabolaFit(rp, r_configs, x0=None, localize=True, mincurv=1e-4):
                  for i in range(len(sps))]
         if min(curvs) >= mincurv:
             if len(rf_tofit) < 300:  # found too few points for good fit
-                # logger.debug("{} points - too few for fit"
-                #              .format(len(rf_tofit)))    # !!! TMPDEBUG
+                logger.debug("{} points - too few for fit"
+                              .format(len(rf_tofit)))    # !!! TMPDEBUG
                 return None, None
             break  # all parabola dimensions now have reasonable shape
         if len(sps) == 1:
@@ -293,8 +297,8 @@ def parabolaFit(rp, r_configs, x0=None, localize=True, mincurv=1e-4):
     # rfacs = rf_tofit
     for (i, sp) in enumerate(sps):
         sp.parabolaFit["curv"] = curvs[i]
-    # logger.debug("Parabola fit: {} parameters were fit with {} points"
-    #              .format(len(sps), len(rf_tofit)))   # !!! TMPDEBUG
+    logger.debug("Parabola fit: {} parameters were fit with {} points"
+                  .format(len(sps), len(rf_tofit)))   # !!! TMPDEBUG
     
     bounds = [(1,sp.steps) for sp in sps]
 
@@ -670,7 +674,7 @@ def search(sl, rp):
                             realLastConfigGen["best"] = gens[-1]
                     if len(newData) > 0:
                         lastconfig = newData[-1][2]
-                    if check_datafiles:
+                    if check_datafiles and not (stop and repeat):
                         check_datafiles = False
                         datafiles = [f for f in os.listdir() 
                                  if re.match(r'data\d+\.chem$', f.lower())]
@@ -678,7 +682,8 @@ def search(sl, rp):
                             all_r_configs.update(io.readDataChem(rp, 
                                                                  datafiles))
                     if len(gens) > 1:
-                        if len(all_r_configs) >= 10*rp.indyPars:
+                        if (len(all_r_configs) >= 10*rp.indyPars
+                                and not (stop and repeat)):
                             if rfac_predict and (rfac_predict[-1][1] > 
                                                  rfaclist[-1][0]):
                                 # if current prediction is bad, reset x0
@@ -690,7 +695,7 @@ def search(sl, rp):
                                              .format(len(all_r_configs)))
                                 parab_x0, predictR = parabolaFit(rp, 
                                                     all_r_configs, x0=parab_x0,
-                                                    localize=True)
+                                                    localize=False)
                                 if predictR is not None:
                                     if not rfac_predict:
                                         logger.debug("Starting parabola fits "

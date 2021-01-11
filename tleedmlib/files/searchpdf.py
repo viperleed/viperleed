@@ -9,6 +9,7 @@ Functions for writing the SearchProgress.pdf and SearchReport.pdf files.
 
 import numpy as np
 import logging
+from matplotlib.markers import MarkerStyle
 
 logger = logging.getLogger("tleedm.files.searchpdf")
 logger.setLevel(logging.INFO)
@@ -263,11 +264,13 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
                     pltpoints[i] = (x,y,c,s)
                     i += 1
                 if predict:
+                    m = MarkerStyle("D")
+                    m._transform.scale(1.0, 0.5)
                     for alpha in set([p[2] for p in predict]):
                         (px, py, _) = tuple(zip(*[p for p in predict 
                                                   if p[2] == alpha]))
                         axs[figcount].scatter(px, py, color="seagreen", 
-                                              alpha=alpha, marker="_", s=120)
+                                              alpha=alpha, marker=m, s=50)
                 x, y = [p[0] for p in pltpoints], [p[1] for p in pltpoints]
                 c, s = [p[2] for p in pltpoints], [p[3] for p in pltpoints]
                 axs[figcount].plot([0, parsPerFig+2], [0.5, 0.5], color='grey', 
