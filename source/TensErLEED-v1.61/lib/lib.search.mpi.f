@@ -3311,7 +3311,7 @@ C  Domaene spaeter automatisch auf 100 Prozent Flaechenanteil gesetzt.
 
       DO 210 IDOM=1,NDOM-1
 
-        PMISCH(IDOM,IPOP)=INT(REAL(PMISCH(IDOM,IPOP))*Norm)
+        PMISCH(IDOM,IPOP)=NINT(REAL(PMISCH(IDOM,IPOP))*Norm)
         NDSL1 = NDSL1 + PMISCH(IDOM,IPOP)
 
  210  CONTINUE

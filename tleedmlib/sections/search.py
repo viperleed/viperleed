@@ -19,7 +19,7 @@ import signal
 import re
 import copy
 from sklearn.preprocessing import PolynomialFeatures
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LinearRegression, Lasso
 from sklearn.pipeline import make_pipeline
 import scipy
 
@@ -241,7 +241,12 @@ def parabolaFit(rp, r_configs, x0=None, localize=True, mincurv=1e-4):
     best_config = np.copy(indep_pars[np.argmin(rfacs)])
     sps_original = sps[:]
 
-    polyreg = make_pipeline(PolynomialFeatures(degree=2), LinearRegression())
+    whichRegression = 'lasso'
+    if whichRegression == 'lasso':
+        polyreg = make_pipeline(PolynomialFeatures(degree=2), Lasso(alpha=1.0))
+    else:
+        polyreg = make_pipeline(PolynomialFeatures(degree=2), 
+                                LinearRegression())
     # weights = None
 
     deletedPars = []
@@ -265,7 +270,7 @@ def parabolaFit(rp, r_configs, x0=None, localize=True, mincurv=1e-4):
             rf_tofit = np.delete(rf_tofit, to_del, axis=0)
         # check curvature of the parabolas per parameter
         polyreg.fit(ip_tofit, rf_tofit)
-        curvs = [(polyreg.named_steps['linearregression']
+        curvs = [(polyreg.named_steps[whichRegression]
                   .coef_[polyreg.named_steps['polynomialfeatures']
                   .get_feature_names().index('x{}^2'.format(i))]) 
                  for i in range(len(sps))]
@@ -507,6 +512,14 @@ def search(sl, rp):
             logger.warning("Failed to delete old SD.TL file. This may "
                             "cause errors in the interpretation of search "
                             "progress.")
+    # same for old data.chem
+    for fn in [f for f in os.listdir() if re.match(r'data\d+\.chem$', 
+                                                      f.lower())]:
+        try:
+            os.remove(fn)
+        except:
+            logger.warning("Failed to delete old {} file. This may cause "
+                           "errors in the parabola fit.".format(fn))
     # start search process
     repeat = True
     first = True
@@ -576,6 +589,7 @@ def search(sl, rp):
         comment = ""
         sdtlGenNum = 0
         gaussianWidthOri = rp.GAUSSIAN_WIDTH
+        check_datafiles = False
         try:
             while proc.poll() == None:
                 time.sleep(timestep)
@@ -641,6 +655,7 @@ def search(sl, rp):
                                 "since last, {:.1f} s/kG overall)".format(
                                 min(rfacs), gens[-1], timer()-printt, speed))
                             printt = timer()
+                            check_datafiles = True
                         if configs != realLastConfig["all"]:
                             realLastConfig["all"] = configs
                             realLastConfigGen["all"] = gens[-1]
@@ -655,6 +670,13 @@ def search(sl, rp):
                             realLastConfigGen["best"] = gens[-1]
                     if len(newData) > 0:
                         lastconfig = newData[-1][2]
+                    if check_datafiles:
+                        check_datafiles = False
+                        datafiles = [f for f in os.listdir() 
+                                 if re.match(r'data\d+\.chem$', f.lower())]
+                        if datafiles:
+                            all_r_configs.update(io.readDataChem(rp, 
+                                                                 datafiles))
                     if len(gens) > 1:
                         if len(all_r_configs) >= 10*rp.indyPars:
                             if rfac_predict and (rfac_predict[-1][1] > 
@@ -664,6 +686,8 @@ def search(sl, rp):
 
                             try:
                                 # !!! WORK IN PROGRESS
+                                logger.debug("Parabola fit with {} points"
+                                             .format(len(all_r_configs)))
                                 parab_x0, predictR = parabolaFit(rp, 
                                                     all_r_configs, x0=parab_x0,
                                                     localize=True)

@@ -103,6 +103,57 @@ def readSDTL_end(filename="SD.TL"):
     bwr.close()
     return lines
 
+def readDataChem(rp, source):
+    """Reads the data from a list of data.chem files, or a single file, 
+    returns a set of tuples (rfac, config), with config as produced by 
+    readSDTL"""
+    def getPercent(domain_step, dp_vals):
+        """Transforms from integer domain area parameter values to percent"""
+        dsteps = int(100 / domain_step) + 1
+        shifted = [v-1 for v in dp_vals]
+        norm = 1
+        if sum(shifted) > 0:
+            norm = (dsteps-1)/sum(shifted)
+        # note that TensErLEED uses implicit floor int conversion here up to 
+        #  version 1.6, so results may be inconsistent with SD.TL.
+        pl = [int(round(v*norm))*domain_step for v in shifted[:-1]]
+        pl.append(100 - sum(pl))
+        return pl
+    
+    if type(source) == str:
+        source = [source]
+    lines = set()
+    for f in source:
+        with open(f, "r") as rf:
+            lines.update(rf.readlines()[1:])
+    returnList = []
+    parslen = 0
+    for line in lines:
+        try:
+            rfac = float(line.split("|")[0].strip())
+            valstring = line.split("|")[1].rstrip()
+            pars = readIntLine(valstring, width=4)
+        except:
+            logger.warning("Could not read values in data.chem line:\n"+line)
+            continue
+        if len(pars) != parslen:
+            if parslen == 0:
+                parslen = len(pars)
+            else:
+                continue     # incomplete line, read while file was written
+        if not rp.domainParams:
+            returnList.append((rfac, ((100, pars[:-1]),)))
+        else:
+            dp_vals = pars[-len(rp.domainParams):]
+            percent = getPercent(rp.DOMAIN_STEP, dp_vals)
+            dpars = []
+            for v in dp_vals:
+                dpars.append(tuple(pars[:v]))
+                pars = pars[v:]
+            returnList.append((rfac, tuple(zip(percent, dpars))))
+    logger.debug("Read data files for a total of {} entries".format(len(returnList)))   # !!! TMPDEBUG
+    return returnList
+
 def writeRfInfo(sl, rp, filename="rf.info"):
     """Generates r-factor parameters for the search, combines them with the
     experimental beams in AUXEXPBEAMS format to make the entire input for the 

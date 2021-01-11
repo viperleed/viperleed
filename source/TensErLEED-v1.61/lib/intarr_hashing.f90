@@ -44,7 +44,7 @@ module intarr_hashing
      procedure :: set
      procedure :: get
      procedure :: init
-     procedure :: show
+     procedure :: outdata
   end type dictionary_t
 
   integer, parameter :: BUCKET_EMPTY = -2
@@ -174,28 +174,39 @@ contains
 
   end subroutine init
 
-  !> Display the content of a dictionary
+  !> Print the contents to file data.chem
   !!
   !! \param this the dictionary_t object
-  subroutine show(this)
+  subroutine outdata(this, fnum)
     class(dictionary_t), intent(in) :: this
+	integer, intent(in) :: fnum
 
     integer :: i, j, s
     integer :: n
+	character(len=10) :: file_id
+	character(len=15) :: file_name
+	
+	write(file_id, '(i0)') fnum
+	file_name = 'data' // trim(adjustl(file_id)) // '.chem'
 
+	open (14, FILE=file_name, status='replace')
+	write(14, *) "    R  | stored configurations"
+	
     n = 0
     do i = 1, this%dict_size
        s = this%buckets(i)%current_idx
        if (s > 0) then
-             write(*,*) 'bucket   : ', i, ' size ', s
           do j = 1, s
-             write(*,*) 'key      : ', this%buckets(i)%entries(j)%key
-             write(*,*) 'value    : ', this%buckets(i)%entries(j)%value
+             write(14, '(F7.4, " |", 500i4)') &
+			   this%buckets(i)%entries(j)%value, &
+			   this%buckets(i)%entries(j)%key
           end do
        end if
     end do
+	
+	close(14)
 
-  end subroutine show
+  end subroutine outdata
 
   !> Find the "in-bucket" index for a given key
   !!
