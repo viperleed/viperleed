@@ -369,6 +369,7 @@ def runPhaseshiftGen(sl,rp, psgensource=os.path.join('source','EEASiSSS.x'),
             chemelList = rp.ELEMENT_MIX[el]
         else:
             chemelList = [el]
+        # then by sites:
         siteList = [site for site in sl.sitelist if site.el == el]
         for cel in chemelList:
             for site in siteList:

@@ -112,8 +112,8 @@ def writeRfInfo(sl, rp, filename="rf.info"):
     for b in rp.expbeams:
         expEnergies.extend([k for k in b.intens if k not in expEnergies])
     expEnergies.sort()
-    minen = min(min(expEnergies), rp.THEO_ENERGIES[0])
-    maxen = max(max(expEnergies), rp.THEO_ENERGIES[1])
+    minen = max(min(expEnergies), rp.THEO_ENERGIES[0])
+    maxen = min(max(expEnergies), rp.THEO_ENERGIES[1])
     # extend energy range if they are close together
     if abs(min(expEnergies) - rp.THEO_ENERGIES[0]) < abs(rp.IV_SHIFT_RANGE[0]):
         minen = (max(min(expEnergies), rp.THEO_ENERGIES[0]) 

@@ -62,18 +62,17 @@ def writeSuperposInput(sl, rp, config, param_name = "PARAM",
             else:
                 geoind = 0
             # cast vib and geo indices from 2D to 1D:
-            ind = (ngeo * vibind) + geoind + 1
-            indices.append(ind)
-        # vp = [sp for sp in sps if sp.el == "vac"]   # unnecessary?
-        # if len(vp) != 0 and totalocc < 1.0:
-        #     occupations.append(1 - totalocc)
-        #     deltanames.append(vp[0].deltaname)
-        #     mnfiles += 1
-        #     indices.append(1)
-        #     if at in surfats:
-        #         surfaceChecks.append(1)
-        #     else:
-        #         surfaceChecks.append(0)
+            indices.append((ngeo * vibind) + geoind + 1)
+        vp = [sp for sp in sps if sp.el == "vac"]
+        if len(vp) != 0 and totalocc < 1.0:
+            occupations.append(1 - totalocc)
+            deltanames.append(vp[0].deltaname)
+            mnfiles += 1
+            indices.append(1)
+            if at in surfats:
+                surfaceChecks.append(1)
+            else:
+                surfaceChecks.append(0)
 
     # write PARAM
     param = """C  DIMENSIONS MAY BE CHANGED IN PARAMETER-STATEMENT
