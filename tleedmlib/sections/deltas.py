@@ -76,10 +76,9 @@ def monitoredPool(rp, poolsize, function, tasks):
 
     def checkPoolResult(r):
         nonlocal pool
-        if r != 0:
+        if r != "":
             pool.terminate()
-        raise RuntimeError("Error in parallel execution of {}"
-                               .format(function.__name__))
+        return r
 
     pool = multiprocessing.Pool(poolsize)
     results = []

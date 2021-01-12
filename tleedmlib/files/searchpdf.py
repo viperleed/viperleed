@@ -316,7 +316,6 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
     except PermissionError:
         logger.warning("Failed to write to " + outname
                         + ": Permission denied.")
-        raise
     except KeyboardInterrupt:
         raise
     except:
@@ -429,7 +428,6 @@ def writeSearchReportPdf(rp, outname = "Search-report.pdf"):
     except PermissionError:
         logger.warning("Failed to write to " + outname
                         + ": Permission denied.")
-        raise
     except KeyboardInterrupt:
         raise
     except:

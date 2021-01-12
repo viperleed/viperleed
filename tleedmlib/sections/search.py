@@ -128,7 +128,7 @@ def processSearchResults(sl, rp, final=True):
             # if final:
             logger.error("Failed to write control.chem")
             rp.setHaltingLevel(1)
-        
+
     # info for log:
     maxpop = max(popcount)
     if final:
@@ -181,7 +181,7 @@ def processSearchResults(sl, rp, final=True):
                 os.chdir(home)
     return None
 
-def parabolaFit(rp, r_configs, x0=None, localize=0.33, mincurv=1e-4,
+def parabolaFit(rp, r_configs, x0=None, localize=0, mincurv=1e-2,
                 whichRegression='linearregression'):
     """
     Performs a parabola fit to all rfactor/configuration data in r_configs.
@@ -199,7 +199,7 @@ def parabolaFit(rp, r_configs, x0=None, localize=0.33, mincurv=1e-4,
         If not zero, r_configs will be reduced to only use points close to the 
         current best result. The value determines the region to be used as 
         compared to the full data, i.e. 0.5 would use only half of the space in 
-        each dimesion. The default is 0.33.
+        each dimesion. The default is 0 (no localization).
     mincurv : float, optional
         The minimum curvature that the N-dimensional paraboloid is required 
         to have along the axis of a given parameter, in order for the minimum 
@@ -218,11 +218,10 @@ def parabolaFit(rp, r_configs, x0=None, localize=0.33, mincurv=1e-4,
 
     """
 
-    # !!! Work in progress
     def optimizerHelper(array, func):
         return func(array.reshape(1,-1))
-    
-    # unpack the data
+
+    # starttime = timer()
     rc = np.array([*r_configs], dtype=object)
     rfacs, configs = rc[:,0].astype(float), rc[:,1]
     localizeFactor = localize
@@ -278,19 +277,14 @@ def parabolaFit(rp, r_configs, x0=None, localize=0.33, mincurv=1e-4,
         if localize != 0:
             # discard points that are far from global min in any dimension
             base = ip_tofit[np.argmin(rfacs)] # parameter vector of best conf
-            logger.debug(base)
             for i in range(len(base)):
                 r = sps[i].steps*localizeFactor*0.5
-                if base[i] - r < 1:
-                    base[i] = 1 + r
-                elif base[i] + r > sps[i].steps:
-                    base[i] = sps[i].steps - r
-            logger.debug(base)
+                base[i] = max(base[i], 1 + r)
+                base[i] = min(base[i], sps[i].steps - r)
             dist_norm = np.array([1/(sp.steps-1) for sp in sps])
             dist = np.abs(dist_norm*(ip_tofit - base))
             maxdist = np.max(dist, 1)
             # dist = np.linalg.norm(dist_norm*(indep_pars - base), axis=1)
-            # logger.debug(dist/np.max(dist)) # !!! TMPDEBUG
             # cutoff = np.percentile(dist, 30)
             # cutoff = np.max(dist) * 0.75
             cutoff = 0.5*localizeFactor
@@ -298,39 +292,44 @@ def parabolaFit(rp, r_configs, x0=None, localize=0.33, mincurv=1e-4,
             to_del = [i for i in range(len(maxdist)) if maxdist[i] > cutoff]
             ip_tofit = np.delete(ip_tofit, to_del, axis=0)
             rf_tofit = np.delete(rf_tofit, to_del, axis=0)
-        # check curvature of the parabolas per parameter
+        # check curvature of the parabolas per parameter (renorm. to rangesize)
         polyreg.fit(ip_tofit, rf_tofit)
         curvs = [(polyreg.named_steps[whichRegression]
                   .coef_[polyreg.named_steps['polynomialfeatures']
-                  .get_feature_names().index('x{}^2'.format(i))]) 
+                  .get_feature_names().index('x{}^2'.format(i))])
+                 * sps[i].steps**2
                  for i in range(len(sps))]
         if min(curvs) >= mincurv:
-            if len(rf_tofit) < 1e3:  # found too few points for good fit
-                logger.debug("{} points - too few for fit"
-                              .format(len(rf_tofit)))    # !!! TMPDEBUG
+            if len(rf_tofit) < 50*len(sps):  # too few points for good fit
+                # logger.debug("{} points - too few for fit of {} dimensions"
+                #               .format(len(rf_tofit), len(sps)))
+                for sp in rp.searchpars:
+                    sp.parabolaFit = {"curv": None, "min": None}
                 return None, None
             break  # all parabola dimensions now have reasonable shape
         if len(sps) == 1:
+            # logger.debug("Found no parameter with sufficient curvature")
+            sps[0].parabolaFit = {"curv": None, "min": None}
             return None, None  # found no parameter with parabola shape
-        # throw out the parameter with lowest curvature; repeat
-        i = curvs.index(min(curvs))
-        sps[i].parabolaFit["curv"] = None
-        sps[i].parabolaFit["min"] = None
-        deletedPars.append(sps_original.index(sps[i]))
-        sps.pop(i)
-        indep_pars = np.delete(indep_pars, i, axis=1)
+        # throw out the parameters with lowest curvature; repeat
+        k = min(max(1, int(len(curvs)*0.2)),   # how many to discard: min. 1,
+                sum(c < mincurv for c in curvs))    # max. all with low curv.
+        ind = np.argpartition(curvs, k)[:k]
+        for i in ind:
+            sps[i].parabolaFit = {"curv": None, "min": None}
+            deletedPars.append(sps_original.index(sps[i]))
+        sps = [sps[i] for i in range(len(sps)) if i not in ind]
+        indep_pars = np.delete(indep_pars, ind, axis=1)
     # indep_pars = ip_tofit
     # rfacs = rf_tofit
     for (i, sp) in enumerate(sps):
         sp.parabolaFit["curv"] = curvs[i]
-    logger.debug("Parabola fit: {} parameters were fit with {} points"
-                  .format(len(sps), len(rf_tofit)))   # !!! TMPDEBUG
+    # logger.debug("Parabola fit: {}/{} parameters were fit with {} points "
+    #              "({:.4f} s)".format(len(sps), len(sps_original), 
+    #                                  len(rf_tofit), (timer() - starttime)))
     
+    # now find minimum within bounds
     bounds = [(1,sp.steps) for sp in sps]
-
-    # if all([sp.parabolaFit["curv"] is None for sp in sps]):
-    #     return None, None   # no good parabola -> no prediction
-
     if x0 is None:
         # x0 = [int((sp.steps + 1)/2) for sp in sps]
         x0 = np.copy(best_config)
@@ -349,7 +348,6 @@ def parabolaFit(rp, r_configs, x0=None, localize=0.33, mincurv=1e-4,
         elif type(sp.restrictTo) == tl.SearchPar:
             sp.parabolaFit = copy.copy(sp.restrictTo.parabolaFit)
     return (best_config, predictR)
-        
 
 def search(sl, rp):
     """Runs the search. Returns None when finishing without errors."""
@@ -402,6 +400,8 @@ def search(sl, rp):
                                                     sp.linkedTo) + 1)
         io.writeSearchOutput(sl, rp)
         return None
+    # TODO: calculate 'usable' beam energy range, output per indypar
+    
     if rp.SUPPRESS_EXECUTION:
         logger.warning("SUPPRESS_EXECUTION parameter is on. Search "
             " will not proceed. Stopping...")
@@ -409,7 +409,6 @@ def search(sl, rp):
         return None
     # check for mpirun, decide whether to use parallelization
     usempi = True
-    
     if (shutil.which("mpirun", os.X_OK) == None 
             or shutil.which("mpiifort", os.X_OK) == None):
         usempi = False
@@ -688,21 +687,17 @@ def search(sl, rp):
                         if datafiles:
                             all_r_configs.update(io.readDataChem(rp, 
                                                                  datafiles))
-                    if len(gens) > 1:
-                        if (len(all_r_configs) >= 10*rp.indyPars
-                                and not (stop and repeat)):
+                        if len(all_r_configs) >= 10*rp.indyPars:
                             if rfac_predict and (rfac_predict[-1][1] > 
                                                  rfaclist[-1][0]):
                                 # if current prediction is bad, reset x0
                                 parab_x0 = None
-
                             try:
                                 # !!! WORK IN PROGRESS
-                                logger.debug("Parabola fit with {} points"
-                                             .format(len(all_r_configs)))
+                                # logger.debug("Parabola fit with {} points"
+                                #              .format(len(all_r_configs)))  # !!! TMPDEBUG
                                 parab_x0, predictR = parabolaFit(rp, 
-                                                    all_r_configs, x0=parab_x0,
-                                                    localize=0)
+                                                    all_r_configs, x0=parab_x0)
                                 if predictR is not None:
                                     if not rfac_predict:
                                         logger.debug("Starting parabola fits "
@@ -713,6 +708,7 @@ def search(sl, rp):
                             except:
                                 logger.warning("Parabolic fit of R-factor "
                                         "data failed", exc_info=rp.LOG_DEBUG)
+                    if len(gens) > 1:
                         try:
                             writeSearchProgressPdf(rp, gens, rfaclist, 
                                                 lastconfig, markers=markers,
@@ -840,6 +836,14 @@ def search(sl, rp):
         logger.info("Finished search. Processing files...")
     else:
         logger.info("Processing files...")
+    # final parabola fit  # !!! double check later
+    if len(all_r_configs) >= 10*rp.indyPars:
+        if rfac_predict and (rfac_predict[-1][1] > rfaclist[-1][0]):
+            parab_x0 = None
+        parab_x0, predictR = parabolaFit(rp, 
+                            all_r_configs, x0=parab_x0)
+        if predictR is not None:
+            rfac_predict.append((gens[-1], predictR))
     # write pdf one more time
     if len(gens) > 1:
         try:
