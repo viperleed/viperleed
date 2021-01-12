@@ -813,17 +813,13 @@ class Rparams:
         for dp in self.domainParams:
             try:
                 os.chdir(dp.workdir)
-                r = dp.rp.generateSearchPars(dp.sl, subdomain=True)
+                dp.rp.generateSearchPars(dp.sl, subdomain=True)
             except:
                 logger.error("Error while creating delta input for domain {}"
                              .format(dp.name))
                 raise
             finally:
                 os.chdir(home)
-            if r != 0:
-                logger.error("Error getting search parameters for domain {}: "
-                             "{}".format(dp.name, r))
-                raise RuntimeError("Error getting search parameters")
             for sp in [sp for sp in dp.rp.searchpars 
                        if type(sp.restrictTo) == int]:
                 sp.restrictTo += len(self.searchpars)

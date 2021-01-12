@@ -290,13 +290,10 @@ def init_domains(rp):
             tensorIndex = tl.leedbase.getMaxTensorIndex(path)
             if tensorIndex != 0:
                 try:
-                    r = tl.leedbase.getTensors(tensorIndex, basedir=path, 
+                    tl.leedbase.getTensors(tensorIndex, basedir=path, 
                                                targetdir=target)
                 except:
                     tensorIndex = 0
-                else:
-                    if r != 0:
-                        tensorIndex = 0
             if tensorIndex != 0:
                 tensorDir = os.path.join(target, "Tensors", 
                                          "Tensors_"+str(tensorIndex).zfill(3))

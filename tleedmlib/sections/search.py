@@ -732,12 +732,10 @@ def search(sl, rp):
                     if (len(gens) > 1 and os.path.isfile("SD.TL") and 
                                                 (repeat or not stop)):
                         try:
-                            r = processSearchResults(sl, rp, final=False)
+                            processSearchResults(sl, rp, final=False)
                         except Exception as e:
-                            r = repr(e)
-                        if r != 0:
                             logger.warning("Failed to update POSCAR_OUT "
-                                            "and VIBROCC_OUT: " + str(r))
+                                            "and VIBROCC_OUT: " + str(e))
                 if stop:
                     logger.info("Stopping search...")
                     pgid = os.getpgid(proc.pid)

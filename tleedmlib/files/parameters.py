@@ -201,7 +201,8 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
 
         Returns
         ----------
-        None
+        int
+            0 if value was set, 1 otherwise
         
         """
         s = value.lower()
@@ -215,11 +216,11 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
             logger.warning('PARAMETERS file: {}: Could not interpret given '
                            'value. Input will be ignored.'.format(param))
             rpars.setHaltingLevel(haltingOnFail)
-            return
+            return 1
         if not varname:
             varname = param
         setattr(rp, varname, v)
-        return
+        return 0
     
     def setNumericalParameter(rp, param, value, varname=None, type_=float, 
                              range_=(None, None), range_exclude=(False,False),
@@ -259,7 +260,8 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
 
         Returns
         ----------
-        None
+        int
+            0 if value was set, 1 otherwise
         
         """
 
@@ -270,7 +272,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                            '{}. Input will be ignored.'
                            .format(param, type_.__name__))
             rpars.setHaltingLevel(haltingOnFail)
-            return
+            return 1
         outOfRange = (False, False)
         if range_[0] is not None and (v < range_[0] or 
                                       (range_exclude[0] and v == range_[0])):
@@ -299,7 +301,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
             logger.warning('PARAMETERS file: {}: Value {} is {}. Input will '
                            'be ignored.'.format(param, v, outOfRangeStr))
             rpars.setHaltingLevel(haltingOnFail)
-            return
+            return 1
         else:
             for i in range(0,2):
                 if outOfRange[i]:
@@ -329,7 +331,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
         if not varname:
             varname = param
         setattr(rp, varname, v)
-        return
+        return 0
 
     loglevel = logger.level
     if silent:
@@ -411,7 +413,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
         elif param == 'SYMMETRY_EPS':
             r = setNumericalParameter(rpars, param, llist[0], 
                                       range_ = (1e-10, None))
-            if r and rpars.SYMMETRY_EPS > 1.0:
+            if r == 0 and rpars.SYMMETRY_EPS > 1.0:
                 logger.warning('PARAMETERS file: SYMMETRY_EPS: Given '
                     'value is greater than one Ångström. This is a '
                     'very loose constraint and might lead to '

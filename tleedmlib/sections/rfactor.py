@@ -21,13 +21,12 @@ logger = logging.getLogger("tleedm.rfactor")
 
 def rfactor(sl, rp, index):
     """Runs the r-factor calculation for either the reference calculation 
-    (index 11) or the superpos (index 12). Returns 0 when finishing without 
-    errors, or an error message otherwise."""
+    (index 11) or the superpos (index 12)."""
     if int((rp.THEO_ENERGIES[1]-rp.THEO_ENERGIES[0]) 
                    / rp.THEO_ENERGIES[2]) + 1 < 2:
         logger.info("Only one theoretical energy found: Cannot calculate "
                      "a meaningful R-Factor. Stopping...")
-        return 0
+        return
     if index == 11:
         name = "refcalc"
     else:
@@ -53,7 +52,7 @@ def rfactor(sl, rp, index):
             logger.error("Cannot execute R-factor calculation: no stored "
                           "spectrum data and no "+fn+" file was "
                           "found.")
-            return("No spectrum data found")
+            raise RuntimeError("No spectrum data found")
         try:
             theobeams, theospec = readFdOut(readfile = path)
             if index == 11: 
@@ -76,7 +75,7 @@ def rfactor(sl, rp, index):
             logger.error("The list of beams read from IVBEAMS is not "
                 "equivalent to the list of beams in "+path+". R-Factor "
                 "calculation cannot proceed.")
-            return("Contradiction in beam sets")
+            raise ValueError("Contradiction in beam sets")
     if index == 11:
         theospec = rp.refcalc_fdout
     elif index == 12:
@@ -97,7 +96,7 @@ def rfactor(sl, rp, index):
     try:
         tldir = getTLEEDdir(home=rp.workdir, version=rp.TL_VERSION)
         if not tldir:
-            return("TensErLEED code not found.")
+            raise RuntimeError("TensErLEED code not found.")
         libpath = os.path.join(tldir,'lib')
         libname = [f for f in os.listdir(libpath) 
                       if f.startswith('rfacsb')][0]
@@ -114,32 +113,21 @@ def rfactor(sl, rp, index):
         logger.warning("SUPPRESS_EXECUTION parameter is on. R-factor "
             "calculation will not proceed. Stopping...")
         rp.setHaltingLevel(3)
-        return 0
+        return
     logger.info("Compiling fortran input files...")
     rfacname = "rfactor-"+rp.timestamp
     if rp.FORTRAN_COMP[0] == "":
-        if rp.getFortranComp() != 0:    #returns 0 on success
-            logger.error("No fortran compiler found, cancelling...")
-            return ("Fortran compile error")
+         rp.getFortranComp()
     try:
-        r=fortranCompile(rp.FORTRAN_COMP[0]+" -o rfacsb.o -c", 
+        fortranCompile(rp.FORTRAN_COMP[0]+" -o rfacsb.o -c", 
                             libname, rp.FORTRAN_COMP[1])
-        if r:
-            logger.error("Error compiling "+libname+", cancelling...")
-            return ("Fortran compile error")
-        r=fortranCompile(rp.FORTRAN_COMP[0]+" -o main.o -c", srcname,
+        fortranCompile(rp.FORTRAN_COMP[0]+" -o main.o -c", srcname,
                             rp.FORTRAN_COMP[1])
-        if r:
-            logger.error("Error compiling "+srcname+", cancelling...")
-            return ("Fortran compile error")
-        r=fortranCompile(rp.FORTRAN_COMP[0]+" -o "+rfacname, "rfacsb.o "
+        fortranCompile(rp.FORTRAN_COMP[0]+" -o "+rfacname, "rfacsb.o "
                           "main.o", rp.FORTRAN_COMP[1])
-        if r:
-            logger.error("Error compiling fortran files, cancelling...")
-            return ("Fortran compile error")
         logger.debug("Compiled fortran files successfully")
     except:
-        logger.error("Error compiling fortran files: ")
+        logger.error("Error compiling fortran files: ", exc_info=True)
         raise
     rfaclogname = rfacname+".log"
     logger.info("Starting R-factor calculation...\n"
@@ -219,4 +207,4 @@ def rfactor(sl, rp, index):
     except:
         logger.warning("Failed to rename R-factor input file PARAM to "
                         "rfactor-PARAM")
-    return 0
+    return

@@ -231,20 +231,12 @@ def compileDelta(comptask):
         for (fname, oname) in [(srcname, "main.o"), 
                                (libname1, "lib.tleed.o"), 
                                (libname2, "lib.delta.o")]:
-            r = tl.leedbase.fortranCompile(comptask.fortran_comp[0]+" -o "
-                                +oname+" -c", fname, comptask.fortran_comp[1])
-            if r:
-                logger.error("Error compiling "+srcname)
-                return ("Fortran compile error in DeltaCompileTask "
-                        + comptask.foldername)
-        r=tl.leedbase.fortranCompile(comptask.fortran_comp[0]+" -o " 
-                            + comptask.exename
-                            +" main.o lib.tleed.o lib.delta.o",
-                            comptask.fortran_comp[1])
-        if r:
-            logger.error("Error compiling fortran files")
-            return ("Fortran compile error in DeltaCompileTask "
-                        + comptask.foldername)
+            tl.leedbase.fortranCompile(comptask.fortran_comp[0]+" -o "
+                            +oname+" -c", fname, comptask.fortran_comp[1])
+        tl.leedbase.fortranCompile(comptask.fortran_comp[0]+" -o " 
+                        + comptask.exename
+                        +" main.o lib.tleed.o lib.delta.o",
+                        comptask.fortran_comp[1])
     except:
         logger.error("Error compiling fortran files: ")
         return ("Fortran compile error in DeltaCompileTask "

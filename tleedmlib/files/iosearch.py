@@ -318,10 +318,7 @@ def generateSearchInput(sl, rp, steuOnly=False, cull=False):
 
     """
     # first generate list of SearchPar objects and figure out search parameters
-    r = rp.generateSearchPars(sl)
-    if r != 0:
-        logger.error("Error getting search parameters: {}".format(r))
-        raise
+    rp.generateSearchPars(sl)
 
     # if search population is undefined, calculate a default:
     if rp.SEARCH_POPULATION == 0:
