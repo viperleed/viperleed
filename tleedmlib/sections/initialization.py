@@ -31,7 +31,7 @@ logger = logging.getLogger("tleedm.initialization")
 
 
 def initialization(sl, rp, subdomain=False):
-    """Runs the initialization. Returns 0 on success."""
+    """Runs the initialization."""
     if not subdomain:
         # check for experimental beams:
         expbeamsname = ""
@@ -53,13 +53,8 @@ def initialization(sl, rp, subdomain=False):
     rp.initTheoEnergies()  # may be initialized based on exp. beams
 
     if (rp.DOMAINS or rp.domainParams) and not subdomain:
-        try:
-            r = init_domains(rp)
-        except:
-            raise
-        if r != 0:
-            return r
-        return 0
+        init_domains(rp)
+        return
 
     # check whether _PHASESHIFTS are present & consistent:
     newpsGen, newpsWrite = True, True
@@ -250,7 +245,7 @@ def initialization(sl, rp, subdomain=False):
     if rp.fileLoaded["IVBEAMS"] and not rp.ivbeams_sorted:
         rp.ivbeams = sortIVBEAMS(sl, rp)
         rp.ivbeams_sorted = True
-    return 0
+    return
 
 def init_domains(rp):
     """Runs an alternative initialization for the domain search. This will 
@@ -277,7 +272,7 @@ def init_domains(rp):
         logger.error("A domain search was defined, but less than two domains "
                      "are defined. Execution will stop.")
         rp.setHaltingLevel(3)
-        return 0
+        return
     checkFiles = ["POSCAR", "PARAMETERS", "VIBROCC", "_PHASESHIFTS"]
     home = os.getcwd()
     for (name, path) in rp.DOMAINS:
@@ -326,12 +321,13 @@ def init_domains(rp):
                                 logger.error("Error copying required file {}"
                                         "for domain {} from origin folder {}"
                                         .format(file, name, path))
-                                return "Error getting domain input files"
+                                raise RuntimeError("Error getting domain "
+                                                   "input files")
                     elif file != "_PHASESHIFTS":
                         logger.error("Required file {} for domain {} not "
                                      "found in origin folder {}"
                                      .format(file, name, path))
-                        return "Error getting domain input files"
+                        raise RuntimeError("Error getting domain input files")
         elif os.path.isfile(path):
             try:
                 tensorIndex = tl.leedbase.getMaxTensorIndex(target)
@@ -348,7 +344,7 @@ def init_domains(rp):
             except:
                 logger.error("Failed to unpack Tensors for domain {} from "
                              "file {}".format(name, path))
-                return "Error getting domain input files"
+                raise RuntimeError("Error getting domain input files")
             for file in (checkFiles + ["IVBEAMS"]):
                 if os.path.isfile(os.path.join(tensorDir, file)):
                     shutil.copy2(os.path.join(tensorDir, file),
@@ -357,7 +353,7 @@ def init_domains(rp):
                     logger.error("Required file {} for domain {} not found in "
                                  "Tensor directory {}".format(file, name, 
                                                               tensorDir))
-                    return "Error getting domain input files"
+                    raise RuntimeError("Error getting domain input files")
             dp.tensorDir = tensorDir
         try:
             # initialize for that domain
@@ -408,7 +404,7 @@ def init_domains(rp):
         finally:
             os.chdir(home)
     if len(rp.domainParams) < len(rp.DOMAINS):
-        return "Failed to read domain parameters"
+        raise RuntimeError("Failed to read domain parameters")
     # check whether bulk unit cells match
     logger.info("Starting domain consistency check...")
     bulkuc0 = np.transpose(rp.domainParams[0].sl.bulkslab.ucell[:2,:2])
@@ -444,7 +440,7 @@ def init_domains(rp):
                         "Domain search cannot proceed. Execution will stop."
                         .format(rp.domainParams[0].name, dp.name))
             rp.setHaltingLevel(3)
-            return 0
+            return
     logger.debug("Domain bulk unit cells are compatible.")
     uc0 = np.transpose(rp.domainParams[0].sl.ucell[:2,:2])
     largestDomain = rp.domainParams[0]
@@ -474,7 +470,7 @@ def init_domains(rp):
                         "matching supercells.".format(dp.name, 
                                                       largestDomain.name))
                     rp.setHaltingLevel(3)
-                    return 0
+                    return
                 else:
                     supercellRequired.append(dp)
                     oldslab = dp.sl
@@ -605,7 +601,7 @@ def init_domains(rp):
                 "a domain search can be executed. Please either manually "
                 "execute appropriate reference calculations, or set RUN = 4")
         rp.setHaltingLevel(3)
-        return 0
+        return
 
     while 4 in rp.RUN:
         if rr:
@@ -613,4 +609,4 @@ def init_domains(rp):
         rp.RUN.insert(rp.RUN.index(4), 2)
         rp.RUN.insert(rp.RUN.index(4), 3)
         rp.RUN.remove(4)
-    return 0
+    return

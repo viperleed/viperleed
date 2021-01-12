@@ -154,7 +154,7 @@ def findBulkSymmetry(sl, rp):
     if len(rotsfound) > 0:
         logger.debug("Bulk glide planes found: " + 
                       ", ".join([str(gl.par) for gl in glidesfound]))
-    return 0
+    return
 
 def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
     """Reduces the unit cell if necessary and finds the plane group of the
@@ -1200,7 +1200,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
                 at.cartpos = psum / pn
     sl.collapseCartesianCoordinates(updateOrigin=True)
     if not rotcell:
-        return 0
+        return
     # after everything else is done, rotate unit cell (in x,y without
     #   changing fractional coordinates) if necessary:
     # because TensErLEED is faster if mirror planes are along x, y, or x+y
@@ -1242,14 +1242,15 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
                 rp.PHI += np.degrees(ang)
                 modifyPARAMETERS(rp, "BEAM_INCIDENCE",
                                  "{:.3f} {:.3f}".format(rp.THETA, rp.PHI))
-    return 0
+    return
 
 def getSymBaseSymmetry(sl, rp):
     """Runs the symmetry search for the symbaseslab, then transfers atom 
     linking to translationally equivalent atoms in the extended slab."""
     if sl.symbaseslab is None:
         logger.error("getSymBaseSymmetry: No symmetry base slab defined.")
-        return 1
+        raise RuntimeError("getSymBaseSymmetry called without symmetry base "
+                           "slab.")
     if sl.symbaseslab.planegroup == "unknown":
         findSymmetry(sl.symbaseslab, rp, forceFindOri = True)
         enforceSymmetry(sl.symbaseslab, rp, rotcell = False)

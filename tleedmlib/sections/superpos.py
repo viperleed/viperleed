@@ -24,8 +24,7 @@ from tleedmlib.files.iorefcalc import readFdOut
 logger = logging.getLogger("tleedm.superpos")
 
 def superpos(sl, rp, subdomain=False):
-    """Runs the superpos calculation. Returns 0 when finishing without 
-    errors, or an error message otherwise."""
+    """Runs the superpos calculation."""
     # check whether there is anything to evaluate
     if rp.searchResultConfig != None:
         config = rp.searchResultConfig[0]
@@ -39,66 +38,57 @@ def superpos(sl, rp, subdomain=False):
             except:
                 logger.error("Superpos: Error reading SD.TL")
                 rp.setHaltingLevel(2)
-                return 0
+                return
         elif os.path.isfile(os.path.join("OUT","SD.TL")):
             try:
                 sdtl = readSDTL_end(filename = os.path.join("OUT", "SD.TL"))
             except:
                 logger.error("Superpos: Error reading SD.TL")
                 rp.setHaltingLevel(2)
-                return 0
+                return
         else:
             logger.error("Superpos: Found no stores results from recent "
                           "search and no SD.TL file. Cancelling...")
             rp.setHaltingLevel(2)
-            return 0
+            return
         if sdtl == None:
             logger.error("Superpos: No data found in SD.TL")
             rp.setHaltingLevel(2)
-            return 0
+            return
         sdtlContent = readSDTL_blocks("\n".join(sdtl), 
                                       whichR = rp.SEARCH_BEAMS)
         if not sdtlContent:
             logger.error("Superpos: No data found in SD.TL")
             rp.setHaltingLevel(2)
-            return 0
+            return
         try:
             config = sdtlContent[0][2][0]  # first block, config, best only
         except:
             logger.error("Superpos: Failed to read best "
                           "configuration from SD.TL")
             rp.setHaltingLevel(2)
-            return 0
+            return
     
     if rp.domainParams:
-        try:
-            r = superpos_domains(rp, config)
-        except:
-            raise
-        if r != 0:
-            return r
-        return 0
+        superpos_domains(rp, config)
+        return
     
     # read DISPLACEMENTS block and fetch deltas
     if not rp.disp_block_read:
         readDISPLACEMENTS_block(rp, sl, rp.disp_blocks[rp.search_index])
         rp.disp_block_read = True
     if not any([ind in rp.runHistory for ind in [2, 3]]):
-        try:
-            r = getDeltas(rp.TENSOR_INDEX, required=True)
-        except:
-            raise
-        if r != 0:
-            return r
+        getDeltas(rp.TENSOR_INDEX, required=True)
     # make sure search parameters are initialized
     if not 3 in rp.runHistory and not subdomain:
         logger.debug("Superpos calculation executed without search. "
                      "Search parameters will be inferred from input files.")
-        r = rp.generateSearchPars(sl)
-        if r != 0:
+        try:
+            rp.generateSearchPars(sl)
+        except:
             logger.error("Error getting search parameters. Superpos will "
                           "stop.")
-            return 0
+            return
     # now we have configuration and parameters, create input:
     contrin = ""
     try:
@@ -108,28 +98,26 @@ def superpos(sl, rp, subdomain=False):
         logger.error("Error getting input data for Superpos: ", 
                       exc_info = True)
         rp.setHaltingLevel(2)
-        return 0
+        return
     if contrin == "":
         logger.error("Error getting input data for Superpos: "
                      "writeSuperposInput returned empty. Cancelling "
                      "Superpos...")
         rp.setHaltingLevel(2)
-        return 0
+        return
     # if execution is suppressed, stop here:
     if rp.SUPPRESS_EXECUTION:
         logger.warning("SUPPRESS_EXECUTION parameter is on. Superpos "
             "calculation will not proceed. Stopping...")
         rp.setHaltingLevel(3)
-        return 0
+        return
     if rp.FORTRAN_COMP[0] == "":
-        if rp.getFortranComp() != 0:    #returns 0 on success
-            logger.error("No fortran compiler found, cancelling...")
-            return ("Fortran compile error")
+        rp.getFortranComp()
     # get fortran files
     try:
         tldir = getTLEEDdir(home=rp.workdir, version=rp.TL_VERSION)
         if not tldir:
-            return("TensErLEED code not found.")
+            raise RuntimeError("TensErLEED code not found.")
         srcpath = os.path.join(tldir,'src')
         srcname = [f for f in os.listdir(srcpath) 
                       if f.startswith('superpos')][0]
@@ -147,14 +135,10 @@ def superpos(sl, rp, subdomain=False):
     sposname = "superpos-"+rp.timestamp
     logger.info("Compiling fortran input files...")
     try:
-        r=fortranCompile(rp.FORTRAN_COMP[0]+" -o", sposname+" "
+        fortranCompile(rp.FORTRAN_COMP[0]+" -o", sposname+" "
                           + srcname + " " + libname, rp.FORTRAN_COMP[1])
-        if r:
-            logger.error("Error compiling fortran files, cancelling...")
-            return ("Fortran compile error")
-        logger.debug("Compiled fortran files successfully")
     except:
-        logger.error("Error compiling fortran files: ")
+        logger.error("Error compiling fortran files: ", exc_info=True)
         raise
     logger.info("Starting Superpos calculation...")
     outname = "superpos-spec.out"
@@ -194,7 +178,7 @@ def superpos(sl, rp, subdomain=False):
         os.rename('DOC','superpos-DOC')
     except:
         pass
-    return 0
+    return
 
 def superpos_domains(rp, config):
     """Runs the normal superpos function for each subdomain, collects the 
@@ -203,11 +187,12 @@ def superpos_domains(rp, config):
     if not 3 in rp.runHistory:
         logger.debug("Superpos calculation executed without search. "
                      "Search parameters will be inferred from input files.")
-        r = rp.generateSearchPars(None)
-        if r != 0:
+        try:
+            rp.generateSearchPars(None)
+        except:
             logger.error("Error getting search parameters. Superpos will "
                           "stop.")
-            return 0
+            return
     home = os.getcwd()
     percentages = []
     for (i, dp) in enumerate(rp.domainParams):
@@ -218,15 +203,13 @@ def superpos_domains(rp, config):
                     .format(dp.name))
         try:
             os.chdir(dp.workdir)
-            r = superpos(dp.sl, dp.rp, subdomain=True)
+            superpos(dp.sl, dp.rp, subdomain=True)
         except:
             logger.error("Error while running superpos calculation for domain "
                          "{}".format(dp.name))
             raise
         finally:
             os.chdir(home)
-        if r != 0:
-            return r
     logger.info("Getting weighted average over domain beams...")
     rp.theobeams["superpos"] = averageBeams([dp.rp.theobeams["superpos"] 
                             for dp in rp.domainParams], weights=percentages)
@@ -246,4 +229,4 @@ def superpos_domains(rp, config):
     except:
         logger.error("Error writing averaged superpos-spec.out for R-factor "
                      "calculation.", exc_info = rp.LOG_DEBUG)
-    return 0
+    return

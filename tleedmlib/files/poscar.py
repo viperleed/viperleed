@@ -265,4 +265,4 @@ def writeCONTCAR(sl, filename='CONTCAR', reorder=False, comments='none',
         raise
     if not silent:
         logger.info("Wrote to "+filename+" successfully")
-    return 0
+    return

@@ -23,16 +23,10 @@ import tleedmlib.files.iorefcalc as io
 logger = logging.getLogger("tleedm.refcalc")
 
 def refcalc(sl, rp, subdomain = False):
-    """Runs the reference calculation. Returns 0 when finishing without 
-    errors, or an error message otherwise."""
+    """Runs the reference calculation."""
     if rp.domainParams:
-        try:
-            r = refcalc_domains(rp)
-        except:
-            raise
-        if r != 0:
-            return r
-        return 0
+        refcalc_domains(rp)
+        return
     sl.getCartesianCoordinates(updateOrigin=True)
     sl.updateLayerCoordinates()
     try:
@@ -81,7 +75,7 @@ def refcalc(sl, rp, subdomain = False):
     try:
         tldir = getTLEEDdir(home=rp.workdir, version=rp.TL_VERSION)
         if not tldir:
-            return("TensErLEED code not found.")
+            raise RuntimeError("TensErLEED code not found.")
         libpath = os.path.join(tldir,'lib')
         libname = [f for f in os.listdir(libpath) 
                       if f.startswith('lib.tleed')][0]
@@ -99,37 +93,27 @@ def refcalc(sl, rp, subdomain = False):
         logger.warning("SUPPRESS_EXECUTION parameter is on. Reference "
             "calculation will not proceed. Stopping...")
         rp.setHaltingLevel(3)
-        return 0
+        return
     logger.info("Compiling fortran input files...")
     rcname = "refcalc-"+rp.timestamp
     if rp.FORTRAN_COMP[0] == "":
-        if rp.getFortranComp() != 0:    #returns 0 on success
+        try:
+            rp.getFortranComp()
+        except:
             logger.error("No fortran compiler found, cancelling...")
-            return ("Fortran compile error")
+            raise RuntimeError("Fortran compile error")
     try:
-        r=fortranCompile(rp.FORTRAN_COMP[0]+" -o muftin.o -c", 
+        fortranCompile(rp.FORTRAN_COMP[0]+" -o muftin.o -c", 
                          "muftin.f", rp.FORTRAN_COMP[1])
-        if r:
-            logger.error("Error compiling muftin.f, cancelling...")
-            return ("Fortran compile error")
-        r=fortranCompile(rp.FORTRAN_COMP[0]+" -o lib.tleed.o -c", 
+        fortranCompile(rp.FORTRAN_COMP[0]+" -o lib.tleed.o -c", 
                                      libname, rp.FORTRAN_COMP[1])
-        if r:
-            logger.error("Error compiling "+libname+", cancelling...")
-            return ("Fortran compile error")
-        r=fortranCompile(rp.FORTRAN_COMP[0]+" -o main.o -c", srcname,
+        fortranCompile(rp.FORTRAN_COMP[0]+" -o main.o -c", srcname,
                             rp.FORTRAN_COMP[1])
-        if r:
-            logger.error("Error compiling "+srcname+", cancelling...")
-            return ("Fortran compile error")
-        r=fortranCompile(rp.FORTRAN_COMP[0]+" -o "+rcname, "muftin.o "
+        fortranCompile(rp.FORTRAN_COMP[0]+" -o "+rcname, "muftin.o "
                           "lib.tleed.o main.o", rp.FORTRAN_COMP[1])
-        if r:
-            logger.error("Error compiling fortran files, cancelling...")
-            return ("Fortran compile error")
         logger.debug("Compiled fortran files successfully")
     except:
-        logger.error("Error compiling fortran files: ")
+        logger.error("Error compiling fortran files: ", exc_info=True)
         raise
     rclogname = rcname+".log"
     logger.info("Starting reference calculation...\n"
@@ -240,7 +224,7 @@ def refcalc(sl, rp, subdomain = False):
                     "directory. This may cause the delta file to "
                     "incorrectly be labelled as belonging with the new "
                     "set of tensors.")
-    return 0
+    return
 
 def runDomainRefcalc(dp):
     """Runs the reference calculation for one domain, based on the 
@@ -249,34 +233,31 @@ def runDomainRefcalc(dp):
     home = os.getcwd()
     try:
         os.chdir(dp.workdir)
-        r = refcalc(dp.sl, dp.rp, subdomain = True)
+        refcalc(dp.sl, dp.rp, subdomain = True)
     except:
         logger.error("Exception during reference calculation for domain {}: "
                      .format(dp.name), exc_info = True)
-        return ("Exception during reference calculation for domain {}"
-                .format(dp.name))
+        raise
     finally:
         os.chdir(home)
-    if r != 0:
-        return r
-    return 0
+    return
 
 def refcalc_domains(rp):
     """Runs reference calculations for the domains that require them."""
     rr = [dp for dp in rp.domainParams if dp.refcalcRequired]
     if not rr:
         logger.info("Found no domain which requires a reference calculation.")
-        return 0
+        return
     # make sure there's a compiler ready, and we know the number of cores:
     if rp.FORTRAN_COMP[0] == "":
-        if rp.getFortranComp() != 0:    #returns 0 on success
+        try:
+            rp.getFortranComp()
+        except:
             logger.error("No fortran compiler found, cancelling...")
-            return ("No Fortran compiler")
+            raise
     for dp in rp.domainParams:
         dp.rp.FORTRAN_COMP = rp.FORTRAN_COMP
-    r = rp.updateCores()  # if number of cores is not defined, try to find it
-    if r != 0:
-        return r
+    rp.updateCores()  # if number of cores is not defined, try to find it
     rr = [dp for dp in rp.domainParams if dp.refcalcRequired]
     logger.info("Running reference calculations in subfolders for domains: "
                 +", ".join([d.name for d in rr]))
@@ -299,23 +280,16 @@ def refcalc_domains(rp):
     #     logging.getLogger("tleedm.files.beams").setLevel(loglevel)
     # for v in [v for v in r if v != 0]:
     #     logger.error(v)
-    #     return ("Error during domain reference calculations")
+    #     raise RuntimeError("Error during domain reference calculations")
 
     for dp in rr:
         logger.info("Starting reference calculation for domain {}"
                     .format(dp.name))
-        try:
-            r = runDomainRefcalc(dp)
-        except:
-            raise
-        if r != 0:
-            logger.error(r)
-            return("Error during reference calculation for domain {}"
-                   .format(dp.name))
+        runDomainRefcalc(dp)
     logger.info("Domain reference calculations finished.")
     
     if len(rr) < len(rp.domainParams):
-        return 0
+        return
     # if refcalcs were done for all domains, get averaged beams
     if 3 in rp.runHistory and rp.searchResultConfig:
         weights = [rp.searchResultConfig[0][i][0] 
@@ -347,4 +321,4 @@ def refcalc_domains(rp):
     except:
         logger.error("Error writing averaged refcalc-fd.out for R-factor "
                      "calculation.", exc_info = rp.LOG_DEBUG)
-    return 0
+    return

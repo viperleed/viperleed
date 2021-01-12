@@ -29,7 +29,7 @@ def writePatternInfo(sl, rp, filename="PatternInfo.tlm"):
     output += "surfGroup = "+pgstring+"\n"
     if sl.bulkslab is None:
         logger.error("PatternInfo.tlm: bulk slab has not been initialized.")
-        return 1
+        raise RuntimeError("writePatternInfo called without bulk slab.")
     output += "bulkGroup = "+sl.bulkslab.foundplanegroup+"\n"
     output += "bulk3Dsym = "+sl.bulkslab.getBulk3Dstr()
     #write output
@@ -40,4 +40,4 @@ def writePatternInfo(sl, rp, filename="PatternInfo.tlm"):
         logger.error("Failed to write "+filename)
         raise
     logger.debug("Wrote to "+filename+" successfully")
-    return 0
+    return

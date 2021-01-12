@@ -233,4 +233,4 @@ def writePHASESHIFTS(firstline, phaseshifts, filename='_PHASESHIFTS'):
         logger.error("Exception while writing _PHASESHIFTS file: ", 
                       exc_info=True)
         raise
-    return 0
+    return

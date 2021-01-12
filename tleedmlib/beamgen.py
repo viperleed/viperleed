@@ -90,4 +90,4 @@ def runBeamGen(sl, rp, beamgensource = os.path.join('source','beamgen3.out'),
                       "NBLIST to _BEAMLIST")
         raise
     logger.debug("Wrote to _BEAMLIST successfully.")
-    return 0
+    return

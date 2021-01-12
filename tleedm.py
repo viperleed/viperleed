@@ -57,8 +57,7 @@ class CustomLogFormatter(logging.Formatter):
 
 
 def runSection(index, sl, rp):
-    """Runs a specific part of the program. Returns 0 when finishing without
-    errors, or an error message otherwise."""
+    """Runs a specific part of the program."""
     sectionNames = {0: "INITIALIZATION",
                     1: "REFERENCE CALCULATION",
                     2: "DELTA-AMPLITUDES",
@@ -180,7 +179,7 @@ def runSection(index, sl, rp):
                         logging.critical("_PHASESHIFT file generation is only "
                             "supported during initialization. Stopping "
                             "execution...")
-                        return ("Inconsistent _PHASESHIFT file")
+                        raise RuntimeError("Inconsistent _PHASESHIFT file")
                     elif newpsWrite:
                         logger.warning("Writing a new _PHASESHIFT file is "
                             "only supported during initialization. The "
@@ -195,42 +194,40 @@ def runSection(index, sl, rp):
                     raise
             elif filename == "DISPLACEMENTS":
                 try:
-                    r = readDISPLACEMENTS(rp)
+                    readDISPLACEMENTS(rp)
                     rp.fileLoaded["DISPLACEMENTS"] = True
                 except:
                     logger.error("Error while reading required file "
                                   "DISPLACEMENTS")
                     raise
-                if r != 0:
-                    return ("Error while reading DISPLACEMENTS file")
             if not rp.fileLoaded[filename] and not ignoreError:
                 # and if that didn't work, stop:
                 logger.error("Step '"+sectionNames[index]+"' requires file "
                               +filename+". Stopping execution...")
-                return ("File not found or file loading error: "+filename)
+                raise RuntimeError("File not found or file loading error: "
+                                   +filename)
         i += 1
-
-    r = 0
-    if index == 0:
-        sections.initialization(sl, rp)
-    elif index == 1:
-        r = sections.refcalc(sl, rp)
-    elif index in [11, 12]:
-        r = sections.rfactor(sl, rp, index)
-    elif index == 2:
-        r = sections.deltas(sl, rp)
-    elif index == 3:
-        r = sections.search(sl, rp)
-    elif index == 31:
-        r = sections.superpos(sl, rp)
-    if r != 0:
-        return r
-
+    try:
+        if index == 0:
+            sections.initialization(sl, rp)
+        elif index == 1:
+            sections.refcalc(sl, rp)
+        elif index in [11, 12]:
+            sections.rfactor(sl, rp, index)
+        elif index == 2:
+            sections.deltas(sl, rp)
+        elif index == 3:
+            sections.search(sl, rp)
+        elif index == 31:
+            sections.superpos(sl, rp)
+    except:
+        logger.error("Error in section {}".format(sectionNames[index]))
+        raise
     elapsedTimeStr = getElapsedTimeString(timer() - sectionStartTime)
     logger.info("Finishing section at " + time.strftime("%H:%M:%S",
                                                          time.localtime())
                  + ". Section took " + elapsedTimeStr + ".")
-    return 0
+    return
 
 def sortfiles(tensorIndex, delete_unzipped = False, tensors = True,
               deltas = True, path = ""):
@@ -505,6 +502,7 @@ def cleanup(manifest, rp = None):
     while logger.handlers:
         logger.removeHandler(logger.handlers[0])
     logging.shutdown()
+    return
 
 
 ###############################################
@@ -576,7 +574,7 @@ def main():
                 logger.error("Failed to copy POSCAR to POSCAR_user. Stopping "
                               "execution...")
                 cleanup(tmpmanifest)
-                return 1
+                return 2
 
     try:
         interpretPARAMETERS(rp, slab=sl)
@@ -659,11 +657,7 @@ def main():
                 logger.info("\nExecution repeats. Moving old output to "
                              "workhistory folder.")
                 moveoldruns(rp)
-            r = runSection(sec, sl, rp)
-            if r != 0:
-                logger.error("Error in tleedm execution: "+str(r))
-                cleanup(rp.manifest, rp)
-                return 1
+            runSection(sec, sl, rp)
             if domains and sl is None:
                 sl = rp.pseudoSlab
             if rp.domainParams:

@@ -308,7 +308,8 @@ def fortranCompile(pre="", filename="", post="",
         logger.error("Error compiling "+filename)
         raise
     if r.returncode != 0:
-        raise RuntimeError(r.returncode)
+        raise RuntimeError("Fortran compiler subprocess returned {}"
+                           .format(r.returncode))
     return None
     
 def writeWoodsNotation(ucell):

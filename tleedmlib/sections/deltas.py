@@ -70,8 +70,7 @@ def monitoredPool(rp, poolsize, function, tasks):
 
     Returns
     -------
-    0 or string
-        0 on success or termination by rp.STOP, error message otherwise
+    None
 
     """
 
@@ -79,7 +78,8 @@ def monitoredPool(rp, poolsize, function, tasks):
         nonlocal pool
         if r != 0:
             pool.terminate()
-        return r
+        raise RuntimeError("Error in parallel execution of {}"
+                               .format(function.__name__))
 
     pool = multiprocessing.Pool(poolsize)
     results = []
@@ -91,19 +91,17 @@ def monitoredPool(rp, poolsize, function, tasks):
         updatePARAMETERS(rp)
         if rp.STOP:
             pool.terminate()
-            return 0
+            return
         time.sleep(1)
     pool.join()
     for r in results:
-        try:
-            v = r.get(timeout=1)
-        except TimeoutError:
-            return ("Error getting multiprocessing return values")
-        if v != 0:
+        v = r.get(timeout=1)
+        if v:
             logger.error(v)
-            return v
-    return 0
-    
+            raise RuntimeError("Error in parallel execution of {}"
+                               .format(function.__name__))
+    return
+
 
 def runDelta(runtask):
     """Function meant to be executed by parallelized workers. Executes a 
@@ -186,7 +184,7 @@ def runDelta(runtask):
         shutil.rmtree(workfolder)
     except:
         logger.warning("Error deleting folder " + workname)
-    return 0
+    return ""
 
 def compileDelta(comptask):
     """Function meant to be executed by parallelized workers. Executes a 
@@ -252,20 +250,15 @@ def compileDelta(comptask):
         return ("Fortran compile error in DeltaCompileTask "
                     + comptask.foldername)
     os.chdir(home)
-    return 0
+    return ""
 
 def deltas(sl, rp, subdomain=False):
-    """Runs the delta-amplitudes calculation. Returns 0 when finishing without 
-    errors, or an error message otherwise."""
+    """Runs the delta-amplitudes calculation."""
     
     if rp.domainParams:
-        try:
-            r = deltas_domains(rp)
-        except:
-            raise
-        if r != 0:
-            return r
-        return 0
+        deltas_domains(rp)
+        return
+
     # read DISPLACEMENTS block
     if not rp.disp_block_read:
         readDISPLACEMENTS_block(rp, sl, rp.disp_blocks[rp.search_index])
@@ -273,7 +266,7 @@ def deltas(sl, rp, subdomain=False):
     # get Tensors
     if not os.path.isdir(os.path.join(".","Tensors")):
         logger.error("No Tensors directory found.")
-        return("Tensors not found")
+        raise RuntimeError("Tensors not found")
     try:
         tl.leedbase.getTensors(rp.TENSOR_INDEX)
     except:
@@ -282,9 +275,7 @@ def deltas(sl, rp, subdomain=False):
         dn = "Tensors_"+str(rp.TENSOR_INDEX).zfill(3)
         logger.debug("Running without reference calculation, checking "
             "input files in "+dn+" to determine original configuration.")
-        r = tl.leedbase.getTensorOriStates(sl, os.path.join(".","Tensors",dn))
-        if r != 0:
-            return r
+        tl.leedbase.getTensorOriStates(sl, os.path.join(".","Tensors",dn))
         sl.restoreOriState(keepDisp=True)
     # if there are old deltas, fetch them
     try:
@@ -382,9 +373,10 @@ def deltas(sl, rp, subdomain=False):
             totalocc = 0.
             for l in occlists:
                 if len(l) <= i:
-                    logger.error("Inconsistent occupancy lists for atom "
-                                  +str(at.oriN))
-                    return ("Inconsistent input")
+                    logger.error("Inconsistent occupancy lists for {} "
+                                 .format(at))
+                    raise ValueError("Inconsistent occupancy lists for {}"
+                                     .format(at))
                 else:
                     totalocc += l[i]
             if totalocc < 1 - 1e-4:
@@ -415,7 +407,7 @@ def deltas(sl, rp, subdomain=False):
         logger.info("All Delta files specified in DISPLACEMENTS are "
                 "already present in the Deltas.zip file. Skipping new "
                 "calculations.")
-        return 0
+        return
     elif countExisting > 0:
         logger.info("{} of {} required Delta-files are already present. "
                      "Generating remaining {} files..."
@@ -497,7 +489,7 @@ def deltas(sl, rp, subdomain=False):
                                 df.split("_")[-2].lower() == el.lower()][0])
         if len(at.deltasGenerated) != len(copydel):
             logger.error("Failed to sort delta files for {}".format(at))
-            return ("Inconsistent delta files")
+            raise RuntimeError("Inconsistent delta files")
 
     # write delta-input file
     dinput = ("""# ABOUT THIS FILE:
@@ -525,18 +517,20 @@ def deltas(sl, rp, subdomain=False):
     # if execution is suppressed, stop here
     if rp.SUPPRESS_EXECUTION and not subdomain:
         rp.setHaltingLevel(3)
-        return 0
+        return
     
     # make sure there's a compiler ready:
     if rp.FORTRAN_COMP[0] == "" and not subdomain:
-        if rp.getFortranComp() != 0:    #returns 0 on success
+        try:
+            rp.getFortranComp()
+        except:
             logger.error("No fortran compiler found, "
                           "cancelling...")
-            return ("No Fortran compiler")
+            raise RuntimeError("No Fortran compiler")
     tlp = tl.leedbase.getTLEEDdir(os.path.abspath(rp.workdir),
                                                version = rp.TL_VERSION)
     if not tlp:
-        return("TensErLEED code not found.")
+        raise RuntimeError("TensErLEED code not found.")
     for ct in deltaCompTasks:
         ct.fortran_comp = rp.FORTRAN_COMP
         ct.sourcedir = tlp
@@ -547,28 +541,20 @@ def deltas(sl, rp, subdomain=False):
             rp.manifest.append("Deltas")
         return (deltaCompTasks, deltaRunTasks)
 
-    # if number of cores is not defined, try to find it
-    r = rp.updateCores()
-    if r != 0:
-        return r
-
+    rp.updateCores()
     # compile files
     logger.info("Compiling fortran files...")
     poolsize = min(len(deltaCompTasks), rp.N_CORES)
-    r = monitoredPool(rp, poolsize, compileDelta, deltaCompTasks)
-    if r:
-        return("Fortran compile error")
+    monitoredPool(rp, poolsize, compileDelta, deltaCompTasks)
     if rp.STOP:
-        return 0
+        return
     
     # run executions
     logger.info("Running delta calculations...")
     poolsize = min(len(deltaRunTasks), rp.N_CORES)
-    r = monitoredPool(rp, poolsize, runDelta, deltaRunTasks)
-    if r:
-        return("Error during delta execution")
+    monitoredPool(rp, poolsize, runDelta, deltaRunTasks)
     if rp.STOP:
-        return 0
+        return
     logger.info("Delta calculations finished.")
     
     # clean up
@@ -579,7 +565,7 @@ def deltas(sl, rp, subdomain=False):
             logger.warning("Error deleting delta compile folder "
                             + ct.foldername)
     rp.manifest.append("Deltas")
-    return 0
+    return
 
 def deltas_domains(rp):
     """Define and run delta calculations for all domains."""
@@ -599,49 +585,45 @@ def deltas_domains(rp):
             raise
         finally:
             os.chdir(home)
-        if type(r) == str:
-            logger.error("Error while creating delta input for domain {}"
-                         .format(dp.name))
-            return r
-        elif r != 0:    # if no deltas need to be calculated, 0 is returned
+        if type(r) == tuple:  # if no deltas need to be calculated, 
+                                #   returns None
             deltaCompTasks.extend(r[0])
             deltaRunTasks.extend(r[1])
+        else:
+            raise RuntimeError("Unknown error while creating delta input for "
+                               "domain {}".format(dp.name))
     
     # if execution is suppressed, stop here
     if rp.SUPPRESS_EXECUTION:
         rp.setHaltingLevel(3)
-        return 0
+        return
     
     # make sure there's a compiler ready, and we know the number of cores:
     if rp.FORTRAN_COMP[0] == "":
-        if rp.getFortranComp() != 0:    #returns 0 on success
+        try:
+            rp.getFortranComp()
+        except:
             logger.error("No fortran compiler found, cancelling...")
-            return ("No Fortran compiler")
+            raise RuntimeError("No Fortran compiler")
     for ct in deltaCompTasks:
         ct.fortran_comp = rp.FORTRAN_COMP
-    r = rp.updateCores()  # if number of cores is not defined, try to find it
-    if r != 0:
-        return r
+    rp.updateCores()  # if number of cores is not defined, try to find it
 
     # compile files
     if len(deltaCompTasks) > 0:
         logger.info("Compiling fortran files...")
         poolsize = min(len(deltaCompTasks), rp.N_CORES)
-        r = monitoredPool(rp, poolsize, compileDelta, deltaCompTasks)
-        if r:
-            return("Fortran compile error")
+        monitoredPool(rp, poolsize, compileDelta, deltaCompTasks)
         if rp.STOP:
-            return 0
+            return
 
     # run executions
     if len(deltaRunTasks) > 0:
         logger.info("Running delta calculations...")
         poolsize = min(len(deltaRunTasks), rp.N_CORES)
-        r = monitoredPool(rp, poolsize, runDelta, deltaRunTasks)
-        if r:
-            return("Error during delta execution")
+        monitoredPool(rp, poolsize, runDelta, deltaRunTasks)
         if rp.STOP:
-            return 0
+            return
         logger.info("Delta calculations finished.")
 
     # clean up
@@ -653,4 +635,4 @@ def deltas_domains(rp):
             logger.warning("Error deleting delta compile folder "
                             + os.path.relpath(d))
     
-    return 0
+    return

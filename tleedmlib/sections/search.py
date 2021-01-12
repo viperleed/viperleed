@@ -487,36 +487,20 @@ def search(sl, rp):
     try:
         fortranCompile(fcomp[0]+" -o lib.search.o -c", 
                         libname, fcomp[1])
-    except:
-        logger.error("Error compiling "+libname+", cancelling...")
-        raise RuntimeError("Fortran compile error")
-    if hashname:
-        try:
+        if hashname:
             fortranCompile(fcomp[0]+" -c", hashname, fcomp[1])
-        except:
-            logger.error("Error compiling "+hashname+", cancelling...")
-            raise RuntimeError("Fortran compile error")
-    try:
         fortranCompile(fcomp[0]+" -o restrict.o -c", 
                         "restrict.f", fcomp[1])
-    except:
-        logger.error("Error compiling restrict.f, cancelling...")
-        raise RuntimeError("Fortran compile error")
-    try:
         fortranCompile(fcomp[0]+" -o search.o -c -fixed", srcname,
                         fcomp[1])
-    except:
-        logger.error("Error compiling "+srcname+", cancelling...")
-        raise RuntimeError("Fortran compile error")
-    # combine
-    to_link = "search.o random_.o lib.search.o restrict.o"
-    if hashname:
-        to_link += " intarr_hashing.o"
-    try:
+        # combine
+        to_link = "search.o random_.o lib.search.o restrict.o"
+        if hashname:
+            to_link += " intarr_hashing.o"
         fortranCompile(fcomp[0]+" -o "+ searchname, to_link, fcomp[1])
     except:
-        logger.error("Error compiling fortran files, cancelling...")
-        raise RuntimeError("Fortran compile error")
+        logger.error("Error compiling fortran files: ", exc_info=True)
+        raise
     logger.debug("Compiled fortran files successfully")
     if rp.LOG_SEARCH:
         searchlogname = searchname+".log"

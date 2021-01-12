@@ -174,7 +174,7 @@ def readPARAMETERS(filename='PARAMETERS'):
     
 def interpretPARAMETERS(rpars, slab=None, silent=False):
     """Interprets the string values in an Rparams object, read previously by 
-    readPARAMETERS, to fill the parameter variables. Returns 0 on success."""
+    readPARAMETERS, to fill the parameter variables."""
     
     def setBoolParameter(rp, param, value, varname=None,
                          addAllowedValues = {False: [], True: []},
@@ -201,7 +201,8 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
 
         Returns
         ----------
-        0 if the parameter was set, 1 otherwise.
+        None
+        
         """
         s = value.lower()
         allowedValues = {False: ['false', 'f'], True: ['true', 't']}
@@ -214,11 +215,11 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
             logger.warning('PARAMETERS file: {}: Could not interpret given '
                            'value. Input will be ignored.'.format(param))
             rpars.setHaltingLevel(haltingOnFail)
-            return 1
+            return
         if not varname:
             varname = param
         setattr(rp, varname, v)
-        return 0
+        return
     
     def setNumericalParameter(rp, param, value, varname=None, type_=float, 
                              range_=(None, None), range_exclude=(False,False),
@@ -258,7 +259,8 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
 
         Returns
         ----------
-        0 if the parameter was set, 1 otherwise.
+        None
+        
         """
 
         try:
@@ -268,7 +270,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                            '{}. Input will be ignored.'
                            .format(param, type_.__name__))
             rpars.setHaltingLevel(haltingOnFail)
-            return 1
+            return
         outOfRange = (False, False)
         if range_[0] is not None and (v < range_[0] or 
                                       (range_exclude[0] and v == range_[0])):
@@ -297,7 +299,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
             logger.warning('PARAMETERS file: {}: Value {} is {}. Input will '
                            'be ignored.'.format(param, v, outOfRangeStr))
             rpars.setHaltingLevel(haltingOnFail)
-            return 1
+            return
         else:
             for i in range(0,2):
                 if outOfRange[i]:
@@ -327,7 +329,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
         if not varname:
             varname = param
         setattr(rp, varname, v)
-        return 0
+        return
 
     loglevel = logger.level
     if silent:
@@ -1122,7 +1124,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
             setTo = setTo.rstrip()
             rpars.V0_REAL = setTo
     logger.setLevel(loglevel)
-    return 0
+    return
 
 def modifyPARAMETERS(rp, modpar, new="", comment="", path="", 
                      suppress_ori=False, include_left=False):

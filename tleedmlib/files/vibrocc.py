@@ -433,4 +433,4 @@ def writeVIBROCC(sl, rp, filename="VIBROCC_OUT", silent=False):
         raise
     if not silent:
         logger.info("Wrote to "+filename+" successfully")
-    return 0
+    return
