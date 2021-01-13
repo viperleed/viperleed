@@ -201,7 +201,6 @@ def readDataChem(rp, source):
                 dpars.append(tuple(pars[:v]))
                 pars = pars[v:]
             returnList.append((rfac, tuple(zip(percent, dpars))))
-    logger.debug("Read data files for a total of {} entries".format(len(returnList)))   # !!! TMPDEBUG
     return returnList
 
 def writeRfInfo(sl, rp, filename="rf.info"):
@@ -295,7 +294,7 @@ def writeRfInfo(sl, rp, filename="rf.info"):
     return output
 
 
-def generateSearchInput(sl, rp, steuOnly=False, cull=False):
+def generateSearchInput(sl, rp, steuOnly=False, cull=False, info=True):
     """
     Generates a PARAM and a search.steu file for the search.
 
@@ -311,6 +310,8 @@ def generateSearchInput(sl, rp, steuOnly=False, cull=False):
     cull : bool, optional
         If True, part of the population (given by rp.SEARCH_CULL) will be
         removed and replaced according to rp.SEARCH_CULL. The default is False.
+    info : bool, optional
+        If False, no info messages will be printed.
 
     Returns
     -------
@@ -327,8 +328,16 @@ def generateSearchInput(sl, rp, steuOnly=False, cull=False):
 
     # calculate some more things for later
     expEnergies = []
+    totalrange = 0
     for b in rp.expbeams:
         expEnergies.extend([k for k in b.intens if k not in expEnergies])
+        totalrange += (min(max(b.intens), rp.THEO_ENERGIES[1]) 
+                       - max(min(b.intens), rp.THEO_ENERGIES[0]))
+    if info:
+        logger.info("Total energy range from experimental beams is "
+                    "{:.2g} eV ({} independent fit parameters, {:.2g} eV per "
+                    "parameter)"
+                    .format(totalrange, rp.indyPars, totalrange / rp.indyPars))
     theoEnergies = int((rp.THEO_ENERGIES[1]-rp.THEO_ENERGIES[0])
                        / rp.THEO_ENERGIES[2]) + 1
     if theoEnergies >= len(expEnergies):

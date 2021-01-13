@@ -18,13 +18,13 @@ import numpy as np
 import signal
 import re
 import copy
-from sklearn.preprocessing import PolynomialFeatures
-from sklearn.linear_model import LinearRegression, Lasso
+from sklearn.linear_model import LinearRegression, Ridge, Lasso, ElasticNet
 from sklearn.pipeline import make_pipeline
 import scipy
 
 import tleedmlib.files.iosearch as io
 import tleedmlib as tl
+from tleedmlib.polynomialfeatures_no_interaction import PolyFeatNoMix
 from tleedmlib.leedbase import fortranCompile
 from tleedmlib.files.parameters import updatePARAMETERS
 from tleedmlib.files.displacements import readDISPLACEMENTS_block
@@ -179,10 +179,10 @@ def processSearchResults(sl, rp, final=True):
                 raise
             finally:
                 os.chdir(home)
-    return None
+    return
 
-def parabolaFit(rp, r_configs, x0=None, localize=0, mincurv=1e-2,
-                whichRegression='linearregression'):
+def parabolaFit(rp, r_configs, x0=None, localize=0, mincurv=5e-3,
+                which_regression='linear', alpha=1e-4):
     """
     Performs a parabola fit to all rfactor/configuration data in r_configs.
     Stores the result in the rp searchpar objects.
@@ -204,6 +204,16 @@ def parabolaFit(rp, r_configs, x0=None, localize=0, mincurv=1e-2,
         The minimum curvature that the N-dimensional paraboloid is required 
         to have along the axis of a given parameter, in order for the minimum 
         and curvature to be saved for that parameter. The default is 1e-4.
+    which_regression : str, optional
+        Defines the regression model to use in the fit. Allowed values are 
+        LinearRegression (default), Ridge, Lasso, and ElasticNet. Note that 
+        for the fit, parameters are centered around the current best 
+        configuration. Therefore, all models except LinearRegression put some 
+        penalty not only on curvature, but also on the parameter offset from 
+        the best-R configuration.
+    alpha : float, optional
+        The alpha value used by Ridge, Lasso and ElasticNet regression. The 
+        default is 1e-5.
 
     Returns
     -------
@@ -217,11 +227,11 @@ def parabolaFit(rp, r_configs, x0=None, localize=0, mincurv=1e-2,
         Predicted minimum R-factor.
 
     """
-
+    
     def optimizerHelper(array, func):
         return func(array.reshape(1,-1))
 
-    # starttime = timer()
+    starttime = timer()
     rc = np.array([*r_configs], dtype=object)
     rfacs, configs = rc[:,0].astype(float), rc[:,1]
     localizeFactor = localize
@@ -259,24 +269,32 @@ def parabolaFit(rp, r_configs, x0=None, localize=0, mincurv=1e-2,
     best_config = np.copy(indep_pars[np.argmin(rfacs)])
     sps_original = sps[:]
 
-    if whichRegression.lower() == 'lasso':  # !!! Parameter for alpha?
-        polyreg = make_pipeline(PolynomialFeatures(degree=2), Lasso(alpha=0.1))
-    elif whichRegression.lower() == 'linearregression':
-        polyreg = make_pipeline(PolynomialFeatures(degree=2), 
-                                LinearRegression())
+    which_regression = which_regression.lower()
+    if which_regression == 'lasso':
+        polyreg = make_pipeline(PolyFeatNoMix(degree=2), Lasso(alpha=alpha,
+                                                               normalize=True))
+    elif which_regression == 'ridge':
+        polyreg = make_pipeline(PolyFeatNoMix(degree=2), Ridge(alpha=alpha,
+                                                               normalize=True))
+    elif which_regression == 'elasticnet':
+        polyreg = make_pipeline(PolyFeatNoMix(degree=2), ElasticNet(
+                                                 alpha=alpha, normalize=True))
     else:
-        logger.warning("Regression model {} not found, parabola fit failed."
-                       .format(whichRegression))
-        return None, None
-    # weights = None
-
+        if which_regression not in ('linearregression', 'linear'):
+            logger.warning("Regression model {} not found, parabola fit "
+                           "defaulting to linear regression."
+                           .format(which_regression))
+        which_regression = "linearregression"
+        polyreg = make_pipeline(PolyFeatNoMix(degree=2), 
+                                LinearRegression())
     deletedPars = []
     while True:
         ip_tofit = np.copy(indep_pars)
         rf_tofit = np.copy(rfacs)
+        xmin = np.copy(ip_tofit[np.argmin(rfacs), :])
         if localize != 0:
             # discard points that are far from global min in any dimension
-            base = ip_tofit[np.argmin(rfacs)] # parameter vector of best conf
+            base = np.copy(xmin)  # parameter vector of best conf
             for i in range(len(base)):
                 r = sps[i].steps*localizeFactor*0.5
                 base[i] = max(base[i], 1 + r)
@@ -292,13 +310,16 @@ def parabolaFit(rp, r_configs, x0=None, localize=0, mincurv=1e-2,
             to_del = [i for i in range(len(maxdist)) if maxdist[i] > cutoff]
             ip_tofit = np.delete(ip_tofit, to_del, axis=0)
             rf_tofit = np.delete(rf_tofit, to_del, axis=0)
+        # center on best config; important because offset from the 
+        #  best configuration may also be penalized in regression
+        ip_tofit = ip_tofit - xmin
         # check curvature of the parabolas per parameter (renorm. to rangesize)
         polyreg.fit(ip_tofit, rf_tofit)
-        curvs = [(polyreg.named_steps[whichRegression]
-                  .coef_[polyreg.named_steps['polynomialfeatures']
+        curvs = [(polyreg.named_steps[which_regression]
+                  .coef_[polyreg.named_steps['polyfeatnomix']
                   .get_feature_names().index('x{}^2'.format(i))])
-                 * sps[i].steps**2
-                 for i in range(len(sps))]
+                  * sp.steps**2
+                 for i, sp in enumerate(sps)]
         if min(curvs) >= mincurv:
             if len(rf_tofit) < 50*len(sps):  # too few points for good fit
                 # logger.debug("{} points - too few for fit of {} dimensions"
@@ -320,27 +341,25 @@ def parabolaFit(rp, r_configs, x0=None, localize=0, mincurv=1e-2,
             deletedPars.append(sps_original.index(sps[i]))
         sps = [sps[i] for i in range(len(sps)) if i not in ind]
         indep_pars = np.delete(indep_pars, ind, axis=1)
-    # indep_pars = ip_tofit
-    # rfacs = rf_tofit
     for (i, sp) in enumerate(sps):
         sp.parabolaFit["curv"] = curvs[i]
-    # logger.debug("Parabola fit: {}/{} parameters were fit with {} points "
-    #              "({:.4f} s)".format(len(sps), len(sps_original), 
-    #                                  len(rf_tofit), (timer() - starttime)))
+    logger.debug("Parabola fit: {}/{} parameters were fit with {} points "
+                  "({:.4f} s)".format(len(sps), len(sps_original), 
+                                      len(rf_tofit), (timer() - starttime)))
     
-    # now find minimum within bounds
-    bounds = [(1,sp.steps) for sp in sps]
-    if x0 is None:
-        # x0 = [int((sp.steps + 1)/2) for sp in sps]
-        x0 = np.copy(best_config)
-    x0 = np.delete(x0, deletedPars)
-    X_min = scipy.optimize.minimize(optimizerHelper, x0, 
+    # now find minimum within bounds (still centered around xmin)
+    bounds = np.array([(1,sp.steps) for sp in sps]) - xmin.reshape((-1,1))
+    if x0 is None:  # x0 is the starting guess
+        x0 = np.copy(xmin)
+    else:
+        x0 = np.delete(x0, deletedPars)
+    parab_min = scipy.optimize.minimize(optimizerHelper, x0, 
                                 args=(polyreg.predict,),method='L-BFGS-B',
                                 bounds=bounds)
-    predictR = X_min.fun[0]
+    predictR = parab_min.fun[0]
     for (i, sp) in enumerate(sps):
-        sp.parabolaFit["min"] = X_min.x[i]
-        best_config[sps_original.index(sp)] = X_min.x[i]
+        sp.parabolaFit["min"] = parab_min.x[i] + xmin[i]
+        best_config[sps_original.index(sp)] = parab_min.x[i] + xmin[i]
     for sp in [sp for sp in rp.searchpars if type(sp.linkedTo) == tl.SearchPar 
                or type(sp.restrictTo) == tl.SearchPar]:
         if type(sp.linkedTo) == tl.SearchPar:
@@ -400,8 +419,6 @@ def search(sl, rp):
                                                     sp.linkedTo) + 1)
         io.writeSearchOutput(sl, rp)
         return None
-    # TODO: calculate 'usable' beam energy range, output per indypar
-    
     if rp.SUPPRESS_EXECUTION:
         logger.warning("SUPPRESS_EXECUTION parameter is on. Search "
             " will not proceed. Stopping...")
@@ -821,7 +838,7 @@ def search(sl, rp):
                 markers.append((genOffset, comment))
             try:
                 io.generateSearchInput(sl, rp, steuOnly=True, 
-                                           cull=True)
+                                           cull=True, info=False)
             except:
                 logger.error("Error re-generating search input")
                 raise
