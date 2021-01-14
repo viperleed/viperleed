@@ -23,6 +23,7 @@ from tleedmlib.leedbase import getBeamCorrespondence
 
 logger = logging.getLogger("tleedm.files.iosearch")
 
+
 def readSDTL_next(filename="SD.TL", offset=0):
     """
     Reads SDTL from offset to end, returns new offset and the content in
@@ -50,11 +51,12 @@ def readSDTL_next(filename="SD.TL", offset=0):
             content = rf.read()
             newoffset = rf.tell()
         return(newoffset, content)
-    except:
+    except Exception:
         logger.error("Error reading SD.TL file")
         return (offset, "")     # return old offset, no content
 
-def readSDTL_blocks(content, whichR = 0, logInfo = False):
+
+def readSDTL_blocks(content, whichR=0, logInfo=False):
     """
     Attempts to interpret a given string as one or more blocks of an SD.TL
     file.
@@ -86,10 +88,10 @@ def readSDTL_blocks(content, whichR = 0, logInfo = False):
             gen = int(block[:13])
             if logInfo:
                 logger.info("Reading search results from SD.TL, "
-                             "generation {}".format(gen))
-        except:
+                            "generation {}".format(gen))
+        except ValueError:
             logger.warning("While reading SD.TL, could not interpret "
-                "generation number "+block[:13])
+                           "generation number "+block[:13])
         lines = block.split("\n")
         rfacs = []
         configs = []
@@ -103,18 +105,19 @@ def readSDTL_blocks(content, whichR = 0, logInfo = False):
                         configs.append(tuple(dpars))
                         dpars = []
                     try:
-                        rav = float(line.split("|")[2 + whichR]) #average R
+                        rav = float(line.split("|")[2 + whichR])  # average R
                         rfacs.append(rav)
-                    except:
+                    except ValueError:
                         logger.error("Could not read R-factor in SD.TL line:\n"
-                                     +line)
+                                     + line)
                 try:
                     percent = int(line.split("|")[-2].strip()[:-1])
                     valstring = line.split("|")[-1].rstrip()
                     pars = readIntLine(valstring, width=4)
                     dpars.append((percent, pars))
-                except:
-                    logger.error("Could not read values in SD.TL line:\n"+line)
+                except ValueError:
+                    logger.error("Could not read values in SD.TL line:\n"
+                                 + line)
         if dpars:
             configs.append(tuple(dpars))
         if not all([len(dp) == len(configs[0]) for dp in configs]):
@@ -127,16 +130,33 @@ def readSDTL_blocks(content, whichR = 0, logInfo = False):
             logger.warning("A block in SD.TL was read but not understood.")
     return returnList
 
+
 def readSDTL_end(filename="SD.TL"):
-    """Reads the last generation block from the SD.TL file."""
+    """
+    Reads the last generation block from the SD.TL file, starting from the
+    last line containing a GENERATION label.
+
+    Parameters
+    ----------
+    filename : str, optional
+        Which file to read
+
+    Returns
+    -------
+    lines : str
+        The contents of the file from the last line containing GENERATION to
+        the end.
+
+    """
     # get the last block from SD.TL:
     bwr = BackwardsReader(filename)
     lines = [""]
-    while not "CCCCCCCCCCC    GENERATION" in lines[-1] and len(bwr.data) > 0:
+    while "CCCCCCCCCCC    GENERATION" not in lines[-1] and len(bwr.data) > 0:
         lines.append(bwr.readline().rstrip())
     lines.reverse()
     bwr.close()
     return lines
+
 
 def readDataChem(rp, source):
     """
@@ -183,7 +203,7 @@ def readDataChem(rp, source):
             rfac = float(line.split("|")[0].strip())
             valstring = line.split("|")[1].rstrip()
             pars = readIntLine(valstring, width=4)
-        except:
+        except ValueError:
             logger.warning("Could not read values in data.chem line:\n"+line)
             continue
         if len(pars) != parslen:
@@ -202,6 +222,7 @@ def readDataChem(rp, source):
                 pars = pars[v:]
             returnList.append((rfac, tuple(zip(percent, dpars))))
     return returnList
+
 
 def writeRfInfo(sl, rp, filename="rf.info"):
     """
@@ -260,11 +281,11 @@ def writeRfInfo(sl, rp, filename="rf.info"):
     f31x25 = ff.FortranRecordWriter("25F3.1")
     output = (f72.write([minen]).ljust(16) + "EMIN\n")
     output += (f72.write([maxen]).ljust(16) + "EMAX\n")
-            # !!! BULLSHIT RESULTS WHEN EMAX > MAX ENERGY IN DELTA FILES
+    # !!! BULLSHIT RESULTS WHEN EMAX > MAX ENERGY IN DELTA FILES
     output += (f72.write([step]).ljust(16) + "EINCR\n")
     output += "  0             IPR - determines amount of output to stdout  \n"
     output += (f72.write([rp.V0_IMAG]).ljust(16) + "VI\n")
-            # !!! bulk or surface V0_IMAG?
+    # !!! bulk or surface V0_IMAG?
     output += "   0.00         V0RR\n"
     output += (f72.write([rp.IV_SHIFT_RANGE[0]]).ljust(16) + "V01\n")
     output += (f72.write([rp.IV_SHIFT_RANGE[1]]).ljust(16) + "V02\n")
@@ -278,16 +299,16 @@ def writeRfInfo(sl, rp, filename="rf.info"):
     output += " DATA MITTEL (integer & half order beams) :\n"
     output += i3x25.write(iorf) + "\n"
     output += " exp - th relationship IBP, beam weights WB\n"
-    output += i3x25.write([n+1 for n in range(0,len(rp.expbeams))]) + "\n"
+    output += i3x25.write([n + 1 for n in range(0, len(rp.expbeams))]) + "\n"
     output += f31x25.write([1]*len(rp.expbeams))+"\n"
-    auxexpbeams = writeAUXEXPBEAMS(rp.expbeams, header = rp.systemName,
-                                   write = True, numbers = True)
+    auxexpbeams = writeAUXEXPBEAMS(rp.expbeams, header=rp.systemName,
+                                   write=True, numbers=True)
     output += auxexpbeams
 
     try:
         with open(filename, 'w') as wf:
             wf.write(output)
-    except:
+    except Exception:
         logger.error("Failed to write "+filename)
         raise
     logger.debug("Wrote to "+filename+" successfully")
@@ -331,7 +352,7 @@ def generateSearchInput(sl, rp, steuOnly=False, cull=False, info=True):
     totalrange = 0
     for b in rp.expbeams:
         expEnergies.extend([k for k in b.intens if k not in expEnergies])
-        totalrange += (min(max(b.intens), rp.THEO_ENERGIES[1]) 
+        totalrange += (min(max(b.intens), rp.THEO_ENERGIES[1])
                        - max(min(b.intens), rp.THEO_ENERGIES[0]))
     if info:
         logger.info("Total energy range from experimental beams is "
@@ -342,7 +363,7 @@ def generateSearchInput(sl, rp, steuOnly=False, cull=False, info=True):
                        / rp.THEO_ENERGIES[2]) + 1
     if theoEnergies >= len(expEnergies):
         logger.warning("Theoretical beams have more data points than "
-                        "experimental beams")
+                       "experimental beams")
         rp.setHaltingLevel(1)
         # TODO: will this crash? If so, raise here
 
@@ -361,10 +382,11 @@ def generateSearchInput(sl, rp, steuOnly=False, cull=False, info=True):
         if at.oriState is None:
             for el in at.offset_occ:
                 if el not in at.disp_occ:
-                    logger.error("Atom "+str(at.oriN)+" has occupation "
-                            "offset defined for element "+el+", which does "
-                            "not appear in atom displacement list. Value "
-                            "will be skipped, this may cause errors.")
+                    logger.error(
+                        "{} has occupation offset defined for element {}, "
+                        "which does not appear in atom displacement list. "
+                        "Value will be skipped, this may cause errors."
+                        .format(at, el))
                 else:
                     at.disp_occ[el] = [v + at.offset_occ[el]
                                        for v in at.disp_occ[el]]
@@ -381,7 +403,7 @@ def generateSearchInput(sl, rp, steuOnly=False, cull=False, info=True):
                 for el in dl:
                     if o != at.disp_geo_offset:
                         del o[el]
-            at.disp_geo_offset = {"all": [np.array([0.0,0.0,0.0])]}
+            at.disp_geo_offset = {"all": [np.array([0., 0., 0.])]}
 
     # PARAM
     output = """C Here are some global parameterization to be performed
@@ -392,11 +414,11 @@ C MNBMD IS MAX(MNBED,MNBTD)
       PARAMETER(MNBED = {})\n""".format(len(rp.expbeams))
     output += "      PARAMETER(MNBTD = {})\n".format(len(rp.ivbeams))
     output += "      PARAMETER(MNBMD = {})".format(max(len(rp.expbeams),
-                                                         len(rp.ivbeams)))
+                                                       len(rp.ivbeams)))
     output += """
 C MNDATA IS MAX. NUMBER OF DATA POINTS IN EXPERIMENTAL BEAMS
       PARAMETER(MNDATA = {})""".format(int(len(expEnergies)*1.1))
-              # array size parameter only - add some buffer -> *1.1
+    # array size parameter only - add some buffer -> *1.1
     output += """
 C MNDATT IS NUMBER OF THEORETICAL DATA POINTS IN EACH BEAM
       PARAMETER(MNDATT = {})""".format(int(theoEnergies*1.1))
@@ -427,16 +449,17 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
         try:
             with open("PARAM", "w") as wf:
                 wf.write(output)
-        except:
+        except Exception:
             logger.error("Failed at writing PARAM file for search.")
             raise
 
     # now search.steu
     output = ""
+    # while producing search.steu, collect information on
+    #   parameters for searchpars.info
     info = ("#".rjust(4) + "label".rjust(7) + "atom".rjust(7) + "elem".rjust(7)
             + "mode".rjust(7) + "steps".rjust(7) + "constr".rjust(7) + "\n")
-                # while producing search.steu, collect information on
-                #  parameters for searchpars.info
+
     nsteps = []     # keep track of number of steps per parameter for init
     parcount = 0
     i3 = ff.FortranRecordWriter("I3")
@@ -458,11 +481,11 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                "generations to be performed\n")
     output += i3.write([astep]).ljust(16) + "area fraction step width (%)\n"
     output += ("SD.TL           name of search document file "
-                               "(max. 10 characters)\n")
+               "(max. 10 characters)\n")
     output += i3.write([ndom]).ljust(16) + ("Number of domains under "
                                             "consideration\n")
     uniquenames = []
-    for k in range(0,ndom):
+    for k in range(0, ndom):
         if ndom == 1:
             crp = rp
             csl = sl
@@ -475,14 +498,16 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
         prev_parcount = parcount
         output += ("======= Information about Domain {}: ====================="
                    "=======================\n").format(k+1)
-        output += (i3.write([len(crp.search_atlist)]).ljust(16)
-              + "Number of atomic sites in variation: Domain {}\n".format(k+1))
+        output += (
+            i3.write([len(crp.search_atlist)]).ljust(16) + "Number of atomic "
+            "sites in variation: Domain {}\n".format(k+1))
         displistcount = len(csl.displists)+1
         surfats = csl.getSurfaceAtoms(crp)
         for (i, at) in enumerate(crp.search_atlist):
             printvac = False
-            output += ("------- Information about site {}: -----------------------"
-                       "-----------------------\n".format(i+1))
+            output += (
+                "------- Information about site {}: -----------------------"
+                "-----------------------\n".format(i+1))
             surf = 1 if at in surfats else 0
             output += (i3.write([surf]).ljust(16) + "Surface (0/1)\n")
             if at.displist in csl.displists:
@@ -491,8 +516,9 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                 dlind = displistcount
                 displistcount += 1
             output += (i3.write([dlind]).ljust(16) + "Atom number\n")
-            output += (i3.write([len(at.deltasGenerated)]).ljust(16)
-                      + "No. of different files for Atom no. {}\n".format(i+1))
+            output += (
+                i3.write([len(at.deltasGenerated)]).ljust(16) + "No. of "
+                "different files for Atom no. {}\n".format(i+1))
             for (j, deltafile) in enumerate(at.deltasGenerated):
                 name = deltafile
                 if frompath:  # need to get the file
@@ -504,11 +530,11 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                         name = "D{}_DEL_{}".format(k+1, un)
                         uniquenames.append(name)
                     try:
-                        shutil.copy2(os.path.join(frompath,deltafile), name)
-                    except:
+                        shutil.copy2(os.path.join(frompath, deltafile), name)
+                    except Exception:
                         logger.error("Error getting Delta file {} for search"
                                      .format(os.path.relpath(
-                                         os.path.join(frompath,deltafile))))
+                                         os.path.join(frompath, deltafile))))
                         raise
                 output += "****Information about file {}:\n".format(j+1)
                 output += (name.ljust(16) + "Name of file {} (max. 15 "
@@ -550,7 +576,7 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                 constr = {"vib": "-", "geo": "-"}
                 for mode in ["vib", "geo"]:
                     spl = [s for s in crp.searchpars if s.el == el
-                          and s.atom == at and s.mode == mode]
+                           and s.atom == at and s.mode == mode]
                     if spl and spl[0].restrictTo is not None:
                         sp = spl[0]
                         if type(sp.restrictTo) == int:
@@ -560,9 +586,9 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                                                                 sp.restrictTo)
                                                    + prev_parcount + 1)
                     elif spl and spl[0].linkedTo is not None:
-                        constr[mode] = "#"+str(crp.searchpars.index(
-                                                              spl[0].linkedTo)
-                                                + prev_parcount + 1)
+                        constr[mode] = "#"+str(
+                            crp.searchpars.index(spl[0].linkedTo)
+                            + prev_parcount + 1)
                 if vib > 0:
                     output += (i3.write([vib]).ljust(16) +
                                "vibrational steps\n")
@@ -620,7 +646,7 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
         else:
             astepnum = int(100 / astep) + 1
         info += (str(parcount).rjust(4) + ("-".rjust(7)*3) + "dom".rjust(7)
-                     + str(astepnum).rjust(7) + "-".rjust(7).rjust(7) + "\n")
+                 + str(astepnum).rjust(7) + "-".rjust(7).rjust(7) + "\n")
         nsteps.append(astepnum)
     # now starting configuration
     output += ("Information about start configuration: (Parameters for each "
@@ -629,14 +655,14 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
         controlpath = ""
         if os.path.isfile("control.chem"):
             controlpath = "control.chem"
-        elif os.path.isfile(os.path.join("AUX","control.chem")):
-            controlpath = os.path.join("AUX","control.chem")
+        elif os.path.isfile(os.path.join("AUX", "control.chem")):
+            controlpath = os.path.join("AUX", "control.chem")
             logger.warning("No control.chem file found in working folder, "
-                            "using AUX/control.chem")
+                           "using AUX/control.chem")
             rp.setHaltingLevel(1)
         else:
             logger.warning("No control.chem file found. Defaulting to random "
-                          "starting configuration.")
+                           "starting configuration.")
             rp.SEARCH_START = "random"
             rp.setHaltingLevel(2)
     if rp.SEARCH_START == "control":
@@ -644,20 +670,20 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
         try:
             with open(controlpath, "r") as rf:
                 controllines = rf.readlines()
-        except:
+        except Exception:
             logger.error("Error reading control.chem file. Defaulting to "
-                          "random starting configuration.")
+                         "random starting configuration.")
             rp.SEARCH_START = "random"
             rp.setHaltingLevel(2)
         if len(controllines) < rp.SEARCH_POPULATION + 2:
             if not rp.controlChemBackup:
                 logger.error("Information in control.chem is incomplete. "
-                              "Defaulting to random starting configuration.")
+                             "Defaulting to random starting configuration.")
                 rp.SEARCH_START = "random"
                 rp.setHaltingLevel(2)
             else:
                 logger.debug("Information in control.chem is incomplete. "
-                              "Loading from stored data...")
+                             "Loading from stored data...")
                 controllines = [s+"\n"
                                 for s in rp.controlChemBackup.split("\n")]
     if rp.SEARCH_START == "random":
@@ -674,9 +700,9 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                     if rp.SEARCH_CULL < rp.SEARCH_POPULATION:
                         ncull = rp.SEARCH_CULL
                     else:
-                        logger.warning("SEARCH_CULL parameter too large: "
-                            "would cull entire population. Culling will be "
-                            "skipped.")
+                        logger.warning(
+                            "SEARCH_CULL parameter too large: would cull "
+                            "entire population. Culling will be skipped.")
                         ncull = 0
                 if any([sp.parabolaFit["min"] is not None
                         for sp in rp.searchpars]):
@@ -692,12 +718,12 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                     try:
                         csurvive = [readIntLine(s, width=3)
                                     for s in clines[:nsurvive]]
-                    except:
+                    except ValueError:
                         if rp.SEARCH_CULL_TYPE == "genetic":
-                            logger.warning("SEARCH_CULL: Failed to read old "
-                                    "configuration from control.chem, cannot "
-                                    "run genetic algorithm. Defaulting to "
-                                    "cloning.")
+                            logger.warning(
+                                "SEARCH_CULL: Failed to read old "
+                                "configuration from control.chem, cannot run "
+                                "genetic algorithm. Defaulting to cloning.")
                             rp.setHaltingLevel(1)
                             csurvive = []
                 for (i, line) in enumerate(clines):
@@ -710,7 +736,9 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                             bc = None
                             if csurvive:
                                 bc = csurvive[0]
-                            nc = rp.getPredictConfig(best_config=bc)
+                            nc = rp.getPredictConfig(
+                                best_config=bc,
+                                mincurv=rp.PARABOLA_FIT["mincurv"])
                             getPredicted = False
                         elif rp.SEARCH_CULL_TYPE == "random":
                             nc = rp.getRandomConfig()
@@ -720,11 +748,11 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                         for v in nc:
                             ol += i3.write([v])
                         output += ol + "\n"
-                    else:    #  "cloning"
+                    else:    # "cloning"
                         output += clines[random.randrange(0, nsurvive)]
             else:  # don't cull
                 for (i, line) in enumerate(controllines):
-                    if i > 1: # first 2 lines are empty
+                    if i > 1:  # first 2 lines are empty
                         output += line
         elif rp.SEARCH_START == "centered":
             for i in range(0, rp.SEARCH_POPULATION):
@@ -745,27 +773,27 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
     try:
         with open("search.steu", "w") as wf:
             wf.write(output)
-    except:
+    except Exception:
         logger.error("Failed to write search.steu file for search.")
         raise
     # write searchpars.info
     try:
         with open("searchpars.info", "w") as wf:
             wf.write(info)
-    except:
-        logger.error("Failed to write searchpars.info file. This file is "
-                    "only for user information and will not affect operation.")
+    except Exception:
+        logger.error(
+            "Failed to write searchpars.info file. This file is "
+            "only for user information and will not affect operation.")
     if steuOnly:
         logger.debug("Wrote search.steu input for search.")
         return None
     # now restrict.f
-    output = ("C  This subroutine serves to restrict individual parameters to "
-"""certain values inside
-C  the search. These values are stored in the PARIND(IPARAM,IPOP) array.
+    output = ("""
+C  This subroutine serves to restrict individual parameters to certain values
+C  inside the search. These values are stored in the PARIND(IPARAM,IPOP) array.
 C  Parameters are counted as listed in control file search.steu, including
-C  a concentration parameter after each atomic site, and the domain weight """
-"""parameters
-C  for each domain at the end of the PARIND array.
+C  a concentration parameter after each atomic site, and the domain weight
+C  parameters for each domain at the end of the PARIND array.
 C
 C  perform restrictions in the following fashion: e.g.
 C
@@ -792,8 +820,8 @@ C  begin restrictions
         if type(sp.restrictTo) == int:
             output += "      PARIND({},IPOP) = {}\n".format(i+1, sp.restrictTo)
         else:
-            output += "      PARIND({},IPOP) = PARIND({},IPOP)\n".format(i+1,
-                                    rp.searchpars.index(sp.restrictTo)+1)
+            output += "      PARIND({},IPOP) = PARIND({},IPOP)\n".format(
+                i + 1, rp.searchpars.index(sp.restrictTo) + 1)
     output += ("""
 C  end restrictions
 
@@ -805,12 +833,13 @@ C  end restrictions
     try:
         with open("restrict.f", "w") as wf:
             wf.write(output)
-    except:
+    except Exception:
         logger.error("Failed to write restrict.f file for search.")
         raise
     logger.debug("Wrote input files for search: PARAM, search.steu, "
                  "restrict.f")
     return None
+
 
 def writeSearchOutput(sl, rp, parinds=None, silent=False):
     """
@@ -837,7 +866,7 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False):
     if parinds is None:
         if rp.searchResultConfig is None:
             logger.error("Failed to write search output: No configuration "
-                          "passed.")
+                         "passed.")
             raise RuntimeError("Failed to write search output")
         else:
             parinds = rp.searchResultConfig[0]
@@ -854,10 +883,9 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False):
     for at in sl.atlist:
         # make list of searchpars addressing this atom:
         sps = [sp for sp in rp.searchpars if sp.atom == at and sp.el != "vac"]
-                                                # ignore vacancies
         if len(sps) > 0:
             # first deal with occupation:
-            par = [sp for sp in sps if sp.mode == "occ"][0] # exactly one
+            par = [sp for sp in sps if sp.mode == "occ"][0]  # exactly one
             i = rp.searchpars.index(par)
             newocc = {}
             for el in at.disp_occ:
@@ -865,10 +893,10 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False):
                 at.offset_occ[el] = (at.disp_occ[el][parinds[i]-1]
                                      - at.site.oriState.occ[el])
                 newocc[el] = at.disp_occ[el][parinds[i]-1]
-                                # will be used for re-calculating position
+                # will be used for re-calculating position
             # now vibrations:
             vibpars = [sp for sp in sps if sp.mode == "vib"]
-                                        # can be empty, or one per element
+            # can be empty, or one per element
             for par in vibpars:
                 i = rp.searchpars.index(par)
                 el = par.el
@@ -880,12 +908,12 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False):
                 at.offset_vib[el] = at.disp_vib[dict_el][parinds[i]-1]
             # now position - recalculate right away:
             geopars = [sp for sp in sps if sp.mode == "geo"]
-                                        # can be empty, or one per element
+            # can be empty, or one per element
             if not geopars:
                 continue
             totalocc = 0
             newpos = {}     # new position per element
-            totalpos = np.array([0.,0.,0.])
+            totalpos = np.array([0., 0., 0.])
             for par in geopars:
                 i = rp.searchpars.index(par)
                 el = par.el
@@ -946,23 +974,23 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False):
     tmpslab.sortOriginal()
     try:
         writeCONTCAR(tmpslab, filename=fn, comments="all", silent=silent)
-    except:
+    except Exception:
         logger.error("Exception occured while writing POSCAR_OUT.",
-                      exc_info = rp.LOG_DEBUG)
+                     exc_info=rp.LOG_DEBUG)
         rp.setHaltingLevel(2)
     if not np.isclose(rp.SYMMETRY_CELL_TRANSFORM, np.identity(2)).all():
         tmpslab = sl.makeSymBaseSlab(rp)
-        fn="POSCAR_OUT_mincell_"+rp.timestamp
+        fn = "POSCAR_OUT_mincell_" + rp.timestamp
         try:
             writeCONTCAR(tmpslab, filename=fn, silent=silent)
-        except:
+        except Exception:
             logger.warning("Exception occured while writing "
-                    "POSCAR_OUT_mincell.", exc_info = rp.LOG_DEBUG)
+                           "POSCAR_OUT_mincell.", exc_info=rp.LOG_DEBUG)
     fn = "VIBROCC_OUT_"+rp.timestamp
     try:
         writeVIBROCC(sl, rp, filename=fn, silent=silent)
-    except:
+    except Exception:
         logger.error("Exception occured while writing VIBROCC_OUT.",
-                      exc_info = rp.LOG_DEBUG)
+                     exc_info=rp.LOG_DEBUG)
         rp.setHaltingLevel(2)
     return None

@@ -28,14 +28,15 @@ from tleedmlib.polynomialfeatures_no_interaction import PolyFeatNoMix
 from tleedmlib.leedbase import fortranCompile
 from tleedmlib.files.parameters import updatePARAMETERS
 from tleedmlib.files.displacements import readDISPLACEMENTS_block
-from tleedmlib.files.searchpdf import (writeSearchProgressPdf, 
+from tleedmlib.files.searchpdf import (writeSearchProgressPdf,
                                        writeSearchReportPdf)
 
 logger = logging.getLogger("tleedm.search")
 
+
 def processSearchResults(sl, rp, final=True):
     """
-    Looks at the final block in the SD.TL file and gets the data from the 
+    Looks at the final block in the SD.TL file and gets the data from the
     best structure in into the slab.
 
     Parameters
@@ -45,8 +46,8 @@ def processSearchResults(sl, rp, final=True):
     rp : Rparams
         Run parameters.
     final : bool, optional
-        Defines whether this is the final interpretation that *must* work and 
-        should go into the log, or if this will be repeated anyway. The 
+        Defines whether this is the final interpretation that *must* work and
+        should go into the log, or if this will be repeated anyway. The
         default is True.
 
     Returns
@@ -59,14 +60,14 @@ def processSearchResults(sl, rp, final=True):
         lines = io.readSDTL_end()
     except FileNotFoundError:
         logger.error("Could not process Search results: SD.TL file not "
-                      "found.")
+                     "found.")
         raise
-    except:
+    except Exception:
         logger.error("Failed to get last block from SD.TL file.")
         raise
     # read the block
-    sdtlContent = io.readSDTL_blocks("\n".join(lines), 
-                                     whichR = rp.SEARCH_BEAMS, logInfo = final)
+    sdtlContent = io.readSDTL_blocks("\n".join(lines),
+                                     whichR=rp.SEARCH_BEAMS, logInfo=final)
     if not sdtlContent:
         if final:
             logger.error("No data found in SD.TL file!")
@@ -74,10 +75,9 @@ def processSearchResults(sl, rp, final=True):
         raise RuntimeError("No data in SD.TL")
     (generation, rfacs, configs) = sdtlContent[0]
     # collect equal entries
-    pops = [] # tuples (r, pars) with 
-              #   r..rfactor, pars..list of parameter indices
+    pops = []  # tuples (rfactor, list of parameter indices)
     popcount = []   # how often a given population is there
-    dparlist = []    # for control.chem
+    dparlist = []   # for control.chem
     for i in range(0, len(rfacs)):
         if (rfacs[i], configs[i]) in pops:
             popcount[pops.index((rfacs[i], configs[i]))] += 1
@@ -92,14 +92,14 @@ def processSearchResults(sl, rp, final=True):
         # check file, which generation
         try:
             with open("control.chem", "r") as rf:
-                rf.readline() # first line is empty.
+                rf.readline()  # first line is empty.
                 s = rf.readline()
                 s = s.split("No.")[-1].split(":")[0]
                 if int(s) != generation:
                     writeControlChem = True
                 if len(rf.readlines()) < rp.SEARCH_POPULATION:
                     writeControlChem = True
-        except:
+        except Exception:
             # try overwriting, just to be safe
             writeControlChem = True
     # write backup file
@@ -124,8 +124,7 @@ def processSearchResults(sl, rp, final=True):
         try:
             with open("control.chem", "w") as wf:
                 wf.write(output)
-        except:
-            # if final:
+        except Exception:
             logger.error("Failed to write control.chem")
             rp.setHaltingLevel(1)
 
@@ -134,25 +133,26 @@ def processSearchResults(sl, rp, final=True):
     if final:
         if len(pops) == 1:
             logger.info("All trial structures converged to the same "
-                    "configuration (R = {:.4f})".format(pops[0][0]))
+                        "configuration (R = {:.4f})".format(pops[0][0]))
         elif any([v > rp.SEARCH_POPULATION/2 for v in popcount]):
             info = ("The search outcome is dominated by one configuration "
-                    "(population {} of {}, R = {:.4f})\n".format(maxpop, 
-                    rp.SEARCH_POPULATION, pops[popcount.index(maxpop)][0]))
+                    "(population {} of {}, R = {:.4f})\n".format(
+                        maxpop, rp.SEARCH_POPULATION,
+                        pops[popcount.index(maxpop)][0]))
         else:
             info = ("The search outcome is not dominated by any "
                     "configuration. The best result has population {} (of {})"
-                    ", R = {:.4f}\n".format(popcount[0], rp.SEARCH_POPULATION, 
+                    ", R = {:.4f}\n".format(popcount[0], rp.SEARCH_POPULATION,
                                             pops[0][0]))
         if len(pops) > 1:
             info += ("The best configurations are:\nPOP       R |")
             if rp.domainParams:
                 info += " area |"
             info += " PARAMETERS\n"
-            for i in range(0,min(5,len(pops))):
+            for i in range(0, min(5, len(pops))):
                 for (j, (percent, pars)) in enumerate(pops[i][1]):
                     if j == 0:
-                        info += "{:>3}  {:.4f} |".format(popcount[i], 
+                        info += "{:>3}  {:.4f} |".format(popcount[i],
                                                          pops[i][0])
                     else:
                         info += "            |"
@@ -170,106 +170,115 @@ def processSearchResults(sl, rp, final=True):
         for (i, dp) in enumerate(rp.domainParams):
             try:
                 os.chdir(dp.workdir)
-                io.writeSearchOutput(dp.sl, dp.rp, pops[0][1][i][1], 
-                                         silent=(not final))
-            except:
+                io.writeSearchOutput(dp.sl, dp.rp, pops[0][1][i][1],
+                                     silent=(not final))
+            except Exception:
                 logger.error("Error while writing search output for domain {}"
-                             .format(dp.name), exc_info = rp.LOG_DEBUG)
+                             .format(dp.name), exc_info=rp.LOG_DEBUG)
                 rp.setHaltingLevel(2)
                 raise
             finally:
                 os.chdir(home)
     return
 
-def parabolaFit(rp, r_configs, x0=None, localize=0, mincurv=5e-3,
-                which_regression='linear', alpha=1e-4):
+
+def parabolaFit(rp, r_configs, x0=None, **kwargs):
     """
     Performs a parabola fit to all rfactor/configuration data in r_configs.
-    Stores the result in the rp searchpar objects.
+    Stores the result in the rp searchpar objects. Keyword arguments are read
+    from rp by default.
 
     Parameters
     ----------
     rp : Rparams
         The Rparams object containing runtime information
-    r_configs : set 
+    r_configs : set
         The data to fit, as (rfactor, configuration) tuples
     x0 : numpy.array, optional
         A starting guess for the minimum
-    localize : real, optional
-        If not zero, r_configs will be reduced to only use points close to the 
-        current best result. The value determines the region to be used as 
-        compared to the full data, i.e. 0.5 would use only half of the space in 
-        each dimesion. The default is 0 (no localization).
-    mincurv : float, optional
-        The minimum curvature that the N-dimensional paraboloid is required 
-        to have along the axis of a given parameter, in order for the minimum 
-        and curvature to be saved for that parameter. The default is 1e-4.
-    which_regression : str, optional
-        Defines the regression model to use in the fit. Allowed values are 
-        LinearRegression (default), Ridge, Lasso, and ElasticNet. Note that 
-        for the fit, parameters are centered around the current best 
-        configuration. Therefore, all models except LinearRegression put some 
-        penalty not only on curvature, but also on the parameter offset from 
-        the best-R configuration.
-    alpha : float, optional
-        The alpha value used by Ridge, Lasso and ElasticNet regression. The 
-        default is 1e-5.
+    Keyword Arguments:
+        localize : real, optional
+            If not zero, r_configs will be reduced to only use points close to
+            the current best result. The value determines the region to be used
+            ascompared to the full data, i.e. 0.5 would use only half of the
+            space in each dimesion.
+        mincurv : float, optional
+            The minimum curvature that the N-dimensional paraboloid is
+            required to have along the axis of a given parameter, in order for
+            the minimum and curvature to be saved for that parameter.
+        type : str, optional
+            Defines the regression model to use in the fit. Allowed values are
+            LinearRegression (default), Ridge, Lasso, and ElasticNet. Note that
+            for the fit, parameters are centered around the current best
+            configuration. Therefore, all models except LinearRegression put
+            some penalty not only on curvature, but also on the parameter
+            offset from the best-R configuration.
+        alpha : float, optional
+            The alpha value used by Ridge, Lasso and ElasticNet regression. The
+            default is 1e-5.
 
     Returns
     -------
     np.array
-        The result vector in parameter space, consisting of the coordinates of 
-        the parabola minimum for those dimensions where the parabola curvature 
-        is greater than mincurv, and the values from the configuration with 
-        the lowest R-factor for all dimensions. Can be passed back as x0 in 
+        The result vector in parameter space, consisting of the coordinates of
+        the parabola minimum for those dimensions where the parabola curvature
+        is greater than mincurv, and the values from the configuration with
+        the lowest R-factor for all dimensions. Can be passed back as x0 in
         the next iteration.
     float
         Predicted minimum R-factor.
 
     """
-    
-    def optimizerHelper(array, func):
-        return func(array.reshape(1,-1))
 
+    def optimizerHelper(array, func):
+        return func(array.reshape(1, -1))
+
+    if "type" not in kwargs:
+        which_regression = rp.PARABOLA_FIT["type"]
+    else:
+        which_regression = kwargs["type"]
+    for a in ("localize", "mincurv", "alpha", "type"):
+        if a not in kwargs:
+            kwargs[a] = rp.PARABOLA_FIT[a]
     starttime = timer()
     rc = np.array([*r_configs], dtype=object)
-    rfacs, configs = rc[:,0].astype(float), rc[:,1]
-    localizeFactor = localize
+    rfacs, configs = rc[:, 0].astype(float), rc[:, 1]
+    localizeFactor = kwargs["localize"]
     if localizeFactor == 0:
         localizeFactor = 1  # no localization
     # reduce to independent parameters during fit
     if not rp.domainParams:
-        sps = [sp for sp in rp.searchpars if sp.el != "vac" and 
+        sps = [sp for sp in rp.searchpars if sp.el != "vac" and
                sp.mode != "dom" and sp.steps*localizeFactor >= 3 and
                sp.linkedTo is None and sp.restrictTo is None]
-        indep_pars = np.array([*np.array([*np.array(configs,dtype=object)],
+        indep_pars = np.array([*np.array([*np.array(configs, dtype=object)],
                                          dtype=object)
-                               .reshape(-1,1,2)[:,0,1]])
-        indep_pars = np.delete(indep_pars, [i for i in 
+                               .reshape(-1, 1, 2)[:, 0, 1]])
+        indep_pars = np.delete(indep_pars, [i for i in
                                             range(len(rp.searchpars)-1)
                                             if rp.searchpars[i] not in sps], 1)
     else:
         # first the percentages:
         sps = [sp for sp in rp.searchpars if sp.mode == "dom"]
-        reshaped = (np.array([*np.array(configs,dtype=object)],dtype=object)
-                                          .reshape(-1,len(rp.domainParams),2))
-        indep_pars = reshaped[:,0,0].astype(int) # contains the percentages
+        reshaped = (np.array([*np.array(configs, dtype=object)], dtype=object)
+                    .reshape(-1, len(rp.domainParams), 2))
+        indep_pars = reshaped[:, 0, 0].astype(int)  # contains the percentages
         # then the 'real' parameters:
         for (j, dp) in enumerate(rp.domainParams):
-            new_sps = [sp for sp in dp.rp.searchpars if 
+            new_sps = [sp for sp in dp.rp.searchpars if
                        sp.el != "vac" and sp.steps*localizeFactor >= 3 and
                        sp.linkedTo is None and sp.restrictTo is None]
-            new_ip = np.array([*reshaped[:,j,1]])
+            new_ip = np.array([*reshaped[:, j, 1]])
             new_ip = np.delete(new_ip, [i for i in range(len(dp.rp.searchpars))
-                                     if dp.rp.searchpars[i] not in new_sps], 1)
+                               if dp.rp.searchpars[i] not in new_sps], 1)
             sps.extend(new_sps)
             indep_pars = np.append(indep_pars, new_ip, axis=1)
-    
     indep_pars = indep_pars.astype(float)
     best_config = np.copy(indep_pars[np.argmin(rfacs)])
     sps_original = sps[:]
 
-    which_regression = which_regression.lower()
+    which_regression = kwargs["type"].lower()
+    alpha = kwargs["alpha"]
     if which_regression == 'lasso':
         polyreg = make_pipeline(PolyFeatNoMix(degree=2), Lasso(alpha=alpha,
                                                                normalize=True))
@@ -285,14 +294,14 @@ def parabolaFit(rp, r_configs, x0=None, localize=0, mincurv=5e-3,
                            "defaulting to linear regression."
                            .format(which_regression))
         which_regression = "linearregression"
-        polyreg = make_pipeline(PolyFeatNoMix(degree=2), 
+        polyreg = make_pipeline(PolyFeatNoMix(degree=2),
                                 LinearRegression())
     deletedPars = []
     while True:
         ip_tofit = np.copy(indep_pars)
         rf_tofit = np.copy(rfacs)
         xmin = np.copy(ip_tofit[np.argmin(rfacs), :])
-        if localize != 0:
+        if kwargs["localize"] != 0:
             # discard points that are far from global min in any dimension
             base = np.copy(xmin)  # parameter vector of best conf
             for i in range(len(base)):
@@ -310,7 +319,7 @@ def parabolaFit(rp, r_configs, x0=None, localize=0, mincurv=5e-3,
             to_del = [i for i in range(len(maxdist)) if maxdist[i] > cutoff]
             ip_tofit = np.delete(ip_tofit, to_del, axis=0)
             rf_tofit = np.delete(rf_tofit, to_del, axis=0)
-        # center on best config; important because offset from the 
+        # center on best config; important because offset from the
         #  best configuration may also be penalized in regression
         ip_tofit = ip_tofit - xmin
         # check curvature of the parabolas per parameter (renorm. to rangesize)
@@ -318,9 +327,9 @@ def parabolaFit(rp, r_configs, x0=None, localize=0, mincurv=5e-3,
         curvs = [(polyreg.named_steps[which_regression]
                   .coef_[polyreg.named_steps['polyfeatnomix']
                   .get_feature_names().index('x{}^2'.format(i))])
-                  * sp.steps**2
+                 * sp.steps**2
                  for i, sp in enumerate(sps)]
-        if min(curvs) >= mincurv:
+        if min(curvs) >= kwargs["mincurv"]:
             if len(rf_tofit) < 50*len(sps):  # too few points for good fit
                 # logger.debug("{} points - too few for fit of {} dimensions"
                 #               .format(len(rf_tofit), len(sps)))
@@ -332,9 +341,10 @@ def parabolaFit(rp, r_configs, x0=None, localize=0, mincurv=5e-3,
             # logger.debug("Found no parameter with sufficient curvature")
             sps[0].parabolaFit = {"curv": None, "min": None}
             return None, None  # found no parameter with parabola shape
-        # throw out the parameters with lowest curvature; repeat
-        k = min(max(1, int(len(curvs)*0.2)),   # how many to discard: min. 1,
-                sum(c < mincurv for c in curvs))    # max. all with low curv.
+        # throw out the parameters with lowest curvature; repeat.
+        #   discard: min. 1, max. all with low curv.
+        k = min(max(1, int(len(curvs)*0.2)),
+                sum(c < kwargs["mincurv"] for c in curvs))
         ind = np.argpartition(curvs, k)[:k]
         for i in ind:
             sps[i].parabolaFit = {"curv": None, "min": None}
@@ -344,23 +354,23 @@ def parabolaFit(rp, r_configs, x0=None, localize=0, mincurv=5e-3,
     for (i, sp) in enumerate(sps):
         sp.parabolaFit["curv"] = curvs[i]
     logger.debug("Parabola fit: {}/{} parameters were fit with {} points "
-                  "({:.4f} s)".format(len(sps), len(sps_original), 
-                                      len(rf_tofit), (timer() - starttime)))
-    
+                 "({:.4f} s)".format(len(sps), len(sps_original),
+                                     len(rf_tofit), (timer() - starttime)))
+
     # now find minimum within bounds (still centered around xmin)
-    bounds = np.array([(1,sp.steps) for sp in sps]) - xmin.reshape((-1,1))
+    bounds = np.array([(1, sp.steps) for sp in sps]) - xmin.reshape((-1, 1))
     if x0 is None:  # x0 is the starting guess
         x0 = np.copy(xmin)
     else:
         x0 = np.delete(x0, deletedPars)
-    parab_min = scipy.optimize.minimize(optimizerHelper, x0, 
-                                args=(polyreg.predict,),method='L-BFGS-B',
-                                bounds=bounds)
+    parab_min = scipy.optimize.minimize(
+        optimizerHelper, x0, args=(polyreg.predict,), method='L-BFGS-B',
+        bounds=bounds)
     predictR = parab_min.fun[0]
     for (i, sp) in enumerate(sps):
         sp.parabolaFit["min"] = parab_min.x[i] + xmin[i]
         best_config[sps_original.index(sp)] = parab_min.x[i] + xmin[i]
-    for sp in [sp for sp in rp.searchpars if type(sp.linkedTo) == tl.SearchPar 
+    for sp in [sp for sp in rp.searchpars if type(sp.linkedTo) == tl.SearchPar
                or type(sp.restrictTo) == tl.SearchPar]:
         if type(sp.linkedTo) == tl.SearchPar:
             sp.parabolaFit = copy.copy(sp.linkedTo.parabolaFit)
@@ -368,8 +378,28 @@ def parabolaFit(rp, r_configs, x0=None, localize=0, mincurv=5e-3,
             sp.parabolaFit = copy.copy(sp.restrictTo.parabolaFit)
     return (best_config, predictR)
 
+
 def search(sl, rp):
-    """Runs the search. Returns None when finishing without errors."""
+    """
+    Generates input for and runs the search, then interprets output.
+
+    Parameters
+    ----------
+    sl : Slab
+        Slab object containing atom, site and layer information.
+    rp : Rparams
+        The run parameters.
+
+    Raises
+    ------
+    RuntimeError
+        Raised if execution cannot continue.
+
+    Returns
+    -------
+    None.
+
+    """
     rp.searchResultConfig = None
     if rp.domainParams:
         initToDo = [(dp.rp, dp.sl, dp.workdir) for dp in rp.domainParams]
@@ -378,35 +408,35 @@ def search(sl, rp):
     for (rpt, slt, path) in initToDo:
         # read DISPLACEMENTS block
         if not rpt.disp_block_read:
-            readDISPLACEMENTS_block(rpt, slt, 
+            readDISPLACEMENTS_block(rpt, slt,
                                     rpt.disp_blocks[rpt.search_index])
             rpt.disp_block_read = True
         # get Deltas
-        if not 2 in rpt.runHistory:
+        if 2 not in rpt.runHistory:
             if "Tensors" in rpt.manifest:
                 logger.error("New tensors were calculated, but no new delta "
-                              "files were generated. Cannot execute search.")
+                             "files were generated. Cannot execute search.")
                 raise RuntimeError("Delta calculations was not run for "
                                    "current tensors.")
-            tl.leedbase.getDeltas(rpt.TENSOR_INDEX, basedir=path, 
-                                      targetdir=path, required=True)
+            tl.leedbase.getDeltas(rpt.TENSOR_INDEX, basedir=path,
+                                  targetdir=path, required=True)
     rp.updateCores()
     # generate rf.info
     try:
         rfinfo = io.writeRfInfo(sl, rp, filename="rf.info")
-    except:
+    except Exception:
         logger.error("Error generating search input file rf.info")
         raise
     # generate PARAM and search.steu
     #   needs to go AFTER rf.info, as writeRfInfo may remove expbeams!
     try:
         io.generateSearchInput(sl, rp)
-    except:
+    except Exception:
         logger.error("Error generating search input")
         raise
     if rp.indyPars == 0:  # never for calculations with domains # !!! CHECK
         logger.info("Found nothing to vary in search. Will proceed "
-                "directly to writing output and starting SUPERPOS.")
+                    "directly to writing output and starting SUPERPOS.")
         rp.searchResultConfig = [(100, [1] * (len(rp.searchpars))-1)]
         for (i, sp) in enumerate(rp.searchpars):
             if type(sp.restrictTo) == int:
@@ -421,76 +451,74 @@ def search(sl, rp):
         return None
     if rp.SUPPRESS_EXECUTION:
         logger.warning("SUPPRESS_EXECUTION parameter is on. Search "
-            " will not proceed. Stopping...")
+                       "will not proceed. Stopping...")
         rp.setHaltingLevel(3)
         return None
     # check for mpirun, decide whether to use parallelization
     usempi = True
-    if (shutil.which("mpirun", os.X_OK) == None 
-            or shutil.which("mpiifort", os.X_OK) == None):
+    if (shutil.which("mpirun", os.X_OK) is None
+            or shutil.which("mpiifort", os.X_OK) is None):
         usempi = False
-        logger.warning("mpirun / mpiifort are not present. Search "
-            "will be compiled and executed without parallelization. "
-            "This will be much slower!")
+        logger.warning(
+            "mpirun / mpiifort are not present. Search will be compiled and "
+            "executed without parallelization. This will be much slower!")
         if rp.FORTRAN_COMP[0] == "":
             try:
                 rp.getFortranComp()
-            except:
+            except Exception:
                 logger.error("No fortran compiler found, cancelling...")
                 raise RuntimeError("Fortran compile error")
     else:
         if rp.FORTRAN_COMP_MPI[0] == "":
             rp.FORTRAN_COMP_MPI[0] = "mpiifort -Ofast"
-            
-            
-    if usempi and shutil.which("mpirun", os.X_OK) == None:
+
+    if usempi and shutil.which("mpirun", os.X_OK) is None:
         usempi = False
-        logger.warning("mpirun is not present. Search will be compiled "
-            "and executed without parallelization. This will be much "
-            "slower!")
+        logger.warning(
+            "mpirun is not present. Search will be compiled and executed "
+            "without parallelization. This will be much slower!")
         if rp.FORTRAN_COMP[0] == "":
             try:
                 rp.getFortranComp()
-            except:
+            except Exception:
                 logger.error("No fortran compiler found, cancelling...")
                 raise RuntimeError("Fortran compile error")
     else:
         if rp.FORTRAN_COMP_MPI[0] == "":
             try:
                 rp.getFortranMpiComp()
-            except:
-                logger.error("No fortran mpi compiler found, "
-                              "cancelling...")
+            except Exception:
+                logger.error("No fortran mpi compiler found, cancelling...")
                 raise RuntimeError("Fortran compile error")
     # get fortran files
     try:
         tldir = tl.leedbase.getTLEEDdir(home=rp.workdir, version=rp.TL_VERSION)
         if not tldir:
             raise RuntimeError("TensErLEED code not found.")
-        srcpath = os.path.join(tldir,'src')
-        srcname = [f for f in os.listdir(srcpath) 
-                      if f.startswith('search.mpi')][0]
-        shutil.copy2(os.path.join(srcpath,srcname), srcname)
-        libpath = os.path.join(tldir,'lib')
-        libname = [f for f in os.listdir(libpath) 
-                      if f.startswith('lib.search.mpi')][0]
-        shutil.copy2(os.path.join(libpath,libname), libname)
-        hashing_files = [f for f in os.listdir(libpath) 
-                      if f.startswith('intarr_hashing')]
+        srcpath = os.path.join(tldir, 'src')
+        srcname = [f for f in os.listdir(srcpath)
+                   if f.startswith('search.mpi')][0]
+        shutil.copy2(os.path.join(srcpath, srcname), srcname)
+        libpath = os.path.join(tldir, 'lib')
+        libname = [f for f in os.listdir(libpath)
+                   if f.startswith('lib.search.mpi')][0]
+        shutil.copy2(os.path.join(libpath, libname), libname)
+        hashing_files = [f for f in os.listdir(libpath)
+                         if f.startswith('intarr_hashing')]
         if hashing_files:
             hashname = hashing_files[0]
-            shutil.copy2(os.path.join(libpath,hashname), hashname)
+            shutil.copy2(os.path.join(libpath, hashname), hashname)
         else:
             hashname = ""
-        if usempi: # these are short C scripts - use pre-compiled versions
+        if usempi:  # these are short C scripts - use pre-compiled versions
             randnamefrom = "MPIrandom_.o"
         else:
             randnamefrom = "random_.o"
         randname = "random_.o"
-        shutil.copy2(os.path.join(libpath,randnamefrom), randname)
+        shutil.copy2(os.path.join(libpath, randnamefrom), randname)
         globalname = "GLOBAL"
-        shutil.copy2(os.path.join(srcpath,globalname), globalname)
-    except:
+        shutil.copy2(os.path.join(srcpath, globalname), globalname)
+    except Exception:
         logger.error("Error getting TensErLEED files for search: ")
         raise
     # compile fortran files
@@ -501,20 +529,17 @@ def search(sl, rp):
         fcomp = rp.FORTRAN_COMP
     logger.info("Compiling fortran input files...")
     try:
-        fortranCompile(fcomp[0]+" -o lib.search.o -c", 
-                        libname, fcomp[1])
+        fortranCompile(fcomp[0]+" -o lib.search.o -c",
+                       libname, fcomp[1])
         if hashname:
             fortranCompile(fcomp[0]+" -c", hashname, fcomp[1])
-        fortranCompile(fcomp[0]+" -o restrict.o -c", 
-                        "restrict.f", fcomp[1])
-        fortranCompile(fcomp[0]+" -o search.o -c -fixed", srcname,
-                        fcomp[1])
-        # combine
+        fortranCompile(fcomp[0]+" -o restrict.o -c", "restrict.f", fcomp[1])
+        fortranCompile(fcomp[0]+" -o search.o -c -fixed", srcname, fcomp[1])
         to_link = "search.o random_.o lib.search.o restrict.o"
         if hashname:
             to_link += " intarr_hashing.o"
-        fortranCompile(fcomp[0]+" -o "+ searchname, to_link, fcomp[1])
-    except:
+        fortranCompile(fcomp[0] + " -o " + searchname, to_link, fcomp[1])
+    except Exception:
         logger.error("Error compiling fortran files: ", exc_info=True)
         raise
     logger.debug("Compiled fortran files successfully")
@@ -523,36 +548,35 @@ def search(sl, rp):
         logger.info("Search log will be written to file "+searchlogname)
         rp.manifest.append(searchlogname)
     if rp.N_CORES == 1:
-        logger.warning("The N_CORES parameter is set to 1. The search "
-                "will be run without multiprocessing. This will be much "
-                "slower!")
-                # TODO: This shouldn't need MPICOMPILE, but I'm not sure 
-                #   if the non-parallelized version of the search is 
-                #   equivalent, so currently, both are *compiled* with mpi,
-                #   and this only switches off mpirun
+        logger.warning(
+            "The N_CORES parameter is set to 1. The search will be run "
+            "without multiprocessing. This will be much slower!")
+        # TODO: This shouldn't need MPICOMPILE, but I'm not sure
+        #   if the non-parallelized version of the search is
+        #   equivalent, so currently, both are *compiled* with mpi,
+        #   and this only switches off mpirun
         usempi = False
     # if there is an old SD.TL file, it needs to be removed
     if os.path.isfile("SD.TL"):
         try:
             os.remove("SD.TL")
-        except:
+        except Exception:
             logger.warning("Failed to delete old SD.TL file. This may "
-                            "cause errors in the interpretation of search "
-                            "progress.")
+                           "cause errors in the interpretation of search "
+                           "progress.")
     # same for old data.chem
-    for fn in [f for f in os.listdir() if re.match(r'data\d+\.chem$', 
-                                                      f.lower())]:
+    for fn in [f for f in os.listdir() if re.match(r'data\d+\.chem$',
+                                                   f.lower())]:
         try:
             os.remove(fn)
-        except:
+        except Exception:
             logger.warning("Failed to delete old {} file. This may cause "
                            "errors in the parabola fit.".format(fn))
     # start search process
     repeat = True
     first = True
     genOffset = 0
-    gens = []           # generation numbers in SD.TL, but continuous if 
-                        #   search restarts
+    gens = []  # generation numbers in SD.TL, but continuous if search restarts
     markers = []
     rfaclist = []
     all_r_configs = set()  # tuples (r, config) for parabola fit
@@ -567,91 +591,90 @@ def search(sl, rp):
     while repeat:
         if first:
             logger.info("Starting search. See files Search-progress.pdf "
-                         "and SD.TL for progress information.")
+                        "and SD.TL for progress information.")
             first = False
         repeat = False
         interrupted = False
         proc = None
         if usempi:
-            command = ["mpirun", "-n", str(rp.N_CORES), 
-                       os.path.join(".",searchname)]
+            command = ["mpirun", "-n", str(rp.N_CORES),
+                       os.path.join(".", searchname)]
         else:
-            command = os.path.join('.',searchname)
+            command = os.path.join('.', searchname)
         try:
             if not rp.LOG_SEARCH:
-                proc = subprocess.Popen(command, 
-                            encoding="ascii", 
-                            stdout=subprocess.DEVNULL, 
-                            stderr=subprocess.STDOUT,
-                            preexec_fn=os.setsid)
+                proc = subprocess.Popen(
+                    command, encoding="ascii",
+                    stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT,
+                    preexec_fn=os.setsid)
             else:
                 logExists = os.path.isfile(searchlogname)
                 with open(searchlogname, "a") as log:
                     if logExists:
                         log.write("\n\n-------\nRESTARTING\n-------\n\n")
-                    proc = subprocess.Popen(command, 
-                            encoding="ascii", stdout=log, stderr=log,
-                            preexec_fn=os.setsid)
-        except:
+                    proc = subprocess.Popen(
+                        command, encoding="ascii",
+                        stdout=log, stderr=log,
+                        preexec_fn=os.setsid)
+        except Exception:
             logger.error("Error starting search. Check SD.TL file.")
             raise
-        if proc == None:
+        if proc is None:
             logger.error("Error starting search subprocess... Stopping.")
             raise RuntimeError("Error running search")
         # FEED INPUT
         try:
-            proc.communicate(input = rfinfo, timeout = 0.1)
+            proc.communicate(input=rfinfo, timeout=0.1)
         except subprocess.TimeoutExpired:
-            pass # started successfully; monitoring below
-        except:
+            pass  # started successfully; monitoring below
+        except Exception:
             logger.error("Error starting search. Check SD.TL file.")
         # MONITOR SEARCH
         searchStartTime = timer()
         printt = searchStartTime
         filepos = 0
-        timestep = 1 # time step to check files
-        evaluationTime = 10 # how often should SD.TL be evaluated
-        lastEval = 0 # last evaluation time, counting in seconds from 
-                     #   searchStartTime
+        timestep = 1  # time step to check files
+        evaluationTime = 10  # how often should SD.TL be evaluated
+        lastEval = 0  # last evaluation time (s), counting from searchStartTime
         comment = ""
         sdtlGenNum = 0
         gaussianWidthOri = rp.GAUSSIAN_WIDTH
         check_datafiles = False
         try:
-            while proc.poll() == None:
+            while proc.poll() is None:
                 time.sleep(timestep)
                 updatePARAMETERS(rp)
                 # check convergence criteria
                 stop = False
                 checkrepeat = True
-                if rp.STOP == True:
+                if rp.STOP is True:
                     stop = True
                     checkrepeat = False
                     logger.info("Search stopped by STOP command.")
                     if not os.path.isfile("SD.TL"):
                         # try saving by waiting for SD.TL to be created...
                         logger.warning("SD.TL file not found. Trying to "
-                                        "wait, maximum 5 minutes...")
+                                       "wait, maximum 5 minutes...")
                         i = 0
                         while not os.path.isfile("SD.TL") and not i >= 300:
                             time.sleep(1)
                             i += 1
                 else:
                     for k in ["dec", "best", "all"]:
-                        if (rp.SEARCH_MAX_DGEN[k] > 0 and len(gens) > 1 
-                              and rp.GAUSSIAN_WIDTH_SCALING != 1
-                              and gens[-1] - realLastConfigGen[k] >= 
-                                                  rp.SEARCH_MAX_DGEN[k]):
+                        if (rp.SEARCH_MAX_DGEN[k] > 0 and len(gens) > 1
+                            and rp.GAUSSIAN_WIDTH_SCALING != 1
+                            and (gens[-1] - realLastConfigGen[k]
+                                 >= rp.SEARCH_MAX_DGEN[k])):
                             stop = True
-                            o = {"all": "all structures", 
+                            o = {"all": "all structures",
                                  "best": "best structure",
                                  "dec": "best 10% of structures"}
-                            logger.info("Search convergence criterion "
-                                "reached: max. generations without change "
-                                "({}): {}/{}."
-                                .format(o[k], 
-                                        gens[-1] - realLastConfigGen[k], 
-                                        int(rp.SEARCH_MAX_DGEN[k])))
+                            logger.info(
+                                "Search convergence criterion reached: max. "
+                                "generations without change ({}): {}/{}."
+                                .format(
+                                    o[k], gens[-1] - realLastConfigGen[k],
+                                    int(rp.SEARCH_MAX_DGEN[k])))
                             break
                 if rp.GAUSSIAN_WIDTH != gaussianWidthOri:
                     stop = True
@@ -659,18 +682,17 @@ def search(sl, rp):
                     comment = ("GAUSSIAN_WIDTH = {}"
                                .format(rp.GAUSSIAN_WIDTH))
                     logger.info("GAUSSIAN_WIDTH parameter changed. "
-                            "Search will restart.")
+                                "Search will restart.")
                 t = timer() - searchStartTime
                 if (t - lastEval > evaluationTime) or stop:
                     # evaluate
                     lastEval = t
                     newData = []
                     if os.path.isfile("SD.TL"):
-                        filepos, content = io.readSDTL_next(
-                                                         offset = filepos)
+                        filepos, content = io.readSDTL_next(offset=filepos)
                         if content:
-                            newData = io.readSDTL_blocks(content, 
-                                                  whichR = rp.SEARCH_BEAMS)
+                            newData = io.readSDTL_blocks(
+                                content, whichR=rp.SEARCH_BEAMS)
                     for (gen, rfacs, configs) in newData:
                         gens.append(gen + genOffset)
                         sdtlGenNum = gen
@@ -678,17 +700,19 @@ def search(sl, rp):
                         all_r_configs.update(list(zip(rfacs, configs)))
                         if gen % 1000 == 0:
                             speed = 1000*(timer() - absstarttime)/gens[-1]
-                            logger.debug("R = {:.4f} (Generation {}, {:.1f} s "
+                            logger.debug(
+                                "R = {:.4f} (Generation {}, {:.1f} s "
                                 "since last, {:.1f} s/kG overall)".format(
-                                min(rfacs), gens[-1], timer()-printt, speed))
+                                    min(rfacs), gens[-1], timer() - printt,
+                                    speed))
                             printt = timer()
                             check_datafiles = True
                         if configs != realLastConfig["all"]:
                             realLastConfig["all"] = configs
                             realLastConfigGen["all"] = gens[-1]
                         if (configs[:int(np.ceil(
-                                            rp.SEARCH_POPULATION * 0.1))] 
-                                                != realLastConfig["dec"]):
+                                            rp.SEARCH_POPULATION * 0.1))]
+                                != realLastConfig["dec"]):
                             realLastConfig["dec"] = configs[:int(np.ceil(
                                             rp.SEARCH_POPULATION * 0.1))]
                             realLastConfigGen["dec"] = gens[-1]
@@ -699,22 +723,22 @@ def search(sl, rp):
                         lastconfig = newData[-1][2]
                     if check_datafiles and not (stop and repeat):
                         check_datafiles = False
-                        datafiles = [f for f in os.listdir() 
-                                 if re.match(r'data\d+\.chem$', f.lower())]
+                        datafiles = [f for f in os.listdir()
+                                     if re.match(r'data\d+\.chem$', f.lower())]
                         if datafiles:
-                            all_r_configs.update(io.readDataChem(rp, 
+                            all_r_configs.update(io.readDataChem(rp,
                                                                  datafiles))
                         if len(all_r_configs) >= 10*rp.indyPars:
-                            if rfac_predict and (rfac_predict[-1][1] > 
+                            if rfac_predict and (rfac_predict[-1][1] >
                                                  rfaclist[-1][0]):
                                 # if current prediction is bad, reset x0
                                 parab_x0 = None
                             try:
                                 # !!! WORK IN PROGRESS
                                 # logger.debug("Parabola fit with {} points"
-                                #              .format(len(all_r_configs)))  # !!! TMPDEBUG
-                                parab_x0, predictR = parabolaFit(rp, 
-                                                    all_r_configs, x0=parab_x0)
+                                #              .format(len(all_r_configs)))
+                                parab_x0, predictR = parabolaFit(
+                                    rp, all_r_configs, x0=parab_x0)
                                 if predictR is not None:
                                     if not rfac_predict:
                                         logger.debug("Starting parabola fits "
@@ -722,65 +746,66 @@ def search(sl, rp):
                                     rfac_predict.append((gens[-1], predictR))
                             except KeyboardInterrupt:
                                 raise
-                            except:
+                            except Exception:
                                 logger.warning("Parabolic fit of R-factor "
-                                        "data failed", exc_info=rp.LOG_DEBUG)
+                                               "data failed",
+                                               exc_info=rp.LOG_DEBUG)
                     if len(gens) > 1:
                         try:
-                            writeSearchProgressPdf(rp, gens, rfaclist, 
-                                                lastconfig, markers=markers,
-                                                rfac_predict=rfac_predict)
+                            writeSearchProgressPdf(
+                                rp, gens, rfaclist, lastconfig,
+                                markers=markers, rfac_predict=rfac_predict)
                         except KeyboardInterrupt:
                             raise
-                        except:
-                            logger.warning("Error writing Search-progress.pdf", 
-                                            exc_info = rp.LOG_DEBUG)
+                        except Exception:
+                            logger.warning("Error writing Search-progress.pdf",
+                                           exc_info=rp.LOG_DEBUG)
                         try:
                             writeSearchReportPdf(rp)
                         except KeyboardInterrupt:
                             raise
-                        except:
+                        except Exception:
                             logger.warning("Error writing Search-report.pdf",
-                                           exc_info = rp.LOG_DEBUG)
-                    if (len(gens) > 1 and os.path.isfile("SD.TL") and 
-                                                (repeat or not stop)):
+                                           exc_info=rp.LOG_DEBUG)
+                    if (len(gens) > 1 and os.path.isfile("SD.TL")
+                            and (repeat or not stop)):
                         try:
                             processSearchResults(sl, rp, final=False)
                         except Exception as e:
                             logger.warning("Failed to update POSCAR_OUT "
-                                            "and VIBROCC_OUT: " + str(e))
+                                           "and VIBROCC_OUT: " + str(e))
                 if stop:
                     logger.info("Stopping search...")
                     pgid = os.getpgid(proc.pid)
                     proc.kill()
                     proc.wait()
                     try:
-                        os.killpg(pgid, signal.SIGTERM)  
-                                        # needed to kill mpirun children
+                        # needed to kill mpirun children
+                        os.killpg(pgid, signal.SIGTERM)
                     except ProcessLookupError:
-                        pass # already dead
+                        pass  # already dead
                     if (not repeat and not rp.GAUSSIAN_WIDTH_SCALING == 1
-                                   and checkrepeat):
+                            and checkrepeat):
                         repeat = True
                         block = False
-                        for k in [k for k in ["dec", "best", "all"] 
+                        for k in [k for k in ["dec", "best", "all"]
                                   if rp.SEARCH_MAX_DGEN[k] > 0]:
                             if convergedConfig[k] != realLastConfig[k]:
                                 convergedConfig[k] = realLastConfig[k][:]
                                 block = True
                             else:
                                 repeat = False
-                                o = {"all": "any structure", 
+                                o = {"all": "any structure",
                                      "best": "best structure",
                                      "dec": "best 10% of structures"}
-                                logger.info("Convergence reached: No "
-                                    "improvement to " + o[k] + " since "
-                                    "changing GAUSSIAN_WIDTH.")
+                                logger.info(
+                                    "Convergence reached: No improvement to "
+                                    + o[k] + " since changing GAUSSIAN_WIDTH.")
                         if not repeat and block:
                             repeat = True
                             logger.info("Multiple convergence "
-                                "criteria are defined, not all are "
-                                "met. Search continues.")
+                                        "criteria are defined, not all are "
+                                        "met. Search continues.")
                         if repeat:
                             rp.GAUSSIAN_WIDTH *= rp.GAUSSIAN_WIDTH_SCALING
                             if rp.GAUSSIAN_WIDTH < 0.0001:
@@ -789,46 +814,46 @@ def search(sl, rp):
                                 rp.SEARCH_MAX_DGEN[k] *= (
                                             rp.SEARCH_MAX_DGEN_SCALING[k])
                                 realLastConfigGen[k] = gens[-1]
-                            logger.info("Reducing GAUSSIAN_WIDTH "
-                                "parameter to {} and restarting search..."
-                                .format(round(rp.GAUSSIAN_WIDTH,4)))
+                            logger.info(
+                                "Reducing GAUSSIAN_WIDTH parameter to {} and "
+                                "restarting search..."
+                                .format(round(rp.GAUSSIAN_WIDTH, 4)))
                             comment = ("GAUSSIAN_WIDTH = {}"
-                                   .format(round(rp.GAUSSIAN_WIDTH,4)))
-                
+                                       .format(round(rp.GAUSSIAN_WIDTH, 4)))
         except KeyboardInterrupt:
             if not os.path.isfile("SD.TL"):
                 # try saving by waiting for SD.TL to be created...
                 logger.warning("SD.TL file not found. Trying to wait, "
-                                "interrupt again to override...")
+                               "interrupt again to override...")
                 try:
                     i = 0
                     while not os.path.isfile("SD.TL") and not i >= 60:
                         time.sleep(1)
                         i += 1
                 except KeyboardInterrupt:
-                    pass # user insisted, give up
+                    pass   # user insisted, give up
             interrupted = True
             rp.STOP = True
             try:
+                # need to kill mpirun children
                 pgid = os.getpgid(proc.pid)
                 proc.kill()
                 proc.wait()
                 os.killpg(pgid, signal.SIGTERM)
-                                    # needed to kill mpirun children
             except ProcessLookupError:
-                pass # already dead
+                pass   # already dead
             logger.warning("Search interrupted by user. Attempting "
-                            "analysis of results...")
-        except:
+                           "analysis of results...")
+        except Exception:
             logger.error("Error during search. Check SD.TL file.")
             try:
+                # need to kill mpirun children
                 pgid = os.getpgid(proc.pid)
                 proc.kill()
                 proc.wait()
                 os.killpg(pgid, signal.SIGTERM)
-                                    # needed to kill mpirun children
             except ProcessLookupError:
-                pass # already dead
+                pass   # already dead
             raise
         if repeat:
             rp.SEARCH_START = "control"
@@ -837,18 +862,18 @@ def search(sl, rp):
                 rp.SEARCH_MAX_GEN -= sdtlGenNum
                 markers.append((genOffset, comment))
             try:
-                io.generateSearchInput(sl, rp, steuOnly=True, 
-                                           cull=True, info=False)
-            except:
+                io.generateSearchInput(sl, rp, steuOnly=True,
+                                       cull=True, info=False)
+            except Exception:
                 logger.error("Error re-generating search input")
                 raise
             if os.path.isfile("SD.TL"):
                 try:
                     os.remove("SD.TL")
-                except:
+                except Exception:
                     logger.warning("Failed to delete old SD.TL file. "
-                                "This may cause errors in the "
-                                "interpretation of search progress.")
+                                   "This may cause errors in the "
+                                   "interpretation of search progress.")
     if not interrupted:
         logger.info("Finished search. Processing files...")
     else:
@@ -857,8 +882,7 @@ def search(sl, rp):
     if len(all_r_configs) >= 10*rp.indyPars:
         if rfac_predict and (rfac_predict[-1][1] > rfaclist[-1][0]):
             parab_x0 = None
-        parab_x0, predictR = parabolaFit(rp, 
-                            all_r_configs, x0=parab_x0)
+        parab_x0, predictR = parabolaFit(rp, all_r_configs, x0=parab_x0)
         if predictR is not None:
             rfac_predict.append((gens[-1], predictR))
     # write pdf one more time
@@ -866,18 +890,18 @@ def search(sl, rp):
         try:
             writeSearchProgressPdf(rp, gens, rfaclist, lastconfig,
                                    markers=markers, rfac_predict=rfac_predict)
-        except:
-            logger.warning("Error writing Search-progress.pdf", 
-                            exc_info = True)
+        except Exception:
+            logger.warning("Error writing Search-progress.pdf",
+                           exc_info=True)
         try:
             writeSearchReportPdf(rp)
-        except:
+        except Exception:
             logger.warning("Error writing Search-report.pdf",
-                            exc_info = True)
+                           exc_info=True)
     # process SD.TL to get POSCAR_OUT, VIBROCC_OUT
     try:
         processSearchResults(sl, rp)
-    except:
+    except Exception:
         logger.error("Error processing search results: ", exc_info=True)
         raise
     # if deltas were copied from domain folders, clean them up
@@ -886,20 +910,20 @@ def search(sl, rp):
         for file in [f for f in os.listdir() if rgx.match(f)]:
             try:
                 os.remove(file)
-            except:
+            except Exception:
                 logger.warning('Failed to deleted redundant domain delta file '
-                               +file)
+                               + file)
     # process files
     try:
-        os.rename('PARAM','search-PARAM')
-    except:
+        os.rename('PARAM', 'search-PARAM')
+    except Exception:
         logger.warning("Failed to rename search input file PARAM to "
-                        "search-PARAM")
+                       "search-PARAM")
     try:
-        os.rename('rf.info','search-rf.info')
-    except:
+        os.rename('rf.info', 'search-rf.info')
+    except Exception:
         logger.warning("Failed to rename search input file rf.info to "
-                        "search-rf.info")
-    if lastconfig != None:
+                       "search-rf.info")
+    if lastconfig is not None:
         rp.searchResultConfig = lastconfig
-    return None
+    return
