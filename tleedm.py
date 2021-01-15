@@ -15,13 +15,8 @@ import os
 import shutil
 import re
 import multiprocessing
-
-cd = os.path.realpath(os.path.dirname(__file__))  # !!! check this.
-tleedmap_path = os.path.realpath(os.path.join(cd, '..'))
-if tleedmap_path not in sys.path:
-    sys.path.append(tleedmap_path)
-
 import tleedmlib.sections as sections
+
 from tleedmlib.base import mkdir_recursive
 from tleedmlib.files.parameters import (readPARAMETERS, interpretPARAMETERS,
                                         modifyPARAMETERS, updatePARAMETERS)
@@ -32,14 +27,18 @@ from tleedmlib.files.beams import (readBEAMLIST, readIVBEAMS, readOUTBEAMS,
 from tleedmlib.files.vibrocc import readVIBROCC, writeVIBROCC
 from tleedmlib.files.displacements import readDISPLACEMENTS
 
+cd = os.path.realpath(os.path.dirname(__file__))  # !!! check this.
+tleedmap_path = os.path.realpath(os.path.join(cd, '..'))
+if tleedmap_path not in sys.path:
+    sys.path.append(tleedmap_path)
+
 logger = logging.getLogger("tleedm")
 starttime = 0.0
 
+
 class CustomLogFormatter(logging.Formatter):
     """Logging Formatter for level-dependent message formatting"""
-
     FORMATS = {
-#        logging.DEBUG: "DBG: %(module)s: %(lineno)d: %(msg)s",
         logging.DEBUG: "dbg: %(msg)s",
         logging.INFO: "%(msg)s",
         logging.WARNING: "# WARNING: %(msg)s",
@@ -57,7 +56,23 @@ class CustomLogFormatter(logging.Formatter):
 
 
 def runSection(index, sl, rp):
-    """Runs a specific part of the program."""
+    """
+    Runs a specific part of the program.
+
+    Parameters
+    ----------
+    index : int
+        Index of the section, see sectionNames variable below.
+    sl : Slab
+        Slab object containing atom information.
+    rp : Rparams
+        The run parameters.
+
+    Returns
+    -------
+    None.
+
+    """
     sectionNames = {0: "INITIALIZATION",
                     1: "REFERENCE CALCULATION",
                     2: "DELTA-AMPLITUDES",
@@ -65,6 +80,7 @@ def runSection(index, sl, rp):
                     11: "R-FACTOR CALCULATION",
                     12: "R-FACTOR CALCULATION",
                     31: "SUPERPOS"}
+    # files that need to be there for the different parts to run
     requiredFiles = {0: ["POSCAR", "PARAMETERS", "VIBROCC", "IVBEAMS"],
                      1: ["BEAMLIST", "PHASESHIFTS", "POSCAR", "PARAMETERS",
                          "IVBEAMS", "VIBROCC"],
@@ -76,7 +92,6 @@ def runSection(index, sl, rp):
                      12: ["BEAMLIST", "PARAMETERS", "IVBEAMS", "EXPBEAMS"],
                      31: ["BEAMLIST", "POSCAR", "PARAMETERS", "IVBEAMS",
                           "VIBROCC", "DISPLACEMENTS"]}
-                # files that need to be there for the different parts to run
 
     checkfiles = requiredFiles[index][:]
     o = "\nSTARTING SECTION: "+sectionNames[index]
@@ -87,7 +102,7 @@ def runSection(index, sl, rp):
         for fn in ["POSCAR", "VIBROCC", "PHASESHIFTS"]:
             try:
                 checkfiles.remove(fn)
-            except:
+            except Exception:
                 pass
     logger.info(o)
     sectionStartTime = timer()
@@ -113,11 +128,11 @@ def runSection(index, sl, rp):
                         # try without the .csv extension
                         rp.expbeams = readOUTBEAMS("EXPBEAMS", enrange=er)
                         rp.fileLoaded["EXPBEAMS"] = True
-                    except:
+                    except Exception:
                         logger.error("Error while reading required file "
-                                      "EXPBEAMS.csv")
+                                     "EXPBEAMS.csv")
                         raise
-                except:
+                except Exception:
                     logger.error("Error while reading required file EXPBEAMS")
                     raise
                 if index != 0:
@@ -128,32 +143,32 @@ def runSection(index, sl, rp):
                     rp.ivbeams_sorted = False
                     rp.fileLoaded["IVBEAMS"] = True
                 except FileNotFoundError:
-                    if (os.path.isfile("EXPBEAMS") or
-                             os.path.isfile("EXPBEAMS.csv")):
+                    if (os.path.isfile("EXPBEAMS")
+                            or os.path.isfile("EXPBEAMS.csv")):
                         checkfiles.insert(i+1, "EXPBEAMS")
                         logger.warning("IVBEAMS file not found. Will attempt "
-                                "generating IVBEAMS from EXBEAMS.")
+                                       "generating IVBEAMS from EXBEAMS.")
                         ignoreError = True
                     else:
                         logger.error("Neither IVBEAMS not EXPBEAMS file "
-                                      "found.")
+                                     "found.")
                         raise
-                except:
+                except Exception:
                     logger.error("Error while reading required file IVBEAMS")
                     raise
             elif filename == "BEAMLIST":
                 try:
                     rp.beamlist = readBEAMLIST()
                     rp.fileLoaded["BEAMLIST"] = True
-                except:
+                except Exception:
                     logger.error("Error while reading required file "
-                                  "_BEAMLIST")
+                                 "_BEAMLIST")
                     raise
             elif filename == "VIBROCC":
                 try:
-                    changeVIBROCC = readVIBROCC(rp,sl)
+                    changeVIBROCC = readVIBROCC(rp, sl)
                     rp.fileLoaded["VIBROCC"] = True
-                except:
+                except Exception:
                     logger.error("Error while reading required file VIBROCC")
                     raise
                 sl.fullUpdate(rp)
@@ -161,8 +176,9 @@ def runSection(index, sl, rp):
                     if os.path.isfile("VIBROCC"):
                         os.rename("VIBROCC", "VIBROCC_user")
                         rp.manifest.append("VIBROCC_user")
-                        logger.info("VIBROCC file was modified with "
-                            "automatically generated vibrational amplitudes.")
+                        logger.info(
+                            "VIBROCC file was modified with automatically "
+                            "generated vibrational amplitudes.")
                     writeVIBROCC(sl, rp, "VIBROCC")
                     rp.manifest.append("VIBROCC")
                 if rp.T_EXPERIMENT is not None:
@@ -176,36 +192,37 @@ def runSection(index, sl, rp):
                     (rp.phaseshifts_firstline, rp.phaseshifts,
                      newpsGen, newpsWrite) = readPHASESHIFTS(sl, rp)
                     if newpsGen:
-                        logging.critical("_PHASESHIFT file generation is only "
-                            "supported during initialization. Stopping "
-                            "execution...")
+                        logging.critical(
+                            "_PHASESHIFT file generation is only supported "
+                            "during initialization. Stopping execution...")
                         raise RuntimeError("Inconsistent _PHASESHIFT file")
                     elif newpsWrite:
-                        logger.warning("Writing a new _PHASESHIFT file is "
+                        logger.warning(
+                            "Writing a new _PHASESHIFT file is "
                             "only supported during initialization. The "
                             "data in the provided file will be used, but "
                             "running the initialization is recommended.")
                         rp.fileLoaded["PHASESHIFTS"] = True
                     else:
                         rp.fileLoaded["PHASESHIFTS"] = True
-                except:
+                except Exception:
                     logger.error("Error while reading required file "
-                                  "_PHASESHIFTS")
+                                 "_PHASESHIFTS")
                     raise
             elif filename == "DISPLACEMENTS":
                 try:
                     readDISPLACEMENTS(rp)
                     rp.fileLoaded["DISPLACEMENTS"] = True
-                except:
+                except Exception:
                     logger.error("Error while reading required file "
-                                  "DISPLACEMENTS")
+                                 "DISPLACEMENTS")
                     raise
             if not rp.fileLoaded[filename] and not ignoreError:
                 # and if that didn't work, stop:
-                logger.error("Step '"+sectionNames[index]+"' requires file "
-                              +filename+". Stopping execution...")
+                logger.error("Step '" + sectionNames[index] + "' requires "
+                             "file " + filename + ". Stopping execution...")
                 raise RuntimeError("File not found or file loading error: "
-                                   +filename)
+                                   + filename)
         i += 1
     try:
         if index == 0:
@@ -220,20 +237,41 @@ def runSection(index, sl, rp):
             sections.search(sl, rp)
         elif index == 31:
             sections.superpos(sl, rp)
-    except:
+    except Exception:
         logger.error("Error in section {}".format(sectionNames[index]))
         raise
     elapsedTimeStr = getElapsedTimeString(timer() - sectionStartTime)
     logger.info("Finishing section at " + time.strftime("%H:%M:%S",
-                                                         time.localtime())
-                 + ". Section took " + elapsedTimeStr + ".")
+                                                        time.localtime())
+                + ". Section took " + elapsedTimeStr + ".")
     return
 
-def sortfiles(tensorIndex, delete_unzipped = False, tensors = True,
-              deltas = True, path = ""):
-    """Makes Tensors and Deltas zip files. Copies files to AUX and OUT folders
+
+def sortfiles(tensorIndex, delete_unzipped=False, tensors=True,
+              deltas=True, path=""):
+    """
+    Makes Tensors and Deltas zip files. Copies files to AUX and OUT folders
     as appropriate. If delete_unzipped is set to True, deletes unzipped Deltas
-    and Tensors directories."""
+    and Tensors directories.
+
+    Parameters
+    ----------
+    tensorIndex : int
+        Which Delta and Tensor files should be considered.
+    delete_unzipped : bool, optional
+        Whether the original Delta- and Tensor-files should be deleted
+        after making the archives. The default is False.
+    tensors, deltas : bool, optional
+        Whether the Tensor/Delta files contain new information and should be
+        saved. The default is True.
+    path : str, optional
+        The base path to check files in. The default is "".
+
+    Returns
+    -------
+    None.
+
+    """
     # move files to AUX and OUT folders
     auxfiles = ["AUXBEAMS", "AUXGEO", "AUXLATGEO", "AUXNONSTRUCT",
                 "POSCAR_oricell", "POSCAR_bulk", "muftin.f",
@@ -254,10 +292,10 @@ def sortfiles(tensorIndex, delete_unzipped = False, tensors = True,
     # outfiles with variable names:
     if not path:
         path = "."
-    outfiles.extend([f for f in os.listdir(path) if
-                         (f.startswith("POSCAR_OUT") or
-                          f.startswith("VIBROCC_OUT") or
-                          f.startswith("R_OUT"))])
+    outfiles.extend([f for f in os.listdir(path)
+                     if (f.startswith("POSCAR_OUT") or
+                         f.startswith("VIBROCC_OUT") or
+                         f.startswith("R_OUT"))])
     # clean up deltas
     deltalist = [f for f in os.listdir(path) if f.startswith("DEL_")]
     if len(deltalist) > 0:
@@ -266,9 +304,9 @@ def sortfiles(tensorIndex, delete_unzipped = False, tensors = True,
         try:
             for df in deltalist:
                 shutil.move(os.path.join(path, df),
-                            os.path.join(path,"Deltas",fn,df))
-        except:
-            logger.error("Error moving Delta files: ", exc_info = True)
+                            os.path.join(path, "Deltas", fn, df))
+        except Exception:
+            logger.error("Error moving Delta files: ", exc_info=True)
 
     # if there are unzipped Tensors or Deltas directories, zip them:
     for t in ["Tensors", "Deltas"]:
@@ -294,25 +332,25 @@ def sortfiles(tensorIndex, delete_unzipped = False, tensors = True,
                     o = os.path.relpath(os.path.join(path, t, d))
                 logger.info("Packing {}.zip...".format(o))
                 try:
-                    shutil.make_archive(os.path.join(path, t, d),"zip",
+                    shutil.make_archive(os.path.join(path, t, d), "zip",
                                         os.path.join(path, t, d))
-                except:
+                except Exception:
                     logger.error("Error packing {}.zip file: ".format(o))
                     delete = False
             if delete:
                 try:
                     shutil.rmtree(os.path.join(path, t, d))
-                except:
-                    logger.warning("Error deleting unzipped {} directory. "
+                except Exception:
+                    logger.warning(
+                        "Error deleting unzipped {} directory. "
                         "This will increase the size of the work folder, "
                         "but not cause any problems.".format(t))
     # sort AUX and OUT files:
     for t in ["AUX", "OUT"]:
         try:
             mkdir_recursive(os.path.join(path, t))
-        except:
-            logger.error("Error creating {} folder: ".format(t),
-                         exc_info = True)
+        except Exception:
+            logger.error("Error creating {} folder: ".format(t), exc_info=True)
         if t == "AUX":
             filelist = auxfiles
         else:
@@ -321,30 +359,43 @@ def sortfiles(tensorIndex, delete_unzipped = False, tensors = True,
                   if os.path.isfile(os.path.join(path, f))]:
             try:
                 shutil.copy2(os.path.join(path, f), os.path.join(path, t, f))
-            except:
+            except Exception:
                 logger.error("Error moving {} file {}: ".format(t, f),
-                             exc_info = True)
+                             exc_info=True)
+
 
 ###############################################
 #            CLEANUP FUNCTIONS                #
 ###############################################
 
-def moveoldruns(rp, prerun = False):
-    """Makes a new folder in 'workhistory'. Copies AUX, OUT and files in
-    manifest (except main log) to that new folder. If prerun is set True, then
-    instead of using the manifest, all potentially interesting files will be
-    copied, and the new folder will get index 0."""
+def moveoldruns(rp, prerun=False):
+    """
+    Makes a new folder in 'workhistory'. Copies AUX, OUT and files in
+    manifest (except main log) to that new folder.
+
+    Parameters
+    ----------
+    rp : Rparams
+        The run parameters.
+    prerun : bool, optional
+        If True, then instead of using the manifest, all potentially
+        interesting files will be copied, and the new folder will get index 0.
+
+    Returns
+    -------
+    None
+
+    """
     sectionabbrv = {1: "R", 2: "D", 3: "S"}
     try:
-        mkdir_recursive(os.path.join(".","workhistory"))
-    except:
-        logger.error("Error creating workhistory folder: ",
-                      exc_info = True)
-        return 1
+        mkdir_recursive(os.path.join(".", "workhistory"))
+    except Exception:
+        logger.error("Error creating workhistory folder: ", exc_info=True)
+        raise
     if not prerun:
         rp.manifest.append("workhistory")
     dl = [n for n in os.listdir("workhistory")
-                      if os.path.isdir(os.path.join("workhistory",n))]
+          if os.path.isdir(os.path.join("workhistory", n))]
     maxnum = -1
     rgx = re.compile(r't'+'{:03d}'.format(rp.TENSOR_INDEX)+r'.r[0-9]{3}_')
     for d in dl:
@@ -354,7 +405,7 @@ def moveoldruns(rp, prerun = False):
                 i = int(d[6:9])
                 if i > maxnum:
                     maxnum = i
-            except:
+            except Exception:
                 pass
     if maxnum == -1:
         if prerun:
@@ -366,7 +417,7 @@ def moveoldruns(rp, prerun = False):
     if prerun:
         oldlogfiles = sorted([f for f in os.listdir() if os.path.isfile(f) and
                               f.endswith(".log") and f.startswith("tleedm-")
-                              and not f in rp.manifest])
+                              and f not in rp.manifest])
         if len(oldlogfiles) > 0:
             oldTimeStamp = oldlogfiles[-1][7:20]
         else:
@@ -380,19 +431,18 @@ def moveoldruns(rp, prerun = False):
                 dirname += sectionabbrv[ind]
         rp.lastOldruns = rp.runHistory[:]
         dirname += "_" + rp.timestamp
-    dirpath = os.path.join(".","workhistory",dirname)
+    dirpath = os.path.join(".", "workhistory", dirname)
     try:
         os.mkdir(dirpath)
-    except:
-        logger.error("Error creating workhistory subfolder: ",
-                      exc_info = True)
-        return 1
+    except Exception:
+        logger.error("Error creating workhistory subfolder: ", exc_info=True)
+        raise
     if not prerun:
         sortfiles(rp.TENSOR_INDEX, delete_unzipped=False,
-                  tensors = False, deltas = False)
+                  tensors=False, deltas=False)
         for dp in rp.domainParams:
             sortfiles(dp.rp.TENSOR_INDEX, delete_unzipped=False,
-                      tensors = False, deltas = False)
+                      tensors=False, deltas=False)
     if prerun:
         filelist = [f for f in os.listdir() if os.path.isfile(f) and
                     f.endswith(".log") and f not in rp.manifest]
@@ -400,43 +450,63 @@ def moveoldruns(rp, prerun = False):
     else:
         filelist = [f for f in rp.manifest if os.path.isfile(f) and not
                     (f.startswith("tleedm-") and f.endswith(".log"))]
-        dirlist = [d for d in rp.manifest if os.path.isdir(d) and not
-                   d in ["Tensors", "Deltas", "workhistory"]]
+        dirlist = [d for d in rp.manifest if os.path.isdir(d) and
+                   d not in ["Tensors", "Deltas", "workhistory"]]
     for f in filelist:
         try:
             if not prerun:
                 shutil.copy2(f, os.path.join(dirpath, f))
             else:
                 shutil.move(f, os.path.join(dirpath, f))
-        except:
+        except Exception:
             logger.warning("Error copying "+f+" to "
-                            + os.path.join(dirpath, f)
-                            + ". File may get overwritten.")
+                           + os.path.join(dirpath, f)
+                           + ". File may get overwritten.")
     for d in dirlist:
         try:
             shutil.copytree(d, os.path.join(dirpath, d))
-        except:
+        except Exception:
             logger.warning("Error copying "+d+" to "
                            + os.path.join(dirpath, d)
                            + ". Files in directory may get overwritten.")
-    return 0
+    return
+
 
 def getElapsedTimeString(t):
-    """Takes a time in seconds, returns a string giving the elapsed times
-    either in minutes or hours, as appropriate."""
+    """
+    Takes a time in seconds, returns a string giving the elapsed times
+    either in minutes or hours, as appropriate.
+    """
     if t >= 3600:
-        elapsedTimeStr = (str(int(t/3600)) + ":"+(str(int(t/60)%60)).zfill(2)
-                          +" hours")
+        elapsedTimeStr = (str(int(t/3600)) + ":"+(str(int(t/60) % 60)).zfill(2)
+                          + " hours")
     elif t >= 60:
-        elapsedTimeStr = (str(int(t/60)) + ":"+(str(int(t)%60)).zfill(2)
-                          +" minutes")
+        elapsedTimeStr = (str(int(t/60)) + ":"+(str(int(t) % 60)).zfill(2)
+                          + " minutes")
     else:
-        elapsedTimeStr = str(round(t, 2)) +" seconds"
+        elapsedTimeStr = str(round(t, 2)) + " seconds"
     return elapsedTimeStr
 
-def cleanup(manifest, rp = None):
-    """Moves files to AUX and OUT folders, writes manifest, adds a final
-    message to the log, then shuts down everything."""
+
+def cleanup(manifest, rp=None):
+    """
+    Moves files to AUX and OUT folders, writes manifest, adds a final
+    message to the log, then shuts down everything.
+
+    Parameters
+    ----------
+    manifest : list of str
+        The files and directories that should be preserved from the work
+        folder.
+    rp : Rparams, optional
+        The run parameters. If None, it is assumed that the run crashed before
+        an Rparams object existed.
+
+    Returns
+    -------
+    None.
+
+    """
     global starttime
 
     logger.info("\nStarting cleanup...")
@@ -449,8 +519,8 @@ def cleanup(manifest, rp = None):
         rp.closePdfReportFigs()
         if not rp.domainParams:
             to_sort = [{"newTensors": ("Tensors" in rp.manifest),
-                       "newDeltas": ("Deltas" in rp.manifest),
-                       "tind": rp.TENSOR_INDEX, "path": ""}]
+                        "newDeltas": ("Deltas" in rp.manifest),
+                        "tind": rp.TENSOR_INDEX, "path": ""}]
         else:
             to_sort = [{"newTensors": False, "newDeltas": False, "tind": 0,
                         "path": ""}]
@@ -462,28 +532,28 @@ def cleanup(manifest, rp = None):
     for d in to_sort:
         try:
             sortfiles(d["tind"], delete_unzipped=True,
-                      tensors = d["newTensors"],
-                      deltas = d["newDeltas"], path = d["path"])
-        except:
+                      tensors=d["newTensors"],
+                      deltas=d["newDeltas"], path=d["path"])
+        except Exception:
             logger.warning("Error sorting files to AUX/OUT folders: ",
-                            exc_info = True)
+                           exc_info=True)
     # write manifest
     written = []
     try:
-        with open("manifest","w") as wf:
+        with open("manifest", "w") as wf:
             for fn in manifest:
-                if not fn in written:
+                if fn not in written:
                     wf.write(fn+"\n")
                     written.append(fn)
         logger.info("Wrote manifest file successfully.")
-    except:
+    except Exception:
         logger.error("Failed to write manifest file.")
 
     # write final log message
     elapsedTimeStr = getElapsedTimeString(timer() - starttime)
     logger.info("\nFinishing execution at "+time.strftime("%Y-%m-%d %H:%M:%S",
-                                                           time.localtime())
-                 +"\nTotal elapsed time: "+elapsedTimeStr+"\n")
+                                                          time.localtime())
+                + "\nTotal elapsed time: "+elapsedTimeStr+"\n")
     if len(history) > 0:
         s = ""
         for ind in history:
@@ -510,34 +580,40 @@ def cleanup(manifest, rp = None):
 ###############################################
 
 def main():
+    """
+    Main of TensErLEED Manager.
+
+    Returns
+    -------
+    int
+        0: exit without errors.
+        1: clean exit through KeyboardInterrupt
+        2: exit due to Exception before entering main loop
+        3: exit due to Exception during main loop
+
+    """
     global starttime
-    #start logger, write to file:
+    # start logger, write to file:
     timestamp = time.strftime("%y%m%d-%H%M%S", time.localtime())
     logname = 'tleedm-'+timestamp+'.log'
-
     logger = logging.getLogger("tleedm")
     logger.setLevel(logging.INFO)
     logFormatter = CustomLogFormatter()
-
     fileHandler = logging.FileHandler(logname, mode="w")
     fileHandler.setFormatter(logFormatter)
-
     consoleHandler = logging.StreamHandler()
     consoleHandler.setFormatter(logFormatter)
-
     logger.addHandler(consoleHandler)
     logger.addHandler(fileHandler)
 
-
-    logger.info("Starting new log: "+logname+"\nTime of execution (UTC): "
-                 +time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())+"\n")
+    logger.info("Starting new log: " + logname + "\nTime of execution (UTC): "
+                + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()) + "\n")
     starttime = timer()
 
-    tmpmanifest = ["AUX","OUT",logname]
-
+    tmpmanifest = ["AUX", "OUT", logname]
     try:
         rp = readPARAMETERS()
-    except:
+    except Exception:
         logger.error("Exception while reading PARAMETERS file", exc_info=True)
         cleanup(tmpmanifest)
         return 2
@@ -550,46 +626,44 @@ def main():
     if domains:  # no POSCAR in main folder for domain searches
         sl = None
     else:
-        if os.path.isfile(os.path.join(".","POSCAR")):
-            poscarfile = os.path.join(".","POSCAR")
+        if os.path.isfile(os.path.join(".", "POSCAR")):
+            poscarfile = os.path.join(".", "POSCAR")
             logger.info("Reading structure from file POSCAR")
             try:
-                sl = readPOSCAR(filename = poscarfile)
-            except:
+                sl = readPOSCAR(filename=poscarfile)
+            except Exception:
                 logger.error("Exception while reading POSCAR", exc_info=True)
                 cleanup(tmpmanifest)
                 return 2
         else:
             logger.error("POSCAR not found. Stopping execution...")
             cleanup(tmpmanifest)
-            return 1
+            return 2
 
         if not sl.preprocessed:
             logger.info("The POSCAR file will be processed and overwritten. "
-                         "Copying the original POSCAR to POSCAR_user...")
+                        "Copying the original POSCAR to POSCAR_user...")
             try:
                 shutil.copy2(poscarfile, "POSCAR_user")
                 tmpmanifest.append("POSCAR_user")
-            except:
+            except Exception:
                 logger.error("Failed to copy POSCAR to POSCAR_user. Stopping "
-                              "execution...")
+                             "execution...")
                 cleanup(tmpmanifest)
                 return 2
-
     try:
         interpretPARAMETERS(rp, slab=sl)
         if rp.LOG_DEBUG:
             logger.setLevel(logging.DEBUG)
             logger.debug("PARAMETERS file was read successfully")
-    except:
+    except Exception:
         logger.error("Exception while reading PARAMETERS file", exc_info=True)
         cleanup(tmpmanifest)
         return 2
-
     rp.timestamp = timestamp
     rp.manifest = tmpmanifest
     if not domains:
-        sl.fullUpdate(rp)   #gets PARAMETERS data into slab
+        sl.fullUpdate(rp)   # gets PARAMETERS data into slab
         rp.fileLoaded["POSCAR"] = True
         if sl.preprocessed:
             rp.SYMMETRY_FIND_ORI = False
@@ -605,44 +679,44 @@ def main():
 
     rp.updateDerivedParams()
     # clean out the workhistory folder, if there is one
-    if os.path.isdir(os.path.join(".","workhistory")):
+    if os.path.isdir(os.path.join(".", "workhistory")):
         try:
-            shutil.rmtree(os.path.join(".","workhistory"))
-        except:
+            shutil.rmtree(os.path.join(".", "workhistory"))
+        except Exception:
             logger.warning("Failed to clear workhistory folder.")
     # get rid of old POSCAR_OUT, VIBROCC_OUT and R_OUT files:
-    for d in [".", os.path.join(".","OUT")]:
+    for d in [".", os.path.join(".", "OUT")]:
         if os.path.isdir(d):
             for s in ["POSCAR_OUT", "VIBROCC_OUT", "R_OUT"]:
                 for f in [fn for fn in os.listdir(d) if fn.startswith(s)]:
                     try:
-                        os.remove(os.path.join(d,f))
-                    except:
+                        os.remove(os.path.join(d, f))
+                    except Exception:
                         logger.debug("Failed to delete file {}"
-                                     .format(os.path.join(d,f)))
+                                     .format(os.path.join(d, f)))
     # clean up old executable files:
     for fn in ["refcalc", "rfactor", "search", "superpos"]:
         p = re.compile(fn+r'-\d{6}-\d{6}')
-        for f in [f for f in os.listdir() if len(f) == len(fn)+14
-                                          and p.match(f)]:
+        for f in [f for f in os.listdir()
+                  if len(f) == len(fn) + 14 and p.match(f)]:
             try:
                 os.remove(f)
-            except:
+            except Exception:
                 logger.debug("Failed to delete file {}".format(f))
     # see if there are old logfiles
     oldlogs = [f for f in os.listdir() if os.path.isfile(f) and
                f.endswith(".log") and f != logname]
     if len(oldlogs) > 0:
         try:
-            moveoldruns(rp, prerun = True)
-        except:
+            moveoldruns(rp, prerun=True)
+        except Exception:
             logger.warning("Exception while trying to clean up from previous "
-                            "run. Program will proceed, but old files may be "
-                            "lost.", exc_info=True)
+                           "run. Program will proceed, but old files may be "
+                           "lost.", exc_info=True)
     if os.path.isfile("fortran-compile.log"):
         try:
             os.remove("fortran-compile.log")
-        except:
+        except Exception:
             pass
 
     sectionorder = [0, 1, 11, 2, 3, 31, 12, 4]
@@ -655,18 +729,25 @@ def main():
             if rp.runHistory and (sectionorder.index(sec)
                                   < sectionorder.index(rp.runHistory[-1])):
                 logger.info("\nExecution repeats. Moving old output to "
-                             "workhistory folder.")
-                moveoldruns(rp)
+                            "workhistory folder.")
+                try:
+                    moveoldruns(rp)
+                except Exception:
+                    logger.warning(
+                        "Exception while trying to clean up earlier segments. "
+                        "Program will proceed, but old files may be lost.",
+                        exc_info=True)
             runSection(sec, sl, rp)
             if domains and sl is None:
                 sl = rp.pseudoSlab
             if rp.domainParams:
                 rp.setHaltingLevel(max([dp.rp.halt for dp in rp.domainParams]))
             if (sec == 0 and not domains and not sl.preprocessed
-                  and rp.HALTING <= 2 and len(rp.RUN) > 0):
-                logger.info("Initialization finished. Execution will stop. "
-                    "Please check whether comments in POSCAR are correct, "
-                    "then restart.")
+                    and rp.HALTING <= 2 and len(rp.RUN) > 0):
+                logger.info(
+                    "Initialization finished. Execution will stop. Please "
+                    "check whether comments in POSCAR are correct, then "
+                    "restart.")
                 rp.setHaltingLevel(2)
                 initHalt = True
             elif (sec == 1 and rp.fileLoaded["EXPBEAMS"]):
@@ -690,7 +771,7 @@ def main():
                     if searchLoopLevel != 0:
                         rp.search_index = sorted(loops)[searchLoopLevel-1][0]
                         logger.info("Search loop: repeating at block "
-                                     +rp.disp_blocks[rp.search_index][1])
+                                    + rp.disp_blocks[rp.search_index][1])
                     else:
                         rp.search_index += 1
                         o = "Search loop ends."
@@ -711,24 +792,21 @@ def main():
                         dp.rp.resetSearchConv()
                     if rp.SEARCH_START == "control":
                         rp.SEARCH_START = "crandom"
-                    # if sec == 412:
-                    #     if rp.RUN[:2] != [42,43]:
-                    #         rp.RUN = [42,43] + rp.RUN
-                    # else:
-                    if rp.RUN[:2] != [2,3]:
-                        rp.RUN = [2,3] + rp.RUN
+                    if rp.RUN[:2] != [2, 3]:
+                        rp.RUN = [2, 3] + rp.RUN
         except KeyboardInterrupt:
             logger.warning("Stopped by keyboard interrupt, attempting "
-                            "clean exit...")
+                           "clean exit...")
             cleanup(rp.manifest, rp)
-            return 2
-        except:
+            return 1
+        except Exception:
             logger.error("Exception during tleedm execution: ", exc_info=True)
             cleanup(rp.manifest, rp)
-            return 2
+            return 3
         if rp.halt >= rp.HALTING:
             if not initHalt:
-                logger.info("# An exception occured that meets the halting "
+                logger.info(
+                    "# An exception occured that meets the halting "
                     "criteria defined by the HALTING parameter. Execution "
                     "will stop, check log for warnings and errors.")
             break
@@ -738,6 +816,7 @@ def main():
             break
     cleanup(rp.manifest, rp)
     return 0
+
 
 if __name__ == "__main__":
     multiprocessing.freeze_support()

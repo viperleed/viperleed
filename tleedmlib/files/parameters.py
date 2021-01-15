@@ -739,6 +739,8 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
             sublists = tl.base.splitSublists(llist, ',')
             for sl in sublists:
                 flag = sl[0].lower()
+                if flag.lower() == 'localise':
+                    flag = 'localize'
                 value_error = ('PARAMETERS file: PARABOLA_FIT: Value {} is '
                                'not valid for flag {}. Value will be ignored.'
                                .format(sl[1], sl[0]))

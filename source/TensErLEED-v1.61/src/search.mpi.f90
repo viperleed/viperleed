@@ -1144,8 +1144,8 @@ C  Now treating all ranks again
 
       END IF
 
-	  IF ((MOD(IGEN,OUTINT).EQ.0) .AND. USEHASH) THEN
-	   CALL HASHTAB%outdata(RANK)
+      IF ((MOD(IGEN,OUTINT).EQ.0) .AND. USEHASH) THEN
+       CALL HASHTAB%outdata(RANK)
       ENDIF
 
 C  Here ends a (nearly) endless loop - next generation
