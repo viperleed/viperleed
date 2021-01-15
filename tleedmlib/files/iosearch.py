@@ -841,7 +841,7 @@ C  end restrictions
     return None
 
 
-def writeSearchOutput(sl, rp, parinds=None, silent=False):
+def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
     """
     Modifies data in sl and rp to reflect the search result given by
     parinds, then writes POSCAR_OUT and VIBROCC_OUT.
@@ -854,15 +854,26 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False):
         The run parameters object to be modified.
     parinds : iterable, optional
         The final parameter values to be applied. If None,
-        rp.searchResultConfig will be used instead.
+        rp.searchResultConfig will be used instead. Can be float, in which
+        case linear interpolation between the two adjacent displacements will
+        be used.
     silent : bool, optional
         Suppresses output to log. The default is False.
+    suffix : str, optional
+        String to be appended to the POSCAR_OUT and VIBROCC_OUT file names.
 
     Returns
     -------
     None
 
     """
+    def interpolate(var, ind):
+        if type(ind) == int:
+            return var[ind]
+        o = ind % 1
+        return (o * var[int(np.ceil(ind))]
+                + (1 - o) * var[int(np.floor(ind))])
+
     if parinds is None:
         if rp.searchResultConfig is None:
             logger.error("Failed to write search output: No configuration "
@@ -890,9 +901,9 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False):
             newocc = {}
             for el in at.disp_occ:
                 # store as offset for now, recalculate for sites later
-                at.offset_occ[el] = (at.disp_occ[el][parinds[i]-1]
+                at.offset_occ[el] = (interpolate(at.disp_occ[el], parinds[i]-1)
                                      - at.site.oriState.occ[el])
-                newocc[el] = at.disp_occ[el][parinds[i]-1]
+                newocc[el] = interpolate(at.disp_occ[el], parinds[i]-1)
                 # will be used for re-calculating position
             # now vibrations:
             vibpars = [sp for sp in sps if sp.mode == "vib"]
@@ -905,7 +916,8 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False):
                 else:
                     dict_el = el
                 # store as offset for now, recalculate for sites later
-                at.offset_vib[el] = at.disp_vib[dict_el][parinds[i]-1]
+                at.offset_vib[el] = interpolate(at.disp_vib[dict_el],
+                                                parinds[i]-1)
             # now position - recalculate right away:
             geopars = [sp for sp in sps if sp.mode == "geo"]
             # can be empty, or one per element
@@ -921,7 +933,7 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False):
                     dict_el = "all"
                 else:
                     dict_el = el
-                disp = np.copy(at.disp_geo[dict_el][parinds[i]-1])
+                disp = np.copy(interpolate(at.disp_geo[dict_el], parinds[i]-1))
                 disp[2] *= -1
                 rdisp = np.dot(uci, disp)
                 newpos[el] = at.oriState.pos + rdisp
@@ -969,28 +981,29 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False):
                     at.offset_occ[el] -= offset_occ
                 if el in at.offset_vib:
                     at.offset_vib[el] -= offset_vib
-    fn = "POSCAR_OUT_"+rp.timestamp
+    fn = "POSCAR_OUT" + suffix + "_" + rp.timestamp
     tmpslab = copy.deepcopy(sl)
     tmpslab.sortOriginal()
     try:
         writeCONTCAR(tmpslab, filename=fn, comments="all", silent=silent)
     except Exception:
-        logger.error("Exception occured while writing POSCAR_OUT.",
+        logger.error("Exception occured while writing POSCAR_OUT" + suffix,
                      exc_info=rp.LOG_DEBUG)
         rp.setHaltingLevel(2)
     if not np.isclose(rp.SYMMETRY_CELL_TRANSFORM, np.identity(2)).all():
         tmpslab = sl.makeSymBaseSlab(rp)
-        fn = "POSCAR_OUT_mincell_" + rp.timestamp
+        fn = "POSCAR_OUT_mincell" + suffix + "_" + rp.timestamp
         try:
             writeCONTCAR(tmpslab, filename=fn, silent=silent)
         except Exception:
-            logger.warning("Exception occured while writing "
-                           "POSCAR_OUT_mincell.", exc_info=rp.LOG_DEBUG)
-    fn = "VIBROCC_OUT_"+rp.timestamp
+            logger.warning(
+                "Exception occured while writing POSCAR_OUT_mincell" + suffix,
+                exc_info=rp.LOG_DEBUG)
+    fn = "VIBROCC_OUT" + suffix + "_" + rp.timestamp
     try:
         writeVIBROCC(sl, rp, filename=fn, silent=silent)
     except Exception:
-        logger.error("Exception occured while writing VIBROCC_OUT.",
+        logger.error("Exception occured while writing VIBROCC_OUT" + suffix,
                      exc_info=rp.LOG_DEBUG)
         rp.setHaltingLevel(2)
-    return None
+    return

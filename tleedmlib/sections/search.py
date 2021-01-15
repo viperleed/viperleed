@@ -165,6 +165,13 @@ def processSearchResults(sl, rp, final=True):
     # now writeSearchOutput:
     if not rp.domainParams:
         io.writeSearchOutput(sl, rp, pops[0][1][0][1], silent=(not final))
+        if any(sp.parabolaFit["min"] for sp in rp.searchpars):
+            parab_inds = list(pops[0][1][0][1])
+            for i, sp in enumerate(rp.searchpars):
+                if sp.parabolaFit["min"] is not None:
+                    parab_inds[i] = sp.parabolaFit["min"]
+            io.writeSearchOutput(sl, rp, parab_inds, silent=True,
+                                 suffix="_parabola")
     else:
         home = os.getcwd()
         for (i, dp) in enumerate(rp.domainParams):
@@ -172,6 +179,13 @@ def processSearchResults(sl, rp, final=True):
                 os.chdir(dp.workdir)
                 io.writeSearchOutput(dp.sl, dp.rp, pops[0][1][i][1],
                                      silent=(not final))
+                if any(sp.parabolaFit["min"] for sp in rp.searchpars):
+                    parab_inds = list(pops[0][1][i][1])
+                    for i, sp in enumerate(dp.rp.searchpars):
+                        if sp.parabolaFit["min"] is not None:
+                            parab_inds[i] = sp.parabolaFit["min"]
+                    io.writeSearchOutput(sl, rp, parab_inds, silent=True,
+                                         suffix="_parabola")
             except Exception:
                 logger.error("Error while writing search output for domain {}"
                              .format(dp.name), exc_info=rp.LOG_DEBUG)
@@ -240,7 +254,7 @@ def parabolaFit(rp, r_configs, x0=None, **kwargs):
     for a in ("localize", "mincurv", "alpha", "type"):
         if a not in kwargs:
             kwargs[a] = rp.PARABOLA_FIT[a]
-    starttime = timer()
+    # starttime = timer()
     rc = np.array([*r_configs], dtype=object)
     rfacs, configs = rc[:, 0].astype(float), rc[:, 1]
     localizeFactor = kwargs["localize"]
@@ -353,9 +367,9 @@ def parabolaFit(rp, r_configs, x0=None, **kwargs):
         indep_pars = np.delete(indep_pars, ind, axis=1)
     for (i, sp) in enumerate(sps):
         sp.parabolaFit["curv"] = curvs[i]
-    logger.debug("Parabola fit: {}/{} parameters were fit with {} points "
-                 "({:.4f} s)".format(len(sps), len(sps_original),
-                                     len(rf_tofit), (timer() - starttime)))
+    # logger.debug("Parabola fit: {}/{} parameters were fit with {} points "
+    #              "({:.4f} s)".format(len(sps), len(sps_original),
+    #                                  len(rf_tofit), (timer() - starttime)))
 
     # now find minimum within bounds (still centered around xmin)
     bounds = np.array([(1, sp.steps) for sp in sps]) - xmin.reshape((-1, 1))
