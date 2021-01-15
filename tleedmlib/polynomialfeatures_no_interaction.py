@@ -9,17 +9,18 @@ import numpy as np
 from scipy import sparse
 
 from sklearn.preprocessing import PolynomialFeatures
-from sklearn.utils.validation import (check_is_fitted, 
-                                      _deprecate_positional_args, 
+from sklearn.utils.validation import (check_is_fitted,
+                                      _deprecate_positional_args,
                                       FLOAT_DTYPES, check_array)
 from sklearn.preprocessing._csr_polynomial_expansion import (
                                                     _csr_polynomial_expansion)
 
+
 class PolyFeatNoMix(PolynomialFeatures):
-    """Child of the PolynomialFeatures class which excludes mixing terms 
-     like x1*x2, leaving only terms of type x1, x1^2, etc. and a constant bias 
-     term - i.e. basically the opposite of the 'interaction_only' keyword 
-     argument of PolynomialFeatures. See documentation for 
+    """Child of the PolynomialFeatures class which excludes mixing terms
+     like x1*x2, leaving only terms of type x1, x1^2, etc. and a constant bias
+     term - i.e. basically the opposite of the 'interaction_only' keyword
+     argument of PolynomialFeatures. See documentation for
      sklearn.preprocessing.PolynomialFeatures for details.
     ----------
     degree : int, default=2
@@ -59,9 +60,9 @@ class PolyFeatNoMix(PolynomialFeatures):
 
     @staticmethod
     def _combinations(n_features, degree, interaction_only, include_bias):
-        # return ((i,)*j for j in range(n_features) 
+        # return ((i,)*j for j in range(n_features)
         #         for i in range(degree+1) if j >= i)
-        return ((tuple(),) + tuple((i,)*j for j in range(1,degree+1) 
+        return ((tuple(),) + tuple((i,)*j for j in range(1, degree+1)
                                           for i in range(n_features)))
 
     def transform(self, X):
@@ -91,7 +92,7 @@ class PolyFeatNoMix(PolynomialFeatures):
         """
         check_is_fitted(self)
 
-        X = check_array(X, order='F', dtype=FLOAT_DTYPES, 
+        X = check_array(X, order='F', dtype=FLOAT_DTYPES,
                         accept_sparse=('csr', 'csc'))
 
         n_samples, n_features = X.shape

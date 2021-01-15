@@ -19,12 +19,13 @@ import signal
 import re
 import copy
 from sklearn.linear_model import LinearRegression, Ridge, Lasso, ElasticNet
+from sklearn.preprocessing import PolynomialFeatures
 from sklearn.pipeline import make_pipeline
 import scipy
 
 import tleedmlib.files.iosearch as io
 import tleedmlib as tl
-from tleedmlib.polynomialfeatures_no_interaction import PolyFeatNoMix
+# from tleedmlib.polynomialfeatures_no_interaction import PolyFeatNoMix
 from tleedmlib.leedbase import fortranCompile
 from tleedmlib.files.parameters import updatePARAMETERS
 from tleedmlib.files.displacements import readDISPLACEMENTS_block
@@ -294,21 +295,21 @@ def parabolaFit(rp, r_configs, x0=None, **kwargs):
     which_regression = kwargs["type"].lower()
     alpha = kwargs["alpha"]
     if which_regression == 'lasso':
-        polyreg = make_pipeline(PolyFeatNoMix(degree=2), Lasso(alpha=alpha,
-                                                               normalize=True))
+        polyreg = make_pipeline(PolynomialFeatures(degree=2),
+                                Lasso(alpha=alpha, normalize=True))
     elif which_regression == 'ridge':
-        polyreg = make_pipeline(PolyFeatNoMix(degree=2), Ridge(alpha=alpha,
-                                                               normalize=True))
+        polyreg = make_pipeline(PolynomialFeatures(degree=2),
+                                Ridge(alpha=alpha, normalize=True))
     elif which_regression == 'elasticnet':
-        polyreg = make_pipeline(PolyFeatNoMix(degree=2), ElasticNet(
-                                                 alpha=alpha, normalize=True))
+        polyreg = make_pipeline(PolynomialFeatures(degree=2),
+                                ElasticNet(alpha=alpha, normalize=True))
     else:
         if which_regression not in ('linearregression', 'linear'):
             logger.warning("Regression model {} not found, parabola fit "
                            "defaulting to linear regression."
                            .format(which_regression))
         which_regression = "linearregression"
-        polyreg = make_pipeline(PolyFeatNoMix(degree=2),
+        polyreg = make_pipeline(PolynomialFeatures(degree=2),
                                 LinearRegression())
     deletedPars = []
     while True:
@@ -339,7 +340,7 @@ def parabolaFit(rp, r_configs, x0=None, **kwargs):
         # check curvature of the parabolas per parameter (renorm. to rangesize)
         polyreg.fit(ip_tofit, rf_tofit)
         curvs = [(polyreg.named_steps[which_regression]
-                  .coef_[polyreg.named_steps['polyfeatnomix']
+                  .coef_[polyreg.named_steps['polynomialfeatures']
                   .get_feature_names().index('x{}^2'.format(i))])
                  * sp.steps**2
                  for i, sp in enumerate(sps)]

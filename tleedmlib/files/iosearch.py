@@ -262,7 +262,7 @@ def writeRfInfo(sl, rp, filename="rf.info"):
     step = min(expEnergies[1]-expEnergies[0], rp.THEO_ENERGIES[2])
     if rp.IV_SHIFT_RANGE[2] > 0:
         vincr = rp.IV_SHIFT_RANGE[2]
-        step = min(step, vincr)
+        step = min(step, vincr)   # !!! should be a parameter
     else:
         vincr = step
     # find correspondence experimental to theoretical beams:
