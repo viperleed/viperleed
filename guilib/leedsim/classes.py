@@ -149,7 +149,7 @@ class LEEDPattern():
         # beamsRefs contains at index [i, j] a list of the indices of beams of
         # domain domains[i] equivalent to beam j (including j)
         beamsRefs = []
-        # for dom range(nDoms):  # THIS IS PROBABLY WRONG FOR A LIST OF DOMAINS
+        # for dom in range(nDoms):  # THIS IS PROBABLY WRONG FOR A LIST OF DOMAINS
         for dom in domains: 
             beamsRefs.append([crossRef + dom*self.nBeams
                               for crossRef in self.firstDomRefs])
@@ -180,7 +180,7 @@ class LEEDPattern():
         #        at the same positional index.
         #        !!!THIS IS A PROBLEM FOR NON-NORMAL INCIDENCE!!!
         #        --> get this list (the same for all domains) ready first
-        allRefs = [np.concatenate(beamRefs[:, beam])
+        allRefs = [np.concatenate(beamRefs[:, beam]).astype(int)
                    for beam in range(self.nBeams)]
         refNames = [set(self.names.ravel()[beamRef]) for beamRef in allRefs]
 
