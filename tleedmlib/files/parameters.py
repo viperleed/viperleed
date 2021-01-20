@@ -664,10 +664,10 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                         'Could not interpret flags. Value will be ignored.')
                     rpars.setHaltingLevel(1)
         elif param == 'IV_SHIFT_RANGE':
-            if len(llist) in [2, 3]:
+            if len(llist) in (2, 3):
                 fl = []
                 try:
-                    f = [float(s) for s in llist]
+                    fl = [float(s) for s in llist]
                 except ValueError:
                     logger.warning(
                         'PARAMETERS file: Failed to convert IV_SHIFT_RANGE '

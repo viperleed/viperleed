@@ -76,7 +76,7 @@ def readSDTL_blocks(content, whichR=0, logInfo=False):
         List consists of one entry per data block. Each entry of the list is
         a tuple (gen, rfacs, configs), where gen is the generation index,
         rfacs an ordered list of R-factors, and configs the corresponding
-        parameter configurations. onfig is a tuple listing (percent, dc)
+        parameter configurations. config is a tuple listing (percent, dc)
         for each domain, with dc the parameter values of that domain.
 
     """
@@ -262,7 +262,7 @@ def writeRfInfo(sl, rp, filename="rf.info"):
     step = min(expEnergies[1]-expEnergies[0], rp.THEO_ENERGIES[2])
     if rp.IV_SHIFT_RANGE[2] > 0:
         vincr = rp.IV_SHIFT_RANGE[2]
-        step = min(step, vincr)   # !!! should be a parameter
+        # step = min(step, vincr)
     else:
         vincr = step
     # find correspondence experimental to theoretical beams:
@@ -359,6 +359,7 @@ def generateSearchInput(sl, rp, steuOnly=False, cull=False, info=True):
                     "{:.2g} eV ({} independent fit parameters, {:.2g} eV per "
                     "parameter)"
                     .format(totalrange, rp.indyPars, totalrange / rp.indyPars))
+    rp.total_en_range = totalrange
     theoEnergies = int((rp.THEO_ENERGIES[1]-rp.THEO_ENERGIES[0])
                        / rp.THEO_ENERGIES[2]) + 1
     if theoEnergies >= len(expEnergies):

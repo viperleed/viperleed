@@ -44,7 +44,8 @@ class SearchPar:
         self.steps = -1     # not used for interpretation, info only
         self.restrictTo = None  # None, Index, or other search par
         self.linkedTo = None    # other search par linked via 'atom number'
-        self.parabolaFit = {"min": None, "curv": None}  # parabolic fit
+        self.parabolaFit = {"min": None,
+                            "err_co": np.nan, "err_unco": np.nan}
         d = {}
         if mode == "occ":
             self.steps = len(next(iter(atom.disp_occ.values())))
@@ -587,8 +588,10 @@ class Rparams:
         out = []
         for (i, sp) in enumerate(self.searchpars):
             if (sp.parabolaFit["min"] is not None and
-                    sp.parabolaFit["curv"] is not None and
-                    sp.parabolaFit["curv"] > curv_cutoff):
+                    not np.isnan(sp.parabolaFit["err_co"]) and
+                    not np.isnan(sp.parabolaFit["err_unco"])):
+                # sp.parabolaFit["curv"] is not None and
+                # sp.parabolaFit["curv"] > curv_cutoff):
                 out.append(int(round(sp.parabolaFit["min"])))
             else:
                 if best_config is not None:

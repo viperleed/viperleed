@@ -23,12 +23,13 @@ try:
     from matplotlib.backends.backend_pdf import PdfPages
     import matplotlib.pyplot as plt
     import matplotlib.ticker as plticker
-except:
+except Exception:
     plotting = False
 else:
     plotting = True
 
 logger = logging.getLogger("tleedm.files.iorfactor")
+
 
 def readROUT(filename="ROUT"):
     """
@@ -37,14 +38,14 @@ def readROUT(filename="ROUT"):
     Parameters
     ----------
     filename : string, optional
-        DESCRIPTION. Pass if you want to read from a file other than the 
+        DESCRIPTION. Pass if you want to read from a file other than the
         default 'ROUT'
 
     Returns
     -------
     tuple (r, r_int, r_frac), float v0rshift, list rfaclist
         r, r_int, r_frac: tuple of floats:
-            average R-factor for all beams, integer-order beams and 
+            average R-factor for all beams, integer-order beams and
             fractional order beams.
         v0rshift: inner potential shift corresponding to r, r_int, r_frac
         rfaclist: list of floats, r-factors per beam in order of experimental
@@ -55,7 +56,7 @@ def readROUT(filename="ROUT"):
         lines = rf.readlines()
     line = ""
     i = 0
-    while not "AVERAGE R-FACTOR =" in line and i+1 < len(lines):
+    while "AVERAGE R-FACTOR =" not in line and i+1 < len(lines):
         i += 1
         line = lines[-i]
     if line == "":
@@ -69,31 +70,31 @@ def readROUT(filename="ROUT"):
     if m:
         try:
             rfac = float(m.group("rfac"))
-        except:
+        except ValueError:
             logger.error("Could not read R-factor from "+filename)
         try:
             v0rshift = float(m.group("shift"))
-        except:
+        except ValueError:
             logger.error("Could not read inner potential shift from "
-                          + filename)
+                         + filename)
     else:
-        return (0,0,0), 0, []
+        return (0, 0, 0), 0, []
     # now read the R-factors per beam at v0rshift
     rfaclist = []
-    for line in [l for l in lines if len(l) >= 70]:
-        values = line[18:69].split()  # limits to 999 beams;
-                                      #  use [17:69] if more are required
+    for line in [li for li in lines if len(li) >= 70]:
+        values = line[18:69].split()
+        # limits to 999 beams; use [17:69] if more are required
         try:
             index = int(values[0])
             v0r = float(values[2])
             rav = float(values[-1])
-        except:
+        except ValueError:
             pass    # ignore line
         else:
             if v0r == v0rshift and index > 0:
                 if index != len(rfaclist)+1:
                     logger.warning("Unexpected index mismatch in readROUT. "
-                                    "Reading R-factors per beam will fail.")
+                                   "Reading R-factors per beam will fail.")
                 else:
                     rfaclist.append(rav)
             elif v0r == v0rshift and index == -1:
@@ -103,8 +104,27 @@ def readROUT(filename="ROUT"):
                     rfac_frac = rav
     return (rfac, rfac_int, rfac_frac), v0rshift, rfaclist
 
+
 def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL"):
-    """Writes input file WEXPEL for R-factor calculation."""
+    """
+    Writes input file WEXPEL for R-factor calculation.
+
+    Parameters
+    ----------
+    sl : Slab
+        The Slab object containing atom information.
+    rp : Rparams
+        The run parameters.
+    theobeams : list of Beam
+        The theoretical beams, containing I(V) data.
+    filename : str, optional
+        Name of the file that will be written. The default is "WEXPEL".
+
+    Returns
+    -------
+    None.
+
+    """
     theoEnergies = []
     for b in theobeams:
         theoEnergies.extend([k for k in b.intens if k not in theoEnergies])
@@ -117,15 +137,15 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL"):
     maxen = min(max(expEnergies), rp.THEO_ENERGIES[1])
     # extend energy range if they are close together
     if abs(min(expEnergies) - rp.THEO_ENERGIES[0]) < abs(rp.IV_SHIFT_RANGE[0]):
-        minen = (max(min(expEnergies), rp.THEO_ENERGIES[0]) 
+        minen = (max(min(expEnergies), rp.THEO_ENERGIES[0])
                  - rp.IV_SHIFT_RANGE[0])
     if abs(max(expEnergies) - rp.THEO_ENERGIES[1]) < abs(rp.IV_SHIFT_RANGE[1]):
-        maxen = (min(max(expEnergies), rp.THEO_ENERGIES[1]) 
+        maxen = (min(max(expEnergies), rp.THEO_ENERGIES[1])
                  + rp.IV_SHIFT_RANGE[1]) + 0.01
     step = min(expEnergies[1]-expEnergies[0], theoEnergies[1]-theoEnergies[0])
     if rp.IV_SHIFT_RANGE[2] > 0:
         vincr = rp.IV_SHIFT_RANGE[2]
-        step = min(step, vincr)
+        # step = min(step, vincr)
     else:
         vincr = step
     # find correspondence experimental to theoretical beams:
@@ -146,11 +166,11 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL"):
     output += (" EMIN=" + f72.write([minen]).rjust(9) + ",\n")
     output += (" EMAX=" + f72.write([maxen]).rjust(9) + ",\n")
     output += (" EINCR=" + f72.write([step]).rjust(8) + ",\n")
-    output += " LIMFIL=      1,\n" # number of consecutive input files
-    output += " IPR=         0,\n" # output formatting
+    output += " LIMFIL=      1,\n"  # number of consecutive input files
+    output += " IPR=         0,\n"  # output formatting
     output += (" VI=" + f72.write([rp.V0_IMAG]).rjust(11) + ",\n")
     output += " V0RR=      0.0,\n"
-    output += (" V01=" + f72.write([rp.IV_SHIFT_RANGE[0]]).rjust(10) + ",\n") 
+    output += (" V01=" + f72.write([rp.IV_SHIFT_RANGE[0]]).rjust(10) + ",\n")
     output += (" V02=" + f72.write([rp.IV_SHIFT_RANGE[1]]).rjust(10) + ",\n")
     output += (" VINCR=" + f72.write([vincr]).rjust(8) + ",\n")
     output += " ISMOTH=" + i3.write([rp.R_FACTOR_SMOOTH]).rjust(7) + ",\n"
@@ -159,17 +179,17 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL"):
     output += " GAP=         0,\n"
     output += " &END\n"
     output += (i3x25.write([n+1 for n in beamcorr]) + "\n")
-    for i in range(0,2):   # redundant since indices are already taken care of
-        output += i3x25.write([n+1 for n in range(0,len(rp.expbeams))]) + "\n"
+    for i in range(0, 2):  # redundant since indices are already taken care of
+        output += i3x25.write([n+1 for n in range(0, len(rp.expbeams))]) + "\n"
     output += i3x25.write(iorf) + "\n"
     output += "&NL2\n"
     output += " NSSK=    0,\n"
     if rp.R_FACTOR_TYPE == 1:
-        output += " WR=      0.,0.,1.,\n" # Pendry
+        output += " WR=      0.,0.,1.,\n"  # Pendry
     elif rp.R_FACTOR_TYPE == 2:
-        output += " WR=      1.,0.,0.,\n" # R2
+        output += " WR=      1.,0.,0.,\n"  # R2
     else:
-        output += " WR=      0.,1.,0.,\n" # Zanazzi-Jona
+        output += " WR=      0.,1.,0.,\n"  # Zanazzi-Jona
     output += """ &END
  &NL3
  NORM=           1,
@@ -178,22 +198,37 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL"):
  XTICS=         50,
  &END
  """
-    auxexpbeams = writeAUXEXPBEAMS(rp.expbeams, header = rp.systemName,
-                                   write = True, numbers = False)
+    auxexpbeams = writeAUXEXPBEAMS(rp.expbeams, header=rp.systemName,
+                                   write=True, numbers=False)
     output += auxexpbeams
-    output += "\n"  # information about gaps in the experimental spectra would
-                    #   go here
+    output += "\n"
+    # information about gaps in the experimental spectra would go here
     try:
         with open(filename, 'w') as wf:
             wf.write(output)
-    except:
+    except Exception:
         logger.error("Failed to write "+filename)
         raise
     logger.debug("Wrote to R-factor input file "+filename+" successfully")
     return
 
+
 def writeRfactPARAM(rp, theobeams):
-    """Generates the PARAM file for the rfactor calculation."""
+    """
+    Generates the PARAM file for the rfactor calculation.
+
+    Parameters
+    ----------
+    rp : Rparams
+        The run parameters.
+    theobeams : list of Beam
+        The theoretical beams, containing I(V) data.
+
+    Returns
+    -------
+    None.
+
+    """
     theoEnergies = []
     for b in theobeams:
         theoEnergies.extend([k for k in b.intens if k not in theoEnergies])
@@ -213,12 +248,12 @@ def writeRfactPARAM(rp, theobeams):
 C  MNBED  : number of beams in experimental spectra before averaging
 C  MNBTD  : number of beams in theoretical spectra before averaging
 
-      PARAMETER (MNBED = {}, MNBTD = {})""".format(len(rp.expbeams), 
+      PARAMETER (MNBED = {}, MNBTD = {})""".format(len(rp.expbeams),
                                                    len(theobeams))
     output += """
 
 C  MNET   : number of energies in theoretical beam at time of reading in
-C  MNGP   : greater equal number of grid points in energy working grid (ie after
+C  MNGP  : greater equal number of grid points in energy working grid (ie after
 C           interpolation)
 C  MNS    : number of geometries including those, that are skipped
 
@@ -235,16 +270,17 @@ C           gaps in the spectra set MNGAP to 1 to avoid zero-sized arrays)
     try:
         with open("PARAM", "w") as wf:
             wf.write(output)
-    except:
+    except Exception:
         logger.error("Failed at writing PARAM file for R-factor calculation.")
         raise
     return
 
-def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf', 
-                    plotcolors = None, analysisFile='', v0i=0.):
+
+def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
+                    plotcolors=None, analysisFile='', v0i=0.):
     '''
     Creates a single PDF file containing the plots of R-factors
-    
+
     Parameters
     ----------
     beams: list of (name, R) tuples
@@ -261,62 +297,62 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
              will be saved.
              default: 'Rfactor_plots.pdf'
     analysisFile: kwarg, string
-             if not empty, a more extensive R-factor analysis pdf with 
-             calculated Y-functions and absolute errors will be written to the 
+             if not empty, a more extensive R-factor analysis pdf with
+             calculated Y-functions and absolute errors will be written to the
              given file name.
     v0i: kwarg, float
              imaginary part of the inner potential for calculating Y-functions.
              Should always be passed if analysisFile is passed.
-    
+
     Returns
     -------
     None
-    
+
     '''
     global plotting
     if not plotting:
         logger.debug("Necessary modules for plotting not found. Skipping "
-                      "R-factor plotting.")
+                     "R-factor plotting.")
         return
-    
+
     fnames = ['theo.column', 'exp.column']
-    
+
     if not hasattr(beams, '__len__'):
         logger.error("writeRfactorPdf: First argument should be list, not "
-                      +str(type(beams)))
+                     + str(type(beams)))
         return
-    
-    xxyy=[]
+
+    xxyy = []
     for fname in fnames:
         try:
             f = open(os.path.join(colsDir, fname), 'r')
         except FileNotFoundError:
             logger.error("writeRfactorPdf: File {} not found. Aborting."
-                          .format(fname))
+                         .format(fname))
             return
         except PermissionError:
             logger.error("writeRfactorPdf: Cannot open file {}. Aborting."
-                          .format(fname))
+                         .format(fname))
             return
-        
+
         cols = [[float(col) for col in line.split()] for line in f]
-        
+
         if(np.shape(cols)[1] != 2*len(beams)):
             logger.error("writeRfactorPdf: Number of beams in file {} does "
-                          "not match the input. Aborting.".format(fname))
+                         "not match the input. Aborting.".format(fname))
             return
-        
+
         cols = np.array(cols)
         xy = np.split(cols, len(beams), axis=1)
         # xy is now a list of 2D arrays.
         # Each array has the form [[en1, intens1], ...]
-        # 
+        #
         # for each beam, get rid of the points that have (en, intens) = (0, 0)
         # so that they don't screw up the plots later
-        xy = [coords[~np.all(coords < 1e-3, axis=1)]  for coords in xy]
+        xy = [coords[~np.all(coords < 1e-3, axis=1)] for coords in xy]
         if xy:
             xxyy.append(xy)
-    
+
     xyTheo = xxyy[0]
     xyExp = xxyy[1]
 
@@ -324,21 +360,21 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
     # on the same horizontal scale and leaving a little y space for the legend
     xmin = min(min(xy[:, 0]) for xy in [*xyTheo, *xyExp] if len(xy) != 0)
     xmax = max(max(xy[:, 0]) for xy in [*xyTheo, *xyExp] if len(xy) != 0)
-    
+
     ymin = min(min(xy[:, 1]) for xy in [*xyTheo, *xyExp] if len(xy) != 0)
     ymax = max(max(xy[:, 1]) for xy in [*xyTheo, *xyExp] if len(xy) != 0)
     dy = ymax - ymin
-    
+
     # Set up stuff needed for the plots
     # (will pack two plots per each pdf page)
-    
+
     try:
         pdf = PdfPages(outName)
     except PermissionError:
         logger.error("writeRfactorPdf: Cannot open file {}. Aborting."
-                      .format(outName))
+                     .format(outName))
         return
-    
+
     figsize = (7, 7)
     # set ticks spacing to 50 eV and round the x limits to a multiple of it
     tick = 50
@@ -348,9 +384,9 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
     xlims = (np.floor(xmin/tick)*tick,
              np.ceil(xmax/tick)*tick)
     dx = xlims[1] - xlims[0]
-    
+
     ylims = (ymin - 0.02*dy, ymax + 0.22*dy)
-    
+
     # positions of the beam name and R factor text
     namePos = (xlims[0] + 0.45*dx, ylims[1] - 0.1*dy)
     rPos = (namePos[0], namePos[1]-0.085*dy)
@@ -360,7 +396,7 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
     logger.setLevel(logging.INFO)
     try:
         for ct, (name, rfact, theo, exp) in enumerate(zip(*zip(*beams),
-                                                           xyTheo, xyExp)):
+                                                          xyTheo, xyExp)):
             if len(exp) == 0:
                 continue
             if ct % 2 == 0:
@@ -379,14 +415,14 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
                                 axis='x', direction='in') for ax in axs]
                 [ax.xaxis.set_major_locator(tickloc) for ax in axs]
                 axs[1].set_xlabel("Energy (eV)")
-            
-            idx = ct%2
+
+            idx = ct % 2
             if plotcolors is not None:
-                if not all([matplotlib.colors.is_color_like(s) 
+                if not all([matplotlib.colors.is_color_like(s)
                             for s in plotcolors]):
                     plotcolors = None
                     logger.warning("writeRfactorPdf: Specified colors not "
-                        "recognized, reverting to default colors")
+                                   "recognized, reverting to default colors")
             if plotcolors is None:
                 axs[idx].plot(theo[:, 0], theo[:, 1], label='Theoretical',)
                 axs[idx].plot(exp[:, 0], exp[:, 1], label='Experimental')
@@ -398,34 +434,34 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
             axs[idx].annotate(name, namePos, fontsize=11)
             axs[idx].annotate("R = {:.4f}".format(rfact), rPos, fontsize=11)
             axs[idx].legend()
-            
-        # finally, in case the last figure is empty (i.e. the number of beams 
+
+        # finally, in case the last figure is empty (i.e. the number of beams
         # is odd) turn off the last axes (but leave the blank space).
         if len(beams) % 2 == 1:
             axs[1].axis('off')
             axs[0].set_xlabel("Energy (eV)")
-        
+
         for fig in figs:
             pdf.savefig(fig)
             plt.close(fig)
-    except:
+    except Exception:
         logger.error("writeRfactorPdf: Error while writing rfactor pdf: ",
-                      exc_info = True)
+                     exc_info=True)
     finally:
         pdf.close()
         logger.setLevel(loglevel)
-    
+
     if not analysisFile:
         return
-    
+
     # write R-factor analysis
     try:
         pdf = PdfPages(analysisFile)
     except PermissionError:
         logger.error("writeRfactorPdf: Cannot open file {}. Aborting."
-                      .format(analysisFile))
+                     .format(analysisFile))
         return
-    
+
     figsize = (5.8, 8.3)
     figs = []
     # the following will spam the logger with debug messages; disable.
@@ -433,11 +469,11 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
     logger.setLevel(logging.INFO)
     try:
         for i, (name, rfact, theo, exp) in enumerate(zip(*zip(*beams),
-                                                           xyTheo, xyExp)):
+                                                         xyTheo, xyExp)):
             if len(exp) == 0:
                 continue
-            fig, axs = plt.subplots(3, figsize=figsize, 
-                                                   squeeze=True)
+            fig, axs = plt.subplots(3, figsize=figsize,
+                                    squeeze=True)
             fig.subplots_adjust(left=0.06, right=0.94,
                                 bottom=0.07, top=0.98,
                                 wspace=0, hspace=0.08)
@@ -453,25 +489,25 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
             axs[1].set_ylabel("Y")
             axs[2].set_ylabel("\u2211(\u0394Y)\u00b2")    # sum delta Y ^2
             axs[2].set_xlabel("Energy (eV)")
-            
+
             ytheo = getYfunc(theo, v0i)
             yexp = getYfunc(exp, v0i)
-            dy = np.array([(ytheo[j, 0], yexp[j, 1] - ytheo[j, 1]) 
+            dy = np.array([(ytheo[j, 0], yexp[j, 1] - ytheo[j, 1])
                            for j in range(0, len(ytheo))])
             dysq = np.copy(dy)
-            dysq[:,1] = dysq[:,1]**2
+            dysq[:, 1] = dysq[:, 1]**2
             idysq = np.array([dysq[0]])
             for j in range(1, len(dysq)):
-                idysq = np.append(idysq, [[dysq[j,0], idysq[j-1,1]+dysq[j,1]]], 
-                                  axis=0)
-            
+                idysq = np.append(idysq, [[dysq[j, 0],
+                                           idysq[j-1, 1]+dysq[j, 1]]], axis=0)
+
             axs[1].plot(xlims, [0., 0.], color='grey', alpha=0.2)
             if plotcolors is not None:
-                if not all([matplotlib.colors.is_color_like(s) 
+                if not all([matplotlib.colors.is_color_like(s)
                             for s in plotcolors]):
                     plotcolors = None
                     logger.warning("writeRfactorPdf: Specified colors not "
-                        "recognized, reverting to default colors")
+                                   "recognized, reverting to default colors")
             if plotcolors is None:
                 axs[0].plot(theo[:, 0], theo[:, 1], label='Theoretical')
                 axs[0].plot(exp[:, 0], exp[:, 1], label='Experimental')
@@ -479,29 +515,29 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
                 axs[1].plot(yexp[:, 0], yexp[:, 1], label="Experimental")
             else:
                 axs[0].plot(theo[:, 0], theo[:, 1], label='Theoretical',
-                              color=plotcolors[0])
+                            color=plotcolors[0])
                 axs[0].plot(exp[:, 0], exp[:, 1], label='Experimental',
-                              color=plotcolors[1])
+                            color=plotcolors[1])
                 axs[1].plot(ytheo[:, 0], ytheo[:, 1], label='Theoretical',
                             color=plotcolors[0], linewidth=0.75)
                 axs[1].plot(yexp[:, 0], yexp[:, 1], label="Experimental",
                             color=plotcolors[0], linewidth=0.75)
             axs[1].plot(dy[:, 0], dy[:, 1], label="\u0394Y", color="black",
                         linewidth=0.5)
-            axs[2].plot(idysq[:, 0], idysq[:, 1], color="black", 
+            axs[2].plot(idysq[:, 0], idysq[:, 1], color="black",
                         drawstyle="steps-mid")
-            
+
             axs[0].annotate(name, namePos, fontsize=10)
             axs[0].annotate("R = {:.4f}".format(rfact), rPos, fontsize=10)
             axs[0].legend()
             axs[1].legend()
-            
+
         for fig in figs:
             pdf.savefig(fig)
             plt.close(fig)
-    except:
+    except Exception:
         logger.error("writeRfactorPdf: Error while writing analysis pdf: ",
-                      exc_info = True)
+                     exc_info=True)
     finally:
         pdf.close()
         logger.setLevel(loglevel)
