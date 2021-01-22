@@ -20,7 +20,6 @@ from collections import defaultdict
 import numpy as np
 
 from guilib.leedsim.classes import LEEDPattern
-from guilib.leedsim import exportcsv
 
 ###############################################################################
 #                                  FUNCTIONS                                  #
