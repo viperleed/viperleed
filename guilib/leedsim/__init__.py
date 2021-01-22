@@ -11,6 +11,7 @@ properly indexing an experimental LEED pattern
 from vprglobals import GLOBALS
 
 from .classes import *
+from .exportcsv import export_pattern_csv
 if GLOBALS['USE_GUI']:
     from .widgets import *
     from .mainwindow import LEED_GUI

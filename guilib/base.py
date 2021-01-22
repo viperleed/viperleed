@@ -20,6 +20,7 @@ from collections import defaultdict
 import numpy as np
 
 from guilib.leedsim.classes import LEEDPattern
+from guilib.leedsim import exportcsv
 
 ###############################################################################
 #                                  FUNCTIONS                                  #
@@ -759,6 +760,60 @@ def string_matrix_to_numpy(str_matrix, dtype=float, needs_shape=tuple()):
     return matrix
 
 
+def format_floats(format_specs, *numbers):
+    """
+    Formats floats to have them all aligned to the point, and according to
+    format_spec. format_spec is in the form
+
+    [[fill]align][sign][#][0][minimumwidth][.precision][type]
+
+    - fill and align will be used to pad the overall resulting string
+    - sign, #, 0 are discarded
+    - minimumwidth is the minimum number of characters used to represent the
+      integer parts. Defaults to the minimum number necessary to have all
+      numbers aligned to the decimal point
+    - precision is the number of decimal digits. Defaults to 5.
+    """
+    int_len = integer_part_length(*numbers)
+            
+    # standard pattern for format_specs
+    pattern = (r"^(?P<align>[<>=^]\d+)?"
+               r"[\+\- ]?"
+               r"[#]?"
+               r"[0]?"
+               r"(?P<minwidth>\d*)"
+               r"([.](?P<prec>\d+))?"
+               r"[bdcoxXneEfFgG\%]?$")
+    m = re.match(pattern, format_specs)
+    if m is None:
+        raise TypeError("Incorrect format specifier for type f.")
+    # process the format specifications:
+    # number of digits:
+    prec = m.group('prec')
+    if prec:
+        prec = int(prec)
+    else:
+        prec = 5
+    # minimum width of integer part
+    # (will left-pad with spaces if needed):
+    min_w = m.group('minwidth')
+    if min_w:
+        min_w = int(min_w)
+    else:
+        min_w = int_len
+    tot_w = max(min_w + prec, int_len + prec) + 1  # +1 for decimal point
+    
+    format = f">{tot_w}.{prec}f"
+    raw = ','.join(f"{float(number):{format}}" for number in numbers)
+    align = ''
+    if m.group('align'):
+        align = f"{m.group('align')}"
+    
+    return f"{raw:{align}}"
+
+def integer_part_length(*numbers):
+    return max(len(f"{int(number)}") for number in numbers)
+
 ################################################################################
 #                                   CLASSES                                    #
 ################################################################################
@@ -795,6 +850,123 @@ class BeamIndex(tuple):
 
     def __repr__(self):
         return f"BeamIndex({', '.join(str(index) for index in self)})"
+    
+    def __format__(self, format_specs):
+        """
+        Customized formatting of BeamIndex. format_specs is a standard format
+        specifier in the form:
+
+        [[fill]align][sign][#][0][minimumwidth][.precision][type]
+
+        The following formats apply:
+        - type == "s": 
+            returns "(num/den|num/den)" where the width of each of the h,k
+            fields is dictated by the minimumwidth specifier in format_specs. In
+            this case, minimumwidth should be of the form "(w_num,w_den)", so
+            that the indices can be aligned at the slash. If this is omitted,
+            the width of both fields is equal, and equal to the longest among
+            the two.
+            If h or k are integers, their "/den" is omitted, and replaced with
+            white spaces if the other is fractional.
+            Negative signs are printed, positive ones are replaced with spaces
+            if the other index is negative
+        - type == "f":
+            returns f"({float(h)},{float(k)})". If .precision is not given,
+            uses 5 digits. If minimumwidth is given, it i treated as the minimum
+            width of the integer part only. The two indices are aligned on the
+            decimal point.
+        - all others return f"({str(self)}:{format_specs}})"
+        """
+        if format_specs == '':
+            return str(self)
+        if format_specs[-1] not in ('s', 'f'):
+            # basic format
+            return f"({str(self):{format_specs}})"
+        if format_specs[-1] == 's':
+            num_min_len, den_min_len = self.get_format_lengths('s')
+            
+            # now search the specifier for something like "(\d+,\d+)" to be
+            # interpreted as the minimum widths of the two fields, to update
+            # the minimum lengths of the fields
+            m = re.search(r"((?P<num>\d+),(?P<den>\d+))", format_specs)
+            if m is not None:
+                num_min_len = max(num_min_len, int(m.group('num')))
+                den_min_len = max(den_min_len, int(m.group('den')))
+                format_specs = format_specs.replace(
+                    f"({m.group('num')},{m.group('den')})", '')
+            
+            raws = ['', '']
+            for i, hk in enumerate(self):
+                # numerator is right-justified in its field
+                raws[i] = f"{hk.numerator:>{num_min_len}}"
+                
+                # denominator a bit more complicated, as it depends on whether
+                # it is == 1 or not
+                if hk.denominator == 1:
+                    n_white = den_min_len
+                    n_white += 1 if den_min_len else 0  # slash if needed
+                    raws[i] += ' '*(n_white)
+                else:
+                    raws[i] += f'/{hk.denominator:<{den_min_len}}'
+            return f"{f'({raws[0]}|{raws[1]})':{format_specs}}"
+        if format_specs[-1] == 'f':
+            return f"({format_floats(format_specs, *self)})"
+            
+            int_len = self.get_format_lengths('f')[0]
+            
+            # standard pattern for format_specs
+            pattern = (r"^([<>=^]\d+)?"
+                       r"[\+\- ]?"
+                       r"[#]?"
+                       r"[0]?"
+                       r"(?P<minwidth>\d*)"
+                       r"([.](?P<prec>\d+))?"
+                       r"[bdcoxXneEfFgG\%]?$")
+            m = re.match(pattern, format_specs)
+            if m is None:
+                raise TypeError("Incorrect format specifier for type f.")
+            # process the format specifications:
+            # number of digits:
+            prec = m.group('prec')
+            if prec:
+                prec = int(prec)
+            else:
+                prec = 5
+            # minimum width of integer part
+            # (will left-pad with spaces if needed):
+            min_w = m.group('minwidth')
+            if min_w:
+                min_w = int(min_w)
+            else:
+                min_w = int_len
+            tot_w = max(min_w + prec, int_len + prec) + 1  # +1 for decimal .
+            
+            format = f">{tot_w}.{prec}f"
+            return f"({float(self[0]):{format}},{float(self[1]):{format}})"
+            
+    def get_format_lengths(self, str_or_float):
+        """
+        Returns the minimum number of characters that can represent the
+        BeamIndex as a fraction or as a float. The two cases behave differently:
+        - str_or_float = 's':
+            returns a 2-tuple with the minimum lengths of numerator and
+            denominator, such that both h and k are aligned at the slash (if
+            fractional) or at the lowest significant digit of the numerator
+        - str_or_float = 'f':
+            returns a 1-tuple with the minimum length of the string
+            representation of the integer parts that can represent both
+        """
+        if str_or_float not in ('s', 'f'):
+            raise ValueError("Invalid format specifier. Should be 's' or 'f'.")
+        if str_or_float == 's':
+            num_min_len = max(len(str(hk.numerator)) for hk in self)
+            dens = [hk.denominator for hk in self]
+            if all(den == 1 for den in dens):
+                den_min_len = 0
+            else:
+                den_min_len = max(len(str(den)) for den in dens)
+            return num_min_len, den_min_len
+        return (integer_part_length(*self),)
 
 
 class PlaneGroup():
