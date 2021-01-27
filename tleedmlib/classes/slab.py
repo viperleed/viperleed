@@ -8,8 +8,6 @@ Class accumulating atoms and layers, listing their elements and various other
 properties. Includes functions for manipulation of those properties.
 """
 
-#from timeit import default_timer as timer
-
 import logging
 import numpy as np
 import copy
@@ -23,48 +21,49 @@ import tleedmlib as tl
 
 logger = logging.getLogger("tleedm.slab")
 
+
 class SymPlane:
     """Candidate plane for a symmetry operation. 'ty' pre-defines a type
     (mirror or glide), 'index2' allows the (1,2) and (2,1) directions if True,
     and collapse moves pos into the (0,0) unit cell if True."""
+
     def __init__(self, pos, dr, abt, ty="none", index2=False, collapse=True):
-        if collapse:  #collapse to (0,0) cell
-            self.pos = np.dot(np.transpose(abt),
-                         (np.dot(np.linalg.inv(np.transpose(abt)), pos) % 1.0))
+        if collapse:  # collapse to (0,0) cell
+            self.pos = np.dot(abt.T, (np.dot(np.linalg.inv(abt.T), pos) % 1.0))
         else:
             self.pos = pos
         self.dir = dr/np.linalg.norm(dr)
-                            #normalized vector perpendicular to pos = in-plane
+        # normalized vector perpendicular to pos = in-plane
         self.type = ty
         self.par = []
-        optionlist = [(1,0),(0,1),(1,1),(1,-1)]
-        if index2: 
-            optionlist.extend([(2,1),(1,2)])
-        for (i,j) in optionlist:
-            if abs((abs(np.dot(self.dir,(i*abt[0]+j*abt[1])))
-                  / (np.linalg.norm(self.dir)
-                     * np.linalg.norm(i*abt[0]+j*abt[1])))-1.0) < 0.001:
-                self.par = np.array([i,j])
-    
+        optionlist = [(1, 0), (0, 1), (1, 1), (1, -1)]
+        if index2:
+            optionlist.extend([(2, 1), (1, 2)])
+        for (i, j) in optionlist:
+            if abs((abs(np.dot(self.dir, (i*abt[0]+j*abt[1])))
+                    / (np.linalg.norm(self.dir)
+                    * np.linalg.norm(i*abt[0]+j*abt[1])))-1.0) < 0.001:
+                self.par = np.array([i, j])
+
     def distanceFromOrigin(self, abt):
-        pointlist = [(0,0), (1,0), (0,1), (1,1)]
+        pointlist = [(0, 0), (1, 0), (0, 1), (1, 1)]
         return min([distanceLineThroughPointsFromPoint(
-                                self.pos, self.pos+self.dir, 
+                                self.pos, self.pos+self.dir,
                                 p[0]*abt[0]+p[1]*abt[1])
                     for p in pointlist])
-    
+
     def __str__(self):
         return ("SymPlane(pos = {}, par = {})".format(self.pos, self.par))
 
-    def isEquivalent(self,pl2,abt,eps=0.001):
+    def isEquivalent(self, pl2, abt, eps=0.001):
         """Checks whether two symmetry planes have the same position and
         direction (including duplicates in next unit cell)"""
-        if not np.array_equal(self.par,pl2.par): 
+        if not np.array_equal(self.par, pl2.par):
             return False
         complist = [self.pos]
         fpos = np.dot(np.linalg.inv(np.transpose(abt)), self.pos) % 1.0
         # if we're close to an edge or corner, also check translations
-        for i in range(0,2):
+        for i in range(0, 2):
             releps = eps / np.linalg.norm(abt[i])
             if abs(fpos[i]) < releps:
                 complist.append(self.pos+abt[i])
@@ -74,8 +73,8 @@ class SymPlane:
             complist.append(complist[1]+complist[2]-complist[0])
 
         for p in complist:
-            if tl.base.distanceLineThroughPointsFromPoint(pl2.pos,
-                                                     pl2.pos+pl2.dir,p) < eps:
+            if tl.base.distanceLineThroughPointsFromPoint(
+                    pl2.pos, pl2.pos+pl2.dir, p) < eps:
                 return True
         return False
 
@@ -139,9 +138,9 @@ class Slab:
         self.planegroup = "unknown"
         self.foundplanegroup = "unknown"
         self.orisymplane = None
-    
+
     def resetAtomOriN(self):
-        """Gets new 'original' numbers for atoms in the slab. If a bulkslab 
+        """Gets new 'original' numbers for atoms in the slab. If a bulkslab
         is defined, also updates the numbers there to keep the two consistent.
         """
         self.sortOriginal()
@@ -149,7 +148,7 @@ class Slab:
         bulkAtsRenumbered = []
         for (i, at) in enumerate(self.atlist):
             if self.bulkslab is not None:
-                for bat in [a for a in self.bulkslab.atlist 
+                for bat in [a for a in self.bulkslab.atlist
                             if a.oriN == at.oriN
                             and a not in bulkAtsRenumbered]:
                     bat.oriN = i+1
@@ -188,8 +187,8 @@ class Slab:
     def getCartesianCoordinates(self, updateOrigin=False):
         """Assigns absolute cartesian coordinates to all atoms, with x,y using
         the unit cell (top plane), while z = 0 for the topmost atom and
-        positive going down through the slab. If updateOrigin is set True, the 
-        cartesian origin relative to the fractional origin will be updated, 
+        positive going down through the slab. If updateOrigin is set True, the
+        cartesian origin relative to the fractional origin will be updated,
         otherwise it is static."""
         al = self.atlist[:]     #temporary copy
         al.sort(key=lambda atom: atom.pos[2])
@@ -218,7 +217,7 @@ class Slab:
 
     def collapseCartesianCoordinates(self, updateOrigin=False):
         """Finds atoms outside the parallelogram spanned by the unit vectors
-        a and b and moves them inside. If keepOriZ is True, the old value of 
+        a and b and moves them inside. If keepOriZ is True, the old value of
         the top atom position will be preserved.."""
         self.getFractionalCoordinates()
         self.collapseFractionalCoordinates()
@@ -275,13 +274,13 @@ class Slab:
                         else:
                             highbound = val
                 if 'dc' in s:
-                    cutoff *= (self.ucell[2,2] 
+                    cutoff *= (self.ucell[2,2]
                                / np.linalg.norm(self.ucell[:,2]))
                 for i in range(1,len(al)):
-                    if ((abs(al[i].cartpos[2]-al[i-1].cartpos[2]) > cutoff) 
-                            and al[i].pos[2] > lowbound 
+                    if ((abs(al[i].cartpos[2]-al[i-1].cartpos[2]) > cutoff)
+                            and al[i].pos[2] > lowbound
                             and al[i].pos[2] < highbound
-                            and al[i-1].pos[2] > lowbound 
+                            and al[i-1].pos[2] > lowbound
                             and al[i-1].pos[2] < highbound):
                         ct.append(abs((al[i].pos[2]+al[i-1].pos[2])/2))
             elif s not in ["<", ">"]:
@@ -403,21 +402,21 @@ class Slab:
                     break
             acc.sort(key=lambda sl: sl.atlist[0].el)  # sort by element
             self.sublayers.extend(acc)
-        
-        for (i,sl) in enumerate(self.sublayers): 
+
+        for (i,sl) in enumerate(self.sublayers):
             sl.num = i
 
     def getMinLayerSpacing(self):
-        """Returns the minimum distance (cartesian) between two layers in the 
+        """Returns the minimum distance (cartesian) between two layers in the
         slab. Returns zero if there is only one layer, or none are defined."""
         if len(self.layers) < 2:
             return 0
         self.getCartesianCoordinates()
-        return min([(self.layers[i].carttopz - self.layers[i-1].cartbotz) 
+        return min([(self.layers[i].carttopz - self.layers[i-1].cartbotz)
                     for i in range(1, len(self.layers))])
 
     def updateElements(self,rp):
-        """Updates nelem based on the ELEMENT_MIX parameter, and warns in case 
+        """Updates nelem based on the ELEMENT_MIX parameter, and warns in case
         of a naming conflict."""
         if self.lastupdateelmix == rp.ELEMENT_MIX:
             return     #don't update if up to date
@@ -440,8 +439,8 @@ class Slab:
         self.chemelem = []
         for el in self.elements:
             if el in rp.ELEMENT_MIX:
-                self.chemelem.extend([e.capitalize() 
-                                      for e in rp.ELEMENT_MIX[el] 
+                self.chemelem.extend([e.capitalize()
+                                      for e in rp.ELEMENT_MIX[el]
                                       if not e.capitalize() in self.chemelem])
             else:
                 self.chemelem.append(el.capitalize())
@@ -551,7 +550,7 @@ class Slab:
                            #  fractional coordinates based on the new unit cell
 
     def restoreOriState(self, keepDisp=False):
-        """Resets the atom positions and site vibrational amplitudes to the 
+        """Resets the atom positions and site vibrational amplitudes to the
         original state, and stores the deviations as offset instead."""
         for site in self.sitelist:
             siteats = [at for at in self.atlist if at.site == site]
@@ -602,7 +601,7 @@ class Slab:
 
     def rotateAtoms(self, axis, order):
         """Translates the atoms in the slab to have the axis in the origin,
-        applies an order-fold rotation matrix to the atom positions, then 
+        applies an order-fold rotation matrix to the atom positions, then
         translates back"""
         #these explicit definitions are likely useless, but sqrts might be
         #  marginally more accurate than sin/cos
@@ -614,8 +613,8 @@ class Slab:
         self.getFractionalCoordinates()
 
     def rotateUnitCell(self, order, append_uCellMod = True):
-        """Rotates the unit cell (around the origin), leaving atom positions 
-        the same. Note that this rotates in the opposite direction as 
+        """Rotates the unit cell (around the origin), leaving atom positions
+        the same. Note that this rotates in the opposite direction as
         rotateAtoms."""
         self.getCartesianCoordinates()
         m = rotMatrix(order)
@@ -760,7 +759,7 @@ class Slab:
         return True
 
     def isBulkTransformSymmetric(self, matrix, sldisp, eps):
-        """Evalues whether the slab is self-equivalent under a given symmetry 
+        """Evalues whether the slab is self-equivalent under a given symmetry
         operation, and subsequent translation by a given number of sublayers"""
         uc = self.ucell
         uct = np.transpose(uc)
@@ -770,7 +769,7 @@ class Slab:
         lowocclayer = self.getLowOccLayer()
         baseInd = self.sublayers.index(lowocclayer)
         ori = lowocclayer.atlist[0].cartpos
-        for at in self.sublayers[(baseInd + sldisp) 
+        for at in self.sublayers[(baseInd + sldisp)
                                  % len(self.sublayers)].atlist:
             transVecs.append((at.cartpos - np.dot(matrix, ori)).reshape(3,1))
         for (i, sl) in enumerate(self.sublayers):
@@ -812,7 +811,7 @@ class Slab:
                 v = transVecs[j]
                 shiftm = np.tile(v,len(coordlist))
                 tmpcoords = transcoords + shiftm
-                tmpcoords = np.dot(uc, (np.dot(np.linalg.inv(uc),tmpcoords) 
+                tmpcoords = np.dot(uc, (np.dot(np.linalg.inv(uc),tmpcoords)
                                                                       % 1.0))
                 distances = sps.distance.cdist(tmpcoords.transpose(), oricm2,
                                                'euclidean')
@@ -830,15 +829,15 @@ class Slab:
         return True
 
     def isBulkScrewSymmetric(self, order, sldisp, eps):
-        """Evaluates whether the slab has a screw axis of the given order when 
+        """Evaluates whether the slab has a screw axis of the given order when
         translated by the given number of sublayers."""
         m = np.identity(3, dtype=float)
         m[:2, :2] = rotMatrix(order)
         return self.isBulkTransformSymmetric(m, sldisp, eps)
 
-    
+
     def isBulkGlideSymmetric(self, symplane, sldisp, eps):
-        """Evaluates whether the bulk has a glide plane along a given 
+        """Evaluates whether the bulk has a glide plane along a given
         direction, i.e. mirror at this direction, then some translation."""
         m = np.array([[1,0,0],[0,1,0],[0,0,1]], dtype=float)
         ang = angle(np.array([1,0]),symplane.dir)
@@ -1057,7 +1056,7 @@ class Slab:
         newC = np.append(np.dot(ts.ucell[:2, :2], cFracBase), -repeatC[2])
         for (i,j) in [(0,-1),(-1,0),(-1,-1)]:
             v = np.dot(ts.ucell[:2, :2], cFracBase + np.array([i,j]))
-            if (np.linalg.norm(np.append(v, -repeatC[2])) 
+            if (np.linalg.norm(np.append(v, -repeatC[2]))
                                                     < np.linalg.norm(newC)):
                 newC[:2] = v
         return newC
@@ -1101,7 +1100,7 @@ class Slab:
         return(cl)
 
     def makeSupercell(self, transform):
-        """Returns a copy of the slab with the unit cell transformed by the 
+        """Returns a copy of the slab with the unit cell transformed by the
         given integer-valued, (2x2) transformation matrix."""
         if np.any(abs(np.round(transform) - transform) > 1e-6):
             raise ValueError("Slab.makeSupercell: transformation matrix "
@@ -1137,7 +1136,7 @@ class Slab:
         ts.getFractionalCoordinates()
         ts.getCartesianCoordinates(updateOrigin=True)
         return ts
-        
+
 
     def changeBulkCell(self, rp, newcell):
         """Takes a unit cell (a,b), calculates a new SUPERLATTICE parameter
@@ -1165,9 +1164,9 @@ class Slab:
         else:
             rp.SUPERLATTICE = newSL
             self.bulkslab = self.makeBulkSlab(rp)
-     
+
     def addBulkLayers(self, rp):
-        """Returns a copy of the slab with one bulk unit appended at the 
+        """Returns a copy of the slab with one bulk unit appended at the
         bottom, and a list of the new atoms that were added."""
         ts = copy.deepcopy(self)
         blayers = [l for l in ts.layers if l.isBulk]
@@ -1178,9 +1177,9 @@ class Slab:
         else:
             cvec = ts.ucell[:,2]
             if rp.BULK_REPEAT is None:
-                # assume that interlayer vector from bottom non-bulk to top 
+                # assume that interlayer vector from bottom non-bulk to top
                 #  bulk layer is the same as between bulk units
-                zdiff = (blayers[-1].cartbotz 
+                zdiff = (blayers[-1].cartbotz
                          - ts.layers[blayers[0].num-1].cartbotz)
             elif type(rp.BULK_REPEAT) == float:
                 zdiff = rp.BULK_REPEAT
@@ -1192,7 +1191,7 @@ class Slab:
         newbulkats = []
         tmplist = ts.atlist[:]
         for at in tmplist:
-            if at.layer.isBulk: 
+            if at.layer.isBulk:
                 newbulkats.append(at.duplicate())
             at.cartpos = at.cartpos + bulkc
         ts.collapseCartesianCoordinates(updateOrigin=True)
@@ -1244,7 +1243,7 @@ class Slab:
         sl = np.identity(3, dtype=float)
         sl[:2,:2] = np.transpose(rp.SUPERLATTICE)
         bsl.ucell = np.dot(bsl.ucell, np.linalg.inv(sl))
-        if (rp.superlattice_defined and np.linalg.norm(bsl.ucell[:2,0]) > 
+        if (rp.superlattice_defined and np.linalg.norm(bsl.ucell[:2,0]) >
                                        np.linalg.norm(bsl.ucell[:2,1]) + 1e-4):
             logger.warning("The bulk unit cell defined by SUPERLATTICE does "
                 "not follow standard convention: the first vector is larger "
@@ -1291,10 +1290,10 @@ class Slab:
         return bsl
 
     def makeSymBaseSlab(self, rp, transform=None):
-        """Copies self to create a symmetry base slab by collapsing to the 
-        cell defined by rp.SYMMETRY_CELL_TRANSFORM, then removing duplicates. 
-        Also assigns the duplicateOf variable for all atoms in self.atlist. 
-        By default, the transformation matrix will be taken from rp, but a 
+        """Copies self to create a symmetry base slab by collapsing to the
+        cell defined by rp.SYMMETRY_CELL_TRANSFORM, then removing duplicates.
+        Also assigns the duplicateOf variable for all atoms in self.atlist.
+        By default, the transformation matrix will be taken from rp, but a
         different matrix can also be passed."""
         ssl = copy.deepcopy(self)
         ssl.resetSymmetry()
@@ -1316,12 +1315,12 @@ class Slab:
             i = 0
             while i < len(subl.atlist):
                 j = i+1
-                baseat = [a for a in self.atlist 
+                baseat = [a for a in self.atlist
                           if a.oriN == subl.atlist[i].oriN][0]
                 while j < len(subl.atlist):
                     if subl.atlist[i].isSameXY(subl.atlist[j].cartpos[:2],
                                                eps = rp.SYMMETRY_EPS):
-                        for a in [a for a in self.atlist 
+                        for a in [a for a in self.atlist
                                   if a.oriN == subl.atlist[j].oriN]:
                             a.duplicateOf = baseat
                         subl.atlist.pop(j)
@@ -1339,7 +1338,7 @@ class Slab:
             layer.num = i
             layer.atlist = [at for at in layer.atlist if at in ssl.atlist]
         return ssl
-        
+
     def getSurfaceAtoms(self, rp):
         """Checks which atoms are 'at the surface', returns them as a list."""
         abst = np.transpose(self.ucell[0:2,0:2])
@@ -1395,21 +1394,21 @@ class Slab:
             if len(covered)+len(surfats) >= len(testats):
                 break   # that's all of them
         return surfats
-    
+
     def getBulk3Dstr(self):
-        """Returns a one-line string containing information about the bulk 
-        screw axes and glide planes. Only to be used for bulk slabs. Format of 
-        the string is 'r(2, 4), m([1,1], [ 1,-1])'. If neither screw axes nor 
+        """Returns a one-line string containing information about the bulk
+        screw axes and glide planes. Only to be used for bulk slabs. Format of
+        the string is 'r(2, 4), m([1,1], [ 1,-1])'. If neither screw axes nor
         glide planes exist, returns string 'None'."""
         b3ds = ""
         if self.bulkScrews:
-            b3ds += "r({})".format(", ".join([str(v) 
+            b3ds += "r({})".format(", ".join([str(v)
                                               for v in self.bulkScrews]))
         if self.bulkGlides:
             if b3ds:
                 b3ds += ", "
-            b3ds += "m({})".format(", ".join([np.array2string(gp.par, 
-                                                              separator=",") 
+            b3ds += "m({})".format(", ".join([np.array2string(gp.par,
+                                                              separator=",")
                                               for gp in self.bulkGlides]))
         if not b3ds:
             return "None"

@@ -27,15 +27,15 @@ logger = logging.getLogger("tleedm.leedbase")
 ###############################################
 #                 GLOBALS                     #
 ###############################################
-periodic_table = ['H', 'He', 'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne', 'Na', 
-    'Mg', 'Al', 'Si', 'P', 'S', 'Cl', 'Ar', 'K', 'Ca', 'Sc', 'Ti', 'V', 'Cr', 
-    'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn', 'Ga', 'Ge', 'As', 'Se', 'Br', 'Kr', 
-    'Rb', 'Sr', 'Y', 'Zr', 'Nb', 'Mo', 'Tc', 'Ru', 'Rh', 'Pd', 'Ag', 'Cd', 
-    'In', 'Sn', 'Sb', 'Te', 'I', 'Xe', 'Cs', 'Ba', 'La', 'Ce', 'Pr', 'Nd', 
-    'Pm', 'Sm', 'Eu', 'Gd', 'Tb', 'Dy', 'Ho', 'Er', 'Tm', 'Yb', 'Lu', 'Hf', 
-    'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl', 'Pb', 'Bi', 'Po', 
-    'At', 'Rn', 'Fr', 'Ra', 'Ac', 'Th', 'Pa', 'U', 'Np', 'Pu', 'Am', 'Cm', 
-    'Bk', 'Cf', 'Es', 'Fm', 'Md', 'No', 'Lr', 'Rf', 'Db', 'Sg', 'Bh', 'Hs', 
+periodic_table = ['H', 'He', 'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne', 'Na',
+    'Mg', 'Al', 'Si', 'P', 'S', 'Cl', 'Ar', 'K', 'Ca', 'Sc', 'Ti', 'V', 'Cr',
+    'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn', 'Ga', 'Ge', 'As', 'Se', 'Br', 'Kr',
+    'Rb', 'Sr', 'Y', 'Zr', 'Nb', 'Mo', 'Tc', 'Ru', 'Rh', 'Pd', 'Ag', 'Cd',
+    'In', 'Sn', 'Sb', 'Te', 'I', 'Xe', 'Cs', 'Ba', 'La', 'Ce', 'Pr', 'Nd',
+    'Pm', 'Sm', 'Eu', 'Gd', 'Tb', 'Dy', 'Ho', 'Er', 'Tm', 'Yb', 'Lu', 'Hf',
+    'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl', 'Pb', 'Bi', 'Po',
+    'At', 'Rn', 'Fr', 'Ra', 'Ac', 'Th', 'Pa', 'U', 'Np', 'Pu', 'Am', 'Cm',
+    'Bk', 'Cf', 'Es', 'Fm', 'Md', 'No', 'Lr', 'Rf', 'Db', 'Sg', 'Bh', 'Hs',
     'Mt', 'Ds', 'Rg', 'Cn', 'Nh', 'Fl', 'Mc', 'Lv', 'Ts', 'Og']
 
 elementCovalentRadii = {"H": 0.31, "He": 0.28, "Li": 1.28, "Be": 0.96,
@@ -58,22 +58,22 @@ elementCovalentRadii = {"H": 0.31, "He": 0.28, "Li": 1.28, "Be": 0.96,
                         # from Cordero et al., 2008 (DOI: 10.1039/B801115J)
 
 elementAtomicMass = {"H": 1.00797, "He": 4.00260, "Li": 6.941, "Be": 9.01218,
-    "B": 10.81, "C": 12.011, "N": 14.0067, "O": 15.9994, "F": 18.998403, 
+    "B": 10.81, "C": 12.011, "N": 14.0067, "O": 15.9994, "F": 18.998403,
     "Ne": 20.179, "Na": 22.98977, "Mg": 24.305, "Al": 26.98154, "Si": 28.0855,
-    "P": 30.97376, "S": 32.06, "Cl": 35.453, "K": 39.0983, "Ar": 39.948, 
-    "Ca": 40.08, "Sc": 44.9559, "Ti": 47.90, "V": 50.9415, "Cr": 51.996, 
-    "Mn": 54.9380, "Fe": 55.847, "Ni": 58.70, "Co": 58.9332, "Cu": 63.546, 
-    "Zn": 65.38, "Ga": 69.72, "Ge": 72.59, "As": 74.9216, "Se": 78.96, 
-    "Br": 79.904, "Kr": 83.80, "Rb": 85.4678, "Sr": 87.62, "Y": 88.9059, 
-    "Zr": 91.22, "Nb": 92.9064, "Mo": 95.94, "Tc": 98, "Ru": 101.07, 
-    "Rh": 102.9055, "Pd": 106.4, "Ag": 107.868, "Cd": 112.41, "In": 114.82, 
-    "Sn": 118.69, "Sb": 121.75, "I": 126.9045, "Te": 127.60, "Xe": 131.30, 
-    "Cs": 132.9054, "Ba": 137.33, "La": 138.9055, "Ce": 140.12, 
-    "Pr": 140.9077, "Nd": 144.24, "Pm": 145, "Sm": 150.4, "Eu": 151.96, 
-    "Gd": 157.25, "Tb": 158.9254, "Dy": 162.50, "Ho": 164.9304, "Er": 167.26, 
-    "Tm": 168.9342, "Yb": 173.04, "Lu": 174.967, "Hf": 178.49, "Ta": 180.9479, 
-    "W": 183.85, "Re": 186.207, "Os": 190.2, "Ir": 192.22, "Pt": 195.09, 
-    "Au": 196.9665, "Hg": 200.59, "Tl": 204.37, "Pb": 207.2, "Bi": 208.9804, 
+    "P": 30.97376, "S": 32.06, "Cl": 35.453, "K": 39.0983, "Ar": 39.948,
+    "Ca": 40.08, "Sc": 44.9559, "Ti": 47.90, "V": 50.9415, "Cr": 51.996,
+    "Mn": 54.9380, "Fe": 55.847, "Ni": 58.70, "Co": 58.9332, "Cu": 63.546,
+    "Zn": 65.38, "Ga": 69.72, "Ge": 72.59, "As": 74.9216, "Se": 78.96,
+    "Br": 79.904, "Kr": 83.80, "Rb": 85.4678, "Sr": 87.62, "Y": 88.9059,
+    "Zr": 91.22, "Nb": 92.9064, "Mo": 95.94, "Tc": 98, "Ru": 101.07,
+    "Rh": 102.9055, "Pd": 106.4, "Ag": 107.868, "Cd": 112.41, "In": 114.82,
+    "Sn": 118.69, "Sb": 121.75, "I": 126.9045, "Te": 127.60, "Xe": 131.30,
+    "Cs": 132.9054, "Ba": 137.33, "La": 138.9055, "Ce": 140.12,
+    "Pr": 140.9077, "Nd": 144.24, "Pm": 145, "Sm": 150.4, "Eu": 151.96,
+    "Gd": 157.25, "Tb": 158.9254, "Dy": 162.50, "Ho": 164.9304, "Er": 167.26,
+    "Tm": 168.9342, "Yb": 173.04, "Lu": 174.967, "Hf": 178.49, "Ta": 180.9479,
+    "W": 183.85, "Re": 186.207, "Os": 190.2, "Ir": 192.22, "Pt": 195.09,
+    "Au": 196.9665, "Hg": 200.59, "Tl": 204.37, "Pb": 207.2, "Bi": 208.9804,
     "Po": 209, "At": 210, "Rn": 222, "Fr": 223, "Ra": 226.0254, "Ac": 227.0278,
     "Pa": 231.0359, "Th": 232.0381, "Np": 237.0482, "U": 238.029}
 
@@ -84,9 +84,9 @@ elementAtomicMass = {"H": 1.00797, "He": 4.00260, "Li": 6.941, "Be": 9.01218,
 
 def getYfunc(ivfunc, v0i):
     """
-    Returns the Y function for a given function. The derivative is 
-    approximated by the slope between one point to the left and one to the 
-    right, so the Y function does not have values for the highest and lowest 
+    Returns the Y function for a given function. The derivative is
+    approximated by the slope between one point to the left and one to the
+    right, so the Y function does not have values for the highest and lowest
     energies that are passed.
     Y = L/sqrt(1 + v0i^2 * L^2)
     L = ivfunc' / ivfunc
@@ -94,7 +94,7 @@ def getYfunc(ivfunc, v0i):
     Parameters
     ----------
     ivfunc : iterable
-        Should be a 2D array, list of lists, or list of tuples containing 
+        Should be a 2D array, list of lists, or list of tuples containing
         energies in ivfunc[:,0] and values in ivfunc[:,1], both as float.
 
     v0i : float
@@ -125,10 +125,10 @@ def getYfunc(ivfunc, v0i):
 
 def getTLEEDdir(home="", version=0.):
     """Finds directories in the 'source' folder that have names starting with
-    'TensErLEED', then picks the one with the highest version number. Returns 
+    'TensErLEED', then picks the one with the highest version number. Returns
     a relative path to that directory, eg './source/TensErLEED-v1.6'."""
     sd = os.path.join(home,'source')
-    l = [dn for dn in os.listdir(sd) if (os.path.isdir(os.path.join(sd,dn)) 
+    l = [dn for dn in os.listdir(sd) if (os.path.isdir(os.path.join(sd,dn))
                                          and dn.startswith('TensErLEED'))]
     highest = 0.0
     founddir = ''
@@ -153,21 +153,21 @@ def getTLEEDdir(home="", version=0.):
         return ''
 
 def getMaxTensorIndex(home="."):
-    """Checks the Tensors folder for the highest Tensor index there, 
-    returns that value, or zero if there is no Tensors folder or no valid 
+    """Checks the Tensors folder for the highest Tensor index there,
+    returns that value, or zero if there is no Tensors folder or no valid
     Tensors zip file."""
     if not os.path.isdir(os.path.join(home,"Tensors")):
         return 0
     indlist = []
     rgx = re.compile(r'Tensors_[0-9]{3}\.zip')
-    for f in [f for f in os.listdir(os.path.join(home,"Tensors")) 
+    for f in [f for f in os.listdir(os.path.join(home,"Tensors"))
               if (os.path.isfile(os.path.join(home,"Tensors",f))
                   and rgx.match(f))]:
         m = rgx.match(f)
         if m.span()[1] == 15:  # exact match
             indlist.append(int(m.group(0)[-7:-4]))
     rgx = re.compile(r'Tensors_[0-9]{3}')
-    for f in [f for f in os.listdir(os.path.join(home,"Tensors")) 
+    for f in [f for f in os.listdir(os.path.join(home,"Tensors"))
               if (os.path.isdir(os.path.join(home,"Tensors",f))
                   and rgx.match(f))]:
         m = rgx.match(f)
@@ -178,13 +178,13 @@ def getMaxTensorIndex(home="."):
     return 0
 
 def getTensors(index, basedir=".", targetdir=".", required=True):
-    """Fetches Tensor files from Tensors or archive with specified tensor 
-    index. If required is set True, an error will be printed if no Tensor 
+    """Fetches Tensor files from Tensors or archive with specified tensor
+    index. If required is set True, an error will be printed if no Tensor
     files are found.
     basedir is the directory in which the Tensor directory is based.
     targetdir is the directory to which the Tensor files should be moved."""
     dn = "Tensors_"+str(index).zfill(3)
-    if (os.path.basename(basedir) == "Tensors" 
+    if (os.path.basename(basedir) == "Tensors"
             and not os.path.isdir(os.path.join(basedir, "Tensors"))):
         basedir = os.path.dirname(basedir)
     if not os.path.isdir(os.path.join(basedir,"Tensors",dn)):
@@ -212,15 +212,15 @@ def getTensors(index, basedir=".", targetdir=".", required=True):
     return None
 
 def getDeltas(index, basedir=".", targetdir=".", required=True):
-    """Fetches Delta files from Deltas or archive with specified tensor index. 
-    If required is set True, an error will be printed if no Delta files are 
+    """Fetches Delta files from Deltas or archive with specified tensor index.
+    If required is set True, an error will be printed if no Delta files are
     found.
     basedir is the directory in which the Delta directory is based.
     targetdir is the directory to which the Tensor files should be moved."""
     dn = "Deltas_"+str(index).zfill(3)
     if os.path.isdir(os.path.join(basedir,"Deltas",dn)):
         for f in [f for f in os.listdir(os.path.join(basedir,"Deltas",dn))
-                  if (os.path.isfile(os.path.join(basedir,"Deltas",dn,f)) 
+                  if (os.path.isfile(os.path.join(basedir,"Deltas",dn,f))
                       and f.startswith("DEL_"))]:
             try:
                 shutil.copy2(os.path.join(basedir,"Deltas",dn,f), targetdir)
@@ -242,8 +242,8 @@ def getDeltas(index, basedir=".", targetdir=".", required=True):
     return None
 
 def getTensorOriStates(sl, path):
-    """Reads POSCAR, PARAMETERS and VIBROCC from the target path, gets the 
-    original state of the atoms and sites, and stores them in the given 
+    """Reads POSCAR, PARAMETERS and VIBROCC from the target path, gets the
+    original state of the atoms and sites, and stores them in the given
     slab's atom/site oriState variables."""
     for fn in ["POSCAR", "PARAMETERS", "VIBROCC"]:
         if not os.path.isfile(os.path.join(path, fn)):
@@ -252,7 +252,7 @@ def getTensorOriStates(sl, path):
     dn = os.path.basename(path)
     try:
         tsl = readPOSCAR(os.path.join(path, "POSCAR"))
-        trp = readPARAMETERS(filename = 
+        trp = readPARAMETERS(filename =
                                 os.path.join(path, "PARAMETERS"))
         interpretPARAMETERS(trp, slab=tsl, silent=True)
         tsl.fullUpdate(trp)
@@ -289,9 +289,9 @@ def getTensorOriStates(sl, path):
         site.oriState = copy.deepcopy(tsitel[0])
     return None
 
-def fortranCompile(pre="", filename="", post="", 
+def fortranCompile(pre="", filename="", post="",
                    logname = "fortran-compile.log"):
-    """Assembles pre+filename+post to a filename, tries to execute via 
+    """Assembles pre+filename+post to a filename, tries to execute via
     subprocess.run, raises an exception if it fails."""
     fc = pre+" "+filename+" "+post
     fcl = fc.split()
@@ -300,7 +300,7 @@ def fortranCompile(pre="", filename="", post="",
         sep = "\n\n"
     try:
         with open(logname, "a") as log:
-            log.write(sep + "############\n# COMPILING: " + fc 
+            log.write(sep + "############\n# COMPILING: " + fc
                       + "\n############\n\n")
         with open(logname, "a") as log:
             r = subprocess.run(fcl, stdout=log, stderr=log)
@@ -311,9 +311,9 @@ def fortranCompile(pre="", filename="", post="",
         raise RuntimeError("Fortran compiler subprocess returned {}"
                            .format(r.returncode))
     return None
-    
+
 def writeWoodsNotation(ucell):
-    """Takes a unit cell (as a (2x2) matrix) and attempts to write it in Woods 
+    """Takes a unit cell (as a (2x2) matrix) and attempts to write it in Woods
     Notation. Returns empty string if no Woods notation is found."""
     # !!! VERY INCOMPLETE, should at least detect simple c(a x b) cases
     # !!! Same functionality exists in guilib; replace at some point
@@ -321,15 +321,15 @@ def writeWoodsNotation(ucell):
         return("(" + str(int(ucell[0,0])) + "x" + str(int(ucell[1,1])) + ")")
     else:
         return ""
-    
+
 def readWoodsNotation(s, ucell):
-    """Takes a string that should contain the transformation from the bulk to 
-    the surface unit cell in Wood notation, as well as a bulk unit cell (from 
-    which only the surface vectors are read). Returns a 2x2 transformation 
+    """Takes a string that should contain the transformation from the bulk to
+    the surface unit cell in Wood notation, as well as a bulk unit cell (from
+    which only the surface vectors are read). Returns a 2x2 transformation
     matrix."""
     p = re.compile(r'\s*(?P<type>[PCpc]*)\s*\(\s*(?P<g1>.+)\s*[xX]\s*'
                    +r'(?P<g2>.+)\s*\)\s*[rR]*\s*(?P<alpha>[\d.]*)')
-    # this regular expression matches if (any amount of whitespace at any 
+    # this regular expression matches if (any amount of whitespace at any
     #                                                     point is ignored):
     #   - optional: first character is p or c (or P or C) (-> type)
     #   - then there is a '('
@@ -359,28 +359,28 @@ def readWoodsNotation(s, ucell):
     alpha *= np.pi/180
     g1 = parseMathSqrt(m.group('g1'))
     g2 = parseMathSqrt(m.group('g2'))
-    # get surface unit cell vectors from bulk unit cell (has surface 
+    # get surface unit cell vectors from bulk unit cell (has surface
     #  periodicity!!):
     if alpha == 0.0 and t == 'p':
         mat = np.array([[g1, 0.], [0., g2]], dtype=float)
     else:
         r = [ucell[:2,0],ucell[:2,1]]
-        #q = np.linalg.norm(r[1])/np.linalg.norm(r[0])  
+        #q = np.linalg.norm(r[1])/np.linalg.norm(r[0])
         # this would be to get from bulk vectors to surface, we have to reverse
         q = 1/(np.linalg.norm(r[1])/np.linalg.norm(r[0]))
         omega = abs(angle(r[0],r[1]))
                  #this is always constant in Wood notation, no need to reverse.
-        if t == 'p':    
-            #matrices from: Klaus Hermann; Crystallography and Surface 
+        if t == 'p':
+            #matrices from: Klaus Hermann; Crystallography and Surface
             #                                Structure (Second Edition, Wiley)
             mat = ((1/np.sin(omega))
-                  * np.array([[g1*np.sin(omega-alpha), g1*(1/q)*np.sin(alpha)], 
+                  * np.array([[g1*np.sin(omega-alpha), g1*(1/q)*np.sin(alpha)],
                              [-g2*q*np.sin(alpha), g2*np.sin(omega+alpha)]],
                              dtype=float))
         else:
             mat = ((1/(2*np.sin(omega)))
-                  *np.array([[g1*np.sin(omega-alpha)-g2*q*np.sin(alpha), 
-                              g1*(1/q)*np.sin(alpha)+g2*np.sin(omega+alpha)], 
+                  *np.array([[g1*np.sin(omega-alpha)-g2*q*np.sin(alpha),
+                              g1*(1/q)*np.sin(alpha)+g2*np.sin(omega+alpha)],
                              [-g1*np.sin(omega-alpha)-g2*q*np.sin(alpha),
                               -g1*(1/q)*np.sin(alpha)+g2*np.sin(omega+alpha)]],
                             dtype=float))
@@ -404,11 +404,11 @@ def readWoodsNotation(s, ucell):
     return mat
 
 def checkLattice(ab, eps = 0.001):
-    """Takes unit vectors a,b as a 2x2 matrix, returns (lat,t), where lat is 
-    a string "square", "rectangular", "hexagonal", "rhombic" or "oblique", and 
-    t is a 2x2 transformation matrix which will transform the cell to obtuse 
+    """Takes unit vectors a,b as a 2x2 matrix, returns (lat,t), where lat is
+    a string "square", "rectangular", "hexagonal", "rhombic" or "oblique", and
+    t is a 2x2 transformation matrix which will transform the cell to obtuse
     if it is rhombic or hexagonal."""
-    # Author: Michele Riva; slightly modified for consistency 
+    # Author: Michele Riva; slightly modified for consistency
     #   by Florian Kraushofer
     t = np.array([[1,0],[0,1]])
     c = cosvec(ab[0], ab[1])
@@ -432,13 +432,13 @@ def checkLattice(ab, eps = 0.001):
     return (lat, t)
 
 def reduceUnitCell(ab, eps = 0.001):
-    """Takes an obtuse unit cell as a (2x2) matrix and reduces it to minimum 
-    circumference, keeping the area constant. This might reduce oblique unit 
-    cells to rectangular or hexagonal ones. Returns (ab, t, celltype), where 
-    ab is the modified unit cell, t is the transformation matrix, and celltype 
-    is a string describing the unit cell ("square", "rectangular", 
+    """Takes an obtuse unit cell as a (2x2) matrix and reduces it to minimum
+    circumference, keeping the area constant. This might reduce oblique unit
+    cells to rectangular or hexagonal ones. Returns (ab, t, celltype), where
+    ab is the modified unit cell, t is the transformation matrix, and celltype
+    is a string describing the unit cell ("square", "rectangular",
     "hexagonal", "rhombic" or "oblique")."""
-    # Author: Michele Riva; slightly modified for consistency 
+    # Author: Michele Riva; slightly modified for consistency
     #   by Florian Kraushofer
     (lat,t) = checkLattice(ab)
     ab = np.dot(t,ab)
@@ -451,12 +451,12 @@ def reduceUnitCell(ab, eps = 0.001):
 #        bases
 #     At each iteration:
 #       - order vectors by norm, the shortest first
-#       - determine the projection of the second on the first, and calculate 
+#       - determine the projection of the second on the first, and calculate
 #           the nearest integer kk
 #       - subtract from the second the projection calculated above
-#       - check whether now the second is the smallest. If yes, repeat, 
+#       - check whether now the second is the smallest. If yes, repeat,
 #           otherwise finished.
-        swap = np.array([[1,0],[0,1]]) 
+        swap = np.array([[1,0],[0,1]])
         # matrix that keeps track of whether a and b are swapped
         while True: # Swap vectors if needed to get the shortest first
             if np.linalg.norm(ab[0])>np.linalg.norm(ab[1]):
@@ -475,35 +475,35 @@ def reduceUnitCell(ab, eps = 0.001):
         # Swap vectors back if they were overall swapped
         t = np.dot(swap,t)
         ab = np.dot(swap,ab)
-#         END OF ALGORITHM. Now the lattice ab is closest to rectangular. It 
+#         END OF ALGORITHM. Now the lattice ab is closest to rectangular. It
 #           might be still any shape (square, rect, hex, rhombic, oblique)
         lat,t0=checkLattice(ab)
         t=np.dot(t0,t)
         ab=np.dot(t0,ab)
 #       If ab is still oblique, try to see if it can be transformed to hex or
 #         rhombic by choosing "a" not to be the shortest vector of all.
-#       If possible, keep the new transformation. Otherwise, stick to the one 
+#       If possible, keep the new transformation. Otherwise, stick to the one
 #         that makes it closest to rectangular.
         if lat=="oblique": #lattice is still oblique
             # Re-swapping guarantees that that the matrix has on the first line
             #   the shortest possible vector, and on the second line the second
             #   shortest possible vector.
             # The only possible combinations that can lead to a rhombic/hex are
-            #   a'=b+a or a'=b-a, depending on whether the angle is acute or 
+            #   a'=b+a or a'=b-a, depending on whether the angle is acute or
             #   obtuse, respectively
             t2 = swap
             ab = np.dot(swap,ab)
-            
+
             c = cosvec(ab[0],ab[1])
             t0 = [[-int(np.sign(c)),1],[0,1]]
             t2 = np.dot(t0,t2)
             ab = np.dot(t0,ab)
-            
+
             lat, t0 = checkLattice(ab)
             t2 = np.dot(t0,t2)
-            
-            if lat=="oblique": 
-                # lattice is still oblique, no transformation is needed (will 
+
+            if lat=="oblique":
+                # lattice is still oblique, no transformation is needed (will
                 #   keep the one closest to rect)
                 t2 = np.array([[1,0],[0,1]])
         else:
@@ -517,25 +517,25 @@ def getLEEDdict(sl, rp):
         logger.warning("Generating LEED dictionary for slab with unknown "
                        "plane group!")
     if sl.planegroup in ["pm", "pg", "cm", "rcm", "pmg"]:
-        pgstring = sl.planegroup+"[{} {}]".format(sl.orisymplane.par[0], 
+        pgstring = sl.planegroup+"[{} {}]".format(sl.orisymplane.par[0],
                                                   sl.orisymplane.par[1])
     else:
         pgstring = sl.planegroup
-    if not (abs(np.round(rp.SUPERLATTICE).astype(int) - rp.SUPERLATTICE) 
+    if not (abs(np.round(rp.SUPERLATTICE).astype(int) - rp.SUPERLATTICE)
                                                                 < 1e-3).all():
         logger.error("getLEEDdict: SUPERLATTICE contains non-integer-valued "
                       "entries.")
         return None
-    d = {"eMax": rp.THEO_ENERGIES[1], 
+    d = {"eMax": rp.THEO_ENERGIES[1],
          "SUPERLATTICE": rp.SUPERLATTICE.astype(int),
-          "surfBasis": np.transpose(sl.ucell[:2,:2]), 
+          "surfBasis": np.transpose(sl.ucell[:2,:2]),
           "surfGroup": pgstring, "bulkGroup": sl.bulkslab.foundplanegroup,
           "bulk3Dsym": sl.bulkslab.getBulk3Dstr(),
           "screenAperture": rp.SCREEN_APERTURE}
     return d
 
 def getSymEqBeams(sl, rp):
-    """Returns a list of tuples ((hf,kf), index), where (hf,kf) are beams and 
+    """Returns a list of tuples ((hf,kf), index), where (hf,kf) are beams and
     index is the group of other beams they are equivalent to"""
     if not rp.domainParams:
         d = [getLEEDdict(sl, rp)]
@@ -564,8 +564,8 @@ def getSymEqBeams(sl, rp):
     return symeq
 
 def getBeamCorrespondence(sl, rp):
-    """Compares theoretical and experimental beams, returns a list containing 
-    a number for each theoretical beam, indicating which experimental beam it 
+    """Compares theoretical and experimental beams, returns a list containing
+    a number for each theoretical beam, indicating which experimental beam it
     corresponds to."""
     eps = 1e-5  # for comparing beams
     #   initialize to "no corresponding beam" for all theoretical beams:
@@ -605,7 +605,7 @@ def getBeamCorrespondence(sl, rp):
         logger.warning("Beam "+b.label+" was removed from set of "
                         "experimental beams!")
     # NUMBER OF EXPERIMENTAL BEAMS MUST BE STATIC FROM HERE ON OUT
-    # now, for theoretical beams without assignment, see if there is a 
+    # now, for theoretical beams without assignment, see if there is a
     #   symmetry-equivalent beam to assign them to
     for (nt, tb) in enumerate(rp.ivbeams):
         if beamcorr[nt] == -1:

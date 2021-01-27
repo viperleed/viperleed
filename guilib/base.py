@@ -1079,7 +1079,7 @@ class PlaneGroup():
                  '6': (C6, Cm6)}
     # 2) direction contained in glide planes into the corresponding matrices
     glide_ops = {'[1,0]': M10,
-                 '[1,1]': M11,
+                 '[0,1]': M01,
                  'x': Mx,
                  'y': My,
                  '[1,1]': M11,
