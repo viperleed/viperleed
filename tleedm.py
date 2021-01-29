@@ -567,6 +567,13 @@ def cleanup(manifest, rp=None):
                     o += " ({:.4f} / {:.4f})".format(rp.stored_R[t][1],
                                                      rp.stored_R[t][2])
                 logger.info(o)
+    if rp:
+        if rp.checklist:
+            logger.info("")
+            logger.info("# The following issues should be checked before "
+                        "starting again:")
+            for s in rp.checklist:
+                logger.info("- "+s)
     logger.info("")
     # shut down logger
     while logger.handlers:
@@ -748,6 +755,8 @@ def main():
                     "Initialization finished. Execution will stop. Please "
                     "check whether comments in POSCAR are correct, then "
                     "restart.")
+                rp.checklist.append(
+                    "Check whether comments in POSCAR are correct")
                 rp.setHaltingLevel(2)
                 initHalt = True
             elif (sec == 1 and rp.fileLoaded["EXPBEAMS"]):

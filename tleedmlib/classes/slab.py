@@ -1145,9 +1145,9 @@ class Slab:
         # calculate new SUPERLATTICE matrix
         abst = np.transpose(self.ucell[:2,:2])
         newSL = np.dot(abst, np.linalg.inv(newcell))
-        if not np.all(abs(newSL - newSL.round()) < 1e-3):
+        if not np.all(abs(newSL - newSL.round()) < 5e-2):
             logger.error("Automatically detected bulk SUPERLATTICE is "
-                "not integer-valued: "+str(newSL)+"\n"
+                "not integer-valued: \n"+str(newSL)+"\n"
                 "# User-defined SUPERLATTICE will be used instead.")
             rp.setHaltingLevel(2)
             return

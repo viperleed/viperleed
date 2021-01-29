@@ -185,11 +185,17 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
                 and output):
             logger.info("The POSCAR unit cell was changed from an acute "
                         "to an obtuse form.")
+            rp.checklist.append(
+                "The POSCAR unit vector definitions have changed. Make sure "
+                "to check beam labels for compatibility with new unit cell.")
         elif output:
             logger.warning("The POSCAR unit cell was not in its highest "
                            "symmetry form. The unit cell will be modified "
                            "with the transformation matrix: \n"+str(utr))
             rp.setHaltingLevel(1)
+            rp.checklist.append(
+                "The POSCAR unit vector definitions have changed. Make sure "
+                "to check beam labels for compatibility with new unit cell.")
         # MODIFY SUPERLATTICE PARAMETER
         if not bulk and rp.superlattice_defined:
             rp.SUPERLATTICE = np.dot(usurf, np.dot(rp.SUPERLATTICE,
@@ -929,7 +935,7 @@ def setSymmetry(sl, rp, targetsym):
 
 
 def enforceSymmetry(sl, rp, planegroup="fromslab",
-                    movement='fromparams', rotcell=True):
+                    movement='fromparams', rotcell=False):
     """Finds how atoms are linked to each other based on the planegroup.
     If the planegroup argument is not given, the planegroup assigned to
     the slab will be used. Otherwise, the given planegroup has to be a
@@ -1232,6 +1238,8 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
                 at.cartpos = psum / pn
     sl.collapseCartesianCoordinates(updateOrigin=True)
     if not rotcell:
+        # !!! THIS IS NOW THE DEFAULT, rotcell is NEVER true.
+        #  if it stays like this, consider deleting the following lines..
         return
     # after everything else is done, rotate unit cell (in x,y without
     #   changing fractional coordinates) if necessary:
