@@ -165,7 +165,8 @@ def processSearchResults(sl, rp, final=True):
             logger.info(info)
     # now writeSearchOutput:
     if not rp.domainParams:
-        io.writeSearchOutput(sl, rp, pops[0][1][0][1], silent=(not final))
+        # the order here matters, as the final write operation will store the
+        #  new states (for later searches)
         if any(sp.parabolaFit["min"] for sp in rp.searchpars):
             parab_inds = list(pops[0][1][0][1])
             for i, sp in enumerate(rp.searchpars):
@@ -173,13 +174,12 @@ def processSearchResults(sl, rp, final=True):
                     parab_inds[i] = sp.parabolaFit["min"]
             io.writeSearchOutput(sl, rp, parab_inds, silent=True,
                                  suffix="_parabola")
+        io.writeSearchOutput(sl, rp, pops[0][1][0][1], silent=(not final))
     else:
         home = os.getcwd()
         for (i, dp) in enumerate(rp.domainParams):
             try:
                 os.chdir(dp.workdir)
-                io.writeSearchOutput(dp.sl, dp.rp, pops[0][1][i][1],
-                                     silent=(not final))
                 if any(sp.parabolaFit["min"] for sp in rp.searchpars):
                     parab_inds = list(pops[0][1][i][1])
                     for i, sp in enumerate(dp.rp.searchpars):
@@ -187,6 +187,8 @@ def processSearchResults(sl, rp, final=True):
                             parab_inds[i] = sp.parabolaFit["min"]
                     io.writeSearchOutput(sl, rp, parab_inds, silent=True,
                                          suffix="_parabola")
+                io.writeSearchOutput(dp.sl, dp.rp, pops[0][1][i][1],
+                                     silent=(not final))
             except Exception:
                 logger.error("Error while writing search output for domain {}"
                              .format(dp.name), exc_info=rp.LOG_DEBUG)
@@ -266,7 +268,7 @@ def parabolaFit(rp, r_configs, x0=None, **kwargs):
     for a in ("localize", "mincurv", "alpha", "type"):
         if a not in kwargs:
             kwargs[a] = rp.PARABOLA_FIT[a]
-    starttime = timer()
+    # starttime = timer()
     rc = np.array([*r_configs], dtype=object)
     rfacs, configs = rc[:, 0].astype(float), rc[:, 1]
     localizeFactor = kwargs["localize"]
@@ -338,17 +340,22 @@ def parabolaFit(rp, r_configs, x0=None, **kwargs):
     m = castToMatrix(polyreg.named_steps[which_regression].coef_, len(sps))
     w, v = np.linalg.eig(m)
     # error along main axes
-    err_unco = rr/np.diag(m)
-    err_unco[err_unco < 0] = np.nan
+    d = np.copy(np.diag(m))
+    d[d <= 0] = np.nan
+    err_unco = rr/d
+    with np.errstate(invalid="ignore"):
+        err_unco[err_unco < 0] = np.nan
     err_unco = np.sqrt(err_unco)
     # error along eigenvectors
-    err_ev = rr/w
+    w2 = np.copy(w)
+    w2[w2 == 0] = 1e-100  # to avoid divide-by-zero; dealt with below
+    err_ev = rr/w2
     err_ev[err_ev < 0] = 0  # dealt with below
     err_ev = np.sqrt(err_ev)
     # correlated error
     err_co = np.dot(v**2, err_ev)
     for i in range(len(err_co)):
-        if any(w[j] < 0 and v[i, j] >= 0.1 for j in range(len(w))):
+        if any(w[j] <= 0 and v[i, j] >= 0.1 for j in range(len(w))):
             err_co[i] = np.nan
     # !!! TODO: maybe discard parameters and re-fit?
 
@@ -409,9 +416,10 @@ def parabolaFit(rp, r_configs, x0=None, **kwargs):
     #     indep_pars = np.delete(indep_pars, ind, axis=1)
     # for (i, sp) in enumerate(sps):
     #     sp.parabolaFit["curv"] = curvs[i]
-    logger.debug("Parabola fit: {}/{} parameters were fit with {} points "
-                 "({:.4f} s)".format(len(sps), len(sps_original),
-                                     len(rf_tofit), (timer() - starttime)))
+
+    # logger.debug("Parabola fit: {}/{} parameters were fit with {} points "
+    #              "({:.4f} s)".format(len(sps), len(sps_original),
+    #                                  len(rf_tofit), (timer() - starttime)))
 
     # now find minimum within bounds (still centered around xmin)
     bounds = np.array([(1, sp.steps) for sp in sps]) - xmin.reshape((-1, 1))
