@@ -419,7 +419,7 @@ def writeAUXGEO(sl, rp):
                 "written to the PARAMETERS file.")
         
     if type(rp.BULK_REPEAT) == np.ndarray:
-        bulkc = rp.BULK_REPEAT
+        bulkc = np.copy(rp.BULK_REPEAT)
         if bulkc[2] < 0:
             bulkc = -bulkc
         if rp.N_BULK_LAYERS == 2:
