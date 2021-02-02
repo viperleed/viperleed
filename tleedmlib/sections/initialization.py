@@ -15,7 +15,7 @@ import copy
 import numpy as np
 
 import tleedmlib as tl
-from tleedmlib.base import angle, mkdir_recursive
+from tleedmlib.base import angle
 from tleedmlib.beamgen import runBeamGen
 from tleedmlib.psgen import runPhaseshiftGen
 from tleedmlib.files.poscar import readPOSCAR, writeCONTCAR
@@ -207,8 +207,10 @@ def initialization(sl, rp, subdomain=False):
 
     # write POSCAR_bulk_appended
     n = 1
-    if len(bsl.sublayers) <= len(bsl.elements):
-        n = 2
+    if len(bsl.sublayers) <= len(bsl.elements)*2:
+        n += 1
+        if len(bsl.sublayers) <= len(bsl.elements):
+            n += 1
     try:
         writeCONTCAR(sl.addBulkLayers(rp, n=n)[0],
                      filename='POSCAR_bulk_appended')
@@ -342,7 +344,8 @@ def init_domains(rp):
             tensorDir = os.path.join(target, "Tensors",
                                      "Tensors_"+str(tensorIndex+1).zfill(3))
             try:
-                mkdir_recursive(os.path.join(target, "Tensors", tensorDir))
+                os.makedirs(os.path.join(target, "Tensors", tensorDir),
+                            exist_ok=True)
             except Exception:
                 raise
             try:

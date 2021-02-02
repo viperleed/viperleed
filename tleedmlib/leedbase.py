@@ -17,7 +17,7 @@ import copy
 from fractions import Fraction
 
 from guilib.base import get_equivalent_beams
-from tleedmlib.base import parseMathSqrt, angle, cosvec, mkdir_recursive
+from tleedmlib.base import parseMathSqrt, angle, cosvec
 from tleedmlib.files.parameters import readPARAMETERS, interpretPARAMETERS
 from tleedmlib.files.poscar import readPOSCAR
 from tleedmlib.files.vibrocc import readVIBROCC
@@ -198,7 +198,8 @@ def getTensors(index, basedir=".", targetdir=".", required=True):
         if os.path.isfile(os.path.join(basedir, "Tensors", dn+".zip")):
             try:
                 logger.info("Unpacking {}.zip...".format(dn))
-                mkdir_recursive(os.path.join(targetdir, "Tensors", dn))
+                os.makedirs(os.path.join(targetdir, "Tensors", dn),
+                            exist_ok=True)
                 shutil.unpack_archive(os.path.join(basedir, "Tensors",
                                                    dn+".zip"),
                                       os.path.join(targetdir, "Tensors", dn))
@@ -210,7 +211,7 @@ def getTensors(index, basedir=".", targetdir=".", required=True):
             raise RuntimeError("Tensors not found")
     elif basedir != targetdir:
         try:
-            mkdir_recursive(os.path.join(targetdir, "Tensors", dn))
+            os.makedirs(os.path.join(targetdir, "Tensors", dn), exist_ok=True)
             for file in os.path.listdir(os.path.join(basedir, "Tensors", dn)):
                 shutil.copy2(file, os.path.join(targetdir, "Tensors", dn))
         except Exception:

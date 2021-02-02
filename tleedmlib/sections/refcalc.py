@@ -14,7 +14,6 @@ import copy
 import shutil
 import subprocess
 
-from tleedmlib.base import mkdir_recursive
 from tleedmlib.leedbase import fortranCompile, getTLEEDdir, getMaxTensorIndex
 from tleedmlib.files.parameters import modifyPARAMETERS
 import tleedmlib.files.beams as beams
@@ -184,7 +183,7 @@ def refcalc(sl, rp, subdomain = False):
     rp.TENSOR_INDEX = getMaxTensorIndex() + 1
     rp.manifest.append("Tensors")
     dn = "Tensors_"+str(rp.TENSOR_INDEX).zfill(3)
-    mkdir_recursive(os.path.join(".","Tensors",dn))
+    os.makedirs(os.path.join(".","Tensors",dn), exist_ok=True)
     try:
         for tf in [f for f in os.listdir('.') if f.startswith("T_")]:
             shutil.move(tf, os.path.join(".","Tensors",dn,tf))

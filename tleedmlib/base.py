@@ -24,9 +24,9 @@ logger = logging.getLogger("tleedm.base")
 ###############################################
 
 class BackwardsReader:
-  """Simple class for reading a large file in reverse without having to read 
-  the entire file to memory. 
-  From http://code.activestate.com/recipes/120686/, adapted for python 3 and 
+  """Simple class for reading a large file in reverse without having to read
+  the entire file to memory.
+  From http://code.activestate.com/recipes/120686/, adapted for python 3 and
   changed somewhat to fit requirements.
   """
   def readline(self):
@@ -35,11 +35,11 @@ class BackwardsReader:
       line = self.data[0]
       try:
         self.f.seek(-self.blksize * self.blkcount, 2) # read from end of file
-        self.data = ((self.f.read(self.blksize).decode(self.encoding)) 
+        self.data = ((self.f.read(self.blksize).decode(self.encoding))
                      + line).split("\n")
       except IOError:  # can't seek before the beginning of the file
         self.f.seek(0)
-        self.data = (((self.f.read(self.size - (self.blksize 
+        self.data = (((self.f.read(self.size - (self.blksize
                                                   *(self.blkcount-1))))
                       .decode(self.encoding) + line).split("\n"))
 
@@ -73,50 +73,13 @@ class BackwardsReader:
     if not self.data[-1]:
       self.data.pop()
 
+
 ###############################################
 #                FUNCTIONS                    #
 ###############################################
 
-def mkdir_recursive(targetpath):
-    """
-    Tries creating a directory with the given path. Recursively iterates 
-    to generate the directories above as well, if necessary.
-
-    Parameters
-    ----------
-    targetpath : str
-        Absolute or relative path to the directory that should be created.
-
-    Raises
-    ------
-    OSError
-        If the path cannot be created because the root of the path does not 
-        exist.
-
-    Returns
-    -------
-    None
-
-    """
-    if os.path.isdir(targetpath):
-        return None
-    try:
-        os.mkdir(targetpath)
-        return None
-    except:
-        pass
-    p = os.path.split(targetpath)
-    if not p[1]:
-        raise OSError("Base directory '{}' does not exist".format(p[0]))
-    try:
-        mkdir_recursive(p[0])
-        os.mkdir(targetpath)
-    except:
-        raise
-    return None
-
 def rotMatrix(order):
-    """Returns a (2x2) matrix for in-plane rotation of the given rotation 
+    """Returns a (2x2) matrix for in-plane rotation of the given rotation
     order."""
     #these explicit definitions are likely useless, but sqrts might be
     #  marginally more accurate than sin/cos
@@ -140,8 +103,8 @@ def rotMatrix(order):
                          [-np.sin(angle),np.cos(angle)]])
 
 def fortranContLine(s):
-    """Takes a sting that might be too long to fit on a single line of fortran 
-    code and splits it into continuation lines as necessary. Returns a string 
+    """Takes a sting that might be too long to fit on a single line of fortran
+    code and splits it into continuation lines as necessary. Returns a string
     with ampersands and line breaks."""
     limit = 72  #fortran line length limit
     if len(s) <= limit:
@@ -156,9 +119,9 @@ def fortranContLine(s):
     return o
 
 def readIntRange(s):
-    """Takes a string, returns a list of integers. If the string is a single 
-    int or space-separated ints, the return value is a list containing only 
-    those int. If the string contains i1-i2 or i1:i2, the list is 
+    """Takes a string, returns a list of integers. If the string is a single
+    int or space-separated ints, the return value is a list containing only
+    those int. If the string contains i1-i2 or i1:i2, the list is
     range(i1, i2+1), i.e. contains both i1 and i2."""
     l = []
     sl = s.split()
@@ -181,8 +144,8 @@ def readIntRange(s):
     return list(set(l))
 
 def readVector(s, ucell=None, defRelaltive=False):
-    """Takes a string 'xyz[f1 f2 f3]', 'abc[f1 f2 f3]' or just '[f1 f2 f3]' 
-    and returns the corresponding vector in cartesian coordinates, or None if 
+    """Takes a string 'xyz[f1 f2 f3]', 'abc[f1 f2 f3]' or just '[f1 f2 f3]'
+    and returns the corresponding vector in cartesian coordinates, or None if
     the string cannot be parsed."""
     m = re.match(r'\s*(xyz|abc)?\[\s*(?P<v1>[-0-9.]+)\s+'
                 r'(?P<v2>[-0-9.]+)\s+(?P<v3>[-0-9.]+)\s*\]', s)
@@ -206,7 +169,7 @@ def readVector(s, ucell=None, defRelaltive=False):
 
 def readIntLine(line, width=3):
     """
-    Reads an (arbitrary length) line of integers with fixed width. Will try 
+    Reads an (arbitrary length) line of integers with fixed width. Will try
     to interpret everything as integers until the line ends.
 
     Parameters
@@ -252,7 +215,7 @@ def cosvec(x,y):
 
 def dict_equal(d1,d2):
     """
-    Checks whether two dictionaries are equal, i.e. contain the same set of 
+    Checks whether two dictionaries are equal, i.e. contain the same set of
     keys with the same values
 
     Parameters
@@ -268,7 +231,7 @@ def dict_equal(d1,d2):
         True if all keys and values match, False otherwise
 
     """
-    """Returns true the dictionaries contain the same keys with the same 
+    """Returns true the dictionaries contain the same keys with the same
     values"""
     if len({k: d1[k] for k in d1 if k in d2 and d1[k] == d2[k]})-len(d1) == 0:
         return True
@@ -339,10 +302,10 @@ def angle(v1, v2):
     return np.arctan2(v1[0]*v2[1] - v1[1]*v2[0], v1[0]*v2[0] + v1[1]*v2[1])
 
 def distanceLineThroughPointsFromPoint(p1,p2,r):
-    """Gives the distance of point r from the line defined by p1 and p2 
+    """Gives the distance of point r from the line defined by p1 and p2
     (in 2 or 3 dimensions)"""
     if len(p1) == 2:
-        return (abs((p2[1]-p1[1])*r[0] - (p2[0]-p1[0])*r[1] 
+        return (abs((p2[1]-p1[1])*r[0] - (p2[0]-p1[0])*r[1]
                    + p2[0]*p1[1] - p2[1]*p1[0])
                 / np.sqrt((p2[1]-p1[1])**2 + (p2[0]-p1[0])**2))
     elif len(p1) == 3:
@@ -351,7 +314,7 @@ def distanceLineThroughPointsFromPoint(p1,p2,r):
         return False
 
 def readToExc(llist):
-    """For reading PARAMETERS files; takes a list, returns elements until the 
+    """For reading PARAMETERS files; takes a list, returns elements until the
     first one that starts with an exclamation mark."""
     read = True
     newlist = []
@@ -361,10 +324,10 @@ def readToExc(llist):
                 read = False
             else:
                 newlist.append(s)
-    return newlist        
+    return newlist
 
 def splitSublists(llist, sep):
-    """Takes a list and a separator, splits strings in the list by the 
+    """Takes a list and a separator, splits strings in the list by the
     separator, returns results as list of lists"""
     newlist = []
     sublist = []
@@ -385,15 +348,15 @@ def splitSublists(llist, sep):
                         sublist = []
     newlist.append(sublist)
     return(newlist)
-    
+
 def splitMaxRight(s, sep):
-    """Same as s.split(sep, maxsplit=1), but splitting at the first instance 
+    """Same as s.split(sep, maxsplit=1), but splitting at the first instance
     from the right."""
     sr = s[::-1]
     l = sr.split(sep, maxsplit=1)
     l.reverse()
     nl = []
-    for ns in l: 
+    for ns in l:
         nl.append(ns[::-1])
     return nl
 
@@ -411,7 +374,7 @@ def recombineListElements(llist, com):
     return newlist
 
 def addUnequalPoints(l1,l2,eps,uniqueLists=False):
-    """Adds all points from l1 to l2, if they are not already in l2 
+    """Adds all points from l1 to l2, if they are not already in l2
     (+- epsilon)."""
     nl2 = l2[:]
     nl1 = l1[:]
@@ -424,11 +387,11 @@ def addUnequalPoints(l1,l2,eps,uniqueLists=False):
             usepoint = [True]*len(nl1)
             for (i,p) in enumerate(nl1):
                 if usepoint[i]:
-                    for j in tree.query_ball_point(p, eps)[1:]: 
+                    for j in tree.query_ball_point(p, eps)[1:]:
                         usepoint[j] = False
             nl1 = list(itertools.compress(nl1,usepoint))
         #then add remaining elements to l2:
-        dl = sps.distance.cdist(np.vstack(tuple(l1)), np.vstack(tuple(l2)), 
+        dl = sps.distance.cdist(np.vstack(tuple(l1)), np.vstack(tuple(l2)),
                                 'euclidean')
         for (i,sublist) in enumerate(dl):
             if min(sublist) >= eps:
@@ -436,17 +399,17 @@ def addUnequalPoints(l1,l2,eps,uniqueLists=False):
     return nl2
 
 # def pointIsInList(p,l,eps):                                   # !!! OBSOLETE?
-#     """Checks whether a point is contained in a list of points, given an 
+#     """Checks whether a point is contained in a list of points, given an
 #     epsilon."""
-#     if len(l) == 0: 
+#     if len(l) == 0:
 #         return False
-#     dl = sps.distance.cdist(np.array([list(p)]), np.vstack(tuple(l)), 
+#     dl = sps.distance.cdist(np.array([list(p)]), np.vstack(tuple(l)),
 #                             'euclidean')
 #     if min(dl[0]) < eps:
 #         return True
 #     else:
 #         return False
-    
+
 def available_cpu_count():
     """ Number of available virtual or physical CPUs on this system, i.e.
     user/real as output by time(1) when called with an optimally scaling

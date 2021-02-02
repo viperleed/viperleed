@@ -17,7 +17,6 @@ import re
 import multiprocessing
 import tleedmlib.sections as sections
 
-from tleedmlib.base import mkdir_recursive
 from tleedmlib.files.parameters import (readPARAMETERS, interpretPARAMETERS,
                                         modifyPARAMETERS, updatePARAMETERS)
 from tleedmlib.files.phaseshifts import readPHASESHIFTS
@@ -300,7 +299,7 @@ def sortfiles(tensorIndex, delete_unzipped=False, tensors=True,
     deltalist = [f for f in os.listdir(path) if f.startswith("DEL_")]
     if len(deltalist) > 0:
         fn = "Deltas_"+str(tensorIndex).zfill(3)
-        mkdir_recursive(os.path.join(path, "Deltas", fn))
+        os.makedirs(os.path.join(path, "Deltas", fn), exist_ok=True)
         try:
             for df in deltalist:
                 shutil.move(os.path.join(path, df),
@@ -348,7 +347,7 @@ def sortfiles(tensorIndex, delete_unzipped=False, tensors=True,
     # sort AUX and OUT files:
     for t in ["AUX", "OUT"]:
         try:
-            mkdir_recursive(os.path.join(path, t))
+            os.makedirs(os.path.join(path, t), exist_ok=True)
         except Exception:
             logger.error("Error creating {} folder: ".format(t), exc_info=True)
         if t == "AUX":
@@ -388,7 +387,7 @@ def moveoldruns(rp, prerun=False):
     """
     sectionabbrv = {1: "R", 2: "D", 3: "S"}
     try:
-        mkdir_recursive(os.path.join(".", "workhistory"))
+        os.makedirs(os.path.join(".", "workhistory"), exist_ok=True)
     except Exception:
         logger.error("Error creating workhistory folder: ", exc_info=True)
         raise
@@ -600,6 +599,7 @@ def main():
 
     """
     global starttime
+    os.umask(0)
     # start logger, write to file:
     timestamp = time.strftime("%y%m%d-%H%M%S", time.localtime())
     logname = 'tleedm-'+timestamp+'.log'

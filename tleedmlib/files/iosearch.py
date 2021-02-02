@@ -548,7 +548,7 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                     types = 1
                     printvac = True
                 else:
-                    geo0 = True
+                    # geo0 = True
                     vib0 = True
                     for (mode, d) in [(1, at.disp_geo), (2, at.disp_vib)]:
                         if el in d:
@@ -557,16 +557,16 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                             dl = d["all"]
                         if mode == 1:
                             geo = len(dl)
-                            if geo == 1 and np.linalg.norm(dl[0]) != 0.:
-                                geo0 = False
+                            # if geo == 1 and np.linalg.norm(dl[0]) >= 1e-4:
+                            #     geo0 = False
                         else:
                             vib = len(dl)
                             if vib == 1 and dl[0] != 0.:
                                 vib0 = False
                     if vib == 1 and vib0:
                         vib = 0
-                    elif geo == 1 and geo0:
-                        geo = 0
+                    # elif geo == 1 and geo0:
+                    #     geo = 0
                     if geo > 0 and vib > 0:
                         types = 2
                     else:

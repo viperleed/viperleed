@@ -811,7 +811,7 @@ class Rparams:
                             break
                 if not found:
                     for el in at.disp_geo:
-                        if np.linalg.norm(at.disp_geo[el][0]) > 0.0:
+                        if np.linalg.norm(at.disp_geo[el][0]) >= 1e-4:
                             found = True
                             break
                 if not found:
@@ -845,6 +845,7 @@ class Rparams:
         atlist = al2
         md = {"geo": 1, "vib": 2, "occ": 3}
         splToRestrict = []
+        indep = []
         for at in atlist:
             if len(at.deltasGenerated) > self.search_maxfiles:
                 self.search_maxfiles = len(at.deltasGenerated)
@@ -862,8 +863,9 @@ class Rparams:
                     else:
                         k = "all"
                     if len(d[k]) > 1 or (len(d[k]) == 1 and
-                                         ((mode == "geo" and
-                                             np.linalg.norm(d[k][0]) > 0.)
+                                         ((mode == "geo"
+                                          # and np.linalg.norm(d[k][0]) >= 1e-4
+                                           )
                                           or (mode == "vib" and
                                                       d[k][0] != 0.))):
                         pars += 1
@@ -881,6 +883,7 @@ class Rparams:
                                 splToRestrict.append((sp, c))
                         elif len(d[k]) > 1 and at not in eqlist:
                             self.indyPars += 1
+                            indep.append(sp)
                         if len(d[k]) > 1 and at in eqlist:
                             spl = [s for s in self.searchpars
                                    if at in s.atom.displist
@@ -909,6 +912,7 @@ class Rparams:
                 else:
                     if at not in eqlist:  # occupation will actually vary
                         self.indyPars += 1
+                        indep.append(sp)
                 if at in eqlist:
                     spl = [s for s in self.searchpars if at
                            in s.atom.displist and s.mode == 3]
@@ -925,6 +929,9 @@ class Rparams:
             if spl:
                 sp.restrictTo = spl[0]
                 splTargets.add(spl[0])
+                if spl[0] not in indep and spl[0].steps > 1:
+                    self.indyPars += 1
+                    indep.append(spl[0])
         for (sp, (at, el)) in [tup for tup in splToRestrict
                                if tup[0].restrictTo is None
                                and tup[0] not in splTargets]:
@@ -933,6 +940,9 @@ class Rparams:
                 "element {}, mode {} failed: Could not identify target "
                 "search parameter (atom {}, element {})."
                 .format(sp.atom.oriN, sp.el, sp.mode, at.oriN, el))
+            if sp not in indep and sp.steps > 1:
+                self.indyPars += 1
+                indep.append(sp)
         for (i, sp) in enumerate(self.searchpars):
             # restrict to lowest number index, resolve conflicts
             if sp.restrictTo not in self.searchpars:
