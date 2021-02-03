@@ -17,6 +17,7 @@ from tleedmlib.files.beams import writeAUXBEAMS
 
 logger = logging.getLogger("tleedm.files.iorefcalc")
 
+
 def collectFIN():
     """Combines AUXLATGEO, _BEAMLIST, AUXNONSTRUCT, _PHASESHIFTS, AUXBEAMS
     and AUXGEO into one string (input for refcalc), which it returns."""
@@ -30,12 +31,13 @@ def collectFIN():
             fin += "\n"
     return fin
 
+
 def readFdOut(readfile="fd.out"):
     """Reads the fd.out file produced by the refcalc and returns a list of
     Beam objects."""
     try:
         with open(readfile, 'r') as rf:
-            filelines = [l[:-1] for l in rf.readlines()]
+            filelines = [line[:-1] for line in rf.readlines()]
             rf.seek(0)
             fdout = rf.read()
     except FileNotFoundError:
@@ -52,11 +54,11 @@ def readFdOut(readfile="fd.out"):
     while i < nbeams+3:
         llist = filelines[i-1].split()
         if i == 1:
-            pass #header - skip
+            pass  # header - skip
         elif i == 2:
             nbeams = int(llist[0])
         else:
-            theobeams.append(tl.Beam((float(llist[1]),float(llist[2]))))
+            theobeams.append(tl.Beam((float(llist[1]), float(llist[2]))))
         i += 1
 
     # re-label the beams to get the correct number of characters and formatting
@@ -73,7 +75,7 @@ def readFdOut(readfile="fd.out"):
         if len(llist) > 0:  # skip empty lines
             try:
                 float(llist[0])
-            except:
+            except ValueError:
                 break  # end of data
             blocks.extend(llist)
 
@@ -89,62 +91,64 @@ def readFdOut(readfile="fd.out"):
             beam.intens[en] = values[j]
     return theobeams, fdout
 
+
 def writePARAM(sl, rp):
     """Writes PARAM file for the refcalc"""
     try:
-        beamlist,beamblocks,beamN=writeAUXBEAMS(ivbeams=rp.ivbeams, 
-                                        beamlist=rp.beamlist, write=False)
-    except:
+        beamlist, beamblocks, beamN = writeAUXBEAMS(
+            ivbeams=rp.ivbeams, beamlist=rp.beamlist, write=False)
+    except Exception:
         logger.error("generatePARAM: Exception while getting data from "
-                      "writeAUXBEAMS")
+                     "writeAUXBEAMS")
         raise
-        
+
     # define Clebsh-Gordon coefficient tables:
-    mnlmo = [1, 70, 264, 759, 1820, 3836, 7344, 13053, 21868, 34914, 53560, 
-             79443, 114492, 160952, 221408] 
-    mnlm = [1, 76, 284, 809, 1925, 4032, 7680, 13593, 22693, 36124, 55276, 
+    mnlmo = [1, 70, 264, 759, 1820, 3836, 7344, 13053, 21868, 34914, 53560,
+             79443, 114492, 160952, 221408]
+    mnlm = [1, 76, 284, 809, 1925, 4032, 7680, 13593, 22693, 36124, 55276,
             81809, 117677, 165152, 226848]
-    
+
     # start generating output
     output = ('C  Dimension statements for Tensor LEED reference calculation, '
-                '\nC  version v1.2\n\n')
+              '\nC  version v1.2\n\n')
     output += 'C  1. lattice symmetry\n\n'
     m = rp.SUPERLATTICE.copy()
-    if m[1,1] != 0:     # m[1] not parallel to a_bulk
-        if m[0,1] != 0: # m[0] not parallel to a_bulk
+    if m[1, 1] != 0:      # m[1] not parallel to a_bulk
+        if m[0, 1] != 0:  # m[0] not parallel to a_bulk
             # find basis in which m[0] is parallel to a_bulk
-            f = tl.base.lcm(abs(int(m[0,1])),abs(int(m[1,1])))
-            m[0] *= f/m[0,1]
-            m[1] *= f/m[1,1]
-            m[0] -= m[1]*np.sign(m[0,1])*np.sign(m[1,1])
-        nl1 = abs(int(round(m[0,0])))
+            f = tl.base.lcm(abs(int(m[0, 1])), abs(int(m[1, 1])))
+            m[0] *= f/m[0, 1]
+            m[1] *= f/m[1, 1]
+            m[0] -= m[1]*np.sign(m[0, 1])*np.sign(m[1, 1])
+        nl1 = abs(int(round(m[0, 0])))
         nl2 = abs(int(round(abs(np.linalg.det(rp.SUPERLATTICE))/nl1)))
     else:               # m[1] already parallel to a_bulk
-        nl2 = abs(int(round(m[1,0])))
+        nl2 = abs(int(round(m[1, 0])))
         nl1 = abs(int(round(abs(np.linalg.det(rp.SUPERLATTICE))/nl2)))
     ideg = 2  # any 2D point grid is at least 2fold symmetric
     # if sl.planegroup in ['p2','pmm','pmg','pgg','cmm','rcmm']:
     #     ideg = 2
-    if sl.planegroup in ['p3','p3m1','p31m']:
+    if sl.planegroup in ['p3', 'p3m1', 'p31m']:
         ideg = 3
-    elif sl.planegroup in ['p4','p4m','p4g']:
+    elif sl.planegroup in ['p4', 'p4m', 'p4g']:
         ideg = 4
-    elif sl.planegroup in ['p6','p6m']:
-        ideg = 3    # should be 6, but according to TensErLEED fortran 
-                    #   comments, 3 works better
+    elif sl.planegroup in ['p6', 'p6m']:
+        ideg = 3
+        # should be 6, but according to TensErLEED fortran comments,
+        #   3 works better
     output += ('      PARAMETER (MIDEG='+str(ideg)+',MNL1='+str(nl1)
-                +',MNL2='+str(nl2)+')\n')
+               + ',MNL2='+str(nl2)+')\n')
     output += '      PARAMETER (MNL = MNL1*MNL2)\n'
     output += '\nC  2. General calculational quantities\n\n'
     output += '      PARAMETER (MKNBS = '+str(beamblocks)+')\n'
     output += '      PARAMETER (MKNT =  '+str(beamN)+')\n'
     output += ('      PARAMETER (MNPUN = '+str(len(beamlist))+', MNT0 = '
-                +str(len(beamlist))+')\n')
+               + str(len(beamlist))+')\n')
     output += ('      PARAMETER (MNPSI = '+str(len(rp.phaseshifts))+', MNEL = '
-                +str(len(rp.phaseshifts[0][1]))+')\n')
+               + str(len(rp.phaseshifts[0][1]))+')\n')
     output += '      PARAMETER (MLMAX = '+str(rp.LMAX)+')\n'
     output += ('      PARAMETER (MNLMO = '+str(mnlmo[rp.LMAX-1])+', MNLM = '
-                +str(mnlm[rp.LMAX-1])+')\n')
+               + str(mnlm[rp.LMAX-1])+')\n')
     output += '\nC  3. Parameters for (3D) geometry within (2D) unit mesh\n\n'
     output += '      PARAMETER (MNSITE  = '+str(len(sl.sitelist))+')\n'
     output += '      PARAMETER (MNLTYPE = '+str(len(sl.layers))+')\n'
@@ -153,13 +157,13 @@ def writePARAM(sl, rp):
     mnstack = 0
     if sl.bulkslab is None:
         sl.bulkslab = sl.makeBulkSlab(rp)
-    for layer in [l for l in sl.layers if not l.isBulk]:
+    for layer in [lay for lay in sl.layers if not lay.isBulk]:
         mnstack += 1
         if len(layer.atlist) == 1:
             mnbrav += 1
         if len(layer.atlist) > mnsub:
             mnsub = len(layer.atlist)
-    for i, layer in enumerate([l for l in sl.layers if l.isBulk]):
+    for i, layer in enumerate([lay for lay in sl.layers if lay.isBulk]):
         if len(sl.bulkslab.layers[i].atlist) == 1:
             mnbrav += 1
         if len(sl.bulkslab.layers[i].atlist) > mnsub:
@@ -172,45 +176,45 @@ def writePARAM(sl, rp):
     output += 'C     special cases necessary\n\n'
     output += '      PARAMETER (MLMAX1=MLMAX+1)\n'
     output += '      PARAMETER (MLMMAX = MLMAX1*MLMAX1)\n\n'
-    output += ('      PARAMETER (MNBRAV2 = '+('MNBRAV' if mnbrav > 0 
+    output += ('      PARAMETER (MNBRAV2 = '+('MNBRAV' if mnbrav > 0
                                               else '1')+')\n\n')
-    output += ('      PARAMETER (MNCOMP= '+('MNLTYPE-MNBRAV' if mnsub > 1 
+    output += ('      PARAMETER (MNCOMP= '+('MNLTYPE-MNBRAV' if mnsub > 1
                                             else '1 ')+')\n')
-    output += ('      PARAMETER (MLMT  = '+('MNSUB*MLMMAX' if mnsub > 1 
+    output += ('      PARAMETER (MLMT  = '+('MNSUB*MLMMAX' if mnsub > 1
                                             else '1 ')+')\n')
-    output += ('      PARAMETER (MNSUB2= '+('MNSUB * (MNSUB-1)/2' if mnsub > 1 
+    output += ('      PARAMETER (MNSUB2= '+('MNSUB * (MNSUB-1)/2' if mnsub > 1
                                             else '1 ')+')\n')
-    output += ('      PARAMETER (MLMG  = '+('MNSUB2*MLMMAX*2' if mnsub > 1 
+    output += ('      PARAMETER (MLMG  = '+('MNSUB2*MLMMAX*2' if mnsub > 1
                                             else '1 ')+')\n')
-    output += ('      PARAMETER (MLMN  = '+('MNSUB * MLMMAX' if mnsub > 1 
+    output += ('      PARAMETER (MLMN  = '+('MNSUB * MLMMAX' if mnsub > 1
                                             else '1 ')+')\n')
-    output += ('      PARAMETER (MLM2N = '+('2*MLMN' if mnsub > 1 
+    output += ('      PARAMETER (MLM2N = '+('2*MLMN' if mnsub > 1
                                             else '1 ')+')\n')
-    output += ('      PARAMETER (MLMNI = '+('MNSUB*MLMMAX' if mnsub > 1 
+    output += ('      PARAMETER (MLMNI = '+('MNSUB*MLMMAX' if mnsub > 1
                                             else '1 ')+')\n')
     try:
         with open('PARAM', 'w') as wf:
             wf.write(output)
-    except:
+    except Exception:
         logger.error("Failed to write PARAM file")
         raise
     logger.debug("Wrote to PARAM successfully.")
     return
 
+
 def writeAUXLATGEO(sl, rp):
     """Writes AUXLATGEO, which is part of the input FIN for the refcalc."""
     output = ''
     output += rp.systemName+' '+rp.timestamp+'\n'
-                        #this originally contained V0i, but only for user info
     f72x3 = ff.FortranRecordWriter('3F7.2')
     ens = [rp.THEO_ENERGIES[0], rp.THEO_ENERGIES[1]+0.01, rp.THEO_ENERGIES[2]]
     ol = f72x3.write(ens).ljust(24)
     output += ol + 'EI,EF,DE\n'
     f74x2 = ff.FortranRecordWriter('2F7.4')
-    ucsurf = np.transpose(sl.ucell[:2,:2])
+    ucsurf = np.transpose(sl.ucell[:2, :2])
     if sl.bulkslab is None:
         sl.bulkslab = sl.makeBulkSlab(rp)
-    ucbulk = np.transpose(sl.bulkslab.ucell[:2,:2])
+    ucbulk = sl.bulkslab.ucell[:2, :2].T
     ol = f74x2.write(ucbulk[0]).ljust(24)
     output += ol + 'ARA1\n'
     ol = f74x2.write(ucbulk[1]).ljust(24)
@@ -229,27 +233,26 @@ def writeAUXLATGEO(sl, rp):
     ol = f74x2.write([0.5, rp.V0_Z_ONSET])
     ol = ol.ljust(24)
     output += ol + 'FR ASE\n'
-    
     try:
         with open('AUXLATGEO', 'w') as wf:
             wf.write(output)
-    except:
+    except Exception:
         logger.error("Failed to write AUXLATGEO file")
         raise
     logger.debug("Wrote to AUXLATGEO successfully.")
     return
 
+
 def writeAUXNONSTRUCT(sl, rp):
     """Writes AUXNONSTRUCT, which is part of the input FIN for the refcalc."""
     try:
-        beamnums,_,_=writeAUXBEAMS(ivbeams=rp.ivbeams, beamlist=rp.beamlist, 
-                                      write=False)
-    except:
+        beamnums, _, _ = writeAUXBEAMS(ivbeams=rp.ivbeams,
+                                       beamlist=rp.beamlist,
+                                       write=False)
+    except Exception:
         logger.error("generatePARAM: Exception while getting data from "
-                      "writeAUXBEAMS")
+                     "writeAUXBEAMS")
         raise
-    
-    # start generating output
     output = ''
     f74 = ff.FortranRecordWriter('F7.4')
     ol = f74.write([rp.ATTENUATION_EPS])
@@ -267,15 +270,15 @@ def writeAUXNONSTRUCT(sl, rp):
     output += ol+'LITER\n'
     ol = i3.write([rp.LMAX]).ljust(45)
     output += ol+'LMAX\n'
-    
     try:
         with open('AUXNONSTRUCT', 'w') as wf:
             wf.write(output)
-    except:
+    except Exception:
         logger.error("Failed to write AUXNONSTRUCT file")
         raise
     logger.debug("Wrote to AUXNONSTRUCT successfully.")
     return
+
 
 def writeAUXGEO(sl, rp):
     """Writes AUXGEO, which is part of the input FIN for the refcalc."""
@@ -293,7 +296,7 @@ def writeAUXGEO(sl, rp):
     f74x2 = ff.FortranRecordWriter('2F7.4')
     for i, site in enumerate(sl.sitelist):
         output += '-   site type '+str(i+1)+' ---\n'
-        
+
         for el in sl.elements:
             # this reproduces the order of blocks contained in _PHASESHIFTS:
             if el in rp.ELEMENT_MIX:
@@ -306,19 +309,20 @@ def writeAUXGEO(sl, rp):
                     if s.isEquivalent(site):
                         occ, vib = site.occ[cel], site.vibamp[cel]
                         comment = ('Occ & VibAmp for '+cel+' in '+site.label
-                                   +' site')
+                                   + ' site')
                     else:
-                        occ, vib = 0.0, 0.0
+                        occ, vib = 0., 0.
                         comment = ''
                     try:
                         ol = f74x2.write([occ, vib])
-                    except:
-                        logger.error("Exception while trying to write \
-                            occupation / vibrational amplitude for site "
-                            +site.label, exc_info=True)
+                    except Exception:
+                        logger.error(
+                            "Exception while trying to write occupation / "
+                            "vibrational amplitude for site " + site.label,
+                            exc_info=True)
                     ol = ol.ljust(26)
                     output += ol + comment + '\n'
-        
+
     output += ('-----------------------------------------------------'
                '--------------\n')
     output += ('--- define different layer types                     '
@@ -329,35 +333,35 @@ def writeAUXGEO(sl, rp):
     ol = ol.ljust(26)
     output += ol + 'NLTYPE: number of different layer types\n'
     f74x3 = ff.FortranRecordWriter('3F7.4')
-    blayers = [l for l in sl.layers if l.isBulk]
-    nblayers = [l for l in sl.layers if not l.isBulk]
-    layerOffsets = [np.array([0.,0.,0.]) for i in range(0, len(sl.layers)+1)]
+    blayers = [lay for lay in sl.layers if lay.isBulk]
+    nblayers = [lay for lay in sl.layers if not lay.isBulk]
+    layerOffsets = [np.zeros(3) for _ in range(len(sl.layers) + 1)]
     if sl.bulkslab is None:
         sl.bulkslab = sl.makeBulkSlab(rp)
     for i, layer in enumerate(sl.layers):
         output += '-   layer type '+str(i+1)+' ---\n'
         if layer.isBulk:
             output += ('  2                       LAY = 2: layer type no. '
-                       +str(i+1)+' has bulk lateral periodicity\n')
+                       + str(i+1) + ' has bulk lateral periodicity\n')
         else:
             output += ('  1                       LAY = 1: layer type no. '
-                       +str(i+1)+' has overlayer lateral periodicity\n')
+                       + str(i+1) + ' has overlayer lateral periodicity\n')
         if layer.isBulk:
             bl = sl.bulkslab.layers[blayers.index(layer)]
             bulknums = [at.oriN for at in bl.atlist]
             bulkUnique = [at for at in layer.atlist if at.oriN in bulknums]
             natoms = len(bulkUnique)
-            #sanity check: ratio of unit cell areas (given simply by 
+            # sanity check: ratio of unit cell areas (given simply by
             #  SUPERLATTICE) should match ratio of written vs skipped atoms:
-            arearatio = 1/abs(np.linalg.det(rp.SUPERLATTICE))
-            atomratio = len(bulkUnique)/len(layer.atlist)
-            if abs(arearatio-atomratio) > 1e-3:
-                logger.warning('Ratio of bulk atoms inside/outside the bulk '
-                    'unit cell differs from bulk/slab unit cell size ratio. '
-                    'This means that the actual periodicity of the POSCAR '
-                    'does not match the periodicity given in the SUPERLATTICE '
-                    'parameter. Check SUPERLATTICE parameter and bulk '
-                    'symmetry!')
+            arearatio = 1 / abs(np.linalg.det(rp.SUPERLATTICE))
+            atomratio = len(bulkUnique) / len(layer.atlist)
+            if abs(arearatio - atomratio) > 1e-3:
+                logger.warning(
+                    'Ratio of bulk atoms inside/outside the bulk unit cell '
+                    'differs from bulk/slab unit cell size ratio. This means '
+                    'that the actual periodicity of the POSCAR does not match '
+                    'the periodicity given in the SUPERLATTICE parameter. '
+                    'Check SUPERLATTICE parameter and bulk symmetry!')
                 rp.setHaltingLevel(2)
         else:
             natoms = len(layer.atlist)
@@ -373,19 +377,19 @@ def writeAUXGEO(sl, rp):
             if not rp.LAYER_STACK_VERTICAL:
                 writepos = atom.posInLayer
             else:
-                writepos = atom.cartpos - np.array([nblayers[-1].cartori[0], 
-                                                    nblayers[-1].cartori[1], 
+                writepos = atom.cartpos - np.array([nblayers[-1].cartori[0],
+                                                    nblayers[-1].cartori[1],
                                                     atom.layer.cartori[2]])
             ol = i3.write([sl.sitelist.index(atom.site)+1])
             if natoms != 1:
                 ol += f74x3.write([writepos[2], writepos[0], writepos[1]])
             else:
-                # Bravais layers need to have coordinate (0.0, 0.0, 0.0)
-                #  -> store actual position for later, it will go into the 
+                # Bravais layers need to have coordinate (0., 0., 0.)
+                #  -> store actual position for later, it will go into the
                 #  interlayer vector
-                ol += f74x3.write([0.0, 0.0, 0.0])
+                ol += f74x3.write([0., 0., 0.])
                 layerOffsets[layer.num] += writepos
-                layerOffsets[layer.num+1] -= writepos
+                layerOffsets[layer.num + 1] -= writepos
             ol = ol.ljust(26)
             output += ol+'Atom N='+str(atom.oriN)+' ('+atom.el+')\n'
     output += ('--------------------------------------------------------------'
@@ -395,31 +399,28 @@ def writeAUXGEO(sl, rp):
     output += ('--------------------------------------------------------------'
                '-----\n')
     output += ('  0                       TSLAB = 0: compute bulk using layer '
-               'doubling\n') #change if this is supposed to be a parameter...
-    
-    #########################################################################
-    
+               'doubling\n')
+
     if rp.BULK_REPEAT is None:
         # assume that interlayer vector from bottom non-bulk to top bulk layer
         #   is the same as between bulk units
         # save BULK_REPEAT value for later runs, in case atom above moves
         if rp.N_BULK_LAYERS == 2:
-            rp.BULK_REPEAT = (blayers[1].cartbotz 
+            rp.BULK_REPEAT = (blayers[1].cartbotz
                               - sl.layers[blayers[0].num-1].cartbotz)
         else:
-            rp.BULK_REPEAT = (blayers[0].cartbotz 
+            rp.BULK_REPEAT = (blayers[0].cartbotz
                               - sl.layers[blayers[0].num-1].cartbotz)
         modifyPARAMETERS(rp, "BULK_REPEAT", "{:.4f}".format(rp.BULK_REPEAT),
-                            comment = "Keeps bulk spacing constant during "
-                                      "search")
-        logger.warning("The BULK_REPEAT parameter was undefined, which may "
-                "lead to unintended changes in the bulk unit cell during "
-                "optimization if the lowest non-bulk atom moves.\n"
-                "# The BULK_REPEAT value determined from the POSCAR was "
-                "written to the PARAMETERS file.")
-        
+                         comment="Keeps bulk spacing constant during search")
+        logger.warning(
+            "The BULK_REPEAT parameter was undefined, which may lead to "
+            "unintended changes in the bulk unit cell during optimization if "
+            "the lowest non-bulk atom moves.\n# The BULK_REPEAT value "
+            "determined from the POSCAR was written to the PARAMETERS file.")
+
     if type(rp.BULK_REPEAT) == np.ndarray:
-        bulkc = np.copy(rp.BULK_REPEAT)
+        bulkc = np.copy(rp.BULK_REPEAT) * np.array([1, 1, -1])
         if bulkc[2] < 0:
             bulkc = -bulkc
         if rp.N_BULK_LAYERS == 2:
@@ -433,15 +434,15 @@ def writeAUXGEO(sl, rp):
         bvectors_ASA = bulkc
     else:
         if rp.N_BULK_LAYERS == 2:
-            zdiff = rp.BULK_REPEAT - (blayers[1].cartbotz 
+            zdiff = rp.BULK_REPEAT - (blayers[1].cartbotz
                                       - blayers[0].cartbotz)
             asaZ = rp.BULK_REPEAT - blayers[1].cartbotz + blayers[0].cartori[2]
         else:
             zdiff = rp.BULK_REPEAT
             asaZ = rp.BULK_REPEAT - blayers[0].cartbotz + blayers[0].cartori[2]
         # zdiff = rp.ASAZ + blayers[0].cartbotz - blayers[0].cartori[2]
-        bvectors_ASA = [-sl.ucell[0][2] * zdiff/sl.ucell[2][2], 
-                        -sl.ucell[1][2] * zdiff/sl.ucell[2][2], 
+        bvectors_ASA = [-sl.ucell[0][2] * zdiff/sl.ucell[2][2],
+                        -sl.ucell[1][2] * zdiff/sl.ucell[2][2],
                         asaZ]
 
     # determine ASBULK - interlayer vector between bulk layers
@@ -454,27 +455,27 @@ def writeAUXGEO(sl, rp):
         bl2num = blayers[1].num
         # add layerOffsets for Bravais layers:
         bvectors_ASBULK -= layerOffsets[blayers[0].num+1]
-        # bvectors_ASBULK += (layerOffsets[blayers[1].num+1] 
+        # bvectors_ASBULK += (layerOffsets[blayers[1].num+1]
         #                     + layerOffsets[blayers[0].num])
     else:
         bl2num = blayers[0].num
         bvectors_ASBULK = bvectors_ASA
-    
+
     ol = f74x3.write([bvectors_ASA[2], bvectors_ASA[0], bvectors_ASA[1]])
     ol = ol.ljust(26)
     output += ol + 'ASA interlayer vector between different bulk units\n'
     ol = i3.write([blayers[0].num+1])
     ol = ol.ljust(26)
     output += (ol + 'top layer of bulk unit: layer type '+str(blayers[0].num+1)
-                +'\n')
+               + '\n')
     ol = i3.write([bl2num+1])
     ol = ol.ljust(26)
     output += ol + 'bottom layer of bulk unit: layer type '+str(bl2num+1)+'\n'
-    ol = f74x3.write([bvectors_ASBULK[2], bvectors_ASBULK[0], 
+    ol = f74x3.write([bvectors_ASBULK[2], bvectors_ASBULK[0],
                       bvectors_ASBULK[1]])
     ol = ol.ljust(26)
     output += (ol + 'ASBULK between the two bulk unit layers (may differ from '
-                     'ASA)\n')
+               'ASA)\n')
     output += ('--------------------------------------------------------------'
                '-----\n')
     output += ('--- define layer stacking sequence and Tensor LEED output     '
@@ -482,34 +483,35 @@ def writeAUXGEO(sl, rp):
     output += ('--------------------------------------------------------------'
                '-----\n')
     nonbulk = len(sl.layers)-rp.N_BULK_LAYERS
-    if len(rp.TENSOR_OUTPUT) < nonbulk:    #check TENSOR_OUTPUT parameter
+    if len(rp.TENSOR_OUTPUT) < nonbulk:    # check TENSOR_OUTPUT parameter
         if rp.TENSOR_OUTPUT:
-            logger.warning('Parameters TENSOR_OUTPUT is defined, but contains '
-                'less values than there are non-bulk layers. Missing values '
+            logger.warning(
+                'Parameters TENSOR_OUTPUT is defined, but contains fewer '
+                'values than there are non-bulk layers. Missing values '
                 'will be set to 1.')
             rp.setHaltingLevel(1)
-        for i in range(0,nonbulk-len(rp.TENSOR_OUTPUT)):
+        for i in range(0, nonbulk-len(rp.TENSOR_OUTPUT)):
             rp.TENSOR_OUTPUT.append(1)
     if len(rp.TENSOR_OUTPUT) > nonbulk:
-        logger.warning('Parameters TENSOR_OUTPUT is defined, but contains '
-            'more values than there are non-bulk layers. Excess values will '
-            'be ignored.')
+        logger.warning(
+            'Parameters TENSOR_OUTPUT is defined, but contains more values '
+            'than there are non-bulk layers. Excess values will be ignored.')
         rp.setHaltingLevel(1)
     ol = i3.write([len(sl.layers)-rp.N_BULK_LAYERS])
     ol = ol.ljust(26)
     output += ol + 'NSTACK: number of layers stacked onto bulk\n'
     for layer in list(reversed(nblayers)):
-        n = layer.num+1
+        n = layer.num + 1
         if layer == nblayers[-1] or not rp.LAYER_STACK_VERTICAL:
-            v = sl.layers[n].cartori-layer.cartori
+            v = sl.layers[n].cartori - layer.cartori
         else:
-            v = np.array([0.0,0.0,0.0])
-        v[2] = sl.layers[n].cartori[2]-layer.cartbotz
+            v = np.zeros(3)
+        v[2] = sl.layers[n].cartori[2] - layer.cartbotz
         v = v + layerOffsets[n]   # add layerOffsets for Bravais layers
-        ol = i3.write([n]) + f74x3.write([v[2],v[0],v[1]])
+        ol = i3.write([n]) + f74x3.write([v[2], v[0], v[1]])
         ol = ol.ljust(26)
         output += (ol + 'layer '+str(n)+': layer type '+str(n)+', interlayer '
-                   'vector below\n')     #every layer is also a layer type
+                   'vector below\n')     # every layer is also a layer type
         ol = i3.write([rp.TENSOR_OUTPUT[layer.num]])
         ol = ol.ljust(26)
         output += (ol + '0/1: Tensor output is required for this layer '
@@ -520,7 +522,7 @@ def writeAUXGEO(sl, rp):
             ol = 'T_'+str(atom.oriN)
             ol = ol.ljust(26)
             output += (ol + 'Tensor file name, current layer, sublayer '+str(i)
-                        +'\n')
+                       + '\n')
             i += 1
     output += ('--------------------------------------------------------------'
                '-----\n')
@@ -528,20 +530,21 @@ def writeAUXGEO(sl, rp):
                '  ---\n')
     output += ('--------------------------------------------------------------'
                '-----\n')
-    
+
     try:
         with open('AUXGEO', 'w') as wf:
             wf.write(output)
-    except:
+    except Exception:
         logger.error("Failed to write AUXGEO file")
         raise
     logger.debug("Wrote to AUXGEO successfully.")
     return
 
+
 def writeMuftin(sl, rp):
     """Writes a muftin.f file, which will be compiled for the refcalc."""
     output = """
-C  Subroutine muftin contains explicit energy dependence of inner 
+C  Subroutine muftin contains explicit energy dependence of inner
 C  potentials. The functional form should be left to the user entirely,
 C  thus the subroutine is included in the input explicitly.
 
@@ -616,8 +619,8 @@ C  set substrate / overlayer imaginary part of inner potential
         with open("muftin.f", "w") as wf:
             wf.write(output)
         logger.debug("Wrote to muftin.f successfully.")
-    except:
-        logger.error("Exception while writing muftin.f file: ", 
-                      exc_info=True)
+    except Exception:
+        logger.error("Exception while writing muftin.f file: ",
+                     exc_info=True)
         raise
     return
