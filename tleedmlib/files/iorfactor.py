@@ -52,8 +52,12 @@ def readROUT(filename="ROUT"):
             beams
 
     """
-    with open(filename, 'r') as rf:
-        lines = rf.readlines()
+    try:
+        with open(filename, 'r') as rf:
+            lines = rf.readlines()
+    except Exception:
+        logger.error("Could not open ROUT file")
+        raise
     line = ""
     i = 0
     while "AVERAGE R-FACTOR =" not in line and i+1 < len(lines):
@@ -88,7 +92,7 @@ def readROUT(filename="ROUT"):
             index = int(values[0])
             v0r = float(values[2])
             rav = float(values[-1])
-        except ValueError:
+        except (ValueError, IndexError):
             pass    # ignore line
         else:
             if v0r == v0rshift and index > 0:
