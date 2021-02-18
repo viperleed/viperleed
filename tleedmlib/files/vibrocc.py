@@ -15,6 +15,7 @@ from tleedmlib.base import splitSublists, readToExc
 
 logger = logging.getLogger("tleedm.files.vibrocc")
 
+
 def readVIBROCC(rp, slab, filename='VIBROCC', silent=False):
     """Reads VIBROCC and adds the information to all sites in the slab.
     If vibrational amplitudes are automatically calculated here, returns True,
@@ -30,36 +31,37 @@ def readVIBROCC(rp, slab, filename='VIBROCC', silent=False):
     except FileNotFoundError:
         if generate:
             logger.info("No VIBROCC file found, generating vibrational "
-                         "amplitudes from temperature...")
+                        "amplitudes from temperature...")
             for site in slab.sitelist:
-                if not site.el in rp.ELEMENT_MIX:
-                    if site.getVibAmp(rp, site.el) != 0:
+                if site.el not in rp.ELEMENT_MIX:
+                    if site.getVibAmp(rp, site.el) is not None:
                         logger.error("Failed to generate vibrational "
-                            "amplitude for "+site.el+" in site "+site.label)
+                                     "amplitude for " + site.el + " in site "
+                                     + site.label)
                         raise
                 else:
                     for subel in rp.ELEMENT_MIX[site.el]:
-                        if site.getVibAmp(rp, subel) != 0:
-                            logger.error("Failed to generate vibrational "
-                                "amplitude for " + site.el + " in site "
-                                + site.label)
+                        if site.getVibAmp(rp, subel) is not None:
+                            logger.error(
+                                "Failed to generate vibrational amplitude for "
+                                + site.el + " in site " + site.label)
                             raise
             try:
                 checkVIBROCC(rp, slab, generate=True)
-            except:
+            except Exception:
                 raise
             return True
         else:
             logger.error("VIBROCC not found.")
             raise
-    #read VIBROCC:
-    mode = 0  #0: not reading; 1: vib.amp., 2: occ., 3: search offsets
-    regex = False   #read regular expressions as-is or not
+    # read VIBROCC:
+    mode = 0  # 0: not reading; 1: vib.amp., 2: occ., 3: search offsets
+    regex = False   # read regular expressions as-is or not
     for line in rf:
         line = line.lstrip()
         if "!" in line:
             line = line.split("!")[0]
-        if not '=' in line:
+        if '=' not in line:
             continue
         else:
             if line[0] == '=':
@@ -78,8 +80,8 @@ def readVIBROCC(rp, slab, filename='VIBROCC', silent=False):
                     continue
                 else:
                     logger.warning("VIBROCC: Found line starting with '=', "
-                                    "but didn't recognize vibrational "
-                                    "amplitude or occupation")
+                                   "but didn't recognize vibrational "
+                                   "amplitude or occupation")
                     rp.setHaltingLevel(1)
                 continue
             elif mode == 0:
@@ -94,17 +96,17 @@ def readVIBROCC(rp, slab, filename='VIBROCC', silent=False):
                         param = plist[0]
                     else:
                         continue
-        if mode in [1,2]:
+        if mode in [1, 2]:
             try:
                 llist = line.split('=')[1].split()
             except IndexError:
                 logger.warning('VIBROCC file: ' + param + ' appears to have '
-                                'no value')
+                               'no value')
                 rp.setHaltingLevel(1)
                 continue
             if not llist:
                 logger.warning('VIBROCC file: ' + param + ' appears to have '
-                                'no value')
+                               'no value')
                 rp.setHaltingLevel(1)
                 continue
             # first get values on the right
@@ -112,33 +114,34 @@ def readVIBROCC(rp, slab, filename='VIBROCC', silent=False):
             # read parameter on the left
             targetsites = []
             for site in slab.sitelist:
-                if regex:         #if regular expressions are enabled, take the
-                    prep = param     #  parameter input at face value
+                if regex:        # if regular expressions are enabled, take the
+                    prep = param     # parameter input at face value
                 else:
-                    prep = re.escape(param)   #double-slash non-literal characters
-                    #if regular expressions are not enabled, we want to still
+                    # double-slash non-literal characters
+                    prep = re.escape(param)
+                    # if regular expressions are not enabled, we want to still
                     #  interpret * as "any number of any characters":
-                    prep = prep.replace('\\*','.*')
+                    prep = prep.replace('\\*', '.*')
                 m = re.match(prep, site.label)
                 if m:
-                    #if the length of the matched text == the site label,
+                    # if the length of the matched text == the site label,
                     #  it's a real match
                     if m.end(0) == len(site.label):
                         targetsites.append(site)
             if len(targetsites) == 0:
                 logger.warning('VIBROCC file: No sites matching '+param
-                                +' found, line will be skipped.')
+                               + ' found, line will be skipped.')
                 rp.setHaltingLevel(1)
                 continue
             else:
                 for site in targetsites:
-                    if mode == 1:   #decide which dictionary to write to
+                    if mode == 1:   # decide which dictionary to write to
                         td = site.vibamp
                     else:
                         td = site.occ
                     for sl in sublists:
                         if len(sl) == 1:
-                            #if there's only one value, it should be a float
+                            # if there's only one value, it should be a float
                             #  for the main site element
                             try:
                                 if site.el in rp.ELEMENT_MIX:
@@ -146,27 +149,30 @@ def readVIBROCC(rp, slab, filename='VIBROCC', silent=False):
                                         td[subel] = float(sl[0])
                                 else:
                                     td[site.el] = float(sl[0])
-                            except:
-                                logger.error('VIBROCC file: Error reading '
-                                        'value '+sl[0]+' at parameter '+param)
+                            except Exception:
+                                logger.error(
+                                    'VIBROCC file: Error reading '
+                                    'value '+sl[0]+' at parameter '+param)
                                 raise
                         else:
                             el = sl[0].capitalize()
                             try:
                                 td[el] = float(sl[1])
                             except KeyError:
-                                logger.error('VIBROCC file: Element '+el+
-                                        'not recognized at parameter '+param)
-                            except:
-                                logger.error('VIBROCC file: Error reading '
-                                        'value '+sl[1]+' at parameter '+param)
+                                logger.error(
+                                    'VIBROCC file: Element ' + el + 'not '
+                                    'recognized at parameter ' + param)
+                            except Exception:
+                                logger.error(
+                                    'VIBROCC file: Error reading value '
+                                    + sl[1] + ' at parameter ' + param)
                                 raise
         if mode == 3:
             try:
                 ind = int(plist[1])
-            except:
+            except Exception:
                 logger.error('VIBROCC file: Error converting to atom number: '
-                              +plist[1])
+                             + plist[1])
                 continue
             else:
                 targetatlist = [at for at in slab.atlist if at.oriN == ind]
@@ -174,7 +180,7 @@ def readVIBROCC(rp, slab, filename='VIBROCC', silent=False):
                     targetat = targetatlist[0]
                 else:
                     logger.error('VIBROCC file: {} atoms found with number {}'
-                                  .format(len(targetatlist), ind))
+                                 .format(len(targetatlist), ind))
                     continue
             if param.lower() in ["pos", "geo"]:
                 om = 1
@@ -190,29 +196,29 @@ def readVIBROCC(rp, slab, filename='VIBROCC', silent=False):
                 continue
             s = line.split("=")[1]
             subls = s.split(",")
-            for l in subls:
-                ll = l.split()
+            for li in subls:
+                ll = li.split()
                 if (len(ll) != 4 and om == 1) or (len(ll) != 2 and om != 1):
                     logger.error('VIBROCC file: Wrong number of values in '
-                                  'sublist '+l)
+                                 'sublist '+li)
                     continue
                 else:
                     el = ll[0].capitalize()
-                    if not el in slab.chemelem:
+                    if el not in slab.chemelem:
                         logger.error('VIBROCC file: Element '+el+' not '
-                                      'recognized')
+                                     'recognized')
                         continue
                     values = []
                     try:
                         for s in ll[1:]:
                             values.append(float(s))
-                    except:
+                    except ValueError:
                         logger.error('VIBROCC file: Could not convert values '
-                                      'to floats: '+l)
+                                     'to floats: '+li)
                         continue
             if om == 1:
                 value = np.array(values)
-                value[2] *= -1 # invert z
+                value[2] *= -1  # invert z
             else:
                 value = values[0]
             targetdict[el] = value
@@ -229,26 +235,28 @@ def readVIBROCC(rp, slab, filename='VIBROCC', silent=False):
             logger.warning("Parameter T_DEBYE is defined but unused.")
     return False
 
+
 def checkVIBROCC(rp, slab, generate=False, silent=False):
     """Fills default values and does consistency check of site vibrational
     amplitudes and occupations. If vibrational amplitudes are automatically
     calculated here, returns True, else returns False."""
     vibAmpGenerated = False
     for site in slab.sitelist:
-        #check if the vibrational amplitude is defined for the main element(s)
-        if not site.el in site.vibamp:
-            if not site.el in rp.ELEMENT_MIX:
+        # check if the vibrational amplitude is defined for the main element(s)
+        if site.el not in site.vibamp:
+            if site.el not in rp.ELEMENT_MIX:
                 if generate:
                     if site.getVibAmp(rp, site.el) == 0:
                         vibAmpGenerated = True
                     else:
-                        logger.warning('VIBROCC file: Failed to get '
-                            +site.el+' vibrational amplitude for site '
-                            +site.label)
+                        logger.warning(
+                            'VIBROCC file: Failed to get ' + site.el +
+                            ' vibrational amplitude for site ' + site.label)
                         rp.setHaltingLevel(2)
                 else:
-                    logger.warning('VIBROCC file: No '+site.el+
-                        ' vibrational amplitude defined for site '+site.label)
+                    logger.warning(
+                        'VIBROCC file: No ' + site.el + ' vibrational '
+                        'amplitude defined for site '+site.label)
                     rp.setHaltingLevel(2)
             else:
                 v = -1
@@ -260,31 +268,31 @@ def checkVIBROCC(rp, slab, generate=False, silent=False):
                             vibAmpGenerated = True
                             v = site.vibamp[subel]
                 if v == -1:
-                    logger.error('VIBROCC file: No vibrational amplitude '
-                                'defined for any of the main elements in site '
-                                +site.label)
+                    logger.error(
+                        'VIBROCC file: No vibrational amplitude defined for '
+                        'any of the main elements in site ' + site.label)
                     rp.setHaltingLevel(3)
                     # !!! raise exception
                 else:
                     # vibrational amplitudes were defined for some of the
                     #  main elements but not all. Fill the other values
                     for subel in rp.ELEMENT_MIX[site.el]:
-                        if not subel in site.vibamp:
-                            logger.warning('VIBROCC file: No '+subel
-                                    +' vibrational amplitude defined for site '
-                                    +site.label+'. Using '
-                                    'vibrational amplitude from other element '
-                                    'in site.')
+                        if subel not in site.vibamp:
+                            logger.warning(
+                                'VIBROCC file: No ' + subel + ' vibrational '
+                                'amplitude defined for site ' + site.label +
+                                '. Using vibrational amplitude from other '
+                                'element in site.')
                             rp.setHaltingLevel(1)
                             site.vibamp[subel] = v
-        if site.el in rp.ELEMENT_MIX:  #just use first element in ELEMENT_MIX
+        if site.el in rp.ELEMENT_MIX:  # just use first element in ELEMENT_MIX
             mainva = site.vibamp[rp.ELEMENT_MIX[site.el][0]]
         else:
             mainva = site.vibamp[site.el]
-        #for other elements, fill vibrational elements with that of the main
+        # for other elements, fill vibrational elements with that of the main
         # element (probably not present)
         for el in slab.chemelem:
-            if not el in site.vibamp:
+            if el not in site.vibamp:
                 site.vibamp[el] = mainva
         # check and fill occupations:
         o = 0.
@@ -293,27 +301,29 @@ def checkVIBROCC(rp, slab, generate=False, silent=False):
                 o += site.occ[el]
         if 'Vac' in site.occ:
             o += site.occ['Vac']
-        if not site.el in site.occ:
+        if site.el not in site.occ:
             if site.el in rp.ELEMENT_MIX:
-                if not any([(el in site.occ) 
-                             for el in rp.ELEMENT_MIX[site.el]]):
+                if not any([(el in site.occ)
+                            for el in rp.ELEMENT_MIX[site.el]]):
                     for el in rp.ELEMENT_MIX[site.el]:
                         site.occ[el] = (1. - o) / len(rp.ELEMENT_MIX[site.el])
             else:
                 site.occ[site.el] = 1. - o
             o = 1.
         for el in slab.chemelem:
-            if not el in site.occ:
+            if el not in site.occ:
                 site.occ[el] = 0.
         if o < 0.99:
-            logger.debug('VIBROCC file: Site '+site.label+' has a total '
+            logger.debug(
+                'VIBROCC file: Site '+site.label+' has a total '
                 'occupation less than one. Interpreting remaining {:.2f} '
                 'as vacancies.'.format(1-o))
         elif o > 1.0:
             if o > 1.01:
-                logger.warning('VIBROCC file: Site '+site.label+' has a '
-                        +'total occupation greater than one ({:.2f}). '
-                        'Occupations will be re-scaled to 1.'.format(o))
+                logger.warning(
+                    'VIBROCC file: Site '+site.label+' has a total occupation '
+                    'greater than one ({:.2f}). Occupations will be re-scaled '
+                    'to 1.'.format(o))
                 rp.setHaltingLevel(2)
             for el in site.occ:
                 site.occ[el] *= 1/o
@@ -322,20 +332,22 @@ def checkVIBROCC(rp, slab, generate=False, silent=False):
         #  them and warn the user about it:
         dl = []
         for el in site.vibamp:
-            if not el in slab.chemelem:
-                logger.warning('VIBROCC file: Site '+site.el+'_'+site.name
-                        +' has a vibrational amplitude defined for an unknown '
-                        'element, which will be dropped ('+el+').')
+            if el not in slab.chemelem:
+                logger.warning(
+                    'VIBROCC file: Site ' + site.label + ' has a vibrational '
+                    'amplitude defined for an unknown element, which will be '
+                    'dropped (' + el + ').')
                 rp.setHaltingLevel(1)
                 dl.append[el]
         for el in dl:
             site.vibamp.pop(el, None)
         dl = []
         for el in site.occ:
-            if not el in slab.chemelem and el != "Vac":
-                logger.warning('VIBROCC file: Site '+site.el+'_'+site.name
-                        +' has an occupation defined for an unknown element, '
-                        'which will be dropped ('+el+').')
+            if el not in slab.chemelem and el != "Vac":
+                logger.warning(
+                    'VIBROCC file: Site ' + site.label + ' has an occupation '
+                    'defined for an unknown element, which will be dropped ('
+                    + el + ').')
                 rp.setHaltingLevel(1)
                 dl.append[el]
         for el in dl:
@@ -344,15 +356,16 @@ def checkVIBROCC(rp, slab, generate=False, silent=False):
         logger.debug("VIBROCC value consistency check finished")
     return vibAmpGenerated
 
+
 def writeVIBROCC(sl, rp, filename="VIBROCC_OUT", silent=False):
-    """Writes a new VIBROCC file with the optimized parameters obtained after 
-    the search. The new file will not follow the ordering of the input VIBROCC 
+    """Writes a new VIBROCC file with the optimized parameters obtained after
+    the search. The new file will not follow the ordering of the input VIBROCC
     file."""
     output = "= Vibrational Amplitudes\n"
     for site in sl.sitelist:
         ol = site.label + " = "
         targetels = [el for el in site.vibamp if (site.occ[el] != 0
-                                              or el in site.mixedEls)]
+                                                  or el in site.mixedEls)]
         if len(targetels) == 1:
             ol += "{:.4g}".format(site.vibamp[targetels[0]])
         else:
@@ -361,7 +374,7 @@ def writeVIBROCC(sl, rp, filename="VIBROCC_OUT", silent=False):
                 if i < len(targetels)-1:
                     ol += ", "
         output += ol + "\n"
-        
+
     output += "\n= Occupations\n"
     for site in sl.sitelist:
         write = True
@@ -369,8 +382,8 @@ def writeVIBROCC(sl, rp, filename="VIBROCC_OUT", silent=False):
         targetels = [el for el in site.occ if site.occ[el] != 0]
         if len(targetels) == 1:
             ol += "{:.4g}".format(site.occ[targetels[0]])
-            if (site.occ[targetels[0]] == 1 and site.el == targetels[0] 
-                                            and not site.mixedEls):
+            if (site.occ[targetels[0]] == 1 and site.el == targetels[0]
+                    and not site.mixedEls):
                 write = False
         else:
             for i, el in enumerate(targetels):
@@ -379,7 +392,7 @@ def writeVIBROCC(sl, rp, filename="VIBROCC_OUT", silent=False):
                     ol += ", "
         if write:
             output += ol + "\n"
-    
+
     output += "\n= Search offsets\n"
     # figure out which atoms to write, in which order
     offsetList = []    # metric per atom
@@ -392,7 +405,7 @@ def writeVIBROCC(sl, rp, filename="VIBROCC_OUT", silent=False):
             to += abs(at.offset_vib[el])
         for el in at.offset_geo:
             to += np.linalg.norm(at.offset_geo[el])
-        if to >= 1e-4: # !!! TODO: enough?
+        if to >= 1e-4:  # !!! TODO: enough?
             offsetList.append((to, at))
     offsetList.sort(key=lambda tup: -tup[0])
     for (_, at) in offsetList:
@@ -428,7 +441,7 @@ def writeVIBROCC(sl, rp, filename="VIBROCC_OUT", silent=False):
     try:
         with open(filename, 'w') as wf:
             wf.write(output)
-    except:
+    except Exception:
         logger.error("Failed to write "+filename)
         raise
     if not silent:
