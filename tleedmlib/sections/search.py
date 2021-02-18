@@ -337,19 +337,30 @@ def parabolaFit(rp, r_configs, x0=None, **kwargs):
     ip_tofit = ip_tofit - xmin
     # fit
     polyreg.fit(ip_tofit, rf_tofit)
+    # now find minimum within bounds (still centered around xmin)
+    bounds = np.array([(1, sp.steps) for sp in sps]) - xmin.reshape((-1, 1))
+    if x0 is None:  # x0 is the starting guess
+        x0 = np.copy(xmin)
+    # else:
+    #     x0 = np.delete(x0, deletedPars)
+    parab_min = scipy.optimize.minimize(
+        optimizerHelper, x0, args=(polyreg.predict,), method='L-BFGS-B',
+        bounds=bounds)
+    predictR = parab_min.fun[0]
+    # find errors
     m = castToMatrix(polyreg.named_steps[which_regression].coef_, len(sps))
     w, v = np.linalg.eig(m)
     # error along main axes
     d = np.copy(np.diag(m))
     d[d <= 0] = np.nan
-    err_unco = rr/d
+    err_unco = 2 * np.sqrt(rr * predictR / d)
     with np.errstate(invalid="ignore"):
         err_unco[err_unco < 0] = np.nan
     err_unco = np.sqrt(err_unco)
     # error along eigenvectors
     w2 = np.copy(w)
     w2[w2 == 0] = 1e-100  # to avoid divide-by-zero; dealt with below
-    err_ev = rr/w2
+    err_ev = 2 * np.sqrt(rr * predictR / w2)
     err_ev[err_ev < 0] = 0  # dealt with below
     err_ev = np.sqrt(err_ev)
     # correlated error
@@ -421,16 +432,6 @@ def parabolaFit(rp, r_configs, x0=None, **kwargs):
     #              "({:.4f} s)".format(len(sps), len(sps_original),
     #                                  len(rf_tofit), (timer() - starttime)))
 
-    # now find minimum within bounds (still centered around xmin)
-    bounds = np.array([(1, sp.steps) for sp in sps]) - xmin.reshape((-1, 1))
-    if x0 is None:  # x0 is the starting guess
-        x0 = np.copy(xmin)
-    # else:
-    #     x0 = np.delete(x0, deletedPars)
-    parab_min = scipy.optimize.minimize(
-        optimizerHelper, x0, args=(polyreg.predict,), method='L-BFGS-B',
-        bounds=bounds)
-    predictR = parab_min.fun[0]
     for (i, sp) in enumerate(sps):
         sp.parabolaFit["min"] = parab_min.x[i] + xmin[i]
         sp.parabolaFit["err_co"] = err_co[i]
@@ -570,7 +571,8 @@ def search(sl, rp):
                    if f.startswith('lib.search.mpi')][0]
         shutil.copy2(os.path.join(libpath, libname), libname)
         hashing_files = [f for f in os.listdir(libpath)
-                         if f.startswith('intarr_hashing')]
+                         if f.startswith('intarr_hashing')
+                         and 'LICENCE' not in f]
         if hashing_files:
             hashname = hashing_files[0]
             shutil.copy2(os.path.join(libpath, hashname), hashname)
