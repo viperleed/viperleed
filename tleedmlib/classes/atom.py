@@ -529,7 +529,8 @@ class Atom:
         Parameters
         ----------
         pos : numpy.array
-            Fractional coordinates to check against the position of this atom.
+            Cartesian xy coordinates to check against the position of this
+            atom.
         eps : float, optional
             The precision to which positions are expected to match. The default
             is 1e-3.

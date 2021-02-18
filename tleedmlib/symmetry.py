@@ -1203,15 +1203,15 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
             tmpslab.mirror(testplane, glide=g)
             tmpslab.collapseCartesianCoordinates()
             mvslabs.append(tmpslab)
-        if planegroup not in ["pm", "pg", "cm", "rcm"]:
-            for i in range(0, toprotsym-1):
-                tmpslab = copy.deepcopy(mvslabs[-1])
-                tmpslab.rotateAtoms(ori, toprotsym)
-                tmpslab.collapseCartesianCoordinates()
-                mvslabs.append(tmpslab)
+            if planegroup not in ["pm", "pg", "cm", "rcm"]:
+                for i in range(0, toprotsym-1):
+                    tmpslab = copy.deepcopy(mvslabs[-1])
+                    tmpslab.rotateAtoms(ori, toprotsym)
+                    tmpslab.collapseCartesianCoordinates()
+                    mvslabs.append(tmpslab)
         for (llind, ll) in enumerate(sl.linklists):
             for at in ll:
-                psum = at.cartpos
+                psum = np.copy(at.cartpos)
                 pn = 1
                 for ms in mvslabs:
                     found = False
@@ -1228,14 +1228,20 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
                             complist.append(complist[1]+complist[2]
                                             - complist[0])
                         for p in complist:
-                            if np.linalg.norm(p-at.cartpos[0:2]) < eps:
+                            if np.linalg.norm(p - at.cartpos[:2]) < eps:
                                 psum += np.append(p, at2.cartpos[2])
                                 pn += 1
                                 found = True
                                 break
                         if found:
                             break
-                at.cartpos = psum / pn
+                if pn != len(mvslabs) + 1:
+                    logger.warning(
+                        "During symmetrization of the slab, not all "
+                        "symmetry-equivalent atoms were found for {}. Atom "
+                        "will not be symmetrized.")
+                else:
+                    at.cartpos = psum / pn
     sl.collapseCartesianCoordinates(updateOrigin=True)
     if not rotcell:
         # !!! THIS IS NOW THE DEFAULT, rotcell is NEVER true.
