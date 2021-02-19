@@ -572,7 +572,7 @@ def search(sl, rp):
         shutil.copy2(os.path.join(libpath, libname), libname)
         hashing_files = [f for f in os.listdir(libpath)
                          if f.startswith('intarr_hashing')
-                         and 'LICENCE' not in f]
+                         and f.endswith('.f90')]
         if hashing_files:
             hashname = hashing_files[0]
             shutil.copy2(os.path.join(libpath, hashname), hashname)

@@ -497,7 +497,7 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
             ytheo = getYfunc(theo, v0i)
             yexp = getYfunc(exp, v0i)
             dy = np.array([(ytheo[j, 0], yexp[j, 1] - ytheo[j, 1])
-                           for j in range(0, len(ytheo))])
+                           for j in range(0, min(len(ytheo), len(yexp)))])
             dysq = np.copy(dy)
             dysq[:, 1] = dysq[:, 1]**2
             idysq = np.array([dysq[0]])
