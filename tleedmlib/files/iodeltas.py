@@ -17,8 +17,9 @@ from tleedmlib.files.beams import writeAUXBEAMS
 
 logger = logging.getLogger("tleedm.files.iodeltas")
 
+
 def checkDelta(filename, at, el, rp):
-    """Checks whether a given delta file corresponds to the requested 
+    """Checks whether a given delta file corresponds to the requested
     displacements of a given atom. Returns True or False."""
     eps = 1e-4
     fgeo = []                               # found geo disp
@@ -45,7 +46,7 @@ def checkDelta(filename, at, el, rp):
     try:
         nbeams = int(lines[1][0:3])  # number of beams
         nvar = int(lines[1][6:9])    # number of variations (geo*vib)
-    except:
+    except Exception:
         logger.error("Error parsing file " + filename)
         raise
     if nbeams != len(rp.ivbeams):
@@ -57,7 +58,7 @@ def checkDelta(filename, at, el, rp):
     for i in range(atline, len(lines)):
         try:
             fl = [float(s) for s in lines[i].split()]
-        except:
+        except Exception:
             logger.error("Error parsing file "+filename)
             raise
         for j in range(0, int(len(fl)/2)):
@@ -78,7 +79,7 @@ def checkDelta(filename, at, el, rp):
     for i in range(atline, len(lines)):
         try:
             fl = [f for f in rf74x10.read(lines[i]) if f is not None]
-        except:
+        except Exception:
             logger.error("Error parsing file "+filename)
             raise
         if len(fl) < 10:
@@ -120,13 +121,13 @@ def checkDelta(filename, at, el, rp):
     nvib = nvar / ngeo
     if int(nvib) - nvib > 1e-4:
         logger.error("Error reading file "+filename+": number of geometry "
-                      "variations found does not match header.")
+                     "variations found does not match header.")
         return False
     nvib = int(nvib)
     for i in range(atline, len(lines)):
         try:
             fl = [f for f in rf74x10.read(lines[i]) if f is not None]
-        except:
+        except Exception:
             logger.error("Error parsing file "+filename)
             raise
         parselist = parselist + fl
@@ -134,7 +135,7 @@ def checkDelta(filename, at, el, rp):
             fvib.append(parselist[0])
             if any([f != 0. for f in parselist[1:ngeo]]):
                 logger.warning("File "+filename+": Found unexpected entries "
-                        "in list of vibrational displacements.")
+                               "in list of vibrational displacements.")
             parselist = parselist[ngeo:]
         if len(fvib) >= nvib:
             break
@@ -144,31 +145,58 @@ def checkDelta(filename, at, el, rp):
     else:
         voff = at.site.vibamp[el]
     for (i, f) in enumerate(fvib):
-        bv = round(round(dvib[i] + voff, 4) / 0.529, 4)  # in bohr radii
-                    # rounding twice to account for 1. writing to delta-input,
-                    # 2. reading from DELTA file. Precision 0.529 taken from 
-                    # TensErLEED GLOBAL
+        bv = round(round(dvib[i] + voff, 4) / 0.529, 4)
+        # in bohr radii; rounding twice to account for 1. writing to
+        #  delta-input, 2. reading from DELTA file. Precision 0.529 taken from
+        #  TensErLEED GLOBAL
         if abs(f - bv) >= 1e-4:
             return False
     return True
 
-def generateDeltaInput(atom, targetel, sl, rp, deltaBasic = "", auxbeams = "",
-                       phaseshifts = ""):
-    """Generates a PARAM file and input for one element of one atom. 
-    If deltaBasic is not passed, will call generateDeltaBasic directly. 
-    Returns the delta input as string, a shortened version of that input for 
-    logging as string, and the contents of the required PARAM file as 
-    string."""
+
+def generateDeltaInput(atom, targetel, sl, rp, deltaBasic="", auxbeams="",
+                       phaseshifts=""):
+    """
+    Generates a PARAM file and delta input for one element of one atom.
+
+    Parameters
+    ----------
+    atom : Atom
+        Atom object for which input should be generated.
+    targetel : str
+        The element of that atom for which input should be generated. This may
+        not be the main atom element.
+    sl : Slab
+        The Slab object containing atom information.
+    rp : Rparams
+        The run parameters object.
+    deltaBasic : str, optional
+        Part of delta input that is the same for all atoms. If not passed,
+        will call generateDeltaBasic directly.
+    auxbeams : str, optional
+        The contents of the AUXBEAMS file. If not passed, will attempt to find
+        the AUXBEAMS file and read it.
+    phaseshifts : str, optional
+        The contents of the _PHASESHIFTS file. If not passed, will attempt to
+        find the _PHASESHIFTS file and read it.
+
+    Returns
+    -------
+    (str, str, str).
+        The delta input, a shortened version of that input for logging, and
+        the contents of the required PARAM file.
+    """
+
     if deltaBasic == "":
         deltaBasic = generateDeltaBasic()
     if auxbeams == "":
-        # if AUXBEAMS is not in work folder, check AUX folder 
-        if not os.path.isfile(os.path.join(".","AUXBEAMS")):
-            if os.path.isfile(os.path.join(".","AUX","AUXBEAMS")):
+        # if AUXBEAMS is not in work folder, check AUX folder
+        if not os.path.isfile(os.path.join(".", "AUXBEAMS")):
+            if os.path.isfile(os.path.join(".", "AUX", "AUXBEAMS")):
                 try:
-                    shutil.copy2(os.path.join(".","AUX","AUXBEAMS"), 
+                    shutil.copy2(os.path.join(".", "AUX", "AUXBEAMS"),
                                  "AUXBEAMS")
-                except:
+                except Exception:
                     logger.warning("Failed to copy AUXBEAMS from AUX folder")
             else:
                 logger.warning("generateDeltaInput: AUXBEAMS not found")
@@ -177,7 +205,7 @@ def generateDeltaInput(atom, targetel, sl, rp, deltaBasic = "", auxbeams = "",
                 auxbeams = rf.read()
             if auxbeams[-1] != "\n":
                 auxbeams += "\n"
-        except:
+        except Exception:
             logger.error("generateDeltaInput: Could not read AUXBEAMS")
             raise
     if phaseshifts == "":
@@ -186,22 +214,22 @@ def generateDeltaInput(atom, targetel, sl, rp, deltaBasic = "", auxbeams = "",
                 phaseshifts = rf.read()
             if phaseshifts[-1] != "\n":
                 phaseshifts += "\n"
-        except:
+        except Exception:
             logger.error("generateDeltaInput: Could not read _PHASESHIFTS")
             raise
-    MLMAX = [19, 126, 498, 1463, 3549, 7534, 14484, 25821, 43351, 69322, 
+    MLMAX = [19, 126, 498, 1463, 3549, 7534, 14484, 25821, 43351, 69322,
              106470, 158067, 227969, 320664, 441320]
     try:
-        beamlist, _, _ = writeAUXBEAMS(ivbeams=rp.ivbeams, 
-                                        beamlist=rp.beamlist, write=False)
-    except:
+        beamlist, _, _ = writeAUXBEAMS(ivbeams=rp.ivbeams,
+                                       beamlist=rp.beamlist, write=False)
+    except Exception:
         logger.error("writeDeltaInput: Exception while getting data from "
-                      "writeAUXBEAMS")
+                     "writeAUXBEAMS")
         raise
-    
+
     # merge offsets with displacement lists
     atom.mergeDisp(targetel)
-    
+
     # generate delta.in
     din = ("""   1                         FORMOUT - 1: formatted output
 -------------------------------------------------------------------
@@ -242,7 +270,7 @@ def generateDeltaInput(atom, targetel, sl, rp, deltaBasic = "", auxbeams = "",
 -------------------------------------------------------------------
 """
     if targetel == "vac":
-        geolist = [(0.0,0.0,0.0)]
+        geolist = [(0., 0., 0.)]
     elif targetel in atom.disp_geo:
         geolist = atom.disp_geo[targetel]
     else:
@@ -251,13 +279,13 @@ def generateDeltaInput(atom, targetel, sl, rp, deltaBasic = "", auxbeams = "",
     ol = i4.write([geosteps])
     din += ol.ljust(29) + "NCSTEP - number of displaced positions\n"
     for disp in geolist:
-        ol = f74x3.write([disp[2],disp[0],disp[1]])
+        ol = f74x3.write([disp[2], disp[0], disp[1]])
         din += ol.ljust(29)+"CDISP(z,x,y) - z pointing towards bulk\n"
     din += (
-"""-------------------------------------------------------------------
---- vibrational displacements of atomic site in question        ---
--------------------------------------------------------------------
-""")
+        """-------------------------------------------------------------------
+        --- vibrational displacements of atomic site in question        ---
+        -------------------------------------------------------------------
+        """)
     if targetel == "vac":
         viblist = [0.0]
     elif targetel in atom.disp_vib:
@@ -276,23 +304,23 @@ def generateDeltaInput(atom, targetel, sl, rp, deltaBasic = "", auxbeams = "",
             vibamp = atom.site.vibamp[targetel] + disp
         ol = f74.write([vibamp])
         din += ol.ljust(29)+"DRPER_A\n"
-        
+
     din_main = deltaBasic + auxbeams + phaseshifts + din
     din_short = deltaBasic + "[AUXBEAMS]\n" + "[_PHASESHIFTS]\n" + din
-    
+
     # write PARAM
     param = ("""C  Parameter statements for delta amplitude calculation, v1.2
 C  parameters must be consistent with preceding reference calculation!
 
 C  MLMAX: maximum angular momentum to be considered in calculation
-C  MNLMB: number of Clebsh-Gordon coefficients needed in tmatrix() subroutine - 
+C  MNLMB: number of Clebsh-Gordon coefficients needed in tmatrix() subroutine -
 C         set according to current LMAX
-""" 
-    "C         MLMAX:  1  2   3    4    5    6    7     8     9     "
-              "10    11     12     13     14     15\n"
-    "C         MNLMB: 19 126 498 1463 3549 7534 14484 25821 43351 "
-              "69322 106470 158067 227969 320664 441320\n"
-    """C  MNPSI: number of phase shift values tabulated in phase shift file
+"""
+             "C         MLMAX:  1  2   3    4    5    6    7     8     9     "
+             "10    11     12     13     14     15\n"
+             "C         MNLMB: 19 126 498 1463 3549 7534 14484 25821 43351 "
+             "69322 106470 158067 227969 320664 441320\n" """
+C  MNPSI: number of phase shift values tabulated in phase shift file
 C  MNEL : number of elements for which phase shifts are tabulated
 C  MNT0 : number of beams for which delta amplitude calculation is required
 C  MNATOMS: currently must be set to 1. In principle number of different atomic
@@ -300,19 +328,20 @@ C      positions in a superlattice wrt the reference periodicity when computing
 C      TLEED beams for a superlattice not present in the reference structure
 C  MNDEB: number of thermal variation steps to be performed (outer var. loop)
 C  MNCSTEP: number of geometric variation steps to be performed """
-            +"(inner var. loop)\n\n")
+             + "(inner var. loop)\n\n")
     param += "      PARAMETER( MLMAX = {} )\n".format(rp.LMAX)
     param += "      PARAMETER( MNLMB = {} )\n".format(MLMAX[rp.LMAX-1])
     param += ("      PARAMETER( MNPSI = {}, MNEL = {} )\n"
-                     .format(len(rp.phaseshifts), (len(rp.phaseshifts[0][1]))))
+              .format(len(rp.phaseshifts), (len(rp.phaseshifts[0][1]))))
     param += "      PARAMETER( MNT0 = {} )\n".format(len(beamlist))
     param += "      PARAMETER( MNATOMS = 1 )\n"
     param += "      PARAMETER( MNDEB = {} )\n".format(vibsteps)
     param += "      PARAMETER( MNCSTEP = {} )\n".format(geosteps)
     return din_main, din_short, param
 
+
 def generateDeltaBasic(sl, rp):
-    """Generates the part of the input for delta-amplitudes that is the same 
+    """Generates the part of the input for delta-amplitudes that is the same
     for all atoms, and returns it as a string."""
     output = ""
     output += rp.systemName+" "+rp.timestamp+"\n"
@@ -320,10 +349,10 @@ def generateDeltaBasic(sl, rp):
     ol = f72x2.write([rp.THEO_ENERGIES[0], rp.THEO_ENERGIES[1]+0.01])
     output += ol.ljust(24) + "EI,EF\n"
     f74x2 = ff.FortranRecordWriter('2F7.4')
-    ucsurf = np.transpose(sl.ucell[:2,:2])
+    ucsurf = sl.ucell[:2, :2].T
     if sl.bulkslab is None:
         sl.bulkslab = sl.makeBulkSlab(rp)
-    ucbulk = np.transpose(sl.bulkslab.ucell[:2,:2])
+    ucbulk = sl.bulkslab.ucell[:2, :2].T
     ol = f74x2.write(ucbulk[0])
     output += ol.ljust(24) + 'ARA1\n'
     ol = f74x2.write(ucbulk[1])
