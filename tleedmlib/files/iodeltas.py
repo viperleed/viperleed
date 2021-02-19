@@ -283,9 +283,9 @@ def generateDeltaInput(atom, targetel, sl, rp, deltaBasic="", auxbeams="",
         din += ol.ljust(29)+"CDISP(z,x,y) - z pointing towards bulk\n"
     din += (
         """-------------------------------------------------------------------
-        --- vibrational displacements of atomic site in question        ---
-        -------------------------------------------------------------------
-        """)
+--- vibrational displacements of atomic site in question        ---
+-------------------------------------------------------------------
+""")
     if targetel == "vac":
         viblist = [0.]
     elif targetel in atom.disp_vib:

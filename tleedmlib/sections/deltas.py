@@ -162,7 +162,8 @@ def runDelta(runtask):
                      os.path.join(base, runtask.deltaname))
     except Exception:
         logger.error("Failed to copy delta output file DELWV"
-                     " to main folder as" + runtask.deltaname)
+                     " to main folder as " + runtask.deltaname,
+                     exc_info=True)
         return ("Error encountered by DeltaRunTask " + runtask.deltaname
                 + ": Failed to copy result file out.")
     # append log
