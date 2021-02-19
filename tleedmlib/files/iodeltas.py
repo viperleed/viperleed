@@ -287,7 +287,7 @@ def generateDeltaInput(atom, targetel, sl, rp, deltaBasic="", auxbeams="",
         -------------------------------------------------------------------
         """)
     if targetel == "vac":
-        viblist = [0.0]
+        viblist = [0.]
     elif targetel in atom.disp_vib:
         viblist = atom.disp_vib[targetel]
     else:
@@ -296,12 +296,20 @@ def generateDeltaInput(atom, targetel, sl, rp, deltaBasic="", auxbeams="",
     ol = i4.write([vibsteps])
     din += ol.ljust(29) + "NDEB - number of vib. amplitudes to be considered\n"
     f74 = ff.FortranRecordWriter("F7.4")
-    for disp in viblist:
+    if targetel.lower() != "vac":
         # "default" vibamp + offset, not just offset
-        if targetel.lower() == "vac":
-            vibamp = 0.0
-        else:
-            vibamp = atom.site.vibamp[targetel] + disp
+        vibamps = [v + atom.site.vibamp[targetel] for v in viblist]
+        if any([v <= 0 for v in vibamps]):
+            logger.warning(
+                "Vibrational amplitudes for {} contain values <= 0 "
+                "(smallest: {}). Shifting displacement list to avoid "
+                "non-positive numbers.".format(atom, min(vibamps)))
+            corr = min([v for v in vibamps if v > 0]) - min(vibamps)
+            vibamps = [v + corr for v in vibamps]
+            viblist = [v + corr for v in viblist]
+    else:
+        vibamps = [0.]
+    for vibamp in vibamps:
         ol = f74.write([vibamp])
         din += ol.ljust(29)+"DRPER_A\n"
 
