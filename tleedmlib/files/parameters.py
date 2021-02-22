@@ -312,7 +312,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                            .format(param, type_.__name__))
             rpars.setHaltingLevel(haltingOnFail)
             return 1
-        outOfRange = (False, False)
+        outOfRange = [False, False]
         if range_[0] is not None and (v < range_[0] or
                                       (range_exclude[0] and v == range_[0])):
             outOfRange[0] = True
@@ -482,7 +482,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                 rpars.SYMMETRY_EPS_Z = rpars.SYMMETRY_EPS
         # non-trivial parameters
         elif param == 'BEAM_INCIDENCE':
-            range_ = {'THETA': (0, 90), 'PHI': (0, 360)}
+            range_ = {'THETA': (-90, 90), 'PHI': (0, 360)}
             outOfRangeEvent = {'THETA': ('fail', 'fail'),
                                'PHI': ('modulo', 'modulo')}
             if ',' in value:

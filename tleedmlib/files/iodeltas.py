@@ -302,7 +302,7 @@ def generateDeltaInput(atom, targetel, sl, rp, deltaBasic="", auxbeams="",
         if any([v <= 0 for v in vibamps]):
             logger.warning(
                 "Vibrational amplitudes for {} contain values <= 0 "
-                "(smallest: {}). Shifting displacement list to avoid "
+                "(smallest: {:.4f}). Shifting displacement list to avoid "
                 "non-positive numbers.".format(atom, min(vibamps)))
             corr = min([v for v in vibamps if v > 0]) - min(vibamps)
             vibamps = [v + corr for v in vibamps]
