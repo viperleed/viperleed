@@ -656,6 +656,7 @@ def search(sl, rp):
     lastconfig = None
     rp.searchMaxGenInit = rp.SEARCH_MAX_GEN
     absstarttime = timer()
+    tried_repeat = False        # if SD.TL is not written, try restarting
     while repeat:
         if first:
             logger.info("Starting search. See files Search-progress.pdf "
@@ -761,6 +762,23 @@ def search(sl, rp):
                         if content:
                             newData = io.readSDTL_blocks(
                                 content, whichR=rp.SEARCH_BEAMS)
+                    elif t >= 900 and rp.halting < 3:
+                        stop = True
+                        if tried_repeat:
+                            logger.warning(
+                                "No SD.TL file was written for 15 minutes "
+                                "after restarting the search. Search will "
+                                "stop.")
+                            repeat = False
+                            rp.setHaltingLevel(2)
+                        else:
+                            repeat = True
+                            tried_repeat = True
+                            logger.warning(
+                                "No SD.TL file was written for 15 minutes "
+                                "after the search started. Trying to restart. "
+                                "You can suppress this behaviour by setting "
+                                "the HALTING parameter to 3.")
                     for (gen, rfacs, configs) in newData:
                         gens.append(gen + genOffset)
                         sdtlGenNum = gen
@@ -971,6 +989,9 @@ def search(sl, rp):
     # process SD.TL to get POSCAR_OUT, VIBROCC_OUT
     try:
         processSearchResults(sl, rp)
+    except FileNotFoundError:
+        logger.error("Cannot interpret search results without SD.TL file.")
+        rp.setHaltingLevel(2)
     except Exception:
         logger.error("Error processing search results: ", exc_info=True)
         raise
