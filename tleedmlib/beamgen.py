@@ -14,7 +14,7 @@ import fortranformat as ff
 logger = logging.getLogger("tleedm.beamgen")
 
 
-def runBeamGen(sl, rp, beamgensource=os.path.join('fortran_source',
+def runBeamGen(sl, rp, beamgensource=os.path.join('tensorleed',
                                                   'beamgen3.out'),
                domains=False):
     """Writes necessary input for the beamgen3 code, the runs it. The relevant

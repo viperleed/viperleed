@@ -129,10 +129,11 @@ def getYfunc(ivfunc, v0i):
 
 
 def getTLEEDdir(home="", version=0.):
-    """Finds directories in the 'source' folder that have names starting with
-    'TensErLEED', then picks the one with the highest version number. Returns
-    a relative path to that directory, eg './source/TensErLEED-v1.6'."""
-    sd = os.path.join(home, 'source')
+    """Finds directories in the 'tensorleed' folder that have names starting
+    with 'TensErLEED', then picks the one with the highest version number.
+    Returnsa relative path to that directory, eg
+    './tensorleed/TensErLEED-v1.6'."""
+    sd = os.path.join(home, 'tensorleed')
     ls = [dn for dn in os.listdir(sd) if (os.path.isdir(os.path.join(sd, dn))
                                           and dn.startswith('TensErLEED'))]
     highest = 0.0

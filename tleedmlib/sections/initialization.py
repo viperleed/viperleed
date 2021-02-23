@@ -72,8 +72,8 @@ def initialization(sl, rp, subdomain=False):
             rp.setHaltingLevel(1)
     if newpsGen:
         try:
-            rundgrenpath = os.path.join('source', 'EEASiSSS.x')
-            serneliuspath = os.path.join('source', 'seSernelius')
+            rundgrenpath = os.path.join('tensorleed', 'EEASiSSS.x')
+            serneliuspath = os.path.join('tensorleed', 'seSernelius')
             logger.info("Generating phaseshifts data... ")
             (rp.phaseshifts_firstline,
              rp.phaseshifts) = runPhaseshiftGen(sl, rp,
@@ -220,7 +220,7 @@ def initialization(sl, rp, subdomain=False):
     # generate beamlist
     logger.info("Generating _BEAMLIST...")
     try:
-        bgenpath = os.path.join('source', 'beamgen3.out')
+        bgenpath = os.path.join('tensorleed', 'beamgen3.out')
         runBeamGen(sl, rp, beamgensource=bgenpath)
         # this does NOT read the resulting file!
     except Exception:
@@ -511,7 +511,7 @@ def init_domains(rp):
     # run beamgen for the whole system
     logger.info("Generating _BEAMLIST...")
     try:
-        bgenpath = os.path.join('source', 'beamgen3.out')
+        bgenpath = os.path.join('tensorleed', 'beamgen3.out')
         runBeamGen(rp.pseudoSlab, rp, beamgensource=bgenpath, domains=True)
         # this does NOT read the resulting file!
     except Exception:

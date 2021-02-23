@@ -16,12 +16,14 @@ import tleedmlib as tl
 
 logger = logging.getLogger("tleedm.psgen")
 
-def runPhaseshiftGen(sl,rp, psgensource=os.path.join('source','EEASiSSS.x'),
-                            excosource=os.path.join('source','seSernelius'),
-                            atdenssource=os.path.join('source', 
-                                                      'atom_density_files')):
-    """Creates required input for EEASiSSS.x, then runs it. Reads the output 
-    files and extracts information for _PHASESHIFTS file, then returns that 
+
+def runPhaseshiftGen(sl, rp,
+                     psgensource=os.path.join('tensorleed', 'EEASiSSS.x'),
+                     excosource=os.path.join('tensorleed', 'seSernelius'),
+                     atdenssource=os.path.join('tensorleed',
+                                               'atom_density_files')):
+    """Creates required input for EEASiSSS.x, then runs it. Reads the output
+    files and extracts information for _PHASESHIFTS file, then returns that
     information (without writing _PHASESHIFTS)."""
     shortpath = rp.workdir
     if len(os.path.relpath(rp.workdir)) < len(shortpath):
@@ -29,38 +31,37 @@ def runPhaseshiftGen(sl,rp, psgensource=os.path.join('source','EEASiSSS.x'),
     psgensource = os.path.join(shortpath, psgensource)
     excosource = os.path.join(shortpath, excosource)
     atdenssource = os.path.join(shortpath, atdenssource)
-    
+
     lmax = 16   # this could be a variable, for now set fixed...
     nsl, newbulkats = sl.addBulkLayers(rp)
-    
-    outvals = {}    # dict containing lists of values to output. 
-                    #   format outvals[energy][block][L]
-                    
+    outvals = {}
+    # dict containing lists of values to output: outvals[energy][block][L]
+
     # The following originally calculated phaseshifts first for only the bulk,
     #   then for the slab, taking phaseshifts from the bulk calculations if the
     #   site is present at all in the bulk. However, this means that different
-    #   muffin tin parameters are applied for the different phaseshifts. 
+    #   muffin tin parameters are applied for the different phaseshifts.
     # New solution:
-    #   Take phaseshifts from the slab calculation only. Average only over 
-    #   atoms NOT added as "new bulk" ("newbulkats" list above) to avoid 
+    #   Take phaseshifts from the slab calculation only. Average only over
+    #   atoms NOT added as "new bulk" ("newbulkats" list above) to avoid
     #   influence of the (false) bottom "surface".
 #    for bulk in [True,False]:
 #    wsl = bsl if bulk else nsl  # working slab for this iteration
     # before starting on unit cell, determine whether supercell is needed:
-    blocks = []  #tuples of sites (with poscar elements) and elements 
-        #  (same as POSCAR if no ELEMENT_MIX, ELEMENT_MIX elements if not)
+    blocks = []  # tuples of sites (with poscar elements) and elements
+    #        (same as POSCAR if no ELEMENT_MIX, ELEMENT_MIX elements if not)
     for site in nsl.sitelist:
         if site.el in rp.ELEMENT_MIX:
             for el in rp.ELEMENT_MIX[site.el]:
-                blocks.append((site,el))
+                blocks.append((site, el))
         else:
-            blocks.append((site,site.el))
-    scsize = 1 
+            blocks.append((site, site.el))
+    scsize = 1
     if len(rp.ELEMENT_MIX) > 0:
         minnum = -1
-        for (site, el) in [(site, el) for (site, el) in blocks if site.el 
-                          in rp.ELEMENT_MIX and (site.occ[el] > 0. or
-                                                 el in site.mixedEls)]:
+        for (site, el) in [(site, el) for (site, el) in blocks if site.el
+                           in rp.ELEMENT_MIX and (site.occ[el] > 0. or
+                                                  el in site.mixedEls)]:
             al = [at for at in nsl.atlist if at.site == site]
             atcount = len(al)*site.occ[el]
             if minnum < 0 or (minnum > atcount >= 0):
@@ -77,7 +78,8 @@ def runPhaseshiftGen(sl,rp, psgensource=os.path.join('source','EEASiSSS.x'),
             scsize = maxcells
             # don't warn - this is a large unit cell either way.
         if len(nsl.atlist) * scsize > maxats:
-            logger.debug("Phaseshift generation: Given element "
+            logger.debug(
+                "Phaseshift generation: Given element "
                 "concentrations would require a very large supercell. "
                 "Element concentrations for low-occupancy elements will be "
                 "increased to avoid this. This only concerns the phaseshifts "
@@ -86,20 +88,20 @@ def runPhaseshiftGen(sl,rp, psgensource=os.path.join('source','EEASiSSS.x'),
             minsize = 1
             for site in [s for s in nsl.sitelist if s.el in rp.ELEMENT_MIX]:
                 ats = len([at for at in nsl.atlist if at.site == site])
-                els = len([el for el in rp.ELEMENT_MIX[site.el] if 
-                                   site.occ[el] > 0.])
+                els = len([el for el in rp.ELEMENT_MIX[site.el]
+                           if site.occ[el] > 0.])
                 minsize = max(minsize, int(np.ceil(2*els / ats)))
             scsize = max(minsize, int(maxats / len(nsl.atlist)))
-                
+
     subatlists = {}     # atlist per block tuple
-    if scsize > 1:  #construct supercell to get enough atoms
-        xsize = int(np.ceil(np.sqrt(scsize)))  # if scsize is not prime, try 
-        while scsize % xsize != 0:             #   making it close to square 
+    if scsize > 1:  # construct supercell to get enough atoms
+        xsize = int(np.ceil(np.sqrt(scsize)))  # if scsize is not prime, try
+        while scsize % xsize != 0:             # making it close to square
             xsize += 1
         ysize = int(scsize / xsize)
         cpatlist = nsl.atlist[:]
         for at in cpatlist:
-            for i in range(0,xsize):
+            for i in range(0, xsize):
                 for j in range(0, ysize):
                     if i == j == 0:
                         continue
@@ -107,39 +109,39 @@ def runPhaseshiftGen(sl,rp, psgensource=os.path.join('source','EEASiSSS.x'),
                     tmpat.pos[0] += i
                     tmpat.pos[1] += j
         nsl.getCartesianCoordinates()
-        nsl.ucell = np.dot(np.array([[xsize,0,0],[0,ysize,0],[0,0,1]]),
+        nsl.ucell = np.dot(np.array([[xsize, 0, 0], [0, ysize, 0], [0, 0, 1]]),
                            nsl.ucell)
         nsl.getFractionalCoordinates()
-      
+
     for site in nsl.sitelist:
         if site.el in rp.ELEMENT_MIX:
             occdict = {}
             for (k, v) in site.occ.items():
                 if v > 0.0 or k in rp.ELEMENT_MIX[site.el]:
                     occdict[k] = v
-            occdict = dict(sorted(occdict.items(), 
-                                  key = lambda kv:(kv[1],kv[0])))
-                                    #sort by occupancy values
+            # sort by occupancy values
+            occdict = dict(sorted(occdict.items(),
+                                  key=lambda kv: (kv[1], kv[0])))
             al = [at for at in nsl.atlist if at.site == site]
             totats = len(al)
             for el in occdict:
-                subatlists[(site,el)] = []
+                subatlists[(site, el)] = []
                 reqats = int(np.ceil(totats * site.occ[el]))
                 reqats = max(2, reqats)
                 while reqats > 0 and len(al) > 0:
                     at = random.choice(al)
-                    subatlists[(site,el)].append(at)
+                    subatlists[(site, el)].append(at)
                     al.remove(at)
                     reqats -= 1
-            if len(al) > 0: #should never happen
+            if len(al) > 0:  # should never happen
                 logger.warning("Error in _PHASESHIFTS file "
-                        "generation: Not all atoms were distributed!")
+                               "generation: Not all atoms were distributed!")
         else:
-            subatlists[(site,site.el)] = [at for at in nsl.atlist 
-                                          if at.site == site]
-    blocks = [(site,el) for (site,el) in blocks 
-              if len(subatlists[(site,el)]) > 0]
-#    if bulk: 
+            subatlists[(site, site.el)] = [at for at in nsl.atlist
+                                           if at.site == site]
+    blocks = [(site, el) for (site, el) in blocks
+              if len(subatlists[(site, el)]) > 0]
+#    if bulk:
 #        bulksites = [site for (site,el) in blocks]
 #    else:
 #        # site objects are different in the new slab; copy to equivalent
@@ -158,12 +160,12 @@ def runPhaseshiftGen(sl,rp, psgensource=os.path.join('source','EEASiSSS.x'),
 #                  "LatticeConstant(Angstroms), nshell\n")
 #    else:
     output += ("'s'  1.00 16      BulkOrSlab('b' or 's'), "
-              "LatticeConstant(Angstroms), nshell\n")
+               "LatticeConstant(Angstroms), nshell\n")
     uct = nsl.ucell.transpose()
-    for i in range(0,3):
+    for i in range(0, 3):
         ol = ''
-        for j in range(0,3):
-            s = str(round(uct[i,j],4))+' '
+        for j in range(0, 3):
+            s = str(round(uct[i, j], 4))+' '
             ol += s.ljust(8)
         if i == 0:
             ol += '      CoordinatesOfUnitCell(LCunits)\n'
@@ -172,7 +174,7 @@ def runPhaseshiftGen(sl,rp, psgensource=os.path.join('source','EEASiSSS.x'),
         output += ol
 
     output += (str(len(nsl.atlist))+"  "+str(len(nsl.atlist))
-               +"                  #AtomTypes,#OccupiedAtomTypes\n")
+               + "                  #AtomTypes,#OccupiedAtomTypes\n")
     ptl = [el.lower() for el in tl.leedbase.periodic_table]
 
     chemels = {}
@@ -184,29 +186,29 @@ def runPhaseshiftGen(sl,rp, psgensource=os.path.join('source','EEASiSSS.x'),
             chemel = el.capitalize()
         else:
             logger.error("Error generating _PHASESHIFTS file: Could not "
-                          "identify "+el+" as a chemical element. Define "
-                          "ELEMENT_RENAME or ELEMENT_MIX parameter.")
+                         "identify "+el+" as a chemical element. Define "
+                         "ELEMENT_RENAME or ELEMENT_MIX parameter.")
             raise
-        chgdenrelpath = os.path.join(atdenssource,chemel,"chgden"+chemel)
-        if os.name == 'nt':     #windows - replace the backslashes.
-            chgdenrelpath = chgdenrelpath.replace('/','\\')
+        chgdenrelpath = os.path.join(atdenssource, chemel, "chgden"+chemel)
+        if os.name == 'nt':     # windows - replace the backslashes.
+            chgdenrelpath = chgdenrelpath.replace('/', '\\')
         chemels[el] = chemel
         chemelspaths[el] = chgdenrelpath
-    
+
     nsl.sortByZ(botToTop=True)
     for at in nsl.atlist:
-        # realcartpos = np.dot(nsl.ucell, at.pos)   
-              # use the "real" cartesian system, with Z going up
-        for (site,el) in blocks:
-            if at in subatlists[(site,el)]:
+        # realcartpos = np.dot(nsl.ucell, at.pos)
+        # use the "real" cartesian system, with Z going up
+        for (site, el) in blocks:
+            if at in subatlists[(site, el)]:
                 chemel = chemels[el]
                 chgdenpath = chemelspaths[el]
         output += ("1 "+str(tl.leedbase.periodic_table.index(chemel)+1)
                    + ".  0.  0.  '"+chgdenpath+"'\n")
         ol = ""
-        for j in range(0,3):
+        for j in range(0, 3):
             # ol += str(round(realcartpos[j],4))+" "
-            ol += str(round(at.cartpos[j],4))+" "
+            ol += str(round(at.cartpos[j], 4))+" "
         output += ol + "     Coordinates(LCunits)\n"
     output += "SCATTERING: \n"
     output += "'"+excosource+"' |exchange-correlation file\n"
@@ -215,17 +217,17 @@ def runPhaseshiftGen(sl,rp, psgensource=os.path.join('source','EEASiSSS.x'),
     output += "'p' |SelectOutput: 'phaseshift'/'sigma'/'dataflow'\n"
     output += "'n' |phaseshift: print_SpinPhaseShift? 'yes'/no'\n"
     output += ("'n' |phaseshift,sigma: print_log10(DsigmaDomega)? "
-              "'yes'/'no'\n")
+               "'yes'/'no'\n")
     output += "'n' |phaseshift,sigma: print_DsigmaDtheta? 'yes'/'no'\n"
     output += "'n' |phaseshift,sigma: print_Sherman? 'yes'/'no'\n"
     output += ("'n' |phaseshift,sigma: print_TotalCrossSection? "
-              "'yes'/'no'\n")
+               "'yes'/'no'\n")
     output += "'n' |dataflow: print_RhoPot? 'yes'/'no'\n"
     output += "'n' |dataflow: print_PSvsE? 'yes'/'no'\n"
     output += "'n' |dataflow: print_WaveFunction? 'yes'/'no'\n"
     output += ("0.0," + str(round(float(rp.THEO_ENERGIES[1]) + 20, 1))
-               +","+str(round(float(rp.THEO_ENERGIES[2]),1))
-               +" |'phaseshift'/'dataflow' run: E1->E2,PS_Estep\n")
+               + ","+str(round(float(rp.THEO_ENERGIES[2]), 1))
+               + " |'phaseshift'/'dataflow' run: E1->E2,PS_Estep\n")
     output += "100.,100.,1  |'sigma' run: E1->E2,NumVals\n"
     # TODO - check the following, do they need to be changed?
     output += "MT OPTIMIZATION (Nelder-Mead):\n"
@@ -239,19 +241,19 @@ def runPhaseshiftGen(sl,rp, psgensource=os.path.join('source','EEASiSSS.x'),
     try:
         with open(outfilename, 'w') as wf:
             wf.write(output)
-    except:
+    except Exception:
         logger.error("Phaseshift data generation: Failed to write "
-                      +outfilename+". Proceeding with execution...")
+                     + outfilename + ". Proceeding with execution...")
     if os.name == 'nt':
         logger.error("Phaseshift generation is currently not "
-                         "supported on Windows. Use a linux shell to run "
-                         "phaseshift generation script.")
+                     "supported on Windows. Use a linux shell to run "
+                     "phaseshift generation script.")
         raise EnvironmentError("Phaseshift generation is currently not "
                                "supported on Windows.")
     else:
-        subprocess.run(psgensource,input=output,encoding='ascii')
+        subprocess.run(psgensource, input=output, encoding='ascii')
     # go through all the files that were generated by EEASiSSS and read
-    filelist = [filename for filename in os.listdir('.') if 
+    filelist = [filename for filename in os.listdir('.') if
                 filename.startswith('PS.r.')]
     rgx = re.compile(r'PS\.r\.[0-9]+\.[0-9]+')
     remlist = []
@@ -265,36 +267,37 @@ def runPhaseshiftGen(sl,rp, psgensource=os.path.join('source','EEASiSSS.x'),
             else:
                 try:
                     int(filename.split('.')[-1])
-                except:
+                except Exception:
                     remlist.append(filename)
     for filename in remlist:
         filelist.remove(filename)
     if not filelist:
         logger.error("Phaseshift generation failed: No output files found.")
         raise RuntimeError("Phaseshift generation failed.")
-        
+
+    # sort by atom number
     filelist.sort(key=lambda filename: int(filename.split('.')[-1]))
-                                                #now sorted by atom number
     firstline = ""
-    atoms_phaseshifts = [[] for i in range(0,len(filelist))]    
-                                                #data from all the PS files                                               
-    for (i,filename) in enumerate(filelist):
-#        if bulk or wsl.atlist[i].site not in bulksites: 
+    # data from all the PS files
+    atoms_phaseshifts = [[] for i in range(0, len(filelist))]
+    for (i, filename) in enumerate(filelist):
+        # if bulk or wsl.atlist[i].site not in bulksites:
         if nsl.atlist[i] not in newbulkats:
             psfile = open(filename, 'r')
             reade = -1.
             pslist = []
-            ps_of_e = {}    #dictionary of pslist for energy, where pslist 
-                            # is a list of floats as read from the PS-file
-            for (j,line) in enumerate(psfile):
+            ps_of_e = {}
+            # dictionary of pslist for energy, where pslist is a list of
+            #  floats as read from the PS-file
+            for (j, line) in enumerate(psfile):
                 if j == 0:
-#                    if not bulk: 
+                    # if not bulk:
                     if firstline == "":
-                        firstline = line[2:] #ignore I2 at beginning
-                else:   #line should contain data
+                        firstline = line[2:]  # ignore I2 at beginning
+                else:   # line should contain data
                     values = [float(s) for s in line.split()]
-                    if reade < 0 or values[0] == reade + rp.THEO_ENERGIES[2]:     
-                        #new energy value, start phaseshift value list
+                    if reade < 0 or values[0] == reade + rp.THEO_ENERGIES[2]:
+                        # new energy value, start phaseshift value list
                         if reade >= 0:
                             ps_of_e[reade] = pslist
                         reade = values[0]
@@ -304,17 +307,17 @@ def runPhaseshiftGen(sl,rp, psgensource=os.path.join('source','EEASiSSS.x'),
             ps_of_e[reade] = pslist
             psfile.close()
             atoms_phaseshifts[i] = ps_of_e
-        os.remove(os.path.join('.',filename))   #delete files
-    for (site,el) in blocks:
+        os.remove(os.path.join('.', filename))   # delete files
+    for (site, el) in blocks:
         writeblock = False
         pssum = None
-        for (i,at) in enumerate(nsl.atlist):
-            if at in newbulkats or at not in subatlists[(site,el)]:
+        for (i, at) in enumerate(nsl.atlist):
+            if at in newbulkats or at not in subatlists[(site, el)]:
                 continue
-#            if bulk or at.site not in bulksites:
+            # if bulk or at.site not in bulksites:
             if pssum is None:
                 writeblock = True
-                pel = at.el #POSCAR element for block
+                pel = at.el  # POSCAR element for block
                 pssum = atoms_phaseshifts[i]
                 n = 1
             else:
@@ -326,39 +329,39 @@ def runPhaseshiftGen(sl,rp, psgensource=os.path.join('source','EEASiSSS.x'),
             # append the values for the whole block to outvals:
             for en in pssum:
                 pssum[en] = [v/n for v in pssum[en]]
-                if not en in outvals: 
+                if en not in outvals:
                     outvals[en] = []
-                outvals[en].append((pel,el,site,pssum[en]))
+                outvals[en].append((pel, el, site, pssum[en]))
     # clean up
-#    bss = "-bulk" if bulk else "-slab"
+    # bss = "-bulk" if bulk else "-slab"
     bss = ""
     try:
-        os.rename('logfile','eeasisss-logfile'+bss)
-    except:
+        os.rename('logfile', 'eeasisss-logfile'+bss)
+    except Exception:
         logger.warning("Failed to rename phaseshift generation file "
-                        "'logfile' to 'eeasisss-logfile"+bss+"'")
+                       "'logfile' to 'eeasisss-logfile"+bss+"'")
     try:
-        os.rename('QMTvsE','eeasisss-QMTvsE'+bss)
-    except:
+        os.rename('QMTvsE', 'eeasisss-QMTvsE'+bss)
+    except Exception:
         logger.warning("Failed to rename phaseshift generation file "
-                        "'QMTvsE' to 'eeasisss-QMTvsE"+bss+"'")
+                       "'QMTvsE' to 'eeasisss-QMTvsE"+bss+"'")
     try:
-        os.rename('RMTvsE','eeasisss-RMTvsE'+bss)
-    except:
+        os.rename('RMTvsE', 'eeasisss-RMTvsE'+bss)
+    except Exception:
         logger.warning("Failed to rename phaseshift generation file "
-                        "'RMTvsE' to 'eeasisss-RMTvsE"+bss+"'")
+                       "'RMTvsE' to 'eeasisss-RMTvsE"+bss+"'")
     try:
-        os.rename('V0vsE','eeasisss-V0vsE'+bss)
-    except:
+        os.rename('V0vsE', 'eeasisss-V0vsE'+bss)
+    except Exception:
         logger.warning("Failed to rename phaseshift generation file "
-                        "'V0vsE' to 'eeasisss-V0vsE"+bss+"'")
+                       "'V0vsE' to 'eeasisss-V0vsE"+bss+"'")
     # sort blocks in outvals:
     outvalsSorted = {}
-    outvalLength = 0    # Due to a bug in eeasisss, it does not generate 
-            # exactly the energies it is asked to; this can result in 
-            # different energies being present for the bulk and the slab
-            # calculations. Workaround: Discard energies where not all sites 
-            # are present.
+    outvalLength = 0
+    # Due to a bug in eeasisss, it does not generate exactly the energies it
+    # is asked to; this can result in different energies being present for
+    # the bulk and the slab calculations. Workaround: Discard energies where
+    # not all sites are present.
     for en in outvals:
         outvalsSorted[en] = []
         if len(outvals[en]) > outvalLength:
@@ -374,20 +377,20 @@ def runPhaseshiftGen(sl,rp, psgensource=os.path.join('source','EEASiSSS.x'),
         for cel in chemelList:
             for site in siteList:
                 for en in outvalsSorted:
-                    for (o_el,o_cel,o_site,pslist) in outvals[en]:
-                        if (o_el == el and o_cel == cel 
-                              and o_site.isEquivalent(site)):
+                    for (o_el, o_cel, o_site, pslist) in outvals[en]:
+                        if (o_el == el and o_cel == cel
+                                and o_site.isEquivalent(site)):
                             outvalsSorted[en].append(pslist)
     # return:
     # writePHASESHIFTS wants values as list of tuples and energies in Hartree:
     phaseshifts = []
     for en in outvalsSorted:
-        if len(outvalsSorted[en]) == outvalLength:    # drop energies where
-                        # phaseshift was not calculated for all sites
-            phaseshifts.append((en/27.2116,outvalsSorted[en]))
+        if len(outvalsSorted[en]) == outvalLength:
+            # drop energies where phaseshift was not calculated for all sites
+            phaseshifts.append((en/27.2116, outvalsSorted[en]))
     if firstline == "":
         logger.error("Could not find first line for PHASESHIFTS file "
-                         "(should contain MUFTIN parameters).")
+                     "(should contain MUFTIN parameters).")
         firstline = "ERROR: first line not found in EEASiSSS.x output\n"
         rp.setHaltingLevel(2)
     else:
@@ -395,6 +398,5 @@ def runPhaseshiftGen(sl,rp, psgensource=os.path.join('source','EEASiSSS.x'),
         nblocks = len(phaseshifts[0][1])
         firstline = str(nblocks).rjust(3)+"  "+firstline
         # remove the "PS.r.**.**"
-        firstline = re.sub("PS\.r\.[0-9]+\.[0-9]+", "", firstline)
-    
+        firstline = re.sub(r"PS\.r\.[0-9]+\.[0-9]+", "", firstline)
     return (firstline, phaseshifts)
