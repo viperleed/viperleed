@@ -306,7 +306,10 @@ def generateDeltaInput(atom, targetel, sl, rp, deltaBasic="", auxbeams="",
                 "non-positive numbers.".format(atom, min(vibamps)))
             corr = min([v for v in vibamps if v > 0]) - min(vibamps)
             vibamps = [v + corr for v in vibamps]
-            viblist = [v + corr for v in viblist]
+            for i in range(len(viblist)):
+                # can't be done by list comprehension because it should modify
+                #   the list that 'viblist' is pointing to, not make a copy
+                viblist[i] += corr
     else:
         vibamps = [0.]
     for vibamp in vibamps:
