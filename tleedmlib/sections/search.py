@@ -728,23 +728,6 @@ def search(sl, rp):
                         while not os.path.isfile("SD.TL") and not i >= 300:
                             time.sleep(1)
                             i += 1
-                else:
-                    for k in ["dec", "best", "all"]:
-                        if (rp.SEARCH_MAX_DGEN[k] > 0 and len(gens) > 1
-                            and rp.GAUSSIAN_WIDTH_SCALING != 1
-                            and (gens[-1] - realLastConfigGen[k]
-                                 >= rp.SEARCH_MAX_DGEN[k])):
-                            stop = True
-                            o = {"all": "all structures",
-                                 "best": "best structure",
-                                 "dec": "best 10% of structures"}
-                            logger.info(
-                                "Search convergence criterion reached: max. "
-                                "generations without change ({}): {}/{}."
-                                .format(
-                                    o[k], gens[-1] - realLastConfigGen[k],
-                                    int(rp.SEARCH_MAX_DGEN[k])))
-                            break
                 if rp.GAUSSIAN_WIDTH != gaussianWidthOri:
                     stop = True
                     repeat = True
@@ -793,6 +776,9 @@ def search(sl, rp):
                                     speed))
                             printt = timer()
                             check_datafiles = True
+                        dgen = {}
+                        for k in ["dec", "best", "all"]:
+                            dgen[k] = gens[-1] - realLastConfigGen[k]
                         if configs != realLastConfig["all"]:
                             realLastConfig["all"] = configs
                             realLastConfigGen["all"] = gens[-1]
@@ -805,6 +791,22 @@ def search(sl, rp):
                         if configs[0] != realLastConfig["best"]:
                             realLastConfig["best"] = configs[0]
                             realLastConfigGen["best"] = gens[-1]
+                        for k in ["dec", "best", "all"]:
+                            if (rp.SEARCH_MAX_DGEN[k] > 0
+                                    and len(gens) > 1 and not stop
+                                    and rp.GAUSSIAN_WIDTH_SCALING != 1
+                                    and (dgen[k] >= rp.SEARCH_MAX_DGEN[k])):
+                                stop = True
+                                o = {"all": "all structures",
+                                     "best": "best structure",
+                                     "dec": "best 10% of structures"}
+                                logger.info(
+                                    "Search convergence criterion reached: "
+                                    "max. generations without change ({}): "
+                                    "{}/{}.".format(
+                                        o[k], dgen[k],
+                                        int(rp.SEARCH_MAX_DGEN[k])))
+                                break
                     if len(newData) > 0:
                         lastconfig = newData[-1][2]
                     if check_datafiles and not (stop and repeat):

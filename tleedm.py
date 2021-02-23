@@ -130,10 +130,9 @@ def runSection(index, sl, rp):
                     except Exception:
                         logger.error("Error while reading required file "
                                      "EXPBEAMS.csv")
-                        raise
-                except Exception:
-                    logger.error("Error while reading required file EXPBEAMS")
-                    raise
+                except Exception as e:
+                    logger.error("Error while reading required file EXPBEAMS",
+                                 exc_info=(type(e) != FileNotFoundError))
                 if index != 0:
                     checkEXPBEAMS(sl, rp)
             elif filename == "IVBEAMS":
@@ -151,25 +150,24 @@ def runSection(index, sl, rp):
                     else:
                         logger.error("Neither IVBEAMS not EXPBEAMS file "
                                      "found.")
-                        raise
-                except Exception:
-                    logger.error("Error while reading required file IVBEAMS")
-                    raise
+                except Exception as e:
+                    logger.error("Error while reading required file IVBEAMS",
+                                 exc_info=(type(e) != FileNotFoundError))
             elif filename == "BEAMLIST":
                 try:
                     rp.beamlist = readBEAMLIST()
                     rp.fileLoaded["BEAMLIST"] = True
-                except Exception:
+                except Exception as e:
                     logger.error("Error while reading required file "
-                                 "_BEAMLIST")
-                    raise
+                                 "_BEAMLIST", exc_info=(type(e) !=
+                                                        FileNotFoundError))
             elif filename == "VIBROCC":
                 try:
                     changeVIBROCC = readVIBROCC(rp, sl)
                     rp.fileLoaded["VIBROCC"] = True
-                except Exception:
-                    logger.error("Error while reading required file VIBROCC")
-                    raise
+                except Exception as e:
+                    logger.error("Error while reading required file VIBROCC",
+                                 exc_info=(type(e) != FileNotFoundError))
                 sl.fullUpdate(rp)
                 if changeVIBROCC:
                     if os.path.isfile("VIBROCC"):
@@ -191,7 +189,7 @@ def runSection(index, sl, rp):
                     (rp.phaseshifts_firstline, rp.phaseshifts,
                      newpsGen, newpsWrite) = readPHASESHIFTS(sl, rp)
                     if newpsGen:
-                        logging.critical(
+                        logger.error(
                             "_PHASESHIFT file generation is only supported "
                             "during initialization. Stopping execution...")
                         raise RuntimeError("Inconsistent _PHASESHIFT file")
@@ -204,24 +202,24 @@ def runSection(index, sl, rp):
                         rp.fileLoaded["PHASESHIFTS"] = True
                     else:
                         rp.fileLoaded["PHASESHIFTS"] = True
-                except Exception:
+                except Exception as e:
                     logger.error("Error while reading required file "
-                                 "_PHASESHIFTS")
-                    raise
+                                 "_PHASESHIFTS", exc_info=(type(e) !=
+                                                           FileNotFoundError))
             elif filename == "DISPLACEMENTS":
                 try:
                     readDISPLACEMENTS(rp)
                     rp.fileLoaded["DISPLACEMENTS"] = True
-                except Exception:
+                except Exception as e:
                     logger.error("Error while reading required file "
-                                 "DISPLACEMENTS")
-                    raise
+                                 "DISPLACEMENTS", exc_info=(type(e) !=
+                                                            FileNotFoundError))
             if not rp.fileLoaded[filename] and not ignoreError:
                 # and if that didn't work, stop:
                 logger.error("Step '" + sectionNames[index] + "' requires "
                              "file " + filename + ". Stopping execution...")
-                raise RuntimeError("File not found or file loading error: "
-                                   + filename)
+                rp.setHaltingLevel(3)
+                return
         i += 1
     try:
         if index == 0:
