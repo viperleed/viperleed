@@ -10,7 +10,7 @@ Functions for reading and writing files relevant to the rfactor calculation
 import logging
 import re
 import numpy as np
-import fortranformat as ff
+from viperleed import fortranformat as ff
 import os
 
 from viperleed.tleedmlib.files.beams import writeAUXEXPBEAMS

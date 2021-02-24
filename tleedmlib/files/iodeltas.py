@@ -9,7 +9,7 @@ Functions for reading and writing files relevant to the delta calculation
 
 import logging
 import numpy as np
-import fortranformat as ff
+from viperleed import fortranformat as ff
 import os
 import shutil
 

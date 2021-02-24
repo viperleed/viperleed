@@ -9,7 +9,7 @@ Functions for reading and writing files relevant to the reference calculation
 
 import numpy as np
 import logging
-import fortranformat as ff
+from viperleed import fortranformat as ff
 
 import viperleed.tleedmlib as tl
 from viperleed.tleedmlib.files.parameters import modifyPARAMETERS

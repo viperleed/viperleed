@@ -11,7 +11,7 @@ AUXEXPBEAMS
 import logging
 import numpy as np
 import re
-import fortranformat as ff
+from viperleed import fortranformat as ff
 import copy
 
 import viperleed.tleedmlib as tl

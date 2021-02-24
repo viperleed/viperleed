@@ -10,7 +10,7 @@ Functions for reading and writing the PHASESHIFTS file
 import logging
 import numpy as np
 
-import fortranformat as ff
+from viperleed import fortranformat as ff
 
 logger = logging.getLogger("tleedm.files.phaseshifts")
 

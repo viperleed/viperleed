@@ -9,7 +9,7 @@ import os
 import logging
 import subprocess
 import numpy as np
-import fortranformat as ff
+from viperleed import fortranformat as ff
 
 logger = logging.getLogger("tleedm.beamgen")
 
