@@ -65,9 +65,10 @@ def resources_path(dir_name):
     relative to the temporary path in which the "exe" is extracted during
     execution.
     """
-    # EVENTUALLY IT IS PROBABLY BETTER TO INCLUDE THE WHOLE /fonts FOLDER IN
-    # THE CORRECT PLACE, AND HAVE resources_path RETURN ITS BASE PATH (i.e.,
-    # the top-level folder in which the exe is)
+    # EVENTUALLY IT IS PROBABLY BETTER TO INCLUDE THE WHOLE /fonts FOLDER from
+    # '/guilib' IN THE CORRECT PLACE, AND HAVE resources_path RETURN ITS BASE
+    # PATH (i.e., the top-level folder in which the exe is) IF PYINSTALLER IS
+    # USED 
     if hasattr(sys, '_MEIPASS'):
         return os.path.join(sys._MEIPASS, dir_name)
     return dir_name
