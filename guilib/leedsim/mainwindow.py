@@ -27,7 +27,8 @@ import numpy as np
 import PyQt5.QtCore as qtc
 import PyQt5.QtWidgets as qtw
 
-import guilib as gl
+from viperleed import guilib as gl
+# import guilib as gl
 
 @gl.broadcast_mouse
 class LEED_GUI(qtw.QMainWindow):
@@ -188,6 +189,7 @@ class LEED_GUI(qtw.QMainWindow):
             # no file is currently open
             self.fileSaveAsPressed()
         else:
+            # TODO: ADD HERE A MESSAGE BOX ASKING IF YOU WANT TO OVERWRITE?
             self.saveToFile(self.openFile)
             self.isSaved = True
     
@@ -203,16 +205,20 @@ class LEED_GUI(qtw.QMainWindow):
     def saveToFile(self, fname):
         # Sort out the parameters, converting the values to strings
         params = copy.deepcopy(self.leedParams)
-        for key in params.keys():
+        for key, val in params.items():  # BUG: dictionary changes size upon saving
             if key == 'SUPERLATTICE' or key == 'surfBasis':
                 params[key] = np.array2string(
-                                        params[key],
+                                        val,
                                         separator=',',
                                        # precision=5,
                                         suppress_small=True
                                         ).replace('\n', '').replace(' ', '')
             elif key == 'eMax':
-                params[key] = str(params[key])
+                params[key] = str(val)
+            elif key in ('bulkGroup', 'surfGroup'):
+                params[key] = val.group
+            elif key == 'bulk3Dsym' and val is None:
+                del params[key]
         # now params contains correctly formatted strings
         params = list(params.items())
         paramsTxt = '\n'.join('{}'.format('='.join(param))
@@ -319,9 +325,11 @@ class LEED_GUI(qtw.QMainWindow):
 
         par_dict['eMax'] = float(par_dict['eMax'])
         par_dict['surfBasis'] = gl.string_matrix_to_numpy(
-            par_dict['surfBasis'], dtype=float, needs_shape=(2, 2))
+            par_dict['surfBasis'], dtype=float, needs_shape=(2, 2)
+            )
         par_dict['SUPERLATTICE'] = gl.string_matrix_to_numpy(
-            par_dict['SUPERLATTICE'], int, needs_shape=(2, 2))
+            par_dict['SUPERLATTICE'], int, needs_shape=(2, 2)
+            )
         
         try:
             par_dic['screenAperture'] = float(par_dict['screenAperture'])
@@ -367,12 +375,12 @@ class LEED_GUI(qtw.QMainWindow):
         if not fname[0]:
             return None
         
-        # set up the other parameters needed for export_csv
+        # set up the other parameters needed for export_pattern_csv
         if hasattr(self, 'openFile') and self.openFile:
             params['source'] = self.openFile
         params['version'] = self.version
         
-        gl.export_csv(fname[0], (self.leed,), **params)
+        gl.export_pattern_csv(fname[0], (self.leed,), **params)
     
     def unsavedPopup(self):
         reply = qtw.QMessageBox.question(self, 'Edits unsaved',
@@ -744,24 +752,24 @@ class LEED_GUI(qtw.QMainWindow):
         if ctrl == self.rotWidg.text:
             ctrl.setText('0.0')
         elif ctrl == self.enWidg.text:
-            ctrl.setText('{:.1f}'.format(leed.maxEnergy/2))
-            ctrl.setLimits(10, leed.maxEnergy)
+            ctrl.setText(f'{leed.max_energy/2:.1f}')
+            ctrl.setLimits(10, leed.max_energy)
         elif ctrl == self.enWidg.limits:
             ctrl.setText('Min = 10 eV\n'
-                         'Max = {:.1f} eV'.format(leed.maxEnergy))
+                         f'Max = {leed.max_energy:.1f} eV')
         elif ctrl == self.doms:
-            ctrl.updateText('%d inequivalent domain(s)'%leed.nDoms)
+            ctrl.updateText(f'{leed.n_domains} inequivalent domain(s)')
             ctrl.setTips(text='Click to see all the superlattice '
                               'matrices that generate the domains.')
             ctrl.hide = False
-            if leed.nDoms == 1:
+            if leed.n_domains == 1:
                 ctrl.toggle.setEnabled(False)
             else:
                 ctrl.toggle.setEnabled(True)
         elif ctrl == self.cellShapes:
             self.insertText(ctrl,
-                            f"Slab: {real.surf.type}, {real.surf.group}. "
-                            f"Bulk: {real.bulk.type}, {real.bulk.group}",
+                            f"Slab: {real.surf.cell_shape}, {real.surf.group}. "
+                            f"Bulk: {real.bulk.cell_shape}, {real.bulk.group}",
                             'center')
             ctrl.setStatusTip('Cell shapes and plane groups '
                               'for the whole slab and its bulk.')

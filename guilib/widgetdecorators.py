@@ -16,14 +16,17 @@ import PyQt5.QtCore as qtc
 import PyQt5.QtGui as qtg
 import PyQt5.QtWidgets as qtw
 
-from guilib.decorators import ensure_decorates_class
-from guilib.widgetslib import get_all_children_widgets
+# from viperleed.guilib.decorators import ensure_decorates_class
+# from viperleed.guilib.widgetslib import get_all_children_widgets
+# from guilib.decorators import ensure_decorates_class
+# from guilib.widgetslib import get_all_children_widgets
+from viperleed import guilib as gl
 
 mouse_event_types = (qtc.QEvent.MouseButtonPress, qtc.QEvent.MouseButtonRelease,
                      qtc.QEvent.MouseButtonDblClick,
                      qtc.QEvent.MouseMove, qtc.QEvent.Wheel)
 
-@ensure_decorates_class(qtw.QWidget)
+@gl.ensure_decorates_class(qtw.QWidget)
 @wrapt.decorator
 def receive_mouse_broadcast(cls, _, args, kwargs):
     """
@@ -38,7 +41,7 @@ def receive_mouse_broadcast(cls, _, args, kwargs):
 
     return cls(*args, **kwargs)
 
-@ensure_decorates_class(qtw.QWidget)
+@gl.ensure_decorates_class(qtw.QWidget)
 @wrapt.decorator
 def broadcast_mouse(cls, _, args, kwargs):
     """
@@ -81,7 +84,7 @@ def broadcast_mouse(cls, _, args, kwargs):
         # added, but event.child() is not necessarily the right pointer to the 
         # child as the widget might not be polished yet
         if isinstance(event.child(), qtw.QWidget):
-            children = get_all_children_widgets(event.child())
+            children = gl.get_all_children_widgets(event.child())
             if (event.polished()
                     and event.child() not in self.__polished_children):
                 self.__polished_children.update(children)

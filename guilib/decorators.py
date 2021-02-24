@@ -9,10 +9,13 @@ Created: 2020-01-29
 
 This module provides Qt-independent decorators based on the wrapt Python module
 """
-
 import inspect
+import cProfile
+import pstats
+from time import perf_counter as timer
 
 import wrapt
+from line_profiler import LineProfiler
 
 
 def ensure_decorates_class(superclass=object):
@@ -49,5 +52,61 @@ def ensure_decorates_class(superclass=object):
                                f"not to a {wrapped.__name__} class.")
 
         return decorator(*args, **kwargs)
+    return _wrapper
+
+
+# The following decorators are useful for development, but should be removed
+# otherwise when normally running
+
+
+def profile_calls(sort_args=['cumulative'], print_args=[10]):
+    """
+    Runs a profiler on the wrapped function, using cProfile. This profiles
+    exclusively function calls.
+    """
+    profiler = cProfile.Profile()
+
+    def decorator(func):
+        def inner(*args, **kwargs):
+            result = None
+            try:
+                profiler.enable()
+                result = func(*args, **kwargs)
+                profiler.disable()
+            finally:
+                stats = pstats.Stats(profiler)
+                print("################",
+                      f"Profiling funtion {func.__name__}",
+                      "################")
+                stats.sort_stats(*sort_args).print_stats(*print_args)
+            return result
+        return inner
+    return decorator
+
+
+def profile_lines(func):
+    """
+    Uses line_profiler for profiling each line of the decorated function
+    """
+    def _wrapper(*args, **kwargs):
+        profiler = LineProfiler()
+        profiled_func = profiler(func)
+        try:
+            result = profiled_func(*args, **kwargs)
+        finally:
+            profiler.print_stats()
+        return result
+    return _wrapper
+
+
+def exec_time(func):
+    """
+    Measures execution time of the wrapped function
+    """
+    def _wrapper(*args, **kwargs):
+        t0 = timer()
+        result = func(*args, **kwargs)
+        print(f"Execution time of {func.__name__}: {(timer()-t0)*1000:.2f} ms")
+        return result
     return _wrapper
 

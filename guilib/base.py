@@ -14,12 +14,18 @@ import ast
 import copy
 import sys
 import re
-from fractions import Fraction
+# from fractions import Fraction
+from quicktions import Fraction  # faster version of Fraction (~ factor of 2)
 from collections import defaultdict
+from warnings import warn as warning   # eventually will replace with logging
 
 import numpy as np
 
-from guilib.leedsim.classes import LEEDPattern
+# from viperleed.guilib.leedsim.classes import LEEDPattern
+# from guilib.leedsim.classes import LEEDPattern
+# from guilib import profile_lines, profile_calls
+from viperleed import guilib as gl
+
 
 ###############################################################################
 #                                  FUNCTIONS                                  #
@@ -173,7 +179,7 @@ def get_equivalent_beams(leed_parameters, *other_leed_parameters, domains=None):
     
     for i, leed in enumerate(all_leed):
         if domains[i] is None:
-            domains[i] = range(leed.nDoms)
+            domains[i] = range(leed.n_domains)
 
     # Now use a logic similar to the one in LEEDPattern.get_equivalentSpots
     # for figuring out which superimposed beams are indeed equivalent (i.e.,
@@ -269,135 +275,15 @@ def get_equivalent_beams(leed_parameters, *other_leed_parameters, domains=None):
             beams_with_indices.append((beam, group_idx))
     return beams_with_indices
 
-# Follows in the next comment the version of get_equivalent_beams before the
-# edits (2020-11-14) needed to handle multiple reconstructions
-
-# def get_equivalent_beams(leed_parameters, domains=None):
-    # """
-    # Generates a sorted list of LEED beams, including their fractional
-    # indices and their symmetry-equivalence
-
-    # Parameters
-    # ----------
-    # leedParameters: dictionary
-      # The following keys are needed
-      # - 'eMax': float
-                # maximum primary beam energy used in the TensErLEED calculation
-
-      # - 'surfBasis': 2x2 numpy array of floats
-                     # unit vectors in Cartesian coordinates defining the basis
-                     # vectors aS and bS of the surface unit cell.
-                     # aS = basis[0], bS = basis[1]
-
-      # - 'SUPERLATTICE': 2x2 numpy array of ints
-                        # Superlattice matrix that defines the relation between
-                        # the bulk unit vectors (aB, bB) and the surface ones.
-                        # m = [[m11, m12],[m21, m22]]
-                        # aS = m11*aB + m12*bB
-                        # bS = m12*aB + m22*bB
-
-      # - 'surfGroup': string
-                     # plane group of the surface
-
-      # - 'bulkGroup': string
-                     # plane group of the bulk
-
-      # The following keys are optional
-      # - 'bulk3Dsym': string or array-like
-            # This parameter is used to describe the isomorphic part (i.e.,
-            # neglecting translations) of screw axes and glide planes orthogonal
-            # to the surface. 
-            # -- when passing a string, one the following formats is
-               # required (with or without white spaces):
-                   # * "r(#, #, ...), m([#, #], ...)"
-                   # * "m([#, #], ...), r(#, #, ...)"
-                   # * "r(#, #, ...)"
-                   # * "m([#, #], ...)"
-               # The quantities above are:
-                   # * "r(...)" -- list of rotation orders for screw axes
-                                # (acceptable: 2, 3, 4, 6)
-                   # * "m(...)" -- list of in-plane directions lying on the glide
-                                 # plane, expressed in 'fractional coordinates' of
-                                 # the bulk unit vectors, i.e., "[i,j]" represents
-                                 # the vector i*a + j*b. Acceptable: [1,0], [0,1],
-                                 # [1,1], [1,-1], [1,2], [2,1]
-            # -- when passing an array-like, it should be a 'list' of 2x2
-               # 'matrices' with integer entries (floats will be rounded and cast
-               # to int).
-            # NB: by 2020-06-24, no check is performed on whether the operations
-                # above are actually compatible with the shape of the unit cell!
-      # - 'screenAperture': float
-            # This parameter can be used to define the aperture of the solid angle
-            # captured by the LEED screen in degrees. Acceptable values are
-            # between zero and 180
-
-    # domains: iterable or None, default=None
-             # Domain indices for which the beams get exported
-             # The indices (zero-based) follow the following convention:
-             # - dom = 0 -> domain whose SUPERLATTICE is passed as a key of
-                          # leedParameters
-             # - dom = 1 ... -> domains generated from SUPERLATTICE as a result
-                              # of mirror operations.
-                              # Glide planes count as mirrors;
-                              # Only one mirror/glide is used among those
-                              # parallel to each other
-             # - dom = ... -> domains generated from SUPERLATTICE as a result of
-                            # rotation operations.
-                            # Only one rotation axis is used among the those
-                            # equivalent to each other (e.g., only C4 at origin,
-                            # not C4 at cell center)
-             # Since the ordering of the domains is not necessarily the same as
-             # the order of operations, one needs to rely on the user making the
-             # right choice when asking for domains.
-             # If None, all domains are used.
-
-    # Returns
-    # -------
-    # list of tuples [(name_0, id_0), (name_1, id_1), ...]
-
-        # name_i: str
-                # fractional indices of the beam in the form
-                # '(num_h/den_h, num_k/den_k)'
-
-        # id_i: int
-              # representing the grouping index for symmetry-equivalent beams.
-              # All symmetry-equivalent beams share the same abs(id).
-                # id < 0 for glide-extinct beams,
-                # id = 0 for spot (0, 0),
-                # id > 0 for non-extinct beams
-              # For spots originating from the superposition of different
-              # domains, id is positive even if some of the domains contribute
-              # with glide-extinct beams.
-              # ids are generated based on the (h, k) values, so that beams
-              # closer to the (0, 0) spot have smaller abs(id)
-
-        # The entries in the list are sorted in this order: abs(id), h, k << NOT ANYMORE!
-    # """
-    
-    # if not check_leed_params(leed_parameters):
-        # return None
-
-    # leed = LEEDPattern(leed_parameters)
-
-    # if domains is None:
-        # domains = range(leed.nDoms)
-    # elif not hasattr(domains, '__len__'):
-        # raise ValueError(f"The keyword argument 'domains' should be either "
-                         # f"an iterable or None. Found {type(domains)} "
-                         # "instead.")
-
-    # fract, groups, *_ = zip(*leed.get_equivalentSpots(domains=domains))
-    # return list(zip(fract, groups))
-    
 
 def project_to_first_domain(beam_list, leed_parameters, *other_leed_parameters,
                             domains=None):
     """
-    Given a list of beams and a dictionary of parameters defining the LEED
-    geometry, returns a list of beams that 'projects' the input onto the first
-    domain. I.e., the output contains only beams that belong to the first domain
-    and are equivalent to those given as an input. At present [2020-05-04] this
-    function does not account for non-normal beam incidence.
+    Given a list of beams and a one or more dictionaries of parameters defining
+    the LEED geometry, returns a list of beams that 'projects' the input onto
+    the first domain. I.e., the output contains only beams that belong to the
+    first domain and are equivalent to those given as an input. At present
+    [2020-05-04] this function does not account for non-normal beam incidence.
 
     Parameters
     ----------
@@ -421,7 +307,7 @@ def project_to_first_domain(beam_list, leed_parameters, *other_leed_parameters,
     
     leed_parameters, (leed, *_) = check_multi_leed_params(leed_parameters)
     
-    ops = leed.bulkR.group.group_ops(include_3d=True)
+    ops = leed.reciprocal_lattices['bulk'].group.group_ops(include_3d=True)
     superlattices = [params['SUPERLATTICE'] for params in leed_parameters]
 
     def is_in_first_domain(beam):
@@ -488,7 +374,7 @@ def project_to_first_domain(beam_list, leed_parameters, *other_leed_parameters,
 
                     # Check if the reason why the beam was not found is that
                     # it would lie outside the LEED screen
-                    b = leed.get_BulkBasis()
+                    b = leed.bulk_basis()
                     g = np.linalg.norm(np.dot(beam, b)) * 1e10  # 1/m
                     el_m = 9.109e-31    # kg
                     el_q = 1.60218e-19  # C
@@ -496,13 +382,13 @@ def project_to_first_domain(beam_list, leed_parameters, *other_leed_parameters,
                     
                     # calculate the exit angle
                     s_angle = np.sqrt(hbar**2 * g**2
-                                      /(2 * el_m * el_q * leed.maxEnergy))
+                                      /(2 * el_m * el_q * leed.max_energy))
                     ang = 2*np.degrees(np.arcsin(s_angle))
                     aperture = leed_parameters[0].get('screenAperture', 110)
                     if ang > aperture:
                         err += ("\nThe beam would need a minimum LEED screen "
                                 f"aperture of {ang:.1f} deg at Emax="
-                                f"{leed.maxEnergy} eV, while you are using "
+                                f"{leed.max_energy} eV, while you are using "
                                 f"{aperture} deg. You may have swapped the "
                                 "in-plane unit vectors, or you may want to "
                                 "set a larger aperture with the "
@@ -531,7 +417,8 @@ def project_to_first_domain(beam_list, leed_parameters, *other_leed_parameters,
     # averaging errors when, e.g., a spot is composed of 3 beams but only 2
     # would result from reducing to inequivalent
     all_groups = group_beams(
-        get_equivalent_beams(leed_parameters, domains=domains))
+        get_equivalent_beams(leed_parameters, domains=domains)
+        )
     for group, beams in all_groups.items():
         n = len(beams)
         n_ineq = sum(beam in beams for beam in inequivalent)
@@ -609,7 +496,8 @@ def check_leed_params(leed_parameters):
                         f"Found {type(leed_parameters['SUPERLATTICE'])} "
                         "instead")
     for group in (leed_parameters['surfGroup'], leed_parameters['bulkGroup']):
-        if not check_type(group, 'str'):
+        if not (check_type(group, 'str')
+                or isinstance(group, PlaneGroup)):
             raise TypeError("Plane group should be a string. "
                             f"found {type(group)} instead")
 
@@ -679,13 +567,13 @@ def check_multi_leed_params(leed_parameters):
         params['eMax'] = emax
         if aperture > 0:
             params['screenAperture'] = aperture
-        leed_patterns.append(LEEDPattern(params))
+        leed_patterns.append(gl.LEEDPattern(params))
     
     # check consistency of bulk
-    bulk = leed_patterns[0].bulkR
+    bulk = leed_patterns[0].reciprocal_lattices['bulk']
     b_ops = set(bulk.group.group_ops(include_3d=True))
     for leed in leed_patterns[1:]:
-        this_bulk = leed.bulkR
+        this_bulk = leed.reciprocal_lattices['bulk']
         # bulk lattices should be the same
         if not np.allclose(bulk.basis, this_bulk.basis):
             raise ValueError("Inconsistent bulk bases found in the input "
@@ -754,7 +642,7 @@ def string_matrix_to_numpy(str_matrix, dtype=float, needs_shape=tuple()):
     if dtype == int:
         matrix = np.round(matrix).astype(int)
 
-    if len(needs_shape)>0 and matrix.shape != tuple(needs_shape):
+    if len(needs_shape) > 0 and matrix.shape != tuple(needs_shape):
         return None
     return matrix
 
@@ -810,8 +698,100 @@ def format_floats(format_specs, *numbers):
     
     return f"{raw:{align}}"
 
+
 def integer_part_length(*numbers):
     return max(len(f"{int(number)}") for number in numbers)
+
+
+def parallel(v1, v2):
+    """
+    Check whether vectors v1 and v2 (of arbitrary number of components) are
+    parallel to one another
+
+    Parameters
+    ----------
+    v1, v2 : iterables of real numbers, or None
+        If either vector is None or has only zero entries the comparison
+        returns False
+
+    Returns
+    -------
+    v1 parallel v2 : bool
+
+    Raises
+    ------
+    ValueError if the two vectors have different length
+    """
+    if v1 is None or v2 is None:
+        return False
+    if len(v1) != len(v2):
+        raise ValueError("parallel: can compare only vectors of equal length")
+    # check null entries
+    v12 = np.asarray((v1, v2))
+    null_entries = np.abs(v12) < 1e-8
+    if any(sum(null) == len(v) for null, v in zip(null_entries, v12)):
+        # one of the vectors is identically zero
+        return False
+    if any(null_entries[0] != null_entries[1]):
+        # the vectors have zeros at different positions
+        return False
+    print(null_entries, ~null_entries, v12, v12[~null_entries])
+    nonnul_1 = v12[0, ~null_entries[0]]
+    nonnul_2 = v12[1, ~null_entries[1]]
+    ratios = nonnul_1/nonnul_2
+    return all(np.abs(ratios - ratios[0]) < 1e-8)
+
+
+def orientation(vector, zero_pi=True, precision=4):
+    """
+    Returns the angle in degrees between the vector and the x axis
+
+    Parameters
+    ----------
+    vector : numpy.ndarray
+        vector = [x, y] is the vector for which the orientation is computed
+    zero_pi : bool, default=True
+        If True, returns angles only in the [0, 180] range, i.e., for
+        angle < 0, return 180 - angle. Otherwise angle is in [-180, 180]
+    precision : int
+        number of decimal places for rounding angles in degrees
+
+    Returns
+    -------
+    angle : float
+        angle in degrees
+    """
+    angle = round(np.degrees(np.arctan2(vector[1], vector[0])), precision)
+    # if angle >= 0 or not zero_pi:
+        # return angle
+    if not zero_pi:
+        return angle
+    return angle % 180
+
+
+def screen_radius(energy, aperture):                                          # WILL BE MOVED, renamed, and docstring needs work
+    """
+    Returns the radius of the projection of a LEED screen with a given
+    aperture that contains LEED spots with 'energy'
+
+    Parameters
+    ----------
+    energy : float
+        primary energy of the electrons
+    aperture: float, default=110.0
+              degrees of aperture of the solid angle captured by the
+              LEED screen. The current (2020-08-17) default value is taken
+              from the dimensions of the screen of the ErLEED optics. The
+              MCP SpectaLEED from Omicron appears to have an equivalent
+              aperture of ~80°
+    """
+    electron_mass = 9.109e-31  # kg
+    electron_charge = 1.60218e-19   # C
+    hbar = 1.05457e-34  # J*s
+    # The next one is the prefactor in AA^-1 eV^(-1/2)
+    rt2me_hbar = np.sqrt(2*electron_mass*electron_charge) / hbar*1e-10
+
+    return rt2me_hbar*np.sqrt(energy)*np.sin(np.radians(aperture)/2)
 
 ################################################################################
 #                                   CLASSES                                    #
@@ -821,28 +801,86 @@ def integer_part_length(*numbers):
 class BeamIndex(tuple):
     """
     Convenience class to store a 2-element tuple that represents a Miller index
-    for a LEED beam. Each index is a fractions.Fraction
+    for a LEED beam. Each index is a Fraction.
     """
-    
-    def __new__(cls, *indices):
+    separators = (',', '|')
+
+    def __new__(cls, *indices, denominator=1, from_numerators=False):
+        """
+        Parameters
+        ----------
+        indices : str, or iterable of str or number
+            indices of the beam. Can be passed as a single argument or as two
+            arguments.
+            When a single argument, it should be either a string of the form
+            'idx1, idx' or 'idx1 | idx2' (spaces don't count), or a 2-element
+            iterable with indices.
+            When two arguments, both should be either a string or a number,
+            i.e., mixed input of the form ('idx1', idx2) is not processed
+            correctly
+        denominator : int (default=1)
+            this is used for speeding up instantiation when indices are given
+            as numbers rather than strings, and it is not used at all for string
+            inputs. It should be the largest common denominator between the
+            indices.
+        from_numerators : bool (default=False)
+            Use True when passing only the numerators as indices. The
+            denominator is taken from the denominator optional parameter. When
+            passing numerators only, it is most efficient to give the indices
+            as ints rather than floats
+        """
+        if not isinstance(denominator, int):
+            raise TypeError("BeamIndex: denominator must be an int")
+        indices = cls.__process_indices(indices)
+        if isinstance(indices[0], str):
+            beam_indices = [Fraction(index) for index in indices]
+        else:
+            if from_numerators:
+                # the indices passed are already the numerators
+                numerators = indices
+            else:
+                # the indices passed are fractional, get the numerators
+                numerators = (round(indices[0]*denominator),
+                              round(indices[1]*denominator))
+            beam_indices = [Fraction(num, denominator) for num in numerators]
+        return super().__new__(cls, beam_indices)
+
+    @staticmethod
+    def __process_indices(indices):
+        """
+        Checks and processes the indices as needed
+
+        Returns
+        -------
+        indices : iterable, 2 elements
+
+        Raises
+        ------
+        TypeError
+        ValueError
+        """
         if len(indices) > 2:
             raise ValueError("BeamIndex accepts at most two indices, "
                              f"{len(indices)} given instead.")
         if len(indices) == 1:
-            t = indices[0]
-            if isinstance(t, str):
-                indices = t.split(',')
+            temp = indices[0]
+            if isinstance(temp, str):
+                for separator in BeamIndex.separators:
+                    indices = temp.split(separator)
+                    if len(indices) == 2:
+                        # found an acceptable separator
+                        break
             else:
-                if not hasattr(t, '__len__'):
+                if not hasattr(temp, '__len__'):
                     raise TypeError("BeamIndex: when one argument given, "
                                     "it should be a string or a 2-element "
                                     "array-like.")
-                indices = t
-            if len(indices) != 2:
-                raise ValueError("BeamIndex: too many/few indices. "
-                                 "Exactly 2 indices should be given. "
-                                 f"Found {len(indices)} instead.")
-        return super().__new__(cls, (Fraction(index) for index in indices))
+                indices = temp
+        if len(indices) != 2:
+            raise ValueError("BeamIndex: too many/few indices. "
+                             "Exactly 2 indices should be given. "
+                             f"Found {len(indices)} instead.")
+        return indices
 
     def __str__(self):
         return f"{', '.join(str(index) for index in self)}"
@@ -871,9 +909,9 @@ class BeamIndex(tuple):
             if the other index is negative
         - type == "f":
             returns f"({float(h)},{float(k)})". If .precision is not given,
-            uses 5 digits. If minimumwidth is given, it i treated as the minimum
-            width of the integer part only. The two indices are aligned on the
-            decimal point.
+            uses 5 digits. If minimumwidth is given, it is treated as the
+            minimum width of the integer part only. The two indices are aligned
+            on the decimal point.
         - all others return f"({str(self)}:{format_specs}})"
         """
         if format_specs == '':
@@ -881,68 +919,41 @@ class BeamIndex(tuple):
         if format_specs[-1] not in ('s', 'f'):
             # basic format
             return f"({str(self):{format_specs}})"
-        if format_specs[-1] == 's':
-            num_min_len, den_min_len = self.get_format_lengths('s')
-            
-            # now search the specifier for something like "(\d+,\d+)" to be
-            # interpreted as the minimum widths of the two fields, to update
-            # the minimum lengths of the fields
-            m = re.search(r"((?P<num>\d+),(?P<den>\d+))", format_specs)
-            if m is not None:
-                num_min_len = max(num_min_len, int(m.group('num')))
-                den_min_len = max(den_min_len, int(m.group('den')))
-                format_specs = format_specs.replace(
-                    f"({m.group('num')},{m.group('den')})", '')
-            
-            raws = ['', '']
-            for i, hk in enumerate(self):
-                # numerator is right-justified in its field
-                raws[i] = f"{hk.numerator:>{num_min_len}}"
-                
-                # denominator a bit more complicated, as it depends on whether
-                # it is == 1 or not
-                if hk.denominator == 1:
-                    n_white = den_min_len
-                    n_white += 1 if den_min_len else 0  # slash if needed
-                    raws[i] += ' '*(n_white)
-                else:
-                    raws[i] += f'/{hk.denominator:<{den_min_len}}'
-            return f"{f'({raws[0]}|{raws[1]})':{format_specs}}"
         if format_specs[-1] == 'f':
             return f"({format_floats(format_specs, *self)})"
-            
-            int_len = self.get_format_lengths('f')[0]
-            
-            # standard pattern for format_specs
-            pattern = (r"^([<>=^]\d+)?"
-                       r"[\+\- ]?"
-                       r"[#]?"
-                       r"[0]?"
-                       r"(?P<minwidth>\d*)"
-                       r"([.](?P<prec>\d+))?"
-                       r"[bdcoxXneEfFgG\%]?$")
-            m = re.match(pattern, format_specs)
-            if m is None:
-                raise TypeError("Incorrect format specifier for type f.")
-            # process the format specifications:
-            # number of digits:
-            prec = m.group('prec')
-            if prec:
-                prec = int(prec)
+
+        # Case 's':
+        num_min_len, den_min_len = self.get_format_lengths('s')
+
+        # now search the specifier for something like "(\d+,\d+)" to be
+        # interpreted as the minimum widths of the two fields, to update
+        # the minimum lengths of the fields
+        m = re.search(r"((?P<num>\d+),(?P<den>\d+))", format_specs)
+        if m is not None:
+            num_min_len = max(num_min_len, int(m.group('num')))
+            den_min_len = max(den_min_len, int(m.group('den')))
+            format_specs = format_specs.replace(
+                f"({m.group('num')},{m.group('den')})", '')
+
+        raws = ['', '']
+        for i, hk in enumerate(self):
+            # numerator is right-justified in its field
+            raws[i] = f"{hk.numerator:>{num_min_len}}"
+
+            # denominator a bit more complicated, as it depends on whether
+            # it is == 1 or not
+            if hk.denominator == 1:
+                n_white = den_min_len
+                n_white += 1 if den_min_len else 0  # slash if needed
+                raws[i] += ' '*(n_white)
             else:
-                prec = 5
-            # minimum width of integer part
-            # (will left-pad with spaces if needed):
-            min_w = m.group('minwidth')
-            if min_w:
-                min_w = int(min_w)
-            else:
-                min_w = int_len
-            tot_w = max(min_w + prec, int_len + prec) + 1  # +1 for decimal .
-            
-            format = f">{tot_w}.{prec}f"
-            return f"({float(self[0]):{format}},{float(self[1]):{format}})"
-            
+                raws[i] += f'/{hk.denominator:<{den_min_len}}'
+        return f"{f'({raws[0]}|{raws[1]})':{format_specs}}"
+
+    @property
+    def numerators(self):
+        return tuple(index.numerator for index in self)
+    
     def get_format_lengths(self, str_or_float):
         """
         Returns the minimum number of characters that can represent the
@@ -957,15 +968,16 @@ class BeamIndex(tuple):
         """
         if str_or_float not in ('s', 'f'):
             raise ValueError("Invalid format specifier. Should be 's' or 'f'.")
-        if str_or_float == 's':
-            num_min_len = max(len(str(hk.numerator)) for hk in self)
-            dens = [hk.denominator for hk in self]
-            if all(den == 1 for den in dens):
-                den_min_len = 0
-            else:
-                den_min_len = max(len(str(den)) for den in dens)
-            return num_min_len, den_min_len
-        return (integer_part_length(*self),)
+        if str_or_float == 'f':
+            return (integer_part_length(*self),)
+        # case 's'
+        num_min_len = max(len(str(hk.numerator)) for hk in self)
+        dens = [hk.denominator for hk in self]
+        if all(den == 1 for den in dens):
+            den_min_len = 0
+        else:
+            den_min_len = max(len(str(den)) for den in dens)
+        return num_min_len, den_min_len
 
 
 class PlaneGroup():
@@ -1022,32 +1034,32 @@ class PlaneGroup():
     #                  Also edited: M45 and Mm45 were exchanged.
 
     # These two are good for all cells
-    E = ((1, 0), (0, 1))
-    C2 = ((-1, 0), (0, -1))    # = -E
+    E = (1, 0), (0, 1)
+    C2 = (-1, 0), (0, -1)    # = -E
 
     # These two are good for rectangular and square cells
-    Mx = ((1, 0), (0, -1))
-    My = ((-1, 0), (0, 1))     # = -Mx
+    Mx = (1, 0), (0, -1)
+    My = (-1, 0), (0, 1)     # = -Mx
 
     # These are good for square cells
-    C4 = ((0, -1), (1, 0))
-    Cm4 = ((0, 1), (-1, 0))    # = -C4
-    M45 = ((0, 1), (1, 0))
-    Mm45 = ((0, -1), (-1, 0))  # = -M45
+    C4 = (0, -1), (1, 0)
+    Cm4 = (0, 1), (-1, 0)    # = -C4
+    M45 = (0, 1), (1, 0)
+    Mm45 = (0, -1), (-1, 0)  # = -M45
 
     # These are good for rhombic and hex (both obtuse)
-    M11 = ((0, 1), (1, 0))
-    M1m1 = ((0, -1), (-1, 0))  # = -M11
-    M01 = ((-1, -1), (0, 1))
-    M10 = ((1, 0), (-1, -1))
+    M11 = (0, 1), (1, 0)     # = M45
+    M1m1 = (0, -1), (-1, 0)  # = -M11 = Mm45
+    M01 = (-1, -1), (0, 1)
+    M10 = (1, 0), (-1, -1)
 
     # And these are good for hex only (obtuse)
-    C6 = ((1, 1), (-1, 0))
-    Cm6 = ((0, -1), (1, 1))
-    C3 = ((0, 1), (-1, -1))
-    Cm3 = ((-1, -1), (1, 0))
-    M21 = ((1, 1), (0, -1))
-    M12 = ((-1, 0), (1, 1))
+    C6 = (1, 1), (-1, 0)
+    Cm6 = (0, -1), (1, 1)
+    C3 = (0, 1), (-1, -1)
+    Cm3 = (-1, -1), (1, 0)
+    M21 = (1, 1), (0, -1)
+    M12 = (-1, 0), (1, 1)
 
     allGroups = {'p1': (E,),
                  'p2': (E, C2),
@@ -1079,7 +1091,7 @@ class PlaneGroup():
                  '6': (C6, Cm6)}
     # 2) direction contained in glide planes into the corresponding matrices
     glide_ops = {'[1,0]': M10,
-                 '[1,1]': M11,
+                 '[0,1]': M01,
                  'x': Mx,
                  'y': My,
                  '[1,1]': M11,
@@ -1138,22 +1150,27 @@ class PlaneGroup():
         }
 
     allOps = (E, C2, C4, Cm4, C3, Cm3, C6, Cm6, Mx, My, M45, Mm45, M21, M12,
-              M01, M10, M11, M1m1)
+              M01, M10, M11, M1m1)  # this should not be needed anymore
 
     def __init__(self, group='p1'):
+        if isinstance(group, PlaneGroup):
+            bulk_3d = group.screws_glides
+            group = group.group
+        else:
+            bulk_3d = tuple()
         group = self.check_group_name(group)
         self.group = group
         
         # The next one will be a tuple of the 2x2 matrices representing the
         # isomorphism part of screws and glide planes perpendicular to the
         # surface
-        self.__ops_3d = tuple()
+        self.__ops_3d = bulk_3d
 
     def __repr__(self):
         """
         Representation of PlaneGroup
         """
-        return f"viperleed.guilib.base.PlaneGroup(group={self.group!r})"
+        return f"viperleed.PlaneGroup(group={self.group!r})"
 
     def __str__(self):
         """
@@ -1251,6 +1268,9 @@ class PlaneGroup():
         # NB: I may change the behavior later, and rather make this a
         #     set_3d_ops method, while incorporating the getter into
         #     the group_ops method below
+        if input is None:
+            self.__ops_3d = tuple()
+            return None
         if isinstance(input, (tuple, list, np.array)):
             if len(input) > 2 or len(input) == 0:
                 raise ValueError("PlaneGroup.screws_glides: requires at most "
@@ -1263,8 +1283,12 @@ class PlaneGroup():
                 shape = None
         else:
             shape = None
-                
-        if not isinstance(input, (str, np.array, tuple, list)):
+        
+        if input is None:
+            self.__ops_3d = tuple()
+            return None
+
+        if not isinstance(input, (str, np.ndarray, tuple, list)):
             raise ValueError("PlaneGroup.screws_glides: Invalid input. "
                              "Need either a string or an array-like. "
                              f"Found {type(input)} instead.")
@@ -1272,7 +1296,7 @@ class PlaneGroup():
         if isinstance(input, str):
             if input.lower() == "none":
                 self.__ops_3d = tuple()
-                return
+                return None
 
             ops = []  # this will contain the 2x2 tuples of the new operations
 
@@ -1321,12 +1345,12 @@ class PlaneGroup():
                             " for glide plane. The only directions allowed "
                             f"are: {self.glide_ops.keys() - ['x', 'y']}")
             self.__ops_3d = tuple(ops)
-            return
+            return None
 
         # Otherwise, the input is an array-like, which should correspond to a
         # 1D list of 2x2 matrices with integer values
 
-        if len(np.shape(input)) !=3 or np.shape(input)[1,2] != (2, 2):
+        if len(np.shape(input)) != 3 or np.shape(input)[1,2] != (2, 2):
             raise ValueError("PlaneGroup.screws_glides: an array-like input "
                              "should be a 1D 'list' of 2x2 'matrices'. Found "
                              f"incompatible shape {np.shape(input)}.")
@@ -1359,7 +1383,24 @@ class PlaneGroup():
         """
         return self.subgroups[self.group]
     
-    def transform(self, transform):
+    def is_valid_group(self, group, cell_shape):
+        """
+        Checks whether group is a valid group for a given cell_shape. No type
+        checking is done on group other than string and PlaneGroup, under the
+        assumption that group will be used to create a PlaneGroup itself, which
+        does the type checking in the constructor
+        """
+        if cell_shape not in self.groupsForShape:
+            raise ValueError(f"PlaneGroup: unknown lattice shape {cell_shape}")
+        valid_group = True
+        if isinstance(group, str):
+            group = self.check_group_name(group)
+            valid_group = group in self.groupsForShape[cell_shape]
+        if isinstance(group, PlaneGroup):
+            valid_group = group.group in self.groupsForShape[cell_shape]
+        return valid_group
+    
+    def transform(self, transform, inverse=None, include_3d=False):
         """
         Returns a tuple of the group operations 'projected' to a new coordinate
         system, whose coordinates are expressed by the 2x2 array-like
@@ -1368,13 +1409,22 @@ class PlaneGroup():
         returned may have non-integer values).
         """
         if np.shape(transform) != (2, 2):
-            raise ValueError("PlaneGroup.transform_to_coordinates requires a "
-                             "2x2 array-like as coordinate transform matrix. "
+            raise ValueError("PlaneGroup.transform requires a 2x2 array-like as"
+                             " coordinate transform matrix. "
                              f" Found shape {np.shape(transform)} instead.")
+        if inverse is None:
+            inverse = np.linalg.inv(transform)
+        elif np.shape(inverse) != (2, 2):
+            raise ValueError("PlaneGroup.transform requires a 2x2 array-like as"
+                             " the inverse of the coordinate transform. "
+                             f" Found shape {np.shape(transform)} instead.")
+        elif not np.allclose(np.dot(transform, inverse), ((1, 0), (0, 1))):
+            raise ValueError("PlaneGroup.transform transformation matrix and "
+                             "inverse are inconsistent.")
         return tuple(np.linalg.multi_dot((transform,
                                           op,
-                                          np.linalg.inv(transform)))
-                     for op in self.group_ops())
+                                          inverse))
+                     for op in self.group_ops(include_3d))
 
 
 class Lattice():
@@ -1386,66 +1436,105 @@ class Lattice():
 
     Parameters
     ----------
-    basis: 2x2 np.array
-           basis vectors a and b of the lattice, with a = basis[0], b=basis[1]
-           the units are assumed to be Angstrom for real space lattices, and
-           2*pi/Angstrom for reciprocal-space lattices
-    space: str, default: 'real'
-           accepts 'real' or 'reciprocal' for real and reciprocal space
-           lattices, respectively
-    group: str, default: 'p1'
-           plane group in Hermann-Mauguin notation. See also the PlaneGroup
-           class for acceptable values.
-    limit: int, default: 1
-           radius used to limit the number of lattice points generated. Only
-           lattice points closer to the origin than limit will be produced.
+    basis : 2x2 array-like
+        basis vectors a and b of the lattice, with a = basis[0], b=basis[1]
+        the units are assumed to be Angstrom for real space lattices, and
+        2*pi/Angstrom for reciprocal-space lattices
+    space : str, default='real'
+        accepts 'real' or 'reciprocal' for real and reciprocal space
+        lattices, respectively
+    group : str, default='p1'
+        plane group in Hermann-Mauguin notation. See also the PlaneGroup
+        class for acceptable values.
+    limit : int, default=1
+        radius used to limit the number of lattice points generated. Only
+        lattice points closer to the origin than limit will be produced.
 
-    Properties
+    Attributes
     ----------
-    basis: 2x2 np.array
-           basis, same convention as with class instantiation
-    space: str
-           'real' or 'reciprocal'
-    type: str
-          shape of the unit cell. Can be 'Oblique', 'Rectangular',
-          'Square', 'Rhombic', or 'Hexagonal'
-    group: PlaneGroup
-           a PlaneGroup instance representing the plane group of the lattice
-    lattice: np.array, shape = (..., 2)
-             array of lattice points (x, y) [for real-space] (gx, gy) [for
-             reciprocal space]
-    hk: np.array, shape = (..., 2)
-            array of (h, k) indices that generate the points in lattice, i.e.,
-            lattice[i] = hk[i, 0]*basis[0] + hk[i, 1]*basis[1]
+    basis : 2x2 numpy.ndarray
+        basis, same convention as with class instantiation
 
-    Methods
-    -------
-    nbeams() Return number of lattice points
+    space : str, read-only
+        'real' or 'reciprocal'
 
-    get_lattice_type() finds type of lattice, rather use Lattice.type, unless
-                       you suspect that the type is not up to date
+    cell_shape : str, read-only
+        shape of the unit cell. Can be 'Oblique', 'Rectangular',
+        'Square', 'Rhombic', or 'Hexagonal'
 
-    generate_lattice() generates the lattice points
+    group : PlaneGroup
+        a PlaneGroup instance representing the plane group of the lattice.
+        Can be set with Lattice.group = str or PlaneGroup, or Lattice.group(str)
 
-    get_rotated_lattice(angle) returns a copy of Lattice.lattice rotated
-                               by angle (degrees)
+    lattice : numpy.ndarray, shape == (..., 2)
+        array of lattice points (x, y) [for real-space] or (gx, gy) [for
+        reciprocal space]
 
-    get_rotated_basis(angle) returns a copy of Lattice.basis rotated by angle
+    hk : numpy.ndarray, shape == (..., 2)
+        array of (h, k) indices that generate the points in lattice, i.e.,
+        lattice[i] = hk[i, 0]*basis[0] + hk[i, 1]*basis[1]
 
-    reciprocal_basis() returns the reciprocal of Lattice.basis
+    n_beams : int, read-only
+        Return number of lattice points
 
-    real_basis() returns a copy of the real-space basis, independently of the
-                 fact that the lattice is real or reciprocal
+    real_basis : 2x2 numpy.ndarray, read only
+        returns a copy of the real-space basis, independently of whether
+        the lattice is real or reciprocal. Use Lattice.basis for changing
+        the basis
 
-    lattice_parameters() return lattice parameters
+    reciprocal_basis : 2x2 numpy.ndarray, read-only
+        returns the reciprocal of Lattice.basis. Use Lattice.basis for changing
+        the basis
 
-    set_group(group) sets the plane group to group
+    lattice_parameters : 3-tuple of floats, read-only
+        return lattice parameters as (length_a, length_b, angle), where angle
+        is the angle between the basis vectors in degrees. Use Lattice.basis for
+        changing the basis
 
-    high_symm_transform() return matrix transform that gives highest symmetry
-                          basis (with the same lattice).
+    special_directions : list of (2,) numpy.ndarrays
+        Returns vectors along the directions of the mirror planes, in the
+        same coordinate system as Lattice.basis
 
-    make_high_symmetry() transform Lattice so the basis has the highest
-                         possible symmetry
+    Public methods
+    --------------
+    get_rotated_lattice(angle)
+        returns a copy of Lattice.lattice rotated by angle (degrees), without
+        actually modifying Lattice
+
+    get_rotated_basis(angle)
+        returns a copy of Lattice.basis rotated by angle, without actually 
+        modifying Lattice
+
+    high_symm_transform()
+        return matrix transform that gives highest symmetry basis
+        (with the same lattice). Does not transform the Lattice though.
+        Use Lattice.make_high_symmetry() to make high symmetry, as this also
+        returns the same transform
+
+    make_high_symmetry()
+        transform Lattice so the basis has the highest possible symmetry,
+        returns the transformation used
+
+    transform(transform, as_copy=True)
+        transforms the Lattice by applying transform TO THE LEFT of basis,
+        i.e., the transform matrix passed is meant to act on ROW VECTORS.
+        Can either modify Lattice itself (as_copy=False) or a copy of it.
+        In any case, it returns the transformed Lattice instance
+
+    equivalent_points(special_direction=None, superlattice=None)
+        Returns a dictionary with (h, k): star of (h, k) entries.
+        If special_direction is given, only the mirror plane containing it is
+        used to compute the star of each lattice point. Use superlattice to
+        return indices expressed with respect to a different basis
+    
+    Private methods
+    ---------------
+    __get_cell_shape()
+        finds the shape of lattice unit cell. Use Lattice.cell_shape, unless you
+        suspect that the shape is not up to date
+
+    __generate_lattice()
+        generates the lattice points
     """
 
     def __init__(self, basis, space='real', group='p1', limit=1):
@@ -1464,17 +1553,136 @@ class Lattice():
             raise TypeError(f"Lattice limit should be a scalar, "
                             f"not {type(limit)}")
 
-        self._basis = np.array(basis)
+        self._basis = np.asarray(basis)
         self._space = space
-        self._type = self.__get_lattice_type()
+        self._shape = self.__get_cell_shape()  # __get_cell_shape
+        
+        # check if the plane group given is consistent with the cell shape
+        if not PlaneGroup().is_valid_group(group, self.cell_shape):
+            raise ValueError(f"Lattice: invalid group {group} for lattice "
+                             f"shape {self.cell_shape}")
         self._group = PlaneGroup(group)
         self._limit = limit
         self.lattice, self.hk = self.__generate_lattice()
     
+    # This __eq__ method is very hard to get right. Probably not worth it.
+    # May need to use simultaneous similarity of 2x2 matrices, and check whether
+    # there exists a similarity transform that makes all group operations
+    # fall on one another. The tricky business is finding the generic similarity
+    # transform.
+    # One of the many similarity matrices can be constructed from the
+    # eigenvector matrices of two similar operations.
+    # In fact, given A, B matrices,
+    #         A = Ua D Ua^(-1),     B = Ub D Ub^(-1)
+    # thus
+    #         D = Ua^(-1) A Ua
+    # and
+    #         B = Ub Ua^(-1) A Ua Ub^(-1) = (Ub Ua^(-1)) A (Ub Ua^(-1))^(-1)
+    # so that
+    #         S = Ub Ua^(-1)
+    # is one of the similarity transformation matrices from A to B:
+    #         B = S A S^(-1)
+    # However, this S is not unique. There are some rules for symmetric
+    # (hermitian) matrices, but no good ones for generic matrices.
+    #
+    # def __eq__(self, other):
+        # if not isinstance(other, Lattice):
+            # return NotImplemented
+        # # do first a check on the id
+        # if self is other:
+            # return True
+
+        # # Only high-symmetry lattices can be compared. Use copies with small
+        # # number of points, and keep track for warning reasons of whether some
+        # # needs to be made high-symmetry for comparison
+        # self_hs = self
+        # other_hs = other
+        # msg = ""
+        # if not self.is_high_symmetry():
+            # self_hs = Lattice(self.basis)
+            # self_hs.make_high_symmetry()
+            # msg += "First"
+        # if not other.is_high_symmetry():
+            # other = Lattice(other.basis)
+            # other_hs.make_high_symmetry()
+            # msg += "Second"
+        # if msg:
+            # if msg not in ('First', 'Second'):
+                # msg = "Both"
+            # warning(f"Lattice: {msg} lattice(s) is(are) not high symmetry. "
+                    # "Equality test running on high-symmetry versions")
+
+        # # check if the bases can be transformed into one another by a unitary
+        # # transformation matrix, i.e. b2 = T b1 have the same basis if
+        # # abs(det(T)) = 1.
+
+        # eps = 1e-4  # relative tolerance for equality
+
+        # basis_transform = np.dot(other_hs.basis, np.linalg.inv(self_hs.basis))
+        # det_transform = np.linalg.det(basis_transform)
+        # if np.abs(np.abs(det_transform) - 1) > eps:
+            # return False
+
+        # # Now evaluate if the plane groups (+3d operations) are equivalent.
+        # # Will use sets because of simple subtraction and comparisons
+        # # 1) They must have the same number of symmetry operations.
+        # # Look first only at the plane group operations
+        # self_ops = set(self_hs.group.group_ops())
+        # other_ops = set(other_hs.group.group_ops())
+        # if len(self_ops) != len(oter_ops):
+            # return False
+
+        # # And also at all the others
+        # self_bulkops = set(self_hs.screws_glides)
+        # other_bulkops = set(other_hs.screws_glides)
+        # if len(self_allops) != len(other_allops):
+            # return False
+        
+        # # 2) All rotations (det=1) must be the same, and separately for the
+        # #    surface and for the bulk ones
+        # self_rots = set(op for op in self_ops if np.linalg.det(op) == 1)
+        # other_rots = set(op for op in other_ops if np.linalg.det(op) == 1)
+        # if self_rots != other_rots:
+            # return False
+        # self_bulkrots = set(op for op in self_bulkops if np.linalg.det(op) == 1)
+        # other_bulkrots = set(op
+                             # for op in other_bulkops
+                             # if np.linalg.det(op) == 1)
+        # if self_allrots != other_allrots:
+            # return False
+        
+        # # 3) The rest of the behavior depends on whether the unitary transform
+        # #    between the two lattices is a pure rotation (det == 1) or a
+        # #    roto-reflection (det == -1). In the latter case, reflections may
+        # #    swap the basis vectors, or change their sign. This has implications
+        # #    for those groups that have a single mirror or glide plane.
+        
+        # # now check whether the bases are the same upon any of the plane group
+        # # operations, as well as sign change of either vector and swapping.
+        # # Also keep track of which operation. In fact, we should check whether
+        # # the plane groups are equivalent too, by checking if the directions
+        # # of mirrors/glides are transformed one into the other by the group
+        # # operation that transforms the bases.
+        # invert_first = ((-1, 0), (0, 1))    # sign change of first
+        # invert_second = ((1, 0), (0, -1))   # sign change of second
+        # invert_both = ((-1, 0), (0, -1))    # sign change of both
+        # swap_1 = ((0, -1), (1, 0))          # retain handedness
+        # swap_2 = ((0, 1), (1, 0))           # does not keep handedness
+        # ops = (*self.group.group_ops(include_3d=True),
+               # invert_first, invert_second, swap)
+        # return NotImplemented
+    
+    def __repr__(self):
+        txt = (f"{self.cell_shape} "
+               + f"viperleed.Lattice({self.basis}, ".replace('\n', '')
+               + f"space={self.space}, group={self.group}, "
+               + f"limit={self._limit})")
+        return txt
+    
     @property
     def basis(self):
         """
-        Returns the lattice basis as a 2x2 np.array, with a = basis[0] and
+        Returns the lattice basis as a 2x2 numpy.ndarray, with a = basis[0] and
         b = basis[1]
         """
         return self._basis
@@ -1486,7 +1694,7 @@ class Lattice():
         
         Parameters
         ----------
-        basis: 2x2 array like
+        basis : 2x2 array-like
         """
         if not check_type(basis, 'arraylike'):
             raise TypeError("basis must be array-like. "
@@ -1495,16 +1703,60 @@ class Lattice():
             raise ValueError("Lattice basis needs to have a (2, 2) shape. "
                              f"Found {np.shape(basis)} instead.")
         self._basis = np.array(basis)
-        self._type = self.__get_lattice_type()
+        self._shape = self.__get_cell_shape()
         self.lattice, self.hk = self.__generate_lattice()
 
-    @property  # NB: this one does not have a setter method, so it's read-only
-    def type(self):
+    @property
+    def lattice_parameters(self):
+        """
+        Returns the length of the lattice vectors and the angle alpha between
+        them as a tuple (norm_a, norm_b, alpha)
+        """
+        norm_a, norm_b = np.linalg.norm(self.basis, axis=-1)
+        alpha = np.arccos(np.dot(self.basis[0], self.basis[1])/(norm_a*norm_b))
+        return norm_a, norm_b, np.degrees(alpha)
+
+    @property
+    def reciprocal_basis(self):
+        """
+        Returns the reciprocal of the lattice basis. Notice that if
+        self.space == 'real', this returns the reciprocal space basis.
+        If self.space == 'reciprocal', it returns the reciprocal of
+        the reciprocal, i.e., the real-lattice basis.
+
+        This is different from the return value of real_basis
+        """        
+        # Working out the cross products
+        #   a* = 2pi/area [b x z][0:2] = 2pi/area [b12, -b11]
+        #   b* = 2pi/area [z x a][0:2] = 2pi/area [-a12, a11]
+        # where
+        #   area = det(basis).
+        # Thus
+        #  | a* |                    | b12  -a12| T
+        #  |    | = 2pi/det(basis) * |          |   = 2pi * basis^(-T)
+        #  | b* |                    |-b11   a11|
+        
+        return 2*np.pi*np.linalg.inv(self.basis).T
+
+    @property
+    def real_basis(self):
+        """
+        Always returns the real-space basis of the lattice as a 2x2 np.array
+        """
+        if self.space == 'reciprocal':
+            return self.reciprocal_basis
+        # Not sure why this was like this, but seems useless. Probably was
+        # just to yield a copy.
+        # return np.dot(self.basis, [[1, 0], [0, 1]])
+        return self.basis.copy()
+
+    @property
+    def cell_shape(self):
         """
         Returns the shape of the unit cell as a string. The value returned is
         'Oblique', 'Rectangular', 'Square', 'Rhombic', or 'Hexagonal'.
         """
-        return self._type
+        return self._shape
 
     @property
     def space(self):
@@ -1531,7 +1783,8 @@ class Lattice():
         """
         self._group = PlaneGroup(group)
 
-    def nbeams(self):
+    @property
+    def n_beams(self):
         """
         Returns
         -------
@@ -1540,9 +1793,54 @@ class Lattice():
         reciprocal-space)
         """
         return len(self.hk)
-
-    def __get_lattice_type(self):
+    
+    @property
+    def special_directions(self):
         """
+        Returns vectors along the directions of the mirror planes, in the
+        same coordinate system as self.real_basis. The list returned is as long
+        as there are operations in self.group, with None instead of a direction
+        vector in correspondence of rotations
+
+        Returns
+        -------
+        list of numpy.ndarrays
+        """
+        # Work on the real-basis coordinates, as directions are the
+        # same in real and reciprocal space. Using a reciprocal-space basis
+        # would require to transpose-invert the symmetry operations.
+        # Also notice that we're not including the 3d operations, as this
+        # makes sense only for a 'surface' lattice, and the role of 3d
+        # operations is merely that of determining how many domains may
+        # occur in LEED << IS THIS CORRECT??
+        transform = np.linalg.inv(self.real_basis)
+        ops = self.group.transform(transform)
+
+        # The special directions are those parallel to the eigenvectors
+        # of the mirrors with eigenvalue == 1 (use 1e-4 tolerance).
+        # In fact, this is the direction that is unchanged when applying 
+        # the mirror operation. Rotations do not give any special direction.
+        directions = []
+        for op in ops:
+            if np.linalg.det(op) > 0:  # Rotation
+                directions.append(None)
+                continue
+            eigval, eigvecs = np.linalg.eig(op)
+            # eigvecs has the eigenvectors as columns, ordered in the same
+            # way as the eigenvalues in eigvals. Notice the use of .extend()
+            # rather than .append(). This is because eigvecs is a matrix,
+            # and its 1-element slice is a (1, 2) array. Using .extend() adds
+            # a (2,)-shaped array.
+            directions.extend(eigvecs.T[np.abs(eigval - 1) < 1e-4])
+        return directions
+
+    def __get_cell_shape(self):
+        """
+        Determine the shape of the lattice ('Oblique', 'Rhombic', 'Hexagonal',
+        'Rectangular', or 'Square'), also changing the real-space basis in an
+        handedness-conserving fashion so that the angle between the basis
+        vectors in real space is obtuse (for hexagonal and rhombic only)
+        
         Returns
         -------
         string
@@ -1566,11 +1864,11 @@ class Lattice():
         if np.abs(delta) < eps:  # rhombic or hex
             if self.space == 'real':
                 if cosine > eps:  # angle is acute -> make it obtuse
-                    print('Warning: the input file might be corrupted,'
+                    print('Warning: the input might be corrupted,'
                           'since the real-space basis is not obtuse!')
-                    transform = [[0, -1], [1, 0]]  # this keeps the handedness
+                    transform = (0, -1), (1, 0)  # this keeps the handedness
                 else:
-                    transform = [[1, 0], [0, 1]]
+                    transform = (1, 0), (0, 1)
                 self._basis = np.dot(transform, self._basis)
                 basis = self._basis
                 cosine = np.dot(basis[0],
@@ -1582,7 +1880,7 @@ class Lattice():
                     # the real one is obtuse.
                     cosine *= -1
 
-            if abs(cosine + 1/2) < eps:  # angle is 120deg
+            if abs(cosine + 0.5) < eps:  # angle is 120deg
                 return 'Hexagonal'
             return 'Rhombic'
         return 'Oblique'
@@ -1593,34 +1891,35 @@ class Lattice():
 
         Parameters
         ----------
-        limit:  scalar
-                Determines which portion of the lattice is generated.
-                For space == 'real', the lattice is generated up to a radius
-                of 1.5*limit.
-                    One should then plot from -limit to +limit. This should
-                    cover any post-rotation of the lattice that the user
-                    might later request.
-                For space == 'reciprocal', the lattice is generated up to a
-                radius of limit
+        limit : scalar
+            Determines which portion of the lattice is generated.
+            For space == 'real', the lattice is generated up to a radius
+            of 1.5*limit.
+                One should then plot from -limit to +limit. This should
+                cover any post-rotation of the lattice that the user
+                might later request.
+            For space == 'reciprocal', the lattice is generated up to a
+            radius of limit
 
-        basis:  2x2 array-like, default = self.basis
-                Contains the unit vectors as basis[0] and basis[1]
+        basis : 2x2 array-like, default = self.basis
+            Contains the unit vectors as basis[0] and basis[1]
 
-        space:   string, {'real', 'reciprocal'}, default = self.space
-                Determines whether a real-space or a reciprocal-space
-                lattice is generated.
-                This only affects the behavior of limit (see above)
+        space : string, {'real', 'reciprocal'}, default = self.space
+            Determines whether a real-space or a reciprocal-space
+            lattice is generated.
+            This only affects the behavior of limit (see above)
 
         Returns
         -------
         Tuple (lat, hk)
 
-        lat: 1D np.array
-             Lattice points generated
+        lat : 1D numpy.ndarray
+            Lattice points generated
 
-        hk:  1D np.array, hk.shape == lat.shape
-             Integer indices of the lattice points generated.
-             The lattice points are lat = h*basis[0] + k*basis[1]
+        hk : 1D numpy.ndarray, hk.shape == lat.shape
+            Integer indices of the lattice points generated.
+            The lattice points are lat = h*basis[0] + k*basis[1].
+            hk[i] is a 2-element array of indices of lattice point i
         """
 
         limit = self._limit
@@ -1631,16 +1930,18 @@ class Lattice():
             limit *= 1.5
 
         # get limit for the loops that follow
-        shortest = min(np.linalg.norm(basis[0]),
-                       np.linalg.norm(basis[1]),
+        shortest = min(*np.linalg.norm(basis, axis=-1),
                        np.linalg.norm(basis[0] + basis[1])/2,
                        np.linalg.norm(basis[0] - basis[1])/2)
         h_max = int(np.ceil(limit/shortest))
 
         # create grid of indices
-        hk = np.array([(i, j)
-                       for i in range(-h_max, h_max+1)
-                       for j in range(-h_max, h_max+1)])
+                                                                                # TODO: use BeamIndex here, rather than a bare tuple. Even better,
+                                                                                #       once I have a BeamList (subclass of ndarray, see
+                                                                                #       https://numpy.org/doc/stable/user/basics.subclassing.html)
+                                                                                #       this can be a BeamList, that can preserve the overall type
+                                                                                #       as well as the type of its elements (which will be BeamIndex)
+        hk = np.mgrid[-h_max:h_max+1, -h_max:h_max+1].reshape(2,-1).T
 
         # Create lattice:
         # Notice that, given a row vector of indices (h, k) and a basis in
@@ -1653,11 +1954,11 @@ class Lattice():
         # this as a mask for the output
         mask = np.linalg.norm(lattice, axis=1) <= limit
 
-        return (lattice[mask], hk[mask])
+        return lattice[mask], hk[mask]
 
     def get_rotated_lattice(self, angle):
         """
-        Returns a copy of Lattice.lattice rotates by angle
+        Returns a copy of Lattice.lattice rotated by angle
 
         Parameters
         ----------
@@ -1695,46 +1996,6 @@ class Lattice():
                         [-np.sin(angle), np.cos(angle)]])
         return np.dot(self.basis, rot)
 
-    def reciprocal_basis(self):
-        """
-        Returns the reciprocal of the lattice basis. Notice that if
-        self.space == 'real', this returns the reciprocal space basis.
-        If self.space == 'reciprocal', it returns the reciprocal of
-        the reciprocal, i.e., the real-lattice basis.
-
-        This is different from the return value of real_basis
-        """
-        # 1st and 2nd surface unit cell vectors, including rotation.
-        # Shape = (3, 1)
-        a_3d = np.array([*self.basis[0], 0])
-        b_3d = np.array([*self.basis[1], 0])
-
-        z_3d = np.array([0, 0, 1])
-
-        uc_area = np.vdot(a_3d, np.cross(b_3d, z_3d))  # Area of unit cell
-        a_recipr_3d = (2*np.pi/uc_area)*np.cross(b_3d, z_3d)
-        b_recipr_3d = (2*np.pi/uc_area)*np.cross(z_3d, a_3d)
-
-        return np.array([a_recipr_3d[0:2], b_recipr_3d[0:2]])
-
-    def real_basis(self):
-        """
-        Always returns the real-space basis of the lattice as a 2x2 np.array
-        """
-        if self.space == 'reciprocal':
-            return self.reciprocal_basis()
-        return np.dot(self.basis, [[1, 0], [0, 1]])
-
-    def lattice_parameters(self):
-        """
-        Returns the length of the lattice vectors and the angle alpha between
-        them as a tuple (norm_a, norm_b, alpha)
-        """
-        norm_a = np.linalg.norm(self.basis[0])
-        norm_b = np.linalg.norm(self.basis[1])
-        alpha = np.arccos(np.dot(self.basis[0], self.basis[1])/(norm_a*norm_b))
-        return (norm_a, norm_b, np.degrees(alpha))
-
     def high_symm_transform(self):
         """
         Returns a 2x2 np.array that brings the basis lattice into the highest
@@ -1751,123 +2012,131 @@ class Lattice():
         """
         # The following line should also redefine the basis so that it is
         # obtuse for real-space rhombic and hexagonal lattices
-        _typ = self.type
+        _shape = self.cell_shape
 
         # Will always work on the real-space lattice for convenience,
         # then convert back to the reciprocal one in case the lattice was
         # reciprocal in the first place
-        basis = self.real_basis()
+        basis = self.real_basis
 
         # In what follows, t_elem is used to define a specific elementary
         # operation to be performed on the lattice basis. This is
         # left-multiplied to t_overall at each elementary step, so that
         # t_overall contains the overall transformation
 
-        if _typ == 'ob':
-            # Transform lattice to have the shortest two vectors, with angle
-            # closest to 90°.
-            # This might bring it to rect, hex or rhombic.
+        if _shape != 'ob':
+            return (1, 0), (0, 1)
+
+        # Lattice is oblique.
+        # Transform lattice to have the shortest two vectors, with angle
+        # closest to 90°.
+        # This might bring it to rect, hex or rhombic.
+        #
+        # If neither, will anyway transform to have the closest to rect.
+
+        # ALGORITHM for reduction to closest to rect:
+        # This is a discrete version of Gram-Schmidt's algorithm to find
+        # orthogonal bases
+        # At each iteration:
+        #   - order vectors by norm, the shortest first
+        #   - determine the projection of the second on the first,
+        #     and calculate the nearest integer kk
+        #   - subtract from the second the projection calculated above
+        #   - check whether now the second is the smallest.
+        #     If yes, repeat, otherwise finished.
+
+        # swap keeps track of whether the first and second vectors are
+        # swapped at the end of this passage
+        swap = (1, 0), (0, 1)
+        t_overall = (1, 0), (0, 1)
+        while True:
+            # Swap vectors if needed to get the shortest first
+            if np.linalg.norm(basis[0]) > np.linalg.norm(basis[1]):
+                t_elem = (0, 1), (1, 0)
+            else:
+                t_elem = (1, 0), (0, 1)
+            swap = np.dot(t_elem, swap)
+            t_overall = np.dot(t_elem, t_overall)
+            basis = np.dot(t_elem, basis)
+            projection = np.dot(basis[0], basis[1])/np.dot(basis[0],
+                                                           basis[0])
+            projection = int(np.round(projection))
+            t_elem = (1, 0), (-projection, 1)
+            t_overall = np.dot(t_elem, t_overall)
+            basis = np.dot(t_elem, basis)
+            if np.linalg.norm(basis[0]) <= np.linalg.norm(basis[1]):
+                break
+        # Swap vectors back if they were overall swapped
+        t_overall = np.dot(swap, t_overall)
+        basis = np.dot(swap, basis)
+
+        # END OF ALGORITHM. Now the lattice is closest to rectangular.
+        # It might be still any shape (square, rect, hex, rhombic, oblique)
+
+        # Create a dummy lattice with the new basis,
+        # to check which shape it has
+        _shape = Lattice(basis).cell_shape
+
+        # If it's still oblique, try to see if it can be transformed to hex
+        # or rhombic by choosing "a" not to be the shortest vector of all.
+        #
+        # If possible, keep the new transformation. Otherwise, stick to the
+        # one that makes it closest to rectangular
+        #
+        # All the operations that follow are stored in a matrix t_second,
+        # to be later left-multiplied to t_overall to get the full
+        # transformation
+        #
+        if _shape != 'ob':
+            t_second = (1, 0), (0, 1)
+        else:
+            # lattice is still oblique, even if closest to rectangular
             #
-            # If neither, will anyway transform to have the closest to rect.
-
-            # ALGORITHM for reduction to closest to rect:
-            # This is a discrete version of Gram-Schmidt's algorithm to find
-            # orthogonal bases
-            # At each iteration:
-            #   - order vectors by norm, the shortest first
-            #   - determine the projection of the second on the first,
-            #     and calculate the nearest integer kk
-            #   - subtract from the second the projection calculated above
-            #   - check whether now the second is the smallest.
-            #     If yes, repeat, otherwise finished.
-
-            # swap keeps track of whether the first and second vectors are
-            # swapped at the end of this passage
-            swap = [[1, 0], [0, 1]]
-            t_overall = [[1, 0], [0, 1]]
-            while True:
-                # Swap vectors if needed to get the shortest first
-                if np.linalg.norm(basis[0]) > np.linalg.norm(basis[1]):
-                    t_elem = [[0, 1], [1, 0]]
-                else:
-                    t_elem = [[1, 0], [0, 1]]
-                swap = np.dot(t_elem, swap)
-                t_overall = np.dot(t_elem, t_overall)
-                basis = np.dot(t_elem, basis)
-                projection = np.dot(basis[0], basis[1])/np.dot(basis[0],
-                                                               basis[0])
-                projection = int(np.round(projection))
-                t_elem = [[1, 0], [-projection, 1]]
-                t_overall = np.dot(t_elem, t_overall)
-                basis = np.dot(t_elem, basis)
-                if np.linalg.norm(basis[0]) <= np.linalg.norm(basis[1]):
-                    break
-            # Swap vectors back if they were overall swapped
-            t_overall = np.dot(swap, t_overall)
+            # Re-swapping guarantees that that the matrix has on the first
+            # line the shortest possible vector,
+            # and on the second line the second shortest possible vector.
+            #
+            # The only possible combinations that can lead to a
+            # rhombic/hex are a'=b+a or a'=b-a, depending
+            # on whether the angle is acute or obtuse, respectively
+            #
+            t_second = swap
             basis = np.dot(swap, basis)
 
-            # END OF ALGORITHM. Now the lattice is closest to rectangular.
-            # It might be still any shape (square, rect, hex, rhombic, oblique)
+            t_elem = [[-int(np.sign(np.dot(basis[0], basis[1]))), 1],
+                      [0, 1]]
+            t_second = np.dot(t_elem, t_second)
+            basis = np.dot(t_elem, basis)
+            dummy2 = Lattice(basis)
 
-            # Create a dummy lattice with the new basis,
-            # to check which shape it has
-            _typ = Lattice(basis).type
+            # The following line might change acute into obtuse
+            # --> check if it was the case
+            # PROBABLY IT CANNOT HAPPEN ANYWAY!! IT SHOULD RATHER BE
+            # CHECKED ON DUMMY ABOVE
+            _shape = dummy2.cell_shape
+            sign_before = np.dot(basis[0], basis[1])
+            sign_after = np.dot(dummy2.basis[0], dummy2.basis[1])
+            if sign_before*sign_after < 0:
+                # sign did change -> basis went from acute to obtuse
+                t_second = np.dot([[0, -1], [1, 0]], t_second)
 
-            # If it's still oblique, try to see if it can be transformed to hex
-            # or rhombic by choosing "a" not to be the shortest vector of all.
-            #
-            # If possible, keep the new transformation. Otherwise, stick to the
-            # one that makes it closest to rectangular
-            #
-            # All the operations that follow are stored in a matrix t_second,
-            # to be later left-multiplied to t to get the full transformation
-            #
-            if _typ == 'ob':
-                # lattice is still oblique, even if closest to rectangular
-
-                # Re-swapping guarantees that that the matrix has on the first
-                # line the shortest possible vector,
-                # and on the second line the second shortest possible vector.
-                #
-                # The only possible combinations that can lead to a
-                # rhombic/hex are a'=b+a or a'=b-a, depending
-                # on whether the angle is acute or obtuse, respectively
-                #
-                t_second = swap
-                basis = np.dot(swap, basis)
-
-                t_elem = [[-int(np.sign(np.dot(basis[0], basis[1]))), 1],
-                          [0, 1]]
-                t_second = np.dot(t_elem, t_second)
-                basis = np.dot(t_elem, basis)
-                dummy2 = Lattice(basis)
-
-                # The following line might change acute into obtuse
-                # --> check if it was the case
-                # PROBABLY IT CANNOT HAPPEN ANYWAY!! IT SHOULD RATHER BE
-                # CHECKED ON DUMMY ABOVE
-                _typ = dummy2.type
-                sign_before = np.dot(basis[0], basis[1])
-                sign_after = np.dot(dummy2.basis[0], dummy2.basis[1])
-                if sign_before*sign_after < 0:
-                    # sign did change -> basis went from acute to obtuse
-                    t_second = np.dot([[0, -1], [1, 0]], t_second)
-
-                if _typ == 'ob':
-                    # lattice is still oblique, no transformation is needed
-                    # (will keep the one closest to rect)
-                    t_second = [[1, 0], [0, 1]]
-            else:
-                t_second = [[1, 0], [0, 1]]
-            t_overall = np.dot(t_second, t_overall)
-        else:
-            t_overall = [[1, 0], [0, 1]]
+            if _shape == 'ob':
+                # lattice is still oblique, no transformation is needed
+                # (will keep the one closest to rect)
+                t_second = (1, 0), (0, 1)
+        t_overall = np.dot(t_second, t_overall)
 
         # Finally update the transformation matrix to account for the correct
         # space of the lattice
         if self.space == 'reciprocal':
-            t_overall = np.linalg.inv(t_overall).transpose()
+            t_overall = np.linalg.inv(t_overall).T
         return t_overall
+    
+    def is_high_symmetry(self):
+        """
+        Checks whether the lattice is in the highest symmetry possible
+        """
+        return np.array_equal(((1, 0), (0, 1)), self.high_symm_transform())
 
     def make_high_symmetry(self):
         """
@@ -1886,9 +2155,30 @@ class Lattice():
         if not np.array_equal([[1, 0], [0, 1]], transform):
             # lattice can be higher symmetry, i.e., it was oblique
             self.basis = np.dot(transform, self.basis)
-            self.type = self.get_lattice_type()
-            self.lattice, self.hk = self.generate_lattice()
+            self._shape = self.__get_cell_shape()
+            self.lattice, self.hk = self.__generate_lattice()
             # no need to change the group, since group was at most p2.
             # Inferring whether the group has higher symmetry is not possible
 
         return transform
+    
+    def transform(self, transform, as_copy=True):
+        """
+        Modifies the basis and lattice points according to transform, and
+        returns a copy (if copy=True) or directly modifies the values of self.
+        
+        Returns
+        -------
+        Lattice
+        Either a reference to self (copy=False) or a reference to a new Lattice.
+        in both cases the lattice returned is updated with the transform
+        """
+        new_lattice = self
+        if as_copy:
+            new_lattice = copy.deepcopy(self)
+        new_lattice.basis = np.dot(transform, self.basis)
+        return new_lattice
+    
+    
+
+

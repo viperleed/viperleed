@@ -23,7 +23,8 @@ import PyQt5.QtCore as qtc
 import PyQt5.QtGui as qtg
 import PyQt5.QtWidgets as qtw
 
-import guilib as gl
+# import guilib as gl
+from viperleed import guilib as gl
 
 TEST = False
 
@@ -146,20 +147,20 @@ class LEEDCanvas(gl.MPLFigureCanvas):
         
         self.leed = _win.leed
         
-        screenR = self.leed.get_ScreenRadius(energy)
+        screenR = self.leed.screen_radius(energy)
         self.screen.set_radius(screenR)
         self.setAxLimits(screenR)
         
         windowScaleFactor = (self.rightSize().height()/434)**2
         
         # scaling factor for the markers, also depends on the window size
-        self.markScale = np.sqrt(self.leed.maxEnergy/energy)*windowScaleFactor
+        self.markScale = np.sqrt(self.leed.max_energy/energy)*windowScaleFactor
         
         # Big dot at (0,0), on top of everything
         self.ax.scatter(0, 0, s=100*self.markScale, c='k', zorder=1e10)
         
         # plot the bulk spots as hollow circles
-        bulkLEED = self.leed.rotatePattern(self.rotation, 'bulk')
+        bulkLEED = self.leed.rotate(self.rotation, 'bulk')
         self.bulkLEED = self.ax.scatter(bulkLEED[:,0], bulkLEED[:,1],
                                         s=25*self.markScale,
                                         facecolors='none',
@@ -171,9 +172,9 @@ class LEEDCanvas(gl.MPLFigureCanvas):
     
     def plotLEED(self, hideDoms):
         self.resetLEEDCanvas()
-        self.leed.rotatePattern(self.rotation, 'surf')
+        self.leed.rotate(self.rotation, 'surf')
         
-        if hideDoms or self.leed.nDoms == 1:
+        if hideDoms or self.leed.n_domains == 1:
             toPlot = self.leed.firstLEED
         else:
             toPlot = self.leed.domsLEED
@@ -397,7 +398,7 @@ class RotationBlock(gl.TextBoxWithButtons):
             direction = 1
         if pressed in (self.v10, self.v01):
             vert = True
-        angle = self.window().real.get_bulkToX(direction)
+        angle = self.window().real.angle_for_horizontal_bulk(direction)
         if vert:
             angle += 90
         if qtw.qApp.keyboardModifiers() == qtc.Qt.ControlModifier:
@@ -552,7 +553,7 @@ class DomsBlock(qtw.QWidget):
 
     def initPopup(self):
         leed = self.window().leed
-        self.matricesPopup = MatricesPopup(leed.domSuperlattices,
+        self.matricesPopup = MatricesPopup(leed.superlattices,
                                            leed.domColors,
                                            parent=self.window())
     
