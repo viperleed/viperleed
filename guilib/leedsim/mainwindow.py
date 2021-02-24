@@ -32,7 +32,8 @@ import guilib as gl
 @gl.broadcast_mouse
 class LEED_GUI(qtw.QMainWindow):
     extension = '*.tlm'
-    version = '0.1a'
+    # version = '0.1a'
+    version = gl.GLOBALS['version']
     extStr = 'LEED input files ({})'.format(' '.join([extension,
                                                       extension.upper()]))
     extStr = ';;'.join([extStr, 'All files (*)'])
