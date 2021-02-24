@@ -58,6 +58,21 @@ def commandline_main():
     print('Not implemented yet.', flush=True)
 
 
+def resources_path(dir_name):
+    """
+    This is useful when building an executable from pyinstaller. Returns the
+    correct path to dir_name. When built from pyinstaller, it takes the path
+    relative to the temporary path in which the "exe" is extracted during
+    execution.
+    """
+    # EVENTUALLY IT IS PROBABLY BETTER TO INCLUDE THE WHOLE /fonts FOLDER IN
+    # THE CORRECT PLACE, AND HAVE resources_path RETURN ITS BASE PATH (i.e.,
+    # the top-level folder in which the exe is)
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, dir_name)
+    return dir_name
+
+
 def gui_main():
     """
     Body of the functionality that invokes the ViPErLEED Graphical User
@@ -70,10 +85,12 @@ def gui_main():
     app = qtw.QApplication(sys.argv)
 
     # Import some fonts from ./fonts folder
+    font_path = resources_path("guilib/fonts")
     # * Text: family =  'DejaVu Sans'
-    qtg.QFontDatabase.addApplicationFont("guilib/fonts/DejaVuSans.ttf")
+    qtg.QFontDatabase.addApplicationFont(os.path.join(font_path,
+                                                      "DejaVuSans.ttf"))
     # * Math: family =  'CMU Serif'
-    qtg.QFontDatabase.addApplicationFont("guilib/fonts/cmunrm.otf")
+    qtg.QFontDatabase.addApplicationFont(os.path.join(font_path, "cmunrm.otf"))
 
     leedGUI = gl.LEED_GUI()
     leedGUI.show()
