@@ -28,6 +28,7 @@ from viperleed.guilib.base import (get_equivalent_beams,
 if (os.name == 'posix' and 'DISPLAY' not in os.environ.keys()) or not USE_GUI:
     # The environment does not have graphics capabilities.
     BACKEND = None
+    GLOBALS['USE_GUI'] = False
 else:
     # Import GUI modules
     BACKEND = 'mplcairo'
