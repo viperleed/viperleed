@@ -13,8 +13,8 @@ import numpy as np
 import fortranformat as ff
 import os
 
-from tleedmlib.files.beams import writeAUXEXPBEAMS
-from tleedmlib.leedbase import getBeamCorrespondence, getYfunc
+from viperleed.tleedmlib.files.beams import writeAUXEXPBEAMS
+from viperleed.tleedmlib.leedbase import getBeamCorrespondence, getYfunc
 
 try:
     import matplotlib

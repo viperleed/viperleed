@@ -15,22 +15,27 @@ import os
 import shutil
 import re
 import multiprocessing
-import tleedmlib.sections as sections
 
-from vprglobals import GLOBALS
-from tleedmlib.files.parameters import (readPARAMETERS, interpretPARAMETERS,
-                                        modifyPARAMETERS, updatePARAMETERS)
-from tleedmlib.files.phaseshifts import readPHASESHIFTS
-from tleedmlib.files.poscar import readPOSCAR
-from tleedmlib.files.beams import (readBEAMLIST, readIVBEAMS, readOUTBEAMS,
-                                   checkEXPBEAMS)
-from tleedmlib.files.vibrocc import readVIBROCC, writeVIBROCC
-from tleedmlib.files.displacements import readDISPLACEMENTS
 
-cd = os.path.realpath(os.path.dirname(__file__))  # !!! check this.
-tleedmap_path = os.path.realpath(os.path.join(cd, '..'))
-if tleedmap_path not in sys.path:
-    sys.path.append(tleedmap_path)
+cd = os.path.realpath(os.path.dirname(__file__))
+# NB: it's necessary to add vpr_path to sys.path so that viperleed
+#     can be loaded correctly at the top-level package
+vpr_path = os.path.realpath(os.path.join(cd, '..'))
+for import_path in (cd, vpr_path):
+    if import_path not in sys.path:
+        sys.path.append(import_path)
+
+
+import viperleed.tleedmlib.sections as sections
+from viperleed.vprglobals import GLOBALS
+from viperleed.tleedmlib.files.parameters import (
+    readPARAMETERS, interpretPARAMETERS, modifyPARAMETERS, updatePARAMETERS)
+from viperleed.tleedmlib.files.phaseshifts import readPHASESHIFTS
+from viperleed.tleedmlib.files.poscar import readPOSCAR
+from viperleed.tleedmlib.files.beams import (
+    readBEAMLIST, readIVBEAMS, readOUTBEAMS, checkEXPBEAMS)
+from viperleed.tleedmlib.files.vibrocc import readVIBROCC, writeVIBROCC
+from viperleed.tleedmlib.files.displacements import readDISPLACEMENTS
 
 logger = logging.getLogger("tleedm")
 starttime = 0.0

@@ -14,10 +14,10 @@ import re
 import scipy.spatial as sps
 import itertools
 
-import tleedmlib as tl
-from tleedmlib.base import angle
-from tleedmlib.classes.slab import SymPlane
-from tleedmlib.files.parameters import modifyPARAMETERS
+import viperleed.tleedmlib as tl
+from viperleed.tleedmlib.base import angle
+from viperleed.tleedmlib.classes.slab import SymPlane
+from viperleed.tleedmlib.files.parameters import modifyPARAMETERS
 
 logger = logging.getLogger("tleedm.symmetry")
 

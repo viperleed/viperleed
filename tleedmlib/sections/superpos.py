@@ -14,12 +14,13 @@ import copy
 import shutil
 import subprocess
 
-import tleedmlib.files.iosuperpos as io
-from tleedmlib.leedbase import getDeltas, getTLEEDdir, fortranCompile
-from tleedmlib.files.beams import writeOUTBEAMS, averageBeams, writeFdOut
-from tleedmlib.files.displacements import readDISPLACEMENTS_block
-from tleedmlib.files.iosearch import readSDTL_end, readSDTL_blocks
-from tleedmlib.files.iorefcalc import readFdOut
+import viperleed.tleedmlib.files.iosuperpos as io
+from viperleed.tleedmlib.leedbase import getDeltas, getTLEEDdir, fortranCompile
+from viperleed.tleedmlib.files.beams import (
+    writeOUTBEAMS, averageBeams, writeFdOut)
+from viperleed.tleedmlib.files.displacements import readDISPLACEMENTS_block
+from viperleed.tleedmlib.files.iosearch import readSDTL_end, readSDTL_blocks
+from viperleed.tleedmlib.files.iorefcalc import readFdOut
 
 logger = logging.getLogger("tleedm.superpos")
 

@@ -16,11 +16,12 @@ import shutil
 import copy
 from fractions import Fraction
 
-from guilib.base import get_equivalent_beams
-from tleedmlib.base import parseMathSqrt, angle, cosvec
-from tleedmlib.files.parameters import readPARAMETERS, interpretPARAMETERS
-from tleedmlib.files.poscar import readPOSCAR
-from tleedmlib.files.vibrocc import readVIBROCC
+from viperleed.guilib import get_equivalent_beams
+from viperleed.tleedmlib.base import parseMathSqrt, angle, cosvec
+from viperleed.tleedmlib.files.parameters import (
+    readPARAMETERS, interpretPARAMETERS)
+from viperleed.tleedmlib.files.poscar import readPOSCAR
+from viperleed.tleedmlib.files.vibrocc import readVIBROCC
 
 logger = logging.getLogger("tleedm.leedbase")
 

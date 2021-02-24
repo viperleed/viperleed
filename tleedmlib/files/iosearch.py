@@ -15,11 +15,11 @@ import os
 import random
 import shutil
 
-from tleedmlib.files.beams import writeAUXEXPBEAMS
-from tleedmlib.files.poscar import writeCONTCAR
-from tleedmlib.files.vibrocc import writeVIBROCC
-from tleedmlib.base import BackwardsReader, readIntLine
-from tleedmlib.leedbase import getBeamCorrespondence
+from viperleed.tleedmlib.files.beams import writeAUXEXPBEAMS
+from viperleed.tleedmlib.files.poscar import writeCONTCAR
+from viperleed.tleedmlib.files.vibrocc import writeVIBROCC
+from viperleed.tleedmlib.base import BackwardsReader, readIntLine
+from viperleed.tleedmlib.leedbase import getBeamCorrespondence
 
 logger = logging.getLogger("tleedm.files.iosearch")
 

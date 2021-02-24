@@ -11,7 +11,7 @@ import logging
 import numpy as np
 import re
 
-from tleedmlib.base import splitSublists, readToExc
+from viperleed.tleedmlib.base import splitSublists, readToExc
 
 logger = logging.getLogger("tleedm.files.vibrocc")
 

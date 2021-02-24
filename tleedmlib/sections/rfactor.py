@@ -13,9 +13,9 @@ import logging
 import shutil
 import subprocess
 
-from tleedmlib.files.iorefcalc import readFdOut
-from tleedmlib.leedbase import fortranCompile, getTLEEDdir
-import tleedmlib.files.iorfactor as io
+from viperleed.tleedmlib.files.iorefcalc import readFdOut
+from viperleed.tleedmlib.leedbase import fortranCompile, getTLEEDdir
+import viperleed.tleedmlib.files.iorfactor as io
 
 logger = logging.getLogger("tleedm.rfactor")
 

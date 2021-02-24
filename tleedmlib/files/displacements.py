@@ -11,8 +11,8 @@ import logging
 import re
 import numpy as np
 
-from tleedmlib.base import readIntRange, splitSublists
-from tleedmlib.symmetry import setSymmetry, enforceSymmetry
+from viperleed.tleedmlib.base import readIntRange, splitSublists
+from viperleed.tleedmlib.symmetry import setSymmetry, enforceSymmetry
 
 logger = logging.getLogger("tleedm.files.displacements")
 

@@ -14,18 +14,20 @@ import logging
 import copy
 import numpy as np
 
-import tleedmlib as tl
-from tleedmlib.base import angle
-from tleedmlib.beamgen import runBeamGen
-from tleedmlib.psgen import runPhaseshiftGen
-from tleedmlib.files.poscar import readPOSCAR, writeCONTCAR
-from tleedmlib.files.vibrocc import readVIBROCC
-from tleedmlib.files.parameters import (readPARAMETERS, interpretPARAMETERS,
-                                        modifyPARAMETERS)
-from tleedmlib.files.phaseshifts import readPHASESHIFTS, writePHASESHIFTS
-from tleedmlib.files.beams import (readOUTBEAMS, readBEAMLIST, checkEXPBEAMS,
-                                   readIVBEAMS, sortIVBEAMS, writeIVBEAMS)
-from tleedmlib.files.patterninfo import writePatternInfo
+import viperleed.tleedmlib as tl
+from viperleed.tleedmlib.base import angle
+from viperleed.tleedmlib.beamgen import runBeamGen
+from viperleed.tleedmlib.psgen import runPhaseshiftGen
+from viperleed.tleedmlib.files.poscar import readPOSCAR, writeCONTCAR
+from viperleed.tleedmlib.files.vibrocc import readVIBROCC
+from viperleed.tleedmlib.files.parameters import (
+    readPARAMETERS, interpretPARAMETERS, modifyPARAMETERS)
+from viperleed.tleedmlib.files.phaseshifts import (
+    readPHASESHIFTS, writePHASESHIFTS)
+from viperleed.tleedmlib.files.beams import (
+    readOUTBEAMS, readBEAMLIST, checkEXPBEAMS, readIVBEAMS, sortIVBEAMS,
+    writeIVBEAMS)
+from viperleed.tleedmlib.files.patterninfo import writePatternInfo
 
 logger = logging.getLogger("tleedm.initialization")
 

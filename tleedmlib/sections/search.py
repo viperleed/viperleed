@@ -23,14 +23,14 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.pipeline import make_pipeline
 import scipy
 
-import tleedmlib.files.iosearch as io
-import tleedmlib as tl
+import viperleed.tleedmlib.files.iosearch as io
+import viperleed.tleedmlib as tl
 # from tleedmlib.polynomialfeatures_no_interaction import PolyFeatNoMix
-from tleedmlib.leedbase import fortranCompile
-from tleedmlib.files.parameters import updatePARAMETERS
-from tleedmlib.files.displacements import readDISPLACEMENTS_block
-from tleedmlib.files.searchpdf import (writeSearchProgressPdf,
-                                       writeSearchReportPdf)
+from viperleed.tleedmlib.leedbase import fortranCompile
+from viperleed.tleedmlib.files.parameters import updatePARAMETERS
+from viperleed.tleedmlib.files.displacements import readDISPLACEMENTS_block
+from viperleed.tleedmlib.files.searchpdf import (
+    writeSearchProgressPdf, writeSearchReportPdf)
 
 logger = logging.getLogger("tleedm.search")
 

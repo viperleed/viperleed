@@ -13,7 +13,7 @@ import fortranformat as ff
 import os
 import shutil
 
-from tleedmlib.files.beams import writeAUXBEAMS
+from viperleed.tleedmlib.files.beams import writeAUXBEAMS
 
 logger = logging.getLogger("tleedm.files.iodeltas")
 

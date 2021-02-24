@@ -12,7 +12,7 @@ import random
 import subprocess
 import re
 
-import tleedmlib as tl
+import viperleed.tleedmlib as tl
 
 logger = logging.getLogger("tleedm.psgen")
 

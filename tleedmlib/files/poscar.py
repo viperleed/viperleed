@@ -10,8 +10,8 @@ Functions for reading and writing POSCAR files
 import logging
 import numpy as np
 
-from tleedmlib.classes.slab import Slab
-from tleedmlib.classes.atom import Atom
+from viperleed.tleedmlib.classes.slab import Slab
+from viperleed.tleedmlib.classes.atom import Atom
 
 logger = logging.getLogger("tleedm.files.poscar")
 

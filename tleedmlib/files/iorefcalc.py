@@ -11,9 +11,9 @@ import numpy as np
 import logging
 import fortranformat as ff
 
-import tleedmlib as tl
-from tleedmlib.files.parameters import modifyPARAMETERS
-from tleedmlib.files.beams import writeAUXBEAMS
+import viperleed.tleedmlib as tl
+from viperleed.tleedmlib.files.parameters import modifyPARAMETERS
+from viperleed.tleedmlib.files.beams import writeAUXBEAMS
 
 logger = logging.getLogger("tleedm.files.iorefcalc")
 

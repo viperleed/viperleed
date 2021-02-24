@@ -13,7 +13,7 @@ import re
 import shutil
 import os
 
-import tleedmlib as tl
+import viperleed.tleedmlib as tl
 
 logger = logging.getLogger("tleedm.files.parameters")
 

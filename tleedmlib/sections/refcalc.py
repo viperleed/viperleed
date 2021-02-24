@@ -14,10 +14,11 @@ import copy
 import shutil
 import subprocess
 
-from tleedmlib.leedbase import fortranCompile, getTLEEDdir, getMaxTensorIndex
-from tleedmlib.files.parameters import modifyPARAMETERS
-import tleedmlib.files.beams as beams
-import tleedmlib.files.iorefcalc as io
+from viperleed.tleedmlib.leedbase import (
+    fortranCompile, getTLEEDdir, getMaxTensorIndex)
+from viperleed.tleedmlib.files.parameters import modifyPARAMETERS
+import viperleed.tleedmlib.files.beams as beams
+import viperleed.tleedmlib.files.iorefcalc as io
 
 logger = logging.getLogger("tleedm.refcalc")
 

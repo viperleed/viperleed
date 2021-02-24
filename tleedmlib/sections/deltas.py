@@ -17,11 +17,11 @@ import multiprocessing
 import numpy as np
 import time
 
-import tleedmlib as tl
-import tleedmlib.files.iodeltas as io
-from tleedmlib.files.beams import writeAUXBEAMS
-from tleedmlib.files.displacements import readDISPLACEMENTS_block
-from tleedmlib.files.parameters import updatePARAMETERS
+import viperleed.tleedmlib as tl
+import viperleed.tleedmlib.files.iodeltas as io
+from viperleed.tleedmlib.files.beams import writeAUXBEAMS
+from viperleed.tleedmlib.files.displacements import readDISPLACEMENTS_block
+from viperleed.tleedmlib.files.parameters import updatePARAMETERS
 
 logger = logging.getLogger("tleedm.deltas")
 

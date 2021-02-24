@@ -21,9 +21,9 @@ except Exception:
 else:
     plotting = True
 
-from tleedmlib.files.iodeltas import checkDelta
-from tleedmlib.leedbase import getMaxTensorIndex
-from tleedmlib.base import available_cpu_count
+from viperleed.tleedmlib.files.iodeltas import checkDelta
+from viperleed.tleedmlib.leedbase import getMaxTensorIndex
+from viperleed.tleedmlib.base import available_cpu_count
 
 logger = logging.getLogger("tleedm.rparams")
 

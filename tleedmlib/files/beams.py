@@ -14,8 +14,8 @@ import re
 import fortranformat as ff
 import copy
 
-import tleedmlib as tl
-from guilib.base import project_to_first_domain
+import viperleed.tleedmlib as tl
+from viperleed.guilib import project_to_first_domain
 
 logger = logging.getLogger("tleedm.files.beams")
 

@@ -15,8 +15,9 @@ import re
 import scipy.spatial as sps
 import itertools
 
-from tleedmlib.base import angle, rotMatrix, distanceLineThroughPointsFromPoint
-import tleedmlib as tl
+from viperleed.tleedmlib.base import (
+    angle, rotMatrix, distanceLineThroughPointsFromPoint)
+import viperleed.tleedmlib as tl
 # from tleedmlib import DEFAULT
 
 logger = logging.getLogger("tleedm.slab")
