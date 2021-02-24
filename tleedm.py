@@ -17,6 +17,7 @@ import re
 import multiprocessing
 import tleedmlib.sections as sections
 
+from vprglobals import GLOBALS
 from tleedmlib.files.parameters import (readPARAMETERS, interpretPARAMETERS,
                                         modifyPARAMETERS, updatePARAMETERS)
 from tleedmlib.files.phaseshifts import readPHASESHIFTS
@@ -613,6 +614,7 @@ def main():
 
     logger.info("Starting new log: " + logname + "\nTime of execution (UTC): "
                 + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()) + "\n")
+    logger.info("This is ViPErLEED version " + GLOBALS["version"])
     starttime = timer()
 
     tmpmanifest = ["AUX", "OUT", logname]
