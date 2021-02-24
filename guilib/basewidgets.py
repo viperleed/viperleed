@@ -19,7 +19,8 @@ import PyQt5.QtCore as qtc
 import PyQt5.QtGui as qtg
 import PyQt5.QtWidgets as qtw
 
-import guilib as gl
+from viperleed import guilib as gl
+# import guilib as gl
 
 if gl.BACKEND == 'mplcairo':
     try:

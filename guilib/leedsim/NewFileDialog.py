@@ -16,7 +16,8 @@ import PyQt5.QtCore as qtc
 import PyQt5.QtGui as qtg
 import PyQt5.QtWidgets as qtw
 
-import guilib as gl
+# import guilib as gl
+from viperleed import guilib as gl
 
 angstrom = ' \u212b'
 degrees = '\u00b0'
@@ -383,13 +384,13 @@ class NewFileDialog(qtw.QDialog):
         #--- react on the changes of lattice parameters ---#
         self.lattParamsChanged()
         
-        #--- update the lattice type of the other ---#
+        #--- update the lattice shape of the other ---#
         if self.bulkInput.isChecked():
             other = 'surf'
-            self.surfShape.setCurrentText(self.surfLatt.type)
+            self.surfShape.setCurrentText(self.surfLatt.cell_shape)
         else:
             other = 'bulk'
-            self.bulkShape.setCurrentText(self.bulkLatt.type)
+            self.bulkShape.setCurrentText(self.bulkLatt.cell_shape)
         
         #--- and update the dependent controls ---#
         if signal is not None:
@@ -540,7 +541,7 @@ class NewFileDialog(qtw.QDialog):
             params = [self.bulkParams, self.surfParams]
             latts = [self.bulkLatt, self.surfLatt]
         for (ctrls,latt) in zip(params, latts):
-            (a, b, alpha) = latt.lattice_parameters()
+            a, b, alpha = latt.lattice_parameters
             ctrls[0].setText('{:.4f}{}'.format(a, angstrom))
             ctrls[1].setText('{:.4f}{}'.format(b, angstrom))
             ctrls[2].setText('{:.1f}{}'.format(alpha, degrees))
@@ -559,9 +560,9 @@ class NewFileDialog(qtw.QDialog):
     def updateWoodsList(self):
         # loads the example list of woods notations
         # for the selected bulk shape
-        type = self.bulkLatt.type
+        shape = self.bulkLatt.cell_shape
         self.woods.clear()
-        self.woods.addItems(sorted(self.woodL.examples[type]))
+        self.woods.addItems(sorted(self.woodL.examples[shape]))
         self.updateWoods()
     
     def updateWoods(self):
@@ -571,13 +572,13 @@ class NewFileDialog(qtw.QDialog):
         idx = self.woods.findText(woods, flags = qtc.Qt.MatchExactly)
         if idx < 0:  # item is not already present
             self.woods.addItem(woods)
-            self.woodL.examples[self.bulkLatt.type] |= {woods}
+            self.woodL.examples[self.bulkLatt.cell_shape] |= {woods}
         self.woods.setCurrentText(woods)
     
     def updateGroups(self):
         for (ctrl, latt) in zip([self.bulkGroup, self.surfGroup],
                                 [self.bulkLatt, self.surfLatt]):
-            shape = latt.type
+            shape = latt.cell_shape
             group = latt.group
             groups = group.groupsForShape[shape]
             ctrl.clear()
@@ -611,9 +612,11 @@ class NewFileDialog(qtw.QDialog):
         params = {'eMax': eMax,
                   'SUPERLATTICE': self.supMatrix,
                   'surfBasis': self.surfLatt.basis,
-                  'surfGroup': self.surfLatt.group.group,
-                  'bulkGroup': self.bulkLatt.group.group,
-                  'bulk3Dsym': 'None'
+                  # 'surfGroup': self.surfLatt.group.group,
+                  # 'bulkGroup': self.bulkLatt.group.group,
+                  'surfGroup': self.surfLatt.group,
+                  'bulkGroup': self.bulkLatt.group,
+                  'bulk3Dsym': None
                   }
         
         return params
@@ -729,8 +732,8 @@ class NewFileDialog(qtw.QDialog):
         self.bulkInput.setChecked(True)
         # always set bulk checked at session startup
         # -> might remember choice later
-        self.bulkShape.setCurrentText(self.bulkLatt.type)
-        self.surfShape.setCurrentText(self.surfLatt.type)
+        self.bulkShape.setCurrentText(self.bulkLatt.cell_shape)
+        self.surfShape.setCurrentText(self.surfLatt.cell_shape)
         if 'eMax' in self.oldParams.keys():
             e = self.oldParams['eMax']
         else:

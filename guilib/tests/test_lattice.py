@@ -27,7 +27,7 @@ def test_lattice_init():
     latt = base.Lattice(b, group=g)
     assert np.array_equal(latt.basis, b)
     assert latt.group.group == g
-    assert latt.type == 'Rectangular'
+    assert latt.cell_shape == 'Rectangular'
     assert latt.nbeams() == 3
 
 def test_lattice_wrong_basis_input():

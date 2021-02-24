@@ -16,7 +16,8 @@ import PyQt5.QtCore as qtc
 import PyQt5.QtGui as qtg
 import PyQt5.QtWidgets as qtw
 
-import guilib as gl
+# import guilib as gl
+from viperleed import guilib as gl
 
 
 class ExportCSVDialog(qtw.QDialog):
@@ -42,7 +43,7 @@ class ExportCSVDialog(qtw.QDialog):
     
     def compose(self):
         font = gl.AllGUIFonts().labelFont
-        if self.leed.nDoms > 1:  # more than one domain
+        if self.leed.n_domains > 1:  # more than one domain
             domColors = self.leed.domColors
         else:
             domColors = [(0, 0, 0)]  # black
@@ -85,7 +86,7 @@ class ExportCSVDialog(qtw.QDialog):
         butsLay.addWidget(self.cancelBut)
         
         # Prepare also as many tick boxes as there are domains
-        self.domTicks = [qtw.QCheckBox() for dom in range(self.leed.nDoms)]
+        self.domTicks = [qtw.QCheckBox() for dom in range(self.leed.n_domains)]
         for dom, (color, tick) in enumerate(zip(domColors, self.domTicks)):
             tick.setFont(font)
             tick.setText('Dom. %d' % (dom + 1))

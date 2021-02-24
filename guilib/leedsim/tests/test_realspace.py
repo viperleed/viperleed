@@ -29,7 +29,7 @@ testDict = {'eMax': 15,
 
 def test_realspace_init():
     rs = classes.RealSpace(testDict)
-    assert np.array_equal(rs.superlatticeM, testDict['SUPERLATTICE'])
+    assert np.array_equal(rs.superlattices[0], testDict['SUPERLATTICE'])
     assert np.array_equal(rs.surf.basis, testDict['surfBasis'])
 
 
