@@ -618,8 +618,8 @@ def main():
     logger.addHandler(fileHandler)
 
     logger.info("Starting new log: " + logname + "\nTime of execution (UTC): "
-                + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()) + "\n")
-    logger.info("This is ViPErLEED version " + GLOBALS["version"])
+                + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
+    logger.info("This is ViPErLEED version " + GLOBALS["version"] + "\n")
     starttime = timer()
 
     tmpmanifest = ["AUX", "OUT", logname]
