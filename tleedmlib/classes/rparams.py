@@ -42,6 +42,7 @@ class SearchPar:
         self.el = el
         self.deltaname = deltaname
         self.steps = -1     # not used for interpretation, info only
+        self.center = 1     # the index closest to 0, i.e. "no change"
         self.restrictTo = None  # None, Index, or other search par
         self.linkedTo = None    # other search par linked via 'atom number'
         self.parabolaFit = {"min": None,
@@ -49,6 +50,11 @@ class SearchPar:
         d = {}
         if mode == "occ":
             self.steps = len(next(iter(atom.disp_occ.values())))
+            if el in atom.site.occ and el in atom.disp_occ:
+                n = [abs(v - atom.site.occ[el]) for v in atom.disp_occ[el]]
+                self.center = n.index(min(n))
+            else:  # should not happen
+                self.center = int(round(self.steps / 2) + 1)
         else:
             if mode == "geo":
                 d = atom.disp_geo
@@ -60,6 +66,8 @@ class SearchPar:
             else:
                 k = "all"
             self.steps = len(d[k])
+            n = [np.linalg.norm(v) for v in d[k]]
+            self.center = n.index(min(n)) + 1
 
 
 class DomainParameters:
@@ -557,9 +565,9 @@ class Rparams:
         return config
 
     def getCenteredConfig(self):
-        """Returns a list of 'centered' parameter indices, i.e. all in the
-        middle of their respective range"""
-        return ([int((sp.steps + 1)/2) for sp in self.searchpars])
+        """Returns a list of 'centered' parameter indices, i.e. all as close
+        to 'no displacement' as possible."""
+        return ([sp.center for sp in self.searchpars])
 
     def getPredictConfig(self, best_config=None, curv_cutoff=1e-4):
         """

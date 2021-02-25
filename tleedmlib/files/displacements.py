@@ -606,14 +606,23 @@ def readDISPLACEMENTS_block(rp, sl, dispblock):
                                    'found, skipping line: '+pside)
                     rp.setHaltingLevel(1)
                     continue
-            steps = abs(int(round((fl[1]-fl[0]) / fl[2])))+1
-            mid = (fl[1]+fl[0]) / 2
-            if steps % 2 == 0:      # even number of steps, extend range
-                steps += 1
-            drange = np.arange(mid - ((steps-1)/2*fl[2]),
-                               mid + ((steps-1)/2*fl[2])+1e-6, fl[2])
-            if fl[1] < fl[0]:
-                drange = drange[::-1]  # reverse
+            #  OLD: force uneven number of steps
+            # steps = abs(int(round((fl[1]-fl[0]) / fl[2])))+1
+            # mid = (fl[1]+fl[0]) / 2
+            # if steps % 2 == 0:      # even number of steps, extend range
+            #     steps += 1
+            # drange = np.arange(mid - ((steps-1)/2*fl[2]),
+            #                    mid + ((steps-1)/2*fl[2])+1e-6, fl[2])
+            if fl[0] < fl[1]:
+                drange = np.arange(fl[0], fl[1] + 1e-6, abs(fl[2]))
+            else:
+                drange = np.arange(fl[0], fl[0] - 1e-6, -abs(fl[2]))
+            if min([abs(v) for v in drange]) > 5e-5:
+                logger.warning(
+                    "DISPLACEMENTS: A range does not contain zero. This means "
+                    "that keeping the input configuration unchanged will not "
+                    "be possible during the search: " + value)
+                rp.setHaltingLevel(1)
         if mode == 1 and "offset" in dr:
             # geo offset, get value
             try:
