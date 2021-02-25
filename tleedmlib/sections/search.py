@@ -353,15 +353,16 @@ def parabolaFit(rp, r_configs, x0=None, **kwargs):
     # error along main axes
     d = np.copy(np.diag(m))
     d[d <= 0] = np.nan
-    err_unco = 2 * np.sqrt(rr * predictR / d)
     with np.errstate(invalid="ignore"):
+        err_unco = 2 * np.sqrt(rr * predictR / d)
         err_unco[err_unco < 0] = np.nan
     err_unco = np.sqrt(err_unco)
     # error along eigenvectors
     w2 = np.copy(w)
     w2[w2 == 0] = 1e-100  # to avoid divide-by-zero; dealt with below
-    err_ev = 2 * np.sqrt(rr * predictR / w2)
-    err_ev[err_ev < 0] = 0  # dealt with below
+    with np.errstate(invalid="ignore"):
+        err_ev = 2 * np.sqrt(rr * predictR / w2)
+        err_ev[err_ev < 0] = 0  # dealt with below
     err_ev = np.sqrt(err_ev)
     # correlated error
     err_co = np.dot(v**2, err_ev)
