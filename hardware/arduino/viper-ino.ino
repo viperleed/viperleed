@@ -1,12 +1,17 @@
 /*
-  Test_ReadAnalogVoltage
-  Test for ViPErLEED
+Main LeedControl File
+---------------------
+Author: Bernhard Mayr, Michael Schmid, Florian Dörr
+Date: 03.03.2021
+---------------------
 */
-
+//Libraries
 #include <Arduino.h>
 #include <SPI.h>
 
-/* ---------- CONSTANTS ---------- */
+//File with Arduino settings
+//#include "viper-ino.h"
+//#include "viper-ino_control.h"
 
 #define DEBUG           true  //debug mode, writes to serial line, for use in serial monitor
 
@@ -15,6 +20,76 @@
 #ifndef NAN
   #define NAN        (1.0/0)   //floating-point not-a-number
 #endif
+
+//global variables for communication with Python-Modul "ReadArdo.py"
+#define STARTMARKER 254
+#define ENDMARKER 255
+#define SPECIAL_BYTE 253
+#define MAX_MESSAGE 16
+#define PING 3
+#define INIT_ADC_BYTE 4
+#define OK_BYTE 5
+#define ADC_MEASURE_BYTE 6
+#define INIT_DAC_BYTE 7
+#define INIT_AUTOGAIN_BYTE 8
+#define RESET_BYTE 68
+#define DEBUG_BYTE 0
+
+//Variables for the communication protocoll
+byte bytes_received = 0;            //counter for received bytes
+byte data_received_n = 0;           //numbers of bytes received in message, 2nd byte of received message
+byte data_received_counter = 0;     //total number of bytes received
+byte data_received[MAX_MESSAGE];    //Real message
+byte data_send[MAX_MESSAGE];  
+byte temp_buffer[MAX_MESSAGE];
+byte data_send_count = 0;           //the number of 'real' bytes to be sent to the PC
+byte data_total_send = 0;           //the number of bytes to send to PC taking account of encoded bytes
+
+//Finite state machine 
+int FSM = 0; 
+const int IDLE_STATE = 0; 
+const int INIT_ADC_STATE = 1;
+const int INIT_DAC_STATE = 2;
+const int FSYNC = 3; 
+const int ADC_MEASURE_STATE = 4; 
+const int ADC_VALUE_READY_STATE = 5;
+const int AUTOGAIN_STATE = 6; 
+
+//Flags 
+boolean in_progress = false;            //Flag True when arduino receives new data
+boolean new_data = false;               //Fag True when all new data has arrived
+boolean autogain_measure = true;        //True when Measurements are taken for Autogain
+boolean adc_newgain = false;            //True when a new gain should be set
+
+//ADC settings
+byte gain = 0;
+byte chn; 
+byte polar_mode; 
+byte update_rate;
+byte maximum_gain = 7;
+//byte minimum_gain = 0;
+
+//ADC measurement settings
+uint16_t measurement_n; 
+uint16_t measurement_increment;
+
+//Percent of ADC when saturation is reached
+float adc_saturation = 0.5;
+
+//Union for Variables to convert from float to single bytes
+union shared_memory{                  
+  float float_value;  
+  struct{ 
+    byte byte_array[4]; 
+  }byte_struct; 
+}adc_value;
+//union shared_memory adc_value;
+
+//Timers (defined in milliseconds)
+unsigned long starttime; 
+unsigned long timeout = 5000;         
+unsigned long dac_settletime = 100;
+unsigned long actualtime;
 
 //Number of measurement devices that we can have: ADC#0, ADC#1, LM35 (if present)
 #define N_MAX_MEAS         3
@@ -26,6 +101,7 @@
 #define RELAY_PIN         A4   //relay is connected here if present
 #define JP_I0_PIN         A4   //jumper for manual I0 2.5V range, same as relay pin
 #define JP_AUX_PIN        A5   //jumper for manual AUX 2.5 V range
+#define WORKINPROGRESS     7   //Python script will decide which pin                                                  !!!!!!!!
 
 //Arduino internal reference voltage, ADC maximum, etc
 #define VREF_INTERNAL    2.56  //arduino micro internal ADC reference is 2.56 V
@@ -62,14 +138,14 @@
 #define R_IN_0     (1.0/(7e-12*38400)) //input resistance of ADC7705 in gain0 = x1
 #define REF_OVER_RANGE  (2.5/32768)    //volts per bit at gain0, bipolar, input 0ohm
 const float voltsPerBit[] = {
-        REF_OVER_RANGE*R_IN_0/(R_IN_0 + R_SOURCE),         //gain0 = x1
-        REF_OVER_RANGE*R_IN_0/2/(R_IN_0/2 + R_SOURCE)/2,   //gain1 = x2 has half R_in_0
-        REF_OVER_RANGE*R_IN_0/4/(R_IN_0/4 + R_SOURCE)/4,   //gain2 = x4 has 1/4 R_in_0
-        REF_OVER_RANGE*R_IN_0/8/(R_IN_0/8 + R_SOURCE)/8,   //gain3 = x8 and up: 1/8 R_in_0
-        REF_OVER_RANGE*R_IN_0/8/(R_IN_0/8 + R_SOURCE)/16,  //gain4 = x16
-        REF_OVER_RANGE*R_IN_0/8/(R_IN_0/8 + R_SOURCE)/32,  //gain5 = x32
-        REF_OVER_RANGE*R_IN_0/8/(R_IN_0/8 + R_SOURCE)/64,  //gain6 = x64
-        REF_OVER_RANGE*R_IN_0/8/(R_IN_0/8 + R_SOURCE)/128, //gain7 = x128
+        REF_OVER_RANGE * R_IN_0 / (R_IN_0 + R_SOURCE),         //gain0 = x1
+        REF_OVER_RANGE * R_IN_0 / 2 / (R_IN_0 / 2 + R_SOURCE) / 2,   //gain1 = x2 has half R_in_0
+        REF_OVER_RANGE * R_IN_0 / 4 / (R_IN_0 / 4 + R_SOURCE) / 4,   //gain2 = x4 has 1/4 R_in_0
+        REF_OVER_RANGE * R_IN_0 / 8 / (R_IN_0 / 8 + R_SOURCE) / 8,   //gain3 = x8 and up: 1/8 R_in_0
+        REF_OVER_RANGE * R_IN_0 / 8 / (R_IN_0 / 8 + R_SOURCE) / 16,  //gain4 = x16
+        REF_OVER_RANGE * R_IN_0 / 8 / (R_IN_0 / 8 + R_SOURCE) / 32,  //gain5 = x32
+        REF_OVER_RANGE * R_IN_0 / 8 / (R_IN_0 / 8 + R_SOURCE) / 64,  //gain6 = x64
+        REF_OVER_RANGE * R_IN_0 / 8 / (R_IN_0 / 8 + R_SOURCE) / 128, //gain7 = x128
 };
 // ADC input range scale due to voltage dividers or preamplification on the board
 #define ADC_0_CH0_SCALE_JO 4.0           //ADC#0 channel 0 with JP at I0 open or relay off
@@ -109,44 +185,7 @@ bool adc1ShouldIncreaseGain = false;
 // Measurements of ADC#0, ADC#1 and LM35 sensor temperature are summed up here
 uint16_t numMeasurements;
 int32_t  summedMeasurements[N_MAX_MEAS];
-
-//global variables for communication with Python-module
-#define STARTMARKER 254
-#define ENDMARKER 255
-#define SPECIAL_BYTE 253
-#define MAX_MESSAGE 16
-#define PING 3
-#define INIT_ADC_BYTE 4
-#define OK_BYTE 5
-#define ADC_MEASURE_BYTE 6
-#define INIT_DAC_BYTE 7
-#define INIT_AUTOGAIN_BYTE 8
-#define RESET_BYTE 68
-#define DEBUG_BYTE 0
-
-//Variables for the communication protocoll
-byte bytes_received = 0;            //counter for received bytes
-byte data_received_n = 0;           //numbers of bytes received in message, 2nd byte of received message
-byte data_received_counter = 0;     //total number of bytes received
-byte data_received[MAX_MESSAGE];    //Real message
-byte data_send[MAX_MESSAGE];  
-byte temp_buffer[MAX_MESSAGE];
-byte data_send_count = 0;           //the number of 'real' bytes to be sent to the PC
-byte data_total_send = 0;           //the number of bytes to send to PC taking account of encoded bytes
-
-//Flags 
-boolean in_progress = false;            //Flag True when arduino receives new data
-boolean new_data = false;               //Fag True when all new data has arrived
-
-//Finite state machine 
-int FSM = 0; 
-const int IDLE_STATE = 0; 
-const int INIT_ADC_STATE = 1;
-const int INIT_DAC_STATE = 2;
-const int FSYNC = 3; 
-const int ADC_MEASURE_STATE = 4; 
-const int ADC_VALUE_READY_STATE = 5;
-const int AUTOGAIN_STATE = 6; 
+//================
 
 /* ---------- INITIALIZATION ---------- */
 /** The setup routine runs once on power-up or reset */
@@ -186,35 +225,6 @@ void setup() {
   #endif
 }
 
-/** Main loop by Michael*/
-
-/** The main loop routine runs over and over again forever 
-void loop() {
-  digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on (HIGH is the voltage level)
-  unsigned long startMillis = millis(); 
-  resetMeasurementData();
-  //triggerMeasurements();
-  makeAndSumMeasurements();
-  unsigned long endMillis = millis();
-  float fData[N_MAX_MEAS] = {NAN, NAN, NAN};
-  getFloatMeasurements(fData);
-  Serial.print("dt=");
-  Serial.print(endMillis - startMillis);
-  for (byte i=0; i<N_MAX_MEAS; i++) {
-    Serial.print(" val[");
-    Serial.print(i);
-    Serial.print("]=");
-    byte nDigits = -log10(fData[i])+4;
-    if (nDigits < 0) nDigits = 0;
-    Serial.print(fData[i], nDigits);
-  }
-  Serial.println();
-  digitalWrite(LED_BUILTIN, LOW);    // turn the LED off by making the voltage LOW
-  delay(1000);                       // wait for a second
-}*/
-
-/**Main loop by Bernhard*/
-
 void loop() {
 /*
 * Main loop with "getSerialData()", which receives messages from 
@@ -252,285 +262,7 @@ void loop() {
    }
 }
 
-/** Resets the summed measurement data to 0 */
-void resetMeasurementData() {
-  for (int i=0; i<LENGTH(summedMeasurements); i++)
-    summedMeasurements[i] = 0;
-  numMeasurements = 0;
-}
-
-/** Triggers the ADCs to start the measurements now (i.e., AD7705 FSYNC) */
-void triggerMeasurements() {
-  if (hardwareDetected & ADC_0_PRESENT)
-    AD7705setGainAndTrigger(CS_ADC_0, adc0Channel, adc0Gain);
-  if (hardwareDetected & ADC_1_PRESENT)
-    AD7705setGainAndTrigger(CS_ADC_1, adc1Channel, adc1Gain);
-}
-
-/** Waits for finishing the measurements, then adds the results for ADC#0, ADC#1
- *  and the temperature of the LM35 sensor (if present) to the global
- *  summedMeasurements array. Increments the global numMeasurements counter.
- *  as an array of three signed 16-bit integers.
- *  Results for non-existing components are 0.
- *  Does not trigger the ADCs. Note that ADCs have to be triggered after changing the channel. */
-void makeAndSumMeasurements() {
-  if (hardwareDetected & LM35_PRESENT)
-    summedMeasurements[2] = analogReadMedian(LM35_PIN);   //this one first while we probably have to wait for the others
-  if (hardwareDetected & ADC_0_PRESENT)
-    summedMeasurements[0] = AD7705waitAndReadData(CS_ADC_0, adc0Channel);
-  if (hardwareDetected & ADC_1_PRESENT)
-    summedMeasurements[1] = AD7705waitAndReadData(CS_ADC_1, adc1Channel);
-  numMeasurements++;
-}
-
-/** Converts the global summedMeasurements to float in physical units:
- *  Volts, Amps, degC. */
-void getFloatMeasurements(float fOutput[]) {
-  if (hardwareDetected & ADC_0_PRESENT) {
-    fOutput[0] = summedMeasurements[0] * voltsPerBit[adc0Gain] / numMeasurements;
-    if (adc0Channel == AD7705_CH0) {  //ADC#0 channel 0: I0 input (volts)
-      if ((hardwareDetected & JP_I0_CLOSED) == 0)  //0-10V with jumper open
-        fOutput[0] *= ADC_0_CH0_SCALE_JO;
-    } else                            //ADC#0 channel 1: high voltage (volts)
-      fOutput[0] *= ADC_0_CH1_SCALE;
-  }
-  if (hardwareDetected & ADC_1_PRESENT) {
-    fOutput[1] = summedMeasurements[1] * voltsPerBit[adc1Gain] / numMeasurements;
-    if (adc1Channel == AD7705_CH0) {  //ADC#1 channel 0: I0 at biased sample (amps)
-      fOutput[1] *= ADC_1_CH0_SCALE;
-    } else                            //ADC#1 channel 1: AUX
-      if ((hardwareDetected & JP_AUX_CLOSED) == 0)  //0-10V with jumper open
-        fOutput[1] *= ADC_1_CH1_SCALE_JO;
-  }
-  if (hardwareDetected & LM35_PRESENT) //LM35: degrees C
-    fOutput[2] = summedMeasurements[2] * ARDUINO_ADU_DEG_C / numMeasurements;
-}
-
-/** Simultaneous self-calibration for both ADCs (if present) */
-void selfCalibrateAllADCs(byte updateRate) {
-  unsigned long startMillis = millis();
-  if (hardwareDetected & ADC_0_PRESENT)
-    AD7705selfCalibrate(CS_ADC_0, adc0Channel, adc0Gain, updateRate);
-  if (hardwareDetected & ADC_1_PRESENT)
-    AD7705selfCalibrate(CS_ADC_1, adc1Channel, adc1Gain, updateRate);
-  if (hardwareDetected & ADC_0_PRESENT)
-    AD7705waitForCalibration(CS_ADC_0, adc0Channel);
-  if (hardwareDetected & ADC_1_PRESENT)
-    AD7705waitForCalibration(CS_ADC_1, adc1Channel);
-  unsigned long endMillis = millis();
-  #ifdef DEBUG
-    Serial.print("t_selfCal=");
-    Serial.println(endMillis - startMillis);
-  #endif
-}
-
-/** Sets a digital output used as a chip select signal
- *  from the default high-impedance state to high (=unselected),
- *  without a glitch to the low state */
-void setChipSelectHigh(byte ioPin) {
-  pinMode(ioPin, INPUT_PULLUP);
-  digitalWrite(ioPin, HIGH);
-  pinMode(ioPin, OUTPUT);
-}
-
-/** Returns a bit mask of which hardware was detected */
-uint16_t getHardwarePresent() {
-  int result = 0;
-  //Check for ADCs
-  delay(10);    //make sure that input lines have settled (10 millisec)
-  byte adc0comm = AD7705readCommRegister(CS_ADC_0, AD7705_CH0); //0xff if only pullup, no ADC
-  if (adc0comm != 0xff)
-    result |= ADC_0_PRESENT;
-  byte adc1comm = AD7705readCommRegister(CS_ADC_1, AD7705_CH0);
-  if (adc1comm != 0xff)
-    result |= ADC_1_PRESENT;
-  //Check for LM35 temperature sensor: the analog voltage should be within
-  //the ADC range and settle to a similar value after connecting to a pullup resistor
-  //(the LM35 cannot sink more than about 1 uA, so the pullup will drive it high)
-  pinMode(LM35_PIN, INPUT);
-  delay(10);    //make sure the voltage has settled (10 millisec)
-  int sensorValue1 = analogReadMedian(LM35_PIN);
-  pinMode(LM35_PIN, INPUT_PULLUP);  //measure the voltage with internal pullup
-  delay(10);    //apply pullup for 10 millisec
-  pinMode(LM35_PIN, INPUT);         //reset for usual measurements
-  delay(10);    //make sure the voltage has settled (10 millisec)
-  int sensorValue2 = analogReadMedian(LM35_PIN);
-  if (sensorValue1 > 0 && sensorValue1 < LM35_MAX_ADU &&
-      sensorValue2 < LM35_MAX_ADU && abs(sensorValue2 - sensorValue1) < 10)
-    result |= LM35_PRESENT;
-  //Check for relay present: if the relay is mounted, it should also have an
-  //external pullup that results in about 0.12 V at the pin, about 48 ADUs
-  int sensorValue = analogReadMedian(RELAY_PIN);
-  if (sensorValue > RELAY_MIN_ADU && sensorValue < RELAY_MIN_ADU)
-    result |= RELAY_PRESENT;
-  else {
-    //Check jumper at JP3 indicating 2.5 V I0 range set by user (if no relay)
-    pinMode(JP_I0_PIN, INPUT_PULLUP);
-    delay(1);
-    if (digitalRead(JP_I0_PIN) == 0)
-      result |= JP_I0_CLOSED;
-    pinMode(JP_I0_PIN, INPUT);      //pullup off, reduces power consuption
-  }
-  //Check jumper JP5 indicating 2.5 V AUX range set by user
-  pinMode(JP_AUX_PIN, INPUT_PULLUP);
-  delay(1);
-  if (digitalRead(JP_AUX_PIN) == 0)
-    result |= JP_AUX_CLOSED;
-  pinMode(JP_AUX_PIN, INPUT);
-  return result;
-}
-
-/* ---------- AD7705 ADC FUNCTIONS ---------- */
-
-/** Starts an I/O operation for the AD7705 with given chip select pin */
-void AD7705startIO(byte chipSelectPin) {
-  SPI.beginTransaction(AD7705_SPI_SETTING);
-  digitalWrite(chipSelectPin, LOW);
-}
-
-/** Finishes an I/O operation for the AD7705 with given chip select pin */
-void AD7705endIO(byte chipSelectPin) {
-  digitalWrite(chipSelectPin, HIGH);
-}
-
-/** Resets I/O of the AD7705 by writing 32 high bits */
-void AD7705resetIO(byte chipSelectPin) {
-  AD7705startIO(chipSelectPin);
-  SPI.transfer16(0xffff);
-  SPI.transfer16(0xffff);
-  AD7705endIO(chipSelectPin);
-}
-
-/** Writes the clock register of the AD7705 with the given chip select pin
- *  The update rate can be AD7705_50HZ, AD7705_60HZ, or AD7705_500HZ
- *  Not used because setting the update rate requires self-calibration */
-/*void AD7705setClock(byte chipSelectPin, byte updateRate) {
-  AD7705startIO(chipSelectPin);
-  SPI.transfer(AD7705_REG_CLOCK);
-  SPI.transfer(AD7705_CLK | updateRate);
-  AD7705endIO(chipSelectPin);
-}*/
-
-/** Sets the gain (0...7) and triggers the measurement by touching FSYNC
- *  for the given channel of the AD7705 with the given chip select pin.
- *  Also sets bipolar unbuffered mode and normal operation,
- *  and reads the data register to make sure any old data go away */
-void AD7705setGainAndTrigger(byte chipSelectPin, byte channel, byte gain) {
-  AD7705startIO(chipSelectPin);
-  //SPI.transfer16(0xffff); //reset should not be necessary
-  //SPI.transfer16(0xffff);
-  SPI.transfer(AD7705_REG_SETUP | channel); 
-  SPI.transfer(AD7705_FSYNC | gain<<3);
-  SPI.transfer(AD7705_REG_SETUP | channel);
-  SPI.transfer(gain<<3);
-  SPI.transfer(AD7705_REG_DATA | AD7705_READ_REG | channel);
-  SPI.transfer16(0x0);
-  AD7705endIO(chipSelectPin);
-}
-
-/** Sets gain (0...7) and update rate (AD7705_50HZ, AD7705_60HZ, or AD7705_500HZ) and
- *  performs self-calibration of the AD7705 with the given chip select pin.
- *  Self-calibration is done for the given channel (the calibration of the other channel
- *  remeins untouched).
- *  Thereafter, one has to wait until self-calibration is done, by calling
- *  AD7705waitForCalibration, or wait for the first data (AD7705waitAndReadData).
- *  Triggering (FSYNC) during the self-calibration phase is not allowed. */
-void AD7705selfCalibrate(byte chipSelectPin, byte channel, byte gain, byte updateRate) {
-  AD7705startIO(chipSelectPin);
-  SPI.transfer(AD7705_REG_CLOCK | channel);
-  SPI.transfer(AD7705_CLK | updateRate);     //set clock and update rate
-  SPI.transfer(AD7705_REG_SETUP | channel); 
-  SPI.transfer(AD7705_SELFCAL | gain<<3);    //start self-calibration
-  SPI.transfer(AD7705_REG_DATA | AD7705_READ_REG | channel);
-  SPI.transfer16(0x0);                       //read data register to ensure DRDY is off.
-  AD7705endIO(chipSelectPin);
-}
-
-/** Waits until the AD7705 with the given chip select pin has finished self-calibration */
-void AD7705waitForCalibration(byte chipSelectPin, byte channel) {
-  AD7705startIO(chipSelectPin);
-  do {
-    delayMicroseconds(100);
-    SPI.transfer(AD7705_REG_SETUP | AD7705_READ_REG | channel);
-  } while (SPI.transfer(0x0) & AD7705_SELFCAL);  //read setup register and check for self-calibration
-  AD7705endIO(chipSelectPin);
-}
-
-/** Waits for data and then reads the given channel of the AD7705 with the given chip select pin.
- *  Returns a signed 16-bit int with the signed value (N.B. we use bipolar mode only) */
-int16_t AD7705waitAndReadData(byte chipSelectPin, byte channel) {
-  while(AD7705readCommRegister(chipSelectPin, channel) & AD7705_DRDY) {//DRDY bit is 0 when ready
-    delayMicroseconds(100);
-  }
-  AD7705startIO(chipSelectPin);
-  SPI.transfer(AD7705_REG_DATA | AD7705_READ_REG | channel);
-  int result = SPI.transfer16(0x0);
-  result ^= 0x8000; //flip highest bit: AD7705 output is 0 for -Vref, 0x8000 for 0, 0xffff for +Vref
-  AD7705endIO(chipSelectPin);
-  return result;
-}
-
-/** Reads and returns the communications register of the AD7705 with given chip select pin.
- *  This operation should be done for the channel currently in use. */
-byte AD7705readCommRegister(byte chipSelectPin, byte channel) {
-  AD7705startIO(chipSelectPin);
-  //SPI.transfer16(0xffff); //reset should not be necessary
-  //SPI.transfer16(0xffff);
-  SPI.transfer(AD7705_READ_REG | AD7705_REG_COMM | channel);
-  byte result = SPI.transfer(0x0);
-  AD7705endIO(chipSelectPin);
-  return result;
-}
-
-/* ---------- DAC AD5683 FUNCTIONS ---------- */
-
-/** Resets the AD5683 DAC */
-void AD5683reset(byte chipSelectPin) {
-  SPI.beginTransaction(AD5683_SPI_SETTING);
-  digitalWrite(chipSelectPin, LOW);
-  SPI.transfer(AD5683_RESET_MSB);
-  SPI.transfer16(0);
-  digitalWrite(chipSelectPin, HIGH);
-}
-
-/** Sets the AD5683 DAC output voltage to an unsigned 16-bit value */
-void AD5683setVoltage(byte chipSelectPin, uint16_t dacValue) {
-  uint16_t lowBytes = dacValue << 4;
-  byte hiByte = (dacValue >> 12) | AD5683_SET_DAC;
-  SPI.beginTransaction(AD5683_SPI_SETTING);
-  digitalWrite(chipSelectPin, LOW);
-  SPI.transfer(hiByte);
-  SPI.transfer16(lowBytes);
-  digitalWrite(chipSelectPin, HIGH);
-}
-
-/* ---------- UTILITY FUNCTIONS ---------- */
-
-/** Reads the Arduiono ADC for a given pin (A0...) three times and returns the median */
-uint16_t analogReadMedian(byte pin) {
-  uint16_t a0 = analogRead(pin);
-  uint16_t a1 = analogRead(pin);
-  uint16_t a2 = analogRead(pin);
-  return getMedian(a0, a1, a2);
-}
-
-/** Gets the median of three numbers */
-uint16_t getMedian(uint16_t a0, uint16_t a1, uint16_t a2) {
-  uint16_t max = biggest(a0, a1, a2);
-  if (max == a0) return bigger(a1, a2);
-  if (max == a1) return bigger(a0, a2);
-  else return bigger(a0, a1);
-}
-
-uint16_t bigger(uint16_t a, uint16_t b) {
-  return (a > b) ? a : b;
-}
-
-uint16_t biggest(uint16_t a, uint16_t b, uint16_t c) {
-  return bigger(a, bigger(b,c));
-}
-
-/* -------- BERNHARD'S FUNCTIONS -------- */
+//================
 
 void getSerialData() {
 /*
@@ -588,6 +320,7 @@ void decodeMessage(){
   }
 }
 
+//============================
 void encodeMessage(byte var){
 /*
  * Prepares message before sending it to the PC. Puts single 
@@ -606,7 +339,6 @@ void encodeMessage(byte var){
   NewVar[0] = var;
   encodeMessage(NewVar, 1);
 }
-
 void encodeMessage(byte *var, int len){
 /*
  * Prepares Message before sending it to the PC. Changes every 
@@ -641,7 +373,6 @@ void encodeMessage(byte *var, int len){
   data_total_send = len; 
   dataToPC(); 
 }
-
 void dataToPC() {
 /*
  * Sends bytearray "data_send" to PC by masking message, 
@@ -653,6 +384,7 @@ void dataToPC() {
     Serial.write(data_send, data_send_count);
     Serial.write(ENDMARKER);
 }
+//============================
 
 void processData() {
 /*
@@ -696,12 +428,74 @@ void processData() {
   }
 }
 
+//=========================
+void DoFSYNC(){
+/*
+ * Filtersyncronisation is proceed on the ADC. This is 
+ * done whenever the DAC sets a new Value. In the end 
+ * of the procedure, the data register of the ADC is
+ * read-out and thrown away. 
+ */
+ // ad7705.FSYNC(chn, polar_mode, gain);                                                       ACHTUNG! DURCH WAS ERSETZEN?
+  FSM = IDLE_STATE;
+}
+//=========================
+
+void initialiseAutogain(){
+/*
+ * Function to initialse the Autogain. First it makes several ADC
+ * measurements cycles, adds the values up to a sum and then  
+ * devides by the number of measurement cycles. Then it decides 
+ * for the best gain to start with. It decides for a gain, where 
+ * the measured value is greater than 25% of the measurement 
+ * range at the first time. 
+ */
+  uint16_t adc_readvalue;
+  float autogain_value; 
+  if(autogain_measure){
+    adc_readvalue = AD7705waitAndReadData(WORKINPROGRESS, chn);
+    adc_value.float_value += int(adc_readvalue^0x8000);
+    measurement_increment++;
+    if(measurement_increment == measurement_n){
+      adc_value.float_value= abs(adc_value.float_value/measurement_n/32767);
+      autogain_measure = false; 
+      measurement_increment = 0;
+      gain = 0; 
+    }
+  }
+  if(!autogain_measure){
+    autogain_value = adc_value.float_value*(1 << gain); 
+    if(autogain_value > 0.25){
+      autogain_measure = true; 
+      encodeMessage(OK_BYTE);
+      encodeMessage(1<<gain); //sends actual gain, for debugging, delete
+      //ad7705.init(chn, polar_mode,  gain, update_rate);
+      FSM = IDLE_STATE; 
+    }
+    else{
+      gain++;
+      if(gain == maximum_gain){
+        autogain_measure = true;
+        encodeMessage(OK_BYTE);
+        encodeMessage(1<<gain); //sends actual gain, for debugging, delete
+        //ad7705.init(chn, polar_mode, gain, update_rate); 
+        FSM = IDLE_STATE; 
+      }
+    }
+  }
+  if((millis() -  starttime) > timeout){
+    debugToPC("Timeout, Autogain failed, Arduino turns back to IDLE state"); 
+    FSM = IDLE_STATE;
+  }
+}
+
+//=========================
 void initialiseADC(){ 
 /* 
  *  Function initialise the ADC. First it takes the received message 
  *  "data_received[]" and puts all the bytes into a property of 
  *  the ADC. The message must consist out of 7 bytes. Then it 
- *  sends the initialise command to the ADC
+ *  sends the initialise command to the ADC by ad7705.init()
  */
   if(new_data){
     chn = data_received[0];
@@ -710,8 +504,7 @@ void initialiseADC(){
     measurement_n = data_received[3] << 8 | data_received[4];
     maximum_gain = data_received[5];
     //encodeMessage(1<<gain);
-   // ad7705.init(chn, polar_mode, gain, update_rate);                                       ERSETZEN!!!!!!!!!!!!!!!!!!!
-   //AD7705selfCalibrate(byte chipSelectPin, chn, gain, update_rate)                 DURCH DAS/MUSS ADC AUSWÄHLEN KÖNNEN
+    AD7705selfCalibrate(WORKINPROGRESS, chn, gain, update_rate);
     encodeMessage(OK_BYTE);
     FSM = IDLE_STATE;//Back to command mode
     new_data = false;
@@ -722,7 +515,101 @@ void initialiseADC(){
     new_data = false; 
   }
 }
+//=========================
+void initialiseDAC(){
+/*
+ * Function set a new value to the DAC by packing the first two 
+ * bytes of the "data_received[]" array into a uint16_t variable
+ * "dac_value". The next two bytes of the array are packed into 
+ * the unsigned long integer "dac_settletime", which defines 
+ * the time which is needed for the dac to settle the value. 
+ * Afterwards it initialise the Filtersyncronisation. 
+ */
+  if(new_data){  
+    uint16_t dac_value = data_received[0] << 8 | data_received[1];
+    dac_settletime = data_received[2] << 8 | data_received[3];
+    AD5683setVoltage(CS_DAC, dac_value);
+    FSM = FSYNC;
+    actualtime = millis();
+    new_data = false;
+    adc_value.float_value = 0;
+    measurement_increment = 0; 
+    if(adc_newgain){ //If value reaches upper part of range, it initialise here new gain
+      gain--;
+      AD7705selfCalibrate(WORKINPROGRESS, chn, gain, update_rate);
+      adc_newgain = false; 
+    }
+  }
+  if((millis() -  starttime) > timeout){ 
+    debugToPC("Timeout, no ini Values for DAC received!"); 
+    FSM = IDLE_STATE;
+    new_data = false; 
+  }
+}
 
+void measureADC(){
+/*
+ * This function measures the ADC. First it makes a defined number of measurements 
+ * and adds every value to 'adc_value.float_value'. If the measured value
+ * reaches the upper part of the measuring scale, it sets a flag for a new gain. 
+ * This initialise a new gain to the ADC when a new value is set to the DAC.
+ * If it goes into the saturation of the scale, it starts a new measurement cycle 
+ * or if it has already the lowest gain it sends a error-Message to the computer 
+ * and goes back to IDLE-STATE. 
+ * After a successfull measurment, the value is sended to the PC by the function 
+ * 'SendAdcValue()'
+ */
+/*
+ * uint16_t adc_readvalue;
+  float autogain_value; 
+  if(autogain_measure){
+    adc_readvalue = ad7705.readADResult(chn);
+    Serial.println(adc_readvalue);//Debugging
+    adc_value.float_value += int(adc_readvalue^0x8000);
+    encodeMessage(adc_value.byte_struct.byte_array, 4);//Debugging
+ */
+  uint16_t adc_readvalue = AD7705waitAndReadData(WORKINPROGRESS, chn);
+  int16_t adc_bipolarval = int(adc_readvalue^0x8000);
+  adc_value.float_value += adc_bipolarval;
+  measurement_increment++;
+  if(abs(adc_bipolarval)>(int16_t)(adc_saturation * 32767) && (gain > 0) && !adc_newgain){
+    adc_newgain = true;         
+  } 
+  if(abs(adc_bipolarval) == (int16_t)32768 && gain == 0){
+    debugToPC("ADC Overflow, maximum gain reached, no serious measurements possible...");
+    FSM = IDLE_STATE; 
+  }
+  if(abs(adc_readvalue) == 0xFFFF && gain > 0){
+    gain--;
+    AD7705selfCalibrate(WORKINPROGRESS, chn, gain, update_rate);
+    adc_value.float_value = 0; 
+    measurement_increment = 0;
+    adc_newgain = false; 
+  }
+  if(measurement_increment == measurement_n){
+    adc_value.float_value /= measurement_n;
+    FSM = ADC_VALUE_READY_STATE;
+  }
+  if((millis() -  starttime) > 10000){ 
+    debugToPC("Timeout, ADC measurement Timeout!"); 
+    FSM = IDLE_STATE;
+    new_data = false; 
+  }
+}
+//=========================
+void sendAdcValue(){
+/*
+ * This function sends the value to the PC by packing the 4 byte float 
+ * number into an byte array.
+ */
+  adc_value.float_value = (adc_value.float_value/32768)/(1<<gain);
+  encodeMessage(1<<gain);
+  encodeMessage(adc_value.byte_struct.byte_array, 4);
+  adc_value.float_value = 0; 
+  measurement_increment = 0; 
+  FSM = IDLE_STATE;
+}
+//=========================
 void ResetStates(){
 /*
  * Resets the Arduino and sets it to IDLE-STATE
@@ -734,7 +621,7 @@ void ResetStates(){
   actualtime = 0;  
   gain = 0;
   adc_newgain = false; 
-  ad7705.reset();
+  AD7705resetIO(WORKINPROGRESS); //                                                                    !!!!!!!!!!!!!!!!!!!
 }
 //=========================
 void debugToPC(const char *debugmsg){
@@ -760,4 +647,287 @@ void debugToPC(byte debugbyte){
   Serial.write(nb);
   Serial.write(debugbyte);
   Serial.write(ENDMARKER);
+}
+
+// ------- Michael's functions -------
+
+
+/** Resets the summed measurement data to 0 */
+void resetMeasurementData() {
+    for (int i = 0; i < LENGTH(summedMeasurements); i++)
+        summedMeasurements[i] = 0;
+    numMeasurements = 0;
+}
+
+/** Triggers the ADCs to start the measurements now (i.e., AD7705 FSYNC) */
+void triggerMeasurements() {
+    if (hardwareDetected & ADC_0_PRESENT)
+        AD7705setGainAndTrigger(CS_ADC_0, adc0Channel, adc0Gain);
+    if (hardwareDetected & ADC_1_PRESENT)
+        AD7705setGainAndTrigger(CS_ADC_1, adc1Channel, adc1Gain);
+}
+
+/** Waits for finishing the measurements, then adds the results for ADC#0, ADC#1
+ *  and the temperature of the LM35 sensor (if present) to the global
+ *  summedMeasurements array. Increments the global numMeasurements counter.
+ *  as an array of three signed 16-bit integers.
+ *  Results for non-existing components are 0.
+ *  Does not trigger the ADCs. Note that ADCs have to be triggered after changing the channel. */
+void makeAndSumMeasurements() {
+    if (hardwareDetected & LM35_PRESENT)
+        summedMeasurements[2] = analogReadMedian(LM35_PIN);   //this one first while we probably have to wait for the others
+    if (hardwareDetected & ADC_0_PRESENT)
+        summedMeasurements[0] = AD7705waitAndReadData(CS_ADC_0, adc0Channel);
+    if (hardwareDetected & ADC_1_PRESENT)
+        summedMeasurements[1] = AD7705waitAndReadData(CS_ADC_1, adc1Channel);
+    numMeasurements++;
+}
+
+/** Converts the global summedMeasurements to float in physical units:
+ *  Volts, Amps, degC. */
+void getFloatMeasurements(float fOutput[]) {
+    if (hardwareDetected & ADC_0_PRESENT) {
+        fOutput[0] = summedMeasurements[0] * voltsPerBit[adc0Gain] / numMeasurements;
+        if (adc0Channel == AD7705_CH0) {  //ADC#0 channel 0: I0 input (volts)
+            if ((hardwareDetected & JP_I0_CLOSED) == 0)  //0-10V with jumper open
+                fOutput[0] *= ADC_0_CH0_SCALE_JO;
+        }
+        else                            //ADC#0 channel 1: high voltage (volts)
+            fOutput[0] *= ADC_0_CH1_SCALE;
+    }
+    if (hardwareDetected & ADC_1_PRESENT) {
+        fOutput[1] = summedMeasurements[1] * voltsPerBit[adc1Gain] / numMeasurements;
+        if (adc1Channel == AD7705_CH0) {  //ADC#1 channel 0: I0 at biased sample (amps)
+            fOutput[1] *= ADC_1_CH0_SCALE;
+        }
+        else                            //ADC#1 channel 1: AUX
+            if ((hardwareDetected & JP_AUX_CLOSED) == 0)  //0-10V with jumper open
+                fOutput[1] *= ADC_1_CH1_SCALE_JO;
+    }
+    if (hardwareDetected & LM35_PRESENT) //LM35: degrees C
+        fOutput[2] = summedMeasurements[2] * ARDUINO_ADU_DEG_C / numMeasurements;
+}
+
+/** Simultaneous self-calibration for both ADCs (if present) */
+void selfCalibrateAllADCs(byte updateRate) {
+    unsigned long startMillis = millis();
+    if (hardwareDetected & ADC_0_PRESENT)
+        AD7705selfCalibrate(CS_ADC_0, adc0Channel, adc0Gain, updateRate);
+    if (hardwareDetected & ADC_1_PRESENT)
+        AD7705selfCalibrate(CS_ADC_1, adc1Channel, adc1Gain, updateRate);
+    if (hardwareDetected & ADC_0_PRESENT)
+        AD7705waitForCalibration(CS_ADC_0, adc0Channel);
+    if (hardwareDetected & ADC_1_PRESENT)
+        AD7705waitForCalibration(CS_ADC_1, adc1Channel);
+    unsigned long endMillis = millis();
+#ifdef DEBUG
+    Serial.print("t_selfCal=");
+    Serial.println(endMillis - startMillis);
+#endif
+}
+
+/** Sets a digital output used as a chip select signal
+ *  from the default high-impedance state to high (=unselected),
+ *  without a glitch to the low state */
+void setChipSelectHigh(byte ioPin) {
+    pinMode(ioPin, INPUT_PULLUP);
+    digitalWrite(ioPin, HIGH);
+    pinMode(ioPin, OUTPUT);
+}
+
+/** Returns a bit mask of which hardware was detected */
+uint16_t getHardwarePresent() {
+    int result = 0;
+    //Check for ADCs
+    delay(10);    //make sure that input lines have settled (10 millisec)
+    byte adc0comm = AD7705readCommRegister(CS_ADC_0, AD7705_CH0); //0xff if only pullup, no ADC
+    if (adc0comm != 0xff)
+        result |= ADC_0_PRESENT;
+    byte adc1comm = AD7705readCommRegister(CS_ADC_1, AD7705_CH0);
+    if (adc1comm != 0xff)
+        result |= ADC_1_PRESENT;
+    //Check for LM35 temperature sensor: the analog voltage should be within
+    //the ADC range and settle to a similar value after connecting to a pullup resistor
+    //(the LM35 cannot sink more than about 1 uA, so the pullup will drive it high)
+    pinMode(LM35_PIN, INPUT);
+    delay(10);    //make sure the voltage has settled (10 millisec)
+    int sensorValue1 = analogReadMedian(LM35_PIN);
+    pinMode(LM35_PIN, INPUT_PULLUP);  //measure the voltage with internal pullup
+    delay(10);    //apply pullup for 10 millisec
+    pinMode(LM35_PIN, INPUT);         //reset for usual measurements
+    delay(10);    //make sure the voltage has settled (10 millisec)
+    int sensorValue2 = analogReadMedian(LM35_PIN);
+    if (sensorValue1 > 0 && sensorValue1 < LM35_MAX_ADU &&
+        sensorValue2 < LM35_MAX_ADU && abs(sensorValue2 - sensorValue1) < 10)
+        result |= LM35_PRESENT;
+    //Check for relay present: if the relay is mounted, it should also have an
+    //external pullup that results in about 0.12 V at the pin, about 48 ADUs
+    int sensorValue = analogReadMedian(RELAY_PIN);
+    if (sensorValue > RELAY_MIN_ADU && sensorValue < RELAY_MIN_ADU)
+        result |= RELAY_PRESENT;
+    else {
+        //Check jumper at JP3 indicating 2.5 V I0 range set by user (if no relay)
+        pinMode(JP_I0_PIN, INPUT_PULLUP);
+        delay(1);
+        if (digitalRead(JP_I0_PIN) == 0)
+            result |= JP_I0_CLOSED;
+        pinMode(JP_I0_PIN, INPUT);      //pullup off, reduces power consuption
+    }
+    //Check jumper JP5 indicating 2.5 V AUX range set by user
+    pinMode(JP_AUX_PIN, INPUT_PULLUP);
+    delay(1);
+    if (digitalRead(JP_AUX_PIN) == 0)
+        result |= JP_AUX_CLOSED;
+    pinMode(JP_AUX_PIN, INPUT);
+    return result;
+}
+
+/* ---------- AD7705 ADC FUNCTIONS ---------- */
+
+/** Starts an I/O operation for the AD7705 with given chip select pin */
+void AD7705startIO(byte chipSelectPin) {
+    SPI.beginTransaction(AD7705_SPI_SETTING);
+    digitalWrite(chipSelectPin, LOW);
+}
+
+/** Finishes an I/O operation for the AD7705 with given chip select pin */
+void AD7705endIO(byte chipSelectPin) {
+    digitalWrite(chipSelectPin, HIGH);
+}
+
+/** Resets I/O of the AD7705 by writing 32 high bits */
+void AD7705resetIO(byte chipSelectPin) {
+    AD7705startIO(chipSelectPin);
+    SPI.transfer16(0xffff);
+    SPI.transfer16(0xffff);
+    AD7705endIO(chipSelectPin);
+}
+
+/** Writes the clock register of the AD7705 with the given chip select pin
+ *  The update rate can be AD7705_50HZ, AD7705_60HZ, or AD7705_500HZ
+ *  Not used because setting the update rate requires self-calibration */
+ /*void AD7705setClock(byte chipSelectPin, byte updateRate) {
+   AD7705startIO(chipSelectPin);
+   SPI.transfer(AD7705_REG_CLOCK);
+   SPI.transfer(AD7705_CLK | updateRate);
+   AD7705endIO(chipSelectPin);
+ }*/
+
+ /** Sets the gain (0...7) and triggers the measurement by touching FSYNC
+  *  for the given channel of the AD7705 with the given chip select pin.
+  *  Also sets bipolar unbuffered mode and normal operation,
+  *  and reads the data register to make sure any old data go away */
+void AD7705setGainAndTrigger(byte chipSelectPin, byte channel, byte gain) {
+    AD7705startIO(chipSelectPin);
+    //SPI.transfer16(0xffff); //reset should not be necessary
+    //SPI.transfer16(0xffff);
+    SPI.transfer(AD7705_REG_SETUP | channel);
+    SPI.transfer(AD7705_FSYNC | gain << 3);
+    SPI.transfer(AD7705_REG_SETUP | channel);
+    SPI.transfer(gain << 3);
+    SPI.transfer(AD7705_REG_DATA | AD7705_READ_REG | channel);
+    SPI.transfer16(0x0);
+    AD7705endIO(chipSelectPin);
+}
+
+/** Sets gain (0...7) and update rate (AD7705_50HZ, AD7705_60HZ, or AD7705_500HZ) and
+ *  performs self-calibration of the AD7705 with the given chip select pin.
+ *  Self-calibration is done for the given channel (the calibration of the other channel
+ *  remeins untouched).
+ *  Thereafter, one has to wait until self-calibration is done, by calling
+ *  AD7705waitForCalibration, or wait for the first data (AD7705waitAndReadData).
+ *  Triggering (FSYNC) during the self-calibration phase is not allowed. */
+void AD7705selfCalibrate(byte chipSelectPin, byte channel, byte gain, byte updateRate) {
+    AD7705startIO(chipSelectPin);
+    SPI.transfer(AD7705_REG_CLOCK | channel);
+    SPI.transfer(AD7705_CLK | updateRate);     //set clock and update rate
+    SPI.transfer(AD7705_REG_SETUP | channel);
+    SPI.transfer(AD7705_SELFCAL | gain << 3);    //start self-calibration
+    SPI.transfer(AD7705_REG_DATA | AD7705_READ_REG | channel);
+    SPI.transfer16(0x0);                       //read data register to ensure DRDY is off.
+    AD7705endIO(chipSelectPin);
+}
+
+/** Waits until the AD7705 with the given chip select pin has finished self-calibration */
+void AD7705waitForCalibration(byte chipSelectPin, byte channel) {
+    AD7705startIO(chipSelectPin);
+    do {
+        delayMicroseconds(100);
+        SPI.transfer(AD7705_REG_SETUP | AD7705_READ_REG | channel);
+    } while (SPI.transfer(0x0) & AD7705_SELFCAL);  //read setup register and check for self-calibration
+    AD7705endIO(chipSelectPin);
+}
+
+/** Waits for data and then reads the given channel of the AD7705 with the given chip select pin.
+ *  Returns a signed 16-bit int with the signed value (N.B. we use bipolar mode only) */
+int16_t AD7705waitAndReadData(byte chipSelectPin, byte channel) {
+    while (AD7705readCommRegister(chipSelectPin, channel) & AD7705_DRDY) {//DRDY bit is 0 when ready
+        delayMicroseconds(100);
+    }
+    AD7705startIO(chipSelectPin);
+    SPI.transfer(AD7705_REG_DATA | AD7705_READ_REG | channel);
+    int result = SPI.transfer16(0x0);
+    result ^= 0x8000; //flip highest bit: AD7705 output is 0 for -Vref, 0x8000 for 0, 0xffff for +Vref
+    AD7705endIO(chipSelectPin);
+    return result;
+}
+
+/** Reads and returns the communications register of the AD7705 with given chip select pin.
+ *  This operation should be done for the channel currently in use. */
+byte AD7705readCommRegister(byte chipSelectPin, byte channel) {
+    AD7705startIO(chipSelectPin);
+    //SPI.transfer16(0xffff); //reset should not be necessary
+    //SPI.transfer16(0xffff);
+    SPI.transfer(AD7705_READ_REG | AD7705_REG_COMM | channel);
+    byte result = SPI.transfer(0x0);
+    AD7705endIO(chipSelectPin);
+    return result;
+}
+
+/* ---------- DAC AD5683 FUNCTIONS ---------- */
+
+/** Resets the AD5683 DAC */
+void AD5683reset(byte chipSelectPin) {
+    SPI.beginTransaction(AD5683_SPI_SETTING);
+    digitalWrite(chipSelectPin, LOW);
+    SPI.transfer(AD5683_RESET_MSB);
+    SPI.transfer16(0);
+    digitalWrite(chipSelectPin, HIGH);
+}
+
+/** Sets the AD5683 DAC output voltage to an unsigned 16-bit value */
+void AD5683setVoltage(byte chipSelectPin, uint16_t dacValue) {
+    uint16_t lowBytes = dacValue << 4;
+    byte hiByte = (dacValue >> 12) | AD5683_SET_DAC;
+    SPI.beginTransaction(AD5683_SPI_SETTING);
+    digitalWrite(chipSelectPin, LOW);
+    SPI.transfer(hiByte);
+    SPI.transfer16(lowBytes);
+    digitalWrite(chipSelectPin, HIGH);
+}
+
+/* ---------- UTILITY FUNCTIONS ---------- */
+
+/** Reads the Arduiono ADC for a given pin (A0...) three times and returns the median */
+uint16_t analogReadMedian(byte pin) {
+    uint16_t a0 = analogRead(pin);
+    uint16_t a1 = analogRead(pin);
+    uint16_t a2 = analogRead(pin);
+    return getMedian(a0, a1, a2);
+}
+
+/** Gets the median of three numbers */
+uint16_t getMedian(uint16_t a0, uint16_t a1, uint16_t a2) {
+    uint16_t max = biggest(a0, a1, a2);
+    if (max == a0) return bigger(a1, a2);
+    if (max == a1) return bigger(a0, a2);
+    else return bigger(a0, a1);
+}
+
+uint16_t bigger(uint16_t a, uint16_t b) {
+    return (a > b) ? a : b;
+}
+
+uint16_t biggest(uint16_t a, uint16_t b, uint16_t c) {
+    return bigger(a, bigger(b, c));
 }
