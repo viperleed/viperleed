@@ -12,10 +12,11 @@ from viperleed import fortranformat as ff
 
 logger = logging.getLogger("tleedm.files.iosuperpos")
 
-def writeSuperposInput(sl, rp, config, param_name = "PARAM",
-                                       contrin_name = "superpos-CONTRIN"):
-    """Writes a PARAM and a CONTRIN file as input for the Superpos 
-    calculation. Returns the contents of CONTRIN, as this will also be needed 
+
+def writeSuperposInput(sl, rp, config, param_name="PARAM",
+                       contrin_name="superpos-CONTRIN"):
+    """Writes a PARAM and a CONTRIN file as input for the Superpos
+    calculation. Returns the contents of CONTRIN, as this will also be needed
     as an input stream for the superpos calculation."""
     mnfiles = 0
     occupations = []    # occupation per delta file
@@ -27,7 +28,7 @@ def writeSuperposInput(sl, rp, config, param_name = "PARAM",
     # make lists to print
     for at in rp.search_atlist:
         sps = [sp for sp in rp.searchpars if sp.atom == at]
-        occpar = [sp for sp in sps if sp.mode == "occ"][0] # exactly one
+        occpar = [sp for sp in sps if sp.mode == "occ"][0]  # exactly one
         i = rp.searchpars.index(occpar)
         totalocc = 0.0
         for el in at.disp_occ:
@@ -41,7 +42,7 @@ def writeSuperposInput(sl, rp, config, param_name = "PARAM",
             pl = [sp for sp in sps if sp.el == el]
             if len(pl) == 0:
                 logger.error("No search parameters found for atom {}."
-                              "Aborting...".format(at.oriN))
+                             "Aborting...".format(at.oriN))
                 rp.setHaltingLevel(2)
                 return ""
             deltanames.append(pl[0].deltaname)
@@ -91,11 +92,11 @@ C
     param += "      PARAMETER (MNFILES={})\n".format(mnfiles)
     param += "      PARAMETER (MNCONCS=1)\n"
     param += ("      PARAMETER (MNT0={}, MNCSTEP={}, MNATOMS=1)\n"
-               .format(len(rp.ivbeams), rp.mncstep))
+              .format(len(rp.ivbeams), rp.mncstep))
     try:
         with open(param_name, "w") as wf:
             wf.write(param)
-    except:
+    except Exception:
         logger.error("Failed to write to PARAM file for superpos")
         raise
 
@@ -103,19 +104,19 @@ C
     i3 = ff.FortranRecordWriter("I3")
     f74x10 = ff.FortranRecordWriter('10F7.4')
     contrin = (i3.write([mnfiles]) + "  0               no. of files, VarAll: "
-              "all possible parameter combinations? (1/0)\n")
+               "all possible parameter combinations? (1/0)\n")
     contrin += "  1                  number of concentration steps\n"
     contrin += f74x10.write(occupations) + "\n"
     for i in range(0, len(deltanames)):
         contrin += deltanames[i].ljust(15) + "  1"
         contrin += (i3.write([surfaceChecks[i]]) + "  1  FILENAME(A15 !!!),"
-                   "VARIATIONS,SURFACE?,FORMATTED?\n")
+                    "VARIATIONS,SURFACE?,FORMATTED?\n")
         contrin += i3.write([indices[i]]) + "\n"
     try:
         with open(contrin_name, "w") as wf:
             wf.write(contrin)
-    except:
+    except Exception:
         logger.error("Failed to write " + contrin_name + " file. Execution "
-                      "will continue...")
+                     "will continue...")
 
     return contrin
