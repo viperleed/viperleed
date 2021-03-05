@@ -24,7 +24,7 @@ def main():
           "ELSPLIT and SITEDEF in the PARAMETERS file. "
           "Check the documentation for further information on how to arrange "
           "blocks in the _PHASESHIFTS file.\n")
-    
+
     # read the phaseshifts file
     try:
         (firstline, ps, _, _) = readPHASESHIFTS(None, None, check=False)
@@ -37,30 +37,30 @@ def main():
                 print("Input failed. Please try again.")
             else:
                 try:
-                    (firstline, ps, _, _) = readPHASESHIFTS(None, 
-                                        None, readfile=filename, check=False)
+                    (firstline, ps, _, _) = readPHASESHIFTS(
+                        None, None, readfile=filename, check=False)
                     print("Phaseshifts file read successfully.")
                 except FileNotFoundError:
                     print(filename+" not found.")
                     filename = ""
-                except:
-                    print("Exception while reading phaseshifts file: ", 
+                except Exception:
+                    print("Exception while reading phaseshifts file: ",
                           exc_info=True)
                     return 1
-    except:
+    except Exception:
         print("Exception while reading phaseshifts file: ", exc_info=True)
         return 1
-    
+
     # print some info
-    print("Found "+str(len(ps[0][1]))+" blocks. Enter a space-separated list of "
-          "how the blocks should be arranged in the new file.\n\n"
+    print("Found "+str(len(ps[0][1]))+" blocks. Enter a space-separated list "
+          "of how the blocks should be arranged in the new file.\n\n"
           "Examples:\n"
           "'1 1 2 2': Print the first block twice, then the second block "
           "twice.\n"
           "'2 1': Swap the first an the second block\n"
           "'2 3': Print the second, then the third block, delete the first "
           "block.\n")
-    
+
     # get input for new order
     neworder = ""
     while neworder == "":
@@ -70,7 +70,7 @@ def main():
         else:
             try:
                 ol = [int(s) for s in neworder.split()]
-            except:
+            except ValueError:
                 print("Could not parse input. Please try again.")
                 neworder = ""
             for i in ol:
@@ -78,7 +78,7 @@ def main():
                     print("Input out of bounds. Please try again.")
                     neworder = ""
                     break
-                
+
     # now rearrange blocks as given in ol
     oldps = ps[:]
     ps = []
@@ -86,7 +86,7 @@ def main():
         enps = []
         for i in ol:
             enps.append(oldenps[i-1])
-        ps.append((en,enps))
+        ps.append((en, enps))
 
     # add block of zeroes if necessary:
     nonzero = False
@@ -97,24 +97,24 @@ def main():
     if nonzero:
         oldps = ps[:]
         ps = []
-        for (en,enps) in oldps:
+        for (en, enps) in oldps:
             enps.append([0.0]*len(enps[0]))
-            ps.append((en,enps))
-    
+            ps.append((en, enps))
+
     # in firstline, change the block-count to the new number of blocks
     firstline = str(len(ps[0][1])).rjust(3) + firstline[3:]
-    
+
     # write new file
     try:
         timestamp = time.strftime("%y%m%d-%H%M%S", time.localtime())
         fn = "_PHASESHIFTS_mod_"+timestamp
         writePHASESHIFTS(firstline, ps, filename=fn)
         print("Wrote new phaseshifts file as "+fn)
-    except:
+    except Exception:
         print("Error writing new phaseshifts file.")
         return 1
     return 0
-        
+
 
 if __name__ == "__main__":
     main()

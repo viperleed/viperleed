@@ -15,9 +15,6 @@ import numpy as np
 from tleedmlib.files.poscar import readPOSCAR, writeCONTCAR
 import tleedmlib as tl
 
-###############################################
-#                  MAIN                       #
-###############################################
 
 def main():
     # print some info
@@ -39,7 +36,7 @@ def main():
         except FileNotFoundError:
             print("File "+filename+" not found.")
             filename = ""
-        except:
+        except Exception:
             print("Exception while reading POSCAR file")
             return 1
 
@@ -52,7 +49,7 @@ def main():
         if cutstr != "":
             try:
                 cut = float(cutstr)
-            except:
+            except ValueError:
                 print("Failed to convert input to float.")
                 cut = -1
             else:
@@ -68,7 +65,7 @@ def main():
         else:
             try:
                 eps = float(s)
-            except:
+            except ValueError:
                 print("Could not convert value to float.")
             else:
                 if eps < 0:
@@ -80,7 +77,7 @@ def main():
     rp.SYMMETRY_EPS = eps
     rp.SYMMETRY_EPS_Z = eps
     sl.fullUpdate(rp)
-    
+
     sl.bulkslab = sl.makeBulkSlab(rp)
     bsl = sl.bulkslab
     bsl.createSublayers(eps)
@@ -92,18 +89,18 @@ def main():
         bsl = sl.bulkslab
     if not rp.superlattice_defined:
         ws = tl.leedbase.writeWoodsNotation(rp.SUPERLATTICE)
-                # !!! replace the writeWoodsNotation from baselib with
-                #   the one from guilib
+        # !!! replace the writeWoodsNotation from baselib with
+        #   the one from guilib
         si = rp.SUPERLATTICE.astype(int)
         if ws:
             print("Found SUPERLATTICE = "+ws)
         else:
             print("Found SUPERLATTICE M = {} {}, {} {}".format(
-                                    si[0,0], si[0,1], si[1,0], si[1,1]))
-    
+                si[0, 0], si[0, 1], si[1, 0], si[1, 1]))
+
     bsl.getCartesianCoordinates()
     newC = bsl.getMinC(rp, z_periodic=False)
-    
+
     if newC is None:
         print("No repeat vector was found inside the bulk. The bulk may "
               "already be minimal.")
@@ -112,10 +109,10 @@ def main():
     rp.BULK_REPEAT = -newC
 
     bsl.atlist = [at for at in bsl.atlist if at.cartpos[2] > bsl.topat_ori_z
-                                                          - abs(newC[2])]
+                  - abs(newC[2])]
     bsl.layers[0].atlist = bsl.atlist
 
-    rp.SUPERLATTICE = np.array([[1,0],[0,1]], dtype=float)
+    rp.SUPERLATTICE = np.eye(2)
     newbsl = bsl.makeBulkSlab(rp)
 
     # find largest layer spacing in reduced POSCAR
@@ -154,7 +151,7 @@ def main():
         writeCONTCAR(newbsl, filename='POSCAR_bulk', comments='none')
         print("Wrote POSCAR_bulk. Check file to see if periodicity is "
               "correct.")
-    except:
+    except Exception:
         print("Exception occurred while writing POSCAR_bulk")
 
     # create POSCAR with reduced size
@@ -171,19 +168,19 @@ def main():
     for at in newsl.atlist:
         at.pos[2] -= newZero
     newsl.getCartesianCoordinates()
-    newsl.ucell[:,2] = newsl.ucell[:,2] * (1 - newZero)
+    newsl.ucell[:, 2] = newsl.ucell[:, 2] * (1 - newZero)
     newsl.getFractionalCoordinates()
     newcut = round((topBulkAt.pos[2]
                    + (abs(botSlabAt.pos[2] - topBulkAt.pos[2]) / 2)), 3)
     if bulkcut > 0:
-        newbulkcut = round((topBulkAt.pos[2] - (bulkcut / newsl.ucell[2,2])),
+        newbulkcut = round((topBulkAt.pos[2] - (bulkcut / newsl.ucell[2, 2])),
                            3)
     # write POSCAR_min
     newsl.sortOriginal()
     try:
         writeCONTCAR(newsl, filename='POSCAR_min', comments='none')
         print("Wrote POSCAR_min, to be used with parameters below.")
-    except:
+    except Exception:
         print("Exception occurred while writing POSCAR_min")
 
     # print info
