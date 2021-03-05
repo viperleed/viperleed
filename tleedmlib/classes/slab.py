@@ -107,11 +107,51 @@ class Slab:
         List of Layer objects, each containing atoms of equal element and Z
         coordinate
     sitelist : list of Sitetype
-        list of distinct sites as Sitetype, storing information on vibration
+        List of distinct sites as Sitetype, storing information on vibration
         and concentration
     ucell_mod : list of tuples (str, np.array)
-        stored modifications made to the unit cell; each is a tuple of
+        Stored modifications made to the unit cell; each is a tuple of
         (type, matrix), where type is lmul, rmul, or add
+    topat_ori_z : float
+        Stores the original position of the topmost atom in cartesian
+        coordinates
+    celltype : str
+        Unit cell type as string
+    planegroup : str
+        Symmetry group of the slab, as string
+    foundplanegroup : str
+        Highest symmetry found, doesn't get modified when user reduces
+        symmetry manually
+    orisymplane : SymPlane
+        Only stored if the planegroup is ambigious as to which unit vector the
+        symmetry plane at the origin is parallel to
+    linklists : list of list of Atom
+        List of lists of atoms which are linked by a symmetry operation
+    displists : list of list of Atom
+        List of lists of atoms which are displaced together. This differs from
+        'linklists' in that while linklists stores the linking based on the
+        current symmetry, the 'displists' store actual displacement linking
+        based on the symmetry set at the time the displacement is assigned.
+    sites_initialized : bool
+        Set by self.initSites
+    layers_initialized : bool
+        Set by self.createLayers
+    deltas_initialized : bool
+        Set by Rparams.generateSearchPars
+    preprocessed : bool
+        True if the POSCAR that his slab was read from had the
+        'Plane group = XY' comment in the header, indicating that it was
+        processed by tleedm before.
+    symbaseslab : Slab
+        Slab object collapsed to the base unit cell
+    bulkslab : Slab
+        Slab object containing only bulk layers
+    bulk_screws : list of int
+        Only assigned to the bulkslab object. Integer list of rotation orders
+        present in the bulk.
+    bulk_glides : list of SymPlane
+        Only assigned to the bulkslab object. List of symmetry planes present
+        in the bulk.
     """
 
     def __init__(self):
@@ -126,32 +166,21 @@ class Slab:
         self.sitelist = []
         self.ucell_mod = []
         self.ucell_ori = np.array([])
-        self.topat_ori_z = None     # stores the original position of the topmost
-                                  #   atom in cartesian coordinates
-        self.celltype = "unknown"       # unit cell type as string
-        self.planegroup = "unknown"     # symmetry group of the slab, as string
-        self.foundplanegroup = "unknown" # highest symmetry found, doesn't get
-                                #  modified when user reduces symmetry manually
-        self.orisymplane = None      # only stored if the planegroup is
-                                #   ambigious as to which unit vector the
-                                #   symmetry plane at the origin is parallel to
-        self.linklists = []     # list of lists of atoms which are linked by a
-                                #   symmetry operation
-        self.displists = []     # list of lists of atoms which are displaced
-                                #   together
-
+        self.topat_ori_z = None
+        self.celltype = "unknown"
+        self.planegroup = "unknown"
+        self.foundplanegroup = "unknown"
+        self.orisymplane = None
+        self.linklists = []
+        self.displists = []
         self.sites_initialized = False
         self.layers_initialized = False
-        self.preprocessed = False    # True if the POSCAR it was read from had
-                                     #   the 'Plane group = XY' comment
+        self.preprocessed = False
         self.deltas_initialized = False
-
-        self.symbaseslab = None    # Slab object collapsed to base cell
-        self.bulkslab = None       # Slab object containing only bulk layers
-        self.bulk_screws = []       # only assigned to the bulkslab object!
-                    # Integer list of rotation orders present in the bulk
-        self.bulk_glides = []       # only assigned to the bulkslab object!
-                    # List of symplanes present in the bulk
+        self.symbaseslab = None
+        self.bulkslab = None
+        self.bulk_screws = []
+        self.bulk_glides = []
 
     def resetSymmetry(self):
         """Sets all symmetry information back to default values."""
@@ -188,11 +217,9 @@ class Slab:
         self.getCartesianCoordinates()
         if not self.layers_initialized:
             self.createLayers(rparams)
-            self.layers_initialized = True
         self.updateElements(rparams)
         if not self.sites_initialized:
             self.initSites(rparams)
-            self.sites_initialized = True
         if rparams.fileLoaded["VIBROCC"]:
             for at in self.atlist:
                 at.initDisp()
@@ -350,6 +377,7 @@ class Slab:
             layer.getLayerPos()
             layer.num = i
         self.atlist = tmplist
+        self.layers_initialized = True
 
     def createSublayers(self, eps=0.001):
         """Sorts the atoms in the slab into sublayers, sorted by element and Z
@@ -507,6 +535,7 @@ class Slab:
         for site in [s for s in sl if s.el in rparams.ELEMENT_MIX]:
             site.mixedEls = rparams.ELEMENT_MIX[el][:]
         self.sitelist = sl
+        self.sites_initialized = True
 
     def sortByZ(self, botToTop=False):
         """Sorts atlist by z coordinate"""
