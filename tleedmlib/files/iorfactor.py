@@ -183,9 +183,15 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL"):
     output += " GAP=         0,\n"
     output += " &END\n"
     output += (i3x25.write([n+1 for n in beamcorr]) + "\n")
+    if len(beamcorr) % 25 == 0:
+        output += "\n"
     for i in range(0, 2):  # redundant since indices are already taken care of
         output += i3x25.write([n+1 for n in range(0, len(rp.expbeams))]) + "\n"
+        if len(rp.expbeams) % 25 == 0:
+            output += "\n"
     output += i3x25.write(iorf) + "\n"
+    if len(iorf) % 25 == 0:
+        output += "\n"
     output += "&NL2\n"
     output += " NSSK=    0,\n"
     if rp.R_FACTOR_TYPE == 1:

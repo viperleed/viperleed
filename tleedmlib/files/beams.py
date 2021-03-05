@@ -520,6 +520,8 @@ def writeAUXEXPBEAMS(beams, filename="AUXEXPBEAMS", header="Unknown system",
     if numbers:
         i3x25 = ff.FortranRecordWriter("25I3")
         output += i3x25.write([n+1 for n in range(0, len(beams))]) + "\n"
+        if len(beams) % 25 == 0:
+            output += "\n"
     output += " (12F6.2)\n"
     f62x12 = ff.FortranRecordWriter('12F6.2')
     i4 = ff.FortranRecordWriter('I4')
