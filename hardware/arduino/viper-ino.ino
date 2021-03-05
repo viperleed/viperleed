@@ -436,7 +436,7 @@ void DoFSYNC(){
  * of the procedure, the data register of the ADC is
  * read-out and thrown away. 
  */
- // ad7705.FSYNC(chn, polar_mode, gain);                                                       ACHTUNG! DURCH WAS ERSETZEN?
+  AD7705setGainAndTrigger(WORKINPROGRESS, chn, gain);
   FSM = IDLE_STATE;
 }
 //=========================
