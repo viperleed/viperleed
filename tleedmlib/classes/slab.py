@@ -15,8 +15,7 @@ import re
 import scipy.spatial as sps
 import itertools
 
-from viperleed.tleedmlib.base import (
-    angle, rotMatrix, distanceLineThroughPointsFromPoint)
+from viperleed.tleedmlib.base import (angle, rotMatrix, dist_from_line)
 import viperleed.tleedmlib as tl
 # from tleedmlib import DEFAULT
 
@@ -48,9 +47,8 @@ class SymPlane:
 
     def distanceFromOrigin(self, abt):
         pointlist = [(0, 0), (1, 0), (0, 1), (1, 1)]
-        return min([distanceLineThroughPointsFromPoint(
-                                self.pos, self.pos+self.dir,
-                                p[0]*abt[0]+p[1]*abt[1])
+        return min([dist_from_line(self.pos, self.pos+self.dir,
+                                   p[0]*abt[0]+p[1]*abt[1])
                     for p in pointlist])
 
     def __str__(self):
@@ -74,8 +72,7 @@ class SymPlane:
             complist.append(complist[1]+complist[2]-complist[0])
 
         for p in complist:
-            if tl.base.distanceLineThroughPointsFromPoint(
-                    pl2.pos, pl2.pos+pl2.dir, p) < eps:
+            if tl.base.dist_from_line(pl2.pos, pl2.pos+pl2.dir, p) < eps:
                 return True
         return False
 
@@ -500,7 +497,7 @@ class Slab:
 
     def initSites(self, rparams):
         """Goes through the atom list and supplies them with appropriate
-        Sitedef objects, based on the SITE_DEF parameters from the supplied
+        SiteType objects, based on the SITE_DEF parameters from the supplied
         Rparams."""
         atlist = self.atlist[:]     # copy to not have any permanent changes
         atlist.sort(key=lambda atom: atom.oriN)
@@ -681,7 +678,7 @@ class Slab:
                 at.cartpos[0:2] += glidevec
 
     def getLowOccLayer(self):
-        """Find and returns the lowest occupancy sublayer"""
+        """Finds and returns the lowest occupancy sublayer"""
         minlen = len(self.sublayers[0].atlist)
         lowocclayer = self.sublayers[0]
         for lay in self.sublayers:

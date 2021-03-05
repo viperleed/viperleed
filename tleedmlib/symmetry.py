@@ -432,7 +432,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
             # shift to closest point on oriplane
             shiftv = (np.array([oriplane.dir[1], -oriplane.dir[0]])
                       * oriplane.distanceFromOrigin(abst))
-            if tl.base.distanceLineThroughPointsFromPoint(
+            if tl.base.dist_from_line(
                     oriplane.pos, oriplane.pos+oriplane.dir, shiftv) > eps:
                 shiftv = -1*shiftv
             for at in sl.atlist:
@@ -1168,14 +1168,14 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
         # then if not locked yet, check planes
         if not at.freedir == 0:
             for pl in lockplanes:
-                d = tl.base.distanceLineThroughPointsFromPoint(
+                d = tl.base.dist_from_line(
                     pl.pos, pl.pos+pl.dir, at.cartpos[:2])
                 if d < eps:
                     at.freedir = pl.par
                     if not nomove:  # shift atom onto plane
                         shiftv = np.array([pl.dir[1], -pl.dir[0]]) * d
-                        if (tl.base.distanceLineThroughPointsFromPoint(
-                              pl.pos, pl.pos+pl.dir, at.cartpos[:2] + shiftv)
+                        if (tl.base.dist_from_line(pl.pos, pl.pos+pl.dir,
+                                                   at.cartpos[:2] + shiftv)
                                 > d * 1.1):
                             shiftv = -1 * shiftv
                         at.cartpos[:2] += shiftv

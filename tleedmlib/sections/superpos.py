@@ -24,56 +24,57 @@ from viperleed.tleedmlib.files.iorefcalc import readFdOut
 
 logger = logging.getLogger("tleedm.superpos")
 
+
 def superpos(sl, rp, subdomain=False):
     """Runs the superpos calculation."""
     # check whether there is anything to evaluate
-    if rp.searchResultConfig != None:
+    if rp.searchResultConfig is not None:
         config = rp.searchResultConfig[0]
     else:
         config = None
-        #check for an SD.TL file
+        # check for an SD.TL file
         sdtl = None
         if os.path.isfile("SD.TL"):
             try:
                 sdtl = readSDTL_end(filename="SD.TL")
-            except:
+            except Exception:
                 logger.error("Superpos: Error reading SD.TL")
                 rp.setHaltingLevel(2)
                 return
-        elif os.path.isfile(os.path.join("OUT","SD.TL")):
+        elif os.path.isfile(os.path.join("OUT", "SD.TL")):
             try:
-                sdtl = readSDTL_end(filename = os.path.join("OUT", "SD.TL"))
-            except:
+                sdtl = readSDTL_end(filename=os.path.join("OUT", "SD.TL"))
+            except Exception:
                 logger.error("Superpos: Error reading SD.TL")
                 rp.setHaltingLevel(2)
                 return
         else:
             logger.error("Superpos: Found no stores results from recent "
-                          "search and no SD.TL file. Cancelling...")
+                         "search and no SD.TL file. Cancelling...")
             rp.setHaltingLevel(2)
             return
-        if sdtl == None:
+        if sdtl is None:
             logger.error("Superpos: No data found in SD.TL")
             rp.setHaltingLevel(2)
             return
-        sdtlContent = readSDTL_blocks("\n".join(sdtl), 
-                                      whichR = rp.SEARCH_BEAMS)
+        sdtlContent = readSDTL_blocks("\n".join(sdtl),
+                                      whichR=rp.SEARCH_BEAMS)
         if not sdtlContent:
             logger.error("Superpos: No data found in SD.TL")
             rp.setHaltingLevel(2)
             return
         try:
             config = sdtlContent[0][2][0]  # first block, config, best only
-        except:
-            logger.error("Superpos: Failed to read best "
-                          "configuration from SD.TL")
+        except IndexError:
+            logger.error("Superpos: Failed to read best configuration from "
+                         "SD.TL")
             rp.setHaltingLevel(2)
             return
-    
+
     if rp.domainParams:
         superpos_domains(rp, config)
         return
-    
+
     # read DISPLACEMENTS block and fetch deltas
     if not rp.disp_block_read:
         readDISPLACEMENTS_block(rp, sl, rp.disp_blocks[rp.search_index])
@@ -81,23 +82,22 @@ def superpos(sl, rp, subdomain=False):
     if not any([ind in rp.runHistory for ind in [2, 3]]):
         getDeltas(rp.TENSOR_INDEX, required=True)
     # make sure search parameters are initialized
-    if not 3 in rp.runHistory and not subdomain:
+    if 3 not in rp.runHistory and not subdomain:
         logger.debug("Superpos calculation executed without search. "
                      "Search parameters will be inferred from input files.")
         try:
             rp.generateSearchPars(sl)
-        except:
+        except Exception:
             logger.error("Error getting search parameters. Superpos will "
-                          "stop.")
+                         "stop.")
             return
     # now we have configuration and parameters, create input:
     contrin = ""
     try:
         contrin = io.writeSuperposInput(sl, rp, config[0][1])
         logger.debug("Wrote Superpos input successfully")
-    except:
-        logger.error("Error getting input data for Superpos: ", 
-                      exc_info = True)
+    except Exception:
+        logger.error("Error getting input data for Superpos: ", exc_info=True)
         rp.setHaltingLevel(2)
         return
     if contrin == "":
@@ -109,7 +109,7 @@ def superpos(sl, rp, subdomain=False):
     # if execution is suppressed, stop here:
     if rp.SUPPRESS_EXECUTION:
         logger.warning("SUPPRESS_EXECUTION parameter is on. Superpos "
-            "calculation will not proceed. Stopping...")
+                       "calculation will not proceed. Stopping...")
         rp.setHaltingLevel(3)
         return
     if rp.FORTRAN_COMP[0] == "":
@@ -119,17 +119,17 @@ def superpos(sl, rp, subdomain=False):
         tldir = getTLEEDdir(home=rp.workdir, version=rp.TL_VERSION)
         if not tldir:
             raise RuntimeError("TensErLEED code not found.")
-        srcpath = os.path.join(tldir,'src')
-        srcname = [f for f in os.listdir(srcpath) 
-                      if f.startswith('superpos')][0]
-        shutil.copy2(os.path.join(srcpath,srcname), srcname)
-        libpath = os.path.join(tldir,'lib')
-        libname = [f for f in os.listdir(libpath) 
-                      if f.startswith('lib.superpos')][0]
-        shutil.copy2(os.path.join(libpath,libname), libname)           
+        srcpath = os.path.join(tldir, 'src')
+        srcname = [f for f in os.listdir(srcpath)
+                   if f.startswith('superpos')][0]
+        shutil.copy2(os.path.join(srcpath, srcname), srcname)
+        libpath = os.path.join(tldir, 'lib')
+        libname = [f for f in os.listdir(libpath)
+                   if f.startswith('lib.superpos')][0]
+        shutil.copy2(os.path.join(libpath, libname), libname)
         globalname = "GLOBAL"
-        shutil.copy2(os.path.join(srcpath,globalname), globalname)
-    except:
+        shutil.copy2(os.path.join(srcpath, globalname), globalname)
+    except Exception:
         logger.error("Error getting TensErLEED files for superpos: ")
         raise
     # compile fortran files
@@ -137,18 +137,18 @@ def superpos(sl, rp, subdomain=False):
     logger.info("Compiling fortran input files...")
     try:
         fortranCompile(rp.FORTRAN_COMP[0]+" -o", sposname+" "
-                          + srcname + " " + libname, rp.FORTRAN_COMP[1])
-    except:
+                       + srcname + " " + libname, rp.FORTRAN_COMP[1])
+    except Exception:
         logger.error("Error compiling fortran files: ", exc_info=True)
         raise
     logger.info("Starting Superpos calculation...")
     outname = "superpos-spec.out"
     try:
         with open(outname, "w") as out:
-            subprocess.run(os.path.join('.',sposname), 
+            subprocess.run(os.path.join('.', sposname),
                            input=contrin, encoding="ascii",
                            stdout=out, stderr=subprocess.STDOUT)
-    except:
+    except Exception:
         logger.error("Error during Superpos calculation.")
         raise
     logger.info("Finished Superpos calculation. Processing files...")
@@ -157,42 +157,43 @@ def superpos(sl, rp, subdomain=False):
     except FileNotFoundError:
         logger.error(outname + " not found after superpos calculation.")
         raise
-    except:
-        logger.error("Error reading "+ outname +" after superpos "
-                      " calculation.")
+    except Exception:
+        logger.error("Error reading " + outname + " after superpos "
+                     " calculation.")
         raise
     try:
         writeOUTBEAMS(rp.theobeams["superpos"], filename="FITBEAMS.csv")
         theobeams_norm = copy.deepcopy(rp.theobeams["superpos"])
         for b in theobeams_norm:
             b.normMax()
-        writeOUTBEAMS(theobeams_norm,filename="FITBEAMS_norm.csv")
-    except:
+        writeOUTBEAMS(theobeams_norm, filename="FITBEAMS_norm.csv")
+    except Exception:
         logger.error("Error writing FITBEAMS after superpos calculation.")
     # rename and move files
     try:
-        os.rename('PARAM','superpos-PARAM')
-    except:
+        os.rename('PARAM', 'superpos-PARAM')
+    except Exception:
         logger.warning("Failed to rename superpos input file PARAM to "
-                        "superpos-PARAM")
+                       "superpos-PARAM")
     try:
-        os.rename('DOC','superpos-DOC')
-    except:
+        os.rename('DOC', 'superpos-DOC')
+    except Exception:
         pass
     return
 
+
 def superpos_domains(rp, config):
-    """Runs the normal superpos function for each subdomain, collects the 
+    """Runs the normal superpos function for each subdomain, collects the
     results and averages over the beams to get an overall result."""
     # make sure search parameters are initialized
-    if not 3 in rp.runHistory:
+    if 3 not in rp.runHistory:
         logger.debug("Superpos calculation executed without search. "
                      "Search parameters will be inferred from input files.")
         try:
             rp.generateSearchPars(None)
-        except:
+        except Exception:
             logger.error("Error getting search parameters. Superpos will "
-                          "stop.")
+                         "stop.")
             return
     home = os.getcwd()
     percentages = []
@@ -205,29 +206,30 @@ def superpos_domains(rp, config):
         try:
             os.chdir(dp.workdir)
             superpos(dp.sl, dp.rp, subdomain=True)
-        except:
+        except Exception:
             logger.error("Error while running superpos calculation for domain "
                          "{}".format(dp.name))
             raise
         finally:
             os.chdir(home)
     logger.info("Getting weighted average over domain beams...")
-    rp.theobeams["superpos"] = averageBeams([dp.rp.theobeams["superpos"] 
-                            for dp in rp.domainParams], weights=percentages)
+    rp.theobeams["superpos"] = averageBeams(
+        [dp.rp.theobeams["superpos"] for dp in rp.domainParams],
+        weights=percentages)
     try:
         writeOUTBEAMS(rp.theobeams["superpos"], filename="FITBEAMS.csv")
         theobeams_norm = copy.deepcopy(rp.theobeams["superpos"])
         for b in theobeams_norm:
             b.normMax()
-        writeOUTBEAMS(theobeams_norm,filename="FITBEAMS_norm.csv")
-    except:
+        writeOUTBEAMS(theobeams_norm, filename="FITBEAMS_norm.csv")
+    except Exception:
         logger.error("Error writing FITBEAMS after superpos calculation.",
-                     exc_info = rp.LOG_DEBUG)
+                     exc_info=rp.LOG_DEBUG)
     try:
         rp.superpos_specout = writeFdOut(rp.theobeams["superpos"], rp.beamlist,
-                                         filename="superpos-spec.out", 
+                                         filename="superpos-spec.out",
                                          header=rp.systemName)
-    except:
+    except Exception:
         logger.error("Error writing averaged superpos-spec.out for R-factor "
-                     "calculation.", exc_info = rp.LOG_DEBUG)
+                     "calculation.", exc_info=rp.LOG_DEBUG)
     return
