@@ -109,6 +109,9 @@ class Slab:
     sitelist : list of Sitetype
         list of distinct sites as Sitetype, storing information on vibration
         and concentration
+    ucell_mod : list of tuples (str, np.array)
+        stored modifications made to the unit cell; each is a tuple of
+        (type, matrix), where type is lmul, rmul, or add
     """
 
     def __init__(self):
@@ -121,11 +124,9 @@ class Slab:
         self.layers = []
         self.sublayers = []
         self.sitelist = []
-        self.uCellMod = []      # stored modifications made to the unit cell;
-                                #   each is a tuple of (type, matrix), where
-                                #   type is lmul, rmul, or add
-        self.uCellOri = np.array([])
-        self.topatOriZ = None     # stores the original position of the topmost
+        self.ucell_mod = []
+        self.ucell_ori = np.array([])
+        self.topat_ori_z = None     # stores the original position of the topmost
                                   #   atom in cartesian coordinates
         self.celltype = "unknown"       # unit cell type as string
         self.planegroup = "unknown"     # symmetry group of the slab, as string
@@ -139,23 +140,23 @@ class Slab:
         self.displists = []     # list of lists of atoms which are displaced
                                 #   together
 
-        self.sitesInitialized = False
-        self.layersInitialized = False
+        self.sites_initialized = False
+        self.layers_initialized = False
         self.preprocessed = False    # True if the POSCAR it was read from had
                                      #   the 'Plane group = XY' comment
-        self.deltasInitialized = False
+        self.deltas_initialized = False
 
         self.symbaseslab = None    # Slab object collapsed to base cell
         self.bulkslab = None       # Slab object containing only bulk layers
-        self.bulkScrews = []       # only assigned to the bulkslab object!
+        self.bulk_screws = []       # only assigned to the bulkslab object!
                     # Integer list of rotation orders present in the bulk
-        self.bulkGlides = []       # only assigned to the bulkslab object!
+        self.bulk_glides = []       # only assigned to the bulkslab object!
                     # List of symplanes present in the bulk
 
     def resetSymmetry(self):
         """Sets all symmetry information back to default values."""
-        self.uCellMod = []
-        self.uCellOri = self.ucell
+        self.ucell_mod = []
+        self.ucell_ori = self.ucell
         self.celltype = "unknown"
         self.planegroup = "unknown"
         self.foundplanegroup = "unknown"
@@ -185,13 +186,13 @@ class Slab:
         sites."""
         self.collapseFractionalCoordinates()
         self.getCartesianCoordinates()
-        if not self.layersInitialized:
+        if not self.layers_initialized:
             self.createLayers(rparams)
-            self.layersInitialized = True
+            self.layers_initialized = True
         self.updateElements(rparams)
-        if not self.sitesInitialized:
+        if not self.sites_initialized:
             self.initSites(rparams)
-            self.sitesInitialized = True
+            self.sites_initialized = True
         if rparams.fileLoaded["VIBROCC"]:
             for at in self.atlist:
                 at.initDisp()
@@ -206,11 +207,11 @@ class Slab:
         al.sort(key=lambda atom: atom.pos[2])
         topat = al[-1]
         topcart = np.dot(self.ucell, topat.pos)
-        if updateOrigin or self.topatOriZ is None:
-            self.topatOriZ = topcart[2]
+        if updateOrigin or self.topat_ori_z is None:
+            self.topat_ori_z = topcart[2]
         for atom in al:
             atom.cartpos = np.dot(self.ucell, atom.pos)
-            atom.cartpos[2] = self.topatOriZ - atom.cartpos[2]
+            atom.cartpos[2] = self.topat_ori_z - atom.cartpos[2]
 
     def getFractionalCoordinates(self):
         """Calculates fractional coordinates for all atoms from their
@@ -218,7 +219,7 @@ class Slab:
         uci = np.linalg.inv(self.ucell)
         for at in self.atlist:
             tp = np.copy(at.cartpos)
-            tp[2] = self.topatOriZ-tp[2]
+            tp[2] = self.topat_ori_z-tp[2]
             at.pos = np.dot(uci, tp)
 
     def collapseFractionalCoordinates(self):
@@ -617,7 +618,7 @@ class Slab:
             at.cartpos[0:2] = np.dot(m, at.cartpos[0:2] - axis) + axis
         self.getFractionalCoordinates()
 
-    def rotateUnitCell(self, order, append_uCellMod=True):
+    def rotateUnitCell(self, order, append_ucell_mod=True):
         """Rotates the unit cell (around the origin), leaving atom positions
         the same. Note that this rotates in the opposite direction as
         rotateAtoms."""
@@ -626,8 +627,8 @@ class Slab:
         m3 = np.identity(3, dtype=float)
         m3[:2, :2] = m
         self.ucell = np.dot(m3, self.ucell)
-        if append_uCellMod:
-            self.uCellMod.append(('lmul', m3))
+        if append_ucell_mod:
+            self.ucell_mod.append(('lmul', m3))
         self.getFractionalCoordinates()
 
     def mirror(self, symplane, glide=False):
@@ -954,9 +955,9 @@ class Slab:
         """If the unit cell in a and b was transformed earlier, restore the
         original form and coordinates. If a 'restoreTo' argument is passed,
         restore only back to the point defined by the argument."""
-        if len(self.uCellMod) > 0:
+        if len(self.ucell_mod) > 0:
             self.getCartesianCoordinates()
-            oplist = self.uCellMod[len(restoreTo):]
+            oplist = self.ucell_mod[len(restoreTo):]
             for op in list(reversed(oplist)):
                 if op[0] == 'add':
                     for at in self.atlist:
@@ -968,7 +969,7 @@ class Slab:
                 elif op[0] == 'rmul':
                     self.ucell = np.dot(self.ucell, np.linalg.inv(op[1]))
                     self.collapseCartesianCoordinates()
-            self.uCellMod = self.uCellMod[:len(restoreTo)]
+            self.ucell_mod = self.ucell_mod[:len(restoreTo)]
 
     def getMinUnitCell(self, rp):
         """Checks whether there is a unit cell (a,b) with a smaller area than
@@ -1259,8 +1260,8 @@ class Slab:
                 "than the second. Make sure beams are labelled correctly.")
             rp.setHaltingLevel(1)
         bsl.collapseCartesianCoordinates(updateOrigin=True)
-        bsl.uCellMod = []
-        # if self.uCellMod is not empty, don't drag that into the bulk slab.
+        bsl.ucell_mod = []
+        # if self.ucell_mod is not empty, don't drag that into the bulk slab.
         # position in c is now random; make topmost bulk atom top
         topc = topat.pos[2]
         for at in bsl.atlist:
@@ -1315,8 +1316,8 @@ class Slab:
             transform3[:2, :2] = rp.SYMMETRY_CELL_TRANSFORM
         ssl.ucell = np.dot(ssl.ucell, np.linalg.inv(np.transpose(transform3)))
         ssl.collapseCartesianCoordinates(updateOrigin=True)
-        ssl.uCellMod = []
-        # if self.uCellMod is not empty, don't drag that into the new slab.
+        ssl.ucell_mod = []
+        # if self.ucell_mod is not empty, don't drag that into the new slab.
         # remove duplicates
         ssl.createSublayers(rp.SYMMETRY_EPS_Z)
         newatlist = []
@@ -1410,15 +1411,15 @@ class Slab:
         the string is 'r(2, 4), m([1,1], [ 1,-1])'. If neither screw axes nor
         glide planes exist, returns string 'None'."""
         b3ds = ""
-        if self.bulkScrews:
+        if self.bulk_screws:
             b3ds += "r({})".format(", ".join([str(v)
-                                              for v in self.bulkScrews]))
-        if self.bulkGlides:
+                                              for v in self.bulk_screws]))
+        if self.bulk_glides:
             if b3ds:
                 b3ds += ", "
             b3ds += "m({})".format(", ".join([np.array2string(gp.par,
                                                               separator=",")
-                                              for gp in self.bulkGlides]))
+                                              for gp in self.bulk_glides]))
         if not b3ds:
             return "None"
         return b3ds

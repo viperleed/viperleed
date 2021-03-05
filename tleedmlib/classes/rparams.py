@@ -752,7 +752,7 @@ class Rparams:
         eqlist = []
         # get list of atoms that appear in the search
         if (2 in self.runHistory or 42 in self.runHistory
-                or sl.deltasInitialized):
+                or sl.deltas_initialized):
             # if delta has been run, information what deltas exist is stored
             atlist = [at for at in sl.atlist if (not at.layer.isBulk and
                                                  len(at.deltasGenerated) > 0)]
@@ -844,7 +844,7 @@ class Rparams:
                 elif not found and at in atlist:
                     # delta file is there, but no displacements
                     atlist.remove(at)
-            sl.deltasInitialized = True
+            sl.deltas_initialized = True
         # sort atlist by displists
         al2 = []
         for dl in sl.displists:

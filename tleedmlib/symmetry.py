@@ -113,7 +113,7 @@ def findBulkSymmetry(sl, rp):
                      + str(-newC))
         # apply new unit cell
         ts.atlist = [at for at in ts.atlist
-                     if at.cartpos[2] > ts.topatOriZ - abs(newC[2])]
+                     if at.cartpos[2] > ts.topat_ori_z - abs(newC[2])]
         ts.layers[0].atlist = ts.atlist
         ts.layers = [ts.layers[0]]
         ts.layers[0].isBulk = True
@@ -136,7 +136,7 @@ def findBulkSymmetry(sl, rp):
         for ro in [ro for ro in checkrots if ro not in rotsfound]:
             if ts.isBulkScrewSymmetric(ro, per, eps):
                 rotsfound.append(ro)
-    sl.bulkScrews = rotsfound
+    sl.bulk_screws = rotsfound
     if len(rotsfound) > 0:
         logger.debug("Bulk screw axes found: " +
                      ", ".join([str(v) for v in rotsfound]))
@@ -152,7 +152,7 @@ def findBulkSymmetry(sl, rp):
         for gl in [gl for gl in checkglides if gl not in glidesfound]:
             if ts.isBulkGlideSymmetric(gl, per, eps):
                 glidesfound.append(gl)
-    sl.bulkGlides = glidesfound
+    sl.bulk_glides = glidesfound
     if len(rotsfound) > 0:
         logger.debug("Bulk glide planes found: " +
                      ", ".join([str(gl.par) for gl in glidesfound]))
@@ -218,7 +218,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
             modifyPARAMETERS(rp, "SYMMETRY_FIX", s)
         # MODIFY UNIT CELL
         sl.getCartesianCoordinates()
-        sl.uCellMod.append(('rmul', utr.T))
+        sl.ucell_mod.append(('rmul', utr.T))
         sl.ucell = np.dot(sl.ucell, utr.T)
         # same as np.transpose(np.dot(utr,np.transpose(sl.ucell)))
         sl.collapseCartesianCoordinates(updateOrigin=True)
@@ -392,7 +392,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
             at.cartpos[0:2] -= topsympoint
         for at in ts.atlist:
             at.cartpos[0:2] -= topsympoint
-        sl.uCellMod.append(('add', -topsympoint))
+        sl.ucell_mod.append(('add', -topsympoint))
         sl.getFractionalCoordinates()
         ts.getFractionalCoordinates()
 
@@ -439,7 +439,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
                 at.cartpos[0:2] -= shiftv
             # ts is not used any more in this case, otherwise those atoms
             #  would have to be shifted as well.
-            sl.uCellMod.append(('add', -shiftv))
+            sl.ucell_mod.append(('add', -shiftv))
             sl.getFractionalCoordinates()
         if oriplane:
             oriplane.pos = np.array([0, 0])
@@ -462,7 +462,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
                 # correct origin
                 for at in sl.atlist:
                     at.cartpos[0:2] -= abst[0]/2
-                sl.uCellMod.append(('add', -abst[0]/2))
+                sl.ucell_mod.append(('add', -abst[0]/2))
                 sl.getFractionalCoordinates()
 
     if not planegroup:
@@ -684,7 +684,7 @@ def setSymmetry(sl, rp, targetsym):
         tspar = [int(m.group('i1')), int(m.group('i2'))]
         # if unit cell was changed, adapt directions
         cellchange = False
-        for op in sl.uCellMod:
+        for op in sl.ucell_mod:
             if op[0] in ['lmul', 'rmul']:
                 cellchange = True
                 break
@@ -695,7 +695,7 @@ def setSymmetry(sl, rp, targetsym):
                 "interpret direction in the old coordinate system...")
             rp.setHaltingLevel(1)
             tspar = np.dot(np.linalg.inv(sl.ucell[:2, :2]),
-                           np.dot(sl.uCellOri[:2, :2], tspar))
+                           np.dot(sl.ucell_ori[:2, :2], tspar))
             for i in range(0, 2):
                 tspar[i] = round(tspar[i])
     if targetsym == planegroup:
@@ -720,7 +720,7 @@ def setSymmetry(sl, rp, targetsym):
                                        abst))
                     for at in sl.atlist:
                         at.cartpos[:2] -= shiftv
-                    sl.uCellMod.append(('add', -shiftv))
+                    sl.ucell_mod.append(('add', -shiftv))
                     sl.getFractionalCoordinates()
                     sl.orisymplane.type = "glide"
                     # since the origin shifts and the direction stays the
@@ -746,7 +746,7 @@ def setSymmetry(sl, rp, targetsym):
                     shiftv = 0.25*np.dot(sl.orisymplane.par, abst)
                     for at in sl.atlist:
                         at.cartpos[:2] -= shiftv
-                    sl.uCellMod.append(('add', -shiftv))
+                    sl.ucell_mod.append(('add', -shiftv))
                     sl.getFractionalCoordinates()
                     sl.orisymplane.type = SymPlane(
                         np.array([0, 0]), np.array(sl.orisymplane.dir[1],
@@ -758,7 +758,7 @@ def setSymmetry(sl, rp, targetsym):
                     shiftv = 0.25*np.dot(np.array(tspar[1], -tspar[0]), abst)
                     for at in sl.atlist:
                         at.cartpos[:2] -= shiftv
-                    sl.uCellMod.append(('add', -shiftv))
+                    sl.ucell_mod.append(('add', -shiftv))
                     sl.getFractionalCoordinates()
                     sl.orisymplane = SymPlane(np.array([0, 0]),
                                               np.dot(tspar, abst), abst)
@@ -786,7 +786,7 @@ def setSymmetry(sl, rp, targetsym):
                                                           -tspar[0]), abst)
                             for at in sl.atlist:
                                 at.cartpos[0:2] -= shiftv
-                            sl.uCellMod.append(('add', -shiftv))
+                            sl.ucell_mod.append(('add', -shiftv))
                             sl.getFractionalCoordinates()
                             sl.orisymplane.type = "glide"
                         sl.planegroup = targetsym
@@ -794,7 +794,7 @@ def setSymmetry(sl, rp, targetsym):
                         shiftv = 0.25*(abst[0]+abst[1])
                         for at in sl.atlist:
                             at.cartpos[0:2] -= shiftv
-                        sl.uCellMod.append(('add', -shiftv))
+                        sl.ucell_mod.append(('add', -shiftv))
                         sl.getFractionalCoordinates()
                         sl.orisymplane = SymPlane(np.array([0, 0]),
                                                   np.dot(tspar, abst), abst)
@@ -846,7 +846,7 @@ def setSymmetry(sl, rp, targetsym):
                 if allowed:
                     for at in sl.atlist:
                         at.cartpos[:2] -= shiftv
-                    sl.uCellMod.append(('add', -shiftv))
+                    sl.ucell_mod.append(('add', -shiftv))
                     sl.getFractionalCoordinates()
                     sl.planegroup = targetsym
                 else:

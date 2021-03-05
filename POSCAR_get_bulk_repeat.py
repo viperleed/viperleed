@@ -111,7 +111,7 @@ def main():
 
     rp.BULK_REPEAT = -newC
 
-    bsl.atlist = [at for at in bsl.atlist if at.cartpos[2] > bsl.topatOriZ
+    bsl.atlist = [at for at in bsl.atlist if at.cartpos[2] > bsl.topat_ori_z
                                                           - abs(newC[2])]
     bsl.layers[0].atlist = bsl.atlist
 

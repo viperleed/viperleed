@@ -76,7 +76,7 @@ def readPOSCAR(filename='POSCAR'):
             ucellList.append(llist)
             if linenum == 5:
                 sl.ucell = scaling * np.transpose(np.array(ucellList))
-                sl.uCellOri = scaling * np.transpose(np.array(ucellList))
+                sl.ucell_ori = scaling * np.transpose(np.array(ucellList))
                 if sl.ucell[2, 0] != 0.0 or sl.ucell[2, 1] != 0.0:
                     if sl.ucell[2, 0] < 1e-4 and sl.ucell[2, 1] < 1e-4:
                         sl.ucell[2, 0] = 0.

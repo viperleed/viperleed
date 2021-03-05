@@ -238,7 +238,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock):
     """
     abst = np.transpose(sl.ucell[:2, :2])
     # if the unit cell gets modified by SYM_DELTA, restore it afterwards
-    uCellState = sl.uCellMod
+    uCellState = sl.ucell_mod
     (lines, name) = dispblock
     mode = 0  # 0: not reading; 1: reading geo, 2: reading vib, 3: reading occ
     regex = False   # read regular expressions as-is or not
