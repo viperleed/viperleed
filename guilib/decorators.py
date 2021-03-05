@@ -106,7 +106,20 @@ def exec_time(func):
     def _wrapper(*args, **kwargs):
         t0 = timer()
         result = func(*args, **kwargs)
-        print(f"Execution time of {func.__name__}: {(timer()-t0)*1000:.2f} ms")
+        dt = timer()-t0
+        if dt > 1:
+            mult = 1
+            unit = ''
+        elif dt > 1e-3:
+            mult = 1e3
+            unit = 'm'
+        elif dt > 1e-6:
+            mult = 1e6
+            unit = 'u'
+        else:
+            mult = 1e9
+            unti = 'n'
+        print(f"Execution time of {func.__name__}: {dt*mult:.1f} {unit}s")
         return result
     return _wrapper
 
