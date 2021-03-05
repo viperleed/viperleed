@@ -510,7 +510,7 @@ class Atom:
             if self.layer is not None:
                 self.layer.atlist.append(newat)
                 newat.layer = self.layer
-            self.slab.nperelem[self.slab.elements.index(self.el)] += 1
+            self.slab.n_per_elem[self.el] += 1
         newat.duplicateOf = self
         newat.site = self.site
         newat.dispInitialized = True

@@ -83,7 +83,7 @@ def main():
         for el in bulk.elements:
             if not el in slab.elements:
                 slab.elements.append(el)
-                slab.nperelem.append(0)
+                slab.n_per_elem[el] = 0
     else:
         logging.debug("Slab and bulk elements are identical.")
      
@@ -98,9 +98,9 @@ def main():
         newat.pos[2] /= cfact+1             #recalculate bulk atom c in the new slab unit cell
         slab.atlist.append(newat)
         newat.slab = slab
-    for i in range(0,len(slab.nperelem)):
-        if slab.elements[i] in bulk.elements:
-            slab.nperelem[i] += bulk.nperelem[i]
+    for el in slab.elements:
+        if el in bulk.elements:
+            slab.n_per_elem[el] += bulk.n_per_elem[el]
     
     slab.sortByEl()
     

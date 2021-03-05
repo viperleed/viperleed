@@ -79,27 +79,48 @@ class SymPlane:
                 return True
         return False
 
+
 class Slab:
-    """Contains unit cell, element information and atom coordinates. After
-    feeding raw data into atpos, call initAtomList to create a list of Atom
-    objects."""
+    """
+    Contains unit cell, element information and atom coordinates. Also has a
+    variety of convenience functions for manipulating and updating the atoms.
+
+    Attributes
+    ----------
+    ucell : np.array
+        The unit cell as vectors a, b, c (columns)
+
+    elements : list of str
+        Element labels as read from POSCAR
+    chemelem : list of str
+        Chemical elements in the slab, including from ELEMENT_MIX
+    n_per_elem : dict {str: int}
+        The number of atoms per element.
+    last_element_mix : list of str
+        Stores the last value of the ELEMENT_MIX parameter that was applied.
+    atlist : list of Atom
+        List of all atoms in the slab.
+    layers : list of Layer
+        List of Layer objects, where "layer" is a composite of sublayers, as
+        in TensErLEED
+    sublayers : list of Layer
+        List of Layer objects, each containing atoms of equal element and Z
+        coordinate
+    sitelist : list of Sitetype
+        list of distinct sites as Sitetype, storing information on vibration
+        and concentration
+    """
+
     def __init__(self):
-        self.ucell = np.array([])         # unit cell
-        self.oriels = []        # element labels as read from POSCAR
-        self.elements = []      # element labels as read from POSCAR, with
-                                #   potential modifications after ELEMENT_MIX
-        self.chemelem = []      # chemical elements, including from ELEMENT_MIX
-        self.nelem = 0          # number of different elements, including from
-                                #   ELEMENT_MIX
-        self.nperelem = []      # number of atoms per element
-        self.lastupdateelmix = None    # keep track of whether ELEMENT_MIX
-                                #  changed since updateElements was last called
-        self.atlist = []        # list of Atom objects
-        self.layers = []        # list of Layer objects, where "layer" is a
-                                #   composite of sublayers, as in TensErLEED
-        self.sublayers = []     # list of Layer objects, each containing atoms
-                                #   of equal element and Z coordinate
-        self.sitelist = []      # list of distinct sites as Sitetype elements
+        self.ucell = np.array([])
+        self.elements = []
+        self.chemelem = []
+        self.n_per_elem = {}
+        self.last_element_mix = None
+        self.atlist = []
+        self.layers = []
+        self.sublayers = []
+        self.sitelist = []
         self.uCellMod = []      # stored modifications made to the unit cell;
                                 #   each is a tuple of (type, matrix), where
                                 #   type is lmul, rmul, or add
@@ -174,15 +195,6 @@ class Slab:
         if rparams.fileLoaded["VIBROCC"]:
             for at in self.atlist:
                 at.initDisp()
-
-    def updateNperElem(self):
-        """Updates the nperelem variable based on the atoms that are actually
-        in the slab atlist."""
-        for i in range(0, len(self.elements)):
-            self.nperelem[i] = 0
-            for at in self.atlist:
-                if at.el == self.elements[i]:
-                    self.nperelem[i] += 1
 
     def getCartesianCoordinates(self, updateOrigin=False):
         """Assigns absolute cartesian coordinates to all atoms, with x,y using
@@ -418,9 +430,9 @@ class Slab:
                     for i in range(1, len(self.layers))])
 
     def updateElements(self, rp):
-        """Updates nelem based on the ELEMENT_MIX parameter, and warns in case
-        of a naming conflict."""
-        if self.lastupdateelmix == rp.ELEMENT_MIX:
+        """Updates elements based on the ELEMENT_MIX parameter, and warns in
+        case of a naming conflict."""
+        if self.last_element_mix == rp.ELEMENT_MIX:
             return     # don't update if up to date
         # update nelem
         c = 0
@@ -437,7 +449,6 @@ class Slab:
                             "Element name "+el+" given in ELEMENT_MIX is also "
                             "an element name in POSCAR. It is recommended you "
                             "rename the element in the POSCAR file.")
-        self.nelem = c
         self.chemelem = []
         for el in self.elements:
             if el in rp.ELEMENT_MIX:
@@ -446,22 +457,17 @@ class Slab:
                                       if not e.capitalize() in self.chemelem])
             else:
                 self.chemelem.append(el.capitalize())
-        self.lastupdateelmix = rp.ELEMENT_MIX
+        self.last_element_mix = rp.ELEMENT_MIX
 
     def updateElementCount(self):
-        # update the number of atoms per element
-        for i in range(0, len(self.elements)):
-            self.nperelem[i] = len([at for at in self.atlist
-                                   if at.el == self.elements[i]])
-        # Remove elements that are not present any more
-        i = 0
-        while i < len(self.elements):
-            if self.nperelem[i] == 0:  # the element is not present
-                self.nperelem.pop(i)
-                self.elements.pop(i)
-                self.oriels.pop(i)
+        """Updates the number of atoms per element."""
+        self.n_per_elem = {}
+        for el in self.elements:
+            n = len([at for at in self.atlist if at.el == el])
+            if n > 0:
+                self.n_per_elem[el] = n
             else:
-                i += 1
+                self.elements.remove(el)
 
     def initSites(self, rparams):
         """Goes through the atom list and supplies them with appropriate

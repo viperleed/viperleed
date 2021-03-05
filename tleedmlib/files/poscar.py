@@ -38,9 +38,7 @@ def readPOSCAR(filename='POSCAR'):
 
     def initAtomList(slab, poslist):
         """Creates a list of Atom objects based on the data read previously"""
-        n = 0
-        for nat in slab.nperelem:
-            n += nat
+        n = sum(slab.n_per_elem.values())
         slab.atlist = []
         elnum = 0
         atcount = 0
@@ -48,10 +46,11 @@ def readPOSCAR(filename='POSCAR'):
             slab.atlist.append(Atom(slab.elements[elnum], poslist[i], i+1,
                                     slab))
             atcount += 1
-            if atcount == slab.nperelem[elnum]:
+            if atcount == slab.n_per_elem[slab.elements[elnum]]:
                 elnum += 1
                 atcount = 0
         slab.getCartesianCoordinates()
+
     try:
         rf = open(filename, 'r')
     except FileNotFoundError:
@@ -87,15 +86,15 @@ def readPOSCAR(filename='POSCAR'):
                             'Unit cell a and b vectors must not have an '
                             'out-of-surface (Z) component!')
                         raise ValueError('Invalid unit cell vectors in POSCAR')
-        elif linenum == 6:
-            sl.elements = line.split()       		# element labels
-            sl.oriels = sl.elements[:]              # copy
-            sl.nelem = len(sl.elements)			# number of different elements
+        elif linenum == 6:  # element labels
+            sl.elements = [v.capitalize() for v in line.split()]
         elif linenum == 7:
-            sl.nperelem = [int(i) for i in line.split()]
-            if len(sl.nperelem) != sl.nelem:
-                logger.warning('Lenght of element list does not match length '
-                               'of atoms-per-element list\n')
+            il = [int(i) for i in line.split()]
+            if len(il) != len(sl.elements):
+                raise ValueError('Length of element list does not match '
+                                 'length of atoms-per-element list')
+            for (ind, val) in enumerate(il):
+                sl.n_per_elem[sl.elements[ind]] = il[ind]
         elif linenum == 8:
             # may be 'Direct'/'Cartesian', or selective dynamics line
             # check whether POSCAR was pre-processed, ie whether the
@@ -231,10 +230,10 @@ def writeCONTCAR(sl, filename='CONTCAR', reorder=False, comments='none',
             output += '{:22.16f}'.format(val)
         output += '\n'
     # atom types and numbers
-    for el in sl.oriels:
+    for el in sl.elements:
         output += '{:>5}'.format(el)
     output += '\n'
-    for n in sl.nperelem:
+    for n in sl.n_per_elem.values():
         output += '{:>5}'.format(n)
     output += '\n'
     # header line 'Direct'

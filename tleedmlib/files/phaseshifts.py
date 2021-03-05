@@ -130,7 +130,7 @@ def readPHASESHIFTS(sl, rp, readfile='_PHASESHIFTS', check=True,
             logger.debug("Found "+str(psblocks)+" blocks in _PHASESHIFTS "
                           "file, which is consistent with PARAMETERS.")
             newpsGen, newpsWrite = False, False
-        elif len(phaseshifts[0][1]) == sl.nelem:
+        elif len(phaseshifts[0][1]) == len(sl.chemelem):
             logger.warning("Found fewer blocks than expected in the "
                 "_PHASESHIFTS file. However, the number of blocks matches "
                 "the number of chemical elements. A new _PHASESHIFTS file "
