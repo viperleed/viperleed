@@ -534,6 +534,8 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
                             color=plotcolors[0], linewidth=0.75)
             axs[1].plot(dy[:, 0], dy[:, 1], label="\u0394Y", color="black",
                         linewidth=0.5)
+            axs[1].fill_between(dy[:, 0], dy[:, 1], 0., facecolor='grey',
+                                alpha=0.5)
             axs[2].plot(idysq[:, 0], idysq[:, 1], color="black",
                         drawstyle="steps-mid")
 
