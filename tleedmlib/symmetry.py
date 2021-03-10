@@ -170,13 +170,17 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
     # reduce surface unit cell
     abst = np.transpose(sl.ucell[:2, :2])  # surface unit cell, transposed
 #        usurf = np.array([[1,0],[0,1]])
-    abst, usurf, celltype = tl.leedbase.reduceUnitCell(abst, eps)
+    if rp.SYMMETRY_FIX != "p1":
+        abst, usurf, celltype = tl.leedbase.reduceUnitCell(abst)
+    else:
+        # if symmetry is switched off, don't try to change the cell.
+        celltype, usurf = tl.leedbase.checkLattice(abst)
     # usurf tracks unit cell changes
     # reduce bulk unit cell
     if not bulk:
         abbt = np.dot(np.linalg.inv(rp.SUPERLATTICE), abst)
         # bulk ab unit cell, transposed
-        abbt, ubulk, _ = tl.leedbase.reduceUnitCell(abbt, eps)
+        abbt, ubulk, _ = tl.leedbase.reduceUnitCell(abbt)
         # ubulk tracks unit cell changes
     utr = np.array([[0, 0, 0], [0, 0, 0], [0, 0, 1]])
     utr[:2, :2] = usurf
