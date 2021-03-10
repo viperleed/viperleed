@@ -622,7 +622,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
     # CHECK IF USER WANTS TO MANUALLY REDUCE THE SLAB SYMMETRY, AND
     #    WHETHER THE GIVEN REDUCTION IS LEGAL
     if rp.SYMMETRY_FIX and not bulk and sl.symbaseslab is None:
-        planegroup = sl.setSymmetry(rp, rp.SYMMETRY_FIX)
+        planegroup = setSymmetry(sl, rp, rp.SYMMETRY_FIX)
 
     return planegroup
 
