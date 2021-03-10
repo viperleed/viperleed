@@ -329,12 +329,12 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
             if range_exclude[0]:
                 outOfRangeStr = 'less than or equal to {}'.format(range_[0])
             else:
-                'less than {}'.format(range_[0])
+                outOfRangeStr = 'less than {}'.format(range_[0])
         else:
             if range_exclude[1]:
                 outOfRangeStr = 'larger than or equal to {}'.format(range_[1])
             else:
-                'larger than {}'.format(range_[1])
+                outOfRangeStr = 'larger than {}'.format(range_[1])
         if any([outOfRange[i] and outOfRangeEvent[i] == 'fail'
                 for i in range(0, 2)]):
             logger.warning('PARAMETERS file: {}: Value {} is {}. Input will '
@@ -455,7 +455,8 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                                'minimum value of 16 is recommended.')
         elif param == 'SYMMETRY_EPS':
             r = setNumericalParameter(rpars, param, llist[0],
-                                      range_=(1e-10, None))
+                                      range_=(1e-100, None),
+                                      outOfRangeEvent=("set", "set"))
             if r == 0 and rpars.SYMMETRY_EPS > 1.0:
                 logger.warning(
                     'PARAMETERS file: SYMMETRY_EPS: Given '
@@ -466,7 +467,8 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                 rpars.setHaltingLevel(1)
             if len(llist) > 1:
                 r = setNumericalParameter(rpars, param, llist[0],
-                                          range_=(1e-10, None),
+                                          range_=(1e-100, None),
+                                          outOfRangeEvent=("set", "set"),
                                           varname='SYMMETRY_EPS_Z')
                 if r == 0 and rpars.SYMMETRY_EPS_Z > 1.0:
                     logger.warning(
