@@ -1849,7 +1849,7 @@ class Lattice():
         basis = self._basis
 
         # Relative tolerance factor within which things are assumed to be equal
-        eps = 1e-5
+        eps = 1e-3
 
         # cosine of angle between vectors
         cosine = np.dot(basis[0], basis[1])/(np.linalg.norm(basis[0])

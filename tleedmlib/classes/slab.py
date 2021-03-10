@@ -785,9 +785,8 @@ class Slab:
         distances = sps.distance.cdist(tmpcoords.transpose(), oricm,
                                        'euclidean')
         # print(oricm)
-        for sublist in distances:
-            if min(sublist) > eps:
-                return False
+        if any(min(sublist) > eps for sublist in distances):
+            return False
         return True
 
     def isBulkTransformSymmetric(self, matrix, sldisp, eps):
@@ -1039,7 +1038,7 @@ class Slab:
         if not smaller:
             return(False, abst)
         else:
-            mincell, _, _ = tl.leedbase.reduceUnitCell(mincell, eps)
+            mincell, _, _ = tl.leedbase.reduceUnitCell(mincell)
             # cosmetic corrections
             if abs(mincell[0, 0]) < eps and abs(mincell[1, 1]) < eps:
                 # if matrix is diagonal, swap a and b

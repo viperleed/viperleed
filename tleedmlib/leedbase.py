@@ -419,7 +419,7 @@ def readWoodsNotation(s, ucell):
     return mat
 
 
-def checkLattice(ab, eps=0.001):
+def checkLattice(ab, eps=1e-3):
     """Takes unit vectors a,b as a 2x2 matrix, returns (lat,t), where lat is
     a string "square", "rectangular", "hexagonal", "rhombic" or "oblique", and
     t is a 2x2 transformation matrix which will transform the cell to obtuse
@@ -447,7 +447,7 @@ def checkLattice(ab, eps=0.001):
     return (lat, t)
 
 
-def reduceUnitCell(ab, eps=0.001):
+def reduceUnitCell(ab, eps=1e-3):
     """Takes an obtuse unit cell as a (2x2) matrix and reduces it to minimum
     circumference, keeping the area constant. This might reduce oblique unit
     cells to rectangular or hexagonal ones. Returns (ab, t, celltype), where
@@ -455,7 +455,7 @@ def reduceUnitCell(ab, eps=0.001):
     is a string describing the unit cell ("square", "rectangular",
     "hexagonal", "rhombic" or "oblique")."""
     # Author: Michele Riva; slightly modified for consistency by FK
-    (lat, t) = checkLattice(ab)
+    (lat, t) = checkLattice(ab, eps=eps)
     ab = np.dot(t, ab)
     if lat == "oblique":
         # Transform lattice to have the shortest two vectors, with angle
@@ -492,7 +492,7 @@ def reduceUnitCell(ab, eps=0.001):
         ab = np.dot(swap, ab)
 #         END OF ALGORITHM. Now the lattice ab is closest to rectangular. It
 #           might be still any shape (square, rect, hex, rhombic, oblique)
-        lat, t0 = checkLattice(ab)
+        lat, t0 = checkLattice(ab, eps=eps)
         t = np.dot(t0, t)
         ab = np.dot(t0, ab)
 #       If ab is still oblique, try to see if it can be transformed to hex or
@@ -514,7 +514,7 @@ def reduceUnitCell(ab, eps=0.001):
             t2 = np.dot(t0, t2)
             ab = np.dot(t0, ab)
 
-            lat, t0 = checkLattice(ab)
+            lat, t0 = checkLattice(ab, eps=eps)
             t2 = np.dot(t0, t2)
 
             if lat == "oblique":
