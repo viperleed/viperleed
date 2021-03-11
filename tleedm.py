@@ -620,6 +620,8 @@ def main():
     logger.info("Starting new log: " + logname + "\nTime of execution (UTC): "
                 + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
     logger.info("This is ViPErLEED version " + GLOBALS["version"] + "\n")
+    logger.info("! THIS VERSION IS A PRE-RELEASE NOT MEANT FOR PUBLIC "
+                "DISTRIBUTION !")
     starttime = timer()
 
     tmpmanifest = ["AUX", "OUT", logname]
