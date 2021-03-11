@@ -484,7 +484,10 @@ def writeAUXGEO(sl, rp):
                '-----\n')
     nonbulk = len(sl.layers)-rp.N_BULK_LAYERS
     if len(rp.TENSOR_OUTPUT) < nonbulk:    # check TENSOR_OUTPUT parameter
-        if rp.TENSOR_OUTPUT:
+        if len(rp.TENSOR_OUTPUT) == 1:
+            # interpret one value as concerning all
+            rp.TENSOR_OUTPUT = rp.TENSOR_OUTPUT * nonbulk
+        elif rp.TENSOR_OUTPUT:
             logger.warning(
                 'Parameters TENSOR_OUTPUT is defined, but contains fewer '
                 'values than there are non-bulk layers. Missing values '

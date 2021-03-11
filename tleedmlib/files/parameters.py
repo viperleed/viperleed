@@ -1103,6 +1103,8 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
         elif param == 'TENSOR_OUTPUT':
             nl = tl.base.recombineListElements(llist, '*')
             for s in nl:
+                s = re.sub(r'[Tt](rue|RUE)?', '1', s)
+                s = re.sub(r'[Ff](alse|ALSE)?', '0', s)
                 try:
                     v = int(s)
                     if v != 0 and v != 1:
