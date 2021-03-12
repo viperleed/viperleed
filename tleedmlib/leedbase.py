@@ -14,7 +14,7 @@ import subprocess
 import os
 import shutil
 import copy
-from fractions import Fraction
+from quicktions import Fraction
 
 from viperleed.guilib import get_equivalent_beams
 from viperleed.tleedmlib.base import parseMathSqrt, angle, cosvec

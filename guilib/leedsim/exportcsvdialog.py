@@ -9,7 +9,7 @@ Author: Michele Riva
 
 """
 
-from fractions import Fraction
+from quicktions import Fraction
 
 import numpy as np
 import PyQt5.QtCore as qtc
