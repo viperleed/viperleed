@@ -280,7 +280,7 @@ def sortfiles(tensorIndex, delete_unzipped=False, tensors=True,
                 "POSCAR_oricell", "POSCAR_bulk", "muftin.f",
                 "refcalc-PARAM", "refcalc-FIN", "rfactor-WEXPEL",
                 "rfactor-PARAM", "delta-input", "search.steu",
-                "search-rf.info", "seach-PARAM", "AUXEXPBEAMS",
+                "search-rf.info", "search-PARAM", "AUXEXPBEAMS",
                 "eeasisss-input", "searchpars.info", "superpos-PARAM",
                 "superpos-CONTRIN", "POSCAR_bulk_appended", "POSCAR_mincell",
                 "restrict.f"]
