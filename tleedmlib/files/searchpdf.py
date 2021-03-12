@@ -498,8 +498,8 @@ def writeSearchReportPdf(rp, outname="Search-report.pdf"):
         maxline, = msp.plot(allgens, psmax, '-', color="black")
         scattermax = max(scattermax, max(psmax))
         if not labelled:
-            meanline.set_label('Mean')
-            maxline.set_label('Max')
+            meanline.set_label('Mean parameter \u03C3')    # sigma
+            maxline.set_label('Highest parameter \u03C3')  # sigma
             labelled = True
 
     # layout
