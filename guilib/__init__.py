@@ -16,6 +16,10 @@ from viperleed.vprglobals import GLOBALS
 USE_GUI = GLOBALS['USE_GUI']
 
 from viperleed.guilib.decorators import profile_calls, exec_time, profile_lines
+from viperleed.guilib.helpers import (conventional_angles,
+                                      two_by_n_array_to_tuples,
+                                      two_by_two_array_to_tuple,
+                                      remove_duplicates)
 from viperleed.guilib.base import (get_equivalent_beams,
                                    project_to_first_domain, check_type,
                                    check_leed_params, check_multi_leed_params,
@@ -48,4 +52,5 @@ else:
 from viperleed.guilib.leedsim.exportcsv import export_pattern_csv
 from viperleed.guilib.leedsim.leedparameters import LEEDParameters
 from viperleed.guilib.leedsim.leedparameters import LEEDParametersList
-from viperleed.guilib.leedsim.classes import LEEDPattern, LEEDSymmetryDomains
+from viperleed.guilib.leedsim.classes import (LEEDPattern, LEEDSymmetryDomains,
+                                              LEEDEquivalentBeams,)

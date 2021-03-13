@@ -21,7 +21,6 @@ from warnings import warn as warning   # eventually will replace with logging
 import numpy as np
 
 from viperleed import guilib as gl
-# import guilib as gl
 
 
 class LEEDParameters(MutableMapping):
@@ -40,24 +39,34 @@ class LEEDParameters(MutableMapping):
                      'bulk3Dsym': None,
                      'beamIncidence': (0, 0)  # (theta, phi)
                     }
+    # keys that are not given as input, but are calculated at instantiation
+    calculated_keys = {'bulkReciprocalBasis': None,}
     
     def __init__(self, data):
+        # self.__data is the underlying dictionary that is accessed
+        # when issuing self[key]
         if isinstance(data, LEEDParameters):
-            # probably can do it better, just copying data.__data into
-            # self.__data and skipping all the rest, with the assumption that
-            # a LEEDParameters instance is already fine as is
-            # data = {k: v for k, v in data.items()}
-            self.__data = data.__data
+            # Just copy data into self.__data and skip all the rest
+            self.__data = data
             return None
         if not isinstance(data, (dict, ConfigParser)):
             raise TypeError("LEEDParameters: 'dict' or 'ConfigParser' needed. "
                             f"Found {type(data).__name__!r} instead")
 
-        self.__data = {**self.mandatory_keys, **self.optional_keys}
+        self.__data = {**self.mandatory_keys,
+                       **self.optional_keys,
+                       **self.calculated_keys}
         if isinstance(data, dict):
             self.__from_dict(data)
         else:
             self.__from_file(data)
+
+        # Calculate the parameters in self.calculated_keys
+        self._calculate_missing()
+        
+        # And fix the 3D symmetry operations of the bulk group by embedding
+        # them into the PlaneGroup instance directly
+        self._3d_ops_to_bulk_group()
 
     def __len__(self):
         return len(self.__data)
@@ -89,7 +98,112 @@ class LEEDParameters(MutableMapping):
         return k in self.__data
     
     def __repr__(self):
-        return repr(self.__data)
+        return 'LEEDParameters(' + repr(self.__data).replace('\n','') + ')'
+    
+    def __eq__(self, other):
+        """
+        Equality method for LEEDParameters. Instances are considered equal if
+        they produce the very same LEED pattern, i.e., they have:
+        - the same beamIncidence
+        - the same surface group
+        - the same bulk basis, expressed in the same coordinate system, but
+          accounting for possible sign changes of one of the unit vectors
+        - the same surface lattices, i.e., the same domains. Also in this case,
+          sign changes are acceptable
+          TODO: probably this thing with the sign change needs revisiting.
+
+        The algorithm used assumes that both self and other would produce
+        lattices with highest symmetry
+
+        Returns
+        -------
+        True if LEEDParameters are equal, NotImplemented otherwise
+        """
+        if not isinstance(other, LEEDParameters):
+            # Try to see if other can be used as an argument to the
+            # LEEDParameters constructor
+            try:
+                other = LEEDParameters(other)
+            except (TypeError, NameError, ValueError):
+                # If instantiation raises one of the known exceptions
+                return NotImplemented
+
+        # (1) first a basic check
+        if self is other:
+            return True
+
+        # (2) beamIncidence
+        if self['beamIncidence'] != other['beamIncidence']:
+            return NotImplemented
+
+        # (3) surface plane group
+        if self['surfGroup'] != other['surfGroup']:
+            return NotImplemented
+
+        # (4) reciprocal bulk bases, accounting for sign changes
+        bulk_transform = np.dot(np.linalg.inv(other['bulkReciprocalBasis']),
+                                self['bulkReciprocalBasis']).T
+        if not np.allclose(np.abs(bulk_transform), gl.PlaneGroup.E, atol=1e-4):
+            return NotImplemented
+
+        # (5) check whether the real-space surface bases are the same,
+        #     accounting for sign changes
+        surf_transform = np.dot(other['surfBasis'],
+                                 np.linalg.inv(self['surfBasis']))
+        if np.allclose(np.abs(surf_transform), gl.PlaneGroup.E):
+            # (5.1) in this case, for the two patterns to be the same, we need
+            #       also the bulk groups to be equal, including the operations
+            #       that generate domains
+            if ((self['bulkGroup'] == other['bulkGroup'])
+                and (self['bulkGroup'].same_operations(other['bulkGroup'],
+                                                       include_3d=True))):
+                return True
+            return NotImplemented
+
+        # At this point we have:
+        # * same beamIncidence
+        # * same bulk basis (except sign changes)
+        # * same surface group
+        # * somewhat different surface bases
+
+        # (6) The surface lattices could still be two symmetry-related domains.
+        #     If this is the case, the two superlattice matrices should be
+        #     related to one another by one of the symmetry operations of the
+        #     bulk group
+        # First we have to take into account that the BULK basis of the other
+        # instance may have some sign change. This requires transforming its
+        # superlattice to a common basis:
+        super_other = np.dot(other['SUPERLATTICE'], bulk_transform.round())
+        inv_super_self = np.linalg.inv(self['SUPERLATTICE'])
+
+        # get the matrices that transform the superlattice of self into the
+        # superlattice of other. Here we also have to account
+        # for sign changes of the SURFACE basis
+        sign_changes = (gl.PlaneGroup.E,   # no sign change
+                        gl.PlaneGroup.C2,  # both vectors change sign
+                        gl.PlaneGroup.Mx,  # b changes sign
+                        gl.PlaneGroup.My)  # a changes sign
+        # super_transforms is a "list" where the i-th element equals
+        #    np.dot(inv_super_self, np.dot(sign_changes[i], super_other))
+        super_transforms = np.einsum("ilm,jl,mk->ijk",
+                                     sign_changes, inv_super_self, super_other)
+
+        # (6.1) if the transform is a bulk operation, it certainly needs to
+        #       have only integer entries. Keep only the ones that do:
+        int_transforms = [t.round().astype(int)
+                          for t in super_transforms
+                          if np.allclose(t, t.round())]
+        if len(int_transforms) == 0:
+            return NotImplemented
+
+        # (6.2) check if indeed one of the transforms equals one of the bulk
+        #       symmetry operations
+        bulk_ops = self['bulkGroup'].operations(include_3d=True)
+        for transform in int_transforms:
+            transform = gl.two_by_two_array_to_tuple(transform)
+            if transform in bulk_ops:
+                return True
+        return NotImplemented
 
     def __from_dict(self, data):
         """
@@ -103,12 +217,12 @@ class LEEDParameters(MutableMapping):
         self._check_mandatory(data)
         self._check_and_process_all(data)
         for k, v in data.items():
-            # find the key in self.__data that matches the one in data
+            # find the key in self that matches the one in data
             # when compared case-insensitive. There should be at most one.
             # All those that do not appear are neglected.
-            keys = [kk for kk in self.__data if kk.lower() == k.lower()]
+            keys = [kk for kk in self if kk.lower() == k.lower()]
             if len(keys):
-                self.__data[keys[0]] = v
+                self[keys[0]] = v
             else:
                 warning(f"Unknown LEED parameter {k!r} will be ignored.")
     
@@ -192,13 +306,13 @@ class LEEDParameters(MutableMapping):
                 data[k] = gl.PlaneGroup(v)
             elif k.lower() == 'bulkGroup'.lower():
                 data[k] = gl.PlaneGroup(v)
-            elif k.lower() == 'beamIncidence'.lower():                          # check theta < 0 and update phi accordingly
+            elif k.lower() == 'beamIncidence'.lower():
                 if isinstance(v, str):
                     v = ast.literal_eval(v)
                 if not isinstance(v, (list, tuple, np.ndarray)) or len(v) != 2:
                     raise ValueError("LEEDParameters: invalid beamIncidence "
                                      f"entry found: {v}")
-                data[k] = v
+                data[k] = gl.conventional_angles(*v)
     
     def _check_acceptable(self, data_dict):
         """
@@ -221,6 +335,36 @@ class LEEDParameters(MutableMapping):
                 raise ValueError("SUPERLATTICE needs to be an integer-valued "
                                  "matrix")
 
+    def _calculate_missing(self):
+        """
+        Calculates the extra parameters that are not in the original input
+        but are useful to keep
+        """
+        # (1) bulkReciprocalBasis
+        # build a dummy real-space surface lattice just to get its reciprocal
+        # basis, from which one can find the bulk reciprocal basis. Also,
+        # round a bit the result (8 decimal digits).        
+        dummy_surf = gl.Lattice(self['surfBasis'])
+        bulk_basis = np.dot(self['SUPERLATTICE'].T, dummy_surf.reciprocal_basis)
+        self['bulkReciprocalBasis'] = bulk_basis.round(decimals=8)
+
+    def _3d_ops_to_bulk_group(self):
+        """
+        Edit the 'bulkGroup' entry, which should be a PlaneGroup instance,
+        such that it contains the correct glide and screw symmetry operations
+        """
+        # do something only if it makes sense
+        if self['bulk3Dsym'] is None:
+            return None
+
+        # get dummy bulk to get the lattice shape
+        dummy_bulk = gl.Lattice(self['bulkReciprocalBasis'], space='reciprocal',
+                                group=self['bulkGroup'])
+        bulk_shape = dummy_bulk.cell_shape
+
+        # And apply the bulk operations to the bulk group
+        self['bulkGroup'].screws_glides = (self['bulk3Dsym'], bulk_shape)
+
 
 class LEEDParametersList(MutableSequence):
     """
@@ -229,12 +373,13 @@ class LEEDParametersList(MutableSequence):
     be added after instantiation. During instantiation checks that all are
     consistent
     """
-    def __init__(self, data=None):
+    def __init__(self, data=None, duplicates=False):
         super().__init__()
+        # self.__list is the list that underlies this container, i.e., the
+        # one that is accessed when calling self[index]. It needs initializing
+        # to empty because it is accessed in _process_input_data
         self.__list = []
-        data = self._to_leed_parameters(data)
-        self._check_acceptable(*data)
-        self.__list = data  # the list that underlies this container
+        self.__list = self._process_input_data(data, duplicates)
 
     def __delitem__(self, el):
         del self.__list[el]
@@ -257,11 +402,13 @@ class LEEDParametersList(MutableSequence):
         return len(self.__list)
 
     def __repr__(self):
-        return repr(self.__list)
+        txt = 'LEEDParametersList([\n'
+        txt += '\n'.join(repr(d) for d in self)
+        txt += '\n])'
+        return txt 
 
-    def insert(self, idx, data):
-        data = self._to_leed_parameters(data)
-        self._check_acceptable(*data)
+    def insert(self, idx, data, duplicates=False):
+        data = self._process_input_data(data, duplicates)
         # when inserting, we should make sure that the data is actually a single
         # LEEDParameters to avoid creating a list with entries of different type
         # at different indices
@@ -271,23 +418,40 @@ class LEEDParametersList(MutableSequence):
         if len(data) > 1:
             # more than one parameter passed. Not acceptable for insertion.
             raise ValueError("Cannot insert multiple LEEDParameters at one "
-                             "index. Use LEEDParametersList.append(params) "
+                             "index. Use LEEDParametersList.extend(params) "
                              "or a list of LEEDParametersList")
         self.__list.insert(idx, data[0])
 
-    def append(self, data):
-        self.insert(len(self), data)
-    
-    # def extend(self, data):  # not sure if I want this
-        # # data needs to be an unpackable iterable
-        # self.insert(len(self), *data)
+    def append(self, data, duplicates=False):
+        self.insert(len(self), data, duplicates)
+
+    def extend(self, data, duplicates=False):
+        for d in data:
+            self.append(d, duplicates)
+
+    def _process_input_data(self, data, duplicates=False):
+        """
+        Do all the processing needed to accept the input data, i.e.,
+        converting each entry to a LEEDParameters instance, verify that the
+        the data passed is consistent, and remove duplicates if needed
+        """
+        data = self._to_leed_parameters(data)
+        self._check_acceptable(*data)
+        if not duplicates:
+            # first remove duplicates from data only
+            data = gl.remove_duplicates(data)
+            # then keep only those that are not already in the list
+            # this way, if, at earlier calls we wanted to keep duplicates,
+            # they remain in self
+            data = [d for d in data if d not in self]
+        return data
     
     def _to_leed_parameters(self, data):
         """
         Processes the data given as input, and returns an appropriate list
         of LEEDParameters
         """
-        if data is None:
+        if not data:
             ret = []
         elif isinstance(data, dict):
             # delegate to LEEDParameters the check on the dictionary
@@ -295,63 +459,69 @@ class LEEDParametersList(MutableSequence):
         elif isinstance(data, ConfigParser):
             ret = [LEEDParameters(dict(data[section])) for section in data]
         elif isinstance(data, LEEDParameters):
-            ret = [data]    # was [LEEDParameters], but it must have been wrong!
+            ret = [data]
         elif isinstance(data, LEEDParametersList):
             ret = data
         elif isinstance(data, (list, tuple, np.ndarray)):
-            ret = [LEEDParameters(d) for d in data]
+            # here we check if any of the entries in the list is a
+            # LEEDParametersList first, in which case we replace the entry
+            # with as many LEEDParameters instances as there are in the list
+            ret = []
+            for d in data:
+                if isinstance(d, LEEDParametersList):
+                    ret.extend(d)
+                else:
+                    ret.append(LEEDParameters(d))
         else:
             raise TypeError("LEEDParametersList: invalid data type. Expected "
                             "dict, ConfigParser, LEEDParameters, "
-                            "LEEDParametersList, list, tuple, or np.ndarray. "
+                            "LEEDParametersList, or list, tuple, or "
+                            "np.ndarray of the previous. "
                             f"Found {type(data).__name__!r} instead")
         return ret
     
     def _check_acceptable(self, *data):
         # First store the largest eMax and screenAperture. Will be set
         # as the eMax and screenAperture values if the data is acceptable
-        all_params = (*self.__list, *data)
+        all_params = (*self, *data)
         if len(all_params) == 0:
             return None
         emax = max(param['eMax'] for param in all_params)
         aperture = max(param['screenAperture'] for param in all_params)
         
-        leeds = []
-        for params in copy.deepcopy(all_params):
-            # set up LEEDPatterns with eMax = 1 to make initialization faster,
-            # as this does not calculate all the beams.
-            params['eMax'] = 1  # this is the reason for the deepcopy
-            leeds.append(gl.LEEDPattern(params))
-        
         # check consistency of bulk
-        bulk = leeds[0].reciprocal_lattices['bulk']
-        b_ops = set(bulk.group.group_ops(include_3d=True))
-        for leed in leeds[1:]:
-            this_bulk = leed.reciprocal_lattices['bulk']
-            # bulk lattices should be the same
-            if not np.allclose(bulk.basis, this_bulk.basis):
+        inv_bulk_basis = np.linalg.inv(all_params[0]['bulkReciprocalBasis'])
+        bulk_group = all_params[0]['bulkGroup']
+        bulk_ops = set(bulk_group.operations(include_3d=False))
+        for param in all_params[1:]:
+            # bulk lattices should be the same, except, possibly, for a sign
+            # change. Compute the matrix that transforms one into the other.
+            # Then check that the transform is, except for a sign change, the
+            # identity matrix. Since the bulk bases are the reciprocal ones,
+            # one would need to calculate
+            #        T = ((B'*)^-1 @ B*)^T,
+            # but it is more convenient to calculate
+            #        T* = B'* @ B*^(-1)
+            # since abs(T) == E <--> abs(T*) == E
+            transform = np.dot(param['bulkReciprocalBasis'], inv_bulk_basis)
+            if not np.allclose(np.abs(transform), gl.PlaneGroup.E):
                 raise ValueError("LEEDParametersList: Inconsistent bulk bases "
                                  "found in the input parameters")
-            # bulk groups also should be the same. Not sure how to handle the
-            # case in which some of the parameters does not contain the
-            # bulk3Dsym but others do. Right now it raises errors.
+            # bulk groups also should be the same, but excluding the 3D symmetry
+            # as this only affects how many symmetry domains will be generated
+            this_group = param['bulkGroup']
             same_bulk_group = (
-                bulk.group == this_bulk.group
-                and b_ops == set(this_bulk.group.group_ops(include_3d=True)))
+                bulk_group == this_group
+                and bulk_ops == set(this_group.operations(include_3d=False)))
             if not same_bulk_group:
                 raise ValueError("LEEDParametersList: Inconsistent symmetry "
                                  "operations of bulk lattices in the "
                                  "input parameters")
-            # TODO: check also that all elements give unique LEED patterns, 
-            #       which includes rotational domains. Remove those that do not.
-            #       May be easier to do by adding first __eq__ and __neq__
-            #       to LEEDPattern
-        
+
         # after passing the check, eMax and screenAperture are set to the values
         # found above
         for param in all_params:
             param['eMax'] = emax
             param['screenAperture'] = aperture
-
 
 

@@ -307,7 +307,7 @@ def project_to_first_domain(beam_list, leed_parameters, *other_leed_parameters,
     
     leed_parameters, (leed, *_) = check_multi_leed_params(leed_parameters)
     
-    ops = leed.reciprocal_lattices['bulk'].group.group_ops(include_3d=True)
+    ops = leed.reciprocal_lattices['bulk'].group.operations(include_3d=True)
     superlattices = [params['SUPERLATTICE'] for params in leed_parameters]
 
     def is_in_first_domain(beam):
@@ -571,7 +571,7 @@ def check_multi_leed_params(leed_parameters):
     
     # check consistency of bulk
     bulk = leed_patterns[0].reciprocal_lattices['bulk']
-    b_ops = set(bulk.group.group_ops(include_3d=True))
+    b_ops = set(bulk.group.operations(include_3d=True))
     for leed in leed_patterns[1:]:
         this_bulk = leed.reciprocal_lattices['bulk']
         # bulk lattices should be the same
@@ -582,7 +582,7 @@ def check_multi_leed_params(leed_parameters):
         # case in which some of the parameters does not contain the bulk3Dsym
         # but others do. Right now it raises errors.
         if (not bulk.group == this_bulk.group
-            or not b_ops == set(this_bulk.group.group_ops(include_3d=True))):
+            or not b_ops == set(this_bulk.group.operations(include_3d=True))):
             raise ValueError("Inconsistent symmetry operations of bulk lattices"
                              " in the input parameters")
     return (leed_parameters, leed_patterns)
@@ -1005,7 +1005,7 @@ class PlaneGroup():
 
     Methods
     -------
-    group_ops() Returns tuple with group operations
+    operations() Returns tuple with group operations
 
     get_subgroups() Returns set of strings with the subgroups of group
 
@@ -1183,18 +1183,28 @@ class PlaneGroup():
         Equality method for PlaneGroup instances.
         
         Most likely one would like to also check the set of symmetry operations,
-        as this would allow to include checks of the screws and glides as well
+        as this would allow to include checks of the screws and glides as well.
+
+        Notice that Python 3 handles correctly (and in a faster way) cases in
+        which the not-equal dunder is not reimplemented
         """
         if not isinstance(other, PlaneGroup):
-            # Other instances are never equal
+            # Can't compare instances of other classes
             return NotImplemented
         return self.group == other.group
-
-    def __ne__(self, other):
+    
+    def same_operations(self, other, include_3d=False):
         """
-        Not equality method for PlaneGroup instances.
+        Returns whether self has the same operations as another PlaneGroup
+        instance. The comparison can include or not (depending on the value of
+        include_3d) also the 3D bulk operations. This does not check whether
+        the Hermann-Mauguin names are the same. Use self == other to test that.
         """
-        return not self == other
+        if not isinstance(other, PlaneGroup):
+            return NotImplemented
+        self_ops = set(self.operations(include_3d))
+        other_ops = set(other.operations(include_3d))
+        return self_ops == other_ops
 
     def check_group_name(self, group):
         """
@@ -1267,7 +1277,7 @@ class PlaneGroup():
         # defaulted to None.
         # NB: I may change the behavior later, and rather make this a
         #     set_3d_ops method, while incorporating the getter into
-        #     the group_ops method below
+        #     the operations method below
         if input is None:
             self.__ops_3d = tuple()
             return None
@@ -1304,27 +1314,27 @@ class PlaneGroup():
             screw_re = r"[rR][\(](?P<screws>[\d\,\s]+)[\)]"
             glide_re = r"[mM][\(](?P<glides>[\d\[\]\,\-\s]+)[\)]"
             
-            s = re.search(screw_re, input)
-            g = re.search(glide_re, input)
-            if not (s or g):
+            found_screws = re.search(screw_re, input)
+            found_glides = re.search(glide_re, input)
+            if not (found_screws or found_glides):
                 raise ValueError("PlaneGroup.screws_glides: Invalid input.")
-            if s:  # found some screws
-                screws = s.group('screws').split(',')
+            if found_screws:  # found some screws
+                screws = found_screws.group('screws').split(',')
                 if any(s not in self.screw_ops.keys() for s in screws):
                     raise ValueError("PlaneGroup.screws_glides: Invalid "
                                      "rotation order in the input. Only 2-, "
                                      "3-, 4-, and 6-fold orders allowed.")
                 [ops.extend(self.screw_ops[screw]) for screw in screws]
-            if g:  # found some glide planes
+            if found_glides:  # found some glide planes
                 if shape is None:
                     raise ValueError("PlaneGroup.screws_glides: cell shape is "
                                      "required when glide planes are given.")
                 # parse glide planes by removing spaces and splitting on commas
-                g = g.group('glides').replace(' ','').split(',')
+                glides = found_glides.group('glides').replace(' ','').split(',')
 
                 # now g should contain an even number of elements:
                 # each odd element is of the form "[#", each even "#]"
-                for g_odd, g_even in zip(g[::2], g[1::2]):
+                for g_odd, g_even in zip(glides[::2], glides[1::2]):
                     if g_odd[0] != "[" or g_even[-1] != "]":
                         raise ValueError("PlaneGroup.screws_glides: some "
                                          "glide plane directions are not in "
@@ -1367,7 +1377,7 @@ class PlaneGroup():
             for mi in input
             )
 
-    def group_ops(self, include_3d=False):
+    def operations(self, include_3d=False):
         """
         Returns a tuple of 2x2 tuples representing the operations of the point
         group associated with the 2D plane group
@@ -1406,7 +1416,11 @@ class PlaneGroup():
         system, whose coordinates are expressed by the 2x2 array-like
         transformation matrix given in the "transform" parameter. No assumption
         is made on the coordinate transform (i.e., the operation matrices
-        returned may have non-integer values).
+        returned may have non-integer values)
+
+        Returns
+        -------
+        tuple of numpy.ndarrays
         """
         if np.shape(transform) != (2, 2):
             raise ValueError("PlaneGroup.transform requires a 2x2 array-like as"
@@ -1424,7 +1438,7 @@ class PlaneGroup():
         return tuple(np.linalg.multi_dot((transform,
                                           op,
                                           inverse))
-                     for op in self.group_ops(include_3d))
+                     for op in self.operations(include_3d))
 
 
 class Lattice():
@@ -1564,113 +1578,6 @@ class Lattice():
         self._group = PlaneGroup(group)
         self._limit = limit
         self.lattice, self.hk = self.__generate_lattice()
-    
-    # This __eq__ method is very hard to get right. Probably not worth it.
-    # May need to use simultaneous similarity of 2x2 matrices, and check whether
-    # there exists a similarity transform that makes all group operations
-    # fall on one another. The tricky business is finding the generic similarity
-    # transform.
-    # One of the many similarity matrices can be constructed from the
-    # eigenvector matrices of two similar operations.
-    # In fact, given A, B matrices,
-    #         A = Ua D Ua^(-1),     B = Ub D Ub^(-1)
-    # thus
-    #         D = Ua^(-1) A Ua
-    # and
-    #         B = Ub Ua^(-1) A Ua Ub^(-1) = (Ub Ua^(-1)) A (Ub Ua^(-1))^(-1)
-    # so that
-    #         S = Ub Ua^(-1)
-    # is one of the similarity transformation matrices from A to B:
-    #         B = S A S^(-1)
-    # However, this S is not unique. There are some rules for symmetric
-    # (hermitian) matrices, but no good ones for generic matrices.
-    #
-    # def __eq__(self, other):
-        # if not isinstance(other, Lattice):
-            # return NotImplemented
-        # # do first a check on the id
-        # if self is other:
-            # return True
-
-        # # Only high-symmetry lattices can be compared. Use copies with small
-        # # number of points, and keep track for warning reasons of whether some
-        # # needs to be made high-symmetry for comparison
-        # self_hs = self
-        # other_hs = other
-        # msg = ""
-        # if not self.is_high_symmetry():
-            # self_hs = Lattice(self.basis)
-            # self_hs.make_high_symmetry()
-            # msg += "First"
-        # if not other.is_high_symmetry():
-            # other = Lattice(other.basis)
-            # other_hs.make_high_symmetry()
-            # msg += "Second"
-        # if msg:
-            # if msg not in ('First', 'Second'):
-                # msg = "Both"
-            # warning(f"Lattice: {msg} lattice(s) is(are) not high symmetry. "
-                    # "Equality test running on high-symmetry versions")
-
-        # # check if the bases can be transformed into one another by a unitary
-        # # transformation matrix, i.e. b2 = T b1 have the same basis if
-        # # abs(det(T)) = 1.
-
-        # eps = 1e-4  # relative tolerance for equality
-
-        # basis_transform = np.dot(other_hs.basis, np.linalg.inv(self_hs.basis))
-        # det_transform = np.linalg.det(basis_transform)
-        # if np.abs(np.abs(det_transform) - 1) > eps:
-            # return False
-
-        # # Now evaluate if the plane groups (+3d operations) are equivalent.
-        # # Will use sets because of simple subtraction and comparisons
-        # # 1) They must have the same number of symmetry operations.
-        # # Look first only at the plane group operations
-        # self_ops = set(self_hs.group.group_ops())
-        # other_ops = set(other_hs.group.group_ops())
-        # if len(self_ops) != len(oter_ops):
-            # return False
-
-        # # And also at all the others
-        # self_bulkops = set(self_hs.screws_glides)
-        # other_bulkops = set(other_hs.screws_glides)
-        # if len(self_allops) != len(other_allops):
-            # return False
-        
-        # # 2) All rotations (det=1) must be the same, and separately for the
-        # #    surface and for the bulk ones
-        # self_rots = set(op for op in self_ops if np.linalg.det(op) == 1)
-        # other_rots = set(op for op in other_ops if np.linalg.det(op) == 1)
-        # if self_rots != other_rots:
-            # return False
-        # self_bulkrots = set(op for op in self_bulkops if np.linalg.det(op) == 1)
-        # other_bulkrots = set(op
-                             # for op in other_bulkops
-                             # if np.linalg.det(op) == 1)
-        # if self_allrots != other_allrots:
-            # return False
-        
-        # # 3) The rest of the behavior depends on whether the unitary transform
-        # #    between the two lattices is a pure rotation (det == 1) or a
-        # #    roto-reflection (det == -1). In the latter case, reflections may
-        # #    swap the basis vectors, or change their sign. This has implications
-        # #    for those groups that have a single mirror or glide plane.
-        
-        # # now check whether the bases are the same upon any of the plane group
-        # # operations, as well as sign change of either vector and swapping.
-        # # Also keep track of which operation. In fact, we should check whether
-        # # the plane groups are equivalent too, by checking if the directions
-        # # of mirrors/glides are transformed one into the other by the group
-        # # operation that transforms the bases.
-        # invert_first = ((-1, 0), (0, 1))    # sign change of first
-        # invert_second = ((1, 0), (0, -1))   # sign change of second
-        # invert_both = ((-1, 0), (0, -1))    # sign change of both
-        # swap_1 = ((0, -1), (1, 0))          # retain handedness
-        # swap_2 = ((0, 1), (1, 0))           # does not keep handedness
-        # ops = (*self.group.group_ops(include_3d=True),
-               # invert_first, invert_second, swap)
-        # return NotImplemented
     
     def __repr__(self):
         txt = (f"{self.cell_shape} "

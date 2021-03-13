@@ -121,16 +121,16 @@ class LEEDCanvas(gl.MPLFigureCanvas):
         
     def initLEEDScreen(self, lineThick=0.1):
         # initialize LEED screen to a radius of 1
-        if isinstance(lineThick, (int, float)):
-            if lineThick >= 0:
-                screen = mpl.patches.Circle((0, 0), 1,  facecolor='white',
-                                            edgecolor='k', lw=lineThick,
-                                            zorder=-1)
-            else:
-                raise ValueError("line thickness cannot be negative")
-        else:
+        if not isinstance(lineThick, (int, float)):
             raise ValueError("initLEEDScreen requires a non-negative"
                              " floating point input")
+        elif lineThick < 0:
+            raise ValueError("line thickness cannot be negative")
+        else:
+            screen = mpl.patches.Circle((0, 0), 1,  facecolor='white',
+                                        edgecolor='k', lw=lineThick,
+                                        zorder=-1)
+
         self.ax.add_patch(screen)
         self.setAxLimits(1)
         self.screen = screen

@@ -48,7 +48,7 @@ def export_pattern_csv(fnames, leeds, **kwargs):
             Descriptive text giving a name to the structure, independent of
             file name
         * domains: iterable of (iterable of int or None)
-            the 'outer' list should contain as many entries as there are LEED,
+            the 'outer' list should contain as many entries as there are LEED
             parameters. Each entry is a list of indices (0-based) of the
             symmetry-equivalent domains to be exported. This is tricky to
             infer without looking at the GUI. If any of the lists is None, all
@@ -77,16 +77,16 @@ def export_pattern_csv(fnames, leeds, **kwargs):
         raise ValueError("exportcsv: The number of domains definition indices "
                          f"({len(all_domains)}) is inconsistent with that of "
                          f"LEED patterns ({len(leeds)}).")
-    if any(not isinstance(leed, (dict, gl.LEEDPattern)) for leed in leeds):
+    if any(not isinstance(leed, (dict, gl.LEEDPattern, gl.LEEDParameters))
+           for leed in leeds):
         raise TypeError("exportcsv: each of the LEED parameters passed must "
                         "be either a leed_parameters dictionary or a "
                         "viperleed.LEEDPattern")
     for i, leed in enumerate(leeds):
-        if isinstance(leed, dict):
+        if isinstance(leed, (dict, gl.LEEDParameters)):
             # replace the dictionary entry with a LEEDPattern
-            gl.check_leed_params(leed)
             leeds[i] = gl.LEEDPattern(leed)
-        # and check that the bulk bases are consistent
+        # and check that the bulk bases are consistent                          # This will be done via gl.LEEDParametersList
         if not np.allclose(leed.bulk_basis, leeds[0].bulk_basis):
             raise ValueError("exportcsv: Incompatible bulk bases found among "
                              "the LEED patterns")

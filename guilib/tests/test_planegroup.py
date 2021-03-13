@@ -26,7 +26,7 @@ def test_planegroup_p2():
 
     E = [[1, 0], [0, 1]]
     C2 = [[-1, 0], [0, -1]]
-    ops = g.group_ops()
+    ops = g.operations()
     assert len(ops) == 2
     assert np.array_equal(ops[0], E)
     assert np.array_equal(ops[1], C2)

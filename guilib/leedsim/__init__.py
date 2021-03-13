@@ -13,11 +13,13 @@ from viperleed.vprglobals import GLOBALS
 
 __all__ = ['LEEDSymmetryDomains', 'LEEDsubpattern', 'Woods', 'LEEDPattern',
            'RealSpace', 'export_pattern_csv', 'LEEDParameters',
-           'LEEDParametersList']
+           'LEEDParametersList', 'LEEDEquivalentBeams', 'LEEDStructuralDomains']
 
-from viperleed.guilib.leedsim.classes import (LEEDSymmetryDomains,    # not sure I need this to be exposed
+from viperleed.guilib.leedsim.classes import (LEEDEquivalentBeams,    # not sure I need this to be exposed
+                                              LEEDSymmetryDomains,    # not sure I need this to be exposed
                                               LEEDsubpattern, Woods,  # not sure I need these to be exposed, there were also mpl_colors and degrees
-                                              LEEDPattern, RealSpace)
+                                              LEEDPattern, RealSpace,
+                                              LEEDStructuralDomains)  # not sure I need this to be exposed
 from viperleed.guilib.leedsim.exportcsv import export_pattern_csv
 from viperleed.guilib.leedsim.leedparameters import (LEEDParameters,
                                                      LEEDParametersList)
