@@ -28,13 +28,28 @@ import PyQt5.QtCore as qtc
 import PyQt5.QtWidgets as qtw
 
 from viperleed import guilib as gl
-# import guilib as gl
+
+
+def show_pre_release_popup():
+    """
+    Show a pop-up dialog informing that the current version is a not meant
+    to be distributed without permission, as it is a pre-release
+    """
+    txt = (f"ViPErLEED v{gl.GLOBALS['version']} is a pre-release not meant for "
+           "public distribution!<p> Contact us at <a href="
+           u''"'mailto:riva@iap.tuwien.ac.at'"'>riva@iap.tuwien.ac.at</a> </p>')
+    msgBox = qtw.QMessageBox(qtw.QMessageBox.Information, "Pre-release notice",
+                             txt)
+    msgBox.exec()
+
 
 @gl.broadcast_mouse
 class LEED_GUI(qtw.QMainWindow):
+    pre_release = True
     extension = '*.tlm'
     # version = '0.1a'
     version = gl.GLOBALS['version']
+    
     extStr = 'LEED input files ({})'.format(' '.join([extension,
                                                       extension.upper()]))
     extStr = ';;'.join([extStr, 'All files (*)'])
@@ -54,6 +69,8 @@ class LEED_GUI(qtw.QMainWindow):
                                 # open file. This is used for exporting.
         self.initUI()
         self.centerOnScreen()
+        if self.pre_release:
+            show_pre_release_popup()
     
     def centerOnScreen(self):
         qr = self.frameGeometry()
@@ -692,10 +709,6 @@ class LEED_GUI(qtw.QMainWindow):
         self.adjustWindowSize(size=event.size())
     
     def initRealAndLEED(self, active):
-        if not isinstance(active, bool):
-            raise ValueError('The second positional parameter of'
-                             ' initRealAndLEED must be a boolean.')
-        
         if active:
             # An acceptable LEED input has been loaded.
             # Update all controls with the correct stuff
@@ -711,27 +724,23 @@ class LEED_GUI(qtw.QMainWindow):
         self.connectControlEvents(active)
         
     def connectControlEvents(self, active):
-        if not isinstance(active, bool):
-            raise ValueError("connectControlEvents requires a boolean input.")
-        
         self.buts = [self.enWidg.enUp, self.enWidg.enDown,
                      self.rotWidg.cw, self.rotWidg.ccw,
                      self.rotWidg.h10, self.rotWidg.v10, 
                      self.rotWidg.h01, self.rotWidg.v01, 
                      self.doms.toggle]
+        # First disconnect all controls, as this prevents multiple connections
+        # from being established every time a new file is opened
+        self.disconnectAll()
+
         if active:
-            self.disconnectAll()   # This disconnect prevents multiple 
-                                   # connections from being established
-                                   # every time a new file is opened
             self.enWidg.text.textModified.connect(self.energyChanged)
             self.rotWidg.text.textModified.connect(self.rotationChanged)
             [but.clicked.connect(self.buttonPressed) for but in self.buts]
-        else:
-            self.disconnectAll()
     
     def disconnectAll(self):
         for (widg, slt) in zip([self.enWidg.text, self.rotWidg.text],
-                                [self.energyChanged, self.rotationChanged]):
+                               [self.energyChanged, self.rotationChanged]):
             try:
                 widg.textModified.disconnect(slt)
             except TypeError:
