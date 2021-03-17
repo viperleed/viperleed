@@ -783,11 +783,10 @@ def search(sl, rp):
                         if configs != realLastConfig["all"]:
                             realLastConfig["all"] = configs
                             realLastConfigGen["all"] = gens[-1]
-                        if (configs[:int(np.ceil(
-                                            rp.SEARCH_POPULATION * 0.1))]
+                        if (configs[:(rp.SEARCH_POPULATION // 10 + 1)]
                                 != realLastConfig["dec"]):
-                            realLastConfig["dec"] = configs[:int(np.ceil(
-                                            rp.SEARCH_POPULATION * 0.1))]
+                            realLastConfig["dec"] = configs[:(
+                                            rp.SEARCH_POPULATION // 10 + 1)]
                             realLastConfigGen["dec"] = gens[-1]
                         if configs[0] != realLastConfig["best"]:
                             realLastConfig["best"] = configs[0]

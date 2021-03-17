@@ -101,12 +101,23 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
     if (not rp.rfacscatter_all) or (rp.rfacscatter_all[-1][0] != gens[-1]):
         rp.storeRfacScatter([gens[-1]]*len(rlastunique), rlastunique,
                             lastpops, colors)
-    deltagens = [gens[n] - gens[n-1] for n in range(1, len(gens))]
-    maxdgx, maxdgy = [gens[1]], [deltagens[0]]
-    for i in range(0, len(deltagens)):
-        if deltagens[i] >= maxdgy[-1]:
-            maxdgx.append(gens[i+1])
-            maxdgy.append(deltagens[i])
+    deltagens = {"all": {1: 0}, "best": {1: 0}, "dec": {1: 0}}
+    previous = {"all": rfacs[0][:],
+                "best": min(rfacs[0]),
+                "dec": rfacs[0][:(len(rfacs) // 10 + 1)]}
+    for i in range(1, len(gens)):
+        if min(rfacs[i]) != previous["best"]:
+            deltagens["best"][gens[i]] = (gens[i]
+                                          - max(deltagens["best"].keys()))
+            previous["best"] = min(rfacs[i])
+        if list(rfacs[i]) != list(previous["all"]):
+            deltagens["all"][gens[i]] = (gens[i]
+                                         - max(deltagens["all"].keys()))
+            previous["all"] = rfacs[i][:]
+        if list(rfacs[i][:(len(rfacs[i]) // 10 + 1)]) != list(previous["dec"]):
+            deltagens["dec"][gens[i]] = (gens[i]
+                                         - max(deltagens["dec"].keys()))
+            previous["dec"] = rfacs[i][:(len(rfacs[i]) // 10 + 1)]
 
     figsize = (5.8, 8.3)
     figs = []
@@ -114,7 +125,8 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
     # CSV output
     sep = "; "
     width = 12
-    titles = ["Generation", "Gen_Delta", "R_min", "R_max", "R_mean"]
+    titles = ["Generation", "G_Delta_all", "G_Delta_dec", "G_Delta_best",
+              "R_min", "R_max", "R_mean"]
     output = ""
     for t in titles:
         output += t.rjust(width)+sep
@@ -125,8 +137,12 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
             if gens[i] > mc[0][0]:
                 output += mc[0][1] + "\n"   # comment line for marker
                 mc.pop(0)
-        for ls in [gens, [0] + deltagens]:
-            output += str(ls[i]).rjust(width) + sep
+        output += str(gens[i]).rjust(width) + sep
+        for k in ["all", "dec", "best"]:
+            if gens[i] in deltagens[k]:
+                output += str(deltagens[k][gens[i]]).rjust(width) + sep
+            else:
+                output += "NaN".rjust(width) + sep
         for ls in [rfacsMin, rfacsMax, rfacsMean]:
             output += "{:.4f}".format(ls[i]).rjust(width)+sep
         output = output[:-len(sep)] + "\n"
@@ -143,7 +159,7 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
     fig, (rfp, dgp) = plt.subplots(2, 1, sharex=True, figsize=figsize)
     dgp.set_xlabel('Generations')
     rfp.set_ylabel('R-Factor')
-    dgp.set_ylabel('Generation delta')
+    dgp.set_ylabel('Generations since last change')
     # plot markers
     part = 0
     for (i, g) in enumerate(gens):
@@ -176,11 +192,27 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
     rfp.plot(gens, rfacsMean, label="Mean")
     (x, y, s, c) = list(zip(*rp.rfacscatter))
     rfp.scatter(x, y, s=s, c=c)
-    dgp.scatter(gens[1:], deltagens, s=4, c='black', label="Every")
-    dgp.plot(maxdgx, maxdgy, '-', color='royalblue', label="Max")
+    scatcol = {"all": "black", "dec": "tab:green", "best": "tab:red"}
+    labels = {"all": "Changes to any", "dec": "Changes in best 10%",
+              "best": "Changes to best"}
+    sizes = {"all": 4, "dec": 5, "best": 6}
+    maxy = 1
+    for k in ["all", "dec", "best"]:
+        x, y = deltagens[k].keys(), deltagens[k].values()
+        dgp.scatter(x, y, s=sizes[k], c=scatcol[k])
+        maxdgx, maxdgy = [1], [0]
+        for g in deltagens[k].keys():
+            if deltagens[k][g] >= maxdgy[-1]:
+                maxdgx.append(g)
+                maxdgy.append(deltagens[k][g])
+        if gens[-1] - max(deltagens[k].keys()) >= maxdgy[-1]:
+            maxdgx.append(gens[-1])
+            maxdgy.append(gens[-1] - max(deltagens[k].keys()))
+        dgp.plot(maxdgx, maxdgy, '-', c=scatcol[k], label=labels[k])
+        maxy = max(maxy, max(maxdgy), max(y))
     # layout
     rfp.set_ylim(rYrange)
-    dgp.set_ylim([0, max(deltagens)*1.1])
+    dgp.set_ylim([0, maxy*1.1])
     dgp.ticklabel_format(axis="x", style="sci", scilimits=(0, 4))
     fig.tight_layout()
     rfp.legend(loc="lower left")
