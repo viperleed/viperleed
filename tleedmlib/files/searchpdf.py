@@ -232,7 +232,7 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
                             title += ", "
                         else:
                             title += ")"
-                axs[figcount].set_title(title)
+                axs[figcount].set_title(title, pad=8)
                 pltpoints = []  # x, y, color, size, alpha
                 bestpoints = []
                 xlabels = []
@@ -259,12 +259,25 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
                     if mode == "dom":
                         xlabels.append("#{}\n{}".format(
                             i+1, rp.domainParams[i].name))
+                        edgetext = ["0%", "100%"]
                     else:
                         if mode != "occ":
                             el = par.el
                         else:
                             el = par.atom.el
                         xlabels.append("#{}\n{}".format(par.atom.oriN, el))
+                        edgetext = ["", ""]
+                        if isinstance(par.edges[0], (np.floating, float)):
+                            edgetext = [str(round(v, 4)) for v in par.edges]
+                        elif type(par.edges[0]) == np.ndarray:
+                            edgetext = ["[" + ", ".join([str(round(f, 4))
+                                                         for f in (
+                                                    v * np.array([1, 1, -1]))])
+                                        + "]" for v in par.edges]
+                    axs[figcount].text(i+1, -0.03, edgetext[0], fontsize=3,
+                                       ha="center", va="top")
+                    axs[figcount].text(i+1, 1.02, edgetext[1], fontsize=3,
+                                       ha="center", va="bottom")
                     if vals:
                         offsets.append(np.std(vals))
                         # mean = np.mean(vals)
@@ -368,8 +381,10 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
                 axs[figcount].set_ylim([0, 1])
                 axs[figcount].set_xticks(list(range(1, parsPerFig+1)))
                 axs[figcount].set_xticklabels(xlabels)
-                axs[figcount].tick_params(axis='y', which='both', left=False,
-                                          right=False, labelleft=False)
+                axs[figcount].tick_params(which='both', top=False,
+                                          bottom=False, left=False,
+                                          right=False, labelleft=False,
+                                          labelbottom=True, pad=4)
                 figcount += 1
     if offsets:
         rp.parScatter[-1].append((gens[-1], np.mean(offsets), max(offsets)))

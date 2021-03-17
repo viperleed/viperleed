@@ -42,6 +42,7 @@ class SearchPar:
         self.el = el
         self.deltaname = deltaname
         self.steps = -1     # not used for interpretation, info only
+        self.edges = (None, None)  # the first and last value in the range
         self.center = 1     # the index closest to 0, i.e. "no change"
         self.restrictTo = None  # None, Index, or other search par
         self.linkedTo = None    # other search par linked via 'atom number'
@@ -66,6 +67,7 @@ class SearchPar:
             else:
                 k = "all"
             self.steps = len(d[k])
+            self.edges = (d[k][0], d[k][-1])
             n = [np.linalg.norm(v) for v in d[k]]
             self.center = n.index(min(n)) + 1
 
