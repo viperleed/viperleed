@@ -626,6 +626,7 @@ def getBeamCorrespondence(sl, rp):
     # NUMBER OF EXPERIMENTAL BEAMS MUST BE STATIC FROM HERE ON OUT
     # now, for theoretical beams without assignment, see if there is a
     #   symmetry-equivalent beam to assign them to
+    notfound = []
     for (nt, tb) in enumerate(rp.ivbeams):
         if beamcorr[nt] == -1:
             found = False
@@ -642,6 +643,8 @@ def getBeamCorrespondence(sl, rp):
                 if found:
                     break
             if not found:
-                logger.debug("No experimental beam found for calculated beam "
-                             + tb.label)
+                notfound.append(tb.label)
+    if notfound:
+        logger.debug("No experimental beams found for calculated beams: "
+                     + ", ".join(notfound))
     return beamcorr

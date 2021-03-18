@@ -84,7 +84,8 @@ def runSection(index, sl, rp):
                     3: "SEARCH",
                     11: "R-FACTOR CALCULATION",
                     12: "R-FACTOR CALCULATION",
-                    31: "SUPERPOS"}
+                    31: "SUPERPOS",
+                    5:  "ERROR CALCULATION"}
     # files that need to be there for the different parts to run
     requiredFiles = {0: ["POSCAR", "PARAMETERS", "VIBROCC", "IVBEAMS"],
                      1: ["BEAMLIST", "PHASESHIFTS", "POSCAR", "PARAMETERS",
@@ -96,7 +97,9 @@ def runSection(index, sl, rp):
                      11: ["BEAMLIST", "PARAMETERS", "IVBEAMS", "EXPBEAMS"],
                      12: ["BEAMLIST", "PARAMETERS", "IVBEAMS", "EXPBEAMS"],
                      31: ["BEAMLIST", "POSCAR", "PARAMETERS", "IVBEAMS",
-                          "VIBROCC", "DISPLACEMENTS"]}
+                          "VIBROCC", "DISPLACEMENTS"],
+                     5: ["BEAMLIST", "PHASESHIFTS", "POSCAR", "PARAMETERS",
+                         "IVBEAMS", "VIBROCC", "DISPLACEMENTS", "EXPBEAMS"]}
 
     checkfiles = requiredFiles[index][:]
     o = "\nSTARTING SECTION: "+sectionNames[index]
@@ -240,6 +243,8 @@ def runSection(index, sl, rp):
             sections.search(sl, rp)
         elif index == 31:
             sections.superpos(sl, rp)
+        elif index == 5:
+            sections.errorcalc(sl, rp)
     except Exception:
         logger.error("Error in section {}".format(sectionNames[index]))
         raise
@@ -291,7 +296,7 @@ def sortfiles(tensorIndex, delete_unzipped=False, tensors=True,
                 "Search-report.pdf", "FITBEAMS.csv", "FITBEAMS_norm.csv",
                 "superpos-spec.out", "Rfactor_plots_superpos.pdf",
                 "Rfactor_analysis_refcalc.pdf",
-                "Rfactor_analysis_superpos.pdf"]
+                "Rfactor_analysis_superpos.pdf", "Errors.csv"]
     # outfiles with variable names:
     if not path:
         path = "."
@@ -621,7 +626,7 @@ def main():
                 + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
     logger.info("This is ViPErLEED version " + GLOBALS["version"] + "\n")
     logger.info("! THIS VERSION IS A PRE-RELEASE NOT MEANT FOR PUBLIC "
-                "DISTRIBUTION !")
+                "DISTRIBUTION !\n")
     starttime = timer()
 
     tmpmanifest = ["AUX", "OUT", logname]
@@ -733,7 +738,7 @@ def main():
         except Exception:
             pass
 
-    sectionorder = [0, 1, 11, 2, 3, 31, 12, 4]
+    sectionorder = [0, 1, 11, 2, 3, 31, 12, 4, 5]
     searchLoopR = None
     searchLoopLevel = 0
     initHalt = False

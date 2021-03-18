@@ -206,6 +206,11 @@ def refcalc(sl, rp, subdomain=False):
         except Exception:
             logger.warning("Failed to add input file " + f
                            + " to Tensors folder.")
+    try:
+        shutil.copy2("refcalc-fd.out",
+                     os.path.join("Tensors", dn, "refcalc-fd.out"))
+    except Exception:
+        logger.warning("Failed to copy refcalc-fd.out to Tensors folder.")
     # modify PARAMETERS to contain the energies and LMAX that were really used
     if os.path.isfile(os.path.join("Tensors", dn, "PARAMETERS")):
         modifyPARAMETERS(rp, "THEO_ENERGIES",

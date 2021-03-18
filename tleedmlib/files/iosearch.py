@@ -357,17 +357,12 @@ def generateSearchInput(sl, rp, steuOnly=False, cull=False, info=True):
 
     # calculate some more things for later
     expEnergies = []
-    totalrange = 0
-    for b in rp.expbeams:
-        expEnergies.extend([k for k in b.intens if k not in expEnergies])
-        totalrange += (min(max(b.intens), rp.THEO_ENERGIES[1])
-                       - max(min(b.intens), rp.THEO_ENERGIES[0]))
     if info:
+        totalrange = rp.total_energy_range()
         logger.info("Total energy range from experimental beams is "
                     "{:.2g} eV ({} independent fit parameters, {:.2g} eV per "
                     "parameter)"
                     .format(totalrange, rp.indyPars, totalrange / rp.indyPars))
-    rp.total_en_range = totalrange
     theoEnergies = int((rp.THEO_ENERGIES[1]-rp.THEO_ENERGIES[0])
                        / rp.THEO_ENERGIES[2]) + 1
     if theoEnergies >= len(expEnergies):

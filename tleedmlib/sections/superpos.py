@@ -25,12 +25,12 @@ from viperleed.tleedmlib.files.iorefcalc import readFdOut
 logger = logging.getLogger("tleedm.superpos")
 
 
-def superpos(sl, rp, subdomain=False):
+def superpos(sl, rp, subdomain=False, for_error=False):
     """Runs the superpos calculation."""
     # check whether there is anything to evaluate
-    if rp.searchResultConfig is not None:
+    if rp.searchResultConfig is not None and not for_error:
         config = rp.searchResultConfig[0]
-    else:
+    elif not for_error:
         config = None
         # check for an SD.TL file
         sdtl = None
@@ -79,10 +79,10 @@ def superpos(sl, rp, subdomain=False):
     if not rp.disp_block_read:
         readDISPLACEMENTS_block(rp, sl, rp.disp_blocks[rp.search_index])
         rp.disp_block_read = True
-    if not any([ind in rp.runHistory for ind in [2, 3]]):
+    if not any([ind in rp.runHistory for ind in [2, 3]]) and not for_error:
         getDeltas(rp.TENSOR_INDEX, required=True)
     # make sure search parameters are initialized
-    if 3 not in rp.runHistory and not subdomain:
+    if 3 not in rp.runHistory and not subdomain and not for_error:
         logger.debug("Superpos calculation executed without search. "
                      "Search parameters will be inferred from input files.")
         try:
@@ -94,7 +94,10 @@ def superpos(sl, rp, subdomain=False):
     # now we have configuration and parameters, create input:
     contrin = ""
     try:
-        contrin = io.writeSuperposInput(sl, rp, config[0][1])
+        if not for_error:
+            contrin = io.writeSuperposInput(sl, rp, config[0][1])
+        else:
+            contrin = io.writeSuperposInput(sl, rp, None, for_error=True)
         logger.debug("Wrote Superpos input successfully")
     except Exception:
         logger.error("Error getting input data for Superpos: ", exc_info=True)
@@ -153,7 +156,9 @@ def superpos(sl, rp, subdomain=False):
         raise
     logger.info("Finished Superpos calculation. Processing files...")
     try:
-        rp.theobeams["superpos"], rp.superpos_specout = readFdOut(outname)
+        rp.theobeams["superpos"], rp.superpos_specout = readFdOut(
+            outname, for_error=for_error)
+        # if for_error, theobeams will contain only the first variation
     except FileNotFoundError:
         logger.error(outname + " not found after superpos calculation.")
         raise
@@ -161,14 +166,15 @@ def superpos(sl, rp, subdomain=False):
         logger.error("Error reading " + outname + " after superpos "
                      " calculation.")
         raise
-    try:
-        writeOUTBEAMS(rp.theobeams["superpos"], filename="FITBEAMS.csv")
-        theobeams_norm = copy.deepcopy(rp.theobeams["superpos"])
-        for b in theobeams_norm:
-            b.normMax()
-        writeOUTBEAMS(theobeams_norm, filename="FITBEAMS_norm.csv")
-    except Exception:
-        logger.error("Error writing FITBEAMS after superpos calculation.")
+    if not for_error:
+        try:
+            writeOUTBEAMS(rp.theobeams["superpos"], filename="FITBEAMS.csv")
+            theobeams_norm = copy.deepcopy(rp.theobeams["superpos"])
+            for b in theobeams_norm:
+                b.normMax()
+            writeOUTBEAMS(theobeams_norm, filename="FITBEAMS_norm.csv")
+        except Exception:
+            logger.error("Error writing FITBEAMS after superpos calculation.")
     # rename and move files
     try:
         os.rename('PARAM', 'superpos-PARAM')

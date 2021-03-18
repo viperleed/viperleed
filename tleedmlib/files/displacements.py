@@ -207,7 +207,7 @@ def readDISPLACEMENTS(rp, filename="DISPLACEMENTS"):
     return
 
 
-def readDISPLACEMENTS_block(rp, sl, dispblock):
+def readDISPLACEMENTS_block(rp, sl, dispblock, exclude_mode=""):
     """
     Reads a block from the DISPLACEMENTS file and adds the information to
     all atoms in the slab.
@@ -222,6 +222,10 @@ def readDISPLACEMENTS_block(rp, sl, dispblock):
     dispblock : tuple (lines, name)
         The information in the DISPLACEMENTS block to be interpreted, as read
         be readDISPLACEMENTS.
+    exclude_mode : str, optional
+        If set to 'vib' or 'geo', vibrational or geometrical displacements
+        will be skipped. This is meant to be used for error calculations, where
+        only one-dimensional deltas are desired.
 
     Raises
     ------
@@ -233,9 +237,11 @@ def readDISPLACEMENTS_block(rp, sl, dispblock):
 
     Returns
     -------
-    None.
+    deltas_required : bool
+        True if any displacements were assigned, False otherwise
 
     """
+    deltas_required = False
     abst = np.transpose(sl.ucell[:2, :2])
     # if the unit cell gets modified by SYM_DELTA, restore it afterwards
     uCellState = sl.ucell_mod
@@ -252,8 +258,12 @@ def readDISPLACEMENTS_block(rp, sl, dispblock):
                 llist = line[1:].split()
                 if llist[0][0].lower() == 'g':
                     mode = 1  # geometry
+                    if exclude_mode == "geo":
+                        mode = 0
                 elif llist[0][0].lower() == 'v':
                     mode = 2  # vibration
+                    if exclude_mode == "vib":
+                        mode = 0
                 elif llist[0][0].lower() == 'o':
                     mode = 3  # occupation
                 elif llist[0][0].lower() == 'c':
@@ -685,6 +695,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock):
                         else:
                             at.clearOffset(1, targetel)
                             at.assignDisp(4, disprange, targetel)
+                        deltas_required = True
                     else:
                         logger.warning(
                             "In-plane displacement assignment for "
@@ -721,6 +732,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock):
                                 at.assignDisp(mode, disprange, targetel)
                             else:
                                 at.assignDisp(4, disprange, targetel)
+                            deltas_required = True
                     else:  # azi
                         # allowed only for completely free atoms
                         if type(at.freedir) == int and at.freedir == 1:
@@ -737,6 +749,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock):
                             else:
                                 at.clearOffset(1, targetel)
                                 at.assignDisp(4, disprange, targetel)
+                            deltas_required = True
                         else:
                             logger.warning(
                                 "In-plane azimuthal displacement "
@@ -754,6 +767,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock):
                     at.clearOffset(mode, targetel)
                 if not (len(drange) == 1 and drange[0] == 0.):
                     at.assignDisp(mode, drange, targetel)
+                deltas_required = True
         elif mode == 3:
             # occupations, get ranges:
             sublists = splitSublists(llist, ',')
@@ -943,4 +957,4 @@ def readDISPLACEMENTS_block(rp, sl, dispblock):
                     '5 elements.')
                 raise ValueError("Occupations must sum to exactly 1 if five "
                                  "elements are already defined.")
-    return
+    return deltas_required

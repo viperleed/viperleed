@@ -197,6 +197,7 @@ class Rparams:
         self.phaseshifts_firstline = ""  # contains parameters for MUFTIN
         self.refcalc_fdout = ""
         self.superpos_specout = ""
+        self.best_v0r = None     # best value for v0r from previous R-factor
         self.disp_blocks = []    # tuples (lines, name) in DISPLACEMENTS file
         self.disp_block_read = False  # current displacements block read?
         self.disp_loops = []          # list of tuples (loopStart, loopEnd)
@@ -221,6 +222,19 @@ class Rparams:
         # (name, gens, min, max, mean) for each search
         self.lastParScatterFigs = {}
         # complete figures for each search, with search names as keys
+
+    def total_energy_range(self):
+        """Return the total overlapping energy range of experiment and
+        theory. Note that this may change if experimental beams are dropped."""
+        if not self.expbeams:
+            return 0.
+        expEnergies = []
+        totalrange = 0.
+        for b in self.expbeams:
+            expEnergies.extend([k for k in b.intens if k not in expEnergies])
+            totalrange += (min(max(b.intens), self.THEO_ENERGIES[1])
+                           - max(min(b.intens), self.THEO_ENERGIES[0]))
+        return totalrange
 
     def storeRfacScatter(self, x, y, s, c):
         """

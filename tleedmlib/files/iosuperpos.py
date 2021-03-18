@@ -14,7 +14,8 @@ logger = logging.getLogger("tleedm.files.iosuperpos")
 
 
 def writeSuperposInput(sl, rp, config, param_name="PARAM",
-                       contrin_name="superpos-CONTRIN"):
+                       contrin_name="superpos-CONTRIN",
+                       for_error=False):
     """Writes a PARAM and a CONTRIN file as input for the Superpos
     calculation. Returns the contents of CONTRIN, as this will also be needed
     as an input stream for the superpos calculation."""
@@ -23,20 +24,27 @@ def writeSuperposInput(sl, rp, config, param_name="PARAM",
     deltanames = []     # names of delta files
     surfaceChecks = []  # is that atom at the surface or not?
     indices = []        # vib and geo indices from search, cast to 1D array
+    n_var = 1
+    if for_error:
+        n_var = max([sp.steps for sp in rp.searchpars])
     # determine which atoms are "at the surface"
     surfats = sl.getSurfaceAtoms(rp)
     # make lists to print
     for at in rp.search_atlist:
         sps = [sp for sp in rp.searchpars if sp.atom == at]
-        occpar = [sp for sp in sps if sp.mode == "occ"][0]  # exactly one
-        i = rp.searchpars.index(occpar)
+        if not for_error:
+            occpar = [sp for sp in sps if sp.mode == "occ"][0]  # exactly one
+            i = rp.searchpars.index(occpar)
         totalocc = 0.0
         for el in at.disp_occ:
             if at in surfats:
                 surfaceChecks.append(1)
             else:
                 surfaceChecks.append(0)
-            o = at.disp_occ[el][config[i]-1]
+            if not for_error:   # !!! modify for occupation errors
+                o = at.disp_occ[el][config[i]-1]
+            else:
+                o = at.disp_occ[el][0]  # !!! Should be only one? Test!
             occupations.append(o)
             totalocc += o
             pl = [sp for sp in sps if sp.el == el]
@@ -47,29 +55,42 @@ def writeSuperposInput(sl, rp, config, param_name="PARAM",
                 return ""
             deltanames.append(pl[0].deltaname)
             mnfiles += 1
-            if el in at.disp_geo:
-                k = el
+            if not for_error:
+                if el in at.disp_geo:
+                    k = el
+                else:
+                    k = "all"
+                ngeo = len(at.disp_geo[k])
+                vibpar = [sp for sp in pl if sp.mode == "vib"]
+                if len(vibpar) > 0:
+                    vibind = config[rp.searchpars.index(vibpar[0])] - 1
+                else:
+                    vibind = 0
+                geopar = [sp for sp in pl if sp.mode == "geo"]
+                if len(geopar) > 0:
+                    geoind = config[rp.searchpars.index(geopar[0])] - 1
+                else:
+                    geoind = 0
+                # cast vib and geo indices from 2D to 1D:
+                indices.append([(ngeo * vibind) + geoind + 1])
             else:
-                k = "all"
-            ngeo = len(at.disp_geo[k])
-            vibpar = [sp for sp in pl if sp.mode == "vib"]
-            if len(vibpar) > 0:
-                vibind = config[rp.searchpars.index(vibpar[0])] - 1
-            else:
-                vibind = 0
-            geopar = [sp for sp in pl if sp.mode == "geo"]
-            if len(geopar) > 0:
-                geoind = config[rp.searchpars.index(geopar[0])] - 1
-            else:
-                geoind = 0
-            # cast vib and geo indices from 2D to 1D:
-            indices.append((ngeo * vibind) + geoind + 1)
+                if pl[0].steps == 1:
+                    indices.append([1] * n_var)
+                elif pl[0].steps == n_var:
+                    indices.append(list(range(1, n_var + 1)))
+                else:
+                    logger.error("Superpos for error: Inconsistent number of "
+                                 "variation steps. Found maximum {} steps,"
+                                 " but only {} for {}."
+                                 .format(n_var, pl.steps, at))
+                    rp.setHaltingLevel(2)
+                    return ""
         vp = [sp for sp in sps if sp.el == "vac"]
         if len(vp) != 0 and totalocc < 1.0:
             occupations.append(1 - totalocc)
             deltanames.append(vp[0].deltaname)
             mnfiles += 1
-            indices.append(1)
+            indices.append([1] * n_var)
             if at in surfats:
                 surfaceChecks.append(1)
             else:
@@ -102,16 +123,17 @@ C
 
     # collect contrin output
     i3 = ff.FortranRecordWriter("I3")
+    i3x100 = ff.FortranRecordWriter("100I3")
     f74x10 = ff.FortranRecordWriter('10F7.4')
     contrin = (i3.write([mnfiles]) + "  0               no. of files, VarAll: "
                "all possible parameter combinations? (1/0)\n")
     contrin += "  1                  number of concentration steps\n"
     contrin += f74x10.write(occupations) + "\n"
     for i in range(0, len(deltanames)):
-        contrin += deltanames[i].ljust(15) + "  1"
+        contrin += deltanames[i].ljust(15) + i3.write([n_var])
         contrin += (i3.write([surfaceChecks[i]]) + "  1  FILENAME(A15 !!!),"
                     "VARIATIONS,SURFACE?,FORMATTED?\n")
-        contrin += i3.write([indices[i]]) + "\n"
+        contrin += i3x100.write(indices[i]) + "\n"
     try:
         with open(contrin_name, "w") as wf:
             wf.write(contrin)

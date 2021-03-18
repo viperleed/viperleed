@@ -266,10 +266,7 @@ def deltas(sl, rp, subdomain=False):
     if not os.path.isdir(os.path.join(".", "Tensors")):
         logger.error("No Tensors directory found.")
         raise RuntimeError("Tensors not found")
-    try:
-        tl.leedbase.getTensors(rp.TENSOR_INDEX)
-    except Exception:
-        raise
+    tl.leedbase.getTensors(rp.TENSOR_INDEX)
     if 1 not in rp.runHistory:
         dn = "Tensors_"+str(rp.TENSOR_INDEX).zfill(3)
         logger.debug(

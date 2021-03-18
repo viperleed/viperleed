@@ -2,7 +2,8 @@ C  VAN HOVE R-FACTOR PROGRAM  /  MODIFIED BY G. BESOLD (JAN. '82)
 C                                ERGAENZUNG     (JAN.  '87)              260187
 C  MODIFIED BY RD: AVERAGE-R-FACTORS EXCHANGED                           141290
 C  Allocation error in subroutine RINTAV removed 
-C  via introduction of a second field ATAV.    L.Hammer Oct. 2018
+C  via introduction of a second field ATAV.       L.Hammer Oct. 2018
+C  OUTPUT expanded for error curve calculations   L.Hammer Mar. 2021
 C
 
 C##############################################################################
@@ -235,6 +236,7 @@ C  NV0   : number of variations of the real part of the inner potential
 C  IV    : current inner potential real part variation index
 C  V0    : current inner potential real part variation
 C  V0R   : current inner potential real part
+C  V0GR  : inner potential of best R-factor within a geometry
 C  IBE   : current experimental beam (counted after averaging)
 C  IBT   : current theoretical beam (counted after averaging)
 C  KMIT  : current beam labelling (integer or fractional beam)
@@ -242,7 +244,7 @@ C  KMIT  : current beam labelling (integer or fractional beam)
       INTEGER IS
       REAL D12
       INTEGER NV0, IV
-      REAL V0, V0R
+      REAL V0, V0R, V0GR
       INTEGER IBE, IBT, KMIT
 
 C  variables used to specify common energy range of exp and theor beams
@@ -300,6 +302,7 @@ C          for all integer and fractional beams
 C  CIFE,CIFT:relation between fractional and integer beam intensities for
 C          experimental and theoretical data, respectively
 C  BRAV  : best average R-factor
+C  BGRAV : best average R-factor of a geometry
 C  BRAVB : weighted average over all R-factors for all beams of best average
 C          R-factor geometry
 C  BV0   : inner potential variation of best average R-factor geometry
@@ -311,7 +314,7 @@ C  NSB   : geometry index of best average R-factor geometry
       REAL R2(MNBED), RRZJ(MNBED), RPE(MNBED), RAVB(MNBED)
       REAL RAZ, RAN, RAZM(2), RANM(2)
       REAL ERANG, ERANGM(2), AR(3), ARM(3,2), RAV, RAVM(2)
-      REAL CIFE, CIFT , BRAV, BRAVB(MNBED), BV0, BCIFE, BCIFT
+      REAL CIFE, CIFT , BRAV, BGRAV, BRAVB(MNBED), BV0, BCIFE, BCIFT
       INTEGER NSB
 
 C  variables used for plotting the spectra (subroutines COLUMN and SCRIPT)
@@ -384,6 +387,7 @@ C  default values in namelist NL3
       NFRAC = 0
 
       OPEN(7,FILE='ROUT')
+      OPEN(9,FILE='ROUTSHORT')
       OPEN(8,FILE='WEXPEL',STATUS='OLD')
       REWIND(8)
 
@@ -737,10 +741,10 @@ C  perform domain averaging and check for too high theoretical intensities
       WRITE(7,29)
  29   FORMAT(1X,/,6X,'BEAM',8X,'IBE',3X,'D12',5X,'V0R',4X,'EMIN',4X,
      *       'EMAX',5X,'OVL',5X,'RAV')                                   201103
-
 C  start loop over geometries
 
       BRAV = 1.E2
+      BGRAV = 1.E2
 
       DO 300 IS = 1,NSS
 
@@ -1246,8 +1250,16 @@ C  write R-factors for current geometry to output
  127  FORMAT('AVERAGE         ',I5,F8.4,4F8.2,F8.4,'  <---')
  128  FORMAT('RELATION FRAC TO INT BEAM INTENSITIES:',F6.3,
      *       ' FOR EXP DATA,',F6.3,' FOR THEOR DATA')
+ 129  FORMAT(' ')
+ 130  FORMAT(F8.4)
+
 
 C  check if RAV is a better average R-factor than current best average BRAV
+
+      IF (RAV.LT.BGRAV) THEN
+        BGRAV = RAV
+        V0GR = V0
+      ENDIF
 
       IF (RAV.LT.BRAV) THEN
         BRAV = RAV
@@ -1290,11 +1302,16 @@ C  check if RAV is a better average R-factor than current best average BRAV
          BCIFE = CIFE
          BCIFT = CIFT
         ENDIF
+
       ENDIF
 
 C  end of inner potential loop
 
  200  V0 = V0 + VINCR
+
+      WRITE(7,129) 
+      WRITE(9,130) BGRAV
+      BGRAV = 1.E2
 
 C  end of geometry loop
 

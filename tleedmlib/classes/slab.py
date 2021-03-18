@@ -587,6 +587,8 @@ class Slab:
         """Resets the atom positions and site vibrational amplitudes to the
         original state, and stores the deviations as offset instead."""
         for site in self.sitelist:
+            if site.oriState is None:
+                continue
             siteats = [at for at in self.atlist if at.site == site]
             for el in site.occ:
                 for at in siteats:
@@ -601,6 +603,8 @@ class Slab:
         uci = np.linalg.inv(self.ucell)
         self.getCartesianCoordinates()
         for at in self.atlist:
+            if at.oriState is None:
+                continue
             for el in at.disp_occ.keys():
                 o = np.array([0., 0., 0.])
                 if el in at.offset_geo:

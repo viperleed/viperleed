@@ -14,13 +14,14 @@ import shutil
 import subprocess
 
 from viperleed.tleedmlib.files.iorefcalc import readFdOut
-from viperleed.tleedmlib.leedbase import fortranCompile, getTLEEDdir
+from viperleed.tleedmlib.leedbase import (fortranCompile, getTLEEDdir,
+                                          getTensors)
 import viperleed.tleedmlib.files.iorfactor as io
 
 logger = logging.getLogger("tleedm.rfactor")
 
 
-def rfactor(sl, rp, index):
+def rfactor(sl, rp, index, for_error=False):
     """Runs the r-factor calculation for either the reference calculation
     (index 11) or the superpos (index 12)."""
     if int((rp.THEO_ENERGIES[1]-rp.THEO_ENERGIES[0])
@@ -28,6 +29,9 @@ def rfactor(sl, rp, index):
         logger.info("Only one theoretical energy found: Cannot calculate "
                     "a meaningful R-Factor. Stopping...")
         return
+    if for_error and rp.best_v0r is None:
+        logger.error("Cannot calculate R-factor for error without a stored"
+                     "V0r value. Execute a normal R-factor calculation first.")
     if index == 11:
         name = "refcalc"
     else:
@@ -51,10 +55,22 @@ def rfactor(sl, rp, index):
                 + "in OUT folder...")
             path = os.path.join(".", "OUT", fn)
         else:
-            logger.error("Cannot execute R-factor calculation: no stored "
-                         "spectrum data and no "+fn+" file was "
-                         "found.")
-            raise RuntimeError("No spectrum data found")
+            path = ""
+            if index == 11:
+                # try getting from Tensors
+                getTensors(rp.TENSOR_INDEX, required=False)
+                dn = "Tensors_"+str(rp.TENSOR_INDEX).zfill(3)
+                if os.path.isfile(os.path.join(".", "Tensors", dn, fn)):
+                    logger.warning(
+                        "R-factor calculation was called without "
+                        "stored spectrum data. Reading from file " + fn
+                        + "in " + dn + "folder...")
+                    path = os.path.join(".", "Tensors", dn, fn)
+            if not path:
+                logger.error("Cannot execute R-factor calculation: no stored "
+                             "spectrum data and no "+fn+" file was "
+                             "found.")
+                raise RuntimeError("No spectrum data found")
         try:
             theobeams, theospec = readFdOut(readfile=path)
             if index == 11:
@@ -86,12 +102,12 @@ def rfactor(sl, rp, index):
     theobeams = rp.theobeams[name]
     # WEXPEL before PARAM, to make sure number of exp. beams is correct
     try:
-        io.writeWEXPEL(sl, rp, theobeams)
+        io.writeWEXPEL(sl, rp, theobeams, for_error=for_error)
     except Exception:
         logger.error("Exception during writeWEXPEL: ")
         raise
     try:
-        io.writeRfactPARAM(rp, theobeams)
+        io.writeRfactPARAM(rp, theobeams, for_error=for_error)
     except Exception:
         logger.error("Exception during writeRfactPARAM: ")
         raise
@@ -146,59 +162,6 @@ def rfactor(sl, rp, index):
                      "R-factor log file.")
         raise
     logger.info("Finished R-factor calculation. Processing files...")
-    if not os.path.isfile(os.path.join(".", "ROUT")):
-        logger.error("No ROUT file was found after R-Factor calculation!")
-        rp.setHaltingLevel(2)
-    else:
-        try:
-            (rfac, r_int, r_frac), v0rshift, rfaclist = io.readROUT()
-        except Exception:
-            logger.error("Error reading ROUT file", exc_info=rp.LOG_DEBUG)
-            rp.setHaltingLevel(2)
-        else:
-            logger.info("With inner potential shift of {:.2f} eV: "
-                        "R = {:.4f}\n".format(v0rshift, rfac))
-            dl = ["."]
-            if os.path.isdir("OUT"):
-                dl.append("OUT")
-            for dn in dl:
-                for fn in [f for f in os.listdir(dn)
-                           if f.startswith("R_OUT_"+rp.timestamp)
-                           and os.path.isfile(os.path.join(dn, f))]:
-                    try:  # delete old R_OUT files
-                        os.remove(os.path.join(dn, fn))
-                    except Exception:
-                        pass
-            if rfac == 0:
-                logger.error(
-                    "ROUT reports R-Factor as zero. This means "
-                    "something went wrong in the reference "
-                    "calculation or in the R-factor calculation.")
-                rp.setHaltingLevel(2)
-                fn = "R_OUT_"+name+"_"+rp.timestamp
-            else:
-                fn = "R_OUT_"+name+"_"+rp.timestamp+"_R={:.4f}".format(rfac)
-                rp.last_R = rfac
-                rp.stored_R[name] = (rfac, r_int, r_frac)
-            try:
-                os.rename("ROUT", fn)
-            except Exception:
-                logger.warning("Failed to rename R-factor output file "
-                               "ROUT to "+fn)
-            if len(rfaclist) != len(rp.expbeams):
-                logger.warning("Failed to read R-Factors per beam from "
-                               "R-factor output file ROUT.")
-                rfaclist = [-1]*len(rp.expbeams)
-            outname = "Rfactor_plots_{}.pdf".format(name)
-            aname = "Rfactor_analysis_{}.pdf".format(name)
-            try:
-                io.writeRfactorPdf([(b.label, rfaclist[i]) for (i, b)
-                                    in enumerate(rp.expbeams)],
-                                   plotcolors=rp.PLOT_COLORS_RFACTOR,
-                                   outName=outname, analysisFile=aname,
-                                   v0i=rp.V0_IMAG)
-            except Exception:
-                logger.warning("Error plotting R-factors.", exc_info=True)
     # rename and move files
     try:
         os.rename('WEXPEL', 'rfactor-WEXPEL')
@@ -210,4 +173,68 @@ def rfactor(sl, rp, index):
     except Exception:
         logger.warning("Failed to rename R-factor input file PARAM to "
                        "rfactor-PARAM")
+    if not os.path.isfile(os.path.join(".", "ROUT")):
+        logger.error("No ROUT file was found after R-Factor calculation!")
+        rp.setHaltingLevel(2)
+        return
+
+    # read output
+    if for_error:
+        try:
+            rfaclist = io.readROUTSHORT()
+        except Exception:
+            logger.error("Error reading ROUTSHORT file", exc_info=rp.LOG_DEBUG)
+            rp.setHaltingLevel(2)
+        return rfaclist
+
+    try:
+        (rfac, r_int, r_frac), v0rshift, rfaclist = io.readROUT()
+    except Exception:
+        logger.error("Error reading ROUT file", exc_info=rp.LOG_DEBUG)
+        rp.setHaltingLevel(2)
+    else:
+        logger.info("With inner potential shift of {:.2f} eV: "
+                    "R = {:.4f}\n".format(v0rshift, rfac))
+        rp.best_v0r = v0rshift
+        dl = ["."]
+        if os.path.isdir("OUT"):
+            dl.append("OUT")
+        for dn in dl:
+            for fn in [f for f in os.listdir(dn)
+                       if f.startswith("R_OUT_"+rp.timestamp)
+                       and os.path.isfile(os.path.join(dn, f))]:
+                try:  # delete old R_OUT files
+                    os.remove(os.path.join(dn, fn))
+                except Exception:
+                    pass
+        if rfac == 0:
+            logger.error(
+                "ROUT reports R-Factor as zero. This means "
+                "something went wrong in the reference "
+                "calculation or in the R-factor calculation.")
+            rp.setHaltingLevel(2)
+            fn = "R_OUT_"+name+"_"+rp.timestamp
+        else:
+            fn = "R_OUT_"+name+"_"+rp.timestamp+"_R={:.4f}".format(rfac)
+            rp.last_R = rfac
+            rp.stored_R[name] = (rfac, r_int, r_frac)
+        try:
+            os.rename("ROUT", fn)
+        except Exception:
+            logger.warning("Failed to rename R-factor output file "
+                           "ROUT to "+fn)
+        if len(rfaclist) != len(rp.expbeams):
+            logger.warning("Failed to read R-Factors per beam from "
+                           "R-factor output file ROUT.")
+            rfaclist = [-1]*len(rp.expbeams)
+        outname = "Rfactor_plots_{}.pdf".format(name)
+        aname = "Rfactor_analysis_{}.pdf".format(name)
+        try:
+            io.writeRfactorPdf([(b.label, rfaclist[i]) for (i, b)
+                                in enumerate(rp.expbeams)],
+                               plotcolors=rp.PLOT_COLORS_RFACTOR,
+                               outName=outname, analysisFile=aname,
+                               v0i=rp.V0_IMAG)
+        except Exception:
+            logger.warning("Error plotting R-factors.", exc_info=True)
     return

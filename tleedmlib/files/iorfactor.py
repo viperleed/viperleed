@@ -38,8 +38,7 @@ def readROUT(filename="ROUT"):
     Parameters
     ----------
     filename : string, optional
-        DESCRIPTION. Pass if you want to read from a file other than the
-        default 'ROUT'
+        Pass if you want to read from a file other than 'ROUT'
 
     Returns
     -------
@@ -56,7 +55,7 @@ def readROUT(filename="ROUT"):
         with open(filename, 'r') as rf:
             lines = rf.readlines()
     except Exception:
-        logger.error("Could not open ROUT file")
+        logger.error("Could not open " + filename + " file")
         raise
     line = ""
     i = 0
@@ -109,7 +108,42 @@ def readROUT(filename="ROUT"):
     return (rfac, rfac_int, rfac_frac), v0rshift, rfaclist
 
 
-def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL"):
+def readROUTSHORT(filename="ROUTSHORT"):
+    """
+    Reads the ROUTSHORT file. This is very minimalist and just contains one
+    average R-factor per line.
+
+    Parameters
+    ----------
+    filename : string, optional
+        Pass if you want to read from a file other than 'ROUTSHORT'
+
+    Returns
+    -------
+    rfaclist : list of floats
+        r-factors from the ROUTSHORT file
+
+    """
+    rfaclist = []
+    try:
+        with open(filename, 'r') as rf:
+            lines = rf.readlines()
+    except Exception:
+        logger.error("Could not open " + filename + " file")
+        raise
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            rfaclist.append(float(line))
+        except ValueError:
+            logger.warning("Unexpected value in " + filename + " file, could "
+                           "not transform to float: "+line)
+    return rfaclist
+
+
+def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
     """
     Writes input file WEXPEL for R-factor calculation.
 
@@ -139,13 +173,17 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL"):
     expEnergies.sort()
     minen = max(min(expEnergies), rp.THEO_ENERGIES[0])
     maxen = min(max(expEnergies), rp.THEO_ENERGIES[1])
+    if not for_error:
+        real_iv_shift = rp.IV_SHIFT_RANGE[:2]
+    else:
+        real_iv_shift = [rp.best_v0r] * 2
     # extend energy range if they are close together
-    if abs(min(expEnergies) - rp.THEO_ENERGIES[0]) < abs(rp.IV_SHIFT_RANGE[0]):
+    if abs(min(expEnergies) - rp.THEO_ENERGIES[0]) < abs(real_iv_shift[0]):
         minen = (max(min(expEnergies), rp.THEO_ENERGIES[0])
-                 - rp.IV_SHIFT_RANGE[0])
-    if abs(max(expEnergies) - rp.THEO_ENERGIES[1]) < abs(rp.IV_SHIFT_RANGE[1]):
+                 - real_iv_shift[0])
+    if abs(max(expEnergies) - rp.THEO_ENERGIES[1]) < abs(real_iv_shift[1]):
         maxen = (min(max(expEnergies), rp.THEO_ENERGIES[1])
-                 + rp.IV_SHIFT_RANGE[1]) + 0.01
+                 + real_iv_shift[1]) + 0.01
     step = min(expEnergies[1]-expEnergies[0], theoEnergies[1]-theoEnergies[0])
     if rp.IV_SHIFT_RANGE[2] > 0:
         vincr = rp.IV_SHIFT_RANGE[2]
@@ -174,8 +212,8 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL"):
     output += " IPR=         0,\n"  # output formatting
     output += (" VI=" + f72.write([rp.V0_IMAG]).rjust(11) + ",\n")
     output += " V0RR=      0.0,\n"
-    output += (" V01=" + f72.write([rp.IV_SHIFT_RANGE[0]]).rjust(10) + ",\n")
-    output += (" V02=" + f72.write([rp.IV_SHIFT_RANGE[1]]).rjust(10) + ",\n")
+    output += (" V01=" + f72.write([real_iv_shift[0]]).rjust(10) + ",\n")
+    output += (" V02=" + f72.write([real_iv_shift[1]]).rjust(10) + ",\n")
     output += (" VINCR=" + f72.write([vincr]).rjust(8) + ",\n")
     output += " ISMOTH=" + i3.write([rp.R_FACTOR_SMOOTH]).rjust(7) + ",\n"
     output += " EOT=         0,\n"
@@ -223,7 +261,7 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL"):
     return
 
 
-def writeRfactPARAM(rp, theobeams):
+def writeRfactPARAM(rp, theobeams, for_error=False):
     """
     Generates the PARAM file for the rfactor calculation.
 
@@ -254,6 +292,9 @@ def writeRfactPARAM(rp, theobeams):
     else:
         step = min(expEnergies[1]-expEnergies[0], rp.THEO_ENERGIES[2])
     ngrid = int(np.ceil(((maxen-minen)/step)*1.1))
+    n_var = 1
+    if for_error:
+        n_var = max([sp.steps for sp in rp.searchpars])
     output = """
 C  MNBED  : number of beams in experimental spectra before averaging
 C  MNBTD  : number of beams in theoretical spectra before averaging
@@ -267,15 +308,15 @@ C  MNGP  : greater equal number of grid points in energy working grid (ie after
 C           interpolation)
 C  MNS    : number of geometries including those, that are skipped
 
-      PARAMETER (MNET = {}, MNGP = {})""".format(len(theoEnergies), ngrid)
+      PARAMETER (MNET = {}, MNGP = {})
+      PARAMETER (MNS = {})""".format(len(theoEnergies), ngrid, n_var)
     output += """
-      PARAMETER (MNS = 1)
 
 C  MNGAP  : number of gaps in the experimental spectra (NOTE: if there are no
 C           gaps in the spectra set MNGAP to 1 to avoid zero-sized arrays)
 
       PARAMETER (MNGAP = 1)
-"""         # !!! check - any case in which MSN or MNGAP are != 1?
+"""
     # write PARAM
     try:
         with open("PARAM", "w") as wf:

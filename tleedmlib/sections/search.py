@@ -325,7 +325,7 @@ def parabolaFit(rp, r_configs, x0=None, **kwargs):
         polyreg = make_pipeline(PolynomialFeatures(degree=2),
                                 LinearRegression())
     xmin = np.copy(indep_pars[np.argmin(rfacs), :])
-    rr = np.sqrt(8*np.abs(rp.V0_IMAG) / rp.total_en_range)
+    rr = np.sqrt(8*np.abs(rp.V0_IMAG) / rp.total_energy_range())
     ip_tofit = np.copy(indep_pars)
     rf_tofit = np.copy(rfacs)
     # throw out high R-factors - TODO: perhaps also throw out highest X% ?

@@ -32,7 +32,7 @@ def collectFIN():
     return fin
 
 
-def readFdOut(readfile="fd.out"):
+def readFdOut(readfile="fd.out", for_error=False):
     """Reads the fd.out file produced by the refcalc and returns a list of
     Beam objects."""
     try:
@@ -72,19 +72,28 @@ def readFdOut(readfile="fd.out"):
     blocks = []
     for line in filelines[i-1:]:
         llist = line.split()
-        if len(llist) > 0:  # skip empty lines
-            try:
-                float(llist[0])
-            except ValueError:
-                break  # end of data
-            blocks.extend(llist)
+        if len(llist) == 0:
+            continue  # skip empty lines
+        try:
+            float(llist[0])
+        except ValueError:
+            break  # end of data
+        blocks.extend(llist)
 
     # Each block contains exactly nbeams+2 entries
     # reshape blocks so that each line corresponds to one block
     blocks = np.reshape(blocks, (-1, nbeams+2))
 
     # and parse the data
+    warned = False
     for block in blocks:
+        if block[1] != "0.0001":
+            if not for_error and not warned:
+                warned = True
+                logger.warning("File " + readfile + "contains unexpected "
+                               "data for more than one structural "
+                               "variation. Only the first block was read.")
+            continue
         en = float(block[0])
         values = [float(s) for s in block[2:]]
         for (j, beam) in enumerate(theobeams):
