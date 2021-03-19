@@ -939,7 +939,7 @@ class Rparams:
                         indep.append(sp)
                 if at in eqlist:
                     spl = [s for s in self.searchpars if at
-                           in s.atom.displist and s.mode == 3]
+                           in s.atom.displist and s.mode == "occ"]
                     if spl:
                         sp.linkedTo = spl[0]
             eqlist.extend(at.displist)  # do not consider for future indyPars
@@ -949,7 +949,7 @@ class Rparams:
             spl = [s for s in self.searchpars if s != sp and s.atom == at and
                    s.mode == sp.mode and (s.el == el or
                                           el in ["", "all"] or
-                                          sp.mode == 3)]
+                                          sp.mode == "occ")]
             if spl:
                 sp.restrictTo = spl[0]
                 splTargets.add(spl[0])

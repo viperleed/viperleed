@@ -30,10 +30,18 @@ class R_Error():
         self.mode = mode    # vib, geo, or occ
         self.rfacs = rfacs  # the r-factors from the variations
         self.displacements = []   # displacements of atoms[0]
+        self.main_element = ""    # element occupation displayed in output
         d = {}
         at = atoms[0]   # store displacements for this one; main element
         if mode == "occ":
-            pass  # !!! TODO - not sure what that looks like...
+            if atoms[0].el in atoms[0].disp_occ:
+                self.main_element = atoms[0].el  # main site element
+            else:
+                # element with highest occupation in refcalc
+                self.main_element = max(atoms[0].site.occ,
+                                        key=lambda k: atoms[0].site.occ[k])
+            self.displacements = copy.deepcopy(atoms[0].disp_occ[
+                                                        self.main_element])
         else:
             if mode == "geo":
                 d = atoms[0].disp_geo
@@ -68,17 +76,17 @@ def errorcalc(sl, rp):
     if rp.search_index > 0 and rp.search_index >= len(rp.disp_blocks):
         # running after one or more searches; read the last DISPLACEMENTS block
         rp.search_index -= 1
-    exclude_mode = {"geo": "vib", "vib": "geo"}
-    seg_info = {"geo": "geometrical", "vib": "vibrational"}
-    for mode in "geo", "vib":
+    seg_info = {"geo": "geometrical", "vib": "vibrational",
+                "occ": "occupation"}
+    for mode in "geo", "vib", "occ":
         sl.restoreOriState()  # reset positions, store any changes as offsets
         # read DISPLACEMENTS block - ONLY geo OR vib
         deltas_required = tl.files.displacements.readDISPLACEMENTS_block(
             rp, sl, rp.disp_blocks[rp.search_index],
-            exclude_mode=exclude_mode[mode])
+            only_mode=mode)
         rp.disp_block_read = True  # to prevent deltas segment from re-reading
         if not deltas_required:
-            continue   # !!! how to deal with occupation?
+            continue
         logger.info("\nStarting error calculations for "
                     + seg_info[mode] + " displacements.")
         # run delta calculations
@@ -117,17 +125,23 @@ def errorcalc(sl, rp):
         # run superpos and rfactor:
         for ag in atom_groups:
             rp.search_atlist = ag  # limit variations to only that group
-            logger.info("Now calculating " + seg_info[mode] + " errors for "
+            logger.info("\nNow calculating " + seg_info[mode] + " errors for "
                         "atom group: " + ", ".join(str(at) for at in ag))
             logger.info("Running superpos...")
             tl.sections.superpos(sl, rp, for_error=True)
+            if rp.halt >= rp.HALTING:
+                return
             logger.info("Starting R-factor calculation...")
             rfaclist = tl.sections.rfactor(sl, rp, index=12, for_error=True)
             logger.info("Finished with " + seg_info[mode] + " errors for "
-                        "atom group: " + ", ".join(str(at) for at in ag)
-                        + "\n")
+                        "atom group: " + ", ".join(str(at) for at in ag))
             errors.append(R_Error(ag, mode, rfaclist))
+            if rp.halt >= rp.HALTING:
+                return
+    if len(errors) == 0:
+        logger.info("Error calculation: Returning with no output.")
+        return
     varR = np.sqrt(8*np.abs(rp.V0_IMAG) / rp.total_energy_range())
     io.write_errors_csv(errors)
-    # !!! PLOT
+    io.write_errors_pdf(errors, var=varR)
     return

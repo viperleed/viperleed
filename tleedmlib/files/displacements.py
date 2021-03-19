@@ -207,7 +207,7 @@ def readDISPLACEMENTS(rp, filename="DISPLACEMENTS"):
     return
 
 
-def readDISPLACEMENTS_block(rp, sl, dispblock, exclude_mode=""):
+def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
     """
     Reads a block from the DISPLACEMENTS file and adds the information to
     all atoms in the slab.
@@ -222,8 +222,8 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, exclude_mode=""):
     dispblock : tuple (lines, name)
         The information in the DISPLACEMENTS block to be interpreted, as read
         be readDISPLACEMENTS.
-    exclude_mode : str, optional
-        If set to 'vib' or 'geo', vibrational or geometrical displacements
+    only_mode : str, optional
+        If set to 'vib', 'geo' or 'occ', all other displacements
         will be skipped. This is meant to be used for error calculations, where
         only one-dimensional deltas are desired.
 
@@ -258,14 +258,16 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, exclude_mode=""):
                 llist = line[1:].split()
                 if llist[0][0].lower() == 'g':
                     mode = 1  # geometry
-                    if exclude_mode == "geo":
+                    if only_mode and only_mode != "geo":
                         mode = 0
                 elif llist[0][0].lower() == 'v':
                     mode = 2  # vibration
-                    if exclude_mode == "vib":
+                    if only_mode and only_mode != "vib":
                         mode = 0
                 elif llist[0][0].lower() == 'o':
                     mode = 3  # occupation
+                    if only_mode and only_mode != "occ":
+                        mode = 0
                 elif llist[0][0].lower() == 'c':
                     mode = 4  # constraint
                 elif llist[0][0].lower() == 'r':
@@ -835,6 +837,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, exclude_mode=""):
                 for (at, _) in targetAtEls:
                     if targetel in at.disp_occ:
                         at.assignDisp(mode, drange, targetel)
+                        deltas_required = True
                     else:
                         logger.warning(
                             'DISPLACEMENTS file: trying to address {} with '

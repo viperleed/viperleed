@@ -8,6 +8,8 @@ Functions for writing files relevant to the superpos calculation
 """
 
 import logging
+import numpy as np
+
 from viperleed import fortranformat as ff
 
 logger = logging.getLogger("tleedm.files.iosuperpos")
@@ -25,8 +27,11 @@ def writeSuperposInput(sl, rp, config, param_name="PARAM",
     surfaceChecks = []  # is that atom at the surface or not?
     indices = []        # vib and geo indices from search, cast to 1D array
     n_var = 1
+    n_conc = 1
     if for_error:
-        n_var = max([sp.steps for sp in rp.searchpars])
+        n_var = max([sp.steps for sp in rp.searchpars
+                     if sp.mode in ("geo", "vib")])
+        n_conc = max([sp.steps for sp in rp.searchpars if sp.mode == "occ"])
     # determine which atoms are "at the surface"
     surfats = sl.getSurfaceAtoms(rp)
     # make lists to print
@@ -34,19 +39,27 @@ def writeSuperposInput(sl, rp, config, param_name="PARAM",
         sps = [sp for sp in rp.searchpars if sp.atom == at]
         if not for_error:
             occpar = [sp for sp in sps if sp.mode == "occ"][0]  # exactly one
-            i = rp.searchpars.index(occpar)
-        totalocc = 0.0
+            occind = rp.searchpars.index(occpar)
+        totalocc = np.array([0.] * n_conc)
         for el in at.disp_occ:
             if at in surfats:
                 surfaceChecks.append(1)
             else:
                 surfaceChecks.append(0)
-            if not for_error:   # !!! modify for occupation errors
-                o = at.disp_occ[el][config[i]-1]
+            if not for_error:
+                o = [at.disp_occ[el][config[occind]-1]]
             else:
-                o = at.disp_occ[el][0]  # !!! Should be only one? Test!
+                try:
+                    o = [at.disp_occ[el][j] for j in range(n_conc)]
+                except IndexError:
+                    logger.error("Superpos for error: Inconsistent number of "
+                                 "variation steps. Found maximum {} steps,"
+                                 " but only {} for {}, element {}."
+                                 .format(n_conc, len(at.disp_occ[el]), at, el))
+                    rp.setHaltingLevel(2)
+                    return ""
             occupations.append(o)
-            totalocc += o
+            totalocc += np.array(o)
             pl = [sp for sp in sps if sp.el == el]
             if len(pl) == 0:
                 logger.error("No search parameters found for atom {}."
@@ -86,8 +99,8 @@ def writeSuperposInput(sl, rp, config, param_name="PARAM",
                     rp.setHaltingLevel(2)
                     return ""
         vp = [sp for sp in sps if sp.el == "vac"]
-        if len(vp) != 0 and totalocc < 1.0:
-            occupations.append(1 - totalocc)
+        if len(vp) != 0 and np.any(totalocc < 1.0):
+            occupations.append(list(1 - totalocc))
             deltanames.append(vp[0].deltaname)
             mnfiles += 1
             indices.append([1] * n_var)
@@ -111,7 +124,7 @@ C  MNATOMS: currently inactive - set to 1
 C
 """
     param += "      PARAMETER (MNFILES={})\n".format(mnfiles)
-    param += "      PARAMETER (MNCONCS=1)\n"
+    param += "      PARAMETER (MNCONCS={})\n".format(n_conc)
     param += ("      PARAMETER (MNT0={}, MNCSTEP={}, MNATOMS=1)\n"
               .format(len(rp.ivbeams), rp.mncstep))
     try:
@@ -127,8 +140,11 @@ C
     f74x10 = ff.FortranRecordWriter('10F7.4')
     contrin = (i3.write([mnfiles]) + "  0               no. of files, VarAll: "
                "all possible parameter combinations? (1/0)\n")
-    contrin += "  1                  number of concentration steps\n"
-    contrin += f74x10.write(occupations) + "\n"
+    contrin += i3.write([n_conc]) + ("                  "
+                                     "number of concentration steps\n")
+    occ_trans = map(list, zip(*occupations))  # transpose occupations
+    for occ in occ_trans:
+        contrin += f74x10.write(occ) + "\n"
     for i in range(0, len(deltanames)):
         contrin += deltanames[i].ljust(15) + i3.write([n_var])
         contrin += (i3.write([surfaceChecks[i]]) + "  1  FILENAME(A15 !!!),"

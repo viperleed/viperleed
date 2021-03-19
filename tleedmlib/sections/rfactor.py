@@ -52,7 +52,7 @@ def rfactor(sl, rp, index, for_error=False):
             logger.warning(
                 "R-factor calculation was called without "
                 "stored spectrum data. Reading from file " + fn
-                + "in OUT folder...")
+                + " in OUT folder...")
             path = os.path.join(".", "OUT", fn)
         else:
             path = ""
