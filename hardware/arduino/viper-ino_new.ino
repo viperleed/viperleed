@@ -1,8 +1,8 @@
 /*
 Main LeedControl File
 ---------------------
-Author: Bernhard Mayr, Michael Schmid, Florian Dörr
-Date: 03.03.2021
+Author: Bernhard Mayr, Michael Schmid, Michele Riva, Florian Dörr
+Date: 17.03.2021
 ---------------------
 */
 //Libraries
@@ -24,7 +24,8 @@ Date: 03.03.2021
 //global variables for communication with Python module
 #define STARTMARKER 254
 #define ENDMARKER 255
-#define SPECIAL_BYTE 253
+#define SPECIAL_BYTE 252                                         // !!!!!!!!!!!!!!!!!!!!!! CHANGE FOR PYTHON (Python has value 253)
+#define PC_ERROR 253                                             // !!!!!!!!!!!!!!!!!!!!!! Define in Python
 #define MAX_MSG_LENGTH 16
 
 //definition of messages for communication with PC
@@ -34,7 +35,7 @@ Date: 03.03.2021
 #define PC_MEASURE 6
 #define PC_SET_VOLTAGE 7
 #define PC_AUTOGAIN 8
-#define PC_RESET 68 // !!!!!!!!!!! 68 is the ascii code for "D". Perhaps we should use something more explicative, like "R" (82)
+#define PC_RESET 82                                               // !!!!!!!!!!!!!!!!!!!!!! CHANGE FOR PYTHON (Python has value 68)
 #define PC_DEBUG 0
 #define PC_HARDWARE 63
 
@@ -62,17 +63,17 @@ const int STATE_TRIGGER_ADCS = 3;
 const int STATE_ADC_MEASURE = 4; 
 const int STATE_ADC_VALUE_READY = 5;
 const int STATE_AUTOGAIN = 6; 
+const int STATE_GET_HARDWARE = 7; 
+const int STATE_ERROR = 8; 
 
 //Flags 
 boolean readingFromSerial = false;            //Flag True when arduino receives new data
 boolean newMessage = false;               //Fag True when all new data has arrived
 boolean runningAutogain = true;        //True when Measurements are taken for Autogain
-boolean adc_newgain = false;            //True when a new gain should be set               !!!!!!!!!!!!! This may need to become a 2-element array of bools, since we have two ADCs? Perhaps also rename to "needNewADCGain". Eventually it may be possible to move this into the ADC library. See also adc0ShouldIncreaseGain/adc1ShouldIncreaseGain from Michael's part
 
 //ADC settings
 byte chn; 
 byte polar_mode; 
-byte update_rate;
 byte maximum_gain = 7;
 //byte minimum_gain = 0;
 
@@ -80,16 +81,10 @@ byte maximum_gain = 7;
 uint16_t numMeasurementsToDo = 1;
 uint16_t numMeasurementsDone = 0;
 
-//Percent of ADC when saturation is reached
-float ADC_RANGE_SATURATION_THRESHOLD = 0.5; // !!!!!!!!!!!  this may also become #define(d), or at least const, since we do not change it anywhere.
-
-//Union for Variables to convert from float to single bytes
-union floatOrBytes{                  
-  float asFloat;  
-  struct{ 
-    byte byte_array[4]; 
-  }asBytes; // !!!!!!!!!!!!! I don't understand why we need an extra struct here. I think a simple 4-byte array would do
-}adc_value; // !!!!!!!!!!!!!! It is good to read from both ADCs at the same time. In this case we would need two of these adc_value registers. Actually, three, including the LM35. We can have an N_MAX_MEAS-long array of these to store the measured values, and pass it as an input to getFloatMeasurements (or, rather, make getFloatMeasurements access it from the globals)
+//ADC saturation markers
+#define ADC_POSITIVE_SATURATION 0xffff
+#define ADC_NEGATIVE_SATURATION 0x000
+#define ADC_RANGE_THRESHOLD 0x3fff
 
 //Timers (defined in milliseconds)
 unsigned long initialTime; 
@@ -144,14 +139,14 @@ unsigned long currentTime;
 #define R_IN_0     (1.0/(7e-12*38400)) //input resistance of ADC7705 in gain0 = x1
 #define REF_OVER_RANGE  (2.5/32768)    //volts per bit at gain0, bipolar, input 0ohm !!!!!!!!!!!!!!  Ask Michael: shouldn't we have the actual reference voltage here?
 const float voltsPerBit[] = {
-        REF_OVER_RANGE * R_IN_0 / (R_IN_0 + R_SOURCE),         //gain0 = x1
-        REF_OVER_RANGE * R_IN_0 / 2 / (R_IN_0 / 2 + R_SOURCE) / 2,   //gain1 = x2 has half R_in_0
-        REF_OVER_RANGE * R_IN_0 / 4 / (R_IN_0 / 4 + R_SOURCE) / 4,   //gain2 = x4 has 1/4 R_in_0
-        REF_OVER_RANGE * R_IN_0 / 8 / (R_IN_0 / 8 + R_SOURCE) / 8,   //gain3 = x8 and up: 1/8 R_in_0
-        REF_OVER_RANGE * R_IN_0 / 8 / (R_IN_0 / 8 + R_SOURCE) / 16,  //gain4 = x16
-        REF_OVER_RANGE * R_IN_0 / 8 / (R_IN_0 / 8 + R_SOURCE) / 32,  //gain5 = x32
-        REF_OVER_RANGE * R_IN_0 / 8 / (R_IN_0 / 8 + R_SOURCE) / 64,  //gain6 = x64
-        REF_OVER_RANGE * R_IN_0 / 8 / (R_IN_0 / 8 + R_SOURCE) / 128, //gain7 = x128
+        REF_OVER_RANGE/R_IN_0*(R_IN_0 + R_SOURCE),         //gain0 = x1
+        REF_OVER_RANGE/R_IN_0*2*(R_IN_0/2 + R_SOURCE)/2,   //gain1 = x2 has half R_in_0
+        REF_OVER_RANGE/R_IN_0*4*(R_IN_0/4 + R_SOURCE)/4,   //gain2 = x4 has 1/4 R_in_0
+        REF_OVER_RANGE/R_IN_0*8*(R_IN_0/8 + R_SOURCE)/8,   //gain3 = x8 and up: 1/8 R_in_0
+        REF_OVER_RANGE/R_IN_0*8*(R_IN_0/8 + R_SOURCE)/16,  //gain4 = x16
+        REF_OVER_RANGE/R_IN_0*8*(R_IN_0/8 + R_SOURCE)/32,  //gain5 = x32
+        REF_OVER_RANGE/R_IN_0*8*(R_IN_0/8 + R_SOURCE)/64,  //gain6 = x64
+        REF_OVER_RANGE/R_IN_0*8*(R_IN_0/8 + R_SOURCE)/128, //gain7 = x128
 };
 // ADC input range scale due to voltage dividers or preamplification on the board
 #define ADC_0_CH0_SCALE_JO 4.0           //ADC#0 channel 0 with JP at I0 open or relay off
@@ -190,8 +185,15 @@ bool adc0ShouldIncreaseGain = false;  //whether ADC#0 should increase its gain i
 bool adc1ShouldIncreaseGain = false;
 // Measurements of ADC#0, ADC#1 and LM35 sensor temperature are summed up here
 int32_t  summedMeasurements[N_MAX_MEAS];
-float fData[N_MAX_MEAS] = {NAN, NAN, NAN};
-
+int16_t measurement[N_MAX_MEAS];
+//Union for Variables to convert from float to single bytes
+union floatOrBytes{                  
+  float asFloat; 
+  byte asBytes[4];
+} fDataOutput[N_MAX_MEAS];
+//Variables to determing peak-peak distance in autogain
+int16_t maximumPeak[2];
+int16_t minimumPeak[2];
 /* ---------- INITIALIZATION ---------- */
 /** The setup routine runs once on power-up or on hardware reset */
 void setup() {
@@ -210,18 +212,8 @@ void setup() {
   pinMode(MOSI, OUTPUT);
   AD5683reset(CS_DAC);
   //Reset AD7705 IO. Note that (inverted) chip select = high does not reset it
-  AD7705resetIO(CS_ADC_0);                                      // !!!!!!!!!!!!!!!!!!! maybe rename to "AD7705resetCommunication"
-  AD7705resetIO(CS_ADC_1);
-  //check for hardware present: ADCs, LM35, relay, jumpers
-  hardwareDetected = getHardwarePresent();
-  //initial self-calibration: done in parallel for both ADCs (if present)
-  adc0Gain = 0;             adc1Gain = 0;
-  adc0Channel = AD7705_CH0; adc1Channel = AD7705_CH0;
-  selfCalibrateAllADCs(AD7705_50HZ);                            // !!!!!!!!!!!!!!!!!!!!! Perhaps was meant to be adcUpdateRate? !!!!!!!!!!!!! NO AUTOGAIN! DONE LATER ON AGAIN? NEED TO FIX
-  adc0Channel = AD7705_CH1; adc1Channel = AD7705_CH1;
-  selfCalibrateAllADCs(AD7705_50HZ);                            // !!!!!!!!!!!!!!!!!!!!! Perhaps was meant to be adcUpdateRate? !!!!!!!!!!!!! NO AUTOGAIN! DONE LATER ON AGAIN? NEED TO FIX
-  adc0Channel = AD7705_CH0; adc1Channel = AD7705_CH0;
-  triggerMeasurements();  //set to default channels
+  AD7705resetCommunication(CS_ADC_0);
+  AD7705resetCommunication(CS_ADC_1);
   AD5683setVoltage(CS_DAC, 0x0000);
   #ifdef DEBUG
     Serial.print("hw=0x");
@@ -252,17 +244,24 @@ void loop() {
       break;
     case STATE_TRIGGER_ADCS:
       if((millis()-currentTime) >= dac_settletime){
-        DoFSYNC();
+      triggerMeasurements();
       }
       break;
     case STATE_AUTOGAIN: 
       findOptimalADCGains(); 
       break; 
     case STATE_ADC_MEASURE:
-      measureADC();                                    // !!!!!!!!!!!!!! will probably be replaced in full by makeAndSumMeasurements() after edits (see comments further below)
+      measureADCs();                                    // !!!!!!!!!!!!!! will probably be replaced in full by makeAndSumMeasurements() after edits (see comments further below)
       break;
     case STATE_ADC_VALUE_READY:
       sendAdcValue();
+      break;
+    case STATE_GET_HARDWARE:
+       hardwareDetected = getHardwarePresent(); // !!!!!!!! need to set up returning of detected hardware to PC
+       initialCalibration();
+      break;
+    case STATE_ERROR:
+      // !!!!!!!!! need to set up communication for this
       break;
    }
 }
@@ -426,11 +425,19 @@ void updateState() {
         initialTime = millis(); 
         runningAutogain = true;
         resetMeasurementData();
+        adc0Gain = 0;
+        adc1Gain = 0;
+        adcUpdateRate = AD7705_500HZ;
+        numMeasurementsToDo = 20; // !!!!!!!!! May need to be changed later on
         currentState = STATE_AUTOGAIN;       // !!!!!!!!!!!!!!!! something wrong here! measurement_n is still zero if the PC did not yet ask for a measurement. If it did, the number of measurements requested last time are used for the auto-gain. After a bit of fiddling, I realized that this value is set with setUpAllADCs(). This means that one cannot run this (nor the next one) unless the ADC has been initialized. We need to do some checking, probably on the fact that measurement_n should be a positive number (this means that setUpAllADCs has run). If not, I'd send back an ERROR. reset() should set the number back to zero.
         break;
       case PC_MEASURE:                       // !!!!!!!!!!!!!!!!  bug? Also here numMeasurementsToDo is not updated from anywhere, nor read. 
         initialTime = millis(); 
         currentState = STATE_ADC_MEASURE;
+        break;
+      case PC_HARDWARE:
+        initialTime = millis(); 
+        currentState = STATE_GET_HARDWARE;
         break;
       case PC_RESET:
         reset();
@@ -441,19 +448,9 @@ void updateState() {
 }
 
 //=========================
-void DoFSYNC(){
-/*
- * Synchronization of the ADCs is used as a trigger for starting
- * the measurement. We do not read the result of the first measurement
- * though 
- */
-  triggerMeasurements();
-  currentState = STATE_IDLE;
-}
-//=========================
 
-void findOptimalADCGains(){                            // !!!!!!!!!!!!!!! This whole function needs to be adapted for processing both ADCs at the same time (checking if they are available). Probably also good to rename it to findOptimalADCGains(), as this does not actually set the gain.
-/*                                                     // NEEDS CHECKING !!!!!!!!!!!!!!!!!!!!   MICHAEL WANTS DIFFERENT WAY OF DOING IT!!!!!!!!!!!!!!!!!!!!!
+void findOptimalADCGains(){
+/*
  * Find the optimal gain for all ADCs.
  * (1) measure several values. Remain in AUTOGAIN_STATE until done.            !!!!!!!!!!!!!!!  BUG: numMeasurementsToDo not set!
  * (2) for each ADC, pick a gain G such that the average of the measurements
@@ -467,37 +464,53 @@ void findOptimalADCGains(){                            // !!!!!!!!!!!!!!! This w
  * the measured value is greater than 25% of the measurement 
  * range at the first time. 
  */
-  uint16_t adc_readvalue;
-  float autogain_value; 
+  int16_t autogain_value0;
+  int16_t autogain_value1;
   if(runningAutogain){
-     makeAndSumMeasurements();
-    if(numMeasurementsDone == numMeasurementsToDo){                             // !!!!!!!!!!!!!!!!!!  BUG? measurement_n is initialized to zero at the beginning by the compiler, but not set to a finite number in processData() when the PC requires an auto-gain (the python is not sending how many measurements it should take)
-      adc_value.asFloat= abs(adc_value.asFloat/numMeasurementsToDo/32767);      // !!!!!!!!!!!!!!!!!! not sure why there is a 32767 = 2^15-1 instead of 32768=2^15 that we expect for bipolar mode. check with Michael
+    measureADCsAndPeaks(); // !!!!!!!!!!!!! not at 500 Hz !!!!!!!!!!!!!!!!
+    if(numMeasurementsDone == numMeasurementsToDo){
+      autogain_value0 = max(abs(maximumPeak[0]),abs(minimumPeak[0]))+(maximumPeak[0]-minimumPeak[0]);
+      autogain_value1 = max(abs(maximumPeak[1]),abs(minimumPeak[1]))+(maximumPeak[1]-minimumPeak[1]);
       runningAutogain = false; 
-      numMeasurementsDone = 0;                                                  // !!!!!!!!!!!!!!!!!!! we should rather zero this counter later, after the correct gain has been found, just using resetMeasurementData()
-      adc0Gain = 0; 
+      numMeasurementsDone = 0;                                                  // !!!!!!!!!!!!!!!!!!! we should rather zero this counter later, after the correct gain has been found, just using resetMeasurementData() 
     }
   }
-  if(!runningAutogain){                                                         // !!!!!!!!!!!!!!!!!! I'm not sure why this is done over several loop() iterations rather than having a while here (it's at most 7 iterations. The first part, i.e., the measurement itself, is not repeated). Then, "autogain_measure = true;", "encodeMessage(OK_BYTE);", and "FSM = IDLE_STATE;" can just go after the loops are over.
-    autogain_value = adc_value.asFloat*(1 << adc0Gain); 
-    if(autogain_value > 0.25){
-      runningAutogain = true; 
-      encodeAndSend(PC_OK);
-      currentState = STATE_IDLE; 
-    }
-    else{
+  if(!runningAutogain){
+    while(((autogain_value0 << adc0Gain) > ADC_RANGE_THRESHOLD) && ADC_0_PRESENT){ // !!!!!!!!!!!!!! We go to the gain value that will demand a gain-- in the next measurement !!!!!!!!!!!!!!!!!!!!!
       adc0Gain++;
-      if(adc0Gain == maximum_gain){
-        runningAutogain = true;
-        encodeAndSend(PC_OK);
-        currentState = STATE_IDLE; 
-      }
     }
-  }
+    while(((autogain_value1 << adc1Gain) > ADC_RANGE_THRESHOLD) && ADC_1_PRESENT){ // !!!!!!!!!!!!!! We go to the gain value that will demand a gain-- in the next measurement !!!!!!!!!!!!!!!!!!!!!
+      adc1Gain++;
+    } // !!!!!!!!!! NO ERROR IF GAIN > 7 !!!!!!!!!!!!!!!!!!!!!
+    encodeAndSend(PC_OK);
+    currentState = STATE_IDLE; 
+    }
   if((millis() -  initialTime) > timeout){               // !!!!!!!!!!!!!!!! perhaps go to an ERROR state?
     debugToPC("Timeout, Autogain failed, Arduino turns back to IDLE state"); 
     currentState = STATE_IDLE;
   }
+}
+
+void measureADCsAndPeaks(){
+  if (hardwareDetected & ADC_0_PRESENT)
+        {measurement[0] = AD7705waitAndReadData(CS_ADC_0, adc0Channel);
+        if(measurement[0] > maximumPeak[0]){
+          maximumPeak[0] = measurement[0];
+          }
+        if(measurement[0] < minimumPeak[0]){
+          minimumPeak[0] = measurement[0];
+          }
+        }
+    if (hardwareDetected & ADC_1_PRESENT)
+        {measurement[1] = AD7705waitAndReadData(CS_ADC_1, adc1Channel);
+        if(measurement[1] > maximumPeak[1]){
+          maximumPeak[1] = measurement[1];
+          }
+        if(measurement[1] < minimumPeak[1]){
+          minimumPeak[1] = measurement[1];
+          }
+        }
+numMeasurementsDone++;
 }
 
 //=========================
@@ -509,10 +522,10 @@ void setUpAllADCs(){
   if(newMessage){
     chn = data_received[0];                            // IMPORTANT FOR selfCalibrateAllADCs
     polar_mode = data_received[1];                     // !!!!!!!!!! Since we're not changing the polarity (it's already hard-coded into Michael's part to be bipolar) we can use this bit as the channel for the second ADC. Another good option would be to bit-encode the channel in the first byte, since we just have 2 ADCs. See my comment on WORKINPROGRESS above.
-    update_rate = data_received[2]; 
+    adcUpdateRate = data_received[2]; 
     numMeasurementsToDo = data_received[3] << 8 | data_received[4];
     maximum_gain = data_received[5];
-    selfCalibrateAllADCs;                             //  !!!!!!!!!!!!!!!!!!! CHANNEL NOT SET YET !!!!!!!!!!!!!!!
+    selfCalibrateAllADCs(adcUpdateRate);                             //  !!!!!!!!!!!!!!!!!!! CHANNEL NOT SET YET !!!!!!!!!!!!!!!
     encodeAndSend(PC_OK);
     currentState = STATE_IDLE;//Back to command mode
     newMessage = false;
@@ -547,13 +560,13 @@ void setVoltage(){
     currentTime = millis();
     newMessage = false;
     resetMeasurementData(); 
-    if(adc_newgain){            // !!!!!!!!!!!!!!!! This section needs to be adapted to check whether either of the ADCs needs its gain to be reduced at this iteration, in which case the relevant self-calibration should be called
+    if(adc0ShouldIncreaseGain){            // !!!!!!!!!!!!!!!! This section needs to be adapted to check whether either of the ADCs needs its gain to be reduced at this iteration, in which case the relevant self-calibration should be called
       // During the last measurement, the value read by the ADC has reached the
       // upper part of the range. The gain needs to be decreased, and the ADC
       // requires recalibration
       adc0Gain--;
-      AD7705selfCalibrate(WORKINPROGRESS, chn, adc0Gain, update_rate); // !!!!!!!!!!!!!!!!!!!!!! ALL OR ONLY ONE? MAYBE CHECK BOTH AND IF ONE NEEDS TO BE CALIBRATED WE DO BOTH
-      adc_newgain = false; 
+      AD7705selfCalibrate(WORKINPROGRESS, chn, adc0Gain, adcUpdateRate); // !!!!!!!!!!!!!!!!!!!!!! ALL OR ONLY ONE? MAYBE CHECK BOTH AND IF ONE NEEDS TO BE CALIBRATED WE DO BOTH
+      adc0ShouldIncreaseGain = false; 
     }
   }
   if((millis() -  initialTime) > timeout){                   // !!!!!!!!!!!!! Perhaps we should have an additional ERROR state that can do the reporting to the PC, then back to IDLE?
@@ -563,43 +576,18 @@ void setVoltage(){
   }
 }
 
-void measureADC(){
+void measureADCs(){
 /*
- * This function acquires measurements from the ADC.
- * (1) Take a defined number of measurements (as per measurement_n), that are
- *     added together in 'adc_value.float_value'.
- * (2.1) If the value measured at the current call is larger than the
- *     adc_saturation threshold, the value is still acceptable, but the gain
- *     will need to be decreased the next time that the DAC voltage is
- *     increased. This is signaled by setting the adc_newgain flag, which will 
- *     be processed during the next call to initialiseDAC()
- * (2.2) If instead the value measured is truly at saturation (full scale), the
- *     measurement itself is incorrect, and needs to be repeated from scratch
- *     after decreasing the gain.
- * (3) When the number of measurement points reaches the requested amount, the
+ * This function acquires measurements from the ADCs.
+ * (1) Take a defined number of measurements (as per numMeasurementsToDo), that are
+ *     added together in 'summedMeasurements[]'.
+ * (2) When the number of measurement points reaches the requested amount, the
  *     state of the Arduino is changed to ADC_VALUE_READY_STATE, that will
  *     handle the communication of the measurement to the PC.
  */
   makeAndSumMeasurements(); //                                           !!!!!!!!!!!!!!! summed Measurements not yet divided !!!!!!!!!!!!!!
-  if(abs(summedMeasurements[0])>(int16_t)(ADC_RANGE_SATURATION_THRESHOLD * 32767) && (adc0Gain > 0) && !adc_newgain){
-    // the measured value is above the "saturation" threshold, but not yet at
-    // true saturation, which would make the measured value completely wrong.
-    // Defer the decrease of gain to the next time the DAC voltage will be
-    // increased
-    adc_newgain = true;         
-  } 
-  if(abs(summedMeasurements[0]) == (int16_t)32768 && adc0Gain == 0){                              // !!!!!!!!!!!!!! some notes: 32767 = 0x7FFF = 0xFFFF ^ 0x8000; 32768 = 0x8000
-    debugToPC("ADC Overflow, maximum gain reached, no serious measurements possible..."); // !!!!!!!!!!!!!!!!!  here we can go to an ERROR state
-    currentState = STATE_IDLE; 
-  }
-  if(abs(summedMeasurements[0]) == 0xFFFF && adc0Gain > 0){
-    adc0Gain--;
-    selfCalibrateAllADCs;           // !!!!!!!!!!!!!!!!! CHANNEL NOT SET !!!!!!!!!!!!!!!!!!!!
-    resetMeasurementData();
-    adc_newgain = false; 
-  }
   if(numMeasurementsDone == numMeasurementsToDo){
-    adc_value.asFloat /= numMeasurementsToDo;            // !!!!!!!!!!!!!! I think we can leave this part to the STATE_ADC_VALUE_READY handler !!!!!!!!!!!!!! USE MICHEALS ARRAY !!!!!!!!!!!!
+   // adc_value.asFloat /= numMeasurementsToDo;            // !!!!!!!!!!!!!! I think we can leave this part to the STATE_ADC_VALUE_READY handler !!!!!!!!!!!!!! USE MICHEALS ARRAY !!!!!!!!!!!!
     currentState = STATE_ADC_VALUE_READY;
   }
   if((millis() -  initialTime) > 10000){                   // !!!!!!!!!!!!!!!! probably here go to ERROR state too. Also, it's probably good to use the "timeout" variable instead of 10000
@@ -614,8 +602,9 @@ void sendAdcValue(){  // !!!!!!!!!!! this is the only place where we need to kno
  * This function sends the value to the PC by packing the 4 byte float 
  * number into an byte array.
  */
-  getFloatMeasurements(fData);
-  encodeAndSend(adc_value.asBytes.byte_array, 4); // !!!!!!!!!!!! this will need to be replaced with the right number of calls, depending on the value of WORKINPROGRESS (either one after the other, or as separate loop() iterations) !!!!!!!!!!!!!!!!!! MICHAELS ARRAY !!!!!!!!
+  getFloatMeasurements();
+  encodeAndSend(fDataOutput[0].asBytes, 4); // !!!!!!!!!!!! need to implement way to only send demanded data
+  encodeAndSend(fDataOutput[1].asBytes, 4);
   resetMeasurementData();
   currentState = STATE_IDLE;
 }
@@ -631,9 +620,11 @@ void reset(){
   adc0Gain = 0;
   adc1Gain = 0;
   numMeasurementsToDo = 0;
-  adc_newgain = false; 
-  AD7705resetIO(CS_ADC_0);
-  AD7705resetIO(CS_ADC_1);  // !!!!!!!!!!!! Reset DAC aswell?
+  adc0ShouldIncreaseGain = false; 
+  adc1ShouldIncreaseGain = false;
+  AD7705resetCommunication(CS_ADC_0);
+  AD7705resetCommunication(CS_ADC_1);
+  AD5683reset(CS_DAC);
 }
 //=========================
 void debugToPC(const char *debugmsg){  // !!!!!!!!!!!!!!! Since we're actually using this to send error messages back, I would rename it accordingly. Probably we should also define some error codes to accompany the message itself.
@@ -677,6 +668,7 @@ void triggerMeasurements() {
         AD7705setGainAndTrigger(CS_ADC_0, adc0Channel, adc0Gain);
     if (hardwareDetected & ADC_1_PRESENT)
         AD7705setGainAndTrigger(CS_ADC_1, adc1Channel, adc1Gain);
+    currentState = STATE_IDLE;
 }
 
 /** Waits for finishing the measurements, then adds the results for ADC#0, ADC#1
@@ -689,41 +681,83 @@ void triggerMeasurements() {
  //    value read is OK with respect to output scale. In which case, it should
  //    either set a flag (for each ADC) that will trigger (in the next loop) a
  //    change of gain, or (if the value goes out of range) send an error message
- //    The logics should be similar to the one that we currently have in measureADC()
+ //    The logics should be similar to the one that we currently have in measureADCs()
  //    simple function to do that (e.g., checkMeasurementInADCRange(...) or similar)? needs: value, adc gain, pointer to new-gain flag
 void makeAndSumMeasurements() {
     if (hardwareDetected & LM35_PRESENT)
-        summedMeasurements[2] += analogReadMedian(LM35_PIN);   //this one first while we probably have to wait for the others
+        {measurement[2] = analogReadMedian(LM35_PIN);
+        summedMeasurements[2] += measurement[2];}   //this one first while we probably have to wait for the others
     if (hardwareDetected & ADC_0_PRESENT)
-        summedMeasurements[0] += AD7705waitAndReadData(CS_ADC_0, adc0Channel);
+        {measurement[0] = AD7705waitAndReadData(CS_ADC_0, adc0Channel);
+        checkMeasurementInADCRange(CS_ADC_0, adc0Channel, adc0Gain, &adc0ShouldIncreaseGain, measurement[0]);
+        summedMeasurements[0] += measurement[0];
+        }
     if (hardwareDetected & ADC_1_PRESENT)
-        summedMeasurements[1] += AD7705waitAndReadData(CS_ADC_1, adc1Channel);
+        {measurement[1] = AD7705waitAndReadData(CS_ADC_1, adc1Channel);
+        checkMeasurementInADCRange(CS_ADC_1, adc1Channel, adc1Gain, &adc1ShouldIncreaseGain, measurement[1]);
+        summedMeasurements[1] += measurement[1];
+        }
     numMeasurementsDone++;
+}
+
+void checkMeasurementInADCRange(byte chipSelectPin, byte channel, byte gain, bool* adcShouldIncreaseGain, int16_t adcValue)
+/*
+ * (1) If the value measured at the current call is larger than the
+ *     ADC_RANGE_SATURATION_THRESHOLD threshold, the value is still acceptable, 
+ *     but the gain will need to be decreased the next time that the DAC voltage 
+ *     is increased. This is signaled by setting the adcShouldIncreaseGain flag, 
+ *     which will be processed during the next call to initialiseDAC()
+ * (2) If instead the value measured is truly at saturation (full scale), the
+ *     measurement itself is incorrect, and needs to be repeated from scratch
+ *     after decreasing the gain.
+ * (3) If the value is at full scale but the gain cannot be decreased, an ERROR 
+ *     state will be returned.
+ */
+{  if(abs(adcValue)>ADC_RANGE_THRESHOLD && (gain > 0) && !*adcShouldIncreaseGain){
+    // the measured value is above the "saturation" threshold, but not yet at
+    // true saturation, which would make the measured value completely wrong.
+    // Defer the decrease of gain to the next time the DAC voltage will be
+    // increased
+    *adcShouldIncreaseGain = true;     
+    }
+    if(((adcValue^=8000) == ADC_POSITIVE_SATURATION) || ((adcValue^=8000) == ADC_NEGATIVE_SATURATION)){
+      if(gain>0){
+        gain--;
+        AD7705selfCalibrate(chipSelectPin, channel, gain, adcUpdateRate);
+        AD7705waitForCalibration(chipSelectPin, channel);
+        resetMeasurementData();
+        *adcShouldIncreaseGain = false; 
+      }
+      if(gain==0){
+        debugToPC("ADC Overflow, maximum gain reached, no serious measurements possible...");
+        currentState = STATE_IDLE; 
+      }
+    }
 }
 
 /** Converts the global summedMeasurements to float in physical units:
  *  Volts, Amps, degC. */
-void getFloatMeasurements(float fOutput[]) {                       // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! probably it is best to have this function rather write to the globals 3-element array of shared_memory type rather than passing an array and returning it. This way we can call this function once, only when reporting stuff back to the PC
+void getFloatMeasurements() {                       // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! probably it is best to have this function rather write to the globals 3-element array of shared_memory type rather than passing an array and returning it. This way we can call this function once, only when reporting stuff back to the PC
     if (hardwareDetected & ADC_0_PRESENT) {
-        fOutput[0] = summedMeasurements[0] * voltsPerBit[adc0Gain] / numMeasurementsToDo;
+        fDataOutput[0].asFloat = summedMeasurements[0] * voltsPerBit[adc0Gain] / numMeasurementsToDo;
         if (adc0Channel == AD7705_CH0) {  //ADC#0 channel 0: I0 input (volts)
             if ((hardwareDetected & JP_I0_CLOSED) == 0)  //0-10V with jumper open
-                fOutput[0] *= ADC_0_CH0_SCALE_JO;
+                fDataOutput[0].asFloat *= ADC_0_CH0_SCALE_JO;
         }
         else                            //ADC#0 channel 1: high voltage (volts)
-            fOutput[0] *= ADC_0_CH1_SCALE;
+            fDataOutput[0].asFloat *= ADC_0_CH1_SCALE;
     }
     if (hardwareDetected & ADC_1_PRESENT) {
-        fOutput[1] = summedMeasurements[1] * voltsPerBit[adc1Gain] / numMeasurementsToDo;
+        fDataOutput[1].asFloat = summedMeasurements[1] * voltsPerBit[adc1Gain] / numMeasurementsToDo;
         if (adc1Channel == AD7705_CH0) {  //ADC#1 channel 0: I0 at biased sample (amps)
-            fOutput[1] *= ADC_1_CH0_SCALE;
+            fDataOutput[1].asFloat *= ADC_1_CH0_SCALE;
         }
         else                            //ADC#1 channel 1: AUX
             if ((hardwareDetected & JP_AUX_CLOSED) == 0)  //0-10V with jumper open
-                fOutput[1] *= ADC_1_CH1_SCALE_JO;
+                fDataOutput[1].asFloat *= ADC_1_CH1_SCALE_JO;
     }
     if (hardwareDetected & LM35_PRESENT) //LM35: degrees C
-        fOutput[2] = summedMeasurements[2] * ARDUINO_ADU_DEG_C / numMeasurementsToDo;
+        fDataOutput[2].asFloat = summedMeasurements[2] * ARDUINO_ADU_DEG_C / numMeasurementsToDo;
 }
 
 /** Simultaneous self-calibration for both ADCs (if present) */
@@ -753,7 +787,8 @@ void setChipSelectHigh(byte ioPin) {
     pinMode(ioPin, OUTPUT);
 }
 
-/** Returns a bit mask of which hardware was detected */
+/** Returns a bit mask of which hardware was detected
+ *  checks for hardware present: ADCs, LM35, relay, jumpers */
 uint16_t getHardwarePresent() {
     int result = 0;
     //Check for ADCs
@@ -800,6 +835,17 @@ uint16_t getHardwarePresent() {
     return result;
 }
 
+/*initial calibration after getting hardware*/
+void initialCalibration(){
+ //initial self-calibration: done in parallel for both ADCs (if present)
+  adc0Gain = 0;             adc1Gain = 0;
+  adc0Channel = AD7705_CH0; adc1Channel = AD7705_CH0;
+  selfCalibrateAllADCs(adcUpdateRate);
+  adc0Channel = AD7705_CH1; adc1Channel = AD7705_CH1;
+  selfCalibrateAllADCs(adcUpdateRate);
+  adc0Channel = AD7705_CH0; adc1Channel = AD7705_CH0;
+  triggerMeasurements();  //set to default channels
+}
 /* ---------- AD7705 ADC FUNCTIONS ---------- */
 
 /** Starts an I/O operation for the AD7705 with given chip select pin */
@@ -814,7 +860,7 @@ void AD7705endIO(byte chipSelectPin) {
 }
 
 /** Resets I/O of the AD7705 by writing 32 high bits */
-void AD7705resetIO(byte chipSelectPin) {
+void AD7705resetCommunication(byte chipSelectPin) {
     AD7705startIO(chipSelectPin);
     SPI.transfer16(0xffff);
     SPI.transfer16(0xffff);
