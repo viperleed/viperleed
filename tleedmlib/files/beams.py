@@ -20,10 +20,10 @@ from viperleed.guilib import project_to_first_domain
 logger = logging.getLogger("tleedm.files.beams")
 
 
-def averageBeams(beams, weights=[]):
+def averageBeams(beams, weights=None):
     """Takes a list of parcentages and a list of lists of Beam objects.
     Returns a new list of Beam obects with weighted averaged intensities."""
-    if not weights:
+    if weights is None:
         weights = [1/len(beams)] * len(beams)
     avbeams = copy.deepcopy(beams[0])
     for (i, b) in enumerate(avbeams):
@@ -182,7 +182,7 @@ def sortIVBEAMS(sl, rp):
     return ivsorted
 
 
-def readOUTBEAMS(filename="EXPBEAMS.csv", sep=";", enrange=[]):
+def readOUTBEAMS(filename="EXPBEAMS.csv", sep=";", enrange=None):
     """Reads beams from an EXPBEAMS.csv or THEOBEAMS.csv file. Returns a list
     of Beam objects. The 'sep' parameter defines the separator. If an energy
     range 'enrange' is passed, beams that contain no data within that range
@@ -249,7 +249,7 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=";", enrange=[]):
                         beams[i].intens[en] = f
                 except (ValueError, IndexError):
                     f = None
-    if len(enrange) == 2:
+    if enrange is not None and len(enrange) == 2:
         remlist = []
         for b in beams:
             if (len(b.intens) == 0 or
@@ -446,7 +446,7 @@ def writeOUTBEAMS(beams, filename="THEOBEAMS.csv", sep="; "):
     return
 
 
-def writeAUXBEAMS(ivbeams=[], beamlist=[], beamsfile='IVBEAMS',
+def writeAUXBEAMS(ivbeams=None, beamlist=None, beamsfile='IVBEAMS',
                   readfile='_BEAMLIST', writefile='AUXBEAMS', write=True):
     """"Reads from a _BEAMLIST file (full list of beams for calculation),
     finds the beams listed in IVBEAMS (if not passed as a list 'beams', will
@@ -458,14 +458,14 @@ def writeAUXBEAMS(ivbeams=[], beamlist=[], beamsfile='IVBEAMS',
     else:
         blstr = "_BEAMLIST"
 
-    if ivbeams == []:         # if 'ivbeams' is empty, try to fill it
+    if ivbeams is None:         # if 'ivbeams' is empty, try to fill it
         ivbeams = readIVBEAMS(beamsfile)
 
     output = '   1               IFORM\n'
     # !!! WHAT IS THIS VALUE? WHERE TO GET IT FROM?
 
     # read BEAMLIST
-    if beamlist == []:
+    if beamlist is None:
         logger.warning("writeAUXBEAMS routine: no beamlist passed, "
                        "attempting to read _BEAMLIST directly.")
         try:
@@ -551,13 +551,13 @@ def writeAUXEXPBEAMS(beams, filename="AUXEXPBEAMS", header="Unknown system",
     return output
 
 
-def writeFdOut(beams, beamlist=[], filename="refcalc-fd.out",
+def writeFdOut(beams, beamlist=None, filename="refcalc-fd.out",
                header="Unknown system"):
     """Writes an fd.out file for the given beams. Also returns the file "
     "contents as string."""
     out = header+"\n"
     # read BEAMLIST
-    if not beamlist:
+    if beamlist is None:
         logger.warning("writeFdOut: no beamlist passed, attempting to read "
                        "_BEAMLIST directly.")
         try:

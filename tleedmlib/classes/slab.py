@@ -980,10 +980,12 @@ class Slab:
                     return False
         return True
 
-    def revertUnitCell(self, restoreTo=[]):
+    def revertUnitCell(self, restoreTo=None):
         """If the unit cell in a and b was transformed earlier, restore the
         original form and coordinates. If a 'restoreTo' argument is passed,
         restore only back to the point defined by the argument."""
+        if restoreTo is None:
+            restoreTo = []
         if len(self.ucell_mod) > 0:
             self.getCartesianCoordinates()
             oplist = self.ucell_mod[len(restoreTo):]
