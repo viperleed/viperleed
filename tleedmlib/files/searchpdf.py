@@ -90,8 +90,8 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
             lastpops.append(1)
     allcolors = []
     if rlastunique[-1] == rlastunique[0]:
-        colors = [(0., 0., 0., 1.)] * len(rlastunique)  # black
-        allcolors = [(0., 0., 0., 1.)] * len(rfacs[-1])
+        colors = [(0., 0., 0.)] * len(rlastunique)  # black
+        allcolors = [(0., 0., 0.)] * len(rfacs[-1])
     else:
         colors = []
         for (i, r) in enumerate(rlastunique):
@@ -99,7 +99,7 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
             w = np.sqrt(w)   # stronger scaling towards red
             colors.append((w, 0., 0.))
             for j in range(0, lastpops[i]):
-                allcolors.append((w, 0., 0., 1.))
+                allcolors.append((w, 0., 0.))
     if (not rp.rfacscatter_all) or (rp.rfacscatter_all[-1][0] != gens[-1]):
         rp.storeRfacScatter([gens[-1]]*len(rlastunique), rlastunique,
                             lastpops, colors)
@@ -176,7 +176,6 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
     else:
         lowbound = rfmin
     rYrange = [lowbound-(rfmax-lowbound)*0.1, rfmax+(rfmax-rfmin)*0.1]
-
     labely = rYrange[0] + (rYrange[1]-rYrange[0])*0.99
     xoff = gens[-1]*0.005
     for (xpos, label) in markers:
@@ -280,7 +279,7 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
                                    / (par.steps-1))
                         else:
                             val = conf[i][0] / 100
-                        r, g, b, alpha = allcolors[j]
+                        r, g, b = allcolors[j]
                         if par.linkedTo is None and par.restrictTo is None:
                             alpha = 1.0
                             vals.append(val)
@@ -483,7 +482,6 @@ def writeSearchReportPdf(rp, outname="Search-report.pdf"):
     global plotting
     if not plotting:
         return None
-
     allmin = []
     allmax = []
     allmean = []
