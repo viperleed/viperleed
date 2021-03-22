@@ -356,7 +356,7 @@ def generateSearchInput(sl, rp, steuOnly=False, cull=False, info=True):
         rp.SEARCH_POPULATION = int(np.ceil(spop / rp.N_CORES)) * rp.N_CORES
 
     # calculate some more things for later
-    expEnergies = []
+    expEnergies = set([k for b in rp.expbeams for k in b.intens])
     if info:
         totalrange = rp.total_energy_range()
         logger.info("Total energy range from experimental beams is "
