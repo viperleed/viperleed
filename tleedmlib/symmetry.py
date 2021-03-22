@@ -1002,19 +1002,21 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
                 for (ati, at1) in enumerate(sl1.atlist):
                     for (atj, at2) in enumerate(tmpslab.sublayers[sli]
                                                 .atlist):
-                        if not sl1.atlist[atj] in at1.linklist:
+                        if sl1.atlist[atj] in at1.linklist:
                             # don't check atoms that are already linked
-                            if at1.isSameXY(at2.cartpos[:2], eps):
-                                # combine the two linklists
-                                at1.linklist.extend(sl1.atlist[atj]
-                                                    .linklist)
-                                for at3 in sl1.atlist[atj].linklist:
-                                    at3.symrefm = np.dot(m, np.dot(
-                                        at1.symrefm, at3.symrefm))
-                                    if not at3 == sl1.atlist[atj]:
-                                        at3.linklist = at1.linklist
-                                sl1.atlist[atj].linklist = at1.linklist
-                                break
+                            continue
+                        if not at1.isSameXY(at2.cartpos[:2], eps):
+                            continue
+                        # combine the two linklists
+                        at1.linklist.extend(sl1.atlist[atj].linklist)
+                        for at3 in sl1.atlist[atj].linklist:
+                            at3.symrefm = np.linalg.multi_dot([
+                               np.linalg.inv(at2.symrefm),
+                               at3.symrefm, m, at1.symrefm])
+                            if not at3 == sl1.atlist[atj]:
+                                at3.linklist = at1.linklist
+                        sl1.atlist[atj].linklist = at1.linklist
+                        break
         # TEST MIRROR AND GLIDE PLANES
         if planegroup not in ["p2", "p3", "p4", "p6"]:
             if planegroup in ["pm", "pg", "cm", "pmg", "rcm"]:
@@ -1050,17 +1052,20 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
                     for (atj, at2) in enumerate(tmpslab.sublayers[sli]
                                                 .atlist):
                         # don't check atoms that are already linked
-                        if not sl1.atlist[atj] in at1.linklist:
-                            if at1.isSameXY(at2.cartpos[:2], eps):
-                                # combine the two linklists
-                                at1.linklist.extend(sl1.atlist[atj].linklist)
-                                for at3 in sl1.atlist[atj].linklist:
-                                    at3.symrefm = np.dot(m, np.dot(
-                                        at1.symrefm, at3.symrefm))
-                                    if not at3 == sl1.atlist[atj]:
-                                        at3.linklist = at1.linklist
-                                sl1.atlist[atj].linklist = at1.linklist
-                                break
+                        if sl1.atlist[atj] in at1.linklist:
+                            continue
+                        if not at1.isSameXY(at2.cartpos[:2], eps):
+                            continue
+                        # combine the two linklists
+                        at1.linklist.extend(sl1.atlist[atj].linklist)
+                        for at3 in sl1.atlist[atj].linklist:
+                            at3.symrefm = np.linalg.multi_dot([
+                                np.linalg.inv(at2.symrefm),
+                                at3.symrefm, m, at1.symrefm])
+                            if not at3 == sl1.atlist[atj]:
+                                at3.linklist = at1.linklist
+                        sl1.atlist[atj].linklist = at1.linklist
+                        break
     sl.linklists = []     # re-create linklists
     for at in sl.atlist:
         if len(at.linklist) > 1 and at.linklist not in sl.linklists:

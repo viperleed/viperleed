@@ -331,6 +331,7 @@ class Atom:
                         for v2 in dr:
                             if np.linalg.norm(v-v2) < eps:
                                 found = True
+                                break
                         if not found:
                             match = False
                             break

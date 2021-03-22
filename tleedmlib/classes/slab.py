@@ -663,7 +663,8 @@ class Slab:
 
     def mirror(self, symplane, glide=False):
         """Translates the atoms in the slab to have the symplane in the
-        origin, applies a mirror or glide matrix, then translates back"""
+        origin, applies a mirror or glide matrix, then translates back.
+        Very inefficient implementation!"""
         ang = angle(np.array([1, 0]), symplane.dir)
         rotm = np.array([[np.cos(ang), np.sin(ang)],
                          [-np.sin(ang), np.cos(ang)]])
@@ -673,13 +674,13 @@ class Slab:
         if glide:
             abt = self.ucell[:2, :2].T
             glidevec = (symplane.par[0]*abt[0]+symplane.par[1]*abt[1])/2
+        else:
+            glidevec = np.zeros(2)
         for at in self.atlist:
             at.cartpos[:2] -= symplane.pos     # translate to plane
             at.cartpos[:2] = np.dot(rotmirm, at.cartpos[:2])    # apply mirror
             at.cartpos[:2] += symplane.pos     # translate back
-            if glide:
-                # if we're testing for glide plane, add the appropriate vector
-                at.cartpos[0:2] += glidevec
+            at.cartpos[:2] += glidevec   # 0 if not glides
 
     def getLowOccLayer(self):
         """Finds and returns the lowest occupancy sublayer"""
