@@ -69,12 +69,11 @@ const int STATE_ERROR = 8;
 //Flags 
 boolean readingFromSerial = false;            //Flag True when arduino receives new data
 boolean newMessage = false;               //Fag True when all new data has arrived
-boolean runningAutogain = true;        //True when Measurements are taken for Autogain
 
 //ADC settings
 byte chn; 
 byte polar_mode; 
-byte maximum_gain = 7;
+#define AD7705_MAX_GAIN 7
 //byte minimum_gain = 0;
 
 //ADC measurement settings
@@ -83,7 +82,7 @@ uint16_t numMeasurementsDone = 0;
 
 //ADC saturation markers
 #define ADC_POSITIVE_SATURATION 0xffff
-#define ADC_NEGATIVE_SATURATION 0x000
+#define ADC_NEGATIVE_SATURATION 0x0000
 #define ADC_RANGE_THRESHOLD 0x3fff
 
 //Timers (defined in milliseconds)
@@ -181,8 +180,8 @@ byte     adc1Gain = 0;
 byte     adcUpdateRate = AD7705_50HZ; //update rate for both ADCs (will be set for line frequency) !!!!!!!!!!!!!!!!!! This is never used again, but probably should
 uint16_t adc0RipplePP = 0;            //ripple (peak-peak) measured for ADC#0 during autogain at gain=0 !!!!!!!!!!!!!!!!!! Nor is this or the following. Not sure what Michael wanted to use these for. Perhaps as a substitute of summedMeasurements used only during the autogain?
 uint16_t adc1RipplePP = 0;
-bool adc0ShouldIncreaseGain = false;  //whether ADC#0 should increase its gain in the next cycle !!!!!!!!!!!!!!!!! Unused, same for the next one, but we should use them. However, right now we're just DECREASING the gain, not increasing it [except in findOptimalADCGains()]. Discuss with Michael.
-bool adc1ShouldIncreaseGain = false;
+bool adc0ShouldDecreaseGain = false;  //whether ADC#0 should increase its gain in the next cycle !!!!!!!!!!!!!!!!! Unused, same for the next one, but we should use them. However, right now we're just DECREASING the gain, not increasing it [except in findOptimalADCGains()]. Discuss with Michael.
+bool adc1ShouldDecreaseGain = false;
 // Measurements of ADC#0, ADC#1 and LM35 sensor temperature are summed up here
 int32_t  summedMeasurements[N_MAX_MEAS];
 int16_t measurement[N_MAX_MEAS];
@@ -229,10 +228,7 @@ void loop() {
 * and defines a state with defining the variable "currentState". Depending 
 * on the state, the arduino continues with differnt functions
 */
-  if(currentState != STATE_TRIGGER_ADCS){
-    readFromSerial();
-  }
-  
+  readFromSerial();
   updateState();
 
   switch (currentState){
@@ -257,7 +253,7 @@ void loop() {
       sendAdcValue();
       break;
     case STATE_GET_HARDWARE:
-       hardwareDetected = getHardwarePresent(); // !!!!!!!! need to set up returning of detected hardware to PC
+       hardwareDetected = getHardwarePresent(); // !!!!!!!! need to implement returning of detected hardware to PC
        initialCalibration();
       break;
     case STATE_ERROR:
@@ -293,7 +289,7 @@ void readFromSerial() {
     } 
     if (byteRead == ENDMARKER) {
       readingFromSerial = false;
-      newMessage = true;  
+      newMessage = true;  // !!!!!! make sure to not always set to true
       msgLength = inputRegister[1]; 
       decodeMessage();
     }    
@@ -408,9 +404,9 @@ void updateState() {
  * ----------------
  * data_received[0]: byte array
  */
-  if ((currentState == STATE_IDLE) && newMessage){ 
+  if (newMessage){ // !!!!!!! need to remember to not always set newMessage = true
     switch(data_received[0]){
-      case PING:
+      case PING: // !!!!!!!!! Replace with get hardware
         encodeAndSend(PING);
         break;
       case PC_INIT_ADC:
@@ -422,8 +418,7 @@ void updateState() {
         currentState = STATE_SET_VOLTAGE; 
         break;
       case PC_AUTOGAIN:
-        initialTime = millis(); 
-        runningAutogain = true;
+        initialTime = millis();
         resetMeasurementData();
         adc0Gain = 0;
         adc1Gain = 0;
@@ -435,7 +430,7 @@ void updateState() {
         initialTime = millis(); 
         currentState = STATE_ADC_MEASURE;
         break;
-      case PC_HARDWARE:
+      case PC_HARDWARE: // !!!!!!! Replace with calibration for all gains
         initialTime = millis(); 
         currentState = STATE_GET_HARDWARE;
         break;
@@ -466,25 +461,24 @@ void findOptimalADCGains(){
  */
   int16_t autogain_value0;
   int16_t autogain_value1;
-  if(runningAutogain){
-    measureADCsAndPeaks(); // !!!!!!!!!!!!! not at 500 Hz !!!!!!!!!!!!!!!!
-    if(numMeasurementsDone == numMeasurementsToDo){
-      autogain_value0 = max(abs(maximumPeak[0]),abs(minimumPeak[0]))+(maximumPeak[0]-minimumPeak[0]);
-      autogain_value1 = max(abs(maximumPeak[1]),abs(minimumPeak[1]))+(maximumPeak[1]-minimumPeak[1]);
-      runningAutogain = false; 
-      numMeasurementsDone = 0;                                                  // !!!!!!!!!!!!!!!!!!! we should rather zero this counter later, after the correct gain has been found, just using resetMeasurementData() 
+  measureADCsAndPeaks(); // !!!!!!!!!!!!! not at 500 Hz !!!!!!!!!!!!!!!!
+  if(numMeasurementsDone == numMeasurementsToDo){
+    autogain_value0 = max(abs(maximumPeak[0]),abs(minimumPeak[0])) + (maximumPeak[0] - minimumPeak[0]);
+    autogain_value1 = max(abs(maximumPeak[1]),abs(minimumPeak[1])) + (maximumPeak[1] - minimumPeak[1]);
+    numMeasurementsDone = 0;// !!!!!!!!!!!!!!!!!!! we should rather zero this counter later, after the correct gain has been found, just using resetMeasurementData() 
+    if(hardwareDetected & ADC_0_PRESENT){
+      while(((autogain_value0 << (adc0Gain + 1)) < ADC_RANGE_THRESHOLD) && (adc0Gain < AD7705_MAX_GAIN)){
+        adc0Gain++;
+      }
     }
-  }
-  if(!runningAutogain){
-    while(((autogain_value0 << adc0Gain) > ADC_RANGE_THRESHOLD) && ADC_0_PRESENT){ // !!!!!!!!!!!!!! We go to the gain value that will demand a gain-- in the next measurement !!!!!!!!!!!!!!!!!!!!!
-      adc0Gain++;
+    if (hardwareDetected & ADC_1_PRESENT){
+      while(((autogain_value1 << (adc1Gain + 1)) < ADC_RANGE_THRESHOLD) && (adc1Gain < AD7705_MAX_GAIN)){
+        adc1Gain++;
+      }
     }
-    while(((autogain_value1 << adc1Gain) > ADC_RANGE_THRESHOLD) && ADC_1_PRESENT){ // !!!!!!!!!!!!!! We go to the gain value that will demand a gain-- in the next measurement !!!!!!!!!!!!!!!!!!!!!
-      adc1Gain++;
-    } // !!!!!!!!!! NO ERROR IF GAIN > 7 !!!!!!!!!!!!!!!!!!!!!
     encodeAndSend(PC_OK);
     currentState = STATE_IDLE; 
-    }
+  }
   if((millis() -  initialTime) > timeout){               // !!!!!!!!!!!!!!!! perhaps go to an ERROR state?
     debugToPC("Timeout, Autogain failed, Arduino turns back to IDLE state"); 
     currentState = STATE_IDLE;
@@ -524,7 +518,7 @@ void setUpAllADCs(){
     polar_mode = data_received[1];                     // !!!!!!!!!! Since we're not changing the polarity (it's already hard-coded into Michael's part to be bipolar) we can use this bit as the channel for the second ADC. Another good option would be to bit-encode the channel in the first byte, since we just have 2 ADCs. See my comment on WORKINPROGRESS above.
     adcUpdateRate = data_received[2]; 
     numMeasurementsToDo = data_received[3] << 8 | data_received[4];
-    maximum_gain = data_received[5];
+    //maximum_gain = data_received[5]; //!!!!!!!!!! remove from Phython
     selfCalibrateAllADCs(adcUpdateRate);                             //  !!!!!!!!!!!!!!!!!!! CHANNEL NOT SET YET !!!!!!!!!!!!!!!
     encodeAndSend(PC_OK);
     currentState = STATE_IDLE;//Back to command mode
@@ -560,13 +554,18 @@ void setVoltage(){
     currentTime = millis();
     newMessage = false;
     resetMeasurementData(); 
-    if(adc0ShouldIncreaseGain){            // !!!!!!!!!!!!!!!! This section needs to be adapted to check whether either of the ADCs needs its gain to be reduced at this iteration, in which case the relevant self-calibration should be called
+    if(adc0ShouldDecreaseGain){            // !!!!!!!!!!!!!!!! This section needs to be adapted to check whether either of the ADCs needs its gain to be reduced at this iteration, in which case the relevant self-calibration should be called
       // During the last measurement, the value read by the ADC has reached the
       // upper part of the range. The gain needs to be decreased, and the ADC
       // requires recalibration
       adc0Gain--;
-      AD7705selfCalibrate(WORKINPROGRESS, chn, adc0Gain, adcUpdateRate); // !!!!!!!!!!!!!!!!!!!!!! ALL OR ONLY ONE? MAYBE CHECK BOTH AND IF ONE NEEDS TO BE CALIBRATED WE DO BOTH
-      adc0ShouldIncreaseGain = false; 
+      AD7705selfCalibrate(CS_ADC_0, chn, adc0Gain, adcUpdateRate); // !!!!!!!!!!!!!!!!!!!!!! ALL OR ONLY ONE? MAYBE CHECK BOTH AND IF ONE NEEDS TO BE CALIBRATED WE DO BOTH
+      adc0ShouldDecreaseGain = false; 
+    }
+    if(adc1ShouldDecreaseGain){
+      adc1Gain--;
+      AD7705selfCalibrate(CS_ADC_1, chn, adc1Gain, adcUpdateRate); // !!!!!!!!!!!!!!!!!!!!!! ALL OR ONLY ONE? MAYBE CHECK BOTH AND IF ONE NEEDS TO BE CALIBRATED WE DO BOTH
+      adc0ShouldDecreaseGain = false; 
     }
   }
   if((millis() -  initialTime) > timeout){                   // !!!!!!!!!!!!! Perhaps we should have an additional ERROR state that can do the reporting to the PC, then back to IDLE?
@@ -620,8 +619,8 @@ void reset(){
   adc0Gain = 0;
   adc1Gain = 0;
   numMeasurementsToDo = 0;
-  adc0ShouldIncreaseGain = false; 
-  adc1ShouldIncreaseGain = false;
+  adc0ShouldDecreaseGain = false; 
+  adc1ShouldDecreaseGain = false;
   AD7705resetCommunication(CS_ADC_0);
   AD7705resetCommunication(CS_ADC_1);
   AD5683reset(CS_DAC);
@@ -689,18 +688,18 @@ void makeAndSumMeasurements() {
         summedMeasurements[2] += measurement[2];}   //this one first while we probably have to wait for the others
     if (hardwareDetected & ADC_0_PRESENT)
         {measurement[0] = AD7705waitAndReadData(CS_ADC_0, adc0Channel);
-        checkMeasurementInADCRange(CS_ADC_0, adc0Channel, adc0Gain, &adc0ShouldIncreaseGain, measurement[0]);
+        checkMeasurementInADCRange(CS_ADC_0, adc0Channel, adc0Gain, &adc0ShouldDecreaseGain, measurement[0]);
         summedMeasurements[0] += measurement[0];
         }
     if (hardwareDetected & ADC_1_PRESENT)
         {measurement[1] = AD7705waitAndReadData(CS_ADC_1, adc1Channel);
-        checkMeasurementInADCRange(CS_ADC_1, adc1Channel, adc1Gain, &adc1ShouldIncreaseGain, measurement[1]);
+        checkMeasurementInADCRange(CS_ADC_1, adc1Channel, adc1Gain, &adc1ShouldDecreaseGain, measurement[1]);
         summedMeasurements[1] += measurement[1];
         }
     numMeasurementsDone++;
 }
 
-void checkMeasurementInADCRange(byte chipSelectPin, byte channel, byte gain, bool* adcShouldIncreaseGain, int16_t adcValue)
+void checkMeasurementInADCRange(byte chipSelectPin, byte channel, byte gain, bool* adcShouldIncreaseGain, int16_t adcValue){
 /*
  * (1) If the value measured at the current call is larger than the
  *     ADC_RANGE_SATURATION_THRESHOLD threshold, the value is still acceptable, 
@@ -713,7 +712,7 @@ void checkMeasurementInADCRange(byte chipSelectPin, byte channel, byte gain, boo
  * (3) If the value is at full scale but the gain cannot be decreased, an ERROR 
  *     state will be returned.
  */
-{  if(abs(adcValue)>ADC_RANGE_THRESHOLD && (gain > 0) && !*adcShouldIncreaseGain){
+   if(abs(adcValue)>ADC_RANGE_THRESHOLD && (gain > 0) && !*adcShouldIncreaseGain){
     // the measured value is above the "saturation" threshold, but not yet at
     // true saturation, which would make the measured value completely wrong.
     // Defer the decrease of gain to the next time the DAC voltage will be
