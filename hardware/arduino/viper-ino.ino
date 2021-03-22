@@ -699,12 +699,12 @@ void makeAndSumMeasurements() {
     numMeasurementsDone++;
 }
 
-void checkMeasurementInADCRange(byte chipSelectPin, byte channel, byte gain, bool* adcShouldIncreaseGain, int16_t adcValue){
+void checkMeasurementInADCRange(byte chipSelectPin, byte channel, byte gain, bool* adcShouldDecreaseGain, int16_t adcValue){
 /*
  * (1) If the value measured at the current call is larger than the
  *     ADC_RANGE_SATURATION_THRESHOLD threshold, the value is still acceptable, 
  *     but the gain will need to be decreased the next time that the DAC voltage 
- *     is increased. This is signaled by setting the adcShouldIncreaseGain flag, 
+ *     is increased. This is signaled by setting the adcShouldDecreaseGain flag, 
  *     which will be processed during the next call to initialiseDAC()
  * (2) If instead the value measured is truly at saturation (full scale), the
  *     measurement itself is incorrect, and needs to be repeated from scratch
@@ -712,12 +712,12 @@ void checkMeasurementInADCRange(byte chipSelectPin, byte channel, byte gain, boo
  * (3) If the value is at full scale but the gain cannot be decreased, an ERROR 
  *     state will be returned.
  */
-   if(abs(adcValue)>ADC_RANGE_THRESHOLD && (gain > 0) && !*adcShouldIncreaseGain){
+   if(abs(adcValue)>ADC_RANGE_THRESHOLD && (gain > 0) && !*adcShouldDecreaseGain){
     // the measured value is above the "saturation" threshold, but not yet at
     // true saturation, which would make the measured value completely wrong.
     // Defer the decrease of gain to the next time the DAC voltage will be
     // increased
-    *adcShouldIncreaseGain = true;     
+    *adcShouldDecreaseGain = true;     
     }
     if(((adcValue^=8000) == ADC_POSITIVE_SATURATION) || ((adcValue^=8000) == ADC_NEGATIVE_SATURATION)){
       if(gain>0){
@@ -725,7 +725,7 @@ void checkMeasurementInADCRange(byte chipSelectPin, byte channel, byte gain, boo
         AD7705selfCalibrate(chipSelectPin, channel, gain, adcUpdateRate);
         AD7705waitForCalibration(chipSelectPin, channel);
         resetMeasurementData();
-        *adcShouldIncreaseGain = false; 
+        *adcShouldDecreaseGain = false; 
       }
       if(gain==0){
         debugToPC("ADC Overflow, maximum gain reached, no serious measurements possible...");
