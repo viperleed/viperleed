@@ -296,7 +296,7 @@ def sortfiles(tensorIndex, delete_unzipped=False, tensors=True,
                 "Search-report.pdf", "FITBEAMS.csv", "FITBEAMS_norm.csv",
                 "superpos-spec.out", "Rfactor_plots_superpos.pdf",
                 "Rfactor_analysis_refcalc.pdf",
-                "Rfactor_analysis_superpos.pdf", "Errors.csv"]
+                "Rfactor_analysis_superpos.pdf", "Errors.csv", "Errors.pdf"]
     # outfiles with variable names:
     if not path:
         path = "."
