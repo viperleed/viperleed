@@ -66,11 +66,11 @@ def main():
             raise
     # figure out the number of the tensor
     tnum = 0
-    if os.path.isdir(os.path.join(".", "Tensors")):
+    if os.path.isdir("Tensors"):
         indlist = []
         rgx = re.compile(r'Tensors_[0-9]{3}\.zip')
-        for f in [f for f in os.listdir(os.path.join(".", "Tensors"))
-                  if (os.path.isfile(os.path.join(".", "Tensors", f))
+        for f in [f for f in os.listdir("Tensors")
+                  if (os.path.isfile(os.path.join("Tensors", f))
                       and rgx.match(f))]:
             m = rgx.match(f)
             if m.span()[1] == 15:  # exact match
@@ -217,6 +217,26 @@ def main():
             jobnums.append(1)
         else:
             jobnums.append(maxnums[tnum] + 1)
+    # look for notes file
+    notes_name = ""
+    notes = ""
+    for fn in ("notes", "notes.txt"):
+        if os.path.isfile(fn):
+            notes_name = fn
+            break
+    if notes_name:
+        try:
+            with open(notes_name, 'r') as rf:
+                notes = rf.read()
+        except Exception:
+            print("Error: Failed to read " + notes_name + " file")
+    if notes:
+        try:
+            with open(notes_name, 'w'):
+                pass
+        except Exception:
+            print("Error: Failed to clear the " + notes_name + " file after "
+                  "reading.")
     # write history.info
     spacing = 12
     hi = ""
@@ -255,7 +275,7 @@ def main():
 
     hi += "# TIME ".ljust(spacing) + translateTimestamp(oldTimeStamp) + "\n"
     hi += "# FOLDER ".ljust(spacing) + dirname + "\n"
-    hi += "Notes: \n"
+    hi += "Notes: " + notes + "\n"
     hi += "\n\n###########\n\n"
     try:
         with open("history.info", "a") as wf:
