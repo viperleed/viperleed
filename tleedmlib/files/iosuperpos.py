@@ -30,8 +30,10 @@ def writeSuperposInput(sl, rp, config, param_name="PARAM",
     n_conc = 1
     if for_error:
         n_var = max([sp.steps for sp in rp.searchpars
-                     if sp.mode in ("geo", "vib")])
-        n_conc = max([sp.steps for sp in rp.searchpars if sp.mode == "occ"])
+                     if sp.mode in ("geo", "vib")
+                     and sp.atom in rp.search_atlist])
+        n_conc = max([sp.steps for sp in rp.searchpars if sp.mode == "occ"
+                      and sp.atom in rp.search_atlist])
     # determine which atoms are "at the surface"
     surfats = sl.getSurfaceAtoms(rp)
     # make lists to print
@@ -95,7 +97,7 @@ def writeSuperposInput(sl, rp, config, param_name="PARAM",
                     logger.error("Superpos for error: Inconsistent number of "
                                  "variation steps. Found maximum {} steps,"
                                  " but only {} for {}."
-                                 .format(n_var, pl.steps, at))
+                                 .format(n_var, pl[0].steps, at))
                     rp.setHaltingLevel(2)
                     return ""
         vp = [sp for sp in sps if sp.el == "vac"]

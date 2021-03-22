@@ -10,6 +10,7 @@ TensErLEED Manager section Error calculation
 import logging
 import copy
 import numpy as np
+import os
 
 import viperleed.tleedmlib as tl
 import viperleed.tleedmlib.files.ioerrorcalc as io
@@ -131,6 +132,8 @@ def errorcalc(sl, rp):
             tl.sections.superpos(sl, rp, for_error=True)
             if rp.halt >= rp.HALTING:
                 return
+            if os.path.isfile("ROUTSHORT"):
+                os.remove("ROUTSHORT")
             logger.info("Starting R-factor calculation...")
             rfaclist = tl.sections.rfactor(sl, rp, index=12, for_error=True)
             logger.info("Finished with " + seg_info[mode] + " errors for "

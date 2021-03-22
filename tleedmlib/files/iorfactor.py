@@ -294,7 +294,8 @@ def writeRfactPARAM(rp, theobeams, for_error=False):
     ngrid = int(np.ceil(((maxen-minen)/step)*1.1))
     n_var = 1
     if for_error:
-        n_var = max([sp.steps for sp in rp.searchpars])
+        n_var = max([sp.steps for sp in rp.searchpars
+                     if sp.atom in rp.search_atlist])
     output = """
 C  MNBED  : number of beams in experimental spectra before averaging
 C  MNBTD  : number of beams in theoretical spectra before averaging
