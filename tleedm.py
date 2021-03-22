@@ -171,6 +171,7 @@ def runSection(index, sl, rp):
                                  "_BEAMLIST", exc_info=(type(e) !=
                                                         FileNotFoundError))
             elif filename == "VIBROCC":
+                changeVIBROCC = False
                 try:
                     changeVIBROCC = readVIBROCC(rp, sl)
                     rp.fileLoaded["VIBROCC"] = True
