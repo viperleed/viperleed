@@ -350,6 +350,10 @@ def generateSearchInput(sl, rp, steuOnly=False, cull=False, info=True):
     # first generate list of SearchPar objects and figure out search parameters
     rp.generateSearchPars(sl)
 
+    if rp.indyPars == 0:
+        logger.warning("The current search includes no variations.")
+        rp.indyPars = 1
+
     # if search population is undefined, calculate a default:
     if rp.SEARCH_POPULATION == 0:
         spop = min(48, 15 + rp.indyPars)
