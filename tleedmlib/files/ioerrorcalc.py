@@ -192,6 +192,7 @@ def write_errors_pdf(errors, filename="Errors.pdf", var=None):
                 figcount = 0
                 fig, axs = plt.subplots(fig_order[0], fig_order[1],
                                         figsize=figsize, squeeze=True)
+                axs = axs.flatten()
             err = mode_errors.pop(0)
             rmax = max(r for r in err.rfacs)
             xvals = err_disp[err]
