@@ -40,6 +40,23 @@ from viperleed.tleedmlib.files.displacements import readDISPLACEMENTS
 logger = logging.getLogger("tleedm")
 starttime = 0.0
 
+auxfiles = ["AUXBEAMS", "AUXGEO", "AUXLATGEO", "AUXNONSTRUCT",
+            "POSCAR_oricell", "POSCAR_bulk", "muftin.f",
+            "refcalc-PARAM", "refcalc-FIN", "rfactor-WEXPEL",
+            "rfactor-PARAM", "delta-input", "search.steu",
+            "search-rf.info", "search-PARAM", "AUXEXPBEAMS",
+            "eeasisss-input", "searchpars.info", "superpos-PARAM",
+            "superpos-CONTRIN", "POSCAR_bulk_appended", "POSCAR_mincell",
+            "restrict.f"]
+outfiles = ["THEOBEAMS.csv", "THEOBEAMS_norm.csv",
+            "PatternInfo.tlm", "SD.TL", "refcalc-fd.out",
+            "Rfactor_plots_refcalc.pdf", "control.chem",
+            "Search-progress.pdf", "Search-progress.csv",
+            "Search-report.pdf", "FITBEAMS.csv", "FITBEAMS_norm.csv",
+            "superpos-spec.out", "Rfactor_plots_superpos.pdf",
+            "Rfactor_analysis_refcalc.pdf",
+            "Rfactor_analysis_superpos.pdf", "Errors.csv", "Errors.pdf"]
+
 
 class CustomLogFormatter(logging.Formatter):
     """Logging Formatter for level-dependent message formatting"""
@@ -282,22 +299,7 @@ def sortfiles(tensorIndex, delete_unzipped=False, tensors=True,
 
     """
     # move files to AUX and OUT folders
-    auxfiles = ["AUXBEAMS", "AUXGEO", "AUXLATGEO", "AUXNONSTRUCT",
-                "POSCAR_oricell", "POSCAR_bulk", "muftin.f",
-                "refcalc-PARAM", "refcalc-FIN", "rfactor-WEXPEL",
-                "rfactor-PARAM", "delta-input", "search.steu",
-                "search-rf.info", "search-PARAM", "AUXEXPBEAMS",
-                "eeasisss-input", "searchpars.info", "superpos-PARAM",
-                "superpos-CONTRIN", "POSCAR_bulk_appended", "POSCAR_mincell",
-                "restrict.f"]
-    outfiles = ["THEOBEAMS.csv", "THEOBEAMS_norm.csv",
-                "PatternInfo.tlm", "SD.TL", "refcalc-fd.out",
-                "Rfactor_plots_refcalc.pdf", "control.chem",
-                "Search-progress.pdf", "Search-progress.csv",
-                "Search-report.pdf", "FITBEAMS.csv", "FITBEAMS_norm.csv",
-                "superpos-spec.out", "Rfactor_plots_superpos.pdf",
-                "Rfactor_analysis_refcalc.pdf",
-                "Rfactor_analysis_superpos.pdf", "Errors.csv", "Errors.pdf"]
+
     # outfiles with variable names:
     if not path:
         path = "."
@@ -389,6 +391,8 @@ def moveoldruns(rp, prerun=False):
     prerun : bool, optional
         If True, then instead of using the manifest, all potentially
         interesting files will be copied, and the new folder will get index 0.
+        Then clears out the AUX and OUT folders and old AUX and OUT files from
+        the main directory.
 
     Returns
     -------
@@ -454,7 +458,8 @@ def moveoldruns(rp, prerun=False):
                       tensors=False, deltas=False)
     if prerun:
         filelist = [f for f in os.listdir() if os.path.isfile(f) and
-                    f.endswith(".log") and f not in rp.manifest]
+                    (f.endswith(".log") or f in outfiles or f in auxfiles)
+                    and f not in rp.manifest]
         dirlist = ["AUX", "OUT"]
     else:
         filelist = [f for f in rp.manifest if os.path.isfile(f) and not
@@ -473,7 +478,10 @@ def moveoldruns(rp, prerun=False):
                            + ". File may get overwritten.")
     for d in dirlist:
         try:
-            shutil.copytree(d, os.path.join(dirpath, d))
+            if not prerun:
+                shutil.copytree(d, os.path.join(dirpath, d))
+            else:
+                shutil.move(d, os.path.join(dirpath, d))
         except Exception:
             logger.warning("Error copying "+d+" to "
                            + os.path.join(dirpath, d)
