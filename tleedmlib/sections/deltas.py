@@ -16,6 +16,7 @@ import hashlib
 import multiprocessing
 import numpy as np
 import time
+import psutil
 
 import viperleed.tleedmlib as tl
 import viperleed.tleedmlib.files.iodeltas as io
@@ -79,10 +80,18 @@ def monitoredPool(rp, poolsize, function, tasks):
 
     """
 
+    def kill_pool(p):
+        """Kill the subprocesses, then terminate the pool."""
+        for proc in p._pool:
+            parent = psutil.Process(proc.pid)
+            for child in parent.children(recursive=True):
+                child.kill()
+        p.terminate()
+
     def checkPoolResult(r):
         nonlocal pool
         if r != "":
-            pool.terminate()
+            kill_pool(pool)
         return r
 
     pool = multiprocessing.Pool(poolsize)
@@ -94,7 +103,8 @@ def monitoredPool(rp, poolsize, function, tasks):
     while not all(r.ready() for r in results):
         updatePARAMETERS(rp)
         if rp.STOP:
-            pool.terminate()
+            kill_pool(pool)
+            logger.info("Stopped by STOP parameter.")
             return
         time.sleep(1)
     pool.join()
