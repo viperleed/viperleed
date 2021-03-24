@@ -25,7 +25,7 @@ from viperleed.tleedmlib.files.iorefcalc import readFdOut
 logger = logging.getLogger("tleedm.superpos")
 
 
-def superpos(sl, rp, subdomain=False, for_error=False):
+def superpos(sl, rp, subdomain=False, for_error=False, only_vary=None):
     """Runs the superpos calculation."""
     # check whether there is anything to evaluate
     if rp.searchResultConfig is not None and not for_error:
@@ -97,7 +97,8 @@ def superpos(sl, rp, subdomain=False, for_error=False):
         if not for_error:
             contrin = io.writeSuperposInput(sl, rp, config[0][1])
         else:
-            contrin = io.writeSuperposInput(sl, rp, None, for_error=True)
+            contrin = io.writeSuperposInput(sl, rp, None, for_error=True,
+                                            only_vary=only_vary)
         logger.debug("Wrote Superpos input successfully")
     except Exception:
         logger.error("Error getting input data for Superpos: ", exc_info=True)

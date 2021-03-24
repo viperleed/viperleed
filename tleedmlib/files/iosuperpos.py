@@ -17,10 +17,40 @@ logger = logging.getLogger("tleedm.files.iosuperpos")
 
 def writeSuperposInput(sl, rp, config, param_name="PARAM",
                        contrin_name="superpos-CONTRIN",
-                       for_error=False):
-    """Writes a PARAM and a CONTRIN file as input for the Superpos
-    calculation. Returns the contents of CONTRIN, as this will also be needed
-    as an input stream for the superpos calculation."""
+                       for_error=False, only_vary=None):
+    """
+    Writes a PARAM and a CONTRIN file as input for the Superpos calculation.
+    Returns the contents of CONTRIN, as this will also be needed as an input
+    stream for the superpos calculation.
+
+    Parameters
+    ----------
+    sl : Slab
+        The Slab object to be modified.
+    rp : Rparams
+        The run parameters.
+    config : list of int
+        Parameter indices to be applied.
+    param_name : str, optional
+        Alternative name for the PARAM file.
+    contrin_name : str, optional
+        Alternative name for the superpos-CONTRIN file.
+    for_error : bool, optional
+        If True, the 'config' parameter will be ignored, and superpos will
+        instead be calculated for all variations.
+    only_vary : list of SearchPar, optional
+        If running for error, pass a list of search parameters that should be
+        varied. All other search parameters will be kept at their "centered"
+        position.
+
+    Returns
+    -------
+    str
+        Contents of CONTRIN.
+
+    """
+    if only_vary is None:
+        only_vary = rp.searchpars
     mnfiles = 0
     occupations = []    # occupation per delta file
     deltanames = []     # names of delta files
@@ -30,18 +60,18 @@ def writeSuperposInput(sl, rp, config, param_name="PARAM",
     n_conc = 1
     if for_error:
         n_var = max([sp.steps for sp in rp.searchpars
-                     if sp.mode in ("geo", "vib")
-                     and sp.atom in rp.search_atlist])
-        n_conc = max([sp.steps for sp in rp.searchpars if sp.mode == "occ"
-                      and sp.atom in rp.search_atlist])
+                     if sp.mode in ("geo", "vib") and sp in only_vary])
+        n_conc = max([sp.steps for sp in rp.searchpars
+                      if sp.mode == "occ" and sp in only_vary])
     # determine which atoms are "at the surface"
     surfats = sl.getSurfaceAtoms(rp)
     # make lists to print
-    for at in rp.search_atlist:
+    which_atoms = [at for at in rp.search_atlist
+                   if [sp for sp in rp.searchpars
+                       if sp.atom == at and (sp.non_zero or sp in only_vary)]]
+    for at in which_atoms:
         sps = [sp for sp in rp.searchpars if sp.atom == at]
-        if not for_error:
-            occpar = [sp for sp in sps if sp.mode == "occ"][0]  # exactly one
-            occind = rp.searchpars.index(occpar)
+        occpar = [sp for sp in sps if sp.mode == "occ"][0]  # exactly one
         totalocc = np.array([0.] * n_conc)
         for el in at.disp_occ:
             if at in surfats:
@@ -49,7 +79,10 @@ def writeSuperposInput(sl, rp, config, param_name="PARAM",
             else:
                 surfaceChecks.append(0)
             if not for_error:
+                occind = rp.searchpars.index(occpar)
                 o = [at.disp_occ[el][config[occind]-1]]
+            elif occpar not in only_vary:
+                o = [at.disp_occ[el][occpar.center-1]] * n_conc
             else:
                 try:
                     o = [at.disp_occ[el][j] for j in range(n_conc)]
@@ -70,7 +103,7 @@ def writeSuperposInput(sl, rp, config, param_name="PARAM",
                 return ""
             deltanames.append(pl[0].deltaname)
             mnfiles += 1
-            if not for_error:
+            if not for_error or any(sp not in only_vary for sp in pl):
                 if el in at.disp_geo:
                     k = el
                 else:
@@ -78,26 +111,31 @@ def writeSuperposInput(sl, rp, config, param_name="PARAM",
                 ngeo = len(at.disp_geo[k])
                 vibpar = [sp for sp in pl if sp.mode == "vib"]
                 if len(vibpar) > 0:
-                    vibind = config[rp.searchpars.index(vibpar[0])] - 1
+                    if not for_error:
+                        vibind = config[rp.searchpars.index(vibpar[0])] - 1
+                    else:
+                        vibind = vibpar[0].center - 1
                 else:
                     vibind = 0
                 geopar = [sp for sp in pl if sp.mode == "geo"]
                 if len(geopar) > 0:
-                    geoind = config[rp.searchpars.index(geopar[0])] - 1
+                    if not for_error:
+                        geoind = config[rp.searchpars.index(geopar[0])] - 1
+                    else:
+                        geoind = geopar[0].center - 1
                 else:
                     geoind = 0
                 # cast vib and geo indices from 2D to 1D:
-                indices.append([(ngeo * vibind) + geoind + 1])
+                indices.append([(ngeo * vibind) + geoind + 1] * n_var)
             else:
-                if pl[0].steps == 1:
-                    indices.append([1] * n_var)
-                elif pl[0].steps == n_var:
+                whichpar = max(pl, key=lambda x: x.steps)
+                if whichpar.steps == n_var:
                     indices.append(list(range(1, n_var + 1)))
                 else:
                     logger.error("Superpos for error: Inconsistent number of "
                                  "variation steps. Found maximum {} steps,"
                                  " but only {} for {}."
-                                 .format(n_var, pl[0].steps, at))
+                                 .format(n_var, whichpar.steps, at))
                     rp.setHaltingLevel(2)
                     return ""
         vp = [sp for sp in sps if sp.el == "vac"]

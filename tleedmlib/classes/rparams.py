@@ -43,19 +43,19 @@ class SearchPar:
         self.deltaname = deltaname
         self.steps = -1     # not used for interpretation, info only
         self.edges = (None, None)  # the first and last value in the range
-        self.center = 1     # the index closest to 0, i.e. "no change"
+        self.center = 1  # the index closest to "no change"
+        self.non_zero = False   # whether the center is truly "unchanged"
         self.restrictTo = None  # None, Index, or other search par
         self.linkedTo = None    # other search par linked via 'atom number'
         self.parabolaFit = {"min": None,
                             "err_co": np.nan, "err_unco": np.nan}
         d = {}
         if mode == "occ":
-            self.steps = len(next(iter(atom.disp_occ.values())))
-            if el in atom.site.occ and el in atom.disp_occ:
-                n = [abs(v - atom.site.occ[el]) for v in atom.disp_occ[el]]
-                self.center = n.index(min(n))
-            else:  # should not happen
-                self.center = int(round(self.steps / 2) + 1)
+            el = next(iter(atom.disp_occ.keys()))  # look at any element
+            self.steps = len(atom.disp_occ[el])
+            self.center = atom.disp_center_index[mode][el] + 1
+            self.non_zero = (abs(atom.disp_occ[el][self.center-1]
+                                 - atom.site.occ[el]) >= 1e-4)
         else:
             if mode == "geo":
                 d = atom.disp_geo
@@ -68,8 +68,11 @@ class SearchPar:
                 k = "all"
             self.steps = len(d[k])
             self.edges = (d[k][0], d[k][-1])
-            n = [np.linalg.norm(v) for v in d[k]]
-            self.center = n.index(min(n)) + 1
+            if k not in atom.disp_center_index[mode]:
+                self.center = atom.disp_center_index[mode]["all"] + 1
+            else:
+                self.center = atom.disp_center_index[mode][k] + 1
+            self.non_zero = (np.linalg.norm(d[k][self.center-1]) >= 1e-4)
 
 
 class DomainParameters:

@@ -57,6 +57,8 @@ class Atom:
     disp_geo_offset : dict
         Keys are elements; values are also formatted as lists for convenience,
         but should be one element long.
+    disp_center_index : dict of dict
+        Which index in the displacement range corresponds to "no change"
     dispInitialized : bool
         disp_ variables get initialized after readVIBROCC by Atom.initDisp
     deltasGenerated : list of str
@@ -92,6 +94,9 @@ class Atom:
         self.disp_geo = {"all": [np.zeros(3)]}
         self.disp_occ = {el: [1.]}
         self.disp_geo_offset = {"all": [np.zeros(3)]}
+        self.disp_center_index = {"vib": {"all": 0},
+                                  "geo": {"all": 0},
+                                  "occ": {el: 0}}
         self.dispInitialized = False
         self.deltasGenerated = []
         self.offset_geo = {}
@@ -131,9 +136,13 @@ class Atom:
             self.disp_vib = {"all": [0.]}
             self.disp_geo = {"all": [np.zeros(3)]}
             self.disp_occ = {}
+            self.disp_center_index = {"vib": {"all": 0},
+                                      "geo": {"all": 0},
+                                      "occ": {}}
             for k, v in self.site.occ.items():
                 if v > 0 or k in self.site.mixedEls:
                     self.disp_occ[k] = [v]
+                    self.disp_center_index["occ"][k] = 0
         return None
 
     def mergeDisp(self, el):
@@ -342,6 +351,13 @@ class Atom:
                         "Skipping second assignment.".format(self))
                 else:
                     td[el] = dr
+                    # also store center
+                    if mode != 3:
+                        n = [np.linalg.norm(v) for v in dr]
+                    else:
+                        n = [abs(v - self.site.occ[el]) for v in dr]
+                    smode = {1: "geo", 2: "vib", 3: "occ"}
+                    self.disp_center_index[smode[mode]][el] = n.index(min(n))
         # assign to atoms in linklist:
         if primary:
             if len(self.displist) == 0:

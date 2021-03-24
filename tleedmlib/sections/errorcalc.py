@@ -97,7 +97,9 @@ def errorcalc(sl, rp):
             return
         rp.generateSearchPars(sl)
         # group atoms under variation by linking
-        atom_groups = [[at] for at in rp.search_atlist]
+        atom_groups = [[at] for at in rp.search_atlist
+                       if [sp for sp in rp.searchpars
+                           if sp.atom == at and sp.steps > 1]]
         i = 0
         while i < len(atom_groups):
             found = None
@@ -125,11 +127,12 @@ def errorcalc(sl, rp):
                 i += 1
         # run superpos and rfactor:
         for ag in atom_groups:
-            rp.search_atlist = ag  # limit variations to only that group
+            # rp.search_atlist = ag  # limit variations to only that group
+            only_vary = [sp for sp in rp.searchpars if sp.atom in ag]
             logger.info("\nNow calculating " + seg_info[mode] + " errors for "
                         "atom group: " + ", ".join(str(at) for at in ag))
             logger.info("Running superpos...")
-            tl.sections.superpos(sl, rp, for_error=True)
+            tl.sections.superpos(sl, rp, for_error=True, only_vary=only_vary)
             if rp.halt >= rp.HALTING:
                 return
             if os.path.isfile("ROUTSHORT"):

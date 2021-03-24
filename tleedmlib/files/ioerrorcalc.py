@@ -186,7 +186,7 @@ def write_errors_pdf(errors, filename="Errors.pdf", var=None):
         axs = axs.flatten()
         while len(mode_errors) > 0:
             if figcount >= figs_per_page:
-                fig.tight_layout(rect=(0, 0, 1, 0.98))
+                fig.tight_layout(rect=(0, 0, 1, 0.965))
                 fig.suptitle(titles[mode])
                 figs.append(fig)
                 figcount = 0

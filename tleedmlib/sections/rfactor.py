@@ -64,7 +64,7 @@ def rfactor(sl, rp, index, for_error=False):
                     logger.warning(
                         "R-factor calculation was called without "
                         "stored spectrum data. Reading from file " + fn
-                        + "in " + dn + "folder...")
+                        + " in " + dn + " folder...")
                     path = os.path.join(".", "Tensors", dn, fn)
             if not path:
                 logger.error("Cannot execute R-factor calculation: no stored "
