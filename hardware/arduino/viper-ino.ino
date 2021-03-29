@@ -51,8 +51,6 @@ byte data_received_counter = 0;     //total number of bytes received  !!!!!!!!!!
 byte data_received[MAX_MSG_LENGTH];    //Real message  !!!!!!!!!!! Judging from the code, and if I didn't misinterpret anything, I think we can have only one buffer for the input/output to the PC, so we can replace "data_received" and "data_send" with a single "message" array
 byte data_send[MAX_MSG_LENGTH];  
 byte inputRegister[MAX_MSG_LENGTH];
-byte data_send_count = 0;           //the number of 'real' bytes to be sent to the PC  !!!!!!!!!!!!!!! See suggestion on dataToPC. This also needs to get a better name
-byte data_total_send = 0;           //the number of bytes to send to PC taking account of encoded bytes !!!!!!!!!!!!!!!!!!!!!!  also this one can become just a local, with a better name
 
 //Finite state machine 
 int currentState = 0; //!!!!!!!!!!!!!  Also, perhaps it would be better to have them #define(d) rather than as const int? (save a little memory, 2 bytes * 7 names)
@@ -71,10 +69,7 @@ boolean readingFromSerial = false;            //Flag True when arduino receives 
 boolean newMessage = false;               //Fag True when all new data has arrived
 
 //ADC settings
-byte chn; 
-byte polar_mode; 
 #define AD7705_MAX_GAIN 7
-//byte minimum_gain = 0;
 
 //ADC measurement settings
 uint16_t numMeasurementsToDo = 1;
@@ -112,8 +107,9 @@ unsigned long currentTime;
 #define RELAY_MAX_ADU     96   //ADC signal of relay with pullup is less than this
 #define LM35_MAX_ADU     320   //LM35 signal should be less than 0.8 V (80 degC)
 
-// Definitions for AD7705 analog-to-digital converter  !!!!!!!!!!!!!!!! All this stuff will go into a separate ADC library
+// Definitions for AD7705 analog-to-digital converter
 #define AD7705_SPIMODE     3   //data accepted at rising edge of SCLK
+#define AD7705_MAX_GAIN    7   //gains are 0 (x1) to 7 (x128)
 //AD7705 communication register
 #define AD7705_READ_REG  0x08  //set bit for reading a register
 #define AD7705_CH0       0x00  //set bit for adressing channel 0
@@ -122,9 +118,11 @@ unsigned long currentTime;
 #define AD7705_REG_SETUP 0x10  //bits to set for accessing setup register
 #define AD7705_REG_CLOCK 0x20  //bits to set for accessing clock register
 #define AD7705_REG_DATA  0x30  //bits to set for accessing data register (16 bit)
+#define AD7705_REG_OFFSET 0x60 //bits to set for accessing calibration offset register (24 bit)
+#define AD7705_REG_GAIN  0x70  //bits to set for accessing calibration gain register (24 bit)
 #define AD7705_DRDY      0x80  //bit mask for Data Ready bit in communication register
 //AD7705 setup register
-#define AD7705_STATE_TRIGGER_ADCS     0x01  //bit to set for STATE_TRIGGER_ADCS in setup register
+#define AD7705_FSYNC     0x01  //bit to set for FSYNC in setup register
 #define AD7705_BUFMODE   0x02  //bit to set for buffered mode (not used by us)
 #define AD7705_UNIPOLAR  0x04  //bit to set for unipolar mode (not used by us)
 #define AD7705_SELFCAL   0x40  //bit to set for self-calibration in setup register
@@ -133,10 +131,11 @@ unsigned long currentTime;
 #define AD7705_50HZ      0x04  //bits to set for 50 Hz update rate and suppression
 #define AD7705_60HZ      0x05  //bits to set for 60 Hz update rate and suppression
 #define AD7705_500HZ     0x07  //bits to set for 500 Hz update rate
-// Correction for the finite source impedance and ADC input impedance !!!!!!!!!!!!!!!!!!!!!!!!!!!! Since this stuff depends on our circuit, it will not be in the ADC library
+// Correction for the finite source impedance and ADC input impedance
 #define R_SOURCE       1300.0  //source resistance of our circuit at ADC inputs, 1.3 kOhm
-#define R_IN_0     (1.0/(7e-12*38400)) //input resistance of ADC7705 in gain0 = x1
-#define REF_OVER_RANGE  (2.5/32768)    //volts per bit at gain0, bipolar, input 0ohm !!!!!!!!!!!!!!  Ask Michael: shouldn't we have the actual reference voltage here?
+//#define R_IN_0     (1.0/(7e-12*38400)) //input resistance of ADC7705 in gain0 = x1, nominal (3.72MegOhm)
+#define R_IN_0          4.1e6  //input resistance of ADC7705 in gain0 = x1, measured typical value
+#define REF_OVER_RANGE  (2500.0/32768)    //millivolts (uA@1kOhm) per bit at gain0, bipolar, input 0ohm
 const float voltsPerBit[] = {
         REF_OVER_RANGE/R_IN_0*(R_IN_0 + R_SOURCE),         //gain0 = x1
         REF_OVER_RANGE/R_IN_0*2*(R_IN_0/2 + R_SOURCE)/2,   //gain1 = x2 has half R_in_0
@@ -148,10 +147,10 @@ const float voltsPerBit[] = {
         REF_OVER_RANGE/R_IN_0*8*(R_IN_0/8 + R_SOURCE)/128, //gain7 = x128
 };
 // ADC input range scale due to voltage dividers or preamplification on the board
-#define ADC_0_CH0_SCALE_JO 4.0           //ADC#0 channel 0 with JP at I0 open or relay off
-#define ADC_0_CH1_SCALE    (16000./39.)  //ADC#0 channel 1: High-voltage divider
-#define ADC_1_CH0_SCALE    (1.e-5/2.5)   //ADC#1 channel 0: Amps
-#define ADC_1_CH1_SCALE_JO 4.0           //ADC#1 channel 1 with JP5 open (voltage divider)
+#define ADC_0_CH0_SCALE_JO   0.004      //ADC#0 channel 0 with JP at I0 open or relay off, in volts
+#define ADC_0_CH1_SCALE    (16000./39.*0.001)  //ADC#0 channel 1: High-voltage divider
+#define ADC_1_CH0_SCALE    (10/2500.0)  //ADC#1 channel 0: uAmps
+#define ADC_1_CH1_SCALE_JO   0.004      //ADC#1 channel 1 with JP5 open (voltage divider), in volts
 
 // Definitions for AD5683 digital-to-analog converter !!!!!!!!!!!!!!!!  this stuff will go into the DAC library
 #define AD5683_SPIMODE   1    //data accepted at falling edge of SCLK
@@ -182,8 +181,11 @@ uint16_t adc0RipplePP = 0;            //ripple (peak-peak) measured for ADC#0 du
 uint16_t adc1RipplePP = 0;
 bool adc0ShouldDecreaseGain = false;  //whether ADC#0 should increase its gain in the next cycle !!!!!!!!!!!!!!!!! Unused, same for the next one, but we should use them. However, right now we're just DECREASING the gain, not increasing it [except in findOptimalADCGains()]. Discuss with Michael.
 bool adc1ShouldDecreaseGain = false;
+// Self-calibration results are stored here
+int32_t  selfCalDataForMedian[3][2][2]; //three values for median, two ADCs, last index is offset(0) & gain(1)
+int32_t  selfCalDataVsGain[AD7705_MAX_GAIN+1][2][2]; //for each gain, two ADCs, last index is offset(0)&gain(1)
 // Measurements of ADC#0, ADC#1 and LM35 sensor temperature are summed up here
-int32_t  summedMeasurements[N_MAX_MEAS];
+int32_t summedMeasurements[N_MAX_MEAS];
 int16_t measurement[N_MAX_MEAS];
 //Union for Variables to convert from float to single bytes
 union floatOrBytes{                  
@@ -214,11 +216,44 @@ void setup() {
   AD7705resetCommunication(CS_ADC_0);
   AD7705resetCommunication(CS_ADC_1);
   AD5683setVoltage(CS_DAC, 0x0000);
+  //check for hardware present: ADCs, LM35, relay, jumpers
+  hardwareDetected = getHardwarePresent();
   #ifdef DEBUG
-    Serial.print("hw=0x");
+    Serial.print("hardware=0x");
     Serial.println(hardwareDetected, HEX);
+  #endif
+  //initial self-calibration: done in parallel for both ADCs (if present), for all gains
+  adc0Channel = AD7705_CH0; adc1Channel = AD7705_CH0;
+  for (int gain=0; gain<=AD7705_MAX_GAIN; gain++) {
+    adc0Gain = gain;
+    adc1Gain = gain;
+    for (int i=0; i<3; i++) {  //3 values for 3-point median
+      selfCalibrateAllADCs(AD7705_50HZ);
+      storeAllSelfCalibrationResults(selfCalDataForMedian[i]);
+      #ifdef DEBUG
+        Serial.print("gain=");
+        Serial.print(gain);
+        Serial.print(" cOffs=");
+        Serial.print(selfCalDataForMedian[i][0][0]);
+        Serial.print(" cGain=");
+        Serial.println(selfCalDataForMedian[i][0][1]);
+      #endif
+    }
+    for (int iADC=0; iADC<2; iADC++) {
+      for (int offsNgain=0; offsNgain<2; offsNgain++) {
+        int32_t median = getMedian32(
+            selfCalDataForMedian[0][iADC][offsNgain],
+            selfCalDataForMedian[1][iADC][offsNgain],
+            selfCalDataForMedian[2][iADC][offsNgain]);
+        
+        selfCalDataVsGain[gain][iADC][offsNgain] = median;
+      }
+    }
+  }
+  #ifdef DEBUG
     pinMode(LED_BUILTIN, OUTPUT);
   #endif
+  adc0Gain = 0; adc1Gain = 0;
 }
 
 void loop() {
@@ -352,7 +387,7 @@ void encodeAndSend(byte *byteArray, int len){
  * a SPECIAL_BYTE to two bytes with a leading "SPECIAL_BYTE" and a following
  * "byte - SPECIAL_BYTE."
  * The message is put into the array "data_send[]". The length
- * of the array is defined in the variable "data_total_send".
+ * of the array is defined in the variable "numBytesBeforeEncoding".
  * 
  * Parameters: 
  * -----------
@@ -362,25 +397,21 @@ void encodeAndSend(byte *byteArray, int len){
  * Returns into globals
  * -----------
  * data_send: byte array
- * data_total_send: integer
  */
-  data_send_count = 0;
-  data_total_send = 0;
+  byte numBytesAfterEncoding = 0; 
+  byte numBytesBeforeEncoding = 0; // !!!!!!! Can we remove this? Byte cast not clear
   for(int i = 0; i < len; i ++){
     if(byteArray[i] >= SPECIAL_BYTE){
-      data_send[data_send_count] = SPECIAL_BYTE; 
-      data_send_count++;
-      data_send[data_send_count] = byteArray[i] - SPECIAL_BYTE; 
+      data_send[numBytesAfterEncoding] = SPECIAL_BYTE; 
+      numBytesAfterEncoding++;
+      data_send[numBytesAfterEncoding] = byteArray[i] - SPECIAL_BYTE; 
     }
     else{
-      data_send[data_send_count] = byteArray[i]; 
+      data_send[numBytesAfterEncoding] = byteArray[i]; 
     }
-    data_send_count++;
+    numBytesAfterEncoding++;
   } 
-  data_total_send = len; 
-  dataToPC(); 
-}
-void dataToPC() {        // !!!!!!!!!!!!!!!!!!!!!!!! this function is used only in the previous one, so we can incorporate it there. This way, the data_send_count becomes just local, and we can get rid of it from the globals, perhaps.
+  numBytesBeforeEncoding = len;
 /*
  * Sends byte array "data_send" (i.e., the actual message) to PC as: 
  *   STARTMARKER
@@ -388,10 +419,10 @@ void dataToPC() {        // !!!!!!!!!!!!!!!!!!!!!!!! this function is used only 
  *   actual message
  *   ENDMARKER
  */
-    Serial.write(STARTMARKER);
-    Serial.write(data_total_send);
-    Serial.write(data_send, data_send_count);
-    Serial.write(ENDMARKER);
+  Serial.write(STARTMARKER);
+  Serial.write(numBytesBeforeEncoding);
+  Serial.write(data_send, numBytesAfterEncoding);
+  Serial.write(ENDMARKER);
 }
 //============================
 
@@ -423,6 +454,7 @@ void updateState() {
         adc0Gain = 0;
         adc1Gain = 0;
         adcUpdateRate = AD7705_500HZ;
+        selfCalibrateAllADCs(AD7705_500HZ);
         numMeasurementsToDo = 20; // !!!!!!!!! May need to be changed later on
         currentState = STATE_AUTOGAIN;       // !!!!!!!!!!!!!!!! something wrong here! measurement_n is still zero if the PC did not yet ask for a measurement. If it did, the number of measurements requested last time are used for the auto-gain. After a bit of fiddling, I realized that this value is set with setUpAllADCs(). This means that one cannot run this (nor the next one) unless the ADC has been initialized. We need to do some checking, probably on the fact that measurement_n should be a positive number (this means that setUpAllADCs has run). If not, I'd send back an ERROR. reset() should set the number back to zero.
         break;
@@ -514,12 +546,12 @@ void setUpAllADCs(){
  *  "data_received[]". The bytes have the following meaning:          // << TODO: list what each byte is used for
  */
   if(newMessage){
-    chn = data_received[0];                            // IMPORTANT FOR selfCalibrateAllADCs
-    polar_mode = data_received[1];                     // !!!!!!!!!! Since we're not changing the polarity (it's already hard-coded into Michael's part to be bipolar) we can use this bit as the channel for the second ADC. Another good option would be to bit-encode the channel in the first byte, since we just have 2 ADCs. See my comment on WORKINPROGRESS above.
+    adc0Channel = data_received[0];
+    adc1Channel = data_received[1];
     adcUpdateRate = data_received[2]; 
     numMeasurementsToDo = data_received[3] << 8 | data_received[4];
     //maximum_gain = data_received[5]; //!!!!!!!!!! remove from Phython
-    selfCalibrateAllADCs(adcUpdateRate);                             //  !!!!!!!!!!!!!!!!!!! CHANNEL NOT SET YET !!!!!!!!!!!!!!!
+    selfCalibrateAllADCs(adcUpdateRate);
     encodeAndSend(PC_OK);
     currentState = STATE_IDLE;//Back to command mode
     newMessage = false;
@@ -559,12 +591,16 @@ void setVoltage(){
       // upper part of the range. The gain needs to be decreased, and the ADC
       // requires recalibration
       adc0Gain--;
-      AD7705selfCalibrate(CS_ADC_0, chn, adc0Gain, adcUpdateRate); // !!!!!!!!!!!!!!!!!!!!!! ALL OR ONLY ONE? MAYBE CHECK BOTH AND IF ONE NEEDS TO BE CALIBRATED WE DO BOTH
+      AD7705selfCalibrate(CS_ADC_0, adc0Channel, adc0Gain, adcUpdateRate); // !!!!!!!!!!!!!!!!!!!!!! ALL OR ONLY ONE? MAYBE CHECK BOTH AND IF ONE NEEDS TO BE CALIBRATED WE DO BOTH
+      AD7705waitForCalibration(CS_ADC_0, adc0Channel);
+      delay(1);
       adc0ShouldDecreaseGain = false; 
     }
     if(adc1ShouldDecreaseGain){
       adc1Gain--;
-      AD7705selfCalibrate(CS_ADC_1, chn, adc1Gain, adcUpdateRate); // !!!!!!!!!!!!!!!!!!!!!! ALL OR ONLY ONE? MAYBE CHECK BOTH AND IF ONE NEEDS TO BE CALIBRATED WE DO BOTH
+      AD7705selfCalibrate(CS_ADC_1, adc1Channel, adc1Gain, adcUpdateRate); // !!!!!!!!!!!!!!!!!!!!!! ALL OR ONLY ONE? MAYBE CHECK BOTH AND IF ONE NEEDS TO BE CALIBRATED WE DO BOTH
+      AD7705waitForCalibration(CS_ADC_1, adc1Channel);
+      delay(1);
       adc0ShouldDecreaseGain = false; 
     }
   }
@@ -604,6 +640,7 @@ void sendAdcValue(){  // !!!!!!!!!!! this is the only place where we need to kno
   getFloatMeasurements();
   encodeAndSend(fDataOutput[0].asBytes, 4); // !!!!!!!!!!!! need to implement way to only send demanded data
   encodeAndSend(fDataOutput[1].asBytes, 4);
+  encodeAndSend(fDataOutput[2].asBytes, 4);
   resetMeasurementData();
   currentState = STATE_IDLE;
 }
@@ -650,9 +687,6 @@ void debugToPC(byte debugbyte){
   Serial.write(debugbyte);
   Serial.write(ENDMARKER);
 }
-
-// ------- Michael's functions -------
-
 
 /** Resets the summed measurement data to 0 */
 void resetMeasurementData() {                               // !!!!!!!!!! This needs to be called whenever we are done sending measured values back to the PC
@@ -724,6 +758,7 @@ void checkMeasurementInADCRange(byte chipSelectPin, byte channel, byte gain, boo
         gain--;
         AD7705selfCalibrate(chipSelectPin, channel, gain, adcUpdateRate);
         AD7705waitForCalibration(chipSelectPin, channel);
+        delay(1);
         resetMeasurementData();
         *adcShouldDecreaseGain = false; 
       }
@@ -771,10 +806,53 @@ void selfCalibrateAllADCs(byte updateRate) {
     if (hardwareDetected & ADC_1_PRESENT)
         AD7705waitForCalibration(CS_ADC_1, adc1Channel);
     unsigned long endMillis = millis();
-#ifdef DEBUG
-    Serial.print("t_selfCal=");
-    Serial.println(endMillis - startMillis);
-#endif
+//#ifdef DEBUG
+//    Serial.print("t_selfCal=");
+//    Serial.println(endMillis - startMillis);
+//#endif
+    delay(1); //AD7705 needs about 100 us to process the self-calibration result! 1 ms is on the safe side
+}
+
+/** Stores the result of the last self calibration of both ADCs if present */
+void storeAllSelfCalibrationResults(int32_t targetArray[2][2]) {
+  for (int iADC=0; iADC<2; iADC++) {
+    bool adcPresentMask = iADC==0 ? ADC_0_PRESENT : ADC_1_PRESENT;
+    if (hardwareDetected & adcPresentMask) {
+      byte chipSelect = iADC==0 ? CS_ADC_0 : CS_ADC_1;
+      byte channel = iADC==0 ? adc0Channel : adc1Channel;
+      int32_t offs = AD7705getCalibrationRegister(chipSelect, AD7705_CH0, AD7705_REG_OFFSET);
+      int32_t gain = AD7705getCalibrationRegister(chipSelect, AD7705_CH0, AD7705_REG_GAIN);
+      targetArray[iADC][0] = offs;
+      targetArray[iADC][1] = gain;
+    }
+  }
+}
+
+/** Sets the ADC gains according to the global adc0Gain, adc1Gain variables and restores
+ *  the previously stored calibration values from the selfCalDataVsGain array.
+ *  Also triggers the ADC measurements */
+void setAllADCgainsAndCalibration() {
+  for (int iADC=0; iADC<2; iADC++) {
+    byte adcPresentMask = iADC==0 ? ADC_0_PRESENT : ADC_1_PRESENT;
+    if (hardwareDetected & adcPresentMask) {
+      byte chipSelect = iADC==0 ? CS_ADC_0 : CS_ADC_1;
+      byte channel = iADC==0 ? adc0Channel : adc1Channel;
+      byte gain = iADC==0 ? adc0Gain : adc1Gain;
+      int32_t cOffs = selfCalDataVsGain[gain][iADC][0];
+      int32_t cGain = selfCalDataVsGain[gain][iADC][1];
+      AD7705setCalibrationRegister(chipSelect, AD7705_CH0, AD7705_REG_OFFSET, cOffs);
+      AD7705setCalibrationRegister(chipSelect, AD7705_CH0, AD7705_REG_GAIN, cGain);
+//      #ifdef DEBUG
+//        Serial.print("gain=");
+//        Serial.println(gain);
+//        Serial.print(" cOffs=");
+//        Serial.print(AD7705getCalibrationRegister(chipSelect, AD7705_CH0, AD7705_REG_OFFSET));
+//        Serial.print(" cGain=");
+//        Serial.println(AD7705getCalibrationRegister(chipSelect, AD7705_CH0, AD7705_REG_GAIN));
+//      #endif
+      AD7705setGainAndTrigger(chipSelect, channel, gain);
+    }
+  }
 }
 
 /** Sets a digital output used as a chip select signal
@@ -885,11 +963,11 @@ void AD7705setGainAndTrigger(byte chipSelectPin, byte channel, byte gain) {
     //SPI.transfer16(0xffff); //reset should not be necessary
     //SPI.transfer16(0xffff);
     SPI.transfer(AD7705_REG_SETUP | channel);
-    SPI.transfer(AD7705_STATE_TRIGGER_ADCS | gain << 3);
+    SPI.transfer(AD7705_FSYNC | gain << 3);
     SPI.transfer(AD7705_REG_SETUP | channel);
     SPI.transfer(gain << 3);
     SPI.transfer(AD7705_REG_DATA | AD7705_READ_REG | channel);
-    SPI.transfer16(0x0);
+    SPI.transfer16(0xffff);
     AD7705endIO(chipSelectPin);
 }
 
@@ -907,15 +985,38 @@ void AD7705selfCalibrate(byte chipSelectPin, byte channel, byte gain, byte updat
     SPI.transfer(AD7705_REG_SETUP | channel);
     SPI.transfer(AD7705_SELFCAL | gain << 3);    //start self-calibration
     SPI.transfer(AD7705_REG_DATA | AD7705_READ_REG | channel);
-    SPI.transfer16(0x0);                       //read data register to ensure DRDY is off.
+    SPI.transfer16(0xffff);                       //read data register to ensure DRDY is off.
     AD7705endIO(chipSelectPin);
+}
+
+/** Returns the value in an AD7705 offset or gain calibration register.
+ *  'theRegister' must be AD7705_REG_OFFSET or AD7705_REG_GAIN.
+ *  This function can be called after AD7705selfCalibrate to revrieve the calibration result */
+int32_t AD7705getCalibrationRegister(byte chipSelectPin, byte channel, byte theRegister) {
+  AD7705startIO(chipSelectPin);
+  SPI.transfer(theRegister | AD7705_READ_REG | channel);
+  int32_t result = (int32_t)SPI.transfer16(0xffff) << 8; //read high 16 bits
+  result |= SPI.transfer(0xff);              //read low 8 bits
+  AD7705endIO(chipSelectPin);
+  return result;
+}
+
+/** Sets the value in an AD7705 offset or gain calibration register.
+ *  'theRegister' must be AD7705_REG_OFFSET or AD7705_REG_GAIN.
+ *  This function can be called to restore the result of a previous self-calibration */
+int32_t AD7705setCalibrationRegister(byte chipSelectPin, byte channel, byte theRegister, int32_t value) {
+  AD7705startIO(chipSelectPin);
+  SPI.transfer(theRegister | channel);
+  SPI.transfer16(value>>8);                  //write high 16 bits
+  SPI.transfer(value&0xff);                  //write low 8 bits
+  AD7705endIO(chipSelectPin);
 }
 
 /** Waits until the AD7705 with the given chip select pin has finished self-calibration */
 void AD7705waitForCalibration(byte chipSelectPin, byte channel) {
     AD7705startIO(chipSelectPin);
     do {
-        delayMicroseconds(100);
+        delayMicroseconds(10);
         SPI.transfer(AD7705_REG_SETUP | AD7705_READ_REG | channel);
     } while (SPI.transfer(0x0) & AD7705_SELFCAL);  //read setup register and check for self-calibration
     AD7705endIO(chipSelectPin);
@@ -929,7 +1030,7 @@ int16_t AD7705waitAndReadData(byte chipSelectPin, byte channel) {
     }
     AD7705startIO(chipSelectPin);
     SPI.transfer(AD7705_REG_DATA | AD7705_READ_REG | channel);
-    int result = SPI.transfer16(0x0);
+    int result = SPI.transfer16(0xffff);
     result ^= 0x8000; //flip highest bit: AD7705 output is 0 for -Vref, 0x8000 for 0, 0xffff for +Vref
     AD7705endIO(chipSelectPin);
     return result;
@@ -942,7 +1043,7 @@ byte AD7705readCommRegister(byte chipSelectPin, byte channel) {
     //SPI.transfer16(0xffff); //reset should not be necessary
     //SPI.transfer16(0xffff);
     SPI.transfer(AD7705_READ_REG | AD7705_REG_COMM | channel);
-    byte result = SPI.transfer(0x0);
+    byte result = SPI.transfer(0xff);
     AD7705endIO(chipSelectPin);
     return result;
 }
@@ -973,24 +1074,40 @@ void AD5683setVoltage(byte chipSelectPin, uint16_t dacValue) {
 
 /** Reads the Arduiono ADC for a given pin (A0...) three times and returns the median */
 uint16_t analogReadMedian(byte pin) {
-    uint16_t a0 = analogRead(pin);
-    uint16_t a1 = analogRead(pin);
-    uint16_t a2 = analogRead(pin);
-    return getMedian(a0, a1, a2);
+  uint16_t a0 = analogRead(pin);
+  uint16_t a1 = analogRead(pin);
+  uint16_t a2 = analogRead(pin);
+  return getMedian16(a0, a1, a2);
 }
 
 /** Gets the median of three numbers */
-uint16_t getMedian(uint16_t a0, uint16_t a1, uint16_t a2) {
-    uint16_t max = biggest(a0, a1, a2);
-    if (max == a0) return bigger(a1, a2);
-    if (max == a1) return bigger(a0, a2);
-    else return bigger(a0, a1);
+uint16_t getMedian16(uint16_t a0, uint16_t a1, uint16_t a2) {
+  uint16_t maximum = biggest16(a0, a1, a2);
+  if (maximum == a0) return bigger16(a1, a2);
+  if (maximum == a1) return bigger16(a0, a2);
+  else return bigger16(a0, a1);
 }
 
-uint16_t bigger(uint16_t a, uint16_t b) {
-    return (a > b) ? a : b;
+uint16_t bigger16(uint16_t a, uint16_t b) {
+  return (a > b) ? a : b;
 }
 
-uint16_t biggest(uint16_t a, uint16_t b, uint16_t c) {
-    return bigger(a, bigger(b, c));
+uint16_t biggest16(uint16_t a, uint16_t b, uint16_t c) {
+  return bigger16(a, bigger16(b,c));
+}
+
+  /** Gets the median of three numbers */
+int32_t getMedian32(int32_t a0, int32_t a1, int32_t a2) {
+  int32_t maximum = biggest32(a0, a1, a2);
+  if (maximum == a0) return bigger32(a1, a2);
+  if (maximum == a1) return bigger32(a0, a2);
+  else return bigger32(a0, a1);
+}
+
+int32_t bigger32(int32_t a, int32_t b) {
+  return (a > b) ? a : b;
+}
+
+int32_t biggest32(int32_t a, int32_t b, int32_t c) {
+  return bigger32(a, bigger32(b,c));
 }
