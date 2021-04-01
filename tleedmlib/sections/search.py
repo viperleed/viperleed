@@ -856,7 +856,7 @@ def search(sl, rp):
                             logger.warning("Error writing Search-report.pdf",
                                            exc_info=rp.LOG_DEBUG)
                     if (len(gens) > 1 and os.path.isfile("SD.TL")
-                            and (repeat or not stop)):
+                            and (repeat or checkrepeat or not stop)):
                         try:
                             processSearchResults(sl, rp, final=False)
                         except Exception as e:
