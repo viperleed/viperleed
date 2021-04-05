@@ -1,4 +1,5 @@
-"""
+"""Module gui.py of viperleed.
+
 ======================================
   ViPErLEED Graphical User Interface
 ======================================
@@ -6,8 +7,8 @@
 Author: Michele Riva
 Created: 2020-01-11
 
-This is the module that invokes the execution of the Graphical User Interface
-
+This is the module that invokes the execution of the
+Graphical User Interface
 """
 
 import sys
@@ -21,7 +22,6 @@ for import_path in (cd, vpr_path):
     if import_path not in sys.path:
         sys.path.append(import_path)
 
-# from viperleed.vprglobals import GLOBALS
 from viperleed.vprglobals import GLOBALS
 
 try:
@@ -34,14 +34,14 @@ else:
     GLOBALS['USE_GUI'] = True
 
 from viperleed import guilib as gl
-# import guilib as gl
 
 
 def is_commandline_mode():
-    """
-    Returns whether the system requires to run in command line mode (e.g.,
-    the correct modules are not installed) or if the user asked to run in
-    command line mode via the --nogui command line argument.
+    """Return whether the system requires to run in command line mode.
+
+    This is the case if, e.g., the correct modules are not installed)
+    or if the user asked to run in command line mode via the --nogui
+    command line argument.
     """
     needs_commandline = not GLOBALS['USE_GUI']
     needs_commandline |= gl.BACKEND is None
@@ -50,8 +50,8 @@ def is_commandline_mode():
 
 
 def commandline_main():
-    """
-    Body of the command-line version of the ViPErLEED Graphical User Interface.
+    """Body of the command-line version of the GUI.
+
     In this case, there is very little graphics involved.
     """
     print('Running in command line version...', flush=True, end='')
@@ -59,25 +59,37 @@ def commandline_main():
 
 
 def resources_path(dir_name):
-    """
-    This is useful when building an executable from pyinstaller. Returns the
-    correct path to dir_name. When built from pyinstaller, it takes the path
-    relative to the temporary path in which the "exe" is extracted during
-    execution.
+    """Return the correct path to dir_name.
+
+    This is useful when building an executable from pyinstaller.
+    When built from pyinstaller, it takes the path relative to the
+    temporary path in which the "exe" is extracted during execution.
+
+    Parameters
+    ----------
+    dir_name : str
+        Path relative to the one from which resources_path is called.
+
+    Returns
+    -------
+    str
+        Modified path, only if the GUI is running from a pyinstaller
+        'executable', otherwise returns dir_name unchanged.
     """
     # EVENTUALLY IT IS PROBABLY BETTER TO INCLUDE THE WHOLE /fonts FOLDER from
     # '/guilib' IN THE CORRECT PLACE, AND HAVE resources_path RETURN ITS BASE
     # PATH (i.e., the top-level folder in which the exe is) IF PYINSTALLER IS
-    # USED 
+    # USED
     if hasattr(sys, '_MEIPASS'):
         return os.path.join(sys._MEIPASS, dir_name)
     return dir_name
 
 
 def gui_main():
-    """
-    Body of the functionality that invokes the ViPErLEED Graphical User
-    Interface
+    """Body of the GUI when running with graphics capability.
+
+    Body of the functionality that invokes the ViPErLEED
+    Graphical User Interface.
     """
     gl.catch_gui_crash()
 
@@ -93,15 +105,15 @@ def gui_main():
     # * Math: family =  'CMU Serif'
     qtg.QFontDatabase.addApplicationFont(os.path.join(font_path, "cmunrm.otf"))
 
-    leedGUI = gl.LEED_GUI()
-    leedGUI.show()
-    
+    leed_gui = gl.LEED_GUI()
+    leed_gui.show()
+
     print('Done', flush=True)
-    
+
     sys.exit(app.exec_())
 
 
-if __name__ == '__main__':    
+if __name__ == '__main__':
     if is_commandline_mode():
         commandline_main()
     else:
