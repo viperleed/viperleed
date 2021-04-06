@@ -3,3 +3,4 @@
 .spyproject
 *.ini
 test.py
+*wrong*
