@@ -179,6 +179,11 @@ class LEEDCanvas(gl.MPLFigureCanvas):
         else:
             toPlot = self.leed.domsLEED
         
+        # TODO: there must be a better way. The PathCollection
+        # that underlies the scatter plot has a set_sizes(array)
+        # method that one could use to rescale the size of the
+        # points without every time throwing away stuff and rebuilding
+        # from scratch
         self.leedPat = []  # list of scatter plots
         for patt in toPlot:
             self.leedPat.append(
