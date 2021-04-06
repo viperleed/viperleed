@@ -118,8 +118,9 @@ def exec_time(func):
             unit = 'u'
         else:
             mult = 1e9
-            unti = 'n'
-        print(f"Execution time of {func.__name__}: {dt*mult:.1f} {unit}s")
+            unit = 'n'
+        fname = str(func).replace('<','').split(' at 0x')[0]
+        print(f"Execution time of {fname}: {dt*mult:.1f} {unit}s")
         return result
     return _wrapper
 
