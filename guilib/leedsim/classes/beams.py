@@ -368,8 +368,8 @@ class LEEDEquivalentBeams:
             keys : {'beams', 'group_indices',
                     'overlap_domains', 'extinct_domains'}
             values : list
-                One element per each one of the beams originally
-                passed.
+                One element per each one of the beams passed
+                at instantiation.
 
         Each element in the values is:
             'beams' : tuple or BeamIndex
