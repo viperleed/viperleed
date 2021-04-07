@@ -1,4 +1,5 @@
-"""
+"""Module viperleed.guilib.helpers.
+
 ======================================
   ViPErLEED Graphical User Interface
 ======================================
@@ -10,38 +11,49 @@ Author: Michele Riva
 This module collects helper functions used in various places in the GUI
 """
 
+import itertools
 
 import numpy as np
 
 
 def two_by_n_array_to_tuples(two_by_n, axis=None):
-    """
-    Converts a 2xN or Nx2 array into a zip object, that will return
-    tuples when iterated over
+    """Convert a 2xN or Nx2 array into a zip object.
+
+    Iterating over the return value will return tuples.
 
     Parameters
     ----------
     two_by_n : numpy.ndarray
-        Can have shape (N, 2) or (2, N). The output will always be an iterator
-        of tuples, independent of the shape of the input
+        Can have shape (N, 2) or (2, N). The output will always be
+        an iterator of tuples, independent of the shape of the input
     axis : 0, 1, or None
-        Which axis contains the 2-tuples. Use axis=0 if two_by_n[i] is the
-        i-th tuple, axis=1 if two_by_n[:, i] is the i-th tuple. If None or
-        omitted, the axis is inferred from which of the dimensions is equal
-        to two, unless both are. In that case axis is mandatory.
+        Which axis contains the 2-tuples. Use axis=0 if two_by_n[i]
+        is the i-th tuple, axis=1 if two_by_n[:, i] is the i-th tuple.
+        If None or omitted, the axis is inferred from which of the
+        dimensions is equal to two, unless both are. In that case
+        axis is mandatory.
 
     Returns
     -------
     zip-object
+
+    Raises
+    ------
+    TypeError
+        When the input is not a numpy.ndarray
+    ValueError
+        When the shape of the input is neither (2, N) nor (N, 2)
+    RuntimeError
+        When shape = (2, 2) and no axis was given
     """
     # Make sure we get an array. It would be possible to also do this with
     # other array-like objects but it's not implemented
     if not isinstance(two_by_n, np.ndarray):
         raise TypeError("Need a numpy array as input")
     if (all(length != 2 for length in two_by_n.shape)
-        or len(two_by_n.shape) != 2):
+            or len(two_by_n.shape) != 2):
         raise ValueError("Invalid shape of index array. Expected (2, N)"
-                             f" or (N, 2), found {two_by_n.shape}")
+                         f" or (N, 2), found {two_by_n.shape}")
     if axis is None:
         # determine which one is the right axis
         if two_by_n.shape[0] == 2 and two_by_n.shape[1] != 2:
@@ -60,15 +72,59 @@ def two_by_n_array_to_tuples(two_by_n, axis=None):
 
 
 def two_by_two_array_to_tuple(two_by_two):
-    """
-    Convenience function that converts a 2x2 array to a 2x2 tuple. Does no
-    type or shape checking!
+    """Convert a 2x2 array to a 2x2 tuple.
+
+    Does no type or shape checking!
+
+    Parameters
+    ----------
+    two_by_two : numpy.ndarray
+
+    Returns
+    -------
+    tuple of tuples
     """
     return tuple(map(tuple, two_by_two))
 
 
-def conventional_angles(theta, phi):
+def two_d_iterable_to_array(iterable, dtype=float, shape=None):
+    """Return a numpy.ndarray from a 2D iterable.
+
+    This function uses a faster alternative than simply using
+    np.asarray(iterable, dtype=dtype). Rough speed tests
+    suggest that this is a factor of 1.5-5.5 faster than
+    np.asarray when running on a list of tuples, and a
+    factor of 3-35 faster when running on a list of
+    gl.BeamIndex (likely similar performance on other
+    subclasses of tuple).
+
+    No explicit check is done on shapes.
+
+    Parameters
+    ----------
+    iterable : sequence
+        len(shape) == 2
+    dtype : numpy.dtype, default=float
+        Data type that will be used for the output array.
+    shape : tuple, default=None
+        If given, the return array is reshaped to shape.
+
+    Returns
+    -------
+    numpy.ndarray
     """
+    if isinstance(iterable, np.ndarray):
+        return iterable
+    arr = np.fromiter(itertools.chain.from_iterable(iterable),
+                      dtype=dtype)
+    if shape is None:
+        return arr
+    return arr.reshape(*shape)
+
+
+def conventional_angles(theta, phi):
+    """Return angles in a well defined convention.
+
     Given two angles theta and phi in degrees, returns a modified version such
     that 0 <= theta <= 180 and 0 <= phi < 360, and such that they represent
     the same vector as before
@@ -94,30 +150,40 @@ def conventional_angles(theta, phi):
 
 
 def remove_duplicates(data, return_type=None):
-    """
-    Removes duplicates from the input. The function preserves order, but works
-    with generator objects only if all the items are hashable.
+    """Remove duplicates from the input.
+
+    The function preserves order, but works with generator
+    objects only if all the items are hashable.
 
     Parameters
     ----------
     data : iterable
     return_type : callable, optional (default: same as input or tuple)
-        A callable that can instantiate an iterable, which is then returned.
-        If not given, the same type as the input is returned. It is generally
-        safer to pass return_type, as only a few cases are handled as expected.
-        Falls back on returning a tuple in case return_type would raise abs
-        TypeError. Does not work as expected for multi-dimensional numpy arrays!
+        A callable that can instantiate an iterable, which
+        is then returned.  If not given, the same type as
+        the input is returned.  It is generally safer to
+        pass return_type, as only a few cases are handled
+        as expected.  Falls back on returning a tuple in
+        case return_type would raise TypeError. Does not
+        work as expected for multi-dimensional numpy arrays!
 
     Returns
     -------
-    uniques : return_type if given, type(data) if it doesn't raise errors,
-              tuple otherwise
+    uniques : return_type if given, type(data) if it doesn't
+              raise errors, tuple otherwise
     """
+    def __return_string(elements):
+        return "".join(map(str, elements))
+
+    def __return_array(elements):
+        return np.fromiter(elements, data.dtype)
+
     # try to use an order-preserving O(1) algorithm
     try:
         ret = dict.fromkeys(data)
     except TypeError:
-        # fall back to an O(n^2) algorithm in case there are unhashable elements
+        # fall back to an O(n^2) algorithm in case there are
+        # unhashable elements
         ret = [d for i, d in enumerate(data) if d not in data[:i]]
 
     if return_type is None:
@@ -127,12 +193,12 @@ def remove_duplicates(data, return_type=None):
             return_type = type(data)
 
     if return_type is str:
-        return_type = lambda x: "".join(map(str, x))
+        return_type = __return_string
     elif return_type in (np.array, np.asarray):
-        return_type = lambda x: np.fromiter(x, data.dtype)
+        return_type = __return_array
 
     try:
-        return_type(ret)
+        ret = return_type(ret)
     except (TypeError, ValueError):
-        return_type = tuple
-    return return_type(ret)
+        ret = tuple(ret)
+    return ret
