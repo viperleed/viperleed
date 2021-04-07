@@ -23,8 +23,8 @@ def runPhaseshiftGen(sl, rp,
                      atdenssource=os.path.join('tensorleed',
                                                'atom_density_files')):
     """Creates required input for EEASiSSS.x, then runs it. Reads the output
-    files and extracts information for _PHASESHIFTS file, then returns that
-    information (without writing _PHASESHIFTS)."""
+    files and extracts information for PHASESHIFTS file, then returns that
+    information (without writing PHASESHIFTS)."""
     shortpath = rp.workdir
     if len(os.path.relpath(rp.workdir)) < len(shortpath):
         shortpath = os.path.relpath(rp.workdir)
@@ -134,7 +134,7 @@ def runPhaseshiftGen(sl, rp,
                     al.remove(at)
                     reqats -= 1
             if len(al) > 0:  # should never happen
-                logger.warning("Error in _PHASESHIFTS file "
+                logger.warning("Error in PHASESHIFTS file "
                                "generation: Not all atoms were distributed!")
         else:
             subatlists[(site, site.el)] = [at for at in nsl.atlist
@@ -185,7 +185,7 @@ def runPhaseshiftGen(sl, rp,
         elif el.lower() in ptl:
             chemel = el.capitalize()
         else:
-            logger.error("Error generating _PHASESHIFTS file: Could not "
+            logger.error("Error generating PHASESHIFTS file: Could not "
                          "identify "+el+" as a chemical element. Define "
                          "ELEMENT_RENAME or ELEMENT_MIX parameter.")
             raise

@@ -315,14 +315,14 @@ def deltas(sl, rp, subdomain=False):
     except Exception:
         logger.error("Could not read AUXBEAMS for delta-input")
         raise
-    # get _PHASESHIFTS
+    # get PHASESHIFTS
     try:
-        with open("_PHASESHIFTS", "r") as rf:
+        with open("PHASESHIFTS", "r") as rf:
             phaseshifts = rf.read()
         if phaseshifts[-1] != "\n":
             phaseshifts += "\n"
     except Exception:
-        logger.error("Could not read _PHASESHIFTS for delta-input")
+        logger.error("Could not read PHASESHIFTS for delta-input")
         raise
 
     # go through atoms, remove those that have no variation whatsoever:
@@ -502,8 +502,8 @@ def deltas(sl, rp, subdomain=False):
 # new 'PARAM' files, which are used to recompile the fortran code, and input
 # for generation of specific DELTA files. Lines starting with '#' are comments
 # on the function of the next block of data.
-# In the DELTA file blocks, [AUXBEAMS] and [_PHASESHIFTS] denote where the
-# entire contents of the AUXBEAMS and _PHASESHIFTS files should be inserted.
+# In the DELTA file blocks, [AUXBEAMS] and [PHASESHIFTS] denote where the
+# entire contents of the AUXBEAMS and PHASESHIFTS files should be inserted.
 """)
     for ct in deltaCompTasks:
         dinput += ("\n#### NEW 'PARAM' FILE: ####\n\n" + ct.param + "\n")

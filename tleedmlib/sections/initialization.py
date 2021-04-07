@@ -58,18 +58,18 @@ def initialization(sl, rp, subdomain=False):
         init_domains(rp)
         return
 
-    # check whether _PHASESHIFTS are present & consistent:
+    # check whether PHASESHIFTS are present & consistent:
     newpsGen, newpsWrite = True, True
     # True: new phaseshifts need to be generated/written
-    if os.path.isfile("_PHASESHIFTS"):
+    if os.path.isfile("PHASESHIFTS") or os.path.isfile("_PHASESHIFTS"):
         try:
             (rp.phaseshifts_firstline, rp.phaseshifts,
              newpsGen, newpsWrite) = readPHASESHIFTS(sl, rp,
                                                      ignoreEnRange=subdomain)
         except Exception:
             logger.warning(
-                "Found a _PHASESHIFTS file but could not "
-                "read it. A new _PHASESHIFTS file will be generated."
+                "Found a PHASESHIFTS file but could not "
+                "read it. A new PHASESHIFTS file will be generated."
                 "The exception during read was: ", exc_info=True)
             rp.setHaltingLevel(1)
     if newpsGen:
@@ -93,7 +93,7 @@ def initialization(sl, rp, subdomain=False):
             raise
     rp.fileLoaded["PHASESHIFTS"] = True
     rp.updateDerivedParams()
-    rp.manifest.append("_PHASESHIFTS")
+    rp.manifest.append("PHASESHIFTS")
 
     # if necessary, run findSymmetry:
     if sl.planegroup == "unknown":
@@ -284,7 +284,7 @@ def init_domains(rp):
                      "are defined. Execution will stop.")
         rp.setHaltingLevel(3)
         return
-    checkFiles = ["POSCAR", "PARAMETERS", "VIBROCC", "_PHASESHIFTS"]
+    checkFiles = ["POSCAR", "PARAMETERS", "VIBROCC", "PHASESHIFTS"]
     home = os.getcwd()
     for (name, path) in rp.DOMAINS:
         # determine the target path
@@ -325,14 +325,14 @@ def init_domains(rp):
                             shutil.copy(os.path.join(path, file),
                                         os.path.join(target, file))
                         except Exception:
-                            if file != "_PHASESHIFTS":
+                            if file != "PHASESHIFTS":
                                 logger.error(
                                     "Error copying required file {} for "
                                     "domain {} from origin folder {}"
                                     .format(file, name, path))
                                 raise RuntimeError("Error getting domain "
                                                    "input files")
-                    elif file != "_PHASESHIFTS":
+                    elif file != "PHASESHIFTS":
                         logger.error("Required file {} for domain {} not "
                                      "found in origin folder {}"
                                      .format(file, name, path))

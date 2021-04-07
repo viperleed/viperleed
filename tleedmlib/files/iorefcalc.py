@@ -19,9 +19,9 @@ logger = logging.getLogger("tleedm.files.iorefcalc")
 
 
 def collectFIN():
-    """Combines AUXLATGEO, BEAMLIST, AUXNONSTRUCT, _PHASESHIFTS, AUXBEAMS
+    """Combines AUXLATGEO, BEAMLIST, AUXNONSTRUCT, PHASESHIFTS, AUXBEAMS
     and AUXGEO into one string (input for refcalc), which it returns."""
-    filenames = ["AUXLATGEO", "BEAMLIST", "AUXNONSTRUCT", "_PHASESHIFTS",
+    filenames = ["AUXLATGEO", "BEAMLIST", "AUXNONSTRUCT", "PHASESHIFTS",
                  "AUXBEAMS", "AUXGEO"]
     fin = ""
     for fn in filenames:
@@ -307,7 +307,7 @@ def writeAUXGEO(sl, rp):
         output += '-   site type '+str(i+1)+' ---\n'
 
         for el in sl.elements:
-            # this reproduces the order of blocks contained in _PHASESHIFTS:
+            # this reproduces the order of blocks contained in PHASESHIFTS:
             if el in rp.ELEMENT_MIX:
                 chemelList = rp.ELEMENT_MIX[el]
             else:

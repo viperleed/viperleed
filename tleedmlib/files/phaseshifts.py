@@ -9,15 +9,16 @@ Functions for reading and writing the PHASESHIFTS file
 
 import logging
 import numpy as np
+import os
 
 from viperleed import fortranformat as ff
 
 logger = logging.getLogger("tleedm.files.phaseshifts")
 
 
-def readPHASESHIFTS(sl, rp, readfile='_PHASESHIFTS', check=True,
+def readPHASESHIFTS(sl, rp, readfile='PHASESHIFTS', check=True,
                     ignoreEnRange=False):
-    """Reads from a _PHASESHIFTS file, returns the data as a list of tuples
+    """Reads from a PHASESHIFTS file, returns the data as a list of tuples
     (E, enps), where enps is a list of lists, containing one list of values
     (for different L) for each element. Therefore, len(phaseshifts) is the
     number of energies found, len(phaseshifts[0][1]) should match the number
@@ -29,10 +30,17 @@ def readPHASESHIFTS(sl, rp, readfile='_PHASESHIFTS', check=True,
     rf74x10 = ff.FortranRecordReader('10F7.4')
     ri3 = ff.FortranRecordReader('I3')
 
+    # legacy - allow "_PHASESHIFTS"
+    if (readfile == 'PHASESHIFTS' and not os.path.isfile('PHASESHIFTS')
+            and os.path.isfile('_PHASESHIFTS')):
+        logger.info("Found no PHASESHIFTS file, but found legacy file named "
+                    "_PHASESHIFTS. Renaming _PHASESHIFTS to PHASESHIFTS.")
+        os.rename('_PHASESHIFTS', 'PHASESHIFTS')
+
     try:
         rf = open(readfile, 'r')
     except FileNotFoundError:
-        logger.error("_PHASESHIFTS file not found.")
+        logger.error("PHASESHIFTS file not found.")
         raise
 
     filelines = []
@@ -43,7 +51,7 @@ def readPHASESHIFTS(sl, rp, readfile='_PHASESHIFTS', check=True,
     try:
         nel = ri3.read(filelines[0])[0]
     except Exception:
-        logger.error("Exception while trying to read _PHASESHIFTS: could not "
+        logger.error("Exception while trying to read PHASESHIFTS: could not "
                      "find number of blocks in first line.")
         raise
     phaseshifts = []
@@ -90,9 +98,9 @@ def readPHASESHIFTS(sl, rp, readfile='_PHASESHIFTS', check=True,
             linesperblock = int((lineit-1)/nel)
             if not linesperblock or (((lineit-1)/nel) - linesperblock != 0.0):
                 logger.warning(
-                    "Error while trying to read _PHASESHIFTS: "
+                    "Error while trying to read PHASESHIFTS: "
                     "Could not parse file: The number of blocks may not match "
-                    "the number given in the first line. A new _PHASESHIFTS "
+                    "the number given in the first line. A new PHASESHIFTS "
                     "file will be generated.")
                 rp.setHaltingLevel(1)
                 return ("", [], True, True)
@@ -124,18 +132,18 @@ def readPHASESHIFTS(sl, rp, readfile='_PHASESHIFTS', check=True,
             muftin = False
         if rp.V0_REAL == "default" and not muftin:
             logger.warning(
-                "Could not convert first line of _PHASESHIFTS file to MUFTIN "
-                "parameters. A new _PHASESHIFTS file will be generated.")
+                "Could not convert first line of PHASESHIFTS file to MUFTIN "
+                "parameters. A new PHASESHIFTS file will be generated.")
             rp.setHaltingLevel(1)
         elif len(phaseshifts[0][1]) == psblocks:
-            logger.debug("Found "+str(psblocks)+" blocks in _PHASESHIFTS "
+            logger.debug("Found "+str(psblocks)+" blocks in PHASESHIFTS "
                          "file, which is consistent with PARAMETERS.")
             newpsGen, newpsWrite = False, False
         elif len(phaseshifts[0][1]) == len(sl.chemelem):
             logger.warning(
                 "Found fewer blocks than expected in the "
-                "_PHASESHIFTS file. However, the number of blocks matches "
-                "the number of chemical elements. A new _PHASESHIFTS file "
+                "PHASESHIFTS file. However, the number of blocks matches "
+                "the number of chemical elements. A new PHASESHIFTS file "
                 "will be generated, assuming that each block in the old "
                 "file should be used for all atoms of one element.")
             rp.setHaltingLevel(1)
@@ -159,8 +167,8 @@ def readPHASESHIFTS(sl, rp, readfile='_PHASESHIFTS', check=True,
             firstline = str(len(phaseshifts[0][1])).rjust(3) + firstline[3:]
         else:
             logger.warning(
-                "_PHASESHIFTS file was read but is inconsistent with "
-                "PARAMETERS. A new _PHASESHIFTS file will be generated.")
+                "PHASESHIFTS file was read but is inconsistent with "
+                "PARAMETERS. A new PHASESHIFTS file will be generated.")
             rp.setHaltingLevel(1)
 
     if check and not ignoreEnRange:
@@ -198,30 +206,30 @@ def readPHASESHIFTS(sl, rp, readfile='_PHASESHIFTS', check=True,
                     #  V0r as calculated by EEASiSSS differs from 'real' V0r.
                     #  Don't automatically correct.
                     logger.warning(
-                        "Lowest value in _PHASESHIFTS file ({:.1f} "
+                        "Lowest value in PHASESHIFTS file ({:.1f} "
                         "eV) is larger than the lowest predicted scattering "
                         "energy ({:.1f} eV). If this causes problems in the "
-                        "reference calculation, try deleting the _PHASESHIFTS "
+                        "reference calculation, try deleting the PHASESHIFTS "
                         "file to generate a new one, or increase the starting "
                         "energy in the THEO_ENERGIES parameter."
                         .format(psmin, min(er_inner)))
                 else:
                     logger.warning(
-                        "The energy range found in the _PHASESHIFTS"
+                        "The energy range found in the PHASESHIFTS"
                         " file is smaller than the energy range requested for "
-                        "theoretical beams. A new _PHASESHIFTS file will be "
+                        "theoretical beams. A new PHASESHIFTS file will be "
                         "generated.")
                     newpsGen, newpsWrite = True, True
         else:
             logger.warning(
-                "Could not check energy range in _PHASESHIFTS "
+                "Could not check energy range in PHASESHIFTS "
                 "file. If energy range is insufficient, try deleting the "
-                "_PHASESHIFTS file to generate a new one.")
+                "PHASESHIFTS file to generate a new one.")
     return (firstline, phaseshifts, newpsGen, newpsWrite)
 
 
-def writePHASESHIFTS(firstline, phaseshifts, filename='_PHASESHIFTS'):
-    """Takes phaseshift data and writes it to a _PHASESHIFTS file."""
+def writePHASESHIFTS(firstline, phaseshifts, filename='PHASESHIFTS'):
+    """Takes phaseshift data and writes it to a PHASESHIFTS file."""
     output = firstline
     if output[-1] != "\n":
         output += "\n"
@@ -236,7 +244,7 @@ def writePHASESHIFTS(firstline, phaseshifts, filename='_PHASESHIFTS'):
             wf.write(output)
         logger.debug("Wrote to "+filename+" successfully.")
     except Exception:
-        logger.error("Exception while writing _PHASESHIFTS file: ",
+        logger.error("Exception while writing PHASESHIFTS file: ",
                      exc_info=True)
         raise
     return

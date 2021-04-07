@@ -159,7 +159,7 @@ class Rparams:
         self.T_EXPERIMENT = None
         self.T_DEBYE = None
         self.V0_IMAG = 4.5               # !!! CHOOSE BETTER DEFAULT?
-        self.V0_REAL = "default"   # 'default' will read from _PHASESHIFTS
+        self.V0_REAL = "default"   # 'default' will read from PHASESHIFTS
         self.V0_Z_ONSET = 1.0
         self.VIBR_AMP_SCALE = []   # read as list of strings, interpret later
 
@@ -339,7 +339,7 @@ class Rparams:
                         c.append(float(llist[i + 1]))
                 except ValueError:
                     logger.error("Could not read Muftin parameters from "
-                                 "_PHASESHIFTS file.")
+                                 "PHASESHIFTS file.")
                     raise
                 self.V0_REAL = ("workfn-max({:.2f}, (({:.2f})+({:.2f})/sqrt("
                                 "EEV+workfn+({:.2f}))))".format(*c))

@@ -194,7 +194,7 @@ def refcalc(sl, rp, subdomain=False):
         logger.error("Error moving Tensor files: ")
         raise
     tInputFiles = ["POSCAR", "PARAMETERS", "VIBROCC", "IVBEAMS",
-                   "_PHASESHIFTS"]
+                   "PHASESHIFTS"]
     for f in [f for f in tInputFiles if f in os.listdir('.')]:
         of = f
         for fn in ["POSCAR", "VIBROCC"]:

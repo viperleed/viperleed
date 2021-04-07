@@ -217,12 +217,12 @@ def runSection(index, sl, rp):
                      newpsGen, newpsWrite) = readPHASESHIFTS(sl, rp)
                     if newpsGen:
                         logger.error(
-                            "_PHASESHIFT file generation is only supported "
+                            "PHASESHIFTS file generation is only supported "
                             "during initialization. Stopping execution...")
                         raise RuntimeError("Inconsistent _PHASESHIFT file")
                     elif newpsWrite:
                         logger.warning(
-                            "Writing a new _PHASESHIFT file is "
+                            "Writing a new PHASESHIFTS file is "
                             "only supported during initialization. The "
                             "data in the provided file will be used, but "
                             "running the initialization is recommended.")
@@ -231,8 +231,8 @@ def runSection(index, sl, rp):
                         rp.fileLoaded["PHASESHIFTS"] = True
                 except Exception as e:
                     logger.error("Error while reading required file "
-                                 "_PHASESHIFTS", exc_info=(type(e) !=
-                                                           FileNotFoundError))
+                                 "PHASESHIFTS", exc_info=(type(e) !=
+                                                          FileNotFoundError))
             elif filename == "DISPLACEMENTS":
                 try:
                     readDISPLACEMENTS(rp)

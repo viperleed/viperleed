@@ -4,7 +4,7 @@ Created on Wed Dec 16 17:45 2019
 
 @author: Florian Kraushofer
 
-Reads a _PHASESHIFTS file and allows the user to copy and rearrange the blocks.
+Reads a PHASESHIFTS file and allows the user to copy and rearrange the blocks.
 """
 
 import time
@@ -18,18 +18,18 @@ from tleedmlib.files.phaseshifts import readPHASESHIFTS, writePHASESHIFTS
 
 def main():
     # print some info
-    print("This utility reads a phaseshifts file (eg _PHASESHIFTS) and allows "
+    print("This utility reads a phaseshifts file (eg PHASESHIFTS) and allows "
           "the user to copy and rearrange the blocks, such that they fit the "
           "order of elements in POSCAR and the order of sites as defined by "
           "ELSPLIT and SITEDEF in the PARAMETERS file. "
           "Check the documentation for further information on how to arrange "
-          "blocks in the _PHASESHIFTS file.\n")
+          "blocks in the PHASESHIFTS file.\n")
 
     # read the phaseshifts file
     try:
         (firstline, ps, _, _) = readPHASESHIFTS(None, None, check=False)
     except FileNotFoundError:
-        print("_PHASESHIFTS file not found.")
+        print("PHASESHIFTS file not found.")
         filename = ""
         while filename == "":
             filename = input("Enter phaseshift file name: ")
@@ -107,7 +107,7 @@ def main():
     # write new file
     try:
         timestamp = time.strftime("%y%m%d-%H%M%S", time.localtime())
-        fn = "_PHASESHIFTS_mod_"+timestamp
+        fn = "PHASESHIFTS_mod_"+timestamp
         writePHASESHIFTS(firstline, ps, filename=fn)
         print("Wrote new phaseshifts file as "+fn)
     except Exception:
