@@ -419,7 +419,7 @@ def project_to_first_domain(beam_list, leed_parameters, *other_leed_parameters,
     all_groups = group_beams(
         get_equivalent_beams(leed_parameters, domains=domains)
         )
-    for group, beams in all_groups.items():
+    for beams in all_groups.values():
         n = len(beams)
         n_ineq = sum(beam in beams for beam in inequivalent)
         if n_ineq == 0:
@@ -471,7 +471,7 @@ def check_type(value, typ):
     return is_type
 
 
-def check_leed_params(leed_parameters):
+def check_leed_params(leed_parameters):                                         # TODO: remove: Check is done with LEEDParameters
     """
     Check if all parameters in the leed_parameters dictionary are acceptable
     """
@@ -525,7 +525,7 @@ def check_leed_params(leed_parameters):
     return True
 
 
-def check_multi_leed_params(leed_parameters):
+def check_multi_leed_params(leed_parameters):                                   # TODO: remove. Checks can be done with LEEDParametersList
     """
     Checks consistency of the LEED parameters passed as a list of dictionaries,
     and returns a consistent version. The returned version has the same eMax and
@@ -801,49 +801,60 @@ def screen_radius(energy, aperture):                                          # 
 class BeamIndex(tuple):
     """
     Convenience class to store a 2-element tuple that represents a Miller index
-    for a LEED beam. Each index is a Fraction.
+    for a LEED beam. Each index is a Fraction. Since instantiation is a bit
+    slow, they are cached. Not sure yet how much impact this has on memory.
+    Right now caching is pretty simple, just looking at the hash value of
+    a tuple a subset of the inputs.
     """
-    separators = (',', '|')
+    separators = ',|'
+    __cache = {}
 
     def __new__(cls, *indices, denominator=1, from_numerators=False):
         """
         Parameters
         ----------
-        indices : str, or iterable of str or number
+        indices : str, iterable of str, or iterable of numbers
             indices of the beam. Can be passed as a single argument or as two
             arguments.
             When a single argument, it should be either a string of the form
             'idx1, idx' or 'idx1 | idx2' (spaces don't count), or a 2-element
             iterable with indices.
-            When two arguments, both should be either a string or a number,
-            i.e., mixed input of the form ('idx1', idx2) is not processed
-            correctly
         denominator : int (default=1)
             this is used for speeding up instantiation when indices are given
             as numbers rather than strings, and it is not used at all for string
-            inputs. It should be the largest common denominator between the
-            indices.
+            inputs, nor for those indices that are given as Fraction.
+            It should be the largest common denominator between the
+            indices. This is mandatory when passing true floating-point indices.
         from_numerators : bool (default=False)
             Use True when passing only the numerators as indices. The
             denominator is taken from the denominator optional parameter. When
             passing numerators only, it is most efficient to give the indices
             as ints rather than floats
         """
-        if not isinstance(denominator, int):
-            raise TypeError("BeamIndex: denominator must be an int")
+        # if not isinstance(denominator, int):
+            # raise TypeError("BeamIndex: denominator must be an int")
         indices = cls.__process_indices(indices)
-        if isinstance(indices[0], str):
-            beam_indices = [Fraction(index) for index in indices]
-        else:
-            if from_numerators:
-                # the indices passed are already the numerators
-                numerators = indices
-            else:
-                # the indices passed are fractional, get the numerators
-                numerators = (round(indices[0]*denominator),
-                              round(indices[1]*denominator))
-            beam_indices = [Fraction(num, denominator) for num in numerators]
-        return super().__new__(cls, beam_indices)
+
+        input_hash = hash((*indices, denominator))
+        if input_hash in cls.__cache:
+            return cls.__cache[input_hash]
+
+        instance = (cls.__index_to_fraction(
+                        indices[0], denominator=denominator,
+                        from_numerator=from_numerators
+                        ),
+                    cls.__index_to_fraction(
+                        indices[1], denominator=denominator,
+                        from_numerator=from_numerators
+                        ))
+        instance = super().__new__(cls, instance)
+        cls.__cache[input_hash] = instance
+        return instance
+
+    @staticmethod
+    def clear_cache():
+        """Fully clear cache. Use only if memory usage becomes an issue."""
+        BeamIndex.__cache = {}
 
     @staticmethod
     def __process_indices(indices):
@@ -852,42 +863,98 @@ class BeamIndex(tuple):
 
         Returns
         -------
-        indices : iterable, 2 elements
+        indices : tuple, 2 elements
 
         Raises
         ------
         TypeError
         ValueError
         """
-        if len(indices) > 2:
-            raise ValueError("BeamIndex accepts at most two indices, "
-                             f"{len(indices)} given instead.")
-        if len(indices) == 1:
-            temp = indices[0]
-            if isinstance(temp, str):
-                for separator in BeamIndex.separators:
-                    indices = temp.split(separator)
-                    if len(indices) == 2:
-                        # found an acceptable separator
-                        break
-            else:
-                if not hasattr(temp, '__len__'):
-                    raise TypeError("BeamIndex: when one argument given, "
-                                    "it should be a string or a 2-element "
-                                    "array-like.")
-                indices = temp
-        if len(indices) != 2:
+        n_indices = len(indices)
+        
+        if n_indices == 1:
+            indices = indices[0]
+            if isinstance(indices, str):
+                indices = BeamIndex.__indices_from_string(indices)
+            try:
+                n_indices = len(indices)
+            except TypeError as err:
+                raise TypeError("BeamIndex: when one argument given, "
+                                "it should be a string or a 2-element "
+                                "array-like.") from err
+
+        if n_indices != 2:
             raise ValueError("BeamIndex: too many/few indices. "
                              "Exactly 2 indices should be given. "
-                             f"Found {len(indices)} instead.")
-        return indices
+                             f"Found {n_indices} instead.")
+        return tuple(indices)
+    
+    @staticmethod
+    def __indices_from_string(str_indices):
+        """
+        """
+        for separator in BeamIndex.separators:
+            indices = str_indices.split(separator)
+            if len(indices) == 2:
+                # found an acceptable separator
+                return (Fraction(indices[0]), Fraction(indices[1]))
+        raise ValueError("BeamIndex: too many/few indices in "
+                         f"{str_indices!r}, or incorrect "
+                         "separator (acceptable: ',', '|').")
+
+    @staticmethod
+    def __index_to_fraction(index, denominator=1, from_numerator=False):
+        # if isinstance(index, Fraction):
+            # return index
+        try:
+            index.limit_denominator  # attribute of Fraction only
+        except AttributeError:
+            pass
+        else:
+            return index
+
+        if from_numerator:
+            try:
+                int_numerator = int(index)
+            except TypeError as err:
+                raise TypeError("BeamIndex: when using from_numerators, "
+                                "the indices should be integers.") from err
+        else:
+            # The index passed is fractional, get the numerator
+            float_numerator = index*denominator
+            int_numerator = round(float_numerator)
+            if abs(int_numerator - float_numerator) > 1e-6:
+                raise ValueError(f"Fractional index {index} is not consistent "
+                                 f"with denominator {denominator}.")
+        return Fraction(int_numerator, denominator)
 
     def __str__(self):
         return f"{', '.join(str(index) for index in self)}"
 
     def __repr__(self):
         return f"BeamIndex({', '.join(str(index) for index in self)})"
+
+    def __mul__(self, factor):
+        """Override tuple.__mul__().
+        
+        Make it such that self*number = (self[0]*number, self[1]*number)
+        """
+        if isinstance(factor, (int, Fraction)):
+            return BeamIndex(self[0]*factor, self[1]*factor)
+        raise NotImplementedError("* undefined between BeamIndex and "
+                                  f"{type(factor).__name__}")
     
+    def __rmul__(self, factor):
+        return self.__mul__(factor, self)
+
+    def __imul__(self, factor):
+        if isinstance(factor, (int, Fraction)):
+            self[0] *= factor
+            self[1] *= factor
+            return
+        raise NotImplementedError("* undefined between BeamIndex and "
+                                  f"{type(factor).__name__}")
+
     def __format__(self, format_specs):
         """
         Customized formatting of BeamIndex. format_specs is a standard format
@@ -1280,7 +1347,7 @@ class PlaneGroup():
         #     the operations method below
         if input is None:
             self.__ops_3d = tuple()
-            return None
+            return
         if isinstance(input, (tuple, list, np.array)):
             if len(input) > 2 or len(input) == 0:
                 raise ValueError("PlaneGroup.screws_glides: requires at most "
@@ -1296,7 +1363,7 @@ class PlaneGroup():
         
         if input is None:
             self.__ops_3d = tuple()
-            return None
+            return
 
         if not isinstance(input, (str, np.ndarray, tuple, list)):
             raise ValueError("PlaneGroup.screws_glides: Invalid input. "
@@ -1306,7 +1373,7 @@ class PlaneGroup():
         if isinstance(input, str):
             if input.lower() == "none":
                 self.__ops_3d = tuple()
-                return None
+                return
 
             ops = []  # this will contain the 2x2 tuples of the new operations
 
@@ -1360,12 +1427,12 @@ class PlaneGroup():
         # Otherwise, the input is an array-like, which should correspond to a
         # 1D list of 2x2 matrices with integer values
 
-        if len(np.shape(input)) != 3 or np.shape(input)[1,2] != (2, 2):
+        if len(np.shape(input)) != 3 or np.shape(input)[1, 2] != (2, 2):
             raise ValueError("PlaneGroup.screws_glides: an array-like input "
                              "should be a 1D 'list' of 2x2 'matrices'. Found "
                              f"incompatible shape {np.shape(input)}.")
 
-        if any(np.abs(mij%1) > 1e-4 for mij in np.flatten(input)):
+        if any(np.abs(mij % 1) > 1e-4 for mij in np.flatten(input)):
             raise ValueError("PlaneGroup.screws_glides: an array-like input "
                              "should contain only integer-valued matrices")
 
