@@ -1,4 +1,5 @@
-"""
+"""Module viperleed.guilib.
+
 ======================================
   ViPErLEED Graphical User Interface
 ======================================
@@ -6,7 +7,6 @@
 
 Created: 2020-01-10
 Author: Michele Riva
-       
 """
 
 import os
@@ -19,6 +19,7 @@ from viperleed.guilib.decorators import profile_calls, exec_time, profile_lines
 from viperleed.guilib.helpers import (conventional_angles,
                                       two_by_n_array_to_tuples,
                                       two_by_two_array_to_tuple,
+                                      two_d_iterable_to_array,
                                       remove_duplicates)
 from viperleed.guilib.base import (get_equivalent_beams,
                                    project_to_first_domain, check_type,
@@ -52,5 +53,12 @@ else:
 from viperleed.guilib.leedsim.exportcsv import export_pattern_csv
 from viperleed.guilib.leedsim.leedparameters import LEEDParameters
 from viperleed.guilib.leedsim.leedparameters import LEEDParametersList
+
+# Perhaps better to have the * import from up there moved down here, as
+# leedsim already takes care of selecting only Qt-independent classes
+# when there is no X-server by looking at GLOBALS['USE_GUI']
+# I would then move also the * import of measure, making sure it also
+# cares about the __all__ correctly
 from viperleed.guilib.leedsim.classes import (LEEDPattern, LEEDSymmetryDomains,
-                                              LEEDEquivalentBeams,)
+                                              LEEDEquivalentBeams,
+                                              LEEDStructuralDomains)
