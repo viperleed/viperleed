@@ -191,7 +191,7 @@ class Rparams:
         self.pseudoSlab = None
 
         # data from files
-        self.beamlist = []  # lines as strings from _BEAMLIST
+        self.beamlist = []  # lines as strings from BEAMLIST
         self.ivbeams = []   # uses Beam class; list of beams only
         self.expbeams = []  # uses Beam class; contains intensities
         self.theobeams = {"refcalc": [], "superpos": None}

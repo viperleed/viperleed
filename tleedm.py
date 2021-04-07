@@ -40,7 +40,7 @@ from viperleed.tleedmlib.files.displacements import readDISPLACEMENTS
 logger = logging.getLogger("tleedm")
 starttime = 0.0
 
-auxfiles = ["AUXBEAMS", "AUXGEO", "AUXLATGEO", "AUXNONSTRUCT",
+auxfiles = ["AUXBEAMS", "AUXGEO", "AUXLATGEO", "AUXNONSTRUCT", "BEAMLIST",
             "POSCAR_oricell", "POSCAR_bulk", "muftin.f",
             "refcalc-PARAM", "refcalc-FIN", "rfactor-WEXPEL",
             "rfactor-PARAM", "delta-input", "search.steu",
@@ -185,8 +185,8 @@ def runSection(index, sl, rp):
                     rp.fileLoaded["BEAMLIST"] = True
                 except Exception as e:
                     logger.error("Error while reading required file "
-                                 "_BEAMLIST", exc_info=(type(e) !=
-                                                        FileNotFoundError))
+                                 "BEAMLIST", exc_info=(type(e) !=
+                                                       FileNotFoundError))
             elif filename == "VIBROCC":
                 changeVIBROCC = False
                 try:

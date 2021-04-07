@@ -220,7 +220,7 @@ def initialization(sl, rp, subdomain=False):
         logger.warning("Exception occurred while writing POSCAR_bulk_appended")
 
     # generate beamlist
-    logger.info("Generating _BEAMLIST...")
+    logger.info("Generating BEAMLIST...")
     try:
         bgenpath = os.path.join('tensorleed', 'beamgen3.out')
         runBeamGen(sl, rp, beamgensource=bgenpath)
@@ -228,12 +228,11 @@ def initialization(sl, rp, subdomain=False):
     except Exception:
         logger.error("Exception occurred while calling beamgen.")
         raise
-    rp.manifest.append("_BEAMLIST")
     try:
         rp.beamlist = readBEAMLIST()
         rp.fileLoaded["BEAMLIST"] = True
     except Exception:
-        logger.error("Error while reading required file _BEAMLIST")
+        logger.error("Error while reading required file BEAMLIST")
         raise
 
     if not subdomain:
@@ -511,7 +510,7 @@ def init_domains(rp):
     rp.pseudoSlab.bulkslab = tl.Slab()
     rp.pseudoSlab.bulkslab.ucell = copy.copy(largestDomain.sl.bulkslab.ucell)
     # run beamgen for the whole system
-    logger.info("Generating _BEAMLIST...")
+    logger.info("Generating BEAMLIST...")
     try:
         bgenpath = os.path.join('tensorleed', 'beamgen3.out')
         runBeamGen(rp.pseudoSlab, rp, beamgensource=bgenpath, domains=True)
@@ -519,12 +518,11 @@ def init_domains(rp):
     except Exception:
         logger.error("Exception occurred while calling beamgen.")
         raise
-    rp.manifest.append("_BEAMLIST")
     try:
         rp.beamlist = readBEAMLIST()
         rp.fileLoaded["BEAMLIST"] = True
     except Exception:
-        logger.error("Error while reading required file _BEAMLIST")
+        logger.error("Error while reading required file BEAMLIST")
         raise
     # if EXPBEAMS was loaded, it hasn't been checked yet - check now
     if rp.fileLoaded["EXPBEAMS"]:

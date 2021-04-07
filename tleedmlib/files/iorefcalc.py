@@ -19,9 +19,9 @@ logger = logging.getLogger("tleedm.files.iorefcalc")
 
 
 def collectFIN():
-    """Combines AUXLATGEO, _BEAMLIST, AUXNONSTRUCT, _PHASESHIFTS, AUXBEAMS
+    """Combines AUXLATGEO, BEAMLIST, AUXNONSTRUCT, _PHASESHIFTS, AUXBEAMS
     and AUXGEO into one string (input for refcalc), which it returns."""
-    filenames = ["AUXLATGEO", "_BEAMLIST", "AUXNONSTRUCT", "_PHASESHIFTS",
+    filenames = ["AUXLATGEO", "BEAMLIST", "AUXNONSTRUCT", "_PHASESHIFTS",
                  "AUXBEAMS", "AUXGEO"]
     fin = ""
     for fn in filenames:

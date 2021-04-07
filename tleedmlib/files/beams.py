@@ -41,16 +41,16 @@ def averageBeams(beams, weights=None):
     return avbeams
 
 
-def readBEAMLIST(filename="_BEAMLIST"):
-    """Reads the _BEAMLIST file and returns the contents as a list of the
+def readBEAMLIST(filename="BEAMLIST"):
+    """Reads the BEAMLIST file and returns the contents as a list of the
     lines as strings."""
     beamlist = []
     try:
         with open(filename, "r") as rf:
             beamlist = rf.readlines()
-        logger.debug("_BEAMLIST file was read successfully")
+        logger.debug("BEAMLIST file was read successfully")
     except Exception:
-        logger.error("Error opening _BEAMLIST file.")
+        logger.error("Error opening BEAMLIST file.")
         raise
     return beamlist
 
@@ -114,16 +114,16 @@ def readIVBEAMS(filename='IVBEAMS'):
 
 def sortIVBEAMS(sl, rp):
     """Sorts the beams in IVBEAMS such that they appear in the same order as
-    in the _BEAMLIST. Returns the sorted list."""
+    in the BEAMLIST. Returns the sorted list."""
     # read BEAMLIST
     if rp.beamlist == []:
         logger.warning("sortIVBEAMS routine: no beamlist passed, "
-                       "attempting to read _BEAMLIST directly.")
+                       "attempting to read BEAMLIST directly.")
         try:
-            with open('_BEAMLIST', 'r') as rf:
+            with open('BEAMLIST', 'r') as rf:
                 rp.beamlist = rf.readlines()
         except FileNotFoundError:
-            logger.error("_BEAMLIST not found.")
+            logger.error("BEAMLIST not found.")
             raise
     err = 1e-3          # since beams are saved as floats, give error tolerance
     symeq = tl.leedbase.getSymEqBeams(sl, rp)
@@ -173,7 +173,7 @@ def sortIVBEAMS(sl, rp):
         if not found:
             logger.warning(
                 'IVBEAMS contains beam ' + ib.label + ', which '
-                'was not found in the _BEAMLIST file. Beam will be dropped.')
+                'was not found in the BEAMLIST file. Beam will be dropped.')
     # now sort
     ivsorted = []
     for lb in blfs:
@@ -447,16 +447,16 @@ def writeOUTBEAMS(beams, filename="THEOBEAMS.csv", sep="; "):
 
 
 def writeAUXBEAMS(ivbeams=None, beamlist=None, beamsfile='IVBEAMS',
-                  readfile='_BEAMLIST', writefile='AUXBEAMS', write=True):
-    """"Reads from a _BEAMLIST file (full list of beams for calculation),
+                  readfile='BEAMLIST', writefile='AUXBEAMS', write=True):
+    """"Reads from a BEAMLIST file (full list of beams for calculation),
     finds the beams listed in IVBEAMS (if not passed as a list 'beams', will
     attempt to call readIVBEAMS directly) and copies the corresponding lines
-    to AUXBEAMS. Returns a list of the corresponding beam numbers in _BEAMLIST.
+    to AUXBEAMS. Returns a list of the corresponding beam numbers in BEAMLIST.
     """
-    if not readfile == "_BEAMLIST":
+    if not readfile == "BEAMLIST":
         blstr = "Beam list (filename "+readfile+")"
     else:
-        blstr = "_BEAMLIST"
+        blstr = "BEAMLIST"
 
     if ivbeams is None:         # if 'ivbeams' is empty, try to fill it
         ivbeams = readIVBEAMS(beamsfile)
@@ -467,7 +467,7 @@ def writeAUXBEAMS(ivbeams=None, beamlist=None, beamsfile='IVBEAMS',
     # read BEAMLIST
     if beamlist is None:
         logger.warning("writeAUXBEAMS routine: no beamlist passed, "
-                       "attempting to read _BEAMLIST directly.")
+                       "attempting to read BEAMLIST directly.")
         try:
             beamlist = readBEAMLIST(readfile)
         except Exception:
@@ -559,9 +559,9 @@ def writeFdOut(beams, beamlist=None, filename="refcalc-fd.out",
     # read BEAMLIST
     if beamlist is None:
         logger.warning("writeFdOut: no beamlist passed, attempting to read "
-                       "_BEAMLIST directly.")
+                       "BEAMLIST directly.")
         try:
-            beamlist = readBEAMLIST("_BEAMLIST")
+            beamlist = readBEAMLIST("BEAMLIST")
         except Exception:
             logger.error("Error getting beamlist: file not found.")
             raise
@@ -576,8 +576,8 @@ def writeFdOut(beams, beamlist=None, filename="refcalc-fd.out",
                 break
         else:
             logger.error("writeFdOut: passed beams contain beam {}, which "
-                         "was not found in _BEAMLIST.".format(b.label))
-            raise ValueError("writeFdOut: beam {} is not in _BEAMLIST."
+                         "was not found in BEAMLIST.".format(b.label))
+            raise ValueError("writeFdOut: beam {} is not in BEAMLIST."
                              .format(b.label))
         energies.update(b.intens.keys())
     for en in sorted(list(energies)):
