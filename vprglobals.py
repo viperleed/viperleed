@@ -11,4 +11,4 @@ This module contains global variables
 """
 
 GLOBALS = {'USE_GUI': None,
-           'version': '0.2.1', }
+           'version': '0.3.0', }
