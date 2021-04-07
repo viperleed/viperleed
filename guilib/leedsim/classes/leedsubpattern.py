@@ -203,7 +203,9 @@ class CachedLEEDSubpatternConstructor:
         if not leed.domains.fractional:
             scale = 1/leed.domains[0].denominator_for_bulk_beams
         for k, beams in subpattern_beams.items():
-            beams = scale*gl.two_d_iterable_to_array(beams, dtype=float)
+            beams = scale*gl.two_d_iterable_to_array(beams,
+                                                     dtype=float,
+                                                     shape=(-1, 2))
             subpattern_beams[k] = np.einsum('ij,jk->ik',
                                             beams, leed.bulk.basis)
 
