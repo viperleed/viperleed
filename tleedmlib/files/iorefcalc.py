@@ -410,24 +410,6 @@ def writeAUXGEO(sl, rp):
     output += ('  0                       TSLAB = 0: compute bulk using layer '
                'doubling\n')
 
-    if rp.BULK_REPEAT is None:
-        # assume that interlayer vector from bottom non-bulk to top bulk layer
-        #   is the same as between bulk units
-        # save BULK_REPEAT value for later runs, in case atom above moves
-        if rp.N_BULK_LAYERS == 2:
-            rp.BULK_REPEAT = (blayers[1].cartbotz
-                              - sl.layers[blayers[0].num-1].cartbotz)
-        else:
-            rp.BULK_REPEAT = (blayers[0].cartbotz
-                              - sl.layers[blayers[0].num-1].cartbotz)
-        modifyPARAMETERS(rp, "BULK_REPEAT", "{:.4f}".format(rp.BULK_REPEAT),
-                         comment="Keeps bulk spacing constant during search")
-        logger.warning(
-            "The BULK_REPEAT parameter was undefined, which may lead to "
-            "unintended changes in the bulk unit cell during optimization if "
-            "the lowest non-bulk atom moves.\n# The BULK_REPEAT value "
-            "determined from the POSCAR was written to the PARAMETERS file.")
-
     if type(rp.BULK_REPEAT) == np.ndarray:
         bulkc = np.copy(rp.BULK_REPEAT) * np.array([1, 1, -1])
         if bulkc[2] < 0:

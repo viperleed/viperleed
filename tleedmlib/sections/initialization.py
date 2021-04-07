@@ -174,6 +174,41 @@ def initialization(sl, rp, subdomain=False):
         sl.bulkslab = sl.makeBulkSlab(rp)
     bsl = sl.bulkslab
 
+    # try identifying bulk repeat:
+    if rp.BULK_REPEAT is None:
+        rvec = sl.getBulkRepeat(rp)
+        if rvec is not None:
+            rp.BULK_REPEAT = rvec
+            vec_str = "[{:.5f} {:.5f} {:.5f}]".format(*rp.BULK_REPEAT)
+            modifyPARAMETERS(rp, "BULK_REPEAT", vec_str,
+                             comment="Automatically detected repeat vector")
+            logger.info("Detected bulk repeat vector: " + vec_str)
+    if rp.BULK_REPEAT is None:
+        # failed to detect repeat vector, use fixed distance instead
+        blayers = [lay for lay in sl.layers if lay.isBulk]
+        # assume that interlayer vector from bottom non-bulk to top bulk layer
+        #   is the same as between bulk units
+        # save BULK_REPEAT value for later runs, in case atom above moves
+        if rp.N_BULK_LAYERS == 2:
+            rp.BULK_REPEAT = (blayers[1].cartbotz
+                              - sl.layers[blayers[0].num-1].cartbotz)
+        else:
+            rp.BULK_REPEAT = (blayers[0].cartbotz
+                              - sl.layers[blayers[0].num-1].cartbotz)
+        modifyPARAMETERS(rp, "BULK_REPEAT", "{:.5f}".format(rp.BULK_REPEAT),
+                         comment=("Automatically detected spacing. "
+                                  "Check POSCAR_bulk."))
+        logger.warning(
+            "The BULK_REPEAT parameter was undefined, which may lead to "
+            "unintended changes in the bulk unit cell during optimization if "
+            "the lowest non-bulk atom moves.\n"
+            "# Automatic detection of a bulk repeat vector failed, possibly "
+            "because not enough bulk-like layers were found.\n"
+            "# The BULK_REPEAT vector is assumed to be parallel to the POSCAR "
+            "c vector. Check POSCAR_bulk and the BULK_REPEAT thickness "
+            "written to the PARAMETERS file.")
+        rp.setHaltingLevel(2)
+
     if bsl.planegroup == "unknown":
         # find minimum in-plane unit cell for bulk:
         logger.info("Checking bulk unit cell...")

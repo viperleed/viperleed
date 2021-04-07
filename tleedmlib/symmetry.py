@@ -110,7 +110,7 @@ def findBulkSymmetry(sl, rp):
     newC = ts.getMinC(rp)
     if newC is not None:
         logger.debug("Bulk unit cell could be reduced with repeat vector "
-                     + str(-newC))
+                     "[{:.5f} {:.5f} {:.5f}]".format(*(-newC)))
         # apply new unit cell
         ts.atlist = [at for at in ts.atlist
                      if at.cartpos[2] > ts.topat_ori_z - abs(newC[2])]
