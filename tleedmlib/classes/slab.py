@@ -1106,7 +1106,7 @@ class Slab:
         if len(self.sublayers) < 2*nsub:
             return None
         # nonbulk_subl = self.sublayers[:-nsub]
-        z_range = (self.sublayers[-2*nsub].atlist[0].cartpos[2],
+        z_range = (self.sublayers[-nsub].atlist[0].cartpos[2],
                    self.sublayers[-1].atlist[0].cartpos[2])
         baseLayer = self.sublayers[-1-nsub]
         ori = baseLayer.atlist[0].cartpos  # compare displacements from here
