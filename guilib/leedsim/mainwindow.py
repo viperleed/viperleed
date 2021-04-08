@@ -222,7 +222,7 @@ class LEED_GUI(qtw.QMainWindow):
     def saveToFile(self, fname):
         # Sort out the parameters, converting the values to strings
         params = copy.deepcopy(self.leedParams)
-        for key, val in params.items():  # BUG: dictionary changes size upon saving
+        for key, val in params.copy().items():  # BUG: dictionary changes size upon saving
             if key == 'SUPERLATTICE' or key == 'surfBasis':
                 params[key] = np.array2string(
                                         val,
@@ -260,16 +260,13 @@ class LEED_GUI(qtw.QMainWindow):
         self.fileErr = ''   # keeps track of what happened
         
         if fname[0]:
-            f = open(fname[0], 'r')
-            try:
-                flines = f.readlines()
-            except:
-                f.close()
-                ext = qtc.QFileInfo(fname).suffix().lower()
-                self.fileErr = 'ERROR: File type *.%s not supported.'%(ext)
-                return None
-            else:
-                f.close()
+            with open(fname[0], 'r') as f:
+                try:
+                    flines = f.readlines()
+                except:
+                    ext = qtc.QFileInfo(fname).suffix().lower()
+                    self.fileErr = 'ERROR: File type *.%s not supported.'%(ext)
+                    return None
         else:
             self.fileErr = 'No file selected.'
             return None
@@ -349,7 +346,7 @@ class LEED_GUI(qtw.QMainWindow):
             )
         
         try:
-            par_dic['screenAperture'] = float(par_dict['screenAperture'])
+            par_dict['screenAperture'] = float(par_dict['screenAperture'])
         except ValueError:
             self.fileErr += ("Warning: screenAperture not found, or value "
                              " not acceptable. Will use default 110 deg.")
