@@ -601,6 +601,58 @@ def catch_gui_crash():
     sys.excepthook = exception_hook
 
 
+def check_py_version(version_to_check, check_what='earlier'):
+    """Check the interpreter version against a given input.
+
+    Parameters
+    ----------
+    version_to_check : str
+        A string of the form "x.y.z" with major.minor.patch.
+        Patch and minor can also be left out.
+    check_what : {'earlier', 'later', 'same'}, default='earlier'
+        'earlier' checks interpreter_version < version_to_check
+        'later' checks interpreter_version > version_to_check
+        'same'  checks interpreter_version == version_to_check
+
+    Returns
+    -------
+    bool
+        True if the condition is verified
+    """
+    if check_what not in ('earlier', 'later', 'same'):
+        raise ValueError("check_py_version: Invalid check_what. Should be "
+                         "'earlier', 'later', or 'same'.")
+    
+    major = sys.version_info.major
+    minor = sys.version_info.minor
+    patch = sys.version_info.micro
+
+    version_to_check = version_to_check.split('.')
+    if len(version_to_check) == 3:
+        # major.minor.patch
+        py_version = 10000*major + 100*minor + patch
+        version_to_check = (10000*int(version_to_check[0])
+                            + 100*int(version_to_check[1])
+                            + int(version_to_check[2]))
+    elif len(version_to_check) == 2:
+        # major.minor
+        py_version = 100*major + minor
+        version_to_check = (100*int(version_to_check[0])
+                            + int(version_to_check[1]))
+    elif len(version_to_check) == 1:
+        # major
+        py_version = major
+        version_to_check = int(version_to_check[0])
+    else:
+        raise ValueError("check_py_version: invalid version")
+    
+    if check_what == 'earlier':
+        return py_version < version_to_check
+    if check_what == 'later':
+        return py_version > version_to_check
+    return py_version == version_to_check
+
+
 def string_matrix_to_numpy(str_matrix, dtype=float, needs_shape=tuple()):
     """
     Takes a string representing a matrix with float values and parses it into a
