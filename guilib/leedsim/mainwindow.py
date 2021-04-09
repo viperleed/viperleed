@@ -47,7 +47,6 @@ def show_pre_release_popup():
 class LEED_GUI(qtw.QMainWindow):
     pre_release = True
     extension = '*.tlm'
-    # version = '0.1a'
     version = gl.GLOBALS['version']
     
     extStr = 'LEED input files ({})'.format(' '.join([extension,
@@ -123,6 +122,7 @@ class LEED_GUI(qtw.QMainWindow):
         exportCSV.setShortcut('Ctrl+E')
         exportCSV.setStatusTip('Export list of LEED beams to *.csv')
         exportCSV.triggered.connect(self.exportBeamsPressed)
+        self.actionsToEnable.append(exportCSV)
         
         exportMenu.addAction(exportCSV)
         
@@ -168,8 +168,9 @@ class LEED_GUI(qtw.QMainWindow):
         exportAct = qtw.QAction(
             self.style().standardIcon(qtw.QStyle.SP_DriveFDIcon),
             'Export LEED pattern', self)
-        exportAct.setStatusTip('Export LEED pattern to '
-                               'space-separated file (Ctrl+E)')
+        exportAct.setStatusTip('Export list of LEED beams to '
+                               'comma-separated file (Ctrl+E)')
+        exportAct.triggered.connect(self.exportBeamsPressed)
         
         self.tBar.addAction(newF)
         self.tBar.addAction(openF)
@@ -230,7 +231,7 @@ class LEED_GUI(qtw.QMainWindow):
                                        # precision=5,
                                         suppress_small=True
                                         ).replace('\n', '').replace(' ', '')
-            elif key == 'eMax':
+            elif key in ('eMax', 'screenAperture'):
                 params[key] = str(val)
             elif key in ('bulkGroup', 'surfGroup'):
                 params[key] = val.group
@@ -354,20 +355,24 @@ class LEED_GUI(qtw.QMainWindow):
         
         # Now handle the exit conditions
         try:
-            gl.PlaneGroup(par_dict['bulkGroup'])
+            b_group = gl.PlaneGroup(par_dict['bulkGroup'])
         except ValueError:
             self.fileErr = ('ERROR: Unknown bulk group type '
                            + par_dict['bulkGroup']
                            + self.fileErr)
             return dict()
+        else:
+            par_dict['bulkGroup'] = b_group
         
         try:
-            sG = gl.PlaneGroup(par_dict['surfGroup'])
+            s_group = gl.PlaneGroup(par_dict['surfGroup'])
         except ValueError:
             self.fileErr = ('ERROR: Unknown surface group type '
                             + par_dict['surfGroup']
                             + self.fileErr)
             return dict()
+        else:
+            par_dict['surfGroup'] = s_group
         
         if ((par_dict['surfBasis'] is None)
             or (par_dict['SUPERLATTICE'] is None)):
@@ -387,7 +392,7 @@ class LEED_GUI(qtw.QMainWindow):
                                                 self.default_export[0],
                                                 'Comma-separated file (*.csv)')
         if not fname[0]:
-            return None
+            return
         
         # set up the other parameters needed for export_pattern_csv
         if hasattr(self, 'openFile') and self.openFile:
