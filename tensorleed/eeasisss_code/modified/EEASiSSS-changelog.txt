@@ -1,0 +1,16 @@
+##################################################
+##  List of changes made to EEASiSSS code;      ##
+##  given line numbers refer to original code   ##
+##################################################
+
+### in eeasisss.f90:
+- line 28: for id_at, changed len=6 to len=9
+- line 262: allocate rk_tmp changed from (3,100) to (3,10000), this is an upper limit for atoms in the slab
+- line 575ff: changed subroutine id_atom to accomodate up to 9 characters (see change to line 28); MODIFIES NUMBER OF LINES!
+
+### in imported_routines.f90:
+- line 723: changed countx=400 to countx=10000, this is the maximum number of iterations for subroutine SIMPLEX
+
+05.01.2021 - v4:
+### in eeasisss.f90:
+line 852 (new, original after line 845): inserted assignment for nxt for default case
