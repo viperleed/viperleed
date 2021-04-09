@@ -61,18 +61,18 @@ def runBeamGen(sl, rp, beamgensource=os.path.join('tensorleed',
     except Exception:
         logger.error("Failed to write DATA for BEAMLIST generation.")
         raise
-    if os.name == 'nt':
-        logger.error("Beamlist generation is currently not supported on "
-                     "Windows. Use a linux shell to run beamlist generation "
-                     "script.")
-        raise EnvironmentError("Beamlist generation is currently not "
-                               "supported on Windows.")
-    else:
-        try:
-            subprocess.call(beamgensource)
-        except Exception:
-            logger.error("Failed to execute beamgen script.")
-            raise
+    # if os.name == 'nt':
+    #     logger.error("Beamlist generation is currently not supported on "
+    #                  "Windows. Use a linux shell to run beamlist generation "
+    #                  "script.")
+    #     raise EnvironmentError("Beamlist generation is currently not "
+    #                            "supported on Windows.")
+    # else:
+    try:
+        subprocess.call(beamgensource)
+    except Exception:
+        logger.error("Failed to execute beamgen script.")
+        raise
     # clean up folder, rename files
     try:
         os.remove('BELIST')
