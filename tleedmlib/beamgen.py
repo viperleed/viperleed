@@ -18,7 +18,7 @@ def runBeamGen(sl, rp, beamgensource=os.path.join('tensorleed',
                                                   'beamgen3.out'),
                domains=False):
     """Writes necessary input for the beamgen3 code, the runs it. The relevant
-    output file will be renamed to _BEAMLIST."""
+    output file will be renamed to BEAMLIST."""
     beamgensource = os.path.join(rp.workdir, beamgensource)
     output = ''
     f74x2 = ff.FortranRecordWriter('2F7.4')
@@ -59,26 +59,26 @@ def runBeamGen(sl, rp, beamgensource=os.path.join('tensorleed',
         with open('DATA', 'w') as wf:
             wf.write(output)
     except Exception:
-        logger.error("Failed to write DATA for _BEAMLIST generation.")
+        logger.error("Failed to write DATA for BEAMLIST generation.")
         raise
-    if os.name == 'nt':
-        logger.error("Beamlist generation is currently not supported on "
-                     "Windows. Use a linux shell to run beamlist generation "
-                     "script.")
-        raise EnvironmentError("Beamlist generation is currently not "
-                               "supported on Windows.")
-    else:
-        try:
-            subprocess.call(beamgensource)
-        except Exception:
-            logger.error("Failed to execute beamgen script.")
-            raise
+    # if os.name == 'nt':
+    #     logger.error("Beamlist generation is currently not supported on "
+    #                  "Windows. Use a linux shell to run beamlist generation "
+    #                  "script.")
+    #     raise EnvironmentError("Beamlist generation is currently not "
+    #                            "supported on Windows.")
+    # else:
+    try:
+        subprocess.call(beamgensource)
+    except Exception:
+        logger.error("Failed to execute beamgen script.")
+        raise
     # clean up folder, rename files
     try:
         os.remove('BELIST')
         os.remove('PROT')
     except Exception:
-        logger.warning("_BEAMLIST generation: Failed to remove BELIST or "
+        logger.warning("BEAMLIST generation: Failed to remove BELIST or "
                        "PROT file")
     try:
         os.rename('DATA', 'beamgen3-input')
@@ -86,10 +86,10 @@ def runBeamGen(sl, rp, beamgensource=os.path.join('tensorleed',
         logger.warning("Failed to rename beamlist generation input file "
                        "DATA to beamgen3-input")
     try:
-        os.rename('NBLIST', '_BEAMLIST')
+        os.rename('NBLIST', 'BEAMLIST')
     except Exception:
         logger.error("Failed to rename beamlist generation output file "
-                     "NBLIST to _BEAMLIST")
+                     "NBLIST to BEAMLIST")
         raise
-    logger.debug("Wrote to _BEAMLIST successfully.")
+    logger.debug("Wrote to BEAMLIST successfully.")
     return

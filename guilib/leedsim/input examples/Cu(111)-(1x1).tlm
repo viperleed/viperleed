@@ -1,5 +1,7 @@
 eMax=700.0
-SUPERLATTICE=[[1,0],[0,1]]
 surfBasis=[[2.5435,0.],[-1.27175,2.20273561]]
+SUPERLATTICE=[[1,0],[0,1]]
 surfGroup=p3m1
 bulkGroup=p3m1
+bulk3Dsym=None
+screenAperture=110.0

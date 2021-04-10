@@ -25,7 +25,7 @@ def translateTimestamp(s):
 def main():
     histname = "history"  # name of history folder in home dir
     workhistname = "workhistory"  # name of history folder in work dir
-    copyfiles = ["POSCAR", "_PHASESHIFTS", "PARAMETERS", "IVBEAMS",
+    copyfiles = ["POSCAR", "PHASESHIFTS", "PARAMETERS", "IVBEAMS",
                  "DISPLACEMENTS", "VIBROCC", "EXPBEAMS.csv"]
     parser = argparse.ArgumentParser()
     parser.add_argument(

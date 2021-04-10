@@ -24,7 +24,8 @@ from viperleed.guilib.helpers import (conventional_angles,
 from viperleed.guilib.base import (get_equivalent_beams,
                                    project_to_first_domain, check_type,
                                    check_leed_params, check_multi_leed_params,
-                                   catch_gui_crash, string_matrix_to_numpy,
+                                   catch_gui_crash, check_py_version,
+                                   string_matrix_to_numpy,
                                    format_floats,  # probably not needed globally
                                    integer_part_length,
                                    parallel, orientation, screen_radius,
@@ -36,7 +37,10 @@ if (os.name == 'posix' and 'DISPLAY' not in os.environ.keys()) or not USE_GUI:
     GLOBALS['USE_GUI'] = False
 else:
     # Import GUI modules
-    BACKEND = 'mplcairo'
+    if check_py_version('3.8', 'earlier'):
+        BACKEND = 'mplcairo'
+    else:
+        BACKEND = 'agg'
     from viperleed.guilib.decorators import ensure_decorates_class
     from viperleed.guilib.widgetdecorators import (receive_mouse_broadcast,
                                                    broadcast_mouse)

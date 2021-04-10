@@ -3,11 +3,11 @@
 block_cipher = None
 
 
-a = Analysis(['tleedm.py'],
-             pathex=['/mnt/c/Users/FF/Google Drive/Synchronized/Surface Physics/ViPErLEED/viperleed/freeze'],
+a = Analysis(['/home/schmid/viperleed/gui.py'],
+             #pathex=['E:/Work/Vienna/SPECSLab/Technical/Upgrades/Python LEED-IV/000-git/00-GUI_builds/v0.1.0/'],  # perhaps need another / at end?
              binaries=[],
              datas=[],
-             hiddenimports=['sklearn.utils._cython_blas', 'scipy.spatial.transform._rotation_groups', 'scipy.special.cython_special', 'sklearn.utils._weight_vector'],
+             hiddenimports=[],
              hookspath=[],
              runtime_hooks=[],
              excludes=[],
@@ -15,15 +15,21 @@ a = Analysis(['tleedm.py'],
              win_private_assemblies=False,
              cipher=block_cipher,
              noarchive=False)
+
+font_path = ("/home/schmid/viperleed/guilib/fonts/DejaVuSans.ttf")
+
+font_files = [("guilib/fonts/DejaVuSans.ttf", font_path, "DATA"),
+			  ("guilib/fonts/cmunrm.otf", font_path, "DATA")]
+
 pyz = PYZ(a.pure, a.zipped_data,
              cipher=block_cipher)
 exe = EXE(pyz,
           a.scripts,
           a.binaries,
           a.zipfiles,
-          a.datas,
+          a.datas + font_files,
           [],
-          name='tleedm',
+          name='viperleed_gui_v0.3.0',  #TODO: get version automatically
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,

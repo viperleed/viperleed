@@ -58,18 +58,18 @@ def initialization(sl, rp, subdomain=False):
         init_domains(rp)
         return
 
-    # check whether _PHASESHIFTS are present & consistent:
+    # check whether PHASESHIFTS are present & consistent:
     newpsGen, newpsWrite = True, True
     # True: new phaseshifts need to be generated/written
-    if os.path.isfile("_PHASESHIFTS"):
+    if os.path.isfile("PHASESHIFTS") or os.path.isfile("_PHASESHIFTS"):
         try:
             (rp.phaseshifts_firstline, rp.phaseshifts,
              newpsGen, newpsWrite) = readPHASESHIFTS(sl, rp,
                                                      ignoreEnRange=subdomain)
         except Exception:
             logger.warning(
-                "Found a _PHASESHIFTS file but could not "
-                "read it. A new _PHASESHIFTS file will be generated."
+                "Found a PHASESHIFTS file but could not "
+                "read it. A new PHASESHIFTS file will be generated."
                 "The exception during read was: ", exc_info=True)
             rp.setHaltingLevel(1)
     if newpsGen:
@@ -93,7 +93,7 @@ def initialization(sl, rp, subdomain=False):
             raise
     rp.fileLoaded["PHASESHIFTS"] = True
     rp.updateDerivedParams()
-    rp.manifest.append("_PHASESHIFTS")
+    rp.manifest.append("PHASESHIFTS")
 
     # if necessary, run findSymmetry:
     if sl.planegroup == "unknown":
@@ -174,6 +174,41 @@ def initialization(sl, rp, subdomain=False):
         sl.bulkslab = sl.makeBulkSlab(rp)
     bsl = sl.bulkslab
 
+    # try identifying bulk repeat:
+    if rp.BULK_REPEAT is None:
+        rvec = sl.getBulkRepeat(rp)
+        if rvec is not None:
+            rp.BULK_REPEAT = rvec
+            vec_str = "[{:.5f} {:.5f} {:.5f}]".format(*rp.BULK_REPEAT)
+            modifyPARAMETERS(rp, "BULK_REPEAT", vec_str,
+                             comment="Automatically detected repeat vector")
+            logger.info("Detected bulk repeat vector: " + vec_str)
+    if rp.BULK_REPEAT is None:
+        # failed to detect repeat vector, use fixed distance instead
+        blayers = [lay for lay in sl.layers if lay.isBulk]
+        # assume that interlayer vector from bottom non-bulk to top bulk layer
+        #   is the same as between bulk units
+        # save BULK_REPEAT value for later runs, in case atom above moves
+        if rp.N_BULK_LAYERS == 2:
+            rp.BULK_REPEAT = (blayers[1].cartbotz
+                              - sl.layers[blayers[0].num-1].cartbotz)
+        else:
+            rp.BULK_REPEAT = (blayers[0].cartbotz
+                              - sl.layers[blayers[0].num-1].cartbotz)
+        modifyPARAMETERS(rp, "BULK_REPEAT", "{:.5f}".format(rp.BULK_REPEAT),
+                         comment=("Automatically detected spacing. "
+                                  "Check POSCAR_bulk."))
+        logger.warning(
+            "The BULK_REPEAT parameter was undefined, which may lead to "
+            "unintended changes in the bulk unit cell during optimization if "
+            "the lowest non-bulk atom moves.\n"
+            "# Automatic detection of a bulk repeat vector failed, possibly "
+            "because not enough bulk-like layers were found.\n"
+            "# The BULK_REPEAT vector is assumed to be parallel to the POSCAR "
+            "c vector. Check POSCAR_bulk and the BULK_REPEAT thickness "
+            "written to the PARAMETERS file.")
+        rp.setHaltingLevel(2)
+
     if bsl.planegroup == "unknown":
         # find minimum in-plane unit cell for bulk:
         logger.info("Checking bulk unit cell...")
@@ -220,7 +255,7 @@ def initialization(sl, rp, subdomain=False):
         logger.warning("Exception occurred while writing POSCAR_bulk_appended")
 
     # generate beamlist
-    logger.info("Generating _BEAMLIST...")
+    logger.info("Generating BEAMLIST...")
     try:
         bgenpath = os.path.join('tensorleed', 'beamgen3.out')
         runBeamGen(sl, rp, beamgensource=bgenpath)
@@ -228,12 +263,11 @@ def initialization(sl, rp, subdomain=False):
     except Exception:
         logger.error("Exception occurred while calling beamgen.")
         raise
-    rp.manifest.append("_BEAMLIST")
     try:
         rp.beamlist = readBEAMLIST()
         rp.fileLoaded["BEAMLIST"] = True
     except Exception:
-        logger.error("Error while reading required file _BEAMLIST")
+        logger.error("Error while reading required file BEAMLIST")
         raise
 
     if not subdomain:
@@ -285,7 +319,7 @@ def init_domains(rp):
                      "are defined. Execution will stop.")
         rp.setHaltingLevel(3)
         return
-    checkFiles = ["POSCAR", "PARAMETERS", "VIBROCC", "_PHASESHIFTS"]
+    checkFiles = ["POSCAR", "PARAMETERS", "VIBROCC", "PHASESHIFTS"]
     home = os.getcwd()
     for (name, path) in rp.DOMAINS:
         # determine the target path
@@ -326,14 +360,14 @@ def init_domains(rp):
                             shutil.copy(os.path.join(path, file),
                                         os.path.join(target, file))
                         except Exception:
-                            if file != "_PHASESHIFTS":
+                            if file != "PHASESHIFTS":
                                 logger.error(
                                     "Error copying required file {} for "
                                     "domain {} from origin folder {}"
                                     .format(file, name, path))
                                 raise RuntimeError("Error getting domain "
                                                    "input files")
-                    elif file != "_PHASESHIFTS":
+                    elif file != "PHASESHIFTS":
                         logger.error("Required file {} for domain {} not "
                                      "found in origin folder {}"
                                      .format(file, name, path))
@@ -511,7 +545,7 @@ def init_domains(rp):
     rp.pseudoSlab.bulkslab = tl.Slab()
     rp.pseudoSlab.bulkslab.ucell = copy.copy(largestDomain.sl.bulkslab.ucell)
     # run beamgen for the whole system
-    logger.info("Generating _BEAMLIST...")
+    logger.info("Generating BEAMLIST...")
     try:
         bgenpath = os.path.join('tensorleed', 'beamgen3.out')
         runBeamGen(rp.pseudoSlab, rp, beamgensource=bgenpath, domains=True)
@@ -519,12 +553,11 @@ def init_domains(rp):
     except Exception:
         logger.error("Exception occurred while calling beamgen.")
         raise
-    rp.manifest.append("_BEAMLIST")
     try:
         rp.beamlist = readBEAMLIST()
         rp.fileLoaded["BEAMLIST"] = True
     except Exception:
-        logger.error("Error while reading required file _BEAMLIST")
+        logger.error("Error while reading required file BEAMLIST")
         raise
     # if EXPBEAMS was loaded, it hasn't been checked yet - check now
     if rp.fileLoaded["EXPBEAMS"]:

@@ -14,6 +14,8 @@ Typically they would be further subclassed to create more complicated widgets
 
 # print("this is guilib.basewidgets")
 
+import os
+
 import numpy as np
 import PyQt5.QtCore as qtc
 import PyQt5.QtGui as qtg
@@ -162,8 +164,19 @@ class TextBox(qtw.QLineEdit):
             super().mousePressEvent(event)  # call normal implementation
     
     def keyPressEvent(self, event):
+        print(self.window(),
+              event.key(),
+              event.modifiers() == qtc.Qt.ControlModifier)
         if event.key() in [qtc.Qt.Key_Up, qtc.Qt.Key_Down]:
             self.upDownPressed.emit(event)
+        elif (os.name == 'posix'
+              and event.key() == qtc.Qt.Key_E
+              and event.modifiers()
+              and event.modifiers() == qtc.Qt.ControlModifier
+              and isinstance(self.window(), gl.LEED_GUI)):
+            print("ctrl+e")
+            self.window().keyPressEvent(event)
+            return
         super().keyPressEvent(event)
     
     def wheelEvent(self, event):
@@ -234,7 +247,7 @@ class MPLFigureCanvas(FigureCanvas):
         else:
             mpltitle=''
         if 'titleFont' in kwargs.keys() or 'fontSize' in kwargs.keys():
-            self.titleFont = QFont()
+            self.titleFont = qtg.QFont()
             if 'titleFont' in kwargs.keys():
                 self.titleFont.setFamily(kwargs['titleFont'])
             if 'titleFontSize' in kwargs.keys():
@@ -320,7 +333,7 @@ class MPLFigureCanvas(FigureCanvas):
             gl.editStyleSheet(self, "background-color:transparent;")
             self.figure.patch.set_alpha(0)
         else:
-            editStyleSheet(self, "background-color:white;")
+            gl.editStyleSheet(self, "background-color:white;")
             self.figure.patch.set_alpha(1)
     
     def show_ticks(self, show):
@@ -414,7 +427,7 @@ class MPLFigureCanvas(FigureCanvas):
         Returns a QPoint
         """
         if len(args) != 2:
-            raise InputError('mpl_to_qt_coordinates requires exactly '
+            raise ValueError('mpl_to_qt_coordinates requires exactly '
                              'two arguments')
 
         x_mpl, y_mpl = args

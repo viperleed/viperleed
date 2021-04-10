@@ -177,8 +177,8 @@ def generateDeltaInput(atom, targetel, sl, rp, deltaBasic="", auxbeams="",
         The contents of the AUXBEAMS file. If not passed, will attempt to find
         the AUXBEAMS file and read it.
     phaseshifts : str, optional
-        The contents of the _PHASESHIFTS file. If not passed, will attempt to
-        find the _PHASESHIFTS file and read it.
+        The contents of the PHASESHIFTS file. If not passed, will attempt to
+        find the PHASESHIFTS file and read it.
 
     Returns
     -------
@@ -210,12 +210,12 @@ def generateDeltaInput(atom, targetel, sl, rp, deltaBasic="", auxbeams="",
             raise
     if phaseshifts == "":
         try:
-            with open("_PHASESHIFTS", "r") as rf:
+            with open("PHASESHIFTS", "r") as rf:
                 phaseshifts = rf.read()
             if phaseshifts[-1] != "\n":
                 phaseshifts += "\n"
         except Exception:
-            logger.error("generateDeltaInput: Could not read _PHASESHIFTS")
+            logger.error("generateDeltaInput: Could not read PHASESHIFTS")
             raise
     MLMAX = [19, 126, 498, 1463, 3549, 7534, 14484, 25821, 43351, 69322,
              106470, 158067, 227969, 320664, 441320]
@@ -242,7 +242,7 @@ def generateDeltaInput(atom, targetel, sl, rp, deltaBasic="", auxbeams="",
         # find number of target element
         i = 0
         for el in sl.elements:
-            # this reproduces the order of blocks contained in _PHASESHIFTS:
+            # this reproduces the order of blocks contained in PHASESHIFTS:
             if el in rp.ELEMENT_MIX:
                 chemelList = rp.ELEMENT_MIX[el]
             else:
@@ -317,7 +317,7 @@ def generateDeltaInput(atom, targetel, sl, rp, deltaBasic="", auxbeams="",
         din += ol.ljust(29)+"DRPER_A\n"
 
     din_main = deltaBasic + auxbeams + phaseshifts + din
-    din_short = deltaBasic + "[AUXBEAMS]\n" + "[_PHASESHIFTS]\n" + din
+    din_short = deltaBasic + "[AUXBEAMS]\n" + "[PHASESHIFTS]\n" + din
 
     # write PARAM
     param = ("""C  Parameter statements for delta amplitude calculation, v1.2

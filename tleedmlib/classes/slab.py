@@ -738,10 +738,30 @@ class Slab:
                     return False
         return True
 
-    def isTranslationSymmetric(self, tv, eps, z_periodic=True):
-        """Evaluates whether the slab is equivalent to itself when translated
-        along the given cartesian translation vector tv. 2- or 3-dimensional
-        translation vectors are accepted."""
+    def isTranslationSymmetric(self, tv, eps, z_periodic=True, z_range=None):
+        """
+        Evaluates whether the slab is equivalent to itself when translated
+        along the given cartesian translation vector tv.
+
+        Parameters
+        ----------
+        tv : numpy array
+            2- or 3-dimensional translation vectors are accepted.
+        eps : float
+            Error tolerance for positions (cartesian)
+        z_periodic : bool, optional
+            True for checking periodicity of a bulk slab, in which the c vector
+            is a true unit cell vector. False otherwise.
+        z_range : tuple of floats, optional
+            Limit check to only atoms within a given range of cartesian
+            coordinates. The default is None.
+
+        Returns
+        -------
+        bool
+            True if translation symmetric, else False.
+
+        """
         if len(tv) == 2:  # two-dimensional displacement. append zero for z
             tv = np.append(tv, 0.)
         uc = np.copy(self.ucell)
@@ -761,10 +781,18 @@ class Slab:
         # original cartesian coordinates collapsed to base unit cell
         tmpcoords = np.copy(oricm).transpose()
         # copy of coordinate matrix to be manipulated
+        # determine which z to check
+        if z_range is None:
+            min_z = np.min(tmpcoords[2]) - eps
+            max_z = np.max(tmpcoords[2]) + eps
+        else:
+            z_range = tuple(-v for v in z_range)
+            min_z, max_z = min(z_range) - eps, max(z_range) + eps
         tmpcoords += shiftm
         if not z_periodic:
-            # discard atoms that moved out of cell in z
-            tmpcoords = tmpcoords[:, tmpcoords[2] <= 0]
+            # discard atoms that moved out of range in z
+            tmpcoords = tmpcoords[:, tmpcoords[2] >= min_z]
+            tmpcoords = tmpcoords[:, tmpcoords[2] <= max_z]
         tmpcoords = np.dot(uc, (np.dot(np.linalg.inv(uc), tmpcoords) % 1.0))
         # collapse coordinates to base unit cell
         # for every point in matrix, check whether is equal:
@@ -1063,6 +1091,38 @@ class Slab:
                 mincell = np.dot(np.array([[1, 0], [0, -1]]), mincell)
             return(True, mincell)
 
+    def getBulkRepeat(self, rp):
+        """Based on a pre-existing definition of the bulk, tries to identify
+        a repeat vector for which the bulk matches the slab above. Returns that
+        vector in cartesian coordinates, or None if no match is found."""
+        eps = rp.SYMMETRY_EPS
+        if len(self.sublayers) == 0:
+            self.createSublayers(eps)
+        if self.bulkslab is None:
+            self.makeBulkSlab(rp)
+        if len(self.bulkslab.sublayers) == 0:
+            self.bulkslab.createSublayers(eps)
+        nsub = len(self.bulkslab.sublayers)
+        if len(self.sublayers) < 2*nsub:
+            return None
+        # nonbulk_subl = self.sublayers[:-nsub]
+        z_range = (self.sublayers[-nsub].atlist[0].cartpos[2],
+                   self.sublayers[-1].atlist[0].cartpos[2])
+        baseLayer = self.sublayers[-1-nsub]
+        ori = baseLayer.atlist[0].cartpos  # compare displacements from here
+        repeat_vectors = []
+        for at in self.sublayers[-1].atlist:
+            v = at.cartpos - ori
+            if self.isTranslationSymmetric(v, eps, z_periodic=False,
+                                           z_range=z_range):
+                repeat_vectors.append(-v)
+        if len(repeat_vectors) == 0:
+            return None
+        # pick the shortest repeat vector
+        cv = min(repeat_vectors, key=lambda x: np.linalg.norm(x))
+        cv[2] = -cv[2]  # leed coordinates to standard
+        return cv
+
     def getMinC(self, rp, z_periodic=True):
         """Checks whether there is a vector c with a smaller length than
         the current one. If so, returns the minimized vector, else returns
@@ -1223,7 +1283,8 @@ class Slab:
                     #  bulk layer is the same as between bulk units
                     zdiff = (blayers[-1].cartbotz
                              - ts.layers[blayers[0].num-1].cartbotz)
-                elif zdiff == 0. and type(rp.BULK_REPEAT) == float:
+                elif zdiff == 0. and isinstance(rp.BULK_REPEAT,
+                                                (float, np.floating)):
                     zdiff = rp.BULK_REPEAT
                 bulkc = cvec * zdiff / cvec[2]
             ts.getCartesianCoordinates()
@@ -1276,7 +1337,7 @@ class Slab:
                 #  bulk layer is the same as between bulk units
                 zdiff = (bsl.layers[-1].cartbotz
                          - self.layers[bsl.layers[0].num-1].cartbotz)
-            elif type(rp.BULK_REPEAT) == float:
+            elif isinstance(rp.BULK_REPEAT, (float, np.floating)):
                 zdiff = rp.BULK_REPEAT
             bulkc = cvec * zdiff / cvec[2]
         bsl.ucell[:, 2] = bulkc
