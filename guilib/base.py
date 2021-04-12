@@ -678,24 +678,27 @@ def string_matrix_to_numpy(str_matrix, dtype=float, needs_shape=tuple()):
     match. Otherwise always returns a numpy array.
     """
     if not check_type(str_matrix, 'str'):
-        raise TypeError("Argument 0 of string_matrix should be string. "
-                        f"Found {type(str_matrix)} instead")
+        raise TypeError("string_matrix_to_numpy: str_matrix should be string. "
+                        f"Found {type(str_matrix).__name__!r} instead")
     if not check_type(needs_shape, 'arraylike'):
-        raise TypeError("Argument 1 of string_matrix should be array-like. "
-                        f"Found {type(needs_shape)} instead")
+        raise TypeError("string_matrix_to_numpy: needs_shape should be an "
+                        f"array-like. Found {type(needs_shape).__name__!r} "
+                        "instead")
     try:
         matrix = np.asarray(ast.literal_eval(str_matrix), dtype=float)
-    except SyntaxError as expt:
-        raise RuntimeError("Could not extract a matrix "
-                           f"from string {str_matrix}. "
-                           "Most likely a bracket or a comma is missing")
+    except SyntaxError as err:
+        raise RuntimeError("Could not extract a matrix from string "
+                           f"{str_matrix}. Most likely a bracket or "
+                           "a comma is missing") from err
 
     # if dtype=int, round first, then typecast
     if dtype == int:
-        matrix = np.round(matrix).astype(int)
+        matrix = matrix.round().astype(int)
 
     if len(needs_shape) > 0 and matrix.shape != tuple(needs_shape):
-        return None
+        raise RuntimeError("string_matrix_to_numpy: matrix has the wrong "
+                           f"shape. Expected {tuple(needs_shape)}, found "
+                           f"{matrix.shape}")
     return matrix
 
 
@@ -995,17 +998,12 @@ class BeamIndex(tuple):
             return BeamIndex(self[0]*factor, self[1]*factor)
         raise NotImplementedError("* undefined between BeamIndex and "
                                   f"{type(factor).__name__}")
-    
+
     def __rmul__(self, factor):
         return self.__mul__(factor, self)
 
     def __imul__(self, factor):
-        if isinstance(factor, (int, Fraction)):
-            self[0] *= factor
-            self[1] *= factor
-            return
-        raise NotImplementedError("* undefined between BeamIndex and "
-                                  f"{type(factor).__name__}")
+        return self * factor
 
     def __format__(self, format_specs):
         """
@@ -1015,7 +1013,7 @@ class BeamIndex(tuple):
         [[fill]align][sign][#][0][minimumwidth][.precision][type]
 
         The following formats apply:
-        - type == "s": 
+        - type == "s":
             returns "(num/den|num/den)" where the width of each of the h,k
             fields is dictated by the minimumwidth specifier in format_specs. In
             this case, minimumwidth should be of the form "(w_num,w_den)", so
@@ -1289,7 +1287,7 @@ class PlaneGroup():
         """
         Representation of PlaneGroup
         """
-        return f"viperleed.PlaneGroup(group={self.group!r})"
+        return f"PlaneGroup({self.group!r})"
 
     def __str__(self):
         """
