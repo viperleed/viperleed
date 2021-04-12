@@ -453,7 +453,7 @@ class NewFileDialog(qtw.QDialog):
             woods = self.woods.itemText(woodsIdx)
         woods = self.fixWoods(woods)
         if woods is not None:
-            m = self.woodL.woodsToMatrix(woods, self.bulkLatt.basis)
+            m = self.woodL.to_matrix(woods, self.bulkLatt.basis)
             if m is None:  # woods gives an incommensurate lattice
                 self.sBar.showMessage(woods + ' invalid: Lattice is '
                                       + 'incommensurate.', 7000)
@@ -566,7 +566,7 @@ class NewFileDialog(qtw.QDialog):
         self.updateWoods()
     
     def updateWoods(self):
-        woods = gl.Woods().matrixToWoods(self.supMatrix, self.bulkLatt.basis)
+        woods = gl.Woods.from_matrix(self.supMatrix, self.bulkLatt.basis)
         if woods is None:
             woods = 'None'
         idx = self.woods.findText(woods, flags = qtc.Qt.MatchExactly)
@@ -700,7 +700,7 @@ class NewFileDialog(qtw.QDialog):
             # Now combine integer and square root parts
             if rt is not None:
                 sq = float(rt)
-                (intSq, rad) = self.woodL.squareToProdOfSquares(sq)
+                (intSq, rad) = self.woodL.square_to_prod_of_squares(sq)
                 integral *= np.round(np.sqrt(intSq))
             else:
                 rad = 1
