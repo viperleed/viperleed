@@ -202,3 +202,59 @@ def remove_duplicates(data, return_type=None):
     except (TypeError, ValueError):
         ret = tuple(ret)
     return ret
+
+
+def single_spaces_only(input_string):
+    """Return a string with double-spaces converted to single ones.
+
+    Paramters
+    ---------
+    input_string : str
+        The string to be processed
+
+    Returns
+    -------
+    str
+    """
+    while "  " in input_string:
+        input_string = input_string.replace("  ", " ")
+    return input_string
+
+
+def array2string(matrix):
+    """Return a 1-line string representation of an array."""
+    matrix = np.array2string(matrix, separator=',', suppress_small=True)
+    return single_spaces_only(matrix).replace('\n', '')
+
+
+def prime_numbers():
+    """Yield an infinite number of prime numbers.
+
+    Yields
+    ------
+    int
+        The next prime number.
+    """
+    # Algorithm is taken from https://stackoverflow.com/a/10733621/849891
+    # and is essentially Erastothenes sieve.
+    yield from (2, 3, 5, 7)
+    sieve = {}
+    primes = prime_numbers()
+    prime = next(primes) and next(primes)
+    assert prime == 3
+    prime_squared = prime*prime
+    for i in itertools.count(9, 2):
+        if i in sieve:            # composite
+            step = sieve.pop(i)
+        elif i < prime_squared:   # prime
+            yield i
+            continue
+        else:                     # composite, == prime_squared
+            assert i == prime_squared
+            step = 2*prime
+            prime = next(primes)
+            prime_squared = prime*prime
+        i += step
+        while i in sieve:
+            i += step
+        sieve[i] = step
