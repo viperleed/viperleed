@@ -183,6 +183,10 @@ def initialization(sl, rp, subdomain=False):
             modifyPARAMETERS(rp, "BULK_REPEAT", vec_str,
                              comment="Automatically detected repeat vector")
             logger.info("Detected bulk repeat vector: " + vec_str)
+            # update bulk slab vector
+            sl.bulkslab.getCartesianCoordinates()
+            sl.bulkslab.ucell[:, 2] = np.copy(rvec)
+            sl.bulkslab.collapseCartesianCoordinates()
     if rp.BULK_REPEAT is None:
         # failed to detect repeat vector, use fixed distance instead
         blayers = [lay for lay in sl.layers if lay.isBulk]
