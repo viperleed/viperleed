@@ -1,4 +1,5 @@
-"""
+"""Module realspace of guilib.leedsim.classes.
+
 ======================================
   ViPErLEED Graphical User Interface
 ======================================
@@ -14,8 +15,23 @@ import numpy as np
 
 from viperleed import guilib as gl
 
+
 class RealSpace():
+    """Use to plot a real-space lattice."""
+
     def __init__(self, params):
+        """Initialize RealSpace instance.
+
+        Parameters
+        ----------
+        params : dict, ConfigParser or LEEDParameters
+            The LEED parameters defining this representation
+            of real-space bulk and surface lattices.
+
+        Returns
+        -------
+        None.
+        """
         params = gl.LEEDParameters(params)
 
         self.superlattice = params['SUPERLATTICE']
@@ -39,15 +55,32 @@ class RealSpace():
 
     @property
     def bulk_basis(self):
-        """
-        Real-space basis of the bulk lattice
-        """
+        """Return the real-space basis of the bulk lattice."""
         if hasattr(self, 'bulk'):
             return self.bulk.basis
         return np.dot(np.linalg.inv(self.superlattice),
                       self.surf.basis).round(10)
 
     def angle_for_horizontal_bulk(self, direction):
+        """Return the angle that brings a basis vector horizontal.
+
+        Parameters
+        ----------
+        direction : {0, 1}
+            Which of the basis vectors should be considered
+
+        Returns
+        -------
+        angle : float
+            Angle in degrees. Rotating by angle in-plane,  TRUE??
+            aligns basis[direction] with the x axis of the
+            Cartesian coordinate system.
+
+        Raises
+        ------
+        ValueError
+            If direction is not one between 0 and 1
+        """
         if direction not in (0, 1):
             raise ValueError("First positional argument of "
                              "angle_for_horizontal_bulk() "
@@ -58,4 +91,3 @@ class RealSpace():
         theta = np.arctan2(basis[1], basis[0])
 
         return np.degrees(theta)
-

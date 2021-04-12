@@ -51,7 +51,7 @@ class LEEDPattern:
         identical LEED patterns
     """
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *args, **_kwargs):
         """When only one LEEDPattern instance is given, return it."""
         if len(args) == 1 and isinstance(args[0], LEEDPattern):
             return args[0]
@@ -60,7 +60,7 @@ class LEEDPattern:
     # @gl.profile_calls(print_args=[30])
     # @gl.profile_lines
     @gl.exec_time
-    def __init__(self, leed, *other_leeds, **kwargs):
+    def __init__(self, leed, *other_leeds, **_kwargs):
         """Initialize LEEDPattern.
 
         Parameters
@@ -77,7 +77,7 @@ class LEEDPattern:
             parameters are considered duplicates if they would produce
             the very same LEED pattern, including symmetry-induced
             domains.
-        **kwargs
+        **_kwargs
             Other keyword arguments that are not used.
 
         Returns
@@ -98,7 +98,7 @@ class LEEDPattern:
                 leeds[i] = leeds[i].parameters
 
         # process acceptable keyword arguments
-        keep_duplicates = kwargs.get('keep_duplicates', False)
+        keep_duplicates = _kwargs.get('keep_duplicates', False)
 
         # and prepare the LEEDParametersList that defines the LEED
         # pattern, i.e., a list of STRUCTURAL domains. Consistency of
@@ -156,7 +156,7 @@ class LEEDPattern:
         return self.parameters[0]['eMax']
 
     @property
-    def n_structures(self):  # was n_domains
+    def n_structures(self):
         """Return number of structural domains."""
         return self.domains.n_domains
 
@@ -172,7 +172,7 @@ class LEEDPattern:
 
     @property
     def pattern(self):
-        """Return the LEED pattern as a list of LEEDSubpatterns.
+        """Return the LEED pattern as a dict of LEEDSubpatterns.
 
         It also applies the current rotation to each of the
         sub-patterns.  One needs to call .build_subpatterns asking for
@@ -231,12 +231,10 @@ class LEEDPattern:
         -------
         None.
         """
-        if theta is None and phi is None:
-            return
-        self.domains.set_beam_incidence(*self.primary_beam_angles)
+        self.domains.set_beam_incidence(theta, phi)
 
     @property
-    def superlattices(self):  # TODO: REMOVE?
+    def superlattices(self):
         """Superlattice matrices for each structural domain."""
         return [dom.superlattices for dom in self.domains]
 
@@ -494,6 +492,50 @@ class LEEDPattern:
         """Radius of LEED screen at given energy."""
         return gl.screen_radius(energy, self.parameters[0]['screenAperture'])
 
+    # @gl.exec_time
+    def __build_bulk_subpatterns(self):
+        """Return the subpatterns for the bulk.
+
+        Return a list that contains at most two LEEDSubpattern
+        elements.  The first one is the subpattern for non-extinct
+        bulk beams and is always present.  The second one contains
+        extinct beams, and exists only if the bulk plane group is
+        pg, pmg or p4g.
+
+        Returns
+        -------
+        list
+        """
+        # TODO: should one account for the beamIncidence already here,
+        #       or should we do that in the .pattern property (i.e.,
+        #       only whean a pattern is actally requested)?
+        indices, beams = self.bulk.hk, self.bulk.lattice
+        group_name = self.bulk.group.group
+        if 'g' not in group_name:  # no glide
+            extinct_beams = []
+            non_extinct_beams = beams
+        else:
+            # Get boolean arrays that pick the extinct spots along the
+            # [1 0] and [0 1] directions
+            extinct_10 = (indices[:, 1] == 0) & (indices[:, 0] % 2 == 1)
+            extinct_01 = (indices[:, 0] == 0) & (indices[:, 1] % 2 == 1)
+
+            # pg, pmg, p4g are the only options, pg and pmg may also
+            # have directions
+            if '[1 0]' in group_name:
+                extinct_mask = extinct_10
+            elif '[0 1]' in group_name:
+                extinct_mask = extinct_01
+            else:
+                extinct_mask = extinct_10 | extinct_01
+            extinct_beams = beams[extinct_mask]
+            non_extinct_beams = beams[~extinct_mask]
+
+        bulk_patterns = [LEEDSubpattern(self, non_extinct_beams, '__b')]
+        if extinct_beams:
+            bulk_patterns.append(LEEDSubpattern(self, extinct_beams, '__b__e'))
+        return bulk_patterns
+
     def __reformat_beams(self, beams, **kwargs):
         """Reformat beams to fractional, numerator or g vector.
 
@@ -603,47 +645,3 @@ class LEEDPattern:
         if out_format == 'fractional':
             return tuple(beams)
         return np.dot(beams, self.bulk.basis)
-
-    # @gl.exec_time
-    def __build_bulk_subpatterns(self):
-        """Return the subpatterns for the bulk.
-
-        Return a list that contains at most two LEEDSubpattern
-        elements.  The first one is the subpattern for non-extinct
-        bulk beams and is always present.  The second one contains
-        extinct beams, and exists only if the bulk plane group is
-        pg, pmg or p4g.
-
-        Returns
-        -------
-        list
-        """
-        # TODO: should one account for the beamIncidence already here,
-        #       or should we do that in the .pattern property (i.e.,
-        #       only whean a pattern is actally requested)?
-        indices, beams = self.bulk.hk, self.bulk.lattice
-        group_name = self.bulk.group.group
-        if 'g' not in group_name:  # no glide
-            extinct_beams = []
-            non_extinct_beams = beams
-        else:
-            # Get boolean arrays that pick the extinct spots along the
-            # [1 0] and [0 1] directions
-            extinct_10 = (indices[:, 1] == 0) & (indices[:, 0] % 2 == 1)
-            extinct_01 = (indices[:, 0] == 0) & (indices[:, 1] % 2 == 1)
-
-            # pg, pmg, p4g are the only options, pg and pmg may also
-            # have directions
-            if '[1 0]' in group_name:
-                extinct_mask = extinct_10
-            elif '[0 1]' in group_name:
-                extinct_mask = extinct_01
-            else:
-                extinct_mask = extinct_10 | extinct_01
-            extinct_beams = beams[extinct_mask]
-            non_extinct_beams = beams[~extinct_mask]
-
-        bulk_patterns = [LEEDSubpattern(self, non_extinct_beams, '__b')]
-        if extinct_beams:
-            bulk_patterns.append(LEEDSubpattern(self, extinct_beams, '__b__e'))
-        return bulk_patterns
