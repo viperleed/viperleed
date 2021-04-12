@@ -2,7 +2,7 @@
 Main LeedControl File
 ---------------------
 Author: Bernhard Mayr, Michael Schmid, Michele Riva, Florian Dörr
-Date: 17.03.2021
+Date: 11.04.2021
 ---------------------
 */
 //Libraries
@@ -29,7 +29,7 @@ Date: 17.03.2021
 #define MAX_MSG_LENGTH 16
 
 //definition of messages for communication with PC
-#define PING 3
+#define PC_HARDWARE 3
 #define PC_INIT_ADC 4
 #define PC_OK 5
 #define PC_MEASURE 6
@@ -37,7 +37,6 @@ Date: 17.03.2021
 #define PC_AUTOGAIN 8
 #define PC_RESET 82                                               // !!!!!!!!!!!!!!!!!!!!!! CHANGE FOR PYTHON (Python has value 68)
 #define PC_DEBUG 0
-#define PC_HARDWARE 63
 
 // << THINGS TO DO EVERYWHERE (to conform with c++ style):
 // - use "lower-camel-case" for variables (i.e., thisIsANewVariable) instead of "lower-snake-case" (i.e., this_is_a_new_variable)
@@ -122,7 +121,7 @@ unsigned long currentTime;
 #define AD7705_REG_GAIN  0x70  //bits to set for accessing calibration gain register (24 bit)
 #define AD7705_DRDY      0x80  //bit mask for Data Ready bit in communication register
 //AD7705 setup register
-#define AD7705_FSYNC     0x01  //bit to set for FSYNC in setup register
+#define AD7705_STATE_TRIGGER_ADCS     0x01  //bit to set for FSYNC in setup register
 #define AD7705_BUFMODE   0x02  //bit to set for buffered mode (not used by us)
 #define AD7705_UNIPOLAR  0x04  //bit to set for unipolar mode (not used by us)
 #define AD7705_SELFCAL   0x40  //bit to set for self-calibration in setup register
@@ -183,7 +182,7 @@ bool adc0ShouldDecreaseGain = false;  //whether ADC#0 should increase its gain i
 bool adc1ShouldDecreaseGain = false;
 // Self-calibration results are stored here
 int32_t  selfCalDataForMedian[3][2][2]; //three values for median, two ADCs, last index is offset(0) & gain(1)
-int32_t  selfCalDataVsGain[AD7705_MAX_GAIN+1][2][2]; //for each gain, two ADCs, last index is offset(0)&gain(1)
+int32_t  selfCalDataVsGain[AD7705_MAX_GAIN+1][2][2][2]; //for each gain, two ADCs, two channels each, and last index is offset(0)&gain(1)
 // Measurements of ADC#0, ADC#1 and LM35 sensor temperature are summed up here
 int32_t summedMeasurements[N_MAX_MEAS];
 int16_t measurement[N_MAX_MEAS];
@@ -216,44 +215,13 @@ void setup() {
   AD7705resetCommunication(CS_ADC_0);
   AD7705resetCommunication(CS_ADC_1);
   AD5683setVoltage(CS_DAC, 0x0000);
-  //check for hardware present: ADCs, LM35, relay, jumpers
-  hardwareDetected = getHardwarePresent();
   #ifdef DEBUG
     Serial.print("hardware=0x");
     Serial.println(hardwareDetected, HEX);
   #endif
-  //initial self-calibration: done in parallel for both ADCs (if present), for all gains
-  adc0Channel = AD7705_CH0; adc1Channel = AD7705_CH0;
-  for (int gain=0; gain<=AD7705_MAX_GAIN; gain++) {
-    adc0Gain = gain;
-    adc1Gain = gain;
-    for (int i=0; i<3; i++) {  //3 values for 3-point median
-      selfCalibrateAllADCs(AD7705_50HZ);
-      storeAllSelfCalibrationResults(selfCalDataForMedian[i]);
-      #ifdef DEBUG
-        Serial.print("gain=");
-        Serial.print(gain);
-        Serial.print(" cOffs=");
-        Serial.print(selfCalDataForMedian[i][0][0]);
-        Serial.print(" cGain=");
-        Serial.println(selfCalDataForMedian[i][0][1]);
-      #endif
-    }
-    for (int iADC=0; iADC<2; iADC++) {
-      for (int offsNgain=0; offsNgain<2; offsNgain++) {
-        int32_t median = getMedian32(
-            selfCalDataForMedian[0][iADC][offsNgain],
-            selfCalDataForMedian[1][iADC][offsNgain],
-            selfCalDataForMedian[2][iADC][offsNgain]);
-        
-        selfCalDataVsGain[gain][iADC][offsNgain] = median;
-      }
-    }
-  }
   #ifdef DEBUG
     pinMode(LED_BUILTIN, OUTPUT);
   #endif
-  adc0Gain = 0; adc1Gain = 0;
 }
 
 void loop() {
@@ -288,7 +256,8 @@ void loop() {
       sendAdcValue();
       break;
     case STATE_GET_HARDWARE:
-       hardwareDetected = getHardwarePresent(); // !!!!!!!! need to implement returning of detected hardware to PC
+       hardwareDetected = getHardwarePresent();
+       encodeAndSend(hardwareDetected);
        initialCalibration();
       break;
     case STATE_ERROR:
@@ -313,6 +282,7 @@ void readFromSerial() {
  * temp_buffer: byte array
  */
   if(Serial.available() > 0) {                  // !!!!!!!!!!!!!!< this could become if(Serial.available()) [clearer]
+    if(Serial.available() >= 64){Serial.println("Serial overflow."); currentState = STATE_ERROR;}
     byte byteRead = Serial.read();
     if (byteRead == STARTMARKER) {
       numBytesRead = 0; 
@@ -437,8 +407,9 @@ void updateState() {
  */
   if (newMessage){ // !!!!!!! need to remember to not always set newMessage = true
     switch(data_received[0]){
-      case PING: // !!!!!!!!! Replace with get hardware
-        encodeAndSend(PING);
+      case PC_HARDWARE:
+        initialTime = millis(); 
+        currentState = STATE_GET_HARDWARE;
         break;
       case PC_INIT_ADC:
         initialTime = millis();
@@ -461,10 +432,6 @@ void updateState() {
       case PC_MEASURE:                       // !!!!!!!!!!!!!!!!  bug? Also here numMeasurementsToDo is not updated from anywhere, nor read. 
         initialTime = millis(); 
         currentState = STATE_ADC_MEASURE;
-        break;
-      case PC_HARDWARE: // !!!!!!! Replace with calibration for all gains
-        initialTime = millis(); 
-        currentState = STATE_GET_HARDWARE;
         break;
       case PC_RESET:
         reset();
@@ -551,7 +518,9 @@ void setUpAllADCs(){
     adcUpdateRate = data_received[2]; 
     numMeasurementsToDo = data_received[3] << 8 | data_received[4];
     //maximum_gain = data_received[5]; //!!!!!!!!!! remove from Phython
-    selfCalibrateAllADCs(adcUpdateRate);
+    //selfCalibrateAllADCs(adcUpdateRate);
+    setAllADCgainsAndCalibration();
+    delay(1);
     encodeAndSend(PC_OK);
     currentState = STATE_IDLE;//Back to command mode
     newMessage = false;
@@ -591,15 +560,17 @@ void setVoltage(){
       // upper part of the range. The gain needs to be decreased, and the ADC
       // requires recalibration
       adc0Gain--;
-      AD7705selfCalibrate(CS_ADC_0, adc0Channel, adc0Gain, adcUpdateRate); // !!!!!!!!!!!!!!!!!!!!!! ALL OR ONLY ONE? MAYBE CHECK BOTH AND IF ONE NEEDS TO BE CALIBRATED WE DO BOTH
-      AD7705waitForCalibration(CS_ADC_0, adc0Channel);
+      setAllADCgainsAndCalibration();
+      //AD7705selfCalibrate(CS_ADC_0, adc0Channel, adc0Gain, adcUpdateRate); // !!!!!!!!!!!!!!!!!!!!!! ALL OR ONLY ONE? MAYBE CHECK BOTH AND IF ONE NEEDS TO BE CALIBRATED WE DO BOTH
+      //AD7705waitForCalibration(CS_ADC_0, adc0Channel);
       delay(1);
       adc0ShouldDecreaseGain = false; 
     }
     if(adc1ShouldDecreaseGain){
       adc1Gain--;
-      AD7705selfCalibrate(CS_ADC_1, adc1Channel, adc1Gain, adcUpdateRate); // !!!!!!!!!!!!!!!!!!!!!! ALL OR ONLY ONE? MAYBE CHECK BOTH AND IF ONE NEEDS TO BE CALIBRATED WE DO BOTH
-      AD7705waitForCalibration(CS_ADC_1, adc1Channel);
+      setAllADCgainsAndCalibration();
+      //AD7705selfCalibrate(CS_ADC_1, adc1Channel, adc1Gain, adcUpdateRate); // !!!!!!!!!!!!!!!!!!!!!! ALL OR ONLY ONE? MAYBE CHECK BOTH AND IF ONE NEEDS TO BE CALIBRATED WE DO BOTH
+      //AD7705waitForCalibration(CS_ADC_1, adc1Channel);
       delay(1);
       adc0ShouldDecreaseGain = false; 
     }
@@ -756,8 +727,9 @@ void checkMeasurementInADCRange(byte chipSelectPin, byte channel, byte gain, boo
     if(((adcValue^=8000) == ADC_POSITIVE_SATURATION) || ((adcValue^=8000) == ADC_NEGATIVE_SATURATION)){
       if(gain>0){
         gain--;
-        AD7705selfCalibrate(chipSelectPin, channel, gain, adcUpdateRate);
-        AD7705waitForCalibration(chipSelectPin, channel);
+        setAllADCgainsAndCalibration();
+        //AD7705selfCalibrate(chipSelectPin, channel, gain, adcUpdateRate);
+        //AD7705waitForCalibration(chipSelectPin, channel);
         delay(1);
         resetMeasurementData();
         *adcShouldDecreaseGain = false; 
@@ -820,8 +792,8 @@ void storeAllSelfCalibrationResults(int32_t targetArray[2][2]) {
     if (hardwareDetected & adcPresentMask) {
       byte chipSelect = iADC==0 ? CS_ADC_0 : CS_ADC_1;
       byte channel = iADC==0 ? adc0Channel : adc1Channel;
-      int32_t offs = AD7705getCalibrationRegister(chipSelect, AD7705_CH0, AD7705_REG_OFFSET);
-      int32_t gain = AD7705getCalibrationRegister(chipSelect, AD7705_CH0, AD7705_REG_GAIN);
+      int32_t offs = AD7705getCalibrationRegister(chipSelect, channel, AD7705_REG_OFFSET);
+      int32_t gain = AD7705getCalibrationRegister(chipSelect, channel, AD7705_REG_GAIN);
       targetArray[iADC][0] = offs;
       targetArray[iADC][1] = gain;
     }
@@ -838,17 +810,17 @@ void setAllADCgainsAndCalibration() {
       byte chipSelect = iADC==0 ? CS_ADC_0 : CS_ADC_1;
       byte channel = iADC==0 ? adc0Channel : adc1Channel;
       byte gain = iADC==0 ? adc0Gain : adc1Gain;
-      int32_t cOffs = selfCalDataVsGain[gain][iADC][0];
-      int32_t cGain = selfCalDataVsGain[gain][iADC][1];
-      AD7705setCalibrationRegister(chipSelect, AD7705_CH0, AD7705_REG_OFFSET, cOffs);
-      AD7705setCalibrationRegister(chipSelect, AD7705_CH0, AD7705_REG_GAIN, cGain);
+      int32_t cOffs = selfCalDataVsGain[gain][iADC][channel][0];
+      int32_t cGain = selfCalDataVsGain[gain][iADC][channel][1];
+      AD7705setCalibrationRegister(chipSelect, channel, AD7705_REG_OFFSET, cOffs);
+      AD7705setCalibrationRegister(chipSelect, channel, AD7705_REG_GAIN, cGain);
 //      #ifdef DEBUG
 //        Serial.print("gain=");
 //        Serial.println(gain);
 //        Serial.print(" cOffs=");
-//        Serial.print(AD7705getCalibrationRegister(chipSelect, AD7705_CH0, AD7705_REG_OFFSET));
+//        Serial.print(AD7705getCalibrationRegister(chipSelect, channel, AD7705_REG_OFFSET));
 //        Serial.print(" cGain=");
-//        Serial.println(AD7705getCalibrationRegister(chipSelect, AD7705_CH0, AD7705_REG_GAIN));
+//        Serial.println(AD7705getCalibrationRegister(chipSelect, channel, AD7705_REG_GAIN));
 //      #endif
       AD7705setGainAndTrigger(chipSelect, channel, gain);
     }
@@ -914,14 +886,47 @@ uint16_t getHardwarePresent() {
 
 /*initial calibration after getting hardware*/
 void initialCalibration(){
- //initial self-calibration: done in parallel for both ADCs (if present)
-  adc0Gain = 0;             adc1Gain = 0;
-  adc0Channel = AD7705_CH0; adc1Channel = AD7705_CH0;
-  selfCalibrateAllADCs(adcUpdateRate);
-  adc0Channel = AD7705_CH1; adc1Channel = AD7705_CH1;
-  selfCalibrateAllADCs(adcUpdateRate);
-  adc0Channel = AD7705_CH0; adc1Channel = AD7705_CH0;
-  triggerMeasurements();  //set to default channels
+ //initial self-calibration: done in parallel for both ADCs (if present) (old version of the calibration)
+ //adc0Gain = 0;             adc1Gain = 0;
+ //adc0Channel = AD7705_CH0; adc1Channel = AD7705_CH0;
+ //selfCalibrateAllADCs(adcUpdateRate);
+ //adc0Channel = AD7705_CH1; adc1Channel = AD7705_CH1;
+ //selfCalibrateAllADCs(adcUpdateRate);
+ //adc0Channel = AD7705_CH0; adc1Channel = AD7705_CH0;
+ //triggerMeasurements();  //set to default channels
+  
+  //initial self-calibration: done in parallel for both ADCs (if present), for all gains (new version of the calibration)
+  for(int channel=0; channel<2; channel++){
+    if(channel==0) {adc0Channel = AD7705_CH0; adc1Channel = AD7705_CH0;}
+    if(channel==1) {adc0Channel = AD7705_CH1; adc1Channel = AD7705_CH1;}
+    for (int gain=0; gain<=AD7705_MAX_GAIN; gain++) {
+      adc0Gain = gain;
+      adc1Gain = gain;
+      for (int i=0; i<3; i++) {  //3 values for 3-point median
+        selfCalibrateAllADCs(AD7705_50HZ);
+        storeAllSelfCalibrationResults(selfCalDataForMedian[i]);
+        #ifdef DEBUG
+          Serial.print("gain=");
+          Serial.print(gain);
+          Serial.print(" cOffs=");
+          Serial.print(selfCalDataForMedian[i][0][0]);
+          Serial.print(" cGain=");
+          Serial.println(selfCalDataForMedian[i][0][1]);
+        #endif
+      }
+      for (int iADC=0; iADC<2; iADC++) {
+        for (int offsNgain=0; offsNgain<2; offsNgain++) {
+          int32_t median = getMedian32(
+              selfCalDataForMedian[0][iADC][offsNgain],
+              selfCalDataForMedian[1][iADC][offsNgain],
+              selfCalDataForMedian[2][iADC][offsNgain]);
+          
+          selfCalDataVsGain[gain][iADC][channel][offsNgain] = median;
+        }
+      }
+    }
+  }
+  adc0Gain = 0; adc1Gain = 0;
 }
 /* ---------- AD7705 ADC FUNCTIONS ---------- */
 
@@ -963,7 +968,7 @@ void AD7705setGainAndTrigger(byte chipSelectPin, byte channel, byte gain) {
     //SPI.transfer16(0xffff); //reset should not be necessary
     //SPI.transfer16(0xffff);
     SPI.transfer(AD7705_REG_SETUP | channel);
-    SPI.transfer(AD7705_FSYNC | gain << 3);
+    SPI.transfer(AD7705_STATE_TRIGGER_ADCS | gain << 3);
     SPI.transfer(AD7705_REG_SETUP | channel);
     SPI.transfer(gain << 3);
     SPI.transfer(AD7705_REG_DATA | AD7705_READ_REG | channel);
