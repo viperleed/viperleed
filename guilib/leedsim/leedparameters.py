@@ -15,13 +15,15 @@ viperleed.LEEDPatternList.
 
 from collections.abc import MutableMapping, MutableSequence
 from configparser import ConfigParser
-# import copy
 import ast
 from warnings import warn as warning   # eventually will replace with logging
 
 import numpy as np
 
 from viperleed import guilib as gl
+
+non_string_keys = ('emax', 'surfbasis', 'superlattice', 'bulkgroup',
+                   'surfgroup', 'beamincidence', 'screenaperture')
 
 
 class LEEDParameters(MutableMapping):
@@ -69,7 +71,7 @@ class LEEDParameters(MutableMapping):
         if isinstance(data, dict):
             self.__from_dict(data)
         else:
-            self.__from_file(data)
+            self.__from_parser(data)
 
         # Calculate the parameters in self.calculated_keys
         self._calculate_missing()
@@ -129,7 +131,9 @@ class LEEDParameters(MutableMapping):
 
     def __repr__(self):
         """Return string representation of self."""
-        return 'LEEDParameters(' + repr(self.__data).replace('\n', '') + ')'
+        txt = 'LEEDParameters('
+        txt += gl.single_spaces_only(repr(self.__data)).replace('\n', '')
+        return txt + ')'
 
     def __eq__(self, other):
         """Equality method for LEEDParameters.
@@ -272,7 +276,7 @@ class LEEDParameters(MutableMapping):
             else:
                 warning(f"Unknown LEED parameter {k!r} will be ignored.")
 
-    def __from_file(self, parser):
+    def __from_parser(self, parser):
         """Create LEEDParameters from a configuration file.
 
         Parameters
@@ -284,13 +288,18 @@ class LEEDParameters(MutableMapping):
         Returns
         -------
         None.
+
+        Raises
+        ------
+        RuntimeError
+            When parser contains multiple sections.
         """
         if len(parser.sections()) > 1:
-            raise TypeError("LEEDParameters: multiple structures found. Use "
-                            "LEEDParametersList instead")
-        # Take the section name as a 'name' attribute
-        section = parser.sections()[0]
-        self.__from_dict({**{'name': section}, **parser[section]})
+            raise RuntimeError("LEEDParameters: multiple structures "
+                               "found. Use LEEDParametersList instead")
+        leed_parser = gl.LEEDParser()
+        leed_parser.read_structures(parser)
+        self.__from_dict(leed_parser.as_dict())
 
     def _check_mandatory(self, data):
         """Check that all necessary keys are present in the dictionary."""
@@ -335,91 +344,17 @@ class LEEDParameters(MutableMapping):
         -------
         None.
         """
-        for k, value in data.items():
-            # Process all the values that should not be strings
-            if k.lower() in ('emax', 'screenaperture'):
-                try:
-                    data[k] = float(value)
-                except ValueError as err:
-                    raise ValueError(f"LEEDParameters: invalid {k} "
-                                     f"{value!r} found") from err
-
-            elif k.lower() in ('surfbasis', 'superlattice'):
-                dtype = float if k.lower() == 'surfbasis' else int
-                try:
-                    data[k] = LEEDParameters.__array_from_input(value, dtype)
-                except ValueError as err:
-                    raise ValueError(f"{err}: {k}") from err
-
-            elif k.lower() in ('surfgroup', 'bulkgroup'):
-                data[k] = gl.PlaneGroup(value)
-
-            elif k.lower() == 'beamincidence':
-                data[k] = LEEDParameters.__beam_incidence_from_input(value)
-
-    @staticmethod
-    def __array_from_input(input_matrix, dtype):
-        """Convert input to 2x2 numpy.array.
-
-        Parameters
-        ----------
-        input_matrix : str or iterable
-        dtype : dtype
-            Data type to use for the conversion from string
-
-        Returns
-        -------
-        numpy.ndarray
-            shape (2, 2)
-
-        Raises
-        ------
-        ValueError
-            if not possible to convert to (2, 2) array
-        """
-        matrix = None
-        if isinstance(input_matrix, str):
-            matrix = gl.string_matrix_to_numpy(input_matrix, dtype=dtype,
-                                               needs_shape=(2, 2))
-        else:
-            try:
-                matrix = np.asarray(input_matrix)
-            except TypeError as err:
-                raise ValueError("LEEDParameters: invalid "
-                                 "matrix input") from err
-        if matrix is None or matrix.shape != (2, 2):
-            raise ValueError("LEEDParameters: invalid matrix shape")
-        return matrix
-
-    @staticmethod
-    def __beam_incidence_from_input(angles):
-        """Get beamIncidence tuple from input.
-
-        Parameters
-        ----------
-        angles : iterable or str
-            When an iterable, it should have only two elements.
-            When a str, it should be possible to eval-it to a
-            2-elements iterable.
-
-        Raises
-        ------
-        ValueError
-            If not possible to convert to beamIncidence angles
-
-        Returns
-        -------
-        theta, phi
-            Theta in [0, 90] range, phi in [0,360).
-        """
-        if isinstance(angles, str):
-            angles = ast.literal_eval(angles)
-        if (not isinstance(angles, (list, tuple, np.ndarray))
-                or np.shape(angles) != (2,)
-                or not -90 <= angles[0] <= 90):
-            raise ValueError("LEEDParameters: invalid beamIncidence "
-                             f"entry found: {angles}")
-        return gl.conventional_angles(*angles)
+        # Check whether any of the values that are not supposed to
+        # be strings, are in fact strings.  If they are, use a
+        # LEEDParser to convert them, and write them back into data
+        if any(isinstance(v, str)
+               for k, v in data.items()
+               if k in non_string_keys):
+            name = data.get('name', 'S1')
+            parser = gl.LEEDParser()
+            parser.read_dict({name: data})
+            for k, v in parser.as_dict().items():
+                data[k.lower()] = v
 
     @staticmethod
     def _check_acceptable(data_dict):
@@ -431,24 +366,41 @@ class LEEDParameters(MutableMapping):
 
         Raises
         ------
-        ValueError if not data_dict contains unacceptable data.
+        ValueError if data_dict contains unacceptable data.
         """
         for key, value in data_dict.items():
             if key.lower() == 'emax' and value <= 0:
                 raise ValueError("Maximum LEED energy should be positive.")
+
             if (key.lower() == 'screenaperture'
                     and (value <= 0 or value > 180)):
                 raise ValueError("screenAperture should be between "
                                  f"0 and 180. Found {value} instead.")
-            if (key.lower() in ('surfbasis', 'superlattice')
-                    and np.shape(value) != (2, 2)):
-                raise ValueError("Lattice basis and SUPERLATTICE need to have "
-                                 f"a (2, 2) shape. Found {np.shape(value)} "
-                                 "instead")
+
+            if (key.lower() in ('surfbasis', 'superlattice')):
+                try:
+                    value = np.asarray(value)
+                except TypeError as err:
+                    raise ValueError("LEEDParameters: invalid {key}"
+                                     "matrix input") from err
+                if value.shape != (2, 2):
+                    raise ValueError("LEEDParameters: invalid shape "
+                                     f"{value.shape} for {key}. "
+                                     "Expected (2, 2)")
+                data_dict[key] = value
+
             if (key.lower() == 'superlattice'
                     and any(np.abs(np.asarray(value) % 1).ravel() > 1e-4)):
-                raise ValueError("SUPERLATTICE needs to be an integer-valued "
-                                 "matrix")
+                raise ValueError("SUPERLATTICE needs to be an "
+                                 "integer-valued matrix")
+
+            if key.lower() == 'beamincidence':
+                if (not isinstance(value, (list, tuple, np.ndarray))
+                    or np.shape(value) != (2,)
+                        or not -90 <= value[0] <= 90):
+                    raise ValueError("LEEDParameters: invalid beamIncidence "
+                                     f"entry found: {value}")
+                data_dict[key] = gl.conventional_angles(*value)
 
     def _calculate_missing(self):
         """Calculate extra parameters that used only internally.
@@ -710,12 +662,14 @@ class LEEDParametersList(MutableSequence):
         """
         if not data:
             ret = []
+        elif isinstance(data, ConfigParser):
+            leed_parser = gl.LEEDParser()
+            leed_parser.read_dict(data)
+            ret = [LEEDParameters(leed_parser.as_dict(section))
+                   for section in data.sections()]
         elif isinstance(data, dict):
             # delegate to LEEDParameters the check on the dictionary
             ret = [LEEDParameters(data)]
-        elif isinstance(data, ConfigParser):
-            ret = [LEEDParameters({**{'name': section}, **data[section]})
-                   for section in data]
         elif isinstance(data, LEEDParameters):
             ret = [data]
         elif isinstance(data, LEEDParametersList):
