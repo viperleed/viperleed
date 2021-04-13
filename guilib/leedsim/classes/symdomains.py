@@ -119,7 +119,6 @@ class LEEDSymmetryDomains(Sequence):
         None.
         """
         self.__parameters = gl.LEEDParameters(leed_parameters)
-        super().__init__()
 
         # __const_attributes contains attributes of this instance
         # that are calculated only once (either during this
