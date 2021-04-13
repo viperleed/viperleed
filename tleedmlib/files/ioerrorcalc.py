@@ -11,6 +11,7 @@ import numpy as np
 import logging
 import re
 from scipy import interpolate
+from viperleed.tleedmlib.base import range_to_str
 
 try:
     import matplotlib
@@ -54,7 +55,7 @@ def write_errors_csv(errors, filename="Errors.csv", sep=";"):
                "disp": ["Displacement [A]"],
                "rfac": ["R"]}
     for err in errors:
-        ats = ", ".join(str(at.oriN) for at in err.atoms)
+        ats = range_to_str([at.oriN for at in err.atoms])
         if isinstance(err.displacements[0], np.ndarray):
             dirvec = err.displacements[-1] * np.array([1, 1, -1])
             dirvec = dirvec / np.linalg.norm(dirvec)
@@ -129,7 +130,7 @@ def write_errors_pdf(errors, filename="Errors.pdf", var=None):
             ats = "Atom"
             if len(ats) > 1:
                 ats += "s"
-            ats += " " + ", ".join(str(at.oriN) for at in err.atoms)
+            ats += " " + range_to_str([at.oriN for at in err.atoms])
             if mode == "geo":
                 dirvec = err.displacements[-1] * np.array([1, 1, -1])
                 dirvec = dirvec / np.linalg.norm(dirvec)

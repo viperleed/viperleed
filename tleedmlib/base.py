@@ -151,6 +151,35 @@ def readIntRange(s):
     return list(set(out))
 
 
+def range_to_str(il):
+    """Takes a list of integers, sorts them and returns a string short form.
+    For example, [1, 6, 4, 5, 2, 8] will return "1-2, 4-6, 8". Double entries
+    will be ignored."""
+    if not all(isinstance(v, int) for v in il):
+        t = [type(v) for v in il if type(v) is not int]
+        raise TypeError("range_to_str: expected list of int, not " + str(t[0]))
+    sl = sorted(il, reverse=True)
+    prev = sl.pop()
+    rmin = prev
+    out = str(prev)
+    while sl:
+        v = sl.pop()
+        if v == prev:
+            continue
+        if v - prev == 1:
+            prev = v
+            continue
+        if prev != rmin:
+            out += "-{}, {}".format(prev, v)
+        else:
+            out += ", {}".format(v)
+        prev = v
+        rmin = v
+    if prev != rmin:
+        out += "-{}".format(prev)
+    return out
+
+
 def readVector(s, ucell=None, defRelaltive=False):
     """Takes a string 'xyz[f1 f2 f3]', 'abc[f1 f2 f3]' or just '[f1 f2 f3]'
     and returns the corresponding vector in cartesian coordinates, or None if
