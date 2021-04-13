@@ -258,3 +258,12 @@ def prime_numbers():
         while i in sieve:
             i += step
         sieve[i] = step
+
+
+def equal_dicts(dict_a, dict_b, ignore_keys=[]):
+    """Return dict_a == dict_b, optionally ignoring some keys."""
+    if not ignore_keys:
+        return dict_a == dict_b
+    a_keys = set(dict_a).difference(ignore_keys)
+    b_keys = set(dict_b).difference(ignore_keys)
+    return a_keys == b_keys and all(dict_a[k] == dict_b[k] for k in a_keys)
