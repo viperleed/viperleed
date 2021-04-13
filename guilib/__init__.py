@@ -20,7 +20,10 @@ from viperleed.guilib.helpers import (conventional_angles,
                                       two_by_n_array_to_tuples,
                                       two_by_two_array_to_tuple,
                                       two_d_iterable_to_array,
-                                      remove_duplicates)
+                                      remove_duplicates,
+                                      single_spaces_only,  # Probably I don't need this
+                                      array2string, prime_numbers,
+                                      equal_dicts)
 from viperleed.guilib.base import (get_equivalent_beams,
                                    project_to_first_domain, check_type,
                                    check_leed_params, check_multi_leed_params,
@@ -65,4 +68,5 @@ from viperleed.guilib.leedsim.leedparameters import LEEDParametersList
 # cares about the __all__ correctly
 from viperleed.guilib.leedsim.classes import (LEEDPattern, LEEDSymmetryDomains,
                                               LEEDEquivalentBeams,
-                                              LEEDStructuralDomains)
+                                              LEEDStructuralDomains,
+                                              LEEDParser)
