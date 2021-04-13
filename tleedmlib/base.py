@@ -157,7 +157,8 @@ def range_to_str(il):
     will be ignored."""
     if not all(isinstance(v, int) for v in il):
         t = [type(v) for v in il if type(v) is not int]
-        raise TypeError("range_to_str: expected list of int, not " + str(t[0]))
+        raise TypeError("range_to_str: expected list of int, found type "
+                        + str(t[0].__name__))
     sl = sorted(il, reverse=True)
     prev = sl.pop()
     rmin = prev
