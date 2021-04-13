@@ -146,7 +146,8 @@ class LEEDEquivalentBeams:
 
     hash_keys = ('basis', 'superlattice', 'domain_ids', 'angle_key', 'caller')
 
-    __cache = {}
+    __dict_cache = {}  # instances created from dicts
+    __self_cache = {}  # instances created from LEEDEquivalentBeams
 
     # @gl.profile_lines
     @gl.exec_time
@@ -159,7 +160,13 @@ class LEEDEquivalentBeams:
             list of LEEDEquivalentBeams or list of dict, but not
             mixed. When dictionaries are passed, each one should be
             {beam: set(beams equivalent to beam)} where each beam
-            is a 2-tuple-like
+            is a 2-tuple-like. When passing a single instance of
+            LEEDEquivalentBeams for superposition, very little
+            computation is done, but the keys 'overlap_domains'
+            and 'extinct_domains' of the .indexed_beams property
+            are the same as those of domains[0], i.e., they
+            do not contain the domain_ids passed. The caller needs
+            to fix this a fortiori.
         basis : array-like
             2x2 matrix of the bulk basis, with a, b = basis. This
             parameter is optional when domains is a list of
@@ -178,16 +185,22 @@ class LEEDEquivalentBeams:
             configuration is created. It should be used only when
             combining structures with differently sized unit cells.
             In all other cases, passing fractional indices or only
-            numerators in domains and extinct_lists is faster.
+            numerators in domains and extinct_lists is faster. When
+            all domains are a LEEDEquivalentBeams, denominators for
+            those that .has_fractional_beams are ignored.
         superlattice : array-like, optional
             2x2 superlattice matrix or iterable of 2x2 superlattice
             matrices. Used exclusively to compute the hash. Hash cannot
-            be computed without this.
+            be computed without this. The value passed is ignored when
+            all domains are LEEDEquivalentBeams, as it is automatically
+            calculated.
         angle_key : str, optional
             can be one of {'norm', 'other', angles} where angles is one
             of the special azimuthal angles (i.e., parallel to
             mirror/glide planes). Used to compute the hash. Hash cannot
-            be computed without this.
+            be computed without this. The value passed is ignored when
+            all domains are LEEDEquivalentBeams, as it is automatically
+            calculated.
         caller : object, optional
             The instance that requested the initialization. Used for
             hashing.
@@ -213,20 +226,17 @@ class LEEDEquivalentBeams:
         # unique hash. It is set by self.__update_hash, and read via
         # the self.hash_dict property
         self.__hash_dict = {}
-
         self.__update_hash(**kwargs)
 
+        # See if we can skip all the calculations, and
+        # rather take the attributes from the cached object
         try:
-            # See if we can skip all the calculations, and
-            # rather take the attributes from the cached object
-            self.load_from_cache()
-        except RuntimeError:
+            self.load_from_cache(kwargs['which_cache'])
+        except RuntimeError:  # Nope, will do all calculations
             pass
-        else:
+        else:  # Yes, it's cached
             return
 
-        # If never calculated before, or hash cannot be
-        # determined due to lack of input, calculate again.
         self.__loaded_from_cache = False
         self.__basis = kwargs.get('basis')
         self.__eq_beams_dict = {}  # set in __build_beam_equivalence_dict
@@ -238,34 +248,80 @@ class LEEDEquivalentBeams:
         # different structures.
         # Since this slows down this part quite a bit, it is advisable
         # not to pass 'denominators' unless strictly necessary.
-        #
-        # self.__denominators keeps a dictionary of the denominators
-        # in the form {struct_id: denominator}, and is not
-        # empty only if the LEEDEquivalentBeams was instantated from
-        # a LEEDStructuralDomains instance
         denominators = kwargs.get('denominators', None)
+        self.__has_fract_beams = False
         if denominators:
+            self.__has_fract_beams = True
             if len(denominators) != len(domains):
-                raise ValueError("Inconsistent number of denominators. "
-                                 f"Expected {len(domains)}, found "
-                                 f"{len(denominators)}")
-            domains = [beams_dict_numerators_to_fractional(dom, den)
+                raise ValueError("LEEDEquivalentBeams: Inconsistent number "
+                                 f"of denominators. Expected {len(domains)}, "
+                                 f"found {len(denominators)}")
+            if any(den == 0 for den in denominators):
+                raise ZeroDivisionError("LEEDEquivalentBeams: all "
+                                        "denominators must be nonzero.")
+            dict_to_fract = beams_dict_numerators_to_fractional
+            list_to_fract = beams_list_numerators_to_fractional
+            domains = [dict_to_fract(dom, den) if den else dom
                        for dom, den in zip(domains, denominators)]
-            extinct_lists = [beams_list_numerators_to_fractional(ext, den)
+            extinct_lists = [list_to_fract(ext, den) if den else ext
                              for ext, den in zip(extinct_lists, denominators)]
+
+        try:
+            self.add_to_cache(kwargs['which_cache'])
+        except RuntimeError:
+            # Can't be cached as some hash keys are missing
+            pass
+
+        if len(domains) == 1 and kwargs['which_cache'] == 'self':
+            # There is nothing to superpose. Skip calculations,
+            # And mark it as loaded from cache, as a single
+            # LEEDEquivalentBeams has already seen the correct
+            # processing all the way.
+            self.__loaded_from_cache = True
+
+            # We may have to reprocess beams to fractional, though
+            indexed = kwargs['indexed_beams']
+            eq_beams_dict = domains[0]
+            extinct_lists = extinct_lists[0]
+            if denominators and not kwargs['fractional']:
+                # Need to turn beams into fractional
+                den = denominators[0]
+                indexed['beams'] = list_to_fract(indexed['beams'], den)
+                eq_beams_dict = dict_to_fract(eq_beams_dict, den)
+                extinct_lists = list_to_fract(extinct_lists, den)
+
+            self.__indexed_beams = indexed
+            self.__eq_beams_dict = eq_beams_dict
+            self.__extinct = extinct_lists
+
+            # NB: this way, the domains_ids are NOT the ones
+            # that were originally passed. We assume that the
+            # caller will take care of this.
+            caller = kwargs.get('caller', None)
+            if not caller or not isinstance(caller, gl.LEEDStructuralDomains):
+                warning("LEEDEquivalentBeams: Single domain was already "
+                        "calculated, but domain_ids passed were unused. "
+                        "They will need to be fixed at the source!",
+                        RuntimeWarning)
+            return
 
         beam_groups = self.__build_beam_equivalence_dict(domains)
         beam_groups = self.__sort_beams(beam_groups)
         self.__indexed_beams = self.__index_beams(beam_groups, domains,
                                                   extinct_lists, domain_ids)
-        # If it can be hashed, cache self
-        if self.hash_:
-            self.__cache[self.hash_] = self
 
     @staticmethod
     def __process_input(domains, kwargs):
         """Process input as per __init__ doc."""
         # Do some checking of the parameters passed:
+        # (0) check if the domain_ids passed have the right length
+        domain_ids = kwargs.get('domain_ids', range(len(domains)))
+        if len(domain_ids) != len(domains):
+            raise ValueError("LEEDEquivalentBeams: incompatible number "
+                             + f"of domain_ids ({len(domain_ids)}) "
+                             + f"found. Expected {len(domains)}")
+        kwargs['domain_ids'] = domain_ids
+
         # (1) see if the domains passed are all instances of
         #     LEEDEquivalentBeams. In this case, treat the
         #     current instance as a superposition of the inputs.
@@ -273,73 +329,177 @@ class LEEDEquivalentBeams:
         #     on the same bulk, each possibly containing several
         #     SYMMETRY-related domains.
         if all(isinstance(dom, LEEDEquivalentBeams) for dom in domains):
-            # Check that the elements passed are consistent with one
-            # another, i.e. that the lattice bases are compatible.
-            if not same_bases([dom.basis for dom in domains]):
-                raise ValueError("LEEDEquivalentBeams: domains have different"
-                                 "bulk bases, and cannot be combined")
-
-            # Collect the information that is needed to build a
-            # hash (if present for all)
-            try:
-                kwargs['angle_key'] = ' '.join(dom.hash_dict['angle_key']
-                                               for dom in domains)
-                kwargs['superlattice'] = tuple(dom.hash_dict['superlattice']
-                                               for dom in domains)
-            except KeyError:
-                pass
-            # And all the rest of the information needed for
-            # creating the superposition
-            basis = domains[0].basis
-            extinct_lists = [dom.extinct for dom in domains]
-            domains = [dom.equivalent_beams_dict for dom in domains]
+            domains, kwargs = LEEDEquivalentBeams.__preprocess_eqbeams(domains,
+                                                                       kwargs)
 
         # (2) The only other acceptable option is passing a
         #     list of beam-equivalence dictionaries, as well
         #     as the (now mandatory) parameter basis.
         elif all(isinstance(dom, dict) for dom in domains):
-            basis = kwargs.get('basis', None)
-            if basis is None:
-                raise TypeError("LEEDEquivalentBeams: missing mandatory basis"
-                                "parameter")
-            extinct_lists = kwargs.get('extinct_lists', [[]]*len(domains))
+            kwargs['which_cache'] = 'dict'
         else:
             raise TypeError("LEEDEquivalentBeams: only list of dictionaries "
                             "or list of LEEDEquivalentBeams are acceptable. "
                             "Not possible to use mixed lists")
 
+        basis = kwargs.get('basis', None)
+        if basis is None:
+            raise TypeError("LEEDEquivalentBeams: missing "
+                            "mandatory basis parameter")
         if np.shape(basis) != (2, 2):
             raise ValueError("LEEDEquivalentBeams: invalid bulk_basis "
                              + f"{basis}. ".replace('\n', '')
                              + "Expected a 2x2 array-like")
+
+        extinct_lists = kwargs.get('extinct_lists', [[]]*len(domains))
         if len(extinct_lists) != len(domains):
             raise ValueError("LEEDEquivalentBeams: incompatible number of "
                              + f"domains ({len(extinct_lists)}) found in "
                              + f"extinct_lists. Expected {len(domains)}")
-
-        domain_ids = kwargs.get('domain_ids', range(len(domains)))
-
-        # Re-prepare the kwargs to update the hash dictionary, updating
-        # values that may have changed during this initialization
-        kwargs['basis'] = basis
-        kwargs['domain_ids'] = domain_ids
         kwargs['extinct_lists'] = extinct_lists
 
         return domains, kwargs
 
     @staticmethod
-    def clear_cache():
-        """Clear the hash table of all LEEDEquivalentBeams instances.
+    def __preprocess_eqbeams(domains, kwargs):
+        """Trasform LEEDEquivalentBeams input as if dicts were passed.
+
+        Parameters
+        ----------
+        domains : list of LEEDEquivalentBeams
+            Domains to be combined in superpositions.
+        kwargs : dict
+            Optional arguments passed during instantiation.
+
+        Raises
+        ------
+        ValueError
+            If the domains have inconsistent bases.
+
+        Returns
+        -------
+        domains : list of dict
+            Beam equivalence dictionaries, each one is
+            {beam: set(beams equivalent to beam)} where
+            each beam is a 2-tuple-like.
+        kwargs : dict
+            Modified optional arguments to mimic instance
+            creation from a list of dictionaries.
+        """
+        # Check that the elements passed are consistent with one
+        # another, i.e. that the lattice bases are compatible.
+        if not same_bases([dom.basis for dom in domains]):
+            raise ValueError("LEEDEquivalentBeams: domains have "
+                             "different bases, and cannot be combined")
+
+        # Collect the information that is needed to build a
+        # hash (if present for all)
+        try:
+            kwargs['angle_key'] = ''.join(dom.hash_dict['angle_key']
+                                          for dom in domains)
+            kwargs['superlattice'] = tuple(dom.hash_dict['superlattice']
+                                           for dom in domains)
+        except KeyError:
+            pass
+
+        # Take a look in the cache, to see if, by chance, there
+        # are already some versions of the same domains, computed
+        # as single domains, i.e., with 'domains_id' = (same_id,)
+        # that have fractional beams.
+        # TODO: is 1000 cached too little/much?
+        if len(LEEDEquivalentBeams.__self_cache) < 1000:
+            cached_domains = tuple(LEEDEquivalentBeams.__self_cache.values())
+            cached_ids = [dom.domain_ids for dom in cached_domains]
+            for i, (dom, dom_id) in enumerate(zip(domains,
+                                                  kwargs['domain_ids'])):
+                if dom.has_fractional_beams:
+                    continue
+
+                idx = 0
+                while 1:  # There may be multiple ones
+                    try:
+                        idx = cached_ids.index((dom_id,), idx)
+                    except ValueError:
+                        # no cached copy with the same ids
+                        break
+                    cached = cached_domains[idx]
+                    cached_dict = {k: (v if k != 'superlattice' else v[0])
+                                   for k, v in cached.hash_dict.items()}
+                    if (gl.equal_dicts(cached_dict, dom.hash_dict,
+                                       ignore_keys=['domain_ids', 'caller'])
+                            and cached.has_fractional_beams):
+                        domains[i] = cached
+                        break
+                    idx += 1
+
+        # Then collect the rest of the information
+        # needed for creating the superposition
+        kwargs['basis'] = domains[0].basis
+        kwargs['extinct_lists'] = [dom.extinct for dom in domains]
+
+        # Pre-process the denominators, if passed: if the
+        # beams of some domains are already fractional,
+        # we should not divide again by the denominator
+        denominators = kwargs.get('denominators', None)
+        if denominators:
+            if len(denominators) != len(domains):
+                raise ValueError("Inconsistent number of denominators. "
+                                 f"Expected {len(domains)}, found "
+                                 f"{len(denominators)}")
+            denominators = [None if dom.has_fractional_beams else den
+                            for dom, den in zip(domains, denominators)]
+        kwargs['denominators'] = denominators
+
+        # If there is a single domain, store its indexed
+        # beams and whether the instance has fractional
+        # beams, as this will allow us to skip calculations
+        # later in the __init__.
+        if len(domains) == 1:
+            kwargs['indexed_beams'] = domains[0].indexed_beams
+            kwargs['fractional'] = domains[0].has_fractional_beams
+
+        # Finally, collect the beams
+        domains = [dom.equivalent_beams_dict for dom in domains]
+        kwargs['which_cache'] = 'self'
+
+        return domains, kwargs
+
+    @staticmethod
+    def clear_cache(which_cache='all'):
+        """Clear the selected cache of LEEDEquivalentBeams instances.
 
         This may be useful in case a completely new bulk structure is
         loaded, in case memory usage starts being an issue.
+
+        Parameters
+        ----------
+        which_cache : {'all', 'self', 'dict'}
+            Which of the two caches is to be cleared
+
+        Returns
+        -------
+        None.
         """
-        LEEDEquivalentBeams.__cache = {}
+        if which_cache not in ('all', 'self', 'dict'):
+            raise ValueError("LEEDEquivalentBeams: invalid cache "
+                             f"{which_cache} cannot be cleared.")
+        if which_cache in ('self', 'all'):
+            LEEDEquivalentBeams.__self_cache = {}
+        if which_cache in ('dict', 'all'):
+            LEEDEquivalentBeams.__dict_cache = {}
 
     @property
     def basis(self):
         """Basis vectors as a 2x2 iterable. a = basis[0], b = basis[1]."""
         return self.__basis
+
+    @property
+    def domain_ids(self):
+        """Return a tuple of the domain_ids used for construction."""
+        if 'domain_ids' not in self.hash_dict:
+            raise RuntimeError("Just for me: move call to __update_hash"
+                               "earlier on during __init__")
+        return self.hash_dict['domain_ids']
 
     @property
     def extinct(self):
@@ -366,6 +526,11 @@ class LEEDEquivalentBeams:
         return self.__eq_beams_dict
 
     @property
+    def has_fractional_beams(self):
+        """Return whether the beams in self are fractional."""
+        return self.__has_fract_beams
+
+    @property
     def hash_dict(self):
         """Return dictionary used for computing the hash."""
         return self.__hash_dict
@@ -373,13 +538,20 @@ class LEEDEquivalentBeams:
     @property
     def hash_(self):
         """Compute the hash of the geometry defined during instantiation."""
-        if not self.__hash_dict:
+        if not self.hash_dict:
             return None
         return hash(tuple(self.__hash_dict.values()))
 
     @property
     def indexed_beams(self):
         """Return a list of beams with indexing.
+
+        When a single instance of LEEDEquivalentBeams was
+        used for superposition, the keys 'overlap_domains'
+        and 'extinct_domains' are the same as those of
+        domains[0], i.e., they do not contain the domain_ids
+        passed. The caller is expected to fix this after
+        instantiation.
 
         Returns
         -------
@@ -411,7 +583,8 @@ class LEEDEquivalentBeams:
     @property
     def is_cached(self):
         """Return whether self is stored in the cache."""
-        return self.hash_ and (self.hash_ in self.__cache)
+        return self.hash_ and (self.hash_ in self.__dict_cache
+                               or self.hash_ in self.__self_cache)
 
     @property
     def was_cached(self):
@@ -423,62 +596,51 @@ class LEEDEquivalentBeams:
         """
         return self.__loaded_from_cache
 
-    def load_from_cache(self):
-        """Load self from cache."""
+    def add_to_cache(self, which_cache):
+        """Insert self in the correct cache."""
+        # If it can be hashed, cache self
+        if not self.hash_:
+            raise RuntimeError("LEEDEquivalentBeams: not possible to "
+                               "cache when hash parameters are missing.")
+
+        if which_cache == 'dict':
+            cache = self.__dict_cache
+        elif which_cache == 'self':
+            cache = self.__self_cache
+        else:
+            raise ValueError("LEEDEquivalentBeams: invalid "
+                             f"cache {which_cache}. Should "
+                             "be either 'self' or 'dict'")
+        cache[self.hash_] = self
+
+    def load_from_cache(self, which_cache):
+        """Load self from one of the caches."""
         if not self.is_cached:
             raise RuntimeError("LEEDEquivalentBeams: self is not in "
                                "the cache. Impossible to load.")
         self.__loaded_from_cache = True
 
-        cached = self.__cache[self.hash_]
+        if which_cache == 'dict':
+            cache = self.__dict_cache
+        elif which_cache == 'self':
+            cache = self.__self_cache
+        else:
+            raise ValueError("LEEDEquivalentBeams: invalid "
+                             f"cache {which_cache}. Should "
+                             "be either 'self' or 'dict'")
+        cached = cache[self.hash_]
         self.__basis = cached.basis
         self.__eq_beams_dict = cached.equivalent_beams_dict
         self.__extinct = cached.extinct
         self.__indexed_beams = cached.indexed_beams
-
-    def __update_hash(self, **kwargs):
-        """Update hash dictionary with the parameters passed.
-
-        Parameters
-        ----------
-        basis : iterable
-            2x2 iterable of the bulk basis. Converted to a 2x2 tuple.
-        superlattice : iterable
-            Single superlattice matrix, or list of superlattice
-            matrices. When a list, make sure that each of the elements
-            is a tuple, so that a hash can be built. Only one
-            superlattice matrix per domain is needed.
-        domain_ids : iterable
-            List of hashable entries that identify the domains.
-        angle_key : str
-            Identifier that defines the geometry of the primary beam.
-        **kwargs : dict
-            Other parameters are ignored
-
-        Returns
-        -------
-        None.
-
-        """
-        missing = [key for key in self.hash_keys if key not in kwargs]
-        if missing:
-            warning(f"LEEDEquivalentBeams: missing {missing}. "
-                    "No hash possible")
-            return
-        # Set up __hash_dict to always have the same order
-        self.__hash_dict = {k: kwargs[k] for k in self.hash_keys}
-        for k, hash_component in self.__hash_dict.items():
-            if k in ('basis', 'superlattice'):
-                hash_component = zip(*hash_component)
-            if k in ('basis', 'superlattice', 'domain_ids'):
-                self.__hash_dict[k] = tuple(hash_component)
+        self.__has_fract_beams = cached.has_fractional_beams
 
     @gl.exec_time
     def __build_beam_equivalence_dict(self, beams_by_domain):
         """Split beams into beam equivalence classes.
 
         This is the core method of this class. It is run once at
-        instantiation, and should no be run ever again.
+        instantiation, and should not be run ever again.
 
         It takes a list of dictionaries of beam equivalences, one per
         domain, and combines them into a single dictionary containing
@@ -596,33 +758,6 @@ class LEEDEquivalentBeams:
             append_beams(common_beams)
         return beam_equivalence
 
-    # @gl.profile_calls()
-    @gl.exec_time
-    def __sort_beams(self, beam_groups):
-        """Sort beams given as a list of iterables.
-
-        Parameters
-        ----------
-        beam_groups : iterable
-            Each of the elements in the list is treated as a group
-            of symmetry-equivalent beams.
-
-        Returns
-        -------
-        list of list
-            Sorted version of the input, using the criteria defined
-            by __sort_hk and self.__sort_energy, i.e., the beam
-            groups will appear: (1) in increasing radial position
-            (i.e., energy), and (ii) for beams of equal radial
-            position, beams with larger h+k index within a group will
-            appear first.  There is no criterion for sorting
-            beam-equivalence groups one with respect to the other,
-            except for the radial position.
-        """
-        # sort within each equivalence group and by energy
-        return sorted((sorted(beams, key=sort_hk) for beams in beam_groups),
-                      key=self.__sort_energy)
-
     @gl.exec_time
     # @gl.profile_lines
     # @gl.profile_calls()
@@ -719,6 +854,33 @@ class LEEDEquivalentBeams:
                 #     )
         return indexed_beams
 
+    # @gl.profile_calls()
+    @gl.exec_time
+    def __sort_beams(self, beam_groups):
+        """Sort beams given as a list of iterables.
+
+        Parameters
+        ----------
+        beam_groups : iterable
+            Each of the elements in the list is treated as a group
+            of symmetry-equivalent beams.
+
+        Returns
+        -------
+        list of list
+            Sorted version of the input, using the criteria defined
+            by __sort_hk and self.__sort_energy, i.e., the beam
+            groups will appear: (1) in increasing radial position
+            (i.e., energy), and (ii) for beams of equal radial
+            position, beams with larger h+k index within a group will
+            appear first.  There is no criterion for sorting
+            beam-equivalence groups one with respect to the other,
+            except for the radial position.
+        """
+        # sort within each equivalence group and by energy
+        return sorted((sorted(beams, key=sort_hk) for beams in beam_groups),
+                      key=self.__sort_energy)
+
     def __sort_energy(self, list_of_equivalent_indices):
         """Key-sorting criterion for energies.
 
@@ -750,3 +912,40 @@ class LEEDEquivalentBeams:
         g_vector = np.dot(list_of_equivalent_indices[0], self.basis)
         # Sort by energy, i.e., by ||g||^2:
         return g_vector[0]**2 + g_vector[1]**2
+
+    def __update_hash(self, **kwargs):
+        """Update hash dictionary with the parameters passed.
+
+        Parameters
+        ----------
+        basis : iterable
+            2x2 iterable of the bulk basis. Converted to a 2x2 tuple.
+        superlattice : iterable
+            Single superlattice matrix, or list of superlattice
+            matrices. When a list, make sure that each of the elements
+            is a tuple, so that a hash can be built. Only one
+            superlattice matrix per domain is needed.
+        domain_ids : iterable
+            List of hashable entries that identify the domains.
+        angle_key : str
+            Identifier that defines the geometry of the primary beam.
+        **kwargs : dict
+            Other parameters are ignored
+
+        Returns
+        -------
+        None.
+
+        """
+        missing = [key for key in self.hash_keys if key not in kwargs]
+        if missing:
+            warning(f"LEEDEquivalentBeams: missing {missing}. "
+                    "No hash possible")
+            return
+        # Set up __hash_dict to always have the same order
+        self.__hash_dict = {k: kwargs[k] for k in self.hash_keys}
+        for k, hash_component in self.__hash_dict.items():
+            if k in ('basis', 'superlattice'):
+                hash_component = gl.two_by_two_array_to_tuple(hash_component)
+            if k in ('basis', 'superlattice', 'domain_ids'):
+                self.__hash_dict[k] = tuple(hash_component)
