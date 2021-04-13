@@ -241,7 +241,7 @@ def main():
     spacing = 12
     hi = ""
     if os.path.isfile("history.info"):
-        hi += "\n\n\n"
+        hi += "\n\n"
     if tensornums == {0}:
         hi += "# TENSORS ".ljust(spacing) + "None\n"
     else:
@@ -276,7 +276,7 @@ def main():
     hi += "# TIME ".ljust(spacing) + translateTimestamp(oldTimeStamp) + "\n"
     hi += "# FOLDER ".ljust(spacing) + dirname + "\n"
     hi += "Notes: " + notes + "\n"
-    hi += "\n\n###########\n\n"
+    hi += "\n###########\n"
     try:
         with open("history.info", "a") as wf:
             wf.write(hi)
