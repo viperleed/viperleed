@@ -856,10 +856,10 @@ def screen_radius(energy, aperture):                                          # 
 class BeamIndex(tuple):
     """
     Convenience class to store a 2-element tuple that represents a Miller index
-    for a LEED beam. Each index is a Fraction. Since instantiation is a bit
-    slow, they are cached. Not sure yet how much impact this has on memory.
-    Right now caching is pretty simple, just looking at the hash value of
-    a tuple a subset of the inputs.
+    for a LEED beam. Each index is a Fraction.
+    
+    Since instantiation is a bit slow, and repeated several times, they
+    are cached.
     """
     separators = ',|'
     __cache = {}
@@ -886,11 +886,17 @@ class BeamIndex(tuple):
             passing numerators only, it is most efficient to give the indices
             as ints rather than floats
         """
-        # if not isinstance(denominator, int):
-            # raise TypeError("BeamIndex: denominator must be an int")
         indices = cls.__process_indices(indices)
 
-        input_hash = hash((*indices, denominator))
+        # We will hash the object only if it does not contain
+        # '-1' as this is a special value for hashing. In fact,
+        # hash(-1) = -2 Hashing stuff that contains -1 would
+        # thus produce a significant number of collisions.
+        # Moreover hash(obj) never returns -1.
+        input_hash = -1
+        for_hash = (*indices, denominator)
+        if -1 not in for_hash:
+            input_hash = hash(for_hash)
         if input_hash in cls.__cache:
             return cls.__cache[input_hash]
 
@@ -903,7 +909,8 @@ class BeamIndex(tuple):
                         from_numerator=from_numerators
                         ))
         instance = super().__new__(cls, instance)
-        cls.__cache[input_hash] = instance
+        if input_hash != -1:
+            cls.__cache[input_hash] = instance
         return instance
 
     @staticmethod
@@ -996,8 +1003,8 @@ class BeamIndex(tuple):
         """
         if isinstance(factor, (int, Fraction)):
             return BeamIndex(self[0]*factor, self[1]*factor)
-        raise NotImplementedError("* undefined between BeamIndex and "
-                                  f"{type(factor).__name__}")
+        raise TypeError("unsupported operand type(s) for *: "
+                        f"'BeamIndex' and {type(factor).__name__!r}")
 
     def __rmul__(self, factor):
         return self.__mul__(factor, self)
