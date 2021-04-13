@@ -1,4 +1,5 @@
-"""
+"""Module guilib.leedsim.classes.
+
 ======================================
   ViPErLEED Graphical User Interface
 ======================================
@@ -11,16 +12,15 @@ Author: Michele Riva
 Created: 2021-03-13
 """
 
+__all__ = ('Woods', 'RealSpace', 'LEEDEquivalentBeams', 'LEEDSymmetryDomains',
+           'LEEDStructuralDomains', 'LEEDPattern', 'LEEDParser')
+
 from viperleed.guilib.leedsim.classes.woods import Woods
 from viperleed.guilib.leedsim.classes.realspace import RealSpace
 from viperleed.guilib.leedsim.classes.beams import LEEDEquivalentBeams
 from viperleed.guilib.leedsim.classes.symdomains import LEEDSymmetryDomains
-from viperleed.guilib.leedsim.classes.structdomains import LEEDStructuralDomains
+from viperleed.guilib.leedsim.classes.structdomains import (
+    LEEDStructuralDomains,
+    )
 from viperleed.guilib.leedsim.classes.leedpattern import LEEDPattern
-# from viperleed.guilib.leedsim.classes.leedsubpattern import (
-    # LEEDSubpattern, CachedLEEDSubpatternConstructor
-    # )
-# from viperleed.guilib.leedsim.classes.oldleedpatterns import (LEEDPattern,  # These will be replaced once the new LEEDPattern/LEEDsubpattern work as they should
-                                                              # LEEDsubpattern)
-
-
+from viperleed.guilib.leedsim.classes.leedparser import LEEDParser
