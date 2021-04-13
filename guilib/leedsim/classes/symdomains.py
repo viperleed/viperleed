@@ -19,6 +19,8 @@ import numpy as np
 from viperleed import guilib as gl
 
 
+# @gl.profile_lines
+# @gl.exec_time
 def transform_beam_indices(indices, transform):
     """Transform indices to another basis.
 
@@ -100,7 +102,22 @@ class LEEDSymmetryDomains(Sequence):
     domain
     """
 
+    @gl.exec_time
+    # @gl.profile_lines
     def __init__(self, leed_parameters):
+        """Initialize LEEDSymmetryDomains instance.
+
+        Parameters
+        ----------
+        leed_parameters : dict, ConfigParser or LEEDParameters
+            Parameters defining the collections of domains
+            related by bulk symmetry. Will be fed to
+            LEEDParameters
+
+        Returns
+        -------
+        None.
+        """
         self.__parameters = gl.LEEDParameters(leed_parameters)
         super().__init__()
 
@@ -227,8 +244,7 @@ class LEEDSymmetryDomains(Sequence):
         Returns
         -------
         list
-            List of extinct beams as either tuples or BeamIndex,
-            depending on whether self.fractional is False or True
+            List of extinct beams as tuples of numerators
 
         Raises
         ------
@@ -237,7 +253,8 @@ class LEEDSymmetryDomains(Sequence):
             method has been invoked at least once.
         """
         if self.eq_beams_last_config is None:
-            raise RuntimeError("Need to call .equivalent_spots() once "
+            raise RuntimeError("LEEDSymmetryDomains: Need to "
+                               "call .equivalent_spots() once "
                                "before .extinct is available")
         return self.eq_beams_last_config.extinct
 
@@ -267,12 +284,12 @@ class LEEDSymmetryDomains(Sequence):
             Each entry is a tuple of the form
             (beam, group_idx, overlapping_domains, extinct_domains)
 
-            beam : tuple or BeamIndex,
-                Numerators indices of the beam
-            group_idx : int,
+            beam : tuple
+                Numerators of the indices of the beam
+            group_idx : int
                 Progressive index defining equivalent beams. Negative
                 for fully extinct.
-            overlapping_domains : list,
+            overlapping_domains : list
                 Domain ids for domains contributing
             extinct_domains : list
                 Domain ids for domains that contribute with extinct
@@ -285,8 +302,9 @@ class LEEDSymmetryDomains(Sequence):
             method has been invoked at least once.
         """
         if self.eq_beams_last_config is None:
-            raise RuntimeError("Need to call .equivalent_spots() once "
-                               "before .last_domains_used is available")
+            raise RuntimeError("LEEDSymmetryDomains: Need to call "
+                               ".equivalent_spots() once before "
+                               ".indexed_beams is available")
         return self.eq_beams_last_config.indexed_beams
 
     @property
@@ -487,7 +505,8 @@ class LEEDSymmetryDomains(Sequence):
         kwargs = {'extinct_lists': extinct_beams, 'basis': self.bulk_basis,
                   'domain_ids': domains,  # 0-based indices
                   'superlattice': self.superlattices[0],
-                  'angle_key': self.__key_from_angles(theta, phi, domains)}
+                  'angle_key': self.__key_from_angles(theta, phi, domains),
+                  'caller': self}
         self.__last_eq = gl.LEEDEquivalentBeams(domains_dicts, **kwargs)
         return self.__last_eq.indexed_beams
 
@@ -707,6 +726,8 @@ class LEEDSymmetryDomains(Sequence):
 
         return _ops
 
+    # @gl.exec_time
+    # @gl.profile_lines  # 37% beams_dict[label]; 63% return
     def __get_spot_equivalence(self):
         """Build equivalence classes for LEED beams.
 
@@ -824,6 +845,7 @@ class LEEDSymmetryDomains(Sequence):
             beams_dict_first[90] = self[0].hk[extinct_01]
         return self.__beams_dict_to_other_domains(beams_dict_first)
 
+    # @gl.profile_lines
     def __beams_dict_to_other_domains(self, beams_dict_first):
         """Translate beam dictionary of first domain to all domains.
 
