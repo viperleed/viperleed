@@ -164,9 +164,9 @@ class TextBox(qtw.QLineEdit):
             super().mousePressEvent(event)  # call normal implementation
     
     def keyPressEvent(self, event):
-        print(self.window(),
-              event.key(),
-              event.modifiers() == qtc.Qt.ControlModifier)
+        # print(self.window(),
+              # event.key(),
+              # event.modifiers() == qtc.Qt.ControlModifier)
         if event.key() in [qtc.Qt.Key_Up, qtc.Qt.Key_Down]:
             self.upDownPressed.emit(event)
         elif (os.name == 'posix'
@@ -174,7 +174,7 @@ class TextBox(qtw.QLineEdit):
               and event.modifiers()
               and event.modifiers() == qtc.Qt.ControlModifier
               and isinstance(self.window(), gl.LEED_GUI)):
-            print("ctrl+e")
+            # print("ctrl+e")
             self.window().keyPressEvent(event)
             return
         super().keyPressEvent(event)
