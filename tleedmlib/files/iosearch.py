@@ -663,10 +663,10 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
         controlpath = ""
         if os.path.isfile("control.chem"):
             controlpath = "control.chem"
-        elif os.path.isfile(os.path.join("AUX", "control.chem")):
-            controlpath = os.path.join("AUX", "control.chem")
+        elif os.path.isfile(os.path.join("SUPP", "control.chem")):
+            controlpath = os.path.join("SUPP", "control.chem")
             logger.warning("No control.chem file found in working folder, "
-                           "using AUX/control.chem")
+                           "using SUPP/control.chem")
             rp.setHaltingLevel(1)
         else:
             logger.warning("No control.chem file found. Defaulting to random "

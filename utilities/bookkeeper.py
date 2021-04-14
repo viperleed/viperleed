@@ -41,7 +41,7 @@ def main():
     args = parser.parse_args()
     # make list of stuff to move
     tomove = [d for d in os.listdir() if os.path.isdir(d)
-              and (d == "OUT" or d == "AUX")]
+              and (d == "OUT" or d == "SUPP")]
     tomove.extend([f for f in os.listdir() if os.path.isfile(f)
                    and f.endswith(".log")])
     # if there's nothing to move, return.

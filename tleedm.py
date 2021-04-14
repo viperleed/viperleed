@@ -40,14 +40,14 @@ from viperleed.tleedmlib.files.displacements import readDISPLACEMENTS
 logger = logging.getLogger("tleedm")
 starttime = 0.0
 
-auxfiles = ["AUXBEAMS", "AUXGEO", "AUXLATGEO", "AUXNONSTRUCT", "BEAMLIST",
-            "POSCAR_oricell", "POSCAR_bulk", "muftin.f",
-            "refcalc-PARAM", "refcalc-FIN", "rfactor-WEXPEL",
-            "rfactor-PARAM", "delta-input", "search.steu",
-            "search-rf.info", "search-PARAM", "AUXEXPBEAMS",
-            "eeasisss-input", "searchpars.info", "superpos-PARAM",
-            "superpos-CONTRIN", "POSCAR_bulk_appended", "POSCAR_mincell",
-            "restrict.f"]
+suppfiles = ["AUXBEAMS", "AUXGEO", "AUXLATGEO", "AUXNONSTRUCT", "BEAMLIST",
+             "POSCAR_oricell", "POSCAR_bulk", "muftin.f",
+             "refcalc-PARAM", "refcalc-FIN", "rfactor-WEXPEL",
+             "rfactor-PARAM", "delta-input", "search.steu",
+             "search-rf.info", "search-PARAM", "AUXEXPBEAMS",
+             "eeasisss-input", "searchpars.info", "superpos-PARAM",
+             "superpos-CONTRIN", "POSCAR_bulk_appended", "POSCAR_mincell",
+             "restrict.f"]
 outfiles = ["THEOBEAMS.csv", "THEOBEAMS_norm.csv",
             "PatternInfo.tlm", "SD.TL", "refcalc-fd.out",
             "Rfactor_plots_refcalc.pdf", "control.chem",
@@ -276,7 +276,7 @@ def runSection(index, sl, rp):
 def sortfiles(tensorIndex, delete_unzipped=False, tensors=True,
               deltas=True, path=""):
     """
-    Makes Tensors and Deltas zip files. Copies files to AUX and OUT folders
+    Makes Tensors and Deltas zip files. Copies files to SUPP and OUT folders
     as appropriate. If delete_unzipped is set to True, deletes unzipped Deltas
     and Tensors directories.
 
@@ -298,7 +298,7 @@ def sortfiles(tensorIndex, delete_unzipped=False, tensors=True,
     None.
 
     """
-    # move files to AUX and OUT folders
+    # move files to SUPP and OUT folders
 
     # outfiles with variable names:
     if not path:
@@ -356,14 +356,14 @@ def sortfiles(tensorIndex, delete_unzipped=False, tensors=True,
                         "Error deleting unzipped {} directory. "
                         "This will increase the size of the work folder, "
                         "but not cause any problems.".format(t))
-    # sort AUX and OUT files:
-    for t in ["AUX", "OUT"]:
+    # sort SUPP and OUT files:
+    for t in ["SUPP", "OUT"]:
         try:
             os.makedirs(os.path.join(path, t), exist_ok=True)
         except Exception:
             logger.error("Error creating {} folder: ".format(t), exc_info=True)
-        if t == "AUX":
-            filelist = auxfiles
+        if t == "SUPP":
+            filelist = suppfiles
         else:
             filelist = outfiles
         for f in [f for f in filelist
@@ -381,7 +381,7 @@ def sortfiles(tensorIndex, delete_unzipped=False, tensors=True,
 
 def moveoldruns(rp, prerun=False):
     """
-    Makes a new folder in 'workhistory'. Copies AUX, OUT and files in
+    Makes a new folder in 'workhistory'. Copies SUPP, OUT and files in
     manifest (except main log) to that new folder.
 
     Parameters
@@ -391,8 +391,8 @@ def moveoldruns(rp, prerun=False):
     prerun : bool, optional
         If True, then instead of using the manifest, all potentially
         interesting files will be copied, and the new folder will get index 0.
-        Then clears out the AUX and OUT folders and old AUX and OUT files from
-        the main directory.
+        Then clears out the SUPP and OUT folders and old SUPP and OUT files
+        from the main directory.
 
     Returns
     -------
@@ -458,9 +458,9 @@ def moveoldruns(rp, prerun=False):
                       tensors=False, deltas=False)
     if prerun:
         filelist = [f for f in os.listdir() if os.path.isfile(f) and
-                    (f.endswith(".log") or f in outfiles or f in auxfiles)
+                    (f.endswith(".log") or f in outfiles or f in suppfiles)
                     and f not in rp.manifest]
-        dirlist = ["AUX", "OUT"]
+        dirlist = ["SUPP", "OUT"]
     else:
         filelist = [f for f in rp.manifest if os.path.isfile(f) and not
                     (f.startswith("tleedm-") and f.endswith(".log"))]
@@ -507,7 +507,7 @@ def getElapsedTimeString(t):
 
 def cleanup(manifest, rp=None):
     """
-    Moves files to AUX and OUT folders, writes manifest, adds a final
+    Moves files to SUPP and OUT folders, writes manifest, adds a final
     message to the log, then shuts down everything.
 
     Parameters
@@ -552,7 +552,7 @@ def cleanup(manifest, rp=None):
                       tensors=d["newTensors"],
                       deltas=d["newDeltas"], path=d["path"])
         except Exception:
-            logger.warning("Error sorting files to AUX/OUT folders: ",
+            logger.warning("Error sorting files to SUPP/OUT folders: ",
                            exc_info=True)
     # write manifest
     written = []
@@ -638,7 +638,7 @@ def main():
                 "DISTRIBUTION !\n")
     starttime = timer()
 
-    tmpmanifest = ["AUX", "OUT", logname]
+    tmpmanifest = ["SUPP", "OUT", logname]
     try:
         rp = readPARAMETERS()
     except Exception:

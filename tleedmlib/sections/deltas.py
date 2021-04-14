@@ -287,14 +287,14 @@ def deltas(sl, rp, subdomain=False):
     # if there are old deltas, fetch them
     tl.leedbase.getDeltas(rp.TENSOR_INDEX, required=False)
     dbasic = io.generateDeltaBasic(sl, rp)
-    # get AUXBEAMS; if AUXBEAMS is not in work folder, check AUX folder
+    # get AUXBEAMS; if AUXBEAMS is not in work folder, check SUPP folder
     if not os.path.isfile(os.path.join(".", "AUXBEAMS")):
-        if os.path.isfile(os.path.join(".", "AUX", "AUXBEAMS")):
+        if os.path.isfile(os.path.join(".", "SUPP", "AUXBEAMS")):
             try:
-                shutil.copy2(os.path.join(".", "AUX", "AUXBEAMS"),
+                shutil.copy2(os.path.join(".", "SUPP", "AUXBEAMS"),
                              "AUXBEAMS")
             except Exception:
-                logger.warning("Failed to copy AUXBEAMS from AUX folder. "
+                logger.warning("Failed to copy AUXBEAMS from SUPP folder. "
                                "Generating new file...")
                 try:
                     writeAUXBEAMS(ivbeams=rp.ivbeams, beamlist=rp.beamlist)

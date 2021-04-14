@@ -172,7 +172,7 @@ class Rparams:
         self.halt = 0
         self.systemName = ""
         self.timestamp = ""
-        self.manifest = ["AUX", "OUT"]
+        self.manifest = ["SUPP", "OUT"]
         self.fileLoaded = {
             "PARAMETERS": True, "POSCAR": False,
             "IVBEAMS": False, "VIBROCC": False, "PHASESHIFTS": False,

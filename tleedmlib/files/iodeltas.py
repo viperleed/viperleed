@@ -190,14 +190,14 @@ def generateDeltaInput(atom, targetel, sl, rp, deltaBasic="", auxbeams="",
     if deltaBasic == "":
         deltaBasic = generateDeltaBasic()
     if auxbeams == "":
-        # if AUXBEAMS is not in work folder, check AUX folder
+        # if AUXBEAMS is not in work folder, check SUPP folder
         if not os.path.isfile(os.path.join(".", "AUXBEAMS")):
-            if os.path.isfile(os.path.join(".", "AUX", "AUXBEAMS")):
+            if os.path.isfile(os.path.join(".", "SUPP", "AUXBEAMS")):
                 try:
-                    shutil.copy2(os.path.join(".", "AUX", "AUXBEAMS"),
+                    shutil.copy2(os.path.join(".", "SUPP", "AUXBEAMS"),
                                  "AUXBEAMS")
                 except Exception:
-                    logger.warning("Failed to copy AUXBEAMS from AUX folder")
+                    logger.warning("Failed to copy AUXBEAMS from SUPP folder")
             else:
                 logger.warning("generateDeltaInput: AUXBEAMS not found")
         try:
