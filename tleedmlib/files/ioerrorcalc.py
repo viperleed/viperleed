@@ -57,7 +57,8 @@ def write_errors_csv(errors, filename="Errors.csv", sep=";"):
     for err in errors:
         ats = range_to_str([at.oriN for at in err.atoms])
         if isinstance(err.displacements[0], np.ndarray):
-            dirvec = err.displacements[-1] * np.array([1, 1, -1])
+            dirvec = ((err.displacements[-1] - err.displacements[0])
+                      * np.array([1, 1, -1]))
             dirvec = dirvec / np.linalg.norm(dirvec)
             direction = ("[" + ", ".join([str(round(f, 4))
                                           for f in dirvec]) + "]")
@@ -69,9 +70,8 @@ def write_errors_csv(errors, filename="Errors.csv", sep=";"):
                 disp = err.displacements[i]
             elif isinstance(err.displacements[i], np.ndarray):
                 columns["dir"].append(direction)
-                disp = (np.linalg.norm(err.displacements[i])
-                        * np.sign(np.dot(dirvec * np.array([1, 1, -1]),
-                                         err.displacements[i])))
+                disp = np.dot(dirvec * np.array([1, 1, -1]),
+                              err.displacements[i])
             else:
                 columns["dir"].append("")
                 disp = err.displacements[i]
@@ -132,12 +132,12 @@ def write_errors_pdf(errors, filename="Errors.pdf", var=None):
                 ats += "s"
             ats += " " + range_to_str([at.oriN for at in err.atoms])
             if mode == "geo":
-                dirvec = err.displacements[-1] * np.array([1, 1, -1])
+                dirvec = ((err.displacements[-1] - err.displacements[0])
+                          * np.array([1, 1, -1]))
                 dirvec = dirvec / np.linalg.norm(dirvec)
                 direction = ("[" + ", ".join([str(round(f, 2))
                                               for f in dirvec]) + "]")
-                disp = [np.linalg.norm(v) * 100
-                        * np.sign(np.dot(dirvec * np.array([1, 1, -1]), v))
+                disp = [np.dot(dirvec * np.array([1, 1, -1]), v) * 100
                         for v in err.displacements]
                 err_legend[err] = ats + " along " + direction
             else:
