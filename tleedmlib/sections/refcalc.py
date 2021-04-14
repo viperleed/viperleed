@@ -140,6 +140,11 @@ def refcalc(sl, rp, subdomain=False):
         logger.error("Error reading fd.out after reference calculation. "
                      "Check settings and refcalc log.")
         raise
+    # clear oriState for atoms and sites, current state will be new origin
+    for at in sl.atlist:
+        at.oriState = None
+    for site in sl.sitelist:
+        site.oriState = None
     # compare beam sets:
     eq = True
     eps = 1e-3
