@@ -140,7 +140,8 @@ class LEEDParameters(MutableMapping):
 
         Instances are considered equal if they produce
         the very same LEED pattern, i.e., they have:
-        - the same beamIncidence
+        - the same 'name'
+        - the same 'beamIncidence'
         - the same surface group
         - the same bulk basis, expressed in the same coordinate
           system, but accounting for possible sign changes of
@@ -165,9 +166,12 @@ class LEEDParameters(MutableMapping):
                 # If instantiation raises one of the known exceptions
                 return NotImplemented
 
-        # (1) first a basic check
+        # (1) first a couple of basic checks:
+        #     identity and difference of names (if given)
         if self is other:
             return True
+        if self['name'] != other['name']:
+            return NotImplemented
 
         # (2) beamIncidence
         if self['beamIncidence'] != other['beamIncidence']:
@@ -489,18 +493,62 @@ class LEEDParametersList(MutableSequence):
     def __setitem__(self, idx, data):
         """Set item at idx to data.
 
-        The item is set only if it is an acceptable LEEDParameter,
-        given the data already present in self.
+        The items are set only if they are acceptable LEEDParameter(s),
+        given the data already present in self. This behaves somewhat
+        differently than normal list.__setitem__, as it prevents length
+        changes as well as increases in the number of duplicates.
 
         Parameters
         ----------
         idx : int or slice
-        data : dict, ConfigParser or LEEDParameters
+        data : dict, ConfigParser, or LEEDParameters (or
+               iterables of the same if idx is a slice)
+
+        Raises
+        ------
+        ValueError
+            * When a slice is passed, and the data passed contains
+              duplicates
+            * When the data passed would increase the number of
+              duplicates in self
+            * When replacement of items would change len(self)
         """
-        data = self._to_leed_parameters(data)
-        self._check_acceptable(*data)
-        if not data:
-            return
+        # data = self._process_input_data(data)
+        # At first, just check whether there are duplicates within
+        # the data themselves
+        new_data = self._process_input_data(data, keep_duplicates=True)
+        new_data = gl.remove_duplicates(new_data)
+        if isinstance(idx, slice) and len(new_data) < len(data):
+            raise ValueError("Data contains duplicates")
+
+        # Make sure we're replacing the right number of entries
+        if isinstance(idx, slice):
+            to_replace = self[idx]
+        else:
+            to_replace = [self[idx]]
+        if len(new_data) != len(to_replace):
+            raise ValueError("Inconsistent number of replaced LEEDParameters: "
+                             f"Cannot replace {len(to_replace)} "
+                             f"elements with {len(new_data)}")
+
+        # Now see if the data contains duplicates of elements in self:
+        # (1) We can't replace something with a parameter that
+        #     is already in self and won't be replaced, as
+        #     this would increase the number of duplicates
+        if any(d in self and d not in to_replace for d in new_data):
+            raise ValueError("Not possible to add duplicates "
+                             "of already stored data")
+
+        # (2) We can still accept the data if each
+        #     duplicate will replace its own copy
+        duplicated = [d in to_replace for d in new_data]
+        if (any(duplicated)
+            and any(d_new != d_old if new_is_duplicate else False
+                    for d_new, d_old, new_is_duplicate in zip(new_data,
+                                                              to_replace,
+                                                              duplicated))):
+            raise ValueError("Not possible to add duplicates "
+                             "of already stored data")
         self.__list[idx] = data
 
     def __len__(self):
@@ -619,7 +667,7 @@ class LEEDParametersList(MutableSequence):
             param['beamIncidence'] = new_angles
 
     def _process_input_data(self, data, keep_duplicates=False):
-        """Prcess the given data.
+        """Process the given data.
 
         Do all the processing needed to accept the input data, i.e.,
         converting each entry to a LEEDParameters instance, verify
@@ -636,6 +684,10 @@ class LEEDParametersList(MutableSequence):
             If False, discard those elements in data that are
             a duplicate of elements already present in self,
             as well as duplicates within data.
+
+        Returns
+        -------
+        list
         """
         data = self._to_leed_parameters(data)
         self._check_acceptable(*data)
