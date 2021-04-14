@@ -21,11 +21,29 @@ Created: 2021-03-21
 
 from collections.abc import MutableSequence
 import copy
+import re
+
+import numpy as np
 
 from viperleed import guilib as gl
 
 
-class LEEDStructuralDomains(MutableSequence):
+DEFAULT_NAME = re.compile(r"^S\d+$")
+
+
+# TODO: We would need to fiddle much less if only we passed
+# the LEEDParameters to LEEDEquivalentBeams instead of just
+# the superlattices. This would save a lot of potential cache
+# clear operations. One would need LEEDParameters to then
+# implement an appropriate __hash__. The tricky part there
+# is that a == b --> hash(a) == hash(b), so we have to
+# care about symmetry-equivalent domains. Also, one should
+# have the hash care about the hash(-1) = -2 problem that
+# can very likely happen on the superlattices.
+
+
+class LEEDStructuralDomains(  # pylint: disable=too-many-ancestors
+        MutableSequence):
     """
     Represent several structural domains in a LEED pattern.
 
@@ -43,20 +61,76 @@ class LEEDStructuralDomains(MutableSequence):
 
     @gl.exec_time
     def __init__(self, params, keep_duplicates=False):
-        self.__parameters = gl.LEEDParametersList(params, keep_duplicates)
+        """Initialize LEEDStructuralDomains instance.
 
+        Parameters
+        ----------
+        params : iterable or LEEDParametersList
+            Each element is either dict, ConfigParser, or
+            LEEDParameters. Will be fed to a LEEDParametersList.
+        keep_duplicates : bool, default=False
+            If True, parameters giving identical LEED
+            patterns are kept. Otherwise only those
+            giving 'unique' patterns are kept.
+
+        Returns
+        -------
+        None.
+        """
+        self.__parameters = gl.LEEDParametersList(params, keep_duplicates)
         self.__list = [gl.LEEDSymmetryDomains(p) for p in self.parameters]
 
         # __last_eq is a reference to the last LEEDEquivalentBeams
         # instance used to combine all structural and symmetry domains.
+        # Accessed (read-only) via .eq_beams_last_config
         # __last_domains a dictionary of the last domain indices used.
+        # Accessed (read-only) via .last_domains_used
         # Both are set in self.equivalent_spots()
         self.__last_eq = None
         self.__last_domains = {}
 
     def __delitem__(self, elem):
         """Delete item at a given index or slice."""
+        ids_deleted = self.domain_ids[elem]
+
+        if isinstance(elem, slice):
+            to_delete = range(*elem.indices(self.n_domains))
+        else:
+            to_delete = [elem]
+
+        # Indices of domains without a given name, before
+        # deletion, excluding those that will be deleted:
+        old_unnamed = [i
+                       for i, dom_id in enumerate(self.domain_ids)
+                       if DEFAULT_NAME.mathch(dom_id) and i not in to_delete]
+
+        # Actually delete stuff
         del self.__list[elem]
+        del self.__parameters[elem]
+
+        if self.eq_beams_last_config is None:
+            return
+
+        # Now take care of the LEEDEquivalentBeams:
+        new_unnamed = [i
+                       for i, dom_id in enumerate(self.domain_ids)
+                       if DEFAULT_NAME.mathch(dom_id)]
+
+        # If any of the unnamed has changed its 'place', we
+        # have to clear the cache of LEEDEquivalentBeams, as
+        # their index-based names will now be different.
+        # TODO: remove from the cache only those that may have
+        # gotten messed up
+        if any(new_idx != old_idx
+               for new_idx, old_idx in zip(new_unnamed, old_unnamed)):
+            self.eq_beams_last_config.clear_cache('self')
+
+        # If deletion affected the domains used
+        # in the last .equivalent_spots() call,
+        # that's no longer up to date.
+        if any(old_id in self.last_domains_used for old_id in ids_deleted):
+            self.__last_eq = None
+            self.__last_domains = {}
 
     def __getitem__(self, elem):
         """Retrieve item at a given index or slice.
@@ -69,37 +143,64 @@ class LEEDStructuralDomains(MutableSequence):
     def __setitem__(self, idx, data):
         """Set the value of element(s) at a given index or slice.
 
-        The input is checked for consistency.
+        The input is checked for consistency, the same way as in
+        LEEDParametersList.__setitem__(). Replacing domains with
+        others having the same name and superlattice, but having
+        e.g., a different plane group, will trigger a clearing
+        of the LEEDEquivalentBeams cache. This means that some
+        of the old configurations will need to be recalculated.
 
         Parameters
         ----------
         idx : int or slice
         data : anything that can instantiate a LEEDParametersList
-
-        Raises
-        ------
-        ValueError
-            When a slice is passed, and: the data passed contains
-            duplicates, or contains data that is a duplicate of
-            one of the parameters already present.
         """
-        # Check if data is compatible and if there are duplicates
-        new_params = copy.deepcopy(self.parameters)
-        new_params[idx] = data  # raises errors if incompatible
-        length_change = len(new_params) - len(self.parameters)
-        if isinstance(idx, slice):
-            duplicate = (length_change < len(data))
-        else:
-            duplicate = not length_change
-        if duplicate and isinstance(idx, slice):
-            raise ValueError("Data contains duplicates")
-        if not duplicate:
-            self.parameters[idx] = data
-            if isinstance(idx, slice):
-                self.__list[idx] = [gl.LEEDSymmetryDomains(d)
-                                    for d in data]
-            else:
-                self.__list[idx] = gl.LEEDSymmetryDomains(data)
+        # Keep a few values that we will use later on
+        old_parameters = copy.deepcopy(self.parameters)
+        old_ids = self.domain_ids
+        old_superlattices = self.superlattices
+
+        # Leave all the processing, as well as consistency and
+        # duplicates check to LEEDParametersList.__setitem__
+        self.parameters[idx] = data
+
+        # Then keep track of what was truly changed
+        replaced_idx = [i
+                        for i, (old, new) in enumerate(zip(old_parameters,
+                                                           self.parameters))
+                        if new != old]
+        for i in replaced_idx:
+            self.__list[i] = gl.LEEDSymmetryDomains(self.parameters[i])
+
+        # Now decide whether we have to fix the LEEDEquivalentBeams:
+        # - if any of those removed has the same name and superlattice
+        #   as one of those inserted --> hash corrupted. clear cache
+        # - if any of those removed was used last time
+        #   --> invalidate __last_eq
+        if not self.eq_beams_last_config:
+            return
+
+        # Select only the replaced old/new ids and superlattices
+        new_ids = self.domain_ids
+        new_superlattices = self.superlattices
+        old_ids, new_ids = zip(*((old_ids[i], new_ids[i])
+                                  for i in replaced_idx))
+        old_superlattices, new_superlattices = zip(*(
+            (old_superlattices[i], new_superlattices[i])
+            for i in replaced_idx
+            ))
+
+        for old_id, old_superlattice in zip(old_ids, old_superlattices):
+            same_name_and_super = [np.all(sup == old_superlattice)
+                                   for sup, new_id in zip(new_superlattices,
+                                                          new_ids)
+                                   if new_id == old_id]
+            if any(same_name_and_super):
+                self.eq_beams_last_config.clear_cache('all')
+                break
+        if any(old_id in self.last_domains_used for old_id in old_ids):
+            self.__last_eq = None
+            self.__last_domains = {}
 
     def __len__(self):
         """Return number of structural domains."""
@@ -116,6 +217,22 @@ class LEEDStructuralDomains(MutableSequence):
     def bulk_basis(self):
         """Return the reciprocal-space basis of the bulk lattice."""
         return self[0].bulk_basis
+
+    @property
+    def denominators(self):
+        """Return a dictionary of the denominators for beam indices.
+
+        Returns
+        -------
+        dict
+            key : str
+                Same values as in self.domain_ids
+            value : int
+                Denominator to be used for the beams coming
+                from the structural domain at key
+        """
+        return {struct_id: struct.denominator_for_bulk_beams
+                for struct_id, struct in zip(self.domain_ids, self)}
 
     @property
     def domain_ids(self):
@@ -157,7 +274,8 @@ class LEEDStructuralDomains(MutableSequence):
             method has been invoked at least once.
         """
         if self.eq_beams_last_config is None:
-            raise RuntimeError("Need to call .equivalent_spots() once "
+            raise RuntimeError("LEEDStructuralDomains: Need to "
+                               "call .equivalent_spots() once "
                                "before .extinct is available")
         return self.eq_beams_last_config.extinct
 
@@ -225,8 +343,9 @@ class LEEDStructuralDomains(MutableSequence):
             method has been invoked at least once.
         """
         if self.eq_beams_last_config is None:
-            raise RuntimeError("Need to call .equivalent_spots() once "
-                               "before .indexed_beams is available")
+            raise RuntimeError("LEEDStructuralDomains: Need to call "
+                               ".equivalent_spots() once before "
+                               ".indexed_beams is available")
         return self.eq_beams_last_config.indexed_beams
 
     @property
@@ -260,23 +379,48 @@ class LEEDStructuralDomains(MutableSequence):
         superlattices = (p.superlattices for p in self)
         return dict(zip(self.domain_ids, superlattices))
 
-    def insert(self, idx, data, keep_duplicates=False):
+    def insert(self, index, value,  # pylint: disable=arguments-differ
+               keep_duplicates=False):
         """Override list.insert allowing check for duplicates."""
         # the next raises errors if data is not compatible
+        old_ids = self.domain_ids
+        old_superlattices = self.superlattices
         old_len = len(self.parameters)
-        self.parameters.insert(idx, data, keep_duplicates)
-        if len(self.parameters) > old_len:
-            # do something only if something was actually inserted
-            self.__list.insert(idx, data)
+        self.parameters.insert(index, value, keep_duplicates)
 
-    def append(self, data, keep_duplicates=False):
+        # do something only if something was actually inserted
+        if len(self.parameters) == old_len:
+            return
+        self.__list.insert(index, value)
+
+        # See if we should fiddle with LEEDEquivalentBeams
+        if not self.eq_beams_last_config:
+            return
+
+        # If we shifted some unnamed structures we will have to
+        # clear the 'self'. If the inserted structure
+        # has the same name and superlattice of any of the
+        # ones already present we will also need to clear
+        # the 'dict' cache.
+        if any(DEFAULT_NAME.match(dom_id) for dom_id in old_ids[index:]):
+            self.eq_beams_last_config.clear_cache('self')
+        new_id = self.domain_ids[index]
+        new_superlattice = self.superlattices[index]
+        for old_id, superlattice in zip(old_ids, old_superlattices):
+            if new_id == old_id and np.all(superlattice == new_superlattice):
+                self.eq_beams_last_config.clear_cache('dict')
+                break
+
+    def append(self, value,  # pylint: disable=arguments-differ
+               keep_duplicates=False):
         """Override list.append allowing check for duplicates."""
-        self.insert(len(self), data, keep_duplicates)
+        self.insert(len(self), value, keep_duplicates)
 
-    def extend(self, data, keep_duplicates=False):
+    def extend(self, values,  # pylint: disable=arguments-differ
+               keep_duplicates=False):
         """Override list.extend allowing check for duplicates."""
-        for datum in data:
-            self.append(datum, keep_duplicates)
+        for value in values:
+            self.append(value, keep_duplicates)
 
     @gl.exec_time
     # @gl.profile_lines
@@ -337,13 +481,28 @@ class LEEDStructuralDomains(MutableSequence):
         # structures with differently sized cells.
         denominators = []
         if self.fractional:
-            denominators = [s.denominator_for_bulk_beams for s in structures]
+            denominators = [self.denominators[struct_id]
+                            for struct_id in struct_ids]
 
         self.__last_eq = gl.LEEDEquivalentBeams(eq_beams,
                                                 domain_ids=combined_ids,
-                                                denominators=denominators)
+                                                denominators=denominators,
+                                                caller=self)
         if not self.eq_beams_last_config.was_cached:
             self.__correct_beam_index()
+        elif len(combined_ids) == 1:
+            # Single domain. indexed_beams['overlap_domains']
+            # and indexed_beams['extinct_domains'] need fixing
+            indexed = self.indexed_beams
+            struct_id = combined_ids[0][0]
+            indexed['overlap_domains'] = [
+                [(struct_id, tuple(sym_ids))]
+                for sym_ids in indexed['overlap_domains']
+                ]
+            indexed['extinct_domains'] = [
+                [(struct_id, tuple(sym_ids))] if sym_ids else []
+                for sym_ids in indexed['extinct_domains']
+                ]
         return self.indexed_beams
 
     def from_domain_id(self, domain_id):
@@ -473,7 +632,6 @@ class LEEDStructuralDomains(MutableSequence):
         return domains, structures, ids
 
     @gl.exec_time
-    # @gl.profile_lines
     def __correct_beam_index(self):
         """Correct symmetry domain indices in self.indexed_beams.
 
@@ -481,38 +639,40 @@ class LEEDStructuralDomains(MutableSequence):
         domains, it places in the 'overlapping list' and 'extinct list'
         the full domain ids used, e.g., [('S1', (0, 1, 2)), ...], even
         if the beam being considered only has contributions from domain
-        1 of structure 'S1', as this information is not available. NOT
-        TRUE! IT KNOWS IF IT WAS CREATED FROM A LIST OF LEEDEquivalentBeams
-        AND IF IT WAS PASSED DENOMINATORS!!
+        1 of structure 'S1', as this information is not available.
 
         Here we sort out this mess by taking the LEEDSymmetryDomains
         that were used for the superposition, and selecting only
         those that contain each beam.
 
-        This method is used only internally, and should be called
-        at the end of self.equivalent_spots().
+        This method is used only internally, and is called
+        at the end of self.equivalent_spots() on an incorrect
+        beam list.  One can safely assume that a beamlist is
+        correct if the LEEDEquivalentBeams was loaded from cache
         """
+        # NB: one could do this processing already as part of
+        # LEEDEquivalentBeams__.index_beams(), but it does not
+        # really give a significant improvement (1.8s tot vs.
+        # 1.9s tot for a LEEDPattern with fishbone + 1x1).
+        # This does not justifz the mess of extra code that is
+        # needed there, which also makes LEEDEquivalentBeams
+        # partly dependent on LEEDStructuralDomains.
         if self.eq_beams_last_config is None:
             raise RuntimeError("Cannot reindex beams if .equivalent_spots() "
                                "was never called before.")
-        indexed = self.eq_beams_last_config.indexed_beams
+        indexed = self.indexed_beams
 
-        # Prepare the denominators to make access a bit faster
-        denominators = {}
-        if self.fractional:
-            denominators = {struct_id: struct.denominator_for_bulk_beams
-                            for struct_id, struct in zip(self.domain_ids,
-                                                         self)}
         # for i, (beam, group, overlap, extinct) in enumerate(indexed):
-        for i, (beam, group,
+        for i, (beam, _,
                 overlap, extinct) in enumerate(zip(*indexed.values())):
             correct_overlap = []
             correct_extinct = []
             extinct = dict(extinct)
-            for struct_id, symm_ids in overlap:
+            for struct_id, _ in overlap:
                 dom_beam = beam
-                if denominators:
-                    dom_beam = dom_beam * denominators[struct_id]
+                if self.fractional:
+                    den = self.denominators[struct_id]
+                    dom_beam = (round(beam[0]*den), round(beam[1]*den))
                 struct = self.from_domain_id(struct_id)
                 corrected = struct.domains_containing_beam(dom_beam)
                 correct_overlap.append((struct_id, corrected))
