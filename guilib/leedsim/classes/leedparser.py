@@ -291,6 +291,17 @@ class LEEDParser(  # pylint: disable=too-many-ancestors
         """
         if isinstance(filenames, str):
             filenames = [filenames]
+        n_open = 0
+        for fname in filenames:
+            try:
+                open_file = open(fname, 'r')
+            except FileNotFoundError:
+                pass
+            else:
+                open_file.close()
+                n_open +=1
+        if not n_open:
+            raise FileNotFoundError("None of the files passed exists!")
         for fname in filenames:
             try:
                 super().read(fname, encoding)
