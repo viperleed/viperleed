@@ -488,12 +488,15 @@ class Slab:
     def updateElementCount(self):
         """Updates the number of atoms per element."""
         self.n_per_elem = {}
+        del_elems = []
         for el in self.elements:
             n = len([at for at in self.atlist if at.el == el])
             if n > 0:
                 self.n_per_elem[el] = n
             else:
-                self.elements.remove(el)
+                del_elems.append(el)
+        for el in del_elems:
+            self.elements.remove(el)
 
     def initSites(self, rparams):
         """Goes through the atom list and supplies them with appropriate
