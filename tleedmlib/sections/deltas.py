@@ -13,16 +13,14 @@ import logging
 import shutil
 import subprocess
 import hashlib
-import multiprocessing
 import numpy as np
-import time
-import psutil
 
 import viperleed.tleedmlib as tl
 import viperleed.tleedmlib.files.iodeltas as io
 from viperleed.tleedmlib.files.beams import writeAUXBEAMS
 from viperleed.tleedmlib.files.displacements import readDISPLACEMENTS_block
-from viperleed.tleedmlib.files.parameters import updatePARAMETERS
+# from viperleed.tleedmlib.files.parameters import updatePARAMETERS
+from viperleed.tleedmlib.leedbase import monitoredPool
 
 logger = logging.getLogger("tleedm.deltas")
 
@@ -53,68 +51,6 @@ class DeltaRunTask():
         self.deltaname = ""
         self.comptask = comptask
         self.deltalogname = ""
-
-
-def monitoredPool(rp, poolsize, function, tasks):
-    """
-    The 'function' and 'tasks' arguments are passed on to a multiprocessing
-    pool of size 'poolsize' with apply_async. While waiting for the pool to
-    finish, the PARAMETERS file is read every second to check whether there is
-    a STOP command. If so, the pool is terminated.
-
-    Parameters
-    ----------
-    rp : Rparams object
-        Needed for the parameter update
-    poolsize : int
-        passed on to multiprocessing.Pool
-    function : function
-        passed on to multiprocessing.Pool.apply_async
-    tasks : list of arguments
-        treated like the arguments of pool.map, i.e. each element is passed on
-        in a seperate call of 'function' via multiprocessing.Pool.apply_async
-
-    Returns
-    -------
-    None
-
-    """
-
-    def kill_pool(p):
-        """Kill the subprocesses, then terminate the pool."""
-        for proc in p._pool:
-            parent = psutil.Process(proc.pid)
-            for child in parent.children(recursive=True):
-                child.kill()
-        p.terminate()
-
-    def checkPoolResult(r):
-        nonlocal pool
-        if r != "":
-            kill_pool(pool)
-        return r
-
-    pool = multiprocessing.Pool(poolsize)
-    results = []
-    for task in tasks:
-        r = pool.apply_async(function, (task,), callback=checkPoolResult)
-        results.append(r)
-    pool.close()
-    while not all(r.ready() for r in results):
-        updatePARAMETERS(rp)
-        if rp.STOP:
-            kill_pool(pool)
-            logger.info("Stopped by STOP parameter.")
-            return
-        time.sleep(1)
-    pool.join()
-    for r in results:
-        v = r.get(timeout=1)
-        if v:
-            logger.error(v)
-            raise RuntimeError("Error in parallel execution of {}"
-                               .format(function.__name__))
-    return
 
 
 def runDelta(runtask):

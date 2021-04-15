@@ -14,12 +14,15 @@ import subprocess
 import os
 import shutil
 import copy
+import psutil
+import multiprocessing
+import time
 from quicktions import Fraction
 
 from viperleed.guilib import get_equivalent_beams
 from viperleed.tleedmlib.base import parseMathSqrt, angle, cosvec
 from viperleed.tleedmlib.files.parameters import (
-    readPARAMETERS, interpretPARAMETERS)
+    readPARAMETERS, interpretPARAMETERS, updatePARAMETERS)
 from viperleed.tleedmlib.files.poscar import readPOSCAR
 from viperleed.tleedmlib.files.vibrocc import readVIBROCC
 
@@ -85,6 +88,81 @@ elementAtomicMass = {
 ###############################################
 #                FUNCTIONS                    #
 ###############################################
+
+def monitoredPool(rp, poolsize, function, tasks):
+    """
+    The 'function' and 'tasks' arguments are passed on to a multiprocessing
+    pool of size 'poolsize' with apply_async. While waiting for the pool to
+    finish, the PARAMETERS file is read every second to check whether there is
+    a STOP command. If so, the pool is terminated.
+
+    Parameters
+    ----------
+    rp : Rparams object
+        Needed for the parameter update
+    poolsize : int
+        passed on to multiprocessing.Pool
+    function : function
+        passed on to multiprocessing.Pool.apply_async
+    tasks : list of arguments
+        treated like the arguments of pool.map, i.e. each element is passed on
+        in a seperate call of 'function' via multiprocessing.Pool.apply_async
+
+    Returns
+    -------
+    None
+
+    """
+
+    def kill_pool(p):
+        """Kill the subprocesses, then terminate the pool."""
+        for proc in p._pool:
+            parent = psutil.Process(proc.pid)
+            for child in parent.children(recursive=True):
+                child.kill()
+        p.terminate()
+
+    def checkPoolResult(r):
+        nonlocal pool
+        nonlocal killed
+        if r != "":
+            kill_pool(pool)
+            killed = True
+        return r
+
+    pool = multiprocessing.Pool(poolsize)
+    results = []
+    killed = False
+    for task in tasks:
+        r = pool.apply_async(function, (task,), callback=checkPoolResult)
+        results.append(r)
+    pool.close()
+    while not all(r.ready() for r in results):
+        if killed:
+            break
+        updatePARAMETERS(rp)
+        if rp.STOP:
+            kill_pool(pool)
+            logger.info("Stopped by STOP parameter.")
+            return
+        time.sleep(1)
+    pool.join()
+    error = False
+    for r in results:
+        try:
+            v = r.get(timeout=1)
+            if v:
+                logger.error(v)
+                error = True
+        except TimeoutError:
+            logger.error("Failed to get result from execution of {}"
+                         .format(function.__name__))
+            error = True
+    if error:
+        raise RuntimeError("Error in parallel execution of {}"
+                           .format(function.__name__))
+    return
+
 
 def getYfunc(ivfunc, v0i):
     """

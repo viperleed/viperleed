@@ -180,6 +180,7 @@ class Rparams:
         self.runHistory = []   # sections that have been executed before
         self.lastOldruns = []
         # copy of runHistory when last oldruns folder was created
+        self.lmax_derived = False
         self.superlattice_defined = False
         self.ivbeams_sorted = False
         self.last_R = None
@@ -298,6 +299,7 @@ class Rparams:
             if self.PHASESHIFT_EPS == 0:
                 self.PHASESHIFT_EPS = 0.05
             if self.LMAX == 0:  # determine value from PHASESHIFT_EPS
+                self.lmax_derived = True
                 lmax = 1
                 for el in self.phaseshifts[hi][1]:  # only check highest energy
                     for i, val in enumerate(el):
@@ -307,12 +309,12 @@ class Rparams:
                     logger.debug(
                         "Found small LMAX value based on "
                         "PHASESHIFT_EPS parameter (LMAX="+str(lmax)+").")
-                if lmax > 15:
-                    lmax = 15
+                if lmax > 18:
+                    lmax = 18
                     logger.info(
                         "The LMAX found based on the PHASESHIFT_EPS "
-                        "parameter is greater than 15, which is currently "
-                        "not supported. LMAX was set to 15.")
+                        "parameter is greater than 18, which is currently "
+                        "not supported. LMAX was set to 18.")
                 self.LMAX = lmax
             else:       # sanity check: are large values ignored?
                 warn = False

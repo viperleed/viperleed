@@ -9,27 +9,103 @@ Functions for reading and writing files relevant to the reference calculation
 
 import numpy as np
 import logging
+import os
 from viperleed import fortranformat as ff
 
 import viperleed.tleedmlib as tl
-from viperleed.tleedmlib.files.parameters import modifyPARAMETERS
+from viperleed.tleedmlib.base import splitMaxRight
 from viperleed.tleedmlib.files.beams import writeAUXBEAMS
 
 logger = logging.getLogger("tleedm.files.iorefcalc")
 
 
-def collectFIN():
-    """Combines AUXLATGEO, BEAMLIST, AUXNONSTRUCT, PHASESHIFTS, AUXBEAMS
-    and AUXGEO into one string (input for refcalc), which it returns."""
-    filenames = ["AUXLATGEO", "BEAMLIST", "AUXNONSTRUCT", "PHASESHIFTS",
-                 "AUXBEAMS", "AUXGEO"]
-    fin = ""
-    for fn in filenames:
-        with open(fn, "r") as rf:
-            fin += rf.read()
-        if fin[-1] != "\n":
-            fin += "\n"
-    return fin
+def combine_tensors(path=".", buffer=0):
+    """Combines Tensor files in the target path into a common file. The
+    'buffer' argument specified how much of a Tensor file can be stored in
+    memory at a given time (in bytes). Set 0 to read the entire file at once
+    (faster, but may be a problem if memory is limited)."""
+    tensorfiles = [f for f in os.listdir(path) if f.startswith("T_")
+                   and os.path.isfile(f) and len(f.split("_")) == 3]
+    tnum = {}
+    for f in tensorfiles:
+        try:
+            num = int(f.split("_")[1])
+            float(f.split("_")[2][:-2])
+        except ValueError:
+            continue   # not a real Tensor file
+        if num not in tnum:
+            tnum[num] = [f]
+        else:
+            tnum[num].append(f)
+    for num in tnum:
+        tlist = sorted(tnum[num], key=lambda x: float(x.split("_")[2][:-2]))
+        name = os.path.join(path, splitMaxRight(tlist[0], "_")[0])
+        with open(name, "w") as wf:
+            # having the 'if' this far outside duplicates code, but speeds
+            #  up the loop
+            if buffer == 0:
+                for tf in tlist:
+                    with open(tf, "r") as rf:
+                        wf.write(rf.read())
+                    try:
+                        os.remove(tf)
+                    except Exception:
+                        logger.warning("Failed to delete file " + tf)
+            else:
+                for tf in tlist:
+                    with open(tf, "r") as rf:
+                        while True:
+                            data = rf.read(buffer)
+                            if data:
+                                wf.write(data)
+                            else:
+                                break
+                    try:
+                        os.remove(tf)
+                    except Exception:
+                        logger.warning("Failed to delete file " + tf)
+    return
+
+
+def combine_fdout(path="."):
+    """Combines fd.out files in the target path into a common file."""
+    outlines = []
+    fdfiles = [f for f in os.listdir() if os.path.isfile(f)
+               and f.startswith("fd_") and f.endswith("eV.out")]
+    i = 0
+    while i < len(fdfiles):
+        try:
+            float(fdfiles[i].split("fd_")[1].split("eV.out")[0])
+            i += 1
+        except ValueError:
+            fdfiles.pop(i)
+    fdfiles.sort(key=lambda x: float(x.split("fd_")[1].split("eV.out")[0]))
+    nbeams = 0
+    for f in fdfiles:
+        with open(f, "r") as rf:
+            lines = rf.readlines()
+        lines = [s for s in lines if ".  CORRECT TERMINATION" not in s
+                 and len(s.strip()) >= 1]
+        if len(outlines) == 0:
+            try:
+                nbeams = int(lines[1].strip().split()[0])
+            except Exception:
+                logger.error("Failed to combine fd.out", exc_info=True)
+                raise
+            outlines += lines
+        else:
+            outlines += lines[nbeams+2:]
+        try:
+            os.remove(f)
+        except Exception:
+            logger.warning("Failed to delete file " + f)
+    try:
+        with open("fd.out", "w") as wf:
+            wf.write("".join(outlines))
+    except Exception:
+        logger.error("Failed to write combine fd.out")
+        raise
+    return
 
 
 def readFdOut(readfile="fd.out", for_error=False):
@@ -101,8 +177,11 @@ def readFdOut(readfile="fd.out", for_error=False):
     return theobeams, fdout
 
 
-def writePARAM(sl, rp):
-    """Writes PARAM file for the refcalc"""
+def writePARAM(sl, rp, lmax=-1):
+    """Creats the contents of the PARAM file for the reference calculation.
+    If no LMAX is passed, will use LMAX from rp. Returns str."""
+    if lmax == -1:
+        lmax = rp.LMAX
     try:
         beamlist, beamblocks, beamN = writeAUXBEAMS(
             ivbeams=rp.ivbeams, beamlist=rp.beamlist, write=False)
@@ -113,9 +192,9 @@ def writePARAM(sl, rp):
 
     # define Clebsh-Gordon coefficient tables:
     mnlmo = [1, 70, 264, 759, 1820, 3836, 7344, 13053, 21868, 34914, 53560,
-             79443, 114492, 160952, 221408]
+             79443, 114492, 160952, 221408, 298809, 396492, 518206]
     mnlm = [1, 76, 284, 809, 1925, 4032, 7680, 13593, 22693, 36124, 55276,
-            81809, 117677, 165152, 226848]
+            81809, 117677, 165152, 226848, 305745, 405213, 529036]
 
     # start generating output
     output = ('C  Dimension statements for Tensor LEED reference calculation, '
@@ -155,9 +234,9 @@ def writePARAM(sl, rp):
                + str(len(beamlist))+')\n')
     output += ('      PARAMETER (MNPSI = '+str(len(rp.phaseshifts))+', MNEL = '
                + str(len(rp.phaseshifts[0][1]))+')\n')
-    output += '      PARAMETER (MLMAX = '+str(rp.LMAX)+')\n'
-    output += ('      PARAMETER (MNLMO = '+str(mnlmo[rp.LMAX-1])+', MNLM = '
-               + str(mnlm[rp.LMAX-1])+')\n')
+    output += '      PARAMETER (MLMAX = '+str(lmax)+')\n'
+    output += ('      PARAMETER (MNLMO = '+str(mnlmo[lmax-1])+', MNLM = '
+               + str(mnlm[lmax-1])+')\n')
     output += '\nC  3. Parameters for (3D) geometry within (2D) unit mesh\n\n'
     output += '      PARAMETER (MNSITE  = '+str(len(sl.sitelist))+')\n'
     output += '      PARAMETER (MNLTYPE = '+str(len(sl.layers))+')\n'
@@ -201,14 +280,21 @@ def writePARAM(sl, rp):
                                             else '1 ')+')\n')
     output += ('      PARAMETER (MLMNI = '+('MNSUB*MLMMAX' if mnsub > 1
                                             else '1 ')+')\n')
-    try:
-        with open('PARAM', 'w') as wf:
-            wf.write(output)
-    except Exception:
-        logger.error("Failed to write PARAM file")
-        raise
-    logger.debug("Wrote to PARAM successfully.")
-    return
+    return output
+
+
+def collectFIN():
+    """Combines AUXLATGEO, BEAMLIST, AUXNONSTRUCT, PHASESHIFTS, AUXBEAMS
+    and AUXGEO into one string (input for refcalc), which it returns."""
+    filenames = ["AUXLATGEO", "BEAMLIST", "AUXNONSTRUCT", "PHASESHIFTS",
+                 "AUXBEAMS", "AUXGEO"]
+    fin = ""
+    for fn in filenames:
+        with open(fn, "r") as rf:
+            fin += rf.read()
+        if fin[-1] != "\n":
+            fin += "\n"
+    return fin
 
 
 def writeAUXLATGEO(sl, rp):
