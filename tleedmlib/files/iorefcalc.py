@@ -19,13 +19,14 @@ from viperleed.tleedmlib.files.beams import writeAUXBEAMS
 logger = logging.getLogger("tleedm.files.iorefcalc")
 
 
-def combine_tensors(path=".", buffer=0):
-    """Combines Tensor files in the target path into a common file. The
-    'buffer' argument specified how much of a Tensor file can be stored in
+def combine_tensors(oripath=".", targetpath=".", buffer=0):
+    """Combines Tensor files in 'oripath' into common files in 'targetpath'.
+    The 'buffer' argument specified how much of a Tensor file can be stored in
     memory at a given time (in bytes). Set 0 to read the entire file at once
     (faster, but may be a problem if memory is limited)."""
-    tensorfiles = [f for f in os.listdir(path) if f.startswith("T_")
-                   and os.path.isfile(f) and len(f.split("_")) == 3]
+    tensorfiles = [f for f in os.listdir(oripath) if f.startswith("T_")
+                   and os.path.isfile(os.path.join(oripath, f))
+                   and len(f.split("_")) == 3]
     tnum = {}
     for f in tensorfiles:
         try:
@@ -37,23 +38,26 @@ def combine_tensors(path=".", buffer=0):
             tnum[num] = [f]
         else:
             tnum[num].append(f)
+    if len(tnum) == 0:
+        logger.error("Found no Tensor files to combine.")
+        raise RuntimeError("No Tensor files found")
     for num in tnum:
         tlist = sorted(tnum[num], key=lambda x: float(x.split("_")[2][:-2]))
-        name = os.path.join(path, splitMaxRight(tlist[0], "_")[0])
+        name = os.path.join(targetpath, splitMaxRight(tlist[0], "_")[0])
         with open(name, "w") as wf:
             # having the 'if' this far outside duplicates code, but speeds
             #  up the loop
             if buffer == 0:
                 for tf in tlist:
-                    with open(tf, "r") as rf:
+                    with open(os.path.join(oripath, tf), "r") as rf:
                         wf.write(rf.read())
                     try:
-                        os.remove(tf)
+                        os.remove(os.path.join(oripath, tf))
                     except Exception:
                         logger.warning("Failed to delete file " + tf)
             else:
                 for tf in tlist:
-                    with open(tf, "r") as rf:
+                    with open(os.path.join(oripath, tf), "r") as rf:
                         while True:
                             data = rf.read(buffer)
                             if data:
@@ -61,16 +65,17 @@ def combine_tensors(path=".", buffer=0):
                             else:
                                 break
                     try:
-                        os.remove(tf)
+                        os.remove(os.path.join(oripath, tf))
                     except Exception:
                         logger.warning("Failed to delete file " + tf)
     return
 
 
-def combine_fdout(path="."):
-    """Combines fd.out files in the target path into a common file."""
+def combine_fdout(oripath=".", targetpath="."):
+    """Combines fd.out files in oripath into a common file at targetpath."""
     outlines = []
-    fdfiles = [f for f in os.listdir() if os.path.isfile(f)
+    fdfiles = [f for f in os.listdir(oripath)
+               if os.path.isfile(os.path.join(oripath, f))
                and f.startswith("fd_") and f.endswith("eV.out")]
     i = 0
     while i < len(fdfiles):
@@ -79,10 +84,13 @@ def combine_fdout(path="."):
             i += 1
         except ValueError:
             fdfiles.pop(i)
+    if len(fdfiles) == 0:
+        logger.error("Found no fd.out files to combine.")
+        raise RuntimeError("No fd.out files found")
     fdfiles.sort(key=lambda x: float(x.split("fd_")[1].split("eV.out")[0]))
     nbeams = 0
     for f in fdfiles:
-        with open(f, "r") as rf:
+        with open(os.path.join(oripath, f), "r") as rf:
             lines = rf.readlines()
         lines = [s for s in lines if ".  CORRECT TERMINATION" not in s
                  and len(s.strip()) >= 1]
@@ -96,11 +104,11 @@ def combine_fdout(path="."):
         else:
             outlines += lines[nbeams+2:]
         try:
-            os.remove(f)
+            os.remove(os.path.join(oripath, f))
         except Exception:
             logger.warning("Failed to delete file " + f)
     try:
-        with open("fd.out", "w") as wf:
+        with open(os.path.join(targetpath, "fd.out"), "w") as wf:
             wf.write("".join(outlines))
     except Exception:
         logger.error("Failed to write combine fd.out")

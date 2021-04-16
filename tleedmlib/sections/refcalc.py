@@ -18,7 +18,7 @@ import numpy as np
 from viperleed import fortranformat as ff
 from viperleed.tleedmlib.leedbase import (
     fortranCompile, getTLEEDdir, getMaxTensorIndex, monitoredPool)
-from viperleed.tleedmlib.base import splitMaxRight
+# from viperleed.tleedmlib.base import splitMaxRight
 from viperleed.tleedmlib.files.parameters import modifyPARAMETERS
 import viperleed.tleedmlib.files.beams as beams
 import viperleed.tleedmlib.files.iorefcalc as io
@@ -37,7 +37,7 @@ class RefcalcCompileTask():
         self.fortran_comp = fortran_comp
         self.sourcedir = sourcedir  # where the fortran files are
         self.basedir = basedir    # where the calculation is based
-        self.foldername = "Refcalc_Compile_LMAX{}".format(lmax)
+        self.foldername = "refcalc-compile_LMAX{}".format(lmax)
         self.exename = "refcalc-{}".format(lmax)
 
 
@@ -46,12 +46,13 @@ class RefcalcRunTask():
     compile and run a reference calculation, and copy results back."""
 
     def __init__(self, fin, energy, comptask, logname,
-                 single_threaded=False):
+                 collect_at="", single_threaded=False):
         self.fin = fin
         self.energy = energy
         self.comptask = comptask
         self.logname = logname
         self.foldername = "refcalc-part_{:.2f}eV".format(energy)
+        self.collect_at = collect_at
         self.single_threaded = single_threaded
 
 
@@ -145,11 +146,11 @@ def run_refcalc(runtask):
         nl = (f72x3.write([runtask.energy, runtask.energy + 0.01, 1.0])
               .ljust(24) + 'EI,EF,DE')
         fin = "\n".join((finparts[0], nl, finparts[2]))
-        # now replace LMAX
-        finparts = fin.split("LMAX", maxsplit=1)
-        finparts = [splitMaxRight(finparts[0], "\n")[0], finparts[1]]
-        nl = str(runtask.comptask.lmax).rjust(3).ljust(45) + "LMAX"
-        fin = finparts[0] + "\n" + nl + finparts[1]
+        # # now replace LMAX   !!! only needed for varying LMAX
+        # finparts = fin.split("LMAX", maxsplit=1)
+        # finparts = [splitMaxRight(finparts[0], "\n")[0], finparts[1]]
+        # nl = str(runtask.comptask.lmax).rjust(3).ljust(45) + "LMAX"
+        # fin = finparts[0] + "\n" + nl + finparts[1]
         try:
             with open("refcalc-FIN", "w") as wf:
                 wf.write(fin)
@@ -182,13 +183,17 @@ def run_refcalc(runtask):
         return ""
 
     # move/copy files out
+    if runtask.collect_at:
+        targetpath = os.path.abspath(runtask.collect_at)
+    else:
+        targetpath = base
     en_str = "_{:.2f}eV".format(runtask.energy)
     tensorfiles = [f for f in os.listdir() if f.startswith("T_")
                    and os.path.isfile(f)]
     for tf in tensorfiles:
         try:   # move instead of copy to not duplicate the large files
             shutil.move(os.path.join(workfolder, tf),
-                        os.path.join(base, tf + en_str))
+                        os.path.join(targetpath, tf + en_str))
         except Exception:
             logger.error("Failed to copy refcalc output file " + tf +
                          " to main folder.", exc_info=True)
@@ -196,7 +201,7 @@ def run_refcalc(runtask):
                     + ": Failed to copy Tensor file out.")
     try:
         shutil.copy2(os.path.join(workfolder, "fd.out"),
-                     os.path.join(base, "fd" + en_str + ".out"))
+                     os.path.join(targetpath, "fd" + en_str + ".out"))
     except Exception:
         logger.error("Failed to copy refcalc output file fd.out "
                      " to main folder.", exc_info=True)
@@ -228,7 +233,7 @@ def run_refcalc(runtask):
 
 
 def refcalc(sl, rp, subdomain=False):
-    """Runs the reference calculation."""
+    """Main function to execute the reference calculation segment."""
     if rp.domainParams:
         refcalc_domains(rp)
         return
@@ -356,8 +361,31 @@ def refcalc(sl, rp, subdomain=False):
         # just for information, can continue
         logger.warning("Error writing refcalc-PARAM file: ", exc_info=True)
 
+    # set up log
+    logname = "refcalc-"+rp.timestamp+".log"
+    rp.manifest.append(logname)
+    if not single_threaded:
+        try:
+            with open(logname, "w") as wf:
+                wf.write(
+                    "Logs from multiple reference calculations are "
+                    "collected  here. Their order may not be preserved.\n")
+        except Exception:
+            logger.warning("Error creating refcalc log file. This will not "
+                           "affect execution, proceeding...")
+    # set up collection directory
+    if not single_threaded:
+        collection_dir = os.path.join(os.getcwd(), "refcalc-out")
+        if os.path.isdir(collection_dir):
+            try:
+                shutil.rmtree(collection_dir)
+            except Exception:
+                logger.warning(
+                    "Failed to delete existing folder "
+                    + os.path.basename(collection_dir) + ". This may cause "
+                    "old data to end up in the final Tensors, check results!")
+        os.makedirs(collection_dir, exist_ok=True)
     # collect run tasks
-    logname = "refcalc-"+rp.timestamp
     ref_tasks = []
     if not single_threaded:
         for en in energies:
@@ -366,6 +394,7 @@ def refcalc(sl, rp, subdomain=False):
             else:
                 ct = [ct for ct in comp_tasks if ct.lmax == lmax[en]][0]
             ref_tasks.append(RefcalcRunTask(fin, en, ct, logname,
+                                            collect_at=collection_dir,
                                             single_threaded=False))
     else:
         ct = comp_tasks[0]
@@ -424,8 +453,13 @@ def refcalc(sl, rp, subdomain=False):
                            + ct.foldername)
 
     if not single_threaded:
-        io.combine_tensors()
-        io.combine_fdout()
+        io.combine_tensors(oripath=collection_dir)
+        io.combine_fdout(oripath=collection_dir)
+        try:
+            shutil.rmtree(collection_dir)
+        except Exception:
+            logger.warning("Failed to delete empty directory "
+                           + os.path.basename(collection_dir))
 
     try:
         rp.theobeams["refcalc"], rp.refcalc_fdout = io.readFdOut()
@@ -479,11 +513,6 @@ def refcalc(sl, rp, subdomain=False):
     except Exception:
         logger.warning("Failed to rename refcalc output file fd.out to "
                        "refcalc-fd.out")
-    try:
-        os.rename('PARAM', 'refcalc-PARAM')
-    except Exception:
-        logger.warning("Failed to rename refcalc input file PARAM to "
-                       "refcalc-PARAM")
     # move and zip tensor files
     rp.TENSOR_INDEX = getMaxTensorIndex() + 1
     rp.manifest.append("Tensors")
@@ -572,26 +601,6 @@ def refcalc_domains(rp):
     rr = [dp for dp in rp.domainParams if dp.refcalcRequired]
     logger.info("Running reference calculations in subfolders for domains: "
                 + ", ".join([d.name for d in rr]))
-    #    PARALELLIZED VERSION - doesn't work like this, because the dp objects
-    #       don't get written to (probably blocked by being attached to rp?).
-    #       Could be made to work, but serial execution works just as well.
-    # poolsize = min(len(rr), rp.N_CORES)
-    # loglevel = logger.level
-    # try:
-    #     logger.setLevel(logging.WARNING)
-    #     logging.getLogger("tleedm.files.iorefcalc").setLevel(logging.WARNING)
-    #     logging.getLogger("tleedm.files.beams").setLevel(logging.WARNING)
-    #     with multiprocessing.Pool(poolsize) as pool:
-    #         r = pool.map(runDomainRefcalc, rr)
-    # except:
-    #     raise
-    # finally:
-    #     logger.setLevel(loglevel)
-    #     logging.getLogger("tleedm.files.iorefcalc").setLevel(loglevel)
-    #     logging.getLogger("tleedm.files.beams").setLevel(loglevel)
-    # for v in [v for v in r if v != 0]:
-    #     logger.error(v)
-    #     raise RuntimeError("Error during domain reference calculations")
 
     for dp in rr:
         logger.info("Starting reference calculation for domain {}"
