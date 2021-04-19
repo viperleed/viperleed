@@ -2,7 +2,7 @@
 Main LeedControl File
 ---------------------
 Author: Bernhard Mayr, Michael Schmid, Michele Riva, Florian Dörr
-Date: 11.04.2021
+Date: 16.04.2021
 ---------------------
 */
 //Libraries
@@ -35,6 +35,7 @@ Date: 11.04.2021
 #define PC_MEASURE 6
 #define PC_SET_VOLTAGE 7
 #define PC_AUTOGAIN 8
+#define PC_CALIBRATION 9
 #define PC_RESET 82                                               // !!!!!!!!!!!!!!!!!!!!!! CHANGE FOR PYTHON (Python has value 68)
 #define PC_DEBUG 0
 
@@ -61,7 +62,8 @@ const int STATE_ADC_MEASURE = 4;
 const int STATE_ADC_VALUE_READY = 5;
 const int STATE_AUTOGAIN = 6; 
 const int STATE_GET_HARDWARE = 7; 
-const int STATE_ERROR = 8; 
+const int STATE_INITIAL_CALIBRATION = 8; 
+const int STATE_ERROR = 9; 
 
 //Flags 
 boolean readingFromSerial = false;            //Flag True when arduino receives new data
@@ -80,10 +82,10 @@ uint16_t numMeasurementsDone = 0;
 #define ADC_RANGE_THRESHOLD 0x3fff
 
 //Timers (defined in milliseconds)
-unsigned long initialTime; 
+unsigned long initialTime; // takes the time at the beginning of a state
 unsigned long timeout = 5000;      // !!!!!!!!!!!! this can become a #define, or at least a const    
-unsigned long dac_settletime = 100; // !!!!!!!!!! not sure why we use a long here, as we accept only 2 bytes (uint16_t) in setVoltage()
-unsigned long currentTime;
+uint16_t dac_settletime = 100;
+unsigned long currentTime; // gets set during the state to check for a timeout
 
 //Number of measurement devices that we can have: ADC#0, ADC#1, LM35 (if present)
 #define N_MAX_MEAS         3
@@ -95,7 +97,6 @@ unsigned long currentTime;
 #define RELAY_PIN         A4   //relay is connected here if present
 #define JP_I0_PIN         A4   //jumper for manual I0 2.5V range, same as relay pin
 #define JP_AUX_PIN        A5   //jumper for manual AUX 2.5 V range
-#define WORKINPROGRESS     7   //Python script will decide which pin !!!!!!!!!!! this needs to be NOT a #define because it needs updating. It should be a byte. Also, probably good to give it a more descriptive name, like, whatToMeasure. with 8 bits, we can have a bit representation of the devices. E.g.: ADC0 if WORKINPROGRESS == 0x01 == 0b00000001, ADC1 if WORKINPROGRESS == 0x02 == 0b00000010, LM35 if WORKINPROGRESS == 0x04 == 0b00000100. And combinations can be obtained by bitwise OR. In principle we could also encode it better, such that this single byte can be used also to determine which channel of which ADC to measure: e.g.: MEASURE_ADC0_CH0 = 0x01, MEASURE_ADC0_CH1 = 0x02, MEASURE_ADC1_CH0 = 0x04, MEASURE_ADC1_CH1 = 0x08, MEASURE_LM35 = 0x0f. Obviously then one needs to handle somehow the cases in which the python asks for measuring two channels of the same ADC, which cannot be done at the same time.
 
 //Arduino internal reference voltage, ADC maximum, etc
 #define VREF_INTERNAL    2.56  //arduino micro internal ADC reference is 2.56 V
@@ -170,11 +171,11 @@ SPISettings AD5683_SPI_SETTING(2500000, MSBFIRST, AD5683_SPIMODE);
 SPISettings AD7705_SPI_SETTING(2500000, MSBFIRST, AD7705_SPIMODE);
 
 /* ---------- GLOBAL VARIABLES ---------- */ // !!!!!!!!!!!!!!! Will stay in main part, but see comments below
-byte     hardwareDetected = 0;         //bits set indicate this hardware is spresent/jumper closed
 byte     adc0Channel = AD7705_CH0;    //channel of ADC#0
 byte     adc1Channel = AD7705_CH0;
 byte     adc0Gain = 0;                //gain of ADC#0, 0...7
 byte     adc1Gain = 0;
+byte     calibrationGain = 0;
 byte     adcUpdateRate = AD7705_50HZ; //update rate for both ADCs (will be set for line frequency) !!!!!!!!!!!!!!!!!! This is never used again, but probably should
 uint16_t adc0RipplePP = 0;            //ripple (peak-peak) measured for ADC#0 during autogain at gain=0 !!!!!!!!!!!!!!!!!! Nor is this or the following. Not sure what Michael wanted to use these for. Perhaps as a substitute of summedMeasurements used only during the autogain?
 uint16_t adc1RipplePP = 0;
@@ -185,15 +186,23 @@ int32_t  selfCalDataForMedian[3][2][2]; //three values for median, two ADCs, las
 int32_t  selfCalDataVsGain[AD7705_MAX_GAIN+1][2][2][2]; //for each gain, two ADCs, two channels each, and last index is offset(0)&gain(1)
 // Measurements of ADC#0, ADC#1 and LM35 sensor temperature are summed up here
 int32_t summedMeasurements[N_MAX_MEAS];
-int16_t measurement[N_MAX_MEAS];
 //Union for Variables to convert from float to single bytes
 union floatOrBytes{                  
   float asFloat; 
   byte asBytes[4];
 } fDataOutput[N_MAX_MEAS];
+//Union for Variables to convert from int to single bytes
+union integerOrBytes{                  
+  uint16_t asInt; 
+  byte asBytes[2];
+} hardwareDetected; //bits set indicate this hardware is spresent/jumper closed
 //Variables to determing peak-peak distance in autogain
 int16_t maximumPeak[2];
 int16_t minimumPeak[2];
+//Byte for ERROR traceback
+byte tracebackByte;
+//int to identify serial overflow
+const int SERIAL_OVERFLOW = 13;
 /* ---------- INITIALIZATION ---------- */
 /** The setup routine runs once on power-up or on hardware reset */
 void setup() {
@@ -217,7 +226,7 @@ void setup() {
   AD5683setVoltage(CS_DAC, 0x0000);
   #ifdef DEBUG
     Serial.print("hardware=0x");
-    Serial.println(hardwareDetected, HEX);
+    Serial.println(hardwareDetected.asInt, HEX);
   #endif
   #ifdef DEBUG
     pinMode(LED_BUILTIN, OUTPUT);
@@ -256,12 +265,16 @@ void loop() {
       sendAdcValue();
       break;
     case STATE_GET_HARDWARE:
-       hardwareDetected = getHardwarePresent();
-       encodeAndSend(hardwareDetected);
-       initialCalibration();
+       hardwareDetected.asInt = getHardwarePresent();
+       encodeAndSend(hardwareDetected.asBytes, 2);
+       currentState = STATE_IDLE;
       break;
+    case STATE_INITIAL_CALIBRATION:
+       initialCalibration();
+      break;    
     case STATE_ERROR:
-      // !!!!!!!!! need to set up communication for this
+    encodeAndSend(tracebackByte);
+    currentState = STATE_IDLE;
       break;
    }
 }
@@ -282,7 +295,7 @@ void readFromSerial() {
  * temp_buffer: byte array
  */
   if(Serial.available() > 0) {                  // !!!!!!!!!!!!!!< this could become if(Serial.available()) [clearer]
-    if(Serial.available() >= 64){Serial.println("Serial overflow."); currentState = STATE_ERROR;}
+    if(Serial.available() >= 64){Serial.println("Serial overflow."); tracebackByte = SERIAL_OVERFLOW; currentState = STATE_ERROR;}
     byte byteRead = Serial.read();
     if (byteRead == STARTMARKER) {
       numBytesRead = 0; 
@@ -433,6 +446,10 @@ void updateState() {
         initialTime = millis(); 
         currentState = STATE_ADC_MEASURE;
         break;
+      case PC_CALIBRATION:
+        calibrationGain = 0;
+        currentState = STATE_INITIAL_CALIBRATION;
+        break;
       case PC_RESET:
         reset();
         break;                             // !!!!!!!!!!!!!!!!!!! add one more case for the "?" command (or whichever character we will use to indicate the request of hardware configuration. This will need to call the getHardwarePresent() and return appropriate info to the PC. !!!!!!!!!!!!!!!!! And add Error state
@@ -460,17 +477,17 @@ void findOptimalADCGains(){
  */
   int16_t autogain_value0;
   int16_t autogain_value1;
-  measureADCsAndPeaks(); // !!!!!!!!!!!!! not at 500 Hz !!!!!!!!!!!!!!!!
+  measureADCsAndPeaks();
   if(numMeasurementsDone == numMeasurementsToDo){
     autogain_value0 = max(abs(maximumPeak[0]),abs(minimumPeak[0])) + (maximumPeak[0] - minimumPeak[0]);
     autogain_value1 = max(abs(maximumPeak[1]),abs(minimumPeak[1])) + (maximumPeak[1] - minimumPeak[1]);
     numMeasurementsDone = 0;// !!!!!!!!!!!!!!!!!!! we should rather zero this counter later, after the correct gain has been found, just using resetMeasurementData() 
-    if(hardwareDetected & ADC_0_PRESENT){
+    if(hardwareDetected.asInt & ADC_0_PRESENT){
       while(((autogain_value0 << (adc0Gain + 1)) < ADC_RANGE_THRESHOLD) && (adc0Gain < AD7705_MAX_GAIN)){
         adc0Gain++;
       }
     }
-    if (hardwareDetected & ADC_1_PRESENT){
+    if (hardwareDetected.asInt & ADC_1_PRESENT){
       while(((autogain_value1 << (adc1Gain + 1)) < ADC_RANGE_THRESHOLD) && (adc1Gain < AD7705_MAX_GAIN)){
         adc1Gain++;
       }
@@ -480,27 +497,29 @@ void findOptimalADCGains(){
   }
   if((millis() -  initialTime) > timeout){               // !!!!!!!!!!!!!!!! perhaps go to an ERROR state?
     debugToPC("Timeout, Autogain failed, Arduino turns back to IDLE state"); 
-    currentState = STATE_IDLE;
+    tracebackByte = currentState;
+    currentState = STATE_ERROR;
   }
 }
 
 void measureADCsAndPeaks(){
-  if (hardwareDetected & ADC_0_PRESENT)
-        {measurement[0] = AD7705waitAndReadData(CS_ADC_0, adc0Channel);
-        if(measurement[0] > maximumPeak[0]){
-          maximumPeak[0] = measurement[0];
+  int16_t measurement;
+  if (hardwareDetected.asInt & ADC_0_PRESENT)
+        {measurement = AD7705waitAndReadData(CS_ADC_0, adc0Channel);
+        if(measurement > maximumPeak[0]){
+          maximumPeak[0] = measurement;
           }
-        if(measurement[0] < minimumPeak[0]){
-          minimumPeak[0] = measurement[0];
+        if(measurement < minimumPeak[0]){
+          minimumPeak[0] = measurement;
           }
         }
-    if (hardwareDetected & ADC_1_PRESENT)
-        {measurement[1] = AD7705waitAndReadData(CS_ADC_1, adc1Channel);
-        if(measurement[1] > maximumPeak[1]){
-          maximumPeak[1] = measurement[1];
+    if (hardwareDetected.asInt & ADC_1_PRESENT)
+        {measurement = AD7705waitAndReadData(CS_ADC_1, adc1Channel);
+        if(measurement > maximumPeak[1]){
+          maximumPeak[1] = measurement;
           }
-        if(measurement[1] < minimumPeak[1]){
-          minimumPeak[1] = measurement[1];
+        if(measurement < minimumPeak[1]){
+          minimumPeak[1] = measurement;
           }
         }
 numMeasurementsDone++;
@@ -520,14 +539,15 @@ void setUpAllADCs(){
     //maximum_gain = data_received[5]; //!!!!!!!!!! remove from Phython
     //selfCalibrateAllADCs(adcUpdateRate);
     setAllADCgainsAndCalibration();
-    delay(1);
+    //delay(1);
     encodeAndSend(PC_OK);
     currentState = STATE_IDLE;//Back to command mode
     newMessage = false;
   }
   if((millis() -  initialTime) > timeout){           // !!!!!!!!!! Perhaps go to ERROR state here?
     debugToPC("Timeout, no ini Values for ADC received!"); 
-    currentState = STATE_IDLE; //Back to cmd mode
+    tracebackByte = currentState;
+    currentState = STATE_ERROR;
     newMessage = false; 
   }
 }
@@ -561,23 +581,18 @@ void setVoltage(){
       // requires recalibration
       adc0Gain--;
       setAllADCgainsAndCalibration();
-      //AD7705selfCalibrate(CS_ADC_0, adc0Channel, adc0Gain, adcUpdateRate); // !!!!!!!!!!!!!!!!!!!!!! ALL OR ONLY ONE? MAYBE CHECK BOTH AND IF ONE NEEDS TO BE CALIBRATED WE DO BOTH
-      //AD7705waitForCalibration(CS_ADC_0, adc0Channel);
-      delay(1);
       adc0ShouldDecreaseGain = false; 
     }
     if(adc1ShouldDecreaseGain){
       adc1Gain--;
       setAllADCgainsAndCalibration();
-      //AD7705selfCalibrate(CS_ADC_1, adc1Channel, adc1Gain, adcUpdateRate); // !!!!!!!!!!!!!!!!!!!!!! ALL OR ONLY ONE? MAYBE CHECK BOTH AND IF ONE NEEDS TO BE CALIBRATED WE DO BOTH
-      //AD7705waitForCalibration(CS_ADC_1, adc1Channel);
-      delay(1);
       adc0ShouldDecreaseGain = false; 
     }
   }
   if((millis() -  initialTime) > timeout){                   // !!!!!!!!!!!!! Perhaps we should have an additional ERROR state that can do the reporting to the PC, then back to IDLE?
     debugToPC("Timeout, no ini Values for DAC received!"); 
-    currentState = STATE_IDLE;
+    tracebackByte = currentState;
+    currentState = STATE_ERROR;
     newMessage = false; 
   }
 }
@@ -591,19 +606,19 @@ void measureADCs(){
  *     state of the Arduino is changed to ADC_VALUE_READY_STATE, that will
  *     handle the communication of the measurement to the PC.
  */
-  makeAndSumMeasurements(); //                                           !!!!!!!!!!!!!!! summed Measurements not yet divided !!!!!!!!!!!!!!
+  makeAndSumMeasurements();
   if(numMeasurementsDone == numMeasurementsToDo){
-   // adc_value.asFloat /= numMeasurementsToDo;            // !!!!!!!!!!!!!! I think we can leave this part to the STATE_ADC_VALUE_READY handler !!!!!!!!!!!!!! USE MICHEALS ARRAY !!!!!!!!!!!!
     currentState = STATE_ADC_VALUE_READY;
   }
-  if((millis() -  initialTime) > 10000){                   // !!!!!!!!!!!!!!!! probably here go to ERROR state too. Also, it's probably good to use the "timeout" variable instead of 10000
+  if((millis() -  initialTime) > timeout){
     debugToPC("Timeout, ADC measurement Timeout!"); 
-    currentState = STATE_IDLE;
+    tracebackByte = currentState;
+    currentState = STATE_ERROR;
     newMessage = false; 
   }
 }
 //=========================
-void sendAdcValue(){  // !!!!!!!!!!! this is the only place where we need to know what we want to measure exactly [except for which channel of the AD7705s, which is already used in initialiseADC()]. We should probably make it such that it can return several values (from the different ADCs/LM35) one after the other, if the PC asked for them. We can rename it to reflect this, e.g., "measurementsToPC()" or similar. The safest way would be to have this function look at WORKINPROGRESS (or however we will call it), and send the stuff needed from the current data read. We should consider if we should use several loop() iterations (at most N_MAX_MEAS, one per each ADC) to report the data back (keeping track of what needs still to be sent back by editing WORKINPROGRESS each time we send something) or if it's safer to do it in one shot, effectively stalling reading from the serial line in the meantime.
+void sendAdcValue(){  // !!!!!!!!!!! this is the only place where we need to know what we want to measure exactly [except for which channel of the AD7705s, which is already used in initialiseADC()].
 /*
  * This function sends the value to the PC by packing the 4 byte float 
  * number into an byte array.
@@ -668,9 +683,9 @@ void resetMeasurementData() {                               // !!!!!!!!!! This n
 
 /** Triggers the ADCs to start the measurements now (i.e., AD7705 STATE_TRIGGER_ADCS) */
 void triggerMeasurements() {
-    if (hardwareDetected & ADC_0_PRESENT)
+    if (hardwareDetected.asInt & ADC_0_PRESENT)
         AD7705setGainAndTrigger(CS_ADC_0, adc0Channel, adc0Gain);
-    if (hardwareDetected & ADC_1_PRESENT)
+    if (hardwareDetected.asInt & ADC_1_PRESENT)
         AD7705setGainAndTrigger(CS_ADC_1, adc1Channel, adc1Gain);
     currentState = STATE_IDLE;
 }
@@ -688,18 +703,19 @@ void triggerMeasurements() {
  //    The logics should be similar to the one that we currently have in measureADCs()
  //    simple function to do that (e.g., checkMeasurementInADCRange(...) or similar)? needs: value, adc gain, pointer to new-gain flag
 void makeAndSumMeasurements() {
-    if (hardwareDetected & LM35_PRESENT)
-        {measurement[2] = analogReadMedian(LM35_PIN);
-        summedMeasurements[2] += measurement[2];}   //this one first while we probably have to wait for the others
-    if (hardwareDetected & ADC_0_PRESENT)
-        {measurement[0] = AD7705waitAndReadData(CS_ADC_0, adc0Channel);
-        checkMeasurementInADCRange(CS_ADC_0, adc0Channel, adc0Gain, &adc0ShouldDecreaseGain, measurement[0]);
-        summedMeasurements[0] += measurement[0];
+    int16_t measurement;
+    if (hardwareDetected.asInt & LM35_PRESENT)
+        {measurement = analogReadMedian(LM35_PIN);
+        summedMeasurements[2] += measurement;}   //this one first while we probably have to wait for the others
+    if (hardwareDetected.asInt & ADC_0_PRESENT)
+        {measurement = AD7705waitAndReadData(CS_ADC_0, adc0Channel);
+        checkMeasurementInADCRange(CS_ADC_0, adc0Channel, adc0Gain, &adc0ShouldDecreaseGain, measurement);
+        summedMeasurements[0] += measurement;
         }
-    if (hardwareDetected & ADC_1_PRESENT)
-        {measurement[1] = AD7705waitAndReadData(CS_ADC_1, adc1Channel);
-        checkMeasurementInADCRange(CS_ADC_1, adc1Channel, adc1Gain, &adc1ShouldDecreaseGain, measurement[1]);
-        summedMeasurements[1] += measurement[1];
+    if (hardwareDetected.asInt & ADC_1_PRESENT)
+        {measurement = AD7705waitAndReadData(CS_ADC_1, adc1Channel);
+        checkMeasurementInADCRange(CS_ADC_1, adc1Channel, adc1Gain, &adc1ShouldDecreaseGain, measurement);
+        summedMeasurements[1] += measurement;
         }
     numMeasurementsDone++;
 }
@@ -730,13 +746,14 @@ void checkMeasurementInADCRange(byte chipSelectPin, byte channel, byte gain, boo
         setAllADCgainsAndCalibration();
         //AD7705selfCalibrate(chipSelectPin, channel, gain, adcUpdateRate);
         //AD7705waitForCalibration(chipSelectPin, channel);
-        delay(1);
+        //delay(1);
         resetMeasurementData();
         *adcShouldDecreaseGain = false; 
       }
       if(gain==0){
         debugToPC("ADC Overflow, maximum gain reached, no serious measurements possible...");
-        currentState = STATE_IDLE; 
+        tracebackByte = currentState;
+        currentState = STATE_ERROR;
       }
     }
 }
@@ -744,38 +761,38 @@ void checkMeasurementInADCRange(byte chipSelectPin, byte channel, byte gain, boo
 /** Converts the global summedMeasurements to float in physical units:
  *  Volts, Amps, degC. */
 void getFloatMeasurements() {                       // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! probably it is best to have this function rather write to the globals 3-element array of shared_memory type rather than passing an array and returning it. This way we can call this function once, only when reporting stuff back to the PC
-    if (hardwareDetected & ADC_0_PRESENT) {
+    if (hardwareDetected.asInt & ADC_0_PRESENT) {
         fDataOutput[0].asFloat = summedMeasurements[0] * voltsPerBit[adc0Gain] / numMeasurementsToDo;
         if (adc0Channel == AD7705_CH0) {  //ADC#0 channel 0: I0 input (volts)
-            if ((hardwareDetected & JP_I0_CLOSED) == 0)  //0-10V with jumper open
+            if ((hardwareDetected.asInt & JP_I0_CLOSED) == 0)  //0-10V with jumper open
                 fDataOutput[0].asFloat *= ADC_0_CH0_SCALE_JO;
         }
         else                            //ADC#0 channel 1: high voltage (volts)
             fDataOutput[0].asFloat *= ADC_0_CH1_SCALE;
     }
-    if (hardwareDetected & ADC_1_PRESENT) {
+    if (hardwareDetected.asInt & ADC_1_PRESENT) {
         fDataOutput[1].asFloat = summedMeasurements[1] * voltsPerBit[adc1Gain] / numMeasurementsToDo;
         if (adc1Channel == AD7705_CH0) {  //ADC#1 channel 0: I0 at biased sample (amps)
             fDataOutput[1].asFloat *= ADC_1_CH0_SCALE;
         }
         else                            //ADC#1 channel 1: AUX
-            if ((hardwareDetected & JP_AUX_CLOSED) == 0)  //0-10V with jumper open
+            if ((hardwareDetected.asInt & JP_AUX_CLOSED) == 0)  //0-10V with jumper open
                 fDataOutput[1].asFloat *= ADC_1_CH1_SCALE_JO;
     }
-    if (hardwareDetected & LM35_PRESENT) //LM35: degrees C
+    if (hardwareDetected.asInt & LM35_PRESENT) //LM35: degrees C
         fDataOutput[2].asFloat = summedMeasurements[2] * ARDUINO_ADU_DEG_C / numMeasurementsToDo;
 }
 
 /** Simultaneous self-calibration for both ADCs (if present) */
 void selfCalibrateAllADCs(byte updateRate) {
     unsigned long startMillis = millis();
-    if (hardwareDetected & ADC_0_PRESENT)
+    if (hardwareDetected.asInt & ADC_0_PRESENT)
         AD7705selfCalibrate(CS_ADC_0, adc0Channel, adc0Gain, updateRate);
-    if (hardwareDetected & ADC_1_PRESENT)
+    if (hardwareDetected.asInt & ADC_1_PRESENT)
         AD7705selfCalibrate(CS_ADC_1, adc1Channel, adc1Gain, updateRate);
-    if (hardwareDetected & ADC_0_PRESENT)
+    if (hardwareDetected.asInt & ADC_0_PRESENT)
         AD7705waitForCalibration(CS_ADC_0, adc0Channel);
-    if (hardwareDetected & ADC_1_PRESENT)
+    if (hardwareDetected.asInt & ADC_1_PRESENT)
         AD7705waitForCalibration(CS_ADC_1, adc1Channel);
     unsigned long endMillis = millis();
 //#ifdef DEBUG
@@ -789,7 +806,7 @@ void selfCalibrateAllADCs(byte updateRate) {
 void storeAllSelfCalibrationResults(int32_t targetArray[2][2]) {
   for (int iADC=0; iADC<2; iADC++) {
     bool adcPresentMask = iADC==0 ? ADC_0_PRESENT : ADC_1_PRESENT;
-    if (hardwareDetected & adcPresentMask) {
+    if (hardwareDetected.asInt & adcPresentMask) {
       byte chipSelect = iADC==0 ? CS_ADC_0 : CS_ADC_1;
       byte channel = iADC==0 ? adc0Channel : adc1Channel;
       int32_t offs = AD7705getCalibrationRegister(chipSelect, channel, AD7705_REG_OFFSET);
@@ -806,7 +823,7 @@ void storeAllSelfCalibrationResults(int32_t targetArray[2][2]) {
 void setAllADCgainsAndCalibration() {
   for (int iADC=0; iADC<2; iADC++) {
     byte adcPresentMask = iADC==0 ? ADC_0_PRESENT : ADC_1_PRESENT;
-    if (hardwareDetected & adcPresentMask) {
+    if (hardwareDetected.asInt & adcPresentMask) {
       byte chipSelect = iADC==0 ? CS_ADC_0 : CS_ADC_1;
       byte channel = iADC==0 ? adc0Channel : adc1Channel;
       byte gain = iADC==0 ? adc0Gain : adc1Gain;
@@ -886,47 +903,35 @@ uint16_t getHardwarePresent() {
 
 /*initial calibration after getting hardware*/
 void initialCalibration(){
- //initial self-calibration: done in parallel for both ADCs (if present) (old version of the calibration)
- //adc0Gain = 0;             adc1Gain = 0;
- //adc0Channel = AD7705_CH0; adc1Channel = AD7705_CH0;
- //selfCalibrateAllADCs(adcUpdateRate);
- //adc0Channel = AD7705_CH1; adc1Channel = AD7705_CH1;
- //selfCalibrateAllADCs(adcUpdateRate);
- //adc0Channel = AD7705_CH0; adc1Channel = AD7705_CH0;
- //triggerMeasurements();  //set to default channels
-  
-  //initial self-calibration: done in parallel for both ADCs (if present), for all gains (new version of the calibration)
-  for(int channel=0; channel<2; channel++){
-    if(channel==0) {adc0Channel = AD7705_CH0; adc1Channel = AD7705_CH0;}
-    if(channel==1) {adc0Channel = AD7705_CH1; adc1Channel = AD7705_CH1;}
-    for (int gain=0; gain<=AD7705_MAX_GAIN; gain++) {
-      adc0Gain = gain;
-      adc1Gain = gain;
-      for (int i=0; i<3; i++) {  //3 values for 3-point median
-        selfCalibrateAllADCs(AD7705_50HZ);
-        storeAllSelfCalibrationResults(selfCalDataForMedian[i]);
-        #ifdef DEBUG
-          Serial.print("gain=");
-          Serial.print(gain);
-          Serial.print(" cOffs=");
-          Serial.print(selfCalDataForMedian[i][0][0]);
-          Serial.print(" cGain=");
-          Serial.println(selfCalDataForMedian[i][0][1]);
-        #endif
-      }
-      for (int iADC=0; iADC<2; iADC++) {
-        for (int offsNgain=0; offsNgain<2; offsNgain++) {
-          int32_t median = getMedian32(
-              selfCalDataForMedian[0][iADC][offsNgain],
-              selfCalDataForMedian[1][iADC][offsNgain],
-              selfCalDataForMedian[2][iADC][offsNgain]);
-          
-          selfCalDataVsGain[gain][iADC][channel][offsNgain] = median;
+ //initial self-calibration: done in parallel for both ADCs (if present), for all gains
+    if (calibrationGain <= AD7705_MAX_GAIN) {
+     adc0Gain = calibrationGain;
+     adc1Gain = calibrationGain;
+     for (int i=0; i<3; i++) {  //3 values for 3-point median
+       selfCalibrateAllADCs(AD7705_50HZ);
+       storeAllSelfCalibrationResults(selfCalDataForMedian[i]);
+       #ifdef DEBUG
+         Serial.print("gain=");
+         Serial.print(calibrationGain);
+         Serial.print(" cOffs=");
+         Serial.print(selfCalDataForMedian[i][0][0]);
+         Serial.print(" cGain=");
+         Serial.println(selfCalDataForMedian[i][0][1]);
+       #endif
+     }
+     for (int iADC=0; iADC<2; iADC++) {
+      byte channel = iADC==0 ? adc0Channel : adc1Channel;
+       for (int offsNgain=0; offsNgain<2; offsNgain++) {
+         int32_t median = getMedian32(
+             selfCalDataForMedian[0][iADC][offsNgain],
+             selfCalDataForMedian[1][iADC][offsNgain],
+             selfCalDataForMedian[2][iADC][offsNgain]);  
+         selfCalDataVsGain[calibrationGain][iADC][channel][offsNgain] = median;
         }
       }
+      calibrationGain++;
     }
-  }
-  adc0Gain = 0; adc1Gain = 0;
+  if(calibrationGain > AD7705_MAX_GAIN){adc0Gain = 0; adc1Gain = 0; currentState = STATE_IDLE;}
 }
 /* ---------- AD7705 ADC FUNCTIONS ---------- */
 
