@@ -1,0 +1,28 @@
+\documentclass[12pt,a4paper,english]{article}
+
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath} 
+
+\author{Florian Dörr}
+\title{State Machine}
+\begin{document}
+\titlepage
+\begin{center}
+\begin{tabular}{ |c|c| } 
+ \hline
+\textbf{current state}  & \textbf{goes to}\\ 
+STATE\_IDLE & *\\ 
+STATE\_SET\_VOLTAGE & STATE\_TRIGGER\_ADCS\\ 
+STATE\_TRIGGER\_ADCS & STATE\_IDLE\\ 
+STATE\_AUTOGAIN & STATE\_IDLE\\ 
+STATE\_ADC\_MEASURE & STATE\_ADC\_VALUE\_READY\\ 
+STATE\_ADC\_VALUE\_READY & STATE\_IDLE\\ 
+STATE\_GET\_HARDWARE & STATE\_IDLE\\
+STATE\_INITIAL\_CALIBRATION & STATE\_IDLE\\
+STATE\_ERROR & STATE\_IDLE\\
+ \hline
+\end{tabular}
+\end{center}
+\end{document}
