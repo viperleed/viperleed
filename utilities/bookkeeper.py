@@ -140,7 +140,8 @@ def main():
         if os.path.isdir("OUT"):
             fout = sorted([f for f in os.listdir("OUT")
                            if os.path.isfile(os.path.join("OUT", f))
-                           and f.startswith("POSCAR_OUT_")])
+                           and f.startswith("POSCAR_OUT_")
+                           and "parabola" not in f])
             if len(fout) > 0:
                 path = os.path.join("OUT", fout[-1])
                 try:
@@ -152,7 +153,8 @@ def main():
                       "found in OUT.")
             fout = sorted([f for f in os.listdir("OUT")
                            if os.path.isfile(os.path.join("OUT", f))
-                           and f.startswith("VIBROCC_OUT_")])
+                           and f.startswith("VIBROCC_OUT_")
+                           and "parabola" not in f])
             if len(fout) > 0:
                 path = os.path.join("OUT", fout[-1])
                 try:
