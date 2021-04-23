@@ -498,14 +498,14 @@ class Slab:
         for el in del_elems:
             self.elements.remove(el)
 
-    def initSites(self, rparams):
+    def initSites(self, rp):
         """Goes through the atom list and supplies them with appropriate
         SiteType objects, based on the SITE_DEF parameters from the supplied
         Rparams."""
         atlist = self.atlist[:]     # copy to not have any permanent changes
         atlist.sort(key=lambda atom: atom.oriN)
         sl = []
-        for el, sitedict in rparams.SITE_DEF.items():
+        for el, sitedict in rp.SITE_DEF.items():
             for sitename, sitelist in sitedict.items():
                 newsite = tl.Sitetype(el, sitename)
                 sl.append(newsite)
@@ -517,7 +517,7 @@ class Slab:
                                 + str(i) + ' as ' + el + ', but POSCAR has it '
                                 'as '+atlist[i-1].el+'. Atom will be skipped '
                                 'and left as default site type!')
-                            rparams.setHaltingLevel(1)
+                            rp.setHaltingLevel(1)
                         else:
                             atlist[i-1].site = newsite
                     except IndexError:
@@ -532,8 +532,8 @@ class Slab:
                     found = True
             if found:
                 sl.append(newsite)
-        for site in [s for s in sl if s.el in rparams.ELEMENT_MIX]:
-            site.mixedEls = rparams.ELEMENT_MIX[el][:]
+        for site in [s for s in sl if s.el in rp.ELEMENT_MIX]:
+            site.mixedEls = rp.ELEMENT_MIX[site.el][:]
         self.sitelist = sl
         self.sites_initialized = True
 
