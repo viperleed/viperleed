@@ -130,7 +130,7 @@ class Rparams:
         self.SEARCH_BEAMS = 0   # 0: average, 1: integer, 2: fractional
         self.SEARCH_CULL = 0.1  # fraction of all, or absolute N if >1
         self.SEARCH_CULL_TYPE = "genetic"  # clone, genetic, random
-        self.SEARCH_MAX_GEN = 50000   # maximum number of generations in search
+        self.SEARCH_MAX_GEN = 100000  # maximum number of generations in search
         self.SEARCH_MAX_DGEN = {"all": 0, "best": 0, "dec": 100}
         # maximum number of generations without change before search
         #   is stopped. All: all configs, best: only 1, dec: best 10%
