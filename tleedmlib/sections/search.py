@@ -704,7 +704,8 @@ def search(sl, rp):
         printt = searchStartTime
         filepos = 0
         timestep = 1  # time step to check files
-        evaluationTime = 10  # how often should SD.TL be evaluated
+        # !!! evaluation time could be higher - keep low only for debugging
+        evaluationTime = 60  # how often should SD.TL be evaluated
         lastEval = 0  # last evaluation time (s), counting from searchStartTime
         comment = ""
         sdtlGenNum = 0
@@ -746,7 +747,7 @@ def search(sl, rp):
                         if content:
                             newData = io.readSDTL_blocks(
                                 content, whichR=rp.SEARCH_BEAMS)
-                    elif t >= 900 and rp.halting < 3:
+                    elif t >= 900 and rp.HALTING < 3:
                         stop = True
                         if tried_repeat:
                             logger.warning(
