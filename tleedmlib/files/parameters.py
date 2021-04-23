@@ -958,7 +958,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                     rpars.setHaltingLevel(1)
         elif param == 'SEARCH_START':
             s = llist[0].lower()
-            if s in ["random, rand"]:
+            if s in ["random", "rand"]:
                 rpars.SEARCH_START = "random"
             elif s in ["centered", "center"]:
                 rpars.SEARCH_START = "centered"
