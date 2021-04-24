@@ -5,239 +5,344 @@ Author: Bernhard Mayr, Michael Schmid, Michele Riva, Florian Dörr
 Date: 16.04.2021
 ---------------------
 */
-//Libraries
-#include <Arduino.h>
-#include <SPI.h>
-
-//File with Arduino settings
-//#include "viper-ino.h"
-//#include "viper-ino_control.h"
-
-#define DEBUG           true  //debug mode, writes to serial line, for use in serial monitor
-
-//Useful macros
-#define LENGTH(array)  (sizeof(array) / sizeof((array)[0]))
-#ifndef NAN                                                                                            // !!!!!!!!!! This is never used
-  #define NAN        (1.0/0)   //floating-point not-a-number
-#endif
-
-//global variables for communication with Python module
-#define STARTMARKER 254
-#define ENDMARKER 255
-#define SPECIAL_BYTE 252                                         // !!!!!!!!!!!!!!!!!!!!!! CHANGE FOR PYTHON (Python has value 253)
-#define PC_ERROR 253                                             // !!!!!!!!!!!!!!!!!!!!!! Define in Python
-#define MAX_MSG_LENGTH 16
-
-//definition of messages for communication with PC
-#define PC_HARDWARE 3
-#define PC_INIT_ADC 4
-#define PC_OK 5
-#define PC_MEASURE 6
-#define PC_SET_VOLTAGE 7
-#define PC_AUTOGAIN 8
-#define PC_CALIBRATION 9
-#define PC_RESET 82                                               // !!!!!!!!!!!!!!!!!!!!!! CHANGE FOR PYTHON (Python has value 68)
-#define PC_DEBUG 0
 
 // << THINGS TO DO EVERYWHERE (to conform with c++ style):
 // - use "lower-camel-case" for variables (i.e., thisIsANewVariable) instead of "lower-snake-case" (i.e., this_is_a_new_variable)
 // - use "upper-camel-case" for constants (i.e., THIS_IS_A_CONSTANT). I think most are already correct
 // - use "lower-camel-case" for functions
 
-//Variables for the communication protocoll
-byte numBytesRead = 0;            //counter for received bytes
-byte msgLength = 0;           //numbers of bytes received in message, 2nd byte of received message !!!!!!!!!!!!!!!!!!!!!!!!!!!!   This is set in readFromSerial but never used outside of it. Perhaps we should use it to check that indeed we got the data that we expected.
-byte data_received_counter = 0;     //total number of bytes received  !!!!!!!!!!!!!!!!!!  This is also used only locally in decodeMessage, and it's probably better to keep it only local. There should be minimal to no performance hit by doing this. Also, renaming it to something clearer would help
-byte data_received[MAX_MSG_LENGTH];    //Real message  !!!!!!!!!!! Judging from the code, and if I didn't misinterpret anything, I think we can have only one buffer for the input/output to the PC, so we can replace "data_received" and "data_send" with a single "message" array
-byte data_send[MAX_MSG_LENGTH];  
-byte inputRegister[MAX_MSG_LENGTH];
+// ############################### HEADER START ################################
 
-//Finite state machine 
-int currentState = 0; //!!!!!!!!!!!!!  Also, perhaps it would be better to have them #define(d) rather than as const int? (save a little memory, 2 bytes * 7 names)
-const int STATE_IDLE = 0; 
-const int STATE_SETUP_ADC = 1;
-const int STATE_SET_VOLTAGE = 2;
-const int STATE_TRIGGER_ADCS = 3; 
-const int STATE_ADC_MEASURE = 4; 
-const int STATE_ADC_VALUE_READY = 5;
-const int STATE_AUTOGAIN = 6; 
-const int STATE_GET_HARDWARE = 7; 
-const int STATE_INITIAL_CALIBRATION = 8; 
-const int STATE_ERROR = 9; 
+// Libraries
+#include <Arduino.h>
+#include <SPI.h>
 
-//Flags 
-boolean readingFromSerial = false;            //Flag True when arduino receives new data
-boolean newMessage = false;               //Fag True when all new data has arrived
+// File with Arduino settings                                                   // TODO: make a header file
+// #include "viper-ino.h"
 
-//ADC settings
-#define AD7705_MAX_GAIN 7
+#define DEBUG              true      // Debug mode, writes to serial line, for use in serial monitor
+#define FIRMWARE_VERSION   0x0001    // MMmm, M=major, m=minor. Each of the four can be 0--9 (MAX: 9999 == v99.99). CURENTLY: v0.1
 
-//ADC measurement settings
-uint16_t numMeasurementsToDo = 1;
-uint16_t numMeasurementsDone = 0;
+// Useful macros, structs and unions
+#define LENGTH(array)  (sizeof(array) / sizeof((array)[0]))
+#ifndef NAN
+    #define NAN   (1.0/0)   // Floating-point not-a-number
+#endif
 
-//ADC saturation markers
-#define ADC_POSITIVE_SATURATION 0xffff
-#define ADC_NEGATIVE_SATURATION 0x0000
-#define ADC_RANGE_THRESHOLD 0x3fff
-
-//Timers (defined in milliseconds)
-unsigned long initialTime; // takes the time at the beginning of a state
-unsigned long timeout = 5000;      // !!!!!!!!!!!! this can become a #define, or at least a const    
-uint16_t dac_settletime = 100;
-unsigned long currentTime; // gets set during the state to check for a timeout
-
-//Number of measurement devices that we can have: ADC#0, ADC#1, LM35 (if present)
-#define N_MAX_MEAS         3
-//Arduino I/O pins
-#define CS_DAC             4   //(inverted) chip select of DAC
-#define CS_ADC_0           5   //(inverted) chip select of ADC #0
-#define CS_ADC_1           6   //(inverted) chip select of ADC #1 (optional)
-#define LM35_PIN          A1   //LM35 temperature sensor (optional)
-#define RELAY_PIN         A4   //relay is connected here if present
-#define JP_I0_PIN         A4   //jumper for manual I0 2.5V range, same as relay pin
-#define JP_AUX_PIN        A5   //jumper for manual AUX 2.5 V range
-
-//Arduino internal reference voltage, ADC maximum, etc
-#define VREF_INTERNAL    2.56  //arduino micro internal ADC reference is 2.56 V
-#define ARDUINO_ADC_MAX  0x3ff //10-bit ADC
-#define ARDUINO_ADU_VOLTS (VREF_INTERNAL/ARDUINO_ADC_MAX)      //volts per ADU
-#define ARDUINO_ADU_DEG_C (100*VREF_INTERNAL/ARDUINO_ADC_MAX)  //LM35 degC per ADU
-#define RELAY_MIN_ADU     24   //relay has about 0.12V with pullup, ADC signal is larger than this
-#define RELAY_MAX_ADU     96   //ADC signal of relay with pullup is less than this
-#define LM35_MAX_ADU     320   //LM35 signal should be less than 0.8 V (80 degC)
-
-// Definitions for AD7705 analog-to-digital converter
-#define AD7705_SPIMODE     3   //data accepted at rising edge of SCLK
-#define AD7705_MAX_GAIN    7   //gains are 0 (x1) to 7 (x128)
-//AD7705 communication register
-#define AD7705_READ_REG  0x08  //set bit for reading a register
-#define AD7705_CH0       0x00  //set bit for adressing channel 0
-#define AD7705_CH1       0x01  //set bit for adressing channel 1
-#define AD7705_REG_COMM  0x00  //bits to set for accessing communication register
-#define AD7705_REG_SETUP 0x10  //bits to set for accessing setup register
-#define AD7705_REG_CLOCK 0x20  //bits to set for accessing clock register
-#define AD7705_REG_DATA  0x30  //bits to set for accessing data register (16 bit)
-#define AD7705_REG_OFFSET 0x60 //bits to set for accessing calibration offset register (24 bit)
-#define AD7705_REG_GAIN  0x70  //bits to set for accessing calibration gain register (24 bit)
-#define AD7705_DRDY      0x80  //bit mask for Data Ready bit in communication register
-//AD7705 setup register
-#define AD7705_STATE_TRIGGER_ADCS     0x01  //bit to set for FSYNC in setup register
-#define AD7705_BUFMODE   0x02  //bit to set for buffered mode (not used by us)
-#define AD7705_UNIPOLAR  0x04  //bit to set for unipolar mode (not used by us)
-#define AD7705_SELFCAL   0x40  //bit to set for self-calibration in setup register
-//AD7705 clock register
-#define AD7705_CLK       0x0C  //bits to set for 4.9152 MHz crystal: CLK=1, CLKDIV=1
-#define AD7705_50HZ      0x04  //bits to set for 50 Hz update rate and suppression
-#define AD7705_60HZ      0x05  //bits to set for 60 Hz update rate and suppression
-#define AD7705_500HZ     0x07  //bits to set for 500 Hz update rate
-// Correction for the finite source impedance and ADC input impedance
-#define R_SOURCE       1300.0  //source resistance of our circuit at ADC inputs, 1.3 kOhm
-//#define R_IN_0     (1.0/(7e-12*38400)) //input resistance of ADC7705 in gain0 = x1, nominal (3.72MegOhm)
-#define R_IN_0          4.1e6  //input resistance of ADC7705 in gain0 = x1, measured typical value
-#define REF_OVER_RANGE  (2500.0/32768)    //millivolts (uA@1kOhm) per bit at gain0, bipolar, input 0ohm
-const float voltsPerBit[] = {
-        REF_OVER_RANGE/R_IN_0*(R_IN_0 + R_SOURCE),         //gain0 = x1
-        REF_OVER_RANGE/R_IN_0*2*(R_IN_0/2 + R_SOURCE)/2,   //gain1 = x2 has half R_in_0
-        REF_OVER_RANGE/R_IN_0*4*(R_IN_0/4 + R_SOURCE)/4,   //gain2 = x4 has 1/4 R_in_0
-        REF_OVER_RANGE/R_IN_0*8*(R_IN_0/8 + R_SOURCE)/8,   //gain3 = x8 and up: 1/8 R_in_0
-        REF_OVER_RANGE/R_IN_0*8*(R_IN_0/8 + R_SOURCE)/16,  //gain4 = x16
-        REF_OVER_RANGE/R_IN_0*8*(R_IN_0/8 + R_SOURCE)/32,  //gain5 = x32
-        REF_OVER_RANGE/R_IN_0*8*(R_IN_0/8 + R_SOURCE)/64,  //gain6 = x64
-        REF_OVER_RANGE/R_IN_0*8*(R_IN_0/8 + R_SOURCE)/128, //gain7 = x128
+// Interpret the same value as either uint16_t or a 2-bytes array
+union uint16OrBytes{
+    uint16_t asInt;
+    byte asBytes[2];
 };
-// ADC input range scale due to voltage dividers or preamplification on the board
-#define ADC_0_CH0_SCALE_JO   0.004      //ADC#0 channel 0 with JP at I0 open or relay off, in volts
-#define ADC_0_CH1_SCALE    (16000./39.*0.001)  //ADC#0 channel 1: High-voltage divider
-#define ADC_1_CH0_SCALE    (10/2500.0)  //ADC#1 channel 0: uAmps
-#define ADC_1_CH1_SCALE_JO   0.004      //ADC#1 channel 1 with JP5 open (voltage divider), in volts
 
-// Definitions for AD5683 digital-to-analog converter !!!!!!!!!!!!!!!!  this stuff will go into the DAC library
-#define AD5683_SPIMODE   1    //data accepted at falling edge of SCLK
-#define AD5683_SET_DAC   0x30 //bits of highest (first) byte for writing & setting DAC
-                              //lower 4 bits must be highest 4 bits of data
-#define AD5683_RESET_MSB 0x40 //bits of highest (first) byte for reset (internal reference)
+// Interpret the same value as either (32-bit) float or a 4-bytes array
+union floatOrBytes{
+    float asFloat;
+    byte asBytes[4];
+};
+
+
+
+
+/** ------------------------- Communication with PC ------------------------ **/
+
+// Constants for communication with the PC
+#define MSG_START 254              // Beginning of a serial message
+#define MSG_END 255                // End of a serial message
+#define MSG_SPECIAL_BYTE 252       // Prevents clashing of data with (start, end, error) // TODO: CHANGE FOR PYTHON (Python has value 253)
+#define MSG_MAX_LENGTH 16          // Max no. of bytes in an incoming serial message     // TODO: NEED TO INCREASE THIS TO HOST THE 3 FLOAT ADC VALUES
+#ifndef SERIAL_BUFFER_SIZE
+    #define SERIAL_BUFFER_SIZE 64  // Arduino limit for serial buffer. If buffer is filled, new bytes are DISCARDED
+#endif
+
+// Acceptable messages for communication with the PC
+#define PC_AUTOGAIN    8    // PC requested auto-gain for ADCs
+#define PC_CALIBRATION 9    // PC requested self-calibration
+#define PC_DEBUG       0                                                        // >>>>>>>>>>>>>>>>>>>>>>>>> How is this different from PC_ERROR?
+#define PC_ERROR     253    // An error occurred                                // TODO: Define in Python
+#define PC_HARDWARE    3    // PC requested hardware configuration              // TODO: rename to make it clear that also firmware will be returned
+#define PC_INIT_ADC    4    // PC requested initialization of ADCs              // TODO: rename
+#define PC_MEASURE     6    // PC requested to perform a measurement
+#define PC_OK          5    // Acknowledge request from PC
+#define PC_RESET      82    // PC requested a global reset (ASCII 'R')          // TODO: Change for python (Python has value 68)
+#define PC_SET_VOLTAGE 7    // PC requested to set a certain energy
+
+// Error codes
+#define ERROR_NO_ERROR             0     // No error
+#define ERROR_SERIAL_OVERFLOW      1     // Hardware overflow of Arduino serial
+#define ERROR_MSG_TOO_LONG         2     // Too many characters in message from PC
+#define ERROR_MSG_INCONSITENT      3     // Message received from PC is inconsistent. Probably corrupt.
+#define ERROR_REQUEST_UNKNOWN      4     // Unknown request from PC
+#define ERROR_REQUEST_INVALID      5     // Request from PC contains invalid information
+#define ERROR_TIMEOUT              6     // Timed out while waiting for something
+byte errorCode = ERROR_NO_ERROR;         // Keeps track of which error occurred
+byte errorTraceback;                     // Keeps track of the state that produced the error
+
+// Variables used while communicating with the PC
+byte numBytesRead = 0;                   // Counter for no. of bytes received. numBytesRead may be larger than the number of true data bytes due to encoding.
+byte msgLength = 0;                      // Number of bytes to be expected in message, 2nd byte of received message
+byte serialInputBuffer[MSG_MAX_LENGTH];  // Contains all the raw (i.e., still encoded) bytes read from the serial line
+boolean readingFromSerial = false;       // True while Arduino is receiving a message
+boolean newMessage = false;              // True when a complete, acceptable message has been read
+
+/** TODO
+    Judging from the code, and if I didn't misinterpret anything, I think
+    we can have only one buffer for the input/output to the PC, so we can
+    replace "data_received" and "data_send" with a single "message" array
+*/
+byte data_received[MSG_MAX_LENGTH];      // Real message
+byte data_send[MSG_MAX_LENGTH];
+
+
+
+
+/** ------------------------- Finite state machine ------------------------- **/
+
+#define STATE_IDLE                 0  // Wait for requests from PC
+#define STATE_SETUP_ADC            1  // Pick correct ADC channels, update frequency, and no. of measurement points  // TODO: comment says it also triggers measurements!
+#define STATE_SET_VOLTAGE          2  // Set a voltage with the DAC
+#define STATE_TRIGGER_ADCS         3  // Start a measurement right now
+#define STATE_ADC_MEASURE          4  // ADC measurements in progress
+#define STATE_ADC_VALUE_READY      5  // ADC measurements done
+#define STATE_AUTOGAIN             6  // Find optimal gain for both ADCs
+#define STATE_GET_HARDWARE         7  // Find current hardware configuration
+#define STATE_INITIAL_CALIBRATION  8  // Figure out correct offset and calibration factors for ADCs at all gains.
+#define STATE_ERROR                9  // An error occurred
+uint16_t currentState = STATE_IDLE;
+
+
+
+
+/** ---------------------- Hardware-specific settings ---------------------- **/
+// Measurement devices
+#define N_MAX_MEAS             3  // Number of measurement devices that we can have: ADC#0, ADC#1, LM35 (if present)
+#define N_MAX_ADCS_ON_BOARD    2  // Maximum number of ADCs on the PCB
+byte numADCsOnBoard = N_MAX_ADCS_ON_BOARD;  // Real number of ADCs present      TODO: have getHardwarePresent set this value
+
+// I/O pins on Arduino board
+#define CS_DAC             4    // (Inverted) chip select of DAC
+#define CS_ADC_0           5    // (Inverted) chip select of ADC #0
+#define CS_ADC_1           6    // (Inverted) chip select of ADC #1 (optional)
+#define LM35_PIN          A1    // LM35 temperature sensor (optional)
+#define RELAY_PIN         A4    // Relay is connected here if present
+#define JP_I0_PIN         A4    // Jumper for manual I0 2.5V range, same as relay pin
+#define JP_AUX_PIN        A5    // Jumper for manual AUX 2.5 V range
+
+// Arduino internal reference, ADC maximum, and settings for relay an LM35
+#define VREF_INTERNAL   2.56    // Arduino micro internal ADC reference is 2.56 V
+#define ARDUINO_ADC_MAX  0x3ff  // 10-bit internal ADC
+#define RELAY_MIN_ADU     24    // Relay has about 0.12 V with pull-up, ADC signal is larger than this
+#define RELAY_MAX_ADU     96    // ADC signal of relay with pull-up is less than this
+#define LM35_MAX_ADU     320    // LM35 signal should be less than 0.8 V (80 degC)
+#define ARDUINO_ADU_VOLTS (VREF_INTERNAL/ARDUINO_ADC_MAX)      // Internal ADC: volts per ADU
+#define ARDUINO_ADU_DEG_C (100*VREF_INTERNAL/ARDUINO_ADC_MAX)  // LM35 degC per ADU
+
+#define R_SOURCE        1300.0   // Source resistance of our circuit at ADC inputs, 1.3 kOhm. Used in voltsPerBit[] below.
+
+// Scaling of ADC input ranges due to voltage dividers or preamplification on the board
+#define ADC_0_CH0_SCALE_JO      0.004          // ADC#0 channel 0: with JP at I0 open or relay off, in volts
+#define ADC_0_CH1_SCALE    (16000./39.*0.001)  // ADC#0 channel 1: High-voltage divider
+#define ADC_1_CH0_SCALE        (10/2500.0)     // ADC#1 channel 0: uAmps
+#define ADC_1_CH1_SCALE_JO      0.004          // ADC#1 channel 1: with JP5 open (voltage divider), in volts
 
 // Which hardware and closed jumpers do we have? Bits of present/closed jumpers are 1
-#define ADC_0_PRESENT    0x01 //bit is set if ADC #0 was detected
-#define ADC_1_PRESENT    0x02 //bit is set if ADC #1 was detected
-#define LM35_PRESENT     0x04 //bit is set if LM35 temperature sensor was detected
-#define RELAY_PRESENT    0x08 //bit is set if the relay for I0 input 2.5V/10V is present
-#define JP_I0_CLOSED     0x10 //bit is set if JP3 7-8 is closed or relay on (to indicate 2.5V I0 range)
-#define JP_AUX_CLOSED    0x20 //bit is set if JP5 is closed (to indicate 2.5V AUX range)
+#define ADC_0_PRESENT    0x01 // Bit is set if ADC #0 was detected
+#define ADC_1_PRESENT    0x02 // Bit is set if ADC #1 was detected
+#define LM35_PRESENT     0x04 // Bit is set if LM35 temperature sensor was detected
+#define RELAY_PRESENT    0x08 // Bit is set if the relay for I0 input 2.5V/10V is present
+#define JP_I0_CLOSED     0x10 // Bit is set if JP3 7-8 is closed or relay on (to indicate 2.5V I0 range)
+#define JP_AUX_CLOSED    0x20 // Bit is set if JP5 is closed (to indicate 2.5V AUX range)
 
-//SPI communication settings
-SPISettings AD5683_SPI_SETTING(2500000, MSBFIRST, AD5683_SPIMODE); 
+// ADC saturation thresholds
+#define ADC_POSITIVE_SATURATION 0xffff  // Max ADC output in a range
+#define ADC_NEGATIVE_SATURATION 0x0000  // Min ADC output in a range
+#define ADC_RANGE_THRESHOLD     0x3fff  // If output is larger than this (~25% of range), we need a new gain next time
+
+
+
+
+/** --------------------- Analog-to-digital converters ---------------------- */
+/** NOTE:
+    The contents of this section are very specific to the AD7705
+    ADCs. Perhaps it would be nice to create a generic ADC library
+    (or ADC class?) that can handle this stuff. The code would then
+    look much cleaner.
+*/
+
+// Definitions for AD7705 analog-to-digital converter
+#define AD7705_SPIMODE     3   // Data accepted at rising edge of SCLK
+#define AD7705_MAX_GAIN    7   // Gains are 0 (x1) to 7 (x128)
+
+//AD7705 communication register
+#define AD7705_READ_REG   0x08  // Set bit for reading a register
+#define AD7705_CH0        0x00  // Set bit for addressing channel 0
+#define AD7705_CH1        0x01  // Set bit for addressing channel 1
+#define AD7705_REG_COMM   0x00  // Bits to set for accessing communication register
+#define AD7705_REG_SETUP  0x10  // Bits to set for accessing setup register
+#define AD7705_REG_CLOCK  0x20  // Bits to set for accessing clock register
+#define AD7705_REG_DATA   0x30  // Bits to set for accessing data register (16 bit)
+#define AD7705_REG_OFFSET 0x60  // Bits to set for accessing calibration offset register (24 bit)
+#define AD7705_REG_GAIN   0x70  // Bits to set for accessing calibration gain register (24 bit)
+#define AD7705_DRDY       0x80  // Bit mask for Data Ready bit in communication register
+
+//AD7705 setup register
+#define AD7705_TRIGGER    0x01  // Bit to set for triggering ADC (called FSYNC in data sheet)
+#define AD7705_BUFMODE    0x02  // Bit to set for buffered mode (not used by us)
+#define AD7705_UNIPOLAR   0x04  // Bit to set for unipolar mode (not used by us)
+#define AD7705_SELFCAL    0x40  // Bit to set for self-calibration
+
+//AD7705 clock register
+#define AD7705_CLK        0x0C  // Bits to set for 4.9152 MHz crystal: CLK=1, CLKDIV=1
+#define AD7705_50HZ       0x04  // Bits to set for 50 Hz update rate and suppression
+#define AD7705_60HZ       0x05  // Bits to set for 60 Hz update rate and suppression
+#define AD7705_500HZ      0x07  // Bits to set for 500 Hz update rate
+
+// Correction for the finite source impedance and ADC input impedance
+#define R_IN_0              4.1e6       // input resistance of AD7705 in gain0 = x1, measured typical value
+#define REF_OVER_RANGE  (2500.0/32768)  // millivolts (uA@1kOhm) per bit at gain0, bipolar, input 0ohm
+
+const float voltsPerBit[] = {
+    REF_OVER_RANGE/R_IN_0*(R_IN_0 + R_SOURCE),         // gain0 = x1
+    REF_OVER_RANGE/R_IN_0*2*(R_IN_0/2 + R_SOURCE)/2,   // gain1 = x2 has half R_IN_0
+    REF_OVER_RANGE/R_IN_0*4*(R_IN_0/4 + R_SOURCE)/4,   // gain2 = x4 has 1/4 R_IN_0
+    REF_OVER_RANGE/R_IN_0*8*(R_IN_0/8 + R_SOURCE)/8,   // gain3 = x8 and up: 1/8 R_IN_0
+    REF_OVER_RANGE/R_IN_0*8*(R_IN_0/8 + R_SOURCE)/16,  // gain4 = x16
+    REF_OVER_RANGE/R_IN_0*8*(R_IN_0/8 + R_SOURCE)/32,  // gain5 = x32
+    REF_OVER_RANGE/R_IN_0*8*(R_IN_0/8 + R_SOURCE)/64,  // gain6 = x64
+    REF_OVER_RANGE/R_IN_0*8*(R_IN_0/8 + R_SOURCE)/128, // gain7 = x128
+};
+
+
+
+
+/** ---------------------- Digital-to-analog converter ---------------------- */
+/**
+TODO: This stuff will go into the DAC library
+*/
+
+// Definitions for AD5683 digital-to-analog converter
+#define AD5683_SPIMODE   1    // Data accepted at falling edge of SCLK
+#define AD5683_SET_DAC   0x30 // Bits of highest (first) byte for writing & setting DAC
+                              // Lower 4 bits must be highest 4 bits of data
+#define AD5683_RESET_MSB 0x40 // Bits of highest (first) byte for reset (internal reference)
+
+
+
+
+/** ----------------------- ADC and DAC communication ----------------------- */
+// SPI communication settings
+SPISettings AD5683_SPI_SETTING(2500000, MSBFIRST, AD5683_SPIMODE);
 SPISettings AD7705_SPI_SETTING(2500000, MSBFIRST, AD7705_SPIMODE);
 
-/* ---------- GLOBAL VARIABLES ---------- */ // !!!!!!!!!!!!!!! Will stay in main part, but see comments below
-byte     adc0Channel = AD7705_CH0;    //channel of ADC#0
-byte     adc1Channel = AD7705_CH0;
-byte     adc0Gain = 0;                //gain of ADC#0, 0...7
-byte     adc1Gain = 0;
-byte     calibrationGain = 0;
-byte     adcUpdateRate = AD7705_50HZ; //update rate for both ADCs (will be set for line frequency) !!!!!!!!!!!!!!!!!! This is never used again, but probably should
-uint16_t adc0RipplePP = 0;            //ripple (peak-peak) measured for ADC#0 during autogain at gain=0 !!!!!!!!!!!!!!!!!! Nor is this or the following. Not sure what Michael wanted to use these for. Perhaps as a substitute of summedMeasurements used only during the autogain?
-uint16_t adc1RipplePP = 0;
-bool adc0ShouldDecreaseGain = false;  //whether ADC#0 should increase its gain in the next cycle !!!!!!!!!!!!!!!!! Unused, same for the next one, but we should use them. However, right now we're just DECREASING the gain, not increasing it [except in findOptimalADCGains()]. Discuss with Michael.
-bool adc1ShouldDecreaseGain = false;
-// Self-calibration results are stored here
-int32_t  selfCalDataForMedian[3][2][2]; //three values for median, two ADCs, last index is offset(0) & gain(1)
-int32_t  selfCalDataVsGain[AD7705_MAX_GAIN+1][2][2][2]; //for each gain, two ADCs, two channels each, and last index is offset(0)&gain(1)
-// Measurements of ADC#0, ADC#1 and LM35 sensor temperature are summed up here
-int32_t summedMeasurements[N_MAX_MEAS];
-//Union for Variables to convert from float to single bytes
-union floatOrBytes{                  
-  float asFloat; 
-  byte asBytes[4];
-} fDataOutput[N_MAX_MEAS];
-//Union for Variables to convert from int to single bytes
-union integerOrBytes{                  
-  uint16_t asInt; 
+
+
+
+/** -------------------- Globals for firmware functions -------------------- **/
+// Timers (defined in milliseconds)
+#define TIMEOUT 5000                  // Max 5 seconds to do stuff
+unsigned long initialTime;            // System time when switching to a new state
+uint16_t      dacSettlingTime = 100;  // The time interval for the DAC output to be stable
+                                      //   This is just a default value. The actual one comes
+                                      //   from the PC with a PC_SET_VOLTAGE command, and is
+                                      //   read in setVoltage()
+unsigned long currentTime;                                                      // TODO: REMOVE. It does the exact same thing as initialTime
+
+/* union integerOrBytes{
+  uint16_t asInt;
   byte asBytes[2];
-} hardwareDetected; //bits set indicate this hardware is spresent/jumper closed
-//Variables to determing peak-peak distance in autogain
-int16_t maximumPeak[2];
-int16_t minimumPeak[2];
-//Byte for ERROR traceback
-byte tracebackByte;
-//int to identify serial overflow
-const int SERIAL_OVERFLOW = 13;
+}             hardwareDetected;       // Bits set indicate this hardware is present/jumper closed */
+uint16OrBytes hardwareDetected;       // Bits set indicate this hardware is present/jumper closed
+
+// ADCs: measurement frequency, channel, gain
+byte     adcUpdateRate;        // Update rate for both ADCs (will be set for line frequency)
+byte     adc0Channel;          // Channel of ADC#0
+byte     adc1Channel;          // Channel of ADC#1
+byte     adc0Gain = 0;         // Gain of ADC#0, 0...7
+byte     adc1Gain = 0;         // Gain of ADC#0, 0...7
+bool     adc0ShouldDecreaseGain = false;  // Whether ADC#0 should increase its gain in the next cycle
+bool     adc1ShouldDecreaseGain = false;  // Whether ADC#0 should increase its gain in the next cycle
+
+// ADCs: quantities needed for self-calibration
+byte     calibrationGain = 0;           // Gain for which a calibration is currently being performed (in parallel for both ADCs)
+int32_t  selfCalDataForMedian[3][2][2]; // Values from which medians are calculated: three for median, two ADCs, last index is offset(0) & gain(1)
+int32_t  selfCalDataVsGain[AD7705_MAX_GAIN + 1][2][2][2]; // For each gain, two ADCs, two channels each, and last index is offset(0)&gain(1)
+
+// ADCs: variables for measuring and storing the line frequency ripple
+int16_t  maximumPeak[N_MAX_ADCS_ON_BOARD];       // Maximum of measurement, one for each ADC
+int16_t  minimumPeak[N_MAX_ADCS_ON_BOARD];       // Minimum of measurement, one for each ADC
+uint16_t adc0RipplePP = 0;     // Ripple (peak-peak) measured at gain=0 for ADC#0 during auto-gain
+uint16_t adc1RipplePP = 0;     // Ripple (peak-peak) measured at gain=0 for ADC#1 during auto-gain
+
+/* // ADC container                                                                TODO: use it to simplify code below
+struct analogToDigitalConverter {
+    byte     channel = AD7705_CH0;
+    byte     gain = 0;
+    bool     shouldDecreaseGain = false;
+    int16_t  peakMinimum = 0;
+    int16_t  peakMaximum = 0;
+    uint16_t ripplePP = 0;                                   // Ripple (peak-peak) measured at gain=0 during auto-gain
+    int32_t  calibrationDataForMedian[3][2];                 // Three values for median, last index is offset(0) & gain(1)
+    int32_t  calibrationForGain[AD7705_MAX_GAIN + 1][2][2];  // For each gain, two channels each, and last index is offset(0) & gain(1)
+} ExternalADCs[N_MAX_ADCS_ON_BOARD]; */
+
+// Measurements
+uint16_t numMeasurementsToDo = 1;         // No. of ADC measurements to do before measurement is considered over
+uint16_t numMeasurementsDone;             // Counter for the number of ADC measurements done so far
+int32_t  summedMeasurements[N_MAX_MEAS];  // Measurements of ADC#0, ADC#1 and LM35 are summed up here
+
+/*
+union floatOrBytes{                       // Measured ADC voltages, as floats and
+  float asFloat;                          // 4-byte array, useful for sending back
+  byte asBytes[4];                        // to PC the values measured by the ADCs
+} fDataOutput[N_MAX_MEAS]; */
+floatOrBytes fDataOutput[N_MAX_MEAS];     // Measurements as voltages
+
+// ################################ HEADER END #################################
+
+
+
+
 /* ---------- INITIALIZATION ---------- */
 /** The setup routine runs once on power-up or on hardware reset */
 void setup() {
-  #ifdef DEBUG
-    delay(1000);  // initialize serial communication (emulation on USB) at 9600 bits per second for debug
-    Serial.begin(9600);
-    delay(1000);
-  #endif
+    #ifdef DEBUG
+        // initialize serial communication (emulation
+        // on USB) at 9600 bits per second for debug
+        delay(1000);
+        Serial.begin(9600);
+        delay(1000);
+    #endif
 
-  analogReference(INTERNAL);  // 2.56 V on Arduino Micro, for LM35 (and checking relay presence)
-  //Set all inverted chip-select pins to high via pullup (to avoid low glitch)
-  setChipSelectHigh(CS_DAC);
-  setChipSelectHigh(CS_ADC_0);
-  setChipSelectHigh(CS_ADC_1);
-  pinMode(SCK, OUTPUT);  //should not be needed? but it did not work without
-  pinMode(MOSI, OUTPUT);
-  AD5683reset(CS_DAC);
-  //Reset AD7705 IO. Note that (inverted) chip select = high does not reset it
-  AD7705resetCommunication(CS_ADC_0);
-  AD7705resetCommunication(CS_ADC_1);
-  AD5683setVoltage(CS_DAC, 0x0000);
-  #ifdef DEBUG
-    Serial.print("hardware=0x");
-    Serial.println(hardwareDetected.asInt, HEX);
-  #endif
-  #ifdef DEBUG
-    pinMode(LED_BUILTIN, OUTPUT);
-  #endif
+    analogReference(INTERNAL);  // 2.56 V on Arduino Micro, for LM35 (and checking relay presence)
+
+    //Set all inverted chip-select pins to high via pullup (to avoid low glitch)
+    setChipSelectHigh(CS_DAC);
+    setChipSelectHigh(CS_ADC_0);
+    setChipSelectHigh(CS_ADC_1);
+    pinMode(SCK, OUTPUT);  //should not be needed? but it did not work without
+    pinMode(MOSI, OUTPUT);
+    AD5683reset(CS_DAC);
+    //Reset AD7705 IO. Note that (inverted) chip select = high does not reset it
+    AD7705resetCommunication(CS_ADC_0);
+    AD7705resetCommunication(CS_ADC_1);
+    AD5683setVoltage(CS_DAC, 0x0000);
+    #ifdef DEBUG
+        Serial.print("hardware=0x");
+        Serial.println(hardwareDetected.asInt, HEX);
+    #endif
+    #ifdef DEBUG
+        pinMode(LED_BUILTIN, OUTPUT);
+    #endif
+
+    // Initialize values to their defaults
+    reset();
 }
 
 void loop() {
 /*
-* Main loop with "readFromSerial()", which receives messages from 
+* Main loop with "readFromSerial()", which receives messages from
 * the computer and decodes it. "updateState()" interprets message
-* and defines a state with defining the variable "currentState". Depending 
+* and defines a state with defining the variable "currentState". Depending
 * on the state, the arduino continues with differnt functions
 */
   readFromSerial();
@@ -245,117 +350,138 @@ void loop() {
 
   switch (currentState){
     case STATE_SETUP_ADC:
-      setUpAllADCs();
-      break;
-    case STATE_SET_VOLTAGE: 
-      setVoltage(); 
-      break;
+       setUpAllADCs();
+       break;
+    case STATE_SET_VOLTAGE:
+       setVoltage();
+       break;
     case STATE_TRIGGER_ADCS:
-      if((millis()-currentTime) >= dac_settletime){
-      triggerMeasurements();
-      }
-      break;
-    case STATE_AUTOGAIN: 
-      findOptimalADCGains(); 
-      break; 
+       if((millis()-currentTime) >= dacSettlingTime){
+          triggerMeasurements();
+       }
+       break;
+    case STATE_AUTOGAIN:
+       findOptimalADCGains();
+       break;
     case STATE_ADC_MEASURE:
-      measureADCs();                                    // !!!!!!!!!!!!!! will probably be replaced in full by makeAndSumMeasurements() after edits (see comments further below)
-      break;
+       measureADCs();                                    // !!!!!!!!!!!!!! will probably be replaced in full by makeAndSumMeasurements() after edits (see comments further below)
+       break;
     case STATE_ADC_VALUE_READY:
-      sendAdcValue();
-      break;
+       sendAdcValue();
+       break;
     case STATE_GET_HARDWARE:
        hardwareDetected.asInt = getHardwarePresent();
        encodeAndSend(hardwareDetected.asBytes, 2);
        currentState = STATE_IDLE;
-      break;
+       break;
     case STATE_INITIAL_CALIBRATION:
        initialCalibration();
-      break;    
+       break;
     case STATE_ERROR:
-    encodeAndSend(tracebackByte);
-    currentState = STATE_IDLE;
-      break;
+       encodeAndSend(errorTraceback);
+       currentState = STATE_IDLE;
+       break;
    }
 }
 
 //================
 
 void readFromSerial() {
-/*
- * Receive one byte (i.e., character) from the serial line (i.e., PC) and store
- * it into "temp_buffer[]". Also track whether all bytes that need to be
- * received have been received by looking at whether the last byte read is
- * ENDMARKER. When this happens, temp_buffer will be:              !!!!!!!!!!!!!!!! Probably it would also be good to check here if the number of bytes read is the one expected?
- *     [STARTMARKER, byte with length of message, message, ENDMARKER]
- * 
- * Return into globals: 
- * -------------------
- * data_received_n: integer with length of message
- * temp_buffer: byte array
- */
-  if(Serial.available() > 0) {                  // !!!!!!!!!!!!!!< this could become if(Serial.available()) [clearer]
-    if(Serial.available() >= 64){Serial.println("Serial overflow."); tracebackByte = SERIAL_OVERFLOW; currentState = STATE_ERROR;}
-    byte byteRead = Serial.read();
-    if (byteRead == STARTMARKER) {
-      numBytesRead = 0; 
-      readingFromSerial = true;
+/**
+    Receive one byte (i.e., character) from the serial line (i.e., PC) and store
+    it into "temp_buffer[]". Also track whether all bytes that need to be
+    received have been received by looking at whether the last byte read is
+    MSG_END. When this happens, temp_buffer will be:              !!!!!!!!!!!!!!!! Probably it would also be good to check here if the number of bytes read is the one expected?
+        [MSG_START, byte with length of message, message, MSG_END]
+
+    Return into globals
+    -------------------
+    data_received_n: integer with length of message
+    temp_buffer: byte array
+*/
+    // DO something only if there is data on the serial line
+    if(not Serial.available())  return;
+
+    if(Serial.available() == SERIAL_BUFFER_SIZE){  // Cannot be '>'
+        Serial.println("Serial overflow.");                                     // TODO: Move to error handler
+        errorCode = ERROR_SERIAL_OVERFLOW;
+        errorTraceback = currentState;
+        currentState = STATE_ERROR;
+        // TODO: we're not doing anything to solve the overflow issue!!
+        return;
     }
+
+    byte byteRead = Serial.read();
+    if (byteRead == MSG_START) {
+        numBytesRead = 0;
+        readingFromSerial = true;
+    }
+
     if(readingFromSerial) {
-      inputRegister[numBytesRead] = byteRead;
-      numBytesRead ++;
-    } 
-    if (byteRead == ENDMARKER) {
-      readingFromSerial = false;
-      newMessage = true;  // !!!!!! make sure to not always set to true
-      msgLength = inputRegister[1]; 
-      decodeMessage();
-    }    
-  }
+        serialInputBuffer[numBytesRead] = byteRead;
+        numBytesRead++;
+    }
+
+    // A full message has been read. Need to do stuff with it
+    if (byteRead == MSG_END) {
+        readingFromSerial = false;
+        if (msgLength != numBytesRead){                                         // TODO: check that this is correct
+            errorCode = ERROR_MSG_INCONSITENT;
+            errorTraceback = currentState;
+            currentState = STATE_ERROR;
+            return;
+        }
+        newMessage = true;  // !!!!!! make sure to not always set to true
+        msgLength = serialInputBuffer[1];
+        decodeMessage();
+    }
 }
 
 void decodeMessage(){
 /*
- * Puts received message from array "temp_buffer[]" into array 
- * "data_received[]", keeping only the actual characters (i.e., skipping
- * STARTMARKER == temp_buffer[0], the no.of bytes == temp_buffer[1], and 
- * ENDMARKER == temp_buffer[last]). The only special decoding is for bytes
- * that are SPECIAL_BYTE. In this case, the actual character is
- * SPECIAL_BYTE + the next character.
- * 
- * Return into globals: 
- * --------------------
- * data_received[]: byte array
- * data_received_counter: integer
- */
-  data_received_counter = 0; 
+    Move the interesting bytes of serialInputBuffer[] into data_received[].
+     *
+    In practice, only the actual characters are kept. This means:
+    (1) Skipping:
+           MSG_START == serialInputBuffer[0]
+           total no. of bytes in message == serialInputBuffer[1]
+           MSG_END == serialInputBuffer[last]
+    (2) Decoding bytes with value MSG_SPECIAL_BYTE. In this case, the
+        actual character is MSG_SPECIAL_BYTE + the next character.
+
+    Returns into globals
+    --------------------
+    data_received[] : byte array
+*/
+  byte numDecodedBytes = 0;
   for (byte nthByte = 2; nthByte < numBytesRead; nthByte++) {
-    byte x = inputRegister[nthByte];
-    if (x == SPECIAL_BYTE) {
+    byte decodedByte = serialInputBuffer[nthByte];
+    if (decodedByte == MSG_SPECIAL_BYTE) {
+       // The actual character is MSG_SPECIAL_BYTE + the next byte
        nthByte++;
-       x += inputRegister[nthByte];
+       decodedByte += serialInputBuffer[nthByte];
     }
-    data_received[data_received_counter] = x;
-    data_received_counter++;
+    data_received[numDecodedBytes] = decodedByte;
+    numDecodedBytes++;
   }
 }
 
 //============================
 void encodeAndSend(byte singleByte){
 /*
- * Prepares message before sending it to the PC. Puts single 
- * byte into an array and forwards the array to the "real" 
+ * Prepares message before sending it to the PC. Puts single
+ * byte into an array and forwards the array to the "real"
  * encode message
  * This overloaded function essentially prepares a single-byte-long message
  * to be actually encoded in the next function. Having the two with the same
  * names prevents the rest of the code from having to figure out which function
  * to call depending on whether the message is a single byte or a byte array
- * 
- * Parameters: 
+ *
+ * Parameters:
  * -----------
  * singleByte : single byte
- * 
- * Return into function: 
+ *
+ * Return into function:
  * -----------
  * NewVar[]: byte array with one value
  */
@@ -365,63 +491,63 @@ void encodeAndSend(byte singleByte){
 }
 void encodeAndSend(byte *byteArray, int len){
 /*
- * Prepares message before sending it to the PC. Changes every 
- * byte which happens to have the same value as a STARTMARKER, an ENDMARKER or
- * a SPECIAL_BYTE to two bytes with a leading "SPECIAL_BYTE" and a following
- * "byte - SPECIAL_BYTE."
+ * Prepares message before sending it to the PC. Changes every
+ * byte which happens to have the same value as a MSG_START, an MSG_END or
+ * a MSG_SPECIAL_BYTE to two bytes with a leading "MSG_SPECIAL_BYTE" and a following
+ * "byte - MSG_SPECIAL_BYTE."
  * The message is put into the array "data_send[]". The length
  * of the array is defined in the variable "numBytesBeforeEncoding".
- * 
- * Parameters: 
+ *
+ * Parameters:
  * -----------
  * byteArray : byte array
  * len : integer, length of byte array
- * 
+ *
  * Returns into globals
  * -----------
  * data_send: byte array
  */
-  byte numBytesAfterEncoding = 0; 
+  byte numBytesAfterEncoding = 0;
   byte numBytesBeforeEncoding = 0; // !!!!!!! Can we remove this? Byte cast not clear
   for(int i = 0; i < len; i ++){
-    if(byteArray[i] >= SPECIAL_BYTE){
-      data_send[numBytesAfterEncoding] = SPECIAL_BYTE; 
+    if(byteArray[i] >= MSG_SPECIAL_BYTE){
+      data_send[numBytesAfterEncoding] = MSG_SPECIAL_BYTE;
       numBytesAfterEncoding++;
-      data_send[numBytesAfterEncoding] = byteArray[i] - SPECIAL_BYTE; 
+      data_send[numBytesAfterEncoding] = byteArray[i] - MSG_SPECIAL_BYTE;
     }
     else{
-      data_send[numBytesAfterEncoding] = byteArray[i]; 
+      data_send[numBytesAfterEncoding] = byteArray[i];
     }
     numBytesAfterEncoding++;
-  } 
+  }
   numBytesBeforeEncoding = len;
 /*
- * Sends byte array "data_send" (i.e., the actual message) to PC as: 
- *   STARTMARKER
+ * Sends byte array "data_send" (i.e., the actual message) to PC as:
+ *   MSG_START
  *   numbers of bytes in actual message
  *   actual message
- *   ENDMARKER
+ *   MSG_END
  */
-  Serial.write(STARTMARKER);
+  Serial.write(MSG_START);
   Serial.write(numBytesBeforeEncoding);
   Serial.write(data_send, numBytesAfterEncoding);
-  Serial.write(ENDMARKER);
+  Serial.write(MSG_END);
 }
 //============================
 
 void updateState() {
 /*
- * Use the message received from the python script to  
+ * Use the message received from the python script to
  * update the state, provided that the Arduino is currently idle
- * 
- * Parameters from globals: 
+ *
+ * Parameters from globals:
  * ----------------
  * data_received[0]: byte array
  */
   if (newMessage){ // !!!!!!! need to remember to not always set newMessage = true
     switch(data_received[0]){
       case PC_HARDWARE:
-        initialTime = millis(); 
+        initialTime = millis();
         currentState = STATE_GET_HARDWARE;
         break;
       case PC_INIT_ADC:
@@ -430,7 +556,7 @@ void updateState() {
         break;
       case PC_SET_VOLTAGE:
         initialTime = millis();
-        currentState = STATE_SET_VOLTAGE; 
+        currentState = STATE_SET_VOLTAGE;
         break;
       case PC_AUTOGAIN:
         initialTime = millis();
@@ -442,8 +568,8 @@ void updateState() {
         numMeasurementsToDo = 20; // !!!!!!!!! May need to be changed later on
         currentState = STATE_AUTOGAIN;       // !!!!!!!!!!!!!!!! something wrong here! measurement_n is still zero if the PC did not yet ask for a measurement. If it did, the number of measurements requested last time are used for the auto-gain. After a bit of fiddling, I realized that this value is set with setUpAllADCs(). This means that one cannot run this (nor the next one) unless the ADC has been initialized. We need to do some checking, probably on the fact that measurement_n should be a positive number (this means that setUpAllADCs has run). If not, I'd send back an ERROR. reset() should set the number back to zero.
         break;
-      case PC_MEASURE:                       // !!!!!!!!!!!!!!!!  bug? Also here numMeasurementsToDo is not updated from anywhere, nor read. 
-        initialTime = millis(); 
+      case PC_MEASURE:                       // !!!!!!!!!!!!!!!!  bug? Also here numMeasurementsToDo is not updated from anywhere, nor read.
+        initialTime = millis();
         currentState = STATE_ADC_MEASURE;
         break;
       case PC_CALIBRATION:
@@ -453,7 +579,7 @@ void updateState() {
       case PC_RESET:
         reset();
         break;                             // !!!!!!!!!!!!!!!!!!! add one more case for the "?" command (or whichever character we will use to indicate the request of hardware configuration. This will need to call the getHardwarePresent() and return appropriate info to the PC. !!!!!!!!!!!!!!!!! And add Error state
-    } 
+    }
     newMessage = false;
   }
 }
@@ -466,14 +592,14 @@ void findOptimalADCGains(){
  * (1) measure several values. Remain in AUTOGAIN_STATE until done.            !!!!!!!!!!!!!!!  BUG: numMeasurementsToDo not set!
  * (2) for each ADC, pick a gain G such that the average of the measurements
  * is at least 25% of the range of values that can be measured with G
- * 
+ *
  * From Bernhard                                                               !!!!!!!!!!!!!!!
  * Function to initialse the Autogain. First it makes several ADC
- * measurements cycles, adds the values up to a sum and then  
- * devides by the number of measurement cycles. Then it decides 
- * for the best gain to start with. It decides for a gain, where 
- * the measured value is greater than 25% of the measurement 
- * range at the first time. 
+ * measurements cycles, adds the values up to a sum and then
+ * devides by the number of measurement cycles. Then it decides
+ * for the best gain to start with. It decides for a gain, where
+ * the measured value is greater than 25% of the measurement
+ * range at the first time.
  */
   int16_t autogain_value0;
   int16_t autogain_value1;
@@ -481,7 +607,7 @@ void findOptimalADCGains(){
   if(numMeasurementsDone == numMeasurementsToDo){
     autogain_value0 = max(abs(maximumPeak[0]),abs(minimumPeak[0])) + (maximumPeak[0] - minimumPeak[0]);
     autogain_value1 = max(abs(maximumPeak[1]),abs(minimumPeak[1])) + (maximumPeak[1] - minimumPeak[1]);
-    numMeasurementsDone = 0;// !!!!!!!!!!!!!!!!!!! we should rather zero this counter later, after the correct gain has been found, just using resetMeasurementData() 
+    numMeasurementsDone = 0;// !!!!!!!!!!!!!!!!!!! we should rather zero this counter later, after the correct gain has been found, just using resetMeasurementData()
     if(hardwareDetected.asInt & ADC_0_PRESENT){
       while(((autogain_value0 << (adc0Gain + 1)) < ADC_RANGE_THRESHOLD) && (adc0Gain < AD7705_MAX_GAIN)){
         adc0Gain++;
@@ -493,11 +619,11 @@ void findOptimalADCGains(){
       }
     }
     encodeAndSend(PC_OK);
-    currentState = STATE_IDLE; 
+    currentState = STATE_IDLE;
   }
-  if((millis() -  initialTime) > timeout){               // !!!!!!!!!!!!!!!! perhaps go to an ERROR state?
-    debugToPC("Timeout, Autogain failed, Arduino turns back to IDLE state"); 
-    tracebackByte = currentState;
+  if((millis() -  initialTime) > TIMEOUT){               // !!!!!!!!!!!!!!!! perhaps go to an ERROR state?
+    debugToPC("Timeout, Autogain failed, Arduino turns back to IDLE state");
+    errorTraceback = currentState;
     currentState = STATE_ERROR;
   }
 }
@@ -526,15 +652,15 @@ numMeasurementsDone++;
 }
 
 //=========================
-void setUpAllADCs(){ 
-/* 
+void setUpAllADCs(){
+/*
  *  Initialize the ADC from the parameters stored in the first 7 bytes of
  *  "data_received[]". The bytes have the following meaning:          // << TODO: list what each byte is used for
  */
   if(newMessage){
     adc0Channel = data_received[0];
     adc1Channel = data_received[1];
-    adcUpdateRate = data_received[2]; 
+    adcUpdateRate = data_received[2];
     numMeasurementsToDo = data_received[3] << 8 | data_received[4];
     //maximum_gain = data_received[5]; //!!!!!!!!!! remove from Phython
     //selfCalibrateAllADCs(adcUpdateRate);
@@ -544,11 +670,11 @@ void setUpAllADCs(){
     currentState = STATE_IDLE;//Back to command mode
     newMessage = false;
   }
-  if((millis() -  initialTime) > timeout){           // !!!!!!!!!! Perhaps go to ERROR state here?
-    debugToPC("Timeout, no ini Values for ADC received!"); 
-    tracebackByte = currentState;
+  if((millis() -  initialTime) > TIMEOUT){           // !!!!!!!!!! Perhaps go to ERROR state here?
+    debugToPC("Timeout, no ini Values for ADC received!");
+    errorTraceback = currentState;
     currentState = STATE_ERROR;
-    newMessage = false; 
+    newMessage = false;
   }
 }
 //=========================
@@ -558,42 +684,42 @@ void setVoltage(){
  *
  * The voltage to be set is taken from the first two bytes of
  * the "data_received[]" buffer, that make up a uint16_t
- * The next two bytes of the buffer are packed into 
- * the unsigned long integer "dac_settletime", which defines 
+ * The next two bytes of the buffer are packed into
+ * the unsigned long integer "dacSettlingTime", which defines
  * the time interval that the Arduino will wait before deeming
  * the output voltage stable.
  *
- * The Arduino will go into the filter synchronization state 
- * STATE_TRIGGER_ADCS after the new voltage is set, triggering 
+ * The Arduino will go into the filter synchronization state
+ * STATE_TRIGGER_ADCS after the new voltage is set, triggering
  * measurements on the next loop iteration
  */
-  if(newMessage){  
+  if(newMessage){
     uint16_t dac_value = data_received[0] << 8 | data_received[1];
-    dac_settletime = data_received[2] << 8 | data_received[3];  // !!!!!!!!!!!!! I don't understand why we're using an unsigned LONG type, and then accept only two bytes. Two bytes seem enough, I don't see the reason for waiting longer than 65.535 seconds, so perhaps we can change this into a uint16_t?
+    dacSettlingTime = data_received[2] << 8 | data_received[3];  // !!!!!!!!!!!!! I don't understand why we're using an unsigned LONG type, and then accept only two bytes. Two bytes seem enough, I don't see the reason for waiting longer than 65.535 seconds, so perhaps we can change this into a uint16_t?
     AD5683setVoltage(CS_DAC, dac_value);
     currentState = STATE_TRIGGER_ADCS;
     currentTime = millis();
     newMessage = false;
-    resetMeasurementData(); 
+    resetMeasurementData();
     if(adc0ShouldDecreaseGain){            // !!!!!!!!!!!!!!!! This section needs to be adapted to check whether either of the ADCs needs its gain to be reduced at this iteration, in which case the relevant self-calibration should be called
       // During the last measurement, the value read by the ADC has reached the
       // upper part of the range. The gain needs to be decreased, and the ADC
       // requires recalibration
       adc0Gain--;
       setAllADCgainsAndCalibration();
-      adc0ShouldDecreaseGain = false; 
+      adc0ShouldDecreaseGain = false;
     }
     if(adc1ShouldDecreaseGain){
       adc1Gain--;
       setAllADCgainsAndCalibration();
-      adc0ShouldDecreaseGain = false; 
+      adc0ShouldDecreaseGain = false;
     }
   }
-  if((millis() -  initialTime) > timeout){                   // !!!!!!!!!!!!! Perhaps we should have an additional ERROR state that can do the reporting to the PC, then back to IDLE?
-    debugToPC("Timeout, no ini Values for DAC received!"); 
-    tracebackByte = currentState;
+  if((millis() -  initialTime) > TIMEOUT){                   // !!!!!!!!!!!!! Perhaps we should have an additional ERROR state that can do the reporting to the PC, then back to IDLE?
+    debugToPC("Timeout, no ini Values for DAC received!");
+    errorTraceback = currentState;
     currentState = STATE_ERROR;
-    newMessage = false; 
+    newMessage = false;
   }
 }
 
@@ -610,17 +736,17 @@ void measureADCs(){
   if(numMeasurementsDone == numMeasurementsToDo){
     currentState = STATE_ADC_VALUE_READY;
   }
-  if((millis() -  initialTime) > timeout){
-    debugToPC("Timeout, ADC measurement Timeout!"); 
-    tracebackByte = currentState;
+  if((millis() -  initialTime) > TIMEOUT){
+    debugToPC("Timeout, ADC measurement Timeout!");
+    errorTraceback = currentState;
     currentState = STATE_ERROR;
-    newMessage = false; 
+    newMessage = false;
   }
 }
 //=========================
 void sendAdcValue(){  // !!!!!!!!!!! this is the only place where we need to know what we want to measure exactly [except for which channel of the AD7705s, which is already used in initialiseADC()].
 /*
- * This function sends the value to the PC by packing the 4 byte float 
+ * This function sends the value to the PC by packing the 4 byte float
  * number into an byte array.
  */
   getFloatMeasurements();
@@ -630,48 +756,62 @@ void sendAdcValue(){  // !!!!!!!!!!! this is the only place where we need to kno
   resetMeasurementData();
   currentState = STATE_IDLE;
 }
+
 //=========================
 void reset(){
-/*
- * Resets the Arduino and sets it to IDLE-STATE
- */
-  currentState = STATE_IDLE;  
-  resetMeasurementData();
-  dac_settletime = 0;
-  currentTime = 0;  
-  adc0Gain = 0;
-  adc1Gain = 0;
-  numMeasurementsToDo = 0;
-  adc0ShouldDecreaseGain = false; 
-  adc1ShouldDecreaseGain = false;
-  AD7705resetCommunication(CS_ADC_0);
-  AD7705resetCommunication(CS_ADC_1);
-  AD5683reset(CS_DAC);
+/**
+    Reset the Arduino, the ADCs and the DACs to the default settings,
+    i.e., the same as after boot-up or a hardware reset.
+
+    The Arduino will be in STATE_IDLE at the end.
+**/
+    currentState = STATE_IDLE;
+    dacSettlingTime = 100;   // was 0, but should probably be the same as in the global initialization
+    currentTime = 0;
+
+    adcUpdateRate = AD7705_50HZ;
+    adc0Channel = AD7705_CH0;
+    adc1Channel = AD7705_CH0;
+    adc0Gain = 0;
+    adc1Gain = 0;
+    calibrationGain = 0;
+    adc0RipplePP = 0;
+    adc1RipplePP = 0;
+    adc0ShouldDecreaseGain = false;
+    adc1ShouldDecreaseGain = false;
+
+    numMeasurementsToDo = 1;
+    resetMeasurementData();
+
+    AD7705resetCommunication(CS_ADC_0);
+    AD7705resetCommunication(CS_ADC_1);
+    AD5683reset(CS_DAC);
 }
+
 //=========================
 void debugToPC(const char *debugmsg){  // !!!!!!!!!!!!!!! Since we're actually using this to send error messages back, I would rename it accordingly. Probably we should also define some error codes to accompany the message itself.
 /*
- * Sends a debugmessage to the PC by masking the message 
- * with a STARTMARKER +  DEBUGBYTE + the debug message +
- * ENDMARKER
- * 
+ * Sends a debugmessage to the PC by masking the message
+ * with a MSG_START +  DEBUGBYTE + the debug message +
+ * MSG_END
+ *
  * Parameters
  * ----------
  * debugmessage: const char array with variable field declaration
  */
   byte nb = PC_DEBUG;
-  Serial.write(STARTMARKER);
+  Serial.write(MSG_START);
   Serial.write(nb);
   Serial.println(debugmsg);
-  Serial.write(ENDMARKER);
+  Serial.write(MSG_END);
 }
 //=========================
 void debugToPC(byte debugbyte){
   byte nb = 0;
-  Serial.write(STARTMARKER);
+  Serial.write(MSG_START);
   Serial.write(nb);
   Serial.write(debugbyte);
-  Serial.write(ENDMARKER);
+  Serial.write(MSG_END);
 }
 
 /** Resets the summed measurement data to 0 */
@@ -723,14 +863,14 @@ void makeAndSumMeasurements() {
 void checkMeasurementInADCRange(byte chipSelectPin, byte channel, byte gain, bool* adcShouldDecreaseGain, int16_t adcValue){
 /*
  * (1) If the value measured at the current call is larger than the
- *     ADC_RANGE_SATURATION_THRESHOLD threshold, the value is still acceptable, 
- *     but the gain will need to be decreased the next time that the DAC voltage 
- *     is increased. This is signaled by setting the adcShouldDecreaseGain flag, 
+ *     ADC_RANGE_SATURATION_THRESHOLD threshold, the value is still acceptable,
+ *     but the gain will need to be decreased the next time that the DAC voltage
+ *     is increased. This is signaled by setting the adcShouldDecreaseGain flag,
  *     which will be processed during the next call to initialiseDAC()
  * (2) If instead the value measured is truly at saturation (full scale), the
  *     measurement itself is incorrect, and needs to be repeated from scratch
  *     after decreasing the gain.
- * (3) If the value is at full scale but the gain cannot be decreased, an ERROR 
+ * (3) If the value is at full scale but the gain cannot be decreased, an ERROR
  *     state will be returned.
  */
    if(abs(adcValue)>ADC_RANGE_THRESHOLD && (gain > 0) && !*adcShouldDecreaseGain){
@@ -738,7 +878,7 @@ void checkMeasurementInADCRange(byte chipSelectPin, byte channel, byte gain, boo
     // true saturation, which would make the measured value completely wrong.
     // Defer the decrease of gain to the next time the DAC voltage will be
     // increased
-    *adcShouldDecreaseGain = true;     
+    *adcShouldDecreaseGain = true;
     }
     if(((adcValue^=8000) == ADC_POSITIVE_SATURATION) || ((adcValue^=8000) == ADC_NEGATIVE_SATURATION)){
       if(gain>0){
@@ -748,11 +888,11 @@ void checkMeasurementInADCRange(byte chipSelectPin, byte channel, byte gain, boo
         //AD7705waitForCalibration(chipSelectPin, channel);
         //delay(1);
         resetMeasurementData();
-        *adcShouldDecreaseGain = false; 
+        *adcShouldDecreaseGain = false;
       }
       if(gain==0){
         debugToPC("ADC Overflow, maximum gain reached, no serious measurements possible...");
-        tracebackByte = currentState;
+        errorTraceback = currentState;
         currentState = STATE_ERROR;
       }
     }
@@ -817,9 +957,9 @@ void storeAllSelfCalibrationResults(int32_t targetArray[2][2]) {
   }
 }
 
-/** Sets the ADC gains according to the global adc0Gain, adc1Gain variables and restores
- *  the previously stored calibration values from the selfCalDataVsGain array.
- *  Also triggers the ADC measurements */
+/** Sets the ADC gains according to the global adc0Gain, adc1Gain variables and
+    restores the previously stored calibration values from the selfCalDataVsGain
+    array. Also triggers the ADC measurements */
 void setAllADCgainsAndCalibration() {
   for (int iADC=0; iADC<2; iADC++) {
     byte adcPresentMask = iADC==0 ? ADC_0_PRESENT : ADC_1_PRESENT;
@@ -925,7 +1065,7 @@ void initialCalibration(){
          int32_t median = getMedian32(
              selfCalDataForMedian[0][iADC][offsNgain],
              selfCalDataForMedian[1][iADC][offsNgain],
-             selfCalDataForMedian[2][iADC][offsNgain]);  
+             selfCalDataForMedian[2][iADC][offsNgain]);
          selfCalDataVsGain[calibrationGain][iADC][channel][offsNgain] = median;
         }
       }
@@ -973,7 +1113,7 @@ void AD7705setGainAndTrigger(byte chipSelectPin, byte channel, byte gain) {
     //SPI.transfer16(0xffff); //reset should not be necessary
     //SPI.transfer16(0xffff);
     SPI.transfer(AD7705_REG_SETUP | channel);
-    SPI.transfer(AD7705_STATE_TRIGGER_ADCS | gain << 3);
+    SPI.transfer(AD7705_TRIGGER | gain << 3);
     SPI.transfer(AD7705_REG_SETUP | channel);
     SPI.transfer(gain << 3);
     SPI.transfer(AD7705_REG_DATA | AD7705_READ_REG | channel);
