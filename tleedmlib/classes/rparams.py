@@ -168,6 +168,7 @@ class Rparams:
         self.searchConvInit = {
             "gaussian": None, "dgen": {"all": None, "best": None, "dec": None}}
         self.searchMaxGenInit = self.SEARCH_MAX_GEN
+        self.searchStartInit = None
         # script progress tracking
         self.halt = 0
         self.systemName = ""
@@ -276,6 +277,26 @@ class Rparams:
         # TENSOR_INDEX:
         if self.TENSOR_INDEX is None:
             self.TENSOR_INDEX = getMaxTensorIndex()
+        # TL_VERSION:
+        if self.TL_VERSION == 0.:
+            path = os.path.join(self.workdir, "tensorleed")
+            ls = [dn for dn in os.listdir(path)
+                  if (os.path.isdir(os.path.join(path, dn))
+                      and dn.startswith("TensErLEED"))]
+            highest = 0.0
+            namestr = ""
+            for dn in ls:
+                try:
+                    s = dn.split('v')[-1]
+                    f = float(s)
+                    if f > highest:
+                        highest = f
+                        namestr = s
+                except Exception:
+                    pass
+            self.TL_VERSION = highest
+            if highest > 0.:
+                logger.debug("Detected TensErLEED version " + namestr)
         # SEARCH_CONVERGENCE:
         if self.searchConvInit["gaussian"] is None:
             self.searchConvInit["gaussian"] = self.GAUSSIAN_WIDTH
@@ -285,6 +306,8 @@ class Rparams:
                                               1 / self.GAUSSIAN_WIDTH_SCALING)
             if self.searchConvInit["dgen"][k] is None:
                 self.searchConvInit["dgen"][k] = self.SEARCH_MAX_DGEN[k]
+        if self.searchStartInit is None:
+            self.searchStartInit = self.SEARCH_START
         # Phaseshifts-based:
         if self.fileLoaded["PHASESHIFTS"]:
             # get highest required energy index
@@ -395,6 +418,10 @@ class Rparams:
         self.SEARCH_MAX_GEN = self.searchMaxGenInit
         if self.searchConvInit["gaussian"] is not None:
             self.GAUSSIAN_WIDTH = self.searchConvInit["gaussian"]
+        if self.searchStartInit is not None:
+            self.SEARCH_START = self.searchStartInit
+        if self.SEARCH_START == "control":
+            self.SEARCH_START = "crandom"
         for k in ["best", "all", "dec"]:
             if self.searchConvInit["dgen"][k] is not None:
                 self.SEARCH_MAX_DGEN[k] = self.searchConvInit["dgen"][k]

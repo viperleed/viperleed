@@ -820,8 +820,6 @@ def main():
                     for dp in rp.domainParams:
                         dp.sl.restoreOriState()
                         dp.rp.resetSearchConv()
-                    if rp.SEARCH_START == "control":
-                        rp.SEARCH_START = "crandom"
                     if rp.RUN[:2] != [2, 3]:
                         rp.RUN = [2, 3] + rp.RUN
         except KeyboardInterrupt:

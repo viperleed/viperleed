@@ -328,7 +328,7 @@ def refcalc(sl, rp, subdomain=False):
                 except (IndexError, ValueError):
                     pass
             lmax[en] = min(max(max(lmax_cands), rp.LMAX[0]), rp.LMAX[1])
-            if lmax[en] < 8 and warn_small:
+            if lmax[en] < 6 and warn_small:
                 warn_small = False
                 logger.debug(
                     "Found small LMAX value based on PHASESHIFT_EPS parameter "
