@@ -13,7 +13,7 @@ Date: 16.04.2021
 #include <SPI.h>
 
 // File with Arduino settings                                                   // TODO: make a header file
-// #include "viper-ino.h"
+#include "viper-ino.h"
 
 #define DEBUG              true      // Debug mode, writes to serial line, for use in serial monitor
 #define FIRMWARE_VERSION   0x0001    // MMmm, M=major, m=minor. Each of the four can be 0--9 (MAX: 9999 == v99.99). CURENTLY: v0.1
