@@ -310,7 +310,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
             except ValueError:
                 if type_ != int:
                     raise
-                v = int(float(value))  # for e.g. '1e-6' to int
+                v = int(float(value))  # for e.g. '1e6' to int
         except ValueError:
             logger.warning('PARAMETERS file: {}: Could not convert value to '
                            '{}. Input will be ignored.'

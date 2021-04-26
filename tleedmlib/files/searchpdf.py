@@ -518,11 +518,11 @@ def writeSearchReportPdf(rp, outname="Search-report.pdf"):
             break
     part = max(50, part)
     rfmin, rfmax = min(allmin[-part:]), max(allmean[-part:])
-    if rfmax == rfmin:
+    if rfmax <= rfmin:
         rfmin *= 0.95
         rfmax *= 1.05
     rYrange = [rfmin-(rfmax-rfmin)*0.1, rfmax+(rfmax-rfmin)*0.1]
-    rYrange[1] = min(rYrange[1], 2*max(allmin) - rYrange[0])
+    rYrange[1] = max(rYrange[1], max(allmin)+(rfmax-rfmin)*0.1)
 
     labely = rYrange[0] + (rYrange[1]-rYrange[0])*0.99
     xoff = allgens[-1]*0.005
