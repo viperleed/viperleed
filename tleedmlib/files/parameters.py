@@ -432,15 +432,6 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
         elif param == 'HALTING':
             setNumericalParameter(rpars, param, llist[0], type_=int,
                                   range_=(1, 3))
-        elif param == 'LMAX':
-            r = setNumericalParameter(rpars, param, llist[0], type_=int,
-                                      range_=(1, 15),
-                                      outOfRangeEvent=('set', 'set'))
-            if r == 0 and rpars.PHASESHIFT_EPS != 0:
-                logger.warning(
-                    'PARAMETERS file: Both LMAX and '
-                    'PHASESHIFT_EPS are being defined. PHASESHIFT_EPS '
-                    'will be ignored.')
         elif param == 'N_BULK_LAYERS':
             setNumericalParameter(rpars, param, llist[0], type_=int,
                                   range_=(1, 2), haltingOnFail=2)
@@ -742,6 +733,42 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                         rpars.setHaltingLevel(1)
                         continue
             rpars.LAYER_CUTS = llist
+        elif param == 'LMAX':
+            llist = re.sub(r'[:-]', ' ', value).split()
+            try:
+                il = [int(v) for v in llist]
+            except ValueError:
+                logger.warning('PARAMETERS file: LMAX parameter: Could not '
+                               'parse "' + value + '" as integer(s). Input'
+                               'will be ignored.')
+                rpars.setHaltingLevel(1)
+                continue
+            if len(il) > 2:
+                logger.warning(
+                    'PARAMETERS file: LMAX parameter: Expected one or two '
+                    'values, found {}. First two values will be used.'
+                    .format(len(il)))
+                il = il[:2]
+            if len(il) == 1:
+                if not 1 < il[0] < 18:
+                    il[0] = min(max(1, il[0]), 18)
+                    logger.warning(
+                        'PARAMETERS file: LMAX must be between 1 and 18. '
+                        'Value will be set to {}.'.format(il[0]))
+                rpars.LMAX = [il[0], il[0]]
+            elif len(il) == 2:
+                if il[1] < il[0]:
+                    il.reverse()
+                if il[0] < 1:
+                    logger.warning('PARAMETERS file: LMAX lower bound must be '
+                                   'positive. Value will be set to 1.')
+                    il[0] = 1
+                if il[1] > 18:
+                    logger.warning('PARAMETERS file: LMAX values greater than '
+                                   '18 are currently not supported. Upper '
+                                   'bound will be set to 18.')
+                    il[1] = 18
+                rpars.LMAX = il
         elif param == 'PARABOLA_FIT':
             sublists = tl.base.splitSublists(llist, ',')
             for sl in sublists:
@@ -769,35 +796,30 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                         logger.warning(value_error)
                         rpars.setHaltingLevel(1)
         elif param == 'PHASESHIFT_EPS':
-            if rpars.LMAX != 0:
-                logger.warning('PARAMETERS file: Both LMAX and '
-                               'PHASESHIFT_EPS are being defined. '
-                               'PHASESHIFT_EPS will be ignored.')
-            else:
-                try:
-                    f = float(llist[0])
-                except ValueError:
-                    s = llist[0].lower()[0]
-                    if s == 'r':    # rough
-                        f = 0.1
-                    elif s == 'n':  # normal
-                        f = 0.05
-                    elif s == 'f':  # fine
-                        f = 0.01
-                    elif s == 'e':  # extrafine
-                        f = 0.001
-                    else:
-                        logger.warning('PARAMETERS file: PHASESHIFT_EPS: '
-                                       'Could not convert value to float. '
-                                       'Input will be ignored.')
-                        rpars.setHaltingLevel(1)
-                if f > 0 and f < 1:
-                    rpars.PHASESHIFT_EPS = f
+            try:
+                f = float(llist[0])
+            except ValueError:
+                s = llist[0].lower()[0]
+                if s == 'r':    # rough
+                    f = 0.1
+                elif s == 'n':  # normal
+                    f = 0.05
+                elif s == 'f':  # fine
+                    f = 0.01
+                elif s == 'e':  # extrafine
+                    f = 0.001
                 else:
-                    logger.warning(
-                        'PARAMETERS file: PHASESHIFT_EPS: Unexpected value '
-                        '(should be between 0 and 1). Input will be ignored.')
+                    logger.warning('PARAMETERS file: PHASESHIFT_EPS: '
+                                   'Could not convert value to float. '
+                                   'Input will be ignored.')
                     rpars.setHaltingLevel(1)
+            if f > 0 and f < 1:
+                rpars.PHASESHIFT_EPS = f
+            else:
+                logger.warning(
+                    'PARAMETERS file: PHASESHIFT_EPS: Unexpected value '
+                    '(should be between 0 and 1). Input will be ignored.')
+                rpars.setHaltingLevel(1)
         elif param == 'PLOT_COLORS_RFACTOR':
             if len(llist) >= 2:
                 if len(llist) > 2:

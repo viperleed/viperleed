@@ -187,9 +187,9 @@ def readFdOut(readfile="fd.out", for_error=False):
 
 def writePARAM(sl, rp, lmax=-1):
     """Creats the contents of the PARAM file for the reference calculation.
-    If no LMAX is passed, will use LMAX from rp. Returns str."""
+    If no LMAX is passed, will use maximum LMAX from rp. Returns str."""
     if lmax == -1:
-        lmax = rp.LMAX
+        lmax = rp.LMAX[1]
     try:
         beamlist, beamblocks, beamN = writeAUXBEAMS(
             ivbeams=rp.ivbeams, beamlist=rp.beamlist, write=False)
@@ -371,7 +371,7 @@ def writeAUXNONSTRUCT(sl, rp):
     i3 = ff.FortranRecordWriter('I3')
     ol = i3.write([rp.BULKDOUBLING_MAX]).ljust(45)
     output += ol+'LITER\n'
-    ol = i3.write([rp.LMAX]).ljust(45)
+    ol = i3.write([rp.LMAX[1]]).ljust(45)
     output += ol+'LMAX\n'
     try:
         with open('AUXNONSTRUCT', 'w') as wf:

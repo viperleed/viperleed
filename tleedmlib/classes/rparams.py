@@ -113,7 +113,7 @@ class Rparams:
         self.IV_SHIFT_RANGE = [-3, 3, -1]  # step of -1: init from data
         self.LAYER_CUTS = ["dz(1.2)"]  # list of either str or c coordinates
         self.LAYER_STACK_VERTICAL = True
-        self.LMAX = 0    # will be calculated based on PHASESHIFT_EPS parameter
+        self.LMAX = [0, 0]    # minimum and maximum LMAX
         self.LOG_DEBUG = False
         self.LOG_SEARCH = False
         self.N_BULK_LAYERS = 1           # number of bulk layers
@@ -180,7 +180,6 @@ class Rparams:
         self.runHistory = []   # sections that have been executed before
         self.lastOldruns = []
         # copy of runHistory when last oldruns folder was created
-        self.lmax_derived = False
         self.superlattice_defined = False
         self.ivbeams_sorted = False
         self.last_R = None
@@ -296,16 +295,19 @@ class Rparams:
                         hi = i
                         break
             # LMAX
+            min_set = True
             if self.PHASESHIFT_EPS == 0:
-                self.PHASESHIFT_EPS = 0.05
-            if self.LMAX == 0:  # determine value from PHASESHIFT_EPS
-                self.lmax_derived = True
+                self.PHASESHIFT_EPS = 0.01
+            if self.LMAX[0] <= 0:
+                self.LMAX[0] = 6
+                min_set = False
+            if self.LMAX[1] == 0:  # determine value from PHASESHIFT_EPS
                 lmax = 1
                 for el in self.phaseshifts[hi][1]:  # only check highest energy
                     for i, val in enumerate(el):
                         if abs(val) > self.PHASESHIFT_EPS and (i+1) > lmax:
                             lmax = i+1
-                if lmax < 8:
+                if lmax < 8 and not min_set:
                     logger.debug(
                         "Found small LMAX value based on "
                         "PHASESHIFT_EPS parameter (LMAX="+str(lmax)+").")
@@ -315,13 +317,13 @@ class Rparams:
                         "The LMAX found based on the PHASESHIFT_EPS "
                         "parameter is greater than 18, which is currently "
                         "not supported. LMAX was set to 18.")
-                self.LMAX = lmax
+                self.LMAX[1] = lmax
             else:       # sanity check: are large values ignored?
                 warn = False
                 highval = 0
                 for el in self.phaseshifts[hi][1]:   # highest energy
                     for i, val in enumerate(el):
-                        if abs(val) > 0.1 and (i+1) > self.LMAX:
+                        if abs(val) > 0.1 and (i+1) > self.LMAX[1]:
                             warn = True
                             highval = max(highval, abs(val))
                 if warn:

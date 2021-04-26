@@ -582,8 +582,8 @@ def init_domains(rp):
         rp.ivbeams_sorted = True
 
     rp.updateDerivedParams()
-    if rp.LMAX == 0:
-        rp.LMAX = max([dp.rp.LMAX for dp in rp.domainParams])
+    if rp.LMAX[1] == 0:
+        rp.LMAX[1] = max([dp.rp.LMAX[1] for dp in rp.domainParams])
     for dp in rp.domainParams:
         if dp.refcalcRequired:
             continue
@@ -598,8 +598,8 @@ def init_domains(rp):
             logger.info(cmessage+"Energy range is mismatched.")
             dp.refcalcRequired = True
             continue
-        # check LMAX
-        if rp.LMAX != dp.rp.LMAX:
+        # check LMAX - should be obsolete since TensErLEED version 1.6
+        if rp.LMAX[1] != dp.rp.LMAX[1] and rp.TL_VERSION <= 1.6:
             logger.info(cmessage+"LMAX is mismatched.")
             dp.refcalcRequired = True
         # check beam incidence
@@ -623,9 +623,10 @@ def init_domains(rp):
         logger.info("The following domains require new reference "
                     "calculations: "+", ".join([d.name for d in rr]))
         for dp in rp.domainParams:
-            for var in ["THEO_ENERGIES", "LMAX", "THETA", "PHI", "ivbeams"]:
+            for var in ["THEO_ENERGIES", "THETA", "PHI", "ivbeams"]:
                 setattr(dp.rp, var, copy.deepcopy(getattr(rp, var)))
-        # rp.setHaltingLevel(3)
+            if rp.TL_VERSION <= 1.6:  # not required since TensErLEED v1.61
+                dp.rp.LMAX[1] = rp.LMAX[1]
 
     # repeat initialization for all slabs that require a supercell
     for dp in supercellRequired:

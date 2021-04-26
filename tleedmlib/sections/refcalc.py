@@ -18,7 +18,7 @@ import numpy as np
 from viperleed import fortranformat as ff
 from viperleed.tleedmlib.leedbase import (
     fortranCompile, getTLEEDdir, getMaxTensorIndex, monitoredPool)
-# from viperleed.tleedmlib.base import splitMaxRight
+from viperleed.tleedmlib.base import splitMaxRight
 from viperleed.tleedmlib.files.parameters import modifyPARAMETERS
 import viperleed.tleedmlib.files.beams as beams
 import viperleed.tleedmlib.files.iorefcalc as io
@@ -146,11 +146,11 @@ def run_refcalc(runtask):
         nl = (f72x3.write([runtask.energy, runtask.energy + 0.01, 1.0])
               .ljust(24) + 'EI,EF,DE')
         fin = "\n".join((finparts[0], nl, finparts[2]))
-        # # now replace LMAX   !!! only needed for varying LMAX
-        # finparts = fin.split("LMAX", maxsplit=1)
-        # finparts = [splitMaxRight(finparts[0], "\n")[0], finparts[1]]
-        # nl = str(runtask.comptask.lmax).rjust(3).ljust(45) + "LMAX"
-        # fin = finparts[0] + "\n" + nl + finparts[1]
+        # now replace LMAX
+        finparts = fin.split("LMAX", maxsplit=1)
+        finparts = [splitMaxRight(finparts[0], "\n")[0], finparts[1]]
+        nl = str(runtask.comptask.lmax).rjust(3).ljust(45) + "LMAX"
+        fin = finparts[0] + "\n" + nl + finparts[1]
         try:
             with open("refcalc-FIN", "w") as wf:
                 wf.write(fin)
@@ -299,23 +299,26 @@ def refcalc(sl, rp, subdomain=False):
             logger.error("No fortran compiler found, cancelling...")
             raise RuntimeError("Fortran compile error")
 
-    # !!! Calculating Tensors with different LMAX makes the Deltas crash.
-    # Therefore, calculate always for ONE lmax for now.
-
     # first, figure out for which LMAX to compile:
-    if not rp.lmax_derived or single_threaded or True:
-        # if user has set LMAX manually: respect that
-        which_lmax = set([rp.LMAX])
+    if single_threaded or rp.LMAX[0] == rp.LMAX[1] or rp.TL_VERSION <= 1.6:
+        which_lmax = set([rp.LMAX[1]])
     else:    # find appropriate LMAX per energy
-        # !!! UNUSED CODE
         if rp.PHASESHIFT_EPS == 0:
-            rp.PHASESHIFT_EPS = 0.05
+            rp.PHASESHIFT_EPS = 0.01
         ps_en = [(i, ps[0]*27.2116) for (i, ps) in enumerate(rp.phaseshifts)]
         lmax = {}  # lmax as a function of energy
         warn_small = True
         warn_large = True
         for en in energies:
-            ps_ind = [pe[0] for pe in ps_en if pe[1] > en][0]
+            try:
+                ps_ind = [pe[0] for pe in ps_en if pe[1] >= en][0]
+            except IndexError:
+                if ps_en[-1][1] > en and ps_en[-1][1] - en > 1.:
+                    logger.warning(
+                        "No approriate phaseshifts found for {:.2f} eV. Will "
+                        "try highest available phaseshift energy {:.2f} eV "
+                        "instead.".format(en, ps_en[-1][1]))
+                ps_ind = len(rp.phaseshifts) - 1
             lmax_cands = [1]
             for site_ps in rp.phaseshifts[ps_ind][1]:
                 try:
@@ -324,7 +327,7 @@ def refcalc(sl, rp, subdomain=False):
                          if abs(v) > rp.PHASESHIFT_EPS]) + 1)
                 except (IndexError, ValueError):
                     pass
-            lmax[en] = max(lmax_cands)
+            lmax[en] = min(max(max(lmax_cands), rp.LMAX[0]), rp.LMAX[1])
             if lmax[en] < 8 and warn_small:
                 warn_small = False
                 logger.debug(
@@ -401,19 +404,17 @@ def refcalc(sl, rp, subdomain=False):
         ref_tasks.append(RefcalcRunTask(fin, -1, ct, logname,
                                         single_threaded=True))
 
-    # Modify this if multiple compilations with different LMAX are required
-    home = os.getcwd()
-    try:
-        r = compile_refcalc(comp_tasks[0])
-    except Exception:
-        raise
-    finally:
-        os.chdir(home)
-    if r:
-        logger.error(r)
-        raise RuntimeError("Error compiling fortran files.")
-
     if single_threaded:
+        home = os.getcwd()
+        try:
+            r = compile_refcalc(comp_tasks[0])
+        except Exception:
+            raise
+        finally:
+            os.chdir(home)
+        if r:
+            logger.error(r)
+            raise RuntimeError("Error compiling fortran files.")
         logger.info("Compiling fortran files...")
         logger.info("Starting reference calculation...\n"
                     "Refcalc log will be written to file "+logname)
@@ -430,12 +431,12 @@ def refcalc(sl, rp, subdomain=False):
             raise RuntimeError("Error in reference calculation.")
         logger.info("Reference calculation finished. Processing files...")
     else:
-        # # compile files - PARALLELIZED DELTA COMPILATION - UNUSED
-        # logger.info("Compiling fortran files...")
-        # poolsize = min(len(comp_tasks), rp.N_CORES)
-        # monitoredPool(rp, poolsize, compile_refcalc, comp_tasks)
-        # if rp.STOP:
-        #     return
+        # compile files
+        logger.info("Compiling fortran files...")
+        poolsize = min(len(comp_tasks), rp.N_CORES)
+        monitoredPool(rp, poolsize, compile_refcalc, comp_tasks)
+        if rp.STOP:
+            return
         # run executions
         logger.info("Running reference calculations...")
         poolsize = min(len(ref_tasks), rp.N_CORES)
