@@ -123,12 +123,12 @@ void readFromSerial() {
 
     Reads
     -----
-    
+
 
     Writes
     ------
     numBytesRead, serialInputBuffer, readingFromSerial, msgLength
-    
+
     Goes to state
     -------------
     STATE_ERROR + ERROR_SERIAL_OVERFLOW
@@ -136,7 +136,7 @@ void readFromSerial() {
     STATE_ERROR + ERROR_MSG_INCONSITENT
         In case the number of bytes read does not fit with the
         number expected from the first byte after MSG_START
-    
+
     */
     // Do something only if there is data on the serial line
     if(not Serial.available())  return;
@@ -159,26 +159,9 @@ void readFromSerial() {
     //       that would anyway interrupt whatever we are doing after we read
     //       all the characters (one per state-loop iteration), so there is
     //       probably no point in waiting for whatever is going on to be over.
-    
-    // TODO: make sure we do not go into a segmentation fault by writing
-    //       to places we shouldn't! In fact, our serialInputBuffer has
-    //       a limited size of MSG_MAX_LENGTH bytes. Here we're not
-    //       making in any way sure that we read at most MSG_MAX_LENGTH bytes.
-    //       If we are going to, we should throw an ERROR_MSG_TOO_LONG. 
 
-    // TODO: I think we should anyway check the message received for
-    //       consistency [e.g., a 'command' message should be of length
-    //       exactly == 1(length)+1(the command); we do expect to receive
-    //       data only when we are in certain states; and similar). Then
-    //       we can throw an ERROR_MSG_UNKNOWN or ERROR_MSG_INCONSITENT
-    //       to signal the issue. However, this means that an ERROR_MSG_TOO_LONG
-    //       can be often followed by another error message. Another option
-    //       is to not always immediately return to STATE_IDLE from
-    //       STATE_ERROR: stay in STATE_ERROR if errorCode is ERROR_MSG_TOO_LONG
-    //       until we receive a MSG_END character that marks the end of the
-    //       too-long message to be discarded.
     byte byteRead = Serial.read();
-    
+
     // New message
     if (byteRead == MSG_START) {
         numBytesRead = 0;
@@ -187,6 +170,14 @@ void readFromSerial() {
 
     // Accumulate characters
     if(readingFromSerial) {
+        // Make sure we are not going to write
+        // past the end of serialInputBuffer
+        if (numBytesRead == MSG_MAX_LENGTH) {
+            errorCode = ERROR_MSG_TOO_LONG;
+            errorTraceback = currentState;
+            currentState = STATE_ERROR;
+            return;
+        }
         serialInputBuffer[numBytesRead] = byteRead;
         numBytesRead++;
     }
@@ -194,46 +185,114 @@ void readFromSerial() {
     // A full message has been read
     if (byteRead == MSG_END) {
         readingFromSerial = false;
-        msgLength = serialInputBuffer[1];
-        if (msgLength != numBytesRead){                                         // TODO: WRONG!! the 'length byte' is BEFORE escaping (and does not include start & end markers). This check needs to be moved after the decoding.
-            errorCode = ERROR_MSG_INCONSITENT;
-            errorTraceback = currentState;
-            currentState = STATE_ERROR;
-            return;
-        }
-        decodeMessage();
-        // TODO: here add a isMessageAcceptable()
-        newMessage = true;  // !!!!!! make sure to not always set to true       // TODO: What does this mean? When would you not set it to true?
+        newMessage = decodeAndCheckMessage();
     }
 }
 
-void decodeMessage(){
-/*
-    Move the interesting bytes of serialInputBuffer[] into data_received[].
-     *
-    In practice, only the actual characters are kept. This means:
+
+bool decodeAndCheckMessage(){
+    /**
+    Move the interesting bytes of serialInputBuffer[]
+    into data_received[], and return whether the
+    message read is acceptable.
+
+    In practice, only the actual characters are kept.
+    This means:
     (1) Skipping:
            MSG_START == serialInputBuffer[0]
-           total no. of bytes in message == serialInputBuffer[1]
+           no. of bytes after decoding == serialInputBuffer[1]
            MSG_END == serialInputBuffer[last]
     (2) Decoding bytes with value MSG_SPECIAL_BYTE. In this case, the
         actual character is MSG_SPECIAL_BYTE + the next character.
 
-    Returns into globals
-    --------------------
-    data_received[] : byte array
-*/
-  byte numDecodedBytes = 0;
-  for (byte nthByte = 2; nthByte < numBytesRead; nthByte++) {
-    byte decodedByte = serialInputBuffer[nthByte];
-    if (decodedByte == MSG_SPECIAL_BYTE) {
-       // The actual character is MSG_SPECIAL_BYTE + the next byte
-       nthByte++;
-       decodedByte += serialInputBuffer[nthByte];
+    A message is considered acceptable if:
+    (1) the length contained in the message fits the number
+        of bytes decoded
+    (2) when it is a one-character message (i.e., a command)
+        it should be one of the known commands
+    (3) when it is longer (i.e., it's data), we should be
+        in a state that expects data
+
+    If a message is not acceptable, it also brings the system
+    to a STATE_ERROR with the appropriate errorCode
+
+    Reads
+    -----
+    serialInputBuffer
+
+    Writes
+    ------
+    data_received, currentState, msgLength
+
+    Returns
+    -------
+    True if the message is acceptable
+
+    Goes to state
+    -------------
+    (unchanged)
+        if message is acceptable
+    STATE_ERROR with ERROR_MSG_INCONSITENT
+        if the number of decoded bytes does not match the
+        length expected from the value that came with the
+        message itself
+    STATE_ERROR with ERROR_MSG_UNKNOWN
+        if the message is an unknown command, or if we
+        got some 'data' while we were not expecting any
+    */
+    // Decode the message, starting at the second
+    // byte, and going up to numBytesRead-1. This
+    // skips MSG_START, the length, and MSG_END
+    byte numDecodedBytes = 0;
+    for (byte nthByte = 2; nthByte < numBytesRead; nthByte++) {
+        byte decodedByte = serialInputBuffer[nthByte];
+        if (decodedByte == MSG_SPECIAL_BYTE) {
+            // The actual character is MSG_SPECIAL_BYTE + the next byte
+            nthByte++;
+            decodedByte += serialInputBuffer[nthByte];
+        }
+        data_received[numDecodedBytes] = decodedByte;
+        numDecodedBytes++;
     }
-    data_received[numDecodedBytes] = decodedByte;
-    numDecodedBytes++;
-  }
+
+    // Check that the number of bytes decoded fits
+    msgLength = serialInputBuffer[1];
+    if (msgLength != numDecodedBytes){
+        errorCode = ERROR_MSG_INCONSITENT;
+        errorTraceback = currentState;
+        currentState = STATE_ERROR;
+        return false;
+        }
+
+    if (numDecodedBytes > 1){
+        // Message is some data
+        if (not waitingForDataFromPC){
+            // But we're not expecting any
+            errorCode = ERROR_MSG_UNKNOWN;
+            errorTraceback = currentState;
+            currentState = STATE_ERROR;
+            return false;
+        }
+        // Defer checking to state handlers
+        return true;
+    }
+
+    // Check that it is one of the understandable commands
+    switch(data_received[0]):{
+        case PC_AUTOGAIN: break;
+        case PC_CALIBRATION: break;
+        case PC_HARDWARE: break;
+        case PC_INIT_ADC: break;
+        case PC_MEASURE: break;
+        case PC_RESET: break;
+        case PC_SET_VOLTAGE: break;
+        default:
+            errorCode = ERROR_MSG_UNKNOWN;
+            errorTraceback = currentState;
+            currentState = STATE_ERROR;
+            return false;
+    }
+    return true;
 }
 
 //============================
@@ -323,10 +382,12 @@ void updateState() {
             currentState = STATE_GET_HARDWARE;
             break;
         case PC_INIT_ADC:
+            waitingForDataFromPC = true;
             initialTime = millis();
             currentState = STATE_SETUP_ADC;
             break;
         case PC_SET_VOLTAGE:
+            waitingForDataFromPC = true;
             initialTime = millis();
             currentState = STATE_SET_VOLTAGE;
             break;
@@ -344,6 +405,7 @@ void updateState() {
             currentState = STATE_ADC_MEASURE;
             break;
         case PC_CALIBRATION:
+            // waitingForDataFromPC = true;  // TODO: will be the case after we rework this
             calibrationGain = 0;
             currentState = STATE_INITIAL_CALIBRATION;
             break;
@@ -505,7 +567,7 @@ void setUpAllADCs(){
     STATE_SETUP_ADC (stays) : while waiting for data from the PC
     STATE_IDLE : successfully finished
     **/
-    if(not newMessage){
+    if(not newMessage){  // waiting for data from the PC
         if((millis() -  initialTime) > TIMEOUT){
             debugToPC("Timeout, no ini Values for ADC received!");              // TODO: probably comment out and have the Python take care of it
             errorCode = ERROR_TIMEOUT;
@@ -515,6 +577,8 @@ void setUpAllADCs(){
         }
         return;
     }
+    
+    waitingForDataFromPC = false;
 
     // TODO: we have to handle the bit mask here, so we also know if the
     // user wants us to measure the LM35 too.
@@ -587,7 +651,7 @@ void setVoltage(){
     STATE_SET_VOLTAGE (stays) : while waiting for data from the PC
     STATE_TRIGGER_ADCS : successfully finished
     **/
-    if(not newMessage){
+    if(not newMessage){   // Waiting for data from PC
         if((millis() -  initialTime) > TIMEOUT){
             debugToPC("Timeout, no ini Values for DAC received!");
             errorCode = ERROR_TIMEOUT;
@@ -597,6 +661,8 @@ void setVoltage(){
         }
         return;
     }
+    
+    waitingForDataFromPC = false;
 
     uint16_t dacValue = data_received[0] << 8 | data_received[1];
     dacSettlingTime = data_received[2] << 8 | data_received[3];
@@ -1044,14 +1110,14 @@ void selfCalibrateAllADCs(byte updateRate) {
     /**
     Simultaneous self-calibration for both ADCs
     (if present), using the current channel and gain.
-    
+
     Parameters
     ----------
     updateRate : {AD7705_50HZ, AD7705_60HZ, AD7705_500HZ}
         The update rate for which calibration has to be performed
         Currently, no check is performed that the update rate
         is actually one of the acceptable values                                // TODO: it may be a good idea to do this check
-        
+
     Reads
     -----
     adc0Channel, adc0Gain, adc1Channel, adc1Gain
@@ -1082,7 +1148,7 @@ void storeAllSelfCalibrationResults(int32_t targetArray[2][2]) {                
     /**
     Store the result of the last self calibration
     of both ADCs (if present) to the array passed
-    
+
     Parameters
     ----------
     targetArray : 2x2 int32_t
@@ -1144,7 +1210,7 @@ void setAllADCgainsAndCalibration() {
 //          #endif
 
             // Trigger to make sure the ADC is up to date with the new
-            // calibration data, but we will not read the converted data 
+            // calibration data, but we will not read the converted data
             AD7705setGainAndTrigger(chipSelect, channel, gain);
         }
     }
@@ -1244,7 +1310,7 @@ void initialCalibration(){      // TODO: rename
     for all the possible gain values. The calibration results
     are stored, so that they can be fetched later for faster
     gain switching.
-    
+
     Currently, each gain value is done over a separate state-loop.
     This means that it takes approximately 360 ms to finish a single
     run of this function (120 ms x 3 points for computing medians).
@@ -1252,9 +1318,9 @@ void initialCalibration(){      // TODO: rename
     TODO: We should consider whether we rather want to run one single
     median point per state-loop. This would leave the serial line
     inactive only for 120 ms.
-    
+
     The calibration is done in parallel for both ADCs (if present).
-    
+
     This function needs to be called again should the updateRate
     to be used for the measurements change. Since this takes quite
     long to complete (~3s for all the gains), it is advisable not
@@ -1269,7 +1335,7 @@ void initialCalibration(){      // TODO: rename
     Msg to PC
     ---------
     None.           // TODO: perhaps we would like to inform the PC once the whole calibration is done, since this is one of those things that takes time.
-    
+
 
     Goes to state
     -------------
@@ -1341,7 +1407,7 @@ void initialCalibration(){      // TODO: rename
 
     if(calibrationGain > AD7705_MAX_GAIN){
         // Calibration is over. Set gains to the lowest value and finish.
-        adc0Gain = 0; 
+        adc0Gain = 0;
         adc1Gain = 0;
         currentState = STATE_IDLE;
     }

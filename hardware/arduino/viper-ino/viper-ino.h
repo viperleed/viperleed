@@ -103,6 +103,7 @@ byte data_send[MSG_MAX_LENGTH];
 #define STATE_INITIAL_CALIBRATION  8  // Figure out correct offset and calibration factors for ADCs at all gains.
 #define STATE_ERROR                9  // An error occurred
 uint16_t currentState = STATE_IDLE;   // Keeps track of the current state
+bool waitingForDataFromPC = false;    // Keeps track of whether we are in a state that is waiting for the PC to send something
 
 
 
