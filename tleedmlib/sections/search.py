@@ -649,6 +649,8 @@ def search(sl, rp):
     markers = []
     rfaclist = []
     all_r_configs = set()  # tuples (r, config) for parabola fit
+    max_stored_configs = int(1.5*10**5)  # maximum configurations to store
+    store_config_cutoff = 1  # defines how many varR above min(R) to store
     parab_x0 = None     # starting guess for parabola
     rfac_predict = []  # tuples (gen, r) from parabola fit
     realLastConfig = {"all": [], "best": [], "dec": []}
@@ -815,8 +817,16 @@ def search(sl, rp):
                         datafiles = [f for f in os.listdir()
                                      if re.match(r'data\d+\.chem$', f.lower())]
                         if datafiles:
-                            all_r_configs.update(io.readDataChem(rp,
-                                                                 datafiles))
+                            varR = np.sqrt(8*np.abs(rp.V0_IMAG)
+                                           / rp.total_energy_range())
+                            all_r_configs.update(io.readDataChem(
+                                rp, datafiles,
+                                cutoff=min(rfacs)+store_config_cutoff*varR,
+                                max_configs=max_stored_configs))
+                            if len(all_r_configs) > 1.2*max_stored_configs:
+                                # clean out
+                                all_r_configs = set(sorted(list(
+                                    all_r_configs))[:max_stored_configs])
                         if len(all_r_configs) >= 100*rp.indyPars:
                             if rfac_predict and (rfac_predict[-1][1] >
                                                  rfaclist[-1][0]):
@@ -963,6 +973,18 @@ def search(sl, rp):
                     logger.warning("Failed to delete old SD.TL file. "
                                    "This may cause errors in the "
                                    "interpretation of search progress.")
+            # reduce the all_r_configs object to save memory
+            if rfacs and len(all_r_configs) > 1:
+                cl = sorted(list(all_r_configs))
+                del all_r_configs
+                varR = np.sqrt(8*np.abs(rp.V0_IMAG) / rp.total_energy_range())
+                cl = cl[:min(max_stored_configs,
+                             next((ind for ind, r
+                                   in enumerate(list(zip(*cl))[0])
+                                   if r > min(rfacs)+store_config_cutoff*varR),
+                                  len(cl)))]
+                all_r_configs = set(cl)
+                del cl
     if not interrupted:
         logger.info("Finished search. Processing files...")
     else:
@@ -974,13 +996,12 @@ def search(sl, rp):
         parab_x0, predictR = parabolaFit(rp, all_r_configs, x0=parab_x0)
         if predictR is not None:
             rfac_predict.append((gens[-1], predictR))
+        del all_r_configs  # free up memory
     # write pdf one more time
     if len(gens) > 1:
         try:
-            logger.debug("writing last search-progress.pdf")  # !!! TMPDEBUG
             writeSearchProgressPdf(rp, gens, rfaclist, lastconfig,
                                    markers=markers, rfac_predict=rfac_predict)
-            logger.debug("wrote last search-progress.pdf")    # !!! TMPDEBUG
         except Exception:
             logger.warning("Error writing Search-progress.pdf",
                            exc_info=True)
