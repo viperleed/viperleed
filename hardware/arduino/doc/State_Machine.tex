@@ -1,0 +1,129 @@
+\documentclass[11pt,a4paper,english]{article}
+
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage[margin=15mm]{geometry}
+
+\author{Florian Dörr}
+\title{State Machine}
+\begin{document}
+\titlepage
+
+\section{Communication with PC}
+\textbf{Communication protocol}: Each communication message between PC and Arduino is composed of \texttt{MSG\_START} + 1~byte for length of message that follows + \texttt{message} + \texttt{MSG\_END}. With the exception of error messages sent back from the Arduino to the PC, each byte in \texttt{message} as well as in the length byte (TRUE?? If it is also encoded, we are not decoding it. Otherwise we are limited to \texttt{MSG\_END}~$-1$  bytes) is encoded as follows: if the ASCII representation of the byte would be larger or equal (??) than a \texttt{MSG\_SPECIAL\_BYTE}, the byte is transformed into 2 bytes, the first one is \texttt{MSG\_SPECIAL\_BYTE}, the second is \texttt{byte} $-$ \texttt{MSG\_SPECIAL\_BYTE}. Currently, error messages are a mess.
+
+\vspace*{\baselineskip}
+\noindent\textbf{From PC to Arduino}: The Arduino will in some cases expect a second message, including data relative to the original message sent. Here a list of the data expected in the second message, as well as the replies expected for successful completion (`data' indicates that the reply arrives after the data is received; `end' means when the operations requested are successfully completed; there always may be an error response, see Section~\ref{sec:state_machine}). Neither `Data bytes' nor `Reply bytes' take into account encoding, so the messages may be twice as long. Also missing is the byte with the message length (so 1 more byte).
+
+\begin{center}
+\begin{tabular}{lcp{.32\textwidth}lc}\toprule
+Original message          & Data bytes & Meaning of data bytes  & Reply & Reply bytes\\\midrule
+\texttt{PC\_HARDWARE}     & ---        & ---								        & \texttt{hardwareDetected} & 2\\
+\texttt{PC\_CALIBRATION}  & !---!      & ---                                        & !---!                     & ---\\
+\texttt{PC\_INIT\_ADC}    & 5 & adc0Channel, adc1Channel, adcRate, no.\ measurements MSB, no.\ measurements LSB & data:\texttt{PC\_OK}  & 1\\
+\texttt{PC\_AUTOGAIN}     & ---        & ---                                        & end:\texttt{PC\_OK}       & 1\\
+\texttt{PC\_SET\_VOLTAGE} & 4          & dacValue MBS, dacValue LSB, dacSettlingTime MSB, dacSettlingTime LSB & None & ---\\
+\texttt{PC\_MEASURE}      & ---        & ---                                        & end:$3\times$voltages     & 3$\times$4\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\vspace*{\baselineskip}
+\noindent\textbf{From Arduino to PC}: The information flow from the Arduino to the PC may be
+\begin{itemize}
+\item 2 bytes [encoded] containing the information on the current hardware settings, with the following meaning. From the point of view of the PC, it probably makes sense to only look at the four least-significant bits.
+	  \begin{center}
+	  \begin{tabular}{clp{.5\textwidth}}\toprule
+	  Bit 				 & Mask                     & Meaning\\
+	  \midrule
+	  0 (\texttt{0x01})  & \texttt{ADC\_0\_PRESENT} & (set) ADC\#0 is available \\
+	  1 (\texttt{0x02})  & \texttt{ADC\_1\_PRESENT} & (set) ADC\#1 is available \\
+	  2 (\texttt{0x04})  & \texttt{LM35\_PRESENT}   & (set) an LM35 temperature sensor is available \\
+	  3 (\texttt{0x08})  & \texttt{RELAY\_PRESENT}  & (set) a relay is available, which allows switching the range of the $I_0$ measured from the LEED electronics between (0--2.5~V) and (0--10~V)\\
+	  4 (\texttt{0x10})  & \texttt{JP\_I0\_CLOSED}  & (set) $I_0$ input range is 0--2.5~V; (reset) $I_0$ input range is 0--10~V\\
+	  5 (\texttt{0x20})  & \texttt{JP\_AUX\_CLOSED} & (set) AUX input range is 0--2.5~V; (reset) AUX input range is 0--10~V\\
+	  \bottomrule
+	  \end{tabular}
+	  \end{center}
+\item WE NEED SOMETHING AS A REPLY TO \texttt{PC\_CALIBRATION}! 
+\item \texttt{PC\_OK} [encoded] in response to \texttt{PC\_INIT\_ADC}, after the data received by the Arduino as the message following \texttt{PC\_INIT\_ADC} has been deemed acceptable and processed. Processing should be relatively fast, as it basically just loads calibration registers into the ADCs, and triggers the conversion of their inputs.
+\item \texttt{PC\_OK} [encoded] in response to \texttt{PC\_AUTOGAIN}, after the whole gain-finding procedure is over (roughly after 70 ms).
+\item Three [encoded] consecutive messages (i.e., each with \texttt{MSG\_START} and \texttt{MSG\_END} characters), each with the 4-byte representation of a 32-bit floating-point number.
+\item Error messages from several possible states. Right now the error messages are a mess. Possible error codes are
+
+	\begin{centering}
+	\begin{tabular}{lcp{.5\textwidth}}\toprule
+	Error code                          & Value & Reason\\\midrule
+	\texttt{ERROR\_SERIAL\_OVERFLOW}    & 1     & Arduino serial buffer is full (64 unprocessed characters). The PC sent too many requests that could not be processed in time. The latest messages sent from the PC are likely lost.\\
+	\texttt{ERROR\_MSG\_TOO\_LONG}      & 2     & The PC sent a message that contained too many characters to be processed. Either message was corrupted, or the firmware version is incompatible.\\
+	\texttt{ERROR\_MSG\_INCONSITENT}    & 3     & The message received is inconsistent. Typically when the number of bytes effectively read does not match the one expected from the info in the message itself. Typically means that the message got corrupted.\\
+	\texttt{ERROR\_MSG\_UNKNOWN}        & 4     & The PC sent an unknown command, i.e. not one of those in paragraph \textit{From PC to Arduino} at the beginning of this Section.\\
+	\texttt{ERROR\_MSG\_DATA\_INVALID}  & 5     & The message was understood, but some of the data passed is inappropriate.\\
+	\texttt{ERROR\_REQUEST\_TOO\_EARLY} & 6     & The message was understood, but the request cannot be fulfilled because it requires information that needs another command to come before this.\\
+	\texttt{ERROR\_TIMEOUT}             & 7     & It was not possible to complete an operation in time. It may mean that (i) the Arduino was waiting for data from the PC that never arrived, or (ii) the internal communication with the ADCs was interrupted, likely because the power supply was disconnected while running.\\
+	\texttt{ERROR\_ADC\_SATURATED}      & 8     & The input of one of the ADCs reached solid saturation, and it is not possible to decrease the gain further. May signal an internal malfunction, or that an input cable is incorrectly connected.\\
+	\texttt{ERROR\_TOO\_HOT}            & 9     & The temperature measured by the LM35 is very high. There may be some internal malfunction (either the sensor or the board).\\
+	\texttt{ERROR\_RUNTIME}				& 255   & The firmware is corrupt or there is a bug. Some function has been called with inappropriate values.\\
+	\bottomrule
+	\end{tabular}
+	\end{centering}
+\end{itemize}
+
+
+\clearpage
+
+\section{State machine}\label{sec:state_machine}
+Here all the states of Arduino, including which event triggers entering this state, which function contains the code that is relevant for the state, and whether the state leads to a new state after it is successfully completed.
+\begin{center}
+\begin{tabular}{llll}\toprule
+State					      & Initiated by                 & Handler                        & Goes to state        \\\midrule
+\texttt{STATE\_SETUP\_ADC}    & \texttt{PC\_INIT\_ADC}       & \texttt{setUpAllADCs()}        & \texttt{STATE\_IDLE} \\
+\texttt{STATE\_SET\_VOLTAGE}  & \texttt{PC\_SET\_VOLTAGE}    & \texttt{setVoltage()}          & \texttt{STATE\_TRIGGER\_ADCS} \\
+\texttt{STATE\_TRIGGER\_ADCS} & \texttt{STATE\_SET\_VOLTAGE} & \texttt{triggerMeasurements()} & \texttt{STATE\_IDLE} \\
+\texttt{STATE\_AUTOGAIN}      & \texttt{PC\_AUTOGAIN}        & \texttt{findOptimalADCGains()} & \texttt{STATE\_IDLE} \\
+\texttt{STATE\_ADC\_MEASURE}  & \texttt{PC\_MEASURE} 		 & \texttt{measureADCs()}   & \texttt{STATE\_ADC\_VALUES\_READY}\\
+\texttt{STATE\_ADC\_VALUES\_READY} & \texttt{STATE\_ADC\_MEASURE} & \texttt{sendMeasuredValues()} & \texttt{STATE\_IDLE}\\
+\texttt{STATE\_GET\_HARDWARE}      & \texttt{PC\_HARDWARE}        & \texttt{getHardwarePresent()} & \texttt{STATE\_IDLE}\\
+\texttt{STATE\_INITIAL\_CALIBRATION} & \texttt{PC\_CALIBRATION}   & \texttt{initialCalibration()} & \texttt{STATE\_IDLE}\\
+\texttt{STATE\_ERROR}         & Fault                        & None!                          & \texttt{STATE\_IDLE}\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\vspace*{\baselineskip}
+\noindent{}Follows a description of each of the states in the Arduino finite-state machine:
+\begin{itemize}
+\item \texttt{STATE\_SETUP\_ADC}: Requires the PC to communicate which channels are to be measured for the external ADCs [currently without bit mask, so LM35 will always be measured!], the measurement frequency (50, 60, or 500 Hz) as well as the number of measurement points that needs to be averaged. Calls \texttt{setAllADCgainsAndCalibration()}, sends an OK to the PC, and returns to \texttt{STATE\_IDLE}. In essence, this state just fetches pre-stored calibration data.
+
+	\texttt{setAllADCgainsAndCalibration()} fetches the stored calibration data for the current gain and channel, thus THESE VALUES MUST BE PRESENT AND UP TO DATE. This is currently unchecked, but should be! This means that we must have run through \texttt{STATE\_INITIAL\_CALIBRATION} for the specific channels requested. Thus, we need to somehow keep track of which channels have been calibrated, and which calibrations can still be considered up to date (perhaps we need a long-term timer, and we should also keep track of the temperature [if LM35 is there], since temperature shifts invalidate the self-calibration). It also needs the ADCs to have the correct gains already figured out, so it may be helpful to check whether a \texttt{STATE\_AUTOGAIN} has successfully run through. Also, it calls \texttt{AD7705setGainAndTrigger()}, i.e. the ADCs start measuring. It is unclear what they are measuring, however, and why, but there should be no communication over the SPI from the ADC back, so it will likely measure a single value and stop there.
+
+	It may reach a \texttt{STATE\_ERROR} with (i) \texttt{ERROR\_TIMEOUT} if the PC does not send the needed values as a second message, following \texttt{PC\_INIT\_ADC}, within 5 seconds; (ii) \texttt{ERROR\_REQUEST\_INVALID} if the PC sent an invalid value for a channel or for the \texttt{updateRate}. Things we may also want to check (and throw a \texttt{ERROR\_REQUEST\_PRECEDENCE} error otherwise): (a) requires calibration data to be ready (if there are ADCs connected); (b) may give inappropriate results if the gain selected is inappropriate.
+
+\item \texttt{STATE\_SET\_VOLTAGE}: Requires the PC to communicate the DAC value that needs to be set, as well as how long one should wait for the DAC value to be considered stable. It then goes to \texttt{STATE\_TRIGGER\_ADCS}, after calling \texttt{setAllADCgainsAndCalibration()} should any of the ADCs require its gain to be reduced.
+	
+	\texttt{setAllADCgainsAndCalibration()} fetches the stored calibration data for the current gain and channel, thus THESE VALUES MUST BE PRESENT AND UP TO DATE. This is currently unchecked, but should be! It also needs the ADCs to have the correct gains already figured out, so it may be helpful to check whether a \texttt{STATE\_AUTOGAIN} has successfully run through. In practice, it requires \texttt{STATE\_SETUP\_ADC} to have run through successfully. This is unchecked! Also, it calls \texttt{AD7705setGainAndTrigger()}, i.e. the ADCs start measuring. It is unclear what they are measuring, however, and why, but there should be no communication over the SPI from the ADC back, so it will likely measure a single value and stop there.
+
+	It may reach a \texttt{STATE\_ERROR} due to \texttt{ERROR\_TIMEOUT} if the PC does not send the needed values as a second message, following \texttt{PC\_SET\_VOLTAGE}, within 5 seconds. We should probably throw an \texttt{ERROR\_REQUEST\_PRECEDENCE} if this state is running before a \texttt{STATE\_SETUP\_ADC} has been completed, i.e., before a \texttt{PC\_INIT\_ADC} command has been issued. This, however, depends also on which hardware configuration we have (not needed if the ADCs are not there).
+
+\item \texttt{STATE\_TRIGGER\_ADCS}: cannot be induced by PC directly. It is the sub-state that follows successful completion of \texttt{STATE\_SET\_VOLTAGE}. Does not require any interaction with the PC. For correct operation, requires hardwareDetected to be available and up to date, does nothing if the PC did not ask for \texttt{PC\_HARDWARE}. Could it do weird stuff if hardwareDetected is not up to date? The Arduino then goes to \texttt{STATE\_IDLE}, i.e., although the ADCs have been triggered, NO MEASUREMENT DATA IS SAVED! This means that the PC needs to request measurement explicitly via \texttt{PC\_MEASURE}. I don't really see then the use of the automatic switch from \texttt{STATE\_SET\_VOLTAGE} to \texttt{STATE\_TRIGGER\_ADCS}, especially if the idea was to have the Arduino take care of the timings to avoid lag from the PC!!
+
+\item \texttt{STATE\_AUTOGAIN}: finds the optimal gain for the available ADCs, measuring 20 values (I THOUGHT WE SAID 25!) with both ADCs at gain=0 and at 500~Hz. This triggers first a self-calibration for the two ADCs (in parallel), that takes $\approx120$~ms. Then takes one measurement per state-machine loop (HOW FAST IS A SINGLE MEASUREMENT? COULD WE GET IT FASTER BY TAKING THE 25 MEASUREMENTS WITHOUT GOING THROUGH THE LOOP?), while keeping track of the smallest and largest among the values measured. Finally, chooses the gain such that the worst-case scenario measurement (peak-to-peak, plus the largest among max and min) is above 1/4 of the values that can be measured with that gain. QUESTION: I could not understand whether one needs to explicitly trigger the ADCs before \texttt{selfCalibrateAllADCs()}, or if the stuff done in there via either \texttt{AD7705selfCalibrate()} or \texttt{AD7705waitForCalibration()} already triggers.
+
+	It may reach a \texttt{STATE\_ERROR} due to \texttt{ERROR\_TIMEOUT} if it takes longer than 5 sec to acquire all the measurements needed.
+
+\item \texttt{STATE\_ADC\_MEASURE}: Measures a number of values from all the available ADCs, and averages them (one value per state-loop). Requires to know which channels are to be measured, so one should call \texttt{PC\_INIT\_ADC} beforehand. This is currently unchecked! Currently, it does not tell the PC when the values are ready to be measured, but simply throws them back via the serial line once they are ready, after going to the \texttt{STATE\_ADC\_VALUES\_READY}. During measurement, the values are checked against the saturation thresholds, possibly triggering a gain switch: an immediate gain switch occurs when the value is solidly saturating, if it is possible to reduce the gain; a gain switch is scheduled if the value is not in the central $\approx50\%$ of the current range, but the actual gain switch currently happens only in \texttt{STATE\_SET\_VOLTAGE}. This means it does not happen when not measuring a ramp (e.g., a time series at constant energy). Also, we are not checking whether the LM35 is reading a temperature that is too high (to discuss what this threshold should be. Probably the \texttt{LM35\_MAX\_ADU} of 80degC is too high). Other observations: (1) we are currently throwing away the whole set of measurements if we reach solid saturation. Perhaps we could just \texttt{>>1} the relevant \texttt{summedMeasurements}, and skip the data point for all three ADCs. (2) The decision on whether we need to switch gain is done based on the currently measured value, but it should actually also take into account of the RIPPLE (which is not set to a value anywhere)!
+
+	It may reach a \texttt{STATE\_ERROR} with (i) \texttt{ERROR\_TIMEOUT} if more than 5s pass between the receipt of  \texttt{PC\_MEASURE} and the completion of the \texttt{nMeasurementsToDo}; (ii) \texttt{ERROR\_ADC\_SATURATED} if one of the values measured by the external ADCs available reaches solid saturation, and its gain cannot be decreased further. Notes on errors that we are not handling: (a) measurement requires the ADCs to be already triggered, so \texttt{PC\_MEASURE} cannot be requested before a \texttt{STATE\_TRIGGER\_ADCS} has been successfully completed. Should throw an \texttt{ERROR\_REQUEST\_PRECEDENCE} if this is not the case. (b) We may want to also check for possible errors in the LM35, see \texttt{ERROR\_TOO\_HOT}.
+
+\item \texttt{STATE\_ADC\_VALUES\_READY}: This state cannot be reached directly from a PC command. It is the state that automatically follows successful completion of \texttt{STATE\_ADC\_MEASURE}. Currently it sends back all the available data as three separate messages. It would be better to return a single message with the data that was actually requested. Always goes straight to \texttt{STATE\_IDLE} at the end and currently cannot go into a \texttt{STATE\_ERROR}. We may consider checking whether we come from a \texttt{STATE\_ADC\_VALUES\_READY}, but this may be problematic if we later want to allow the PC to ask for data even if the measurement is not completely over.
+
+\item \texttt{STATE\_GET\_HARDWARE}: Currently, returns to the PC a 2-byte bit mask indicating the current hardware configuration. Retrieving what is present from the bitmask can be done by bitwise AND with \texttt{ADC\_0\_PRESENT} [bit 0 == LSb], \texttt{ADC\_1\_PRESENT} [bit 1], \texttt{LM35\_PRESENT} [bit 2], \texttt{RELAY\_PRESENT} [bit 3], \texttt{JP\_I0\_CLOSED} [bit 4] ($I_0$ input range is 0--2.5~V instead of 0--10~V), \texttt{JP\_AUX\_CLOSED} [bit 5] (AUX range is 0--2.5~V instead of 0--10~V). For what concerns the PC, only the LSB is likely interesting, since the ADC measurements already return with the correct values. NOTES: (1) when measuring $I_0$ the return value is in volts. Thus the PC needs to know the V$\leftrightarrow\mu$A conversion. (2) I did not see anywhere a way to actually switch the relay electronically, which one may trigger with a command from the PC to switch the input range for the $I_0$ current. To discuss again if this was meant to be an option. (3) Ideally, we would also like to send back the 2-byte \texttt{FIRMWARE\_VERSION} before the hardware information (within the same message)
+
+\item \texttt{STATE\_INITIAL\_CALIBRATION}: In this state the ADCs are self-calibrated in parallel for all the possible gain values and for the currently selected channel. This state take long to complete (120~ms per calibration point, 3 points per gain to compute medians, 8 gain values. In total $\approx3$~s). There are several issues with the current implementation. (1) Calibration is always done at 50~Hz. This is because \texttt{updateRate} is not available (it currently comes as part of the data message associated with \texttt{PC\_INIT\_ADC}). Solution: have \texttt{PC\_CALIBRATION} require some data as a second message. One of the bytes is \texttt{updateRate}. (2) Calibration is only done for the current channel for both ADCs because the channel information is not available (it currently comes as part of the data message associated with \texttt{PC\_INIT\_ADC}). Solution: have the data message for \texttt{PC\_CALIBRATION} of the previous point also contain one byte for the channels to be calibrated. This must be done with a bitmask, as we may want to perform a calibration for both channels of the both ADCs. The channels given here may be more than those for which measurements are requested later with \texttt{PC\_INIT\_ADC}. (3) Currently the \texttt{initialCalibration()} function cannot time out. This may lead to an unresponsive state in which we wait forever for a self-calibration to finish (e.g., the power plug is disconnected, but the Arduino is still up). (4) once (1+2) are solved, there may be a second way to time out, i.e., no data comes from the PC. (5) Currently the Arduino does not tell back the PC that the calibration requested ran successfully. Thus the PC does not know when it is over. This is problematic, especially considering that this state may last for as long as 6 s.
+
+\end{itemize}
+
+\end{document}
