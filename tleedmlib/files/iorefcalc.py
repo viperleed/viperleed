@@ -477,12 +477,10 @@ def writeAUXGEO(sl, rp):
             writelist = layer.atlist
         writelist.sort(key=lambda atom: -atom.pos[2])
         for atom in writelist:
-            if not rp.LAYER_STACK_VERTICAL:
-                writepos = atom.posInLayer
-            else:
-                writepos = atom.cartpos - np.array([nblayers[-1].cartori[0],
-                                                    nblayers[-1].cartori[1],
-                                                    atom.layer.cartori[2]])
+            writepos = atom.cartpos - atom.layer.cartori
+            if rp.LAYER_STACK_VERTICAL:
+                writepos += np.append(atom.layer.cartori[:2]
+                                      - blayers[0].cartori[:2], 0)
             ol = i3.write([sl.sitelist.index(atom.site)+1])
             if natoms != 1:
                 ol += f74x3.write([writepos[2], writepos[0], writepos[1]])
@@ -590,7 +588,7 @@ def writeAUXGEO(sl, rp):
     output += ol + 'NSTACK: number of layers stacked onto bulk\n'
     for layer in list(reversed(nblayers)):
         n = layer.num + 1
-        if layer == nblayers[-1] or not rp.LAYER_STACK_VERTICAL:
+        if not rp.LAYER_STACK_VERTICAL:
             v = sl.layers[n].cartori - layer.cartori
         else:
             v = np.zeros(3)

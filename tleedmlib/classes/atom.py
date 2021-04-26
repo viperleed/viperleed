@@ -85,7 +85,6 @@ class Atom:
         self.layer = None
         self.site = None
         self.cartpos = None
-        self.posInLayer = None
         self.linklist = []
         self.displist = []
         self.freedir = 1

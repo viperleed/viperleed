@@ -452,7 +452,7 @@ class Slab:
         if len(self.layers) < 2:
             return 0
         self.getCartesianCoordinates()
-        return min([(self.layers[i].carttopz - self.layers[i-1].cartbotz)
+        return min([(self.layers[i].cartori[2] - self.layers[i-1].cartbotz)
                     for i in range(1, len(self.layers))])
 
     def updateElements(self, rp):
