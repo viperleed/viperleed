@@ -12,20 +12,26 @@
 \begin{document}
 \titlepage
 
+Arduino program flow should be as follows:
+\begin{itemize}
+\item Prepare for measurement: \texttt{PC\_CALIBRATION}, \texttt{PC\_INIT\_ADC}, \texttt{PC\_SET\_VOLTAGE} (first voltage to measure, but do not care about data that may come back, after dacSettlingTime has elapsed), wait for \texttt{PC\_OK} reply (dacSettlingTime is over), then \texttt{PC\_AUTOGAIN}
+\item Measure IV curve: \texttt{PC\_SET\_VOLTAGE} (again the same), wait for \texttt{PC\_OK} reply, trigger camera and wait for data to come back; then \texttt{PC\_SET\_VOLTAGE} (next voltage step), \ldots
+\end{itemize}
+
 \section{Communication with PC}
-\textbf{Communication protocol}: Each communication message between PC and Arduino is composed of \texttt{MSG\_START} + 1~byte for length of message that follows + \texttt{message} + \texttt{MSG\_END}. With the exception of error messages sent back from the Arduino to the PC, each byte in \texttt{message} as well as in the length byte (TRUE?? If it is also encoded, we are not decoding it. Otherwise we are limited to \texttt{MSG\_END}~$-1$  bytes) is encoded as follows: if the ASCII representation of the byte would be larger or equal (??) than a \texttt{MSG\_SPECIAL\_BYTE}, the byte is transformed into 2 bytes, the first one is \texttt{MSG\_SPECIAL\_BYTE}, the second is \texttt{byte} $-$ \texttt{MSG\_SPECIAL\_BYTE}. Currently, error messages are a mess.
+\textbf{Communication protocol}: Each communication message between PC and Arduino is composed of \texttt{MSG\_START} + 1~byte for length of message that follows, before encoding + \texttt{message} + \texttt{MSG\_END}. With the exception of error messages sent back from the Arduino to the PC, each byte in \texttt{message} is encoded as follows: if the ASCII representation of the byte would be larger or equal than a \texttt{MSG\_SPECIAL\_BYTE}, the byte is transformed into 2 bytes, the first one is \texttt{MSG\_SPECIAL\_BYTE}, the second is \texttt{byte} $-$ \texttt{MSG\_SPECIAL\_BYTE}. Currently, error messages are a mess.
 
 \vspace*{\baselineskip}
 \noindent\textbf{From PC to Arduino}: The Arduino will in some cases expect a second message, including data relative to the original message sent. Here a list of the data expected in the second message, as well as the replies expected for successful completion (`data' indicates that the reply arrives after the data is received; `end' means when the operations requested are successfully completed; there always may be an error response, see Section~\ref{sec:state_machine}). Neither `Data bytes' nor `Reply bytes' take into account encoding, so the messages may be twice as long. Also missing is the byte with the message length (so 1 more byte).
 
 \begin{center}
-\begin{tabular}{lcp{.32\textwidth}lc}\toprule
+\begin{tabular}{lcp{.32\textwidth}p{.2\textwidth}c}\toprule
 Original message          & Data bytes & Meaning of data bytes  & Reply & Reply bytes\\\midrule
 \texttt{PC\_HARDWARE}     & ---        & ---								        & \texttt{hardwareDetected} & 2\\
 \texttt{PC\_CALIBRATION}  & !---!      & ---                                        & !---!                     & ---\\
 \texttt{PC\_INIT\_ADC}    & 5 & adc0Channel, adc1Channel, adcRate, no.\ measurements MSB, no.\ measurements LSB & data:\texttt{PC\_OK}  & 1\\
 \texttt{PC\_AUTOGAIN}     & ---        & ---                                        & end:\texttt{PC\_OK}       & 1\\
-\texttt{PC\_SET\_VOLTAGE} & 4          & dacValue MBS, dacValue LSB, dacSettlingTime MSB, dacSettlingTime LSB & None & ---\\
+\texttt{PC\_SET\_VOLTAGE} & 4          & dacValue MBS, dacValue LSB, dacSettlingTime MSB, dacSettlingTime LSB & !None! Should do \texttt{PC\_OK} after dacSettlingTime is elapsed & ---\\
 \texttt{PC\_MEASURE}      & ---        & ---                                        & end:$3\times$voltages     & 3$\times$4\\
 \bottomrule
 \end{tabular}
@@ -60,9 +66,9 @@ Original message          & Data bytes & Meaning of data bytes  & Reply & Reply 
 	\texttt{ERROR\_SERIAL\_OVERFLOW}    & 1     & Arduino serial buffer is full (64 unprocessed characters). The PC sent too many requests that could not be processed in time. The latest messages sent from the PC are likely lost.\\
 	\texttt{ERROR\_MSG\_TOO\_LONG}      & 2     & The PC sent a message that contained too many characters to be processed. Either message was corrupted, or the firmware version is incompatible.\\
 	\texttt{ERROR\_MSG\_INCONSITENT}    & 3     & The message received is inconsistent. Typically when the number of bytes effectively read does not match the one expected from the info in the message itself. Typically means that the message got corrupted.\\
-	\texttt{ERROR\_MSG\_UNKNOWN}        & 4     & The PC sent an unknown command, i.e. not one of those in paragraph \textit{From PC to Arduino} at the beginning of this Section.\\
+	\texttt{ERROR\_MSG\_UNKNOWN}        & 4     & The PC sent an unknown command, i.e. not one of those in paragraph \textit{From PC to Arduino} at the beginning of this Section. Only check for 1-byte long stuff.\\
 	\texttt{ERROR\_MSG\_DATA\_INVALID}  & 5     & The message was understood, but some of the data passed is inappropriate.\\
-	\texttt{ERROR\_REQUEST\_TOO\_EARLY} & 6     & The message was understood, but the request cannot be fulfilled because it requires information that needs another command to come before this.\\
+	\texttt{ERROR\_NEVER\_CALIBRATED}   & 6     & The ADCs need to be calibrated at least once with \texttt{PC\_CALIBRATION} after the boot up of the Arduino. This has not been done.\\
 	\texttt{ERROR\_TIMEOUT}             & 7     & It was not possible to complete an operation in time. It may mean that (i) the Arduino was waiting for data from the PC that never arrived, or (ii) the internal communication with the ADCs was interrupted, likely because the power supply was disconnected while running.\\
 	\texttt{ERROR\_ADC\_SATURATED}      & 8     & The input of one of the ADCs reached solid saturation, and it is not possible to decrease the gain further. May signal an internal malfunction, or that an input cable is incorrectly connected.\\
 	\texttt{ERROR\_TOO\_HOT}            & 9     & The temperature measured by the LM35 is very high. There may be some internal malfunction (either the sensor or the board).\\
@@ -108,7 +114,7 @@ State					      & Initiated by                 & Handler                        
 
 	It may reach a \texttt{STATE\_ERROR} due to \texttt{ERROR\_TIMEOUT} if the PC does not send the needed values as a second message, following \texttt{PC\_SET\_VOLTAGE}, within 5 seconds. We should probably throw an \texttt{ERROR\_REQUEST\_PRECEDENCE} if this state is running before a \texttt{STATE\_SETUP\_ADC} has been completed, i.e., before a \texttt{PC\_INIT\_ADC} command has been issued. This, however, depends also on which hardware configuration we have (not needed if the ADCs are not there).
 
-\item \texttt{STATE\_TRIGGER\_ADCS}: cannot be induced by PC directly. It is the sub-state that follows successful completion of \texttt{STATE\_SET\_VOLTAGE}. Does not require any interaction with the PC. For correct operation, requires hardwareDetected to be available and up to date, does nothing if the PC did not ask for \texttt{PC\_HARDWARE}. Could it do weird stuff if hardwareDetected is not up to date? The Arduino then goes to \texttt{STATE\_IDLE}, i.e., although the ADCs have been triggered, NO MEASUREMENT DATA IS SAVED! This means that the PC needs to request measurement explicitly via \texttt{PC\_MEASURE}. I don't really see then the use of the automatic switch from \texttt{STATE\_SET\_VOLTAGE} to \texttt{STATE\_TRIGGER\_ADCS}, especially if the idea was to have the Arduino take care of the timings to avoid lag from the PC!!
+\item \texttt{STATE\_TRIGGER\_ADCS}: cannot be induced by PC directly. It is the sub-state that follows successful completion of \texttt{STATE\_SET\_VOLTAGE}. Does not require any interaction with the PC. For correct operation, requires hardwareDetected to be available and up to date, does nothing if the PC did not ask for \texttt{PC\_HARDWARE}. Could it do weird stuff if hardwareDetected is not up to date? The Arduino then goes to \texttt{STATE\_IDLE}, i.e., although the ADCs have been triggered, NO MEASUREMENT DATA IS SAVED! This means that the PC needs to request measurement explicitly via \texttt{PC\_MEASURE}. I don't really see then the use of the automatic switch from \texttt{STATE\_SET\_VOLTAGE} to \texttt{STATE\_TRIGGER\_ADCS}, especially if the idea was to have the Arduino take care of the timings to avoid lag from the PC!! IT MUST GO TO \texttt{STATE\_ADC\_MEASURE}.
 
 \item \texttt{STATE\_AUTOGAIN}: finds the optimal gain for the available ADCs, measuring 20 values (I THOUGHT WE SAID 25!) with both ADCs at gain=0 and at 500~Hz. This triggers first a self-calibration for the two ADCs (in parallel), that takes $\approx120$~ms. Then takes one measurement per state-machine loop (HOW FAST IS A SINGLE MEASUREMENT? COULD WE GET IT FASTER BY TAKING THE 25 MEASUREMENTS WITHOUT GOING THROUGH THE LOOP?), while keeping track of the smallest and largest among the values measured. Finally, chooses the gain such that the worst-case scenario measurement (peak-to-peak, plus the largest among max and min) is above 1/4 of the values that can be measured with that gain. QUESTION: I could not understand whether one needs to explicitly trigger the ADCs before \texttt{selfCalibrateAllADCs()}, or if the stuff done in there via either \texttt{AD7705selfCalibrate()} or \texttt{AD7705waitForCalibration()} already triggers.
 
