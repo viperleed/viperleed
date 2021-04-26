@@ -49,9 +49,9 @@ union floatOrBytes{
 #define PC_AUTOGAIN    8    // PC requested auto-gain for ADCs
 #define PC_CALIBRATION 9    // PC requested self-calibration
 #define PC_ERROR     253    // An error occurred
-#define PC_HARDWARE    3    // PC requested hardware configuration              // TODOv: rename to make it clear that also firmware will be returned. Probably PC_GET_CONFIGURATION or similar
-#define PC_INIT_ADC    4    // PC requested initialization of ADCs              // TODOv: rename something like PC_PREPARE_ADCS_FOR_MEASUREMENT  // TODOv: requires calibration data up to date (keep a flag, raise errors if never calibrated since bootup. Flag should be set to false at reset(). The python side will have to keep track of when the last calibration was done, and warn if it is too old.)
-#define PC_MEASURE     6    // PC requested to perform a measurement            // TODOv: rename PC_TRIGGER_ADCS, should lead first to STATE_TRIGGER_ADCS that later automatically ends into STATE_ADC_MEASURE
+#define PC_HARDWARE    3    // PC requested hardware configuration              // TODO: rename to make it clear that also firmware will be returned. Probably PC_GET_CONFIGURATION or similar
+#define PC_INIT_ADC    4    // PC requested initialization of ADCs              // TODO: rename something like PC_PREPARE_ADCS_FOR_MEASUREMENT  // TODO: requires calibration data up to date (keep a flag, raise errors if never calibrated since bootup. Flag should be set to false at reset(). The python side will have to keep track of when the last calibration was done, and warn if it is too old.)
+#define PC_MEASURE     6    // PC requested to perform a measurement            // TODO: rename PC_TRIGGER_ADCS, should lead first to STATE_TRIGGER_ADCS that later automatically ends into STATE_ADC_MEASURE
 #define PC_OK          5    // Acknowledge request from PC
 #define PC_RESET      82    // PC requested a global reset (ASCII 'R')
 #define PC_SET_VOLTAGE 7    // PC requested to set a certain energy
@@ -93,7 +93,7 @@ byte data_send[MSG_MAX_LENGTH];
 /** ------------------------- Finite state machine ------------------------- **/
 
 #define STATE_IDLE                 0  // Wait for requests from PC
-#define STATE_SETUP_ADC            1  // Pick correct ADC channels, update frequency, and no. of measurement points  // TODOv: Maybe rename to STATE_PREPARE_ADCS_FOR_MEASUREMENT, STATE_PREPARE_FOR_MEASUREMENT, or STATE_SETUP_ADCS?
+#define STATE_SETUP_ADC            1  // Pick correct ADC channels, update frequency, and no. of measurement points  // TODO: Maybe rename to STATE_PREPARE_ADCS_FOR_MEASUREMENT, STATE_PREPARE_FOR_MEASUREMENT, or STATE_SETUP_ADCS?
 #define STATE_SET_VOLTAGE          2  // Set a voltage with the DAC
 #define STATE_TRIGGER_ADCS         3  // Start a measurement right now
 #define STATE_ADC_MEASURE          4  // ADC measurements in progress
@@ -177,23 +177,23 @@ bool     adc1ShouldDecreaseGain = false;  // Whether ADC#0 should increase its g
 
 // ADCs: quantities needed for self-calibration
 byte     calibrationGain = 0;           // Gain for which a calibration is currently being performed (in parallel for both ADCs)
-int32_t  selfCalDataForMedian[3][2][2]; // Values from which medians are calculated: three for median, two ADCs, last index is offset(0) & gain(1) // TODOv: this is currently used only locally inside initialCalibration(). Move it in there.
+int32_t  selfCalDataForMedian[3][2][2]; // Values from which medians are calculated: three for median, two ADCs, last index is offset(0) & gain(1) // TODO: this is currently used only locally inside initialCalibration(). Move it in there.
 int32_t  selfCalDataVsGain[AD7705_MAX_GAIN + 1][2][2][2]; // For each gain, two ADCs, two channels each, and last index is offset(0)&gain(1)
 
 // ADCs: variables for measuring and storing the line frequency ripple
 int16_t  maximumPeak[N_MAX_ADCS_ON_PCB];       // Maximum of measurement, one for each ADC
 int16_t  minimumPeak[N_MAX_ADCS_ON_PCB];       // Minimum of measurement, one for each ADC
-int16_t  adc0RipplePP = 0;     // Ripple (peak-peak) measured at gain=0 for ADC#0 during auto-gain  // TODOv: this is unused but should be
-int16_t  adc1RipplePP = 0;     // Ripple (peak-peak) measured at gain=0 for ADC#1 during auto-gain  // TODOv: this is unused but should be
+int16_t  adc0RipplePP = 0;     // Ripple (peak-peak) measured at gain=0 for ADC#0 during auto-gain  // TODO: this is unused but should be
+int16_t  adc1RipplePP = 0;     // Ripple (peak-peak) measured at gain=0 for ADC#1 during auto-gain  // TODO: this is unused but should be
 
-/* // ADC container                                                             // TODOv: use it to simplify code below
+/* // ADC container                                                             // TODO: use it to simplify code below
 struct analogToDigitalConverter {
     byte     chipSelect;    // to be initialized!
     uint16_t present;       // to be initialized!
     byte     channel = AD7705_CH0;
     byte     gain = 0;
     bool     shouldDecreaseGain = false;
-    int16_t  ripplePP = 0;                                   // Ripple (peak-peak) measured at gain=0 during auto-gain    // TODOv: should we keep the largest ripple value ever measured or the latest?
+    int16_t  ripplePP = 0;                                   // Ripple (peak-peak) measured at gain=0 during auto-gain    // TODO: should we keep the largest ripple value ever measured or the latest?
     int32_t  calibrationForGain[AD7705_MAX_GAIN + 1][2][2];  // For each gain, two channels each, and last index is offset(0) & gain(1)
 } externalADCs[N_MAX_ADCS_ON_PCB]; */
 
@@ -207,7 +207,7 @@ union floatOrBytes{                       // Measured ADC voltages, as floats an
   float asFloat;                          // 4-byte array, useful for sending back
   byte asBytes[4];                        // to PC the values measured by the ADCs
 } fDataOutput[N_MAX_MEAS]; */
-floatOrBytes fDataOutput[N_MAX_MEAS];     // Measurements as voltages  // TODOv: rename measuredVoltages[], not so great, find another name
+floatOrBytes fDataOutput[N_MAX_MEAS];     // Measurements as voltages  // TODO: rename measuredVoltages[], not so great, find another name
 
 
 
