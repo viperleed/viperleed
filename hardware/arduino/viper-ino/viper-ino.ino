@@ -87,7 +87,7 @@ void loop() {
                 triggerMeasurements();
             }
             break;
-        case STATE_AUTOGAIN:              // TODO: rename STATE_AUTOGAIN_ADCS
+        case STATE_ADCS_AUTOGAIN:
             findOptimalADCGains();
             break;
         case STATE_ADC_MEASURE:           // TODO: rename STATE_MEASURE_ADCS
@@ -405,7 +405,7 @@ void updateState() {
             adc1Gain = 0;
             selfCalibrateAllADCs(AD7705_500HZ);  // Takes ~13 ms
             numMeasurementsToDo = 25;                                           // TODO: back up numMeasurementsToDo before changing it!
-            currentState = STATE_AUTOGAIN;
+            currentState = STATE_ADCS_AUTOGAIN;
             break;
         case PC_MEASURE:
             initialTime = millis();
@@ -453,7 +453,7 @@ void findOptimalADCGains(){
     -------------
     STATE_ERROR + ERROR_TIMEOUT : if it takes more than 5s to acquire
         all the measurements that are to be acquired
-    STATE_AUTOGAIN (stays) : while it has not yet finished measuring
+    STATE_ADCS_AUTOGAIN (stays) : while it has not yet finished measuring
         all the values required
     STATE_IDLE : successfully finished
     **/
