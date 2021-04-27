@@ -46,15 +46,15 @@ union floatOrBytes{
 #endif
 
 // Acceptable messages for communication with the PC
-#define PC_AUTOGAIN    8    // PC requested auto-gain for ADCs
-#define PC_CALIBRATION 9    // PC requested self-calibration of all ADCs at all gains
-#define PC_ERROR     253    // An error occurred
-#define PC_HARDWARE    3    // PC requested hardware configuration              // TODO: rename to make it clear that also firmware will be returned. Probably PC_GET_CONFIGURATION or similar
-#define PC_INIT_ADC    4    // PC requested initialization of ADCs              // TODO: rename something like PC_PREPARE_ADCS_FOR_MEASUREMENT  // TODO: requires calibration data up to date (keep a flag, raise errors if never calibrated since bootup. Flag should be set to false at reset(). The python side will have to keep track of when the last calibration was done, and warn if it is too old.)
-#define PC_MEASURE     6    // PC requested to perform a measurement            // TODO: rename PC_TRIGGER_ADCS, should lead first to STATE_TRIGGER_ADCS that later automatically ends into STATE_MEASURE_ADCS
-#define PC_OK          5    // Acknowledge request from PC
-#define PC_RESET      82    // PC requested a global reset (ASCII 'R')
-#define PC_SET_VOLTAGE 7    // PC requested to set a certain energy
+#define PC_AUTOGAIN        8    // PC requested auto-gain for ADCs
+#define PC_CALIBRATION     9    // PC requested self-calibration of all ADCs at all gains
+#define PC_ERROR         253    // An error occurred
+#define PC_CONFIGURATION   3    // PC requested hardware configuration              // TODO: rename to make it clear that also firmware will be returned. Probably PC_GET_CONFIGURATION or similar
+#define PC_INIT_ADC        4    // PC requested initialization of ADCs              // TODO: rename something like PC_PREPARE_ADCS_FOR_MEASUREMENT  // TODO: requires calibration data up to date (keep a flag, raise errors if never calibrated since bootup. Flag should be set to false at reset(). The python side will have to keep track of when the last calibration was done, and warn if it is too old.)
+#define PC_MEASURE         6    // PC requested to perform a measurement            // TODO: rename PC_TRIGGER_ADCS, should lead first to STATE_TRIGGER_ADCS that later automatically ends into STATE_MEASURE_ADCS
+#define PC_OK              5    // Acknowledge request from PC
+#define PC_RESET          82    // PC requested a global reset (ASCII 'R')
+#define PC_SET_VOLTAGE     7    // PC requested to set a certain energy
 
 // Error codes
 #define ERROR_NO_ERROR            0   // No error
@@ -99,7 +99,7 @@ byte data_send[MSG_MAX_LENGTH];
 #define STATE_MEASURE_ADCS         4  // ADC measurements in progress
 #define STATE_ADC_VALUES_READY     5  // ADC measurements done
 #define STATE_AUTOGAIN_ADCS        6  // Find optimal gain for both ADCs
-#define STATE_GET_HARDWARE         7  // Find current hardware configuration
+#define STATE_GET_CONFIGURATION    7  // Find current hardware configuration
 #define STATE_CALIBRATE_ADCS       8  // Figure out correct offset and calibration factors for ADCs at all gains.
 #define STATE_ERROR                9  // An error occurred
 uint16_t currentState = STATE_IDLE;   // Keeps track of the current state

@@ -13,7 +13,12 @@ Date: 16.04.2021
 #include "viper-ino.h"   // Arduino-related settings. Includes ADC and DAC
 
 #define DEBUG              true      // Debug mode, writes to serial line, for use in serial monitor
-#define FIRMWARE_VERSION   0x0001    // MMmm, M=major, m=minor. Each of the four bytes can be 0--9 (MAX: 9999 == v99.99). CURENTLY: v0.1
+
+// Firmware version: Each of the four bytes can be 0--9 (MAX: v99.99). CURENTLY: v0.1  // TODO: perhaps there's a better way to do that with a simple macro
+const byte firmwareVersion[4]{0,     // Major, most-significant digit
+                              0,     // Major, least-significant digit
+                              0,     // minor, most-significant digit
+                              1};    // minor, least-significant digit 
 
 
 
@@ -96,10 +101,8 @@ void loop() {
         case STATE_ADC_VALUES_READY:
             sendMeasuredValues();
             break;
-        case STATE_GET_HARDWARE:          // TODO: rename to STATE_GET_CONFIGURATION, as it also needs to return FIRMWARE_VERSION. Make the whole thing a single handler function like the others.
-            hardwareDetected.asInt = getHardwarePresent();
-            encodeAndSend(hardwareDetected.asBytes, 2);
-            currentState = STATE_IDLE;
+        case STATE_GET_CONFIGURATION:
+            getConfiguration();
             break;
         case STATE_CALIBRATE_ADCS:
             calibrateADCsAtAllGains();
@@ -288,7 +291,7 @@ bool decodeAndCheckMessage(){
     switch(data_received[0]){
         case PC_AUTOGAIN: break;
         case PC_CALIBRATION: break;
-        case PC_HARDWARE: break;
+        case PC_CONFIGURATION: break;
         case PC_INIT_ADC: break;
         case PC_MEASURE: break;
         case PC_RESET: break;
@@ -384,9 +387,9 @@ void updateState() {
 
     // !!!!!!! need to remember to not always set newMessage = true             // TODO: What does this mean? when?
     switch(data_received[0]){
-        case PC_HARDWARE:
+        case PC_CONFIGURATION:
             initialTime = millis();
-            currentState = STATE_GET_HARDWARE;
+            currentState = STATE_GET_CONFIGURATION;
             break;
         case PC_INIT_ADC:
             waitingForDataFromPC = true;
@@ -1309,6 +1312,34 @@ uint16_t getHardwarePresent() {
         result |= JP_AUX_CLOSED;
     pinMode(JP_AUX_PIN, INPUT);
     return result;
+}
+
+void getConfiguration(){
+    /**Send firmware version and hardware configuration to PC.
+
+    Writes
+    -----
+    hardwareDetected
+
+    Msg to PC
+    ---------
+    6 data bytes
+        first four are firmware version (M, M, m, m)
+        last two are hardware configuration as bitmask
+
+    Goes to state
+    -------------
+    STATE_IDLE : always
+    **/
+    hardwareDetected.asInt = getHardwarePresent();
+    byte configuration[6] = {firmwareVersion[0], // Major, most-significant digit
+                             firmwareVersion[1], // Major, least-significant digit
+                             firmwareVersion[2], // minor, most-significant digit
+                             firmwareVersion[3], // minor, least-significant digit
+                             hardwareDetected.asBytes[0],
+                             hardwareDetected.asBytes[1]};
+    encodeAndSend(configuration, 6);
+    currentState = STATE_IDLE;
 }
 
 void calibrateADCsAtAllGains(){
