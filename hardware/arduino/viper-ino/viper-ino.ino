@@ -14,11 +14,9 @@ Date: 16.04.2021
 
 #define DEBUG              true      // Debug mode, writes to serial line, for use in serial monitor
 
-// Firmware version: Each of the four bytes can be 0--9 (MAX: v99.99). CURENTLY: v0.1  // TODO: perhaps there's a better way to do that with a simple macro
-const byte firmwareVersion[4]{0,     // Major, most-significant digit
-                              0,     // Major, least-significant digit
-                              0,     // minor, most-significant digit
-                              1};    // minor, least-significant digit 
+// Firmware version (MAX: v255.255). CURENTLY: v0.1
+#define FIRMWARE_VERSION_MAJOR    0  // max 255
+#define FIRMWARE_VERSION_MINOR    1  // max 255
 
 
 
@@ -153,7 +151,7 @@ void readFromSerial() {
         return;
     }
 
-    // TODO: We are currently reading only 1 'character' per sate loop          // ISSUE #11
+    // TODO: We are currently reading only 1 'character' per sate loop          // ISSUE #12
     //       from the serial line. This means that it takes at least
     //       4 state-loop iterations to have the Arduino be responsive
     //       to a command. In the worst case, a single loop iteration
@@ -1337,10 +1335,8 @@ void getConfiguration(){
     STATE_IDLE : always
     **/
     hardwareDetected.asInt = getHardwarePresent();
-    byte configuration[6] = {firmwareVersion[0], // Major, most-significant digit
-                             firmwareVersion[1], // Major, least-significant digit
-                             firmwareVersion[2], // minor, most-significant digit
-                             firmwareVersion[3], // minor, least-significant digit
+    byte configuration[4] = {FIRMWARE_VERSION_MAJOR,
+                             FIRMWARE_VERSION_MINOR,
                              hardwareDetected.asBytes[0],
                              hardwareDetected.asBytes[1]};
     encodeAndSend(configuration, 6);

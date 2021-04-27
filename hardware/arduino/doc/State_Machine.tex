@@ -27,7 +27,7 @@ Arduino program flow should be as follows:
 \begin{center}
 \begin{tabular}{lcp{.32\textwidth}p{.2\textwidth}c}\toprule
 Original message            & Data bytes & Meaning of data bytes  & Reply & Reply bytes\\\midrule
-\texttt{PC\_CONFIGURATION}  & ---        & ---								        & firmware (4 bytes) + hardware (2 bytes) & 6\\
+\texttt{PC\_CONFIGURATION}  & ---        & ---								        & firmware (2 bytes) + hardware (2 bytes) & 4\\
 \texttt{PC\_CALIBRATION}    & !---!      & ---                                        & !---!                     & ---\\
 \texttt{PC\_INIT\_ADC}      & 5 & adc0Channel, adc1Channel, adcRate, no.\ measurements MSB, no.\ measurements LSB & data:\texttt{PC\_OK}  & 1\\
 \texttt{PC\_AUTOGAIN}       & ---        & ---                                        & end:\texttt{PC\_OK}       & 1\\
@@ -41,7 +41,7 @@ Original message            & Data bytes & Meaning of data bytes  & Reply & Repl
 % \vspace*{\baselineskip}
 \noindent\textbf{From Arduino to PC}\\The PC can expect to receive:
 \begin{itemize}
-\item 6 bytes [encoded] containing the information on the current firmware version (first 4 bytes) and hardware settings (last 2), as a reply to \texttt{PC\_CONFIGURATION}. The firmware version comes as 4 digits, i.e. (MAJOR MSB, MAJOR LSB, MINOR MSB, MINOR LSB), each of which can go from zero to 9 (max `9999', i.e. v99.99). The bits in the hardware information have following meaning:
+\item 4 bytes [encoded] containing the information on the current firmware version (first 2 bytes) and hardware settings (last 2), as a reply to \texttt{PC\_CONFIGURATION}. The firmware version comes as (MAJOR, MINOR), i.e., the maximum is v255.255. The bits in the hardware information have the following meaning:
 	  \begin{center}
 	  \begin{tabular}{clp{.5\textwidth}}\toprule
 	  Bit 				 & Mask                     & Meaning\\
@@ -62,7 +62,7 @@ Original message            & Data bytes & Meaning of data bytes  & Reply & Repl
 \item \texttt{PC\_OK} [encoded] in response to \texttt{PC\_INIT\_ADC}, after the data received by the Arduino as the message following \texttt{PC\_INIT\_ADC} has been deemed acceptable and processed. Processing should be relatively fast, as it basically just loads calibration registers into the ADCs, and triggers the conversion of their inputs.
 \item \texttt{PC\_OK} [encoded] in response to \texttt{PC\_AUTOGAIN}, after the whole gain-finding procedure is over (roughly after 70 ms).
 \item Three [encoded] consecutive messages (i.e., each with \texttt{MSG\_START} and \texttt{MSG\_END} characters), each with the 4-byte representation of a 32-bit floating-point number.
-\item Error messages from several possible states. Each error causes two messages to be sent: The first one is the (encoded) \texttt{PC\_ERROR} byte, the second one is a 2-byte data message, where the first byte corresponds to the state in which the error occurred, while the second one is one of this error codes:
+\item Error messages from several possible states. Each error causes two messages to be sent: The first one is the [encoded] \texttt{PC\_ERROR} byte, the second one is a 2-byte [encoded] data message, where the first byte corresponds to the state in which the error occurred, while the second one is one of these error codes:
 
 	\begin{centering}
 	\begin{tabular}{lcp{.5\textwidth}}\toprule
@@ -76,7 +76,7 @@ Original message            & Data bytes & Meaning of data bytes  & Reply & Repl
 	\texttt{ERROR\_TIMEOUT}             & 7     & It was not possible to complete an operation in time. It may mean that (i) the Arduino was waiting for data from the PC that never arrived, or (ii) the internal communication with the ADCs was interrupted, likely because the power supply was disconnected while running.\\
 	\texttt{ERROR\_ADC\_SATURATED}      & 8     & The input of one of the ADCs reached solid saturation, and it is not possible to decrease the gain further. May signal an internal malfunction, or that an input cable is incorrectly connected.\\
 	\texttt{ERROR\_TOO\_HOT}            & 9     & The temperature measured by the LM35 is very high. There may be some internal malfunction (either the sensor or the board).\\
-	\texttt{ERROR\_RUNTIME}				& 255   & The firmware is corrupt or there is a bug. Some function has been called with inappropriate values.\\
+	\texttt{ERROR\_RUNTIME}				& 255   & The firmware is corrupt or there is a bug. Some function has been called with inappropriate values or while the Arduino is in the wrong state.\\
 	\bottomrule
 	\end{tabular}
 	\end{centering}
