@@ -329,7 +329,8 @@ C           gaps in the spectra set MNGAP to 1 to avoid zero-sized arrays)
 
 
 def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
-                    plotcolors=None, analysisFile='', v0i=0.):
+                    plotcolors=None, analysisFile='', v0i=0.,
+                    figs_per_page=2):
     '''
     Creates a single PDF file containing the plots of R-factors
 
@@ -355,6 +356,12 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
     v0i: kwarg, float
              imaginary part of the inner potential for calculating Y-functions.
              Should always be passed if analysisFile is passed.
+    figs_per_page : int or (int, int)
+             Define how many figures to plot on each page. Either tuple
+             (columns, rows), or single integer (preferred). For single int,
+             layout will be adapted automatically. Numbers that are not nicely
+             divisible may be rounded up, resulting in some whitespace. The
+             default is 2 (one column, two rows).
 
     Returns
     -------
@@ -417,8 +424,20 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
     ymax = max(max(xy[:, 1]) for xy in [*xyTheo, *xyExp] if len(xy) != 0)
     dy = ymax - ymin
 
+    # Figure out how to arrange the figures
+    if type(figs_per_page) == int:
+        xfigs = int(np.round(np.sqrt(figs_per_page/2)))
+        yfigs = int(np.ceil(figs_per_page / xfigs))
+        if xfigs*yfigs != figs_per_page:
+            logger.debug("R-factor plots: Figures per page corrected from {} "
+                         "to {}".format(figs_per_page, xfigs*yfigs))
+            figs_per_page = xfigs*yfigs
+    else:
+        xfigs, yfigs = figs_per_page
+        figs_per_page = xfigs*yfigs
+    figsize = (7., 3.5 * yfigs / xfigs)
+
     # Set up stuff needed for the plots
-    # (will pack two plots per each pdf page)
 
     try:
         pdf = PdfPages(outName)
@@ -427,7 +446,6 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
                      .format(outName))
         return
 
-    figsize = (7, 7)
     # set ticks spacing to 50 eV and round the x limits to a multiple of it
     tick = 50
     tickloc = plticker.MultipleLocator(base=tick)
@@ -437,12 +455,13 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
              np.ceil(xmax/tick)*tick)
     dx = xlims[1] - xlims[0]
 
-    ylims = (ymin - 0.02*dy, ymax + 0.22*dy)
-
-    # positions of the beam name and R factor text
-    namePos = (xlims[0] + 0.45*dx, ylims[1] - 0.1*dy)
-    rPos = (namePos[0], namePos[1]-0.085*dy)
+    # positions and scales, depending on number of figures per page
     figs = []
+    fontscale = 1 / np.sqrt(xfigs)
+    linewidth = 1.5 * fontscale
+    ylims = (ymin - 0.02*dy, ymax + 0.22*dy/fontscale)
+    namePos = (xlims[0] + 0.02*dx, ylims[1] - 0.1*dy/fontscale)
+    rPos = (namePos[0], namePos[1]-0.085*dy/fontscale)
     # the following will spam the logger with debug messages; disable.
     loglevel = logger.level
     logger.setLevel(logging.INFO)
@@ -451,24 +470,48 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
                                                           xyTheo, xyExp)):
             if len(exp) == 0:
                 continue
-            if ct % 2 == 0:
+            if ct % figs_per_page == 0:
                 # need a new figure
-                # squeeze=True returns the 2 axes as a 1D (instead of 2D) array
-                fig, axs = plt.subplots(2, figsize=figsize, squeeze=True)
-                fig.subplots_adjust(left=0.08, right=0.92,
-                                    bottom=0.07, top=0.98,
-                                    wspace=0, hspace=0.07)
+                fig, axs = plt.subplots(yfigs, xfigs, figsize=figsize,
+                                        squeeze=False)
+                axs = axs.flatten(order='F')  # flatten column-style
+                # botspace = max(0.14 * xfigs/yfigs, 0.7 * fontscale)
+                # botspace = 0.14 / (yfigs * fontscale)
+                # if xfigs >= yfigs:
+                #     botspace = 0.14 * fontscale
+                fig.subplots_adjust(left=(0.03 / (xfigs * fontscale)),
+                                    right=(1 - 0.03 / (xfigs * fontscale)),
+                                    bottom=(0.14 / (yfigs * fontscale)),
+                                    top=(1 - 0.02 / (yfigs * fontscale)),
+                                    wspace=0.04 / fontscale,
+                                    hspace=0.02 / fontscale)
                 figs.append(fig)
                 [ax.set_xlim(*xlims) for ax in axs]
                 [ax.set_ylim(*ylims) for ax in axs]
                 [ax.get_yaxis().set_visible(False) for ax in axs]
-                [ax.tick_params(bottom=True,
-                                top=True,
-                                axis='x', direction='in') for ax in axs]
+                [sp.set_linewidth(0.8*linewidth) for ax in axs
+                 for sp in ax.spines.values()]
+                # [ax.tick_params(bottom=True, top=True, axis='x',
+                #                 direction='in', labelsize=9*fontscale,
+                #                 pad=5*fontscale, width=0.8*linewidth,
+                #                 length=4*fontscale)
+                #     for ax in axs]
                 [ax.xaxis.set_major_locator(tickloc) for ax in axs]
-                axs[1].set_xlabel("Energy (eV)")
-
-            idx = ct % 2
+                for i, ax in enumerate(axs):
+                    if ((i+1) % yfigs == 0
+                            or (ct//figs_per_page == len(beams)//figs_per_page
+                                and i+1 == len(beams) % figs_per_page)):
+                        ax.set_xlabel("Energy (eV)", fontsize=10*fontscale,
+                                      labelpad=4*fontscale)
+                        ax.tick_params(bottom=True, top=True, axis='x',
+                                       direction='in', labelsize=9*fontscale,
+                                       pad=5*fontscale, width=0.8*linewidth,
+                                       length=3*fontscale)
+                    else:
+                        ax.tick_params(bottom=True, top=True, axis='x',
+                                       direction='in', labelbottom=False,
+                                       width=0.8*linewidth, length=3*fontscale)
+            idx = ct % figs_per_page
             if plotcolors is not None:
                 if not all([matplotlib.colors.is_color_like(s)
                             for s in plotcolors]):
@@ -476,22 +519,27 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
                     logger.warning("writeRfactorPdf: Specified colors not "
                                    "recognized, reverting to default colors")
             if plotcolors is None:
-                axs[idx].plot(theo[:, 0], theo[:, 1], label='Theoretical',)
-                axs[idx].plot(exp[:, 0], exp[:, 1], label='Experimental')
+                axs[idx].plot(theo[:, 0], theo[:, 1], label='Theoretical',
+                              linewidth=linewidth)
+                axs[idx].plot(exp[:, 0], exp[:, 1], label='Experimental',
+                              linewidth=linewidth)
             else:
                 axs[idx].plot(theo[:, 0], theo[:, 1], label='Theoretical',
-                              color=plotcolors[0])
+                              color=plotcolors[0], linewidth=linewidth)
                 axs[idx].plot(exp[:, 0], exp[:, 1], label='Experimental',
-                              color=plotcolors[1])
-            axs[idx].annotate(name, namePos, fontsize=11)
-            axs[idx].annotate("R = {:.4f}".format(rfact), rPos, fontsize=11)
-            axs[idx].legend()
+                              color=plotcolors[1], linewidth=linewidth)
+            axs[idx].annotate(name, namePos, fontsize=10*fontscale)
+            axs[idx].annotate("R = {:.4f}".format(rfact), rPos,
+                              fontsize=10*fontscale)
+            legend = axs[idx].legend(fontsize=9*fontscale, loc="upper right",
+                                     frameon=False)
+            legend.get_frame().set_linewidth(linewidth)
 
         # finally, in case the last figure is empty (i.e. the number of beams
         # is odd) turn off the last axes (but leave the blank space).
-        if len(beams) % 2 == 1:
-            axs[1].axis('off')
-            axs[0].set_xlabel("Energy (eV)")
+        if len(beams) % figs_per_page != 0:
+            for a in axs[-(figs_per_page - len(beams) % figs_per_page):]:
+                a.axis('off')
 
         for fig in figs:
             pdf.savefig(fig)

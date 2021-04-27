@@ -24,7 +24,7 @@ knownParams = [
     'ELEMENT_RENAME', 'FILAMENT_WF', 'FORTRAN_COMP', 'HALTING',
     'IV_SHIFT_RANGE', 'LAYER_CUTS', 'LAYER_STACK_VERTICAL', 'LMAX',
     'LOG_DEBUG', 'LOG_SEARCH', 'N_BULK_LAYERS', 'N_CORES', 'PARABOLA_FIT',
-    'PHASESHIFT_EPS', 'PLOT_COLORS_RFACTOR', 'RUN', 'R_FACTOR_SMOOTH',
+    'PHASESHIFT_EPS', 'PLOT_RFACTOR', 'RUN', 'R_FACTOR_SMOOTH',
     'R_FACTOR_TYPE', 'SCREEN_APERTURE', 'SEARCH_BEAMS', 'SEARCH_CONVERGENCE',
     'SEARCH_CULL', 'SEARCH_MAX_GEN', 'SEARCH_POPULATION', 'SEARCH_START',
     'SITE_DEF', 'SUPERLATTICE', 'SUPPRESS_EXECUTION', 'SYMMETRIZE_INPUT',
@@ -32,7 +32,8 @@ knownParams = [
     'SYMMETRY_FIX', 'TENSOR_INDEX', 'TENSOR_OUTPUT', 'THEO_ENERGIES',
     'TL_VERSION', 'T_DEBYE', 'T_EXPERIMENT', 'V0_IMAG', 'V0_REAL',
     'V0_Z_ONSET', 'VIBR_AMP_SCALE']
-paramAlias = {}  # keys should be all lowercase, with no underscores
+# paramAlias keys should be all lowercase, with no underscores
+paramAlias = {'plotrfactors': "PLOT_RFACTOR"}
 for p in knownParams:
     paramAlias[p.lower().replace("_", "")] = p
 
@@ -820,21 +821,63 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                     'PARAMETERS file: PHASESHIFT_EPS: Unexpected value '
                     '(should be between 0 and 1). Input will be ignored.')
                 rpars.setHaltingLevel(1)
-        elif param == 'PLOT_COLORS_RFACTOR':
-            if len(llist) >= 2:
-                if len(llist) > 2:
-                    logger.warning(
-                        'PARAMETERS file: PLOT_COLORS_RFACTOR '
-                        'parameter: Expected two values, found {}. First two '
-                        'values will be used.'.format(len(llist)))
-                    rpars.setHaltingLevel(1)
-                rpars.PLOT_COLORS_RFACTOR = (llist[0], llist[1])
-            else:
-                logger.warning(
-                    'PARAMETERS file: PLOT_COLORS_RFACTOR '
-                    'parameter: Expected two values, found {}. Input will be '
-                    'ignored.'.format(len(llist)))
+        elif param == 'PLOT_RFACTOR':
+            if len(plist) == 1:
+                logger.warning('PARAMETERS file: PLOT_RFACTOR: Found no flag. '
+                               'Input will be ignored.')
                 rpars.setHaltingLevel(1)
+                continue
+            flag = plist[1].lower()
+            if flag not in ('color', 'colour', 'colors', 'colours', 'perpage'):
+                logger.warning('PARAMETERS file: PLOT_RFACTOR: Flag {} not '
+                               'recognized. Input will be ignored.'
+                               .format(flag))
+                rpars.setHaltingLevel(1)
+                continue
+            if flag in ('color', 'colour', 'colors', 'colours'):
+                if len(llist) >= 2:
+                    if len(llist) > 2:
+                        logger.warning(
+                            'PARAMETERS file: PLOT_RFACTOR colors: Expected '
+                            'two values, found {}. First two values will be '
+                            'used.'.format(len(llist)))
+                    rpars.PLOT_RFACTOR['colors'] = (llist[0], llist[1])
+                else:
+                    logger.warning(
+                        'PARAMETERS file: PLOT_RFACTOR colors: Expected two '
+                        'values, found {}. Input will be ignored.'
+                        .format(len(llist)))
+            elif flag == 'perpage':
+                if len(llist) == 1:
+                    try:
+                        i = int(llist[0])
+                    except (ValueError, IndexError):
+                        logger.warning(
+                            'PARAMETERS file: PLOT_RFACTOR perpage: Could not '
+                            'convert value to integer. Input will be ignored.')
+                        continue
+                    if i <= 0:
+                        logger.warning(
+                            'PARAMETERS file: PLOT_RFACTOR perpage: Value has '
+                            'to be positive integer. Input will be ignored.')
+                        continue
+                    rpars.PLOT_RFACTOR['perpage'] = i
+                elif len(llist) >= 2:
+                    try:
+                        il = [int(v) for v in llist[:2]]
+                    except (ValueError, IndexError):
+                        logger.warning(
+                            'PARAMETERS file: PLOT_RFACTOR perpage: Could not '
+                            'convert values to integers. Input will be '
+                            'ignored.')
+                        continue
+                    if any([i <= 0 for i in il]):
+                        logger.warning(
+                            'PARAMETERS file: PLOT_RFACTOR perpage: Values '
+                            'have to be positive integers. Input will be '
+                            'ignored.')
+                        continue
+                    rpars.PLOT_RFACTOR['perpage'] = tuple(il)
         elif param == 'RUN':
             rl = []
             for s in llist:
