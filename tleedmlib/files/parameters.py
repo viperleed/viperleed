@@ -828,13 +828,26 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                 rpars.setHaltingLevel(1)
                 continue
             flag = plist[1].lower()
-            if flag not in ('color', 'colour', 'colors', 'colours', 'perpage'):
+            if flag not in ('color', 'colour', 'colors', 'colours', 'perpage',
+                            'border', 'borders', 'axes', 'legend', 'legends',
+                            'layout'):
                 logger.warning('PARAMETERS file: PLOT_RFACTOR: Flag {} not '
                                'recognized. Input will be ignored.'
                                .format(flag))
                 rpars.setHaltingLevel(1)
                 continue
-            if flag in ('color', 'colour', 'colors', 'colours'):
+            if flag in ('border', 'borders', 'axes'):
+                if llist[0].lower() in ('all', 'none'):
+                    rpars.PLOT_RFACTOR['axes'] = llist[0].lower()
+                elif llist[0].lower() in ('less', 'lb'):
+                    rpars.PLOT_RFACTOR['axes'] = 'lb'
+                elif llist[0].lower() in ('bottom', 'b'):
+                    rpars.PLOT_RFACTOR['axes'] = 'b'
+                else:
+                    logger.warning(
+                        'PARAMETERS file: PLOT_RFACTOR {}: Value not '
+                        'recognized. Input will be ignored.'.format(flag))
+            elif flag in ('color', 'colour', 'colors', 'colours'):
                 if len(llist) >= 2:
                     if len(llist) > 2:
                         logger.warning(
@@ -847,7 +860,17 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                         'PARAMETERS file: PLOT_RFACTOR colors: Expected two '
                         'values, found {}. Input will be ignored.'
                         .format(len(llist)))
-            elif flag == 'perpage':
+                    continue
+            elif flag in ('legend', 'legends'):
+                if llist[0].lower() in ('all', 'first', 'none'):
+                    rpars.PLOT_RFACTOR['legend'] = llist[0].lower()
+                elif llist[0].lower() in ('topright', 'tr'):
+                    rpars.PLOT_RFACTOR['legend'] = 'tr'
+                else:
+                    logger.warning(
+                        'PARAMETERS file: PLOT_RFACTOR {}: Value not '
+                        'recognized. Input will be ignored.'.format(flag))
+            elif flag in ('perpage', 'layout'):
                 if len(llist) == 1:
                     try:
                         i = int(llist[0])

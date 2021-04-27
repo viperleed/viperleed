@@ -122,7 +122,8 @@ class Rparams:
                              "localize": 0}
         self.PHASESHIFT_EPS = 0  # defined in updateDerivedParams
         self.PHI = 0.0           # from BEAM_INCIDENCE
-        self.PLOT_RFACTOR = {'colors': None, 'perpage': 2}
+        self.PLOT_RFACTOR = {'axes': 'all', 'colors': None,
+                             'legend': 'all', 'perpage': 2}
         self.RUN = [0, 1, 2, 3]        # what segments should be run
         self.R_FACTOR_TYPE = 1  # 1: Pendry, 2: R2, 3: Zanazzi-Jona
         self.R_FACTOR_SMOOTH = 0

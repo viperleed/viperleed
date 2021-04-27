@@ -232,10 +232,9 @@ def rfactor(sl, rp, index, for_error=False):
         try:
             io.writeRfactorPdf([(b.label, rfaclist[i]) for (i, b)
                                 in enumerate(rp.expbeams)],
-                               plotcolors=rp.PLOT_RFACTOR['colors'],
                                outName=outname, analysisFile=aname,
                                v0i=rp.V0_IMAG,
-                               figs_per_page=rp.PLOT_RFACTOR['perpage'])
+                               formatting=rp.PLOT_RFACTOR)
         except Exception:
             logger.warning("Error plotting R-factors.", exc_info=True)
     return
