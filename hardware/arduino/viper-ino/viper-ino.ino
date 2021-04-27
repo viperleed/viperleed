@@ -87,10 +87,10 @@ void loop() {
                 triggerMeasurements();
             }
             break;
-        case STATE_AUTOGAIN_ADCS:              // TODO: rename STATE_ADCS_AUTOGAIN
+        case STATE_AUTOGAIN_ADCS:
             findOptimalADCGains();
             break;
-        case STATE_ADC_MEASURE:           // TODO: rename STATE_MEASURE_ADCS
+        case STATE_MEASURE_ADCS:
             measureADCs();
             break;
         case STATE_ADC_VALUES_READY:
@@ -285,7 +285,7 @@ bool decodeAndCheckMessage(){
     }
 
     // Check that it is one of the understandable commands
-    switch(data_received[0]):{
+    switch(data_received[0]){
         case PC_AUTOGAIN: break;
         case PC_CALIBRATION: break;
         case PC_HARDWARE: break;
@@ -409,7 +409,7 @@ void updateState() {
             break;
         case PC_MEASURE:
             initialTime = millis();
-            currentState = STATE_ADC_MEASURE;
+            currentState = STATE_MEASURE_ADCS;
             break;
         case PC_CALIBRATION:
             // waitingForDataFromPC = true;  // TODO: will be the case after we rework this
@@ -724,7 +724,7 @@ void measureADCs(){
     STATE_ERROR with ERROR_ADC_SATURATED : if one of the inputs of
         the ADCs has reached saturation, and there is no room
         to decrease the gain.
-    STATE_ADC_MEASURE (stays) : until all the data values that
+    STATE_MEASURE_ADCS (stays) : until all the data values that
         need to be measured have been acquired
     STATE_ADC_VALUES_READY : successfully finished
     **/
@@ -891,11 +891,11 @@ void triggerMeasurements() {
 
     Msg to PC
     ---------
-    None.                                 // TODO: we actually have to return a PC_OK before going to STATE_ADC_MEASURE
+    None.                                 // TODO: we actually have to return a PC_OK before going to STATE_MEASURE_ADCS
 
     Goes to state
     -------------
-    STATE_IDLE : always                  // TODO: must always go to STATE_ADC_MEASURE instead!
+    STATE_IDLE : always                  // TODO: must always go to STATE_MEASURE_ADCS instead!
     **/
     // TODO: hardwareDetected needs to be a valid value before this
     // call makes sense at all. This is currently unchecked for, but
@@ -946,7 +946,7 @@ void makeAndSumMeasurements() {
     STATE_ERROR + ERROR_ADC_SATURATED : if one of the values read
         by the ADCs reaches a solid saturation, and the gain cannot
         be decreased to circumvent the problem.
-    STATE_ADC_MEASURE (stays) : unless a saturation error occurs
+    STATE_MEASURE_ADCS (stays) : unless a saturation error occurs
     */
     // TODO: we should discuss what to do when a measurement saturates.
     //   Currently we are adding the measured value anyway. Perhaps we

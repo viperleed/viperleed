@@ -51,7 +51,7 @@ union floatOrBytes{
 #define PC_ERROR     253    // An error occurred
 #define PC_HARDWARE    3    // PC requested hardware configuration              // TODO: rename to make it clear that also firmware will be returned. Probably PC_GET_CONFIGURATION or similar
 #define PC_INIT_ADC    4    // PC requested initialization of ADCs              // TODO: rename something like PC_PREPARE_ADCS_FOR_MEASUREMENT  // TODO: requires calibration data up to date (keep a flag, raise errors if never calibrated since bootup. Flag should be set to false at reset(). The python side will have to keep track of when the last calibration was done, and warn if it is too old.)
-#define PC_MEASURE     6    // PC requested to perform a measurement            // TODO: rename PC_TRIGGER_ADCS, should lead first to STATE_TRIGGER_ADCS that later automatically ends into STATE_ADC_MEASURE
+#define PC_MEASURE     6    // PC requested to perform a measurement            // TODO: rename PC_TRIGGER_ADCS, should lead first to STATE_TRIGGER_ADCS that later automatically ends into STATE_MEASURE_ADCS
 #define PC_OK          5    // Acknowledge request from PC
 #define PC_RESET      82    // PC requested a global reset (ASCII 'R')
 #define PC_SET_VOLTAGE 7    // PC requested to set a certain energy
@@ -96,7 +96,7 @@ byte data_send[MSG_MAX_LENGTH];
 #define STATE_SETUP_ADC            1  // Pick correct ADC channels, update frequency, and no. of measurement points  // TODO: Maybe rename to STATE_PREPARE_ADCS_FOR_MEASUREMENT, STATE_PREPARE_FOR_MEASUREMENT, or STATE_SETUP_ADCS?
 #define STATE_SET_VOLTAGE          2  // Set a voltage with the DAC
 #define STATE_TRIGGER_ADCS         3  // Start a measurement right now
-#define STATE_ADC_MEASURE          4  // ADC measurements in progress
+#define STATE_MEASURE_ADCS         4  // ADC measurements in progress
 #define STATE_ADC_VALUES_READY     5  // ADC measurements done
 #define STATE_AUTOGAIN_ADCS        6  // Find optimal gain for both ADCs
 #define STATE_GET_HARDWARE         7  // Find current hardware configuration
