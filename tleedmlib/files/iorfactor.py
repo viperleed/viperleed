@@ -516,7 +516,7 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
                 # need a new figure
                 fig, axs = plt.subplots(yfigs, xfigs, figsize=figsize,
                                         squeeze=False)
-                axs = axs.flatten(order='F')  # flatten column-style
+                axs = axs.flatten(order='C')  # flatten row-style
                 fig.subplots_adjust(left=(0.03 / (xfigs * fontscale)),
                                     right=(1 - 0.03 / (xfigs * fontscale)),
                                     bottom=(0.14 / (yfigs * fontscale)),
@@ -533,9 +533,8 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
                 for i, ax in enumerate(axs):
                     for k in axes_visible:
                         ax.spines[k].set_visible(axes_visible[k])
-                    if ((i+1) % yfigs == 0
-                            or (ct//figs_per_page == len(beams)//figs_per_page
-                                and i+1 == len(beams) % figs_per_page)):
+                    if (((i//xfigs) + 1 == figs_per_page//xfigs)
+                            or len(beams) - (ct + i) <= xfigs):
                         ax.set_xlabel("Energy (eV)", fontsize=10*fontscale,
                                       labelpad=4*fontscale)
                         ax.tick_params(bottom=True,
@@ -572,12 +571,8 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
             if (print_legend == 'all'
                     or (print_legend == 'first' and idx == 0)
                     or (print_legend == 'tr'
-                        and idx % yfigs == 0
-                        and (figs_per_page//yfigs == (idx//yfigs) + 1
-                             or ((len(beams) % figs_per_page) // yfigs
-                                 == idx//yfigs
-                                 and (ct//figs_per_page
-                                      == len(beams)//figs_per_page))))):
+                        and (idx//xfigs == 0 and ((idx+1) % xfigs == 0
+                                                  or ct + 1 == len(beams))))):
                 legend = axs[idx].legend(fontsize=9*fontscale,
                                          loc="upper right", frameon=False)
                 legend.get_frame().set_linewidth(linewidth)
