@@ -107,9 +107,8 @@ void loop() {
         case STATE_CALIBRATE_ADCS:
             calibrateADCsAtAllGains();
             break;
-        case STATE_ERROR:                 // TODO: make a proper handler for this one!
-            encodeAndSend(errorTraceback);
-            currentState = STATE_IDLE;
+        case STATE_ERROR:
+            handleErrors();
             break;
     }
 }
@@ -147,12 +146,10 @@ void readFromSerial() {
     if(Serial.available() >= SERIAL_BUFFER_SIZE){  // Should never be '>', but better safe than sorry
         // The serial buffer is full and it potentially
         // already discarded some of the bytes that came
-        errorCode = ERROR_SERIAL_OVERFLOW;
-        errorTraceback = currentState;
+        errorTraceback[0] = currentState;
+        errorTraceback[1] = ERROR_SERIAL_OVERFLOW;
         currentState = STATE_ERROR;
-        // TODO: read and discard whatever is in the buffer. This MUST be done
-        //       in the error handler, where we will first send an error message
-        //       and then clean up the buffer.
+        // The buffer will be flushed in the error handler 
         return;
     }
 
@@ -183,8 +180,8 @@ void readFromSerial() {
         // Make sure we are not going to write
         // past the end of serialInputBuffer
         if (numBytesRead == MSG_MAX_LENGTH) {
-            errorCode = ERROR_MSG_TOO_LONG;
-            errorTraceback = currentState;
+            errorTraceback[0] = currentState;
+            errorTraceback[1] = ERROR_MSG_TOO_LONG;
             currentState = STATE_ERROR;
             return;
         }
@@ -224,7 +221,7 @@ bool decodeAndCheckMessage(){
         in a state that expects data
 
     If a message is not acceptable, it also brings the system
-    to a STATE_ERROR with the appropriate errorCode
+    to a STATE_ERROR with the appropriate error code
 
     Reads
     -----
@@ -268,8 +265,8 @@ bool decodeAndCheckMessage(){
     // Check that the number of bytes decoded fits
     msgLength = serialInputBuffer[1];
     if (msgLength != numDecodedBytes){
-        errorCode = ERROR_MSG_INCONSITENT;
-        errorTraceback = currentState;
+        errorTraceback[0] = currentState;
+        errorTraceback[1] = ERROR_MSG_INCONSITENT;
         currentState = STATE_ERROR;
         return false;
         }
@@ -278,8 +275,8 @@ bool decodeAndCheckMessage(){
         // Message is some data
         if (not waitingForDataFromPC){
             // But we're not expecting any
-            errorCode = ERROR_MSG_UNKNOWN;
-            errorTraceback = currentState;
+            errorTraceback[0] = currentState;
+            errorTraceback[1] = ERROR_MSG_UNKNOWN;
             currentState = STATE_ERROR;
             return false;
         }
@@ -297,8 +294,8 @@ bool decodeAndCheckMessage(){
         case PC_RESET: break;
         case PC_SET_VOLTAGE: break;
         default:
-            errorCode = ERROR_MSG_UNKNOWN;
-            errorTraceback = currentState;
+            errorTraceback[0] = currentState;
+            errorTraceback[1] = ERROR_MSG_UNKNOWN;
             currentState = STATE_ERROR;
             return false;
     }
@@ -385,7 +382,6 @@ void updateState() {
  */
     if (not newMessage) return;
 
-    // !!!!!!! need to remember to not always set newMessage = true             // TODO: What does this mean? when?
     switch(data_received[0]){
         case PC_CONFIGURATION:
             initialTime = millis();
@@ -468,9 +464,8 @@ void findOptimalADCGains(){
     measureADCsRipple();
     if (numMeasurementsDone < numMeasurementsToDo){
         if((millis() -  initialTime) > TIMEOUT){
-            debugToPC("Timeout, Autogain failed, Arduino turns back to IDLE state");
-            errorCode = ERROR_TIMEOUT;
-            errorTraceback = currentState;
+            errorTraceback[0] = currentState;
+            errorTraceback[1] = ERROR_TIMEOUT;
             currentState = STATE_ERROR;
             resetMeasurementData();
             newMessage = false;
@@ -579,9 +574,8 @@ void setUpAllADCs(){
     **/
     if(not newMessage){  // waiting for data from the PC
         if((millis() -  initialTime) > TIMEOUT){
-            debugToPC("Timeout, no ini Values for ADC received!");              // TODO: probably comment out and have the Python take care of it
-            errorCode = ERROR_TIMEOUT;
-            errorTraceback = currentState;
+            errorTraceback[0] = currentState;
+            errorTraceback[1] = ERROR_TIMEOUT;
             currentState = STATE_ERROR;
             newMessage = false;
         }
@@ -597,8 +591,8 @@ void setUpAllADCs(){
     for (byte i = 0; i < 2; i++){
         byte channel = data_received[i];
         if (channel != AD7705_CH0 or channel != AD7705_CH1){
-            errorCode = ERROR_MSG_DATA_INVALID;
-            errorTraceback = currentState;
+            errorTraceback[0] = currentState;
+            errorTraceback[1] = ERROR_MSG_DATA_INVALID;
             currentState = STATE_ERROR;
             newMessage = false;
             return;
@@ -612,8 +606,8 @@ void setUpAllADCs(){
     if (adcUpdateRate != AD7705_50HZ
             or adcUpdateRate != AD7705_60HZ
             or adcUpdateRate != AD7705_500HZ){
-        errorCode = ERROR_MSG_DATA_INVALID;
-        errorTraceback = currentState;
+        errorTraceback[0] = currentState;
+        errorTraceback[1] = ERROR_MSG_DATA_INVALID;
         currentState = STATE_ERROR;
         adcUpdateRate = AD7705_50HZ;
         newMessage = false;
@@ -663,9 +657,8 @@ void setVoltage(){
     **/
     if(not newMessage){   // Waiting for data from PC
         if((millis() -  initialTime) > TIMEOUT){
-            debugToPC("Timeout, no ini Values for DAC received!");
-            errorCode = ERROR_TIMEOUT;
-            errorTraceback = currentState;
+            errorTraceback[0] = currentState;
+            errorTraceback[1] = ERROR_TIMEOUT;
             currentState = STATE_ERROR;
             newMessage = false;
         }
@@ -747,9 +740,8 @@ void measureADCs(){
     }
 
     if((millis() -  initialTime) > TIMEOUT){
-        debugToPC("Timeout, ADC measurement Timeout!");
-        errorCode = ERROR_TIMEOUT;
-        errorTraceback = currentState;
+        errorTraceback[0] = currentState;
+        errorTraceback[1] = ERROR_TIMEOUT;
         currentState = STATE_ERROR;
         newMessage = false;
     }
@@ -846,30 +838,50 @@ void reset(){
     AD5683reset(CS_DAC);
 }
 
-//=========================
-void debugToPC(const char *debugmsg){  // !!!!!!!!!!!!!!! Since we're actually using this to send error messages back, I would rename it accordingly. Probably we should also define some error codes to accompany the message itself.
-/*
- * Sends a debugmessage to the PC by masking the message
- * with a MSG_START +  DEBUGBYTE + the debug message +
- * MSG_END
- *
- * Parameters
- * ----------
- * debugmessage: const char array with variable field declaration
- */
-  byte nb = PC_ERROR;
-  Serial.write(MSG_START);
-  Serial.write(nb);
-  Serial.println(debugmsg);
-  Serial.write(MSG_END);
-}
-//=========================
-void debugToPC(byte debugbyte){
-  byte nb = 0;
-  Serial.write(MSG_START);
-  Serial.write(nb);
-  Serial.write(debugbyte);
-  Serial.write(MSG_END);
+
+void handleErrors(){
+    /**Handler for STATE_ERROR.
+    
+    Takes care of cleaning up things after an error occurred,
+    and reports the error information to the PC.
+    
+    Reads
+    -----
+    currentState, errorTraceback
+    
+    Msg to PC
+    ---------
+    First message : PC_ERROR
+    Second message : errorTraceback, i.e., two bytes
+        First byte : state of the Arduino while the error occurred
+        Second byte : error code
+    
+    Goes to state
+    -------------
+    STATE_ERROR : if this function is not called inside a STATE_ERROR
+    STATE_IDLE : otherwise
+    **/
+    if (currentState != STATE_ERROR){
+        errorTraceback[0] = currentState;
+        errorTraceback[1] = ERROR_RUNTIME;
+        currentState = STATE_ERROR;
+        return;
+    }
+    
+    // First, report the error, so the PC knows
+    // there may be some cleanup going on
+    encodeAndSend(PC_ERROR);
+    encodeAndSend(errorTraceback, 2);
+    
+    // Then clean up possible mess that caused the error
+    switch(errorTraceback[1]){
+        case ERROR_SERIAL_OVERFLOW:
+            // Discard all characters in the serial buffer,
+            // since messages are anyway likely corrupt.
+            while(Serial.available()) Serial.read();
+            break;
+    }
+    currentState = STATE_IDLE;
 }
 
 void resetMeasurementData() {
@@ -1059,9 +1071,8 @@ void checkMeasurementInADCRange(byte chipSelectPin, byte channel, byte gain,
         }
         // if(gain==0){       // TODO: I think this was a bug: if the previous 'if' decreased the gain to zero, this would trigger an error, even with a potentially acceptable value (measured with the lower gain).
         else{
-            debugToPC("ADC Overflow, maximum gain reached, no serious measurements possible...");
-            errorCode = ERROR_ADC_SATURATED;
-            errorTraceback = currentState;
+            errorTraceback[0] = currentState;
+            errorTraceback[1] = ERROR_ADC_SATURATED;
             currentState = STATE_ERROR;
         }
     }
@@ -1132,7 +1143,6 @@ void selfCalibrateAllADCs(byte updateRate) {
     -----
     adc0Channel, adc0Gain, adc1Channel, adc1Gain
     **/
-    // unsigned long startMillis = millis();                                    // TODO: remove, used only in (commented) DEBUG
     if (hardwareDetected.asInt & ADC_0_PRESENT)
         AD7705selfCalibrate(CS_ADC_0, adc0Channel, adc0Gain, updateRate);
     if (hardwareDetected.asInt & ADC_1_PRESENT)
@@ -1141,16 +1151,11 @@ void selfCalibrateAllADCs(byte updateRate) {
         AD7705waitForCalibration(CS_ADC_0, adc0Channel);
     if (hardwareDetected.asInt & ADC_1_PRESENT)
         AD7705waitForCalibration(CS_ADC_1, adc1Channel);
-    // unsigned long endMillis = millis();                                      // TODO: remove, used only in (commented) DEBUG
-    //#ifdef DEBUG
-    //    Serial.print("t_selfCal=");
-    //    Serial.println(endMillis - startMillis);
-    //#endif
 
     // AD7705 needs about 100--200 us to process the
     // self-calibration result. 1 ms delay is on the
     // safe side, and does not make much of a difference
-    // on the overall procedure, which takes ~120 ms
+    // on the overall procedure, which takes ~6/updateRate
     delay(1);
 }
 

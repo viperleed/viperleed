@@ -19,10 +19,10 @@ Arduino program flow should be as follows:
 \end{itemize}
 
 \section{Communication with PC}
-\textbf{Communication protocol}: Each communication message between PC and Arduino is composed of \texttt{MSG\_START} + 1~byte for length of message that follows, before encoding + \texttt{message} + \texttt{MSG\_END}. With the exception of error messages sent back from the Arduino to the PC, each byte in \texttt{message} is encoded as follows: if the ASCII representation of the byte would be larger or equal than a \texttt{MSG\_SPECIAL\_BYTE}, the byte is transformed into 2 bytes, the first one is \texttt{MSG\_SPECIAL\_BYTE}, the second is \texttt{byte} $-$ \texttt{MSG\_SPECIAL\_BYTE}. Currently, error messages are a mess.
+\textbf{Communication protocol}\\Each communication message between PC and Arduino is composed of \texttt{MSG\_START} + 1~byte for length of message that follows, before encoding + \texttt{message} + \texttt{MSG\_END}. Each byte in \texttt{message} is encoded as follows: if the ASCII representation of the byte would be larger or equal than a \texttt{MSG\_SPECIAL\_BYTE}, the byte is transformed into 2 bytes, the first one is \texttt{MSG\_SPECIAL\_BYTE}, the second is \texttt{byte} $-$ \texttt{MSG\_SPECIAL\_BYTE}.
 
 \vspace*{\baselineskip}
-\noindent\textbf{From PC to Arduino}: The Arduino will in some cases expect a second message, including data relative to the original message sent. Here a list of the data expected in the second message, as well as the replies expected for successful completion (`data' indicates that the reply arrives after the data is received; `end' means when the operations requested are successfully completed; there always may be an error response, see Section~\ref{sec:state_machine}). Neither `Data bytes' nor `Reply bytes' take into account encoding, so the messages may be twice as long. Also missing is the byte with the message length (so 1 more byte).
+\noindent\textbf{From PC to Arduino}\\The Arduino will in some cases expect a second message, including data relative to the original message sent. Here a list of the data expected in the second message, as well as the replies expected for successful completion (`data' indicates that the reply arrives after the data is received; `end' means when the operations requested are successfully completed; there always may be an error response, see Section~\ref{sec:state_machine}). Neither `Data bytes' nor `Reply bytes' take into account encoding, so the messages may be twice as long. Also missing is the byte with the message length (so 1 more byte).
 
 \begin{center}
 \begin{tabular}{lcp{.32\textwidth}p{.2\textwidth}c}\toprule
@@ -39,9 +39,9 @@ Original message            & Data bytes & Meaning of data bytes  & Reply & Repl
 
 \clearpage
 % \vspace*{\baselineskip}
-\noindent\textbf{From Arduino to PC}: The information flow from the Arduino to the PC may be
+\noindent\textbf{From Arduino to PC}\\The PC can expect to receive:
 \begin{itemize}
-\item 6 bytes [encoded] containing the information on the current firmware version and hardware settings. The first 4 bytes are the 4 digits of the firmware version, i.e. (MAJOR most-significant digit, MAJOR least-significant digit, MINOR most-significant digit, MINOR least-significant digit), each of which can go from zero to 9 (max `9999', i.e. v99.99). The last 2 bytes contain hardware information with the following meaning. (NB: from the point of view of the PC, it probably makes sense to only look at the four least-significant bits.)
+\item 6 bytes [encoded] containing the information on the current firmware version (first 4 bytes) and hardware settings (last 2), as a reply to \texttt{PC\_CONFIGURATION}. The firmware version comes as 4 digits, i.e. (MAJOR MSB, MAJOR LSB, MINOR MSB, MINOR LSB), each of which can go from zero to 9 (max `9999', i.e. v99.99). The bits in the hardware information have following meaning:
 	  \begin{center}
 	  \begin{tabular}{clp{.5\textwidth}}\toprule
 	  Bit 				 & Mask                     & Meaning\\
@@ -55,16 +55,19 @@ Original message            & Data bytes & Meaning of data bytes  & Reply & Repl
 	  \bottomrule
 	  \end{tabular}
 	  \end{center}
+      
+      NB: from the point of view of the PC, it probably makes sense to only look at the four least-significant bits, as measurement results are already reported back in physical units (volts, microamperes, degrees centigrades).
+
 \item WE NEED SOMETHING AS A REPLY TO \texttt{PC\_CALIBRATION}! 
 \item \texttt{PC\_OK} [encoded] in response to \texttt{PC\_INIT\_ADC}, after the data received by the Arduino as the message following \texttt{PC\_INIT\_ADC} has been deemed acceptable and processed. Processing should be relatively fast, as it basically just loads calibration registers into the ADCs, and triggers the conversion of their inputs.
 \item \texttt{PC\_OK} [encoded] in response to \texttt{PC\_AUTOGAIN}, after the whole gain-finding procedure is over (roughly after 70 ms).
 \item Three [encoded] consecutive messages (i.e., each with \texttt{MSG\_START} and \texttt{MSG\_END} characters), each with the 4-byte representation of a 32-bit floating-point number.
-\item Error messages from several possible states. Right now the error messages are a mess. Possible error codes are
+\item Error messages from several possible states. Each error causes two messages to be sent: The first one is the (encoded) \texttt{PC\_ERROR} byte, the second one is a 2-byte data message, where the first byte corresponds to the state in which the error occurred, while the second one is one of this error codes:
 
 	\begin{centering}
 	\begin{tabular}{lcp{.5\textwidth}}\toprule
 	Error code                          & Value & Reason\\\midrule
-	\texttt{ERROR\_SERIAL\_OVERFLOW}    & 1     & Arduino serial buffer is full (64 unprocessed characters). The PC sent too many requests that could not be processed in time. The latest messages sent from the PC are likely lost.\\
+	\texttt{ERROR\_SERIAL\_OVERFLOW}    & 1     & Arduino serial buffer is full (64 unprocessed characters). The PC sent too many requests that could not be processed in time. The current contents of the serial buffer will be discarded. Wait a few milliseconds before sending a new message to make sure the buffer is fully empty.\\
 	\texttt{ERROR\_MSG\_TOO\_LONG}      & 2     & The PC sent a message that contained too many characters to be processed. Either message was corrupted, or the firmware version is incompatible.\\
 	\texttt{ERROR\_MSG\_INCONSITENT}    & 3     & The message received is inconsistent. Typically when the number of bytes effectively read does not match the one expected from the info in the message itself. Typically means that the message got corrupted.\\
 	\texttt{ERROR\_MSG\_UNKNOWN}        & 4     & The PC sent an unknown command, i.e. not one of those in paragraph \textit{From PC to Arduino} at the beginning of this Section. Only check for 1-byte long stuff.\\
@@ -86,16 +89,16 @@ Original message            & Data bytes & Meaning of data bytes  & Reply & Repl
 Here all the states of Arduino, including which event triggers entering this state, which function contains the code that is relevant for the state, and whether the state leads to a new state after it is successfully completed.
 \begin{center}
 \begin{tabular}{llll}\toprule
-State					        & Initiated by                 & Handler                           & Goes to state        \\\midrule
-\texttt{STATE\_SETUP\_ADC}      & \texttt{PC\_INIT\_ADC}       & \texttt{setUpAllADCs()}           & \texttt{STATE\_IDLE} \\
-\texttt{STATE\_SET\_VOLTAGE}    & \texttt{PC\_SET\_VOLTAGE}    & \texttt{setVoltage()}             & \texttt{STATE\_TRIGGER\_ADCS} \\
-\texttt{STATE\_TRIGGER\_ADCS}   & \texttt{STATE\_SET\_VOLTAGE} & \texttt{triggerMeasurements()}    & \texttt{STATE\_IDLE} \\
-\texttt{STATE\_AUTOGAIN\_ADCS}  & \texttt{PC\_AUTOGAIN}        & \texttt{findOptimalADCGains()}    & \texttt{STATE\_IDLE} \\
+State					        & Initiated by                 & Handler                            & Goes to state        \\\midrule
+\texttt{STATE\_SETUP\_ADC}      & \texttt{PC\_INIT\_ADC}       & \texttt{setUpAllADCs()}            & \texttt{STATE\_IDLE} \\
+\texttt{STATE\_SET\_VOLTAGE}    & \texttt{PC\_SET\_VOLTAGE}    & \texttt{setVoltage()}              & \texttt{STATE\_TRIGGER\_ADCS}\\
+\texttt{STATE\_TRIGGER\_ADCS}   & \texttt{STATE\_SET\_VOLTAGE} & \texttt{triggerMeasurements()}     & \texttt{STATE\_IDLE} \\
+\texttt{STATE\_AUTOGAIN\_ADCS}  & \texttt{PC\_AUTOGAIN}        & \texttt{findOptimalADCGains()}     & \texttt{STATE\_IDLE} \\
 \texttt{STATE\_MEASURE\_ADCS}   & \texttt{PC\_MEASURE} 		   & \texttt{measureADCs()}   & \texttt{STATE\_ADC\_VALUES\_READY}\\
-\texttt{STATE\_ADC\_VALUES\_READY} & \texttt{STATE\_MEASURE\_ADCS} & \texttt{sendMeasuredValues()} & \texttt{STATE\_IDLE}\\
-\texttt{STATE\_GET\_CONFIGURATION} & \texttt{PC\_CONFIGURATION}    & \texttt{getHardwarePresent()} & \texttt{STATE\_IDLE}\\
+\texttt{STATE\_ADC\_VALUES\_READY} & \texttt{STATE\_MEASURE\_ADCS} & \texttt{sendMeasuredValues()}  & \texttt{STATE\_IDLE}\\
+\texttt{STATE\_GET\_CONFIGURATION} & \texttt{PC\_CONFIGURATION}    & \texttt{getConfiguration()}    & \texttt{STATE\_IDLE}\\
 \texttt{STATE\_CALIBRATE\_ADCS} & \texttt{PC\_CALIBRATION}     & \texttt{calibrateADCsAtAllGains()} & \texttt{STATE\_IDLE}\\
-\texttt{STATE\_ERROR}           & Fault                        & None!                             & \texttt{STATE\_IDLE}\\
+\texttt{STATE\_ERROR}           & Fault                        & \texttt{handleErrors()}            & \texttt{STATE\_IDLE}\\
 \bottomrule
 \end{tabular}
 \end{center}

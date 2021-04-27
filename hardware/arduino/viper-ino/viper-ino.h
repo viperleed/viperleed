@@ -49,7 +49,7 @@ union floatOrBytes{
 #define PC_AUTOGAIN        8    // PC requested auto-gain for ADCs
 #define PC_CALIBRATION     9    // PC requested self-calibration of all ADCs at all gains
 #define PC_ERROR         253    // An error occurred
-#define PC_CONFIGURATION   3    // PC requested hardware configuration              // TODO: rename to make it clear that also firmware will be returned. Probably PC_GET_CONFIGURATION or similar
+#define PC_CONFIGURATION   3    // PC requested hardware configuration
 #define PC_INIT_ADC        4    // PC requested initialization of ADCs              // TODO: rename something like PC_PREPARE_ADCS_FOR_MEASUREMENT  // TODO: requires calibration data up to date (keep a flag, raise errors if never calibrated since bootup. Flag should be set to false at reset(). The python side will have to keep track of when the last calibration was done, and warn if it is too old.)
 #define PC_MEASURE         6    // PC requested to perform a measurement            // TODO: rename PC_TRIGGER_ADCS, should lead first to STATE_TRIGGER_ADCS that later automatically ends into STATE_MEASURE_ADCS
 #define PC_OK              5    // Acknowledge request from PC
@@ -68,8 +68,7 @@ union floatOrBytes{
 #define ERROR_ADC_SATURATED       8   // One of the ADC values reached saturation, and gain can't be decreased further
 #define ERROR_TOO_HOT             9   // The temperature read by the LM35 is too high
 #define ERROR_RUNTIME           255   // Some function has been called from an inappropriate state. This is to flag possible bugs for future development.
-byte errorCode;                       // Keeps track of which error occurred
-byte errorTraceback;                  // Keeps track of the state that produced the error
+byte errorTraceback[2];               // Keeps track of: (0) the state that produced the error, (1) which error occurred (one of ERROR_*)
 
 // Variables used while communicating with the PC
 byte numBytesRead = 0;                   // Counter for no. of bytes received. numBytesRead may be larger than the number of true data bytes due to encoding.
