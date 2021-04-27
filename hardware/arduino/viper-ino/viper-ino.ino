@@ -151,46 +151,41 @@ void readFromSerial() {
         return;
     }
 
-    // TODO: We are currently reading only 1 'character' per sate loop          // ISSUE #12
-    //       from the serial line. This means that it takes at least
-    //       4 state-loop iterations to have the Arduino be responsive
-    //       to a command. In the worst case, a single loop iteration
-    //       currently takes ~360 ms (during STATE_CALIBRATE_ADCS).
-    //       This means that it may take as long as ~1.4 seconds to
-    //       Acknowledge a command and stop what's going on.
-    //       Perhaps it would make more sense to read multiple characters
-    //       from the serial line if there is anything available? In fact,
-    //       if there are characters, it means that the PC sent some request
-    //       that would anyway interrupt whatever we are doing after we read
-    //       all the characters (one per state-loop iteration), so there is
-    //       probably no point in waiting for whatever is going on to be over.
+    while (Serial.available()){
+        byte byteRead = Serial.read();
 
-    byte byteRead = Serial.read();
-
-    // New message
-    if (byteRead == MSG_START) {
-        numBytesRead = 0;
-        readingFromSerial = true;
-    }
-
-    // Accumulate characters
-    if(readingFromSerial) {
-        // Make sure we are not going to write
-        // past the end of serialInputBuffer
-        if (numBytesRead == MSG_MAX_LENGTH) {
-            errorTraceback[0] = currentState;
-            errorTraceback[1] = ERROR_MSG_TOO_LONG;
-            currentState = STATE_ERROR;
-            return;
+        // New message
+        if (byteRead == MSG_START) {
+            numBytesRead = 0;
+            readingFromSerial = true;
         }
-        serialInputBuffer[numBytesRead] = byteRead;
-        numBytesRead++;
-    }
 
-    // A full message has been read
-    if (byteRead == MSG_END) {
-        readingFromSerial = false;
-        newMessage = decodeAndCheckMessage();
+        // Accumulate characters
+        if(readingFromSerial) {
+            // Make sure we are not going to write
+            // past the end of serialInputBuffer
+            if (numBytesRead == MSG_MAX_LENGTH) {
+                errorTraceback[0] = currentState;
+                errorTraceback[1] = ERROR_MSG_TOO_LONG;
+                currentState = STATE_ERROR;
+                return;
+            }
+            serialInputBuffer[numBytesRead] = byteRead;
+            numBytesRead++;
+        }
+
+        // A full message has been read
+        if (byteRead == MSG_END) {
+            readingFromSerial = false;
+            newMessage = decodeAndCheckMessage();
+            break;
+        }
+        
+        // Delay a very little bit to make sure new characters
+        // come in, if any. This should be enough to read in a
+        // whole message. If it isn't the case, we will finish
+        // during the next state-loop iteration anyway.
+        delayMicroseconds(20);
     }
 }
 

@@ -51,10 +51,10 @@ union floatOrBytes{
 #define PC_ERROR         253    // An error occurred
 #define PC_CONFIGURATION  63    // PC requested hardware configuration (ASCII '?')              // TODO: change in Python
 #define PC_SET_UP_ADCS     4    // PC requested to prepare the ADCs for a measurement           // TODO: requires calibration data up to date (keep a flag, raise errors if never calibrated since bootup. Flag should be set to false at reset(). The python side will have to keep track of when the last calibration was done, and warn if it is too old.)
-#define PC_TRIGGER_ADCS   84    // PC requested to start a measurement right now (ASCII 'T')    // TODO: should lead first to STATE_TRIGGER_ADCS that later automatically ends into STATE_MEASURE_ADCS // TODO: change in Python
+#define PC_TRIGGER_ADCS   84    // PC requested to start a measurement right now (ASCII 'T')    // TODO: change in Python
 #define PC_OK              5    // Acknowledge request from PC
 #define PC_RESET          82    // PC requested a global reset (ASCII 'R')
-#define PC_SET_VOLTAGE    86    // PC requested to set a certain energy (ASCII 'V')     // TODO: change in Python
+#define PC_SET_VOLTAGE    86    // PC requested to set a certain energy (ASCII 'V')             // TODO: change in Python
 
 // Error codes
 #define ERROR_NO_ERROR            0   // No error
