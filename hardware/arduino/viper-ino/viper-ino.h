@@ -98,7 +98,7 @@ byte data_send[MSG_MAX_LENGTH];
 #define STATE_TRIGGER_ADCS         3  // Start a measurement right now
 #define STATE_ADC_MEASURE          4  // ADC measurements in progress
 #define STATE_ADC_VALUES_READY     5  // ADC measurements done
-#define STATE_ADCS_AUTOGAIN        6  // Find optimal gain for both ADCs
+#define STATE_AUTOGAIN_ADCS        6  // Find optimal gain for both ADCs
 #define STATE_GET_HARDWARE         7  // Find current hardware configuration
 #define STATE_CALIBRATE_ADCS       8  // Figure out correct offset and calibration factors for ADCs at all gains.
 #define STATE_ERROR                9  // An error occurred
