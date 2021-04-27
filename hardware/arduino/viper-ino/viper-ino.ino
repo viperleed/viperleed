@@ -287,7 +287,7 @@ bool decodeAndCheckMessage(){
         case PC_AUTOGAIN: break;
         case PC_CALIBRATION: break;
         case PC_CONFIGURATION: break;
-        case PC_INIT_ADC: break;
+        case PC_SET_UP_ADCS: break;
         case PC_MEASURE: break;
         case PC_RESET: break;
         case PC_SET_VOLTAGE: break;
@@ -385,7 +385,7 @@ void updateState() {
             initialTime = millis();
             currentState = STATE_GET_CONFIGURATION;
             break;
-        case PC_INIT_ADC:
+        case PC_SET_UP_ADCS:
             waitingForDataFromPC = true;
             initialTime = millis();
             currentState = STATE_SETUP_ADC;
@@ -563,8 +563,8 @@ void setUpAllADCs(){
 
     Goes to state
     -------------
-    STATE_ERROR + ERROR_TIMEOUT : if more than 5s pass between the PC_INIT_ADC
-        message and the receipt of data
+    STATE_ERROR + ERROR_TIMEOUT : if more than 5s pass between the
+        PC_SET_UP_ADCS message and the receipt of data
     STATE_ERROR + ERROR_MSG_DATA_INVALID : if either channel or the update rate
         are not acceptable values
     STATE_SETUP_ADC (stays) : while waiting for data from the PC

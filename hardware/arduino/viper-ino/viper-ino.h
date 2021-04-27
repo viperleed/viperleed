@@ -49,8 +49,8 @@ union floatOrBytes{
 #define PC_AUTOGAIN        8    // PC requested auto-gain for ADCs
 #define PC_CALIBRATION     9    // PC requested self-calibration of all ADCs at all gains
 #define PC_ERROR         253    // An error occurred
-#define PC_CONFIGURATION  63    // PC requested hardware configuration (ASCII '?')
-#define PC_INIT_ADC        4    // PC requested initialization of ADCs              // TODO: rename something like PC_PREPARE_ADCS_FOR_MEASUREMENT  // TODO: requires calibration data up to date (keep a flag, raise errors if never calibrated since bootup. Flag should be set to false at reset(). The python side will have to keep track of when the last calibration was done, and warn if it is too old.)
+#define PC_CONFIGURATION  63    // PC requested hardware configuration (ASCII '?')  // TODO: change in Python
+#define PC_SET_UP_ADCS     4    // PC requested initialization of ADCs              // TODO: requires calibration data up to date (keep a flag, raise errors if never calibrated since bootup. Flag should be set to false at reset(). The python side will have to keep track of when the last calibration was done, and warn if it is too old.)
 #define PC_MEASURE         6    // PC requested to perform a measurement            // TODO: rename PC_TRIGGER_ADCS, should lead first to STATE_TRIGGER_ADCS that later automatically ends into STATE_MEASURE_ADCS
 #define PC_OK              5    // Acknowledge request from PC
 #define PC_RESET          82    // PC requested a global reset (ASCII 'R')
