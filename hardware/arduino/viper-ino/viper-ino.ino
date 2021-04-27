@@ -85,7 +85,7 @@ void loop() {
         case STATE_SET_VOLTAGE:
             setVoltage();
             break;
-        case STATE_TRIGGER_ADCS:
+        case STATE_TRIGGER_ADCS:                                                // TODO: must go to STATE_MEASURE_ADCS at the end
             if((millis() - initialTime) >= dacSettlingTime){
                 triggerMeasurements();
             }
@@ -288,7 +288,7 @@ bool decodeAndCheckMessage(){
         case PC_CALIBRATION: break;
         case PC_CONFIGURATION: break;
         case PC_SET_UP_ADCS: break;
-        case PC_MEASURE: break;
+        case PC_TRIGGER_ADCS: break;
         case PC_RESET: break;
         case PC_SET_VOLTAGE: break;
         default:
@@ -404,9 +404,9 @@ void updateState() {
             numMeasurementsToDo = 25;                                           // TODO: back up numMeasurementsToDo before changing it!
             currentState = STATE_AUTOGAIN_ADCS;
             break;
-        case PC_MEASURE:
+        case PC_TRIGGER_ADCS:
             initialTime = millis();
-            currentState = STATE_MEASURE_ADCS;
+            currentState = STATE_TRIGGER_ADCS;
             break;
         case PC_CALIBRATION:
             // waitingForDataFromPC = true;  // TODO: will be the case after we rework this
@@ -713,7 +713,7 @@ void measureADCs(){
     Goes to state
     -------------
     STATE_ERROR with ERROR_TIMEOUT : if it takes longer than 5s
-        between the PC_MEASURE message and completing the number
+        between the PC_TRIGGER_ADCS message and completing the number
         of measurements that need to be averaged
     STATE_ERROR with ERROR_ADC_SATURATED : if one of the inputs of
         the ADCs has reached saturation, and there is no room
@@ -723,7 +723,7 @@ void measureADCs(){
     STATE_ADC_VALUES_READY : successfully finished
     **/
     // TODO: since makeAndSumMeasurements() requires the ADCs to be already
-    //       triggered fro measurements, the PC_MEASURE command cannot
+    //       triggered fro measurements, the PC_TRIGGER_ADCS command cannot
     //       be handled until the ADCs have been triggered!
     makeAndSumMeasurements();
     // TODO: if, by chance, the last value measured by one of the ADCs
@@ -904,11 +904,11 @@ void triggerMeasurements() {
 
     Msg to PC
     ---------
-    None.                                 // TODO: we actually have to return a PC_OK before going to STATE_MEASURE_ADCS
+    PC_OK, signaling that the we will then begin collecting measurements
 
     Goes to state
     -------------
-    STATE_IDLE : always                  // TODO: must always go to STATE_MEASURE_ADCS instead!
+    STATE_MEASURE_ADCS : always
     **/
     // TODO: hardwareDetected needs to be a valid value before this
     // call makes sense at all. This is currently unchecked for, but
@@ -919,11 +919,12 @@ void triggerMeasurements() {
         AD7705setGainAndTrigger(CS_ADC_0, adc0Channel, adc0Gain);
     if (hardwareDetected.asInt & ADC_1_PRESENT)
         AD7705setGainAndTrigger(CS_ADC_1, adc1Channel, adc1Gain);
-    currentState = STATE_IDLE;
-    // TODO: The ADCs are triggered for measurement, but NO MEASUREMENT IS
-    //       SAVED! This means that the PC needs to request measurement
-    //       explicitly. I don't really see then the use of the automatic
-    //       switch from STATE_SET_VOLTAGE to STATE_TRIGGER_ADCS!!
+    
+    // Signal the PC that we are now going to start the measurements
+    encodeAndSend(PC_OK)
+    
+    // Switch over to measuring state
+    currentState = STATE_MEASURE_ADCS;
 }
 
 void makeAndSumMeasurements() {
