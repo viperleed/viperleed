@@ -47,7 +47,7 @@ union floatOrBytes{
 
 // Acceptable messages for communication with the PC
 #define PC_AUTOGAIN    8    // PC requested auto-gain for ADCs
-#define PC_CALIBRATION 9    // PC requested self-calibration
+#define PC_CALIBRATION 9    // PC requested self-calibration of all ADCs at all gains
 #define PC_ERROR     253    // An error occurred
 #define PC_HARDWARE    3    // PC requested hardware configuration              // TODO: rename to make it clear that also firmware will be returned. Probably PC_GET_CONFIGURATION or similar
 #define PC_INIT_ADC    4    // PC requested initialization of ADCs              // TODO: rename something like PC_PREPARE_ADCS_FOR_MEASUREMENT  // TODO: requires calibration data up to date (keep a flag, raise errors if never calibrated since bootup. Flag should be set to false at reset(). The python side will have to keep track of when the last calibration was done, and warn if it is too old.)
@@ -73,7 +73,7 @@ byte errorTraceback;                  // Keeps track of the state that produced 
 
 // Variables used while communicating with the PC
 byte numBytesRead = 0;                   // Counter for no. of bytes received. numBytesRead may be larger than the number of true data bytes due to encoding.
-byte msgLength = 0;                      // Number of bytes to be expected in message, 2nd byte of received message
+byte msgLength = 0;                      // No. bytes to be expected in message (2nd byte of received message). Used in states that expect data to check the message
 byte serialInputBuffer[MSG_MAX_LENGTH];  // Contains all the raw (i.e., still encoded) bytes read from the serial line
 boolean readingFromSerial = false;       // True while Arduino is receiving a message
 boolean newMessage = false;              // True when a complete, acceptable message has been read

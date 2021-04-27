@@ -101,8 +101,8 @@ void loop() {
             encodeAndSend(hardwareDetected.asBytes, 2);
             currentState = STATE_IDLE;
             break;
-        case STATE_INITIAL_CALIBRATION:   // TODO: rename, probably STATE_CALIBRATE_ADCS
-            initialCalibration();
+        case STATE_CALIBRATE_ADCS:
+            calibrateADCsAtAllGains();
             break;
         case STATE_ERROR:                 // TODO: make a proper handler for this one!
             encodeAndSend(errorTraceback);
@@ -153,7 +153,14 @@ void readFromSerial() {
         return;
     }
 
-    // TODO: perhaps it would make more sense to read multiple characters
+    // TODO: We are currently reading only 1 'character' per sate loop          // ISSUE #11
+    //       from the serial line. This means that it takes at least
+    //       4 state-loop iterations to have the Arduino be responsive
+    //       to a command. In the worst case, a single loop iteration
+    //       currently takes ~360 ms (during STATE_CALIBRATE_ADCS).
+    //       This means that it may take as long as ~1.4 seconds to
+    //       Acknowledge a command and stop what's going on.
+    //       Perhaps it would make more sense to read multiple characters
     //       from the serial line if there is anything available? In fact,
     //       if there are characters, it means that the PC sent some request
     //       that would anyway interrupt whatever we are doing after we read
@@ -407,7 +414,7 @@ void updateState() {
         case PC_CALIBRATION:
             // waitingForDataFromPC = true;  // TODO: will be the case after we rework this
             calibrationGain = 0;
-            currentState = STATE_INITIAL_CALIBRATION;
+            currentState = STATE_CALIBRATE_ADCS;
             break;
         case PC_RESET:
             reset();
@@ -1304,7 +1311,7 @@ uint16_t getHardwarePresent() {
     return result;
 }
 
-void initialCalibration(){      // TODO: rename
+void calibrateADCsAtAllGains(){
     /**
     For both ADCs, the channel currently selected is calibrated
     for all the possible gain values. The calibration results
@@ -1339,7 +1346,7 @@ void initialCalibration(){      // TODO: rename
 
     Goes to state
     -------------
-    STATE_INITIAL_CALIBRATION (stays) : until all the gain values
+    STATE_CALIBRATE_ADCS (stays) : until all the gain values
         have been calibrated for the currently selected channels
     STATE_IDLE : after calibration is done
     */
@@ -1349,7 +1356,7 @@ void initialCalibration(){      // TODO: rename
     //     a specified updateRate. The problem is that the updateRate
     //     does not come as data from the PC until we go to STATE_SETUP_ADC.
     //     However, there we already need this calibration to be done.
-    //     Solution: have the STATE_INITIAL_CALIBRATION require a second
+    //     Solution: have the STATE_CALIBRATE_ADCS require a second
     //     communication from the PC (that may time out) in which we are
     //     told the updateRate to use. Then, we can get rid of the
     //     updateRate from the data required in STATE_SETUP_ADC.
@@ -1357,7 +1364,7 @@ void initialCalibration(){      // TODO: rename
     //     Here we need to know which channels we want to calibrate,
     //     but this information comes too late in STATE_SETUP_ADC,
     //     where we need the calibration already. Solution: have the
-    //     STATE_INITIAL_CALIBRATION require also the channels to be
+    //     STATE_CALIBRATE_ADCS require also the channels to be
     //     specified in the same communication message from the previous
     //     point. Rename this function fullyCalibrateOneADCChannel, and
     //     accept two parameters (adc0Channel and adc1Channel) that tell
