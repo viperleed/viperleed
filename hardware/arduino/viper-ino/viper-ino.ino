@@ -47,26 +47,8 @@ void setup() {
     pinMode(SCK, OUTPUT);  // Should not be needed, but it did not work without
     pinMode(MOSI, OUTPUT);
 
-    // Reset DAC
-    AD5683reset(CS_DAC);
-
-    // Explicitly reset the ADC I/O communication: just setting
-    // the (inverted) chip select to high does not trigger a reset
-    AD7705resetCommunication(CS_ADC_0);
-    AD7705resetCommunication(CS_ADC_1);
-
-    // Set DAC output to zero volts
-    AD5683setVoltage(CS_DAC, 0x0000);
-
-    #ifdef DEBUG
-        Serial.print("hardware=0x");
-        Serial.println(hardwareDetected.asInt, HEX);
-    #endif
-    #ifdef DEBUG
-        pinMode(LED_BUILTIN, OUTPUT);
-    #endif
-
-    // Initialize values to their defaults
+    // Reset ADC and DAC, set DAC output to zero,
+    // and set variables to well-defined defaults
     reset();
 }
 
@@ -146,7 +128,8 @@ void updateState() {
             currentState = STATE_GET_CONFIGURATION;
             break;
         case PC_CALIBRATION:
-            // waitingForDataFromPC = true;  // TODO: will be the case after we rework this
+            waitingForDataFromPC = true;
+            initialTime = millis();
             calibrationGain = 0;
             currentState = STATE_CALIBRATE_ADCS;
             break;
@@ -174,6 +157,56 @@ void updateState() {
             break;
     }
     newMessage = false;
+}
+
+
+bool didTimeOut(){
+    /**Return whether the Arduino waiting has timed out.
+    
+    Reads
+    -----
+    initialTime
+    
+    Returns
+    -------
+    true if timed out
+    
+    Goes to state
+    -------------
+    STATE_ERROR with ERROR_TIMEOUT
+        If timed out
+    **/
+    if((millis() -  initialTime) > TIMEOUT){
+        errorTraceback[0] = currentState;
+        errorTraceback[1] = ERROR_TIMEOUT;
+        currentState = STATE_ERROR;
+        return true;
+        }
+    return false;
+}
+
+
+bool notInStateAndError(byte state){
+    /**Return true if we are not in the given state.
+    
+    Also brings the system to a RUNTIME_ERROR.
+    
+    Reads
+    -----
+    currentState
+    
+    Goes to state
+    -------------
+    STATE_ERROR : ERROR_RUNTIME
+        If not in state
+    **/
+    if (currentState != state){
+        errorTraceback[0] = currentState;
+        errorTraceback[1] = ERROR_RUNTIME;
+        currentState = STATE_ERROR;
+        return true;
+    }
+    return false;
 }
 
 
@@ -444,12 +477,10 @@ void encodeAndSend(byte *byteArray, int len){
 void prepareForAutogain(){
     /**Prepare the system to enter a STATE_AUTOGAIN_ADCS.
     
-    Reads
-    -----
-    
     Writes
     ------
-    
+    adc0Gain, adc1Gain, numMeasurementsDone, summedMeasurements,
+    numMeasurementsToDoBackup, numMeasurementsToDo
     **/
     // Reset data, as we will store measurements in the same arrays
     resetMeasurementData();
@@ -473,7 +504,7 @@ void prepareForAutogain(){
 
 
 
-/** ---------------------- STATE & PC REQUEST HANDLERS --------------------- **/
+/** ---------------------- STATE & PC-REQUEST HANDLERS --------------------- **/
 
 /** Handler of STATE_GET_CONFIGURATION */
 void getConfiguration(){
@@ -491,8 +522,14 @@ void getConfiguration(){
 
     Goes to state
     -------------
-    STATE_IDLE : always
+    STATE_ERROR : ERROR_RUNTIME
+        If this function is not called within STATE_GET_CONFIGURATION
+    STATE_IDLE
+        Otherwise
     **/
+    if (notInStateAndError(STATE_GET_CONFIGURATION))
+        return;
+
     hardwareDetected.asInt = getHardwarePresent();
     byte configuration[4] = {FIRMWARE_VERSION_MAJOR,
                              FIRMWARE_VERSION_MINOR,
@@ -503,80 +540,173 @@ void getConfiguration(){
 }
 
 
+// For reasons unknown, the Arduino compiler complains if this
+// function is declared after its caller (the next one). Having
+// a prototype in the .h file does not help.
+void storeAllSelfCalibrationResults(int32_t targetArray[N_MAX_ADCS_ON_PCB][2]) {
+    /**
+    Store the result of the last self calibration
+    of both ADCs (if present) to the array passed
+
+    Parameters
+    ----------
+    targetArray : 2x2 int32_t
+        The array where the calibration results are to be saved.
+        The first index identifies which ADC, the second one is
+        used to store offset (at index 0) and gain (at index 1).
+
+    Reads
+    -----
+    hardwareDetected, adc0Channel, adc1Channel
+    **/
+    for (int iADC = 0; iADC < N_MAX_ADCS_ON_PCB; iADC++) {
+        // bool adcPresentMask = iADC==0 ? ADC_0_PRESENT : ADC_1_PRESENT;       // BUG: ADC_0_PRESENT/ADC_1_PRESENT are uint16_t, not bool!
+        uint16_t adcPresentMask = iADC==0 ? ADC_0_PRESENT : ADC_1_PRESENT;      // TODO: using the ADCs struct would make it easier, as you would just need to do externalADCs[iADC].present
+        if (hardwareDetected.asInt & adcPresentMask) {
+            byte chipSelect = iADC==0 ? CS_ADC_0 : CS_ADC_1;                    // TODO: similarly, with the ADCs struct, would be enough to do externalADCs[iADC].chipSelect
+            byte channel = iADC==0 ? adc0Channel : adc1Channel;                 // TODO: same thing here: externalADCs[iADC].channel
+            int32_t offs = AD7705getCalibrationRegister(chipSelect, channel, AD7705_REG_OFFSET);
+            int32_t gain = AD7705getCalibrationRegister(chipSelect, channel, AD7705_REG_GAIN);
+            targetArray[iADC][0] = offs;
+            targetArray[iADC][1] = gain;
+        }
+    }
+}
+
+
 /** Handler of STATE_CALIBRATE_ADCS */
 void calibrateADCsAtAllGains(){
-    /**
-    For both ADCs, the channel currently selected is calibrated
-    for all the possible gain values. The calibration results
-    are stored, so that they can be fetched later for faster
-    gain switching.
+    /**Calibrate (in parallel) the available ADCs for all possible gains.
 
-    Currently, each gain value is done over a separate state-loop.
-    This means that it takes approximately 360 ms to finish a single
-    run of this function (120 ms x 3 points for computing medians).
-    This means, the serial line remains unresponsive for ~360 ms.
+    The calibration results are stored, so they can be fetched
+    later to make gain-switching faster.
+    
+    Calibration is performed for those channels and update
+    rate that come from the PC as the first data message
+    after PC_CALIBRATION.
 
-    The calibration is done in parallel for both ADCs (if present).
+    Each gain value is done over a separate state-loop. This means
+    that it takes approximately 360 ms to finish a single run of
+    this function (120 ms x 3 points for computing medians), i.e.,
+    that the serial line remains unresponsive for ~360 ms.
 
-    This function needs to be called again should the updateRate
-    to be used for the measurements change. Since this takes quite
-    long to complete (~3s for all the gains), it is advisable not
-    to run it when finding the best ADC gain (don at 500Hz), since
-    there the measurements are done at gain==0 and only for the
-    channel to be measured.
+    Should one need to change the updateRate used during measurements,
+    the system must run again through this STATE_CALIBRATE_ADCS.
+
+    Reads
+    -----
+    msgLength
 
     Writes
     ------
-    calibrationGain, adc0Gain, adc1Gain
+    initialTime, newMessage, waitingForDataFromPC,
+    adc0Channel, adc1Channel, adcUpdateRate,
+    calibrationGain, adc0Gain, adc1Gain, selfCalDataVsGain
 
     Msg to PC
     ---------
-    None.           // TODO: perhaps we would like to inform the PC once the whole calibration is done, since this is one of those things that takes time.
-
+    PC_OK.
 
     Goes to state
     -------------
-    STATE_CALIBRATE_ADCS (stays) : until all the gain values
-        have been calibrated for the currently selected channels
-    STATE_IDLE : after calibration is done
+    STATE_ERROR : ERROR_RUNTIME
+        If this function is not called within STATE_CALIBRATE_ADCS
+    STATE_ERROR : ERROR_TIMEOUT
+        If the ADC channels and update rate data needed from
+        the PC do not arrive within 5 s of entering the state
+    STATE_ERROR : ERROR_TIMEOUT
+        If calibration for a single state-loop iteration (i.e.,
+        one value of gain) takes longer than 5 s
+    STATE_ERROR : ERROR_MSG_DATA_INVALID
+        If we get the wrong number of data bytes, or if either
+        one of the channels or the update rate is not one of
+        the acceptable values
+    STATE_CALIBRATE_ADCS (stays)
+        Until all the gain values have been calibrated
+        for the currently selected channels
+    STATE_IDLE
+        After calibration is done
     */
+    if (notInStateAndError(STATE_CALIBRATE_ADCS))
+        return;
 
-    // TODO: I can see three issues with the current code:
-    //   - it always does the calibration at AD7705_50HZ rather than at
-    //     a specified updateRate. The problem is that the updateRate
-    //     does not come as data from the PC until we go to STATE_SET_UP_ADCS.
-    //     However, there we already need this calibration to be done.
-    //     Solution: have the STATE_CALIBRATE_ADCS require a second
-    //     communication from the PC (that may time out) in which we are
-    //     told the updateRate to use. Then, we can get rid of the
-    //     updateRate from the data required in STATE_SET_UP_ADCS.
-    //   - A very similar problem exists for what concerns the channels:
-    //     Here we need to know which channels we want to calibrate,
-    //     but this information comes too late in STATE_SET_UP_ADCS,
-    //     where we need the calibration already. Solution: have the
-    //     STATE_CALIBRATE_ADCS require also the channels to be
-    //     specified in the same communication message from the previous
-    //     point. Rename this function fullyCalibrateOneADCChannel, and
-    //     accept two parameters (adc0Channel and adc1Channel) that tell
-    //     you which channels need to be calibrated. This way we can also
-    //     allow the calibration to be done on both channels of both ADCs
-    //     once we accept the bitmask (if three channels requested, it does
-    //     not cost anything to do all four).
-    //   - currently this function cannot time out, but it should! If the
-    //     power plug for the ADCs is disconnected, we would wait forever
-    //     for the calibration results (and the PC doesn't know how long
-    //     it may take)!
-    if (calibrationGain <= AD7705_MAX_GAIN) {
+    if(not newMessage){  // waiting for data from the PC
+        if (didTimeOut())
+            waitingForDataFromPC = false;
+        return;
+    }
+    else {
+        // Data has arrived. This part runs only once,
+        // the first time the data arrives
+
+        // Check that we got the data that we expected, i.e.,
+        // (1) 2 bytes for channels, one for update rate
+        if (msgLength != 3){
+            errorTraceback[0] = currentState;
+            errorTraceback[1] = ERROR_MSG_DATA_INVALID;
+            currentState = STATE_ERROR;
+            waitingForDataFromPC = false;
+            newMessage = false;
+            return;
+        }
+        
+        // (2) The channels are acceptable
+        for (byte i = 0; i < 2; i++){
+            byte channel = data_received[i];
+            if (channel != AD7705_CH0 or channel != AD7705_CH1){
+                errorTraceback[0] = currentState;
+                errorTraceback[1] = ERROR_MSG_DATA_INVALID;
+                currentState = STATE_ERROR;
+                waitingForDataFromPC = false;
+                newMessage = false;
+                return;
+            }
+        }
+        
+        adc0Channel = data_received[0];
+        adc1Channel = data_received[1];
+        
+        // (2) The update rate is acceptable
+        if (not isAcceptableADCUpdateRate(data_received[2])){
+            errorTraceback[0] = currentState;
+            errorTraceback[1] = ERROR_MSG_DATA_INVALID;
+            currentState = STATE_ERROR;
+            waitingForDataFromPC = false;
+            newMessage = false;
+            return;
+        }
+        adcUpdateRate = data_received[2];
+        
+    }
+
+    // Data is OK
+    newMessage = false;
+    waitingForDataFromPC = false;
+    
+    // May timeout in the following if the ADC power is disconnected
+    // while we're waiting for a calibration to be finished
+    initialTime = millis();
+
+    // The next part runs once every state loop
+    if (calibrationGain <= AD7705_MAX_GAIN) {        
+        // Prepare a place to store values from which medians are
+        // calculated: three for median, N_MAX_ADCS_ON_PCB for ADCs,
+        // last index is offset(0) & gain(1)
+        int32_t selfCalDataForMedian[3][N_MAX_ADCS_ON_PCB][2];
+
+        if (didTimeOut()) {
+            adc0Gain = 0;
+            adc1Gain = 0;
+            return;
+        }
+
         adc0Gain = calibrationGain;
         adc1Gain = calibrationGain;
         // Calibrate 3 times each of the ADCs (in parallel) at
         // the current calibrationGain, and for the adc0Channel
-        // and adc1Channel currently selected.                                  // TODO: in light of the comments above, one needs to set the channels passed as parameters at the beginning of this function
-        // The three measurements are saved in selfCalDataForMedian,
-        // which is later used to compute the 3-point median,
-        // giving the final calibration result
+        // and adc1Channel currently selected.
         for (int i = 0; i < 3; i++) {
-            selfCalibrateAllADCs(AD7705_50HZ);
+            selfCalibrateAllADCs(adcUpdateRate);
             storeAllSelfCalibrationResults(selfCalDataForMedian[i]);
             #ifdef DEBUG
                 Serial.print("gain=");
@@ -588,6 +718,8 @@ void calibrateADCsAtAllGains(){
             #endif
         }
 
+        // Compute the median of the values above, and store
+        // it for each ADC, so it can be fetched later
         for (int iADC=0; iADC < N_MAX_ADCS_ON_PCB; iADC++) {
             byte channel = iADC==0 ? adc0Channel : adc1Channel;                 // TODO: using the externalADCs array of struct would make this easier: externalADCs[iADC].channel
             for (int offsetOrGain = 0; offsetOrGain < 2; offsetOrGain++) {
@@ -603,9 +735,21 @@ void calibrateADCsAtAllGains(){
     }
 
     if(calibrationGain > AD7705_MAX_GAIN){
-        // Calibration is over. Set gains to the lowest value and finish.
+        // Calibration is over.
+        // Remember which channels we have calibrated
+        for (int iADC=0; iADC < N_MAX_ADCS_ON_PCB; iADC++) {
+            byte channel = iADC==0 ? adc0Channel : adc1Channel;
+            calibratedChannels[iADC][channel] = true;
+        }
+
+        // Set gains to the lowest value, and load the
+        // new gains and their calibration in the ADCs
         adc0Gain = 0;
         adc1Gain = 0;
+        setAllADCgainsAndCalibration();
+
+        // And tell the PC that we're done
+        encodeAndSend(PC_OK);
         currentState = STATE_IDLE;
     }
 }
@@ -618,10 +762,11 @@ void prepareADCsForMeasurement(){
     data_received. The bytes have the following meaning:
     - [0] channel of ADC#0
     - [1] channel of ADC#1
-    - [2] measurement frequency for ADCs #0 and #1
-    - [3 + 4] number of measurements that will be averaged. [3] is the
-              high byte, [4] the low byte. Data is interpreted as a uint16_t.
-    - REMOVED [5] maximum gain value for ADC #0 and #1
+    - [2 + 3] number of measurements that will be averaged. [2] is the
+              high byte, [3] the low byte. Data is interpreted as a uint16_t.
+
+    - // TODO: remove from Python: measurement frequency for ADCs #0 and #1
+    - // TODO: remove from Python: maximum gain value for ADC #0 and #1
 
     Reads
     -----
@@ -638,36 +783,51 @@ void prepareADCsForMeasurement(){
 
     Goes to state
     -------------
-    STATE_ERROR + ERROR_TIMEOUT : if more than 5s pass between the
-        PC_SET_UP_ADCS message and the receipt of data
-    STATE_ERROR + ERROR_MSG_DATA_INVALID : if either channel or the update rate
-        are not acceptable values
-    STATE_SET_UP_ADCS (stays) : while waiting for data from the PC
-    STATE_IDLE : successfully finished
+    STATE_ERROR : ERROR_RUNTIME
+        If this function is not called within STATE_SET_UP_ADCS
+    STATE_ERROR : ERROR_TIMEOUT
+        If more than 5s pass between the PC_SET_UP_ADCS message
+        and the receipt of data
+    STATE_ERROR : ERROR_MSG_DATA_INVALID
+        If either channel is an acceptable values
+    STATE_ERROR : ERROR_NEVER_CALIBRATED
+        If one of the ADC channels used was not calibrated
+    STATE_SET_UP_ADCS (stays)
+        While waiting for data from the PC
+    STATE_IDLE
+        Successfully finished
     **/
-    if(not newMessage){  // waiting for data from the PC
-        if((millis() -  initialTime) > TIMEOUT){
-            errorTraceback[0] = currentState;
-            errorTraceback[1] = ERROR_TIMEOUT;
-            currentState = STATE_ERROR;
+    if (notInStateAndError(STATE_SET_UP_ADCS))
+        return;
+
+    if (not newMessage){  // waiting for data from the PC
+        if(didTimeOut()){
+            waitingForDataFromPC = false;
             newMessage = false;
         }
         return;
     }
     
+    // Data has arrived
     waitingForDataFromPC = false;
+    newMessage = false;
 
-    // TODO: we have to handle the bit mask here, so we also know if the
-    // user wants us to measure the LM35 too.
-
-    // Do some checking on the channels and updateRate values received:
+    // Do some checking on the data we received:
+    // (1) Correct number of bytes? [2(channels) + 2(no. measurements)]
+    if (msgLength != 4){
+        errorTraceback[0] = currentState;
+        errorTraceback[1] = ERROR_MSG_DATA_INVALID;
+        currentState = STATE_ERROR;
+        return;
+    }
+    
+    // (2) channels acceptable?
     for (byte i = 0; i < 2; i++){
         byte channel = data_received[i];
         if (channel != AD7705_CH0 or channel != AD7705_CH1){
             errorTraceback[0] = currentState;
             errorTraceback[1] = ERROR_MSG_DATA_INVALID;
             currentState = STATE_ERROR;
-            newMessage = false;
             return;
         }
     }
@@ -675,27 +835,14 @@ void prepareADCsForMeasurement(){
     adc0Channel = data_received[0];
     adc1Channel = data_received[1];
 
-    adcUpdateRate = data_received[2];
-    if (adcUpdateRate != AD7705_50HZ
-            or adcUpdateRate != AD7705_60HZ
-            or adcUpdateRate != AD7705_500HZ){
-        errorTraceback[0] = currentState;
-        errorTraceback[1] = ERROR_MSG_DATA_INVALID;
-        currentState = STATE_ERROR;
-        adcUpdateRate = AD7705_50HZ;
-        newMessage = false;
-        return;
-    }
-
     numMeasurementsToDo = data_received[3] << 8 | data_received[4];
 
-    //maximum_gain = data_received[5];                                          // TODO: remove from Python
-
-    setAllADCgainsAndCalibration();                                             // TODO: this requires that the calibration has been properly done for the channels requested! We should check that this is in fact the case. This can perhaps be done in updateState().
+    setAllADCgainsAndCalibration();
+    if (currentState == STATE_ERROR)   // Some channel was not calibrated
+            return;
 
     encodeAndSend(PC_OK);
-    currentState = STATE_IDLE;//Back to command mode
-    newMessage = false;
+    currentState = STATE_IDLE;
 }
 
 
@@ -725,18 +872,24 @@ void setVoltage(){
 
     Goes to state
     -------------
-    STATE_ERROR + ERROR_TIMEOUT : if more than 5s pass between the
-        PC_SET_VOLTAGE message and the receipt of data
-    STATE_SET_VOLTAGE (stays) : while waiting for data from the PC
-    STATE_TRIGGER_ADCS : successfully finished
+    STATE_ERROR : ERROR_RUNTIME
+        If this function is not called within STATE_SET_VOLTAGE
+    STATE_ERROR : ERROR_TIMEOUT
+        If more than 5s pass between the PC_SET_VOLTAGE message
+        and the receipt of data
+    STATE_ERROR : ERROR_NEVER_CALIBRATED
+        If one of the ADC channels used was not calibrated
+    STATE_SET_VOLTAGE (stays)
+        While waiting for data from the PC
+    STATE_TRIGGER_ADCS
+        Successfully finished
     **/
+    if (notInStateAndError(STATE_SET_VOLTAGE))
+        return;
+
     if(not newMessage){   // Waiting for data from PC
-        if((millis() -  initialTime) > TIMEOUT){
-            errorTraceback[0] = currentState;
-            errorTraceback[1] = ERROR_TIMEOUT;
-            currentState = STATE_ERROR;
-            newMessage = false;
-        }
+        if(didTimeOut())
+            waitingForDataFromPC = false;
         return;
     }
     
@@ -749,19 +902,7 @@ void setVoltage(){
     initialTime = millis();
     newMessage = false;
     resetMeasurementData();
-    if(adc0ShouldDecreaseGain){
-        // During the last measurement, the value read by the ADC has
-        // reached the upper part of the range. The gain needs to be
-        // decreased, and the ADC requires recalibration
-        adc0Gain--;
-        setAllADCgainsAndCalibration();                                         // TODO: requires the calibration data to be available and up to date. This is currently not checked!
-        adc0ShouldDecreaseGain = false;
-    }
-    if(adc1ShouldDecreaseGain){
-        adc1Gain--;
-        setAllADCgainsAndCalibration();
-        adc0ShouldDecreaseGain = false;
-    }
+    decreaseADCGainsIfNeeded();
 }
 
 
@@ -785,19 +926,19 @@ void waitAndTriggerMeasurements() {
 
     Goes to state
     -------------
+    STATE_ERROR : ERROR_RUNTIME
+        If this function is not called within STATE_TRIGGER_ADCS
     STATE_TRIGGER_ADCS (stays)
         until the voltage output can be considered stable
     STATE_MEASURE_ADCS
         after the voltage output can be considered stable
     **/
+    if (notInStateAndError(STATE_TRIGGER_ADCS))
+        return;
+    
     // Wait in the same state till the voltage output is stable
     if((millis() - initialTime) < dacSettlingTime) return;
     
-    // TODO: hardwareDetected needs to be a valid value before this
-    // call makes sense at all. This is currently unchecked for, but
-    // may be unnecessary (the function will do nothing if the PC did
-    // send a PC_HARDWARE message before. What happens if hardwareDetected
-    // is not up to date?
     if (hardwareDetected.asInt & ADC_0_PRESENT)
         AD7705setGainAndTrigger(CS_ADC_0, adc0Channel, adc0Gain);
     if (hardwareDetected.asInt & ADC_1_PRESENT)
@@ -835,17 +976,21 @@ void measureADCs(){
 
     Goes to state
     -------------
-    STATE_ERROR with ERROR_TIMEOUT : if it takes longer than 5s
-        between the beginning of the state and completing the number
-        of measurements that need to be averaged
-    STATE_ERROR with ERROR_ADC_SATURATED : if one of the inputs of
-        the ADCs has reached saturation, and there is no room
-        to decrease the gain.
-    STATE_MEASURE_ADCS (stays) : until all the data values that
-        need to be measured have been acquired
-    STATE_ADC_VALUES_READY : successfully finished
+    STATE_ERROR : ERROR_TIMEOUT
+        If it takes longer than 5s between the beginning of the state
+        and completing the number of measurements that need to be averaged
+    STATE_ERROR : ERROR_ADC_SATURATED
+        If one of the inputs of the ADCs has reached saturation, and
+        there is no room to decrease the gain.
+    STATE_ERROR : ERROR_NEVER_CALIBRATED
+        If one of the ADC channels used was not calibrated
+    STATE_MEASURE_ADCS (stays)
+        Until finished measuring all the data points
+    STATE_ADC_VALUES_READY
+        Successfully finished
     **/
-    // TODO: check that we come from STATE_MEASURE_ADCS
+    if (notInStateAndError(STATE_MEASURE_ADCS))
+        return;
 
     makeAndSumMeasurements();
     // TODO: if, by chance, the last value measured by one of the ADCs
@@ -859,12 +1004,8 @@ void measureADCs(){
         return;
     }
 
-    if((millis() -  initialTime) > TIMEOUT){
-        errorTraceback[0] = currentState;
-        errorTraceback[1] = ERROR_TIMEOUT;
-        currentState = STATE_ERROR;
+    if(didTimeOut())
         newMessage = false;
-    }
 }
 
 
@@ -907,20 +1048,22 @@ void sendMeasuredValues(){
 
     Goes to state
     -------------
-    STATE_IDLE : always
+    STATE_ERROR : ERROR_RUNTIME
+        If this function is not called within STATE_ADC_VALUES_READY
+    STATE_IDLE
+        Otherwise
     **/
+    // TODO: We may later remove this, if we want the option
+    // of sending incomplete data back upon request from the PC
+    if (notInStateAndError(STATE_ADC_VALUES_READY))
+        return;
+    
     // TODO: Ideally, one would like to rather return a SINGLE MESSAGE
-    //       containing at most 3*4 significant bytes (+ encoding), and
-    //       including only the subset of measured values that were
-    //       effectively requested. In this case, the worst-case scenario
-    //       message length would be N_MAX_MEAS*4(bytes)*2(encoding)
-    // TODO: we could check that currentState == STATE_ADC_VALUES_READY
-    //       and throw an ERROR_RUNTIME otherwise.
-    //       Possible drawback: if later we want to allow the PC to be
-    //       able to force sending data even if not all the measurements
-    //       have been completed, this would throw an unnecessary error
+    //       containing 3*4 significant bytes (+ encoding).
+    //       In this case, the worst-case scenario message length would be
+    //       N_MAX_MEAS*4(bytes)*2(encoding) + 3 (MSG_START, MSG_END, length)
     getFloatMeasurements();
-    encodeAndSend(fDataOutput[0].asBytes, 4); // !!!!!!!!!!!! need to implement way to only send demanded data
+    encodeAndSend(fDataOutput[0].asBytes, 4);
     encodeAndSend(fDataOutput[1].asBytes, 4);
     encodeAndSend(fDataOutput[2].asBytes, 4);
     resetMeasurementData();
@@ -956,12 +1099,20 @@ void findOptimalADCGains(){
 
     Goes to state
     -------------
-    STATE_ERROR + ERROR_TIMEOUT : if it takes more than 5s to acquire
-        all the measurements that are to be acquired
-    STATE_AUTOGAIN_ADCS (stays) : while it has not yet finished measuring
-        all the values required
-    STATE_IDLE : successfully finished
+    STATE_ERROR : ERROR_RUNTIME
+        If this function is not called within STATE_AUTOGAIN_ADCS
+    STATE_ERROR : ERROR_TIMEOUT
+        If it takes more than 5s to acquire all the measurements
+    STATE_ERROR : ERROR_NEVER_CALIBRATED
+        If one of the ADC channels used was not calibrated
+    STATE_AUTOGAIN_ADCS (stays)
+        While it has not yet finished measuring all the values required
+    STATE_IDLE
+        Successfully finished
     **/
+    if (notInStateAndError(STATE_AUTOGAIN_ADCS))
+        return;
+    
     // Notice that we are not triggering the ADCs here, as we are
     // not particularly interested in a measuring from a specific
     // point in time. The first data will anyway be available
@@ -969,11 +1120,7 @@ void findOptimalADCGains(){
     // end of the self-calibration.
     measureADCsRipple();
     if (numMeasurementsDone < numMeasurementsToDo){
-        if((millis() -  initialTime) > TIMEOUT){
-            errorTraceback[0] = currentState;
-            errorTraceback[1] = ERROR_TIMEOUT;
-            currentState = STATE_ERROR;
-
+        if(didTimeOut()){
             // Do some cleanup:
             resetMeasurementData();
             numMeasurementsToDo = numMeasurementsToDoBackup;
@@ -984,6 +1131,8 @@ void findOptimalADCGains(){
             adc0Gain = 0;
             adc1Gain = 0;
             setAllADCgainsAndCalibration();
+            if (currentState == STATE_ERROR)   // Some channel was not calibrated
+                return;
         }
         return;
     }
@@ -1019,6 +1168,8 @@ void findOptimalADCGains(){
     numMeasurementsToDo = numMeasurementsToDoBackup;
     newMessage = false;
     setAllADCgainsAndCalibration();
+    if (currentState == STATE_ERROR)   // Some channel was not calibrated
+        return;
 
     encodeAndSend(PC_OK);
     currentState = STATE_IDLE;
@@ -1042,15 +1193,13 @@ void handleErrors(){
     
     Goes to state
     -------------
-    STATE_ERROR : if this function is not called inside a STATE_ERROR
-    STATE_IDLE : otherwise
+    STATE_ERROR : ERROR_RUNTIME
+        If this function is not called within a STATE_ERROR
+    STATE_IDLE
+        Otherwise
     **/
-    if (currentState != STATE_ERROR){
-        errorTraceback[0] = currentState;
-        errorTraceback[1] = ERROR_RUNTIME;
-        currentState = STATE_ERROR;
+    if (notInStateAndError(STATE_ERROR))
         return;
-    }
     
     // First, report the error, so the PC knows
     // there may be some cleanup going on
@@ -1072,14 +1221,35 @@ void handleErrors(){
 /** Handler of PC_RESET */
 void reset(){
     /**
-    Reset the Arduino, the ADCs and the DACs to the default settings,
-    i.e., the same as after boot-up or a hardware reset.
+    Reset the Arduino, the ADCs and the DACs to the default
+    settings, mimicking as much as possible the state right
+    after boot-up or a hardware reset. The DAC output is
+    also set to zero.
 
-    The Arduino will be in STATE_IDLE at the end.
+    Writes
+    ------
+    numBytesRead, msgLength, readingFromSerial, newMessage,
+    waitingForDataFromPC, dacSettlingTime, hardwareDetected,
+    adcUpdateRate, adc0Channel, adc1Channel, adc0Gain,
+    adc1Gain, calibrationGain, adc0RipplePP, adc1RipplePP,
+    adc0ShouldDecreaseGain, adc1ShouldDecreaseGain,
+    numMeasurementsToDo, numMeasurementsToDoBackup,
+    numMeasurementsDone, summedMeasurements, calibratedChannels
+    
+    Goes to state
+    -------------
+    STATE_IDLE
     **/
-    currentState = STATE_IDLE;
-    dacSettlingTime = 100;   // TODO: was 0, but should probably be the same as in the global initialization
+    numBytesRead = 0;
+    msgLength = 0;
+    readingFromSerial = false;
+    newMessage = false;
 
+    currentState = STATE_IDLE;
+    waitingForDataFromPC = false;
+    dacSettlingTime = 100;
+
+    hardwareDetected.asInt = 0;
     adcUpdateRate = AD7705_50HZ;
     adc0Channel = AD7705_CH0;
     adc1Channel = AD7705_CH0;
@@ -1095,11 +1265,30 @@ void reset(){
     numMeasurementsToDoBackup = 1;
     resetMeasurementData();
 
-    // TODO: clear also calibration data
+    // Rather than clearing the calibration data, we can just
+    // reset the flags marking whether channels were calibrated
+    // since we always check that they were calibrated before
+    // loading calibration data
+    for (byte iADC=0; iADC < N_MAX_ADCS_ON_PCB; iADC++){
+        calibratedChannels[iADC][0] = false;
+        calibratedChannels[iADC][1] = false;
+    }
 
+    // Explicitly reset the ADC I/O communication
     AD7705resetCommunication(CS_ADC_0);
     AD7705resetCommunication(CS_ADC_1);
+    
+    // Reset the update rate
+    AD7705setClock(CS_ADC_0, adcUpdateRate);
+    AD7705setClock(CS_ADC_1, adcUpdateRate);
+    
+    // As well as channel and gain
+    AD7705setGainAndTrigger(CS_ADC_0, adc0Channel, adc0Gain);
+    AD7705setGainAndTrigger(CS_ADC_1, adc1Channel, adc1Gain);
+    
+    // Reset DAC and set the output voltage to zero
     AD5683reset(CS_DAC);
+    AD5683setVoltage(CS_DAC, 0x0000);
 }
 
 
@@ -1122,7 +1311,6 @@ uint16_t getHardwarePresent() {
     -------
     2-byte bit mask in a uint16_t
     */
-    // int result = 0;                                                          // TODO: probably was a bug: using int and returning uint16_t
     uint16_t result = 0;
 
     // (1) Check for ADCs
@@ -1151,7 +1339,7 @@ uint16_t getHardwarePresent() {
     // (2.1) Value before
     pinMode(LM35_PIN, INPUT);
     delay(10);    // Make sure the voltage has settled (10 ms)
-    uint16_t sensorValue1 = analogReadMedian(LM35_PIN);                         // TODO: this and the following ones were int, but analogReadMedian returns uint16_t
+    uint16_t sensorValue1 = analogReadMedian(LM35_PIN);
 
     // (2.2) Set pull-up resistor, and apply for 10 ms
     pinMode(LM35_PIN, INPUT_PULLUP);
@@ -1198,6 +1386,14 @@ uint16_t getHardwarePresent() {
 }
 
 
+bool isAcceptableADCUpdateRate(byte updateRate){                                // TODO: may later move to the ADC 'library'
+    /**Return whether the given update rate in an acceptable value.*/
+    return ((updateRate == AD7705_50HZ)
+            or (updateRate == AD7705_60HZ)
+            or (updateRate == AD7705_500HZ));
+}
+
+
 void selfCalibrateAllADCs(byte updateRate) {
     /**
     Simultaneous self-calibration for both ADCs
@@ -1208,12 +1404,19 @@ void selfCalibrateAllADCs(byte updateRate) {
     updateRate : {AD7705_50HZ, AD7705_60HZ, AD7705_500HZ}
         The update rate for which calibration has to be performed
         Currently, no check is performed that the update rate
-        is actually one of the acceptable values                                // TODO: it may be a good idea to do this check
+        is actually one of the acceptable values
 
     Reads
     -----
     adc0Channel, adc0Gain, adc1Channel, adc1Gain
     **/
+    if (not isAcceptableADCUpdateRate(updateRate)){
+        errorTraceback[0] = currentState;
+        errorTraceback[1] = ERROR_RUNTIME;
+        currentState = STATE_ERROR;
+        return;
+    }
+    
     if (hardwareDetected.asInt & ADC_0_PRESENT)
         AD7705selfCalibrate(CS_ADC_0, adc0Channel, adc0Gain, updateRate);
     if (hardwareDetected.asInt & ADC_1_PRESENT)
@@ -1231,37 +1434,6 @@ void selfCalibrateAllADCs(byte updateRate) {
 }
 
 
-void storeAllSelfCalibrationResults(int32_t targetArray[N_MAX_ADCS_ON_PCB][2]) {
-    /**
-    Store the result of the last self calibration
-    of both ADCs (if present) to the array passed
-
-    Parameters
-    ----------
-    targetArray : 2x2 int32_t
-        The array where the calibration results are to be saved.
-        The first index identifies which ADC, the second one is
-        used to store offset (at index 0) and gain (at index 1).
-
-    Reads
-    -----
-    hardwareDetected, adc0Channel, adc1Channel
-    **/
-    for (int iADC = 0; iADC < N_MAX_ADCS_ON_PCB; iADC++) {
-        // bool adcPresentMask = iADC==0 ? ADC_0_PRESENT : ADC_1_PRESENT;       // BUG: ADC_0_PRESENT/ADC_1_PRESENT are uint16_t, not bool!
-        uint16_t adcPresentMask = iADC==0 ? ADC_0_PRESENT : ADC_1_PRESENT;      // TODO: using the ADCs struct would make it easier, as you would just need to do externalADCs[iADC].present
-        if (hardwareDetected.asInt & adcPresentMask) {
-            byte chipSelect = iADC==0 ? CS_ADC_0 : CS_ADC_1;                    // TODO: similarly, with the ADCs struct, would be enough to do externalADCs[iADC].chipSelect
-            byte channel = iADC==0 ? adc0Channel : adc1Channel;                 // TODO: same thing here: externalADCs[iADC].channel
-            int32_t offs = AD7705getCalibrationRegister(chipSelect, channel, AD7705_REG_OFFSET);
-            int32_t gain = AD7705getCalibrationRegister(chipSelect, channel, AD7705_REG_GAIN);
-            targetArray[iADC][0] = offs;
-            targetArray[iADC][1] = gain;
-        }
-    }
-}
-
-
 void setAllADCgainsAndCalibration() {
     /**
     Set the ADC gains according to the global adc0Gain,
@@ -1274,11 +1446,14 @@ void setAllADCgainsAndCalibration() {
     -----
     hardwareDetected, adc0Channel, adc1Channel, adc0Gain,
     adc1Gain, selfCalDataVsGain, adcUpdateRate
+    
+    Goes to state
+    -------------
+    STATE_ERROR : ERROR_NEVER_CALIBRATED
+        If one of the ADC channels was not calibrated before
+    Same state
+        Otherwise
     **/
-    // TODO: requires the calibration data to be up to date (or at least
-    //       that the self-calibration has run at least once)! This is
-    //       currently unchecked for. Should probably raise some errors
-    //       if they are not.
     for (int iADC = 0; iADC < 2; iADC++) {
         // byte adcPresentMask = iADC==0 ? ADC_0_PRESENT : ADC_1_PRESENT;       // BUG: ADC_0_PRESENT/ADC_1_PRESENT are uint16_t, not byte (probably would work with byte, but better have the right type to start with)!
         uint16_t adcPresentMask = iADC==0 ? ADC_0_PRESENT : ADC_1_PRESENT;      // TODO: easier with externalADCs struct: externalADCs[i].present
@@ -1286,6 +1461,15 @@ void setAllADCgainsAndCalibration() {
             byte chipSelect = iADC==0 ? CS_ADC_0 : CS_ADC_1;                    // TODO: easier with externalADCs[iADC].chipSelect
             byte channel = iADC==0 ? adc0Channel : adc1Channel;                 // TODO: easier with externalADCs[iADC].channel
             byte gain = iADC==0 ? adc0Gain : adc1Gain;                          // TODO: easier with externalADCs[iADC].gain
+            
+            // Make sure that the channel has been calibrated before
+            if (not calibratedChannels[iADC][channel]){
+                errorTraceback[0] = currentState;
+                errorTraceback[1] = ERROR_NEVER_CALIBRATED;
+                currentState = STATE_ERROR;
+                return;
+            }
+            
             int32_t cOffs = selfCalDataVsGain[gain][iADC][channel][0];
             int32_t cGain = selfCalDataVsGain[gain][iADC][channel][1];
             AD7705setCalibrationRegister(chipSelect, channel, AD7705_REG_OFFSET, cOffs);
@@ -1304,6 +1488,41 @@ void setAllADCgainsAndCalibration() {
 }
 
 
+// Call this in other measurement functions that we may implement later on!
+void decreaseADCGainsIfNeeded(){
+    /**
+    Decrease the gain of all ADCs if, during the last
+    measurement, the value converted by the ADC has
+    reached the upper part of the range.
+
+    Writes
+    ------
+    adc0Gain, adc1Gain, adc0ShouldDecreaseGain, adc1ShouldDecreaseGain
+    
+    Goes to state
+    -------------
+    STATE_ERROR : ERROR_NEVER_CALIBRATED
+        If one of the ADC channels used was not calibrated
+    Stays the same
+        Otherwise
+    **/
+    if(adc0ShouldDecreaseGain){
+        adc0Gain--;
+        setAllADCgainsAndCalibration();    // Load the correct calibration
+        if (currentState == STATE_ERROR)   // Channel was not calibrated
+            return;
+        adc0ShouldDecreaseGain = false;
+    }
+    if(adc1ShouldDecreaseGain){
+        adc1Gain--;
+        setAllADCgainsAndCalibration();    // Load the correct calibration
+        if (currentState == STATE_ERROR)   // Channel was not calibrated
+            return;
+        adc1ShouldDecreaseGain = false;
+    }
+}
+
+
 void makeAndSumMeasurements() {
     /**
     Get one measurement value from all the available ADCs, including the
@@ -1312,7 +1531,7 @@ void makeAndSumMeasurements() {
 
     Whenever a value is measured, it is checked against the saturation
     thresholds, possibly determining a gain switch the next time a
-    measurement is performed.                                                   // TODO: think if this is problematic when NOT running a ramp, but, say, measuring at constant voltage. Since the gain switch happens in setVoltage(), it would never get switched at all. This may be a problem when measuring transients.
+    measurement is performed.
 
     Notice that this does not trigger the ADCs, that should already be
     ready for measurement before this function is called.
@@ -1334,10 +1553,13 @@ void makeAndSumMeasurements() {
 
     Goes to state
     -------------
-    STATE_ERROR + ERROR_ADC_SATURATED : if one of the values read
-        by the ADCs reaches a solid saturation, and the gain cannot
-        be decreased to circumvent the problem.
-    STATE_MEASURE_ADCS (stays) : unless a saturation error occurs
+    STATE_ERROR : ERROR_ADC_SATURATED
+        If one of the values read by the ADCs reaches a solid
+        saturation, and the gain cannot be decreased further
+    STATE_ERROR : ERROR_NEVER_CALIBRATED
+        If one of the ADC channels used was not calibrated
+    STATE_MEASURE_ADCS (stays)
+        Otherwise
     */
     // TODO: we should discuss what to do when a measurement saturates.
     //   Currently we are adding the measured value anyway. Perhaps we
@@ -1362,32 +1584,28 @@ void makeAndSumMeasurements() {
         }   // this one first while we probably have to wait for the others
     if (hardwareDetected.asInt & ADC_0_PRESENT){
         measurement = AD7705waitAndReadData(CS_ADC_0, adc0Channel);
-        checkMeasurementInADCRange(CS_ADC_0, adc0Channel, adc0Gain,
-                                   &adc0ShouldDecreaseGain, measurement);
+        checkMeasurementInADCRange(adc0Gain, &adc0ShouldDecreaseGain,
+                                   measurement);
         summedMeasurements[0] += measurement;
         }
     if (hardwareDetected.asInt & ADC_1_PRESENT){
         measurement = AD7705waitAndReadData(CS_ADC_1, adc1Channel);
-        checkMeasurementInADCRange(CS_ADC_1, adc1Channel, adc1Gain,
-                                   &adc1ShouldDecreaseGain, measurement);
+        checkMeasurementInADCRange(adc1Gain, &adc1ShouldDecreaseGain,
+                                   measurement);
         summedMeasurements[1] += measurement;
         }
     numMeasurementsDone++;
 }
 
 
-void checkMeasurementInADCRange(byte chipSelectPin, byte channel, byte gain,
-                                bool* adcShouldDecreaseGain, int16_t adcValue){    // The call to this function would be much easier having externalADCs, as then we would just pass the index of the ADC in the externalADCs array
+void checkMeasurementInADCRange(byte gain, bool* adcShouldDecreaseGain,
+                                int16_t adcValue){    // The call to this function would be much easier having externalADCs, as then we would just pass the index of the ADC in the externalADCs array
     /**
     Check whether the (signed) value read is approaching
     the saturation for the current measurement range.
 
     Parameters
     ----------
-    chipSelectPin : byte                                                        // TODO: unused
-        The pin that can be used to communicate with the ADC
-    channel : byte                                                              // TODO: unused
-        The channel of the ADC that is currently being measured
     gain : byte
         The current gain of the ADC
     adcShouldDecreaseGain : *bool
@@ -1410,9 +1628,13 @@ void checkMeasurementInADCRange(byte chipSelectPin, byte channel, byte gain,
 
     Goes to state
     -------------
-    STATE_ERROR + ERROR_ADC_SATURATED : if adcValue is in solid
-        saturation, and the gain cannot be decreased. Otherwise,
-        the currentState is preserved.
+    STATE_ERROR : ERROR_ADC_SATURATED
+        If adcValue is in solid saturation, and the gain cannot
+        be decreased. Otherwise, the currentState is preserved.
+    STATE_ERROR : ERROR_NEVER_CALIBRATED
+        If the ADC channel used was not calibrated
+    Stays unchanged
+        Otherwise
     */
     // TODO: The ripple (measured at gain 0) should be >> by gain and
     //       added to abs(adcValue) for the next check only
@@ -1437,6 +1659,8 @@ void checkMeasurementInADCRange(byte chipSelectPin, byte channel, byte gain,
         if(gain > 0){
             gain--;
             setAllADCgainsAndCalibration();
+            if (currentState == STATE_ERROR)   // Some channel was not calibrated
+                return;
             resetMeasurementData();
             *adcShouldDecreaseGain = false;
         }
@@ -1451,7 +1675,7 @@ void checkMeasurementInADCRange(byte chipSelectPin, byte channel, byte gain,
 
 
 void resetMeasurementData() {
-    /** Reset summedMeasurement and numMeasurementsDone to 0 **/
+    /** Reset summedMeasurements and numMeasurementsDone to 0 **/
     for (int i = 0; i < LENGTH(summedMeasurements); i++)
         summedMeasurements[i] = 0;
     numMeasurementsDone = 0;

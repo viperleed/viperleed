@@ -160,10 +160,6 @@ uint16_t      dacSettlingTime = 100;  // The time interval for the DAC output to
                                       //   from the PC with a PC_SET_VOLTAGE command, and is
                                       //   read in setVoltage()
 
-/* union integerOrBytes{
-  uint16_t asInt;
-  byte asBytes[2];
-}             hardwareDetected;       // Bits set indicate this hardware is present/jumper closed */
 uint16OrBytes hardwareDetected;       // Bits set indicate this hardware is present/jumper closed
 
 // ADCs: measurement frequency, channel, gain
@@ -176,8 +172,8 @@ bool     adc0ShouldDecreaseGain = false;  // Whether ADC#0 should increase its g
 bool     adc1ShouldDecreaseGain = false;  // Whether ADC#0 should increase its gain in the next cycle
 
 // ADCs: quantities needed for self-calibration
-byte     calibrationGain = 0;           // Gain for which a calibration is currently being performed (in parallel for both ADCs)
-int32_t  selfCalDataForMedian[3][2][2]; // Values from which medians are calculated: three for median, two ADCs, last index is offset(0) & gain(1) // TODO: this is currently used only locally inside initialCalibration(). Move it in there.
+byte     calibrationGain = 0;                         // Gain for which a calibration is currently being performed (in parallel for both ADCs)
+bool     calibratedChannels[N_MAX_ADCS_ON_PCB][2];    // Array of flags to keep track of which channels (last index) of the ADCs have been calibrated
 int32_t  selfCalDataVsGain[AD7705_MAX_GAIN + 1][2][2][2]; // For each gain, two ADCs, two channels each, and last index is offset(0)&gain(1)
 
 // ADCs: variables for measuring and storing the line frequency ripple
@@ -195,20 +191,17 @@ struct analogToDigitalConverter {
     bool     shouldDecreaseGain = false;
     int16_t  ripplePP = 0;                                   // Ripple (peak-peak) measured at gain=0 during auto-gain    // TODO: should we keep the largest ripple value ever measured or the latest?
     int32_t  calibrationForGain[AD7705_MAX_GAIN + 1][2][2];  // For each gain, two channels each, and last index is offset(0) & gain(1)
+	bool     calibratedChannels[2] = {false, false};
 } externalADCs[N_MAX_ADCS_ON_PCB]; */
 
 // Measurements
 uint16_t numMeasurementsToDo = 1;         // No. of ADC measurements to do before measurement is considered over
 uint16_t numMeasurementsToDoBackup = 1;   // Copy of the previous one, used to restore the previous value after auto-gain is done
 uint16_t numMeasurementsDone;             // Counter for the number of ADC measurements done so far
-int32_t  summedMeasurements[N_MAX_MEAS];  // Measurements of ADC#0, ADC#1 and LM35 are summed up here
+int32_t  summedMeasurements[N_MAX_MEAS];  // Measurements of ADCs and LM35 are summed up here
 
-/*
-union floatOrBytes{                       // Measured ADC voltages, as floats and
-  float asFloat;                          // 4-byte array, useful for sending back
-  byte asBytes[4];                        // to PC the values measured by the ADCs
-} fDataOutput[N_MAX_MEAS]; */
-floatOrBytes fDataOutput[N_MAX_MEAS];     // Measurements as voltages  // TODO: rename measuredVoltages[], not so great, find another name
+floatOrBytes fDataOutput[N_MAX_MEAS];     // Measurements in physical units  // TODO: rename
+
 
 
 
