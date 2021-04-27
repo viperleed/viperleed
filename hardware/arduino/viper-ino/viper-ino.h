@@ -47,7 +47,7 @@ union floatOrBytes{
 
 // Acceptable messages for communication with the PC
 #define PC_AUTOGAIN       65    // PC requested auto-gain for ADCs (ASCII 'A')				    // TODO: change in Python
-#define PC_CALIBRATION     9    // PC requested self-calibration of all ADCs at all gains
+#define PC_CALIBRATION     9    // PC requested self-calibration of all ADCs at all gains (ASCII 'C'==67)  // TODO: change in Python
 #define PC_ERROR         253    // An error occurred
 #define PC_CONFIGURATION  63    // PC requested hardware configuration (ASCII '?')              // TODO: change in Python
 #define PC_SET_UP_ADCS     4    // PC requested to prepare the ADCs for a measurement           // TODO: requires calibration data up to date (keep a flag, raise errors if never calibrated since bootup. Flag should be set to false at reset(). The python side will have to keep track of when the last calibration was done, and warn if it is too old.)
