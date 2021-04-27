@@ -54,7 +54,7 @@ union floatOrBytes{
 #define PC_MEASURE         6    // PC requested to perform a measurement                // TODO: rename PC_TRIGGER_ADCS, should lead first to STATE_TRIGGER_ADCS that later automatically ends into STATE_MEASURE_ADCS
 #define PC_OK              5    // Acknowledge request from PC
 #define PC_RESET          82    // PC requested a global reset (ASCII 'R')
-#define PC_SET_VOLTAGE    86    // PC requested to set a certain energy (ASCII 'V')
+#define PC_SET_VOLTAGE    86    // PC requested to set a certain energy (ASCII 'V')     // TODO: change in Python
 
 // Error codes
 #define ERROR_NO_ERROR            0   // No error
@@ -92,7 +92,7 @@ byte data_send[MSG_MAX_LENGTH];
 /** ------------------------- Finite state machine ------------------------- **/
 
 #define STATE_IDLE                 0  // Wait for requests from PC
-#define STATE_SETUP_ADC            1  // Pick correct ADC channels, update frequency, and no. of measurement points  // TODO: Maybe rename to STATE_PREPARE_ADCS_FOR_MEASUREMENT, STATE_PREPARE_FOR_MEASUREMENT, or STATE_SETUP_ADCS?
+#define STATE_SET_UP_ADCS          1  // Pick correct ADC channels, update frequency, and no. of measurement points  // TODO: Maybe rename to STATE_PREPARE_ADCS_FOR_MEASUREMENT, STATE_PREPARE_FOR_MEASUREMENT, or STATE_SETUP_ADCS?
 #define STATE_SET_VOLTAGE          2  // Set a voltage with the DAC
 #define STATE_TRIGGER_ADCS         3  // Start a measurement right now
 #define STATE_MEASURE_ADCS         4  // ADC measurements in progress

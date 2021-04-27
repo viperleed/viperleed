@@ -79,8 +79,8 @@ void loop() {
 
     // Finally do what's needed in the currentState
     switch (currentState){
-        case STATE_SETUP_ADC:
-            setUpAllADCs();
+        case STATE_SET_UP_ADCS:
+            prepareADCsForMeasurement();
             break;
         case STATE_SET_VOLTAGE:
             setVoltage();
@@ -388,7 +388,7 @@ void updateState() {
         case PC_SET_UP_ADCS:
             waitingForDataFromPC = true;
             initialTime = millis();
-            currentState = STATE_SETUP_ADC;
+            currentState = STATE_SET_UP_ADCS;
             break;
         case PC_SET_VOLTAGE:
             waitingForDataFromPC = true;
@@ -498,7 +498,7 @@ void findOptimalADCGains(){
     resetMeasurementData();
     encodeAndSend(PC_OK);
     currentState = STATE_IDLE;
-    // TODO: here we have to do the same as in setUpAllADCs(), i.e. writing to updateRate the clock register, write the new gain to the ADCs, load the calibration, then return
+    // TODO: here we have to do the same as in prepareADCsForMeasurement(), i.e. writing to updateRate the clock register, write the new gain to the ADCs, load the calibration, then return
 }
 
 void measureADCsRipple(){
@@ -537,7 +537,7 @@ void measureADCsRipple(){
 }
 
 //=========================
-void setUpAllADCs(){
+void prepareADCsForMeasurement(){
     /**
     Initialize the ADC from the parameters stored in the first 7 bytes of
     "data_received[]". The bytes have the following meaning:
@@ -567,7 +567,7 @@ void setUpAllADCs(){
         PC_SET_UP_ADCS message and the receipt of data
     STATE_ERROR + ERROR_MSG_DATA_INVALID : if either channel or the update rate
         are not acceptable values
-    STATE_SETUP_ADC (stays) : while waiting for data from the PC
+    STATE_SET_UP_ADCS (stays) : while waiting for data from the PC
     STATE_IDLE : successfully finished
     **/
     if(not newMessage){  // waiting for data from the PC
@@ -1386,15 +1386,15 @@ void calibrateADCsAtAllGains(){
     // TODO: I can see three issues with the current code:
     //   - it always does the calibration at AD7705_50HZ rather than at
     //     a specified updateRate. The problem is that the updateRate
-    //     does not come as data from the PC until we go to STATE_SETUP_ADC.
+    //     does not come as data from the PC until we go to STATE_SET_UP_ADCS.
     //     However, there we already need this calibration to be done.
     //     Solution: have the STATE_CALIBRATE_ADCS require a second
     //     communication from the PC (that may time out) in which we are
     //     told the updateRate to use. Then, we can get rid of the
-    //     updateRate from the data required in STATE_SETUP_ADC.
+    //     updateRate from the data required in STATE_SET_UP_ADCS.
     //   - A very similar problem exists for what concerns the channels:
     //     Here we need to know which channels we want to calibrate,
-    //     but this information comes too late in STATE_SETUP_ADC,
+    //     but this information comes too late in STATE_SET_UP_ADCS,
     //     where we need the calibration already. Solution: have the
     //     STATE_CALIBRATE_ADCS require also the channels to be
     //     specified in the same communication message from the previous

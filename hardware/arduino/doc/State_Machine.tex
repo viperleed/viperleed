@@ -7,7 +7,7 @@
 \usepackage{booktabs}
 \usepackage[margin=15mm]{geometry}
 
-\author{Florian Dörr}
+\author{Florian D\"orr, Michele Riva}
 \title{State Machine}
 \begin{document}
 \titlepage
@@ -88,9 +88,10 @@ Original message            & Data bytes & Meaning of data bytes  & Reply & Repl
 \section{State machine}\label{sec:state_machine}
 Here all the states of Arduino, including which event triggers entering this state, which function contains the code that is relevant for the state, and whether the state leads to a new state after it is successfully completed.
 \begin{center}
+\small
 \begin{tabular}{llll}\toprule
 State					        & Initiated by                 & Handler                            & Goes to state        \\\midrule
-\texttt{STATE\_SETUP\_ADC}      & \texttt{PC\_SET\_UP\_ADCS}   & \texttt{setUpAllADCs()}            & \texttt{STATE\_IDLE} \\
+\texttt{STATE\_SET\_UP\_ADCS}   & \texttt{PC\_SET\_UP\_ADCS}   & \texttt{prepareADCsForMeasurement()} & \texttt{STATE\_IDLE} \\
 \texttt{STATE\_SET\_VOLTAGE}    & \texttt{PC\_SET\_VOLTAGE}    & \texttt{setVoltage()}              & \texttt{STATE\_TRIGGER\_ADCS}\\
 \texttt{STATE\_TRIGGER\_ADCS}   & \texttt{STATE\_SET\_VOLTAGE} & \texttt{triggerMeasurements()}     & \texttt{STATE\_IDLE} \\
 \texttt{STATE\_AUTOGAIN\_ADCS}  & \texttt{PC\_AUTOGAIN}        & \texttt{findOptimalADCGains()}     & \texttt{STATE\_IDLE} \\
@@ -106,7 +107,7 @@ State					        & Initiated by                 & Handler                      
 \vspace*{\baselineskip}
 \noindent{}Follows a description of each of the states in the Arduino finite-state machine:
 \begin{itemize}
-\item \texttt{STATE\_SETUP\_ADC}: Requires the PC to communicate which channels are to be measured for the external ADCs [currently without bit mask, so LM35 will always be measured!], the measurement frequency (50, 60, or 500 Hz) as well as the number of measurement points that needs to be averaged. Calls \texttt{setAllADCgainsAndCalibration()}, sends an OK to the PC, and returns to \texttt{STATE\_IDLE}. In essence, this state just fetches pre-stored calibration data.
+\item \texttt{STATE\_SET\_UP\_ADCS}: Requires the PC to communicate which channels are to be measured for the external ADCs [currently without bit mask, so LM35 will always be measured!], the measurement frequency (50, 60, or 500 Hz) as well as the number of measurement points that needs to be averaged. Calls \texttt{setAllADCgainsAndCalibration()}, sends an OK to the PC, and returns to \texttt{STATE\_IDLE}. In essence, this state just fetches pre-stored calibration data.
 
 	\texttt{setAllADCgainsAndCalibration()} fetches the stored calibration data for the current gain and channel, thus THESE VALUES MUST BE PRESENT AND UP TO DATE. This is currently unchecked, but should be! This means that we must have run through \texttt{STATE\_CALIBRATE\_ADCS} for the specific channels requested. Thus, we need to somehow keep track of which channels have been calibrated, and which calibrations can still be considered up to date (perhaps we need a long-term timer, and we should also keep track of the temperature [if LM35 is there], since temperature shifts invalidate the self-calibration). It also needs the ADCs to have the correct gains already figured out, so it may be helpful to check whether a \texttt{STATE\_AUTOGAIN\_ADCS} has successfully run through. Also, it calls \texttt{AD7705setGainAndTrigger()}, i.e. the ADCs start measuring. It is unclear what they are measuring, however, and why, but there should be no communication over the SPI from the ADC back, so it will likely measure a single value and stop there.
 
@@ -114,9 +115,9 @@ State					        & Initiated by                 & Handler                      
 
 \item \texttt{STATE\_SET\_VOLTAGE}: Requires the PC to communicate the DAC value that needs to be set, as well as how long one should wait for the DAC value to be considered stable. It then goes to \texttt{STATE\_TRIGGER\_ADCS}, after calling \texttt{setAllADCgainsAndCalibration()} should any of the ADCs require its gain to be reduced.
 	
-	\texttt{setAllADCgainsAndCalibration()} fetches the stored calibration data for the current gain and channel, thus THESE VALUES MUST BE PRESENT AND UP TO DATE. This is currently unchecked, but should be! It also needs the ADCs to have the correct gains already figured out, so it may be helpful to check whether a \texttt{STATE\_AUTOGAIN\_ADCS} has successfully run through. In practice, it requires \texttt{STATE\_SETUP\_ADC} to have run through successfully. This is unchecked! Also, it calls \texttt{AD7705setGainAndTrigger()}, i.e. the ADCs start measuring. It is unclear what they are measuring, however, and why, but there should be no communication over the SPI from the ADC back, so it will likely measure a single value and stop there.
+	\texttt{setAllADCgainsAndCalibration()} fetches the stored calibration data for the current gain and channel, thus THESE VALUES MUST BE PRESENT AND UP TO DATE. This is currently unchecked, but should be! It also needs the ADCs to have the correct gains already figured out, so it may be helpful to check whether a \texttt{STATE\_AUTOGAIN\_ADCS} has successfully run through. In practice, it requires \texttt{STATE\_SET\_UP\_ADCS} to have run through successfully. This is unchecked! Also, it calls \texttt{AD7705setGainAndTrigger()}, i.e. the ADCs start measuring. It is unclear what they are measuring, however, and why, but there should be no communication over the SPI from the ADC back, so it will likely measure a single value and stop there.
 
-	It may reach a \texttt{STATE\_ERROR} due to \texttt{ERROR\_TIMEOUT} if the PC does not send the needed values as a second message, following \texttt{PC\_SET\_VOLTAGE}, within 5 seconds. We should probably throw an \texttt{ERROR\_REQUEST\_PRECEDENCE} if this state is running before a \texttt{STATE\_SETUP\_ADC} has been completed, i.e., before a \texttt{PC\_SET\_UP\_ADCS} command has been issued. This, however, depends also on which hardware configuration we have (not needed if the ADCs are not there).
+	It may reach a \texttt{STATE\_ERROR} due to \texttt{ERROR\_TIMEOUT} if the PC does not send the needed values as a second message, following \texttt{PC\_SET\_VOLTAGE}, within 5 seconds. We should probably throw an \texttt{ERROR\_REQUEST\_PRECEDENCE} if this state is running before a \texttt{STATE\_SET\_UP\_ADCS} has been completed, i.e., before a \texttt{PC\_SET\_UP\_ADCS} command has been issued. This, however, depends also on which hardware configuration we have (not needed if the ADCs are not there).
 
 \item \texttt{STATE\_TRIGGER\_ADCS}: cannot be induced by PC directly. It is the sub-state that follows successful completion of \texttt{STATE\_SET\_VOLTAGE}. Does not require any interaction with the PC. For correct operation, requires hardwareDetected to be available and up to date, does nothing if the PC did not ask for \texttt{PC\_CONFIGURATION}. Could it do weird stuff if hardwareDetected is not up to date? The Arduino then goes to \texttt{STATE\_IDLE}, i.e., although the ADCs have been triggered, NO MEASUREMENT DATA IS SAVED! This means that the PC needs to request measurement explicitly via \texttt{PC\_MEASURE}. I don't really see then the use of the automatic switch from \texttt{STATE\_SET\_VOLTAGE} to \texttt{STATE\_TRIGGER\_ADCS}, especially if the idea was to have the Arduino take care of the timings to avoid lag from the PC!! IT MUST GO TO \texttt{STATE\_MEASURE\_ADCS}.
 
