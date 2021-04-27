@@ -137,15 +137,20 @@ def monitoredPool(rp, poolsize, function, tasks):
         r = pool.apply_async(function, (task,), callback=checkPoolResult)
         results.append(r)
     pool.close()
-    while not all(r.ready() for r in results):
-        if killed:
-            break
-        updatePARAMETERS(rp)
-        if rp.STOP:
-            kill_pool(pool)
-            logger.info("Stopped by STOP parameter.")
-            return
-        time.sleep(1)
+    try:
+        while not all(r.ready() for r in results):
+            if killed:
+                break
+            updatePARAMETERS(rp)
+            if rp.STOP:
+                kill_pool(pool)
+                logger.info("Stopped by STOP parameter.")
+                return
+            time.sleep(1)
+    except KeyboardInterrupt:
+        logger.warning("Stopped by keyboard interrupt.")
+        kill_pool(pool)
+        raise
     pool.join()
     error = False
     for r in results:
