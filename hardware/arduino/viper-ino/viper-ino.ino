@@ -85,7 +85,7 @@ void loop() {
         case STATE_SET_VOLTAGE:
             setVoltage();
             break;
-        case STATE_TRIGGER_ADCS:                                                // TODO: must go to STATE_MEASURE_ADCS at the end
+        case STATE_TRIGGER_ADCS:
             if((millis() - initialTime) >= dacSettlingTime){
                 triggerMeasurements();
             }
@@ -115,15 +115,14 @@ void loop() {
 
 void readFromSerial() {
     /**
-    Receive one byte (i.e., character) from the serial line (i.e., PC) and store
-    it into "temp_buffer[]". Also track whether all bytes that need to be
-    received have been received by looking at whether the last byte read is
-    MSG_END. When this happens, temp_buffer will be:
-        [MSG_START, byte with length of message, message, MSG_END]
-
-    Reads
-    -----
-
+    Store bytes (i.e., characters) read from the serial line (i.e., PC)
+    in serialInputBuffer. A message is considered complete when we
+    receive a MSG_END. When this happens, serialInputBuffer will be
+    [MSG_START, byte with length of decoded message, message, MSG_END]
+    
+    A full message will likely be read during a single call to this
+    function, unless its characters come in very slowly. In this case
+    it will take a few loop iterations to read a full message.
 
     Writes
     ------
@@ -390,13 +389,9 @@ void updateState() {
             initialTime = millis();
             currentState = STATE_SET_VOLTAGE;
             break;
-        case PC_AUTOGAIN:                                                       // TODO: may be nice to have a prepareForAutogain() function
+        case PC_AUTOGAIN:
             initialTime = millis();
-            resetMeasurementData();
-            adc0Gain = 0;
-            adc1Gain = 0;
-            selfCalibrateAllADCs(AD7705_500HZ);  // Takes ~13 ms
-            numMeasurementsToDo = 25;                                           // TODO: back up numMeasurementsToDo before changing it!
+            prepareForAutogain();
             currentState = STATE_AUTOGAIN_ADCS;
             break;
         case PC_TRIGGER_ADCS:
@@ -416,6 +411,33 @@ void updateState() {
 }
 
 //=========================
+
+void prepareForAutogain(){
+    /**Prepare the system to enter a STATE_AUTOGAIN_ADCS.
+    
+    Reads
+    -----
+    
+    Writes
+    ------
+    
+    **/
+    // Reset data, as we will store measurements in the same arrays
+    resetMeasurementData();
+    
+    // Gains to zero, where we will measure for the gain optimization
+    adc0Gain = 0;
+    adc1Gain = 0;
+    
+    // Calibrate at the high frequency used for autogain
+    selfCalibrateAllADCs(AD7705_500HZ);  // Takes ~13 ms
+    
+    // Backup the number of measurement that will be
+    // used during normal measurements later on. This
+    // is restored at the end of the gain optimization
+    numMeasurementsToDoBackup = numMeasurementsToDo;
+    numMeasurementsToDo = 25;
+}
 
 void findOptimalADCGains(){
     /**
@@ -460,9 +482,17 @@ void findOptimalADCGains(){
             errorTraceback[0] = currentState;
             errorTraceback[1] = ERROR_TIMEOUT;
             currentState = STATE_ERROR;
+
+            // Do some cleanup:
             resetMeasurementData();
+            numMeasurementsToDo = numMeasurementsToDoBackup;
             newMessage = false;
-            // TODO: here we set gains to zero, and do the same as when going to IDLE at the end
+
+            // Place the ADCs back at gain zero, and
+            // restore updateRate and calibration
+            adc0Gain = 0;
+            adc1Gain = 0;
+            setAllADCgainsAndCalibration();
         }
         return;
     }
@@ -490,10 +520,17 @@ void findOptimalADCGains(){
             adc1Gain++;
       }
     }
+
+    // Done. Clean up and update the ADCs with the new gain
+    // found, also setting back the normal updateRate, and
+    // loading the relevant calibration data.
     resetMeasurementData();
+    numMeasurementsToDo = numMeasurementsToDoBackup;
+    newMessage = false;
+    setAllADCgainsAndCalibration();
+
     encodeAndSend(PC_OK);
     currentState = STATE_IDLE;
-    // TODO: here we have to do the same as in prepareADCsForMeasurement(), i.e. writing to updateRate the clock register, write the new gain to the ADCs, load the calibration, then return
 }
 
 void measureADCsRipple(){
@@ -534,8 +571,8 @@ void measureADCsRipple(){
 //=========================
 void prepareADCsForMeasurement(){
     /**
-    Initialize the ADC from the parameters stored in the first 7 bytes of
-    "data_received[]". The bytes have the following meaning:
+    Initialize the ADC from the parameters stored in the first 5 bytes of
+    data_received. The bytes have the following meaning:
     - [0] channel of ADC#0
     - [1] channel of ADC#1
     - [2] measurement frequency for ADCs #0 and #1
@@ -822,6 +859,7 @@ void reset(){
     adc1ShouldDecreaseGain = false;
 
     numMeasurementsToDo = 1;
+    numMeasurementsToDoBackup = 1;
     resetMeasurementData();
 
     // TODO: clear also calibration data
@@ -916,7 +954,7 @@ void triggerMeasurements() {
         AD7705setGainAndTrigger(CS_ADC_1, adc1Channel, adc1Gain);
     
     // Signal the PC that we are now going to start the measurements
-    encodeAndSend(PC_OK)
+    encodeAndSend(PC_OK);
     
     // Switch over to measuring state
     currentState = STATE_MEASURE_ADCS;
@@ -1031,11 +1069,8 @@ void checkMeasurementInADCRange(byte chipSelectPin, byte channel, byte gain,
         saturation, and the gain cannot be decreased. Otherwise,
         the currentState is preserved.
     */
-    // TODO: here we need to somehow use the adc0RipplePP and adc1RipplePP
-    //       values, not just the bare adcValue measured! Alternatively, we
-    //       could directly pass in the ripple-modified value during the call
-    //         The ripple (measured at gain 0) should be >> by gain and
-    //         added to abs(adcValue) for the next check only
+    // TODO: The ripple (measured at gain 0) should be >> by gain and
+    //       added to abs(adcValue) for the next check only
     if(abs(adcValue) > ADC_RANGE_THRESHOLD
        && (gain > 0)
        && !*adcShouldDecreaseGain){
@@ -1057,9 +1092,6 @@ void checkMeasurementInADCRange(byte chipSelectPin, byte channel, byte gain,
         if(gain > 0){
             gain--;
             setAllADCgainsAndCalibration();
-            //AD7705selfCalibrate(chipSelectPin, channel, gain, adcUpdateRate);
-            //AD7705waitForCalibration(chipSelectPin, channel);
-            //delay(1);
             resetMeasurementData();
             *adcShouldDecreaseGain = false;
         }
@@ -1153,7 +1185,7 @@ void selfCalibrateAllADCs(byte updateRate) {
     delay(1);
 }
 
-void storeAllSelfCalibrationResults(int32_t targetArray[2][2]) {                // TODO: use N_MAX_ADCS_ON_PCB for the dimension of the first direction.
+void storeAllSelfCalibrationResults(int32_t targetArray[N_MAX_ADCS_ON_PCB][2]) {
     /**
     Store the result of the last self calibration
     of both ADCs (if present) to the array passed
@@ -1169,7 +1201,7 @@ void storeAllSelfCalibrationResults(int32_t targetArray[2][2]) {                
     -----
     hardwareDetected, adc0Channel, adc1Channel
     */
-    for (int iADC = 0; iADC < 2; iADC++) {                                      // TODO: use N_MAX_ADCS_ON_PCB for the upper limit of the index
+    for (int iADC = 0; iADC < N_MAX_ADCS_ON_PCB; iADC++) {
         // bool adcPresentMask = iADC==0 ? ADC_0_PRESENT : ADC_1_PRESENT;       // BUG: ADC_0_PRESENT/ADC_1_PRESENT are uint16_t, not bool!
         uint16_t adcPresentMask = iADC==0 ? ADC_0_PRESENT : ADC_1_PRESENT;      // TODO: using the ADCs struct would make it easier, as you would just need to do externalADCs[iADC].present
         if (hardwareDetected.asInt & adcPresentMask) {
@@ -1188,11 +1220,13 @@ void setAllADCgainsAndCalibration() {
     Set the ADC gains according to the global adc0Gain,
     adc1Gain variables and restores the previously stored
     calibration values from the selfCalDataVsGain array.
+    Also makes sure that the update rate of the ADCs is
+    the correct one.
 
     Reads
     -----
     hardwareDetected, adc0Channel, adc1Channel, adc0Gain,
-    adc1Gain, selfCalDataVsGain
+    adc1Gain, selfCalDataVsGain, adcUpdateRate
     **/
     // TODO: requires the calibration data to be up to date (or at least
     //       that the self-calibration has run at least once)! This is
@@ -1209,14 +1243,11 @@ void setAllADCgainsAndCalibration() {
             int32_t cGain = selfCalDataVsGain[gain][iADC][channel][1];
             AD7705setCalibrationRegister(chipSelect, channel, AD7705_REG_OFFSET, cOffs);
             AD7705setCalibrationRegister(chipSelect, channel, AD7705_REG_GAIN, cGain);
-//          #ifdef DEBUG
-//              Serial.print("gain=");
-//              Serial.println(gain);
-//              Serial.print(" cOffs=");
-//              Serial.print(AD7705getCalibrationRegister(chipSelect, channel, AD7705_REG_OFFSET));
-//              Serial.print(" cGain=");
-//              Serial.println(AD7705getCalibrationRegister(chipSelect, channel, AD7705_REG_GAIN));
-//          #endif
+            
+            // Reset the update rate. This is necessary after
+            // finishing the auto-gain (that is done at a
+            // different frequency), but does not hurt anyway
+            AD7705setClock(chipSelect, adcUpdateRate);
 
             // Trigger to make sure the ADC is up to date with the new
             // calibration data, but we will not read the converted data
@@ -1426,7 +1457,7 @@ void calibrateADCsAtAllGains(){
             #endif
         }
 
-        for (int iADC=0; iADC < 2; iADC++) {                                    // TODO: use N_MAX_ADCS_ON_PCB instead of 2
+        for (int iADC=0; iADC < N_MAX_ADCS_ON_PCB; iADC++) {
             byte channel = iADC==0 ? adc0Channel : adc1Channel;                 // TODO: using the externalADCs array of struct would make this easier: externalADCs[iADC].channel
             for (int offsetOrGain = 0; offsetOrGain < 2; offsetOrGain++) {
                 int32_t median = getMedian32(

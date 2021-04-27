@@ -199,6 +199,7 @@ struct analogToDigitalConverter {
 
 // Measurements
 uint16_t numMeasurementsToDo = 1;         // No. of ADC measurements to do before measurement is considered over
+uint16_t numMeasurementsToDoBackup = 1;   // Copy of the previous one, used to restore the previous value after auto-gain is done
 uint16_t numMeasurementsDone;             // Counter for the number of ADC measurements done so far
 int32_t  summedMeasurements[N_MAX_MEAS];  // Measurements of ADC#0, ADC#1 and LM35 are summed up here
 
