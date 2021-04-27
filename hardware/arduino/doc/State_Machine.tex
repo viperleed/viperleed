@@ -94,10 +94,10 @@ Here all the states of Arduino, including which event triggers entering this sta
 State					        & Initiated by                 & Handler                            & Goes to state        \\\midrule
 \texttt{STATE\_SET\_UP\_ADCS}   & \texttt{PC\_SET\_UP\_ADCS}   & \texttt{prepareADCsForMeasurement()} & \texttt{STATE\_IDLE} \\
 \texttt{STATE\_SET\_VOLTAGE}    & \texttt{PC\_SET\_VOLTAGE}    & \texttt{setVoltage()}              & \texttt{STATE\_TRIGGER\_ADCS}\\
-\texttt{STATE\_TRIGGER\_ADCS}   & \texttt{PC\_TRIGGER\_ADCS} or & \texttt{triggerMeasurements()}    & !\texttt{STATE\_IDLE}! \\
+\texttt{STATE\_TRIGGER\_ADCS}   & \texttt{PC\_TRIGGER\_ADCS} or & \texttt{waitAndTriggerMeasurements()} & \texttt{STATE\_MEASURE\_ADCS} \\
                                 & \texttt{STATE\_SET\_VOLTAGE} &&\\
 \texttt{STATE\_AUTOGAIN\_ADCS}  & \texttt{PC\_AUTOGAIN}        & \texttt{findOptimalADCGains()}     & \texttt{STATE\_IDLE} \\
-\texttt{STATE\_MEASURE\_ADCS}   & !Nothing! & \texttt{measureADCs()}   & \texttt{STATE\_ADC\_VALUES\_READY}\\
+\texttt{STATE\_MEASURE\_ADCS}   & \texttt{STATE\_TRIGGER\_ADCS} & \texttt{measureADCs()}   & \texttt{STATE\_ADC\_VALUES\_READY}\\
 \texttt{STATE\_ADC\_VALUES\_READY} & \texttt{STATE\_MEASURE\_ADCS} & \texttt{sendMeasuredValues()}  & \texttt{STATE\_IDLE}\\
 \texttt{STATE\_GET\_CONFIGURATION} & \texttt{PC\_CONFIGURATION}    & \texttt{getConfiguration()}    & \texttt{STATE\_IDLE}\\
 \texttt{STATE\_CALIBRATE\_ADCS} & \texttt{PC\_CALIBRATION}     & \texttt{calibrateADCsAtAllGains()} & \texttt{STATE\_IDLE}\\
