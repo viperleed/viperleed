@@ -46,7 +46,7 @@ union floatOrBytes{
 #endif
 
 // Acceptable messages for communication with the PC
-#define PC_AUTOGAIN        8    // PC requested auto-gain for ADCs
+#define PC_AUTOGAIN       65    // PC requested auto-gain for ADCs (ASCII 'A')				    // TODO: change in Python
 #define PC_CALIBRATION     9    // PC requested self-calibration of all ADCs at all gains
 #define PC_ERROR         253    // An error occurred
 #define PC_CONFIGURATION  63    // PC requested hardware configuration (ASCII '?')              // TODO: change in Python

@@ -705,9 +705,9 @@ void setVoltage(){
     newMessage = false;
     resetMeasurementData();
     if(adc0ShouldDecreaseGain){
-        // During the last measurement, the value read by the ADC has reached the
-        // upper part of the range. The gain needs to be decreased, and the ADC
-        // requires recalibration
+        // During the last measurement, the value read by the ADC has
+        // reached the upper part of the range. The gain needs to be
+        // decreased, and the ADC requires recalibration
         adc0Gain--;
         setAllADCgainsAndCalibration();                                         // TODO: requires the calibration data to be available and up to date. This is currently not checked!
         adc0ShouldDecreaseGain = false;
@@ -745,7 +745,7 @@ void measureADCs(){
     Goes to state
     -------------
     STATE_ERROR with ERROR_TIMEOUT : if it takes longer than 5s
-        between the PC_TRIGGER_ADCS message and completing the number
+        between the beginning of the state and completing the number
         of measurements that need to be averaged
     STATE_ERROR with ERROR_ADC_SATURATED : if one of the inputs of
         the ADCs has reached saturation, and there is no room
@@ -754,9 +754,8 @@ void measureADCs(){
         need to be measured have been acquired
     STATE_ADC_VALUES_READY : successfully finished
     **/
-    // TODO: since makeAndSumMeasurements() requires the ADCs to be already
-    //       triggered fro measurements, the PC_TRIGGER_ADCS command cannot
-    //       be handled until the ADCs have been triggered!
+    // TODO: check that we come from STATE_MEASURE_ADCS
+
     makeAndSumMeasurements();
     // TODO: if, by chance, the last value measured by one of the ADCs
     //       caused a solid saturation, this is not communicated in any
@@ -1123,7 +1122,7 @@ void getFloatMeasurements() {
     fDataOutput
     **/
     if (hardwareDetected.asInt & ADC_0_PRESENT) {
-        fDataOutput[0].asFloat = summedMeasurements[0] * voltsPerBit[adc0Gain] / numMeasurementsToDo;  // TODO: wouldn't it be better to use numMeasurementsDone?? They should be the same, but we may later want to allow the PC to send back data even if the averaging is not done, perhaps?
+        fDataOutput[0].asFloat = summedMeasurements[0] * voltsPerBit[adc0Gain] / numMeasurementsDone;
         // ADC#0, channel 0: I0 input (Volts).
         // The actual voltage at the input can be in either 0-2.5 V
         // (jumper closed) or 0-10 V (jumper open) ranges. This means
@@ -1139,18 +1138,24 @@ void getFloatMeasurements() {
     }
 
     if (hardwareDetected.asInt & ADC_1_PRESENT) {
-        fDataOutput[1].asFloat = summedMeasurements[1] * voltsPerBit[adc1Gain] / numMeasurementsToDo;
+        fDataOutput[1].asFloat = summedMeasurements[1] * voltsPerBit[adc1Gain] / numMeasurementsDone;
         // ADC#1, channel 0: I0 at biased sample (microAmps)
         if (adc1Channel == AD7705_CH0) {
             fDataOutput[1].asFloat *= ADC_1_CH0_SCALE;
         }
-        else                            //ADC#1 channel 1: AUX
-            if ((hardwareDetected.asInt & JP_AUX_CLOSED) == 0)  //0-10V with jumper open
+        else{
+            // ADC#1 channel 1: AUX
+            // The actual voltage at the input can be in either 0-2.5 V
+            // (jumper closed) or 0-10 V (jumper open) ranges. This means
+            // scaling the vale by JP_AUX_CLOSED if the jumper is open,
+            // and doing nothing if it's closed (ADC range is already 0-2.5V) 
+            if ((hardwareDetected.asInt & JP_AUX_CLOSED) == 0)  // 0-10 V with jumper open
                 fDataOutput[1].asFloat *= ADC_1_CH1_SCALE_JO;
+        }
     }
 
-    if (hardwareDetected.asInt & LM35_PRESENT) //LM35: degrees C
-        fDataOutput[2].asFloat = summedMeasurements[2] * ARDUINO_ADU_DEG_C / numMeasurementsToDo;
+    if (hardwareDetected.asInt & LM35_PRESENT) // LM35: degrees C
+        fDataOutput[2].asFloat = summedMeasurements[2] * ARDUINO_ADU_DEG_C / numMeasurementsDone;
 }
 
 void selfCalibrateAllADCs(byte updateRate) {
@@ -1200,7 +1205,7 @@ void storeAllSelfCalibrationResults(int32_t targetArray[N_MAX_ADCS_ON_PCB][2]) {
     Reads
     -----
     hardwareDetected, adc0Channel, adc1Channel
-    */
+    **/
     for (int iADC = 0; iADC < N_MAX_ADCS_ON_PCB; iADC++) {
         // bool adcPresentMask = iADC==0 ? ADC_0_PRESENT : ADC_1_PRESENT;       // BUG: ADC_0_PRESENT/ADC_1_PRESENT are uint16_t, not bool!
         uint16_t adcPresentMask = iADC==0 ? ADC_0_PRESENT : ADC_1_PRESENT;      // TODO: using the ADCs struct would make it easier, as you would just need to do externalADCs[iADC].present
@@ -1314,9 +1319,9 @@ uint16_t getHardwarePresent() {
         sensorValue2 < LM35_MAX_ADU && abs(sensorValue2 - sensorValue1) < 10)
         result |= LM35_PRESENT;
 
-    // (3) Check for relay present: if the relay is mounted, there              // TODO: I don't think we have anything implemented to actually drive the relay to switch gain. I can't recall if this is something that the user should just do externally with a switch, or if we wanted to allow switching this electronically
+    // (3) Check for relay present: if the relay is mounted, there
     // should also be an external pull-up resistor soldered. This
-    // gives about 0.12 V at the pin, i.e. 48 ADUs, i.e. in between
+    // gives about 0.12 V at the pin, i.e. 48 ADUs, i.e., in between
     // RELAY_MIN_ADU and RELAY_MAX_ADU
     uint16_t sensorValue = analogReadMedian(RELAY_PIN);
     // if (sensorValue > RELAY_MIN_ADU && sensorValue < RELAY_MIN_ADU)          // TODO: probably a bug here?? this goes well only if sensorValue == RELAY_MIN_ADU
@@ -1381,9 +1386,6 @@ void calibrateADCsAtAllGains(){
     This means that it takes approximately 360 ms to finish a single
     run of this function (120 ms x 3 points for computing medians).
     This means, the serial line remains unresponsive for ~360 ms.
-    TODO: We should consider whether we rather want to run one single
-    median point per state-loop. This would leave the serial line
-    inactive only for 120 ms.
 
     The calibration is done in parallel for both ADCs (if present).
 
