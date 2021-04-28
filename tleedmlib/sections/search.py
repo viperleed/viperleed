@@ -9,6 +9,7 @@ Tensor LEED Manager section Search
 """
 
 import os
+import sys
 import logging
 import shutil
 import subprocess
@@ -199,7 +200,7 @@ def processSearchResults(sl, rp, final=True):
     return
 
 
-def parabolaFit(rp, r_configs, x0=None, **kwargs):
+def parabolaFit(rp, datafiles, r_best, x0=None, max_configs=0, **kwargs):
     """
     Performs a parabola fit to all rfactor/configuration data in r_configs.
     Stores the result in the rp searchpar objects. Keyword arguments are read
@@ -209,10 +210,16 @@ def parabolaFit(rp, r_configs, x0=None, **kwargs):
     ----------
     rp : Rparams
         The Rparams object containing runtime information
-    r_configs : set
-        The data to fit, as (rfactor, configuration) tuples
+    datafiles : list of str
+        The files to read data from
+    r_best : float
+        Best known R-factor so far
     x0 : numpy.array, optional
         A starting guess for the minimum
+    max_configs : int
+        0 to read all, else specifies the maximum number of configurations to
+        read in. Will sort configurations and read in the ones with lowest
+        R-factors first, discard the rest.
     Keyword Arguments:
         localize : real, optional
             If not zero, r_configs will be reduced to only use points close to
@@ -230,6 +237,7 @@ def parabolaFit(rp, r_configs, x0=None, **kwargs):
             configuration. Therefore, all models except LinearRegression put
             some penalty not only on curvature, but also on the parameter
             offset from the best-R configuration.
+            Setting 'type' to 'none' turns off parabola fit entirely.
         alpha : float, optional
             The alpha value used by Ridge, Lasso and ElasticNet regression. The
             default is 1e-5.
@@ -261,15 +269,30 @@ def parabolaFit(rp, r_configs, x0=None, **kwargs):
         m = 0.5*(m + m.T)
         return m
 
+    if not datafiles:
+        return None, None
     if "type" not in kwargs:
         which_regression = rp.PARABOLA_FIT["type"]
     else:
         which_regression = kwargs["type"]
+    if which_regression == "none":
+        return None, None
     for a in ("localize", "mincurv", "alpha", "type"):
         if a not in kwargs:
             kwargs[a] = rp.PARABOLA_FIT[a]
+
+    # read data
+    r_cutoff = 1.0
+    if datafiles:
+        varR = np.sqrt(8*np.abs(rp.V0_IMAG) / rp.total_energy_range())
+        rc = np.array((io.readDataChem(
+            rp, datafiles,
+            cutoff=r_best + r_cutoff * varR,
+            max_configs=max_configs)), dtype=object)
+    if len(rc) < 100*rp.indyPars:
+        return None, None
+
     # starttime = timer()
-    rc = np.array([*r_configs], dtype=object)
     rfacs, configs = rc[:, 0].astype(float), rc[:, 1]
     localizeFactor = kwargs["localize"]
     if localizeFactor == 0:
@@ -641,6 +664,21 @@ def search(sl, rp):
         except Exception:
             logger.warning("Failed to delete old {} file. This may cause "
                            "errors in the parabola fit.".format(fn))
+    # get config size
+    config_size = (
+        sys.getsizeof((1., tuple()))
+        + sys.getsizeof(tuple([tuple()] * max(1, len(rp.domainParams))))
+        + sys.getsizeof((1, tuple())))
+    if rp.domainParams:
+        config_size += sum(
+            [sys.getsizeof(tuple([0] * len(dp.rp.searchpars)))
+             + sys.getsizeof(1) * len(dp.rp.searchpars)
+             for dp in rp.domainParams])
+    else:
+        config_size += (sys.getsizeof(tuple([0] * len(rp.searchpars)))
+                        + sys.getsizeof(1) * len(rp.searchpars))
+    max_memory_parab = 1e9   # maximum memory in bytes to use on parabola fit
+    max_read_configs = int(max_memory_parab / config_size)
     # start search process
     repeat = True
     first = True
@@ -648,9 +686,6 @@ def search(sl, rp):
     gens = []  # generation numbers in SD.TL, but continuous if search restarts
     markers = []
     rfaclist = []
-    all_r_configs = set()  # tuples (r, config) for parabola fit
-    max_stored_configs = int(1.5*10**5)  # maximum configurations to store
-    store_config_cutoff = 1  # defines how many varR above min(R) to store
     parab_x0 = None     # starting guess for parabola
     rfac_predict = []  # tuples (gen, r) from parabola fit
     realLastConfig = {"all": [], "best": [], "dec": []}
@@ -770,7 +805,6 @@ def search(sl, rp):
                         gens.append(gen + genOffset)
                         sdtlGenNum = gen
                         rfaclist.append(np.array(rfacs))
-                        all_r_configs.update(list(zip(rfacs, configs)))
                         if gen % 1000 == 0:
                             speed = 1000*(timer() - absstarttime)/gens[-1]
                             logger.debug(
@@ -812,43 +846,30 @@ def search(sl, rp):
                                 break
                     if len(newData) > 0:
                         lastconfig = newData[-1][2]
-                    if check_datafiles and not (stop and repeat):
+                    if (check_datafiles and not (stop and repeat)
+                            and rp.PARABOLA_FIT["type"] != "none"):
                         check_datafiles = False
                         datafiles = [f for f in os.listdir()
                                      if re.match(r'data\d+\.chem$', f.lower())]
-                        if datafiles:
-                            varR = np.sqrt(8*np.abs(rp.V0_IMAG)
-                                           / rp.total_energy_range())
-                            all_r_configs.update(io.readDataChem(
-                                rp, datafiles,
-                                cutoff=min(rfacs)+store_config_cutoff*varR,
-                                max_configs=max_stored_configs))
-                            if len(all_r_configs) > 1.2*max_stored_configs:
-                                # clean out
-                                all_r_configs = set(sorted(list(
-                                    all_r_configs))[:max_stored_configs])
-                        if len(all_r_configs) >= 100*rp.indyPars:
-                            if rfac_predict and (rfac_predict[-1][1] >
-                                                 rfaclist[-1][0]):
-                                # if current prediction is bad, reset x0
-                                parab_x0 = None
-                            try:
-                                # !!! WORK IN PROGRESS
-                                # logger.debug("Parabola fit with {} points"
-                                #              .format(len(all_r_configs)))
-                                parab_x0, predictR = parabolaFit(
-                                    rp, all_r_configs, x0=parab_x0)
-                                if predictR is not None:
-                                    if not rfac_predict:
-                                        logger.debug("Starting parabola fits "
-                                                     "to R-factor data.")
-                                    rfac_predict.append((gens[-1], predictR))
-                            except KeyboardInterrupt:
-                                raise
-                            except Exception:
-                                logger.warning("Parabolic fit of R-factor "
-                                               "data failed",
-                                               exc_info=rp.LOG_DEBUG)
+                        if rfac_predict and (rfac_predict[-1][1] >
+                                             rfaclist[-1][0]):
+                            # if current prediction is bad, reset x0
+                            parab_x0 = None
+                        try:
+                            parab_x0, predictR = parabolaFit(
+                                rp, datafiles, min(rfacs), x0=parab_x0,
+                                max_configs=max_read_configs)
+                            if predictR is not None:
+                                if not rfac_predict:
+                                    logger.debug("Starting parabola fits "
+                                                 "to R-factor data.")
+                                rfac_predict.append((gens[-1], predictR))
+                        except KeyboardInterrupt:
+                            raise
+                        except Exception:
+                            logger.warning("Parabolic fit of R-factor "
+                                           "data failed",
+                                           exc_info=rp.LOG_DEBUG)
                     if len(gens) > 1:
                         try:
                             writeSearchProgressPdf(
@@ -973,30 +994,20 @@ def search(sl, rp):
                     logger.warning("Failed to delete old SD.TL file. "
                                    "This may cause errors in the "
                                    "interpretation of search progress.")
-            # reduce the all_r_configs object to save memory
-            if rfacs and len(all_r_configs) > 1:
-                cl = sorted(list(all_r_configs))
-                del all_r_configs
-                varR = np.sqrt(8*np.abs(rp.V0_IMAG) / rp.total_energy_range())
-                cl = cl[:min(max_stored_configs,
-                             next((ind for ind, r
-                                   in enumerate(list(zip(*cl))[0])
-                                   if r > min(rfacs)+store_config_cutoff*varR),
-                                  len(cl)))]
-                all_r_configs = set(cl)
-                del cl
     if not interrupted:
         logger.info("Finished search. Processing files...")
     else:
         logger.info("Processing files...")
     # final parabola fit  # !!! double check later
-    if len(all_r_configs) >= 10*rp.indyPars:
-        if rfac_predict and (rfac_predict[-1][1] > rfaclist[-1][0]):
-            parab_x0 = None
-        parab_x0, predictR = parabolaFit(rp, all_r_configs, x0=parab_x0)
-        if predictR is not None:
-            rfac_predict.append((gens[-1], predictR))
-        del all_r_configs  # free up memory
+    if rfac_predict and (rfac_predict[-1][1] > rfaclist[-1][0]):
+        parab_x0 = None
+    datafiles = [f for f in os.listdir()
+                 if re.match(r'data\d+\.chem$', f.lower())]
+    parab_x0, predictR = parabolaFit(rp, datafiles, min(rfacs),
+                                     x0=parab_x0,
+                                     max_configs=max_read_configs)
+    if predictR is not None:
+        rfac_predict.append((gens[-1], predictR))
     # write pdf one more time
     if len(gens) > 1:
         try:

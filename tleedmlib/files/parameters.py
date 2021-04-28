@@ -771,6 +771,9 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                     il[1] = 18
                 rpars.LMAX = il
         elif param == 'PARABOLA_FIT':
+            if llist[0] == 'off':
+                rpars.PARABOLA_FIT['type'] = 'none'
+                continue
             sublists = tl.base.splitSublists(llist, ',')
             for sl in sublists:
                 flag = sl[0].lower()
@@ -781,7 +784,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                                .format(sl[1], sl[0]))
                 if flag == 'type':
                     if sl[1].lower() in ('linear', 'linearregression', 'lasso',
-                                         'ridge', 'elasticnet'):
+                                         'ridge', 'elasticnet', 'none'):
                         rpars.PARABOLA_FIT['type'] = sl[1]
                     else:
                         logger.warning(value_error)
