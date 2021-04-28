@@ -10,6 +10,7 @@ Functions for reading and writing files relevant to the reference calculation
 import numpy as np
 import logging
 import os
+import copy
 from viperleed import fortranformat as ff
 
 import viperleed.tleedmlib as tl
@@ -385,6 +386,10 @@ def writeAUXNONSTRUCT(sl, rp):
 
 def writeAUXGEO(sl, rp):
     """Writes AUXGEO, which is part of the input FIN for the refcalc."""
+    if rp.LAYER_STACK_VERTICAL:
+        sl = copy.deepcopy(sl)
+        sl.projectCToZ()
+        sl.updateLayerCoordinates()
     output = ''
     output += ('---------------------------------------------------------'
                '----------\n')
@@ -478,9 +483,6 @@ def writeAUXGEO(sl, rp):
         writelist.sort(key=lambda atom: -atom.pos[2])
         for atom in writelist:
             writepos = atom.cartpos - atom.layer.cartori
-            if rp.LAYER_STACK_VERTICAL:
-                writepos += np.append(atom.layer.cartori[:2]
-                                      - blayers[0].cartori[:2], 0)
             ol = i3.write([sl.sitelist.index(atom.site)+1])
             if natoms != 1:
                 ol += f74x3.write([writepos[2], writepos[0], writepos[1]])
@@ -588,10 +590,7 @@ def writeAUXGEO(sl, rp):
     output += ol + 'NSTACK: number of layers stacked onto bulk\n'
     for layer in list(reversed(nblayers)):
         n = layer.num + 1
-        if not rp.LAYER_STACK_VERTICAL:
-            v = sl.layers[n].cartori - layer.cartori
-        else:
-            v = np.zeros(3)
+        v = sl.layers[n].cartori - layer.cartori
         v[2] = sl.layers[n].cartori[2] - layer.cartbotz
         v = v + layerOffsets[n]   # add layerOffsets for Bravais layers
         ol = i3.write([n]) + f74x3.write([v[2], v[0], v[1]])
