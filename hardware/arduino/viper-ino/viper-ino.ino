@@ -80,10 +80,10 @@ void loop() {
             prepareADCsForMeasurement();
             break;
         case STATE_SET_VOLTAGE:
-            setVoltage();
+            setVoltageAndWait();
             break;
         case STATE_TRIGGER_ADCS:
-            waitAndTriggerMeasurements();
+            triggerMeasurements();
             break;
         case STATE_MEASURE_ADCS:
             measureADCs();
@@ -847,9 +847,11 @@ void prepareADCsForMeasurement(){
 
 
 /** Handler of STATE_SET_VOLTAGE */
-void setVoltage(){
+void setVoltageAndWait(){
     /**
     Ask the DAC to provide a new voltage, if new settings are available.
+    Then, wait the prescribed amount of time for the voltage to be stable,
+    and trigger the ADCs for a measurement.
 
     Needs 4 bytes from the data_received[] buffer. The meaning is:
     - [0(MSB) + 1(LSB)] DAC value to be set (uint16_t).
@@ -858,17 +860,18 @@ void setVoltage(){
 
     Reads
     -----
-    data_received
+    data_received, msgLength
 
     Writes
     ------
-    dacSettlingTime, currentState, newMessage, summedMeasurements,
+    dacSettlingTime, newMessage, waitingForDataFromPC, summedMeasurements,
     numMeasurementsDone, adc0Gain, adc1Gain, adc0ShouldDecreaseGain,
-    adc1ShouldDecreaseGain
+    adc1ShouldDecreaseGain, initialTime
 
     Msg to PC
     ---------
-    None.
+    PC_OK, signaling that we're done waiting, and we
+    will begin collecting measurements
 
     Goes to state
     -------------
@@ -877,77 +880,108 @@ void setVoltage(){
     STATE_ERROR : ERROR_TIMEOUT
         If more than 5s pass between the PC_SET_VOLTAGE message
         and the receipt of data
+    STATE_ERROR : ERROR_MSG_DATA_INVALID
+        If we receive data, but it isn't exactly the amount
+        we were expecting to get
     STATE_ERROR : ERROR_NEVER_CALIBRATED
         If one of the ADC channels used was not calibrated
     STATE_SET_VOLTAGE (stays)
-        While waiting for data from the PC
+        While waiting for data from the PC, and until the
+        voltage output can be considered stable
     STATE_TRIGGER_ADCS
         Successfully finished
     **/
     if (notInStateAndError(STATE_SET_VOLTAGE))
         return;
 
-    if(not newMessage){   // Waiting for data from PC
+    if (not newMessage){
+        // Waiting for data from PC
         if(didTimeOut())
             waitingForDataFromPC = false;
         return;
     }
     
-    waitingForDataFromPC = false;
+    if (newMessage){ // Do this only once
+        // Data has arrived
+        waitingForDataFromPC = false;
+        newMessage = false;
+        
+        // Check that it is the right amount of data
+        // 2 bytes for voltage, 2 bytes for dacSettlingTime
+        if (msgLength != 4){
+            errorTraceback[0] = currentState;
+            errorTraceback[1] = ERROR_MSG_DATA_INVALID;
+            currentState = STATE_ERROR;
 
-    uint16_t dacValue = data_received[0] << 8 | data_received[1];
-    dacSettlingTime = data_received[2] << 8 | data_received[3];
-    AD5683setVoltage(CS_DAC, dacValue);
+            // Set the output to zero                   // TODO: should we? If we do it here, we should probably do it anyway in all states where there may be a nonzero voltage, should they error out! Then it could just simply be moved to handleErrors().
+            AD5683setVoltage(CS_DAC, 0x0000);
+
+            // And do what we normally would at the
+            // beginning of STATE_TRIGGER_ADCS (we're
+            // not going there this time)
+            decreaseADCGainsIfNeeded();                // TODO: should we do this? Alternatively we could either: let the next operation take care of this (likely starting over, or directly going to STATE_TRIGGER_ADCS with a PC_TRIGGER_ADCS) OR forget that we may want to decrease the gain, de facto requiring that the whole procedure has to be restarted. If we set the voltage to zero (see above), probably it's better to do the second one, as that forces anyway the PC to start over.
+            resetMeasurementData();
+            return;
+        }
+        
+        uint16_t dacValue = data_received[0] << 8 | data_received[1];
+        dacSettlingTime = data_received[2] << 8 | data_received[3];
+
+        // Set the new voltage
+        AD5683setVoltage(CS_DAC, dacValue);
+        initialTime = millis();
+    }
+    
+    // And wait in the same state till the voltage output is stable
+    if((millis() - initialTime) < dacSettlingTime) return;
+
+    // Finally tell the PC we're done waiting,
+    // and trigger the ADCs for measurement
+    encodeAndSend(PC_OK);
     currentState = STATE_TRIGGER_ADCS;
-    initialTime = millis();
-    newMessage = false;
-    resetMeasurementData();
-    decreaseADCGainsIfNeeded();
 }
 
 
 /** Handler of STATE_TRIGGER_ADCS */
-void waitAndTriggerMeasurements() {
-    /**
-    Wait for the voltage output to be stable, then
-    trigger the (available) ADCs to start converting
+void triggerMeasurements() {
+    /**Trigger the (available) ADCs to start converting.
+    
+    This is basically just the precursor state to STATE_MEASURE_ADCS            // TODO: I'm wondering if we even need a state for this. It may just be a function call as the 'preparation' for the STATE_MEASURE_ADCS
 
     Reads
     -----
-    hardwareDetected, adc0Channel, adc0Gain, adc1Channel, adc1Gain
+    hardwareDetected, adc0Channel, adc1Channel
 
     Writes
     ------
-    currentState
+    adc0Gain, adc1Gain, summedMeasurements, numMeasurementsDone
 
     Msg to PC
     ---------
-    PC_OK, signaling that the we will then begin collecting measurements
+    None.
+    (Will return data when returning from STATE_ADC_VALUES_READY,
+    that is called after STATE_MEASURE_ADCS is over)
 
     Goes to state
     -------------
     STATE_ERROR : ERROR_RUNTIME
         If this function is not called within STATE_TRIGGER_ADCS
-    STATE_TRIGGER_ADCS (stays)
-        until the voltage output can be considered stable
     STATE_MEASURE_ADCS
-        after the voltage output can be considered stable
+        Otherwise
     **/
     if (notInStateAndError(STATE_TRIGGER_ADCS))
         return;
-    
-    // Wait in the same state till the voltage output is stable
-    if((millis() - initialTime) < dacSettlingTime) return;
     
     if (hardwareDetected.asInt & ADC_0_PRESENT)
         AD7705setGainAndTrigger(CS_ADC_0, adc0Channel, adc0Gain);
     if (hardwareDetected.asInt & ADC_1_PRESENT)
         AD7705setGainAndTrigger(CS_ADC_1, adc1Channel, adc1Gain);
-    
-    // Signal the PC that we are now going to start the measurements
-    encodeAndSend(PC_OK);
-    
-    // Switch over to measuring state
+
+    // Prepare the system for measurement
+    decreaseADCGainsIfNeeded();
+    resetMeasurementData();
+
+    // And switch over to the measurement state
     currentState = STATE_MEASURE_ADCS;
 }
 

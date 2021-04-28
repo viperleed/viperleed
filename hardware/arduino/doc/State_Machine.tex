@@ -72,8 +72,8 @@ Original message            & Data bytes & Meaning of data bytes                
 	\texttt{ERROR\_MSG\_TOO\_LONG}      & 2     & The PC sent a message that contained too many characters to be processed. Either the message was corrupted, or the firmware version is incompatible.\\
 	\texttt{ERROR\_MSG\_INCONSITENT}    & 3     & The message received is inconsistent. Typically when the number of bytes effectively read does not match the one expected from the info in the message itself. Typically means that the message got corrupted.\\
 	\texttt{ERROR\_MSG\_UNKNOWN}        & 4     & The PC sent an unknown command, i.e., it is neither one of those in paragraph \textit{From PC to Arduino} at the beginning of this Section (for 1-byte long messages), or it is a data message (> 1 byte) but we were not waiting for any data to arrive.\\
-	\texttt{ERROR\_MSG\_DATA\_INVALID}  & 5     & The message was understood, but some of the data passed is inappropriate, or there is too much data.\\
-	\texttt{ERROR\_NEVER\_CALIBRATED}   & 6     & The ADCs need to be calibrated at least once with \texttt{PC\_CALIBRATION} after the boot up of the Arduino or after a \texttt{PC\_RESET}. This has not been done.\\
+	\texttt{ERROR\_MSG\_DATA\_INVALID}  & 5     & The message was understood, but some of the data passed is inappropriate, or there is too much/little data.\\
+	\texttt{ERROR\_NEVER\_CALIBRATED}   & 6     & The ADCs need to be calibrated at least once with \texttt{PC\_CALIBRATION} after the boot up of the Arduino or after a \texttt{PC\_RESET}. This has not been done for the channels in use.\\
 	\texttt{ERROR\_TIMEOUT}             & 7     & It was not possible to complete an operation in time. It may mean that (i) the Arduino was waiting for data from the PC that never arrived, or (ii) the internal communication with the ADCs was interrupted, likely because the power supply was disconnected while running.\\
 	\texttt{ERROR\_ADC\_SATURATED}      & 8     & The input of one of the ADCs reached solid saturation, and it is not possible to decrease the gain further. May signal an internal malfunction, or that an input cable is incorrectly connected.\\
 	\texttt{ERROR\_TOO\_HOT}            & 9     & The temperature measured by the LM35 is very high. There may be some internal malfunction (either the sensor or the board).\\
@@ -95,8 +95,8 @@ State					        & Initiated by                 & Handler                      
 \texttt{STATE\_GET\_CONFIGURATION} & \texttt{PC\_CONFIGURATION}    & \texttt{getConfiguration()}    & \texttt{STATE\_IDLE}\\
 \texttt{STATE\_CALIBRATE\_ADCS} & \texttt{PC\_CALIBRATION}     & \texttt{calibrateADCsAtAllGains()} & \texttt{STATE\_IDLE}\\
 \texttt{STATE\_SET\_UP\_ADCS}   & \texttt{PC\_SET\_UP\_ADCS}   & \texttt{prepareADCsForMeasurement()} & \texttt{STATE\_IDLE} \\
-\texttt{STATE\_SET\_VOLTAGE}    & \texttt{PC\_SET\_VOLTAGE}    & \texttt{setVoltage()}              & \texttt{STATE\_TRIGGER\_ADCS}\\
-\texttt{STATE\_TRIGGER\_ADCS}   & \texttt{PC\_TRIGGER\_ADCS} or & \texttt{waitAndTriggerMeasurements()} & \texttt{STATE\_MEASURE\_ADCS} \\
+\texttt{STATE\_SET\_VOLTAGE}    & \texttt{PC\_SET\_VOLTAGE}    & \texttt{setVoltageAndWait()}       & \texttt{STATE\_TRIGGER\_ADCS}\\
+\texttt{STATE\_TRIGGER\_ADCS}   & \texttt{PC\_TRIGGER\_ADCS} or & \texttt{triggerMeasurements()} & \texttt{STATE\_MEASURE\_ADCS} \\
                                 & \texttt{STATE\_SET\_VOLTAGE} &&\\
 \texttt{STATE\_AUTOGAIN\_ADCS}  & \texttt{PC\_AUTOGAIN}        & \texttt{findOptimalADCGains()}     & \texttt{STATE\_IDLE} \\
 \texttt{STATE\_MEASURE\_ADCS}   & \texttt{STATE\_TRIGGER\_ADCS} & \texttt{measureADCs()}   & \texttt{STATE\_ADC\_VALUES\_READY}\\
@@ -117,19 +117,19 @@ State					        & Initiated by                 & Handler                      
 
 \item \texttt{STATE\_SET\_UP\_ADCS}: This state picks the requested channels and fetches pre-stored calibration data. Requires the PC to communicate which channels are to be measured for the `external' ADCs (2 bytes) as well as the number of measurement points that needs to be averaged (2 bytes). Calls \texttt{setAllADCgainsAndCalibration()}, sends an OK to the PC, and returns to \texttt{STATE\_IDLE}.
 
-	Possible errors:\\\texttt{ERROR\_TIMEOUT} (waiting for data from PC);\\\texttt{ERROR\_MSG\_DATA\_INVALID} (channels are invalid or more than 4 bytes in the message).\\\texttt{ERROR\_NEVER\_CALIBRATED} (one of the ADC channels is uncalibrated)
+	Possible errors:\\\texttt{ERROR\_TIMEOUT} (waiting for data from PC);\\\texttt{ERROR\_MSG\_DATA\_INVALID} (channels are invalid or not exactly 4 bytes in the message).\\\texttt{ERROR\_NEVER\_CALIBRATED} (one of the ADC channels is uncalibrated)
 
-\item \texttt{STATE\_SET\_VOLTAGE}: Requires the PC to communicate the DAC value that needs to be set, as well as how long one should wait for the DAC value to be considered stable. It then goes to \texttt{STATE\_TRIGGER\_ADCS}, after calling \texttt{setAllADCgainsAndCalibration()} should any of the ADCs require its gain to be reduced.
+\item \texttt{STATE\_SET\_VOLTAGE}: Requires the PC to communicate the DAC value that needs to be set, as well as how long one should wait for the DAC value to be considered stable. It sets the required voltage, and waits \texttt{dacSettlingTime} (milliseconds). Then triggers ADC measurements going to \texttt{STATE\_TRIGGER\_ADCS}.
 	
-	Possible errors:\\\texttt{ERROR\_TIMEOUT} (waiting for data from PC).\\\texttt{ERROR\_NEVER\_CALIBRATED} (one of the ADC channels is uncalibrated).
+	Possible errors:\\\texttt{ERROR\_TIMEOUT} (waiting for data from PC).\\\texttt{ERROR\_MSG\_DATA\_INVALID} (not exactly 4 bytes in the message).\\\texttt{ERROR\_NEVER\_CALIBRATED} (one of the ADC channels is uncalibrated).
 
-\item \texttt{STATE\_TRIGGER\_ADCS}: This state is initiated either by \texttt{PC\_TRIGGER\_ADCS}, or as a result of the successful completion of \texttt{STATE\_SET\_VOLTAGE}. It always uses the current value of \texttt{dacSettlingTime} that is set in \texttt{STATE\_SET\_VOLTAGE}. It waits this time interval, and then triggers ADC measurements, going directly to \texttt{STATE\_MEASURE\_ADCS}. TO ME, IT WOULD BE MORE LOGIC TO HAVE SET\_VOLTAGE WAIT AND HAVE THIS ONE TRIGGER IMMEDIATELY.
+\item \texttt{STATE\_TRIGGER\_ADCS}: This state is initiated either by \texttt{PC\_TRIGGER\_ADCS}, or as a result of the successful completion of \texttt{STATE\_SET\_VOLTAGE}. It decreases the ADC gains, should any of the ADCs require this, and goes straight to \texttt{STATE\_MEASURE\_ADCS}.
 
 \item \texttt{STATE\_AUTOGAIN\_ADCS}: finds the optimal gain for the available ADCs, measuring 25 values with both ADCs at gain=0 and at 500~Hz. This triggers first a self-calibration for the two ADCs (in parallel), that takes $\approx13$~ms. Then takes one measurement per state-machine loop, while keeping track of the smallest and largest among the values measured. Finally, chooses the gain such that the worst-case scenario measurement (peak-to-peak, plus the largest among max and min) is above 1/4 of the values that can be measured with that gain.
 
 	Possible errors:\\\texttt{ERROR\_TIMEOUT} (no response from ADC in 5~s)\\\texttt{ERROR\_NEVER\_CALIBRATED} (one of the ADC channels is uncalibrated).
 
-\item \texttt{STATE\_MEASURE\_ADCS}: Measures the number of values given in \texttt{STATE\_SET\_UP\_ADCS} from all the available ADCs, and averages them (one value per state-loop), then goes to \texttt{STATE\_ADC\_VALUES\_READY}. During measurement, the values are checked against the saturation thresholds, possibly triggering a gain switch: an immediate gain switch occurs when the value is solidly saturating, if it is possible to reduce the gain; a gain switch is scheduled if the value is not in the central $\approx50\%$ of the current range. In this case, the actual gain switch should happen when the next measurement is about to start (right now, in \texttt{STATE\_SET\_VOLTAGE}). New implementations should take this into account.
+\item \texttt{STATE\_MEASURE\_ADCS}: Measures the number of values given in \texttt{STATE\_SET\_UP\_ADCS} from all the available ADCs, and averages them (one value per state-loop), then goes to \texttt{STATE\_ADC\_VALUES\_READY}. During measurement, the values are checked against the saturation thresholds, possibly triggering a gain switch: an immediate gain switch occurs when the value is solidly saturating, if it is possible to reduce the gain; a gain switch is scheduled if the value is not in the central $\approx50\%$ of the current range. In this case, the actual gain decrease is done the next time \texttt{STATE\_TRIGGER\_ADCS} executes.
 
 NOTES: (1) we are currently throwing away the whole set of measurements if we reach solid saturation. Perhaps we could just \texttt{>>1} the relevant \texttt{summedMeasurements}, and skip the data point for all three ADCs. (2) The decision on whether we need to switch gain is done based on the currently measured value, but it should actually also take into account of the RIPPLE (which is not set to a value anywhere)! (3) It may be a good place to check whether the LM35 is reading a temperature that is too high (to discuss what this threshold should be. Probably the \texttt{LM35\_MAX\_ADU} of 80degC is too much).
 
