@@ -479,9 +479,9 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
 
     # set ticks spacing to 50 eV and round the x limits to a multiple of it
     tick = 50
-    tickloc = plticker.MultipleLocator(base=tick)
-    # xlims = (min(xmin, np.round((xmin - 10)/tick)*tick),
-    #          max(xmax, np.round((xmax + 10)/tick)*tick))
+    oritick = plticker.MultipleLocator(base=tick)
+    majortick = oritick
+    minortick = None
     xlims = (np.floor(xmin/tick)*tick,
              np.ceil(xmax/tick)*tick)
     dx = xlims[1] - xlims[0]
@@ -493,6 +493,12 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
     ylims = (ymin - 0.02*dy, ymax + 0.22*dy/fontscale)
     namePos = (xlims[0] + 0.02*dx, ylims[1] - 0.1*dy/fontscale)
     rPos = (namePos[0], namePos[1]-0.085*dy/fontscale)
+
+    if dx / (tick * fontscale) > 16:  # too many labelled ticks
+        minortick = majortick
+        newbase = int(np.ceil(dx / (tick * fontscale * 16))) * tick
+        majortick = plticker.MultipleLocator(base=newbase)
+    ticklen = 3*fontscale
 
     # axes helper variables
     axes_visible = {'left': True, 'right': True, 'bottom': True, 'top': True}
@@ -529,7 +535,9 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
                 [ax.get_yaxis().set_visible(False) for ax in axs]
                 [sp.set_linewidth(0.7*linewidth) for ax in axs
                  for sp in ax.spines.values()]
-                [ax.xaxis.set_major_locator(tickloc) for ax in axs]
+                [ax.xaxis.set_major_locator(majortick) for ax in axs]
+                if minortick is not None:
+                    [ax.xaxis.set_minor_locator(minortick) for ax in axs]
                 for i, ax in enumerate(axs):
                     for k in axes_visible:
                         ax.spines[k].set_visible(axes_visible[k])
@@ -537,17 +545,21 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
                             or len(beams) - (ct + i) <= xfigs):
                         ax.set_xlabel("Energy (eV)", fontsize=10*fontscale,
                                       labelpad=4*fontscale)
-                        ax.tick_params(bottom=True,
-                                       top=axes_visible['top'], axis='x',
-                                       direction='in', labelsize=9*fontscale,
-                                       pad=5*fontscale, width=0.7*linewidth,
-                                       length=3*fontscale)
+                        ax.tick_params(
+                            which='both', bottom=True,
+                            top=axes_visible['top'], axis='x',
+                            direction='in', labelsize=9*fontscale,
+                            pad=5*fontscale, width=0.7*linewidth,
+                            length=ticklen)
                         ax.spines['bottom'].set_visible(True)
                     else:
-                        ax.tick_params(bottom=axes_visible['bottom'],
-                                       top=axes_visible['top'], axis='x',
-                                       direction='in', labelbottom=False,
-                                       width=0.7*linewidth, length=3*fontscale)
+                        ax.tick_params(
+                            which='both', bottom=axes_visible['bottom'],
+                            top=axes_visible['top'], axis='x', direction='in',
+                            labelbottom=False, width=0.7*linewidth,
+                            length=ticklen)
+                    if minortick is not None:
+                        ax.tick_params(which='minor', length=ticklen*0.5)
             idx = ct % figs_per_page
             if plotcolors is not None:
                 if not all([matplotlib.colors.is_color_like(s)
@@ -626,7 +638,7 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
             [ax.tick_params(bottom=True,
                             top=True,
                             axis='x', direction='in') for ax in axs]
-            [ax.xaxis.set_major_locator(tickloc) for ax in axs]
+            [ax.xaxis.set_major_locator(oritick) for ax in axs]
             axs[0].set_ylabel("Intensity (arb. units)")
             axs[1].set_ylabel("Y")
             axs[2].set_ylabel("\u2211(\u0394Y)\u00b2")    # sum delta Y ^2
