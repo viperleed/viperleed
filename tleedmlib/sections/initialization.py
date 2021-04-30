@@ -48,7 +48,7 @@ def initialization(sl, rp, subdomain=False):
                 er = rp.THEO_ENERGIES[:2]
             if not rp.fileLoaded["EXPBEAMS"]:
                 try:
-                    rp.expbeams = readOUTBEAMS(fn, enrange=er)
+                    rp.expbeams = readOUTBEAMS(filename=fn, enrange=er)
                     if len(rp.expbeams) > 0:
                         rp.fileLoaded["EXPBEAMS"] = True
                     else:
@@ -316,7 +316,7 @@ def init_domains(rp):
             er = rp.THEO_ENERGIES[:2]
         if not rp.fileLoaded["EXPBEAMS"]:
             try:
-                rp.expbeams = readOUTBEAMS(fn, enrange=er)
+                rp.expbeams = readOUTBEAMS(filename=fn, enrange=er)
                 if len(rp.expbeams) > 0:
                     rp.fileLoaded["EXPBEAMS"] = True
                 else:

@@ -147,15 +147,17 @@ def runSection(index, sl, rp):
                     er = rp.THEO_ENERGIES[:2]
                 try:
                     rp.expbeams = readOUTBEAMS("EXPBEAMS.csv", enrange=er)
-                    rp.fileLoaded["EXPBEAMS"] = True
+                    if len(rp.expbeams) > 0:
+                        rp.fileLoaded["EXPBEAMS"] = True
                 except FileNotFoundError:
                     try:
                         # try without the .csv extension
                         rp.expbeams = readOUTBEAMS("EXPBEAMS", enrange=er)
-                        rp.fileLoaded["EXPBEAMS"] = True
+                        if len(rp.expbeams) > 0:
+                            rp.fileLoaded["EXPBEAMS"] = True
                     except Exception:
                         logger.error("Error while reading required file "
-                                     "EXPBEAMS.csv")
+                                     "EXPBEAMS.csv", exc_info=rp.LOG_DEBUG)
                 except Exception as e:
                     logger.error("Error while reading required file EXPBEAMS",
                                  exc_info=(type(e) != FileNotFoundError))
