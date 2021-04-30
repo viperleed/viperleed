@@ -49,7 +49,10 @@ def initialization(sl, rp, subdomain=False):
             if not rp.fileLoaded["EXPBEAMS"]:
                 try:
                     rp.expbeams = readOUTBEAMS(fn, enrange=er)
-                    rp.fileLoaded["EXPBEAMS"] = True
+                    if len(rp.expbeams) > 0:
+                        rp.fileLoaded["EXPBEAMS"] = True
+                    else:
+                        logger.error("Error reading "+fn+": No data was read.")
                 except Exception:
                     logger.error("Error while reading file "+fn, exc_info=True)
     rp.initTheoEnergies()  # may be initialized based on exp. beams
@@ -314,7 +317,10 @@ def init_domains(rp):
         if not rp.fileLoaded["EXPBEAMS"]:
             try:
                 rp.expbeams = readOUTBEAMS(fn, enrange=er)
-                rp.fileLoaded["EXPBEAMS"] = True
+                if len(rp.expbeams) > 0:
+                    rp.fileLoaded["EXPBEAMS"] = True
+                else:
+                    logger.error("Error reading "+fn+": No data was read.")
             except Exception:
                 logger.error("Error while reading file "+fn, exc_info=True)
     rp.initTheoEnergies()  # may be initialized based on exp. beams
