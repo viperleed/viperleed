@@ -147,10 +147,9 @@ def readFdOut(readfile="fd.out", for_error=False):
         i += 1
 
     # re-label the beams to get the correct number of characters and formatting
-    mw = max([beam.lwidth for beam in theobeams])
+    mw = max([beam.getLabel()[1] for beam in theobeams])
     for beam in theobeams:
-        beam.lwidth = mw
-        beam.getLabel()
+        beam.label = beam.getLabel(lwidth=mw)[0]
 
     # From now on, all the lines correspond to blocks of beam intensities.
     # Collect them, skipping empty lines

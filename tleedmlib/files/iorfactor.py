@@ -618,6 +618,10 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
 
     figsize = (5.8, 8.3)
     figs = []
+
+    ylims = (ymin - 0.02*dy, ymax + 0.22*dy)
+    namePos = (xlims[0] + 0.45*dx, ylims[1] - 0.1*dy)
+    rPos = (namePos[0], namePos[1]-0.085*dy)
     # the following will spam the logger with debug messages; disable.
     loglevel = logger.level
     logger.setLevel(logging.INFO)

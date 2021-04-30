@@ -833,7 +833,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
             flag = plist[1].lower()
             if flag not in ('color', 'colour', 'colors', 'colours', 'perpage',
                             'border', 'borders', 'axes', 'legend', 'legends',
-                            'layout'):
+                            'layout', 'overbar', 'overline'):
                 logger.warning('PARAMETERS file: PLOT_RFACTOR: Flag {} not '
                                'recognized. Input will be ignored.'
                                .format(flag))
@@ -873,6 +873,17 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                     logger.warning(
                         'PARAMETERS file: PLOT_RFACTOR {}: Value not '
                         'recognized. Input will be ignored.'.format(flag))
+                    continue
+            elif flag in ('overbar', 'overline'):
+                if llist[0].lower().startswith("t"):
+                    rpars.PLOT_RFACTOR['overbar'] = True
+                elif llist[0].lower().startswith("f"):
+                    rpars.PLOT_RFACTOR['overbar'] = False
+                else:
+                    logger.warning(
+                        'PARAMETERS file: PLOT_RFACTOR {}: Value not '
+                        'recognized. Input will be ignored.'.format(flag))
+                    continue
             elif flag in ('perpage', 'layout'):
                 if len(llist) == 1:
                     try:

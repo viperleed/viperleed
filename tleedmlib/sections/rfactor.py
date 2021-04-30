@@ -229,9 +229,17 @@ def rfactor(sl, rp, index, for_error=False):
             rfaclist = [-1]*len(rp.expbeams)
         outname = "Rfactor_plots_{}.pdf".format(name)
         aname = "Rfactor_analysis_{}.pdf".format(name)
+        if rp.PLOT_RFACTOR["overbar"]:
+            labelstyle = "overbar"
+        else:
+            labelstyle = "minus"
+        labelwidth = max([beam.getLabel(style=labelstyle)[1]
+                          for beam in rp.expbeams])
         try:
-            io.writeRfactorPdf([(b.label, rfaclist[i]) for (i, b)
-                                in enumerate(rp.expbeams)],
+            io.writeRfactorPdf([(b.getLabel(lwidth=labelwidth,
+                                            style=labelstyle)[0],
+                                 rfaclist[i])
+                                for (i, b) in enumerate(rp.expbeams)],
                                outName=outname, analysisFile=aname,
                                v0i=rp.V0_IMAG,
                                formatting=rp.PLOT_RFACTOR)

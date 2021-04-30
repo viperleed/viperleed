@@ -40,10 +40,9 @@ def main():
     print("Found file with "+str(len(beams))+" beams.\n")
 
     # relabel beams
-    mw = max([beam.lwidth for beam in beams])
+    mw = max([beam.getLabel()[1] for beam in beams])
     for beam in beams:
-        beam.lwidth = mw
-        beam.getLabel()
+        beam.label = beam.getLabel(lwidth=mw)[0]
 
     # get output file name
     filename = ""
