@@ -11,6 +11,7 @@ AUXEXPBEAMS
 import logging
 import numpy as np
 import re
+import os
 from viperleed import fortranformat as ff
 import copy
 
@@ -195,8 +196,12 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=";", enrange=None):
         with open(filename, 'r') as rf:
             lines = [li[:-1] for li in rf.readlines()]
     except FileNotFoundError:
-        logger.error("Error reading "+filename)
-        raise
+        if filename.endswith(".csv") and os.path.isfile(filename[:-4]):
+            with open(filename[:-4], 'r') as rf:
+                lines = [li[:-1] for li in rf.readlines()]
+        else:
+            logger.error("Error reading "+filename)
+            raise
     firstline = True
     rgx = re.compile(r'[\*\(\s]*(?P<h>[-0-9/]+)\s*\|\s*(?P<k>[-0-9/]+)')
     for line in lines:
@@ -225,11 +230,11 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=";", enrange=None):
                     if "/" in sh:
                         h = int(sh.split("/")[0]) / int(sh.split("/")[1])
                     else:
-                        h = int(sh)
+                        h = float(sh)
                     if "/" in sk:
                         k = int(sk.split("/")[0]) / int(sk.split("/")[1])
                     else:
-                        k = int(sk)
+                        k = float(sk)
                 except (ValueError, IndexError, ZeroDivisionError):
                     logger.error("readOUTBEAMS: Could not parse h/k in "
                                  "label: "+label)
