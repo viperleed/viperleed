@@ -62,7 +62,7 @@ else
 fi
 
 # copy input files, go there and execute
-cp PARAMETERS VIBROCC IVBEAMS DISPLACEMENTS POSCAR PHASESHIFTS EXPBEAMS.csv "$WORK" 2> /dev/null
+cp PARAMETERS VIBROCC IVBEAMS DISPLACEMENTS POSCAR PHASESHIFTS EXPBEAMS.csv EXPBEAMS "$WORK" 2> /dev/null
 cp -r "$TLEEDMSOURCE"/* "$WORK"
 cd "$WORK"
 chmod +x tleedm
