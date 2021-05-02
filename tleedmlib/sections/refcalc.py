@@ -107,7 +107,7 @@ def compile_refcalc(comptask):
                 fname, comptask.fortran_comp[1])
         fortranCompile(
             comptask.fortran_comp[0] + " -o ", comptask.exename,
-            "muftin.o lib.tleed.o main.o" + comptask.fortran_comp[1])
+            "muftin.o lib.tleed.o main.o " + comptask.fortran_comp[1])
     except Exception as e:
         logger.error("Error compiling fortran files: " + str(e))
         return ("Fortran compile error in RefcalcCompileTask "
