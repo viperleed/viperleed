@@ -159,7 +159,7 @@ def monitoredPool(rp, poolsize, function, tasks):
             if v:
                 logger.error(v)
                 error = True
-        except TimeoutError:
+        except (TimeoutError, multiprocessing.context.TimeoutError):
             logger.error("Failed to get result from execution of {}"
                          .format(function.__name__))
             error = True
@@ -400,7 +400,10 @@ def fortranCompile(pre="", filename="", post="",
     except Exception:
         logger.error("Error compiling "+filename)
         raise
-    if r.returncode != 0:
+    if r.returncode == 1:
+        logger.warning("Compiling " + filename + " returned 1 (unidentified "
+                       "error). Trying to proceed...")
+    if r.returncode not in (0, 1):
         raise RuntimeError("Fortran compiler subprocess returned {}"
                            .format(r.returncode))
     return None
