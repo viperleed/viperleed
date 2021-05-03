@@ -11,7 +11,7 @@ import numpy as np
 import logging
 import re
 from scipy import interpolate
-from viperleed.tleedmlib.base import range_to_str
+from viperleed.tleedmlib.base import range_to_str, max_diff
 
 try:
     import matplotlib
@@ -122,6 +122,7 @@ def write_errors_pdf(errors, filename="Errors.pdf", var=None):
             continue
         err_x = {}
         err_y = {}
+        err_x_inters = {}  # x-values of intersections with var(R)
         err_x_to_mark = {}
         err_legend = {}
         err_disp = {}
@@ -153,10 +154,18 @@ def write_errors_pdf(errors, filename="Errors.pdf", var=None):
             x = np.arange(min(xvals), max(xvals)+0.01,
                           (xrange[1] - xrange[0])*1e-4)
             y = interpolate.splev(x, tck)
-            ind_to_mark = [np.argmin(abs(x - v)) for v in disp]
-            err_x_to_mark[err] = ind_to_mark
-            err_x[err] = x
-            err_y[err] = y
+            indmark = [np.argmin(abs(x - v)) for v in disp]
+            err_x_to_mark[err] = indmark
+            err_x[err] = x[indmark[0]:indmark[-1]+1]
+            err_y[err] = y[indmark[0]:indmark[-1]+1]
+            err_x_to_mark[err] = [v - indmark[0] for v in indmark]
+            err_x_inters[err] = []
+            if var and any(err_y[err]) > rmin + var:
+                rv = rmin + var
+                err_x_inters[err] = [
+                    x for i, x in enumerate(err_x[err])
+                    if 0 < i and (np.sign(err_y[err][i-1]-rv)
+                                  != np.sign(err_y[err][i]-rv))]
         # plot combined figure
         rmax = max(r for err in mode_errors for r in err.rfacs)
         fig = plt.figure(figsize=(5.8, 5.8))
@@ -169,14 +178,28 @@ def write_errors_pdf(errors, filename="Errors.pdf", var=None):
         ax.set_title(titles[mode])
         if var and rmin + var < rmax + (rmax-rmin)*0.1:
             ax.plot(xrange, [rmin + var]*2, color="slategray")
-            ax.text((xrange[0] + xrange[1])/2, rmin + var + (rmax-rmin)*0.01,
-                    "$R_P + var(R_P)$", ha="center", va="bottom")
+            inters = sorted([x for err in mode_errors
+                             for x in err_x_inters[err]]
+                            + [xrange[0], xrange[1]])
+            (ind, diff) = max_diff(inters)
+            text_x = inters[ind] - diff/2
+            text_y = rmin + var + (rmax-rmin)*0.015
+            va = "bottom"
+            ind_at_text = {err: np.argmin([abs(x - text_x)
+                                           for x in err_x[err]])
+                           for err in mode_errors}
+            if sum([err_y[err][ind_at_text[err]] > rmin + var
+                    for err in mode_errors]) > len(mode_errors) / 2:
+                text_y = rmin + var - (rmax-rmin)*0.015
+                va = "top"
+            ax.text(text_x, text_y, "$R_P + var(R_P)$", ha="center", va=va,
+                    bbox=dict(facecolor='white', edgecolor='none',
+                              alpha=0.6, pad=0.5))
         for err in mode_errors:
             ax.plot(err_x[err], err_y[err], '-o', label=err_legend[err],
                     markevery=err_x_to_mark[err])
         ax.set_xlim(*xrange)
         ax.set_ylim(rmin - ((rmax-rmin)*0.1), rmax + ((rmax-rmin)*0.1))
-        # ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
         ax.legend(fontsize="small")
         fig.tight_layout()
         figs.append(fig)
@@ -202,10 +225,21 @@ def write_errors_pdf(errors, filename="Errors.pdf", var=None):
             if var and rmin + var < rmax + (rmax-rmin)*0.1:
                 axs[figcount].plot(xrange, [rmin + var]*2, color="slategray",
                                    linewidth=1)
-                axs[figcount].text((xrange[0] + xrange[1])/2,
-                                   rmin + var + (rmax-rmin)*0.01,
-                                   "$R_P + var(R_P)$", fontsize=6,
-                                   ha="center", va="bottom")
+                inters = sorted(err_x_inters[err] + [xrange[0], xrange[1]])
+                (ind, diff) = max_diff(inters)
+                text_x = inters[ind] - diff/2
+                text_y = rmin + var + (rmax-rmin)*0.015
+                va = "bottom"
+                ind_at_text = np.argmin([abs(x - text_x)
+                                         for x in err_x[err]])
+                if err_y[err][ind_at_text] > rmin + var:
+                    text_y = rmin + var - (rmax-rmin)*0.015
+                    va = "top"
+                axs[figcount].text(text_x, text_y, "$R_P + var(R_P)$",
+                                   fontsize=6, ha="center", va=va,
+                                   bbox=dict(facecolor='white',
+                                             edgecolor='none',
+                                             alpha=0.6, pad=0.5))
             axs[figcount].plot(err_x[err], err_y[err], '-o',
                                markevery=err_x_to_mark[err],
                                linewidth=1, ms=2,
