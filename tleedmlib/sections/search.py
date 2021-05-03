@@ -284,7 +284,7 @@ def parabolaFit(rp, datafiles, r_best, x0=None, max_configs=0, **kwargs):
     # read data
     r_cutoff = 1.0
     if datafiles:
-        varR = np.sqrt(8*np.abs(rp.V0_IMAG) / rp.total_energy_range())
+        varR = np.sqrt(8*np.abs(rp.V0_IMAG) / rp.total_energy_range())*r_best
         rc = np.array((io.readDataChem(
             rp, datafiles,
             cutoff=r_best + r_cutoff * varR,
