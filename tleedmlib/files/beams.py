@@ -424,7 +424,7 @@ def writeOUTBEAMS(beams, filename="THEOBEAMS.csv", sep="; "):
     file."""
     nan = "NaN"  # what to put when no value
     output = "E".rjust(7)+sep
-    w = max(11, beams[0].lwidth*2 + 3)
+    w = max(11, len(beams[0].label))
     energies = []
     for b in beams:
         output += b.label.rjust(w)+sep
