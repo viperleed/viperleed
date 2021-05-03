@@ -198,13 +198,13 @@ def connectToArduino(port):
     arduino_port: class object serial
     """
     global arduino_port
-    PC_HARDWARE = int(config['communication_bytes']['PC_HARDWARE'])
+    PC_CONFIGURATION = int(config['communication_bytes']['PC_CONFIGURATION'])
     
     arduino_port = serial.Serial(port, 115200, timeout = 1)
     if arduino_port.inWaiting() == 0:
-        sendToArduino(PC_HARDWARE)
+        sendToArduino(PC_CONFIGURATION)
         time.sleep(1) #time to settle connection
-        if receiveFromArduino() == PC_HARDWARE: """Need to check for hardware byte here"""
+        if receiveFromArduino() == PC_CONFIGURATION: """Need to check for hardware byte here"""
             print("Arduino Initialisation: DONE!")
             return arduino_port
     arduino_port.close()
@@ -223,8 +223,8 @@ def initialiseADC(arduino_config):
     ----------
     arduino_config: dict
     """
-    PC_INIT_ADC = int(config['communication_bytes']['PC_INIT_ADC'])
-    sendToArduino(PC_INIT_ADC)
+    PC_SET_UP_ADCS = int(config['communication_bytes']['PC_SET_UP_ADCS'])
+    sendToArduino(PC_SET_UP_ADCS)
     message = []                                               
     for key in ('channel', 'polar_mode', 'update_rate'): 
         message.append(int(arduino_config[key]))
@@ -334,10 +334,10 @@ def initialiseAutoGain():
 #======================================
 def adcMeasure():
     """
-    Send PC_MEASURE to arduino and initialise measurement of adc
+    Send PC_TRIGGER_ADCS to arduino and initialise measurement of adc
     """
-    PC_MEASURE = int(config['communication_bytes']['PC_MEASURE'])
-    sendToArduino(PC_MEASURE)
+    PC_TRIGGER_ADCS = int(config['communication_bytes']['PC_TRIGGER_ADCS'])
+    sendToArduino(PC_TRIGGER_ADCS)
 
 #======================================
 

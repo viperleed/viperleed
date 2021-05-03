@@ -1175,13 +1175,14 @@ void findOptimalADCGains(){
     int16_t autogain_value1;
     autogain_value0 = (max(abs(maximumPeak[0]), abs(minimumPeak[0]))
                        + (maximumPeak[0] - minimumPeak[0]));
+    adc0RipplePP = maximumPeak[0] - minimumPeak[0];
     autogain_value1 = (max(abs(maximumPeak[1]), abs(minimumPeak[1]))
                        + (maximumPeak[1] - minimumPeak[1]));
+    adc1RipplePP = maximumPeak[1] - minimumPeak[1];
     // TODO: probably something to check here: if either autogain_value is
     //       already in saturation with gain=0 something is wrong with
     //       the hardware or with the connections. Probably to check only
     //       if the specific ADC is present.
-    // TODO: here we have to compute and store the ripple
     if(hardwareDetected.asInt & ADC_0_PRESENT){
         while(((autogain_value0 << (adc0Gain + 1)) < ADC_RANGE_THRESHOLD)
               && (adc0Gain < AD7705_MAX_GAIN)){
@@ -1619,13 +1620,13 @@ void makeAndSumMeasurements() {
     if (hardwareDetected.asInt & ADC_0_PRESENT){
         measurement = AD7705waitAndReadData(CS_ADC_0, adc0Channel);
         checkMeasurementInADCRange(adc0Gain, &adc0ShouldDecreaseGain,
-                                   measurement);
+                                   measurement, adc0RipplePP);
         summedMeasurements[0] += measurement;
         }
     if (hardwareDetected.asInt & ADC_1_PRESENT){
         measurement = AD7705waitAndReadData(CS_ADC_1, adc1Channel);
         checkMeasurementInADCRange(adc1Gain, &adc1ShouldDecreaseGain,
-                                   measurement);
+                                   measurement, adc1RipplePP);
         summedMeasurements[1] += measurement;
         }
     numMeasurementsDone++;
@@ -1633,7 +1634,7 @@ void makeAndSumMeasurements() {
 
 
 void checkMeasurementInADCRange(byte gain, bool* adcShouldDecreaseGain,
-                                int16_t adcValue){    // The call to this function would be much easier having externalADCs, as then we would just pass the index of the ADC in the externalADCs array
+                                int16_t adcValue, int16_t Ripple){    // The call to this function would be much easier having externalADCs, as then we would just pass the index of the ADC in the externalADCs array
     /**
     Check whether the (signed) value read is approaching
     the saturation for the current measurement range.
@@ -1670,9 +1671,7 @@ void checkMeasurementInADCRange(byte gain, bool* adcShouldDecreaseGain,
     Stays unchanged
         Otherwise
     */
-    // TODO: The ripple (measured at gain 0) should be >> by gain and
-    //       added to abs(adcValue) for the next check only
-    if(abs(adcValue) > ADC_RANGE_THRESHOLD
+    if((abs(adcValue)+abs(Ripple>>gain)) > ADC_RANGE_THRESHOLD
        && (gain > 0)
        && !*adcShouldDecreaseGain){
         // The measured value is above the "saturation" threshold,
