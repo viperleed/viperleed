@@ -382,8 +382,52 @@ def getTensorOriStates(sl, path):
     return None
 
 
-def fortranCompile(pre="", filename="", post="",
-                   logname="fortran-compile.log"):
+def fortran_compile_batch(tasks, retry=True, logname="fortran-compile.log"):
+    """
+    Performs a list of fortran compilations.
+
+    Parameters
+    ----------
+    tasks : iterable of tuples (pre, filename, post)
+        Each entry will be passed to fortran_compile.
+    retry : bool, optional
+        If compilation fails, check whether failure is likely due to missing
+        '-mcmodel=medium', and if so, retry. The default is True.
+    logname: str, optional
+        Name of the log file.
+
+    Returns
+    -------
+    None on success, else raises RuntimeException.
+
+    """
+
+    r = None
+    for (pre, filename, post) in tasks:
+        r = fortran_compile(pre=pre, filename=filename, post=post,
+                            logname=logname)
+        if r:
+            break
+    if not r:
+        return None
+    if r == "mcmodel":
+        if not retry:
+            raise RuntimeError(
+                "Compiling fortran code failed, likely due to missing "
+                "'-mcmodel=medium'")
+        logger.warning("Compiling fortran code failed; retrying with "
+                       "'-mcmodel=medium' option.")
+        newtasks = [(pre + " -mcmodel=medium", filename, post)
+                    for (pre, filename, post) in tasks]
+        fortran_compile_batch(newtasks, retry=False, logname=logname)
+    else:
+        raise RuntimeError("Compiling fortran code failed, unknown return "
+                           "value: " + r)
+    return None
+
+
+def fortran_compile(pre="", filename="", post="",
+                    logname="fortran-compile.log"):
     """Assembles pre+filename+post to a filename, tries to execute via
     subprocess.run, raises an exception if it fails."""
     fc = pre+" "+filename+" "+post
@@ -400,10 +444,22 @@ def fortranCompile(pre="", filename="", post="",
     except Exception:
         logger.error("Error compiling "+filename)
         raise
-    if r.returncode == 1:
-        logger.warning("Compiling " + filename + " returned 1 (unidentified "
-                       "error). Trying to proceed...")
     if r.returncode not in (0, 1):
+        raise RuntimeError("Fortran compiler subprocess returned {}"
+                           .format(r.returncode))
+    if r.returncode == 1 and "-mcmodel=medium" not in fc:
+        mcmodel = False
+        with open(logname, "r") as log:
+            if "relocation truncated to fit:" in log.read():
+                mcmodel = True
+                logger.warning("Compiling file {} failed, likely due to "
+                               "missing '-mcmodel=medium' flag."
+                               .format(filename))
+        if not mcmodel:
+            raise RuntimeError("Fortran compiler subprocess returned {}"
+                               .format(r.returncode))
+        return "mcmodel"
+    if r.returncode != 0:
         raise RuntimeError("Fortran compiler subprocess returned {}"
                            .format(r.returncode))
     return None

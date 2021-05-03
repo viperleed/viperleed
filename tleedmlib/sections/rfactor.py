@@ -14,7 +14,7 @@ import shutil
 import subprocess
 
 from viperleed.tleedmlib.files.iorefcalc import readFdOut
-from viperleed.tleedmlib.leedbase import (fortranCompile, getTLEEDdir,
+from viperleed.tleedmlib.leedbase import (fortran_compile_batch, getTLEEDdir,
                                           getTensors)
 import viperleed.tleedmlib.files.iorfactor as io
 
@@ -137,17 +137,18 @@ def rfactor(sl, rp, index, for_error=False):
     rfacname = "rfactor-"+rp.timestamp
     if rp.FORTRAN_COMP[0] == "":
         rp.getFortranComp()
+    # compile
+    ctasks = [(rp.FORTRAN_COMP[0] + " -o " + oname + " -c",
+               fname, rp.FORTRAN_COMP[1]) for (fname, oname)
+              in [(libname, "rfacsb.o"), (srcname, "main.o")]]
+    ctasks.append((rp.FORTRAN_COMP[0]+" -o "+rfacname, "rfacsb.o main.o",
+                   rp.FORTRAN_COMP[1]))
     try:
-        fortranCompile(rp.FORTRAN_COMP[0]+" -o rfacsb.o -c",
-                       libname, rp.FORTRAN_COMP[1])
-        fortranCompile(rp.FORTRAN_COMP[0]+" -o main.o -c", srcname,
-                       rp.FORTRAN_COMP[1])
-        fortranCompile(rp.FORTRAN_COMP[0]+" -o "+rfacname, "rfacsb.o "
-                       "main.o", rp.FORTRAN_COMP[1])
-        logger.debug("Compiled fortran files successfully")
+        fortran_compile_batch(ctasks)
     except Exception:
         logger.error("Error compiling fortran files: ", exc_info=True)
         raise
+    # run
     rfaclogname = rfacname+".log"
     logger.info("Starting R-factor calculation...\n"
                 "R-factor log will be written to file "+rfaclogname)

@@ -27,7 +27,7 @@ import scipy
 import viperleed.tleedmlib.files.iosearch as io
 import viperleed.tleedmlib as tl
 # from tleedmlib.polynomialfeatures_no_interaction import PolyFeatNoMix
-from viperleed.tleedmlib.leedbase import fortranCompile
+from viperleed.tleedmlib.leedbase import fortran_compile_batch
 from viperleed.tleedmlib.files.parameters import updatePARAMETERS
 from viperleed.tleedmlib.files.displacements import readDISPLACEMENTS_block
 from viperleed.tleedmlib.files.searchpdf import (
@@ -620,21 +620,23 @@ def search(sl, rp):
     else:
         fcomp = rp.FORTRAN_COMP
     logger.info("Compiling fortran input files...")
+    # compile
+    ctasks = [(fcomp[0]+" -o lib.search.o -c", libname, fcomp[1])]
+    if hashname:
+        ctasks.append((fcomp[0]+" -c", hashname, fcomp[1]))
+    ctasks.append((fcomp[0]+" -o restrict.o -c", "restrict.f", fcomp[1]))
+    ctasks.append((fcomp[0]+" -o search.o -c -fixed", srcname, fcomp[1]))
+    to_link = "search.o random_.o lib.search.o restrict.o"
+    if hashname:
+        to_link += " intarr_hashing.o"
+    ctasks.append((fcomp[0] + " -o " + searchname, to_link, fcomp[1]))
     try:
-        fortranCompile(fcomp[0]+" -o lib.search.o -c",
-                       libname, fcomp[1])
-        if hashname:
-            fortranCompile(fcomp[0]+" -c", hashname, fcomp[1])
-        fortranCompile(fcomp[0]+" -o restrict.o -c", "restrict.f", fcomp[1])
-        fortranCompile(fcomp[0]+" -o search.o -c -fixed", srcname, fcomp[1])
-        to_link = "search.o random_.o lib.search.o restrict.o"
-        if hashname:
-            to_link += " intarr_hashing.o"
-        fortranCompile(fcomp[0] + " -o " + searchname, to_link, fcomp[1])
+        fortran_compile_batch(ctasks)
     except Exception:
         logger.error("Error compiling fortran files: ", exc_info=True)
         raise
     logger.debug("Compiled fortran files successfully")
+    # run
     if rp.LOG_SEARCH:
         searchlogname = searchname+".log"
         logger.info("Search log will be written to file "+searchlogname)

@@ -17,7 +17,7 @@ import numpy as np
 
 from viperleed import fortranformat as ff
 from viperleed.tleedmlib.leedbase import (
-    fortranCompile, getTLEEDdir, getMaxTensorIndex, monitoredPool)
+    fortran_compile_batch, getTLEEDdir, getMaxTensorIndex, monitoredPool)
 from viperleed.tleedmlib.base import splitMaxRight
 from viperleed.tleedmlib.files.parameters import modifyPARAMETERS
 import viperleed.tleedmlib.files.beams as beams
@@ -98,16 +98,14 @@ def compile_refcalc(comptask):
                 + comptask.foldername + " while trying to fetch fortran "
                 "source files")
     # compile
+    ctasks = [(comptask.fortran_comp[0] + " -o " + oname + " -c",
+               fname, comptask.fortran_comp[1]) for (fname, oname)
+              in [(muftinname, "muftin.o"), (libname, "lib.tleed.o"),
+                  (srcname, "main.o")]]
+    ctasks.append((comptask.fortran_comp[0] + " -o " + comptask.exename,
+                   "muftin.o lib.tleed.o main.o", comptask.fortran_comp[1]))
     try:
-        for (fname, oname) in [(muftinname, "muftin.o"),
-                               (libname, "lib.tleed.o"),
-                               (srcname, "main.o")]:
-            fortranCompile(
-                comptask.fortran_comp[0] + " -o " + oname + " -c",
-                fname, comptask.fortran_comp[1])
-        fortranCompile(
-            comptask.fortran_comp[0] + " -o ", comptask.exename,
-            "muftin.o lib.tleed.o main.o " + comptask.fortran_comp[1])
+        fortran_compile_batch(ctasks)
     except Exception as e:
         logger.error("Error compiling fortran files: " + str(e))
         return ("Fortran compile error in RefcalcCompileTask "

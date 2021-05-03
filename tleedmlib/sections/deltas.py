@@ -179,18 +179,17 @@ def compileDelta(comptask):
         return ("Error encountered by DeltaCompileTask " + comptask.foldername
                 + "while trying to fetch fortran source files")
     # compile
+    ctasks = [(comptask.fortran_comp[0] + " -o " + oname + " -c",
+               fname, comptask.fortran_comp[1]) for (fname, oname)
+              in [(srcname, "main.o"), (libname1, "lib.tleed.o"),
+                  (libname2, "lib.delta.o")]]
+    ctasks.append((comptask.fortran_comp[0] + " -o " + comptask.exename,
+                   "main.o lib.tleed.o lib.delta.o",
+                   comptask.fortran_comp[1]))
     try:
-        for (fname, oname) in [(srcname, "main.o"),
-                               (libname1, "lib.tleed.o"),
-                               (libname2, "lib.delta.o")]:
-            tl.leedbase.fortranCompile(
-                comptask.fortran_comp[0] + " -o " + oname + " -c",
-                fname, comptask.fortran_comp[1])
-        tl.leedbase.fortranCompile(
-            comptask.fortran_comp[0] + " -o " + comptask.exename
-            + " main.o lib.tleed.o lib.delta.o", comptask.fortran_comp[1])
-    except Exception:
-        logger.error("Error compiling fortran files: ")
+        tl.leedbase.fortran_compile_batch(ctasks)
+    except Exception as e:
+        logger.error("Error compiling fortran files: " + str(e))
         return ("Fortran compile error in DeltaCompileTask "
                 + comptask.foldername)
     os.chdir(home)
