@@ -21,7 +21,7 @@ import viperleed.tleedmlib.files.iorfactor as io
 logger = logging.getLogger("tleedm.rfactor")
 
 
-def rfactor(sl, rp, index, for_error=False):
+def rfactor(sl, rp, index, for_error=False, only_vary=None):
     """Runs the r-factor calculation for either the reference calculation
     (index 11) or the superpos (index 12)."""
     if int((rp.THEO_ENERGIES[1]-rp.THEO_ENERGIES[0])
@@ -107,7 +107,8 @@ def rfactor(sl, rp, index, for_error=False):
         logger.error("Exception during writeWEXPEL: ")
         raise
     try:
-        io.writeRfactPARAM(rp, theobeams, for_error=for_error)
+        io.writeRfactPARAM(rp, theobeams, for_error=for_error,
+                           only_vary=only_vary)
     except Exception:
         logger.error("Exception during writeRfactPARAM: ")
         raise

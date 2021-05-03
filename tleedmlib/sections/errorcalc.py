@@ -138,7 +138,8 @@ def errorcalc(sl, rp):
             if os.path.isfile("ROUTSHORT"):
                 os.remove("ROUTSHORT")
             logger.info("Starting R-factor calculation...")
-            rfaclist = tl.sections.rfactor(sl, rp, index=12, for_error=True)
+            rfaclist = tl.sections.rfactor(sl, rp, index=12, for_error=True,
+                                           only_vary=only_vary)
             logger.info("Finished with " + seg_info[mode] + " errors for "
                         "atom group: " + ", ".join(str(at) for at in ag))
             errors.append(R_Error(ag, mode, rfaclist))

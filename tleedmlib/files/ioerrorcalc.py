@@ -94,8 +94,8 @@ def write_errors_csv(errors, filename="Errors.csv", sep=";"):
     try:
         with open(filename, "w") as wf:
             wf.write(output)
-    except Exception:
-        logger.warning("Failed to write "+filename)
+    except Exception as e:
+        logger.warning("Failed to write "+filename + ": " + str(e))
     return
 
 

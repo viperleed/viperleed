@@ -261,7 +261,7 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
     return
 
 
-def writeRfactPARAM(rp, theobeams, for_error=False):
+def writeRfactPARAM(rp, theobeams, for_error=False, only_vary=None):
     """
     Generates the PARAM file for the rfactor calculation.
 
@@ -294,8 +294,12 @@ def writeRfactPARAM(rp, theobeams, for_error=False):
     ngrid = int(np.ceil(((maxen-minen)/step)*1.1))
     n_var = 1
     if for_error:
-        n_var = max([sp.steps for sp in rp.searchpars
-                     if sp.atom in rp.search_atlist])
+        if not only_vary:
+            logger.warning("Rfactor PARAM for error: Parameters under "
+                           "variation not passed.")
+            only_vary = [sp for sp in rp.searchpars
+                         if sp.atom in rp.search_atlist]
+        n_var = max([sp.steps for sp in only_vary])
     output = """
 C  MNBED  : number of beams in experimental spectra before averaging
 C  MNBTD  : number of beams in theoretical spectra before averaging
