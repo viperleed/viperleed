@@ -380,11 +380,9 @@ def writeVIBROCC(sl, rp, filename="VIBROCC_OUT", silent=False):
         write = True
         ol = site.label + " = "
         targetels = [el for el in site.occ if site.occ[el] != 0]
-        if len(targetels) == 1:
-            ol += "{:.4g}".format(site.occ[targetels[0]])
-            if (site.occ[targetels[0]] == 1 and site.el == targetels[0]
-                    and not site.mixedEls):
-                write = False
+        if (len(targetels) == 1 and site.occ[targetels[0]] == 1
+                and site.el == targetels[0] and not site.mixedEls):
+            write = False
         else:
             for i, el in enumerate(targetels):
                 ol += el + " {:.4g}".format(site.occ[el])
