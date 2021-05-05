@@ -47,7 +47,7 @@ suppfiles = ["AUXBEAMS", "AUXGEO", "AUXLATGEO", "AUXNONSTRUCT", "BEAMLIST",
              "search-rf.info", "search-PARAM", "AUXEXPBEAMS",
              "eeasisss-input", "searchpars.info", "superpos-PARAM",
              "superpos-CONTRIN", "POSCAR_bulk_appended", "POSCAR_mincell",
-             "restrict.f"]
+             "restrict.f", "Phaseshifts_plots.pdf"]
 outfiles = ["THEOBEAMS.csv", "THEOBEAMS_norm.csv",
             "PatternInfo.tlm", "SD.TL", "refcalc-fd.out",
             "Rfactor_plots_refcalc.pdf", "control.chem",

@@ -23,7 +23,7 @@ from viperleed.tleedmlib.files.vibrocc import readVIBROCC
 from viperleed.tleedmlib.files.parameters import (
     readPARAMETERS, interpretPARAMETERS, modifyPARAMETERS)
 from viperleed.tleedmlib.files.phaseshifts import (
-    readPHASESHIFTS, writePHASESHIFTS)
+    readPHASESHIFTS, writePHASESHIFTS, plot_phaseshifts)
 from viperleed.tleedmlib.files.beams import (
     readOUTBEAMS, readBEAMLIST, checkEXPBEAMS, readIVBEAMS, sortIVBEAMS,
     writeIVBEAMS)
@@ -94,6 +94,10 @@ def initialization(sl, rp, subdomain=False):
         except Exception:
             logger.error("Exception during writePHASESHIFTS: ")
             raise
+    try:
+        plot_phaseshifts(sl, rp)
+    except Exception:
+        logger.warning("Failed to plot phaseshifts", exc_info=rp.LOG_DEBUG)
     rp.fileLoaded["PHASESHIFTS"] = True
     rp.updateDerivedParams()
     rp.manifest.append("PHASESHIFTS")
