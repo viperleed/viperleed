@@ -197,6 +197,7 @@ def getYfunc(ivfunc, v0i):
         # cannot calculate derivative, return empty
         return np.array([[]])
     yfunc = None
+    ivfunc = np.array(ivfunc)
     for i in range(1, len(ivfunc)-1):
         vals = ivfunc[i-1:i+2, 1]
         lf = ((vals[2] - vals[0]) /

@@ -267,6 +267,8 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=";", enrange=None):
                                "will be ignored.")
         for b in remlist:
             beams.remove(b)
+    if enrange is None:
+        return beams
     totalrange = 0.
     minmax = enrange[:]
     if len(minmax) < 2:
