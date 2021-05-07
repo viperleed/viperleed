@@ -107,11 +107,11 @@ void updateState() {
     this requires us to change the state of the Arduino, and
     do some preparation that may be needed before entering
     the new state.
-    
+
     Reads
     -----
     newMessage, data_received
-    
+
     Writes
     ------
     initialTime, currentState, waitingForDataFromPC, calibrationGain
@@ -162,51 +162,47 @@ void updateState() {
 
 bool didTimeOut(){
     /**Return whether the Arduino waiting has timed out.
-    
+
     Reads
     -----
     initialTime
-    
+
     Returns
     -------
     true if timed out
-    
+
     Goes to state
     -------------
     STATE_ERROR with ERROR_TIMEOUT
         If timed out
     **/
     if((millis() -  initialTime) > TIMEOUT){
-        errorTraceback[0] = currentState;
-        errorTraceback[1] = ERROR_TIMEOUT;
-        currentState = STATE_ERROR;
+        raise(ERROR_TIMEOUT);
         return true;
         }
     return false;
 }
 
 
-bool notInStateAndError(byte state){
-    /**Return true if we are not in the given state.
-    
-    Also brings the system to a RUNTIME_ERROR.
-    
-    Reads
+bool raise(byte error_code){
+    /**Bring the system to a STATE_ERROR with a given error_code.
+
+    Parameters
+    ----------
+    error_code
+        Byte that identifies the error, see header.
+
+    Writes
     -----
     currentState
-    
+
     Goes to state
     -------------
-    STATE_ERROR : ERROR_RUNTIME
-        If not in state
+    STATE_ERROR : error_code
     **/
-    if (currentState != state){
-        errorTraceback[0] = currentState;
-        errorTraceback[1] = ERROR_RUNTIME;
-        currentState = STATE_ERROR;
-        return true;
-    }
-    return false;
+    errorTraceback[0] = currentState;
+    errorTraceback[1] = error_code;
+    currentState = STATE_ERROR;
 }
 
 
@@ -222,7 +218,7 @@ void readFromSerial() {
     in serialInputBuffer. A message is considered complete when we
     receive a MSG_END. When this happens, serialInputBuffer will be
     [MSG_START, byte with length of decoded message, message, MSG_END]
-    
+
     A full message will likely be read during a single call to this
     function, unless its characters come in very slowly. In this case
     it will take a few loop iterations to read a full message.
@@ -233,9 +229,9 @@ void readFromSerial() {
 
     Goes to state
     -------------
-    STATE_ERROR + ERROR_SERIAL_OVERFLOW
+    STATE_ERROR : ERROR_SERIAL_OVERFLOW
         In case the Arduino serial buffer reaches its limit
-    STATE_ERROR + ERROR_MSG_INCONSITENT
+    STATE_ERROR : ERROR_MSG_INCONSITENT
         In case the number of bytes read does not fit with the
         number expected from the first byte after MSG_START
 
@@ -245,11 +241,9 @@ void readFromSerial() {
 
     if(Serial.available() >= SERIAL_BUFFER_SIZE){  // Should never be '>', but better safe than sorry
         // The serial buffer is full and it potentially
-        // already discarded some of the bytes that came
-        errorTraceback[0] = currentState;
-        errorTraceback[1] = ERROR_SERIAL_OVERFLOW;
-        currentState = STATE_ERROR;
-        // The buffer will be flushed in the error handler 
+        // already discarded some of the bytes that came.
+        // The buffer will be flushed in the error handler
+        raise(ERROR_SERIAL_OVERFLOW);
         return;
     }
 
@@ -267,9 +261,7 @@ void readFromSerial() {
             // Make sure we are not going to write
             // past the end of serialInputBuffer
             if (numBytesRead == MSG_MAX_LENGTH) {
-                errorTraceback[0] = currentState;
-                errorTraceback[1] = ERROR_MSG_TOO_LONG;
-                currentState = STATE_ERROR;
+                raise(ERROR_MSG_TOO_LONG);
                 return;
             }
             serialInputBuffer[numBytesRead] = byteRead;
@@ -280,9 +272,9 @@ void readFromSerial() {
         if (byteRead == MSG_END) {
             readingFromSerial = false;
             newMessage = decodeAndCheckMessage();
-            break;
+            return;
         }
-        
+
         // Delay a very little bit to make sure new characters
         // come in, if any. This should be enough to read in a
         // whole message. If it isn't the case, we will finish
@@ -334,11 +326,11 @@ bool decodeAndCheckMessage(){
     -------------
     (unchanged)
         if message is acceptable
-    STATE_ERROR with ERROR_MSG_INCONSITENT
+    STATE_ERROR : ERROR_MSG_INCONSITENT
         if the number of decoded bytes does not match the
         length expected from the value that came with the
         message itself
-    STATE_ERROR with ERROR_MSG_UNKNOWN
+    STATE_ERROR : ERROR_MSG_UNKNOWN
         if the message is an unknown command, or if we
         got some 'data' while we were not expecting any
     */
@@ -360,9 +352,7 @@ bool decodeAndCheckMessage(){
     // Check that the number of bytes decoded fits
     msgLength = serialInputBuffer[1];
     if (msgLength != numDecodedBytes){
-        errorTraceback[0] = currentState;
-        errorTraceback[1] = ERROR_MSG_INCONSITENT;
-        currentState = STATE_ERROR;
+        raise(ERROR_MSG_INCONSITENT);
         return false;
         }
 
@@ -370,9 +360,7 @@ bool decodeAndCheckMessage(){
         // Message is some data
         if (not waitingForDataFromPC){
             // But we're not expecting any
-            errorTraceback[0] = currentState;
-            errorTraceback[1] = ERROR_MSG_UNKNOWN;
-            currentState = STATE_ERROR;
+            raise(ERROR_MSG_UNKNOWN);
             return false;
         }
         // Defer checking to state handlers
@@ -389,9 +377,7 @@ bool decodeAndCheckMessage(){
         case PC_RESET: break;
         case PC_SET_VOLTAGE: break;
         default:
-            errorTraceback[0] = currentState;
-            errorTraceback[1] = ERROR_MSG_UNKNOWN;
-            currentState = STATE_ERROR;
+            raise(ERROR_MSG_UNKNOWN);
             return false;
     }
     return true;
@@ -476,7 +462,7 @@ void encodeAndSend(byte *byteArray, int len){
 
 void prepareForAutogain(){
     /**Prepare the system to enter a STATE_AUTOGAIN_ADCS.
-    
+
     Writes
     ------
     adc0Gain, adc1Gain, numMeasurementsDone, summedMeasurements,
@@ -484,14 +470,14 @@ void prepareForAutogain(){
     **/
     // Reset data, as we will store measurements in the same arrays
     resetMeasurementData();
-    
+
     // Gains to zero, where we will measure for the gain optimization
     adc0Gain = 0;
     adc1Gain = 0;
-    
+
     // Calibrate at the high frequency used for autogain
     selfCalibrateAllADCs(AD7705_500HZ);  // Takes ~13 ms
-    
+
     // Backup the number of measurement that will be
     // used during normal measurements later on. This
     // is restored at the end of the gain optimization
@@ -527,8 +513,10 @@ void getConfiguration(){
     STATE_IDLE
         Otherwise
     **/
-    if (notInStateAndError(STATE_GET_CONFIGURATION))
+    if (currentState != STATE_GET_CONFIGURATION){
+        raise(ERROR_RUNTIME);
         return;
+    }
 
     hardwareDetected.asInt = getHardwarePresent();
     byte configuration[4] = {FIRMWARE_VERSION_MAJOR,
@@ -580,7 +568,7 @@ void calibrateADCsAtAllGains(){
 
     The calibration results are stored, so they can be fetched
     later to make gain-switching faster.
-    
+
     Calibration is performed for those channels and update
     rate that come from the PC as the first data message
     after PC_CALIBRATION.
@@ -618,19 +606,20 @@ void calibrateADCsAtAllGains(){
         If calibration for a single state-loop iteration (i.e.,
         one value of gain) takes longer than 5 s
     STATE_ERROR : ERROR_MSG_DATA_INVALID
-        If we get the wrong number of data bytes, or if either
-        one of the channels or the update rate is not one of
-        the acceptable values
+        If we get too few data bytes, or if either one of the
+        channels or the update rate is not an acceptable value
     STATE_CALIBRATE_ADCS (stays)
         Until all the gain values have been calibrated
         for the currently selected channels
     STATE_IDLE
         After calibration is done
     */
-    if (notInStateAndError(STATE_CALIBRATE_ADCS))
+    if (currentState != STATE_CALIBRATE_ADCS){
+        raise(ERROR_RUNTIME);
         return;
+    }
 
-    if(not newMessage){  // waiting for data from the PC
+    if (not newMessage){  // waiting for data from the PC
         if (didTimeOut())
             waitingForDataFromPC = false;
         return;
@@ -640,55 +629,49 @@ void calibrateADCsAtAllGains(){
         // the first time the data arrives
 
         // Check that we got the data that we expected, i.e.,
-        // (1) 2 bytes for channels, one for update rate
-        if (msgLength != 3){
-            errorTraceback[0] = currentState;
-            errorTraceback[1] = ERROR_MSG_DATA_INVALID;
-            currentState = STATE_ERROR;
+        // (1) 1 byte for update rate, 2 for channels
+        if (msgLength < 3){
+            raise(ERROR_MSG_DATA_INVALID);
             waitingForDataFromPC = false;
             newMessage = false;
             return;
         }
-        
+
         // (2) The channels are acceptable
         for (byte i = 0; i < 2; i++){
             byte channel = data_received[i];
             if (channel != AD7705_CH0 or channel != AD7705_CH1){
-                errorTraceback[0] = currentState;
-                errorTraceback[1] = ERROR_MSG_DATA_INVALID;
-                currentState = STATE_ERROR;
+                raise(ERROR_MSG_DATA_INVALID);
                 waitingForDataFromPC = false;
                 newMessage = false;
                 return;
             }
         }
-        
+
         adc0Channel = data_received[0];
         adc1Channel = data_received[1];
-        
+
         // (2) The update rate is acceptable
         if (not isAcceptableADCUpdateRate(data_received[2])){
-            errorTraceback[0] = currentState;
-            errorTraceback[1] = ERROR_MSG_DATA_INVALID;
-            currentState = STATE_ERROR;
+            raise(ERROR_MSG_DATA_INVALID);
             waitingForDataFromPC = false;
             newMessage = false;
             return;
         }
         adcUpdateRate = data_received[2];
-        
+
     }
 
     // Data is OK
     newMessage = false;
     waitingForDataFromPC = false;
-    
+
     // May timeout in the following if the ADC power is disconnected
     // while we're waiting for a calibration to be finished
     initialTime = millis();
 
     // The next part runs once every state loop
-    if (calibrationGain <= AD7705_MAX_GAIN) {        
+    if (calibrationGain <= AD7705_MAX_GAIN) {
         // Prepare a place to store values from which medians are
         // calculated: three for median, N_MAX_ADCS_ON_PCB for ADCs,
         // last index is offset(0) & gain(1)
@@ -789,7 +772,8 @@ void prepareADCsForMeasurement(){
         If more than 5s pass between the PC_SET_UP_ADCS message
         and the receipt of data
     STATE_ERROR : ERROR_MSG_DATA_INVALID
-        If either channel is an acceptable values
+        If we receive less than the data that we expect (4 bytes)
+        or if either channel is not an acceptable value
     STATE_ERROR : ERROR_NEVER_CALIBRATED
         If one of the ADC channels used was not calibrated
     STATE_SET_UP_ADCS (stays)
@@ -797,8 +781,10 @@ void prepareADCsForMeasurement(){
     STATE_IDLE
         Successfully finished
     **/
-    if (notInStateAndError(STATE_SET_UP_ADCS))
+    if (currentState != STATE_SET_UP_ADCS){
+        raise(ERROR_RUNTIME);
         return;
+    }
 
     if (not newMessage){  // waiting for data from the PC
         if(didTimeOut()){
@@ -807,27 +793,23 @@ void prepareADCsForMeasurement(){
         }
         return;
     }
-    
+
     // Data has arrived
     waitingForDataFromPC = false;
     newMessage = false;
 
     // Do some checking on the data we received:
     // (1) Correct number of bytes? [2(channels) + 2(no. measurements)]
-    if (msgLength != 4){
-        errorTraceback[0] = currentState;
-        errorTraceback[1] = ERROR_MSG_DATA_INVALID;
-        currentState = STATE_ERROR;
+    if (msgLength < 4){
+        raise(ERROR_MSG_DATA_INVALID);
         return;
     }
-    
+
     // (2) channels acceptable?
     for (byte i = 0; i < 2; i++){
         byte channel = data_received[i];
         if (channel != AD7705_CH0 or channel != AD7705_CH1){
-            errorTraceback[0] = currentState;
-            errorTraceback[1] = ERROR_MSG_DATA_INVALID;
-            currentState = STATE_ERROR;
+            raise(ERROR_MSG_DATA_INVALID);
             return;
         }
     }
@@ -839,7 +821,7 @@ void prepareADCsForMeasurement(){
 
     setAllADCgainsAndCalibration();
     if (currentState == STATE_ERROR)   // Some channel was not calibrated
-            return;
+        return;
 
     encodeAndSend(PC_OK);
     currentState = STATE_IDLE;
@@ -891,8 +873,10 @@ void setVoltageAndWait(){
     STATE_TRIGGER_ADCS
         Successfully finished
     **/
-    if (notInStateAndError(STATE_SET_VOLTAGE))
+    if (currentState != STATE_SET_VOLTAGE){
+        raise(ERROR_RUNTIME);
         return;
+    }
 
     if (not newMessage){
         // Waiting for data from PC
@@ -900,18 +884,16 @@ void setVoltageAndWait(){
             waitingForDataFromPC = false;
         return;
     }
-    
+
     if (newMessage){ // Do this only once
         // Data has arrived
         waitingForDataFromPC = false;
         newMessage = false;
-        
+
         // Check that it is the right amount of data
         // 2 bytes for voltage, 2 bytes for dacSettlingTime
         if (msgLength != 4){
-            errorTraceback[0] = currentState;
-            errorTraceback[1] = ERROR_MSG_DATA_INVALID;
-            currentState = STATE_ERROR;
+            raise(ERROR_MSG_DATA_INVALID);
 
             // Set the output to zero                   // TODO: should we? If we do it here, we should probably do it anyway in all states where there may be a nonzero voltage, should they error out! Then it could just simply be moved to handleErrors().
             AD5683setVoltage(CS_DAC, 0x0000);
@@ -923,7 +905,7 @@ void setVoltageAndWait(){
             resetMeasurementData();
             return;
         }
-        
+
         uint16_t dacValue = data_received[0] << 8 | data_received[1];
         dacSettlingTime = data_received[2] << 8 | data_received[3];
 
@@ -931,7 +913,7 @@ void setVoltageAndWait(){
         AD5683setVoltage(CS_DAC, dacValue);
         initialTime = millis();
     }
-    
+
     // And wait in the same state till the voltage output is stable
     if((millis() - initialTime) < dacSettlingTime) return;
 
@@ -945,7 +927,7 @@ void setVoltageAndWait(){
 /** Handler of STATE_TRIGGER_ADCS */
 void triggerMeasurements() {
     /**Trigger the (available) ADCs to start converting.
-    
+
     This is basically just the precursor state to STATE_MEASURE_ADCS            // TODO: I'm wondering if we even need a state for this. It may just be a function call as the 'preparation' for the STATE_MEASURE_ADCS
 
     Reads
@@ -969,9 +951,11 @@ void triggerMeasurements() {
     STATE_MEASURE_ADCS
         Otherwise
     **/
-    if (notInStateAndError(STATE_TRIGGER_ADCS))
+    if (currentState != STATE_TRIGGER_ADCS){
+        raise(ERROR_RUNTIME);
         return;
-    
+    }
+
     if (hardwareDetected.asInt & ADC_0_PRESENT)
         AD7705setGainAndTrigger(CS_ADC_0, adc0Channel, adc0Gain);
     if (hardwareDetected.asInt & ADC_1_PRESENT)
@@ -1023,8 +1007,10 @@ void measureADCs(){
     STATE_ADC_VALUES_READY
         Successfully finished
     **/
-    if (notInStateAndError(STATE_MEASURE_ADCS))
+    if (currentState != STATE_MEASURE_ADCS){
+        raise(ERROR_RUNTIME);
         return;
+    }
 
     makeAndSumMeasurements();
     // TODO: if, by chance, the last value measured by one of the ADCs
@@ -1089,9 +1075,11 @@ void sendMeasuredValues(){
     **/
     // TODO: We may later remove this, if we want the option
     // of sending incomplete data back upon request from the PC
-    if (notInStateAndError(STATE_ADC_VALUES_READY))
+    if (currentState != STATE_ADC_VALUES_READY){
+        raise(ERROR_RUNTIME);
         return;
-    
+    }
+
     // TODO: Ideally, one would like to rather return a SINGLE MESSAGE
     //       containing 3*4 significant bytes (+ encoding).
     //       In this case, the worst-case scenario message length would be
@@ -1144,9 +1132,11 @@ void findOptimalADCGains(){
     STATE_IDLE
         Successfully finished
     **/
-    if (notInStateAndError(STATE_AUTOGAIN_ADCS))
+    if (currentState != STATE_AUTOGAIN_ADCS){
+        raise(ERROR_RUNTIME);
         return;
-    
+    }
+
     // Notice that we are not triggering the ADCs here, as we are
     // not particularly interested in a measuring from a specific
     // point in time. The first data will anyway be available
@@ -1196,7 +1186,7 @@ void findOptimalADCGains(){
       }
     }
 
-    // Done. Clean up and update the ADCs with the new gain
+    // Now clean up and update the ADCs with the new gain
     // found, also setting back the normal updateRate, and
     // loading the relevant calibration data.
     resetMeasurementData();
@@ -1214,18 +1204,18 @@ void findOptimalADCGains(){
 /** Handler of STATE_ERROR */
 void handleErrors(){
     /**Clean up after an error, and report it to the PC.
-    
+
     Reads
     -----
     currentState, errorTraceback
-    
+
     Msg to PC
     ---------
     First message : PC_ERROR
     Second message : errorTraceback, i.e., two bytes
         First byte : state of the Arduino while the error occurred
         Second byte : error code
-    
+
     Goes to state
     -------------
     STATE_ERROR : ERROR_RUNTIME
@@ -1233,20 +1223,26 @@ void handleErrors(){
     STATE_IDLE
         Otherwise
     **/
-    if (notInStateAndError(STATE_ERROR))
+    if (currentState != STATE_ERROR){
+        raise(ERROR_RUNTIME);
         return;
-    
+    }
+
     // First, report the error, so the PC knows
     // there may be some cleanup going on
     encodeAndSend(PC_ERROR);
     encodeAndSend(errorTraceback, 2);
-    
+
     // Then clean up possible mess that caused the error
     switch(errorTraceback[1]){
         case ERROR_SERIAL_OVERFLOW:
             // Discard all characters in the serial buffer,
             // since messages are anyway likely corrupt.
             while(Serial.available()) Serial.read();
+            break;
+        case ERROR_MSG_TOO_LONG:
+            numBytesRead = 0;
+            readingFromSerial = false;
             break;
     }
     currentState = STATE_IDLE;
@@ -1270,7 +1266,7 @@ void reset(){
     adc0ShouldDecreaseGain, adc1ShouldDecreaseGain,
     numMeasurementsToDo, numMeasurementsToDoBackup,
     numMeasurementsDone, summedMeasurements, calibratedChannels
-    
+
     Goes to state
     -------------
     STATE_IDLE
@@ -1312,15 +1308,15 @@ void reset(){
     // Explicitly reset the ADC I/O communication
     AD7705resetCommunication(CS_ADC_0);
     AD7705resetCommunication(CS_ADC_1);
-    
+
     // Reset the update rate
     AD7705setClock(CS_ADC_0, adcUpdateRate);
     AD7705setClock(CS_ADC_1, adcUpdateRate);
-    
+
     // As well as channel and gain
     AD7705setGainAndTrigger(CS_ADC_0, adc0Channel, adc0Gain);
     AD7705setGainAndTrigger(CS_ADC_1, adc1Channel, adc1Gain);
-    
+
     // Reset DAC and set the output voltage to zero
     AD5683reset(CS_DAC);
     AD5683setVoltage(CS_DAC, 0x0000);
@@ -1446,12 +1442,10 @@ void selfCalibrateAllADCs(byte updateRate) {
     adc0Channel, adc0Gain, adc1Channel, adc1Gain
     **/
     if (not isAcceptableADCUpdateRate(updateRate)){
-        errorTraceback[0] = currentState;
-        errorTraceback[1] = ERROR_RUNTIME;
-        currentState = STATE_ERROR;
+        raise(ERROR_RUNTIME);
         return;
     }
-    
+
     if (hardwareDetected.asInt & ADC_0_PRESENT)
         AD7705selfCalibrate(CS_ADC_0, adc0Channel, adc0Gain, updateRate);
     if (hardwareDetected.asInt & ADC_1_PRESENT)
@@ -1481,7 +1475,7 @@ void setAllADCgainsAndCalibration() {
     -----
     hardwareDetected, adc0Channel, adc1Channel, adc0Gain,
     adc1Gain, selfCalDataVsGain, adcUpdateRate
-    
+
     Goes to state
     -------------
     STATE_ERROR : ERROR_NEVER_CALIBRATED
@@ -1496,20 +1490,18 @@ void setAllADCgainsAndCalibration() {
             byte chipSelect = iADC==0 ? CS_ADC_0 : CS_ADC_1;                    // TODO: easier with externalADCs[iADC].chipSelect
             byte channel = iADC==0 ? adc0Channel : adc1Channel;                 // TODO: easier with externalADCs[iADC].channel
             byte gain = iADC==0 ? adc0Gain : adc1Gain;                          // TODO: easier with externalADCs[iADC].gain
-            
+
             // Make sure that the channel has been calibrated before
             if (not calibratedChannels[iADC][channel]){
-                errorTraceback[0] = currentState;
-                errorTraceback[1] = ERROR_NEVER_CALIBRATED;
-                currentState = STATE_ERROR;
+                raise(ERROR_NEVER_CALIBRATED);
                 return;
             }
-            
+
             int32_t cOffs = selfCalDataVsGain[gain][iADC][channel][0];
             int32_t cGain = selfCalDataVsGain[gain][iADC][channel][1];
             AD7705setCalibrationRegister(chipSelect, channel, AD7705_REG_OFFSET, cOffs);
             AD7705setCalibrationRegister(chipSelect, channel, AD7705_REG_GAIN, cGain);
-            
+
             // Reset the update rate. This is necessary after
             // finishing the auto-gain (that is done at a
             // different frequency), but does not hurt anyway
@@ -1533,7 +1525,7 @@ void decreaseADCGainsIfNeeded(){
     Writes
     ------
     adc0Gain, adc1Gain, adc0ShouldDecreaseGain, adc1ShouldDecreaseGain
-    
+
     Goes to state
     -------------
     STATE_ERROR : ERROR_NEVER_CALIBRATED
@@ -1634,7 +1626,7 @@ void makeAndSumMeasurements() {
 
 
 void checkMeasurementInADCRange(byte gain, bool* adcShouldDecreaseGain,
-                                int16_t adcValue, int16_t Ripple){    // The call to this function would be much easier having externalADCs, as then we would just pass the index of the ADC in the externalADCs array
+                                int16_t adcValue, int16_t ripple){    // The call to this function would be much easier having externalADCs, as then we would just pass the index of the ADC in the externalADCs array
     /**
     Check whether the (signed) value read is approaching
     the saturation for the current measurement range.
@@ -1649,7 +1641,8 @@ void checkMeasurementInADCRange(byte gain, bool* adcShouldDecreaseGain,
         a gain reduction is necessary.
     adcValue : int16_t
         Signed version of the value measured by the ADC that
-        has to be checked for saturation.
+        has to be checked for saturation. The check will be
+        actually done on abs(adcValue) + abs(ripple).
         (1) If adcValue is in the middle ~50% band of the
             measurement range (i.e., 2*ADC_RANGE_THRESHOLD),
             the value is still acceptable, but gain will soon
@@ -1660,6 +1653,10 @@ void checkMeasurementInADCRange(byte gain, bool* adcShouldDecreaseGain,
         (3) If adcValue is in solid saturation but the gain
             cannot be decreased, go to STATE_ERROR,
             with ERROR_ADC_SATURATED code.
+    ripple : int16_t
+        Peak-to-peak ripple voltage measured at the lowest
+        gain for the ADC in question. This value is the one
+        set while in STATE_AUTOGAIN_ADCS.
 
     Goes to state
     -------------
@@ -1671,7 +1668,7 @@ void checkMeasurementInADCRange(byte gain, bool* adcShouldDecreaseGain,
     Stays unchanged
         Otherwise
     */
-    if((abs(adcValue)+abs(Ripple>>gain)) > ADC_RANGE_THRESHOLD
+    if((abs(adcValue) + abs(ripple>>gain)) > ADC_RANGE_THRESHOLD
        && (gain > 0)
        && !*adcShouldDecreaseGain){
         // The measured value is above the "saturation" threshold,
@@ -1681,7 +1678,7 @@ void checkMeasurementInADCRange(byte gain, bool* adcShouldDecreaseGain,
         // setVoltage() gets called, i.e. at the next energy step.
 
         // NB: using the absolute value of the signed measurement
-        //     means that we consider the value 'above threshold'
+        //     means that we deem the value 'above threshold'
         //     when its unsigned version is outside a band twice
         //     as large as the one used in findOptimalADCGains()
         *adcShouldDecreaseGain = true;
@@ -1699,9 +1696,7 @@ void checkMeasurementInADCRange(byte gain, bool* adcShouldDecreaseGain,
         }
         // if(gain==0){       // TODO: I think this was a bug: if the previous 'if' decreased the gain to zero, this would trigger an error, even with a potentially acceptable value (measured with the lower gain).
         else{
-            errorTraceback[0] = currentState;
-            errorTraceback[1] = ERROR_ADC_SATURATED;
-            currentState = STATE_ERROR;
+            raise(ERROR_ADC_SATURATED);
         }
     }
 }
@@ -1760,7 +1755,7 @@ void getFloatMeasurements() {
             // The actual voltage at the input can be in either 0-2.5 V
             // (jumper closed) or 0-10 V (jumper open) ranges. This means
             // scaling the vale by JP_AUX_CLOSED if the jumper is open,
-            // and doing nothing if it's closed (ADC range is already 0-2.5V) 
+            // and doing nothing if it's closed (ADC range is already 0-2.5V)
             if ((hardwareDetected.asInt & JP_AUX_CLOSED) == 0)  // 0-10 V with jumper open
                 fDataOutput[1].asFloat *= ADC_1_CH1_SCALE_JO;
         }
