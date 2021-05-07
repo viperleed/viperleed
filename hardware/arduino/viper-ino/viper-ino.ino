@@ -567,11 +567,11 @@ void calibrateADCsAtAllGains(){
     /**Calibrate (in parallel) the available ADCs for all possible gains.
 
     The calibration results are stored, so they can be fetched
-    later to make gain-switching faster.
+    later to allow fast switching of the gain.
 
-    Calibration is performed for those channels and update
-    rate that come from the PC as the first data message
-    after PC_CALIBRATION.
+    Calibration is performed for those update rate and channels
+    that come from the PC as the first data message following
+    PC_CALIBRATION.
 
     Each gain value is done over a separate state-loop. This means
     that it takes approximately 360 ms to finish a single run of
@@ -627,44 +627,34 @@ void calibrateADCsAtAllGains(){
     else {
         // Data has arrived. This part runs only once,
         // the first time the data arrives
+        newMessage = false;
+        waitingForDataFromPC = false;
 
         // Check that we got the data that we expected, i.e.,
-        // (1) 1 byte for update rate, 2 for channels
+        // (1) at least: 1 byte for update rate + 2 for channels
         if (msgLength < 3){
             raise(ERROR_MSG_DATA_INVALID);
-            waitingForDataFromPC = false;
-            newMessage = false;
             return;
         }
 
-        // (2) The channels are acceptable
-        for (byte i = 0; i < 2; i++){
-            byte channel = data_received[i];
+        // (2) The update rate is acceptable
+        if (not isAcceptableADCUpdateRate(data_received[0])){
+            raise(ERROR_MSG_DATA_INVALID);
+            return;
+        }
+        adcUpdateRate = data_received[0];
+        
+        // (3) The channels are acceptable
+        for (byte i = 0; i < N_MAX_ADCS_ON_PCB; i++){
+            byte channel = data_received[i+1];
             if (channel != AD7705_CH0 or channel != AD7705_CH1){
                 raise(ERROR_MSG_DATA_INVALID);
-                waitingForDataFromPC = false;
-                newMessage = false;
                 return;
             }
         }
-
-        adc0Channel = data_received[0];
-        adc1Channel = data_received[1];
-
-        // (2) The update rate is acceptable
-        if (not isAcceptableADCUpdateRate(data_received[2])){
-            raise(ERROR_MSG_DATA_INVALID);
-            waitingForDataFromPC = false;
-            newMessage = false;
-            return;
-        }
-        adcUpdateRate = data_received[2];
-
+        adc0Channel = data_received[1];
+        adc1Channel = data_received[2];
     }
-
-    // Data is OK
-    newMessage = false;
-    waitingForDataFromPC = false;
 
     // May timeout in the following if the ADC power is disconnected
     // while we're waiting for a calibration to be finished
@@ -731,7 +721,7 @@ void calibrateADCsAtAllGains(){
         adc1Gain = 0;
         setAllADCgainsAndCalibration();
 
-        // And tell the PC that we're done
+        // Finally, tell the PC that we're done
         encodeAndSend(PC_OK);
         currentState = STATE_IDLE;
     }
@@ -741,12 +731,12 @@ void calibrateADCsAtAllGains(){
 /** Handler of STATE_SET_UP_ADCS */
 void prepareADCsForMeasurement(){
     /**
-    Initialize the ADC from the parameters stored in the first 5 bytes of
-    data_received. The bytes have the following meaning:
-    - [0] channel of ADC#0
-    - [1] channel of ADC#1
-    - [2 + 3] number of measurements that will be averaged. [2] is the
-              high byte, [3] the low byte. Data is interpreted as a uint16_t.
+    Initialize the ADC from the parameters stored in the first 4 bytes
+    of data_received. The bytes have the following meaning:
+    - [0 + 1] number of measurements that will be averaged. [0] is the
+              high byte, [1] the low byte. Interpreted as an uint16_t.
+    - [2] channel of ADC#0
+    - [3] channel of ADC#1
 
     - // TODO: remove from Python: measurement frequency for ADCs #0 and #1
     - // TODO: remove from Python: maximum gain value for ADC #0 and #1
@@ -757,8 +747,7 @@ void prepareADCsForMeasurement(){
 
     Writes
     ------
-    newMessage, adc0Channel, adc1Channel, adcUpdateRate, numMeasurementsToDo,
-    currentState
+    newMessage, adc0Channel, adc1Channel, numMeasurementsToDo
 
     Msg to PC
     ---------
@@ -799,25 +788,24 @@ void prepareADCsForMeasurement(){
     newMessage = false;
 
     // Do some checking on the data we received:
-    // (1) Correct number of bytes? [2(channels) + 2(no. measurements)]
+    // (1) At least 4 bytes? [2(no. measurements) + 2(channels)]
     if (msgLength < 4){
         raise(ERROR_MSG_DATA_INVALID);
         return;
     }
 
+    numMeasurementsToDo = data_received[0] << 8 | data_received[1];
+
     // (2) channels acceptable?
-    for (byte i = 0; i < 2; i++){
-        byte channel = data_received[i];
+    for (byte i = 0; i < N_MAX_ADCS_ON_PCB; i++){
+        byte channel = data_received[i+2];
         if (channel != AD7705_CH0 or channel != AD7705_CH1){
             raise(ERROR_MSG_DATA_INVALID);
             return;
         }
     }
-
-    adc0Channel = data_received[0];
-    adc1Channel = data_received[1];
-
-    numMeasurementsToDo = data_received[3] << 8 | data_received[4];
+    adc0Channel = data_received[2];
+    adc1Channel = data_received[3];
 
     setAllADCgainsAndCalibration();
     if (currentState == STATE_ERROR)   // Some channel was not calibrated
@@ -1243,6 +1231,10 @@ void handleErrors(){
         case ERROR_MSG_TOO_LONG:
             numBytesRead = 0;
             readingFromSerial = false;
+            break;
+        case ERROR_MSG_DATA_INVALID:
+            waitingForDataFromPC = false;
+            newMessage = false;
             break;
     }
     currentState = STATE_IDLE;

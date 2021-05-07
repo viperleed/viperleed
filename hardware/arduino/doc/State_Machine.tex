@@ -26,14 +26,14 @@ Arduino program flow should be as follows:
 
 \begin{center}
 \begin{tabular}{lcp{.29\textwidth}p{.21\textwidth}c}\toprule
-Original message            & Data bytes & Meaning of data bytes                    & Reply & Reply bytes\\\midrule
-\texttt{PC\_CONFIGURATION}  & ---        & ---								        & \small{version + hardware}       & 4\\
-\texttt{PC\_CALIBRATION}    & 3 & adc0Ch., adc1Ch., adcRate                         & {\small(done)} \texttt{PC\_OK}   & 1\\
-\texttt{PC\_SET\_UP\_ADCS}  & 4 & adc0Ch., adc1Ch., no.\ meas. MSB, no.\ meas. LSB & {\small(data OK)} \texttt{PC\_OK}  & 1\\
-\texttt{PC\_AUTOGAIN}       & ---        & ---                                      & {\small(done)} \texttt{PC\_OK}   & 1\\
-\texttt{PC\_SET\_VOLTAGE}   & 4          & dacValue MBS, dacValue LSB,   & {\small(done waiting)} \texttt{PC\_OK};     & 1\\
-                            &            & dacSettlingTime MSB, dacSettlingTime LSB & {\small(meas. ready) $3\times$data} & 3$\times$4\\
-\texttt{PC\_TRIGGER\_ADCS}  & ---        & ---                                      & {\small(meas. ready) $3\times$data} & 3$\times$4\\
+Original message            & Data bytes & Meaning of data bytes                      & Reply & Reply bytes\\\midrule
+\texttt{PC\_CONFIGURATION}  & ---        & ---								          & \small{version + hardware}          & 4\\
+\texttt{PC\_CALIBRATION}    & 3 & adcRate, adc0Ch., adc1Ch.                           & {\small(done)} \texttt{PC\_OK}      & 1\\
+\texttt{PC\_SET\_UP\_ADCS}  & 4 & no.\ meas.\ MSB, no.\ meas.\ LSB,  adc0Ch., adc1Ch. & {\small(data OK)} \texttt{PC\_OK}   & 1\\
+\texttt{PC\_AUTOGAIN}       & ---        & ---                                        & {\small(done)} \texttt{PC\_OK}      & 1\\
+\texttt{PC\_SET\_VOLTAGE}   & 4          & dacValue MBS, dacValue LSB,   & {\small(done waiting)} \texttt{PC\_OK};          & 1\\
+                            &            & dacSettlingTime MSB, dacSettlingTime LSB   & {\small(meas. ready) $3\times$data} & 3$\times$4\\
+\texttt{PC\_TRIGGER\_ADCS}  & ---        & ---                                        & {\small(meas. ready) $3\times$data} & 3$\times$4\\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -109,13 +109,13 @@ State					        & Initiated by                 & Handler                      
 \vspace*{\baselineskip}
 \noindent{}Follows a description of each of the states in the Arduino finite-state machine:
 \begin{itemize}
-\item \texttt{STATE\_GET\_CONFIGURATION}: Returns to the PC the current firmware and hardware information. See Section \textit{From Arduino to PC} above for details. Notice that many of the functions require access to the results computed in this state, that should be up to date. Thus, it is advisable to call a \texttt{PC\_CONFIGURATION} before each measurement, or at least after initial boot-up of the Arduino.
+\item \texttt{STATE\_GET\_CONFIGURATION}: Returns to the PC the current firmware and hardware information. See Section \textit{From Arduino to PC} above for details. Notice that many of the functions require access to the results computed in this state, that should be up to date. Thus, it is advisable to call a \texttt{PC\_CONFIGURATION} before each measurement run, or at least after initial boot-up of the Arduino.
 
-\item \texttt{STATE\_CALIBRATE\_ADCS}: In this state the ADCs are self-calibrated in parallel for all the possible gain values. The state expects a data message following \texttt{PC\_CALIBRATION} containing 3 bytes: the channels of the ADCs to be calibrated, and the update rate to be used. This state take long to complete (120~ms per calibration point, 3 points per gain to compute medians, 8 gain values. In total $\approx3$~s). Once the calibration is over, it send back a \texttt{PC\_OK} and goes to \texttt{STATE\_IDLE}. Many of the states depend on the calibration data gathered in this state. Hence one always needs to make sure that \texttt{PC\_CALIBRATION} is issued from the PC. Calibrations expire: drift over time and temperature fluctuations. The PC will need to take care of these things (especially on long-term measurements). All standard IV measurements should include a calibration.
+\item \texttt{STATE\_CALIBRATE\_ADCS}: In this state the ADCs are self-calibrated in parallel for all the possible gain values. The state expects a data message following \texttt{PC\_CALIBRATION} containing 3 bytes: the conversion rate to be used, and the channels of the ADCs to be calibrated. This state takes long to complete (120~ms per calibration point, 3 points per gain to compute medians, 8 gain values. In total $\approx3$~s). Once the calibration is over, it sends back a \texttt{PC\_OK} and goes to \texttt{STATE\_IDLE}. Many of the states depend on the calibration data gathered in this state. Hence one always needs to make sure that \texttt{PC\_CALIBRATION} is issued from the PC. Calibrations expire: drift over time and temperature fluctuations. The PC will need to take care of these things (especially on long-term measurements). All standard IV measurements should include a calibration.
 
     Possible errors:\\\texttt{ERROR\_TIMEOUT} (waiting for data from PC, or no response from ADCs);\\\texttt{ERROR\_MSG\_DATA\_INVALID} (invalid channels or update rate, or less than 3 bytes in the message).
 
-\item \texttt{STATE\_SET\_UP\_ADCS}: This state picks the requested channels and fetches pre-stored calibration data. Requires the PC to communicate which channels are to be measured for the `external' ADCs (2 bytes) as well as the number of measurement points that needs to be averaged (2 bytes). Calls \texttt{setAllADCgainsAndCalibration()}, sends a \texttt{PC\_OK}, and returns to \texttt{STATE\_IDLE}.
+\item \texttt{STATE\_SET\_UP\_ADCS}: This state picks the requested channels and fetches pre-stored calibration data. Requires the PC to communicate the number of measurement points that needs to be averaged (2 bytes) as well as which channels are to be measured for the `external' ADCs (2 bytes). Calls \texttt{setAllADCgainsAndCalibration()}, sends a \texttt{PC\_OK}, and returns to \texttt{STATE\_IDLE}.
 
 	Possible errors:\\\texttt{ERROR\_TIMEOUT} (waiting for data from PC);\\\texttt{ERROR\_MSG\_DATA\_INVALID} (channels are invalid or less than 4 bytes in the message).\\\texttt{ERROR\_NEVER\_CALIBRATED} (one of the ADC channels is uncalibrated)
 
