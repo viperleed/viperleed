@@ -491,6 +491,34 @@ def search(sl, rp):
     None.
 
     """
+
+    def kill_process(proc, default_pgid=None):
+        """Cleanly kill the mpirun subprocess and its children. If the process
+        is not alive any more (and therefore the pgid cannot be determined),
+        will instead try to terminate the default_pgid, if passed."""
+        # determine pgid
+        try:
+            pgid = os.getpgid(proc.pid)
+        except ProcessLookupError:
+            pgid = default_pgid
+        # kill main process
+        try:
+            proc.kill()
+            proc.wait()
+        except ProcessLookupError:
+            pass   # already dead
+        if pgid is not None:
+            # kill children
+            try:
+                os.killpg(pgid, signal.SIGTERM)
+                if os.name == "nt":
+                    os.waitpid(pgid)
+                else:
+                    os.waitpid(-pgid, 0)
+            except (ProcessLookupError, ChildProcessError):
+                pass  # already dead or no children
+        return
+
     rp.searchResultConfig = None
     if rp.domainParams:
         initToDo = [(dp.rp, dp.sl, dp.workdir) for dp in rp.domainParams]
@@ -697,6 +725,7 @@ def search(sl, rp):
     rp.searchMaxGenInit = rp.SEARCH_MAX_GEN
     absstarttime = timer()
     tried_repeat = False        # if SD.TL is not written, try restarting
+    pgid = None
     while repeat:
         if first:
             logger.info("Starting search. See files Search-progress.pdf "
@@ -725,6 +754,7 @@ def search(sl, rp):
                         command, encoding="ascii",
                         stdout=log, stderr=log,
                         preexec_fn=os.setsid)
+            pgid = os.getpgid(proc.pid)
         except Exception:
             logger.error("Error starting search. Check SD.TL file.")
             raise
@@ -898,14 +928,7 @@ def search(sl, rp):
                                            "and VIBROCC_OUT: " + str(e))
                 if stop:
                     logger.info("Stopping search...")
-                    pgid = os.getpgid(proc.pid)
-                    proc.kill()
-                    proc.wait()
-                    try:
-                        # needed to kill mpirun children
-                        os.killpg(pgid, signal.SIGTERM)
-                    except ProcessLookupError:
-                        pass  # already dead
+                    kill_process(proc)
                     if (not repeat and not rp.GAUSSIAN_WIDTH_SCALING == 1
                             and checkrepeat):
                         repeat = True
@@ -956,26 +979,12 @@ def search(sl, rp):
                     pass   # user insisted, give up
             interrupted = True
             rp.STOP = True
-            try:
-                # need to kill mpirun children
-                pgid = os.getpgid(proc.pid)
-                proc.kill()
-                proc.wait()
-                os.killpg(pgid, signal.SIGTERM)
-            except ProcessLookupError:
-                pass   # already dead
+            kill_process(proc)
             logger.warning("Search interrupted by user. Attempting "
                            "analysis of results...")
         except Exception:
             logger.error("Error during search. Check SD.TL file.")
-            try:
-                # need to kill mpirun children
-                pgid = os.getpgid(proc.pid)
-                proc.kill()
-                proc.wait()
-                os.killpg(pgid, signal.SIGTERM)
-            except ProcessLookupError:
-                pass   # already dead
+            kill_process(proc)
             raise
         if repeat:
             rp.SEARCH_START = "control"
@@ -996,6 +1005,11 @@ def search(sl, rp):
                     logger.warning("Failed to delete old SD.TL file. "
                                    "This may cause errors in the "
                                    "interpretation of search progress.")
+    if proc is not None:
+        try:     # should generally not be necessary, but just to make sure
+            kill_process(proc, default_pgid=pgid)
+        except Exception:
+            pass
     if not interrupted:
         logger.info("Finished search. Processing files...")
     else:
@@ -1005,11 +1019,12 @@ def search(sl, rp):
         parab_x0 = None
     datafiles = [f for f in os.listdir()
                  if re.match(r'data\d+\.chem$', f.lower())]
-    parab_x0, predictR = parabolaFit(rp, datafiles, min(rfacs),
-                                     x0=parab_x0,
-                                     max_configs=max_read_configs)
-    if predictR is not None:
-        rfac_predict.append((gens[-1], predictR))
+    if len(rfaclist) > 0:
+        parab_x0, predictR = parabolaFit(rp, datafiles, min(rfacs),
+                                         x0=parab_x0,
+                                         max_configs=max_read_configs)
+        if predictR is not None:
+            rfac_predict.append((gens[-1], predictR))
     # write pdf one more time
     if len(gens) > 1:
         try:
