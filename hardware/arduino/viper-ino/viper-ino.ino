@@ -1002,7 +1002,6 @@ void measureADCs(){
     //       the error. It could be solved easily by a simple check:
     //       if (currentState == STATE_ERROR) return;
     if(numMeasurementsDone == numMeasurementsToDo){
-        encodeAndSend(PC_OK);
         currentState = STATE_ADC_VALUES_READY;
         return;
     }
