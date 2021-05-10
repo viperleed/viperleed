@@ -739,7 +739,6 @@ void prepareADCsForMeasurement(){
     - [3] channel of ADC#1
 
     - // TODO: remove from Python: measurement frequency for ADCs #0 and #1
-    - // TODO: remove from Python: maximum gain value for ADC #0 and #1
 
     Reads
     -----
@@ -883,9 +882,6 @@ void setVoltageAndWait(){
         if (msgLength != 4){
             raise(ERROR_MSG_DATA_INVALID);
 
-            // Set the output to zero                   // TODO: should we? If we do it here, we should probably do it anyway in all states where there may be a nonzero voltage, should they error out! Then it could just simply be moved to handleErrors().
-            AD5683setVoltage(CS_DAC, 0x0000);
-
             // And do what we normally would at the
             // beginning of STATE_TRIGGER_ADCS (we're
             // not going there this time)
@@ -1008,6 +1004,7 @@ void measureADCs(){
     //       the error. It could be solved easily by a simple check:
     //       if (currentState == STATE_ERROR) return;
     if(numMeasurementsDone == numMeasurementsToDo){
+        encodeAndSend(PC_OK);
         currentState = STATE_ADC_VALUES_READY;
         return;
     }
@@ -1220,7 +1217,8 @@ void handleErrors(){
     // there may be some cleanup going on
     encodeAndSend(PC_ERROR);
     encodeAndSend(errorTraceback, 2);
-
+    //Set voltage to zero
+    AD5683setVoltage(CS_DAC, 0x0000);
     // Then clean up possible mess that caused the error
     switch(errorTraceback[1]){
         case ERROR_SERIAL_OVERFLOW:
@@ -1686,7 +1684,6 @@ void checkMeasurementInADCRange(byte gain, bool* adcShouldDecreaseGain,
             resetMeasurementData();
             *adcShouldDecreaseGain = false;
         }
-        // if(gain==0){       // TODO: I think this was a bug: if the previous 'if' decreased the gain to zero, this would trigger an error, even with a potentially acceptable value (measured with the lower gain).
         else{
             raise(ERROR_ADC_SATURATED);
         }
