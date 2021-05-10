@@ -738,8 +738,6 @@ void prepareADCsForMeasurement(){
     - [2] channel of ADC#0
     - [3] channel of ADC#1
 
-    - // TODO: remove from Python: measurement frequency for ADCs #0 and #1
-
     Reads
     -----
     data_received

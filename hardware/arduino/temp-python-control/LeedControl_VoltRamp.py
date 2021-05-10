@@ -241,10 +241,9 @@ def initialiseADC(arduino_config):
         2, sign)
     message.append(measurement_n[0])
     message.append(measurement_n[1])
-    for key in ('adc0_channel', 'adc1_channel', 'update_rate'): 
+    for key in ('adc0_channel', 'adc1_channel'): 
         message.append(int(arduino_config[key]))
     sendToArduino(message) 
-    #TODO: We send the update rate, not used in the Arduino code
     #print("Gain in ADC initialisation is:", receiveFromArduino())
     if receiveFromArduino() == PC_OK: 
         print("ADC Initalisation: DONE!")
