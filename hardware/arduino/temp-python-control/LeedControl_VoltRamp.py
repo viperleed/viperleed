@@ -520,7 +520,6 @@ def main(energies=None):
     # Connect with Arduino, reset it and flush input buffer
     portname = serial_ports()
     arduino_port = connectToArduino(portname)
-    sendToArduino(PC_RESET)
     arduino_port.flushInput()
 
     # Calibrate and initialize ADCs, DAC and auto-gain,
@@ -561,21 +560,21 @@ def main(energies=None):
             else: 
                 pass
                 # CameraObject.snap_image()
-            #TODO: I think we never return a DAC value
-            print('Gain: %i \nDAC-Value: %f' % (int(receiveFromArduino()),
-                                                actual_energy))
+            #print('Gain: %i \nDAC-Value: %f' % (int(receiveFromArduino()),
+            #                                   actual_energy))
+            print('nDAC-Value: %f' % (actual_energy))
             adc0_value = receiveFromArduino()
             adc1_value = receiveFromArduino()
             adc2_value = receiveFromArduino()
             #adc0 is ADC0, adc1 is ADC1 and adc2 is the LM35 in the Arduino code
-            print("ADC0_VAlUE:", adc0_value * v_ref_adc)
-            print("ADC1_VAlUE:", adc1_value * v_ref_adc)
-            print("ADC2_VAlUE:", adc2_value * v_ref_adc,
+            print("ADC0_VAlUE:", adc0_value*I0_conversion_factor)
+            print("ADC1_VAlUE:", adc1_value)
+            print("ADC2_VAlUE:", adc2_value,
                   " t = ", round(1000*time.time()))
             print("#########################")
-            adc0_value_csv.append(adc0_value * v_ref_adc)
-            adc1_value_csv.append(adc1_value * v_ref_adc)
-            adc2_value_csv.append(adc2_value * v_ref_adc)
+            adc0_value_csv.append(adc0_value*I0_conversion_factor)
+            adc1_value_csv.append(adc1_value)
+            adc2_value_csv.append(adc2_value)
             dac_value_csv.append(actual_energy)
             time_temp = time.time() - timestart
             timestamp.append(time_temp)
@@ -584,13 +583,13 @@ def main(energies=None):
     # finally: 
     except KeyboardInterrupt:
         CameraObject.stop_camera()
-        sendToArduino(PC_RESET)
+        #sendToArduino(PC_RESET)
+        #Reset would clear calibration: not necessary
         setDAC(dac_value_end) 
         arduino_port.close()
         
     time.sleep(3)  # To process the last frame, the callback needs some time
     CameraObject.stop_camera()
-    sendToArduino(PC_RESET)
     setDAC(dac_value_end)
     createCSV(list(zip(adc0_value_csv, adc1_value_csv, adc2_value_csv, dac_value_csv, timestamp)), path) 
     arduino_port.close()
