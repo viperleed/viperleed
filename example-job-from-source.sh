@@ -8,8 +8,8 @@
 #  - deletes work directory, if requested
 
 # define paths for scripts:
-BOOKIE=/home/tuwien/viperleed/current_packed/utilities/bookkeeper
-TLEEDMSOURCE=/home/tuwien/viperleed/current_packed/viperleed
+BOOKIE=./viperleed/utilities/bookkeeper.py
+TLEEDMSOURCE=./viperleed
 
 # define location of work directory
 WORK=./work
@@ -24,14 +24,14 @@ WORK=./work
 #####################################################
 
 # in case bookkeeper has not been run, run it now (will stop if it has nothing to do)
-cp "$BOOKIE" ./bookkeeper
-chmod +x bookkeeper
+cp "$BOOKIE" ./bookkeeper.py
+# chmod +x bookkeeper
 echo "Running bookkeeper..."
-./bookkeeper
+python3 bookkeeper.py
 
 # create work directory, copy tleedm executable and TensErLEED source code
 OUTDIR=`pwd`
-mkdir "$WORK" 2> /dev/null
+mkdir "$WORK"/viperleed 2> /dev/null
 
 # copy all or only newest Tensors and Deltas to work directory.
 if [ "$ALLTENSORS" = "true" ]; then
@@ -62,13 +62,13 @@ else
 fi
 
 # copy input files, go there and execute
-cp PARAMETERS VIBROCC IVBEAMS DISPLACEMENTS POSCAR PHASESHIFTS EXPBEAMS.csv EXPBEAMS "$WORK" 2> /dev/null
-cp -r "$TLEEDMSOURCE"/* "$WORK"
-cd "$WORK"
-chmod +x tleedm
+cp PARAMETERS VIBROCC IVBEAMS DISPLACEMENTS POSCAR PHASESHIFTS EXPBEAMS.csv EXPBEAMS "$WORK"/viperleed 2> /dev/null
+cp -r "$TLEEDMSOURCE"/* "$WORK"/viperleed
+cd "$WORK"/viperleed
+# chmod +x tleedm
 chmod +x tensorleed/EEASiSSS.x
 chmod +x tensorleed/beamgen3.out
-./tleedm
+python3 tleedm.py
 
 # copy the files listed in manifest back to home
 xargs -a manifest cp -r -t "$OUTDIR"
