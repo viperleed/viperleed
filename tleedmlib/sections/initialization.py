@@ -94,13 +94,13 @@ def initialization(sl, rp, subdomain=False):
         except Exception:
             logger.error("Exception during writePHASESHIFTS: ")
             raise
+    rp.fileLoaded["PHASESHIFTS"] = True
+    rp.updateDerivedParams()
+    rp.manifest.append("PHASESHIFTS")
     try:
         plot_phaseshifts(sl, rp)
     except Exception:
         logger.warning("Failed to plot phaseshifts", exc_info=rp.LOG_DEBUG)
-    rp.fileLoaded["PHASESHIFTS"] = True
-    rp.updateDerivedParams()
-    rp.manifest.append("PHASESHIFTS")
 
     # if necessary, run findSymmetry:
     if sl.planegroup == "unknown":
