@@ -668,7 +668,8 @@ def search(sl, rp):
     if rp.LOG_SEARCH:
         searchlogname = searchname+".log"
         logger.info("Search log will be written to file "+searchlogname)
-        rp.manifest.append(searchlogname)
+        if rp.TL_VERSION > 1.6:
+            rp.manifest.append(searchlogname)
     if rp.N_CORES == 1:
         logger.warning(
             "The N_CORES parameter is set to 1. The search will be run "

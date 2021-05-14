@@ -123,7 +123,7 @@ class Rparams:
         self.LAYER_STACK_VERTICAL = True
         self.LMAX = [0, 0]    # minimum and maximum LMAX
         self.LOG_DEBUG = False
-        self.LOG_SEARCH = False
+        self.LOG_SEARCH = True
         self.N_BULK_LAYERS = 1           # number of bulk layers
         self.N_CORES = 0                 # number of cores
         self.PARABOLA_FIT = {"type": "ridge", "alpha": 1e-2, "mincurv": 5e-3,
