@@ -8,7 +8,7 @@ Schematic simulation of a LEED pattern. Allow exporting list of LEED spots for
 properly indexing an experimental LEED pattern
 """
 
-from viperleed.vprglobals import GLOBALS
+from viperleed import GLOBALS
 # from vprglobals import GLOBALS
 
 __all__ = ['LEEDSymmetryDomains', 'LEEDsubpattern', 'Woods', 'LEEDPattern',

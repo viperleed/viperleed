@@ -27,7 +27,7 @@ for import_path in (cd, vpr_path):
 
 
 import viperleed.tleedmlib.sections as sections
-from viperleed.vprglobals import GLOBALS
+from viperleed import GLOBALS
 from viperleed.tleedmlib.files.parameters import (
     readPARAMETERS, interpretPARAMETERS, modifyPARAMETERS, updatePARAMETERS)
 from viperleed.tleedmlib.files.phaseshifts import readPHASESHIFTS
