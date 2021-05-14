@@ -1447,7 +1447,6 @@ class Slab:
 
     def getSurfaceAtoms(self, rp):
         """Checks which atoms are 'at the surface', returns them as a list."""
-        abst = self.ucell[:2, :2].T
         testats = copy.deepcopy(self.atlist)
         testats.sort(key=lambda atom: -atom.pos[2])
         covered = []
@@ -1483,21 +1482,13 @@ class Slab:
                                  "identify "+ta.el+" as a chemical element.")
                     rp.setHaltingLevel(2)
                     return []
-            r *= 1.1    # !!! test if this is enough
-            points = [ta.cartpos[:2]]
-            for i in range(-1, 2):
-                for j in range(-1, 2):
-                    if not (i == 0 and j == 0):
-                        points.append(points[0] + i*abst[0] + j*abst[1])
+            r *= 1.2    # !!! test if this is enough
             surfats.extend([a for a in self.atlist if (a.pos[2] >= ta.pos[2]
                             and a not in covered and a not in surfats)])
-            for at in [a for a in self.atlist if (a.pos[2] < ta.pos[2]
-                                                  and a not in covered)]:
-                for p in points:
-                    if np.linalg.norm(at.cartpos[:2] - p) < r:
-                        covered.append(at)
-                        break
-            if len(covered)+len(surfats) >= len(testats):
+            covered.extend([a for a in self.atlist if a.pos[2] < ta.pos[2]
+                            and a not in covered
+                            and a.isSameXY(ta.cartpos[:2], eps=r)])
+            if len(covered) + len(surfats) >= len(testats):
                 break   # that's all of them
         return surfats
 
