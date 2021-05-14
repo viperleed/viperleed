@@ -41,7 +41,7 @@ class SearchPar:
         self.mode = mode
         self.el = el
         self.deltaname = deltaname
-        self.steps = -1     # not used for interpretation, info only
+        self.steps = 1
         self.edges = (None, None)  # the first and last value in the range
         self.center = 1  # the index closest to "no change"
         self.non_zero = False   # whether the center is truly "unchanged"
@@ -61,7 +61,7 @@ class SearchPar:
                 d = atom.disp_geo
             elif mode == "vib":
                 d = atom.disp_vib
-        if len(d) > 0:
+        if len(d) > 0 and el != "vac":  # if vac: use defaults
             if el in d:
                 k = el
             else:
