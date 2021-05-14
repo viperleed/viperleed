@@ -307,6 +307,8 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
                                                          for f in (
                                                     v * np.array([1, 1, -1]))])
                                         + "]" for v in par.edges]
+                        elif type(par.edges[0]) == str:
+                            edgetext = par.edges
                     axs[figcount].text(i+1, -0.03, edgetext[0], fontsize=3,
                                        ha="center", va="top")
                     axs[figcount].text(i+1, 1.02, edgetext[1], fontsize=3,

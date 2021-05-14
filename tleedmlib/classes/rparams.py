@@ -56,6 +56,14 @@ class SearchPar:
             self.center = atom.disp_center_index[mode][el] + 1
             self.non_zero = (abs(atom.disp_occ[el][self.center-1]
                                  - atom.site.occ[el]) >= 1e-4)
+            edges = []
+            for ind in (0, -1):
+                edges.append(" + ".join("{:.2f} {}".format(
+                    atom.disp_occ[e][ind], e) for e in atom.disp_occ
+                    if atom.disp_occ[e][ind] > 0.005))
+                if edges[-1] == "":
+                    edges[-1] = "vac"
+            self.edges = tuple(edges)
         else:
             if mode == "geo":
                 d = atom.disp_geo
