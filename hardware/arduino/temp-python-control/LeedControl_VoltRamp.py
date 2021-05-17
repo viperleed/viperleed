@@ -3,6 +3,7 @@ Created on Fri Jul 31 13:38:53 2020
 
 @author: Bernhard Mayr
 @author: Michele Riva (from 2020-11-09)
+@author: Florian Dörr
 """
 # Python standard modules
 import time
@@ -201,13 +202,18 @@ def connectToArduino(port):
     """
     global arduino_port
     PC_CONFIGURATION = int(config['communication_bytes']['PC_CONFIGURATION'])
+    FIRMWARE_VERSION_MAJOR = int(config['firmware_version']['FIRMWARE_VERSION_MAJOR'])
+    FIRMWARE_VERSION_MINOR = int(config['firmware_version']['FIRMWARE_VERSION_MINOR'])
+    hardware_bits = int(config['hardware_bits'])
     
     arduino_port = serial.Serial(port, 115200, timeout = 1)
     if arduino_port.inWaiting() == 0:
         sendToArduino(PC_CONFIGURATION)
         time.sleep(1) #time to settle connection
         hardwareConfiguration = receiveFromArduino()
-        if hardwareConfiguration:
+        if hardwareConfiguration[1] != FIRMWARE_VERSION_MAJOR or hardwareConfiguration[2] != FIRMWARE_VERSION_MINOR:
+            print("Versions do not match.")
+        if hardwareConfiguration[3] or hardwareConfiguration[4]:
             print("Hardware detected")
             for key, value in hardware_bits.items():
                 if value & hardwareConfiguration:
@@ -215,7 +221,7 @@ def connectToArduino(port):
             return arduino_port
         elif hardwareConfiguration is None:
             print("No hardware configuration returned")
-        elif hardwareConfiguration == 0:
+        elif hardwareConfiguration[3] == 0 and hardwareConfiguration[4] == 0:
             print("No hardware detected")
             return arduino_port
     arduino_port.close()
@@ -301,7 +307,7 @@ def serial_ports():
     return result_port
 
 #======================================
-def setDAC(energy, settle_time = 0):
+def setVoltageAndMeasure(energy, settle_time = 0):
     """
     Function initialise dac and sends dac value to arduino. 
     
@@ -347,20 +353,6 @@ def initialiseAutoGain():
         raise IOError("Arduino doesnt react when python tries to initialise "
                       "the Autogain Function, Program stops")
 
-#======================================
-def adcMeasure():
-    """
-    Send PC_TRIGGER_ADCS to arduino and initialise measurement of adc
-    Not used in our current code
-    """
-    PC_TRIGGER_ADCS = int(config['communication_bytes']['PC_TRIGGER_ADCS'])
-    sendToArduino(PC_TRIGGER_ADCS)
-    if receiveFromArduino() == PC_OK:
-        print("Measurements done")
-    else:
-        identifyError()
-        arduino_port.close()
-        raise IOError("Arduino does not reach the number of measurements to do")
 #======================================
 
 def createCSV(multilist, path):
@@ -485,9 +477,14 @@ def identifyError():
     Is called upon when PC_ERROR is returned from the Arduino to the PC. It compares 
     the trace back byte to the ones saved in the config and prints the according key
     """
-    ErrorState = receiveFromArduino()
+    arduino_states = int(config['arduino_states'])
+    error_bytes = int(config['error_bytes'])
+    ErrorMessage = receiveFromArduino()
+    for key, value in arduino_states.items():
+        if value == ErrorMessage[1]:
+            print (key)
     for key, value in error_bytes.items():
-        if value == ErrorState[1]:
+        if value == ErrorMessage[2]:
             print (key)
 
 def main(energies=None):
@@ -506,6 +503,7 @@ def main(energies=None):
     dac_value_end = float(config['measurement_settings']['dac_value_end'])
     camera_settle_time = int(config['camera_settings']['camera_settle_time'])
     live_mode = (config['camera_settings']['live_mode'] == 'True')
+    I0_conversion_factor = int(config['leed_hardware']['I0_conversion_factor'])
     
     start_energy, end_energy, delta_energy = TUI()
     start_energy = 0.5
@@ -526,10 +524,8 @@ def main(energies=None):
     # then re-initialize the ADC with the right gain
     adcCalibration(adc_start_config)
     initialiseADC(adc_autogain_config)
-    setDAC(start_energy, dac_first_settletime)
-    #TODO: We already start a measurement over here because we automatically go to triggering and then measuring in the arduino code
+    setVoltageAndMeasure(start_energy, dac_first_settletime)
     initialiseAutoGain()
-    initialiseADC(adc_start_config)
     actual_energy = start_energy
     adc0_value_csv = []
     adc1_value_csv = []
@@ -540,14 +536,14 @@ def main(energies=None):
     
     # This keyboard interrupt thing will not exist. Process interruption will
     # be handled with a signal
-    # TODO: I have no clue what this does but I removed the call for a measurement as setDAC already does that. We need to redo this.
+    # TODO: I have no clue what this does but I removed the call for a measurement as setVoltageAndMeasure already does that. We need to redo this.
     try: 
         while actual_energy <= end_energy:
             print("Energy:%.2f V" % actual_energy)
             # if camera is used in "exposure" mode
             while not live_mode: 
                 if not CameraObject.callback_data.dac_busy:
-                    setDAC(actual_energy, dac_settletime)
+                    setVoltageAndMeasure(actual_energy, dac_settletime)
                     break
             if not live_mode:
                 time.sleep(camera_settle_time*1e-3)
@@ -585,12 +581,12 @@ def main(energies=None):
         CameraObject.stop_camera()
         #sendToArduino(PC_RESET)
         #Reset would clear calibration: not necessary
-        setDAC(dac_value_end) 
+        setVoltageAndMeasure(dac_value_end) 
         arduino_port.close()
         
     time.sleep(3)  # To process the last frame, the callback needs some time
     CameraObject.stop_camera()
-    setDAC(dac_value_end)
+    setVoltageAndMeasure(dac_value_end)
     createCSV(list(zip(adc0_value_csv, adc1_value_csv, adc2_value_csv, dac_value_csv, timestamp)), path) 
     arduino_port.close()
     print('Arduino Disconnected')
