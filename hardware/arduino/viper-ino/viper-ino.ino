@@ -80,10 +80,7 @@ void loop() {
             prepareADCsForMeasurement();
             break;
         case STATE_SET_VOLTAGE:
-            setVoltageAndWait();
-            break;
-        case STATE_TRIGGER_ADCS:
-            triggerMeasurements();
+            setVoltageWaitAndTrigger();
             break;
         case STATE_MEASURE_ADCS:
             measureADCs();
@@ -148,10 +145,6 @@ void updateState() {
             prepareForAutogain();
             currentState = STATE_AUTOGAIN_ADCS;
             break;
-        case PC_TRIGGER_ADCS:
-            initialTime = millis();
-            currentState = STATE_TRIGGER_ADCS;
-            break;
         case PC_RESET:
             reset();
             break;
@@ -204,8 +197,6 @@ bool raise(byte error_code){
     errorTraceback[1] = error_code;
     currentState = STATE_ERROR;
 }
-
-
 
 
 
@@ -373,7 +364,6 @@ bool decodeAndCheckMessage(){
         case PC_CALIBRATION: break;
         case PC_CONFIGURATION: break;
         case PC_SET_UP_ADCS: break;
-        case PC_TRIGGER_ADCS: break;
         case PC_RESET: break;
         case PC_SET_VOLTAGE: break;
         default:
@@ -814,7 +804,7 @@ void prepareADCsForMeasurement(){
 
 
 /** Handler of STATE_SET_VOLTAGE */
-void setVoltageAndWait(){
+void setVoltageWaitAndTrigger(){
     /**
     Ask the DAC to provide a new voltage, if new settings are available.
     Then, wait the prescribed amount of time for the voltage to be stable,
@@ -855,7 +845,7 @@ void setVoltageAndWait(){
     STATE_SET_VOLTAGE (stays)
         While waiting for data from the PC, and until the
         voltage output can be considered stable
-    STATE_TRIGGER_ADCS
+    STATE_MEASURE_ADCS
         Successfully finished
     **/
     if (currentState != STATE_SET_VOLTAGE){
@@ -902,15 +892,14 @@ void setVoltageAndWait(){
     // Finally tell the PC we're done waiting,
     // and trigger the ADCs for measurement
     encodeAndSend(PC_OK);
-    currentState = STATE_TRIGGER_ADCS;
+    triggerMeasurements();
+    currentState = STATE_MEASURE_ADCS;
 }
 
 
-/** Handler of STATE_TRIGGER_ADCS */
+/** Handles triggering after setting the Voltage */
 void triggerMeasurements() {
     /**Trigger the (available) ADCs to start converting.
-
-    This is basically just the precursor state to STATE_MEASURE_ADCS            // TODO: I'm wondering if we even need a state for this. It may just be a function call as the 'preparation' for the STATE_MEASURE_ADCS
 
     Reads
     -----
@@ -923,17 +912,8 @@ void triggerMeasurements() {
     Msg to PC
     ---------
     None.
-    (Will return data when returning from STATE_ADC_VALUES_READY,
-    that is called after STATE_MEASURE_ADCS is over)
-
-    Goes to state
-    -------------
-    STATE_ERROR : ERROR_RUNTIME
-        If this function is not called within STATE_TRIGGER_ADCS
-    STATE_MEASURE_ADCS
-        Otherwise
     **/
-    if (currentState != STATE_TRIGGER_ADCS){
+    if (currentState != STATE_SET_VOLTAGE){
         raise(ERROR_RUNTIME);
         return;
     }
@@ -946,9 +926,6 @@ void triggerMeasurements() {
     // Prepare the system for measurement
     decreaseADCGainsIfNeeded();
     resetMeasurementData();
-
-    // And switch over to the measurement state
-    currentState = STATE_MEASURE_ADCS;
 }
 
 

@@ -51,7 +51,6 @@ union floatOrBytes{
 #define PC_ERROR         253    // An error occurred
 #define PC_CONFIGURATION  63    // PC requested hardware configuration (ASCII '?')
 #define PC_SET_UP_ADCS    83    // PC requested to prepare the ADCs for a measurement (ASCII 'S')   // TODO: requires calibration data up to date (keep a flag, raise errors if never calibrated since bootup. Flag should be set to false at reset(). The python side will have to keep track of when the last calibration was done, and warn if it is too old.)
-#define PC_TRIGGER_ADCS   84    // PC requested to start a measurement right now (ASCII 'T')
 #define PC_OK             75    // Acknowledge request from PC (ASCCI 'K')
 #define PC_RESET          82    // PC requested a global reset (ASCII 'R')
 #define PC_SET_VOLTAGE    86    // PC requested to set a certain energy (ASCII 'V')
@@ -92,13 +91,12 @@ byte data_send[MSG_MAX_LENGTH];
 /** ------------------------- Finite state machine ------------------------- **/
 
 #define STATE_IDLE                 0  // Wait for requests from PC
-#define STATE_SET_UP_ADCS          1  // Pick correct ADC channels, update frequency, and no. of measurement points
-#define STATE_SET_VOLTAGE          2  // Set a voltage with the DAC
-#define STATE_TRIGGER_ADCS         3  // Start a measurement right now
+#define STATE_SET_UP_ADCS          1  // Pick correct ADC channels and no. of measurement points
+#define STATE_SET_VOLTAGE          2  // Set a voltage with the DAC and triggers the ADCs
 #define STATE_MEASURE_ADCS         4  // ADC measurements in progress
 #define STATE_ADC_VALUES_READY     5  // ADC measurements done
 #define STATE_AUTOGAIN_ADCS        6  // Find optimal gain for both ADCs
-#define STATE_GET_CONFIGURATION    7  // Find current hardware configuration
+#define STATE_GET_CONFIGURATION    7  // Find current hardware configuration and return it with the firmware version
 #define STATE_CALIBRATE_ADCS       8  // Figure out correct offset and calibration factors for ADCs at all gains.
 #define STATE_ERROR                9  // An error occurred
 uint16_t currentState = STATE_IDLE;   // Keeps track of the current state
