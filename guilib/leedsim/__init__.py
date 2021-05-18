@@ -33,6 +33,7 @@ if GLOBALS['USE_GUI']:
                                                   HoverAnnot, MatricesPopup,
                                                   TEST)                            # This probably not...
     from viperleed.guilib.leedsim.mainwindow import LEED_GUI
+    from viperleed.guilib.leedsim.dialogbulk3dsym import Bulk3DSymDialog
     from viperleed.guilib.leedsim.newfiledialog import NewFileDialog
     from viperleed.guilib.leedsim.exportcsvdialog import ExportCSVDialog
     # from .widgets import *
@@ -41,6 +42,7 @@ if GLOBALS['USE_GUI']:
     # from .ExportCSVDialog import ExportCSVDialog
     __all__.extend(['DomsBlock', 'EnergyBlock', 'RotationBlock', 'ToggleButton',
                     'LEEDCanvas', 'RealCanvas', 'HoverAnnot', 'MatricesPopup',
-                    'TEST', 'LEED_GUI', 'NewFileDialog', 'ExportCSVDialog'])
+                    'TEST', 'LEED_GUI', 'Bulk3DSymDialog', 'NewFileDialog',
+                    'ExportCSVDialog'])
 
 

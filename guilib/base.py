@@ -1080,11 +1080,6 @@ class PlaneGroup():
                 Mij: mirror across a line through vector v = i*a + j*b,
                      where a and b are the basis unit vectors
     """
-    # EDIT 2020-06-22: all the operations below are now defined as tuples of
-    #                  tuples rather than numpy arrays. This makes them
-    #                  hash-able, and thus usable as set elements.
-    #                  Also edited: M45 and Mm45 were exchanged.
-
     # These two are good for all cells
     E = (1, 0), (0, 1)
     C2 = (-1, 0), (0, -1)    # = -E
@@ -1139,8 +1134,8 @@ class PlaneGroup():
     # 1) rotation orders of screws into a tuple of the corresponding matrices
     screw_ops = {'2': (C2,),
                  '3': (C3, Cm3),
-                 '4': (C4, Cm4),
-                 '6': (C6, Cm6)}
+                 '4': (C4, Cm4),    # Probably need also to add C2
+                 '6': (C6, Cm6)}    # Probably also need C3, Cm3 and C2
     # 2) direction contained in glide planes into the corresponding matrices
     glide_ops = {'[1,0]': M10,
                  '[0,1]': M01,
@@ -1330,9 +1325,9 @@ class PlaneGroup():
         # NB: I may change the behavior later, and rather make this a
         #     set_3d_ops method, while incorporating the getter into
         #     the operations method below
-        if input is None:
+        if not input:
             self.__ops_3d = tuple()
-            return None
+            return
         if isinstance(input, (tuple, list, np.array)):
             if len(input) > 2 or len(input) == 0:
                 raise ValueError("PlaneGroup.screws_glides: requires at most "
@@ -1346,9 +1341,9 @@ class PlaneGroup():
         else:
             shape = None
         
-        if input is None:
+        if not input:
             self.__ops_3d = tuple()
-            return None
+            return
 
         if not isinstance(input, (str, np.ndarray, tuple, list)):
             raise ValueError("PlaneGroup.screws_glides: Invalid input. "
@@ -1358,7 +1353,7 @@ class PlaneGroup():
         if isinstance(input, str):
             if input.lower() == "none":
                 self.__ops_3d = tuple()
-                return None
+                return
 
             ops = []  # this will contain the 2x2 tuples of the new operations
 
@@ -1371,7 +1366,8 @@ class PlaneGroup():
             if not (found_screws or found_glides):
                 raise ValueError("PlaneGroup.screws_glides: Invalid input.")
             if found_screws:  # found some screws
-                screws = found_screws.group('screws').split(',')
+                screws = found_screws.group('screws').replace(' ',
+                                                              '').split(',')
                 if any(s not in self.screw_ops.keys() for s in screws):
                     raise ValueError("PlaneGroup.screws_glides: Invalid "
                                      "rotation order in the input. Only 2-, "
@@ -1407,17 +1403,17 @@ class PlaneGroup():
                             " for glide plane. The only directions allowed "
                             f"are: {self.glide_ops.keys() - ['x', 'y']}")
             self.__ops_3d = tuple(ops)
-            return None
+            return
 
         # Otherwise, the input is an array-like, which should correspond to a
         # 1D list of 2x2 matrices with integer values
 
-        if len(np.shape(input)) != 3 or np.shape(input)[1,2] != (2, 2):
+        if len(np.shape(input)) != 3 or np.shape(input)[1:] != (2, 2):
             raise ValueError("PlaneGroup.screws_glides: an array-like input "
                              "should be a 1D 'list' of 2x2 'matrices'. Found "
                              f"incompatible shape {np.shape(input)}.")
 
-        if any(np.abs(mij%1) > 1e-4 for mij in np.flatten(input)):
+        if any(np.abs(mij % 1) > 1e-4 for mij in np.ravel(input)):
             raise ValueError("PlaneGroup.screws_glides: an array-like input "
                              "should contain only integer-valued matrices")
 
