@@ -31,12 +31,13 @@ python3 bookkeeper.py
 
 # create work directory, copy tleedm executable and TensErLEED source code
 OUTDIR=`pwd`
+mkdir "$WORK" 2> /dev/null
 mkdir "$WORK"/viperleed 2> /dev/null
 
 # copy all or only newest Tensors and Deltas to work directory.
 if [ "$ALLTENSORS" = "true" ]; then
-  cp Tensors "$WORK"/Tensors
-  cp Deltas "$WORK"/Deltas
+  cp Tensors "$WORK"/viperleed/Tensors
+  cp Deltas "$WORK"/viperleed/Deltas
 else
   TNUM=""
   mapfile -d $'\0' TENSORS < <(find Tensors -regex 'Tensors/Tensors_[0-9][0-9][0-9].zip' -print0 2> /dev/null)
@@ -44,7 +45,7 @@ else
     TNAME=${TENSORS[-1]:(-15)}
     TNUM=${TNAME:(-7):3}
     mkdir "$WORK"/Tensors 2> /dev/null
-    cp Tensors/$TNAME "$WORK"/Tensors/$TNAME
+    cp Tensors/$TNAME "$WORK"/viperleed/Tensors/$TNAME
   fi
   if [ "$TNUM" ]; then
     DNAME=""
@@ -56,7 +57,7 @@ else
     done
     if [ "$DNAME" ]; then
       mkdir "$WORK"/Deltas 2> /dev/null
-      cp Deltas/$DNAME "$WORK"/Deltas/$DNAME
+      cp Deltas/$DNAME "$WORK"/viperleed/Deltas/$DNAME
     fi
   fi
 fi
