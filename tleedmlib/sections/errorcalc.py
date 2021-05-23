@@ -138,8 +138,7 @@ def errorcalc(sl, rp):
             if os.path.isfile("ROUTSHORT"):
                 os.remove("ROUTSHORT")
             logger.info("Starting R-factor calculation...")
-            rfaclist = tl.sections.rfactor(sl, rp, index=12, for_error=True,
-                                           only_vary=only_vary)
+            rfaclist = tl.sections.rfactor(sl, rp, index=12, for_error=True)
             logger.info("Finished with " + seg_info[mode] + " errors for "
                         "atom group: " + ", ".join(str(at) for at in ag))
             errors.append(R_Error(ag, mode, rfaclist))
@@ -148,8 +147,7 @@ def errorcalc(sl, rp):
     if len(errors) == 0:
         logger.info("Error calculation: Returning with no output.")
         return
-    minR = min(r for err in errors for r in err.rfacs)
-    varR = np.sqrt(8*np.abs(rp.V0_IMAG) / rp.total_energy_range()) * minR
+    varR = np.sqrt(8*np.abs(rp.V0_IMAG) / rp.total_energy_range())
     logger.info("Found var(R) = {:.4f}".format(varR))
     io.write_errors_csv(errors)
     io.write_errors_pdf(errors, var=varR)

@@ -9,112 +9,27 @@ Functions for reading and writing files relevant to the reference calculation
 
 import numpy as np
 import logging
-import os
-import copy
 from viperleed import fortranformat as ff
 
 import viperleed.tleedmlib as tl
-from viperleed.tleedmlib.base import splitMaxRight
+from viperleed.tleedmlib.files.parameters import modifyPARAMETERS
 from viperleed.tleedmlib.files.beams import writeAUXBEAMS
 
 logger = logging.getLogger("tleedm.files.iorefcalc")
 
 
-def combine_tensors(oripath=".", targetpath=".", buffer=0):
-    """Combines Tensor files in 'oripath' into common files in 'targetpath'.
-    The 'buffer' argument specified how much of a Tensor file can be stored in
-    memory at a given time (in bytes). Set 0 to read the entire file at once
-    (faster, but may be a problem if memory is limited)."""
-    tensorfiles = [f for f in os.listdir(oripath) if f.startswith("T_")
-                   and os.path.isfile(os.path.join(oripath, f))
-                   and len(f.split("_")) == 3]
-    tnum = {}
-    for f in tensorfiles:
-        try:
-            num = int(f.split("_")[1])
-            float(f.split("_")[2][:-2])
-        except ValueError:
-            continue   # not a real Tensor file
-        if num not in tnum:
-            tnum[num] = [f]
-        else:
-            tnum[num].append(f)
-    if len(tnum) == 0:
-        logger.error("Found no Tensor files to combine.")
-        raise RuntimeError("No Tensor files found")
-    for num in tnum:
-        tlist = sorted(tnum[num], key=lambda x: float(x.split("_")[2][:-2]))
-        name = os.path.join(targetpath, splitMaxRight(tlist[0], "_")[0])
-        with open(name, "w") as wf:
-            # having the 'if' this far outside duplicates code, but speeds
-            #  up the loop
-            if buffer == 0:
-                for tf in tlist:
-                    with open(os.path.join(oripath, tf), "r") as rf:
-                        wf.write(rf.read())
-                    try:
-                        os.remove(os.path.join(oripath, tf))
-                    except Exception:
-                        logger.warning("Failed to delete file " + tf)
-            else:
-                for tf in tlist:
-                    with open(os.path.join(oripath, tf), "r") as rf:
-                        while True:
-                            data = rf.read(buffer)
-                            if data:
-                                wf.write(data)
-                            else:
-                                break
-                    try:
-                        os.remove(os.path.join(oripath, tf))
-                    except Exception:
-                        logger.warning("Failed to delete file " + tf)
-    return
-
-
-def combine_fdout(oripath=".", targetpath="."):
-    """Combines fd.out files in oripath into a common file at targetpath."""
-    outlines = []
-    fdfiles = [f for f in os.listdir(oripath)
-               if os.path.isfile(os.path.join(oripath, f))
-               and f.startswith("fd_") and f.endswith("eV.out")]
-    i = 0
-    while i < len(fdfiles):
-        try:
-            float(fdfiles[i].split("fd_")[1].split("eV.out")[0])
-            i += 1
-        except ValueError:
-            fdfiles.pop(i)
-    if len(fdfiles) == 0:
-        logger.error("Found no fd.out files to combine.")
-        raise RuntimeError("No fd.out files found")
-    fdfiles.sort(key=lambda x: float(x.split("fd_")[1].split("eV.out")[0]))
-    nbeams = 0
-    for f in fdfiles:
-        with open(os.path.join(oripath, f), "r") as rf:
-            lines = rf.readlines()
-        lines = [s for s in lines if ".  CORRECT TERMINATION" not in s
-                 and len(s.strip()) >= 1]
-        if len(outlines) == 0:
-            try:
-                nbeams = int(lines[1].strip().split()[0])
-            except Exception:
-                logger.error("Failed to combine fd.out", exc_info=True)
-                raise
-            outlines += lines
-        else:
-            outlines += lines[nbeams+2:]
-        try:
-            os.remove(os.path.join(oripath, f))
-        except Exception:
-            logger.warning("Failed to delete file " + f)
-    try:
-        with open(os.path.join(targetpath, "fd.out"), "w") as wf:
-            wf.write("".join(outlines))
-    except Exception:
-        logger.error("Failed to write combine fd.out")
-        raise
-    return
+def collectFIN():
+    """Combines AUXLATGEO, BEAMLIST, AUXNONSTRUCT, PHASESHIFTS, AUXBEAMS
+    and AUXGEO into one string (input for refcalc), which it returns."""
+    filenames = ["AUXLATGEO", "BEAMLIST", "AUXNONSTRUCT", "PHASESHIFTS",
+                 "AUXBEAMS", "AUXGEO"]
+    fin = ""
+    for fn in filenames:
+        with open(fn, "r") as rf:
+            fin += rf.read()
+        if fin[-1] != "\n":
+            fin += "\n"
+    return fin
 
 
 def readFdOut(readfile="fd.out", for_error=False):
@@ -147,9 +62,10 @@ def readFdOut(readfile="fd.out", for_error=False):
         i += 1
 
     # re-label the beams to get the correct number of characters and formatting
-    mw = max([beam.getLabel()[1] for beam in theobeams])
+    mw = max([beam.lwidth for beam in theobeams])
     for beam in theobeams:
-        beam.label = beam.getLabel(lwidth=mw)[0]
+        beam.lwidth = mw
+        beam.getLabel()
 
     # From now on, all the lines correspond to blocks of beam intensities.
     # Collect them, skipping empty lines
@@ -185,11 +101,8 @@ def readFdOut(readfile="fd.out", for_error=False):
     return theobeams, fdout
 
 
-def writePARAM(sl, rp, lmax=-1):
-    """Creats the contents of the PARAM file for the reference calculation.
-    If no LMAX is passed, will use maximum LMAX from rp. Returns str."""
-    if lmax == -1:
-        lmax = rp.LMAX[1]
+def writePARAM(sl, rp):
+    """Writes PARAM file for the refcalc"""
     try:
         beamlist, beamblocks, beamN = writeAUXBEAMS(
             ivbeams=rp.ivbeams, beamlist=rp.beamlist, write=False)
@@ -200,9 +113,9 @@ def writePARAM(sl, rp, lmax=-1):
 
     # define Clebsh-Gordon coefficient tables:
     mnlmo = [1, 70, 264, 759, 1820, 3836, 7344, 13053, 21868, 34914, 53560,
-             79443, 114492, 160952, 221408, 298809, 396492, 518206]
+             79443, 114492, 160952, 221408]
     mnlm = [1, 76, 284, 809, 1925, 4032, 7680, 13593, 22693, 36124, 55276,
-            81809, 117677, 165152, 226848, 305745, 405213, 529036]
+            81809, 117677, 165152, 226848]
 
     # start generating output
     output = ('C  Dimension statements for Tensor LEED reference calculation, '
@@ -242,9 +155,9 @@ def writePARAM(sl, rp, lmax=-1):
                + str(len(beamlist))+')\n')
     output += ('      PARAMETER (MNPSI = '+str(len(rp.phaseshifts))+', MNEL = '
                + str(len(rp.phaseshifts[0][1]))+')\n')
-    output += '      PARAMETER (MLMAX = '+str(lmax)+')\n'
-    output += ('      PARAMETER (MNLMO = '+str(mnlmo[lmax-1])+', MNLM = '
-               + str(mnlm[lmax-1])+')\n')
+    output += '      PARAMETER (MLMAX = '+str(rp.LMAX)+')\n'
+    output += ('      PARAMETER (MNLMO = '+str(mnlmo[rp.LMAX-1])+', MNLM = '
+               + str(mnlm[rp.LMAX-1])+')\n')
     output += '\nC  3. Parameters for (3D) geometry within (2D) unit mesh\n\n'
     output += '      PARAMETER (MNSITE  = '+str(len(sl.sitelist))+')\n'
     output += '      PARAMETER (MNLTYPE = '+str(len(sl.layers))+')\n'
@@ -288,21 +201,14 @@ def writePARAM(sl, rp, lmax=-1):
                                             else '1 ')+')\n')
     output += ('      PARAMETER (MLMNI = '+('MNSUB*MLMMAX' if mnsub > 1
                                             else '1 ')+')\n')
-    return output
-
-
-def collectFIN():
-    """Combines AUXLATGEO, BEAMLIST, AUXNONSTRUCT, PHASESHIFTS, AUXBEAMS
-    and AUXGEO into one string (input for refcalc), which it returns."""
-    filenames = ["AUXLATGEO", "BEAMLIST", "AUXNONSTRUCT", "PHASESHIFTS",
-                 "AUXBEAMS", "AUXGEO"]
-    fin = ""
-    for fn in filenames:
-        with open(fn, "r") as rf:
-            fin += rf.read()
-        if fin[-1] != "\n":
-            fin += "\n"
-    return fin
+    try:
+        with open('PARAM', 'w') as wf:
+            wf.write(output)
+    except Exception:
+        logger.error("Failed to write PARAM file")
+        raise
+    logger.debug("Wrote to PARAM successfully.")
+    return
 
 
 def writeAUXLATGEO(sl, rp):
@@ -371,7 +277,7 @@ def writeAUXNONSTRUCT(sl, rp):
     i3 = ff.FortranRecordWriter('I3')
     ol = i3.write([rp.BULKDOUBLING_MAX]).ljust(45)
     output += ol+'LITER\n'
-    ol = i3.write([rp.LMAX[1]]).ljust(45)
+    ol = i3.write([rp.LMAX]).ljust(45)
     output += ol+'LMAX\n'
     try:
         with open('AUXNONSTRUCT', 'w') as wf:
@@ -385,10 +291,6 @@ def writeAUXNONSTRUCT(sl, rp):
 
 def writeAUXGEO(sl, rp):
     """Writes AUXGEO, which is part of the input FIN for the refcalc."""
-    if rp.LAYER_STACK_VERTICAL:
-        sl = copy.deepcopy(sl)
-        sl.projectCToZ()
-        sl.updateLayerCoordinates()
     output = ''
     output += ('---------------------------------------------------------'
                '----------\n')
@@ -481,7 +383,12 @@ def writeAUXGEO(sl, rp):
             writelist = layer.atlist
         writelist.sort(key=lambda atom: -atom.pos[2])
         for atom in writelist:
-            writepos = atom.cartpos - atom.layer.cartori
+            if not rp.LAYER_STACK_VERTICAL:
+                writepos = atom.posInLayer
+            else:
+                writepos = atom.cartpos - np.array([nblayers[-1].cartori[0],
+                                                    nblayers[-1].cartori[1],
+                                                    atom.layer.cartori[2]])
             ol = i3.write([sl.sitelist.index(atom.site)+1])
             if natoms != 1:
                 ol += f74x3.write([writepos[2], writepos[0], writepos[1]])
@@ -589,7 +496,10 @@ def writeAUXGEO(sl, rp):
     output += ol + 'NSTACK: number of layers stacked onto bulk\n'
     for layer in list(reversed(nblayers)):
         n = layer.num + 1
-        v = sl.layers[n].cartori - layer.cartori
+        if layer == nblayers[-1] or not rp.LAYER_STACK_VERTICAL:
+            v = sl.layers[n].cartori - layer.cartori
+        else:
+            v = np.zeros(3)
         v[2] = sl.layers[n].cartori[2] - layer.cartbotz
         v = v + layerOffsets[n]   # add layerOffsets for Bravais layers
         ol = i3.write([n]) + f74x3.write([v[2], v[0], v[1]])

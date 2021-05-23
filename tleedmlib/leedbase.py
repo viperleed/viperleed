@@ -14,15 +14,12 @@ import subprocess
 import os
 import shutil
 import copy
-import psutil
-import multiprocessing
-import time
 from quicktions import Fraction
 
 from viperleed.guilib import get_equivalent_beams
 from viperleed.tleedmlib.base import parseMathSqrt, angle, cosvec
 from viperleed.tleedmlib.files.parameters import (
-    readPARAMETERS, interpretPARAMETERS, updatePARAMETERS)
+    readPARAMETERS, interpretPARAMETERS)
 from viperleed.tleedmlib.files.poscar import readPOSCAR
 from viperleed.tleedmlib.files.vibrocc import readVIBROCC
 
@@ -89,86 +86,6 @@ elementAtomicMass = {
 #                FUNCTIONS                    #
 ###############################################
 
-def monitoredPool(rp, poolsize, function, tasks):
-    """
-    The 'function' and 'tasks' arguments are passed on to a multiprocessing
-    pool of size 'poolsize' with apply_async. While waiting for the pool to
-    finish, the PARAMETERS file is read every second to check whether there is
-    a STOP command. If so, the pool is terminated.
-
-    Parameters
-    ----------
-    rp : Rparams object
-        Needed for the parameter update
-    poolsize : int
-        passed on to multiprocessing.Pool
-    function : function
-        passed on to multiprocessing.Pool.apply_async
-    tasks : list of arguments
-        treated like the arguments of pool.map, i.e. each element is passed on
-        in a seperate call of 'function' via multiprocessing.Pool.apply_async
-
-    Returns
-    -------
-    None
-
-    """
-
-    def kill_pool(p):
-        """Kill the subprocesses, then terminate the pool."""
-        for proc in p._pool:
-            parent = psutil.Process(proc.pid)
-            for child in parent.children(recursive=True):
-                child.kill()
-        p.terminate()
-
-    def checkPoolResult(r):
-        nonlocal pool
-        nonlocal killed
-        if r != "":
-            kill_pool(pool)
-            killed = True
-        return r
-
-    pool = multiprocessing.Pool(poolsize)
-    results = []
-    killed = False
-    for task in tasks:
-        r = pool.apply_async(function, (task,), callback=checkPoolResult)
-        results.append(r)
-    pool.close()
-    try:
-        while not all(r.ready() for r in results):
-            if killed:
-                break
-            updatePARAMETERS(rp)
-            if rp.STOP:
-                kill_pool(pool)
-                logger.info("Stopped by STOP parameter.")
-                return
-            time.sleep(1)
-    except KeyboardInterrupt:
-        logger.warning("Stopped by keyboard interrupt.")
-        kill_pool(pool)
-        raise
-    pool.join()
-    error = False
-    for r in results:
-        try:
-            v = r.get(timeout=1)
-            if v:
-                logger.error(v)
-                error = True
-        except (TimeoutError, multiprocessing.context.TimeoutError):
-            logger.error("Failed to get result from execution of {}"
-                         .format(function.__name__))
-            error = True
-    if error:
-        raise RuntimeError("Error in parallel execution of {}"
-                           .format(function.__name__))
-    return
-
-
 def getYfunc(ivfunc, v0i):
     """
     Returns the Y function for a given function. The derivative is
@@ -197,7 +114,6 @@ def getYfunc(ivfunc, v0i):
         # cannot calculate derivative, return empty
         return np.array([[]])
     yfunc = None
-    ivfunc = np.array(ivfunc)
     for i in range(1, len(ivfunc)-1):
         vals = ivfunc[i-1:i+2, 1]
         lf = ((vals[2] - vals[0]) /
@@ -383,52 +299,8 @@ def getTensorOriStates(sl, path):
     return None
 
 
-def fortran_compile_batch(tasks, retry=True, logname="fortran-compile.log"):
-    """
-    Performs a list of fortran compilations.
-
-    Parameters
-    ----------
-    tasks : iterable of tuples (pre, filename, post)
-        Each entry will be passed to fortran_compile.
-    retry : bool, optional
-        If compilation fails, check whether failure is likely due to missing
-        '-mcmodel=medium', and if so, retry. The default is True.
-    logname: str, optional
-        Name of the log file.
-
-    Returns
-    -------
-    None on success, else raises RuntimeException.
-
-    """
-
-    r = None
-    for (pre, filename, post) in tasks:
-        r = fortran_compile(pre=pre, filename=filename, post=post,
-                            logname=logname)
-        if r:
-            break
-    if not r:
-        return None
-    if r == "mcmodel":
-        if not retry:
-            raise RuntimeError(
-                "Compiling fortran code failed, likely due to missing "
-                "'-mcmodel=medium'")
-        logger.warning("Compiling fortran code failed; retrying with "
-                       "'-mcmodel=medium' option.")
-        newtasks = [(pre + " -mcmodel=medium", filename, post)
-                    for (pre, filename, post) in tasks]
-        fortran_compile_batch(newtasks, retry=False, logname=logname)
-    else:
-        raise RuntimeError("Compiling fortran code failed, unknown return "
-                           "value: " + r)
-    return None
-
-
-def fortran_compile(pre="", filename="", post="",
-                    logname="fortran-compile.log"):
+def fortranCompile(pre="", filename="", post="",
+                   logname="fortran-compile.log"):
     """Assembles pre+filename+post to a filename, tries to execute via
     subprocess.run, raises an exception if it fails."""
     fc = pre+" "+filename+" "+post
@@ -445,21 +317,6 @@ def fortran_compile(pre="", filename="", post="",
     except Exception:
         logger.error("Error compiling "+filename)
         raise
-    if r.returncode not in (0, 1):
-        raise RuntimeError("Fortran compiler subprocess returned {}"
-                           .format(r.returncode))
-    if r.returncode == 1 and "-mcmodel=medium" not in fc:
-        mcmodel = False
-        with open(logname, "r") as log:
-            if "relocation truncated to fit:" in log.read():
-                mcmodel = True
-                logger.warning("Compiling file {} failed, likely due to "
-                               "missing '-mcmodel=medium' flag."
-                               .format(filename))
-        if not mcmodel:
-            raise RuntimeError("Fortran compiler subprocess returned {}"
-                               .format(r.returncode))
-        return "mcmodel"
     if r.returncode != 0:
         raise RuntimeError("Fortran compiler subprocess returned {}"
                            .format(r.returncode))

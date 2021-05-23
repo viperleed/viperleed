@@ -8,19 +8,8 @@ Reads a PHASESHIFTS file and allows the user to copy and rearrange the blocks.
 """
 
 import time
-import os
-import sys
 
-cd = os.path.realpath(os.path.dirname(__file__))
-# NB: it's necessary to add vpr_path to sys.path so that viperleed
-#     can be loaded correctly at the top-level package
-vpr_path = os.path.realpath(os.path.join(cd, '..', '..'))
-for import_path in (cd, vpr_path):
-    if import_path not in sys.path:
-        sys.path.append(import_path)
-
-from viperleed.tleedmlib.files.phaseshifts import (readPHASESHIFTS,
-                                                   writePHASESHIFTS)
+from tleedmlib.files.phaseshifts import readPHASESHIFTS, writePHASESHIFTS
 
 
 ###############################################
@@ -98,6 +87,19 @@ def main():
         for i in ol:
             enps.append(oldenps[i-1])
         ps.append((en, enps))
+
+    # add block of zeroes if necessary:
+    nonzero = False
+    for f in ps[-1][1]:
+        if f != 0.0:
+            nonzero = True
+            break
+    if nonzero:
+        oldps = ps[:]
+        ps = []
+        for (en, enps) in oldps:
+            enps.append([0.0]*len(enps[0]))
+            ps.append((en, enps))
 
     # in firstline, change the block-count to the new number of blocks
     firstline = str(len(ps[0][1])).rjust(3) + firstline[3:]

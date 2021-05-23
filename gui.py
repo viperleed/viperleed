@@ -22,7 +22,7 @@ for import_path in (cd, vpr_path):
     if import_path not in sys.path:
         sys.path.append(import_path)
 
-from viperleed import GLOBALS
+from viperleed.vprglobals import GLOBALS
 
 try:
     import PyQt5.QtCore as qtc

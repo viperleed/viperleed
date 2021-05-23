@@ -452,7 +452,7 @@ class Slab:
         if len(self.layers) < 2:
             return 0
         self.getCartesianCoordinates()
-        return min([(self.layers[i].cartori[2] - self.layers[i-1].cartbotz)
+        return min([(self.layers[i].carttopz - self.layers[i-1].cartbotz)
                     for i in range(1, len(self.layers))])
 
     def updateElements(self, rp):
@@ -488,24 +488,21 @@ class Slab:
     def updateElementCount(self):
         """Updates the number of atoms per element."""
         self.n_per_elem = {}
-        del_elems = []
         for el in self.elements:
             n = len([at for at in self.atlist if at.el == el])
             if n > 0:
                 self.n_per_elem[el] = n
             else:
-                del_elems.append(el)
-        for el in del_elems:
-            self.elements.remove(el)
+                self.elements.remove(el)
 
-    def initSites(self, rp):
+    def initSites(self, rparams):
         """Goes through the atom list and supplies them with appropriate
         SiteType objects, based on the SITE_DEF parameters from the supplied
         Rparams."""
         atlist = self.atlist[:]     # copy to not have any permanent changes
         atlist.sort(key=lambda atom: atom.oriN)
         sl = []
-        for el, sitedict in rp.SITE_DEF.items():
+        for el, sitedict in rparams.SITE_DEF.items():
             for sitename, sitelist in sitedict.items():
                 newsite = tl.Sitetype(el, sitename)
                 sl.append(newsite)
@@ -517,7 +514,7 @@ class Slab:
                                 + str(i) + ' as ' + el + ', but POSCAR has it '
                                 'as '+atlist[i-1].el+'. Atom will be skipped '
                                 'and left as default site type!')
-                            rp.setHaltingLevel(1)
+                            rparams.setHaltingLevel(1)
                         else:
                             atlist[i-1].site = newsite
                     except IndexError:
@@ -532,8 +529,8 @@ class Slab:
                     found = True
             if found:
                 sl.append(newsite)
-        for site in [s for s in sl if s.el in rp.ELEMENT_MIX]:
-            site.mixedEls = rp.ELEMENT_MIX[site.el][:]
+        for site in [s for s in sl if s.el in rparams.ELEMENT_MIX]:
+            site.mixedEls = rparams.ELEMENT_MIX[el][:]
         self.sitelist = sl
         self.sites_initialized = True
 
@@ -1447,6 +1444,7 @@ class Slab:
 
     def getSurfaceAtoms(self, rp):
         """Checks which atoms are 'at the surface', returns them as a list."""
+        abst = self.ucell[:2, :2].T
         testats = copy.deepcopy(self.atlist)
         testats.sort(key=lambda atom: -atom.pos[2])
         covered = []
@@ -1482,13 +1480,21 @@ class Slab:
                                  "identify "+ta.el+" as a chemical element.")
                     rp.setHaltingLevel(2)
                     return []
-            r *= 1.2    # !!! test if this is enough
+            r *= 1.1    # !!! test if this is enough
+            points = [ta.cartpos[:2]]
+            for i in range(-1, 2):
+                for j in range(-1, 2):
+                    if not (i == 0 and j == 0):
+                        points.append(points[0] + i*abst[0] + j*abst[1])
             surfats.extend([a for a in self.atlist if (a.pos[2] >= ta.pos[2]
                             and a not in covered and a not in surfats)])
-            covered.extend([a for a in self.atlist if a.pos[2] < ta.pos[2]
-                            and a not in covered
-                            and a.isSameXY(ta.cartpos[:2], eps=r)])
-            if len(covered) + len(surfats) >= len(testats):
+            for at in [a for a in self.atlist if (a.pos[2] < ta.pos[2]
+                                                  and a not in covered)]:
+                for p in points:
+                    if np.linalg.norm(at.cartpos[:2] - p) < r:
+                        covered.append(at)
+                        break
+            if len(covered)+len(surfats) >= len(testats):
                 break   # that's all of them
         return surfats
 

@@ -15,8 +15,7 @@ import shutil
 import subprocess
 
 import viperleed.tleedmlib.files.iosuperpos as io
-from viperleed.tleedmlib.leedbase import (getDeltas, getTLEEDdir,
-                                          fortran_compile)
+from viperleed.tleedmlib.leedbase import getDeltas, getTLEEDdir, fortranCompile
 from viperleed.tleedmlib.files.beams import (
     writeOUTBEAMS, averageBeams, writeFdOut)
 from viperleed.tleedmlib.files.displacements import readDISPLACEMENTS_block
@@ -141,8 +140,8 @@ def superpos(sl, rp, subdomain=False, for_error=False, only_vary=None):
     sposname = "superpos-"+rp.timestamp
     logger.info("Compiling fortran input files...")
     try:
-        fortran_compile(rp.FORTRAN_COMP[0]+" -o", sposname+" "
-                        + srcname + " " + libname, rp.FORTRAN_COMP[1])
+        fortranCompile(rp.FORTRAN_COMP[0]+" -o", sposname+" "
+                       + srcname + " " + libname, rp.FORTRAN_COMP[1])
     except Exception:
         logger.error("Error compiling fortran files: ", exc_info=True)
         raise

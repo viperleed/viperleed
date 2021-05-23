@@ -1,5 +1,6 @@
 # Ignore workspace and pycache:
 **/__pycache__
 .spyproject
+*.ini
 test.py
 *wrong*

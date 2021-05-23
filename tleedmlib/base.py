@@ -151,36 +151,6 @@ def readIntRange(s):
     return list(set(out))
 
 
-def range_to_str(il):
-    """Takes a list of integers, sorts them and returns a string short form.
-    For example, [1, 6, 4, 5, 2, 8] will return "1-2, 4-6, 8". Double entries
-    will be ignored."""
-    if not all(isinstance(v, int) for v in il):
-        t = [type(v) for v in il if type(v) is not int]
-        raise TypeError("range_to_str: expected list of int, found type "
-                        + str(t[0].__name__))
-    sl = sorted(il, reverse=True)
-    prev = sl.pop()
-    rmin = prev
-    out = str(prev)
-    while sl:
-        v = sl.pop()
-        if v == prev:
-            continue
-        if v - prev == 1:
-            prev = v
-            continue
-        if prev != rmin:
-            out += "-{}, {}".format(prev, v)
-        else:
-            out += ", {}".format(v)
-        prev = v
-        rmin = v
-    if prev != rmin:
-        out += "-{}".format(prev)
-    return out
-
-
 def readVector(s, ucell=None, defRelaltive=False):
     """Takes a string 'xyz[f1 f2 f3]', 'abc[f1 f2 f3]' or just '[f1 f2 f3]'
     and returns the corresponding vector in cartesian coordinates, or None if
@@ -279,20 +249,6 @@ def dict_equal(d1, d2):
 def lcm(a, b):
     "Calculate the lowest common multiple of two integers a and b"
     return a * b // np.gcd(a, b)
-
-
-def max_diff(list_):
-    """Find the index in a list such that list[i] - list[i-1] is the largest
-    value difference in the list (after sorting). Return i and the difference.
-    """
-    if len(list_) < 2:
-        return None, None
-    list_ = sorted(list_)
-    maxdiff = max([list_[i] - list_[i-1] for i in range(1, len(list_))])
-    m = [i for i in range(1, len(list_)) if list_[i] - list_[i-1] == maxdiff]
-    if m:
-        return m[0], maxdiff
-    return None, maxdiff
 
 
 def parseMathSqrt(s):

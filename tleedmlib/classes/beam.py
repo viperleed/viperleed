@@ -21,13 +21,15 @@ class Beam:
         The h and k coordinates of the beam as Fractions
     hk : tuple (float, float)
         The h and k coordinates of the beam as float
+    lwidth : int
+        width of each component of the label; total width = 2*lwidth+3
     intens : dict {float: float}
         contains {energy: intensity} pairs
     label : str
         Label for the beam
     """
 
-    def __init__(self, hk, maxdenom=99):
+    def __init__(self, hk, maxdenom=99, lwidth=2):
         if all([isinstance(v, Fraction) for v in hk]):
             self.hkfrac = hk
             self.hk = (float(hk[0]), float(hk[1]))
@@ -35,8 +37,9 @@ class Beam:
             self.hk = hk
             self.hkfrac = (Fraction(hk[0]).limit_denominator(maxdenom),
                            Fraction(hk[1]).limit_denominator(maxdenom))
+        self.lwidth = lwidth
         self.intens = {}
-        self.label, _ = self.getLabel()
+        self.label = self.getLabel()
 
     def updateIndex(self, hk, maxdenom=99):
         """Keep values but change indices"""
@@ -47,87 +50,40 @@ class Beam:
             self.hk = hk
             self.hkfrac = (Fraction(hk[0]).limit_denominator(maxdenom),
                            Fraction(hk[1]).limit_denominator(maxdenom))
-        self.label, _ = self.getLabel()
+        self.label = self.getLabel()
 
-    def getLabel(self, style="plain", lwidth=-1):
+    def getLabel(self):
         """
         Returns a string of format '( 1/2 | -1   )', where a,b in '(a|b)'
         are justified to at least the given width. If h or k end up longer,
         the width of the other one will also be changed.
 
-        Parameters
-        ----------
-        style : str, optional
-            Select a different style for the label.
-
-            plain:
-                UTF8-compatible, with hyphen '-' as minus, for log
-            minus:
-                replace hyphen by proper minus sign, '\u2212'
-            overbar:
-                use latex overbars instead of minus
-        lwidth: int, optional
-            width of each component of the label; total width = 2*lwidth+3.
-            Leave negative to determine automatically
-
         Returns
         -------
         out : str
             The new label.
-        lwidth : int
-            The width of the new label
 
         """
         out = ""
         i = 0
-        if lwidth < 0:
-            lwidth = 2
-            if style == "overbar":
-                lwidth = 1
         while i < 2:
-            texlen = 0  # added length from tex commands
             if i == 0:
-                wl = math.ceil((lwidth - 1) / 2)  # width for numerator
+                wl = math.ceil((self.lwidth - 1) / 2)  # width for numerator
             v = self.hkfrac[i]
             if v.denominator == 1:
-                if style != "overbar":
-                    s = str(v.numerator).rjust(max(2, wl))   # use more space
-                else:
-                    if v.numerator < 0:
-                        s = ((r"\overline{" + str(abs(v.numerator)) + "}")
-                             .rjust(wl + 11))  # 11 chars for the "\overline{}"
-                        texlen += 11
-                    else:
-                        s = str(v.numerator).rjust(wl)
+                s = str(v.numerator).rjust(max(2, wl))  # can use more space
             else:
-                if style != "overbar":
-                    s = str(v.numerator).rjust(wl)+"/"+str(v.denominator)
-                else:
-                    if v.numerator < 0:
-                        s = ((r"\overline{" + str(abs(v.numerator)) + "/"
-                              + str(v.denominator) + "}")
-                             .rjust(wl + 11))  # 11 chars for the "\overline{}"
-                        texlen += 11
-                    else:
-                        s = str(v.numerator).rjust(wl)+"/"+str(v.denominator)
-            s = s.ljust(lwidth + texlen)
-            if len(s) - texlen > lwidth:
-                lwidth = len(s) - texlen
+                s = str(v.numerator).rjust(wl)+"/"+str(v.denominator)
+            s = s.ljust(self.lwidth)
+            if len(s) > self.lwidth:
+                self.lwidth = len(s)
                 i = -1     # start over
             elif i == 0:
-                if style == "overbar":
-                    out = "$"
-                else:
-                    out = ""
-                out += "(" + s + "|"
+                out = "("+s+"|"
             else:
                 out += s + ")"
-                if style == "overbar":
-                    out += "$"
             i += 1
-        if style == "minus":
-            out = out.replace("-", "\u2212")
-        return out, lwidth
+        return out
 
     def normMax(self):
         """

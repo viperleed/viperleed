@@ -9,7 +9,6 @@ Tensor LEED Manager section Search
 """
 
 import os
-import sys
 import logging
 import shutil
 import subprocess
@@ -27,7 +26,7 @@ import scipy
 import viperleed.tleedmlib.files.iosearch as io
 import viperleed.tleedmlib as tl
 # from tleedmlib.polynomialfeatures_no_interaction import PolyFeatNoMix
-from viperleed.tleedmlib.leedbase import fortran_compile_batch
+from viperleed.tleedmlib.leedbase import fortranCompile
 from viperleed.tleedmlib.files.parameters import updatePARAMETERS
 from viperleed.tleedmlib.files.displacements import readDISPLACEMENTS_block
 from viperleed.tleedmlib.files.searchpdf import (
@@ -200,7 +199,7 @@ def processSearchResults(sl, rp, final=True):
     return
 
 
-def parabolaFit(rp, datafiles, r_best, x0=None, max_configs=0, **kwargs):
+def parabolaFit(rp, r_configs, x0=None, **kwargs):
     """
     Performs a parabola fit to all rfactor/configuration data in r_configs.
     Stores the result in the rp searchpar objects. Keyword arguments are read
@@ -210,16 +209,10 @@ def parabolaFit(rp, datafiles, r_best, x0=None, max_configs=0, **kwargs):
     ----------
     rp : Rparams
         The Rparams object containing runtime information
-    datafiles : list of str
-        The files to read data from
-    r_best : float
-        Best known R-factor so far
+    r_configs : set
+        The data to fit, as (rfactor, configuration) tuples
     x0 : numpy.array, optional
         A starting guess for the minimum
-    max_configs : int
-        0 to read all, else specifies the maximum number of configurations to
-        read in. Will sort configurations and read in the ones with lowest
-        R-factors first, discard the rest.
     Keyword Arguments:
         localize : real, optional
             If not zero, r_configs will be reduced to only use points close to
@@ -237,7 +230,6 @@ def parabolaFit(rp, datafiles, r_best, x0=None, max_configs=0, **kwargs):
             configuration. Therefore, all models except LinearRegression put
             some penalty not only on curvature, but also on the parameter
             offset from the best-R configuration.
-            Setting 'type' to 'none' turns off parabola fit entirely.
         alpha : float, optional
             The alpha value used by Ridge, Lasso and ElasticNet regression. The
             default is 1e-5.
@@ -269,30 +261,15 @@ def parabolaFit(rp, datafiles, r_best, x0=None, max_configs=0, **kwargs):
         m = 0.5*(m + m.T)
         return m
 
-    if not datafiles:
-        return None, None
     if "type" not in kwargs:
         which_regression = rp.PARABOLA_FIT["type"]
     else:
         which_regression = kwargs["type"]
-    if which_regression == "none":
-        return None, None
     for a in ("localize", "mincurv", "alpha", "type"):
         if a not in kwargs:
             kwargs[a] = rp.PARABOLA_FIT[a]
-
-    # read data
-    r_cutoff = 1.0
-    if datafiles:
-        varR = np.sqrt(8*np.abs(rp.V0_IMAG) / rp.total_energy_range())*r_best
-        rc = np.array((io.readDataChem(
-            rp, datafiles,
-            cutoff=r_best + r_cutoff * varR,
-            max_configs=max_configs)), dtype=object)
-    if len(rc) < 100*rp.indyPars:
-        return None, None
-
     # starttime = timer()
+    rc = np.array([*r_configs], dtype=object)
     rfacs, configs = rc[:, 0].astype(float), rc[:, 1]
     localizeFactor = kwargs["localize"]
     if localizeFactor == 0:
@@ -491,34 +468,6 @@ def search(sl, rp):
     None.
 
     """
-
-    def kill_process(proc, default_pgid=None):
-        """Cleanly kill the mpirun subprocess and its children. If the process
-        is not alive any more (and therefore the pgid cannot be determined),
-        will instead try to terminate the default_pgid, if passed."""
-        # determine pgid
-        try:
-            pgid = os.getpgid(proc.pid)
-        except ProcessLookupError:
-            pgid = default_pgid
-        # kill main process
-        try:
-            proc.kill()
-            proc.wait()
-        except ProcessLookupError:
-            pass   # already dead
-        if pgid is not None:
-            # kill children
-            try:
-                os.killpg(pgid, signal.SIGTERM)
-                if os.name == "nt":
-                    os.waitpid(pgid)
-                else:
-                    os.waitpid(-pgid, 0)
-            except (ProcessLookupError, ChildProcessError):
-                pass  # already dead or no children
-        return
-
     rp.searchResultConfig = None
     if rp.domainParams:
         initToDo = [(dp.rp, dp.sl, dp.workdir) for dp in rp.domainParams]
@@ -648,28 +597,25 @@ def search(sl, rp):
     else:
         fcomp = rp.FORTRAN_COMP
     logger.info("Compiling fortran input files...")
-    # compile
-    ctasks = [(fcomp[0]+" -o lib.search.o -c", libname, fcomp[1])]
-    if hashname:
-        ctasks.append((fcomp[0]+" -c", hashname, fcomp[1]))
-    ctasks.append((fcomp[0]+" -o restrict.o -c", "restrict.f", fcomp[1]))
-    ctasks.append((fcomp[0]+" -o search.o -c -fixed", srcname, fcomp[1]))
-    to_link = "search.o random_.o lib.search.o restrict.o"
-    if hashname:
-        to_link += " intarr_hashing.o"
-    ctasks.append((fcomp[0] + " -o " + searchname, to_link, fcomp[1]))
     try:
-        fortran_compile_batch(ctasks)
+        fortranCompile(fcomp[0]+" -o lib.search.o -c",
+                       libname, fcomp[1])
+        if hashname:
+            fortranCompile(fcomp[0]+" -c", hashname, fcomp[1])
+        fortranCompile(fcomp[0]+" -o restrict.o -c", "restrict.f", fcomp[1])
+        fortranCompile(fcomp[0]+" -o search.o -c -fixed", srcname, fcomp[1])
+        to_link = "search.o random_.o lib.search.o restrict.o"
+        if hashname:
+            to_link += " intarr_hashing.o"
+        fortranCompile(fcomp[0] + " -o " + searchname, to_link, fcomp[1])
     except Exception:
         logger.error("Error compiling fortran files: ", exc_info=True)
         raise
     logger.debug("Compiled fortran files successfully")
-    # run
     if rp.LOG_SEARCH:
         searchlogname = searchname+".log"
         logger.info("Search log will be written to file "+searchlogname)
-        if rp.TL_VERSION > 1.6:
-            rp.manifest.append(searchlogname)
+        rp.manifest.append(searchlogname)
     if rp.N_CORES == 1:
         logger.warning(
             "The N_CORES parameter is set to 1. The search will be run "
@@ -695,21 +641,6 @@ def search(sl, rp):
         except Exception:
             logger.warning("Failed to delete old {} file. This may cause "
                            "errors in the parabola fit.".format(fn))
-    # get config size
-    config_size = (
-        sys.getsizeof((1., tuple()))
-        + sys.getsizeof(tuple([tuple()] * max(1, len(rp.domainParams))))
-        + sys.getsizeof((1, tuple())))
-    if rp.domainParams:
-        config_size += sum(
-            [sys.getsizeof(tuple([0] * len(dp.rp.searchpars)))
-             + sys.getsizeof(1) * len(dp.rp.searchpars)
-             for dp in rp.domainParams])
-    else:
-        config_size += (sys.getsizeof(tuple([0] * len(rp.searchpars)))
-                        + sys.getsizeof(1) * len(rp.searchpars))
-    max_memory_parab = 1e9   # maximum memory in bytes to use on parabola fit
-    max_read_configs = int(max_memory_parab / config_size)
     # start search process
     repeat = True
     first = True
@@ -717,6 +648,7 @@ def search(sl, rp):
     gens = []  # generation numbers in SD.TL, but continuous if search restarts
     markers = []
     rfaclist = []
+    all_r_configs = set()  # tuples (r, config) for parabola fit
     parab_x0 = None     # starting guess for parabola
     rfac_predict = []  # tuples (gen, r) from parabola fit
     realLastConfig = {"all": [], "best": [], "dec": []}
@@ -726,7 +658,6 @@ def search(sl, rp):
     rp.searchMaxGenInit = rp.SEARCH_MAX_GEN
     absstarttime = timer()
     tried_repeat = False        # if SD.TL is not written, try restarting
-    pgid = None
     while repeat:
         if first:
             logger.info("Starting search. See files Search-progress.pdf "
@@ -755,7 +686,6 @@ def search(sl, rp):
                         command, encoding="ascii",
                         stdout=log, stderr=log,
                         preexec_fn=os.setsid)
-            pgid = os.getpgid(proc.pid)
         except Exception:
             logger.error("Error starting search. Check SD.TL file.")
             raise
@@ -774,8 +704,7 @@ def search(sl, rp):
         printt = searchStartTime
         filepos = 0
         timestep = 1  # time step to check files
-        # !!! evaluation time could be higher - keep low only for debugging
-        evaluationTime = 60  # how often should SD.TL be evaluated
+        evaluationTime = 10  # how often should SD.TL be evaluated
         lastEval = 0  # last evaluation time (s), counting from searchStartTime
         comment = ""
         sdtlGenNum = 0
@@ -817,7 +746,7 @@ def search(sl, rp):
                         if content:
                             newData = io.readSDTL_blocks(
                                 content, whichR=rp.SEARCH_BEAMS)
-                    elif t >= 900 and rp.HALTING < 3:
+                    elif t >= 900 and rp.halting < 3:
                         stop = True
                         if tried_repeat:
                             logger.warning(
@@ -838,6 +767,7 @@ def search(sl, rp):
                         gens.append(gen + genOffset)
                         sdtlGenNum = gen
                         rfaclist.append(np.array(rfacs))
+                        all_r_configs.update(list(zip(rfacs, configs)))
                         if gen % 1000 == 0:
                             speed = 1000*(timer() - absstarttime)/gens[-1]
                             logger.debug(
@@ -879,30 +809,35 @@ def search(sl, rp):
                                 break
                     if len(newData) > 0:
                         lastconfig = newData[-1][2]
-                    if (check_datafiles and not (stop and repeat)
-                            and rp.PARABOLA_FIT["type"] != "none"):
+                    if check_datafiles and not (stop and repeat):
                         check_datafiles = False
                         datafiles = [f for f in os.listdir()
                                      if re.match(r'data\d+\.chem$', f.lower())]
-                        if rfac_predict and (rfac_predict[-1][1] >
-                                             rfaclist[-1][0]):
-                            # if current prediction is bad, reset x0
-                            parab_x0 = None
-                        try:
-                            parab_x0, predictR = parabolaFit(
-                                rp, datafiles, min(rfacs), x0=parab_x0,
-                                max_configs=max_read_configs)
-                            if predictR is not None:
-                                if not rfac_predict:
-                                    logger.debug("Starting parabola fits "
-                                                 "to R-factor data.")
-                                rfac_predict.append((gens[-1], predictR))
-                        except KeyboardInterrupt:
-                            raise
-                        except Exception:
-                            logger.warning("Parabolic fit of R-factor "
-                                           "data failed",
-                                           exc_info=rp.LOG_DEBUG)
+                        if datafiles:
+                            all_r_configs.update(io.readDataChem(rp,
+                                                                 datafiles))
+                        if len(all_r_configs) >= 100*rp.indyPars:
+                            if rfac_predict and (rfac_predict[-1][1] >
+                                                 rfaclist[-1][0]):
+                                # if current prediction is bad, reset x0
+                                parab_x0 = None
+                            try:
+                                # !!! WORK IN PROGRESS
+                                # logger.debug("Parabola fit with {} points"
+                                #              .format(len(all_r_configs)))
+                                parab_x0, predictR = parabolaFit(
+                                    rp, all_r_configs, x0=parab_x0)
+                                if predictR is not None:
+                                    if not rfac_predict:
+                                        logger.debug("Starting parabola fits "
+                                                     "to R-factor data.")
+                                    rfac_predict.append((gens[-1], predictR))
+                            except KeyboardInterrupt:
+                                raise
+                            except Exception:
+                                logger.warning("Parabolic fit of R-factor "
+                                               "data failed",
+                                               exc_info=rp.LOG_DEBUG)
                     if len(gens) > 1:
                         try:
                             writeSearchProgressPdf(
@@ -929,7 +864,14 @@ def search(sl, rp):
                                            "and VIBROCC_OUT: " + str(e))
                 if stop:
                     logger.info("Stopping search...")
-                    kill_process(proc)
+                    pgid = os.getpgid(proc.pid)
+                    proc.kill()
+                    proc.wait()
+                    try:
+                        # needed to kill mpirun children
+                        os.killpg(pgid, signal.SIGTERM)
+                    except ProcessLookupError:
+                        pass  # already dead
                     if (not repeat and not rp.GAUSSIAN_WIDTH_SCALING == 1
                             and checkrepeat):
                         repeat = True
@@ -980,12 +922,26 @@ def search(sl, rp):
                     pass   # user insisted, give up
             interrupted = True
             rp.STOP = True
-            kill_process(proc)
+            try:
+                # need to kill mpirun children
+                pgid = os.getpgid(proc.pid)
+                proc.kill()
+                proc.wait()
+                os.killpg(pgid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass   # already dead
             logger.warning("Search interrupted by user. Attempting "
                            "analysis of results...")
         except Exception:
             logger.error("Error during search. Check SD.TL file.")
-            kill_process(proc)
+            try:
+                # need to kill mpirun children
+                pgid = os.getpgid(proc.pid)
+                proc.kill()
+                proc.wait()
+                os.killpg(pgid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass   # already dead
             raise
         if repeat:
             rp.SEARCH_START = "control"
@@ -1006,31 +962,24 @@ def search(sl, rp):
                     logger.warning("Failed to delete old SD.TL file. "
                                    "This may cause errors in the "
                                    "interpretation of search progress.")
-    if proc is not None:
-        try:     # should generally not be necessary, but just to make sure
-            kill_process(proc, default_pgid=pgid)
-        except Exception:
-            pass
     if not interrupted:
         logger.info("Finished search. Processing files...")
     else:
         logger.info("Processing files...")
     # final parabola fit  # !!! double check later
-    if rfac_predict and (rfac_predict[-1][1] > rfaclist[-1][0]):
-        parab_x0 = None
-    datafiles = [f for f in os.listdir()
-                 if re.match(r'data\d+\.chem$', f.lower())]
-    if len(rfaclist) > 0:
-        parab_x0, predictR = parabolaFit(rp, datafiles, min(rfacs),
-                                         x0=parab_x0,
-                                         max_configs=max_read_configs)
+    if len(all_r_configs) >= 10*rp.indyPars:
+        if rfac_predict and (rfac_predict[-1][1] > rfaclist[-1][0]):
+            parab_x0 = None
+        parab_x0, predictR = parabolaFit(rp, all_r_configs, x0=parab_x0)
         if predictR is not None:
             rfac_predict.append((gens[-1], predictR))
     # write pdf one more time
     if len(gens) > 1:
         try:
+            logger.debug("writing last search-progress.pdf")  # !!! TMPDEBUG
             writeSearchProgressPdf(rp, gens, rfaclist, lastconfig,
                                    markers=markers, rfac_predict=rfac_predict)
+            logger.debug("wrote last search-progress.pdf")    # !!! TMPDEBUG
         except Exception:
             logger.warning("Error writing Search-progress.pdf",
                            exc_info=True)

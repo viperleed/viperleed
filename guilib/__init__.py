@@ -11,7 +11,7 @@ Author: Michele Riva
 
 import os
 
-from viperleed import GLOBALS
+from viperleed.vprglobals import GLOBALS
 
 USE_GUI = GLOBALS['USE_GUI']
 

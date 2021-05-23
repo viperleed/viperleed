@@ -190,14 +190,14 @@ def generateDeltaInput(atom, targetel, sl, rp, deltaBasic="", auxbeams="",
     if deltaBasic == "":
         deltaBasic = generateDeltaBasic()
     if auxbeams == "":
-        # if AUXBEAMS is not in work folder, check SUPP folder
+        # if AUXBEAMS is not in work folder, check AUX folder
         if not os.path.isfile(os.path.join(".", "AUXBEAMS")):
-            if os.path.isfile(os.path.join(".", "SUPP", "AUXBEAMS")):
+            if os.path.isfile(os.path.join(".", "AUX", "AUXBEAMS")):
                 try:
-                    shutil.copy2(os.path.join(".", "SUPP", "AUXBEAMS"),
+                    shutil.copy2(os.path.join(".", "AUX", "AUXBEAMS"),
                                  "AUXBEAMS")
                 except Exception:
-                    logger.warning("Failed to copy AUXBEAMS from SUPP folder")
+                    logger.warning("Failed to copy AUXBEAMS from AUX folder")
             else:
                 logger.warning("generateDeltaInput: AUXBEAMS not found")
         try:
@@ -340,8 +340,8 @@ C      TLEED beams for a superlattice not present in the reference structure
 C  MNDEB: number of thermal variation steps to be performed (outer var. loop)
 C  MNCSTEP: number of geometric variation steps to be performed """
              + "(inner var. loop)\n\n")
-    param += "      PARAMETER( MLMAX = {} )\n".format(rp.LMAX[1])
-    param += "      PARAMETER( MNLMB = {} )\n".format(MLMAX[rp.LMAX[1]-1])
+    param += "      PARAMETER( MLMAX = {} )\n".format(rp.LMAX)
+    param += "      PARAMETER( MNLMB = {} )\n".format(MLMAX[rp.LMAX-1])
     param += ("      PARAMETER( MNPSI = {}, MNEL = {} )\n"
               .format(len(rp.phaseshifts), (len(rp.phaseshifts[0][1]))))
     param += "      PARAMETER( MNT0 = {} )\n".format(len(beamlist))

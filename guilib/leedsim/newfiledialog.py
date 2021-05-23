@@ -16,6 +16,7 @@ import PyQt5.QtCore as qtc
 import PyQt5.QtGui as qtg
 import PyQt5.QtWidgets as qtw
 
+# import guilib as gl
 from viperleed import guilib as gl
 
 angstrom = ' \u212b'
@@ -38,16 +39,16 @@ class NewFileDialog(qtw.QDialog):
         
         self.compose()
         self.woodL = gl.Woods()
-        self.bulk_3d_sym_dialog = gl.Bulk3DSymDialog(self)
         self.open(oldParams)
     
     def open(self, params=dict()):
         #---- update some quantities for this session ----#
-        self.oldParams = params  # LEED parameters when opened
+        self.oldParams = params # leed parameters when opened
         
         self.initLattices()
         self.initControlValues()
-
+        
+        #super(NewFileDialog, self).open()
         super().open()
     
     def initLattices(self):
@@ -68,10 +69,6 @@ class NewFileDialog(qtw.QDialog):
         
         self.surfLatt = gl.Lattice(surfBasis, group=surfGroup)
         self.bulkLatt = gl.Lattice(bulkBasis, group=bulkGroup)
-        
-        if self.oldParams:
-            self.bulkLatt.group.screws_glides = (self.oldParams['bulk3Dsym'],
-                                                 self.bulkLatt.cell_shape)
 
     def compose(self):
         labFont = gl.AllGUIFonts().labelFont
@@ -150,16 +147,7 @@ class NewFileDialog(qtw.QDialog):
         
         allWidgs.extend([self.bulkGroup, self.surfGroup])
         
-        # Button to input extra symmetry operations for bulk
-        self.bulk_3d_sym = qtw.QPushButton('Extra bulk\nsymmetry')
-        self.bulk_3d_sym.setFont(gl.AllGUIFonts().buttonFont)
-        self.bulk_3d_sym.setSizePolicy(qtw.QSizePolicy.Fixed,
-                                           qtw.QSizePolicy.Preferred)
-        self.bulk_3d_sym.setMinimumWidth(self.aB.width())
-        allWidgs.append(self.bulk_3d_sym)
-        
-        
-        # Text and button for reduction to highest symmetry                     # TODO: this does not really work nicely. Also, its layout is not inserted (commented out below)
+        # Text and button for reduction to highest symmetry
         self.highSymTxt = qtw.QLabel('The lattices could have higher symmetry')
         self.highSymBut = qtw.QPushButton('Reduce to higher symmetry')
         for widg in [self.highSymTxt, self.highSymBut]:
@@ -250,7 +238,6 @@ class NewFileDialog(qtw.QDialog):
         lattsLay.addWidget(groupLab, 6, 0, 1, 1)
         lattsLay.addWidget(self.bulkGroup, 6, 1, 1, 1)
         lattsLay.addWidget(self.surfGroup, 6, 2, 1, 1)
-        lattsLay.addWidget(self.bulk_3d_sym, 7, 1, 1, 1)
         
         hSymLay = qtw.QVBoxLayout()
         hSymLay.setSpacing(4)
@@ -259,7 +246,7 @@ class NewFileDialog(qtw.QDialog):
         hSymLay.addWidget(self.highSymBut)
         hSymLay.addStretch(1)
         
-        lattsLay.addLayout(hSymLay, 8, 0, 1, 3)
+        lattsLay.addLayout(hSymLay, 7, 0, 1, 3)
         
         for lab in [lattInputLabel, self.bulkInput, self.surfInput]:
             lattsLay.setAlignment(lab, qtc.Qt.AlignCenter)
@@ -301,6 +288,8 @@ class NewFileDialog(qtw.QDialog):
         
         botButsLay = qtw.QHBoxLayout()
         botButsLay.addWidget(self.sBar)
+        #botButsLay.addStretch(1)   # This stretch makes the status bar
+                                    # shrink to zero width! -> remove
         botButsLay.addWidget(self.doneBut)
         botButsLay.addWidget(self.cancelBut)
         
@@ -347,7 +336,6 @@ class NewFileDialog(qtw.QDialog):
             # pressing enter/return
             but.setAutoDefault(False)
             but.setDefault(False)
-        self.bulk_3d_sym.clicked.connect(self.on_bulk_3d_pressed)
         self.highSymBut.clicked.connect(self.onReducePressed)
     
     # The next 7 functions are the handler of control changes
@@ -484,8 +472,8 @@ class NewFileDialog(qtw.QDialog):
     def onButtonPressed(self, checked):
         btn = self.sender()
         if btn == self.doneBut:
-            # Automatically make lattices high symmetry before exiting          # TODO: this screws up for the extra bulk operations. The high-symmetry button should rather appear after edits.
-            # self.highSymBut.click()
+            # Automatically make lattices high symmetry before exiting
+            self.highSymBut.click()
             params = self.packParameters()
             if params is not None:
                 self.dialogEdited.emit(params)
@@ -506,13 +494,6 @@ class NewFileDialog(qtw.QDialog):
         self.updateLatticeRestrictions()
         self.updateWoodsList()
         self.updateGroups()
-    
-    def on_bulk_3d_pressed(self, checked):
-        self.bulk_3d_sym_dialog.update_operations(self.bulkLatt)
-        if self.bulk_3d_sym_dialog.exec() == qtw.QDialog.Accepted:
-            operations = self.bulk_3d_sym_dialog.extra_operations()
-            self.bulkLatt.group.screws_glides = (operations,
-                                                 self.bulkLatt.cell_shape)
     
     # The next 8 function are explicitly called to handle changes of controls
     
@@ -546,15 +527,8 @@ class NewFileDialog(qtw.QDialog):
         allGroups = self.bulkLatt.group.allGroups
         for (latt, group) in zip([self.bulkLatt, self.surfLatt],
                                  [bGroup, sGroup]):
-            if group in allGroups:
-                bulk_3d = latt.group.screws_glides
+            if group in allGroups.keys():
                 latt.group = group
-                latt.group.screws_glides = (bulk_3d, latt.cell_shape)
-        
-        # Also, update the options for extra bulk operations
-        self.bulk_3d_sym_dialog.update_operations(self.bulkLatt)
-        # and deactivate button in case there is nothing to add
-        self.bulk_3d_sym.setEnabled(self.bulk_3d_sym_dialog.n_extra_ops)
     
     def updateLatticeParameters(self, which='both'):
         if which == 'bulk':
@@ -638,9 +612,12 @@ class NewFileDialog(qtw.QDialog):
         params = {'eMax': eMax,
                   'SUPERLATTICE': self.supMatrix,
                   'surfBasis': self.surfLatt.basis,
+                  # 'surfGroup': self.surfLatt.group.group,
+                  # 'bulkGroup': self.bulkLatt.group.group,
                   'surfGroup': self.surfLatt.group,
                   'bulkGroup': self.bulkLatt.group,
-                  'bulk3Dsym': self.bulkLatt.group.screws_glides}
+                  'bulk3Dsym': None
+                  }
         
         return params
     
@@ -757,7 +734,7 @@ class NewFileDialog(qtw.QDialog):
         # -> might remember choice later
         self.bulkShape.setCurrentText(self.bulkLatt.cell_shape)
         self.surfShape.setCurrentText(self.surfLatt.cell_shape)
-        if 'eMax' in self.oldParams:
+        if 'eMax' in self.oldParams.keys():
             e = self.oldParams['eMax']
         else:
             e = 700

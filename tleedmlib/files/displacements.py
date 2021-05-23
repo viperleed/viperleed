@@ -786,7 +786,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                             fl = [float(subl[-1])]
                         except Exception:
                             pass
-                    if len(fl) == 1 or (len(fl) == 3 and fl[2] < 5e-5):
+                    if len(fl) == 1:
                         fl = [fl[0], fl[0], 1]
                     if len(fl) < 3:
                         logger.warning(
@@ -794,9 +794,8 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                             + ' as list of floats, skipping line.')
                         rp.setHaltingLevel(1)
                         break
-                if len(fl) < 3 or (len(fl) == 3 and fl[2] < 5e-5):
-                    if len(fl) == 1 or (len(fl) == 3 and fl[2] < 5e-5):
-                        # interpret as static offset
+                if len(fl) < 3:
+                    if len(fl) == 1:  # interpret as static offset
                         fl = [fl[0], fl[0], 1]
                     else:
                         logger.warning('DISPLACEMENTS file: too few values '
@@ -816,8 +815,6 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                 except (ValueError, IndexError):
                     f = float(subl[-1])  # checked before, will work
                     fl = [f, f, 1]
-                if fl[2] < 5e-5:
-                    fl = [fl[0], fl[0], 1]
                 steps = abs(int(round((fl[1]-fl[0]) / fl[2])))+1
                 if steps > maxsteps:
                     steps = maxsteps
@@ -826,14 +823,9 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                         'numbers for occupancies of '+pside+'. Decreasing '
                         'spacing for '+subl[0]+' to make number of steps '
                         'equal.')
-                if steps == 1 and maxsteps > 1:
-                    drange = np.array([fl[0]] * maxsteps)
-                else:
-                    mid = (fl[1]+fl[0]) / 2
-                    drange = np.arange(mid-((steps-1)/2*fl[2]),
-                                       mid+((steps-1)/2*fl[2])+1e-5, fl[2])
-                    if fl[1] < fl[0]:
-                        drange = np.flip(drange)
+                mid = (fl[1]+fl[0]) / 2
+                drange = np.arange(mid-((steps-1)/2*fl[2]),
+                                   mid+((steps-1)/2*fl[2])+1e-5, fl[2])
                 if subl[0].capitalize() in sl.chemelem:
                     targetel = subl[0]
                 else:

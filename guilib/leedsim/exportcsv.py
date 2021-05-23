@@ -14,7 +14,7 @@ as input for the ViPErLEED ImageJ plug-ins
 import numpy as np
 
 from viperleed import guilib as gl
-from viperleed import GLOBALS
+from viperleed.vprglobals import GLOBALS
 
 
 def export_pattern_csv(fnames, leeds, **kwargs):

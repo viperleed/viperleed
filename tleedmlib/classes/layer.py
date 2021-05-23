@@ -24,6 +24,8 @@ class Layer:
         #  z is highest atom
         self.cartori = None
         self.cartbotz = None    # z position of lowest atom
+        self.carttopz = None    # z position of highest atom
+        # only used by sublayers in the symmetry detection routines
         if sublayer:
             # list of candidate positions for rotation / mirror / glide planes
             self.symposlist = []
@@ -40,7 +42,10 @@ class Layer:
         self.cartori = np.dot(self.slab.ucell, oripos)
         # this gets x and y correct, but z still in the wrong direction and
         #  with origin as POSCAR
-        # -> just take the z from the highest atom.
         self.cartori[2] = topat.cartpos[2]
+        # just take the z from the highest atom.
         self.cartbotz = botat.cartpos[2]
+        self.carttopz = topat.cartpos[2]
+        for atom in al:
+            atom.posInLayer = atom.cartpos - self.cartori
         return
