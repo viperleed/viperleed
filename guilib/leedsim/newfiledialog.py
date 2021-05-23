@@ -163,8 +163,8 @@ class NewFileDialog(qtw.QDialog):
         for widg in [self.highSymTxt, self.highSymBut]:
             widg.setFont(smallText)
             widg.setSizePolicy(qtw.QSizePolicy.Fixed, qtw.QSizePolicy.Preferred)
-        self.highSymBut.setMinimumWidth(self.highSymBut.width()*0.4)
-        self.highSymTxt.setMinimumWidth(self.highSymBut.width()*0.4)
+        self.highSymBut.setMinimumWidth(round(self.highSymBut.width()*0.4))
+        self.highSymTxt.setMinimumWidth(round(self.highSymBut.width()*0.4))
 
         # Superstructure input: dropdown and 2x2 matrix
         superstructLab = qtw.QLabel('Reconstruction periodicity')
@@ -590,7 +590,7 @@ class NewFileDialog(qtw.QDialog):
         self.updateWoods()
 
     def updateWoods(self):
-        woods = gl.Woods.from_matrix(self.supMatrix, self.bulkLatt.basis)
+        woods = gl.Woods().from_matrix(self.supMatrix, self.bulkLatt.basis)
         if woods is None:
             woods = 'None'
         idx = self.woods.findText(woods, flags = qtc.Qt.MatchExactly)

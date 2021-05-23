@@ -365,7 +365,9 @@ class RotationBlock(gl.TextBoxWithButtons):
             lab.adjustSize()
         for but in np.ravel(horVerButs):
             but.setSizePolicy(qtw.QSizePolicy.Preferred, qtw.QSizePolicy.Fixed)
-            but.setMaximumHeight(qtw.QPushButton().sizeHint().height()*.84)
+            but.setMaximumHeight(
+                round(qtw.QPushButton().sizeHint().height()*.84)
+                )
         
         # set tooltips
         tips = ['Rotate lattices and pattern to bring the [1 0] '
@@ -390,7 +392,7 @@ class RotationBlock(gl.TextBoxWithButtons):
          for i in range(2) for j in range(2)]
         
         # set the minimum heights of rows and columns
-        bWLay.setColumnMinimumWidth(0, oneZeroLab.width()*1.2)
+        bWLay.setColumnMinimumWidth(0, round(oneZeroLab.width()*1.2))
         
         # Add the layout to the bottomWidget
         self.bottomWidget.setLayout(bWLay)

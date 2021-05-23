@@ -285,8 +285,10 @@ class MPLFigureCanvas(FigureCanvas):
         self.__wheel_buddy = buddy
 
     def sizeHint(self):
-        s = min(self.window().centralWidget().height()*self.windowFraction,
-                self.window().centralWidget().width()*0.45)
+        s = round(
+            min(self.window().centralWidget().height()*self.windowFraction,
+            self.window().centralWidget().width()*0.45)
+            )
         sH = qtc.QSize()
         sH.setWidth(s)
         sH.setHeight(s)

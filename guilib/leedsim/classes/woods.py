@@ -167,7 +167,7 @@ class Woods:
             Woods representiation of the matrix, if
             representable, otherwise None.
         """
-        matrix = np.asrray(matrix)
+        matrix = np.asarray(matrix)
 
         representable = self.primitive_or_centered(matrix, bulk_basis)
         if not representable:

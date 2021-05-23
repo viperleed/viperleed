@@ -596,19 +596,19 @@ class LEED_GUI(qtw.QMainWindow):
         if self.testConfig == 'layout':
             pass
         else:
-            rotx = (w0 - self.rotWidg.width())/2 + 0.032*w0
-            self.rotWidg.move(qtc.QPoint(rotx,8))
+            rotx = round((w0 - self.rotWidg.width())/2 + 0.032*w0)
+            self.rotWidg.move(qtc.QPoint(rotx, 8))
 
         #### ENERGY ####
         if self.testConfig == 'layout':
             pass
         else:
-            enx = w0*.98 - self.enWidg.width()
+            enx = round(w0*.98 - self.enWidg.width())
             self.enWidg.move(qtc.QPoint(enx,8))
 
         #### TOGGLE DOMAINS ###
         dx = self.enWidg.geometry().topRight().x() - self.doms.width()
-        dy = h0*.97 - self.doms.height()
+        dy = round(h0*.97 - self.doms.height())
         self.doms.move(qtc.QPoint(dx,dy))
 
         #### CELLS SHAPES/GROUPS ####
@@ -628,8 +628,10 @@ class LEED_GUI(qtw.QMainWindow):
             #topLayout.addWidget(self.cellShapes,1,0,1,1,qtc.Qt.AlignHCenter|qtc.Qt.AlignTop)
             #pass
         else:
-            self.cellShapes.move((w0-self.cellShapes.geometry().width())/2,
-                                 self.doms.geometry().center().y())
+            self.cellShapes.move(
+                round((w0-self.cellShapes.geometry().width())/2),
+                self.doms.geometry().center().y()
+                )
 
         ##TESTING
         # self.ensurePolished()
