@@ -307,6 +307,8 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
                                                          for f in (
                                                     v * np.array([1, 1, -1]))])
                                         + "]" for v in par.edges]
+                        elif type(par.edges[0]) == str:
+                            edgetext = par.edges
                     axs[figcount].text(i+1, -0.03, edgetext[0], fontsize=3,
                                        ha="center", va="top")
                     axs[figcount].text(i+1, 1.02, edgetext[1], fontsize=3,
@@ -518,11 +520,11 @@ def writeSearchReportPdf(rp, outname="Search-report.pdf"):
             break
     part = max(50, part)
     rfmin, rfmax = min(allmin[-part:]), max(allmean[-part:])
-    if rfmax == rfmin:
+    if rfmax <= rfmin:
         rfmin *= 0.95
         rfmax *= 1.05
     rYrange = [rfmin-(rfmax-rfmin)*0.1, rfmax+(rfmax-rfmin)*0.1]
-    rYrange[1] = min(rYrange[1], 2*max(allmin) - rYrange[0])
+    rYrange[1] = max(rYrange[1], max(allmin)+(rfmax-rfmin)*0.1)
 
     labely = rYrange[0] + (rYrange[1]-rYrange[0])*0.99
     xoff = allgens[-1]*0.005

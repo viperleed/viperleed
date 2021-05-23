@@ -41,7 +41,7 @@ class SearchPar:
         self.mode = mode
         self.el = el
         self.deltaname = deltaname
-        self.steps = -1     # not used for interpretation, info only
+        self.steps = 1
         self.edges = (None, None)  # the first and last value in the range
         self.center = 1  # the index closest to "no change"
         self.non_zero = False   # whether the center is truly "unchanged"
@@ -56,12 +56,20 @@ class SearchPar:
             self.center = atom.disp_center_index[mode][el] + 1
             self.non_zero = (abs(atom.disp_occ[el][self.center-1]
                                  - atom.site.occ[el]) >= 1e-4)
+            edges = []
+            for ind in (0, -1):
+                edges.append(" + ".join("{:.2f} {}".format(
+                    atom.disp_occ[e][ind], e) for e in atom.disp_occ
+                    if atom.disp_occ[e][ind] > 0.005))
+                if edges[-1] == "":
+                    edges[-1] = "vac"
+            self.edges = tuple(edges)
         else:
             if mode == "geo":
                 d = atom.disp_geo
             elif mode == "vib":
                 d = atom.disp_vib
-        if len(d) > 0:
+        if len(d) > 0 and el != "vac":  # if vac: use defaults
             if el in d:
                 k = el
             else:
@@ -113,16 +121,17 @@ class Rparams:
         self.IV_SHIFT_RANGE = [-3, 3, -1]  # step of -1: init from data
         self.LAYER_CUTS = ["dz(1.2)"]  # list of either str or c coordinates
         self.LAYER_STACK_VERTICAL = True
-        self.LMAX = 0    # will be calculated based on PHASESHIFT_EPS parameter
+        self.LMAX = [0, 0]    # minimum and maximum LMAX
         self.LOG_DEBUG = False
-        self.LOG_SEARCH = False
+        self.LOG_SEARCH = True
         self.N_BULK_LAYERS = 1           # number of bulk layers
         self.N_CORES = 0                 # number of cores
         self.PARABOLA_FIT = {"type": "ridge", "alpha": 1e-2, "mincurv": 5e-3,
                              "localize": 0}
         self.PHASESHIFT_EPS = 0  # defined in updateDerivedParams
         self.PHI = 0.0           # from BEAM_INCIDENCE
-        self.PLOT_COLORS_RFACTOR = None
+        self.PLOT_RFACTOR = {'axes': 'all', 'colors': None,
+                             'legend': 'all', 'overbar': False, 'perpage': 2}
         self.RUN = [0, 1, 2, 3]        # what segments should be run
         self.R_FACTOR_TYPE = 1  # 1: Pendry, 2: R2, 3: Zanazzi-Jona
         self.R_FACTOR_SMOOTH = 0
@@ -130,7 +139,7 @@ class Rparams:
         self.SEARCH_BEAMS = 0   # 0: average, 1: integer, 2: fractional
         self.SEARCH_CULL = 0.1  # fraction of all, or absolute N if >1
         self.SEARCH_CULL_TYPE = "genetic"  # clone, genetic, random
-        self.SEARCH_MAX_GEN = 50000   # maximum number of generations in search
+        self.SEARCH_MAX_GEN = 100000  # maximum number of generations in search
         self.SEARCH_MAX_DGEN = {"all": 0, "best": 0, "dec": 100}
         # maximum number of generations without change before search
         #   is stopped. All: all configs, best: only 1, dec: best 10%
@@ -168,11 +177,12 @@ class Rparams:
         self.searchConvInit = {
             "gaussian": None, "dgen": {"all": None, "best": None, "dec": None}}
         self.searchMaxGenInit = self.SEARCH_MAX_GEN
+        self.searchStartInit = None
         # script progress tracking
         self.halt = 0
         self.systemName = ""
         self.timestamp = ""
-        self.manifest = ["AUX", "OUT"]
+        self.manifest = ["SUPP", "OUT"]
         self.fileLoaded = {
             "PARAMETERS": True, "POSCAR": False,
             "IVBEAMS": False, "VIBROCC": False, "PHASESHIFTS": False,
@@ -276,6 +286,26 @@ class Rparams:
         # TENSOR_INDEX:
         if self.TENSOR_INDEX is None:
             self.TENSOR_INDEX = getMaxTensorIndex()
+        # TL_VERSION:
+        if self.TL_VERSION == 0.:
+            path = os.path.join(self.workdir, "tensorleed")
+            ls = [dn for dn in os.listdir(path)
+                  if (os.path.isdir(os.path.join(path, dn))
+                      and dn.startswith("TensErLEED"))]
+            highest = 0.0
+            namestr = ""
+            for dn in ls:
+                try:
+                    s = dn.split('v')[-1]
+                    f = float(s)
+                    if f > highest:
+                        highest = f
+                        namestr = s
+                except Exception:
+                    pass
+            self.TL_VERSION = highest
+            if highest > 0.:
+                logger.debug("Detected TensErLEED version " + namestr)
         # SEARCH_CONVERGENCE:
         if self.searchConvInit["gaussian"] is None:
             self.searchConvInit["gaussian"] = self.GAUSSIAN_WIDTH
@@ -285,6 +315,8 @@ class Rparams:
                                               1 / self.GAUSSIAN_WIDTH_SCALING)
             if self.searchConvInit["dgen"][k] is None:
                 self.searchConvInit["dgen"][k] = self.SEARCH_MAX_DGEN[k]
+        if self.searchStartInit is None:
+            self.searchStartInit = self.SEARCH_START
         # Phaseshifts-based:
         if self.fileLoaded["PHASESHIFTS"]:
             # get highest required energy index
@@ -295,31 +327,35 @@ class Rparams:
                         hi = i
                         break
             # LMAX
+            min_set = True
             if self.PHASESHIFT_EPS == 0:
-                self.PHASESHIFT_EPS = 0.05
-            if self.LMAX == 0:  # determine value from PHASESHIFT_EPS
+                self.PHASESHIFT_EPS = 0.01
+            if self.LMAX[0] <= 0:
+                self.LMAX[0] = 6
+                min_set = False
+            if self.LMAX[1] == 0:  # determine value from PHASESHIFT_EPS
                 lmax = 1
                 for el in self.phaseshifts[hi][1]:  # only check highest energy
                     for i, val in enumerate(el):
                         if abs(val) > self.PHASESHIFT_EPS and (i+1) > lmax:
                             lmax = i+1
-                if lmax < 8:
+                if lmax < 8 and not min_set:
                     logger.debug(
                         "Found small LMAX value based on "
                         "PHASESHIFT_EPS parameter (LMAX="+str(lmax)+").")
-                if lmax > 15:
-                    lmax = 15
+                if lmax > 18:
+                    lmax = 18
                     logger.info(
                         "The LMAX found based on the PHASESHIFT_EPS "
-                        "parameter is greater than 15, which is currently "
-                        "not supported. LMAX was set to 15.")
-                self.LMAX = lmax
+                        "parameter is greater than 18, which is currently "
+                        "not supported. LMAX was set to 18.")
+                self.LMAX[1] = lmax
             else:       # sanity check: are large values ignored?
                 warn = False
                 highval = 0
                 for el in self.phaseshifts[hi][1]:   # highest energy
                     for i, val in enumerate(el):
-                        if abs(val) > 0.1 and (i+1) > self.LMAX:
+                        if abs(val) > 0.1 and (i+1) > self.LMAX[1]:
                             warn = True
                             highval = max(highval, abs(val))
                 if warn:
@@ -391,6 +427,10 @@ class Rparams:
         self.SEARCH_MAX_GEN = self.searchMaxGenInit
         if self.searchConvInit["gaussian"] is not None:
             self.GAUSSIAN_WIDTH = self.searchConvInit["gaussian"]
+        if self.searchStartInit is not None:
+            self.SEARCH_START = self.searchStartInit
+        if self.SEARCH_START == "control":
+            self.SEARCH_START = "crandom"
         for k in ["best", "all", "dec"]:
             if self.searchConvInit["dgen"][k] is not None:
                 self.SEARCH_MAX_DGEN[k] = self.searchConvInit["dgen"][k]

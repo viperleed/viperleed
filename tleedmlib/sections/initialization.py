@@ -23,7 +23,7 @@ from viperleed.tleedmlib.files.vibrocc import readVIBROCC
 from viperleed.tleedmlib.files.parameters import (
     readPARAMETERS, interpretPARAMETERS, modifyPARAMETERS)
 from viperleed.tleedmlib.files.phaseshifts import (
-    readPHASESHIFTS, writePHASESHIFTS)
+    readPHASESHIFTS, writePHASESHIFTS, plot_phaseshifts)
 from viperleed.tleedmlib.files.beams import (
     readOUTBEAMS, readBEAMLIST, checkEXPBEAMS, readIVBEAMS, sortIVBEAMS,
     writeIVBEAMS)
@@ -48,8 +48,11 @@ def initialization(sl, rp, subdomain=False):
                 er = rp.THEO_ENERGIES[:2]
             if not rp.fileLoaded["EXPBEAMS"]:
                 try:
-                    rp.expbeams = readOUTBEAMS(fn, enrange=er)
-                    rp.fileLoaded["EXPBEAMS"] = True
+                    rp.expbeams = readOUTBEAMS(filename=fn, enrange=er)
+                    if len(rp.expbeams) > 0:
+                        rp.fileLoaded["EXPBEAMS"] = True
+                    else:
+                        logger.error("Error reading "+fn+": No data was read.")
                 except Exception:
                     logger.error("Error while reading file "+fn, exc_info=True)
     rp.initTheoEnergies()  # may be initialized based on exp. beams
@@ -94,6 +97,10 @@ def initialization(sl, rp, subdomain=False):
     rp.fileLoaded["PHASESHIFTS"] = True
     rp.updateDerivedParams()
     rp.manifest.append("PHASESHIFTS")
+    try:
+        plot_phaseshifts(sl, rp)
+    except Exception:
+        logger.warning("Failed to plot phaseshifts", exc_info=rp.LOG_DEBUG)
 
     # if necessary, run findSymmetry:
     if sl.planegroup == "unknown":
@@ -183,6 +190,10 @@ def initialization(sl, rp, subdomain=False):
             modifyPARAMETERS(rp, "BULK_REPEAT", vec_str,
                              comment="Automatically detected repeat vector")
             logger.info("Detected bulk repeat vector: " + vec_str)
+            # update bulk slab vector
+            sl.bulkslab.getCartesianCoordinates()
+            sl.bulkslab.ucell[:, 2] = np.copy(rvec)
+            sl.bulkslab.collapseCartesianCoordinates()
     if rp.BULK_REPEAT is None:
         # failed to detect repeat vector, use fixed distance instead
         blayers = [lay for lay in sl.layers if lay.isBulk]
@@ -309,8 +320,11 @@ def init_domains(rp):
             er = rp.THEO_ENERGIES[:2]
         if not rp.fileLoaded["EXPBEAMS"]:
             try:
-                rp.expbeams = readOUTBEAMS(fn, enrange=er)
-                rp.fileLoaded["EXPBEAMS"] = True
+                rp.expbeams = readOUTBEAMS(filename=fn, enrange=er)
+                if len(rp.expbeams) > 0:
+                    rp.fileLoaded["EXPBEAMS"] = True
+                else:
+                    logger.error("Error reading "+fn+": No data was read.")
             except Exception:
                 logger.error("Error while reading file "+fn, exc_info=True)
     rp.initTheoEnergies()  # may be initialized based on exp. beams
@@ -578,8 +592,8 @@ def init_domains(rp):
         rp.ivbeams_sorted = True
 
     rp.updateDerivedParams()
-    if rp.LMAX == 0:
-        rp.LMAX = max([dp.rp.LMAX for dp in rp.domainParams])
+    if rp.LMAX[1] == 0:
+        rp.LMAX[1] = max([dp.rp.LMAX[1] for dp in rp.domainParams])
     for dp in rp.domainParams:
         if dp.refcalcRequired:
             continue
@@ -594,8 +608,8 @@ def init_domains(rp):
             logger.info(cmessage+"Energy range is mismatched.")
             dp.refcalcRequired = True
             continue
-        # check LMAX
-        if rp.LMAX != dp.rp.LMAX:
+        # check LMAX - should be obsolete since TensErLEED version 1.6
+        if rp.LMAX[1] != dp.rp.LMAX[1] and rp.TL_VERSION <= 1.6:
             logger.info(cmessage+"LMAX is mismatched.")
             dp.refcalcRequired = True
         # check beam incidence
@@ -619,9 +633,10 @@ def init_domains(rp):
         logger.info("The following domains require new reference "
                     "calculations: "+", ".join([d.name for d in rr]))
         for dp in rp.domainParams:
-            for var in ["THEO_ENERGIES", "LMAX", "THETA", "PHI", "ivbeams"]:
+            for var in ["THEO_ENERGIES", "THETA", "PHI", "ivbeams"]:
                 setattr(dp.rp, var, copy.deepcopy(getattr(rp, var)))
-        # rp.setHaltingLevel(3)
+            if rp.TL_VERSION <= 1.6:  # not required since TensErLEED v1.61
+                dp.rp.LMAX[1] = rp.LMAX[1]
 
     # repeat initialization for all slabs that require a supercell
     for dp in supercellRequired:

@@ -158,10 +158,9 @@ def readSDTL_end(filename="SD.TL"):
     return lines
 
 
-def readDataChem(rp, source):
+def readDataChem(rp, source, cutoff=0, max_configs=0):
     """
     Reads the data from a list of data.chem files, or a single file.
-    Returns
 
     Parameters
     ----------
@@ -169,6 +168,13 @@ def readDataChem(rp, source):
         Run parameters.
     source : either a filename, or an iterable containing multiple file names.
         The files from which to read data; usually of format 'data*.chem'.
+    cutoff : float
+        0 to read all, else specifies the maximum R-factor to be stored.
+        All structures with higher R will be discarded.
+    max_configs : int
+        0 to read all, else specifies the maximum number of configurations to
+        read in. Will sort configurations and read in the ones with lowest
+        R-factors first, discard the rest.
 
     Returns
     -------
@@ -198,13 +204,19 @@ def readDataChem(rp, source):
             lines.update(rf.readlines()[1:])
     returnList = []
     parslen = 0
+    if max_configs == 0:
+        max_configs = len(lines)
+    if len(lines) > max_configs:
+        lines = set(sorted(list(lines))[:max_configs])
     for line in lines:
         try:
             rfac = float(line.split("|")[0].strip())
+            if cutoff != 0 and rfac > cutoff:
+                continue
             valstring = line.split("|")[1].rstrip()
             pars = readIntLine(valstring, width=4)
-        except ValueError:
-            logger.warning("Could not read values in data.chem line:\n"+line)
+        except (ValueError, IndexError):
+            logger.debug("Could not read values in data.chem line:\n"+line)
             continue
         if len(pars) != parslen:
             if parslen == 0:
@@ -663,10 +675,10 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
         controlpath = ""
         if os.path.isfile("control.chem"):
             controlpath = "control.chem"
-        elif os.path.isfile(os.path.join("AUX", "control.chem")):
-            controlpath = os.path.join("AUX", "control.chem")
+        elif os.path.isfile(os.path.join("SUPP", "control.chem")):
+            controlpath = os.path.join("SUPP", "control.chem")
             logger.warning("No control.chem file found in working folder, "
-                           "using AUX/control.chem")
+                           "using SUPP/control.chem")
             rp.setHaltingLevel(1)
         else:
             logger.warning("No control.chem file found. Defaulting to random "

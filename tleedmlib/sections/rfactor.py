@@ -14,14 +14,14 @@ import shutil
 import subprocess
 
 from viperleed.tleedmlib.files.iorefcalc import readFdOut
-from viperleed.tleedmlib.leedbase import (fortranCompile, getTLEEDdir,
+from viperleed.tleedmlib.leedbase import (fortran_compile_batch, getTLEEDdir,
                                           getTensors)
 import viperleed.tleedmlib.files.iorfactor as io
 
 logger = logging.getLogger("tleedm.rfactor")
 
 
-def rfactor(sl, rp, index, for_error=False):
+def rfactor(sl, rp, index, for_error=False, only_vary=None):
     """Runs the r-factor calculation for either the reference calculation
     (index 11) or the superpos (index 12)."""
     if int((rp.THEO_ENERGIES[1]-rp.THEO_ENERGIES[0])
@@ -107,7 +107,8 @@ def rfactor(sl, rp, index, for_error=False):
         logger.error("Exception during writeWEXPEL: ")
         raise
     try:
-        io.writeRfactPARAM(rp, theobeams, for_error=for_error)
+        io.writeRfactPARAM(rp, theobeams, for_error=for_error,
+                           only_vary=only_vary)
     except Exception:
         logger.error("Exception during writeRfactPARAM: ")
         raise
@@ -137,17 +138,18 @@ def rfactor(sl, rp, index, for_error=False):
     rfacname = "rfactor-"+rp.timestamp
     if rp.FORTRAN_COMP[0] == "":
         rp.getFortranComp()
+    # compile
+    ctasks = [(rp.FORTRAN_COMP[0] + " -o " + oname + " -c",
+               fname, rp.FORTRAN_COMP[1]) for (fname, oname)
+              in [(libname, "rfacsb.o"), (srcname, "main.o")]]
+    ctasks.append((rp.FORTRAN_COMP[0]+" -o "+rfacname, "rfacsb.o main.o",
+                   rp.FORTRAN_COMP[1]))
     try:
-        fortranCompile(rp.FORTRAN_COMP[0]+" -o rfacsb.o -c",
-                       libname, rp.FORTRAN_COMP[1])
-        fortranCompile(rp.FORTRAN_COMP[0]+" -o main.o -c", srcname,
-                       rp.FORTRAN_COMP[1])
-        fortranCompile(rp.FORTRAN_COMP[0]+" -o "+rfacname, "rfacsb.o "
-                       "main.o", rp.FORTRAN_COMP[1])
-        logger.debug("Compiled fortran files successfully")
+        fortran_compile_batch(ctasks)
     except Exception:
         logger.error("Error compiling fortran files: ", exc_info=True)
         raise
+    # run
     rfaclogname = rfacname+".log"
     logger.info("Starting R-factor calculation...\n"
                 "R-factor log will be written to file "+rfaclogname)
@@ -229,12 +231,20 @@ def rfactor(sl, rp, index, for_error=False):
             rfaclist = [-1]*len(rp.expbeams)
         outname = "Rfactor_plots_{}.pdf".format(name)
         aname = "Rfactor_analysis_{}.pdf".format(name)
+        if rp.PLOT_RFACTOR["overbar"]:
+            labelstyle = "overbar"
+        else:
+            labelstyle = "minus"
+        labelwidth = max([beam.getLabel(style=labelstyle)[1]
+                          for beam in rp.expbeams])
         try:
-            io.writeRfactorPdf([(b.label, rfaclist[i]) for (i, b)
-                                in enumerate(rp.expbeams)],
-                               plotcolors=rp.PLOT_COLORS_RFACTOR,
+            io.writeRfactorPdf([(b.getLabel(lwidth=labelwidth,
+                                            style=labelstyle)[0],
+                                 rfaclist[i])
+                                for (i, b) in enumerate(rp.expbeams)],
                                outName=outname, analysisFile=aname,
-                               v0i=rp.V0_IMAG)
+                               v0i=rp.V0_IMAG,
+                               formatting=rp.PLOT_RFACTOR)
         except Exception:
             logger.warning("Error plotting R-factors.", exc_info=True)
     return
