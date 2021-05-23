@@ -31,7 +31,14 @@ def main():
     parser.add_argument(
         "-c", "--cont",
         help=("overwrite POSCAR and VIBROCC with POSCAR_OUT and VIBROCC_OUT "
-              "from the OUT folder, if present"),
+              "from the OUT folder, if present."),
+        action="store_true")
+    parser.add_argument(
+        "-d", "--discard",
+        help=("discard all results from the last run, as if it had not "
+              "happened, and do not add anything to history or history.info. "
+              "Note that this will not necessarily restore modified input "
+              "files in the main folder."),
         action="store_true")
     parser.add_argument(
         "-n", "--name",
@@ -39,9 +46,13 @@ def main():
               "folder that is created, and is logged in history.info"),
         type=str)
     args = parser.parse_args()
+    if args.cont and args.discard:
+        print("Bookkeeper ERROR: Flags --cont and --discard are incompatible."
+              "Bookkeeper will stop.")
+        return 1
     # make list of stuff to move
     tomove = [d for d in os.listdir() if os.path.isdir(d)
-              and (d == "OUT" or d == "AUX")]
+              and (d == "OUT" or d == "SUPP")]
     tomove.extend([f for f in os.listdir() if os.path.isfile(f)
                    and f.endswith(".log")])
     # if there's nothing to move, return.
@@ -58,7 +69,7 @@ def main():
             print("Bookkeeper: Found nothing to do. Exiting...")
             return 1
     # check whether history folder is there. If not, make one
-    if not os.path.isdir(histname):
+    if not os.path.isdir(histname) and not args.discard:
         try:
             os.mkdir(histname)
         except Exception:
@@ -95,7 +106,16 @@ def main():
             except (ValueError, IndexError):
                 pass
     if tnum not in maxnums:
-        num = 1
+        num = 1  # Tensor is new - if discard: delete
+        if args.discard:
+            tensorfile = os.path.join("Tensors", "Tensors_{:03d}.zip")
+            deltafile = os.path.join("Deltas", "Deltas_{:03d}.zip")
+            for f in (tensorfile, deltafile):
+                if os.path.isfile(f):
+                    try:
+                        os.remove(f)
+                    except Exception:
+                        print("Failed to discard file " + f)
     else:
         num = maxnums[tnum] + 1
     # find old timestamp, if possible
@@ -112,35 +132,37 @@ def main():
     else:
         timestamp = time.strftime("%y%m%d-%H%M%S", time.localtime())
         oldTimeStamp = "moved-" + timestamp
-    # get dirname
-    dirname = "t{:03d}.r{:03d}_".format(tnum, num) + oldTimeStamp
-    if args.name:
-        dirname += "_" + args.name
-    tdir = os.path.join(histname, dirname)
-    if os.path.isdir(tdir):
-        tdir2 = tdir+"_moved-"+timestamp
-        print("Error: Target directory " + tdir + " already exists. Will use "
-              + tdir2 + " instead.")
-        tdir = tdir2
-        dirname = os.path.basename(tdir)
-    try:
-        os.mkdir(tdir)
-    except Exception:
-        print("Error: Could not create target directory " + tdir
-              + "\n Stopping...")
-        raise 1
-    # copy files
-    for f in [f for f in os.listdir() if f in copyfiles]:
+    if not args.discard:
+        # get dirname
+        dirname = "t{:03d}.r{:03d}_".format(tnum, num) + oldTimeStamp
+        if args.name:
+            dirname += "_" + args.name
+        tdir = os.path.join(histname, dirname)
+        if os.path.isdir(tdir):
+            tdir2 = tdir+"_moved-"+timestamp
+            print("Error: Target directory " + tdir + " already exists. Will "
+                  "use " + tdir2 + " instead.")
+            tdir = tdir2
+            dirname = os.path.basename(tdir)
         try:
-            shutil.copy2(f, os.path.join(tdir, f))
+            os.mkdir(tdir)
         except Exception:
-            print("Error: Failed to copy "+f)
+            print("Error: Could not create target directory " + tdir
+                  + "\n Stopping...")
+            raise 1
+        # copy (or discard) files
+        for f in [f for f in os.listdir() if f in copyfiles]:
+            try:
+                shutil.copy2(f, os.path.join(tdir, f))
+            except Exception:
+                print("Error: Failed to copy "+f)
     # if CONT, check for POSCAR_OUT / VIBROCC_OUT
-    if args.cont:
+    if args.cont and not args.discard:
         if os.path.isdir("OUT"):
             fout = sorted([f for f in os.listdir("OUT")
                            if os.path.isfile(os.path.join("OUT", f))
-                           and f.startswith("POSCAR_OUT_")])
+                           and f.startswith("POSCAR_OUT_")
+                           and "parabola" not in f])
             if len(fout) > 0:
                 path = os.path.join("OUT", fout[-1])
                 try:
@@ -152,7 +174,8 @@ def main():
                       "found in OUT.")
             fout = sorted([f for f in os.listdir("OUT")
                            if os.path.isfile(os.path.join("OUT", f))
-                           and f.startswith("VIBROCC_OUT_")])
+                           and f.startswith("VIBROCC_OUT_")
+                           and "parabola" not in f])
             if len(fout) > 0:
                 path = os.path.join("OUT", fout[-1])
                 try:
@@ -166,13 +189,24 @@ def main():
             print("Error: Flag --cont was set, but no OUT folder exists.")
     # move old stuff
     for f in tomove:
-        try:
-            shutil.move(f, os.path.join(tdir, f))
-        except Exception:
-            print("Error: Failed to move "+f)
+        if not args.discard:
+            try:
+                shutil.move(f, os.path.join(tdir, f))
+            except Exception:
+                print("Error: Failed to move "+f)
+        else:  # delete instead
+            try:
+                shutil.rmtree(f)
+            except NotADirectoryError:
+                try:
+                    os.remove(f)
+                except Exception:
+                    print("Failed to discard file " + f)
+            except Exception:
+                print("Failed to discard directory " + f)
     # if there is a workhist folder, go through it and move contents as well
     tensornums = {tnum}
-    if os.path.isdir(workhistname):
+    if os.path.isdir(workhistname) and not args.discard:
         workhistprev = [d for d in os.listdir(workhistname) if
                         os.path.isdir(os.path.join(workhistname, d))
                         and rgx.match(d) and ("previous" in d)]
@@ -206,11 +240,17 @@ def main():
                           + os.path.join(workhistname, d))
                 tensornums.add(tnum2)
     if os.path.isdir(workhistname):
-        if len(os.listdir(workhistname)) == 0:
+        if len(os.listdir(workhistname)) == 0 or args.discard:
             try:
                 shutil.rmtree(workhistname)
-            except Exception:
-                print("Failed to delete empty "+workhistname+" directory.")
+            except Exception as e:
+                if args.discard:
+                    print("Failed to discard workhistory folder: " + e)
+                else:
+                    print("Failed to delete empty "+workhistname+" directory: "
+                          + e)
+    if args.discard:  # all done
+        return 0
     jobnums = []
     for tnum in tensornums:
         if tnum not in maxnums:
@@ -241,7 +281,7 @@ def main():
     spacing = 12
     hi = ""
     if os.path.isfile("history.info"):
-        hi += "\n\n\n"
+        hi += "\n\n"
     if tensornums == {0}:
         hi += "# TENSORS ".ljust(spacing) + "None\n"
     else:
@@ -276,12 +316,13 @@ def main():
     hi += "# TIME ".ljust(spacing) + translateTimestamp(oldTimeStamp) + "\n"
     hi += "# FOLDER ".ljust(spacing) + dirname + "\n"
     hi += "Notes: " + notes + "\n"
-    hi += "\n\n###########\n\n"
+    hi += "\n###########\n"
     try:
         with open("history.info", "a") as wf:
             wf.write(hi)
     except Exception:
         print("Error: Failed to append to history.info file.")
+    return 0
 
 
 if __name__ == '__main__':

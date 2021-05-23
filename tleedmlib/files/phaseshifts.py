@@ -13,6 +13,17 @@ import os
 
 from viperleed import fortranformat as ff
 
+try:
+    import matplotlib
+    matplotlib.rcParams.update({'figure.max_open_warning': 0})
+    matplotlib.use('Agg')
+    from matplotlib.backends.backend_pdf import PdfPages
+    import matplotlib.pyplot as plt
+except Exception:
+    plotting = False
+else:
+    plotting = True
+
 logger = logging.getLogger("tleedm.files.phaseshifts")
 
 
@@ -247,4 +258,86 @@ def writePHASESHIFTS(firstline, phaseshifts, filename='PHASESHIFTS'):
         logger.error("Exception while writing PHASESHIFTS file: ",
                      exc_info=True)
         raise
+    return
+
+
+def plot_phaseshifts(sl, rp, filename="Phaseshifts_plots.pdf"):
+    """
+    Outputs plots of the phaseshifts in rp.phaseshifts in a pdf file.
+
+    Parameters
+    ----------
+    sl : Slab
+        Slab object, used to determine elements and sites represented in
+        the phaseshifts.
+    rp : Rparams
+        Run parameters. Phaseshifts are read from rp.phaseshifts.
+    filename : str, optional
+        Name of the output file. The default is "Phaseshifts_plots.pdf".
+
+    Returns
+    -------
+    None.
+
+    """
+    global plotting
+    if not plotting:
+        logger.debug("Necessary modules for plotting not found. Skipping "
+                     "Phaseshift plotting.")
+        return
+    ps_labels = []
+    for el in sl.elements:
+        # this reproduces the order of blocks contained in PHASESHIFTS:
+        if el in rp.ELEMENT_MIX:
+            chemelList = rp.ELEMENT_MIX[el]
+        else:
+            chemelList = [el]
+        ps_labels.extend([cel + " in " + s.label + " site"
+                          for cel in chemelList
+                          for s in sl.sitelist if s.el == el])
+    energies = np.array([ps[0]*27.2116 for ps in rp.phaseshifts])
+    ps_vals = np.array([ps[1] for ps in rp.phaseshifts])
+
+    figsize = (7, 4)
+    linewidth = 1
+    nlplot = min(np.shape(ps_vals)[-1], rp.LMAX[1]+1)
+
+    figs = []
+    # colors = ["#000000", "#004949", "#009292", "#ff6db6", "#ffb6db",
+    #           "#490092", "#006ddb", "#b66dff", "#6db6ff", "#b6dbff",
+    #           "#920000", "#924900", "#db6d00", "#24ff24", "#ffff6d"]
+    #   colorblind safe 16 - not great
+    colors = ["#000000", "#E69F00", "#56B4E9", "#009E73",
+              "#F0E442", "#0072B2", "#D55E00", "#CC79A7"]  # colorblind safe 8
+    styles = ["-", "--", ":", "-."]  # for when we run out of colors
+    for i, label in enumerate(ps_labels):
+        fig, ax = plt.subplots(figsize=figsize)
+        figs.append(fig)
+        fig.subplots_adjust(left=0.1, right=0.98,
+                            bottom=0.11, top=0.92)
+        ax.set_title(label)
+        ax.set_xlabel("Energy (eV)")
+        ax.set_ylabel("Phaseshifts (rad)")
+        ax.grid(True, linewidth=0.1*linewidth)
+        [sp.set_linewidth(0.7*linewidth) for sp in ax.spines.values()]
+        ax.tick_params(bottom=True, top=True, left=True, right=True,
+                       axis='both', direction='in', width=0.7*linewidth)
+        ax.set_xlim((np.min(energies), np.max(energies)))
+        for j in range(0, nlplot):
+            ax.plot(energies, ps_vals[:, i, j],
+                    linewidth=linewidth, label="L = {}".format(j),
+                    c=colors[j % len(colors)],
+                    ls=styles[(j // len(colors)) % len(styles)])
+        legend = ax.legend(ncol=(nlplot // 8 + 1))
+        legend.get_frame().set_linewidth(linewidth*0.7)
+
+    try:
+        pdf = PdfPages(filename)
+        for fig in figs:
+            pdf.savefig(fig)
+            plt.close(fig)
+        pdf.close()
+    except PermissionError:
+        logger.error("plot_phaseshifts: Cannot open file {}. Aborting."
+                     .format(filename))
     return

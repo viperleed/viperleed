@@ -24,7 +24,7 @@ knownParams = [
     'ELEMENT_RENAME', 'FILAMENT_WF', 'FORTRAN_COMP', 'HALTING',
     'IV_SHIFT_RANGE', 'LAYER_CUTS', 'LAYER_STACK_VERTICAL', 'LMAX',
     'LOG_DEBUG', 'LOG_SEARCH', 'N_BULK_LAYERS', 'N_CORES', 'PARABOLA_FIT',
-    'PHASESHIFT_EPS', 'PLOT_COLORS_RFACTOR', 'RUN', 'R_FACTOR_SMOOTH',
+    'PHASESHIFT_EPS', 'PLOT_RFACTOR', 'RUN', 'R_FACTOR_SMOOTH',
     'R_FACTOR_TYPE', 'SCREEN_APERTURE', 'SEARCH_BEAMS', 'SEARCH_CONVERGENCE',
     'SEARCH_CULL', 'SEARCH_MAX_GEN', 'SEARCH_POPULATION', 'SEARCH_START',
     'SITE_DEF', 'SUPERLATTICE', 'SUPPRESS_EXECUTION', 'SYMMETRIZE_INPUT',
@@ -32,7 +32,8 @@ knownParams = [
     'SYMMETRY_FIX', 'TENSOR_INDEX', 'TENSOR_OUTPUT', 'THEO_ENERGIES',
     'TL_VERSION', 'T_DEBYE', 'T_EXPERIMENT', 'V0_IMAG', 'V0_REAL',
     'V0_Z_ONSET', 'VIBR_AMP_SCALE']
-paramAlias = {}  # keys should be all lowercase, with no underscores
+# paramAlias keys should be all lowercase, with no underscores
+paramAlias = {'plotrfactors': "PLOT_RFACTOR"}
 for p in knownParams:
     paramAlias[p.lower().replace("_", "")] = p
 
@@ -305,7 +306,12 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
         """
 
         try:
-            v = type_(value)
+            try:
+                v = type_(value)
+            except ValueError:
+                if type_ != int:
+                    raise
+                v = int(float(value))  # for e.g. '1e6' to int
         except ValueError:
             logger.warning('PARAMETERS file: {}: Could not convert value to '
                            '{}. Input will be ignored.'
@@ -427,15 +433,6 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
         elif param == 'HALTING':
             setNumericalParameter(rpars, param, llist[0], type_=int,
                                   range_=(1, 3))
-        elif param == 'LMAX':
-            r = setNumericalParameter(rpars, param, llist[0], type_=int,
-                                      range_=(1, 15),
-                                      outOfRangeEvent=('set', 'set'))
-            if r == 0 and rpars.PHASESHIFT_EPS != 0:
-                logger.warning(
-                    'PARAMETERS file: Both LMAX and '
-                    'PHASESHIFT_EPS are being defined. PHASESHIFT_EPS '
-                    'will be ignored.')
         elif param == 'N_BULK_LAYERS':
             setNumericalParameter(rpars, param, llist[0], type_=int,
                                   range_=(1, 2), haltingOnFail=2)
@@ -737,7 +734,46 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                         rpars.setHaltingLevel(1)
                         continue
             rpars.LAYER_CUTS = llist
+        elif param == 'LMAX':
+            llist = re.sub(r'[:-]', ' ', value).split()
+            try:
+                il = [int(v) for v in llist]
+            except ValueError:
+                logger.warning('PARAMETERS file: LMAX parameter: Could not '
+                               'parse "' + value + '" as integer(s). Input'
+                               'will be ignored.')
+                rpars.setHaltingLevel(1)
+                continue
+            if len(il) > 2:
+                logger.warning(
+                    'PARAMETERS file: LMAX parameter: Expected one or two '
+                    'values, found {}. First two values will be used.'
+                    .format(len(il)))
+                il = il[:2]
+            if len(il) == 1:
+                if not 1 < il[0] < 18:
+                    il[0] = min(max(1, il[0]), 18)
+                    logger.warning(
+                        'PARAMETERS file: LMAX must be between 1 and 18. '
+                        'Value will be set to {}.'.format(il[0]))
+                rpars.LMAX = [il[0], il[0]]
+            elif len(il) == 2:
+                if il[1] < il[0]:
+                    il.reverse()
+                if il[0] < 1:
+                    logger.warning('PARAMETERS file: LMAX lower bound must be '
+                                   'positive. Value will be set to 1.')
+                    il[0] = 1
+                if il[1] > 18:
+                    logger.warning('PARAMETERS file: LMAX values greater than '
+                                   '18 are currently not supported. Upper '
+                                   'bound will be set to 18.')
+                    il[1] = 18
+                rpars.LMAX = il
         elif param == 'PARABOLA_FIT':
+            if llist[0] == 'off':
+                rpars.PARABOLA_FIT['type'] = 'none'
+                continue
             sublists = tl.base.splitSublists(llist, ',')
             for sl in sublists:
                 flag = sl[0].lower()
@@ -748,7 +784,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                                .format(sl[1], sl[0]))
                 if flag == 'type':
                     if sl[1].lower() in ('linear', 'linearregression', 'lasso',
-                                         'ridge', 'elasticnet'):
+                                         'ridge', 'elasticnet', 'none'):
                         rpars.PARABOLA_FIT['type'] = sl[1]
                     else:
                         logger.warning(value_error)
@@ -764,50 +800,121 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                         logger.warning(value_error)
                         rpars.setHaltingLevel(1)
         elif param == 'PHASESHIFT_EPS':
-            if rpars.LMAX != 0:
-                logger.warning('PARAMETERS file: Both LMAX and '
-                               'PHASESHIFT_EPS are being defined. '
-                               'PHASESHIFT_EPS will be ignored.')
-            else:
-                try:
-                    f = float(llist[0])
-                except ValueError:
-                    s = llist[0].lower()[0]
-                    if s == 'r':    # rough
-                        f = 0.1
-                    elif s == 'n':  # normal
-                        f = 0.05
-                    elif s == 'f':  # fine
-                        f = 0.01
-                    elif s == 'e':  # extrafine
-                        f = 0.001
-                    else:
-                        logger.warning('PARAMETERS file: PHASESHIFT_EPS: '
-                                       'Could not convert value to float. '
-                                       'Input will be ignored.')
-                        rpars.setHaltingLevel(1)
-                if f > 0 and f < 1:
-                    rpars.PHASESHIFT_EPS = f
+            try:
+                f = float(llist[0])
+            except ValueError:
+                s = llist[0].lower()[0]
+                if s == 'r':    # rough
+                    f = 0.1
+                elif s == 'n':  # normal
+                    f = 0.05
+                elif s == 'f':  # fine
+                    f = 0.01
+                elif s == 'e':  # extrafine
+                    f = 0.001
                 else:
-                    logger.warning(
-                        'PARAMETERS file: PHASESHIFT_EPS: Unexpected value '
-                        '(should be between 0 and 1). Input will be ignored.')
+                    logger.warning('PARAMETERS file: PHASESHIFT_EPS: '
+                                   'Could not convert value to float. '
+                                   'Input will be ignored.')
                     rpars.setHaltingLevel(1)
-        elif param == 'PLOT_COLORS_RFACTOR':
-            if len(llist) >= 2:
-                if len(llist) > 2:
-                    logger.warning(
-                        'PARAMETERS file: PLOT_COLORS_RFACTOR '
-                        'parameter: Expected two values, found {}. First two '
-                        'values will be used.'.format(len(llist)))
-                    rpars.setHaltingLevel(1)
-                rpars.PLOT_COLORS_RFACTOR = (llist[0], llist[1])
+            if f > 0 and f < 1:
+                rpars.PHASESHIFT_EPS = f
             else:
                 logger.warning(
-                    'PARAMETERS file: PLOT_COLORS_RFACTOR '
-                    'parameter: Expected two values, found {}. Input will be '
-                    'ignored.'.format(len(llist)))
+                    'PARAMETERS file: PHASESHIFT_EPS: Unexpected value '
+                    '(should be between 0 and 1). Input will be ignored.')
                 rpars.setHaltingLevel(1)
+        elif param == 'PLOT_RFACTOR':
+            if len(plist) == 1:
+                logger.warning('PARAMETERS file: PLOT_RFACTOR: Found no flag. '
+                               'Input will be ignored.')
+                rpars.setHaltingLevel(1)
+                continue
+            flag = plist[1].lower()
+            if flag not in ('color', 'colour', 'colors', 'colours', 'perpage',
+                            'border', 'borders', 'axes', 'legend', 'legends',
+                            'layout', 'overbar', 'overline'):
+                logger.warning('PARAMETERS file: PLOT_RFACTOR: Flag {} not '
+                               'recognized. Input will be ignored.'
+                               .format(flag))
+                rpars.setHaltingLevel(1)
+                continue
+            if flag in ('border', 'borders', 'axes'):
+                if llist[0].lower() in ('all', 'none'):
+                    rpars.PLOT_RFACTOR['axes'] = llist[0].lower()
+                elif llist[0].lower() in ('less', 'lb'):
+                    rpars.PLOT_RFACTOR['axes'] = 'lb'
+                elif llist[0].lower() in ('bottom', 'b'):
+                    rpars.PLOT_RFACTOR['axes'] = 'b'
+                else:
+                    logger.warning(
+                        'PARAMETERS file: PLOT_RFACTOR {}: Value not '
+                        'recognized. Input will be ignored.'.format(flag))
+            elif flag in ('color', 'colour', 'colors', 'colours'):
+                if len(llist) >= 2:
+                    if len(llist) > 2:
+                        logger.warning(
+                            'PARAMETERS file: PLOT_RFACTOR colors: Expected '
+                            'two values, found {}. First two values will be '
+                            'used.'.format(len(llist)))
+                    rpars.PLOT_RFACTOR['colors'] = (llist[0], llist[1])
+                else:
+                    logger.warning(
+                        'PARAMETERS file: PLOT_RFACTOR colors: Expected two '
+                        'values, found {}. Input will be ignored.'
+                        .format(len(llist)))
+                    continue
+            elif flag in ('legend', 'legends'):
+                if llist[0].lower() in ('all', 'first', 'none'):
+                    rpars.PLOT_RFACTOR['legend'] = llist[0].lower()
+                elif llist[0].lower() in ('topright', 'tr'):
+                    rpars.PLOT_RFACTOR['legend'] = 'tr'
+                else:
+                    logger.warning(
+                        'PARAMETERS file: PLOT_RFACTOR {}: Value not '
+                        'recognized. Input will be ignored.'.format(flag))
+                    continue
+            elif flag in ('overbar', 'overline'):
+                if llist[0].lower().startswith("t"):
+                    rpars.PLOT_RFACTOR['overbar'] = True
+                elif llist[0].lower().startswith("f"):
+                    rpars.PLOT_RFACTOR['overbar'] = False
+                else:
+                    logger.warning(
+                        'PARAMETERS file: PLOT_RFACTOR {}: Value not '
+                        'recognized. Input will be ignored.'.format(flag))
+                    continue
+            elif flag in ('perpage', 'layout'):
+                if len(llist) == 1:
+                    try:
+                        i = int(llist[0])
+                    except (ValueError, IndexError):
+                        logger.warning(
+                            'PARAMETERS file: PLOT_RFACTOR perpage: Could not '
+                            'convert value to integer. Input will be ignored.')
+                        continue
+                    if i <= 0:
+                        logger.warning(
+                            'PARAMETERS file: PLOT_RFACTOR perpage: Value has '
+                            'to be positive integer. Input will be ignored.')
+                        continue
+                    rpars.PLOT_RFACTOR['perpage'] = i
+                elif len(llist) >= 2:
+                    try:
+                        il = [int(v) for v in llist[:2]]
+                    except (ValueError, IndexError):
+                        logger.warning(
+                            'PARAMETERS file: PLOT_RFACTOR perpage: Could not '
+                            'convert values to integers. Input will be '
+                            'ignored.')
+                        continue
+                    if any([i <= 0 for i in il]):
+                        logger.warning(
+                            'PARAMETERS file: PLOT_RFACTOR perpage: Values '
+                            'have to be positive integers. Input will be '
+                            'ignored.')
+                        continue
+                    rpars.PLOT_RFACTOR['perpage'] = tuple(il)
         elif param == 'RUN':
             rl = []
             for s in llist:
@@ -958,7 +1065,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                     rpars.setHaltingLevel(1)
         elif param == 'SEARCH_START':
             s = llist[0].lower()
-            if s in ["random, rand"]:
+            if s in ["random", "rand"]:
                 rpars.SEARCH_START = "random"
             elif s in ["centered", "center"]:
                 rpars.SEARCH_START = "centered"

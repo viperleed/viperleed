@@ -1,6 +1,6 @@
 C  Tensor LEED subroutine library for delta amplitude calculation
-C  v1.2, VB 13.04.00
-C  for use with delta.f v1.2
+C  v1.2, VB 13.04.00  modified by  LH 23.04.21 (for read in of tensors with variable lmax)
+C  for use with delta.f v1.61
 C
 C  as described in 
 C
@@ -22,7 +22,7 @@ C  of the package is passed on.
 C
 C**********************************************************************************
 C
-C  Please read the comments in delta.f, v1.2
+C  Please read the comments in delta.f, v1.61
 C
 C  Subroutines are derived from original codes by P.J. Rous (Tensor LEED) and U. Loeffler
 C  (inclusion of thermal vibrations), with modifications by W. Oed, R. Doell, and others.
@@ -251,45 +251,51 @@ C-------------------------------------------------------------------------------
 C  SUBROUTINE INAMP READS IN ALL AMPLITUDES IN MOMENTUM SPACE
 C
       SUBROUTINE INAMP(IFILE,IFORM,NT0,PSQ,AK2M,AK3M,ALM,EXLM,LPMMAX,
-     1                 WORK,LMMAX)
+     1                 WORK,LMMAX,LMDAT)
 C
       DIMENSION PSQ(2,NT0),AK2M(NT0),AK3M(NT0)
       COMPLEX ALM(LPMMAX),EXLM(LPMMAX,NT0)
-      COMPLEX WORK(LMMAX)
-C
+      COMPLEX WORK(LPMMAX)
+
 C  PRESET AK2M,AK3M WITH VERY LARGE VALUE
-C
+
       DO 11 I=1,NT0
            AK2M(I) = 1.E10
            AK3M(I) = 1.E10
    11 CONTINUE
-C
-   50 IF (IFORM.EQ.0) THEN
+
+   50 CONTINUE
+
+      IF (IFORM.EQ.0) THEN
       READ (IFILE) NEXIT
       ELSE
       READ (IFILE,10) NEXIT
    10 FORMAT (I3)
       ENDIF
+
       IF (NEXIT.LT.0) RETURN
       IF (IFORM.EQ.0) THEN
       READ (IFILE) PQ1,PQ2,AK2,AK3,WORK
       ELSE
       READ (IFILE,20) PQ1,PQ2,AK2,AK3
-      READ (IFILE,20) (WORK(I),I=1,LMMAX)
+      READ (IFILE,20) (WORK(I),I=1,LMDAT)
    20 FORMAT(5E12.6)
       ENDIF
+
       IF (NEXIT.EQ.0) THEN
-      DO 100 I=1,LPMMAX
+      DO 100 I=1,LMDAT
       ALM(I)=WORK(I)
   100 CONTINUE
+
       ELSE
       PSQ(1,NEXIT)=PQ1
       PSQ(2,NEXIT)=PQ2
       AK2M(NEXIT)=AK2
       AK3M(NEXIT)=AK3
-      DO 200 I=1,LPMMAX
+      DO 200 I=1,LMDAT
       EXLM(I,NEXIT)=WORK(I)
   200 CONTINUE
+
       ENDIF
       GOTO 50
       END
@@ -297,7 +303,8 @@ C
 C-----------------------------------------------------------------------------------------
 C  SUBROUTINE INDATA READS ALL INFORMATION BELONGING TO ONE ENERGY
 C
-      SUBROUTINE INDATA(IFILE,IFORM,E,L1,CAF,NT0,XIST,VPIS,VPIO,VO,VV)
+      SUBROUTINE INDATA(IFILE,IFORM,E,L1,CAF,NT0,XIST,VPIS,VPIO,VO,VV,
+     1 LMDAT)
 C
       REAL E,VPIS,VPIO,VO,VV
       COMPLEX CAF(L1),XIST(NT0)
@@ -307,15 +314,18 @@ C
       ELSE
       READ(IFILE,20,ERR=100,END=200)E,VPIS,VPIO,VO,VV
       READ(IFILE,10,ERR=100,END=200)L1DAT
-      READ(IFILE,20,ERR=100,END=200)(CAF(I),I=1,L1)
+      READ(IFILE,20,ERR=100,END=200)(CAF(I),I=1,L1DAT)
       READ(IFILE,20,ERR=100,END=200)(XIST(I),I=1,NT0)
    10 FORMAT (I3)
    20 FORMAT (5E16.10)
       ENDIF
-      IF (L1DAT.NE.L1) THEN
+      WRITE(6,21) L1DAT -1
+   21 FORMAT('current LMAX =',I3)
+      IF (L1DAT.GT.L1) THEN
       WRITE (6,*) 'L1=',L1,'L1DAT=',L1DAT,'ASSUMED WRONG INPUTFILE!'
       STOP
       ENDIF
+      LMDAT = L1DAT*L1DAT
       RETURN
 C
   100 WRITE (6,*) 'ERROR OCURRED IN READING INPUTFILE'
@@ -466,7 +476,7 @@ C
        XA=CSQRT(XA)
 C
 C
-C     PK=CEXP(CI*DELTAK*UNDISLACED POSN IN UNIT CELL)
+C     PK=CEXP(CI*DELTAK*UNDISPLACED POSITION IN UNIT CELL)
 C
        DELTK=PSQ(1,NEXIT)*CUNDISP(NR,2)+PSQ(2,NEXIT)*CUNDISP(NR,3)
        DELTK=DELTK/BOHR
