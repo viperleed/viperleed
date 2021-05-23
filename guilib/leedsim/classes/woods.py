@@ -137,13 +137,13 @@ class Woods:
         groups = match.groupdict()
         gamma1 = 1
         gamma2 = 1
-        if groups['gamma1_int']:
+        if groups['gamma1_int'] is not None:
             gamma1 *= float(groups['gamma1_int'])
-        if groups['gamma1_sqrt']:
+        if groups['gamma1_sqrt'] is not None:
             gamma1 *= np.sqrt(float(groups['gamma1_sqrt']))
-        if groups['gamma2_int']:
+        if groups['gamma2_int'] is not None:
             gamma2 *= float(groups['gamma2_int'])
-        if groups['gamma2_sqrt']:
+        if groups['gamma2_sqrt'] is not None:
             gamma2 *= np.sqrt(float(groups['gamma2_sqrt']))
         if groups['alpha']:
             alpha = float(groups['alpha'])
@@ -207,20 +207,20 @@ class Woods:
 
         for gamma in gammas:
             gamma_square = round(gamma**2)
-            (gamma_square_int,
-             gamma_square_rt) = Woods.square_to_prod_of_squares(gamma_square)
-            gamma_int = round(np.sqrt(gamma_square_int))
+            (gamma_int_squared,
+             gamma_sqrt) = Woods.square_to_prod_of_squares(gamma_square)
+            gamma_int = round(np.sqrt(gamma_int_squared))
 
-            format_direction = ''  # format the direction in here
-            if gamma_square_rt:  # insert root part
-                format_direction = f"\u221a{int(gamma_square_rt)}"
+            format_direction = ''  # Format the direction in here.
+            if gamma_sqrt > 1:     # Root part
+                format_direction = f"\u221a{gamma_sqrt}"
 
             if not format_direction:
-                # if there is no root part, always
+                # If there is no root part, always
                 # insert the integer part
                 format_direction = str(gamma_int)
             elif gamma_int > 1:
-                # otherwise add it if it's not 1
+                # Otherwise add it if it's not 1
                 format_direction = str(gamma_int) + format_direction
             to_format.append(format_direction)
 
@@ -360,7 +360,7 @@ class Woods:
                                     for (fact, power, rem)
                                     in zip(unique_factors, pow2, rest_pow)])
 
-        return np.prod(squares), np.prod(remainders)
+        return round(np.prod(squares)), round(np.prod(remainders))
 
     @staticmethod
     def prime_factors(number):
