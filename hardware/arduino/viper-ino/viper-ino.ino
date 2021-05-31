@@ -148,6 +148,10 @@ void updateState() {
         case PC_RESET:
             reset();
             break;
+        case PC_MEASURE_ONLY:
+            encodeAndSend(PC_OK);
+            triggerMeasurements(); //This contains the state switch to STATE_MEASURE_ADCS
+            break;
     }
     newMessage = false;
 }
@@ -475,7 +479,35 @@ void prepareForAutogain(){
     numMeasurementsToDo = 25;
 }
 
+/** Handles triggering after setting the Voltage */
+void triggerMeasurements() {
+    /**Trigger the (available) ADCs to start converting.
 
+    Reads
+    -----
+    hardwareDetected, adc0Channel, adc1Channel
+
+    Writes
+    ------
+    adc0Gain, adc1Gain, summedMeasurements, numMeasurementsDone
+
+    Msg to PC
+    ---------
+    None.
+
+    Contains the necessary state switch to STATE_MEASURE_ADCS in order to measure data.
+    **/
+
+    if (hardwareDetected.asInt & ADC_0_PRESENT)
+        AD7705setGainAndTrigger(CS_ADC_0, adc0Channel, adc0Gain);
+    if (hardwareDetected.asInt & ADC_1_PRESENT)
+        AD7705setGainAndTrigger(CS_ADC_1, adc1Channel, adc1Gain);
+
+    // Prepare the system for measurement
+    decreaseADCGainsIfNeeded();
+    resetMeasurementData();
+    currentState = STATE_MEASURE_ADCS;
+}
 
 
 
@@ -846,7 +878,7 @@ void setVoltageWaitAndTrigger(){
         While waiting for data from the PC, and until the
         voltage output can be considered stable
     STATE_MEASURE_ADCS
-        Successfully finished
+        Successfully finished, accessed via triggerMeasurements()
     **/
     if (currentState != STATE_SET_VOLTAGE){
         raise(ERROR_RUNTIME);
@@ -892,40 +924,7 @@ void setVoltageWaitAndTrigger(){
     // Finally tell the PC we're done waiting,
     // and trigger the ADCs for measurement
     encodeAndSend(PC_OK);
-    triggerMeasurements();
-    currentState = STATE_MEASURE_ADCS;
-}
-
-
-/** Handles triggering after setting the Voltage */
-void triggerMeasurements() {
-    /**Trigger the (available) ADCs to start converting.
-
-    Reads
-    -----
-    hardwareDetected, adc0Channel, adc1Channel
-
-    Writes
-    ------
-    adc0Gain, adc1Gain, summedMeasurements, numMeasurementsDone
-
-    Msg to PC
-    ---------
-    None.
-    **/
-    if (currentState != STATE_SET_VOLTAGE){
-        raise(ERROR_RUNTIME);
-        return;
-    }
-
-    if (hardwareDetected.asInt & ADC_0_PRESENT)
-        AD7705setGainAndTrigger(CS_ADC_0, adc0Channel, adc0Gain);
-    if (hardwareDetected.asInt & ADC_1_PRESENT)
-        AD7705setGainAndTrigger(CS_ADC_1, adc1Channel, adc1Gain);
-
-    // Prepare the system for measurement
-    decreaseADCGainsIfNeeded();
-    resetMeasurementData();
+    triggerMeasurements(); //This contains the state switch to STATE_MEASURE_ADCS
 }
 
 

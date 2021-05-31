@@ -54,6 +54,7 @@ union floatOrBytes{
 #define PC_OK             75    // Acknowledge request from PC (ASCCI 'K')
 #define PC_RESET          82    // PC requested a global reset (ASCII 'R')
 #define PC_SET_VOLTAGE    86    // PC requested to set a certain energy (ASCII 'V')
+#define PC_MEASURE_ONLY   77    // PC requested measurement without changing Voltage (ASCII 'M')
 
 // Error codes
 #define ERROR_NO_ERROR            0   // No error
