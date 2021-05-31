@@ -16,6 +16,7 @@ Arduino program flow should be as follows:
 \begin{itemize}
 \item Prepare for measurement: \texttt{PC\_CALIBRATION}, \texttt{PC\_SET\_UP\_ADCS}, \texttt{PC\_SET\_VOLTAGE} (first voltage to measure, but do not care about data that may come back, after dacSettlingTime has elapsed), wait for \texttt{PC\_OK} reply (dacSettlingTime is over), then \texttt{PC\_AUTOGAIN}
 \item Measure IV curve: \texttt{PC\_SET\_VOLTAGE} (again the same), wait for \texttt{PC\_OK} reply, trigger camera and wait for data to come back; then \texttt{PC\_SET\_VOLTAGE} (next voltage step), \ldots
+\item Measure without changing Voltage: \texttt{PC\_MEASURE\_ONLY}, wait for \texttt{PC\_OK} reply and wait for data to come back, repeat
 \end{itemize}
 
 \section{Communication with PC}
@@ -33,6 +34,8 @@ Original message            & Data bytes & Meaning of data bytes                
 \texttt{PC\_AUTOGAIN}       & ---        & ---                                        & {\small(done)} \texttt{PC\_OK}      & 1\\
 \texttt{PC\_SET\_VOLTAGE}   & 4          & dacValue MBS, dacValue LSB,   & {\small(done waiting)} \texttt{PC\_OK};          & 1\\
                             &            & dacSettlingTime MSB, dacSettlingTime LSB   & {\small(meas. ready) $3\times$data} & 3$\times$4\\
+\texttt{PC\_MEASURE\_ONLY}       & ---        & ---                                        & {\small(starting)} \texttt{PC\_OK}      & 1\\
+                                                & & & {\small(meas. ready) $3\times$data} & 3$\times$4 \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -61,6 +64,7 @@ Original message            & Data bytes & Meaning of data bytes                
 \item \texttt{PC\_OK} in response to \texttt{PC\_CALIBRATION} once the calibration is over (takes $\approx3$~s to complete).
 \item \texttt{PC\_OK} in response to \texttt{PC\_SET\_UP\_ADCS}, after the data received by the Arduino (i.e., the message following \texttt{PC\_SET\_UP\_ADCS}) has been deemed acceptable and processed. Processing should be relatively fast, as it basically just loads calibration registers into the ADCs, and triggers the conversion of their inputs.
 \item \texttt{PC\_OK} in response to \texttt{PC\_AUTOGAIN}, after the whole gain-finding procedure is over (roughly after 70 ms).
+\item \texttt{PC\_OK} in response to \texttt{PC\_MEASURE\_ONLY}, before triggering
 \item Three consecutive messages (i.e., each with \texttt{MSG\_START} and \texttt{MSG\_END} characters), each with the 4-byte representation of a 32-bit floating-point number. This is the second message after \texttt{PC\_SET\_VOLTAGE}.
 \item Error messages from several possible states. Each error causes two messages to be sent: The first one is \texttt{PC\_ERROR} (1 byte), the second one is a 2-byte data message, where the first byte corresponds to the state in which the error occurred, while the second one is one of the error codes in the following Table.
 
@@ -116,7 +120,7 @@ State					        & Initiated by                 & Handler                      
 
 	Possible errors:\\\texttt{ERROR\_TIMEOUT} (waiting for data from PC);\\\texttt{ERROR\_MSG\_DATA\_INVALID} (channels are invalid or less than 4 bytes in the message).\\\texttt{ERROR\_NEVER\_CALIBRATED} (one of the ADC channels is uncalibrated)
 
-\item \texttt{STATE\_SET\_VOLTAGE}: Requires the PC to communicate the DAC value that needs to be set, as well as how long one should wait for the DAC value to be considered stable. It sets the required voltage, and waits \texttt{dacSettlingTime} (milliseconds). After triggering it decreases the ADC gains, should any of the ADCs require this, and goes straight to \texttt{STATE\_MEASURE\_ADCS}.
+\item \texttt{STATE\_SET\_VOLTAGE}: Requires the PC to communicate the DAC value that needs to be set, as well as how long one should wait for the DAC value to be considered stable. It sets the required voltage, and waits \texttt{dacSettlingTime} (milliseconds). After triggering it decreases the ADC gains, should any of the ADCs require this, and goes straight to \texttt{STATE\_MEASURE\_ADCS}. The state change is done in the \texttt{triggerMeasurements()} function.
 	
 	Possible errors:\\\texttt{ERROR\_TIMEOUT} (waiting for data from PC).\\\texttt{ERROR\_MSG\_DATA\_INVALID} (not exactly 4 bytes in the message).\\\texttt{ERROR\_NEVER\_CALIBRATED} (one of the ADC channels is uncalibrated).
 
