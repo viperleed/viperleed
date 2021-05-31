@@ -7,24 +7,26 @@ Created on Fri Jul 31 13:38:53 2020
 """
 # Python standard modules
 import time
-import sys, os
+import sys
+import os
 import configparser
 import glob
 import struct
 from zipfile import ZipFile
 
 # NON STANDARD. Will try to get rid of these
-import serial        # NON STANDARD - maybe one can use this to replace the serial package: https://github.com/wiseman/arduino-serial
+import serial  # NON STANDARD
+# maybe one can use this to replace the serial package: https://github.com/wiseman/arduino-serial
 import pandas as pd  # NON STANDARD I will try to get rid of this. It's used only for the export to csv
 import serial.tools.list_ports  # NON STANDARD
+
+# ViPErLEED
+from camera import Camera
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
 if 'Camera_libraries' not in sys.path: 
     sys.path.append(os.path.join(current_path, 'Camera_libraries'))
-
-# ViPErLEED
-from camera import Camera
 
 # Configuration-File location:
 configfile_location = 'Configuration/LeedControl_config.ini'
@@ -33,37 +35,36 @@ if not config.read(configfile_location):
     raise AttributeError("Couldn't load configuration file ",
                          configfile_location)
 
-PC_OK = int(config['communication_bytes']['PC_OK'])
+PC_OK = config.getint('communication_bytes', 'PC_OK')
 
 # order of most significant byte in int.to_bytes(b, 'little/big')
 # int.to_bytes(bytes_lengthg, orderofsignificantByte)
 sign = 'big'
 
 # serial port object to Arduino
-arduino_port = '' 
+arduino_port = serial.Serial()
 
 #======================================
-#TODO: Change names to something more explanatory
 
-def sendToArduino(send_bytes):
+def send_to_arduino(send_bytes):
     """
     Function sends a byte or bytearray to the arduino and masks
     the message with STARTMARKER + message + ENDMARKER
     
     Parameters
     ----------
-    send_bytes: int, float or bytearray
+    send_bytes: int, float, byte or bytearray
     """
-    STARTMARKER = int(config['communication_bytes']['STARTMARKER'])
-    ENDMARKER = int(config['communication_bytes']['ENDMARKER'])
+    STARTMARKER = config.getint('communication_bytes', 'STARTMARKER')
+    ENDMARKER = config.getint('communication_bytes', 'ENDMARKER')
     
-    send_bytes, bytes_length = encodeHighBytes(send_bytes)
+    send_bytes, bytes_length = encode_high_bytes(send_bytes)
     adjusted_sendbyte = (STARTMARKER.to_bytes(1, sign)
                          + bytes_length.to_bytes(1, sign)
                          + send_bytes + ENDMARKER.to_bytes(1, sign))
     arduino_port.write(adjusted_sendbyte)
 
-def encodeHighBytes(in_bytes):
+def encode_high_bytes(in_bytes):
     """
     Function encodes message before sending it to the arduino. Encodes int 
     to byte or to a bytearray. If resulting byte or bytearray contains a 
@@ -87,7 +88,7 @@ def encodeHighBytes(in_bytes):
     outstring:  bytearray or byte
     n:          length of bytearray or byte, dtype: int
     """
-    SPECIAL_BYTE = int(config['communication_bytes']['SPECIAL_BYTE'])
+    SPECIAL_BYTE = config.getint('communication_bytes', 'SPECIAL_BYTE')
     
     out_bytes = ""
     out_bytes = out_bytes.encode()
@@ -110,9 +111,22 @@ def encodeHighBytes(in_bytes):
     return(out_bytes, n)
 
 #======================================    
+def adc_measure_only():
+    """
+    Send  PC_MEASURE_ONLY to arduino and initialise measurement of adc
+    Not used in our current code
+    """
+    PC_MEASURE_ONLY = config.getint('communication_bytes', 'PC_MEASURE_ONLY')
+    send_to_arduino(PC_MEASURE_ONLY)
+    if receive_from_arduino() == PC_OK:
+        print("Measurements starting")
+    else:
+        identify_error()
+        arduino_port.close()
+        raise IOError("Arduino does not reach the number of measurements to do")
+#======================================
 
-
-def receiveFromArduino():
+def receive_from_arduino():
     """
     Function receives messages from Arduino
     
@@ -120,8 +134,8 @@ def receiveFromArduino():
     ----------
     send_bytes: int, float or bytearray
     """
-    STARTMARKER = int(config['communication_bytes']['STARTMARKER'])
-    ENDMARKER = int(config['communication_bytes']['ENDMARKER'])
+    STARTMARKER = config.getint('communication_bytes', 'STARTMARKER')
+    ENDMARKER = config.getint('communication_bytes', 'ENDMARKER')
     
     received_value = "z"
     message = ''
@@ -138,10 +152,10 @@ def receiveFromArduino():
         received_value = arduino_port.read()
         message += received_value
     
-    return decodeHighBytes(message)
+    return decode_high_bytes(message)
     
     
-def decodeHighBytes(in_bytes):
+def decode_high_bytes(in_bytes):
     """
     Function decodes message. If there are SPECIAL_BYTEs in the message, it 
     decodes them and the byte after back to a single byte. Example: 
@@ -162,7 +176,7 @@ def decodeHighBytes(in_bytes):
     ----------
     byte or bytearray
     """
-    SPECIAL_BYTE = int(config['communication_bytes']['SPECIAL_BYTE'])
+    SPECIAL_BYTE = config.getint('communication_bytes', 'SPECIAL_BYTE')
     
     out_bytes = in_bytes[0].to_bytes(1, sign)
     i = 1
@@ -186,7 +200,7 @@ def decodeHighBytes(in_bytes):
     
 #======================================  
 
-def connectToArduino(port):
+def connect_to_arduino(port):
     """
     Function connects to Arduino, through given port ID
     The Arduino will return the hardware it can detect to
@@ -201,22 +215,22 @@ def connectToArduino(port):
     arduino_port: class object serial
     """
     global arduino_port
-    PC_CONFIGURATION = int(config['communication_bytes']['PC_CONFIGURATION'])
-    FIRMWARE_VERSION_MAJOR = int(config['firmware_version']['FIRMWARE_VERSION_MAJOR'])
-    FIRMWARE_VERSION_MINOR = int(config['firmware_version']['FIRMWARE_VERSION_MINOR'])
-    hardware_bits = int(config['hardware_bits'])
+    PC_CONFIGURATION = config.getint('communication_bytes', 'PC_CONFIGURATION')
+    FIRMWARE_VERSION = config['firmware_version']['FIRMWARE_VERSION']
+    hardware_bits = config['hardware_bits']
     
     arduino_port = serial.Serial(port, 115200, timeout = 1)
     if arduino_port.inWaiting() == 0:
-        sendToArduino(PC_CONFIGURATION)
+        send_to_arduino(PC_CONFIGURATION)
         time.sleep(1) #time to settle connection
-        hardwareConfiguration = receiveFromArduino()
-        if hardwareConfiguration[1] != FIRMWARE_VERSION_MAJOR or hardwareConfiguration[2] != FIRMWARE_VERSION_MINOR:
+        hardwareConfiguration = receive_from_arduino()
+        hardwareVersion = f"{hardwareConfiguration[1]}.{hardwareConfiguration[2]}"
+        if hardwareVersion != FIRMWARE_VERSION:
             print("Versions do not match.")
         if hardwareConfiguration[3] or hardwareConfiguration[4]:
             print("Hardware detected")
             for key, value in hardware_bits.items():
-                if value & hardwareConfiguration:
+                if int(value) & hardwareConfiguration[3:]:
                     print (key)
             return arduino_port
         elif hardwareConfiguration is None:
@@ -231,7 +245,7 @@ def connectToArduino(port):
 #======================================
 
 
-def initialiseADC(arduino_config):
+def initialise_adcs(arduino_config):
     """
     Function initialise adc and sends adc configuration settings, defined in
     'ReadArdo_config.ini'
@@ -240,8 +254,8 @@ def initialiseADC(arduino_config):
     ----------
     arduino_config: dict
     """
-    PC_SET_UP_ADCS = int(config['communication_bytes']['PC_SET_UP_ADCS'])
-    sendToArduino(PC_SET_UP_ADCS)
+    PC_SET_UP_ADCS = config.getint('communication_bytes', 'PC_SET_UP_ADCS')
+    send_to_arduino(PC_SET_UP_ADCS)
     message = []
     measurement_n = int(arduino_config['measurement_counter']).to_bytes(
         2, sign)
@@ -249,13 +263,13 @@ def initialiseADC(arduino_config):
     message.append(measurement_n[1])
     for key in ('adc0_channel', 'adc1_channel'): 
         message.append(int(arduino_config[key]))
-    sendToArduino(message) 
-    #print("Gain in ADC initialisation is:", receiveFromArduino())
-    if receiveFromArduino() == PC_OK: 
+    send_to_arduino(message) 
+    #print("Gain in ADC initialisation is:", receive_from_arduino())
+    if receive_from_arduino() == PC_OK: 
         print("ADC Initalisation: DONE!")
         print("-----------------------")
     else:
-        identifyError()
+        identify_error()
         arduino_port.close()
         raise IOError("ADC Initalisation: FAILED!")
 
@@ -307,7 +321,7 @@ def serial_ports():
     return result_port
 
 #======================================
-def setVoltageAndMeasure(energy, settle_time = 0):
+def set_voltage_and_measure(energy, settle_time = 0):
     """
     Function initialise dac and sends dac value to arduino. 
     
@@ -316,46 +330,46 @@ def setVoltageAndMeasure(energy, settle_time = 0):
     energy: float, int
     settle_time: int
     """
-    v_ref_dac = float(config['measurement_settings']['v_ref_dac'] )
-    PC_SET_VOLTAGE = int(config['communication_bytes']['PC_SET_VOLTAGE'])
+    v_ref_dac = config.getfloat('measurement_settings', 'v_ref_dac')
+    PC_SET_VOLTAGE = config.getint('communication_bytes', 'PC_SET_VOLTAGE')
     dac_value_temp = int(round(energy * 65536/(v_ref_dac*2)))
     if(dac_value_temp >= 65536): 
         dac_value_temp = 65535
     dac_send = dac_value_temp.to_bytes(2,sign) + settle_time.to_bytes(2,sign)
     # print("DAC_send = " ,dac_value_temp)
     # print("DAC_tobytes =" ,dac_value_temp.to_bytes(2, sign), " t= ",round(1000*time.time()))
-    sendToArduino(PC_SET_VOLTAGE)
-    sendToArduino(dac_send)
-    # dac_send = sendToArduino(dac_send)
-    if receiveFromArduino() == PC_OK:
+    send_to_arduino(PC_SET_VOLTAGE)
+    send_to_arduino(dac_send)
+    # dac_send = send_to_arduino(dac_send)
+    if receive_from_arduino() == PC_OK:
         print("Voltage is set, triggering")
     else:
-        identifyError()
+        identify_error()
         arduino_port.close()
 #======================================
 
-def initialiseAutoGain():
+def start_autogain():
     """
     Function starts autogain-function on arduino. Autogain-funtion measures 
     adc value and sets gain, that measured value is bigger than 25% of the 
     measurment range. Starts with gain 1 (no gain). Maximum gain is 128
     """
-    PC_AUTOGAIN = int(config['communication_bytes']['PC_AUTOGAIN'])
-    sendToArduino(PC_AUTOGAIN)
+    PC_AUTOGAIN = config.getint('communication_bytes', 'PC_AUTOGAIN')
+    send_to_arduino(PC_AUTOGAIN)
     print("Autogain: IN PROCESS...")
     
-    if receiveFromArduino() == PC_OK:
-        # print("Gain found =",pow(2,int(receiveFromArduino())))#for debugging, can be deleted
-        print("Gain found =", int(receiveFromArduino()))
+    if receive_from_arduino() == PC_OK:
+        # print("Gain found =",pow(2,int(receive_from_arduino())))#for debugging, can be deleted
+        print("Gain found =", int(receive_from_arduino()))
     else:
-        identifyError()
+        identify_error()
         arduino_port.close()
         raise IOError("Arduino doesnt react when python tries to initialise "
                       "the Autogain Function, Program stops")
 
 #======================================
 
-def createCSV(multilist, path):
+def create_csv(multilist, path):
     """
     Creates csv with columns:
         Index | ADC_value [V] | DAC_value [V] | Time [sec]
@@ -388,7 +402,7 @@ def TUI():
     startenergy, endenergy, deltaenergy: float
     """
     while True:
-        max_energy = 2*float(config['measurement_settings']['v_ref_dac'])
+        max_energy = 2*config.getfloat('measurement_settings', 'v_ref_dac')
         start_energy = -1
         while start_energy < 0 or start_energy > max_energy:
             start_energy = float(input("\nPlease enter the energy to START "
@@ -441,14 +455,14 @@ def pack_measurements(zip_path):  # MR: NEEDS TO BE COMPLETED
     # TEMP: will use a simple incremental number for a moment for the naming of
     # the zip files
     i = 0
-    while os.path.exists(os.path.join(path, str(i), ".zip")):
+    while os.path.exists(os.path.join(zip_path, str(i), ".zip")):
         i += 1
     
     with ZipFile(os.path.join(zip_path, str(i), ".zip")) as zip_file:
         for f in fnames:
             zip_file.write(f, os.path.basename(f))
             
-def adcCalibration(arduino_config):
+def calibrate_adcs(arduino_config):
     """
     Send PC_CALIBRATION to arduino which does the calibration for all gains for the
     selected channels and saves the values for later use.
@@ -457,75 +471,74 @@ def adcCalibration(arduino_config):
     ----------
     arduino_config: dict
     """
-    PC_CALIBRATION = int(config['communication_bytes']['PC_CALIBRATION'])
-    sendToArduino(PC_CALIBRATION)
+    PC_CALIBRATION = config.getint('communication_bytes', 'PC_CALIBRATION')
+    send_to_arduino(PC_CALIBRATION)
     message = []                                               
     for key in ('update_rate', 'adc0_channel', 'adc1_channel'): 
         message.append(int(arduino_config[key]))
-    sendToArduino(message) 
-    if receiveFromArduino() == PC_OK: 
+    send_to_arduino(message) 
+    if receive_from_arduino() == PC_OK: 
         print("ADC calibration: DONE!")
         print("-----------------------")
     else:
-        identifyError()
+        identify_error()
         arduino_port.close()
         raise IOError("ADC calibration: FAILED!")
 
 
-def identifyError():
+def identify_error():
     """
     Is called upon when PC_ERROR is returned from the Arduino to the PC. It compares 
     the trace back byte to the ones saved in the config and prints the according key
     """
-    arduino_states = int(config['arduino_states'])
-    error_bytes = int(config['error_bytes'])
-    ErrorMessage = receiveFromArduino()
+    arduino_states = config['arduino_states']
+    error_bytes = config['error_bytes']
+    ErrorMessage = receive_from_arduino()
     for key, value in arduino_states.items():
-        if value == ErrorMessage[1]:
+        if int(value) == ErrorMessage[1]:
             print (key)
     for key, value in error_bytes.items():
-        if value == ErrorMessage[2]:
+        if int(value) == ErrorMessage[2]:
             print (key)
+            
+def prepare_for_measurement():
 
-def main(energies=None):
-    global arduino_port
+    adc_config = config['iv_movie_configuration']
+    dac_first_settletime = config.getint('measurement_settings', 'dac_first_settle_time')
+    start_energy = config.getfloat('measurement_settings', 'start_energy')
     
-    PC_RESET = int(config['communication_bytes']['PC_RESET'])
+    # Connect with Arduino, reset it and flush input buffer
+    portname = serial_ports()
+    arduino_port = connect_to_arduino(portname)
+    arduino_port.flushInput()
     
-    adc_autogain_config = config['adc_autogain_configuration']
-    adc_start_config = config['adc_start_configuration']
-    v_ref_adc = float(config['measurement_settings']['v_ref_adc'])
-    dac_first_settletime = int(config[
-        'measurement_settings']['dac_first_settle_time'])
-    dac_settletime =  int(
-        config['measurement_settings']['dac_settle_time'])
-    path = str(config['measurement_settings']['path'])
-    dac_value_end = float(config['measurement_settings']['dac_value_end'])
-    camera_settle_time = int(config['camera_settings']['camera_settle_time'])
+    # Calibrate and initialize ADCs, DAC and auto-gain,
+    # then re-initialize the ADC with the right gain
+    calibrate_adcs(adc_config)
+    initialise_adcs(adc_config)
+    set_voltage_and_measure(start_energy, dac_first_settletime)
+    start_autogain()
+
+def measure_iv_video():
+
+    PC_RESET = config.getint('communication_bytes', 'PC_RESET')
+    dac_settletime = config.getint('measurement_settings', 'dac_settle_time')
+    path = config['measurement_settings']['path']
+    dac_value_end = config.getfloat('measurement_settings', 'dac_value_end')
+    camera_settle_time = config.getint('camera_settings', 'camera_settle_time')
     live_mode = (config['camera_settings']['live_mode'] == 'True')
-    I0_conversion_factor = int(config['leed_hardware']['I0_conversion_factor'])
+    I0_conversion_factor = config.getint('leed_hardware', 'I0_conversion_factor')
     
     start_energy, end_energy, delta_energy = TUI()
-    start_energy = 0.5
-    delta_energy = 0.005#1e-16#
-    end_energy = 4.9#0.5 + 881*delta_energy*3#
+    start_energy = config.getfloat('measurement_settings', 'start_energy')
+    delta_energy = config.getfloat('measurement_settings', 'delta_energy')
+    end_energy = config.getfloat('measurement_settings', 'end_energy')
     
     #Connect with Camera and initialize it
     CameraObject = Camera.camera_from_ini(
         config['camera_settings']['class_name'])
     CameraObject.initialize(config['camera_settings'])
-
-    # Connect with Arduino, reset it and flush input buffer
-    portname = serial_ports()
-    arduino_port = connectToArduino(portname)
-    arduino_port.flushInput()
-
-    # Calibrate and initialize ADCs, DAC and auto-gain,
-    # then re-initialize the ADC with the right gain
-    adcCalibration(adc_start_config)
-    initialiseADC(adc_autogain_config)
-    setVoltageAndMeasure(start_energy, dac_first_settletime)
-    initialiseAutoGain()
+    
     actual_energy = start_energy
     adc0_value_csv = []
     adc1_value_csv = []
@@ -536,14 +549,14 @@ def main(energies=None):
     
     # This keyboard interrupt thing will not exist. Process interruption will
     # be handled with a signal
-    # TODO: I have no clue what this does but I removed the call for a measurement as setVoltageAndMeasure already does that. We need to redo this.
+    # TODO: I have no clue what this does but I removed the call for a measurement as set_voltage_and_measure already does that. We need to redo this.
     try: 
         while actual_energy <= end_energy:
             print("Energy:%.2f V" % actual_energy)
             # if camera is used in "exposure" mode
             while not live_mode: 
                 if not CameraObject.callback_data.dac_busy:
-                    setVoltageAndMeasure(actual_energy, dac_settletime)
+                    set_voltage_and_measure(actual_energy, dac_settletime)
                     break
             if not live_mode:
                 time.sleep(camera_settle_time*1e-3)
@@ -556,12 +569,12 @@ def main(energies=None):
             else: 
                 pass
                 # CameraObject.snap_image()
-            #print('Gain: %i \nDAC-Value: %f' % (int(receiveFromArduino()),
+            #print('Gain: %i \nDAC-Value: %f' % (int(receive_from_arduino()),
             #                                   actual_energy))
             print('nDAC-Value: %f' % (actual_energy))
-            adc0_value = receiveFromArduino()
-            adc1_value = receiveFromArduino()
-            adc2_value = receiveFromArduino()
+            adc0_value = receive_from_arduino()
+            adc1_value = receive_from_arduino()
+            adc2_value = receive_from_arduino()
             #adc0 is ADC0, adc1 is ADC1 and adc2 is the LM35 in the Arduino code
             print("ADC0_VAlUE:", adc0_value*I0_conversion_factor)
             print("ADC1_VAlUE:", adc1_value)
@@ -579,20 +592,27 @@ def main(energies=None):
     # finally: 
     except KeyboardInterrupt:
         CameraObject.stop_camera()
-        #sendToArduino(PC_RESET)
+        #send_to_arduino(PC_RESET)
         #Reset would clear calibration: not necessary
-        setVoltageAndMeasure(dac_value_end) 
+        set_voltage_and_measure(dac_value_end) 
         arduino_port.close()
         
     time.sleep(3)  # To process the last frame, the callback needs some time
     CameraObject.stop_camera()
-    setVoltageAndMeasure(dac_value_end)
-    createCSV(list(zip(adc0_value_csv, adc1_value_csv, adc2_value_csv, dac_value_csv, timestamp)), path) 
+    set_voltage_and_measure(dac_value_end)
+    create_csv(list(zip(adc0_value_csv, adc1_value_csv, adc2_value_csv, dac_value_csv, timestamp)), path) 
+    # before terminating, pack all the necessary data into a single zip file
+    # pack_measurements()
+    
+def main():
+    global arduino_port
+    
+    prepare_for_measurement()
+    measure_iv_video()
+    
     arduino_port.close()
     print('Arduino Disconnected')
     
-    # before terminating, pack all the necessary data into a single zip file
-    # pack_measurements()
 
 def do_nothing_on_purpose():  # MR: just a mock I needed for my presentation
     import numpy as np
@@ -636,3 +656,46 @@ if __name__ == '__main__':
         print('#########################')
         print('DONE!')
         print("Time for whole procedure:", (time.time() - t1))
+
+
+def calculate_real_energy():
+    """
+    This function measures the voltage on the filament that we get in return for the requested voltage.
+    After this the collected data is used to do a polynomial fit which can be used to obtain the correct
+    voltage on the filament.
+    """
+    import numpy as np
+    
+    adc_config = config['measure_filament_configuration']
+    dac_first_settletime = config.getint('measurement_settings', 'dac_first_settle_time')
+    dac_settletime = config.getint('measurement_settings', 'dac_settle_time')
+    path = config['measurement_settings']['path']
+    start_energy, end_energy, delta_energy = TUI()
+    start_energy = config.getfloat('measurement_settings', 'start_energy')
+    delta_energy = config.getfloat('measurement_settings', 'delta_energy')
+    end_energy = config.getfloat('measurement_settings', 'end_energy')
+    actual_energy = start_energy
+    real_dac_value_csv = []
+    dac_comparison_value_csv = []
+    
+    portname = serial_ports()
+    arduino_port = connect_to_arduino(portname)
+    arduino_port.flushInput()
+    calibrate_adcs(adc_config)
+    initialise_adcs(adc_config)
+    set_voltage_and_measure(start_energy, dac_first_settletime)
+    start_autogain()
+    
+    while actual_energy <= end_energy:
+        set_voltage_and_measure(actual_energy, dac_settletime)
+        #TODO: wait for a certain amount of time
+        adc0_value = receive_from_arduino()
+        print("ADC0_VAlUE:", adc0_value)
+        print("#########################")
+        real_dac_value_csv.append(adc0_value)
+        dac_comparison_value_csv.append(actual_energy)
+        actual_energy += delta_energy
+    error_data = np.polyfit(real_dac_value_csv, dac_comparison_value_csv, 3)
+    #polyfit(x, y, degree of accuracy)
+    error_polynome = np.poly1d(error_data)
+    #poly1d(error_data) makes it a polynome that we can use like "error_polynome(wanted_dac_value)" which will yield the dac value we need to send to the arduino
