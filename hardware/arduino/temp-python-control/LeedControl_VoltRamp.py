@@ -14,19 +14,20 @@ import glob
 import struct
 from zipfile import ZipFile
 
+import numpy as np
 # NON STANDARD. Will try to get rid of these
 import serial  # NON STANDARD
 # maybe one can use this to replace the serial package: https://github.com/wiseman/arduino-serial
 import pandas as pd  # NON STANDARD I will try to get rid of this. It's used only for the export to csv
 import serial.tools.list_ports  # NON STANDARD
 
-# ViPErLEED
-from camera import Camera
-
 current_path = os.path.dirname(os.path.abspath(__file__))
 
 if 'Camera_libraries' not in sys.path: 
     sys.path.append(os.path.join(current_path, 'Camera_libraries'))
+    
+# ViPErLEED
+from camera import Camera
 
 # Configuration-File location:
 configfile_location = 'Configuration/LeedControl_config.ini'
@@ -501,9 +502,9 @@ def identify_error():
         if int(value) == ErrorMessage[2]:
             print (key)
             
-def prepare_for_measurement():
+def prepare_for_measurement(configuration_section):
 
-    adc_config = config['iv_movie_configuration']
+    adc_config = config[configuration_section]
     dac_first_settletime = config.getint('measurement_settings', 'dac_first_settle_time')
     start_energy = config.getfloat('measurement_settings', 'start_energy')
     
@@ -546,7 +547,6 @@ def measure_iv_video():
     dac_value_csv = []
     timestamp = []
     timestart = time.time()
-    
     # This keyboard interrupt thing will not exist. Process interruption will
     # be handled with a signal
     # TODO: I have no clue what this does but I removed the call for a measurement as set_voltage_and_measure already does that. We need to redo this.
@@ -607,7 +607,7 @@ def measure_iv_video():
 def main():
     global arduino_port
     
-    prepare_for_measurement()
+    prepare_for_measurement('iv_movie_configuration')
     measure_iv_video()
     
     arduino_port.close()
@@ -615,7 +615,6 @@ def main():
     
 
 def do_nothing_on_purpose():  # MR: just a mock I needed for my presentation
-    import numpy as np
     
     start_energy, end_energy, delta_energy = TUI()
     actual_energy = start_energy
@@ -658,18 +657,14 @@ if __name__ == '__main__':
         print("Time for whole procedure:", (time.time() - t1))
 
 
-def calculate_real_energy():
+def calibrate_real_energy_scale():
     """
     This function measures the voltage on the filament that we get in return for the requested voltage.
     After this the collected data is used to do a polynomial fit which can be used to obtain the correct
     voltage on the filament.
     """
-    import numpy as np
-    
-    adc_config = config['measure_filament_configuration']
-    dac_first_settletime = config.getint('measurement_settings', 'dac_first_settle_time')
+    prepare_for_measurement('measure_filament_configuration')
     dac_settletime = config.getint('measurement_settings', 'dac_settle_time')
-    path = config['measurement_settings']['path']
     start_energy, end_energy, delta_energy = TUI()
     start_energy = config.getfloat('measurement_settings', 'start_energy')
     delta_energy = config.getfloat('measurement_settings', 'delta_energy')
@@ -677,18 +672,9 @@ def calculate_real_energy():
     actual_energy = start_energy
     real_dac_value_csv = []
     dac_comparison_value_csv = []
-    
-    portname = serial_ports()
-    arduino_port = connect_to_arduino(portname)
-    arduino_port.flushInput()
-    calibrate_adcs(adc_config)
-    initialise_adcs(adc_config)
-    set_voltage_and_measure(start_energy, dac_first_settletime)
-    start_autogain()
-    
+
     while actual_energy <= end_energy:
         set_voltage_and_measure(actual_energy, dac_settletime)
-        #TODO: wait for a certain amount of time
         adc0_value = receive_from_arduino()
         print("ADC0_VAlUE:", adc0_value)
         print("#########################")
