@@ -16,6 +16,7 @@ from zipfile import ZipFile
 import matplotlib.pyplot as plt
 
 import numpy as np
+from numpy.polynomial.polynomial import Polynomial
 # NON STANDARD. Will try to get rid of these
 import serial  # NON STANDARD
 # maybe one can use this to replace the serial package: https://github.com/wiseman/arduino-serial
@@ -550,7 +551,7 @@ def measure_iv_video():
     npoints = int((end_energy-start_energy)/delta_energy)
     if npoints <= 0:
         print("Please check the starting and ending energy and the stepsize.")
-        raise IOError("Number of steps could not be calculated!")
+        raise RuntimeError("Number of steps could not be calculated!")
     nominal_energy_csv = np.linspace(start_energy, end_energy, npoints)
     
     # This keyboard interrupt thing will not exist. Process interruption will
@@ -678,7 +679,7 @@ def calibrate_real_energy_scale():
     npoints = int((end_energy-start_energy)/delta_energy)
     if npoints <= 0:
         print("Please check the starting and ending energy and the stepsize.")
-        raise IOError("Number of steps could not be calculated!")
+        raise RuntimeError("Number of steps could not be calculated!")
     nominal_energy_csv = np.linspace(start_energy, end_energy, npoints)
     
     for actual_energy in nominal_energy_csv:
@@ -687,11 +688,12 @@ def calibrate_real_energy_scale():
         print("ADC0_VAlUE:", adc0_value)
         print("#########################")
         true_energy_csv.append(adc0_value)
-    fit_coefficients = np.polynomial.polynomial.polyfit(true_energy_csv, nominal_energy_csv, 3)
+    #fit_coefficients = np.polynomial.polynomial.polyfit(true_energy_csv, nominal_energy_csv, 3)
     #polyfit(x, y, degree of accuracy)
     #fit_polynomial = np.poly1d(fit_coefficients)
     #poly1d(fit_coefficients) makes it a polynome that we can use like "fit_polynomial(wanted_dac_value)" which will yield the dac value we need to send to the arduino
-    fit_polynomial = np.polynomial.polynomial.Polynomial(fit_coefficients)
+    #fit_polynomial = np.polynomial.polynomial.Polynomial(fit_coefficients)
+    fit_polynomial = Polynomial.fit(true_energy_csv, nominal_energy_csv, 3)
     ax1, ax2 = plt.subplots(2, 1)
     ax1.set_ylabel('fit_polynomial')
     ax1.set_xlabel('true energy')
