@@ -13,6 +13,7 @@ import configparser
 import glob
 import struct
 from zipfile import ZipFile
+import matplotlib.pyplot as plt
 
 import numpy as np
 # NON STANDARD. Will try to get rid of these
@@ -137,12 +138,12 @@ def receive_from_arduino():
     """
     STARTMARKER = config.getint('communication_bytes', 'STARTMARKER')
     ENDMARKER = config.getint('communication_bytes', 'ENDMARKER')
-    
+    arduino_timeout = config.getfloat('measurement_settings', 'arduino_timeout')
     received_value = "z"
     message = ''
     t1 = time.time()
     while arduino_port.inWaiting() == 0: 
-        if (time.time() - t1) > 30: 
+        if (time.time() - t1) > arduino_timeout: 
             arduino_port.close()
             raise IOError("Timeout while Reading Arduino. No message received")
     while ord(received_value) != STARTMARKER: 
@@ -539,19 +540,24 @@ def measure_iv_video():
     CameraObject = Camera.camera_from_ini(
         config['camera_settings']['class_name'])
     CameraObject.initialize(config['camera_settings'])
-    
-    actual_energy = start_energy
+
     adc0_value_csv = []
     adc1_value_csv = []
     adc2_value_csv = []
-    dac_value_csv = []
     timestamp = []
     timestart = time.time()
+    
+    npoints = int((end_energy-start_energy)/delta_energy)
+    if npoints <= 0:
+        print("Please check the starting and ending energy and the stepsize.")
+        raise IOError("Number of steps could not be calculated!")
+    nominal_energy_csv = np.linspace(start_energy, end_energy, npoints)
+    
     # This keyboard interrupt thing will not exist. Process interruption will
     # be handled with a signal
     # TODO: I have no clue what this does but I removed the call for a measurement as set_voltage_and_measure already does that. We need to redo this.
     try: 
-        while actual_energy <= end_energy:
+        for actual_energy in nominal_energy_csv:
             print("Energy:%.2f V" % actual_energy)
             # if camera is used in "exposure" mode
             while not live_mode: 
@@ -584,10 +590,8 @@ def measure_iv_video():
             adc0_value_csv.append(adc0_value*I0_conversion_factor)
             adc1_value_csv.append(adc1_value)
             adc2_value_csv.append(adc2_value)
-            dac_value_csv.append(actual_energy)
             time_temp = time.time() - timestart
             timestamp.append(time_temp)
-            actual_energy += delta_energy
 
     # finally: 
     except KeyboardInterrupt:
@@ -600,7 +604,7 @@ def measure_iv_video():
     time.sleep(3)  # To process the last frame, the callback needs some time
     CameraObject.stop_camera()
     set_voltage_and_measure(dac_value_end)
-    create_csv(list(zip(adc0_value_csv, adc1_value_csv, adc2_value_csv, dac_value_csv, timestamp)), path) 
+    create_csv(list(zip(adc0_value_csv, adc1_value_csv, adc2_value_csv, nominal_energy_csv, timestamp)), path) 
     # before terminating, pack all the necessary data into a single zip file
     # pack_measurements()
     
@@ -669,19 +673,32 @@ def calibrate_real_energy_scale():
     start_energy = config.getfloat('measurement_settings', 'start_energy')
     delta_energy = config.getfloat('measurement_settings', 'delta_energy')
     end_energy = config.getfloat('measurement_settings', 'end_energy')
-    actual_energy = start_energy
-    real_dac_value_csv = []
-    dac_comparison_value_csv = []
-
-    while actual_energy <= end_energy:
+    true_energy_csv = []
+    
+    npoints = int((end_energy-start_energy)/delta_energy)
+    if npoints <= 0:
+        print("Please check the starting and ending energy and the stepsize.")
+        raise IOError("Number of steps could not be calculated!")
+    nominal_energy_csv = np.linspace(start_energy, end_energy, npoints)
+    
+    for actual_energy in nominal_energy_csv:
         set_voltage_and_measure(actual_energy, dac_settletime)
         adc0_value = receive_from_arduino()
         print("ADC0_VAlUE:", adc0_value)
         print("#########################")
-        real_dac_value_csv.append(adc0_value)
-        dac_comparison_value_csv.append(actual_energy)
-        actual_energy += delta_energy
-    error_data = np.polyfit(real_dac_value_csv, dac_comparison_value_csv, 3)
+        true_energy_csv.append(adc0_value)
+    fit_coefficients = np.polynomial.polynomial.polyfit(true_energy_csv, nominal_energy_csv, 3)
     #polyfit(x, y, degree of accuracy)
-    error_polynome = np.poly1d(error_data)
-    #poly1d(error_data) makes it a polynome that we can use like "error_polynome(wanted_dac_value)" which will yield the dac value we need to send to the arduino
+    #fit_polynomial = np.poly1d(fit_coefficients)
+    #poly1d(fit_coefficients) makes it a polynome that we can use like "fit_polynomial(wanted_dac_value)" which will yield the dac value we need to send to the arduino
+    fit_polynomial = np.polynomial.polynomial.Polynomial(fit_coefficients)
+    ax1, ax2 = plt.subplots(2, 1)
+    ax1.set_ylabel('fit_polynomial')
+    ax1.set_xlabel('true energy')
+    ax2.set_ylabel('residuals')
+    ax2.set_xlabel('true energy')
+    print(fit_polynomial)
+    ax1.plot(true_energy_csv, fit_polynomial(true_energy_csv), '-')
+    ax2.plot(true_energy_csv, np.subtract(fit_polynomial(true_energy_csv), nominal_energy_csv), '.')
+    #plt.ylim(0, 10)
+    plt.show()

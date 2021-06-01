@@ -34,7 +34,7 @@ void AD7705resetCommunication(byte chipSelectPin) {
 /** Writes the clock register of the AD7705 with the given chip select pin
  *  The update rate can be AD7705_50HZ, AD7705_60HZ, or AD7705_500HZ
  *  Not used because setting the update rate requires self-calibration */
-void AD7705setClock(byte chipSelectPin, byte updateRate) {                        // TODO: call at the end of Autogain to reset back the updateRate in the ADC
+void AD7705setClock(byte chipSelectPin, byte updateRate) {
    AD7705startIO(chipSelectPin);
    SPI.transfer(AD7705_REG_CLOCK);
    SPI.transfer(AD7705_CLK | updateRate);
