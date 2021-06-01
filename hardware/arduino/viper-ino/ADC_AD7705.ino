@@ -42,18 +42,18 @@ void AD7705setClock(byte chipSelectPin, byte updateRate) {
  }
 
 void AD7705setGainAndTrigger(byte chipSelectPin, byte channel, byte gain) {
-    /**Set the gain and trigger an AD7705 ADC.
+    /**Set the gain, and trigger an AD7705 ADC.
 
     This essentially sets a well-defined point in time after
     which conversions of the selected input channel will be
     available, after amplification with the selected gain.
-    
+
     Notice that this function does not initiate the reading
     of any of the conversion results from the Arduino. Thus,
     every 1/updateRate sec after this, new values will be
     available in the data register, and they will be thrown
     away if they are not read.
-    
+
     The function also sets bipolar unbuffered operation mode,
     as well as 'normal operation' (i.e., not a calibration)
     that is necessary for our inputs. Any old data that may
@@ -87,14 +87,13 @@ void AD7705setGainAndTrigger(byte chipSelectPin, byte channel, byte gain) {
 void AD7705selfCalibrate(byte chipSelectPin, byte channel,
                          byte gain, byte updateRate) {
     /**Self-calibrate an AD7705 ADC.
-    
+
     Thereafter, one has to wait until self-calibration is
     done, by calling AD7705waitForCalibration, or by waiting
     for the first data (AD7705waitAndReadData).
-    
-    Triggering (STATE_TRIGGER_ADCS) during self-calibration
-    should never be performed.
-    
+
+    Triggering during self-calibration should never be performed.
+
     Parameters
     ----------
     chipSelectPin : byte
@@ -128,11 +127,11 @@ void AD7705selfCalibrate(byte chipSelectPin, byte channel,
 int32_t AD7705getCalibrationRegister(byte chipSelectPin, byte channel,
                                      byte calibrationRegister) {                // TODO: Datasheet says one should write high to FSYNC before doing operations with the calibration registers
     /**Return the offset or gain calibration register of an AD7705.
-    
+
     This function can be called after a call to
     AD7705selfCalibrate() to retrieve the calibration
     result, with a short delay(1) in between.
-    
+
     Parameters
     ----------
     chipSelectPin : byte
