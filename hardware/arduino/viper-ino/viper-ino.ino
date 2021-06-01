@@ -148,6 +148,10 @@ void updateState() {
         case PC_RESET:
             reset();
             break;
+        case PC_MEASURE_ONLY:
+            encodeAndSend(PC_OK);
+            triggerMeasurements(); //This contains the state switch to STATE_MEASURE_ADCS
+            break;
     }
     newMessage = false;
 }
@@ -476,6 +480,37 @@ void prepareForAutogain(){
 }
 
 
+void triggerMeasurements() {
+    /**Trigger the (available) ADCs to start converting.
+
+    Reads
+    -----
+    hardwareDetected, adc0Channel, adc1Channel
+
+    Writes
+    ------
+    adc0Gain, adc1Gain, summedMeasurements, numMeasurementsDone
+
+    Msg to PC
+    ---------
+    None.
+
+    Goes to state
+    -------------
+    STATE_MEASURE_ADCS
+        At end of execution, effectively starting the measurement
+    **/
+    // The next two lines take ~20 ms each                                      // TODO: true?
+    if (hardwareDetected.asInt & ADC_0_PRESENT)
+        AD7705setGainAndTrigger(CS_ADC_0, adc0Channel, adc0Gain);
+    if (hardwareDetected.asInt & ADC_1_PRESENT)
+        AD7705setGainAndTrigger(CS_ADC_1, adc1Channel, adc1Gain);
+
+    // Prepare the system for measurement
+    decreaseADCGainsIfNeeded();
+    resetMeasurementData();
+    currentState = STATE_MEASURE_ADCS;
+}
 
 
 
@@ -846,7 +881,7 @@ void setVoltageWaitAndTrigger(){
         While waiting for data from the PC, and until the
         voltage output can be considered stable
     STATE_MEASURE_ADCS
-        Successfully finished
+        Successfully finished, accessed via triggerMeasurements()
     **/
     if (currentState != STATE_SET_VOLTAGE){
         raise(ERROR_RUNTIME);
@@ -892,40 +927,7 @@ void setVoltageWaitAndTrigger(){
     // Finally tell the PC we're done waiting,
     // and trigger the ADCs for measurement
     encodeAndSend(PC_OK);
-    triggerMeasurements();
-    currentState = STATE_MEASURE_ADCS;
-}
-
-
-/** Handles triggering after setting the Voltage */
-void triggerMeasurements() {
-    /**Trigger the (available) ADCs to start converting.
-
-    Reads
-    -----
-    hardwareDetected, adc0Channel, adc1Channel
-
-    Writes
-    ------
-    adc0Gain, adc1Gain, summedMeasurements, numMeasurementsDone
-
-    Msg to PC
-    ---------
-    None.
-    **/
-    if (currentState != STATE_SET_VOLTAGE){
-        raise(ERROR_RUNTIME);
-        return;
-    }
-
-    if (hardwareDetected.asInt & ADC_0_PRESENT)
-        AD7705setGainAndTrigger(CS_ADC_0, adc0Channel, adc0Gain);
-    if (hardwareDetected.asInt & ADC_1_PRESENT)
-        AD7705setGainAndTrigger(CS_ADC_1, adc1Channel, adc1Gain);
-
-    // Prepare the system for measurement
-    decreaseADCGainsIfNeeded();
-    resetMeasurementData();
+    triggerMeasurements();  // This switches to STATE_MEASURE_ADCS
 }
 
 
@@ -1097,7 +1099,7 @@ void findOptimalADCGains(){
     }
 
     // Notice that we are not triggering the ADCs here, as we are
-    // not particularly interested in a measuring from a specific
+    // not particularly interested in measuring from a specific
     // point in time. The first data will anyway be available
     // approximately 3/updateRate (i.e., 6 ms @ 500 Hz) after the
     // end of the self-calibration.
@@ -1114,7 +1116,7 @@ void findOptimalADCGains(){
             adc0Gain = 0;
             adc1Gain = 0;
             setAllADCgainsAndCalibration();
-            if (currentState == STATE_ERROR)   // Some channel was not calibrated
+            if (currentState == STATE_ERROR)   // Some channel was not calibrated // TODO: this check will always be true, as we're in the 'timed out' branch anyway
                 return;
         }
         return;
@@ -1191,7 +1193,7 @@ void handleErrors(){
     // there may be some cleanup going on
     encodeAndSend(PC_ERROR);
     encodeAndSend(errorTraceback, 2);
-    //Set voltage to zero
+    // Set voltage to zero
     AD5683setVoltage(CS_DAC, 0x0000);
     // Then clean up possible mess that caused the error
     switch(errorTraceback[1]){
@@ -1447,7 +1449,7 @@ void setAllADCgainsAndCalibration() {
     Same state
         Otherwise
     **/
-    for (int iADC = 0; iADC < 2; iADC++) {
+    for (int iADC = 0; iADC < N_MAX_ADCS_ON_PCB; iADC++) {
         // byte adcPresentMask = iADC==0 ? ADC_0_PRESENT : ADC_1_PRESENT;       // BUG: ADC_0_PRESENT/ADC_1_PRESENT are uint16_t, not byte (probably would work with byte, but better have the right type to start with)!
         uint16_t adcPresentMask = iADC==0 ? ADC_0_PRESENT : ADC_1_PRESENT;      // TODO: easier with externalADCs struct: externalADCs[i].present
         if (hardwareDetected.asInt & adcPresentMask) {

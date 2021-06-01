@@ -50,10 +50,11 @@ union floatOrBytes{
 #define PC_CALIBRATION    67    // PC requested self-calibration of all ADCs at all gains (ASCII 'C')
 #define PC_ERROR         253    // An error occurred
 #define PC_CONFIGURATION  63    // PC requested hardware configuration (ASCII '?')
-#define PC_SET_UP_ADCS    83    // PC requested to prepare the ADCs for a measurement (ASCII 'S')   // TODO: requires calibration data up to date (keep a flag, raise errors if never calibrated since bootup. Flag should be set to false at reset(). The python side will have to keep track of when the last calibration was done, and warn if it is too old.)
+#define PC_SET_UP_ADCS    83    // PC requested to prepare the ADCs for a measurement (ASCII 'S')   // TODO: The python side will have to keep track of when the last calibration was done, and warn if it is too old.
 #define PC_OK             75    // Acknowledge request from PC (ASCCI 'K')
 #define PC_RESET          82    // PC requested a global reset (ASCII 'R')
 #define PC_SET_VOLTAGE    86    // PC requested to set a certain energy (ASCII 'V')
+#define PC_MEASURE_ONLY   77    // PC requested measurement without changing Voltage (ASCII 'M')
 
 // Error codes
 #define ERROR_NO_ERROR            0   // No error
@@ -92,7 +93,7 @@ byte data_send[MSG_MAX_LENGTH];
 
 #define STATE_IDLE                 0  // Wait for requests from PC
 #define STATE_SET_UP_ADCS          1  // Pick correct ADC channels and no. of measurement points
-#define STATE_SET_VOLTAGE          2  // Set a voltage with the DAC and triggers the ADCs
+#define STATE_SET_VOLTAGE          2  // Set a voltage with the DAC, wait, then trigger the ADCs
 #define STATE_MEASURE_ADCS         4  // ADC measurements in progress
 #define STATE_ADC_VALUES_READY     5  // ADC measurements done
 #define STATE_AUTOGAIN_ADCS        6  // Find optimal gain for both ADCs
@@ -135,12 +136,12 @@ bool waitingForDataFromPC = false;    // Keeps track of whether we are in a stat
 #define ADC_1_CH1_SCALE_JO      0.004          // ADC#1 channel 1: with JP5 open (voltage divider), in volts
 
 // Which hardware and closed jumpers do we have? Bits of present/closed jumpers are 1
-#define ADC_0_PRESENT    0x01 // Bit is set if ADC #0 was detected
-#define ADC_1_PRESENT    0x02 // Bit is set if ADC #1 was detected
-#define LM35_PRESENT     0x04 // Bit is set if LM35 temperature sensor was detected
-#define RELAY_PRESENT    0x08 // Bit is set if the relay for I0 input 2.5V/10V is present
-#define JP_I0_CLOSED     0x10 // Bit is set if JP3 7-8 is closed or relay on (to indicate 2.5V I0 range)
-#define JP_AUX_CLOSED    0x20 // Bit is set if JP5 is closed (to indicate 2.5V AUX range rather than 10V range)
+#define ADC_0_PRESENT   0x01  // Bit is set if ADC #0 was detected
+#define ADC_1_PRESENT   0x02  // Bit is set if ADC #1 was detected
+#define LM35_PRESENT    0x04  // Bit is set if LM35 temperature sensor was detected
+#define RELAY_PRESENT   0x08  // Bit is set if the relay for I0 input 2.5V/10V is present
+#define JP_I0_CLOSED    0x10  // Bit is set if JP3 7-8 is closed or relay on (to indicate 2.5V I0 range)
+#define JP_AUX_CLOSED   0x20  // Bit is set if JP5 is closed (to indicate 2.5V AUX range rather than 10V range)
 
 // ADC saturation thresholds
 #define ADC_POSITIVE_SATURATION 0xffff  // Max ADC output in a range
@@ -165,9 +166,9 @@ byte     adcUpdateRate;        // Update rate for both ADCs (will be set for lin
 byte     adc0Channel;          // Channel of ADC#0
 byte     adc1Channel;          // Channel of ADC#1
 byte     adc0Gain = 0;         // Gain of ADC#0, 0...7
-byte     adc1Gain = 0;         // Gain of ADC#0, 0...7
+byte     adc1Gain = 0;         // Gain of ADC#1, 0...7
 bool     adc0ShouldDecreaseGain = false;  // Whether ADC#0 should increase its gain in the next cycle
-bool     adc1ShouldDecreaseGain = false;  // Whether ADC#0 should increase its gain in the next cycle
+bool     adc1ShouldDecreaseGain = false;  // Whether ADC#1 should increase its gain in the next cycle
 
 // ADCs: quantities needed for self-calibration
 byte     calibrationGain = 0;                         // Gain for which a calibration is currently being performed (in parallel for both ADCs)
@@ -177,8 +178,8 @@ int32_t  selfCalDataVsGain[AD7705_MAX_GAIN + 1][2][2][2]; // For each gain, two 
 // ADCs: variables for measuring and storing the line frequency ripple
 int16_t  maximumPeak[N_MAX_ADCS_ON_PCB];       // Maximum of measurement, one for each ADC
 int16_t  minimumPeak[N_MAX_ADCS_ON_PCB];       // Minimum of measurement, one for each ADC
-int16_t  adc0RipplePP = 0;     // Ripple (peak-peak) measured at gain=0 for ADC#0 during auto-gain  // TODO: this is unused but should be
-int16_t  adc1RipplePP = 0;     // Ripple (peak-peak) measured at gain=0 for ADC#1 during auto-gain  // TODO: this is unused but should be
+int16_t  adc0RipplePP = 0;     // Ripple (peak-peak) measured at gain=0 for ADC#0 during auto-gain
+int16_t  adc1RipplePP = 0;     // Ripple (peak-peak) measured at gain=0 for ADC#1 during auto-gain
 
 /* // ADC container                                                             // TODO: use it to simplify code below
 struct analogToDigitalConverter {
