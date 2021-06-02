@@ -29,7 +29,7 @@ if 'Camera_libraries' not in sys.path:
     sys.path.append(os.path.join(current_path, 'Camera_libraries'))
     
 # ViPErLEED
-from camera import Camera
+#from camera import Camera
 
 # Configuration-File location:
 configfile_location = 'Configuration/LeedControl_config.ini'
@@ -613,7 +613,7 @@ def main():
     global arduino_port
     
     prepare_for_measurement('iv_movie_configuration')
-    measure_iv_video()
+    #measure_iv_video()
     
     arduino_port.close()
     print('Arduino Disconnected')

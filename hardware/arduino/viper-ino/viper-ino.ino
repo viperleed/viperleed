@@ -1039,9 +1039,9 @@ void sendMeasuredValues(){
     STATE_ERROR : ERROR_RUNTIME
         If this function is not called within STATE_ADC_VALUES_READY
     STATE_IDLE
-        If singleMeasurement is true
+        If continuousMeasurement is false
     STATE_MEASURE_ADCS
-        If singleMeasurement is false
+        If continuousMeasurement is true
     **/
     // TODO: We may later remove this, if we want the option
     // of sending incomplete data back upon request from the PC
@@ -1059,11 +1059,11 @@ void sendMeasuredValues(){
     encodeAndSend(fDataOutput[1].asBytes, 4);
     encodeAndSend(fDataOutput[2].asBytes, 4);
     resetMeasurementData();
-    if (singleMeasurement) {
-        currentState = STATE_IDLE;
+    if (continuousMeasurement) {
+        currentState = STATE_MEASURE_ADCS;
     }
     else {
-        currentState = STATE_MEASURE_ADCS;
+        currentState = STATE_IDLE;
     }
 }
 
@@ -1784,7 +1784,7 @@ void measureADCsRipple(){
 void changeMeasurementMode() {
     /**
     Sets the measurement mode either to continous or single measurement.
-    To achieve this the singleMeasurement boolean is set to true or false.
+    To achieve this the continuousMeasurement boolean is set to true or false.
     If the arduino is ordered to do continuous measurements it will set
     numMeasurementsToDo = 1.
     
@@ -1794,7 +1794,7 @@ void changeMeasurementMode() {
 
     Writes
     ------
-    singleMeasurement
+    continuousMeasurement
 
     Msg to PC
     ---------
@@ -1818,8 +1818,8 @@ void changeMeasurementMode() {
     }
   if (not newMessage){  // waiting for data from the PC
         if(didTimeOut()){
-            waitingForDataFromPC = false;
-            newMessage = false;
+            waitingForDataFromPC = false;     // TODO: Move to error handler ?
+            newMessage = false;     // TODO: Move to error handler ?
         }
         return;
     }
@@ -1827,12 +1827,17 @@ void changeMeasurementMode() {
     // Data has arrived
     waitingForDataFromPC = false;
     newMessage = false;
-  
+
+    if (msgLength != 1){
+        raise(ERROR_MSG_DATA_INVALID);
+        return;
+    }
+    
     if (data_received[0]){
-        singleMeasurement = true;
+        continuousMeasurement = true;
     }
     else {
-        singleMeasurement = false;
+        continuousMeasurement = false;
         numMeasurementsToDo = 1;
     }
 

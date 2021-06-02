@@ -138,7 +138,7 @@ NOTES: (1) we are currently throwing away the whole set of measurements if we re
 
 \item \texttt{STATE\_ADC\_VALUES\_READY}: This state cannot be reached directly from a PC command. It is the state that automatically follows successful completion of \texttt{STATE\_MEASURE\_ADCS}. Currently it sends back all the data as three separate messages, even if some of the ADCs are not available.
 
-\item \texttt{STATE\_CHANGE\_MEASUREMENT\_MODE}: Sets the boolean \texttt{singleMeasurement} either to true or false. True will result in a single measurement cycle beeing done when requested by the user. False will make the arduino repeat measuring and returning data. It also sets \texttt{measurementsToDo} to 1.
+\item \texttt{STATE\_CHANGE\_MEASUREMENT\_MODE}: Sets the boolean \texttt{continuousMeasurement} either to true or false. False will result in a single measurement cycle beeing done when requested by the user. True will make the arduino repeat measuring and returning data. It also sets \texttt{measurementsToDo} to 1.
 
 
 \end{itemize}
