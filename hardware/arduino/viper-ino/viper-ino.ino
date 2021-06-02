@@ -94,6 +94,9 @@ void loop() {
         case STATE_ERROR:
             handleErrors();
             break;
+        case STATE_CHANGE_MEASUREMENT_MODE:
+            changeMeasurementMode();
+            break;
     }
 }
 
@@ -151,6 +154,11 @@ void updateState() {
         case PC_MEASURE_ONLY:
             encodeAndSend(PC_OK);
             triggerMeasurements(); //This contains the state switch to STATE_MEASURE_ADCS
+            break;
+        case PC_CHANGE_MEAS_MODE:
+            waitingForDataFromPC = true;
+            initialTime = millis();
+            currentState = STATE_CHANGE_MEASUREMENT_MODE;
             break;
     }
     newMessage = false;
@@ -762,7 +770,6 @@ void prepareADCsForMeasurement(){
               high byte, [1] the low byte. Interpreted as an uint16_t.
     - [2] channel of ADC#0
     - [3] channel of ADC#1
-
     Reads
     -----
     data_received
@@ -1032,7 +1039,9 @@ void sendMeasuredValues(){
     STATE_ERROR : ERROR_RUNTIME
         If this function is not called within STATE_ADC_VALUES_READY
     STATE_IDLE
-        Otherwise
+        If singleMeasurement is true
+    STATE_MEASURE_ADCS
+        If singleMeasurement is false
     **/
     // TODO: We may later remove this, if we want the option
     // of sending incomplete data back upon request from the PC
@@ -1050,7 +1059,12 @@ void sendMeasuredValues(){
     encodeAndSend(fDataOutput[1].asBytes, 4);
     encodeAndSend(fDataOutput[2].asBytes, 4);
     resetMeasurementData();
-    currentState = STATE_IDLE;
+    if (singleMeasurement) {
+        currentState = STATE_IDLE;
+    }
+    else {
+        currentState = STATE_MEASURE_ADCS;
+    }
 }
 
 
@@ -1767,7 +1781,64 @@ void measureADCsRipple(){
 }
 
 
+void changeMeasurementMode() {
+    /**
+    Sets the measurement mode either to continous or single measurement.
+    To achieve this the singleMeasurement boolean is set to true or false.
+    If the arduino is ordered to do continuous measurements it will set
+    numMeasurementsToDo = 1.
+    
+    Reads
+    -----
+    data_received
 
+    Writes
+    ------
+    singleMeasurement
+
+    Msg to PC
+    ---------
+    PC_OK
+
+    Goes to state
+    -------------
+    STATE_ERROR : ERROR_RUNTIME
+        If this function is not called within STATE_CHANGE_MEASUREMENT_MODE
+    STATE_ERROR : ERROR_TIMEOUT
+        If more than 5s pass between the PC_CHANGE_MEAS_MODE message
+        and the receipt of data
+    STATE_CHANGE_MEASUREMENT_MODE (stays)
+        While waiting for data from the PC
+    STATE_IDLE
+        Successfully finished
+  **/
+  if (currentState != STATE_CHANGE_MEASUREMENT_MODE){
+        raise(ERROR_RUNTIME);
+        return;
+    }
+  if (not newMessage){  // waiting for data from the PC
+        if(didTimeOut()){
+            waitingForDataFromPC = false;
+            newMessage = false;
+        }
+        return;
+    }
+
+    // Data has arrived
+    waitingForDataFromPC = false;
+    newMessage = false;
+  
+    if (data_received[0]){
+        singleMeasurement = true;
+    }
+    else {
+        singleMeasurement = false;
+        numMeasurementsToDo = 1;
+    }
+
+    encodeAndSend(PC_OK);
+    currentState = STATE_IDLE;
+}
 
 
 

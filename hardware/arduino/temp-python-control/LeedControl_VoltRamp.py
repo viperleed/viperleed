@@ -250,8 +250,8 @@ def connect_to_arduino(port):
 
 def initialise_adcs(arduino_config):
     """
-    Function initialise adc and sends adc configuration settings, defined in
-    'ReadArdo_config.ini'
+    Function initialise adcs and sends adc configuration settings, defined in
+    'LeedControl_config.ini'
     
     Parameter
     ----------
@@ -266,7 +266,7 @@ def initialise_adcs(arduino_config):
     message.append(measurement_n[1])
     for key in ('adc0_channel', 'adc1_channel'): 
         message.append(int(arduino_config[key]))
-    send_to_arduino(message) 
+    send_to_arduino(message)
     #print("Gain in ADC initialisation is:", receive_from_arduino())
     if receive_from_arduino() == PC_OK: 
         print("ADC Initalisation: DONE!")
@@ -693,7 +693,12 @@ def calibrate_real_energy_scale():
     #fit_polynomial = np.poly1d(fit_coefficients)
     #poly1d(fit_coefficients) makes it a polynome that we can use like "fit_polynomial(wanted_dac_value)" which will yield the dac value we need to send to the arduino
     #fit_polynomial = np.polynomial.polynomial.Polynomial(fit_coefficients)
+    
+    #fit_polynomial_data = Polynomial.fit(true_energy_csv, nominal_energy_csv, 3)
+    #fit_polynomial = Polynomial.cast(fit_polynomial_data)
+    
     fit_polynomial = Polynomial.fit(true_energy_csv, nominal_energy_csv, 3)
+    
     ax1, ax2 = plt.subplots(2, 1)
     ax1.set_ylabel('fit_polynomial')
     ax1.set_xlabel('true energy')
@@ -704,3 +709,19 @@ def calibrate_real_energy_scale():
     ax2.plot(true_energy_csv, np.subtract(fit_polynomial(true_energy_csv), nominal_energy_csv), '.')
     #plt.ylim(0, 10)
     plt.show()
+    
+def change_measurement_mode(measurement_mode):
+    """
+    Send use_this_mode to arduino, which decides if the arduino will keep
+    measuring or not
+    """
+    PC_CHANGE_MEASUREMENT_MODE = config.getint('communication_bytes', 'PC_CHANGE_MEAS_MODE')
+    send_to_arduino(PC_CHANGE_MEASUREMENT_MODE)
+    use_this_mode = config.getint('measurement_settings', measurement_mode)
+    send_to_arduino(use_this_mode)
+    if receive_from_arduino() == PC_OK:
+        print("Measurement mode has been set.")
+    else:
+        identify_error()
+        arduino_port.close()
+        raise IOError("Setting the measurement mode failed.")

@@ -55,6 +55,7 @@ union floatOrBytes{
 #define PC_RESET          82    // PC requested a global reset (ASCII 'R')
 #define PC_SET_VOLTAGE    86    // PC requested to set a certain energy (ASCII 'V')
 #define PC_MEASURE_ONLY   77    // PC requested measurement without changing Voltage (ASCII 'M')
+#define PC_CHANGE_MEAS_MODE 32  // PC requested a change between continuous and single measurement mode
 
 // Error codes
 #define ERROR_NO_ERROR            0   // No error
@@ -94,6 +95,7 @@ byte data_send[MSG_MAX_LENGTH];
 #define STATE_IDLE                 0  // Wait for requests from PC
 #define STATE_SET_UP_ADCS          1  // Pick correct ADC channels and no. of measurement points
 #define STATE_SET_VOLTAGE          2  // Set a voltage with the DAC, wait, then trigger the ADCs
+#define STATE_CHANGE_MEASUREMENT_MODE 3 // Get and set the desired measurement mode
 #define STATE_MEASURE_ADCS         4  // ADC measurements in progress
 #define STATE_ADC_VALUES_READY     5  // ADC measurements done
 #define STATE_AUTOGAIN_ADCS        6  // Find optimal gain for both ADCs
@@ -102,7 +104,7 @@ byte data_send[MSG_MAX_LENGTH];
 #define STATE_ERROR                9  // An error occurred
 uint16_t currentState = STATE_IDLE;   // Keeps track of the current state
 bool waitingForDataFromPC = false;    // Keeps track of whether we are in a state that is waiting for the PC to send something
-
+bool singleMeasurement = true;        // Decides if the Arduino continues to measure and return data or if it stops after doing so once
 
 
 
