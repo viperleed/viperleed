@@ -554,11 +554,6 @@ def readWoodsNotation(s, ucell):
                        "identified as:\n"+str(mat))
         logger.warning("SUPERLATTICE values do not round to "
                        "integer values. Check SUPERLATTICE parameter.")
-    # check whether unit cell follows convention
-    abbt = np.dot(np.linalg.inv(mat), np.transpose(ucell[:2, :2]))
-    if np.linalg.norm(abbt[0]) > np.linalg.norm(abbt[1]) + 1e-4:
-        # swap bulk vectors; -1 to keep handedness
-        mat = np.dot(np.array([[0, 1], [-1, 0]]), mat)
     return mat
 
 
