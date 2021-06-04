@@ -618,7 +618,7 @@ def refcalc_domains(rp):
             "weighted average over domain beams, using weights from last "
             "search result...")
     else:
-        weights = []
+        weights = None
         logger.info(
             "Reference calculations were done for all domains, but no "
             "area weights for the different domains are available yet. "
