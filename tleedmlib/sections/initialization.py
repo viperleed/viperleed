@@ -633,7 +633,7 @@ def init_domains(rp):
         logger.info("The following domains require new reference "
                     "calculations: "+", ".join([d.name for d in rr]))
         for dp in rp.domainParams:
-            for var in ["THEO_ENERGIES", "THETA", "PHI", "ivbeams"]:
+            for var in ["THEO_ENERGIES", "THETA", "PHI", "N_CORES", "ivbeams"]:
                 setattr(dp.rp, var, copy.deepcopy(getattr(rp, var)))
             if rp.TL_VERSION <= 1.6:  # not required since TensErLEED v1.61
                 dp.rp.LMAX[1] = rp.LMAX[1]
