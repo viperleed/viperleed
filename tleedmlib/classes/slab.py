@@ -528,6 +528,12 @@ class Slab:
         for el in del_elems:
             self.elements.remove(el)
 
+    def updateAtomNumbers(self):
+        """Updates atom oriN - should not happen normally, but necessary if
+        atoms get deleted."""
+        for (i, at) in enumerate(self.atlist):
+            at.oriN = i+1
+
     def initSites(self, rp):
         """Goes through the atom list and supplies them with appropriate
         SiteType objects, based on the SITE_DEF parameters from the supplied
@@ -535,11 +541,11 @@ class Slab:
         atlist = self.atlist[:]     # copy to not have any permanent changes
         atlist.sort(key=lambda atom: atom.oriN)
         sl = []
-        for el, sitedict in rp.SITE_DEF.items():
-            for sitename, sitelist in sitedict.items():
+        for el in rp.SITE_DEF:
+            for sitename in rp.SITE_DEF[el]:
                 newsite = tl.Sitetype(el, sitename)
                 sl.append(newsite)
-                for i in sitelist:
+                for i in rp.SITE_DEF[el][sitename]:
                     try:
                         if atlist[i-1].el != el:
                             logger.warning(
