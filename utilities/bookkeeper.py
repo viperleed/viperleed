@@ -69,7 +69,7 @@ def main():
             print("Bookkeeper: Found nothing to do. Exiting...")
             return 1
     # check whether history folder is there. If not, make one
-    if not os.path.isdir(histname) and not args.discard:
+    if not os.path.isdir(histname):
         try:
             os.mkdir(histname)
         except Exception:
