@@ -15,7 +15,14 @@ import re
 import scipy.spatial as sps
 import itertools
 
+try:
+    import ase
+    has_ase = True
+except Exception:
+    has_ase = False
+
 from viperleed.tleedmlib.base import (angle, rotMatrix, dist_from_line)
+from viperleed.tleedmlib.classes.atom import Atom
 import viperleed.tleedmlib as tl
 # from tleedmlib import DEFAULT
 
@@ -81,6 +88,7 @@ class Slab:
     """
     Contains unit cell, element information and atom coordinates. Also has a
     variety of convenience functions for manipulating and updating the atoms.
+    Slabs can be created from an ase.Atoms object using the create_from kwarg.
 
     Attributes
     ----------
@@ -151,7 +159,9 @@ class Slab:
         in the bulk.
     """
 
-    def __init__(self):
+    def __init__(self, ase_atoms=None):
+        global has_ase
+
         self.ucell = np.array([])
         self.elements = []
         self.chemelem = []
@@ -178,6 +188,26 @@ class Slab:
         self.bulkslab = None
         self.bulk_screws = []
         self.bulk_glides = []
+
+        if ase_atoms is None:
+            return
+        if not has_ase:
+            logger.warning("Slab creation from ase.Atoms not supported: "
+                           "Module ase not found.")
+            return
+        if type(ase_atoms) != ase.Atoms:
+            raise TypeError("Slab object must be created empty or from "
+                            "ase.Atoms, found unexpected type "
+                            + str(type(ase_atoms)))
+        # initialize from ase_atoms
+        self.ucell = np.transpose(ase_atoms.cell[:])
+        elems = [v.capitalize() for v in ase_atoms.get_chemical_symbols()]
+        self.n_per_elem = {k: elems.count(k) for k in set(elems)}
+        self.elements = list(self.n_per_elem.keys())
+        for i, (el, pos) in enumerate(zip(elems,
+                                          ase_atoms.get_scaled_positions())):
+            self.atlist.append(Atom(el, pos, i+1, self))
+        self.getCartesianCoordinates()
 
     def resetSymmetry(self):
         """Sets all symmetry information back to default values."""
