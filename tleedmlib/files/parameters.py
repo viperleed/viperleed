@@ -634,7 +634,8 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
             else:
                 setNumericalParameter(rpars, param, llist[0])
         elif param == 'FORTRAN_COMP':
-            if len(plist) <= 1 and llist[0].lower() in ["ifort", "gfortran"]:
+            if (len(plist) <= 1 and llist[0].lower() in ["ifort", "gfortran"]
+                    and len(llist) > 1):
                 rpars.getFortranComp(comp=llist[0].lower())
             elif (len(plist) > 1 and plist[1].lower() == "mpi"
                   and llist[0].lower() in ["mpifort", "mpiifort"]):
