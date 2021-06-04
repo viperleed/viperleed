@@ -292,7 +292,6 @@ def parabolaFit(rp, datafiles, r_best, x0=None, max_configs=0, **kwargs):
     if len(rc) < 100*rp.indyPars:
         return None, None
 
-    # starttime = timer()
     rfacs, configs = rc[:, 0].astype(float), rc[:, 1]
     localizeFactor = kwargs["localize"]
     if localizeFactor == 0:

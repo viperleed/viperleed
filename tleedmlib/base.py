@@ -23,6 +23,25 @@ logger = logging.getLogger("tleedm.base")
 #                 CLASSES                     #
 ###############################################
 
+class CustomLogFormatter(logging.Formatter):
+    """Logging Formatter for level-dependent message formatting"""
+    FORMATS = {
+        logging.DEBUG: "dbg: %(msg)s",
+        logging.INFO: "%(msg)s",
+        logging.WARNING: "# WARNING: %(msg)s",
+        logging.ERROR: "### ERROR ### in %(module)s:%(funcName)s:%(lineno)s\n"
+                       "# %(msg)s \n#############",
+        logging.CRITICAL: "### CRITICAL ### in %(module)s:%(funcName)s:"
+                          "%(lineno)s\n# %(msg)s \n################",
+        "DEFAULT": "%(msg)s",
+    }
+
+    def format(self, record):
+        log_fmt = self.FORMATS.get(record.levelno, self.FORMATS['DEFAULT'])
+        formatter = logging.Formatter(log_fmt)
+        return formatter.format(record)
+
+
 class BackwardsReader:
     """Simple class for reading a large file in reverse without having to read
     the entire file to memory.
@@ -123,6 +142,22 @@ def fortranContLine(s):
         s = s[(limit-6):]
     o += s
     return o
+
+
+def get_elapsed_time_str(t):
+    """
+    Takes float time in seconds, returns a formatted string giving the elapsed
+    times in minutes, hours or seconds, as appropriate.
+    """
+    if t >= 3600:
+        elapsedTimeStr = (str(int(t/3600)) + ":"+(str(int(t/60) % 60)).zfill(2)
+                          + " hours")
+    elif t >= 60:
+        elapsedTimeStr = (str(int(t/60)) + ":"+(str(int(t) % 60)).zfill(2)
+                          + " minutes")
+    else:
+        elapsedTimeStr = str(round(t, 2)) + " seconds"
+    return elapsedTimeStr
 
 
 def readIntRange(s):

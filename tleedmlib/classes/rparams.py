@@ -13,6 +13,7 @@ import logging
 import os
 import random
 import shutil
+from timeit import default_timer as timer
 
 try:
     import matplotlib.pyplot as plt
@@ -162,17 +163,18 @@ class Rparams:
         self.TENSOR_INDEX = None  # default: pick highest in Tensors folder
         self.TENSOR_OUTPUT = []  # per layer: write Tensor output? (0/1)
         self.THEO_ENERGIES = [-1, -1, -1]
-        # default: [20, 800, 2], initialized in tleedm.py / runSection / INIT
+        # default: [20, 800, 2], initialized in section INIT
         self.THETA = 0.0        # from BEAM_INCIDENCE
         self.TL_VERSION = 0.    # requested TensErLEED version
         self.T_EXPERIMENT = None
         self.T_DEBYE = None
-        self.V0_IMAG = 4.5               # !!! CHOOSE BETTER DEFAULT?
+        self.V0_IMAG = 4.5
         self.V0_REAL = "default"   # 'default' will read from PHASESHIFTS
         self.V0_Z_ONSET = 1.0
         self.VIBR_AMP_SCALE = []   # read as list of strings, interpret later
 
         # RUN VARIABLES
+        self.starttime = timer()
         self.workdir = os.getcwd()  # MAIN WORK DIRECTORY; where to find files
         self.searchConvInit = {
             "gaussian": None, "dgen": {"all": None, "best": None, "dec": None}}
