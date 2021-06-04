@@ -104,7 +104,7 @@ byte data_send[MSG_MAX_LENGTH];
 #define STATE_ERROR                9  // An error occurred
 uint16_t currentState = STATE_IDLE;   // Keeps track of the current state
 bool waitingForDataFromPC = false;    // Keeps track of whether we are in a state that is waiting for the PC to send something
-bool continuousMeasurement = true;        // Decides if the Arduino continues to measure and return data or if it stops after doing so once
+bool continuousMeasurement = false;   // Decides if the Arduino continues to measure and return data or if it stops after doing so once
 
 
 
