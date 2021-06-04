@@ -142,7 +142,7 @@ def readPARAMETERS(filename='PARAMETERS'):
     try:
         rf = open(filename, 'r')
     except FileNotFoundError:
-        logger.error("PARAMETERS not found.")
+        logger.warning("PARAMETERS file not found.")
         raise
     # read PARAMETERS:
     rpars = tl.Rparams()
@@ -1383,7 +1383,8 @@ def modifyPARAMETERS(rp, modpar, new="", comment="", path="",
     file = os.path.join(path, "PARAMETERS")
     oriname = "PARAMETERS_ori_"+rp.timestamp
     ori = os.path.join(path, oriname)
-    if oriname not in rp.manifest and not suppress_ori:
+    if (oriname not in rp.manifest and not suppress_ori
+            and os.path.isfile(file)):
         try:
             shutil.copy2(file, ori)
         except Exception:
@@ -1399,6 +1400,8 @@ def modifyPARAMETERS(rp, modpar, new="", comment="", path="",
     try:
         with open(file, "r") as rf:
             plines = rf.readlines()
+    except FileNotFoundError:
+        plines = []
     except Exception:
         logger.error("Error reading PARAMETERS file.")
         raise

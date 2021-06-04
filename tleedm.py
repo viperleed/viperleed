@@ -22,6 +22,7 @@ for import_path in (cd, vpr_path):
     if import_path not in sys.path:
         sys.path.append(import_path)
 
+from viperleed.tleedmlib import Rparams
 from viperleed.tleedmlib.base import CustomLogFormatter
 from viperleed.tleedmlib.sections.run_sections import section_loop
 from viperleed.tleedmlib.sections.cleanup import prerun_clean, cleanup
@@ -33,9 +34,28 @@ from viperleed.tleedmlib.files.poscar import readPOSCAR
 logger = logging.getLogger("tleedm")
 
 
-def run():
+def run_tleedm(system_name="", console_output=True, slab=None,
+               preset_params={}):
     """
-    Runs the TensErLEED Manager.
+    Runs the TensErLEED Manager. By default, a PARAMETERS and a POSCAR file
+    are expected, but can be replaced by passing the 'slab' and/or
+    'present_params' kwargs.
+
+    Parameters
+    ----------
+    system_name : str, optional
+        Used as a comment in some output file headers
+    console_output : bool, optional
+        If False, will not add a logging.StreamHandler. Output will only be
+        printed to the log file.
+    slab : Slab, optional
+        Start from a pre-existing slab, instead of reading from POSCAR.
+    preset_params : dict, optional
+        Parameters to add to the Rparams object after PARAMETERS has been read.
+        Keys should be attributes of Rparam. Values in preset_params will
+        overwrite values read from the PARAMETERS file, if present in both. If
+        no PARAMETERS file is read, parameters will be read exclusively from
+        present_params.
 
     Returns
     -------
@@ -55,10 +75,11 @@ def run():
     logFormatter = CustomLogFormatter()
     fileHandler = logging.FileHandler(logname, mode="w")
     fileHandler.setFormatter(logFormatter)
-    consoleHandler = logging.StreamHandler()
-    consoleHandler.setFormatter(logFormatter)
-    logger.addHandler(consoleHandler)
     logger.addHandler(fileHandler)
+    if console_output:
+        consoleHandler = logging.StreamHandler()
+        consoleHandler.setFormatter(logFormatter)
+        logger.addHandler(consoleHandler)
 
     logger.info("Starting new log: " + logname + "\nTime of execution (UTC): "
                 + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
@@ -69,6 +90,13 @@ def run():
     tmpmanifest = ["SUPP", "OUT", logname]
     try:
         rp = readPARAMETERS()
+    except FileNotFoundError:
+        if not preset_params:
+            logger.error("No PARAMETERS file found, and no preset parameters "
+                         "passed. Execution will stop.")
+            cleanup(tmpmanifest)
+            return 2
+        rp = Rparams()
     except Exception:
         logger.error("Exception while reading PARAMETERS file", exc_info=True)
         cleanup(tmpmanifest)
@@ -80,13 +108,13 @@ def run():
         domains = True
 
     if domains:  # no POSCAR in main folder for domain searches
-        sl = None
-    else:
+        slab = None
+    elif slab is None:
         if os.path.isfile(os.path.join(".", "POSCAR")):
             poscarfile = os.path.join(".", "POSCAR")
             logger.info("Reading structure from file POSCAR")
             try:
-                sl = readPOSCAR(filename=poscarfile)
+                slab = readPOSCAR(filename=poscarfile)
             except Exception:
                 logger.error("Exception while reading POSCAR", exc_info=True)
                 cleanup(tmpmanifest)
@@ -96,7 +124,7 @@ def run():
             cleanup(tmpmanifest)
             return 2
 
-        if not sl.preprocessed:
+        if not slab.preprocessed:
             logger.info("The POSCAR file will be processed and overwritten. "
                         "Copying the original POSCAR to POSCAR_user...")
             try:
@@ -108,7 +136,7 @@ def run():
                 cleanup(tmpmanifest)
                 return 2
     try:
-        interpretPARAMETERS(rp, slab=sl)
+        interpretPARAMETERS(rp, slab=slab)
         if rp.LOG_DEBUG:
             logger.setLevel(logging.DEBUG)
             logger.debug("PARAMETERS file was read successfully")
@@ -118,15 +146,23 @@ def run():
         return 2
     rp.timestamp = timestamp
     rp.manifest = tmpmanifest
+    for p in preset_params:
+        try:
+            setattr(rp, p, preset_params[p])
+        except Exception:
+            logger.warning("Error applying preset parameter {}: ".format(p),
+                           exc_info=True)
     if not domains:
-        sl.fullUpdate(rp)   # gets PARAMETERS data into slab
+        slab.fullUpdate(rp)   # gets PARAMETERS data into slab
         rp.fileLoaded["POSCAR"] = True
-        if sl.preprocessed:
+        if slab.preprocessed:
             rp.SYMMETRY_FIND_ORI = False
 
-    # get name of parent folder, use as system name (for file headers):
-    rp.systemName = os.path.basename(os.path.abspath(os.path.join(os.getcwd(),
-                                                                  os.pardir)))
+    rp.systemName = system_name
+    if not rp.systemName:
+        # use name of parent folder
+        rp.systemName = os.path.basename(os.path.abspath(
+            os.path.join(os.getcwd(), os.pardir)))
     # check if halting condition is already in effect:
     if rp.halt >= rp.HALTING:
         logger.info("Halting execution...")
@@ -137,9 +173,9 @@ def run():
 
     prerun_clean(rp, logname)
 
-    return section_loop(rp, sl)
+    return section_loop(rp, slab)
 
 
 if __name__ == "__main__":
     multiprocessing.freeze_support()
-    run()
+    run_tleedm()
