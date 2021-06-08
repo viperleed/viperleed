@@ -600,14 +600,12 @@ def writeAUXGEO(sl, rp):
         ol = ol.ljust(26)
         output += (ol + '0/1: Tensor output is required for this layer '
                    '(TENSOR_OUTPUT)\n')
-        i = 1
-        for atom in layer.atlist:
-            # ol = 'T_'+atom.el+str(atom.oriN)
-            ol = 'T_'+str(atom.oriN)
-            ol = ol.ljust(26)
-            output += (ol + 'Tensor file name, current layer, sublayer '+str(i)
-                       + '\n')
-            i += 1
+        if rp.TENSOR_OUTPUT[layer.num] == 0:
+            continue   # don't write the Tensor file names
+        for i, atom in enumerate(layer.atlist):
+            ol = ('T_'+str(atom.oriN)).ljust(26)
+            output += (ol + 'Tensor file name, current layer, sublayer '
+                       + str(i+1) + '\n')
     output += ('--------------------------------------------------------------'
                '-----\n')
     output += ('--- end geometrical input                                     '
