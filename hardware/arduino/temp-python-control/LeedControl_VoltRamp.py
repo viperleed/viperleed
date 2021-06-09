@@ -114,6 +114,29 @@ def encode_high_bytes(in_bytes):
             out_bytes = out_bytes + in_bytes[i].to_bytes(1, sign)
     return(out_bytes, n)
 
+def bytes_to_float(bytes_in):
+    """Convert four bytes to float.
+    
+    Parameters
+    ----------
+    bytes_in : bytes or bytearray
+        Should have length 4. It is assumed that the bytes are in
+        big-endian format.
+    
+    Returns
+    -------
+    float
+    """
+    if (not hasattr(bytes_in, '__len__')
+            or not isinstance(bytes_in, (bytes, bytearray))):
+        raise TypeError("bytes_to_float: invalid type "
+                        f"{type(bytes_in).__name__}. Expected 'bytes',"
+                        "or 'bytearray'")
+    if len(bytes_in) != 4:
+        raise ValueError("bytes_to_float: Invalid number of bytes "
+                         f"({len(bytes_in)}). Expected 4.")
+    return struct.unpack(">f", bytes_in)[0]
+    
 #======================================
 def adc_measure_only():
     """
@@ -275,6 +298,7 @@ def initialise_adcs(arduino_config):
     send_to_arduino(PC_SET_UP_ADCS)
     message = []
     measurement_n = int(arduino_config['measurement_counter']).to_bytes(2, sign)
+    #print(measurement_n) prints b'\x00\n'
     message.append(measurement_n[0])
     message.append(measurement_n[1])
     for key in ('adc0_channel', 'adc1_channel'):
@@ -343,12 +367,18 @@ def set_voltage_and_measure(energy, settle_time = 0):
 
     Parameter
     ----------
-    energy: float, int
+    energy: float
+         Nominal electron energy in electronvolts to be set
     settle_time: int
     """
     v_ref_dac = config.getfloat('measurement_settings', 'v_ref_dac')
     PC_SET_VOLTAGE = config.getint('communication_bytes', 'PC_SET_VOLTAGE')
-    dac_value_temp = int(round(energy * 65536/(v_ref_dac*2)))
+    dac_out_vs_nominal_energy = 10/1000  # 10V / 1000 eV
+    ouput_gain = 4  # Gain of the output stage on board
+    conversion_factor = dac_out_vs_nominal_energy * 65536 / (v_ref_dac * ouput_gain)
+    
+    # TODO: nominal energy to actual energy after calibration
+    dac_value_temp = int(round(energy * conversion_factor))
     if(dac_value_temp >= 65536):
         dac_value_temp = 65535
     dac_send = dac_value_temp.to_bytes(2,sign) + settle_time.to_bytes(2,sign)
@@ -376,7 +406,8 @@ def start_autogain():
 
     if receive_from_arduino() == PC_OK:
         # print("Gain found =",pow(2,int(receive_from_arduino())))#for debugging, can be deleted
-        print("Gain found =", int(receive_from_arduino()))
+        # print("Gain found =", int(receive_from_arduino()))
+        pass
     else:
         identify_error()
         arduino_port.close()
@@ -418,7 +449,7 @@ def TUI():
     startenergy, endenergy, deltaenergy: float
     """
     while True:
-        max_energy = 2*config.getfloat('measurement_settings', 'v_ref_dac')
+        max_energy = 4*config.getfloat('measurement_settings', 'v_ref_dac')
         start_energy = -1
         while start_energy < 0 or start_energy > max_energy:
             start_energy = float(input(
@@ -495,9 +526,7 @@ def calibrate_adcs(arduino_config):
     for key in ('update_rate', 'adc0_channel', 'adc1_channel'):
         message.append(int(arduino_config[key]))
     send_to_arduino(message)
-    msg = receive_from_arduino()
-    print(msg, PC_OK)
-    if msg == PC_OK:
+    if receive_from_arduino() == PC_OK:
         print("ADC calibration: DONE!")
         print("-----------------------")
     else:
@@ -539,10 +568,16 @@ def prepare_for_measurement(configuration_section):
     calibrate_adcs(adc_config)
     initialise_adcs(adc_config)
     set_voltage_and_measure(start_energy, dac_first_settletime)
+    receive_from_arduino()
+    receive_from_arduino()
+    receive_from_arduino()
+    adc0_gain = receive_from_arduino()
+    adc1_gain = receive_from_arduino()
+    #tmp
     start_autogain()
 
 def measure_iv_video():
-
+    prepare_for_measurement('iv_movie_configuration')
     PC_RESET = config.getint('communication_bytes', 'PC_RESET')
     dac_settletime = config.getint('measurement_settings', 'dac_settle_time')
     path = config['measurement_settings']['path']
@@ -572,7 +607,7 @@ def measure_iv_video():
     if npoints <= 0:
         print("Please check the starting and ending energy and the stepsize.")
         raise RuntimeError("Number of steps could not be calculated!")
-    nominal_energy_csv = np.linspace(start_energy, end_energy, npoints)
+    nominal_energy_csv = np.linspace(start_energy, end_energy, npoints+1)
 
     # This keyboard interrupt thing will not exist. Process interruption will
     # be handled with a signal
@@ -599,9 +634,9 @@ def measure_iv_video():
             #print('Gain: %i \nDAC-Value: %f' % (int(receive_from_arduino()),
             #                                   actual_energy))
             print('nDAC-Value: %f' % (actual_energy))
-            adc0_value = receive_from_arduino()
-            adc1_value = receive_from_arduino()
-            adc2_value = receive_from_arduino()
+            adc0_value = bytes_to_float(receive_from_arduino())
+            adc1_value = bytes_to_float(receive_from_arduino())
+            adc2_value = bytes_to_float(receive_from_arduino())
             #adc0 is ADC0, adc1 is ADC1 and adc2 is the LM35 in the Arduino code
             print("ADC0_VAlUE:", adc0_value*I0_conversion_factor)
             print("ADC1_VAlUE:", adc1_value)
@@ -630,12 +665,144 @@ def measure_iv_video():
     # before terminating, pack all the necessary data into a single zip file
     # pack_measurements()
 
+def test_iv_video():
+    prepare_for_measurement('iv_movie_configuration')
+    PC_RESET = config.getint('communication_bytes', 'PC_RESET')
+    dac_settletime = config.getint('measurement_settings', 'dac_settle_time')
+    dac_value_end = config.getfloat('measurement_settings', 'dac_value_end')
+    I0_conversion_factor = config.getint('leed_hardware',
+                                         'I0_conversion_factor')
+
+    start_energy = config.getfloat('measurement_settings', 'start_energy')
+    delta_energy = config.getfloat('measurement_settings', 'delta_energy')
+    end_energy = config.getfloat('measurement_settings', 'end_energy')
+
+    adc0_value_csv = []
+    adc1_value_csv = []
+    adc2_value_csv = []
+    adc0_gain_csv = []
+    adc0_int_csv = []
+    timestamp = []
+    timestart = time.time()
+
+    npoints = int((end_energy-start_energy)/delta_energy)
+    if npoints <= 0:
+        print("Please check the starting and ending energy and the stepsize.")
+        raise RuntimeError("Number of steps could not be calculated!")
+    nominal_energy_csv = np.linspace(start_energy, end_energy, npoints+1)
+    
+    for actual_energy in nominal_energy_csv:
+        set_voltage_and_measure(actual_energy, dac_settletime)
+        adc0_value = bytes_to_float(receive_from_arduino())
+        adc1_value = bytes_to_float(receive_from_arduino())
+        adc2_value = bytes_to_float(receive_from_arduino())
+        adc0_gain = receive_from_arduino()
+        adc1_gain = receive_from_arduino()
+        #tmp
+        print(actual_energy)
+        print("ADC0_VAlUE:", adc0_value*I0_conversion_factor)
+        print("ADC1_VAlUE:", adc1_value)
+        print("ADC2_VAlUE:", adc2_value,
+              " t = ", round(1000*time.time()))
+        print("ADC0_Gain:", adc0_gain)
+        print("ADC1_Gain:", adc1_gain)
+        #print("ADC1_Gain:", adc0_int)
+        print("#########################")
+        adc0_value_csv.append(adc0_value*I0_conversion_factor)
+        adc1_value_csv.append(adc1_value)
+        adc2_value_csv.append(adc2_value)
+        adc0_gain_csv.append(adc0_gain)
+        #adc0_int_csv.append(adc0_int)
+        time_temp = time.time() - timestart
+        timestamp.append(time_temp)
+
+    set_voltage_and_measure(dac_value_end)
+    _, (ax1, ax2) = plt.subplots(2, 1)
+    ax1.set_ylabel('adc0_value')
+    ax1.set_xlabel('energy')
+    ax2.set_ylabel('adc0_gain')
+    ax2.set_xlabel('energy')
+    ax1.plot(nominal_energy_csv, adc0_value_csv, '.')
+    ax2.plot(nominal_energy_csv, adc0_gain_csv, '.')
+    plt.show()
+
+def change_measurement_mode(measurement_mode):
+    """
+    Send measurement mode to arduino, which decides if the arduino will do
+    continuous measurememts or not.
+    """
+    PC_CHANGE_MEASUREMENT_MODE = config.getint('communication_bytes',
+                                               'PC_CHANGE_MEAS_MODE')
+    PC_ERROR = config.getint('communication_bytes', 
+                             'PC_ERROR').to_bytes(1, sign)
+    send_to_arduino(PC_CHANGE_MEASUREMENT_MODE)
+    message = []
+    use_this_mode = config.getint('measurement_settings',
+                                  measurement_mode)
+    message.append(use_this_mode)
+    measurement_time = config.getint('measurement_settings',
+                                     'measurement_time').to_bytes(2, sign)
+    message.append(measurement_time[0])
+    message.append(measurement_time[1])
+    print(message)
+    send_to_arduino(message)
+    msg = receive_from_arduino()
+    while (msg != PC_ERROR) and (msg != PC_OK):
+        msg = receive_from_arduino()
+    if msg == PC_OK:
+        print("Measurement mode has been set.")
+    else:
+        identify_error()
+        arduino_port.close()
+        raise IOError("Setting the measurement mode failed.")
+
+def quick_measurements():
+    prepare_for_measurement('iv_movie_configuration')
+    PC_RESET = config.getint('communication_bytes', 'PC_RESET')
+    dac_settletime = config.getint('measurement_settings', 'dac_settle_time')
+    dac_value_end = config.getfloat('measurement_settings', 'dac_value_end')
+    I0_conversion_factor = config.getint('leed_hardware',
+                                         'I0_conversion_factor')
+    continuous_measurement_loops = config.getint('measurement_settings', 
+                                                 'continuous_measurement_loops')
+    start_energy = config.getfloat('measurement_settings', 'start_energy')
+
+    adc0_value_csv = []
+    adc1_value_csv = []
+    adc2_value_csv = []
+    timestamp = []
+    timestart = time.time()
+
+    change_measurement_mode('continuous_measurement_yes')
+    set_voltage_and_measure(start_energy, dac_settletime)
+
+    i = 1
+    while i <= continuous_measurement_loops:
+        i += 1
+        adc0_value = bytes_to_float(receive_from_arduino())
+        adc1_value = bytes_to_float(receive_from_arduino())
+        adc2_value = bytes_to_float(receive_from_arduino())
+        print("ADC0_VAlUE:", adc0_value*I0_conversion_factor)
+        print("ADC1_VAlUE:", adc1_value)
+        print("ADC2_VAlUE:", adc2_value,
+              " t = ", round(1000*time.time()))
+        print("#########################")
+        adc0_value_csv.append(adc0_value*I0_conversion_factor)
+        adc1_value_csv.append(adc1_value)
+        adc2_value_csv.append(adc2_value)
+        time_temp = time.time() - timestart
+        timestamp.append(time_temp)
+
+    change_measurement_mode('continuous_measurement_no')
+    #set_voltage_and_measure(dac_value_end)
+
 def main():
     global arduino_port
-
-    prepare_for_measurement('iv_movie_configuration')
+    #prepare_for_measurement('iv_movie_configuration')
     #measure_iv_video()
-
+    test_iv_video()
+    #quick_measurements()
+    
     arduino_port.close()
     print('Arduino Disconnected')
 
@@ -702,11 +869,11 @@ def calibrate_real_energy_scale():
     if npoints <= 0:
         print("Please check the starting and ending energy and the stepsize.")
         raise RuntimeError("Number of steps could not be calculated!")
-    nominal_energy_csv = np.linspace(start_energy, end_energy, npoints)
+    nominal_energy_csv = np.linspace(start_energy, end_energy, npoints+1)
 
     for actual_energy in nominal_energy_csv:
         set_voltage_and_measure(actual_energy, dac_settletime)
-        adc0_value = receive_from_arduino()
+        adc0_value = bytes_to_float(receive_from_arduino())
         print("ADC0_VAlUE:", adc0_value)
         print("#########################")
         true_energy_csv.append(adc0_value)
@@ -733,26 +900,3 @@ def calibrate_real_energy_scale():
              '.')
     #plt.ylim(0, 10)
     plt.show()
-
-def change_measurement_mode(measurement_mode):
-    """
-    Send measurement mode to arduino, which decides if the arduino will do
-    continuous measurememts or not.
-    """
-    PC_CHANGE_MEASUREMENT_MODE = config.getint('communication_bytes',
-                                               'PC_CHANGE_MEAS_MODE')
-    send_to_arduino(PC_CHANGE_MEASUREMENT_MODE)
-    message = []
-    use_this_mode = config.getint('measurement_settings', measurement_mode)
-    message.append(use_this_mode)
-    measurement_time = config.getint('measurement_settings',
-                                     'measurement_time').to_bytes(2, sign)
-    message.append(measurement_time[0])
-    message.append(measurement_time[1])
-    send_to_arduino(message)
-    if receive_from_arduino() == PC_OK:
-        print("Measurement mode has been set.")
-    else:
-        identify_error()
-        arduino_port.close()
-        raise IOError("Setting the measurement mode failed.")

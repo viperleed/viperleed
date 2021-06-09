@@ -381,6 +381,8 @@ bool decodeAndCheckMessage(){
         case PC_SET_UP_ADCS: break;
         case PC_RESET: break;
         case PC_SET_VOLTAGE: break;
+        case PC_MEASURE_ONLY: break;
+        case PC_CHANGE_MEAS_MODE: break;
         default:
             raise(ERROR_MSG_UNKNOWN);
             return false;
@@ -523,6 +525,7 @@ void triggerMeasurements() {
 
     // Prepare the system for measurement
     resetMeasurementData();
+    initialTime = millis();
     currentState = STATE_MEASURE_ADCS;
 }
 
@@ -832,7 +835,7 @@ void prepareADCsForMeasurement(){
     // (2) channels acceptable?
     for (byte i = 0; i < N_MAX_ADCS_ON_PCB; i++){
         byte channel = data_received[i+2];
-        if (channel != AD7705_CH0 or channel != AD7705_CH1){
+        if (channel != AD7705_CH0 and channel != AD7705_CH1){
             raise(ERROR_MSG_DATA_INVALID);
             return;
         }
@@ -1034,7 +1037,7 @@ void sendMeasuredValues(){
     Msg to PC
     ---------
     Three serial messages, each contains 4 bytes (+encoding) with
-    values from LM35, ADC#0, ADC#1 (in this order)
+    values from ADC#0, ADC#1, LM35 (in this order)
 
     Goes to state
     -------------
@@ -1056,14 +1059,24 @@ void sendMeasuredValues(){
     //       containing 3*4 significant bytes (+ encoding).
     //       In this case, the worst-case scenario message length would be
     //       N_MAX_MEAS*4(bytes)*2(encoding) + 3 (MSG_START, MSG_END, length)
-    // TODO: check if endianness is correct, may need to switch it because Arduino uses litte endianness
     getFloatMeasurements();
-    encodeAndSend(fDataOutput[0].asBytes, 4);
-    encodeAndSend(fDataOutput[1].asBytes, 4);
-    encodeAndSend(fDataOutput[2].asBytes, 4);
+    
+    // Since the ATMega32u4 (Arduino Micro) uses little-endian memory layout, we
+    // have flip the bytes over to maintain consistency of our messages, which
+    // are in big-endian order 
+    byte littleToBigEndian[4];
+    for (int iADC = 0; iADC < N_MAX_ADCS_ON_PCB+1; iADC++){  // external ADCs + LM35
+        for (int i = 0; i < 4; i++){
+          littleToBigEndian[i] = fDataOutput[iADC].asBytes[3-i];
+          }
+        encodeAndSend(littleToBigEndian, 4);
+    }
+    encodeAndSend(adc0Gain);
+    encodeAndSend(adc1Gain);
     resetMeasurementData();
     if (continuousMeasurement) {
         currentState = STATE_MEASURE_ADCS;
+        initialTime = millis();
     }
     else {
         currentState = STATE_IDLE;
@@ -1273,6 +1286,7 @@ void reset(){
     numMeasurementsToDo = 1;
     numMeasurementsToDoBackup = 1;
     resetMeasurementData();
+    ContinuousMeasurementInterval = 0;
 
     // Rather than clearing the calibration data, we can just
     // reset the flags marking whether channels were calibrated
@@ -1842,6 +1856,12 @@ void changeMeasurementMode() {
       raise(ERROR_MSG_DATA_INVALID);
       return;
     }
+    
+    // This is not being used yet. If we want to include a time to wait in between 
+    // measurements we need to implement this in the sendMeasuredValues() function. 
+    // We would do this there because we decided to never call the trigger function. 
+    // Possibly a TODO.
+    ContinuousMeasurementInterval = data_received[1] << 8 | data_received[2];
 
     encodeAndSend(PC_OK);
     currentState = STATE_IDLE;

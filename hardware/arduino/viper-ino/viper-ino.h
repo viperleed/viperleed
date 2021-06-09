@@ -196,10 +196,11 @@ struct analogToDigitalConverter {
 } externalADCs[N_MAX_ADCS_ON_PCB]; */
 
 // Measurements
-uint16_t numMeasurementsToDo = 1;         // No. of ADC measurements to do before measurement is considered over
-uint16_t numMeasurementsToDoBackup = 1;   // Copy of the previous one, used to restore the previous value after auto-gain is done
-uint16_t numMeasurementsDone;             // Counter for the number of ADC measurements done so far
-int32_t  summedMeasurements[N_MAX_MEAS];  // Measurements of ADCs and LM35 are summed up here
+uint16_t numMeasurementsToDo = 1;           // No. of ADC measurements to do before measurement is considered over
+uint16_t numMeasurementsToDoBackup = 1;     // Copy of the previous one, used to restore the previous value after auto-gain is done
+uint16_t numMeasurementsDone;               // Counter for the number of ADC measurements done so far
+int32_t  summedMeasurements[N_MAX_MEAS];    // Measurements of ADCs and LM35 are summed up here
+uint16_t ContinuousMeasurementInterval = 0; // Time between measurements if continuous-measurement mode is on
 
 floatOrBytes fDataOutput[N_MAX_MEAS];     // Measurements in physical units  // TODO: rename
 
