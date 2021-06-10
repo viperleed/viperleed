@@ -1071,8 +1071,6 @@ void sendMeasuredValues(){
           }
         encodeAndSend(littleToBigEndian, 4);
     }
-    encodeAndSend(adc0Gain);
-    encodeAndSend(adc1Gain);
     resetMeasurementData();
     if (continuousMeasurement) {
         currentState = STATE_MEASURE_ADCS;
@@ -1182,7 +1180,6 @@ void findOptimalADCGains(){
     setAllADCgainsAndCalibration();
     if (currentState == STATE_ERROR)   // Some channel was not calibrated
         return;
-
     encodeAndSend(PC_OK);
     currentState = STATE_IDLE;
 }
@@ -1603,13 +1600,13 @@ void makeAndSumMeasurements() {
         }   // this one first while we probably have to wait for the others
     if (hardwareDetected.asInt & ADC_0_PRESENT){
         measurement = AD7705waitAndReadData(CS_ADC_0, adc0Channel);
-        checkMeasurementInADCRange(adc0Gain, &adc0ShouldDecreaseGain,
+        checkMeasurementInADCRange(&adc0Gain, &adc0ShouldDecreaseGain,
                                    measurement, adc0RipplePP);
         summedMeasurements[0] += measurement;
         }
     if (hardwareDetected.asInt & ADC_1_PRESENT){
         measurement = AD7705waitAndReadData(CS_ADC_1, adc1Channel);
-        checkMeasurementInADCRange(adc1Gain, &adc1ShouldDecreaseGain,
+        checkMeasurementInADCRange(&adc1Gain, &adc1ShouldDecreaseGain,
                                    measurement, adc1RipplePP);
         summedMeasurements[1] += measurement;
         }
@@ -1617,7 +1614,7 @@ void makeAndSumMeasurements() {
 }
 
 
-void checkMeasurementInADCRange(byte gain, bool* adcShouldDecreaseGain,
+void checkMeasurementInADCRange(byte* gain, bool* adcShouldDecreaseGain,
                                 int16_t adcValue, int16_t ripple){    // The call to this function would be much easier having externalADCs, as then we would just pass the index of the ADC in the externalADCs array
     /**
     Check whether the (signed) value read is approaching
@@ -1660,9 +1657,9 @@ void checkMeasurementInADCRange(byte gain, bool* adcShouldDecreaseGain,
     Stays unchanged
         Otherwise
     */
-    if((abs(adcValue) + abs(ripple>>gain)) > ADC_RANGE_THRESHOLD
-       && (gain > 0)
-       && !*adcShouldDecreaseGain){
+    if(abs(adcValue) > (ADC_RANGE_THRESHOLD - abs(ripple>>*gain))
+       && (*gain > 0)
+       && !(*adcShouldDecreaseGain)){
         // The measured value is above the "saturation" threshold,
         // but not yet at true saturation, which would make the
         // measured value completely wrong. Defer the decrease of
@@ -1675,11 +1672,10 @@ void checkMeasurementInADCRange(byte gain, bool* adcShouldDecreaseGain,
         //     as large as the one used in findOptimalADCGains()
         *adcShouldDecreaseGain = true;
     }
-
-    if(((adcValue^=8000) == ADC_POSITIVE_SATURATION)
-       || ((adcValue^=8000) == ADC_NEGATIVE_SATURATION)){
-        if(gain > 0){
-            gain--;
+    
+    if(abs(adcValue) >= ADC_SATURATION){
+        if(*gain > 0){
+            (*gain)--;
             setAllADCgainsAndCalibration();
             if (currentState == STATE_ERROR)   // Some channel was not calibrated
                 return;
@@ -1866,7 +1862,6 @@ void changeMeasurementMode() {
     encodeAndSend(PC_OK);
     currentState = STATE_IDLE;
 }
-
 
 
 /** -------------------------- ARDUINO UTILITIES --------------------------- **/

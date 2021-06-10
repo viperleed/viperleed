@@ -403,7 +403,6 @@ def start_autogain():
     PC_AUTOGAIN = config.getint('communication_bytes', 'PC_AUTOGAIN')
     send_to_arduino(PC_AUTOGAIN)
     print("Autogain: IN PROCESS...")
-
     if receive_from_arduino() == PC_OK:
         # print("Gain found =",pow(2,int(receive_from_arduino())))#for debugging, can be deleted
         # print("Gain found =", int(receive_from_arduino()))
@@ -571,9 +570,6 @@ def prepare_for_measurement(configuration_section):
     receive_from_arduino()
     receive_from_arduino()
     receive_from_arduino()
-    adc0_gain = receive_from_arduino()
-    adc1_gain = receive_from_arduino()
-    #tmp
     start_autogain()
 
 def measure_iv_video():
@@ -680,8 +676,6 @@ def test_iv_video():
     adc0_value_csv = []
     adc1_value_csv = []
     adc2_value_csv = []
-    adc0_gain_csv = []
-    adc0_int_csv = []
     timestamp = []
     timestart = time.time()
 
@@ -693,37 +687,41 @@ def test_iv_video():
     
     for actual_energy in nominal_energy_csv:
         set_voltage_and_measure(actual_energy, dac_settletime)
-        adc0_value = bytes_to_float(receive_from_arduino())
+        print(actual_energy)
+        data = receive_from_arduino()
+        if len(data) == 1:
+           identify_error()
+           break
+        else:
+            adc0_value = bytes_to_float(data)
         adc1_value = bytes_to_float(receive_from_arduino())
         adc2_value = bytes_to_float(receive_from_arduino())
-        adc0_gain = receive_from_arduino()
-        adc1_gain = receive_from_arduino()
-        #tmp
-        print(actual_energy)
         print("ADC0_VAlUE:", adc0_value*I0_conversion_factor)
         print("ADC1_VAlUE:", adc1_value)
         print("ADC2_VAlUE:", adc2_value,
               " t = ", round(1000*time.time()))
-        print("ADC0_Gain:", adc0_gain)
-        print("ADC1_Gain:", adc1_gain)
-        #print("ADC1_Gain:", adc0_int)
         print("#########################")
         adc0_value_csv.append(adc0_value*I0_conversion_factor)
         adc1_value_csv.append(adc1_value)
         adc2_value_csv.append(adc2_value)
-        adc0_gain_csv.append(adc0_gain)
-        #adc0_int_csv.append(adc0_int)
         time_temp = time.time() - timestart
         timestamp.append(time_temp)
 
     set_voltage_and_measure(dac_value_end)
-    _, (ax1, ax2) = plt.subplots(2, 1)
+    
+    fit_polynomial = Polynomial.fit(nominal_energy_csv, adc0_value_csv, 5)
+    print(fit_polynomial, flush=True)
+    fig, (ax1, ax2) = plt.subplots(2, 1)
     ax1.set_ylabel('adc0_value')
     ax1.set_xlabel('energy')
-    ax2.set_ylabel('adc0_gain')
-    ax2.set_xlabel('energy')
     ax1.plot(nominal_energy_csv, adc0_value_csv, '.')
-    ax2.plot(nominal_energy_csv, adc0_gain_csv, '.')
+    ax1.plot(nominal_energy_csv, fit_polynomial(nominal_energy_csv), '-')
+    
+    ax2.set_ylabel('residuals')
+    ax2.set_xlabel('true energy')
+    ax2.plot(nominal_energy_csv,
+             np.subtract(fit_polynomial(nominal_energy_csv), adc0_value_csv),
+             '.')
     plt.show()
 
 def change_measurement_mode(measurement_mode):
@@ -774,7 +772,7 @@ def quick_measurements():
     timestart = time.time()
 
     change_measurement_mode('continuous_measurement_yes')
-    set_voltage_and_measure(start_energy, dac_settletime)
+    set_voltage_and_measure(start_energy, 0)
 
     i = 1
     while i <= continuous_measurement_loops:
@@ -794,14 +792,30 @@ def quick_measurements():
         timestamp.append(time_temp)
 
     change_measurement_mode('continuous_measurement_no')
-    #set_voltage_and_measure(dac_value_end)
+    set_voltage_and_measure(dac_value_end)
+    
+    times = range(continuous_measurement_loops)
+    fit_polynomial = Polynomial.fit(times, adc0_value_csv, 1)
+    print(fit_polynomial, flush=True)
+    fig, (ax1, ax2) = plt.subplots(2, 1)
+    ax1.set_ylabel('adc0_value')
+    ax1.set_xlabel('energy')
+    ax1.plot(times, adc0_value_csv, '.')
+    ax1.plot(times, fit_polynomial(times), '-')
+    
+    ax2.set_ylabel('residuals')
+    ax2.set_xlabel('true energy')
+    ax2.plot(times,
+             np.subtract(fit_polynomial(times), adc0_value_csv),
+             '.')
+    plt.show()
 
 def main():
     global arduino_port
     #prepare_for_measurement('iv_movie_configuration')
     #measure_iv_video()
-    test_iv_video()
-    #quick_measurements()
+    #test_iv_video()
+    quick_measurements()
     
     arduino_port.close()
     print('Arduino Disconnected')
@@ -888,7 +902,7 @@ def calibrate_real_energy_scale():
 
     fit_polynomial = Polynomial.fit(true_energy_csv, nominal_energy_csv, 3)
 
-    ax1, ax2 = plt.subplots(2, 1)
+    fig, (ax1, ax2) = plt.subplots(2, 1)
     ax1.set_ylabel('fit_polynomial')
     ax1.set_xlabel('true energy')
     ax2.set_ylabel('residuals')

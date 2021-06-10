@@ -146,9 +146,8 @@ bool continuousMeasurement = false;   // Decides if the Arduino continues to mea
 #define JP_AUX_CLOSED   0x20  // Bit is set if JP5 is closed (to indicate 2.5V AUX range rather than 10V range)
 
 // ADC saturation thresholds
-#define ADC_POSITIVE_SATURATION 0xffff  // Max ADC output in a range
-#define ADC_NEGATIVE_SATURATION 0x0000  // Min ADC output in a range
-#define ADC_RANGE_THRESHOLD     0x3fff  // If output is larger than this (~25% of range), we need a new gain next time
+#define ADC_SATURATION       32760   // Threshold to deem abs(adcValue) at saturation, in principle it should be 32767/-32768 but needs testing
+#define ADC_RANGE_THRESHOLD  0x3fff  // If output is larger than this (~25% of range), we need a new gain next time
 
 
 
@@ -203,7 +202,6 @@ int32_t  summedMeasurements[N_MAX_MEAS];    // Measurements of ADCs and LM35 are
 uint16_t ContinuousMeasurementInterval = 0; // Time between measurements if continuous-measurement mode is on
 
 floatOrBytes fDataOutput[N_MAX_MEAS];     // Measurements in physical units  // TODO: rename
-
 
 
 
