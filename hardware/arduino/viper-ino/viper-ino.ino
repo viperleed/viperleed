@@ -16,7 +16,7 @@ Date: 16.04.2021
 
 // Firmware version (MAX: v255.255). CURENTLY: v0.1
 #define FIRMWARE_VERSION_MAJOR    0  // max 255
-#define FIRMWARE_VERSION_MINOR    1  // max 255
+#define FIRMWARE_VERSION_MINOR    2  // max 255
 
 
 
