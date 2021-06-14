@@ -184,7 +184,7 @@ class LEEDStructuralDomains(  # pylint: disable=too-many-ancestors
         new_ids = self.domain_ids
         new_superlattices = self.superlattices
         old_ids, new_ids = zip(*((old_ids[i], new_ids[i])
-                                  for i in replaced_idx))
+                                 for i in replaced_idx))
         old_superlattices, new_superlattices = zip(*(
             (old_superlattices[i], new_superlattices[i])
             for i in replaced_idx
