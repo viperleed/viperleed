@@ -17,7 +17,6 @@ import re
 # from fractions import Fraction
 from quicktions import Fraction  # faster version of Fraction (~ factor of 2)
 from collections import defaultdict
-from warnings import warn as warning   # eventually will replace with logging
 
 import numpy as np
 
@@ -66,7 +65,7 @@ def get_equivalent_beams(leed_parameters, *other_leed_parameters, domains=None):
       - 'bulk3Dsym': string or array-like
             This parameter is used to describe the isomorphic part (i.e.,
             neglecting translations) of screw axes and glide planes orthogonal
-            to the surface. 
+            to the surface.
             -- when passing a string, one the following formats is
                required (with or without white spaces):
                    * "r(#, #, ...), m([#, #], ...)"
@@ -90,7 +89,7 @@ def get_equivalent_beams(leed_parameters, *other_leed_parameters, domains=None):
             This parameter can be used to define the aperture of the solid angle
             captured by the LEED screen in degrees. Acceptable values are
             between zero and 180
-    
+
     *other_leed_parameters: dictionaries, optional
       unpacked list of LEED parameters for additional reconstructions
       that may be present on the surface as an incoherent superposition with the
@@ -126,7 +125,7 @@ def get_equivalent_beams(leed_parameters, *other_leed_parameters, domains=None):
              right choice when asking for domains.
 
              If None, all domains are used. If a single integer, only that
-             domain is considered. 
+             domain is considered.
 
              If multiple LEED parameter dictionaries are passed, domains should
              be a list of lists with as many entries as there are LEED
@@ -159,7 +158,7 @@ def get_equivalent_beams(leed_parameters, *other_leed_parameters, domains=None):
     # of dictionaries
     if isinstance(leed_parameters, dict):
         leed_parameters = (leed_parameters, *other_leed_parameters)
-    
+
     # check that the domains keyword argument is consistent with the number of
     # parameters passed
     if domains is None:
@@ -174,9 +173,9 @@ def get_equivalent_beams(leed_parameters, *other_leed_parameters, domains=None):
         raise ValueError("Not as many domains as LEED parameters passed."
                          f"Expected {len(leed_parameters)}, found "
                          f"len(domains)")
-    
+
     leed_parameters, all_leed = check_multi_leed_params(leed_parameters)
-    
+
     for i, leed in enumerate(all_leed):
         if domains[i] is None:
             domains[i] = range(leed.n_domains)
@@ -190,7 +189,7 @@ def get_equivalent_beams(leed_parameters, *other_leed_parameters, domains=None):
     all_extinct = []
     for doms, leed in zip(domains, all_leed):
         fract, groups, *_ = zip(*leed.get_equivalentSpots(domains=doms))
-        
+
         # use the group indices to create dictionaries of index: beams
         beams = defaultdict(set)
         extinct = []
@@ -198,7 +197,7 @@ def get_equivalent_beams(leed_parameters, *other_leed_parameters, domains=None):
             if group < 0:
                 extinct.append(beam)
             beams[group].add(beam)
-        
+
         # now re-index the dictionaries such that there are as many keys as
         # beams and each entry is
         #    beam: list of equivalent beams (including beam itself)
@@ -206,28 +205,28 @@ def get_equivalent_beams(leed_parameters, *other_leed_parameters, domains=None):
                           for eq_beams in beams.values()
                           for beam in eq_beams})
         all_extinct.append(extinct)
-    
+
     all_beams_cp = copy.deepcopy(all_beams)
-    
+
     # Flatten the list of all beams, keeping only uniques
     flat_beams = set(beam for beams in all_beams for beam in beams)
-    
+
     # and iterate through each with the same logics as in
     # LEEDPattern.get_equivalentSpots
     # Example on square bulk:
     #   p(2x2)-pmm + c(2x2)-pm[1 0]
     #   overlapping spots are {1 | 0}, {1/2 | 1/2}, and {1 | 1}
-    #   
+    #
     #   p(2x2): ( 1 | 1), (-1 |  1), (-1 | -1), (1 | -1) equivalent
     #   c(2x2): ( 1 | 1), ( 1 | -1) equivalent
     #           (-1 | 1), (-1 | -1) equivalent
     #   -> ( 1 | 1), ( 1 | -1) equivalent
     #      (-1 | 1), (-1 | -1) equivalent, but not equivalent to the others
-    #   
-    #   
+    #
+    #
     #   THIS IS THE SAME CODE AS IN LEEDPattern, probably will consolidate the
     #   two later on
-    #   
+    #
     eq_beams = []
     for beam in flat_beams:
         # from each structure, if there is a beam <beam>, take the list of all
@@ -243,7 +242,7 @@ def get_equivalent_beams(leed_parameters, *other_leed_parameters, domains=None):
             # intersection of the elements of the list, i.e., all those in
             # common to all structures
             common_beams = set.intersection(*beam_lists)
-            
+
             # now "mark as processed" in all the structures the beams coming
             # from the intersection by removing them
             for beams_dict in all_beams_cp:
@@ -256,7 +255,7 @@ def get_equivalent_beams(leed_parameters, *other_leed_parameters, domains=None):
             for beams in eq_beams]
     # and by energy
     sorted_beams = sorted(llst, key=all_leed[0].sortEnergy)
-    
+
     # and fix the indices, also accounting for extinct beams
     beams_with_indices = []
     for i, beams in enumerate(sorted_beams):
@@ -265,7 +264,7 @@ def get_equivalent_beams(leed_parameters, *other_leed_parameters, domains=None):
             overlapping_structs = [s + 1 for s in range(len(all_leed))
                                    if beam in all_beams[s]]
             group_idx = i
-            
+
             # figure out whether the beam is extinct in all the structures, in
             # which case the index goes negative
             n_extinct = len([1 for s in overlapping_structs
@@ -304,9 +303,9 @@ def project_to_first_domain(beam_list, leed_parameters, *other_leed_parameters,
     # of dictionaries
     if isinstance(leed_parameters, dict):
         leed_parameters = (leed_parameters, *other_leed_parameters)
-    
+
     leed_parameters, (leed, *_) = check_multi_leed_params(leed_parameters)
-    
+
     ops = leed.reciprocal_lattices['bulk'].group.operations(include_3d=True)
     superlattices = [params['SUPERLATTICE'] for params in leed_parameters]
 
@@ -321,7 +320,7 @@ def project_to_first_domain(beam_list, leed_parameters, *other_leed_parameters,
             if all(i.denominator == 1 for i in indices):
                 return True
         return False
-    
+
     def group_beams(beams_in):
         """
         Given a list of beams in the form ('indices', group_index) generates a
@@ -333,7 +332,7 @@ def project_to_first_domain(beam_list, leed_parameters, *other_leed_parameters,
         for *beams, group in beams_in:
             ddict[group].extend(BeamIndex(beam) for beam in beams)
         return ddict
-    
+
     def to_inequivalent(beams_in):
         """
         Given a list of beams of the first domain, returns another list
@@ -342,10 +341,10 @@ def project_to_first_domain(beam_list, leed_parameters, *other_leed_parameters,
         # get the list of all equivalent beams for the first domain only
         # It's a list of tuples of the form ('index', group)
         eq_beams = get_equivalent_beams(leed_parameters, domains=0)
-        
+
         # construct a dictionary of the form beam_group: [*beams].
         group_dict = group_beams(eq_beams)
-        
+
         # Now create a new dictionary with as many keys as beams, and for each
         # beam, use the first beam in its beam group as value. This allows later
         # to replace each beam in the original list with only one of the beams
@@ -353,7 +352,7 @@ def project_to_first_domain(beam_list, leed_parameters, *other_leed_parameters,
         beams_dict = {beam: beams[0]
                       for group, beams in group_dict.items()
                       for beam in beams}
-        
+
         # (1) replace each beam in beams_in with the first one of its beam
         #     group, as per the beams_dict dictionary created above
         # (2) remove duplicates by transforming to a set
@@ -379,7 +378,7 @@ def project_to_first_domain(beam_list, leed_parameters, *other_leed_parameters,
                     el_m = 9.109e-31    # kg
                     el_q = 1.60218e-19  # C
                     hbar = 1.05457e-34  # J*s
-                    
+
                     # calculate the exit angle
                     s_angle = np.sqrt(hbar**2 * g**2
                                       /(2 * el_m * el_q * leed.max_energy))
@@ -404,9 +403,9 @@ def project_to_first_domain(beam_list, leed_parameters, *other_leed_parameters,
         projected.extend(tuple(beam) for beam in proj[first_dom])
     # remove duplicates
     projected = list(set(projected))
-    
+
     inequivalent = to_inequivalent(projected)
-    
+
     # now decide if one should keep all the beams in projected, or only the
     # inequivalent ones -> might be nicer to do with a generator to avoid
     # creating the whole list!
@@ -430,8 +429,7 @@ def project_to_first_domain(beam_list, leed_parameters, *other_leed_parameters,
 
 
 def check_type(value, typ):
-    """
-    Basic type check for value
+    """Basic type check for value.
 
     Parameters
     ----------
@@ -518,7 +516,7 @@ def check_leed_params(leed_parameters):                                         
                          "instead")
     if aperture < 0 or aperture > 180:
         raise ValueError("screenAperture should be between 0 and 180. "
-                         f"Found {aperture} instead.") 
+                         f"Found {aperture} instead.")
     # type and format checking for the plane groups is done in the PlaneGroup
     # instance constructor directly
 
@@ -533,22 +531,22 @@ def check_multi_leed_params(leed_parameters):                                   
     checking acceptable values for the parameters (as in check_leed_params, it
     also checks that the bulk lattices are the same for all. Raises errors
     otherwise.
-    
+
     Parameters
     ----------
     leed_parameters: list of dictionaries
-    
-    
+
+
     Returns
     -------
     (consistent_leed_parameters, leed_patterns)
-    
+
     - consistent_leed_parameters: list of dictionaries with eMax and
                                   ScreenApertures equal for all
     - leed_patterns: list of gl.LEEDPattern
                      patterns generated from consistent_leed_parameters
     """
-    
+
     # check that each single parameter passed has all the necessary contents,
     # and:
     # - take the largest energy as eMax for all
@@ -560,7 +558,7 @@ def check_multi_leed_params(leed_parameters):                                   
             return None
         emax = max(params['eMax'], emax)
         aperture = max(params.get('screenAperture', 0), aperture)
-    
+
     leed_patterns = []
     for params in leed_parameters:
         # update eMax and screenAperture
@@ -568,7 +566,7 @@ def check_multi_leed_params(leed_parameters):                                   
         if aperture > 0:
             params['screenAperture'] = aperture
         leed_patterns.append(gl.LEEDPattern(params))
-    
+
     # check consistency of bulk
     bulk = leed_patterns[0].reciprocal_lattices['bulk']
     b_ops = set(bulk.group.operations(include_3d=True))
@@ -622,7 +620,7 @@ def check_py_version(version_to_check, check_what='earlier'):
     if check_what not in ('earlier', 'later', 'same'):
         raise ValueError("check_py_version: Invalid check_what. Should be "
                          "'earlier', 'later', or 'same'.")
-    
+
     major = sys.version_info.major
     minor = sys.version_info.minor
     patch = sys.version_info.micro
@@ -645,7 +643,7 @@ def check_py_version(version_to_check, check_what='earlier'):
         version_to_check = int(version_to_check[0])
     else:
         raise ValueError("check_py_version: invalid version")
-    
+
     if check_what == 'earlier':
         return py_version < version_to_check
     if check_what == 'later':
@@ -717,7 +715,7 @@ def format_floats(format_specs, *numbers):
     - precision is the number of decimal digits. Defaults to 5.
     """
     int_len = integer_part_length(*numbers)
-            
+
     # standard pattern for format_specs
     pattern = (r"^(?P<align>[<>=^]\d+)?"
                r"[\+\- ]?"
@@ -744,13 +742,13 @@ def format_floats(format_specs, *numbers):
     else:
         min_w = int_len
     tot_w = max(min_w + prec, int_len + prec) + 1  # +1 for decimal point
-    
+
     format = f">{tot_w}.{prec}f"
     raw = ','.join(f"{float(number):{format}}" for number in numbers)
     align = ''
     if m.group('align'):
         align = f"{m.group('align')}"
-    
+
     return f"{raw:{align}}"
 
 
@@ -790,7 +788,6 @@ def parallel(v1, v2):
     if any(null_entries[0] != null_entries[1]):
         # the vectors have zeros at different positions
         return False
-    print(null_entries, ~null_entries, v12, v12[~null_entries])
     nonnul_1 = v12[0, ~null_entries[0]]
     nonnul_2 = v12[1, ~null_entries[1]]
     ratios = nonnul_1/nonnul_2
@@ -857,7 +854,7 @@ class BeamIndex(tuple):
     """
     Convenience class to store a 2-element tuple that represents a Miller index
     for a LEED beam. Each index is a Fraction.
-    
+
     Since instantiation is a bit slow, and repeated several times, they
     are cached.
     """
@@ -933,7 +930,7 @@ class BeamIndex(tuple):
         ValueError
         """
         n_indices = len(indices)
-        
+
         if n_indices == 1:
             indices = indices[0]
             if isinstance(indices, str):
@@ -950,7 +947,7 @@ class BeamIndex(tuple):
                              "Exactly 2 indices should be given. "
                              f"Found {n_indices} instead.")
         return tuple(indices)
-    
+
     @staticmethod
     def __indices_from_string(str_indices):
         """
@@ -998,7 +995,7 @@ class BeamIndex(tuple):
 
     def __mul__(self, factor):
         """Override tuple.__mul__().
-        
+
         Make it such that self*number = (self[0]*number, self[1]*number)
         """
         if isinstance(factor, (int, Fraction)):
@@ -1077,7 +1074,7 @@ class BeamIndex(tuple):
     @property
     def numerators(self):
         return tuple(index.numerator for index in self)
-    
+
     def get_format_lengths(self, str_or_float):
         """
         Returns the minimum number of characters that can represent the
@@ -1131,7 +1128,7 @@ class PlaneGroup():
     -------
     operations() Returns tuple with group operations
 
-    get_subgroups() Returns set of strings with the subgroups of group
+    subgroups() Returns set of strings with the subgroups of group
 
     The point group operations are represented by 2x2 matrices (np ndarrays),
     and correspond to applying the operation in 'fractional' coordinates.
@@ -1218,7 +1215,7 @@ class PlaneGroup():
                  '[1,2]': M12,
                  '[2,1]': M21}
 
-    groupsForShape = {
+    groups_for_shape = {
         'Oblique': ('p1', 'p2'),
         'Rectangular': ('p1', 'p2', 'pm[1 0]', 'pm[0 1]', 'pg[1 0]',
                         'pg[0 1]', 'rcm[1 0]', 'rcm[0 1]', 'pmm', 'pmg[1 0]',
@@ -1232,7 +1229,7 @@ class PlaneGroup():
                       'p31m', 'p6', 'p6m')
         }
 
-    subgroups = {
+    __subgroups = {
         'p1': {'p1'},
         'p2': {'p1', 'p2'},
         'pm[1 0]': {'p1', 'pm[1 0]'},
@@ -1252,14 +1249,14 @@ class PlaneGroup():
         'pmg[0 1]': {'p1', 'p2', 'pg[0 1]', 'pm[1 0]', 'pmg[0 1]'},
         'pgg': {'p1', 'p2', 'pg[1 0]', 'pg[0 1]', 'pgg'},
         'cmm': {'p1', 'p2', 'cm[1 1]', 'cm[1 -1]', 'cmm'},
-        'rcmm': {'p1', 'p2', 'pm[1 0]', 'pm[0 1]', 'pg[1 0]', 'pg[0 1]',
-                 'rcm[1 0]', 'rcm[0 1]', 'pmm', 'pmg[1 0]', 'pmg[0 1]', 'pgg',
-                 'rcmm'},
+        'rcmm': {'p1', 'p2', 'pm[1 0]', 'pm[0 1]', 'pg[1 0]',
+                 'pg[0 1]', 'rcm[1 0]', 'rcm[0 1]', 'pmm',
+                 'pmg[1 0]', 'pmg[0 1]', 'pgg', 'rcmm'},
         'p4': {'p1', 'p2', 'p4'},
-        'p4m': {'p1', 'p2', 'pm[1 0]', 'pm[0 1]', 'cm[1 1]', 'cm[1 -1]', 'pmm',
-                'cmm', 'p4', 'p4m'},
-        'p4g': {'p1', 'p2', 'pg[1 0]', 'pg[0 1]', 'cm[1 1]', 'cm[1 -1]', 'pgg',
-                'cmm', 'p4', 'p4g'},
+        'p4m': {'p1', 'p2', 'pm[1 0]', 'pm[0 1]', 'cm[1 1]',
+                'cm[1 -1]', 'pmm', 'cmm', 'p4', 'p4m'},
+        'p4g': {'p1', 'p2', 'pg[1 0]', 'pg[0 1]', 'cm[1 1]',
+                'cm[1 -1]', 'pgg', 'cmm', 'p4', 'p4g'},
         'p3': {'p1', 'p3'},
         'p3m1': {'p1', 'cm[1 -1]', 'cm[2 1]', 'cm[1 2]', 'p3', 'p3m1'},
         'p31m': {'p1', 'cm[1 0]', 'cm[0 1]', 'cm[1 1]', 'p3', 'p31m'},
@@ -1269,7 +1266,7 @@ class PlaneGroup():
         }
 
     allOps = (E, C2, C4, Cm4, C3, Cm3, C6, Cm6, Mx, My, M45, Mm45, M21, M12,
-              M01, M10, M11, M1m1)  # this should not be needed anymore
+              M01, M10, M11, M1m1)  # This should not be needed anymore
 
     def __init__(self, group='p1'):
         if isinstance(group, PlaneGroup):
@@ -1277,126 +1274,155 @@ class PlaneGroup():
             group = group.group
         else:
             bulk_3d = tuple()
-        group = self.check_group_name(group)
+        group = self.__check_group_name(group)
         self.group = group
-        
-        # The next one will be a tuple of the 2x2 matrices representing the
-        # isomorphism part of screws and glide planes perpendicular to the
-        # surface
+
+        # The next one will be a tuple of the 2x2 matrices
+        # representing the isomorphism part of screws and
+        # glide planes perpendicular to the surface
         self.__ops_3d = bulk_3d
 
-    def __repr__(self):
-        """
-        Representation of PlaneGroup
-        """
-        return f"PlaneGroup({self.group!r})"
-
-    def __str__(self):
-        """
-        string representation of PlaneGroup
-        """
-        return self.group
-
     def __eq__(self, other):
-        """
-        Equality method for PlaneGroup instances.
-        
-        Most likely one would like to also check the set of symmetry operations,
-        as this would allow to include checks of the screws and glides as well.
+        """Return whether self is equal to other.
 
-        Notice that Python 3 handles correctly (and in a faster way) cases in
-        which the not-equal dunder is not reimplemented
+        Currently, this is a relatively simple check,
+        that only looks at whether the Hermann-Mauguin
+        names of self and other are the same.
+
+        Use self.same_operations(other, inlude_3d) to
+        explicitly check the set of symmetry operations.
+
         """
+        # Notice that Python 3 handles correctly (and in a
+        # faster way) cases in which __ne__ is not reimplemented.
+        # This is why __ne__ is not reimplemented here.
         if not isinstance(other, PlaneGroup):
             # Can't compare instances of other classes
             return NotImplemented
         return self.group == other.group
-    
-    def same_operations(self, other, include_3d=False):
-        """
-        Returns whether self has the same operations as another PlaneGroup
-        instance. The comparison can include or not (depending on the value of
-        include_3d) also the 3D bulk operations. This does not check whether
-        the Hermann-Mauguin names are the same. Use self == other to test that.
-        """
-        if not isinstance(other, PlaneGroup):
-            return NotImplemented
-        self_ops = set(self.operations(include_3d))
-        other_ops = set(other.operations(include_3d))
-        return self_ops == other_ops
 
-    def check_group_name(self, group):
-        """
-        Fixes spaces in the group name and checks that the fixed name is an
-        acceptable plane group
-        """
-        if not isinstance(group, str):
-            raise TypeError("'group' should be a string. "
-                            f"Found {type(group)} instead")
-        group_re = re.compile(
-            r"""
-            (?P<hermann>[\w]+)      # hermann mauguin
-            (?:[\[]                 # optional direction opening bracket
-            (?P<dir1> [-]*[\d]+)    # first direction
-            [\s]*                   # optional space
-            (?P<dir2> [-]*[\d]+)    # second direction
-            [\]])*                  # optional direction closing bracket
-            """,
-            re.VERBOSE)
-        
-        group_match = group_re.match(group)
-        if group_match is None:
-            raise ValueError(f"{group} is not an acceptable plane group.")
-        group = group_match.group('hermann')
-        
-        if group_match.group('dir1') is not None:
-            group = (f"{group}[{group_match.group('dir1')} "
-                     f"{group_match.group('dir2')}]")
+    def __str__(self):
+        """Return the Hermann-Mauguin name as a string."""
+        return self.group
 
-        if group not in self.allGroups.keys():
-            raise ValueError(f"{group} is not an acceptable plane group.")
-        
-        return group
-    
-    @property
-    def screws_glides(self):
-        """
-        Returns a tuple containing 2x2 tuples of integers representing the
-        isomorphic part of screw axes and glide planes perpendicular to the
-        surface
-        """
-        return self.__ops_3d
-    
-    @screws_glides.setter
-    def screws_glides(self, input):
-        """
-        Set the isomorphic part of screws/glides.
+    def __repr__(self):
+        """Return a string representation of PlaneGroup."""
+        return f"PlaneGroup({self.group!r})"
+
+    @staticmethod
+    def groups_compatible_with(cell_shape, operations=tuple(),
+                               include_3d=False):
+        """Return the groups compatible with cell_shape and operations.
+
+        Given a certain cell shape, the groups compatible with
+        that shape and a set of symmetry operations are those
+        that are (i) groups that can exists for that cell shape,
+        and (ii) also subgroups of the list of operations given.
+
         Parameters
         ----------
-        input, is a 1- or 2-tuple where
-        first item: str or array-like 
-                 - a string of the following forms (with or without spaces):
-                   "r(#, #, ...), m([#, #], [#, #], ...)"
-                   "m([#, #], [#, #], ...), r(#, #, ...)"
-                   "r(#, #, ...)"
-                   "m([#, #], [#, #], ...)"
-                   "None"
-                   For screws, the list in "r()" provides the order of rotations
-                   For glides, an entry "[i,j]" means the glide plane leaves
-                   the in-plane direction i*a + j*b unmodified.
-                 - an array-like, containing a list of 2x2 matrices of integers
-        second item:
-                 one of the lattice types: 'Oblique', 'Rectangular', 'Square',
-                 'Hexagonal', or 'Rhombic'. This parameter is required only if
-                 the first argument is a string containing definitions of glide
-                 planes.
+        cell_shape : {'Oblique', 'Rectangular',
+                      'Square', 'Rhombic', 'Hexagonal'}
+            The shape of the cell of the lattice. Used to
+            pick initially the list of compatible groups
+        operations : iterable of operation matrices, optional
+            If not given or empty, the list selected from
+            the shape is returned. Otherwise, only those
+            groups in the list that are subgroups of the
+            operations given are returned. If given, the
+            elements of 'operations' are assumed to be
+            represented in fractional coordinates. Notice
+            that passing a generator will consume it.
+            Default is an empty tuple.
+        include_3d : bool, optional
+            Whether also 3D operations (screw axes, glide
+            planes) should be included in the check.
+            Default is False.
+
+        Returns
+        -------
+        tuple of strings
+            The Hermann-Mauguin names of compatible groups
+        """
+        try:
+            compatible_with_shape = PlaneGroup.groups_for_shape[cell_shape]
+        except KeyError as err:
+            raise ValueError(f"PlaneGroup: invalid cell_shape {cell_shape}. "
+                             "Should one of 'Oblique', 'Rectangular',"
+                             " 'Square', 'Rhombic', 'Hexagonal'.") from err
+        if not operations:
+            return compatible_with_shape
+
+        if not hasattr(operations, '__iter__'):
+            raise TypeError("PlaneGroup: operations should be an iterable")
+
+        # Convert any numpy array to tuples,
+        # for the 'not in' comparison below
+        operations = list(operations)
+        for i, operation in enumerate(operations):
+            if np.shape(operation) != (2, 2):
+                raise ValueError("PlaneGroup: operations should be "
+                                 "an iterable of (2, 2) matrices")
+            if isinstance(operation, np.ndarray):
+                operations[i] = gl.two_by_two_array_to_tuple(operation)
+
+        compatible = []
+        for group in compatible_with_shape:
+            group = PlaneGroup(group)
+            if any(operation not in operations
+                   for operation in group.operations(include_3d)):
+                continue
+            compatible.append(group.group)
+
+        return tuple(compatible)
+
+    @property
+    def screws_glides(self):
+        """Return 3D symmetry operations as 2x2 tuples.
+
+        The 2x2 tuples of integers returned represent the
+        isomorphic part of screw axes and glide planes
+        perpendicular to the surface.
+
+        Returns
+        -------
+        tuple of tuples
+        """
+        return self.__ops_3d
+
+    @screws_glides.setter
+    def screws_glides(self, input):
+        """Set the isomorphic part of 3D symmetry operations.
+
+        Parameters
+        ----------
+        input : tuple
+            len(input) == 1, or len(input) == 2
+
+        input[0] : str or Sequence
+            A string of the following forms (with or without spaces):
+                "r(#, #, ...), m([#, #], [#, #], ...)"
+                "m([#, #], [#, #], ...), r(#, #, ...)"
+                "r(#, #, ...)"
+                "m([#, #], [#, #], ...)"
+                "None"
+                For screws, the list in "r()" provides the order of
+                rotations.  For glides, an entry "[i,j]" means the
+                glide plane leaves the in-plane direction i*a + j*b
+                unmodified.
+            A sequence, containing a list of 2x2 matrices of integers
+        input[1] : {'Oblique', 'Rectangular', 'Square',
+                    'Hexagonal', or 'Rhombic'}
+            Cell shape of the lattice. This parameter is mandatory if
+            input[0] is a string containing definitions of glide planes
+
+        Returns
+        -------
+        None
         """
         # The next if/else handles the input parameter so that, if only a
         # 1-tuple or a single string is given, the shape of the unit cell is
         # defaulted to None.
-        # NB: I may change the behavior later, and rather make this a
-        #     set_3d_ops method, while incorporating the getter into
-        #     the operations method below
         if not input:
             self.__ops_3d = tuple()
             return
@@ -1412,7 +1438,7 @@ class PlaneGroup():
                 shape = None
         else:
             shape = None
-        
+
         if not input:
             self.__ops_3d = tuple()
             return
@@ -1427,17 +1453,18 @@ class PlaneGroup():
                 self.__ops_3d = tuple()
                 return
 
-            ops = []  # this will contain the 2x2 tuples of the new operations
+            # ops will contain the 2x2 tuples of the new operations
+            ops = []
 
             # search the following patterns
             screw_re = r"[rR][\(](?P<screws>[\d\,\s]+)[\)]"
             glide_re = r"[mM][\(](?P<glides>[\d\[\]\,\-\s]+)[\)]"
-            
+
             found_screws = re.search(screw_re, input)
             found_glides = re.search(glide_re, input)
             if not (found_screws or found_glides):
                 raise ValueError("PlaneGroup.screws_glides: Invalid input.")
-            if found_screws:  # found some screws
+            if found_screws:
                 screws = found_screws.group('screws').replace(' ',
                                                               '').split(',')
                 if any(s not in self.screw_ops.keys() for s in screws):
@@ -1445,24 +1472,26 @@ class PlaneGroup():
                                      "rotation order in the input. Only 2-, "
                                      "3-, 4-, and 6-fold orders allowed.")
                 [ops.extend(self.screw_ops[screw]) for screw in screws]
-            if found_glides:  # found some glide planes
+            if found_glides:
                 if shape is None:
                     raise ValueError("PlaneGroup.screws_glides: cell shape is "
                                      "required when glide planes are given.")
-                # parse glide planes by removing spaces and splitting on commas
-                glides = found_glides.group('glides').replace(' ','').split(',')
+                # Parse glide planes by removing
+                # spaces and splitting on commas
+                glides = found_glides.group('glides').replace(' ',
+                                                              '').split(',')
 
-                # now g should contain an even number of elements:
+                # Now glides should contain an even number of elements:
                 # each odd element is of the form "[#", each even "#]"
                 for g_odd, g_even in zip(glides[::2], glides[1::2]):
                     if g_odd[0] != "[" or g_even[-1] != "]":
                         raise ValueError("PlaneGroup.screws_glides: some "
-                                         "glide plane directions are not in "
-                                         "the form '[i, j]'")
+                                         "glide plane directions are not "
+                                         "in the form '[i, j]'")
                     key = f"{g_odd},{g_even}"
-                    # the only keys that require special attention are "[1,0]"
-                    # and "[0,1]", since the matrices depend on the shape of
-                    # the cell
+                    # The only keys that require special attention
+                    # are "[1,0]" and "[0,1]", since the matrices
+                    # depend on the shape of the cell
                     if key == '[1,0]' and shape in ('Square', 'Rectangular'):
                         key = 'x'
                     if key == '[0,1]' and shape in ('Square', 'Rectangular'):
@@ -1471,87 +1500,152 @@ class PlaneGroup():
                         ops.append(self.glide_ops[key])
                     except KeyError:
                         raise ValueError(
-                            f"PlaneGroup.screws_glides: invalid direction {key}"
-                            " for glide plane. The only directions allowed "
-                            f"are: {self.glide_ops.keys() - ['x', 'y']}")
+                            "PlaneGroup.screws_glides: invalid "
+                            f"direction {key} for glide plane. "
+                            "The only allowed directions are: "
+                            f"{self.glide_ops.keys() - ['x', 'y']}")
             self.__ops_3d = tuple(ops)
             return
 
-        # Otherwise, the input is an array-like, which should correspond to a
-        # 1D list of 2x2 matrices with integer values
+        # Otherwise, the input is an array-like, which should
+        # correspond to a 1D list of 2x2 matrices of integers
 
-        if len(np.shape(input)) != 3 or np.shape(input)[1:] != (2, 2):
+        input = np.asarray(input)
+        if len(input.shape) != 3 or input.shape[1:] != (2, 2):
             raise ValueError("PlaneGroup.screws_glides: an array-like input "
                              "should be a 1D 'list' of 2x2 'matrices'. Found "
                              f"incompatible shape {np.shape(input)}.")
 
-        if any(np.abs(mij % 1) > 1e-4 for mij in np.ravel(input)):
+        if np.any(np.abs(input - input.round()) > 1e-4):
             raise ValueError("PlaneGroup.screws_glides: an array-like input "
                              "should contain only integer-valued matrices")
 
-        self.__ops_3d = tuple(  # * make the whole list a tuple
-            tuple(              # * make each array of the input into a tuple
-                map(tuple,      # * map each line of each matrix to a tuple
-                    np.array(mi).round().astype(int))  # after rounding to int
+        self.__ops_3d = gl.two_by_n_array_to_tuples(
+                input.round().astype(int)
                 )
-            for mi in input
-            )
+
+    @property
+    def subgroups(self):
+        """Return the 2D subgroups of self as a set of strings."""
+        return self.__subgroups[self.group]
+
+    def is_valid_group(self, group, cell_shape):
+        """Checks if group is a valid group for a given cell_shape.
+
+        No type checking is done on group other than string
+        and PlaneGroup, under the assumption that group will
+        be used to create a PlaneGroup itself, which does
+        the type checking in the constructor.
+
+        Parameters
+        ----------
+        group : str or PlaneGroup
+            The group to be checked. When a string, assume
+            it is the Hermann-Mauguin name.
+        cell_shape : {'Oblique', 'Rectangular', 'Square',
+                    'Hexagonal', or 'Rhombic'}
+            Shape of the lattice for which compatibility is
+            checked.
+
+        Returns
+        -------
+        valid_group : bool
+        """
+        if cell_shape not in self.groups_for_shape:
+            raise ValueError(f"PlaneGroup: unknown lattice shape {cell_shape}")
+        valid_group = False
+        if isinstance(group, str):
+            group = self.__check_group_name(group)
+            valid_group = group in self.groups_for_shape[cell_shape]
+        elif isinstance(group, PlaneGroup):
+            valid_group = group.group in self.groups_for_shape[cell_shape]
+        return valid_group
 
     def operations(self, include_3d=False):
-        """
-        Returns a tuple of 2x2 tuples representing the operations of the point
-        group associated with the 2D plane group
+        """Return symmetry operations as 2x2 matrices.
+
+        Operation of the point group.
+
+        Parameters
+        ----------
+        include_3d : bool
+            Whether the returned 'list' should include also
+            the isomorphic part of the 3D screws and glides
+            perpendicular to the surface.
+
+        Returns
+        -------
+        tuple of tuples
         """
         ops = list(self.allGroups[self.group])
         if include_3d:
             ops.extend(self.screws_glides)
         return tuple(ops)
 
-    def get_subgroups(self):
+    def same_operations(self, other, include_3d=False):
+        """Return whether self has the same operations as other.
+
+        The comparison does not check whether the Hermann-Mauguin
+        names are the same. Use self == other to test that. Thus
+        PlaneGroup('pm[1, 0]').same_operations(PlaneGroup('pg[1, 0]'))
+        returns True.
+
+        Parameters
+        ----------
+        include_3d : bool
+            If True, the comparison also includes the isomorphic
+            part of the 3D screw/glide operations.
+
+        Returns
+        -------
+        bool
         """
-        Returns the 2D subgroups of PlaneGroup as a set of strings
-        """
-        return self.subgroups[self.group]
-    
-    def is_valid_group(self, group, cell_shape):
-        """
-        Checks whether group is a valid group for a given cell_shape. No type
-        checking is done on group other than string and PlaneGroup, under the
-        assumption that group will be used to create a PlaneGroup itself, which
-        does the type checking in the constructor
-        """
-        if cell_shape not in self.groupsForShape:
-            raise ValueError(f"PlaneGroup: unknown lattice shape {cell_shape}")
-        valid_group = True
-        if isinstance(group, str):
-            group = self.check_group_name(group)
-            valid_group = group in self.groupsForShape[cell_shape]
-        if isinstance(group, PlaneGroup):
-            valid_group = group.group in self.groupsForShape[cell_shape]
-        return valid_group
-    
+        if not isinstance(other, PlaneGroup):
+            return NotImplemented
+        self_ops = set(self.operations(include_3d))
+        other_ops = set(other.operations(include_3d))
+        return self_ops == other_ops
+
     def transform(self, transform, inverse=None, include_3d=False):
-        """
-        Returns a tuple of the group operations 'projected' to a new coordinate
-        system, whose coordinates are expressed by the 2x2 array-like
-        transformation matrix given in the "transform" parameter. No assumption
-        is made on the coordinate transform (i.e., the operation matrices
-        returned may have non-integer values)
+        """Transform the group operations to new coordinates.
+
+        No assumption is made on the coordinate transform.
+        This means that the operation matrices returned may
+        have non-integer values.
+
+        Parameters
+        ----------
+        transform : Sequence
+            Shape == (2, 2). The coordinate transformation to be
+            applied. This is interpreted as follows: assume that
+            the operations are currently expressed in a coordinate
+            system with basis B_0 = (a_0, b_0), with a_0 and b_0
+            row vectors. The new basis is
+            B_1 = (a_1, b_1) = transform @ B_0.
+        inverse : Sequence, optional
+            Shape == (2, 2). The inverse of the transform. This can
+            be given for performance reasons. If not given or None,
+            inverse = numpy.linalg.inv(transform).  If given, it is
+            checked that transform @ inverse is the identity matrix.
+            Default is None.
+        include_3d : bbol, optional
+            Whether the operations transformed should also
+            include the isomorphic part of the 3D screws/glides.
 
         Returns
         -------
         tuple of numpy.ndarrays
         """
         if np.shape(transform) != (2, 2):
-            raise ValueError("PlaneGroup.transform requires a 2x2 array-like as"
-                             " coordinate transform matrix. "
-                             f" Found shape {np.shape(transform)} instead.")
+            raise ValueError("PlaneGroup.transform requires a 2x2 "
+                             "array-like as coordinate transform matrix. "
+                             f"Found shape {np.shape(transform)} instead.")
         if inverse is None:
             inverse = np.linalg.inv(transform)
         elif np.shape(inverse) != (2, 2):
-            raise ValueError("PlaneGroup.transform requires a 2x2 array-like as"
-                             " the inverse of the coordinate transform. "
-                             f" Found shape {np.shape(transform)} instead.")
+            raise ValueError("PlaneGroup.transform requires a 2x2 array-like "
+                             "as the inverse of the coordinate transform. "
+                             f"Found shape {np.shape(transform)} instead.")
         elif not np.allclose(np.dot(transform, inverse), ((1, 0), (0, 1))):
             raise ValueError("PlaneGroup.transform transformation matrix and "
                              "inverse are inconsistent.")
@@ -1559,6 +1653,57 @@ class PlaneGroup():
                                           op,
                                           inverse))
                      for op in self.operations(include_3d))
+
+    def __check_group_name(self, group):
+        """Check that a string is an acceptable Hermann-Mauguin name.
+
+        Before checking, spaces are fixed to allow checking directions.
+
+        Parameters
+        ----------
+        group : str
+            String to be fixed and checked.
+
+        Returns
+        -------
+        fixed_group : str
+            A Hermann-Mauguin with correct spacings, if the
+            string given was an acceptable PlaneGroup name.
+
+        Raises
+        ------
+        TypeError
+            If group is not a string
+        ValueError
+            If group is not an acceptable Hermann-Mauguin name.
+        """
+        if not isinstance(group, str):
+            raise TypeError("'group' should be a string. "
+                            f"Found {type(group)} instead")
+        group_re = re.compile(
+            r'''
+            (?P<hermann>[\w]+)      # Hermann-Mauguin
+            (?:[\[]                 # Optional direction opening bracket
+            (?P<dir1> [-]*[\d]+)    # First direction
+            [\s]*                   # Optional space
+            (?P<dir2> [-]*[\d]+)    # Second direction
+            [\]])*                  # Optional direction closing bracket
+            ''',
+            re.VERBOSE)
+
+        group_match = group_re.match(group)
+        if group_match is None:
+            raise ValueError(f"{group} is not an acceptable plane group.")
+        group = group_match.group('hermann')
+
+        if group_match.group('dir1') is not None:
+            group = (f"{group}[{group_match.group('dir1')} "
+                     f"{group_match.group('dir2')}]")
+
+        if group not in self.allGroups.keys():
+            raise ValueError(f"{group} is not an acceptable plane group.")
+
+        return group
 
 
 class Lattice():
@@ -1636,7 +1781,7 @@ class Lattice():
         actually modifying Lattice
 
     get_rotated_basis(angle)
-        returns a copy of Lattice.basis rotated by angle, without actually 
+        returns a copy of Lattice.basis rotated by angle, without actually
         modifying Lattice
 
     high_symm_transform()
@@ -1660,7 +1805,7 @@ class Lattice():
         If special_direction is given, only the mirror plane containing it is
         used to compute the star of each lattice point. Use superlattice to
         return indices expressed with respect to a different basis
-    
+
     Private methods
     ---------------
     __get_cell_shape()
@@ -1690,7 +1835,7 @@ class Lattice():
         self._basis = np.asarray(basis)
         self._space = space
         self._shape = self.__get_cell_shape()  # __get_cell_shape
-        
+
         # check if the plane group given is consistent with the cell shape
         if not PlaneGroup().is_valid_group(group, self.cell_shape):
             raise ValueError(f"Lattice: invalid group {group} for lattice "
@@ -1698,14 +1843,14 @@ class Lattice():
         self._group = PlaneGroup(group)
         self._limit = limit
         self.lattice, self.hk = self.__generate_lattice()
-    
+
     def __repr__(self):
         txt = (f"{self.cell_shape} "
                + f"viperleed.Lattice({self.basis}, ".replace('\n', '')
                + f"space={self.space}, group={self.group}, "
                + f"limit={self._limit})")
         return txt
-    
+
     @property
     def basis(self):
         """
@@ -1718,7 +1863,7 @@ class Lattice():
     def basis(self, basis):
         """
         Sets the lattice basis to basis and updates the other attributes
-        
+
         Parameters
         ----------
         basis : 2x2 array-like
@@ -1726,12 +1871,44 @@ class Lattice():
         if not check_type(basis, 'arraylike'):
             raise TypeError("basis must be array-like. "
                             f"Found {type(basis)} instead.")
-        if not np.shape(basis) == (2, 2):
+        basis = np.asarray(basis)
+        if basis.shape != (2, 2):
             raise ValueError("Lattice basis needs to have a (2, 2) shape. "
                              f"Found {np.shape(basis)} instead.")
-        self._basis = np.array(basis)
+        if abs(np.linalg.det(basis)) < 1e-5:
+            raise ValueError("Lattice basis cannot be a singular matrix.")
+
+        self._basis = basis
         self._shape = self.__get_cell_shape()
         self.lattice, self.hk = self.__generate_lattice()
+
+        compatible_groups = self.group.groups_compatible_with(self.cell_shape)
+        if self.group.group not in compatible_groups:
+            # Shape does not allow the old group.
+            # Can't pick one, so use 'p1'                                      # TODO: is there a better way to do this? How to treat 3D operations (also when group is one of those of the shape)?
+            self.group = 'p1'
+
+    @property
+    def cell_shape(self):
+        """
+        Returns the shape of the unit cell as a string. The value returned is
+        'Oblique', 'Rectangular', 'Square', 'Rhombic', or 'Hexagonal'.
+        """
+        return self._shape
+
+    @property
+    def group(self):
+        """Return the PlaneGroup of the lattice."""
+        return self._group
+
+    @group.setter
+    def group(self, group):
+        """
+        Set the plane group to a PlaneGroup instance with Hermann-Mauguin
+        symbol equal to group. See PlaneGroup for a list of acceptable input
+        parameters.
+        """
+        self._group = PlaneGroup(group)
 
     @property
     def lattice_parameters(self):
@@ -1744,26 +1921,15 @@ class Lattice():
         return norm_a, norm_b, np.degrees(alpha)
 
     @property
-    def reciprocal_basis(self):
+    def n_beams(self):
         """
-        Returns the reciprocal of the lattice basis. Notice that if
-        self.space == 'real', this returns the reciprocal space basis.
-        If self.space == 'reciprocal', it returns the reciprocal of
-        the reciprocal, i.e., the real-lattice basis.
-
-        This is different from the return value of real_basis
-        """        
-        # Working out the cross products
-        #   a* = 2pi/area [b x z][0:2] = 2pi/area [b12, -b11]
-        #   b* = 2pi/area [z x a][0:2] = 2pi/area [-a12, a11]
-        # where
-        #   area = det(basis).
-        # Thus
-        #  | a* |                    | b12  -a12| T
-        #  |    | = 2pi/det(basis) * |          |   = 2pi * basis^(-T)
-        #  | b* |                    |-b11   a11|
-        
-        return 2*np.pi*np.linalg.inv(self.basis).T
+        Returns
+        -------
+        int
+        the number of lattice points (for real-space) or LEED beams (for
+        reciprocal-space)
+        """
+        return len(self.hk)
 
     @property
     def real_basis(self):
@@ -1778,12 +1944,26 @@ class Lattice():
         return self.basis.copy()
 
     @property
-    def cell_shape(self):
+    def reciprocal_basis(self):
         """
-        Returns the shape of the unit cell as a string. The value returned is
-        'Oblique', 'Rectangular', 'Square', 'Rhombic', or 'Hexagonal'.
+        Returns the reciprocal of the lattice basis. Notice that if
+        self.space == 'real', this returns the reciprocal space basis.
+        If self.space == 'reciprocal', it returns the reciprocal of
+        the reciprocal, i.e., the real-lattice basis.
+
+        This is different from the return value of real_basis
         """
-        return self._shape
+        # Working out the cross products
+        #   a* = 2pi/area [b x z][0:2] = 2pi/area [b12, -b11]
+        #   b* = 2pi/area [z x a][0:2] = 2pi/area [-a12, a11]
+        # where
+        #   area = det(basis).
+        # Thus
+        #  | a* |                    | b12  -a12| T
+        #  |    | = 2pi/det(basis) * |          |   = 2pi * basis^(-T)
+        #  | b* |                    |-b11   a11|
+
+        return 2*np.pi*np.linalg.inv(self.basis).T
 
     @property
     def space(self):
@@ -1794,33 +1974,6 @@ class Lattice():
         """
         return self._space
 
-    @property
-    def group(self):
-        """
-        Returns the plane group of the lattice as a PlaneGroup instance
-        """
-        return self._group
-
-    @group.setter
-    def group(self, group):
-        """
-        Set the plane group to a PlaneGroup instance with Hermann-Mauguin
-        symbol equal to group. See PlaneGroup for a list of acceptable input
-        parameters.
-        """
-        self._group = PlaneGroup(group)
-
-    @property
-    def n_beams(self):
-        """
-        Returns
-        -------
-        int
-        the number of lattice points (for real-space) or LEED beams (for
-        reciprocal-space)
-        """
-        return len(self.hk)
-    
     @property
     def special_directions(self):
         """
@@ -1845,7 +1998,7 @@ class Lattice():
 
         # The special directions are those parallel to the eigenvectors
         # of the mirrors with eigenvalue == 1 (use 1e-4 tolerance).
-        # In fact, this is the direction that is unchanged when applying 
+        # In fact, this is the direction that is unchanged when applying
         # the mirror operation. Rotations do not give any special direction.
         directions = []
         for op in ops:
@@ -1867,7 +2020,7 @@ class Lattice():
         'Rectangular', or 'Square'), also changing the real-space basis in an
         handedness-conserving fashion so that the angle between the basis
         vectors in real space is obtuse (for hexagonal and rhombic only)
-        
+
         Returns
         -------
         string
@@ -1963,11 +2116,6 @@ class Lattice():
         h_max = int(np.ceil(limit/shortest))
 
         # create grid of indices
-                                                                                # TODO: use BeamIndex here, rather than a bare tuple. Even better,
-                                                                                #       once I have a BeamList (subclass of ndarray, see
-                                                                                #       https://numpy.org/doc/stable/user/basics.subclassing.html)
-                                                                                #       this can be a BeamList, that can preserve the overall type
-                                                                                #       as well as the type of its elements (which will be BeamIndex)
         hk = np.mgrid[-h_max:h_max+1, -h_max:h_max+1].reshape(2,-1).T
 
         # Create lattice:
@@ -2158,7 +2306,7 @@ class Lattice():
         if self.space == 'reciprocal':
             t_overall = np.linalg.inv(t_overall).T
         return t_overall
-    
+
     def is_high_symmetry(self):
         """
         Checks whether the lattice is in the highest symmetry possible
@@ -2188,12 +2336,12 @@ class Lattice():
             # Inferring whether the group has higher symmetry is not possible
 
         return transform
-    
+
     def transform(self, transform, as_copy=True):
         """
         Modifies the basis and lattice points according to transform, and
         returns a copy (if copy=True) or directly modifies the values of self.
-        
+
         Returns
         -------
         Lattice
@@ -2205,7 +2353,7 @@ class Lattice():
             new_lattice = copy.deepcopy(self)
         new_lattice.basis = np.dot(transform, self.basis)
         return new_lattice
-    
-    
+
+
 
 
