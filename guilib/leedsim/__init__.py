@@ -28,14 +28,21 @@ from viperleed.guilib.leedsim.leedparameters import (LEEDParameters,
 if GLOBALS['USE_GUI']:
     __all__.extend(['DomsBlock', 'EnergyBlock', 'RotationBlock',
                     'ToggleButton', 'LEEDCanvas', 'RealCanvas',
-                    'HoverAnnot', 'MatricesPopup', 'TEST', 'LEED_GUI',
-                    'NewFileDialog', 'Bulk3DSymDialog', 'ExportCSVDialog'])
+                    'HoverAnnot', 'MatricesPopup', 'TEST',
+                    'LatticeInput', 'EditableMatrix', 'BulkInput',
+                    'SurfaceStructureInput',
+                    'LEED_GUI',
+                    'NewFileDialog',
+                    'Bulk3DSymDialog', 'ExportCSVDialog'])
     from viperleed.guilib.leedsim.widgets import (DomsBlock, EnergyBlock,
                                                   RotationBlock, ToggleButton,
                                                   LEEDCanvas, RealCanvas,
                                                   HoverAnnot, MatricesPopup,
-                                                  TEST)                            # This probably not...
+                                                  TEST,                         # This probably not...
+                                                  LatticeInput, EditableMatrix,
+                                                  BulkInput,
+                                                  SurfaceStructureInput)
     from viperleed.guilib.leedsim.mainwindow import LEED_GUI
-    from viperleed.guilib.leedsim.dialogbulk3dsym import Bulk3DSymDialog
-    from viperleed.guilib.leedsim.newfiledialog import NewFileDialog
-    from viperleed.guilib.leedsim.exportcsvdialog import ExportCSVDialog
+    from viperleed.guilib.leedsim.dialogs import (Bulk3DSymDialog,              # Perhaps not needed if moving all dialogs in their folder
+                                                  NewFileDialog,                # Perhaps not needed if moving all dialogs in their folder
+                                                  ExportCSVDialog)              # Perhaps not needed if moving all dialogs in their folder

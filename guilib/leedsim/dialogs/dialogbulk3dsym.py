@@ -162,8 +162,8 @@ class Bulk3DSymDialog(qtw.QDialog):
         # to input arbitrary operations as one would have to check
         # all the combinations of operations.
         # TODO: do this later when we figure out how to handle this.
-
-        #       For now, look through the gl.PlaneGroup(s) for the
+        #
+        #       For now, look through the gl.PlaneGroups for the
         #       current bulk.cell_shape, and pick the smallest group
         #       that contains all the selected operations (+ those of
         #       the plane group itself). Then use the operations of
@@ -176,7 +176,7 @@ class Bulk3DSymDialog(qtw.QDialog):
                      if extras(i).checkState()])
 
         # Get the smallest group that contains all the operations
-        for group in gl.PlaneGroup.groupsForShape[self.__bulk.cell_shape]:
+        for group in gl.PlaneGroup.groups_for_shape[self.__bulk.cell_shape]:
             group_ops = gl.PlaneGroup(group).operations()
             if all(op in group_ops for op in all_ops):
                 break
@@ -266,9 +266,9 @@ class Bulk3DSymDialog(qtw.QDialog):
         bulk_ops = self.__bulk.group.operations()
 
         # Get the plane group with most operations given the
-        # current cell shape (always the last in groupsForShape)
+        # current cell shape (always the last in groups_for_shape)
         largest_group = gl.PlaneGroup(
-            bulk.group.groupsForShape[bulk.cell_shape][-1]
+            bulk.group.groups_for_shape[bulk.cell_shape][-1]
             )
         self.__extra_ops = []
         for op in largest_group.operations():
