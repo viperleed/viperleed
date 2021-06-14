@@ -236,7 +236,7 @@ def prime_numbers():
         The next prime number.
     """
     # Algorithm is taken from https://stackoverflow.com/a/10733621/849891
-    # and is essentially Erastothenes sieve.
+    # and is essentially Erastothene's sieve.
     yield from (2, 3, 5, 7)
     sieve = {}
     primes = prime_numbers()

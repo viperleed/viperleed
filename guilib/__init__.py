@@ -21,7 +21,7 @@ from viperleed.guilib.helpers import (conventional_angles,
                                       two_by_two_array_to_tuple,
                                       two_d_iterable_to_array,
                                       remove_duplicates,
-                                      single_spaces_only,  # Probably I don't need this
+                                      single_spaces_only,
                                       array2string, prime_numbers,
                                       equal_dicts)
 from viperleed.guilib.base import (get_equivalent_beams,
@@ -33,6 +33,8 @@ from viperleed.guilib.base import (get_equivalent_beams,
                                    integer_part_length,
                                    parallel, orientation, screen_radius,
                                    BeamIndex, PlaneGroup, Lattice)
+
+from viperleed.guilib.mathparse import MathParser, UnsupportedMathError
 
 if (os.name == 'posix' and 'DISPLAY' not in os.environ.keys()) or not USE_GUI:
     # The environment does not have graphics capabilities.
