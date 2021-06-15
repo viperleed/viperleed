@@ -18,6 +18,7 @@ Date: 26.04.2021
 
 #include <SPI.h>
 
+#define AD7705_DELAY_MICRO 100
 
 // Definitions for AD7705 analog-to-digital converter
 #define AD7705_SPIMODE     3   // Data accepted at rising edge of SCLK

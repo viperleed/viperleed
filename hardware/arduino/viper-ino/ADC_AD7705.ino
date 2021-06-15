@@ -165,20 +165,28 @@ int32_t AD7705setCalibrationRegister(byte chipSelectPin, byte channel, byte theR
 }
 
 /** Waits until the AD7705 with the given chip select pin has finished self-calibration */
-void AD7705waitForCalibration(byte chipSelectPin, byte channel) {               // TODO: Need to have an internal timeout! Perhaps have a #define AD7705_DELAY_MICRO 100 and use this in all delay functions. Then the timeout can just be a counter.
+void AD7705waitForCalibration(byte chipSelectPin, byte channel) {
+    uint32_t timeoutCounter = 0;
     AD7705startIO(chipSelectPin);
     do {
-        delayMicroseconds(100);
+        if (timeoutCounter > 50100) //50100 == 5.01 seconds > than our arduino timeout (5 seconds)
+            return;
+        delayMicroseconds(AD7705_DELAY_MICRO);
         SPI.transfer(AD7705_REG_SETUP | AD7705_READ_REG | channel);
+        timeoutCounter++;
     } while (SPI.transfer(0x0) & AD7705_SELFCAL);  //read setup register and check for self-calibration
     AD7705endIO(chipSelectPin);
 }
 
 /** Waits for data and then reads the given channel of the AD7705 with the given chip select pin.
  *  Returns a signed 16-bit int with the signed value (N.B. we use bipolar mode only) */
-int16_t AD7705waitAndReadData(byte chipSelectPin, byte channel) {               // TODO: Need to have an internal timeout! Do it the same way as the previous one
+int16_t AD7705waitAndReadData(byte chipSelectPin, byte channel) {
+    uint32_t timeoutCounter = 0;
     while (AD7705readCommRegister(chipSelectPin, channel) & AD7705_DRDY) {//DRDY bit is 0 when ready
-        delayMicroseconds(100);
+        if (timeoutCounter > 50100) //50100 == 5.01 seconds > than our arduino timeout (5 seconds)
+            return -1;
+        delayMicroseconds(AD7705_DELAY_MICRO);
+        timeoutCounter++;
     }
     AD7705startIO(chipSelectPin);
     SPI.transfer(AD7705_REG_DATA | AD7705_READ_REG | channel);
