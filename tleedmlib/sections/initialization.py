@@ -238,7 +238,7 @@ def initialization(sl, rp, subdomain=False):
                         *[x for y in rp.SUPERLATTICE.astype(int) for x in y]))
 
         # bulk plane group detection:
-        logger.info("Initializing bulk symmetry search...")
+        logger.info("Starting bulk symmetry search...")
         tl.symmetry.findSymmetry(bsl, rp, bulk=True, output=False)
         bsl.revertUnitCell()  # keep origin matched with main slab
         logger.info("Found bulk plane group: "+bsl.foundplanegroup)
