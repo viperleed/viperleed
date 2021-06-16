@@ -733,7 +733,7 @@ class LEED_GUI(qtw.QMainWindow):
                      self.rotWidg.h10, self.rotWidg.v10,
                      self.rotWidg.h01, self.rotWidg.v01,
                      self.doms.toggle]
-        # First disconnect all controls, as this prevents multiple connections
+        # First disconnect all controls, as this prevents multiple connections  # LOOK AT Qt::UniqueConnection
         # from being established every time a new file is opened
         self.disconnectAll()
 
