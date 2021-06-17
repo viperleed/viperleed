@@ -22,7 +22,7 @@ def translateTimestamp(s):
                                       s[7:9], s[9:11], s[11:13])
 
 
-def main():
+def bookkeeper():
     histname = "history"  # name of history folder in home dir
     workhistname = "workhistory"  # name of history folder in work dir
     copyfiles = ["POSCAR", "PHASESHIFTS", "PARAMETERS", "IVBEAMS",
@@ -108,8 +108,10 @@ def main():
     if tnum not in maxnums:
         num = 1  # Tensor is new - if discard: delete
         if args.discard:
-            tensorfile = os.path.join("Tensors", "Tensors_{:03d}.zip")
-            deltafile = os.path.join("Deltas", "Deltas_{:03d}.zip")
+            tensorfile = os.path.join("Tensors", "Tensors_{:03d}.zip"
+                                      .format(tnum))
+            deltafile = os.path.join("Deltas", "Deltas_{:03d}.zip"
+                                     .format(tnum))
             for f in (tensorfile, deltafile):
                 if os.path.isfile(f):
                     try:
@@ -326,4 +328,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    bookkeeper()
