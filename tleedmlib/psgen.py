@@ -11,6 +11,7 @@ import logging
 import random
 import subprocess
 import re
+import shutil
 
 import viperleed.tleedmlib as tl
 
@@ -25,12 +26,21 @@ def runPhaseshiftGen(sl, rp,
     """Creates required input for EEASiSSS.x, then runs it. Reads the output
     files and extracts information for PHASESHIFTS file, then returns that
     information (without writing PHASESHIFTS)."""
-    shortpath = rp.workdir
-    if len(os.path.relpath(rp.workdir)) < len(shortpath):
-        shortpath = os.path.relpath(rp.workdir)
-    psgensource = os.path.join(shortpath, psgensource)
+    shortpath = rp.sourcedir
+    if len(os.path.relpath(rp.sourcedir)) < len(shortpath):
+        shortpath = os.path.relpath(rp.sourcedir)
+
+    if len(shortpath) > 62:
+        # too long - need to copy stuff here
+        manual_copy = True
+        os.makedirs("tensorleed", exist_ok=True)
+        shutil.copy2(os.path.join(shortpath, excosource), excosource)
+        shortpath = "."
+    else:
+        manual_copy = False
+
+    psgensource = os.path.join(rp.sourcedir, psgensource)
     excosource = os.path.join(shortpath, excosource)
-    atdenssource = os.path.join(shortpath, atdenssource)
 
     lmax = 16   # this could be a variable, for now set fixed...
     nsl, newbulkats = sl.addBulkLayers(rp)
@@ -189,9 +199,13 @@ def runPhaseshiftGen(sl, rp,
                          "identify "+el+" as a chemical element. Define "
                          "ELEMENT_RENAME or ELEMENT_MIX parameter.")
             raise
-        chgdenrelpath = os.path.join(atdenssource, chemel, "chgden"+chemel)
-        if os.name == 'nt':     # windows - replace the backslashes.
-            chgdenrelpath = chgdenrelpath.replace('/', '\\')
+        subpath = os.path.join(atdenssource, chemel, "chgden"+chemel)
+        chgdenrelpath = os.path.join(shortpath, subpath)
+        if manual_copy:
+            os.makedirs(os.path.join(os.path.dirname(subpath)), exist_ok=True)
+            shutil.copy2(os.path.join(rp.sourcedir, subpath), subpath)
+        # if os.name == 'nt':     # windows - replace the backslashes.
+        #     chgdenrelpath = chgdenrelpath.replace('/', '\\')
         chemels[el] = chemel
         chemelspaths[el] = chgdenrelpath
 
