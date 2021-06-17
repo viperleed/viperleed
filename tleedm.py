@@ -35,7 +35,7 @@ logger = logging.getLogger("tleedm")
 
 
 def run_tleedm(system_name="", console_output=True, slab=None,
-               preset_params={}):
+               preset_params={}, source="."):
     """
     Runs the TensErLEED Manager. By default, a PARAMETERS and a POSCAR file
     are expected, but can be replaced by passing the 'slab' and/or
@@ -56,6 +56,9 @@ def run_tleedm(system_name="", console_output=True, slab=None,
         overwrite values read from the PARAMETERS file, if present in both. If
         no PARAMETERS file is read, parameters will be read exclusively from
         present_params.
+    source : str, optional
+        Path where the 'tensorleed' directory can be found, which contains all
+        the TensErLEED source code.
 
     Returns
     -------
@@ -159,6 +162,7 @@ def run_tleedm(system_name="", console_output=True, slab=None,
             rp.SYMMETRY_FIND_ORI = False
 
     rp.systemName = system_name
+    rp.sourcedir = source
     if not rp.systemName:
         # use name of parent folder
         rp.systemName = os.path.basename(os.path.abspath(

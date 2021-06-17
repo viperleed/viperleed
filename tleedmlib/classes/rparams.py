@@ -88,7 +88,7 @@ class DomainParameters:
     """Stores workdir, slab and runparams objects for each domain"""
 
     def __init__(self, workdir, homedir, name):
-        self.workdir = workdir  # path do sub-directory for domain calculation
+        self.workdir = workdir  # path to sub-directory for domain calculation
         self.homedir = homedir  # path to main tleedm working directory
         self.name = name        # domain name as defined by user
         self.sl = None
@@ -175,7 +175,8 @@ class Rparams:
 
         # RUN VARIABLES
         self.starttime = timer()
-        self.workdir = os.getcwd()  # MAIN WORK DIRECTORY; where to find files
+        self.sourcedir = os.getcwd()  # where to find 'tensorleed'
+        self.workdir = os.getcwd()  # MAIN WORK DIRECTORY; where to find input
         self.searchConvInit = {
             "gaussian": None, "dgen": {"all": None, "best": None, "dec": None}}
         self.searchMaxGenInit = self.SEARCH_MAX_GEN
@@ -290,7 +291,7 @@ class Rparams:
             self.TENSOR_INDEX = getMaxTensorIndex()
         # TL_VERSION:
         if self.TL_VERSION == 0.:
-            path = os.path.join(self.workdir, "tensorleed")
+            path = os.path.join(self.sourcedir, "tensorleed")
             ls = [dn for dn in os.listdir(path)
                   if (os.path.isdir(os.path.join(path, dn))
                       and dn.startswith("TensErLEED"))]

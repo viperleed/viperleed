@@ -121,7 +121,7 @@ def superpos(sl, rp, subdomain=False, for_error=False, only_vary=None):
         rp.getFortranComp()
     # get fortran files
     try:
-        tldir = getTLEEDdir(home=rp.workdir, version=rp.TL_VERSION)
+        tldir = getTLEEDdir(home=rp.sourcedir, version=rp.TL_VERSION)
         if not tldir:
             raise RuntimeError("TensErLEED code not found.")
         srcpath = os.path.join(tldir, 'src')

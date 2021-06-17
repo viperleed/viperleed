@@ -19,7 +19,7 @@ def runBeamGen(sl, rp, beamgensource=os.path.join('tensorleed',
                domains=False):
     """Writes necessary input for the beamgen3 code, the runs it. The relevant
     output file will be renamed to BEAMLIST."""
-    beamgensource = os.path.join(rp.workdir, beamgensource)
+    beamgensource = os.path.join(rp.sourcedir, beamgensource)
     output = ''
     f74x2 = ff.FortranRecordWriter('2F7.4')
     if sl.bulkslab is None:

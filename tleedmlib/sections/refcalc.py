@@ -284,7 +284,7 @@ def refcalc(sl, rp, subdomain=False):
 
     energies = np.arange(rp.THEO_ENERGIES[0], rp.THEO_ENERGIES[1]+0.01,
                          rp.THEO_ENERGIES[2])
-    tldir = os.path.abspath(getTLEEDdir(home=rp.workdir,
+    tldir = os.path.abspath(getTLEEDdir(home=rp.sourcedir,
                                         version=rp.TL_VERSION))
     if not tldir:
         raise RuntimeError("TensErLEED code not found.")
