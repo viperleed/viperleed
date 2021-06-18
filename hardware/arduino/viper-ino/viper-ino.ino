@@ -1071,6 +1071,7 @@ void sendMeasuredValues(){
           }
         encodeAndSend(littleToBigEndian, 4);
     }
+    //encodeAndSend(adc0Gain); //uncomment for debug (adapt python side accordingly)
     resetMeasurementData();
     if (continuousMeasurement) {
         currentState = STATE_MEASURE_ADCS;
@@ -1147,13 +1148,14 @@ void findOptimalADCGains(){
         return;
     }
 
-    int16_t autogain_value0;
-    int16_t autogain_value1;
-    autogain_value0 = (max(abs(maximumPeak[0]), abs(minimumPeak[0]))
-                       + (maximumPeak[0] - minimumPeak[0]));
+    // using int32_t because summing int16_t may overflow 
+    int32_t autogain_value0;
+    int32_t autogain_value1;
+    autogain_value0 = (max(abs((int32_t)maximumPeak[0]), abs((int32_t)minimumPeak[0]))
+                       + abs((int32_t)maximumPeak[0] - (int32_t)minimumPeak[0]));
     adc0RipplePP = maximumPeak[0] - minimumPeak[0];
-    autogain_value1 = (max(abs(maximumPeak[1]), abs(minimumPeak[1]))
-                       + (maximumPeak[1] - minimumPeak[1]));
+    autogain_value1 = (max(abs((int32_t)maximumPeak[1]), abs((int32_t)minimumPeak[1]))
+                       + abs((int32_t)maximumPeak[1] - (int32_t)minimumPeak[1]));
     adc1RipplePP = maximumPeak[1] - minimumPeak[1];
     // TODO: probably something to check here: if either autogain_value is
     //       already in saturation with gain=0 something is wrong with
@@ -1169,7 +1171,7 @@ void findOptimalADCGains(){
         while(((autogain_value1 << (adc1Gain + 1)) < ADC_RANGE_THRESHOLD)
               && (adc1Gain < AD7705_MAX_GAIN)){
             adc1Gain++;
-      }
+        }
     }
 
     // Now clean up and update the ADCs with the new gain

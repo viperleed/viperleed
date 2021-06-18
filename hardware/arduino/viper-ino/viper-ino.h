@@ -25,6 +25,18 @@ union uint16OrBytes{
     byte asBytes[2];
 };
 
+// Interpret the same value as either int16_t or a 2-bytes array
+union int16OrBytes{
+    int16_t asInt;
+    byte asBytes[2];
+};
+
+// Interpret the same value as either int32_t or a 4-bytes array
+union int32OrBytes{
+    int32_t asInt;
+    byte asBytes[4];
+};
+
 // Interpret the same value as either (32-bit) float or a 4-bytes array
 union floatOrBytes{
     float asFloat;

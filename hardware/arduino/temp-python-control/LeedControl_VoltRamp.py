@@ -12,6 +12,7 @@ import os
 import configparser
 import glob
 import struct
+import ast
 from zipfile import ZipFile
 import matplotlib.pyplot as plt
 
@@ -29,7 +30,7 @@ if 'Camera_libraries' not in sys.path:
     sys.path.append(os.path.join(current_path, 'Camera_libraries'))
 
 # ViPErLEED
-from camera import Camera
+#from camera import Camera
 
 # Configuration-File location:
 configfile_location = 'Configuration/LeedControl_config.ini'
@@ -181,9 +182,9 @@ def receive_from_arduino():
     
     # TODO: check that the message length is appropriate
     
-    print("Got message: ", repr(message))
+    # print("Got message: ", repr(message))
     decoded = decode_high_bytes(message)
-    print("Decoded: ", repr(decoded))
+    # print("Decoded: ", repr(decoded))
 
     return decoded
 
@@ -226,14 +227,6 @@ def decode_high_bytes(in_bytes):
             out_bytes += in_bytes[i].to_bytes(1, sign)
         i += 1
     return out_bytes[2:-1]
-
-    # OLD CODE FROM BERNHARD inappropriate for messages that are not data or OK
-    # each function that expects a return value should take care of interpreting
-    # it as it is supposed to
-    if out_bytes[1] < 4:
-        return int.from_bytes(out_bytes[2:(2+out_bytes[1])], sign)
-    elif out_bytes[1] == 4:
-        return struct.unpack('f', out_bytes[2:6])[0]
 
 #======================================
 
@@ -379,8 +372,10 @@ def set_voltage_and_measure(energy, settle_time = 0):
     
     # TODO: nominal energy to actual energy after calibration
     dac_value_temp = int(round(energy * conversion_factor))
-    if(dac_value_temp >= 65536):
+    if dac_value_temp >= 65536:
         dac_value_temp = 65535
+    if dac_value_temp <= 0:
+        dac_value_temp = 0
     dac_send = dac_value_temp.to_bytes(2,sign) + settle_time.to_bytes(2,sign)
     # print("DAC_send = " ,dac_value_temp)
     # print("DAC_tobytes =" ,dac_value_temp.to_bytes(2, sign), " t= ",round(1000*time.time()))
@@ -556,6 +551,15 @@ def prepare_for_measurement(configuration_section):
     dac_first_settletime = config.getint('measurement_settings',
                                          'dac_first_settle_time')
     start_energy = config.getfloat('measurement_settings', 'start_energy')
+    
+    calicbration_coef = ast.literal_eval(
+        config['energy_calibration']['coefficients']
+        )
+    calibration_domain = ast.literal_eval(
+        config['energy_calibration']['domain']
+        )
+    dac_energy = Polynomial(calicbration_coef, domain=calibration_domain,
+                            window=calibration_domain)
 
     # Connect with Arduino, reset it and flush input buffer
     portname = serial_ports()
@@ -566,7 +570,7 @@ def prepare_for_measurement(configuration_section):
     # then re-initialize the ADC with the right gain
     calibrate_adcs(adc_config)
     initialise_adcs(adc_config)
-    set_voltage_and_measure(start_energy, dac_first_settletime)
+    set_voltage_and_measure(dac_energy(start_energy), dac_first_settletime)
     receive_from_arduino()
     receive_from_arduino()
     receive_from_arduino()
@@ -575,7 +579,7 @@ def prepare_for_measurement(configuration_section):
 def measure_iv_video():
     prepare_for_measurement('iv_movie_configuration')
     PC_RESET = config.getint('communication_bytes', 'PC_RESET')
-    dac_settletime = config.getint('measurement_settings', 'dac_settle_time')
+    dac_settle_time = config.getint('measurement_settings', 'dac_settle_time')
     path = config['measurement_settings']['path']
     dac_value_end = config.getfloat('measurement_settings', 'dac_value_end')
     camera_settle_time = config.getint('camera_settings', 'camera_settle_time')
@@ -614,7 +618,7 @@ def measure_iv_video():
             # if camera is used in "exposure" mode
             while not live_mode:
                 if not CameraObject.callback_data.dac_busy:
-                    set_voltage_and_measure(actual_energy, dac_settletime)
+                    set_voltage_and_measure(actual_energy, dac_settle_time)
                     break
             if not live_mode:
                 time.sleep(camera_settle_time*1e-3)
@@ -663,8 +667,8 @@ def measure_iv_video():
 
 def test_iv_video():
     prepare_for_measurement('iv_movie_configuration')
-    PC_RESET = config.getint('communication_bytes', 'PC_RESET')
-    dac_settletime = config.getint('measurement_settings', 'dac_settle_time')
+    # PC_RESET = config.getint('communication_bytes', 'PC_RESET')
+    dac_settle_time = config.getint('measurement_settings', 'dac_settle_time')
     dac_value_end = config.getfloat('measurement_settings', 'dac_value_end')
     I0_conversion_factor = config.getint('leed_hardware',
                                          'I0_conversion_factor')
@@ -686,7 +690,7 @@ def test_iv_video():
     nominal_energy_csv = np.linspace(start_energy, end_energy, npoints+1)
     
     for actual_energy in nominal_energy_csv:
-        set_voltage_and_measure(actual_energy, dac_settletime)
+        set_voltage_and_measure(actual_energy, dac_settle_time)
         print(actual_energy)
         data = receive_from_arduino()
         if len(data) == 1:
@@ -708,7 +712,6 @@ def test_iv_video():
         timestamp.append(time_temp)
 
     set_voltage_and_measure(dac_value_end)
-    
     fit_polynomial = Polynomial.fit(nominal_energy_csv, adc0_value_csv, 5)
     print(fit_polynomial, flush=True)
     fig, (ax1, ax2) = plt.subplots(2, 1)
@@ -742,7 +745,7 @@ def change_measurement_mode(measurement_mode):
                                      'measurement_time').to_bytes(2, sign)
     message.append(measurement_time[0])
     message.append(measurement_time[1])
-    print(message)
+    # print(message)
     send_to_arduino(message)
     msg = receive_from_arduino()
     while (msg != PC_ERROR) and (msg != PC_OK):
@@ -754,15 +757,29 @@ def change_measurement_mode(measurement_mode):
         arduino_port.close()
         raise IOError("Setting the measurement mode failed.")
 
-def quick_measurements():
-    prepare_for_measurement('iv_movie_configuration')
-    PC_RESET = config.getint('communication_bytes', 'PC_RESET')
-    dac_settletime = config.getint('measurement_settings', 'dac_settle_time')
+def quick_measurements(measure_what='I0', settle_time_scaling=1):
+    """"""
+    conversion_factor = 1
+    if measure_what == 'I0':
+        config_section = 'iv_movie_configuration'
+        conversion_factor = config.getint('leed_hardware',
+                                          'I0_conversion_factor')
+        y_title = 'I0 (uA)'
+    elif measure_what == 'HV':
+        config_section = 'measure_filament_configuration'
+        y_title = 'Energy (eV)'
+    else:
+        raise ValueError("Unknown measurement mode")
+
+    prepare_for_measurement(config_section)
+    dac_settle_time = config.getint('measurement_settings', 'dac_settle_time')
+    dac_first_settle_time = config.getint('measurement_settings',
+                                         'dac_first_settle_time')
     dac_value_end = config.getfloat('measurement_settings', 'dac_value_end')
-    I0_conversion_factor = config.getint('leed_hardware',
-                                         'I0_conversion_factor')
     continuous_measurement_loops = config.getint('measurement_settings', 
-                                                 'continuous_measurement_loops')
+                                                 'continuous_measurement_loops')    
+    continuous_measurement_steps = config.getint('measurement_settings', 
+                                                 'continuous_measurement_steps')
     start_energy = config.getfloat('measurement_settings', 'start_energy')
 
     adc0_value_csv = []
@@ -770,55 +787,171 @@ def quick_measurements():
     adc2_value_csv = []
     timestamp = []
     timestart = time.time()
+    j = 1
+    while j <= continuous_measurement_steps:
+        set_voltage_and_measure(0, dac_first_settle_time)
+        change_measurement_mode('continuous_measurement_yes')
+        print(dac_settle_time)
+        set_voltage_and_measure(start_energy, dac_settle_time)
 
-    change_measurement_mode('continuous_measurement_yes')
-    set_voltage_and_measure(start_energy, 0)
+        i = 1
+        adc0_value_this_loop = []
+        while i <= continuous_measurement_loops:
+            i += 1
+            adc0_value = bytes_to_float(receive_from_arduino())
+            adc1_value = bytes_to_float(receive_from_arduino())
+            adc2_value = bytes_to_float(receive_from_arduino())
+            # print("ADC0_VAlUE:", adc0_value*conversion_factor)
+            # print("ADC1_VAlUE:", adc1_value)
+            # print("ADC2_VAlUE:", adc2_value,
+                  # " t = ", round(1000*time.time()))
+            # print("#########################")
+            adc0_value_this_loop.append(adc0_value*conversion_factor)
+            adc1_value_csv.append(adc1_value)
+            adc2_value_csv.append(adc2_value)
+            time_temp = time.time() - timestart
+            timestamp.append(time_temp)
+        dac_settle_time *= settle_time_scaling
+        adc0_value_csv.append(adc0_value_this_loop)
+        j += 1
 
-    i = 1
-    while i <= continuous_measurement_loops:
-        i += 1
-        adc0_value = bytes_to_float(receive_from_arduino())
-        adc1_value = bytes_to_float(receive_from_arduino())
-        adc2_value = bytes_to_float(receive_from_arduino())
-        print("ADC0_VAlUE:", adc0_value*I0_conversion_factor)
-        print("ADC1_VAlUE:", adc1_value)
-        print("ADC2_VAlUE:", adc2_value,
-              " t = ", round(1000*time.time()))
-        print("#########################")
-        adc0_value_csv.append(adc0_value*I0_conversion_factor)
-        adc1_value_csv.append(adc1_value)
-        adc2_value_csv.append(adc2_value)
-        time_temp = time.time() - timestart
-        timestamp.append(time_temp)
-
-    change_measurement_mode('continuous_measurement_no')
+        change_measurement_mode('continuous_measurement_no')
+    
     set_voltage_and_measure(dac_value_end)
     
-    times = range(continuous_measurement_loops)
-    fit_polynomial = Polynomial.fit(times, adc0_value_csv, 1)
-    print(fit_polynomial, flush=True)
+    dac_settle_time = config.getint('measurement_settings', 'dac_settle_time')
+    times = np.arange(continuous_measurement_loops)
     fig, (ax1, ax2) = plt.subplots(2, 1)
-    ax1.set_ylabel('adc0_value')
-    ax1.set_xlabel('energy')
-    ax1.plot(times, adc0_value_csv, '.')
-    ax1.plot(times, fit_polynomial(times), '-')
-    
-    ax2.set_ylabel('residuals')
-    ax2.set_xlabel('true energy')
-    ax2.plot(times,
-             np.subtract(fit_polynomial(times), adc0_value_csv),
+    ax1.set_ylabel(y_title)
+    ax1.set_xlabel('Time since set voltage (ms)')
+    averaged = np.zeros(np.shape(times))
+    for i, data in enumerate(adc0_value_csv):
+        averaged = np.add(averaged, data)
+        ax1.plot(times*20 + 60 + dac_settle_time*settle_time_scaling**i,
+                 data, '.')
+
+    ax2.set_ylabel('Average' + y_title)
+    ax2.set_xlabel('Time since set voltage (ms)')
+    ax2.plot(times*20 + 60,
+             averaged/continuous_measurement_steps,
              '.')
     plt.show()
+    return adc0_value_csv
 
+def test_single_ramp_quick_measurements(measure_what='I0'):
+    conversion_factor = 1
+    if measure_what == 'I0':
+        config_section = 'iv_movie_configuration'
+        conversion_factor = config.getint('leed_hardware',
+                                          'I0_conversion_factor')
+        y_title = 'I0 (uA)'
+    elif measure_what == 'HV':
+        config_section = 'measure_filament_configuration'
+        y_title = 'Energy (eV)'
+    else:
+        raise ValueError("Unknown measurement mode")
+
+    dac_settle_time = config.getint('measurement_settings', 'dac_settle_time')
+    dac_first_settle_time = config.getint('measurement_settings',
+                                          'dac_first_settle_time')
+    continuous_measurement_loops = config.getint('measurement_settings', 
+                                                 'continuous_measurement_loops') 
+    start_energy = config.getfloat('measurement_settings', 'start_energy')
+    delta_energy = config.getfloat('measurement_settings', 'delta_energy')
+    end_energy = config.getfloat('measurement_settings', 'end_energy')
+
+    adc0_value_csv = []
+    adc1_value_csv = []
+    adc2_value_csv = []
+    timestamp = []
+    timestart = time.time()
+
+    npoints = int((end_energy-start_energy)/delta_energy)
+    if npoints <= 0:
+        print("Please check the starting and ending energy and the stepsize.")
+        raise RuntimeError("Number of steps could not be calculated!")
+    nominal_energy_csv = np.linspace(start_energy, end_energy, npoints+1)
+    
+    for actual_energy in nominal_energy_csv:
+        change_measurement_mode('continuous_measurement_yes')
+        set_voltage_and_measure(actual_energy, 0)
+        i = 1
+        adc0_value_this_loop = []
+        while i <= continuous_measurement_loops:
+            i += 1
+            adc0_value = bytes_to_float(receive_from_arduino())
+            adc1_value = bytes_to_float(receive_from_arduino())
+            adc2_value = bytes_to_float(receive_from_arduino())
+            adc0_value_this_loop.append(adc0_value*conversion_factor)
+            adc1_value_csv.append(adc1_value)
+            adc2_value_csv.append(adc2_value)
+            time_temp = time.time() - timestart
+            timestamp.append(time_temp)
+        adc0_value_csv.append(adc0_value_this_loop)
+
+        change_measurement_mode('continuous_measurement_no')
+        
+    set_voltage_and_measure(start_energy, dac_first_settle_time)
+
+    return adc0_value_csv
+    
+def multiple_ramps_quick_measurements(measure_what='I0'):
+    if measure_what == 'I0':
+        config_section = 'iv_movie_configuration'
+        y_title = 'I0 (uA)'
+    elif measure_what == 'HV':
+        config_section = 'measure_filament_configuration'
+        y_title = 'Energy (eV)'
+    prepare_for_measurement(config_section)
+    update_rate_raw = config.getint(config_section, 'update_rate')
+    update_rate = config.getint('adc_update_rate', str(update_rate_raw))
+    dac_value_end = config.getfloat('measurement_settings', 'dac_value_end')
+    num_ramps = config.getint('measurement_settings', 
+                              'continuous_measurement_steps')
+    continuous_measurement_loops = config.getint('measurement_settings', 
+                                                 'continuous_measurement_loops')
+    adc0_value_csv = []
+    i=1
+    while i <= num_ramps:
+        adc0_value_csv.append(test_single_ramp_quick_measurements(measure_what))
+        i += 1
+    # times in milliseconds. The +3 is because of triggering.
+    times = (np.arange(continuous_measurement_loops) + 3)*1000/update_rate
+    adc0_values = np.asarray(adc0_value_csv)
+    average = np.sum(adc0_values, axis=0)/num_ramps
+    shift = np.sum(average[:,-10:], axis=1)/10
+    steps = (average.T - shift).T
+
+    fig, (ax1, ax2) = plt.subplots(2, 1)
+    ax1.set_ylabel(y_title)
+    ax1.set_xlabel('Time since set voltage (ms)')
+    averaged = np.zeros(np.shape(times))
+    for step in steps:
+        ax1.plot(times, step, '.')
+
+    # ax2.set_ylabel('Average' + y_title)
+    # ax2.set_xlabel('Time since set voltage (ms)')
+    # ax2.plot(times*20 + 60,
+             # averaged/continuous_measurement_steps,
+             # '.')
+    plt.show()
+    set_voltage_and_measure(dac_value_end)
+    return times, steps
+    
 def main():
     global arduino_port
-    #prepare_for_measurement('iv_movie_configuration')
-    measure_iv_video()
-    #test_iv_video()
-    #quick_measurements()
-    
+    # prepare_for_measurement('iv_movie_configuration')
+    # measure_iv_video()
+    # test_iv_video()
+    # quick_measurements('I0')
+    ret_value = quick_measurements('HV', 2)
+    # calibrate_real_energy_scale()
+    # ret_value = multiple_ramps_quick_measurements('HV')
+    # prepare_for_measurement('measure_filament_configuration')
+    # ret_value = test_single_ramp_quick_measurements('HV')
     arduino_port.close()
     print('Arduino Disconnected')
+    return ret_value
 
 
 def do_nothing_on_purpose():  # MR: just a mock I needed for my presentation
@@ -853,6 +986,62 @@ def do_nothing_on_purpose():  # MR: just a mock I needed for my presentation
     time.sleep(3)
     print('Arduino Disconnected')
 
+def calibrate_real_energy_scale():
+    """
+    This function measures the voltage on the filament that we get in
+    return for the requested voltage. After this the collected data is
+    used to do a polynomial fit which can be used to obtain the correct
+    voltage on the filament.
+    """
+    prepare_for_measurement('measure_filament_configuration')
+    dac_settle_time = config.getint('measurement_settings', 'dac_settle_time')
+    #start_energy, end_energy, delta_energy = TUI()
+    start_energy = config.getfloat('measurement_settings', 'start_energy')
+    delta_energy = config.getfloat('measurement_settings', 'delta_energy')
+    end_energy = config.getfloat('measurement_settings', 'end_energy')
+    dac_value_end = config.getfloat('measurement_settings', 'dac_value_end')
+    true_energy_csv = []
+
+    npoints = int((end_energy-start_energy)/delta_energy)
+    if npoints <= 0:
+        print("Please check the starting and ending energy and the stepsize.")
+        raise RuntimeError("Number of steps could not be calculated!")
+    nominal_energy_csv = np.linspace(start_energy, end_energy, npoints+1)
+
+    for actual_energy in nominal_energy_csv:
+        set_voltage_and_measure(actual_energy, dac_settle_time)
+        data = receive_from_arduino()
+        if len(data) == 1:
+           identify_error()
+           break
+        else:
+            adc0_value = bytes_to_float(data)
+        receive_from_arduino()
+        receive_from_arduino()
+        print("ADC0_VAlUE:", adc0_value)
+        print("#########################")
+        true_energy_csv.append(adc0_value)
+
+    true_energy_csv = np.asarray(true_energy_csv)
+
+    set_voltage_and_measure(dac_value_end)
+    fit_polynomial = Polynomial.fit(true_energy_csv, nominal_energy_csv, 1, domain=[-10,1100], window=[-10, 1100])
+
+    print(fit_polynomial.domain)
+    fig, (ax1, ax2) = plt.subplots(2, 1)
+    ax1.set_ylabel('fit_polynomial')
+    ax1.set_xlabel('true energy')
+    ax2.set_ylabel('residuals')
+    ax2.set_xlabel('true energy')
+    print("[", ", ".join(f"{ci:.20f}" for ci in fit_polynomial.coef), "]", sep="")
+    
+    ax1.plot(true_energy_csv, nominal_energy_csv, '.')
+    ax1.plot(true_energy_csv, fit_polynomial(true_energy_csv), '-')
+    ax2.plot(true_energy_csv,
+             np.subtract(fit_polynomial(true_energy_csv), nominal_energy_csv),
+             '.')
+    #plt.ylim(0, 10)
+    plt.show()
 
 
 if __name__ == '__main__':
@@ -863,54 +1052,3 @@ if __name__ == '__main__':
         print('DONE!')
         print("Time for whole procedure:", (time.time() - t1))
 
-
-def calibrate_real_energy_scale():
-    """
-    This function measures the voltage on the filament that we get in
-    return for the requested voltage. After this the collected data is
-    used to do a polynomial fit which can be used to obtain the correct
-    voltage on the filament.
-    """
-    prepare_for_measurement('measure_filament_configuration')
-    dac_settletime = config.getint('measurement_settings', 'dac_settle_time')
-    start_energy, end_energy, delta_energy = TUI()
-    start_energy = config.getfloat('measurement_settings', 'start_energy')
-    delta_energy = config.getfloat('measurement_settings', 'delta_energy')
-    end_energy = config.getfloat('measurement_settings', 'end_energy')
-    true_energy_csv = []
-
-    npoints = int((end_energy-start_energy)/delta_energy)
-    if npoints <= 0:
-        print("Please check the starting and ending energy and the stepsize.")
-        raise RuntimeError("Number of steps could not be calculated!")
-    nominal_energy_csv = np.linspace(start_energy, end_energy, npoints+1)
-
-    for actual_energy in nominal_energy_csv:
-        set_voltage_and_measure(actual_energy, dac_settletime)
-        adc0_value = bytes_to_float(receive_from_arduino())
-        print("ADC0_VAlUE:", adc0_value)
-        print("#########################")
-        true_energy_csv.append(adc0_value)
-    #fit_coefficients = np.polynomial.polynomial.polyfit(true_energy_csv, nominal_energy_csv, 3)
-    #polyfit(x, y, degree of accuracy)
-    #fit_polynomial = np.poly1d(fit_coefficients)
-    #poly1d(fit_coefficients) makes it a polynome that we can use like "fit_polynomial(wanted_dac_value)" which will yield the dac value we need to send to the arduino
-    #fit_polynomial = np.polynomial.polynomial.Polynomial(fit_coefficients)
-
-    #fit_polynomial_data = Polynomial.fit(true_energy_csv, nominal_energy_csv, 3)
-    #fit_polynomial = Polynomial.cast(fit_polynomial_data)
-
-    fit_polynomial = Polynomial.fit(true_energy_csv, nominal_energy_csv, 3)
-
-    fig, (ax1, ax2) = plt.subplots(2, 1)
-    ax1.set_ylabel('fit_polynomial')
-    ax1.set_xlabel('true energy')
-    ax2.set_ylabel('residuals')
-    ax2.set_xlabel('true energy')
-    print(fit_polynomial)
-    ax1.plot(true_energy_csv, fit_polynomial(true_energy_csv), '-')
-    ax2.plot(true_energy_csv,
-             np.subtract(fit_polynomial(true_energy_csv), nominal_energy_csv),
-             '.')
-    #plt.ylim(0, 10)
-    plt.show()
