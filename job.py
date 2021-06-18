@@ -53,6 +53,9 @@ def main():
         print("Running bookkeeper...")
         bookkeeper()
 
+    # create work directory if necessary
+    os.makedirs(work_path, exist_ok=True)
+
     # copy Tensors and Deltas to work directory
     if all_tensors:
         try:

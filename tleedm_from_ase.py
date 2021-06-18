@@ -13,13 +13,13 @@ import ase.db
 import sys
 import os
 import numpy as np
+import shutil
 
-# only required if running from within 'viperleed' directory:
-cd = os.path.realpath(os.path.dirname(__file__))
-vpr_path = os.path.realpath(os.path.join(cd, '..'))
-for import_path in (cd, vpr_path):
-    if import_path not in sys.path:
-        sys.path.append(import_path)
+# path to directory containing viperleed source - define explicitly
+vpr_path = '/home/path/to/source/'       # without final /viperleed
+
+if os.path.abspath(vpr_path) not in sys.path:
+    sys.path.append(os.path.abspath(vpr_path))
 
 from viperleed.tleedm import run_tleedm
 from viperleed.tleedmlib import Slab, Rparams
@@ -50,8 +50,8 @@ def main():
     slab.updateAtomNumbers()
     slab.updateElementCount()
 
-    # test: output POSCAR, just to check
-    writeCONTCAR(slab, filename='POSCAR_turned_cut')
+    # # test: output POSCAR, just to check
+    # writeCONTCAR(slab, filename='POSCAR_turned_cut')
 
     # figure out surface sites
     site_def = {}
@@ -61,14 +61,44 @@ def main():
         if atn:
             site_def[el] = {'surf': atn}
 
-    # here one could cd to a temp directory; don't forget to copy input
-    #  files there: PARAMETERS, PHASESHIFTS, IVBEAMS, (VIBROCC)
+    # create work directory if necessary
+    # alternative: could use a tempfile.TemporaryDirectory()
+    work_path = os.path.abspath(os.path.join('.', 'work_' + ind_label))
+    os.makedirs(work_path, exist_ok=True)
 
-    # run tleedm
-    run_tleedm(slab=slab, preset_params={'SITE_DEF': site_def})
+    # copy input files to work directory
+    # NOTE: PARAMETERS should NOT contain SITE_DEF flags.
+    # VIBROCC should contain *_surf sites for all elements.
+    for file in ['PARAMETERS', 'VIBROCC', 'IVBEAMS', 'PHASESHIFTS']:
+        try:
+            shutil.copy2(file, os.path.join(work_path, file))
+        except FileNotFoundError:
+            pass
 
-    # copy back THEOBEAMS.csv ?
-    # ...
+    # go to work directory, execute there
+    home = os.path.abspath('.')
+    os.chdir(work_path)
+    run_tleedm(slab=slab, preset_params={'SITE_DEF': site_def},
+               source=os.path.join(vpr_path, 'viperleed'))
+
+    # copy back THEOBEAMS.csv
+    # alternative: read in as data, store back to database
+    if not os.path.isfile('THEOBEAMS.csv'):
+        print('ERROR: No THEOBEAMS.csv output found for ' + ind_label)
+        return
+    theo_name = 'THEOBEAMS_' + ind_label + '.csv'
+    try:
+        shutil.copy2('THEOBEAMS.csv', os.path.join(home, theo_name))
+    except Exception as e:
+        print('Error copying ' + theo_name + ' to home directory: ' + str(e))
+        return
+
+    # go back, delete work directory (or keep it for diagnosis...)
+    os.chdir(home)
+    try:
+        shutil.rmtree(work_path)
+    except Exception as e:
+        print('Error deleting work directory: ' + str(e))
 
     return
 
