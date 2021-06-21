@@ -202,8 +202,8 @@ class Slab:
         # initialize from ase_atoms
         self.ucell = np.transpose(ase_atoms.cell[:])
         elems = [v.capitalize() for v in ase_atoms.get_chemical_symbols()]
-        self.n_per_elem = {k: elems.count(k) for k in set(elems)}
-        self.elements = list(self.n_per_elem.keys())
+        self.elements = sorted(list(set(elems)))
+        self.n_per_elem = {k: elems.count(k) for k in self.elements}
         for i, (el, pos) in enumerate(zip(elems,
                                           ase_atoms.get_scaled_positions())):
             self.atlist.append(Atom(el, pos, i+1, self))
