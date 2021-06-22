@@ -1596,23 +1596,23 @@ void makeAndSumMeasurements() {
     //   temperature). We may want to send an ERROR_TOO_HOT.
 
     int16_t measurement;
+    numMeasurementsDone++;
     if (hardwareDetected.asInt & LM35_PRESENT){
         measurement = analogReadMedian(LM35_PIN);
         summedMeasurements[2] += measurement;
         }   // this one first while we probably have to wait for the others
     if (hardwareDetected.asInt & ADC_0_PRESENT){
         measurement = AD7705waitAndReadData(CS_ADC_0, adc0Channel);
+        summedMeasurements[0] += measurement;
         checkMeasurementInADCRange(&adc0Gain, &adc0ShouldDecreaseGain,
                                    measurement, adc0RipplePP);
-        summedMeasurements[0] += measurement;
         }
     if (hardwareDetected.asInt & ADC_1_PRESENT){
         measurement = AD7705waitAndReadData(CS_ADC_1, adc1Channel);
+        summedMeasurements[1] += measurement;
         checkMeasurementInADCRange(&adc1Gain, &adc1ShouldDecreaseGain,
                                    measurement, adc1RipplePP);
-        summedMeasurements[1] += measurement;
         }
-    numMeasurementsDone++;
 }
 
 
