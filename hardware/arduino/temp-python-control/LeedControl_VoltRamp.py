@@ -551,15 +551,8 @@ def prepare_for_measurement(configuration_section):
     dac_first_settletime = config.getint('measurement_settings',
                                          'dac_first_settle_time')
     start_energy = config.getfloat('measurement_settings', 'start_energy')
-    
-    calicbration_coef = ast.literal_eval(
-        config['energy_calibration']['coefficients']
-        )
-    calibration_domain = ast.literal_eval(
-        config['energy_calibration']['domain']
-        )
-    dac_energy = Polynomial(calicbration_coef, domain=calibration_domain,
-                            window=calibration_domain)
+        
+    dac_energy = energy_calibration_curve()
 
     # Connect with Arduino, reset it and flush input buffer
     portname = serial_ports()
@@ -770,7 +763,7 @@ def quick_measurements(measure_what='I0', settle_time_scaling=1):
         y_title = 'Energy (eV)'
     else:
         raise ValueError("Unknown measurement mode")
-
+    dac_energy = energy_calibration_curve()
     prepare_for_measurement(config_section)
     dac_settle_time = config.getint('measurement_settings', 'dac_settle_time')
     dac_first_settle_time = config.getint('measurement_settings',
@@ -789,7 +782,7 @@ def quick_measurements(measure_what='I0', settle_time_scaling=1):
     timestart = time.time()
     j = 1
     while j <= continuous_measurement_steps:
-        set_voltage_and_measure(0, dac_first_settle_time)
+        set_voltage_and_measure(100, dac_first_settle_time)
         change_measurement_mode('continuous_measurement_yes')
         print(dac_settle_time)
         set_voltage_and_measure(start_energy, dac_settle_time)
@@ -916,24 +909,52 @@ def multiple_ramps_quick_measurements(measure_what='I0'):
         adc0_value_csv.append(test_single_ramp_quick_measurements(measure_what))
         i += 1
     # times in milliseconds. The +3 is because of triggering.
+    n_points_ave = round(0.25*continuous_measurement_loops)
     times = (np.arange(continuous_measurement_loops) + 3)*1000/update_rate
     adc0_values = np.asarray(adc0_value_csv)
     average = np.sum(adc0_values, axis=0)/num_ramps
-    shift = np.sum(average[:,-10:], axis=1)/10
+    shift = np.sum(average[:,-n_points_ave:], axis=1)/n_points_ave
     steps = (average.T - shift).T
+    #TODO: standard deviation needs check
+    standard_deviation = np.std(steps[:,-n_points_ave:], axis=1, ddof=1)
+    standard_dev_min = min(dev for dev in standard_deviation if dev > 0)
+    num_voltage_steps = len(standard_deviation)
 
-    fig, (ax1, ax2) = plt.subplots(2, 1)
+    for j, stdev in enumerate(standard_deviation):
+        if (stdev == 0):
+            standard_deviation[j] = standard_dev_min
+        print(standard_deviation[j])
+
+    relaxation_time = []
+    sigma_mult = 2.8
+    for step, stdev in zip(steps, standard_deviation):
+        i = 1
+        while i < continuous_measurement_loops - 2:
+            if (abs(step[-i]) > sigma_mult*stdev
+                and abs(step[-i-1]) > sigma_mult*stdev
+                    and abs(step[-i-2]) > sigma_mult*stdev):
+                break
+            i += 1
+        relaxation_time.append(continuous_measurement_loops - i)
+    
+    relaxation_time = (np.asarray(relaxation_time) + 3)*1000/update_rate
+    
+    fig, (ax1, ax2, ax3) = plt.subplots(3, 1)
     ax1.set_ylabel(y_title)
     ax1.set_xlabel('Time since set voltage (ms)')
     averaged = np.zeros(np.shape(times))
-    for step in steps:
-        ax1.plot(times, step, '.')
-
-    # ax2.set_ylabel('Average' + y_title)
-    # ax2.set_xlabel('Time since set voltage (ms)')
-    # ax2.plot(times*20 + 60,
-             # averaged/continuous_measurement_steps,
-             # '.')
+    for sigma, step in zip(standard_deviation, steps):
+        _ = ax1.plot(times, step, '.')[0]
+        ax1.plot((times[0], times[-1]), (sigma_mult*sigma, sigma_mult*sigma),
+                 '-', color=_.get_color())
+        ax1.plot((times[0], times[-1]), (-sigma_mult*sigma, -sigma_mult*sigma),
+                 '-', color=_.get_color())
+    ax2.set_ylabel("Relaxtion time (ms)")
+    ax2.set_xlabel("Energy (eV)")
+    ax2.plot(shift, relaxation_time, '.')  # TODO: use nominal energies instea
+    ax3.set_ylabel("Sigma (eV)")
+    ax3.set_xlabel("Energy (eV)")
+    ax3.plot(shift, standard_deviation, '.')  # TODO: use nominal energies instead
     plt.show()
     set_voltage_and_measure(dac_value_end)
     return times, steps
@@ -944,9 +965,9 @@ def main():
     # measure_iv_video()
     # test_iv_video()
     # quick_measurements('I0')
-    ret_value = quick_measurements('HV', 2)
+    # ret_value = quick_measurements('HV', 2)
     # calibrate_real_energy_scale()
-    # ret_value = multiple_ramps_quick_measurements('HV')
+    ret_value = multiple_ramps_quick_measurements('HV')
     # prepare_for_measurement('measure_filament_configuration')
     # ret_value = test_single_ramp_quick_measurements('HV')
     arduino_port.close()
@@ -1043,6 +1064,16 @@ def calibrate_real_energy_scale():
     #plt.ylim(0, 10)
     plt.show()
 
+def energy_calibration_curve():
+    calibration_coef = ast.literal_eval(
+        config['energy_calibration']['coefficients']
+        )
+    calibration_domain = ast.literal_eval(
+        config['energy_calibration']['domain']
+        )
+    dac_energy = Polynomial(calibration_coef, domain=calibration_domain,
+                            window=calibration_domain)
+    return dac_energy
 
 if __name__ == '__main__':
     t1 = time.time()
