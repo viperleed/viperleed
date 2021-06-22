@@ -104,6 +104,8 @@ def combine_fdout(oripath=".", targetpath="."):
             outlines += lines
         else:
             outlines += lines[nbeams+2:]
+        if (nbeams % 5) == 4:
+            outlines += "\n"  # expects an empty line (fortran formatting..)
         try:
             os.remove(os.path.join(oripath, f))
         except Exception:
@@ -112,7 +114,7 @@ def combine_fdout(oripath=".", targetpath="."):
         with open(os.path.join(targetpath, "fd.out"), "w") as wf:
             wf.write("".join(outlines))
     except Exception:
-        logger.error("Failed to write combine fd.out")
+        logger.error("Failed to write combined fd.out")
         raise
     return
 
