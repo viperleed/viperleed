@@ -312,15 +312,9 @@ def writeRfInfo(sl, rp, filename="rf.info"):
         output += "\n"
     output += " DATA MITTEL (integer & half order beams) :\n"
     output += i3x25.write(iorf) + "\n"
-    if len(iorf) % 25 == 0:
-        output += "\n"
     output += " exp - th relationship IBP, beam weights WB\n"
     output += i3x25.write([n + 1 for n in range(0, len(rp.expbeams))]) + "\n"
-    if len(rp.expbeams) % 25 == 0:
-        output += "\n"
     output += f31x25.write([1]*len(rp.expbeams))+"\n"
-    if len(rp.expbeams) % 25 == 0:
-        output += "\n"
     auxexpbeams = writeAUXEXPBEAMS(rp.expbeams, header=rp.systemName,
                                    write=True, numbers=True)
     output += auxexpbeams
