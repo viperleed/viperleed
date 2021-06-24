@@ -308,8 +308,6 @@ def writeRfInfo(sl, rp, filename="rf.info"):
                .ljust(16) + "NTH NEX\n")
     # numbers of theoretical beams, as they correspond to experimental beams
     output += (i3x25.write([n+1 for n in beamcorr]) + "\n")
-    if len(beamcorr) % 25 == 0:
-        output += "\n"
     output += " DATA MITTEL (integer & half order beams) :\n"
     output += i3x25.write(iorf) + "\n"
     output += " exp - th relationship IBP, beam weights WB\n"
