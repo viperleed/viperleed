@@ -14,10 +14,6 @@ Graphical User Interface
 import sys
 import os
 
-# TODO: py 3.6
-#   * Attribute Qt::AA_EnableHighDpiScaling must
-#     be set before QCoreApplication is created
-
 cd = os.path.realpath(os.path.dirname(__file__))
 # NB: it's necessary to add vpr_path to sys.path so that viperleed
 #     can be loaded correctly at the top-level package
@@ -98,6 +94,7 @@ def gui_main():
     gl.catch_gui_crash()
 
     print('Loading GUI...', flush=True, end='')
+    qtg.QGuiApplication.setAttribute(qtc.Qt.AA_EnableHighDpiScaling)
     qtg.QGuiApplication.setAttribute(qtc.Qt.AA_UseHighDpiPixmaps)
     app = qtw.QApplication(sys.argv)
 
