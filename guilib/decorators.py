@@ -124,3 +124,12 @@ def exec_time(func):
         return result
     return _wrapper
 
+
+def print_call(func):
+    """Print the class and the name of the function that is executed."""
+    def _wrapper(*args, **kwargs):
+        fname = str(func).replace('<','').split(' at 0x')[0]
+        print("Called", fname)
+        return func(*args, **kwargs)
+
+    return _wrapper

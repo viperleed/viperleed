@@ -15,7 +15,8 @@ from viperleed import GLOBALS
 
 USE_GUI = GLOBALS['USE_GUI']
 
-from viperleed.guilib.decorators import profile_calls, exec_time, profile_lines
+from viperleed.guilib.decorators import (profile_calls, exec_time,
+                                         profile_lines, print_call)
 from viperleed.guilib.helpers import (conventional_angles,
                                       two_by_n_array_to_tuples,
                                       two_by_two_array_to_tuple,
@@ -53,6 +54,7 @@ else:
                                               MPLFigureCanvas, PainterMatrix,
                                               TextBox, TextBoxWithButtons)
     from viperleed.guilib.widgetslib import (AllGUIFonts, drawText,
+                                             change_control_text_color,
                                              editStyleSheet,
                                              get_all_children_widgets)
     from viperleed.guilib.leedsim import *
