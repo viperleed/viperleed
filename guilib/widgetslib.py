@@ -25,10 +25,35 @@ from viperleed import guilib as gl
 ################################################################################
 
 
+def change_control_text_color(ctrl, color):
+    """Change color of the text in a control.
+
+    Typically useful for signaling an error
+    on user input on some of the controls.
+
+    Parameters
+    ----------
+    ctrl_name : QWidget
+        The control whose color has to be changed.
+    color : QColor
+        Color to be used
+
+    Returns
+    -------
+    None.
+    """
+    palette = ctrl.palette()
+    if isinstance(ctrl, qtw.QPushButton):
+        palette.setColor(palette.ButtonText, color)
+    else:
+        palette.setColor(palette.Text, color)
+    ctrl.setPalette(palette)
+
+
 def editStyleSheet(qwidget, new_entries):
     """
     Append or replace new_entries in the styleSheet of qwidget
-    
+
     Parameters
     ----------
     qwidget: QWidget
@@ -48,7 +73,7 @@ def editStyleSheet(qwidget, new_entries):
 
     entry_re = r"""
         (?P<property>[-a-z ]+)              # property:
-                                            #    lowercase letters, '-' and ' '  
+                                            #    lowercase letters, '-' and ' '
         :                                   # colon
         (?P<value>[\w\%\#\(\),:.-_\\\/ ]+)  # value:
                                             #    alphanumeric, %, #,
@@ -95,7 +120,7 @@ def drawText(painter, text, transform=None, combine=False):
 
     rawFont = qtg.QRawFont.fromFont(painter.font())
     indexes = rawFont.glyphIndexesForString(text)
-    
+
     painter.save();
     paths = [rawFont.pathForGlyph(index) for index in indexes]
     advances = rawFont.advancesForGlyphIndexes(indexes,
@@ -119,7 +144,7 @@ def get_all_children_widgets(parent, exclude_parent=False, recursive=True):
     exclude_parent: bool, default = False
                     If True parent is not contained in the returned set
     recursive: bool, default = True
-               If False, only first-generation widgets are returned 
+               If False, only first-generation widgets are returned
                If True, all-generations widgets are included
 
     Returns
@@ -132,9 +157,9 @@ def get_all_children_widgets(parent, exclude_parent=False, recursive=True):
     """
     if not isinstance(parent, (qtw.QWidget, qtw.QLayout)):
         return set()
-    
+
     children = set(parent.children())
-    
+
     # find all widgets that are directly children of parent
     childrenWidgs = {child for child in [*children, parent]
                       if isinstance(child, qtw.QWidget)}
@@ -150,16 +175,16 @@ def get_all_children_widgets(parent, exclude_parent=False, recursive=True):
         childrenWidgs.update(widg
                              for widg in to_add
                              if isinstance(widg, qtw.QWidget))
-    
+
     if recursive:
         # and run recursively to find all the nested children
         for child in childrenWidgs.copy():
             if child != parent:
                 childrenWidgs.update(get_all_children_widgets(child))
-    
+
     if exclude_parent:
         childrenWidgs.discard(parent)
-    
+
     return childrenWidgs
 
 
@@ -178,23 +203,23 @@ class AllGUIFonts():  ## > Will handle in a different way!
         self.smallButtonFont = qtg.QFont()
         self.largeTextFont = qtg.QFont()
         self.plotTitleFont = qtg.QFont()
-        
+
         allfonts = [self.buttonFont,
                     self.smallTextFont,
                     self.labelFont,
                     self.smallButtonFont,
                     self.largeTextFont,
                     self.plotTitleFont]
-        
+
         [x.setFamily("DejaVu Sans") for x in allfonts]
-        
+
         self.buttonFont.setPointSize(10)
         self.smallTextFont.setPointSize(9)
         self.labelFont.setPointSize(10)
         self.smallButtonFont.setPointSize(8)
         self.largeTextFont.setPointSize(12)
         self.plotTitleFont.setPointSize(14)
-        
+
         self.mathFont = qtg.QFont()
         self.mathFont.setFamily("CMU Serif")
         self.mathFont.setPointSize(15)
