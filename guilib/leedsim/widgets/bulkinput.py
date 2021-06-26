@@ -1,6 +1,10 @@
 """Module bulkinput of viperleed.guilib.leedsim.widgets.
 
-Contains the BulkInput used within the NewFileDialog class.
+======================================
+  ViPErLEED Graphical User Interface
+======================================
+
+Defines the BulkInput widget used within the NewFileDialog class.
 
 Created: 2021-06-01
 Author: Michele Riva
@@ -34,8 +38,12 @@ class BulkInput(LatticeInput):
             The lattice instance that will be modified
             when the controls in this instance are edited
         """
-        super().__init__(parent, title='Bulk Lattice', lattice=bulk_lattice,
-                         with_labels=True, edit_enabled=True)
+        kwargs = {'parent': parent,
+                  'title': 'Bulk Lattice',
+                  'lattice': bulk_lattice,
+                  'with_labels': True,
+                  'edit_enabled': True}
+        super().__init__(**kwargs)
 
         self.bulk_3d_sym_dialog = Bulk3DSymDialog(self.window())
 

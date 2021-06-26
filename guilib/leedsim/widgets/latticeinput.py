@@ -1,6 +1,11 @@
-"""Module newfiledialogwidgets of viperleed.guilib.leedsim.dialogs
+"""Module latticeinput of viperleed.guilib.leedsim.widgets.
 
-Contains the widgets used within the NewFileDialog class
+======================================
+  ViPErLEED Graphical User Interface
+======================================
+
+Defines the LatticeInput class, a widget for the interactive input of
+lattice parameters and plane group defining a lattice.
 
 Created: 2021-06-01
 Author: Michele Riva
@@ -14,10 +19,11 @@ import PyQt5.QtWidgets as qtw
 
 from viperleed import guilib as gl
 
-angstrom = ' \u212b'
-degrees = '\u00b0'
+ANGSTROM = ' \u212b'
+DEGREES = '\u00b0'
 
-MATCH_LATTICE_PARAM = re.compile(r'^\s*(\d+(\.\d+)?)\s*[\u212b\u00b0]?\s*$')    # NB: does not match negative. # TODO: replace this with a math parser
+# TODO: replace this with a math parser
+MATCH_LATTICE_PARAM = re.compile(r'^\s*(\d+(\.\d+)?)\s*[\u212b\u00b0]?\s*$')
 
 
 class LatticeInput(qtw.QWidget):
@@ -37,36 +43,39 @@ class LatticeInput(qtw.QWidget):
     need_high_sym_reduction = qtc.pyqtSignal()
     high_sym_pressed = qtc.pyqtSignal()
 
-    def __init__(self, parent=None, lattice=None, title='',
-                 with_labels=False, edit_enabled=False):
+    def __init__(self, **kwargs):
         """Initialize widget.
 
         Parameters
         ----------
-        parent : PyQt5.QtWidgets.QWidget, default=None
+        parent : PyQt5.QtWidgets.QWidget or None, optional
             Parent widget that 'contains' this instance.
-        lattice : viperleed.Lattice
-            The lattice instance that will be modified
-            when the controls in this instance are edited
-        title : str, default=''
+            Default is None.
+        lattice : viperleed.Lattice or None, optional
+            The lattice instance that will be modified when the
+            controls in this instance are edited. If None or not
+            given, it should be set via the .lattice property
+            before any functionality is available. Default is None.
+        title : str, optional
             Title to be used for this widget. It is placed
-            centered horizontally, on top
-        with_labels : bool, default=False
+            centered horizontally, on top. Default is ''.
+        with_labels : bool, optional
             If True, labels for the controls are placed on the left.
-        edit_enabled : bool, default=False
+            Default is False.
+        edit_enabled : bool, optional
             If False, all the controls, except for the one
             of the plane group, are not editable, and serve
-            only for display purposes.
+            only for display purposes. Default is False.
 
         Returns
         -------
         None.
         """
-        super().__init__(parent)
+        super().__init__(kwargs.get('parent', None))
 
-        self.title = title
-        self._lattice = lattice
-        self.edit_enabled = edit_enabled
+        self.title = kwargs.get('title', '')
+        self._lattice = kwargs.get('lattice', None)
+        self.edit_enabled = kwargs.get('edit_enabled', False)
 
         # 'hi_sym' is a button to transform the lattice to the highest
         # possible symmetry, i.e., with shortest vectors, as close to
@@ -82,12 +91,12 @@ class LatticeInput(qtw.QWidget):
         # to signal the user that something is wrong. For
         # now this is always True.
         self.__valid_input = True
-        
+
         # Keep track of the last acceptable
         # lattice basis given by the user
         self.__last_acceptable_basis = np.zeros((2,2))
 
-        self._compose(with_labels)
+        self._compose(kwargs.get('with_labels', False))
         self._connect()
 
     @property
@@ -117,6 +126,11 @@ class LatticeInput(qtw.QWidget):
             return np.array([[a_len, 0],
                              [b_len*np.cos(alpha), b_len*np.sin(alpha)]])
         return None
+
+    @property
+    def group(self):
+        """Return the combo box used as plane group input."""
+        return self._ctrls['group']
 
     @property
     def lattice(self):
@@ -172,6 +186,37 @@ class LatticeInput(qtw.QWidget):
             self.__valid_input = True
 
     @gl.print_call
+    def group_from_lattice_and_update_options(self):
+        """Update the group combo box with appropriate entries.
+
+        Returns
+        -------
+        None
+
+        Emits
+        -----
+        group_changed
+            If the selected group has actually changed.
+        """
+        shape = self.lattice.cell_shape
+        lattice_group = self.lattice.group.group
+        compatible_groups = gl.PlaneGroup.groups_compatible_with(shape)
+        if lattice_group not in compatible_groups:
+            self.lattice.group = 'p1'
+
+        group_combo = self._ctrls['group']
+        old_group = group_combo.currentText()
+        group_combo.clear()
+        group_combo.addItems(compatible_groups)
+        group_combo.setCurrentText(lattice_group)
+        group_combo.setEnabled(group_combo.count() > 1)
+
+        if lattice_group != old_group:
+            print("###     o--->", self.__class__.__name__,
+                  "-- about to emit group_changed")
+            self.group_changed.emit(lattice_group)
+
+    @gl.print_call
     def update_controls_from_lattice(self):
         """Use the underlying lattice to update the controls.
 
@@ -198,7 +243,7 @@ class LatticeInput(qtw.QWidget):
         if shape != _ctrl_shape:
             self._ctrls['shape'].setCurrentText(self.lattice.cell_shape)
             self.update_lattice_restrictions()
-            self._group_from_lattice_and_update_options()
+            self.group_from_lattice_and_update_options()
             print("###     o--->", self.__class__.__name__,
                   "-- about to emit shape_changed")
             self.shape_changed.emit(shape)
@@ -250,14 +295,14 @@ class LatticeInput(qtw.QWidget):
         if shape in ('Square', 'Rectangular', 'Hexagonal'):
             self._ctrls['alpha'].setEnabled(False)
             if shape in ('Square', 'Rectangular'):
-                self._ctrls['alpha'].setText(f'90{degrees}')
+                self._ctrls['alpha'].setText(f'90{DEGREES}')
             else:
-                self._ctrls['alpha'].setText(f'120{degrees}')
+                self._ctrls['alpha'].setText(f'120{DEGREES}')
         else:
             self._ctrls['alpha'].setEnabled(self.edit_enabled)
 
     def _compose(self, with_labels):
-        """"Place children widgets.
+        """Place children widgets.
 
         Parameters
         ----------
@@ -269,7 +314,6 @@ class LatticeInput(qtw.QWidget):
         None.
         """
         # Fonts
-        small_txt_font = gl.AllGUIFonts().smallTextFont
         label_font = gl.AllGUIFonts().labelFont
 
         # Title
@@ -294,54 +338,10 @@ class LatticeInput(qtw.QWidget):
                 label.setMaximumWidth(label_width)
 
         # Actual controls
-        # (1) Lattice shape
-        self._ctrls['shape'].setFont(small_txt_font)
-        self._ctrls['shape'].addItems(['Oblique', 'Rectangular', 'Square',
-                                        'Rhombic', 'Hexagonal'])
-
-        # The special item '_None' is used as an initial value
-        # only if a lattice was not given at instantiation, as
-        # we need to emit a shape_changed once the lattice
-        # is set the first time. See update_controls_from_lattice
-        if self._lattice is None:
-            self._ctrls['shape'].addItem('_None')
-            self._ctrls['shape'].setCurrentText('_None')
-        self._ctrls['shape'].setCurrentText('')
-        self._ctrls['shape'].setSizePolicy(qtw.QSizePolicy.Fixed,
-                                            qtw.QSizePolicy.Preferred)
-        self._ctrls['shape'].ensurePolished()
-        self._ctrls['shape'].adjustSize()
-        self._ctrls['shape'].setEnabled(self.edit_enabled)
-
-        # (2) Lattice parameters: a, b, alpha
-        for key in ('a', 'b', 'alpha'):
-            self._ctrls[key].setFont(label_font)
-            self._ctrls[key].setSizePolicy(qtw.QSizePolicy.Fixed,
-                                            qtw.QSizePolicy.Fixed)
-            self._ctrls[key].setMaximumWidth(self._ctrls['shape'].width())
-            self._ctrls[key].ensurePolished()
-            self._ctrls[key].adjustSize()
-            self._ctrls[key].setEnabled(self.edit_enabled)
-
-        # (3) Group (always enabled)
-        self._ctrls['group'].setFont(small_txt_font)
-        self._ctrls['group'].setSizePolicy(qtw.QSizePolicy.Fixed,
-                                            qtw.QSizePolicy.Preferred)
-        self._ctrls['group'].setMinimumWidth(self._ctrls['a'].width())
-        self._ctrls['group'].ensurePolished()
-
-        # (4) Reduce to high symmetry button
-        self._ctrls['hi_sym'].setText('Make high\nsymmetry')
-        self._ctrls['hi_sym'].setFont(gl.AllGUIFonts().buttonFont)
-        self._ctrls['hi_sym'].setSizePolicy(qtw.QSizePolicy.Fixed,
-                                            qtw.QSizePolicy.Preferred)
-        self._ctrls['hi_sym'].setMinimumWidth(self._ctrls['shape'].width())
-        self._ctrls['hi_sym'].ensurePolished()
-        self._ctrls['hi_sym'].setAutoDefault(False)
-        self._ctrls['hi_sym'].hide()
-        palette = self._ctrls['hi_sym'].palette()
-        palette.setColor(palette.ButtonText, qtc.Qt.red)
-        self._ctrls['hi_sym'].setPalette(palette)
+        self._compose_ctrl_shape()
+        self._compose_ctrl_a_b_alpha()
+        self._compose_ctrl_group()
+        self._compose_ctrl_high_sym_button()
 
         # Lay controls out:
         # (i) Set up layout
@@ -368,6 +368,61 @@ class LatticeInput(qtw.QWidget):
             layout.addWidget(ctrl, i + 1, ctrl_column, 1, 1)
 
         self.setLayout(layout)
+
+    def _compose_ctrl_a_b_alpha(self):
+        """Set up controls of lattice parameters."""
+        for key in ('a', 'b', 'alpha'):
+            self._ctrls[key].setFont(gl.AllGUIFonts().labelFont)
+            self._ctrls[key].setSizePolicy(qtw.QSizePolicy.Fixed,
+                                           qtw.QSizePolicy.Fixed)
+            self._ctrls[key].setMaximumWidth(self._ctrls['shape'].width())
+            self._ctrls[key].ensurePolished()
+            self._ctrls[key].adjustSize()
+            self._ctrls[key].setEnabled(self.edit_enabled)
+
+    def _compose_ctrl_group(self):
+        """Set up control for plane group selection."""
+        ctrl = self._ctrls['group']
+
+        ctrl.setFont(gl.AllGUIFonts().smallTextFont)
+        ctrl.setSizePolicy(qtw.QSizePolicy.Fixed, qtw.QSizePolicy.Preferred)
+        ctrl.setMinimumWidth(self._ctrls['a'].width())
+        ctrl.ensurePolished()
+
+    def _compose_ctrl_high_sym_button(self):
+        """Set up control to reduce to highest symmetry."""
+        ctrl = self._ctrls['hi_sym']
+
+        ctrl.setText('Make high\nsymmetry')
+        ctrl.setFont(gl.AllGUIFonts().buttonFont)
+        ctrl.setSizePolicy(qtw.QSizePolicy.Fixed, qtw.QSizePolicy.Preferred)
+        ctrl.setMinimumWidth(self._ctrls['shape'].width())
+        ctrl.ensurePolished()
+        ctrl.setAutoDefault(False)
+        ctrl.hide()
+        gl.change_control_text_color(ctrl, qtc.Qt.red)
+
+    def _compose_ctrl_shape(self):
+        """Set up 'shape' control."""
+        ctrl = self._ctrls['shape']
+
+        ctrl.setFont(gl.AllGUIFonts().smallTextFont)
+        ctrl.addItems(['Oblique', 'Rectangular', 'Square',
+                       'Rhombic', 'Hexagonal'])
+
+        # The special item '_None' is used as an initial value
+        # only if a lattice was not given at instantiation, as
+        # we need to emit a shape_changed once the lattice
+        # is set the first time. See update_controls_from_lattice
+        if self._lattice is None:
+            ctrl.addItem('_None')
+            ctrl.setCurrentText('_None')
+        ctrl.setCurrentText('')
+        ctrl.setSizePolicy(qtw.QSizePolicy.Fixed,
+                                            qtw.QSizePolicy.Preferred)
+        ctrl.ensurePolished()
+        ctrl.adjustSize()
+        ctrl.setEnabled(self.edit_enabled)
 
     def _connect(self):
         """Connect relevant signals to handlers."""
@@ -575,7 +630,7 @@ class LatticeInput(qtw.QWidget):
         self.check_high_symmetry()  # May emit need_high_sym_reduction
 
         # And update the group control
-        self._group_from_lattice_and_update_options()  # May emit group_changed
+        self.group_from_lattice_and_update_options()  # May emit group_changed
 
         print("###     o--->", self.__class__.__name__,
               "-- about to emit shape_changed")
@@ -585,37 +640,6 @@ class LatticeInput(qtw.QWidget):
             print("###     o--->", self.__class__.__name__,
                   "-- about to emit need_high_sym_reduction")
             self.need_high_sym_reduction.emit()
-
-    @gl.print_call
-    def _group_from_lattice_and_update_options(self):
-        """Update the group combo box with appropriate entries.
-
-        Returns
-        -------
-        None
-
-        Emits
-        -----
-        group_changed
-            If the selected group has actually changed.
-        """
-        shape = self.lattice.cell_shape
-        lattice_group = self.lattice.group.group
-        compatible_groups = gl.PlaneGroup.groups_compatible_with(shape)
-        if lattice_group not in compatible_groups:
-            self.lattice.group = 'p1'
-
-        group_combo = self._ctrls['group']
-        old_group = group_combo.currentText()
-        group_combo.clear()
-        group_combo.addItems(compatible_groups)
-        group_combo.setCurrentText(lattice_group)
-        group_combo.setEnabled(group_combo.count() > 1)
-
-        if lattice_group != old_group:
-            print("###     o--->", self.__class__.__name__,
-                  "-- about to emit group_changed")
-            self.group_changed.emit(lattice_group)
 
     @gl.print_call
     def _update_lattice_group(self, new_group):
@@ -642,6 +666,6 @@ class LatticeInput(qtw.QWidget):
         None.
         """
         a_len, b_len, alpha = self.lattice.lattice_parameters
-        self._ctrls['a'].setText(f"{a_len:.4f}{angstrom}")
-        self._ctrls['b'].setText(f"{b_len:.4f}{angstrom}")
-        self._ctrls['alpha'].setText(f"{alpha:.4f}{degrees}")
+        self._ctrls['a'].setText(f"{a_len:.4f}{ANGSTROM}")
+        self._ctrls['b'].setText(f"{b_len:.4f}{ANGSTROM}")
+        self._ctrls['alpha'].setText(f"{alpha:.4f}{DEGREES}")

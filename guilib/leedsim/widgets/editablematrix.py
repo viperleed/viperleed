@@ -1,6 +1,11 @@
-"""Module newfiledialogwidgets of viperleed.guilib.leedsim.dialogs
+"""Module editablematrix of viperleed.guilib.leedsim.widgets.
 
-Contains the widgets used within the NewFileDialog class
+======================================
+  ViPErLEED Graphical User Interface
+======================================
+
+Defines the EditableMatrix widget, an interactively
+editable matrix of integers or floats.
 
 Created: 2021-06-01
 Author: Michele Riva
@@ -42,7 +47,7 @@ class EditableMatrix(qtw.QWidget):
         """
         super().__init__(parent)
 
-        if not hasattr(shape, '__len__') or not (0 < len(shape) <= 2):
+        if not hasattr(shape, '__len__') or not 0 < len(shape) <= 2:
             raise ValueError("EditableMatrix: invalid shape. Expected "
                              "tuple with one or two elements, found "
                              f"{shape}")
@@ -203,13 +208,14 @@ class EditableMatrix(qtw.QWidget):
             validator = qtg.QDoubleValidator()
         for m_ij in self._ctrls.ravel():
             m_ij.setFont(label_font)
-            m_ij.setMaximumWidth(35)
-            m_ij.setSizePolicy(qtw.QSizePolicy.Fixed, qtw.QSizePolicy.Preferred)
+            m_ij.setMaximumWidth(35 if self._dtype == int else 50)
+            m_ij.setSizePolicy(qtw.QSizePolicy.Fixed,
+                               qtw.QSizePolicy.Preferred)
             m_ij.setValidator(validator)
             m_ij.ensurePolished()
 
-        for label in labels:
-            label.ensurePolished()
+        for qlabel in labels:
+            qlabel.ensurePolished()
 
         # Lay out the widgets
         # (i) Matrix elements
@@ -227,9 +233,9 @@ class EditableMatrix(qtw.QWidget):
 
         # (ii) put it all together
         layout = qtw.QHBoxLayout()
-        for label in labels:
-            layout.addWidget(label)
-            layout.setAlignment(label, qtc.Qt.AlignCenter)
+        for qlabel in labels:
+            layout.addWidget(qlabel)
+            layout.setAlignment(qlabel, qtc.Qt.AlignCenter)
         layout.insertLayout(len(labels) - 1, matrix_layout)
         layout.addStretch(1)
 
@@ -242,6 +248,7 @@ class EditableMatrix(qtw.QWidget):
         for m_ij in self._ctrls.ravel():
             m_ij.textEdited.connect(self._on_element_edited)
 
+    @gl.print_call
     def _on_element_edited(self, new_element):
         """React on a change of one of the matrix elements.
 
@@ -256,14 +263,11 @@ class EditableMatrix(qtw.QWidget):
         -----
         matrix_edited(new_matrix) if the edited entry is valid.
         """
-        print(self.__class__.__name__, '_on_element_edited')
         validate = self._ctrls[0, 0].validator().validate
         # The '0' below is the cursor position, unused by both
         # QIntValidator and QDoubleValidator, but mandatory from
         # the signature. Both validators return a tuple:
         # (state, text, cursor_pos), where state is what we need
         if not validate(new_element, 0)[0] == qtg.QValidator.Acceptable:
-            print('Not acceptable')
             return
         self.matrix_edited.emit(self.matrix)
-

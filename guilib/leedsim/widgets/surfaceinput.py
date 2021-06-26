@@ -1,6 +1,12 @@
-"""Module surfaceinput of viperleed.guilib.leedsim.widgets.
+"""Module latticeinput of viperleed.guilib.leedsim.widgets.
 
-Contains the SurfaceStructureInput widget used within the NewFileDialog class.
+======================================
+  ViPErLEED Graphical User Interface
+======================================
+
+Defines the SurfaceStructureInput class, a widget for the interactive
+input of lattice parameters, plane group, superlattice matrix, and
+Wood's notation super-periodicity of a reconstructed surface.
 
 Created: 2021-06-01
 Author: Michele Riva
@@ -17,10 +23,10 @@ from viperleed.guilib.leedsim.classes.woods import (Woods, WoodsSyntaxError,
 
 
 def _wrap_group_update(lattice_input, surface_input):
-    """Wrapper for _group_from_lattice_and_update_options.
+    """Wrap reimplementation of group_from_lattice_and_update_options.
 
     This wrapper allows reimplementing the method
-    LatticeInput._group_from_lattice_and_update_options,
+    LatticeInput.group_from_lattice_and_update_options,
     allowing each call to the method -- internally
     done in LatticeInput instances -- to access also
     information contained in surface_input.
@@ -45,17 +51,17 @@ def _wrap_group_update(lattice_input, surface_input):
     """
     if not isinstance(lattice_input, LatticeInput):
         raise TypeError("Reimplementation of "
-                        "_group_from_lattice_and_update_options "
+                        "group_from_lattice_and_update_options "
                         "was not called with a LatticeInput instance "
                         "as first argument.")
     if not isinstance(surface_input, SurfaceStructureInput):
         raise TypeError("Reimplementation of "
-                        "_group_from_lattice_and_update_options "
+                        "group_from_lattice_and_update_options "
                         "was not called with a SurfaceStructureInput "
                         "instance as second argument.")
 
     def _reimplemented():
-        """Reimplement _group_from_lattice_and_update_options.
+        """Reimplement group_from_lattice_and_update_options.
 
         The reimplementation picks the list of groups taking
         into account also the bulk.group of the surface_input
@@ -72,7 +78,7 @@ def _wrap_group_update(lattice_input, surface_input):
             lattice_input has actually changed
         """
         print(f"{lattice_input.__class__.__name__}",
-              "_group_from_lattice_and_update_options.",
+              "group_from_lattice_and_update_options.",
               "Reimplemented by SurfaceStructureInput")
 
         # The changes start here.
@@ -112,7 +118,7 @@ def _wrap_group_update(lattice_input, surface_input):
         if lattice_group not in compatible_groups:
             lattice_input.lattice.group = 'p1'
 
-        group_combo = lattice_input._ctrls['group']
+        group_combo = lattice_input.group
         old_group = group_combo.currentText()
         group_combo.clear()
         group_combo.addItems(compatible_groups)
@@ -180,10 +186,10 @@ class SurfaceStructureInput(qtw.QWidget):
         if surface_lattice:
             self._update_woods_list_and_selection()
 
-        # Replace _group_from_lattice_and_update_options of
+        # Replace group_from_lattice_and_update_options of
         # the underlying LatticeInput to handle changes of
         # the bulk group
-        self._ctrls['lattice']._group_from_lattice_and_update_options = (
+        self._ctrls['lattice'].group_from_lattice_and_update_options = (
             _wrap_group_update(self._ctrls['lattice'], self)
             )
 
@@ -263,7 +269,7 @@ class SurfaceStructureInput(qtw.QWidget):
 
     @property
     def woods(self):
-        """Returns the Woods object used to handle Wood's notation."""
+        """Return the Woods object used to handle Wood's notation."""
         return self.__woods
 
     @gl.print_call
@@ -436,7 +442,7 @@ class SurfaceStructureInput(qtw.QWidget):
         lattice.group_changed
             If the group of the underlying lattice actually changed
         """
-        self._ctrls['lattice']._group_from_lattice_and_update_options()
+        self._ctrls['lattice'].group_from_lattice_and_update_options()
 
     @gl.print_call
     def _on_high_sym_pressed(self, *__args):
@@ -522,7 +528,7 @@ class SurfaceStructureInput(qtw.QWidget):
         self.surface_changed.emit()
 
     @gl.print_call
-    def _on_woods_selected(self, woods_index=None):                            # TODO: nicer with *args?
+    def _on_woods_selected(self, *args):
         """React on the selection of a new entry in the combo.
 
         This is the slot associated with the 'activated' signal
@@ -531,13 +537,6 @@ class SurfaceStructureInput(qtw.QWidget):
         (which is in fact a QLineEdit). The signals below are
         emitted only in case the text in the combo box is not
         'None'.
-
-        Parameters
-        ----------
-        woods_index : int or None, default=None
-            When None, it is assumed that the call came from
-            the 'editingFinished' signal of the combo box (in
-            fact, editingFinished carries no data).
 
         Emits
         -----
@@ -558,15 +557,15 @@ class SurfaceStructureInput(qtw.QWidget):
             via self._on_superlattice_changed)
         """
         woods_combo = self._ctrls['woods']
-        if woods_index is None:
-            # The call to the function came from
-            # the editingFinished of the QLineEdit
-            woods_txt = woods_combo.currentText()
-        else:
+        if args:
             # The call came from a user click on a QComboBox item
             # NB: This happens also if the element chosen did not
             #     actually change!
-            woods_txt = woods_combo.itemText(woods_index)
+            woods_txt = woods_combo.itemText(args[0])
+        else:
+            # The call to the function came from
+            # the editingFinished of the QLineEdit
+            woods_txt = woods_combo.currentText()
 
         if woods_txt == 'None':
             return
@@ -576,7 +575,7 @@ class SurfaceStructureInput(qtw.QWidget):
         # Reformat input
         try:
             self.__woods.string = woods_txt
-        except (ValueError, WoodsSyntaxError) as err:
+        except (ValueError, WoodsSyntaxError):
             # Text is not an acceptable Wood's notation
             valid = False
             print("###     o--->", self.__class__.__name__,
@@ -587,7 +586,7 @@ class SurfaceStructureInput(qtw.QWidget):
         if valid:
             try:
                 superlattice = self.__woods.matrix
-            except MatrixIncommensurateError as err:
+            except MatrixIncommensurateError:
                 # Woods gave an incommensurate lattice.
                 # See if the problem is the angle given.
                 try:
@@ -651,8 +650,8 @@ class SurfaceStructureInput(qtw.QWidget):
         else:
             # Representable. See if we already have it in the
             # list (.findText returns index >= 0 if found)
-            found = 0 <= woods_combo.findText(new_woods,
-                                              flags=qtc.Qt.MatchExactly)
+            found = woods_combo.findText(new_woods,
+                                         flags=qtc.Qt.MatchExactly) >= 0
             if not found:
                 woods_combo.addItem(new_woods)
                 self.__woods.add_example(new_woods, self.bulk.cell_shape)
@@ -714,6 +713,6 @@ class SurfaceStructureInput(qtw.QWidget):
 
         woods_combo = self._ctrls['woods']
         woods_combo.clear()
-        woods_combo.addItems(sorted(self.__woods.get_examples(bulk_shape)))    # TODO: do I need sorted()?
+        woods_combo.addItems(sorted(self.__woods.get_examples(bulk_shape)))
 
         self._pick_right_woods()
