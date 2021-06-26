@@ -2199,7 +2199,7 @@ class Lattice():
         # left-multiplied to t_overall at each elementary step, so that
         # t_overall contains the overall transformation
 
-        if _shape != 'ob':
+        if _shape != 'Oblique':
             return (1, 0), (0, 1)
 
         # Lattice is oblique.
@@ -2308,9 +2308,7 @@ class Lattice():
         return t_overall
 
     def is_high_symmetry(self):
-        """
-        Checks whether the lattice is in the highest symmetry possible
-        """
+        """Check whether the lattice has the highest symmetry possible."""
         return np.array_equal(((1, 0), (0, 1)), self.high_symm_transform())
 
     def make_high_symmetry(self):
