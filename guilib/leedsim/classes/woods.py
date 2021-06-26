@@ -20,8 +20,6 @@ from viperleed import guilib as gl
 from viperleed.guilib.mathparse import MathParser, UnsupportedMathError
 
 # TODO: allow also "rect" special Woods notation for hex lattices (ONLY??)
-# TODO: pylint complains that Woods has 9/7 instance attributes, but I
-#       count less than that.
 
 # Unicode symbols
 DEGREES = '\u00b0'
@@ -465,7 +463,7 @@ class Woods:
         WoodsNotRepresentableError
             If matrix is valid but not Wood's-representable.
         """
-        self.string = self.from_matrix(matrix)
+        self.from_matrix(matrix)
 
     @property
     def string(self):
@@ -583,7 +581,9 @@ class Woods:
                           ndigits=1)
             woods += f"R{alpha}{self.degrees}"
 
-        self.string = woods
+        # Don't use self.string to skip the reformatting,
+        # which is anyway already correct
+        self.__string = woods
 
         return woods
 
@@ -639,7 +639,9 @@ class Woods:
         orig_matrix = tmp_woods.to_matrix(check_commensurate=False)
 
         if is_commensurate(orig_matrix):
-            self.string = tmp_woods.string
+            # Skip using self.string to avoid reformatting,
+            # as the format is already correct
+            self.__string = tmp_woods.string
             return self.string
 
         # Matrix is incommensurate. Try to round
@@ -648,17 +650,19 @@ class Woods:
         rounded_txt = tmp_woods.from_matrix(rounded_matrix)
         round_prefix, *round_gamma, round_alpha = self.parse(rounded_txt)
 
+        delta_gamma = np.abs(np.subtract(orig_gamma, round_gamma)/orig_gamma)
         # Prefix should stay the same; same for gammas
         # (the user rarely inputs the wrong scaling);
         # New angle is acceptable if it is within +-1
         # degree from the original input
         if (round_prefix != orig_prefix
-            or np.any(np.subtract(orig_gamma, round_gamma)/orig_gamma > 1e-3)
+            or np.any(delta_gamma > 1e-3)
                 or abs(round_alpha - orig_alpha) > 1):
             raise MatrixIncommensurateError(orig_matrix)
 
-        # Correction was successful.
-        self.string = rounded_txt
+        # Correction was successful.  Skip using self.string
+        # to avoid reformatting, as the format is already correct
+        self.__string = rounded_txt
 
         return rounded_txt
 
