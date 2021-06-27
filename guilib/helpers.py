@@ -16,6 +16,9 @@ import itertools
 import numpy as np
 
 
+# Disable due to pylint bug for sequence of
+# allowed values (see 'axis' parameter)
+# pylint: disable=missing-param-doc,missing-type-doc
 def two_by_n_array_to_tuples(two_by_n, axis=None):
     """Convert a 2xN or Nx2 array into a zip object.
 
@@ -26,7 +29,7 @@ def two_by_n_array_to_tuples(two_by_n, axis=None):
     two_by_n : numpy.ndarray
         Can have shape (N, 2) or (2, N). The output will always be
         an iterator of tuples, independent of the shape of the input
-    axis : 0, 1, or None
+    axis : {0, 1, or None}
         Which axis contains the 2-tuples. Use axis=0 if two_by_n[i]
         is the i-th tuple, axis=1 if two_by_n[:, i] is the i-th tuple.
         If None or omitted, the axis is inferred from which of the
@@ -35,7 +38,9 @@ def two_by_n_array_to_tuples(two_by_n, axis=None):
 
     Returns
     -------
-    zip-object
+    zip
+        Iterator of tuples containing the elements in the
+        original array
 
     Raises
     ------
@@ -65,12 +70,18 @@ def two_by_n_array_to_tuples(two_by_n, axis=None):
                                "correct axis, as two_by_n.shape is (2, 2). "
                                "Provide the correct axis with the axis "
                                "optional argument")
+
+    # Disable, as I find it clearer with the explicit check
+    # pylint: disable=compare-to-zero
     if axis == 0:  # Shape == (2, N)
         return zip(two_by_n[0], two_by_n[1])
     # Shape == (N, 2)
     return zip(two_by_n[:, 0], two_by_n[:, 1])
+# pylint: enable=missing-param-doc,missing-type-doc
 
 
+# Disable for performance reasons
+# pylint: disable=bad-builtin
 def two_by_two_array_to_tuple(two_by_two):
     """Convert a 2x2 array to a 2x2 tuple.
 
@@ -83,35 +94,38 @@ def two_by_two_array_to_tuple(two_by_two):
     Returns
     -------
     tuple of tuples
+        Converted array
     """
     return tuple(map(tuple, two_by_two))
+# pylint: enable=bad-builtin
 
 
 def two_d_iterable_to_array(iterable, dtype=float, shape=None):
     """Return a numpy.ndarray from a 2D iterable.
 
     This function uses a faster alternative than simply using
-    np.asarray(iterable, dtype=dtype). Rough speed tests
-    suggest that this is a factor of 1.5-5.5 faster than
-    np.asarray when running on a list of tuples, and a
-    factor of 3-35 faster when running on a list of
-    gl.BeamIndex (likely similar performance on other
-    subclasses of tuple).
-
-    No explicit check is done on shapes.
+    np.asarray(iterable, dtype=dtype). Rough speed tests suggest
+    that this is a factor of 1.5-5.5 faster than np.asarray when
+    running on a list of tuples, and a factor of 3-35 faster when
+    running on a list of gl.BeamIndex (likely similar performance
+    on other subclasses of tuple).
 
     Parameters
     ----------
-    iterable : sequence
-        len(shape) == 2
-    dtype : numpy.dtype, default=float
+    iterable : Sequence
+        The sequence to be converted to numpy.ndarray
+    dtype : numpy.dtype, optional
         Data type that will be used for the output array.
-    shape : tuple, default=None
-        If given, the return array is reshaped to shape.
+        Default is float.
+    shape : tuple or None, optional
+        If given and not None, the return array is reshaped
+        to shape. Works correctly only if len(shape) == 2,
+        but this is unchecked for speed reasons. Default is None
 
     Returns
     -------
     numpy.ndarray
+        Array version of the iterable passed
     """
     if isinstance(iterable, np.ndarray):
         return iterable
@@ -138,7 +152,10 @@ def conventional_angles(theta, phi):
 
     Returns
     -------
-    (theta, phi) : (float, float)
+    theta : float
+        Polar angle in conventional setting, i.e., 0 <= theta <= 180
+    phi : float
+        Azimuthal angle in conventional setting, i.e., 0 <= phi < 360
     """
     phi %= 360
     if theta < 0:
@@ -149,6 +166,10 @@ def conventional_angles(theta, phi):
     return theta, phi
 
 
+# Disable as it does not really make sense to write separate
+# functions for different data types. Perhaps one could make
+# it a class.
+# pylint: disable=too-complex
 def remove_duplicates(data, return_type=None):
     """Remove duplicates from the input.
 
@@ -169,11 +190,12 @@ def remove_duplicates(data, return_type=None):
 
     Returns
     -------
-    uniques : return_type if given, type(data) if it doesn't
-              raise errors, tuple otherwise
+    uniques : object
+        Type is return_type if given, type(data) if
+        it doesn't raise errors, tuple otherwise
     """
     def __return_string(elements):
-        return "".join(map(str, elements))
+        return "".join(str(el) for el in elements)
 
     def __return_array(elements):
         return np.fromiter(elements, data.dtype)
@@ -183,7 +205,7 @@ def remove_duplicates(data, return_type=None):
         ret = dict.fromkeys(data)
     except TypeError:
         # fall back to an O(n^2) algorithm in case there are
-        # unhashable elements
+        # non-hashable elements
         ret = [d for i, d in enumerate(data) if d not in data[:i]]
 
     if return_type is None:
@@ -198,16 +220,17 @@ def remove_duplicates(data, return_type=None):
         return_type = __return_array
 
     try:
-        ret = return_type(ret)
+        ret_with_type = return_type(ret)
     except (TypeError, ValueError):
-        ret = tuple(ret)
-    return ret
+        ret_with_type = tuple(ret)
+    return ret_with_type
+# pylint: enable=too-complex
 
 
 def single_spaces_only(input_string):
     """Return a string with double-spaces converted to single ones.
 
-    Paramters
+    Parameters
     ---------
     input_string : str
         The string to be processed
@@ -215,6 +238,8 @@ def single_spaces_only(input_string):
     Returns
     -------
     str
+        A version of input_string that
+        contains only single white spaces
     """
     while "  " in input_string:
         input_string = input_string.replace("  ", " ")
@@ -228,6 +253,9 @@ def array2string(matrix):
     return matrix.replace('[ ','[').replace(' ]', ']').replace(' ,', ',')
 
 
+# Disable, as pylint does not detect
+# that this is an infinite generator
+# pylint: disable=stop-iteration-return
 def prime_numbers():
     """Yield an infinite number of prime numbers.
 
@@ -259,10 +287,28 @@ def prime_numbers():
         while i in sieve:
             i += step
         sieve[i] = step
+# pylint: enable=stop-iteration-return
 
 
-def equal_dicts(dict_a, dict_b, ignore_keys=[]):
-    """Return dict_a == dict_b, optionally ignoring some keys."""
+def equal_dicts(dict_a, dict_b, ignore_keys=None):
+    """Return dict_a == dict_b, optionally ignoring some keys.
+
+    Parameters
+    ----------
+    dict_a : dict
+        The first of the dictionaries to be compared
+    dict_b : dict
+        The second of the dictionaries to be compared
+    ignore_keys : Sequence or None, optional
+        Keys to be skipped while comparing the dictionaries.
+        If not given or None, all keys are compared. Default
+        is None.
+
+    Returns
+    -------
+    bool
+        True if dict_a == dict_b
+    """
     if not ignore_keys:
         return dict_a == dict_b
     a_keys = set(dict_a).difference(ignore_keys)
