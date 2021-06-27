@@ -1,4 +1,4 @@
-"""Module latticeinput of viperleed.guilib.leedsim.widgets.
+"""Module surfaceinput of viperleed.guilib.leedsim.widgets.
 
 ======================================
   ViPErLEED Graphical User Interface
@@ -184,7 +184,7 @@ class SurfaceStructureInput(qtw.QWidget):
                        'superlattice': EditableMatrix(),
                        'lattice': LatticeInput(lattice=surface_lattice)}
         if surface_lattice:
-            self._update_woods_list_and_selection()
+            self.update_woods_list_and_selection()
 
         # Replace group_from_lattice_and_update_options of
         # the underlying LatticeInput to handle changes of
@@ -243,7 +243,7 @@ class SurfaceStructureInput(qtw.QWidget):
                             "Expected viperleed.Lattice")
         self._update_superlattice_from_surf_basis(new_lattice.basis)
         self._ctrls['lattice'].lattice = new_lattice
-        self._update_woods_list_and_selection()
+        self.update_woods_list_and_selection()
 
     @property
     def superlattice(self):
@@ -259,6 +259,16 @@ class SurfaceStructureInput(qtw.QWidget):
         self._ctrls['superlattice'].set_matrix(new_matrix)
 
     @property
+    def top_left_global(self):
+        """Return the global location of the top-left corner.
+        
+        Returns
+        -------
+        top_left : QPoint
+        """
+        return self.mapToGlobal(qtc.QPoint(0, 0))
+
+    @property
     def valid_input(self):
         """Return whether the user input is OK."""
         print(self.__class__.__name__,
@@ -271,6 +281,123 @@ class SurfaceStructureInput(qtw.QWidget):
     def woods(self):
         """Return the Woods object used to handle Wood's notation."""
         return self.__woods
+
+    @gl.print_call
+    def on_bulk_group_changed(self, *__args):
+        """Pick the appropriate list of groups.
+
+        'Appropriate' means all those groups that are compatible
+        with the cell shape and the new bulk group, in the sense
+        of viperleed.PlaneGroup.groups_compatible_with().
+
+        This slot should be connected to the group_changed signal
+        of the BulkInput widget that holds the same bulk lattice
+        as in self.bulk.
+
+        Parameters
+        ----------
+        *__args : tuple
+            Unused but necessary to comply with the signature
+            of signals connected to this method. The new bulk
+            group is always taken from the underlying bulk
+            lattice, which should be up to date.
+
+        Returns
+        -------
+        None.
+
+        Emits
+        -----
+        lattice.group_changed
+            If the group of the underlying lattice actually changed
+        """
+        self._ctrls['lattice'].group_from_lattice_and_update_options()
+
+    @gl.print_call
+    def on_bulk_basis_changed(self, *__args):
+        """React to a change of the bulk basis.
+
+        The surface basis is changed accordingly,
+        then the controls are updated.
+
+        This slot should be connected to the lattice_parameters_changed
+        signal of the BulkInput widget that holds the same bulk lattice
+        as in self.bulk. It can also be connected to the shape_changed
+        signal of the same widget.
+
+        Parameters
+        ----------
+        *__args : tuple
+            Unused but necessary to comply with the signature
+            of signals connected to this method. The new bulk
+            basis is always taken from the underlying bulk
+            lattice, which should be up to date.
+
+        Returns
+        -------
+        None.
+
+        Emits
+        -----
+        lattice.need_high_sym_reduction()
+            If the underlying lattice is not highest symmetry
+        need_high_sym_reduction()
+            If the underlying lattice is not highest symmetry.
+            This signal is just a convenience to prevent the
+            need to directly look into the underlying lattice
+            control
+        lattice.group_changed(new_group)
+            If group of underlying lattice actually changed
+        lattice.shape_changed(new_shape)
+            If shape of underlying lattice actually changed
+        """
+        lattice = self._ctrls['lattice']
+        superlattice = self._ctrls['superlattice'].matrix
+        lattice.update_lattice_basis(np.dot(superlattice, self.bulk.basis))
+        self.__woods.bulk_basis = self.bulk.basis
+        lattice.update_controls_from_lattice()
+
+    @gl.print_call
+    def pick_right_woods(self):
+        """Choose the appropriate Wood's representation.
+
+        Causes a change of the text in the Wood's combo
+        box. The new text is a valid Wood's notation if
+        the superlattice matrix is Wood's-representable,
+        and 'None' otherwise.
+
+        Returns
+        -------
+        None.
+        """
+        woods_combo = self._ctrls['woods']
+
+        # Set color to black whenever this function is called,
+        # as it always will pick the correct Wood's text. This
+        # undoes 'unprocessed' color changes that may have
+        # happened as a result of an improper text input (set
+        # in _on_woods_selected).
+        palette = woods_combo.lineEdit().palette()
+        palette.setColor(palette.Text, qtc.Qt.black)
+        woods_combo.lineEdit().setPalette(palette)
+
+        # See if the superlattice matrix is Wood's-representable
+        try:
+            new_woods = self.__woods.from_matrix(
+                self._ctrls['superlattice'].matrix
+                )
+        except WoodsNotRepresentableError:
+            new_woods = 'None'
+        else:
+            # Representable. See if we already have it in the
+            # list (.findText returns index >= 0 if found)
+            found = woods_combo.findText(new_woods,
+                                         flags=qtc.Qt.MatchExactly) >= 0
+            if not found:
+                woods_combo.addItem(new_woods)
+                self.__woods.add_example(new_woods, self.bulk.cell_shape)
+
+        woods_combo.setCurrentText(new_woods)
 
     @gl.print_call
     def update_controls(self):
@@ -293,6 +420,33 @@ class SurfaceStructureInput(qtw.QWidget):
         # Update lattice parameters and group. May emit
         # lattice.group_changed and/or lattice.shape_changed
         self._ctrls['lattice'].update_controls_from_lattice()
+
+    @gl.print_call
+    def update_woods_list_and_selection(self, bulk_shape=''):
+        """Fetch examples of Wood's given a bulk-lattice shape.
+
+        Also update the current selection, should the current
+        superlattice be representable in Wood's notation.
+
+        This slot should be connected to the shape_changed signal
+        of the BulkInput widget that holds the same bulk lattice
+        as in self.bulk.
+
+        Parameters
+        ----------
+        bulk_shape : {'Oblique', 'Rectangular', 'Square',
+                      'Rhombic', 'Hexagonal', ''}
+            If empty, bulk_shape is taken from the underlying
+            bulk lattice. Default is an empty string.
+        """
+        if not bulk_shape:
+            bulk_shape = self.bulk.cell_shape
+
+        woods_combo = self._ctrls['woods']
+        woods_combo.clear()
+        woods_combo.addItems(sorted(self.__woods.get_examples(bulk_shape)))
+
+        self.pick_right_woods()
 
     def _compose(self):
         """Place children widgets."""
@@ -370,81 +524,6 @@ class SurfaceStructureInput(qtw.QWidget):
             )
 
     @gl.print_call
-    def _on_bulk_basis_changed(self, *__args):
-        """React to a change of the bulk basis.
-
-        The surface basis is changed accordingly,
-        then the controls are updated.
-
-        This slot should be connected to the lattice_parameters_changed
-        signal of the BulkInput widget that holds the same bulk lattice
-        as in self.bulk. It can also be connected to the shape_changed
-        signal of the same widget.
-
-        Parameters
-        ----------
-        *__args : tuple
-            Unused but necessary to comply with the signature
-            of signals connected to this method. The new bulk
-            basis is always taken from the underlying bulk
-            lattice, which should be up to date.
-
-        Returns
-        -------
-        None.
-
-        Emits
-        -----
-        lattice.need_high_sym_reduction()
-            If the underlying lattice is not highest symmetry
-        need_high_sym_reduction()
-            If the underlying lattice is not highest symmetry.
-            This signal is just a convenience to prevent the
-            need to directly look into the underlying lattice
-            control
-        lattice.group_changed(new_group)
-            If group of underlying lattice actually changed
-        lattice.shape_changed(new_shape)
-            If shape of underlying lattice actually changed
-        """
-        lattice = self._ctrls['lattice']
-        superlattice = self._ctrls['superlattice'].matrix
-        lattice.update_lattice_basis(np.dot(superlattice, self.bulk.basis))
-        self.__woods.bulk_basis = self.bulk.basis
-        lattice.update_controls_from_lattice()
-
-    @gl.print_call
-    def _on_bulk_group_changed(self, *__args):
-        """Pick the appropriate list of groups.
-
-        'Appropriate' means all those groups that are compatible
-        with the cell shape and the new bulk group, in the sense
-        of viperleed.PlaneGroup.groups_compatible_with().
-
-        This slot should be connected to the group_changed signal
-        of the BulkInput widget that holds the same bulk lattice
-        as in self.bulk.
-
-        Parameters
-        ----------
-        *__args : tuple
-            Unused but necessary to comply with the signature
-            of signals connected to this method. The new bulk
-            group is always taken from the underlying bulk
-            lattice, which should be up to date.
-
-        Returns
-        -------
-        None.
-
-        Emits
-        -----
-        lattice.group_changed
-            If the group of the underlying lattice actually changed
-        """
-        self._ctrls['lattice'].group_from_lattice_and_update_options()
-
-    @gl.print_call
     def _on_high_sym_pressed(self, *__args):
         """React on a request to make the lattice high symmetry.
 
@@ -462,7 +541,7 @@ class SurfaceStructureInput(qtw.QWidget):
         surface_changed
         """
         self._update_superlattice_from_surf_basis()
-        self._pick_right_woods()
+        self.pick_right_woods()
         print("###     o--->", self.__class__.__name__,
               "-- about to emit surface_changed")
         self.surface_changed.emit()
@@ -521,7 +600,7 @@ class SurfaceStructureInput(qtw.QWidget):
         lattice.update_controls_from_lattice()
 
         # And see if the matrix is woods representable
-        self._pick_right_woods()
+        self.pick_right_woods()
 
         print("###     o--->", self.__class__.__name__,
               "-- about to emit surface_changed")
@@ -617,48 +696,6 @@ class SurfaceStructureInput(qtw.QWidget):
         woods_combo.lineEdit().setPalette(palette)
 
     @gl.print_call
-    def _pick_right_woods(self):
-        """Choose the appropriate Wood's representation.
-
-        Causes a change of the text in the Wood's combo
-        box. The new text is a valid Wood's notation if
-        the superlattice matrix is Wood's-representable,
-        and 'None' otherwise.
-
-        Returns
-        -------
-        None.
-        """
-        woods_combo = self._ctrls['woods']
-
-        # Set color to black whenever this function is called,
-        # as it always will pick the correct Wood's text. This
-        # undoes 'unprocessed' color changes that may have
-        # happened as a result of an improper text input (set
-        # in _on_woods_selected).
-        palette = woods_combo.lineEdit().palette()
-        palette.setColor(palette.Text, qtc.Qt.black)
-        woods_combo.lineEdit().setPalette(palette)
-
-        # See if the superlattice matrix is Wood's-representable
-        try:
-            new_woods = self.__woods.from_matrix(
-                self._ctrls['superlattice'].matrix
-                )
-        except WoodsNotRepresentableError:
-            new_woods = 'None'
-        else:
-            # Representable. See if we already have it in the
-            # list (.findText returns index >= 0 if found)
-            found = woods_combo.findText(new_woods,
-                                         flags=qtc.Qt.MatchExactly) >= 0
-            if not found:
-                woods_combo.addItem(new_woods)
-                self.__woods.add_example(new_woods, self.bulk.cell_shape)
-
-        woods_combo.setCurrentText(new_woods)
-
-    @gl.print_call
     def _update_superlattice_from_surf_basis(self, surf_basis=None):
         """Update superlattice control from the given surface basis.
 
@@ -689,30 +726,3 @@ class SurfaceStructureInput(qtw.QWidget):
 
         # Use .set_matrix() to not emit matrix_edited
         self._ctrls['superlattice'].set_matrix(superlattice)
-
-    @gl.print_call
-    def _update_woods_list_and_selection(self, bulk_shape=''):
-        """Fetch examples of Wood's given a bulk-lattice shape.
-
-        Also update the current selection, should the current
-        superlattice be representable in Wood's notation.
-
-        This slot should be connected to the shape_changed signal
-        of the BulkInput widget that holds the same bulk lattice
-        as in self.bulk.
-
-        Parameters
-        ----------
-        bulk_shape : {'Oblique', 'Rectangular', 'Square',
-                      'Rhombic', 'Hexagonal', ''}
-            If empty, bulk_shape is taken from the underlying
-            bulk lattice. Default is an empty string.
-        """
-        if not bulk_shape:
-            bulk_shape = self.bulk.cell_shape
-
-        woods_combo = self._ctrls['woods']
-        woods_combo.clear()
-        woods_combo.addItems(sorted(self.__woods.get_examples(bulk_shape)))
-
-        self._pick_right_woods()
