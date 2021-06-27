@@ -464,7 +464,7 @@ def deltas(sl, rp, subdomain=False):
         except Exception:
             logger.error("No fortran compiler found, cancelling...")
             raise RuntimeError("No Fortran compiler")
-    tlp = tl.leedbase.getTLEEDdir(os.path.abspath(rp.workdir),
+    tlp = tl.leedbase.getTLEEDdir(os.path.abspath(rp.sourcedir),
                                   version=rp.TL_VERSION)
     if not tlp:
         raise RuntimeError("TensErLEED code not found.")

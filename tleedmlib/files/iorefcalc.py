@@ -104,6 +104,8 @@ def combine_fdout(oripath=".", targetpath="."):
             outlines += lines
         else:
             outlines += lines[nbeams+2:]
+        if (nbeams % 5) == 4:
+            outlines += "\n"  # expects an empty line (fortran formatting..)
         try:
             os.remove(os.path.join(oripath, f))
         except Exception:
@@ -112,7 +114,7 @@ def combine_fdout(oripath=".", targetpath="."):
         with open(os.path.join(targetpath, "fd.out"), "w") as wf:
             wf.write("".join(outlines))
     except Exception:
-        logger.error("Failed to write combine fd.out")
+        logger.error("Failed to write combined fd.out")
         raise
     return
 
@@ -600,14 +602,12 @@ def writeAUXGEO(sl, rp):
         ol = ol.ljust(26)
         output += (ol + '0/1: Tensor output is required for this layer '
                    '(TENSOR_OUTPUT)\n')
-        i = 1
-        for atom in layer.atlist:
-            # ol = 'T_'+atom.el+str(atom.oriN)
-            ol = 'T_'+str(atom.oriN)
-            ol = ol.ljust(26)
-            output += (ol + 'Tensor file name, current layer, sublayer '+str(i)
-                       + '\n')
-            i += 1
+        if rp.TENSOR_OUTPUT[layer.num] == 0:
+            continue   # don't write the Tensor file names
+        for i, atom in enumerate(layer.atlist):
+            ol = ('T_'+str(atom.oriN)).ljust(26)
+            output += (ol + 'Tensor file name, current layer, sublayer '
+                       + str(i+1) + '\n')
     output += ('--------------------------------------------------------------'
                '-----\n')
     output += ('--- end geometrical input                                     '

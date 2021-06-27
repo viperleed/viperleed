@@ -16,7 +16,7 @@ Date: 16.04.2021
 
 // Firmware version (MAX: v255.255). CURENTLY: v0.1
 #define FIRMWARE_VERSION_MAJOR    0  // max 255
-#define FIRMWARE_VERSION_MINOR    1  // max 255
+#define FIRMWARE_VERSION_MINOR    2  // max 255
 
 
 
@@ -94,6 +94,9 @@ void loop() {
         case STATE_ERROR:
             handleErrors();
             break;
+        case STATE_CHANGE_MEASUREMENT_MODE:
+            changeMeasurementMode();
+            break;
     }
 }
 
@@ -118,7 +121,9 @@ void updateState() {
     May go anywhere
     **/
     if (not newMessage) return;
-
+    
+    if (msgLength > 1) return; //We received data
+    
     switch(data_received[0]){
         case PC_CONFIGURATION:
             initialTime = millis();
@@ -152,12 +157,17 @@ void updateState() {
             encodeAndSend(PC_OK);
             triggerMeasurements(); //This contains the state switch to STATE_MEASURE_ADCS
             break;
+        case PC_CHANGE_MEAS_MODE:
+            waitingForDataFromPC = true;
+            initialTime = millis();
+            currentState = STATE_CHANGE_MEASUREMENT_MODE;
+            break;
     }
     newMessage = false;
 }
 
 
-bool didTimeOut(){
+bool checkIfTimedOut(){
     /**Return whether the Arduino waiting has timed out.
 
     Reads
@@ -250,7 +260,6 @@ void readFromSerial() {
             numBytesRead = 0;
             readingFromSerial = true;
         }
-
         // Accumulate characters
         if(readingFromSerial) {
             // Make sure we are not going to write
@@ -266,6 +275,8 @@ void readFromSerial() {
         // A full message has been read
         if (byteRead == MSG_END) {
             readingFromSerial = false;
+            /*for (int i; i < numBytesRead; i++)  // echo message, for debug
+                Serial.write(serialInputBuffer[i]);*/
             newMessage = decodeAndCheckMessage();
             return;
         }
@@ -329,11 +340,11 @@ bool decodeAndCheckMessage(){
         if the message is an unknown command, or if we
         got some 'data' while we were not expecting any
     */
-    // Decode the message, starting at the second
-    // byte, and going up to numBytesRead-1. This
+    // Decode the message, starting at the second byte,
+    // and going up to numBytesRead - 2 (included). This
     // skips MSG_START, the length, and MSG_END
     byte numDecodedBytes = 0;
-    for (byte nthByte = 2; nthByte < numBytesRead; nthByte++) {
+    for (byte nthByte = 2; nthByte <= numBytesRead - 2; nthByte++) {
         byte decodedByte = serialInputBuffer[nthByte];
         if (decodedByte == MSG_SPECIAL_BYTE) {
             // The actual character is MSG_SPECIAL_BYTE + the next byte
@@ -370,6 +381,8 @@ bool decodeAndCheckMessage(){
         case PC_SET_UP_ADCS: break;
         case PC_RESET: break;
         case PC_SET_VOLTAGE: break;
+        case PC_MEASURE_ONLY: break;
+        case PC_CHANGE_MEAS_MODE: break;
         default:
             raise(ERROR_MSG_UNKNOWN);
             return false;
@@ -500,15 +513,19 @@ void triggerMeasurements() {
     STATE_MEASURE_ADCS
         At end of execution, effectively starting the measurement
     **/
-    // The next two lines take ~20 ms each                                      // TODO: true?
+    // Decrease gain before triggering: need to
+    // trigger each time the gain is changed.
+    decreaseADCGainsIfNeeded();
+    
+    // After triggering, 3/updateRate sec pass before the first data is available
     if (hardwareDetected.asInt & ADC_0_PRESENT)
         AD7705setGainAndTrigger(CS_ADC_0, adc0Channel, adc0Gain);
     if (hardwareDetected.asInt & ADC_1_PRESENT)
         AD7705setGainAndTrigger(CS_ADC_1, adc1Channel, adc1Gain);
 
     // Prepare the system for measurement
-    decreaseADCGainsIfNeeded();
     resetMeasurementData();
+    initialTime = millis();
     currentState = STATE_MEASURE_ADCS;
 }
 
@@ -543,12 +560,15 @@ void getConfiguration(){
         return;
     }
 
+    // Note that the ATmega32U4 of Arduino Micro uses
+    // little-endiam memory layout, i.e., LSB is
+    // at lower memory index
     hardwareDetected.asInt = getHardwarePresent();
     byte configuration[4] = {FIRMWARE_VERSION_MAJOR,
                              FIRMWARE_VERSION_MINOR,
-                             hardwareDetected.asBytes[0],
-                             hardwareDetected.asBytes[1]};
-    encodeAndSend(configuration, 6);
+                             hardwareDetected.asBytes[1],
+                             hardwareDetected.asBytes[0]};
+    encodeAndSend(configuration, 4);
     currentState = STATE_IDLE;
 }
 
@@ -573,7 +593,6 @@ void storeAllSelfCalibrationResults(int32_t targetArray[N_MAX_ADCS_ON_PCB][2]) {
     hardwareDetected, adc0Channel, adc1Channel
     **/
     for (int iADC = 0; iADC < N_MAX_ADCS_ON_PCB; iADC++) {
-        // bool adcPresentMask = iADC==0 ? ADC_0_PRESENT : ADC_1_PRESENT;       // BUG: ADC_0_PRESENT/ADC_1_PRESENT are uint16_t, not bool!
         uint16_t adcPresentMask = iADC==0 ? ADC_0_PRESENT : ADC_1_PRESENT;      // TODO: using the ADCs struct would make it easier, as you would just need to do externalADCs[iADC].present
         if (hardwareDetected.asInt & adcPresentMask) {
             byte chipSelect = iADC==0 ? CS_ADC_0 : CS_ADC_1;                    // TODO: similarly, with the ADCs struct, would be enough to do externalADCs[iADC].chipSelect
@@ -644,12 +663,11 @@ void calibrateADCsAtAllGains(){
         return;
     }
 
-    if (not newMessage){  // waiting for data from the PC
-        if (didTimeOut())
-            waitingForDataFromPC = false;
+    if (not newMessage and waitingForDataFromPC){  // waiting for data from the PC
+        checkIfTimedOut();
         return;
     }
-    else {
+    if (newMessage and waitingForDataFromPC) {
         // Data has arrived. This part runs only once,
         // the first time the data arrives
         newMessage = false;
@@ -672,7 +690,7 @@ void calibrateADCsAtAllGains(){
         // (3) The channels are acceptable
         for (byte i = 0; i < N_MAX_ADCS_ON_PCB; i++){
             byte channel = data_received[i+1];
-            if (channel != AD7705_CH0 or channel != AD7705_CH1){
+            if (channel != AD7705_CH0 and channel != AD7705_CH1){
                 raise(ERROR_MSG_DATA_INVALID);
                 return;
             }
@@ -692,7 +710,7 @@ void calibrateADCsAtAllGains(){
         // last index is offset(0) & gain(1)
         int32_t selfCalDataForMedian[3][N_MAX_ADCS_ON_PCB][2];
 
-        if (didTimeOut()) {
+        if (checkIfTimedOut()) {
             adc0Gain = 0;
             adc1Gain = 0;
             return;
@@ -737,7 +755,7 @@ void calibrateADCsAtAllGains(){
         // Remember which channels we have calibrated
         for (int iADC=0; iADC < N_MAX_ADCS_ON_PCB; iADC++) {
             byte channel = iADC==0 ? adc0Channel : adc1Channel;
-            calibratedChannels[iADC][channel] = true;
+            calibratedChannels[iADC][channel] = true;  // TODO: perhaps should onlz set to true only for the ADCs that are present. Think what are the consequences.
         }
 
         // Set gains to the lowest value, and load the
@@ -762,7 +780,6 @@ void prepareADCsForMeasurement(){
               high byte, [1] the low byte. Interpreted as an uint16_t.
     - [2] channel of ADC#0
     - [3] channel of ADC#1
-
     Reads
     -----
     data_received
@@ -798,10 +815,7 @@ void prepareADCsForMeasurement(){
     }
 
     if (not newMessage){  // waiting for data from the PC
-        if(didTimeOut()){
-            waitingForDataFromPC = false;
-            newMessage = false;
-        }
+        checkIfTimedOut();
         return;
     }
 
@@ -821,7 +835,7 @@ void prepareADCsForMeasurement(){
     // (2) channels acceptable?
     for (byte i = 0; i < N_MAX_ADCS_ON_PCB; i++){
         byte channel = data_received[i+2];
-        if (channel != AD7705_CH0 or channel != AD7705_CH1){
+        if (channel != AD7705_CH0 and channel != AD7705_CH1){
             raise(ERROR_MSG_DATA_INVALID);
             return;
         }
@@ -888,14 +902,13 @@ void setVoltageWaitAndTrigger(){
         return;
     }
 
-    if (not newMessage){
+    if (not newMessage and waitingForDataFromPC){
         // Waiting for data from PC
-        if(didTimeOut())
-            waitingForDataFromPC = false;
+        checkIfTimedOut();
         return;
     }
 
-    if (newMessage){ // Do this only once
+    if (newMessage and waitingForDataFromPC){ // Do this only once
         // Data has arrived
         waitingForDataFromPC = false;
         newMessage = false;
@@ -985,8 +998,7 @@ void measureADCs(){
         return;
     }
 
-    if(didTimeOut())
-        newMessage = false;
+    checkIfTimedOut();
 }
 
 
@@ -1025,14 +1037,16 @@ void sendMeasuredValues(){
     Msg to PC
     ---------
     Three serial messages, each contains 4 bytes (+encoding) with
-    values from LM35, ADC#0, ADC#1 (in this order)
+    values from ADC#0, ADC#1, LM35 (in this order)
 
     Goes to state
     -------------
     STATE_ERROR : ERROR_RUNTIME
         If this function is not called within STATE_ADC_VALUES_READY
     STATE_IDLE
-        Otherwise
+        If continuousMeasurement is false
+    STATE_MEASURE_ADCS
+        If continuousMeasurement is true
     **/
     // TODO: We may later remove this, if we want the option
     // of sending incomplete data back upon request from the PC
@@ -1046,11 +1060,26 @@ void sendMeasuredValues(){
     //       In this case, the worst-case scenario message length would be
     //       N_MAX_MEAS*4(bytes)*2(encoding) + 3 (MSG_START, MSG_END, length)
     getFloatMeasurements();
-    encodeAndSend(fDataOutput[0].asBytes, 4);
-    encodeAndSend(fDataOutput[1].asBytes, 4);
-    encodeAndSend(fDataOutput[2].asBytes, 4);
+    
+    // Since the ATMega32u4 (Arduino Micro) uses little-endian memory layout, we
+    // have flip the bytes over to maintain consistency of our messages, which
+    // are in big-endian order 
+    byte littleToBigEndian[4];
+    for (int iADC = 0; iADC < N_MAX_ADCS_ON_PCB+1; iADC++){  // external ADCs + LM35
+        for (int i = 0; i < 4; i++){
+          littleToBigEndian[i] = fDataOutput[iADC].asBytes[3-i];
+          }
+        encodeAndSend(littleToBigEndian, 4);
+    }
+    //encodeAndSend(adc0Gain); //uncomment for debug (adapt python side accordingly)
     resetMeasurementData();
-    currentState = STATE_IDLE;
+    if (continuousMeasurement) {
+        currentState = STATE_MEASURE_ADCS;
+        initialTime = millis();
+    }
+    else {
+        currentState = STATE_IDLE;
+    }
 }
 
 
@@ -1105,30 +1134,28 @@ void findOptimalADCGains(){
     // end of the self-calibration.
     measureADCsRipple();
     if (numMeasurementsDone < numMeasurementsToDo){
-        if(didTimeOut()){
+        if(checkIfTimedOut()){
             // Do some cleanup:
             resetMeasurementData();
             numMeasurementsToDo = numMeasurementsToDoBackup;
-            newMessage = false;
 
             // Place the ADCs back at gain zero, and
             // restore updateRate and calibration
             adc0Gain = 0;
             adc1Gain = 0;
             setAllADCgainsAndCalibration();
-            if (currentState == STATE_ERROR)   // Some channel was not calibrated // TODO: this check will always be true, as we're in the 'timed out' branch anyway
-                return;
         }
         return;
     }
 
-    int16_t autogain_value0;
-    int16_t autogain_value1;
-    autogain_value0 = (max(abs(maximumPeak[0]), abs(minimumPeak[0]))
-                       + (maximumPeak[0] - minimumPeak[0]));
+    // using int32_t because summing int16_t may overflow 
+    int32_t autogain_value0;
+    int32_t autogain_value1;
+    autogain_value0 = (max(abs((int32_t)maximumPeak[0]), abs((int32_t)minimumPeak[0]))
+                       + abs((int32_t)maximumPeak[0] - (int32_t)minimumPeak[0]));
     adc0RipplePP = maximumPeak[0] - minimumPeak[0];
-    autogain_value1 = (max(abs(maximumPeak[1]), abs(minimumPeak[1]))
-                       + (maximumPeak[1] - minimumPeak[1]));
+    autogain_value1 = (max(abs((int32_t)maximumPeak[1]), abs((int32_t)minimumPeak[1]))
+                       + abs((int32_t)maximumPeak[1] - (int32_t)minimumPeak[1]));
     adc1RipplePP = maximumPeak[1] - minimumPeak[1];
     // TODO: probably something to check here: if either autogain_value is
     //       already in saturation with gain=0 something is wrong with
@@ -1144,7 +1171,7 @@ void findOptimalADCGains(){
         while(((autogain_value1 << (adc1Gain + 1)) < ADC_RANGE_THRESHOLD)
               && (adc1Gain < AD7705_MAX_GAIN)){
             adc1Gain++;
-      }
+        }
     }
 
     // Now clean up and update the ADCs with the new gain
@@ -1152,11 +1179,9 @@ void findOptimalADCGains(){
     // loading the relevant calibration data.
     resetMeasurementData();
     numMeasurementsToDo = numMeasurementsToDoBackup;
-    newMessage = false;
     setAllADCgainsAndCalibration();
     if (currentState == STATE_ERROR)   // Some channel was not calibrated
         return;
-
     encodeAndSend(PC_OK);
     currentState = STATE_IDLE;
 }
@@ -1206,11 +1231,9 @@ void handleErrors(){
             numBytesRead = 0;
             readingFromSerial = false;
             break;
-        case ERROR_MSG_DATA_INVALID:
-            waitingForDataFromPC = false;
-            newMessage = false;
-            break;
     }
+    waitingForDataFromPC = false;
+    newMessage = false;
     currentState = STATE_IDLE;
 }
 
@@ -1244,6 +1267,7 @@ void reset(){
 
     currentState = STATE_IDLE;
     waitingForDataFromPC = false;
+    continuousMeasurement = false;
     dacSettlingTime = 100;
 
     hardwareDetected.asInt = 0;
@@ -1261,6 +1285,7 @@ void reset(){
     numMeasurementsToDo = 1;
     numMeasurementsToDoBackup = 1;
     resetMeasurementData();
+    ContinuousMeasurementInterval = 0;
 
     // Rather than clearing the calibration data, we can just
     // reset the flags marking whether channels were calibrated
@@ -1571,27 +1596,27 @@ void makeAndSumMeasurements() {
     //   temperature). We may want to send an ERROR_TOO_HOT.
 
     int16_t measurement;
+    numMeasurementsDone++;
     if (hardwareDetected.asInt & LM35_PRESENT){
         measurement = analogReadMedian(LM35_PIN);
         summedMeasurements[2] += measurement;
         }   // this one first while we probably have to wait for the others
     if (hardwareDetected.asInt & ADC_0_PRESENT){
         measurement = AD7705waitAndReadData(CS_ADC_0, adc0Channel);
-        checkMeasurementInADCRange(adc0Gain, &adc0ShouldDecreaseGain,
-                                   measurement, adc0RipplePP);
         summedMeasurements[0] += measurement;
+        checkMeasurementInADCRange(&adc0Gain, &adc0ShouldDecreaseGain,
+                                   measurement, adc0RipplePP);
         }
     if (hardwareDetected.asInt & ADC_1_PRESENT){
         measurement = AD7705waitAndReadData(CS_ADC_1, adc1Channel);
-        checkMeasurementInADCRange(adc1Gain, &adc1ShouldDecreaseGain,
-                                   measurement, adc1RipplePP);
         summedMeasurements[1] += measurement;
+        checkMeasurementInADCRange(&adc1Gain, &adc1ShouldDecreaseGain,
+                                   measurement, adc1RipplePP);
         }
-    numMeasurementsDone++;
 }
 
 
-void checkMeasurementInADCRange(byte gain, bool* adcShouldDecreaseGain,
+void checkMeasurementInADCRange(byte* gain, bool* adcShouldDecreaseGain,
                                 int16_t adcValue, int16_t ripple){    // The call to this function would be much easier having externalADCs, as then we would just pass the index of the ADC in the externalADCs array
     /**
     Check whether the (signed) value read is approaching
@@ -1634,9 +1659,9 @@ void checkMeasurementInADCRange(byte gain, bool* adcShouldDecreaseGain,
     Stays unchanged
         Otherwise
     */
-    if((abs(adcValue) + abs(ripple>>gain)) > ADC_RANGE_THRESHOLD
-       && (gain > 0)
-       && !*adcShouldDecreaseGain){
+    if(abs(adcValue) > (ADC_RANGE_THRESHOLD - abs(ripple>>*gain))
+       && (*gain > 0)
+       && !(*adcShouldDecreaseGain)){
         // The measured value is above the "saturation" threshold,
         // but not yet at true saturation, which would make the
         // measured value completely wrong. Defer the decrease of
@@ -1649,11 +1674,10 @@ void checkMeasurementInADCRange(byte gain, bool* adcShouldDecreaseGain,
         //     as large as the one used in findOptimalADCGains()
         *adcShouldDecreaseGain = true;
     }
-
-    if(((adcValue^=8000) == ADC_POSITIVE_SATURATION)
-       || ((adcValue^=8000) == ADC_NEGATIVE_SATURATION)){
-        if(gain > 0){
-            gain--;
+    
+    if(abs(adcValue) >= ADC_SATURATION){
+        if(*gain > 0){
+            (*gain)--;
             setAllADCgainsAndCalibration();
             if (currentState == STATE_ERROR)   // Some channel was not calibrated
                 return;
@@ -1767,8 +1791,79 @@ void measureADCsRipple(){
 }
 
 
+void changeMeasurementMode() {
+    /**
+    Sets the measurement mode either to continous or single measurement.
+    To achieve this the continuousMeasurement boolean is set to true or false.
+    If the arduino is ordered to do continuous measurements it will set
+    numMeasurementsToDo = 1.
+    
+    Reads
+    -----
+    data_received
 
+    Writes
+    ------
+    continuousMeasurement
 
+    Msg to PC
+    ---------
+    PC_OK
+
+    Goes to state
+    -------------
+    STATE_ERROR : ERROR_RUNTIME
+        If this function is not called within STATE_CHANGE_MEASUREMENT_MODE
+    STATE_ERROR : ERROR_TIMEOUT
+        If more than 5s pass between the PC_CHANGE_MEAS_MODE message
+        and the receipt of data
+    STATE_CHANGE_MEASUREMENT_MODE (stays)
+        While waiting for data from the PC
+    STATE_IDLE
+        Successfully finished
+  **/
+    int continuous_mode;
+    if (currentState != STATE_CHANGE_MEASUREMENT_MODE){
+        raise(ERROR_RUNTIME);
+        return;
+    }
+    if (not newMessage and waitingForDataFromPC){  // waiting for data from the PC
+        checkIfTimedOut();
+        return;
+    }
+
+    // Data has arrived
+    waitingForDataFromPC = false;
+    newMessage = false;
+    
+    if (msgLength < 3){
+        raise(ERROR_MSG_DATA_INVALID);
+        return;
+    }
+
+    continuous_mode = data_received[0];
+    
+    if (continuous_mode == 1){
+        continuousMeasurement = true;
+        numMeasurementsToDo = 1;
+    }
+    if (continuous_mode == 0) {
+        continuousMeasurement = false;
+    }
+    if (continuous_mode != 1 and continuous_mode != 0) {
+      raise(ERROR_MSG_DATA_INVALID);
+      return;
+    }
+    
+    // This is not being used yet. If we want to include a time to wait in between 
+    // measurements we need to implement this in the sendMeasuredValues() function. 
+    // We would do this there because we decided to never call the trigger function. 
+    // Possibly a TODO.
+    ContinuousMeasurementInterval = data_received[1] << 8 | data_received[2];
+
+    encodeAndSend(PC_OK);
+    currentState = STATE_IDLE;
+}
 
 
 /** -------------------------- ARDUINO UTILITIES --------------------------- **/

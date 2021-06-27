@@ -13,6 +13,7 @@ import logging
 import os
 import random
 import shutil
+from timeit import default_timer as timer
 
 try:
     import matplotlib.pyplot as plt
@@ -87,7 +88,7 @@ class DomainParameters:
     """Stores workdir, slab and runparams objects for each domain"""
 
     def __init__(self, workdir, homedir, name):
-        self.workdir = workdir  # path do sub-directory for domain calculation
+        self.workdir = workdir  # path to sub-directory for domain calculation
         self.homedir = homedir  # path to main tleedm working directory
         self.name = name        # domain name as defined by user
         self.sl = None
@@ -162,18 +163,20 @@ class Rparams:
         self.TENSOR_INDEX = None  # default: pick highest in Tensors folder
         self.TENSOR_OUTPUT = []  # per layer: write Tensor output? (0/1)
         self.THEO_ENERGIES = [-1, -1, -1]
-        # default: [20, 800, 2], initialized in tleedm.py / runSection / INIT
+        # default: [20, 800, 2], initialized in section INIT
         self.THETA = 0.0        # from BEAM_INCIDENCE
         self.TL_VERSION = 0.    # requested TensErLEED version
         self.T_EXPERIMENT = None
         self.T_DEBYE = None
-        self.V0_IMAG = 4.5               # !!! CHOOSE BETTER DEFAULT?
+        self.V0_IMAG = 4.5
         self.V0_REAL = "default"   # 'default' will read from PHASESHIFTS
         self.V0_Z_ONSET = 1.0
         self.VIBR_AMP_SCALE = []   # read as list of strings, interpret later
 
         # RUN VARIABLES
-        self.workdir = os.getcwd()  # MAIN WORK DIRECTORY; where to find files
+        self.starttime = timer()
+        self.sourcedir = os.getcwd()  # where to find 'tensorleed'
+        self.workdir = os.getcwd()  # MAIN WORK DIRECTORY; where to find input
         self.searchConvInit = {
             "gaussian": None, "dgen": {"all": None, "best": None, "dec": None}}
         self.searchMaxGenInit = self.SEARCH_MAX_GEN
@@ -288,7 +291,7 @@ class Rparams:
             self.TENSOR_INDEX = getMaxTensorIndex()
         # TL_VERSION:
         if self.TL_VERSION == 0.:
-            path = os.path.join(self.workdir, "tensorleed")
+            path = os.path.join(self.sourcedir, "tensorleed")
             ls = [dn for dn in os.listdir(path)
                   if (os.path.isdir(os.path.join(path, dn))
                       and dn.startswith("TensErLEED"))]

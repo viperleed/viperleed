@@ -114,7 +114,7 @@ def rfactor(sl, rp, index, for_error=False, only_vary=None):
         raise
     # get fortran files and compile
     try:
-        tldir = getTLEEDdir(home=rp.workdir, version=rp.TL_VERSION)
+        tldir = getTLEEDdir(home=rp.sourcedir, version=rp.TL_VERSION)
         if not tldir:
             raise RuntimeError("TensErLEED code not found.")
         libpath = os.path.join(tldir, 'lib')

@@ -246,7 +246,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
     sl.celltype = celltype
     if output:
         logger.info("Found unit cell type: "+celltype)
-        logger.info("Initializing symmetry search...")
+        logger.info("Starting symmetry search...")
     # FIND HIGHEST SYMMETRY ORIGIN
     sl.collapseCartesianCoordinates()
     # create a testslab: C projected to Z
@@ -342,7 +342,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
         mirror = False
         glide = False
         symplanelist = []
-        if not rp.SYMMETRY_FIND_ORI and not forceFindOri:
+        if not rp.SYMMETRY_FIND_ORI and not forceFindOri and not bulk:
             for (pa, pb) in [(0, 0), (0.25, 0.25), (0.25, -0.25)]:
                 for (i, j) in [(1, 0), (0, 1), (1, 1), (1, -1)]:
                     symplanelist.append(SymPlane(pa*abst[0]+pb*abst[1],
@@ -501,8 +501,6 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
         elif celltype == "square":
             if toprotsym == 4:
                 # test mirror plane along unit vector at origin
-                if output:
-                    logger.debug("Checking for mirror/glide planes...")
                 spl = SymPlane(np.array([0, 0]), abst[0], abst)
                 if ts.isMirrorSymmetric(spl, eps):
                     planegroup = "p4m"
@@ -516,8 +514,6 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
                         planegroup = "p4"
             else:   # p1 p2 pm pg pmm pmg pgg
                 # test mirror plane along both diagonals at origin
-                if output:
-                    logger.debug("Checking for mirror/glide planes...")
                 found = False
                 for i in [+1, -1]:
                     spl = SymPlane(np.array([0, 0]), (abst[0]+i*abst[1]),
@@ -534,8 +530,6 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
                     efftype = "rectangular"
         if celltype == "rhombic" or efftype == "rhombic":
             # test mirror plane along both diagonals at origin
-            if output:
-                logger.debug("Checking for mirror/glide planes...")
             found = False
             for i in [+1, -1]:
                 spl = SymPlane(np.array([0, 0]), (abst[0]+i*abst[1]), abst)
@@ -556,8 +550,6 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
                     rp.setHaltingLevel(2)
         if celltype == "rectangular" or efftype == "rectangular":
             # test mirror plane along both unit vectors at origin
-            if output:
-                logger.debug("Checking for mirror/glide planes...")
             mirs = [False, False]
             for i in range(0, 2):
                 spl = SymPlane(np.array([0, 0]), abst[i], abst)

@@ -292,7 +292,6 @@ def parabolaFit(rp, datafiles, r_best, x0=None, max_configs=0, **kwargs):
     if len(rc) < 100*rp.indyPars:
         return None, None
 
-    # starttime = timer()
     rfacs, configs = rc[:, 0].astype(float), rc[:, 1]
     localizeFactor = kwargs["localize"]
     if localizeFactor == 0:
@@ -611,7 +610,8 @@ def search(sl, rp):
                 raise RuntimeError("Fortran compile error")
     # get fortran files
     try:
-        tldir = tl.leedbase.getTLEEDdir(home=rp.workdir, version=rp.TL_VERSION)
+        tldir = tl.leedbase.getTLEEDdir(home=rp.sourcedir,
+                                        version=rp.TL_VERSION)
         if not tldir:
             raise RuntimeError("TensErLEED code not found.")
         srcpath = os.path.join(tldir, 'src')

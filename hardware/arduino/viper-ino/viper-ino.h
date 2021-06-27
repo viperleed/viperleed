@@ -25,6 +25,18 @@ union uint16OrBytes{
     byte asBytes[2];
 };
 
+// Interpret the same value as either int16_t or a 2-bytes array
+union int16OrBytes{
+    int16_t asInt;
+    byte asBytes[2];
+};
+
+// Interpret the same value as either int32_t or a 4-bytes array
+union int32OrBytes{
+    int32_t asInt;
+    byte asBytes[4];
+};
+
 // Interpret the same value as either (32-bit) float or a 4-bytes array
 union floatOrBytes{
     float asFloat;
@@ -55,6 +67,7 @@ union floatOrBytes{
 #define PC_RESET          82    // PC requested a global reset (ASCII 'R')
 #define PC_SET_VOLTAGE    86    // PC requested to set a certain energy (ASCII 'V')
 #define PC_MEASURE_ONLY   77    // PC requested measurement without changing Voltage (ASCII 'M')
+#define PC_CHANGE_MEAS_MODE 32  // PC requested a change between continuous and single measurement mode
 
 // Error codes
 #define ERROR_NO_ERROR            0   // No error
@@ -94,6 +107,7 @@ byte data_send[MSG_MAX_LENGTH];
 #define STATE_IDLE                 0  // Wait for requests from PC
 #define STATE_SET_UP_ADCS          1  // Pick correct ADC channels and no. of measurement points
 #define STATE_SET_VOLTAGE          2  // Set a voltage with the DAC, wait, then trigger the ADCs
+#define STATE_CHANGE_MEASUREMENT_MODE 3 // Get and set the desired measurement mode
 #define STATE_MEASURE_ADCS         4  // ADC measurements in progress
 #define STATE_ADC_VALUES_READY     5  // ADC measurements done
 #define STATE_AUTOGAIN_ADCS        6  // Find optimal gain for both ADCs
@@ -102,7 +116,7 @@ byte data_send[MSG_MAX_LENGTH];
 #define STATE_ERROR                9  // An error occurred
 uint16_t currentState = STATE_IDLE;   // Keeps track of the current state
 bool waitingForDataFromPC = false;    // Keeps track of whether we are in a state that is waiting for the PC to send something
-
+bool continuousMeasurement = false;   // Decides if the Arduino continues to measure and return data or if it stops after doing so once
 
 
 
@@ -144,9 +158,8 @@ bool waitingForDataFromPC = false;    // Keeps track of whether we are in a stat
 #define JP_AUX_CLOSED   0x20  // Bit is set if JP5 is closed (to indicate 2.5V AUX range rather than 10V range)
 
 // ADC saturation thresholds
-#define ADC_POSITIVE_SATURATION 0xffff  // Max ADC output in a range
-#define ADC_NEGATIVE_SATURATION 0x0000  // Min ADC output in a range
-#define ADC_RANGE_THRESHOLD     0x3fff  // If output is larger than this (~25% of range), we need a new gain next time
+#define ADC_SATURATION       32760   // Threshold to deem abs(adcValue) at saturation, in principle it should be 32767/-32768 but needs testing
+#define ADC_RANGE_THRESHOLD  0x3fff  // If output is larger than this (~25% of range), we need a new gain next time
 
 
 
@@ -194,13 +207,13 @@ struct analogToDigitalConverter {
 } externalADCs[N_MAX_ADCS_ON_PCB]; */
 
 // Measurements
-uint16_t numMeasurementsToDo = 1;         // No. of ADC measurements to do before measurement is considered over
-uint16_t numMeasurementsToDoBackup = 1;   // Copy of the previous one, used to restore the previous value after auto-gain is done
-uint16_t numMeasurementsDone;             // Counter for the number of ADC measurements done so far
-int32_t  summedMeasurements[N_MAX_MEAS];  // Measurements of ADCs and LM35 are summed up here
+uint16_t numMeasurementsToDo = 1;           // No. of ADC measurements to do before measurement is considered over
+uint16_t numMeasurementsToDoBackup = 1;     // Copy of the previous one, used to restore the previous value after auto-gain is done
+uint16_t numMeasurementsDone;               // Counter for the number of ADC measurements done so far
+int32_t  summedMeasurements[N_MAX_MEAS];    // Measurements of ADCs and LM35 are summed up here
+uint16_t ContinuousMeasurementInterval = 0; // Time between measurements if continuous-measurement mode is on
 
 floatOrBytes fDataOutput[N_MAX_MEAS];     // Measurements in physical units  // TODO: rename
-
 
 
 

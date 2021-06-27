@@ -244,10 +244,12 @@ def getTLEEDdir(home="", version=0.):
         return ''
 
 
-def getMaxTensorIndex(home="."):
-    """Checks the Tensors folder for the highest Tensor index there,
+def getMaxTensorIndex(home=".", zip_only=False):
+    """
+    Checks the Tensors folder for the highest Tensor index there,
     returns that value, or zero if there is no Tensors folder or no valid
-    Tensors zip file."""
+    Tensors zip file. zip_only looks only for zip files, ignoring directories.
+    """
     if not os.path.isdir(os.path.join(home, "Tensors")):
         return 0
     indlist = []
@@ -258,13 +260,14 @@ def getMaxTensorIndex(home="."):
         m = rgx.match(f)
         if m.span()[1] == 15:  # exact match
             indlist.append(int(m.group(0)[-7:-4]))
-    rgx = re.compile(r'Tensors_[0-9]{3}')
-    for f in [f for f in os.listdir(os.path.join(home, "Tensors"))
-              if (os.path.isdir(os.path.join(home, "Tensors", f))
-                  and rgx.match(f))]:
-        m = rgx.match(f)
-        if m.span()[1] == 11:  # exact match
-            indlist.append(int(m.group(0)[-3:]))
+    if not zip_only:
+        rgx = re.compile(r'Tensors_[0-9]{3}')
+        for f in [f for f in os.listdir(os.path.join(home, "Tensors"))
+                  if (os.path.isdir(os.path.join(home, "Tensors", f))
+                      and rgx.match(f))]:
+            m = rgx.match(f)
+            if m.span()[1] == 11:  # exact match
+                indlist.append(int(m.group(0)[-3:]))
     if indlist:
         return max(indlist)
     return 0
@@ -554,11 +557,6 @@ def readWoodsNotation(s, ucell):
                        "identified as:\n"+str(mat))
         logger.warning("SUPERLATTICE values do not round to "
                        "integer values. Check SUPERLATTICE parameter.")
-    # check whether unit cell follows convention
-    abbt = np.dot(np.linalg.inv(mat), np.transpose(ucell[:2, :2]))
-    if np.linalg.norm(abbt[0]) > np.linalg.norm(abbt[1]) + 1e-4:
-        # swap bulk vectors; -1 to keep handedness
-        mat = np.dot(np.array([[0, 1], [-1, 0]]), mat)
     return mat
 
 

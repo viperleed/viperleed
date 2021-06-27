@@ -284,7 +284,7 @@ def refcalc(sl, rp, subdomain=False):
 
     energies = np.arange(rp.THEO_ENERGIES[0], rp.THEO_ENERGIES[1]+0.01,
                          rp.THEO_ENERGIES[2])
-    tldir = os.path.abspath(getTLEEDdir(home=rp.workdir,
+    tldir = os.path.abspath(getTLEEDdir(home=rp.sourcedir,
                                         version=rp.TL_VERSION))
     if not tldir:
         raise RuntimeError("TensErLEED code not found.")
@@ -452,8 +452,9 @@ def refcalc(sl, rp, subdomain=False):
                            + ct.foldername)
 
     if not single_threaded:
-        io.combine_tensors(oripath=collection_dir)
         io.combine_fdout(oripath=collection_dir)
+        if 1 in rp.TENSOR_OUTPUT:
+            io.combine_tensors(oripath=collection_dir)
         try:
             shutil.rmtree(collection_dir)
         except Exception:
@@ -512,9 +513,12 @@ def refcalc(sl, rp, subdomain=False):
     except Exception:
         logger.warning("Failed to rename refcalc output file fd.out to "
                        "refcalc-fd.out")
+    if 1 not in rp.TENSOR_OUTPUT:
+        return
     # move and zip tensor files
     rp.TENSOR_INDEX = getMaxTensorIndex() + 1
-    rp.manifest.append("Tensors")
+    if "Tensors" not in rp.manifest:
+        rp.manifest.append("Tensors")
     dn = "Tensors_"+str(rp.TENSOR_INDEX).zfill(3)
     os.makedirs(os.path.join(".", "Tensors", dn), exist_ok=True)
     try:
@@ -618,7 +622,7 @@ def refcalc_domains(rp):
             "weighted average over domain beams, using weights from last "
             "search result...")
     else:
-        weights = []
+        weights = None
         logger.info(
             "Reference calculations were done for all domains, but no "
             "area weights for the different domains are available yet. "

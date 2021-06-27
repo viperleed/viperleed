@@ -36,6 +36,7 @@ Original message            & Data bytes & Meaning of data bytes                
                             &            & dacSettlingTime MSB, dacSettlingTime LSB   & {\small(meas. ready) $3\times$data} & 3$\times$4\\
 \texttt{PC\_MEASURE\_ONLY}       & ---        & ---                                        & {\small(starting)} \texttt{PC\_OK}      & 1\\
                                                 & & & {\small(meas. ready) $3\times$data} & 3$\times$4 \\
+\texttt{PC\_CHANGE\_MEAS\_MODE} & 1 & set meas. mode & {\small(done)} \texttt{PC\_OK} & 1\\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -103,6 +104,7 @@ State					        & Initiated by                 & Handler                      
 \texttt{STATE\_MEASURE\_ADCS}   & \texttt{STATE\_TRIGGER\_ADCS} & \texttt{measureADCs()}   & \texttt{STATE\_ADC\_VALUES\_READY}\\
 \texttt{STATE\_ADC\_VALUES\_READY} & \texttt{STATE\_MEASURE\_ADCS} & \texttt{sendMeasuredValues()}  & \texttt{STATE\_IDLE}\\
 \texttt{STATE\_ERROR}           & Fault                        & \texttt{handleErrors()}            & \texttt{STATE\_IDLE}\\
+\texttt{STATE\_CHANGE\_MEASUREMENT\_MODE} & \texttt{PC\_CHANGE\_MEAS\_MODE} & \texttt{changeMeasurementMode()}  & \texttt{STATE\_IDLE}\\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -136,7 +138,7 @@ NOTES: (1) we are currently throwing away the whole set of measurements if we re
 
 \item \texttt{STATE\_ADC\_VALUES\_READY}: This state cannot be reached directly from a PC command. It is the state that automatically follows successful completion of \texttt{STATE\_MEASURE\_ADCS}. Currently it sends back all the data as three separate messages, even if some of the ADCs are not available.
 
-
+\item \texttt{STATE\_CHANGE\_MEASUREMENT\_MODE}: Sets the boolean \texttt{continuousMeasurement} either to true or false. False will result in a single measurement cycle beeing done when requested by the user. True will make the arduino repeat measuring and returning data. It also sets \texttt{measurementsToDo} to 1.
 
 
 \end{itemize}

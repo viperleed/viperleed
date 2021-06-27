@@ -238,7 +238,7 @@ def initialization(sl, rp, subdomain=False):
                         *[x for y in rp.SUPERLATTICE.astype(int) for x in y]))
 
         # bulk plane group detection:
-        logger.info("Initializing bulk symmetry search...")
+        logger.info("Starting bulk symmetry search...")
         tl.symmetry.findSymmetry(bsl, rp, bulk=True, output=False)
         bsl.revertUnitCell()  # keep origin matched with main slab
         logger.info("Found bulk plane group: "+bsl.foundplanegroup)
@@ -633,7 +633,8 @@ def init_domains(rp):
         logger.info("The following domains require new reference "
                     "calculations: "+", ".join([d.name for d in rr]))
         for dp in rp.domainParams:
-            for var in ["THEO_ENERGIES", "THETA", "PHI", "ivbeams"]:
+            for var in ["THEO_ENERGIES", "THETA", "PHI", "N_CORES", "ivbeams",
+                        "sourcedir"]:
                 setattr(dp.rp, var, copy.deepcopy(getattr(rp, var)))
             if rp.TL_VERSION <= 1.6:  # not required since TensErLEED v1.61
                 dp.rp.LMAX[1] = rp.LMAX[1]
