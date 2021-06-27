@@ -13,7 +13,7 @@ LEEDParametersList, that fully represent a viperleed.LEEDPattern and
 viperleed.LEEDPatternList.
 """
 
-from collections.abc import MutableMapping, MutableSequence
+from collections.abc import MutableMapping, MutableSequence, Sequence
 from configparser import ConfigParser
 import ast
 from warnings import warn as warning   # eventually will replace with logging
@@ -136,7 +136,7 @@ class LEEDParameters(MutableMapping):
         return txt + ')'
 
     def __eq__(self, other):
-        """Equality method for LEEDParameters.
+        """Return whether self is equal to other.
 
         Instances are considered equal if they produce
         the very same LEED pattern, i.e., they have:
@@ -481,6 +481,14 @@ class LEEDParametersList(MutableSequence):
     def __delitem__(self, index):
         """Remove item."""
         del self.__list[index]
+
+    def __eq__(self, other):
+        """Return whether self is equal to other."""
+        if not isinstance(other, (LEEDParametersList, Sequence)):
+            return NotImplemented
+        if isinstance(other, LEEDParametersList):
+            return self.__list == other.__list
+        return self.__list == other
 
     def __getitem__(self, index):
         """Get item at index."""
