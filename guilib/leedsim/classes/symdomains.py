@@ -51,7 +51,7 @@ def transform_beam_indices(indices, transform):
         A dictionary of the form {hk': set{hk'}} is returned when
         a dict was passed.
     """
-    if len(indices) == 0:
+    if not indices:
         return indices
 
     # In case we have a dict, extract indices from the keys (one
@@ -69,15 +69,17 @@ def transform_beam_indices(indices, transform):
     transformed_indices = np.einsum('ij,jk', flattened_indices, transform)
 
     # Now transform them back to a list of tuples
-    transformed_indices = list(gl.two_by_n_array_to_tuples(transformed_indices,
-                                                           axis=1))
+    transformed_indices_list = list(
+        gl.two_by_n_array_to_tuples(transformed_indices, axis=1)
+        )
+
     if not isinstance(indices, dict):
-        return transformed_indices
+        return transformed_indices_list
 
     # When a dict was passed, we need to split the
     # beams once again into keys and values
-    k_transf = transformed_indices[:len(keys)]
-    v_transf = transformed_indices[len(keys):]
+    k_transf = transformed_indices_list[:len(keys)]
+    v_transf = transformed_indices_list[len(keys):]
 
     # and figure out how long each of the values used to be, so
     # they can be split again correctly among the various keys
@@ -120,7 +122,7 @@ class LEEDSymmetryDomains(Sequence):
         """
         self.__parameters = gl.LEEDParameters(leed_parameters)
 
-        # __const_attributes contains attributes of this instance
+        # __consts contains attributes of this instance
         # that are calculated only once (either during this
         # initialization or upon first call of one of the properties).
         # The keys are:
@@ -141,7 +143,7 @@ class LEEDSymmetryDomains(Sequence):
         #           the beam indices with respect to the bulk.  This
         #           makes calculations faster.
         #           Read via self.denominator_for_bulk_beams.
-        self.__const_attributes = {'bulk': None,
+        self.__consts = {'bulk': None,
                                    'operations': [],
                                    'superlattices': [],
                                    'denominator': None}
@@ -199,19 +201,19 @@ class LEEDSymmetryDomains(Sequence):
     @property
     def bulk_basis(self):
         """Reciprocal-space basis of the bulk lattice."""
-        if self.__const_attributes['bulk']:
+        if self.__consts['bulk']:
             return self.bulk.basis
         return np.dot(self.superlattices[0].T, self[0].basis).round(10)
 
     @property
     def bulk(self):
         """Minimal bulk Lattice. Do not use for plotting."""
-        if not self.__const_attributes['bulk']:
+        if not self.__consts['bulk']:
             bulk_lattice = gl.Lattice(self.bulk_basis,
                                       group=self.groups['bulk'],
                                       space='reciprocal')
-            self.__const_attributes['bulk'] = bulk_lattice
-        return self.__const_attributes['bulk']
+            self.__consts['bulk'] = bulk_lattice
+        return self.__consts['bulk']
 
     @property
     def domain_ids(self):
@@ -337,12 +339,13 @@ class LEEDSymmetryDomains(Sequence):
 
         Returns
         -------
-        list of 2x2 tuples
+        operations : list of tuples
+            Each tuple has shape == (2, 2).
         """
-        if not self.__const_attributes['operations']:
+        if not self.__consts['operations']:
             operations = self.__find_domain_operations()
-            self.__const_attributes['operations'] = operations
-        return self.__const_attributes['operations']
+            self.__consts['operations'] = operations
+        return self.__consts['operations']
 
     @property
     def parameters(self):
@@ -361,12 +364,12 @@ class LEEDSymmetryDomains(Sequence):
             the same as given in the parameters during
             initialization.
         """
-        if len(self.__const_attributes['superlattices']) == 0:
+        if not isinstance(self.__consts['superlattices'], np.ndarray):
             first_superlattice = self.__parameters['SUPERLATTICE']
             superlattices = np.einsum('ij,mjk->mik', first_superlattice,
                                       self.operations)
-            self.__const_attributes['superlattices'] = superlattices
-        return self.__const_attributes['superlattices']
+            self.__consts['superlattices'] = superlattices
+        return self.__consts['superlattices']
 
     @property
     def g_vectors(self):
@@ -383,10 +386,10 @@ class LEEDSymmetryDomains(Sequence):
     @property
     def denominator_for_bulk_beams(self):
         """Return the denominator to use for fractional indices."""
-        if not self.__const_attributes['denominator']:
+        if not self.__consts['denominator']:
             den = abs(round(np.linalg.det(self.superlattices[0])))
-            self.__const_attributes['denominator'] = den
-        return self.__const_attributes['denominator']
+            self.__consts['denominator'] = den
+        return self.__consts['denominator']
 
     def angular_offsets(self, zero_pi=False):
         """Angular offsets between all domains and the first one.
@@ -418,11 +421,12 @@ class LEEDSymmetryDomains(Sequence):
 
         Parameters
         ----------
-        domains : list, int, or None (default=None)
+        domains : list, int, or None, optional
             only the beams of the domains selected by these indices
             will be output.  If None, all the domains are used. If a
             single int is passed, it is taken as the positional index
-            of the only domain to be processed
+            of the only domain to be processed. If a list, all elements
+            should be integers. Default is None.
         theta, phi : number or None
             polar and azimuthal directions in degrees of the primary
             beam.  If not given or None, those defined at instantiation
@@ -439,6 +443,14 @@ class LEEDSymmetryDomains(Sequence):
              beam_group_idx,
              list of domain indices of domains contributing to beam,
              list of domain indices of domains contributing as extinct)
+
+        Raises
+        ------
+        TypeError
+            If domains is not one of the acceptable types
+        ValueError
+            If any of the values passed in domains is negative
+            or exceeds the number symmetry-equivalent domains
         """
         # type- and value-check the input, and process when needed
         if theta is None:
@@ -452,11 +464,11 @@ class LEEDSymmetryDomains(Sequence):
         elif isinstance(domains, int):
             domains = [domains]
         elif not hasattr(domains, '__iter__'):
-            raise ValueError("Invalid domain indices. Expected an "
-                             "iterable, an integer, or None")
+            raise TypeError("Invalid domain indices. Expected an "
+                            "iterable, an integer, or None")
         if not all(isinstance(dom, int) for dom in domains):
-            raise ValueError("Invalid domain index. "
-                             "All indices should be integers")
+            raise TypeError("Invalid domain index. "
+                            "All indices should be integers")
         if any(dom < 0 or dom >= self.n_domains for dom in domains):
             raise ValueError("Domain index out of range. "
                              "Indices should be between 0 "
@@ -576,6 +588,11 @@ class LEEDSymmetryDomains(Sequence):
                 the star of beam j in domain i
         list
             if which_beams[:2] == 'ex'
+
+        Raises
+        ------
+        ValueError
+            if which_beams is not one of the acceptable values
         """
         # check and fix the input if needed
         which_beams = which_beams[:2]
@@ -613,7 +630,9 @@ class LEEDSymmetryDomains(Sequence):
 
         Returns
         -------
-        str : {'norm', 'other', 'azimuthal angle of mirrors/glides'}
+        key : str
+            One of 'norm', 'other', or the azimuthal angle
+            of mirrors/glides
         """
         a_angle = gl.orientation(self[0].real_basis[0], zero_pi=False)
         phi = (phi - a_angle) % 180
@@ -681,9 +700,8 @@ class LEEDSymmetryDomains(Sequence):
 
         Returns
         -------
-        list of operations
-
-        -------
+        operations : list
+            list of operations. Each one is a (2, 2) tuple
         """
         # The current version is based on the concept of co-sets of a
         # group.  Given a group G and a subgroup H, the left co-set of
@@ -745,7 +763,8 @@ class LEEDSymmetryDomains(Sequence):
 
         Returns
         -------
-        list of dicts, each one
+        list
+            One element per domain, each element is a dict with
             keys : str
                 'norm' and 'other' keys are always present.  In
                 addition, there are as many keys as there are
@@ -816,6 +835,8 @@ class LEEDSymmetryDomains(Sequence):
         and populate dictionaries with the in-plane directions of the
         primary beam that makes them extinct
         """
+        # pylint: disable=compare-to-zero
+
         group = self.groups['surf'].group
         # Like for __get_spot_equivalence, do the calculation on the
         # first domain, then extend to the others by relabeling

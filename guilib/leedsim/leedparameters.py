@@ -131,9 +131,9 @@ class LEEDParameters(MutableMapping):
 
     def __repr__(self):
         """Return string representation of self."""
-        txt = 'LEEDParameters('
-        txt += gl.single_spaces_only(repr(self.__data)).replace('\n', '')
-        return txt + ')'
+        txt = gl.single_spaces_only(repr(self.__data)).replace('\n', '')
+        txt = txt.replace('[ ', '[').replace(' ]', ']').replace(' ,', ',')
+        return f"LEEDParameters({txt})"
 
     def __eq__(self, other):
         """Return whether self is equal to other.

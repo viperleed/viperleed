@@ -49,7 +49,15 @@ class CachedLEEDSubpatternConstructor:
 
         Returns
         -------
-        CachedLEEDSubpatternConstructor.
+        CachedLEEDSubpatternConstructor
+            New instance
+
+        Raises
+        ------
+        TypeError
+            If leed is not a LEEDPattern instance
+        ValueError
+            If domains_ids is not given or it is None
         """
         if not isinstance(leed, gl.LEEDPattern):
             raise TypeError(f"Invalid 'leed' type {type(leed).__name__}. "
@@ -418,10 +426,6 @@ class LEEDSubpattern:
             The transform is applied on the right, i.e., each of the
             transformed beams will be (bx, by) @ transform_matrix.
 
-        Returns
-        -------
-        None.
-
         Raises
         ------
         ValueError
@@ -497,6 +501,17 @@ class LEEDSubpattern:
         Returns
         -------
         None.
+
+        Raises
+        ------
+        TypeError
+            If alpha cannot be converted to a number,
+            or if color is not a Sequence
+        ValueError
+            If float(alpha) is not between 0 and 1,
+            if color does not have exactly three elements,
+            or if any of the three elements is not and
+            integer between 0 and 255
         """
         alpha = self.__scatter_format.get('alpha', None)
         if alpha is None:

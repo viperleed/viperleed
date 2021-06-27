@@ -749,6 +749,7 @@ class NewFileDialog(qtw.QDialog):
         This is the slot to which the editingFinished signal of
         the QLineEdit for editing surface name is connected.
         """
+        # TODO: make sure names are unique
         new_name = self._ctrls['edit_surf_name'].text()
         if self._glob['surface_being_edited'] != -1:
             # A name is being edited
@@ -834,8 +835,7 @@ class NewFileDialog(qtw.QDialog):
                  'bulk3Dsym': bulk_3d_sym,
                  'beamIncidence': beam_incidence,
                  'screenAperture': screen_aperture,
-                 'name': self._ctrls['surfaces'].tabText(i)},
-                keep_duplicates=True
+                 'name': self._ctrls['surfaces'].tabText(i)}
                 )
 
         return parameters

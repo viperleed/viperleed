@@ -92,6 +92,7 @@ class LEEDParser(  # pylint: disable=too-many-ancestors
         Returns
         -------
         dict
+            A dictionary representation of self
 
         Raises
         ------
@@ -103,6 +104,7 @@ class LEEDParser(  # pylint: disable=too-many-ancestors
             If any of the values in self[structure] does not conform
             to the expected types/shapes/limiting values.
         """
+        # pylint: disable=too-complex
         if structure is None:
             if len(self.sections()) > 1:
                 raise ValueError("LEEDParser: need to specify a structure "
@@ -145,6 +147,8 @@ class LEEDParser(  # pylint: disable=too-many-ancestors
         super().clear()
         self['DEFAULT'] = defaults
 
+    # Disabled because of bug in pylint:
+    # pylint: disable=missing-param-doc,missing-type-doc
     def getarray(self, structure, key):
         """Convert a (structure, key) to 2x2 numpy.ndarray.
 
@@ -189,6 +193,7 @@ class LEEDParser(  # pylint: disable=too-many-ancestors
                                f"of {key} in {structure}") from err
         return matrix
 
+    # pylint: enable=missing-param-doc,missing-type-doc
     def getbeamincidence(self, structure):
         """Get beamIncidence tuple from (structure, key).
 
@@ -197,11 +202,6 @@ class LEEDParser(  # pylint: disable=too-many-ancestors
         structure : str
             One of the structures in self
 
-        Raises
-        ------
-        ValueError
-            If not possible to convert to beamIncidence angles
-
         Returns
         -------
         theta, phi
@@ -209,6 +209,8 @@ class LEEDParser(  # pylint: disable=too-many-ancestors
 
         Raises
         ------
+        ValueError
+            If not possible to convert to beamIncidence angles
         RuntimeError
             If self[structure]['beamIncidence'] is not an acceptable
             beamIncidence
@@ -224,6 +226,8 @@ class LEEDParser(  # pylint: disable=too-many-ancestors
                                f"found in structure {structure}: {angles}")
         return gl.conventional_angles(*angles)
 
+    # Disabled because of bug in pylint:
+    # pylint: disable=missing-param-doc,missing-type-doc
     def getgroup(self, structure, key):
         """Convert a (structure, key) to PlaneGroup.
 
@@ -237,6 +241,13 @@ class LEEDParser(  # pylint: disable=too-many-ancestors
         Returns
         -------
         viperleed.guilib.PlaneGroup
+            A PlaneGroup instance with Hermann-Maugin name as
+            found in the file
+
+        Raises
+        ------
+        KeyError
+            If key is neither 'surfGroup' nor 'bulkGroup'
         """
         self.__check_structure(structure)
         key = self.optionxform(key)
@@ -248,6 +259,7 @@ class LEEDParser(  # pylint: disable=too-many-ancestors
 
         return gl.PlaneGroup(self[structure][key])
 
+    # pylint: enable=missing-param-doc,missing-type-doc
     def optionxform(self, optionstr):
         """Overridden ConfigParser method.
 
@@ -262,6 +274,7 @@ class LEEDParser(  # pylint: disable=too-many-ancestors
         Returns
         -------
         str
+            The key in self to be used for storing option
         """
         return param_names_map[optionstr.lower()]
 
@@ -281,13 +294,13 @@ class LEEDParser(  # pylint: disable=too-many-ancestors
         encoding : str, optional
             See ConfigParser.read() documentation
 
-        Returns
-        -------
-        None.
-
         Raises
         ------
-        DeprecationWarning if the file is in the old format.
+        DeprecationWarning
+            If the file is in the old format
+        FileNotFoundError
+            If none of the file names given corresponds to an
+            existing file
         """
         if isinstance(filenames, str):
             filenames = [filenames]
@@ -358,13 +371,10 @@ class LEEDParser(  # pylint: disable=too-many-ancestors
             section headers. If a string, it is interpreted
             as a file name to read from.
 
-        Returns
-        -------
-        None.
-
         Raises
         ------
-        TypeError : when structures is not an acceptabe type
+        TypeError
+            When structures is not an acceptable type
         """
         if isinstance(structures, str):
             # Assume it's a file name

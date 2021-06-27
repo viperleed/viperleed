@@ -87,7 +87,7 @@ class LEEDPattern:
         """
         # Skip everything when a single LEEDPattern is passed, as
         # __new__ already takes care of this
-        if len(other_leeds) == 0 and isinstance(leed, LEEDPattern):
+        if not other_leeds and isinstance(leed, LEEDPattern):
             return
 
         # The only other special case to be treated is when one of the
@@ -319,7 +319,7 @@ class LEEDPattern:
         Returns
         -------
         list
-            as many elements as there are beams equivalent to beam,
+            As many elements as there are beams equivalent to beam,
             each one is a (beam, index, text) tuple, with
             beam : tuple
                 formatted as requested in out_format
@@ -329,6 +329,11 @@ class LEEDPattern:
                 form "i+(j)+..." where i,j,... are the indices of the
                 domains that contribute to the beam, and parenthesized
                 ones are extinct contributions
+
+        Raises
+        ------
+        ValueError
+            If beam is not one of the beams of the LEED pattern.
         """
         # Potentially useful for the hovering annotations.
         # They need the following info:
@@ -392,6 +397,7 @@ class LEEDPattern:
         Returns
         -------
         bool
+            True if beam_indices is a beam of the LEED pattern
         """
         last_eq = self.domains.eq_beams_last_config
         return beam_indices in last_eq.equivalent_beams_dict
@@ -403,7 +409,7 @@ class LEEDPattern:
 
         Parameters
         ----------
-        beams : iterable
+        beams_indices : iterable
             Each element is the index of a beam, with the same
             format as in self.domains (i.e., fractional or
             numerator-only).
@@ -413,14 +419,14 @@ class LEEDPattern:
         list of str
             One string per beam; each string has the form:
             "struct1:sym1+sym2+...; struct2:sym1+sym2+...".
-            "struct_id: ..." is parenthesised if the domain
+            "struct_id: ..." is parenthesized if the domain
             contributes only in an extinct manner, i.e., its
             part will look like "(struct_id:...)".
 
             THIS IS NOT TRUE, BUT IT WOULD BE NICE PERHAPS:
             Similarly, those symmetry-induced
             domains that contribute in an extinct manner in a
-            non-fully-extinct domain are parenthesised.
+            non-fully-extinct domain are parenthesized.
         """
         def __format(overlapped, extinct):
             """Format list of domains as per __doc__."""
@@ -471,9 +477,10 @@ class LEEDPattern:
             positive x axis in the same Cartesian reference as the bulk
             basis. Positive counterclockwise.
 
-        Returns
-        -------
-        None.
+        Raises
+        ------
+        TypeError
+            If angle is not a number
         """
         try:
             float(angle)
@@ -496,19 +503,20 @@ class LEEDPattern:
     def __build_bulk_subpatterns(self):
         """Return the subpatterns for the bulk.
 
-        Return a list that contains at most two LEEDSubpattern
-        elements.  The first one is the subpattern for non-extinct
-        bulk beams and is always present.  The second one contains
-        extinct beams, and exists only if the bulk plane group is
-        pg, pmg or p4g.
-
         Returns
         -------
-        list
+        subpatterns : list
+            A list that contains at most two LEEDSubpattern
+            elements.  The first one is the subpattern for
+            non-extinct bulk beams and is always present.
+            The second one contains extinct beams, and exists
+            only if the bulk plane group is pg, pmg or p4g.
         """
+        # pylint: disable=compare-to-zero
+
         # TODO: should one account for the beamIncidence already here,
         #       or should we do that in the .pattern property (i.e.,
-        #       only whean a pattern is actally requested)?
+        #       only when a pattern is actually requested)?
         indices, beams = self.bulk.hk, self.bulk.lattice
         group_name = self.bulk.group.group
         if 'g' not in group_name:  # no glide
@@ -577,11 +585,21 @@ class LEEDPattern:
 
         Returns
         -------
-        List of reformatted beams. Type depends on out_format:
-
+        reformatted_beams : numpy.ndarray or tuple of BeamIndex
+            Return type depends on out_format as follows
             'out_format' == 'g' : numpy.ndarray
             'out_format' == 'fractional' : tuple of BeamIndex
             'out_format' == 'numerator' : tuple of BeamIndex
+
+        Raises
+        ------
+        ValueError
+            If in_format is not one of the acceptable values
+        ValueError
+            If either in_format or out_format is 'numerator'
+            but the domains cannot be expressed as numerators
+            only (i.e., there are different structures with
+            differently-sized unit cells).
         """
         in_format = kwargs.get('in_format', '')
         out_format = kwargs.get('out_format', in_format)

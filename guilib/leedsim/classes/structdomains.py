@@ -44,8 +44,7 @@ DEFAULT_NAME = re.compile(r"^S\d+$")
 
 class LEEDStructuralDomains(  # pylint: disable=too-many-ancestors
         MutableSequence):
-    """
-    Represent several structural domains in a LEED pattern.
+    """Represent several structural domains in a LEED pattern.
 
     This is a container class that can be used to represent a list of
     distinct structural domains contributing to a LEED pattern. Each
@@ -372,9 +371,10 @@ class LEEDStructuralDomains(  # pylint: disable=too-many-ancestors
 
         Returns
         -------
-        Dictionary of the form {id: superlattices} for each of the
-        structural domains, where superlattices is a numpy.ndarray
-        of superlattice matrices
+        dict
+            Dictionary of the form {id: superlattices} for each of the
+            structural domains, where superlattices is a numpy.ndarray
+            of superlattice matrices
         """
         superlattices = (p.superlattices for p in self)
         return dict(zip(self.domain_ids, superlattices))
@@ -450,6 +450,11 @@ class LEEDStructuralDomains(  # pylint: disable=too-many-ancestors
             phi is positive counterclockwise, and measured from the x
             axis in the Cartesian reference of the real-space basis of
             the first domain.
+
+        Returns
+        -------
+        equivalent_spots : list
+            list of beams grouped by equivalence
         """
         # Figure out which domains we want:
         domains, structures, struct_ids = self.process_domains_input(domains)
@@ -510,13 +515,20 @@ class LEEDStructuralDomains(  # pylint: disable=too-many-ancestors
 
         Parameters
         ----------
-        domain_ids : str
-            Idenifier of the domain. If using the positional index,
-            just use self[idx].
+        domain_id : str
+            Identifier of the domain. If using the
+            positional index, use self[idx] instead.
 
         Returns
         -------
         LEEDSymmetryDomains
+            The LEEDSymmetryDomains instance with
+            the given domain_id
+
+        Raises
+        ------
+        ValueError
+            If there is no domain with id == domain_id
         """
         try:
             idx = self.domain_ids.index(domain_id)
@@ -602,7 +614,7 @@ class LEEDStructuralDomains(  # pylint: disable=too-many-ancestors
             When the entries in the domain indices are not integers
         """
         ids = self.domain_ids
-        structures = self
+        structures = self.__list
         if domains is None:
             domains = [None]*self.n_domains
         elif isinstance(domains, dict):
@@ -619,11 +631,10 @@ class LEEDStructuralDomains(  # pylint: disable=too-many-ancestors
                     ids.append(struct_id)
                     domains.append(symm_ids)
                     structures.append(structure)
-        elif hasattr(domains, '__len__'):
-            if len(domains) != self.n_domains:
-                raise ValueError("equivalent_spots: Inconsistent number "
-                                 "of structural domains. Expected "
-                                 f"{self.n_domains}, found {len(domains)}")
+        elif hasattr(domains, '__len__') and len(domains) != self.n_domains:
+            raise ValueError("equivalent_spots: Inconsistent number "
+                             "of structural domains. Expected "
+                             f"{self.n_domains}, found {len(domains)}")
         elif isinstance(domains, int):
             domains = [domains]*self.n_domains
         else:

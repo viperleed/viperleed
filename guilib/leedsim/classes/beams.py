@@ -36,8 +36,8 @@ def beams_dict_numerators_to_fractional(beam_dict, denominator):
     beam_dict : dict
         Dictionary containing only the numerators of the fractional
         indices of beams. Form: {beam: set(beams equivalent to beam)}
-
     denominator : int
+        The denominator to be used to compute fractions
 
     Returns
     -------
@@ -67,8 +67,8 @@ def beams_list_numerators_to_fractional(beam_list, denominator):
     beam_list : iterable
         Iterable containing only the numerators of the fractional
         indices of beams
-
     denominator : int
+        The denominator to be used to compute fractions
 
     Returns
     -------
@@ -217,6 +217,8 @@ class LEEDEquivalentBeams:
             * basis is not a 2x2 array-like
             * Number of entries in extinct_lists or denominators is
               different than those in domains
+        ZeroDivisionError
+            If any of the denominators is zero
         """
         domains, kwargs = self.__process_input(domains, kwargs)
         extinct_lists = kwargs.pop('extinct_lists')
@@ -240,7 +242,7 @@ class LEEDEquivalentBeams:
         self.__loaded_from_cache = False
         self.__basis = kwargs.get('basis')
         self.__eq_beams_dict = {}  # set in __build_beam_equivalence_dict
-        self.__extinct = []        # set in __index_beams
+        self.__extinct = tuple()   # set in __index_beams
 
         # Before going on, if there is a 'denominators' keyword
         # argument we need to re-process domains and extinct_lists
@@ -256,7 +258,7 @@ class LEEDEquivalentBeams:
                 raise ValueError("LEEDEquivalentBeams: Inconsistent number "
                                  f"of denominators. Expected {len(domains)}, "
                                  f"found {len(denominators)}")
-            if any(den == 0 for den in denominators):
+            if any(abs(den) < 1e-3 for den in denominators):
                 raise ZeroDivisionError("LEEDEquivalentBeams: all "
                                         "denominators must be nonzero.")
             dict_to_fract = beams_dict_numerators_to_fractional
@@ -394,7 +396,7 @@ class LEEDEquivalentBeams:
 
         # Collect the information that is needed to build a
         # hash (if present for all)
-        try:
+        try:  # pylint: disable=too-many-try-statements
             kwargs['angle_key'] = ''.join(dom.hash_dict['angle_key']
                                           for dom in domains)
             kwargs['superlattice'] = tuple(dom.hash_dict['superlattice']
@@ -476,9 +478,10 @@ class LEEDEquivalentBeams:
         which_cache : {'all', 'self', 'dict'}
             Which of the two caches is to be cleared
 
-        Returns
-        -------
-        None.
+        Raises
+        ------
+        ValueError
+            If which_cache is not one of 'all', 'self', or 'dict'
         """
         if which_cache not in ('all', 'self', 'dict'):
             raise ValueError("LEEDEquivalentBeams: invalid cache "
@@ -732,10 +735,6 @@ class LEEDEquivalentBeams:
             beam_sets = [set(beams_dict[beam]) - processed_beams
                          for beams_dict in beams_by_domain
                          if beam in beams_dict]
-            if not beam_sets:
-                # This is just for testing. It should never happen.
-                raise RuntimeError(f"No beams in set of beam {beam}. "
-                                   "Something went wrong!")
 
             # Take the set intersection, i.e., pick all those in
             # common to all domains that contribute

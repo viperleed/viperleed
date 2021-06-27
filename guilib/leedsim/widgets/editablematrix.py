@@ -44,6 +44,13 @@ class EditableMatrix(qtw.QWidget):
         Returns
         -------
         None.
+
+        Raises
+        ------
+        ValueError
+            If shape is not a sequence of length 1 or 2
+        ValueError
+            If dtype is not int or float
         """
         super().__init__(parent)
 
@@ -89,10 +96,6 @@ class EditableMatrix(qtw.QWidget):
             Matrix to be set. It should have the same
             shape and dtype given at instantiation
 
-        Returns
-        -------
-        None.
-
         Raises
         ------
         ValueError
@@ -123,10 +126,6 @@ class EditableMatrix(qtw.QWidget):
             Matrix to be set. It should have the same
             shape and dtype given at instantiation
 
-        Returns
-        -------
-        None.
-
         Raises
         ------
         ValueError
@@ -156,10 +155,6 @@ class EditableMatrix(qtw.QWidget):
         Parameters
         ----------
         color : QColor
-
-        Returns
-        -------
-        None
         """
         palette = self._ctrls.ravel()[0].palette()
         palette.setColor(palette.Text, color)

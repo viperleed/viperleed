@@ -146,11 +146,16 @@ class LatticeInput(qtw.QWidget):
         Parameters
         ---------
         new_lattice : viperleed.Lattice
+
+        Raises
+        ------
+        TypeError
+            If new_lattice is not a viperleed.Lattice
         """
         if not isinstance(new_lattice, gl.Lattice):
-            raise RuntimeError("LatticeInput: invalid lattice argument "
-                               f"type {type(new_lattice).__name__}. "
-                               "Expected viperleed.Lattice")
+            raise TypeError("LatticeInput: invalid lattice argument "
+                            f"type {type(new_lattice).__name__}. "
+                            "Expected viperleed.Lattice")
         self._lattice = new_lattice
         self.__last_acceptable_basis = new_lattice.basis
         self.update_controls_from_lattice()
@@ -185,22 +190,22 @@ class LatticeInput(qtw.QWidget):
         else:
             self.__valid_input = True
 
+    def compatible_groups(self):
+        """Return a tuple of groups compatible with lattice."""
+        shape = self.lattice.cell_shape
+        return gl.PlaneGroup.groups_compatible_with(shape)
+
     @gl.print_call
     def group_from_lattice_and_update_options(self):
         """Update the group combo box with appropriate entries.
-
-        Returns
-        -------
-        None
 
         Emits
         -----
         group_changed
             If the selected group has actually changed.
         """
-        shape = self.lattice.cell_shape
         lattice_group = self.lattice.group.group
-        compatible_groups = gl.PlaneGroup.groups_compatible_with(shape)
+        compatible_groups = self.compatible_groups()
         if lattice_group not in compatible_groups:
             self.lattice.group = 'p1'
 
@@ -219,10 +224,6 @@ class LatticeInput(qtw.QWidget):
     @gl.print_call
     def update_controls_from_lattice(self):
         """Use the underlying lattice to update the controls.
-
-        Returns
-        -------
-        None.
 
         Emits
         -----

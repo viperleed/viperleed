@@ -22,17 +22,17 @@ from viperleed.guilib.leedsim.classes.woods import (Woods, WoodsSyntaxError,
                                                     WoodsNotRepresentableError)
 
 
-def _wrap_group_update(lattice_input, surface_input):
-    """Wrap reimplementation of group_from_lattice_and_update_options.
+def _wrap_compatible_groups(lattice_input, surface_input):
+    """Wrap reimplementation of compatible_groups.
 
     This wrapper allows reimplementing the method
-    LatticeInput.group_from_lattice_and_update_options,
-    allowing each call to the method -- internally
-    done in LatticeInput instances -- to access also
+    LatticeInput.compatible_groups, allowing each
+    call to the method -- internally done in
+    LatticeInput instances -- to access also
     information contained in surface_input.
 
-    This is necessary to handle changes of the bulk group
-    that affect the list of surface groups.
+    This is necessary to handle changes of the bulk
+    group that affect the list of surface groups.
 
     Parameters
     ----------
@@ -48,20 +48,24 @@ def _wrap_group_update(lattice_input, surface_input):
     -------
     _reimplemented : callable
         Reimplemented method
+
+    Raises
+    ------
+    TypeError
+        If lattice_input is not a LatticeInput instance
+    TypeError
+        If surface_input is not a SurfaceStructureInput instance
     """
     if not isinstance(lattice_input, LatticeInput):
-        raise TypeError("Reimplementation of "
-                        "group_from_lattice_and_update_options "
-                        "was not called with a LatticeInput instance "
-                        "as first argument.")
+        raise TypeError("Reimplementation of compatible_groups was not called "
+                        "with a LatticeInput instance as first argument.")
     if not isinstance(surface_input, SurfaceStructureInput):
-        raise TypeError("Reimplementation of "
-                        "group_from_lattice_and_update_options "
-                        "was not called with a SurfaceStructureInput "
+        raise TypeError("Reimplementation of compatible_groups was "
+                        "not called with a SurfaceStructureInput "
                         "instance as second argument.")
 
     def _reimplemented():
-        """Reimplement group_from_lattice_and_update_options.
+        """Reimplement compatible_groups.
 
         The reimplementation picks the list of groups taking
         into account also the bulk.group of the surface_input
@@ -69,7 +73,11 @@ def _wrap_group_update(lattice_input, surface_input):
 
         Returns
         -------
-        None.
+        compatible_groups : tuple
+            tuple of strings of the Hermann-Maugin names of
+            groups compatible with both the lattice_input
+            LatticeInput instance and the operations of the
+            bulk group of the surface_input instance.
 
         Emits
         -----
@@ -78,10 +86,8 @@ def _wrap_group_update(lattice_input, surface_input):
             lattice_input has actually changed
         """
         print(f"{lattice_input.__class__.__name__}",
-              "group_from_lattice_and_update_options.",
-              "Reimplemented by SurfaceStructureInput")
+              "compatible_groups. Reimplemented by SurfaceStructureInput")
 
-        # The changes start here.
         # (1) Project the bulk operations to the
         #     surface via the superlattice matrix
         #     Rather recalculate the matrix than
@@ -89,7 +95,6 @@ def _wrap_group_update(lattice_input, surface_input):
         #     may not be up to date
         transform = np.dot(surface_input.lattice.basis,
                            np.linalg.inv(surface_input.bulk.basis))
-        print("Superlattice used for transform:", transform)
         #     Exclude 3D operations, as they only
         #     contribute to which domains exist
         projected_bulk_ops = surface_input.bulk.group.transform(
@@ -108,27 +113,7 @@ def _wrap_group_update(lattice_input, surface_input):
         # (2) Pick the list of compatible groups, also
         #     accounting for the operations just found
         shape = lattice_input.lattice.cell_shape
-        compatible_groups = gl.PlaneGroup.groups_compatible_with(
-            shape, projected_bulk_ops
-            )
-
-        # From here on, the implementation is
-        # identical to the one in LatticeInput
-        lattice_group = lattice_input.lattice.group.group
-        if lattice_group not in compatible_groups:
-            lattice_input.lattice.group = 'p1'
-
-        group_combo = lattice_input.group
-        old_group = group_combo.currentText()
-        group_combo.clear()
-        group_combo.addItems(compatible_groups)
-        group_combo.setCurrentText(lattice_group)
-        group_combo.setEnabled(group_combo.count() > 1)
-
-        if lattice_group != old_group:
-            print("###     o--->", lattice_input.__class__.__name__,
-                  "-- about to emit group_changed")
-            lattice_input.group_changed.emit(lattice_group)
+        return gl.PlaneGroup.groups_compatible_with(shape, projected_bulk_ops)
 
     return _reimplemented
 
@@ -186,11 +171,10 @@ class SurfaceStructureInput(qtw.QWidget):
         if surface_lattice:
             self.update_woods_list_and_selection()
 
-        # Replace group_from_lattice_and_update_options of
-        # the underlying LatticeInput to handle changes of
-        # the bulk group
-        self._ctrls['lattice'].group_from_lattice_and_update_options = (
-            _wrap_group_update(self._ctrls['lattice'], self)
+        # Replace .compatible_groups() of the underlying
+        # LatticeInput to handle changes of the bulk group
+        self._ctrls['lattice'].compatible_groups = (
+            _wrap_compatible_groups(self._ctrls['lattice'], self)
             )
 
         # Keep track if the user input is OK or not. Used
@@ -261,7 +245,7 @@ class SurfaceStructureInput(qtw.QWidget):
     @property
     def top_left_global(self):
         """Return the global location of the top-left corner.
-        
+
         Returns
         -------
         top_left : QPoint
@@ -271,9 +255,6 @@ class SurfaceStructureInput(qtw.QWidget):
     @property
     def valid_input(self):
         """Return whether the user input is OK."""
-        print(self.__class__.__name__,
-              "valid_input -- SELF", self.__valid_input,
-              "LATTICE:", self._ctrls['lattice'].valid_input)
         return (self.__valid_input
                 and self._ctrls['lattice'].valid_input)
 
@@ -302,10 +283,6 @@ class SurfaceStructureInput(qtw.QWidget):
             group is always taken from the underlying bulk
             lattice, which should be up to date.
 
-        Returns
-        -------
-        None.
-
         Emits
         -----
         lattice.group_changed
@@ -332,10 +309,6 @@ class SurfaceStructureInput(qtw.QWidget):
             of signals connected to this method. The new bulk
             basis is always taken from the underlying bulk
             lattice, which should be up to date.
-
-        Returns
-        -------
-        None.
 
         Emits
         -----
@@ -583,11 +556,9 @@ class SurfaceStructureInput(qtw.QWidget):
         surface_changed :
             If the new superlattice is acceptable
         """
-        if np.linalg.det(new_superlattice) == 0:
+        if abs(np.linalg.det(new_superlattice)) < 1e-3:
             self._ctrls['superlattice'].set_text_color(qtc.Qt.red)
             self.__valid_input = False
-            print("###     o--->", self.__class__.__name__,
-                  "-- about to emit user_gave_invalid_input")
             self.user_gave_invalid_input.emit('Matrix is singular!', 2000)
             return
 
@@ -649,51 +620,36 @@ class SurfaceStructureInput(qtw.QWidget):
         if woods_txt == 'None':
             return
 
-        valid = True
-        palette = self._ctrls['woods'].lineEdit().palette()
         # Reformat input
         try:
             self.__woods.string = woods_txt
         except (ValueError, WoodsSyntaxError):
             # Text is not an acceptable Wood's notation
-            valid = False
-            print("###     o--->", self.__class__.__name__,
-                  "-- about to emit user_gave_invalid_input")
             self.user_gave_invalid_input.emit("Invalid Wood's syntax.", 1000)
+            gl.change_control_text_color(woods_combo.lineEdit(), qtc.Qt.red)
+            return
 
         # Try converting to a matrix
-        if valid:
+        try:
+            superlattice = self.__woods.matrix
+        except MatrixIncommensurateError:
+            # Woods gave an incommensurate lattice.
+            # See if the problem is the angle given.
             try:
-                superlattice = self.__woods.matrix
+                self.__woods.guess_correct_rotation()
             except MatrixIncommensurateError:
-                # Woods gave an incommensurate lattice.
-                # See if the problem is the angle given.
-                try:
-                    self.__woods.guess_correct_rotation()
-                except MatrixIncommensurateError:
-                    # Can't be fixed
-                    valid = False
-                    print("###     o--->", self.__class__.__name__,
-                          "-- about to emit user_gave_invalid_input")
-                    self.user_gave_invalid_input.emit(
-                        f"{woods_txt} invalid: Lattice is incommensurate.",
-                        7000
-                        )
-                else:
-                    woods_combo.setCurrentText(self.__woods.string)
-                    superlattice = self.__woods.matrix
+                # Can't be fixed
+                self.user_gave_invalid_input.emit(
+                    f"{woods_txt} invalid: Lattice is incommensurate.",
+                    7000
+                    )
+                gl.change_control_text_color(woods_combo.lineEdit(),
+                                             qtc.Qt.red)
+                return
 
-        # Check again, as it may now be invalid
-        if valid:
-            # Woods is acceptable.
-            text_color = qtc.Qt.black
-            self._ctrls['superlattice'].matrix = superlattice
-        else:
-            text_color = qtc.Qt.red
-
-        # Signal possible errors by changing the text color
-        palette.setColor(palette.Text, text_color)
-        woods_combo.lineEdit().setPalette(palette)
+        woods_combo.setCurrentText(self.__woods.string)
+        self._ctrls['superlattice'].matrix = self.__woods.matrix
+        gl.change_control_text_color(woods_combo.lineEdit(), qtc.Qt.black)
 
     @gl.print_call
     def _update_superlattice_from_surf_basis(self, surf_basis=None):
