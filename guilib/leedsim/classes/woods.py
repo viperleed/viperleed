@@ -59,30 +59,20 @@ MATCH_WOODS = re.compile(
             ''', re.VERBOSE)
 
 
-def is_commensurate(matrix, eps=5e-3):                                         # TODO: maybe move to helpers.py and call it is_integer_matrix()? Then one could just leave the determinant check in here
+def is_commensurate(matrix):
     """Return whether a matrix represent a commensurate structure.
 
     Parameters
     ----------
     matrix : Sequence
         Matrix to be tested
-    eps : float, default=1e-3
-        Relative tolerance for assuming things equal
 
     Returns
     -------
     commensurate : bool
         True if matrix is commensurate
     """
-    if matrix is None:
-        return False
-
-    if isinstance(matrix, np.ndarray) and matrix.dtype == int:
-        return True
-
-    matrix = np.asarray(matrix)
-    return (np.all(np.abs(matrix - matrix.round()) < eps)
-            and np.linalg.det(matrix).round() != 0)
+    return gl.is_integer_matrix(matrix, 5e-3) and np.linalg.det(matrix).round()
 
 
 def prime_factors(number):
@@ -90,7 +80,7 @@ def prime_factors(number):
     for prime_factor in gl.prime_numbers():
         if prime_factor*prime_factor > number:
             break
-        while number % prime_factor == 0:
+        while not number % prime_factor:
             yield prime_factor
             number //= prime_factor
     if number > 1:
@@ -110,10 +100,9 @@ def square_to_prod_of_squares(number):
     Returns
     -------
     squares : int
+        The largest perfect square divisor of number
     remainder : int
-
-    Such that number = squares * remainder, where square
-    is the largest perfect square divisor of number
+        The remainder, i.e., number / squares
     """
     # Take number, find all prime factors, return a tuple:
     # first element is the product of all primes showing
@@ -158,6 +147,8 @@ class WoodsSyntaxError(Exception):
     """Exception raised in case a Wood's string has invalid syntax."""
 
 
+# Disable due to pylint bug
+# pylint: disable=too-many-instance-attributes
 class Woods:
     """Class to represent a reconstruction in Wood's notation.
 
@@ -299,6 +290,7 @@ class Woods:
         Returns
         -------
         formatted : str
+            Formatted string representation of self
 
         Raises
         ------
@@ -372,38 +364,69 @@ class Woods:
         else:
             groups['prefix'] = 'p'
 
-        parser = MathParser()
-
-        gammas = [.1]*2
-        for i, key in enumerate(('gamma1', 'gamma2')):
-            gamma = groups[key]
-            # gamma2 may eat up the closing parenthesis
-            if gamma.count('(')  == gamma.count(')') - 1:
-                # Get rid of the swallowed closing
-                # parenthesis, i.e., the last ')'
-                idx = gamma.rindex(')')
-                gamma = gamma[:idx] + gamma[idx+1:]
-            parser.expression = gamma
-            try:
-                gammas[i] = parser.evaluate()
-            except SyntaxError as err:
-                raise WoodsSyntaxError(f"Woods: {groups[key]} could "
-                                       "not be parsed, likely because "
-                                       "of unmatched brackets") from err
-            except UnsupportedMathError as err:
-                raise WoodsSyntaxError(f"Woods: {groups[key]} could "
-                                       "not be parsed as it contains "
-                                       "unsupported math operations") from err
-            # Make sure that gamma**2 is close to int
-            if abs(gammas[i]**2 - round(gammas[i]**2)) > 1e-3:
-                raise ValueError(f"Woods: invalid direction {i+1}. {gammas[i]}"
-                                 " is not the square root of an integer")
+        gammas = [Woods.__parse_and_check_gamma(groups[key])
+                  for key in ('gamma1', 'gamma2')]
 
         if groups['alpha']:
             alpha = float(groups['alpha'])
         else:
             alpha = 0
         return groups['prefix'], gammas[0], gammas[1], alpha
+
+    @staticmethod
+    def __parse_and_check_gamma(gamma_str):
+        """Return a float from the string of a direction-scaling factor.
+
+        A scaling factor gamma is part of a Wood's notation, that
+        takes the form <prefix>(<gamma1>x<gamma2>)R<angle>.
+
+        Parameters
+        ----------
+        gamma_str : str
+            The string representation of a scaling factor. Can
+            contain only arithmetic expressions and square roots
+
+        Returns
+        -------
+        gamma : float
+            The parsed value of the string given
+
+        Raises
+        ------
+        WoodsSyntaxError
+            If gamma_str could not be evaluated due to either
+            unsupported math or unmatched brackets
+        ValueError
+            If gamma_str can be parsed, but its value is not the
+            square root of an integer
+        """
+        parser = MathParser()
+
+        # Given the way the parser is, gamma2 may
+        # eat up the closing parenthesis
+        if gamma_str.count('(')  == gamma_str.count(')') - 1:
+            # Get rid of the swallowed closing
+            # parenthesis, i.e., the last ')'
+            idx = gamma_str.rindex(')')
+            gamma_str = gamma_str[:idx] + gamma_str[idx+1:]
+
+        parser.expression = gamma_str
+        try:
+            gamma = parser.evaluate()
+        except SyntaxError as err:
+            raise WoodsSyntaxError(f"Woods: {gamma_str} could "
+                                   "not be parsed, likely because "
+                                   "of unmatched brackets") from err
+        except UnsupportedMathError as err:
+            raise WoodsSyntaxError(f"Woods: {gamma_str} could "
+                                   "not be parsed as it contains "
+                                   "unsupported math operations") from err
+
+        # Make sure that gamma**2 is close to int
+        if abs(gamma**2 - round(gamma**2)) > 1e-3:
+            raise ValueError(f"Woods: {gamma_str} (evaluated to {gamma}) "
+                             "is not the square root of an integer")
+        return gamma
 
     @property
     def bulk_basis(self):
@@ -502,6 +525,8 @@ class Woods:
         """Return the style of this instance."""
         return self.__style
 
+    # Disabled because of bug in pylint:
+    # pylint: disable=missing-param-doc,missing-type-doc
     def add_example(self, woods, shape):
         """Add an example Wood's notation for a given cell shape.
 
@@ -522,6 +547,7 @@ class Woods:
         woods = format(woods)
         self.__examples[shape].add(woods)
 
+    # pylint: enable=missing-param-doc,missing-type-doc
     def from_matrix(self, matrix, bulk_basis=None):
         """Construct woods string from matrix.
 
@@ -601,6 +627,7 @@ class Woods:
         Returns
         -------
         examples : set
+            Examples of Wood's notation for the given shape
         """
         if self.style == 'unicode':
             return self.__examples[shape]
@@ -728,11 +755,11 @@ class Woods:
         omega = np.arccos(np.dot(self.bulk_basis[0],
                                  self.bulk_basis[1])/(norm1*norm2))
 
-        matrix = ((gamma1 * np.sin(omega - alpha),
-                   gamma1 * np.sin(alpha)/basis_ratio),
-                  (-gamma2 * basis_ratio * np.sin(alpha),
-                   gamma2 * np.sin(omega + alpha)))
-        matrix = np.array(matrix)/np.sin(omega)
+        matrix = np.array(((gamma1 * np.sin(omega - alpha),
+                            gamma1 * np.sin(alpha)/basis_ratio),
+                           (-gamma2 * basis_ratio * np.sin(alpha),
+                            gamma2 * np.sin(omega + alpha))))
+        matrix /= np.sin(omega)
 
         if prefix == 'c':
             matrix = np.dot([[1, 1], [-1, 1]], matrix)/2
@@ -846,6 +873,11 @@ class Woods:
         ----------
         matrix : sequence
             The matrix to be checked. Shape (2, 2).
+
+        Returns
+        -------
+        bool
+            True if matrix is Wood's-representable
         """
         basis = self.bulk_basis
         transformed_basis = np.dot(matrix, basis)

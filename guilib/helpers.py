@@ -224,7 +224,8 @@ def single_spaces_only(input_string):
 def array2string(matrix):
     """Return a 1-line string representation of an array."""
     matrix = np.array2string(matrix, separator=',', suppress_small=True)
-    return single_spaces_only(matrix).replace('\n', '')
+    matrix = single_spaces_only(matrix).replace('\n', '')
+    return matrix.replace('[ ','[').replace(' ]', ']').replace(' ,', ',')
 
 
 def prime_numbers():
@@ -267,3 +268,33 @@ def equal_dicts(dict_a, dict_b, ignore_keys=[]):
     a_keys = set(dict_a).difference(ignore_keys)
     b_keys = set(dict_b).difference(ignore_keys)
     return a_keys == b_keys and all(dict_a[k] == dict_b[k] for k in a_keys)
+
+
+def is_integer_matrix(matrix, eps=1e-3):
+    """Return whether a matrix contains only integers.
+
+    Will return True also if all elements are floats that
+    are close to integer values.
+
+    Parameters
+    ----------
+    matrix : Sequence
+        Matrix to be tested
+    eps : float, optional
+        Absolute tolerance to determine if a float is
+        close to an integer.  Default is 1e-3.
+
+    Returns
+    -------
+    commensurate : bool
+        True if matrix is commensurate
+    """
+    if matrix is None:
+        return False
+
+    if isinstance(matrix, np.ndarray) and matrix.dtype == int:
+        return True
+
+    matrix = np.asarray(matrix)
+
+    return np.all(np.abs(matrix - matrix.round()) < eps)
