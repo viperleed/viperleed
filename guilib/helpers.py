@@ -139,9 +139,9 @@ def two_d_iterable_to_array(iterable, dtype=float, shape=None):
 def conventional_angles(theta, phi):
     """Return angles in a well defined convention.
 
-    Given two angles theta and phi in degrees, returns a modified version such
-    that 0 <= theta <= 180 and 0 <= phi < 360, and such that they represent
-    the same vector as before
+    Given two angles theta and phi in degrees, returns a modified
+    version such that 0 <= theta <= 180 and 0 <= phi < 360, and
+    such that they represent the same vector as before
 
     Parameters
     ----------
@@ -264,8 +264,8 @@ def prime_numbers():
     int
         The next prime number.
     """
-    # Algorithm is taken from https://stackoverflow.com/a/10733621/849891
-    # and is essentially Erastothene's sieve.
+    # Algorithm from https://stackoverflow.com/a/10733621/849891
+    # and it is essentially Erastothene's sieve.
     yield from (2, 3, 5, 7)
     sieve = {}
     primes = prime_numbers()
