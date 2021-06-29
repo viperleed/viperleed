@@ -57,8 +57,10 @@ else:
                                              change_control_text_color,
                                              editStyleSheet,
                                              get_all_children_widgets)
+    from viperleed.guilib.modulebase import ViPErLEEDModuleBase
     from viperleed.guilib.leedsim import *
     from viperleed.guilib.measure import *
+    from viperleed.guilib.selectmodule import ViPErLEEDSelectModule
 
 
 from viperleed.guilib.leedsim.exportcsv import export_pattern_csv

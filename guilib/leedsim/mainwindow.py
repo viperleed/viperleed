@@ -30,22 +30,9 @@ import PyQt5.QtWidgets as qtw
 from viperleed import guilib as gl
 
 
-def show_pre_release_popup():
-    """
-    Show a pop-up dialog informing that the current version is a not meant
-    to be distributed without permission, as it is a pre-release
-    """
-    txt = (f"ViPErLEED v{gl.GLOBALS['version']} is a pre-release not meant for "
-           "public distribution!<p> Contact us at <a href="
-           u''"'mailto:riva@iap.tuwien.ac.at'"'>riva@iap.tuwien.ac.at</a> </p>')
-    msgBox = qtw.QMessageBox(qtw.QMessageBox.Information, "Pre-release notice",
-                             txt)
-    msgBox.exec()
-
-
 @gl.broadcast_mouse
-class LEED_GUI(qtw.QMainWindow):
-    pre_release = True
+class LEED_GUI(gl.ViPErLEEDModuleBase):
+    
     extension = '*.tlm'
     version = gl.GLOBALS['version']
 
@@ -68,8 +55,6 @@ class LEED_GUI(qtw.QMainWindow):
                                 # open file. This is used for exporting.
         self.initUI()
         self.centerOnScreen()
-        if self.pre_release:
-            show_pre_release_popup()
 
     def centerOnScreen(self):
         qr = self.frameGeometry()
@@ -811,7 +796,7 @@ class LEED_GUI(qtw.QMainWindow):
                                      qtw.QMessageBox.No)
 
         if reply == qtw.QMessageBox.Yes:
-            event.accept()
+            super().closeEvent(event)
         else:
             event.ignore()
 

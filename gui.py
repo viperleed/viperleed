@@ -106,7 +106,7 @@ def gui_main():
     # * Math: family =  'CMU Serif'
     qtg.QFontDatabase.addApplicationFont(os.path.join(font_path, "cmunrm.otf"))
 
-    leed_gui = gl.LEED_GUI()
+    leed_gui = gl.ViPErLEEDSelectModule()
     leed_gui.show()
 
     print('Done', flush=True)
