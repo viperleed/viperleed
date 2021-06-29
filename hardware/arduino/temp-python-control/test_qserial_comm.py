@@ -9,6 +9,8 @@ Author: Michele Riva
 # For a simple example of a serial on a different thread see
 # https://www.programmersought.com/article/57762641596/
 
+# Some good info: https://stackoverflow.com/questions/42576537/
+
 import sys
 
 from PyQt5 import (QtWidgets as qtw,
@@ -92,6 +94,12 @@ class MainWindow(qtw.QWidget):
             self.__port.clearError()
             return
 
+        # TODO: here we need to set up the port. At least:
+        # setBaudRate()
+        # setDataBits()
+        # setParity()
+        # setStopBits()
+
         self.__port.readyRead.connect(self.on_bytes_ready_to_read)
         self.__port.errorOccurred.connect(self.on_serial_error)
 
@@ -126,25 +134,6 @@ class MainWindow(qtw.QWidget):
                                   'Error sending message',
                                   'Could not send message. Try again.',
                                   qtw.QMessageBox.Ok, self)
-            return
-
-        # if not self.__port.waitForBytesWritten(TIMEOUT):
-            # print('Timeout while sending', flush=True)
-            # ret = qtw.QMessageBox(qtw.QMessageBox.Critical,
-                                 # 'Error sending message',
-                                 # f"Timed out ({TIMEOUT/1000} s) while "
-                                 # "sending message.",
-                                 # qtw.QMessageBox.Ok, self)
-            # return
-
-        # self._ctrls['msg_received'].setText('')
-        # if not self.__port.waitForReadyRead(TIMEOUT):
-            # print('Timeout while reading', flush=True)
-            # ret = qtw.QMessageBox(qtw.QMessageBox.Critical,
-                                 # 'No message received',
-                                 # f"Timed out ({TIMEOUT/1000} s) while "
-                                 # "waiting for response.",
-                                 # qtw.QMessageBox.Ok, self)
 
     def on_bytes_ready_to_read(self):
         """Read the message received."""
