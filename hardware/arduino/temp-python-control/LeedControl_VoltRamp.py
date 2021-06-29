@@ -22,17 +22,22 @@ from numpy.polynomial.polynomial import Polynomial
 from scipy.fft import rfft, rfftfreq
 # NON STANDARD. Will try to get rid of these
 import serial  # NON STANDARD
-# maybe one can use this to replace the serial package: https://github.com/wiseman/arduino-serial
 import pandas as pd  # NON STANDARD I will try to get rid of this. It's used only for the export to csv
 import serial.tools.list_ports  # NON STANDARD
 
 current_path = os.path.dirname(os.path.abspath(__file__))
+dll_path = os.path.join(current_path, 'Camera_libraries')
+camera_path = dll_path
 
-if 'Camera_libraries' not in sys.path:
-    sys.path.append(os.path.join(current_path, 'Camera_libraries'))
+try:
+    os.add_dll_directory(dll_path)
+except AttributeError:
+    pass
+if camera_path not in sys.path:
+    sys.path.append(camera_path)
 
 # ViPErLEED
-# from camera import Camera
+from camera import Camera
 
 # Configuration-File location:
 configfile_location = 'Configuration/LeedControl_config.ini'
@@ -1243,8 +1248,8 @@ def main():
     # ret_value = multiple_ramps_quick_measurements('HV')
     # ret_value = long_term_measurements('HV')
     # ret_value = long_term_measurements('I0')
-    # ret_value = quick_up_down_measurements('I0', 2)
-    ret_value = multiple_up_down_measurement_ramps('I0')
+    ret_value = quick_up_down_measurements('I0', 2)
+    # ret_value = multiple_up_down_measurement_ramps('I0')
     arduino_port.close()
     print('Arduino Disconnected')
     return ret_value
