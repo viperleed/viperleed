@@ -20,10 +20,11 @@ import numpy as np
 from numpy.polynomial.polynomial import Polynomial
 # import scipy
 from scipy.fft import rfft, rfftfreq
+from PyQt5 import (QtSerialPort as qts,
+                   QtCore as qtc,
+                   QtWidgets as qtw)
 # NON STANDARD. Will try to get rid of these
-import serial  # NON STANDARD
 import pandas as pd  # NON STANDARD I will try to get rid of this. It's used only for the export to csv
-import serial.tools.list_ports  # NON STANDARD
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 dll_path = os.path.join(current_path, 'Camera_libraries')
@@ -52,8 +53,8 @@ sign = 'big'
 
 PC_OK = config.getint('communication_bytes', 'PC_OK').to_bytes(1, sign)
 
-# serial port object to Arduino
-arduino_port = serial.Serial()
+# QSerialPort object to Arduino
+arduino_port = qts.QSerialPort()
 
 # ======================================
 
@@ -74,7 +75,8 @@ def send_to_arduino(send_bytes):
                          + bytes_length.to_bytes(1, sign)
                          + send_bytes + ENDMARKER.to_bytes(1, sign))
     print("Sending: ", adjusted_sendbyte, "with msg_length =", bytes_length)
-    arduino_port.write(adjusted_sendbyte)
+    if arduino_port.write(adjusted_sendbyte) < 0:
+        raise RuntimeError("Serial.write did not succeed")
 
 def encode_high_bytes(in_bytes):
     """
@@ -175,12 +177,12 @@ def receive_from_arduino():
     received_value = "z"
     message = ''
     t1 = time.time()
-    while arduino_port.inWaiting() == 0:
+    while not arduino_port.bytesAvailable():
         if (time.time() - t1) > arduino_timeout:
             arduino_port.close()
             raise IOError("Timeout while Reading Arduino. No message received")
     while ord(received_value) != STARTMARKER:
-        received_value = arduino_port.read()
+        received_value = arduino_port.readData()
         message = received_value
 
     while ord(received_value) != ENDMARKER:
@@ -249,15 +251,20 @@ def connect_to_arduino(port):
 
     Return
     ----------
-    arduino_port: class object serial
+    arduino_port: class object QSerialPort
     """
     global arduino_port
     PC_CONFIGURATION = config.getint('communication_bytes', 'PC_CONFIGURATION')
     FIRMWARE_VERSION = config['firmware_version']['FIRMWARE_VERSION']
     hardware_bits = config['hardware_bits']
 
-    arduino_port = serial.Serial(port, 115200, timeout = 1)
-    if arduino_port.inWaiting() == 0:
+    # arduino_port = serial.serial(port, 115200, timeout = 1)
+    arduino_port.setPort(port)
+    arduino_port.setBaudRate(115200)
+    arduino_port.open(arduino_port.ReadWrite)
+    # if arduino_port.inWaiting() == 0:  # old solution for PySerial
+    # if arduino_port.waitForReadyRead():
+    if not arduino_port.bytesAvailable():
         send_to_arduino(PC_CONFIGURATION)
         time.sleep(1)  # time to settle connection
         hardware_config = receive_from_arduino()
@@ -280,7 +287,7 @@ def connect_to_arduino(port):
             return arduino_port
     arduino_port.close()
     raise IOError("\nSomething went wrong! \nConnection was successful but no"
-                  " respond from the device! \nT H E  E N D")
+                  " response from the device! \n")
 
 # ======================================
 
@@ -330,35 +337,34 @@ def serial_ports():
     """
     results = []
 
-    if sys.platform.startswith('win'):
-        ports = list(serial.tools.list_ports.comports())
-        for port in ports:
-            if 'Arduino Micro' in port[1]: results.append(port[0])
-    elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
-        # this excludes your current terminal "/dev/tty"
-        ports = glob.glob('/dev/tty[A-Za-z]*')
-    elif sys.platform.startswith('darwin'):
-        ports = glob.glob('/dev/tty[A-Za-z]*')
-    else:
-        raise EnvironmentError('Unsupported platform')
+    # if sys.platform.startswith('win'):
+        # # ports = list(serial.tools.list_ports.comports())
+        # ports = qts.QSerialPortInfo.availablePorts()
+        # for port in ports:
+            # if 'Arduino Micro' in port[1]: results.append(port[0])
+    # elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
+        # # this excludes your current terminal "/dev/tty"
+        # ports = glob.glob('/dev/tty[A-Za-z]*')
+    # elif sys.platform.startswith('darwin'):
+        # ports = glob.glob('/dev/tty[A-Za-z]*')
+    # else:
+        # raise EnvironmentError('Unsupported platform')
 
-    result_port = ''
-
-    for result in results:
-        try:
-            s = serial.Serial(result)
-            s.close()
-            result_port = result
-        except (OSError, serial.SerialException):
-            pass
-        except ValueError:
-            raise IOError("Couldn't find port to Arduino!")
-    if not results:
+    arduino_ports = [port
+                     for port in qts.QSerialPortInfo.availablePorts()
+                     if 'Arduino Micro' in port.description()]
+    if not arduino_ports:
         raise IOError("Couldn't find port to Arduino!")
-    if not result_port:
-        raise IOError("Unable to connect to Arduino, try disconnecting and "
-                      "connecting again.")
-    return result_port
+
+    for port_info in arduino_ports:
+        port = qts.QSerialPort(port_info)
+        if not port.open(port.ReadWrite):
+            continue
+        port.close()
+        return port_info
+
+    raise IOError("Unable to connect to Arduino, try "
+                  "disconnecting and connecting again.")
 
 # ======================================
 def set_voltage_and_measure(energy, settle_time = 0):
@@ -1240,6 +1246,7 @@ def multiple_up_down_measurement_ramps(measure_what='I0'):
     
 def main():
     global arduino_port
+    app = qtw.QApplication(sys.argv)
     # measure_iv_video()
     # test_iv_video()
     # ret_value = quick_measurements('I0', 2)
@@ -1251,6 +1258,7 @@ def main():
     ret_value = quick_up_down_measurements('I0', 2)
     # ret_value = multiple_up_down_measurement_ramps('I0')
     arduino_port.close()
+    sys.exit(app.exec_())
     print('Arduino Disconnected')
     return ret_value
 
