@@ -20,8 +20,9 @@ from PyQt5 import (QtWidgets as qtw,
 
 
 TIMEOUT = 5000  # milliseconds
-MSG_START = b'\x00'
+MSG_START = b'\xfe'
 MSG_END = b'\xff'
+BYTE_ORDER = 'big'
 
 
 class MainWindow(qtw.QWidget):
@@ -94,7 +95,7 @@ class MainWindow(qtw.QWidget):
         self.print_port_config()
 
         # TODO: here we need to set up the port. At least:
-        self.__port.setBaudRate(self.__port.Baud115200)
+        self.__port.setBaudRate(int(400e6))
         # self.__port.setDataBits(self.__port.Data8)  # Default is 8 --> OK
         self.__port.setDataTerminalReady(True)
         # setParity()     # Default is QSerialPort::NoParity --> OK
@@ -129,8 +130,10 @@ class MainWindow(qtw.QWidget):
         if not msg_out:
             print('No message', flush=True)
             return
+        msg_out = bytes(msg_out, 'utf-8')
+        n_bytes = len(msg_out).to_bytes(1, BYTE_ORDER)
 
-        msg_out = MSG_START + bytes(msg_out, 'utf-8') + MSG_END
+        msg_out = MSG_START + n_bytes + msg_out + MSG_END
         print("Sending", msg_out)
         if self.__port.write(msg_out) < 0:
             print('Could not send', flush=True)

@@ -260,8 +260,9 @@ def connect_to_arduino(port):
 
     # arduino_port = serial.serial(port, 115200, timeout = 1)
     arduino_port.setPort(port)
-    arduino_port.setBaudRate(115200)
     arduino_port.open(arduino_port.ReadWrite)
+    arduino_port.setBaudRate(int(400e6))
+    arduino_port.setDataTerminalReady(True)
     # if arduino_port.inWaiting() == 0:  # old solution for PySerial
     # if arduino_port.waitForReadyRead():
     if not arduino_port.bytesAvailable():
