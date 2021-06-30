@@ -11,6 +11,7 @@ Author: Michele Riva
 
 # Some good info: https://stackoverflow.com/questions/42576537/
 
+import time
 import sys
 
 from PyQt5 import (QtWidgets as qtw,
@@ -19,6 +20,8 @@ from PyQt5 import (QtWidgets as qtw,
 
 
 TIMEOUT = 5000  # milliseconds
+MSG_START = b'\x00'
+MSG_END = b'\xff'
 
 
 class MainWindow(qtw.QWidget):
@@ -94,11 +97,16 @@ class MainWindow(qtw.QWidget):
             self.__port.clearError()
             return
 
+        self.print_port_config()
+
         # TODO: here we need to set up the port. At least:
-        # setBaudRate()
-        # setDataBits()
-        # setParity()
-        # setStopBits()
+        self.__port.setBaudRate(self.__port.Baud115200)
+        # self.__port.setDataBits(self.__port.Data8)  # Default is 8 --> OK
+        self.__port.setDataTerminalReady(True)
+        # setParity()     # Default is QSerialPort::NoParity --> OK
+        # setStopBits()   # Default is 1 --> OK
+
+        self.print_port_config()
 
         self.__port.readyRead.connect(self.on_bytes_ready_to_read)
         self.__port.errorOccurred.connect(self.on_serial_error)
@@ -107,6 +115,7 @@ class MainWindow(qtw.QWidget):
             self._ctrls[key].setEnabled(False)
         for key in ('disconnect', 'msg_to_send', 'send'):
             self._ctrls[key].setEnabled(True)
+        self._ctrls['msg_received'].setText('')
 
     def serial_disconnect(self, *__args):
         """Disconnect from connected serial port."""
@@ -116,6 +125,9 @@ class MainWindow(qtw.QWidget):
             self._ctrls[key].setEnabled(True)
         for key in ('disconnect', 'msg_to_send', 'send'):
             self._ctrls[key].setEnabled(False)
+        
+        self.__port.readyRead.disconnect(self.on_bytes_ready_to_read)
+        self.__port.errorOccurred.disconnect(self.on_serial_error)
 
     def send_message(self, *__args):
         """Send message to port, and wait for reply."""
@@ -128,7 +140,9 @@ class MainWindow(qtw.QWidget):
                                  qtw.QMessageBox.Ok, self)
             return
 
-        if self.__port.write(bytes(msg_out, 'utf-8')) < 0:
+        msg_out = MSG_START + bytes(msg_out, 'utf-8') + MSG_END
+        print("Sending", msg_out)
+        if self.__port.write(msg_out) < 0:
             print('Could not send', flush=True)
             ret = qtw.QMessageBox(qtw.QMessageBox.Critical,
                                   'Error sending message',
@@ -137,8 +151,10 @@ class MainWindow(qtw.QWidget):
 
     def on_bytes_ready_to_read(self):
         """Read the message received."""
-        msg = self.__port.readAll()
-        self._ctrls['msg_received'].setText(bytes(msg))
+        msg = bytes(self.__port.readAll())
+        msg = msg.replace(MSG_START, b'').replace(MSG_END, b'')
+        
+        self._ctrls['msg_received'].setText(str(msg))
     
     def on_serial_error(self, error_code):
         """React to a serial-port error."""
@@ -148,6 +164,21 @@ class MainWindow(qtw.QWidget):
         """Reimplement closeEvent to also close open ports."""
         self.__port.close()
         super().closeEvent(event)
+    
+    def print_port_config(self):
+        """Print the configuration of an open port."""
+        print(
+            f"### Serial port settings of {self.__port.portName()} ###",
+            f"baudRate: {self.__port.baudRate()}",
+            f"breakEnabled: {self.__port.isBreakEnabled()}",
+            f"dataBits: {self.__port.dataBits()}",
+            f"dataTerminalReady: {self.__port.isDataTerminalReady()}",
+            f"flowControl: {self.__port.flowControl()}",
+            f"parity: {self.__port.parity()}",
+            f"requestToSend: {self.__port.isRequestToSend()}",
+            f"stopBits: {self.__port.stopBits()}",
+            sep='\n', end='\n\n'
+            )
 
 
 if __name__ == '__main__':
