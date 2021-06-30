@@ -88,12 +88,6 @@ class MainWindow(qtw.QWidget):
         self.__port = qts.QSerialPort(name)
         if not self.__port.open(self.__port.ReadWrite):
             print('Not open', flush=True)
-            ret = qtw.QMessageBox(qtw.QMessageBox.Critical,
-                                 'Error connecting',
-                                 'An error occurred while trying to '
-                                 'open the serial port. Error code: '
-                                 f'{self.__port.error()}.',
-                            qtw.QMessageBox.Ok, self)
             self.__port.clearError()
             return
 
@@ -134,20 +128,12 @@ class MainWindow(qtw.QWidget):
         msg_out = self._ctrls['msg_to_send'].text()
         if not msg_out:
             print('No message', flush=True)
-            ret = qtw.QMessageBox(qtw.QMessageBox.Information,
-                                 'No message to send',
-                                 'No message to send. Please provide one.',
-                                 qtw.QMessageBox.Ok, self)
             return
 
         msg_out = MSG_START + bytes(msg_out, 'utf-8') + MSG_END
         print("Sending", msg_out)
         if self.__port.write(msg_out) < 0:
             print('Could not send', flush=True)
-            ret = qtw.QMessageBox(qtw.QMessageBox.Critical,
-                                  'Error sending message',
-                                  'Could not send message. Try again.',
-                                  qtw.QMessageBox.Ok, self)
 
     def on_bytes_ready_to_read(self):
         """Read the message received."""
