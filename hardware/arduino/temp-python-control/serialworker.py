@@ -3,7 +3,6 @@
 ========================================
    ViPErLEED Graphical User Interface
 ========================================
-*** module guilib.leedsim.leedparameters ***
 
 Created: 2021-06-230
 Author: Michele Riva
@@ -11,7 +10,7 @@ Author: Florian Doerr
 
 This module contains the definition of the BaseSerialWorker class
 and ExtraSerialErrors enum that are used as base classes for serial
-communcation with controllers supported by ViPErLEED. The serial
+communication with controllers supported by ViPErLEED. The serial
 communication happens in a separate thread to prevent stalling the
 Graphical User Interface.
 """
@@ -30,7 +29,7 @@ SERIAL_ERROR_MESSAGES = {
          "cables and/or update the list of ports."),
     qts.QSerialPort.PermissionError:
         ("Permission error while opening port {}. The port may be "
-         "alredy in use, or you may not have sufficient privileges."),
+         "already in use, or you may not have sufficient privileges."),
     qts.QSerialPort.OpenError:
         ("Cannot open again a port on the same object. "
          "Close port {} before by calling disconnect()."),
@@ -38,9 +37,9 @@ SERIAL_ERROR_MESSAGES = {
         ("Cannot perform the requested operation on a "
          "closed port. Open {} by calling .connect()."),
     qts.QSerialPort.WriteError:
-        ("Writing data to port {} failed."),
+        "Writing data to port {} failed.",
     qts.QSerialPort.ReadError:
-        ("Reading data from port {} failed."),
+        "Reading data from port {} failed.",
     qts.QSerialPort.ResourceError:
         ("Port {} became unavailable to system. Device may be "
          "disconnected from the system. Check connection cables."),
@@ -53,7 +52,7 @@ SERIAL_ERROR_MESSAGES = {
          "BaseSerialWorker, using waitForBytesWritten or waitForReadyRead "
          "instead of asynchronous behavior."),
     qts.QSerialPort.UnknownError:
-        ("An unknown error occurred while acessing port {}.")
+        "An unknown error occurred while accessing port {}."
 }
 
 
