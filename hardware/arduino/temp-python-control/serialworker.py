@@ -17,7 +17,7 @@ Graphical User Interface.
 """
 
 import enum
-import abc
+from abc import ABCMeta, abstractmethod
 from configparser import ConfigParser
 
 from PyQt5 import (QtCore as qtc,
@@ -74,7 +74,7 @@ class ExtraSerialErrors(enum.Enum):
 
 # TODO: pylint too-many-instance-attributes
 # TODO: push encode() implementation from Flo
-class BaseSerialWorker(metaclass=abc.ABCMeta):
+class BaseSerialWorker(metaclass=ABCMeta):
     """Base class for serial communication for a ViPErLEED controller."""
 
     error_occurred = qtc.pyqtSignal(int, str)
@@ -271,10 +271,7 @@ class BaseSerialWorker(metaclass=abc.ABCMeta):
         return message
     # pylint: enable=no-self-use
 
-    # Disable pylint check as this is supposed
-    # to be the signature for subclasses
-    # pylint: disable=no-self-use,unused-argument
-    @abc.abstractmethod
+    @abstractmethod
     def identify_error(self, messages_since_error):
         """Identify which error occurred.
 
@@ -322,9 +319,8 @@ class BaseSerialWorker(metaclass=abc.ABCMeta):
             After the error has been identified
         """
         return
-    # pylint: enable=no-self-use,unused-argument
 
-    @abc.abstractmethod
+    @abstractmethod
     def is_error_message(self, message):
         """Check if a message corresponds to an error.
 
@@ -377,7 +373,7 @@ class BaseSerialWorker(metaclass=abc.ABCMeta):
         return True
     # pylint: enable=no-self-use,unused-argument
 
-    @abc.abstractmethod
+    @abstractmethod
     def process_messages(self):
         """Process data received into human-understandable information.
 
