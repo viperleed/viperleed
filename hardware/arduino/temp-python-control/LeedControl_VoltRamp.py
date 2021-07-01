@@ -126,13 +126,13 @@ def encode_high_bytes(in_bytes):
 
 def bytes_to_float(bytes_in):
     """Convert four bytes to float.
-    
+
     Parameters
     ----------
     bytes_in : bytes or bytearray
         Should have length 4. It is assumed that the bytes are in
         big-endian format.
-    
+
     Returns
     -------
     float
@@ -146,7 +146,7 @@ def bytes_to_float(bytes_in):
         raise ValueError("bytes_to_float: Invalid number of bytes "
                          f"({len(bytes_in)}). Expected 4.")
     return struct.unpack(">f", bytes_in)[0]
-    
+
 # ======================================
 def adc_measure_only():
     """
@@ -188,9 +188,9 @@ def receive_from_arduino():
     while ord(received_value) != ENDMARKER:
         received_value = arduino_port.read()
         message += received_value
-    
+
     # TODO: check that the message length is appropriate
-    
+
     # print("Got message: ", repr(message))
     decoded = decode_high_bytes(message)
     # print("Decoded: ", repr(decoded))
@@ -383,7 +383,7 @@ def set_voltage_and_measure(energy, settle_time = 0):
     dac_out_vs_nominal_energy = 10/1000  # 10V / 1000 eV
     ouput_gain = 4  # Gain of the output stage on board
     conversion_factor = dac_out_vs_nominal_energy * 65536 / (v_ref_dac * ouput_gain)
-    
+
     # TODO: nominal energy to actual energy after calibration
     dac_value_temp = int(round(energy * conversion_factor))
     if dac_value_temp >= 65536:
@@ -565,7 +565,7 @@ def prepare_for_measurement(configuration_section):
     dac_first_settletime = config.getint('measurement_settings',
                                          'dac_first_settle_time')
     start_energy = config.getfloat('measurement_settings', 'start_energy')
-        
+
     dac_energy = energy_calibration_curve()
 
     # Connect with Arduino, reset it and flush input buffer
@@ -695,7 +695,7 @@ def test_iv_video():
         print("Please check the starting and ending energy and the stepsize.")
         raise RuntimeError("Number of steps could not be calculated!")
     nominal_energy_csv = np.linspace(start_energy, end_energy, npoints+1)
-    
+
     for actual_energy in nominal_energy_csv:
         set_voltage_and_measure(actual_energy, dac_settle_time)
         print(actual_energy)
@@ -726,7 +726,7 @@ def test_iv_video():
     ax1.set_xlabel('energy')
     ax1.plot(nominal_energy_csv, adc0_value_csv, '.')
     ax1.plot(nominal_energy_csv, fit_polynomial(nominal_energy_csv), '-')
-    
+
     ax2.set_ylabel('residuals')
     ax2.set_xlabel('true energy')
     ax2.plot(nominal_energy_csv,
@@ -741,7 +741,7 @@ def change_measurement_mode(measurement_mode):
     """
     PC_CHANGE_MEASUREMENT_MODE = config.getint('communication_bytes',
                                                'PC_CHANGE_MEAS_MODE')
-    PC_ERROR = config.getint('communication_bytes', 
+    PC_ERROR = config.getint('communication_bytes',
                              'PC_ERROR').to_bytes(1, sign)
     send_to_arduino(PC_CHANGE_MEASUREMENT_MODE)
     message = []
@@ -783,9 +783,9 @@ def quick_measurements(measure_what='I0', settle_time_scaling=1):
     dac_first_settle_time = config.getint('measurement_settings',
                                           'dac_first_settle_time')
     dac_value_end = config.getfloat('measurement_settings', 'dac_value_end')
-    continuous_measurement_points = config.getint('measurement_settings', 
+    continuous_measurement_points = config.getint('measurement_settings',
                                                  'continuous_measurement_points')
-    continuous_measurement_loops = config.getint('measurement_settings', 
+    continuous_measurement_loops = config.getint('measurement_settings',
                                                 'continuous_measurement_loops')
     start_energy = config.getfloat('measurement_settings', 'start_energy')
     end_energy = config.getfloat('measurement_settings', 'end_energy')
@@ -832,9 +832,9 @@ def quick_measurements(measure_what='I0', settle_time_scaling=1):
         j += 1
 
         change_measurement_mode('continuous_measurement_no')
-    
+
     set_voltage_and_measure(dac_value_end)
-    
+
     dac_settle_time = config.getint('measurement_settings', 'dac_settle_time')
     times = np.arange(continuous_measurement_points)
     fig, (ax1, ax2) = plt.subplots(2, 1)
@@ -870,8 +870,8 @@ def test_single_ramp_quick_measurements(measure_what='I0'):
     dac_settle_time = config.getint('measurement_settings', 'dac_settle_time')
     dac_first_settle_time = config.getint('measurement_settings',
                                           'dac_first_settle_time')
-    continuous_measurement_points = config.getint('measurement_settings', 
-                                                 'continuous_measurement_points') 
+    continuous_measurement_points = config.getint('measurement_settings',
+                                                 'continuous_measurement_points')
     start_energy = config.getfloat('measurement_settings', 'start_energy')
     delta_energy = config.getfloat('measurement_settings', 'delta_energy')
     end_energy = config.getfloat('measurement_settings', 'end_energy')
@@ -887,7 +887,7 @@ def test_single_ramp_quick_measurements(measure_what='I0'):
         print("Please check the starting and ending energy and the stepsize.")
         raise RuntimeError("Number of steps could not be calculated!")
     nominal_energy_csv = np.linspace(start_energy, end_energy, npoints+1)
-    
+
     for actual_energy in nominal_energy_csv:
         change_measurement_mode('continuous_measurement_yes')
         set_voltage_and_measure(actual_energy, 0)
@@ -906,11 +906,11 @@ def test_single_ramp_quick_measurements(measure_what='I0'):
         adc0_value_csv.append(adc0_value_this_loop)
 
         change_measurement_mode('continuous_measurement_no')
-        
+
     set_voltage_and_measure(start_energy, dac_first_settle_time)
 
     return adc0_value_csv
-    
+
 def multiple_ramps_quick_measurements(measure_what='I0'):
     conversion_factor = 1
     if measure_what == 'I0':
@@ -927,9 +927,9 @@ def multiple_ramps_quick_measurements(measure_what='I0'):
     update_rate_raw = config.getint(config_section, 'update_rate')
     update_rate = config.getint('adc_update_rate', str(update_rate_raw))
     dac_value_end = config.getfloat('measurement_settings', 'dac_value_end')
-    num_ramps = config.getint('measurement_settings', 
+    num_ramps = config.getint('measurement_settings',
                               'continuous_measurement_loops')
-    continuous_measurement_points = config.getint('measurement_settings', 
+    continuous_measurement_points = config.getint('measurement_settings',
                                                  'continuous_measurement_points')
     start_energy = config.getfloat('measurement_settings', 'start_energy')
     end_energy = config.getfloat('measurement_settings', 'end_energy')
@@ -965,9 +965,9 @@ def multiple_ramps_quick_measurements(measure_what='I0'):
                 break
             i += 1
         relaxation_time.append(continuous_measurement_points - i)
-    
+
     relaxation_time = (np.asarray(relaxation_time) + 3)*1000/update_rate
-    
+
     energy_scale = np.linspace(start_energy, end_energy, num_voltage_steps)
     fig, (ax1, ax2, ax3) = plt.subplots(3, 1)
     ax1.set_ylabel(y_title)
@@ -987,7 +987,7 @@ def multiple_ramps_quick_measurements(measure_what='I0'):
     plt.show()
     set_voltage_and_measure(dac_value_end)
     return times, steps
-    
+
 def long_term_measurements(measure_what='I0', interval=5):
     conversion_factor = 1
     if measure_what == 'I0':
@@ -1002,14 +1002,14 @@ def long_term_measurements(measure_what='I0', interval=5):
         raise ValueError("Unknown measurement mode")
     dac_value_end = config.getfloat('measurement_settings', 'dac_value_end')
     prepare_for_measurement(config_section)
-    
+
     counter = 720
     adc0_value_csv = []
     adc1_value_csv = []
     adc2_value_csv = []
     timestamp = []
     timestart = time.time()
-    
+
     while counter:
         adc_measure_only()
         adc0_value = bytes_to_float(receive_from_arduino())
@@ -1022,9 +1022,9 @@ def long_term_measurements(measure_what='I0', interval=5):
         timestamp.append(time_temp)
         counter -= 1
         time.sleep(interval)
-        
+
     set_voltage_and_measure(dac_value_end)
-        
+
     fig, (ax1, ax2, ax3) = plt.subplots(3, 1)
     ax1.set_ylabel(y_title)
     ax1.set_xlabel('Time since set voltage (s)')
@@ -1037,7 +1037,7 @@ def long_term_measurements(measure_what='I0', interval=5):
     ax3.plot(timestamp, adc2_value_csv, '.')
     plt.show()
     return timestamp, adc0_value_csv, adc1_value_csv, adc2_value_csv
-    
+
 def quick_up_down_measurements(measure_what='I0', settle_time_scaling=1):
     """"""
     conversion_factor = 1
@@ -1057,15 +1057,15 @@ def quick_up_down_measurements(measure_what='I0', settle_time_scaling=1):
     dac_first_settle_time = config.getint('measurement_settings',
                                          'dac_first_settle_time')
     dac_value_end = config.getfloat('measurement_settings', 'dac_value_end')
-    continuous_measurement_points = config.getint('measurement_settings', 
-                                                 'continuous_measurement_points')    
-    continuous_measurement_loops = config.getint('measurement_settings', 
+    continuous_measurement_points = config.getint('measurement_settings',
+                                                 'continuous_measurement_points')
+    continuous_measurement_loops = config.getint('measurement_settings',
                                                  'continuous_measurement_loops')
     start_energy = config.getfloat('measurement_settings', 'start_energy')
     end_energy = config.getfloat('measurement_settings', 'end_energy')
     update_rate_raw = config.getint(config_section, 'update_rate')
     update_rate = config.getint('adc_update_rate', str(update_rate_raw))
-    
+
     adc0_value_csv = []
     adc1_value_csv = []
     adc2_value_csv = []
@@ -1101,9 +1101,9 @@ def quick_up_down_measurements(measure_what='I0', settle_time_scaling=1):
         j += 1
 
         change_measurement_mode('continuous_measurement_no')
-    
+
     set_voltage_and_measure(dac_value_end)
-    
+
     dac_settle_time = config.getint('measurement_settings', 'dac_settle_time')
     times = np.arange(continuous_measurement_points)
     fig, (ax1, ax2) = plt.subplots(2, 1)
@@ -1126,9 +1126,9 @@ def quick_up_down_measurements(measure_what='I0', settle_time_scaling=1):
     xf = rfftfreq(continuous_measurement_points, 1 / update_rate)
     plt.plot(xf, np.abs(yf))
     plt.show()
-    
+
     return adc0_value_csv
-    
+
 def quick_up_down_measurement_ramp(measure_what='I0', settle_time_scaling=1):
     """"""
     conversion_factor = 1
@@ -1143,9 +1143,9 @@ def quick_up_down_measurement_ramp(measure_what='I0', settle_time_scaling=1):
     dac_settle_time = config.getint('measurement_settings', 'dac_settle_time')
     dac_first_settle_time = config.getint('measurement_settings',
                                          'dac_first_settle_time')
-    continuous_measurement_points = config.getint('measurement_settings', 
-                                                 'continuous_measurement_points')    
-    continuous_measurement_loops = config.getint('measurement_settings', 
+    continuous_measurement_points = config.getint('measurement_settings',
+                                                 'continuous_measurement_points')
+    continuous_measurement_loops = config.getint('measurement_settings',
                                                  'continuous_measurement_loops')
     start_energy = config.getfloat('measurement_settings', 'start_energy')
     end_energy = config.getfloat('measurement_settings', 'end_energy')
@@ -1156,13 +1156,13 @@ def quick_up_down_measurement_ramp(measure_what='I0', settle_time_scaling=1):
     adc2_value_csv = []
     timestamp = []
     timestart = time.time()
-    
+
     npoints = int((end_energy-start_energy)/delta_energy)
     if npoints <= 0:
         print("Please check the starting and ending energy and the stepsize.")
         raise RuntimeError("Number of steps could not be calculated!")
     nominal_energy_csv = np.linspace(start_energy, end_energy, npoints+1)
-    
+
     if start_energy > 0:
         set_voltage_and_measure(start_energy - delta_energy,
                                 dac_first_settle_time)
@@ -1188,9 +1188,9 @@ def quick_up_down_measurement_ramp(measure_what='I0', settle_time_scaling=1):
         dac_settle_time *= settle_time_scaling
         adc0_value_csv.append(adc0_value_this_loop)
         change_measurement_mode('continuous_measurement_no')
-    
+
     return adc0_value_csv
-    
+
 def multiple_up_down_measurement_ramps(measure_what='I0'):
     if measure_what == 'I0':
         config_section = 'iv_movie_configuration'
@@ -1203,9 +1203,9 @@ def multiple_up_down_measurement_ramps(measure_what='I0'):
     prepare_for_measurement(config_section)
     update_rate_raw = config.getint(config_section, 'update_rate')
     update_rate = config.getint('adc_update_rate', str(update_rate_raw))
-    num_ramps = config.getint('measurement_settings', 
+    num_ramps = config.getint('measurement_settings',
                               'continuous_measurement_loops')
-    continuous_measurement_points = config.getint('measurement_settings', 
+    continuous_measurement_points = config.getint('measurement_settings',
                                                  'continuous_measurement_points')
     start_energy = config.getfloat('measurement_settings', 'start_energy')
     end_energy = config.getfloat('measurement_settings', 'end_energy')
@@ -1225,7 +1225,7 @@ def multiple_up_down_measurement_ramps(measure_what='I0'):
     average = np.sum(adc0_values, axis=0)/num_ramps
     shift = np.sum(average[:,-n_points_ave:], axis=1)/n_points_ave
     steps = (average.T - shift).T
-    
+
     average_heights = []
     average_heights = shift[1:] - shift[:-1]
     average_heights = np.insert(average_heights, 0, shift[0])
@@ -1244,7 +1244,7 @@ def multiple_up_down_measurement_ramps(measure_what='I0'):
         ax2.plot(xf, np.abs(yf))
     plt.show()
     return times, steps
-    
+
 def main():
     global arduino_port
     app = qtw.QApplication(sys.argv)
@@ -1344,7 +1344,7 @@ def calibrate_real_energy_scale():
     ax2.set_ylabel('residuals')
     ax2.set_xlabel('true energy')
     print("[", ", ".join(f"{ci:.20f}" for ci in fit_polynomial.coef), "]", sep="")
-    
+
     ax1.plot(true_energy_csv, nominal_energy_csv, '.')
     ax1.plot(true_energy_csv, fit_polynomial(true_energy_csv), '-')
     ax2.plot(true_energy_csv,
