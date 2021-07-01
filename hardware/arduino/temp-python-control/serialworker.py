@@ -1,4 +1,4 @@
-"""Module serialwoker of viperleed.?????.
+"""Module serialworker of viperleed.?????.
 
 ========================================
    ViPErLEED Graphical User Interface
@@ -8,10 +8,11 @@ Created: 2021-06-230
 Author: Michele Riva
 Author: Florian Doerr
 
-This module contains the definition of the SerialWorkerABC class
-and ExtraSerialErrors enum that are used as base classes for serial
-communication with controllers supported by ViPErLEED. The serial
-communication happens in a separate thread to prevent stalling the
+This module contains the definition of the SerialWorkerABC abstract
+base class, ViPErLEEDErrorEnum base Enum class and ExtraSerialErrors
+derived Enum that are used as base classes for serial communication
+with controllers supported by ViPErLEED. The serial communication
+can also happens in a separate QThread to prevent stalling the
 Graphical User Interface.
 """
 
@@ -32,7 +33,7 @@ SERIAL_ERROR_MESSAGES = {
          "already in use, or you may not have sufficient privileges."),
     qts.QSerialPort.OpenError:
         ("Cannot open again a port on the same object. "
-         "Close port {} before by calling disconnect()."),
+         "Close port {} by calling disconnect(), then try again."),
     qts.QSerialPort.NotOpenError:
         ("Cannot perform the requested operation on a "
          "closed port. Open {} by calling .connect()."),
@@ -41,7 +42,7 @@ SERIAL_ERROR_MESSAGES = {
     qts.QSerialPort.ReadError:
         "Reading data from port {} failed.",
     qts.QSerialPort.ResourceError:
-        ("Port {} became unavailable to system. Device may be "
+        ("Port {} became unavailable to the system. Device may be "
          "disconnected from the system. Check connection cables."),
     qts.QSerialPort.UnsupportedOperationError:
         ("Cannot perform the requested operation on port {}: operation is "
@@ -57,13 +58,52 @@ SERIAL_ERROR_MESSAGES = {
 
 
 class ViPErLEEDErrorEnum(tuple, enum.Enum):
-    """Base class for ViPErLEED errors.
+    """Base class for ViPErLEED hardware errors.
 
-    Each enum value is a tuple of the form
-    (error_code, error_description), where error_code
-    is an integer, and error_description a string that
-    will be shown to the user when the error occurs.
+    Each Enum value is a tuple of the form
+        (error_code, error_description)
+    where error_code is an integer, and error_description a string
+    that will be shown to the user when the error occurs. The string
+    may also contain formatting directives, that should be .format()ted
+    by the controller or by the GUI.
     """
+    @classmethod
+    def as_dict(cls):
+        """Return a dictionary of error codes and error names."""
+        return {el[0]: el.name for el in cls}
+
+    @classmethod
+    def from_code(cls, code):
+        """Return the ViPErLEEDErrorEnum with a given code.
+
+        Parameters
+        ----------
+        code : int
+            The code of the error
+
+        Returns
+        -------
+        ViPErLEEDErrorEnum.value
+            The hardware error itself, which can be unpacked
+            into a tuple of the form (code, error_description)
+
+        Raises
+        ------
+        TypeError
+            If code is not an int
+        AttributeError
+            If code is an unknown error code
+        """
+        if not isinstance(code, int):
+            raise TypeError(f"{cls.__name__}.from_code(code): type of code "
+                            f"should be 'int', not {type(code).__name__!r}.")
+        try:
+            error_name = cls.as_dict()[code]
+        except KeyError as err:
+            raise AttributeError(
+                f"Unkown {cls.__name__} error with code {code}"
+                ) from err
+        return getattr(cls, error_name)
 
 
 class ExtraSerialErrors(ViPErLEEDErrorEnum):
@@ -82,33 +122,64 @@ class ExtraSerialErrors(ViPErLEEDErrorEnum):
                                  "by the controller. Check implementation "
                                  "and/or your configuration file.")
 
-# Disable too-many-instance-attributes due to bug in pylint:
-# it counts self.port_settings in __init__ as an attribute
-# while it actually is a @property.
-# pylint: disable=too-many-instance-attributes
+
 class SerialWorkerABC(metaclass=ABCMeta):
     """Base class for serial communication for a ViPErLEED controller."""
 
     error_occurred = qtc.pyqtSignal(ViPErLEEDErrorEnum)
     data_received = qtc.pyqtSignal(object)
 
-    def __init__(self, port_name='', settings=None):
-        """Initialize serial worker object."""
+    def __init__(self, settings=None, port_name=''):
+        """Initialize serial worker object.
+
+        Parameters
+        ----------
+        settings : dict or ConfigParser
+            The settings used to initialize the serial port. For the
+            serial port itself one only needs a 'serial_port_settings'
+            section. In practice, it is likely safer to pass the whole
+            ConfigParser object used for the controller class. It can
+            be changed using the .port_settings property, or with the
+            set_port_settings() setter method. See the documentation
+            of set_port_settings() for more details on other mandatory
+            content of the settings argument.
+        port_name : str or QSerialPortInfo, optional
+            The name (or info) of the serial port. If not given, it
+            must be set via the .port_name attribute, or the setter
+            set_port_name(), before any communication can be
+            established. Default is an empty string.
+
+        Raises
+        ------
+        TypeError
+            If no settings are given.
+        """
         self.__port = qts.QSerialPort(port_name)
 
         if settings is None:
-            raise ValueError(f"{self.__class__.__name__}: missing "
-                             "mandatory serial port settings")
+            raise TypeError(f"{self.__class__.__name__}: missing "
+                            "mandatory serial port settings")
 
-        # The next three are set via the call to the .port_settings
-        # property for extra checks and preprocessing
+        # .__serial_settings is set via the following call to
+        # set_port_settings() for extra checks and preprocessing
         self.__serial_settings = None
-        self.__msg_markers = {'START': None,
-                              'END': b''}
-        self.port_settings = settings
+        self.set_port_settings(settings)
+
+        # .unprocessed_messages is a list of all the messages
+        # that came on the serial line and that have not been
+        # processed yet. They should be processed in the call
+        # to process_messages() by .pop()ping one at a time
         self.unprocessed_messages = []
 
+        # __last_partial_message contains the 'head' of the last
+        # message that was not yet fully read from the serial.
+        # Used to prevent loosing bytes in asynchronous read.
         self.__last_partial_message = b''
+
+        # __messages_since_error is a list of all the serial
+        # messages that came since the last unidentified error.
+        # All these messages will be discarded automatically
+        # after the error has been identified with identify_error()
         self.__messages_since_error = []
 
         self.__timeout = qtc.QTimer()
@@ -117,12 +188,20 @@ class SerialWorkerABC(metaclass=ABCMeta):
 
     @property
     def byte_order(self):
-        """Return the byte order used for serial messages."""
+        """Return the byte order used for serial messages.
+
+        Returns
+        -------
+        byte_order : str
+            Returns either 'big' or 'little'. The return value can
+            be used in functions converting bytes to human-readable
+            data types [e.g., int.from_bytes(bytes_obj, byte_order)].
+        """
         return self.port_settings.get('serial_port_settings',
                                       'BYTE_ORDER')
 
     def get_port_name(self):
-        """Return the name of the current port."""
+        """Return the name of the current port as a string."""
         return self.__port.portName()
 
     def set_port_name(self, new_port_name):
@@ -130,9 +209,9 @@ class SerialWorkerABC(metaclass=ABCMeta):
 
         This will disconnect an already-open port, but will not
         connect to the port with the newly set name. Explicitly
-        use .connect() after changing .port_settings, if needed.
+        use .connect() (after changing .port_settings, if needed).
 
-        This method can be used a slot for a signal carrying a
+        This method can be used as a slot for a signal carrying a
         string or a QSerialPortInfo.
 
         Parameters
@@ -161,19 +240,49 @@ class SerialWorkerABC(metaclass=ABCMeta):
 
     port_name = property(get_port_name, set_port_name)
 
+    @property
+    def msg_markers(self):
+        """Return the markers signaling beginning/end of messages.
+
+        Returns
+        -------
+        msg_markers : dict
+            keys : {'START', 'END'}
+            values : bytes or None
+                Only the 'START' marker may be None, in case no
+                start marker is used.
+        """
+        start_marker = self.port_settings.getint('serial_port_settings',
+                                                 'MSG_START', fallback=None)
+        if start_marker is not None:
+            start_marker.to_bytes(1, self.byte_order)
+
+        return {'START':  start_marker,
+                'END': self.port_settings.getint(
+                    'serial_port_settings', 'MSG_END'
+                    ).to_bytes(1, self.byte_order)}
+
     def get_port_settings(self):
-        """Return the current settings for the port."""
+        """Return the current settings for the port.
+
+        Returns
+        -------
+        port_settings : ConfigParser
+            The ConfigParser containing all the settings, among
+            which the port settings that are available in section
+            'serial_port_settings'.
+        """
         return self.__serial_settings
 
     def set_port_settings(self, new_settings):
         """Change settings of the port.
 
         This will disconnect an already-open port, but will not
-        connect to the port with the new settings. Explicitly
-        use .connect() after changing .port_settings.
+        connect to the port with the new_settings. Explicitly
+        use .connect() after changing port settings.
 
-        This method can be used a slot for a signal carrying a
-        dict or a ConfigParser.
+        This method can be used as a slot for a signal carrying
+        a dict or a ConfigParser.
 
         Parameters
         ----------
@@ -181,21 +290,21 @@ class SerialWorkerABC(metaclass=ABCMeta):
             Configuration of port. It must have a 'serial_port_settings'
             section.
             The following fields in new_settings['serial_port_settings']
-            will be used (no quotes if using a ConfigParser!):
-            BYTE_ORDER : str, {'big', 'little'}
+            will be used:
+            'BYTE_ORDER' : str, {'big', 'little'}
                 Order in which bytes are transmitted. 'big' means
-                most-significant-byte first.
-            MSG_END : bytes
+                most-significant-byte is transmitted earlier in time.
+            'MSG_END' : bytes
                 Byte to be used as a marker for the end of a message
-            MSG_START : bytes, optional
+            'MSG_START' : bytes, optional
                 Byte to be used as a marker for the beginning of a
                 message. Default is no start marker.
             'baud_rate': number
                 Baud rate for the transmission. Will be interpreted
                 as an integer.
             'break_enabled' : bool, optional
-                Whether the serial device makes use of the break
-                condition for communication. Default is False.
+                Whether the transmission line should be placed in
+                the break state. Default is False.
             'data_bits' : int, optional
                 Number of data bits per data packet. Default is 8.
             'data_terminal_ready' : bool, optional
@@ -204,8 +313,10 @@ class SerialWorkerABC(metaclass=ABCMeta):
                 Default is False.
             'flow_control' : {'NoFlowControl', 'HardwareControl',
                               'SoftwareControl'}, optional
-                The type of flow control used by the device. Default
-                is NoFlowControl.
+                The type of flow control used by the device.
+                'HardwareControl' means the device uses RTS/CTS,
+                'SoftwareControl' means the device uses XON/XOFF.
+                Default is NoFlowControl.
             'parity' : {'NoParity', 'EvenParity', 'OddParity',
                         'SpaceParity', 'MarkParity'}, optional
                 Which parity bits are used for each data packet.
@@ -213,8 +324,8 @@ class SerialWorkerABC(metaclass=ABCMeta):
             'request_to_send' : bool, optional
                 Whether the Request To Send (RTS) line should be held
                 high or not for communication. This option has no effect
-                if 'flow_control' is set to 'HardwareControl'. Default
-                is False.
+                if 'flow_control' is set to 'HardwareControl', as the
+                serial driver controls the RTS line. Default is False.
             'stop_bits' : int, optional
                 Number of bits used as stop bits for each data packet.
                 Default is 1.
@@ -223,10 +334,12 @@ class SerialWorkerABC(metaclass=ABCMeta):
         ------
         TypeError
             If new_settings is neither a dict nor a ConfigParser
-        ValueError
+        KeyError
             If new_settings does not contain a 'serial_port_settings'
             section, of if the section does not contain the mandatory
-            options MSG_END and BYTE_ORDER.
+            options MSG_END and BYTE_ORDER
+        ValueError
+            If 'BYTE_ORDER' is neither 'big' nor 'little'.
         """
         if not isinstance(new_settings, (dict, ConfigParser)):
             raise TypeError(
@@ -235,32 +348,33 @@ class SerialWorkerABC(metaclass=ABCMeta):
                 "Should be 'dict' or 'ConfigParser'."
                 )
         if 'serial_port_settings' not in new_settings:
-            raise ValueError(
+            raise KeyError(
                 f"{self.__class__.__name__}: settings must "
                 "contain a 'serial_port_settings' section"
                 )
         if any(key not in new_settings['serial_port_settings']
                for key in ('MSG_END', 'BYTE_ORDER')):
-            raise ValueError(
+            raise KeyError(
                 f"{self.__class__.__name__}: section 'serial_port_settings' "
                 "of the settings should contain both 'MSG_END' and "
                 "'BYTE_ORDER' fields."
                 )
 
+        byte_order = new_settings.get('serial_port_settings', 'BYTE_ORDER')
+        if byte_order not in ('big', 'little'):
+            raise ValueError(
+                f"{self.__class__.__name__}: invalid 'BYTE_ORDER' found. "
+                f"Should be either 'big' or 'little', not {byte_order}."
+                )
+
         self.__port.close()
-        self.__serial_settings = new_settings
 
-        start_marker = new_settings.getint('serial_port_settings',
-                                           'MSG_START', fallback=None)
-        if start_marker is not None:
-            start_marker.to_bytes(1, self.byte_order)
-
-        self.__msg_markers = {
-            'START':  start_marker,
-            'END': new_settings.getint(
-                'serial_port_settings', 'MSG_END'
-                ).to_bytes(1, self.byte_order)
-            }
+        if isinstance(new_settings, dict):
+            config = ConfigParser()
+            config.read_dict(new_settings)
+            self.__serial_settings = config
+        else:
+            self.__serial_settings = new_settings
 
     port_settings = property(get_port_settings, set_port_settings)
 
@@ -302,25 +416,27 @@ class SerialWorkerABC(metaclass=ABCMeta):
     # to be the signature for subclasses
     # pylint: disable=no-self-use
     def encode(self, message):
-        """Encode a message to send it via serial.
+        """Encode a message to be sent via the serial port.
 
         The base implementation of this method is a no-op, i.e.,
         it returns the same message it got. Subclasses of the
         SerialWorkerABC class should reimplement this function
         to actually encode messages before sending them to the
-        device via the serial line.
+        device via the serial line. The reimplemented method
+        should care about appropriately converting a supported
+        object to an actual message in bytes.
 
         This method is called on every message right before
         writing it to the serial line.
 
         Parameters
         ----------
-        message : bytes or bytearray
+        message : object
             The message to be encoded
 
         Returns
         -------
-        decoded_message : bytes or bytearray
+        encoded_message : bytes or bytearray
             The encoded message
         """
         return message
@@ -331,7 +447,7 @@ class SerialWorkerABC(metaclass=ABCMeta):
         """Identify which error occurred.
 
         This function is called whenever an error occurred. Concrete
-        subclasses should reimplement this function and emit a signal
+        subclasses must reimplement this function and emit a signal
         self.error_occurred(ViPErLEEDErrorEnum). New error codes
         should be defined in a specific ViPErLEEDErrorEnum subclass.
 
@@ -339,24 +455,24 @@ class SerialWorkerABC(metaclass=ABCMeta):
         that contain information about the error. This information
         may be contained in the error message itself, or may come
         as data messages following the error message. All messages
-        that came after an error message are discarded after
-        identify_error() successfully identifies error information.
-        New messages can be processed only if identify_error() is
-        successfully completed, i.e., is calls clear_errors().
+        that are received after an error message and before the error
+        is identified are discarded. New messages can be processed
+        only if identify_error() is successfully completed, i.e.,
+        it calls clear_errors().
 
         The function should be a no-op if identification of the error
         should fail because the data did not arrive yet.
 
         The reimplementation must call the clear_errors() method to
-        be considered successfully completed. It makes sense to call
-        clear_errors() only after an error has been successfully
+        be considered successfully completed. It only makes sense to
+        call clear_errors() only after an error has been successfully
         identified (or if no error information is expected).
 
         Parameters
         ----------
         messages_since_error : list
-            All the full messages that came after the last error
-            message was received, including the error message itself.
+            All the full messages that were received after the last
+            error message, including the error message itself.
             messages_since_error[0] is the error message. Each message
             is a bytes object, containing the already decoded message.
             All messages_since_error will be discarded after the error
@@ -379,7 +495,9 @@ class SerialWorkerABC(metaclass=ABCMeta):
 
         This method must be reimplemented by concrete classes.
         It should return True if message is an error message,
-        False otherwise.
+        False otherwise. If an error message is received at any
+        point, any message that is still unprocessed is discarded
+        immediately.
 
         Parameters
         ----------
@@ -399,9 +517,9 @@ class SerialWorkerABC(metaclass=ABCMeta):
         """Check whether message is a supported command.
 
         This method is guaranteed to be called exactly once
-        during send_message() right before actually sending
-        the message, and before encoding(). The message will
-        be encoded and sent only if this method returns True.
+        during send_message() right before encoding and sending
+        the message. The message will be encoded and sent only
+        if this method returns True.
 
         This method can be reimplemented to (i) keep track of
         the last 'request' command sent, right before sending
@@ -434,9 +552,9 @@ class SerialWorkerABC(metaclass=ABCMeta):
         """Process data received into human-understandable information.
 
         This function is called every time one (or more) messages
-        arrive on the serial line, provided that there is no unhandled
-        error that came before message. Reimplement identify_error()
-        to handle errors.
+        arrive on the serial line, unless there currently is an
+        error message that has not yet been handled. Reimplement
+        identify_error() to handle errors.
 
         This method should be reimplemented by any concrete subclass.
         The reimplementation should look into the list
@@ -444,6 +562,12 @@ class SerialWorkerABC(metaclass=ABCMeta):
         it wants to process. Then it should emit the data_received
         signal for data that are worth processing (e.g., measurements),
         as this is caught by the controller class.
+
+        When reimplementing this method, it is a good idea to either
+        not process any message (if not enough messages arrived yet)
+        or to process all .unprocessed_messages. This prevents data
+        loss, should an error message be received while there are
+        still unprocessed messages.
 
         Emits
         -----
@@ -463,10 +587,12 @@ class SerialWorkerABC(metaclass=ABCMeta):
             per the self.encode() method. Typically will be either
             a bytes/bytearray, a number, or a string.
         timeout : int, optional
-            Maximum amount of time in milliseconds that the worker
-            will wait before emitting a timeout error. If negative,
-            it will never time out. A timeout of zero will cause
-            an immediate time out. Default is -1.
+            Maximum amount of time (in milliseconds) that the worker
+            will spend while waiting to receive any messages following
+            this message. If negative, it will never time out. A timeout
+            of zero will cause an immediate time out. When the worker
+            times out an ExtraSerialErrors.TIMEOUT_ERROR is emitted.
+            Default is -1.
 
         Returns
         -------
@@ -488,14 +614,16 @@ class SerialWorkerABC(metaclass=ABCMeta):
         # be taken care of by __on_serial_error, but needs checking!
         # if self.__port.write(self.encode(message)) < 0:
             # self.error_occurred.emit(
-                # "Error sending message. Check communication and port settings?"
+                # "Error sending message."
+                # "Check communication and port settings?"
                 # )
 
     def serial_connect(self, *__args):
         """Connect to currently selected port."""
         if not self.__port.open(self.__port.ReadWrite):
-            print('Not open', flush=True)
-            self.__port.clearError()
+            # Could not open port. self.__on_serial_error()
+            # will emit an error_occurred(ExtraSerialErrors)
+            print('Not open', flush=True)  # TEMP
             return
 
         self.print_port_config()  # TEMP
@@ -507,6 +635,7 @@ class SerialWorkerABC(metaclass=ABCMeta):
 
     def serial_disconnect(self, *__args):
         """Disconnect from connected serial port."""
+        self.clear_errors()
         self.__port.close()
         self.__port.readyRead.disconnect(self.__on_bytes_ready_to_read)
         self.__port.errorOccurred.disconnect(self.__on_serial_error)
@@ -514,12 +643,16 @@ class SerialWorkerABC(metaclass=ABCMeta):
     def __check_and_preprocess_message(self, message):
         """Check integrity of message.
 
-        Parameter
-        ---------
+        This function is called exactly once on each complete serial
+        message received. Only messages passing this check will be
+        decoded (and, later, processed).
+
+        Parameters
+        ----------
         message : bytes or bytearray
             The message to be checked. Integrity checks only involve
             making sure that the message is not empty before and after
-            removal of a start marker if used. If a start marker is
+            removal of a start marker, if used. If a start marker is
             used (i.e., a MSG_START is present in self.port_settings),
             the method considers the message valid only if the first
             character is a MSG_START.
@@ -527,14 +660,15 @@ class SerialWorkerABC(metaclass=ABCMeta):
         Returns
         -------
         processed_message : bytes or bytearray
-            Message stripped of the MSG_START marker, if used, otherwise
-            the message is returned unchanged. Returns an empty message
-            if message is invalid.
+            Message stripped of the MSG_START marker, if used,
+            otherwise the message is returned unchanged, unless
+            it is invalid. An empty message is returned if the
+            original message was invalid.
 
         Emits
         -----
         error_occurred(ExtraSerialErrors.NO_MESSAGE_ERROR)
-            If message is empty (before or after removal of MSG_START
+            If message is empty (before or after removal of MSG_START)
         error_occurred(ExtraSerialErrors.NO_START_MARKER_ERROR)
             If the first byte of message is not MSG_START, if there
             is a MSG_START in self.port_settings.
@@ -543,8 +677,9 @@ class SerialWorkerABC(metaclass=ABCMeta):
             self.error_occurred.emit(ExtraSerialErrors.NO_MESSAGE_ERROR)
             return b''
 
-        start_marker = self.__msg_markers['START']
+        start_marker = self.msg_markers['START']
         if start_marker is not None:
+            # Protocol uses a start marker
             if message[0] != start_marker:
                 self.error_occurred.emit(
                     ExtraSerialErrors.NO_START_MARKER_ERROR
@@ -558,15 +693,19 @@ class SerialWorkerABC(metaclass=ABCMeta):
         return message
 
     def __on_bytes_ready_to_read(self):
-        """Read the message received."""
+        """Read the message(s) received."""
         self.__timeout.stop()
 
         msg = bytes(self.__port.readAll())
-        head, *messages, tail = msg.split(self.__msg_markers['END'])
+
+        head, *messages, tail = msg.split(self.msg_markers['END'])
         messages.insert(0, self.__last_partial_message + head)
         self.__last_partial_message = tail
 
         for i, message in enumerate(messages):
+            # Make sure the messages are not empty, and get rid of
+            # MSG_START if used. error_occurred is emitted in case
+            # the message is empty (before of after stripping start).
             message = self.__check_and_preprocess_message(message)
             if not message:
                 return
@@ -580,8 +719,13 @@ class SerialWorkerABC(metaclass=ABCMeta):
             self.identify_error(self.__messages_since_error)
             return
 
+        # Check if any of the messages we received is an error.
+        # If yes, all unprocessed messages are discarded, and
+        # all messages that arrived after the error are kept
+        # until the error information has been identified
         for i, message in enumerate(messages):
             if self.is_error_message(message):
+                self.unprocessed_messages = []
                 self.__messages_since_error = messages[i:]
                 self.identify_error(self.__messages_since_error)
                 return
@@ -603,11 +747,12 @@ class SerialWorkerABC(metaclass=ABCMeta):
         """
         error_msg = SERIAL_ERROR_MESSAGES[error_code].format(self.port_name)
         self.error_occurred.emit((error_code, error_msg))
+        self.clear_errors()
 
-        print(error_msg)
+        print(error_msg)  # TEMP
 
     def __on_serial_timeout(self):
-        """React on a serial timeout.
+        """React to a serial timeout.
 
         Returns
         -------
@@ -622,7 +767,7 @@ class SerialWorkerABC(metaclass=ABCMeta):
 
     def __set_up_serial_port(self):
         """Load settings to serial port."""
-        settings = self.__serial_settings
+        settings = self.port_settings
         self.__port.setBaudRate(
             int(settings.getfloat('serial_port_settings',
                                   'baud_rate',
@@ -659,6 +804,8 @@ class SerialWorkerABC(metaclass=ABCMeta):
         self.__port.setParity(parity)
 
         if flow_control is not self.__port.HardwareControl:
+            # Do the following only if not under HardwareControl,
+            # otherwise the following causes UnsupportedOperationError
             self.__port.setRequestToSend(
                 settings.getbool('serial_port_settings',
                                  'request_to_send',
@@ -684,4 +831,3 @@ class SerialWorkerABC(metaclass=ABCMeta):
             f"stopBits: {self.__port.stopBits()}",
             sep='\n', end='\n\n'
             )
-# pylint: enable=too-many-instance-attributes
