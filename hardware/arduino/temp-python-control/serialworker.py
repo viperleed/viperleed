@@ -74,10 +74,8 @@ class ExtraSerialErrors(enum.Enum):
 
 # TODO: pylint too-many-instance-attributes
 # TODO: push encode() implementation from Flo
-class BaseSerialWorker:
+class BaseSerialWorker(metaclass=abc.ABCMeta):
     """Base class for serial communication for a ViPErLEED controller."""
-
-    __metaclass__ = abc.ABCMeta
 
     error_occurred = qtc.pyqtSignal(int, str)
     data_received = qtc.pyqtSignal(object)
@@ -317,11 +315,6 @@ class BaseSerialWorker:
         Returns
         -------
         None.
-
-        Raises
-        ------
-        NotImplementedError
-            If this method is not reimplemented by concrete subclasses.
 
         Emits
         -----
