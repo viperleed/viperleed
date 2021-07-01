@@ -17,6 +17,7 @@ Graphical User Interface.
 """
 
 import enum
+import abc
 from configparser import ConfigParser
 
 from PyQt5 import (QtCore as qtc,
@@ -29,28 +30,28 @@ SERIAL_ERROR_MESSAGES = {
          "cables and/or update the list of ports."),
     qts.QSerialPort.PermissionError:
         ("Permission error while opening port {}. The port may be "
-         "alredy in use, or you may not have sufficient privileges.")
+         "alredy in use, or you may not have sufficient privileges."),
     qts.QSerialPort.OpenError:
         ("Cannot open again a port on the same object. "
-         "Close port {} before by calling disconnect().")
+         "Close port {} before by calling disconnect()."),
     qts.QSerialPort.NotOpenError:
         ("Cannot perform the requested operation on a "
-         "closed port. Open {} by calling .connect().")
+         "closed port. Open {} by calling .connect()."),
     qts.QSerialPort.WriteError:
-        ("Writing data to port {} failed.")
+        ("Writing data to port {} failed."),
     qts.QSerialPort.ReadError:
-        ("Reading data from port {} failed.")
+        ("Reading data from port {} failed."),
     qts.QSerialPort.ResourceError:
         ("Port {} became unavailable to system. Device may be "
-         "disconnected from the system. Check connection cables.")
+         "disconnected from the system. Check connection cables."),
     qts.QSerialPort.UnsupportedOperationError:
         ("Cannot perform the requested operation on port {}: operation is "
-         "either not supported or prohibited by the operating system.")
+         "either not supported or prohibited by the operating system."),
     qts.QSerialPort.TimeoutError:
         ("Serial timeout error on port {}. This should not normally occur. "
          "It means someone incorrectly implemented a subclass of "
          "BaseSerialWorker, using waitForBytesWritten or waitForReadyRead "
-         "instead of asynchronous behavior.")
+         "instead of asynchronous behavior."),
     qts.QSerialPort.UnknownError:
         ("An unknown error occurred while acessing port {}.")
 }
@@ -71,8 +72,12 @@ class ExtraSerialErrors(enum.Enum):
     UNSUPPORTED_COMMAND_ERROR = 53
 
 
+# TODO: pylint too-many-instance-attributes
+# TODO: push encode() implementation from Flo
 class BaseSerialWorker:
     """Base class for serial communication for a ViPErLEED controller."""
+
+    __metaclass__ = abc.ABCMeta
 
     error_occurred = qtc.pyqtSignal(int, str)
     data_received = qtc.pyqtSignal(object)
@@ -120,10 +125,6 @@ class BaseSerialWorker:
             Name of port to be opened. Use the availablePorts()
             method of QSerialPortInfo to determine appropriate
             port names.
-
-        Returns
-        -------
-        None.
 
         Raises
         ------
@@ -245,9 +246,12 @@ class BaseSerialWorker:
         identify_error after the error has been correctly identified.
         """
         self.__port.clearErrors()
-        self._timeout.stop()
+        self.__timeout.stop()
         self.__messages_since_error = []
 
+    # Disable pylint check as this is supposed
+    # to be the signature for subclasses
+    # pylint: disable=no-self-use
     def decode(self, message):
         """Decode a serial message.
 
@@ -259,13 +263,20 @@ class BaseSerialWorker:
         Parameters
         ----------
         message : bytes or bytearray
+            The message to be decoded
 
         Returns
         -------
         decoded_message : bytes or bytearray
+            The decoded message
         """
         return message
+    # pylint: enable=no-self-use
 
+    # Disable pylint check as this is supposed
+    # to be the signature for subclasses
+    # pylint: disable=no-self-use,unused-argument
+    @abc.abstractmethod
     def identify_error(self, messages_since_error):
         """Identify which error occurred.
 
@@ -317,11 +328,10 @@ class BaseSerialWorker:
         error_occurred(error_code, descriptive_text)
             After the error has been identified
         """
-        raise NotImplementedError(
-            f"{self.__class__.__name__} must reimplement "
-            "identify_error(self, messages_since_error)!"
-            )
+        return
+    # pylint: enable=no-self-use,unused-argument
 
+    @abc.abstractmethod
     def is_error_message(self, message):
         """Check if a message corresponds to an error.
 
@@ -338,11 +348,11 @@ class BaseSerialWorker:
         bool
             Whether message is an error message
         """
-        raise NotImplementedError(
-            f"{self.__class__.__name__} must reimplement "
-            "is_error_message(self, message)!"
-            )
+        return
 
+    # Disable pylint check as this is supposed
+    # to be the signature for subclasses
+    # pylint: disable=no-self-use,unused-argument
     def is_message_supported(self, message):
         """Check whether message is a supported command.
 
@@ -372,7 +382,9 @@ class BaseSerialWorker:
             messages will then be sent.
         """
         return True
+    # pylint: enable=no-self-use,unused-argument
 
+    @abc.abstractmethod
     def process_messages(self):
         """Process data received into human-understandable information.
 
@@ -394,10 +406,7 @@ class BaseSerialWorker:
             Any time the message received contains data that are
             worth processing.
         """
-        raise NotImplementedError(
-            f"{self.__class__.__name__} must reimplement "
-            "process_message(self, message)!"
-            )
+        return
 
     def send_message(self, message, timeout=-1):
         """Send message to controller via serial port.
@@ -425,7 +434,7 @@ class BaseSerialWorker:
         """
         timeout = int(timeout)
         if timeout >= 0:
-            self.__timoout.start(timeout)
+            self.__timeout.start(timeout)
 
         if not self.is_message_supported(message):
             return
@@ -454,8 +463,8 @@ class BaseSerialWorker:
     def serial_disconnect(self, *__args):
         """Disconnect from connected serial port."""
         self.__port.close()
-        self.__port.readyRead.disconnect(self.on_bytes_ready_to_read)
-        self.__port.errorOccurred.disconnect(self.on_serial_error)
+        self.__port.readyRead.disconnect(self.__on_bytes_ready_to_read)
+        self.__port.errorOccurred.disconnect(self.__on_serial_error)
 
     def __check_and_preprocess_message(self, message):
         """Check integrity of message.
@@ -472,10 +481,10 @@ class BaseSerialWorker:
 
         Returns
         -------
-        processed_message : bytes or bytearray or None
+        processed_message : bytes or bytearray
             Message stripped of the MSG_START marker, if used, otherwise
-            the message is returned unchanged. Returns None if message
-            is invalid.
+            the message is returned unchanged. Returns an empty message
+            if message is invalid.
 
         Emits
         -----
@@ -490,7 +499,7 @@ class BaseSerialWorker:
                 ExtraSerialErrors.NO_MESSAGE_ERROR,
                 "Empty message received from controller"
                 )
-            return
+            return b''
 
         start_marker = self.__msg_markers['START']
         if start_marker is not None:
@@ -501,7 +510,7 @@ class BaseSerialWorker:
                     "controller (missing start marker). "
                     "Probably a communication error."
                     )
-                return
+                return b''
             message = message[1:]
 
         if not message:
@@ -509,7 +518,7 @@ class BaseSerialWorker:
                 ExtraSerialErrors.NO_MESSAGE_ERROR,
                 "Empty message received from controller"
                 )
-            return
+            return b''
         return message
 
     def __on_bytes_ready_to_read(self):
@@ -523,7 +532,7 @@ class BaseSerialWorker:
 
         for i, message in enumerate(messages):
             message = self.__check_and_preprocess_message(message)
-            if message is None:
+            if not message:
                 return
             messages[i] = self.decode(message)
 

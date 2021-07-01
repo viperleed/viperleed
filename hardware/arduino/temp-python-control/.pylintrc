@@ -1,0 +1,3 @@
+[MASTER]
+extension-pkg-whitelist=PyQt5
+load-plugins=pylint.extensions.broad_try_clause,pylint.extensions.emptystring,pylint.extensions.comparetozero,pylint.extensions.confusing_elif,pylint.extensions.bad_builtin,pylint.extensions.mccabe,pylint.extensions.docstyle,pylint.extensions.check_elif,pylint.extensions.redefined_variable_type,pylint.extensions.overlapping_exceptions,pylint.extensions.docparams
