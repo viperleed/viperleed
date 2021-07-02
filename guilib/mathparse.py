@@ -65,6 +65,7 @@ def _fix_expression(txt):
     Returns
     -------
     fixed_txt : str
+        Expression suitable to be evaluated by MathParser
     """
     remove_spaces = r'\s*'
     txt = re.sub(remove_spaces, '', txt)
@@ -118,6 +119,7 @@ def __fix_multiplication(txt):
     Returns
     -------
     fixed_txt : str
+        Text with multiplication signs added where needed.
     """
     # Add a star whenever a digit is followed by any
     # character except a digit, an operator, or a parenthesis
@@ -194,6 +196,13 @@ class MathParser:
         Parameters
         ----------
         new_expression : str
+            Expression to be evaluated. Call .evaluate() to
+            get the numeric value of the expression.
+
+        Raises
+        ------
+        TypeError
+            If new_expression is not a string.
         """
         if not isinstance(new_expression, str):
             raise TypeError("MathParser: expression should be a string, "
@@ -206,6 +215,7 @@ class MathParser:
         Returns
         -------
         number : float
+            Numeric value of the expression.
 
         Raises
         ------
@@ -234,32 +244,105 @@ class MathParser:
             ret = node.n
 
         elif isinstance(node, ast.BinOp):
-            try:
-                operation = BINARY_OPERATIONS[type(node.op)]
-            except KeyError as err:
-                raise UnsupportedMathError(node.op) from err
-            ret = operation(self.__eval(node.left), self.__eval(node.right))
+            ret = self.__eval_binary_operation(node)
 
         elif isinstance(node, ast.UnaryOp):
-            try:
-                operation = UNARY_OPERATIONS[type(node.op)]
-            except KeyError as err:
-                raise UnsupportedMathError(node.op) from err
-            ret = operation(self.__eval(node.operand))
+            ret = self.__eval_unary_operation(node)
 
         elif isinstance(node, ast.Call):
-            try:
-                operation = MATH_OPERATIONS[node.func.id]
-            except KeyError as err:
-                raise UnsupportedMathError(node.func.id) from err
-
-            # Allow only single-argument math operations
-            ret = operation(self.__eval(node.args[0]))
+            ret = self.__eval_math_function(node)
 
         else:
             raise UnsupportedMathError(node)
 
         return ret
+
+    def __eval_math_function(self, node):
+        """Evaluate a node containing the call to a function.
+
+        Supported mathematical functions are:
+         * sqrt(x)
+
+        Parameters
+        ----------
+        node : ast.node
+            The node to be evaluated. It is NOT checked to
+            actually be a node describing a math function.
+
+        Return
+        ------
+        number : float
+            Result of evaluating the mathematical function
+
+        Raises
+        ------
+        UnsupportedMathError
+            If the mathematical function is not supported
+        """
+        try:
+            operation = MATH_OPERATIONS[node.func.id]
+        except KeyError as err:
+            raise UnsupportedMathError(node.func.id) from err
+
+        # Allow only single-argument math operations
+        return operation(self.__eval(node.args[0]))
+
+    def __eval_binary_operation(self, node):
+        """Evaluate a node containing a binary operation.
+
+        Supported binary operations are addition, subtraction,
+        multiplication, division, modulo division, and raising
+        to power.
+
+        Parameters
+        ----------
+        node : ast.node
+            The node to be evaluated. It is NOT checked to
+            actually be a node describing a binary operation.
+
+        Return
+        ------
+        number : float
+            Numeric value of the binary operation
+
+        Raises
+        ------
+        UnsupportedMathError
+            If the binary operation is not one of the supported ones
+        """
+        try:
+            operation = BINARY_OPERATIONS[type(node.op)]
+        except KeyError as err:
+            raise UnsupportedMathError(node.op) from err
+        return operation(self.__eval(node.left), self.__eval(node.right))
+
+    def __eval_unary_operation(self, node):
+        """Evaluate a node containing a unary operation.
+
+        Supported unary operations are sign change (-x) and
+        no-sign-change (+x).
+
+        Parameters
+        ----------
+        node : ast.node
+            The node to be evaluated. It is NOT checked to
+            actually be a node describing a unary operation.
+
+        Return
+        ------
+        number : float
+            Numeric value of the unary operation
+
+        Raises
+        ------
+        UnsupportedMathError
+            If the unary operation is not one of the supported ones
+        """
+        try:
+            operation = UNARY_OPERATIONS[type(node.op)]
+        except KeyError as err:
+            raise UnsupportedMathError(node.op) from err
+        return operation(self.__eval(node.operand))
 
 
 if __name__ == '__main__':

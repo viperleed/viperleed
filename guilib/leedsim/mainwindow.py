@@ -68,7 +68,8 @@ class LEED_GUI(gl.ViPErLEEDModuleBase):
         self.actionsToEnable = []
 
         # "File"
-        self.fileMenu = menubar.addMenu('&File')
+        self.fileMenu = qtw.QMenu('&File')
+        menubar.insertMenu(self.about_action, self.fileMenu)
 
         # File -> New
         newF = qtw.QAction('&New...', self)
@@ -653,7 +654,6 @@ class LEED_GUI(gl.ViPErLEEDModuleBase):
 
         # print("... Title and icon")
         self.setWindowTitle('LEED Pattern Indexing Helper')
-        self.setWindowIcon(self.style().standardIcon(qtw.QStyle.SP_DirIcon))
 
         # print("... Status bar")
         self.sBar = qtw.QStatusBar()

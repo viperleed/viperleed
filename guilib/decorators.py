@@ -1,13 +1,14 @@
-"""
+"""Module decorators of guilib.
+
 ======================================
   ViPErLEED Graphical User Interface
 ======================================
-   *** Module guilib.decorators ***
 
 Author: Michele Riva
 Created: 2020-01-29
 
-This module provides Qt-independent decorators based on the wrapt Python module
+This module provides Qt-independent decorators based on the
+wrapt Python module.
 """
 import inspect
 import cProfile
@@ -19,10 +20,11 @@ from line_profiler import LineProfiler
 
 
 def ensure_decorates_class(superclass=object):
-    """
-    Decorator to be applied to a @wrapt.decorator. Raises exceptions if the
-    @wrapt.decorator on which it acts is not applied to a subclass of
-    superclass.
+    """Make sure a @wrapt.decorator decrates a class.
+
+    This decorator is meant to be applied to a @wrapt.decorator.
+    Raises exceptions if the @wrapt.decorator on which it acts is
+    not applied to a subclass of superclass.
 
     Parameters
     ----------
@@ -31,12 +33,17 @@ def ensure_decorates_class(superclass=object):
 
     Returns
     -------
-    The original @wrapt.decorator if the @wrapt.decorator is applied to a
-    subclass of superclass. Raises RuntimeError otherwise.
+    decorator : callable
+        The original @wrapt.decorator if the @wrapt.decorator
+        is applied to a subclass of superclass.
+    Raises
+    ------
+    RuntimeError
+        If the decorator was not applied to a subclass of superclass.
     """
 
     @wrapt.decorator
-    def _wrapper(decorator, always_none, args, kwargs):
+    def _wrapper(decorator, _, args, kwargs):
         wrapped = args[0]
         if not inspect.isclass(superclass):
             raise TypeError("@ensure_decorates_class() arg 1 must be a class")
@@ -59,15 +66,18 @@ def ensure_decorates_class(superclass=object):
 # otherwise when normally running
 
 
-def profile_calls(sort_args=['cumulative'], print_args=[10]):
-    """
-    Runs a profiler on the wrapped function, using cProfile. This profiles
-    exclusively function calls.
+def profile_calls(sort_args=('cumulative',), print_args=(10,)):
+    """Run cProfile on the decorated function.
+
+    Notice that cProfile exclusively profiles function calls.
     """
     profiler = cProfile.Profile()
 
     def decorator(func):
         def inner(*args, **kwargs):
+            # Disable pylint warning as there is no other sensible
+            # way to actually profile the function.
+            # pylint: disable=too-many-try-statements
             result = None
             try:
                 profiler.enable()
@@ -85,10 +95,9 @@ def profile_calls(sort_args=['cumulative'], print_args=[10]):
 
 
 def profile_lines(func):
-    """
-    Uses line_profiler for profiling each line of the decorated function
-    """
+    """Profile execution time of each line of the decorated function."""
     def _wrapper(*args, **kwargs):
+        """Execute and profile function."""
         profiler = LineProfiler()
         profiled_func = profiler(func)
         try:
@@ -100,27 +109,26 @@ def profile_lines(func):
 
 
 def exec_time(func):
-    """
-    Measures execution time of the wrapped function
-    """
+    """Measure execution time of the wrapped function."""
     def _wrapper(*args, **kwargs):
-        t0 = timer()
+        """Execute function and print the execution time."""
+        start_time = timer()
         result = func(*args, **kwargs)
-        dt = timer()-t0
-        if dt > 1:
+        elapsed = timer() - start_time
+        if elapsed > 1:
             mult = 1
             unit = ''
-        elif dt > 1e-3:
+        elif elapsed > 1e-3:
             mult = 1e3
             unit = 'm'
-        elif dt > 1e-6:
+        elif elapsed > 1e-6:
             mult = 1e6
             unit = 'u'
         else:
             mult = 1e9
             unit = 'n'
         fname = str(func).replace('<','').split(' at 0x')[0]
-        print(f"Execution time of {fname}: {dt*mult:.1f} {unit}s")
+        print(f"Execution time of {fname}: {elapsed*mult:.1f} {unit}s")
         return result
     return _wrapper
 

@@ -20,27 +20,34 @@ from PyQt5 import (QtCore as qtc,
 
 from viperleed import guilib as gl
 from viperleed.gui import resources_path
+from viperleed.guilib.modulebase import logo_one_line
 
 
 PRE_RELEASE = True
 
 
 def show_pre_release_popup():
-    """
-    Show a pop-up dialog informing that the current version is a not meant
-    to be distributed without permission, as it is a pre-release
+    """Show a pop-up informing about pre-release status.
+
+    The current ViPErLEED version is a not meant to be distributed
+    without permission, as it is a pre-release.
+
+    Returns
+    -------
+    None.
     """
     txt = (f"ViPErLEED v{gl.GLOBALS['version']} is a pre-release not meant "
            "for public distribution!<p> Contact us at <a href="
            u''"'mailto:riva@iap.tuwien.ac.at'"'>riva@iap.tuwien.ac.at</a> '
            "</p>")
-    msgBox = qtw.QMessageBox(qtw.QMessageBox.Information,
+    msg_box = qtw.QMessageBox(qtw.QMessageBox.Information,
                              "Pre-release notice", txt)
-    msgBox.exec()
+    msg_box.exec()
 
 
-class ViPErLEEDSelectModule(qtw.QMainWindow):
+class ViPErLEEDSelectModule(gl.ViPErLEEDModuleBase):
     """Window to pick what to do."""
+
     # modules is a dictionary of the available modules.
     # Keys are tuples, with key[0] == filename of icon
     # to use, and key[1] == class that opens the main
@@ -74,7 +81,7 @@ class ViPErLEEDSelectModule(qtw.QMainWindow):
         event.accept()
         qtw.qApp.quit()
 
-    def keyPressEvent(self, event):
+    def keyPressEvent(self, event):  # pylint: disable=invalid-name
         """Reimpement to catch Ctrl+Q and Ctrl+W for quitting."""
         if (event.key() in (qtc.Qt.Key_Q, qtc.Qt.Key_W)
                 and event.modifiers() == qtc.Qt.ControlModifier):
@@ -83,12 +90,8 @@ class ViPErLEEDSelectModule(qtw.QMainWindow):
     def _compose(self):
         """Place children widgets."""
         layout = qtw.QVBoxLayout()
-        logo_oneline = qtg.QPixmap(resources_path(
-            'guilib/icons/viperleed_logo_oneline_200x38.png'
-            ))
-        logo = qtw.QLabel()
-        logo.setPixmap(logo_oneline)
-        layout.addWidget(logo, alignment=qtc.Qt.AlignHCenter)
+
+        layout.addWidget(logo_one_line(), alignment=qtc.Qt.AlignHCenter)
 
         for module, (icon_fname, cls) in self.modules.items():
             icon = qtg.QIcon(os.path.join(resources_path('guilib/icons'),
@@ -98,7 +101,6 @@ class ViPErLEEDSelectModule(qtw.QMainWindow):
             button.setIconSize(qtc.QSize(200, 122))
             button.clicked.connect(self._on_module_open_requested)
             button.setSizePolicy(qtw.QSizePolicy.Fixed, qtw.QSizePolicy.Fixed)
-            # button.setCheckable(True)
             layout.addWidget(button)
 
             if cls is None:
@@ -111,7 +113,7 @@ class ViPErLEEDSelectModule(qtw.QMainWindow):
         self.setWindowTitle('ViPErLEED')
         self.adjustSize()
         self.setFixedSize(self.size())
-        
+
         flags = self.windowFlags()
         flags &= ~qtc.Qt.WindowMinimizeButtonHint
         self.setWindowFlags(flags)
@@ -135,16 +137,31 @@ class ViPErLEEDSelectModule(qtw.QMainWindow):
         Returns
         -------
         None.
+
+        Raises
+        ------
+        RuntimeError
+            If the module being opened is not a valid ViPErLEED module
         """
+        # Disable, as _on_module_open_requested can only run if there
+        # are buttons, one of which will always be the sender. Thus
+        # name always has a well-defined value.
+        # pylint: disable=undefined-loop-variable
         for name, button in self._btns.items():
             if self.sender() is button:
                 break
 
         module = self._open_modules[name]
+
+        # Module is already open
         if module:
             module.show()
+            # Move window to front
             module.raise_()
-            module.activateWindow()
+            # Show as a window, also in case it is minimized
+            module.setWindowState(module.windowState()
+                                  & ~qtc.Qt.WindowMinimized
+                                  | qtc.Qt.WindowActive)
             return
 
         _, cls = self.modules[name]
