@@ -25,6 +25,7 @@ from PyQt5 import (QtCore as qtc,
 
 
 SERIAL_ERROR_MESSAGES = {
+    qts.QSerialPort.NoError: "",
     qts.QSerialPort.DeviceNotFoundError:
         ("No device on port {}. Please check the communication "
          "cables and/or update the list of ports."),
@@ -123,11 +124,13 @@ class ExtraSerialErrors(ViPErLEEDErrorEnum):
                                  "and/or your configuration file.")
 
 
-class SerialWorkerABC(metaclass=ABCMeta):
+# class SerialWorkerABC(qtc.QObject, metaclass=ABCMeta):
+class SerialWorkerABC(qtc.QObject):
     """Base class for serial communication for a ViPErLEED controller."""
 
     error_occurred = qtc.pyqtSignal(ViPErLEEDErrorEnum)
-    data_received = qtc.pyqtSignal(object)
+    data_received = qtc.pyqtSignal(tuple)
+    energy_is_set = qtc.pyqtSignal()
 
     def __init__(self, settings=None, port_name=''):
         """Initialize serial worker object.
@@ -154,6 +157,7 @@ class SerialWorkerABC(metaclass=ABCMeta):
         TypeError
             If no settings are given.
         """
+        super().__init__()
         self.__port = qts.QSerialPort(port_name)
 
         if settings is None:
@@ -384,7 +388,7 @@ class SerialWorkerABC(metaclass=ABCMeta):
         This method must be called in the reimplementation of
         identify_error after the error has been correctly identified.
         """
-        self.__port.clearErrors()
+        self.__port.clearError()
         self.__timeout.stop()
         self.__messages_since_error = []
 
@@ -624,6 +628,8 @@ class SerialWorkerABC(metaclass=ABCMeta):
             # Could not open port. self.__on_serial_error()
             # will emit an error_occurred(ExtraSerialErrors)
             print('Not open', flush=True)  # TEMP
+            print(self.port_name)
+            self.print_port_config()
             return
 
         self.print_port_config()  # TEMP
@@ -745,8 +751,13 @@ class SerialWorkerABC(metaclass=ABCMeta):
         error_occurred((error_code, msg))
             Always
         """
+        if error_code is qts.QSerialPort.NoError:
+            return
         error_msg = SERIAL_ERROR_MESSAGES[error_code].format(self.port_name)
-        self.error_occurred.emit((error_code, error_msg))
+        ExtraSerialErrors.temp_error = (error_code, error_msg)
+        print(type(ExtraSerialErrors.temp_error), type(ExtraSerialErrors.NO_MESSAGE_ERROR))
+        self.error_occurred.emit(ExtraSerialErrors.temp_error)
+        del ExtraSerialErrors.temp_error
         self.clear_errors()
 
         print(error_msg)  # TEMP
@@ -771,35 +782,35 @@ class SerialWorkerABC(metaclass=ABCMeta):
         self.__port.setBaudRate(
             int(settings.getfloat('serial_port_settings',
                                   'baud_rate',
-                                  self.__port.baudRate()))
+                                  fallback=self.__port.baudRate()))
             )
         self.__port.setBreakEnabled(
-            settings.getbool('serial_port_settings',
-                             'break_enabled',
-                             self.__port.isBreakEnabled())
+            settings.getboolean('serial_port_settings',
+                                'break_enabled',
+                                fallback=self.__port.isBreakEnabled())
             )
         self.__port.setDataBits(
             settings.getint('serial_port_settings',
                             'data_bits',
-                            self.__port.dataBits())
+                            fallback=self.__port.dataBits())
             )
         self.__port.setDataTerminalReady(
-            settings.getbool('serial_port_settings',
-                             'data_terminal_ready',
-                             self.__port.isDataTerminalReady())
+            settings.getboolean('serial_port_settings',
+                                'data_terminal_ready',
+                                fallback=self.__port.isDataTerminalReady())
             )
 
         flow_control = getattr(
             self.__port, settings.get('serial_port_settings',
                                       'flow_control',
-                                      self.__port.flowControl())
+                                      fallback=self.__port.flowControl())
             )
         self.__port.setFlowControl(flow_control)
 
         parity = getattr(
             self.__port, settings.get('serial_port_settings',
                                       'parity',
-                                      self.__port.parity())
+                                      fallback=self.__port.parity())
             )
         self.__port.setParity(parity)
 
@@ -807,14 +818,14 @@ class SerialWorkerABC(metaclass=ABCMeta):
             # Do the following only if not under HardwareControl,
             # otherwise the following causes UnsupportedOperationError
             self.__port.setRequestToSend(
-                settings.getbool('serial_port_settings',
-                                 'request_to_send',
-                                 self.__port.isRequestToSend())
+                settings.getboolean('serial_port_settings',
+                                    'request_to_send',
+                                    fallback=self.__port.isRequestToSend())
                 )
         self.__port.setStopBits(
             settings.getint('serial_port_settings',
                             'stop_bits',
-                            self.__port.stopBits())
+                            fallback=self.__port.stopBits())
             )
 
     def print_port_config(self):

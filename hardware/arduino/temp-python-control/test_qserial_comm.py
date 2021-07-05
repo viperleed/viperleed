@@ -13,17 +13,21 @@ Author: Michele Riva
 
 import time
 import sys
+from configparser import ConfigParser
 
 from PyQt5 import (QtWidgets as qtw,
                    QtCore as qtc,
                    QtSerialPort as qts)
-
+from viperinoworker import ViPErinoSerialWorker
 
 TIMEOUT = 5000  # milliseconds
 MSG_START = b'\xfe'
 MSG_END = b'\xff'
 BYTE_ORDER = 'big'
 
+
+CONFIG = ConfigParser()
+CONFIG.read('Configuration/LeedControl_config.ini')
 
 class MainWindow(qtw.QWidget):
     """Simple window for basic tests."""
@@ -40,7 +44,7 @@ class MainWindow(qtw.QWidget):
                        'msg_to_send': qtw.QLineEdit(),
                        'msg_received': qtw.QLineEdit()}
 
-        self.__port = qts.QSerialPort()
+        self.__port = ViPErinoSerialWorker(settings=CONFIG)
 
         self.__compose()
         self.__connect()
@@ -86,25 +90,11 @@ class MainWindow(qtw.QWidget):
     def serial_connect(self, *__args):
         """Connect to currently selected port."""
         name = self._ctrls['select_port'].currentText().split(':')[0]
-        self.__port = qts.QSerialPort(name)
-        if not self.__port.open(self.__port.ReadWrite):
-            print('Not open', flush=True)
-            self.__port.clearError()
-            return
+        self.__port.port_name = name
+        self.__port.serial_connect()
 
-        self.print_port_config()
-
-        # TODO: here we need to set up the port. At least:
-        self.__port.setBaudRate(int(400e6))
-        # self.__port.setDataBits(self.__port.Data8)  # Default is 8 --> OK
-        self.__port.setDataTerminalReady(True)
-        # setParity()     # Default is QSerialPort::NoParity --> OK
-        # setStopBits()   # Default is 1 --> OK
-
-        self.print_port_config()
-
-        self.__port.readyRead.connect(self.on_bytes_ready_to_read)
-        self.__port.errorOccurred.connect(self.on_serial_error)
+        self.__port.data_received.connect(self.on_data_received)
+        self.__port.error_occurred.connect(self.on_error_occurred)
 
         for key in ('select_port', 'update_ports', 'connect'):
             self._ctrls[key].setEnabled(False)
@@ -114,15 +104,14 @@ class MainWindow(qtw.QWidget):
 
     def serial_disconnect(self, *__args):
         """Disconnect from connected serial port."""
-        self.__port.close()
+        self.__port.serial_disconnect()
 
         for key in ('select_port', 'update_ports', 'connect'):
             self._ctrls[key].setEnabled(True)
         for key in ('disconnect', 'msg_to_send', 'send'):
             self._ctrls[key].setEnabled(False)
-        
-        self.__port.readyRead.disconnect(self.on_bytes_ready_to_read)
-        self.__port.errorOccurred.disconnect(self.on_serial_error)
+
+        self.__port.error_occurred.disconnect(self.on_error_occurred)
 
     def send_message(self, *__args):
         """Send message to port, and wait for reply."""
@@ -130,30 +119,31 @@ class MainWindow(qtw.QWidget):
         if not msg_out:
             print('No message', flush=True)
             return
-        msg_out = bytes(msg_out, 'utf-8')
-        n_bytes = len(msg_out).to_bytes(1, BYTE_ORDER)
+        # msg_out = bytes(msg_out, 'utf-8')
+        # n_bytes = len(msg_out).to_bytes(1, BYTE_ORDER)
 
-        msg_out = MSG_START + n_bytes + msg_out + MSG_END
-        print("Sending", msg_out)
-        if self.__port.write(msg_out) < 0:
-            print('Could not send', flush=True)
+        # msg_out = MSG_START + n_bytes + msg_out + MSG_END
+        # print("Sending", msg_out)
+        # if self.__port.write(msg_out) < 0:
+            # print('Could not send', flush=True)
+        self.__port.send_message(msg_out, timeout=TIMEOUT)
 
-    def on_bytes_ready_to_read(self):
+    def on_data_received(self, data):
         """Read the message received."""
-        msg = bytes(self.__port.readAll())
-        msg = msg.replace(MSG_START, b'').replace(MSG_END, b'')
-        
-        self._ctrls['msg_received'].setText(str(msg))
-    
-    def on_serial_error(self, error_code):
+        # msg = bytes(self.__port.readAll())
+        # msg = msg.replace(MSG_START, b'').replace(MSG_END, b'')
+
+        self._ctrls['msg_received'].setText(str(data))
+
+    def on_error_occurred(self, error_code, error_msg):
         """React to a serial-port error."""
-        print("Serial error occurred. Code:", error_code)
+        print(error_msg, "\n", f"    (Error code: {error_code})")
 
     def closeEvent(self, event):
         """Reimplement closeEvent to also close open ports."""
-        self.__port.close()
+        self.__port.serial_disconnect()
         super().closeEvent(event)
-    
+
     def print_port_config(self):
         """Print the configuration of an open port."""
         print(

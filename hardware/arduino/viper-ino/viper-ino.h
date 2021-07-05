@@ -67,7 +67,7 @@ union floatOrBytes{
 #define PC_RESET          82    // PC requested a global reset (ASCII 'R')
 #define PC_SET_VOLTAGE    86    // PC requested to set a certain energy (ASCII 'V')
 #define PC_MEASURE_ONLY   77    // PC requested measurement without changing Voltage (ASCII 'M')
-#define PC_CHANGE_MEAS_MODE 32  // PC requested a change between continuous and single measurement mode
+#define PC_CHANGE_MEAS_MODE 109  // PC requested a change between continuous and single measurement mode
 
 // Error codes
 #define ERROR_NO_ERROR            0   // No error
