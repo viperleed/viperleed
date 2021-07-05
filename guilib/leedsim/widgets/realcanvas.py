@@ -21,7 +21,7 @@ class RealCanvas(gl.MPLFigureCanvas):
     def plotLattices(self):
         self.ax.cla()
 
-        _win = self.window()  # this should be the LEED_GUI instance
+        _win = self.window()  # this should be the LEEDPatternSimulator instance
 
         rs = _win.real
 

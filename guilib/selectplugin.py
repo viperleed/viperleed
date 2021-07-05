@@ -20,7 +20,7 @@ from PyQt5 import (QtCore as qtc,
 
 from viperleed import guilib as gl
 from viperleed.gui import resources_path
-from viperleed.guilib.modulebase import logo_one_line
+from viperleed.guilib.pluginsbase import logo_one_line
 
 
 PRE_RELEASE = True
@@ -45,14 +45,15 @@ def show_pre_release_popup():
     msg_box.exec()
 
 
-class ViPErLEEDSelectModule(gl.ViPErLEEDModuleBase):
+class ViPErLEEDSelectPlugin(gl.ViPErLEEDPluginBase):
     """Window to pick what to do."""
 
     # modules is a dictionary of the available modules.
     # Keys are tuples, with key[0] == filename of icon
     # to use, and key[1] == class that opens the main
     # window of the module
-    modules = {'pattern_simulator': ('pattern_simulator.png', gl.LEED_GUI),
+    modules = {'pattern_simulator': ('pattern_simulator.png',
+                                     gl.LEEDPatternSimulator),
                'measure': ('measure.png', None),}
 
     def __init__(self, parent=None):
@@ -86,6 +87,7 @@ class ViPErLEEDSelectModule(gl.ViPErLEEDModuleBase):
         if (event.key() in (qtc.Qt.Key_Q, qtc.Qt.Key_W)
                 and event.modifiers() == qtc.Qt.ControlModifier):
             self.close()
+        super().keyPressEvent(event)
 
     def _compose(self):
         """Place children widgets."""

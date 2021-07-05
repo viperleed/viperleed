@@ -174,7 +174,7 @@ class ExportCSVDialog(qtw.QDialog):
         params['name'] = self.structName.text()
         
         # Other parameters (leed, source, file names) are taken care of
-        # by LEED_GUI
+        # by LEEDPatternSimulator
         
         return params
 

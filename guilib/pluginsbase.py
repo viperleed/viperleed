@@ -36,8 +36,8 @@ def logo_one_line():
     return logo
 
 
-class ViPErLEEDModuleBase(qtw.QMainWindow):
-    """Base class for a ViPErLEED module."""
+class ViPErLEEDPluginBase(qtw.QMainWindow):
+    """Base class for the main window of a ViPErLEED plug-in."""
 
     module_closed = qtc.pyqtSignal(object)  # The class being destroyed
 
@@ -65,6 +65,12 @@ class ViPErLEEDModuleBase(qtw.QMainWindow):
         """Reimplement closeEvent to emit a module_closed."""
         self.module_closed.emit(self)
         super().closeEvent(event)
+
+    def keyPressEvent(self, event):    # pylint: disable=invalid-name
+        """Extend keyPressEvent to close 'About' on 'Esc'."""
+        if event.key() == qtc.Qt.Key_Escape:
+            self.__about.hide()
+        super().keyPressEvent(event)
 
     def mousePressEvent(self, event):  # pylint: disable=invalid-name
         """Reimplement QMainWindow.mousePressEvent.
@@ -117,7 +123,6 @@ class AboutViPErLEED(qtw.QWidget):
     def __compose(self):
         """Set up children widgets."""
         layout = qtw.QVBoxLayout()
-        print(layout.spacing())
         layout.setSpacing(20)
         max_width = 600
         papers = (
@@ -147,9 +152,12 @@ class AboutViPErLEED(qtw.QWidget):
             'page, or using the <U>H</U>elp.<p>'
             'The most recent code is available on our GitHub repository '
             '<a href="https://github.com/viperleed">github.com/viperleed</a>, '
-            'and it is released under the GNU General Public License '
+            'and is released under the GNU General Public License '
             '<a href="https://www.gnu.org/licenses/gpl-3.0">version 3</a>'
-            ' or later.<p>ViPErLEED is developed as a '
+            ' or later.<p>Bugs can be reported using the GitHub '
+            '<a href="https://github.com/viperleed/viperleed/issues">Issues'
+            '</a> or via email (<a href="mailto:riva@iap.tuwien.ac.at>'
+            'riva@iap.tuwien.ac.at</a>).<p>ViPErLEED is developed as a '
             'collaboration between the Surface Physics group at the '
             '<a href="https://www.iap.tuwien.ac.at/www/surface/index">'
             'Institute of Applied Physics</a> of the TU Wien, and the '

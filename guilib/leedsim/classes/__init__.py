@@ -16,6 +16,10 @@ __all__ = ('Woods', 'RealSpace', 'LEEDEquivalentBeams', 'LEEDSymmetryDomains',
            'LEEDStructuralDomains', 'LEEDPattern', 'LEEDParser')
 
 from viperleed.guilib.leedsim.classes.woods import Woods
+from viperleed.guilib.leedsim.classes.leedparameters import(
+    LEEDParameters,
+    LEEDParametersList
+    )
 from viperleed.guilib.leedsim.classes.realspace import RealSpace
 from viperleed.guilib.leedsim.classes.beams import LEEDEquivalentBeams
 from viperleed.guilib.leedsim.classes.symdomains import LEEDSymmetryDomains

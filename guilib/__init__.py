@@ -57,16 +57,16 @@ else:
                                              change_control_text_color,
                                              editStyleSheet,
                                              get_all_children_widgets)
-    from viperleed.guilib.modulebase import (ViPErLEEDModuleBase,
-                                             AboutViPErLEED)
+    from viperleed.guilib.pluginsbase import (ViPErLEEDPluginBase,
+                                              AboutViPErLEED)
     from viperleed.guilib.leedsim import *
     from viperleed.guilib.measure import *
-    from viperleed.guilib.selectmodule import ViPErLEEDSelectModule
+    from viperleed.guilib.selectplugin import ViPErLEEDSelectPlugin
 
 
 from viperleed.guilib.leedsim.exportcsv import export_pattern_csv
-from viperleed.guilib.leedsim.leedparameters import LEEDParameters
-from viperleed.guilib.leedsim.leedparameters import LEEDParametersList
+from viperleed.guilib.leedsim.classes import (LEEDParameters,
+                                              LEEDParametersList)
 
 # Perhaps better to have the * import from up there moved down here, as
 # leedsim already takes care of selecting only Qt-independent classes

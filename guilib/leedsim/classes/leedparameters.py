@@ -15,7 +15,6 @@ viperleed.LEEDPatternList.
 
 from collections.abc import MutableMapping, MutableSequence, Sequence
 from configparser import ConfigParser
-import ast
 from warnings import warn as warning   # eventually will replace with logging
 
 import numpy as np
@@ -101,6 +100,8 @@ class LEEDParameters(MutableMapping):
 
         Raises
         ------
+        TypeError
+            If k is not a string.
         Warning
             If k is not an acceptable parameter name.
         """
@@ -135,6 +136,8 @@ class LEEDParameters(MutableMapping):
         txt = txt.replace('[ ', '[').replace(' ]', ']').replace(' ,', ',')
         return f"LEEDParameters({txt})"
 
+    # TODO: pylint too many return (11/6)
+    # TODO: pylint too complex mccabe=14
     def __eq__(self, other):
         """Return whether self is equal to other.
 
@@ -155,7 +158,9 @@ class LEEDParameters(MutableMapping):
 
         Returns
         -------
-        True if LEEDParameters are equal, NotImplemented otherwise
+        equal : bool or NotImplementedType
+            Returns True if LEEDParameters are equal,
+            NotImplemented otherwise
         """
         if not isinstance(other, LEEDParameters):
             # Try to see if other can be used as an argument to the
@@ -237,7 +242,7 @@ class LEEDParameters(MutableMapping):
         int_transforms = [t.round().astype(int)
                           for t in super_transforms
                           if np.allclose(t, t.round())]
-        if len(int_transforms) == 0:
+        if not int_transforms:
             return NotImplemented
 
         # (6.2) check if indeed one of the transforms equals one
@@ -357,9 +362,10 @@ class LEEDParameters(MutableMapping):
             name = data.get('name', 'S1')
             parser = gl.LEEDParser()
             parser.read_dict({name: data})
-            for k, v in parser.as_dict().items():
-                data[k.lower()] = v
+            for k, value in parser.as_dict().items():
+                data[k.lower()] = value
 
+    # TODO: pylint too complex mccabe=11
     @staticmethod
     def _check_acceptable(data_dict):
         """Check that the dict input is acceptable.
@@ -367,10 +373,12 @@ class LEEDParameters(MutableMapping):
         Parameters
         ----------
         data_dict : dict or LEEDParameters
+            The data to be checked
 
         Raises
         ------
-        ValueError if data_dict contains unacceptable data.
+        ValueError
+            if data_dict contains unacceptable data.
         """
         for key, value in data_dict.items():
             if key.lower() == 'emax' and value <= 0:
@@ -381,7 +389,7 @@ class LEEDParameters(MutableMapping):
                 raise ValueError("screenAperture should be between "
                                  f"0 and 180. Found {value} instead.")
 
-            if (key.lower() in ('surfbasis', 'superlattice')):
+            if key.lower() in ('surfbasis', 'superlattice'):
                 try:
                     value = np.asarray(value)
                 except TypeError as err:
@@ -441,6 +449,10 @@ class LEEDParameters(MutableMapping):
         self['bulkGroup'].screws_glides = (self['bulk3Dsym'], bulk_shape)
 
 
+# Probably bug in pylint. Should not complain about too-many-ancestors
+# when subclassing an collections.abc
+# Should be solved in pylint 2.9.0, but it isn't as of pylint 2.9.3
+# pylint: disable=too-many-ancestors
 class LEEDParametersList(MutableSequence):
     """1-D only list of LEEDParameters.
 
@@ -486,8 +498,8 @@ class LEEDParametersList(MutableSequence):
         """Return whether self is equal to other."""
         if not isinstance(other, (LEEDParametersList, Sequence)):
             return NotImplemented
-        if isinstance(other, LEEDParametersList):
-            return self.__list == other.__list
+        # if isinstance(other, LEEDParametersList):
+            # return self.__list == other.__list
         return self.__list == other
 
     def __getitem__(self, index):
@@ -570,6 +582,10 @@ class LEEDParametersList(MutableSequence):
         txt += '\n])'
         return txt
 
+    # Disable pylint check. It's not great to make the signature
+    # different than the one of list.insert, but it seems the best
+    # option for this very specific case of 'list without duplicates'
+    # pylint: disable=arguments-differ
     def insert(self, idx, data, keep_duplicates=False):
         """Insert data at index.
 
@@ -580,11 +596,18 @@ class LEEDParametersList(MutableSequence):
         ----------
         idx : int
             Index at which to insert
-        data : dict, ConfigParser, or LEEDParameters
+        data : dict, ConfigParser, LEEDParameters
             The data to be inserted. Will be checked for compatibility.
-        keep_duplicates : bool (default=False)
+        keep_duplicates : bool, optional
             If False, data is inserted only if it is not a duplicate
-            of elements already present in self.
+            of elements already present in self. Default is False.
+
+        Raises
+        ------
+        ValueError
+            When trying to insert multiple LEEDParameters at one index,
+            as this has the potential of making the LEEDParametersList
+            multi-dimensional
         """
         data = self._process_input_data(data, keep_duplicates)
         # when inserting, we should make sure that the data is actually
@@ -601,6 +624,8 @@ class LEEDParametersList(MutableSequence):
                              "or a list of LEEDParametersList")
         self.__list.insert(idx, data[0])
 
+    # See comment at .insert()
+    # pylint: disable=arguments-differ
     def append(self, data, keep_duplicates=False):
         """Insert a single element at the end.
 
@@ -609,15 +634,19 @@ class LEEDParametersList(MutableSequence):
 
         Parameters
         ----------
-        data : dict, ConfigParser, or LEEDParameters
-            The data to be inserted. Will be checked for compatibility.
-        keep_duplicates : bool (default=False)
+        data : dict, ConfigParser, LEEDParameters
+            The dictionary-like LEED parameters to be inserted.
+            Will be checked for compatibility.
+        keep_duplicates : bool, optional
             If False, data is appended only if it is not a duplicate
-            of elements already present in self.
+            of elements already present in self. Default is False.
         """
         self.insert(len(self), data, keep_duplicates)
+    # pylint: enable=arguments-differ
 
-    def extend(self, data, keep_duplicates=False):
+    # See comment at .insert()
+    # pylint: disable=arguments-differ
+    def extend(self, iterable, keep_duplicates=False):
         """Insert a elements from an iterable at the end.
 
         Only those entries that are compatible with the
@@ -625,16 +654,19 @@ class LEEDParametersList(MutableSequence):
 
         Parameters
         ----------
-        data : iterable or LEEDParametersList
+        iterable : iterable or LEEDParametersList
             Each element is either dict, ConfigParser, or LEEDParameters
             The data to be inserted. Each element will be checked for
             compatibility.
-        keep_duplicates : bool (default=False)
+        keep_duplicates : bool, optional
             If False, append only those elements in data that are not
-            a duplicate of elements already present in self.
+            a duplicate of elements already present in self. Duplicates
+            are tested with the equality method for LEEDParameters.
+            Default is False.
         """
-        for datum in data:
-            self.append(datum, keep_duplicates)
+        for elem in iterable:
+            self.append(elem, keep_duplicates)
+    # pylint: enable=arguments-differ
 
     def set_beam_incidence(self, theta=None, phi=None):
         """Set the 'beamIncidence' key to the given angles.
@@ -643,15 +675,22 @@ class LEEDParametersList(MutableSequence):
 
         Parameters
         ----------
-        theta : float, default=None
+        theta : float, optional
             Polar incidence angle. Should be in the [-90, 90] range.
-            Normal icidence is theta=0. No modification if not given
-            or if None.
-        phi : float
+            Normal incidence is theta=0. No modification if not given
+            or if None. Default is None
+        phi : float, optional
             Azimuthal incidence angle. Positive counterclockwise,
             measured with respect to the positive x axis of the
             Cartesian coordinates in which the real-space bases
-            are expressed. Will be taken modulo 360.
+            are expressed. Will be taken modulo 360. Not modified
+            if not given or if None. Default is None.
+
+        Raises
+        ------
+        TypeError
+            If either theta or phi are given, but cannot
+            be converted to floating point numbers.
         """
         if theta is None and phi is None:
             return
@@ -660,7 +699,9 @@ class LEEDParametersList(MutableSequence):
             theta = old_angles[0]
         elif phi is None:
             phi = old_angles[1]
-        try:
+        # Disable pylint check as this is done on purpose:
+        # Both conversions to float must be possible.
+        try:  # pylint: disable=too-many-try-statements
             theta = float(theta)
             phi = float(phi)
         except TypeError as err:
@@ -696,6 +737,8 @@ class LEEDParametersList(MutableSequence):
         Returns
         -------
         list
+            The checked and processed input. Each element is a
+            LEEDParameters instance.
         """
         data = self._to_leed_parameters(data)
         self._check_acceptable(*data)
@@ -714,11 +757,20 @@ class LEEDParametersList(MutableSequence):
 
         Parameters
         ----------
-        data : dict, ConfigParser, LEEDParameters, or iterable of the same
+        data : dict, ConfigParser, LEEDParameters, or Sequence
+            The data to be converted to a list of LEEDParameters.
+            When a Sequence, each element should be dict, ConfigParser,
+            or LEEDParameters. A LEEDParametersList is also acceptable.
 
         Returns
         -------
-        list of LEEDParameters
+        list
+            Each element is a LEEDParameters whatever the input.
+
+        Raises
+        ------
+        TypeError
+            If any of the data is not one of the acceptable types.
         """
         if not data:
             ret = []
@@ -780,7 +832,7 @@ class LEEDParametersList(MutableSequence):
         # Will be set as the eMax and screenAperture values
         # if the data is acceptable
         all_params = (*self, *data)
-        if len(all_params) == 0:
+        if not all_params:
             return
         emax = max(param['eMax'] for param in all_params)
         aperture = max(param['screenAperture'] for param in all_params)

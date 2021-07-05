@@ -19,11 +19,12 @@ from viperleed.guilib.leedsim.classes import (LEEDEquivalentBeams,    # not sure
                                               LEEDSymmetryDomains,    # not sure I need this to be exposed
                                               LEEDStructuralDomains,  # not sure I need this to be exposed
                                               LEEDParser,             # not sure I need this to be exposed
-                                              Woods,                  # not sure I need this to be exposed
+                                              Woods,
                                               LEEDPattern, RealSpace)
 from viperleed.guilib.leedsim.exportcsv import export_pattern_csv
-from viperleed.guilib.leedsim.leedparameters import (LEEDParameters,
-                                                     LEEDParametersList)
+from viperleed.guilib.leedsim.classes.leedparameters import (
+    LEEDParameters, LEEDParametersList
+    )
 
 if GLOBALS['USE_GUI']:
     __all__.extend(['DomsBlock', 'EnergyBlock', 'RotationBlock',
@@ -31,7 +32,7 @@ if GLOBALS['USE_GUI']:
                     'HoverAnnot', 'MatricesPopup', 'TEST',
                     'LatticeInput', 'EditableMatrix', 'BulkInput',
                     'SurfaceStructureInput',
-                    'LEED_GUI',
+                    'LEEDPatternSimulator',
                     'NewFileDialog',
                     'Bulk3DSymDialog', 'ExportCSVDialog'])
     from viperleed.guilib.leedsim.widgets import (DomsBlock, EnergyBlock,
@@ -42,7 +43,7 @@ if GLOBALS['USE_GUI']:
                                                   LatticeInput, EditableMatrix,
                                                   BulkInput,
                                                   SurfaceStructureInput)
-    from viperleed.guilib.leedsim.mainwindow import LEED_GUI
+    from viperleed.guilib.leedsim.mainwindow import LEEDPatternSimulator
     from viperleed.guilib.leedsim.dialogs import (Bulk3DSymDialog,              # Perhaps not needed if moving all dialogs in their folder
                                                   NewFileDialog,                # Perhaps not needed if moving all dialogs in their folder
                                                   ExportCSVDialog)              # Perhaps not needed if moving all dialogs in their folder
