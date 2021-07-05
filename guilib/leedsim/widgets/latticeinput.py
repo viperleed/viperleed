@@ -166,6 +166,21 @@ class LatticeInput(qtw.QWidget):
         return self.valid_input
 
     @property
+    def top_left_global_handle(self):
+        """Return the global position of the top-left alignment handle.
+        
+        The alignment handle is the global position of the top-left
+        corner of the 'shape' control. Can be used for aligning
+        with respect to the 'bulk'.
+
+        Returns
+        -------
+        top_left : QPoint
+        """
+        shape = self._ctrls['shape']
+        return shape.parent().mapToGlobal(shape.pos())
+
+    @property
     def valid_input(self):
         """Return whether the user input is OK."""
         return self.__valid_input
@@ -194,6 +209,17 @@ class LatticeInput(qtw.QWidget):
         """Return a tuple of groups compatible with lattice."""
         shape = self.lattice.cell_shape
         return gl.PlaneGroup.groups_compatible_with(shape)
+
+    def flash_high_symm_button(self):
+        """Flash on/off the high-symmetry button.
+        
+        This is useful to get the sizeHint of the control
+        adjust to the largest it can ever get. Can be called
+        if the dialog has never been shown before with the
+        purpose of alignment.
+        """
+        self._ctrls['hi_sym'].show()
+        self._ctrls['hi_sym'].hide()
 
     @gl.print_call
     def group_from_lattice_and_update_options(self):

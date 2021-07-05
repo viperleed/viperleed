@@ -243,14 +243,18 @@ class SurfaceStructureInput(qtw.QWidget):
         self._ctrls['superlattice'].set_matrix(new_matrix)
 
     @property
-    def top_left_global(self):
-        """Return the global location of the top-left corner.
+    def top_left_global_handle(self):
+        """Return the global position of the top-left alignment handle.
+        
+        The alignment handle is the global position of the top-left
+        corner of the 'shape' control. Can be used for aligning
+        with respect to the 'bulk'.
 
         Returns
         -------
         top_left : QPoint
         """
-        return self.mapToGlobal(qtc.QPoint(0, 0))
+        return self._ctrls['lattice'].top_left_global_handle
 
     @property
     def valid_input(self):

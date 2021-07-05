@@ -22,9 +22,6 @@ from viperleed.guilib.leedsim import LEEDParametersList
 from viperleed.gui import resources_path
 # from viperleed.guilib.leedsim.widgets import BulkInput
 
-# TODO: improve resizing on disappearance of hi_sym buttons
-# TODO: alignment of bulk and surface controls is screwed when
-#       hi_sym buttons appear
 
 DEFAULT_STARTUP = (
     {'SUPERLATTICE': ((1, 0), (0, 1)),
@@ -85,17 +82,13 @@ class NewFileDialog(qtw.QDialog):
             'live_view': qtw.QCheckBox('Live update')
             }
         self._glob = {      # Miscellaneous attributes
+            # Keep track of whether the widget has ever been shown
+            '__never_shown': True,
             # 'surface_being_edited' is the index of the tab
             # whose name is currently being edited (or -1 if
             # no tab is being edited). Used in self.edit_surf_name
             # and self._on_surface_name_changed
             'surface_being_edited' : -1,
-            # __spacing_fixed is False only before the dialog is
-            # opened the first time. Used to determine whether
-            # the vertical offset between 'bulk' and 'surfaces'
-            # controls has been already fixed or not
-            # (see __fix_bulk_surf_spacing)
-            '__spacing_fixed': False,
             # 'e_max_valid' contains information on whether
             # the input in the e_max control is a valid
             # maximum LEED energy or not.
@@ -124,10 +117,6 @@ class NewFileDialog(qtw.QDialog):
 
     def accept(self):
         """Reimplement QDialog.reject for some clean-up.
-
-        Returns
-        -------
-        None.
 
         Emits
         -----
@@ -206,10 +195,6 @@ class NewFileDialog(qtw.QDialog):
     def reject(self):
         """Reimplement QDialog.reject for some clean-up.
 
-        Returns
-        -------
-        None
-
         Emits
         -----
         editing_finished
@@ -248,17 +233,6 @@ class NewFileDialog(qtw.QDialog):
         surf = gl.SurfaceStructureInput(bulk_lattice=self.bulk_lattice)
         surf.lattice = lattice
         surf.update_controls()
-
-        # # Align the controls with respect to those of the bulk,
-        # # such that the 'make high symmetry' buttons line up.
-        # lay = surf._ctrls['lattice'].layout()
-        # print(self._ctrls['bulk']._ctrls['3d_sym'].height(),
-              # self._ctrls['bulk']._ctrls['3d_sym'].sizeHint().height())
-        # lay.setRowMinimumHeight(
-            # lay.rowCount() - 2,
-            # self._ctrls['bulk']._ctrls['3d_sym'].sizeHint().height()
-            # + lay.verticalSpacing()
-            # )
 
         # Disconnect some signals that need to be reconnected
         # after the ones of the surface are connected. This is
@@ -318,6 +292,7 @@ class NewFileDialog(qtw.QDialog):
         """
         while self._ctrls['surfaces'].count():
             self._ctrls['surfaces'].removeTab(0)
+        self._glob['__never_shown'] = True
 
     def _compose(self):
         """Place children widgets."""
@@ -395,10 +370,10 @@ class NewFileDialog(qtw.QDialog):
         # they can be used in _init_controls to align appropriately
         # the lattice parameter controls for bulk and surface.
         dialog_layout.addWidget(self._ctrls['bulk'], 1, 0, 1, 1)
-        dialog_layout.addWidget(self._ctrls['surfaces'], 0, 1, 2, 1)   # 2
-        dialog_layout.addWidget(self._ctrls['live_view'], 2, 0, 1, 1)  # 2
-        dialog_layout.addLayout(emax_layout, 2, 1, 1, 1)               # 3
-        dialog_layout.addLayout(status_and_buttons_layout, 3, 0, 1, 2) # 3
+        dialog_layout.addWidget(self._ctrls['surfaces'], 0, 1, 3, 1)
+        dialog_layout.addWidget(self._ctrls['live_view'], 3, 0, 1, 1)
+        dialog_layout.addLayout(emax_layout, 3, 1, 1, 1)
+        dialog_layout.addLayout(status_and_buttons_layout, 4, 0, 1, 2)
         dialog_layout.setAlignment(emax_layout,
                                    qtc.Qt.AlignRight | qtc.Qt.AlignVCenter)
         self.setLayout(dialog_layout)
@@ -500,25 +475,27 @@ class NewFileDialog(qtw.QDialog):
 
         The fix is done only once.
         """
-        if self._glob['__spacing_fixed']:
-            return
-
-        # To get the correct positions of widgets there
-        # is no way around showing and hiding the dialog
-        # This should be almost invisible though.
-        self.show()
-        self.hide()
+        if self._glob['__never_shown']:
+            # To get the correct positions of widgets there
+            # is no way around showing and hiding the dialog
+            # This should be almost invisible though.
+            self.show()
+            self._ctrls['bulk'].flash_high_symm_button()
+            self.hide()
+            self._glob['__never_shown'] = False
 
         # Now positions are correct. Calculate the current
-        # vertical  offset between the bulk and surface controls
+        # vertical offset between the bulk and surface controls
         surf = self._ctrls['surfaces'].currentWidget()
-        offset = surf.top_left_global
-        offset -= self._ctrls['bulk'].mapToGlobal(qtc.QPoint(0, 0))
+        offset = surf.top_left_global_handle
+        offset -= self._ctrls['bulk'].top_left_global_handle
         offset = offset.y()
 
         # Finally set the space as the height of the 1st row
-        self.layout().setRowMinimumHeight(0, offset)
-        self._glob['__spacing_fixed'] = True
+        top_row_height = self.layout().rowMinimumHeight(0)
+        top_row_height += offset
+        top_row_height = max(0, top_row_height)
+        self.layout().setRowMinimumHeight(0, top_row_height)
 
     def _init_controls(self):
         """Set the values in the controls from startup parameters."""
@@ -706,12 +683,8 @@ class NewFileDialog(qtw.QDialog):
     def _on_structures_changed(self, *__args, **__kwargs):
         """React on any user change of the structures.
 
-        The leed_parameters_changed signal emitted can be used
-        for live updates.
-        # TODO: evaluate whether changing the emax makes things
-        too slow to recalculate. In that case, I may choose to
-        fix the energy to some low value here to limit the number
-        of beams that need to be calculated.
+        The leed_parameters_changed signal emitted can be
+        used for live updates.
 
         Returns
         -------
@@ -724,6 +697,10 @@ class NewFileDialog(qtw.QDialog):
             parameters have actually changed, and live-view
             mode is on.
         """
+        # TODO: evaluate whether changing the emax makes things
+        # too slow to recalculate. In that case, I may choose to
+        # fix the energy to some low value here to limit the number
+        # of beams that need to be calculated.
         if not self._ctrls['done'].isEnabled():
             return
 
@@ -747,12 +724,23 @@ class NewFileDialog(qtw.QDialog):
         """React on completed edits of a surface-structure name.
 
         This is the slot to which the editingFinished signal of
-        the QLineEdit for editing surface name is connected.
+        the QLineEdit for editing a surface name is connected.
         """
-        # TODO: make sure names are unique
         new_name = self._ctrls['edit_surf_name'].text()
+        tab_names = [self._ctrls['surfaces'].tabText(i)
+                     for i in range(self._ctrls['surfaces'].count())]
         if self._glob['surface_being_edited'] != -1:
-            # A name is being edited
+            # A name is being edited. Make sure the new name
+            # does not conflict with others, except the one
+            # of the edited tab.
+            if any(new_name == tab_name
+                   for i, tab_name in enumerate(tab_names)
+                   if i != self._glob['surface_being_edited']):
+                self._ctrls['status_bar'].showMessage(
+                    f"Surface structure name {new_name!r} already used.",
+                    3000
+                    )
+                return
             self._ctrls['surfaces'].setTabText(
                 self._glob['surface_being_edited'],
                 new_name
