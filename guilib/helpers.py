@@ -16,8 +16,8 @@ import itertools
 import numpy as np
 
 
-# Disable due to pylint bug for sequence of
-# allowed values (see 'axis' parameter)
+# Disable due to pylint bug for sequence of allowed values
+#  ('axis' parameter). Bug is still there as of pylint 2.9.3
 # pylint: disable=missing-param-doc,missing-type-doc
 def two_by_n_array_to_tuples(two_by_n, axis=None):
     """Convert a 2xN or Nx2 array into a zip object.
@@ -29,7 +29,7 @@ def two_by_n_array_to_tuples(two_by_n, axis=None):
     two_by_n : numpy.ndarray
         Can have shape (N, 2) or (2, N). The output will always be
         an iterator of tuples, independent of the shape of the input
-    axis : {0, 1, or None}
+    axis : {None, 0, 1}
         Which axis contains the 2-tuples. Use axis=0 if two_by_n[i]
         is the i-th tuple, axis=1 if two_by_n[:, i] is the i-th tuple.
         If None or omitted, the axis is inferred from which of the

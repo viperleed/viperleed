@@ -19,6 +19,8 @@ import numpy as np
 from viperleed import guilib as gl
 
 
+# TODO: pylint similar lines. Here line 234; structdomains line 250
+
 # @gl.profile_lines
 # @gl.exec_time
 def transform_beam_indices(indices, transform):
@@ -144,9 +146,9 @@ class LEEDSymmetryDomains(Sequence):
         #           makes calculations faster.
         #           Read via self.denominator_for_bulk_beams.
         self.__consts = {'bulk': None,
-                                   'operations': [],
-                                   'superlattices': [],
-                                   'denominator': None}
+                         'operations': [],
+                         'superlattices': [],
+                         'denominator': None}
 
         # self.__domains is the underlying list that is accessed when
         # issuing self[index]. It's a list of gl.Lattice instances
@@ -792,7 +794,12 @@ class LEEDSymmetryDomains(Sequence):
         # domains, work on the first one only , i.e., self[0], in
         # integer-index notation, and later on translate stuff to the
         # other domains
+
+        # Looks like pylint goes nuts here, and recognizes
+        # .group to be a 'str', not a 'PlaneGroup' as it is
+        # pylint: disable=no-member
         all_operations = self[0].group.operations()
+        # pylint: enable=no-member
         a_angle = gl.orientation(self[0].real_basis[0], zero_pi=False)
 
         # Prepare the dict keys:

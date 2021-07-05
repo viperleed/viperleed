@@ -149,6 +149,7 @@ class LEEDEquivalentBeams:
     __dict_cache = {}  # instances created from dicts
     __self_cache = {}  # instances created from LEEDEquivalentBeams
 
+    # TODO: pylint too-complex mccabe=11
     # @gl.profile_lines
     @gl.exec_time
     def __init__(self, domains, **kwargs):
@@ -362,6 +363,7 @@ class LEEDEquivalentBeams:
 
         return domains, kwargs
 
+    # TODO: pylint too-complex mccabe=14
     @staticmethod
     def __preprocess_eqbeams(domains, kwargs):
         """Trasform LEEDEquivalentBeams input as if dicts were passed.
