@@ -52,7 +52,7 @@ union floatOrBytes{
 #define MSG_START 254              // Beginning of a serial message
 #define MSG_END 255                // End of a serial message
 #define MSG_SPECIAL_BYTE 252       // Prevents clashing of data with (start, end, error)
-#define MSG_MAX_LENGTH 16          // Max no. of bytes in an incoming serial message     // TODO: NEED TO INCREASE THIS TO HOST THE 3 FLOAT ADC VALUES
+#define MSG_MAX_LENGTH 32          // Max no. of bytes in an incoming serial message
 #ifndef SERIAL_BUFFER_SIZE
     #define SERIAL_BUFFER_SIZE 64  // Arduino limit for serial buffer. If buffer is full, new bytes are DISCARDED
 #endif
@@ -171,6 +171,7 @@ uint16_t      dacSettlingTime = 100;  // The time interval for the DAC output to
                                       //   This is just a default value. The actual one comes
                                       //   from the PC with a PC_SET_VOLTAGE command, and is
                                       //   read in setVoltage()
+byte nextVoltageStep;                 // Counter for multiple voltage steps
 
 uint16OrBytes hardwareDetected;       // Bits set indicate this hardware is present/jumper closed
 
@@ -211,9 +212,9 @@ uint16_t numMeasurementsToDo = 1;           // No. of ADC measurements to do bef
 uint16_t numMeasurementsToDoBackup = 1;     // Copy of the previous one, used to restore the previous value after auto-gain is done
 uint16_t numMeasurementsDone;               // Counter for the number of ADC measurements done so far
 int32_t  summedMeasurements[N_MAX_MEAS];    // Measurements of ADCs and LM35 are summed up here
-uint16_t ContinuousMeasurementInterval = 0; // Time between measurements if continuous-measurement mode is on
+uint16_t continuousMeasurementInterval;     // Time between measurements if continuous-measurement mode is on
 
-floatOrBytes fDataOutput[N_MAX_MEAS];     // Measurements in physical units  // TODO: rename
+floatOrBytes fDataOutput[N_MAX_MEAS];       // Measurements in physical units  // TODO: rename
 
 
 
