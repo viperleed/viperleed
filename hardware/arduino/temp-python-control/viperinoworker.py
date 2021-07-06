@@ -20,6 +20,7 @@ from configparser import ConfigParser
 # ViPErLEED modules
 from serialworker import ExtraSerialErrors, SerialWorkerABC, ViPErLEEDErrorEnum
 
+
 # TODO: update send_message doc string
 # .super() take full doc string only change acceptable data types
 class ViPErLEEDHardwareError(ViPErLEEDErrorEnum):
@@ -77,16 +78,17 @@ class ViPErinoSerialWorker(SerialWorkerABC):
         super().__init__(port_name=port_name, settings=settings)
 
     def decode(self, message):
-        """
-        Function decodes messages received from the Arduino. If there
-        are SPECIAL_BYTEs in the message, it decodes them and turns them
-        into single bytes. Afterwards it checks if the message length is
-        consistent with the supposed length sent by the Arduino. If true
-        it will return the message without the message length.
+        """Decodes message received from the Arduino.
+
+        If there are SPECIAL_BYTEs in the message, decode them and turn
+        them into single bytes. Afterwards, check if message fits the
+        length given in msg_length and check if the function has the
+        length of any data expected. If true return bytearray of data,
+        if false return empty bytearray.
 
         Parameters
         ----------
-        message : bytearray
+        message : bytes or bytearray
             The message to be decoded
 
         Returns
@@ -96,34 +98,23 @@ class ViPErinoSerialWorker(SerialWorkerABC):
         """
         special_byte = self.port_settings.getint('serial_port_settings',
                                                  'SPECIAL_BYTE')
-        mgs_length, *msg_data = message
-        # Check if message length greater than zero
-        if mgs_length == 0:
-            self.error_occurred.emit(ExtraSerialErrors.NO_MESSAGE_ERROR)
+        msg_length, *msg_data = message
         # Iterate through message and add special bytes up
         for index, value in enumerate(msg_data):
             if value == special_byte:
                 msg_data[index] += msg_data[index+1]
                 msg_data.pop(index + 1)
-        # Check if the message length is consistent with the supposed
-        # length sent by the Arduino and remove message length from
-        # message.
-        if mgs_length != len(msg_data):
-            self.error_occurred.emit(
-                ViPErLEEDHardwareError.ERROR_MSG_RCVD_INCONSISTENT
-                )
-
+        msg_to_check = bytearray((msg_length, *msg_data))
+        if not self.is_decoded_message_acceptable(msg_to_check):
+            return bytearray()
         return bytearray(msg_data)
 
     def encode(self, message):
-        """
-        Function encodes messages sent to the Arduino. If there are
-        SPECIAL_BYTEs in the message, it decodes them and turns them
-        into single bytes. Afterwards the original message length gets
-        added at the beginning of the message.
+        """Encode messages sent to the Arduino.
 
-        This method is called on every message right before
-        writing it to the serial line.
+        If there are SPECIAL_BYTEs in the message encode them and make
+        them two bytes. Afterwards, insert the length of the decoded
+        message at the beginning of the bytearray.
 
         Parameters
         ----------
@@ -132,7 +123,7 @@ class ViPErinoSerialWorker(SerialWorkerABC):
 
         Returns
         -------
-        message : bytes or bytearray
+        message : bytearray
             The encoded message
         """
         special_byte_int = self.port_settings.getint('serial_port_settings',
@@ -150,6 +141,7 @@ class ViPErinoSerialWorker(SerialWorkerABC):
         else:
             raise TypeError("Encoding of message to Arduino failed. "
                             f"Cannot encode {type(message)}.")
+        # TODO: Arduino can not receive a message this long (possibly 513 bytes)
         # Get the message length and check if it can be sent with 1 byte
         payload_length = len(message)
         if payload_length > 255:
@@ -173,12 +165,12 @@ class ViPErinoSerialWorker(SerialWorkerABC):
         return message
 
     def identify_error(self, messages_since_error):
-        """
-        Identifies the error sent back by the Arduino. Error data will
-        be returned right after sending the PC_ERROR byte. Therefore
-        messages_since_error[0] will contain the PC_ERROR byte and
-        messages_since_error[1] will contain both the error state and
-        the error type in this order.
+        """Identify the error sent back by the Arduino.
+
+        Error data will be returned right after sending the PC_ERROR
+        byte. Therefore messages_since_error[0] will contain the PC_ERROR
+        byte and messages_since_error[1] will contain both the error
+        state and the error type in this order.
 
 
         Parameters
@@ -224,28 +216,50 @@ class ViPErinoSerialWorker(SerialWorkerABC):
         fmt_data = {'error_name': current_error.name,
                     'state': arduino_states[error_state],
                     'err_details': current_error[1]}
-        msg = msg_to_format.format(**fmt_data)
+        error_msg = msg_to_format.format(**fmt_data)
         # Emit error and clear errors.
-        ViPErLEEDHardwareError.temp_error = (error_code, msg)
-        self.error_occurred.emit(ViPErLEEDHardwareError.temp_error)
-        del ViPErLEEDHardwareError.temp_error
+        self.error_occurred.emit((error_code, error_msg))
         self.clear_errors()
 
-        # Old solution before the .from_code(error_code) function
-        # for code, error_name in ViPErLEEDHardwareError.as_dict().items():
-            # if code == error_code:
-                # _, err_details = getattr(ViPErLEEDHardwareError, error_name)
-                # msg = msg_to_format.format(error_name,
-                                           # arduino_states[error_state],
-                                           # err_details)
-                # self.error_occurred.emit((code, msg))
-                # self.clear_errors()
-                # return
+    def is_decoded_message_acceptable(self, message):
+        """Check whether a decoded message is ok.
+
+        Check if meesage length is consistent with the length given
+        in the first byte and if message is one of the three possible
+        lengths sent by the Arduino (1, 2, 4).
+
+        Parameters
+        ----------
+        message : bytearray
+            The message to be checked
+
+        Returns
+        -------
+        acceptable : bool
+            True if message is acceptable
+        """
+        msg_length, *msg_data = message
+        # Check if message length greater than zero
+        if msg_length == 0:
+            self.error_occurred.emit(ExtraSerialErrors.NO_MESSAGE_ERROR)
+            return False
+        if msg_length != len(msg_data):
+            self.error_occurred.emit(
+                ViPErLEEDHardwareError.ERROR_MSG_RCVD_INCONSISTENT
+                )
+            return False
+        if msg_length not in (1, 2, 4):
+            self.error_occurred.emit(
+                ViPErLEEDHardwareError.ERROR_MSG_RCVD_INVALID
+                )
+            return False
+        return True
 
     def is_error_message(self, message):
-        """
-        Checks if the message length is equal 1 and has the value of
-        PC_ERROR. If true it will return that the message is an error
+        """Check if message is an error message.
+
+        Check if the message length is equal 1 and has the value of
+        PC_ERROR. If true return that the message is an error
         message.
 
         Parameters
@@ -262,15 +276,22 @@ class ViPErinoSerialWorker(SerialWorkerABC):
         return len(message) == 1 and message[0] == pc_error
 
     def is_message_supported(self, messages):
-        """
-        Checks whether message is a supported command or not and
-        keeps track of which request was sent last to the Arduino.
-        If a command is unsupported, it emits an error_occurred
-        signal with ExtraSerialErrors.UNSUPPORTED_COMMAND_ERROR.
+        """Check if message contains one allowed command.
+
+        Check whether the message is a supported command or not and
+        keep track of which request was sent last to the Arduino.
+        If a command is unsupported, emit an error_occurred signal
+        with ExtraSerialErrors.UNSUPPORTED_COMMAND_ERROR. If there
+        are more than two commands in one set of messages emit an
+        error as the current structure does not allow this. If
+        a change measurement mode command has been sent, update the
+        countinuous measurement setting on the PC side. After clearing
+        the message, remember the sent request and set the serial to
+        busy.
 
         Parameters
         ----------
-        message : object
+        message : str, object
             The same message given to self.send_message(), right
             before encoding and sending to the device
 
@@ -317,10 +338,12 @@ class ViPErinoSerialWorker(SerialWorkerABC):
         return True
 
     def process_messages(self):
-        """
-        Converts received data into human understandable information
-        and emits this data. Emits a signal if the arduino is ready to
-        receive another command.
+        """Convert received data into human understandable information.
+
+        Process data according to its type and emit data that will be
+        processed further. Set serial busy to false if either a PC_OK
+        arrives of if the hardware configuration gets returned by the
+        Arduino.
 
         Emits
         -----
@@ -329,7 +352,9 @@ class ViPErinoSerialWorker(SerialWorkerABC):
             worth processing.
         """
         if not self.unprocessed_messages:
+            # No messages came yet
             return
+
         pc_configuration = self.port_settings.get('available_commands',
                                                   'PC_CONFIGURATION')
         pc_set_voltage = self.port_settings.get('available_commands',
@@ -351,15 +376,16 @@ class ViPErinoSerialWorker(SerialWorkerABC):
             elif len(message) == 4:
                 if self.__last_request_sent == pc_configuration:
                     self.busy = False
-                    self.data_received.emit(message)
+                    firmware, hardware = self.__firmware_and_hardware(message)
+                    self.data_received.emit((firmware, hardware))
                 elif (self.__last_request_sent == pc_set_voltage or
                         self.__last_request_sent == pc_measure_only):
-                    self.__measurements.append(bytes_to_float(message))
-                    if len(self.__measurements) >= 3:
-                        self.data_received.emit(self.__measurements[:3])
-                        self.__measurements.pop()
-                        self.__measurements.pop()
-                        self.__measurements.pop()
+                    self.__measurements.append(self.__bytes_to_float(message))
+                    if len(self.__measurements) < 3:
+                        # Not enough data yet
+                        continue
+                    self.data_received.emit(self.__measurements)
+                    self.__measurements = []
                 elif self.__is_continuous_mode:
                     pass
             # If the message is 2 bytes long, then it is most likely the
@@ -379,25 +405,76 @@ class ViPErinoSerialWorker(SerialWorkerABC):
         self.unprocessed_messages = []
         return
 
-def bytes_to_float(bytes_in):
-    """Convert four bytes to float.
+    def __bytes_to_float(self, bytes_in):
+        """Convert four bytes to float.
 
-    Parameters
-    ----------
-    bytes_in : bytes or bytearray
-        Should have length 4. It is assumed that the bytes are in
-        big-endian format.
+        Parameters
+        ----------
+        bytes_in : bytes or bytearray
+            Should have length 4.
 
-    Returns
-    -------
-    float
-    """
-    if (not hasattr(bytes_in, '__len__')
-            or not isinstance(bytes_in, (bytes, bytearray))):
-        raise TypeError("bytes_to_float: invalid type "
-                        f"{type(bytes_in).__name__}. Expected 'bytes',"
-                        "or 'bytearray'")
-    if len(bytes_in) != 4:
-        raise ValueError("bytes_to_float: Invalid number of bytes "
-                         f"({len(bytes_in)}). Expected 4.")
-    return struct.unpack(">f", bytes_in)[0]
+        Returns
+        -------
+        float
+        """
+        if (not hasattr(bytes_in, '__len__')
+                or not isinstance(bytes_in, (bytes, bytearray))):
+            raise TypeError("bytes_to_float: invalid type "
+                            f"{type(bytes_in).__name__}. Expected 'bytes',"
+                            "or 'bytearray'")
+        if len(bytes_in) != 4:
+            raise ValueError("bytes_to_float: Invalid number of bytes "
+                             f"({len(bytes_in)}). Expected 4.")
+        float_fmt = '>f' if self.byte_order == 'big' else '<f'
+        return struct.unpack(float_fmt, bytes_in)[0]
+
+    def __firmware_and_hardware(self, message):
+        """Return Arduino firmware version and hardware configuration.
+
+        Parameters
+        ----------
+        message : bytearray
+            Should have length 4
+            Contains firmware as bytes 0 and 1 and hardware
+            configuration as bytes 2 and 3
+
+        Returns
+        -------
+        firmware_version : str
+            Firmware version as "<major>.<minor>"
+        hardware_config : dict
+            keys : {'adc_0', 'adc_1', 'lm35', 'relay',
+                    'i0_range', 'aux_range'}
+            values : bool or str
+                Values are True/False for 'adc_0', 'adc_1',
+                'lm35', and 'relay', corresponding to the
+                hardware having access to the devices; Values
+                for 'i0_range' and 'aux_range' are the strings
+                '0 -- 2.5 V' or '0 -- 10 V'.
+        """
+        major, minor, *hardware = message
+        firmware_version = f"{major}.{minor}"
+
+        hardware_bits = self.port_settings['hardware_bits']                     # TODO: extend set_port_settings to check for all the extra sections that we are using in this implementation
+        hardware_config = {'adc_0': False,
+                           'adc_1': False,
+                           'lm35': False,
+                           'relay': False,
+                           'i0_range': '0 -- 10 V',
+                           'aux_range': '0 -- 10 V'}
+
+        hardware = int.from_bytes(hardware, self.byte_order)
+        for key, value in hardware_bits.items():
+            present_or_closed = bool(int(value) & hardware)
+            key = key.lower().replace('_present', '')
+            if 'closed' in key:
+                if present_or_closed:
+                    present_or_closed = '0 -- 2.5 V'
+                else:
+                    present_or_closed = '0 -- 10 V'
+                key = 'i0_range' if 'i0' in key else 'aux_range'
+            hardware_config[key] = present_or_closed
+
+        return firmware_version, hardware_config
+
+

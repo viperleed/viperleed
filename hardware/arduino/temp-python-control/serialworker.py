@@ -129,7 +129,7 @@ class SerialWorkerABC(qtc.QObject):
     """Base class for serial communication for a ViPErLEED controller."""
 
     error_occurred = qtc.pyqtSignal(tuple)
-    data_received = qtc.pyqtSignal(tuple)
+    data_received = qtc.pyqtSignal(object)
     serial_busy = qtc.pyqtSignal(bool)
 
     def __init__(self, settings=None, port_name=''):
@@ -195,6 +195,10 @@ class SerialWorkerABC(qtc.QObject):
         # A reimplementation of is_message_supported can set
         # the .busy right before returning True.
         self.__busy = False
+
+        # Keep track of whether we got an unacceptable message
+        # after a .send_message()
+        self.__got_unacceptable_response = False
 
         self.__timeout = qtc.QTimer()
         self.__timeout.setSingleShot(True)
@@ -421,6 +425,7 @@ class SerialWorkerABC(qtc.QObject):
         self.__port.clearError()
         self.__timeout.stop()
         self.__messages_since_error = []
+        self.__got_unacceptable_response = False
 
     # Disable pylint check as this is supposed
     # to be the signature for subclasses
@@ -440,10 +445,13 @@ class SerialWorkerABC(qtc.QObject):
 
         Returns
         -------
-        decoded_message : bytes or bytearray
-            The decoded message
+        decoded_message : bytearray
+            The decoded message. Should return an empty message
+            if not is_decoded_message_acceptable().
         """
-        return message
+        if not self.is_decoded_message_acceptable(message):
+            return bytearray()
+        return bytearray(message)
     # pylint: enable=no-self-use
 
     # Disable pylint check as this is supposed
@@ -525,6 +533,35 @@ class SerialWorkerABC(qtc.QObject):
             After the error has been identified
         """
         return
+        
+    # Disable pylint check as this is supposed
+    # to be the signature for subclasses
+    # pylint: disable=no-self-use,unused-argument
+    def is_decoded_message_acceptable(self, message):
+        """Check whether a decoded message is ok.
+
+        This method can be called inside .decode(). If a message
+        is unacceptable, decode() should return an empty bytearray.
+        Only non-empty decoded messages will be stored. Moreover,
+        all messages that come after an unacceptable message are
+        discarded, until the next time the method .send_message()
+        runs, or after calling .clear_errors().
+
+        Reimplement this menthod in subclasses. The base
+        implementation always returns True.
+
+        Parameters
+        ----------
+        message : bytearray
+            The message to be checked
+
+        Returns
+        -------
+        acceptable : bool
+            True if message is acceptable
+        """
+        return True
+    # pylint: enable=no-self-use,unused-argument
 
     @abstractmethod
     def is_error_message(self, message):
@@ -646,6 +683,8 @@ class SerialWorkerABC(qtc.QObject):
         if not self.is_message_supported(all_messages):
             return
 
+        self.__got_unacceptable_response = False
+
         timeout = int(timeout)
         if timeout >= 0:
             self.__timeout.start(timeout)
@@ -726,7 +765,6 @@ class SerialWorkerABC(qtc.QObject):
             return bytearray()
 
         start_marker = self.msg_markers['START']
-        print(f"{message=}", f"{message[:1]=}", f"{start_marker=}")
         if start_marker is not None:
             # Protocol uses a start marker
             if message[:1] != start_marker:
@@ -745,6 +783,9 @@ class SerialWorkerABC(qtc.QObject):
         """Read the message(s) received."""
         self.__timeout.stop()
 
+        if self.__got_unacceptable_response:
+            return
+
         msg = bytes(self.__port.readAll())
 
         head, *messages, tail = msg.split(self.msg_markers['END'])
@@ -754,11 +795,15 @@ class SerialWorkerABC(qtc.QObject):
         for i, message in enumerate(messages):
             # Make sure the messages are not empty, and get rid of
             # MSG_START if used. error_occurred is emitted in case
-            # the message is empty (before of after stripping start).
+            # the message is empty (before of after stripping start)
             message = self.__check_and_preprocess_message(message)
             if not message:
                 return
-            messages[i] = self.decode(message)
+            decoded = self.decode(message)
+            if not decoded:
+                self.__got_unacceptable_response = True
+                return
+            messages[i] = decoded
 
         if self.__messages_since_error:
             # We got an error sometime before, but we did not yet

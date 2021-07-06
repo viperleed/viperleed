@@ -55,6 +55,9 @@ class MainWindow(qtw.QWidget):
         """Place children widgets."""
         layout = qtw.QGridLayout()
 
+        self._ctrls['msg_received'].setSizePolicy(qtw.QSizePolicy.Preferred,
+                                                  qtw.QSizePolicy.Expanding)
+
         layout.addWidget(self._ctrls['select_port'], 0, 0)
         layout.addWidget(self._ctrls['update_ports'], 0, 1)
         layout.addWidget(self._ctrls['connect'], 1, 0)
@@ -143,7 +146,11 @@ class MainWindow(qtw.QWidget):
 
     def closeEvent(self, event):
         """Reimplement closeEvent to also close open ports."""
-        self.__port.serial_disconnect()
+        try:
+            self.__port.serial_disconnect()
+        except TypeError:
+            # port is already disconnected
+            pass
         super().closeEvent(event)
 
     def print_port_config(self):
