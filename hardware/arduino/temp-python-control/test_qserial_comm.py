@@ -126,6 +126,7 @@ class MainWindow(qtw.QWidget):
         # print("Sending", msg_out)
         # if self.__port.write(msg_out) < 0:
             # print('Could not send', flush=True)
+        print(f"{msg_out=}")
         self.__port.send_message(msg_out, timeout=TIMEOUT)
 
     def on_data_received(self, data):
@@ -135,8 +136,9 @@ class MainWindow(qtw.QWidget):
 
         self._ctrls['msg_received'].setText(str(data))
 
-    def on_error_occurred(self, error_code, error_msg):
+    def on_error_occurred(self, error_data):
         """React to a serial-port error."""
+        error_code, error_msg = error_data
         print(error_msg, "\n", f"    (Error code: {error_code})")
 
     def closeEvent(self, event):

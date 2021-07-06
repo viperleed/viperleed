@@ -4,7 +4,7 @@
    ViPErLEED Graphical User Interface
 ========================================
 
-Created: 2021-06-230
+Created: 2021-06-23
 Author: Michele Riva
 Author: Florian Doerr
 
@@ -128,9 +128,9 @@ class ExtraSerialErrors(ViPErLEEDErrorEnum):
 class SerialWorkerABC(qtc.QObject):
     """Base class for serial communication for a ViPErLEED controller."""
 
-    error_occurred = qtc.pyqtSignal(ViPErLEEDErrorEnum)
+    error_occurred = qtc.pyqtSignal(tuple)
     data_received = qtc.pyqtSignal(tuple)
-    energy_is_set = qtc.pyqtSignal()
+    serial_busy = qtc.pyqtSignal(bool)
 
     def __init__(self, settings=None, port_name=''):
         """Initialize serial worker object.
@@ -172,7 +172,8 @@ class SerialWorkerABC(qtc.QObject):
         # .unprocessed_messages is a list of all the messages
         # that came on the serial line and that have not been
         # processed yet. They should be processed in the call
-        # to process_messages() by .pop()ping one at a time
+        # to process_messages() by .pop()ping one at a time.
+        # Each element is a bytearray.
         self.unprocessed_messages = []
 
         # __last_partial_message contains the 'head' of the last
@@ -185,6 +186,15 @@ class SerialWorkerABC(qtc.QObject):
         # All these messages will be discarded automatically
         # after the error has been identified with identify_error()
         self.__messages_since_error = []
+
+        # __busy keeps track of whether the serial line is
+        # currently busy, e.g., a message was sent and we
+        # should wait for the reply to come before we send
+        # another message. Accessed via the .busy property.
+        # Default behavior is not to consider the serial busy.
+        # A reimplementation of is_message_supported can set
+        # the .busy right before returning True.
+        self.__busy = False
 
         self.__timeout = qtc.QTimer()
         self.__timeout.setSingleShot(True)
@@ -203,6 +213,26 @@ class SerialWorkerABC(qtc.QObject):
         """
         return self.port_settings.get('serial_port_settings',
                                       'BYTE_ORDER')
+
+    @property
+    def busy(self):
+        """Return whther the serial port is busy."""
+        return self.__busy
+
+    @busy.setter
+    def busy(self, is_busy):
+        """Set the serial to busy True/False.
+
+        Parameters
+        ----------
+        is_busy : bool
+            True if serial is busy
+        """
+        was_busy = self.busy
+        is_busy = bool(is_busy)
+        if was_busy is not is_busy:
+            self.__busy = is_busy
+            self.serial_busy.emit(self.busy)
 
     def get_port_name(self):
         """Return the name of the current port as a string."""
@@ -259,7 +289,7 @@ class SerialWorkerABC(qtc.QObject):
         start_marker = self.port_settings.getint('serial_port_settings',
                                                  'MSG_START', fallback=None)
         if start_marker is not None:
-            start_marker.to_bytes(1, self.byte_order)
+            start_marker = start_marker.to_bytes(1, self.byte_order)
 
         return {'START':  start_marker,
                 'END': self.port_settings.getint(
@@ -433,6 +463,9 @@ class SerialWorkerABC(qtc.QObject):
         This method is called on every message right before
         writing it to the serial line.
 
+        The reimplemented encode() should NOT add start and end
+        markers, as these are already handled by send_message().
+
         Parameters
         ----------
         message : object
@@ -440,7 +473,7 @@ class SerialWorkerABC(qtc.QObject):
 
         Returns
         -------
-        encoded_message : bytes or bytearray
+        encoded_message : bytearray
             The encoded message
         """
         return message
@@ -567,6 +600,8 @@ class SerialWorkerABC(qtc.QObject):
         signal for data that are worth processing (e.g., measurements),
         as this is caught by the controller class.
 
+        Each element in .unprocessed_messages is a bytearray.
+
         When reimplementing this method, it is a good idea to either
         not process any message (if not enough messages arrived yet)
         or to process all .unprocessed_messages. This prevents data
@@ -581,7 +616,7 @@ class SerialWorkerABC(qtc.QObject):
         """
         return
 
-    def send_message(self, message, timeout=-1):
+    def send_message(self, message, *other_messges, timeout=-1):
         """Send message to controller via serial port.
 
         Parameters
@@ -607,13 +642,20 @@ class SerialWorkerABC(qtc.QObject):
         error_occurred
             If message could not be sent
         """
+        all_messages = (message, *other_messges)
+        if not self.is_message_supported(all_messages):
+            return
+
         timeout = int(timeout)
         if timeout >= 0:
             self.__timeout.start(timeout)
-
-        if not self.is_message_supported(message):
-            return
-        self.__port.write(self.encode(message))
+        for message in all_messages:
+            encoded = self.encode(message)
+            if self.msg_markers['START'] is not None:
+                encoded[:0] = self.msg_markers['START']
+            encoded.extend(self.msg_markers['END'])
+            print(f"{encoded=}")
+            self.__port.write(encoded)
         # TODO: the error that we're handling below should already
         # be taken care of by __on_serial_error, but needs checking!
         # if self.__port.write(self.encode(message)) < 0:
@@ -655,7 +697,7 @@ class SerialWorkerABC(qtc.QObject):
 
         Parameters
         ----------
-        message : bytes or bytearray
+        message : bytes
             The message to be checked. Integrity checks only involve
             making sure that the message is not empty before and after
             removal of a start marker, if used. If a start marker is
@@ -665,7 +707,7 @@ class SerialWorkerABC(qtc.QObject):
 
         Returns
         -------
-        processed_message : bytes or bytearray
+        processed_message : bytearray
             Message stripped of the MSG_START marker, if used,
             otherwise the message is returned unchanged, unless
             it is invalid. An empty message is returned if the
@@ -681,22 +723,23 @@ class SerialWorkerABC(qtc.QObject):
         """
         if not message:
             self.error_occurred.emit(ExtraSerialErrors.NO_MESSAGE_ERROR)
-            return b''
+            return bytearray()
 
         start_marker = self.msg_markers['START']
+        print(f"{message=}", f"{message[:1]=}", f"{start_marker=}")
         if start_marker is not None:
             # Protocol uses a start marker
-            if message[0] != start_marker:
+            if message[:1] != start_marker:
                 self.error_occurred.emit(
                     ExtraSerialErrors.NO_START_MARKER_ERROR
                     )
-                return b''
+                return bytearray()
             message = message[1:]
 
         if not message:
             self.error_occurred.emit(ExtraSerialErrors.NO_MESSAGE_ERROR)
-            return b''
-        return message
+            return bytearray()
+        return bytearray(message)
 
     def __on_bytes_ready_to_read(self):
         """Read the message(s) received."""
@@ -751,11 +794,10 @@ class SerialWorkerABC(qtc.QObject):
         error_occurred((error_code, msg))
             Always
         """
-        if error_code is qts.QSerialPort.NoError:
+        if error_code == qts.QSerialPort.NoError:
             return
         error_msg = SERIAL_ERROR_MESSAGES[error_code].format(self.port_name)
         ExtraSerialErrors.temp_error = (error_code, error_msg)
-        print(type(ExtraSerialErrors.temp_error), type(ExtraSerialErrors.NO_MESSAGE_ERROR))
         self.error_occurred.emit(ExtraSerialErrors.temp_error)
         del ExtraSerialErrors.temp_error
         self.clear_errors()

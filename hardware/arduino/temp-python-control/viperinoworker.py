@@ -27,30 +27,41 @@ class ViPErLEEDHardwareError(ViPErLEEDErrorEnum):
     ERROR_NO_ERROR = (0, "No error")
     ERROR_SERIAL_OVERFLOW = (1, "Hardware overflow of Arduino serial.")
     ERROR_MSG_TOO_LONG = (2, "Sent message too long.")
-    ERROR_MSG_SENT_INCONSISTENT = (3, "Sent message has not the length "
-                                      "it is supposed to have.")
-    ERROR_MSG_RCVD_INCONSISTENT = (13, "Received message has not the "
-                                       "length it is supposed to have.")
+    ERROR_MSG_SENT_INCONSISTENT = (3,
+                                   "Sent message has not the length "
+                                   "it is supposed to have.")
+    ERROR_MSG_RCVD_INCONSISTENT = (13,
+                                   "Received message has not the "
+                                   "length it is supposed to have.")
     ERROR_MSG_UNKNOWN = (4, "Unknown request from PC.")
-    ERROR_MSG_DATA_INVALID = (5, "Request from PC contains invalid "
-                                 "information.")
-    ERROR_NEVER_CALIBRATED = (6, "The ADCs have never been "
-                                 "calibrated since bootup")
+    ERROR_MSG_DATA_INVALID = (5,
+                              "Request from PC contains invalid information.")
+    ERROR_NEVER_CALIBRATED = (6,
+                              "The ADCs have never been "
+                              "calibrated since bootup")
     ERROR_TIMEOUT = (7, "Arduino timed out while waiting for something")
-    ERROR_ADC_SATURATED = (8, "One of the ADC values reached saturation "
-                              "and the gain cannot be decreased further.")
+    ERROR_ADC_SATURATED = (8,
+                           "One of the ADC values reached saturation "
+                           "and the gain cannot be decreased further.")
     ERROR_TOO_HOT = (9, "The temperature read by the LM35 is too high.")
-    ERROR_RUNTIME = (255, "Some function has been called from an "
-                          "inappropriate state. This is to flag "
-                          "possible bugs for future development.")
-    ERROR_UNKNOWN_ERROR = (256, "The error code received is not a known "
-                                "error type. Possibly a newly introduced "
-                                "error code that has not been added to the "
-                                "ViPErLEEDHardwareError enum.Enum yet.")
-    ERROR_ERROR_SLIPPED_THROUGH = (11, "For some reason and error identifier "
-                                       "ended up in the unprocessed messages.")
-    ERROR_MSG_RCVD_INVALID = (12, "Received message length does not fit the "
-                                  "length of any data expected.")
+    ERROR_RUNTIME = (255,
+                     "Some function has been called from an "
+                     "inappropriate state. This is to flag "
+                     "possible bugs for future development.")
+    ERROR_UNKNOWN_ERROR = (256,
+                           "The error code received is not a known "
+                           "error type. Possibly a newly introduced "
+                           "error code that has not been added to the "
+                           "ViPErLEEDHardwareError enum.Enum yet.")
+    ERROR_ERROR_SLIPPED_THROUGH = (11,
+                                   "For some reason and error identifier "
+                                   "ended up in the unprocessed messages.")
+    ERROR_MSG_RCVD_INVALID = (12,
+                              "Received message length does not fit the "
+                              "length of any data expected.")
+    ERROR_TOO_MANY_COMMANDS = (14,
+                               "Only one request command can be processed "
+                               "at a time")
 
 
 class ViPErinoSerialWorker(SerialWorkerABC):
@@ -61,6 +72,8 @@ class ViPErinoSerialWorker(SerialWorkerABC):
     def __init__(self, settings=None, port_name=''):
         """Initialize serial worker object."""
         self.__last_request_sent = ''
+        self.__measurements = []
+        self.__is_continuous_mode = False
         super().__init__(port_name=port_name, settings=settings)
 
     def decode(self, message):
@@ -73,34 +86,34 @@ class ViPErinoSerialWorker(SerialWorkerABC):
 
         Parameters
         ----------
-        message : bytes or bytearray
+        message : bytearray
             The message to be decoded
 
         Returns
         -------
-        message : bytes or bytearray
+        message : bytearray
             The decoded message
         """
         special_byte = self.port_settings.getint('serial_port_settings',
                                                  'SPECIAL_BYTE')
+        mgs_length, *msg_data = message
         # Check if message length greater than zero
-        if int.from_bytes(message[0], self.byte_order) == 0:
+        if mgs_length == 0:
             self.error_occurred.emit(ExtraSerialErrors.NO_MESSAGE_ERROR)
         # Iterate through message and add special bytes up
-        for index, value in enumerate(message[1:]):
+        for index, value in enumerate(msg_data):
             if value == special_byte:
-                message[index] += message[index+1]
-                message.pop(index+1)
+                msg_data[index] += msg_data[index+1]
+                msg_data.pop(index + 1)
         # Check if the message length is consistent with the supposed
         # length sent by the Arduino and remove message length from
         # message.
-        if message[0] != len(message[1:]):
+        if mgs_length != len(msg_data):
             self.error_occurred.emit(
                 ViPErLEEDHardwareError.ERROR_MSG_RCVD_INCONSISTENT
                 )
-        message.pop(0)
 
-        return message
+        return bytearray(msg_data)
 
     def encode(self, message):
         """
@@ -132,8 +145,8 @@ class ViPErinoSerialWorker(SerialWorkerABC):
             message = message.to_bytes(n_bytes, self.byte_order)
         elif isinstance(message, str):
             message = message.encode()
-        elif isinstance(message, bytes):
-            pass
+        if isinstance(message, bytes):
+            message = bytearray(message)
         else:
             raise TypeError("Encoding of message to Arduino failed. "
                             f"Cannot encode {type(message)}.")
@@ -145,16 +158,18 @@ class ViPErinoSerialWorker(SerialWorkerABC):
         # Iterate through message and split values that are larger
         # or equals special_byte into two different bytes. The second
         # byte gets inserted right after the first one.
+        # Enumerate returns bytes as integers
         for i, value in enumerate(message):
-            value_int = int.from_bytes(value, self.byte_order)
-            if value_int >= special_byte_int:
+            if value >= special_byte_int:
                 message[i] = special_byte
                 message.insert(
                     i + 1,
-                    (value_int - special_byte_int).to_bytes(1, self.byte_order)
+                    (value - special_byte_int).to_bytes(1, self.byte_order)
                     )
         # Insert the message length at the beginning of the message
+        print(f"encode, before length: {message=}")
         message.insert(0, payload_length)
+        print(f"encode, after length: {message=}")
         return message
 
     def identify_error(self, messages_since_error):
@@ -190,8 +205,7 @@ class ViPErinoSerialWorker(SerialWorkerABC):
             return
         # Reading error state and error code from the returned data
         error_state, error_code = messages_since_error[1]
-        error_state = int.from_bytes(error_state, self.byte_order)
-        error_code = int.from_bytes(error_code, self.byte_order)
+
         # Flipping the arduino_states section in order to access
         # the name of the state (key)
         arduino_states = {int(code): state
@@ -207,10 +221,10 @@ class ViPErinoSerialWorker(SerialWorkerABC):
         except AttributeError:
             current_error = ViPErLEEDHardwareError.ERROR_UNKNOWN_ERROR
         # Set values and format the string which will be emitted.
-        state = arduino_states[error_state]
-        error_name = current_error.name
-        err_details = current_error[1]
-        msg = msg_to_format.format(error_name, state, err_details)
+        fmt_data = {'error_name': current_error.name,
+                    'state': arduino_states[error_state],
+                    'err_details': current_error[1]}
+        msg = msg_to_format.format(**fmt_data)
         # Emit error and clear errors.
         ViPErLEEDHardwareError.temp_error = (error_code, msg)
         self.error_occurred.emit(ViPErLEEDHardwareError.temp_error)
@@ -244,11 +258,10 @@ class ViPErinoSerialWorker(SerialWorkerABC):
             Whether message is an error message
         """
         pc_error = self.port_settings.getint('available_commands', 'PC_ERROR')
-        value = int.from_bytes(message[0], self.byte_order)
 
-        return len(message) == 1 and value == pc_error
+        return len(message) == 1 and message[0] == pc_error
 
-    def is_message_supported(self, message):
+    def is_message_supported(self, messages):
         """
         Checks whether message is a supported command or not and
         keeps track of which request was sent last to the Arduino.
@@ -267,41 +280,47 @@ class ViPErinoSerialWorker(SerialWorkerABC):
             True if message is acceptable. Only acceptable
             messages will then be sent.
         """
+        # Remember!: messages[0] has to be of type Str
         # Check if message is valid data. Since the length of messages
         # can vary, the only reasonable check is if single bytes are
         # indeed an order specified in the config.
-        if not isinstance(message, (str, bytes, bytearray)):
-            return True
-        if len(message) > 1:
-            return True
-        available_commands = self.port_settings['available_commands'].keys()
-        if message[0].decode() in available_commands:
-            self.__last_request_sent = message[0].decode()
-            return True
-        # Emit error message
-        self.error_occurred.emit(ExtraSerialErrors.UNSUPPORTED_COMMAND_ERROR)
-        return False
-        
+        available_commands = self.port_settings['available_commands'].values()
+        command, *data = messages
+        if command not in available_commands:
+            # The first message must be a command
+            self.error_occurred.emit(
+                ExtraSerialErrors.UNSUPPORTED_COMMAND_ERROR
+                )
+            return False
+        if any(message in available_commands for message in data):
+            # Only the fist message can be a command; the others (if
+            # any) can only be data to accompany the command itself.
+            self.error_occurred.emit(
+                ViPErLEEDHardwareError.ERROR_TOO_MANY_COMMANDS
+                )
+            return False
+
+        pc_change_meas_mode = self.port_settings.get('available_commands',
+                                                     'PC_CHANGE_MEAS_MODE')
+        if command == pc_change_meas_mode:
+            # Continuous measurement is the only thing we have to check
+            # as it will potentially spam us with a lot of measurements
+            # so we should react appropriately
+            if not data:
+                raise  # TODO: actually emit an error message
+                return False
+            self.__is_continuous_mode = bool(int.from_bytes(data[0],
+                                             self.byte_order))
+
+        self.__last_request_sent = command
+        self.busy = True
+        return True
+
     def process_messages(self):
-        """Process data received into human-understandable information.
-
-        This function is called every time one (or more) messages
-        arrive on the serial line, unless there currently is an
-        error message that has not yet been handled. Reimplement
-        identify_error() to handle errors.
-
-        This method should be reimplemented by any concrete subclass.
-        The reimplementation should look into the list
-        self.unprocessed_messages and .pop() from there the messages
-        it wants to process. Then it should emit the data_received
-        signal for data that are worth processing (e.g., measurements),
-        as this is caught by the controller class.
-
-        When reimplementing this method, it is a good idea to either
-        not process any message (if not enough messages arrived yet)
-        or to process all .unprocessed_messages. This prevents data
-        loss, should an error message be received while there are
-        still unprocessed messages.
+        """
+        Converts received data into human understandable information
+        and emits this data. Emits a signal if the arduino is ready to
+        receive another command.
 
         Emits
         -----
@@ -309,34 +328,57 @@ class ViPErinoSerialWorker(SerialWorkerABC):
             Any time the message received contains data that are
             worth processing.
         """
+        if not self.unprocessed_messages:
+            return
+        pc_configuration = self.port_settings.get('available_commands',
+                                                  'PC_CONFIGURATION')
+        pc_set_voltage = self.port_settings.get('available_commands',
+                                                'PC_SET_VOLTAGE')
+        pc_measure_only = self.port_settings.get('available_commands',
+                                                 'PC_MEASURE_ONLY')
+        pc_ok = self.port_settings.get('available_commands', 'PC_OK')
+
         for message in self.unprocessed_messages:
-            # Only bytes and bytearrays will be sent by the Arduino
-            if isinstance(message, (bytes, bytearray)):
-                # If the length of the message is 1, then it has to be a
-                # PC_OK byte
-                if len(message) == 1:
-                    self.data_received.emit(message.decode())
-                # Hardware config and measure values are both 4 bytes long
-                # How are we going to check if we convert to float or not?
-                elif len(message) == 4:
+            # If the length of the message is 1, then it has to be a
+            # PC_OK byte
+            if message.decode() == pc_ok:
+                self.busy = False
+            # Hardware config and measure values are both 4 bytes long.
+            # Both commands are differentiated by the __last_request_sent
+            # attribute and get processed accordingly. If continuous mode
+            # is on and data got returned after a new request has been
+            # sent, nothing is done with it.
+            elif len(message) == 4:
+                if self.__last_request_sent == pc_configuration:
+                    self.busy = False
                     self.data_received.emit(message)
-                # If the message is 2 bytes long, then it is most likely the
-                # identifier for an error and ended up here somehow
-                elif len(message) == 2:
-                    self.error_occurred.emit(
-                        ViPErLEEDHardwareError.ERROR_ERROR_SLIPPED_THROUGH
-                        )
-                # If the message does not fit one of the lengths above, it 
-                # is no known message type.
-                else:
-                    self.error_occurred.emit(
-                        ViPErLEEDHardwareError.ERROR_MSG_RCVD_INVALID
-                        )
-        # TODO: I think we can empty unprocessed_messages every time after 
+                elif (self.__last_request_sent == pc_set_voltage or
+                        self.__last_request_sent == pc_measure_only):
+                    self.__measurements.append(bytes_to_float(message))
+                    if len(self.__measurements) >= 3:
+                        self.data_received.emit(self.__measurements[:3])
+                        self.__measurements.pop()
+                        self.__measurements.pop()
+                        self.__measurements.pop()
+                elif self.__is_continuous_mode:
+                    pass
+            # If the message is 2 bytes long, then it is most likely the
+            # identifier for an error and ended up here somehow
+            elif len(message) == 2:
+                self.error_occurred.emit(
+                    ViPErLEEDHardwareError.ERROR_ERROR_SLIPPED_THROUGH
+                    )
+            # If the message does not fit one of the lengths above, it
+            # is no known message type.
+            else:
+                self.error_occurred.emit(
+                    ViPErLEEDHardwareError.ERROR_MSG_RCVD_INVALID
+                    )
+        # TODO: I think we can empty unprocessed_messages every time after
         # checking the messages.
         self.unprocessed_messages = []
         return
-        
+
 def bytes_to_float(bytes_in):
     """Convert four bytes to float.
 
