@@ -14,7 +14,7 @@ Date: 16.04.2021
 
 #define DEBUG   false    // Debug mode, writes to serial line, for use in serial monitor
 
-// Firmware version (MAX: v255.255). CURENTLY: v0.1
+// Firmware version (MAX: v255.255). CURENTLY: v0.3
 #define FIRMWARE_VERSION_MAJOR    0  // max 255
 #define FIRMWARE_VERSION_MINOR    3  // max 255
 
@@ -30,7 +30,7 @@ void setup() {
 
     The setup routine runs once on power-up or on hardware reset.
     */
-    #ifdef DEBUG
+    #if DEBUG
         // initialize serial communication (emulation
         // on USB) at 9600 bits per second for debug
         delay(1000);
@@ -734,7 +734,7 @@ void calibrateADCsAtAllGains(){
         for (int i = 0; i < 3; i++) {
             selfCalibrateAllADCs(adcUpdateRate);
             storeAllSelfCalibrationResults(selfCalDataForMedian[i]);
-            #ifdef DEBUG
+            #if DEBUG
                 Serial.print("gain=");
                 Serial.print(calibrationGain);
                 Serial.print(" cOffs=");
