@@ -16,7 +16,7 @@ Date: 16.04.2021
 
 // Firmware version (MAX: v255.255). CURENTLY: v0.1
 #define FIRMWARE_VERSION_MAJOR    0  // max 255
-#define FIRMWARE_VERSION_MINOR    3  // max 255
+#define FIRMWARE_VERSION_MINOR    2  // max 255
 
 
 
@@ -143,7 +143,6 @@ void updateState() {
         case PC_SET_VOLTAGE:
             waitingForDataFromPC = true;
             initialTime = millis();
-            nextVoltageStep = 0;
             currentState = STATE_SET_VOLTAGE;
             break;
         case PC_AUTOGAIN:
@@ -340,9 +339,6 @@ bool decodeAndCheckMessage(){
     STATE_ERROR : ERROR_MSG_UNKNOWN
         if the message is an unknown command, or if we
         got some 'data' while we were not expecting any
-    STATE_ERROR : ERROR_MSG_DATA_INVALID
-        if the message only contains a length byte with
-        length 0
     */
     // Decode the message, starting at the second byte,
     // and going up to numBytesRead - 2 (included). This
@@ -359,14 +355,8 @@ bool decodeAndCheckMessage(){
         numDecodedBytes++;
     }
 
-    // Check if data was received
-    msgLength = serialInputBuffer[1];
-    if (msgLength == 0){
-      raise(ERROR_MSG_DATA_INVALID);
-      return false;
-    }
-    
     // Check that the number of bytes decoded fits
+    msgLength = serialInputBuffer[1];
     if (msgLength != numDecodedBytes){
         raise(ERROR_MSG_INCONSITENT);
         return false;
@@ -867,17 +857,12 @@ void setVoltageWaitAndTrigger(){
     /**
     Ask the DAC to provide a new voltage, if new settings are available.
     Then, wait the prescribed amount of time for the voltage to be stable,
-    and trigger the ADCs for a measurement. This may be repeated multiple
-    times to allow for multiple voltage steps at once. Triggering occurs
-    only after all steps are completed.
+    and trigger the ADCs for a measurement.
 
-    For each step, we need 4 bytes from the data_received[] buffer.
-    Their meaning is:
+    Needs 4 bytes from the data_received[] buffer. The meaning is:
     - [0(MSB) + 1(LSB)] DAC value to be set (uint16_t).
     - [2(MSB) + 3(LSB)] dacSettlingTime (uint16_t). Time interval to
             wait before considering the DAC value stable
-    Multiple steps are done whenever the data_received[] buffer contains
-    multiple 8-bytes consecutive blocks.
 
     Reads
     -----
@@ -887,7 +872,7 @@ void setVoltageWaitAndTrigger(){
     ------
     dacSettlingTime, newMessage, waitingForDataFromPC, summedMeasurements,
     numMeasurementsDone, adc0Gain, adc1Gain, adc0ShouldDecreaseGain,
-    adc1ShouldDecreaseGain, initialTime, nextVoltageStep
+    adc1ShouldDecreaseGain, initialTime
 
     Msg to PC
     ---------
@@ -912,8 +897,6 @@ void setVoltageWaitAndTrigger(){
     STATE_MEASURE_ADCS
         Successfully finished, accessed via triggerMeasurements()
     **/
-    uint16_t dacValue;
-        
     if (currentState != STATE_SET_VOLTAGE){
         raise(ERROR_RUNTIME);
         return;
@@ -931,49 +914,33 @@ void setVoltageWaitAndTrigger(){
         newMessage = false;
 
         // Check that it is the right amount of data
-        // For each voltage step: 2 bytes for voltage, 
-        // 2 bytes for dacSettlingTime
-        if (msgLength % 4 != 0){
+        // 2 bytes for voltage, 2 bytes for dacSettlingTime
+        if (msgLength != 4){
             raise(ERROR_MSG_DATA_INVALID);
 
             // And do what we normally would at the
             // beginning of STATE_TRIGGER_ADCS (we're
             // not going there this time)
+            decreaseADCGainsIfNeeded();                // TODO: should we do this? Alternatively we could either: let the next operation take care of this (likely starting over, or directly going to STATE_TRIGGER_ADCS with a PC_TRIGGER_ADCS) OR forget that we may want to decrease the gain, de facto requiring that the whole procedure has to be restarted. If we set the voltage to zero (see above), probably it's better to do the second one, as that forces anyway the PC to start over.
             resetMeasurementData();
             return;
         }
 
-        dacValue = data_received[0] << 8 | data_received[1];
+        uint16_t dacValue = data_received[0] << 8 | data_received[1];
         dacSettlingTime = data_received[2] << 8 | data_received[3];
 
         // Set the new voltage
         AD5683setVoltage(CS_DAC, dacValue);
         initialTime = millis();
     }
-    
-    // Wait for timer if needed
+
+    // And wait in the same state till the voltage output is stable
     if((millis() - initialTime) < dacSettlingTime) return;
-
-    // One voltage step is over.
-    nextVoltageStep++;
-
-    // See if we have another one to do
-    byte offset = nextVoltageStep*4;
-    if (offset < msgLength){
-        dacValue = data_received[offset] << 8 | data_received[offset+1];
-        dacSettlingTime = data_received[offset+2] << 8 | data_received[offset+3];
-        
-        // Set the new voltage
-        AD5683setVoltage(CS_DAC, dacValue);
-        initialTime = millis();
-        return;
-    }
 
     // Finally tell the PC we're done waiting,
     // and trigger the ADCs for measurement
     encodeAndSend(PC_OK);
     triggerMeasurements();  // This switches to STATE_MEASURE_ADCS
-    nextVoltageStep = 0;    // This is not strictly needed, but nicer for cleanup
 }
 
 
@@ -1224,10 +1191,6 @@ void findOptimalADCGains(){
 void handleErrors(){
     /**Clean up after an error, and report it to the PC.
 
-    Should an error occur, the voltage output is always set
-    to zero, and the Arduino forgets about the need to
-    decrease ADC gains next time.
-
     Reads
     -----
     currentState, errorTraceback
@@ -1255,12 +1218,8 @@ void handleErrors(){
     // there may be some cleanup going on
     encodeAndSend(PC_ERROR);
     encodeAndSend(errorTraceback, 2);
-    
-    // Set voltage to zero and forget about gain decrease
+    // Set voltage to zero
     AD5683setVoltage(CS_DAC, 0x0000);
-    adc0ShouldDecreaseGain = false;
-    adc1ShouldDecreaseGain = false;
-    
     // Then clean up possible mess that caused the error
     switch(errorTraceback[1]){
         case ERROR_SERIAL_OVERFLOW:
@@ -1290,9 +1249,9 @@ void reset(){
     Writes
     ------
     numBytesRead, msgLength, readingFromSerial, newMessage,
-    waitingForDataFromPC, dacSettlingTime, nextVoltageStep,
-    hardwareDetected, adcUpdateRate, adc0Channel, adc1Channel
-    adc0Gain, adc1Gain, calibrationGain, adc0RipplePP, adc1RipplePP,
+    waitingForDataFromPC, dacSettlingTime, hardwareDetected,
+    adcUpdateRate, adc0Channel, adc1Channel, adc0Gain,
+    adc1Gain, calibrationGain, adc0RipplePP, adc1RipplePP,
     adc0ShouldDecreaseGain, adc1ShouldDecreaseGain,
     numMeasurementsToDo, numMeasurementsToDoBackup,
     numMeasurementsDone, summedMeasurements, calibratedChannels
@@ -1310,7 +1269,6 @@ void reset(){
     waitingForDataFromPC = false;
     continuousMeasurement = false;
     dacSettlingTime = 100;
-    nextVoltageStep = 0;
 
     hardwareDetected.asInt = 0;
     adcUpdateRate = AD7705_50HZ;
@@ -1327,7 +1285,7 @@ void reset(){
     numMeasurementsToDo = 1;
     numMeasurementsToDoBackup = 1;
     resetMeasurementData();
-    continuousMeasurementInterval = 0;
+    ContinuousMeasurementInterval = 0;
 
     // Rather than clearing the calibration data, we can just
     // reset the flags marking whether channels were calibrated
@@ -1901,7 +1859,7 @@ void changeMeasurementMode() {
     // measurements we need to implement this in the sendMeasuredValues() function. 
     // We would do this there because we decided to never call the trigger function. 
     // Possibly a TODO.
-    continuousMeasurementInterval = data_received[1] << 8 | data_received[2];
+    ContinuousMeasurementInterval = data_received[1] << 8 | data_received[2];
 
     encodeAndSend(PC_OK);
     currentState = STATE_IDLE;
