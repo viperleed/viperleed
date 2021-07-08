@@ -16,6 +16,7 @@ to prevent stalling the Graphical User Interface.
 # Python standard modules
 import struct
 from configparser import ConfigParser
+from collections.abc import Sequence
 
 # ViPErLEED modules
 from serialworker import ExtraSerialErrors, SerialWorkerABC, ViPErLEEDErrorEnum
@@ -58,11 +59,18 @@ class ViPErLEEDHardwareError(ViPErLEEDErrorEnum):
                                    "For some reason and error identifier "
                                    "ended up in the unprocessed messages.")
     ERROR_MSG_RCVD_INVALID = (12,
-                              "Received message length does not fit the "
-                              "length of any data expected.")
+                              "Received message length does not fit "
+                              "the length of any data expected.")
     ERROR_TOO_MANY_COMMANDS = (14,
-                               "Only one request command can be processed "
-                               "at a time")
+                               "Only one request command "
+                               "can be processed at a time")
+    ERROR_NO_HARDWARE_DETECTED = (15,
+                                  "No ADC detected. External power "
+                                  "supply may be disconnected.")
+    ERROR_VERSIONS_DO_NOT_MATCH = (16,
+                                   "The version of the firmware installed on "
+                                   "the Arduino does not match the version "
+                                   "running on the PC. May be incompatible.")
 
 
 class ViPErinoSerialWorker(SerialWorkerABC):
@@ -72,10 +80,37 @@ class ViPErinoSerialWorker(SerialWorkerABC):
     """
     def __init__(self, settings=None, port_name=''):
         """Initialize serial worker object."""
+
         self.__last_request_sent = ''
         self.__measurements = []
         self.__is_continuous_mode = False
         super().__init__(port_name=port_name, settings=settings)
+
+    def set_port_settings(self, new_settings):
+        """Change settings of the port.
+
+        Check if all necessary sections are available. Then set the
+        port settings as specified in the SerialWorkerABC class.
+        """
+        if not isinstance(new_settings, (dict, ConfigParser)):
+            raise TypeError(
+                f"{self.__class__.__name__}: invalid type "
+                f"{type(new_settings).__name__} for settings. "
+                "Should be 'dict' or 'ConfigParser'."
+                )
+
+        # Section 'serial_port_settings' is checked
+        # for in the base class implementation
+        necessary_sections = ('hardware_bits', 'available_commands',
+                              'arduino_states', 'error_bytes',
+                              'firmware_version')
+        for section_name in necessary_sections:
+            if section_name not in new_settings:
+                (error_code,
+                 error_msg) = ExtraSerialErrors.ERROR_INVALID_PORT_SETTINGS
+                error_msg = error_msg.format(section_name)
+                self.error_occurred.emit((error_code, error_msg))
+        super().set_port_settings(new_settings)
 
     def decode(self, message):
         """Decodes message received from the Arduino.
@@ -118,7 +153,7 @@ class ViPErinoSerialWorker(SerialWorkerABC):
 
         Parameters
         ----------
-        message : object
+        message : bytearray
             The message to be encoded
 
         Returns
@@ -126,21 +161,10 @@ class ViPErinoSerialWorker(SerialWorkerABC):
         message : bytearray
             The encoded message
         """
-        special_byte_int = self.port_settings.getint('serial_port_settings',
-                                                     'SPECIAL_BYTE')
-        special_byte = special_byte_int.to_bytes(1, self.byte_order)
-        # Check for data type and convert message into a bytearray if
-        # necessary
-        if isinstance(message, int):
-            n_bytes = (message.bit_length()+7)//8
-            message = message.to_bytes(n_bytes, self.byte_order)
-        elif isinstance(message, str):
-            message = message.encode()
-        if isinstance(message, bytes):
-            message = bytearray(message)
-        else:
-            raise TypeError("Encoding of message to Arduino failed. "
-                            f"Cannot encode {type(message)}.")
+        special_byte = self.port_settings.getint('serial_port_settings',
+                                                 'SPECIAL_BYTE')
+
+        print(f"before special byte: {message=}")
         # TODO: Arduino can not receive a message this long (possibly 513 bytes)
         # Get the message length and check if it can be sent with 1 byte
         payload_length = len(message)
@@ -152,12 +176,9 @@ class ViPErinoSerialWorker(SerialWorkerABC):
         # byte gets inserted right after the first one.
         # Enumerate returns bytes as integers
         for i, value in enumerate(message):
-            if value >= special_byte_int:
+            if value >= special_byte:
                 message[i] = special_byte
-                message.insert(
-                    i + 1,
-                    (value - special_byte_int).to_bytes(1, self.byte_order)
-                    )
+                message.insert(i + 1, value - special_byte)
         # Insert the message length at the beginning of the message
         print(f"encode, before length: {message=}")
         message.insert(0, payload_length)
@@ -224,7 +245,7 @@ class ViPErinoSerialWorker(SerialWorkerABC):
     def is_decoded_message_acceptable(self, message):
         """Check whether a decoded message is ok.
 
-        Check if meesage length is consistent with the length given
+        Check if message length is consistent with the length given
         in the first byte and if message is one of the three possible
         lengths sent by the Arduino (1, 2, 4).
 
@@ -285,13 +306,13 @@ class ViPErinoSerialWorker(SerialWorkerABC):
         are more than two commands in one set of messages emit an
         error as the current structure does not allow this. If
         a change measurement mode command has been sent, update the
-        countinuous measurement setting on the PC side. After clearing
+        continuous measurement setting on the PC side. After clearing
         the message, remember the sent request and set the serial to
         busy.
 
         Parameters
         ----------
-        message : str, object
+        messages : str, object
             The same message given to self.send_message(), right
             before encoding and sending to the device
 
@@ -305,15 +326,15 @@ class ViPErinoSerialWorker(SerialWorkerABC):
         # Check if message is valid data. Since the length of messages
         # can vary, the only reasonable check is if single bytes are
         # indeed an order specified in the config.
-        available_commands = self.port_settings['available_commands'].values()
+        available_commands = self.port_settings['available_commands']
         command, *data = messages
-        if command not in available_commands:
+        if command not in available_commands.values():
             # The first message must be a command
-            self.error_occurred.emit(
-                ExtraSerialErrors.UNSUPPORTED_COMMAND_ERROR
-                )
+            error_code, error_msg = ExtraSerialErrors.UNSUPPORTED_COMMAND_ERROR
+            error_msg = error_msg.format(command)
+            self.error_occurred.emit((error_code, error_msg))
             return False
-        if any(message in available_commands for message in data):
+        if any(message in available_commands.values() for message in data):
             # Only the fist message can be a command; the others (if
             # any) can only be data to accompany the command itself.
             self.error_occurred.emit(
@@ -321,23 +342,106 @@ class ViPErinoSerialWorker(SerialWorkerABC):
                 )
             return False
 
-        pc_change_meas_mode = self.port_settings.get('available_commands',
-                                                     'PC_CHANGE_MEAS_MODE')
-        if command == pc_change_meas_mode:
+        need_data = [available_commands[k]
+                     for k in ('PC_CHANGE_MEAS_MODE', 'PC_SET_VOLTAGE',
+                               'PC_CALIBRATION', 'PC_SET_UP_ADCS')]
+        if command in need_data:
+            if not data:
+                # Too little data available
+                # This is meant as a safeguard for future code changes
+                raise RuntimeError(
+                    "{self.__class.__name__}.is_message_supported: "
+                    "No data message for one of the Arduino commands "
+                    "that requires data. Check implementation!"
+                    )
+        if len(data) > 1:
+            # Too much data available: we never send more than
+            # two messages (one command, one data).
+            # This should never happen, as long as we pass all the
+            # data for a command as a single entity. It is meant as
+            # a safeguard for future changes of the code.
+            raise RuntimeError(
+                "{self.__class.__name__}.is_message_supported: "
+                "At most one data message should be given for each "
+                "command to the Arduino. Wrap data for one command into "
+                "a single Sequence."
+                )
+
+        if command == available_commands['PC_CHANGE_MEAS_MODE']:
             # Continuous measurement is the only thing we have to check
             # as it will potentially spam us with a lot of measurements
             # so we should react appropriately
-            if not data:
-                raise  # TODO: actually emit an error message
-                return False
-            self.__is_continuous_mode = bool(int.from_bytes(data[0],
-                                             self.byte_order))
+            print(f"{data[0][0]=} and {data[0]=}")
+            self.__is_continuous_mode = bool(data[0][0])
 
         self.__last_request_sent = command
         self.busy = True
         return True
 
-    def process_messages(self):
+    def prepare_message_for_encoding(self, message, *other_messages):
+        """Prepare a message to be encoded.
+
+        This method is guaranteed to be called exactly once on each
+        call to send_message(message, *other_messages), right before
+        each of the messages are (separately) encoded. Since .encode()
+        expects each message to be a bytes or bytearray, this method
+        can be called to turn messages into bytearrays.
+
+        Parameters
+        ----------
+        message : str
+            The command to be sent to the ViPErLEED Arduino
+        *other_messages : int, bytes, bytearray, Sequence
+            At most one *other_messages should be given for
+            the ViPErLEED Arduino. When a Sequence, each element
+            must be an int. This is the data needed by the command
+            in message.
+
+        Returns
+        -------
+        message_out : bytearray
+            len(message_out) == 1. The command ready to be encoded.
+        *other_messages_out : bytearray
+            The data for the command, ready to be encoded.
+        """
+        # Convert 'message' (i.e., the command) into a bytearray if
+        # necessary.  'other_messages' is the data for the command.
+        message = message.encode()
+        if not other_messages:
+            return (bytearray(message),)
+
+        # Now process the data depending on the command
+        data = other_messages[0]
+        commands = self.port_settings['available_commands']
+        # In the following, we treat the special cases of:
+        # "some of the pieces of information passed to send_message
+        # is an int that has to be turned into bytes with length >= 2"
+        if message == commands['PC_SET_UP_ADCS'].encode():
+            # data is a 3-element Sequence, with
+            # [n_averaging_points, adc0_channel, adc1_channel],
+            # where n_averaging_points has to be 2 bytes
+            data[:1] = data[0].to_bytes(2, self.byte_order)
+        elif message == commands['PC_SET_VOLTAGE'].encode():
+            # data is a 2N-long sequence of the format
+            # voltage, waiting, voltage, waiting, ....
+            # where each entry has to be turned into 2
+            # bytes.
+            # Run over a copy to avoid infinite loop.
+            print(f"Before byte splitting: {data=}")
+            for i, elem in enumerate(data.copy()):
+                data[2*i:2*i+1] = elem.to_bytes(2, self.byte_order)
+            print(f"After byte splitting: {data=}")
+        elif message == commands['PC_CHANGE_MEAS_MODE'].encode():
+            # Here the data is [mode, time] where time
+            # has to be turned into 2 bytes.
+            data[1:] = data[-1].to_bytes(2, self.byte_order)
+
+        print(f"{message=}", f"{data=}")
+        # Note that PC_CALIBRATION also requires data, but
+        # all the elements in data are 1-byte-long integers
+        return bytearray(message), bytearray(data)
+
+    def process_received_messages(self):
         """Convert received data into human understandable information.
 
         Process data according to its type and emit data that will be
@@ -366,8 +470,12 @@ class ViPErinoSerialWorker(SerialWorkerABC):
         for message in self.unprocessed_messages:
             # If the length of the message is 1, then it has to be a
             # PC_OK byte
-            if message.decode() == pc_ok:
-                self.busy = False
+            if len(message) == 1:
+                if message.decode() == pc_ok:
+                    self.busy = False
+                    if self.__last_request_sent in (pc_set_voltage,
+                                                    pc_measure_only):
+                        self.about_to_trigger.emit()
             # Hardware config and measure values are both 4 bytes long.
             # Both commands are differentiated by the __last_request_sent
             # attribute and get processed accordingly. If continuous mode
@@ -378,8 +486,8 @@ class ViPErinoSerialWorker(SerialWorkerABC):
                     self.busy = False
                     firmware, hardware = self.__firmware_and_hardware(message)
                     self.data_received.emit((firmware, hardware))
-                elif (self.__last_request_sent == pc_set_voltage or
-                        self.__last_request_sent == pc_measure_only):
+                elif self.__last_request_sent in (pc_set_voltage,
+                                                  pc_measure_only):
                     self.__measurements.append(self.__bytes_to_float(message))
                     if len(self.__measurements) < 3:
                         # Not enough data yet
@@ -431,6 +539,11 @@ class ViPErinoSerialWorker(SerialWorkerABC):
     def __firmware_and_hardware(self, message):
         """Return Arduino firmware version and hardware configuration.
 
+        Decode the message containing the configuration and return the
+        hardware. If the firmware_version does not fit the version
+        specified in the configuration files emit an error. If no ADC
+        has been detected emit an error.
+
         Parameters
         ----------
         message : bytearray
@@ -452,10 +565,15 @@ class ViPErinoSerialWorker(SerialWorkerABC):
                 for 'i0_range' and 'aux_range' are the strings
                 '0 -- 2.5 V' or '0 -- 10 V'.
         """
+        version = self.port_settings['firmware_version']['FIRMWARE_VERSION']
         major, minor, *hardware = message
         firmware_version = f"{major}.{minor}"
+        if firmware_version != version:
+            self.error_occurred.emit(
+                    ViPErLEEDHardwareError.ERROR_VERSIONS_DO_NOT_MATCH
+                    )
 
-        hardware_bits = self.port_settings['hardware_bits']                     # TODO: extend set_port_settings to check for all the extra sections that we are using in this implementation
+        hardware_bits = self.port_settings['hardware_bits']
         hardware_config = {'adc_0': False,
                            'adc_1': False,
                            'lm35': False,
@@ -474,7 +592,10 @@ class ViPErinoSerialWorker(SerialWorkerABC):
                     present_or_closed = '0 -- 10 V'
                 key = 'i0_range' if 'i0' in key else 'aux_range'
             hardware_config[key] = present_or_closed
-
+        if not (hardware_config['adc_0'] or hardware_config['adc_1']):
+            self.error_occurred.emit(
+                    ViPErLEEDHardwareError.ERROR_NO_HARDWARE_DETECTED
+                    )
         return firmware_version, hardware_config
 
 

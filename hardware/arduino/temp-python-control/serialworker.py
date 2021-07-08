@@ -122,6 +122,10 @@ class ExtraSerialErrors(ViPErLEEDErrorEnum):
                                  "Command {} is not supported "
                                  "by the controller. Check implementation "
                                  "and/or your configuration file.")
+    ERROR_INVALID_PORT_SETTINGS = (54,
+                                   "Invalid serial port settings: "
+                                   "Required settings {!r} missing. "
+                                   "Check configuration file.")
 
 
 # class SerialWorkerABC(qtc.QObject, metaclass=ABCMeta):
@@ -131,6 +135,7 @@ class SerialWorkerABC(qtc.QObject):
     error_occurred = qtc.pyqtSignal(tuple)
     data_received = qtc.pyqtSignal(object)
     serial_busy = qtc.pyqtSignal(bool)
+    about_to_trigger = qtc.pyqtSignal()
 
     def __init__(self, settings=None, port_name=''):
         """Initialize serial worker object.
@@ -172,14 +177,14 @@ class SerialWorkerABC(qtc.QObject):
         # .unprocessed_messages is a list of all the messages
         # that came on the serial line and that have not been
         # processed yet. They should be processed in the call
-        # to process_messages() by .pop()ping one at a time.
-        # Each element is a bytearray.
+        # to process_received_messages() by .pop()ping one at
+        # a time. Each element is a bytearray.
         self.unprocessed_messages = []
 
         # __last_partial_message contains the 'head' of the last
         # message that was not yet fully read from the serial.
         # Used to prevent loosing bytes in asynchronous read.
-        self.__last_partial_message = b''
+        self.__last_partial_message = bytearray()
 
         # __messages_since_error is a list of all the serial
         # messages that came since the last unidentified error.
@@ -533,7 +538,7 @@ class SerialWorkerABC(qtc.QObject):
             After the error has been identified
         """
         return
-        
+
     # Disable pylint check as this is supposed
     # to be the signature for subclasses
     # pylint: disable=no-self-use,unused-argument
@@ -621,8 +626,42 @@ class SerialWorkerABC(qtc.QObject):
         return True
     # pylint: enable=no-self-use,unused-argument
 
+    def prepare_message_for_encoding(self, message, *other_messages):
+        """Prepare a message to be encoded.
+
+        This method is guaranteed to be called exaclty once on each
+        call to send_message(message, *other_messages), right before
+        each of the messages are (separately) encoded. Since .encode()
+        expects each message to be a bytes or bytearray, this method
+        can be called to turn messages into byearrays.
+
+        For example, assume that a command expects data as an integer,
+        expressed as two bytes; one can pass send_message() the command
+        (first argument) and the integer (second argument), and use this
+        method to turn the integer to two bytes before encoding.
+
+        The basic implementation returns messages as they were passed.
+
+        Parameters
+        ----------
+        message : object
+            The message to be sent. This is the same as the first
+            argument given to send_message().
+        *other_messages : object, optional
+            Other messages to be sent. These are the same as the
+            optional *other_messages given to send_message().
+
+        Returns
+        -------
+        message_out : object
+            Should have one of the types acceptable for encode()
+        *other_messages_out : object
+            hould have one of the types acceptable for encode()
+        """
+        return message, *other_messages
+
     @abstractmethod
-    def process_messages(self):
+    def process_received_messages(self):
         """Process data received into human-understandable information.
 
         This function is called every time one (or more) messages
@@ -653,7 +692,7 @@ class SerialWorkerABC(qtc.QObject):
         """
         return
 
-    def send_message(self, message, *other_messges, timeout=-1):
+    def send_message(self, message, *other_messages, timeout=-1):
         """Send message to controller via serial port.
 
         Parameters
@@ -673,13 +712,8 @@ class SerialWorkerABC(qtc.QObject):
         Returns
         -------
         None.
-
-        Emits                                                                  # TODO: probably nothing actually!
-        -----
-        error_occurred
-            If message could not be sent
         """
-        all_messages = (message, *other_messges)
+        all_messages = (message, *other_messages)
         if not self.is_message_supported(all_messages):
             return
 
@@ -688,6 +722,7 @@ class SerialWorkerABC(qtc.QObject):
         timeout = int(timeout)
         if timeout >= 0:
             self.__timeout.start(timeout)
+        all_messages = self.prepare_message_for_encoding(*all_messages)
         for message in all_messages:
             encoded = self.encode(message)
             if self.msg_markers['START'] is not None:
@@ -695,13 +730,6 @@ class SerialWorkerABC(qtc.QObject):
             encoded.extend(self.msg_markers['END'])
             print(f"{encoded=}")
             self.__port.write(encoded)
-        # TODO: the error that we're handling below should already
-        # be taken care of by __on_serial_error, but needs checking!
-        # if self.__port.write(self.encode(message)) < 0:
-            # self.error_occurred.emit(
-                # "Error sending message."
-                # "Check communication and port settings?"
-                # )
 
     def serial_connect(self, *__args):
         """Connect to currently selected port."""
@@ -724,8 +752,12 @@ class SerialWorkerABC(qtc.QObject):
         """Disconnect from connected serial port."""
         self.clear_errors()
         self.__port.close()
-        self.__port.readyRead.disconnect(self.__on_bytes_ready_to_read)
-        self.__port.errorOccurred.disconnect(self.__on_serial_error)
+        try:
+            self.__port.readyRead.disconnect(self.__on_bytes_ready_to_read)
+            self.__port.errorOccurred.disconnect(self.__on_serial_error)
+        except TypeError:
+            # port is already disconnected
+            pass
 
     def __check_and_preprocess_message(self, message):
         """Check integrity of message.
@@ -788,9 +820,14 @@ class SerialWorkerABC(qtc.QObject):
 
         msg = bytes(self.__port.readAll())
 
+        if self.msg_markers['END'] not in msg:
+            # Only a fraction of a message has been read.
+            self.__last_partial_message.extend(msg)
+            return
+
         head, *messages, tail = msg.split(self.msg_markers['END'])
         messages.insert(0, self.__last_partial_message + head)
-        self.__last_partial_message = tail
+        self.__last_partial_message = bytearray(tail)
 
         for i, message in enumerate(messages):
             # Make sure the messages are not empty, and get rid of
@@ -824,7 +861,7 @@ class SerialWorkerABC(qtc.QObject):
                 self.identify_error(self.__messages_since_error)
                 return
         self.unprocessed_messages.extend(messages)
-        self.process_messages()
+        self.process_received_messages()
 
     def __on_serial_error(self, error_code):
         """React to a serial-port error.

@@ -20,10 +20,7 @@ from PyQt5 import (QtWidgets as qtw,
                    QtSerialPort as qts)
 from viperinoworker import ViPErinoSerialWorker
 
-TIMEOUT = 5000  # milliseconds
-MSG_START = b'\xfe'
-MSG_END = b'\xff'
-BYTE_ORDER = 'big'
+TIMEOUT = 30000  # milliseconds
 
 
 CONFIG = ConfigParser()
@@ -118,19 +115,21 @@ class MainWindow(qtw.QWidget):
 
     def send_message(self, *__args):
         """Send message to port, and wait for reply."""
-        msg_out = self._ctrls['msg_to_send'].text()
-        if not msg_out:
+        msg_to_send = self._ctrls['msg_to_send'].text()
+        if not msg_to_send:
             print('No message', flush=True)
             return
-        # msg_out = bytes(msg_out, 'utf-8')
-        # n_bytes = len(msg_out).to_bytes(1, BYTE_ORDER)
+        
+        msg_command, *data = msg_to_send.split(';')
+        if data:
+            data = data[0]
+            msg_data = [int(d) for d in data.split(',')]
+            msg = (msg_command, msg_data)
+        else:
+            msg = (msg_command,)
 
-        # msg_out = MSG_START + n_bytes + msg_out + MSG_END
-        # print("Sending", msg_out)
-        # if self.__port.write(msg_out) < 0:
-            # print('Could not send', flush=True)
-        print(f"{msg_out=}")
-        self.__port.send_message(msg_out, timeout=TIMEOUT)
+        print(f"{msg=}")
+        self.__port.send_message(*msg, timeout=TIMEOUT)
 
     def on_data_received(self, data):
         """Read the message received."""

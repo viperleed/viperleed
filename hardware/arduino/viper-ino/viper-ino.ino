@@ -152,6 +152,7 @@ void updateState() {
             currentState = STATE_AUTOGAIN_ADCS;
             break;
         case PC_RESET:
+            encodeAndSend(PC_OK);
             reset();
             break;
         case PC_MEASURE_ONLY:
