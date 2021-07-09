@@ -1,4 +1,4 @@
-"""Module serialworker of viperleed.?????.
+"""Module serialworkerabc of viperleed.?????.
 
 ========================================
    ViPErLEED Graphical User Interface
@@ -16,13 +16,13 @@ can also happens in a separate QThread to prevent stalling the
 Graphical User Interface.
 """
 
-import enum
 from abc import ABCMeta, abstractmethod
 from configparser import ConfigParser
 
 from PyQt5 import (QtCore as qtc,
                    QtSerialPort as qts)
 
+from viperleed.guilib.measure import hardwarebase
 
 SERIAL_ERROR_MESSAGES = {
     qts.QSerialPort.NoError: "",
@@ -58,56 +58,7 @@ SERIAL_ERROR_MESSAGES = {
 }
 
 
-class ViPErLEEDErrorEnum(tuple, enum.Enum):
-    """Base class for ViPErLEED hardware errors.
-
-    Each Enum value is a tuple of the form
-        (error_code, error_description)
-    where error_code is an integer, and error_description a string
-    that will be shown to the user when the error occurs. The string
-    may also contain formatting directives, that should be .format()ted
-    by the controller or by the GUI.
-    """
-    @classmethod
-    def as_dict(cls):
-        """Return a dictionary of error codes and error names."""
-        return {el[0]: el.name for el in cls}
-
-    @classmethod
-    def from_code(cls, code):
-        """Return the ViPErLEEDErrorEnum with a given code.
-
-        Parameters
-        ----------
-        code : int
-            The code of the error
-
-        Returns
-        -------
-        ViPErLEEDErrorEnum.value
-            The hardware error itself, which can be unpacked
-            into a tuple of the form (code, error_description)
-
-        Raises
-        ------
-        TypeError
-            If code is not an int
-        AttributeError
-            If code is an unknown error code
-        """
-        if not isinstance(code, int):
-            raise TypeError(f"{cls.__name__}.from_code(code): type of code "
-                            f"should be 'int', not {type(code).__name__!r}.")
-        try:
-            error_name = cls.as_dict()[code]
-        except KeyError as err:
-            raise AttributeError(
-                f"Unkown {cls.__name__} error with code {code}"
-                ) from err
-        return getattr(cls, error_name)
-
-
-class ExtraSerialErrors(ViPErLEEDErrorEnum):
+class ExtraSerialErrors(hardwarebase.ViPErLEEDErrorEnum):
     """Data class for basic serial errors not available in QSerialPort."""
     NO_MESSAGE_ERROR = (50,
                         "Empty message received from controller.")
@@ -122,14 +73,19 @@ class ExtraSerialErrors(ViPErLEEDErrorEnum):
                                  "Command {} is not supported "
                                  "by the controller. Check implementation "
                                  "and/or your configuration file.")
-    ERROR_INVALID_PORT_SETTINGS = (54,
-                                   "Invalid serial port settings: "
-                                   "Required settings {!r} missing. "
-                                   "Check configuration file.")
+    # The following two are fatal errors, and should make the GUI
+    # essentially unusable, apart from loading appropriate settings
+    INVALID_PORT_SETTINGS = (54,
+                             "Invalid serial port settings: Required "
+                             "settings {!r} missing or values "
+                             "inappropriate. Check configuration file.")
+    MISSING_SETTINGS = (55,
+                        "Serial port cannot operate without settings. "
+                        "Load an appropriate settings file before "
+                        "proceeding.")
 
 
-# class SerialWorkerABC(qtc.QObject, metaclass=ABCMeta):
-class SerialWorkerABC(qtc.QObject):
+class SerialABC(qtc.QObject):
     """Base class for serial communication for a ViPErLEED controller."""
 
     error_occurred = qtc.pyqtSignal(tuple)
@@ -164,10 +120,6 @@ class SerialWorkerABC(qtc.QObject):
         """
         super().__init__()
         self.__port = qts.QSerialPort(port_name)
-
-        if settings is None:
-            raise TypeError(f"{self.__class__.__name__}: missing "
-                            "mandatory serial port settings")
 
         # .__serial_settings is set via the following call to
         # set_port_settings() for extra checks and preprocessing
@@ -225,7 +177,7 @@ class SerialWorkerABC(qtc.QObject):
 
     @property
     def busy(self):
-        """Return whther the serial port is busy."""
+        """Return whether the serial port is busy."""
         return self.__busy
 
     @busy.setter
@@ -384,40 +336,31 @@ class SerialWorkerABC(qtc.QObject):
         ValueError
             If 'BYTE_ORDER' is neither 'big' nor 'little'.
         """
-        if not isinstance(new_settings, (dict, ConfigParser)):
-            raise TypeError(
-                f"{self.__class__.__name__}: invalid type "
-                f"{type(new_settings).__name__} for settings. "
-                "Should be 'dict' or 'ConfigParser'."
-                )
-        if 'serial_port_settings' not in new_settings:
-            raise KeyError(
-                f"{self.__class__.__name__}: settings must "
-                "contain a 'serial_port_settings' section"
-                )
-        if any(key not in new_settings['serial_port_settings']
-               for key in ('MSG_END', 'BYTE_ORDER')):
-            raise KeyError(
-                f"{self.__class__.__name__}: section 'serial_port_settings' "
-                "of the settings should contain both 'MSG_END' and "
-                "'BYTE_ORDER' fields."
-                )
+        mandatory_settings = (
+            ('serial_port_settings', 'MSG_END'),
+            ('serial_port_settings', 'BYTE_ORDER', ('big', 'little'))
+            )
 
-        byte_order = new_settings.get('serial_port_settings', 'BYTE_ORDER')
-        if byte_order not in ('big', 'little'):
-            raise ValueError(
-                f"{self.__class__.__name__}: invalid 'BYTE_ORDER' found. "
-                f"Should be either 'big' or 'little', not {byte_order}."
-                )
+        print(f"{new_settings=}")
+        (self.__serial_settings,
+         invalid) = hardwarebase.config_has_sections_and_options(
+            self,
+            new_settings,
+            mandatory_settings
+            )
+        if invalid:
+            print("INVALID!", invalid)
+            if hasattr(invalid, '__len__'):
+                for setting in invalid:
+                    (error_code,
+                     error_msg) = ExtraSerialErrors.INVALID_PORT_SETTINGS
+                    error_msg = error_msg.format(setting)
+                    self.error_occurred.emit((error_code, error_msg))
+            else:
+                self.error_occurred.emit(ExtraSerialErrors.MISSING_SETTINGS)
 
+        self.__serial_settings = new_settings
         self.__port.close()
-
-        if isinstance(new_settings, dict):
-            config = ConfigParser()
-            config.read_dict(new_settings)
-            self.__serial_settings = config
-        else:
-            self.__serial_settings = new_settings
 
     port_settings = property(get_port_settings, set_port_settings)
 
@@ -552,7 +495,7 @@ class SerialWorkerABC(qtc.QObject):
         discarded, until the next time the method .send_message()
         runs, or after calling .clear_errors().
 
-        Reimplement this menthod in subclasses. The base
+        Reimplement this method in subclasses. The base
         implementation always returns True.
 
         Parameters
@@ -629,11 +572,11 @@ class SerialWorkerABC(qtc.QObject):
     def prepare_message_for_encoding(self, message, *other_messages):
         """Prepare a message to be encoded.
 
-        This method is guaranteed to be called exaclty once on each
+        This method is guaranteed to be called exactly once on each
         call to send_message(message, *other_messages), right before
         each of the messages are (separately) encoded. Since .encode()
         expects each message to be a bytes or bytearray, this method
-        can be called to turn messages into byearrays.
+        can be called to turn messages into bytearrays.
 
         For example, assume that a command expects data as an integer,
         expressed as two bytes; one can pass send_message() the command
@@ -656,7 +599,7 @@ class SerialWorkerABC(qtc.QObject):
         message_out : object
             Should have one of the types acceptable for encode()
         *other_messages_out : object
-            hould have one of the types acceptable for encode()
+            should have one of the types acceptable for encode()
         """
         return message, *other_messages
 
@@ -692,7 +635,7 @@ class SerialWorkerABC(qtc.QObject):
         """
         return
 
-    def send_message(self, message, *other_messages, timeout=-1):
+    def send_message(self, message, *other_messages, timeout=None):
         """Send message to controller via serial port.
 
         Parameters
@@ -701,13 +644,16 @@ class SerialWorkerABC(qtc.QObject):
             The message to send. This message will be encoded as
             per the self.encode() method. Typically will be either
             a bytes/bytearray, a number, or a string.
-        timeout : int, optional
+        timeout : int or None, optional
             Maximum amount of time (in milliseconds) that the worker
             will spend while waiting to receive any messages following
-            this message. If negative, it will never time out. A timeout
-            of zero will cause an immediate time out. When the worker
-            times out an ExtraSerialErrors.TIMEOUT_ERROR is emitted.
-            Default is -1.
+            this message. If negative, it will never time out.
+            A timeout of zero will cause an immediate time out. When
+            the worker times out an ExtraSerialErrors.TIMEOUT_ERROR is
+            emitted. If not given or None, the timeout will be taken
+            from the option 'serial_port_settings'/'timeout' of
+            self.port_settings. Should this option not exist, timeout
+            will fall back to -1 (i.e., no timeout). Default is None
 
         Returns
         -------
@@ -718,6 +664,11 @@ class SerialWorkerABC(qtc.QObject):
             return
 
         self.__got_unacceptable_response = False
+
+        if timeout is None:
+            timeout = self.port_settings.getint('serial_port_settings',
+                                                'timeout',
+                                                fallback=-1)
 
         timeout = int(timeout)
         if timeout >= 0:

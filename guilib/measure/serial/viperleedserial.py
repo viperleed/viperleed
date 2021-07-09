@@ -19,12 +19,14 @@ from configparser import ConfigParser
 from collections.abc import Sequence
 
 # ViPErLEED modules
-from serialworker import ExtraSerialErrors, SerialWorkerABC, ViPErLEEDErrorEnum
+from viperleed.guilib.measure.serial.serialabc import (ExtraSerialErrors,
+                                                       SerialABC)
+from viperleed.guilib.measure import hardwarebase
 
 
 # TODO: update send_message doc string
-# .super() take full doc string only change acceptable data types
-class ViPErLEEDHardwareError(ViPErLEEDErrorEnum):
+
+class ViPErLEEDHardwareError(hardwarebase.ViPErLEEDErrorEnum):
     """This class contains all errors related to the Arduino."""
     ERROR_NO_ERROR = (0, "No error")
     ERROR_SERIAL_OVERFLOW = (1, "Hardware overflow of Arduino serial.")
@@ -69,11 +71,12 @@ class ViPErLEEDHardwareError(ViPErLEEDErrorEnum):
                                   "supply may be disconnected.")
     ERROR_VERSIONS_DO_NOT_MATCH = (16,
                                    "The version of the firmware installed on "
-                                   "the Arduino does not match the version "
-                                   "running on the PC. May be incompatible.")
+                                   "the ViPErLEED hardware (v{arduino_version})"
+                                   " does not match the one on the PC "
+                                   "(v{local_version}). May be incompatible.")
 
 
-class ViPErinoSerialWorker(SerialWorkerABC):
+class ViPErLEEDSerial(SerialABC):
     """
     Class for serial communication with
     the Arduino Micro ViPErLEED controller.
@@ -92,24 +95,31 @@ class ViPErinoSerialWorker(SerialWorkerABC):
         Check if all necessary sections are available. Then set the
         port settings as specified in the SerialWorkerABC class.
         """
-        if not isinstance(new_settings, (dict, ConfigParser)):
-            raise TypeError(
-                f"{self.__class__.__name__}: invalid type "
-                f"{type(new_settings).__name__} for settings. "
-                "Should be 'dict' or 'ConfigParser'."
-                )
-
         # Section 'serial_port_settings' is checked
         # for in the base class implementation
-        necessary_sections = ('hardware_bits', 'available_commands',
-                              'arduino_states', 'error_bytes',
-                              'firmware_version')
-        for section_name in necessary_sections:
-            if section_name not in new_settings:
-                (error_code,
-                 error_msg) = ExtraSerialErrors.ERROR_INVALID_PORT_SETTINGS
-                error_msg = error_msg.format(section_name)
-                self.error_occurred.emit((error_code, error_msg))
+        mandatory_settings = (
+            ('hardware_bits',),
+            ('available_commands',),
+            ('arduino_states',),
+            ('error_bytes',),
+            ('controller', 'FIRMWARE_VERSION')
+            )
+
+        new_settings, invalid = hardwarebase.config_has_sections_and_options(
+            self,
+            new_settings,
+            mandatory_settings
+            )
+        if invalid:
+            print("invalid in viperleed", invalid)
+            if hasattr(invalid, '__len__'):
+                for setting in invalid:
+                    (error_code,
+                     error_msg) = ExtraSerialErrors.INVALID_PORT_SETTINGS
+                    error_msg = error_msg.format(setting)
+                    self.error_occurred.emit((error_code, error_msg))
+            else:
+                self.error_occurred.emit(ExtraSerialErrors.MISSING_SETTINGS)
         super().set_port_settings(new_settings)
 
     def decode(self, message):
@@ -565,13 +575,15 @@ class ViPErinoSerialWorker(SerialWorkerABC):
                 for 'i0_range' and 'aux_range' are the strings
                 '0 -- 2.5 V' or '0 -- 10 V'.
         """
-        version = self.port_settings['firmware_version']['FIRMWARE_VERSION']
+        local_version = self.port_settings['controller']['FIRMWARE_VERSION']
         major, minor, *hardware = message
         firmware_version = f"{major}.{minor}"
-        if firmware_version != version:
-            self.error_occurred.emit(
-                    ViPErLEEDHardwareError.ERROR_VERSIONS_DO_NOT_MATCH
-                    )
+        if firmware_version != local_version:
+            (error_code,
+            error_msg) = ViPErLEEDHardwareError.ERROR_VERSIONS_DO_NOT_MATCH
+            error_msg = error_msg.format(arduino_version=firmware_version,
+                                         local_version=local_version)
+            self.error_occurred.emit((error_code, error_msg))
 
         hardware_bits = self.port_settings['hardware_bits']
         hardware_config = {'adc_0': False,
@@ -597,5 +609,3 @@ class ViPErinoSerialWorker(SerialWorkerABC):
                     ViPErLEEDHardwareError.ERROR_NO_HARDWARE_DETECTED
                     )
         return firmware_version, hardware_config
-
-

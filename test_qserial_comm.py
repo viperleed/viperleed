@@ -11,20 +11,32 @@ Author: Michele Riva
 
 # Some good info: https://stackoverflow.com/questions/42576537/
 
-import time
 import sys
+import os
+import time
 from configparser import ConfigParser
 
 from PyQt5 import (QtWidgets as qtw,
                    QtCore as qtc,
                    QtSerialPort as qts)
-from viperinoworker import ViPErinoSerialWorker
+
+cd = os.path.realpath(os.path.dirname(__file__))
+# NB: it's necessary to add vpr_path to sys.path so that viperleed
+#     can be loaded correctly at the top-level package
+vpr_path = os.path.realpath(os.path.join(cd, '..'))
+for import_path in (cd, vpr_path):
+    if import_path not in sys.path:
+        sys.path.append(import_path)
+
+from viperleed.guilib.measure import ViPErLEEDSerial
 
 TIMEOUT = 30000  # milliseconds
 
 
 CONFIG = ConfigParser()
-CONFIG.read('Configuration/LeedControl_config.ini')
+CONFIG.read(
+    os.path.join(cd, 'guilib/measure/configuration/viperleed_config.ini')
+    )
 
 class MainWindow(qtw.QWidget):
     """Simple window for basic tests."""
@@ -41,7 +53,7 @@ class MainWindow(qtw.QWidget):
                        'msg_to_send': qtw.QLineEdit(),
                        'msg_received': qtw.QLineEdit()}
 
-        self.__port = ViPErinoSerialWorker(settings=CONFIG)
+        self.__port = ViPErLEEDSerial(settings=CONFIG)
 
         self.__compose()
         self.__connect()
@@ -69,6 +81,8 @@ class MainWindow(qtw.QWidget):
         self._ctrls['send'].setEnabled(False)
 
         self.setLayout(layout)
+        self.adjustSize()
+        self.resize(2*self.size())
 
     def __connect(self):
         """Connect relevant signals."""
@@ -76,6 +90,7 @@ class MainWindow(qtw.QWidget):
         self._ctrls['disconnect'].clicked.connect(self.serial_disconnect)
         self._ctrls['send'].clicked.connect(self.send_message)
         self._ctrls['update_ports'].clicked.connect(self.update_port_list)
+        self._ctrls['msg_to_send'].editingFinished.connect(self.send_message)
 
     def update_port_list(self, *__args):
         """Update list of available ports."""
@@ -119,11 +134,15 @@ class MainWindow(qtw.QWidget):
         if not msg_to_send:
             print('No message', flush=True)
             return
-        
+
         msg_command, *data = msg_to_send.split(';')
         if data:
             data = data[0]
-            msg_data = [int(d) for d in data.split(',')]
+            try:
+                msg_data = [int(d) for d in data.split(',')]
+            except ValueError:
+                print("Invalid message")
+                return
             msg = (msg_command, msg_data)
         else:
             msg = (msg_command,)

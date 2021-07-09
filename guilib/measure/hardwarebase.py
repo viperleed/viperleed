@@ -1,0 +1,168 @@
+"""Module hardwarebase of viperleed.???
+
+========================================
+   ViPErLEED Graphical User Interface
+========================================
+
+Created: 2021-07-08
+Author: Michele Riva
+Author: Florian Doerr
+
+This module contains utility functions and classes shared
+ by mutliple ViPErLEED hardware objects.
+"""
+
+import enum
+from configparser import ConfigParser
+
+########################## FUNCTIONS #####################################
+
+def config_has_sections_and_options(caller, config, mandatory_settings):
+    """Make sure settings are fine, and return it as a ConfigParser.
+
+    Parameters
+    ----------
+    caller : object
+        The object calling this method
+    config : dict or ConfigParser or None
+        The configuration to be checked
+    mandatory_settings : Sequence
+        Each element is a tuple of the forms
+        (<section>, )
+            Checks that config contains the section <section>.
+            No options are checked.
+        (<section>, <option>)
+            Checks that the config contains <option> in the
+            existing section <section>. No values are checked
+            for <option>.
+        (<section>, <option>, <admissible_values>)
+            Checks that the config contains <option> in the
+            existing section <section>, and that <option> is
+            one of the <admissible_values>. In this case,
+            <admissible_values> is a Sequence of strings.
+
+    Returns
+    -------
+    config : ConfigParser or None
+        The same config, but as a ConfigParser, provided
+        the settings are OK. Returns None if some of the
+        mandatory_settings is invalid or if the original
+        config was None.
+    invalid_settings : list, None or True
+        Invalid mandatory_settings of config. None in case
+        settng are OK, list if settings are invalid, True
+        if config was None.
+
+    Raises
+    ------
+    TypeError
+        If settings is neither a dict nor a ConfigParser or
+        mandatory_settings contains invalid data (i.e., one
+        of the entries is not a Sequence with length <= 3).
+    """
+    if config is None:
+        return None, True
+
+    if not isinstance(config, (dict, ConfigParser)):
+        raise TypeError(
+            f"{caller.__class__.__name__}: invalid type "
+            f"{type(config).__name__} for settings. "
+            "Should be 'dict' or 'ConfigParser'."
+            )
+    if isinstance(config, dict):
+        tmp_config = ConfigParser()
+        tmp_config.read_dict(config)
+        config = tmp_config
+
+    invalid_settings = []
+    for setting in mandatory_settings:
+        if not setting or len(setting) > 3:
+            raise TypeError(f"Invalid mandatory setting {setting}. "
+                            f"with length {len(setting)}. Expected "
+                            "length <= 3.")
+        elif len(setting) == 1:
+            # (<section>,)
+            if not config.has_section(setting[0]):
+                invalid_settings.append(setting)
+                continue
+                # raise KeyError(
+                    # f"{caller.__class__.__name__}: settings "
+                    # f"must contain a {setting[0]!r} section"
+                    # )
+        elif len(setting) in (2, 3):
+            # (<section>, <option>) or (<section>, <option>, <admissible>)
+            section, option = setting[:2]
+            if not config.has_option(section, option):
+                invalid_settings.append(setting)
+                continue
+                # raise KeyError(
+                    # f"{caller.__class__.__name__}: settings must contain a "
+                    # f"{setting[0]!r} section including option {setting[1]!r}"
+                    # )
+            if len(setting) == 3:
+                # (<section>, <option>, <admissible>)
+                admissible_values = setting[2]
+                value = config.get(section, option)
+                if value not in admissible_values:
+                    invalid_settings.append(setting)
+                    continue
+                    # raise ValueError(
+                        # f"{caller.__class__.__name__}: invalid value {value!r}"
+                        # f" for settings/option {section!r}/{option!r}. "
+                        # f"Expected one of {', '.join(admissible_values)}."
+                        # )
+            
+    if invalid_settings:
+        config = None
+    return config, invalid_settings
+
+
+################################ CLASSES ########################
+
+class ViPErLEEDErrorEnum(tuple, enum.Enum):
+    """Base class for ViPErLEED hardware errors.
+
+    Each Enum value is a tuple of the form
+        (error_code, error_description)
+    where error_code is an integer, and error_description a string
+    that will be shown to the user when the error occurs. The string
+    may also contain formatting directives, that should be .format()ted
+    by the controller or by the GUI.
+    """
+    @classmethod
+    def as_dict(cls):
+        """Return a dictionary of error codes and error names."""
+        return {el[0]: el.name for el in cls}
+
+    @classmethod
+    def from_code(cls, code):
+        """Return the ViPErLEEDErrorEnum with a given code.
+
+        Parameters
+        ----------
+        code : int
+            The code of the error
+
+        Returns
+        -------
+        ViPErLEEDErrorEnum.value
+            The hardware error itself, which can be unpacked
+            into a tuple of the form (code, error_description)
+
+        Raises
+        ------
+        TypeError
+            If code is not an int
+        AttributeError
+            If code is an unknown error code
+        """
+        if not isinstance(code, int):
+            raise TypeError(f"{cls.__name__}.from_code(code): type of code "
+                            f"should be 'int', not {type(code).__name__!r}.")
+        try:
+            error_name = cls.as_dict()[code]
+        except KeyError as err:
+            raise AttributeError(
+                f"Unknown {cls.__name__} error with code {code}"
+                ) from err
+        return getattr(cls, error_name)
