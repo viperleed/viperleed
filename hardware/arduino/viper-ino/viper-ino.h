@@ -80,6 +80,7 @@ union floatOrBytes{
 #define ERROR_TIMEOUT             7   // Timed out while waiting for something
 #define ERROR_ADC_SATURATED       8   // One of the ADC values reached saturation, and gain can't be decreased further
 #define ERROR_TOO_HOT             9   // The temperature read by the LM35 is too high
+#define ERROR_HARDWARE_UNKNOWN   10   // The PC never asked for the hardware configuration
 #define ERROR_RUNTIME           255   // Some function has been called from an inappropriate state. This is to flag possible bugs for future development.
 byte errorTraceback[2];               // Keeps track of: (0) the state that produced the error, (1) which error occurred (one of ERROR_*)
 
@@ -174,6 +175,7 @@ uint16_t      dacSettlingTime = 100;  // The time interval for the DAC output to
 byte nextVoltageStep;                 // Counter for multiple voltage steps
 
 uint16OrBytes hardwareDetected;       // Bits set indicate this hardware is present/jumper closed
+bool hardwareNeverChecked = true;     // Is set false if the PC asked for the hardware configuration
 
 // ADCs: measurement frequency, channel, gain
 byte     adcUpdateRate;        // Update rate for both ADCs (will be set for line frequency)

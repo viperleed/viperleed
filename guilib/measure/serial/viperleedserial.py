@@ -48,6 +48,9 @@ class ViPErLEEDHardwareError(hardwarebase.ViPErLEEDErrorEnum):
                            "One of the ADC values reached saturation "
                            "and the gain cannot be decreased further.")
     ERROR_TOO_HOT = (9, "The temperature read by the LM35 is too high.")
+    ERROR_HARDWARE_UNKNOWN = (10,
+                              "Cannot perform operation before the hardware "
+                              "configuration is known. Send PC_CONFIGURATION.")
     ERROR_RUNTIME = (255,
                      "Some function has been called from an "
                      "inappropriate state. This is to flag "

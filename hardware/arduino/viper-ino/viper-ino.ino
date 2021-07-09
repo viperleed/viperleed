@@ -123,6 +123,10 @@ void updateState() {
     if (not newMessage) return;
     
     if (msgLength > 1) return; //We received data
+
+    if (data_received[0] != PC_CONFIGURATION 
+        and data_received[0] != PC_RESET 
+        and hardwareNotKnown()) return;
     
     switch(data_received[0]){
         case PC_CONFIGURATION:
@@ -580,6 +584,7 @@ void getConfiguration(){
                              hardwareDetected.asBytes[1],
                              hardwareDetected.asBytes[0]};
     encodeAndSend(configuration, 4);
+    hardwareNeverChecked = false;    
     currentState = STATE_IDLE;
 }
 
@@ -1314,6 +1319,7 @@ void reset(){
     nextVoltageStep = 0;
 
     hardwareDetected.asInt = 0;
+    hardwareNeverChecked = true;    
     adcUpdateRate = AD7705_50HZ;
     adc0Channel = AD7705_CH0;
     adc1Channel = AD7705_CH0;
@@ -1908,6 +1914,13 @@ void changeMeasurementMode() {
     currentState = STATE_IDLE;
 }
 
+bool hardwareNotKnown(){
+    if(hardwareNeverChecked){
+        raise(ERROR_HARDWARE_UNKNOWN);
+        return true;
+    }
+    return false;
+}
 
 /** -------------------------- ARDUINO UTILITIES --------------------------- **/
 
