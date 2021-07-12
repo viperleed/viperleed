@@ -51,9 +51,9 @@ class ControllerABC(metaclass=ABCMeta):
         self.__controls_camera = controls_camera
         mandatory_settings = (('controller', 'serial_port_class'),)
 
-        new_settings, invalid = config_has_sections_and_options(
+        settings, invalid = config_has_sections_and_options(
             self,
-            new_settings,
+            settings,
             mandatory_settings
             )
         if invalid:
@@ -61,12 +61,12 @@ class ControllerABC(metaclass=ABCMeta):
                 for setting in invalid:
                     (error_code,
                      error_msg) = ControllerErrors.INVALID_CONTROLLER_SETTINGS
-                     error_msg = error_msg.format(setting)
-                     self.error_occurred.emit((error_code, error_msg))
+                    error_msg = error_msg.format(setting)
+                    self.error_occurred.emit((error_code, error_msg))
             else:
                 self.error_occurred.emit(ControllerErrors.MISSING_SETTINGS)
 
-        self.__settings = new_settings
+        self.__settings = settings
         serial_name = settings.get('controller', 'serial_port_class')
         self.__serial = get_serial(serial_name)(settings=self.settings,
                                                 port_name=port_name)
@@ -114,8 +114,8 @@ class ControllerABC(metaclass=ABCMeta):
                 for setting in invalid:
                     (error_code,
                      error_msg) = ControllerErrors.INVALID_CONTROLLER_SETTINGS
-                     error_msg = error_msg.format(setting)
-                     self.error_occurred.emit((error_code, error_msg))
+                    error_msg = error_msg.format(setting)
+                    self.error_occurred.emit((error_code, error_msg))
             else:
                 self.error_occurred.emit(ControllerErrors.MISSING_SETTINGS)
 
