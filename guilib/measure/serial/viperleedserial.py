@@ -29,7 +29,7 @@ from viperleed.guilib.measure import hardwarebase
 class ViPErLEEDHardwareError(hardwarebase.ViPErLEEDErrorEnum):
     """This class contains all errors related to the Arduino."""
     ERROR_NO_ERROR = (0, "No error")
-    ERROR_SERIAL_OVERFLOW = (1, "Hardware overflow of Arduino serial.")
+    ERROR_SERIAL_OVERFLOW = (1, "Overflow of the hardware serial.")
     ERROR_MSG_TOO_LONG = (2, "Sent message too long.")
     ERROR_MSG_SENT_INCONSISTENT = (3,
                                    "Sent message has not the length "
@@ -41,9 +41,9 @@ class ViPErLEEDHardwareError(hardwarebase.ViPErLEEDErrorEnum):
     ERROR_MSG_DATA_INVALID = (5,
                               "Request from PC contains invalid information.")
     ERROR_NEVER_CALIBRATED = (6,
-                              "The ADCs have never been "
-                              "calibrated since bootup")
-    ERROR_TIMEOUT = (7, "Arduino timed out while waiting for something")
+                              "Cannot perform operation before ADCs have "
+                              "been calibrated. Send PC_CALIBRATION.")
+    ERROR_TIMEOUT = (7, "Controller timed out while waiting for something.")
     ERROR_ADC_SATURATED = (8,
                            "One of the ADC values reached saturation "
                            "and the gain cannot be decreased further.")

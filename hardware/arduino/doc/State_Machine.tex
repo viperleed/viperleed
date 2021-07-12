@@ -14,7 +14,7 @@
 
 Arduino program flow should be as follows:
 \begin{itemize}
-\item Prepare for measurement: \texttt{PC\_CALIBRATION}, \texttt{PC\_SET\_UP\_ADCS}, \texttt{PC\_SET\_VOLTAGE} (first voltage to measure, but do not care about data that may come back, after dacSettlingTime has elapsed), wait for \texttt{PC\_OK} reply (dacSettlingTime is over), then \texttt{PC\_AUTOGAIN}
+\item Prepare for measurement: \texttt{PC\_CONFIGURATION}, \texttt{PC\_CALIBRATION}, \texttt{PC\_SET\_UP\_ADCS}, \texttt{PC\_SET\_VOLTAGE} (first voltage to measure, but do not care about data that may come back, after dacSettlingTime has elapsed), wait for \texttt{PC\_OK} reply (dacSettlingTime is over), then \texttt{PC\_AUTOGAIN}
 \item Measure IV curve: \texttt{PC\_SET\_VOLTAGE} (again the same), wait for \texttt{PC\_OK} reply, trigger camera and wait for data to come back; then \texttt{PC\_SET\_VOLTAGE} (next voltage step), \ldots
 \item Measure without changing Voltage: \texttt{PC\_MEASURE\_ONLY}, wait for \texttt{PC\_OK} reply and wait for data to come back, repeat
 \end{itemize}
@@ -32,11 +32,12 @@ Original message            & Data bytes & Meaning of data bytes                
 \texttt{PC\_CALIBRATION}    & 3 & adcRate, adc0Ch., adc1Ch.                           & {\small(done)} \texttt{PC\_OK}      & 1\\
 \texttt{PC\_SET\_UP\_ADCS}  & 4 & no.\ meas.\ MSB, no.\ meas.\ LSB,  adc0Ch., adc1Ch. & {\small(data OK)} \texttt{PC\_OK}   & 1\\
 \texttt{PC\_AUTOGAIN}       & ---        & ---                                        & {\small(done)} \texttt{PC\_OK}      & 1\\
-\texttt{PC\_SET\_VOLTAGE}   & 4          & dacValue MBS, dacValue LSB,   & {\small(done waiting)} \texttt{PC\_OK};          & 1\\
-                            &            & dacSettlingTime MSB, dacSettlingTime LSB   & {\small(meas. ready) $3\times$data} & 3$\times$4\\
+\texttt{PC\_SET\_VOLTAGE}   &n$\times$4          & dacValue MBS, dacValue LSB,   & {\small(done waiting)} \texttt{PC\_OK};          & 1\\
+                            &            & dacSettlingTime MSB, dacSettlingTime LSB, times the number of steps   & {\small(meas. ready) $3\times$data} & 3$\times$4\\
 \texttt{PC\_MEASURE\_ONLY}       & ---        & ---                                        & {\small(starting)} \texttt{PC\_OK}      & 1\\
                                                 & & & {\small(meas. ready) $3\times$data} & 3$\times$4 \\
 \texttt{PC\_CHANGE\_MEAS\_MODE} & 1 & set meas. mode & {\small(done)} \texttt{PC\_OK} & 1\\
+\texttt{PC\_RESET} & --- & --- & {\small(starting)} \texttt{PC\_OK} & 1\\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -65,9 +66,10 @@ Original message            & Data bytes & Meaning of data bytes                
 \item \texttt{PC\_OK} in response to \texttt{PC\_CALIBRATION} once the calibration is over (takes $\approx3$~s to complete).
 \item \texttt{PC\_OK} in response to \texttt{PC\_SET\_UP\_ADCS}, after the data received by the Arduino (i.e., the message following \texttt{PC\_SET\_UP\_ADCS}) has been deemed acceptable and processed. Processing should be relatively fast, as it basically just loads calibration registers into the ADCs, and triggers the conversion of their inputs.
 \item \texttt{PC\_OK} in response to \texttt{PC\_AUTOGAIN}, after the whole gain-finding procedure is over (roughly after 70 ms).
-\item \texttt{PC\_OK} in response to \texttt{PC\_MEASURE\_ONLY}, before triggering
+\item \texttt{PC\_OK} in response to \texttt{PC\_MEASURE\_ONLY}, before triggering.
+\item \texttt{PC\_OK} in response to \texttt{PC\_RESET}.
 \item Three consecutive messages (i.e., each with \texttt{MSG\_START} and \texttt{MSG\_END} characters), each with the 4-byte representation of a 32-bit floating-point number. This is the second message after \texttt{PC\_SET\_VOLTAGE}.
-\item Error messages from several possible states. Each error causes two messages to be sent: The first one is \texttt{PC\_ERROR} (1 byte), the second one is a 2-byte data message, where the first byte corresponds to the state in which the error occurred, while the second one is one of the error codes in the following Table.
+\item Error messages from several possible states. Each error causes two messages to be sent: The first one is \texttt{PC\_ERROR} (1 byte), the second one is a 2-byte data message, where the first byte corresponds to the state in which the error occurred, while the second one is one of the error codes in the following table.
 
 	\begin{centering}
 	\begin{tabular}{lcp{.58\textwidth}}\toprule
@@ -81,7 +83,9 @@ Original message            & Data bytes & Meaning of data bytes                
 	\texttt{ERROR\_TIMEOUT}             & 7     & It was not possible to complete an operation in time. It may mean that (i) the Arduino was waiting for data from the PC that never arrived, or (ii) the internal communication with the ADCs was interrupted, likely because the power supply was disconnected while running.\\
 	\texttt{ERROR\_ADC\_SATURATED}      & 8     & The input of one of the ADCs reached solid saturation, and it is not possible to decrease the gain further. May signal an internal malfunction, or that an input cable is incorrectly connected.\\
 	\texttt{ERROR\_TOO\_HOT}            & 9     & The temperature measured by the LM35 is very high. There may be some internal malfunction (either the sensor or the board).\\
+	\texttt{ERROR\_HARDWARE\_UNKNOWN}        & 10     & The PC has not asked for the hardware configuration yet. This error is always thrown if any command except \texttt{PC\_RESET} or \texttt{PC\_CONFIGURATION} is sent before the configuration is known.\\
 	\texttt{ERROR\_RUNTIME}				& 255   & The firmware is corrupt or there is a bug. Some function has been called with inappropriate values or while the Arduino is in the wrong state.\\
+
 	\bottomrule
 	\end{tabular}
 	\end{centering}
@@ -116,29 +120,31 @@ State					        & Initiated by                 & Handler                      
 
 \item \texttt{STATE\_CALIBRATE\_ADCS}: In this state the ADCs are self-calibrated in parallel for all the possible gain values. The state expects a data message following \texttt{PC\_CALIBRATION} containing 3 bytes: the conversion rate to be used, and the channels of the ADCs to be calibrated. This state takes long to complete (120~ms per calibration point, 3 points per gain to compute medians, 8 gain values. In total $\approx3$~s). Once the calibration is over, it sends back a \texttt{PC\_OK} and goes to \texttt{STATE\_IDLE}. Many of the states depend on the calibration data gathered in this state. Hence one always needs to make sure that \texttt{PC\_CALIBRATION} is issued from the PC. Calibrations expire: drift over time and temperature fluctuations. The PC will need to take care of these things (especially on long-term measurements). All standard IV measurements should include a calibration.
 
-    Possible errors:\\\texttt{ERROR\_TIMEOUT} (waiting for data from PC, or no response from ADCs);\\\texttt{ERROR\_MSG\_DATA\_INVALID} (invalid channels or update rate, or less than 3 bytes in the message).
+    Possible errors:\\\texttt{ERROR\_TIMEOUT} (waiting for data from PC, or no response from ADCs);\\\texttt{ERROR\_MSG\_DATA\_INVALID} (invalid channels or update rate, or less than 3 bytes in the message).\\\texttt{ERROR\_HARDWARE\_UNKNOWN} (configuration has not been asked for yet)
 
 \item \texttt{STATE\_SET\_UP\_ADCS}: This state picks the requested channels and fetches pre-stored calibration data. Requires the PC to communicate the number of measurement points that needs to be averaged (2 bytes) as well as which channels are to be measured for the `external' ADCs (2 bytes). Calls \texttt{setAllADCgainsAndCalibration()}, sends a \texttt{PC\_OK}, and returns to \texttt{STATE\_IDLE}.
 
-	Possible errors:\\\texttt{ERROR\_TIMEOUT} (waiting for data from PC);\\\texttt{ERROR\_MSG\_DATA\_INVALID} (channels are invalid or less than 4 bytes in the message).\\\texttt{ERROR\_NEVER\_CALIBRATED} (one of the ADC channels is uncalibrated)
+	Possible errors:\\\texttt{ERROR\_TIMEOUT} (waiting for data from PC);\\\texttt{ERROR\_MSG\_DATA\_INVALID} (channels are invalid or less than 4 bytes in the message).\\\texttt{ERROR\_NEVER\_CALIBRATED} (one of the ADC channels is uncalibrated)\\\texttt{ERROR\_HARDWARE\_UNKNOWN} (configuration has not been asked for yet)
 
-\item \texttt{STATE\_SET\_VOLTAGE}: Requires the PC to communicate the DAC value that needs to be set, as well as how long one should wait for the DAC value to be considered stable. It sets the required voltage, and waits \texttt{dacSettlingTime} (milliseconds). After triggering it decreases the ADC gains, should any of the ADCs require this, and goes straight to \texttt{STATE\_MEASURE\_ADCS}. The state change is done in the \texttt{triggerMeasurements()} function.
+\item \texttt{STATE\_SET\_VOLTAGE}: Requires the PC to communicate the DAC value/s that need/s to be set, as well as how long one should wait for the DAC value/s to be considered stable. It sets the required voltage, and waits \texttt{dacSettlingTime} (milliseconds). If multiple steps have been sent, this process gets repeated until all of the steps have been executed. After triggering it decreases the ADC gains, should any of the ADCs require this, and goes straight to \texttt{STATE\_MEASURE\_ADCS}. The state change is done in the \texttt{triggerMeasurements()} function.
 	
-	Possible errors:\\\texttt{ERROR\_TIMEOUT} (waiting for data from PC).\\\texttt{ERROR\_MSG\_DATA\_INVALID} (not exactly 4 bytes in the message).\\\texttt{ERROR\_NEVER\_CALIBRATED} (one of the ADC channels is uncalibrated).
+	Possible errors:\\\texttt{ERROR\_TIMEOUT} (waiting for data from PC).\\\texttt{ERROR\_MSG\_DATA\_INVALID} (not exactly 4 bytes in the message).\\\texttt{ERROR\_NEVER\_CALIBRATED} (one of the ADC channels is uncalibrated).\\\texttt{ERROR\_HARDWARE\_UNKNOWN} (configuration has not been asked for yet)
 
 \item \texttt{STATE\_AUTOGAIN\_ADCS}: Finds the optimal gain for the available ADCs, measuring 25 values with both ADCs at gain=0 and at 500~Hz. This triggers first a self-calibration for the two ADCs (in parallel), that takes $\approx13$~ms. Then takes one measurement per state-machine loop, while keeping track of the smallest and largest among the values measured. Finally, chooses the gain such that the worst-case scenario measurement (peak-to-peak, plus the largest among max and min) is above 1/4 of the values that can be measured with that gain. The peak-to-peak measured here is also stored.
 
-	Possible errors:\\\texttt{ERROR\_TIMEOUT} (no response from ADC in 5~s)\\\texttt{ERROR\_NEVER\_CALIBRATED} (one of the ADC channels is uncalibrated).
+	Possible errors:\\\texttt{ERROR\_TIMEOUT} (no response from ADC in 5~s)\\\texttt{ERROR\_NEVER\_CALIBRATED} (one of the ADC channels is uncalibrated).\\\texttt{ERROR\_HARDWARE\_UNKNOWN} (configuration has not been asked for yet)
 
 \item \texttt{STATE\_MEASURE\_ADCS}: Measures the number of values given in \texttt{STATE\_SET\_UP\_ADCS} from all the available ADCs, and averages them (one value per state-loop), then goes to \texttt{STATE\_ADC\_VALUES\_READY}. During measurement, the values are checked against the saturation thresholds, possibly triggering a gain switch: an immediate gain switch occurs when the value is solidly saturating, if it is possible to reduce the gain; a gain switch is scheduled if the value is not in the central $\approx50\%$ of the current range. In this case, the actual gain decrease is done the next time \texttt{STATE\_SET\_VOLTAGE} executes.
 
 NOTES: (1) we are currently throwing away the whole set of measurements if we reach solid saturation. Perhaps we could just \texttt{>>1} the relevant \texttt{summedMeasurements}, and skip the data point for all three ADCs. (2) It may be a good place to check whether the LM35 is reading a temperature that is too high (to discuss what this threshold should be. Probably the \texttt{LM35\_MAX\_ADU} of 80degC is too much).
 
-	Possible errors:\\\texttt{ERROR\_TIMEOUT} (takes longer than 5~s to measure all the values)\\\texttt{ERROR\_ADC\_SATURATED} (one of the values measured by the external ADCs reached solid saturation, and its gain cannot be decreased further). \\\texttt{ERROR\_NEVER\_CALIBRATED} (one of the ADC channels is uncalibrated).
+	Possible errors:\\\texttt{ERROR\_TIMEOUT} (takes longer than 5~s to measure all the values)\\\texttt{ERROR\_ADC\_SATURATED} (one of the values measured by the external ADCs reached solid saturation, and its gain cannot be decreased further). \\\texttt{ERROR\_NEVER\_CALIBRATED} (one of the ADC channels is uncalibrated).\\\texttt{ERROR\_HARDWARE\_UNKNOWN} (configuration has not been asked for yet)
 
 \item \texttt{STATE\_ADC\_VALUES\_READY}: This state cannot be reached directly from a PC command. It is the state that automatically follows successful completion of \texttt{STATE\_MEASURE\_ADCS}. Currently it sends back all the data as three separate messages, even if some of the ADCs are not available.
 
 \item \texttt{STATE\_CHANGE\_MEASUREMENT\_MODE}: Sets the boolean \texttt{continuousMeasurement} either to true or false. False will result in a single measurement cycle beeing done when requested by the user. True will make the arduino repeat measuring and returning data. It also sets \texttt{measurementsToDo} to 1.
+
+	Possible errors:\\\texttt{ERROR\_HARDWARE\_UNKNOWN} (configuration has not been asked for yet)
 
 
 \end{itemize}
