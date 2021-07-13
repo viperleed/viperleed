@@ -92,6 +92,11 @@ class SerialABC(qtc.QObject):
     data_received = qtc.pyqtSignal(object)
     serial_busy = qtc.pyqtSignal(bool)
     about_to_trigger = qtc.pyqtSignal()
+    
+    _mandatory_settings = [
+            ('serial_port_settings', 'MSG_END'),
+            ('serial_port_settings', 'BYTE_ORDER', ('big', 'little'))
+            ]
 
     def __init__(self, settings=None, port_name=''):
         """Initialize serial worker object.
@@ -336,17 +341,11 @@ class SerialABC(qtc.QObject):
         ValueError
             If 'BYTE_ORDER' is neither 'big' nor 'little'.
         """
-        mandatory_settings = (
-            ('serial_port_settings', 'MSG_END'),
-            ('serial_port_settings', 'BYTE_ORDER', ('big', 'little'))
-            )
-
-        print(f"{new_settings=}")
         (self.__serial_settings,
          invalid) = hardwarebase.config_has_sections_and_options(
             self,
             new_settings,
-            mandatory_settings
+            self._mandatory_settings
             )
         if invalid:
             print("INVALID!", invalid)

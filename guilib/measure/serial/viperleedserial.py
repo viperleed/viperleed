@@ -90,40 +90,16 @@ class ViPErLEEDSerial(SerialABC):
         self.__last_request_sent = ''
         self.__measurements = []
         self.__is_continuous_mode = False
-        super().__init__(port_name=port_name, settings=settings)
-
-    def set_port_settings(self, new_settings):
-        """Change settings of the port.
-
-        Check if all necessary sections are available. Then set the
-        port settings as specified in the SerialWorkerABC class.
-        """
-        # Section 'serial_port_settings' is checked
-        # for in the base class implementation
-        mandatory_settings = (
+        
+        self._mandatory_settings.extend((
             ('hardware_bits',),
             ('available_commands',),
             ('arduino_states',),
             ('error_bytes',),
             ('controller', 'FIRMWARE_VERSION')
-            )
-
-        new_settings, invalid = hardwarebase.config_has_sections_and_options(
-            self,
-            new_settings,
-            mandatory_settings
-            )
-        if invalid:
-            print("invalid in viperleed", invalid)
-            if hasattr(invalid, '__len__'):
-                for setting in invalid:
-                    (error_code,
-                     error_msg) = ExtraSerialErrors.INVALID_PORT_SETTINGS
-                    error_msg = error_msg.format(setting)
-                    self.error_occurred.emit((error_code, error_msg))
-            else:
-                self.error_occurred.emit(ExtraSerialErrors.MISSING_SETTINGS)
-        super().set_port_settings(new_settings)
+            ))
+        
+        super().__init__(port_name=port_name, settings=settings)
 
     def decode(self, message):
         """Decodes message received from the Arduino.
