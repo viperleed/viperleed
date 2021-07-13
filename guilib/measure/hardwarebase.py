@@ -9,11 +9,12 @@ Author: Michele Riva
 Author: Florian Doerr
 
 This module contains utility functions and classes shared
- by mutliple ViPErLEED hardware objects.
+by mutliple ViPErLEED hardware objects.
 """
 
-import enum
 from configparser import ConfigParser
+import enum
+import sys
 
 ########################## FUNCTIONS #####################################
 
@@ -111,10 +112,46 @@ def config_has_sections_and_options(caller, config, mandatory_settings):
                         # f" for settings/option {section!r}/{option!r}. "
                         # f"Expected one of {', '.join(admissible_values)}."
                         # )
-            
+
     if invalid_settings:
         config = None
     return config, invalid_settings
+
+
+def class_from_name(package, class_name):
+    """Return the serial class given its name.
+
+    Parameters
+    ----------
+    package : str
+        Name of the viperleed.guilib package where
+        the class should be looked for. package
+        should be the name of the package relative
+        to the main measure plugin folder.
+    class_name : str
+        Name of the class to be returned
+
+    Raises
+    ------
+    AttributeError
+        If package is not a valid package
+    ValueError
+        If class_name could not be found in package
+    """
+    try:
+        getattr(sys.modules[__package__], package)
+    except AttributeError as err:
+        raise AttributeError(f"{__package__} does not contain "
+                             f"a package named {package}") from err
+
+    package_name = f"{__package__}.{package}"
+    try:
+        cls = getattr(sys.modules[package_name], class_name)
+    except AttributeError as err:
+        raise ValueError(
+            f"No {package} class named {class_name} found."
+            ) from err
+    return cls
 
 
 ################################ CLASSES ########################

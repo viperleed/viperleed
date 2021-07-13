@@ -21,10 +21,9 @@ from numpy.polynomial.polynomial import Polynomial
 from PyQt5 import QtCore as qtc
 
 # ViPErLEED modules
-from viperleed.guilib.measure import get_serial
 from viperleed.guilib.measure.hardwarebase import (
-    config_has_sections_and_options,
-    ViPErLEEDErrorEnum
+    config_has_sections_and_options, class_from_name,
+    ViPErLEEDErrorEnum,
     )
 
 
@@ -68,8 +67,9 @@ class ControllerABC(metaclass=ABCMeta):
 
         self.__settings = settings
         serial_name = settings.get('controller', 'serial_port_class')
-        self.__serial = get_serial(serial_name)(settings=self.settings,
-                                                port_name=port_name)
+        serial_class = class_from_name('serial', serial_name)
+        self.__serial = serial_class(settings=self.settings,
+                                     port_name=port_name)
 
     @property
     def controls_camera(self):
