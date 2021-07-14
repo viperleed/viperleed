@@ -129,7 +129,7 @@ class ImagingSourceDMKCamera(CameraABC):
         self.callback_data.camera_lib = self.camera_lib
         self.callback_function = IC.TIS_GrabberDLL.FRAMEREADYCALLBACK(callback)
 
-    def fail(self, funct, *args, **kwargs):
+    def __fail(self, funct, *args, **kwargs):
         """Run self.camera_lib.funct(*args, **kwargs).
         
         Returns
@@ -139,31 +139,26 @@ class ImagingSourceDMKCamera(CameraABC):
         """
         return getattr(self.camera_lib, funct)(*args, **kwargs) != self.SUCCESS
 
-    def initialize(self, camera_config):
-        
-        # TODO: the next lines should rather go into a dedicated
-        #       portion of the GUI where stuff is loaded from
-        #       the config file. Part of this can go to a general
-        #       .settings property of the ABC.
-        imagingsource_devices = self.camera_lib.GetDevices()
-        device_name = camera_config['device_name']
+    def open(self):
+        """Connect to the camera."""
+        return not self.__fail('openVideoCaptureDevice', self.name)
 
-        # Check whether there is a camera with the device name from the config
-        # file
-        indices = [i for i, s in enumerate(imagingsource_devices)
-                     if device_name in s.decode()]
-        if len(indices) == 0:
-            raise RuntimeError("No Camera with Name \"%s\" has been found in "
-                               "Devicelist!" % str(device_name))
-        elif len(indices) > 1:
-            print("WARNING: There are more devices with the name \"%s\", program "
-                  "takes the first one..." % str(device_name))
-        # END PART TO MOVE
+    def list_devices(self)
+        """Return a list of avaliable device names.
+
+        Returns
+        -------
+        devices : list
+            Each element is a string representing
+            the name of a camera device.
+        """
+        devices = self.camera_lib.GetDevices()
+        return [d.decode() for d in devices]
+
+    def initialize(self, camera_config):
 
         # try connecting
-        if self.fail('openVideoCaptureDevice', camera_config['device_name']):   # device_name mandatory
-            raise RuntimeError("Impossible to connect to Camera " +
-                               device_name)
+        
 
         # set up the video format
         video_format = camera_config['video_format'].split()[0]                 # video_format seems IS specific --> super()
@@ -189,15 +184,12 @@ class ImagingSourceDMKCamera(CameraABC):
 
         # set exposure, gain, number of frames, frame rate,image path,
         # nameprefix
-        self.set_exposure(camera_config['exposure_time'])                       # exposure_time mandatory
-        self.set_gain(camera_config['gain'])                                    # gain mandatory?
-        self.set_n_frames(camera_config['n_frames'])                            # optional, fallback to 1
+        
+        
         self.set_framerate(camera_config['frame_rate'])                         # probably skip this altogether and stick to exposure_time only
-        self.set_imagepath(camera_config['image_path'],                         # useless
-                           camera_config['file_name'])
 
         self.set_callback()                                                     # probably IS specific
-        self.set_continuous_mode(camera_config['live_mode'])                    # mandatory
+        self.set_continuous_mode(camera_config['live_mode'])                    # optional, will be context-specific
         self.enable_trigger(camera_config['live_mode'])                         # unclear how this differs from continuous on/off
 
         self.start_camera(camera_config['live_mode'])
