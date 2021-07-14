@@ -12,10 +12,11 @@ This module contains the definition of the ViPErinoController class
 which gives commands to the ViPErinoSerialWorker class.
 """
 # ViPErLEED modules
-from viperleed.guilib.measure.controller.controllerabc import ControllerABC
+from viperleed.guilib.measure.controller.\
+     measurecontrollerabc import MeasureController
 
 
-class ViPErinoController(ControllerABC):
+class ViPErinoController(MeasureController):
     """Controller class for the ViPErLEED Arduino Micro."""
 
     def __init__(self, settings=None, port_name='', controls_camera=False):
