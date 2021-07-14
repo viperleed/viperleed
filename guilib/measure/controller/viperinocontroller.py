@@ -11,17 +11,30 @@ Author: Florian Doerr
 This module contains the definition of the ViPErinoController class
 which gives commands to the ViPErinoSerialWorker class.
 """
+from collections import defaultdict
 # ViPErLEED modules
 from viperleed.guilib.measure.controller.\
-     measurecontrollerabc import MeasureController
+     measurecontrollerabc import MeasureController, MeasureControllerError
+
 
 
 class ViPErinoController(MeasureController):
     """Controller class for the ViPErLEED Arduino Micro."""
-
+    
+    self.labels['temperature'] = ('°C', 'lin')
+    self.labels['cold_junction'] = ('°C', 'lin')
+    
+    
     def __init__(self, settings=None, port_name='', controls_camera=False):
         """Initialise controller object."""
-
+        
+        self.labels['temperature'] = []
+        self.labels['cold_junction'] = []
+        
+        if data_points.keys() != labels.keys():
+            self.error_occurred.emit(
+                MeasureControllerError.SECTIONS_DO_NOT_MATCH
+                )
         super().init(settings=settings, port_name=port_name,
                      controls_camera=controls_camera)
 
