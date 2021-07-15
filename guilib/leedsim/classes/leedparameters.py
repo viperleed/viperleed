@@ -393,25 +393,24 @@ class LEEDParameters(MutableMapping):
                 try:
                     value = np.asarray(value)
                 except TypeError as err:
-                    raise ValueError("LEEDParameters: invalid {key}"
+                    raise ValueError(f"Invalid {key}"
                                      "matrix input") from err
                 if value.shape != (2, 2):
-                    raise ValueError("LEEDParameters: invalid shape "
+                    raise ValueError("Invalid shape "
                                      f"{value.shape} for {key}. "
                                      "Expected (2, 2)")
                 data_dict[key] = value
 
             if (key.lower() == 'superlattice'
                     and any(np.abs(np.asarray(value) % 1).ravel() > 1e-4)):
-                raise ValueError("SUPERLATTICE needs to be an "
+                raise ValueError("SUPERLATTICE must be an "
                                  "integer-valued matrix")
 
             if key.lower() == 'beamincidence':
                 if (not isinstance(value, (list, tuple, np.ndarray))
                     or np.shape(value) != (2,)
                         or not -90 <= value[0] <= 90):
-                    raise ValueError("LEEDParameters: invalid beamIncidence "
-                                     f"entry found: {value}")
+                    raise ValueError(f"Invalid beamIncidence: {value}")
                 data_dict[key] = gl.conventional_angles(*value)
 
     def _calculate_missing(self):
@@ -468,10 +467,12 @@ class LEEDParametersList(MutableSequence):
 
         Parameters
         ----------
-        data : iterable or LEEDParametersList
-            Each element is either dict, ConfigParser, or
-            LEEDParameters. Each element will be checked for
-            compatibility, i.e., all should have the same bulk.
+        data : Sequence
+            Each element is either dict, ConfigParser,
+            LEEDParameters, or LEEDParametersList. Each element
+            will be checked for compatibility, i.e., all should
+            have the same bulk. A single LEEDParametersList is
+            also an acceptable Sequence.
         keep_duplicates : bool (default=False)
             If False, only one of the entries in data that
             would produce identical LEED patterns (i.e., same
@@ -521,7 +522,7 @@ class LEEDParametersList(MutableSequence):
         Parameters
         ----------
         idx : int or slice
-        data : dict, ConfigParser, or LEEDParameters (or
+        data : dict, ConfigParser, LEEDParameters (or
                iterables of the same if idx is a slice)
 
         Raises
@@ -852,7 +853,7 @@ class LEEDParametersList(MutableSequence):
             # since abs(T) == E <--> abs(T*) == E
             transform = np.dot(param['bulkReciprocalBasis'], inv_bulk_basis)
             if not np.allclose(np.abs(transform), gl.PlaneGroup.E):
-                raise ValueError("LEEDParametersList: Inconsistent bulk bases "
+                raise ValueError("Inconsistent bulk bases "
                                  "found in the input parameters")
 
             # Bulk groups also should be the same, but excluding the
@@ -864,9 +865,9 @@ class LEEDParametersList(MutableSequence):
                 and bulk_group.same_operations(this_group, include_3d=False)
                 )
             if not same_bulk_group:
-                raise ValueError("LEEDParametersList: Inconsistent symmetry "
-                                 "operations of bulk lattices in the "
-                                 "input parameters")
+                raise ValueError("Inconsistent symmetry "
+                                 "operations of bulk lattices "
+                                 "in the input parameters")
 
         # Check passed. Set eMax and screenAperture to the max
         for param in all_params:

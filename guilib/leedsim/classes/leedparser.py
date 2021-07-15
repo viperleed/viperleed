@@ -19,7 +19,8 @@ as defined in this module in the <defaults> dictionary.
 
 import ast
 import configparser
-import os
+# import os
+from pathlib import Path
 import warnings
 from collections.abc import Sequence, Mapping
 from io import IOBase
@@ -123,10 +124,11 @@ class LEEDParser(  # pylint: disable=too-many-ancestors
                 try:
                     out_dict[k] = self.getfloat(structure, k)
                 except ValueError as err:
-                    raise RuntimeError(f"LEEDParser: invalid {k} "
+                    raise RuntimeError(f"Invalid {k} "
                                        f"{out_dict[k]!r} found") from err
 
             elif k in ('surfBasis', 'SUPERLATTICE'):
+                out_dict[k] = self.getarray(structure, k)
                 out_dict[k] = self.getarray(structure, k)
 
             elif k in ('surfGroup', 'bulkGroup'):
@@ -176,7 +178,7 @@ class LEEDParser(  # pylint: disable=too-many-ancestors
         key = self.optionxform(key)
 
         if key not in ('surfBasis', 'SUPERLATTICE'):
-            raise KeyError(f"LEEDParser: {key} cannot be converted to array")
+            raise KeyError(f"{key} cannot be converted to array")
         self.__check_key(structure, key)
 
         dtype = float if key == 'surfBasis' else int
@@ -187,11 +189,11 @@ class LEEDParser(  # pylint: disable=too-many-ancestors
                                                needs_shape=(2, 2))
         except RuntimeError as err:
             if matrix.shape == (2, 2):
-                raise RuntimeError("LEEDParser: could not convert "
-                                   f"{key} of {structure} into a "
+                raise RuntimeError(f"Could not convert {key} "
+                                   f"of {structure} into a "
                                    "numpy.ndarray.") from err
-            raise RuntimeError(f"LEEDParser: invalid shape "
-                               f"of {key} in {structure}") from err
+            raise RuntimeError(f"Invalid shape of {key} "
+                               f"in {structure}") from err
         return matrix
 
     # pylint: enable=missing-param-doc,missing-type-doc
@@ -223,7 +225,7 @@ class LEEDParser(  # pylint: disable=too-many-ancestors
         if (not isinstance(angles, (list, tuple, np.ndarray))
                 or np.shape(angles) != (2,)
                 or not -90 <= angles[0] <= 90):
-            raise RuntimeError("LEEDParser: invalid beamIncidence in "
+            raise RuntimeError("Invalid beamIncidence in "
                                f"found in structure {structure}: {angles}")
         return gl.conventional_angles(*angles)
 
@@ -254,7 +256,7 @@ class LEEDParser(  # pylint: disable=too-many-ancestors
         key = self.optionxform(key)
 
         if key not in ('surfGroup', 'bulkGroup'):
-            raise KeyError(f"LEEDParser: {key} cannot be "
+            raise KeyError(f"{key} cannot be "
                            "converted to PlaneGroup")
         self.__check_key(structure, key)
 
@@ -280,12 +282,12 @@ class LEEDParser(  # pylint: disable=too-many-ancestors
         return param_names_map[optionstr.lower()]
 
     def read(self, filenames, encoding=None):
-        """Read the contents of a single file into self.
+        """Read the contents of files into self.
 
-        It also checks whether the file is in the 'old' format, i.e.,
-        without 'section headers'. If this is the case, the standard
-        section header '[S1]' is added, and the file is overwritten
-        to comply with the new format.
+        It also checks whether the file(s) are in the 'old' format,
+        i.e., without 'section headers'. If this is the case, the
+        standard section header '[S1]' is added, and the files are
+        overwritten to comply with the new format.
 
         Parameters
         ----------
@@ -305,29 +307,23 @@ class LEEDParser(  # pylint: disable=too-many-ancestors
         """
         if isinstance(filenames, str):
             filenames = [filenames]
-        n_open = sum(os.path.isfile(f) for f in filenames)
-        # n_open = 0
-        # for fname in filenames:
-            # try:
-                # open_file = open(fname, 'r')
-            # except FileNotFoundError:
-                # pass
-            # else:
-                # open_file.close()
-                # n_open +=1
+        filenames = [Path(f) for f in filenames]
+        n_open = sum(f.is_file() for f in filenames)
         if not n_open:
             raise FileNotFoundError("None of the files passed exists!")
         for fname in filenames:
             try:
                 super().read(fname, encoding)
             except configparser.MissingSectionHeaderError:
-                warnings.warn(f"{filenames} is an old-style input file. "
+                # Old-style, has no sections
+                with fname.open('r') as open_file:
+                    # Add a section called like the file name
+                    lines = [f'[{fname.stem}]\n', *open_file.readlines()]
+                with fname.open('w') as open_file:
+                    open_file.writelines(lines)
+                warnings.warn(f"{fname} is an old-style input file. "
                               "Will be reformatted and overwritten.",
                               DeprecationWarning)
-                with open(fname, 'r') as open_file:
-                    lines = ['[S1]\n', *open_file.readlines()]
-                with open(fname, 'w') as open_file:
-                    open_file.writelines(lines)
         super().read(filenames, encoding)
 
         self['DEFAULT'] = defaults
@@ -420,7 +416,7 @@ class LEEDParser(  # pylint: disable=too-many-ancestors
     def __check_key(self, structure, key):
         """Raise KeyError if key is not in self[structure]."""
         if not self.has_option(structure, key):
-            raise KeyError(f"LEEDParser: {key} missing in {structure}.")
+            raise KeyError(f"{key} missing in {structure}.")
 
     def __check_structure(self, structure):
         """Raise ValueError if structure is not in self."""
