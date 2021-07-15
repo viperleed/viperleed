@@ -1,4 +1,5 @@
-"""
+"""Module mainwindow of viperleed.guilib.leedsim
+
 ======================================
   ViPErLEED Graphical User Interface
 ======================================
@@ -9,11 +10,12 @@ Module: mainwindow.py
 Created: 2020-01-13
 Author: Michele Riva
 
-This is the main window of the ViPErLEED simulation plug-in. This window
-handles all the widgets and all the calls to other dialogs.
+Defines the LEEDPatternSimulator class, i.e., the main window of
+the ViPErLEED pattern simulator plug-in. Allows simulating LEED
+patterns from multiple structures, accounting for symmetry.
 
-2020-01-13 At present this is the only plug-in available; the behavior and
-           coding of this will change when other plug-ins are integrated
+2021-07-04: major restyling started, including
+            support for multiple structures
 """
 
 #TESTING
@@ -22,6 +24,8 @@ from time import perf_counter
 
 import re
 import copy
+import warnings
+from pathlib import Path
 
 import numpy as np
 import PyQt5.QtCore as qtc
@@ -30,207 +34,402 @@ import PyQt5.QtWidgets as qtw
 from viperleed import guilib as gl
 
 
+DEFAULT_INPUT_FILE_EXTENSION = '*.tlm'
+DEFAULT_OPEN_FILE = ('./guilib/leedsim/input examples/', 'PatternInfo.tlm')
+DEFAULT_EXPORT_FILE = ('./guilib/leedsim/exported/', 'LEEDBeams.csv')
+TITLE = 'LEED Pattern Simulator'
+SCREEN_FRACTION = 0.63
+
+
+def default_input_file_extensions():
+    """Return a string that can be used in Open/Save dialogs for filtering."""
+    txt = ("LEED Pattern simulation input files ("
+           f"{DEFAULT_INPUT_FILE_EXTENSION}, "
+           f"{DEFAULT_INPUT_FILE_EXTENSION.upper()})")
+    return f"{txt};;All files (*)"
+
+# TODO: this may easily go into a settings.ini file
+def default_file_menu():
+    """Return settings for the 'File' menu.
+
+    Returns
+    -------
+    settings : dict
+        keys : str
+            Shorthand name of menu entry. Typical names are
+            'new', 'open', 'save', 'save_as', 'exit'
+        values : tuple
+            Settings for the menu entry, in the following order:
+            icon : QIcon or None
+                Icon to be used in the menu and tool bar. If
+                None, the corresponding entry will not be added
+                to the tool bar.
+            menu_text : str
+                Text appearing in the menu entry
+            shortcut : str
+                Keyboard shortcut that activates the action
+            tool_tip : str
+                Text that appears in a tool tip box when
+                hovering with the mouse. Shortcut will be
+                added in parentheses.
+            status_tip : str
+                Text that appears in the status bar when
+                hovering with the mouse. Shortcut will be
+                added in parentheses.
+            handler : str
+                Attribute of the class that will be invoked
+                when the menu entry/tool-bar icon is activated
+            to_be_enabled : bool
+                True if the entry should be enabled only when
+                a valid input file is loaded. If False, the
+                entry is always enabled.
+    """
+    style = qtw.QWidget().style()
+    settings = {
+        'new': (style.standardIcon(qtw.QStyle.SP_FileIcon),
+                '&New/edit...',
+                'Ctrl+N',
+                'New/Edit LEED pattern',
+                'New/Edit LEED pattern input file',
+                '_on_file_new_or_edit_pressed',
+                False),
+        'open': (style.standardIcon(qtw.QStyle.SP_DialogOpenButton),
+                 '&Open...',
+                 'Ctrl+O',
+                 'Open LEED pattern input',
+                 'Open LEED pattern input file',
+                 '_on_file_open_pressed',
+                 False),
+        'save': (style.standardIcon(qtw.QStyle.SP_DialogSaveButton),
+                 '&Save',
+                 'Ctrl+S',
+                 'Save LEED pattern input',
+                 'Save LEED pattern input file',
+                 '_on_file_save_pressed',
+                 True),
+        'save_as': (None,
+                    '&Save As...',
+                    'Ctrl+Shift+S',
+                    'Save LEED pattern input as',
+                    'Save LEED pattern input file as',
+                    '_on_file_save_as_pressed',
+                    True),
+        'exit': (None,
+                 '&Exit',
+                 'Ctrl+W',
+                 'Exit LEED Pattern simulator',
+                 'Exit LEED Pattern simulator plug-in',
+                 'close',
+                 False)
+    }
+    return settings
+
+
+# TODO: remember last directories, also across sessions
+
 @gl.broadcast_mouse
-class LEED_GUI(gl.ViPErLEEDModuleBase):
-    
-    extension = '*.tlm'
-    version = gl.GLOBALS['version']
+class LEEDPatternSimulator(gl.ViPErLEEDPluginBase):
+    """A class that allows simulating LEED Patterns."""
 
-    extStr = 'LEED input files ({})'.format(' '.join([extension,
-                                                      extension.upper()]))
-    extStr = ';;'.join([extStr, 'All files (*)'])
-    default_open = ('./guilib/leedsim/input examples/', 'PatternInfo.tlm')
-    default_export = ('./guilib/leedsim/exported/', 'LEEDSpots.csv')
+    def __init__(self, parent=None):
+        """Initialize window."""
+        super().__init__(parent, name=TITLE)
 
-    # these are the parameters to read from the LEED file
-    inputParams = ('eMax', 'surfBasis', 'SUPERLATTICE', 'surfGroup',
-                   'bulkGroup')
-    optionalParams = ('bulk3Dsym', 'screenAperture')
+        # Keep references to controls, dialogs, and some globals
+        self._ctrls = {
+            # We have to keep a reference to the top-level
+            # menus in the menu bar to have them show up.
+            'file_menu': qtw.QMenu("&File"),
+            # Real-space and LEED pattern plotting canvases
+            'lattices_canvas': gl.RealCanvas(title='Real-Space Lattices'),      # TODO: was self.realSpace
+            'leed_canvas': gl.LEEDCanvas(title='LEED Pattern'),                 # TODO: was self.recSpace
+            # Rotation, just as a view, i.e., not the azimuthal
+            # angle of incidence of the primary beam
+            'rotation': gl.RotationBlock(),                                     # TODO: was self.rotWidg
+            # Current primary electron energy
+            'energy': gl.EnergyBlock(),                                         # TODO: was self.enWidg
+            # Domains selector
+            'domains': qtw.QPushButton('Select domains')
+            }
+        # __enabled_on_valid_input is a list of actions
+        # and controls that are enabled only when the user
+        # gave a valid input for a surface structure.
+        self.__enabled_on_valid_input = [
+            v for k, v in self._ctrls.items()
+            if k not in ('file_menu',)
+            ]
 
-    def __init__(self):
-        super().__init__()
-        self.fonts = gl.AllGUIFonts()
-        self.leedParams = dict()
-        self.openedFile = None  # Keep track of the name of the currently
-                                # open file. This is used for exporting.
-        self.initUI()
-        self.centerOnScreen()
+        self._dialogs = {'file_new': gl.NewFileDialog(self),}
+        self._glob = {
+            # parameters holds the LEED parameters currently
+            # used for plotting the lattices and LEED pattern
+            'parameters': gl.LEEDParametersList(),
+            # is_saved keeps track of whether the structure
+            # input is saved to disk. Used to keep track of
+            # whether the saved file is up to date
+            'is_saved': False,
+            # filename keeps track of the name of the
+            # input file that is currently open, if any.
+            # Used to save edits and for exporting.
+            'filename': None,
+            }
 
-    def centerOnScreen(self):
-        qr = self.frameGeometry()
-        cp = qtw.QDesktopWidget().availableGeometry(self).center()
-        qr.moveCenter(cp)
-        self.move(qr.topLeft())
+        # Set window properties
+        self.setWindowTitle(TITLE)
+        self.setAcceptDrops(True)
+        self.installEventFilter(self)
 
-    def setMenu(self):
-        menubar = self.menuBar()
+        self.__compose()
+        self.__connect()
+        self.adjustSize()
+        self.center_on_screen()
 
-        self.actionsToEnable = []
+    @property
+    def view_rotation(self):
+        """Return the current viewing rotation as a float.
 
-        # "File"
-        self.fileMenu = qtw.QMenu('&File')
-        menubar.insertMenu(self.about_action, self.fileMenu)
+        Returns
+        -------
+        angle : float
+            The current angle in degrees between the horizontal
+            direction and the first basis vector of the bulk,
+            modulo 360.                                                         # TODO: true??
+        """
+        return float(self._ctrls['rotation'].text.text())
 
-        # File -> New
-        newF = qtw.QAction('&New...', self)
-        newF.setShortcut('Ctrl+N')
-        newF.setStatusTip('New LEED pattern file')
-        newF.triggered.connect(self.fileNewDialog)
+    @property
+    def energy(self):
+        """Return the current energy as a float."""
+        return float(self._ctrls['energy'].text.text())
 
-        # File -> Open
-        openF = qtw.QAction('&Open...', self)
-        openF.setShortcut('Ctrl+O')
-        openF.setStatusTip('Open LEED pattern file')
-        openF.triggered.connect(self.fileOpenDialog)
+    @property
+    def filename(self):
+        """Return the name of the open file, if any, None otherwise."""
+        return self._glob['filename']
 
-        # File -> Save
-        saveF = qtw.QAction('&Save', self)
-        saveF.setShortcut('Ctrl+S')
-        saveF.setStatusTip('Save LEED pattern file')
-        saveF.triggered.connect(self.fileSavePressed)
+    @filename.setter
+    def filename(self, new_filename):
+        """Set the name of the currently open file."""
+        self._glob['filename'] = new_filename
 
-        self.actionsToEnable.append(saveF)
+    def __get_parameters(self):
+        """Return the current LEED parameters used.
 
-        # File -> Save As...
-        svAs = qtw.QAction('&Save As...', self)
-        svAs.setShortcut('Ctrl+Shift+S')
-        svAs.setStatusTip('Save LEED pattern file as...')
-        svAs.triggered.connect(self.fileSaveAsPressed)
-        self.actionsToEnable.append(svAs)
+        This is the getter for the .parameters @property.
 
-        # File -> Export sub-menu...
-        exportMenu = qtw.QMenu('Export')
-        self.actionsToEnable.append(exportMenu)
+        Returns
+        -------
+        parameters : LEEDParametersList
+            The current LEED parameters used for plotting
+        """
+        return self._glob['parameters']
 
-        # ...and its contents:
-        # * Export list of beams to *.csv
-        exportCSV = qtw.QAction('&Export Beam List...', self)
-        exportCSV.setShortcut('Ctrl+E')
-        exportCSV.setStatusTip('Export list of LEED beams to *.csv')
-        exportCSV.triggered.connect(self.exportBeamsPressed)
-        self.actionsToEnable.append(exportCSV)
+    def __set_parameters(self, new_parameters):
+        """Set new LEED parameters.
 
-        exportMenu.addAction(exportCSV)
+        This is the setter for the .parameters @property.
 
-        # File -> Exit
-        exit = qtw.QAction('&Exit', self)
-        exit.setShortcut('Ctrl+Q')
-        exit.setStatusTip('Exit application')
-        exit.triggered.connect(qtw.qApp.quit)
-        #exitAct.triggered.connect(self.close)
-        # Replacing line 109 with 110 makes the popup appear also when
-        # closing with CTRL+Q
+        Parameters
+        ----------
+        new_parameters : Sequence
+            The new LEED parameters used for plotting. Each element
+            should be a dict, a ConfigParser, a LEEDParameters, or
+            a LEEDParametersList. Also a single LEEDParametersList
+            is an acceptable Sequence.
+        """
+        if new_parameters == self.parameters:
+            # No need to recalculate if things are unchanged
+            print("same")
+            return
+        self._glob['parameters'] = gl.LEEDParametersList(new_parameters)
+        self.enable_ctrls(True)
+        # self.initRealAndLEED(True)                                            # TODO: call appropriate method after reimplementation
 
-        self.fileMenu.addAction(newF)
-        self.fileMenu.addAction(openF)
-        self.fileMenu.addAction(saveF)
-        self.fileMenu.addAction(svAs)
-        self.fileMenu.addMenu(exportMenu)
-        self.fileMenu.addSeparator()
-        self.fileMenu.addAction(exit)
+        #                                                                       # TODO: was also destroying the exportDialog, but would probably
+        #                                                                       # simply be better to reprepare the dialog and its contents each
+        #                                                                       # time it is opened
 
-    def setToolBar(self):
-        self.tBar = self.addToolBar('')
-        self.tBar.setFloatable(False)
-        self.tBar.setIconSize(0.7*self.tBar.iconSize())
+    parameters = property(__get_parameters, __set_parameters)
 
-        newF = qtw.QAction(self.style().standardIcon(qtw.QStyle.SP_FileIcon),
-                       'New LEED pattern', self)
-        newF.setStatusTip('New LEED pattern file (Ctrl+N)')
-        newF.triggered.connect(self.fileNewDialog)
+    @property
+    def saved(self):
+        """Return whether the current input is saved."""
+        return self._glob['is_saved']
 
-        openF = qtw.QAction(
-            self.style().standardIcon(qtw.QStyle.SP_DialogOpenButton),
-            'Open LEED pattern', self)
-        openF.setStatusTip('Open LEED pattern file (Ctrl+O)')
-        openF.triggered.connect(self.fileOpenDialog)
+    @saved.setter
+    def saved(self, is_saved):
+        """Set whether the current input is saved."""
+        #                                                                       # TODO: also change active state of save button and menu actions
+        self._glob['is_saved'] = bool(is_saved)
 
-        saveF = qtw.QAction(
-            self.style().standardIcon(qtw.QStyle.SP_DialogSaveButton),
-            'Save LEED pattern', self)
-        saveF.setStatusTip('Save LEED pattern file (Ctrl+S)')
-        saveF.triggered.connect(self.fileSavePressed)
+    def closeEvent(self, event):
+        """Extend closeEvent to ask for saving changes."""
+        reply = qtw.QMessageBox.No
 
-        exportAct = qtw.QAction(
-            self.style().standardIcon(qtw.QStyle.SP_DriveFDIcon),
-            'Export LEED pattern', self)
-        exportAct.setStatusTip('Export list of LEED beams to '
-                               'comma-separated file (Ctrl+E)')
-        exportAct.triggered.connect(self.exportBeamsPressed)
+        # self.filename is None only if no file was ever loaded
+        # and if no edit was ever done when starting from scratch
+        if self.filename is not None and not self.saved:
+            reply = qtw.QMessageBox.question(
+                self, 'Unsaved changes',
+                f"Save changes to file {self.filename} before closing?",
+                qtw.QMessageBox.Yes
+                | qtw.QMessageBox.No
+                | qtw.QMessageBox.Cancel,
+                qtw.QMessageBox.Yes
+                )
+        if reply == qtw.QMessageBox.Cancel:
+            event.ignore()
+            return
+        if reply == qtw.QMessageBox.Yes:
+            self._on_file_save_pressed()
+        super().closeEvent(event)
 
-        self.tBar.addAction(newF)
-        self.tBar.addAction(openF)
-        self.tBar.addAction(saveF)
-        self.tBar.addAction(exportAct)
+    def dragEnterEvent(self, event):
+        """Extend dragEnterEvent to accept drag-drop of input files."""
+        mime_data = event.mimeData()
 
-        self.actionsToEnable.append(saveF)
-        self.actionsToEnable.append(exportAct)
+        # Use 'urls' as this returns an iterable of QUrl objects
+        # that point to the file paths of the files that are dragged
+        if not mime_data.hasUrls():
+            # Not dropping a file
+            super().dragEnterEvent(event)
+            return
 
-    def fileOpenDialog(self):
-        fname = qtw.QFileDialog.getOpenFileName(self, 'Open LEED pattern',
-                                                self.default_open[0],
-                                                self.extStr)
-        loadedParams = self.parseLEEDFile(fname)
-        if loadedParams is not None:
-            self.openedFile = fname
-            self.leedParams = loadedParams
-            self.loadLEEDInput(loadedParams, True)
-            self.isSaved = True
-            self.openFile = fname[0]
+        # Determine whether the files dropped are acceptable inputs
+        fnames = [url.toLocalFile() for url in mime_data.urls()]
+        params = self.__read_files_and_report_errors(fnames, silent=True)
+        if not params:
+            # Invalid input
+            super().dragEnterEvent(event)
+            return
+
+        # Files are OK. Enable receiving QDropEvent
+        event.acceptProposedAction()
+
+    def dropEvent(self, event):
+        """Extend dropEvent to accept drag-drop of input files.
+
+        The reimplementation of dragEnterEvent guarantees that
+        event.mimeData().hasUrls(), and that the files being
+        dropped are acceptable.
+
+        Parameters
+        ----------
+        event : QDropEvent
+            The drop event to be processed.
+        """
+        fnames = [url.toLocalFile() for url in event.mimeData().urls()]
+        params = self.__read_files_and_report_errors(fnames)
+        if not params:
+            # This should never happen, but better safe than sorry
+            return
+
+        event.acceptProposedAction()
+        if params:
+            self.parameters = params
+
+        if len(fnames) > 1:
+            self.filename = ''
+            self.saved = False
         else:
-            self.fileReadError(fname=fname[0])
+            self.filename = fnames[0]
+            self.saved = True
 
-    def fileNewDialog(self):
-        if not hasattr(self, 'newDialog'):
-            self.newDialog = gl.NewFileDialog(self, self.leedParams)
-            self.newDialog.dialogEdited.connect(self.loadLEEDInput)
-            self.isSaved = False
-        else:
-            self.newDialog.open(self.leedParams)
+    def eventFilter(self, watched_object, event):
+        """Extend eventFilter to filter events.
 
-    def fileSavePressed(self):
-        if (not hasattr(self, 'openFile')) or (self.openFile is None):
-            # no file is currently open
-            self.fileSaveAsPressed()
-        else:
-            # TODO: ADD HERE A MESSAGE BOX ASKING IF YOU WANT TO OVERWRITE?
-            self.saveToFile(self.openFile)
-            self.isSaved = True
+        The following events are currently processed:
+            atc.QEvent.NonClientAreaMouseButtonRelease
+                Triggered when the window has been moved and the
+                mouse button is release. The window is resized
+                to a dimension that fits the current screen. The
+                event is then processed normally.
 
-    def fileSaveAsPressed(self):
-        fname = qtw.QFileDialog.getSaveFileName(self, 'Save TLM input', '',
-                                                self.extStr)
-        if fname is not None and fname[0]:
-            # file selected correctly
-            self.saveToFile(fname[0])
-            self.openFile = fname[0]
-            self.isSaved = True
+        Returns
+        -------
+        reject_event : bool
+            True if the event should not be processed.
+        """
+        if (event.type() == qtc.QEvent.NonClientAreaMouseButtonRelease
+                and self.screen_changed):
+            self.adjustSize()                                                   # TODO: replace with reimplementation that uses the current size rather than sizeHint(), and that also scales children and font sizes
+        return super().eventFilter(watched_object, event)
 
-    def saveToFile(self, fname):
-        # Sort out the parameters, converting the values to strings
-        params = copy.deepcopy(self.leedParams)
-        for key, val in params.copy().items():  # BUG: dictionary changes size upon saving
-            if key == 'SUPERLATTICE' or key == 'surfBasis':
-                params[key] = np.array2string(
-                                        val,
-                                        separator=',',
-                                       # precision=5,
-                                        suppress_small=True
-                                        ).replace('\n', '').replace(' ', '')
-            elif key in ('eMax', 'screenAperture'):
-                params[key] = str(val)
-            elif key in ('bulkGroup', 'surfGroup'):
-                params[key] = val.group
-            elif key == 'bulk3Dsym' and val is None:
-                del params[key]
-        # now params contains correctly formatted strings
-        params = list(params.items())
-        paramsTxt = '\n'.join('{}'.format('='.join(param))
-                              for param in params)
-        with open(fname, 'w+') as f:
-            f.write(paramsTxt)
+    def enable_ctrls(self, enabled):
+        """Enable or disable controls and actions.
 
-    def exportBeamsPressed(self):
+        This method should typically be called when a valid
+        structural input is loaded.
+
+        Parameters
+        ----------
+        enabled : bool
+            True to enable controls. In fact, any object that
+            can evaluate to a bool is accepted. Its truth value
+            will be used.
+        """
+        enabled = bool(enabled)
+        for obj in self.__enabled_on_valid_input:
+            obj.setEnabled(enabled)
+
+    def mouseReleaseEvent(self, event):                                         # TODO: fixme
+        """Extend mouseReleaseEvent.
+
+        Hide the pop-up with matrices when clicking anywhere
+        on the window.
+        TODO: this will rather close the domain selector window
+
+        Parameters
+        ----------
+        event : QMouseEvent
+            The mouse-release event to be handled.
+
+        Returns
+        -------
+        None
+        """
+        if False:
+            doms = self._ctrls['domains']
+            if (doms.isEnabled()
+                and doms.matricesPopup.isVisible()
+                and not doms.text.underMouse()):
+                # the reason for not acting when doms.text is underMouse() is
+                # that the event handling in this case is done within DomsBlock
+                doms.matricesPopup.hide()
+            # TESTING                                                           # TODO: fix
+            # for annot in self.recSpace.annots:
+                # annot.show()
+            # END TESTING
+        super().mouseReleaseEvent(event)
+
+    def moveEvent(self, event):
+        """Extend moveEvent to have non-children follow the window."""
+        super().moveEvent(event)
+        delta = event.pos() - event.oldPos()
+
+        for annot in self._ctrls['leed_canvas'].annots:
+            # NB: one cannot use += for in-place assignment since
+            # .center is a property, which would then become a
+            # standard attribute.
+            annot.center = qtc.QPoint(*annot.center) + delta
+            if annot.isVisible():
+                # Move only visible annotations, which will move
+                # together with the window. If one would have
+                # this call even for invisible annotations, the move
+                # would be issued before the next show. This messes
+                # the position of the annotation.
+                annot.move(annot.pos() + delta)
+
+    def save_input(self):
+        """Save the current input to file."""
+        gl.LEEDParser.write_structures(self.parameters, self.filename)
+
+    def sizeHint(self):                                                         # TODO: consider if it makes sense to: (1) also reimplement minimumSizeHint(); (2) move this to base
+        """Reimplement sizeHint to scale with the current screen."""
+        self.ensurePolished()
+        return SCREEN_FRACTION*self.screen().size()                             # TODO: for MPLCanvas it may make sense to look at QSize.scale(..., aspect_ratio)
+
+    def _on_export_beams_pressed(self):                                         # TODO: fix + doc
         # Create a dialog to select which domains should be exported
         # and to process the data to export
         if not hasattr(self, 'exportDialog'):
@@ -240,386 +439,395 @@ class LEED_GUI(gl.ViPErLEEDModuleBase):
         else:
             self.exportDialog.open()
 
-    def parseLEEDFile(self, fname, checkOnly=False):
-        # returns: None if file is unreadable/no file was selected; empty
-        # dict if file does not contain all parameters/incorrect ones; dict
-        # with parameters otherwise
-        self.fileErr = ''   # keeps track of what happened
+    def _on_file_new_or_edit_pressed(self):
+        """React to a request to produce a new input file or edit one."""
+        self._dialogs['file_new'].open(self.parameters)
 
-        if fname[0]:
-            with open(fname[0], 'r') as f:
-                try:
-                    flines = f.readlines()
-                except:
-                    ext = qtc.QFileInfo(fname).suffix().lower()
-                    self.fileErr = 'ERROR: File type *.%s not supported.'%(ext)
-                    return None
+    def _on_file_open_pressed(self):
+        """React to a request to open existing input files."""
+        fnames = qtw.QFileDialog.getOpenFileNames(
+            self, 'Open LEED pattern input',
+            DEFAULT_OPEN_FILE[0],
+            default_input_file_extensions()
+            )
+        if not fnames[0]:
+            # No files selected
+            return
+
+        params = self.__read_files_and_report_errors(fnames[0], silent=False)
+        if not params:
+            # Files selected were invalid
+            return
+
+        # When multiple files are loaded, we force the
+        # user to save the combined input to a new file
+        if len(fnames[0]) > 1:
+            self.filename = ''
+            self.saved = False
         else:
-            self.fileErr = 'No file selected.'
-            return None
+            self.saved = True
+            self.filename = fnames[0][0]
 
-        if checkOnly:
-            return dict()
+        self.parameters = params
 
-        if flines is None:
-            return dict()
+    def _on_file_save_as_pressed(self):
+        """React to a request to save the input with a new name."""
+        fname = qtw.QFileDialog.getSaveFileName(
+            self, 'Save Pattern simulator input',
+            '', default_input_file_extensions()
+            )
+        if fname and fname[0]:
+            # File selected correctly
+            self.filename = fname[0]
+            self.save_input()
+            self.saved = True
 
-        # Something has been successfully read
-        # get rid of white spaces (i.e, ' ', '\t', '\n', '\r')
-        flines = [re.sub(r'\s+', '', line) for line in flines]
+    def _on_file_save_pressed(self):
+        """React to a request to save the input file."""
+        if not self.filename:  # No file is currently open
+            self._on_file_save_as_pressed()
+            return
+        #                                                                       # TODO: add here a message box asking if you want to overwrite
+        self.save_input()
+        self.saved = True
 
-        #get rid of comments, that begin with \# \! \%
-        commentChars = ['#', '!', '%']
-        for ch in commentChars:
-            flines = [line.partition(ch)[0].lower() for line in flines]
-            # i.e., take whatever block is on the left side of any of the
-            # comment characters
+    def _on_structure_edit_finished(self, leed_parameters):
+        """React to a change of the structure input.
 
-        # now keep only lines that contain exactly one '=' sign
-        flines = [line for line in flines if line.count('=') == 1]
+        This is the slot connected to the editing_finished of
+        NewFileDialog. The sole purpose of this is to have the
+        GUI appropriately ask for saving changes to file when
+        the first structure is created from scratch.
 
-        if len(flines) == 0:
-            self.fileErr = 'File does not contain any LEED parameter.'
-            return dict()
+        Parameters
+        ----------
+        leed_parameters : LEEDParametersList
+            The new LEEDParametersList to be used
+        """
+        if leed_parameters and self.filename is None:
+            print("edited")
+            self.filename = ''
+        self.parameters = leed_parameters
+        self.saved = False
 
-        # and split them in two:
-        # _param contains what's on the left of '=',
-        # _values what's on the right
-        flines_param, flines_values = zip(
-                         *[np.array(line.partition('='))[[0, 2]].tolist()
-                           for line in flines
-                           if len(line) > 1]
-                         )
-        # make a dictionary out of these. This also removes duplicate
-        # parameters, taking the last occurrence as the value
-        par_dict = dict(zip(flines_param, flines_values))
+    def __compose(self):
+        """Prepare menu, bars, and children widgets."""
+        self.__compose_menu_and_toolbar()
 
-        if len(par_dict) < len(flines_param):
-            self.fileErr = ('Warning: Repeated entries found;'
-                            ' using last occurrence.')
+        self.setStatusBar(qtw.QStatusBar())
+        self.statusBar().showMessage('Ready')
 
-        # remove all entries that are not acceptable parameters
-        acceptable = [p.lower()
-                      for p in (*self.inputParams, *self.optionalParams)]
-        par_dict = {key.lower(): val
-                    for key, val in par_dict.items()
-                    if key.lower() in acceptable}
+        self.setCentralWidget(qtw.QWidget())
+        self.centralWidget().setLayout(qtw.QGridLayout())
 
-        # replace the dictionary keys in par_dict with their standard
-        # capitalization, found in self.inputParams and in self.optionalParams.
-        # Will make a difference between keys that are mandatory parameters
-        # and keys that are optional ones.
-        for par in (*self.inputParams, *self.optionalParams):
-            try:
-                par_dict[par.lower()]
-            except KeyError:
-                if par in self.inputParams:
-                    self.fileErr = (f'ERROR: Mandatory parameter {par} '
-                                    'not found. '
-                                    + self.fileErr)
-                    return dict()
-                # otherwise the parameter is optional, and will be set to a
-                # default of 'None'
-                par_dict[par] = 'None'
+        self.__compose_ctrls()
+        self.enable_ctrls(False)
+
+    def __compose_ctrls(self):
+        """Set up and place children widgets."""
+        # (1) Real-space view of the lattices:
+        #     Scrolling while the mouse cursor is on the canvas
+        #     causes visual rotation of the lattices (an the LEED)
+        lattices = self._ctrls['lattices_canvas']
+        lattices.wheel_buddy = self._ctrls['rotation'].text
+
+        # (2) LEED pattern
+        # * Draw the LEED screen as a circle. It will also act as a
+        #   background, and will be used as a clip path for the pattern
+        leed = self._ctrls['leed_canvas']
+        leed.initLEEDScreen(lineThick=lattices.getSpinesThickness())            # TODO: snake_case. Probably make getSpinesThickness a spine_thickness @property
+
+        # * Scrolling while the mouse cursor is on the LEED plot
+        #   will change the energy
+        leed.wheel_buddy = self._ctrls['energy'].text
+
+        # (3) Button that opens the domain selector
+        domains = self._ctrls['domains']
+        domains.setFont(gl.AllGUIFonts().labelFont)
+        domains.ensurePolished()
+        domains.setSizePolicy(qtw.QSizePolicy.Fixed, qtw.QSizePolicy.Fixed)
+
+        # (4) Place controls in the layout
+        layout = self.centralWidget().layout()
+        layout.setHorizontalSpacing(15)
+        layout.setContentsMargins(20, 10, 20, 10)
+
+        layout.addLayout(lattices.mplLayout,                                    # TODO: snake
+                         0, 0, 3, 1,
+                         alignment=qtc.Qt.AlignVCenter | qtc.Qt.AlignLeft)
+        layout.addLayout(leed.mplLayout,                                        # TODO: snake
+                         0, 1, 3, 3,
+                         alignment=qtc.Qt.AlignVCenter | qtc.Qt.AlignRight)
+        layout.addWidget(self._ctrls['rotation'],
+                         0, 1, 1, 1,
+                         alignment=qtc.Qt.AlignTop | qtc.Qt.AlignLeft)
+        layout.addWidget(self._ctrls['energy'],
+                         0, 3, 1, 1,
+                         alignment=qtc.Qt.AlignTop | qtc.Qt.AlignRight)
+        layout.addWidget(domains,
+                         2, 3, 1, 1,
+                         alignment=qtc.Qt.AlignBottom | qtc.Qt.AlignRight)
+
+    def __compose_menu_and_toolbar(self):                                       # TODO: Common stuff that can go to base?: New, Open, Save, Save As, Exit
+        """Set up the menu and a matching tool bar."""
+        menu_bar = self.menuBar()
+        tool_bar = self.addToolBar('')
+        tool_bar.setFloatable(False)
+        tool_bar.setIconSize(0.7*tool_bar.iconSize())
+
+        file_menu = self._ctrls['file_menu']
+        menu_bar.insertMenu(self.about_action,  # before 'About'
+                            file_menu)          # insert the rest
+
+        # Need to keep 'exit' to insert 'export' and a separator.
+        # All other actions are connected to their handlers.
+        exit = None
+        for name, (icon, text, shortcut,
+                   tooltip, statustip,
+                   handler, to_enable) in default_file_menu().items():
+            if icon:
+                action = qtw.QAction(icon, text, self)
             else:
-                par_dict[par] = par_dict.pop(par.lower())
+                action = qtw.QAction(text, self)
+            action.setShortcut(shortcut)
+            shortcut = action.shortcut().toString()
+            action.setToolTip(tooltip + f" ({shortcut})")
+            action.setStatusTip(statustip + f" ({shortcut})")
+            action.triggered.connect(getattr(self, handler))
+            if name == 'exit':
+                exit = action
+            file_menu.addAction(action)
+            if icon:
+                tool_bar.addAction(action)
+            if to_enable:
+                 self.__enabled_on_valid_input.append(action)
 
-        par_dict['eMax'] = float(par_dict['eMax'])
-        par_dict['surfBasis'] = gl.string_matrix_to_numpy(
-            par_dict['surfBasis'], dtype=float, needs_shape=(2, 2)
+        # File -> Export sub-menu...
+        export_menu = qtw.QMenu('Export')
+        self.__enabled_on_valid_input.append(export_menu)
+
+        # ...and its contents:
+        # * Export list of beams to *.csv
+        export_csv = qtw.QAction(
+            self.style().standardIcon(qtw.QStyle.SP_DriveFDIcon),
+            '&Export Beam List...', self)
+        export_csv.setShortcut('Ctrl+E')
+        shortcut = export_csv.shortcut().toString()
+        export_csv.setToolTip('Export list of LEED beams' + f" ({shortcut})")
+        export_csv.setStatusTip("Export list of LEED beams "
+                                + f"to *.csv ({shortcut})")
+        export_csv.triggered.connect(self._on_export_beams_pressed)
+        self.__enabled_on_valid_input.append(export_csv)
+
+        export_menu.addAction(export_csv)
+
+        file_menu.insertMenu(exit, export_menu)
+        file_menu.insertSeparator(exit)
+
+    def __connect(self):
+        """Connect relevant controls and signals."""
+        self._dialogs['file_new'].leed_parameters_changed.connect(
+            self.__set_parameters
             )
-        par_dict['SUPERLATTICE'] = gl.string_matrix_to_numpy(
-            par_dict['SUPERLATTICE'], int, needs_shape=(2, 2)
+        self._dialogs['file_new'].editing_finished.connect(
+            self._on_structure_edit_finished
             )
 
-        try:
-            par_dict['screenAperture'] = float(par_dict['screenAperture'])
-        except ValueError:
-            self.fileErr += ("Warning: screenAperture not found, or value "
-                             " not acceptable. Will use default 110 deg.")
-            par_dict['screenAperture'] = 110.0
-
-        # Now handle the exit conditions
-        try:
-            b_group = gl.PlaneGroup(par_dict['bulkGroup'])
-        except ValueError:
-            self.fileErr = ('ERROR: Unknown bulk group type '
-                           + par_dict['bulkGroup']
-                           + self.fileErr)
-            return dict()
-        else:
-            par_dict['bulkGroup'] = b_group
-
-        try:
-            s_group = gl.PlaneGroup(par_dict['surfGroup'])
-        except ValueError:
-            self.fileErr = ('ERROR: Unknown surface group type '
-                            + par_dict['surfGroup']
-                            + self.fileErr)
-            return dict()
-        else:
-            par_dict['surfGroup'] = s_group
-
-        if ((par_dict['surfBasis'] is None)
-            or (par_dict['SUPERLATTICE'] is None)):
-            self.fileErr  = ('ERROR: Too many entries in '
-                            + 'surface unit vectors or SUPERLATTICE. '
-                            + self.fileErr)
-            return dict()
-        return par_dict
-
-    def exportCSV(self, params):
+    def exportCSV(self, params):                                                # TODO: rename, fix & doc
         # Ask if the user wants to save the input if it isn't
-        if not self.isSaved:
+        if not self.saved:
             self.unsavedPopup()
 
         # Then open a normal file dialog to save the data to file
         fname = qtw.QFileDialog.getSaveFileName(self, 'Export list of beams',
                                                 self.default_export[0],
                                                 'Comma-separated file (*.csv)')
-        if not fname[0]:
+        if not fname or not fname[0]:
             return
 
         # set up the other parameters needed for export_pattern_csv
-        if hasattr(self, 'openFile') and self.openFile:
-            params['source'] = self.openFile
-        params['version'] = self.version
+        if self.filename:
+            params['source'] = self.filename
+        params['version'] = gl.GLOBALS['version']
 
         gl.export_pattern_csv(fname[0], (self.leed,), **params)
 
-    def unsavedPopup(self):
+    def unsavedPopup(self):                                                     # TODO: fix & doc
         reply = qtw.QMessageBox.question(self, 'Edits unsaved',
                                         'Would you like to save changes?',
                                         qtw.QMessageBox.Yes
                                         | qtw.QMessageBox.No,
                                         qtw.QMessageBox.Yes)
         if reply == qtw.QMessageBox.Yes:
-            self.fileSavePressed()
+            self._on_file_save_pressed()
 
-    def loadLEEDInput(self, par_dict, readFile=False):
-        if par_dict:
-            self.leedParams = par_dict
-            self.set_ControlsActive(True)
-            self.initRealAndLEED(True)
-            self.enableActions(True)
-        if readFile:
-            self.fileReadError()
-        if hasattr(self, 'exportDialog'):
-            # delete exportDialog as the number of its widgets (that depends
-            # on the number of domains) is most likely not accurate anymore.
-            self.exportDialog.destroy()
-            del self.exportDialog
+    def initRealAndLEED(self, active):                                          # TODO: reimplement, rename & doc
+        if active:
+            # An acceptable LEED input has been loaded.
+            # Update all controls with the correct stuff
+            self.real = gl.RealSpace(self.leedParams)
+            self.leed = gl.LEEDPattern(self.leedParams)
+            for ctrl in self.allCtrls:
+                self.updateCtrlAfterFileLoad(ctrl)
+            self._ctrls['domains'].initPopup()
+            # initially set focus to a widget that does not respond to
+            # wheelEvent.
+            self._ctrls['domains'].toggle.setFocus()
 
-    def insertText(self, label, text, align='left'):
-        # sets, reshapes, and realigns horizontally a QWidget after changing
-        # its text
+        self.connectControlEvents(active)
 
-        if align not in ['left', 'center', 'right']:
-            raise ValueError("Alignment of QWidget can only be 'left',"
-                             "'center' or 'right'")
+    def connectControlEvents(self, active):
+        self.buts = [self._ctrls['energy'].enUp, self._ctrls['energy'].enDown,
+                     self._ctrls['rotation'].cw, self._ctrls['rotation'].ccw,
+                     self._ctrls['rotation'].h10, self._ctrls['rotation'].v10,
+                     self._ctrls['rotation'].h01, self._ctrls['rotation'].v01,
+                     self._ctrls['domains'].toggle]
+        # First disconnect all controls, as this prevents multiple connections  # LOOK AT Qt::UniqueConnection. Should not require to disconnectAll()
+        # from being established every time a new file is opened
+        self.disconnectAll()
 
-        pos0 = label.geometry().topLeft()
-        if align == 'left':
-            delta0 = 0
-        elif align == 'right':
-            delta0 = label.width()
+        if active:
+            self._ctrls['energy'].text.textModified.connect(self.energyChanged)
+            self._ctrls['rotation'].text.textModified.connect(self.rotationChanged)
+            [but.clicked.connect(self.buttonPressed) for but in self.buts]
+
+    def disconnectAll(self):
+        for (widg, slt) in zip([self._ctrls['energy'].text,
+                                self._ctrls['rotation'].text],
+                               [self.energyChanged, self.rotationChanged]):
+            try:
+                widg.textModified.disconnect(slt)
+            except TypeError:
+                pass
+        for but in self.buts:
+            try:
+                but.clicked.disconnect()
+            except TypeError:
+                pass
+
+    def updateCtrlAfterFileLoad(self, ctrl):                                    # TODO: make it a list of things to do rather than 1kg of if...elif
+        if ctrl not in self.allCtrls:
+            raise ValueError('Unknown control')
+
+        leed = self.leed
+        real = self.real
+
+        if ctrl == self._ctrls['rotation'].text:
+            ctrl.setText('0.0')
+        elif ctrl == self._ctrls['energy'].text:
+            ctrl.setText(f'{leed.max_energy/2:.1f}')
+            ctrl.setLimits(10, leed.max_energy)
+        elif ctrl == self._ctrls['energy'].limits:
+            ctrl.setText('Min = 10 eV\n'
+                         f'Max = {leed.max_energy:.1f} eV')
+        elif ctrl == self._ctrls['domains']:
+            ctrl.updateText(f'{leed.n_domains} inequivalent domain(s)')
+            ctrl.setTips(text='Click to see all the superlattice '
+                              'matrices that generate the domains.')
+            ctrl.hide = False
+            ctrl.toggle.setEnabled(leed.n_domains != 1)
+        elif False and ctrl == self._ctrls['cell_shapes']:
+            self.insertText(ctrl,
+                            f"Slab: {real.surf.cell_shape}, {real.surf.group}. "
+                            f"Bulk: {real.bulk.cell_shape}, {real.bulk.group}",
+                            'center')
+            ctrl.setStatusTip('Cell shapes and plane groups '
+                              'for the whole slab and its bulk.')
+        elif ctrl == self._ctrls['lattices_canvas']:
+            ctrl.plotLattices()
+        elif ctrl == self._ctrls['leed_canvas']:
+            ctrl.plotLEED(self._ctrls['domains'].hide)
         else:
-            delta0 = label.width()/2
-
-        label.setText(text)
-        label.adjustSize()
-
-        if align == 'left':
-            delta1 = 0
-        elif align == 'right':
-            delta1 = label.width()
-        else:
-            delta1 = label.width()/2
-
-        label.move(pos0.x() - delta1 + delta0, pos0.y())
-
-    def initControls(self):
-        # Initialize all controls and labels, and set their dimensions
-        # w is the centralWidget
-
-        w = self.window().centralWidget()
-
-        #### REAL SPACE AND LEED PATTERN PLOTTING CANVASES
-        self.realSpace = gl.RealCanvas(parent=w, title='Real Space Lattice')
-        self.recSpace = gl.LEEDCanvas(parent=w, title='LEED Pattern')
-
-        # draw the LEED screen as a circle. It will also act as a background,
-        # and will be used as a clip path for the pattern
-        self.recSpace.initLEEDScreen(
-                               lineThick=self.realSpace.getSpinesThickness())
-
-        #### ROTATION ####
-        self.rotWidg = gl.RotationBlock(w)
-        self.realSpace.wheel_buddy = self.rotWidg.text
-
-        #### ENERGY ####
-        self.enWidg = gl.EnergyBlock(w)
-        self.recSpace.wheel_buddy = self.enWidg.text
-
-        #### DOMAINS ####
-        self.doms = gl.DomsBlock(w)
-
-        #### Unit cells shape and group ####
-        self.cellShapes = qtw.QLabel("Slab: \u2014, \u2014. "
-                                     "Bulk: \u2014, \u2014",
-                                     w)
-        self.cellShapes.setFont(gl.AllGUIFonts().largeTextFont)
-        self.cellShapes.setStatusTip('Open or drag-drop a LEED pattern file'
-                                     'to print the shapes and symmetry'
-                                     'groups of the system!')
-        self.cellShapes.setAlignment(qtc.Qt.AlignHCenter | qtc.Qt.AlignBaseline)
-        self.cellShapes.setSizePolicy(qtw.QSizePolicy.Expanding,
-                                      qtw.QSizePolicy.Preferred)
-        self.cellShapes.adjustSize()
-
-        # Prepare a list of controls
-        # Notice that the plot controls are at the end on purpose,
-        # so all the others are updated first after loading a file
-        self.allCtrls = [self.rotWidg, *(self.rotWidg.subWidgs),
-                         self.enWidg, *(self.enWidg.subWidgs),
-                         self.doms, self.cellShapes,
-                         self.realSpace, self.recSpace]
-
-        # Disable all controls at initialization.
-        # They will be enabled when a file is loaded
-        self.set_ControlsActive(False)
-
-    def set_ControlsActive(self, active):
-        if isinstance(active, bool):
-            [ctrl.setEnabled(active) for ctrl in self.allCtrls]
-        else:
-            raise ValueError('Invalid datatype for set_ControlsActive')
-
-    def composeUI(self):
-        # Position all controls correctly
-
-        winWidg = self.window().centralWidget()
-
-        g0 = winWidg.geometry()   # Origin and size of centralWidget
-                                  # of the window, i.e. window size minus
-                                  # size of menu and status bars
-        w0 = g0.width()
-        h0 = g0.height()
-        self.area = w0*h0
-
-        topLayout = winWidg.layout()
-        '''
-        Layout:
-            Legend: sh/sv(n)= horizontal/vertical stretch;
-                    RS= real space (VBox)
-                    LD= leed (Vbox)
-                    Ro= rotation block (excluding bulk buttons)
-                    bu= bulk alignment buttons
-                    En= energy block (excluding text below)
-                    Et= energy limits text
-                    Db= domains toggle button
-                    Dt= domains text
-                    Sh= slab shape (sh+Hbox+sh)
-
-                    if more symbols are present in a cell, the left ones correspond to widgets/items below the right ones
-
-              0      1        2        3        4        5        6        7
-            -------------------------------------------------------------
-        0    | sv |    RS    |  sv    |  LD    |  sv    |        |        |        |
-            -------------------------------------------------------------
-        1    | sv |        |  sv    |        |  sv    |        |        |        |
-            -------------------------------------------------------------
-        2    | sv |        |  sv    |        |  sv    |        |        |        |
-            -------------------------------------------------------------
-        3    | sv |        |  sv    |        |  sv    |        |        |        |
-            -------------------------------------------------------------
-        4    | sv |        |  sv    |        |  sv    |        |        |        |
-            -------------------------------------------------------------
-        5    | sv |        |  sv    |        |  sv    |        |        |        |
-            -------------------------------------------------------------
-        6    | sv |        |  sv    |        |  sv    |        |        |        |
-            -------------------------------------------------------------
-        7    | sv |        |  sv    |        |  sv    |        |        |        |
-            -------------------------------------------------------------
-        '''
-
-        ## REAL SPACE AND LEED PATTERN
-        if self.testConfig == 'layout':
-            topLayout.setSpacing(3)
-            topLayout.setContentsMargins(0, 0, 0, 0)
-            basicStretch = 1
-            plotStretch = (topLayout.columnStretch(0)
-                           * self.realSpace.getStretchFactor().width())
-
-            topLayout.addLayout(self.realSpace.mplLayout, 0, 1, 1, 1)
-            topLayout.setColumnStretch(0, basicStretch)
-            topLayout.setColumnStretch(1, plotStretch)
-            topLayout.setColumnStretch(2, basicStretch)
-
-            topLayout.addLayout(self.recSpace.mplLayout, 0, 3, 1, 1)
-            topLayout.setColumnStretch(3, plotStretch)
-            topLayout.setColumnStretch(4, basicStretch)
-
-            #[topLayout.setColumnStretch(col,1) for col in [3,4,10,11]]
-            #topLayout.setRowStretch(3,1)
-            # topLayout.setRowStretch(0,1)
-            # topLayout.setRowStretch(1,2)
-            #topLayout.setRowStretch(5,1)
-            #topLayout.setRowStretch(6,1)
-        else:
-            plotsHBox = qtw.QHBoxLayout()
-            plotsHBox.addStretch(1)
-            plotsHBox.addLayout(self.realSpace.mplLayout)
-            plotsHBox.addStretch(1)
-            plotsHBox.addLayout(self.recSpace.mplLayout)
-            plotsHBox.addStretch(1)
-
-            winWidg.layout().addLayout(plotsHBox)
-
-        labelToTextOffset = -qtc.QPoint(0,3)
-
-        #### ROTATION ####
-        if self.testConfig == 'layout':
             pass
-        else:
-            rotx = round((w0 - self.rotWidg.width())/2 + 0.032*w0)
-            self.rotWidg.move(qtc.QPoint(rotx, 8))
+            # Nothing should be done for the others
+            # (except enabling and connecting events, which is done elsewhere)
 
-        #### ENERGY ####
-        if self.testConfig == 'layout':
-            pass
-        else:
-            enx = round(w0*.98 - self.enWidg.width())
-            self.enWidg.move(qtc.QPoint(enx,8))
+        self.statusBar().showMessage('Ready')
 
-        #### TOGGLE DOMAINS ###
-        dx = self.enWidg.geometry().topRight().x() - self.doms.width()
-        dy = round(h0*.97 - self.doms.height())
-        self.doms.move(qtc.QPoint(dx,dy))
+    # The next event handlers take care of user-induced changes
+    # on the controls
+    def energyChanged(self, eOld, eNew):
+        self._ctrls['leed_canvas'].plotLEED(self._ctrls['domains'].hide)
 
-        #### CELLS SHAPES/GROUPS ####
-        if self.testConfig == 'layout':
-            self.cellShapes.setAlignment(qtc.Qt.AlignCenter)
-                        #(qtc.Qt.AlignHCenter | qtc.Qt.AlignTop)
-            shapesLay = qtw.QHBoxLayout()
-            shapesLay.addStretch(1)
-            shapesLay.addWidget(self.cellShapes,
-                                qtc.Qt.AlignHCenter | qtc.Qt.AlignTop)
-            shapesLay.addStretch(1)
-            topLayout.addLayout(shapesLay, 1, 0, 1, topLayout.columnCount())#,qtc.Qt.AlignCenter)
-            # topLayout.setRowStretch(0,100)
-            # topLayout.setRowStretch(1,5)
-            # vSpacer=QSpacerItem(1, 10, hPolicy = qtw.QSizePolicy.Expanding, vPolicy = qtw.QSizePolicy.Minimum)
-            # topLayout.addItem(vSpacer,2,0,1,topLayout.columnCount())
-            #topLayout.addWidget(self.cellShapes,1,0,1,1,qtc.Qt.AlignHCenter|qtc.Qt.AlignTop)
-            #pass
-        else:
-            self.cellShapes.move(
-                round((w0-self.cellShapes.geometry().width())/2),
-                self.doms.geometry().center().y()
+    def rotationChanged(self, rotOld, rotNew):
+        self._ctrls['lattices_canvas'].plotLattices()
+        self._ctrls['leed_canvas'].plotLEED(self._ctrls['domains'].hide)
+
+    def buttonPressed(self, event):
+        pressed = self.sender()
+        if pressed in self._ctrls['energy'].subWidgs:
+            self._ctrls['energy'].on_buttonPressed(pressed)
+        elif pressed in self._ctrls['rotation'].subWidgs:
+            self._ctrls['rotation'].on_buttonPressed(pressed)
+        elif pressed == self._ctrls['domains'].toggle:
+            self._ctrls['domains'].togglePressed()
+            self._ctrls['leed_canvas'].plotLEED(self._ctrls['domains'].hide)
+
+    def __read_files_and_report_errors(self, fnames, silent=False):
+        """Read input files and report errors and warnings.
+
+        Errors and warnings will be reported in a dedicated
+        message box if not silenced.
+
+        Parameters
+        ----------
+        fnames : Sequence
+            An iterable of the file names of the files to be read
+        silent : bool, optional
+            If True, errors are swallowed, and are not reported
+            with a message box. Errors are always reported in the
+            status bar. Default is False.
+
+        Returns
+        -------
+        leed_parameters : LEEDParametersList
+            The LEED parameters ready for being loaded in the
+            controls. leed_parameters is an empty list if fnames
+            are an invalid input.
+        """
+        error_msg = gl.ErrorBox(error_while="opening LEED pattern input",
+                                parent=self, silent=silent)
+        parser = gl.LEEDParser()
+
+        # Use a context manager to catch DeprecationWarning, which
+        # is 'raised' for old-style files (without section headers)
+        with warnings.catch_warnings(record=True) as warns:
+            warnings.simplefilter("always", category=DeprecationWarning)
+            parser.read(fnames)
+            if warns and not silent:
+                self.statusBar().showMessage(
+                    "Old-style input file(s): Will be "
+                    "reformatted and overwritten.",
+                    5000
+                    )
+
+        try:
+            params = gl.LEEDParametersList(parser)
+        except NameError as err:
+            # Missing parameters
+            self.statusBar().showMessage(
+                f"Invalid LEED input file(s): {err.args[0]}.", 5000
                 )
+            error_msg.exec_(self.statusBar().currentMessage())
+            return gl.LEEDParametersList()
+        except (ValueError, RuntimeError) as err:
+            # Invalid data
+            self.statusBar().showMessage(
+                f"Invalid LEED input file(s): {err.args[0]}", 5000
+                )
+            error_msg.exec_(self.statusBar().currentMessage())
+            return gl.LEEDParametersList()
 
-        ##TESTING
+        if not params:
+            try:
+                raise EOFError(f"The selected file(s) contain no data.")
+            except EOFError as err:
+                self.statusBar().showMessage("File(s) are empty", 5000)
+                error_msg.exec_(f"Invalid LEED input file: {err.args[0]}")
+                return gl.LEEDParametersList()
+        return params
+
+    def __zz_test_annots_compose(self):                                        # TODO: remove
         # self.ensurePolished()
         # tmpscreencenter = self.recSpace.geometry().center()
         # ctmp = winWidg.mapToGlobal(self.recSpace.geometry().center())
@@ -634,277 +842,22 @@ class LEED_GUI(gl.ViPErLEEDModuleBase):
             tmp.head_pos = delta*5 + tmp.center
             # tmp.show()
 
-        ## END TESTING
+    def __zz_annots_showEvent(self, event):
+        # print("begin showEvent")
+        super().showEvent(event)
 
-    def enableActions(self, enable):
-        if not isinstance(enable, bool):
-            raise
-        [act.setEnabled(enable) for act in self.actionsToEnable]
-
-    def initUI(self):
-        # print("Initializing UI...")
-        # print("... Menus")
-        self.setMenu()
-
-        # print("... Tool bar")
-        self.setToolBar()
-        self.enableActions(False)
-
-        self.setAcceptDrops(True)
-
-        # print("... Title and icon")
-        self.setWindowTitle('LEED Pattern Indexing Helper')
-
-        # print("... Status bar")
-        self.sBar = qtw.QStatusBar()
-        self.setStatusBar(self.sBar)
-        self.sBar.showMessage('Ready')
-
-        self.testConfig = 'fix'#'layout'#
-        cw = qtw.QWidget()
-        if self.testConfig == 'layout':
-            topLayout = qtw.QGridLayout(cw)
-        else:
-            topLayout = qtw.QHBoxLayout(cw)
-        # print(f"... Central widget ({cw})")
-        self.setCentralWidget(cw)
-
-        self.adjustWindowSize()
-
-        # print("... Initialize controls")
-        self.initControls()
-        # print("... Position controls")
-        self.composeUI()
-
-    def sizeHint(self):
-        self.ensurePolished()
-        screenFraction = 0.8
-        screensize = qtw.QDesktopWidget().availableGeometry(self).size()
-        sH = screenFraction*screensize
-        return sH
-
-    def adjustWindowSize(self, size=None):
-        # Updates the size of the central widget, window and menus.
-        if size is None:
-            size = self.sizeHint()
-        # the next line will need to replace the one after
-        # once I make the window re-sizable
-        #self.resize(size)
-        self.setFixedSize(size)
-        self.layout().activate() # this rebuilds the window layout, and forces the centralWidget to fill the space
-
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
-        self.adjustWindowSize(size=event.size())
-
-    def initRealAndLEED(self, active):
-        if active:
-            # An acceptable LEED input has been loaded.
-            # Update all controls with the correct stuff
-            self.real = gl.RealSpace(self.leedParams)
-            self.leed = gl.LEEDPattern(self.leedParams)
-            for ctrl in self.allCtrls:
-                self.updateCtrlAfterFileLoad(ctrl)
-            self.doms.initPopup()
-            # initially set focus to a widget that does not respond to
-            # wheelEvent.
-            self.doms.toggle.setFocus()
-
-        self.connectControlEvents(active)
-
-    def connectControlEvents(self, active):
-        self.buts = [self.enWidg.enUp, self.enWidg.enDown,
-                     self.rotWidg.cw, self.rotWidg.ccw,
-                     self.rotWidg.h10, self.rotWidg.v10,
-                     self.rotWidg.h01, self.rotWidg.v01,
-                     self.doms.toggle]
-        # First disconnect all controls, as this prevents multiple connections  # LOOK AT Qt::UniqueConnection
-        # from being established every time a new file is opened
-        self.disconnectAll()
-
-        if active:
-            self.enWidg.text.textModified.connect(self.energyChanged)
-            self.rotWidg.text.textModified.connect(self.rotationChanged)
-            [but.clicked.connect(self.buttonPressed) for but in self.buts]
-
-    def disconnectAll(self):
-        for (widg, slt) in zip([self.enWidg.text, self.rotWidg.text],
-                               [self.energyChanged, self.rotationChanged]):
-            try:
-                widg.textModified.disconnect(slt)
-            except TypeError:
-                pass
-        for but in self.buts:
-            try:
-                but.clicked.disconnect()
-            except TypeError:
-                pass
-
-    def updateCtrlAfterFileLoad(self, ctrl):
-        if ctrl not in self.allCtrls:
-            raise ValueError('Unknown control')
-
-        leed = self.leed
-        real = self.real
-
-        if ctrl == self.rotWidg.text:
-            ctrl.setText('0.0')
-        elif ctrl == self.enWidg.text:
-            ctrl.setText(f'{leed.max_energy/2:.1f}')
-            ctrl.setLimits(10, leed.max_energy)
-        elif ctrl == self.enWidg.limits:
-            ctrl.setText('Min = 10 eV\n'
-                         f'Max = {leed.max_energy:.1f} eV')
-        elif ctrl == self.doms:
-            ctrl.updateText(f'{leed.n_domains} inequivalent domain(s)')
-            ctrl.setTips(text='Click to see all the superlattice '
-                              'matrices that generate the domains.')
-            ctrl.hide = False
-            if leed.n_domains == 1:
-                ctrl.toggle.setEnabled(False)
-            else:
-                ctrl.toggle.setEnabled(True)
-        elif ctrl == self.cellShapes:
-            self.insertText(ctrl,
-                            f"Slab: {real.surf.cell_shape}, {real.surf.group}. "
-                            f"Bulk: {real.bulk.cell_shape}, {real.bulk.group}",
-                            'center')
-            ctrl.setStatusTip('Cell shapes and plane groups '
-                              'for the whole slab and its bulk.')
-        elif ctrl == self.realSpace:
-            ctrl.plotLattices()
-        elif ctrl == self.recSpace:
-            ctrl.plotLEED(self.doms.hide)
-        else:
-            pass
-            # Nothing should be done for the others
-            # (except enabling and connecting events, which is done elsewhere)
-
-        self.statusBar().showMessage('Ready')
-
-    def get_energy(self): #is it possible to get rid of this?
-        return float(self.enWidg.text.text())
-
-    def get_angle(self): #is it possible to get rid of this?
-        return float(self.rotWidg.text.text())
-
-    def closeEvent(self, event):
-        reply = qtw.QMessageBox.question(self,
-                                     'Message',
-                                     'Are you sure to quit?',
-                                     qtw.QMessageBox.Yes | qtw.QMessageBox.No,
-                                     qtw.QMessageBox.No)
-
-        if reply == qtw.QMessageBox.Yes:
-            super().closeEvent(event)
-        else:
-            event.ignore()
-
-    def mouseReleaseEvent(self, event):
-        """
-        Re-implement mouseReleaseEvent to hide the pop-up with matrices when
-        clicking anywhere on the window
-        """
-        doms = self.doms
-        if (doms.isEnabled()
-            and doms.matricesPopup.isVisible()
-            and not doms.text.underMouse()):
-            # the reason for not acting when doms.text is underMouse() is that
-            # the event handling in this case is done within DomsBlock
-            doms.matricesPopup.hide()
-        # TESTING
-        # for annot in self.recSpace.annots:
-            # annot.show()
-        # END TESTING
-        super().mouseReleaseEvent(event)
-
-    # The next event handlers take care of user-induced changes
-    # on the controls
-    def energyChanged(self, eOld, eNew):
-        self.recSpace.plotLEED(self.doms.hide)
-
-    def rotationChanged(self, rotOld, rotNew):
-        self.realSpace.plotLattices()
-        self.recSpace.plotLEED(self.doms.hide)
-
-    def buttonPressed(self, event):
-        pressed = self.sender()
-        if pressed in self.enWidg.subWidgs:
-            self.enWidg.on_buttonPressed(pressed)
-        elif pressed in self.rotWidg.subWidgs:
-            self.rotWidg.on_buttonPressed(pressed)
-        elif pressed == self.doms.toggle:
-            self.doms.togglePressed()
-            self.recSpace.plotLEED(self.doms.hide)
-
-    # The next two event handlers are for drag-drop of files
-    def dragEnterEvent(self, event):
-        mimeData = event.mimeData()
-        if mimeData.hasUrls():   # Check that the user is dropping a file
-            fname = [url.toLocalFile() for url in mimeData.urls()]
-
-            # now handle differently the cases in which the user has
-            # dropped multiple files:
-            if len(fname) > 1:
-                # for now, just take the first one. Then there will be a
-                # popup asking which one to load
-                fname = fname[0]
-                event.mimeData().setUrls(fname)
-            # check that the file contains some readable content
-            loadedParams = self.parseLEEDFile(fname, checkOnly=True)
-            if loadedParams is not None:
-                event.acceptProposedAction()
-
-    def dropEvent(self, event):
-        loadedParams = self.parseLEEDFile([url.toLocalFile()
-                                           for url
-                                           in event.mimeData().urls()])
-        if loadedParams:
-            event.acceptProposedAction()
-            self.loadLEEDInput(loadedParams, True)
-            self.isSaved = True
-        else:
-            self.fileReadError()
-
-    def fileReadError(self, fname=None, msg=None):
-        if msg is None:
-            msg = self.fileErr
-        if msg != '':
-            self.statusBar().showMessage(msg)
-
-    # def showEvent(self, event):
-        # # print("begin showEvent")
-        # super().showEvent(event)
-
-        # # print("super().showEvent finished")
-        # tmpscreencenter = self.recSpace.geometry().center()
-        # tmpLayCtr = self.recSpace.mplLayout.geometry().center()
-        # ctmp = self.window().centralWidget().mapToGlobal(
-        # # ctmp = self.window().mapToGlobal(
-               # self.recSpace.geometry().center())
-        # # print('\n\n', tmpscreencenter, tmpLayCtr, ctmp, self.recSpace.parentWidget().mapToGlobal(
-               # # self.recSpace.geometry().center()), self.recSpace.parentWidget().mapToGlobal(qtc.QPoint(0,0)))
-        # # print('\n\n', self.pos(), tmpscreencenter,
-              # # ctmp, self.recSpace.parentWidget()==winWidg, '\n')
-        # for tmp in self.tmps:
-            # # print(f"before: {tmp.center}", end=' ')
-            # tmp.center = ctmp
-            # tmp.show()
-            # # print(f"after: {tmp.center}")
-
-    def moveEvent(self, event):
-        super().moveEvent(event)
-        delta = event.pos() - event.oldPos()
-
-        for annot in self.recSpace.annots:
-            # NB: one cannot use += for in-place assignment since this redefines
-            # the .center attribute that is a @property!
-            annot.center = qtc.QPoint(*annot.center) + delta
-            if annot.isVisible():
-                # move only if visible to handle the situation in which the
-                # window is moved while the annotations are displayed: this way
-                # annotations move together with the window. If one would have
-                # this call even when not visible, the move is issued before the
-                # next show, and it will mess the position of the annotation
-                annot.move(annot.pos() + delta)
-
+        # print("super().showEvent finished")
+        tmpscreencenter = self.recSpace.geometry().center()
+        tmpLayCtr = self.recSpace.mplLayout.geometry().center()
+        ctmp = self.window().centralWidget().mapToGlobal(
+        # ctmp = self.window().mapToGlobal(
+               self.recSpace.geometry().center())
+        # print('\n\n', tmpscreencenter, tmpLayCtr, ctmp, self.recSpace.parentWidget().mapToGlobal(
+               # self.recSpace.geometry().center()), self.recSpace.parentWidget().mapToGlobal(qtc.QPoint(0,0)))
+        # print('\n\n', self.pos(), tmpscreencenter,
+              # ctmp, self.recSpace.parentWidget()==winWidg, '\n')
+        for tmp in self.tmps:
+            # print(f"before: {tmp.center}", end=' ')
+            tmp.center = ctmp
+            tmp.show()
+            # print(f"after: {tmp.center}")
