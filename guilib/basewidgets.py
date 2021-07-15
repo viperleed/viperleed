@@ -212,9 +212,9 @@ class TextBox(qtw.QLineEdit):
 
 
 class MPLFigureCanvas(FigureCanvas):
-    '''
+    """
     Subclass of the matplotlib (MPL) FigureCanvas class
-    '''
+    """
 
     def __init__(self, figure=None, **kwargs):
         if figure is None:
@@ -237,16 +237,13 @@ class MPLFigureCanvas(FigureCanvas):
         # Change the size policy such that it hasHeightForWidth. This keeps
         # MPLFigureCanvas square when inserted in a layout
         size_policy = self.sizePolicy()
+        print(f"{size_policy.horizontalPolicy()=}, {size_policy.verticalPolicy()=}")
         size_policy.setHeightForWidth(True)
+        print(f"{size_policy.hasHeightForWidth()=}")
         self.setSizePolicy(size_policy)
 
-        if 'parent' in kwargs.keys():
-            self.setParent(kwargs['parent'])
+        self.setParent(kwargs.get('parent', None))
 
-        if 'title' in kwargs.keys():
-            mpltitle = kwargs['title']
-        else:
-            mpltitle=''
         if 'titleFont' in kwargs.keys() or 'fontSize' in kwargs.keys():
             self.titleFont = qtg.QFont()
             if 'titleFont' in kwargs.keys():
@@ -255,12 +252,14 @@ class MPLFigureCanvas(FigureCanvas):
                 self.titleFont.setPointSize(kwargs['titleFontSize'])
         else:
             self.titleFont = gl.AllGUIFonts().plotTitleFont
-        self.setTitle(mpltitle)
+
+        self.setTitle(kwargs.get('title', ''))
 
         if 'plotCanvasSize' in kwargs.keys():
             self.setSize(kwargs['plotCanvasSize'])
         else:
             self.adjustSize()
+        print(f"{self.hasHeightForWidth()=}, {self.layout()=}")
 
     @property
     def ax(self):
@@ -284,21 +283,21 @@ class MPLFigureCanvas(FigureCanvas):
                             f"Found {type(buddy)} instead")
         self.__wheel_buddy = buddy
 
-    def sizeHint(self):
-        s = round(
-            min(self.window().centralWidget().height()*self.windowFraction,
-            self.window().centralWidget().width()*0.45)
-            )
-        sH = qtc.QSize()
-        sH.setWidth(s)
-        sH.setHeight(s)
-        return sH
+    # def sizeHint(self):
+        # s = round(
+            # min(self.window().centralWidget().height()*self.windowFraction,
+            # self.window().centralWidget().width()*0.45)
+            # )
+        # sH = qtc.QSize()
+        # sH.setWidth(s)
+        # sH.setHeight(s)
+        # return sH
 
-    def minimumSizeHint(self):
-        return qtc.QSize(300, 300)
+    # def minimumSizeHint(self):
+        # return qtc.QSize(300, 300)
 
-    def minimumSize(self):
-        return self.minimumSizeHint()
+    # def minimumSize(self):
+        # return self.minimumSizeHint()
 
     def rightSize(self):
         sWindow = self.sizeHint()
@@ -316,6 +315,13 @@ class MPLFigureCanvas(FigureCanvas):
         """
         return width
 
+    # TODO: this causes the fixed sizes issue. Perhaps would be better to
+    # actually set mplLayout as self.layout (may be impossible), or have
+    # a widget around the whole thing? Maybe LEEDPattern and RealSpace could
+    # just be QWidget and contain MPLFigureCanvas. Removing this resizeEvent
+    # makes heightForWidth kinda work, but only when reducing the width of
+    # the container widget. Making it larger or changing height makes the
+    # plots become rectangular.
     def resizeEvent(self, event):
         event = qtg.QResizeEvent(self.rightSize(), event.oldSize())
         super().resizeEvent(event)  # call the original one
@@ -326,10 +332,12 @@ class MPLFigureCanvas(FigureCanvas):
         self.title.updateGeometry()
 
     def getStretchFactor(self):
-        return qtc.QSize(self.rightSize().width()
-                         /self.window().centralWidget().size().width(),
-                         self.rightSize().height()
-                         /self.window().centralWidget().size().height())
+        return qtc.QSize(
+            int(self.rightSize().width()
+                / self.window().centralWidget().size().width()),
+            int(self.rightSize().height()
+                / self.window().centralWidget().size().height())
+            )
 
     def set_transparent_background(self, transparent):
         if transparent:
@@ -387,8 +395,13 @@ class MPLFigureCanvas(FigureCanvas):
             # Right now, the title and self do not have a stretch factor defined
             # This might be an issue for resizing
             self.mplLayout.setAlignment(
-                self.title, qtc.Qt.AlignHCenter | qtc.Qt.AlignBaseline)
+                self.title,
+                qtc.Qt.AlignHCenter | qtc.Qt.AlignBaseline
+                )
             self.mplLayout.setAlignment(self, qtc.Qt.AlignHCenter)
+
+            # self.mplLayout.setStretchFactor(self.title, 1)
+            # self.mplLayout.setStretchFactor(self, 20)
 
     def setSize(self, size=None):
         self.setFixedSize(size, size)
@@ -443,44 +456,32 @@ class MPLFigureCanvas(FigureCanvas):
 
 class TextBoxWithButtons(qtw.QWidget):
     def __init__(self, **kwargs):
-        labelText = ''
-        textBoxText = ''
-        topButText = ''
-        botButText = ''
-        parent = None
-        if 'labelText' in kwargs.keys():
-            labelText = kwargs['labelText']
-        if 'textBoxText' in kwargs.keys():
-            textBoxText = kwargs['textBoxText']
-        if 'topButText' in kwargs.keys():
-            topButText = kwargs['topButText']
-        if 'botButText' in kwargs.keys():
-            botButText = kwargs['botButText']
-        if 'parent' in kwargs.keys():
-            parent = kwargs['parent']
+        parent = kwargs.get('parent', None)
+
         super().__init__(parent=parent)
 
-        self.label = qtw.QLabel(labelText, parent)
-        self.text = TextBox(textBoxText, parent)
-        self.topBut = qtw.QPushButton(topButText, parent)
-        self.botBut = qtw.QPushButton(botButText, parent)
+        self.label = qtw.QLabel(kwargs.get('labelText', ''), parent)
+        self.text = TextBox(kwargs.get('textBoxText', ''), parent)
+        self.topBut = qtw.QPushButton(kwargs.get('topButText', ''), parent)
+        self.botBut = qtw.QPushButton(kwargs.get('botButText', ''), parent)
         self.bottomWidget = qtw.QWidget(parent)
         # self.bottomWidget is just a container at the bottom that can
         # be filled with different stuff in subclasses
 
-        self.subWidgs = [self.label, self.text, self.topBut, self.botBut,
-                        self.bottomWidget]
+        self.subWidgs = [self.label, self.text, self.topBut,
+                         self.botBut, self.bottomWidget]
         self.setFonts()
 
-        if 'textBoxWidth' in kwargs.keys():
-            self.textBoxWidth = kwargs['textBoxWidth']
-        else:
-            self.textBoxWidth = self.text.sizeHint().width()
-        self.smallButtonDims = int(self.label.width()/6)
+        self.textBoxWidth = kwargs.get('textBoxWidth',
+                                       self.text.sizeHint().width())
 
-        self.label.setBuddy(self.text)
+        self.smallButtonDims = int(self.textBoxWidth/5)
+        print(f"{self.textBoxWidth=}, {self.smallButtonDims=}")
+
         # setBuddy allows to use shortcuts if there's a single & prepended
         # to a letter in the text of the QLabel
+        self.label.setBuddy(self.text)
+
         self.compose()
 
         # connect the upDownPressed signal of TextBox: arrows up/down will
@@ -496,6 +497,7 @@ class TextBoxWithButtons(qtw.QWidget):
         self.text.setFont(gl.AllGUIFonts().labelFont)
         for but in [self.topBut,self.botBut]:
             but.setFont(gl.AllGUIFonts().buttonFont)
+        self.ensurePolished()
 
     def setTips(self, **kwargs):
         if 'labelTip' in kwargs.keys():
