@@ -4,12 +4,12 @@
   ViPErLEED Graphical User Interface
 ======================================
 
-Defines the ViPErLEEDModuleBase class from which all ViPErLEED
+Defines the ViPErLEEDPluginBase class from which all ViPErLEED
 modules should inherit. Any concrete implementation of a module
 should use super().closeEvent() if it wants to accept a closeEvent()
 rather than just .accept()ing the event. The AboutViPErLEED class is
 also defined, a common 'About' dialog that is present on all modules
-that are subclasses of ViPErLEEDModuleBase.
+that are subclasses of ViPErLEEDPluginBase.
 
 Author: Michele Riva
 Created: 2021-06-29
@@ -36,30 +36,90 @@ def logo_one_line():
     return logo
 
 
+# TODO: find a nice way to set up a default menu with
+# icons that are common to all ViPErLEEDPluginBase windows.
+# The main difficulty is having instance-dependent tool-tips.
+
+# Probably best to rather load settings from a settings.ini
+# file (or similarly named) that must be contained in the
+# __path__ of the __module__ that defines the plug-in class.
+
 class ViPErLEEDPluginBase(qtw.QMainWindow):
     """Base class for the main window of a ViPErLEED plug-in."""
 
     module_closed = qtc.pyqtSignal(object)  # The class being destroyed
 
-    def __init__(self, parent=None, name=''):
-        """Initialize module."""
+    def __init__(self, parent=None, name='', description=''):
+        """Initialize module.
+
+        Parameters
+        ----------
+        parent : QWidget, optional
+            The parent widget of this plug-in window. Typically
+            not given as plug-ins are usually independent, top
+            level windows. Default is None.
+        name : str. optional
+            Name of the plug-in. Currently unused. Default is
+            an empty string.
+        description : str, optional
+            Verbose description of plug-in. Currently unused.
+            Default is an empty string
+        """
         super().__init__(parent)
         self.name = name
         self.about_action = qtw.QAction("About")
         self.__about = AboutViPErLEED(module_name=name,
-                                      module_description='')
+                                      module_description=description)
 
         self.setAttribute(qtc.Qt.WA_DeleteOnClose)
         self.setWindowIcon(qtg.QIcon(LOGO))
 
+        # Native windows are a little slower to draw, but offer
+        # the advantage of giving access to windowHandler() (a
+        # QWindow), which has a screenChanged signal.
+        self.setAttribute(qtc.Qt.WA_NativeWindow)
+
+        # __screen_changed can be used in an eventFilter that
+        # catches qtc.QEvent.NonClientAreaMouseButtonRelease
+        # event.type()s to modify the appearance of windows
+        # when they are dropped on a different screen
+        self.__screen_changed = False
+
         self.__compose()
+        self.__connect()
 
-    def __compose(self):
-        """Prepare a basic menu bar that all modules will have."""
-        menu = self.menuBar()
-        menu.addAction(self.about_action)
+    def __get_screen_changed(self):
+        """Return whether the window has been moved among screens."""
+        return self.__screen_changed
 
-        self.about_action.triggered.connect(self.__about.show)
+    def __set_screen_changed(self, changed):
+        """Set screen_changed.
+
+        This is also the slot connected to the screenChanged
+        signal of the native QWindow holding this QMainWindow
+
+        Parameters
+        ----------
+        changed : object
+            Any object. self.screen_changed will be
+            set equal to the truth value of changed.
+
+        Returns
+        -------
+        None.
+        """
+        self.__screen_changed = bool(changed)
+
+    screen_changed = property(__get_screen_changed, __set_screen_changed)
+
+    # TODO: check that it works nicely with multiple
+    # monitors and different DPIs & scaling!
+    def center_on_screen(self):
+        """Center the window in the current screen."""
+        window_rect = self.frameGeometry()
+        screen_center = qtw.qApp.desktop().availableGeometry(self).center()
+        window_rect.moveCenter(screen_center)
+        self.move(window_rect.topLeft())
 
     def closeEvent(self, event):  # pylint: disable=invalid-name
         """Reimplement closeEvent to emit a module_closed."""
@@ -94,6 +154,17 @@ class ViPErLEEDPluginBase(qtw.QMainWindow):
         if self.__about.isVisible():
             self.__about.close()
         super().mousePressEvent(event)
+
+    def __compose(self):
+        """Prepare a basic menu bar that all modules will have."""
+        menu = self.menuBar()
+        menu.addAction(self.about_action)
+
+    def __connect(self):
+        """Connect relevant signals to slots."""
+        self.about_action.triggered.connect(self.__about.show)
+        self.windowHandle().screenChanged.connect(self.__set_screen_changed)
+
 
 
 class AboutViPErLEED(qtw.QWidget):
