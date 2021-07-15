@@ -34,7 +34,6 @@ DEFAULT_STARTUP = (
 class NewFileDialog(qtw.QDialog):
     """Dialog to create or edit the input for a LEED pattern."""
 
-    dialogEdited = qtc.pyqtSignal()
     editing_finished = qtc.pyqtSignal(LEEDParametersList)
     leed_parameters_changed = qtc.pyqtSignal(LEEDParametersList)
 
@@ -100,8 +99,6 @@ class NewFileDialog(qtw.QDialog):
 
         self._compose()
         self._connect()
-
-        self.open()
 
     @property
     def bulk_lattice(self):
