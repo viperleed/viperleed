@@ -34,7 +34,7 @@ if GLOBALS['USE_GUI']:
                     'SurfaceStructureInput',
                     'LEEDPatternSimulator',
                     'NewFileDialog',
-                    'Bulk3DSymDialog', 'ExportCSVDialog'])
+                    'Bulk3DSymDialog', 'ExportCSVDialog', 'ErrorBox'])
     from viperleed.guilib.leedsim.widgets import (DomsBlock, EnergyBlock,
                                                   RotationBlock, ToggleButton,
                                                   LEEDCanvas, RealCanvas,
@@ -46,4 +46,5 @@ if GLOBALS['USE_GUI']:
     from viperleed.guilib.leedsim.mainwindow import LEEDPatternSimulator
     from viperleed.guilib.leedsim.dialogs import (Bulk3DSymDialog,              # Perhaps not needed if moving all dialogs in their folder
                                                   NewFileDialog,                # Perhaps not needed if moving all dialogs in their folder
-                                                  ExportCSVDialog)              # Perhaps not needed if moving all dialogs in their folder
+                                                  ExportCSVDialog,              # Perhaps not needed if moving all dialogs in their folder
+                                                  ErrorBox)
