@@ -69,7 +69,10 @@ class ViPErLEEDSelectPlugin(gl.ViPErLEEDPluginBase):
 
     def closeEvent(self, event):
         """Reimplement closeEvent to also close open modules."""
-        if any(self._open_modules.values()):
+        open_modules = [module
+                        for module in self._open_modules.values()
+                        if module]
+        if any(open_modules):
             reply = qtw.QMessageBox.question(
                 self, 'Message',
                 'Are you sure to quit?\nThis will close all modules!',
@@ -79,7 +82,7 @@ class ViPErLEEDSelectPlugin(gl.ViPErLEEDPluginBase):
             if reply == qtw.QMessageBox.No:
                 event.ignore()
                 return
-            for module in self._open_modules.values():
+            for module in open_modules:
                 module.close()
         event.accept()
         qtw.qApp.quit()
@@ -147,10 +150,12 @@ class ViPErLEEDSelectPlugin(gl.ViPErLEEDPluginBase):
         RuntimeError
             If the module being opened is not a valid ViPErLEED module
         """
-        # Disable, as _on_module_open_requested can only run if there
-        # are buttons, one of which will always be the sender. Thus
-        # name always has a well-defined value.
+        # Disable pylint warning, as _on_module_open_requested can
+        # only run if there are buttons, one of which will always be
+        # the sender. Thus name always has a well-defined value.
+
         # pylint: disable=undefined-loop-variable
+
         for name, button in self._btns.items():
             if self.sender() is button:
                 break
