@@ -79,6 +79,8 @@ class ViPErLEEDSelectPlugin(gl.ViPErLEEDPluginBase):
             if reply == qtw.QMessageBox.No:
                 event.ignore()
                 return
+            for module in self._open_modules.values():
+                module.close()
         event.accept()
         qtw.qApp.quit()
 
