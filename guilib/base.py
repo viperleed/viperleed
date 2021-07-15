@@ -593,7 +593,10 @@ def catch_gui_crash():
     """
     sys._excepthook = sys.excepthook
     def exception_hook(exctype, value, traceback):
-        print(exctype, value, traceback)
+        print("########## Caught an exception! ##########")
+        # TODO: here one would like to rather open a parent-less
+        # QMessageBox reporting the exception. Perhaps even log
+        # the event to disk (or have the option in the message).
         sys._excepthook(exctype, value, traceback)
         sys.exit(1)
     sys.excepthook = exception_hook
