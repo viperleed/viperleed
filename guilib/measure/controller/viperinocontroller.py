@@ -11,7 +11,7 @@ Author: Florian Doerr
 This module contains the definition of the ViPErinoController class
 which gives commands to the ViPErinoSerialWorker class.
 """
-from collections import defaultdict
+
 # ViPErLEED modules
 from viperleed.guilib.measure.controller.\
      measurecontrollerabc import MeasureController, MeasureControllerError
@@ -21,21 +21,17 @@ from viperleed.guilib.measure.controller.\
 class ViPErinoController(MeasureController):
     """Controller class for the ViPErLEED Arduino Micro."""
     
-    self.labels['temperature'] = ('°C', 'lin')
-    self.labels['cold_junction'] = ('°C', 'lin')
-    
-    
+    plot_info = MeasureController.plot_info.copy()
+    plot_info['temperature'] = ('°C', 'lin')
+    plot_info['cold_junction'] = ('°C', 'lin')
+
+
     def __init__(self, settings=None, port_name='', controls_camera=False):
         """Initialise controller object."""
         
-        self.labels['temperature'] = []
-        self.labels['cold_junction'] = []
+        # TODO: Add stuff here if needed, otherwise remove init.
         
-        if data_points.keys() != labels.keys():
-            self.error_occurred.emit(
-                MeasureControllerError.SECTIONS_DO_NOT_MATCH
-                )
-        super().init(settings=settings, port_name=port_name,
+        super().__init__(settings=settings, port_name=port_name,
                      controls_camera=controls_camera)
 
     def set_energy(self, energy, time, *more_steps):
@@ -63,20 +59,20 @@ class ViPErinoController(MeasureController):
         -------
         energies_and_times: array of integers
         """
-        v_ref_dac = self.settings.getfloat('measurement_settings', 
+        v_ref_dac = self.settings.getfloat('measurement_settings',
                                            'v_ref_dac')
 
         dac_out_vs_nominal_energy = 10/1000  # 10V / 1000 eV
-        ouput_gain = 4  # Gain of the output stage on board
+        output_gain = 4  # Gain of the output stage on board
         conversion_factor = dac_out_vs_nominal_energy * 65536 / (v_ref_dac *
                                                                  ouput_gain)
-        
+
         energies_and_times = [energy, time, *more_steps]
         if len(more_steps) % 2 != 0:
             raise TypeError(f"{self.__class__.__name__}.set_energy: "
                             "Number of energy and time steps do not match. "
                             "Expected an even number of arguments, found "
-                            f"{len(more_steps) + 2} arguments."
+                            f"{len(more_steps) + 2} arguments.")
         number_of_steps = int(len(energies_and_times)/2)
 
         for i in range(number_of_steps):
