@@ -237,9 +237,7 @@ class MPLFigureCanvas(FigureCanvas):
         # Change the size policy such that it hasHeightForWidth. This keeps
         # MPLFigureCanvas square when inserted in a layout
         size_policy = self.sizePolicy()
-        print(f"{size_policy.horizontalPolicy()=}, {size_policy.verticalPolicy()=}")
         size_policy.setHeightForWidth(True)
-        print(f"{size_policy.hasHeightForWidth()=}")
         self.setSizePolicy(size_policy)
 
         self.setParent(kwargs.get('parent', None))
@@ -259,7 +257,6 @@ class MPLFigureCanvas(FigureCanvas):
             self.setSize(kwargs['plotCanvasSize'])
         else:
             self.adjustSize()
-        print(f"{self.hasHeightForWidth()=}, {self.layout()=}")
 
     @property
     def ax(self):
@@ -293,8 +290,9 @@ class MPLFigureCanvas(FigureCanvas):
         # sH.setHeight(s)
         # return sH
 
-    # def minimumSizeHint(self):
-        # return qtc.QSize(300, 300)
+    def minimumSizeHint(self):
+        min_width = 350
+        return qtc.QSize(min_width, self.heightForWidth(min_width))
 
     # def minimumSize(self):
         # return self.minimumSizeHint()
@@ -313,6 +311,7 @@ class MPLFigureCanvas(FigureCanvas):
         Re-implementation of QWidget heightForWidth that allows to keep the
         widget square when inserted in a QLayout
         """
+        # print("hfw", end=' ', flush=True)
         return width
 
     # TODO: this causes the fixed sizes issue. Perhaps would be better to
@@ -322,14 +321,25 @@ class MPLFigureCanvas(FigureCanvas):
     # makes heightForWidth kinda work, but only when reducing the width of
     # the container widget. Making it larger or changing height makes the
     # plots become rectangular.
-    def resizeEvent(self, event):
-        event = qtg.QResizeEvent(self.rightSize(), event.oldSize())
-        super().resizeEvent(event)  # call the original one
+    # def resizeEvent(self, event):
+        # event = qtg.QResizeEvent(self.rightSize(), event.oldSize())
+        # super().resizeEvent(event)  # call the original one
 
-        # the next updates notify the layout of the change in size,
-        # and keep the alignment correct
-        self.updateGeometry()
-        self.title.updateGeometry()
+        # # the next updates notify the layout of the change in size,
+        # # and keep the alignment correct
+        # self.updateGeometry()
+        # self.title.updateGeometry()
+    # def resizeEvent(self, event):
+        # new_len = min(event.size().width(), event.size().height())
+        # new_adjusted_size = qtc.QSize(new_len, self.heightForWidth(new_len))
+        # resize_event = qtg.QResizeEvent(new_adjusted_size, event.oldSize())
+        # super().resizeEvent(resize_event)
+
+        # # the next updates notify the layout of the change in size,
+        # # and keep the alignment correct
+        # self.updateGeometry()
+        # self.title.updateGeometry()
+
 
     def getStretchFactor(self):
         return qtc.QSize(

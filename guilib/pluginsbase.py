@@ -48,6 +48,13 @@ class ViPErLEEDPluginBase(qtw.QMainWindow):
     """Base class for the main window of a ViPErLEED plug-in."""
 
     module_closed = qtc.pyqtSignal(object)  # The class being destroyed
+    
+    # screen_changed tracks changes of screen. This signal carries
+    # the old and the new screen objects. This  signal is emitted
+    # only after the window is dropped onto the new screen. It can
+    # be connected in subclasses, e.g., to adapt the size of the
+    # window when the screen is changed.
+    screen_changed = qtc.pyqtSignal(qtg.QScreen, qtg.QScreen)
 
     def __init__(self, parent=None, name='', description=''):
         """Initialize module.
@@ -79,38 +86,51 @@ class ViPErLEEDPluginBase(qtw.QMainWindow):
         # QWindow), which has a screenChanged signal.
         self.setAttribute(qtc.Qt.WA_NativeWindow)
 
-        # __screen_changed can be used in an eventFilter that
-        # catches qtc.QEvent.NonClientAreaMouseButtonRelease
-        # event.type()s to modify the appearance of windows
-        # when they are dropped on a different screen
-        self.__screen_changed = False
+        # __screens keeps track of the old
+        # and new screens of the plug-in
+        self.__screens = {'old': self.screen(),
+                          'new': self.screen()}
 
         self.__compose()
         self.__connect()
+        self.installEventFilter(self)
 
-    def __get_screen_changed(self):
-        """Return whether the window has been moved among screens."""
-        return self.__screen_changed
+    @property
+    def old_screen(self):
+        """Return the last screen of the plug-in."""
+        return self.__screens['old']
+    
+    @old_screen.setter
+    def old_screen(self, old_screen):
+        """Set the last screen of the plug-in."""
+        self.__screens['old'] = old_screen
 
-    def __set_screen_changed(self, changed):
-        """Set screen_changed.
+    @property
+    def new_screen(self):
+        """Return the new screen of the plug-in."""
+        return self.__screens['new']
+
+    @new_screen.setter
+    def new_screen(self, new_screen):
+        """Set the new screen of the plug-in.
 
         This is also the slot connected to the screenChanged
         signal of the native QWindow holding this QMainWindow
 
         Parameters
         ----------
-        changed : object
-            Any object. self.screen_changed will be
-            set equal to the truth value of changed.
+        new_screen : QScreen
+            The new screen object
 
-        Returns
-        -------
-        None.
+        Emits
+        -----
+        screen_changed
+            If the screen actually changed
         """
-        self.__screen_changed = bool(changed)
-
-    screen_changed = property(__get_screen_changed, __set_screen_changed)
+        self.__screens['new'] = new_screen
+        if self.new_screen != self.old_screen:
+            self.screen_changed.emit(self.old_screen, self.new_screen)
+            self.old_screen = self.new_screen
 
     # TODO: check that it works nicely with multiple
     # monitors and different DPIs & scaling!
@@ -121,7 +141,29 @@ class ViPErLEEDPluginBase(qtw.QMainWindow):
         window_rect.moveCenter(screen_center)
         self.move(window_rect.topLeft())
 
-    def closeEvent(self, event):  # pylint: disable=invalid-name
+    def eventFilter(self,                # pylint: disable=invalid-name
+                    watched_object, event):
+        """Extend eventFilter to filter events.
+
+        The following events are currently processed:
+            atc.QEvent.NonClientAreaMouseButtonRelease
+                Triggered when the window has been moved and the
+                mouse button is release. The window is resized
+                to a dimension that fits the current screen. The
+                event is then processed normally.
+
+        Returns
+        -------
+        reject_event : bool
+            True if the event should not be processed.
+        """
+        if event.type() == qtc.QEvent.NonClientAreaMouseButtonPress:
+            self.old_screen = self.screen()
+        elif event.type() == qtc.QEvent.NonClientAreaMouseButtonRelease:
+            self.new_screen = self.screen()
+        return super().eventFilter(watched_object, event)
+
+    def closeEvent(self, event):       # pylint: disable=invalid-name
         """Reimplement closeEvent to emit a module_closed."""
         self.module_closed.emit(self)
         super().closeEvent(event)
@@ -163,7 +205,6 @@ class ViPErLEEDPluginBase(qtw.QMainWindow):
     def __connect(self):
         """Connect relevant signals to slots."""
         self.about_action.triggered.connect(self.__about.show)
-        self.windowHandle().screenChanged.connect(self.__set_screen_changed)
 
 
 

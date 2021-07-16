@@ -177,7 +177,6 @@ class LEEDPatternSimulator(gl.ViPErLEEDPluginBase):
         # Set window properties
         self.setWindowTitle(TITLE)
         self.setAcceptDrops(True)
-        self.installEventFilter(self)
 
         self.__compose()
         self.__connect()
@@ -335,26 +334,6 @@ class LEEDPatternSimulator(gl.ViPErLEEDPluginBase):
             self.filename = fnames[0]
             self.saved = True
 
-    def eventFilter(self, watched_object, event):
-        """Extend eventFilter to filter events.
-
-        The following events are currently processed:
-            atc.QEvent.NonClientAreaMouseButtonRelease
-                Triggered when the window has been moved and the
-                mouse button is release. The window is resized
-                to a dimension that fits the current screen. The
-                event is then processed normally.
-
-        Returns
-        -------
-        reject_event : bool
-            True if the event should not be processed.
-        """
-        if (event.type() == qtc.QEvent.NonClientAreaMouseButtonRelease
-                and self.screen_changed):
-            self.adjustSize()                                                   # TODO: replace with reimplementation that uses the current size rather than sizeHint(), and that also scales children and font sizes
-        return super().eventFilter(watched_object, event)
-
     def enable_ctrls(self, enabled):
         """Enable or disable controls and actions.
 
@@ -491,6 +470,22 @@ class LEEDPatternSimulator(gl.ViPErLEEDPluginBase):
         self.save_input()
         self.saved = True
 
+    def _on_screen_changed(self, old_screen, new_screen):
+        """React to a change of screen.
+        
+        This is the slot connected to the screen_changed
+        signal, inherited from ViPErLEEDPluginBase.
+        
+        Parameters
+        ----------
+        old_screen : QScreen
+            The old screen of the window
+        new_screen : QScreen
+            The new screen of the window
+        """
+        print(old_screen, new_screen)
+        self.adjustSize()
+
     def _on_structure_edit_finished(self, leed_parameters):
         """React to a change of the structure input.
 
@@ -553,20 +548,22 @@ class LEEDPatternSimulator(gl.ViPErLEEDPluginBase):
         layout.setContentsMargins(20, 10, 20, 10)
 
         layout.addLayout(lattices.mplLayout,                                    # TODO: snake
-                         0, 0, 3, 1,
-                         alignment=qtc.Qt.AlignVCenter | qtc.Qt.AlignLeft)
+                         0, 1,
+                         alignment=qtc.Qt.AlignCenter)
         layout.addLayout(leed.mplLayout,                                        # TODO: snake
-                         0, 1, 3, 3,
-                         alignment=qtc.Qt.AlignVCenter | qtc.Qt.AlignRight)
+                         0, 2,
+                         alignment=qtc.Qt.AlignCenter)
         layout.addWidget(self._ctrls['rotation'],
-                         0, 1, 1, 1,
+                         0, 2,
                          alignment=qtc.Qt.AlignTop | qtc.Qt.AlignLeft)
         layout.addWidget(self._ctrls['energy'],
-                         0, 3, 1, 1,
+                         0, 2,
                          alignment=qtc.Qt.AlignTop | qtc.Qt.AlignRight)
         layout.addWidget(domains,
-                         2, 3, 1, 1,
+                         0, 2,
                          alignment=qtc.Qt.AlignBottom | qtc.Qt.AlignRight)
+        # layout.setColumnStretch(0, 2)
+        # layout.setColumnStretch(3, 2)
 
     def __compose_menu_and_toolbar(self):                                       # TODO: Common stuff that can go to base?: New, Open, Save, Save As, Exit
         """Set up the menu and a matching tool bar."""
@@ -626,6 +623,7 @@ class LEEDPatternSimulator(gl.ViPErLEEDPluginBase):
 
     def __connect(self):
         """Connect relevant controls and signals."""
+        self.screen_changed.connect(self._on_screen_changed)
         self._dialogs['file_new'].leed_parameters_changed.connect(
             self.__set_parameters
             )
