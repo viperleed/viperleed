@@ -29,6 +29,13 @@ GrabberHandle._fields_ = [('unused', C.c_int)]
 
 
 
+# TODO: add a close method that calls the dll
+#       IC_CloseVideoCaptureDevice(hGrabber) function
+# TODO: look at the documentation at https://github.com/TheImagingSource/IC-Imaging-Control-Samples/tree/master/Python/Open%20Camera%2C%20Grab%20Image%20to%20OpenCV
+# TODO: also at (ip-config) https://github.com/TheImagingSource/IC-Imaging-Control-Samples/tree/master/c%23/Open%20GigE%20Camera%20by%20IP%20Address
+
+# TODO: snake_case, cleanup. Take also a look at the github
+
 class TIS_GrabberDLL(object):
     if sys.maxsize > 2**32 :
         __tisgrabber = C.windll.LoadLibrary("tisgrabber_x64.dll")
