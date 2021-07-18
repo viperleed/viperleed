@@ -21,12 +21,16 @@ from collections.abc import Sequence
 # ViPErLEED modules
 from viperleed.guilib.measure.serial.serialabc import (ExtraSerialErrors,
                                                        SerialABC)
-from viperleed.guilib.measure import hardwarebase
+from viperleed.guilib.measure.hardwarebase import (
+    ViPErLEEDErrorEnum,
+    config_has_sections_and_options,
+    emit_error
+    )
 
 
 # TODO: update send_message doc string
 
-class ViPErLEEDHardwareError(hardwarebase.ViPErLEEDErrorEnum):
+class ViPErLEEDHardwareError(ViPErLEEDErrorEnum):
     """This class contains all errors related to the Arduino."""
     ERROR_NO_ERROR = (0, "No error")
     ERROR_SERIAL_OVERFLOW = (1, "Overflow of the hardware serial.")
@@ -226,9 +230,8 @@ class ViPErLEEDSerial(SerialABC):
         fmt_data = {'error_name': current_error.name,
                     'state': arduino_states[error_state],
                     'err_details': current_error[1]}
-        error_msg = msg_to_format.format(**fmt_data)
         # Emit error and clear errors.
-        self.error_occurred.emit((error_code, error_msg))
+        emit_error(self, (error_code, msg_to_format), **fmt_data)
         self.clear_errors()
 
     def is_decoded_message_acceptable(self, message):
@@ -251,17 +254,14 @@ class ViPErLEEDSerial(SerialABC):
         msg_length, *msg_data = message
         # Check if message length greater than zero
         if msg_length == 0:
-            self.error_occurred.emit(ExtraSerialErrors.NO_MESSAGE_ERROR)
+            emit_error(self, ExtraSerialErrors.NO_MESSAGE_ERROR)
             return False
         if msg_length != len(msg_data):
-            self.error_occurred.emit(
-                ViPErLEEDHardwareError.ERROR_MSG_RCVD_INCONSISTENT
-                )
+            emit_error(self,
+                       ViPErLEEDHardwareError.ERROR_MSG_RCVD_INCONSISTENT)
             return False
         if msg_length not in (1, 2, 4):
-            self.error_occurred.emit(
-                ViPErLEEDHardwareError.ERROR_MSG_RCVD_INVALID
-                )
+            emit_error(self, ViPErLEEDHardwareError.ERROR_MSG_RCVD_INVALID)
             return False
         return True
 
@@ -275,11 +275,12 @@ class ViPErLEEDSerial(SerialABC):
         Parameters
         ----------
         message : bytes or bytearray
+            A decoded message received through the serial line
 
         Returns
         -------
         bool
-            Whether message is an error message
+            Whether message is an error message.
         """
         pc_error = self.port_settings.getint('available_commands', 'PC_ERROR')
 
@@ -319,16 +320,13 @@ class ViPErLEEDSerial(SerialABC):
         command, *data = messages
         if command not in available_commands.values():
             # The first message must be a command
-            error_code, error_msg = ExtraSerialErrors.UNSUPPORTED_COMMAND_ERROR
-            error_msg = error_msg.format(command)
-            self.error_occurred.emit((error_code, error_msg))
+            emit_error(self, ExtraSerialErrors.UNSUPPORTED_COMMAND_ERROR,
+                       command)
             return False
         if any(message in available_commands.values() for message in data):
             # Only the fist message can be a command; the others (if
             # any) can only be data to accompany the command itself.
-            self.error_occurred.emit(
-                ViPErLEEDHardwareError.ERROR_TOO_MANY_COMMANDS
-                )
+            emit_error(self, ViPErLEEDHardwareError.ERROR_TOO_MANY_COMMANDS)
             return False
 
         need_data = [available_commands[k]
@@ -488,15 +486,13 @@ class ViPErLEEDSerial(SerialABC):
             # If the message is 2 bytes long, then it is most likely the
             # identifier for an error and ended up here somehow
             elif len(message) == 2:
-                self.error_occurred.emit(
-                    ViPErLEEDHardwareError.ERROR_ERROR_SLIPPED_THROUGH
-                    )
+                emit_error(self,
+                           ViPErLEEDHardwareError.ERROR_ERROR_SLIPPED_THROUGH)
             # If the message does not fit one of the lengths above, it
             # is no known message type.
             else:
-                self.error_occurred.emit(
-                    ViPErLEEDHardwareError.ERROR_MSG_RCVD_INVALID
-                    )
+                emit_error(self, ViPErLEEDHardwareError.ERROR_MSG_RCVD_INVALID)
+
         # TODO: I think we can empty unprocessed_messages every time after
         # checking the messages.
         self.unprocessed_messages = []
@@ -558,11 +554,10 @@ class ViPErLEEDSerial(SerialABC):
         major, minor, *hardware = message
         firmware_version = f"{major}.{minor}"
         if firmware_version != local_version:
-            (error_code,
-            error_msg) = ViPErLEEDHardwareError.ERROR_VERSIONS_DO_NOT_MATCH
-            error_msg = error_msg.format(arduino_version=firmware_version,
-                                         local_version=local_version)
-            self.error_occurred.emit((error_code, error_msg))
+            emit_error(self,
+                       ViPErLEEDHardwareError.ERROR_VERSIONS_DO_NOT_MATCH,
+                       arduino_version=firmware_version,
+                       local_version=local_version)
 
         hardware_bits = self.port_settings['hardware_bits']
         hardware_config = {'adc_0': False,
@@ -584,7 +579,5 @@ class ViPErLEEDSerial(SerialABC):
                 key = 'i0_range' if 'i0' in key else 'aux_range'
             hardware_config[key] = present_or_closed
         if not (hardware_config['adc_0'] or hardware_config['adc_1']):
-            self.error_occurred.emit(
-                    ViPErLEEDHardwareError.ERROR_NO_HARDWARE_DETECTED
-                    )
+            emit_error(self, ViPErLEEDHardwareError.ERROR_NO_HARDWARE_DETECTED)
         return firmware_version, hardware_config

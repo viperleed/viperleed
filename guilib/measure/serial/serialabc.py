@@ -22,7 +22,11 @@ from configparser import ConfigParser
 from PyQt5 import (QtCore as qtc,
                    QtSerialPort as qts)
 
-from viperleed.guilib.measure import hardwarebase
+from viperleed.guilib.measure.hardwarebase import (
+    ViPErLEEDErrorEnum,
+    config_has_sections_and_options,
+    emit_error
+    )
 
 SERIAL_ERROR_MESSAGES = {
     qts.QSerialPort.NoError: "",
@@ -58,7 +62,7 @@ SERIAL_ERROR_MESSAGES = {
 }
 
 
-class ExtraSerialErrors(hardwarebase.ViPErLEEDErrorEnum):
+class ExtraSerialErrors(ViPErLEEDErrorEnum):
     """Data class for basic serial errors not available in QSerialPort."""
     NO_MESSAGE_ERROR = (50,
                         "Empty message received from controller.")
@@ -85,6 +89,8 @@ class ExtraSerialErrors(hardwarebase.ViPErLEEDErrorEnum):
                         "proceeding.")
 
 
+# TODO: Do we really need it to be a QObject? the only reason would be
+# running in a separate thread, which seems we will not do
 class SerialABC(qtc.QObject):
     """Base class for serial communication for a ViPErLEED controller."""
 
@@ -341,22 +347,16 @@ class SerialABC(qtc.QObject):
         ValueError
             If 'BYTE_ORDER' is neither 'big' nor 'little'.
         """
-        (self.__serial_settings,
-         invalid) = hardwarebase.config_has_sections_and_options(
+        if new_settings is None:
+            emit_error(self, ExtraSerialErrors.MISSING_SETTINGS)
+            
+        self.__serial_settings, invalid = config_has_sections_and_options(
             self,
             new_settings,
             self._mandatory_settings
             )
-        if invalid:
-            print("INVALID!", invalid)
-            if hasattr(invalid, '__len__'):
-                for setting in invalid:
-                    (error_code,
-                     error_msg) = ExtraSerialErrors.INVALID_PORT_SETTINGS
-                    error_msg = error_msg.format(setting)
-                    self.error_occurred.emit((error_code, error_msg))
-            else:
-                self.error_occurred.emit(ExtraSerialErrors.MISSING_SETTINGS)
+        for setting in invalid:
+            emit_error(self, ExtraSerialErrors.INVALID_PORT_SETTINGS, setting)
 
         self.__serial_settings = new_settings
         self.__port.close()
@@ -523,6 +523,7 @@ class SerialABC(qtc.QObject):
         Parameters
         ----------
         message : bytes or bytearray
+            A decoded message received through the serial line
 
         Returns
         -------
@@ -743,21 +744,19 @@ class SerialABC(qtc.QObject):
             is a MSG_START in self.port_settings.
         """
         if not message:
-            self.error_occurred.emit(ExtraSerialErrors.NO_MESSAGE_ERROR)
+            emit_error(self, ExtraSerialErrors.NO_MESSAGE_ERROR)
             return bytearray()
 
         start_marker = self.msg_markers['START']
         if start_marker is not None:
             # Protocol uses a start marker
             if message[:1] != start_marker:
-                self.error_occurred.emit(
-                    ExtraSerialErrors.NO_START_MARKER_ERROR
-                    )
+                emit_error(self, ExtraSerialErrors.NO_START_MARKER_ERROR)
                 return bytearray()
             message = message[1:]
 
         if not message:
-            self.error_occurred.emit(ExtraSerialErrors.NO_MESSAGE_ERROR)
+            emit_error(self, ExtraSerialErrors.NO_MESSAGE_ERROR)
             return bytearray()
         return bytearray(message)
 
@@ -828,10 +827,8 @@ class SerialABC(qtc.QObject):
         """
         if error_code == qts.QSerialPort.NoError:
             return
-        error_msg = SERIAL_ERROR_MESSAGES[error_code].format(self.port_name)
-        ExtraSerialErrors.temp_error = (error_code, error_msg)
-        self.error_occurred.emit(ExtraSerialErrors.temp_error)
-        del ExtraSerialErrors.temp_error
+        emit_error(self, (error_code, SERIAL_ERROR_MESSAGES[error_code]),
+                   self.port_name)
         self.clear_errors()
 
         print(error_msg)  # TEMP
@@ -848,7 +845,7 @@ class SerialABC(qtc.QObject):
         error_occurred(ExtraSerialErrors.TIMEOUT_ERROR)
             Always
         """
-        self.error_occurred.emit(ExtraSerialErrors.TIMEOUT_ERROR)
+        emit_error(self, ExtraSerialErrors.TIMEOUT_ERROR)
 
     def __set_up_serial_port(self):
         """Load settings to serial port."""

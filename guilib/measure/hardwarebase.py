@@ -16,107 +16,7 @@ from configparser import ConfigParser
 import enum
 import sys
 
-########################## FUNCTIONS #####################################
-
-def config_has_sections_and_options(caller, config, mandatory_settings):
-    """Make sure settings are fine, and return it as a ConfigParser.
-
-    Parameters
-    ----------
-    caller : object
-        The object calling this method
-    config : dict or ConfigParser or None
-        The configuration to be checked
-    mandatory_settings : Sequence
-        Each element is a tuple of the forms
-        (<section>, )
-            Checks that config contains the section <section>.
-            No options are checked.
-        (<section>, <option>)
-            Checks that the config contains <option> in the
-            existing section <section>. No values are checked
-            for <option>.
-        (<section>, <option>, <admissible_values>)
-            Checks that the config contains <option> in the
-            existing section <section>, and that <option> is
-            one of the <admissible_values>. In this case,
-            <admissible_values> is a Sequence of strings.
-
-    Returns
-    -------
-    config : ConfigParser or None
-        The same config, but as a ConfigParser, provided
-        the settings are OK. Returns None if some of the
-        mandatory_settings is invalid or if the original
-        config was None.
-    invalid_settings : list, None or True
-        Invalid mandatory_settings of config. None in case
-        settng are OK, list if settings are invalid, True
-        if config was None.
-
-    Raises
-    ------
-    TypeError
-        If settings is neither a dict nor a ConfigParser or
-        mandatory_settings contains invalid data (i.e., one
-        of the entries is not a Sequence with length <= 3).
-    """
-    if config is None:
-        return None, True
-
-    if not isinstance(config, (dict, ConfigParser)):
-        raise TypeError(
-            f"{caller.__class__.__name__}: invalid type "
-            f"{type(config).__name__} for settings. "
-            "Should be 'dict' or 'ConfigParser'."
-            )
-    if isinstance(config, dict):
-        tmp_config = ConfigParser()
-        tmp_config.read_dict(config)
-        config = tmp_config
-
-    invalid_settings = []
-    for setting in mandatory_settings:
-        if not setting or len(setting) > 3:
-            raise TypeError(f"Invalid mandatory setting {setting}. "
-                            f"with length {len(setting)}. Expected "
-                            "length <= 3.")
-        elif len(setting) == 1:
-            # (<section>,)
-            if not config.has_section(setting[0]):
-                invalid_settings.append(setting)
-                continue
-                # raise KeyError(
-                    # f"{caller.__class__.__name__}: settings "
-                    # f"must contain a {setting[0]!r} section"
-                    # )
-        elif len(setting) in (2, 3):
-            # (<section>, <option>) or (<section>, <option>, <admissible>)
-            section, option = setting[:2]
-            if not config.has_option(section, option):
-                invalid_settings.append(setting)
-                continue
-                # raise KeyError(
-                    # f"{caller.__class__.__name__}: settings must contain a "
-                    # f"{setting[0]!r} section including option {setting[1]!r}"
-                    # )
-            if len(setting) == 3:
-                # (<section>, <option>, <admissible>)
-                admissible_values = setting[2]
-                value = config.get(section, option)
-                if value not in admissible_values:
-                    invalid_settings.append(setting)
-                    continue
-                    # raise ValueError(
-                        # f"{caller.__class__.__name__}: invalid value {value!r}"
-                        # f" for settings/option {section!r}/{option!r}. "
-                        # f"Expected one of {', '.join(admissible_values)}."
-                        # )
-
-    if invalid_settings:
-        config = None
-    return config, invalid_settings
-
+################################## FUNCTIONS ##################################
 
 def class_from_name(package, class_name):
     """Return the serial class given its name.
@@ -154,7 +54,142 @@ def class_from_name(package, class_name):
     return cls
 
 
-################################ CLASSES ########################
+def config_has_sections_and_options(caller, config, mandatory_settings):
+    """Make sure settings are fine, and return it as a ConfigParser.
+
+    Parameters
+    ----------
+    caller : object
+        The object calling this method
+    config : dict or ConfigParser or None
+        The configuration to be checked. It is advisable to
+        NOT pass a dict, as the return value will be a copy,
+        and will not be up to date among objects sharing the
+        same configuration.
+    mandatory_settings : Sequence
+        Each element is a tuple of the forms
+        (<section>, )
+            Checks that config contains the section <section>.
+            No options are checked.
+        (<section>, <option>)
+            Checks that the config contains <option> in the
+            existing section <section>. No values are checked
+            for <option>.
+        (<section>, <option>, <admissible_values>)
+            Checks that the config contains <option> in the
+            existing section <section>, and that <option> is
+            one of the <admissible_values>. In this case,
+            <admissible_values> is a Sequence of strings.
+
+    Returns
+    -------
+    config : ConfigParser or None
+        The same config, but as a ConfigParser, provided
+        the settings are OK. Returns None if some of the
+        mandatory_settings is invalid or if the original
+        config was None.
+    invalid_settings : list
+        Invalid mandatory_settings of config. None in case
+        settings are OK, list if settings are invalid, True
+        if config was None.
+
+    Raises
+    ------
+    TypeError
+        If settings is neither a dict nor a ConfigParser or
+        mandatory_settings contains invalid data (i.e., one
+        of the entries is not a Sequence with length <= 3).
+    """
+    if config is None:
+        return None, mandatory_settings
+
+    if not isinstance(config, (dict, ConfigParser)):
+        raise TypeError(
+            f"{caller.__class__.__name__}: invalid type "
+            f"{type(config).__name__} for settings. "
+            "Should be 'dict' or 'ConfigParser'."
+            )
+    if isinstance(config, dict):
+        tmp_config = ConfigParser()
+        tmp_config.read_dict(config)
+        config = tmp_config
+
+    invalid_settings = []
+    for setting in mandatory_settings:
+        if not setting or len(setting) > 3:
+            raise TypeError(f"Invalid mandatory setting {setting}. "
+                            f"with length {len(setting)}. Expected "
+                            "length <= 3.")
+        elif len(setting) == 1:
+            # (<section>,)
+            if not config.has_section(setting[0]):
+                invalid_settings.append(setting)
+                continue
+        elif len(setting) in (2, 3):
+            # (<section>, <option>) or (<section>, <option>, <admissible>)
+            section, option = setting[:2]
+            if not config.has_option(section, option):
+                invalid_settings.append(setting)
+                continue
+            if len(setting) == 3:
+                # (<section>, <option>, <admissible>)
+                admissible_values = setting[2]
+                value = config.get(section, option)
+                if value not in admissible_values:
+                    invalid_settings.append(setting)
+
+    if invalid_settings:
+        config = None
+    return config, invalid_settings
+
+
+def emit_error(sender, error, *msg_args, **msg_kwargs):
+    """Emit a ViPErLEEDErrorEnum-like error.
+
+    Parameters
+    ----------
+    sender : object
+        The instance in which the error occurred. Must have
+        an error_occurred pyqtSignal.
+    error : tuple or ViPErLEEDErrorEnum
+        The error to be emitted. Should be a 2-tuple of the
+        form (error_code, error_message).
+    *msg_args : object
+        Extra info to be inserted in the error message as
+        positional arguments to str.format
+    **msg_kwargs : object
+        Extra info to be inserted in the error message as
+        keyword arguments.
+
+    Raises
+    ------
+    TypeError
+        If sender does not have an error_occurred signal,
+        or if error is not a Sequence.
+    ValueError
+        If error is not a 2-element tuple
+    """
+    if not hasattr(sender, 'error_occurred'):
+        raise TypeError(f"Object {sender} has no error_occurred signal "
+                        "to emit. Probably an inappropriate type")
+    try:
+        _ = len(error)
+    except TypeError:
+        raise TypeError(f"Invalid error {error} cannot be emitted")
+
+    if len(error) != 2:
+        raise TypeError(f"Invalid error {error} cannot be emitted")
+
+    if not msg_args and not msg_kwargs:
+        sender.error_occurred.emit(error)
+        return
+
+    error_code, error_msg = error
+    error_msg = error_msg.format(*msg_args, **msg_kwargs)
+    sender.error_occurred.emit((error_code, error_msg))
+
+
+################################### CLASSES ###################################
 
 class ViPErLEEDErrorEnum(tuple, enum.Enum):
     """Base class for ViPErLEED hardware errors.
