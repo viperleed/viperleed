@@ -22,7 +22,7 @@ from PyQt5 import QtCore as qtc
 
 # ViPErLEED modules
 from viperleed.guilib.measure.hardwarebase import (
-    config_has_sections_and_options, class_from_name,
+    config_has_sections_and_options, class_from_name, emit_error,
     ViPErLEEDErrorEnum,
     )
 
@@ -45,31 +45,18 @@ class ControllerABC(metaclass=ABCMeta):
 
     error_occurred = qtc.pyqtSignal(tuple)
 
+    _mandatory_settings = [
+        ('controller', 'serial_port_class'),
+        ]
+
     def __init__(self, settings=None, port_name='', controls_camera=False):
-        """Initialise the controller instance."""
+        """Initialize the controller instance."""
         self.__controls_camera = controls_camera
-        mandatory_settings = (('controller', 'serial_port_class'),)
+        self.__port_name = port_name
+        self.__settings = None
+        self.__serial = None
 
-        settings, invalid = config_has_sections_and_options(
-            self,
-            settings,
-            mandatory_settings
-            )
-        if invalid:
-            if hasattr(invalid, '__len__'):
-                for setting in invalid:
-                    (error_code,
-                     error_msg) = ControllerErrors.INVALID_CONTROLLER_SETTINGS
-                    error_msg = error_msg.format(setting)
-                    self.error_occurred.emit((error_code, error_msg))
-            else:
-                self.error_occurred.emit(ControllerErrors.MISSING_SETTINGS)
-
-        self.__settings = settings
-        serial_name = settings.get('controller', 'serial_port_class')
-        serial_class = class_from_name('serial', serial_name)
-        self.__serial = serial_class(settings=self.settings,
-                                     port_name=port_name)
+        self.set_settings(settings)
 
     @property
     def controls_camera(self):
@@ -86,43 +73,54 @@ class ControllerABC(metaclass=ABCMeta):
         """Return the serial port instance used."""
         return self.__serial
 
-    @property
-    def settings(self):
+    def __get_settings(self):
         """Return the current settings used as a ConfigParser."""
         return self.__settings
 
-    @settings.setter
-    def settings(self, new_settings):
+    def set_settings(self, new_settings):
         """Set new settings for this controller.
+
+        Settings are accepted and loaded only if they are valid.
 
         Parameters
         ----------
         new_settings : dict or ConfigParser
             The new settings. Will be checked for the following
             mandatory sections/options:
+                'controller'/'serial_port_class'
         """
-        mandatory_settings = (('controller', 'serial_port_class'),)
+        if new_settings is None:
+            emit_error(self, ControllerErrors.MISSING_SETTINGS)
+            return
 
         new_settings, invalid = config_has_sections_and_options(
-            self,
-            new_settings,
-            mandatory_settings
+            self, new_settings,
+            self._mandatory_settings
             )
+        for setting in invalid:
+            emit_error(self, ControllerErrors.INVALID_CONTROLLER_SETTINGS,
+                       setting)
 
         if invalid:
-            if hasattr(invalid, '__len__'):
-                for setting in invalid:
-                    (error_code,
-                     error_msg) = ControllerErrors.INVALID_CONTROLLER_SETTINGS
-                    error_msg = error_msg.format(setting)
-                    self.error_occurred.emit((error_code, error_msg))
-            else:
-                self.error_occurred.emit(ControllerErrors.MISSING_SETTINGS)
+            return
+        
+        serial_cls_name = new_settings.get('controller', 'serial_port_class')
+        if self.serial.__class__.__name__ != serial_cls_name:
+            try:
+                serial_class = class_from_name('serial', serial_cls_name)
+            except ValueError:
+                emit_error(self, ControllerErrors.INVALID_CONTROLLER_SETTINGS,
+                           setting)
+                return
+            self.__serial = serial_class(settings=new_settings,
+                                         port_name=self.__port_name)
 
         # The next line will also check that new_settings contains
         # appropriate settings for the serial port class used
         self.serial.port_settings = new_settings
-        self.__settings = new_settings
+        self.__settings = self.serial.port_settings
+
+    settings = property(__get_settings, __set_settings)
 
     @abstractmethod
     def set_energy(self, energy, *other_data, **kwargs):

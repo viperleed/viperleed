@@ -286,6 +286,9 @@ class SerialABC(qtc.QObject):
         This will disconnect an already-open port, but will not
         connect to the port with the new_settings. Explicitly
         use .connect() after changing port settings.
+        
+        Settings are loaded only if they are valid. Otherwise
+        the previous settings stay in effect.
 
         This method can be used as a slot for a signal carrying
         a dict or a ConfigParser.
@@ -349,8 +352,9 @@ class SerialABC(qtc.QObject):
         """
         if new_settings is None:
             emit_error(self, ExtraSerialErrors.MISSING_SETTINGS)
+            return
             
-        self.__serial_settings, invalid = config_has_sections_and_options(
+        new_settings, invalid = config_has_sections_and_options(
             self,
             new_settings,
             self._mandatory_settings
@@ -358,6 +362,9 @@ class SerialABC(qtc.QObject):
         for setting in invalid:
             emit_error(self, ExtraSerialErrors.INVALID_PORT_SETTINGS, setting)
 
+        if invalid:
+            return
+        
         self.__serial_settings = new_settings
         self.__port.close()
 
