@@ -5,39 +5,27 @@ Created on Tue Sep 22 18:00:17 2020
 @author: e-thi
 """
 import os
+from enum import Enum
 import time
 import ctypes
 
-import cv2
-# NON STANDARD, needs to be tested against speed of image saving with respect to
-# skimage.io, gdal (part of osgeo?), rasterio, perhaps tiffile?, and pillow-simd
-
 import numpy as np
 
-# rather add the directories to sys.path. Also, the generic camera libraries
-# should be reorganized into a better directory tree:
-# ./
-# config.ini goes here, no need to have a folder for one single file
-# ./drivers
-#   camera.py
-#   /imagingsource
-#    imagingsource.py
-#    (all the current contents of Camera_libraries, excl. camera.py)
-# ./temp (folder to create at runtime, and to be cleaned up afterwards;
-#         path is hard-coded here, not included in .ini file)
-#   all measurement files go here, before packing to a .zip
-# ./LEED_data (standard folder for saving the .zip files)
-os.chdir('Camera_libraries')
-
-from camera import CameraABC
-from camera import bin_image
-import tisgrabber as IC
-
-os.chdir('..')
+from viperleed.guilib.measure.camera.cameraabc import CameraABC
+from viperleed.guilib.measure.camera.drivers.imagingsource import (
+    tisgrabber as driver
+    )
 
 
 # TODO: frame_ready_callback will take camera instead of user_data as the
 #       last parameter. This way it has access to the camera functions
+
+PROP_CAM_AUTO_EXPOSURE = 4
+ENABLE = 1
+DISABLE = 0
+SUCCESS = driver.DLLReturns.SUCCESS.value
+
+
 
 def callback(hGrabber, pBuffer, framenumber, user_data):
     """
@@ -114,36 +102,37 @@ def callback(hGrabber, pBuffer, framenumber, user_data):
         user_data.busy = False
 
 
+
+
 class ImagingSourceDMKCamera(CameraABC):
     """Class to control a DMK-model camera from Imaging Source."""
 
-    PROP_CAM_AUTO_EXPOSURE = 4
-    ENABLE = 1
-    DISABLE = 0
-    SUCCESS = 1
+    # RESOLUTION_MAX_WIDTH = 2048
+    # RESOLUTION_MIN_WIDTH = 528
+    # RESOLUTION_MULTIPLE_WIDTH = 16
+    # RESOLUTION_MAX_HEIGHT = 1536
+    # RESOLUTION_MIN_HEIGHT = 4
+    # RESOLUTION_MULTIPLE_HEIGHT = 4
 
-    RESOLUTION_MAX_WIDTH = 2048
-    RESOLUTION_MIN_WIDTH = 528
-    RESOLUTION_MULTIPLE_WIDTH = 16
-    RESOLUTION_MAX_HEIGHT = 1536
-    RESOLUTION_MIN_HEIGHT = 4
-    RESOLUTION_MULTIPLE_HEIGHT = 4
+    def __init__(self, settings=None):
+        """Initialize camera."""
+        super().__init__(driver.TIS_CAM(), settings=settings)
 
-    def __init__(self):
-        super().__init__()
-        self.camera_lib = IC.TIS_CAM()
-        self.callback_data.camera_lib = self.camera_lib
-        self.callback_function = IC.TIS_GrabberDLL.FRAMEREADYCALLBACK(callback)
+    def close(self):
+        """Close the camera device."""
 
-    def __fail(self, funct, *args, **kwargs):
-        """Run self.camera_lib.funct(*args, **kwargs).
+
+    def __fail(self, func, *args, **kwargs):
+        """Run self.driver.funct(*args, **kwargs).
         
         Returns
         -------
         fail : bool
             True if the action failed
         """
-        return getattr(self.camera_lib, funct)(*args, **kwargs) != self.SUCCESS
+        return getattr(self.driver, func)(*args, **kwargs) != SUCCESS
+
+################################# FROM HERE ###################################
 
     def open(self):
         """Connect to the camera."""
