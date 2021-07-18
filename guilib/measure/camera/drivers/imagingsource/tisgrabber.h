@@ -68,46 +68,51 @@ typedef struct HFRAMEFILTER_t__
     without an error.
 */
 #define IC_SUCCESS   1		///< Return value for success.
+
 //////////////////////////////////////////////////////////////////////////
 /*! If a function returns IC_ERROR, then something went wrong.
 */
 #define IC_ERROR     0		///< Return value that indicates an error.
+
 //////////////////////////////////////////////////////////////////////////
 /*! This error indicates, that an HGRABBER handle has not been created yet. Please
 	see IC_CreateGrabber() for creating an HGRABBER handle. 
 */
 #define IC_NO_HANDLE -1		///< No device handle. HGRABBER is NULL.
+
 //////////////////////////////////////////////////////////////////////////
 /*! This return values indicates that no device has been opened. Please refer to
     IC_OpenVideoCaptureDevice().
 */
 #define IC_NO_DEVICE -2     ///< No device opened, but HGRABBER is valid.
-//////////////////////////////////////////////////////////////////////////
-/*! This return value indicates, that the video capture device is not in live mode,
-    but live mode is for the current function call required. Please refer to
-	IC_StartLive().
-*/
 
-#define IC_NOT_AVAILABLE -3     ///< Property not avaiable, but HGRABBER is valid.
+
 //////////////////////////////////////////////////////////////////////////
 /*! This return value indicates, that the video capture device does not support
 	the specified property.
 */
+#define IC_NOT_AVAILABLE -3     ///< Property not avaiable, but HGRABBER is valid.
 
-#define IC_NO_PROPERTYSET -3     ///< The Propertyset was not queried.
 //////////////////////////////////////////////////////////////////////////
 /*! This return value indicates, that the porperty set was not queried for
 	the current grabber handle. Please check, whether IC_QueryPropertySet() 
 	was called once before using the function.
 */
+#define IC_NO_PROPERTYSET -3     ///< The Propertyset was not queried.
 
-#define IC_DEFAULT_WINDOW_SIZE_SET -3     ///< The live display window size could not be set
 //////////////////////////////////////////////////////////////////////////
 /*! This return value indicates, that setting of a custom live display window size
 	failed, because IC_SetDefaultWindowPosition() was not called with parameter false
 	somewhere before.
 	@sa IC_SetDefaultWindowPosition
 	@sa IC_SetWindowPosition
+*/
+#define IC_DEFAULT_WINDOW_SIZE_SET -3     ///< The live display window size could not be set
+
+//////////////////////////////////////////////////////////////////////////
+/*! This return value indicates, that the video capture device is not in live mode,
+    but live mode is for the current function call required. Please refer to
+	IC_StartLive().
 */
 #define IC_NOT_IN_LIVEMODE -3 ///< A device has been opened, but is is not in live mode.
 
@@ -153,8 +158,9 @@ typedef struct HFRAMEFILTER_t__
 	@sa IC_LoadDeviceStateFromFileEx
 */
 #define IC_WRONG_XML_FORMAT -1
+
 //////////////////////////////////////////////////////////////////////////
-/*! This return value indicates, that  the passed XML file contains no compatible XML
+/*! This return value indicates, that the passed XML file contains no compatible XML
 	data.
 
 	@sa IC_LoadDeviceStateFromFileEx
