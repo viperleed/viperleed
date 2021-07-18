@@ -36,6 +36,9 @@ import tisgrabber as IC
 os.chdir('..')
 
 
+# TODO: frame_ready_callback will take camera instead of user_data as the
+#       last parameter. This way it has access to the camera functions
+
 def callback(hGrabber, pBuffer, framenumber, user_data):
     """
     This is the Callback-function, which is called when a software Trigger is
@@ -56,6 +59,9 @@ def callback(hGrabber, pBuffer, framenumber, user_data):
         # WHY IS THE NEXT LINE EVEN NEEDED? pBuffer should already be a pointer
         # to a byte array. Probably best to use (copy avoids memory overlaps):
         # np.ctypeslib.as_array(ptr, shape=(8,)).copy()
+        #
+        # Also, look at GetImage()/GetImageEx() that seems to more or less
+        # already do what's needed
         image = ctypes.cast(pBuffer,
                             ctypes.POINTER(ctypes.c_ubyte * buffersize))
         image_name = (str(user_data.process_params['filename_prefix'])+
@@ -79,7 +85,7 @@ def callback(hGrabber, pBuffer, framenumber, user_data):
                                     Imageformat[0])))  # Height WRONG
             if (user_data.process_params['counter_frames']
                 < user_data.process_params['n_frames']):
-                user_data.busy = False
+                user_data.busy = False  # BUG: must be True??
         else:
             user_data.dac_busy = False
             array_data_type = np.uint16
@@ -144,7 +150,7 @@ class ImagingSourceDMKCamera(CameraABC):
         return not self.__fail('openVideoCaptureDevice', self.name)
 
     def list_devices(self)
-        """Return a list of avaliable device names.
+        """Return a list of available device names.
 
         Returns
         -------
@@ -156,9 +162,6 @@ class ImagingSourceDMKCamera(CameraABC):
         return [d.decode() for d in devices]
 
     def initialize(self, camera_config):
-
-        # try connecting
-        
 
         # set up the video format
         video_format = camera_config['video_format'].split()[0]                 # video_format seems IS specific --> super()
@@ -174,26 +177,12 @@ class ImagingSourceDMKCamera(CameraABC):
         # if 'Y16' in video_format:
             # if self.fail('SetFormat', IC.SinkFormats.Y16):
                 # raise RuntimeError("Error setting format Y16")
-
-        # set up the region of interest
-        if camera_config['set_roi'] == 'True':                                  # roi optional, stored in config as x, y, w, h, fallback to None
-            self.set_roi(camera_config['roi_x'], camera_config['roi_y'])
-
-        # set binning
-        self.set_binning(camera_config['bin_factor'])                           # binning optional fallback to 1
-
-        # set exposure, gain, number of frames, frame rate,image path,
-        # nameprefix
-        
         
         self.set_framerate(camera_config['frame_rate'])                         # probably skip this altogether and stick to exposure_time only
 
         self.set_callback()                                                     # probably IS specific
-        self.set_continuous_mode(camera_config['live_mode'])                    # optional, will be context-specific
-        self.enable_trigger(camera_config['live_mode'])                         # unclear how this differs from continuous on/off
 
         self.start_camera(camera_config['live_mode'])
-        print('Camera Initialization: DONE!')
 
     def set_exposure(self, time_exposure):
         """
