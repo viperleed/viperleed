@@ -89,3 +89,124 @@
 # int   IC_SetCodec(HGRABBER hlGrabber, HCODEC Codec)
 # int   IC_SetAVIFileName(HGRABBER hlGrabber, char * FileName)
 # int   IC_enableAVICapturePause(HGRABBER hlGrabber, int Pause)
+
+
+######################## REMOVED FROM IMPLEMENTATION ##########################
+
+    # TODO: it is unclear what an input channel is! ANALOG INPUT. Probably not useful.
+    get_input_channel_count = __dll.IC_GetInputChannelCount
+    get_input_channel_count.restype = C.c_int
+    get_input_channel_count.argtypes = (GrabberHandlePtr,)
+    get_input_channel_count.__doc__ = (
+        """Return the number of available input channels for a device.
+
+        Requires a video-capture device to be open.
+
+        Parameters
+        ----------
+        grabber_handle : GrabberHandlePtr
+            Handle to grabber object
+
+        Returns
+        -------
+        n_channels : int
+            The number of channels on success, otherwise NO_DEVICE
+            (no video capture device open) or NO_HANDLE (invalid
+            grabber_handle)."""
+        )
+
+    # TODO: probably not useful
+    get_input_channel = __dll.IC_GetInputChannel
+    get_input_channel.restype = C.c_char_p
+    get_input_channel.argtypes = GrabberHandlePtr, C.c_int
+    get_input_channel.__doc__ = (
+        """Return the input channel at index as a string.
+
+        A device should be open for this method to succeed. This method
+        will fail unless get_input_channel_count() was called before.
+
+        Parameters
+        ----------
+        grabber_handle : GrabberHandlePtr
+            Handle to grabber object
+        index : int
+            Index of the channel to be returned. index must be between
+            0 and get_input_channel_count().
+
+        Returns
+        -------
+        channel : bytes or None
+            The name of the specified input channel (UTF-8). Returns
+            None if an error occurred."""
+        )
+
+    # TODO: video norm == Analog/PAL/NTSC/SECAM:
+    #       https://docs.microsoft.com/en-us/windows/win32/
+    #               api/strmif/ne-strmif-analogvideostandard)
+    #       unclear if it meks senso to have this.
+    get_video_norm_count = __dll.IC_GetVideoNormCount
+    get_video_norm_count.restype = C.c_int
+    get_video_norm_count.argtypes = (GrabberHandlePtr,)
+    get_video_norm_count.__doc__ = (
+        """Return the number of the video norms for the current device.
+
+        A device should be open for this method to succeed.
+
+        Parameters
+        ----------
+        grabber_handle : GrabberHandlePtr
+            Handle to grabber object
+
+        Returns
+        -------
+        n_norms : int
+            The number of video norms on success, otherwise NO_DEVICE
+            (no video capture device open) or NO_HANDLE (invalid
+            grabber_handle)."""
+        )
+
+    # TODO: unclear if useful, probably not
+    get_video_norm = __dll.IC_GetVideoNorm
+    get_video_norm.restype = C.c_char_p
+    get_video_norm.argtypes = GrabberHandlePtr, C.c_int
+    get_video_norm.__doc__ = (
+        """Return the video norm at index as a string.
+
+        This method will fail unless get_video_norm_count() was
+        called before.
+
+        Parameters
+        ----------
+        grabber_handle : GrabberHandlePtr
+            Handle to grabber object
+        index : int
+            Index of the video norm to be returned. index must be
+            between 0 and get_video_norm_count().
+
+        Returns
+        -------
+        video_norm : bytes or None
+            The name of the specified video norm (UTF-8). Returns
+            None if an error occurred."""
+        )
+
+    # TODO: probably not useful
+    set_window_handle = __dll.IC_SetHWnd
+    set_window_handle.restype = C.c_int
+    set_window_handle.argtypes = GrabberHandlePtr, C.c_int
+    set_window_handle.__doc__ = (
+        """Assign a window handle to display the video in.
+
+        Parameters
+        ----------
+        grabber_handle : GrabberHandlePtr
+            Handle to grabber object
+        window_handle : int
+            The handle of the window where a live video will be shown.
+
+        Returns
+        -------
+        ret_val : int
+            SUCCESS if an image has been snapped, ERROR if something
+            went wrong."""
+        )
