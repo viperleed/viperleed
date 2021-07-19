@@ -434,8 +434,8 @@ class CameraABC(metaclass=ABCMeta):
         -------
         width, height : int
             Width and height of the image in pixels
-        bits : int
-            Number of bits per pixel and per color
+        n_bytes : int
+            Number of bytes per pixel and per color
         n_colors : int
             Number of color channels
         """
