@@ -12,9 +12,12 @@ This module contains utility functions and classes shared
 by mutliple ViPErLEED hardware objects.
 """
 
+from abc import ABCMeta
 from configparser import ConfigParser
 import enum
 import sys
+
+from PyQt5 import QtCore as qtc
 
 ################################## FUNCTIONS ##################################
 
@@ -190,6 +193,13 @@ def emit_error(sender, error, *msg_args, **msg_kwargs):
 
 
 ################################### CLASSES ###################################
+
+
+class QMetaABC(type(qtc.QObject), ABCMeta):
+    """Metaclass common to QObject and ABCMeta allowing @abstractmethod."""
+
+    pass
+
 
 class ViPErLEEDErrorEnum(tuple, enum.Enum):
     """Base class for ViPErLEED hardware errors.

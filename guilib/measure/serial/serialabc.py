@@ -16,14 +16,14 @@ can also happens in a separate QThread to prevent stalling the
 Graphical User Interface.
 """
 
-from abc import ABCMeta, abstractmethod
+from abc import abstractmethod  # ABCMeta, 
 from configparser import ConfigParser
 
 from PyQt5 import (QtCore as qtc,
                    QtSerialPort as qts)
 
 from viperleed.guilib.measure.hardwarebase import (
-    ViPErLEEDErrorEnum,
+    ViPErLEEDErrorEnum, QMetaABC
     config_has_sections_and_options,
     emit_error
     )
@@ -91,7 +91,7 @@ class ExtraSerialErrors(ViPErLEEDErrorEnum):
 
 # TODO: Do we really need it to be a QObject? the only reason would be
 # running in a separate thread, which seems we will not do
-class SerialABC(qtc.QObject):
+class SerialABC(qtc.QObject, metaclass=QMetaABC):
     """Base class for serial communication for a ViPErLEED controller."""
 
     error_occurred = qtc.pyqtSignal(tuple)
