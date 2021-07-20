@@ -10,13 +10,13 @@ Author: Florian Doerr
 
 """
 
-from abc import ABCMeta, abstractmethod
+from abc import abstractmethod
 
 import numpy as np
 from PyQt5 import QtCore as qtc
 
 from viperleed.guilib.measure.hardwarebase import (
-    ViPErLEEDErrorEnum, config_has_sections_and_options, emit_error
+    ViPErLEEDErrorEnum, config_has_sections_and_options, emit_error, QMetaABC
     )
 from viperleed.guilib.measure.camera.imageprocess import (ImageProcessor,
                                                           ImageProcessInfo)
@@ -50,7 +50,7 @@ class CameraErrors(ViPErLEEDErrorEnum):
     UNSUPPORTED_WHILE_BUSY = (207, "Cannot {} while camera is busy.")
 
 
-class CameraABC(metaclass=ABCMeta):
+class CameraABC(qtc.QObject, metaclass=QMetaABC):
     """Abstract base class for ViPErLEED cameras."""
 
     camera_busy = qtc.pyqtSignal(bool)
