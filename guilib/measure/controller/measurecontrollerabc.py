@@ -29,12 +29,11 @@ class MeasureController(ControllerABC):
     # class know that the controller is done measuring.
     controller_ready = qtc.pyqtSignal(object)
 
-    def __init__(self, settings=None, port_name='', controls_camera=False,
-                 sets_energy=False):
+    def __init__(self, settings=None, port_name='', sets_energy=False):
         """Initialise controller class object."""
 
         super().init(settings=settings, port_name=port_name,
-                     controls_camera=controls_camera, sets_energy=sets_energy)
+                     sets_energy=sets_energy)
 
         # This dictionary must be reimplemented in subclasses.
         # It must contain all possible measurement types the controller
@@ -42,48 +41,36 @@ class MeasureController(ControllerABC):
         # class responsible for receiving data from this controller.
         self.__measurements = defaultdict(list)
 
-        # Flags needed for loop operation.
-        self.flags = defaultdict(list)
-        self.flags['image_received'] = False
-        self.flags['measurements_received'] = False
-
         # Connect data_received signal from the serial to
         # the receive_measurements function in this class.
         self.serial.data_received.connect(self.receive_measurements)
 
-
     def handle_do_measurement(self, energy, *other_data, **kwargs):
         """Handle the do measurement command.
 
-        Decide what to do depending on the settings of 
+        Decide what to do depending on the settings of
         the controller.
 
         Returns
         -------
         None.
         """
+        self.busy = True
         # TODO: other parameters not documented and not used
         if self.sets_energy:
             set_energy(true_energy_to_setpoint(energy))
-                if self.controls_camera:
-                    trigger_camera()
-        elif self.settings['camera_settings']['mode'] == 'live':
-            # TODO: What do we do here?
-            return
         else:
             # TODO: delay by time from configuration
             measure_now()
-            if self.controls_camera:
-                trigger_camera()
-                
+
     @abstractmethod
     def abort(self):
         """Abort current task.
-        
+
         This method must be reimplemented in subclasses.
         Abort what the controller is doing right now and
         return to waiting for further instructions.
-        
+
         Returns
         -------
         None.
@@ -189,35 +176,21 @@ class MeasureController(ControllerABC):
         """Check if all measurements have been received.
 
         Emit a signal which contains all of the measurements as soon
-        as the image from the camera and the data from the controller
-        have been received. If the controller class does not control
-        a camera, it will not wait for an image to be returned. If
-        the camera is in live mode, the controller class will not
-        wait for measurement data from the controller.
+        as the data from the controller has been received.
 
         The busy attribute will let the measurement class know if
         it can continue with the next step in´the measurement cycle.
-        Once all of the controller classes are not busy anymore, the
-        signal for the next step will be sent.
+        Once all of the controllers and cameras are not busy anymore,
+        the signal for the next step will be sent.
 
         Returns
         -------
         None.
         """
-
-        if not self.__controls_camera:
-            self.flags['image_received'] = True
-        if self.settings['camera_settings']['mode'] == 'live':
-            self.flags['measurements_received'] = True
-        if self.image_received and self.measurements_received:
-            self.flags['image_received'] = False
-            self.flags['measurements_received'] = False
-            self.busy = False
-            self.controller_ready.emit(self.__measurements)
-            for key in self.__measurements:
-                self.__measurements[key] = []
-
-        return
+        self.busy = False
+        self.controller_ready.emit(self.__measurements)
+        for key in self.__measurements:
+            self.__measurements[key] = []
 
     @abstractmethod
     def set_energy(self, energy, *other_data, **kwargs):

@@ -49,10 +49,9 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
         ('controller', 'serial_port_class'),
         ]
 
-    def __init__(self, settings=None, port_name='', controls_camera=False,
-                 sets_energy=False):
+    def __init__(self, settings=None, port_name='', sets_energy=False):
         """Initialize the controller instance."""
-        self.__controls_camera = controls_camera
+
         # Switches the controller from set_energy() to measure_now().
         self.__sets_energy = sets_energy
         self.__port_name = port_name
@@ -83,20 +82,10 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
         self.__busy = bool(is_busy)
 
     @property
-    def controls_camera(self):
-        """Return whether this controller also manage the camera."""
-        return self.__controls_camera
-
-    @controls_camera.setter
-    def controls_camera(self, active):
-        """Set whether this controller handles the camera."""
-        self.__controls_camera = bool(active)
-
-    @property
     def serial(self):
         """Return the serial port instance used."""
         return self.__serial
-        
+
     @property
     def sets_energy(self):
         """Return whether the controller sets the energy."""
