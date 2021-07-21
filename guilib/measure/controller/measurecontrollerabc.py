@@ -21,7 +21,6 @@ from viperleed.guilib.measure.controller.controllerabc import ControllerABC
 from viperleed.guilib.measure import hardwarebase
 
 
-
 class MeasureController(ControllerABC):
     """Controller class for measurement controllers."""
 
@@ -37,13 +36,23 @@ class MeasureController(ControllerABC):
 
         # This dictionary must be reimplemented in subclasses.
         # It must contain all possible measurement types the controller
-        # can receive using the same nomiclature used in the measurement
+        # can receive using the same keys used in the measurement
         # class responsible for receiving data from this controller.
         self.__measurements = defaultdict(list)
+        
+        # This dictionary must be reimplemented in subclasses.
+        # It must contain all functions the MeasureController has to call
+        # in the order they have to be called to bring the controller into
+        # a state ready for measurements.
+        self.prepare_to_dos = defaultdict(bool)
 
         # Connect data_received signal from the serial to
         # the receive_measurements function in this class.
         self.serial.data_received.connect(self.receive_measurements)
+
+        # Variable used to store the starting energy sent
+        # by the measurementABC class.
+        self.__starting_energy = 0
 
     def handle_do_measurement(self, energy, *other_data, **kwargs):
         """Handle the do measurement command.
@@ -58,10 +67,10 @@ class MeasureController(ControllerABC):
         self.busy = True
         # TODO: other parameters not documented and not used
         if self.sets_energy:
-            set_energy(true_energy_to_setpoint(energy))
+            self.set_energy(self.true_energy_to_setpoint(energy))
         else:
             # TODO: delay by time from configuration
-            measure_now()
+            self.measure_now()
 
     @abstractmethod
     def abort(self):
@@ -100,12 +109,13 @@ class MeasureController(ControllerABC):
         """
         return
 
-    @abstractmethod
-    def prepare_for_measurement(self, energy):
+    def prepare_for_measurement(self, busy):
         """Prepare the controller for a measurement.
 
-        This method must be reimplemented in subclasses. The
-        reimplementation should take the settings property
+        The prepare_to_dos dictionary used in this method 
+        must be reimplemented in subclasses. The
+        reimplementation should call functions that take the
+        settings property
         derived from the configuration file and use it to do
         all required tasks before a measurement.
         (i.e. calibrating the electronics, selecting channels,
@@ -122,19 +132,27 @@ class MeasureController(ControllerABC):
         self.current_energy attribute to the starting energy
         of the cycle.
 
-        Parameters
-        ----------
-        energy : float
-            Starting energy the controller will set if
-            sets_energy is true.
-
         Returns
         -------
         None.
         """
-        self.busy = True
-        return
+        if not busy:
+            next_to_do = None
+            for key, to_do in self.prepare_to_dos.items():
+                if not to_do:
+                    continue
+                next_to_do = key
+                break
 
+            if next_to_do:
+                self.prepare_to_dos[next_to_do] = False
+                if next_to_do == 'self.set_energy':
+                    next_to_do(self.true_energy_to_setpoint(
+                                self.__starting_energy))
+                else:
+                    next_to_do()
+                return
+            self.controller_ready.emit({})
 
     @abstractmethod
     def receive_measurements(self, receive):
@@ -169,10 +187,9 @@ class MeasureController(ControllerABC):
         """
 
         self.ready()
-
         return
 
-   def ready(self):
+    def ready(self):
         """Check if all measurements have been received.
 
         Emit a signal which contains all of the measurements as soon
@@ -238,3 +255,24 @@ class MeasureController(ControllerABC):
         """
         return
 
+    def trigger_prepare(self, energy):
+        """Trigger the first step in the prepare_for_measurement function.
+        
+        Set self.busy to true, reset all prepare_to_dos and
+        start first step of the preparation.
+        
+        Parameters
+        ----------
+        energy : float
+            Starting energy the controller will set if
+            sets_energy is true.
+
+        Returns
+        -------
+        None.
+        """
+        self.busy = True
+        self.__starting_energy = energy
+        for key in self.prepare_to_dos:
+            self.prepare_to_dos[key] = True
+        self.prepare_for_measurement(False)
