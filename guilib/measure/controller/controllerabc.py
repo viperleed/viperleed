@@ -22,8 +22,8 @@ from PyQt5 import QtCore as qtc
 
 # ViPErLEED modules
 from viperleed.guilib.measure.hardwarebase import (
-    config_has_sections_and_options, class_from_name, emit_error, QMetaABC
-    ViPErLEEDErrorEnum,
+    config_has_sections_and_options, class_from_name, emit_error, QMetaABC,
+    ViPErLEEDErrorEnum
     )
 
 
@@ -100,7 +100,7 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
         energy_setter : bool
             True if the controller sets the energy.
         """
-         self.__sets_energy = bool(energy_setter)
+        self.__sets_energy = bool(energy_setter)
 
     def __get_settings(self):
         """Return the current settings used as a ConfigParser."""
@@ -149,7 +149,7 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
         self.serial.port_settings = new_settings
         self.__settings = self.serial.port_settings
 
-    settings = property(__get_settings, __set_settings)
+    settings = property(__get_settings, set_settings)
 
     @abstractmethod
     def set_energy(self, energy, *other_data, **kwargs):

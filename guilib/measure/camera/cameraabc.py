@@ -12,6 +12,7 @@ Author: Florian Doerr
 
 from abc import abstractmethod
 
+import ast
 import numpy as np
 from PyQt5 import QtCore as qtc
 
@@ -195,8 +196,8 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
             Exposure time in milliseconds
         """
         try:
-            exposure_time self.settings.getfloat('measurement_settings',
-                                                 'camera_exposure')
+            exposure_time = self.settings.getfloat('measurement_settings',
+                                                   'camera_exposure')
         except ValueError:  # Cannot be read as float
             exposure_time = -1
 
@@ -226,9 +227,10 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         if gain < min_gain or gain > max_gain:
             emit_error(self, CameraErrors.INVALID_SETTINGS,
                        'measurement_settings/camera_gain')
+        return gain
 
     @property
-    def mode(self)
+    def mode(self):
         """Return the camera mode from the settings.
 
         Returns
@@ -257,7 +259,7 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
 
         min_n, max_n = self.get_exposure_limits()
         if n_frames < min_n or n_frames > max_n:
-            emit_error(self, CameraErrors.INVALID_SETTING_WITH_FALLBACK
+            emit_error(self, CameraErrors.INVALID_SETTING_WITH_FALLBACK,
                        n_frames, 'measurement_settings/n_frames', 1)
             n_frames = 1
             self.settings.set('measurement_settings', 'n_frames', '1')
@@ -315,7 +317,7 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
             new_roi_w = (roi_w // self.binning)*self.binning
             new_roi_h = (roi_h // self.binning)*self.binning
             emit_error(self, CameraErrors.BINNING_ROI_MISMATCH,
-                       roi_w, roi_h, self.binning,new_roi_w, new_roi_h)
+                       roi_w, roi_h, self.binning, new_roi_w, new_roi_h)
             roi = (*roi_offsets, new_roi_w, new_roi_h)
             self.settings.set('camera_settings', 'roi', str(roi))
         return roi
@@ -480,7 +482,7 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         self.check_loaded_settings()
 
     @abstractmethod
-    def open(self)
+    def open(self):
         """Open the camera device.
 
         This method is guaranteed to be called exactly once every time
@@ -498,7 +500,7 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         return False
 
     @abstractmethod
-    def get_binning (self):
+    def get_binning(self):
         """Return the binning factor internally used for averaging.
 
         This method should be reimplemented to query the camera for the

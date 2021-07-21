@@ -28,7 +28,8 @@ class MeasurementErrors(ViPErLEEDErrorEnum):
                            "The returned data dictionary contained a section "
                            "that was not specified in the measurement class.")
 
-class measurementABC(qtc.QObject, metaclass=QMetaABC):
+
+class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
     """Generic measurement class.
 
     The plot_info dictionary in this class may be reimplemented
@@ -39,17 +40,17 @@ class measurementABC(qtc.QObject, metaclass=QMetaABC):
 
     # Is emitted if a measurement cycle has been completed.
     cycle_completed = qtc.pyqtSignal()
-    # Is emmited when an error occurs
+    # Is emitted when an error occurs
     error_occurred = qtc.pyqtSignal(tuple)
 
     # The reimplementation may introduce more/other keys.
     # See ViPErinoController for an example on how to do this.
     plot_info = defaultdict(list)
-    plot_info['nominal_energies'] = ('eV', 'lin')
-    plot_info['I0'] = ('uA', 'lin')
-    plot_info['measured_energies'] = ('eV', 'lin')
-    plot_info['elapsed_time'] = ('ms', 'lin')
-    plot_info['aux0'] = ('V', 'log')
+    plot_info['nominal_energies'] = ['eV', 'lin']
+    plot_info['I0'] = ['uA', 'lin']
+    plot_info['measured_energies'] = ['eV', 'lin']
+    plot_info['elapsed_time'] = ['ms', 'lin']
+    plot_info['aux0'] = ['V', 'log']
 
     def __init__(self, measurement_settings=None, controllers=None,
                  cameras=None):
@@ -237,7 +238,8 @@ class measurementABC(qtc.QObject, metaclass=QMetaABC):
         for controller in controllers:
             controller.controller_ready.connect(
                 self.receive_from_controller, type=qtc.Qt.UniqueConnection
-                )    
+                )
+
     def disconnect_cameras(self, cameras):
         """Disconnect camera_busy signals 
         from receive_from_camera function.
@@ -268,7 +270,7 @@ class measurementABC(qtc.QObject, metaclass=QMetaABC):
         """
         self.current_energy = self.start_energy
         for controller in self.__controllers:
-            controller.prepare_for_measurement(self.start_energy)
+            controller.trigger_prepare(self.start_energy)
 
     def ready_for_next_measurement(self):
         """Check if all measurements have been received.
@@ -311,7 +313,7 @@ class measurementABC(qtc.QObject, metaclass=QMetaABC):
             self.ready_for_next_measurement()
 
     def receive_from_controller(self, receive):
-        """Receive measurement data from the cotroller.
+        """Receive measurement data from the controller.
 
         Append received data to the internal dictionary. Emit an
         error if received dictionary contains a section that does
