@@ -1,94 +1,93 @@
 ############# LIST OF DLL FUNCTIONS NOT IMPLEMENTED IN GrabberDLL #############
 
-# void  IC_ReleaseGrabber(HGRABBER *hGrabber)
-# void  IC_CloseLibrary()
-# char* IC_GetDeviceName(HGRABBER hGrabber)
-# int   IC_SetVideoNorm(HGRABBER hGrabber, char *szNorm)
-# int   IC_SetInputChannel(HGRABBER hGrabber, char *szChannel)
-# int   IC_PrepareLive(HGRABBER hGrabber, int iShow)
-# int   IC_SuspendLive(HGRABBER hGrabber)
-# int   IC_IsLive(HGRABBER hGrabber)
-# int   IC_IsCameraPropertyAutoAvailable(HGRABBER hGrabber, CAMERA_PROPERTY iProperty)
-# int   IC_GetAutoCameraProperty(HGRABBER hGrabber, int iProperty, int *iOnOff)
-# int   IC_IsVideoPropertyAvailable(HGRABBER hGrabber, VIDEO_PROPERTY eProperty)
-# int   IC_VideoPropertyGetRange(HGRABBER hGrabber, VIDEO_PROPERTY eProperty, long *lMin, long *lMax)
-# int   IC_GetVideoProperty(HGRABBER hGrabber, VIDEO_PROPERTY eProperty, long *lValue)
-# int   IC_IsVideoPropertyAutoAvailable(HGRABBER hGrabber, VIDEO_PROPERTY eProperty)
-# int   IC_GetAutoVideoProperty(HGRABBER hGrabber, int iProperty, int *iOnOff)
-# int   IC_SetVideoProperty(HGRABBER hGrabber, VIDEO_PROPERTY eProperty, long lValue)
-# int   IC_GetSerialNumber(HGRABBER hGrabber, char* szSerial)
-# int   IC_ListDevices(char *szDeviceList, int iSize)
-# int   IC_ListDevicesbyIndex(char *szDeviceName, int iSize, int DeviceIndex)
-# int   IC_ListVideoFormats(HGRABBER hGrabber, char *szFormatList, int iSize)
-# int   IC_ListVideoFormatbyIndex(HGRABBER hGrabber, char *szFormatName, int iSize, int iIndex)
-# int   IC_GetDevice(int iIndex)
-# int   IC_LoadDeviceStateFromFileEx(HGRABBER hGrabber, char* szFileName, int OpenDevice)
-# int   IC_SaveDeviceSettings(HGRABBER hGrabber, char* szFilename)
-# int   IC_OpenDeviceBySettings(HGRABBER hGrabber, char* szFilename)
-# int   IC_LoadDeviceSettings(HGRABBER hGrabber, char* szFilename)
-# int   IC_OpenDevByDisplayName(HGRABBER hGrabber, char *szDisplayname)
-# int   IC_GetDisplayName(HGRABBER hGrabber, char *szDisplayname, int iLen)
-# int   IC_GetUniqueName(HGRABBER hGrabber, char *szUniquename, int iLen)
-# void  IC_RemoveOverlay(HGRABBER hGrabber, int iEnable)
-# void  IC_EnableOverlay(HGRABBER hGrabber, int iEnable)
-# long  IC_BeginPaint(HGRABBER hGrabber)
-# void  IC_EndPaint(HGRABBER hGrabber)
-# void  IC_MsgBox(char * szText, char* szTitle)
-# int   IC_SetCallbacks(HGRABBER hGrabber, FRAME_READY_CALLBACK	cb, void* x1_argument_in_void_userdata, DEVICE_LOST_CALLBACK dlCB, void* x2_argument_in_void_userdata)
-# int   IC_SignalDetected(HGRABBER hGrabber)
-# int   IC_SetTriggerMode(HGRABBER hGrabber, char* szMode)
-# int   IC_SetTriggerPolarity(GRABBER hGrabber, int iPolarity)
-# int   IC_GetExpRegValRange(HGRABBER hGrabber, long *lMin, long *lMax)
-# int   IC_GetExpRegVal(HGRABBER hGrabber, long *lValue)
-# int   IC_SetExpRegVal(HGRABBER hGrabber, long lValue)
-# int   IC_EnableExpRegValAuto(HGRABBER hGrabber, int iOnOff)
-# int   IC_GetExpRegValAuto(HGRABBER hGrabber, int *iOnOff)
-# int   IC_IsExpAbsValAvailable(HGRABBER hGrabber)
-# int   IC_GetExpAbsValRange(HGRABBER hGrabber, float *fMin, float *fMax)
-# int   IC_GetExpAbsVal(HGRABBER hGrabber, float *fValue)
-# int   IC_SetExpAbsVal(HGRABBER hGrabber,  float fValue)
-# int   IC_GetColorEnhancement(HGRABBER hGrabber, int *OnOff)
-# int   IC_SetColorEnhancement(HGRABBER hGrabber, int OnOff)
-# int   IC_GetAvailableFrameRates(HGRABBER hGrabber, int Index, float *fps)
-# int   IC_SetWhiteBalanceAuto(HGRABBER hGrabber, int iOnOff)
-# int   IC_SetWhiteBalanceRed(HGRABBER hGrabber, long Value)
-# int   IC_SetWhiteBalanceGreen(HGRABBER hGrabber, long Value)
-# int   IC_SetWhiteBalanceBlue(HGRABBER hGrabber, long Value)
-# int   IC_FocusOnePush(HGRABBER hGrabber)
-# int   IC_ShowInternalPropertyPage(HGRABBER hGrabber)
-# int   IC_ResetUSBCam(HGRABBER hGrabber)
-# int   IC_QueryPropertySet(HGRABBER hGrabber)
-# COMMENTED OUT  int   IC_PropertySet_Set
-# int   IC_SetDefaultWindowPosition(HGRABBER hGrabber, int Default)
-# int   IC_SetWindowPosition(HGRABBER hGrabber, int PosX, int PosY, int Width, int Height)
-# int   IC_enumPropertyElements(HGRABBER hGrabber, char* Property, IC_ENUMCB cb, void* data
-# int   IC_enumPropertyElementInterfaces(HGRABBER hGrabber, char* Property, char* Element, IC_ENUMCB cb, void* data)
-# int   IC_GetPropertyAbsoluteValueRange(HGRABBER hGrabber, char* Property, char *Element, float *Min, float *Max)
-# int   IC_GetPropertyMapStrings(HGRABBER hGrabber, char* Property, char *Element, int *StringCount, char **Strings)
-# int   IC_GetPropertyMapString(HGRABBER hGrabber, char* Property, char *Element,  char *String)
-# int   IC_SetPropertyMapString(HGRABBER hGrabber, char* Property, char *Element,  char *String)
-# int   IC_GetAvailableFrameFilterCount()
-# int   IC_GetAvailableFrameFilters(char **szFilterList, int iSize)
-# int   IC_CreateFrameFilter(char *szFilterName, HFRAMEFILTER *FilterHandle)
-# int   IC_AddFrameFilterToDevice(HGRABBER hGrabber, HFRAMEFILTER FilterHandle)
-# void  IC_RemoveFrameFilterFromDevice(HGRABBER hGrabber, HFRAMEFILTER FilterHandle)
-# void  IC_DeleteFrameFilter(HFRAMEFILTER FilterHandle)
-# int   IC_FrameFilterShowDialog(HFRAMEFILTER FilterHandle)
-# int   IC_FrameFilterGetParameter(HFRAMEFILTER FilterHandle, char* ParameterName, void* Data)
-# int   IC_FrameFilterSetParameterInt(HFRAMEFILTER FilterHandle, char* ParameterName, int Data)
-# int   IC_FrameFilterSetParameterFloat(HFRAMEFILTER FilterHandle, char* ParameterName, float Data)
-# int   IC_FrameFilterSetParameterBoolean(HFRAMEFILTER FilterHandle, char* ParameterName, int Data)
-# int   IC_FrameFilterSetParameterString(HFRAMEFILTER FilterHandle, char* ParameterName, char* Data)
-# int   IC_FrameFilterDeviceClear(HGRABBER hGrabber)
-# void  IC_enumCodecs(ENUMCODECCB cb, void* data)
-# HCODEC   IC_Codec_Create(char* Name)
-# void  IC_Codec_Release(HCODEC Codec)
-# int   IC_Codec_getName(HCODEC Codec, int l, char* Name)
-# int   IC_Codec_hasDialog(HCODEC Codec)
-# int   IC_Codec_showDialog(HCODEC Codec)
-# int   IC_SetCodec(HGRABBER hlGrabber, HCODEC Codec)
-# int   IC_SetAVIFileName(HGRABBER hlGrabber, char * FileName)
-# int   IC_enableAVICapturePause(HGRABBER hlGrabber, int Pause)
+#  maybe  # void  IC_ReleaseGrabber(HGRABBER *hGrabber)
+#  maybe  # void  IC_CloseLibrary()
+#  maybe  # char* IC_GetDeviceName(HGRABBER hGrabber)
+#   NO    # int   IC_SetVideoNorm(HGRABBER hGrabber, char *szNorm)
+#   NO    # int   IC_SetInputChannel(HGRABBER hGrabber, char *szChannel)
+#  maybe  # int   IC_PrepareLive(HGRABBER hGrabber, int iShow)
+#   NO    # int   IC_SuspendLive(HGRABBER hGrabber)
+#   YES   # int   IC_IsLive(HGRABBER hGrabber)
+#  maybe  # int   IC_IsCameraPropertyAutoAvailable(HGRABBER hGrabber, CAMERA_PROPERTY iProperty)
+#  maybe  # int   IC_GetAutoCameraProperty(HGRABBER hGrabber, int iProperty, int *iOnOff)
+#  maybe  # int   IC_IsVideoPropertyAvailable(HGRABBER hGrabber, VIDEO_PROPERTY eProperty)
+#  maybe  # int   IC_VideoPropertyGetRange(HGRABBER hGrabber, VIDEO_PROPERTY eProperty, long *lMin, long *lMax)
+#  maybe  # int   IC_GetVideoProperty(HGRABBER hGrabber, VIDEO_PROPERTY eProperty, long *lValue)
+#  maybe  # int   IC_IsVideoPropertyAutoAvailable(HGRABBER hGrabber, VIDEO_PROPERTY eProperty)
+#  maybe  # int   IC_GetAutoVideoProperty(HGRABBER hGrabber, int iProperty, int *iOnOff)
+#  maybe  # int   IC_SetVideoProperty(HGRABBER hGrabber, VIDEO_PROPERTY eProperty, long lValue)
+#  maybe  # int   IC_GetSerialNumber(HGRABBER hGrabber, char* szSerial)
+#   YES?  # int   IC_ListDevices(char *szDeviceList, int iSize)
+#   NO    # int   IC_ListDevicesbyIndex(char *szDeviceName, int iSize, int DeviceIndex)
+#   NO    # int   IC_ListVideoFormats(HGRABBER hGrabber, char *szFormatList, int iSize)
+#   NO    # int   IC_ListVideoFormatbyIndex(HGRABBER hGrabber, char *szFormatName, int iSize, int iIndex)
+#  maybe  # int   IC_GetDevice(int iIndex)
+#   NO    # int   IC_LoadDeviceStateFromFileEx(HGRABBER hGrabber, char* szFileName, int OpenDevice)
+#   NO    # int   IC_SaveDeviceSettings(HGRABBER hGrabber, char* szFilename)
+#   NO    # int   IC_OpenDeviceBySettings(HGRABBER hGrabber, char* szFilename)
+#   NO    # int   IC_LoadDeviceSettings(HGRABBER hGrabber, char* szFilename)
+#   NO    # int   IC_OpenDevByDisplayName(HGRABBER hGrabber, char *szDisplayname)
+#   NO    # int   IC_GetDisplayName(HGRABBER hGrabber, char *szDisplayname, int iLen)
+#  maybe  # int   IC_GetUniqueName(HGRABBER hGrabber, char *szUniquename, int iLen)
+#   NO    # void  IC_RemoveOverlay(HGRABBER hGrabber, int iEnable)
+#   NO    # void  IC_EnableOverlay(HGRABBER hGrabber, int iEnable)
+#   NO    # long  IC_BeginPaint(HGRABBER hGrabber)
+#   NO    # void  IC_EndPaint(HGRABBER hGrabber)
+#   NO    # void  IC_MsgBox(char * szText, char* szTitle)
+#   NO    # int   IC_SetCallbacks(HGRABBER hGrabber, FRAME_READY_CALLBACK	cb, void* x1_argument_in_void_userdata, DEVICE_LOST_CALLBACK dlCB, void* x2_argument_in_void_userdata)
+#  maybe  # int   IC_SignalDetected(HGRABBER hGrabber)
+#   YES?  # int   IC_SetTriggerMode(HGRABBER hGrabber, char* szMode)
+#   YES?  # int   IC_SetTriggerPolarity(GRABBER hGrabber, int iPolarity)
+#   NO?   # int   IC_GetExpRegValRange(HGRABBER hGrabber, long *lMin, long *lMax)
+#   NO?   # int   IC_GetExpRegVal(HGRABBER hGrabber, long *lValue)
+#   NO?   # int   IC_SetExpRegVal(HGRABBER hGrabber, long lValue)
+#   NO?   # int   IC_EnableExpRegValAuto(HGRABBER hGrabber, int iOnOff)
+#   NO?   # int   IC_GetExpRegValAuto(HGRABBER hGrabber, int *iOnOff)
+#   YES?  # int   IC_IsExpAbsValAvailable(HGRABBER hGrabber)
+#   YES?  # int   IC_GetExpAbsValRange(HGRABBER hGrabber, float *fMin, float *fMax)
+#   YES?  # int   IC_GetExpAbsVal(HGRABBER hGrabber, float *fValue)
+#   YES?  # int   IC_SetExpAbsVal(HGRABBER hGrabber,  float fValue)
+#   NO    # int   IC_GetColorEnhancement(HGRABBER hGrabber, int *OnOff)
+#   NO    # int   IC_SetColorEnhancement(HGRABBER hGrabber, int OnOff)
+#   YES?  # int   IC_GetAvailableFrameRates(HGRABBER hGrabber, int Index, float *fps)
+#   NO    # int   IC_SetWhiteBalanceAuto(HGRABBER hGrabber, int iOnOff)
+#   NO    # int   IC_SetWhiteBalanceRed(HGRABBER hGrabber, long Value)
+#   NO    # int   IC_SetWhiteBalanceGreen(HGRABBER hGrabber, long Value)
+#   NO    # int   IC_SetWhiteBalanceBlue(HGRABBER hGrabber, long Value)
+#   NO?   # int   IC_FocusOnePush(HGRABBER hGrabber)
+#   YES   # int   IC_ShowInternalPropertyPage(HGRABBER hGrabber)
+#   NO    # int   IC_ResetUSBCam(HGRABBER hGrabber)
+#   NO    # int   IC_QueryPropertySet(HGRABBER hGrabber)
+#   NO    # COMMENTED OUT  int   IC_PropertySet_Set
+#   NO    # int   IC_SetDefaultWindowPosition(HGRABBER hGrabber, int Default)
+#   NO    # int   IC_SetWindowPosition(HGRABBER hGrabber, int PosX, int PosY, int Width, int Height)
+#  maybe? # int   IC_enumPropertyElements(HGRABBER hGrabber, char* Property, IC_ENUMCB cb, void* data
+#  maybe? # int   IC_enumPropertyElementInterfaces(HGRABBER hGrabber, char* Property, char* Element, IC_ENUMCB cb, void* data)
+#   YES?  # int   IC_GetPropertyMapStrings(HGRABBER hGrabber, char* Property, char *Element, int *StringCount, char **Strings)
+#   YES?  # int   IC_GetPropertyMapString(HGRABBER hGrabber, char* Property, char *Element,  char *String)
+#   YES?  # int   IC_SetPropertyMapString(HGRABBER hGrabber, char* Property, char *Element,  char *String)
+#   NO    # int   IC_GetAvailableFrameFilterCount()
+#   NO    # int   IC_GetAvailableFrameFilters(char **szFilterList, int iSize)
+#   NO    # int   IC_CreateFrameFilter(char *szFilterName, HFRAMEFILTER *FilterHandle)
+#   NO    # int   IC_AddFrameFilterToDevice(HGRABBER hGrabber, HFRAMEFILTER FilterHandle)
+#   NO    # void  IC_RemoveFrameFilterFromDevice(HGRABBER hGrabber, HFRAMEFILTER FilterHandle)
+#   NO    # void  IC_DeleteFrameFilter(HFRAMEFILTER FilterHandle)
+#   NO    # int   IC_FrameFilterShowDialog(HFRAMEFILTER FilterHandle)
+#   NO    # int   IC_FrameFilterGetParameter(HFRAMEFILTER FilterHandle, char* ParameterName, void* Data)
+#   NO    # int   IC_FrameFilterSetParameterInt(HFRAMEFILTER FilterHandle, char* ParameterName, int Data)
+#   NO    # int   IC_FrameFilterSetParameterFloat(HFRAMEFILTER FilterHandle, char* ParameterName, float Data)
+#   NO    # int   IC_FrameFilterSetParameterBoolean(HFRAMEFILTER FilterHandle, char* ParameterName, int Data)
+#   NO    # int   IC_FrameFilterSetParameterString(HFRAMEFILTER FilterHandle, char* ParameterName, char* Data)
+#   NO    # int   IC_FrameFilterDeviceClear(HGRABBER hGrabber)
+#   NO    # void  IC_enumCodecs(ENUMCODECCB cb, void* data)
+#   NO    # HCODEC   IC_Codec_Create(char* Name)
+#   NO    # void  IC_Codec_Release(HCODEC Codec)
+#   NO    # int   IC_Codec_getName(HCODEC Codec, int l, char* Name)
+#   NO    # int   IC_Codec_hasDialog(HCODEC Codec)
+#   NO    # int   IC_Codec_showDialog(HCODEC Codec)
+#   NO    # int   IC_SetCodec(HGRABBER hlGrabber, HCODEC Codec)
+#   NO    # int   IC_SetAVIFileName(HGRABBER hlGrabber, char * FileName)
+#   NO    # int   IC_enableAVICapturePause(HGRABBER hlGrabber, int Pause)
 
 
 ######################## REMOVED FROM IMPLEMENTATION ##########################
@@ -210,3 +209,103 @@
             SUCCESS if an image has been snapped, ERROR if something
             went wrong."""
         )
+		
+	    # TODO: unclear which format the file name should have.
+    #       would str(Path.resolve()) work? returns separators as '\\'
+    # TODO: unclear which kind of errors it may return, if any
+    # TODO: not sure if it is useful.
+    __dll_load_settings_from_file = __dll.IC_LoadDeviceStateFromFile
+    __dll_load_settings_from_file.restype = GrabberHandlePtr
+    __dll_load_settings_from_file.argtypes = GrabberHandlePtr, c_char_p
+    __dll_load_settings_from_file.errcheck = check_dll_return('pointer')
+
+    def load_settings_from_file(self, filename):
+        """Load a device-settings file.
+
+        On success the device is opened automatically.
+
+        Parameters
+        ----------
+        file_name : str or bytes
+            Path to the settings file to be loaded.
+
+        Returns
+        -------
+        None.
+        """
+        self.__handle = self.__dll_load_settings_from_file(
+            self.__handle, _to_bytes(filename)
+            )
+
+    # TODO: similar question as load_settings_from_file
+    __dll_save_settings_to_file = __dll.IC_SaveDeviceStateToFile
+    __dll_save_settings_to_file.argtypes = GrabberHandlePtr, c_char_p
+    __dll_save_settings_to_file.errcheck = check_dll_return()
+
+    def save_settings(self, filename):
+        """Save the state of a video capture device to file.
+
+        Parameters
+        ----------
+        file_name : str or bytes
+            Path to the settings file where settings should be saved.
+
+        Returns
+        -------
+        None.
+        """
+        self.__dll_save_settings_to_file(self.__handle,
+                                         _to_bytes(filename))
+
+    # TODO: use this, should limit the number of errors. May also
+    # get rid of it if it turns out that we actually do not need
+    # to set camera properties.
+    __dll_is_cam_property_available = __dll.IC_IsCameraPropertyAvailable
+    __dll_is_cam_property_available.argtypes = GrabberHandlePtr, c_char_p
+    __dll_is_cam_property_available.errcheck = (
+        # 'ERROR' means not available
+        check_dll_return(exclude_errors=('ERROR',))
+        )
+	
+	EnableAutoCameraProperty = __dll.IC_EnableAutoCameraProperty
+    EnableAutoCameraProperty.argtypes = (GrabberHandlePtr, c_int,
+                                         c_int)
+
+    EnableVideoAutoProperty = __dll.IC_EnableAutoVideoProperty
+    EnableVideoAutoProperty.argtypes = (GrabberHandlePtr, c_int,
+                                        c_int)
+		
+#####################   NOT IMPLEMENTED, BUT SHOULD PROBABLY BE ###############
+	# TODO: this has to be tested. Would be nice to have it working,
+    #       at least as an alternative to VCDPropertyInspector.
+    # Judging from .h EnumCallback takes a name (of an enum or property?)
+    # and some data, and returns int. Unclear id the int returned is the
+    # value of the property enum or what. It is unclear also if this can
+    # be a python function (probably yes)
+    EnumCallback = CFUNCTYPE(c_int, c_char_p, c_void_p)
+
+    # TODO: new from dll. Make sure it works.
+    enumerate_properties = __dll.IC_enumProperties
+    enumerate_properties.argtypes = GrabberHandlePtr, EnumCallback, c_void_p
+    enumerate_properties.__doc__ = (
+        """Enumerate properties of an open device.
+
+        This method needs testing as it was not originally wrapped.
+
+        Parameters
+        ----------
+        grabber_handle : GrabberHandlePtr
+            Handle to grabber object.
+        callback : EnumCallback
+            Function that will be called on enums? Has signature
+            (char* name, void* data) and returns int
+        callback_data : int or None (== c_void_p)
+            Data passed to the callback function
+
+        Returns
+        -------
+        ret_val : int
+            SUCCESS, ERROR or other errors."""
+        )
+
+
