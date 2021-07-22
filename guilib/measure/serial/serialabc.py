@@ -23,7 +23,7 @@ from PyQt5 import (QtCore as qtc,
                    QtSerialPort as qts)
 
 from viperleed.guilib.measure.hardwarebase import (
-    ViPErLEEDErrorEnum, QMetaABC
+    ViPErLEEDErrorEnum, QMetaABC,
     config_has_sections_and_options,
     emit_error
     )
@@ -837,8 +837,6 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         emit_error(self, (error_code, SERIAL_ERROR_MESSAGES[error_code]),
                    self.port_name)
         self.clear_errors()
-
-        print(error_msg)  # TEMP
 
     def __on_serial_timeout(self):
         """React to a serial timeout.

@@ -14,7 +14,7 @@ base class, used for giving basic commands to the LEED electronics.
 
 # Python standard modules
 import ast
-from abc import ABCMeta, abstractmethod
+from abc import abstractmethod
 from configparser import ConfigParser
 
 from numpy.polynomial.polynomial import Polynomial
@@ -22,8 +22,8 @@ from PyQt5 import QtCore as qtc
 
 # ViPErLEED modules
 from viperleed.guilib.measure.hardwarebase import (
-    config_has_sections_and_options, class_from_name, emit_error,
-    ViPErLEEDErrorEnum,
+    config_has_sections_and_options, class_from_name, emit_error, QMetaABC,
+    ViPErLEEDErrorEnum
     )
 
 
@@ -40,7 +40,7 @@ class ControllerErrors(ViPErLEEDErrorEnum):
                         "proceeding.")
 
 
-class ControllerABC(metaclass=ABCMeta):
+class ControllerABC(qtc.QObject, metaclass=QMetaABC):
     """Base class for giving orders to the LEED electronics."""
 
     error_occurred = qtc.pyqtSignal(tuple)
@@ -49,29 +49,58 @@ class ControllerABC(metaclass=ABCMeta):
         ('controller', 'serial_port_class'),
         ]
 
-    def __init__(self, settings=None, port_name='', controls_camera=False):
+    def __init__(self, settings=None, port_name='', sets_energy=False):
         """Initialize the controller instance."""
-        self.__controls_camera = controls_camera
+
+        # Switches the controller from set_energy() to measure_now().
+        self.__sets_energy = sets_energy
         self.__port_name = port_name
         self.__settings = None
         self.__serial = None
 
         self.set_settings(settings)
 
-    @property
-    def controls_camera(self):
-        """Return whether this controller also manage the camera."""
-        return self.__controls_camera
+        # Is used to determine if the next step
+        # in the measurement cycle can be done.
+        self.__busy = False
 
-    @controls_camera.setter
-    def controls_camera(self, active):
-        """Set whether this controller handles the camera."""
-        self.__controls_camera = bool(active)
+
+    @property
+    def busy(self):
+        """Return whether the controller is busy."""
+        return self.__busy
+
+    @busy.setter
+    def busy(self, is_busy):
+        """Set the controller to busy True/False.
+
+        Parameters
+        ----------
+        is_busy : bool
+            True if the controller is busy
+        """
+        self.__busy = bool(is_busy)
 
     @property
     def serial(self):
         """Return the serial port instance used."""
         return self.__serial
+
+    @property
+    def sets_energy(self):
+        """Return whether the controller sets the energy."""
+        return self.__sets_energy
+
+    @sets_energy.setter
+    def sets_energy(self, energy_setter):
+        """Set the serial to controls energy True/False.
+
+        Parameters
+        ----------
+        energy_setter : bool
+            True if the controller sets the energy.
+        """
+        self.__sets_energy = bool(energy_setter)
 
     def __get_settings(self):
         """Return the current settings used as a ConfigParser."""
@@ -103,7 +132,7 @@ class ControllerABC(metaclass=ABCMeta):
 
         if invalid:
             return
-        
+
         serial_cls_name = new_settings.get('controller', 'serial_port_class')
         if self.serial.__class__.__name__ != serial_cls_name:
             try:
@@ -120,7 +149,7 @@ class ControllerABC(metaclass=ABCMeta):
         self.serial.port_settings = new_settings
         self.__settings = self.serial.port_settings
 
-    settings = property(__get_settings, __set_settings)
+    settings = property(__get_settings, set_settings)
 
     @abstractmethod
     def set_energy(self, energy, *other_data, **kwargs):

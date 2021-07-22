@@ -11,69 +11,203 @@ This module contains the definition of the MeasureController class
 which gives commands to the SerialABC class.
 """
 
-import ast
 from collections import defaultdict
 from abc import abstractmethod
 
-from numpy.polynomial.polynomial import Polynomial
 from PyQt5 import QtCore as qtc
 
 # ViPErLEED modules
 from viperleed.guilib.measure.controller.controllerabc import ControllerABC
 from viperleed.guilib.measure import hardwarebase
 
-class MeasureControllerError(hardwarebase.ViPErLEEDErrorEnum):
-    UNKNOWN_MEASUREMENT = (150, "The measurement to do is of an unkown type.")
-
 
 class MeasureController(ControllerABC):
-    """Controller class for the ViPErLEED Arduino Micro.
+    """Controller class for measurement controllers."""
 
-    The plot_info dictionary in this class may be reimplemented
-    in subclasses. Each section (label) needs to contain
-    the unit and the scaling ('lin' for linear and 'log' for
-    logarithmic scaling.
-    """
-    # Is emitted if a measurement cycle has been completed.
-    cycle_completed = qtc.pyqtSignal()
-    do_next_measurement = qtc.pyqtSignal()
+    # Signal which is used to forward data and let the measurementabc
+    # class know that the controller is done measuring.
+    controller_ready = qtc.pyqtSignal(object)
 
-    # The reimplementation may introduce more/other keys.
-    # See ViPErinoController for an example on how to do this.
-    plot_info = defaultdict(list)
-    plot_info['nominal_energies'] = ('eV', 'lin')
-    plot_info['I0'] = ('uA', 'lin')
-    plot_info['measured_energies'] = ('eV', 'lin')
-    plot_info['elapsed_time'] = ('ms', 'lin')
-    plot_info['aux0'] = ('V', 'log')
-
-    def __init__(self, settings=None, port_name='', controls_camera=False):
+    def __init__(self, settings=None, port_name='', sets_energy=False):
         """Initialise controller class object."""
 
         super().init(settings=settings, port_name=port_name,
-                     controls_camera=controls_camera)
+                     sets_energy=sets_energy)
+
+        # This dictionary must be reimplemented in subclasses.
+        # It must contain all possible measurement types the controller
+        # can receive using the same keys used in the measurement
+        # class responsible for receiving data from this controller.
+        self.__measurements = defaultdict(list)
+        
+        # This dictionary must be reimplemented in subclasses.
+        # It must contain all functions the MeasureController has to call
+        # in the order they have to be called to bring the controller into
+        # a state ready for measurements.
+        self.prepare_to_dos = defaultdict(bool)
 
         # Connect data_received signal from the serial to
         # the receive_measurements function in this class.
         self.serial.data_received.connect(self.receive_measurements)
 
-        # The reimplementation may introduce more/other keys.
-        self.data_points = defaultdict(list)
-        for key in self.plot_info:
-            self.data_points[key] = []
+        # Variable used to store the starting energy sent
+        # by the measurementABC class.
+        self.__starting_energy = 0
 
-        # Flags needed for loop operation.
-        self.flags = defaultdict(list)
-        self.flags['image_received'] = False
-        self.flags['measurements_received'] = False
+    def handle_do_measurement(self, energy, *other_data, **kwargs):
+        """Handle the do measurement command.
 
-        # Attributes needed for loop operation
-        self.current_energy = 0
-        self.cycle_type = ''
-        self.end_energy = float(
-            self.settings['measurement_settings']['end_energy']
-            )
+        Decide what to do depending on the settings of
+        the controller.
 
+        Returns
+        -------
+        None.
+        """
+        self.busy = True
+        # TODO: other parameters not documented and not used
+        if self.sets_energy:
+            self.set_energy(self.true_energy_to_setpoint(energy))
+        else:
+            # TODO: delay by time from configuration
+            self.measure_now()
+
+    @abstractmethod
+    def abort(self):
+        """Abort current task.
+
+        This method must be reimplemented in subclasses.
+        Abort what the controller is doing right now and
+        return to waiting for further instructions.
+
+        Returns
+        -------
+        None.
+        """
+        return
+
+    @abstractmethod
+    def measure_now(self):
+        """Take a measurement.
+
+        This method must be reimplemented in subclasses. It is
+        supposed to be called after preparing the controller for
+        a measurement and after an energy has been set on the
+        controller. It should only emit a send_message signal
+        which triggers a measurement and sends additional data
+        if needed.
+
+        If the controller already automatically takes a measurement
+        after setting an energy it can be a no op.
+
+        It should take all required data for this operation from
+        the settings property derived from the configuration file.
+
+        Returns
+        -------
+        None.
+        """
+        return
+
+    def prepare_for_measurement(self, busy):
+        """Prepare the controller for a measurement.
+
+        The prepare_to_dos dictionary used in this method 
+        must be reimplemented in subclasses. The
+        reimplementation should call functions that take the
+        settings property
+        derived from the configuration file and use it to do
+        all required tasks before a measurement.
+        (i.e. calibrating the electronics, selecting channels,
+        determining the gain, ...)
+
+        All communication with the hardware should be done
+        via the send_command signal, which takes instructions
+        as a tuple and forwards them to the send_message
+        function of the serialabc class.
+
+        It should be able to select the update rate of the
+        measurement electronics and change channels if there
+        are more than one. It will also need to set the
+        self.current_energy attribute to the starting energy
+        of the cycle.
+
+        Returns
+        -------
+        None.
+        """
+        if not busy:
+            next_to_do = None
+            for key, to_do in self.prepare_to_dos.items():
+                if not to_do:
+                    continue
+                next_to_do = key
+                break
+
+            if next_to_do:
+                self.prepare_to_dos[next_to_do] = False
+                if next_to_do == 'self.set_energy':
+                    next_to_do(self.true_energy_to_setpoint(
+                                self.__starting_energy))
+                else:
+                    next_to_do()
+                return
+            self.controller_ready.emit({})
+
+    @abstractmethod
+    def receive_measurements(self, receive):
+        """Receive measurements from the serial.
+
+        This function has to be reimplemented in subclasses.
+        Upon receiving the data_received signal this function
+        is supposed to process and append measurements to the
+        appropriate attribute of the class.
+
+        All of the settings required for processing different
+        measurements should be derived from the configuration
+        file. (i.e.: Different measurements may require other
+        conversion factors.) The channels selected in the
+        settings can be used to determine to which section of
+        the data_points library the measurement should be
+        appended to.
+
+        After the measurements have been processed, the
+        function has to set the measurements_received flag to
+        True and check if the next measurement can start via
+        the ready_for_next_measurement function.
+
+        Parameters
+        ----------
+        receive : object
+            Data received from the serial, most
+            likely an array/a list of floats.
+        Returns
+        -------
+        None.
+        """
+
+        self.ready()
+        return
+
+    def ready(self):
+        """Check if all measurements have been received.
+
+        Emit a signal which contains all of the measurements as soon
+        as the data from the controller has been received.
+
+        The busy attribute will let the measurement class know if
+        it can continue with the next step in´the measurement cycle.
+        Once all of the controllers and cameras are not busy anymore,
+        the signal for the next step will be sent.
+
+        Returns
+        -------
+        None.
+        """
+        self.busy = False
+        self.controller_ready.emit(self.__measurements)
+        for key in self.__measurements:
+            self.__measurements[key] = []
 
     @abstractmethod
     def set_energy(self, energy, *other_data, **kwargs):
@@ -92,8 +226,7 @@ class MeasureController(ControllerABC):
         self.true_energy_to_setpoint(energy).
 
         If this function does not already trigger a measurement
-        it should emit an about_to_trigger_signal which in turn
-        calls the measure_now function.
+        it should call the measure_now function.
 
         Parameters
         ----------
@@ -122,276 +255,24 @@ class MeasureController(ControllerABC):
         """
         return
 
-    @abstractmethod
-    def prepare_for_measurement(self):
-        """Prepare the controller for a measurement.
-
-        This method must be reimplemented in subclasses. The
-        reimplementation should take the settings property
-        derived from the configuration file and use it to do
-        all required tasks before a measurement.
-        (i.e. calibrating the electronics, selecting channels,
-        determining the gain, ...)
-
-        All communication with the hardware should be done
-        via the send_command signal, which takes instructions
-        as a tuple and forwards them to the send_message
-        function of the serialabc class.
-
-        It should be able to select the update rate of the
-        measurement electronics and change channels if there
-        are more than one. It will also need to set the
-        self.current_energy attribute to the starting energy
-        of the cycle.
-
-        Returns
-        -------
-        None.
-        """
-        return
-
-    def measure_iv_video(self):
-        """Measure a ramp of energies.
-
-        This method must be reimplemented in subclasses. This
-        function should take measurements while doing an energy
-        ramp. It should measure I0 (the current emitted by the
-        filament used to create the electron beam) and take
-        pictures of the LEED screen for every energy step.
-
-        The energies at the beginning and at the end of the ramp
-        have to be specified in the settings property derived
-        from the configuration file. Furthermore, the delta
-        energy between two energy steps (step height) has to be
-        given as well.
-
+    def trigger_prepare(self, energy):
+        """Trigger the first step in the prepare_for_measurement function.
+        
+        Set self.busy to true, reset all prepare_to_dos and
+        start first step of the preparation.
+        
         Parameters
         ----------
-        current_energy
+        energy : float
+            Starting energy the controller will set if
+            sets_energy is true.
 
         Returns
         -------
         None.
         """
-        # Edit docstring
-        # Do stuff here
-
-
-        self.current_energy += self.end_energy
-        if self.current_energy > self.end_energy:
-            self.cycle_completed.emit()
-        return
-
-    def measure_energy_setpoint(self):
-        """Measure the energy offset of the LEED electronics.
-
-        This method must be reimplemented in subclasses. The
-        reimplementation is supposed to take measurements of
-        the voltage applied to the filament across the full
-        uncalibrated energy spectrum.
-
-        Returns
-        -------
-        None.
-        """
-        # Edit docstring
-        # TODO: Write this function
-
-        self.current_energy += self.end_energy
-        if self.current_energy > self.end_energy:
-            self.calibrate_energy_setpoint()
-            self.cycle_completed.emit()
-        return
-
-    def calibrate_energy_setpoint(self):
-        """Calibrate the energy setpoint of the LEED electronics
-
-        The offset is measured in the measure_energy_setpoint()
-        function which returns the measured energies and the
-        nominal energies The measured energies are then put into
-        relation to the nominal energies using
-        numpy.polynomial.polynomial.Polynomial. A polynomial of
-        first degree is most likely accurate enough for the
-        calibration, but the degree can be adjusted by changing
-        the integer value in the Polynomial.fit function.
-
-        The measured energies are used as the x-coordinates
-        and the nominal energies are used as the y-coordinates.
-        The resulting polynomial is written into the config file
-        and used to calibrate the nominal energy via the
-        true_energy_to_setpoint() function to get the desired
-        output.
-
-        Returns
-        -------
-        None
-        """
-        nominal_energies = self.data_points['nominal_energies']
-        measured_energies = self.data_points['measured_energies']
-        domain = ast.literal_eval(self.settings['energy_calibration']['domain'])
-        fit_polynomial = Polynomial.fit(measured_energies, nominal_energies, 1,
-                                        domain=domain, window=domain)
-        coefficients = str(list(fit_polynomial.coef))
-        self.settings.set('coefficients', coefficients)
-        return
-
-    def determine_settle_time(self):
-        """Determine settle time of the electronics.
-
-        Returns
-        -------
-        None.
-        """
-        # Edit docstring
-        # TODO
-        return
-
-    def time_resolved_measurement(self):
-        """Measure same energy over time.
-
-        This function should take measurements at the same
-        energy over a specified amount of time. All required
-        data should be taken from the settings property derived
-        from the configuration file.
-
-        If continuous mode is implemented, the function should
-        be able to determine if using continuous mode or triggered
-        mode is the more appropriate choice.
-
-        Returns
-        -------
-        None.
-        """
-        # Edit docstring
-        # TODO
-        return
-
-    @abstractmethod
-    def measure_now(self):
-        """Take a measurement.
-
-        This method must be reimplemented in subclasses. It is
-        supposed to be called after preparing the controller for
-        a measurement and after an energy has been set on the
-        controller. It should only emit a send_message signal
-        which triggers a measurement and sends additional data
-        if needed.
-
-        It should take all required data for this operation from
-        the settings property derived from the configuration file.
-
-        Returns
-        -------
-        None.
-        """
-        return
-
-    @abstractmethod
-    def receive_image(self, object):
-        """Need to wait for camera class.
-        
-        Process image.
-        
-        After the image has been processed, the function has to 
-        set the image_received flag to True and check if the 
-        next measurement can start via the 
-        ready_for_next_measurement function.
-        
-        Returns
-        -------
-        None.
-        """
-        # Edit docstring
-        
-        self.flags['image_received'] = True
-        self.ready_for_next_measurement()
-        
-        return
-
-    @abstractmethod
-    def receive_measurements(self, object):
-        """Receive measurements from the serial.
-
-        This function has to be reimplemented in subclasses.
-        Upon receiving the data_received signal this function
-        is supposed to process and append measurements to the
-        appropriate attribute of the class.
-
-        All of the settings required for processing different
-        measurements should be derived from the configuration
-        file. (i.e.: Different measurements may require other
-        conversion factors.) The channels selected in the
-        settings can be used to determine to which section of
-        the data_points library the measurement should be
-        appended to.
-
-        After the measurements have been processed, the
-        function has to set the measurements_received flag to
-        True and check if the next measurement can start via 
-        the ready_for_next_measurement function.
-        
-        Returns
-        -------
-        None.
-        """
-        
-        self.flags['measurements_received'] = True
-        self.ready_for_next_measurement()
-        
-        return
-
-    def ready_for_next_measurement(self):
-        """Check if all measurements have been received.
-
-        The next measurement will be started as soon as both
-        the image from the camera and the data from the controller
-        have been received. If the controller class does not control
-        a camera, it will not wait for an image to be returned. If
-        the camera is in live mode, the controller class will not
-        wait for measurement data from the controller.
-
-        Returns
-        -------
-        None.
-        """
-
-        if not self.__controls_camera:
-            self.flags['image_received'] = True
-        if self.settings['camera_settings']['mode'] == 'live':
-            self.flags['measurements_received'] = True
-        if self.image_received and self.measurements_received:
-            # Rather call a function here
-            # self.do_next_measurement.emit()
-            self.flags['image_received'] = False
-            self.flags['measurements_received'] = False
-            self.do_next_measurement()
-        
-        return
-        
-    def do_next_measurement(self):
-        """Determine measurement function.
-        
-        Decide which measurement to do, by checking the orders
-        that were given by the gui. The only possible orders
-        are "iv_video" for a LEED I(V) measurement, 
-        "time_resolved" for a time resolved measurement,
-        "energy_calibration" for determining the energy 
-        calibration setpoint and "settle_time" for determining
-        the settle time of the LEED electronics.
-        
-        Returns
-        -------
-        None.
-        """
-        if self.cycle_type == "iv_video":
-            self.measure_iv_video()
-        if self.cycle_type == "time_resolved":
-            self.measure_energy_setpoint()
-        if self.cycle_type == "energy_calibration":
-            self.measure_energy_setpoint()
-        if self.cycle_type == "settle_time":
-            self.measure_energy_setpoint()
-        else:
-            self.error_occurred.emit(MeasureControllerError.UNKNOWN_MEASUREMENT)
-         
-        return
+        self.busy = True
+        self.__starting_energy = energy
+        for key in self.prepare_to_dos:
+            self.prepare_to_dos[key] = True
+        self.prepare_for_measurement(False)
