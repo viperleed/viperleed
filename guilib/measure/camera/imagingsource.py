@@ -399,6 +399,8 @@ class ImagingSourceDMKCamera(CameraABC):
         if self.fail('SetPropertyValue', 'Partial scan', 'Y Offset', y0_pixel):
             raise RuntimeError("Error setting horizontal offset of "
                                + y0_pixel)
+        
+        # VCDID_FlipVertical\VCDElement_Value
 
     def set_binning(self, bin_factor):
         """
