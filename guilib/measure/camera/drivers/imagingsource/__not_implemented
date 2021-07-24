@@ -61,8 +61,6 @@
 #   NO    # COMMENTED OUT  int   IC_PropertySet_Set
 #   NO    # int   IC_SetDefaultWindowPosition(HGRABBER hGrabber, int Default)
 #   NO    # int   IC_SetWindowPosition(HGRABBER hGrabber, int PosX, int PosY, int Width, int Height)
-#  maybe? # int   IC_enumPropertyElements(HGRABBER hGrabber, char* Property, IC_ENUMCB cb, void* data
-#  maybe? # int   IC_enumPropertyElementInterfaces(HGRABBER hGrabber, char* Property, char* Element, IC_ENUMCB cb, void* data)
 #   YES?  # int   IC_GetPropertyMapStrings(HGRABBER hGrabber, char* Property, char *Element, int *StringCount, char **Strings)
 #   YES?  # int   IC_GetPropertyMapString(HGRABBER hGrabber, char* Property, char *Element,  char *String)
 #   YES?  # int   IC_SetPropertyMapString(HGRABBER hGrabber, char* Property, char *Element,  char *String)
@@ -209,8 +207,8 @@
             SUCCESS if an image has been snapped, ERROR if something
             went wrong."""
         )
-		
-	    # TODO: unclear which format the file name should have.
+
+	# TODO: unclear which format the file name should have.
     #       would str(Path.resolve()) work? returns separators as '\\'
     # TODO: unclear which kind of errors it may return, if any
     # TODO: not sure if it is useful.
@@ -257,55 +255,22 @@
         self.__dll_save_settings_to_file(self.__handle,
                                          _to_bytes(filename))
 
-    # TODO: use this, should limit the number of errors. May also
-    # get rid of it if it turns out that we actually do not need
-    # to set camera properties.
-    __dll_is_cam_property_available = __dll.IC_IsCameraPropertyAvailable
-    __dll_is_cam_property_available.argtypes = GrabberHandlePtr, c_char_p
-    __dll_is_cam_property_available.errcheck = (
-        # 'ERROR' means not available
-        check_dll_return(exclude_errors=('ERROR',))
-        )
-	
+	# I doubt we will ever use this
 	EnableAutoCameraProperty = __dll.IC_EnableAutoCameraProperty
     EnableAutoCameraProperty.argtypes = (GrabberHandlePtr, c_int,
                                          c_int)
 
+	# Same here
     EnableVideoAutoProperty = __dll.IC_EnableAutoVideoProperty
     EnableVideoAutoProperty.argtypes = (GrabberHandlePtr, c_int,
                                         c_int)
-		
-#####################   NOT IMPLEMENTED, BUT SHOULD PROBABLY BE ###############
-	# TODO: this has to be tested. Would be nice to have it working,
-    #       at least as an alternative to VCDPropertyInspector.
-    # Judging from .h EnumCallback takes a name (of an enum or property?)
-    # and some data, and returns int. Unclear id the int returned is the
-    # value of the property enum or what. It is unclear also if this can
-    # be a python function (probably yes)
-    EnumCallback = CFUNCTYPE(c_int, c_char_p, c_void_p)
 
-    # TODO: new from dll. Make sure it works.
-    enumerate_properties = __dll.IC_enumProperties
-    enumerate_properties.argtypes = GrabberHandlePtr, EnumCallback, c_void_p
-    enumerate_properties.__doc__ = (
-        """Enumerate properties of an open device.
-
-        This method needs testing as it was not originally wrapped.
-
-        Parameters
-        ----------
-        grabber_handle : GrabberHandlePtr
-            Handle to grabber object.
-        callback : EnumCallback
-            Function that will be called on enums? Has signature
-            (char* name, void* data) and returns int
-        callback_data : int or None (== c_void_p)
-            Data passed to the callback function
-
-        Returns
-        -------
-        ret_val : int
-            SUCCESS, ERROR or other errors."""
-        )
+	# TODO: signature was wrong: c_void_p instead of GrabberHandlePtr
+	# This uses the 'simple name' rather than the fully qualified name
+	# with serial number. That's not the best option. Better open with
+	# unique name (to be seen how they will eventually shown to the user)
+    OpenVideoCaptureDevice = __dll.IC_OpenVideoCaptureDevice
+    OpenVideoCaptureDevice.restype = c_int
+    OpenVideoCaptureDevice.argtypes = GrabberHandlePtr, c_char_p
 
 
