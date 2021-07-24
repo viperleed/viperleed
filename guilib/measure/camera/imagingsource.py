@@ -138,7 +138,7 @@ class ImagingSourceDMKCamera(CameraABC):
         """Connect to the camera."""
         return not self.__fail('openVideoCaptureDevice', self.name)
 
-    def list_devices(self)
+    def list_devices(self):
         """Return a list of available device names.
 
         Returns
