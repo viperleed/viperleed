@@ -120,6 +120,9 @@ class ImageProcessInfo:
     @property
     def bad_pixels(self):
         """Return bad pixels as a list of (x, y) coordinates."""
+        # TODO: return the list of bad pixels recalculated on the ROI
+        # (bad pixels are a wrt full sensor), skipping those whose
+        # transformed coordinates are < 0 or > roi width/height.
         return self.__bad_pixels
 
     @bad_pixels.setter
