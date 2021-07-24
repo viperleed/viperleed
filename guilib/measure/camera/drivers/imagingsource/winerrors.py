@@ -36,15 +36,16 @@ def check_dll_return(success='int', include_errors=tuple(),
         raise ValueError("Can only give include_errors "
                          "or exclude_errors, not both.")
     if include_errors:
-        include = (getattr(DLLReturns, e) for e in include_errors)
+        include = [getattr(DLLReturns, e) for e in include_errors]
         errors = {e.value: e for e in DLLReturns if e in include}
     elif exclude_errors:
-        exclude = (getattr(DLLReturns, e) for e in exclude_errors)
+        exclude = [getattr(DLLReturns, e) for e in exclude_errors]
         errors = {e.value: e
                   for e in DLLReturns
                   if e not in exclude}
     else:
         errors = DLLReturns.as_dict()
+
 
     limit = 0
     success = success.replace(' ', '')
@@ -56,14 +57,15 @@ def check_dll_return(success='int', include_errors=tuple(),
     def int_checker(result, func, args):
         """Check validity of the return of a int-returning function."""
         print(f"{func.__name__}{args} returned {result}")
-        if result.value == DLLReturns.SUCCESS.value:
+        # if result.value == DLLReturns.SUCCESS.value:
+        if result == DLLReturns.SUCCESS.value:
             # All good
-            return
+            return result
 
-        error = errors.get(result.value, None)
+        error = errors.get(result, None)
         if error is None:
             raise ImagingSourceError(
-                f"Unkonwn or excluded error code {result.value}"
+                f"Unkonwn or excluded error code {result}"
                 )
         raise ImagingSourceError(
             f"{func.__name__}{args} returned error "
@@ -73,7 +75,8 @@ def check_dll_return(success='int', include_errors=tuple(),
     def pointer_checker(result, func, args):
         """Check that the return of the function is a valid pointer."""
         print(f"{func.__name__}{args} returned {result}")
-        if result.value is None:
+        if not result:
+            # pointer to NULL
             raise ImagingSourceError(
                 f"{func.__name__}{args} returned a pointer to NULL"
                 )
@@ -83,10 +86,10 @@ def check_dll_return(success='int', include_errors=tuple(),
         """Check that the return is larger than a limit."""
         print(f"{func.__name__}{args} returned {result}")
         err_txt = f"{func.__name__}{args} returned {result} <= {limit}."
-        err = errors.get(result.value, None)
+        err = errors.get(result, None)
         if err is not None:
             err_txt += f" This is error {err.name}: {err.message}."
-        if result.value <= limit:
+        if result <= limit:
             raise ImagingSourceError(err_txt)
         return result
 
@@ -94,16 +97,16 @@ def check_dll_return(success='int', include_errors=tuple(),
         """Check that the return is larger or equal than a limit."""
         print(f"{func.__name__}{args} returned {result}")
         err_txt = f"{func.__name__}{args} returned {result} < {limit}"
-        err = errors.get(result.value, None)
+        err = errors.get(result, None)
         if err is not None:
             err_txt += f" This is error {err.name}: {err.message}."
-        if result.value < limit:
+        if result < limit:
             raise ImagingSourceError(err_txt)
         return result
 
     if success == 'int':
         return int_checker
-    if success == 'pointer'
+    if success == 'pointer':
         return pointer_checker
     if success.startswith('>='):
         return ge_checker
@@ -121,7 +124,7 @@ class DLLReturns(tuple, Enum):
     NO_HANDLE = (-1, "Grabber handle is invalid. Call create_grabber().")
     NO_DEVICE = (-2,
                  "Method requires an open device, but no device is open. "
-                 "Call OpenVideoCaptureDevice().")
+                 "Call open_video_capture_device(dev_name).")
     NOT_AVAILABLE = (-3, "Device does not support a {!r} property.")
     NO_PROPERTYSET = (-3,
                       "The property set was not queried for the device. "
