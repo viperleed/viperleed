@@ -11,6 +11,6 @@ Author: Florian Doerr
 This module contains classes and functions to handle cameras
 """
 
-from viperleed.guilib.measure.camera.imagingsource import (
-    ImagingSourceDMKCamera
-    )
+# from viperleed.guilib.measure.camera.imagingsource import (
+    # ImagingSourceDMKCamera
+    # )
