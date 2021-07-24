@@ -1111,7 +1111,7 @@ int AC IC_EnableAutoVideoProperty( HGRABBER hGrabber, int iProperty, int iOnOff 
     @param *format  This receives the current color format.
     @retval IC_SUCCESS on success
     @retval IC_ERROR if something went wrong. */
-int AC IC_GetImageDescription( HGRABBER hGrabber, long *lWidth, long *lHeight, int *iBitsPerPixel, COLORFORMAT *format );///<Retrieve the properties of the current video format and sink typ.
+int AC IC_GetImageDescription( HGRABBER hGrabber, long *lWidth, long *lHeight, int *iBitsPerPixel, COLORFORMAT *format );///<Retrieve the properties of the current video format and sink type.
 
 
 
@@ -1374,7 +1374,7 @@ int AC IC_SetTriggerPolarity( HGRABBER hGrabber, int iPolarity ); ///< Set the t
 
     @param hGrabber    Handle to a grabber object.
     @retval IC_SUCCESS : Success
-    @retval IC_NOT:AVAILABLE : The property is not supported by the current device
+    @retval IC_NOT_AVAILABLE : The property is not supported by the current device
     @retval IC_NO_HANDLE    Invalid grabber handle
     @retval IC_NO_DEVICE    No video capture device opened
 
@@ -1779,7 +1779,7 @@ int AC IC_enumPropertyElements(HGRABBER hGrabber, char* Property, IC_ENUMCB cb, 
     - Switch
     - Button
     - MapStrings
-    - AbsoluteValues
+    - AbsoluteValue
     - Unknown
 
     @param hGrabber    Handle to a grabber object.
