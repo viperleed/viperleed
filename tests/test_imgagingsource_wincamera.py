@@ -12,7 +12,7 @@ if vpr_path not in sys.path:
     sys.path.append(str(vpr_path))
 
 from viperleed.guilib.measure.camera.drivers.imagingsource.tisgrabber import (
-    WindowsCamera, DLLReturns, ImagingSourceError, SinkFormat, CameraProperty
+    WindowsCamera, DLLReturns, ImagingSourceError, SinkFormat
     )
 
 
@@ -54,13 +54,13 @@ class TestDeviceNotopen(unittest.TestCase):
             img_shape = self.camera.video_format_shape
             print(err.exception)
         with self.assertRaises(ImagingSourceError) as err:
-            fmts = self.camera.video_formats
+            fmts = self.camera.default_video_formats
             print(err.exception)
         with self.assertRaises(ImagingSourceError) as err:
             self.camera.set_video_format('_some_invalid_format_zz')
             print(err.exception)
         with self.assertRaises(ImagingSourceError) as err:
-            self.camera.open_by_unique_name('__AbcdEfg')
+            self.camera.open('__AbcdEfg')
             print(err.exception)
         with self.assertRaises(ImagingSourceError) as err:
             self.camera.snap_live_image()
@@ -71,21 +71,21 @@ class TestDeviceNotopen(unittest.TestCase):
         with self.assertRaises(ImagingSourceError) as err:
             self.camera.stop_live()
             print(err.exception)
-        with self.assertRaises(ImagingSourceError) as err:
-            self.camera.unique_name_from_index(1000)
-            print(err.exception)
-        with self.assertRaises(ImagingSourceError) as err:
-            self.camera.check_available_cam_properties()
-            print(err.exception)
-        with self.assertRaises(ImagingSourceError) as err:
-            cam_prop = self.camera.get_camera_property('EXPOSURE')
-            print(err.exception)
-        with self.assertRaises(ImagingSourceError) as err:
-            self.camera.set_camera_property('EXPOSURE', 3)
-            print(err.exception)
-        with self.assertRaises(ImagingSourceError) as err:
-            p_min, p_max = self.camera.get_camera_property_range('EXPOSURE')
-            print(err.exception)
+        # with self.assertRaises(ImagingSourceError) as err:
+            # self.camera.unique_name_from_index(1000)
+            # print(err.exception)
+        # with self.assertRaises(ImagingSourceError) as err:
+            # self.camera.check_available_cam_properties()
+            # print(err.exception)
+        # with self.assertRaises(ImagingSourceError) as err:
+            # cam_prop = self.camera.get_camera_property('EXPOSURE')
+            # print(err.exception)
+        # with self.assertRaises(ImagingSourceError) as err:
+            # self.camera.set_camera_property('EXPOSURE', 3)
+            # print(err.exception)
+        # with self.assertRaises(ImagingSourceError) as err:
+            # p_min, p_max = self.camera.get_camera_property_range('EXPOSURE')
+            # print(err.exception)
 
 
 if __name__ == '__main__':
