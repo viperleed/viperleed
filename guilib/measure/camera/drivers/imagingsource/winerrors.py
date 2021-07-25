@@ -6,7 +6,7 @@ Author: Michele Riva
 from enum import Enum
 
 def check_dll_return(success='int', include_errors=tuple(),
-                     exclude_errors=tuple()):
+                     exclude_errors=tuple(), valid_returns=()):
     """Return an appropriate callable for checking DLL errors.
 
     Parameters
@@ -16,15 +16,24 @@ def check_dll_return(success='int', include_errors=tuple(),
         are:
         * 'int': check integer return values
         * 'pointer': check that the return is a valid pointer
-        * '>0': check that the result is positive
+        * '>NUMBER': check that the result is larger than NUMBER
+        * '>=NUMBER': check that the result is larger than, or
+            equal to NUMBER
         Default is 'int'.
     include_errors, exclude_errors : Sequence, optional
         Which error return values should be included/excluded while
         checking the return. Only one of the two should be given.
         Each element is (the name of) a DLLReturns. This is meaningful
         only for success == 'int', as there are multiple returns with
-        the same value. Default is tuple() for both, i.e., take all
-        the returns.
+        the same value. Default is an empty tuple for both, i.e., take
+        all the returns.
+    valid_returns : Sequence, optional
+        Which returns values are to also be considered 'valid'. This
+        argument is used only for 'int' checking, and makes sense to
+        be given only if the function is a checker, returning SUCCESS
+        when something is found, and one of these values when it is
+        not. SUCCESS is alway considered a valid return. Default is
+        an empty tuple.
 
     Returns
     -------
@@ -45,7 +54,9 @@ def check_dll_return(success='int', include_errors=tuple(),
                   if e not in exclude}
     else:
         errors = DLLReturns.as_dict()
-
+    
+    if valid_returns:
+        valid_returns = [getattr(DLLReturns, e).value for e in valid_returns]
 
     limit = 0
     success = success.replace(' ', '')
@@ -57,8 +68,7 @@ def check_dll_return(success='int', include_errors=tuple(),
     def int_checker(result, func, args):
         """Check validity of the return of a int-returning function."""
         print(f"{func.__name__}{args} returned {result}")
-        # if result.value == DLLReturns.SUCCESS.value:
-        if result == DLLReturns.SUCCESS.value:
+        if result in (DLLReturns.SUCCESS.value, *valid_returns):
             # All good
             return result
 
@@ -69,7 +79,7 @@ def check_dll_return(success='int', include_errors=tuple(),
                 )
         raise ImagingSourceError(
             f"{func.__name__}{args} returned error "
-            f"{error.name}: {error.message}"
+            f"{error.name}: {error.message}", err_code=error
             )
 
     def pointer_checker(result, func, args):
@@ -78,7 +88,8 @@ def check_dll_return(success='int', include_errors=tuple(),
         if not result:
             # pointer to NULL
             raise ImagingSourceError(
-                f"{func.__name__}{args} returned a pointer to NULL"
+                f"{func.__name__}{args} returned a pointer to NULL",
+                err_code = DLLReturns.NULL_POINTER
                 )
         return result
 
@@ -90,7 +101,7 @@ def check_dll_return(success='int', include_errors=tuple(),
         if err is not None:
             err_txt += f" This is error {err.name}: {err.message}."
         if result <= limit:
-            raise ImagingSourceError(err_txt)
+            raise ImagingSourceError(err_txt, err_code=error)
         return result
 
     def ge_checker(result, func, args):
@@ -101,7 +112,7 @@ def check_dll_return(success='int', include_errors=tuple(),
         if err is not None:
             err_txt += f" This is error {err.name}: {err.message}."
         if result < limit:
-            raise ImagingSourceError(err_txt)
+            raise ImagingSourceError(err_txt, err_code=error)
         return result
 
     if success == 'int':
@@ -133,7 +144,9 @@ class DLLReturns(tuple, Enum):
                                "Failed setting size of live-view window. "
                                "Call IC_SetDefaultWindowPosition(false), "
                                "then retry.")
-    NOT_IN_LIVEMODE = (-3, "Property {!r} can only be set while in live mode.")
+    NOT_IN_LIVE_MODE = (-3,
+                        "Property {!r} can only/cannot be set while "
+                        "in live mode. Switch mode, then retry.")
     PROPERTY_ITEM_NOT_AVAILABLE = (
         -4, "VCD property item {!r} is not supported by the device."
         )
@@ -154,6 +167,10 @@ class DLLReturns(tuple, Enum):
     -5, "Could not open device while loading settings from file."
     )
     FILE_NOT_FOUND = (35, "File {} does not exist.")
+    UNKOWN = (-2000, "Unknown or unspecified error.")
+    NULL_POINTER = (-2001, "Returned a pointer to NULL")
+    INVALID_SINK_FORMAT = (-2002, "Invalid sink/video format")
+    REQUIRES_REBOOT = (-2003, ".close(), reboot the camera, and retry")
 
     @classmethod
     def as_dict(cls):
@@ -177,4 +194,25 @@ class DLLReturns(tuple, Enum):
 
 
 class ImagingSourceError(Exception):
-    pass
+    """An error specific to a Imaging Source camera."""
+
+    def __init__(self, msg, *args, err_code=DLLReturns.UNKOWN, **kwargs):
+        """Initialize instance.
+
+        Parameters
+        ----------
+        msg : str
+            Error message
+        *args : object
+            Other arguments passed to Exception
+        err_code : DLLReturns
+            Error code. Accessible with the .err_code attribute
+        **kwargs : object
+            Other keyword arguments passed to Exception
+
+        Returns
+        -------
+        None.
+        """
+        self.err_code = err_code
+        super().__init__(msg, *args, **kwargs)

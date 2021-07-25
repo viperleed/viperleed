@@ -21,8 +21,8 @@ Created on Mon Nov 21 09:44:40 2016
 from enum import Enum
 from ctypes import (Structure as CStructure, WinDLL, CFUNCTYPE, cast as c_cast,
                     sizeof as c_sizeof, c_uint8, c_int, c_long, c_ulong,
-                    c_ubyte, c_float, py_object, POINTER, c_char_p, c_void_p)
-import inspect
+                    c_ubyte, c_float, py_object, POINTER, c_char_p, c_void_p,
+                    c_char)
 import os
 from pathlib import Path
 import sys
@@ -31,9 +31,12 @@ import numpy as np
 from viperleed.guilib.measure.camera.drivers.imagingsource.winerrors import (
     DLLReturns, check_dll_return, ImagingSourceError
     )
+from viperleed.guilib.measure.camera.drivers.imagingsource.properties import (
+    store_property, SwitchProperty, VCDPropertyInterface,
+    PropertyDiscoveryCallbackType
+    )
 
 dll_path = Path(__file__).parent.resolve()
-print(f"{dll_path=}")
 try:
     os.add_dll_directory(dll_path)
 except AttributeError:
@@ -42,6 +45,8 @@ sys.path.append(dll_path)
 
 
 c_float_p = POINTER(c_float)
+c_long_p = POINTER(c_long)
+
 
 def _to_bytes(string):
     """Return string as bytes.
@@ -72,63 +77,13 @@ def _to_bytes(string):
                     "Expected, 'str', 'bytes', or 'bytearray")
 
 
-class CameraProperty(Enum):
-    """Class holding possible camera properties.
-
-    Does not include VCD properties, which are accessed by name.
-    """
-
-    PAN = 0
-    TILT = 1
-    ROLL = 2
-    ZOOM = 3
-    EXPOSURE = 4
-    IRIS = 5
-    FOCUS = 6
-    MEGA = 65536  # Guard for max enum value, i.e., 2**sizeof(int)
-
-    @classmethod
-    def get(cls, cam_property):
-        """Return an appropriate enum from value or name.
-
-        Parameters
-        ----------
-        cam_property : str, int, or CameraProperty
-            Some reference to a camera property. If a string, lookup
-            is done by name (not case sensitive), otherwise by value.
-
-        Returns
-        -------
-        property : CameraProperty
-            The attribute corresponding to cam_property
-
-        Raises
-        ------
-        ValueError
-            If no property could be found
-        """
-        if isinstance(cam_property, str):
-            try:
-                cam_property = getattr(cls, cam_property.upper())
-            except AttributeError as err:
-                raise ValueError(f"Unknown camera property {cam_property}. "
-                                 "Perhaps you meant video property?") from err
-        else:
-            try:
-                cam_property = cls(cam_property)
-            except ValueError as err:
-                raise ValueError(f"Unknown camera property {cam_property}. "
-                                 "Perhaps you meant video property?") from err
-        return cam_property
-
-
 class SinkFormat(Enum):
-    Y800 = 0      # monochrome 1-byte;    top-left
+    Y800 = 0      # Monochrome 1-byte;    top-left
     RGB24 = 1     # 3 bytes: B G R;       top-left
     RGB32 = 2     # 4 bytes: B G R alpha; top-left; alpha unused == 0
-    UYVY = 3      # 4-bytes color;        top-left; see fourcc.org; bit complicated (U&V shared by neighbor pixels, y for both)
-    Y16 = 4       # gray 2-bytes;         top-left
-    NONE = 5      # used only as return value
+    UYVY = 3      # 4-bytes color;        top-left; see fourcc.org;
+    Y16 = 4       # Monochrome 2-bytes;   top-left
+    NONE = 5      # Used only as return value to signal 'invalid'
     MEGA = 65536  # Guard for max enum value, i.e., 2**sizeof(int)
     # RGB64       # 8 bytes: 2B 2G 2R 2A; top-left; seems unsupported
 
@@ -141,21 +96,23 @@ class SinkFormat(Enum):
         sink_format : str, int or SinkFormat
             Some reference to a sink format.
 
+        Returns
+        -------
+        sink_format : SinkFormat
+            The appropriate attribute
+
         Raises
         ------
         ValueError
             If sink_format is not a valid sink format
         ImagingSourceError
-            If sink_format would yield .NONE
-        RuntimeError
-            If sink_format would yield .MEGA
+            If sink_format would yield .NONE or .MEGA
         """
         if isinstance(sink_format, str):
-            try:
-                sink_format = getattr(cls, sink_format)
-            except AttributeError as err:
+            sink_format = getattr(cls, sink_format, None)
+            if sink_format is None:
                 raise ValueError("Unknown sink/video format "
-                                 f"{sink_format}") from err
+                                 f"{sink_format}")
         else:
             try:
                 sink_format = cls(sink_format)
@@ -164,11 +121,26 @@ class SinkFormat(Enum):
                                  f"{sink_format}") from err
         if sink_format == SinkFormat.NONE:
             raise ImagingSourceError("Invalid sink/video "
-                                     f"format {sink_format.name}")
+                                     f"format {sink_format.name}",
+                                     err_code=DLLReturns.INVALID_SINK_FORMAT)
         elif sink_format == SinkFormat.MEGA:
             raise ImagingSourceError("Camera should never return "
-                                     "SinkFormat.MEGA")
+                                     "SinkFormat.MEGA",
+                                     err_code=DLLReturns.INVALID_SINK_FORMAT)
         return sink_format
+
+    @property
+    def n_colors(self):
+        """Return the number of color channels for a format."""
+        if self.name.startswith('Y'):
+            return 1
+        if self is SinkFormat.RGB24:
+            return 3
+        if self is SinkFormat.RGB32:
+            return 4
+        raise ImagingSourceError(f"Format {self} does not have a "
+                                 "defined number of color channels.",
+                                 err_code=DLLReturns.INVALID_SINK_FORMAT)
 
 
 class StreamMode(Enum):
@@ -188,46 +160,6 @@ class StreamMode(Enum):
     SNAP = 1
 
 
-class SwitchProperty(Enum):
-    """On/Off VCD property enum."""
-
-    ON = 1
-    OFF = 0
-
-    @classmethod
-    def get(cls, on_off):
-        """Return an appropriate enum from value or name.
-
-        Parameters
-        ----------
-        on_off : str, SwitchProperty or object
-            If a str, should be 'on'/'off' (not case sensitive).
-            If an object, its truth value will be used.
-
-        Returns
-        -------
-        switch_property : SwitchProperty
-            The attribute corresponding to on_off.
-
-        Raises
-        ------
-        ValueError
-            If a string is passed that is neither 'on' nor 'off'
-            (not case sensitive)
-        """
-        if isinstance(on_off, str):
-            try:
-                switch_property = getattr(cls, on_off.upper())
-            except AttributeError as err:
-                raise ValueError(
-                    f"Invalid string {on_off} for SwitchProperty. "
-                    "Should be 'on' or 'off' (not case sensitive)"
-                    )
-        else:
-            switch_property = cls(bool(on_off))
-        return switch_property
-
-
 class GrabberHandle(CStructure):
     _fields_ = [('unused', c_int)]
 
@@ -241,81 +173,24 @@ GrabberHandlePtr = POINTER(GrabberHandle)
 GrabberHandlePtr.__repr__ = lambda self: f"GrabberHandlePtr({self.contents})"
 
 
-# Prototype of frame-ready callbacks:
+# Prototype of frame-ready callbacks (best to use as a decorator):
 FrameReadyCallbackType = CFUNCTYPE(
     c_void_p,          # return type
-    GrabberHandlePtr,  # HGRABBER; funnily was c_int!
+    # GrabberHandlePtr,  # HGRABBER; funnily was c_int!
+    c_int,
     POINTER(c_ubyte),  # pointer to first byte of image data
     c_ulong,           # current frame number
     py_object          # other data (python) passed along
     )
 
-# A little trick to make functions decorated with
-# @FrameReadyCallbackType inspect-able with inspect.signature
-# NB: other inspect features may not work, as there is no
-# explicit support for CFUNCTYPE() objects.
-def __example_cb(__handle, img_buffer, frame_no, py_obj_for_callback):
-    """A no-op frame-ready callback with appropriate signature."""
-    return
-FrameReadyCallbackType.__signature__ = (
-    inspect.Signature.from_callable(__example_cb)
-    )
+FrameReadyCallbackType.__ctypeswrapper__ = 'FrameReadyCallbackType'
 
 
-class VCDPropertyInterface(Enum):
-    """List of VCD property interfaces with their methods."""
-
-    RANGE = int
-    SWITCH = bool
-    BUTTON = 'one_push'
-    MAPSTRINGS = str
-    ABSOLUTEVALUE = float
-    UNKNOWN = None
-
-    @classmethod
-    def get(cls, name):
-        """Return attribute by name."""
-        if isinstance(name, cls):
-            return name
-        return getattr(cls, name.upper(), cls.UNKNOWN)
-
-
-
-# Prototype of frame-ready callbacks:
-PropertyDiscoveryCallbackType = CFUNCTYPE(
-    c_int,             # return type
-    c_char_p,           # name of property/element/interface
-    py_object          # data (python) useful to store the name
-    )
-
-@PropertyDiscoveryCallbackType
-def store_property(name, storage):
-    """Store a property in a python dict.
-
-    Parameters
-    ----------
-    name : bytes
-        Name of property/element/interface
-    storage : dict
-        Property names will be stored keys, values are dictionaries
-
-    Returns
-    -------
-    finished : int
-        Whether property search is over or not. This function
-        always returns 0, such that all properties can be discovered.
-    """
-    storage[name.decode()] = {}
-    return 0 # DLLReturns.SUCCESS.value
-
-
-# TODO: look at the documentation at https://github.com/TheImagingSource/IC-Imaging-Control-Samples/tree/master/Python/Open%20Camera%2C%20Grab%20Image%20to%20OpenCV
-# TODO: also at (ip-config) https://github.com/TheImagingSource/IC-Imaging-Control-Samples/tree/master/c%23/Open%20GigE%20Camera%20by%20IP%20Address
+# TODO: also look at (ip-config) https://github.com/TheImagingSource/IC-Imaging-Control-Samples/tree/master/c%23/Open%20GigE%20Camera%20by%20IP%20Address
 
 # TODO: try removing some of the many functions, especially those we will never use
 
-class  WindowsCamera: #GrabberDLL:
-    # """Interface class that defines python equivalents to the DLL calls."""
+class  WindowsCamera:
     """Interface class for Imaging Source camera in Windows."""
 
     # To prevent creating bindings to the dll functions each time
@@ -336,19 +211,21 @@ class  WindowsCamera: #GrabberDLL:
         # Call init_library with None straight away. It was done the
         # same way in the original tisgrabber.py. init_library will
         # do something only the first time an instance is created.
-        self.init_library()
+        self.__init_library()
         self.__handle = self.create_grabber()
+        self.__vcd_properties = {}
+        self.__has_frame_ready_callback = False
 
     @classmethod
-    def init_library(cls, license_key=None):
-        """Initialize the IC Imaging Control dll library.
+    def __init_library(cls, license_key=None):
+        """Initialize the IC Imaging Control DLL library.
 
         This function must be called only once before any other
-        functions of the dll are called.
+        functions of the DLL are called.
 
         Parameters
         ----------
-        license_key : str or None, optional
+        license_key : str, bytes or None, optional
             The license key. Pass None if using a 'trial' version.
             Default is None.
 
@@ -385,10 +262,7 @@ class  WindowsCamera: #GrabberDLL:
         """
         return self._dll_create_grabber()
 
-    # TODO: an alternative to do the loop in C would be to use IC_ListDevices
-    # but it is unclear whether it would return unique names or just device
-    # names. Perhaps worth implementing and testing. Then we would not need
-    # n_devices and unique_name_from_index.
+    # NB: IC_ListDevices does not return unique names
     @property
     def devices(self):
         """Return the unique names of available devices.
@@ -398,7 +272,8 @@ class  WindowsCamera: #GrabberDLL:
         unique_names : list
             List of unique device names, each as a string.
         """
-        names = (self.unique_name_from_index(i) for i in range(self.n_devices))
+        names = (self.__unique_name_from_index(i)
+                 for i in range(self.__n_devices))
         return [n for n in names if n]
 
     _dll_get_frame_rate =  _dll.IC_GetFrameRate
@@ -418,20 +293,14 @@ class  WindowsCamera: #GrabberDLL:
             A positive frame rate if frame rate is supported,
             zero otherwise.
         """
-        # TODO: check it is OK. The original implementation was first
-        # defining frame_rate_c = ctypes.c_long(), then overwriting
-        # it with the return value
         return self._dll_get_frame_rate(self.__handle)
 
     _dll_set_frame_rate = _dll.IC_SetFrameRate
     _dll_set_frame_rate.argtypes = GrabberHandlePtr, c_float
     _dll_set_frame_rate.errcheck = check_dll_return(
-        # NOT_AVAILABLE would be an error, but NOT_IN_LIVEMODE
+        # NOT_AVAILABLE would be an error, but NOT_IN_LIVE_MODE
         # seems more reasonable to return. Perhaps better check
-        # live mode explicitly and leave NOT_AVAILABLE.
-        # TODO: cross check exclude, as it seems not working properly.
-        #       got a WRONG_INCOMPATIBLE_XML error which should have been
-        #       NOT_IN_LIVEMODE
+        # live mode explicitly and leave NOT_AVAILABLE?
         exclude_errors=('NOT_AVAILABLE', 'NO_PROPERTYSET',
                         'DEFAULT_WINDOW_SIZE_SET', 'WRONG_XML_FORMAT',
                         'WRONG_INCOMPATIBLE_XML',
@@ -453,17 +322,11 @@ class  WindowsCamera: #GrabberDLL:
         # TODO: if live, stop, then set, then restart
         self._dll_set_frame_rate(self.__handle, rate)
 
-    # TODO: unclear what 'color format' means. Is it == video_format??
-    #       is it == sink_type ??
-    # TODO: eventually it would be nice to align the returns to the
-    #       signature I want in CameraABC (i.e., return the no. of
-    #       color channels rather than the format)
     _dll_get_image_description = _dll.IC_GetImageDescription
-    _dll_get_image_description.argtypes = (
-        GrabberHandlePtr, POINTER(c_long), POINTER(c_long),
-        POINTER(c_int), POINTER(c_int)
-        )
     _dll_get_image_description.errcheck = check_dll_return()
+    _dll_get_image_description.argtypes = (
+        GrabberHandlePtr, c_long_p, c_long_p, POINTER(c_int), POINTER(c_int)
+        )
 
     @property
     def image_info(self):
@@ -477,7 +340,9 @@ class  WindowsCamera: #GrabberDLL:
             Number of bytes for each pixel, accounting for color
             channels
         format : SinkFormat
-            The current color format
+            The current color format. Notice that this is the color
+            format of the image stored in the internal memory, NOT
+            the video format.
 
         Raises
         ---------
@@ -492,13 +357,28 @@ class  WindowsCamera: #GrabberDLL:
         width, height = c_long(), c_long()
         bits_per_pixel, color_format_c = c_int(), c_int()
 
-        self._dll_get_image_description(self.__handle, width, height,
-                                        bits_per_pixel, color_format_c)
+        try:
+            self._dll_get_image_description(self.__handle, width, height,
+                                            bits_per_pixel, color_format_c)
+        except ImagingSourceError as err:
+            # No info available. May happen when the sink format
+            # is not up to date in the camera. Call the getter,
+            # which updates it internally, then try again.
+            if err.err_code is DLLReturns.ERROR:
+                _ = self.sink_format
+                self._dll_get_image_description(self.__handle, width, height,
+                                                bits_per_pixel, color_format_c)
+            else:
+                raise
+
         bytes_per_pixel = bits_per_pixel.value // 8
         try:
             color_format = SinkFormat.get(color_format_c.value)
         except ValueError as err:
-            raise ImagingSourceError(err.args[0] + " received.") from err
+            raise ImagingSourceError(
+                err.args[0] + " received.",
+                err_code=DLLReturns.INVALID_SINK_FORMAT
+                ) from err
 
         return width.value, height.value, bytes_per_pixel, color_format
 
@@ -507,15 +387,14 @@ class  WindowsCamera: #GrabberDLL:
     _dll_n_devices.errcheck = check_dll_return('>=0')
 
     @property
-    def n_devices(self):    # TODO: do we need this to be public??
+    def __n_devices(self):
         """Get the number of the currently available devices.
 
         This function creates an internal array of all connected video-
-        capture devices. With each call to this function, this array is
-        rebuilt. The name and the unique name can be retrieved from the
-        internal array using the function IC_GetDevice() and the method
-        unique_name_from_index(). Both are useful to for retrieving
-        device names to open devices.
+        capture devices. With each call to this function, this array
+        is rebuilt. The unique name can be retrieved from the internal
+        array using the method __unique_name_from_index(). This can
+        then be used to open devices.
 
         Returns
         -------
@@ -545,17 +424,36 @@ class  WindowsCamera: #GrabberDLL:
         """
         # TODO: needs live mode? NO, requires the camera to have acquired
         # at least one frame. Before that, it errors out returning NONE.
-        # TODO: old implementation was returning RGB24 in case
-        #       of 'unknown' format
         sink_format_c = self._dll_get_sink_format(self.__handle)
         try:
             sink_format = SinkFormat.get(sink_format_c)
         except ValueError as err:
-            raise ImagingSourceError(err.args[0] + " received")
-        except ImagingSourceError as err:
-            raise ImagingSourceError("Camera should be in live mode. Call "
-                                     ".start_live(), then retry.") from err
+            raise ImagingSourceError(err.args[0] + " received",
+                                     err_code=DLLReturns.INVALID_SINK_FORMAT)
+        except ImagingSourceError:
+            if sink_format_c is SinkFormat.NONE.value:
+                # Camera was not yet placed in live mode: sink
+                # format is unavailable until one image has been
+                # snapped. Do this, then try again.
+                self.start_live()
+                # self.snap_live_image()
+                self.stop_live()
 
+                sink_format_c = self._dll_get_sink_format(self.__handle)
+                try:
+                    sink_format = SinkFormat.get(sink_format_c)
+                except ValueError as err:
+                    raise ImagingSourceError(
+                        err.args[0] + " received",
+                        err_code=DLLReturns.INVALID_SINK_FORMAT
+                        )
+                except ImagingSourceError:
+                    raise ImagingSourceError(
+                        "Could not retrieve sink format.",
+                        err_code=DLLReturns.INVALID_SINK_FORMAT
+                        )
+            else:  # Mega
+                raise
         return sink_format
 
     _dll_set_sink_format = _dll.IC_SetFormat
@@ -577,28 +475,26 @@ class  WindowsCamera: #GrabberDLL:
             One of the values in SinkFormat. Note that UYVY can
             only be used in conjunction with a UYVY video format
         """
-        # TODO: whenever changed, also .start_live() .stop_live() to
-        # make sure that the getter returns data
+        # TODO: errors out when running live --> stop/set/start
         sink_format = SinkFormat.get(sink_format)
         self._dll_set_sink_format(self.__handle, sink_format.value)
 
-    _dll_is_device_valid = _dll.IC_IsDevValid
-    _dll_is_device_valid.argtypes = (GrabberHandlePtr,)
-    _dll_is_device_valid.errcheck = check_dll_return()
-
     @property
-    def valid(self):  # TODO: maybe I don't need this public
-        """Return whether there is a valid open device."""
-        # TODO: after checking possible returns, get rid of
-        # the error checker if the only thing that can happen
-        # is a generic ERROR. The purpose of the error checker
-        # is just printing out the return values.
-        try:
-            ret_val = self._dll_is_device_valid(self.__handle)
-        except ImagingSourceError:
-            # No device open
-            pass
-        return  ret_val == DLLReturns.SUCCESS.value
+    def vcd_properties(self):
+        """Return a dict of VCD properties/elements/interfaces.
+
+        Returns
+        -------
+        vcd_properties : dict
+            The dict has the following structure:
+            {prop_name_1:
+                {el_name_1_1 : (VCDPropertyInterface, vcd_properties, ...),
+                 ...},
+             prop_name_2:
+                {...},
+             ...}
+        """
+        return self.__vcd_properties
 
     _dll_video_format_width = _dll.IC_GetVideoFormatWidth
     _dll_video_format_height = _dll.IC_GetVideoFormatHeight
@@ -612,25 +508,43 @@ class  WindowsCamera: #GrabberDLL:
         """Return (width, height) (pixels) of the current video format."""
         width = self._dll_video_format_width(self.__handle)
         height = self._dll_video_format_height(self.__handle)
-        return width.value, height.value
+        return width, height
 
-    # TODO: perhaps would be nice to run the loop at the c level. This
-    # can be done with IC_ListVideoFormats. Then one would not need
-    # __n_video_formats() nor __video_format_by_index(idx)
+    _dll_list_video_formats = _dll.IC_ListVideoFormats
+    _dll_list_video_formats.argtypes = GrabberHandlePtr, c_char_p, c_int
+    _dll_list_video_formats.errcheck = check_dll_return(">=0")
+
     @property
-    def video_formats(self):
-        """Return a list of the video formats available for a device."""
-        n_formats = self.__n_video_formats()
-        formats = (self.__video_format_by_index(i) for i in range(n_formats))
-        return [f for f in formats if f]
+    def default_video_formats(self):
+        """Return a list of the default video formats available.
+
+        This property is especially useful to determine the minimum
+        and maximum width and height that a format supports.
+
+        Returns
+        -------
+        video_formats : list
+            Each element is a string of the form
+            '<formatID> (<width>x<height>)'
+        """
+        # There is probably a better way to do this than making a 2D
+        # char array and then casting to char_p (that's what the function
+        # expects according to the .h signature).
+        n_max_formats = 80
+        n_max_chars = 40
+        formats_arr = ((c_char * n_max_chars) * n_max_formats)()
+        n_formats = self._dll_list_video_formats(
+            self.__handle, c_cast(formats_arr, c_char_p), n_max_chars
+            )
+        formats = [c_cast(f, c_char_p).value.decode()
+                   for f in formats_arr
+                   if f[0] != b'\x00']
+        return formats
 
     _dll_set_video_format = _dll.IC_SetVideoFormat
     _dll_set_video_format.argtypes = GrabberHandlePtr, c_char_p
     _dll_set_video_format.errcheck = check_dll_return()
 
-    # TODO: funnily enough there is no way to get the video format
-    # back as a string. The only way to fetch info about the
-    # video format is via get_image_description()
     def set_video_format(self, video_format):
         """Set a video format for the current video-capture device.
 
@@ -648,18 +562,30 @@ class  WindowsCamera: #GrabberDLL:
         """
         self._dll_set_video_format(self.__handle,
                                    _to_bytes(video_format))
+        # The .image_info is not updated until the sink format
+        # is also fully updated. We can safely set video and sink
+        # color formats equal here.
+        self.sink_format = SinkFormat.get(video_format.split()[0])
+
+        # Then update the info in the camera itself by getting back
+        # the sink format just set.
+        _ = self.sink_format
+
 
     # TODO: check which errors
     _dll_open_by_unique_name = _dll.IC_OpenDevByUniqueName
     _dll_open_by_unique_name.argtypes = GrabberHandlePtr, c_char_p
     _dll_open_by_unique_name.errcheck = check_dll_return()
 
-    def open_by_unique_name(self, unique_name):
+    def open(self, unique_name):
         """Open a video capture by using its unique name.
 
         Use IC_GetUniqueName() to retrieve the unique name of an
-        open device. unique_name_from_index(index) can be used
+        open device. __unique_name_from_index(index) can be used
         before the device is open to retrieve the unique name.
+
+        The available VCD properties of the device are also stored,
+        and can be retrieved with .vcd_properties
 
         Parameters
         ----------
@@ -668,17 +594,15 @@ class  WindowsCamera: #GrabberDLL:
         """
         self._dll_open_by_unique_name(self.__handle,
                                       _to_bytes(unique_name))
+        self.__find_vcd_properties()
 
-    # TODO: may it return other errors, like NO_HANDLE and NO_DEVICE?
-    # TODO: include_errors / exclude_errors doe not work properly.
-    #       maybe I have it the wrong way around?
     _dll_snap_image = _dll.IC_SnapImage
     _dll_snap_image.argtypes = GrabberHandlePtr, c_int
     _dll_snap_image.errcheck = check_dll_return(
-        include_errors=('ERROR', 'NOT_IN_LIVEMODE')
+        include_errors=('ERROR', 'NOT_IN_LIVE_MODE')
         )
 
-    # Would be nicer for it to actually return a np.array already
+    # TODO: Would be nicer for it to actually return a np.array already
     # I could then call __get_image_ptr in here rather than having
     # it as a separate method
     def snap_live_image(self, timeout=2000):
@@ -699,12 +623,6 @@ class  WindowsCamera: #GrabberDLL:
         -------
         None
         """
-        # C-Returns
-        # ---------
-        # ret_val : int
-            # SUCCESS if an image has been snapped, NOT_IN_LIVEMODE if
-            # the device is not in live mode, i.e., start_live() was
-            # not called, ERROR if something else went wrong.
         self._dll_snap_image(self.__handle, timeout)
 
     _dll_start_live = _dll.IC_StartLive
@@ -728,7 +646,6 @@ class  WindowsCamera: #GrabberDLL:
         """
         self._dll_start_live(self.__handle, bool(show_video))
 
-    # TODO: unclear which errors it may return
     _dll_stop_live = _dll.IC_StopLive
     _dll_stop_live.argtypes = (GrabberHandlePtr,)
     _dll_stop_live.errcheck = check_dll_return()
@@ -755,9 +672,6 @@ class  WindowsCamera: #GrabberDLL:
         """
         self.__handle = self._dll_show_device_selection_dialog(self.__handle)
 
-    # TODO: restype did not match signature. Also, the old python
-    # implementation assigned the return to __handle. Should be
-    # checked.
     # TODO: implemented just for testing. will be later removed.
     # Dialog looks nice. Perhaps we should mock it in Qt and make
     # it look more or less like this for all cameras.
@@ -773,9 +687,7 @@ class  WindowsCamera: #GrabberDLL:
 
         Returns
         -------
-        ret_val : int
-            SUCCESS on success, NO_HANDLE if grabber_handle is invalid,
-            NO_DEVICE if no device was open, ERROR otherwise.
+        None.
         """
         self._dll_show_property_dialog(self.__handle)
 
@@ -784,7 +696,7 @@ class  WindowsCamera: #GrabberDLL:
     _dll_unique_name_from_index.argtypes = (c_int,)
     _dll_unique_name_from_index.errcheck = check_dll_return('pointer')
 
-    def unique_name_from_index(self, index):
+    def __unique_name_from_index(self, index):
         """Get unique name of a device given its index.
 
         The unique device name consist of the device name and its
@@ -796,7 +708,7 @@ class  WindowsCamera: #GrabberDLL:
         ----------
         index : int
             The index of the device whose name is to be returned. It
-            must be between 0 and self.n_devices.
+            must be between 0 and self.__n_devices.
 
         Returns
         -------
@@ -808,49 +720,6 @@ class  WindowsCamera: #GrabberDLL:
         if name is not None:
             return name.decode()
         return ''
-
-    _dll_video_format_by_index = _dll.IC_GetVideoFormat
-    _dll_video_format_by_index.restype = c_char_p
-    _dll_video_format_by_index.argtypes = GrabberHandlePtr, c_int
-    _dll_video_format_by_index.errcheck = check_dll_return('pointer')
-
-    def __video_format_by_index(self, index):
-        """Return the video format specified by index as bytes.
-
-        Parameters
-        ----------
-        index : int
-            Index of the video format to be used. Must be between 0 and
-            n_video_formats().
-
-        Returns
-        -------
-        video_format : str
-            The name of the specified video format. Returns an empty
-            string in case of error.
-        """
-        video_format = self._dll_video_format_by_index(self.__handle, index)
-        if video_format:
-            return video_format
-        return ''
-
-    _dll_n_video_formats = _dll.IC_GetVideoFormatCount
-    _dll_n_video_formats.argtypes = (GrabberHandlePtr,)
-    _dll_n_video_formats.errcheck = check_dll_return('>=0')
-
-    def __n_video_formats(self):
-        """Return the number of video formats supported.
-
-        Requires a video-capture device to be open.
-
-        Returns
-        -------
-        n_formats : int
-            The number of video formats supported by the open device
-            if successful. Otherwise NO_DEVICE (no device open) or
-            NO_HANDLE (invalid grabber_handle).
-        """
-        return self._dll_n_video_formats(self.__handle)
 
     _dll_get_image_ptr = _dll.IC_GetImagePtr
     _dll_get_image_ptr.restype = c_void_p  # void to also allow None
@@ -868,167 +737,6 @@ class  WindowsCamera: #GrabberDLL:
             Returns None in case of error.
         """
         return self._dll_get_image_ptr(self.__handle)
-
-
-    _dll_is_cam_property_available = _dll.IC_IsCameraPropertyAvailable
-    _dll_is_cam_property_available.argtypes = GrabberHandlePtr, c_int
-    _dll_is_cam_property_available.errcheck = (
-        check_dll_return(exclude_errors=('ERROR',))  # == not available
-        )
-
-    def check_available_cam_properties(self):
-        """Return a dict of available camera properties.
-
-        The dictionary is also stored for check purposes.
-
-        Returns
-        -------
-        properties : dict
-            Availability of camera properties. Each entry is
-            property_name: str
-            available: bool
-        """
-        self.__available_cam_properties = {}
-        for cam_property in CameraProperty:
-            try:
-                available = self._dll_is_cam_property_available(
-                    self.__handle, cam_property.value
-                    )
-            except ImagingSourceError:
-                # Check I get ERROR, i.e., not available
-                continue
-            self.__available_cam_properties[cam_property.name] = (
-                available == DLLReturns.SUCCESS.value
-                )
-        return self.__available_cam_properties
-
-    # TODO: unclear what it returns exactly.
-    # TODO: check also whether setting exposure this way is the
-    #       same as using set_property_value_int and absolute value
-    #       If it is the same, probably better keep only one to
-    #       limit overcrowding of class.
-    _dll_get_camera_property = _dll.IC_GetCameraProperty
-    _dll_get_camera_property.argtypes = (GrabberHandlePtr, c_int,
-                                          POINTER(c_long))
-    _dll_get_camera_property.errcheck = check_dll_return()
-
-    def get_camera_property(self, cam_property):
-        """Retrieve the value of a camera property.
-
-        Parameters
-        ----------
-        cam_property : str, int, or CameraProperty
-            The property whose value is to be read
-
-        Returns
-        -------
-        property_value : int
-            Value of the requested property
-
-        Raises
-        ------
-        ValueError
-            If cam_property is not a valid camera property
-        ImagingSourceError
-            if cam_property is not available
-        """
-        # C-Returns
-        # ---------
-        # ret_val : int
-        #     SUCCESS or ERROR. Probably also NOT_AVAILABLE, and perhaps
-        #     PROPERTY_ITEM_NOT_AVAILABLE, PROPERTY_ELEMENT_NOT_AVAILABLE,
-        #     PROPERTY_ELEMENT_WRONG_INTERFACE
-        cam_property = CameraProperty.get(cam_property)
-        if not self.__available_cam_properties:
-            self.check_available_cam_properties()
-        if not self.__available_cam_properties.get(cam_property.name):
-            raise ImagingSourceError(
-                f"Property {cam_property.name} not available for this device"
-                )
-        prop = c_long()
-        self._dll_get_camera_property(self.__handle, cam_property.value, prop)
-        return prop.value
-
-    _dll_set_camera_property = _dll.IC_SetCameraProperty
-    _dll_set_camera_property.argtypes = GrabberHandlePtr, c_int, c_long
-    _dll_set_camera_property.errcheck = check_dll_return()
-
-    def set_camera_property(self, cam_property, value):
-        """Set a camera property.
-
-        Parameters
-        ----------
-        property : str, int, or CameraProperty
-            The property to be set
-        value : int
-            The value of the property. The value should be in the range
-            of the specified property.
-
-        Raises
-        ------
-        ValueError
-            If cam_property is not a valid camera property
-        ImagingSourceError
-            If cam_property is not available or camera returned error
-        """
-
-        cam_property = CameraProperty.get(cam_property)
-        if not self.__available_cam_properties:
-            self.check_available_cam_properties()
-        if not self.__available_cam_properties.get(cam_property.name):
-            raise ImagingSourceError(
-                f"Property {cam_property.name} not available"
-                )
-        self._dll_set_camera_property(self.__handle, cam_property.value,
-                                      value)
-
-    # TODO: check return values
-    _dll_get_camera_property_range = _dll.IC_CameraPropertyGetRange
-    _dll_get_camera_property_range.argtypes = (GrabberHandlePtr, c_int,
-                                               POINTER(c_long),
-                                               POINTER(c_long))
-    _dll_get_camera_property_range.errcheck = check_dll_return()
-
-    def get_camera_property_range(self, cam_property):
-        """Retrieve the minimum and maximum value of a property.
-
-        Parameters
-        ----------
-        property : str, int, or CameraProperty
-            The property whose range is to be read
-
-        Returns
-        -------
-        min, max : int
-            The minimum and maximum value of the property.
-
-        Raises
-        ------
-        ValueError
-            If cam_property is not a valid camera property
-        RuntimeError
-            If cam_property is not available
-        """
-        cam_property = CameraProperty.get(cam_property)
-        if not self.__available_cam_properties:
-            self.check_available_cam_properties()
-        if not self.__available_cam_properties.get(cam_property.name):
-            raise ImagingSourceError(
-                f"Property {cam_property.name} not available"
-                )
-        prop_min, prop_max = c_long(), c_long()
-
-        self._dll_get_camera_property_range(self.__handle, cam_property.value,
-                                            prop_min, prop_max)
-        return prop_min, prop_max
-
-    _dll_is_property_available =  _dll.IC_IsPropertyAvailable
-    _dll_is_property_available.argtypes = GrabberHandlePtr, c_char_p, c_char_p
-    _dll_is_property_available.errcheck = check_dll_return()
-    # TODO: exclude PROPERTY_ITEM_NOT_AVAILABLE, PROPERTY_ELEMENT_NOT_AVAILABLE,
-    # NOT_ALL_PROPERTIES_RESTORED (== PROPERTY_ITEM_NOT_AVAILABLE),
-    # DEVICE_NOT_FOUND (== PROPERTY_ELEMENT_NOT_AVAILABLE).
-    # Perhaps also add a valid_returns tuple to the error checker!
 
     # ###############   DISCOVERY OF VCD PROPERTIES   #################
     # Three functions, one for getting the name of properties, one
@@ -1055,20 +763,20 @@ class  WindowsCamera: #GrabberDLL:
         py_object
         )
 
-    def find_vcd_properties(self):
-        """Return available VCD property/element/interface.
+    def __find_vcd_properties(self):
+        """Return all available VCD property/element/interface.
 
         Returns
         -------
         properties : dict
-            keys are property names, values are dict. Each sub-dict
-            key is an element name, values are VCDPropertyInterface
-            attributes.
+            keys are property names, values are dict. Each
+            key of each sub-dict is an element name, values
+            are lists of VCDPropertyInterface attributes.
         """
-        vcd_properties = {}
+        self.__vcd_properties = {}
         self._dll_discover_vcd_properties(self.__handle, store_property,
-                                          vcd_properties)
-        for prop_name, elements in vcd_properties.items():
+                                          self.__vcd_properties)
+        for prop_name, elements in self.__vcd_properties.items():
             self._dll_discover_vcd_elements(
                 self.__handle, _to_bytes(prop_name),
                 store_property, elements
@@ -1081,39 +789,7 @@ class  WindowsCamera: #GrabberDLL:
                 # Replace interface names with VCDPropertyInterface
                 elements[elem_name] = [VCDPropertyInterface.get(i)
                                        for i in interfaces]
-
-
-        print("\n#######################################################\n",
-              vcd_properties)
-
-
-
-    def is_vcd_property_available(self, property_name, element_name=None):
-        """Check if a (property, element) pair exists.
-
-        Parameters
-        ----------
-        property_name : str or bytes
-            Name of the property to be checked
-        element_name : str or bytes, optional
-            Property element, e.g., "Value", "Auto". If not given
-            or None, only the existence of the property is checked.
-            Default is None.
-
-        Returns
-        -------
-        available : bool
-            True if the (property, element) pair exists.
-        """
-        # C-Returns
-        # ---------
-        # SUCCESS Success,  NO_HANDLE, NO_DEVICE,
-        # PROPERTY_ELEMENT_NOT_AVAILABLE,
-        # PROPERTY_ELEMENT_WRONG_INTERFACE
-        available = self._dll_is_property_available(
-            self.__handle, _to_bytes(property_name), _to_bytes(element_name)
-            )
-        return available == DLLReturns.SUCCESS.value
+        self.__vcd_properties
 
     # #####################    VCD PROPERTIES    ######################
     #
@@ -1121,105 +797,113 @@ class  WindowsCamera: #GrabberDLL:
     # always specified via the <method> keyword argument. Values
     # given are adjusted accordingly.
 
-    # TODO: it is undocumented which properties are available.
-    # Perhaps using VCDPropertyInspector of IC Imaging Control
-    # would be a way to check whether enumerate_properties works?
-    # A decent read: https://www.theimagingsource.com/support/documentation
-    #                        /ic-imaging-control-cpp/tech_VCDProperties.htm
-
+    __vcd_prop_checker = check_dll_return(
+        include_errors=(
+            'NO_HANDLE', 'NO_DEVICE', 'PROPERTY_ITEM_NOT_AVAILABLE',
+            'PROPERTY_ELEMENT_NOT_AVAILABLE',
+            'PROPERTY_ELEMENT_WRONG_INTERFACE'
+            )
+        )
     # Value as float: getter, range getter, setter.
     _dll_get_property_value_float = _dll.IC_GetPropertyAbsoluteValue
-    _dll_get_property_value_float.errcheck = check_dll_return()
+    _dll_get_property_value_float.errcheck = __vcd_prop_checker
     _dll_get_property_value_float.argtypes = (
         GrabberHandlePtr, c_char_p,c_char_p, c_float_p
         )
     _dll_get_property_value_range_float = _dll.IC_GetPropertyAbsoluteValueRange
-    _dll_get_property_value_range_float.errcheck = check_dll_return()
+    _dll_get_property_value_range_float.errcheck = __vcd_prop_checker
     _dll_get_property_value_range_float.argtypes = (
         GrabberHandlePtr, c_char_p, c_char_p, c_float_p, c_float_p
         )
     _dll_set_property_value_float = _dll.IC_SetPropertyAbsoluteValue
-    _dll_set_property_value_float.errcheck = check_dll_return()
+    _dll_set_property_value_float.errcheck = __vcd_prop_checker
     _dll_set_property_value_float.argtypes = (
         GrabberHandlePtr, c_char_p, c_char_p, c_float
         )
 
     # Value as int: getter, range getter, setter.
     _dll_get_property_value_int = _dll.IC_GetPropertyValue
-    _dll_get_property_value_int.errcheck = check_dll_return()
+    _dll_get_property_value_int.errcheck = __vcd_prop_checker
     _dll_get_property_value_int.argtypes = (
-        GrabberHandlePtr, c_char_p, c_char_p, POINTER(c_long)
+        GrabberHandlePtr, c_char_p, c_char_p, c_long_p
         )
     _dll_get_property_value_range_int = _dll.IC_GetPropertyValueRange
-    _dll_get_property_value_range_int.errcheck = check_dll_return()
+    _dll_get_property_value_range_int.errcheck = __vcd_prop_checker
     _dll_get_property_value_range_int.argtypes = (
-        GrabberHandlePtr, c_char_p, c_char_p, POINTER(c_long), POINTER(c_long)
+        GrabberHandlePtr, c_char_p, c_char_p, c_long_p, c_long_p
         )
     _dll_set_property_value_int = _dll.IC_SetPropertyValue
-    _dll_set_property_value_int.errcheck = check_dll_return()
+    _dll_set_property_value_int.errcheck = __vcd_prop_checker
     _dll_set_property_value_int.argtypes = (
         GrabberHandlePtr, c_char_p, c_char_p, c_int
         )
 
     # On/Off (== bool): getter, setter. [NO RANGE OBVIOUSLY]
     _dll_get_on_off_property = _dll.IC_GetPropertySwitch
-    _dll_get_on_off_property.errcheck = check_dll_return()
+    _dll_get_on_off_property.errcheck = __vcd_prop_checker
     _dll_get_on_off_property.argtypes= (
-        GrabberHandlePtr, c_char_p, c_char_p, POINTER(c_long)
+        GrabberHandlePtr, c_char_p, c_char_p, c_long_p
         )
     _dll_set_on_off_property = _dll.IC_SetPropertySwitch
-    _dll_set_on_off_property.errcheck = check_dll_return()
+    _dll_set_on_off_property.errcheck = __vcd_prop_checker
     _dll_set_on_off_property.argtypes= (
         GrabberHandlePtr, c_char_p, c_char_p, c_int
         )
 
-    # TODO: exclude DEVICE_NOT_FOUND, NOT_ALL_PROPERTIES_RESTORED,
-    # NO_PROPERTYSET, DEFAULT_WINDOW_SIZE_SET
-    def get_vcd_property(self, property_name, element_name=None, method=float):
+    # TODO: fix all docstrings
+    def get_vcd_property(self, property_name, element_name=None, method=None):
         """Return the current value of a property/element pair.
 
         Parameters
         ----------
         property_name : str or bytes
-            The name of the property whose value is to be changed
+            The name of the property whose value is to be returned
         element_name : str, bytes or None, optional
             The name of the setting to be accessed (examples: 'Value',
-            'Auto'). If None or not given, 'Value' is used. Default is
-            None.
-        method : {float, int, bool}, optional
-            Which method to use to set the property. Typically, float
-            gives finer control over the values, but may not be a valid
-            way of setting some properties. bool is reserved for on/off
-            properties. Default is float.
+            'Auto'). This argument is mandatory if the property has
+            multiple elements. Otherwise, if not given, the only
+            element present will be returned.
+        method :  str, VCDPropertyInterface
+                 or VCDPropertyInterface.value, optional
+            Which method should be used to access the property/element.
+            This is honored only in case the property/element has
+            multiple access methods, in which case it is mandatory.
 
         Returns
         -------
         property_value : int, float or SwitchProperty
-            The value of the property/element.
+            The value of the property/element. The return type
+            depends on the choice of method.
         """
-        if method is float:
+        (prop_name,
+         elem_name,
+         method) = self.__get_property_element_interface(property_name,
+                                                         element_name,
+                                                         method)
+        if method is VCDPropertyInterface.ABSOLUTEVALUE:
             getter = self._dll_get_property_value_float
             property_value = c_float()
-        elif method is int:
+        elif method is VCDPropertyInterface.RANGE:
             getter = self._dll_get_property_value_int
             property_value = c_long()
-        elif method is bool:
+        elif method is VCDPropertyInterface.SWITCH:
             getter = self._dll_get_on_off_property
             property_value = c_long()
+        elif method is VCDPropertyInterface.MAPSTRINGS:
+             raise NotImplementedError("Map strings not yet implemented")
         else:
             raise ValueError(
                 f"Unexpected method {method} for getting VCD "
                 f"property/element {property_name}/{element_name}"
                 )
-        getter(self.__handle, _to_bytes(property_name),
-               _to_bytes(element_name), property_value)
+        getter(self.__handle, prop_name, elem_name, property_value)
 
-        if method is not bool:
+        if method is not VCDPropertyInterface.SWITCH:
             return property_value.value
         return SwitchProperty.get(property_value.value)
 
     def set_vcd_property(self, property_name, element_name,
-                         value, method=float):
+                         value, method=None):
         """Set the value of a VCD property/element pair.
 
         Parameters
@@ -1227,107 +911,158 @@ class  WindowsCamera: #GrabberDLL:
         property_name : str or bytes
             The name of the property whose value is to be changed
         element_name : str or bytes
-            The name of the setting to be accessed (examples: 'Value',
+            The name of the setting to be accessed (e.g. 'Value',
             'Auto').
         value : object
             The value to be set for the property/element. For on/off
-            settings (method == bool) accepts strings 'on'/'off' (not
-            case sensitive), SwitchProperty, or any object with a truth
-            value. Otherwise it should be a number or a string that
-            evaluates to a number.
-        method : {float, int, bool}, optional
-            Which method to use to set the property. Typically, float
-            gives finer control over the values, but may not be a valid
-            way of setting some properties. bool is reserved for on/off
-            properties. Default is float.
+            settings (method == VCDPropertyInterface.SWITCH) accepts
+            strings 'on'/'off' (not case sensitive), SwitchProperty,
+            or any object with a truth value. Otherwise it should be
+            a number, or a string that evaluates to a number.
+        method : str, VCDPropertyInterface
+                 or VCDPropertyInterface.value, optional
+            Which method should be used to access the property/element.
+            This is honored only in case the property/element has
+            multiple access methods, in which case it is mandatory.
 
         Raises
         ------
         ImagingSourceError
             If errors occur in setting properties.
         """
-        # By exclusion, it looks like the int method is using the
-        # DirectShow interface, i.e., only setting integer values
-        # to properties. Differently from the setter (take 16-bit
-        # int), this writes to a 32-bits long pointer.
-        #
-        #
-        # doc: "The interface IVCDRangeProperty, for example, provides
-        #      access to the property that is equivalent to the property
-        #      access of DirectShow."
-        #
-        # tisgrabber.h suggests: "For a list of properties and elements
-        # use the VCDPropertyInspector of IC Imaging Control."
-        #
-        # C-Returns
-        # ---------
-        # ret_val : int
-        #     SUCCESS, NO_HANDLE (invalid grabber handle), NO_DEVICE
-        #     (no device open), PROPERTY_ITEM_NOT_AVAILABLE (the
-        #     property item is not available),
-        #     PROPERTY_ELEMENT_NOT_AVAILABLE (the element of the
-        #     property is not available),
-        #     PROPERTY_ELEMENT_WRONG_INTERFACE (the property element
-        #     exists but it does not have the requested attribute,
-        #     e.g., b'Exposure' b'Auto' has no 'range').
+        (prop_name,
+         elem_name,
+         method) = self.__get_property_element_interface(property_name,
+                                                         element_name,
+                                                         method)
 
-        if method is float:
+        if method is VCDPropertyInterface.ABSOLUTEVALUE:
             setter = self._dll_set_property_value_float
             value = float(value)
-        elif method is int:
+        elif method is VCDPropertyInterface.RANGE:
             setter = self._dll_set_property_value_int
             value = int(value)
-        elif method is bool:
+        elif method is VCDPropertyInterface.SWITCH:
             setter = self._dll_set_on_off_property
             value = SwitchProperty.get(value).value
+        elif method is VCDPropertyInterface.MAPSTRINGS:
+             raise NotImplementedError("Map strings not yet implemented")
         else:
             raise ValueError(
                 f"Unexpected method {method} for setting VCD "
                 f"property/element {property_name}/{element_name}"
                 )
-        setter(self.__handle, _to_bytes(property_name),
-               _to_bytes(element_name), value)
+        setter(self.__handle, prop_name, elem_name, value)
 
     def get_vcd_property_range(self, property_name, element_name=None,
-                               method=float):
+                               method=None):
         """Return minimum and maximum values for a property/element pair.
 
         Parameters
         ----------
         property_name : str or bytes
-            The name of the property whose value is to be changed
+            The name of the property whose range should be returned
         element_name : str, bytes or None, optional
             The name of the setting to be accessed (examples: 'Value',
-            'Auto'). If None or not given, 'Value' is used. Default is
-            None.
+            'Auto'). This argument is mandatory if the property has
+            multiple elements. Otherwise, if not given, the only
+            element present will be returned.
+        method : str, VCDPropertyInterface
+                 or VCDPropertyInterface.value, optional
+            Which method should be used to access the property/element.
+            This is honored only in case the property/element has
+            multiple access methods, in which case it is mandatory.
 
         Returns
         -------
-        property_min, property_max : int
+        property_min, property_max : int or float
             The minimum and maximum values of the property/element.
+            The return type depends on the method chosen: int for
+            VCDPropertyInterface.RANGE, float for .ABSOLUTEVALUE.
         """
-        # C-Returns
-        # ---------
-        # SUCCESS, NO_HANDLE, NO_DEVICE, PROPERTY_ITEM_NOT_AVAILABLE,
-        # PROPERTY_ELEMENT_NOT_AVAILABLE, PROPERTY_ELEMENT_WRONG_INTERFACE
-        if method is float:
+        (prop_name,
+         elem_name,
+         method) = self.__get_property_element_interface(property_name,
+                                                         element_name,
+                                                         method)
+
+        if method is VCDPropertyInterface.ABSOLUTEVALUE:
             range_getter = self._dll_get_property_value_range_float
             prop_min, prop_max = c_float(), c_float()
-        elif method is int:
+        elif method is VCDPropertyInterface.RANGE:
             range_getter = self._dll_get_property_value_range_int
             prop_min, prop_max = c_long(), c_long()
+        elif method is VCDPropertyInterface.MAPSTRINGS:
+            raise NotImplementedError("Map strings not yet implemented")
         else:
             raise ValueError(
                 f"Unexpected method {method} for retrieving the range "
                 f"of VCD property/element {property_name}/{element_name}"
                 )
-        range_getter(self.__handle, _to_bytes(property_name),
-                     _to_bytes(element_name), prop_min, prop_max)
+        range_getter(self.__handle, prop_name, elem_name, prop_min, prop_max)
         return prop_min.value, prop_max.value
+
+    def __get_property_element_interface(self, prop_name, elem_name, method):
+        """Return a tuple of property/element/interface.
+
+        The return values are suitable to be used in setter, getter,
+        and range-getter DLL functions.
+
+        Parameters
+        ----------
+        prop_name : str or bytes
+            Name of the property
+        elem_name : str or bytes or None
+            Element to be accessed. Can be None only if the property
+            has only one element.
+        method : str or VCDPropertyInterface or VCDPropertyInterface.value
+            Honored only if the property/element has multiple access methods.
+
+        Returns
+        -------
+        prop_name : bytes
+            Name of the property
+        elem_name : bytes
+            Name of the element
+        method : VCDPropertyInterface
+            Interface.
+
+        Raises
+        ------
+        ValueError
+            If the element/interface cannot be picked univocally.
+        """
+        # Get the property
+        vcd_prop = self.vcd_properties.get(prop_name, None)
+        if vcd_prop is None:
+            raise ValueError(f"VCD property {prop_name} not available "
+                             "or misspelled. Use self.vcd_properties to "
+                             "see the available VCD properties")
+        # Pick an element
+        if len(vcd_prop) > 1 and not elem_name:
+            raise ValueError(f"Property {prop_name} has the following "
+                             f"elements: {[e for e in vcd_prop]}. Pick one.")
+        elif len(vcd_prop) == 1:
+            elem_name = tuple(vcd_prop)[0]
+        vcd_elem = vcd_prop[elem_name]
+        print(vcd_elem, tuple(vcd_elem)[0])
+
+        # Pick an interface (== method)
+        if len(vcd_elem) > 1 and not method:
+            raise ValueError(
+                f"Property/Element {prop_name}/{elem_name} has the "
+                f"following methods: {[i.name for i in vcd_elem]}. Pick one."
+                )
+        elif len(vcd_elem) == 1:
+            method = vcd_elem[0]
+
+        method = VCDPropertyInterface.get(method)
+
+        return _to_bytes(prop_name), _to_bytes(elem_name), method
 
     _dll_trigger_property_once = _dll.IC_PropertyOnePush
     _dll_trigger_property_once.argtypes = GrabberHandlePtr, c_char_p, c_char_p
-    _dll_trigger_property_once.errcheck = check_dll_return()
+    _dll_trigger_property_once.errcheck = __vcd_prop_checker
 
     def trigger_vcd_property_once(self, property_name, element_name):
         """Trigger a property/element automatically once now.
@@ -1390,21 +1125,25 @@ class  WindowsCamera: #GrabberDLL:
             If it looks like on_frame_ready was not decorated
             with @FrameReadyCallbackType.
         """
-        # Make sure the signature fits:
-        try:
-            callback_signature = inspect.signature(on_frame_ready)
-        except TypeError as err:
+        # Make sure the frame-ready callback has been wrapped correctly
+        if not hasattr(on_frame_ready, '__call__'):
             raise TypeError(f"Frame-ready callback {on_frame_ready.__name__} "
-                            "is not a callable") from err
-        if (on_frame_ready.__class__.__name__ != 'CFunctionType'
-            or len(callback_signature.parameters) != 4):
-            raise ValueError(
-                f"Frame-ready callback was not decorated with "
-                f"@{self.__class__.__name__}.FrameReadyCallbackType. This "
-                " is needed to ensure appropriate type checking/conversions"
+                            "is not a callable")
+        if (not hasattr(on_frame_ready, '__ctypeswrapper__')
+                or on_frame_ready.__ctypeswrapper__ != 'FrameReadyCallbackType'):
+            raise ValueError(f"Frame-ready callback was not decorated with "
+                             f"@FrameReadyCallbackType. This is needed to "
+                             "ensure appropriate type checking/conversions")
+        if not self.__has_frame_ready_callback:
+            self._dll_set_frame_ready_callback(self.__handle, on_frame_ready,
+                                               py_obj_for_callback)
+            self.__has_frame_ready_callback = True
+        else:
+            raise ImagingSourceError(
+                "Cannot set twice a callback due to some bug in the "
+                "underlying DLL. Power-down the camera, and retry.",
+                err_code=DLLReturns.REQUIRES_REBOOT
                 )
-        self._dll_set_frame_ready_callback(self.__handle, on_frame_ready,
-                                           py_obj_for_callback)
 
     _dll_set_continuous_mode = _dll.IC_SetContinuousMode
     _dll_set_continuous_mode.argtypes = GrabberHandlePtr, c_int
@@ -1437,11 +1176,14 @@ class  WindowsCamera: #GrabberDLL:
     _dll_close_device = _dll.IC_CloseVideoCaptureDevice
     _dll_close_device.restype = None  # Returns void
     _dll_close_device.argtypes = (GrabberHandlePtr,)
-    # _dll_close_device.errcheck = check_dll_return() # TODO: Returns some random positive number??
 
-    def close_device(self):
+    def close(self):
         """Close the currently open video-capture device."""
         self._dll_close_device(self.__handle)
+        self.__vcd_properties = {}
+        # Would be nicer to have it set by the device lost callback,
+        # as this does not prevent one from 
+        self.__has_frame_ready_callback = False
 
     _dll_is_trigger_available = _dll.IC_IsTriggerAvailable
     _dll_is_trigger_available.argtypes = (GrabberHandlePtr,)
@@ -1487,7 +1229,7 @@ class  WindowsCamera: #GrabberDLL:
 
     _dll_get_trigger_modes = _dll.IC_GetTriggerModes
     _dll_get_trigger_modes.argtypes = GrabberHandlePtr, c_char_p, c_int
-    _dll_get_trigger_modes.errcheck = check_dll_return('>0')
+    _dll_get_trigger_modes.errcheck = check_dll_return('>=0')
 
     @property
     def available_trigger_modes(self):
@@ -1496,9 +1238,9 @@ class  WindowsCamera: #GrabberDLL:
         # I get 0 returned on the DMK 33GX265 [specs] 46910583
         # while is_trigger_available() gives True
         n_max_modes = 20
-        modes_c = c_char_p()
+        modes_c = ((c_char * 10) * n_max_modes)()
         n_modes = self._dll_get_trigger_modes(
-            self.__handle, modes_c, n_max_modes
+            self.__handle, c_cast(modes_c, c_char_p), n_max_modes
             )
         # TODO: unclear how to read the modes.
         print(modes_c)
@@ -1508,6 +1250,8 @@ class  WindowsCamera: #GrabberDLL:
     _dll_reset.argtypes = (GrabberHandlePtr,)
     _dll_reset.errcheck = check_dll_return()
 
+    # TODO: funnily it always returns 0 (== ERROR). Should be
+    # checked whether all the properties are actually reset.
     def reset(self):
         """Reset the camera to default properties."""
         self._dll_reset(self.__handle)

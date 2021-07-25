@@ -7,7 +7,7 @@
 #   NO    # int   IC_SetInputChannel(HGRABBER hGrabber, char *szChannel)
 #  maybe  # int   IC_PrepareLive(HGRABBER hGrabber, int iShow)
 #   NO    # int   IC_SuspendLive(HGRABBER hGrabber)
-#   YES   # int   IC_IsLive(HGRABBER hGrabber)
+#  maybe  # int   IC_IsLive(HGRABBER hGrabber)
 #  maybe  # int   IC_IsCameraPropertyAutoAvailable(HGRABBER hGrabber, CAMERA_PROPERTY iProperty)
 #  maybe  # int   IC_GetAutoCameraProperty(HGRABBER hGrabber, int iProperty, int *iOnOff)
 #  maybe  # int   IC_IsVideoPropertyAvailable(HGRABBER hGrabber, VIDEO_PROPERTY eProperty)
@@ -17,9 +17,8 @@
 #  maybe  # int   IC_GetAutoVideoProperty(HGRABBER hGrabber, int iProperty, int *iOnOff)
 #  maybe  # int   IC_SetVideoProperty(HGRABBER hGrabber, VIDEO_PROPERTY eProperty, long lValue)
 #  maybe  # int   IC_GetSerialNumber(HGRABBER hGrabber, char* szSerial)
-#   YES?  # int   IC_ListDevices(char *szDeviceList, int iSize)
+#   NO    # int   IC_ListDevices(char *szDeviceName, int iSize) --> names are not unique
 #   NO    # int   IC_ListDevicesbyIndex(char *szDeviceName, int iSize, int DeviceIndex)
-#   NO    # int   IC_ListVideoFormats(HGRABBER hGrabber, char *szFormatList, int iSize)
 #   NO    # int   IC_ListVideoFormatbyIndex(HGRABBER hGrabber, char *szFormatName, int iSize, int iIndex)
 #  maybe  # int   IC_GetDevice(int iIndex)
 #   NO    # int   IC_LoadDeviceStateFromFileEx(HGRABBER hGrabber, char* szFileName, int OpenDevice)
@@ -89,6 +88,58 @@
 
 
 ######################## REMOVED FROM IMPLEMENTATION ##########################
+
+
+    _dll_is_property_available =  _dll.IC_IsPropertyAvailable
+    _dll_is_property_available.argtypes = GrabberHandlePtr, c_char_p, c_char_p
+    _dll_is_property_available.errcheck = check_dll_return(
+        exclude_errors=('DEVICE_NOT_FOUND', 'NOT_ALL_PROPERTIES_RESTORED'),
+        valid_returns=('PROPERTY_ITEM_NOT_AVAILABLE',
+                       'PROPERTY_ELEMENT_NOT_AVAILABLE',
+                       'PROPERTY_ELEMENT_WRONG_INTERFACE')
+        )
+
+    def is_vcd_property_available(self, property_name, element_name=None):
+        """Check if a (property, element) pair exists.
+
+        Parameters
+        ----------
+        property_name : str or bytes
+            Name of the property to be checked
+        element_name : str or bytes, optional
+            Property element, e.g., "Value", "Auto". If not given
+            or None, only the existence of the property is checked.
+            Default is None.
+
+        Returns
+        -------
+        available : bool
+            True if the (property, element) pair exists.
+        """
+        available = self._dll_is_property_available(
+            self.__handle, _to_bytes(property_name), _to_bytes(element_name)
+            )
+        return available == DLLReturns.SUCCESS.value
+
+
+    _dll_is_device_valid = _dll.IC_IsDevValid
+    _dll_is_device_valid.argtypes = (GrabberHandlePtr,)
+    _dll_is_device_valid.errcheck = check_dll_return()
+
+    @property
+    def valid(self):  # TODO: maybe I don't need this public, or not at all
+        """Return whether there is a valid open device."""
+        # TODO: after checking possible returns, get rid of
+        # the error checker if the only thing that can happen
+        # is a generic ERROR. The purpose of the error checker
+        # is just printing out the return values.
+        try:
+            ret_val = self._dll_is_device_valid(self.__handle)
+        except ImagingSourceError:
+            # No device open
+            pass
+        return  ret_val == DLLReturns.SUCCESS.value
+
 
     # TODO: it is unclear what an input channel is! ANALOG INPUT. Probably not useful.
     get_input_channel_count = __dll.IC_GetInputChannelCount
@@ -268,9 +319,269 @@
 	# TODO: signature was wrong: c_void_p instead of GrabberHandlePtr
 	# This uses the 'simple name' rather than the fully qualified name
 	# with serial number. That's not the best option. Better open with
-	# unique name (to be seen how they will eventually shown to the user)
+	# unique name (to be seen how they will eventually be shown to the user)
     OpenVideoCaptureDevice = __dll.IC_OpenVideoCaptureDevice
     OpenVideoCaptureDevice.restype = c_int
     OpenVideoCaptureDevice.argtypes = GrabberHandlePtr, c_char_p
+
+
+	
+
+class CameraProperty(Enum):
+    """Class holding possible camera properties.
+
+    Does not include VCD properties, which are accessed by name.
+    """
+
+    PAN = 0
+    TILT = 1
+    ROLL = 2
+    ZOOM = 3
+    EXPOSURE = 4
+    IRIS = 5
+    FOCUS = 6
+    MEGA = 65536  # Guard for max enum value, i.e., 2**sizeof(int)
+
+    @classmethod
+    def get(cls, cam_property):
+        """Return an appropriate enum from value or name.
+
+        Parameters
+        ----------
+        cam_property : str, int, or CameraProperty
+            Some reference to a camera property. If a string, lookup
+            is done by name (not case sensitive), otherwise by value.
+
+        Returns
+        -------
+        property : CameraProperty
+            The attribute corresponding to cam_property
+
+        Raises
+        ------
+        ValueError
+            If no property could be found
+        """
+        if isinstance(cam_property, str):
+            cam_property = getattr(cls, cam_property.upper(), None)
+            if cam_property is None:
+                raise ValueError(f"Unknown camera property {cam_property}. "
+                                 "Perhaps you meant video property?")
+        else:
+            try:
+                cam_property = cls(cam_property)
+            except ValueError as err:
+                raise ValueError(f"Unknown camera property {cam_property}. "
+                                 "Perhaps you meant video property?") from err
+        return cam_property
+
+
+    _dll_is_cam_property_available = _dll.IC_IsCameraPropertyAvailable
+    _dll_is_cam_property_available.argtypes = GrabberHandlePtr, c_int
+    _dll_is_cam_property_available.errcheck = (
+        check_dll_return(exclude_errors=('ERROR',))  # == not available
+        )
+
+    def check_available_cam_properties(self):
+        """Return a dict of available camera properties.
+
+        The dictionary is also stored for check purposes.
+
+        Returns
+        -------
+        properties : dict
+            Availability of camera properties. Each entry is
+            property_name: str
+            available: bool
+        """
+        self.__available_cam_properties = {}
+        for cam_property in CameraProperty:
+            try:
+                available = self._dll_is_cam_property_available(
+                    self.__handle, cam_property.value
+                    )
+            except ImagingSourceError:
+                # Check I get ERROR, i.e., not available
+                continue
+            self.__available_cam_properties[cam_property.name] = (
+                available == DLLReturns.SUCCESS.value
+                )
+        return self.__available_cam_properties
+
+    # TODO: unclear what it returns exactly.
+    # TODO: check also whether setting exposure this way is the
+    #       same as using set_property_value_int and absolute value
+    #       If it is the same, probably better keep only one to
+    #       limit overcrowding of class.
+    _dll_get_camera_property = _dll.IC_GetCameraProperty
+    _dll_get_camera_property.argtypes = (GrabberHandlePtr, c_int,
+                                          POINTER(c_long))
+    _dll_get_camera_property.errcheck = check_dll_return()
+
+    def get_camera_property(self, cam_property):
+        """Retrieve the value of a camera property.
+
+        Parameters
+        ----------
+        cam_property : str, int, or CameraProperty
+            The property whose value is to be read
+
+        Returns
+        -------
+        property_value : int
+            Value of the requested property
+
+        Raises
+        ------
+        ValueError
+            If cam_property is not a valid camera property
+        ImagingSourceError
+            if cam_property is not available
+        """
+        # C-Returns
+        # ---------
+        # ret_val : int
+        #     SUCCESS or ERROR. Probably also NOT_AVAILABLE, and perhaps
+        #     PROPERTY_ITEM_NOT_AVAILABLE, PROPERTY_ELEMENT_NOT_AVAILABLE,
+        #     PROPERTY_ELEMENT_WRONG_INTERFACE
+        cam_property = CameraProperty.get(cam_property)
+        if not self.__available_cam_properties:
+            self.check_available_cam_properties()
+        if not self.__available_cam_properties.get(cam_property.name):
+            raise ImagingSourceError(
+                f"Property {cam_property.name} not available for this device"
+                )
+        prop = c_long()
+        self._dll_get_camera_property(self.__handle, cam_property.value, prop)
+        return prop.value
+
+    _dll_set_camera_property = _dll.IC_SetCameraProperty
+    _dll_set_camera_property.argtypes = GrabberHandlePtr, c_int, c_long
+    _dll_set_camera_property.errcheck = check_dll_return()
+
+    def set_camera_property(self, cam_property, value):
+        """Set a camera property.
+
+        Parameters
+        ----------
+        property : str, int, or CameraProperty
+            The property to be set
+        value : int
+            The value of the property. The value should be in the range
+            of the specified property.
+
+        Raises
+        ------
+        ValueError
+            If cam_property is not a valid camera property
+        ImagingSourceError
+            If cam_property is not available or camera returned error
+        """
+
+        cam_property = CameraProperty.get(cam_property)
+        if not self.__available_cam_properties:
+            self.check_available_cam_properties()
+        if not self.__available_cam_properties.get(cam_property.name):
+            raise ImagingSourceError(
+                f"Property {cam_property.name} not available"
+                )
+        self._dll_set_camera_property(self.__handle, cam_property.value,
+                                      value)
+
+    # TODO: check return values
+    _dll_get_camera_property_range = _dll.IC_CameraPropertyGetRange
+    _dll_get_camera_property_range.argtypes = (GrabberHandlePtr, c_int,
+                                               POINTER(c_long),
+                                               POINTER(c_long))
+    _dll_get_camera_property_range.errcheck = check_dll_return()
+
+    def get_camera_property_range(self, cam_property):
+        """Retrieve the minimum and maximum value of a property.
+
+        Parameters
+        ----------
+        property : str, int, or CameraProperty
+            The property whose range is to be read
+
+        Returns
+        -------
+        min, max : int
+            The minimum and maximum value of the property.
+
+        Raises
+        ------
+        ValueError
+            If cam_property is not a valid camera property
+        RuntimeError
+            If cam_property is not available
+        """
+        cam_property = CameraProperty.get(cam_property)
+        if not self.__available_cam_properties:
+            self.check_available_cam_properties()
+        if not self.__available_cam_properties.get(cam_property.name):
+            raise ImagingSourceError(
+                f"Property {cam_property.name} not available"
+                )
+        prop_min, prop_max = c_long(), c_long()
+
+        self._dll_get_camera_property_range(self.__handle, cam_property.value,
+                                            prop_min, prop_max)
+        return prop_min, prop_max
+
+	# #####  REPLACED BY default_video_formats VIA IC_ListVideoFormats
+
+    # TODO: perhaps would be nice to run the loop at the c level. This
+    # can be done with IC_ListVideoFormats. Then one would not need
+    # __n_video_formats() nor __video_format_by_index(idx)
+    @property
+    def video_formats(self):
+        """Return a list of the video formats available for a device."""
+        n_formats = self.__n_video_formats()
+        formats = (self.__video_format_by_index(i) for i in range(n_formats))
+        return [f for f in formats if f]
+
+    _dll_n_video_formats = _dll.IC_GetVideoFormatCount
+    _dll_n_video_formats.argtypes = (GrabberHandlePtr,)
+    _dll_n_video_formats.errcheck = check_dll_return('>=0')
+
+    def __n_video_formats(self):
+        """Return the number of video formats supported.
+
+        Requires a video-capture device to be open.
+
+        Returns
+        -------
+        n_formats : int
+            The number of video formats supported by the open device
+            if successful. Otherwise NO_DEVICE (no device open) or
+            NO_HANDLE (invalid grabber_handle).
+        """
+        return self._dll_n_video_formats(self.__handle)
+	
+	
+    _dll_video_format_by_index = _dll.IC_GetVideoFormat
+    _dll_video_format_by_index.restype = c_char_p
+    _dll_video_format_by_index.argtypes = GrabberHandlePtr, c_int
+    _dll_video_format_by_index.errcheck = check_dll_return('pointer')
+
+    def __video_format_by_index(self, index):
+        """Return the video format specified by index as bytes.
+
+        Parameters
+        ----------
+        index : int
+            Index of the video format to be used. Must be between 0 and
+            n_video_formats().
+
+        Returns
+        -------
+        video_format : str
+            The name of the specified video format. Returns an empty
+            string in case of error.
+        """
+        video_format = self._dll_video_format_by_index(self.__handle, index)
+        if video_format:
+            return video_format
+        return ''
 
 
