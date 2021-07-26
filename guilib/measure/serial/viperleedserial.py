@@ -460,8 +460,7 @@ class ViPErLEEDSerial(SerialABC):
             if len(message) == 1:
                 if message.decode() == pc_ok:
                     self.busy = False
-                    if self.__last_request_sent in (pc_set_voltage,
-                                                    pc_measure_only):
+                    if self.__last_request_sent == pc_set_voltage:
                         self.about_to_trigger.emit()
             # Hardware config and measure values are both 4 bytes long.
             # Both commands are differentiated by the __last_request_sent
