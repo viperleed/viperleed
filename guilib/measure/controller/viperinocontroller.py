@@ -14,25 +14,23 @@ which gives commands to the ViPErinoSerialWorker class.
 
 # ViPErLEED modules
 from viperleed.guilib.measure.controller.\
-     measurecontrollerabc import MeasureController, MeasureControllerError
+     measurecontrollerabc import MeasureController
 
 
 
 class ViPErinoController(MeasureController):
     """Controller class for the ViPErLEED Arduino Micro."""
-    
+
     plot_info = MeasureController.plot_info.copy()
     plot_info['temperature'] = ('°C', 'lin')
     plot_info['cold_junction'] = ('°C', 'lin')
 
 
-    def __init__(self, settings=None, port_name='', controls_camera=False):
-        """Initialise controller object."""
-        
-        # TODO: Add stuff here if needed, otherwise remove init.
-        
+    def __init__(self, settings=None, port_name='', sets_energy=False):
+        """Initialise ViPErino controller object."""
+
         super().__init__(settings=settings, port_name=port_name,
-                     controls_camera=controls_camera)
+                     sets_energy=sets_energy)
 
     def set_energy(self, energy, time, *more_steps):
         """Convert data from gui to usable values for the DAC.
@@ -59,13 +57,14 @@ class ViPErinoController(MeasureController):
         -------
         energies_and_times: array of integers
         """
+        # TODO: multiple steps
         v_ref_dac = self.settings.getfloat('measurement_settings',
                                            'v_ref_dac')
 
         dac_out_vs_nominal_energy = 10/1000  # 10V / 1000 eV
         output_gain = 4  # Gain of the output stage on board
         conversion_factor = dac_out_vs_nominal_energy * 65536 / (v_ref_dac *
-                                                                 ouput_gain)
+                                                                 output_gain)
 
         energies_and_times = [energy, time, *more_steps]
         if len(more_steps) % 2 != 0:
