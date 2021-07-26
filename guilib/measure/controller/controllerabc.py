@@ -48,6 +48,7 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
     _mandatory_settings = [
         ('controller', 'serial_port_class'),
         ]
+    controller_busy = qtc.pyqtSignal(bool)
 
     def __init__(self, settings=None, port_name='', sets_energy=False):
         """Initialize the controller instance."""
@@ -64,7 +65,6 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
         # in the measurement cycle can be done.
         self.__busy = False
 
-
     @property
     def busy(self):
         """Return whether the controller is busy."""
@@ -79,7 +79,11 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
         is_busy : bool
             True if the controller is busy
         """
-        self.__busy = bool(is_busy)
+        was_busy = self.__busy
+        is_busy = bool(is_busy)
+        if was_busy is not is_busy:
+            self.__busy = is_busy
+            self.controller_busy.emit(self.busy)
 
     @property
     def serial(self):
