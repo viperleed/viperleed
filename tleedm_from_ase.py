@@ -39,11 +39,15 @@ def main():
     rp = Rparams()  # only needed formally, no function here
 
     # some simple manipulation to make the slab conform to standards:
-    # switch b and c
-    slab.ucell = np.diag(np.diag(slab.ucell)[[0, 2, 1]])
-    for at in slab.atlist:
-        at.pos[[1, 2]] = at.pos[[2, 1]]
-    slab.getCartesianCoordinates(updateOrigin=True)
+    # # switch b and c
+    # --> needed only for evolutionary runs  and 4x1_SrTiO3_pristine
+    #     4x1_SrTiO3_perturbed. Newer slabs are already correct.
+    if (ind_label.startswith("4x1_SrTiO3_perturbed")
+            or ind_label.startswith("4x1_SrTiO3_pristine")):
+        slab.ucell = np.diag(np.diag(slab.ucell)[[0, 2, 1]])
+        for at in slab.atlist:
+            at.pos[[1, 2]] = at.pos[[2, 1]]
+        slab.getCartesianCoordinates(updateOrigin=True)
 
     # cut below c = 0.4
     slab.atlist = [at for at in slab.atlist if at.pos[2] > 0.4]
