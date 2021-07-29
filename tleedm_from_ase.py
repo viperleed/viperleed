@@ -57,7 +57,7 @@ def main():
     # a_bulk_experiment = 3.905           # SrTiO3 bulk
     # a_bulk_dft = 16.0542637142856996/4  # b/4 for the 4x1
     # slab.ucell *= a_bulk_experiment / a_bulk_dft
-    # slab.getCartesianCoordinates()
+    # slab.getCartesianCoordinates(updateOrigin=True)
 
     # # test: output POSCAR, just to check
     # writeCONTCAR(slab, filename='POSCAR_turned_cut')
