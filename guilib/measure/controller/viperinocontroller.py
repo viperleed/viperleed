@@ -63,7 +63,6 @@ class ViPErinoController(MeasureController):
         if sets_energy == True:
             self.begin_prepare_todos[
                 'set_energy'
-                # 'set_energy(self.__energies[0], self.__settle_times[0])'
                 ] = True
         self.continue_prepare_todos['start_autogain'] = True
 
@@ -173,15 +172,10 @@ class ViPErinoController(MeasureController):
         """
         pc_set_up_adcs = self.__settings.get('available_commands',
                                              'PC_SET_UP_ADCS')
-        arduino_config = self.__settings['iv_movie_configuration']
-        # TODO: How to get proper section? maybe as a string in settings?
-        message = []
-        measurement_n = int(arduino_config[
-                            'measurement_counter']).to_bytes(2, sign)
-        message.append(measurement_n[0])
-        message.append(measurement_n[1])
-        for key in ('adc0_channel', 'adc1_channel'):
-            message.append(int(arduino_config[key]))
+        num_meas_to_average = self.__settings.getint(
+                                'measurement_settings', 'num_meas_to_average'
+                                ).to_bytes(2, 'big')
+        message = [*num_meas_to_average, *self.__adc_channels[:2]]
         send_to_arduino([pc_set_up_adcs], message)
 
     def get_hardware(self):
@@ -216,21 +210,19 @@ class ViPErinoController(MeasureController):
         calibrate them. This function has to be run at least once
         after starting the micro controller. It will store all of
         the necessary calibration data on the micro controller
-        itself. It is only done for the channels selected in the
-        settings. If the controller is trying to measure channels
-        that have not been calibrated yet an error will occur.
+        itself. It is only done for the channels selected. If the
+        controller is trying to measure channels that have not been
+        calibrated yet an error will occur.
 
         Returns
         -------
         None.
         """
+        
         pc_calibration = self.__settings.get('available_commands',
                                              'PC_CALIBRATION')
-        arduino_config = self.__settings['iv_movie_configuration']
-        # TODO: How to get proper section? maybe as a string in settings?
-        message = []
-        for key in ('update_rate', 'adc0_channel', 'adc1_channel'):
-            message.append(int(arduino_config[key]))
+        update_rate = self.__settings.getint('controller', 'update_rate')
+        message = [update_rate, *self.__adc_channels[:2]]
         send_to_arduino([pc_calibration], message)
 
     def receive_measurements(self, receive):
@@ -239,6 +231,11 @@ class ViPErinoController(MeasureController):
         Append measurements to the according section. Done via the
         settings. The chosen ADC channels will determine which
         value was measured.
+
+        The receive parameter has to have the measurements listed
+        in the same order as the measurement devices are listed in
+        the controller configuration, otherwise the measurements
+        will not be saved in the correct section.
 
         Parameters
         ----------
@@ -249,10 +246,9 @@ class ViPErinoController(MeasureController):
         -------
         None.
         """
-        self.__measurements['nominal_energy'] = self.__energies[-1:]
-        self.__measurements[self.__adc_measurement_types[0]] = receive[0]
-        self.__measurements[self.__adc_measurement_types[1]] = receive[1]
-        self.__measurements['temperature'] = receive[2]
+        for i, measurement in enumerate(self.__adc_measurement_types):
+            if measurement is not None:
+                self.__measurements[measurement] = receive[i]
         self.ready()
 
     def measure_now(self):
@@ -288,9 +284,9 @@ class ViPErinoController(MeasureController):
     def what_to_measure(self, requested):
         """Decide what to measure.
 
-        Receive requested measurement types from MeasurementABC 
+        Receive requested measurement types from MeasurementABC
         class, check if request is valid and set channels
-        accordingly. 
+        accordingly.
 
         Parameters
         ----------
@@ -311,8 +307,8 @@ class ViPErinoController(MeasureController):
         if len(requested) > n_devices:
             emit_error(self, ViPErinoErrors.TOO_MANY_MEASUREMENT_TYPES)
         for request in requested:
-            for i, measuement_device in enumerate(measurement_devices):
-                if request in measuement_device:
+            for i, measurement_device in enumerate(measurement_devices):
+                if request in measurement_device:
                     if self.__adc_measurement_types[i] is not None:
                         emit_error(self,
                                    ViPErinoErrors.OVERLAPPING_MEASUREMENTS)
@@ -323,4 +319,3 @@ class ViPErinoController(MeasureController):
                     break
             else:
                 emit_error(self, ViPErinoErrors.INVALID_REQUEST)
-        # TODO: Emission of data still happens non-modular unlike the check above.
