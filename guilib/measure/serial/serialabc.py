@@ -16,7 +16,7 @@ can also happens in a separate QThread to prevent stalling the
 Graphical User Interface.
 """
 
-from abc import abstractmethod  # ABCMeta, 
+from abc import abstractmethod  # ABCMeta,
 from configparser import ConfigParser
 
 from PyQt5 import (QtCore as qtc,
@@ -98,7 +98,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
     data_received = qtc.pyqtSignal(object)
     serial_busy = qtc.pyqtSignal(bool)
     about_to_trigger = qtc.pyqtSignal()
-    
+
     _mandatory_settings = [
             ('serial_port_settings', 'MSG_END'),
             ('serial_port_settings', 'BYTE_ORDER', ('big', 'little'))
@@ -286,7 +286,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         This will disconnect an already-open port, but will not
         connect to the port with the new_settings. Explicitly
         use .connect() after changing port settings.
-        
+
         Settings are loaded only if they are valid. Otherwise
         the previous settings stay in effect.
 
@@ -353,7 +353,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         if new_settings is None:
             emit_error(self, ExtraSerialErrors.MISSING_SETTINGS)
             return
-            
+
         new_settings, invalid = config_has_sections_and_options(
             self,
             new_settings,
@@ -364,7 +364,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
 
         if invalid:
             return
-        
+
         self.__serial_settings = new_settings
         self.__port.close()
 

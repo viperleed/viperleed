@@ -59,11 +59,13 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
     # The reimplementation may introduce more/other keys.
     # See ViPErinoController for an example on how to do this.
     plot_info = defaultdict(list)
-    plot_info['nominal_energies'] = ['eV', 'lin']
+    plot_info['nominal_energy'] = ['eV', 'lin']
     plot_info['I0'] = ['uA', 'lin']
-    plot_info['measured_energies'] = ['eV', 'lin']
+    plot_info['measured_energy'] = ['eV', 'lin']
     plot_info['elapsed_time'] = ['ms', 'lin']
-    plot_info['aux0'] = ['V', 'log']
+    plot_info['Isample'] = ['V', 'log']
+    plot_info['temperature'] = ('°C', 'lin')
+    plot_info['cold_junction'] = ('°C', 'lin')
 
     def __init__(self, measurement_settings=None, primary_controller=None,
                  controllers=None, cameras=None):
@@ -480,7 +482,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         
         In order to know if the first preparation step has
         been done, the controller_busy must be connected and
-        returned as soon as all points in the prepare_to_dos_1
+        returned as soon as all points in the begin_prepare_todos
         dictionary have been executed.
         
         Before the second step starts, this functions is

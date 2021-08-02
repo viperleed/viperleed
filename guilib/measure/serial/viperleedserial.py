@@ -94,7 +94,7 @@ class ViPErLEEDSerial(SerialABC):
         self.__last_request_sent = ''
         self.__measurements = []
         self.__is_continuous_mode = False
-        
+
         self._mandatory_settings.extend((
             ('hardware_bits',),
             ('available_commands',),
@@ -102,7 +102,7 @@ class ViPErLEEDSerial(SerialABC):
             ('error_bytes',),
             ('controller', 'FIRMWARE_VERSION')
             ))
-        
+
         super().__init__(port_name=port_name, settings=settings)
 
     def decode(self, message):
