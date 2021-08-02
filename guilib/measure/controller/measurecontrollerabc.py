@@ -48,12 +48,12 @@ class MeasureController(ControllerABC):
         # They must contain all functions the MeasureController has to call
         # in the order they have to be called to bring the controller into
         # a state ready for measurements.
-        # prepare_to_dos_1 contains everything that has to be done before
+        # begin_prepare_todos contains everything that has to be done before
         # the starting energy has been set.
-        # prepare_to_dos_2 contains everything that has to be done after
+        # continue_prepare_todos contains everything that has to be done after
         # the starting energy has been set.
-        self.prepare_to_dos_1 = defaultdict(bool)
-        self.prepare_to_dos_2 = defaultdict(bool)
+        self.begin_prepare_todos = defaultdict(bool)
+        self.continue_prepare_todos = defaultdict(bool)
 
         # Connect data_received signal from the serial to
         # the receive_measurements function in this class.
@@ -69,27 +69,6 @@ class MeasureController(ControllerABC):
         # tuple used to store the times sent
         # by the measurementABC class.
         self.__settle_times = []
-
-    def handle_do_measurement(self, energy, *other_data, **kwargs):
-        """Handle the do measurement command.
-
-        Decide what to do depending on the settings of
-        the controller.
-
-        Returns
-        -------
-        None.
-        """
-        # TODO: move to subclass?
-        self.busy = True
-        # TODO: other parameters not documented and not used
-        if self.sets_energy:
-            energies_and_times = [energy, *other_data]
-            self.set_energy(self.true_energy_to_setpoint(energy))
-        # TODO: fix energy setpoint function
-        else:
-            # TODO: delay by time from configuration
-            self.measure_now()
 
     @abstractmethod
     def abort(self):
@@ -128,10 +107,11 @@ class MeasureController(ControllerABC):
         """
         return
 
+    # @qtc.pyqtSlot(bool)
     def begin_preparation(self, busy):
         """Prepare the controller for a measurement.
 
-        The prepare_to_dos_1 dictionary used in this method
+        The begin_prepare_todos dictionary used in this method
         must be reimplemented in subclasses. The
         reimplementation should call functions that take the
         settings property derived from the configuration file
@@ -153,31 +133,31 @@ class MeasureController(ControllerABC):
         -------
         None.
         """
-        if not busy:
-            next_to_do = None
-            for key, to_do in self.prepare_to_dos_1.items():
-                if not to_do:
-                    continue
-                next_to_do = key
-                break
+        if busy:
+            return
 
-            if next_to_do:
-                self.prepare_to_dos_1[next_to_do] = False
-                if next_to_do == 'self.set_energy':
-                    next_to_do(self.true_energy_to_setpoint(
-                                self.__energies))
-                    # TODO: fix this ^
-                else:
-                    next_to_do()
-                return
-            self.serial.serial_busy.disconnect()
-            self.busy = False
+        next_to_do = None
+        for key, to_do in self.begin_prepare_todos.items():
+            if not to_do:
+                continue
+            next_to_do = getattr(self, key)
+            break
+
+        if next_to_do:
+            self.begin_prepare_todos[next_to_do] = False
+            if next_to_do is self.set_energy:
+                next_to_do(self.__energies, self.__settle_times)
+            else:
+                next_to_do()
+            return
+        self.serial.serial_busy.disconnect()
+        self.busy = False
 
     # @qtc.pyqtSlot(bool)
     def continue_preparation(self, busy):
         """Prepare the controller for a measurement.
 
-        The prepare_to_dos_2 dictionary used in this method
+        The continue_prepare_todos dictionary used in this method
         must be reimplemented in subclasses. The
         reimplementation should call functions that take the
         settings property derived from the configuration file
@@ -201,14 +181,14 @@ class MeasureController(ControllerABC):
         """
         if not busy:
             next_to_do = None
-            for key, to_do in self.prepare_to_dos_2.items():
+            for key, to_do in self.continue_prepare_todos.items():
                 if not to_do:
                     continue
                 next_to_do = key
                 break
 
             if next_to_do:
-                self.prepare_to_dos_2[next_to_do] = False
+                self.continue_prepare_todos[next_to_do] = False
                 next_to_do()
                 return
             self.serial.serial_busy.disconnect()
@@ -231,11 +211,6 @@ class MeasureController(ControllerABC):
         settings can be used to determine to which section of
         the data_points library the measurement should be
         appended to.
-
-        After the measurements have been processed, the
-        function has to set the measurements_received flag to
-        True and check if the next measurement can start via
-        the ready_for_next_measurement function.
 
         Parameters
         ----------
@@ -320,8 +295,8 @@ class MeasureController(ControllerABC):
     def trigger_begin_preparation(self, energy, time):
         """Trigger the first step in the preparation for measurements.
 
-        Set self.busy to true, reset all prepare_to_dos_1 and
-        start first step of the preparation.
+        Set self.busy to true, reset all begin_prepare_todos
+        and start first step of the preparation.
 
         Parameters
         ----------
@@ -337,10 +312,10 @@ class MeasureController(ControllerABC):
         None.
         """
         self.busy = True
-        self.__energies = energy
-        self.__settle_times = time
-        for key in self.prepare_to_dos_1:
-            self.prepare_to_dos_1[key] = True
+        self.__energies = [energy]
+        self.__settle_times = [time]
+        for key in self.begin_prepare_todos:
+            self.begin_prepare_todos[key] = True
         self.serial.serial_busy.connect(self.begin_preparation,
                                         type=qtc.Qt.UniqueConnection)
         self.begin_preparation(False)
@@ -348,16 +323,43 @@ class MeasureController(ControllerABC):
     def trigger_continue_preparation(self):
         """Trigger the second step in the preparation for measurements.
 
-        Set self.busy to true, reset all prepare_to_dos_2 and
-        start second step of the preparation.
+        Set self.busy to true, reset all continue_prepare_todos
+        and start second step of the preparation.
 
         Returns
         -------
         None.
         """
         self.busy = True
-        for key in self.prepare_to_dos_2:
-            self.prepare_to_dos_2[key] = True
+        for key in self.continue_prepare_todos:
+            self.continue_prepare_todos[key] = True
         self.serial.serial_busy.connect(self.continue_preparation,
                                         type=qtc.Qt.UniqueConnection)
         self.continue_preparation(False)
+
+    @abstractmethod
+    def what_to_measure(self, requested):
+        """Decide what to measure.
+
+        This method must be reimplimented in subclasses. It
+        should take requested measurement types as strings
+        from the MeasurementABC class (i.e.: I0, Isample, ...),
+        check if those types are available and not conflicting
+        with each other and decide which channels to use.
+
+        Addionally class attributes should be implemented
+        in subclasses which remember which measurements were
+        requested in order to use them afterwards when creating
+        dictionaries to return data.
+        
+        Parameters
+        ----------
+        requested : list of strings
+            Contains all of the requested
+            measurement types.
+            
+        Returns
+        -------
+        None.
+        """
+        return
