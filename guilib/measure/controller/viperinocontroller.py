@@ -12,12 +12,36 @@ This module contains the definition of the ViPErinoController class
 which gives commands to the ViPErinoSerialWorker class.
 """
 
+import ast
 from collections import defaultdict
 
 # ViPErLEED modules
 from viperleed.guilib.measure.controller.\
      measurecontrollerabc import MeasureController
+from viperleed.guilib.measure.hardwarebase import (ViPErLEEDErrorEnum,
+                                                   emit_error)
 
+
+class ViPErinoErrors(ViPErLEEDErrorEnum):
+    TOO_MANY_MEASUREMENT_TYPES = (150,
+                                  "The ViPErinoController can only handle "
+                                  "as many measurement requests as there are "
+                                  "ADCs installed but more have been "
+                                  "requested.")
+    OVERLAPPING_MEASUREMENTS = (151,
+                                "At least two requested measurements concern "
+                                "the same ADC. Consider installing another "
+                                "controller to do both measurements in "
+                                "parallel.")
+    INVALID_REQUEST = (152,
+                       "A measurement type has been requested that is not "
+                       "implemented on the controller side. Maybe "
+                       "implemented type has not been added in the "
+                       "controller configuration file.")
+    REQUESTED_ADC_OFFLINE = (153,
+                             "Requested measurement type needs associated "
+                             "ADC to be available for measurements but it is "
+                             "not.")
 
 
 class ViPErinoController(MeasureController):
@@ -25,8 +49,8 @@ class ViPErinoController(MeasureController):
 
     def __init__(self, settings=None, port_name='', sets_energy=False):
         """Initialise ViPErino controller object.
-        
-        Initialise prepare_to_dos dictionaries. The key is a
+
+        Initialise prepare_todos dictionaries. The key is a
         string that is used to call a function, the value is a
         boolean that is used to determine if the connected
         function has already been called.
@@ -42,10 +66,10 @@ class ViPErinoController(MeasureController):
                 # 'set_energy(self.__energies[0], self.__settle_times[0])'
                 ] = True
         self.continue_prepare_todos['start_autogain'] = True
-        
-        self.__adc0_measurement_type = ''
-        self.__adc1_measurement_type = ''
-        
+
+        self.__adc_measurement_types = []
+        self.__adc_channels = []
+
         self.__hardware = defaultdict()
 
         super().__init__(settings=settings, port_name=port_name,
@@ -53,7 +77,7 @@ class ViPErinoController(MeasureController):
 
     def set_sets_energy(self, energy_setter):
         """Set the serial to controls energy True/False.
-        
+
         Set the boolean and update the begin_prepare_todos
         dictionary accordingly.
 
@@ -63,8 +87,7 @@ class ViPErinoController(MeasureController):
             True if the controller sets the energy.
         """
         super().set_sets_energy(energy_setter)
-        # TODO: change key
-        key = 'set_energy(self.__energies[0], self.__settle_times[0])'
+        key = 'set_energy'
         if self.__sets_energy == True:
             self.begin_prepare_todos[key] = True
         else:
@@ -97,7 +120,7 @@ class ViPErinoController(MeasureController):
         energies_and_times: array of integers
         """
         # TODO: multiple steps
-        v_ref_dac = self.settings.getfloat('measurement_settings',
+        v_ref_dac = self.__settings.getfloat('measurement_settings',
                                            'v_ref_dac')
 
         dac_out_vs_nominal_energy = 10/1000  # 10V / 1000 eV
@@ -156,11 +179,11 @@ class ViPErinoController(MeasureController):
         measurement_n = int(arduino_config[
                             'measurement_counter']).to_bytes(2, sign)
         message.append(measurement_n[0])
-        message.append(measurement_n[1])       
+        message.append(measurement_n[1])
         for key in ('adc0_channel', 'adc1_channel'):
             message.append(int(arduino_config[key]))
         send_to_arduino([pc_set_up_adcs], message)
-        
+
     def get_hardware(self):
         """Get hardware connected to micro controller.
 
@@ -227,11 +250,10 @@ class ViPErinoController(MeasureController):
         None.
         """
         self.__measurements['nominal_energy'] = self.__energies[-1:]
-        self.__measurements[self.__adc0_measurement_type] = receive[0]
-        self.__measurements[self.__adc1_measurement_type] = receive[1]
+        self.__measurements[self.__adc_measurement_types[0]] = receive[0]
+        self.__measurements[self.__adc_measurement_types[1]] = receive[1]
         self.__measurements['temperature'] = receive[2]
-        self.data_ready.emit(self.__measurements)
-        self.__measurements.clear()
+        self.ready()
 
     def measure_now(self):
         """Take a measurement.
@@ -263,3 +285,42 @@ class ViPErinoController(MeasureController):
         """
         return
 
+    def what_to_measure(self, requested):
+        """Decide what to measure.
+
+        Receive requested measurement types from MeasurementABC 
+        class, check if request is valid and set channels
+        accordingly. 
+
+        Parameters
+        ----------
+        requested : list of strings
+            Contains all of the requested
+            measurement types.
+
+        Returns
+        -------
+        None.
+        """
+        measurement_devices = ast.literal_eval(
+            self.__settings['controller']['measurement_devices']
+            )
+        n_devices = len(measurement_devices)
+        self.__adc_measurement_types = [None]*n_devices
+        self.__adc_channels = [0]*n_devices
+        if len(requested) > n_devices:
+            emit_error(self, ViPErinoErrors.TOO_MANY_MEASUREMENT_TYPES)
+        for request in requested:
+            for i, measuement_device in enumerate(measurement_devices):
+                if request in measuement_device:
+                    if self.__adc_measurement_types[i] is not None:
+                        emit_error(self,
+                                   ViPErinoErrors.OVERLAPPING_MEASUREMENTS)
+                    self.__adc_measurement_types[i] = request
+                    self.__adc_channels[i] = self.__settings.getint(
+                        'controller', request
+                        )
+                    break
+            else:
+                emit_error(self, ViPErinoErrors.INVALID_REQUEST)
+        # TODO: Emission of data still happens non-modular unlike the check above.
