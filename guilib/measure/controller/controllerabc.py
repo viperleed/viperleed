@@ -90,13 +90,11 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
         """Return the serial port instance used."""
         return self.__serial
 
-    @property
-    def sets_energy(self):
+    def __get_sets_energy(self):
         """Return whether the controller sets the energy."""
         return self.__sets_energy
 
-    @sets_energy.setter
-    def sets_energy(self, energy_setter):
+    def set_sets_energy(self, energy_setter):
         """Set the serial to controls energy True/False.
 
         Parameters
@@ -105,6 +103,8 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
             True if the controller sets the energy.
         """
         self.__sets_energy = bool(energy_setter)
+
+    sets_energy = property(__get_sets_energy, set_sets_energy)
 
     def __get_settings(self):
         """Return the current settings used as a ConfigParser."""
@@ -198,8 +198,8 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
         """
         return
 
-    def true_energy_to_setpoint(self, energy):
-        """Take requested energy and convert it to the energy to set.
+    def true_energy_to_setpoint(self, energies):
+        """Take requested energies and convert them to the energies to set.
 
         The conversion is done by reading a polynomial from
         the config files which is a function of the true energy
@@ -207,15 +207,16 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
 
         Parameters
         ----------
-        energy : float
-            Requested energy in eV
+        energies : list of floats
+            Requested energies in eV
 
         Returns
         -------
-        energy : float
-            Energy to set in eV in order
-            to get requested energy
+        new_energies : list of floats
+            Energies to set in eV in order
+            to get requested energies.
         """
+        new_energies = []
         calibration_coef = ast.literal_eval(
             self.settings['energy_calibration']['coefficients']
             )
@@ -224,4 +225,7 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
             )
         calibration = Polynomial(calibration_coef, domain=calibration_domain,
                                  window=calibration_domain)
-        return calibration(energy)
+        for energy in energies:
+            new_energies.append(calibration(energy))
+
+        return new_energies
