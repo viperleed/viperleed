@@ -60,7 +60,7 @@ class ViPErinoController(MeasureController):
         self.begin_prepare_todos['get_hardware'] = True
         self.begin_prepare_todos['calibrate_adcs'] = True
         self.begin_prepare_todos['set_up_adcs'] = True
-        if sets_energy == True:
+        if sets_energy:
             self.begin_prepare_todos[
                 'set_energy'
                 ] = True
@@ -72,7 +72,7 @@ class ViPErinoController(MeasureController):
         self.__hardware = defaultdict()
 
         super().__init__(settings=settings, port_name=port_name,
-                     sets_energy=sets_energy)
+                         sets_energy=sets_energy)
 
     def set_sets_energy(self, energy_setter):
         """Set the serial to controls energy True/False.
@@ -87,7 +87,7 @@ class ViPErinoController(MeasureController):
         """
         super().set_sets_energy(energy_setter)
         key = 'set_energy'
-        if self.__sets_energy == True:
+        if self.__sets_energy:
             self.begin_prepare_todos[key] = True
         else:
             if key in self.begin_prepare_todos:
@@ -105,22 +105,26 @@ class ViPErinoController(MeasureController):
         Parameters
         ----------
         energy: float
-            True electron energy in electronvolts (i.e., electrons
-            coming out of the gun will have this energy)
+            True electron energy in electronvolts.
         time: integer
             Interval in milliseconds that the controller will wait
-            before deeming the LEED optics stable at energy.
+            before deeming the LEED optics stable at set energy.
         *more_steps: float and integer (alternating)
             The first element in each pair is again one energy, the
-            second element the time interval to wait.
+            second element the time interval to wait. Multiple steps
+            can be executed quickly after each other. The last step
+            will be the final energy that is set and should have
+            the longest waiting time to allow the electronics to
+            stabilize.
 
         Returns
         -------
         energies_and_times: array of integers
         """
-        # TODO: multiple steps
+        pc_set_voltage = self.__settings.get('available_commands',
+                                             'PC_SET_VOLTAGE')
         v_ref_dac = self.__settings.getfloat('measurement_settings',
-                                           'v_ref_dac')
+                                             'v_ref_dac')
 
         dac_out_vs_nominal_energy = 10/1000  # 10V / 1000 eV
         output_gain = 4  # Gain of the output stage on board
@@ -143,6 +147,10 @@ class ViPErinoController(MeasureController):
             if tmp_energy <= 0:
                 tmp_energy = 0
             energies_and_times[2*i] = tmp_energy
+        message = []
+        for value in energies_and_times:
+            message.extend(value.to_bytes(2, 'big'))
+        self.__serial.send_to_arduino([pc_set_voltage], message)
 
     def start_autogain(self):
         """Determine starting gain.
@@ -176,7 +184,7 @@ class ViPErinoController(MeasureController):
                                 'measurement_settings', 'num_meas_to_average'
                                 ).to_bytes(2, 'big')
         message = [*num_meas_to_average, *self.__adc_channels[:2]]
-        send_to_arduino([pc_set_up_adcs], message)
+        self.__serial.send_to_arduino([pc_set_up_adcs], message)
 
     def get_hardware(self):
         """Get hardware connected to micro controller.
@@ -223,11 +231,12 @@ class ViPErinoController(MeasureController):
                                              'PC_CALIBRATION')
         update_rate = self.__settings.getint('controller', 'update_rate')
         message = [update_rate, *self.__adc_channels[:2]]
-        send_to_arduino([pc_calibration], message)
+        self.__serial.send_to_arduino([pc_calibration], message)
 
     def receive_measurements(self, receive):
         """Receive measurements from the serial.
 
+        For measurements:
         Append measurements to the according section. Done via the
         settings. The chosen ADC channels will determine which
         value was measured.
@@ -236,16 +245,28 @@ class ViPErinoController(MeasureController):
         in the same order as the measurement devices are listed in
         the controller configuration, otherwise the measurements
         will not be saved in the correct section.
+        
+        For hardware:
+        Save received data into a dictionary to store hardware
+        configuration for future use. Hardware is only sent after
+        the get_hardware function has been executed and before the
+        calibration is done.
 
         Parameters
         ----------
-        receive : list
+        receive : list or dict
             Data received from the serial.
+            list if a measurement has been received
+            dict if the hardware configuration has been received
 
         Returns
         -------
         None.
         """
+        if self.begin_prepare_todos['get_hardware'] == False and
+                self.begin_prepare_todos['calibrate_adcs'] == True:
+            self.__hardware = receive
+        # TODO: Check if hardware can end up in measurements.
         for i, measurement in enumerate(self.__adc_measurement_types):
             if measurement is not None:
                 self.__measurements[measurement] = receive[i]
@@ -256,7 +277,7 @@ class ViPErinoController(MeasureController):
 
         Measure without setting the energy. This function is
         supposed to be used in time resolved measurements and
-        by secondary controllers which will not set the enery.
+        by secondary controllers which will not set the energy.
 
         If the controller already automatically takes a measurement
         after setting an energy it can be a no op.
@@ -266,20 +287,37 @@ class ViPErinoController(MeasureController):
         None.
         """
         pc_measure_only = self.__settings.get('available_commands',
-                                               'PC_MEASURE_ONLY')
+                                              'PC_MEASURE_ONLY')
         self.__serial.send_message([pc_measure_only])
 
-    def abort(self):
-        """Abort current task.
+    def abort_and_reset(self):
+        """Abort current task and reset the controller.
 
-        Abort what the controller is doing right now and
-        return to waiting for further instructions.
+        Abort what the controller is doing right now, reset
+        it and return to waiting for further instructions.
 
         Returns
         -------
         None.
         """
-        return
+        pc_reset = self.__settings.get('available_commands',
+                                              'PC_RESET')
+        self.__serial.send_message([pc_reset])
+
+        self.begin_prepare_todos['get_hardware'] = True
+        self.begin_prepare_todos['calibrate_adcs'] = True
+        self.begin_prepare_todos['set_up_adcs'] = True
+        if sets_energy:
+            self.begin_prepare_todos[
+                'set_energy'
+                ] = True
+        self.continue_prepare_todos['start_autogain'] = True
+
+        self.__adc_measurement_types = []
+        self.__adc_channels = []
+        self.__hardware = defaultdict()
+        self.__measurements = defaultdict(list)
+        self.__energies_and_times = []
 
     def what_to_measure(self, requested):
         """Decide what to measure.

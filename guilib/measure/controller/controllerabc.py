@@ -59,7 +59,7 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
         self.__settings = None
         self.__serial = None
 
-        self.set_settings(settings)
+        self.settings = settings
 
         # Is used to determine if the next step
         # in the measurement cycle can be done.
@@ -156,14 +156,14 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
     settings = property(__get_settings, set_settings)
 
     @abstractmethod
-    def set_energy(self, energy, *other_data, **kwargs):
+    def set_energy(self, energy, *other_data):
         """Set electron energy on LEED controller.
 
         This method must be reimplemented in subclasses. The
         reimplementation should take the energy value in eV
         and other optional data needed by the serial interface
         and turn them into a message that can be sent via
-        self.serial.send_message(message, *other_messages).
+        self.__serial.send_message(message, *other_messages).
 
         Conversion from the desired, true electron energy (i.e.,
         the energy that the electrons will have when exiting the
@@ -185,12 +185,6 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
             be passed from the GUI during normal operation.
             Hence, it can only be used during self-calibration
             of the controller.
-        **kwargs
-            Other keyword arguments to set the energy. These
-            keyword arguments will NOT be passed from the GUI
-            during normal operation. Hence, they should only
-            be only be used during self-calibration of the
-            controller.
 
         Returns
         -------
