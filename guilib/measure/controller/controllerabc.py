@@ -198,8 +198,8 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
         """
         return
 
-    def true_energy_to_setpoint(self, energies):
-        """Take requested energies and convert them to the energies to set.
+    def true_energy_to_setpoint(self, energy):
+        """Take requested energy and convert it to the energy to set.
 
         The conversion is done by reading a polynomial from
         the config files which is a function of the true energy
@@ -207,16 +207,15 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
 
         Parameters
         ----------
-        energies : list of floats
-            Requested energies in eV
+        energy : float
+            Requested energy in eV
 
         Returns
         -------
-        new_energies : list of floats
-            Energies to set in eV in order
-            to get requested energies.
+        new_energy : float
+            Energy to set in eV in order
+            to get requested energy.
         """
-        new_energies = []
         calibration_coef = ast.literal_eval(
             self.settings['energy_calibration']['coefficients']
             )
@@ -225,7 +224,6 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
             )
         calibration = Polynomial(calibration_coef, domain=calibration_domain,
                                  window=calibration_domain)
-        for energy in energies:
-            new_energies.append(calibration(energy))
+        new_energy = calibration(energy)
 
-        return new_energies
+        return new_energy
