@@ -478,7 +478,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         during the first preparation step as the starting 
         energy is set in it. Since the primary controller
         will return measurements after setting an energy,
-        the data_ready signal has to be disconnected aswell.
+        the data_ready signal has to be disconnected as well.
         
         In order to know if the first preparation step has
         been done, the controller_busy must be connected and

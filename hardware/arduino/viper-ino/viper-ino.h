@@ -73,7 +73,7 @@ union floatOrBytes{
 #define ERROR_NO_ERROR            0   // No error
 #define ERROR_SERIAL_OVERFLOW     1   // Hardware overflow of Arduino serial
 #define ERROR_MSG_TOO_LONG        2   // Too many characters in message from PC
-#define ERROR_MSG_INCONSITENT     3   // Message received from PC is inconsistent. Probably corrupt.
+#define ERROR_MSG_INCONSISTENT     3   // Message received from PC is inconsistent. Probably corrupt.
 #define ERROR_MSG_UNKNOWN         4   // Unknown request from PC
 #define ERROR_MSG_DATA_INVALID    5   // Request from PC contains invalid information
 #define ERROR_NEVER_CALIBRATED    6   // The ADCs have never been calibrated before since bootup

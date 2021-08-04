@@ -242,7 +242,7 @@ void readFromSerial() {
     -------------
     STATE_ERROR : ERROR_SERIAL_OVERFLOW
         In case the Arduino serial buffer reaches its limit
-    STATE_ERROR : ERROR_MSG_INCONSITENT
+    STATE_ERROR : ERROR_MSG_INCONSISTENT
         In case the number of bytes read does not fit with the
         number expected from the first byte after MSG_START
 
@@ -338,7 +338,7 @@ bool decodeAndCheckMessage(){
     -------------
     (unchanged)
         if message is acceptable
-    STATE_ERROR : ERROR_MSG_INCONSITENT
+    STATE_ERROR : ERROR_MSG_INCONSISTENT
         if the number of decoded bytes does not match the
         length expected from the value that came with the
         message itself
@@ -373,7 +373,7 @@ bool decodeAndCheckMessage(){
     
     // Check that the number of bytes decoded fits
     if (msgLength != numDecodedBytes){
-        raise(ERROR_MSG_INCONSITENT);
+        raise(ERROR_MSG_INCONSISTENT);
         return false;
         }
 

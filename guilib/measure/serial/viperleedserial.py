@@ -459,9 +459,9 @@ class ViPErLEEDSerial(SerialABC):
             # PC_OK byte
             if len(message) == 1:
                 if message.decode() == pc_ok:
-                    self.busy = False
                     if self.__last_request_sent == pc_set_voltage:
                         self.about_to_trigger.emit()
+                    self.busy = False
             # Hardware config and measure values are both 4 bytes long.
             # Both commands are differentiated by the __last_request_sent
             # attribute and get processed accordingly. If continuous mode
@@ -469,9 +469,11 @@ class ViPErLEEDSerial(SerialABC):
             # sent, nothing is done with it.
             elif len(message) == 4:
                 if self.__last_request_sent == pc_configuration:
-                    self.busy = False
                     firmware, hardware = self.__firmware_and_hardware(message)
-                    self.data_received.emit((firmware, hardware))
+                    # self.data_received.emit((firmware, hardware))
+                    # Firmware already checked on serial side.
+                    self.data_received.emit(hardware)
+                    self.busy = False
                 elif self.__last_request_sent in (pc_set_voltage,
                                                   pc_measure_only):
                     self.__measurements.append(self.__bytes_to_float(message))

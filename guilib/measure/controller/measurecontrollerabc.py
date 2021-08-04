@@ -63,20 +63,17 @@ class MeasureController(ControllerABC):
         # about_to_trigger signal.
         self.serial.about_to_trigger.connect(self.about_to_trigger.emit)
 
-        # tuple used to store the energies sent
-        # by the measurementABC class.
-        self.__energies = []
-        # tuple used to store the times sent
-        # by the measurementABC class.
-        self.__settle_times = []
+        # tuple used to store the energies and times sent
+        # by the MeasurementABC class in alternating order.
+        self.__energies_and_times = []
 
     @abstractmethod
-    def abort(self):
-        """Abort current task.
+    def abort_and_reset(self):
+        """Abort current task and reset the controller.
 
         This method must be reimplemented in subclasses.
-        Abort what the controller is doing right now and
-        return to waiting for further instructions.
+        Abort what the controller is doing right now, reset
+        it and return to waiting for further instructions.
 
         Returns
         -------
@@ -146,9 +143,10 @@ class MeasureController(ControllerABC):
         if next_to_do:
             self.begin_prepare_todos[next_to_do] = False
             if next_to_do is self.set_energy:
-                next_to_do(self.__energies, self.__settle_times)
+                next_to_do(self.__energies_and_times)
             else:
                 next_to_do()
+            next_to_do()
             return
         self.serial.serial_busy.disconnect()
         self.busy = False
@@ -247,7 +245,7 @@ class MeasureController(ControllerABC):
             self.__measurements[key] = []
 
     @abstractmethod
-    def set_energy(self, energy, *other_data, **kwargs):
+    def set_energy(self, energy, *other_data):
         """Set electron energy on LEED controller.
 
         This method must be reimplemented in subclasses. The
@@ -279,12 +277,6 @@ class MeasureController(ControllerABC):
             be passed from the GUI during normal operation.
             Hence, it can only be used during self-calibration
             of the controller.
-        **kwargs
-            Other keyword arguments to set the energy. These
-            keyword arguments will NOT be passed from the GUI
-            during normal operation. Hence, they should only
-            be only be used during self-calibration of the
-            controller.
 
         Returns
         -------
@@ -292,7 +284,7 @@ class MeasureController(ControllerABC):
         """
         return
 
-    def trigger_begin_preparation(self, energy, time):
+    def trigger_begin_preparation(self, energies_and_times):
         """Trigger the first step in the preparation for measurements.
 
         Set self.busy to true, reset all begin_prepare_todos
@@ -300,20 +292,16 @@ class MeasureController(ControllerABC):
 
         Parameters
         ----------
-        energy : float
-            Starting energy the controller will set if
-            sets_energy is true.
-        time : int
-            Settle time after the setting the starting
-            energy
+        energies_and_times
+            Starting energies and times the controller will 
+            use if sets_energy is true.
 
         Returns
         -------
         None.
         """
         self.busy = True
-        self.__energies = [energy]
-        self.__settle_times = [time]
+        self.__energies_and_times = energies_and_times
         for key in self.begin_prepare_todos:
             self.begin_prepare_todos[key] = True
         self.serial.serial_busy.connect(self.begin_preparation,
@@ -341,13 +329,13 @@ class MeasureController(ControllerABC):
     def what_to_measure(self, requested):
         """Decide what to measure.
 
-        This method must be reimplimented in subclasses. It
+        This method must be reimplemented in subclasses. It
         should take requested measurement types as strings
         from the MeasurementABC class (i.e.: I0, Isample, ...),
         check if those types are available and not conflicting
         with each other and decide which channels to use.
 
-        Addionally class attributes should be implemented
+        Additionally class attributes should be implemented
         in subclasses which remember which measurements were
         requested in order to use them afterwards when creating
         dictionaries to return data.

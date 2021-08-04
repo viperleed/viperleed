@@ -59,7 +59,7 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
         self.__settings = None
         self.__serial = None
 
-        self.set_settings(settings)
+        self.settings = settings
 
         # Is used to determine if the next step
         # in the measurement cycle can be done.
@@ -156,14 +156,14 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
     settings = property(__get_settings, set_settings)
 
     @abstractmethod
-    def set_energy(self, energy, *other_data, **kwargs):
+    def set_energy(self, energy, *other_data):
         """Set electron energy on LEED controller.
 
         This method must be reimplemented in subclasses. The
         reimplementation should take the energy value in eV
         and other optional data needed by the serial interface
         and turn them into a message that can be sent via
-        self.serial.send_message(message, *other_messages).
+        self.__serial.send_message(message, *other_messages).
 
         Conversion from the desired, true electron energy (i.e.,
         the energy that the electrons will have when exiting the
@@ -185,12 +185,6 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
             be passed from the GUI during normal operation.
             Hence, it can only be used during self-calibration
             of the controller.
-        **kwargs
-            Other keyword arguments to set the energy. These
-            keyword arguments will NOT be passed from the GUI
-            during normal operation. Hence, they should only
-            be only be used during self-calibration of the
-            controller.
 
         Returns
         -------
@@ -198,8 +192,8 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
         """
         return
 
-    def true_energy_to_setpoint(self, energies):
-        """Take requested energies and convert them to the energies to set.
+    def true_energy_to_setpoint(self, energy):
+        """Take requested energy and convert it to the energy to set.
 
         The conversion is done by reading a polynomial from
         the config files which is a function of the true energy
@@ -207,16 +201,15 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
 
         Parameters
         ----------
-        energies : list of floats
-            Requested energies in eV
+        energy : float
+            Requested energy in eV
 
         Returns
         -------
-        new_energies : list of floats
-            Energies to set in eV in order
-            to get requested energies.
+        new_energy : float
+            Energy to set in eV in order
+            to get requested energy.
         """
-        new_energies = []
         calibration_coef = ast.literal_eval(
             self.settings['energy_calibration']['coefficients']
             )
@@ -225,7 +218,6 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
             )
         calibration = Polynomial(calibration_coef, domain=calibration_domain,
                                  window=calibration_domain)
-        for energy in energies:
-            new_energies.append(calibration(energy))
+        new_energy = calibration(energy)
 
-        return new_energies
+        return new_energy
