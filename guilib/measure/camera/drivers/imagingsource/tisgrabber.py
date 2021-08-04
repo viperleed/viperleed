@@ -26,6 +26,8 @@ from ctypes import (Structure as CStructure, WinDLL, CFUNCTYPE, cast as c_cast,
 import os
 from pathlib import Path
 import sys
+import time  # TEMP
+
 import numpy as np
 
 from viperleed.guilib.measure.camera.drivers.imagingsource.winerrors import (
@@ -176,8 +178,7 @@ GrabberHandlePtr.__repr__ = lambda self: f"GrabberHandlePtr({self.contents})"
 # Prototype of frame-ready callbacks (best to use as a decorator):
 FrameReadyCallbackType = CFUNCTYPE(
     c_void_p,          # return type
-    # GrabberHandlePtr,  # HGRABBER; funnily was c_int!
-    c_int,
+    GrabberHandlePtr,  # HGRABBER
     POINTER(c_ubyte),  # pointer to first byte of image data
     c_ulong,           # current frame number
     py_object          # other data (python) passed along
@@ -251,7 +252,7 @@ class  WindowsCamera:
     def create_grabber(self):
         """Return a new grabber handle.
 
-        Unused grabber handles should be release by calling
+        Unused grabber handles should be released by calling
         IC_ReleaseGrabber(). There is no need to release a handle
         when closing a device, as handles can be reused.
 
@@ -262,7 +263,13 @@ class  WindowsCamera:
         """
         return self._dll_create_grabber()
 
-    # NB: IC_ListDevices does not return unique names
+    @property
+    def exposure(self):
+        """Return the exposure time in milliseconds."""
+        as_int = self.get_vcd_property("Exposure", "Value", method=int)
+        as_float = self.get_vcd_property("Exposure", "Value", method=float)
+        print(f"as_int={as_int/1e3} ms, as_float={as_float*1e3} ms")
+
     @property
     def devices(self):
         """Return the unique names of available devices.
@@ -272,55 +279,94 @@ class  WindowsCamera:
         unique_names : list
             List of unique device names, each as a string.
         """
+        # This is not great, as the loop is done in python and requires
+        # multiple interactions with the camera, but IC_ListDevices does
+        # not return unique names (i.e., no serial number info).
         names = (self.__unique_name_from_index(i)
                  for i in range(self.__n_devices))
         return [n for n in names if n]
 
-    _dll_get_frame_rate =  _dll.IC_GetFrameRate
-    _dll_get_frame_rate.restype = c_float
-    _dll_get_frame_rate.argtypes = (GrabberHandlePtr,)
-    _dll_get_frame_rate.errcheck = check_dll_return('>0')
+    _dll_get_img_readout_rate =  _dll.IC_GetFrameRate
+    _dll_get_img_readout_rate.restype = c_float
+    _dll_get_img_readout_rate.argtypes = (GrabberHandlePtr,)
+    _dll_get_img_readout_rate.errcheck = check_dll_return('>0')
 
     @property
-    def frame_rate(self):
-        """Return the frame rate of the current device.
+    def image_readout_rate(self):
+        """Return the rate at which images are read from the device.
 
-        The device should be open and in live mode.
+        Notice that this corresponds to the actual frame rate (i.e.,
+        number of frames delivered per second) only when triggering
+        is OFF. With triggering 'on' this is the inverse of the time
+        it takes to digitize the pixel intensity data and store it
+        in the internal memory of the camera. This time should be
+        added to the exposure time to determine how long it takes to
+        get frames delivered after a trigger pulse is received.
 
         Returns
         -------
-        frame_rate : float
-            A positive frame rate if frame rate is supported,
+        image_readout_rate : float
+            A positive number if image readout rate is supported,
             zero otherwise.
         """
-        return self._dll_get_frame_rate(self.__handle)
+        return self._dll_get_img_readout_rate(self.__handle)
 
-    _dll_set_frame_rate = _dll.IC_SetFrameRate
-    _dll_set_frame_rate.argtypes = GrabberHandlePtr, c_float
-    _dll_set_frame_rate.errcheck = check_dll_return(
-        # NOT_AVAILABLE would be an error, but NOT_IN_LIVE_MODE
-        # seems more reasonable to return. Perhaps better check
-        # live mode explicitly and leave NOT_AVAILABLE?
-        exclude_errors=('NOT_AVAILABLE', 'NO_PROPERTYSET',
+    _dll_set_img_readout_rate = _dll.IC_SetFrameRate
+    _dll_set_img_readout_rate.argtypes = GrabberHandlePtr, c_float
+    _dll_set_img_readout_rate.errcheck = check_dll_return(
+        exclude_errors=('NOT_IN_LIVE_MODE', 'NO_PROPERTYSET',
                         'DEFAULT_WINDOW_SIZE_SET', 'WRONG_XML_FORMAT',
                         'WRONG_INCOMPATIBLE_XML',
                         'NOT_ALL_PROPERTIES_RESTORED', 'DEVICE_NOT_FOUND')
         )
 
-    @frame_rate.setter
-    def frame_rate(self, rate):
-        """Set a new frame rate.
+    @image_readout_rate.setter
+    def image_readout_rate(self, rate):
+        """Set a new rate for reading out images.
 
-        A new frame rate can not be set while in live mode. Call
-        stop_live(), then try again.
+        Notice that this corresponds to the actual frame rate (i.e.,
+        number of frames delivered per second) only when triggering
+        is OFF. With triggering 'on' this is the inverse of the time
+        it takes to digitize the pixel intensity data and store it
+        in the internal memory of the camera. This time should be
+        added to the exposure time to determine how long it takes to
+        get frames delivered after a trigger pulse is received. When
+        in triggered mode, it is thus advisable to set the readout
+        rate as high as possible to limit dead time.
+
+        A new image readout rate can not be set while in live mode.
+        Call stop_live(), then try again.
 
         Parameters
         ----------
-        frame_rate : float
-            The new frame rate.
+        rate : float
+            The new image readout rate.
         """
-        # TODO: if live, stop, then set, then restart
-        self._dll_set_frame_rate(self.__handle, rate)
+        was_running = self.is_running
+        if was_running:
+            self.stop()
+        self._dll_set_img_readout_rate(self.__handle, rate)
+        if was_running:
+            self.start()
+
+    @property
+    def image_readout_rate_range(self):
+        """Return the minimum and maximum available image readout rates."""
+        # This is a bit of a workaround: IC_GetAvailableFrameRates
+        # seems not to return the correct range. Will instead set
+        # unreasonably small and unreasonably large frame rates,
+        # and see what the camera actually sets internally.
+        old_image_readout_rate = self.image_readout_rate
+
+        self.image_readout_rate = 0
+        min_rate = self.image_readout_rate
+
+        self.image_readout_rate = 100000000
+        max_rate = self.image_readout_rate
+
+        self.image_readout_rate = old_image_readout_rate
+
+        return min_rate, max_rate
 
     _dll_get_image_description = _dll.IC_GetImageDescription
     _dll_get_image_description.errcheck = check_dll_return()
@@ -349,11 +395,6 @@ class  WindowsCamera:
         ImagingSourceError
             If the format returned is unknown.
         """
-        # TODO: this returns an ERROR if the sink format was changed
-        # but no image was ever snapped since then. The way to go:
-        # check if it errors out with return == 0. If this is the case,
-        # .start_live(), .stop_live(), then call again. The second time
-        # it should not fail if the camera is fine.
         width, height = c_long(), c_long()
         bits_per_pixel, color_format_c = c_int(), c_int()
 
@@ -411,19 +452,21 @@ class  WindowsCamera:
     def sink_format(self):
         """Return the color format of the sink type currently set.
 
-        The sink type describes the format of the buffer where snapped
-        images are stored. The method returns a valid value only after
-        IC_PreprareLive() or start_live() are called. Notice that the
-        sink type may differ from the video format.
+        The sink type describes the format of the buffer where images
+        are stored internally in the camera. The method returns a valid
+        value only after IC_PreprareLive() or start() are called.
+        Notice that the sink type may differ from the video format.
 
         Returns
         -------
-        color_format : int
-            One of the values in SinkFormat. Returns !!UNCLEAR WHAT!!
-            if not in live mode or if an error occurred.
+        color_format : SinkFormat
+            The sink format currently in use.
+
+        Raises
+        ------
+        ImagingSourceError
+            If the value returned is not a valid SinkFormat
         """
-        # TODO: needs live mode? NO, requires the camera to have acquired
-        # at least one frame. Before that, it errors out returning NONE.
         sink_format_c = self._dll_get_sink_format(self.__handle)
         try:
             sink_format = SinkFormat.get(sink_format_c)
@@ -431,13 +474,11 @@ class  WindowsCamera:
             raise ImagingSourceError(err.args[0] + " received",
                                      err_code=DLLReturns.INVALID_SINK_FORMAT)
         except ImagingSourceError:
-            if sink_format_c is SinkFormat.NONE.value:
-                # Camera was not yet placed in live mode: sink
-                # format is unavailable until one image has been
-                # snapped. Do this, then try again.
-                self.start_live()
-                # self.snap_live_image()
-                self.stop_live()
+            if sink_format_c == SinkFormat.NONE.value:
+                # Camera was not yet started: sink format is unavailable.
+                # Start/stop, then try again.
+                self.start()
+                self.stop()
 
                 sink_format_c = self._dll_get_sink_format(self.__handle)
                 try:
@@ -475,9 +516,27 @@ class  WindowsCamera:
             One of the values in SinkFormat. Note that UYVY can
             only be used in conjunction with a UYVY video format
         """
-        # TODO: errors out when running live --> stop/set/start
+        was_triggered = self.trigger_enabled
+        was_running = self.is_running
+        if was_running:
+            self.stop()
         sink_format = SinkFormat.get(sink_format)
         self._dll_set_sink_format(self.__handle, sink_format.value)
+
+        # Prepare camera to allow triggering. When the sink format
+        # has been changed, one needs to snap an image. This is done
+        # automatically when __set_frame_acquisition_mode is set to SNAP
+        self.__set_frame_acquisition_mode(StreamMode.SNAP)
+
+        # Reset stream mode to continuous as then it is just a
+        # matter of having enable_trigger(True/False) for getting
+        # single frames delivered upon request [start('triggered')
+        # + send_software_trigger] or a continuous stream of
+        # images [start('live')].
+        self.trigger_enabled = was_triggered
+        self.__set_frame_acquisition_mode(StreamMode.CONTINUOUS)
+        if was_running:
+            self.start()
 
     @property
     def vcd_properties(self):
@@ -510,12 +569,15 @@ class  WindowsCamera:
         height = self._dll_video_format_height(self.__handle)
         return width, height
 
+    # TODO: perhaps I will make this private, as I want to
+    # use it only to determine the minimum and maximum image
+    # sizes in the two directions.
     _dll_list_video_formats = _dll.IC_ListVideoFormats
     _dll_list_video_formats.argtypes = GrabberHandlePtr, c_char_p, c_int
     _dll_list_video_formats.errcheck = check_dll_return(">=0")
 
     @property
-    def default_video_formats(self):
+    def __default_video_formats(self):
         """Return a list of the default video formats available.
 
         This property is especially useful to determine the minimum
@@ -541,6 +603,11 @@ class  WindowsCamera:
                    if f[0] != b'\x00']
         return formats
 
+    # There seems to be a C++ class method get_active_video_format
+    # for CaptureDevice, which actually ends up calling the
+    # implementation from the specific camera type (e.g., in <arv.h>).
+    # However, there seems to be no way to call it via the DLL.
+
     _dll_set_video_format = _dll.IC_SetVideoFormat
     _dll_set_video_format.argtypes = GrabberHandlePtr, c_char_p
     _dll_set_video_format.errcheck = check_dll_return()
@@ -553,7 +620,11 @@ class  WindowsCamera:
         Parameters
         ----------
         video_format : str, bytes, or bytearray
-            The desired video format.
+            The desired video format. Should be in the form
+            '<format> (<width>x<height>)', where <format> is
+            one of the names in SinkFormat, and <width> and
+            <height> are the number of pixels requested along
+            the two directions.
 
         Returns
         -------
@@ -571,7 +642,6 @@ class  WindowsCamera:
         # the sink format just set.
         _ = self.sink_format
 
-
     # TODO: check which errors
     _dll_open_by_unique_name = _dll.IC_OpenDevByUniqueName
     _dll_open_by_unique_name.argtypes = GrabberHandlePtr, c_char_p
@@ -585,7 +655,9 @@ class  WindowsCamera:
         before the device is open to retrieve the unique name.
 
         The available VCD properties of the device are also stored,
-        and can be retrieved with .vcd_properties
+        and can be retrieved with .vcd_properties. The newly open
+        device is set to deliver frames continuously to the frame-
+        ready callback.
 
         Parameters
         ----------
@@ -596,100 +668,76 @@ class  WindowsCamera:
                                       _to_bytes(unique_name))
         self.__find_vcd_properties()
 
-    _dll_snap_image = _dll.IC_SnapImage
-    _dll_snap_image.argtypes = GrabberHandlePtr, c_int
-    _dll_snap_image.errcheck = check_dll_return(
-        include_errors=('ERROR', 'NOT_IN_LIVE_MODE')
-        )
+        # Set stream mode always to continuous as then it is just a
+        # matter of having enable_trigger(True/False) for getting
+        # single frames delivered upon request [start('triggered')
+        # + send_software_trigger()] or a continuous stream of
+        # images [start('live')].
+        self.__set_frame_acquisition_mode(StreamMode.CONTINUOUS)
 
-    # TODO: Would be nicer for it to actually return a np.array already
-    # I could then call __get_image_ptr in here rather than having
-    # it as a separate method
-    def snap_live_image(self, timeout=2000):
-        """Snap an image.
+    _dll_is_running = _dll.IC_IsLive
+    _dll_is_running.argtypes = (GrabberHandlePtr,)
+    _dll_is_running.errcheck = check_dll_return(">=0")
 
-        The video capture device must be set to live mode and a sink
-        type has to be set before this call. The format of the snapped
-        images depends on the selected sink type.
-
-        Parameters
-        ----------
-        timeout : int, optional
-            Time interval in milliseconds after which the device will
-            time out. A value of -1 corresponds to no time-out. Default
-            is 2000, i.e., 2 sec.
-
-        Returns
-        -------
-        None
-        """
-        self._dll_snap_image(self.__handle, timeout)
+    @property
+    def is_running(self):
+        """Returns whether the camera is currently running."""
+        return bool(self._dll_is_running(self.__handle))
 
     _dll_start_live = _dll.IC_StartLive
     _dll_start_live.argtypes = GrabberHandlePtr, c_int
     _dll_start_live.errcheck = check_dll_return()
 
-    def start_live(self, show_video=False):
-        """Start camera in live mode.
+    def start(self, mode=None, show_video=False):
+        """Start camera.
+
+        After starting, one has to wait a little time before frames
+        can be retrieved. A similar wait is necessary after triggering
+        and before calling stop(), otherwise frames are not delivered.
+
+        When .trigger_enabled == False, it takes 1/image_readout_rate
+        to deliver a frame; when .trigger_enabled == True, one needs
+        trigger_delay + exposure + 1/image_readout_rate_max before a
+        frame is delivered. A good minimum time for triggering
+        is (exposure + 1/image_readout_rate_max)*1.05 [less than this
+        will miss some frames].
 
         Parameters
         ----------
+        mode : {None, 'triggered', 'live'}, optional
+            Which mode should the camera be started in. 'triggered'
+            automatically enables triggering, 'live' will stream
+            frames every 1/image_readout_rate seconds. If None,
+            the mode will be derived from whether triggering is
+            enabled or not. Default is None.
         show_video : bool, optional
             Do not show a video if False, show one if True. Frames
             will be delivered in any case (i.e., callbacks can be
-            used). Default is False.
+            used). The value of this argument is used only when
+            mode == 'live'; no video is shown in 'triggered' mode.
+            Default is False.
 
         Returns
         -------
         ret_val : int
             SUCCESS on success, ERROR if something went wrong.
         """
+        if mode is None:
+            mode = 'triggered' if self.trigger_enabled else 'live'
+        if mode == 'triggered':
+            show_video = False
+            self.trigger_enabled = True
+        else:
+            self.trigger_enabled = False
         self._dll_start_live(self.__handle, bool(show_video))
 
     _dll_stop_live = _dll.IC_StopLive
     _dll_stop_live.argtypes = (GrabberHandlePtr,)
     _dll_stop_live.errcheck = check_dll_return()
 
-    def stop_live(self):
-        """Stop live mode."""
+    def stop(self):
+        """Stop the camera."""
         self._dll_stop_live(self.__handle)
-
-    _dll_show_device_selection_dialog = _dll.IC_ShowDeviceSelectionDialog
-    _dll_show_device_selection_dialog.restype = GrabberHandlePtr
-    _dll_show_device_selection_dialog.argtypes = (GrabberHandlePtr,)
-
-    # TODO: implemented just for testing. will be later removed.
-    # TODO: looks like it should never error out.
-    def temp_selection_dialog(self):
-        """Show a device-selection dialog.
-
-        This dialog allows to select the video capture device, the
-        video norm, video format, input channel and frame rate.
-
-        Returns
-        -------
-        None.
-        """
-        self.__handle = self._dll_show_device_selection_dialog(self.__handle)
-
-    # TODO: implemented just for testing. will be later removed.
-    # Dialog looks nice. Perhaps we should mock it in Qt and make
-    # it look more or less like this for all cameras.
-    _dll_show_property_dialog = _dll.IC_ShowPropertyDialog
-    _dll_show_property_dialog.restype = c_int  # was GrabberHandlePtr
-    _dll_show_property_dialog.argtypes = (GrabberHandlePtr,)
-    _dll_show_property_dialog.errcheck = check_dll_return()
-
-    def temp_property_dialog(self):
-        """Show the VCDProperty dialog.
-
-        Requires a video-capture device to be open.
-
-        Returns
-        -------
-        None.
-        """
-        self._dll_show_property_dialog(self.__handle)
 
     _dll_unique_name_from_index = _dll.IC_GetUniqueNamefromList
     _dll_unique_name_from_index.restype = c_char_p
@@ -699,10 +747,11 @@ class  WindowsCamera:
     def __unique_name_from_index(self, index):
         """Get unique name of a device given its index.
 
-        The unique device name consist of the device name and its
-        serial number. It allows to differentiate between more devices
-        of the same type connected to the computer. The unique device
-        name is passed to the method open_by_unique_name().
+        The unique device name consist of the device name, any given
+        name (in square brackets) and its serial number. It allows to
+        differentiate between more devices of the same type connected
+        to the computer. The unique device name is passed to the method
+        open().
 
         Parameters
         ----------
@@ -720,23 +769,6 @@ class  WindowsCamera:
         if name is not None:
             return name.decode()
         return ''
-
-    _dll_get_image_ptr = _dll.IC_GetImagePtr
-    _dll_get_image_ptr.restype = c_void_p  # void to also allow None
-    _dll_get_image_ptr.argtypes = (GrabberHandlePtr,)
-    _dll_get_image_ptr.errcheck = check_dll_return('pointer')
-
-    def __get_image_ptr(self):
-        """Get a pointer to the pixel data of the last snapped image.
-
-        Returns
-        -------
-        pointer : ctypes.c_void_p
-            A pointer to the the first byte of the bottommost line
-            of the image (images are saved from bottom to top!).
-            Returns None in case of error.
-        """
-        return self._dll_get_image_ptr(self.__handle)
 
     # ###############   DISCOVERY OF VCD PROPERTIES   #################
     # Three functions, one for getting the name of properties, one
@@ -794,8 +826,9 @@ class  WindowsCamera:
     # #####################    VCD PROPERTIES    ######################
     #
     # The way properties are 'set', 'gotten' or 'range-gotten' is
-    # always specified via the <method> keyword argument. Values
-    # given are adjusted accordingly.
+    # always derived from their native 'interface', unless there
+    # are multiple options, in which case the <method> kwarg is
+    # used.
 
     __vcd_prop_checker = check_dll_return(
         include_errors=(
@@ -850,7 +883,6 @@ class  WindowsCamera:
         GrabberHandlePtr, c_char_p, c_char_p, c_int
         )
 
-    # TODO: fix all docstrings
     def get_vcd_property(self, property_name, element_name=None, method=None):
         """Return the current value of a property/element pair.
 
@@ -1044,8 +1076,11 @@ class  WindowsCamera:
                              f"elements: {[e for e in vcd_prop]}. Pick one.")
         elif len(vcd_prop) == 1:
             elem_name = tuple(vcd_prop)[0]
-        vcd_elem = vcd_prop[elem_name]
-        print(vcd_elem, tuple(vcd_elem)[0])
+        vcd_elem = vcd_prop.get(elem_name, None)
+        if vcd_elem is None:
+            raise ValueError(f"VCD element {elem_name} not available for "
+                             f"property {prop_name} (or misspelled). Use "
+                             "self.vcd_properties to see available properties")
 
         # Pick an interface (== method)
         if len(vcd_elem) > 1 and not method:
@@ -1079,19 +1114,14 @@ class  WindowsCamera:
             self.__handle, _to_bytes(property_name), _to_bytes(element_name)
             )
 
-    # The py_object at the end is the same that will later be passed
-    # on to the frame-ready callback as the last argument.
     _dll_set_frame_ready_callback = _dll.IC_SetFrameReadyCallback
     _dll_set_frame_ready_callback.errcheck = check_dll_return()
+    # The py_object at the end is the same that will later be passed
+    # on to the frame-ready callback as the last argument.
     _dll_set_frame_ready_callback.argtypes = (
         GrabberHandlePtr, FrameReadyCallbackType, py_object
         )
 
-    # TODO: it is not entirely clear how the callback should actually look.
-    # printing stuff caused snap to fail; passing a list in which stuff
-    # is written failed. Perhaps I need a deeper structure than a list,
-    # like a dict? Then the CallbackUserData class from Bernhard may make
-    # some sense to exist.
     def set_frame_ready_callback(self, on_frame_ready, py_obj_for_callback):
         """Define the frame-ready callback function.
 
@@ -1115,15 +1145,16 @@ class  WindowsCamera:
                     Same object as below
         py_obj_for_callback : object
             The python object that is passed as the last argument to
-            on_frame_ready.
+            on_frame_ready. If the callback is to modify this, it is
+            necessary to pass a dictionary-like object (or a class
+            instance with attributes).
 
         Raises
         -------
         TypeError
             If on_frame_ready is not callable
         ValueError
-            If it looks like on_frame_ready was not decorated
-            with @FrameReadyCallbackType.
+            If on_frame_ready was not decorated with @FrameReadyCallbackType.
         """
         # Make sure the frame-ready callback has been wrapped correctly
         if not hasattr(on_frame_ready, '__call__'):
@@ -1145,34 +1176,51 @@ class  WindowsCamera:
                 err_code=DLLReturns.REQUIRES_REBOOT
                 )
 
-    _dll_set_continuous_mode = _dll.IC_SetContinuousMode
-    _dll_set_continuous_mode.argtypes = GrabberHandlePtr, c_int
-    _dll_set_continuous_mode.errcheck = check_dll_return()
+    _dll_set_frame_acquisition_mode = _dll.IC_SetContinuousMode
+    _dll_set_frame_acquisition_mode.argtypes = GrabberHandlePtr, c_int
+    _dll_set_frame_acquisition_mode.errcheck = check_dll_return()
 
-    # TODO: it is unclear whether this will return frames while in live
-    # mode, and especially WHERE
-    def set_frame_acquisition_mode(self, mode):
+    def __set_frame_acquisition_mode(self, mode):
         """Set the mode for returning images.
 
-        This method will fail if the device is currently streaming
-        in live-view mode.
+        For correct operation, 'triggered' mode requires mode to be
+        StreamMode.CONTINUOUS, .trigger_enabled == True, then start()
+        after setting the mode and enabling the trigger [alternatively,
+        start('triggered')]. For 'live' mode, both CONTINUOUS and
+        SNAP work fine, but .trigger_enabled must be False [this is
+        automatic if start('live') is called].
 
         Parameters
         ----------
-        mode : StreamMode
+        mode : StreamMode or str
             If CONTINUOUS, each frame acquired by the camera
             will be passed to the frame-ready callback function
             automatically. If SNAP, images are returned only
-            when snap_live_image() is called.
+            when IC_SnapImage() is called.
         """
         try:
             mode = StreamMode(mode)
         except ValueError as err:
             raise ValueError(f"Invalid stream mode {mode}")
-        self._dll_set_continuous_mode(self.__handle, mode.value)
 
-    # TODO: signature was wrong: c_void_p instead of GrabberHandlePtr,
-    # and also had a c_char_p that does not fit with the .h
+        was_running = self.is_running
+        if was_running:
+            self.stop()
+
+        self._dll_set_frame_acquisition_mode(self.__handle, mode.value)
+
+        # Snap once (if needed) to update the internal
+        # settings of the camera
+        if mode is StreamMode.SNAP:
+            # The next line also sets self.trigger_enabled to False
+            self.start('live')
+            self._dll.IC_SnapImage(self.__handle, 2000)
+            self.stop()
+
+        # Restart in the previous mode
+        if was_running:
+            self.start()
+
     _dll_close_device = _dll.IC_CloseVideoCaptureDevice
     _dll_close_device.restype = None  # Returns void
     _dll_close_device.argtypes = (GrabberHandlePtr,)
@@ -1182,69 +1230,89 @@ class  WindowsCamera:
         self._dll_close_device(self.__handle)
         self.__vcd_properties = {}
         # Would be nicer to have it set by the device lost callback,
-        # as this does not prevent one from 
+        # as this does not prevent one from closing/reopening and
+        # trying to set a new callback. It is unclear whether the
+        # problem with setting the callback twice is only there
+        # when running from the terminal.
         self.__has_frame_ready_callback = False
 
-    _dll_is_trigger_available = _dll.IC_IsTriggerAvailable
-    _dll_is_trigger_available.argtypes = (GrabberHandlePtr,)
-    _dll_is_trigger_available.errcheck = (
-        check_dll_return(exclude_errors=('ERROR',))  # == not available
-        )
+    @property
+    def trigger_enabled(self):
+        """Return whether triggering is currently enabled."""
+        return self.get_vcd_property('Trigger', 'Enable') is SwitchProperty.ON
 
-    # TODO: is this only hardware trigger, or also software?
-    def is_trigger_available(self):
-        """Return whether the device supports triggering."""
-        available = self._dll_is_trigger_available(self.__handle)
-        return available == DLLReturns.SUCCESS.value
-
-    _dll_enable_trigger = _dll.IC_EnableTrigger
-    _dll_enable_trigger.argtypes = GrabberHandlePtr, c_int
-    _dll_enable_trigger.errcheck = check_dll_return()
-
-    def enable_trigger(self, enabled=True):
+    @trigger_enabled.setter
+    def trigger_enabled(self, enabled):
         """Enable or disable capability to respond to a trigger signal.
 
         Trigger signals may either be via hardware or via software.
+        This method also sets the image_readout_rate to its maximum
+        value when enabling the trigger. After disabling the trigger,
+        one should explicitly set the desired image_readout_rate.
 
         Parameters
         ----------
-        enabled : bool, optional
+        enabled : bool
             If True, the device will afterwards be responsive to a
-            (hardware or software) trigger signal. Default is True.
+            (hardware or software) trigger signal.
 
         Returns
         -------
         None
         """
-        _enabled = SwitchProperty(bool(enabled)).value
-        self._dll_enable_trigger(self.__handle, _enabled)
+        self.set_vcd_property('Trigger', 'Enable', bool(enabled))
 
-    _dll_send_software_trigger = _dll.IC_SoftwareTrigger
-    _dll_send_software_trigger.argtypes = (GrabberHandlePtr,)
-    _dll_send_software_trigger.errcheck = check_dll_return()
+        # When using triggering, it is a good idea to set the image
+        # readout rate to the maximum, as its inverse just adds
+        # as an offset to the actual time it takes to get a frame.
+        # Setting an unreasonably large value will internally set
+        # the maximum allowed image_readout_rate.
+        if enabled:
+            self.image_readout_rate = 100000
+
+    @property
+    def trigger_burst_count(self):
+        """Return the number of frames in a trigger burst."""
+        return self.get_vcd_property("Trigger", "Burst Count")
+
+    @trigger_burst_count.setter
+    def trigger_burst_count(self, n_frames):
+        """Set the number of frames in a trigger burst.
+
+        Notice that when giving a trigger burst, the time to
+        receive each frame still amounts to (a bit less than)
+        (.exposure + 1/.image_readout_rate)*1.1.
+        It should also be noted that when one needs many frames
+        with relatively short exposure times, some frames ARE
+        DROPPED. Some examples (DMK33GX265 -- if more than MAX
+        frames, the rest is missing):
+        - 2ms exposure, 1536x1536 --> MAX 23 frames
+        - 10ms exposure, 1536x1536 --> MAX 23 frames
+        - 50ms exposure, 1536x1536 --> MAX 30 frames
+        - 100ms exposure, 1536x1536 --> MAX 209 frames
+        - 50ms exposure, 544x544 --> MAX > 400 frames
+        - 5ms exposure, 544x544 --> MAX 131 frames
+        This seems not related to the callback function, as
+        working in continuous mode without trigger always gives
+        the correct number of frames (with the same callback)
+
+        Parameters
+        ----------
+        n_frames : int
+            Number of frames that should be used in a trigger
+            burst. Notice that if trigger_burst_count is
+            changed after send_software_trigger() and before
+            all frames are acquired, the updated number of
+            frames will be honored.
+        """
+        self.set_vcd_property("Trigger", "Burst Count", n_frames)
+
+    # TODO: does is_trigger_available() [REMOVED] only check for hardware
+    # trigger, or also software?
 
     def send_software_trigger(self):
         """Trigger the camera now via software."""
-        self._dll_send_software_trigger(self.__handle)
-
-    _dll_get_trigger_modes = _dll.IC_GetTriggerModes
-    _dll_get_trigger_modes.argtypes = GrabberHandlePtr, c_char_p, c_int
-    _dll_get_trigger_modes.errcheck = check_dll_return('>=0')
-
-    @property
-    def available_trigger_modes(self):
-        """Return a list of trigger modes available (each a string)."""
-        # Perhaps this only refers to hardware trigger modes?
-        # I get 0 returned on the DMK 33GX265 [specs] 46910583
-        # while is_trigger_available() gives True
-        n_max_modes = 20
-        modes_c = ((c_char * 10) * n_max_modes)()
-        n_modes = self._dll_get_trigger_modes(
-            self.__handle, c_cast(modes_c, c_char_p), n_max_modes
-            )
-        # TODO: unclear how to read the modes.
-        print(modes_c)
-        # return [mi.value.decode() for mi in modes_c if mi.value]
+        self.trigger_vcd_property_once("Trigger", "Software Trigger")
 
     _dll_reset = _dll.IC_ResetProperties
     _dll_reset.argtypes = (GrabberHandlePtr,)

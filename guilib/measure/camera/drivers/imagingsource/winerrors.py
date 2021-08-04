@@ -67,7 +67,7 @@ def check_dll_return(success='int', include_errors=tuple(),
 
     def int_checker(result, func, args):
         """Check validity of the return of a int-returning function."""
-        print(f"{func.__name__}{args} returned {result}")
+        # print(f"{func.__name__}{args} returned {result}")
         if result in (DLLReturns.SUCCESS.value, *valid_returns):
             # All good
             return result
@@ -84,7 +84,7 @@ def check_dll_return(success='int', include_errors=tuple(),
 
     def pointer_checker(result, func, args):
         """Check that the return of the function is a valid pointer."""
-        print(f"{func.__name__}{args} returned {result}")
+        # print(f"{func.__name__}{args} returned {result}")
         if not result:
             # pointer to NULL
             raise ImagingSourceError(
@@ -95,7 +95,7 @@ def check_dll_return(success='int', include_errors=tuple(),
 
     def gt_checker(result, func, args):
         """Check that the return is larger than a limit."""
-        print(f"{func.__name__}{args} returned {result}")
+        # print(f"{func.__name__}{args} returned {result}")
         err_txt = f"{func.__name__}{args} returned {result} <= {limit}."
         err = errors.get(result, None)
         if err is not None:
@@ -106,7 +106,7 @@ def check_dll_return(success='int', include_errors=tuple(),
 
     def ge_checker(result, func, args):
         """Check that the return is larger or equal than a limit."""
-        print(f"{func.__name__}{args} returned {result}")
+        # print(f"{func.__name__}{args} returned {result}")
         err_txt = f"{func.__name__}{args} returned {result} < {limit}"
         err = errors.get(result, None)
         if err is not None:

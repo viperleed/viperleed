@@ -7,7 +7,6 @@
 #   NO    # int   IC_SetInputChannel(HGRABBER hGrabber, char *szChannel)
 #  maybe  # int   IC_PrepareLive(HGRABBER hGrabber, int iShow)
 #   NO    # int   IC_SuspendLive(HGRABBER hGrabber)
-#  maybe  # int   IC_IsLive(HGRABBER hGrabber)
 #  maybe  # int   IC_IsCameraPropertyAutoAvailable(HGRABBER hGrabber, CAMERA_PROPERTY iProperty)
 #  maybe  # int   IC_GetAutoCameraProperty(HGRABBER hGrabber, int iProperty, int *iOnOff)
 #  maybe  # int   IC_IsVideoPropertyAvailable(HGRABBER hGrabber, VIDEO_PROPERTY eProperty)
@@ -54,7 +53,7 @@
 #   NO    # int   IC_SetWhiteBalanceGreen(HGRABBER hGrabber, long Value)
 #   NO    # int   IC_SetWhiteBalanceBlue(HGRABBER hGrabber, long Value)
 #   NO?   # int   IC_FocusOnePush(HGRABBER hGrabber)
-#   YES   # int   IC_ShowInternalPropertyPage(HGRABBER hGrabber)
+#   NO    # int   IC_ShowInternalPropertyPage(HGRABBER hGrabber)
 #   NO    # int   IC_ResetUSBCam(HGRABBER hGrabber)
 #   NO    # int   IC_QueryPropertySet(HGRABBER hGrabber)
 #   NO    # COMMENTED OUT  int   IC_PropertySet_Set
@@ -89,7 +88,146 @@
 
 ######################## REMOVED FROM IMPLEMENTATION ##########################
 
+	_dll_show_device_selection_dialog = _dll.IC_ShowDeviceSelectionDialog
+    _dll_show_device_selection_dialog.restype = GrabberHandlePtr
+    _dll_show_device_selection_dialog.argtypes = (GrabberHandlePtr,)
 
+    # TODO: implemented just for testing. will be later removed.
+    # TODO: looks like it should never error out.
+    def temp_selection_dialog(self):
+        """Show a device-selection dialog.
+
+        This dialog allows to select the video capture device, the
+        video norm, video format, input channel and frame rate.
+
+        Returns
+        -------
+        None.
+        """
+        self.__handle = self._dll_show_device_selection_dialog(self.__handle)
+
+    # TODO: implemented just for testing. will be later removed.
+    # Dialog looks nice. Perhaps we should mock it in Qt and make
+    # it look more or less like this for all cameras.
+    _dll_show_property_dialog = _dll.IC_ShowPropertyDialog
+    _dll_show_property_dialog.restype = c_int  # was GrabberHandlePtr
+    _dll_show_property_dialog.argtypes = (GrabberHandlePtr,)
+    _dll_show_property_dialog.errcheck = check_dll_return()
+
+    def temp_property_dialog(self):
+        """Show the VCDProperty dialog.
+
+        Requires a video-capture device to be open.
+
+        Returns
+        -------
+        None.
+        """
+        self._dll_show_property_dialog(self.__handle)
+
+
+
+	# REMOVE snap_live_image() AS LONG AS ALL IS CAMERAS SUPPORT
+	# SOFTWARE TRIGGER, AS THERE IS ESSENTIALLY NO DIFFERENCE
+	# BETWEEN THE TWO. ALSO, IT MAKES OPERATION MUCH EASIER. ALSO,
+	# __get_image_ptr IS NOT NEEDED ANYMORE, AS THIS MAKES SENSE
+	# ONLY IF SNAPPING AN IMAGE IN StreamMode.SNAP.
+
+    _dll_snap_image = _dll.IC_SnapImage
+    _dll_snap_image.argtypes = GrabberHandlePtr, c_int
+    _dll_snap_image.errcheck = check_dll_return(
+        include_errors=('ERROR', 'NOT_IN_LIVE_MODE')
+        )
+
+    # TODO: Would be nicer for it to actually return a np.array already
+    # I could then call __get_image_ptr in here rather than having
+    # it as a separate method
+    def snap_live_image(self, timeout=2000):
+        """Snap an image.
+
+        The video capture device must be set to live mode and a sink
+        type has to be set before this call. The format of the snapped
+        images depends on the selected sink type.
+
+        Parameters
+        ----------
+        timeout : int, optional
+            Time interval in milliseconds after which the device will
+            time out. A value of -1 corresponds to no time-out. Default
+            is 2000, i.e., 2 sec.
+
+        Returns
+        -------
+        None
+        """
+        self._dll_snap_image(self.__handle, timeout)
+
+    _dll_get_image_ptr = _dll.IC_GetImagePtr
+    _dll_get_image_ptr.restype = c_void_p  # void to also allow None
+    _dll_get_image_ptr.argtypes = (GrabberHandlePtr,)
+    _dll_get_image_ptr.errcheck = check_dll_return('pointer')
+
+    def __get_image_ptr(self):
+        """Get a pointer to the pixel data of the last snapped image.
+
+        Returns
+        -------
+        pointer : ctypes.c_void_p
+            A pointer to the the first byte of the bottommost line
+            of the image (images are saved from bottom to top!).
+            Returns None in case of error.
+        """
+        return self._dll_get_image_ptr(self.__handle)
+
+
+	# Seems this is checking whether the camera supports HARDWARE triggering.
+	# Moved out, as if we go for hardware trigger, the camera will be
+	# controlled by the Controller class directly, and not in the Measurement.
+    _dll_is_trigger_available = _dll.IC_IsTriggerAvailable
+    _dll_is_trigger_available.argtypes = (GrabberHandlePtr,)
+    _dll_is_trigger_available.errcheck = (
+        check_dll_return(exclude_errors=('ERROR',))  # == not available
+        )
+
+    # TODO: is this only hardware trigger, or also software?
+    def is_trigger_available(self):
+        """Return whether the device supports triggering."""
+        available = self._dll_is_trigger_available(self.__handle)
+        return available == DLLReturns.SUCCESS.value
+
+	# Looks like these trigger modes thing is currently unsupported:
+	#    https://www.theimagingsource.com/support/documentation/
+	#            ic-aik-extension/prop_descFeatures_trigger_mode_strings.htm
+	_dll_get_trigger_modes = _dll.IC_GetTriggerModes
+    _dll_get_trigger_modes.argtypes = GrabberHandlePtr, c_char_p, c_int
+    _dll_get_trigger_modes.errcheck = check_dll_return('>=0')
+
+    @property
+    def available_trigger_modes(self):
+        """Return a list of trigger modes available (each a string)."""
+        # Perhaps this only refers to hardware trigger modes?
+        # I get 0 returned on the DMK 33GX265 [specs] 46910583
+        # while is_trigger_available() gives True
+        n_max_modes = 20
+        modes_c = ((c_char * 10) * n_max_modes)()
+        n_modes = self._dll_get_trigger_modes(
+            self.__handle, c_cast(modes_c, c_char_p), n_max_modes
+            )
+        # TODO: unclear how to read the modes.
+        print(modes_c)
+        # return [mi.value.decode() for mi in modes_c if mi.value]
+
+
+	# THESE TWO ARE DONE VIA VCD PROPERTIES
+    _dll_enable_trigger = _dll.IC_EnableTrigger
+    _dll_enable_trigger.argtypes = GrabberHandlePtr, c_int
+    _dll_enable_trigger.errcheck = check_dll_return()
+
+    _dll_send_software_trigger = _dll.IC_SoftwareTrigger
+    _dll_send_software_trigger.argtypes = (GrabberHandlePtr,)
+    _dll_send_software_trigger.errcheck = check_dll_return()
+
+	# NOT USEFUL SINCE WE CAN LIST ALL OF THE PROPERTIES
     _dll_is_property_available =  _dll.IC_IsPropertyAvailable
     _dll_is_property_available.argtypes = GrabberHandlePtr, c_char_p, c_char_p
     _dll_is_property_available.errcheck = check_dll_return(
@@ -325,8 +463,6 @@
     OpenVideoCaptureDevice.argtypes = GrabberHandlePtr, c_char_p
 
 
-	
-
 class CameraProperty(Enum):
     """Class holding possible camera properties.
 
@@ -557,8 +693,8 @@ class CameraProperty(Enum):
             NO_HANDLE (invalid grabber_handle).
         """
         return self._dll_n_video_formats(self.__handle)
-	
-	
+
+
     _dll_video_format_by_index = _dll.IC_GetVideoFormat
     _dll_video_format_by_index.restype = c_char_p
     _dll_video_format_by_index.argtypes = GrabberHandlePtr, c_int
