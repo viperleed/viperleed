@@ -1369,93 +1369,73 @@ void reset(){
 
 /** ---------------- FUNCTIONS CALLED WITHIN STATE HANDLERS ---------------- **/
 
+/** Returns a bit mask of which hardware was detected */
 uint16_t getHardwarePresent() {
-    /**
-    Identify which hardware configuration we have on the board.
-
-    The return value should be bitwise AND-ed with the *_PRESENT
-    (for ADCs, LM35 and relay) and *_CLOSED (jumpers only) constants
-
-    Hardware checks: ADCs, LM35, relay, jumpers
-
-    Returns
-    -------
-    2-byte bit mask in a uint16_t
-    */
-    uint16_t result = 0;
-
-    // (1) Check for ADCs
-    delay(10);    // Make sure that input lines have settled (10 ms)
-
-    // Trying to read a register (communication, but could
-    // be anything else) will give 0xff if the line is held
-    // high by the pull-ups on the MISO line or by the bus
-    // isolator. This means the ADC is not there, or it is not
-    // powered up (e.g., the external power supply is unplugged)
-    byte adc0comm = AD7705readCommRegister(CS_ADC_0, AD7705_CH0);
-    if (adc0comm != 0xff)
-        result |= ADC_0_PRESENT;
-    byte adc1comm = AD7705readCommRegister(CS_ADC_1, AD7705_CH0);
-    if (adc1comm != 0xff)
-        result |= ADC_1_PRESENT;
-
-    // (2) Check for LM35 temperature sensor: the analog voltage
-    // should be within the ADC range, and it should settle back
-    // to a similar value after shortly connecting to a pull-up
-    // resistor, then back to the LM35. In fact, since the LM35
-    // cannot sink more than about 1 uA, connecting to a pull-up
-    // resistor would drive the value high. Then, the value will
-    // stay high if there is no LM35 there.
-
-    // (2.1) Value before
-    pinMode(LM35_PIN, INPUT);
-    delay(10);    // Make sure the voltage has settled (10 ms)
-    uint16_t sensorValue1 = analogReadMedian(LM35_PIN);
-
-    // (2.2) Set pull-up resistor, and apply for 10 ms
-    pinMode(LM35_PIN, INPUT_PULLUP);
-    delay(10);
-
-    // (2.3) Reset for normal measurements, and measure again
-    pinMode(LM35_PIN, INPUT);
-    delay(10);    // Make sure the voltage has settled (10 ms)
-    uint16_t sensorValue2 = analogReadMedian(LM35_PIN);
-
-    // (2.4) check the values
-    if (sensorValue1 > 0 && sensorValue1 < LM35_MAX_ADU &&
-        sensorValue2 < LM35_MAX_ADU && abs(sensorValue2 - sensorValue1) < 10)
-        result |= LM35_PRESENT;
-
-    // (3) Check for relay present: if the relay is mounted, there
-    // should also be an external pull-up resistor soldered. This
-    // gives about 0.12 V at the pin, i.e. 48 ADUs, i.e., in between
-    // RELAY_MIN_ADU and RELAY_MAX_ADU
-    uint16_t sensorValue = analogReadMedian(RELAY_PIN);
-    // if (sensorValue > RELAY_MIN_ADU && sensorValue < RELAY_MIN_ADU)          // TODO: probably a bug here?? this goes well only if sensorValue == RELAY_MIN_ADU
-    if (sensorValue > RELAY_MIN_ADU && sensorValue < RELAY_MAX_ADU)             // TODO: check correct: Replaced the second RELAY_MIN_ADU with RELAY_MAX_ADU
-        result |= RELAY_PRESENT;
-    else {
-        // (4) Check jumper at JP3, which indicates that the user
-        //     solidly selected the 2.5 V I0 range, and is not using
-        //     a relay to switch ranges
-        pinMode(JP_I0_PIN, INPUT_PULLUP);
-        delay(1);
-        if (digitalRead(JP_I0_PIN) == 0)
-            result |= JP_I0_CLOSED;
-        pinMode(JP_I0_PIN, INPUT);      // pull-up off, to reduce power consumption
-    }
-
-    // (5) Check jumper JP5 that should be closed by the
-    // user if the 0--2.5 V AUX range as been chosen (at
-    // JP6) instead of the 0--10 V AUX range
+  int result = 0;
+  //Check for ADCs
+  //First reset AD7705 IO. Note that (inverted) chip select = high does not reset
+  //communication. Reset is done by writing 32 high bits.
+  delay(1);     //make sure that all lines have settled (1 millisec)
+  AD7705resetCommunication(CS_ADC_0);
+  AD7705resetCommunication(CS_ADC_1);
+  delay(1);     //make sure that all lines have settled (1 millisec)
+  byte adc0comm = AD7705readCommRegister(CS_ADC_0, AD7705_CH0); //0xff if only pullup, no ADC
+  if (adc0comm != 0xff)
+    result |= ADC_0_PRESENT;
+  byte adc1comm = AD7705readCommRegister(CS_ADC_1, AD7705_CH0);
+  if (adc1comm != 0xff)
+    result |= ADC_1_PRESENT;
+  //Check for LM35 temperature sensor: the analog voltage should be within
+  //the ADC range and settle to a similar value after connecting to a pullup resistor
+  //(the LM35 cannot sink more than about 1 uA, so the pullup will drive it high)
+  pinMode(LM35_PIN, INPUT);
+  analogReadMedian(LM35_PIN); //unused measurement; the ADC needs time till it works correctly
+  delay(10);    //make sure the voltage has settled (10 millisec)
+  int sensorValue0 = analogReadMedian(LM35_PIN);
+  int sensorValue0a = analogReadMedian(LM35_PIN);
+  pinMode(LM35_PIN, INPUT_PULLUP);  //measure the voltage with internal pullup
+  delay(10);    //apply pullup for 10 millisec
+  int sensorValue1 = analogReadMedian(LM35_PIN);
+  pinMode(LM35_PIN, INPUT);         //reset for usual measurements
+  delay(10);    //make sure the voltage has settled (10 millisec)
+  int sensorValue2 = analogReadMedian(LM35_PIN);
+  if (sensorValue0 > 0 && sensorValue0 < LM35_MAX_ADU &&
+      sensorValue2 > 0 && sensorValue2 < LM35_MAX_ADU &&
+      abs(sensorValue2 - sensorValue0) < 10 &&
+      sensorValue1 == ARDUINO_ADC_MAX)
+    result |= LM35_PRESENT;
+  //Check for relay present: If the relay is mounted, it should also have an
+  //external pullup that results in about 0.12 V at the pin, about 48 ADUs.
+  //If no relay is mounted, it is either open or jumpered to ground, signalling
+  //whether the input range is 10 V or 2.5 V range, respectively.
+  //If the input is open, the arduino internal pullup would drive it high;
+  //if the input is grounded, the voltage should be close to 0.
+  pinMode(RELAY_PIN, INPUT_PULLUP);  //measure the voltage with arduino pullup
+  analogReadMedian(RELAY_PIN);       //unused measurement just to make sure
+  delay(10);    //apply pullup for 10 millisec
+  int sensorValue3 = analogReadMedian(RELAY_PIN);
+  pinMode(RELAY_PIN, INPUT);  //measure the voltage without pullup
+  delay(10);    //no pullup for 10 millisec
+  int sensorValue4 = analogReadMedian(RELAY_PIN);
+  if (sensorValue3 < ARDUINO_ADC_MAX && //not an open input
+      sensorValue4 > RELAY_MIN_ADU && sensorValue4 < RELAY_MAX_ADU) {
+    result |= RELAY_PRESENT;
+  } else {
+    //Check jumper at JP3 indicating 2.5 V I0 range set by user (if no relay)
+    pinMode(JP_I0_PIN, INPUT_PULLUP);
+    delay(1);
+    if (digitalRead(JP_I0_PIN) == 0)
+      result |= JP_I0_CLOSED;
+    pinMode(JP_I0_PIN, INPUT);      //pullup off, reduces power consuption
+  }
+    //Check jumper at JP5 indicating 2.5 V AUX range set by user (if no relay)
     pinMode(JP_AUX_PIN, INPUT_PULLUP);
     delay(1);
     if (digitalRead(JP_AUX_PIN) == 0)
-        result |= JP_AUX_CLOSED;
-    pinMode(JP_AUX_PIN, INPUT);
-    return result;
+      result |=   JP_AUX_CLOSED;
+    pinMode(JP_AUX_PIN, INPUT);     //pullup off, reduces power consuption
+  return result;
 }
-
 
 bool isAcceptableADCUpdateRate(byte updateRate){                                // TODO: may later move to the ADC 'library'
     /**Return whether the given update rate in an acceptable value.*/
