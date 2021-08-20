@@ -552,7 +552,7 @@ def refcalc(sl, rp, subdomain=False):
                                        for v in rp.THEO_ENERGIES]),
                          path=os.path.join("Tensors", dn),
                          suppress_ori=True)
-        modifyPARAMETERS(rp, "LMAX", new=str(rp.LMAX),
+        modifyPARAMETERS(rp, "LMAX", new="{}-{}".format(*rp.LMAX),
                          path=os.path.join("Tensors", dn), suppress_ori=True)
     # delete old delta files in main work folder, if necessary
     #   (there should not be any, unless there was an error)

@@ -526,7 +526,7 @@ def deltas_domains(rp):
         if type(r) == tuple:  # if no deltas need to be calculated returns None
             deltaCompTasks.extend(r[0])
             deltaRunTasks.extend(r[1])
-        else:
+        elif r is not None:
             raise RuntimeError("Unknown error while creating delta input for "
                                "domain {}".format(dp.name))
 

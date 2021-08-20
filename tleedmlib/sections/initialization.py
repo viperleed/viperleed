@@ -353,8 +353,9 @@ def init_domains(rp):
                 try:
                     tl.leedbase.getTensors(tensorIndex, basedir=path,
                                            targetdir=target)
-                except Exception:
+                except Exception as e:
                     tensorIndex = 0
+                    logger.warning("Error fetching Tensors: " + str(e))
             if tensorIndex != 0:
                 tensorDir = os.path.join(target, "Tensors",
                                          "Tensors_"+str(tensorIndex).zfill(3))
@@ -363,12 +364,17 @@ def init_domains(rp):
                         shutil.copy2(os.path.join(tensorDir, file),
                                      os.path.join(target, file))
                     else:
+                        logger.warning("Input file {} is missing in Tensors "
+                                       "directory. A new reference "
+                                       "calculation is required.".format(file))
                         tensorIndex = 0
                         break
             if tensorIndex != 0:
                 dp.tensorDir = tensorDir
             else:       # no usable tensors in that dir; get input
                 dp.refcalcRequired = True
+                logger.info("No previous Tensors found, reference calculation "
+                            "is required.")
                 for file in checkFiles:
                     if os.path.isfile(os.path.join(path, file)):
                         try:
@@ -423,6 +429,7 @@ def init_domains(rp):
                 dp.sl = readPOSCAR()
                 dp.rp = readPARAMETERS()
                 dp.rp.workdir = home
+                dp.rp.sourcedir = rp.sourcedir
                 dp.rp.timestamp = rp.timestamp
                 interpretPARAMETERS(dp.rp, slab=dp.sl, silent=True)
                 dp.sl.fullUpdate(dp.rp)   # gets PARAMETERS data into slab

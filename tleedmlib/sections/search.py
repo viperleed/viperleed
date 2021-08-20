@@ -183,10 +183,10 @@ def processSearchResults(sl, rp, final=True):
                 os.chdir(dp.workdir)
                 if any(sp.parabolaFit["min"] for sp in rp.searchpars):
                     parab_inds = list(pops[0][1][i][1])
-                    for i, sp in enumerate(dp.rp.searchpars):
+                    for j, sp in enumerate(dp.rp.searchpars):
                         if sp.parabolaFit["min"] is not None:
-                            parab_inds[i] = sp.parabolaFit["min"]
-                    io.writeSearchOutput(sl, rp, parab_inds, silent=True,
+                            parab_inds[j] = sp.parabolaFit["min"]
+                    io.writeSearchOutput(dp.sl, dp.rp, parab_inds, silent=True,
                                          suffix="_parabola")
                 io.writeSearchOutput(dp.sl, dp.rp, pops[0][1][i][1],
                                      silent=(not final))
@@ -312,12 +312,13 @@ def parabolaFit(rp, datafiles, r_best, x0=None, max_configs=0, **kwargs):
         sps = [sp for sp in rp.searchpars if sp.mode == "dom"]
         reshaped = (np.array([*np.array(configs, dtype=object)], dtype=object)
                     .reshape(-1, len(rp.domainParams), 2))
-        indep_pars = reshaped[:, 0, 0].astype(int)  # contains the percentages
+        indep_pars = reshaped[:, :, 0].astype(int)  # contains the percentages
         # then the 'real' parameters:
         for (j, dp) in enumerate(rp.domainParams):
             new_sps = [sp for sp in dp.rp.searchpars if
                        sp.el != "vac" and sp.steps*localizeFactor >= 3 and
-                       sp.linkedTo is None and sp.restrictTo is None]
+                       sp.linkedTo is None and sp.restrictTo is None and
+                       sp.mode != "dom"]
             new_ip = np.array([*reshaped[:, j, 1]])
             new_ip = np.delete(new_ip, [i for i in range(len(dp.rp.searchpars))
                                if dp.rp.searchpars[i] not in new_sps], 1)

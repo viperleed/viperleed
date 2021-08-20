@@ -229,7 +229,7 @@ def readDataChem(rp, source, cutoff=0, max_configs=0):
             dp_vals = pars[-len(rp.domainParams):]
             percent = getPercent(rp.DOMAIN_STEP, dp_vals)
             dpars = []
-            for v in dp_vals:
+            for v in [len(dp.rp.searchpars) for dp in rp.domainParams]:
                 dpars.append(tuple(pars[:v]))
                 pars = pars[v:]
             returnList.append((rfac, tuple(zip(percent, dpars))))

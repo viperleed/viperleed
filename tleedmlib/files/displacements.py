@@ -112,10 +112,10 @@ def readDISPLACEMENTS(rp, filename="DISPLACEMENTS"):
                 else:
                     rp.disp_blocks[-1] = ([], name)
                 continue
-            else:
+            elif line.split('==')[1].strip().lower()[0] != "d":
                 logger.warning("Found DISPLACEMENTS line starting with '==',"
                                "but could not interpret it as the start of a "
-                               "search block.")
+                               "search or domain block.")
                 rp.setHaltingLevel(2)
                 continue
         elif loopLine and not len(rp.disp_blocks) == 0:
