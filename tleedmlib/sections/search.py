@@ -954,19 +954,24 @@ def search(sl, rp):
                                         "criteria are defined, not all are "
                                         "met. Search continues.")
                         if repeat:
-                            rp.GAUSSIAN_WIDTH *= rp.GAUSSIAN_WIDTH_SCALING
-                            if rp.GAUSSIAN_WIDTH < 0.0001:
-                                rp.GAUSSIAN_WIDTH = 0.0001
+                            if rp.GAUSSIAN_WIDTH == 0.0001:
+                                logger.info(
+                                    "GAUSSIAN_WIDTH cannot be reduced "
+                                    "further, continuing search...")
+                            else:
+                                rp.GAUSSIAN_WIDTH *= rp.GAUSSIAN_WIDTH_SCALING
+                                if rp.GAUSSIAN_WIDTH < 0.0001:
+                                    rp.GAUSSIAN_WIDTH = 0.0001
+                                logger.info(
+                                    "Reducing GAUSSIAN_WIDTH parameter to {} "
+                                    "and restarting search..."
+                                    .format(round(rp.GAUSSIAN_WIDTH, 4)))
+                                comment = ("GAUSSIAN_WIDTH = {}".format(
+                                    round(rp.GAUSSIAN_WIDTH, 4)))
                             for k in ["dec", "best", "all"]:
                                 rp.SEARCH_MAX_DGEN[k] *= (
                                             rp.SEARCH_MAX_DGEN_SCALING[k])
                                 realLastConfigGen[k] = gens[-1]
-                            logger.info(
-                                "Reducing GAUSSIAN_WIDTH parameter to {} and "
-                                "restarting search..."
-                                .format(round(rp.GAUSSIAN_WIDTH, 4)))
-                            comment = ("GAUSSIAN_WIDTH = {}"
-                                       .format(round(rp.GAUSSIAN_WIDTH, 4)))
         except KeyboardInterrupt:
             if not os.path.isfile("SD.TL"):
                 # try saving by waiting for SD.TL to be created...
