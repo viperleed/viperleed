@@ -324,10 +324,19 @@ class Atom:
                         "{} already has an offset defined. Skipping second "
                         "assignment.".format(self))
                 continue
-            if el not in td:    # did not assign for this element yet -> OK
+            if el not in td or (len(td[el]) == 1
+                                and np.linalg.norm(td[el]) < 1e-5):
+                # did not assign for this element yet -> OK, store
                 td[el] = dr
+                # also store center
+                if mode != 3:
+                    n = [np.linalg.norm(v) for v in dr]
+                else:
+                    n = [abs(v - self.site.occ[el]) for v in dr]
+                smode = {1: "geo", 2: "vib", 3: "occ"}
+                self.disp_center_index[smode[mode]][el] = n.index(min(n))
                 continue
-            # check whether every value in td[el] is also in disprange
+            # is warning required: every value in td[el] also in disprange?
             match = True
             if el in td:
                 if len(td[el]) != len(dr):
@@ -348,15 +357,9 @@ class Atom:
                         "Atom.assignDisp: Trying to assign displacement list, "
                         "but atom {} already has displacements assigned. "
                         "Skipping second assignment.".format(self))
-                else:
-                    td[el] = dr
-                    # also store center
-                    if mode != 3:
-                        n = [np.linalg.norm(v) for v in dr]
-                    else:
-                        n = [abs(v - self.site.occ[el]) for v in dr]
-                    smode = {1: "geo", 2: "vib", 3: "occ"}
-                    self.disp_center_index[smode[mode]][el] = n.index(min(n))
+                    return    # also don't assign to other atoms
+                # in case of linking, base assignments on current dr
+                dr = td[el][:]
         # assign to atoms in linklist:
         if primary:
             if len(self.displist) == 0:
