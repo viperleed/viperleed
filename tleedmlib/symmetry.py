@@ -15,7 +15,8 @@ import scipy.spatial as sps
 import itertools
 
 import viperleed.tleedmlib as tl
-from viperleed.tleedmlib.base import angle
+from viperleed.tleedmlib.base import (angle,
+                                      rotation_matrix_order, rotation_matrix)
 from viperleed.tleedmlib.classes.slab import SymPlane
 from viperleed.tleedmlib.files.parameters import modifyPARAMETERS
 
@@ -987,9 +988,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
             tmpslab = copy.deepcopy(sl)
             tmpslab.rotateAtoms(np.array([0, 0]), toprotsym)
             tmpslab.collapseCartesianCoordinates()
-            ang = 2*np.pi/toprotsym
-            m = np.array([[np.cos(ang), -np.sin(ang)],
-                          [np.sin(ang), np.cos(ang)]])
+            m = np.linalg.inv(rotation_matrix_order(toprotsym))
             for (sli, sl1) in enumerate(sl.sublayers):
                 for (ati, at1) in enumerate(sl1.atlist):
                     for (atj, at2) in enumerate(tmpslab.sublayers[sli]
@@ -1035,10 +1034,9 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
             tmpslab.mirror(testplane, glide=g)
             tmpslab.collapseCartesianCoordinates()
             ang = angle(np.array([1, 0]), testplane.dir)
-            rotm = np.array([[np.cos(ang), np.sin(ang)],
-                             [-np.sin(ang), np.cos(ang)]])
-            m = np.dot(np.linalg.inv(rotm), np.dot(np.array([[1, 0], [0, -1]]),
-                                                   rotm))
+            rotm = rotation_matrix(ang)
+            m = np.dot(rotm, np.dot(np.array([[1, 0], [0, -1]]),
+                                                   np.linalg.inv(rotm)))
             for (sli, sl1) in enumerate(sl.sublayers):
                 for (ati, at1) in enumerate(sl1.atlist):
                     for (atj, at2) in enumerate(tmpslab.sublayers[sli]
@@ -1283,9 +1281,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
                     found = True
         if not found:
             ang = angle(np.array([1, 0]), mirrordirs[0])
-            rotm = np.array([[np.cos(ang), np.sin(ang), 0],
-                             [-np.sin(ang), np.cos(ang), 0],
-                             [0, 0, 1]])
+            rotm = rotation_matrix(ang, dim=3)
             sl.ucell = np.dot(rotm, sl.ucell)
             for i in range(0, 3):
                 for j in range(0, 3):

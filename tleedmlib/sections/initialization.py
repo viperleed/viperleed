@@ -15,7 +15,7 @@ import copy
 import numpy as np
 
 import viperleed.tleedmlib as tl
-from viperleed.tleedmlib.base import angle
+from viperleed.tleedmlib.base import angle, rotation_matrix
 from viperleed.tleedmlib.beamgen import runBeamGen
 from viperleed.tleedmlib.psgen import runPhaseshiftGen
 from viperleed.tleedmlib.files.poscar import readPOSCAR, writeCONTCAR
@@ -488,12 +488,8 @@ def init_domains(rp):
             logger.info("Bulk unit cells of domain {0} and domain {1} are "
                         "mismatched, but can be matched by rotating domain "
                         "{1}.".format(rp.domainParams[0].name, dp.name))
-            ang = angle(bulkuc[0], bulkuc0[0])
-            rotm = np.array([[np.cos(ang), np.sin(ang)],
-                             [-np.sin(ang), np.cos(ang)]])
-            rotm = np.identity(3)
-            rotm[:2, :2] = np.array([[np.cos(ang), np.sin(ang)],
-                                    [-np.sin(ang), np.cos(ang)]])
+            ang = angle(bulkuc0[0], bulkuc[0])
+            rotm = rotation_matrix(ang, dim=3)
             rotm_t = np.transpose(rotm)
             # dp.sl.ucell = np.transpose(np.dot(np.transpose(dp.sl.ucell),
             #                                   rotuc))

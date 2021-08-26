@@ -102,29 +102,22 @@ class BackwardsReader:
 #                FUNCTIONS                    #
 ###############################################
 
-def rotMatrix(order):
+def rotation_matrix(angle, dim=2):
     """Returns a (2x2) matrix for in-plane rotation of the given rotation
-    order."""
-    # these explicit definitions are likely useless, but sqrts might be
-    #  marginally more accurate than sin/cos
-    if order == 2:
-        return np.array([[-1, 0], [0, -1]])
-    elif order == -3:
-        return np.array([[-0.5, -np.sqrt(3)/2], [np.sqrt(3)/2, -0.5]])
-    elif order == 3:
-        return np.array([[-0.5, np.sqrt(3)/2], [-np.sqrt(3)/2, -0.5]])
-    elif order == -4:
-        return np.array([[0, 1], [-1, 0]])
-    elif order == 4:
-        return np.array([[0, -1], [1, 0]])
-    elif order == -6:
-        return np.array([[0.5, np.sqrt(3)/2], [-np.sqrt(3)/2, 0.5]])
-    elif order == 6:
-        return np.array([[0.5, -np.sqrt(3)/2], [np.sqrt(3)/2, 0.5]])
-    else:
-        angle = 2*np.pi/order
-        return np.array([[np.cos(angle), np.sin(angle)],
-                         [-np.sin(angle), np.cos(angle)]])
+    angle. Set dim=3 to get a 3x3 matrix with rotation in [:2, :2]."""
+    if dim < 2:
+        raise ValueError("Dimension matrix needs at least dimension 2")
+    m = np.eye(dim, dtype=float)
+    m[:2, :2] = np.array([[np.cos(angle), -np.sin(angle)],
+                          [np.sin(angle), np.cos(angle)]])
+    return m
+
+
+def rotation_matrix_order(order, dim=2):
+    """Returns a (2x2) matrix for in-plane rotation of the given rotation
+    order. Set dim=3 to get a 3x3 matrix with rotation in [:2, :2]."""
+    angle = 2*np.pi/order
+    return rotation_matrix(angle, dim=dim)
 
 
 def fortranContLine(s):

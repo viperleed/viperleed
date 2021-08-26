@@ -21,7 +21,8 @@ try:
 except Exception:
     has_ase = False
 
-from viperleed.tleedmlib.base import (angle, rotMatrix, dist_from_line)
+from viperleed.tleedmlib.base import (angle, rotation_matrix_order,
+                                      rotation_matrix, dist_from_line)
 from viperleed.tleedmlib.classes.atom import Atom
 import viperleed.tleedmlib as tl
 # from tleedmlib import DEFAULT
@@ -681,7 +682,7 @@ class Slab:
         applies an order-fold rotation matrix to the atom positions, then
         translates back"""
         self.getCartesianCoordinates()
-        m = rotMatrix(order)
+        m = rotation_matrix_order(order)
         for at in self.atlist:
             # translate origin to candidate point, rotate, translate back
             at.cartpos[0:2] = np.dot(m, at.cartpos[0:2] - axis) + axis
@@ -692,7 +693,7 @@ class Slab:
         the same. Note that this rotates in the opposite direction as
         rotateAtoms."""
         self.getCartesianCoordinates()
-        m = rotMatrix(order)
+        m = rotation_matrix_order(order)
         m3 = np.identity(3, dtype=float)
         m3[:2, :2] = m
         self.ucell = np.dot(m3, self.ucell)
@@ -704,9 +705,8 @@ class Slab:
         """Translates the atoms in the slab to have the symplane in the
         origin, applies a mirror or glide matrix, then translates back.
         Very inefficient implementation!"""
-        ang = angle(np.array([1, 0]), symplane.dir)
-        rotm = np.array([[np.cos(ang), np.sin(ang)],
-                         [-np.sin(ang), np.cos(ang)]])
+        ang = angle(symplane.dir, np.array([1, 0]))
+        rotm = rotation_matrix(ang)
         rotmirm = np.dot(np.linalg.inv(rotm),
                          np.dot(np.array([[1, 0], [0, -1]]), rotm))
         # rotates to have plane in x direction, mirrors on x
@@ -734,7 +734,7 @@ class Slab:
     def isRotationSymmetric(self, axis, order, eps):
         """Evaluates whether the slab is equivalent to itself when rotated
         around the axis with the given rotational order"""
-        m = rotMatrix(order)
+        m = rotation_matrix_order(order)
         ab = self.ucell[:2, :2]
         abt = ab.T
         releps = [eps / np.linalg.norm(abt[j]) for j in range(0, 2)]
@@ -934,17 +934,15 @@ class Slab:
     def isBulkScrewSymmetric(self, order, sldisp, eps):
         """Evaluates whether the slab has a screw axis of the given order when
         translated by the given number of sublayers."""
-        m = np.identity(3, dtype=float)
-        m[:2, :2] = rotMatrix(order)
+        m = rotation_matrix_order(order, dim=3)
         return self.isBulkTransformSymmetric(m, sldisp, eps)
 
     def isBulkGlideSymmetric(self, symplane, sldisp, eps):
         """Evaluates whether the bulk has a glide plane along a given
         direction, i.e. mirror at this direction, then some translation."""
         m = np.identity(3, dtype=float)
-        ang = angle(np.array([1, 0]), symplane.dir)
-        rotm = np.array([[np.cos(ang), np.sin(ang)],
-                         [-np.sin(ang), np.cos(ang)]])
+        ang = angle(symplane.dir, np.array([1, 0]))
+        rotm = rotation_matrix(ang)
         m[:2, :2] = np.dot(np.linalg.inv(rotm),
                            np.dot(np.array([[1, 0], [0, -1]]), rotm))
         return self.isBulkTransformSymmetric(m, sldisp, eps)
@@ -952,9 +950,8 @@ class Slab:
     def isMirrorSymmetric(self, symplane, eps, glide=False):
         """Evaluates whether the slab is equivalent to itself when applying a
         mirror or glide operation at a given plane"""
-        ang = angle(np.array([1, 0]), symplane.dir)
-        rotm = np.array([[np.cos(ang), np.sin(ang)],
-                         [-np.sin(ang), np.cos(ang)]])
+        ang = angle(symplane.dir, np.array([1, 0]))
+        rotm = rotation_matrix(ang)
         rotmirm = np.dot(np.linalg.inv(rotm),
                          np.dot(np.array([[1, 0], [0, -1]]), rotm))
         # rotates to have plane in x direction, mirrors on x
