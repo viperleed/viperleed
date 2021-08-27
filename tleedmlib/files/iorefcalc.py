@@ -309,35 +309,45 @@ def collectFIN():
 
 def writeAUXLATGEO(sl, rp):
     """Writes AUXLATGEO, which is part of the input FIN for the refcalc."""
+    if rp.TL_VERSION < 1.7:
+        formatter = {'energies': ff.FortranRecordWriter('3F7.2'),
+                     'uc': ff.FortranRecordWriter('2F7.4'),
+                     'x_ase_wf': ff.FortranRecordWriter('2F7.4'),
+                     }
+    else:
+        formatter = {'energies': ff.FortranRecordWriter('3F9.2'),
+                     'uc': ff.FortranRecordWriter('2F9.4'),
+                     'x_ase_wf': ff.FortranRecordWriter('3F9.2'),
+                     }
     output = ''
     output += rp.systemName+' '+rp.timestamp+'\n'
-    f72x3 = ff.FortranRecordWriter('3F7.2')
     ens = [rp.THEO_ENERGIES[0], rp.THEO_ENERGIES[1]+0.01, rp.THEO_ENERGIES[2]]
-    ol = f72x3.write(ens).ljust(24)
-    output += ol + 'EI,EF,DE\n'
-    f74x2 = ff.FortranRecordWriter('2F7.4')
+    output += formatter['energies'].write(ens).ljust(24) + 'EI,EF,DE\n'
     ucsurf = np.transpose(sl.ucell[:2, :2])
     if sl.bulkslab is None:
         sl.bulkslab = sl.makeBulkSlab(rp)
     ucbulk = sl.bulkslab.ucell[:2, :2].T
-    ol = f74x2.write(ucbulk[0]).ljust(24)
-    output += ol + 'ARA1\n'
-    ol = f74x2.write(ucbulk[1]).ljust(24)
-    output += ol + 'ARA2\n'
-    output += ' 0.0    0.0             SS1\n'
-    output += ' 0.0    0.0             SS2\n'
-    output += ' 0.0    0.0             SS3\n'
-    output += ' 0.0    0.0             SS4\n'
-    ol = f74x2.write(ucsurf[0]).ljust(24)
-    output += ol + 'ARB1\n'
-    ol = f74x2.write(ucsurf[1]).ljust(24)
-    output += ol + 'ARB2\n'
-    output += ' 0.0    0.0             SO1\n'
-    output += ' 0.0    0.0             SO2\n'
-    output += ' 0.0    0.0             SO3\n'
-    ol = f74x2.write([0.5, rp.V0_Z_ONSET])
-    ol = ol.ljust(24)
-    output += ol + 'FR ASE\n'
+    output += formatter['uc'].write(ucbulk[0]).ljust(24) + 'ARA1\n'
+    output += formatter['uc'].write(ucbulk[1]).ljust(24) + 'ARA2\n'
+    if rp.TL_VERSION < 1.7:
+        output += ' 0.0    0.0             SS1\n'
+        output += ' 0.0    0.0             SS2\n'
+        output += ' 0.0    0.0             SS3\n'
+        output += ' 0.0    0.0             SS4\n'
+    output += formatter['uc'].write(ucsurf[0]).ljust(24) + 'ARB1\n'
+    output += formatter['uc'].write(ucsurf[1]).ljust(24) + 'ARB2\n'
+    if rp.TL_VERSION < 1.7:
+        output += ' 0.0    0.0             SO1\n'
+        output += ' 0.0    0.0             SO2\n'
+        output += ' 0.0    0.0             SO3\n'
+    if rp.TL_VERSION < 1.7:
+        output += (formatter['x_ase_wf'].write([0.5, rp.V0_Z_ONSET]).ljust(24)
+                   + 'FR ASE\n')
+    else:
+        # Different parameters here in version 1.7! Previously in muftin
+        output += (formatter['x_ase_wf'].write([rp.V0_IMAG, rp.V0_Z_ONSET,
+                                                rp.FILAMENT_WF]).ljust(24)
+                   + 'V0i,ASE,WORKFN\n')
     try:
         with open('AUXLATGEO', 'w') as wf:
             wf.write(output)
@@ -358,23 +368,31 @@ def writeAUXNONSTRUCT(sl, rp):
         logger.error("generatePARAM: Exception while getting data from "
                      "writeAUXBEAMS")
         raise
+    if rp.TL_VERSION < 1.7:
+        formatter = {'tst': ff.FortranRecordWriter('F7.4'),
+                     'incidence': ff.FortranRecordWriter('(F7.2, F6.1)'),
+                     'beamnums': ff.FortranRecordWriter('15I4'),
+                     'eps': ff.FortranRecordWriter('F7.4'),
+                     'ints': ff.FortranRecordWriter('I3'),
+                     }
+    else:
+        formatter = {'tst': ff.FortranRecordWriter('F11.8'),
+                     'incidence': ff.FortranRecordWriter('2F9.4'),
+                     'beamnums': ff.FortranRecordWriter('15I5'),
+                     'eps': ff.FortranRecordWriter('F7.4'),
+                     'ints': ff.FortranRecordWriter('I3'),
+                     }
     output = ''
-    f74 = ff.FortranRecordWriter('F7.4')
-    ol = f74.write([rp.ATTENUATION_EPS])
-    output += ol+'           >>>>> ! <<<<<              TST\n'
-    i4x15 = ff.FortranRecordWriter('15I4')
-    ol = i4x15.write(beamnums)
-    output += ol+'\n'
-    f72f61 = ff.FortranRecordWriter('(F7.2, F6.1)')
-    ol = f72f61.write([rp.THETA, rp.PHI]).ljust(45)
-    output += ol+'THETA FI\n'
-    ol = f74.write([rp.BULKDOUBLING_EPS]).ljust(45)
-    output += ol+'EPS\n'
-    i3 = ff.FortranRecordWriter('I3')
-    ol = i3.write([rp.BULKDOUBLING_MAX]).ljust(45)
-    output += ol+'LITER\n'
-    ol = i3.write([rp.LMAX[1]]).ljust(45)
-    output += ol+'LMAX\n'
+    
+    output += (formatter['tst'].write([rp.ATTENUATION_EPS]).ljust(18) + 
+               '>>>>> ! <<<<<              TST\n')
+    output += formatter['beamnums'].write(beamnums)+'\n'
+    output += (formatter['incidence'].write([rp.THETA, rp.PHI]).ljust(45)
+               + 'THETA FI\n')
+    output += formatter['eps'].write([rp.BULKDOUBLING_EPS]).ljust(45) + 'EPS\n'
+    output += (formatter['ints'].write([rp.BULKDOUBLING_MAX]).ljust(45)
+               + 'LITER\n')
+    output += formatter['ints'].write([rp.LMAX[1]]).ljust(45) + 'LMAX\n'
     try:
         with open('AUXNONSTRUCT', 'w') as wf:
             wf.write(output)
@@ -387,6 +405,14 @@ def writeAUXNONSTRUCT(sl, rp):
 
 def writeAUXGEO(sl, rp):
     """Writes AUXGEO, which is part of the input FIN for the refcalc."""
+    if rp.TL_VERSION < 1.7:
+        formatter = {'vibrocc': ff.FortranRecordWriter('2F7.4'),
+                     'geo': ff.FortranRecordWriter('3F7.4'),
+                     }
+    else:
+        formatter = {'vibrocc': ff.FortranRecordWriter('2F9.4'),
+                     'geo': ff.FortranRecordWriter('3F9.4'),
+                     }
     slab_c = np.copy(sl.ucell[:, 2])
     if rp.LAYER_STACK_VERTICAL:
         sl = copy.deepcopy(sl)
@@ -403,7 +429,6 @@ def writeAUXGEO(sl, rp):
     ol = i3.write([len(sl.sitelist)])
     ol = ol.ljust(26)
     output += ol + 'NSITE: number of different site types\n'
-    f74x2 = ff.FortranRecordWriter('2F7.4')
     for i, site in enumerate(sl.sitelist):
         output += '-   site type '+str(i+1)+' ---\n'
 
@@ -424,13 +449,12 @@ def writeAUXGEO(sl, rp):
                         occ, vib = 0., 0.
                         comment = ''
                     try:
-                        ol = f74x2.write([occ, vib])
+                        ol = formatter['vibrocc'].write([occ, vib]).ljust(26)
                     except Exception:
                         logger.error(
                             "Exception while trying to write occupation / "
                             "vibrational amplitude for site " + site.label,
                             exc_info=True)
-                    ol = ol.ljust(26)
                     output += ol + comment + '\n'
 
     output += ('-----------------------------------------------------'
@@ -442,7 +466,6 @@ def writeAUXGEO(sl, rp):
     ol = i3.write([len(sl.layers)])
     ol = ol.ljust(26)
     output += ol + 'NLTYPE: number of different layer types\n'
-    f74x3 = ff.FortranRecordWriter('3F7.4')
     blayers = [lay for lay in sl.layers if lay.isBulk]
     nblayers = [lay for lay in sl.layers if not lay.isBulk]
     layerOffsets = [np.zeros(3) for _ in range(len(sl.layers) + 1)]
@@ -487,12 +510,13 @@ def writeAUXGEO(sl, rp):
             writepos = atom.cartpos - atom.layer.cartori
             ol = i3.write([sl.sitelist.index(atom.site)+1])
             if natoms != 1:
-                ol += f74x3.write([writepos[2], writepos[0], writepos[1]])
+                ol += formatter['geo'].write([writepos[2],
+                                              writepos[0], writepos[1]])
             else:
                 # Bravais layers need to have coordinate (0., 0., 0.)
                 #  -> store actual position for later, it will go into the
                 #  interlayer vector
-                ol += f74x3.write([0., 0., 0.])
+                ol += formatter['geo'].write([0., 0., 0.])
                 layerOffsets[layer.num] += writepos
                 layerOffsets[layer.num + 1] -= writepos
             ol = ol.ljust(26)
@@ -537,7 +561,8 @@ def writeAUXGEO(sl, rp):
         bl2num = blayers[0].num
         bvectors_ASBULK = bvectors_ASA
 
-    ol = f74x3.write([bvectors_ASA[2], bvectors_ASA[0], bvectors_ASA[1]])
+    ol = formatter['geo'].write([bvectors_ASA[2],
+                                 bvectors_ASA[0], bvectors_ASA[1]])
     ol = ol.ljust(26)
     output += ol + 'ASA interlayer vector between different bulk units\n'
     ol = i3.write([blayers[0].num+1])
@@ -547,8 +572,8 @@ def writeAUXGEO(sl, rp):
     ol = i3.write([bl2num+1])
     ol = ol.ljust(26)
     output += ol + 'bottom layer of bulk unit: layer type '+str(bl2num+1)+'\n'
-    ol = f74x3.write([bvectors_ASBULK[2], bvectors_ASBULK[0],
-                      bvectors_ASBULK[1]])
+    ol = formatter['geo'].write([bvectors_ASBULK[2],
+                                 bvectors_ASBULK[0], bvectors_ASBULK[1]])
     ol = ol.ljust(26)
     output += (ol + 'ASBULK between the two bulk unit layers (may differ from '
                'ASA)\n')
@@ -584,7 +609,7 @@ def writeAUXGEO(sl, rp):
         v = sl.layers[n].cartori - layer.cartori
         v[2] = sl.layers[n].cartori[2] - layer.cartbotz
         v = v + layerOffsets[n]   # add layerOffsets for Bravais layers
-        ol = i3.write([n]) + f74x3.write([v[2], v[0], v[1]])
+        ol = i3.write([n]) + formatter['geo'].write([v[2], v[0], v[1]])
         ol = ol.ljust(26)
         output += (ol + 'layer '+str(n)+': layer type '+str(n)+', interlayer '
                    'vector below\n')     # every layer is also a layer type
