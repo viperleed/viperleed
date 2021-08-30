@@ -187,8 +187,8 @@ def readPHASESHIFTS(sl, rp, readfile='PHASESHIFTS', check=True,
         checkfail = False
         er = np.arange(rp.THEO_ENERGIES[0], rp.THEO_ENERGIES[1]+1e-4,
                        rp.THEO_ENERGIES[2])
-        psmin = round(phaseshifts[0][0]*27.2116, 2)
-        psmax = round(phaseshifts[-1][0]*27.2116, 2)
+        psmin = round(phaseshifts[0][0]*27.211396, 2)
+        psmax = round(phaseshifts[-1][0]*27.211396, 2)
         if rp.V0_REAL == "default":
             llist = firstline.split()
             c = []
@@ -295,7 +295,7 @@ def plot_phaseshifts(sl, rp, filename="Phaseshifts_plots.pdf"):
         ps_labels.extend([cel + " in " + s.label + " site"
                           for cel in chemelList
                           for s in sl.sitelist if s.el == el])
-    energies = np.array([ps[0]*27.2116 for ps in rp.phaseshifts])
+    energies = np.array([ps[0]*27.211396 for ps in rp.phaseshifts])
     ps_vals = np.array([ps[1] for ps in rp.phaseshifts])
 
     figsize = (7, 4)

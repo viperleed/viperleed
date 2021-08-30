@@ -401,7 +401,7 @@ def runPhaseshiftGen(sl, rp,
     for en in outvalsSorted:
         if len(outvalsSorted[en]) == outvalLength:
             # drop energies where phaseshift was not calculated for all sites
-            phaseshifts.append((en/27.2116, outvalsSorted[en]))
+            phaseshifts.append((en/27.211396, outvalsSorted[en]))
     if firstline == "":
         logger.error("Could not find first line for PHASESHIFTS file "
                      "(should contain MUFTIN parameters).")

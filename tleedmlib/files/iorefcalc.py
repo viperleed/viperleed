@@ -397,7 +397,8 @@ def writeAUXNONSTRUCT(sl, rp):
     output += formatter['ints'].write([rp.LMAX[1]]).ljust(45) + 'LMAX\n'
     if rp.TL_VERSION >= 1.7:
         # TODO: if phaseshifts are calculated differently, change format here
-        output += formatter['ints'].write([1]).ljust(45) + 'PSFORMAT\n'
+        output += (formatter['ints'].write([1]).ljust(45)
+                   + 'PSFORMAT  1: Rundgren_v1.6; 2: Rundgren_v1.7\n')
     try:
         with open('AUXNONSTRUCT', 'w') as wf:
             wf.write(output)

@@ -326,7 +326,8 @@ class Rparams:
             hi = len(self.phaseshifts)-1
             if self.THEO_ENERGIES[1] > 0:
                 for i in range(0, len(self.phaseshifts)):
-                    if self.phaseshifts[i][0]*27.2116 > self.THEO_ENERGIES[1]:
+                    if (self.phaseshifts[i][0]*27.211396
+                            > self.THEO_ENERGIES[1]):
                         hi = i
                         break
             # LMAX

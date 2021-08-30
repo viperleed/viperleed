@@ -318,7 +318,7 @@ def refcalc(sl, rp, subdomain=False):
     else:    # find appropriate LMAX per energy
         if rp.PHASESHIFT_EPS == 0:
             rp.PHASESHIFT_EPS = 0.01
-        ps_en = [(i, ps[0]*27.2116) for (i, ps) in enumerate(rp.phaseshifts)]
+        ps_en = [(i, ps[0]*27.211396) for (i, ps) in enumerate(rp.phaseshifts)]
         lmax = {}  # lmax as a function of energy
         warn_small = True
         warn_large = True
