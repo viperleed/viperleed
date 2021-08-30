@@ -46,7 +46,7 @@ class RefcalcRunTask():
     compile and run a reference calculation, and copy results back."""
 
     def __init__(self, fin, energy, comptask, logname,
-                 collect_at="", single_threaded=False):
+                 collect_at="", single_threaded=False, tl_version=0.):
         self.fin = fin
         self.energy = energy
         self.comptask = comptask
@@ -54,6 +54,7 @@ class RefcalcRunTask():
         self.foldername = "refcalc-part_{:.2f}eV".format(energy)
         self.collect_at = collect_at
         self.single_threaded = single_threaded
+        self.tl_version = tl_version
 
 
 def compile_refcalc(comptask):
@@ -61,6 +62,9 @@ def compile_refcalc(comptask):
     RefcalcCompileTask."""
     logger = logging.getLogger("tleedm.refcalc")
     home = os.getcwd()
+    has_muftin = False
+    if os.path.isfile("muftin.f"):
+        has_muftin = True
     workfolder = os.path.join(comptask.basedir, comptask.foldername)
     # make folder and go there:
     if os.path.isdir(workfolder):
@@ -89,21 +93,26 @@ def compile_refcalc(comptask):
         shutil.copy2(os.path.join(srcpath, srcname), srcname)
         globalname = "GLOBAL"
         shutil.copy2(os.path.join(srcpath, globalname), globalname)
-        muftinname = "muftin.f"
-        shutil.copy2(os.path.join(comptask.basedir, muftinname), muftinname)
+        if has_muftin:
+            muftinname = "muftin.f"
+            shutil.copy2(os.path.join(comptask.basedir, muftinname),
+                         muftinname)
     except Exception:
         logger.error("Error getting TensErLEED files for "
                      "refcalc-amplitudes: ", exc_info=True)
         return ("Error encountered by RefcalcCompileTask "
                 + comptask.foldername + " while trying to fetch fortran "
                 "source files")
+    compile_list = [(libname, "lib.tleed.o"), (srcname, "main.o")]
+    if has_muftin:
+        compile_list.append((muftinname, "muftin.o"))
     # compile
     ctasks = [(comptask.fortran_comp[0] + " -o " + oname + " -c",
                fname, comptask.fortran_comp[1]) for (fname, oname)
-              in [(muftinname, "muftin.o"), (libname, "lib.tleed.o"),
-                  (srcname, "main.o")]]
+              in compile_list]
     ctasks.append((comptask.fortran_comp[0] + " -o " + comptask.exename,
-                   "muftin.o lib.tleed.o main.o", comptask.fortran_comp[1]))
+                   " ".join(list(zip(*compile_list))[1]),
+                   comptask.fortran_comp[1]))
     try:
         fortran_compile_batch(ctasks)
     except Exception as e:
@@ -140,9 +149,14 @@ def run_refcalc(runtask):
         logname = "refcalc.log"
         # modify FIN: replace the energy range (second line)
         finparts = runtask.fin.split("\n", maxsplit=2)
-        f72x3 = ff.FortranRecordWriter('3F7.2')
-        nl = (f72x3.write([runtask.energy, runtask.energy + 0.01, 1.0])
-              .ljust(24) + 'EI,EF,DE')
+        if runtask.tl_version < 1.7:
+            eformatter = ff.FortranRecordWriter('3F7.2')
+            lj = 24
+        else:
+            eformatter = ff.FortranRecordWriter('3F9.2')
+            lj = 30
+        nl = (eformatter.write([runtask.energy, runtask.energy + 0.01, 1.0])
+              .ljust(lj) + 'EI,EF,DE')
         fin = "\n".join((finparts[0], nl, finparts[2]))
         # now replace LMAX
         finparts = fin.split("LMAX", maxsplit=1)
@@ -271,11 +285,12 @@ def refcalc(sl, rp, subdomain=False):
         logger.error(
             "Exception while trying to write refcalc-FIN file. "
             "Execution will proceed. The exception was: ", exc_info=True)
-    try:
-        io.writeMuftin(sl, rp)
-    except Exception:
-        logger.error("Exception during writeMuftin: ")
-        raise
+    if rp.TL_VERSION < 1.7:   # muftin.f deprecated in version 1.7
+        try:
+            io.writeMuftin(sl, rp)
+        except Exception:
+            logger.error("Exception during writeMuftin: ")
+            raise
     if rp.SUPPRESS_EXECUTION:
         logger.warning("SUPPRESS_EXECUTION parameter is on. Reference "
                        "calculation will not proceed. Stopping...")
@@ -396,11 +411,13 @@ def refcalc(sl, rp, subdomain=False):
                 ct = [ct for ct in comp_tasks if ct.lmax == lmax[en]][0]
             ref_tasks.append(RefcalcRunTask(fin, en, ct, logname,
                                             collect_at=collection_dir,
-                                            single_threaded=False))
+                                            single_threaded=False,
+                                            tl_version=rp.TL_VERSION))
     else:
         ct = comp_tasks[0]
         ref_tasks.append(RefcalcRunTask(fin, -1, ct, logname,
-                                        single_threaded=True))
+                                        single_threaded=True,
+                                        tl_version=rp.TL_VERSION))
 
     if single_threaded:
         home = os.getcwd()

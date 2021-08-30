@@ -202,7 +202,10 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
     iorf.extend([0]*(len(rp.ivbeams)-len(rp.expbeams)))
 
     f72 = ff.FortranRecordWriter("F7.2")
-    i3x25 = ff.FortranRecordWriter("25I3")
+    if rp.TL_VERSION < 1.7:
+        beam_formatter = ff.FortranRecordWriter("25I3")
+    else:
+        beam_formatter = ff.FortranRecordWriter("25I4")
     i3 = ff.FortranRecordWriter("I3")
     output = " &NL1\n"
     output += (" EMIN=" + f72.write([minen]).rjust(9) + ",\n")
@@ -220,14 +223,15 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
     output += " PLOT=        1,\n"
     output += " GAP=         0,\n"
     output += " &END\n"
-    output += (i3x25.write([n+1 for n in beamcorr]) + "\n")
+    output += (beam_formatter.write([n+1 for n in beamcorr]) + "\n")
     if len(beamcorr) % 25 == 0:
         output += "\n"
     for i in range(0, 2):  # redundant since indices are already taken care of
-        output += i3x25.write([n+1 for n in range(0, len(rp.expbeams))]) + "\n"
+        output += beam_formatter.write(
+            [n+1 for n in range(0, len(rp.expbeams))]) + "\n"
         if len(rp.expbeams) % 25 == 0:
             output += "\n"
-    output += i3x25.write(iorf) + "\n"
+    output += beam_formatter.write(iorf) + "\n"
     if len(iorf) % 25 == 0:
         output += "\n"
     output += "&NL2\n"

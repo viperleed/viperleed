@@ -314,39 +314,41 @@ def writeAUXLATGEO(sl, rp):
                      'uc': ff.FortranRecordWriter('2F7.4'),
                      'x_ase_wf': ff.FortranRecordWriter('2F7.4'),
                      }
+        lj = 24  # ljust spacing
     else:
         formatter = {'energies': ff.FortranRecordWriter('3F9.2'),
                      'uc': ff.FortranRecordWriter('2F9.4'),
                      'x_ase_wf': ff.FortranRecordWriter('3F9.2'),
                      }
+        lj = 30  # ljust spacing
     output = ''
     output += rp.systemName+' '+rp.timestamp+'\n'
     ens = [rp.THEO_ENERGIES[0], rp.THEO_ENERGIES[1]+0.01, rp.THEO_ENERGIES[2]]
-    output += formatter['energies'].write(ens).ljust(24) + 'EI,EF,DE\n'
+    output += formatter['energies'].write(ens).ljust(lj) + 'EI,EF,DE\n'
     ucsurf = np.transpose(sl.ucell[:2, :2])
     if sl.bulkslab is None:
         sl.bulkslab = sl.makeBulkSlab(rp)
     ucbulk = sl.bulkslab.ucell[:2, :2].T
-    output += formatter['uc'].write(ucbulk[0]).ljust(24) + 'ARA1\n'
-    output += formatter['uc'].write(ucbulk[1]).ljust(24) + 'ARA2\n'
+    output += formatter['uc'].write(ucbulk[0]).ljust(lj) + 'ARA1\n'
+    output += formatter['uc'].write(ucbulk[1]).ljust(lj) + 'ARA2\n'
     if rp.TL_VERSION < 1.7:
         output += ' 0.0    0.0             SS1\n'
         output += ' 0.0    0.0             SS2\n'
         output += ' 0.0    0.0             SS3\n'
         output += ' 0.0    0.0             SS4\n'
-    output += formatter['uc'].write(ucsurf[0]).ljust(24) + 'ARB1\n'
-    output += formatter['uc'].write(ucsurf[1]).ljust(24) + 'ARB2\n'
+    output += formatter['uc'].write(ucsurf[0]).ljust(lj) + 'ARB1\n'
+    output += formatter['uc'].write(ucsurf[1]).ljust(lj) + 'ARB2\n'
     if rp.TL_VERSION < 1.7:
         output += ' 0.0    0.0             SO1\n'
         output += ' 0.0    0.0             SO2\n'
         output += ' 0.0    0.0             SO3\n'
     if rp.TL_VERSION < 1.7:
-        output += (formatter['x_ase_wf'].write([0.5, rp.V0_Z_ONSET]).ljust(24)
+        output += (formatter['x_ase_wf'].write([0.5, rp.V0_Z_ONSET]).ljust(lj)
                    + 'FR ASE\n')
     else:
         # Different parameters here in version 1.7! Previously in muftin
         output += (formatter['x_ase_wf'].write([rp.V0_IMAG, rp.V0_Z_ONSET,
-                                                rp.FILAMENT_WF]).ljust(24)
+                                                rp.FILAMENT_WF]).ljust(lj)
                    + 'V0i,ASE,WORKFN\n')
     try:
         with open('AUXLATGEO', 'w') as wf:
@@ -393,6 +395,9 @@ def writeAUXNONSTRUCT(sl, rp):
     output += (formatter['ints'].write([rp.BULKDOUBLING_MAX]).ljust(45)
                + 'LITER\n')
     output += formatter['ints'].write([rp.LMAX[1]]).ljust(45) + 'LMAX\n'
+    if rp.TL_VERSION >= 1.7:
+        # TODO: if phaseshifts are calculated differently, change format here
+        output += formatter['ints'].write([1]).ljust(45) + 'PSFORMAT\n'
     try:
         with open('AUXNONSTRUCT', 'w') as wf:
             wf.write(output)
