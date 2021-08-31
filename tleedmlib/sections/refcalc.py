@@ -40,6 +40,9 @@ class RefcalcCompileTask():
         self.foldername = "refcalc-compile_LMAX{}".format(lmax)
         self.exename = "refcalc-{}".format(lmax)
 
+        if os.name == 'nt':
+            self.exename += '.exe'
+
 
 class RefcalcRunTask():
     """Stores information for a worker to create a subfolder, copy input there,

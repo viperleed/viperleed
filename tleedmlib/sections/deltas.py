@@ -38,6 +38,9 @@ class DeltaCompileTask():
         self.sourcedir = ""  # where the fortran files are
         self.basedir = ""    # where the calculation is based
 
+        if os.name == 'nt':
+            self.exename += '.exe'
+
 
 class DeltaRunTask():
     """Stores information needed to copy the correct delta executable and
