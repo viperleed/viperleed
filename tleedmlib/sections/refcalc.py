@@ -241,7 +241,8 @@ def run_refcalc(runtask):
     # clean up
     os.chdir(home)
     try:
-        shutil.rmtree(workfolder)
+        # shutil.rmtree(workfolder)
+        pass      # TEMP EDIT FOR PROFILING FORTRAN
     except Exception:
         logger.warning("Error deleting folder " + runtask.foldername)
     return ""
@@ -466,7 +467,8 @@ def refcalc(sl, rp, subdomain=False):
     # clean up compile folders
     for ct in comp_tasks:
         try:
-            shutil.rmtree(os.path.join(ct.basedir, ct.foldername))
+            # shutil.rmtree(os.path.join(ct.basedir, ct.foldername))
+            pass      # TEMP EDIT FOR PROFILING FORTRAN
         except Exception:
             logger.warning("Error deleting refcalc compile folder "
                            + ct.foldername)
@@ -476,7 +478,8 @@ def refcalc(sl, rp, subdomain=False):
         if 1 in rp.TENSOR_OUTPUT:
             io.combine_tensors(oripath=collection_dir)
         try:
-            shutil.rmtree(collection_dir)
+            # shutil.rmtree(collection_dir)
+            pass      # TEMP EDIT FOR PROFILING FORTRAN
         except Exception:
             logger.warning("Failed to delete empty directory "
                            + os.path.basename(collection_dir))
