@@ -1336,12 +1336,12 @@ C  3  WRITE(6,93)N,AOD(N)
   93  FORMAT(I4,2E14.4)
 C
 C
-C  GAUSSIAN ELLIMINATE TRANSPOSED (1-X) MATRIX
+C  GAUSSIAN ELLIMINATE TRANSPOSED (1-X) MATRIX       ! Michele: calls can be replaced with CGETRF
 C
       CALL ZGE(XODST,IPLO,LOD,LOD,EMACH)
       CALL ZGE(XEVST,IPLE,LEV,LEV,EMACH)
 C
-C  INVERT (1-X) & MULTIPLY BY A0LM ON THE RIGHT
+C  INVERT (1-X) & MULTIPLY BY A0LM ON THE RIGHT      ! Michele: calls can be replaced with CGETRS? Check what ZTU does differently than ZSU. Looks like it solves the system A**T X = B for X.
 C
       CALL ZTU(XODST,IPLO,AOD,LOD,LOD,EMACH)
       CALL ZTU(XEVST,IPLE,AEV,LEV,LEV,EMACH)
@@ -4018,7 +4018,10 @@ C   TH(LMNI,LMNI2) IS SQUARE HERE WITH LMNI2=LMNI=NLAY*LMMAX.
 C   IPL IS ADDITIONAL WORKING SPACE.
 C   INV,NINV ARE NOT USED HERE (BUT NINV IS TO BE GIVEN THE SAME
 C    VALUE AS NLAY IN THE INPUT).
-C 
+C
+! 2021-08-31 Michele: All parts of RTINV that are still using SOi and SSi
+! should be removed! TODO: check how S1...S3 (here set to SOi/SSi) are used
+! in the calls that follow RTINV (only in refcalc?)
       SUBROUTINE RTINV(RA1,TA1,RA2,TA2,RB1,TB1,RB2,TB2,RC1,TC1,          121190
      1RC2,TC2,N,NM,NP,AMULT,CYLM,PQ,
      2SYM,NT,FLMS,FLM,NL,LX,LXI,LT,LXM,LMMAX,KLM,
@@ -4723,7 +4726,7 @@ C  NO LONGER HOLD AFTER DOUBLING.
       COMPLEX SQRT,EXP
       DIMENSION  RA(N,N), TA(N,N), RB(N,N), TB(N,N), PP(2,NP), XS(NP)
       DIMENSION  S1(NP,NP), S2(NP,NP), S3(NP,NP), S4(NP,NP), PQ(2,NT)
-      DIMENSION  AS(3),SS1(2),SS2(2),INT(NP),SS3(2),SS4(2)
+      DIMENSION  AS(3),SS1(2),SS2(2),INT(NP),SS3(2),SS4(2)            ! Michele: get rid of SSi and SOi also here
       DIMENSION SO1(2),SO2(2),SO3(2)
       COMMON  /MS/LMAX,EPS,LITER
       COMMON  E, AK2, AK3,VPI
@@ -4904,7 +4907,7 @@ C
 10    LL2=LL+LL
 C
 C  PERFORM INVERSION AND MULTIPLICATION
-      CALL CXMTXT(X,LEV,LL,LL,LL2,MARK,DET,-1,XH)
+      CALL CXMTXT(X,LEV,LL,LL,LL2,MARK,DET,-1,XH)         ! Michele: Judge if this can be replaced with CGETRF/CGETRS (likely better optimized?)
 C
       LD=(IT-1)*LMMAX
       IF (IL.EQ.1) LD=LD+LEV
