@@ -415,10 +415,12 @@ def writeAUXGEO(sl, rp):
         formatter = {'vibrocc': ff.FortranRecordWriter('2F7.4'),
                      'geo': ff.FortranRecordWriter('3F7.4'),
                      }
+        lj = 26
     else:
         formatter = {'vibrocc': ff.FortranRecordWriter('2F9.4'),
                      'geo': ff.FortranRecordWriter('3F9.4'),
                      }
+        lj = 32
     slab_c = np.copy(sl.ucell[:, 2])
     if rp.LAYER_STACK_VERTICAL:
         sl = copy.deepcopy(sl)
@@ -432,8 +434,7 @@ def writeAUXGEO(sl, rp):
     output += ('---------------------------------------------------------'
                '----------\n')
     i3 = ff.FortranRecordWriter('I3')
-    ol = i3.write([len(sl.sitelist)])
-    ol = ol.ljust(26)
+    ol = i3.write([len(sl.sitelist)]).ljust(lj)
     output += ol + 'NSITE: number of different site types\n'
     for i, site in enumerate(sl.sitelist):
         output += '-   site type '+str(i+1)+' ---\n'
@@ -455,7 +456,7 @@ def writeAUXGEO(sl, rp):
                         occ, vib = 0., 0.
                         comment = ''
                     try:
-                        ol = formatter['vibrocc'].write([occ, vib]).ljust(26)
+                        ol = formatter['vibrocc'].write([occ, vib]).ljust(lj)
                     except Exception:
                         logger.error(
                             "Exception while trying to write occupation / "
@@ -469,8 +470,7 @@ def writeAUXGEO(sl, rp):
                '           ---\n')
     output += ('-----------------------------------------------------'
                '--------------\n')
-    ol = i3.write([len(sl.layers)])
-    ol = ol.ljust(26)
+    ol = i3.write([len(sl.layers)]).ljust(lj)
     output += ol + 'NLTYPE: number of different layer types\n'
     blayers = [lay for lay in sl.layers if lay.isBulk]
     nblayers = [lay for lay in sl.layers if not lay.isBulk]
@@ -480,10 +480,10 @@ def writeAUXGEO(sl, rp):
     for i, layer in enumerate(sl.layers):
         output += '-   layer type '+str(i+1)+' ---\n'
         if layer.isBulk:
-            output += ('  2                       LAY = 2: layer type no. '
+            output += ('  2'.ljust(lj) + 'LAY = 2: layer type no. '
                        + str(i+1) + ' has bulk lateral periodicity\n')
         else:
-            output += ('  1                       LAY = 1: layer type no. '
+            output += ('  1'.ljust(lj) + 'LAY = 1: layer type no. '
                        + str(i+1) + ' has overlayer lateral periodicity\n')
         if layer.isBulk:
             bl = sl.bulkslab.layers[blayers.index(layer)]
@@ -504,8 +504,7 @@ def writeAUXGEO(sl, rp):
                 rp.setHaltingLevel(2)
         else:
             natoms = len(layer.atlist)
-        ol = i3.write([natoms])
-        ol = ol.ljust(26)
+        ol = i3.write([natoms]).ljust(lj)
         output += ol+'number of Bravais sublayers in layer '+str(i+1)+'\n'
         if layer.isBulk:
             writelist = bulkUnique
@@ -525,7 +524,7 @@ def writeAUXGEO(sl, rp):
                 ol += formatter['geo'].write([0., 0., 0.])
                 layerOffsets[layer.num] += writepos
                 layerOffsets[layer.num + 1] -= writepos
-            ol = ol.ljust(26)
+            ol = ol.ljust(lj)
             output += ol+'Atom N='+str(atom.oriN)+' ('+atom.el+')\n'
     output += ('--------------------------------------------------------------'
                '-----\n')
@@ -533,7 +532,7 @@ def writeAUXGEO(sl, rp):
                '  ---\n')
     output += ('--------------------------------------------------------------'
                '-----\n')
-    output += ('  0                       TSLAB = 0: compute bulk using layer '
+    output += ('  0'.ljust(lj) + 'TSLAB = 0: compute bulk using layer '
                'doubling\n')
 
     # determine ASA
@@ -568,19 +567,15 @@ def writeAUXGEO(sl, rp):
         bvectors_ASBULK = bvectors_ASA
 
     ol = formatter['geo'].write([bvectors_ASA[2],
-                                 bvectors_ASA[0], bvectors_ASA[1]])
-    ol = ol.ljust(26)
+                                 bvectors_ASA[0], bvectors_ASA[1]]).ljust(lj)
     output += ol + 'ASA interlayer vector between different bulk units\n'
-    ol = i3.write([blayers[0].num+1])
-    ol = ol.ljust(26)
+    ol = i3.write([blayers[0].num+1]).ljust(lj)
     output += (ol + 'top layer of bulk unit: layer type '+str(blayers[0].num+1)
                + '\n')
-    ol = i3.write([bl2num+1])
-    ol = ol.ljust(26)
+    ol = i3.write([bl2num+1]).ljust(lj)
     output += ol + 'bottom layer of bulk unit: layer type '+str(bl2num+1)+'\n'
-    ol = formatter['geo'].write([bvectors_ASBULK[2],
-                                 bvectors_ASBULK[0], bvectors_ASBULK[1]])
-    ol = ol.ljust(26)
+    ol = formatter['geo'].write([bvectors_ASBULK[2], bvectors_ASBULK[0],
+                                 bvectors_ASBULK[1]]).ljust(lj)
     output += (ol + 'ASBULK between the two bulk unit layers (may differ from '
                'ASA)\n')
     output += ('--------------------------------------------------------------'
@@ -607,26 +602,24 @@ def writeAUXGEO(sl, rp):
             'Parameters TENSOR_OUTPUT is defined, but contains more values '
             'than there are non-bulk layers. Excess values will be ignored.')
         rp.setHaltingLevel(1)
-    ol = i3.write([len(sl.layers)-rp.N_BULK_LAYERS])
-    ol = ol.ljust(26)
+    ol = i3.write([len(sl.layers)-rp.N_BULK_LAYERS]).ljust(lj)
     output += ol + 'NSTACK: number of layers stacked onto bulk\n'
     for layer in list(reversed(nblayers)):
         n = layer.num + 1
         v = sl.layers[n].cartori - layer.cartori
         v[2] = sl.layers[n].cartori[2] - layer.cartbotz
         v = v + layerOffsets[n]   # add layerOffsets for Bravais layers
-        ol = i3.write([n]) + formatter['geo'].write([v[2], v[0], v[1]])
-        ol = ol.ljust(26)
-        output += (ol + 'layer '+str(n)+': layer type '+str(n)+', interlayer '
-                   'vector below\n')     # every layer is also a layer type
-        ol = i3.write([rp.TENSOR_OUTPUT[layer.num]])
-        ol = ol.ljust(26)
+        ol = i3.write([n]) + formatter['geo'].write([v[2],
+                                                     v[0], v[1]])
+        output += (ol.ljust(lj) + 'layer '+str(n)+': layer type '+str(n)
+                   +', interlayer vector below\n')
+        ol = i3.write([rp.TENSOR_OUTPUT[layer.num]]).ljust(lj)
         output += (ol + '0/1: Tensor output is required for this layer '
                    '(TENSOR_OUTPUT)\n')
         if rp.TENSOR_OUTPUT[layer.num] == 0:
             continue   # don't write the Tensor file names
         for i, atom in enumerate(layer.atlist):
-            ol = ('T_'+str(atom.oriN)).ljust(26)
+            ol = ('T_'+str(atom.oriN)).ljust(lj)
             output += (ol + 'Tensor file name, current layer, sublayer '
                        + str(i+1) + '\n')
     output += ('--------------------------------------------------------------'

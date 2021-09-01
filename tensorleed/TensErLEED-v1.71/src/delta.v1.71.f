@@ -1,5 +1,5 @@
 C  Tensor LEED delta amplitude calculation v1.7
-C  VB, 13.04.00  modified by LH 26.03.21
+C  VB, 13.04.00  modified by LH 23.04.21 (allows to read in tensors with variable lmax)
 C  for use with lib.tleed.f v1.7, lib.delta.f v1.7 
 C
 C  as described in 
@@ -169,6 +169,7 @@ C  EEV :  current energy in eV
       DIMENSION XIST(MNT0)
       REAL VPIS,VPIO,VV
       REAL EEV
+	  INTEGER L1DAT,LMDAT
 
 C  subroutine INAMP
 
@@ -264,9 +265,6 @@ C  end header - begin actual computation
 
       EMACH  = MEMACH
 
-C  set integers required for variable dimensions throughout code
-C  (cf. PARAM)
-
       NPSI   = MNPSI
       NEL    = MNEL
       LMAX   = MLMAX
@@ -333,7 +331,7 @@ C  note TV = TVB in readbas
 C  read first energy, inner potential, momentum, reference t-matrix,
 C  reference amplitudes from Tensor file AMP
 
-      CALL INDATA(1,FORMIN,E,L1,CAF,NT0,XIST,VPIS,VPIO,VV)
+      CALL INDATA(1,FORMIN,E,L1,CAF,NT0,XIST,VPIS,VPIO,VV,LMDAT)
 
       IF (E.lt.0.) THEN
         write(6,*) "First energy in Tensor file AMP was zero. Stopped."
@@ -350,7 +348,7 @@ C  read Tensor wavefields for current energy from file AMP; GTEMP is
 C  used as a working space with improper, but sufficient dimensions
 
           CALL INAMP(1,FORMIN,NT0,PSQ,AK2M,AK3M,ALM,EXLM,LMMAX,
-     1               GTEMP,LMMAX)
+     1               GTEMP,LMMAX,LMDAT)
 
 
       IF ((EEV.gt.(EI-1.E-3)).and.(EEV.lt.(EF+1.E-3))) THEN
@@ -409,7 +407,7 @@ C  write results to output file DELWV
 C  read next energy, inner potential, momentum, reference t-matrix,
 C  reference amplitudes from Tensor file AMP
 
-      CALL INDATA(1,FORMIN,E,L1,CAF,NT0,XIST,VPIS,VPIO,VV)
+      CALL INDATA(1,FORMIN,E,L1,CAF,NT0,XIST,VPIS,VPIO,VV,LMDAT)
 
 C  terminate only if negative E value is read! Otherwise, re-enter energy loop.
 

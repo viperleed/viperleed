@@ -518,15 +518,19 @@ def writeAUXBEAMS(ivbeams=None, beamlist=None, beamsfile='IVBEAMS',
 
 
 def writeAUXEXPBEAMS(beams, filename="AUXEXPBEAMS", header="Unknown system",
-                     write=True, numbers=False):
+                     write=True, numbers=False, version=0):
     """Takes a list of Beam objects and writes them in the format required by
     TensErLEED for experimental beam data. Returns the whole output as a
     string. 'numbers' defines whether a sequence of beam numbers in line 2
-    is expected."""
+    is expected. 'version' is to pass the TensErLEED-version, only needed for
+    new formatting styles."""
     output = header+"\n"
     if numbers:
-        i3x25 = ff.FortranRecordWriter("25I3")
-        output += i3x25.write([n+1 for n in range(0, len(beams))]) + "\n"
+        if version < 1.7:
+            bformatter = ff.FortranRecordWriter("25I3")
+        else:
+            bformatter = ff.FortranRecordWriter("25I4")
+        output += bformatter.write([n+1 for n in range(0, len(beams))]) + "\n"
         if len(beams) % 25 == 0:
             output += "\n"
     output += " (12F6.2)\n"

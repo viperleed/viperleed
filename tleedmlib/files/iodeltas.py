@@ -62,7 +62,8 @@ def checkDelta(filename, at, el, rp):
     for i in range(atline, len(lines)):  # read and check beams, then break
         try:        # read hk of beams formatted as F10.5
             fl = [float(s) for s in [lines[i][j:j+10]
-                                     for j in range(0, 10, len(lines[i]//10))]]
+                                     for j in range(0, len(lines[i]) - 10,
+                                                    10)]]
         except Exception:
             logger.error("Error parsing file "+filename)
             raise
@@ -368,7 +369,7 @@ def generateDeltaBasic(sl, rp):
     """Generates the part of the input for delta-amplitudes that is the same
     for all atoms, and returns it as a string."""
     if rp.TL_VERSION < 1.7:
-        formatter = {'energies': ff.FortranRecordWriter('"3F7.2'),
+        formatter = {'energies': ff.FortranRecordWriter('3F7.2'),
                      'uc': ff.FortranRecordWriter('2F7.4'),
                      'angles': ff.FortranRecordWriter('2F7.4'),
                      }

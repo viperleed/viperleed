@@ -287,34 +287,49 @@ def writeRfInfo(sl, rp, filename="rf.info"):
         else:
             iorf.append(1)
 
-    f72 = ff.FortranRecordWriter("F7.2")
-    i3 = ff.FortranRecordWriter("I3")
-    i3x25 = ff.FortranRecordWriter("25I3")
-    f31x25 = ff.FortranRecordWriter("25F3.1")
-    output = (f72.write([minen]).ljust(16) + "EMIN\n")
-    output += (f72.write([maxen]).ljust(16) + "EMAX\n")
+    if rp.TL_VERSION < 1.7:
+        formatter = {'energies': ff.FortranRecordWriter('F7.2'),
+                     'int': ff.FortranRecordWriter('I3'),
+                     'beams': ff.FortranRecordWriter("25I3"),
+                     'weights': ff.FortranRecordWriter("25F3.1")
+                     }
+    else:
+        formatter = {'energies': ff.FortranRecordWriter('F7.2'),
+                     'int': ff.FortranRecordWriter('I4'),
+                     'beams': ff.FortranRecordWriter("25I4"),
+                     'weights': ff.FortranRecordWriter("25F4.1")
+                     }
+    output = (formatter['energies'].write([minen]).ljust(16) + "EMIN\n")
+    output += (formatter['energies'].write([maxen]).ljust(16) + "EMAX\n")
     # !!! BULLSHIT RESULTS WHEN EMAX > MAX ENERGY IN DELTA FILES
-    output += (f72.write([step]).ljust(16) + "EINCR\n")
-    output += "  0             IPR - determines amount of output to stdout  \n"
-    output += (f72.write([rp.V0_IMAG]).ljust(16) + "VI\n")
-    # !!! bulk or surface V0_IMAG?
-    output += "   0.00         V0RR\n"
-    output += (f72.write([rp.IV_SHIFT_RANGE[0]]).ljust(16) + "V01\n")
-    output += (f72.write([rp.IV_SHIFT_RANGE[1]]).ljust(16) + "V02\n")
-    output += (f72.write([vincr]).ljust(16) + "VINCR\n")
-    output += (i3.write([rp.R_FACTOR_SMOOTH]) + "             ISMOTH\n")
-    output += "  0             EOT - 0: exp format, 1: van Hove format\n"
-    output += ((i3.write([len(rp.ivbeams)]) + i3.write([len(rp.expbeams)]))
-               .ljust(16) + "NTH NEX\n")
+    output += (formatter['energies'].write([step]).ljust(16) + "EINCR\n")
+    output += (formatter['int'].write([0]).ljust(16)
+               + "IPR - determines amount of output to stdout\n")
+    output += (formatter['energies'].write([rp.V0_IMAG]).ljust(16) + "VI\n")
+    output += (formatter['energies'].write([0.]).ljust(16) + "V0RR\n")
+    output += (formatter['energies'].write([rp.IV_SHIFT_RANGE[0]]).ljust(16)
+               + "V01\n")
+    output += (formatter['energies'].write([rp.IV_SHIFT_RANGE[1]]).ljust(16)
+               + "V02\n")
+    output += (formatter['energies'].write([vincr]).ljust(16) + "VINCR\n")
+    output += (formatter['int'].write([rp.R_FACTOR_SMOOTH]).ljust(16)
+               + "ISMOTH\n")
+    output += (formatter['int'].write([0]).ljust(16)
+               + "EOT - 0: exp format, 1: van Hove format\n")
+    output += ((formatter['int'].write([len(rp.ivbeams)])
+                + formatter['int'].write([len(rp.expbeams)])).ljust(16)
+               + "NTH NEX\n")
     # numbers of theoretical beams, as they correspond to experimental beams
-    output += (i3x25.write([n+1 for n in beamcorr]) + "\n")
-    output += " DATA MITTEL (integer & half order beams) :\n"
-    output += i3x25.write(iorf) + "\n"
+    output += (formatter['beams'].write([n+1 for n in beamcorr]) + "\n")
+    output += " DATA MITTEL (integer & fractional beams) :\n"
+    output += formatter['beams'].write(iorf) + "\n"
     output += " exp - th relationship IBP, beam weights WB\n"
-    output += i3x25.write([n + 1 for n in range(0, len(rp.expbeams))]) + "\n"
-    output += f31x25.write([1]*len(rp.expbeams))+"\n"
+    output += formatter['beams'].write([n + 1 for n
+                                        in range(0, len(rp.expbeams))]) + "\n"
+    output += formatter['weights'].write([1]*len(rp.expbeams))+"\n"
     auxexpbeams = writeAUXEXPBEAMS(rp.expbeams, header=rp.systemName,
-                                   write=True, numbers=True)
+                                   write=True, numbers=True,
+                                   version=rp.TL_VERSION)
     output += auxexpbeams
 
     try:
@@ -474,28 +489,49 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
 
     nsteps = []     # keep track of number of steps per parameter for init
     parcount = 0
-    i3 = ff.FortranRecordWriter("I3")
+    # i3 = ff.FortranRecordWriter("I3")
     i1 = ff.FortranRecordWriter("I1")
-    output += (i3.write([rp.indyPars]).ljust(16)
+    maxgen = rp.SEARCH_MAX_GEN
+    if rp.TL_VERSION < 1.7:
+        formatter = {'int': ff.FortranRecordWriter('I3'),
+                     'gens': ff.FortranRecordWriter('I6'),
+                     'rmut': ff.FortranRecordWriter('F7.4'),
+                     'ctrl': ff.FortranRecordWriter('I3'),
+                     }
+        if maxgen > 999999:
+            maxgen = 999999
+        ctrl_width = 3
+    else:
+        formatter = {'int': ff.FortranRecordWriter('I5'),
+                     'gens': ff.FortranRecordWriter('I7'),
+                     'rmut': ff.FortranRecordWriter('F7.4'),
+                     'ctrl': ff.FortranRecordWriter('I4'),
+                     }
+        if maxgen > 9999999:
+            maxgen = 9999999
+        ctrl_width = 4
+    output += (formatter['int'].write([rp.indyPars]).ljust(16)
                + "number of independent parameters\n")
     f74 = ff.FortranRecordWriter('F7.4')
-    output += (f74.write([rp.GAUSSIAN_WIDTH]).ljust(16)
+    output += (formatter['rmut'].write([rp.GAUSSIAN_WIDTH]).ljust(16)
                + "gaussian width control parameter RMUT\n")
-    output += ("  0             initialisation for random number generator - "
-               "0: use system time, 1,...: use init\n")
-    output += (i3.write([rp.R_FACTOR_TYPE]).ljust(16)
+    output += (formatter['int'].write([0]).ljust(16) + "initialisation for "
+               "random number generator - 0: use system time, 1,...: use"
+               " init\n")
+    output += (formatter['int'].write([rp.R_FACTOR_TYPE]).ljust(16)
                + "1: use RPe -- 2: use R2\n")
-    output += (i3.write([rp.SEARCH_BEAMS]).ljust(16)
+    output += (formatter['int'].write([rp.SEARCH_BEAMS]).ljust(16)
                + "Optimization of which beam group do you want? "
                "(0=Aver,1=Int,2=Half)\n")
-    output += " 1000           output intervall\n"
-    output += (str(rp.SEARCH_MAX_GEN).ljust(16) + "desired number of "
-               "generations to be performed\n")
-    output += i3.write([astep]).ljust(16) + "area fraction step width (%)\n"
+    output += formatter['gens'].write([1000]).ljust(16) + "output intervall\n"
+    output += (formatter['gens'].write([maxgen]).ljust(16)
+               + "desired number of generations to be performed\n")
+    output += (formatter['int'].write([astep]).ljust(16)
+               + "area fraction step width (%)\n")
     output += ("SD.TL           name of search document file "
                "(max. 10 characters)\n")
-    output += i3.write([ndom]).ljust(16) + ("Number of domains under "
-                                            "consideration\n")
+    output += (formatter['int'].write([ndom]).ljust(16)
+               + "Number of domains under consideration\n")
     uniquenames = []
     for k in range(0, ndom):
         if ndom == 1:
@@ -511,8 +547,8 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
         output += ("======= Information about Domain {}: ====================="
                    "=======================\n").format(k+1)
         output += (
-            i3.write([len(crp.search_atlist)]).ljust(16) + "Number of atomic "
-            "sites in variation: Domain {}\n".format(k+1))
+            formatter['int'].write([len(crp.search_atlist)]).ljust(16)
+            + "Number of atomic sites in variation: Domain {}\n".format(k+1))
         displistcount = len(csl.displists)+1
         surfats = csl.getSurfaceAtoms(crp)
         for (i, at) in enumerate(crp.search_atlist):
@@ -521,16 +557,18 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                 "------- Information about site {}: -----------------------"
                 "-----------------------\n".format(i+1))
             surf = 1 if at in surfats else 0
-            output += (i3.write([surf]).ljust(16) + "Surface (0/1)\n")
+            output += (formatter['int'].write([surf]).ljust(16)
+                       + "Surface (0/1)\n")
             if at.displist in csl.displists:
                 dlind = csl.displists.index(at.displist) + 1
             else:
                 dlind = displistcount
                 displistcount += 1
-            output += (i3.write([dlind]).ljust(16) + "Atom number\n")
+            output += (formatter['int'].write([dlind]).ljust(16)
+                       + "Atom number\n")
             output += (
-                i3.write([len(at.deltasGenerated)]).ljust(16) + "No. of "
-                "different files for Atom no. {}\n".format(i+1))
+                formatter['int'].write([len(at.deltasGenerated)]).ljust(16)
+                + "No. of different files for Atom no. {}\n".format(i+1))
             for (j, deltafile) in enumerate(at.deltasGenerated):
                 name = deltafile
                 if frompath:  # need to get the file
@@ -551,7 +589,8 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                 output += "****Information about file {}:\n".format(j+1)
                 output += (name.ljust(16) + "Name of file {} (max. 15 "
                            "characters)\n".format(j+1))
-                output += "  1             Formatted(0/1)\n"
+                output += (formatter['int'].write([1]).ljust(16)
+                           + "Formatted(0/1)\n")
                 el = deltafile.split("_")[-2]
                 if el.lower() == "vac":
                     geo = 1
@@ -582,8 +621,8 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                         types = 2
                     else:
                         types = 1
-                output += (i3.write([types]).ljust(16) + "Types of parameters "
-                           "in file {}\n".format(j+1))
+                output += (formatter['int'].write([types]).ljust(16)
+                           + "Types of parameters in file {}\n".format(j+1))
                 label = i1.write([i+1])+i1.write([j+1])
                 constr = {"vib": "-", "geo": "-"}
                 for mode in ["vib", "geo"]:
@@ -602,7 +641,7 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                             crp.searchpars.index(spl[0].linkedTo)
                             + prev_parcount + 1)
                 if vib > 0:
-                    output += (i3.write([vib]).ljust(16) +
+                    output += (formatter['int'].write([vib]).ljust(16) +
                                "vibrational steps\n")
                     parcount += 1
                     info += (str(parcount).rjust(4) + ("P"+label).rjust(7)
@@ -611,7 +650,7 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                              + constr["vib"].rjust(7) + "\n")
                     nsteps.append(vib)
                 if geo > 0:
-                    output += (i3.write([geo]).ljust(16) +
+                    output += (formatter['int'].write([geo]).ljust(16) +
                                "geometrical steps\n")
                     parcount += 1
                     info += (str(parcount).rjust(4) + ("P"+label).rjust(7)
@@ -621,8 +660,8 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                     nsteps.append(geo)
             output += "****concentration steps for site no. {}\n".format(i+1)
             occsteps = len(next(iter(at.disp_occ.values())))
-            output += (i3.write([occsteps]).ljust(16) + "no. of concentration "
-                       "steps - sum must equal 1 !\n")
+            output += (formatter['int'].write([occsteps]).ljust(16)
+                       + "no. of concentration steps - sum must equal 1 !\n")
             for j in range(0, occsteps):
                 ol = ""
                 totalocc = 0
@@ -699,11 +738,11 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                 controllines = [s+"\n"
                                 for s in rp.controlChemBackup.split("\n")]
     if rp.SEARCH_START == "random":
-        output += ("  0             Certain start position (1) or random "
-                   "configuration (0)")
+        output += (formatter['int'].write([0]).ljust(16) + 
+                   "Certain start position (1) or random configuration (0)\n")
     else:
-        output += ("  1             Certain start position (1) or random "
-                   "configuration (0)\n")
+        output += (formatter['int'].write([1]).ljust(16) + 
+                   "Certain start position (1) or random configuration (0)\n")
         if rp.SEARCH_START == "control":
             if cull and rp.SEARCH_CULL > 0:
                 if rp.SEARCH_CULL < 1:
@@ -728,7 +767,7 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                 if (rp.SEARCH_CULL_TYPE == "genetic" or
                         getPredicted):  # prepare readable clines
                     try:
-                        csurvive = [readIntLine(s, width=3)
+                        csurvive = [readIntLine(s, width=ctrl_width)
                                     for s in clines[:nsurvive]]
                     except ValueError:
                         if rp.SEARCH_CULL_TYPE == "genetic":
@@ -758,7 +797,7 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                             nc = rp.getOffspringConfig(csurvive)
                         ol = ""
                         for v in nc:
-                            ol += i3.write([v])
+                            ol += formatter['ctrl'].write([v])
                         output += ol + "\n"
                     else:    # "cloning"
                         output += clines[random.randrange(0, nsurvive)]
@@ -770,7 +809,7 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
             for i in range(0, rp.SEARCH_POPULATION):
                 ol = ""
                 for n in nsteps:
-                    ol += i3.write([(n+1)/2])
+                    ol += formatter['ctrl'].write([(n+1)/2])
                 output += ol + "\n"
         else:    # rp.SEARCH_START == "crandom"
             pop = [rp.getCenteredConfig()]
@@ -779,7 +818,7 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
             for p in pop:
                 ol = ""
                 for v in p:
-                    ol += i3.write([v])
+                    ol += formatter['ctrl'].write([v])
                 output += ol + "\n"
     # write search.steu
     try:

@@ -111,15 +111,19 @@ def processSearchResults(sl, rp, final=True):
         astep = rp.DOMAIN_STEP
     else:
         astep = 100
+    if rp.TL_VERSION < 1.7:
+        ctrl_width = 3
+    else:
+        ctrl_width = 4
     for dpars in dparlist:
         ol = ""
         areapars = []
         for (percent, l) in dpars:
             for ind in l:
-                ol += str(ind).rjust(3)
+                ol += str(ind).rjust(ctrl_width)
             areapars.append(int(percent/astep)+1)
         for ap in areapars:
-            ol += str(ap).rjust(3)
+            ol += str(ap).rjust(ctrl_width)
         output += ol + "\n"
     rp.controlChemBackup = output
     if writeControlChem:
