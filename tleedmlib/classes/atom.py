@@ -324,8 +324,9 @@ class Atom:
                         "{} already has an offset defined. Skipping second "
                         "assignment.".format(self))
                 continue
-            if el not in td or (len(td[el]) == 1
-                                and np.linalg.norm(td[el]) < 1e-5):
+            if (el not in td 
+                    or (len(td[el]) == 1 and np.linalg.norm(td[el]) < 1e-5)
+                    or (mode == 3 and len(td[el]) == 1 and td[el][0] == 1.)):
                 # did not assign for this element yet -> OK, store
                 td[el] = dr
                 # also store center
