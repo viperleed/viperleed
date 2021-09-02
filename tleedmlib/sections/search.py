@@ -658,7 +658,13 @@ def search(sl, rp):
     if hashname:
         ctasks.append((fcomp[0]+" -c", hashname, fcomp[1]))
     ctasks.append((fcomp[0]+" -o restrict.o -c", "restrict.f", fcomp[1]))
-    ctasks.append((fcomp[0]+" -o search.o -c -fixed", srcname, fcomp[1]))
+    format_tag = ""
+    if any([f.endswith('.f90') for f in (libname, srcname, hashname)]):
+        format_tag = "-fixed"
+        if any([s in fcomp[0] for s in ("gfortran", "mpifort")]):
+            # assume that mpifort also uses gfortran
+            format_tag = "--fixed-form"  #  different formatting string
+    ctasks.append((fcomp[0]+" -o search.o -c "+format_tag, srcname, fcomp[1]))
     to_link = "search.o random_.o lib.search.o restrict.o"
     if hashname:
         to_link += " intarr_hashing.o"
