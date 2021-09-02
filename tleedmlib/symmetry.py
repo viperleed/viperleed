@@ -343,20 +343,24 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
         mirror = False
         glide = False
         symplanelist = []
+        test_mirror_dirs = [(1, 0), (0, 1), (1, 1), (1, -1)]
+        if celltype == "hexagonal":
+            test_mirror_dirs.extend([(1, 2), (2, 1)])
         if not rp.SYMMETRY_FIND_ORI and not forceFindOri and not bulk:
             for (pa, pb) in [(0, 0), (0.25, 0.25), (0.25, -0.25)]:
-                for (i, j) in [(1, 0), (0, 1), (1, 1), (1, -1)]:
+                for (i, j) in test_mirror_dirs:
                     symplanelist.append(SymPlane(pa*abst[0]+pb*abst[1],
-                                                 i*abst[0]+j*abst[1], abst))
+                                                 i*abst[0]+j*abst[1], abst,
+                                                 index2=True))
         else:
             if toprotsym == 0:
                 checklist = symposlist
             else:
                 checklist = toprotlist
             for (k, pos) in enumerate(checklist):
-                for (i, j) in [(1, 0), (0, 1), (1, 1), (1, -1)]:
+                for (i, j) in test_mirror_dirs:
                     symplanelist.append(SymPlane(pos, i*abst[0]+j*abst[1],
-                                                 abst))
+                                                 abst, index2=True))
         if output:
             logger.debug(str(len(symplanelist))
                          + " candidates for mirror/glide planes found...")
@@ -418,7 +422,10 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
                         oriplane = spl
         else:
             if not glide:
-                planegroup = "pm"
+                if celltype in ("square", "rectangular"):
+                    planegroup = "pm"
+                else:
+                    planegroup = "p1"
             else:
                 planegroup = "cm"
             for spl in symplanelist:
@@ -430,9 +437,28 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
                         oriplane = spl
                         # prioritize planes close to the origin of cell (1, 1)
             if planegroup == "cm":
-                # both mirrors and glides. if parallel to unit vectors: rcm
-                if tuple(oriplane.par) in [(1, 0), (0, 1)]:
-                    planegroup = "rcm"
+                if celltype in ("square", "rectangular"):
+                    # both mirrors and glides. if parallel to unit vectors: rcm
+                    if tuple(oriplane.par) in [(1, 0), (0, 1)]:
+                        planegroup = "rcm"
+                elif (celltype == "hexagonal"
+                      and tuple(oriplane.par) not in [(1, 1), (1, -1)]):
+                    # Special case - required rotation of unit cell
+                    logger.warning(
+                        "The POSCAR unit cell was changed to a higher "
+                        "symmetry form. Make sure to check beam labels for "
+                        "compatibility with new unit cell.")
+                    rp.checklist.append("Check modified unit cell")
+                    rp.setHaltingLevel(2)
+                    ang = angle(abst[0]+abst[1], oriplane.dir)
+                    m = rotation_matrix(ang, dim=3)
+                    sl.getCartesianCoordinates()
+                    sl.ucell_mod.append(('lmul', m))
+                    sl.ucell = np.dot(m, sl.ucell)
+                    abst = np.transpose(sl.ucell[:2, :2])
+                    sl.collapseCartesianCoordinates(updateOrigin=True)
+                    oriplane = SymPlane(np.array([0, 0]),
+                                        abst[0]+abst[1], abst)
         if oriplane is not None and oriplane.distanceFromOrigin(abst) > eps:
             # shift to closest point on oriplane
             shiftv = (np.array([oriplane.dir[1], -oriplane.dir[0]])
