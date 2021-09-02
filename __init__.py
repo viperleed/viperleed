@@ -7,4 +7,4 @@
 # print('You have imported', __name__)
 
 GLOBALS = {'USE_GUI': None,
-           'version': '0.5.6', }
+           'version': '0.6.0', }
