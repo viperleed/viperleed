@@ -33,7 +33,11 @@ knownParams = [
     'TL_VERSION', 'T_DEBYE', 'T_EXPERIMENT', 'V0_IMAG', 'V0_REAL',
     'V0_Z_ONSET', 'VIBR_AMP_SCALE']
 # paramAlias keys should be all lowercase, with no underscores
-paramAlias = {'plotrfactors': "PLOT_RFACTOR"}
+paramAlias = {
+    'fortrancompile': 'FORTRAN_COMP', 'compiler': 'FORTRAN_COMP',
+    'fortrancompiler': 'FORTRAN_COMP',
+    'plotrfactors': 'PLOT_RFACTOR',
+              }
 for p in knownParams:
     paramAlias[p.lower().replace("_", "")] = p
 
@@ -170,7 +174,7 @@ def readPARAMETERS(filename='PARAMETERS'):
         param = plist[0]
         if (param not in knownParams and
                 param.lower().replace("_", "") in paramAlias):
-            param = paramAlias(param.lower().replace("_", ""))
+            param = paramAlias[param.lower().replace("_", "")]
         if param not in knownParams:
             logger.warning('PARAMETERS file: Parameter '+param+' not '
                            'recognized.')
