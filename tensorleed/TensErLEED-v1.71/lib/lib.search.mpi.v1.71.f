@@ -2131,7 +2131,7 @@ C  Subroutine ReadFile reads in a specified delta amplitude file
       Subroutine ReadFile(CNTFIL,NDOM,IDOM,IPLACE,IFILE,NPLACES,NFILES,
      +                    NT0,NNATOMS,NSTEP,NDATT,IFORM,EMIN,EMAX,
      +                    INFILE,THETA,FI,RAR1,RAR2,PQFEX,CUNDISP,
-     +                    CDISP,AID,EMK,EMK0,ESMK,VPI,VVV,
+     +                    CDISP,AID,EMK,EMK0,ESMK,VPI,VV,
      +                    XISTMK,DELMK,DATTNO,XIST,DELWV,CUNDVB,CDVB)
 
       include "PARAM"
