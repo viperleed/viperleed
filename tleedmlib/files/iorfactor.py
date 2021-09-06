@@ -39,7 +39,6 @@ def readROUT(filename="ROUT"):
     ----------
     filename : string, optional
         Pass if you want to read from a file other than 'ROUT'
-    tl_version: float, optional
 
     Returns
     -------
