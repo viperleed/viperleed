@@ -39,6 +39,7 @@ def readROUT(filename="ROUT"):
     ----------
     filename : string, optional
         Pass if you want to read from a file other than 'ROUT'
+    tl_version: float, optional
 
     Returns
     -------
@@ -85,8 +86,10 @@ def readROUT(filename="ROUT"):
     # now read the R-factors per beam at v0rshift
     rfaclist = []
     for line in [li for li in lines if len(li) >= 70]:
-        values = line[18:69].split()
-        # limits to 999 beams; use [17:69] if more are required
+        line = line.strip()
+        if line.endswith("<---"):
+            line = line[:-4]
+        values = line[16:].split()
         try:
             index = int(values[0])
             v0r = float(values[2])
