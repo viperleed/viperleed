@@ -579,7 +579,12 @@ def search(sl, rp):
         return None
     # check for mpirun, decide whether to use parallelization
     usempi = True
-    if (shutil.which("mpirun", os.X_OK) is None
+    if rp.N_CORES == 1:
+        logger.warning(
+            "The N_CORES parameter is set to 1. The search will be run "
+            "without multiprocessing. This will be much slower!")
+        usempi = False
+    elif (shutil.which("mpirun", os.X_OK) is None
             or shutil.which("mpiifort", os.X_OK) is None):
         usempi = False
         logger.warning(
@@ -606,12 +611,19 @@ def search(sl, rp):
             except Exception:
                 logger.error("No fortran compiler found, cancelling...")
                 raise RuntimeError("Fortran compile error")
-    else:
+    if usempi:
         if rp.FORTRAN_COMP_MPI[0] == "":
             try:
                 rp.getFortranMpiComp()
             except Exception:
                 logger.error("No fortran mpi compiler found, cancelling...")
+                raise RuntimeError("Fortran compile error")
+    else:
+        if rp.FORTRAN_COMP[0] == "":
+            try:
+                rp.getFortranComp()
+            except Exception:
+                logger.error("No fortran compiler found, cancelling...")
                 raise RuntimeError("Fortran compile error")
     # get fortran files
     try:
@@ -620,12 +632,20 @@ def search(sl, rp):
         if not tldir:
             raise RuntimeError("TensErLEED code not found.")
         srcpath = os.path.join(tldir, 'src')
-        srcname = [f for f in os.listdir(srcpath)
-                   if f.startswith('search.mpi')][0]
+        if usempi:
+            srcname = [f for f in os.listdir(srcpath)
+                       if f.startswith('search.mpi')][0]
+        else:
+            srcname = [f for f in os.listdir(srcpath)
+                       if f.startswith('search') and 'mpi' not in f][0]
         shutil.copy2(os.path.join(srcpath, srcname), srcname)
         libpath = os.path.join(tldir, 'lib')
-        libname = [f for f in os.listdir(libpath)
-                   if f.startswith('lib.search.mpi')][0]
+        if usempi:
+            libname = [f for f in os.listdir(libpath)
+                       if f.startswith('lib.search.mpi')][0]
+        else:
+            libname = [f for f in os.listdir(libpath)
+                       if f.startswith('lib.search') and 'mpi' not in f][0]
         shutil.copy2(os.path.join(libpath, libname), libname)
         hashing_files = [f for f in os.listdir(libpath)
                          if f.startswith('intarr_hashing')
@@ -681,15 +701,6 @@ def search(sl, rp):
         logger.info("Search log will be written to file "+searchlogname)
         if rp.TL_VERSION > 1.6:
             rp.manifest.append(searchlogname)
-    if rp.N_CORES == 1:
-        logger.warning(
-            "The N_CORES parameter is set to 1. The search will be run "
-            "without multiprocessing. This will be much slower!")
-        # TODO: This shouldn't need MPICOMPILE, but I'm not sure
-        #   if the non-parallelized version of the search is
-        #   equivalent, so currently, both are *compiled* with mpi,
-        #   and this only switches off mpirun
-        usempi = False
     # if there is an old SD.TL file, it needs to be removed
     if os.path.isfile("SD.TL"):
         try:

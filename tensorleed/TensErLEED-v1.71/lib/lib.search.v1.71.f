@@ -258,8 +258,8 @@ C  SKIP SOME BEAMS
 	  
 68    CONTINUE
 C     WRITE(6,70)IBE,(BENAME(I,IBE),I=1,5),IBT,(PQAV(I,IBT),I=1,2)
-70    FORMAT(9H*BEAM NO.,1I5,10H IN EXP. (,4A4,20H), WHICH IS BEAM NO.,
-     11I5,12H IN THEORY (,2F12.4,1H))
+C70    FORMAT(9H*BEAM NO.,1I5,10H IN EXP. (,4A4,20H), WHICH IS BEAM NO.,
+C     11I5,12H IN THEORY (,2F12.4,1H))
 
 CVB  for R2:
 
@@ -598,12 +598,12 @@ C  Beam me up to main! Now!
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
       SUBROUTINE SEA_RCD(NDOM,NPS,NPRMK,NSTEP,PNUM,VARST,PARIND,
-     +                   RPEIND,WSK,WIDT,RMUT,NPAR)
+     +                   RPEIND,WSK,WIDT,RMUT,NPAR,PARDEP)
 
 C Global variables
       INTEGER NDOM,NPS,NPRMK,PNUM,NSTEP,NPAR
-      INTEGER VARST,PARIND
-      DIMENSION VARST(NPRMK),PARIND(NPRMK,NPS)
+      INTEGER VARST,PARIND,PARDEP
+      DIMENSION VARST(NPRMK),PARIND(NPRMK,NPS),PARDEP(NPRMK)
       REAL RPEIND,WSK,WIDT,RMUT
       DIMENSION WIDT(NPRMK)
       DIMENSION RPEIND(NPS),WSK(NSTEP)
@@ -615,12 +615,20 @@ C Local variables
       REAL BACKGROUND, NormG
       integer P(30), IPS, IDOM
 
-c      write(8,*) "now in sea_rcd"
+C      write(4,*) "now in sea_rcd"
+C      write(4,*) NPS,NPRMK,PNUM
 
-      DO 1855 IPOP=1,NPS
+      DO 1856 IPOP=1,NPS
       DO 1855 IPARAM=1,PNUM
+      
+C If parameter is dependent on another, we can skip everything
 
-c      write(8,*) "PARAMETER",IPARAM,"IN POP",IPOP,"started"
+       IF(PARDEP(IPARAM).ne.0) THEN
+         PARIND(IPARAM,IPOP) = PARIND(PARDEP(IPARAM),IPOP)
+         GOTO 1855
+       ENDIF
+
+C      write(8,*) "PARAMETER",IPARAM,"IN POP",IPOP,"started"
 
       IF(ABS(WIDT(IPARAM)-1).LE.1E-4) THEN
       width=2.
@@ -680,7 +688,7 @@ c         write(8,*)"probability of value",IPVAL," is",WSK(IPVAL)
 c      write(8,*) "distribution normalised"
 
 C  Determination of new random number
-C  not that if name of random subroutine is changed, integer declaration of
+C  note that if name of random subroutine is changed, integer declaration of
 C  random (see above) must also be changed!
 
       FMKRN=random()
@@ -702,6 +710,7 @@ C      write(8,*) "random",FMKRN," between",MKHELP1," ",MKHELP2,"?"
       MKHELP1=MKHELP2
  1854 CONTINUE
  1855 CONTINUE
+ 1856 CONTINUE
 
       RETURN
       END
@@ -847,7 +856,7 @@ C
   100 continue
 
 
-      text1 = 'IND ||  R-Av  |  R-Int | R-Frac |   V0r   || Proz | '
+cas      WRITE(4,5558) ' IND ||  R-Av  |  R-Int | R-Frac |   V0r   ||',
 cas     +((((('P',IPLACE,IFILE,','),IPARAM=1,PARTYP(IPLACE,IFILE)),
 cas     +IFILE=1,NFIL(IPLACE)),('C',IPLACE,IPLACE,',')),IPLACE=1,MNPLACES)
 
@@ -1270,10 +1279,10 @@ C  NBEA(I) IF J.GT.I MUST HOLD. IF NBEA(I)=0, EXP. BEAM I WILL BE SKIPPED
 C  LATER ON
 
 C  READ AND PRINT DESCRIPTION OF EXPERIMENT
-      READ(5,'(A80)') TEXT
+      READ(12,'(A80)') TEXT
       WRITE(6,*) TEXT
 
-      READ(5,30)(NBEA(I),I=1,NBED)
+      READ(12,30)(NBEA(I),I=1,NBED)
       WRITE(6,40)NBED
 C     WRITE(8,40)NBED
 40    FORMAT(1H*,I4,25H EXP. BEAMS TO BE READ IN)                         040481
@@ -1281,10 +1290,10 @@ C     WRITE(8,40)NBED
 C     WRITE(8,50)(NBEA(I),I=1,NBED)
 50    FORMAT(31H*AVERAGING SCHEME OF EXP. BEAMS,400(25I4,/))
 C  READ INPUT FORMAT OF EXP. INTENSITIES
-      READ(5,'(A80)') FMT
+      READ(12,'(A80)') FMT
       DO 90 IB=1,NBED
 C  READ AND PRINT NAME OF THIS BEAM
-      READ(5,10)(BENAME(I,IB),I=1,5)
+      READ(12,10)(BENAME(I,IB),I=1,5)
 10    FORMAT(19A4)
       WRITE(6,70)IB,(BENAME(I,IB),I=1,5)
 C     WRITE(8,70)IB,(BENAME(I,IB),I=1,5)
@@ -1295,7 +1304,7 @@ C  NORMALIZATION TO INTENSITIES OF THE ORDER OF 1 (NOT NECESSARY, BUT
 C  SAFE), AND TO MATCH UP CURVES TO BE AVERAGED TOGETHER WHEN THEIR
 C  ENERGY RANGES DIFFER (TO AVOID DISCONTINUITIES AT ENERGIES WHERE
 C  THE NUMBER OF CURVES AVERAGED TOGETHER CHANGES)
-      READ(5,35)NEE(IB),FAC
+      READ(12,35)NEE(IB),FAC
 35    FORMAT(1I4,1E13.4)
 
       IF (NEE(IB).gt.MNDATA) THEN
@@ -1307,7 +1316,7 @@ C  THE NUMBER OF CURVES AVERAGED TOGETHER CHANGES)
 
       N=NEE(IB)
 C  READ (AND MAYBE PRINT) EXP. INTENSITIES
-      READ(5,FMT)(EE(IB,IE),AE(IB,IE),IE=1,N)
+      READ(12,FMT)(EE(IB,IE),AE(IB,IE),IE=1,N)
       IF (IPR.LT.1) GO TO 82
       WRITE(6,80)(EE(IB,IE),AE(IB,IE),IE=1,N)
 80    FORMAT(31H* EXP. ENERGIES AND INTENSITIES,
@@ -1334,37 +1343,37 @@ CVB  This subroutine reads information for r-factor determination from file rf.i
 
 C  begin readin from stdin
 
-      READ(5,'(F7.2)') EMIN
-      READ(5,'(F7.2)') EMAX
-      READ(5,'(F7.2)') EINCR
-      READ(5,'(I4)')   IPR
-      READ(5,'(F7.2)') VI
-      READ(5,'(F7.2)') V0RR
-      READ(5,'(F7.2)') V01
-      READ(5,'(F7.2)') V02
-      READ(5,'(F7.2)') VINCR
-      READ(5,'(I4)')   ISMOTH
-      READ(5,'(I4)')   EOT
-      READ(5,'(2I4)')  NBTD,NBED
+      READ(12,'(F7.2)') EMIN
+      READ(12,'(F7.2)') EMAX
+      READ(12,'(F7.2)') EINCR
+      READ(12,'(I4)')   IPR
+      READ(12,'(F7.2)') VI
+      READ(12,'(F7.2)') V0RR
+      READ(12,'(F7.2)') V01
+      READ(12,'(F7.2)') V02
+      READ(12,'(F7.2)') VINCR
+      READ(12,'(I4)')   ISMOTH
+      READ(12,'(I4)')   EOT
+      READ(12,'(2I4)')  NBTD,NBED
 
       WRITE(6,8)NBTD,NBED                                               040481
 8     FORMAT(13H*NBTD,NBED = ,2I4)                                      040481
 
-      READ(5,'(25I4)') (KAV(J),J=1,NBTD)
+      READ(12,'(25I4)') (KAV(J),J=1,NBTD)
 
       WRITE(6,5)(KAV(J),J=1,NBTD)
 
-5     FORMAT(33H*AVERAGING SCHEME OF THEOR. BEAMS,400(25I4,/))
+5     FORMAT(33H0AVERAGING SCHEME OF THEOR. BEAMS,400(25I4,/))
 
 C Values for averaging of beams in integer and half order beams
-      READ(5,*) 
-      READ(5,'(25I4)') (MITTEL(I),I=1,NBED)
+      READ(12,*) 
+      READ(12,'(25I4)') (MITTEL(I),I=1,NBED)
 
 C beam order IBP, beam weights WR
 
-      READ(5,*)
-      READ(5,'(25I4)')   (IBP(I),I=1,NBED)
-      READ(5,'(25F4.1)') (WB(I),I=1,NBED)
+      READ(12,*)
+      READ(12,'(25I4)')   (IBP(I),I=1,NBED)
+      READ(12,'(25F4.1)') (WB(I),I=1,NBED)
 
 C  NSS is artifact present in many r-factor subroutines
 
@@ -1471,7 +1480,7 @@ C  INTERPOLATE (AND SET NEGATIVE INTENSITIES TO ZERO)
       N=NE(IB)
       IF (N.EQ.0) GO TO 70
       WRITE(6,80)IB,(E(IB,IE),A(IS,IB,IE),IE=1,N)
-80    FORMAT(40H*INTENSITIES AFTER INTERPOLATION IN BEAM,1I5,
+80    FORMAT(40H0INTENSITIES AFTER INTERPOLATION IN BEAM,1I5,
      1/,1000(5(1F7.2,1E13.4,3X),/))
 70    CONTINUE
 90    RETURN
@@ -2009,7 +2018,7 @@ C  READ IN BEAM AVERAGING INFORMATION. IF NBEA(I)=NBEA(J), PSEUDO-EXP.
 C  BEAMS I AND J WILL BE AVERAGED TOGETHER. THE RELATION NBEA(J).GT.
 C  NBEA(I) IF J.GT.I MUST HOLD. IF NBEA(I)=0, EXP. BEAM I WILL BE SKIPPED
 C  LATER ON
-      READ(5,30)(NBEA(I),I=1,NBED)
+      READ(12,30)(NBEA(I),I=1,NBED)
       write(6,30)(NBEA(I),I=1,NBED)
 C
 C
@@ -2022,8 +2031,8 @@ C
 C
 C
 C BEGIN READ IN PART
-      READ (5,102) CHARD
-      READ (5,103) NBEAMS
+      READ (12,102) CHARD
+      READ (12,103) NBEAMS
       write(6,102) CHARD
       write(6,103) NBEAMS
       IF (NBED .NE. NBEAMS) THEN
@@ -2035,7 +2044,7 @@ C BEGIN READ IN PART
           STOP 'ERROR 1 IN PSEUDOEXPERIMENT'
       ENDIF
       DO 210 IB=1,NBED   
-         READ(5,101) INN,(BENAME(I,IB),I=1,5)
+         READ(12,101) INN,(BENAME(I,IB),I=1,5)
          write(6,101) INN,(BENAME(I,IB),I=1,5)
   210 CONTINUE
 C
@@ -2049,7 +2058,7 @@ C  PRESET ALL ARRAYS
   220 CONTINUE
 C
       DO 230 J=1,NDATA
-         READ (5,105,END=250) EEH(J),DUMMY,(AE(K,J),K=1,NBED)
+         READ (12,105,END=250) EEH(J),DUMMY,(AE(K,J),K=1,NBED)
 
          DO 240 K=1,NBED
             IF (MAXI(K) .LT. AE(K,J)) MAXI(K)=AE(K,J)
@@ -2414,13 +2423,13 @@ C  check validity of read energy
 
               IF (CNTFIL.eq.11) THEN
 
-                EMK0(IDATT) = EMK(IDATT)
+                EMK0(IDATT) = EMK(IDATT) - VV(IDATT)
 
               ELSE
 
-                CHECK = ABS(EMK(IDATT)-EMK0(IDATT))
+                CHECK = ABS(EMK(IDATT)-VV(IDATT)-EMK0(IDATT))
 
-                IF (CHECK.gt.1.E-9) THEN
+                IF (CHECK.gt.1.E-4) THEN
 
                   write(8,*) 'Illegal energy read in input file',
      +            CNTFIL
@@ -2931,7 +2940,7 @@ C  files.
 
       IF (PNUM.NE.MNPRMK) THEN
 
-         write(8,'("PNUM:",I5,"MNPRMK:",I5)') PNUM, MNPRMK
+         write(8,'("PNUM:",I3,"MNPRMK:",I5)') PNUM, MNPRMK
 
          write(8,*) "par.no    varst"
          DO 50 IPARAM=1,PNUM,1
@@ -2987,6 +2996,147 @@ c      END IF
       END
 
 ********************************************************************************
+C Subroutine GetDependency initializes the PARDEP array. For each parameter, if 
+C it should always be equivalent to another parameter via the "Atom number"
+C FILREL, the PARDEP(IPARAM) will be set to the index of that parameter. For 
+C all other parameters, PARDEP will be 0, and only those parameters need to be 
+C calculated by SEA_RCD.
+C Added 2020-12 by F. Kraushofer; largely a copy of GetGrid that stores the 
+C information instead of having to run in every iteration of the optimization
+C loop.
+
+      Subroutine GetDependency(NDOM,NPLACES,NFILES,NPRMK,NPRAS,NPS,
+     +                         NFIL,PARTYP,FILREL,PARDEP)
+
+      include "PARAM"
+
+C  Dimension sizes
+
+      INTEGER NPLACES(NDOM),NFILES,NPRMK,NPS
+      integer NPRAS(NDOM)
+
+C  Global variables
+
+									
+C  NFIL is number of files for each place
+															 
+C  PARTYP is number of parameters in current file
+															   
+													
+											 
+C  FILREL can force different atoms to be treated equally ("atom number")
+C  PARDEP stores whether a parameter should be set to the same value as another one
+      
+
+      INTEGER   NFIL,FILREL
+      DIMENSION NFIL(NDOM,MNPLACES),FILREL(NDOM,MNPLACES)
+      INTEGER   PARTYP
+											
+      DIMENSION PARTYP(NDOM,MNPLACES,NFILES)
+      INTEGER   PARDEP
+      DIMENSION PARDEP(NPRMK)
+							
+														  
+
+C  local variables
+
+C  CNT1 counts parameters that have already been processed in previous files
+C  CNT2 has the same purpose when atom number is considered (for second atom)
+C  CNTPAR is another counter for parameters within a place
+							 
+C  OFFSET is used to skip the parameters PARIND of the first (LDOM - 1) domains;
+C  so OFFSET is equal to 0, if LDOM = 1, and equal to NPRAS(1), if LDOM = 2,
+C  and so on.
+C  KDOM and LDOM are the domain number in loops over domains
+
+      INTEGER CNT1,CNT2,CNTPAR,OFFSET
+      INTEGER KDOM,LDOM
+
+C  Set 0 for all
+      PARDEP = 0
+
+C  start loop to do this for each domain
+      do 201 LDOM = 1, NDOM
+      
+C --- first determine the value of OFFSET corresponding to the LDOM-th domain
+      OFFSET = 0
+      do 200 KDOM = 1, LDOM - 1
+        OFFSET = OFFSET + NPRAS(KDOM)
+ 200  continue
+
+C  Check dependences
+										  
+
+      CNT1 = OFFSET
+      DO 970 IPLACE1 = 1, NPLACES(LDOM) - 1
+
+C  Set CNT2 to CNT1, then start to compare places after IPLACE1 to IPLACE1
+
+        CNT2 = CNT1
+        DO 971 IPLACE2 = IPLACE1 + 1, NPLACES(LDOM)
+
+C  increment CNT2 for last place (which is IPLACE1 in first run)
+
+          DO 972 IFILE = 1, NFIL(LDOM, IPLACE2 - 1)
+
+            CNT2 = CNT2 + PARTYP(LDOM, IPLACE2 - 1, IFILE)
+
+ 972      CONTINUE
+
+C  never forget concentration parameter
+
+          CNT2 = CNT2 + 1
+
+          IF (FILREL(LDOM, IPLACE2) .eq. FILREL(LDOM, IPLACE1)) THEN
+
+C  store dependence
+
+            CNTPAR = 0
+            DO 973 IFILE = 1, NFIL(LDOM, IPLACE2)
+
+              DO 974 IPARAM = 1, PARTYP(LDOM, IPLACE2, IFILE)
+
+                PARDEP(CNT2+CNTPAR+IPARAM) = CNT1+CNTPAR+IPARAM
+											   
+
+ 974          CONTINUE
+
+              CNTPAR = CNTPAR + PARTYP(LDOM, IPLACE2, IFILE)
+
+ 973        CONTINUE
+
+C  never forget concentration parameter
+
+            PARDEP(CNT2+CNTPAR+1) = CNT1+CNTPAR+1
+									  
+
+          END IF
+
+ 971    CONTINUE
+
+C  now increment CNT1 for next place IPLACE1
+
+        DO 975 IFILE = 1, NFIL(LDOM, IPLACE1)
+
+          CNT1 = CNT1 + PARTYP(LDOM, IPLACE1, IFILE)
+
+ 975    CONTINUE
+
+C  never forget concentration parameter
+
+        CNT1 = CNT1 + 1
+
+ 970  CONTINUE
+
+C  domain loop ends
+
+ 201  continue
+
+      RETURN
+   
+      END
+
+********************************************************************************
 C  Compute current grid point in deltaamplitude-file from parameter grip points
 C  for each site IFNUM and store away concentration step no. NPARC
 C  grid points are computed from parameter values PARIND file by file
@@ -2996,7 +3146,8 @@ C  parameters while IFNUM refers to a specific file. The structure of the
 C  loops below is tedious and can certainly be improved using a structogram.:)
 
       Subroutine GetGrid(NDOM,NPLACES,NFILES,NPRMK,NPRAS,NPS,IDOM,IPOP,
-     +                   NFIL,IFNUM,PARTYP,PARIND,VARST,NPARC,FILREL)
+     +                   NFIL,IFNUM,PARTYP,PARIND,VARST,NPARC,FILREL,
+     +                   PARDEP)
 
       include "PARAM"
 
@@ -3015,16 +3166,18 @@ C  PARIND are current parameter values as determined by Sea_RCD
 C  VARST is number of grid points for each parameter
 C  NPARC is current concentration step number
 C  FILREL can force different atoms to be treated equally ("atom number")
+C  PARDEP stores whether a parameter should be set to the same value as 
+C  another one (see subroutine GetDependency)
 
       INTEGER   IPOP
-
+      
       INTEGER   NFIL
       DIMENSION NFIL(NDOM,MNPLACES)
       INTEGER   IFNUM,PARTYP
       DIMENSION IFNUM(NDOM,MNPLACES,NFILES),
      .          PARTYP(NDOM,MNPLACES,NFILES)
-      INTEGER   PARIND,VARST
-      DIMENSION PARIND(NPRMK,NPS),VARST(NPRMK)
+      INTEGER   PARIND,VARST,PARDEP
+      DIMENSION PARIND(NPRMK,NPS),VARST(NPRMK),PARDEP(NPRMK)
       INTEGER   NPARC,FILREL
       DIMENSION NPARC(NDOM,MNPLACES),FILREL(NDOM,MNPLACES)
 
@@ -3048,72 +3201,14 @@ C --- first determine the value of OFFSET corresponding to the IDOM-th domain
         OFFSET = OFFSET + NPRAS(KDOM)
  200  continue
 
-
 C  Take independence of atoms into account
 
       CNT1 = OFFSET
-      DO 970 IPLACE1 = 1, NPLACES(IDOM) - 1
-
-C  Set CNT2 to CNT1, then start to compare places after IPLACE1 to IPLACE1
-
-        CNT2 = CNT1
-        DO 971 IPLACE2 = IPLACE1 + 1, NPLACES(IDOM)
-
-C  increment CNT2 for last place (which is IPLACE1 in first run)
-
-          DO 972 IFILE = 1, NFIL(IDOM, IPLACE2 - 1)
-
-            CNT2 = CNT2 + PARTYP(IDOM, IPLACE2 - 1, IFILE)
-
- 972      CONTINUE
-
-C  never forget concentration parameter
-
-          CNT2 = CNT2 + 1
-
-          IF (FILREL(IDOM, IPLACE2) .eq. FILREL(IDOM, IPLACE1)) THEN
-
-C  equalize all parameters if identical atom numbers for IPLACE2, IPLACE1
-
-            CNTPAR = 0
-            DO 973 IFILE = 1, NFIL(IDOM, IPLACE2)
-
-              DO 974 IPARAM = 1, PARTYP(IDOM, IPLACE2, IFILE)
-
-                PARIND(CNT2+CNTPAR+IPARAM,IPOP) = 
-     =          PARIND(CNT1+CNTPAR+IPARAM,IPOP)
-
- 974          CONTINUE
-
-              CNTPAR = CNTPAR + PARTYP(IDOM, IPLACE2, IFILE)
-
- 973        CONTINUE
-
-C  never forget concentration parameter
-
-            PARIND(CNT2+CNTPAR+1,IPOP) =
-     .      PARIND(CNT1+CNTPAR+1,IPOP)
-
-          END IF
-
- 971    CONTINUE
-
-C  now increment CNT1 for next place IPLACE1
-
-        DO 975 IFILE = 1, NFIL(IDOM, IPLACE1)
-
-          CNT1 = CNT1 + PARTYP(IDOM, IPLACE1, IFILE)
-
- 975    CONTINUE
-
-C  never forget concentration parameter
-
-        CNT1 = CNT1 + 1
-
+      DO 970 IPARAM = 1, NPRMK
+        IF(PARDEP(IPARAM).ne.0) THEN
+          PARIND(IPARAM,IPOP) = PARIND(PARDEP(IPARAM),IPOP)
+        END IF
  970  CONTINUE
-
-
- 100  continue
 
 C  Begin computation of IFNUM, NPARC
 

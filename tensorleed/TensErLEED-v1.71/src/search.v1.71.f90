@@ -1,6 +1,6 @@
 C  Tensor LEED optimization algorithm 
 C  v1.7, VB 13.04.00 modified wrt field limitations by LH 26.03.21
-C  for use with lib.search.f v1.71, random_.c
+C  for use with lib.search.f v1.7, random_.c
 C
 C  as described in 
 C
@@ -53,6 +53,7 @@ C  V. Blum v104a: Minor corrections (type declarations adjusted)
 C  V. Blum v105: energy dependent inner potential now taken over from LEED
 C                calculation
 C  V. Blum v106: minor adjustments for TensErLEED; subroutines now in lib.search.f
+
 
 **************************************************************************
 
@@ -181,6 +182,7 @@ C  OVLG is total energy range (sum of all used experimental beams)
       DIMENSION BENAME(5,MNBED)
       INTEGER MITTEL
       DIMENSION MITTEL(MNBED)
+      
 C  Arrays for data to compare search results to from WEXPEL via READE or READT
 
 C  AE is array for measured experimental intensity data (or theor. comparison data
@@ -197,6 +199,7 @@ C  NBEA contains information for averaging of experimental beams
       DIMENSION NEE(MNBED)
       INTEGER NBEA
       DIMENSION NBEA(MNBED)
+
 C  Variables only used in READT, not in READE
 
 C  MAXI is maximum intensity of each beam
@@ -205,6 +208,7 @@ C  IOFF is number of first non-zero intensity value for each beam
       REAL MAXI
       DIMENSION MAXI(MNBTD)
       INTEGER IOFF(MNBTD)
+
 C  Variables calculated from input 'experimental' data in PREEXP
 
 C  YE are Pendry Y-functions of averaged and smoothed experimental I(E) data
@@ -232,6 +236,7 @@ C  NBE is number of experimental beams after averaging
       INTEGER NNN
       DIMENSION NNN(MNDATA)
       INTEGER NBE
+
 C  Variables for search procedure itself, obtained from file steu
 C  via subroutine READSC
 
@@ -323,6 +328,7 @@ C  quot is used for energy-dependent inner potential V0R=const+E/quot
       DIMENSION CUNDVB(MNATOMS,3),CDVB(MNCSTEP,MNATOMS,3)
 
       REAL quot
+
 C  Variables for search procedure in main program
 
 C  RMUT is constant that normalizes width of gaussian distribution 
@@ -461,6 +467,10 @@ C  first thing: open control file
 
       OPEN(8,file='control.chem')
 
+C  open R-factor info file
+
+      OPEN(12,file='rf.info', STATUS='OLD')
+
 C  set dimension statements for subroutines to desired values
 C  generally, none of these should be set too large in PARAM
 
@@ -483,6 +493,7 @@ C  both will be repeated later
 
       NBMD = MNBMD
 
+      NSS = 1
 C  initialize population here (may change in readsc)
 
       DO 1849 IPOP=1,MPS
@@ -932,6 +943,10 @@ C  store this as last improved generation
 
       ENDIF
 
+      IF ((MOD(IGEN,OUTINT).EQ.0) .AND. USEHASH) THEN
+       CALL HASHTAB%outdata(0)
+      ENDIF
+
 C  Here ends a (nearly) endless loop - next generation
 
       if ((MAXGEN .eq. 0) .or. (IGEN .lt. MAXGEN)) THEN
@@ -939,7 +954,7 @@ C  Here ends a (nearly) endless loop - next generation
 C  Determine parameters of next population
 
         CALL SEA_RCD(NDOM,NPS,NPRMK,NSTEP,PNUM,VARST,PARIND,RPEIND,
-     +               WSK,WIDT,RMUT,NPAR)
+     +               WSK,WIDT,RMUT,NPAR,PARDEP)
 
         goto 1492
 
