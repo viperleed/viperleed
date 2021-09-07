@@ -158,12 +158,17 @@ class ViPErLEEDSerial(SerialABC):
                                                  'SPECIAL_BYTE')
 
         print(f"before special byte: {message=}")
-        # TODO: Arduino can not receive a message this long (possibly 513 bytes)
-        # Get the message length and check if it can be sent with 1 byte
+        # Get the message length and check if the Arduino can store the
+        # whole message with its 64 byte sized buffer. The calculation
+        # factors in the START and END marker and the payload_length byte.
+        # The remaining 61 bytes for the message must be divided by two
+        # as every byte in the message could be a special_byte.
+        # START + payload_length + 2*message + END <= 64
         payload_length = len(message)
-        if payload_length > 255:
+        if payload_length > 30:
             raise ValueError(f"Length of message {message} too long "
-                             "to be sent with a 1 byte long length.")
+                             "to be received by the Arduino.")
+        # TODO: We may want to move this check after the conversion.
         # Iterate through message and split values that are larger
         # or equals special_byte into two different bytes. The second
         # byte gets inserted right after the first one.
@@ -493,9 +498,6 @@ class ViPErLEEDSerial(SerialABC):
             # is no known message type.
             else:
                 emit_error(self, ViPErLEEDHardwareError.ERROR_MSG_RCVD_INVALID)
-
-        # TODO: I think we can empty unprocessed_messages every time after
-        # checking the messages.
         self.unprocessed_messages = []
         return
 

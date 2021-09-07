@@ -293,7 +293,7 @@ class MeasureController(ControllerABC):
         Parameters
         ----------
         energies_and_times
-            Starting energies and times the controller will 
+            Starting energies and times the controller will
             use if sets_energy is true.
 
         Returns
@@ -339,13 +339,13 @@ class MeasureController(ControllerABC):
         in subclasses which remember which measurements were
         requested in order to use them afterwards when creating
         dictionaries to return data.
-        
+
         Parameters
         ----------
         requested : list of strings
             Contains all of the requested
             measurement types.
-            
+
         Returns
         -------
         None.

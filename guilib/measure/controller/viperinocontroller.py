@@ -226,7 +226,7 @@ class ViPErinoController(MeasureController):
         -------
         None.
         """
-        
+
         pc_calibration = self.__settings.get('available_commands',
                                              'PC_CALIBRATION')
         update_rate = self.__settings.getint('controller', 'update_rate')
@@ -245,7 +245,7 @@ class ViPErinoController(MeasureController):
         in the same order as the measurement devices are listed in
         the controller configuration, otherwise the measurements
         will not be saved in the correct section.
-        
+
         For hardware:
         Save received data into a dictionary to store hardware
         configuration for future use. Hardware is only sent after
@@ -266,7 +266,6 @@ class ViPErinoController(MeasureController):
         if self.begin_prepare_todos['get_hardware'] == False and
                 self.begin_prepare_todos['calibrate_adcs'] == True:
             self.__hardware = receive
-        # TODO: Check if hardware can end up in measurements.
         for i, measurement in enumerate(self.__adc_measurement_types):
             if measurement is not None:
                 self.__measurements[measurement] = receive[i]
