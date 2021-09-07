@@ -106,12 +106,25 @@ def config_has_sections_and_options(caller, config, mandatory_settings):
     if config is None:
         return None, mandatory_settings
 
-    if not isinstance(config, (dict, ConfigParser)):
+    # if not isinstance(config, (dict, ConfigParser)):
+        # raise TypeError(
+            # f"{caller.__class__.__name__}: invalid type "
+            # f"{type(config).__name__} for settings. "
+            # "Should be 'dict' or 'ConfigParser'."
+            # )
+
+    if not isinstance(config, (dict, ConfigParser, str)):
         raise TypeError(
             f"{caller.__class__.__name__}: invalid type "
             f"{type(config).__name__} for settings. "
-            "Should be 'dict' or 'ConfigParser'."
+            "Should be 'dict', 'str' or 'ConfigParser'."
             )
+
+    if isinstance(config, str):
+        tmp_config = ConfigParser(comment_prefixes='/', allow_no_value=True)
+        tmp_config.read(config)
+        config = tmp_config
+
     if isinstance(config, dict):
         tmp_config = ConfigParser()
         tmp_config.read_dict(config)
