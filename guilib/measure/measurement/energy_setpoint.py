@@ -7,37 +7,65 @@ Created: 2021-07-19
 Author: Michele Riva
 Author: Florian Doerr
 
-This module contains the definition of the measure_energy_setpoint class
+This module contains the definition of the MeasureEnergySetpoint class
 which gives commands to the controller classes.
 """
 
 import ast
+import csv
+from time import gmtime, strftime
 from numpy.polynomial.polynomial import Polynomial
 
+class MeasureEnergySetpoint(MeasurementABC):
+    """Generic measurement class."""
 
+    def begin_measurement_preparation(self):
+        """Start preparation for measurements.
 
-
-
-    def measure_energy_setpoint(self):
-        """Measure the energy offset of the LEED electronics.
-
-        This method must be reimplemented in subclasses. The
-        reimplementation is supposed to take measurements of
-        the voltage applied to the filament across the full
-        uncalibrated energy spectrum.
+        Prepare the controllers for a measurement which starts
+        the measurement cycle. This function only performs the
+        first part. (Everything that is done before the starting
+        energy is set.)
 
         Returns
         -------
         None.
         """
-        # Edit docstring
-        # TODO: Write this function
+        coefficients = '(0, 1)'
+        self.primary_controller.settings.set(
+            'energy_calibration', 'coefficients', coefficients)
+        super().begin_measurement_preparation()
 
-        self.current_energy += self.delta_energy
+    def start_next_measurement(self):
+        """Set energy and measure.
+
+        Set energy via the primary controller. Once this is done
+        the returned about_to_trigger signal will start the
+        measurement on all secondary controllers.
+
+        Returns
+        -------
+        None.
+        """
+        set_LEED_energy(self.current_energy)
+
+    def is_finished(self):
+        """Check if the full measurement cycle is done.
+        
+        If the energy is above the end_energy the cycle is
+        completed. If not, then the delta energy is added
+        and the next measurement is started.
+
+        Returns
+        -------
+        bool
+        """
         if self.current_energy > self.end_energy:
             self.calibrate_energy_setpoint()
-            self.cycle_completed.emit()
-        return
+            return True
+        else:
+            self.current_energy += self.delta_energy
+            return False
 
     def calibrate_energy_setpoint(self):
         """Calibrate the energy setpoint of the LEED electronics
@@ -64,8 +92,14 @@ from numpy.polynomial.polynomial import Polynomial
         """
         nominal_energies = self.data_points['nominal_energies']
         measured_energies = self.data_points['measured_energies']
-        domain = ast.literal_eval(self.settings['energy_calibration']['domain'])
+        domain = ast.literal_eval(
+            self.primary_controller.settings['energy_calibration']['domain'])
         fit_polynomial = Polynomial.fit(measured_energies, nominal_energies, 1,
                                         domain=domain, window=domain)
         coefficients = str(list(fit_polynomial.coef))
-        self.settings.set('coefficients', coefficients)
+        self.primary_controller.settings.set(
+            'energy_calibration', 'coefficients', coefficients)
+        file_name = self.settings.get(
+            'devices', 'primary_controller')
+        with open(file_name, 'w') as configfile:
+            self.primary_controller.settings.write(configfile)
