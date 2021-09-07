@@ -240,9 +240,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
 
         This function must be reimplemented in subclasses. It
         should check if the measurement cycle is done via the
-        settings. If not it should call start_next_measurement.
-        If the whole measurement is done it should emit a .finished()
-        signal.
+        settings.
 
         Returns
         -------
@@ -267,18 +265,22 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         for key in self.data_points:
             self.data_points[key] = []
 
-    @abstractmethod
     def save_data(self):
-        """Save data if required.
-
-        Needs to reimplemented in subclasses. This function
-        can be a no-op if saving data is not necessary.
+        """Save data.
 
         Returns
         -------
         None.
         """
-        return
+        # class_name = self.__class__.__name__
+        # clock = strftime("_%Y-%m-%d_%H-%M-%S", gmtime())
+        # csv_name = class_name + clock + ".csv"
+        csv_name = "measurement_data.csv"
+        # TODO: where to save this? Need to add folder creation, this solution is only temporary. Images and measurement data from controllers will be saved with the configuration files in a zip folder.
+        with open(csv_name, 'w', encoding='UTF8', newline='') as file_name:
+            writer = csv.writer(file_name)
+            for key, value in self.data_points.items():
+                writer.writerow([key, value])
 
     def set_LEED_energy(self, *message):
         """Set the electron energy used for LEED.
@@ -300,19 +302,6 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         """
         self.__primary_controller.set_energy(message)
 
-    def do_next_measurement(self):
-        """Do the next measurement.
-
-        Start measuring on all controllers and cameras as soon
-        as the about_to_trigger signal has been received from the primary
-        controller.
-
-        Returns
-        -------
-        None.
-        """
-        self.ready_for_measurement.emit()
-
     def abort(self):
         """Abort all current actions.
 
@@ -332,7 +321,6 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         for key in self.data_points:
             self.data_points[key] = []
 
-    @abstractmethod
     def connect_cameras(self, cameras=None):
         """Connect necessary camera signals."""
 
@@ -352,7 +340,6 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
                 )
             # TODO: may need to connect preparation.
 
-    @abstractmethod
     def connect_controllers(self, controllers=None):
         """Connect necessary controller signals."""
 
@@ -375,7 +362,6 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
                 controller.trigger_continue_preparation, type=qtc.Qt.UniqueConnection
                 )
 
-    @abstractmethod
     def connect_primary_controller(self):
         """Connect signals of the primary controller."""
 
@@ -393,18 +379,10 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             self.__primary_controller.trigger_continue_preparation,
             type=qtc.Qt.UniqueConnection
             )
-        # Connections below depend on measurement type
-        # and are exclusive to each other. Implemented in subclass.
         self.__primary_controller.about_to_trigger.connect(
-            self.start_next_measurement, type=qtc.Qt.UniqueConnection
+            self.do_next_measurement, type=qtc.Qt.UniqueConnection
             )
-        # TODO: ^ needed in preparation!!!
-        # self.ready_for_measurement.connect(
-            # self.__primary_controller.measure_now,
-            # type=qtc.Qt.UniqueConnection
-            # )
 
-    @abstractmethod
     def disconnect_cameras(self, cameras):
         """Disconnect necessary camera signals."""
 
@@ -418,7 +396,6 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             # TODO: ^ function?
             # TODO: may need to disconnect preparation.
 
-    @abstractmethod
     def disconnect_controllers(self, controllers):
         """Disconnect necessary controller signals."""
 
@@ -433,7 +410,6 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
                 controller.trigger_continue_preparation
                 )
 
-    @abstractmethod
     def disconnect_primary_controller(self):
         """Disconnect signals of the primary controller."""
 
@@ -447,15 +423,8 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         self.continue_preparation.disconnect(
             self.__primary_controller.trigger_continue_preparation
             )
-        # Connections below depend on measurement type
-        # and are exclusive to each other. Implemented in subclass.
         self.__primary_controller.about_to_trigger.disconnect()
-        # TODO: ^ needed in preparation!!!
-        # self.ready_for_measurement.disconnect(
-            # self.__primary_controller.measure_now
-            # )
 
-    @abstractmethod
     def prepare_cameras(self):
         """Prepare cameras for a measurement.
 
@@ -473,41 +442,41 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
 
     def switch_signals_for_preparation(self):
         """Switch signals for preparation.
-        
+
         The about_to_trigger signal has to be disconnected
-        during the first preparation step as the starting 
+        during the first preparation step as the starting
         energy is set in it. Since the primary controller
         will return measurements after setting an energy,
         the data_ready signal has to be disconnected as well.
-        
+
         In order to know if the first preparation step has
         been done, the controller_busy must be connected and
         returned as soon as all points in the begin_prepare_todos
         dictionary have been executed.
-        
+
         Before the second step starts, this functions is
         called again. It will reconnect all disconnected
         signals and disconnect controller_busy. The second
         preparation step has to emit a data_ready signal
-        containing an empty dictionary at its end. This will 
-        function like an ordinary measurement and as soon as 
+        containing an empty dictionary at its end. This will
+        function like an ordinary measurement and as soon as
         all controllers are done preparing this class will
         continue with the measurement cycle.
-        
+
         If about_to_trigger is connected:
             Disconnect:
                 about_to_trigger
                 data_ready
             Connect:
                 controller_busy
-                
+
         If about_to_trigger is disconnected:
             Disconnect:
                 controller_busy
             Connect:
                 about_to_trigger
                 data_ready
-        
+
         Returns
         -------
         None.
@@ -515,7 +484,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
 
         try:
             self.__primary_controller.about_to_trigger.connect(
-                self.start_next_measurement, type=qtc.Qt.UniqueConnection
+                self.do_next_measurement, type=qtc.Qt.UniqueConnection
                 )
         except TypeError:
             self.__primary_controller.about_to_trigger.disconnect()
@@ -561,7 +530,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         Prepare the controllers for a measurement which starts
         the measurement cycle. This function only performs the second part.
         (Everything that is done after the starting energy is set.)
-        
+
         Parameters
         ----------
         busy : bool
@@ -599,7 +568,6 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             self.finalize()
         else:
             self.start_next_measurement()
-        # TODO: make this work
 
     def receive_from_camera(self, busy):
         """Receive not busy signal from camera.
@@ -644,3 +612,41 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             else:
                 self.data_points[key].append(receive[key])
         self.ready_for_next_measurement()
+
+    def do_next_measurement(self):
+        """Do the next measurement.
+
+        Start measuring on all secondary controllers and cameras
+        as soon as the about_to_trigger signal has been received
+        from the primary controller.
+
+        Returns
+        -------
+        None.
+        """
+        self.ready_for_measurement.emit()
+
+    @abstractmethod
+    def start_next_measurement(self):
+        """Set energy (if required) and measure.
+
+        If the primary controller sets an energy:
+        Set energy via the primary controller. Once this is done
+        the returned about_to_trigger signal should start the
+        measurement on all secondary controllers.
+
+        If the primary controller does not set an energy:
+        Start the measurement on the primary and all secondary
+        controllers immediately without waiting for an
+        about_to_trigger signal.
+
+        Returns
+        -------
+        None.
+        """
+        # If the primary controller sets an energy:
+        # set_LEED_energy(self.current_energy)
+
+        # If the primary controller does not set an energy:
+        # self.__primary_controller.measure_now()
+        # do_next_measurement()
