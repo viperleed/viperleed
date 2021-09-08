@@ -295,11 +295,13 @@ class Slab:
         for layer in self.layers:
             layer.getLayerPos()
 
-    def createLayers(self, rparams):
+    def createLayers(self, rparams, bulk_cuts=[]):
         """Creates a list of Layer objects based on the N_BULK_LAYERS and
         LAYER_CUTS parameters in rparams. If layers were already defined,
-        overwrite."""
-        # first interpret LAYER_CUTS parameter - is a list of strings
+        overwrite. The bulk_cuts kwarg allows specifically inserting
+        automatically detected bulk layer cuts. Returns the cuts as a sorted
+        list of floats."""
+        # first interpret LAYER_CUTS parameter - can be a list of strings
         ct = []
         rgx = re.compile(r'\s*(dz|dc)\s*\(\s*(?P<cutoff>[0-9.]+)\s*\)')
         al = self.atlist[:]
@@ -316,6 +318,8 @@ class Slab:
                     continue
                 cutoff = float(m.group('cutoff'))
                 lowbound = 0.
+                if bulk_cuts:
+                    lowbound = max(bulk_cuts)
                 highbound = 1.
                 val = None
                 if (i > 1) and (rparams.LAYER_CUTS[i-1] in ["<", ">"]):
@@ -357,6 +361,8 @@ class Slab:
                 except ValueError:
                     logger.warning("LAYER_CUTS: Could not parse value: " + s)
                     continue
+        if bulk_cuts:
+            ct = [v for v in ct if v > max(bulk_cuts) + 1e-6] + bulk_cuts
         ct.sort()
         self.layers = []
         tmplist = self.atlist[:]
@@ -406,6 +412,7 @@ class Slab:
             layer.num = i
         self.atlist = tmplist
         self.layers_initialized = True
+        return ct
 
     def createSublayers(self, eps=0.001):
         """Sorts the atoms in the slab into sublayers, sorted by element and Z
@@ -1133,11 +1140,11 @@ class Slab:
         vector in cartesian coordinates, or None if no match is found."""
         eps = rp.SYMMETRY_EPS
         if len(self.sublayers) == 0:
-            self.createSublayers(eps)
+            self.createSublayers(rp.SYMMETRY_EPS_Z)
         if self.bulkslab is None:
             self.makeBulkSlab(rp)
         if len(self.bulkslab.sublayers) == 0:
-            self.bulkslab.createSublayers(eps)
+            self.bulkslab.createSublayers(rp.SYMMETRY_EPS_Z)
         nsub = len(self.bulkslab.sublayers)
         if len(self.sublayers) < 2*nsub:
             return None
@@ -1353,6 +1360,95 @@ class Slab:
         ts.collapseCartesianCoordinates(updateOrigin=True)
         return ts
 
+    def detectBulk(self, rp, second_cut_min_spacing=1.2):
+        """
+        Determine the minimal bulk repeat vector from BULK_LIKE_BELOW.
+
+        Parameters
+        ----------
+        rp : Rparams
+            Run parameters object. Contains BULK_LIKE_BELOW, not modified.
+        second_cut_min_spacing : float, optional
+            Minimal z spacing in Angstrom between sublayers of the detected
+            bulk unit to make an additional cut through the bulk. If no two
+            sublayers are below this threshold, the bulk will be treated as
+            a single layer.
+
+        Raises
+        ------
+        RuntimeError
+            Raised if no repeat vector is found.
+
+        Returns
+        -------
+        bulk_repeat : np.array
+            The new repeat vector.
+        slab_cuts : list of float
+            Layer cuts needed for the bulk.
+
+        """
+        tsl = copy.deepcopy(self)   # temporary copy to mess up layers in
+        rp_dummy = copy.deepcopy(rp)
+        rp_dummy.LAYER_CUTS = [rp.BULK_LIKE_BELOW]
+        rp_dummy.N_BULK_LAYERS = 1
+        rp_dummy.BULK_LIKE_BELOW = 0.
+        tsl.createLayers(rp_dummy)
+        # create a pseudo-bulkslab
+        tsl.bulkslab = tsl.makeBulkSlab(rp_dummy)
+        bsl = tsl.bulkslab
+        bsl.createSublayers(rp.SYMMETRY_EPS_Z)
+        # reduce unit cell in xy
+        changecell, mincell = bsl.getMinUnitCell(rp)
+        if changecell:
+            tsl.changeBulkCell(rp, mincell)
+            bsl = tsl.bulkslab
+        bsl.getCartesianCoordinates()
+        # detect new C vector
+        newC = bsl.getMinC(rp, z_periodic=False)
+        if newC is None:
+            logger.error("Automatic bulk detection failed: Found no bulk "
+                         "repeat vector below the specified cutoff.")
+            raise RuntimeError("Failed to detect bulk repeat vector.")
+
+        # reduce the bulk slab
+        rp_dummy.BULK_REPEAT = -newC
+        rp_dummy.SUPERLATTICE = np.eye(2)
+        tsl.bulkslab = tsl.makeBulkSlab(rp_dummy)
+        bsl = tsl.bulkslab
+        bsl.createSublayers(rp.SYMMETRY_EPS_Z)
+
+        # calculate cut plane
+        frac_bulk_thickness = abs(newC[2]) / abs(self.ucell[2, 2])
+        frac_lowest_pos = min([at.pos[2] for at in self.atlist])
+        frac_bulk_onset = (frac_lowest_pos + frac_bulk_thickness
+                           - (rp.SYMMETRY_EPS_Z / self.ucell[2, 2]))
+        slab_cuts = [(max([at.pos[2] for at in self.atlist
+                          if at.pos[2] < frac_bulk_onset])
+                     + min([at.pos[2] for at in self.atlist
+                            if at.pos[2] > frac_bulk_onset]))
+                     / 2]
+
+        # now look for potential second cut
+        if len(bsl.sublayers) > 1:
+            maxdist = abs(bsl.sublayers[1].cartbotz
+                          - bsl.sublayers[0].cartbotz)
+            cutlayer = 0
+            for i in range(1, len(bsl.sublayers) - 1):
+                d = abs(bsl.sublayers[i+1].cartbotz
+                        - bsl.sublayers[i].cartbotz)
+                if d > maxdist:
+                    maxdist = d
+                    cutlayer = i
+            if maxdist >= second_cut_min_spacing:
+                bulkcut_frac_from_lowest = (
+                    bsl.sublayers[cutlayer].atlist[0].pos[2]
+                    - (maxdist / (2 * abs(bsl.ucell[2, 2])))
+                    - min([at.pos[2] for at in bsl.atlist]))
+                slab_cuts.append(frac_lowest_pos
+                                 + (bulkcut_frac_from_lowest
+                                    * bsl.ucell[2, 2] / self.ucell[2, 2]))
+        return (-newC, slab_cuts)
+
     def makeBulkSlab(self, rp):
         """Copies self to create a bulk slab, in which evething apart from the
         bulk layers is deleted. Returns that bulk slab."""
@@ -1381,9 +1477,9 @@ class Slab:
             bulkc = cvec * zdiff / cvec[2]
         bsl.ucell[:, 2] = bulkc
         # reduce dimensions in xy
-        sl = np.identity(3, dtype=float)
-        sl[:2, :2] = rp.SUPERLATTICE.T
-        bsl.ucell = np.dot(bsl.ucell, np.linalg.inv(sl))
+        superlattice = np.identity(3, dtype=float)
+        superlattice[:2, :2] = rp.SUPERLATTICE.T
+        bsl.ucell = np.dot(bsl.ucell, np.linalg.inv(superlattice))
         if (rp.superlattice_defined and np.linalg.norm(bsl.ucell[:2, 0]) >
                 np.linalg.norm(bsl.ucell[:2, 1]) + 1e-4):
             logger.warning(
@@ -1392,8 +1488,8 @@ class Slab:
                 "than the second. Make sure beams are labelled correctly.")
             rp.setHaltingLevel(1)
         bsl.collapseCartesianCoordinates(updateOrigin=True)
-        bsl.ucell_mod = []
         # if self.ucell_mod is not empty, don't drag that into the bulk slab.
+        bsl.ucell_mod = []
         # position in c is now random; make topmost bulk atom top
         topc = topat.pos[2]
         for at in bsl.atlist:

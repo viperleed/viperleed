@@ -108,6 +108,7 @@ class Rparams:
         self.ATTENUATION_EPS = 0.0001
         self.BULKDOUBLING_EPS = 0.001
         self.BULKDOUBLING_MAX = 10
+        self.BULK_LIKE_BELOW = 0.
         self.BULK_REPEAT = None
         self.DOMAINS = []         # list of domains (name, path)
         self.DOMAIN_STEP = 1      # area step in percent for domain search

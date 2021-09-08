@@ -177,9 +177,23 @@ def initialization(sl, rp, subdomain=False):
                      "execution will continue...")
 
     if rp.BULK_LIKE_BELOW > 0:
-        cvec, cuts = sl.detectBulk(rp)
-        logger.debug(cvec)
-        logger.debug(cuts)
+        if rp.BULK_REPEAT is not None:
+            logger.warning("Both BULK_LIKE_BELOW and BULK_REPEAT are defined."
+                           "BULK_LIKE_BELOW will be ignored in favour of the "
+                           "explicitly defined bulk repeat vector.")
+        else:
+            cvec, cuts = sl.detectBulk(rp)
+            rp.BULK_REPEAT = cvec
+            vec_str = "[{:.5f} {:.5f} {:.5f}]".format(*rp.BULK_REPEAT)
+            modifyPARAMETERS(rp, "BULK_REPEAT", vec_str,
+                             comment="Automatically detected repeat vector")
+            logger.info("Detected bulk repeat vector: " + vec_str)
+            layer_cuts = sl.createLayers(rp, bulk_cuts=cuts)
+            modifyPARAMETERS(rp, "LAYER_CUTS", " ".join(["{:.4f}".format(f)
+                                                         for f in layer_cuts]))
+            rp.N_BULK_LAYERS = len(cuts)
+            modifyPARAMETERS(rp, "N_BULK_LAYERS", str(len(cuts)))
+        modifyPARAMETERS(rp, "BULK_LIKE_BELOW", new="")
 
     # create bulk slab:
     if sl.bulkslab is None:
