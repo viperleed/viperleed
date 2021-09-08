@@ -12,7 +12,7 @@ the appropriate N_BULK_LAYERS and BULK_REPEAT values.
 import copy
 import numpy as np
 
-from tleedmlib.files.poscar import readPOSCAR, writeCONTCAR
+from tleedmlib.files.poscar import readPOSCAR, writePOSCAR
 import tleedmlib as tl
 
 
@@ -148,7 +148,7 @@ def main():
     # write POSCAR_bulk
     newbsl.sortOriginal()
     try:
-        writeCONTCAR(newbsl, filename='POSCAR_bulk', comments='none')
+        writePOSCAR(newbsl, filename='POSCAR_bulk', comments='none')
         print("Wrote POSCAR_bulk. Check file to see if periodicity is "
               "correct.")
     except Exception:
@@ -178,7 +178,7 @@ def main():
     # write POSCAR_min
     newsl.sortOriginal()
     try:
-        writeCONTCAR(newsl, filename='POSCAR_min', comments='none')
+        writePOSCAR(newsl, filename='POSCAR_min', comments='none')
         print("Wrote POSCAR_min, to be used with parameters below.")
     except Exception:
         print("Exception occurred while writing POSCAR_min")

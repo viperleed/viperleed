@@ -168,8 +168,8 @@ def readPOSCAR(filename='POSCAR'):
     return(sl)
 
 
-def writeCONTCAR(sl, filename='CONTCAR', reorder=False, comments='none',
-                 silent=False):
+def writePOSCAR(sl, filename='CONTCAR', reorder=False, comments='none',
+                silent=False):
     """
     Takes a Slab object and writes a POSCAR-type file based on the atlist. If a
     POSCAR is in the folder, it will take header data from it, otherwise is

@@ -16,7 +16,7 @@ import random
 import shutil
 
 from viperleed.tleedmlib.files.beams import writeAUXEXPBEAMS
-from viperleed.tleedmlib.files.poscar import writeCONTCAR
+from viperleed.tleedmlib.files.poscar import writePOSCAR
 from viperleed.tleedmlib.files.vibrocc import writeVIBROCC
 from viperleed.tleedmlib.base import BackwardsReader, readIntLine
 from viperleed.tleedmlib.leedbase import getBeamCorrespondence
@@ -1036,7 +1036,7 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
     tmpslab = copy.deepcopy(sl)
     tmpslab.sortOriginal()
     try:
-        writeCONTCAR(tmpslab, filename=fn, comments="all", silent=silent)
+        writePOSCAR(tmpslab, filename=fn, comments="all", silent=silent)
     except Exception:
         logger.error("Exception occured while writing POSCAR_OUT" + suffix,
                      exc_info=rp.LOG_DEBUG)
@@ -1045,7 +1045,7 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
         tmpslab = sl.makeSymBaseSlab(rp)
         fn = "POSCAR_OUT_mincell" + suffix + "_" + rp.timestamp
         try:
-            writeCONTCAR(tmpslab, filename=fn, silent=silent)
+            writePOSCAR(tmpslab, filename=fn, silent=silent)
         except Exception:
             logger.warning(
                 "Exception occured while writing POSCAR_OUT_mincell" + suffix,

@@ -37,8 +37,6 @@ class Atom:
     cartpos : numpy.array
         Position in cartesian coordinates, with the highest atom as z = 0,
         positive z pointing into the surface
-    posInLayer : numpy.array
-        Same as cartpos, but from the layer origin
     linklist : list of Atom
         Defines to which other atoms the atom is linked
     displist : list of Atom

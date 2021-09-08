@@ -16,7 +16,7 @@ import copy
 import numpy as np
 from timeit import default_timer as timer
 
-from tleedmlib.files.poscar import readPOSCAR, writeCONTCAR
+from tleedmlib.files.poscar import readPOSCAR, writePOSCAR
 
 ###############################################
 #                  MAIN                       #
@@ -116,7 +116,7 @@ def main():
     slab.sortByEl()
 
     try:
-        writeCONTCAR(slab, reorder=False)
+        writePOSCAR(slab, reorder=False)
     except Exception:
         logging.error("Exception while writing CONTCAR:", exc_info=True)
 #    print(cfact)

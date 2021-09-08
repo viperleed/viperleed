@@ -18,7 +18,7 @@ import viperleed.tleedmlib as tl
 from viperleed.tleedmlib.base import angle, rotation_matrix
 from viperleed.tleedmlib.beamgen import runBeamGen
 from viperleed.tleedmlib.psgen import runPhaseshiftGen
-from viperleed.tleedmlib.files.poscar import readPOSCAR, writeCONTCAR
+from viperleed.tleedmlib.files.poscar import readPOSCAR, writePOSCAR
 from viperleed.tleedmlib.files.vibrocc import readVIBROCC
 from viperleed.tleedmlib.files.parameters import (
     readPARAMETERS, interpretPARAMETERS, modifyPARAMETERS)
@@ -140,7 +140,7 @@ def initialization(sl, rp, subdomain=False):
                 "information. Consider calculating with POSCAR_mincell, "
                 "or setting SYMMETRY_CELL_TRANSFORM to conserve "
                 "translational symmetry.".format(ws))
-            writeCONTCAR(ssl, filename="POSCAR_mincell")
+            writePOSCAR(ssl, filename="POSCAR_mincell")
             rp.setHaltingLevel(1)
     elif not np.isclose(rp.SYMMETRY_CELL_TRANSFORM, np.identity(2)).all():
         if not np.isclose(rp.SYMMETRY_CELL_TRANSFORM, transform).all():
@@ -154,7 +154,7 @@ def initialization(sl, rp, subdomain=False):
                     "slab symmetry search using base unit cell...")
         tl.symmetry.getSymBaseSymmetry(sl, rp)
         try:
-            writeCONTCAR(sl.symbaseslab, filename='POSCAR_mincell',
+            writePOSCAR(sl.symbaseslab, filename='POSCAR_mincell',
                          comments='all')
         except Exception:
             logger.warning("Exception occurred while writing POSCAR_mincell")
@@ -163,7 +163,7 @@ def initialization(sl, rp, subdomain=False):
     tmpslab = copy.deepcopy(sl)
     tmpslab.sortOriginal()
     try:
-        writeCONTCAR(tmpslab, filename='POSCAR', comments='all')
+        writePOSCAR(tmpslab, filename='POSCAR', comments='all')
     except Exception:
         logger.error("Exception occurred while writing new POSCAR")
         raise
@@ -171,10 +171,15 @@ def initialization(sl, rp, subdomain=False):
     # generate POSCAR_oricell
     tmpslab.revertUnitCell()
     try:
-        writeCONTCAR(tmpslab, filename='POSCAR_oricell', comments='nodir')
+        writePOSCAR(tmpslab, filename='POSCAR_oricell', comments='nodir')
     except Exception:
         logger.error("Exception occurred while writing POSCAR_oricell, "
                      "execution will continue...")
+
+    if rp.BULK_LIKE_BELOW > 0:
+        cvec, cuts = sl.detectBulk(rp)
+        logger.debug(cvec)
+        logger.debug(cuts)
 
     # create bulk slab:
     if sl.bulkslab is None:
@@ -249,7 +254,7 @@ def initialization(sl, rp, subdomain=False):
         bsl = copy.deepcopy(sl.bulkslab)
         bsl.sortOriginal()
         try:
-            writeCONTCAR(bsl, filename='POSCAR_bulk', comments='bulk')
+            writePOSCAR(bsl, filename='POSCAR_bulk', comments='bulk')
         except Exception:
             logger.error("Exception occurred while writing POSCAR_bulk")
             raise
@@ -261,7 +266,7 @@ def initialization(sl, rp, subdomain=False):
         if len(bsl.sublayers) <= len(bsl.elements):
             n += 1
     try:
-        writeCONTCAR(sl.addBulkLayers(rp, n=n)[0],
+        writePOSCAR(sl.addBulkLayers(rp, n=n)[0],
                      filename='POSCAR_bulk_appended')
     except Exception:
         logger.warning("Exception occurred while writing POSCAR_bulk_appended")

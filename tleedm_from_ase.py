@@ -23,7 +23,7 @@ if os.path.abspath(vpr_path) not in sys.path:
 
 from viperleed.tleedm import run_tleedm
 from viperleed.tleedmlib import Slab, Rparams
-from viperleed.tleedmlib.files.poscar import writeCONTCAR
+from viperleed.tleedmlib.files.poscar import writePOSCAR
 
 def main():
     # download structure as ase.Atoms from ind_label
@@ -64,7 +64,7 @@ def main():
     # slab.getCartesianCoordinates(updateOrigin=True)
 
     # # test: output POSCAR, just to check
-    # writeCONTCAR(slab, filename='POSCAR_turned_cut')
+    # writePOSCAR(slab, filename='POSCAR_turned_cut')
 
     # figure out surface sites
     site_def = {}
