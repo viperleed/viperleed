@@ -1,3 +1,4 @@
+# for testing only, delete when done testing
 import time
 import pyautogui as pya
 
