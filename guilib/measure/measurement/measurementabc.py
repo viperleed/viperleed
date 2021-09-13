@@ -13,12 +13,15 @@ by the other measurement classes.
 """
 from collections import defaultdict
 from abc import abstractmethod
+import csv
+from time import localtime, strftime
 
 from PyQt5 import QtCore as qtc
 
 # ViPErLEED modules
 from viperleed.guilib.measure.hardwarebase import (
-    emit_error, ViPErLEEDErrorEnum, QMetaABC
+    emit_error, ViPErLEEDErrorEnum, QMetaABC,
+    config_has_sections_and_options, class_from_name
     )
 
 
@@ -27,6 +30,17 @@ class MeasurementErrors(ViPErLEEDErrorEnum):
     INVALID_MEASUREMENT = (300,
                            "The returned data dictionary contained a section "
                            "that was not specified in the measurement class.")
+    MISSING_SETTINGS = (301,
+                        "Measurements cannot be taken without settings. "
+                        "Load an appropriate settings file before "
+                        "proceeding.")
+    INVALID_MEAS_SETTINGS = (302,
+                             "Invalid measurement settings: Required "
+                             "settings {!r} missing or wrong. Check "
+                             "configuration file.")
+    MISSING_CLASS_NAME = (303,
+                          "{!r} is missing the name "
+                          "of its related class object.")
 
 
 class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
@@ -64,34 +78,41 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
     plot_info['measured_energy'] = ['eV', 'lin']
     plot_info['elapsed_time'] = ['ms', 'lin']
     plot_info['Isample'] = ['V', 'log']
-    plot_info['temperature'] = ('°C', 'lin')
-    plot_info['cold_junction'] = ('°C', 'lin')
+    plot_info['temperature'] = ['°C', 'lin']
+    plot_info['cold_junction'] = ['°C', 'lin']
 
-    def __init__(self, measurement_settings=None, primary_controller=None,
-                 controllers=None, cameras=None):
+    _mandatory_settings = [
+        ('devices', 'primary_controller'),
+        ('measurement_settings', 'start_energy')
+    ]
+    # TODO: Which settings should be mandatory? Discuss with Michele.
+
+    def __init__(self, measurement_settings):
         """Initialise measurement class"""
 
-        self.__settings = measurement_settings
-        # Primary controller sets the energy.
-        self.__primary_controller = primary_controller
-        self.__primary_controller.sets_energy = True
-        self.__secondary_controllers = controllers
-        for controller in self.__secondary_controllers:
-            controller.sets_energy = False
-        self.__cameras = cameras
-
-        # Connect signals to appropriate functions
-        self.connect_primary_controller()
-        self.connect_controllers(*self.__secondary_controllers)
-        self.connect_cameras(self.__cameras)
+        self.current_energy = 0
+        self.__settings = None
+        self.__primary_controller = None
+        self.__secondary_controllers = []
+        self.__cameras = []
+        self.__start_energy = 0
 
         # The reimplementation may introduce more/other keys.
         self.data_points = defaultdict(list)
         for key in self.plot_info:
             self.data_points[key] = []
 
-        # Attributes needed for loop operation
-        self.current_energy = 0
+        self.set_settings(measurement_settings)
+
+        # All the rest should be done evry time new settings are loaded.
+        # Connect signals to appropriate functions ------ move to set setttings
+        self.connect_primary_controller()
+        self.connect_controllers(*self.__secondary_controllers)
+        self.connect_cameras(self.__cameras)
+
+
+        # Attributes needed for loop operation  -> move somewhere else
+        # Settle time will saved in primary controller ini
         self.__start_energy = self.settings.getfloat('measurement_settings',
                                                      'start_energy')
         self.__end_energy = self.settings.getfloat('measurement_settings',
@@ -99,9 +120,9 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         self.__delta_energy = self.settings.getfloat('measurement_settings',
                                                      'delta_energy')
         self.__settle_time = self.settings.getint('measurement_settings',
-                                                  'dac_settle_time')
+                                                  'settle_time')
         self.__long_settle_time = self.settings.getint('measurement_settings',
-                                                       'dac_first_settle_time')
+                                                       'first_settle_time')
 
     @property
     def cameras(self):
@@ -121,6 +142,79 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         self.disconnect_cameras(self.__cameras)
         self.__cameras = new_cameras
         self.connect_cameras(self.__cameras)
+
+    def __get_settings(self):
+        """Return the current settings for the measurement.
+
+        Returns
+        -------
+        settings : ConfigParser
+            The ConfigParser containing the measurement settings.
+        """
+        return self.__settings
+
+    def set_settings(self, new_settings):
+        """Change settings of the measurement.
+
+        Settings are loaded only if they are valid. Otherwise
+        the previous settings stay in effect.
+
+        Parameters
+        ----------
+        new_settings : dict or ConfigParser or string
+            Configuration of the measurement.
+
+        Raises
+        ------
+        TypeError
+            If new_settings is neither a dict nor a ConfigParser
+            nor a string
+        KeyError
+            If new_settings does not contain one of the mandatory
+            settings
+        """
+        if new_settings is None:
+            emit_error(self, MeasurementErrors.MISSING_SETTINGS)
+            return
+
+        new_settings, invalid = config_has_sections_and_options(
+            self,
+            new_settings,
+            self._mandatory_settings
+            )
+        for setting in invalid:
+            emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS, setting)
+
+        if invalid:
+            return
+
+        self.__settings = new_settings
+
+        self.disconnect_primary_controller(self.__primary_controller)
+        self.disconnect_controllers(self.__secondary_controllers)
+        self.disconnect_cameras(self.__cameras)
+
+        self.__primary_controller = None
+        self.__secondary_controllers = []
+        self.__cameras = []
+
+        prim_set = ast.literal_eval(
+            self.__settings.get('devices','primary_controller'))
+        self.__primary_controller = self.__make_controller(prim_set[0],
+                                                           is_primary=True)
+
+        secondary_set = ast.literal_eval(
+            config.get('devices','secondary_controllers'))
+        for secondary_settings in secondary_set:
+            self.__secondary_controllers.append(self.__make_controller(
+                secondary_settings[0], is_primary=False))
+
+        camera_set = ast.literal_eval(
+            config.get('devices','secondary_controllers'))
+        for camera_settings in camera_set:
+            self.__cameras.append(self.__make_camera(camera_settings))
+
+    settings = property(__get_settings, set_settings)
 
     def add_cameras(self, *new_cameras):
         """Extend camera list by one or more
@@ -258,12 +352,12 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         None.
         """
         self.finished.emit(self.plot_info, self.data_points)
-        self.save_data()
-        self.current_energy = 0
-        # Set LEED energy to 0.
-        self.set_LEED_energy(self.current_energy)
-        for key in self.data_points:
-            self.data_points[key] = []
+        try:
+            self.save_data()
+        finally:
+            self.current_energy = 0
+            # Set LEED energy to 0.
+            self.set_LEED_energy(self.current_energy)
 
     def save_data(self):
         """Save data.
@@ -273,10 +367,11 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         None.
         """
         # class_name = self.__class__.__name__
-        # clock = strftime("_%Y-%m-%d_%H-%M-%S", gmtime())
+        # clock = strftime("_%Y-%m-%d_%H-%M-%S", localtime())
         # csv_name = class_name + clock + ".csv"
         csv_name = "measurement_data.csv"
-        # TODO: where to save this? Need to add folder creation, this solution is only temporary. Images and measurement data from controllers will be saved with the configuration files in a zip folder.
+        # TODO: In which manner should we save this? Current implementation is bad.
+        # TODO: Where to save this? Need to add folder creation, this solution is only temporary. Images and measurement data from controllers will be saved with the configuration files in a zip folder.
         with open(csv_name, 'w', encoding='UTF8', newline='') as file_name:
             writer = csv.writer(file_name)
             for key, value in self.data_points.items():
@@ -300,7 +395,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         -------
         None.
         """
-        self.__primary_controller.set_energy(message)
+        self.__primary_controller.set_energy(*message)
 
     def abort(self):
         """Abort all current actions.
@@ -645,8 +740,58 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         None.
         """
         # If the primary controller sets an energy:
-        # set_LEED_energy(self.current_energy)
+        # set_LEED_energy(self.current_energy, TODO: time to wait here)
+        # ^ set energy and wait, triggers measurement afterwards
 
         # If the primary controller does not set an energy:
         # self.__primary_controller.measure_now()
         # do_next_measurement()
+
+    def __make_controller(self, controller_settings, is_primary=False):
+        """TODO: Add docstring."""
+        config = ConfigParser()
+
+        config, invalid = config_has_sections_and_options(
+            self,
+            controller_settings,
+            [('controller', 'controller_class'), ('controller', 'port_name')]
+            )
+        if invalid:
+            emit_error(self, MeasurementErrors.MISSING_CLASS_NAME,
+                       ('controller', 'controller_class'))
+            return
+
+        controller_cls_name = config.get('controller', 'controller_class')
+        port_name = config.get('controller', 'port_name')
+        try:
+            controller_class = class_from_name('controller',
+                                               controller_cls_name)
+            except ValueError:
+                emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
+                           'controller/controller_class')
+                return
+        return controller_class(config, port_name, sets_energy=is_primary)
+
+    def __make_camera(self, camera_settings):
+        """TODO: Add docstring."""
+        config = ConfigParser()
+
+        config, invalid = config_has_sections_and_options(
+            self,
+            camera_settings,
+            [('camera', 'camera_class'), ('camera', 'port_name')]
+            )
+        if invalid:
+            emit_error(self, MeasurementErrors.MISSING_CLASS_NAME,
+                       ('camera', 'camera_class'))
+            return
+
+        camera_cls_name = config.get('camera', 'camera_class')
+        port_name = config.get('camera', 'port_name')
+        try:
+            camera_class = class_from_name('camera', camera_cls_name)
+            except ValueError:
+                emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
+                           'camera/camera_class')
+                return
+        return camera_class(config, port_name)
