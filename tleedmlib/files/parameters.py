@@ -514,6 +514,9 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                         rpars, 'BEAM_INCIDENCE {}'.format(name),
                         llist[ind], range_=range_[name], varname=name,
                         outOfRangeEvent=outOfRangeEvent[name])
+            if rpars.THETA < 0:
+                rpars.THETA = abs(rpars.THETA)
+                rpars.PHI = (rpars.PHI + 180) % 360
         elif param == 'BULK_REPEAT':
             s = value.lower()
             if "[" not in s:
