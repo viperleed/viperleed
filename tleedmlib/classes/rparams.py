@@ -105,7 +105,7 @@ class Rparams:
         self.readParams = {}    # original parameters as read from file
 
         # FROM PARAMETERS FILE
-        self.ATTENUATION_EPS = 0.0001
+        self.ATTENUATION_EPS = 0.001
         self.BULKDOUBLING_EPS = 0.001
         self.BULKDOUBLING_MAX = 10
         self.BULK_LIKE_BELOW = 0.
