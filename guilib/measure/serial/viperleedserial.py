@@ -15,7 +15,6 @@ to prevent stalling the Graphical User Interface.
 """
 # Python standard modules
 import struct
-from configparser import ConfigParser
 from collections.abc import Sequence
 
 # ViPErLEED modules
@@ -88,7 +87,8 @@ class ViPErLEEDSerial(SerialABC):
     Class for serial communication with
     the Arduino Micro ViPErLEED controller.
     """
-    def __init__(self, settings=None, port_name=''):
+
+    def __init__(self, settings, port_name=''):
         """Initialize serial worker object."""
 
         self.__last_request_sent = ''
@@ -103,7 +103,7 @@ class ViPErLEEDSerial(SerialABC):
             ('controller', 'FIRMWARE_VERSION')
             ))
 
-        super().__init__(port_name=port_name, settings=settings)
+        super().__init__(settings, port_name=port_name)
 
     def decode(self, message):
         """Decodes message received from the Arduino.

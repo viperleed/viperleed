@@ -31,12 +31,15 @@ class MeasureController(ControllerABC):
     # This signal is only used by the primary controller which
     # sets the energy.
     about_to_trigger = qtc.pyqtSignal()
+    
+    _mandatory_settings = [*ControllerABC._mandatory_settings,
+                           ('controller', 'measurement_devices')]
 
-    def __init__(self, settings=None, port_name='', sets_energy=False):
+    # def __init__(self, settings=None, port_name='', sets_energy=False):
+    def __init__(self, settings, port_name='', sets_energy=False):
         """Initialise controller class object."""
 
-        super().init(settings=settings, port_name=port_name,
-                     sets_energy=sets_energy)
+        super().init(settings, port_name=port_name, sets_energy=sets_energy)
 
         # This dictionary must be reimplemented in subclasses.
         # It must contain all possible measurement types the controller
@@ -66,6 +69,7 @@ class MeasureController(ControllerABC):
         # tuple used to store the energies and times sent
         # by the MeasurementABC class in alternating order.
         self.__energies_and_times = []
+        
 
     @abstractmethod
     def abort_and_reset(self):

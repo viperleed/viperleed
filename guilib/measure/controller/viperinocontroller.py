@@ -47,7 +47,8 @@ class ViPErinoErrors(ViPErLEEDErrorEnum):
 class ViPErinoController(MeasureController):
     """Controller class for the ViPErLEED Arduino Micro."""
 
-    def __init__(self, settings=None, port_name='', sets_energy=False):
+    # def __init__(self, settings=None, port_name='', sets_energy=False):
+    def __init__(self, settings, port_name='', sets_energy=False):
         """Initialise ViPErino controller object.
 
         Initialise prepare_todos dictionaries. The key is a
@@ -71,8 +72,7 @@ class ViPErinoController(MeasureController):
 
         self.__hardware = defaultdict()
 
-        super().__init__(settings=settings, port_name=port_name,
-                         sets_energy=sets_energy)
+        super().__init__(settings, port_name=port_name, sets_energy=sets_energy)
 
     def set_sets_energy(self, energy_setter):
         """Set the serial to controls energy True/False.

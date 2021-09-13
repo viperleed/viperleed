@@ -104,7 +104,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             ('serial_port_settings', 'BYTE_ORDER', ('big', 'little'))
             ]
 
-    def __init__(self, settings=None, port_name=''):
+    def __init__(self, settings, port_name=''):
         """Initialize serial worker object.
 
         Parameters
@@ -295,7 +295,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
 
         Parameters
         ----------
-        new_settings : dict or ConfigParser
+        new_settings : dict or ConfigParser or string
             Configuration of port. It must have a 'serial_port_settings'
             section.
             The following fields in new_settings['serial_port_settings']
@@ -342,10 +342,13 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         Raises
         ------
         TypeError
-            If new_settings is neither a dict nor a ConfigParser
+            If new_settings is neither a dict nor a ConfigParser nor
+            a string
+
+        # TODO: this is not true any longer. But documentation of errors emitted is missing.
         KeyError
             If new_settings does not contain a 'serial_port_settings'
-            section, of if the section does not contain the mandatory
+            section, or if the section does not contain the mandatory
             options MSG_END and BYTE_ORDER
         ValueError
             If 'BYTE_ORDER' is neither 'big' nor 'little'.
@@ -359,10 +362,10 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             new_settings,
             self._mandatory_settings
             )
-        for setting in invalid:
-            emit_error(self, ExtraSerialErrors.INVALID_PORT_SETTINGS, setting)
-
         if invalid:
+            error_msg = ', '.join(invalid)
+            emit_error(self, ExtraSerialErrors.INVALID_PORT_SETTINGS,
+                       error_msg)
             return
 
         self.__serial_settings = new_settings
