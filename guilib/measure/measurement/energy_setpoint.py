@@ -12,9 +12,8 @@ which gives commands to the controller classes.
 """
 
 import ast
-import csv
-from time import gmtime, strftime
 from numpy.polynomial.polynomial import Polynomial
+
 
 class MeasureEnergySetpoint(MeasurementABC):
     """Generic measurement class."""
@@ -47,7 +46,7 @@ class MeasureEnergySetpoint(MeasurementABC):
         -------
         None.
         """
-        set_LEED_energy(self.current_energy)
+        self.set_LEED_energy(self.current_energy)
 
     def is_finished(self):
         """Check if the full measurement cycle is done.
@@ -94,12 +93,13 @@ class MeasureEnergySetpoint(MeasurementABC):
         measured_energies = self.data_points['measured_energies']
         domain = ast.literal_eval(
             self.primary_controller.settings['energy_calibration']['domain'])
-        fit_polynomial = Polynomial.fit(measured_energies, nominal_energies, 1,
-                                        domain=domain, window=domain)
+        fit_polynomial = Polynomial.fit(measured_energies, nominal_energies,
+                                        1, domain=domain, window=domain)
         coefficients = str(list(fit_polynomial.coef))
         self.primary_controller.settings.set(
             'energy_calibration', 'coefficients', coefficients)
-        file_name = self.settings.get(
-            'devices', 'primary_controller')
+        file_name = ast.literal_eval(
+                        self.settings.get('devices','primary_controller')
+                        )[0]
         with open(file_name, 'w') as configfile:
             self.primary_controller.settings.write(configfile)
