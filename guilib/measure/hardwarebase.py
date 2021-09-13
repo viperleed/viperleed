@@ -9,11 +9,12 @@ Author: Michele Riva
 Author: Florian Doerr
 
 This module contains utility functions and classes shared
-by mutliple ViPErLEED hardware objects.
+by multiple ViPErLEED hardware objects.
 """
 
 from abc import ABCMeta
 from configparser import ConfigParser
+from pathlib import Path
 import enum
 import sys
 
@@ -55,7 +56,6 @@ def class_from_name(package, class_name):
             f"No {package} class named {class_name} found."
             ) from err
     return cls
-
 
 def config_has_sections_and_options(caller, config, mandatory_settings):
     """Make sure settings are fine, and return it as a ConfigParser.
@@ -106,14 +106,7 @@ def config_has_sections_and_options(caller, config, mandatory_settings):
     if config is None:
         return None, mandatory_settings
 
-    # if not isinstance(config, (dict, ConfigParser)):
-        # raise TypeError(
-            # f"{caller.__class__.__name__}: invalid type "
-            # f"{type(config).__name__} for settings. "
-            # "Should be 'dict' or 'ConfigParser'."
-            # )
-
-    if not isinstance(config, (dict, ConfigParser, str)):
+    if not isinstance(config, (dict, ConfigParser, str, Path)):
         raise TypeError(
             f"{caller.__class__.__name__}: invalid type "
             f"{type(config).__name__} for settings. "
@@ -121,6 +114,12 @@ def config_has_sections_and_options(caller, config, mandatory_settings):
             )
 
     if isinstance(config, str):
+        config = Path(config)
+    if isinstance(config, Path):
+        if not config.is_file():
+            raise FileNotFoundError(f"Could not open/read file: {config}. "
+                                    "Check if this file exists and is in the "
+                                    "correct folder.")
         tmp_config = ConfigParser(comment_prefixes='/', allow_no_value=True)
         tmp_config.read(config)
         config = tmp_config
