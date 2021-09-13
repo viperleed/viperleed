@@ -286,6 +286,8 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=";", enrange=None):
 
 
 def checkEXPBEAMS(sl, rp, domains=False):
+    if rp.AVERAGE_BEAMS == False:
+        return     # !!! DELETE ONCE guilib DOES AVERAGING CORRECTLY
     remlist = []
     symeq = tl.leedbase.getSymEqBeams(sl, rp)
     for (bi, b) in enumerate(rp.expbeams):
@@ -405,9 +407,14 @@ def writeIVBEAMS(sl, rp, filename="IVBEAMS", domains=False):
     if any([v is None for v in d]):
         logger.error("Failed to write IVBEAMS")
         return []
-    makebeams = project_to_first_domain([b.hkfrac for b in rp.expbeams], *d)
-    output = "This IVBEAMS file was automatically generated from EXPBEAMS\n"
-    ivbeams = [tl.Beam(hk) for hk in makebeams]
+    output = ("  h         k          Beams to calculate, automatically "
+              "generated from EXPBEAMS\n")
+    if rp.AVERAGE_BEAMS != False:
+        makebeams = project_to_first_domain([b.hkfrac for b in rp.expbeams],
+                                            *d)
+        ivbeams = [tl.Beam(hk) for hk in makebeams]
+    else:
+        ivbeams = [tl.Beam(b.hkfrac) for b in rp.expbeams]
     for b in ivbeams:
         output += "{: 10.6f} {: 10.6f}\n".format(b.hk[0], b.hk[1])
     try:

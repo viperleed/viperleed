@@ -683,12 +683,22 @@ def getLEEDdict(sl, rp):
         logger.error("getLEEDdict: SUPERLATTICE contains non-integer-valued "
                      "entries.")
         return None
+    if rp.AVERAGE_BEAMS is None:
+        passed_incidence = (rp.THETA, rp.PHI)
+    elif isinstance(rp.AVERAGE_BEAMS, tuple):
+        passed_incidence = rp.AVERAGE_BEAMS
+    else:
+        passed_incidence = (5., 5.)
+        # !!! WRONG - SHOULD INSTEAD PASS SOMETHING THAT TELLS guilib NOT TO
+        #               AVERAGE. e.g.:
+        # passed_incidence = None
     d = {"eMax": rp.THEO_ENERGIES[1],
          "SUPERLATTICE": rp.SUPERLATTICE.astype(int),
          "surfBasis": sl.ucell[:2, :2].T,
          "surfGroup": pgstring, "bulkGroup": sl.bulkslab.foundplanegroup,
          "bulk3Dsym": sl.bulkslab.getBulk3Dstr(),
-         "screenAperture": rp.SCREEN_APERTURE}
+         "screenAperture": rp.SCREEN_APERTURE,
+         "beamIncidence": passed_incidence}
     return d
 
 

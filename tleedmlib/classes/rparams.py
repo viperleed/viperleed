@@ -106,6 +106,7 @@ class Rparams:
 
         # FROM PARAMETERS FILE
         self.ATTENUATION_EPS = 0.001
+        self.AVERAGE_BEAMS = None
         self.BULKDOUBLING_EPS = 0.001
         self.BULKDOUBLING_MAX = 10
         self.BULK_LIKE_BELOW = 0.

@@ -19,7 +19,7 @@ logger = logging.getLogger("tleedm.files.parameters")
 
 # list of allowed parameters
 knownParams = [
-    'ATTENUATION_EPS', 'BEAM_INCIDENCE', 'BULKDOUBLING_EPS',
+    'ATTENUATION_EPS', 'AVERAGE_BEAMS', 'BEAM_INCIDENCE', 'BULKDOUBLING_EPS',
     'BULKDOUBLING_MAX', 'BULK_LIKE_BELOW', 'BULK_REPEAT', 'DOMAIN',
     'DOMAIN_STEP', 'ELEMENT_MIX',
     'ELEMENT_RENAME', 'FILAMENT_WF', 'FORTRAN_COMP', 'HALTING',
@@ -268,13 +268,124 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
         setattr(rp, varname, v)
         return 0
 
+    def getNumericalParameter(param, value, type_=float,
+                              range_=(None, None), haltingOnFail=1,
+                              range_exclude=(False, False),
+                              outOfRangeEvent=('fail', 'fail')):
+        """
+        Generic function for interpreting a given parameter as an integer or
+        float value.
+
+        Parameters
+        ----------
+        param : str
+            The name of the parameter in PARAMETERS, for error messages only
+        value : str
+            The value as found in the PARAMETERS file
+        type_ : int or float, optional
+            Which type the variable must take
+        range_ : tuple, values can be int or float or None, optional
+            Defines upper and lower limits for the value. If either is set to
+            None, only the other one will be interpreted. The default is None
+            for both.
+        range_exclude : tuple (bool, bool), optional
+            Whether the upper and lower limits themselves are allowed values
+            or not. The default is False for both (range is inclusive).
+        outOfRangeEvent : str 'fail' or 'set', optional
+            What to do if the given value lies outside the range. For 'fail',
+            the value will be ignored. For 'modulo', the value will be
+            brought within the range by '%' operation. For 'set', the value
+            will be set to the lowest allowed value. The default is
+            ('fail', 'fail').
+        haltingOnFail : int, optional
+            What halting level should be set if the 'fail' event is triggered.
+
+        Returns
+        ----------
+        int or float or None
+            The value to set, or None if interpretation failed.
+
+        """
+
+        try:
+            try:
+                v = type_(value)
+            except ValueError:
+                if type_ != int:
+                    raise
+                v = int(float(value))  # for e.g. '1e6' to int
+        except ValueError:
+            logger.warning('PARAMETERS file: {}: Could not convert value to '
+                           '{}. Input will be ignored.'
+                           .format(param, type_.__name__))
+            rpars.setHaltingLevel(haltingOnFail)
+            return None
+        outOfRange = [False, False]
+        if range_[0] is not None and (v < range_[0] or
+                                      (range_exclude[0] and v == range_[0])):
+            outOfRange[0] = True
+        if range_[1] is not None and (v > range_[1] or
+                                      (range_exclude[1] and v == range_[1])):
+            outOfRange[1] = True
+        rangeChars = ({False: "[", True: "]"}, {False: "]", True: "["})
+        if all([v is not None for v in range_]):
+            outOfRangeStr = 'not in range {}{}, {}{}'.format(
+                                        rangeChars[0][range_exclude[0]],
+                                        range_[0], range_[1],
+                                        rangeChars[1][range_exclude[1]])
+        elif range_[0] is not None:
+            if range_exclude[0]:
+                outOfRangeStr = 'less than or equal to {}'.format(range_[0])
+            else:
+                outOfRangeStr = 'less than {}'.format(range_[0])
+        else:
+            if range_exclude[1]:
+                outOfRangeStr = 'larger than or equal to {}'.format(range_[1])
+            else:
+                outOfRangeStr = 'larger than {}'.format(range_[1])
+        if any([outOfRange[i] and outOfRangeEvent[i] == 'fail'
+                for i in range(0, 2)]):
+            logger.warning('PARAMETERS file: {}: Value {} is {}. Input will '
+                           'be ignored.'.format(param, v, outOfRangeStr))
+            rpars.setHaltingLevel(haltingOnFail)
+            return None
+        else:
+            for i in range(0, 2):
+                if outOfRange[i]:
+                    if outOfRangeEvent == 'modulo':
+                        if not range_[1]:
+                            raise ValueError(
+                                'Cannot use outOfRangeEvent modulo if upper '
+                                'limit is undefined.')
+                        if not range_[0]:
+                            range_[0] = 0
+                        setTo = (((v - range_[0]) % (range_[1] - range_[0]))
+                                 + range_[0])
+                    elif range_exclude[i]:
+                        mult = 1
+                        if i == 1:
+                            mult = -1
+                        if type_ == float:
+                            setTo = range_[i] + mult*1e-4
+                        else:
+                            setTo = range_[i] + mult
+                    else:
+                        setTo = range_[i]
+                    logger.warning('PARAMETERS file: {}: Value {} is {}. '
+                                   'Value will be set to {}.'
+                                   .format(param, v, outOfRangeStr, setTo))
+                    v = setTo
+                    break
+        return v
+
+
     def setNumericalParameter(rp, param, value, varname=None, type_=float,
                               range_=(None, None), haltingOnFail=1,
                               range_exclude=(False, False),
                               outOfRangeEvent=('fail', 'fail')):
         """
         Generic function for setting a given parameter to an integer or float
-        value.
+        value. Interpretation is done via getNumericalParameter.
 
         Parameters
         ----------
@@ -311,75 +422,12 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
 
         """
 
-        try:
-            try:
-                v = type_(value)
-            except ValueError:
-                if type_ != int:
-                    raise
-                v = int(float(value))  # for e.g. '1e6' to int
-        except ValueError:
-            logger.warning('PARAMETERS file: {}: Could not convert value to '
-                           '{}. Input will be ignored.'
-                           .format(param, type_.__name__))
-            rpars.setHaltingLevel(haltingOnFail)
+        v = getNumericalParameter(param=param, value=value, type_=type_,
+                                  range_=range_, haltingOnFail=haltingOnFail,
+                                  range_exclude=range_exclude,
+                                  outOfRangeEvent=outOfRangeEvent)
+        if v is None:
             return 1
-        outOfRange = [False, False]
-        if range_[0] is not None and (v < range_[0] or
-                                      (range_exclude[0] and v == range_[0])):
-            outOfRange[0] = True
-        if range_[1] is not None and (v > range_[1] or
-                                      (range_exclude[1] and v == range_[1])):
-            outOfRange[1] = True
-        rangeChars = ({False: "[", True: "]"}, {False: "]", True: "["})
-        if all([v is not None for v in range_]):
-            outOfRangeStr = 'not in range {}{}, {}{}'.format(
-                                        rangeChars[0][range_exclude[0]],
-                                        range_[0], range_[1],
-                                        rangeChars[1][range_exclude[1]])
-        elif range_[0] is not None:
-            if range_exclude[0]:
-                outOfRangeStr = 'less than or equal to {}'.format(range_[0])
-            else:
-                outOfRangeStr = 'less than {}'.format(range_[0])
-        else:
-            if range_exclude[1]:
-                outOfRangeStr = 'larger than or equal to {}'.format(range_[1])
-            else:
-                outOfRangeStr = 'larger than {}'.format(range_[1])
-        if any([outOfRange[i] and outOfRangeEvent[i] == 'fail'
-                for i in range(0, 2)]):
-            logger.warning('PARAMETERS file: {}: Value {} is {}. Input will '
-                           'be ignored.'.format(param, v, outOfRangeStr))
-            rpars.setHaltingLevel(haltingOnFail)
-            return 1
-        else:
-            for i in range(0, 2):
-                if outOfRange[i]:
-                    if outOfRangeEvent == 'modulo':
-                        if not range_[1]:
-                            raise ValueError(
-                                'Cannot use outOfRangeEvent modulo if upper '
-                                'limit is undefined.')
-                        if not range_[0]:
-                            range_[0] = 0
-                        setTo = (((v - range_[0]) % (range_[1] - range_[0]))
-                                 + range_[0])
-                    elif range_exclude[i]:
-                        mult = 1
-                        if i == 1:
-                            mult = -1
-                        if type_ == float:
-                            setTo = range_[i] + mult*1e-4
-                        else:
-                            setTo = range_[i] + mult
-                    else:
-                        setTo = range_[i]
-                    logger.warning('PARAMETERS file: {}: Value {} is {}. '
-                                   'Value will be set to {}.'
-                                   .format(param, v, outOfRangeStr, setTo))
-                    v = setTo
-                    break
         if not varname:
             varname = param
         setattr(rp, varname, v)
@@ -488,35 +536,57 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
             else:
                 rpars.SYMMETRY_EPS_Z = rpars.SYMMETRY_EPS
         # non-trivial parameters
-        elif param == 'BEAM_INCIDENCE':
+        elif param in ['AVERAGE_BEAMS', 'BEAM_INCIDENCE']:  # same syntax
+            if param == 'AVERAGE_BEAMS':   # special cases
+                if value.strip().lower() in ['off', 'none', 'false', 'f']:
+                    rpars.AVERAGE_BEAMS = False
+                    continue
+                elif value.lower() in ['all', 'perpendicular', 'perp']:
+                    rpars.AVERAGE_BEAMS = (0., 0.)
+                    continue
             range_ = {'THETA': (-90, 90), 'PHI': (0, 360)}
             outOfRangeEvent = {'THETA': ('fail', 'fail'),
                                'PHI': ('modulo', 'modulo')}
+            d = {'THETA': 0, 'PHI': 0}
             if ',' in value:
                 sublists = tl.base.splitSublists(llist, ',')
                 for sl in sublists:
                     for name in ['THETA', 'PHI']:
                         if sl[0].upper() == name:
-                            setNumericalParameter(
-                                rpars, 'BEAM_INCIDENCE {}'.format(name),
-                                sl[1], range_=range_[name],
-                                outOfRangeEvent=outOfRangeEvent[name],
-                                varname=name)
+                            d[name] = getNumericalParameter(
+                                '{} {}'.format(param, name), sl[1],
+                                range_=range_[name],
+                                outOfRangeEvent=outOfRangeEvent[name])
                             break
                     else:
                         logger.warning(
-                            'PARAMETERS file: BEAM_INCIDENCE: Unknown flag '
-                            'found. Input will be ignored.')
+                            'PARAMETERS file: {}: Unknown flag found. Input '
+                            'will be ignored.').format(param)
                         rpars.setHaltingLevel(1)
+                        continue
             else:
+                if len(llist) != 2:
+                    logger.warning(
+                        'PARAMETERS file: {}: Expected 2 values, found {}. '
+                        'Input will be ignored.').format(param, len(llist))
+                    rpars.setHaltingLevel(1)
+                    continue
                 for ind, name in enumerate(['THETA', 'PHI']):
-                    setNumericalParameter(
-                        rpars, 'BEAM_INCIDENCE {}'.format(name),
-                        llist[ind], range_=range_[name], varname=name,
+                    d[name] = getNumericalParameter(
+                        '{} {}'.format(param, name), llist[ind],
+                        range_=range_[name],
                         outOfRangeEvent=outOfRangeEvent[name])
-            if rpars.THETA < 0:
-                rpars.THETA = abs(rpars.THETA)
-                rpars.PHI = (rpars.PHI + 180) % 360
+            if any(v is None for v in d.values()):
+                continue    # some error occured, don't set values
+            if d['THETA'] < 0:
+                d['THETA'] = abs(d['THETA'])
+                d['PHI'] = (d['PHI'] + 180) % 360
+            # finally set
+            if param == 'AVERAGE_BEAMS':
+                rpars.AVERAGE_BEAMS = (d['THETA'], d['PHI'])
+            else:
+                rpars.THETA = d['THETA']
+                rpars.PHI = d['PHI']
         elif param == 'BULK_REPEAT':
             s = value.lower()
             if "[" not in s:
