@@ -953,8 +953,8 @@ C
       SUBROUTINE READSC(NDOM,NPLACES,NFILES,INFILE,NSURF,
      +                  IFORM,PNUM,VARST,NPRMK,NPRAS,PARTYP,NPS,
      +                  PARIND,STAFLA,OUTINT,FILREL,WHICHG,WHICHR,
-     +                  NFIL,NCONCS,CONC,DMISCH,MAXGEN,SEANAME,
-     +                  NPAR,RMUT,INIT)
+     +                  DATOUT,NFIL,NCONCS,CONC,DMISCH,MAXGEN,
+     +                  SEANAME,NPAR,RMUT,INIT)
 
       include "PARAM"
 
@@ -965,9 +965,10 @@ C  Dimension statements
 
 C  WHICHG determines which beam group to use
 C  WHICHR determines whether RPe or R2 are used
+C  DATOUT determines whether to store and print R(struct) data
 
       INTEGER NPAR
-      INTEGER PNUM,STAFLA,WHICHG,WHICHR
+      INTEGER PNUM,STAFLA,WHICHG,WHICHR,DATOUT
       INTEGER PARTYP,FILREL,OUTINT
       DIMENSION PARTYP(NDOM,MNPLACES,NFILES),FILREL(NDOM,MNPLACES)
       CHARACTER*15 INFILE(NDOM,MNPLACES,NFILES)
@@ -1021,6 +1022,7 @@ C  begin work
       READ(21,'(I5)') INIT
       READ(21,'(I5)') WHICHR
       READ(21,'(I5)') WHICHG
+      READ(21,'(I5)') DATOUT
       READ(21,'(I7)') OUTINT
       READ(21,'(I7)') MAXGEN
 

@@ -523,6 +523,13 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
     output += (formatter['int'].write([rp.SEARCH_BEAMS]).ljust(16)
                + "Optimization of which beam group do you want? "
                "(0=Aver,1=Int,2=Half)\n")
+    if rp.TL_VERSION >= 1.71:
+        outdata = 0
+        if rp.PARABOLA_FIT["type"] != "none":
+            outdata = 1
+        output += (formatter['int'].write([outdata]).ljust(16)
+                   + "Store configurations and write data.chem files for "
+                   "parabola fit (0=false)\n")
     output += formatter['gens'].write([1000]).ljust(16) + "output intervall\n"
     output += (formatter['gens'].write([maxgen]).ljust(16)
                + "desired number of generations to be performed\n")

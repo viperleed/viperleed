@@ -130,9 +130,11 @@ C       INIT > 0 -> init is used as initialising value for random, useful when t
 C  HASHTAB is the hashtable containing sets of PARINDS as keys and R-factors as values
 C  USEHASH defines whether HASHTAB should be used - turn on only if not much change is happening
 C  HASHINI tracks whether the hash table has been initialized
+C  DATOUT allows hash table usable and output to be disabled in search.steu (0 -> off)
 
       TYPE(dictionary_t) HASHTAB
       LOGICAL USEHASH,HASHINI
+      INTEGER DATOUT
 
 C  PARIND contains parameter value for each parameter (incl. concentration) and each
 C         individual in current generation
@@ -539,8 +541,8 @@ C Modul 4: Readin control information for search algorithm
 
       CALL READSC(NDOM,NPLACES,NFILES,INFILE,NSURF,IFORM,
      +            PNUM,VARST,NPRMK,NPRAS,PARTYP,NPS,PARIND,STAFLA,
-     +            OUTINT,FILREL,WHICHG,WHICHR,NFIL,NCONCS,CONC,DMISCH,
-     +            MAXGEN,SEANAME,NPAR,RMUT,INIT)
+     +            OUTINT,FILREL,WHICHG,WHICHR,DATOUT,NFIL,NCONCS,CONC,
+     +            DMISCH,MAXGEN,SEANAME,NPAR,RMUT,INIT)
 
 C  initialize variables for HASHTAB
 
@@ -916,8 +918,9 @@ C order list of structures as function of (increasing) R-factor
      +  PMISCH)
 
 C  threshold for using hash table storage: if there are no changes for a while, turn on USEHASH
+C  unless switched off entirely by DATOUT
 
-        IF (.NOT. USEHASH) THEN
+        IF ((.NOT. USEHASH) .and. (DATOUT .ne. 0)) THEN
 
           IF ((IGEN-LASTGEN) .GE. 5e3*(RMUT**2)*NPAR) THEN
             USEHASH = .true.
