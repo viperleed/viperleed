@@ -14,7 +14,9 @@ by the other measurement classes.
 from collections import defaultdict
 from abc import abstractmethod
 import csv
-from time import localtime, strftime
+import ast
+from configparser import ConfigParser
+# from time import localtime, strftime
 
 from PyQt5 import QtCore as qtc
 
@@ -90,6 +92,8 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
     def __init__(self, measurement_settings):
         """Initialise measurement class"""
 
+        super().__init__()
+
         self.current_energy = 0
         self.__settings = None
         self.__primary_controller = None
@@ -103,13 +107,6 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             self.data_points[key] = []
 
         self.set_settings(measurement_settings)
-
-        # All the rest should be done evry time new settings are loaded.
-        # Connect signals to appropriate functions ------ move to set setttings
-        self.connect_primary_controller()
-        self.connect_controllers(*self.__secondary_controllers)
-        self.connect_cameras(self.__cameras)
-
 
         # Attributes needed for loop operation  -> move somewhere else
         # Settle time will saved in primary controller ini
@@ -190,29 +187,30 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
 
         self.__settings = new_settings
 
-        self.disconnect_primary_controller(self.__primary_controller)
-        self.disconnect_controllers(self.__secondary_controllers)
-        self.disconnect_cameras(self.__cameras)
-
-        self.__primary_controller = None
-        self.__secondary_controllers = []
-        self.__cameras = []
-
+        # Instantiate primary controller class
         prim_set = ast.literal_eval(
-            self.__settings.get('devices','primary_controller'))
-        self.__primary_controller = self.__make_controller(prim_set[0],
-                                                           is_primary=True)
+            self.__settings.get('devices', 'primary_controller'))
+        self.primary_controller = self.__make_controller(prim_set[0],
+                                                         is_primary=True)
+        self.primary_controller.what_to_measure(prim_set[1])
 
+        # Instantiate secondary controller classes
+        tmp_devices = []
         secondary_set = ast.literal_eval(
-            config.get('devices','secondary_controllers'))
+             self.__settings.get('devices', 'secondary_controllers'))
         for secondary_settings in secondary_set:
-            self.__secondary_controllers.append(self.__make_controller(
-                secondary_settings[0], is_primary=False))
+            tmp_devices.append(self.__make_controller(secondary_settings[0],
+                                                      is_primary=False))
+            tmp_devices[-1].what_to_measure(secondary_settings[1])
+        self.controllers = tmp_devices
 
+        # Instantiate camera classes
+        tmp_devices = []
         camera_set = ast.literal_eval(
-            config.get('devices','secondary_controllers'))
+             self.__settings.get('devices', 'cameras'))
         for camera_settings in camera_set:
-            self.__cameras.append(self.__make_camera(camera_settings))
+            tmp_devices.append(self.__make_camera(camera_settings))
+        self.cameras = tmp_devices
 
     settings = property(__get_settings, set_settings)
 
@@ -268,8 +266,6 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         """
         self.disconnect_controllers(self.__secondary_controllers)
         self.__secondary_controllers = new_controllers
-        for controller in self.__secondary_controllers:
-            controller.sets_energy = False
         self.connect_controllers(self.__secondary_controllers)
 
     def add_controllers(self, *new_controllers):
@@ -286,8 +282,6 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         None.
         """
         self.__secondary_controllers.extend(new_controllers)
-        for controller in new_controllers:
-            controller.sets_energy = False
         self.connect_controllers(new_controllers)
 
     def remove_controllers(self, *remove):
@@ -325,7 +319,6 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         """
         self.disconnect_primary_controller()
         self.__primary_controller = new_controller
-        self.__primary_controller.sets_energy = True
         self.connect_primary_controller()
 
     @abstractmethod
@@ -766,10 +759,10 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         try:
             controller_class = class_from_name('controller',
                                                controller_cls_name)
-            except ValueError:
-                emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
-                           'controller/controller_class')
-                return
+        except ValueError:
+            emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
+                       'controller/controller_class')
+            return
         return controller_class(config, port_name, sets_energy=is_primary)
 
     def __make_camera(self, camera_settings):
@@ -790,8 +783,8 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         port_name = config.get('camera', 'port_name')
         try:
             camera_class = class_from_name('camera', camera_cls_name)
-            except ValueError:
-                emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
-                           'camera/camera_class')
-                return
+        except ValueError:
+            emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
+                       'camera/camera_class')
+            return
         return camera_class(config, port_name)
