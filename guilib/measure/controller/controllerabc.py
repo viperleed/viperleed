@@ -47,7 +47,7 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
 
     _mandatory_settings = [
         ('controller', 'serial_port_class'),
-        ('available_commands')
+        ('available_commands',)
         ]
     controller_busy = qtc.pyqtSignal(bool)
 
@@ -79,6 +79,7 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
             settings file.
         """
 
+        super().__init__()
         self.__sets_energy = sets_energy
         self.__settings = None
         self.__serial = None
@@ -129,7 +130,7 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
         """Return whether the controller sets the energy."""
         return self.__sets_energy
 
-    @set_energy.setter
+    @sets_energy.setter
     def sets_energy(self, energy_setter):
         """Set the serial to controls energy True/False.
 
@@ -177,8 +178,6 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
             emit_error(self, ControllerErrors.INVALID_CONTROLLER_SETTINGS,
                        error_msg)
             return
-
-
 
         serial_cls_name = new_settings.get('controller', 'serial_port_class')
         if self.serial.__class__.__name__ != serial_cls_name:

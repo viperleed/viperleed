@@ -99,7 +99,7 @@ class MeasureEnergySetpoint(MeasurementABC):
         self.primary_controller.settings.set(
             'energy_calibration', 'coefficients', coefficients)
         file_name = ast.literal_eval(
-                        self.settings.get('devices','primary_controller')
+                        self.settings.get('devices', 'primary_controller')
                         )[0]
         with open(file_name, 'w') as configfile:
             self.primary_controller.settings.write(configfile)
