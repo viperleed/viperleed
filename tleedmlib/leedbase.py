@@ -734,17 +734,17 @@ def getBeamCorrespondence(sl, rp):
     a number for each theoretical beam, indicating which experimental beam it
     corresponds to."""
     eps = 1e-5  # for comparing beams
-    #   initialize to "no corresponding beam" for all theoretical beams:
-    beamcorr = [-1]*len(rp.ivbeams)
+    #   make dictionary {theoretical_beam: experimental_beam}
+    beamcorr = {}
     # get symmetry-equivalence list:
     symeq = getSymEqBeams(sl, rp)
     # first, go through experimental beams and assign theoreticals if clear:
     remlist = []
-    for (ne, eb) in enumerate(rp.expbeams):
+    for eb in rp.expbeams:
         found = False
-        for (nt, tb) in enumerate(rp.ivbeams):
+        for tb in rp.ivbeams:
             if eb.isEqual(tb, eps=eps):
-                beamcorr[nt] = ne
+                beamcorr[tb] = eb
                 found = True
                 break
         if not found:
@@ -754,9 +754,9 @@ def getBeamCorrespondence(sl, rp):
                 if eb.isEqual_hk(hk, eps=eps):
                     eqbl.extend([hk2 for (hk2, j) in symeq if i == j])
             for hk in eqbl:
-                for (nt, tb) in enumerate(rp.ivbeams):
+                for tb in rp.ivbeams:
                     if tb.isEqual_hk(hk, eps=eps):
-                        beamcorr[nt] = ne
+                        beamcorr[tb] = eb
                         found = True
                         break
                 if found:
@@ -775,17 +775,17 @@ def getBeamCorrespondence(sl, rp):
     # now, for theoretical beams without assignment, see if there is a
     #   symmetry-equivalent beam to assign them to
     notfound = []
-    for (nt, tb) in enumerate(rp.ivbeams):
-        if beamcorr[nt] == -1:
+    for tb in rp.ivbeams:
+        if tb not in beamcorr.keys():
             found = False
             eqbl = []   # hk of equivalent beams
             for (hk, i) in symeq:
                 if tb.isEqual_hk(hk, eps=eps):
                     eqbl.extend([hk2 for (hk2, j) in symeq if i == j])
             for hk in eqbl:
-                for (ne, eb) in enumerate(rp.expbeams):
+                for eb in rp.expbeams:
                     if eb.isEqual_hk(hk, eps=eps):
-                        beamcorr[nt] = ne
+                        beamcorr[tb] = eb
                         found = True
                         break
                 if found:
@@ -795,4 +795,8 @@ def getBeamCorrespondence(sl, rp):
     if notfound:
         logger.debug("No experimental beams found for calculated beams: "
                      + ", ".join(notfound))
-    return beamcorr
+    beamcorr_list = [-1]*len(rp.ivbeams)
+    for i, tb in enumerate(rp.ivbeams):
+        if tb in beamcorr:
+            beamcorr_list[i] = rp.expbeams.index(beamcorr[tb])
+    return beamcorr_list
