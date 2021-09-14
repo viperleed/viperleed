@@ -286,8 +286,6 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=";", enrange=None):
 
 
 def checkEXPBEAMS(sl, rp, domains=False):
-    if rp.AVERAGE_BEAMS == False:
-        return     # !!! DELETE ONCE guilib DOES AVERAGING CORRECTLY
     remlist = []
     symeq = tl.leedbase.getSymEqBeams(sl, rp)
     for (bi, b) in enumerate(rp.expbeams):
