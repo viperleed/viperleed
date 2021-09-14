@@ -290,6 +290,8 @@ def plot_phaseshifts(sl, rp, filename="Phaseshifts_plots.pdf"):
         # this reproduces the order of blocks contained in PHASESHIFTS:
         if el in rp.ELEMENT_MIX:
             chemelList = rp.ELEMENT_MIX[el]
+        elif el in rp.ELEMENT_RENAME:
+            chemelList = [rp.ELEMENT_RENAME[el]]
         else:
             chemelList = [el]
         ps_labels.extend([cel + " in " + s.label + " site"
