@@ -129,7 +129,7 @@ class Rparams:
         self.LOG_SEARCH = True
         self.N_BULK_LAYERS = 1           # number of bulk layers
         self.N_CORES = 0                 # number of cores
-        self.PARABOLA_FIT = {"type": "ridge", "alpha": 1e-2, "mincurv": 5e-3,
+        self.PARABOLA_FIT = {"type": "none", "alpha": 1e-2, "mincurv": 5e-3,
                              "localize": 0}
         self.PHASESHIFT_EPS = 0  # defined in updateDerivedParams
         self.PHI = 0.0           # from BEAM_INCIDENCE
