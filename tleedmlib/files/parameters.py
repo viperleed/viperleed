@@ -1000,7 +1000,20 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                     rpars.PLOT_RFACTOR['perpage'] = tuple(il)
         elif param == 'RUN':
             rl = []
+            aliases = {0: ["initialization", "initialisation", "init", "ini"],
+                       1: ["refcalc", "ref", "fd"],
+                       11: ["rfactor", "rfac"],
+                       12: ["rfacsuper"],
+                       2: ["deltaamplitudes", "deltas", "delta", "del"],
+                       3: ["search"],
+                       31: ["superpos", "super", "sup"],
+                       4: ["domains", "domain", "dom"],
+                       5: ["error", "err"]
+                       }
             for s in llist:
+                for ind in aliases:
+                    for a in aliases[ind]:
+                        s = s.replace(a, str(ind))
                 ir = tl.base.readIntRange(s)
                 if len(ir) > 0:
                     rl.extend(ir)
