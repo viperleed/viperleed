@@ -69,8 +69,8 @@ def updatePARAMETERS(rp, filename='PARAMETERS'):
         logger.warning("updatePARAMETERS routine: PARAMETERS file not found.")
         return
     for line in lines:
-        if "!" in line:
-            line = line.split("!")[0].rstrip()
+        for c in ["!", "#", "%"]:    # start of comment
+            line = line.split(c)[0].rstrip()
         for param in ["SEARCH_KILL", "STOP"]:  # SEARCH_KILL is legacy name
             if line.lstrip().upper().startswith(param):
                 if not re.match(r"\s*"+param+r"\s*=\s*[Ff](alse)?", line):

@@ -52,7 +52,8 @@ def readDISPLACEMENTS(rp, filename="DISPLACEMENTS"):
         logger.error("Error reading DISPLACEMENTS file.")
         raise
     for (i, line) in enumerate(lines):
-        line = line.split("!")[0].strip()
+        for c in ["!", "#", "%"]:    # start of comment
+            line = line.split(c)[0].strip()
         if re.search(r'<\s*/?\s*loop\s*>', line.lower()):
             if "=" in line:
                 logger.warning("DISPLACEMENTS file: One line cannot contain "

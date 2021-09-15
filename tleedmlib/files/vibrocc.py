@@ -59,8 +59,8 @@ def readVIBROCC(rp, slab, filename='VIBROCC', silent=False):
     regex = False   # read regular expressions as-is or not
     for line in rf:
         line = line.lstrip()
-        if "!" in line:
-            line = line.split("!")[0]
+        for c in ["!", "#", "%"]:    # start of comment
+            line = line.split(c)[0].rstrip()
         if '=' not in line:
             continue
         else:
