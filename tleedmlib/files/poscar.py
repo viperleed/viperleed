@@ -32,7 +32,7 @@ def readPOSCAR(filename='POSCAR'):
 
     Returns
     -------
-    None.
+    Slab.
 
     """
 
@@ -68,15 +68,17 @@ def readPOSCAR(filename='POSCAR'):
         if linenum == 1:
             pass
         elif linenum == 2:
-            scaling = float(line.split()[0])
+            sl.poscar_scaling = float(line.split()[0])
         elif linenum <= 5:
             if linenum == 3:
                 ucellList = []
             llist = [float(i) for i in line.split()]
             ucellList.append(llist)
             if linenum == 5:
-                sl.ucell = scaling * np.transpose(np.array(ucellList))
-                sl.ucell_ori = scaling * np.transpose(np.array(ucellList))
+                sl.ucell = sl.poscar_scaling * np.transpose(
+                                                    np.array(ucellList))
+                sl.ucell_ori = sl.poscar_scaling * np.transpose(
+                                                    np.array(ucellList))
                 if sl.ucell[2, 0] != 0.0 or sl.ucell[2, 1] != 0.0:
                     if sl.ucell[2, 0] < 1e-4 and sl.ucell[2, 1] < 1e-4:
                         sl.ucell[2, 0] = 0.
@@ -222,12 +224,12 @@ def writePOSCAR(sl, filename='CONTCAR', reorder=False, comments='none',
     else:
         # fill dummy header:
         output += 'unknown\n'
-    output += '   1.0\n'    # no extra scaling
+    output += '{:10.6f}\n'.format(sl.poscar_scaling)  # scaling
     # unit cell
     m = np.transpose(sl.ucell)
     for vec in m:
         for val in vec:
-            output += '{:22.16f}'.format(val)
+            output += '{:22.16f}'.format(val / sl.poscar_scaling)
         output += '\n'
     # atom types and numbers
     for el in sl.elements:
@@ -264,14 +266,7 @@ def writePOSCAR(sl, filename='CONTCAR', reorder=False, comments='none',
                    + 'Layer'.rjust(7) + 'Linking'.rjust(9)
                    + 'FreeDir'.rjust(12) + ': see POSCAR')
     output += ol+'\n'
-    # NperElCount = 0
-    # lastEl = sl.atlist[0].el
     for i, at in enumerate(sl.atlist):
-        # if lastEl != at.el:
-        #     lastEl = at.el
-        #     NperElCount = 1
-        # else:
-        #     NperElCount += 1
         ol = ''
         for coord in at.pos:
             ol += '{:20.16f}'.format(coord)

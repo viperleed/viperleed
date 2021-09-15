@@ -95,7 +95,8 @@ class Slab:
     ----------
     ucell : np.array
         The unit cell as vectors a, b, c (columns)
-
+    poscar_scaling : float
+        The original scaling factor from POSCAR
     elements : list of str
         Element labels as read from POSCAR
     chemelem : list of str
@@ -164,6 +165,7 @@ class Slab:
         global has_ase
 
         self.ucell = np.array([])
+        self.poscar_scaling = 1.
         self.elements = []
         self.chemelem = []
         self.n_per_elem = {}
