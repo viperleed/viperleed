@@ -307,14 +307,18 @@ C
 C-----------------------------------------------------------------------------
 C  NOW WRITE HEADER FOR OUTPUTFILE
 C
+      IF (NFILES.GT.20) GOTO 124
       WRITE (6,122) (INFILE(I),I=1,NFILES)
-  122 FORMAT (200A15)
-      WRITE (6,124) NT0
-  124 FORMAT (I5)
-      DO 128 I=1,NT0
-           WRITE (6,126) I,PQFEX(1,I),PQFEX(2,I),1
-  126      FORMAT (I5,2F10.5,I5)
-  128 CONTINUE
+  122 FORMAT (20A15)
+      GOTO 130
+  124 WRITE (6,126) (INFILE(I),I=1,20)
+  126 FORMAT (20A15,'and further DEL files')
+  130 WRITE (6,134) NT0
+  134 FORMAT (I5)
+      DO 138 I=1,NT0
+           WRITE (6,136) I,PQFEX(1,I),PQFEX(2,I),1
+  136      FORMAT (I5,2F10.5,I5)
+  138 CONTINUE
 C      WRITE (6,122)
 C
 C-------------------------------------------------------------------------------
