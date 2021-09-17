@@ -114,6 +114,7 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
         is_busy : bool
             True if the controller is busy
         """
+        # print('busy:', is_busy, self.serial.port_name)
         was_busy = self.__busy
         is_busy = bool(is_busy)
         if was_busy is not is_busy:
@@ -197,7 +198,7 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
 
         # Notice that the .connect() will run anyway, even if the
         # settings are invalid (i.e., missing mandatory fields)!
-        self.serial.connect()
+        self.serial.serial_connect()
         self.__settings = self.serial.port_settings
 
     settings = property(__get_settings, set_settings)

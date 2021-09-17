@@ -31,7 +31,7 @@ class MeasureController(ControllerABC):
     # This signal is only used by the primary controller which
     # sets the energy.
     about_to_trigger = qtc.pyqtSignal()
-    
+
     _mandatory_settings = [*ControllerABC._mandatory_settings,
                            ('controller', 'measurement_devices')]
 
@@ -39,13 +39,13 @@ class MeasureController(ControllerABC):
     def __init__(self, settings, port_name='', sets_energy=False):
         """Initialise controller class object."""
 
-        super().init(settings, port_name=port_name, sets_energy=sets_energy)
+        super().__init__(settings, port_name=port_name, sets_energy=sets_energy)
 
         # This dictionary must be reimplemented in subclasses.
         # It must contain all possible measurement types the controller
         # can receive using the same keys used in the measurement
         # class responsible for receiving data from this controller.
-        self.__measurements = defaultdict(list)
+        self.measurements = defaultdict(list)
 
         # These dictionaries must be reimplemented in subclasses.
         # They must contain all functions the MeasureController has to call
@@ -58,18 +58,9 @@ class MeasureController(ControllerABC):
         self.begin_prepare_todos = defaultdict(bool)
         self.continue_prepare_todos = defaultdict(bool)
 
-        # Connect data_received signal from the serial to
-        # the receive_measurements function in this class.
-        self.serial.data_received.connect(self.receive_measurements)
-
-        # Connect serial about_to_trigger signal to controller
-        # about_to_trigger signal.
-        self.serial.about_to_trigger.connect(self.about_to_trigger.emit)
-
         # tuple used to store the energies and times sent
         # by the MeasurementABC class in alternating order.
         self.__energies_and_times = []
-        
 
     @abstractmethod
     def abort_and_reset(self):
@@ -109,7 +100,7 @@ class MeasureController(ControllerABC):
         return
 
     # @qtc.pyqtSlot(bool)
-    def begin_preparation(self, busy):
+    def begin_preparation(self, serial_busy):
         """Prepare the controller for a measurement.
 
         The begin_prepare_todos dictionary used in this method
@@ -126,7 +117,7 @@ class MeasureController(ControllerABC):
 
         Parameters
         ----------
-        busy : boolean
+        serial_busy : boolean
             Busy state of the serial.
             If not busy, send next command.
 
@@ -134,7 +125,7 @@ class MeasureController(ControllerABC):
         -------
         None.
         """
-        if busy:
+        if serial_busy:
             return
 
         next_to_do = None
@@ -143,20 +134,18 @@ class MeasureController(ControllerABC):
                 continue
             next_to_do = getattr(self, key)
             break
-
         if next_to_do:
-            self.begin_prepare_todos[next_to_do] = False
-            if next_to_do is self.set_energy:
-                next_to_do(self.__energies_and_times)
+            self.begin_prepare_todos[next_to_do.__name__] = False
+            if next_to_do == self.set_energy:
+                next_to_do(*self.__energies_and_times)
             else:
                 next_to_do()
-            next_to_do()
             return
         self.serial.serial_busy.disconnect()
         self.busy = False
 
     # @qtc.pyqtSlot(bool)
-    def continue_preparation(self, busy):
+    def continue_preparation(self, serial_busy):
         """Prepare the controller for a measurement.
 
         The continue_prepare_todos dictionary used in this method
@@ -173,7 +162,7 @@ class MeasureController(ControllerABC):
 
         Parameters
         ----------
-        busy : boolean
+        serial_busy : boolean
             Busy state of the serial.
             If not busy, send next command.
 
@@ -181,21 +170,22 @@ class MeasureController(ControllerABC):
         -------
         None.
         """
-        if not busy:
-            next_to_do = None
-            for key, to_do in self.continue_prepare_todos.items():
-                if not to_do:
-                    continue
-                next_to_do = key
-                break
+        if serial_busy:
+            return
+        next_to_do = None
+        for key, to_do in self.continue_prepare_todos.items():
+            if not to_do:
+                continue
+            next_to_do = getattr(self, key)
+            break
 
-            if next_to_do:
-                self.continue_prepare_todos[next_to_do] = False
-                next_to_do()
-                return
-            self.serial.serial_busy.disconnect()
-            self.busy = False
-            self.data_ready.emit({})
+        if next_to_do:
+            self.continue_prepare_todos[next_to_do.__name__] = False
+            next_to_do()
+            return
+
+        self.serial.serial_busy.disconnect()
+        self.busy = False
 
     @abstractmethod
     def receive_measurements(self, receive):
@@ -225,10 +215,10 @@ class MeasureController(ControllerABC):
         None.
         """
 
-        self.ready()
+        self.measurements_done()
         return
 
-    def ready(self):
+    def measurements_done(self):
         """Check if all measurements have been received.
 
         Emit a signal which contains all of the measurements as soon
@@ -244,9 +234,9 @@ class MeasureController(ControllerABC):
         None.
         """
         self.busy = False
-        self.data_ready.emit(self.__measurements)
-        for key in self.__measurements:
-            self.__measurements[key] = []
+        self.data_ready.emit(self.measurements)
+        for key in self.measurements:
+            self.measurements[key] = []
 
     @abstractmethod
     def set_energy(self, energy, *other_data):
@@ -310,7 +300,7 @@ class MeasureController(ControllerABC):
             self.begin_prepare_todos[key] = True
         self.serial.serial_busy.connect(self.begin_preparation,
                                         type=qtc.Qt.UniqueConnection)
-        self.begin_preparation(False)
+        self.begin_preparation(serial_busy=False)
 
     def trigger_continue_preparation(self):
         """Trigger the second step in the preparation for measurements.
@@ -327,7 +317,7 @@ class MeasureController(ControllerABC):
             self.continue_prepare_todos[key] = True
         self.serial.serial_busy.connect(self.continue_preparation,
                                         type=qtc.Qt.UniqueConnection)
-        self.continue_preparation(False)
+        self.continue_preparation(serial_busy=False)
 
     @abstractmethod
     def what_to_measure(self, requested):
@@ -355,3 +345,17 @@ class MeasureController(ControllerABC):
         None.
         """
         return
+
+    def set_settings(self, new_settings):
+        """TODO: add doc string."""
+        super().set_settings(new_settings)
+
+        if self.serial is not None:
+            # Connect data_received signal from the serial to
+            # the receive_measurements function in this class.
+            self.serial.data_received.connect(self.receive_measurements)
+
+            # Connect serial about_to_trigger signal to controller
+            # about_to_trigger signal.
+            self.serial.about_to_trigger.connect(self.about_to_trigger.emit)
+        

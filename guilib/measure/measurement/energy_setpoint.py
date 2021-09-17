@@ -14,9 +14,22 @@ which gives commands to the controller classes.
 import ast
 from numpy.polynomial.polynomial import Polynomial
 
+from measurementabc import MeasurementABC
+
 
 class MeasureEnergySetpoint(MeasurementABC):
-    """Generic measurement class."""
+    """Energy calibration class."""
+
+    def __init__(self, measurement_settings):
+        """TODO: add docstring"""
+        super().__init__(measurement_settings)
+        self.__end_energy = self.settings.getfloat('measurement_settings',
+                                                   'end_energy')
+        self.__delta_energy = self.settings.getfloat('measurement_settings',
+                                                     'delta_energy')
+        self.__settling_time = self.primary_controller.settings.getint(
+                            'measurement_settings',
+                            'settle_time')
 
     def begin_measurement_preparation(self):
         """Start preparation for measurements.
@@ -46,12 +59,16 @@ class MeasureEnergySetpoint(MeasurementABC):
         -------
         None.
         """
-        self.set_LEED_energy(self.current_energy)
+        self.primary_controller.busy = True
+        for controller in self.controllers:
+            controller.busy = True
+        self.data_points['nominal_energy'].append(self.current_energy)
+        self.set_LEED_energy(self.current_energy, self.__settling_time)
 
     def is_finished(self):
         """Check if the full measurement cycle is done.
-        
-        If the energy is above the end_energy the cycle is
+
+        If the energy is above the __end_energy the cycle is
         completed. If not, then the delta energy is added
         and the next measurement is started.
 
@@ -59,12 +76,11 @@ class MeasureEnergySetpoint(MeasurementABC):
         -------
         bool
         """
-        if self.current_energy > self.end_energy:
+        if self.current_energy >= self.__end_energy:
             self.calibrate_energy_setpoint()
             return True
-        else:
-            self.current_energy += self.delta_energy
-            return False
+        self.current_energy += self.__delta_energy
+        return False
 
     def calibrate_energy_setpoint(self):
         """Calibrate the energy setpoint of the LEED electronics
@@ -89,8 +105,9 @@ class MeasureEnergySetpoint(MeasurementABC):
         -------
         None
         """
-        nominal_energies = self.data_points['nominal_energies']
-        measured_energies = self.data_points['measured_energies']
+        nominal_energies = self.data_points['nominal_energy']
+        measured_energies = self.data_points['HV']
+        print(nominal_energies,measured_energies)
         domain = ast.literal_eval(
             self.primary_controller.settings['energy_calibration']['domain'])
         fit_polynomial = Polynomial.fit(measured_energies, nominal_energies,

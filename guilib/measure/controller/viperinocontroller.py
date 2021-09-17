@@ -56,7 +56,7 @@ class ViPErinoController(MeasureController):
         boolean that is used to determine if the connected
         function has already been called.
         """
-
+        super().__init__(settings, port_name=port_name, sets_energy=sets_energy)
         # Initialise dictionaries for the measurement preparation.
         self.begin_prepare_todos['get_hardware'] = True
         self.begin_prepare_todos['calibrate_adcs'] = True
@@ -72,26 +72,25 @@ class ViPErinoController(MeasureController):
 
         self.__hardware = defaultdict()
 
-        super().__init__(settings, port_name=port_name, sets_energy=sets_energy)
+# Obsolete now, no set_sets_energy anymore
+    # def set_sets_energy(self, energy_setter):
+        # """Set the serial to controls energy True/False.
 
-    def set_sets_energy(self, energy_setter):
-        """Set the serial to controls energy True/False.
+        # Set the boolean and update the begin_prepare_todos
+        # dictionary accordingly.
 
-        Set the boolean and update the begin_prepare_todos
-        dictionary accordingly.
-
-        Parameters
-        ----------
-        energy_setter : bool
-            True if the controller sets the energy.
-        """
-        super().set_sets_energy(energy_setter)
-        key = 'set_energy'
-        if self.__sets_energy:
-            self.begin_prepare_todos[key] = True
-        else:
-            if key in self.begin_prepare_todos:
-                del self.begin_prepare_todos[key]
+        # Parameters
+        # ----------
+        # energy_setter : bool
+            # True if the controller sets the energy.
+        # """
+        # super().set_sets_energy(energy_setter)
+        # key = 'set_energy'
+        # if self.__sets_energy:
+            # self.begin_prepare_todos[key] = True
+        # else:
+            # if key in self.begin_prepare_todos:
+                # del self.begin_prepare_todos[key]
 
     def set_energy(self, energy, time, *more_steps):
         """Convert data from gui to usable values for the DAC.
@@ -121,9 +120,9 @@ class ViPErinoController(MeasureController):
         -------
         energies_and_times: array of integers
         """
-        pc_set_voltage = self.__settings.get('available_commands',
-                                             'PC_SET_VOLTAGE')
-        v_ref_dac = self.__settings.getfloat('measurement_settings',
+        pc_set_voltage = self.settings.get('available_commands',
+                                           'PC_SET_VOLTAGE')
+        v_ref_dac = self.settings.getfloat('measurement_settings',
                                              'v_ref_dac')
 
         dac_out_vs_nominal_energy = 10/1000  # 10V / 1000 eV
@@ -150,7 +149,7 @@ class ViPErinoController(MeasureController):
         message = []
         for value in energies_and_times:
             message.extend(value.to_bytes(2, 'big'))
-        self.__serial.send_to_arduino([pc_set_voltage], message)
+        self.serial.send_message(pc_set_voltage, message)
 
     def start_autogain(self):
         """Determine starting gain.
@@ -163,8 +162,8 @@ class ViPErinoController(MeasureController):
         """
         # TODO: Had issues in the beginning back then on omicron
         # (Gain too high)
-        pc_autogain = self.__settings.get('available_commands', 'PC_AUTOGAIN')
-        self.__serial.send_message([pc_autogain])
+        pc_autogain = self.settings.get('available_commands', 'PC_AUTOGAIN')
+        self.serial.send_message(pc_autogain)
 
     def set_up_adcs(self):
         """Set up ADCs.
@@ -178,13 +177,16 @@ class ViPErinoController(MeasureController):
         -------
         None.
         """
-        pc_set_up_adcs = self.__settings.get('available_commands',
-                                             'PC_SET_UP_ADCS')
-        num_meas_to_average = self.__settings.getint(
+        pc_set_up_adcs = self.settings.get('available_commands',
+                                           'PC_SET_UP_ADCS')
+        # num_meas_to_average = self.settings.getint(
+                                # 'measurement_settings', 'num_meas_to_average'
+                                # ).to_bytes(2, 'big')
+        num_meas_to_average = self.settings.getint(
                                 'measurement_settings', 'num_meas_to_average'
-                                ).to_bytes(2, 'big')
-        message = [*num_meas_to_average, *self.__adc_channels[:2]]
-        self.__serial.send_to_arduino([pc_set_up_adcs], message)
+                                )
+        message = [num_meas_to_average, *self.__adc_channels[:2]]
+        self.serial.send_message(pc_set_up_adcs, message)
 
     def get_hardware(self):
         """Get hardware connected to micro controller.
@@ -207,9 +209,9 @@ class ViPErinoController(MeasureController):
         -------
         None.
         """
-        pc_configuration = self.__settings.get('available_commands',
-                                               'PC_CONFIGURATION')
-        self.__serial.send_message([pc_configuration])
+        pc_configuration = self.settings.get('available_commands',
+                                             'PC_CONFIGURATION')
+        self.serial.send_message(pc_configuration)
 
     def calibrate_adcs(self):
         """Calibrate ADCs.
@@ -227,11 +229,11 @@ class ViPErinoController(MeasureController):
         None.
         """
 
-        pc_calibration = self.__settings.get('available_commands',
-                                             'PC_CALIBRATION')
-        update_rate = self.__settings.getint('controller', 'update_rate')
+        pc_calibration = self.settings.get('available_commands',
+                                           'PC_CALIBRATION')
+        update_rate = self.settings.getint('controller', 'update_rate')
         message = [update_rate, *self.__adc_channels[:2]]
-        self.__serial.send_to_arduino([pc_calibration], message)
+        self.serial.send_message(pc_calibration, message)
 
     def receive_measurements(self, receive):
         """Receive measurements from the serial.
@@ -263,13 +265,15 @@ class ViPErinoController(MeasureController):
         -------
         None.
         """
-        if self.begin_prepare_todos['get_hardware'] == False and
-                self.begin_prepare_todos['calibrate_adcs'] == True:
+        if (not self.begin_prepare_todos['get_hardware']
+                and self.begin_prepare_todos['calibrate_adcs']):
             self.__hardware = receive
+            return
+
         for i, measurement in enumerate(self.__adc_measurement_types):
             if measurement is not None:
-                self.__measurements[measurement] = receive[i]
-        self.ready()
+                self.measurements[measurement] = receive[i]
+        self.measurements_done()
 
     def measure_now(self):
         """Take a measurement.
@@ -285,9 +289,9 @@ class ViPErinoController(MeasureController):
         -------
         None.
         """
-        pc_measure_only = self.__settings.get('available_commands',
-                                              'PC_MEASURE_ONLY')
-        self.__serial.send_message([pc_measure_only])
+        pc_measure_only = self.settings.get('available_commands',
+                                            'PC_MEASURE_ONLY')
+        self.serial.send_message(pc_measure_only)
 
     def abort_and_reset(self):
         """Abort current task and reset the controller.
@@ -299,9 +303,8 @@ class ViPErinoController(MeasureController):
         -------
         None.
         """
-        pc_reset = self.__settings.get('available_commands',
-                                              'PC_RESET')
-        self.__serial.send_message([pc_reset])
+        pc_reset = self.settings.get('available_commands', 'PC_RESET')
+        self.serial.send_message(pc_reset)
 
         self.begin_prepare_todos['get_hardware'] = True
         self.begin_prepare_todos['calibrate_adcs'] = True
@@ -315,7 +318,7 @@ class ViPErinoController(MeasureController):
         self.__adc_measurement_types = []
         self.__adc_channels = []
         self.__hardware = defaultdict()
-        self.__measurements = defaultdict(list)
+        self.measurements = defaultdict(list)
         self.__energies_and_times = []
 
     def what_to_measure(self, requested):
@@ -336,7 +339,7 @@ class ViPErinoController(MeasureController):
         None.
         """
         measurement_devices = ast.literal_eval(
-            self.__settings['controller']['measurement_devices']
+            self.settings['controller']['measurement_devices']
             )
         n_devices = len(measurement_devices)
         self.__adc_measurement_types = [None]*n_devices
@@ -350,7 +353,7 @@ class ViPErinoController(MeasureController):
                         emit_error(self,
                                    ViPErinoErrors.OVERLAPPING_MEASUREMENTS)
                     self.__adc_measurement_types[i] = request
-                    self.__adc_channels[i] = self.__settings.getint(
+                    self.__adc_channels[i] = self.settings.getint(
                         'controller', request
                         )
                     break

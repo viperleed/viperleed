@@ -26,9 +26,6 @@ from viperleed.guilib.measure.hardwarebase import (
     emit_error
     )
 
-
-# TODO: update send_message doc string
-
 class ViPErLEEDHardwareError(ViPErLEEDErrorEnum):
     """This class contains all errors related to the Arduino."""
     ERROR_NO_ERROR = (0, "No error")
@@ -157,7 +154,7 @@ class ViPErLEEDSerial(SerialABC):
         special_byte = self.port_settings.getint('serial_port_settings',
                                                  'SPECIAL_BYTE')
 
-        print(f"before special byte: {message=}")
+        # print(f"before special byte: {message=}")
         # Get the message length and check if the Arduino can store the
         # whole message with its 64 byte sized buffer. The calculation
         # factors in the START and END marker and the payload_length byte.
@@ -178,9 +175,9 @@ class ViPErLEEDSerial(SerialABC):
                 message[i] = special_byte
                 message.insert(i + 1, value - special_byte)
         # Insert the message length at the beginning of the message
-        print(f"encode, before length: {message=}")
+        # print(f"encode, before length: {message=}")
         message.insert(0, payload_length)
-        print(f"encode, after length: {message=}")
+        # print(f"encode, after length: {message=}")
         return message
 
     def identify_error(self, messages_since_error):
@@ -289,7 +286,7 @@ class ViPErLEEDSerial(SerialABC):
         """
         pc_error = self.port_settings.getint('available_commands', 'PC_ERROR')
 
-        return len(message) == 1 and message[0] == pc_error
+        return len(message) == 1 and message == pc_error
 
     def is_message_supported(self, messages):
         """Check if message contains one allowed command.
@@ -321,22 +318,23 @@ class ViPErLEEDSerial(SerialABC):
         # Check if message is valid data. Since the length of messages
         # can vary, the only reasonable check is if single bytes are
         # indeed an order specified in the config.
-        available_commands = self.port_settings['available_commands']
+        available_commands = self.port_settings['available_commands'].values()
         command, *data = messages
-        if command not in available_commands.values():
+
+        if command not in available_commands:
             # The first message must be a command
             emit_error(self, ExtraSerialErrors.UNSUPPORTED_COMMAND_ERROR,
                        command)
             return False
-        if any(message in available_commands.values() for message in data):
+        if any(message in available_commands for message in data):
             # Only the fist message can be a command; the others (if
             # any) can only be data to accompany the command itself.
             emit_error(self, ViPErLEEDHardwareError.ERROR_TOO_MANY_COMMANDS)
             return False
 
-        need_data = [available_commands[k]
-                     for k in ('PC_CHANGE_MEAS_MODE', 'PC_SET_VOLTAGE',
-                               'PC_CALIBRATION', 'PC_SET_UP_ADCS')]
+        need_data = [self.port_settings['available_commands'][value] 
+                        for value in ('PC_CHANGE_MEAS_MODE', 'PC_SET_VOLTAGE',
+                                      'PC_CALIBRATION', 'PC_SET_UP_ADCS')]
         if command in need_data:
             if not data:
                 # Too little data available
@@ -358,8 +356,9 @@ class ViPErLEEDSerial(SerialABC):
                 "command to the Arduino. Wrap data for one command into "
                 "a single Sequence."
                 )
-
-        if command == available_commands['PC_CHANGE_MEAS_MODE']:
+        change_mode = self.port_settings.get('available_commands',
+                                             'PC_CHANGE_MEAS_MODE')
+        if command == change_mode:
             # Continuous measurement is the only thing we have to check
             # as it will potentially spam us with a lot of measurements
             # so we should react appropriately
@@ -401,37 +400,37 @@ class ViPErLEEDSerial(SerialABC):
         message = message.encode()
         if not other_messages:
             return (bytearray(message),)
-
+        messages_to_return = []
+        messages_to_return.append(bytearray(message))
         # Now process the data depending on the command
-        data = other_messages[0]
         commands = self.port_settings['available_commands']
-        # In the following, we treat the special cases of:
-        # "some of the pieces of information passed to send_message
-        # is an int that has to be turned into bytes with length >= 2"
-        if message == commands['PC_SET_UP_ADCS'].encode():
-            # data is a 3-element Sequence, with
-            # [n_averaging_points, adc0_channel, adc1_channel],
-            # where n_averaging_points has to be 2 bytes
-            data[:1] = data[0].to_bytes(2, self.byte_order)
-        elif message == commands['PC_SET_VOLTAGE'].encode():
-            # data is a 2N-long sequence of the format
-            # voltage, waiting, voltage, waiting, ....
-            # where each entry has to be turned into 2
-            # bytes.
-            # Run over a copy to avoid infinite loop.
-            print(f"Before byte splitting: {data=}")
-            for i, elem in enumerate(data.copy()):
-                data[2*i:2*i+1] = elem.to_bytes(2, self.byte_order)
-            print(f"After byte splitting: {data=}")
-        elif message == commands['PC_CHANGE_MEAS_MODE'].encode():
-            # Here the data is [mode, time] where time
-            # has to be turned into 2 bytes.
-            data[1:] = data[-1].to_bytes(2, self.byte_order)
-
-        print(f"{message=}", f"{data=}")
+        for data in other_messages:
+            # In the following, we treat the special cases of:
+            # "some of the pieces of information passed to send_message
+            # is an int that has to be turned into bytes with length >= 2"
+            if message == commands['PC_SET_UP_ADCS'].encode():
+                # data is a 3-element Sequence, with
+                # [n_averaging_points, adc0_channel, adc1_channel],
+                # where n_averaging_points has to be 2 bytes
+                data[:1] = data[0].to_bytes(2, self.byte_order)
+            elif message == commands['PC_SET_VOLTAGE'].encode():
+                # data is a 2N-long sequence of the format
+                # voltage, waiting, voltage, waiting, ....
+                # where each entry has to be turned into 2
+                # bytes.
+                # Run over a copy to avoid infinite loop.
+                # print(f"Before byte splitting: {data=}")
+                for i, elem in enumerate(data.copy()):
+                    data[2*i:2*i+1] = elem.to_bytes(2, self.byte_order)
+                # print(f"After byte splitting: {data=}")
+            elif message == commands['PC_CHANGE_MEAS_MODE'].encode():
+                # Here the data is [mode, time] where time
+                # has to be turned into 2 bytes.
+                data[1:] = data[-1].to_bytes(2, self.byte_order)
+            messages_to_return.append(bytearray(data))
         # Note that PC_CALIBRATION also requires data, but
         # all the elements in data are 1-byte-long integers
-        return bytearray(message), bytearray(data)
+        return messages_to_return
 
     def process_received_messages(self):
         """Convert received data into human understandable information.
@@ -450,7 +449,6 @@ class ViPErLEEDSerial(SerialABC):
         if not self.unprocessed_messages:
             # No messages came yet
             return
-
         pc_configuration = self.port_settings.get('available_commands',
                                                   'PC_CONFIGURATION')
         pc_set_voltage = self.port_settings.get('available_commands',
@@ -458,12 +456,11 @@ class ViPErLEEDSerial(SerialABC):
         pc_measure_only = self.port_settings.get('available_commands',
                                                  'PC_MEASURE_ONLY')
         pc_ok = self.port_settings.get('available_commands', 'PC_OK')
-
         for message in self.unprocessed_messages:
             # If the length of the message is 1, then it has to be a
             # PC_OK byte
             if len(message) == 1:
-                if message.decode() == pc_ok:
+                if message == pc_ok.encode():
                     if self.__last_request_sent == pc_set_voltage:
                         self.about_to_trigger.emit()
                     self.busy = False
@@ -561,7 +558,6 @@ class ViPErLEEDSerial(SerialABC):
                        ViPErLEEDHardwareError.ERROR_VERSIONS_DO_NOT_MATCH,
                        arduino_version=firmware_version,
                        local_version=local_version)
-
         hardware_bits = self.port_settings['hardware_bits']
         hardware_config = {'adc_0': False,
                            'adc_1': False,
@@ -572,6 +568,8 @@ class ViPErLEEDSerial(SerialABC):
 
         hardware = int.from_bytes(hardware, self.byte_order)
         for key, value in hardware_bits.items():
+            if key.startswith('#'):  # line is a comment
+                continue
             present_or_closed = bool(int(value) & hardware)
             key = key.lower().replace('_present', '')
             if 'closed' in key:

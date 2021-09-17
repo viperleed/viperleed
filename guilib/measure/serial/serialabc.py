@@ -1,4 +1,4 @@
-"""Module serialworkerabc of viperleed.?????.
+"""Module serialabc of viperleed.
 
 ========================================
    ViPErLEED Graphical User Interface
@@ -8,16 +8,15 @@ Created: 2021-06-23
 Author: Michele Riva
 Author: Florian Doerr
 
-This module contains the definition of the SerialWorkerABC abstract
-base class, ViPErLEEDErrorEnum base Enum class and ExtraSerialErrors
-derived Enum that are used as base classes for serial communication
-with controllers supported by ViPErLEED. The serial communication
-can also happens in a separate QThread to prevent stalling the
+This module contains the definition of the SerialABC abstract base
+class and the ExtraSerialErrors from ViPErLEEDErrorEnum derived
+Enum that are used as base classes for serial communication with
+hardware controllers supported by ViPErLEED. The serial communication
+can also happen in a separate QThread to prevent stalling the
 Graphical User Interface.
 """
 
-from abc import abstractmethod  # ABCMeta,
-from configparser import ConfigParser
+from abc import abstractmethod
 
 from PyQt5 import (QtCore as qtc,
                    QtSerialPort as qts)
@@ -89,8 +88,6 @@ class ExtraSerialErrors(ViPErLEEDErrorEnum):
                         "proceeding.")
 
 
-# TODO: Do we really need it to be a QObject? the only reason would be
-# running in a separate thread, which seems we will not do
 class SerialABC(qtc.QObject, metaclass=QMetaABC):
     """Base class for serial communication for a ViPErLEED controller."""
 
@@ -362,8 +359,9 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             new_settings,
             self._mandatory_settings
             )
+
         if invalid:
-            error_msg = ', '.join(invalid)
+            error_msg = invalid
             emit_error(self, ExtraSerialErrors.INVALID_PORT_SETTINGS,
                        error_msg)
             return
@@ -646,7 +644,10 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         return
 
     def send_message(self, message, *other_messages, timeout=None):
-        """Send message to controller via serial port.
+        """Send message to hardware via serial port.
+
+        Add START and END markers to message and send it to the
+        COM port specified in the settings.
 
         Parameters
         ----------
@@ -654,6 +655,9 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             The message to send. This message will be encoded as
             per the self.encode() method. Typically will be either
             a bytes/bytearray, a number, or a string.
+        other_messages : tuple of objects
+            Additional messages if the hardware needs to receive
+            multiple consecutive messages.
         timeout : int or None, optional
             Maximum amount of time (in milliseconds) that the worker
             will spend while waiting to receive any messages following
@@ -689,7 +693,6 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             if self.msg_markers['START'] is not None:
                 encoded[:0] = self.msg_markers['START']
             encoded.extend(self.msg_markers['END'])
-            print(f"{encoded=}")
             self.__port.write(encoded)
 
     def serial_connect(self, *__args):
@@ -715,10 +718,11 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         self.__port.close()
         try:
             self.__port.readyRead.disconnect(self.__on_bytes_ready_to_read)
-            self.__port.errorOccurred.disconnect(self.__on_serial_error)
         except TypeError:
             # port is already disconnected
             pass
+        else:
+            self.__port.errorOccurred.disconnect(self.__on_serial_error)
 
     def __check_and_preprocess_message(self, message):
         """Check integrity of message.
@@ -773,7 +777,6 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
     def __on_bytes_ready_to_read(self):
         """Read the message(s) received."""
         self.__timeout.stop()
-
         if self.__got_unacceptable_response:
             return
 
