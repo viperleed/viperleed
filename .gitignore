@@ -3,3 +3,9 @@
 .spyproject
 test.py
 *wrong*
+
+#macOS files
+.DS_Store
+
+#Ignore files from Jetbrains IDEs
+.idea/
