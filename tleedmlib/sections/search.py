@@ -584,21 +584,6 @@ def search(sl, rp):
             "The N_CORES parameter is set to 1. The search will be run "
             "without multiprocessing. This will be much slower!")
         usempi = False
-    elif (shutil.which("mpirun", os.X_OK) is None
-            or shutil.which("mpiifort", os.X_OK) is None):
-        usempi = False
-        logger.warning(
-            "mpirun / mpiifort are not present. Search will be compiled and "
-            "executed without parallelization. This will be much slower!")
-        if rp.FORTRAN_COMP[0] == "":
-            try:
-                rp.getFortranComp()
-            except Exception:
-                logger.error("No fortran compiler found, cancelling...")
-                raise RuntimeError("Fortran compile error")
-    else:
-        if rp.FORTRAN_COMP_MPI[0] == "":
-            rp.FORTRAN_COMP_MPI[0] = "mpiifort -Ofast"
 
     if usempi and shutil.which("mpirun", os.X_OK) is None:
         usempi = False
