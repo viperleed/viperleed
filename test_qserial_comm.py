@@ -35,7 +35,7 @@ TIMEOUT = 30000  # milliseconds
 
 CONFIG = ConfigParser()
 CONFIG.read(
-    os.path.join(cd, 'guilib/measure/configuration/viperleed_config.ini')
+    os.path.join(cd, 'guilib/measure/configuration/original_backup.ini')
     )
 
 class MainWindow(qtw.QWidget):
