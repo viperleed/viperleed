@@ -938,7 +938,7 @@ def search(sl, rp):
                                            "and VIBROCC_OUT: " + str(e))
                 if stop:
                     logger.info("Stopping search...")
-                    kill_process(proc)
+                    kill_process(proc, default_pgid=pgid)
                     if (not repeat and not rp.GAUSSIAN_WIDTH_SCALING == 1
                             and checkrepeat):
                         repeat = True
@@ -994,12 +994,12 @@ def search(sl, rp):
                     pass   # user insisted, give up
             interrupted = True
             rp.STOP = True
-            kill_process(proc)
+            kill_process(proc, default_pgid=pgid)
             logger.warning("Search interrupted by user. Attempting "
                            "analysis of results...")
         except Exception:
             logger.error("Error during search. Check SD.TL file.")
-            kill_process(proc)
+            kill_process(proc, default_pgid=pgid)
             raise
         if repeat:
             rp.SEARCH_START = "control"
