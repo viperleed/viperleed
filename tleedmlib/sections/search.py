@@ -59,7 +59,7 @@ def processSearchResults(sl, rp, final=True):
     """
     # get the last block from SD.TL:
     try:
-        lines = io.readSDTL_end()
+        lines = io.readSDTL_end(n_expect=rp.SEARCH_POPULATION)
     except FileNotFoundError:
         logger.error("Could not process Search results: SD.TL file not "
                      "found.")
@@ -69,7 +69,8 @@ def processSearchResults(sl, rp, final=True):
         raise
     # read the block
     sdtlContent = io.readSDTL_blocks("\n".join(lines),
-                                     whichR=rp.SEARCH_BEAMS, logInfo=final)
+                                     whichR=rp.SEARCH_BEAMS, logInfo=final,
+                                     n_expect=rp.SEARCH_POPULATION)
     if not sdtlContent:
         if final:
             logger.error("No data found in SD.TL file!")
@@ -823,7 +824,8 @@ def search(sl, rp):
                         filepos, content = io.readSDTL_next(offset=filepos)
                         if content:
                             newData = io.readSDTL_blocks(
-                                content, whichR=rp.SEARCH_BEAMS)
+                                content, whichR=rp.SEARCH_BEAMS,
+                                n_expect=rp.SEARCH_POPULATION)
                     elif t >= 900 and rp.HALTING < 3:
                         stop = True
                         if tried_repeat:

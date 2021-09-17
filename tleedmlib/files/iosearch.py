@@ -56,7 +56,7 @@ def readSDTL_next(filename="SD.TL", offset=0):
         return (offset, "")     # return old offset, no content
 
 
-def readSDTL_blocks(content, whichR=0, logInfo=False):
+def readSDTL_blocks(content, whichR=0, logInfo=False, n_expect=0):
     """
     Attempts to interpret a given string as one or more blocks of an SD.TL
     file.
@@ -69,6 +69,9 @@ def readSDTL_blocks(content, whichR=0, logInfo=False):
         Which r-factor values to use (average / integer / fractional)
     logInfo : bool, optional
         Whether some basic information should be printed to logger.info
+    n_expect : int, optional
+        Number of configurations expected per block. If a block contains
+        fewer, it will be ignored.
 
     Returns
     -------
@@ -126,12 +129,15 @@ def readSDTL_blocks(content, whichR=0, logInfo=False):
             continue
         if gen != 0 and len(rfacs) > 0 and len(configs) > 0:
             returnList.append((gen, rfacs, tuple(configs)))
+        elif len(configs) < n_expect:
+            logger.warning("A block in SD.TL contains fewer configurations "
+                           "than expected.")
         else:
             logger.warning("A block in SD.TL was read but not understood.")
     return returnList
 
 
-def readSDTL_end(filename="SD.TL"):
+def readSDTL_end(filename="SD.TL", n_expect=0):
     """
     Reads the last generation block from the SD.TL file, starting from the
     last line containing a GENERATION label.
@@ -140,6 +146,10 @@ def readSDTL_end(filename="SD.TL"):
     ----------
     filename : str, optional
         Which file to read
+    n_expect : int, optional
+        Number of configurations expected per block. If the last block contains
+        fewer, it will be ignored, instead reading the second-to-last. Set to
+        0 to read the last block irrespective of length.
 
     Returns
     -------
@@ -150,11 +160,18 @@ def readSDTL_end(filename="SD.TL"):
     """
     # get the last block from SD.TL:
     bwr = BackwardsReader(filename)
-    lines = [""]
-    while "CCCCCCCCCCC    GENERATION" not in lines[-1] and len(bwr.data) > 0:
-        lines.append(bwr.readline().rstrip())
-    lines.reverse()
-    bwr.close()
+    try:
+        lines = [""]
+        while len(bwr.data) > 0:
+            while ("CCCCCCCCCCC    GENERATION" not in lines[-1]
+                   and len(bwr.data) > 0):
+                lines.append(bwr.readline().rstrip())
+            if len([l for l in lines if "|" in l]) > n_expect:
+                break
+            lines = [""]
+        lines.reverse()
+    finally:
+        bwr.close()
     return lines
 
 

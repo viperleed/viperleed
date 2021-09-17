@@ -37,14 +37,16 @@ def superpos(sl, rp, subdomain=False, for_error=False, only_vary=None):
         sdtl = None
         if os.path.isfile("SD.TL"):
             try:
-                sdtl = readSDTL_end(filename="SD.TL")
+                sdtl = readSDTL_end(filename="SD.TL",
+                                    n_expect=rp.SEARCH_POPULATION)
             except Exception:
                 logger.error("Superpos: Error reading SD.TL")
                 rp.setHaltingLevel(2)
                 return
         elif os.path.isfile(os.path.join("OUT", "SD.TL")):
             try:
-                sdtl = readSDTL_end(filename=os.path.join("OUT", "SD.TL"))
+                sdtl = readSDTL_end(filename=os.path.join("OUT", "SD.TL"),
+                                    n_expect=rp.SEARCH_POPULATION)
             except Exception:
                 logger.error("Superpos: Error reading SD.TL")
                 rp.setHaltingLevel(2)
@@ -59,7 +61,8 @@ def superpos(sl, rp, subdomain=False, for_error=False, only_vary=None):
             rp.setHaltingLevel(2)
             return
         sdtlContent = readSDTL_blocks("\n".join(sdtl),
-                                      whichR=rp.SEARCH_BEAMS)
+                                      whichR=rp.SEARCH_BEAMS,
+                                      n_expect=rp.SEARCH_POPULATION)
         if not sdtlContent:
             logger.error("Superpos: No data found in SD.TL")
             rp.setHaltingLevel(2)
