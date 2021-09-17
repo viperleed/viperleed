@@ -380,7 +380,8 @@ subroutine step(x,y,f,neqn,h,eps,wt,start,hold,k,kold,crash,phi,p,yp,&
 !if error tolerance is too small, increase it to an acceptable value.
       round = 0.0d0
       do 10 l = 1,neqn
-   10   round = round + (y(l)/wt(l))**2
+        round = round + (y(l)/wt(l))**2
+   10 continue
       round = twou*dsqrt(round)
       if(p5eps .ge. round) go to 15
       eps = 2.0*round*(1.0d0 + fouru)
@@ -396,7 +397,8 @@ subroutine step(x,y,f,neqn,h,eps,wt,start,hold,k,kold,crash,phi,p,yp,&
       do 20 l = 1,neqn
         phi(l,1) = yp(l)
         phi(l,2) = 0.0d0
-   20   sum = sum + (yp(l)/wt(l))**2
+        sum = sum + (yp(l)/wt(l))**2
+   20 continue
       sum = dsqrt(sum)
       absh = dabs(h)
       if(eps .lt. 16.0d0*sum*h*h) absh = 0.25d0*dsqrt(eps/sum)
@@ -410,7 +412,8 @@ subroutine step(x,y,f,neqn,h,eps,wt,start,hold,k,kold,crash,phi,p,yp,&
       if(p5eps .gt. 100.0d0*round) go to 99
       nornd = .false.
       do 25 l = 1,neqn
-   25   phi(l,15) = 0.0d0
+        phi(l,15) = 0.0d0
+   25 continue
    99 ifail = 0
 !end BLOCK 0
 !
@@ -444,7 +447,8 @@ subroutine step(x,y,f,neqn,h,eps,wt,start,hold,k,kold,crash,phi,p,yp,&
         temp1 = temp2 + h
         alpha(i) = h/temp1
         reali = i
-  105   sig(i+1) = reali*alpha(i)*sig(i)
+        sig(i+1) = reali*alpha(i)*sig(i)
+  105  continue
   110 psi(k) = temp1
 !compute coefficients g(*). initialize v(*) and set w(*).
 !g(2) is set in data statement.
@@ -463,13 +467,15 @@ subroutine step(x,y,f,neqn,h,eps,wt,start,hold,k,kold,crash,phi,p,yp,&
       if(nsm2 .lt. 1) go to 130
       do 125 j = 1,nsm2
         i = k-j
-  125   v(i) = v(i) - alpha(j+1)*v(i+1)
+        v(i) = v(i) - alpha(j+1)*v(i+1)
+  125 continue
 !update v(*) and set w(*).
   130 limit1 = kp1 - ns
       temp5 = alpha(ns)
       do 135 iq = 1,limit1
         v(iq) = v(iq) - temp5*v(iq+1)
-  135   w(iq) = v(iq)
+        w(iq) = v(iq)
+  135 continue
       g(nsp1) = w(1)
 !compute the g(*) in the work vector w(*).
   140 nsp2 = ns + 2
@@ -478,8 +484,10 @@ subroutine step(x,y,f,neqn,h,eps,wt,start,hold,k,kold,crash,phi,p,yp,&
         limit2 = kp2 - i
         temp6 = alpha(i-1)
         do 145 iq = 1,limit2
-  145     w(iq) = w(iq) - temp6*w(iq+1)
-  150   g(i) = w(1)
+          w(iq) = w(iq) - temp6*w(iq+1)
+  145   continue
+        g(i) = w(1)
+  150 continue
   199   continue
 !end BLOCK 1
 !
@@ -493,29 +501,34 @@ subroutine step(x,y,f,neqn,h,eps,wt,start,hold,k,kold,crash,phi,p,yp,&
       do 210 i = nsp1,k
         temp1 = beta(i)
         do 205 l = 1,neqn
-  205     phi(l,i) = temp1*phi(l,i)
-  210   continue
+          phi(l,i) = temp1*phi(l,i)
+  205   continue
+  210 continue
 !predict solution and differences.
   215 do 220 l = 1,neqn
         phi(l,kp2) = phi(l,kp1)
         phi(l,kp1) = 0.0d0
-  220   p(l) = 0.0d0
+        p(l) = 0.0d0
+  220 continue
       do 230 j = 1,k
         i = kp1 - j
         ip1 = i+1
         temp2 = g(i)
         do 225 l = 1,neqn
           p(l) = p(l) + temp2*phi(l,i)
-  225     phi(l,i) = phi(l,i) + phi(l,ip1)
+          phi(l,i) = phi(l,i) + phi(l,ip1)
+  225   continue
   230   continue
       if(nornd) go to 240
       do 235 l = 1,neqn
         tau = h*p(l) - phi(l,15)
         p(l) = y(l) + tau
-  235   phi(l,16) = (p(l) - y(l)) - tau
+        phi(l,16) = (p(l) - y(l)) - tau
+  235 continue
       go to 250
   240 do 245 l = 1,neqn
-  245   p(l) = y(l) + h*p(l)
+        p(l) = y(l) + h*p(l)
+  245 continue
   250 xold = x
       x = x + h
       absh = dabs(h)
@@ -530,7 +543,8 @@ subroutine step(x,y,f,neqn,h,eps,wt,start,hold,k,kold,crash,phi,p,yp,&
         if(km2)265,260,255
   255   erkm2 = erkm2 + ((phi(l,km1)+temp4)*temp3)**2
   260   erkm1 = erkm1 + ((phi(l,k)+temp4)*temp3)**2
-  265   erk = erk + (temp4*temp3)**2
+        erk = erk + (temp4*temp3)**2
+  265 continue
       if(km2)280,275,270
   270 erkm2 = absh*sig(km1)*gstr(km2)*dsqrt(erkm2)
   275 erkm1 = absh*sig(k)*gstr(km1)*dsqrt(erkm1)
@@ -560,11 +574,13 @@ subroutine step(x,y,f,neqn,h,eps,wt,start,hold,k,kold,crash,phi,p,yp,&
         temp1 = 1.0d0/beta(i)
         ip1 = i+1
         do 305 l = 1,neqn
-  305     phi(l,i) = temp1*(phi(l,i) - phi(l,ip1))
+          phi(l,i) = temp1*(phi(l,i) - phi(l,ip1))
+  305   continue
   310   continue
       if(k .lt. 2) go to 320
       do 315 i = 2,k
-  315   psi(i-1) = psi(i) - h
+        psi(i-1) = psi(i) - h
+  315 continue
 !on third failure, set order to one.  thereafter, use optimal step size.
   320 ifail = ifail + 1
       temp2 = 0.5d0
@@ -621,7 +637,8 @@ subroutine step(x,y,f,neqn,h,eps,wt,start,hold,k,kold,crash,phi,p,yp,&
       if(knew .eq. km1) go to 455
       if(kp1 .gt. ns) go to 460
       do 440 l = 1,neqn
-  440   erkp1 = erkp1 + (phi(l,kp2)/wt(l))**2
+        erkp1 = erkp1 + (phi(l,kp2)/wt(l))**2
+  440 continue
       erkp1 = absh*gstr(kp1)*dsqrt(erkp1)
 !using estimated error at order k+1, determine appropriate order for
 !next step.
@@ -679,7 +696,8 @@ subroutine intrp(x,y,xout,yout,ypout,neqn,kold,phi,psi)
 !initialize w(*) for computing g(*)
       do 5 i = 1,ki
         temp1 = i
-    5   w(i) = 1.0d0/temp1
+        w(i) = 1.0d0/temp1
+    5 continue
       term = 0.0d0
 !compute g(*)
       do 15 j = 2,ki
@@ -689,24 +707,29 @@ subroutine intrp(x,y,xout,yout,ypout,neqn,kold,phi,psi)
         eta = hi/psijm1
         limit1 = kip1 - j
         do 10 i = 1,limit1
-   10     w(i) = gamma*w(i) - eta*w(i+1)
+          w(i) = gamma*w(i) - eta*w(i+1)
+   10   continue
         g(j) = w(1)
         rho(j) = gamma*rho(jm1)
-   15   term = psijm1
+        term = psijm1
+   15 continue
 !interpolate
       do 20 l = 1,neqn
         ypout(l) = 0.0d0
-   20   yout(l) = 0.0d0
+        yout(l) = 0.0d0
+   20 continue
       do 30 j = 1,ki
         i = kip1 - j
         temp2 = g(i)
         temp3 = rho(i)
         do 25 l = 1,neqn
           yout(l) = yout(l) + temp2*phi(l,i)
-   25     ypout(l) = ypout(l) + temp3*phi(l,i)
+          ypout(l) = ypout(l) + temp3*phi(l,i)
+   25   continue
    30   continue
       do 35 l = 1,neqn
-   35   yout(l) = y(l) + hi*yout(l)
+        yout(l) = y(l) + hi*yout(l)
+   35 continue
       return
 end subroutine intrp
 end subroutine ode
