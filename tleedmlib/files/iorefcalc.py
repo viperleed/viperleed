@@ -126,19 +126,20 @@ def readFdOut(readfile="fd.out", for_error=False):
         with open(readfile, 'r') as rf:
             filelines = [line[:-1] for line in rf.readlines()]
             rf.seek(0)
-            fdout = rf.read()
     except FileNotFoundError:
         logger.error("Error in readFdOut: file "+str(readfile)+" not found.")
         raise
     if filelines[0].startswith(" SOME ERROR OCCURED WHILE READING"):
         logger.error("File "+readfile+" reports error: "+filelines[0])
         raise Exception("File "+readfile+" reports error.")
-    if ".  CORRECT TERMINATION" in fdout:   # happens for superpos output...
-        fdout = fdout.split(".  CORRECT TERMINATION")[0]
+      #    if ".  CORRECT TERMINATION" in fdout:   # happens for superpos output...
+#        fdout = fdout.split(".  CORRECT TERMINATION")[0]
+    fdout = ""
     theobeams = []
     i = 1   # number lines as in text editor - be careful about indexing!
     nbeams = 1e10   # some large number, just to enter the while loop
     while i < nbeams+3:
+        fdout += filelines[i-1] + "\n"
         llist = filelines[i-1].split()
         if i == 1:
             pass  # header - skip
@@ -157,6 +158,9 @@ def readFdOut(readfile="fd.out", for_error=False):
     # Collect them, skipping empty lines
     blocks = []
     for line in filelines[i-1:]:
+        if ".  CORRECT TERMINATION" in line:    # sometimes superpos output is not in right line. sync issue? 
+            continue
+        fdout +=  line + "\n"
         llist = line.split()
         if len(llist) == 0:
             continue  # skip empty lines
@@ -722,3 +726,4 @@ C  set substrate / overlayer imaginary part of inner potential
                      exc_info=True)
         raise
     return
+    
