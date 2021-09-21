@@ -31,7 +31,7 @@ class WindowDoesSomething(qtw.QWidget):
     def do_stuff(self, checked):
         config = configparser.ConfigParser(comment_prefixes='/', allow_no_value=True)
         file_name = Path('C:/Users/Florian/Documents/Uni/Masterarbeit/ViperLEED/viperleed/guilib/measure/configuration/viperleed_config.ini')
-        #TODO: path here not nice
+        # TODO: path here not nice
         try:
             f = open(file_name, 'r')
             f.close()
@@ -55,9 +55,9 @@ class WindowDoesSomething(qtw.QWidget):
         self.btn_do.setEnabled(False)
 
     def __on_error_occurred(self, error_code, error_message):
-         print("Error occured in", self.sender())
-         print(f"code={error_code}")
-         print(f"message={error_message}")
+        print("Error occurred in", self.sender())
+        print(f"code={error_code}")
+        print(f"message={error_message}")
 
     def __on_close_pressed(self, *_):
         # After the measurement is done, close the serial ports.
@@ -73,7 +73,6 @@ class WindowDoesSomething(qtw.QWidget):
     def closeEvent(self, event):
         self.__on_close_pressed()
         super().closeEvent(event)
-
 
 
 if __name__ == '__main__':

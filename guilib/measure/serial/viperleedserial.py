@@ -27,6 +27,7 @@ from viperleed.guilib.measure.hardwarebase import (
     emit_error
     )
 
+
 class ViPErLEEDHardwareError(ViPErLEEDErrorEnum):
     """This class contains all errors related to the Arduino."""
     ERROR_NO_ERROR = (0, "No error")
@@ -286,7 +287,7 @@ class ViPErLEEDSerial(SerialABC):
         if msg_length == 0:
             emit_error(self, ExtraSerialErrors.NO_MESSAGE_ERROR)
             return False
-        # Check if message length consitent with sent length
+        # Check if message length consistent with sent length
         if msg_length != len(msg_data):
             emit_error(self,
                        ViPErLEEDHardwareError.ERROR_MSG_RCVD_INCONSISTENT)
@@ -426,7 +427,7 @@ class ViPErLEEDSerial(SerialABC):
 
         Returns
         -------
-        messages_to_return : tuple of bytarrays
+        messages_to_return : tuple of bytearrays
             Consisting of the command and the data necessary to
             execute it.
         """

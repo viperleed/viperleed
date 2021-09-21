@@ -125,7 +125,7 @@ class ViPErinoController(MeasureController):
         pc_set_voltage = self.settings.get('available_commands',
                                            'PC_SET_VOLTAGE')
         v_ref_dac = self.settings.getfloat('measurement_settings',
-                                             'v_ref_dac')
+                                           'v_ref_dac')
 
         dac_out_vs_nominal_energy = 10/1000  # 10V / 1000 eV
         output_gain = 4  # Gain of the output stage on board

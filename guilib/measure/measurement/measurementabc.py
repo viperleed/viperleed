@@ -465,7 +465,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             try:
                 self.__primary_controller.data_ready.disconnect()
             except TypeError:
-                # data_ready is alreay disconnected from all its slots
+                # data_ready is already disconnected from all its slots
                 pass
             self.abort_action.disconnect(self.__primary_controller.abort_and_reset)
             self.begin_preparation.disconnect(
