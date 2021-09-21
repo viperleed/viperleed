@@ -18,7 +18,6 @@ from PyQt5 import QtCore as qtc
 
 # ViPErLEED modules
 from viperleed.guilib.measure.controller.controllerabc import ControllerABC
-from viperleed.guilib.measure import hardwarebase
 
 
 class MeasureController(ControllerABC):
