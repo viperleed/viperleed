@@ -1,4 +1,4 @@
-"""ViPErino Controller
+"""Module viperinocontroller of ViPErLEED
 
 ========================================
    ViPErLEED Graphical User Interface
@@ -8,7 +8,8 @@ Created: 2021-07-08
 Author: Michele Riva
 Author: Florian Doerr
 
-This module contains the definition of the ViPErinoController class
+This module contains the definition of the ViPErinoController
+class and its associated ViPErLEEDErrorEnum class ViPErinoErrors
 which gives commands to the ViPErinoSerialWorker class.
 """
 
@@ -55,6 +56,29 @@ class ViPErinoController(MeasureController):
         string that is used to call a function, the value is a
         boolean that is used to determine if the connected
         function has already been called.
+
+        Parameters
+        ----------
+        settings : ConfigParser
+            The controller settings
+        port_name : str, optional
+            Name of the serial port to be used to communicate with
+            the controller. This parameter is optional only in case
+            settings contains a 'controller'/'port_name' option. If
+            this is given, it will also be stored in the settings
+            file, overriding the value that may be there. Default is
+            an empty string.
+        sets_energy : bool, optional
+            Used to determine whether this controller is responsible
+            for setting the electron energy by communicating with the
+            LEED optics. Only one controller may be setting the energy.
+            Default is False.
+
+        Raises
+        ------
+        TypeError
+            If no port_name is given, and none was present in the
+            settings file.
         """
         super().__init__(settings, port_name=port_name, sets_energy=sets_energy)
         # Initialise dictionaries for the measurement preparation.
@@ -72,34 +96,16 @@ class ViPErinoController(MeasureController):
 
         self.__hardware = defaultdict()
 
-# Obsolete now, no set_sets_energy anymore
-    # def set_sets_energy(self, energy_setter):
-        # """Set the serial to controls energy True/False.
-
-        # Set the boolean and update the begin_prepare_todos
-        # dictionary accordingly.
-
-        # Parameters
-        # ----------
-        # energy_setter : bool
-            # True if the controller sets the energy.
-        # """
-        # super().set_sets_energy(energy_setter)
-        # key = 'set_energy'
-        # if self.__sets_energy:
-            # self.begin_prepare_todos[key] = True
-        # else:
-            # if key in self.begin_prepare_todos:
-                # del self.begin_prepare_todos[key]
-
     def set_energy(self, energy, time, *more_steps):
-        """Convert data from gui to usable values for the DAC.
+        """Set energy with associated settling time.
 
         Take the energy (or energies), get setpoint energy (or
         energies) and convert it to an integer value for the DAC.
-        Afterwards send energy and time to the hardware. The
-        controller will automatically trigger and start measuring
-        after setting the voltage.
+        Afterwards send energy and time to the hardware via the
+        serial. The controller will automatically trigger and
+        start measuring after setting the voltage. Each energy
+        will need a settling time associated with it which is the
+        time the hardware will wait before setting the next energy.
 
         Parameters
         ----------
@@ -115,10 +121,6 @@ class ViPErinoController(MeasureController):
             will be the final energy that is set and should have
             the longest waiting time to allow the electronics to
             stabilize.
-
-        Returns
-        -------
-        energies_and_times: array of integers
         """
         pc_set_voltage = self.settings.get('available_commands',
                                            'PC_SET_VOLTAGE')
@@ -179,9 +181,6 @@ class ViPErinoController(MeasureController):
         """
         pc_set_up_adcs = self.settings.get('available_commands',
                                            'PC_SET_UP_ADCS')
-        # num_meas_to_average = self.settings.getint(
-                                # 'measurement_settings', 'num_meas_to_average'
-                                # ).to_bytes(2, 'big')
         num_meas_to_average = self.settings.getint(
                                 'measurement_settings', 'num_meas_to_average'
                                 )
@@ -228,7 +227,6 @@ class ViPErinoController(MeasureController):
         -------
         None.
         """
-
         pc_calibration = self.settings.get('available_commands',
                                            'PC_CALIBRATION')
         update_rate = self.settings.getint('controller', 'update_rate')
@@ -249,7 +247,7 @@ class ViPErinoController(MeasureController):
         will not be saved in the correct section.
 
         For hardware:
-        Save received data into a dictionary to store hardware
+        Save received data into a dictionary to store the hardware
         configuration for future use. Hardware is only sent after
         the get_hardware function has been executed and before the
         calibration is done.
@@ -281,9 +279,6 @@ class ViPErinoController(MeasureController):
         Measure without setting the energy. This function is
         supposed to be used in time resolved measurements and
         by secondary controllers which will not set the energy.
-
-        If the controller already automatically takes a measurement
-        after setting an energy it can be a no op.
 
         Returns
         -------

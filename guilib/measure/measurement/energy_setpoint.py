@@ -1,4 +1,4 @@
-"""Module energy_setpoint of viperleed.?????.
+"""Module energy_setpoint of viperleed.
 ========================================
    ViPErLEED Graphical User Interface
 ========================================
@@ -21,7 +21,12 @@ class MeasureEnergySetpoint(MeasurementABC):
     """Energy calibration class."""
 
     def __init__(self, measurement_settings):
-        """TODO: add docstring"""
+        """Initialise measurement class.
+
+        This is an upgraded version of its parent class.
+        __end_energy, __delta_energy and __settle_time are
+        read from the settings and made private properties.
+        """
         super().__init__(measurement_settings)
         self.__end_energy = self.settings.getfloat('measurement_settings',
                                                    'end_energy')
@@ -42,6 +47,12 @@ class MeasureEnergySetpoint(MeasurementABC):
         Returns
         -------
         None.
+
+        Emits
+        -----
+        begin_preparation
+            Starts the measurement preparation and carries
+            a tuple of energies and times with it.
         """
         coefficients = '(0, 1)'
         self.primary_controller.settings.set(
@@ -60,7 +71,7 @@ class MeasureEnergySetpoint(MeasurementABC):
         None.
         """
         self.primary_controller.busy = True
-        for controller in self.controllers:
+        for controller in self.secondary_controllers:
             controller.busy = True
         self.data_points['nominal_energy'].append(self.current_energy)
         self.set_LEED_energy(self.current_energy, self.__settling_time)
@@ -107,7 +118,7 @@ class MeasureEnergySetpoint(MeasurementABC):
         """
         nominal_energies = self.data_points['nominal_energy']
         measured_energies = self.data_points['HV']
-        print(nominal_energies,measured_energies)
+        print(nominal_energies, measured_energies)
         domain = ast.literal_eval(
             self.primary_controller.settings['energy_calibration']['domain'])
         fit_polynomial = Polynomial.fit(measured_energies, nominal_energies,
@@ -120,3 +131,17 @@ class MeasureEnergySetpoint(MeasurementABC):
                         )[0]
         with open(file_name, 'w') as configfile:
             self.primary_controller.settings.write(configfile)
+
+    def abort(self):
+        """Abort all current actions.
+        
+        Abort and reset all variables.
+        
+        Returns
+        -------
+        None.
+        """
+        coefficients = '(0, 1)'
+        self.primary_controller.settings.set(
+            'energy_calibration', 'coefficients', coefficients)
+        super().abort()

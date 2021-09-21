@@ -47,7 +47,7 @@ class WindowDoesSomething(qtw.QWidget):
         self.do_this.finished.connect(self.__on_close_pressed)
         self.do_this.finished.connect(self.__on_stuff_done)
         self.do_this.primary_controller.error_occurred.connect(self.error_occurred)
-        for controller in self.do_this.controllers:
+        for controller in self.do_this.secondary_controllers:
             if controller:
                 controller.error_occurred.connect(self.error_occurred)
         
@@ -62,7 +62,7 @@ class WindowDoesSomething(qtw.QWidget):
     def __on_close_pressed(self, *_):
         # After the measurement is done, close the serial ports.
         for controller in (self.do_this.primary_controller,
-                           *self.do_this.controllers):
+                           *self.do_this.secondary_controllers):
             if controller:
                 controller.serial.serial_disconnect()
         self.btn_do.setEnabled(True)

@@ -1,4 +1,4 @@
-"""Module controllerabc of viperleed.?????.
+"""Module controllerabc of viperleed.
 
 ========================================
    ViPErLEED Graphical User Interface
@@ -9,7 +9,8 @@ Author: Michele Riva
 Author: Florian Doerr
 
 This module contains the definition of the ControllerABC abstract
-base class, used for giving basic commands to the LEED electronics.
+base class and its associated ViPErLEEDErrorEnum class ControllerErrors
+used for giving basic commands to the LEED electronics.
 """
 
 # Python standard modules
@@ -51,10 +52,9 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
         ]
     controller_busy = qtc.pyqtSignal(bool)
 
-    # def __init__(self, settings=None, port_name='', sets_energy=False):
-    def __init__(self, settings, port_name='', sets_energy=False):                # NOTE: we will need a settings file that remember which devices were connected to which port
-        """Initialize the controller instance.
-        
+    def __init__(self, settings, port_name='', sets_energy=False):                # NOTE: we will need a settings file that remembers which devices were connected to which port ------ Do we?
+        """Initialise the controller instance.
+
         Parameters
         ----------
         settings : ConfigParser
@@ -71,7 +71,7 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
             for setting the electron energy by communicating with the
             LEED optics. Only one controller may be setting the energy.
             Default is False.
-        
+
         Raises
         ------
         TypeError
@@ -113,8 +113,12 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
         ----------
         is_busy : bool
             True if the controller is busy
+
+        Emits
+        -----
+        controller_busy
+            If the busy state of the controller changed.
         """
-        # print('busy:', is_busy, self.serial.port_name)
         was_busy = self.__busy
         is_busy = bool(is_busy)
         if was_busy is not is_busy:
@@ -157,6 +161,14 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
             The new settings. Will be checked for the following
             mandatory sections/options:
                 'controller'/'serial_port_class'
+
+        Emits
+        -----
+        error_occurred
+            If the new_settings are None, or if they do not match
+            up with the mandatory settings required by the controller
+            or if the serial class specified in the settings could not
+            be instantiated.
         """
         if new_settings is None:
             emit_error(self, ControllerErrors.MISSING_SETTINGS)
@@ -228,11 +240,7 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
             to be able to set the energy. This data should
             not contain information about recalibration of
             the energy itself, as this should be done via
-            self.true_energy_to_setpoint(energy). This
-            list of extra positional arguments will NOT
-            be passed from the GUI during normal operation.
-            Hence, it can only be used during self-calibration
-            of the controller.
+            self.true_energy_to_setpoint(energy).
 
         Returns
         -------
@@ -244,13 +252,16 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
         """Take requested energy and convert it to the energy to set.
 
         The conversion is done by reading a polynomial from
-        the config files which is a function of the true energy
-        and yields the energy to set.
+        the configuration files which is a function of the true
+        energy and yields the energy to set. This polynomial is
+        determined in the energy calibration and written to the
+        config. This function should always be called when
+        setting an energy.
 
         Parameters
         ----------
         energy : float
-            Requested energy in eV
+            Requested energy in eV.
 
         Returns
         -------

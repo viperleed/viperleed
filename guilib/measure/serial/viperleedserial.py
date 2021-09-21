@@ -1,4 +1,4 @@
-"""ViPErino Serialwoker
+"""Module viperleedserial of ViPErLEED
 
 ========================================
    ViPErLEED Graphical User Interface
@@ -8,8 +8,9 @@ Created: 2021-07-01
 Author: Michele Riva
 Author: Florian Doerr
 
-This module contains the definition of the ViPErinoSerialWorker class
-that is used for serial communication with the Arduino Micro controller
+This module contains the definitions of the ViPErLEEDSerial class and
+its associated ViPErLEEDErrorEnum class ViPErLEEDHardwareError
+that are used for serial communication with the Arduino Micro controller
 used by ViPErLEED. The serial communication happens in a separate thread
 to prevent stalling the Graphical User Interface.
 """
@@ -86,7 +87,30 @@ class ViPErLEEDSerial(SerialABC):
     """
 
     def __init__(self, settings, port_name=''):
-        """Initialize serial worker object."""
+        """Initialize serial worker object.
+
+        Parameters
+        ----------
+        settings : ConfigParser
+            The settings used to initialize the serial port. For the
+            serial port itself one only needs a 'serial_port_settings'
+            section. In practice, it is likely safer to pass the whole
+            ConfigParser object used for the controller class. It can
+            be changed using the .port_settings property, or with the
+            set_port_settings() setter method. See the documentation
+            of set_port_settings() for more details on other mandatory
+            content of the settings argument.
+        port_name : str or QSerialPortInfo, optional
+            The name (or info) of the serial port. If not given, it
+            must be set via the .port_name attribute, or the setter
+            set_port_name(), before any communication can be
+            established. Default is an empty string.
+
+        Raises
+        ------
+        TypeError
+            If no settings are given.
+        """
 
         self.__last_request_sent = ''
         self.__measurements = []
@@ -103,7 +127,7 @@ class ViPErLEEDSerial(SerialABC):
         super().__init__(settings, port_name=port_name)
 
     def decode(self, message):
-        """Decodes message received from the Arduino.
+        """Decodes messages received from the Arduino.
 
         If there are SPECIAL_BYTEs in the message, decode them and turn
         them into single bytes. Afterwards, check if message fits the
@@ -165,7 +189,7 @@ class ViPErLEEDSerial(SerialABC):
         if payload_length > 30:
             raise ValueError(f"Length of message {message} too long "
                              "to be received by the Arduino.")
-        # TODO: We may want to move this check after the conversion.
+                                                                               # TODO: We may want to move this check after the conversion.
         # Iterate through message and split values that are larger
         # or equals special_byte into two different bytes. The second
         # byte gets inserted right after the first one.
@@ -175,9 +199,7 @@ class ViPErLEEDSerial(SerialABC):
                 message[i] = special_byte
                 message.insert(i + 1, value - special_byte)
         # Insert the message length at the beginning of the message
-        # print(f"encode, before length: {message=}")
         message.insert(0, payload_length)
-        # print(f"encode, after length: {message=}")
         return message
 
     def identify_error(self, messages_since_error):
@@ -187,7 +209,6 @@ class ViPErLEEDSerial(SerialABC):
         byte. Therefore messages_since_error[0] will contain the PC_ERROR
         byte and messages_since_error[1] will contain both the error
         state and the error type in this order.
-
 
         Parameters
         ----------
@@ -252,16 +273,25 @@ class ViPErLEEDSerial(SerialABC):
         -------
         acceptable : bool
             True if message is acceptable
+
+        Emits
+        -----
+        error_occurred
+            If the message length is not consistent with the length
+            sent in the message or if the message length is not
+            one of the acceptable lengths.
         """
         msg_length, *msg_data = message
         # Check if message length greater than zero
         if msg_length == 0:
             emit_error(self, ExtraSerialErrors.NO_MESSAGE_ERROR)
             return False
+        # Check if message length consitent with sent length
         if msg_length != len(msg_data):
             emit_error(self,
                        ViPErLEEDHardwareError.ERROR_MSG_RCVD_INCONSISTENT)
             return False
+        # Check if message length is one of the expected lengths
         if msg_length not in (1, 2, 4):
             emit_error(self, ViPErLEEDHardwareError.ERROR_MSG_RCVD_INVALID)
             return False
@@ -277,7 +307,7 @@ class ViPErLEEDSerial(SerialABC):
         Parameters
         ----------
         message : bytes or bytearray
-            A decoded message received through the serial line
+            A decoded message received through the serial line.
 
         Returns
         -------
@@ -313,11 +343,17 @@ class ViPErLEEDSerial(SerialABC):
         message_acceptable : bool
             True if message is acceptable. Only acceptable
             messages will then be sent.
+
+        Emits
+        -----
+        error_occurred
+            If the first message is not a known command or if
+            the message contains more than one command.
         """
         # Remember!: messages[0] has to be of type Str
         # Check if message is valid data. Since the length of messages
         # can vary, the only reasonable check is if single bytes are
-        # indeed an order specified in the config.
+        # indeed a command specified in the config.
         available_commands = self.port_settings['available_commands'].values()
         command, *data = messages
 
@@ -332,7 +368,7 @@ class ViPErLEEDSerial(SerialABC):
             emit_error(self, ViPErLEEDHardwareError.ERROR_TOO_MANY_COMMANDS)
             return False
 
-        need_data = [self.port_settings['available_commands'][value] 
+        need_data = [self.port_settings['available_commands'][value]
                         for value in ('PC_CHANGE_MEAS_MODE', 'PC_SET_VOLTAGE',
                                       'PC_CALIBRATION', 'PC_SET_UP_ADCS')]
         if command in need_data:
@@ -390,10 +426,9 @@ class ViPErLEEDSerial(SerialABC):
 
         Returns
         -------
-        message_out : bytearray
-            len(message_out) == 1. The command ready to be encoded.
-        *other_messages_out : bytearray
-            The data for the command, ready to be encoded.
+        messages_to_return : tuple of bytarrays
+            Consisting of the command and the data necessary to
+            execute it.
         """
         # Convert 'message' (i.e., the command) into a bytearray if
         # necessary.  'other_messages' is the data for the command.
@@ -429,7 +464,7 @@ class ViPErLEEDSerial(SerialABC):
                 data[1:] = data[-1].to_bytes(2, self.byte_order)
             messages_to_return.append(bytearray(data))
         # Note that PC_CALIBRATION also requires data, but
-        # all the elements in data are 1-byte-long integers
+        # all the elements in data are 1-byte-long integers.
         return messages_to_return
 
     def process_received_messages(self):
@@ -445,6 +480,9 @@ class ViPErLEEDSerial(SerialABC):
         data_received
             Any time the message received contains data that are
             worth processing.
+        error_occurred
+            If the message is an error message or if it could not
+            be identified.
         """
         if not self.unprocessed_messages:
             # No messages came yet
@@ -458,13 +496,13 @@ class ViPErLEEDSerial(SerialABC):
         pc_ok = self.port_settings.get('available_commands', 'PC_OK')
         for message in self.unprocessed_messages:
             # If the length of the message is 1, then it has to be a
-            # PC_OK byte
+            # PC_OK byte.
             if len(message) == 1:
                 if message == pc_ok.encode():
                     if self.__last_request_sent == pc_set_voltage:
                         self.about_to_trigger.emit()
                     self.busy = False
-            # Hardware config and measure values are both 4 bytes long.
+            # Hardware config and measurement values are both 4 bytes long.
             # Both commands are differentiated by the __last_request_sent
             # attribute and get processed accordingly. If continuous mode
             # is on and data got returned after a new request has been
@@ -549,6 +587,13 @@ class ViPErLEEDSerial(SerialABC):
                 hardware having access to the devices; Values
                 for 'i0_range' and 'aux_range' are the strings
                 '0 -- 2.5 V' or '0 -- 10 V'.
+
+        Emits
+        -----
+        error_occurred
+            If the firmware version of the controller class and
+            the hardware do not match up or if the hardware did
+            not detect any ADCs to take measurements with.
         """
         local_version = self.port_settings['controller']['FIRMWARE_VERSION']
         major, minor, *hardware = message

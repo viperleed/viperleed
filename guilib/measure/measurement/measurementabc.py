@@ -1,4 +1,4 @@
-"""Module measurementabc of viperleed.?????.
+"""Module measurementabc of viperleed.
 ========================================
    ViPErLEED Graphical User Interface
 ========================================
@@ -8,8 +8,8 @@ Author: Michele Riva
 Author: Florian Doerr
 
 This module contains the definition of the measurementABC class
-which gives commands to the controller classes and is inherited
-by the other measurement classes.
+which gives commands to the controller classes and its associated
+ViPErLEEDErrorEnum class MeasurementErrors.
 """
 from collections import defaultdict
 from abc import abstractmethod
@@ -26,7 +26,7 @@ from PyQt5 import QtCore as qtc
     # config_has_sections_and_options, class_from_name
     # )
 
-  # test
+# test
 import os, sys
 
 p = os.path.abspath('C:/Users/Florian/Documents/Uni/Masterarbeit/ViperLEED/')
@@ -63,7 +63,6 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
     the unit and the scaling ('lin' for linear and 'log' for
     logarithmic scaling.
     """
-
     # Is emitted if a measurement cycle has been completed.
     # Contains measurement data as a tuple of dictionaries.
     finished = qtc.pyqtSignal(tuple)
@@ -97,7 +96,6 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         ('devices', 'primary_controller'),
         ('measurement_settings', 'start_energy')
     ]
-    # TODO: Which settings should be mandatory? Discuss with Michele.
 
     def __init__(self, measurement_settings):
         """Initialise measurement class"""
@@ -118,8 +116,8 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
 
         self.set_settings(measurement_settings)
 
-        # Attributes needed for loop operation  -> move somewhere else
-        # Settle time will saved in primary controller ini
+        # TODO: Attributes needed for loop operation  -> move somewhere else
+        # Settle time will be saved in primary controller .ini
         self.__start_energy = self.settings.getfloat('measurement_settings',
                                                      'start_energy')
         self.__settle_time = self.settings.getint('measurement_settings',
@@ -160,21 +158,31 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         """Change settings of the measurement.
 
         Settings are loaded only if they are valid. Otherwise
-        the previous settings stay in effect.
+        the previous settings stay in effect. If the settings
+        have been accepted, controller and camera objects as
+        specified in the settings will be instantiated, told
+        what they will be measuring, moved to their respective
+        properties and connected to all necessary signals.
 
         Parameters
         ----------
-        new_settings : dict or ConfigParser or string
+        new_settings : dict, ConfigParser, string or path
             Configuration of the measurement.
 
         Raises
         ------
         TypeError
-            If new_settings is neither a dict nor a ConfigParser
-            nor a string
-        KeyError
-            If new_settings does not contain one of the mandatory
-            settings
+            If new_settings is neither a dict, ConfigParser, string
+            or path and if an element of the mandatory_settings is
+            None or has a length greater than 3.
+
+        Emits
+        -----
+        ExtraSerialErrors.MISSING_SETTINGS
+            If new_settings is missing.
+        ExtraSerialErrors.INVALID_MEAS_SETTINGS
+            If any element of the new_settings does not fit the
+            mandatory_settings.
         """
         if new_settings is None:
             emit_error(self, MeasurementErrors.MISSING_SETTINGS)
@@ -209,7 +217,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             ctrl.what_to_measure(secondary_measures)
             # ctrl.moveToThread(self.thread)
             secondary_controllers.append(ctrl)
-        self.controllers = secondary_controllers
+        self.secondary_controllers = secondary_controllers
         # self.thread.start()
 
         # Instantiate camera classes
@@ -222,48 +230,13 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
 
     settings = property(__get_settings, set_settings)
 
-    def add_cameras(self, new_cameras):
-        """Extend camera list by one or more
-        cameras and connect signals.
-
-        Parameters
-        ----------
-        new_cameras : list
-            List of camera class objects.
-
-        Returns
-        -------
-        None.
-        """
-        self.__cameras.extend(new_cameras)
-        self.connect_cameras(new_cameras)
-
-    def remove_cameras(self, remove):
-        """Remove unwanted cameras and disconnect signals.
-
-        Parameters
-        ----------
-        remove : list
-            List of camera class objects.
-
-        Returns
-        -------
-        None.
-        """
-        for camera in remove:
-            try:
-                self.__cameras.remove(camera)
-            except ValueError:
-                pass
-        self.disconnect_cameras(remove)
-
     @property
-    def controllers(self):  # TODO: rename as secondary_controllers
+    def secondary_controllers(self):
         """Return the controllers used by this class."""
         return self.__secondary_controllers
 
-    @controllers.setter
-    def controllers(self, new_controllers):
+    @secondary_controllers.setter
+    def secondary_controllers(self, new_controllers):
         """Set the controllers which should be
         used and handle signals.
 
@@ -275,41 +248,6 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         self.disconnect_controllers(self.__secondary_controllers)
         self.__secondary_controllers = new_controllers
         self.connect_controllers(self.__secondary_controllers)
-
-    def add_controllers(self, new_controllers):
-        """Extend controller list by one or more
-        controllers and connect signals.
-
-        Parameters
-        ----------
-        new_controllers : list
-            List of controller class objects.
-
-        Returns
-        -------
-        None.
-        """
-        self.__secondary_controllers.extend(new_controllers)
-        self.connect_controllers(new_controllers)
-
-    def remove_controllers(self, remove):
-        """Remove unwanted controllers and disconnect signals.
-
-        Parameters
-        ----------
-        remove : list
-            List of controller class objects.
-
-        Returns
-        -------
-        None.
-        """
-        for controller in remove:
-            try:
-                self.__secondary_controllers.remove(controller)
-            except ValueError:
-                pass
-        self.disconnect_controllers(remove)
 
     @property
     def primary_controller(self):
@@ -358,7 +296,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             self.current_energy = 0
             # Set LEED energy to 0.
             self.__primary_controller.data_ready.disconnect()
-            self.disconnect_controllers(self.controllers)
+            self.disconnect_controllers(self.secondary_controllers)
             self.disconnect_cameras(self.cameras)
             self.set_LEED_energy(self.current_energy, 1000)
             self.disconnect_primary_controller()
@@ -402,6 +340,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         """
         self.__primary_controller.set_energy(*message)
 
+    @abstractmethod
     def abort(self):
         """Abort all current actions.
 
@@ -494,18 +433,18 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         """Disconnect necessary camera signals."""
         pass
         # for camera in cameras:
-            # camera.camera_busy.disconnect(
-                # self.receive_from_camera
-                # )
-            # self.ready_for_measurement.disconnect(camera.TODO)
+            # if camera:
+                # camera.camera_busy.disconnect(
+                    # self.receive_from_camera
+                    # )
+                # self.ready_for_measurement.disconnect(camera.TODO)
+                    # # TODO: ^ function?
+                # self.abort_action.connect(camera.abort)
                 # # TODO: ^ function?
-            # self.abort_action.connect(camera.abort)
-            # # TODO: ^ function?
-            # # TODO: may need to disconnect preparation.
+                # # TODO: may need to disconnect preparation.
 
     def disconnect_controllers(self, controllers):
         """Disconnect necessary controller signals."""
-
         for controller in controllers:
             if controller:
                 controller.serial.serial_disconnect()
@@ -523,12 +462,8 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
 
     def disconnect_primary_controller(self):
         """Disconnect signals of the primary controller."""
-        # TODO: do this check for secondaries and cameras too
         if self.__primary_controller is not None:
             self.__primary_controller.serial.serial_disconnect()
-            # self.__primary_controller.data_ready.disconnect(
-                # self.receive_from_controller
-                # )
             try:
                 self.__primary_controller.data_ready.disconnect()
             except TypeError:
@@ -572,14 +507,9 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         returned as soon as all points in the begin_prepare_todos
         dictionary have been executed.
 
-        Before the second step starts, this functions is
+        Before the second step starts, this function is
         called again. It will reconnect all disconnected
-        signals and disconnect controller_busy. The second
-        preparation step has to emit a data_ready signal
-        containing an empty dictionary at its end. This will
-        function like an ordinary measurement and as soon as
-        all controllers are done preparing this class will
-        continue with the measurement cycle.
+        signals and disconnect controller_busy.
 
         If about_to_trigger is connected:
             Disconnect:
@@ -633,12 +563,22 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         """Start preparation for measurements.
 
         Prepare the controllers for a measurement which starts
-        the measurement cycle. This function only performs the first part.
-        (Everything that is done before the starting energy is set.)
+        the measurement cycle. This function only performs the
+        first part. (Everything that is done before the starting
+        energy is set.)
+
+        Signals are switched to allow preparation to take place.
 
         Returns
         -------
         None.
+
+        Emits
+        -----
+        begin_preparation
+            Starts the measurement preparation and carries
+            a tuple of energies and times with it.
+
         """
         self.switch_signals_for_preparation()
         self.current_energy = self.__start_energy
@@ -649,8 +589,13 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         """Continue preparation for measurements.
 
         Prepare the controllers for a measurement which starts
-        the measurement cycle. This function only performs the second part.
-        (Everything that is done after the starting energy is set.)
+        the measurement cycle. This function only performs the
+        second part. (Everything that is done after the starting
+        energy is set.)
+
+        Signals are switched back and the busy signal is
+        connected to a function which checks if all the
+        controllers are done with the preparation.
 
         Parameters
         ----------
@@ -660,6 +605,12 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         Returns
         -------
         None.
+
+        Emits
+        -----
+        continue_preparation
+            Starts the second part of the measurement
+            preparation.
         """
         if busy:
             return
@@ -668,7 +619,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         if any(controller.busy for controller in self.__secondary_controllers):
             return
         self.switch_signals_for_preparation()
-        for controller in self.controllers:
+        for controller in self.secondary_controllers:
             if controller:
                 controller.controller_busy.connect(
                     self.is_preparation_finished,
@@ -682,8 +633,8 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
     def ready_for_next_measurement(self):
         """Check if all measurements have been received.
 
-        After all measurements have been received, a check if the
-        loop is done will be called.
+        After all measurements have been received, a check if
+        the loop is done will be called.
 
         Returns
         -------
@@ -699,16 +650,26 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             self.finalize()
         else:
             self.start_next_measurement()
-            
+
     def is_preparation_finished(self):
-        """TODO: add docstring"""
+        """Check if measurement preparation is done.
+
+        Whenever a controller is done with its preparation
+        this function will be called. The busy attribute is
+        used to check if all controllers are done with their
+        preparation. If this is true, the busy signal going to
+        this function will be disconnected and the first
+        measurement will immediately be started.
+
+        Returns
+        -------
+        None.
+        """
         if self.__primary_controller.busy:
             return
         if any(controller.busy for controller in self.__secondary_controllers):
             return
-        if any(camera.busy for camera in self.__cameras):
-            return
-        for controller in self.controllers:
+        for controller in self.secondary_controllers:
             if controller:
                 controller.controller_busy.disconnect()
         self.__primary_controller.controller_busy.disconnect()
@@ -750,14 +711,20 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         Returns
         -------
         None.
+        
+        Emits
+        -----
+        error_occurred
+            If the received measurement contains a label that is
+            not specified in the data_points dictionary.
         """
         print(receive)
         for key in receive:
             if key not in self.data_points.keys():
                 emit_error(self, MeasurementErrors.INVALID_MEASUREMENT)
             else:
-                self.data_points[key].append(receive[key])            
-        self.ready_for_next_measurement()        
+                self.data_points[key].append(receive[key])
+        self.ready_for_next_measurement()
 
     def do_next_measurement(self):
         """Do the next measurement.
@@ -801,7 +768,33 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         # do_next_measurement()
 
     def __make_controller(self, controller_settings, is_primary=False):
-        """TODO: Add docstring."""
+        """Instantiate controller class object.
+        
+        Take controller settings and generate a controller object
+        from it.
+        
+        Parameters
+        ----------
+        controller_settings : dict, ConfigParser, str, path
+            Settings used for the instantiated controller.
+            Has to contain the name of the controller class
+            to be instantiated.
+        is_primary : boolean
+            True if the controller is the primary controller.
+            
+        Returns
+        -------
+        instance : controller class object
+            The controller that is going to handle the hardware.
+            
+        Emits
+        -----
+        MeasurementErrors.MISSING_CLASS_NAME
+            If the controller class name is missing.
+        MeasurementErrors.INVALID_MEAS_SETTINGS
+            If the controller could not be instantiated
+            from the given name.
+        """
         config = ConfigParser()
         config, invalid = config_has_sections_and_options(
             self,
@@ -826,7 +819,30 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         return instance
 
     def __make_camera(self, camera_settings):
-        """TODO: Add docstring."""
+        """Instantiate camera class object.
+        
+        Take camera settings and generate a camera object from it.
+        
+        Parameters
+        ----------
+        camera_settings : dict, ConfigParser, str, path
+            Settings used for the instantiated camera.
+            Has to contain the name of the camera class
+            to be instantiated.
+            
+        Returns
+        -------
+        instance : camera class object
+            The camara class used for the connected camera.
+            
+        Emits
+        -----
+        MeasurementErrors.MISSING_CLASS_NAME
+            If the camera class name is missing.
+        MeasurementErrors.INVALID_MEAS_SETTINGS
+            If the camera could not be instantiated
+            from the given name.
+        """
         config = ConfigParser()
 
         config, invalid = config_has_sections_and_options(
@@ -847,4 +863,5 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
                        'camera/camera_class')
             return
-        return camera_class(config, port_name)
+        instance = camera_class(config, port_name)
+        return instance

@@ -1,4 +1,4 @@
-"""Module serialabc of viperleed.
+"""Module serialabc of ViPErLEED
 
 ========================================
    ViPErLEED Graphical User Interface
@@ -15,12 +15,14 @@ hardware controllers supported by ViPErLEED. The serial communication
 can also happen in a separate QThread to prevent stalling the
 Graphical User Interface.
 """
-
+# Python standard modules
 from abc import abstractmethod
 
+# Non-standard modules
 from PyQt5 import (QtCore as qtc,
                    QtSerialPort as qts)
 
+# ViPErLEED modules
 from viperleed.guilib.measure.hardwarebase import (
     ViPErLEEDErrorEnum, QMetaABC,
     config_has_sections_and_options,
@@ -54,7 +56,7 @@ SERIAL_ERROR_MESSAGES = {
     qts.QSerialPort.TimeoutError:
         ("Serial timeout error on port {}. This should not normally occur. "
          "It means someone incorrectly implemented a subclass of "
-         "SerialWorkerABC, using waitForBytesWritten or waitForReadyRead "
+         "SerialABC, using waitForBytesWritten or waitForReadyRead "
          "instead of asynchronous behavior."),
     qts.QSerialPort.UnknownError:
         "An unknown error occurred while accessing port {}."
@@ -106,7 +108,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
 
         Parameters
         ----------
-        settings : dict or ConfigParser
+        settings : ConfigParser
             The settings used to initialize the serial port. For the
             serial port itself one only needs a 'serial_port_settings'
             section. In practice, it is likely safer to pass the whole
@@ -339,16 +341,17 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         Raises
         ------
         TypeError
-            If new_settings is neither a dict nor a ConfigParser nor
-            a string
+            If new_settings is neither a dict, ConfigParser, string
+            or path and if an element of the mandatory_settings is
+            None or has a length greater than 3.
 
-        # TODO: this is not true any longer. But documentation of errors emitted is missing.
-        KeyError
-            If new_settings does not contain a 'serial_port_settings'
-            section, or if the section does not contain the mandatory
-            options MSG_END and BYTE_ORDER
-        ValueError
-            If 'BYTE_ORDER' is neither 'big' nor 'little'.
+        Emits
+        -----
+        ExtraSerialErrors.MISSING_SETTINGS
+            If new_settings is missing.
+        ExtraSerialErrors.INVALID_PORT_SETTINGS
+            If any element of the new_settings does not fit the
+            mandatory_settings.
         """
         if new_settings is None:
             emit_error(self, ExtraSerialErrors.MISSING_SETTINGS)
@@ -390,13 +393,13 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
 
         The base implementation of this method is a no-op, i.e.,
         it returns the same message it got. Subclasses of the
-        SerialWorkerABC class should reimplement this function
+        SerialABC class should reimplement this function
         to actually decode possibly encoded messages.
 
         Parameters
         ----------
         message : bytes or bytearray
-            The message to be decoded
+            The message to be decoded.
 
         Returns
         -------
@@ -417,7 +420,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
 
         The base implementation of this method is a no-op, i.e.,
         it returns the same message it got. Subclasses of the
-        SerialWorkerABC class should reimplement this function
+        SerialABC class should reimplement this function
         to actually encode messages before sending them to the
         device via the serial line. The reimplemented method
         should care about appropriately converting a supported
@@ -523,7 +526,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         """Check if a message corresponds to an error.
 
         This method must be reimplemented by concrete classes.
-        It should return True if message is an error message,
+        It should return True if the message is an error message,
         False otherwise. If an error message is received at any
         point, any message that is still unprocessed is discarded
         immediately.
@@ -638,7 +641,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         Emits
         -----
         data_received
-            Any time the message received contains data that are
+            Any time the message received contains data that is
             worth processing.
         """
         return
@@ -646,8 +649,11 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
     def send_message(self, message, *other_messages, timeout=None):
         """Send message to hardware via serial port.
 
-        Add START and END markers to message and send it to the
-        COM port specified in the settings.
+        If a message is not supported send_message will return and not
+        send the message. Afterwards a timeout timer is started and the
+        message is encoded. START and END markers are added to the
+        message. In the end the message is sent to the port specified
+        in the settings via self.port_name.
 
         Parameters
         ----------

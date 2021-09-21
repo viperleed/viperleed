@@ -1,4 +1,4 @@
-"""Module measurecontrollerabc of viperleed.?????.
+"""Module measurecontrollerabc of viperleed.
 ========================================
    ViPErLEED Graphical User Interface
 ========================================
@@ -24,7 +24,7 @@ from viperleed.guilib.measure import hardwarebase
 class MeasureController(ControllerABC):
     """Controller class for measurement controllers."""
 
-    # Signal which is used to forward data and let the measurementabc
+    # Signal which is used to forward data and let the MeasurementABC
     # class know that the controller is done measuring.
     data_ready = qtc.pyqtSignal(object)
 
@@ -35,9 +35,35 @@ class MeasureController(ControllerABC):
     _mandatory_settings = [*ControllerABC._mandatory_settings,
                            ('controller', 'measurement_devices')]
 
-    # def __init__(self, settings=None, port_name='', sets_energy=False):
     def __init__(self, settings, port_name='', sets_energy=False):
-        """Initialise controller class object."""
+        """Initialise controller class object.
+
+        This is an upgraded version of its parent class as it
+        instantiates multiple measurement related properties.
+
+        Parameters
+        ----------
+        settings : ConfigParser
+            The controller settings
+        port_name : str, optional
+            Name of the serial port to be used to communicate with
+            the controller. This parameter is optional only in case
+            settings contains a 'controller'/'port_name' option. If
+            this is given, it will also be stored in the settings
+            file, overriding the value that may be there. Default is
+            an empty string.
+        sets_energy : bool, optional
+            Used to determine whether this controller is responsible
+            for setting the electron energy by communicating with the
+            LEED optics. Only one controller may be setting the energy.
+            Default is False.
+
+        Raises
+        ------
+        TypeError
+            If no port_name is given, and none was present in the
+            settings file.
+        """
 
         super().__init__(settings, port_name=port_name, sets_energy=sets_energy)
 
@@ -48,13 +74,12 @@ class MeasureController(ControllerABC):
         self.measurements = defaultdict(list)
 
         # These dictionaries must be reimplemented in subclasses.
-        # They must contain all functions the MeasureController has to call
-        # in the order they have to be called to bring the controller into
-        # a state ready for measurements.
-        # begin_prepare_todos contains everything that has to be done before
-        # the starting energy has been set.
-        # continue_prepare_todos contains everything that has to be done after
-        # the starting energy has been set.
+        # They must contain all functions the MeasureController has
+        # to call in the order to bring the controller into a state
+        # ready for measurements. begin_prepare_todos contains
+        # everything that has to be done before the starting energy
+        # has been set. continue_prepare_todos contains everything
+        # that has to be done after the starting energy has been set.
         self.begin_prepare_todos = defaultdict(bool)
         self.continue_prepare_todos = defaultdict(bool)
 
@@ -87,9 +112,6 @@ class MeasureController(ControllerABC):
         which triggers a measurement and sends additional data
         if needed.
 
-        If the controller already automatically takes a measurement
-        after setting an energy it can be a no op.
-
         It should take all required data for this operation from
         the settings property derived from the configuration file.
 
@@ -106,10 +128,9 @@ class MeasureController(ControllerABC):
         The begin_prepare_todos dictionary used in this method
         must be reimplemented in subclasses. The
         reimplementation should call functions that take the
-        settings property derived from the configuration file
-        and use it to do all required tasks before a measurement.
-        (i.e. calibrating the electronics, selecting channels,
-        determining the gain, ...)
+        settings property and use it to do all required tasks
+        before a measurement. (i.e. calibrating the electronics,
+        selecting channels, determining the gain, ...)
 
         It should be able to select the update rate of the
         measurement electronics and change channels if there
@@ -148,8 +169,8 @@ class MeasureController(ControllerABC):
     def continue_preparation(self, serial_busy):
         """Prepare the controller for a measurement.
 
-        The continue_prepare_todos dictionary used in this method
-        must be reimplemented in subclasses. The
+        The continue_prepare_todos dictionary used in this
+        method must be reimplemented in subclasses. The
         reimplementation should call functions that take the
         settings property derived from the configuration file
         and use it to do all required tasks before a measurement.
@@ -222,12 +243,20 @@ class MeasureController(ControllerABC):
         """Check if all measurements have been received.
 
         Emit a signal which contains all of the measurements as soon
-        as the data from the controller has been received.
+        as the data from the controller has been received. This
+        signal will trigger a busy check.
 
         The busy attribute will let the measurement class know if
         it can continue with the next step in´the measurement cycle.
         Once all of the controllers and cameras are not busy anymore,
         the signal for the next step will be sent.
+
+        Emits
+        -----
+        data_ready
+            A signal containing the collected data, which
+            triggers a check if all controllers and cameras
+            are already done.
 
         Returns
         -------
@@ -266,11 +295,7 @@ class MeasureController(ControllerABC):
             to be able to set the energy. This data should
             not contain information about recalibration of
             the energy itself, as this should be done via
-            self.true_energy_to_setpoint(energy). This
-            list of extra positional arguments will NOT
-            be passed from the GUI during normal operation.
-            Hence, it can only be used during self-calibration
-            of the controller.
+            self.true_energy_to_setpoint(energy).
 
         Returns
         -------
@@ -283,10 +308,13 @@ class MeasureController(ControllerABC):
 
         Set self.busy to true, reset all begin_prepare_todos
         and start first step of the preparation.
+        energies_and_times is a tuple containing the energies
+        and times to set during the preparation. First the energy
+        should be set and afterwards the gain should be determined.
 
         Parameters
         ----------
-        energies_and_times
+        energies_and_times : tuple
             Starting energies and times the controller will
             use if sets_energy is true.
 
@@ -329,7 +357,7 @@ class MeasureController(ControllerABC):
         check if those types are available and not conflicting
         with each other and decide which channels to use.
 
-        Additionally class attributes should be implemented
+        Additionally, class attributes should be implemented
         in subclasses which remember which measurements were
         requested in order to use them afterwards when creating
         dictionaries to return data.
@@ -347,7 +375,28 @@ class MeasureController(ControllerABC):
         return
 
     def set_settings(self, new_settings):
-        """TODO: add doc string."""
+        """Set new settings for this controller.
+
+        Settings are accepted and loaded only if they are valid.
+        This is an upgraded version of the set_settings in the
+        parent class as this function also connects the
+        about_to_trigger and the data_received signals.
+
+        Parameters
+        ----------
+        new_settings : dict or ConfigParser
+            The new settings. Will be checked for the following
+            mandatory sections/options:
+                'controller'/'serial_port_class'
+
+        Emits
+        -----
+        error_occurred
+            If the new_settings are None, or if they do not match
+            up with the mandatory settings required by the controller
+            or if the serial class specified in the settings could not
+            be instantiated.
+        """
         super().set_settings(new_settings)
 
         if self.serial is not None:
@@ -358,4 +407,3 @@ class MeasureController(ControllerABC):
             # Connect serial about_to_trigger signal to controller
             # about_to_trigger signal.
             self.serial.about_to_trigger.connect(self.about_to_trigger.emit)
-        

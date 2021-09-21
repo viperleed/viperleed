@@ -1,4 +1,4 @@
-"""Module hardwarebase of viperleed.???
+"""Module hardwarebase of viperleed.
 
 ========================================
    ViPErLEED Graphical User Interface
@@ -60,11 +60,16 @@ def class_from_name(package, class_name):
 def config_has_sections_and_options(caller, config, mandatory_settings):
     """Make sure settings are fine, and return it as a ConfigParser.
 
+    Dictionaries are converted into ConfigParsers and checked.
+    ConfigParsers are only checked. Strings are converted into
+    path objects and paths are used to access files from which
+    data is read into ConfigParsers and checked.
+
     Parameters
     ----------
     caller : object
         The object calling this method
-    config : dict or ConfigParser or None
+    config : dict, ConfigParser, str, path or None
         The configuration to be checked. It is advisable to
         NOT pass a dict, as the return value will be a copy,
         and will not be up to date among objects sharing the
@@ -99,9 +104,13 @@ def config_has_sections_and_options(caller, config, mandatory_settings):
     Raises
     ------
     TypeError
-        If settings is neither a dict nor a ConfigParser or
-        mandatory_settings contains invalid data (i.e., one
-        of the entries is not a Sequence with length <= 3).
+        If settings is not a dict, str, path, or a
+        ConfigParser or mandatory_settings contains invalid
+        data (i.e., one of the entries is not a Sequence
+        with length <= 3).
+    FileNotFoundError
+        If the requested configuration file could not be
+        found/opened.
     """
     if config is None:
         return None, mandatory_settings
@@ -193,7 +202,7 @@ def emit_error(sender, error, *msg_args, **msg_kwargs):
         raise TypeError(f"Invalid error {error} cannot be emitted")
 
     if len(error) != 2:
-        raise TypeError(f"Invalid error {error} cannot be emitted")
+        raise ValueError(f"Invalid error {error} cannot be emitted")
 
     if not msg_args and not msg_kwargs:
         sender.error_occurred.emit(error)
