@@ -116,14 +116,12 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
 
         self.set_settings(measurement_settings)
 
-        # TODO: Attributes needed for loop operation  -> move somewhere else
-        # Settle time will be saved in primary controller .ini
         self.__start_energy = self.settings.getfloat('measurement_settings',
                                                      'start_energy')
-        self.__settle_time = self.settings.getint('measurement_settings',
-                                                  'settle_time')
-        self.__long_settle_time = self.settings.getint('measurement_settings',
-                                                       'first_settle_time')
+        self.__settle_time = self.primary_controller.settings.getint(
+            'measurement_settings', 'settle_time')
+        self.__long_settle_time = self.primary_controller.settings.getint(
+            'measurement_settings', 'first_settle_time')
 
     @property
     def cameras(self):
@@ -760,7 +758,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         # Set every controller/camera busy at the beginning <-- DO THIS ALWAYS!!!!
         # And append self.current_energy to self.data_points['nominal_energy']
         # If the primary controller sets an energy:
-        # set_LEED_energy(self.current_energy, TODO: time to wait here)
+        # set_LEED_energy(self.current_energy, self.__settle_time)
         # ^ set energy and wait, triggers measurement afterwards
 
         # If the primary controller does not set an energy:
