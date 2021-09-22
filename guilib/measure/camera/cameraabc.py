@@ -875,6 +875,8 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         The reimplementation must call super().trigger_now() before,
         as this will emit an error_occurred if the camera mode is
         inappropriate (i.e., the camera is not in triggered mode).
+        It will set the camera to busy and set n_frames_done to 0
+        as well.
 
         Returns
         -------
@@ -887,6 +889,8 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         if self.mode != 'triggered':
             emit_error(self, CameraErrors.UNSUPPORTED_OPERATION,
                        'trigger', 'live')
+        self.busy = True
+        self.n_frames_done = 0
 
     def __is_valid_roi(self, roi):
         """Check that ROI is OK and fits with limits.
@@ -942,30 +946,25 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
             # In live mode, the frames will be handled by the GUI
             return
 
-        if not self.busy:
-            # The first frame just arrived
-            self.busy = True
-            self.n_frames_done = 0
+        try:
+            self.process_info.bad_pixels = self.settings.get(
+                'camera_settings', 'bad_pixels', fallback=tuple()
+                )
+        except (TypeError, ValueError):
+            emit_error(self, CameraErrors.INVALID_SETTING_WITH_FALLBACK,
+                       'camera_settings/bad_pixels', 'no bad pixels')
+        # TODO: file name. Probably needs a temp path + a file name
+        #       both should be taken care of by the controller.
+        # TODO: do I need to keep a reference here??
 
-            try:
-                self.process_info.bad_pixels = self.settings.get(
-                    'camera_settings', 'bad_pixels', fallback=tuple()
-                    )
-            except (TypeError, ValueError):
-                emit_error(self, CameraErrors.INVALID_SETTING_WITH_FALLBACK,
-                           'camera_settings/bad_pixels', 'no bad pixels')
-            # TODO: file name. Probably needs a temp path + a file name
-            #       both should be taken care of by the controller.
-            # TODO: do I need to keep a reference here??
-
-            processor = ImageProcessor()
-            processor.image_saved.connect(self.__on_image_saved)
-            processor.image_saved.connect(processor.deleteLater)
-            self.__process_thread.finished.connec(processor.deleteLater)
-            self.__process_frame.connect(processor.process_frame)
-            processor.prepare_to_process(self.process_info.copy(), image)
-            processor.moveToThread(self.__process_thread)                     # TODO: may need to be moved before connecting
-            # processor.moveToThread(self.__process_thread.currentThread())   # TODO: may be the way to go as the thread is running already
+        processor = ImageProcessor()
+        processor.image_saved.connect(self.__on_image_saved)
+        processor.image_saved.connect(processor.deleteLater)
+        self.__process_thread.finished.connec(processor.deleteLater)
+        self.__process_frame.connect(processor.process_frame)
+        processor.prepare_to_process(self.process_info.copy(), image)
+        processor.moveToThread(self.__process_thread)                     # TODO: may need to be moved before connecting
+        # processor.moveToThread(self.__process_thread.currentThread())   # TODO: may be the way to go as the thread is running already
 
         self.__process_frame.emit(image)
         self.n_frames_done += 1

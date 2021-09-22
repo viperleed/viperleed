@@ -311,12 +311,18 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         # clock = strftime("_%Y-%m-%d_%H-%M-%S", localtime())
         # csv_name = class_name + clock + ".csv"
         csv_name = "measurement_data.csv"
+        length = len(self.data_points['nominal_energy'])
         # TODO: In which manner should we save this? Current implementation is bad.
         # TODO: Where to save this? Need to add folder creation, this solution is only temporary. Images and measurement data from controllers will be saved with the configuration files in a zip folder.
         with open(csv_name, 'w', encoding='UTF8', newline='') as file_name:
             writer = csv.writer(file_name)
-            for key, value in self.data_points.items():
-                writer.writerow([key, value])
+            writer.writerow(self.data_points.keys())
+            for i in range(length-1):
+                values = []
+                for key in self.data_points.keys():
+                    if self.data_points[key]:
+                        values.append(self.data_points[key][i])
+                writer.writerow(values)
 
     def set_LEED_energy(self, *message):
         """Set the electron energy used for LEED.
@@ -350,32 +356,38 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         -------
         None.
         """
-
         self.abort_action.emit()
         self.current_energy = 0
-        # Set LEED energy to 0.
-        self.set_LEED_energy(self.current_energy)
+        # Set LEED energy to 0
+        self.__primary_controller.data_ready.disconnect()
+        self.disconnect_controllers(self.secondary_controllers)
+        for controller in self.secondary_controllers:
+            controller.busy = False
+        self.disconnect_cameras(self.cameras)
+        for camera in self.cameras:
+            camera.busy = False
+        self.set_LEED_energy(self.current_energy, 1000)
+        self.disconnect_primary_controller()
+        self.__primary_controller.busy = False
+        
         for key in self.data_points:
             self.data_points[key] = []
 
     def connect_cameras(self, cameras=None):
         """Connect necessary camera signals."""
-        pass
-        # if not cameras:
-            # cameras = self.__cameras
-        # for camera in cameras:
-            # camera.camera_busy.connect(
-                # self.receive_from_camera, type=qtc.Qt.UniqueConnection
-                # )
-            # self.ready_for_measurement.connect(
-                # camera.TODO, type=qtc.Qt.UniqueConnection
-                # # TODO: ^ function?
-                # )
-            # self.abort_action.connect(
-                # camera.abort, type=qtc.Qt.UniqueConnection
-                # # TODO: ^ function?
-                # )
-            # # TODO: may need to connect preparation.
+        if not cameras:
+            cameras = self.__cameras
+        for camera in cameras:
+            if camera:
+                camera.camera_busy.connect(
+                    self.receive_from_camera, type=qtc.Qt.UniqueConnection
+                    )
+                self.ready_for_measurement.connect(
+                    camera.trigger_now, type=qtc.Qt.UniqueConnection
+                    )
+                self.abort_action.connect(
+                    camera.stop, type=qtc.Qt.UniqueConnection
+                    )
 
     def connect_controllers(self, controllers=None):
         """Connect necessary controller signals."""
@@ -429,17 +441,11 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
 
     def disconnect_cameras(self, cameras):
         """Disconnect necessary camera signals."""
-        pass
-        # for camera in cameras:
-            # if camera:
-                # camera.camera_busy.disconnect(
-                    # self.receive_from_camera
-                    # )
-                # self.ready_for_measurement.disconnect(camera.TODO)
-                    # # TODO: ^ function?
-                # self.abort_action.connect(camera.abort)
-                # # TODO: ^ function?
-                # # TODO: may need to disconnect preparation.
+        for camera in cameras:
+            if camera:
+                camera.camera_busy.disconnect(self.receive_from_camera)
+                self.ready_for_measurement.disconnect(camera.trigger_now)
+                self.abort_action.disconnect(camera.stop)
 
     def disconnect_controllers(self, controllers):
         """Disconnect necessary controller signals."""
