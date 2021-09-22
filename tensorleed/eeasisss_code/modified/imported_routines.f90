@@ -543,8 +543,7 @@ subroutine step(x,y,f,neqn,h,eps,wt,start,hold,k,kold,crash,phi,p,yp,&
         if(km2)265,260,255
   255   erkm2 = erkm2 + ((phi(l,km1)+temp4)*temp3)**2
   260   erkm1 = erkm1 + ((phi(l,k)+temp4)*temp3)**2
-        erk = erk + (temp4*temp3)**2
-  265 continue
+  265   erk = erk + (temp4*temp3)**2
       if(km2)280,275,270
   270 erkm2 = absh*sig(km1)*gstr(km2)*dsqrt(erkm2)
   275 erkm1 = absh*sig(k)*gstr(km1)*dsqrt(erkm1)
