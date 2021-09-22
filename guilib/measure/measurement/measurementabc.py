@@ -385,9 +385,9 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
                 self.ready_for_measurement.connect(
                     camera.trigger_now, type=qtc.Qt.UniqueConnection
                     )
-                self.abort_action.connect(
-                    camera.stop, type=qtc.Qt.UniqueConnection
-                    )
+        # camera.disconnect does not need to be hooked up to the
+        # abort_action signal as it is called in the disconnecting
+        # of the camera signals anyway.
 
     def connect_controllers(self, controllers=None):
         """Connect necessary controller signals."""
@@ -443,9 +443,9 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         """Disconnect necessary camera signals."""
         for camera in cameras:
             if camera:
+                camera.disconnect()
                 camera.camera_busy.disconnect(self.receive_from_camera)
                 self.ready_for_measurement.disconnect(camera.trigger_now)
-                self.abort_action.disconnect(camera.stop)
 
     def disconnect_controllers(self, controllers):
         """Disconnect necessary controller signals."""
