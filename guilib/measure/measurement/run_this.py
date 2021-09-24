@@ -5,6 +5,7 @@ from pathlib import Path
 from PyQt5 import (QtWidgets as qtw, QtCore as qtc)
 
 from energy_setpoint import MeasureEnergySetpoint
+from settle_time import DetermineSettletime
 
 
 class WindowDoesSomething(qtw.QWidget):
@@ -41,7 +42,7 @@ class WindowDoesSomething(qtw.QWidget):
                                     "Check if this file exists and is in the "
                                     "correct folder.")
             return
-        self.do_this = MeasureEnergySetpoint(config)
+        self.do_this = DetermineSettletime(config)
 
         self.do_this.error_occurred.connect(self.error_occurred)
         self.do_this.finished.connect(self.__on_close_pressed)

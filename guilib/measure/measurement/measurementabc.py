@@ -312,7 +312,6 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         # csv_name = class_name + clock + ".csv"
         csv_name = "measurement_data.csv"
         length = len(self.data_points['nominal_energy'])
-        # TODO: In which manner should we save this? Current implementation is bad.
         # TODO: Where to save this? Need to add folder creation, this solution is only temporary. Images and measurement data from controllers will be saved with the configuration files in a zip folder.
         with open(csv_name, 'w', encoding='UTF8', newline='') as file_name:
             writer = csv.writer(file_name)
