@@ -239,11 +239,7 @@ class MeasureController(ControllerABC):
         return
 
     def measurements_done(self):
-        """Check if all measurements have been received.
-
-        Emit a signal which contains all of the measurements as soon
-        as the data from the controller has been received. This
-        signal will trigger a busy check.
+        """Emit measurements and change busy mode.
 
         The busy attribute will let the measurement class know if
         it can continue with the next step in´the measurement cycle.
@@ -406,3 +402,22 @@ class MeasureController(ControllerABC):
             # Connect serial about_to_trigger signal to controller
             # about_to_trigger signal.
             self.serial.about_to_trigger.connect(self.about_to_trigger.emit)
+
+    @abstractmethod
+    def set_continuous_mode(self, continuous):
+        """Set continuous mode.
+
+        Has to be reimplemented in subclasses. If true the
+        controller has to continue measuring and return data
+        without receiving further instructions.
+        
+        Parameters
+        ----------
+        continuous : bool
+            True if continuous mode is on.
+            
+        Returns
+        -------
+        None.
+        """
+        return

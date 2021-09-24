@@ -354,3 +354,30 @@ class ViPErinoController(MeasureController):
                     break
             else:
                 emit_error(self, ViPErinoErrors.INVALID_REQUEST)
+
+    def set_continuous_mode(self, continuous):
+        """Set continuous mode.
+
+        If true the controller will continue returning
+        measurements without further instructions.
+        
+        Parameters
+        ----------
+        continuous : bool
+            True if continuous mode is on.
+            
+        Returns
+        -------
+        None.
+        """
+        # TODO: better names
+        continuous_mode = self.settings.get('available_commands',
+                                            'pc_change_meas_mode')
+        if continuous:
+            on = self.settings.getint('measurement_settings',
+                                   'continuous_measurement_yes')
+        else:
+            on = self.settings.getint('measurement_settings',
+                                   'continuous_measurement_no')
+        self.serial.send_message(continuous_mode, [on,])
+            
