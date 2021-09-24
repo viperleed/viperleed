@@ -4,8 +4,11 @@
 test.py
 *wrong*
 
-#macOS files
+# macOS files
 .DS_Store
 
-#Ignore files from Jetbrains IDEs
+# Ignore files from Jetbrains IDEs
 .idea/
+
+# Ignore log file from recompile script
+utilities/recompile_parts.log
