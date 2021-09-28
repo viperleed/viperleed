@@ -619,7 +619,7 @@ C  are found
 
       DO IE = 1,NE
         IMIN = IE
-        IF (A(IE).GT.1.E-6) GO TO 100
+        IF (A(IE).GT.1.E-8) GO TO 100
       ENDDO
  100  CONTINUE
 
@@ -675,7 +675,7 @@ C  find first non-zero intensity and skip beam, if only one or less are found
 
       DO IE = 1,NE
         IMIN = IE
-        IF (A(IE).GT.1.E-6) GO TO 100
+        IF (A(IE).GT.1.E-8) GO TO 100
       ENDDO
  100  CONTINUE
 
