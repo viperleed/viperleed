@@ -36,11 +36,11 @@ class DetermineSettletime(MeasurementABC):
                                                      'delta_energy')
         self.__settle_time = 0
         # Settle time has to be 0 for calibration
-        self.__counter = 1
-        self.__points_to_take = self.settings.getint(
-            'measurement_settings', 'continuous_measurement_points')
         self.__measurement_time = self.settings.getint('measurement_settings',
                                                        'measurement_time')
+        self.timer = qtc.QTimer()
+        self.timer.setSingleShot(True)
+        self.timer.timeout.connect(self.ready_for_next_measurement)
         # TODO: think of something better than setting the most
         # important quantity as a string like below.
         self.thing_to_count = 'HV'
@@ -56,12 +56,11 @@ class DetermineSettletime(MeasurementABC):
         -------
         None.
         """
-        if self.__counter == 1:
-            self.primary_controller.busy = True
-            for controller in self.secondary_controllers:
-                controller.busy = True
-            self.connect_continuous_mode_set()
-            self.continuous_mode.emit(True)
+        self.primary_controller.busy = True
+        for controller in self.secondary_controllers:
+            controller.busy = True
+        self.connect_continuous_mode_set()
+        self.continuous_mode.emit(True)
 
     def continuous_mode_set(self, busy):
         """Check if continuous mode has been set on all controllers.
@@ -81,6 +80,7 @@ class DetermineSettletime(MeasurementABC):
         if any(controller.busy for controller in self.secondary_controllers):
             return
         self.disconnect_continuous_mode_set()
+        self.timer.start(self.__measurement_time)
         self.set_LEED_energy(self.current_energy, self.__settle_time)
 
     def is_finished(self):
@@ -94,15 +94,11 @@ class DetermineSettletime(MeasurementABC):
         -------
         bool
         """
-        if self.__counter >= self.__points_to_take:
-            self.continuous_mode.emit(False)
-            if self.current_energy >= self.__end_energy:
-                self.on_finished()
-                return True
-            else:
-                self.current_energy += self.__delta_energy
-                self.__counter = 0
-        self.__counter += 1
+        self.continuous_mode.emit(False)
+        if self.current_energy >= self.__end_energy:
+            self.on_finished()
+            return True
+        self.current_energy += self.__delta_energy
         return False
 
     def on_finished(self):
@@ -122,7 +118,7 @@ class DetermineSettletime(MeasurementABC):
                             'controller', 'update_rate')
         update_rate = self.primary_controller.settings.getint(
                             'adc_update_rate', int_update_rate)
-        measured_energies = self.data_poinrs['HV']
+        measured_energies = self.data_points['HV']
 
         length = len(measured_energies) - 1
         for i, energy in enumerate(measured_energies):
@@ -280,8 +276,8 @@ class DetermineSettletime(MeasurementABC):
             else:
                 self.data_points[key].append(receive[key])
         # This has to be '==', do not change to 'is'
-        if any(key == self.thing_to_count for key in receive):
-            self.ready_for_next_measurement()
+        # if any(key == self.thing_to_count for key in receive):
+            # self.ready_for_next_measurement()
 
     def connect_continuous_mode_set(self):
         """Connect controller busy signal to continuous_mode_set.

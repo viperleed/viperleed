@@ -376,9 +376,9 @@ class ViPErinoController(MeasureController):
                                             'pc_change_meas_mode')
         if continuous:
             on = self.settings.getint('measurement_settings',
-                                   'continuous_measurement_yes')
+                                      'continuous_measurement_yes')
         else:
             on = self.settings.getint('measurement_settings',
-                                   'continuous_measurement_no')
+                                      'continuous_measurement_no')
         self.serial.send_message(continuous_mode, [on,])
 
