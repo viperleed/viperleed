@@ -162,6 +162,7 @@ class Rparams:
         self.SYMMETRY_EPS_Z = 0.1
         self.SYMMETRY_FIND_ORI = True
         self.SYMMETRY_FIX = ''
+        self.SYMMETRY_BULK = {}   # keys: group, rotation, mirror
         self.TENSOR_INDEX = None  # default: pick highest in Tensors folder
         self.TENSOR_OUTPUT = []  # per layer: write Tensor output? (0/1)
         self.THEO_ENERGIES = [-1, -1, -1]
