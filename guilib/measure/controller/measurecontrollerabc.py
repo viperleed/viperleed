@@ -409,15 +409,29 @@ class MeasureController(ControllerABC):
 
         Has to be reimplemented in subclasses. If true the
         controller has to continue measuring and return data
-        without receiving further instructions.
-        
+        without receiving further instructions. The serial_busy
+        has to be hooked up to the busy state of the controller.
+        Call super() to enable switching of busy state of controller
+        once the continuous mode has been set on the hardware
+        controller.
+
         Parameters
         ----------
         continuous : bool
             True if continuous mode is on.
-            
+
         Returns
         -------
         None.
         """
-        return
+        if continuous:
+            self.serial.serial_busy.connect(
+                self.set_busy,
+                type=qtc.Qt.UniqueConnection
+                )
+        else:
+            try:
+                self.serial.serial_busy.disconnect()
+            except TypeError:
+                # serial_busy has not been connected to anything
+                pass

@@ -87,7 +87,7 @@ class ViPErLEEDSerial(SerialABC):
     the Arduino Micro ViPErLEED controller.
     """
 
-    def __init__(self, settings, port_name=''):
+    def __init__(self, settings, port_name='', **kwargs):
         """Initialize serial worker object.
 
         Parameters
@@ -125,7 +125,7 @@ class ViPErLEEDSerial(SerialABC):
             ('controller', 'FIRMWARE_VERSION')
             ))
 
-        super().__init__(settings, port_name=port_name)
+        super().__init__(settings, port_name=port_name, **kwargs)
 
     def decode(self, message):
         """Decodes messages received from the Arduino.
@@ -399,7 +399,7 @@ class ViPErLEEDSerial(SerialABC):
             # Continuous measurement is the only thing we have to check
             # as it will potentially spam us with a lot of measurements
             # so we should react appropriately
-            print(f"{data[0][0]=} and {data[0]=}")
+            # print(f"{data[0][0]=} and {data[0]=}")
             self.__is_continuous_mode = bool(data[0][0])
 
         self.__last_request_sent = command
@@ -495,6 +495,12 @@ class ViPErLEEDSerial(SerialABC):
         pc_measure_only = self.port_settings.get('available_commands',
                                                  'PC_MEASURE_ONLY')
         pc_ok = self.port_settings.get('available_commands', 'PC_OK')
+        # The following check catches data that is received
+        # from setting up a connection to the micro controller.
+        if self.__last_request_sent == pc_configuration:
+            if len(self.unprocessed_messages) != 1:
+                self.unprocessed_messages = []
+                return
         for message in self.unprocessed_messages:
             # If the length of the message is 1, then it has to be a
             # PC_OK byte.

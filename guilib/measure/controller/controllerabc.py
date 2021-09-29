@@ -100,13 +100,13 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
         # in the measurement cycle can be done.
         self.__busy = False
 
-    @property
-    def busy(self):
+    def __get_busy(self):
         """Return whether the controller is busy."""
+        # if self.serial.busy:
+            # return True
         return self.__busy
 
-    @busy.setter
-    def busy(self, is_busy):
+    def set_busy(self, is_busy):
         """Set the controller to busy True/False.
 
         Parameters
@@ -124,6 +124,8 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
         if was_busy is not is_busy:
             self.__busy = is_busy
             self.controller_busy.emit(self.busy)
+
+    busy = property(__get_busy, set_busy)
 
     @property
     def serial(self):
@@ -201,7 +203,8 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
                            'controller/serial_port_class')
                 return
             self.__serial = serial_class(new_settings,
-                                         port_name=self.__port_name)
+                                         port_name=self.__port_name,
+                                         parent=self)
         else:
             # The next line will also check that new_settings contains
             # appropriate settings for the serial port class used.

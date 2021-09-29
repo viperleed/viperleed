@@ -108,7 +108,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         self.__secondary_controllers = []
         self.__cameras = []
         self.__start_energy = 0
-        # self.thread = qtc.QThread()
+        self.thread = qtc.QThread()
         # The reimplementation may introduce more/other keys.
         self.data_points = defaultdict(list)
         for key in self.plot_info:
@@ -213,10 +213,10 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         for secondary_config, secondary_measures in secondary_set:
             ctrl = self.__make_controller(secondary_config, is_primary=False)
             ctrl.what_to_measure(secondary_measures)
-            # ctrl.moveToThread(self.thread)
+            ctrl.moveToThread(self.thread)
             secondary_controllers.append(ctrl)
         self.secondary_controllers = secondary_controllers
-        # self.thread.start()
+        self.thread.start()
 
         # Instantiate camera classes
         cameras = []
@@ -368,7 +368,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         self.set_LEED_energy(self.current_energy, 1000)
         self.disconnect_primary_controller()
         self.__primary_controller.busy = False
-        
+
         for key in self.data_points:
             self.data_points[key] = []
 
@@ -462,6 +462,11 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
                 self.continue_preparation.disconnect(
                     controller.trigger_continue_preparation
                     )
+                try:
+                    controller.controller_busy.disconnect()
+                except TypeError:
+                    # controller_busy was not connected at the time
+                    pass
 
     def disconnect_primary_controller(self):
         """Disconnect signals of the primary controller."""
@@ -480,6 +485,11 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
                 self.__primary_controller.trigger_continue_preparation
                 )
             self.__primary_controller.about_to_trigger.disconnect()
+            try:
+                self.__primary_controller.controller_busy.disconnect()
+            except TypeError:
+                    # controller_busy was not connected at the time
+                    pass
 
     def prepare_cameras(self):
         """Prepare cameras for a measurement.
@@ -532,7 +542,6 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         -------
         None.
         """
-
         try:
             self.__primary_controller.about_to_trigger.connect(
                 self.do_next_measurement, type=qtc.Qt.UniqueConnection
@@ -714,7 +723,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         Returns
         -------
         None.
-        
+
         Emits
         -----
         error_occurred
@@ -772,10 +781,10 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
 
     def __make_controller(self, controller_settings, is_primary=False):
         """Instantiate controller class object.
-        
+
         Take controller settings and generate a controller object
         from it.
-        
+
         Parameters
         ----------
         controller_settings : dict, ConfigParser, str, path
@@ -784,12 +793,12 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             to be instantiated.
         is_primary : boolean
             True if the controller is the primary controller.
-            
+
         Returns
         -------
         instance : controller class object
             The controller that is going to handle the hardware.
-            
+
         Emits
         -----
         MeasurementErrors.MISSING_CLASS_NAME
@@ -823,21 +832,21 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
 
     def __make_camera(self, camera_settings):
         """Instantiate camera class object.
-        
+
         Take camera settings and generate a camera object from it.
-        
+
         Parameters
         ----------
         camera_settings : dict, ConfigParser, str, path
             Settings used for the instantiated camera.
             Has to contain the name of the camera class
             to be instantiated.
-            
+
         Returns
         -------
         instance : camera class object
             The camara class used for the connected camera.
-            
+
         Emits
         -----
         MeasurementErrors.MISSING_CLASS_NAME

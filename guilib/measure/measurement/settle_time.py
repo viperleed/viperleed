@@ -57,8 +57,31 @@ class DetermineSettletime(MeasurementABC):
         None.
         """
         if self.__counter == 1:
+            self.primary_controller.busy = True
+            for controller in self.secondary_controllers:
+                controller.busy = True
+            self.connect_continuous_mode_set()
             self.continuous_mode.emit(True)
-            self.set_LEED_energy(self.current_energy, self.__settle_time)
+
+    def continuous_mode_set(self, busy):
+        """Check if continuous mode has been set on all controllers.
+
+        Return if any controller has not been set to continuous
+        mode yet. Otherwise set the LEED energy and start the
+        measurement.
+
+        Returns
+        -------
+        None.
+        """
+        if busy:
+            return
+        if self.primary_controller.busy:
+            return
+        if any(controller.busy for controller in self.secondary_controllers):
+            return
+        self.disconnect_continuous_mode_set()
+        self.set_LEED_energy(self.current_energy, self.__settle_time)
 
     def is_finished(self):
         """Check if the full measurement cycle is done.
@@ -209,7 +232,6 @@ class DetermineSettletime(MeasurementABC):
         super().abort()
         # TODO: add stuff to reset
 
-    # TODO: the following implementation is bad.
     def ready_for_next_measurement(self):
         """Check if continuous measurement is done.
 
@@ -224,6 +246,7 @@ class DetermineSettletime(MeasurementABC):
 
     def receive_from_camera(self, busy):
         """Do nothing."""
+        # TODO: We may want a live stream if we do the energy wiggle.
         pass
 
     def receive_from_controller(self, receive):
@@ -259,3 +282,43 @@ class DetermineSettletime(MeasurementABC):
         # This has to be '==', do not change to 'is'
         if any(key == self.thing_to_count for key in receive):
             self.ready_for_next_measurement()
+
+    def connect_continuous_mode_set(self):
+        """Connect controller busy signal to continuous_mode_set.
+
+        Use the controller_busy signal to see if all controllers
+        have been set to continuous mode. Has to be disconnected
+        once all controllers have been set to continuous mode,
+        see disconnect_continuous_mode_set function.
+
+        Returns
+        -------
+        None.
+        """
+        for controller in self.secondary_controllers:
+            if controller:
+                controller.controller_busy.connect(
+                    self.continuous_mode_set,
+                    type=qtc.Qt.UniqueConnection
+                    )
+        self.primary_controller.controller_busy.connect(
+            self.continuous_mode_set,
+            type=qtc.Qt.UniqueConnection
+            )
+
+    def disconnect_continuous_mode_set(self):
+        """Connect controller busy signal to continuous_mode_set.
+
+        The controller_busy signal has to be disconnected once
+        all controllers have been set to continuous mode,
+        otherwise the signal from setting the voltage will start
+        an infinite loop.
+
+        Returns
+        -------
+        None.
+        """
+        for controller in self.secondary_controllers:
+            if controller:
+                controller.controller_busy.disconnect()
+        self.primary_controller.controller_busy.disconnect()

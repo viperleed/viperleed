@@ -360,17 +360,18 @@ class ViPErinoController(MeasureController):
 
         If true the controller will continue returning
         measurements without further instructions.
-        
+
         Parameters
         ----------
         continuous : bool
             True if continuous mode is on.
-            
+
         Returns
         -------
         None.
         """
         # TODO: better names
+        super().set_continuous_mode(continuous)
         continuous_mode = self.settings.get('available_commands',
                                             'pc_change_meas_mode')
         if continuous:
@@ -380,4 +381,4 @@ class ViPErinoController(MeasureController):
             on = self.settings.getint('measurement_settings',
                                    'continuous_measurement_no')
         self.serial.send_message(continuous_mode, [on,])
-            
+

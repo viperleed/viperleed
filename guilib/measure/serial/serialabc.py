@@ -103,7 +103,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             ('serial_port_settings', 'BYTE_ORDER', ('big', 'little'))
             ]
 
-    def __init__(self, settings, port_name=''):
+    def __init__(self, settings, port_name='', **kwargs):
         """Initialize serial worker object.
 
         Parameters
@@ -128,8 +128,8 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         TypeError
             If no settings are given.
         """
-        super().__init__()
-        self.__port = qts.QSerialPort(port_name)
+        super().__init__(**kwargs)
+        self.__port = qts.QSerialPort(port_name, parent=self)
 
         # .__serial_settings is set via the following call to
         # set_port_settings() for extra checks and preprocessing
