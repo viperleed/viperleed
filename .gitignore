@@ -12,3 +12,6 @@ test.py
 
 # Ignore log file from recompile script
 utilities/recompile_parts.log
+
+# Ignore testing folder
+Hematite_test/
