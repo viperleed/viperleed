@@ -59,6 +59,9 @@ class DetermineSettletime(MeasurementABC):
         self.primary_controller.busy = True
         for controller in self.secondary_controllers:
             controller.busy = True
+        for key in self.data_points.keys():
+            self.data_points[key].append([])
+        self.data_points['nominal_energy'][-1].append(self.current_energy)
         self.connect_continuous_mode_set()
         self.continuous_mode.emit(True)
 
@@ -106,37 +109,44 @@ class DetermineSettletime(MeasurementABC):
 
         Takes measured energies and calculates settling time
         from them. Writes settling time to primary controller
-        configuration file afterwards."""
-        if True:
-            print(len(self.data_points['HV']), len(self.data_points['I0']))
-            return
-        # TODO: Need to do this for multiple steps and take the highest value
-        data_points = 0
+        configuration file afterwards.
+        
+        Returns
+        -------
+        None.
+        """
         step_height = 0.5
-        # This step height will be the aimed for height used later in the LEED I(V) video
-        int_update_rate = self.primary_controller.settings.getint(
+        # This step height will be the aimed for height used later
+        # in the LEED I(V) video.
+        int_update_rate = self.primary_controller.settings.get(
                             'controller', 'update_rate')
         update_rate = self.primary_controller.settings.getint(
                             'adc_update_rate', int_update_rate)
         measured_energies = self.data_points['HV']
+        set_energies = self.data_points['nominal_energy']
+        
+        for j, step in enumerate(measured_energies):
+            length = len(step)
+            data_points = 0
+            for i, energy in enumerate(step):
+                if abs(step[length-1-i] - set_energies[j][0]) < step_height*1000:
+                    data_points += 1
+                else:
+                    break
+            print(length)
+            print(data_points)
+            settle_time = 1000*data_points/update_rate
+            if settle_time > self.__settle_time:
+                self.__settle_time = settle_time
+            print(self.__settle_time)
 
-        length = len(measured_energies) - 1
-        for i, energy in enumerate(measured_energies):
-            if abs(measured_energies[length - i] - self.current_energy) < step_height:
-                data_points += 1
-            else:
-                break
-        self.__settle_time = 1000*data_points/update_rate
         self.primary_controller.settings.set(
-            'measurement_settings', 'settle_time', self.__settle_time)
-
+            'measurement_settings', 'settle_time', str(self.__settle_time))
         file_name = ast.literal_eval(
                         self.settings.get('devices', 'primary_controller')
                         )[0]
         with open(file_name, 'w') as configfile:
             self.primary_controller.settings.write(configfile)
-        # May want to run this class for each step and overwrite settle_time only if it is higher than the previous one
-        # Need to use continuous mode --> one measurement ever 20 ms at update_rate 4
 
     def is_preparation_finished(self):
         """Check if measurement preparation is done.
@@ -250,9 +260,7 @@ class DetermineSettletime(MeasurementABC):
 
         Append received data to the internal dictionary. Emit an
         error if received dictionary contains a section that does
-        not exist in the internal dictionary. After appending all
-        measurements check if all of the connected controllers are
-        ready for the next measurement.
+        not exist in the internal dictionary.
 
         Parameters
         ----------
@@ -274,10 +282,8 @@ class DetermineSettletime(MeasurementABC):
             if key not in self.data_points.keys():
                 emit_error(self, MeasurementErrors.INVALID_MEASUREMENT)
             else:
-                self.data_points[key].append(receive[key])
-        # This has to be '==', do not change to 'is'
-        # if any(key == self.thing_to_count for key in receive):
-            # self.ready_for_next_measurement()
+                self.data_points[key][-1].append(receive[key])
+        
 
     def connect_continuous_mode_set(self):
         """Connect controller busy signal to continuous_mode_set.

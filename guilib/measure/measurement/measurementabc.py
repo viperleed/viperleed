@@ -298,6 +298,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             self.disconnect_cameras(self.cameras)
             self.set_LEED_energy(self.current_energy, 1000)
             self.disconnect_primary_controller()
+            self.thread.quit()
             self.finished.emit((self.plot_info, self.data_points))
 
     def save_data(self):
@@ -730,7 +731,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             If the received measurement contains a label that is
             not specified in the data_points dictionary.
         """
-        print(receive)
+        # print(receive)
         for key in receive:
             if key not in self.data_points.keys():
                 emit_error(self, MeasurementErrors.INVALID_MEASUREMENT)
