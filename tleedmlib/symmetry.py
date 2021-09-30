@@ -238,7 +238,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
             celltype = "square"
         else:
             celltype = "rectangular"
-    elif np.linalg.norm(abst[0]) - np.linalg.norm(abst[1]) >= eps:
+    elif abs(np.linalg.norm(abst[0]) - np.linalg.norm(abst[1])) >= eps:
         celltype = "oblique"
     elif abs(abs(angle(abst[0], abst[1])) - (2*np.pi/3)) < eps:
         celltype = "hexagonal"

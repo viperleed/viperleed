@@ -25,7 +25,6 @@ from viperleed.tleedmlib.base import (angle, rotation_matrix_order,
                                       rotation_matrix, dist_from_line)
 from viperleed.tleedmlib.classes.atom import Atom
 import viperleed.tleedmlib as tl
-# from tleedmlib import DEFAULT
 
 logger = logging.getLogger("tleedm.slab")
 
@@ -123,7 +122,8 @@ class Slab:
         Stores the original position of the topmost atom in cartesian
         coordinates
     celltype : str
-        Unit cell type as string
+        Unit cell type as string. Values: oblique, rhombic, rectangular,
+        square, hexagonal
     planegroup : str
         Symmetry group of the slab, as string
     foundplanegroup : str

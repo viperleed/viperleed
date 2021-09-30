@@ -29,6 +29,7 @@ knownParams = [
     'R_FACTOR_TYPE', 'SCREEN_APERTURE', 'SEARCH_BEAMS', 'SEARCH_CONVERGENCE',
     'SEARCH_CULL', 'SEARCH_MAX_GEN', 'SEARCH_POPULATION', 'SEARCH_START',
     'SITE_DEF', 'SUPERLATTICE', 'SUPPRESS_EXECUTION', 'SYMMETRIZE_INPUT',
+    'SYMMETRY_BULK',
     'SYMMETRY_CELL_TRANSFORM', 'SYMMETRY_EPS', 'SYMMETRY_FIND_ORI',
     'SYMMETRY_FIX', 'TENSOR_INDEX', 'TENSOR_OUTPUT', 'THEO_ENERGIES',
     'TL_VERSION', 'T_DEBYE', 'T_EXPERIMENT', 'V0_IMAG', 'V0_REAL',
@@ -36,6 +37,7 @@ knownParams = [
 # paramAlias keys should be all lowercase, with no underscores
 paramAlias = {
     'bulklike': 'BULK_LIKE_BELOW',
+    'bulksymmetry': 'SYMMETRY_BULK',
     'fortrancompile': 'FORTRAN_COMP', 'compiler': 'FORTRAN_COMP',
     'fortrancompiler': 'FORTRAN_COMP',
     'plotrfactors': 'PLOT_RFACTOR',
@@ -432,6 +434,11 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
             varname = param
         setattr(rp, varname, v)
         return 0
+
+    # general definitions
+    grouplist = [
+        "p1", "p2", "pm", "pg", "cm", "rcm", "pmm", "pmg", "pgg", "cmm",
+        "rcmm", "p4", "p4m", "p4g", "p3", "p3m1", "p31m", "p6", "p6m"]
 
     loglevel = logger.level
     if silent:
@@ -1251,12 +1258,59 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                         setattr(rpars, param, np.array(nl, dtype=float))
                         if param == 'SUPERLATTICE':
                             rpars.superlattice_defined = True
+        elif param == 'SYMMETRY_BULK':
+            recombined_list = []
+            while llist:
+                v = llist.pop(0).lower()
+                if "[" in v and "]" in llist[0]:
+                    v += " " + llist.pop(0).lower()
+                recombined_list.append(v)
+            for v in recombined_list:
+                if v.split("[")[0] in grouplist:
+                    rpars.SYMMETRY_BULK['group'] = v
+                elif v.startswith("r"):
+                    try:
+                        i = int(v[1])
+                    except (ValueError, IndexError):
+                        logger.warning(
+                            "PARAMETERS file: error reading value '" + v
+                            + "' in SYMMETRY_BULK.")
+                        rpars.setHaltingLevel(2)
+                        continue
+                    if 'rotation' not in rpars.SYMMETRY_BULK:
+                        rpars.SYMMETRY_BULK['rotation'] = []
+                    if i not in rpars.SYMMETRY_BULK['rotation']:
+                        rpars.SYMMETRY_BULK['rotation'].append(i)
+                elif v.startswith("m"):
+                    if not "[" in v or not "]" in v:
+                        logger.warning(
+                            "PARAMETERS file: error reading value '" + v
+                            + "' in SYMMETRY_BULK: no direction recognized.")
+                        rpars.setHaltingLevel(2)
+                        continue
+                    str_vals = v.split("[")[1].split("]")[0].split()
+                    if len(str_vals) != 2:
+                        logger.warning(
+                            "PARAMETERS file: error reading value '" + v
+                            + "' in SYMMETRY_BULK: expected 2 values.")
+                        rpars.setHaltingLevel(2)
+                        continue
+                    try:
+                        int_vals = tuple(int(v) for v in str_vals)
+                    except (ValueError, IndexError):
+                        logger.warning(
+                            "PARAMETERS file: error reading value '" + v
+                            + "' in SYMMETRY_BULK.")
+                        rpars.setHaltingLevel(2)
+                        continue
+                    if int_vals[0] < 0:
+                        int_vals = (-int_vals[0], -int_vals[1])
+                    if 'mirror' not in rpars.SYMMETRY_BULK:
+                        rpars.SYMMETRY_BULK['mirror'] = []
+                    if int_vals in rpars.SYMMETRY_BULK['mir']:
+                        rpars.SYMMETRY_BULK['mirror'].append(int_vals)
         elif param == 'SYMMETRY_FIX':
             s = llist[0].lower()
-            grouplist = [
-                "p1", "p2", "pm", "pg", "cm", "rcm", "pmm", "pmg", "pgg",
-                "cmm", "rcmm", "p4", "p4m", "p4g", "p3", "p3m1", "p31m", "p6",
-                "p6m"]
             if s == 'true':
                 pass    # same as default, determine symmetry automatically
             elif s == 'false':

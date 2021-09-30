@@ -683,17 +683,87 @@ def getLEEDdict(sl, rp):
         logger.error("getLEEDdict: SUPERLATTICE contains non-integer-valued "
                      "entries.")
         return None
-    if isinstance(rp.AVERAGE_BEAMS, tuple):
-        beam_incidence = rp.AVERAGE_BEAMS
-    else:
-        beam_incidence = (rp.THETA, rp.PHI)
     d = {"eMax": rp.THEO_ENERGIES[1],
          "SUPERLATTICE": rp.SUPERLATTICE.astype(int),
          "surfBasis": sl.ucell[:2, :2].T,
          "surfGroup": pgstring, "bulkGroup": sl.bulkslab.foundplanegroup,
          "bulk3Dsym": sl.bulkslab.getBulk3Dstr(),
          "screenAperture": rp.SCREEN_APERTURE,
-         "beamIncidence": beam_incidence}
+         "beamIncidence": (rp.THETA, rp.PHI)}
+    # some values can be overwritten via parameters:
+    if isinstance(rp.AVERAGE_BEAMS, tuple):
+        d["beamIncidence"] = rp.AVERAGE_BEAMS
+    # some definitions for bulk symmetry. # TODO: use guilib functions
+    allowed_groups = {
+        "oblique": ("p1", "p2"),
+        "rhombic": ("p1", "p2", "cm", "cmm"),
+        "rectangular": (
+            "p1", "p2", "pm", "pg", "rcm", "pmm", "pmg", "pgg", "rcmm"),
+        "square": (
+            "p1", "p2", "pm", "pg", "rcm", "pmm", "pmg", "pgg", "rcmm",
+            "p4", "p4m", "p4g"),
+        "hexagonal": (
+            "p1", "p2", "cm", "cmm", "p3", "p3m1", "p31m", "p6", "p6m")
+        }
+    allowed_rotations = {
+        "oblique": (2,),
+        "rhombic": (2,),
+        "rectangular": (2,),
+        "square": (2, 4),
+        "hexagonal": (2, 3, 4)
+        }
+    allowed_mirrors = {
+        "oblique": (),
+        "rhombic": ((1, 1), (1, -1)),
+        "rectangular": ((1, 0), (0, 1)),
+        "square": ((1, 0), (0, 1), (1, 1), (1, -1)),
+        "hexagonal": ((1, 0), (0, 1), (1, 1), (1, -1), (1, 2), (2, 1))
+        }
+    if "group" in rp.SYMMETRY_BULK:
+        if (rp.SYMMETRY_BULK["group"].split("[")[0]
+                not in allowed_groups[sl.bulkslab.celltype]):
+            logger.warning("Group {} given in SYMMETRY_BULK is not allowed "
+                           "for bulk cell type '{}'.".format(
+                               rp.SYMMETRY_BULK["group"].split("[")[0],
+                               sl.bulkslab.celltype))
+            rp.setHaltingLevel(2)
+        else:
+            d["bulkGroup"] = rp.SYMMETRY_BULK["group"]
+        bulk_rotations = []
+        bulk_mirrors = []
+        if "rotation" in rp.SYMMETRY_BULK:
+            for order in rp.SYMMETRY_BULK["rotation"]:
+                if order not in allowed_rotations[sl.bulkslab.celltype]:
+                    logger.warning(
+                        "Rotation order {} given in SYMMETRY_BULK is not "
+                        "allowed for bulk cell type '{}'.".format(
+                            order, sl.bulkslab.celltype))
+                    rp.setHaltingLevel(2)
+                else:
+                    bulk_rotations.append(order)
+        if "mirror" in rp.SYMMETRY_BULK:
+            for par in rp.SYMMETRY_BULK["mirror"]:
+                if par not in allowed_mirrors[sl.bulkslab.celltype]:
+                    logger.warning(
+                        "Mirror direction {} given in SYMMETRY_BULK is not "
+                        "allowed for bulk cell type '{}'.".format(
+                            par, sl.bulkslab.celltype))
+                    rp.setHaltingLevel(2)
+                else:
+                    bulk_mirrors.append(par)
+        b3ds = ""
+        if bulk_rotations:
+            b3ds += "r({})".format(", ".join([str(v) for v in bulk_rotations]))
+        if bulk_mirrors:
+            if b3ds:
+                b3ds += ", "
+            b3ds += "m({})".format(", ".join([np.array2string(np.array(par),
+                                                              separator=",")
+                                              for par in bulk_mirrors]))
+        if not b3ds:
+            d["bulk3Dsym"] = "None"
+        else:
+            d["bulk3Dsym"] = b3ds
     return d
 
 
