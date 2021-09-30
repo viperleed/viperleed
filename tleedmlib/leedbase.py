@@ -700,8 +700,8 @@ def getLEEDdict(sl, rp):
         "rectangular": (
             "p1", "p2", "pm", "pg", "rcm", "pmm", "pmg", "pgg", "rcmm"),
         "square": (
-            "p1", "p2", "pm", "pg", "rcm", "pmm", "pmg", "pgg", "rcmm",
-            "p4", "p4m", "p4g"),
+            "p1", "p2", "pm", "pg", "cm", "cmm", "rcm", "pmm", "pmg", "pgg",
+            "rcmm", "p4", "p4m", "p4g"),
         "hexagonal": (
             "p1", "p2", "cm", "cmm", "p3", "p3m1", "p31m", "p6", "p6m")
         }
