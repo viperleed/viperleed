@@ -17,7 +17,7 @@ import numpy as np
 import viperleed.tleedmlib as tl
 from viperleed.tleedmlib.base import angle, rotation_matrix
 from viperleed.tleedmlib.beamgen import runBeamGen
-from viperleed.tleedmlib.psgen import runPhaseshiftGen
+from viperleed.tleedmlib.psgen import (runPhaseshiftGen, runPhaseshiftGen_old)
 from viperleed.tleedmlib.files.poscar import readPOSCAR, writePOSCAR
 from viperleed.tleedmlib.files.vibrocc import readVIBROCC
 from viperleed.tleedmlib.files.parameters import (
@@ -80,10 +80,15 @@ def initialization(sl, rp, subdomain=False):
             rundgrenpath = os.path.join('tensorleed', 'EEASiSSS.x')
             serneliuspath = os.path.join('tensorleed', 'seSernelius')
             logger.info("Generating phaseshifts data... ")
-            (rp.phaseshifts_firstline,
-             rp.phaseshifts) = runPhaseshiftGen(sl, rp,
-                                                psgensource=rundgrenpath,
-                                                excosource=serneliuspath)
+            if rp.PHASESHIFTS_CALC_OLD:
+                (rp.phaseshifts_firstline,
+                 rp.phaseshifts) = runPhaseshiftGen_old(sl, rp,
+                                                    psgensource=rundgrenpath,
+                                                    excosource=serneliuspath)
+            else:
+                (rp.phaseshifts_firstline,
+                 rp.phaseshifts) = runPhaseshiftGen(sl, rp,
+                                                        psgensource=rundgrenpath)
             logger.debug("Finished generating phaseshift data")
         except Exception:
             logger.error("Exception while calling phaseshiftgen: ")
