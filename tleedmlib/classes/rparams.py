@@ -132,6 +132,8 @@ class Rparams:
         self.PARABOLA_FIT = {"type": "none", "alpha": 1e-2, "mincurv": 5e-3,
                              "localize": 0}
         self.PHASESHIFT_EPS = 0  # defined in updateDerivedParams
+        self.PHASESHIFTS_CALC_OLD = True # use old EEASiSSS version # TODO: once established, set to False or remove
+        self.PHASESHIFTS_OUT_OLD = True  # output old PHASESHIFTS file # TODO: once established, set to False or remove
         self.PHI = 0.0           # from BEAM_INCIDENCE
         self.PLOT_RFACTOR = {'axes': 'all', 'colors': None,
                              'legend': 'all', 'overbar': False, 'perpage': 2}
