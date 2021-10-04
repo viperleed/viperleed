@@ -26,25 +26,35 @@ class TimeResolved(MeasurementABC):
         """Initialise measurement class.
 
         This is an upgraded version of its parent class.
-        __end_energy, __delta_energy and __points_to_take are
-        read from the settings and made private properties.
         """
         super().__init__(measurement_settings)
-        self.__end_energy = self.settings.getfloat('measurement_settings',
-                                                   'end_energy')
-        self.__delta_energy = self.settings.getfloat('measurement_settings',
-                                                     'delta_energy')
         self.__settle_time = 0
         # Settle time has to be 0 for calibration
-        self.__measurement_time = self.settings.getint('measurement_settings',
-                                                       'measurement_time')
+        self.__time_over = False
+
+        self.__delta_energy = self.settings.getfloat('measurement_settings',
+                                                     'delta_energy')
+        self.__end_energy = self.settings.getfloat('measurement_settings',
+                                                   'end_energy')
         self.__endless = self.settings.getboolean('measurement_settings',
                                                   'endless')
+        self.__measurement_time = self.settings.getint('measurement_settings',
+                                                       'measurement_time')
+        self.__constant_energy = self.settings.getboolean(
+            'measurement_settings', 'constant_energy')
+        self.__limit_continuous = self.settings.getint('measurement_settings',
+                                                       'limit_continuous')
+        self.__cycle_time = self.settings.getint('measurement_settings',
+                                                 'cycle_time')
+
         self.timer = qtc.QTimer()
         self.timer.setSingleShot(True)
-        self.__time_to_check = self.settings.getint('measurement_settings',
-                                                    'continuous_switch')
         self.timer.timeout.connect(self.ready_for_next_measurement)
+
+        if self.__cycle_time > 0:
+            self.cycle_timer = qtc.QTimer()
+            self.cycle_timer.setSingleShot(True)
+            self.cycle_timer.timeout.connect(self.__set_time_over)
 
     def start_next_measurement(self):
         """Set energy and measure.
@@ -57,7 +67,7 @@ class TimeResolved(MeasurementABC):
         -------
         None.
         """
-        if self.__measurement_time <= self.__time_to_check:
+        if self.__measurement_time <= self.__limit_continuous:
             self.primary_controller.busy = True
             for controller in self.secondary_controllers:
                 controller.busy = True
@@ -105,12 +115,15 @@ class TimeResolved(MeasurementABC):
         -------
         bool
         """
-        if self.__measurement_time <= self.__time_to_check:
+        if self.__time_over:
+            self.on_finished()
+            return True
+        if self.__measurement_time <= self.__limit_continuous:
             self.continuous_mode.emit(False)
         if self.current_energy >= self.__end_energy:
             self.on_finished()
             return True
-        self.current_energy = self.energy_generator()
+        self.current_energy = self.__energy_generator()
         return False
 
     def on_finished(self):
@@ -134,7 +147,7 @@ class TimeResolved(MeasurementABC):
         measured_energies = self.data_points['HV']
         set_energies = self.data_points['nominal_energy']
 
-        if self.__measurement_time <= self.__time_to_check:
+        if self.__measurement_time <= self.__limit_continuous:
             for j, step in enumerate(measured_energies):
                 length = len(step)-1
                 data_points = 0
@@ -183,6 +196,8 @@ class TimeResolved(MeasurementABC):
             if controller:
                 controller.controller_busy.disconnect()
         self.primary_controller.controller_busy.disconnect()
+        if self.__cycle_time > 0:
+            self.cycle_timer.start(self.__cycle_time)
         self.start_next_measurement()
 
     def connect_cameras(self, cameras=None):
@@ -288,7 +303,7 @@ class TimeResolved(MeasurementABC):
             if key not in self.data_points.keys():
                 emit_error(self, MeasurementErrors.INVALID_MEASUREMENT)
             else:
-                if self.__measurement_time <= self.__time_to_check:
+                if self.__measurement_time <= self.__limit_continuous:
                     self.data_points[key][-1].append(receive[key])
                 else:
                     self.data_points[key].append(receive[key])
@@ -334,19 +349,32 @@ class TimeResolved(MeasurementABC):
                 controller.controller_busy.disconnect()
         self.primary_controller.controller_busy.disconnect()
 
-    def energy_generator(self):
+    def __energy_generator(self):
         """Determine next energy to set.
-        
+
         Determine the next energy to set using parameters from
         the config and self.current_energy.
-        
+
         Returns
         -------
         energy : float
             Next energy to set.
         """
+        if self.__constant_energy:
+            return self.start_energy
         energy = self.current_energy + self.__delta_energy
         if self.__endless:
             if energy >= self.__end_energy:
                 energy = self.start_energy
         return energy
+
+    def __set_time_over(self):
+        """Set __time_over to True
+
+        Serves to end a measurement after a specific time.
+
+        Returns
+        -------
+        None.
+        """
+        self.__time_over = True
