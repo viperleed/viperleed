@@ -107,7 +107,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         self.__primary_controller = None
         self.__secondary_controllers = []
         self.__cameras = []
-        self.__start_energy = 0
+        self.start_energy = 0
         self.thread = qtc.QThread()
         # The reimplementation may introduce more/other keys.
         self.data_points = defaultdict(list)
@@ -116,8 +116,8 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
 
         self.set_settings(measurement_settings)
 
-        self.__start_energy = self.settings.getfloat('measurement_settings',
-                                                     'start_energy')
+        self.start_energy = self.settings.getfloat('measurement_settings',
+                                                   'start_energy')
         self.__settle_time = self.primary_controller.settings.getint(
             'measurement_settings', 'settle_time')
         self.__long_settle_time = self.primary_controller.settings.getint(
@@ -594,8 +594,8 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
 
         """
         self.switch_signals_for_preparation()
-        self.current_energy = self.__start_energy
-        self.begin_preparation.emit((self.__start_energy,
+        self.current_energy = self.start_energy
+        self.begin_preparation.emit((self.start_energy,
                                      self.__long_settle_time))
 
     def continue_measurement_preparation(self, busy):

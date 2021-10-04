@@ -38,13 +38,13 @@ class TimeResolved(MeasurementABC):
         # Settle time has to be 0 for calibration
         self.__measurement_time = self.settings.getint('measurement_settings',
                                                        'measurement_time')
+        self.__endless = self.settings.getboolean('measurement_settings',
+                                                  'endless')
         self.timer = qtc.QTimer()
         self.timer.setSingleShot(True)
-        self.time_to_check = 1500
-        if self.__measurement_time <= self.time_to_check:
-            self.timer.timeout.connect(self.ready_for_next_measurement)
-        else:
-            self.timer.timeout.connect(self.ready_for_next_measurement)
+        self.__time_to_check = self.settings.getint('measurement_settings',
+                                                    'continuous_switch')
+        self.timer.timeout.connect(self.ready_for_next_measurement)
 
     def start_next_measurement(self):
         """Set energy and measure.
@@ -57,7 +57,7 @@ class TimeResolved(MeasurementABC):
         -------
         None.
         """
-        if self.__measurement_time <= self.time_to_check:
+        if self.__measurement_time <= self.__time_to_check:
             self.primary_controller.busy = True
             for controller in self.secondary_controllers:
                 controller.busy = True
@@ -97,20 +97,20 @@ class TimeResolved(MeasurementABC):
     def is_finished(self):
         """Check if the full measurement cycle is done.
 
-        If the number of measurement points has been reached the
-        cycle is completed. If not, one is added to the counter
-        and the next measurement is started.
+        If the desired number of steps/measurements has been reached
+        evaluate data and return True. Otherwise generate next energy
+        and return False.
 
         Returns
         -------
         bool
         """
-        if self.__measurement_time <= self.time_to_check:
+        if self.__measurement_time <= self.__time_to_check:
             self.continuous_mode.emit(False)
         if self.current_energy >= self.__end_energy:
             self.on_finished()
             return True
-        self.current_energy += self.__delta_energy
+        self.current_energy = self.energy_generator()
         return False
 
     def on_finished(self):
@@ -119,7 +119,7 @@ class TimeResolved(MeasurementABC):
         Takes measured energies and calculates settling time
         from them. Writes settling time to primary controller
         configuration file afterwards.
-        
+
         Returns
         -------
         None.
@@ -133,8 +133,8 @@ class TimeResolved(MeasurementABC):
                             'adc_update_rate', int_update_rate)
         measured_energies = self.data_points['HV']
         set_energies = self.data_points['nominal_energy']
-        
-        if self.__measurement_time <= self.time_to_check:
+
+        if self.__measurement_time <= self.__time_to_check:
             for j, step in enumerate(measured_energies):
                 length = len(step)-1
                 data_points = 0
@@ -288,11 +288,11 @@ class TimeResolved(MeasurementABC):
             if key not in self.data_points.keys():
                 emit_error(self, MeasurementErrors.INVALID_MEASUREMENT)
             else:
-                if self.__measurement_time <= self.time_to_check:
+                if self.__measurement_time <= self.__time_to_check:
                     self.data_points[key][-1].append(receive[key])
                 else:
                     self.data_points[key].append(receive[key])
-        
+
 
     def connect_continuous_mode_set(self):
         """Connect controller busy signal to continuous_mode_set.
@@ -333,3 +333,20 @@ class TimeResolved(MeasurementABC):
             if controller:
                 controller.controller_busy.disconnect()
         self.primary_controller.controller_busy.disconnect()
+
+    def energy_generator(self):
+        """Determine next energy to set.
+        
+        Determine the next energy to set using parameters from
+        the config and self.current_energy.
+        
+        Returns
+        -------
+        energy : float
+            Next energy to set.
+        """
+        energy = self.current_energy + self.__delta_energy
+        if self.__endless:
+            if energy >= self.__end_energy:
+                energy = self.start_energy
+        return energy
