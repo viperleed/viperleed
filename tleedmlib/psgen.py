@@ -14,6 +14,7 @@ import re
 import shutil
 
 import viperleed.tleedmlib as tl
+from viperleed import fortranformat as ff
 
 logger = logging.getLogger("tleedm.psgen")
 
@@ -682,7 +683,7 @@ def format_eeasisss_input(nsl, newbulkats, rp):
     except Exception:
         logger.warning('Unable to determine L_MAX in phaseshift gen. Defaulted to 16.')
     # energy range
-    E2 = round(float(rp.THEO_ENERGIES[1]) + 20, 2)
+    E2 = round(float(rp.THEO_ENERGIES[1]) + 30, 2) # add 30 eV to energy range for dbg TODO remove
     E2_str = str(E2)
     Estep = round(float(rp.THEO_ENERGIES[2]), 2)
     Estep_str = str(Estep)
@@ -696,7 +697,7 @@ def format_eeasisss_input(nsl, newbulkats, rp):
     input_options += "'n' !'yes'/'no': Rho print?\"" + '\n'
     input_options += "'n' !'yes'/'no': Pot print?\"" + '\n'
     input_options += "'n' !'yes'/'no': WaveFunction print?\"" + '\n'
-    input_options += " 000.00  " + E2_str +"    " + Estep_str + " !energy interval E1,E2,Estep" + '\n'
+    input_options += " 000.00  " + E2_str + "    " + Estep_str + " !energy interval E1,E2,Estep" + '\n'
     input_options += "   " + n_cores_str + "   " + str(l_max) + "                !nthread,lmax" + '\n'
     input_options += "  1.d-06 1.d-09         !relerr abserr" + '\n'    # I hope these are reasonable values?
     input_options += " DIFFERENTIAL EVOLUTION METHOD" + '\n'
@@ -756,17 +757,15 @@ def convert_eeasiss_output(sl, rp, atom_types, lmax, Emax, Estep, ps_outdir):
 
 
         # lmax, E2 and Estep were read and set in format_eeasisss_input(...)
-        # size of phaseshift array: # of energies (= int((Emax-Emin)/Estep) +1)* lmax +1 * #files for elem
-        Emin = 0
-        ps = np.zeros([int((Emax - Emin) / Estep) + 1, lmax])  # initialize np array with zeros
-        energy = np.zeros([int((Emax - Emin) / Estep) + 1])
-        #ps_avg = np.zeros([int((Emax - Emin) / Estep) + 1, lmax + 1]) # still need this ?
-        ######################
 
         filename = 'PS.' + str(at_type.atomic_number) + '.' + str(type_id) + '.txt'
         dir_prefix = './'+ ps_outdir +'/'
+        # get number of lines: # could also be calculated from energy range
+        num_lines = sum(1 for line in open(dir_prefix + filename, 'r', encoding='utf-8'))
+        Emin = 0
+        ps = np.zeros([num_lines, lmax])  # initialize np array with zeros
+        energy = np.zeros([num_lines])
         with open(dir_prefix + filename, 'r', encoding='utf-8') as psfile:
-
             psfile.readline()  # firstline contains V0 parameters; discard read later
             for j, line in enumerate(psfile):
                 values = line.split()
@@ -811,7 +810,9 @@ def convert_eeasiss_output(sl, rp, atom_types, lmax, Emax, Estep, ps_outdir):
             phaseshifts.append([energy_hartree,ps])
 
         # format into old output format – int at beginning of line is skipped in old version too!
-        firstline = str(c0) + "\t" + str(c1) + "\t" + str(c2) + "\t" + str(c3) + "\t" + "PS.r.00.00\txxxx 210930-000000"
+        formater = ff.FortranRecordWriter('(4F8.2)')
+        firstline = formater.write([c0,c1,c2,c3])
+        firstline += "\t" + "PS.r.00.00\txxxx 210930-000000"  # TODO clean?
         # copied from above, old formatting of first line... TODO
         if firstline == "":
             logger.error("Could not find first line for PHASESHIFTS file "
@@ -821,13 +822,12 @@ def convert_eeasiss_output(sl, rp, atom_types, lmax, Emax, Estep, ps_outdir):
         else:
             # add number of blocks to firstline
             nblocks = len(phaseshifts[0][1])
-            firstline = str(nblocks).rjust(3) + "  " + firstline
+            firstline = str(nblocks).rjust(3) + " " + firstline # technically fails if more then 999 blocks - non-issue?
             # remove the "PS.r.**.**"
             firstline = re.sub(r"PS\.r\.[0-9]+\.[0-9]+", "", firstline)
 
-    return firstline, phaseshifts
 
-    # TODO: rearrange firstline to correct order
+    return firstline, phaseshifts
 
 def read_V0_coefficients(coef_file_path = 'PS_out/Vxc0EincAprx_v0coef'):
     """
