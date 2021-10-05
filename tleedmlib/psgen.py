@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """
 Created on Mon Aug 17 15:32:12 2020
+major rework Sep&Oct 2021
 
-@author: Florian Kraushofer
+@author: Florian Kraushofer & Alexander M. Imre
 """
 
 import os
@@ -429,7 +430,11 @@ def runPhaseshiftGen_old(sl, rp,
     return (firstline, phaseshifts)
 
 def runPhaseshiftGen(sl, rp, psgensource=os.path.join('tensorleed', 'eeasisss_new', 'eeas')):
-
+    """
+    Creates the input for EEASISSS, runs it and read the output from the generated files.
+    Returns phaseshift information (but does not yet write PHASSHIFTS file) in addition with the firstline string which
+    contains the muffin tin potential paramenters.
+    """
     nsl, newbulkats = sl.addBulkLayers(rp)
     outvals = {}
     # dict containing lists of values to output: outvals[energy][block][L]
@@ -588,6 +593,9 @@ def runPhaseshiftGen(sl, rp, psgensource=os.path.join('tensorleed', 'eeasisss_ne
 
 
 def format_eeasisss_input(nsl, newbulkats, rp):
+    """
+    Produces the input file for EEASISSS (version from 2021).
+    """
     ##############################
     # Create EEASiSSS input
     ##############################
@@ -612,62 +620,12 @@ def format_eeasisss_input(nsl, newbulkats, rp):
             ol += s
         ol += '          !CoordinatesOfUnitCell(UOL)\n'
         input_file_uc_block += ol
-    #######
-    # Atomic positions block & Muffin tin parameters block
-    #######
-    # iterate over all types of atoms (i.e. all atoms that can be in each site types)
 
-    nsl.createSublayers(eps=0.001)
-
-
-    atom_types = {}
-    input_file_atom_pos_block = ""
-    input_file_mt_params_block = ""
-
-    for sublayer_id, sublayer in enumerate(nsl.sublayers,1):  # enumerate(..., 1) makes sublayer_id start at 1
-        for atom in sublayer.atlist:
-            new_bulk = True if atom in newbulkats else False
-            if (sublayer_id, atom.site, atom.el, new_bulk) not in atom_types.keys():
-                atom_types[(sublayer_id, atom.site, atom.el, new_bulk)] =\
-                    tl.classes.sitetype.Atom_type(atom.el, str(atom.site), new_bulk)
-            atom_types[(sublayer_id, atom.site, atom.el, new_bulk)].add_atom(atom)
-    # We need to go through all this trouble of making Atom types, since we need to group the atoms into sublayers, but
-    # we can't mix elements (which could otherwise happen if we have mixed occupation)
-
-    # Now simplify by remapping atom_types to a new dict with unique integer ID...
-    re_map = {}
-    for type_id, old_ref in enumerate(atom_types.keys(),1): # old_ref is (sublayer_id, atom.site, atom.el, new_bulk)
-        re_map[old_ref] = type_id
-    atom_types = {re_map[id]:atom_types[id] for id in re_map} # list comprehension magic
-
-    for type_id in atom_types.keys(): # should be ordered
-        atom_type = atom_types[type_id]
-
-        type_header = '\t'.join([str(len(atom_type.atoms)), str(atom_type.get_atomic_number()), str(type_id),
-                                 str(type_id), '{: .4f}'.format(atom_type.rmtmin),
-                                 '{: .4f}'.format(atom_type.rmtmax), '{: .4f}'.format(atom_type.S), atom_type.el])
-        #if atom_type.new_bulk == True: # for dbg
-        #    type_header += '\t !atom in new bulk'
-        input_file_atom_pos_block += type_header + '\n'
-        atom_coords_table = ''
-        for atom in atom_type.atoms:
-            # rescale atomic coordinates from fractional to absolute
-            # for this multiply fractional positon by unit cell matrix
-            fractional_vec = np.array([pos for pos in atom.pos])
-            position_vec = uct.dot(fractional_vec)
-
-            atom_coords_table += ' '.join(['{: .5f}'.format(pos) for pos in position_vec])
-            atom_coords_table += '\n'
-        input_file_atom_pos_block += atom_coords_table
-
-        input_file_mt_params_block += ' '.join([str(type_id), '{: .4f}'.format(atom_type.rmtmin),
-                                                '{: .4f}'.format(atom_type.rmtmax), '{: .4f}'.format(atom_type.S),
-                                                '{: .4f}'.format(atom_type.fxc), atom_type.el])
-        if type_id == 1:  # only in first line
-            input_file_mt_params_block += '\t!iA rmtmin rmtmax rmtS fxc elem'
-        elif type_id == 2:  # only in second line
-            input_file_mt_params_block += '\t!etc ...'
-        input_file_mt_params_block += '\n'
+    ############################
+    # Organize atoms and create input block with atom positions
+    ############################
+    atom_types = organize_atoms_by_types(newbulkats, nsl)
+    input_file_atom_pos_block, input_file_mt_params_block = make_atoms_input_blocks(atom_types, uct)
 
     ##############################
     # Options block
@@ -689,7 +647,6 @@ def format_eeasisss_input(nsl, newbulkats, rp):
     Estep_str = str(Estep)
     n_cores_str = str(rp.N_CORES)  # number of threads
 
-
     input_options = ""
     input_options += "OPTIONS:" + '\n'
     input_options += "'s' !crystal: 'bulk'/'slab'." + '\n'
@@ -701,11 +658,12 @@ def format_eeasisss_input(nsl, newbulkats, rp):
     input_options += "   " + n_cores_str + "   " + str(l_max) + "                !nthread,lmax" + '\n'
     input_options += "  1.d-06 1.d-09         !relerr abserr" + '\n'    # I hope these are reasonable values?
     input_options += " DIFFERENTIAL EVOLUTION METHOD" + '\n'
-    # TODO check params belwo
+    # TODO check params below
     input_options += "    0.80   0.50         !F_XC,CR_XC" + '\n'       # does this need changing?
     input_options += "    0   1   0           !method" + '\n'           # what does this actually do?
     input_options += "    2   0.800000        !strategy,F_CR" + '\n'
     input_options += "  8000    0             !itermax"                 # fix itermax and other params?
+
     ##############################
     # Assemble input file
     ##############################
@@ -719,6 +677,95 @@ def format_eeasisss_input(nsl, newbulkats, rp):
     input_file_txt += input_options
 
     return atom_types, input_file_txt, l_max, E2, Estep
+
+
+def organize_atoms_by_types(newbulkats, nsl):
+    """
+    Takes atoms from the slab (nsl) and groups them for the EEASISSS input. Atoms need to be organized into groups of
+    same element and site. Note that a site could have mixed occupation.
+    Returns atom_types, which contains the groups of atom types mapped to an index required for identification. Further,
+    the input blocks containing the atom positions are produced here.
+    """
+    atom_types = {} # dict will contain Atom types
+    for atom in nsl.atlist:
+        new_bulk = True if atom in newbulkats else False
+        if (atom.site, atom.el, new_bulk) not in atom_types.keys():
+            atom_types[(atom.site, atom.el, new_bulk)] = tl.classes.sitetype.Atom_type(atom.el, str(atom.site), new_bulk)
+            atom_types[(atom.site, atom.el, new_bulk)].add_atom(atom)
+        else:
+            atom_types[(atom.site, atom.el, new_bulk)].add_atom(atom)
+
+    # Now simplify by remapping atom_types to a new dict with unique integer ID...
+    re_map = {}
+    for type_id, old_ref in enumerate(atom_types.keys(),
+                                      1):  # old_ref is (sublayer_id, atom.site, atom.el, new_bulk)
+        re_map[old_ref] = type_id
+    atom_types = {re_map[id]: atom_types[id] for id in re_map}  # list comprehension magic
+
+    return atom_types
+
+
+def organize_atoms_by_sublayers(newbulkats, nsl):
+    """
+    Unused and outdated.
+    Does same thing as organize_atoms_by_type but additionally groups them by sublayers as produced by
+    slab.createSublayer(...)
+    Produces worse results and EEASISSS takes much longer to execute.
+    """
+
+    # iterate over all types of atoms (i.e. all atoms that can be in each site types)
+    #create the sublayers
+    nsl.createSublayers(eps=0.001)
+    atom_types = {}
+    for sublayer_id, sublayer in enumerate(nsl.sublayers, 1):  # enumerate(..., 1) makes sublayer_id start at 1
+        for atom in sublayer.atlist:
+            new_bulk = True if atom in newbulkats else False
+            if (sublayer_id, atom.site, atom.el, new_bulk) not in atom_types.keys():
+                atom_types[(sublayer_id, atom.site, atom.el, new_bulk)] = \
+                    tl.classes.sitetype.Atom_type(atom.el, str(atom.site), new_bulk)
+            atom_types[(sublayer_id, atom.site, atom.el, new_bulk)].add_atom(atom)
+    # We need to go through all this trouble of making Atom types, since we need to group the atoms into sublayers, but
+    # we can't mix elements (which could otherwise happen if we have mixed occupation)
+    # Now simplify by remapping atom_types to a new dict with unique integer ID...
+    re_map = {}
+    for type_id, old_ref in enumerate(atom_types.keys(), 1):  # old_ref is (sublayer_id, atom.site, atom.el, new_bulk)
+        re_map[old_ref] = type_id
+    atom_types = {re_map[id]: atom_types[id] for id in re_map}  # list comprehension magic
+
+    return atom_types
+
+
+def make_atoms_input_blocks(atom_types, uct):
+    input_file_atom_pos_block = ""
+    input_file_mt_params_block = ""
+    for type_id in atom_types.keys():  # should be ordered
+        atom_type = atom_types[type_id]
+        type_header = '\t'.join([str(len(atom_type.atoms)), str(atom_type.get_atomic_number()), str(type_id),
+                                 str(type_id), '{: .4f}'.format(atom_type.rmtmin),
+                                 '{: .4f}'.format(atom_type.rmtmax), '{: .4f}'.format(atom_type.S), atom_type.el])
+        if atom_type.new_bulk == True:  # for easy visibility
+            type_header += '\t !atom in new bulk'
+        input_file_atom_pos_block += type_header + '\n'
+        atom_coords_table = ""
+        for atom in atom_type.atoms:
+            # rescale atomic coordinates from fractional to absolute
+            # for this multiply fractional positon by unit cell matrix
+            fractional_vec = np.array([pos for pos in atom.pos])
+            position_vec = uct.dot(fractional_vec)
+
+            atom_coords_table += ' '.join(['{: .5f}'.format(pos) for pos in position_vec])
+            atom_coords_table += '\n'
+        input_file_atom_pos_block += atom_coords_table
+
+        input_file_mt_params_block += ' '.join([str(type_id), '{: .4f}'.format(atom_type.rmtmin),
+                                                '{: .4f}'.format(atom_type.rmtmax), '{: .4f}'.format(atom_type.S),
+                                                '{: .4f}'.format(atom_type.fxc), atom_type.el])
+        if type_id == 1:  # only in first line
+            input_file_mt_params_block += '\t!iA rmtmin rmtmax rmtS fxc elem'
+        elif type_id == 2:  # only in second line
+            input_file_mt_params_block += '\t!etc ...'
+        input_file_mt_params_block += '\n'
+    return input_file_atom_pos_block, input_file_mt_params_block
 
 
 def convert_eeasiss_output(sl, rp, atom_types, lmax, Emax, Estep, ps_outdir):
@@ -828,6 +875,7 @@ def convert_eeasiss_output(sl, rp, atom_types, lmax, Emax, Estep, ps_outdir):
 
 
     return firstline, phaseshifts
+
 
 def read_V0_coefficients(coef_file_path = 'PS_out/Vxc0EincAprx_v0coef'):
     """
