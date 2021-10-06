@@ -537,8 +537,10 @@ def runPhaseshiftGen(sl, rp, psgensource=os.path.join('tensorleed', 'eeasisss_ne
     ###########
     # subdirecory with phaseshifts
     ps_outdir = 'PS_out'
+
     # Function below takes care of formatting the input so it can be used with eeasisss
-    atom_types, input_file_txt, lmax, E2, Estep = format_eeasisss_input(nsl, newbulkats, rp) # call function to format and organize atoms
+    # calls function to format and organize atoms
+    atom_types, input_file_txt, lmax, E2, Estep = format_eeasisss_input(nsl, newbulkats, rp)
 
     # Write input file
     input_file_name = "EEASISSS-input.txt" # hardcoded, change?
@@ -552,12 +554,13 @@ def runPhaseshiftGen(sl, rp, psgensource=os.path.join('tensorleed', 'eeasisss_ne
     #################
     # Call EEASISSS with input file
     #################
-    log_file_name = "EEASISSS-log.txt"
+    log_filename = "EEASISSS-log.txt" # log file
     psgensource = os.path.join('tensorleed', 'eeasisss_new', 'eeasisss')
     psgensource = os.path.join(rp.sourcedir, psgensource) # otherwise the location would not be known
     atlib_dir = os.path.join('tensorleed', 'eeasisss_new', 'atlib/') # atom density files, by Sernelius
     atlib_dir = os.path.join(rp.sourcedir, atlib_dir)
     outdir_path = os.path.join(".",ps_outdir+"/")
+    # create directory for individual phaseshift files if not yet present
     os.makedirs(outdir_path, exist_ok=True)
 
     # execution of EEASISSS requires the executable eeas to be in the work directory
@@ -572,7 +575,7 @@ def runPhaseshiftGen(sl, rp, psgensource=os.path.join('tensorleed', 'eeasisss_ne
         rp.setHaltinglevel(2)
 
     # We are now ready to call EEASISS
-    psgencommand = [psgensource, '-i', input_file_name, '-l', log_file_name, '-a', atlib_dir, '-o', outdir_path]
+    psgencommand = [psgensource, '-i', input_file_name, '-l', log_filename, '-a', atlib_dir, '-o', outdir_path]
     logger.debug("Now calling EEASISSS...")
     try:
         subprocess.run(psgencommand)
@@ -587,7 +590,11 @@ def runPhaseshiftGen(sl, rp, psgensource=os.path.join('tensorleed', 'eeasisss_ne
     except Exception:
         logger.warning("Could not remove eeas executable from work directory.") # Not a big deal if this happens.
 
+    # Now the results of the phaseshift calculation are read out and formatted for further processing
     firstline, phaseshifts = convert_eeasiss_output(sl, rp, atom_types, lmax, E2, Estep, ps_outdir)
+
+    # Finish up by moving relevant files to work directory and then removing the out_dir
+    move_EEASISSS_files(ps_outdir, log_filename, Vxc0_files = ['Vxc0Einc', 'Vxc0EincAprx', 'Vxc0EincAprx_v0coef'])
 
     return (firstline, phaseshifts)
 
@@ -895,3 +902,18 @@ def read_V0_coefficients(coef_file_path='PS_out/Vxc0EincAprx_v0coef'):
         logger.error("Could not open and read file " + coef_file_path)
         raise RuntimeError("Unable to read inner potential coefficients")
     return c0,c1,c2,c3
+
+
+def move_EEASISSS_files(ps_outdir, log_filename, Vxc0_files = ['Vxc0Einc', 'Vxc0EincAprx', 'Vxc0EincAprx_v0coef']):
+    """
+    Moves files from PS_out folder to work folder and then removes PS_out.
+    """
+    outdir_path = os.path.join(".", ps_outdir + "/")
+    # move log file
+    shutil.move(os.path.join(outdir_path, log_filename), os.path.join(".", log_filename))
+    # move muffin tin potential files
+    for file in Vxc0_files:
+        shutil.move(os.path.join(outdir_path, file), os.path.join(".", file))
+    # only remaining files are individual phaseshift files; can be discarded since they are combines in PHASESHIFTS
+    # remove PS_out folder with contents
+    shutil.rmtree(outdir_path)
