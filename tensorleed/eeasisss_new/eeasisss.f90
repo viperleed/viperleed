@@ -620,7 +620,10 @@ goto 1001
 !!!   open(41,file=trim(outdir)//'/'//trim(xid),status='replace')
       write(40,'(i0,1x,4(1x,f0.2),2x,a)') lmax+1,v0coef(1:4)
       do i=1,ne
-        write(40,910) emv0(i),(delta(i,l,ir),l=0,lmax)
+!!!     Alex: below would have output incident E - muffin tin potential
+!!!     changed to output incident E (changed emv0(i) to eev(i))
+        write(40,910) eev(i),(delta(i,l,ir),l=0,lmax) !!! Line changed for ViPErLEED
+!!!     Line above was before:   write(40,910) emv0(i),(delta(i,l,ir),l=0,lmax)
 !!!     write(41,910) emv0(i),(delta(i,l,ir),l=0,min(lmax,9))
       enddo
       close(40)  !!!; close(41)
