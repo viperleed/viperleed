@@ -20,7 +20,7 @@ from measurementabc import MeasurementABC
 
 class TimeResolved(MeasurementABC):
     """Time resolved measurement class."""
-    continuous_mode = qtc.pyqtSignal(bool)
+    continuous_mode = qtc.pyqtSignal([list])
 
     def __init__(self, measurement_settings):
         """Initialise measurement class.
@@ -75,7 +75,7 @@ class TimeResolved(MeasurementABC):
                 self.data_points[key].append([])
             self.data_points['nominal_energy'][-1].append(self.current_energy)
             self.connect_continuous_mode_set()
-            self.continuous_mode.emit(True)
+            self.continuous_mode.emit([True, False])
             pass
         else:
             self.data_points['nominal_energy'].append(self.current_energy)
@@ -115,15 +115,12 @@ class TimeResolved(MeasurementABC):
         -------
         bool
         """
-        if self.__time_over:
-            self.on_finished()
-            return True
         if self.__measurement_time <= self.__limit_continuous:
-            self.continuous_mode.emit(False)
-        if self.current_energy >= self.__end_energy:
+            self.continuous_mode.emit([False, False])
+        if self.__time_over or self.current_energy >= self.__end_energy:
             self.on_finished()
             return True
-        self.current_energy = self.__energy_generator()
+        self.current_energy = self.energy_generator()
         return False
 
     def on_finished(self):
@@ -267,7 +264,7 @@ class TimeResolved(MeasurementABC):
         None.
         """
         if self.is_finished():
-            self.finalize()
+            self.prepare_finalization()
         else:
             self.start_next_measurement()
 
@@ -349,7 +346,7 @@ class TimeResolved(MeasurementABC):
                 controller.controller_busy.disconnect()
         self.primary_controller.controller_busy.disconnect()
 
-    def __energy_generator(self):
+    def energy_generator(self):
         """Determine next energy to set.
 
         Determine the next energy to set using parameters from
@@ -378,3 +375,32 @@ class TimeResolved(MeasurementABC):
         None.
         """
         self.__time_over = True
+
+    def prepare_finalization(self):
+        """Prepare for finalization.
+
+        Connect controller busy to self.finalize, set controllers
+        busy and tell them to switch continuous mode off.
+
+        Returns
+        -------
+        None.
+        
+        Emits
+        -----
+        continuous_mode(False)
+            Tell the controller to turn continuous mode off.
+        """
+        for controller in self.secondary_controllers:
+            if controller:
+                controller.busy = True
+                controller.controller_busy.connect(
+                    self.finalize,
+                    type=qtc.Qt.UniqueConnection
+                    )
+        self.primary_controller.busy = True
+        self.primary_controller.controller_busy.connect(
+            self.finalize,
+            type=qtc.Qt.UniqueConnection
+            )
+        self.continuous_mode.emit([False, True])

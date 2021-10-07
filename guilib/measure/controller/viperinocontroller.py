@@ -151,7 +151,8 @@ class ViPErinoController(MeasureController):
         message = []
         for value in energies_and_times:
             message.extend(value.to_bytes(2, 'big'))
-        self.serial.send_message(pc_set_voltage, message)
+        # self.serial.send_message(pc_set_voltage, message)
+        self.send_message(pc_set_voltage, message)
 
     def start_autogain(self):
         """Determine starting gain.
@@ -165,7 +166,8 @@ class ViPErinoController(MeasureController):
         # TODO: Had issues in the beginning back then on omicron
         # (Gain too high)
         pc_autogain = self.settings.get('available_commands', 'PC_AUTOGAIN')
-        self.serial.send_message(pc_autogain)
+        # self.serial.send_message(pc_autogain)
+        self.send_message(pc_autogain)
 
     def set_up_adcs(self):
         """Set up ADCs.
@@ -185,7 +187,8 @@ class ViPErinoController(MeasureController):
                                 'measurement_settings', 'num_meas_to_average'
                                 )
         message = [num_meas_to_average, *self.__adc_channels[:2]]
-        self.serial.send_message(pc_set_up_adcs, message)
+        # self.serial.send_message(pc_set_up_adcs, message)
+        self.send_message(pc_set_up_adcs, message)
 
     def get_hardware(self):
         """Get hardware connected to micro controller.
@@ -210,7 +213,8 @@ class ViPErinoController(MeasureController):
         """
         pc_configuration = self.settings.get('available_commands',
                                              'PC_CONFIGURATION')
-        self.serial.send_message(pc_configuration)
+        # self.serial.send_message(pc_configuration)
+        self.send_message(pc_configuration)
 
     def calibrate_adcs(self):
         """Calibrate ADCs.
@@ -231,7 +235,8 @@ class ViPErinoController(MeasureController):
                                            'PC_CALIBRATION')
         update_rate = self.settings.getint('controller', 'update_rate')
         message = [update_rate, *self.__adc_channels[:2]]
-        self.serial.send_message(pc_calibration, message)
+        # self.serial.send_message(pc_calibration, message)
+        self.send_message(pc_calibration, message)
 
     def receive_measurements(self, receive):
         """Receive measurements from the serial.
@@ -286,7 +291,8 @@ class ViPErinoController(MeasureController):
         """
         pc_measure_only = self.settings.get('available_commands',
                                             'PC_MEASURE_ONLY')
-        self.serial.send_message(pc_measure_only)
+        # self.serial.send_message(pc_measure_only)
+        self.send_message(pc_measure_only)
 
     def abort_and_reset(self):
         """Abort current task and reset the controller.
@@ -299,7 +305,8 @@ class ViPErinoController(MeasureController):
         None.
         """
         pc_reset = self.settings.get('available_commands', 'PC_RESET')
-        self.serial.send_message(pc_reset)
+        # self.serial.send_message(pc_reset)
+        self.send_message(pc_reset)
 
         self.begin_prepare_todos['get_hardware'] = True
         self.begin_prepare_todos['calibrate_adcs'] = True
@@ -355,23 +362,25 @@ class ViPErinoController(MeasureController):
             else:
                 emit_error(self, ViPErinoErrors.INVALID_REQUEST)
 
-    def set_continuous_mode(self, continuous):
+    def set_continuous_mode(self, data):
         """Set continuous mode.
 
-        If true the controller will continue returning
-        measurements without further instructions.
+        If continuous is true the controller will continue
+        returning measurements without further instructions.
 
         Parameters
         ----------
-        continuous : bool
-            True if continuous mode is on.
+        data : list of bools
+            A list containing the continuous and
+            in_finalization bools.
 
         Returns
         -------
         None.
         """
         # TODO: better names
-        super().set_continuous_mode(continuous)
+        super().set_continuous_mode(data)
+        continuous, in_finalization = data
         continuous_mode = self.settings.get('available_commands',
                                             'pc_change_meas_mode')
         if continuous:
@@ -380,5 +389,6 @@ class ViPErinoController(MeasureController):
         else:
             on = self.settings.getint('measurement_settings',
                                       'continuous_measurement_no')
-        self.serial.send_message(continuous_mode, [on,])
+        # self.serial.send_message(continuous_mode, [on,0,0])
+        self.send_message(continuous_mode, [on,0,0])
 

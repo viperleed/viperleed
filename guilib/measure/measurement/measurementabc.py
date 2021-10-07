@@ -28,6 +28,7 @@ from PyQt5 import QtCore as qtc
 
 # test
 import os, sys
+import time
 
 p = os.path.abspath('C:/Users/Florian/Documents/Uni/Masterarbeit/ViperLEED/')
 sys.path.insert(1, p)
@@ -279,27 +280,37 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         """
         return True
 
-    def finalize(self):
+    def finalize(self, busy=False):
         """Finish the measurement cycle.
 
-        Emit data and reset the class.
+        Save data and set energy to zero.
+        
+        Parameters
+        ----------
+        busy : bool
+            Needed if the finalize is called by the controller
+            busy state change signal. (continuous measurement mode)
 
         Returns
         -------
         None.
         """
+        if busy:
+            return
+        if self.__primary_controller.busy:
+            return
+        if any(controller.busy for controller in self.__secondary_controllers):
+            return
         try:
             self.save_data()
         finally:
             self.current_energy = 0
             # Set LEED energy to 0.
             self.__primary_controller.data_ready.disconnect()
+            self.__primary_controller.data_ready.connect(self.return_to_gui)
             self.disconnect_controllers(self.secondary_controllers)
             self.disconnect_cameras(self.cameras)
             self.set_LEED_energy(self.current_energy, 1000)
-            self.disconnect_primary_controller()
-            self.thread.quit()
-            self.finished.emit((self.plot_info, self.data_points))
 
     def save_data(self):
         """Save data.
@@ -416,6 +427,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
                     controller.trigger_continue_preparation,
                     type=qtc.Qt.UniqueConnection
                     )
+                # self.thread.started.connect(controller.make_serial)
 
     def connect_primary_controller(self):
         """Connect signals of the primary controller."""
@@ -660,7 +672,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         if any(camera.busy for camera in self.__cameras):
             return
         if self.is_finished():
-            self.finalize()
+            self.prepare_finalization()
         else:
             self.start_next_measurement()
 
@@ -878,3 +890,35 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             return
         instance = camera_class(config, port_name)
         return instance
+
+    def return_to_gui (self, *__args):
+        """Return collected data to gui.
+
+        Quit thread and emit data.
+
+        Returns
+        -------
+        None.
+
+        Emits
+        -----
+        finished
+            A signal containing all collected data.
+        """
+        self.disconnect_primary_controller()
+        self.thread.quit()
+        self.finished.emit((self.plot_info, self.data_points))
+
+    def prepare_finalization(self):
+        """Prepare for finalization.
+
+        This function may need to be reimplemented in subclasses.
+        Ensure that finalization is prepared properly and that
+        self.finalize() gets called. Can be only a call to
+        self.finalize() if no preparation is needed.
+
+        Returns
+        -------
+        None.
+        """
+        self.finalize()

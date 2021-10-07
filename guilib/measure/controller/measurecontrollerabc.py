@@ -107,9 +107,8 @@ class MeasureController(ControllerABC):
         This method must be reimplemented in subclasses. It is
         supposed to be called after preparing the controller for
         a measurement and after an energy has been set on the
-        controller. It should only emit a send_message signal
-        which triggers a measurement and sends additional data
-        if needed.
+        controller. It should only trigger a measurement and
+        send additional data if needed.
 
         It should take all required data for this operation from
         the settings property derived from the configuration file.
@@ -205,6 +204,7 @@ class MeasureController(ControllerABC):
             return
 
         self.serial.serial_busy.disconnect()
+        self.serial.serial_busy.connect(self.send_unsent_messages)
         self.busy = False
 
     @abstractmethod
@@ -270,7 +270,7 @@ class MeasureController(ControllerABC):
         reimplementation should take the energy value in eV
         and other optional data needed by the serial interface
         and turn them into a message that can be sent via
-        self.serial.send_message(message, *other_messages).
+        self.send_message(message, *other_messages).
 
         Conversion from the desired, true electron energy (i.e.,
         the energy that the electrons will have when exiting the
@@ -404,34 +404,37 @@ class MeasureController(ControllerABC):
             self.serial.about_to_trigger.connect(self.about_to_trigger.emit)
 
     @abstractmethod
-    def set_continuous_mode(self, continuous):
+    def set_continuous_mode(self, data):
         """Set continuous mode.
 
-        Has to be reimplemented in subclasses. If true the
-        controller has to continue measuring and return data
-        without receiving further instructions. The serial_busy
-        has to be hooked up to the busy state of the controller.
-        Call super() to enable switching of busy state of controller
-        once the continuous mode has been set on the hardware
-        controller.
+        Has to be reimplemented in subclasses. If continuous is
+        true the controller has to continue measuring and return
+        data without receiving further instructions. in_finalization
+        is used to reconnect the serial_busy signal which is used to
+        check if the controller has indeed turned off continuous mode
+        at the end of a measurement cycle. The serial_busy has to be
+        hooked up to the busy state of the controller. Call super()
+        to enable switching of busy state of controller once the
+        continuous mode has been set on the hardware controller.
 
         Parameters
         ----------
-        continuous : bool
-            True if continuous mode is on.
+        data : list of bools
+            A list containing the continuous and
+            in_finalization bools.
 
         Returns
         -------
         None.
         """
+        continuous, in_finalization = data
         if continuous:
-            self.serial.serial_busy.connect(
-                self.set_busy,
-                type=qtc.Qt.UniqueConnection
-                )
+            self.serial.serial_busy.connect(self.set_busy)
         else:
             try:
-                self.serial.serial_busy.disconnect()
+                self.serial.serial_busy.disconnect(self.set_busy)
             except TypeError:
                 # serial_busy has not been connected to anything
                 pass
+        if not continuous and in_finalization:
+           self.serial.serial_busy.connect(self.set_busy)

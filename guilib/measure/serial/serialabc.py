@@ -167,7 +167,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         # after a .send_message()
         self.__got_unacceptable_response = False
 
-        self.__timeout = qtc.QTimer()
+        self.__timeout = qtc.QTimer(parent=self)
         self.__timeout.setSingleShot(True)
         self.__timeout.timeout.connect(self.__on_serial_timeout)
 
@@ -266,6 +266,27 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
                 'END': self.port_settings.getint(
                     'serial_port_settings', 'MSG_END'
                     ).to_bytes(1, self.byte_order)}
+
+    def __get_port(self):
+        """Return the underlying QSerialPort."""
+        return self.__port
+
+    def set_port(self, port_name):
+        """Create a new QSerialPort with name port_name.
+
+        Port settings should should alreadz exist.
+
+        Parameters
+        ----------
+        port_name : str or QSerialPortInfo
+            Information needed to create and open a new port
+        """
+        if self.port:
+            self.serial_disconnect()
+        self.__port = qts.QSerialPort(port_name, parent=self)
+        self.serial_connect()
+
+    port = property(__get_port, set_port)
 
     def get_port_settings(self):
         """Return the current settings for the port.
@@ -445,6 +466,11 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         return message
     # pylint: enable=no-self-use
 
+    def flush(self):
+        """Remove unsent messages from the queue."""
+        self.unsent_messages = []
+        self.busy = False
+
     @abstractmethod
     def identify_error(self, messages_since_error):
         """Identify which error occurred.
@@ -580,6 +606,21 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         return True
     # pylint: enable=no-self-use,unused-argument
 
+    @abstractmethod
+    def message_requires_response(self, *messages):
+        """Return whether the messages to be sent require a response.
+
+        TODO: details
+
+        *messages : TODO (same as send_message)
+            Same arguments passed to send_message
+
+        Returns
+        -------
+        bool
+        """
+        pass
+
     def prepare_message_for_encoding(self, message, *other_messages):
         """Prepare a message to be encoded.
 
@@ -694,6 +735,8 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         if timeout >= 0:
             self.__timeout.start(timeout)
         all_messages = self.prepare_message_for_encoding(*all_messages)
+        if self.message_requires_response(*all_messages):
+            self.busy = True
         for message in all_messages:
             encoded = self.encode(message)
             if self.msg_markers['START'] is not None:
@@ -705,7 +748,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         """Connect to currently selected port."""
         if not self.__port.open(self.__port.ReadWrite):
             # Could not open port. self.__on_serial_error()
-            # will emit an error_occurred(ExtraSerialErrors)
+            # will emit an error_occurred(ExtraSerialErrors) # TODO
             print('Not open', flush=True)  # TEMP
             print(self.port_name)
             self.print_port_config()

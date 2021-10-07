@@ -100,10 +100,25 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
         # in the measurement cycle can be done.
         self.__busy = False
 
+        # __unsent_messages is a list of messages that have been
+        # stored by the controller because it was not yet possible
+        # to send them to the hardware controller. New messages
+        # will automatically be appended to __unsent_messages if
+        # the serial is still waiting for a response from the
+        # hardware. All messages in __unsent_messages are processed
+        # in the order they arrive at. When the serial receives
+        # a valid answer from the hardware it will automatically
+        # trigger an attempt to send the next message in
+        # __unsent_messages. Each element of unsent_messages is
+        # a tuple containing the command and its associated data
+        # and the timeout parameter.
+        self.__unsent_messages = []
+
     def __get_busy(self):
         """Return whether the controller is busy."""
-        # if self.serial.busy:
-            # return True
+        if self.serial.busy:
+            return True
+        # TODO: think about corner cases (setting controller busy/not busy wrongly because we only see serial busy)
         return self.__busy
 
     def set_busy(self, is_busy):
@@ -119,10 +134,13 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
         controller_busy
             If the busy state of the controller changed.
         """
-        was_busy = self.__busy
+        if self.__unsent_messages:
+            return
+        # was_busy = self.__busy
+        was_busy = self.busy
         is_busy = bool(is_busy)
         if was_busy is not is_busy:
-            self.__busy = is_busy
+            self.__busy = is_busy if not self.serial.busy else True
             self.controller_busy.emit(self.busy)
 
     busy = property(__get_busy, set_busy)
@@ -283,3 +301,51 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
         new_energy = calibration(energy)
 
         return new_energy
+
+    def make_serial(self):
+        """Create serial port object and connect to it."""
+        self.serial.port = self.settings.get('controller', 'port_name')
+
+    def send_message(self, *data):
+        """Use serial to send message.
+
+        Send message via serial. Save it if serial is busy
+        or if there are other messages that have been stored.
+
+        Parameters
+        ----------
+        data : tuple
+            Any data the controller class may need to send.
+
+        Returns
+        -------
+        None.
+        """
+        if self.__unsent_messages or self.serial.busy:
+            self.__unsent_messages.append(data)
+            return
+        print(self.serial.port_name, *data)
+        self.serial.send_message(*data)
+
+    def send_unsent_messages(self, serial_busy):
+        """Send messages that have been stored.
+
+        Parameters
+        ----------
+        serial_busy : boolean
+            Busy state of the serial.
+            If not busy, send next unsent message.
+
+        Returns
+        -------
+        None.
+        """
+        if serial_busy:
+            return
+        if self.__unsent_messages:
+            data = self.__unsent_messages.pop()
+            print(self.serial.port_name, *data)
+            self.serial.send_message(*data)
+
+    def flush(self):
+        """TODO: clear unsent, set busy false and send abort"""

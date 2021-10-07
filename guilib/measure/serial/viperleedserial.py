@@ -403,7 +403,21 @@ class ViPErLEEDSerial(SerialABC):
             self.__is_continuous_mode = bool(data[0][0])
 
         self.__last_request_sent = command
-        self.busy = True
+
+        return True
+    
+    def message_requires_response(self, command, *__args):
+        """Return whether the messages to be sent require a response.
+        
+        TODO: details
+        
+        *messages : TODO (same as send_message)
+            Same arguments passed to send_message
+        
+        Returns
+        -------
+        bool
+        """
         return True
 
     def prepare_message_for_encoding(self, message, *other_messages):
@@ -501,6 +515,7 @@ class ViPErLEEDSerial(SerialABC):
             if len(self.unprocessed_messages) != 1:
                 self.unprocessed_messages = []
                 return
+        print(self.port_name, self.unprocessed_messages)
         for message in self.unprocessed_messages:
             # If the length of the message is 1, then it has to be a
             # PC_OK byte.
