@@ -25,7 +25,7 @@ class MeasureEnergySetpoint(MeasurementABC):
         """Initialise measurement class.
 
         This is an upgraded version of its parent class.
-        __end_energy, __delta_energy and __settle_time are
+        __end_energy, __delta_energy and __hv_settle_time are
         read from the settings and made private properties.
         """
         super().__init__(measurement_settings)
@@ -33,7 +33,7 @@ class MeasureEnergySetpoint(MeasurementABC):
                                                    'end_energy')
         self.__delta_energy = self.settings.getfloat('measurement_settings',
                                                      'delta_energy')
-        self.__settling_time = self.primary_controller.settings.getint(
+        self.__hv_settle_time = self.primary_controller.settings.getint(
             'measurement_settings', 'settle_time')
 
     def begin_measurement_preparation(self):
@@ -74,7 +74,7 @@ class MeasureEnergySetpoint(MeasurementABC):
         for controller in self.secondary_controllers:
             controller.busy = True
         self.data_points['nominal_energy'].append(self.current_energy)
-        self.set_LEED_energy(self.current_energy, self.__settling_time)
+        self.set_LEED_energy(self.current_energy, self.__hv_settle_time)
 
     def is_finished(self):
         """Check if the full measurement cycle is done.

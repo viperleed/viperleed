@@ -27,10 +27,10 @@ class IVVideo(MeasurementABC):
                                                    'end_energy')
         self.__delta_energy = self.settings.getfloat('measurement_settings',
                                                      'delta_energy')
-        self.__camera_delay = self.settings.getfloat('measurement_settings',
-                                                     'camera_delay')
-        self.__settle_time = self.primary_controller.settings.getint(
-            'measurement_settings', 'settle_time')
+        self.__hv_settle_time = self.primary_controller.settings.getint(
+            'measurement_settings', 'hv_settle_time')
+        self.__i0_settle_time = self.primary_controller.settings.getint(
+            'measurement_settings', 'i0_settle_time')
         self.camera_timer = qtc.QTimer(parent=self)
         self.camera_timer.setSingleShot(True)
 
@@ -49,8 +49,8 @@ class IVVideo(MeasurementABC):
         for controller in self.secondary_controllers:
             controller.busy = True
         self.data_points['nominal_energy'].append(self.current_energy)
-        self.set_LEED_energy(self.current_energy, self.__settle_time)
-        self.camera_timer.start(self.__camera_delay)
+        self.set_LEED_energy(self.current_energy, self.__i0_settle_time)
+        self.camera_timer.start(self.__hv_settle_time)
 
     def is_finished(self):
         """Check if the full measurement cycle is done.
@@ -82,7 +82,7 @@ class IVVideo(MeasurementABC):
     def connect_cameras(self, cameras=None):
         """Connect necessary camera signals."""
         if not cameras:
-            cameras = self.__cameras
+            cameras = self.cameras
         for camera in cameras:
             if camera:
                 camera.camera_busy.connect(

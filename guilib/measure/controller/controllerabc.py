@@ -195,10 +195,12 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
 
         # The next extra setting is mandatory only for a controller
         # that sets the LEED energy on the optics
-        extra_mandatory = ('measurement_settings', 'settle_time')
-        if (self.sets_energy
-                and extra_mandatory not in self._mandatory_settings):
-            self._mandatory_settings.append(extra_mandatory)
+        extra_mandatory_list = [('measurement_settings', 'i0_settle_time'),
+                                ('measurement_settings', 'hv_settle_time')]
+        for extra_mandatory in extra_mandatory_list:
+            if (self.sets_energy
+                    and extra_mandatory not in self._mandatory_settings):
+                self._mandatory_settings.append(extra_mandatory)
 
         new_settings, invalid = config_has_sections_and_options(
             self, new_settings,

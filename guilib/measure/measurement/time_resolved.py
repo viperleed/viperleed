@@ -23,10 +23,7 @@ class TimeResolved(MeasurementABC):
     continuous_mode = qtc.pyqtSignal([list])
 
     def __init__(self, measurement_settings):
-        """Initialise measurement class.
-
-        This is an upgraded version of its parent class.
-        """
+        """Initialise measurement class."""
         super().__init__(measurement_settings)
         self.__settle_time = 0
         # Settle time has to be 0 for calibration
@@ -47,12 +44,12 @@ class TimeResolved(MeasurementABC):
         self.__cycle_time = self.settings.getint('measurement_settings',
                                                  'cycle_time')
 
-        self.timer = qtc.QTimer()
+        self.timer = qtc.QTimer(parent=self)
         self.timer.setSingleShot(True)
         self.timer.timeout.connect(self.ready_for_next_measurement)
 
         if self.__cycle_time > 0:
-            self.cycle_timer = qtc.QTimer()
+            self.cycle_timer = qtc.QTimer(parent=self)
             self.cycle_timer.setSingleShot(True)
             self.cycle_timer.timeout.connect(self.__set_time_over)
 
@@ -134,6 +131,8 @@ class TimeResolved(MeasurementABC):
         -------
         None.
         """
+        # TODO: This will either be moved to a subclass or a separate processor
+        # TODO: currently using nominal energy on an uncalibrated energy measurement: offset might be larger than step height!!!
         step_height = 0.5
         # This step height will be the aimed for height used later
         # in the LEED I(V) video.
@@ -141,14 +140,22 @@ class TimeResolved(MeasurementABC):
                             'controller', 'update_rate')
         update_rate = self.primary_controller.settings.getint(
                             'adc_update_rate', int_update_rate)
-        measured_energies = self.data_points['HV']
+        measure = self.settings.get('measurement_settings', 'measure_this')
+        if measure == 'HV':
+            to_change = 'hv_settle_time'
+        elif measure == 'I0':
+            to_change = 'i0_settle_time'
+        else:
+            # TODO: emit error
+            pass
+        measured = self.data_points[measure]
         set_energies = self.data_points['nominal_energy']
 
         if self.__measurement_time <= self.__limit_continuous:
-            for j, step in enumerate(measured_energies):
+            for j, step in enumerate(measured):
                 length = len(step)-1
                 data_points = 0
-                for i, energy in enumerate(step):
+                for i, measurement in enumerate(step):
                     if abs(step[length-i] - set_energies[j][0]) < step_height:
                         data_points += 1
                     else:
@@ -161,7 +168,7 @@ class TimeResolved(MeasurementABC):
                 print(self.__settle_time)
 
             self.primary_controller.settings.set(
-                'measurement_settings', 'settle_time', str(self.__settle_time))
+                'measurement_settings', to_change, str(self.__settle_time))
             file_name = ast.literal_eval(
                             self.settings.get('devices', 'primary_controller')
                             )[0]

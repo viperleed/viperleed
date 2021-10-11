@@ -119,8 +119,6 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
 
         self.start_energy = self.settings.getfloat('measurement_settings',
                                                    'start_energy')
-        self.__settle_time = self.primary_controller.settings.getint(
-            'measurement_settings', 'settle_time')
         self.__long_settle_time = self.primary_controller.settings.getint(
             'measurement_settings', 'first_settle_time')
 
@@ -783,15 +781,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         -------
         None.
         """
-        # Set every controller/camera busy at the beginning <-- DO THIS ALWAYS!!!!
-        # And append self.current_energy to self.data_points['nominal_energy']
-        # If the primary controller sets an energy:
-        # set_LEED_energy(self.current_energy, self.__settle_time)
-        # ^ set energy and wait, triggers measurement afterwards
-
-        # If the primary controller does not set an energy:
-        # self.__primary_controller.measure_now()
-        # do_next_measurement()
+        return
 
     def __make_controller(self, controller_settings, is_primary=False):
         """Instantiate controller class object.

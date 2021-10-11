@@ -43,7 +43,7 @@ class WindowDoesSomething(qtw.QWidget):
                                     "Check if this file exists and is in the "
                                     "correct folder.")
             return
-        self.do_this = IVVideo(config)
+        self.do_this = TimeResolved(config)
 
         self.do_this.error_occurred.connect(self.error_occurred)
         self.do_this.finished.connect(self.__on_close_pressed)
