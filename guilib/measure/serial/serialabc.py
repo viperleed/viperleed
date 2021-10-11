@@ -88,6 +88,8 @@ class ExtraSerialErrors(ViPErLEEDErrorEnum):
                         "Serial port cannot operate without settings. "
                         "Load an appropriate settings file before "
                         "proceeding.")
+    PORT_NOT_OPEN = (56,
+                     "Serial port could not be openend.")
 
 
 class SerialABC(qtc.QObject, metaclass=QMetaABC):
@@ -610,16 +612,20 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
     def message_requires_response(self, *messages):
         """Return whether the messages to be sent require a response.
 
-        TODO: details
+        Needs to be reimplemented in subclasses. This function
+        should return True if the sent message requires a response
+        from the connected hardware.
 
-        *messages : TODO (same as send_message)
+        Parameters
+        ----------
+        *messages : tuple
             Same arguments passed to send_message
 
         Returns
         -------
         bool
         """
-        pass
+        return True
 
     def prepare_message_for_encoding(self, message, *other_messages):
         """Prepare a message to be encoded.
@@ -747,8 +753,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
     def serial_connect(self, *__args):
         """Connect to currently selected port."""
         if not self.__port.open(self.__port.ReadWrite):
-            # Could not open port. self.__on_serial_error()
-            # will emit an error_occurred(ExtraSerialErrors) # TODO
+            emit_error(self, ExtraSerialErrors.PORT_NOT_OPEN)
             print('Not open', flush=True)  # TEMP
             print(self.port_name)
             self.print_port_config()

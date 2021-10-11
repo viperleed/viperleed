@@ -180,17 +180,7 @@ class ViPErLEEDSerial(SerialABC):
                                                  'SPECIAL_BYTE')
 
         # print(f"before special byte: {message=}")
-        # Get the message length and check if the Arduino can store the
-        # whole message with its 64 byte sized buffer. The calculation
-        # factors in the START and END marker and the payload_length byte.
-        # The remaining 61 bytes for the message must be divided by two
-        # as every byte in the message could be a special_byte.
-        # START + payload_length + 2*message + END <= 64
         payload_length = len(message)
-        if payload_length > 30:
-            raise ValueError(f"Length of message {message} too long "
-                             "to be received by the Arduino.")
-                                                                               # TODO: We may want to move this check after the conversion.
         # Iterate through message and split values that are larger
         # or equals special_byte into two different bytes. The second
         # byte gets inserted right after the first one.
@@ -201,6 +191,12 @@ class ViPErLEEDSerial(SerialABC):
                 message.insert(i + 1, value - special_byte)
         # Insert the message length at the beginning of the message
         message.insert(0, payload_length)
+        # Get the message length and check if the Arduino can store the
+        # whole message with its 64 byte sized buffer. The calculation
+        # factors in the START and END marker.
+        if len(message) > 62:
+            raise ValueError(f"Length of message {message} too long "
+                             "to be received by the Arduino.")
         return message
 
     def identify_error(self, messages_since_error):
@@ -405,15 +401,15 @@ class ViPErLEEDSerial(SerialABC):
         self.__last_request_sent = command
 
         return True
-    
+
     def message_requires_response(self, command, *__args):
         """Return whether the messages to be sent require a response.
-        
-        TODO: details
-        
-        *messages : TODO (same as send_message)
+
+        Currently all commands return a PC_OK or other data.
+
+        *messages : tuple
             Same arguments passed to send_message
-        
+
         Returns
         -------
         bool

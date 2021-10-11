@@ -253,8 +253,8 @@ class TimeResolved(MeasurementABC):
         -------
         None.
         """
-        super().abort()
-        # TODO: add stuff to reset
+        self.prepare_finalization()
+        # super().abort()
 
     def ready_for_next_measurement(self):
         """Check if continuous measurement is done.

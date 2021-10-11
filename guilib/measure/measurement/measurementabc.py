@@ -383,6 +383,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
 
         for key in self.data_points:
             self.data_points[key] = []
+        # TODO: check if this function works as intended, not waiting for OK from primary controller
 
     def connect_cameras(self, cameras=None):
         """Connect necessary camera signals."""
