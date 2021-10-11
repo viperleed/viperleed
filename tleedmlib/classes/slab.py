@@ -1308,6 +1308,7 @@ class Slab:
         bottom, and a list of the new atoms that were added."""
         ts = copy.deepcopy(self)
         newbulkats = []
+        duplicated = []
         zdiff = 0.
         for _ in range(n):
             blayers = [lay for lay in ts.layers if lay.isBulk]
@@ -1332,11 +1333,13 @@ class Slab:
             bulkc[2] = -bulkc[2]
             tmplist = ts.atlist[:]
             for at in tmplist:
-                if at.layer.isBulk:
+                if at.layer.isBulk and at not in duplicated:
                     newbulkats.append(at.duplicate())
+                    duplicated.append(at)
+                    newbulkats[-1].oriN = len(ts.atlist) + 1
                 at.cartpos = at.cartpos + bulkc
             ts.collapseCartesianCoordinates(updateOrigin=True)
-            ts.sortByZ()
+            ts.sortOriginal()
         return ts, newbulkats
 
     def doubleBulkSlab(self):

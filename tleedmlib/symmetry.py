@@ -1063,6 +1063,13 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
         if len(at.linklist) > 1 and at.linklist not in sl.linklists:
             # don't keep the linklists of length 1
             sl.linklists.append(at.linklist)
+    # check that all linked atoms have the same sites
+    for ll in sl.linklists:
+        if len(set([at.site for at in ll])) > 1:
+            logger.warning(
+                "Symmetry-equivalent atoms are assigned to different sites: "
+                + "; ".join(["{}: {}".format(at, at.site.label) for at in ll]))
+            rp.setHaltingLevel(1)
     # FIND ALLOWED MOVE DIRECTIONS FOR ATOMS
     lockpoints = []     # full list of rotation points (no duplication)
     ori = np.array([0., 0.])

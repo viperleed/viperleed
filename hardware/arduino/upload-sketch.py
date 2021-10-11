@@ -10,6 +10,14 @@ sketch to the hardware.
 The Arduino CLI is available from https://github.com/arduino/arduino-cli/releases
 """
 
+# NOTES: best way to go to also rename Arduino Micro to ViPErLEED is
+# to (1) create a copy of the boards.txt file that comes with the CLI
+# AFTER installing the avr core (TODO: check where it is, see also the
+# notex.txt file) -- call it boards.txt.ViPErLEED; (2) in boards.txt.ViPErLEED
+# replace "Arduino Micro" with "ViPErLEED" (unless the file was already there)
+# (3) rename boards.txt to boards.txt.bak, and boards.txt.ViPErLEED to
+# boards.txt; (4) compile and upload; (5) undo no.3.
+
 from pathlib import Path
 import requests
 import subprocess
@@ -245,7 +253,7 @@ def compile(for_board, upload=False):
 
     argv = ['compile', '--clean', '-b', for_board['fqbn'], viperino]
     if upload:
-        argv.append(['-u', '-p', for_board['port']]
+        argv.append(['-u', '-p', for_board['port']])
 
     cli = subprocess.run([cli, *argv], capture_output=True)
     try:
@@ -256,6 +264,7 @@ def compile(for_board, upload=False):
 
 
 if __name__ == '__main__':
+    # get_arduino_cli(True)
     print(get_boards())
     install_arduino_core('arduino:avr')
-    print(list_arduino_cores())
+    print(get_arduino_cores())

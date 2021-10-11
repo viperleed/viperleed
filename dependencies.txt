@@ -13,3 +13,6 @@ mplcairo  # on linux, requires sudo apt install libcairo2-dev pkg-config pythonx
 
 # development only
 line_profiler
+
+# hardware
+requests

@@ -389,7 +389,7 @@ def refcalc(sl, rp, subdomain=False):
     # collect run tasks
     ref_tasks = []
     if not single_threaded:
-        for en in energies:
+        for en in sorted(energies, reverse=True):
             if len(which_lmax) == 1:
                 ct = comp_tasks[0]
             else:

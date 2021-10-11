@@ -11,16 +11,12 @@ This is the module that invokes the execution of the
 Graphical User Interface
 """
 
+from pathlib import Path
 import sys
-import os
 
-cd = os.path.realpath(os.path.dirname(__file__))
-# NB: it's necessary to add vpr_path to sys.path so that viperleed
-#     can be loaded correctly at the top-level package
-vpr_path = os.path.realpath(os.path.join(cd, '..'))
-for import_path in (cd, vpr_path):
-    if import_path not in sys.path:
-        sys.path.append(import_path)
+vpr_path = Path(__file__).resolve().parents[1]
+if vpr_path not in sys.path:
+    sys.path.append(str(vpr_path))
 
 from viperleed import GLOBALS
 
@@ -81,7 +77,7 @@ def resources_path(dir_name):
     # PATH (i.e., the top-level folder in which the exe is) IF PYINSTALLER IS
     # USED
     if hasattr(sys, '_MEIPASS'):
-        return os.path.join(sys._MEIPASS, dir_name)
+        return str(Path(sys._MEIPASS, dir_name).resolve())
     return dir_name
 
 
@@ -101,10 +97,13 @@ def gui_main():
     # Import some fonts from ./fonts folder
     font_path = resources_path("guilib/fonts")
     # * Text: family =  'DejaVu Sans'
-    qtg.QFontDatabase.addApplicationFont(os.path.join(font_path,
-                                                      "DejaVuSans.ttf"))
+    qtg.QFontDatabase.addApplicationFont(
+        str(Path(font_path, "DejaVuSans.ttf").resolve())
+        )
     # * Math: family =  'CMU Serif'
-    qtg.QFontDatabase.addApplicationFont(os.path.join(font_path, "cmunrm.otf"))
+    qtg.QFontDatabase.addApplicationFont(
+        str(Path(font_path, "cmunrm.otf").resolve())
+        )
 
     plugin_selector_window = gl.ViPErLEEDSelectPlugin()
     plugin_selector_window.show()

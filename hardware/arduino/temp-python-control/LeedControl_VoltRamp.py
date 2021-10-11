@@ -3,7 +3,7 @@ Created on Fri Jul 31 13:38:53 2020
 
 @author: Bernhard Mayr
 @author: Michele Riva (from 2020-11-09)
-@author: Florian Dörr
+@author: Florian Dörr (from 2021-04-26)
 """
 # Python standard modules
 import time
@@ -18,19 +18,27 @@ import matplotlib.pyplot as plt
 
 import numpy as np
 from numpy.polynomial.polynomial import Polynomial
+# import scipy
+from scipy.fft import rfft, rfftfreq
+from PyQt5 import (QtSerialPort as qts,
+                   QtCore as qtc,
+                   QtWidgets as qtw)
 # NON STANDARD. Will try to get rid of these
-import serial  # NON STANDARD
-# maybe one can use this to replace the serial package: https://github.com/wiseman/arduino-serial
 import pandas as pd  # NON STANDARD I will try to get rid of this. It's used only for the export to csv
-import serial.tools.list_ports  # NON STANDARD
 
 current_path = os.path.dirname(os.path.abspath(__file__))
+dll_path = os.path.join(current_path, 'Camera_libraries')
+camera_path = dll_path
 
-if 'Camera_libraries' not in sys.path:
-    sys.path.append(os.path.join(current_path, 'Camera_libraries'))
+try:
+    os.add_dll_directory(dll_path)
+except AttributeError:
+    pass
+if camera_path not in sys.path:
+    sys.path.append(camera_path)
 
 # ViPErLEED
-#from camera import Camera
+from camera import Camera
 
 # Configuration-File location:
 configfile_location = 'Configuration/LeedControl_config.ini'
@@ -45,10 +53,10 @@ sign = 'big'
 
 PC_OK = config.getint('communication_bytes', 'PC_OK').to_bytes(1, sign)
 
-# serial port object to Arduino
-arduino_port = serial.Serial()
+# QSerialPort object to Arduino
+arduino_port = qts.QSerialPort()
 
-#======================================
+# ======================================
 
 def send_to_arduino(send_bytes):
     """
@@ -67,7 +75,8 @@ def send_to_arduino(send_bytes):
                          + bytes_length.to_bytes(1, sign)
                          + send_bytes + ENDMARKER.to_bytes(1, sign))
     print("Sending: ", adjusted_sendbyte, "with msg_length =", bytes_length)
-    arduino_port.write(adjusted_sendbyte)
+    if arduino_port.write(adjusted_sendbyte) < 0:
+        raise RuntimeError("Serial.write did not succeed")
 
 def encode_high_bytes(in_bytes):
     """
@@ -113,17 +122,17 @@ def encode_high_bytes(in_bytes):
             out_bytes += (in_bytes[i] - SPECIAL_BYTE).to_bytes(1, sign)
         else:
             out_bytes = out_bytes + in_bytes[i].to_bytes(1, sign)
-    return(out_bytes, n)
+    return out_bytes, n
 
 def bytes_to_float(bytes_in):
     """Convert four bytes to float.
-    
+
     Parameters
     ----------
     bytes_in : bytes or bytearray
         Should have length 4. It is assumed that the bytes are in
         big-endian format.
-    
+
     Returns
     -------
     float
@@ -137,8 +146,8 @@ def bytes_to_float(bytes_in):
         raise ValueError("bytes_to_float: Invalid number of bytes "
                          f"({len(bytes_in)}). Expected 4.")
     return struct.unpack(">f", bytes_in)[0]
-    
-#======================================
+
+# ======================================
 def adc_measure_only():
     """
     Send  PC_MEASURE_ONLY to arduino and initialise measurement of adc
@@ -152,7 +161,7 @@ def adc_measure_only():
         identify_error()
         arduino_port.close()
         raise IOError("Arduino does not reach the number of measurements to do")
-#======================================
+# ======================================
 
 def receive_from_arduino():
     """
@@ -168,20 +177,20 @@ def receive_from_arduino():
     received_value = "z"
     message = ''
     t1 = time.time()
-    while arduino_port.inWaiting() == 0:
+    while not arduino_port.bytesAvailable():
         if (time.time() - t1) > arduino_timeout:
             arduino_port.close()
             raise IOError("Timeout while Reading Arduino. No message received")
     while ord(received_value) != STARTMARKER:
-        received_value = arduino_port.read()
+        received_value = arduino_port.readData()
         message = received_value
 
     while ord(received_value) != ENDMARKER:
         received_value = arduino_port.read()
         message += received_value
-    
+
     # TODO: check that the message length is appropriate
-    
+
     # print("Got message: ", repr(message))
     decoded = decode_high_bytes(message)
     # print("Decoded: ", repr(decoded))
@@ -228,7 +237,7 @@ def decode_high_bytes(in_bytes):
         i += 1
     return out_bytes[2:-1]
 
-#======================================
+# ======================================
 
 def connect_to_arduino(port):
     """
@@ -242,17 +251,23 @@ def connect_to_arduino(port):
 
     Return
     ----------
-    arduino_port: class object serial
+    arduino_port: class object QSerialPort
     """
     global arduino_port
     PC_CONFIGURATION = config.getint('communication_bytes', 'PC_CONFIGURATION')
     FIRMWARE_VERSION = config['firmware_version']['FIRMWARE_VERSION']
     hardware_bits = config['hardware_bits']
 
-    arduino_port = serial.Serial(port, 115200, timeout = 1)
-    if arduino_port.inWaiting() == 0:
+    # arduino_port = serial.serial(port, 115200, timeout = 1)
+    arduino_port.setPort(port)
+    arduino_port.open(arduino_port.ReadWrite)
+    arduino_port.setBaudRate(int(400e6))
+    arduino_port.setDataTerminalReady(True)
+    # if arduino_port.inWaiting() == 0:  # old solution for PySerial
+    # if arduino_port.waitForReadyRead():
+    if not arduino_port.bytesAvailable():
         send_to_arduino(PC_CONFIGURATION)
-        time.sleep(1) #time to settle connection
+        time.sleep(1)  # time to settle connection
         hardware_config = receive_from_arduino()
         hardwareVersion = f"{hardware_config[0]}.{hardware_config[1]}"
         if hardwareVersion != FIRMWARE_VERSION:
@@ -273,9 +288,9 @@ def connect_to_arduino(port):
             return arduino_port
     arduino_port.close()
     raise IOError("\nSomething went wrong! \nConnection was successful but no"
-                  " respond from the device! \nT H E  E N D")
+                  " response from the device! \n")
 
-#======================================
+# ======================================
 
 
 def initialise_adcs(arduino_config):
@@ -291,13 +306,13 @@ def initialise_adcs(arduino_config):
     send_to_arduino(PC_SET_UP_ADCS)
     message = []
     measurement_n = int(arduino_config['measurement_counter']).to_bytes(2, sign)
-    #print(measurement_n) prints b'\x00\n'
+    # print(measurement_n) prints b'\x00\n'
     message.append(measurement_n[0])
     message.append(measurement_n[1])
     for key in ('adc0_channel', 'adc1_channel'):
         message.append(int(arduino_config[key]))
     send_to_arduino(message)
-    #print("Gain in ADC initialisation is:", receive_from_arduino())
+    # print("Gain in ADC initialisation is:", receive_from_arduino())
     if receive_from_arduino() == PC_OK:
         print("ADC Initalisation: DONE!")
         print("-----------------------")
@@ -306,7 +321,7 @@ def initialise_adcs(arduino_config):
         arduino_port.close()
         raise IOError("ADC Initalisation: FAILED!")
 
-#======================================
+# ======================================
 
 
 def serial_ports():
@@ -323,37 +338,36 @@ def serial_ports():
     """
     results = []
 
-    if sys.platform.startswith('win'):
-        ports = list(serial.tools.list_ports.comports())
-        for port in ports:
-            if 'Arduino Micro' in port[1]: results.append(port[0])
-    elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
-        # this excludes your current terminal "/dev/tty"
-        ports = glob.glob('/dev/tty[A-Za-z]*')
-    elif sys.platform.startswith('darwin'):
-        ports = glob.glob('/dev/tty[A-Za-z]*')
-    else:
-        raise EnvironmentError('Unsupported platform')
+    # if sys.platform.startswith('win'):
+        # # ports = list(serial.tools.list_ports.comports())
+        # ports = qts.QSerialPortInfo.availablePorts()
+        # for port in ports:
+            # if 'Arduino Micro' in port[1]: results.append(port[0])
+    # elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
+        # # this excludes your current terminal "/dev/tty"
+        # ports = glob.glob('/dev/tty[A-Za-z]*')
+    # elif sys.platform.startswith('darwin'):
+        # ports = glob.glob('/dev/tty[A-Za-z]*')
+    # else:
+        # raise EnvironmentError('Unsupported platform')
 
-    result_port = ''
-
-    for result in results:
-        try:
-            s = serial.Serial(result)
-            s.close()
-            result_port = result
-        except (OSError, serial.SerialException):
-            pass
-        except ValueError:
-            raise IOError("Couldn't find port to Arduino!")
-    if not results:
+    arduino_ports = [port
+                     for port in qts.QSerialPortInfo.availablePorts()
+                     if 'Arduino Micro' in port.description()]
+    if not arduino_ports:
         raise IOError("Couldn't find port to Arduino!")
-    if not result_port:
-        raise IOError("Unable to connect to Arduino, try disconnecting and "
-                      "connecting again.")
-    return result_port
 
-#======================================
+    for port_info in arduino_ports:
+        port = qts.QSerialPort(port_info)
+        if not port.open(port.ReadWrite):
+            continue
+        port.close()
+        return port_info
+
+    raise IOError("Unable to connect to Arduino, try "
+                  "disconnecting and connecting again.")
+
+# ======================================
 def set_voltage_and_measure(energy, settle_time = 0):
     """
     Function initialise dac and sends dac value to arduino.
@@ -369,14 +383,14 @@ def set_voltage_and_measure(energy, settle_time = 0):
     dac_out_vs_nominal_energy = 10/1000  # 10V / 1000 eV
     ouput_gain = 4  # Gain of the output stage on board
     conversion_factor = dac_out_vs_nominal_energy * 65536 / (v_ref_dac * ouput_gain)
-    
+
     # TODO: nominal energy to actual energy after calibration
     dac_value_temp = int(round(energy * conversion_factor))
     if dac_value_temp >= 65536:
         dac_value_temp = 65535
     if dac_value_temp <= 0:
         dac_value_temp = 0
-    dac_send = dac_value_temp.to_bytes(2,sign) + settle_time.to_bytes(2,sign)
+    dac_send = dac_value_temp.to_bytes(2, sign) + settle_time.to_bytes(2, sign)
     # print("DAC_send = " ,dac_value_temp)
     # print("DAC_tobytes =" ,dac_value_temp.to_bytes(2, sign), " t= ",round(1000*time.time()))
     send_to_arduino(PC_SET_VOLTAGE)
@@ -387,7 +401,7 @@ def set_voltage_and_measure(energy, settle_time = 0):
     else:
         identify_error()
         arduino_port.close()
-#======================================
+# ======================================
 
 def start_autogain():
     """
@@ -408,7 +422,7 @@ def start_autogain():
         raise IOError("Arduino doesnt react when python tries to initialise "
                       "the Autogain Function, Program stops")
 
-#======================================
+# ======================================
 
 def create_csv(multilist, path):
     """
@@ -422,7 +436,7 @@ def create_csv(multilist, path):
     i = 0
     while os.path.exists(os.path.join(path, "sample%s.csv" % i)):
         i += 1
-    #timestamp = datetime.now()
+    # timestamp = datetime.now()
     df = pd.DataFrame(multilist, columns=['ADC_VAL', 'DAC_Val', 'DeltaTime'])
     print("-----------------------")
     print(df)
@@ -430,7 +444,7 @@ def create_csv(multilist, path):
     df.to_csv(os.path.join(path, "sample%s.csv" % i), index=True)
     print("CSV File was created")
 
-#======================================
+# ======================================
 
 def TUI():
     """
@@ -449,7 +463,7 @@ def TUI():
             start_energy = float(input(
                 "\nPlease enter the energy to START with in Volt. "
                 f"Allowed are values between 0 V and "
-                f"{(max_energy)*100:.1f} V:\n"
+                f"{max_energy*100:.1f} V:\n"
                 ))/100
             if start_energy < 0 or start_energy > max_energy:
                 print("Invalid")
@@ -461,7 +475,7 @@ def TUI():
                 print("Invalid")
         delta_energy = -1
         while delta_energy < 0:
-            delta_energy =  float(
+            delta_energy = float(
                 input("Please enter the DELTA energy in Volt:\n"))/100
             if delta_energy < 0:
                 print("Invalid")
@@ -540,10 +554,10 @@ def identify_error():
     ErrorMessage = receive_from_arduino()
     for key, value in arduino_states.items():
         if int(value) == ErrorMessage[0]:
-            print (key)
+            print(key)
     for key, value in error_bytes.items():
         if int(value) == ErrorMessage[1]:
-            print (key)
+            print(key)
 
 def prepare_for_measurement(configuration_section):
 
@@ -551,7 +565,7 @@ def prepare_for_measurement(configuration_section):
     dac_first_settletime = config.getint('measurement_settings',
                                          'dac_first_settle_time')
     start_energy = config.getfloat('measurement_settings', 'start_energy')
-        
+
     dac_energy = energy_calibration_curve()
 
     # Connect with Arduino, reset it and flush input buffer
@@ -585,7 +599,7 @@ def measure_iv_video():
     delta_energy = config.getfloat('measurement_settings', 'delta_energy')
     end_energy = config.getfloat('measurement_settings', 'end_energy')
 
-    #Connect with Camera and initialize it
+    # Connect with Camera and initialize it
     CameraObject = Camera.camera_from_ini(
         config['camera_settings']['class_name'])
     CameraObject.initialize(config['camera_settings'])
@@ -624,13 +638,13 @@ def measure_iv_video():
             else:
                 pass
                 # CameraObject.snap_image()
-            #print('Gain: %i \nDAC-Value: %f' % (int(receive_from_arduino()),
+            # print('Gain: %i \nDAC-Value: %f' % (int(receive_from_arduino()),
             #                                   actual_energy))
-            print('nDAC-Value: %f' % (actual_energy))
+            print('nDAC-Value: %f' % actual_energy)
             adc0_value = bytes_to_float(receive_from_arduino())
             adc1_value = bytes_to_float(receive_from_arduino())
             adc2_value = bytes_to_float(receive_from_arduino())
-            #adc0 is ADC0, adc1 is ADC1 and adc2 is the LM35 in the Arduino code
+            # adc0 is ADC0, adc1 is ADC1 and adc2 is the LM35 in the Arduino code
             print("ADC0_VAlUE:", adc0_value*I0_conversion_factor)
             print("ADC1_VAlUE:", adc1_value)
             print("ADC2_VAlUE:", adc2_value,
@@ -645,8 +659,8 @@ def measure_iv_video():
     # finally:
     except KeyboardInterrupt:
         CameraObject.stop_camera()
-        #send_to_arduino(PC_RESET)
-        #Reset would clear calibration: not necessary
+        # send_to_arduino(PC_RESET)
+        # Reset would clear calibration: not necessary
         set_voltage_and_measure(dac_value_end)
         arduino_port.close()
 
@@ -681,14 +695,14 @@ def test_iv_video():
         print("Please check the starting and ending energy and the stepsize.")
         raise RuntimeError("Number of steps could not be calculated!")
     nominal_energy_csv = np.linspace(start_energy, end_energy, npoints+1)
-    
+
     for actual_energy in nominal_energy_csv:
         set_voltage_and_measure(actual_energy, dac_settle_time)
         print(actual_energy)
         data = receive_from_arduino()
         if len(data) == 1:
-           identify_error()
-           break
+            identify_error()
+            break
         else:
             adc0_value = bytes_to_float(data)
         adc1_value = bytes_to_float(receive_from_arduino())
@@ -712,7 +726,7 @@ def test_iv_video():
     ax1.set_xlabel('energy')
     ax1.plot(nominal_energy_csv, adc0_value_csv, '.')
     ax1.plot(nominal_energy_csv, fit_polynomial(nominal_energy_csv), '-')
-    
+
     ax2.set_ylabel('residuals')
     ax2.set_xlabel('true energy')
     ax2.plot(nominal_energy_csv,
@@ -727,7 +741,7 @@ def change_measurement_mode(measurement_mode):
     """
     PC_CHANGE_MEASUREMENT_MODE = config.getint('communication_bytes',
                                                'PC_CHANGE_MEAS_MODE')
-    PC_ERROR = config.getint('communication_bytes', 
+    PC_ERROR = config.getint('communication_bytes',
                              'PC_ERROR').to_bytes(1, sign)
     send_to_arduino(PC_CHANGE_MEASUREMENT_MODE)
     message = []
@@ -767,20 +781,28 @@ def quick_measurements(measure_what='I0', settle_time_scaling=1):
     prepare_for_measurement(config_section)
     dac_settle_time = config.getint('measurement_settings', 'dac_settle_time')
     dac_first_settle_time = config.getint('measurement_settings',
-                                         'dac_first_settle_time')
+                                          'dac_first_settle_time')
     dac_value_end = config.getfloat('measurement_settings', 'dac_value_end')
-    continuous_measurement_points = config.getint('measurement_settings', 
-                                                 'continuous_measurement_points')    
-    continuous_measurement_loops = config.getint('measurement_settings', 
-                                                 'continuous_measurement_loops')
+    continuous_measurement_points = config.getint('measurement_settings',
+                                                 'continuous_measurement_points')
+    continuous_measurement_loops = config.getint('measurement_settings',
+                                                'continuous_measurement_loops')
     start_energy = config.getfloat('measurement_settings', 'start_energy')
     end_energy = config.getfloat('measurement_settings', 'end_energy')
+    update_rate_raw = config.getint(config_section, 'update_rate')
+    update_rate = config.getint('adc_update_rate', str(update_rate_raw))
 
     adc0_value_csv = []
     adc1_value_csv = []
     adc2_value_csv = []
     timestamp = []
     timestart = time.time()
+    for _ in range(3):
+        set_voltage_and_measure(end_energy, dac_settle_time)
+        receive_from_arduino()
+        receive_from_arduino()
+        receive_from_arduino()
+        set_voltage_and_measure(start_energy, dac_first_settle_time)
     j = 1
     while j <= continuous_measurement_loops:
         set_voltage_and_measure(start_energy, dac_first_settle_time)
@@ -810,9 +832,9 @@ def quick_measurements(measure_what='I0', settle_time_scaling=1):
         j += 1
 
         change_measurement_mode('continuous_measurement_no')
-    
+
     set_voltage_and_measure(dac_value_end)
-    
+
     dac_settle_time = config.getint('measurement_settings', 'dac_settle_time')
     times = np.arange(continuous_measurement_points)
     fig, (ax1, ax2) = plt.subplots(2, 1)
@@ -821,12 +843,12 @@ def quick_measurements(measure_what='I0', settle_time_scaling=1):
     averaged = np.zeros(np.shape(times))
     for i, data in enumerate(adc0_value_csv):
         averaged = np.add(averaged, data)
-        ax1.plot(times*20 + 60 + dac_settle_time*settle_time_scaling**i,
+        ax1.plot((times + 3)*1000/update_rate + dac_settle_time*settle_time_scaling**i,
                  data, '.')
 
-    ax2.set_ylabel('Average' + y_title)
+    ax2.set_ylabel('Average ' + y_title)
     ax2.set_xlabel('Time since set voltage (ms)')
-    ax2.plot(times*20 + 60,
+    ax2.plot((times + 3)*1000/update_rate,
              averaged/continuous_measurement_loops,
              '.')
     plt.show()
@@ -848,8 +870,8 @@ def test_single_ramp_quick_measurements(measure_what='I0'):
     dac_settle_time = config.getint('measurement_settings', 'dac_settle_time')
     dac_first_settle_time = config.getint('measurement_settings',
                                           'dac_first_settle_time')
-    continuous_measurement_points = config.getint('measurement_settings', 
-                                                 'continuous_measurement_points') 
+    continuous_measurement_points = config.getint('measurement_settings',
+                                                 'continuous_measurement_points')
     start_energy = config.getfloat('measurement_settings', 'start_energy')
     delta_energy = config.getfloat('measurement_settings', 'delta_energy')
     end_energy = config.getfloat('measurement_settings', 'end_energy')
@@ -865,7 +887,7 @@ def test_single_ramp_quick_measurements(measure_what='I0'):
         print("Please check the starting and ending energy and the stepsize.")
         raise RuntimeError("Number of steps could not be calculated!")
     nominal_energy_csv = np.linspace(start_energy, end_energy, npoints+1)
-    
+
     for actual_energy in nominal_energy_csv:
         change_measurement_mode('continuous_measurement_yes')
         set_voltage_and_measure(actual_energy, 0)
@@ -884,25 +906,30 @@ def test_single_ramp_quick_measurements(measure_what='I0'):
         adc0_value_csv.append(adc0_value_this_loop)
 
         change_measurement_mode('continuous_measurement_no')
-        
+
     set_voltage_and_measure(start_energy, dac_first_settle_time)
 
     return adc0_value_csv
-    
+
 def multiple_ramps_quick_measurements(measure_what='I0'):
+    conversion_factor = 1
     if measure_what == 'I0':
         config_section = 'iv_movie_configuration'
+        conversion_factor = config.getint('leed_hardware',
+                                          'I0_conversion_factor')
         y_title = 'I0 (uA)'
     elif measure_what == 'HV':
         config_section = 'measure_filament_configuration'
         y_title = 'Energy (eV)'
+    else:
+        raise ValueError("Unknown measurement mode")
     prepare_for_measurement(config_section)
     update_rate_raw = config.getint(config_section, 'update_rate')
     update_rate = config.getint('adc_update_rate', str(update_rate_raw))
     dac_value_end = config.getfloat('measurement_settings', 'dac_value_end')
-    num_ramps = config.getint('measurement_settings', 
+    num_ramps = config.getint('measurement_settings',
                               'continuous_measurement_loops')
-    continuous_measurement_points = config.getint('measurement_settings', 
+    continuous_measurement_points = config.getint('measurement_settings',
                                                  'continuous_measurement_points')
     start_energy = config.getfloat('measurement_settings', 'start_energy')
     end_energy = config.getfloat('measurement_settings', 'end_energy')
@@ -938,21 +965,20 @@ def multiple_ramps_quick_measurements(measure_what='I0'):
                 break
             i += 1
         relaxation_time.append(continuous_measurement_points - i)
-    
+
     relaxation_time = (np.asarray(relaxation_time) + 3)*1000/update_rate
-    
+
     energy_scale = np.linspace(start_energy, end_energy, num_voltage_steps)
     fig, (ax1, ax2, ax3) = plt.subplots(3, 1)
     ax1.set_ylabel(y_title)
     ax1.set_xlabel('Time since set voltage (ms)')
-    averaged = np.zeros(np.shape(times))
     for sigma, step in zip(standard_deviation, steps):
         _ = ax1.plot(times, step, '.')[0]
         ax1.plot((times[0], times[-1]), (sigma_mult*sigma, sigma_mult*sigma),
                  '-', color=_.get_color())
         ax1.plot((times[0], times[-1]), (-sigma_mult*sigma, -sigma_mult*sigma),
                  '-', color=_.get_color())
-    ax2.set_ylabel("Relaxtion time (ms)")
+    ax2.set_ylabel("Relaxation time (ms)")
     ax2.set_xlabel("Energy (eV)")
     ax2.plot(energy_scale, relaxation_time, '.')
     ax3.set_ylabel("Sigma (eV)")
@@ -961,7 +987,7 @@ def multiple_ramps_quick_measurements(measure_what='I0'):
     plt.show()
     set_voltage_and_measure(dac_value_end)
     return times, steps
-    
+
 def long_term_measurements(measure_what='I0', interval=5):
     conversion_factor = 1
     if measure_what == 'I0':
@@ -976,14 +1002,14 @@ def long_term_measurements(measure_what='I0', interval=5):
         raise ValueError("Unknown measurement mode")
     dac_value_end = config.getfloat('measurement_settings', 'dac_value_end')
     prepare_for_measurement(config_section)
-    
+
     counter = 720
     adc0_value_csv = []
     adc1_value_csv = []
     adc2_value_csv = []
     timestamp = []
     timestart = time.time()
-    
+
     while counter:
         adc_measure_only()
         adc0_value = bytes_to_float(receive_from_arduino())
@@ -996,7 +1022,9 @@ def long_term_measurements(measure_what='I0', interval=5):
         timestamp.append(time_temp)
         counter -= 1
         time.sleep(interval)
-        
+
+    set_voltage_and_measure(dac_value_end)
+
     fig, (ax1, ax2, ax3) = plt.subplots(3, 1)
     ax1.set_ylabel(y_title)
     ax1.set_xlabel('Time since set voltage (s)')
@@ -1009,20 +1037,229 @@ def long_term_measurements(measure_what='I0', interval=5):
     ax3.plot(timestamp, adc2_value_csv, '.')
     plt.show()
     return timestamp, adc0_value_csv, adc1_value_csv, adc2_value_csv
-    
-    
+
+def quick_up_down_measurements(measure_what='I0', settle_time_scaling=1):
+    """"""
+    conversion_factor = 1
+    if measure_what == 'I0':
+        config_section = 'iv_movie_configuration'
+        conversion_factor = config.getint('leed_hardware',
+                                          'I0_conversion_factor')
+        y_title = 'I0 (uA)'
+    elif measure_what == 'HV':
+        config_section = 'measure_filament_configuration'
+        y_title = 'Energy (eV)'
+    else:
+        raise ValueError("Unknown measurement mode")
+    dac_energy = energy_calibration_curve()
+    prepare_for_measurement(config_section)
+    dac_settle_time = config.getint('measurement_settings', 'dac_settle_time')
+    dac_first_settle_time = config.getint('measurement_settings',
+                                         'dac_first_settle_time')
+    dac_value_end = config.getfloat('measurement_settings', 'dac_value_end')
+    continuous_measurement_points = config.getint('measurement_settings',
+                                                 'continuous_measurement_points')
+    continuous_measurement_loops = config.getint('measurement_settings',
+                                                 'continuous_measurement_loops')
+    start_energy = config.getfloat('measurement_settings', 'start_energy')
+    end_energy = config.getfloat('measurement_settings', 'end_energy')
+    update_rate_raw = config.getint(config_section, 'update_rate')
+    update_rate = config.getint('adc_update_rate', str(update_rate_raw))
+
+    adc0_value_csv = []
+    adc1_value_csv = []
+    adc2_value_csv = []
+    timestamp = []
+    timestart = time.time()
+    for _ in range(3):
+        set_voltage_and_measure(end_energy, dac_settle_time)
+        receive_from_arduino()
+        receive_from_arduino()
+        receive_from_arduino()
+        set_voltage_and_measure(start_energy, dac_first_settle_time)
+    j = 1
+    while j <= continuous_measurement_loops:
+        set_voltage_and_measure(start_energy, dac_first_settle_time)
+        change_measurement_mode('continuous_measurement_yes')
+        set_voltage_and_measure(end_energy+0.1*np.sign(end_energy-start_energy), 0)
+        set_voltage_and_measure(end_energy, dac_settle_time)
+
+        i = 1
+        adc0_value_this_loop = []
+        while i <= continuous_measurement_points:
+            i += 1
+            adc0_value = bytes_to_float(receive_from_arduino())
+            adc1_value = bytes_to_float(receive_from_arduino())
+            adc2_value = bytes_to_float(receive_from_arduino())
+            adc0_value_this_loop.append(adc0_value*conversion_factor)
+            adc1_value_csv.append(adc1_value)
+            adc2_value_csv.append(adc2_value)
+            time_temp = time.time() - timestart
+            timestamp.append(time_temp)
+        dac_settle_time *= settle_time_scaling
+        adc0_value_csv.append(adc0_value_this_loop)
+        j += 1
+
+        change_measurement_mode('continuous_measurement_no')
+
+    set_voltage_and_measure(dac_value_end)
+
+    dac_settle_time = config.getint('measurement_settings', 'dac_settle_time')
+    times = np.arange(continuous_measurement_points)
+    fig, (ax1, ax2) = plt.subplots(2, 1)
+    ax1.set_ylabel(y_title)
+    ax1.set_xlabel('Time since set voltage (ms)')
+    averaged = np.zeros(np.shape(times))
+    for i, data in enumerate(adc0_value_csv):
+        averaged = np.add(averaged, data)
+        ax1.plot((times + 3)*1000/update_rate + dac_settle_time*settle_time_scaling**i,
+                 data, '.')
+
+    ax2.set_ylabel('Average ' + y_title)
+    ax2.set_xlabel('Time since set voltage (ms)')
+    ax2.plot((times + 3)*1000/update_rate,
+             averaged/continuous_measurement_loops,
+             '.')
+    plt.show()
+    plt.yscale('log')
+    yf = rfft(averaged[:]/continuous_measurement_loops)
+    xf = rfftfreq(continuous_measurement_points, 1 / update_rate)
+    plt.plot(xf, np.abs(yf))
+    plt.show()
+
+    return adc0_value_csv
+
+def quick_up_down_measurement_ramp(measure_what='I0', settle_time_scaling=1):
+    """"""
+    conversion_factor = 1
+    if measure_what == 'I0':
+        conversion_factor = config.getint('leed_hardware',
+                                          'I0_conversion_factor')
+    elif measure_what == 'HV':
+        pass
+    else:
+        raise ValueError("Unknown measurement mode")
+    dac_energy = energy_calibration_curve()
+    dac_settle_time = config.getint('measurement_settings', 'dac_settle_time')
+    dac_first_settle_time = config.getint('measurement_settings',
+                                         'dac_first_settle_time')
+    continuous_measurement_points = config.getint('measurement_settings',
+                                                 'continuous_measurement_points')
+    continuous_measurement_loops = config.getint('measurement_settings',
+                                                 'continuous_measurement_loops')
+    start_energy = config.getfloat('measurement_settings', 'start_energy')
+    end_energy = config.getfloat('measurement_settings', 'end_energy')
+    delta_energy = config.getfloat('measurement_settings', 'delta_energy')
+
+    adc0_value_csv = []
+    adc1_value_csv = []
+    adc2_value_csv = []
+    timestamp = []
+    timestart = time.time()
+
+    npoints = int((end_energy-start_energy)/delta_energy)
+    if npoints <= 0:
+        print("Please check the starting and ending energy and the stepsize.")
+        raise RuntimeError("Number of steps could not be calculated!")
+    nominal_energy_csv = np.linspace(start_energy, end_energy, npoints+1)
+
+    if start_energy > 0:
+        set_voltage_and_measure(start_energy - delta_energy,
+                                dac_first_settle_time)
+    else:
+        set_voltage_and_measure(0, dac_first_settle_time)
+
+    for actual_energy in nominal_energy_csv:
+        adc0_value_this_loop = []
+        set_voltage_and_measure(actual_energy+0.1*np.sign(delta_energy), 0)
+        change_measurement_mode('continuous_measurement_yes')
+        set_voltage_and_measure(actual_energy, dac_settle_time)
+        i = 1
+        while i <= continuous_measurement_points:
+            i += 1
+            adc0_value = bytes_to_float(receive_from_arduino())
+            adc1_value = bytes_to_float(receive_from_arduino())
+            adc2_value = bytes_to_float(receive_from_arduino())
+            adc0_value_this_loop.append(adc0_value*conversion_factor)
+            adc1_value_csv.append(adc1_value)
+            adc2_value_csv.append(adc2_value)
+            time_temp = time.time() - timestart
+            timestamp.append(time_temp)
+        dac_settle_time *= settle_time_scaling
+        adc0_value_csv.append(adc0_value_this_loop)
+        change_measurement_mode('continuous_measurement_no')
+
+    return adc0_value_csv
+
+def multiple_up_down_measurement_ramps(measure_what='I0'):
+    if measure_what == 'I0':
+        config_section = 'iv_movie_configuration'
+        y_title = 'I0 (uA)'
+    elif measure_what == 'HV':
+        config_section = 'measure_filament_configuration'
+        y_title = 'Energy (eV)'
+    else:
+        raise ValueError("Unknown measurement mode")
+    prepare_for_measurement(config_section)
+    update_rate_raw = config.getint(config_section, 'update_rate')
+    update_rate = config.getint('adc_update_rate', str(update_rate_raw))
+    num_ramps = config.getint('measurement_settings',
+                              'continuous_measurement_loops')
+    continuous_measurement_points = config.getint('measurement_settings',
+                                                 'continuous_measurement_points')
+    start_energy = config.getfloat('measurement_settings', 'start_energy')
+    end_energy = config.getfloat('measurement_settings', 'end_energy')
+    dac_value_end = config.getfloat('measurement_settings', 'dac_value_end')
+    dac_first_settle_time = config.getint('measurement_settings',
+                                         'dac_first_settle_time')
+    adc0_value_csv = []
+    i=1
+    while i <= num_ramps:
+        adc0_value_csv.append(quick_up_down_measurement_ramp(measure_what))
+        i += 1
+    set_voltage_and_measure(dac_value_end, dac_first_settle_time)
+    # times in milliseconds. The +3 is because of triggering.
+    n_points_ave = round(0.25*continuous_measurement_points)
+    times = (np.arange(continuous_measurement_points) + 3)*1000/update_rate
+    adc0_values = np.asarray(adc0_value_csv)
+    average = np.sum(adc0_values, axis=0)/num_ramps
+    shift = np.sum(average[:,-n_points_ave:], axis=1)/n_points_ave
+    steps = (average.T - shift).T
+
+    average_heights = []
+    average_heights = shift[1:] - shift[:-1]
+    average_heights = np.insert(average_heights, 0, shift[0])
+
+    fig, (ax1, ax2) = plt.subplots(2, 1)
+    ax1.set_ylabel(y_title)
+    ax1.set_xlabel('Time since set voltage (ms)')
+    xf = rfftfreq(continuous_measurement_points, 1 / update_rate)
+    ax2.set_yscale('log')
+    ax2.set_ylabel('FFT (absolute value)')
+    ax2.set_xlabel('Frequency (Hz)')
+    for step in steps:
+        ax1.plot(times, step, '.')
+        ax1.plot((times[0], times[-1]), (average_heights, average_heights), '-')
+        yf = rfft(step/num_ramps)
+        ax2.plot(xf, np.abs(yf))
+    plt.show()
+    return times, steps
+
 def main():
     global arduino_port
+    app = qtw.QApplication(sys.argv)
     # measure_iv_video()
     # test_iv_video()
-    # ret_value = quick_measurements('I0')
-    ret_value = quick_measurements('HV', 2)
+    # ret_value = quick_measurements('I0', 2)
+    # ret_value = quick_measurements('HV', 2)
     # calibrate_real_energy_scale()
     # ret_value = multiple_ramps_quick_measurements('HV')
-    # prepare_for_measurement('measure_filament_configuration')
-    # ret_value = test_single_ramp_quick_measurements('HV')
     # ret_value = long_term_measurements('HV')
+    # ret_value = long_term_measurements('I0')
+    ret_value = quick_up_down_measurements('I0', 2)
+    # ret_value = multiple_up_down_measurement_ramps('I0')
     arduino_port.close()
+    sys.exit(app.exec_())
     print('Arduino Disconnected')
     return ret_value
 
@@ -1032,16 +1269,16 @@ def do_nothing_on_purpose():  # MR: just a mock I needed for my presentation
     start_energy, end_energy, delta_energy = TUI()
     actual_energy = start_energy
 
-    time.sleep(1) #time to settle connection
+    time.sleep(1) # time to settle connection
     print("Arduino Initialisation: DONE!")
 
-    time.sleep(0.5) #time to settle connection
+    time.sleep(0.5) # time to settle connection
     print("ADC Initalisation: DONE!")
     print("-----------------------")
-    time.sleep(0.2) #time to settle connection
+    time.sleep(0.2) # time to settle connection
     print("Autogain: IN PROCESS...")
 
-    time.sleep(0.2) #time to settle connection
+    time.sleep(0.2) # time to settle connection
     print("ADC Initalisation: DONE!")
     print("-----------------------")
 
@@ -1068,7 +1305,7 @@ def calibrate_real_energy_scale():
     """
     prepare_for_measurement('measure_filament_configuration')
     dac_settle_time = config.getint('measurement_settings', 'dac_settle_time')
-    #start_energy, end_energy, delta_energy = TUI()
+    # start_energy, end_energy, delta_energy = TUI()
     start_energy = config.getfloat('measurement_settings', 'start_energy')
     delta_energy = config.getfloat('measurement_settings', 'delta_energy')
     end_energy = config.getfloat('measurement_settings', 'end_energy')
@@ -1107,7 +1344,7 @@ def calibrate_real_energy_scale():
     ax2.set_ylabel('residuals')
     ax2.set_xlabel('true energy')
     print("[", ", ".join(f"{ci:.20f}" for ci in fit_polynomial.coef), "]", sep="")
-    
+
     ax1.plot(true_energy_csv, nominal_energy_csv, '.')
     ax1.plot(true_energy_csv, fit_polynomial(true_energy_csv), '-')
     ax2.plot(true_energy_csv,

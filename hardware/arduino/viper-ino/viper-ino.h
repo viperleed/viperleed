@@ -52,7 +52,7 @@ union floatOrBytes{
 #define MSG_START 254              // Beginning of a serial message
 #define MSG_END 255                // End of a serial message
 #define MSG_SPECIAL_BYTE 252       // Prevents clashing of data with (start, end, error)
-#define MSG_MAX_LENGTH 16          // Max no. of bytes in an incoming serial message     // TODO: NEED TO INCREASE THIS TO HOST THE 3 FLOAT ADC VALUES
+#define MSG_MAX_LENGTH 32          // Max no. of bytes in an incoming serial message
 #ifndef SERIAL_BUFFER_SIZE
     #define SERIAL_BUFFER_SIZE 64  // Arduino limit for serial buffer. If buffer is full, new bytes are DISCARDED
 #endif
@@ -67,19 +67,20 @@ union floatOrBytes{
 #define PC_RESET          82    // PC requested a global reset (ASCII 'R')
 #define PC_SET_VOLTAGE    86    // PC requested to set a certain energy (ASCII 'V')
 #define PC_MEASURE_ONLY   77    // PC requested measurement without changing Voltage (ASCII 'M')
-#define PC_CHANGE_MEAS_MODE 32  // PC requested a change between continuous and single measurement mode
+#define PC_CHANGE_MEAS_MODE 109  // PC requested a change between continuous and single measurement mode
 
 // Error codes
 #define ERROR_NO_ERROR            0   // No error
 #define ERROR_SERIAL_OVERFLOW     1   // Hardware overflow of Arduino serial
 #define ERROR_MSG_TOO_LONG        2   // Too many characters in message from PC
-#define ERROR_MSG_INCONSITENT     3   // Message received from PC is inconsistent. Probably corrupt.
+#define ERROR_MSG_INCONSISTENT     3   // Message received from PC is inconsistent. Probably corrupt.
 #define ERROR_MSG_UNKNOWN         4   // Unknown request from PC
 #define ERROR_MSG_DATA_INVALID    5   // Request from PC contains invalid information
 #define ERROR_NEVER_CALIBRATED    6   // The ADCs have never been calibrated before since bootup
 #define ERROR_TIMEOUT             7   // Timed out while waiting for something
 #define ERROR_ADC_SATURATED       8   // One of the ADC values reached saturation, and gain can't be decreased further
 #define ERROR_TOO_HOT             9   // The temperature read by the LM35 is too high
+#define ERROR_HARDWARE_UNKNOWN   10   // The PC never asked for the hardware configuration
 #define ERROR_RUNTIME           255   // Some function has been called from an inappropriate state. This is to flag possible bugs for future development.
 byte errorTraceback[2];               // Keeps track of: (0) the state that produced the error, (1) which error occurred (one of ERROR_*)
 
@@ -171,8 +172,10 @@ uint16_t      dacSettlingTime = 100;  // The time interval for the DAC output to
                                       //   This is just a default value. The actual one comes
                                       //   from the PC with a PC_SET_VOLTAGE command, and is
                                       //   read in setVoltage()
+byte nextVoltageStep;                 // Counter for multiple voltage steps
 
 uint16OrBytes hardwareDetected;       // Bits set indicate this hardware is present/jumper closed
+bool hardwareNeverChecked = true;     // Is set false if the PC asked for the hardware configuration
 
 // ADCs: measurement frequency, channel, gain
 byte     adcUpdateRate;        // Update rate for both ADCs (will be set for line frequency)
@@ -211,9 +214,9 @@ uint16_t numMeasurementsToDo = 1;           // No. of ADC measurements to do bef
 uint16_t numMeasurementsToDoBackup = 1;     // Copy of the previous one, used to restore the previous value after auto-gain is done
 uint16_t numMeasurementsDone;               // Counter for the number of ADC measurements done so far
 int32_t  summedMeasurements[N_MAX_MEAS];    // Measurements of ADCs and LM35 are summed up here
-uint16_t ContinuousMeasurementInterval = 0; // Time between measurements if continuous-measurement mode is on
+uint16_t continuousMeasurementInterval;     // Time between measurements if continuous-measurement mode is on
 
-floatOrBytes fDataOutput[N_MAX_MEAS];     // Measurements in physical units  // TODO: rename
+floatOrBytes fDataOutput[N_MAX_MEAS];       // Measurements in physical units  // TODO: rename
 
 
 

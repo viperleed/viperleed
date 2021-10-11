@@ -387,6 +387,7 @@ def writeAUXNONSTRUCT(sl, rp):
 
 def writeAUXGEO(sl, rp):
     """Writes AUXGEO, which is part of the input FIN for the refcalc."""
+    slab_c = np.copy(sl.ucell[:, 2])
     if rp.LAYER_STACK_VERTICAL:
         sl = copy.deepcopy(sl)
         sl.projectCToZ()
@@ -505,31 +506,20 @@ def writeAUXGEO(sl, rp):
     output += ('  0                       TSLAB = 0: compute bulk using layer '
                'doubling\n')
 
+    # determine ASA
     if type(rp.BULK_REPEAT) == np.ndarray:
-        bulkc = np.copy(rp.BULK_REPEAT) * np.array([1, 1, -1])
-        if bulkc[2] < 0:
-            bulkc = -bulkc
-        if rp.N_BULK_LAYERS == 2:
-            zdiff = bulkc[2] - (blayers[1].cartbotz - blayers[0].cartbotz)
-            asaZ = bulkc[2] - (blayers[1].cartbotz - blayers[0].cartori[2])
-        else:
-            zdiff = bulkc[2]
-            asaZ = bulkc[2] - (blayers[0].cartbotz - blayers[0].cartori[2])
-        bulkc = bulkc * zdiff/bulkc[2]
-        bulkc[2] = asaZ
-        bvectors_ASA = bulkc
+        bvectors_ASA = np.copy(rp.BULK_REPEAT) * np.array([1, 1, -1])
+        if bvectors_ASA[2] < 0:
+            bvectors_ASA = -bvectors_ASA
+        bulkc = bvectors_ASA[2]
     else:
-        if rp.N_BULK_LAYERS == 2:
-            zdiff = rp.BULK_REPEAT - (blayers[1].cartbotz
-                                      - blayers[0].cartbotz)
-            asaZ = rp.BULK_REPEAT - blayers[1].cartbotz + blayers[0].cartori[2]
-        else:
-            zdiff = rp.BULK_REPEAT
-            asaZ = rp.BULK_REPEAT - blayers[0].cartbotz + blayers[0].cartori[2]
-        # zdiff = rp.ASAZ + blayers[0].cartbotz - blayers[0].cartori[2]
-        bvectors_ASA = [-sl.ucell[0][2] * zdiff/sl.ucell[2][2],
-                        -sl.ucell[1][2] * zdiff/sl.ucell[2][2],
-                        asaZ]
+        bulkc = np.copy(rp.BULK_REPEAT)
+        bvectors_ASA = -slab_c * bulkc/slab_c[2]
+    # bulkc is now the repeat length along c. now correct for layer thickness:
+    if rp.N_BULK_LAYERS == 2:
+        bvectors_ASA[2] = bulkc - (blayers[1].cartbotz - blayers[0].cartori[2])
+    else:
+        bvectors_ASA[2] = bulkc - (blayers[0].cartbotz - blayers[0].cartori[2])
 
     # determine ASBULK - interlayer vector between bulk layers
     if rp.N_BULK_LAYERS == 2:
@@ -541,8 +531,8 @@ def writeAUXGEO(sl, rp):
         bl2num = blayers[1].num
         # add layerOffsets for Bravais layers:
         bvectors_ASBULK -= layerOffsets[blayers[0].num+1]
-        # bvectors_ASBULK += (layerOffsets[blayers[1].num+1]
-        #                     + layerOffsets[blayers[0].num])
+        # correct ASA xy in case ASBULK already includes some:
+        bvectors_ASA[:2] -= bvectors_ASBULK[:2]
     else:
         bl2num = blayers[0].num
         bvectors_ASBULK = bvectors_ASA

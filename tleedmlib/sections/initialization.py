@@ -218,6 +218,7 @@ def initialization(sl, rp, subdomain=False):
             "# The BULK_REPEAT vector is assumed to be parallel to the POSCAR "
             "c vector. Check POSCAR_bulk and the BULK_REPEAT thickness "
             "written to the PARAMETERS file.")
+        rp.checklist.append("Check bulk repeat vector in PARAMETERS")
         rp.setHaltingLevel(2)
 
     if bsl.planegroup == "unknown":

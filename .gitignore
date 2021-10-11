@@ -1,5 +1,6 @@
 # Ignore workspace and pycache:
 **/__pycache__
+**/.idea
 .spyproject
 test.py
 *wrong*
