@@ -118,7 +118,6 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
         """Return whether the controller is busy."""
         if self.serial.busy:
             return True
-        # TODO: think about corner cases (setting controller busy/not busy wrongly because we only see serial busy)
         return self.__busy
 
     def set_busy(self, is_busy):
@@ -348,4 +347,21 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
             self.serial.send_message(*data)
 
     def flush(self):
-        """TODO: clear unsent, set busy false and send abort"""
+        """Clear unsent, set busy false and send abort"""
+        self.__unsent_messages = []
+        self.busy = False
+        self.abort_and_reset()
+
+    @abstractmethod
+    def abort_and_reset(self):
+        """Abort current task and reset the controller.
+
+        This method must be reimplemented in subclasses.
+        Abort what the controller is doing right now, reset
+        it and return to waiting for further instructions.
+
+        Returns
+        -------
+        None.
+        """
+        return

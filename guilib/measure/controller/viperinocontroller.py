@@ -151,7 +151,6 @@ class ViPErinoController(MeasureController):
         message = []
         for value in energies_and_times:
             message.extend(value.to_bytes(2, 'big'))
-        # self.serial.send_message(pc_set_voltage, message)
         self.send_message(pc_set_voltage, message)
 
     def start_autogain(self):
@@ -166,7 +165,6 @@ class ViPErinoController(MeasureController):
         # TODO: Had issues in the beginning back then on omicron
         # (Gain too high)
         pc_autogain = self.settings.get('available_commands', 'PC_AUTOGAIN')
-        # self.serial.send_message(pc_autogain)
         self.send_message(pc_autogain)
 
     def set_up_adcs(self):
@@ -187,7 +185,6 @@ class ViPErinoController(MeasureController):
                                 'measurement_settings', 'num_meas_to_average'
                                 )
         message = [num_meas_to_average, *self.__adc_channels[:2]]
-        # self.serial.send_message(pc_set_up_adcs, message)
         self.send_message(pc_set_up_adcs, message)
 
     def get_hardware(self):
@@ -213,7 +210,6 @@ class ViPErinoController(MeasureController):
         """
         pc_configuration = self.settings.get('available_commands',
                                              'PC_CONFIGURATION')
-        # self.serial.send_message(pc_configuration)
         self.send_message(pc_configuration)
 
     def calibrate_adcs(self):
@@ -235,7 +231,6 @@ class ViPErinoController(MeasureController):
                                            'PC_CALIBRATION')
         update_rate = self.settings.getint('controller', 'update_rate')
         message = [update_rate, *self.__adc_channels[:2]]
-        # self.serial.send_message(pc_calibration, message)
         self.send_message(pc_calibration, message)
 
     def receive_measurements(self, receive):
@@ -291,7 +286,6 @@ class ViPErinoController(MeasureController):
         """
         pc_measure_only = self.settings.get('available_commands',
                                             'PC_MEASURE_ONLY')
-        # self.serial.send_message(pc_measure_only)
         self.send_message(pc_measure_only)
 
     def abort_and_reset(self):
@@ -305,7 +299,6 @@ class ViPErinoController(MeasureController):
         None.
         """
         pc_reset = self.settings.get('available_commands', 'PC_RESET')
-        # self.serial.send_message(pc_reset)
         self.send_message(pc_reset)
 
         self.begin_prepare_todos['get_hardware'] = True
@@ -378,17 +371,15 @@ class ViPErinoController(MeasureController):
         -------
         None.
         """
-        # TODO: better names
         super().set_continuous_mode(data)
         continuous, in_finalization = data
         continuous_mode = self.settings.get('available_commands',
                                             'pc_change_meas_mode')
         if continuous:
-            on = self.settings.getint('measurement_settings',
-                                      'continuous_measurement_yes')
+            mode_on = self.settings.getint('measurement_settings',
+                                           'continuous_measurement_yes')
         else:
-            on = self.settings.getint('measurement_settings',
-                                      'continuous_measurement_no')
-        # self.serial.send_message(continuous_mode, [on,0,0])
-        self.send_message(continuous_mode, [on,0,0])
+            mode_on = self.settings.getint('measurement_settings',
+                                           'continuous_measurement_no')
+        self.send_message(continuous_mode, [mode_on,0,0])
 
