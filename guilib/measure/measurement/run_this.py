@@ -6,6 +6,7 @@ from PyQt5 import (QtWidgets as qtw, QtCore as qtc)
 
 from energy_setpoint import MeasureEnergySetpoint
 from time_resolved import TimeResolved
+from iv_video import IVVideo
 
 
 class WindowDoesSomething(qtw.QWidget):
@@ -42,7 +43,7 @@ class WindowDoesSomething(qtw.QWidget):
                                     "Check if this file exists and is in the "
                                     "correct folder.")
             return
-        self.do_this = TimeResolved(config)
+        self.do_this = IVVideo(config)
 
         self.do_this.error_occurred.connect(self.error_occurred)
         self.do_this.finished.connect(self.__on_close_pressed)
