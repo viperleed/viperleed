@@ -15,7 +15,7 @@ import ast
 from numpy.polynomial.polynomial import Polynomial
 
 # ViPErLEED modules
-from measurementabc import MeasurementABC
+from viperleed.guilib.measure.measurement.measurementabc import MeasurementABC
 
 
 class MeasureEnergySetpoint(MeasurementABC):
@@ -34,7 +34,7 @@ class MeasureEnergySetpoint(MeasurementABC):
         self.__delta_energy = self.settings.getfloat('measurement_settings',
                                                      'delta_energy')
         self.__hv_settle_time = self.primary_controller.settings.getint(
-            'measurement_settings', 'settle_time')
+            'measurement_settings', 'hv_settle_time')
 
     def begin_measurement_preparation(self):
         """Start preparation for measurements.

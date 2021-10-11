@@ -14,7 +14,7 @@ which gives commands to the controller classes.
 from PyQt5 import QtCore as qtc
 
 # ViPErLEED modules
-from measurementabc import MeasurementABC
+from viperleed.guilib.measure.measurement.measurementabc import MeasurementABC
 
 
 class IVVideo(MeasurementABC):

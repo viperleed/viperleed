@@ -16,22 +16,11 @@ from abc import abstractmethod
 import csv
 import ast
 from configparser import ConfigParser
-# from time import localtime, strftime
+# from time import localtime, strftime  # Used in commented code
 
 from PyQt5 import QtCore as qtc
 
 # ViPErLEED modules
-# from viperleed.guilib.measure.hardwarebase import (
-    # emit_error, ViPErLEEDErrorEnum, QMetaABC,
-    # config_has_sections_and_options, class_from_name
-    # )
-
-# test
-import os, sys
-import time
-
-p = os.path.abspath('C:/Users/Florian/Documents/Uni/Masterarbeit/ViperLEED/')
-sys.path.insert(1, p)
 from viperleed.guilib.measure.hardwarebase import (
     emit_error, ViPErLEEDErrorEnum, QMetaABC,
     config_has_sections_and_options, class_from_name
