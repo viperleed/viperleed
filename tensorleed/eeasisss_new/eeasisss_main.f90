@@ -36,7 +36,7 @@
     call get_command_argument(iarg, argv) 
     selectcase(adjustl(argv))
       case("--help", "-h")
-write(*,*)"Object files are ~/bin/eeasisss.x and ~/bin/eeas.x, "
+write(*,*)"Object files are ~/bin/eeasisss and ~/bin/eeas, "
 write(*,*)"working directory is ./ ."
 write(*,*)"===================================================================="
 write(*,*)"--help or -h shows working space organization:"

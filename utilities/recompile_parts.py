@@ -178,10 +178,10 @@ def main():
 	############################
 
 	EEASiSSS = to_compile()
-	sources = ["eeasisss_init.f90", "eeasisss_main.f90", "eeasisss.f90"]
+	sources = ["eeas.f90", "eeasisss_init.f90", "eeasisss_main.f90", "eeasisss.f90"] # Order important since they depended on modules in previous files!!
 	destination_filename = "eeasisss"
 	flags = "-Ofast"  # optimization level 3
-	EEASiSSS.set_compiler(fortran_mpi_compiler)  # This needs to be MPI compiled
+	EEASiSSS.set_compiler(fortran_compiler)
 
 	for source_filename in sources:
 		source_path = this_directory.parent / 'tensorleed' / 'eeasisss_new' / source_filename
@@ -192,38 +192,14 @@ def main():
 
 	# Place module (.mod) files in specified directory rather then working directory (= utilities directory)
 	# See here for details: https://stackoverflow.com/questions/8855896/specify-directory-where-gfortran-should-look-for-modules
-	if EEASiSSS.compiler == 'mpiifort':
+	if EEASiSSS.compiler == 'ifort':
 		flags += " -I " + str((this_directory.parent / 'tensorleed' / 'eeasisss_new' / 'mod_files'))
-		flags += " -module" + str((this_directory.parent / 'tensorleed' / 'eeasisss_new' / 'mod_files'))
-	elif EEASiSSS.compiler == 'mpifort':
+		flags += " -module " + str((this_directory.parent / 'tensorleed' / 'eeasisss_new' / 'mod_files'))
+	elif EEASiSSS.compiler == 'gfortran':
 		flags += " -I " + str((this_directory.parent / 'tensorleed' / 'eeasisss_new' / 'mod_files'))
 		flags += " -J " + str((this_directory.parent / 'tensorleed' / 'eeasisss_new' / 'mod_files'))
 	EEASiSSS.set_flags(flags)
 	EEASiSSS.send_compile(suppress_fortran_warnings)
-
-	EEAS = to_compile()
-	sources = ["eeas.f90"]
-	destination_filename = "eeas"
-	flags = "-Ofast"  # optimization level 3
-	EEAS.set_compiler(fortran_compiler)  # This needs to be MPI compiled
-
-	for source_filename in sources:
-		source_path = this_directory.parent / 'tensorleed' / 'eeasisss_new' / source_filename
-		EEAS.add_source(source_path)
-	destination_path = this_directory.parent / 'tensorleed' / 'eeasisss_new' / destination_filename
-	EEAS.set_destination(destination_path)
-	EEAS.set_logname(logname)
-
-	# Place module (.mod) files in specified directory rather then working directory (= utilities directory)
-	# See here for details: https://stackoverflow.com/questions/8855896/specify-directory-where-gfortran-should-look-for-modules
-	if EEAS.compiler == 'ifort':
-		flags += " -I " + str((this_directory.parent / 'tensorleed' / 'eeasisss_new' / 'mod_files'))
-		flags += " -module" + str((this_directory.parent / 'tensorleed' / 'eeasisss_new' / 'mod_files'))
-	elif EEAS.compiler == 'gfortran':
-		flags += " -I " + str((this_directory.parent / 'tensorleed' / 'eeasisss_new' / 'mod_files'))
-		flags += " -J" + str((this_directory.parent / 'tensorleed' / 'eeasisss_new' / 'mod_files'))
-	EEAS.set_flags(flags)
-	EEAS.send_compile(suppress_fortran_warnings)
 
 if __name__ == "__main__":
 		main()

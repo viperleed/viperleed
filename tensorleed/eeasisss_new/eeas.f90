@@ -5,15 +5,15 @@
   !        KTH Royal Institute of Technology, Stockholm, Sweden.
   !Version: 28 March 2021.
   !-----------------------------------------------------------------------
-  program eeas
-
+  module eeas ! AMI: changed program eeas into module eeas
+  implicit none
   !program EEAS
   !Elastic Electron-Atom Scattering in Solids and Solid Surfaces,
   !author: John Rundgren, jru@kth.se .
   !The author appreciates acknowledgement in publications by citation:
   !J. Rundgren, Phys.Rev.B68,125405(2003),
   !             Phys.Rev.B76,195441(2007).
-  implicit none
+
   character(len=1) :: Pot,WF
   character(len=127) :: outdir
   character(len=3) :: cie
@@ -47,8 +47,13 @@
   real(dp) :: pF,Esdat,Lsdat
   real(dp),allocatable :: EmVxc0(:),Lrs(:),Ltest(:),Lconst(:)
 
+    contains
+!-----------------------------------------------------------------------
+    subroutine read_eeas()
+    implicit none
+
   !EEAS import from EEASiSSS.
-  open(1732,file='../uinp1',form='unformatted',status='unknown')
+  open(1732,file='./uinp1',form='unformatted',status='unknown') ! AMI: changed from ../uinp to ./uinp
   read(1732) nxx,nieq,ne,nlat,nshell,nsp,nsr,nthread,lmax
   close(1732)
   !
@@ -60,25 +65,27 @@
     psu(0:lmax,nieq),psd(0:lmax,nieq), &
     psu1(0:lmax,nieq),psd1(0:lmax,nieq) )
   !
-  open(1732,file='../uinp2',form='unformatted',status='unknown')
+  open(1732,file='./uinp2',form='unformatted',status='unknown') ! AMI: changed from ../uinp to ./uinp
   read(1732) outdir,Pot,WF,idElemA,idZA,neq,nx,dx,rx,ad,ia, &
     sp,sr,sdat,eev,Vcry,Vcry0,rmt,nxR,z,rho,rs,fxc,relerr,abserr
   close(1732)
   !
   !THREAD definition.
-  open(20,file='threadno',status='unknown')
-  read(20,*) ithread
-  close(20)
+  !open(20,file='threadno',status='unknown')
+  !read(20,*) ithread
+  !close(20)
   !
   !LOGFILE and RESULT of eeas(ithread,ie).
   psu=0.d0; psd=0.d0; psu1=0.d0; psd1=0.d0
-  do ie=ithread,ne,nthread
+
+  ! Loop below goes over all ulog and udat files (used to be split up into "threads")
+  do ie=1,ne
     write(cie,'(i0)') ie
-    open(611,file='../ulog'//trim(cie),status='unknown')
+    open(611,file='./ulog'//trim(cie),status='unknown') ! AMI: changed from ../ulog to ./ulog
     Einc=eev(ie)/rydb
     call MTvsE(ie)
     call PSvsE(ie)
-    open(20,file='../udat'//trim(cie),status='unknown',access='stream') 
+    open(20,file='./udat'//trim(cie),status='unknown',access='stream') ! AMI: changed from ../udat to ./udat
     write(20) Vxc0, &
               ((psu(l,ir),l=0,lmax),ir=1,nieq), &
               ((psd(l,ir),l=0,lmax),ir=1,nieq), &
@@ -105,8 +112,7 @@
     write(611,'(a,20(1x,f6.2):)')'const =',Lconst(:)
   endif
   enddo
-  stop
-contains
+  end subroutine read_eeas
 
 !=======================================================================
 ! MUFFIN-TIN SPHERES
@@ -138,7 +144,7 @@ contains
   if(Pot=='y'.and.ie==ne)then
     do ir=1,nieq
       open(10, &
-      file='../'//trim(outdir)//'/'//'Vxc.'//idZA(ir),status='unknown')
+      file='./'//trim(outdir)//'/'//'Vxc.'//idZA(ir),status='unknown') ! AMI: changed from ../ to ./
       do i=1,nxR(ir)
         if(Vxc(i,ir)*rydb > -100.d0)then
           write(10,910) rx(i,ir),Vxc(i,ir)*rydb 
@@ -473,8 +479,8 @@ contains
   !wave function display.
     if(WF=='y'.and.ie==ne)then
       write(idL,'(i0)') l
-      if(tag=='su') fil = '../'//trim(outdir)//'/u'//trim(idZA(ir))//'.'//idL
-      if(tag=='sd') fil = '../'//trim(outdir)//'/v'//trim(idZA(ir))//'.'//idL 
+      if(tag=='su') fil = './'//trim(outdir)//'/u'//trim(idZA(ir))//'.'//idL
+      if(tag=='sd') fil = './'//trim(outdir)//'/v'//trim(idZA(ir))//'.'//idL
       open(11,file=trim(fil),status='unknown')
       !ou normalized so that ou(1,nor) = interstitial wave function.
       cnst=t*(bj(l)*cos(ps)-by(l)*sin(ps))/ou(1,nor)
@@ -1383,4 +1389,4 @@ subroutine intrp(x,y,xout,yout,ypout,neqn,kold,phi,psi)
       return
 end subroutine intrp
 
-end program eeas
+end module eeas

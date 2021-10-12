@@ -566,10 +566,10 @@ def runPhaseshiftGen(sl, rp, psgensource=os.path.join('tensorleed', 'eeasisss_ne
     # execution of EEASISSS requires the executable eeas to be in the work directory
     # (a shell script is created and executes eeas from the work directory, which is hardcoded)
     # -> copy eeas to work directory beforehand and remove it afterwards
-    eeas_exec_path = os.path.join('tensorleed', 'eeasisss_new', 'eeas')
-    eeas_exec_path = os.path.join(rp.sourcedir, eeas_exec_path)
+    eeasisss_exec_path = os.path.join('tensorleed', 'eeasisss_new', 'eeasisss')
+    eeasisss_exec_path = os.path.join(rp.sourcedir, eeasisss_exec_path)
     try:
-        shutil.copy2(eeas_exec_path,".")
+        shutil.copy2(eeasisss_exec_path, ".")
     except Exception:
         logger.error("Could not copy file eeas required by EEASISSS. Phaseshift generation will fail if not present.")
         rp.setHaltinglevel(2)
@@ -586,9 +586,9 @@ def runPhaseshiftGen(sl, rp, psgensource=os.path.join('tensorleed', 'eeasisss_ne
 
     #when done, remove eeas executable from work directory again:
     try:
-        os.remove('eeas')
+        os.remove('eeasisss')
     except Exception:
-        logger.warning("Could not remove eeas executable from work directory.") # Not a big deal if this happens.
+        logger.warning("Could not remove eeasisss executable from work directory.") # Not a big deal if this happens.
 
     # Now the results of the phaseshift calculation are read out and formatted for further processing
     firstline, phaseshifts = convert_eeasiss_output(sl, rp, atom_types, lmax, E2, Estep, ps_outdir)
@@ -917,3 +917,10 @@ def move_EEASISSS_files(ps_outdir, log_filename, Vxc0_files = ['Vxc0Einc', 'Vxc0
     # only remaining files are individual phaseshift files; can be discarded since they are combines in PHASESHIFTS
     # remove PS_out folder with contents
     shutil.rmtree(outdir_path)
+
+    # remove files ulog*, udat* and uinp* created by eeasisss programme
+    files_in_directory = os.listdir(".")
+    filtered_files = [file for file in files_in_directory if (file.startswith('ulog')
+                                                     or file.startswith('udat') or file.startswith('uinp'))]
+    for file in filtered_files:
+        os.remove(os.path.join(".", file))

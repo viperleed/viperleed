@@ -27,7 +27,9 @@
 
   use sdata,only : nsp,nsr,sp,sr,sdat,sdat1
 
-  use Eparallel,only : mkdirport,eeas_pll
+  !AMI: got rid of Eparallel
+  !AMI instead use eeas from eeas.f90
+  use eeas, only: read_eeas
 
   use DifferentialEvolution,only : DEM,NP,refresh,VTR,bestval,nfeval,itval
 
@@ -190,8 +192,8 @@ goto 1001
   close(1414)
   write(61,'(a)')'eeasisss: files 1414 written.'
   !
-  !ELASTIC ELECTRON-ATOM SCATTERING in PARALLEL.
-  call eeas_pll(nthread)
+  !ELASTIC ELECTRON-ATOM SCATTERING
+  call read_eeas() ! Calls routines in eeas.f90
   !
   !EEASiSSS reads EEAS.
   write(61,'(/20("===="))')
@@ -294,7 +296,7 @@ goto 1001
   write(61,'(/a)')'PStab written.'
   !
   !Cleaning up.
-  if(windows)then
+  if(windows)then ! AMI TODO: get rid of this mess...
     isys = SYSTEM('del uinp*')
     isys = SYSTEM('del ulog*')
     isys = SYSTEM('del udat*')
@@ -304,13 +306,13 @@ goto 1001
       isys = SYSTEM('rmdir /S /Q '//trim('thread'//ci))
     enddo
   elseif(linux)then
-    isys = SYSTEM('rm uinp*')
-    isys = SYSTEM('rm ulog*')
-    isys = SYSTEM('rm udat*')
-    isys = SYSTEM('rm eeas.sh')
-    do i=1,nthread
+    !isys = SYSTEM('rm uinp*') ! AMI: Clean up now accomplished in Python.
+    !isys = SYSTEM('rm ulog*') ! AMI: Clean up now accomplished in Python.
+    !isys = SYSTEM('rm udat*') ! AMI: Clean up now accomplished in Python.
+    !isys = SYSTEM('rm eeas.sh') ! AMI: File no longer present
+    do i=1,1
       write(ci,'(i0)') i
-      isys = SYSTEM('rm -r '//trim('thread'//ci))
+      !isys = SYSTEM('rm -r '//trim('thread'//ci))
     enddo
   endif
   !
