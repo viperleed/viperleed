@@ -557,7 +557,7 @@ class Rparams:
                 "-lmkl_intel_thread -lmkl_core -liomp5 -lpthread -lm -ldl"]
             logger.debug("Using fortran compiler: ifort")
         elif found == "gfortran":
-            self.FORTRAN_COMP = ["gfortran -O2", "-llapack -lpthread"]
+            self.FORTRAN_COMP = ["gfortran -O2", "-llapack -lpthread -lblas"]
             logger.debug("Using fortran compiler: gfortran")
         return
 
