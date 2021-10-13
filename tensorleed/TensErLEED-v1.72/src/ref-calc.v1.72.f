@@ -1,8 +1,8 @@
-C  Tensor LEED reference calculation 
-C  v1.72, LH,MR,AMI 12.10.2021
-C  for use with lib.tleed.f v1.7
+C  Tensor LEED reference calculation
+C  v1.2, VB 13.04.00
+C  for use with lib.tleed.f v1.72
 C
-C  as described in 
+C  as described in
 C
 C  V. Blum, K. Heinz, submitted to Comp. Phys. Comm. (2000).
 C
@@ -12,7 +12,7 @@ C  Welcome to the Erlangen Tensor LEED program package. Permission is granted
 C  to use these programs freely, and to modify them as you may find appropriate.
 C  However, we cannot take any responsibility for possible bugs or other
 C  limitations you may encounter. If you find a bug or worthwhile improvement,
-C  please notify us at 
+C  please notify us at
 C
 C                       tleed@fkp.physik.uni-erlangen.de
 C
@@ -21,9 +21,9 @@ C  distributing the code please refer back to us first to ensure the latest vers
 C  of the package is passed on.
 C
 C  What the program does:
-C  * This TLEED Tensor calculation program works for any multi-component 
-C    surface LEED problem I have encountered so far. Yet, as the number 
-C    of applications increases, new problems may turn up, requiring some 
+C  * This TLEED Tensor calculation program works for any multi-component
+C    surface LEED problem I have encountered so far. Yet, as the number
+C    of applications increases, new problems may turn up, requiring some
 C    additional coding. Please, in that process, avoid obsolete code that
 C    is simply dragged along.
 C
@@ -32,7 +32,7 @@ C
 C  * The f77 implicit convention for integer (IJKLMNO) and real variables
 C    is not kept. Each variable is declared explicitly, regardless of its
 C    name (except for some counters, "I..." ). Subroutines mostly use the
-C    convention, sometimes don't. Message: Check each variable's type 
+C    convention, sometimes don't. Message: Check each variable's type
 C    before you use it.
 C
       program leed
@@ -43,12 +43,12 @@ C  include parameter statements for dimensions etc
 
 C  set unchangeable constants
 
-      INCLUDE 'GLOBAL'
+      INCLUDE "GLOBAL"
 
 C  MNDIM determines up to which LMAX variable dimensions for
 C        Clebsch-Gordan coefficients are known to the program
 C        must only be changed if data statements for NCA,NLMS
-C        are to be enlarged 
+C        are to be enlarged
 
       PARAMETER (MNDIM = 18)
 
@@ -79,8 +79,12 @@ C  TVA  : area of (1x1) unit mesh
 C  TVB  : area of superlattice unit mesh
 C  ARA1,ARA2: 2D real-space lattice vectors of (1x1) unit mesh
 C  RAR1,RAR2: 2D reciprocal lattice vectors of (1x1) unit mesh
+C  SS1,SS2,SS3,SS4: 4 possible registry shifts for substrate layer
+C         calculation (in units of ARA1,ARA2)
 C  ARB1,ARB2: 2D real-space lattice vectors of superlattice unit mesh
 C  RBR1,RBR2: 2D reciprocal lattice vectors of superlattice unit mesh
+C  SO1,SO2,SO3: 3 possible registry shifts for superlattice layers
+C         calculation (in units of ARA1,ARA2!)
 C  ASB  : convergence criterion - should be set .le. the smallest interlayer
 C         distance for which layer doubling is used (enters into TST)
 C  FR   : obsolete
@@ -96,6 +100,7 @@ C  NPU  : list of beams for which full dynamical output is desired
 C         normally identical with Tensor LEED output beam list
 C  THETA,FI : (polar) incidence angles of incoming beam
 C  VV :   muffin tin constant
+C  VO :   obsolete - should be zero.
 C  EPS,LITER : convergence criteria for substrate layer doubling sequence
 C  TI,TF,DT,T0 : obsolete
 C  LMAX : highest angular momentum to be used in calculation - should be
@@ -105,16 +110,17 @@ C  ES    : energies for which phase shifts are tabulated
 C  PHSS  : l-dependent phase shifts for up to three elements
 C  VPI,VPIS,VPIO : imaginary part of inner potential (damping)
 C  EI,EF,DE: initial, final energy and step width for computation
-C  EM,C1,C2,C3,C4,C5,C6,C7,C8: Parameters of the phaseshift program 
-C                              for calculation of the inner potential VV.
-C  PSFMT: Parameter indicating the format of the phaseshift file
-  
+
       CHARACTER*80 TITLE
       REAL TVA,TVB
       REAL ARA1,ARA2,RAR1,RAR2
       DIMENSION ARA1(2),ARA2(2),RAR1(2),RAR2(2)
+      REAL SS1,SS2,SS3,SS4
+      DIMENSION SS1(2),SS2(2),SS3(2),SS4(2)
       REAL ARB1,ARB2,RBR1,RBR2
       DIMENSION ARB1(2),ARB2(2),RBR1(2),RBR2(2)
+      REAL SO1,SO2,SO3
+      DIMENSION SO1(2),SO2(2),SO3(2)
       REAL ASB
       DIMENSION ASB(3)
       REAL FR,ASE
@@ -134,7 +140,7 @@ C  PSFMT: Parameter indicating the format of the phaseshift file
       INTEGER NPU
       DIMENSION NPU(MNPUN)
       REAL THETA,FI
-      REAL VV
+      REAL VO,VV
       REAL EPS
       INTEGER LITER
       INTEGER LMAX,L1
@@ -731,10 +737,9 @@ C*************************************************************
  100  CONTINUE
 
 c  calculation of energy dependent inner potential from Rundgren's parameters
-! Note AMI: reworked by LH; newest version of EEAS code no longer used 8 coefficient approximation... TODO?
- 
+
       IF (EM) 140,120,110
-	  
+
 110   ERED = (EEV+WORKFN)/EM
       IF (ERED-1) 130,120,120
 
@@ -773,7 +778,7 @@ C  used in FMAT ...
 
 C  compute components of incident vector parallel to surface
 
-      KSQ = 2.0*(E-VV) 
+      KSQ = 2.0*(E-VV)
       AK  = SQRT(KSQ) * SIN(THETA)
       AK2 = AK * COS(FI)
       AK3 = AK * SIN(FI)

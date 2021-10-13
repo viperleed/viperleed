@@ -1,6 +1,6 @@
 C  Tensor LEED subroutines for reference & delta amplitude calculation
-C  v1.72, LH,MR,AMI 11.10.2021
-C  for use with ref-calc.f v1.72, delta.f v1.7+
+C  v1.6, LH 25.05.18
+C  for use with ref-calc.f v1.6, delta.f v1.6
 C
 C  as described in
 C
@@ -22,7 +22,7 @@ C  of the package is passed on.
 C
 C**********************************************************************************
 C
-C  Please read the comment in ref-calc.f, v1.72 .
+C  Please read the comment in ref-calc.f, v1.6 .
 C
 C  Most subroutines are derived from those described in
 C
@@ -113,7 +113,7 @@ C  Subroutines are included in alphabetical order
 !    ! between the very top layer and what's underneath may be a bit
 !    ! of a poor approximation.
       COMMON  E, AK2, AK3    !, VPI
-      COMMON  /ADS/ FR, ASE, VPIS, VPIO, VV  ! VV necessary (although unused) as this is a named COMMON block from main
+      COMMON  /ADS/ FR, ASE, VPIS, VPIO, VO, VV  ! VV necessary (although unused) as this is a named COMMON block from main
 
       IU = CMPLX(0.0,1.0)
       AK = 2.0 * E
@@ -123,8 +123,8 @@ C  Subroutines are included in alphabetical order
         BK3 = AK3 + PQ(2, I)
 
 !       YY is k_perp in topmost layer
-      YY = CMPLX(AK - BK2 * BK2 - BK3 * BK3,
-     +           -2.0 * VPIO + 0.000001)
+        YY = CMPLX(AK - 2.0 * VO - BK2 * BK2 - BK3 * BK3,
+     +             -2.0 * VPIO + 0.000001)
         YY = SQRT(YY)
 !       XX is k_perp in the rest of the stack
         XX = CMPLX(AK - BK2 * BK2 - BK3 * BK3,
@@ -531,7 +531,7 @@ C  AUTHOR  PENDRY
       DIMENSION FAC(NFAC)
       FLOAT(I)=DFLOAT(I)
    40 FORMAT(28H INVALID ARGUMENTS FOR BLM  ,6(I3,1H,))
-      PI = 3.14159265359
+      PI = 3.14159265
       IF (M1+M2+M3)  420, 350, 420
   350 IF (L1-LMAX-LMAX)  360, 360, 530
   360 IF (L2-LMAX)  370, 370, 530
@@ -732,7 +732,7 @@ C     DIMENSION  CLM(NLM),           YLM(NN), FAC2(NN), FAC1(N)
       DOUBLE PRECISION FAC
       DIMENSION FAC(NFAC)
 
-      PI = 3.14159265359
+      PI = 3.14159265
       L2MAX = LMAX + LMAX
       NF=4*LMAX+1
 
@@ -839,8 +839,8 @@ C  the RTINV array dimensions are correct.
       REAL POS,SUBPOS
       DIMENSION POS(NLAY,3),SUBPOS(NLTYPE,NNSUB,3)
 
-      DO ILAY = 1,NLAY
-        DO IPOS = 1,3
+      DO IPOS = 1,3
+        DO ILAY = 1,NLAY
           POS(ILAY,IPOS) = SUBPOS(ILTYPE,ILAY,IPOS)
         ENDDO
       ENDDO
@@ -1554,7 +1554,7 @@ C
            WRITE (IFILE) -1
       ELSE
            WRITE (IFILE,10) -1
-   10 FORMAT (I5) ! Used to be I3 until v1.7
+   10 FORMAT (I3)
       ENDIF
       RETURN
       END
@@ -1665,12 +1665,12 @@ C  3  WRITE(6,93)N,AOD(N)
   93  FORMAT(I4,2E14.4)
 C
 C
-C  GAUSSIAN ELLIMINATE TRANSPOSED (1-X) MATRIX       ! Michele: calls can be replaced with CGETRF /TODO
+C  GAUSSIAN ELLIMINATE TRANSPOSED (1-X) MATRIX
 C
       CALL ZGE(XODST,IPLO,LOD,LOD,EMACH)
       CALL ZGE(XEVST,IPLE,LEV,LEV,EMACH)
 C
-C  INVERT (1-X) & MULTIPLY BY A0LM ON THE RIGHT      ! Michele: calls can be replaced with CGETRS? Check what ZTU does differently than ZSU. Looks like it solves the system A**T X = B for X. /TODO
+C  INVERT (1-X) & MULTIPLY BY A0LM ON THE RIGHT
 C
       CALL ZTU(XODST,IPLO,AOD,LOD,LOD,EMACH)
       CALL ZTU(XEVST,IPLE,AEV,LEV,LEV,EMACH)
@@ -1726,7 +1726,6 @@ C
       RETURN
       END
 
-!  TODO: Alex: remove FMAT_OLD since FMAT now exists?
 C-----------------------------------------------------------------------
 COMMENT FMAT_OLD CALCULATES THE VALUES OF THE SUM FLMS(JS,LM),
 C       OVER LATTICE POINTS OF EACH SUBLATTICE JS, WHERE
@@ -1783,7 +1782,7 @@ C   AR1,AR2= BASIS VECTORS OF SUPERLATTICE.
       DIMENSION  AK(2),AR1(2),AR2(2),RAR1(2),RAR2(2),R(2)
       COMMON  E, AK, VPI
       COMMON  /SL/BR1, BR2, AR1, AR2, RAR1, RAR2, NL1, NL2
-      PI = 3.14159265359
+      PI = 3.14159265
       CZERO = CMPLX(0.0,0.0)
       CI = CMPLX(0.0,1.0)
       KAPPA = CMPLX(2.0 * E, - 2.0 * VPI + 0.000001)
@@ -2293,7 +2292,6 @@ C  Compute lattice sum into S                                                 10
         ENDIF
 140   CONTINUE  ! End of KK loop over quadrants
 
-!  TODO: replace GO TO
 150   IF (NOR.EQ.1) GO TO 60
       IF (JJ2.EQ.1) GO TO 160
       IF (JJ2.NE.1) GO TO 50
@@ -2303,7 +2301,7 @@ C
 C  PRINT NUMBER OF LATTICE POINTS USED IN SUMMATION
 C     WRITE(6,170)NUMR
 C170   FORMAT(28H NO. OF LATT. PTS. FOR GH   ,I5)
-      FF=-8.0*3.14159265359*K0 ! TODO style: here and everywhere: replace explicit value by constant PI
+      FF=-8.0*3.14159265*K0
 
 C  USE SUBROUTINE GHSC TO MULTIPLY LATTICE SUM INTO CLEBSCH-GORDON
 C  COEFFICIENTS
@@ -2399,7 +2397,7 @@ C
          RXR2(1)=RBR2(1)
          RXR2(2)=RBR2(2)
       ELSE                ! bulk
-         PI=3.14159265359
+         PI=3.14159265
          ATV=2.0*PI/TV
          RXR1(1)=ARA2(2)*ATV
          RXR1(2)=-ARA2(1)*ATV
@@ -2407,7 +2405,7 @@ C
          RXR2(2)=ARA1(1)*ATV
       ENDIF
       K0=SQRT(CMPLX(2.0*E,-2.0*VPI+0.000001))
-      CFAC=-16.0*(3.14159265359)*(3.14159265359)*CI/TV
+      CFAC=-16.0*(3.14159265)*(3.14159265)*CI/TV
       NLYLM=NLAY2*LMMAX
 C
 C  COPY OLD VALUES OF GH ONTO GH WHERE APPROPRIATE
@@ -2444,7 +2442,7 @@ C
 C
 C  TSTS= ESTIMATED NO. OF POINTS IN DIRECT LATTICE SUM
 C
-      TSTS=DCUT*DCUT*3.14159265359/TV
+      TSTS=DCUT*DCUT*3.14159265/TV
       DO 10 IZ=1,NLAY2
          IF (NUGH(IZ).NE.0) THEN
             IF (ABS(DRL(IZ,1)).GT.0.001) THEN
@@ -2548,7 +2546,7 @@ C
                IF (GK2.GT.1.0E-8) THEN
                   CFY=GKX/SQRT(GK2)
                   IF (ABS(ABS(CFY)-1.).LE.1.E-6) THEN
-                     IF (CFY.LT.0.0) FY=3.14159265359
+                     IF (CFY.LT.0.0) FY=3.14159265
                   ELSE
                      FY=ACOS(CFY)
                   ENDIF
@@ -2769,9 +2767,9 @@ C  enjoy the comments :-)
       REAL SPQF
       DIMENSION SPQF(2,KNT)
 
-  283 FORMAT(I5,2F10.5,I3)
-C LH  Adjusted to allow for beams numbers until 99999
-  284 FORMAT(I5,2F10.5,I3)
+  283 FORMAT(I3,2F10.5,I3)
+C LH  Adjusted to allow for beams numbers beyond 999
+  284 FORMAT(I4,2F10.5,I3)
 
       WRITE(IFILE,'(A80)') TITLE
 C  PUNCH A CARD WITH NPUN
@@ -3149,7 +3147,7 @@ CDIR$ NOVECTOR
 
 !-----------------------------------------------------------------------
 !  SUBROUTINE MULTAMP_OPT multiplies one vector into a matrix.
-!  Optimized for Fortran memory access by Michele
+!  Optimized for Fortran memory access - by MR v1.72
 !
       SUBROUTINE MULTAMP_OPT(INAMP,OUTAMP,MATRIX,N)
       COMPLEX INAMP(N),OUTAMP(N),MATRIX(N,N)
@@ -3219,7 +3217,7 @@ C
 C
       DIMENSION PQF(2,NT),PQFEX(2,NT0)
       COMPLEX XI(NT), XIST(NT0), CAF(L1)
-      COMMON /ADS/ ASE,VPIS,VPIO,VV ! note: V0 removed!
+      COMMON /ADS/ ASE,VPIS,VPIO,VV
 
 C   START LOOP OVER EXIT BEAMS.
 
@@ -3280,7 +3278,7 @@ C   than original calculation scheme                                     110195
       DIMENSION  PPP(N1,N2,N3), PHS(N3), DEL(N2), SUM(N2)
       DIMENSION  CTAB(N3)
 
-      PI = 3.14159265359 ! TODO: Pi is redefined often... put into global?
+      PI = 3.14159265
       CI = CMPLX(0.0,1.0)
       DO 170 J = 1, N2
   170 DEL(J) = (0.0,0.0)
@@ -3437,8 +3435,8 @@ C  vibrational amplitude, and stoichiometry)
         READ(5,*)
 
         DO IEL = 1,NEL,1
-
-          READ(5,'(2F9.4)') CONC(ISITE,IEL),VIB(ISITE,IEL) ! used t0 be 2F7.4 before v1.7
+            ! AMI: note change F7.4 -> F9.4 in v1.71 by LH
+          READ(5,'(2F9.4)') CONC(ISITE,IEL),VIB(ISITE,IEL)
           VIB(ISITE,IEL) = VIB(ISITE,IEL)/BOHR
 
         ENDDO
@@ -3491,7 +3489,7 @@ C  KBRAV, KCOMP are only counters
 
         DO ISUB = 1,NSUB(ILTYPE)
 
-          READ(5,'(I3,3F9.4)') STYPE(ILTYPE,ISUB), ! used to be 3F7.4 pre v1.7
+          READ(5,'(I3,3F9.4)') STYPE(ILTYPE,ISUB),
      +                        (SUBPOS(ILTYPE,ISUB,IPOS),IPOS=1,3)
 
           IF ((STYPE(ILTYPE,ISUB).lt.1)
@@ -3542,10 +3540,10 @@ C  now gather info for layer doubling
 
 C  ASA IS THE SUBSTRATE INTERLAYER VECTOR (LINKING REFERENCE POINTS
 C  ON SUCCESSIVE LAYERS)(ANGSTROM)
-        READ(5,'(3F9.4)')(ASA(I),I=1,3) ! used to be 3F7.4 pre v1.7
+        READ(5,'(3F9.4)')(ASA(I),I=1,3)
         READ(5,'(I3)') TOPLAYB
         READ(5,'(I3)') BOTLAYB
-        READ(5,'(3F9.4)') (ASBULK(I),I=1,3) ! used to be 3F7.4 pre v1.7
+        READ(5,'(3F9.4)') (ASBULK(I),I=1,3)
 
         IF ((TOPLAYB.lt.1).or.(TOPLAYB.gt.NLTYPE)) THEN
           write(6,*) "Top bulk layer is illegal layer type.",
@@ -3591,7 +3589,7 @@ C  next, read info for layer stacking
 
       DO ISTACK = NSTACK,1,-1
 
-        READ(5,'(I3,3F9.4)') LTYPE(ISTACK),(LDIST(ISTACK,I),I=1,3,1) ! used to be 3F7.4 pre v1.7
+        READ(5,'(I3,3F9.4)') LTYPE(ISTACK),(LDIST(ISTACK,I),I=1,3,1)
 
         IF ((LTYPE(ISTACK).lt.1).or.(LTYPE(ISTACK).gt.NLTYPE)) THEN
           write(6,*) "Stacked layer number ",ISTACK,
@@ -3797,7 +3795,7 @@ C  The variables VPIS and VPIO should be removed somewhen from the code. LH 25.0
 C  SLIND COMPARES SUBSTRATE LATTICE AND SUPERLATTICE FOR THE BENEFIT
 C  OF FMAT
       CALL SLIND(V,VL,JJS,NL,IDEG,2.0E-4)                               141278
-C     WRITE (6,250)				   
+C     WRITE (6,250)
       KNTT= 0
 C  READ IN KNBS SETS OF BEAMS
       DO 580 J = 1, KNBS
@@ -3862,11 +3860,11 @@ C  ICLEB = FLAG FUER FELDER CLM,YLM,FAC1,FAC2 - obsolete!
       READ(5,201) PSFMT
 	  WRITE(6,204) PSFMT
       WRITE (6,351)
- 
+
       L1=LMAX+1
-	  
+
       IF (PSFMT.eq.1) THEN
-	  
+
 C  NEL= NO. OF CHEMICAL ELEMENTS FOR WHICH PHASE SHIFTS ARE TO BE READ IN
 
       READ(5,205)NELCHECK,C4,C1,C2,C3
@@ -3919,15 +3917,15 @@ C  PHSS STORES THE INPUT PHASE SHIFTS (RADIAN)
 
           READ(5,'(F8.3,20F8.4)')ES(IENER),(PHSS(IENER,IEL,L),L=1,L1)
 		  ES(IENER)=ES(IENER)/HARTREE
-		  
+
         ENDDO
   661 CONTINUE
-	  
+
 	  ELSE
 	    WRITE(6,*) "Phaseshift format incorrectly assigned!"
 		STOP
 	  ENDIF
-		  
+
 
       DO 670 IENER = 1, 1
 
@@ -4095,6 +4093,8 @@ C  read in PQFEX, instead use appropriate beams NPU from fd list SPQF.
 !   EPS,LITER  NOT USED.
 !   SO1,SO2,SO3= SPACE FOR UP TO 3 ORIGIN SHIFTS (REGISTRIES) OF AN
 !    OVERLAYER, FIRST ID OF WHICH ARE USED IF LAY=1.
+!   SS1,SS2,SS3,SS4= SPACE FOR UP TO 4 ORIGIN SHIFTS (REGISTRIES) OF A
+!    SUBSTRATE LAYER, FIRST ID OF WHICH ARE USED IF LAY=2.
 !   /BT/  TEMPERATURE DATA PASSED TO MFOLD.
       SUBROUTINE  RSMF_SIMPLE(RA, TA, N, AMULT, CYLM, PQ, NT, FLMS,
      &                        FLM, V, NL, N_OFFSET, NLL, AF, CAF, LM,
@@ -4117,9 +4117,9 @@ C  read in PQFEX, instead use appropriate beams NPU from fd list SPQF.
       DIMENSION  CAF(LM), FLMS(NL, KLM), FLM(KLM)
       DIMENSION  LX(LMMAX), LXI(LMMAX)
       COMMON  E, AK2, AK3, VPI, TV
-      COMMON /MS/LMAX,EPS,LITER
+      COMMON /MS/LMAX,EPS,LITER,SO1,SO2,SO3,SS1,SS2,SS3,SS4
 
-      PI = 3.14159265359
+      PI = 3.14159265
       L1 = LM
       LEV1 = LEV + 1
       CI = CMPLX(0.0,1.0)
@@ -4333,10 +4333,10 @@ CVB
 
       COMMON  E, AK2, AK3, VPI
       COMMON /MFB/ GP, L1
-      COMMON  /MS/LMAX, EPS1, LITER
+      COMMON /MS/  LMAX, EPS1, LITER, SO1, SO2, SO3, SS1, SS2, SS3, SS4! SOi/SSi not used anymore
       COMMON /MPT/ NA, NS, ID, LAY, LM, NTAU, TST, TV, DCUT, NOPT, NEW ! NOPT always == 1 for Tensor LEED; ID == 1 (registry shifts), not used anymore
 
-      PI = 3.14159265359
+      PI = 3.14159265
       L1 = LM
       LMS = L2M * L2M
       LOD = LMMAX - LEV
@@ -4610,7 +4610,7 @@ C   NL1,NL2= SUPERLATTICE CHARACTERIZATION (SEE MAIN PROGRAM).
       COMMON  /SL/BR1, BR2, AR1, AR2, RAR1, RAR2, NL1, NL2
 C
       CI = CMPLX(0.0,1.0)
-      PI = 3.14159265359
+      PI = 3.14159265
 C  SET UP VECTORS V DEFINING SUBLATTICES AND QUANTITIES VL FOR LATER
 C  REFERENCE.
       I = 1
@@ -4684,7 +4684,7 @@ C  SAME SUBLATTICE.
         STOP
       END IF
 
-      PI = 3.14159265359
+      PI = 3.14159265
       LM = 0
       CL = 0.0
       A = 1.0
@@ -4919,6 +4919,7 @@ C  STORE PRESENT INTERPLANAR VECTORS FOR LATER COMPARISON
 !   PQ= LIST OF RECIPROCAL LATTICE VECTORS G (BEAMS).
 !   AS= INTERLAYER VECTOR (AS(1).GT.0.0).
 !  IN COMMON BLOCKS
+!   LMAX,SO1,SO2,SO3,SS1,SS2,SS3,SS4  NOT USED.
 !   EPS= CONVERGENCE CRITERION FOR LAYER DOUBLING
 !   LITER= LIMIT ON NUMBER OF DOUBLINGS.
 !   E,VPI  COMPLEX CURRENT ENERGY.
@@ -4941,7 +4942,7 @@ C  STORE PRESENT INTERPLANAR VECTORS FOR LATER COMPARISON
 
       COMPLEX TEMP
 
-      COMMON  /MS/LMAX, EPS1, LITER
+      COMMON  /MS/  LMAX, EPS, LITER, SO1, SO2, SO3, SS1, SS2, SS3, SS4
       COMMON  E, AK2, AK3,VPI
 
    10 FORMAT(4H X =,E15.4)
@@ -5124,7 +5125,7 @@ C
 10    LL2=LL+LL
 C
 C  PERFORM INVERSION AND MULTIPLICATION
-      CALL CXMTXT(X,LEV,LL,LL,LL2,MARK,DET,-1,XH)    ! TODO Michele: Judge if this can be replaced with CGETRF/CGETRS (likely better optimized?)
+      CALL CXMTXT(X,LEV,LL,LL,LL2,MARK,DET,-1,XH)
 C
       LD=(IT-1)*LMMAX
       IF (IL.EQ.1) LD=LD+LEV
