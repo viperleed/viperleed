@@ -491,6 +491,10 @@ def refcalc(sl, rp, subdomain=False):
         logger.error("Error reading fd.out after reference calculation. "
                      "Check settings and refcalc log.")
         raise
+    if len(rp.theobeams["refcalc"]) == 0:
+        logger.error("No data found in fd.out . "
+                     "Check if file is empty.")
+        raise
     # clear oriState for atoms and sites, current state will be new origin
     for at in sl.atlist:
         at.oriState = None
