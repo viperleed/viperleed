@@ -1,5 +1,5 @@
 C  Tensor LEED reference calculation
-C  v1.2, VB 13.04.00
+C  v1.7, LH,MR,AMI 13.10.2021
 C  for use with lib.tleed.f v1.72
 C
 C  as described in
@@ -110,17 +110,17 @@ C  ES    : energies for which phase shifts are tabulated
 C  PHSS  : l-dependent phase shifts for up to three elements
 C  VPI,VPIS,VPIO : imaginary part of inner potential (damping)
 C  EI,EF,DE: initial, final energy and step width for computation
+C  EM,C1,C2,C3,C4,C5,C6,C7,C8: Parameters of the phaseshift program
+C                              for calculation of the inner potential VV.
+C  PSFMT: Parameter indicating the format of the phaseshift file
 
+  ! AMI note: variables SSi and SOi removed in v1.71
       CHARACTER*80 TITLE
       REAL TVA,TVB
       REAL ARA1,ARA2,RAR1,RAR2
       DIMENSION ARA1(2),ARA2(2),RAR1(2),RAR2(2)
-      REAL SS1,SS2,SS3,SS4
-      DIMENSION SS1(2),SS2(2),SS3(2),SS4(2)
       REAL ARB1,ARB2,RBR1,RBR2
       DIMENSION ARB1(2),ARB2(2),RBR1(2),RBR2(2)
-      REAL SO1,SO2,SO3
-      DIMENSION SO1(2),SO2(2),SO3(2)
       REAL ASB
       DIMENSION ASB(3)
       REAL FR,ASE
@@ -140,7 +140,7 @@ C  EI,EF,DE: initial, final energy and step width for computation
       INTEGER NPU
       DIMENSION NPU(MNPUN)
       REAL THETA,FI
-      REAL VO,VV
+      REAL VV ! AMI note: V0 removed in v1.71
       REAL EPS
       INTEGER LITER
       INTEGER LMAX,L1
@@ -805,7 +805,7 @@ C*************************************************************
       DR0 = 0.
       VSITE = 0.
 
-      DO ISITE = 1,NSITE                    ! These loops may be still swapped around, or, perhaps better, swap the indices of TMAT
+      DO ISITE = 1,NSITE         ! These loops may be still swapped around, or, perhaps better, swap the indices of TMAT
 
         DO IL = 1,L1,1
           TMAT(ISITE,IL) = 0.
