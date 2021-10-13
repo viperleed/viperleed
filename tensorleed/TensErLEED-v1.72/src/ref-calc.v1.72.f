@@ -79,12 +79,8 @@ C  TVA  : area of (1x1) unit mesh
 C  TVB  : area of superlattice unit mesh
 C  ARA1,ARA2: 2D real-space lattice vectors of (1x1) unit mesh
 C  RAR1,RAR2: 2D reciprocal lattice vectors of (1x1) unit mesh
-C  SS1,SS2,SS3,SS4: 4 possible registry shifts for substrate layer
-C         calculation (in units of ARA1,ARA2)
 C  ARB1,ARB2: 2D real-space lattice vectors of superlattice unit mesh
 C  RBR1,RBR2: 2D reciprocal lattice vectors of superlattice unit mesh
-C  SO1,SO2,SO3: 3 possible registry shifts for superlattice layers
-C         calculation (in units of ARA1,ARA2!)
 C  ASB  : convergence criterion - should be set .le. the smallest interlayer
 C         distance for which layer doubling is used (enters into TST)
 C  FR   : obsolete
@@ -737,6 +733,7 @@ C*************************************************************
  100  CONTINUE
 
 c  calculation of energy dependent inner potential from Rundgren's parameters
+! Note AMI: reworked by LH; newest version of EEAS code no longer used 8 coefficient approximation... TODO?
 
       IF (EM) 140,120,110
 
