@@ -1,5 +1,5 @@
 C  Tensor LEED subroutines for reference & delta amplitude calculation
-C  v1.6, LH 25.05.18
+C  v1.72, LH,MR,AMI 13.10.2021
 C  for use with ref-calc.f v1.6, delta.f v1.6
 C
 C  as described in
@@ -1554,7 +1554,7 @@ C
            WRITE (IFILE) -1
       ELSE
            WRITE (IFILE,10) -1
-   10 FORMAT (I3)
+   10 FORMAT (I5) ! changed to I5 in v1.71
       ENDIF
       RETURN
       END
@@ -1665,12 +1665,12 @@ C  3  WRITE(6,93)N,AOD(N)
   93  FORMAT(I4,2E14.4)
 C
 C
-C  GAUSSIAN ELLIMINATE TRANSPOSED (1-X) MATRIX
+C  GAUSSIAN ELLIMINATE TRANSPOSED (1-X) MATRIX       ! Michele: calls can be replaced with CGETRF
 C
       CALL ZGE(XODST,IPLO,LOD,LOD,EMACH)
       CALL ZGE(XEVST,IPLE,LEV,LEV,EMACH)
 C
-C  INVERT (1-X) & MULTIPLY BY A0LM ON THE RIGHT
+C  INVERT (1-X) & MULTIPLY BY A0LM ON THE RIGHT      ! Michele: calls can be replaced with CGETRS? Check what ZTU does differently than ZSU. Looks like it solves the system A**T X = B for X.
 C
       CALL ZTU(XODST,IPLO,AOD,LOD,LOD,EMACH)
       CALL ZTU(XEVST,IPLE,AEV,LEV,LEV,EMACH)
@@ -1726,6 +1726,7 @@ C
       RETURN
       END
 
+! TODO: Alex - can FMAT_OLD be removed?
 C-----------------------------------------------------------------------
 COMMENT FMAT_OLD CALCULATES THE VALUES OF THE SUM FLMS(JS,LM),
 C       OVER LATTICE POINTS OF EACH SUBLATTICE JS, WHERE
@@ -2767,9 +2768,9 @@ C  enjoy the comments :-)
       REAL SPQF
       DIMENSION SPQF(2,KNT)
 
-  283 FORMAT(I3,2F10.5,I3)
-C LH  Adjusted to allow for beams numbers beyond 999
-  284 FORMAT(I4,2F10.5,I3)
+  283 FORMAT(I5,2F10.5,I3)
+C LH  Adjusted to allow for beams numbers until 99999
+  284 FORMAT(I5,2F10.5,I3)
 
       WRITE(IFILE,'(A80)') TITLE
 C  PUNCH A CARD WITH NPUN
@@ -5125,7 +5126,7 @@ C
 10    LL2=LL+LL
 C
 C  PERFORM INVERSION AND MULTIPLICATION
-      CALL CXMTXT(X,LEV,LL,LL,LL2,MARK,DET,-1,XH)
+      CALL CXMTXT(X,LEV,LL,LL,LL2,MARK,DET,-1,XH)         ! Michele: Judge if this can be replaced with CGETRF/CGETRS (likely better optimized?)
 C
       LD=(IT-1)*LMMAX
       IF (IL.EQ.1) LD=LD+LEV
@@ -5495,7 +5496,7 @@ C   TSF0,TSF,AF,CAF  SEE ABOVE.
       E=EB-V
       IF (E.LT.ES(1)) GO TO 850
 C  FIND SET OF PHASE SHIFTS APPROPRIATE TO DESIRED CHEMICAL ELEMENT
-C  AND INTERPOLATE TO CURRENT ENERGY (OR EXTRAPOLATE TO ENERGIES
+C  AND INTERPOLATE LINEARLY TO CURRENT ENERGY (OR EXTRAPOLATE TO ENERGIES
 C  ABOVE THE RANGE GIVEN FOR THE PHASE SHIFTS)
 
   710 I = 1
