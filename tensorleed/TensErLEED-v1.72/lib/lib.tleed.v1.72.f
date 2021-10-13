@@ -1,6 +1,6 @@
 C  Tensor LEED subroutines for reference & delta amplitude calculation
 C  v1.72, LH,MR,AMI 13.10.2021
-C  for use with ref-calc.f v1.6, delta.f v1.6
+C  for use with ref-calc.f v1.72, delta.f v1.7+
 C
 C  as described in
 C
@@ -22,7 +22,7 @@ C  of the package is passed on.
 C
 C**********************************************************************************
 C
-C  Please read the comment in ref-calc.f, v1.6 .
+C  Please read the comment in ref-calc.f, v1.72 .
 C
 C  Most subroutines are derived from those described in
 C
@@ -1665,12 +1665,12 @@ C  3  WRITE(6,93)N,AOD(N)
   93  FORMAT(I4,2E14.4)
 C
 C
-C  GAUSSIAN ELLIMINATE TRANSPOSED (1-X) MATRIX       ! Michele: calls can be replaced with CGETRF
+C  GAUSSIAN ELLIMINATE TRANSPOSED (1-X) MATRIX       ! Michele: calls can be replaced with CGETRF /TODO
 C
       CALL ZGE(XODST,IPLO,LOD,LOD,EMACH)
       CALL ZGE(XEVST,IPLE,LEV,LEV,EMACH)
 C
-C  INVERT (1-X) & MULTIPLY BY A0LM ON THE RIGHT      ! Michele: calls can be replaced with CGETRS? Check what ZTU does differently than ZSU. Looks like it solves the system A**T X = B for X.
+C  INVERT (1-X) & MULTIPLY BY A0LM ON THE RIGHT      ! Michele: calls can be replaced with CGETRS? Check what ZTU does differently than ZSU. Looks like it solves the system A**T X = B for X. /TODO
 C
       CALL ZTU(XODST,IPLO,AOD,LOD,LOD,EMACH)
       CALL ZTU(XEVST,IPLE,AEV,LEV,LEV,EMACH)
@@ -1726,7 +1726,7 @@ C
       RETURN
       END
 
-! TODO: Alex - can FMAT_OLD be removed?
+!  TODO: Alex: remove FMAT_OLD since FMAT now exists?
 C-----------------------------------------------------------------------
 COMMENT FMAT_OLD CALCULATES THE VALUES OF THE SUM FLMS(JS,LM),
 C       OVER LATTICE POINTS OF EACH SUBLATTICE JS, WHERE
@@ -2293,6 +2293,7 @@ C  Compute lattice sum into S                                                 10
         ENDIF
 140   CONTINUE  ! End of KK loop over quadrants
 
+!  TODO: replace GO TO
 150   IF (NOR.EQ.1) GO TO 60
       IF (JJ2.EQ.1) GO TO 160
       IF (JJ2.NE.1) GO TO 50
@@ -3218,7 +3219,7 @@ C
 C
       DIMENSION PQF(2,NT),PQFEX(2,NT0)
       COMPLEX XI(NT), XIST(NT0), CAF(L1)
-      COMMON /ADS/ ASE,VPIS,VPIO,VV
+      COMMON /ADS/ ASE,VPIS,VPIO,VV ! note: V0 removed!
 
 C   START LOOP OVER EXIT BEAMS.
 
@@ -3490,7 +3491,7 @@ C  KBRAV, KCOMP are only counters
 
         DO ISUB = 1,NSUB(ILTYPE)
 
-          READ(5,'(I3,3F9.4)') STYPE(ILTYPE,ISUB),
+          READ(5,'(I3,3F9.4)') STYPE(ILTYPE,ISUB), ! used to be 3F7.4 pre v1.7
      +                        (SUBPOS(ILTYPE,ISUB,IPOS),IPOS=1,3)
 
           IF ((STYPE(ILTYPE,ISUB).lt.1)
@@ -3541,10 +3542,10 @@ C  now gather info for layer doubling
 
 C  ASA IS THE SUBSTRATE INTERLAYER VECTOR (LINKING REFERENCE POINTS
 C  ON SUCCESSIVE LAYERS)(ANGSTROM)
-        READ(5,'(3F9.4)')(ASA(I),I=1,3)
+        READ(5,'(3F9.4)')(ASA(I),I=1,3) ! used to be 3F7.4 pre v1.7
         READ(5,'(I3)') TOPLAYB
         READ(5,'(I3)') BOTLAYB
-        READ(5,'(3F9.4)') (ASBULK(I),I=1,3)
+        READ(5,'(3F9.4)') (ASBULK(I),I=1,3) ! used to be 3F7.4 pre v1.7
 
         IF ((TOPLAYB.lt.1).or.(TOPLAYB.gt.NLTYPE)) THEN
           write(6,*) "Top bulk layer is illegal layer type.",
@@ -3590,7 +3591,7 @@ C  next, read info for layer stacking
 
       DO ISTACK = NSTACK,1,-1
 
-        READ(5,'(I3,3F9.4)') LTYPE(ISTACK),(LDIST(ISTACK,I),I=1,3,1)
+        READ(5,'(I3,3F9.4)') LTYPE(ISTACK),(LDIST(ISTACK,I),I=1,3,1) ! used to be 3F7.4 pre v1.7
 
         IF ((LTYPE(ISTACK).lt.1).or.(LTYPE(ISTACK).gt.NLTYPE)) THEN
           write(6,*) "Stacked layer number ",ISTACK,
@@ -5121,7 +5122,7 @@ C
 10    LL2=LL+LL
 C
 C  PERFORM INVERSION AND MULTIPLICATION
-      CALL CXMTXT(X,LEV,LL,LL,LL2,MARK,DET,-1,XH)         ! Michele: Judge if this can be replaced with CGETRF/CGETRS (likely better optimized?)
+      CALL CXMTXT(X,LEV,LL,LL,LL2,MARK,DET,-1,XH)    ! TODO Michele: Judge if this can be replaced with CGETRF/CGETRS (likely better optimized?)
 C
       LD=(IT-1)*LMMAX
       IF (IL.EQ.1) LD=LD+LEV
