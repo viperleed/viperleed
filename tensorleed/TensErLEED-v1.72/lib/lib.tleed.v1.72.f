@@ -2399,7 +2399,7 @@ C
          RXR2(1)=RBR2(1)
          RXR2(2)=RBR2(2)
       ELSE                ! bulk
-         PI=3.14159265
+         PI=3.14159265 ! why define PI here ??? used below...... TODO, but dont want to touch this now. WTF
          ATV=2.0*PI/TV
          RXR1(1)=ARA2(2)*ATV
          RXR1(2)=-ARA2(1)*ATV
@@ -4939,6 +4939,7 @@ C  STORE PRESENT INTERPLANAR VECTORS FOR LATER COMPARISON
 
       COMPLEX TEMP
 
+! AMI note: BE CAREFULL, there are convergence criteria EPS and EPS1. A mixup between them caused trouble in v1.72 !
       COMMON  /MS/  LMAX, EPS, LITER
       COMMON  E, AK2, AK3,VPI
 
