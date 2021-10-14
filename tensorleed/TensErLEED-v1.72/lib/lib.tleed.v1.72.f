@@ -859,7 +859,8 @@ C  PHASE SHIFTS
 C  AUTHOR  PENDRY
 C  DIMENSION 42 REQUIRES N1+N2+N3-1 = 4*LMAX+2 .LE. 42
       SUBROUTINE  CPPP (PPP, N1, N2, N3, NFAC,F)
-      DOUBLE PRECISION F
+      ! DOUBLE PRECISION F
+      REAL*8 F, SUM  ! MRiva 2021-10-14: Fixes divergence to +-Infinity, leading in turn to NaNs in spectra
       DIMENSION  PPP(N1,N2,N3), F(NFAC)
       F(1) = 1.0
       DO 370 I = 1, NFAC-1
