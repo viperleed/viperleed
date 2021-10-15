@@ -96,7 +96,7 @@ C  NPU  : list of beams for which full dynamical output is desired
 C         normally identical with Tensor LEED output beam list
 C  THETA,FI : (polar) incidence angles of incoming beam
 C  VV :   muffin tin constant
-C  VO :   obsolete - should be zero.
+
 C  EPS,LITER : convergence criteria for substrate layer doubling sequence
 C  TI,TF,DT,T0 : obsolete
 C  LMAX : highest angular momentum to be used in calculation - should be
@@ -582,7 +582,7 @@ C  common blocks
       COMMON /MS/LMAX,EPS,LITER
       COMMON /ADS/ASE,VPIS,VPIO,VV
       COMMON /BT/IT,T,T0,DRPER,DRPAR,DR0
-      COMMON /MPT/ NA,NS,ID,LAY,L1,NTAU,TSTS,TV1,DCUTS,NOPT,NEW
+      COMMON /MPT/ NA,NS,ID,LAY,L1,NTAU,TSTS,TV1,DCUTS,NOPT,NEW  ! Used only by RTINV. MRiva: ID is unnecessary and can be removed completely from the whole code. Same is true for NOPT.
 	  COMMON /INPOT/EM,C1,C2,C3,C4,C5,C6,C7,C8, WORKFN
 
 
@@ -733,7 +733,7 @@ C*************************************************************
  100  CONTINUE
 
 c  calculation of energy dependent inner potential from Rundgren's parameters
-! Note AMI: reworked by LH; newest version of EEAS code no longer used 8 coefficient approximation... TODO?
+! Note AMI: reworked by LH; newest version of EEAS code no longer used 8 coefficient approximation... TODO?  << May be the problem! perhaps we can temporarily deactivate it (--> IF (ERED-1) 120,120,120)?
 
       IF (EM) 140,120,110
 
@@ -876,15 +876,6 @@ C  (NLS = NL is necessary, cf. appendix B of Van Hove / Tong 1979)
 !     actually does via the unnamed COMMON block "E,AK21,VPI,..."
 !     since AK21 is changed within DECIDE right above
       CALL  FMAT (FLMS,V,JJS,NL,NLS,DCUTS,IDEG,LMAX,KLM,SCC,SA)
-
-Ctest TODO @MR can be removed?
-C  for outmat:
-
-c      NOUT(1) = 1
-c      NOUT(2) = 2
-c      NOUT(3) = 3
-c      NOUT(4) = 4
-c      NOUT(5) = 5
 
 C*************************************************************
 C  compute (plane-wave) scattering matrices for each layer type

@@ -77,17 +77,9 @@ C  Subroutines are included in alphabetical order
 !        Lateral momentum of incident beam in vacuum
 !    VPI : real, unused
 !        Imaginary part of the inner potential
-!    VPIO, VPIS : real
+!    VPIO, VPIS : real                                                 << Would actually be nice to use VPI straight (everywhere)
 !        Imaginary part of the inner potential in the top layer
 !        and in the rest of the stack
-!    VO : real
-!        Offset of real part of inner potential between top layer
-!        and rest of the stack (VO == E_rest - E_top)
-!    FR : real
-!        Fraction of the phase shift due to perpendicular propagation
-!        that should use the inner potential of the 'rest of the stack'.
-!        1 - FR will be the contribution of the top layer. When using
-!        VPIS == VPIO and VO == 0 this has no effect.
 !    ASE : real
 !        Onset 'height' of inner potential, i.e., where the solid starts
 !        with respect to the geometrical position of the topmost layer.
@@ -104,16 +96,8 @@ C  Subroutines are included in alphabetical order
       REAL AK, BK2, BK3, PQ, INTL_VEC, X
       DIMENSION INTL_VEC(3), PQ(2, N)
 
-!    ! Ideally we do not want to use VPIS/VPIO/VO as they give weird
-!    ! results according to Lutz, but rather VPI. This would also make
-!    ! XX and YY entirely equal, and would simplify the code a bit.
-!    ! For now keep it this way for consistency with the code that was
-!    ! in ADREF2T. This may perhaps turn out to become handy for 'rough'
-!    ! surfaces, although the fact that a difference is assumed only
-!    ! between the very top layer and what's underneath may be a bit
-!    ! of a poor approximation.
       COMMON  E, AK2, AK3    !, VPI
-      COMMON  /ADS/ FR, ASE, VPIS, VPIO, VO, VV  ! VV necessary (although unused) as this is a named COMMON block from main
+      COMMON  /ADS/ ASE, VPIS, VPIO, VV  ! VV necessary (although unused) as this is a named COMMON block from main
 
       IU = CMPLX(0.0,1.0)
       AK = 2.0 * E
@@ -123,23 +107,17 @@ C  Subroutines are included in alphabetical order
         BK3 = AK3 + PQ(2, I)
 
 !       YY is k_perp in topmost layer
-        YY = CMPLX(AK - 2.0 * VO - BK2 * BK2 - BK3 * BK3,
+        YY = CMPLX(AK - BK2 * BK2 - BK3 * BK3,
      +             -2.0 * VPIO + 0.000001)
         YY = SQRT(YY)
-!       XX is k_perp in the rest of the stack
-        XX = CMPLX(AK - BK2 * BK2 - BK3 * BK3,
-     +             -2.0 * VPIS + 0.000001)
-        XX = SQRT(XX)
 
 !       X is the phase shift due to in-plane propagation between top layer
 !       and stack underneath
         X = BK2 * INTL_VEC(2) + BK3 * INTL_VEC(3)
 
         WK(I, 1) = EXP(IU * (YY * ASE))
-        WK(I, 2) = EXP(IU * (YY * (1.0 - FR) * INTL_VEC(1)
-     +                       + XX * FR * INTL_VEC(1) + X))
-        WK(I, 3) = EXP(IU * (YY * (1.0 - FR) * INTL_VEC(1)
-     +                       + XX * FR * INTL_VEC(1) - X))
+        WK(I, 2) = EXP(IU * (YY * INTL_VEC(1) + X))
+        WK(I, 3) = EXP(IU * (YY * INTL_VEC(1) - X))
       ENDDO
       RETURN
       END
@@ -1724,215 +1702,6 @@ C
 
  1    CONTINUE
 C
-      RETURN
-      END
-
-!  TODO: Alex: remove FMAT_OLD since FMAT now exists?
-C-----------------------------------------------------------------------
-COMMENT FMAT_OLD CALCULATES THE VALUES OF THE SUM FLMS(JS,LM),
-C       OVER LATTICE POINTS OF EACH SUBLATTICE JS, WHERE
-C       LM=(0,0),(1,-1),(1,1),.....
-C       NOTE  FOR ODD (L+M), FLMS IS ZERO
-C  AUTHOR  PENDRY
-C  DIMENSIONS 80 AND 41 REQUIRE LMAX.LE.10. AND IDEG.LE.4
-C   FLMS= OUTPUT LATTICE SUMS.
-C   V,JJS= INPUT FROM SUBROUTINE SLIND.
-C   NL= NO. OF SUBLATTICES
-C   NLS= ACTUAL NO. OF SUBLATTICE SUMS DESIRED (E.G. 1 OR NL).
-C   DCUT= CUTOFF DISTANCE FOR LATTICE SUM.
-C   IDEG= DEGREE OF SYMMETRY OF LATTICE (IDEG-FOLD ROTATION AXIS).
-C    NOTE  DO NOT USE IDEG=1. IDEG=3 PREFERABLE OVER IDEG=6.
-C   LMAX= LARGEST VALUE OF L.
-C   KLM=(2*LMAX+1)*(2*LMAX+2)/2.
-C  IN COMMON BLOCKS
-C   E= CURRENT ENERGY.
-C   AK  PARALLEL COMPONENTS OF PRIMARY INCIDENT K-VECTOR.
-C   VPI= IMAGINARY PART OF ENERGY.
-C   BR1,BR2,RAR1,RAR2,NL1,NL2  NOT USED.
-C   AR1,AR2= BASIS VECTORS OF SUPERLATTICE.
-COMMENT FMAT CALCULATES THE VALUES OF THE SUM FLMS(JS,LM),
-C       OVER LATTICE POINTS OF EACH SUBLATTICE JS, WHERE
-C       LM=(0,0),(1,-1),(1,1),.....
-C       NOTE  FOR ODD (L+M), FLMS IS ZERO
-C  AUTHOR  PENDRY
-C  DIMENSIONS 80 AND 41 REQUIRE LMAX.LE.10. AND IDEG.LE.4
-CVB These dimensions are no longer set excplicitly; only restriction
-C   is IDEG <= 6 now, from ANC and ANS
-C   FLMS= OUTPUT LATTICE SUMS.
-C   V,JJS= INPUT FROM SUBROUTINE SLIND.
-C   NL= NO. OF SUBLATTICES
-C   NLS= ACTUAL NO. OF SUBLATTICE SUMS DESIRED (E.G. 1 OR NL).
-C   DCUT= CUTOFF DISTANCE FOR LATTICE SUM.
-C   IDEG= DEGREE OF SYMMETRY OF LATTICE (IDEG-FOLD ROTATION AXIS).
-C   NOTE  DO NOT USE IDEG=1. IDEG=3 PREFERABLE OVER IDEG=6.
-C   LMAX= LARGEST VALUE OF L.
-C   KLM=(2*LMAX+1)*(2*LMAX+2)/2.
-C  IN COMMON BLOCKS
-C   E= CURRENT ENERGY.
-C   AK  PARALLEL COMPONENTS OF PRIMARY INCIDENT K-VECTOR.
-C   VPI= IMAGINARY PART OF ENERGY.
-C   BR1,BR2,RAR1,RAR2,NL1,NL2  NOT USED.
-C   AR1,AR2= BASIS VECTORS OF SUPERLATTICE.
-      SUBROUTINE  FMAT_OLD (FLMS, V, JJS, NL, NLS, DCUT, IDEG, LMAX,KLM,
-     +                  SCC,SA)
-      COMPLEX  FLMS, SCC, SA, RTAB, CZERO, CI, KAPPA, SC, SD, SE, Z,
-     1ACS, ACC, RF
-      COMPLEX SQRT,EXP,COS,SIN
-      DIMENSION  FLMS(NL,KLM), V(NL,2), JJS(NL,IDEG), BR1(2)
-      DIMENSION  BR2(2), SCC(IDEG,4*LMAX+1),
-     +           SA(2*LMAX*IDEG), ANC(6), ANS(6), RTAB(4)
-      DIMENSION  AK(2),AR1(2),AR2(2),RAR1(2),RAR2(2),R(2)
-      COMMON  E, AK, VPI
-      COMMON  /SL/BR1, BR2, AR1, AR2, RAR1, RAR2, NL1, NL2
-      PI = 3.14159265
-      CZERO = CMPLX(0.0,0.0)
-      CI = CMPLX(0.0,1.0)
-      KAPPA = CMPLX(2.0 * E, - 2.0 * VPI + 0.000001)
-      KAPPA = SQRT(KAPPA)
-      AG=SQRT(AK(1)*AK(1)+AK(2)*AK(2))
-C
-COMMENT ANC,ANS AND SA ARE PREPARED TO BE USED IN THE SUM
-C       OVER SYMMETRICALLY RELATED SECTORS OF THE LATTICE
-      L2MAX = LMAX + LMAX
-      LIM = L2MAX * IDEG
-      LIML = L2MAX + 1
-      ANG = 2.0 * PI/FLOAT(IDEG)
-      D = 1.0
-CDIR$ NOVECTOR                                                            170389
-      DO 10 J = 1, IDEG
-      ANC(J) = COS(D * ANG)
-      ANS(J) = SIN(D * ANG)
-   10 D = D + 1.0
-CDIR$ VECTOR                                                              170389
-      D = 1.0
-      DO 20 J = 1, LIM
-      SA(J) = EXP( - CI * D * ANG)
-   20 D = D + 1.0
-      DO 30 J = 1, NL
-      DO 30 K = 1, KLM
-   30 FLMS(J,K) = CZERO
-COMMENT THE LATTICE SUM STARTS.THE SUM IS DIVIDED INTO ONE
-C       OVER A SINGLE SECTOR,THE OTHER (IDEG-1) SECTORS
-C       ARE RELATED BY SYMMETRY EXCEPT FOR FACTORS
-C       INVOLVING THE DIRECTION OF R
-C  THE RANGE OF SUMMATION IS LIMITED BY DCUT
-      D = SQRT(AR1(1) * AR1(1) + AR1(2) * AR1(2))
-      LI1=INT(DCUT/D)+2                                                 020780
-      D = SQRT(AR2(1) * AR2(1) + AR2(2) * AR2(2))
-      LI2=INT(DCUT/D)+2                                                 020780
-      DCUT2=DCUT*DCUT                                                   020780
-C  ONE SUBLATTICE AT A TIME IS TREATED IN THE FIRST SECTOR
-      DO 160 JS = 1, NLS
-      LI11 = LI1
-      LI22 = LI2
-      ASST = 0.0
-      ADD = 1.0
-      ANT =  - 1.0
-      ADR1=V(JS,1)*COS(V(JS,2))
-      ADR2=V(JS,1)*SIN(V(JS,2))
-C  SHIFT POINT ADR1,2 BY MULTIPLES OF AR1 AND AR2                       020780
-C  INTO SUPERLATTICE UNIT CELL NEAR ORIGIN, DEFINED BY THE LIMITS       020780
-C  (-0.001 TO 0.999)*AR1 AND (0.001 TO 1.001)*AR2                       020780
-      DET=AR1(1)*AR2(2)-AR1(2)*AR2(1)                                      .
-      B1=(ADR1*AR2(2)-ADR2*AR2(1))/DET
-      B2=(AR1(1)*ADR2-AR1(2)*ADR1)/DET
-      BP1=AMOD(B1,1.)
-      IF (BP1.LT.-.001) BP1=BP1+1.
-      IF (BP1.GT.0.999) BP1=BP1-1.
-      BP2=AMOD(B2,1.)
-      IF (BP2.LT.0.001) BP2=BP2+1.
-      IF (BP2.LT.0.001) BP2=BP2+1.
-      ADR1=BP1*AR1(1)+BP2*AR2(1)                                           .
-      ADR2=BP1*AR1(2)+BP2*AR2(2)                                        020780
-   40 AST =  - 1.0
-   60 AN1 = ANT
-      DO 130 I1 = 1, LI11
-      AN1 = AN1 + ADD
-      AN2 = AST
-      DO 130 I2 = 1, LI22
-      AN2 = AN2 + 1.0
-COMMENT R=THE CURRENT LATTICE VECTOR IN THE SUM
-C       AR=MOD(R)
-C       RTAB(1)=-EXP(I*FI(R))
-      R(1)=AN1*AR1(1)+AN2*AR2(1)+ADR1
-      R(2)=AN1*AR1(2)+AN2*AR2(2)+ADR2
-      AR=R(1)*R(1)+R(2)*R(2)                                            020780
-      IF (AR.GT.DCUT2) GO TO 130                                        020780
-      AR=SQRT(AR)                                                       020780
-      RTAB(1) =  - CMPLX(R(1)/AR,R(2)/AR)
-      ABC = 1.0
-      ABB = 0.0
-      IF (AG-1.0E-4)  80, 80, 70
-   70 ABC = (AK(1) * R(1) + AK(2) * R(2))/(AG * AR)
-      ABB = ( - AK(2) * R(1) + AK(1) * R(2))/(AG * AR)
-   80 SC = CI * AG * AR
-COMMENT SCC CONTAINS FACTORS IN THE SUMMATION DEPENDENT ON
-C       THE DIRECTION OF R. CONTRIBUTIONS FROM SYMMETRICALLY
-C       RELATED SECTORS CAN BE GENERATED SIMPLY AND ARE
-C       ACCUMULATED FOR EACH SECTOR, INDEXED BY THE SUBSCRIPT J.
-C       THE SUBSCRIPT M IS ORDERED M=(-L2MAX),(-L2MAX+1)....
-C       (+L2MAX)
-      DO 90 J = 1, IDEG
-      AD = ABC * ANC(J) - ABB * ANS(J)
-      SD = EXP(SC * AD)
-      SCC(J,LIML) = SD
-      MJ = 0
-      SE = RTAB(1)
-CDIR$ SHORTLOOP                                                           170389
-      DO 90 M = 1, L2MAX
-      MJ = MJ + J
-      MP = LIML + M
-      MM = LIML - M
-      SCC(J,MP) = SD * SA(MJ)/SE
-      SCC(J,MM) = SD * SE/SA(MJ)
-   90 SE = SE * RTAB(1)
-      Z = AR * KAPPA
-      ACS = SIN(Z)
-      ACC = COS(Z)
-COMMENT RTAB(3)=SPHERICAL HANKEL FUNCTION OF THE FIRST KIND,L=0
-C       RTAB(4)=SPHERICAL HANKEL FUNCTION OF THE FIRST KIND,L=1
-      RTAB(3) = (ACS - CI * ACC)/Z
-      RTAB(4) = ((ACS/Z - ACC) - CI * (ACC/Z + ACS))/Z
-      AL = 0.0
-COMMENT THE SUMMATION OVER FACTORS INDEPENDENT OF THE
-C       DIRECTION OF R IS ACCUMULATED IN FLM, FOR EACH
-C       SUBLATTICE INDEXED BY SUBSCRIPT JSP.  THE SECOND
-C       SUBSCRIPT ORDERS L AND M AS  (0,0),(1,-1),(1,1),(2,-2),
-C       (2,0),(2,2)...
-      JF = 1
-      DO 120 JL = 1, LIML
-      RF = RTAB(3) * CI
-      JM = L2MAX + 2 - JL
-      DO 110 KM = 1, JL
-C  CONSIDER THE CORRESPONDING LATTICE POINTS IN THE OTHER SECTORS AND
-C  GIVE THEIR CONTRIBUTION TO THE APPROPRIATE SUBLATTICE
-CDIR$ NOVECTOR                                                            170389
-      DO 100 J = 1, IDEG
-      JSP = JJS(JS,J)
-  100 FLMS(JSP,JF) = FLMS(JSP,JF) + SCC(J,JM) * RF
-CDIR$ VECTOR                                                              170389
-      JF = JF + 1
-      JM = JM + 2
-  110 CONTINUE
-COMMENT SPHERICAL HANKEL FUNCTIONS FOR HIGHER L ARE
-C       GENERATED BY RECURRENCE RELATIONS
-      ACS = (2.0 * AL + 3.0) * RTAB(4)/Z - RTAB(3)
-      RTAB(3) = RTAB(4)
-      RTAB(4) = ACS
-      AL = AL + 1.0
-  120 CONTINUE
-  130 CONTINUE
-COMMENT SPECIAL TREATMENT IS REQUIRED IF IDEG=2
-C  TWO SECTORS REMAIN TO BE SUMMED OVER
-      IF (IDEG-2)  140, 140, 160
-  140 IF (ASST)  150, 150, 160
-  150 ASST = 1.0
-      ADD =  - 1.0
-      AST=-1.0                                                          020780
-      IF (BP2.GT.0.999) AST=-2.                                         020780
-      ANT = 0.0
-      GO TO 60
-  160 CONTINUE
       RETURN
       END
 
@@ -4942,7 +4711,7 @@ C  STORE PRESENT INTERPLANAR VECTORS FOR LATER COMPARISON
 
 ! AMI note: BE CAREFULL, there are convergence criteria EPS and EPS1. A mixup between them caused trouble in v1.72 !
       COMMON  /MS/  LMAX, EPS, LITER
-      COMMON  E, AK2, AK3,VPI
+      COMMON  E, AK2, AK3, VPI
 
    10 FORMAT(4H X =,E15.4)
    20 FORMAT(24H NO CONV IN SUBREF AFTER,I3,2X,9HITER, X =,E15.4)
