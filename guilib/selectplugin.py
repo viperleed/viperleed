@@ -21,6 +21,7 @@ from PyQt5 import (QtCore as qtc,
 from viperleed import guilib as gl
 from viperleed.gui import resources_path
 from viperleed.guilib.pluginsbase import logo_one_line
+from viperleed.guilib.measure.uimeasurement import Measure
 
 
 PRE_RELEASE = True
@@ -54,7 +55,7 @@ class ViPErLEEDSelectPlugin(gl.ViPErLEEDPluginBase):
     # window of the module
     modules = {'pattern_simulator': ('pattern_simulator.png',
                                      gl.LEEDPatternSimulator),
-               'measure': ('measure.png', None),}
+               'measure': ('measure.png', Measure),}
 
     def __init__(self, parent=None):
         """Initialize window."""
