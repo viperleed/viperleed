@@ -18,6 +18,7 @@ utilities/recompile_parts.log
 Hematite_test/
 Tests/
 
-# Ignore compiled versions of random_.c
+# Ignore compiled versions of random_.c and beamgen
 **/random_.o
 **/MPIrandom_.o
+**/beamgen.v1.7
