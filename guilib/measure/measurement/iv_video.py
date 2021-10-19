@@ -19,6 +19,8 @@ from viperleed.guilib.measure.measurement.measurementabc import MeasurementABC
 
 class IVVideo(MeasurementABC):
     """Measurement class for LEED I(V) videos."""
+    
+    display_name = 'I(V) video'
 
     def __init__(self, measurement_settings):
         """Initialise measurement class."""
@@ -66,6 +68,7 @@ class IVVideo(MeasurementABC):
         if self.current_energy >= self.__end_energy:
             return True
         self.current_energy += self.__delta_energy
+        self.new_data_available.emit()
         return False
 
     def abort(self):

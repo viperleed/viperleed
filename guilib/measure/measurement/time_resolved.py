@@ -21,6 +21,7 @@ from viperleed.guilib.measure.measurement.measurementabc import MeasurementABC
 class TimeResolved(MeasurementABC):
     """Time resolved measurement class."""
     continuous_mode = qtc.pyqtSignal([list])
+    display_name = 'Time resolved'
 
     def __init__(self, measurement_settings):
         """Initialise measurement class."""
@@ -117,6 +118,7 @@ class TimeResolved(MeasurementABC):
         if self.__time_over or self.current_energy >= self.__end_energy:
             self.on_finished()
             return True
+        self.new_data_available.emit()        # TODO: check for plot delay. Alternative: fire a Qtimer at regular intervals (e.g. ~150 ms)
         self.current_energy = self.energy_generator()
         return False
 

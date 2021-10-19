@@ -464,6 +464,31 @@ class MPLFigureCanvas(FigureCanvas):
         return qtc.QPoint(np.round(x_qt), np.round(y_qt))
 
 
+class MeasurementFigureCanvas(FigureCanvas):
+    """
+    Subclass of the matplotlib FigureCanvas class
+    used to display measurement datay.
+    """
+
+    def __init__(self, figure=None, **kwargs):
+        if figure is None:
+            figure = Figure()
+        super().__init__(figure)
+
+        self.__ax = self.figure.subplots()  # matplotlib axes
+
+        self.setParent(kwargs.get('parent', None))
+
+        self.adjustSize()
+    
+    @property
+    def ax(self):
+        """
+        Returns a reference to the matplotlib axes on which stuff is plotted
+        """
+        return self.__ax
+
+
 class TextBoxWithButtons(qtw.QWidget):
     def __init__(self, **kwargs):
         parent = kwargs.get('parent', None)

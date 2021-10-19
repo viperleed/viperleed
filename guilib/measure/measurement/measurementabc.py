@@ -70,6 +70,8 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
     # Abort current task on the controller side.
     # Is emitted if measurement is aborted.
     abort_action = qtc.pyqtSignal()
+    # TODO: test signal below
+    new_data_available = qtc.pyqtSignal()
 
     # The reimplementation may introduce more/other keys.
     # See ViPErinoController for an example on how to do this.

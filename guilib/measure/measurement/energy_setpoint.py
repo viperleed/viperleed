@@ -20,6 +20,8 @@ from viperleed.guilib.measure.measurement.measurementabc import MeasurementABC
 
 class MeasureEnergySetpoint(MeasurementABC):
     """Energy calibration class."""
+    
+    display_name = 'Energy calibration'
 
     def __init__(self, measurement_settings):
         """Initialise measurement class.
@@ -91,6 +93,7 @@ class MeasureEnergySetpoint(MeasurementABC):
             self.calibrate_energy_setpoint()
             return True
         self.current_energy += self.__delta_energy
+        self.new_data_available.emit()
         return False
 
     def calibrate_energy_setpoint(self):

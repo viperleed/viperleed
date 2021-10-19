@@ -22,9 +22,11 @@ import time
 
 # ViPErLEED modules
 from viperleed import guilib as gl
-from viperleed.guilib.measure.measurement.energy_setpoint import MeasureEnergySetpoint
-from viperleed.guilib.measure.measurement.time_resolved import TimeResolved
-from viperleed.guilib.measure.measurement.iv_video import IVVideo
+from viperleed.guilib.measure.measurement import ALL_MEASUREMENTS
+from viperleed.guilib.measure.hardwarebase import class_from_name
+from viperleed.guilib.basewidgets import MeasurementFigureCanvas as Figure
+
+from viperleed.guilib.measure.measurement.time_resolved import TimeResolved # TEMP
 
 TITLE = 'Measurement UI'
 
@@ -41,17 +43,18 @@ class Measure(gl.ViPErLEEDPluginBase):
         # Keep references to controls, dialogs, and some globals
         self._ctrls = {
             'measure': qtw.QPushButton("Start Measurement"),
+            'abort': qtw.QPushButton("Abort"),
             'select': qtw.QComboBox(),
             'Start energy': qtw.QLineEdit(''),
             'End energy': qtw.QLineEdit(''),
-            'Delta energy': qtw.QLineEdit('')
+            'Delta energy': qtw.QLineEdit(''),
+            'save': qtw.QPushButton("Save"),
+            'plots': [],
             # TODO: add times/ make separate class/ read stuff from config and put it in the box upon opening extra window/add save button
             }
 
         self._dialogs = {}
         self._glob = {}
-        self.__measurement_types = ['Energy calibration', 'Time resolved',
-                                    'I(V) video']
 
         # Set window properties
         self.setWindowTitle(TITLE)
@@ -70,8 +73,18 @@ class Measure(gl.ViPErLEEDPluginBase):
         self._ctrls['measure'].ensurePolished()
         self._ctrls['measure'].clicked.connect(self.do_stuff)
         self._ctrls['measure'].setEnabled(False)
+        
+        self._ctrls['abort'].setFont(gl.AllGUIFonts().buttonFont)
+        self._ctrls['abort'].ensurePolished()
+        # self._ctrls['abort'].clicked.connect(self.do_stuff)
+        self._ctrls['abort'].setEnabled(False)
+        
+        self._ctrls['save'].setFont(gl.AllGUIFonts().buttonFont)
+        self._ctrls['save'].ensurePolished()
+        # self._ctrls['save'].clicked.connect(TODO: this)
+        # self._ctrls['save'].setEnabled(False)
 
-        self._ctrls['select'].addItems(self.__measurement_types)
+        self._ctrls['select'].addItems(ALL_MEASUREMENTS.keys())
         self._ctrls['select'].setFont(gl.AllGUIFonts().buttonFont)
         self._ctrls['select'].ensurePolished()
         self._ctrls['select'].activated.connect(self.__on_element_selected)
@@ -85,7 +98,8 @@ class Measure(gl.ViPErLEEDPluginBase):
             self._ctrls[key].validator().setLocale(qtc.QLocale.c())
             # self._ctrls[key].editingFinished.connect(self.__temp)
 
-        layout.addWidget(self._ctrls['measure'], 1, 1, 1, 2)
+        layout.addWidget(self._ctrls['measure'], 1, 1, 1, 1)
+        layout.addWidget(self._ctrls['abort'], 1, 2, 1, 1)
         layout.addWidget(self._ctrls['select'], 2, 1, 1, 2)
         layout.addWidget(qtw.QLabel('Start energy ='), 3, 1, 1, 1)
         layout.addWidget(self._ctrls['Start energy'], 3, 2, 1, 1)
@@ -93,7 +107,14 @@ class Measure(gl.ViPErLEEDPluginBase):
         layout.addWidget(self._ctrls['End energy'], 4, 2, 1, 1)
         layout.addWidget(qtw.QLabel('Delta energy ='), 5, 1, 1, 1)
         layout.addWidget(self._ctrls['Delta energy'], 5, 2, 1, 1)
+        layout.addWidget(self._ctrls['save'], 6, 1, 1, 2)
         self.statusBar().showMessage('Ready')
+        
+        # temp: prepare a single plot and plot a line there
+        fig = Figure()
+        self._ctrls['plots'].append(fig)
+        layout.addWidget(fig, 7, 1, 1, 2)
+        fig.ax.plot([0,1,2], [0,1,2], 'r.')
 
     def do_stuff(self, checked):
         self.do_this.error_occurred.connect(self.error_occurred)
@@ -124,7 +145,8 @@ class Measure(gl.ViPErLEEDPluginBase):
         if self.do_this:
             self.do_this.thread.quit()
             self.__on_finished()
-        config = configparser.ConfigParser(comment_prefixes='/', allow_no_value=True)
+        config = configparser.ConfigParser(comment_prefixes='/',
+                                           allow_no_value=True)
         file_name = Path('C:/Users/Florian/Documents/Uni/Masterarbeit/ViperLEED/viperleed/guilib/measure/configuration/viperleed_config.ini')
         # TODO: path here not nice
         try:
@@ -136,12 +158,20 @@ class Measure(gl.ViPErLEEDPluginBase):
                                     "Check if this file exists and is in the "
                                     "correct folder.")
             return
-        if text == self.__measurement_types[0]:
-            self.do_this = MeasureEnergySetpoint(config)
-        if text == self.__measurement_types[1]:
-            self.do_this = TimeResolved(config)
-        if text == self.__measurement_types[2]:
-            self.do_this = IVVideo(config)
+        measurement_cls = ALL_MEASUREMENTS[text]
+        self.do_this = measurement_cls(config)
+        
+        if not isinstance(self.do_this, TimeResolved):  # TEMP. TODO: Handle data structure of time resolved
+            self.do_this.new_data_available.connect(self.on_new_data)
 
         self._ctrls['measure'].setEnabled(True)
 
+    def on_new_data(self):
+        """Replot measured data."""
+        fig = self._ctrls['plots'][0]
+        fig.ax.cla()  # Clear old stuff
+        meas = self.sender()
+        
+        fig.ax.plot(meas.data_points['nominal_energy'],
+                    meas.data_points['I0'], '.')
+        fig.ax.figure.canvas.draw_idle()
