@@ -148,10 +148,7 @@ class ViPErinoController(MeasureController):
             if tmp_energy <= 0:
                 tmp_energy = 0
             energies_and_times[2*i] = tmp_energy
-        message = []
-        for value in energies_and_times:
-            message.extend(value.to_bytes(2, 'big'))
-        self.send_message(pc_set_voltage, message)
+        self.send_message(pc_set_voltage, energies_and_times)
 
     def start_autogain(self):
         """Determine starting gain.
