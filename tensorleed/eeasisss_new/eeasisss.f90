@@ -1,9 +1,11 @@
-!=========================================================================
+  !=======================================================================
   !This program is free software under the terms of the GNU General Public
   !License as published by the Free Software Foundation.
   !Author: John O. Rundgren, jru@KTH.se ,
   !        KTH Royal Institute of Technology, Stockholm, Sweden.
   !Version: 28 March 2021.
+  !-----------------------------------------------------------------------
+  ! Adapted for ViPErLEED by Alexander M. Imre, October 2021
   !-----------------------------------------------------------------------
   subroutine EEASiSSS(input_file,log_file,output_dir,atom_dir)
 
@@ -20,9 +22,9 @@
   use maths,only : ipol,pois,iofx,sph_av
 
   use space,only : NeighborShells,NBR,nshell,nieq,neq,rx,dx,nx,nxx, &
-    nlat,ad,ia,rmt,rmtS,rmin,rmax
+    nlat,ad,ia,rmt,rmtovl,rmin,rmax
 
-  use enrgy,only : Free_Atom_Overlap,rho,rs,eev,ne,v0ev,emv0,fxc, &
+  use enrgy,only : Free_Atom_Overlap,rho,rs,eev,ne,v0ev,emv0,xcfac, &
     Vnist,Vcry,VcryR,Vcry0
 
   use sdata,only : nsp,nsr,sp,sr,sdat,sdat1
@@ -43,7 +45,7 @@
   integer,allocatable :: nxR(:)
   real(dp) :: v0coef(8),acc
   real(dp),allocatable :: Vxc0(:),XCmin(:),XCmax(:),bestmem_XC(:), &
-    rmtSexp(:),psu(:,:,:),psd(:,:,:),psl(:,:,:),psu1(:,:,:),psd1(:,:,:), &
+    RelOvlp(:),psu(:,:,:),psd(:,:,:),psl(:,:,:),psu1(:,:,:),psd1(:,:,:), &
     eps(:,:),a(:)
   real(dp),parameter :: rydb=13.60569172d0
   external errMT
@@ -68,7 +70,7 @@
   !
   !eev,emv0,v0ev allocated in StructureAndMethods.
   allocate(rmt(nieq),Vcry(nxx,nieq),VcryR(nieq), &
-    Vxc0(ne),nxR(nieq),rmtSexp(nieq), &
+    Vxc0(ne),nxR(nieq),RelOvlp(nieq), &
     psu(ne,0:lmax,nieq),psd(ne,0:lmax,nieq),psl(ne,0:lmax,nieq), &
     psu1(ne,0:lmax,nieq),psd1(ne,0:lmax,nieq), &
     eps(0:lmax,nieq),a(ne) )
@@ -82,7 +84,7 @@
   enddo
   write(61,822)'rmax(B)',(rmax(ir),ir=1,nieq)
   write(61,822)'rmin(B)',(rmin(ir),ir=1,nieq)
-  write(61,822)'rmtS',(rmtS(ir),ir=1,nieq)
+  write(61,822)'rmtovl',(rmtovl(ir),ir=1,nieq)
   !DEM PARAMETRS.
   NPfac=max(10,nieq)
   NP=NPfac*nieq
@@ -100,7 +102,7 @@
     !NEW rmt.
     rmt=bestmem_XC
     do ir=1,nieq
-      rmtSexp(ir)=(rmt(ir)+rmt(ia(2,ir)))/ad(2,ir)-1.d0
+      RelOvlp(ir)=(rmt(ir)+rmt(ia(2,ir)))/ad(2,ir)-1.d0
     enddo
     write(61,825)'fitness =',bestval*rydb
     write(61,810)'#calls,#improvements=',nfeval,itval
@@ -108,7 +110,7 @@
     write(61,820)'NNatom',(idElemA(ia(2,ir)),ir=1,nieq)
     write(61,822)'rmt(B)',(rmt(ir),ir=1,nieq)
     write(61,822)'rmtNN(B)',(rmt(ia(2,ir)),ir=1,nieq)
-    write(61,822)'rmtSexp',(rmtSexp(ir),ir=1,nieq)
+    write(61,822)'RelOvlp(B)',(RelOvlp(ir),ir=1,nieq)
     !Calculating VcryR and Vcry0.
     do ir=1,nieq
       VcryR(ir) = ipol(rmt(ir),nx(ir),rx(1,ir),dx(ir),Vcry(1,ir),'Vcry')
@@ -188,7 +190,7 @@ goto 1001
   !
   open(1414,file='uinp2',form='unformatted',status='unknown')
   write(1414) outdir,Pot,WF,idElemA,idZA,neq,nx,dx,rx,ad,ia, &
-    sp,sr,sdat,eev,Vcry,Vcry0,rmt,nxR,z,rho,rs,fxc,relerr,abserr 
+    sp,sr,sdat,eev,Vcry,Vcry0,rmt,nxR,z,rho,rs,xcfac,relerr,abserr
   close(1414)
   write(61,'(a)')'eeasisss: files 1414 written.'
   !
@@ -323,16 +325,16 @@ goto 1001
   subroutine errMT(X,fitness)
   use param,only : dp
   use maths,only : ipol
-  use space,only : nieq,neq,nlat,ad,ia,nx,rx,dx,rmtS
+  use space,only : nieq,neq,nlat,ad,ia,nx,rx,dx,rmtovl
   use enrgy,only : Vcry,VcryR,Vcry0
   implicit none
   integer  :: ir
   real(dp) :: X(nieq),harvest,fitness
   intrinsic random_number
   !
-  !rmtS in percent of ad(2,ir).
+  !rmtovl in percent of ad(2,ir).
   do ir=1,nieq
-    if(ad(2,ir)*(1.d0+rmtS(ir))-X(ir)-X(ia(2,ir)) < 0.d0)then
+    if(ad(2,ir)*(1.d0+rmtovl(ir))-X(ir)-X(ia(2,ir)) < 0.d0)then
       call random_number(harvest)
       fitness=(1.d0+harvest)*1.d+33
       return
@@ -350,9 +352,9 @@ goto 1001
   use param,only : dp,Elem,z,compound,idZ,idA,idZA,idElemA,bos,SpinPS, &
     Chg,Pot,WF,lmax,nthread,eev1,eev2,emesh,relerr,abserr
 
-  use space,only : rc,rk,dx,nx,nieq,neq,ieq,nlat,rmin,rmax,volUC,rmtS
+  use space,only : rc,rk,dx,nx,nieq,neq,ieq,nlat,rmin,rmax,volUC,rmtovl
 
-  use enrgy,only : eev,ne,v0ev,emv0,fxc
+  use enrgy,only : eev,ne,v0ev,emv0,xcfac
 
   use DifferentialEvolution,only : method,itermax,strategy,F_XC,F_CR,CR_XC
 
@@ -397,7 +399,7 @@ goto 1001
  read(5,*) nieq !
  !
  allocate(z(nieq),neq(nieq),dx(nieq),idZA(nieq),idElemA(nieq),nx(nieq), &
-   rmin(nieq),rmax(nieq),ieq(nieq),rmtS(nieq),fxc(nieq), &
+   rmin(nieq),rmax(nieq),ieq(nieq),rmtovl(nieq),xcfac(nieq), &
    rk_tmp(3,1000),idZ(nieq),idA(nieq))
  nlat=0
  !rmin, rmax in Bohr.
@@ -426,8 +428,8 @@ goto 1001
  205 format(3f9.4,' Ang',2x,3f9.4,' Bohr')
  !
  do ir=1,nieq
-   read(5,*)     idA(ir),rmin(ir),rmax(ir),rmtS(ir),fxc(ir)
-   write(61,210) idA(ir),rmin(ir),rmax(ir),rmtS(ir),fxc(ir),&
+   read(5,*)     idA(ir),rmin(ir),rmax(ir),rmtovl(ir),xcfac(ir)
+   write(61,210) idA(ir),rmin(ir),rmax(ir),rmtovl(ir),xcfac(ir),&
                  trim(Elem(idZ(ir)))
  enddo
  210 format(i2,4f8.4,2x,a)
