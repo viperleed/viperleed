@@ -842,7 +842,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                     .format(len(il)))
                 il = il[:2]
             if len(il) == 1:
-                if not 1 < il[0] < 18:
+                if not 1 < il[0] <= 18:
                     il[0] = min(max(1, il[0]), 18)
                     logger.warning(
                         'PARAMETERS file: LMAX must be between 1 and 18. '
