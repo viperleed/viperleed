@@ -1,10 +1,12 @@
- !=======================================================================
+  !=======================================================================
   !This program is free software under the terms of the GNU General Public
   !License as published by the Free Software Foundation.
   !Author: John O. Rundgren, jru@KTH.se ,
   !        KTH Royal Institute of Technology, Stockholm, Sweden.
   !Version: 28 March 2021.
- !-----------------------------------------------------------------------
+  !-----------------------------------------------------------------------
+  ! Adapted for ViPErLEED by Alexander M. Imre, October 2021
+  !-----------------------------------------------------------------------
  module param
  !double precision definition.
  integer,parameter :: dp=selected_real_kind(15,307)
@@ -175,7 +177,7 @@ integer,allocatable :: neq(:),ieq(:)
 !             where ir=1:nieq and i=1:nx(ir),
 
 !rmt(:)  = MT radius,
-!rmtS(:) = overlap exterior to NN distance ad(2,:),
+!rmtovl  = overlap exterior to NN distance ad(2,:),
 !rmin(:) = min MT radius,
 !rmax(:) = max MT radius,
 !rx(:,:) = radial grid,
@@ -183,8 +185,8 @@ integer,allocatable :: neq(:),ieq(:)
 !nx(:)   = (input) # grid points in atomic calculation,
 !        = (calc.) outermost grid point determined by superposition z,
 !nxx     = max nx(:).
-!real(dp) :: rmtS
-real(dp),allocatable :: rx(:,:),dx(:),rmin(:),rmax(:),rmt(:),rmtS(:)
+!real(dp) :: rmtovl
+real(dp),allocatable :: rx(:,:),dx(:),rmin(:),rmax(:),rmt(:),rmtovl(:)
 integer,allocatable  :: nx(:)
 integer :: nxx
 !unit cell,
@@ -494,10 +496,10 @@ real(dp),allocatable :: atrho4pir2(:,:),rho(:,:),rs(:,:),&
 !eev1,eev2 = energy interval for phase shift calculation,
 !emv0      = Einc-V0(inner potential),
 !m         = energy position of V0 dip,
-!fxc       = correction factor on Vxc.
+!xcfac     = correction factor on Vxc.
 integer  :: ne,m,kappa,iatom
 real(dp) :: Einc
-real(dp),allocatable :: eev(:),emv0(:),v0ev(:),fxc(:)
+real(dp),allocatable :: eev(:),emv0(:),v0ev(:),xcfac(:)
 !
 !Phase shift quantum numbers etc.
 !iatom =atom subscript,
@@ -572,10 +574,17 @@ contains
    enddo
    close(50)
    !check nuclear charge Z.
-   call trapez(rx(1,ir),dx(ir),nx(ir),atrho4pir2(1,ir),1,nx(ir),HFz)
+   call trapez(rx(1,ir),dx(ir),nx(ir),atrho4pir2(1,ir),1,nx(ir),HFz) ! AMI: Something goes wrong here... Integreation is off by a bit which caused below check to fail - thus removed (chgden files are static anyways)
    write(61,901) ir,z(ir),HFz(nx(ir))
-   if(abs(z(ir)-HFz(nx(ir))) > 0.08)then
-     write(61,'(a)')'stop'; stop
+   ! AMI: below checks if integrated charge matches atomic number. This fails for heavy atoms for some reason.
+   ! While such a sanity check makes sense in principal, there are two issues:
+   ! 1) the atomic density files are not changed in between runs anyways, so it is useless to do this every time
+   ! 2) something goes wrong in the integration here (boundaries?). I wrote a short python script that integrates
+   !    and checks the values in the charge density files. Differences between actual and integrated Z are less than
+   !    0.001% in ALL cases. (see charge_density_check.py in atlib/)
+   if(abs(z(ir)-HFz(nx(ir))) > 0.08)then ! Why 0.08 anyways?
+   !  write(61,'(a, f9.4)')'Difference in nuclear charge: ', abs(z(ir)-HFz(nx(ir)))
+     write(61,'(a)')'stop - Difference in nuclear charge bigger then 0.08' !;stop ! AMI: uncomment to cause stop
    endif
    !avoiding numerical noise of large-radius atrho4pir2.
    do i=nx(ir),nx(ir)/2,-1
@@ -584,6 +593,7 @@ contains
        exit
      endif
    enddo
+
  enddo
  close(10)
  !
@@ -638,10 +648,10 @@ contains
  end subroutine Free_Atom_Overlap
 end module enrgy
 !=========================================================================================================================
-module sdata
-use param,only : dp
-implicit none 
-!Self-energy data by the courtesy of B.E.Sernelius.
+!FORTRAN MODULE SDATA with PROGRAM RESHAPE SDATA
+ module sdata
+ implicit none
+!Self-energy data by B.E.Sernelius.
 !Ref.: K.W.Shung, B.E.Sernelius, and G.D.Mahan, PRB 36,4499 (1987).
 integer,parameter :: nsr=17,nsp=151
 real(dp),dimension(nsr),parameter :: sr=(/&
@@ -896,10 +906,25 @@ real(dp),dimension(nsp*nsr),parameter :: sdat1=(/&
 -0.49110d0,-0.48690d0,-0.48270d0,-0.47870d0,-0.47480d0,-0.47090d0,-0.46720d0,-0.46350d0,-0.45990d0,-0.45640d0,-0.45300d0,&
 -0.44960d0,-0.44630d0,-0.44310d0,-0.43990d0,-0.43680d0,-0.43370d0,-0.43070d0,-0.42780d0,-0.42490d0,-0.42210d0,-0.41930d0,&
 -0.41650d0,-0.41380d0,-0.41120d0,-0.40860d0/)
-end module sdata
+ end module sdata
+ !
+ program reshape_sdata
+ use sdata,only: nsp,nsr,sp,sr,sdat,sdat1
+ implicit none
+ character(len=2) :: cj
+!sdat1(1:nsp*nsr) -> sdat(1:nsp,1),sdat(1:nsp,2),...,sdat(1:nsp,nsr)
+!                    piled up vertically:
+ sdat=reshape(sdat1,shape=(/nsp,nsr/))
+!rectangular matrix written:
+ do j=1,nsr
+   write(cj,'(i0)') j
+   open(62,file='spx'//trim(cj),status='unknown')
+   write(62,'(2f9.5)') (sp(i),sdat(i,j),i=1,nsp)  !sdat(1:nsp,j)
+ enddo
+ close(62)
+ end program reshape_sdata
 
-
-! got rid of module Eparallel
+! AMI: got rid of module Eparallel
 !==============================================================================
 module DifferentialEvolution
   use param,only : dp

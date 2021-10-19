@@ -5,6 +5,8 @@
   !        KTH Royal Institute of Technology, Stockholm, Sweden.
   !Version: 28 March 2021.
   !-----------------------------------------------------------------------
+  ! Adapted for ViPErLEED by Alexander M. Imre, October 2021
+  !-----------------------------------------------------------------------
   program eeasisss_main
   !This program requires compiler adhering to Fortran 2003 standard.
   implicit none

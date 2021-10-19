@@ -5,6 +5,8 @@
   !        KTH Royal Institute of Technology, Stockholm, Sweden.
   !Version: 28 March 2021.
   !-----------------------------------------------------------------------
+  ! Adapted for ViPErLEED by Alexander M. Imre, October 2021
+  !-----------------------------------------------------------------------
   module eeas ! AMI: changed program eeas into module eeas
   implicit none
   !program EEAS
@@ -27,7 +29,7 @@
   real(dp),parameter :: rydb=13.60569172d0,pi=acos(-1.d0)
   real(dp) :: Einc,Vcry0,Vxc0,gam,zet
   real(dp),allocatable :: ad(:,:),eev(:),v0ev(:),sdat(:,:),sp(:),sr(:),&
-    rmt(:),rx(:,:),dx(:),z(:),rho(:,:),rs(:,:),fxc(:),&
+    rmt(:),rx(:,:),dx(:),z(:),rho(:,:),rs(:,:),xcfac(:),&
     Vcry(:,:),VxcR(:),Vtot(:,:),Vxc(:,:)
 
   !PScal variables.
@@ -61,13 +63,13 @@
     idElemA(nieq),idZA(nieq),eev(ne),v0ev(ne),sdat(nsp,nsr),sp(nsp),sr(nsr), &
     rx(nxx,nieq),dx(nieq),rmt(nieq),z(nieq),rho(nxx,nieq),rs(nxx,nieq), &
     Vtot(nxx,nieq),Vcry(nxx,nieq),Vxc(nxx,nieq),VxcR(nieq),nxR(nieq), &
-    fxc(nieq),EmVxc0(nieq),Lconst(nieq),Lrs(nieq),Ltest(nieq), &
+    xcfac(nieq),EmVxc0(nieq),Lconst(nieq),Lrs(nieq),Ltest(nieq), &
     psu(0:lmax,nieq),psd(0:lmax,nieq), &
     psu1(0:lmax,nieq),psd1(0:lmax,nieq) )
   !
   open(1732,file='./uinp2',form='unformatted',status='unknown') ! AMI: changed from ../uinp to ./uinp
   read(1732) outdir,Pot,WF,idElemA,idZA,neq,nx,dx,rx,ad,ia, &
-    sp,sr,sdat,eev,Vcry,Vcry0,rmt,nxR,z,rho,rs,fxc,relerr,abserr
+    sp,sr,sdat,eev,Vcry,Vcry0,rmt,nxR,z,rho,rs,xcfac,relerr,abserr
   close(1732)
   !
   !THREAD definition.
@@ -156,7 +158,7 @@
   !Phase shift generated from XC modulated carrier potential.
   do ir=1,nieq
     Vtot(1:nxR(ir),ir) = &
-    Vcry(1:nxR(ir),ir) + Vxc(1:nxR(ir),ir) * fxc(ir)
+    Vcry(1:nxR(ir),ir) + Vxc(1:nxR(ir),ir) * xcfac(ir)
   enddo
   emv0=Einc-Vxc0
   q=sqrt(emv0 + cm2*emv0**2)
