@@ -4,3 +4,7 @@ gfortran -O2 -o /users/olof/bin/eeas.exe eeas.f90
 del *.mod
 ::this is gfortran in windows 10 with mingw; olof is user name, see eeasisss_main;
 ::eof
+
+# To compile on Linux/MacOs run:
+gfortran -Ofast -o eeasisss eeas.f90 eeasisss_init.f90 eeasisss_main.f90 eeasisss.f90
+rm *.mod

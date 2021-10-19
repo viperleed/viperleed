@@ -591,7 +591,7 @@ def runPhaseshiftGen(sl, rp, psgensource=os.path.join('tensorleed', 'eeasisss_ne
         logger.warning("Could not remove eeasisss executable from work directory.") # Not a big deal if this happens.
 
     # Now the results of the phaseshift calculation are read out and formatted for further processing
-    firstline, phaseshifts = convert_eeasiss_output(sl, rp, atom_types, lmax, E2, Estep, ps_outdir)
+    firstline, phaseshifts = convert_eeasisss_output(sl, rp, atom_types, lmax, E2, Estep, ps_outdir)
 
     # Finish up by moving relevant files to work directory and then removing the out_dir
     move_EEASISSS_files(ps_outdir, log_filename, Vxc0_files = ['Vxc0Einc', 'Vxc0EincAprx', 'Vxc0EincAprx_v0coef'])
@@ -775,7 +775,7 @@ def make_atoms_input_blocks(atom_types, uct):
     return input_file_atom_pos_block, input_file_mt_params_block
 
 
-def convert_eeasiss_output(sl, rp, atom_types, lmax, Emax, Estep, ps_outdir):
+def convert_eeasisss_output(sl, rp, atom_types, lmax, Emax, Estep, ps_outdir):
     ##############################
     # Read and convert EEASiSSS ouput
     ##############################
