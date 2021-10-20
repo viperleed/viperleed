@@ -64,7 +64,7 @@ def compile_refcalc(comptask):
     """Function meant to be executed by parallelized workers. Executes a
     RefcalcCompileTask."""
     logger = logging.getLogger("tleedm.refcalc")
-    home = os.getcwd()
+    #home = os.getcwd()
     has_muftin = False
     if os.path.isfile("muftin.f"):
         has_muftin = True
@@ -122,7 +122,7 @@ def compile_refcalc(comptask):
         logger.error("Error compiling fortran files: " + str(e))
         return ("Fortran compile error in RefcalcCompileTask "
                 + comptask.foldername)
-    os.chdir(home)
+    os.chdir(comptask.basedir)
     return ""
 
 
@@ -130,13 +130,13 @@ def run_refcalc(runtask):
     """Runs a part of a reference calculation in a subfolder, or the whole
     refcalc here if in single-threaded mode."""
     logger = logging.getLogger("tleedm.refcalc")
-    home = os.getcwd()
+    #home = os.getcwd()
     base = runtask.comptask.basedir
-    workfolder = home
+    workfolder = base
     task_name = "(single-threaded)"
     if not runtask.single_threaded:
         # make folder and go there:
-        workfolder = os.path.join(home, runtask.foldername)
+        workfolder = os.path.join(base, runtask.foldername)
         task_name = runtask.foldername
         if os.path.isdir(workfolder):
             logger.warning("Folder "+runtask.foldername+" already exists. "
@@ -150,22 +150,7 @@ def run_refcalc(runtask):
         logname = runtask.logname
     else:
         logname = "refcalc.log"
-        # modify FIN: replace the energy range (second line)
-        finparts = runtask.fin.split("\n", maxsplit=2)
-        if runtask.tl_version < 1.7:
-            eformatter = ff.FortranRecordWriter('3F7.2')
-            lj = 24
-        else:
-            eformatter = ff.FortranRecordWriter('3F9.2')
-            lj = 30
-        nl = (eformatter.write([runtask.energy, runtask.energy + 0.01, 1.0])
-              .ljust(lj) + 'EI,EF,DE')
-        fin = "\n".join((finparts[0], nl, finparts[2]))
-        # now replace LMAX
-        finparts = fin.split("LMAX", maxsplit=1)
-        finparts = [splitMaxRight(finparts[0], "\n")[0], finparts[1]]
-        nl = str(runtask.comptask.lmax).rjust(3).ljust(45) + "LMAX"
-        fin = finparts[0] + "\n" + nl + finparts[1]
+        fin = edit_fin_energy_lmax(runtask)
         try:
             with open("refcalc-FIN", "w") as wf:
                 wf.write(fin)
@@ -239,12 +224,33 @@ def run_refcalc(runtask):
             logger.warning("Error writing refcalc log part "
                            + task_name + ": ", exc_info=True)
     # clean up
-    os.chdir(home)
+    os.chdir(base)
     try:
         shutil.rmtree(workfolder)
     except Exception:
         logger.warning("Error deleting folder " + runtask.foldername)
     return ""
+
+
+def edit_fin_energy_lmax(runtask):
+    """modify FIN: replace the energy range (second line)"""
+    comment, _, rest = runtask.fin.split("\n", maxsplit=2)
+    if runtask.tl_version < 1.7:
+        eformatter = ff.FortranRecordWriter('3F7.2')
+        lj = 24
+    else:
+        eformatter = ff.FortranRecordWriter('3F9.2')
+        lj = 30
+    energy = (eformatter.write([runtask.energy, runtask.energy + 0.01, 1.0])
+              .ljust(lj) + 'EI,EF,DE')
+    # now replace LMAX - now makes sure LMAX can be part of directory name
+    # this works because even if the directory were to be named LMAX, there is a timestap after it rather than a \n
+    before_LMAX, after_LMAX = rest.split("   LMAX", maxsplit=1)
+    before_LMAX = splitMaxRight(before_LMAX, "\n")[0]
+    after_LMAX = str(runtask.comptask.lmax).rjust(3).ljust(45) + "LMAX\n" + after_LMAX
+    # fin = finparts[0] + "\n" + nl + finparts[1]
+    fin = "\n".join((comment, energy, before_LMAX, after_LMAX))
+    return fin
 
 
 def refcalc(sl, rp, subdomain=False):
@@ -370,7 +376,7 @@ def refcalc(sl, rp, subdomain=False):
                          exc_info=rp.LOG_DEBUG)
             raise
         comp_tasks.append(RefcalcCompileTask(param, lm, rp.FORTRAN_COMP,
-                                             tldir, basedir=os.getcwd()))
+                                             tldir, basedir=rp.workdir))
         collect_param += ("### PARAM file for LMAX = {} ###\n\n".format(lm)
                           + param + "\n\n")
     try:
