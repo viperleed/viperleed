@@ -638,17 +638,11 @@ def format_eeasisss_input(nsl, newbulkats, rp):
     # Options block
     ##############################
 
-    # l_max from input
-    l_max = 16
-    try:
-        if isinstance(rp.L_MAX, int):
-            lmax = rp.L_MAX
-        else:
-            lmax = rp.L_MAX[1]
-    except Exception:
-        logger.warning('Unable to determine L_MAX in phaseshift gen. Defaulted to 16.')
+    # l_max always set to 18 (not expensive)
+    l_max = 18
+
     # energy range
-    E2 = round(float(rp.THEO_ENERGIES[1]) + 30, 2) # add 30 eV to energy range for dbg TODO remove
+    E2 = round(float(rp.THEO_ENERGIES[1]) + 20, 2) # add 20 eV to energy range
     E2_str = str(E2)
     Estep = round(float(rp.THEO_ENERGIES[2]), 2)
     Estep_str = str(Estep)
