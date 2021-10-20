@@ -25,6 +25,9 @@ suppfiles = ["AUXBEAMS", "AUXGEO", "AUXLATGEO", "AUXNONSTRUCT", "BEAMLIST",
              "eeasisss-input", "searchpars.info", "superpos-PARAM",
              "superpos-CONTRIN", "POSCAR_bulk_appended", "POSCAR_mincell",
              "restrict.f", "Phaseshifts_plots.pdf"]
+
+supp_dirs = ["original_inputs", "compile_logs"]
+
 outfiles = ["THEOBEAMS.csv", "THEOBEAMS_norm.csv",
             "PatternInfo.tlm", "SD.TL", "refcalc-fd.out",
             "Rfactor_plots_refcalc.pdf", "control.chem",
@@ -184,15 +187,24 @@ def sortfiles(tensorIndex, delete_unzipped=False, tensors=True,
             logger.error("Error creating {} folder: ".format(t), exc_info=True)
         if t == "SUPP":
             filelist = suppfiles
+            directory_list = supp_dirs # move directories original_inputs and compile_logs to SUPP
         else:
             filelist = outfiles
+            directory_list = []
         for f in [f for f in filelist
-                  if os.path.isfile(os.path.join(path, f))]:
+                  if os.path.isfile(os.path.join(path, f))]: # copies files into SUPP and OUT directories
             try:
                 shutil.copy2(os.path.join(path, f), os.path.join(path, t, f))
             except Exception:
                 logger.error("Error moving {} file {}: ".format(t, f),
                              exc_info=True)
+        for d in directory_list:
+            if os.path.isdir(os.path.join(path, d)):
+                try:
+                    shutil.copytree(os.path.join(path, d), os.path.join(path, t, d))
+                except Exception:
+                    logger.error("Error moving {} directory {}: ".format(t, d),
+                                 exc_info=True)
 
 
 def move_oldruns(rp, prerun=False):

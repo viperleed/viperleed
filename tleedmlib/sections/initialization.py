@@ -326,6 +326,9 @@ def initialization(sl, rp, subdomain=False):
     if rp.fileLoaded["IVBEAMS"] and not rp.ivbeams_sorted:
         rp.ivbeams = sortIVBEAMS(sl, rp)
         rp.ivbeams_sorted = True
+
+    # At the end of initialization preserve the original input files
+    preserve_original_input(rp, logger)
     return
 
 
@@ -696,4 +699,36 @@ def init_domains(rp):
         rp.RUN.insert(rp.RUN.index(4), 2)
         rp.RUN.insert(rp.RUN.index(4), 3)
         rp.RUN.remove(4)
+    return
+
+
+def preserve_original_input(rp, init_logger, path=""):
+    """
+    Creates directory original_inputs and copies input files there for preservation.
+    """
+    # Folder name "original_inputs" hardcoded. If changed, change also in cleanup.py !
+    folder_name = "original_inputs"
+    if not path:
+        path = "."
+
+    # makes orig_inputs directory
+    try:
+        orig_inputs_path = os.path.join(path, folder_name)
+        os.makedirs(orig_inputs_path, exist_ok=True)
+    except Exception:
+        logger.warning("Could not create directory {}".format(folder_name))
+        rp.setHaltingLevel(1)
+
+    # copy all files to orig_inputs that were used as original input
+    for file in rp.fileLoaded:
+        if rp.fileLoaded[file]:
+            # copy to original input
+            try:
+                if os.path.isfile(file):
+                    shutil.copy2(os.path.join(path, file), orig_inputs_path)
+                else:
+                    raise FileNotFoundError
+            except Exception:
+                init_logger.warning("Could not copy file {} to ".format(file) + folder_name)
+                rp.setHaltingLevel(1)
     return
