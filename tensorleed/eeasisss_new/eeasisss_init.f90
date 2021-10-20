@@ -650,7 +650,8 @@ end module enrgy
 !=========================================================================================================================
 !FORTRAN MODULE SDATA with PROGRAM RESHAPE SDATA
  module sdata
- implicit none
+ use param,only : dp
+! implicit none
 !Self-energy data by B.E.Sernelius.
 !Ref.: K.W.Shung, B.E.Sernelius, and G.D.Mahan, PRB 36,4499 (1987).
 integer,parameter :: nsr=17,nsp=151
@@ -907,22 +908,8 @@ real(dp),dimension(nsp*nsr),parameter :: sdat1=(/&
 -0.44960d0,-0.44630d0,-0.44310d0,-0.43990d0,-0.43680d0,-0.43370d0,-0.43070d0,-0.42780d0,-0.42490d0,-0.42210d0,-0.41930d0,&
 -0.41650d0,-0.41380d0,-0.41120d0,-0.40860d0/)
  end module sdata
- !
- program reshape_sdata
- use sdata,only: nsp,nsr,sp,sr,sdat,sdat1
- implicit none
- character(len=2) :: cj
-!sdat1(1:nsp*nsr) -> sdat(1:nsp,1),sdat(1:nsp,2),...,sdat(1:nsp,nsr)
-!                    piled up vertically:
- sdat=reshape(sdat1,shape=(/nsp,nsr/))
-!rectangular matrix written:
- do j=1,nsr
-   write(cj,'(i0)') j
-   open(62,file='spx'//trim(cj),status='unknown')
-   write(62,'(2f9.5)') (sp(i),sdat(i,j),i=1,nsp)  !sdat(1:nsp,j)
- enddo
- close(62)
- end program reshape_sdata
+
+! AMI: removoved program reshape_sdata – was unused and causing issues.
 
 ! AMI: got rid of module Eparallel
 !==============================================================================
