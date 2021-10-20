@@ -419,8 +419,8 @@ C  R-FACTOR ACCORDING TO PENDRY (MULT. BY 0.5)
       RPE(IBE)=1.0*SY2/(SEY2+STY2)
 
       ARPE=ARPE+WB(IBE)*EET(IBE)*RPE(IBE)
-              RAZZ=RAZZ+SY2*WB(IBE)
-              RANN=RANN+SEY2*WB(IBE)+STY2*WB(IBE)
+      RAZZ=RAZZ+SY2*WB(IBE)
+      RANN=RANN+SEY2*WB(IBE)+STY2*WB(IBE)
 
 CVB
       END IF
@@ -451,7 +451,7 @@ CVB
          ERANGM(KMIT)=ERANGM(KMIT)+WB(IBE)*EET(IBE)                     260187
       ENDIF                                                             260187
 
-      OVL=EET(IBE)
+      OVL=EET(IBE)   ! unused
 C       WRITE(7,4444) (BENAME(I,IBE),I=1,3),IBE,D12,V0R,
 C     * EMIN,EMAX,OVL,RPE(IBE)
       EET(IBE)=WB(IBE)*EET(IBE)
@@ -567,7 +567,7 @@ C  inner potential)
       IF (AR.GE.BARAV) GO TO 145
 
         BARAV=AR
-        BV0(IPOP)=-V0RR+V0
+        BV0(IPOP)=-V0RR+V0  ! TODO: avoid use of IPOP by writing to some fixed variable, pass BV0(IPOP) from search
 
         IF (WHICHR.eq.1) THEN  
 

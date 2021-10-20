@@ -125,7 +125,7 @@ C  NSSK  : list of geometries to be skipped, eg NSSK = 4,7,8 skips 4th,7th and
 C          8th geometry
 C  WB    : weights for different beams (counting by numbers NBEA), used to
 C          obtain R-factors averaged over beams (should not include weights for
-C          differing energy ranges, since these are already programmed in)
+C          differing energy ranges, since these are already programmed in)   ! TODO: scrap, no weights
 C  WR    : WR(1), WR(2) and WR(3) are the weights of the R2-, the Zanazzi-Jona-
 C          and the Pendry-R-factor respectively used in obtaining the average
 C          R-factor
@@ -498,7 +498,7 @@ C  average data from different experiments and order by increasing energy
 C  smooth experimental data
 
           IF (ISMOTH.GT.0) THEN
-            CALL SMOOTH(ISMOTH,A,E,NE,IPR,IB)
+            CALL SMOOTH(ISMOTH,A,E,NE,IPR,IB) ! 3 point smoothing
           ENDIF
 
 C  interpolate experimental data on working grid (multiples of EINCR eV)
@@ -724,7 +724,7 @@ C  read in calculated energies and intensities (in range EMIN to EMAX)
 
 C  perform domain averaging and check for too high theoretical intensities
 
-      CALL RINTAV(ATS,NSS,NBTD,NETI,PQ,PQAV,KAV,SYM,NBT,ES,IPR,ATSAV)
+      CALL RINTAV(ATS,NSS,NBTD,NETI,PQ,PQAV,KAV,SYM,NBT,ES,IPR,ATSAV)   ! TODO: simplify, remove SYM, but also averages beam groups as defined in KAV
 
       DO IB = 1,NBT                                                      121280
 
@@ -752,7 +752,8 @@ C  start loop over geometries
       WRITE(6,30)IS,VALUES(IS)
  30   FORMAT(14H*STRUCTURE NO.,1I5,23H CHARACTERIZED BY VALUE,1F7.4)
 
-      D12=VALUES(IS)
+      D12=VALUES(IS)  ! Counter for configuration – only 1 configuration will be needed in new R-factor code; multiple configurations treated by Python
+                      ! All functions that take IS can be reimplemented without it...
 
 C  copy energies and intensities for geometry IS
 
@@ -808,7 +809,7 @@ C  produce some integrals over theoretical data
 
 C  start loop over inner potential values
 
-      NV0 = INT((V02 - V01)/VINCR + 0.0001) + 1
+      NV0 = INT((V02 - V01)/VINCR + 0.0001) + 1  ! Shift of real part of inner potential (implement via parabolic fit)
       V0  = V01
 
       DO 200 IV = 1,NV0
@@ -1161,7 +1162,7 @@ C  R-factor according to Pendry (mult. by 0.5)
 
       ENDIF
 
-C  average over above R-factors for current beam
+C  average over above R-factors for current beam   ! TODO: scrap
 
       WS=0.
       DO I=1,3
@@ -1311,7 +1312,7 @@ C  end of inner potential loop
  200  V0 = V0 + VINCR
 
       WRITE(7,129) 
-      WRITE(9,130) BGRAV
+      WRITE(9,130) BGRAV ! file ROUTSHORT
       BGRAV = 1.E2
 
 C  end of geometry loop
@@ -1324,12 +1325,12 @@ C  write output of experimental and best-fit theoretical data in column format
 
         CALL COLUMN(NEMINB,NEMAXB,NTMINB,NTMAXB,EE,AE,BET,BAT,NBED,NBTD,
      *              MNGP,NBE,IBP,GCOUNT,NG1B,NG2B,NGT1B,NGT2B,MNGAP,
-     *              TSEB,TSTB,BV0,INTMAX,NORM)
+     *              TSEB,TSTB,BV0,INTMAX,NORM)   ! pass back as arrays instead
 
 C  create gnuplot and latex scripts for plotting the spectra
 
         CALL SCRIPT(EMIN,EMAX,INTMAX,PLSIZE,XTICS,NBE,BENAME,BRAVB,NBED,
-     *              TEXT,BRAV,IBP)
+     *              TEXT,BRAV,IBP)     ! scrap
 
       ENDIF
 
