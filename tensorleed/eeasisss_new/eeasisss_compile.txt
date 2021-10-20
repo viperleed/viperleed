@@ -6,5 +6,7 @@ del *.mod
 ::eof
 
 # To compile on Linux/MacOs run:
-gfortran -Ofast -o eeasisss eeas.f90 eeasisss_init.f90 eeasisss_main.f90 eeasisss.f90
+gfortran -Ofast -o eeasisss eeas.f90 eeasisss_init.f90 eeasisss_main.f90 eeasisss.f90 -w
 rm *.mod
+
+# -w suppresses warnings for deprecated features; ifort works too

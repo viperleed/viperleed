@@ -55,7 +55,7 @@
     implicit none
 
   !EEAS import from EEASiSSS.
-  open(1732,file='./uinp1',form='unformatted',status='unknown') ! AMI: changed from ../uinp to ./uinp
+  open(1732,file='./uinp1',form='unformatted',status='unknown') ! AMI: changed from ../uinp to ./uinp (removal of "multithreading")
   read(1732) nxx,nieq,ne,nlat,nshell,nsp,nsr,nthread,lmax
   close(1732)
   !
@@ -67,7 +67,7 @@
     psu(0:lmax,nieq),psd(0:lmax,nieq), &
     psu1(0:lmax,nieq),psd1(0:lmax,nieq) )
   !
-  open(1732,file='./uinp2',form='unformatted',status='unknown') ! AMI: changed from ../uinp to ./uinp
+  open(1732,file='./uinp2',form='unformatted',status='unknown') ! AMI: changed from ../uinp to ./uinp (removal of "multithreading")
   read(1732) outdir,Pot,WF,idElemA,idZA,neq,nx,dx,rx,ad,ia, &
     sp,sr,sdat,eev,Vcry,Vcry0,rmt,nxR,z,rho,rs,xcfac,relerr,abserr
   close(1732)
@@ -83,11 +83,11 @@
   ! Loop below goes over all ulog and udat files (used to be split up into "threads")
   do ie=1,ne
     write(cie,'(i0)') ie
-    open(611,file='./ulog'//trim(cie),status='unknown') ! AMI: changed from ../ulog to ./ulog
+    open(611,file='./ulog'//trim(cie),status='unknown') ! AMI: changed from ../ulog to ./ulog (removal of "multithreading")
     Einc=eev(ie)/rydb
     call MTvsE(ie)
     call PSvsE(ie)
-    open(20,file='./udat'//trim(cie),status='unknown',access='stream') ! AMI: changed from ../udat to ./udat
+    open(20,file='./udat'//trim(cie),status='unknown',access='stream') ! AMI: changed from ../udat to ./udat (removal of "multithreading")
     write(20) Vxc0, &
               ((psu(l,ir),l=0,lmax),ir=1,nieq), &
               ((psd(l,ir),l=0,lmax),ir=1,nieq), &
@@ -114,6 +114,12 @@
     write(611,'(a,20(1x,f6.2):)')'const =',Lconst(:)
   endif
   enddo
+  close(20) !AMI: added close statement October 2021
+  close(611) !AMI added close statement Ocotber 2021 - was causing issues!
+  !AMI: Note: Re-opening a different file with the same unit (i.e.open(611,...)) automatically closes the last one.
+  ! If done in a loop, the last file will stay open if not closed however!
+  ! This caused a problem with the removal of multithreding, as eeeas.f90 is no longer executed on its own but rather
+  ! as a part of eeasisss.
   end subroutine read_eeas
 
 !=======================================================================

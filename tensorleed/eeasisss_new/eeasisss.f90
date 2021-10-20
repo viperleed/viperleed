@@ -192,7 +192,7 @@ goto 1001
   write(1414) outdir,Pot,WF,idElemA,idZA,neq,nx,dx,rx,ad,ia, &
     sp,sr,sdat,eev,Vcry,Vcry0,rmt,nxR,z,rho,rs,xcfac,relerr,abserr
   close(1414)
-  write(61,'(a)')'eeasisss: files 1414 written.'
+  write(61,'(a)')'eeasisss: files 1414 written.' ! AMI: change message? refers to unit number from Fortran
   !
   !ELASTIC ELECTRON-ATOM SCATTERING
   call read_eeas() ! Calls routines in eeas.f90
@@ -202,17 +202,22 @@ goto 1001
   write(61,'(a)')'EEAS'
   write(61,'(20("----"))')
   !logfile.
-  do ie=1,ne
+  !write (*,*) "cie: ", cie                                                                                 ! AMI: debug
+  !write (*,*) "ne: ", ne!                                                                                  ! AMI: debug
+  do ie=1,ne ! Loop over atoms
     write(cie,'(i0)') ie
     !logfile.
+    !write (*,*) 'ulog'//trim(cie)                                                                          ! AMI: debug
     open(19,file='ulog'//trim(cie),status='unknown')
+    !write (*,*) 'done', cie                                                                                ! AMI: debug
     do
       read(19,'(a)',end=1) txt
       write(61,'(a)') trim(txt)
     enddo
-    1 continue
+    1 continue  ! end marker for read statement from above
   enddo
-  close(19)
+close(19) ! AMI: Fortran peculiarity – re-opening file with same unit (here: open(19, ...)) closes last file for that unit
+  ! However, this leaves the last file with that unit open, so it needs to be closed outside the loop. Could also be done differently.
   !data.
   do ie=1,ne
     write(cie,'(i0)') ie
@@ -299,13 +304,14 @@ goto 1001
   !
   !Cleaning up.
   if(windows)then ! AMI TODO: get rid of this mess...
-    isys = SYSTEM('del uinp*')
-    isys = SYSTEM('del ulog*')
-    isys = SYSTEM('del udat*')
-    isys = SYSTEM('del eeas.cmd')
+     write(*,*) 'If you end up here something is very wrong. (windows == true in eeasisss.f90)'
+    !isys = SYSTEM('del uinp*')
+    !isys = SYSTEM('del ulog*')
+    !isys = SYSTEM('del udat*')
+    !isys = SYSTEM('del eeas.cmd')
     do i=1,nthread
       write(ci,'(i0)') i
-      isys = SYSTEM('rmdir /S /Q '//trim('thread'//ci))
+      !isys = SYSTEM('rmdir /S /Q '//trim('thread'//ci))
     enddo
   elseif(linux)then
     !isys = SYSTEM('rm uinp*') ! AMI: Clean up now accomplished in Python.
