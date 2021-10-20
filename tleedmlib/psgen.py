@@ -578,11 +578,17 @@ def runPhaseshiftGen(sl, rp, psgensource=os.path.join('tensorleed', 'eeasisss_ne
     psgencommand = [psgensource, '-i', input_file_name, '-l', log_filename, '-a', atlib_dir, '-o', outdir_path]
     logger.debug("Now calling EEASISSS...")
     try:
-        subprocess.run(psgencommand)
-        logger.debug("EEASISSS execution finished. See EEASISSS-log.txt")
+        complete = subprocess.run(psgencommand, capture_output=True, text=True)  # returns Subprocess.complete instance
+        complete.check_returncode()  # If returncode is non-zero, raise a CalledProcessError. -> except & finally
+        logger.debug("EEASISSS execution finished without error. See EEASISSS-log.txt") # -> only if returncode == 0
     except Exception:  # can subprocess even fail?
         logger.error("Error during EEASISSS execution.")
         raise RuntimeError("Subprocess EEASISSS failed")
+    finally:
+        if complete.stdout != "":
+            logger.debug("EEASISSS stdout:\n" + str(complete.stdout))
+        if complete.stderr != "":
+            logger.error("EEASISSS stderr:\n" + str(complete.stderr)) # Put error from Fortran into log!
 
     #when done, remove eeas executable from work directory again:
     try:
