@@ -153,7 +153,7 @@ def rfactor(sl, rp, index, for_error=False, only_vary=None):
     rfaclogname = rfacname+".log"
     logger.info("Starting R-factor calculation...\n"
                 "R-factor log will be written to file "+rfaclogname)
-    rp.manifest.append(rfaclogname)
+    # rp.manifest.append(rfaclogname)  # no longer in manifest, instead moved to SUPP at cleanup
     try:
         with open(rfaclogname, "w") as log:
             subprocess.run(os.path.join('.', rfacname),

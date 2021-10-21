@@ -327,6 +327,9 @@ def initialization(sl, rp, subdomain=False):
         rp.ivbeams = sortIVBEAMS(sl, rp)
         rp.ivbeams_sorted = True
 
+    # Create directory compile_logs in which logs from compilation will be saved
+    make_compile_logs_dir(rp, logger)
+
     # At the end of initialization preserve the original input files
     preserve_original_input(rp, logger)
     return
@@ -731,4 +734,20 @@ def preserve_original_input(rp, init_logger, path=""):
             except Exception:
                 init_logger.warning("Could not copy file {} to ".format(file) + folder_name)
                 rp.setHaltingLevel(1)
+    return
+
+def make_compile_logs_dir(rp, init_logger, path=""):
+    """
+    Creates directory compile_logs in which logs from compilation will be saved.
+    """
+    folder_name = "compile_logs"
+    if not path:
+        path = "."
+
+    # makes compile_logs directory
+    try:
+        os.makedirs(os.path.join(path, folder_name), exist_ok=True)
+    except Exception:
+        logger.warning("Could not create directory {}".format(folder_name))
+        rp.setHaltingLevel(1)
     return

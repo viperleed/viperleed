@@ -247,7 +247,7 @@ def edit_fin_energy_lmax(runtask):
     # this works because even if the directory were to be named LMAX, there is a timestap after it rather than a \n
     before_LMAX, after_LMAX = rest.split("   LMAX", maxsplit=1)
     before_LMAX = splitMaxRight(before_LMAX, "\n")[0]
-    after_LMAX = str(runtask.comptask.lmax).rjust(3).ljust(45) + "LMAX\n" + after_LMAX
+    after_LMAX = str(runtask.comptask.lmax).rjust(3).ljust(45) + "LMAX" + after_LMAX
     # fin = finparts[0] + "\n" + nl + finparts[1]
     fin = "\n".join((comment, energy, before_LMAX, after_LMAX))
     return fin
@@ -469,8 +469,18 @@ def refcalc(sl, rp, subdomain=False):
             return
         logger.info("Reference calculations finished. Processing files...")
 
-    # clean up compile folders
+    # clean up compile folders - AMI: move logs first to compile_logs !
     for ct in comp_tasks:
+        try:
+            compile_log_dir = "compile_logs"
+            log_file_name = "fortran-compile.log"
+            source_file = os.path.join(ct.basedir, ct.foldername, log_file_name)
+            target_file_name = ct.foldername + ".log"
+            target_file = os.path.join(rp.workdir, compile_log_dir, target_file_name)
+            shutil.copy2(source_file, target_file)
+        except Exception:
+            logger.warning("Error copying refcalc compile log from folder "
+                           + ct.foldername)
         try:
             shutil.rmtree(os.path.join(ct.basedir, ct.foldername))
         except Exception:

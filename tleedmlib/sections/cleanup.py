@@ -22,6 +22,7 @@ suppfiles = ["AUXBEAMS", "AUXGEO", "AUXLATGEO", "AUXNONSTRUCT", "BEAMLIST",
              "refcalc-PARAM", "refcalc-FIN", "rfactor-WEXPEL",
              "rfactor-PARAM", "delta-input", "search.steu",
              "search-rf.info", "search-PARAM", "AUXEXPBEAMS",
+             "EEASISSS-input.txt", "EEASISSS-log.txt",
              "eeasisss-input", "searchpars.info", "superpos-PARAM",
              "superpos-CONTRIN", "POSCAR_bulk_appended", "POSCAR_mincell",
              "restrict.f", "Phaseshifts_plots.pdf"]
@@ -188,6 +189,10 @@ def sortfiles(tensorIndex, delete_unzipped=False, tensors=True,
         if t == "SUPP":
             filelist = suppfiles
             directory_list = supp_dirs # move directories original_inputs and compile_logs to SUPP
+            # Also add log files (except for tleedm) into SUPP
+            logs_to_supp = [f for f in os.listdir(path) if f.endswith(".log") and not f.startswith("tleedm")]
+            for f in logs_to_supp:
+                filelist.append(f)
         else:
             filelist = outfiles
             directory_list = []

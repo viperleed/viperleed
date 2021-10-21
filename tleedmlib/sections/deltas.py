@@ -362,7 +362,7 @@ def deltas(sl, rp, subdomain=False):
             "Generating delta files...\n"
             "Delta log will be written to local subfolders, and collected in "
             + deltalogname)
-    rp.manifest.append(deltalogname)
+    # rp.manifest.append(deltalogname) # no longer in manifest, instead moved to SUPP at cleanup
     try:
         with open(deltalogname, "w") as wf:
             wf.write("Logs from multiple delta calculations are collected "

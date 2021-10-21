@@ -686,7 +686,8 @@ def search(sl, rp):
         searchlogname = searchname+".log"
         logger.info("Search log will be written to file "+searchlogname)
         if rp.TL_VERSION > 1.6:
-            rp.manifest.append(searchlogname)
+            pass
+            # rp.manifest.append(searchlogname) # no longer in manifest, instead moved to SUPP at cleanup
     # if there is an old SD.TL file, it needs to be removed
     if os.path.isfile("SD.TL"):
         try:
