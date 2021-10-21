@@ -388,7 +388,7 @@ def refcalc(sl, rp, subdomain=False):
 
     # set up log
     logname = "refcalc-"+rp.timestamp+".log"
-    rp.manifest.append(logname)
+    # rp.manifest.append(logname) # no longer in manifest, instead moved to SUPP at cleanup
     if not single_threaded:
         try:
             with open(logname, "w") as wf:
