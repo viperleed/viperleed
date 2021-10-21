@@ -567,9 +567,12 @@ def refcalc(sl, rp, subdomain=False):
     except Exception:
         logger.error("Error moving Tensor files: ")
         raise
+    # Move input files used for Tensor generation to Tensor folder for preservation
+    # Since version 0.6.3 files are taken from original_inputs directory
     tInputFiles = ["POSCAR", "PARAMETERS", "VIBROCC", "IVBEAMS",
                    "PHASESHIFTS"]
-    for f in [f for f in tInputFiles if f in os.listdir('.')]:
+    original_inputs_dir = os.path.join('.', "original_inputs")
+    for f in [f for f in tInputFiles if f in os.listdir(original_inputs_dir)]:
         of = f
         for fn in ["POSCAR", "VIBROCC"]:
             if (f == fn and 3 in rp.runHistory
@@ -579,7 +582,7 @@ def refcalc(sl, rp, subdomain=False):
             shutil.copy2(of, os.path.join("Tensors", dn, f))
         except Exception:
             logger.warning("Failed to add input file " + f
-                           + " to Tensors folder.")
+                           + " to Tensors folder from original_inputs.")
     try:
         shutil.copy2("refcalc-fd.out",
                      os.path.join("Tensors", dn, "refcalc-fd.out"))
