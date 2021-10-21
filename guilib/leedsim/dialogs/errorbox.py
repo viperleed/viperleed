@@ -19,7 +19,11 @@ class ErrorBox(qtw.QMessageBox):
             will be "Error while <error_while>".
         text : str, optional
             Descriptive text that will be used every time
-            the dialog is shown.
+            the dialog is shown. 
+        silent : bool, optional
+            If True, no dialog is shown when an error occurs.
+            Can be accessed via the .silent attribute. Default
+            is False.
         parent : QWidget, optional
             The parent widget. Default is None.
 

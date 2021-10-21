@@ -285,9 +285,9 @@ class LEEDParser(  # pylint: disable=too-many-ancestors
         """Read the contents of files into self.
 
         It also checks whether the file(s) are in the 'old' format,
-        i.e., without 'section headers'. If this is the case, the
-        standard section header '[S1]' is added, and the files are
-        overwritten to comply with the new format.
+        i.e., without 'section headers'. If this is the case, a
+        standard section header is added (same as file name), and
+        the files are overwritten to comply with the new format.
 
         Parameters
         ----------
