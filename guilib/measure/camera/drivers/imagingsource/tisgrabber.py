@@ -217,6 +217,11 @@ class  WindowsCamera:
         self.__handle = self.create_grabber()
         self.__vcd_properties = {}
         self.__has_frame_ready_callback = False
+        # Store video format info, as this is static for an open
+        # device, and takes a while to retrieve the first time.
+        self.__video_fmt_info = {'min_w': None, 'min_h': None,
+                                 'max_w': None, 'max_h': None,
+                                 'd_w': None, 'd_h': None}
 
     @classmethod
     def __init_library(cls, license_key=None):
@@ -394,7 +399,7 @@ class  WindowsCamera:
     def gain(self):
         """Return the current gain used in decibel."""
         return self.get_vcd_property("Gain", "Value", method=float)
-    
+
     @gain.setter
     def gain(self, new_gain):
         """Set gain to new_gain (in decibel)."""
@@ -645,6 +650,64 @@ class  WindowsCamera:
         """
         return self.__vcd_properties
 
+    @property
+    def video_format_shape_range(self):
+        """Return min_width, min_height, max_width, max_height."""
+        if not self.__video_fmt_info['min_w']:
+            widths = []
+            heights = []
+            for vid_fmt in self.__default_video_formats:
+                # formats are of the form "<type> (wxh)"
+                width, height = (
+                    vid_fmt.split()[1].replace('(','').replace(')','').split('x')
+                    )
+                widths.append(int(width))
+                heights.append(int(height))
+            self.__video_fmt_info['min_w'] = min(widths)
+            self.__video_fmt_info['min_h'] = min(heights)
+            self.__video_fmt_info['max_w'] = max(widths)
+            self.__video_fmt_info['max_h'] = max(heights)
+        return (self.__video_fmt_info['min_w'], self.__video_fmt_info['min_h'],
+                self.__video_fmt_info['max_w'], self.__video_fmt_info['max_h'])
+
+    @property
+    def video_format_shape_increments(self):
+        """Return the minimum increments allowed for width and height."""
+        if not self.__video_fmt_info['d_w']:
+            min_w, min_h, max_w, max_h = self.video_format_shape_range
+            old_w, old_h, _, old_format = self.image_info
+            fmt = "{} ({}x{})"
+            incr_w = incr_h = -1
+
+            for width in range(min_w + 1, max_w):
+                # setting an unavailable format raises errors
+                try:
+                    self._dll_set_video_format(
+                        self.__handle,
+                        _to_bytes(fmt.format('Y16', width, min_h))
+                        )
+                except ImagingSourceError:
+                    pass
+                else:
+                    incr_w = width - min_w
+                    break
+            for height in range(min_h + 1, max_h):
+                # setting an unavailable format raises errors
+                try:
+                    self._dll_set_video_format(
+                        self.__handle,
+                        _to_bytes(fmt.format('Y16', min_w, height))
+                        )
+                except ImagingSourceError:
+                    pass
+                else:
+                    incr_h = height - min_h
+                    break
+            self.set_video_format(fmt.format(old_format.name, old_w, old_h))
+            self.__video_fmt_info['d_w'] = incr_w
+            self.__video_fmt_info['d_h'] = incr_h
+        return (self.__video_fmt_info['d_w'], self.__video_fmt_info['d_h'])
+
     _dll_video_format_width = _dll.IC_GetVideoFormatWidth
     _dll_video_format_height = _dll.IC_GetVideoFormatHeight
     _dll_video_format_width.argtypes = (GrabberHandlePtr,)
@@ -673,6 +736,10 @@ class  WindowsCamera:
         # problem with setting the callback twice is only there
         # when running from the terminal.
         self.__has_frame_ready_callback = False
+
+        self.__video_fmt_info = {'min_w': None, 'min_h': None,
+                                 'max_w': None, 'max_h': None,
+                                 'd_w': None, 'd_h': None}
 
     _dll_enable_auto_camera_prop = _dll.IC_EnableAutoCameraProperty
     _dll_enable_auto_camera_prop.argtypes = GrabberHandlePtr, c_int, c_int
@@ -726,7 +793,7 @@ class  WindowsCamera:
 
         for vcd_prop in ("Gain", "Exposure"):
             self.set_vcd_property(vcd_prop, 'Auto', enabled)
-        
+
         if failed:
             raise ImagingSourceError(
                 f"Failed to {'en' if enabled else 'dis'}able: {failed}",
@@ -1202,8 +1269,6 @@ class  WindowsCamera:
             self.__handle, _to_bytes(property_name), _to_bytes(element_name)
             )
 
-    # TODO: use this to determine the minimum and maximum image
-    #       sizes in the two directions.
     _dll_list_video_formats = _dll.IC_ListVideoFormats
     _dll_list_video_formats.argtypes = GrabberHandlePtr, c_char_p, c_int
     _dll_list_video_formats.errcheck = check_dll_return(">=0")
