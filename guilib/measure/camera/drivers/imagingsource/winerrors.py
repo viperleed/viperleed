@@ -97,9 +97,9 @@ def check_dll_return(success='int', include_errors=tuple(),
         """Check that the return is larger than a limit."""
         # print(f"{func.__name__}{args} returned {result}")
         err_txt = f"{func.__name__}{args} returned {result} <= {limit}."
-        err = errors.get(result, None)
-        if err is not None:
-            err_txt += f" This is error {err.name}: {err.message}."
+        error = errors.get(result, None)
+        if error is not None:
+            err_txt += f" This is error {error.name}: {error.message}."
         if result <= limit:
             raise ImagingSourceError(err_txt, err_code=error)
         return result
@@ -108,9 +108,9 @@ def check_dll_return(success='int', include_errors=tuple(),
         """Check that the return is larger or equal than a limit."""
         # print(f"{func.__name__}{args} returned {result}")
         err_txt = f"{func.__name__}{args} returned {result} < {limit}"
-        err = errors.get(result, None)
-        if err is not None:
-            err_txt += f" This is error {err.name}: {err.message}."
+        error = errors.get(result, None)
+        if error is not None:
+            err_txt += f" This is error {error.name}: {error.message}."
         if result < limit:
             raise ImagingSourceError(err_txt, err_code=error)
         return result
@@ -136,6 +136,8 @@ class DLLReturns(tuple, Enum):
     NO_DEVICE = (-2,
                  "Method requires an open device, but no device is open. "
                  "Call open_video_capture_device(dev_name).")
+    CAMERA_PROPERTY_NOT_AVAILABLE = (-2,
+                                     "Property not available")
     NOT_AVAILABLE = (-3, "Device does not support a {!r} property.")
     NO_PROPERTYSET = (-3,
                       "The property set was not queried for the device. "
@@ -171,6 +173,7 @@ class DLLReturns(tuple, Enum):
     NULL_POINTER = (-2001, "Returned a pointer to NULL")
     INVALID_SINK_FORMAT = (-2002, "Invalid sink/video format")
     REQUIRES_REBOOT = (-2003, ".close(), reboot the camera, and retry")
+    FAILED_TO_ENABLE = (-2004, "Failed to enable/disable properties.")
 
     @classmethod
     def as_dict(cls):
