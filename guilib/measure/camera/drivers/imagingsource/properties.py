@@ -38,6 +38,69 @@ def store_property(name, storage):
     return 0
 
 
+class CameraProperty(Enum):
+    """Class holding possible camera properties.
+
+    Does not include VCD properties, which are accessed by name.
+    """
+
+    PAN = 0
+    TILT = 1
+    ROLL = 2
+    ZOOM = 3
+    EXPOSURE = 4
+    IRIS = 5
+    FOCUS = 6
+    MEGA = 65536  # Guard for max enum value, i.e., 2**sizeof(int)
+
+    @classmethod
+    def get(cls, cam_property):
+        """Return an appropriate enum from value or name.
+
+        Parameters
+        ----------
+        cam_property : str, int, or CameraProperty
+            Some reference to a camera property. If a string, lookup
+            is done by name (not case sensitive), otherwise by value.
+
+        Returns
+        -------
+        property : CameraProperty
+            The attribute corresponding to cam_property
+
+        Raises
+        ------
+        ValueError
+            If no property could be found
+        """
+        if isinstance(cam_property, str):
+            cam_property = getattr(cls, cam_property.upper(), None)
+            if cam_property is None:
+                raise ValueError(f"Unknown camera property {cam_property}. "
+                                 "Perhaps you meant video property?")
+        else:
+            try:
+                cam_property = cls(cam_property)
+            except ValueError as err:
+                raise ValueError(f"Unknown camera property {cam_property}. "
+                                 "Perhaps you meant video property?") from err
+        return cam_property
+
+
+class VideoProperty(Enum):
+    """Class holding possible video properties."""
+    BRIGHTNESS = 0
+    CONTRAST = 1
+    HUE = 2
+    SATURATION = 3
+    SHARPNESS = 4
+    GAMMA = 5
+    COLORENABLE = 6
+    WHITEBALANCE = 7
+    BLACK_LIGHT_COMPENSATION = 8
+    GAIN = 9
+    MEGA = 65536  # Guard for max enum value, i.e., 2**sizeof(int)
+
 class SwitchProperty(Enum):
     """On/Off VCD property enum."""
 
