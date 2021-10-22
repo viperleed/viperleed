@@ -257,7 +257,7 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         except ValueError:  # Cannot be read as int
             n_frames = -1
 
-        min_n, max_n = self.get_exposure_limits()
+        min_n, max_n = self.get_n_frames_limits()
         if n_frames < min_n or n_frames > max_n:
             emit_error(self, CameraErrors.INVALID_SETTING_WITH_FALLBACK,
                        n_frames, 'measurement_settings/n_frames', 1)
@@ -376,6 +376,8 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         """Return whether the camera allows triggering multiple frames.
         
         This property should be reimplemented in concrete subclasses.
+        Should the camera support trigger burst, get_n_frames_limits
+        should also be reimplemented.
         
         Returns
         -------
@@ -759,6 +761,11 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
             raise NotImplementedError(
                 f"{self.__class__.__name__} natively supports frame averaging,"
                 " but self.get_n_frames_limits() was not reimplemented"
+                )
+        if self.supports_trigger_burst:
+            raise NotImplementedError(
+                f"{self.__class__.__name__} natively supports trigger burst, "
+                "but self.get_n_frames_limits() was not reimplemented"
                 )
         return 1, np.inf
 
