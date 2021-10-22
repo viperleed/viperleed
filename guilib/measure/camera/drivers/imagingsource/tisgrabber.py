@@ -288,7 +288,9 @@ class  WindowsCamera:
     @property
     def exposure_range(self):
         """Return min and max exposure times in milliseconds."""
-        return self.get_vcd_property_range("Exposure", "Value", method=int)
+        min_exp, max_exp = self.get_vcd_property_range("Exposure", "Value",
+                                                       method=int)
+        return min_exp/1000, max_exp/1000
 
     @property
     def exposure(self):
@@ -756,7 +758,9 @@ class  WindowsCamera:
     def enable_auto_properties(self, enabled):
         """Enable/disable automatic properties.
 
-        Properties affected: Exposure, Gain
+        Properties affected:
+        Exposure, Gain, all available CameraProperty,
+        Auto-centering of 'partial scan' (i.e., ROI)
 
         Parameters
         ----------
@@ -793,6 +797,7 @@ class  WindowsCamera:
 
         for vcd_prop in ("Gain", "Exposure"):
             self.set_vcd_property(vcd_prop, 'Auto', enabled)
+        self.set_vcd_property("Partial scan", "Auto-center", enabled)
 
         if failed:
             raise ImagingSourceError(
@@ -824,7 +829,11 @@ class  WindowsCamera:
         """
         self._dll_open_by_unique_name(self.__handle,
                                       _to_bytes(unique_name))
+
+        # Do some of the slow stuff already here, such that
+        # following calls will be fast.
         self.__find_vcd_properties()
+        _ = self.video_format_shape_increments
 
         # Set stream mode always to continuous as then it is just a
         # matter of having enable_trigger(True/False) for getting
