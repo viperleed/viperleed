@@ -144,6 +144,24 @@ class SinkFormat(Enum):
         raise ImagingSourceError(f"Format {self} does not have a "
                                  "defined number of color channels.",
                                  err_code=DLLReturns.INVALID_SINK_FORMAT)
+    
+    @property
+    def n_bytes(self):
+        """Return the number of bytes per pixel and per color channel."""
+        # Always 1 byte, except Y16, and, when will be supported, RGB64
+        if self in (SinkFormat.Y16,):
+            return 2
+        return 1
+    
+    @property
+    def green_channel(self):
+        """Return the 0-based index of the green channel."""
+        if self.name.startswith('RGB'):
+            return 1  # B, G, R
+        if self.name.startswith('Y'):
+            return 0  # monochrome
+        raise ValueError(f"No green channel for {self.name} format.")
+        
 
 
 class StreamMode(Enum):
@@ -422,8 +440,9 @@ class  WindowsCamera:
         width, height : int
             Width and height of the image in pixels
         bytes_per_pixel : int
-            Number of bytes for each pixel, accounting for color
-            channels
+            Number of bytes for each pixel and color channel
+        n_colors : int
+            Number of color channels
         format : SinkFormat
             The current color format. Notice that this is the color
             format of the image stored in the internal memory, NOT
@@ -451,7 +470,6 @@ class  WindowsCamera:
             else:
                 raise
 
-        bytes_per_pixel = bits_per_pixel.value // 8
         try:
             color_format = SinkFormat.get(color_format_c.value)
         except ValueError as err:
@@ -460,6 +478,8 @@ class  WindowsCamera:
                 err_code=DLLReturns.INVALID_SINK_FORMAT
                 ) from err
 
+        bytes_per_pixel = (bits_per_pixel.value / color_format.n_colors) // 8
+        
         return width.value, height.value, bytes_per_pixel, color_format
 
     _dll_is_running = _dll.IC_IsLive
@@ -677,7 +697,7 @@ class  WindowsCamera:
         """Return the minimum increments allowed for width and height."""
         if not self.__video_fmt_info['d_w']:
             min_w, min_h, max_w, max_h = self.video_format_shape_range
-            old_w, old_h, _, old_format = self.image_info
+            old_w, old_h, *_, old_format = self.image_info
             fmt = "{} ({}x{})"
             incr_w = incr_h = -1
 
