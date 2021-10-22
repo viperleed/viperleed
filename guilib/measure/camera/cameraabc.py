@@ -374,11 +374,11 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
     @abstractmethod
     def supports_trigger_burst(self):
         """Return whether the camera allows triggering multiple frames.
-        
+
         This property should be reimplemented in concrete subclasses.
         Should the camera support trigger burst, get_n_frames_limits
         should also be reimplemented.
-        
+
         Returns
         -------
         supported : bool
@@ -919,6 +919,9 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
                        'trigger', 'live')
         self.busy = True
         self.n_frames_done = 0
+
+        if self.supports_trigger_burst:
+            self.process_info.clear_times()
 
     def __is_valid_roi(self, roi):
         """Check that ROI is OK and fits with limits.

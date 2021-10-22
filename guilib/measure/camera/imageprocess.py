@@ -101,6 +101,8 @@ class ImageProcessInfo:
         binning, the bottom-right pixels will be removed. The truth
         value of this attribute should be False if the camera handles
         binning internally
+    frame_times : list
+        List of frame-arrival times.
     camera : CameraABC
         The camera to which these image processing infos are related.
 
@@ -115,6 +117,7 @@ class ImageProcessInfo:
     n_frames: int = 0
     roi: typing.Sequence = tuple()
     binning: int = 0
+    frame_times: typing.Sequence = []
     camera: typing.Any = None  # the camera object
 
     @property
@@ -166,6 +169,10 @@ class ImageProcessInfo:
     def copy(self):
         """Return a deep-copy of self."""
         return copy.deepcopy(self)
+    
+    def clear_times(self):
+        """Clear the frame arrival times."""
+        self.frame_times = []
 
 
 class ImageProcessor(qtc.QObject):
