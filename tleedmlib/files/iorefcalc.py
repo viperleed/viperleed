@@ -297,11 +297,15 @@ def writePARAM(sl, rp, lmax=-1):
     return output
 
 
-def collectFIN():
+def collectFIN(version=0.):
     """Combines AUXLATGEO, BEAMLIST, AUXNONSTRUCT, PHASESHIFTS, AUXBEAMS
     and AUXGEO into one string (input for refcalc), which it returns."""
-    filenames = ["AUXLATGEO", "BEAMLIST", "AUXNONSTRUCT", "PHASESHIFTS",
-                 "AUXBEAMS", "AUXGEO"]
+    if version < 1.72:
+        filenames = ["AUXLATGEO", "BEAMLIST", "AUXNONSTRUCT", "PHASESHIFTS",
+                     "AUXBEAMS", "AUXGEO"]
+    else:
+        filenames = ["AUXLATGEO", "BEAMLIST", "AUXNONSTRUCT", "PHASESHIFTS",
+                     "AUXGEO"]
     fin = ""
     for fn in filenames:
         with open(fn, "r") as rf:
@@ -403,6 +407,9 @@ def writeAUXNONSTRUCT(sl, rp):
         # TODO: if phaseshifts are calculated differently, change format here
         output += (formatter['ints'].write([1]).ljust(45)
                    + 'PSFORMAT  1: Rundgren_v1.6; 2: Rundgren_v1.7\n')
+    if rp.TL_VERSION >= 1.73:
+        output += (formatter['ints'].write([1]).ljust(45)
+                   + 'IFORM - formatted input and output\n')
     try:
         with open('AUXNONSTRUCT', 'w') as wf:
             wf.write(output)

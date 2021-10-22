@@ -270,18 +270,19 @@ def refcalc(sl, rp, subdomain=False):
     except Exception:
         logger.error("Exception during writeAUXNONSTRUCT: ")
         raise
-    try:
-        beams.writeAUXBEAMS(ivbeams=rp.ivbeams, beamlist=rp.beamlist)
-    except Exception:
-        logger.error("Exception during writeAUXBEAMS: ")
-        raise
+    if rp.TL_VERSION < 1.73:
+        try:
+            beams.writeAUXBEAMS(ivbeams=rp.ivbeams, beamlist=rp.beamlist)
+        except Exception:
+            logger.error("Exception during writeAUXBEAMS: ")
+            raise
     try:
         io.writeAUXGEO(sl, rp)
     except Exception:
         logger.error("Exception during writeAUXGEO: ")
         raise
     try:
-        fin = io.collectFIN()
+        fin = io.collectFIN(version=rp.TL_VERSION)
     except Exception:
         logger.error("Exception while trying to collect input for "
                      "refcalc FIN: ")
@@ -474,9 +475,11 @@ def refcalc(sl, rp, subdomain=False):
         try:
             compile_log_dir = "compile_logs"
             log_file_name = "fortran-compile.log"
-            source_file = os.path.join(ct.basedir, ct.foldername, log_file_name)
+            source_file = os.path.join(ct.basedir, ct.foldername,
+                                       log_file_name)
             target_file_name = ct.foldername + ".log"
-            target_file = os.path.join(rp.workdir, compile_log_dir, target_file_name)
+            target_file = os.path.join(rp.workdir, compile_log_dir,
+                                       target_file_name)
             shutil.copy2(source_file, target_file)
         except Exception:
             logger.warning("Error copying refcalc compile log from folder "
