@@ -370,6 +370,22 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
 
     settings = property(__get_settings, set_settings)
 
+    @property
+    @abstractmethod
+    def supports_trigger_burst(self):
+        """Return whether the camera allows triggering multiple frames.
+        
+        This property should be reimplemented in concrete subclasses.
+        
+        Returns
+        -------
+        supported : bool
+            True if the camera internally supports triggering multiple
+            frames, i.e., only one 'trigger_now()' call is necessary to
+            deliver all the frames needed.
+        """
+        return False
+
     def check_loaded_settings(self):
         """Check that camera and configuration settings are the same.
 
@@ -801,12 +817,13 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
 
     @abstractmethod
     def get_roi_size_limits(self):
-        """Return the minimum and maximum ROI supported.
+        """Return minimum, maximum and granularity of the ROI.
 
         This method must be reimplemented in concrete subclasses.
-        Typically it would return (1, 1) for the minimum ROI and
-        (sensor_width, sensor_height) for the maximum ROI. Make
-        sure to .open() before querying the camera.
+        Typically it would return (1, 1) for the minimum ROI,
+        (sensor_width, sensor_height) for the maximum ROI, and
+        (1, 1) for the minimum increments. Make sure to .open()
+        before querying the camera.
 
         Returns
         -------
@@ -816,8 +833,12 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         roi_max : tuple
             Two elements, both integers, corresponding to the
             maximum width and maximum height
+        roi_increments : tuple
+            Two elements, both integers, corresponding to the
+            minimum allowed increments for width and height of
+            the region of interest
         """
-        return
+        return tuple(), tuple(), tuple()
 
     @abstractmethod
     def reset(self):
@@ -910,9 +931,10 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         if len(roi) != 4:
             return False
         roi_x, roi_y, roi_w, roi_h = roi
-        (min_w, min_h), (max_w, max_h) = self.get_roi_size_limits()
+        (min_w, min_h), (max_w, max_h), (d_w, d_h) = self.get_roi_size_limits()
         if (roi_x < 0 or roi_y < 0 or roi_w < min_w or roi_h < min_h
-                or roi_x + roi_w > max_w or roi_y + roi_h > max_h):
+            or roi_x + roi_w > max_w or roi_y + roi_h > max_h
+                or roi_w % d_w or roi_h % d_h):
             return False
         return True
 
@@ -954,7 +976,7 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
             emit_error(self, CameraErrors.INVALID_SETTING_WITH_FALLBACK,
                        'camera_settings/bad_pixels', 'no bad pixels')
         # TODO: file name. Probably needs a temp path + a file name
-        #       both should be taken care of by the controller.
+        #       both should be taken care of by the measurement.
         # TODO: do I need to keep a reference here??
 
         processor = ImageProcessor()
@@ -971,6 +993,8 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
 
         if self.n_frames_done < self.n_frames:
             # More frames to be acquired
+            if self.supports_trigger_burst:
+                return
             self.trigger_now()
         else:
             # All frames are done
