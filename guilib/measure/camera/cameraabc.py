@@ -126,7 +126,7 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         self.__process_thread = qtc.QThread()
 
         # Number of frames accumulated for averaging
-        self.__n_frames_done = 0
+        self.n_frames_done = 0
 
         self.frame_ready.connect(self.__on_frame_ready)
 
@@ -863,6 +863,33 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         return
 
     @abstractmethod
+    def set_callback(self, on_frame_ready):
+        """Pass a frame-ready callback to the camera driver.
+
+        If the camera does not support having a callback function,
+        a similar behavior can be obtained using an appropriate
+        pyqtSignal, emitted as soon as a frame has been acquired.
+
+        Parameters
+        ----------
+        on_frame_ready : callable
+            The function that will be called by the camera each time
+            a new frame arrives. The callback should only care of
+            converting the data from the camera into a numpy.array
+            of appropriate shape and data type, then emitting a
+            frame_ready signal carrying the array. It must be able
+            to take a reference to self as part of its arguments:
+            It may do so either taking self directly or taking
+            self.process_info (.camera is a reference to self).
+            It can then access methods of the driver via self.driver.
+
+        Returns
+        -------
+        None
+        """
+        return
+
+    @abstractmethod
     def start(self):
         """Start the camera.
 
@@ -1009,30 +1036,3 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         else:
             # All frames are done
             self.busy = False
-
-    @abstractmethod
-    def set_callback(self, on_frame_ready):
-        """Pass a frame-ready callback to the camera driver.
-
-        If the camera does not support having a callback function,
-        a similar behavior can be obtained using an appropriate
-        pyqtSignal, emitted as soon as a frame has been acquired.
-
-        Parameters
-        ----------
-        on_frame_ready : callable
-            The function that will be called by the camera each time
-            a new frame arrives. The callback should only care of
-            converting the data from the camera into a numpy.array
-            of appropriate shape and data type, then emitting a
-            frame_ready signal carrying the array. It must be able
-            to take a reference to self as part of its arguments:
-            It may do so either taking self directly or taking
-            self.process_info (.camera is a reference to self).
-            It can then access methods of the driver via self.driver.
-
-        Returns
-        -------
-        None
-        """
-        return
