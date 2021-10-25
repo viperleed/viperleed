@@ -195,6 +195,7 @@ class TimeResolved(MeasurementABC):
             controller.controller_busy.disconnect()
         if self.__cycle_time > 0:
             self.cycle_timer.start(self.__cycle_time)
+        self.prepared.emit()
         self.start_next_measurement()
 
     def connect_cameras(self):
@@ -260,7 +261,6 @@ class TimeResolved(MeasurementABC):
             except TypeError:
                 pass
         self.prepare_finalization()
-        # super().abort()
 
     def ready_for_next_measurement(self):
         """Check if continuous measurement is done.

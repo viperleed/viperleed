@@ -72,6 +72,8 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
     abort_action = qtc.pyqtSignal()
     # TODO: test signal below
     new_data_available = qtc.pyqtSignal()
+    # TODO: test signabelow
+    prepared = qtc.pyqtSignal()
 
     # The reimplementation may introduce more/other keys.
     # See ViPErinoController for an example on how to do this.
@@ -381,8 +383,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             pass
         self.primary_controller.busy = False
 
-        for key in self.data_points:
-            self.data_points[key] = []
+        self.finished.emit((self.plot_info, self.data_points))
         # TODO: check if this function works as intended, not waiting for OK from primary controller
 
     def connect_cameras(self):
@@ -657,6 +658,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             return
         for controller in self.controllers:
             controller.controller_busy.disconnect()
+        self.prepared.emit()
         self.start_next_measurement()
 
     def receive_from_camera(self, busy):
@@ -842,7 +844,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         instance = camera_class(config, port_name)
         return instance
 
-    def return_to_gui (self, *__args):
+    def return_to_gui(self, *__args):
         """Return collected data to gui.
 
         Quit thread and emit data.

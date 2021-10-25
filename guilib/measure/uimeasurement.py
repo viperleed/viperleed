@@ -113,26 +113,15 @@ class Measure(gl.ViPErLEEDPluginBase):
         layout.addWidget(fig, 7, 1, 1, 2)
 
     def do_stuff(self):
-        self.do_this.error_occurred.connect(self.error_occurred)
-        self.do_this.finished.connect(self.__on_finished)
-        self.do_this.finished.connect(self.__on_stuff_done)
-        self.do_this.primary_controller.error_occurred.connect(self.error_occurred)
-        for controller in self.do_this.secondary_controllers:
-            if controller:
-                controller.error_occurred.connect(self.error_occurred)
-
         self.do_this.begin_measurement_preparation()
         self._ctrls['measure'].setEnabled(False)
         self._ctrls['select'].setEnabled(False)
-        self._ctrls['abort'].setEnabled(True)
         self.statusBar().showMessage('Busy')
 
     def __on_finished(self, *_):
         # After the measurement is done, close the serial ports.
-        for controller in (self.do_this.primary_controller,
-                           *self.do_this.secondary_controllers):
-            if controller:
-                controller.serial.serial_disconnect()
+        for controller in self.do_this.controllers:
+            controller.serial.serial_disconnect()
         self._ctrls['measure'].setEnabled(True)
         self._ctrls['select'].setEnabled(True)
         self._ctrls['abort'].setEnabled(False)
@@ -164,7 +153,16 @@ class Measure(gl.ViPErLEEDPluginBase):
 
         if not isinstance(self.do_this, ALL_MEASUREMENTS['Time resolved']):  # TEMP. TODO: Handle data structure of time resolved
             self.do_this.new_data_available.connect(self.__on_new_data)
+            
         self._ctrls['abort'].clicked.connect(self.do_this.abort)
+        self.do_this.error_occurred.connect(self.error_occurred)
+        self.do_this.finished.connect(self.__on_finished)
+        self.do_this.finished.connect(self.__on_stuff_done)
+        self.do_this.prepared.connect(self.__on_controllers_prepared)
+        self.do_this.primary_controller.error_occurred.connect(self.error_occurred)
+        for controller in self.do_this.secondary_controllers:
+            if controller:
+                controller.error_occurred.connect(self.error_occurred)
 
         self.do_stuff()
 
@@ -177,3 +175,7 @@ class Measure(gl.ViPErLEEDPluginBase):
         fig.ax.plot(meas.data_points['nominal_energy'],
                     meas.data_points['I0'], '.')
         fig.ax.figure.canvas.draw_idle()
+
+    def __on_controllers_prepared(self):
+        """Enable abort button."""
+        self._ctrls['abort'].setEnabled(True)
