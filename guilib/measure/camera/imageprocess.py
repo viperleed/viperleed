@@ -25,7 +25,7 @@ supports frame averaging at the hardware level.
 import ast
 from collections.abc import Sequence
 import copy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import typing
 from pathlib import Path
 
@@ -117,7 +117,7 @@ class ImageProcessInfo:
     n_frames: int = 0
     roi: typing.Sequence = tuple()
     binning: int = 0
-    frame_times: typing.Sequence = []
+    frame_times: typing.Sequence = field(default_factory=list)
     camera: typing.Any = None  # the camera object
 
     @property
