@@ -66,8 +66,7 @@ class TimeResolved(MeasurementABC):
         None.
         """
         if self.__measurement_time <= self.__limit_continuous:
-            self.primary_controller.busy = True
-            for controller in self.secondary_controllers:
+            for controller in self.controllers:
                 controller.busy = True
             for key in self.data_points.keys():
                 self.data_points[key].append([])
@@ -92,11 +91,7 @@ class TimeResolved(MeasurementABC):
         -------
         None.
         """
-        if busy:
-            return
-        if self.primary_controller.busy:
-            return
-        if any(controller.busy for controller in self.secondary_controllers):
+        if busy or any(controller.busy for controller in self.controllers):
             return
         self.disconnect_continuous_mode_set()
         self.timer.start(self.__measurement_time)
@@ -194,31 +189,27 @@ class TimeResolved(MeasurementABC):
         -------
         None.
         """
-        if self.primary_controller.busy:
+        if any(controller.busy for controller in self.controllers):
             return
-        if any(controller.busy for controller in self.secondary_controllers):
-            return
-        for controller in self.secondary_controllers:
-            if controller:
-                controller.controller_busy.disconnect()
-        self.primary_controller.controller_busy.disconnect()
+        for controller in self.controllers:
+            controller.controller_busy.disconnect()
         if self.__cycle_time > 0:
             self.cycle_timer.start(self.__cycle_time)
         self.start_next_measurement()
 
-    def connect_cameras(self, cameras=None):
+    def connect_cameras(self):
         """Connect necessary camera signals."""
-        super().connect_cameras(cameras)
-        for camera in cameras:
+        super().connect_cameras()
+        for camera in self.cameras:
             if camera:
                 # self.continuous_mode.connect(TODO: Function here.,
                                              # type=qtc.Qt.UniqueConnection)
                 pass
 
-    def connect_controllers(self, controllers=None):
+    def connect_secondary_controllers(self):
         """Connect necessary controller signals."""
-        super().connect_controllers(controllers)
-        for controller in controllers:
+        super().connect_secondary_controllers()
+        for controller in self.secondary_controllers:
             if controller:
                 self.continuous_mode.connect(controller.set_continuous_mode,
                                              type=qtc.Qt.UniqueConnection)
@@ -231,18 +222,18 @@ class TimeResolved(MeasurementABC):
             type=qtc.Qt.UniqueConnection
             )
 
-    def disconnect_cameras(self, cameras):
+    def disconnect_cameras(self):
         """Disconnect necessary camera signals."""
-        super().disconnect_cameras(cameras)
-        for camera in cameras:
+        super().disconnect_cameras()
+        for camera in self.cameras:
             if camera:
                 # self.continuous_mode.disconnect(TODO: Function here.)
                 pass
 
-    def disconnect_controllers(self, controllers):
+    def disconnect_secondary_controllers(self):
         """Disconnect necessary controller signals."""
-        super().disconnect_controllers(controllers)
-        for controller in controllers:
+        super().disconnect_secondary_controllers()
+        for controller in self.secondary_controllers:
             if controller:
                 self.continuous_mode.disconnect(controller.set_continuous_mode)
 
@@ -263,16 +254,11 @@ class TimeResolved(MeasurementABC):
         None.
         """
         self.timer.stop()
-        try:
-            for controller in self.secondary_controllers:
-                if controller:
-                    controller.controller_busy.disconnect()
-        except TypeError:
-            pass
-        try:
-            self.primary_controller.controller_busy.disconnect()
-        except TypeError:
-            pass
+        for controller in self.controllers:
+            try:
+                controller.controller_busy.disconnect()
+            except TypeError:
+                pass
         self.prepare_finalization()
         # super().abort()
 
@@ -338,16 +324,9 @@ class TimeResolved(MeasurementABC):
         -------
         None.
         """
-        for controller in self.secondary_controllers:
-            if controller:
-                controller.controller_busy.connect(
-                    self.continuous_mode_set,
-                    type=qtc.Qt.UniqueConnection
-                    )
-        self.primary_controller.controller_busy.connect(
-            self.continuous_mode_set,
-            type=qtc.Qt.UniqueConnection
-            )
+        for controller in self.controllers:
+            controller.controller_busy.connect(self.continuous_mode_set,
+                                               type=qtc.Qt.UniqueConnection)
 
     def disconnect_continuous_mode_set(self):
         """Connect controller busy signal to continuous_mode_set.
@@ -361,10 +340,8 @@ class TimeResolved(MeasurementABC):
         -------
         None.
         """
-        for controller in self.secondary_controllers:
-            if controller:
-                controller.controller_busy.disconnect()
-        self.primary_controller.controller_busy.disconnect()
+        for controller in self.controllers:
+            controller.controller_busy.disconnect()
 
     def energy_generator(self):
         """Determine next energy to set.
@@ -411,12 +388,8 @@ class TimeResolved(MeasurementABC):
         continuous_mode(False)
             Tell the controller to turn continuous mode off.
         """
-        for controller in (*self.secondary_controllers,
-                           self.primary_controller):
-            if controller:
-                controller.busy = True
-                controller.controller_busy.connect(
-                    self.finalize,
-                    type=qtc.Qt.UniqueConnection
-                    )
+        for controller in self.controllers:
+            controller.busy = True
+            controller.controller_busy.connect(self.finalize,
+                                               type=qtc.Qt.UniqueConnection)
         self.continuous_mode.emit([False, True])

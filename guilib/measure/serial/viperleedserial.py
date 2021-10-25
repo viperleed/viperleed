@@ -511,7 +511,7 @@ class ViPErLEEDSerial(SerialABC):
             if len(self.unprocessed_messages) != 1:
                 self.unprocessed_messages = []
                 return
-        print(self.port_name, self.unprocessed_messages)
+        # print(self.port_name, self.unprocessed_messages)
         for message in self.unprocessed_messages:
             # If the length of the message is 1, then it has to be a
             # PC_OK byte.

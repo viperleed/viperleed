@@ -72,8 +72,7 @@ class MeasureEnergySetpoint(MeasurementABC):
         -------
         None.
         """
-        self.primary_controller.busy = True
-        for controller in self.secondary_controllers:
+        for controller in self.controllers:
             controller.busy = True
         self.data_points['nominal_energy'].append(self.current_energy)
         self.set_LEED_energy(self.current_energy, self.__hv_settle_time)

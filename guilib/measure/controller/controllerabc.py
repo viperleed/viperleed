@@ -344,7 +344,6 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
             return
         if self.__unsent_messages:
             data = self.__unsent_messages.pop()
-            print(self.serial.port_name, *data)
             self.serial.send_message(*data)
 
     def flush(self):

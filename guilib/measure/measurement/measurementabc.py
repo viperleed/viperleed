@@ -128,9 +128,15 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         new_cameras : list
             List of camera class objects.
         """
-        self.disconnect_cameras(self.__cameras)
+        self.disconnect_cameras()
         self.__cameras = new_cameras
-        self.connect_cameras(self.__cameras)
+        self.connect_cameras()
+
+    @property
+    def controllers(self):
+        """Return a tuple of all controllers."""
+        controllers = (self.primary_controller, *self.secondary_controllers)
+        return tuple(c for c in controllers if c)
 
     def __get_settings(self):
         """Return the current settings for the measurement.
@@ -233,9 +239,9 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         new_controllers : list
             List of controller class objects.
         """
-        self.disconnect_controllers(self.__secondary_controllers)
+        self.disconnect_secondary_controllers()
         self.__secondary_controllers = new_controllers
-        self.connect_controllers(self.__secondary_controllers)
+        self.connect_secondary_controllers()
 
     @property
     def primary_controller(self):
@@ -273,7 +279,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         """Finish the measurement cycle.
 
         Save data and set energy to zero.
-        
+
         Parameters
         ----------
         busy : bool
@@ -284,21 +290,17 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         -------
         None.
         """
-        if busy:
-            return
-        if self.__primary_controller.busy:
-            return
-        if any(controller.busy for controller in self.__secondary_controllers):
+        if busy or any(controller.busy for controller in self.controllers):
             return
         try:
             self.save_data()
         finally:
             self.current_energy = 0
             # Set LEED energy to 0.
-            self.__primary_controller.data_ready.disconnect()
-            self.__primary_controller.data_ready.connect(self.return_to_gui)
-            self.disconnect_controllers(self.secondary_controllers)
-            self.disconnect_cameras(self.cameras)
+            self.primary_controller.data_ready.disconnect()
+            self.primary_controller.data_ready.connect(self.return_to_gui)
+            self.disconnect_secondary_controllers()
+            self.disconnect_cameras()
             self.set_LEED_energy(self.current_energy, 1000)
 
     def save_data(self):
@@ -342,7 +344,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         -------
         None.
         """
-        self.__primary_controller.set_energy(*message)
+        self.primary_controller.set_energy(*message)
 
     @abstractmethod
     def abort(self):
@@ -360,13 +362,16 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         self.current_energy = 0
         # Set LEED energy to 0
         try:
-            self.__primary_controller.data_ready.disconnect()
-            self.disconnect_controllers(self.secondary_controllers)
+            self.primary_controller.data_ready.disconnect()
+        except TypeError:
+            pass
+        try:
+            self.disconnect_secondary_controllers()
         except TypeError:
             pass
         for controller in self.secondary_controllers:
             controller.busy = False
-        self.disconnect_cameras(self.cameras)
+        self.disconnect_cameras()
         for camera in self.cameras:
             camera.busy = False
         self.set_LEED_energy(self.current_energy, 1000)
@@ -374,17 +379,15 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             self.disconnect_primary_controller()
         except TypeError:
             pass
-        self.__primary_controller.busy = False
+        self.primary_controller.busy = False
 
         for key in self.data_points:
             self.data_points[key] = []
         # TODO: check if this function works as intended, not waiting for OK from primary controller
 
-    def connect_cameras(self, cameras=None):
+    def connect_cameras(self):
         """Connect necessary camera signals."""
-        if not cameras:
-            cameras = self.__cameras
-        for camera in cameras:
+        for camera in self.cameras:
             if camera:
                 camera.camera_busy.connect(
                     self.receive_from_camera, type=qtc.Qt.UniqueConnection
@@ -396,106 +399,96 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         # abort_action signal as it is called in the disconnecting
         # of the camera signals anyway.
 
-    def connect_controllers(self, controllers=None):
+    def connect_secondary_controllers(self):
         """Connect necessary controller signals."""
-
-        if not controllers:
-            controllers = self.__secondary_controllers
-        for controller in controllers:
-            if controller:
-                controller.data_ready.connect(
-                    self.receive_from_controller,
-                    type=qtc.Qt.UniqueConnection
-                    )
-                self.ready_for_measurement.connect(
-                    controller.measure_now,
-                    type=qtc.Qt.UniqueConnection
-                    )
-                self.abort_action.connect(
-                    controller.abort_and_reset,
-                    type=qtc.Qt.UniqueConnection
-                    )
-                self.begin_preparation.connect(
-                    controller.trigger_begin_preparation,
-                    type=qtc.Qt.UniqueConnection
-                    )
-                self.continue_preparation.connect(
-                    controller.trigger_continue_preparation,
-                    type=qtc.Qt.UniqueConnection
-                    )
-                # self.thread.started.connect(controller.make_serial)
+        for controller in self.secondary_controllers:
+            if not controller:
+                continue
+            controller.data_ready.connect(self.receive_from_controller,
+                                          type=qtc.Qt.UniqueConnection)
+            self.ready_for_measurement.connect(controller.measure_now,
+                                               type=qtc.Qt.UniqueConnection)
+            self.abort_action.connect(controller.abort_and_reset,
+                                      type=qtc.Qt.UniqueConnection)
+            self.begin_preparation.connect(
+                controller.trigger_begin_preparation,
+                type=qtc.Qt.UniqueConnection
+                )
+            self.continue_preparation.connect(
+                controller.trigger_continue_preparation,
+                type=qtc.Qt.UniqueConnection
+                )
 
     def connect_primary_controller(self):
         """Connect signals of the primary controller."""
 
-        self.__primary_controller.data_ready.connect(
+        self.primary_controller.data_ready.connect(
             self.receive_from_controller, type=qtc.Qt.UniqueConnection
             )
         self.abort_action.connect(
-            self.__primary_controller.abort_and_reset,
+            self.primary_controller.abort_and_reset,
             type=qtc.Qt.UniqueConnection
             )
         self.begin_preparation.connect(
-            self.__primary_controller.trigger_begin_preparation,
+            self.primary_controller.trigger_begin_preparation,
             type=qtc.Qt.UniqueConnection
             )
         self.continue_preparation.connect(
-            self.__primary_controller.trigger_continue_preparation,
+            self.primary_controller.trigger_continue_preparation,
             type=qtc.Qt.UniqueConnection
             )
-        self.__primary_controller.about_to_trigger.connect(
+        self.primary_controller.about_to_trigger.connect(
             self.do_next_measurement, type=qtc.Qt.UniqueConnection
             )
 
-    def disconnect_cameras(self, cameras):
+    def disconnect_cameras(self):
         """Disconnect necessary camera signals."""
-        for camera in cameras:
+        for camera in self.cameras:
             if camera:
                 camera.disconnect()
                 camera.camera_busy.disconnect(self.receive_from_camera)
                 self.ready_for_measurement.disconnect(camera.trigger_now)
 
-    def disconnect_controllers(self, controllers):
+    def disconnect_secondary_controllers(self):
         """Disconnect necessary controller signals."""
-        for controller in controllers:
-            if controller:
-                controller.serial.serial_disconnect()
-                controller.data_ready.disconnect(
-                    self.receive_from_controller
-                    )
-                self.ready_for_measurement.disconnect(controller.measure_now)
-                self.abort_action.disconnect(controller.abort_and_reset)
-                self.begin_preparation.disconnect(
-                    controller.trigger_begin_preparation
-                    )
-                self.continue_preparation.disconnect(
-                    controller.trigger_continue_preparation
-                    )
-                try:
-                    controller.controller_busy.disconnect()
-                except TypeError:
-                    # controller_busy was not connected at the time
-                    pass
+        for controller in self.secondary_controllers:
+            if not controller:
+                continue
+            controller.serial.serial_disconnect()
+            controller.data_ready.disconnect(self.receive_from_controller)
+            self.ready_for_measurement.disconnect(controller.measure_now)
+            self.abort_action.disconnect(controller.abort_and_reset)
+            self.begin_preparation.disconnect(
+                controller.trigger_begin_preparation
+                )
+            self.continue_preparation.disconnect(
+                controller.trigger_continue_preparation
+                )
+            try:
+                controller.controller_busy.disconnect()
+            except TypeError:
+                # controller_busy was not connected at the time
+                pass
 
     def disconnect_primary_controller(self):
         """Disconnect signals of the primary controller."""
-        if self.__primary_controller is not None:
-            self.__primary_controller.serial.serial_disconnect()
+        if self.primary_controller is not None:
+            self.primary_controller.serial.serial_disconnect()
             try:
-                self.__primary_controller.data_ready.disconnect()
+                self.primary_controller.data_ready.disconnect()
             except TypeError:
                 # data_ready is already disconnected from all its slots
                 pass
-            self.abort_action.disconnect(self.__primary_controller.abort_and_reset)
+            self.abort_action.disconnect(self.primary_controller.abort_and_reset)
             self.begin_preparation.disconnect(
-                self.__primary_controller.trigger_begin_preparation
+                self.primary_controller.trigger_begin_preparation
                 )
             self.continue_preparation.disconnect(
-                self.__primary_controller.trigger_continue_preparation
+                self.primary_controller.trigger_continue_preparation
                 )
-            self.__primary_controller.about_to_trigger.disconnect()
+            self.primary_controller.about_to_trigger.disconnect()
             try:
-                self.__primary_controller.controller_busy.disconnect()
+                self.primary_controller.controller_busy.disconnect()
             except TypeError:
                     # controller_busy was not connected at the time
                     pass
@@ -552,33 +545,21 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         None.
         """
         try:
-            self.__primary_controller.about_to_trigger.connect(
+            self.primary_controller.about_to_trigger.connect(
                 self.do_next_measurement, type=qtc.Qt.UniqueConnection
                 )
         except TypeError:
-            self.__primary_controller.about_to_trigger.disconnect()
-            self.__primary_controller.data_ready.disconnect()
-            for controller in self.__secondary_controllers:
-                if controller:
-                    controller.data_ready.disconnect()
-                    controller.controller_busy.connect(
-                        self.continue_measurement_preparation
-                        )
-            self.__primary_controller.controller_busy.connect(
-                self.continue_measurement_preparation
-                )
+            self.primary_controller.about_to_trigger.disconnect()
+            for controller in self.controllers:
+                controller.data_ready.disconnect()
+                controller.controller_busy.connect(
+                    self.continue_measurement_preparation
+                    )
         else:
-            self.__primary_controller.controller_busy.disconnect()
-            for controller in self.__secondary_controllers:
-                if controller:
-                    controller.controller_busy.disconnect()
-                    controller.data_ready.connect(
-                        self.receive_from_controller,
-                        type=qtc.Qt.UniqueConnection
-                        )
-            self.__primary_controller.data_ready.connect(
-                self.receive_from_controller, type=qtc.Qt.UniqueConnection
-                )
+            for controller in self.controllers:
+                controller.controller_busy.disconnect()
+                controller.data_ready.connect(self.receive_from_controller,
+                                              type=qtc.Qt.UniqueConnection)
 
     def begin_measurement_preparation(self):
         """Start preparation for measurements.
@@ -633,22 +614,12 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             Starts the second part of the measurement
             preparation.
         """
-        if busy:
-            return
-        if self.__primary_controller.busy:
-            return
-        if any(controller.busy for controller in self.__secondary_controllers):
+        if busy or any(controller.busy for controller in self.controllers):
             return
         self.switch_signals_for_preparation()
-        for controller in self.secondary_controllers:
-            if controller:
-                controller.controller_busy.connect(
-                    self.is_preparation_finished,
-                    type=qtc.Qt.UniqueConnection
-                    )
-        self.__primary_controller.controller_busy.connect(
-            self.is_preparation_finished, type=qtc.Qt.UniqueConnection
-            )
+        for controller in self.controllers:
+            controller.controller_busy.connect(self.is_preparation_finished,
+                                               type=qtc.Qt.UniqueConnection)
         self.continue_preparation.emit()
 
     def ready_for_next_measurement(self):
@@ -661,11 +632,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         -------
         None.
         """
-        if self.__primary_controller.busy:
-            return
-        if any(controller.busy for controller in self.__secondary_controllers):
-            return
-        if any(camera.busy for camera in self.__cameras):
+        if any(obj.busy for obj in (*self.controllers, *self.cameras)):
             return
         if self.is_finished():
             self.prepare_finalization()
@@ -686,14 +653,10 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         -------
         None.
         """
-        if self.__primary_controller.busy:
+        if any(controller.busy for controller in self.controllers):
             return
-        if any(controller.busy for controller in self.__secondary_controllers):
-            return
-        for controller in self.secondary_controllers:
-            if controller:
-                controller.controller_busy.disconnect()
-        self.__primary_controller.controller_busy.disconnect()
+        for controller in self.controllers:
+            controller.controller_busy.disconnect()
         self.start_next_measurement()
 
     def receive_from_camera(self, busy):
