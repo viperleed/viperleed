@@ -378,5 +378,5 @@ class ViPErinoController(MeasureController):
         else:
             mode_on = self.settings.getint('measurement_settings',
                                            'continuous_measurement_no')
-        self.send_message(continuous_mode, [mode_on,0,0])
+        self.send_message(continuous_mode, [mode_on, 0, 0])
 

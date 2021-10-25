@@ -359,15 +359,21 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         self.abort_action.emit()
         self.current_energy = 0
         # Set LEED energy to 0
-        self.__primary_controller.data_ready.disconnect()
-        self.disconnect_controllers(self.secondary_controllers)
+        try:
+            self.__primary_controller.data_ready.disconnect()
+            self.disconnect_controllers(self.secondary_controllers)
+        except TypeError:
+            pass
         for controller in self.secondary_controllers:
             controller.busy = False
         self.disconnect_cameras(self.cameras)
         for camera in self.cameras:
             camera.busy = False
         self.set_LEED_energy(self.current_energy, 1000)
-        self.disconnect_primary_controller()
+        try:
+            self.disconnect_primary_controller()
+        except TypeError:
+            pass
         self.__primary_controller.busy = False
 
         for key in self.data_points:

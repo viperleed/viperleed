@@ -262,6 +262,17 @@ class TimeResolved(MeasurementABC):
         -------
         None.
         """
+        self.timer.stop()
+        try:
+            for controller in self.secondary_controllers:
+                if controller:
+                    controller.controller_busy.disconnect()
+        except TypeError:
+            pass
+        try:
+            self.primary_controller.controller_busy.disconnect()
+        except TypeError:
+            pass
         self.prepare_finalization()
         # super().abort()
 
@@ -400,16 +411,12 @@ class TimeResolved(MeasurementABC):
         continuous_mode(False)
             Tell the controller to turn continuous mode off.
         """
-        for controller in self.secondary_controllers:
+        for controller in (*self.secondary_controllers,
+                           self.primary_controller):
             if controller:
                 controller.busy = True
                 controller.controller_busy.connect(
                     self.finalize,
                     type=qtc.Qt.UniqueConnection
                     )
-        self.primary_controller.busy = True
-        self.primary_controller.controller_busy.connect(
-            self.finalize,
-            type=qtc.Qt.UniqueConnection
-            )
         self.continuous_mode.emit([False, True])
