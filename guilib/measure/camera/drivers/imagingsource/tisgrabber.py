@@ -478,9 +478,11 @@ class  WindowsCamera:
                 err_code=DLLReturns.INVALID_SINK_FORMAT
                 ) from err
 
-        bytes_per_pixel = (bits_per_pixel.value / color_format.n_colors) // 8
+        n_colors = color_format.n_colors
+        bytes_per_pixel = (bits_per_pixel.value / n_colors) // 8
         
-        return width.value, height.value, bytes_per_pixel, color_format
+        return (width.value, height.value, int(bytes_per_pixel),
+                color_format.n_colors, color_format)
 
     _dll_is_running = _dll.IC_IsLive
     _dll_is_running.argtypes = (GrabberHandlePtr,)
