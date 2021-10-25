@@ -21,8 +21,10 @@ from viperleed.guilib.measure.camera.drivers.imagingsource import (
     ISCamera as ImagingSourceDriver, FrameReadyCallbackType,
     ImagingSourceError, SinkFormat,
     )
-from viperleed.guilib.measure.camera.cameraabc import CameraABC
+from viperleed.guilib.measure.camera.cameraabc import CameraABC, CameraErrors
 from viperleed.guilib.measure.camera.imageprocess import ImageProcessInfo
+from viperleed.guilib.measure.hardwarebase import emit_error
+from viperleed import guilib as gl
 
 @FrameReadyCallbackType
 def on_frame_ready(__grabber_handle, image_start_pixel,
@@ -63,7 +65,8 @@ def on_frame_ready(__grabber_handle, image_start_pixel,
     process_info.frame_times.append(timer())
     camera = process_info.camera
 
-    if camera.n_frames_done > 2:
+    if (camera.n_frames_done > 2
+            or len(process_info.frame_times) > 2):
         n_lost, best_rate = estimate_frame_loss(process_info.frame_times,
                                                 camera.driver.frame_rate,
                                                 camera.exposure)
@@ -73,7 +76,7 @@ def on_frame_ready(__grabber_handle, image_start_pixel,
         # No need to display images while estimating the best frame rate
         if len(process_info.frame_times) >= camera.n_frames_estimate:
             camera.driver.stop_delivering_frames()
-            camera.driver.frame_rate = best_rate
+            camera.is_finding_best_frame_rate = False
             camera.done_estimating_frame_rate.emit()
         return
 
@@ -100,12 +103,12 @@ def on_frame_ready(__grabber_handle, image_start_pixel,
     img_ptr = POINTER(c_ubyte * buff_size)
     
     # (4.1) create array with all color channels
-    img_buffer = c_cast(image_start_pixel, image_array_ptr).contents
+    img_buffer = c_cast(image_start_pixel, img_ptr).contents
     image = np.ndarray(buffer=img_buffer, dtype=dtype, shape=shape)
     
     # (4.2) pick only the relevant one (i.e., green for multicolor),
-    #       making the image 2D, and transpose to get the width first.
-    image = image[:,:,color_fmt.green_channel].T
+    #       making the image 2D.
+    image = image[:,:,color_fmt.green_channel]
 
     camera.frame_ready.emit(image.copy())
 
@@ -140,7 +143,7 @@ def estimate_frame_loss(frame_times, frame_rate, exposure):
 
     # Ideally, a frame should take (slightly more) than dt_ideal
     # seconds to be delivered
-    dt_ideal = 1/min(1000/exposure, c.frame_rate)
+    dt_ideal = 1/min(1000/exposure, frame_rate)
 
     # However, it can take a little longer (or shorter) to do so
     dt_total = frame_times[-1] - frame_times[0]
@@ -160,7 +163,7 @@ class ImagingSourceCamera(CameraABC):
 
     done_estimating_frame_rate = qtc.pyqtSignal()
 
-    def __init__(self, *args, settings=None, **kwargs):
+    def __init__(self, *args, settings=None, parent=None, **kwargs):
         """Initialize instance.
 
         Parameters
@@ -182,14 +185,95 @@ class ImagingSourceCamera(CameraABC):
         **kwargs : object
             Other unused keyword arguments
         """
-        super().__init__(ImagingSourceDriver(), *args,
-                         settings=settings, **kwargs)
+        self.hardware_supported_features.append('color_format')
         self.is_finding_best_frame_rate = False
-        self.done_estimating_frame_rate.connect(self.__start_postponed)
         self.best_next_rate = 1024
 
-        # No. a frames to estimate optimal frame rate
-        self.n_frames_estimate = 21
+        self.__has_callback = False
+
+        super().__init__(ImagingSourceDriver(), *args,
+                         settings=settings, parent=parent, **kwargs)
+        # try:
+            # self.done_estimating_frame_rate.connect(self.__start_postponed,
+                                                    # qtc.Qt.UniqueConnection)
+        # except TypeError:
+            # # Already connected
+            # pass
+        self.done_estimating_frame_rate.connect(self.__start_postponed)
+
+    @property
+    def image_info(self):
+        """Return information about the last image.
+
+        Returns
+        -------
+        width, height : int
+            Width and height of the image in pixels
+        n_bytes : int
+            Number of bytes per pixel and per color
+        n_colors : int
+            Number of color channels
+        """
+        *info, _ = self.driver.image_info
+        return info
+
+    @property
+    def is_running(self):
+        """Return whether the camera is currently running."""
+        try:
+            running = self.driver.is_running
+        except ImagingSourceError:
+            running = False
+        return running
+
+    @property
+    def color_format(self):
+        """Return the the color format used."""
+        color_fmt = self.settings.get('camera_settings', 'color_format',
+                                      fallback='Y16')
+        try:
+            color_fmt = SinkFormat.get(color_fmt)
+        except (ValueError, ImagingSourceError):
+            emit_error(self, CameraErrors.INVALID_SETTING_WITH_FALLBACK,
+                       color_fmt, 'camera_settings/color_format', 'Y16')
+            color_fmt = SinkFormat.Y16
+        self.settings.set('camera_settings', 'color_format', color_fmt.name)
+        return color_fmt
+    
+    @color_format.setter
+    def color_format(self, color_fmt):
+        """Set a new color format."""
+        try:
+            color_fmt = SinkFormat.get(color_fmt)
+        except (ValueError, ImagingSourceError):
+            emit_error(self, CameraErrors.INVALID_SETTING_WITH_FALLBACK,
+                       color_fmt, 'camera_settings/color_format', 'Y16')
+            color_fmt = SinkFormat.Y16
+        self.settings.set('camera_settings', 'color_format', color_fmt.name)
+
+    @property
+    def n_frames_estimate(self):
+        """Return no. of frames for frame rate optimization.
+        
+        The number of frames for estimates scales with the
+        exposure time such that it never takes more than 5
+        seconds to perform the initial optimization.
+        
+        Returns
+        -------
+        n_frames : int
+            Negative values indicate that there is no need
+            to optimize (i.e., exposure is very long).
+        """
+        if self.exposure >= 1500:
+            return -1
+        if self.exposure >= 500:
+            return 4
+        if self.exposure >= 200:
+            return 7
+        if self.exposure >= 100:
+            return 11
+        return 21
 
     @property
     def supports_trigger_burst(self):
@@ -209,21 +293,6 @@ class ImagingSourceCamera(CameraABC):
     def close(self):
         """Close the camera device."""
         self.driver.close()
-
-    def image_info(self):
-        """Return information about the last image.
-
-        Returns
-        -------
-        width, height : int
-            Width and height of the image in pixels
-        n_bytes : int
-            Number of bytes per pixel and per color
-        n_colors : int
-            Number of color channels
-        """
-        *info, _ = self.driver.image_info
-        return info
 
     def list_devices(self):
         """Return a list of available device names.
@@ -252,10 +321,25 @@ class ImagingSourceCamera(CameraABC):
         except ImagingSourceError:
             return False
 
+        # Without the next line the camera does not
+        # work for no obvious reason (returns errors).
+        self.set_roi(no_roi=True)
         self.driver.enable_auto_properties(False)
-        self.set_callback(on_frame_ready)
+        if not self.__has_callback:
+            self.set_callback(on_frame_ready)
+            self.__has_callback = True
+        self.set_roi()
 
         return True
+
+    def set_color_format(self):
+        """Set a color format in the camera."""
+        self.driver.sink_format = self.color_format
+        _ = self.driver.sink_format  # update also video format
+    
+    def get_color_format(self):
+        """Return the color format set in the camera."""
+        return self.driver.sink_format
 
     def get_binning(self):
         """Return zero, i.e., unsupported binning.
@@ -272,11 +356,11 @@ class ImagingSourceCamera(CameraABC):
 
     def get_exposure(self):
         """Return the exposure time (milliseconds) set in the camera."""
-        return self.device.exposure
+        return self.driver.exposure
 
     def set_exposure(self):
         """Set the exposure time for one frame (from settings)."""
-        self.device.exposure = self.exposure
+        self.driver.exposure = self.exposure
 
     def get_exposure_limits(self):
         """Return the the minimum and maximum exposure times supported.
@@ -294,7 +378,7 @@ class ImagingSourceCamera(CameraABC):
 
     def set_gain(self):
         """Set the gain of the camera in decibel."""
-        self.driver,gain = self.gain
+        self.driver.gain = self.gain
 
     def get_gain_limits(self):
         """Return the the minimum and maximum gains supported.
@@ -368,7 +452,7 @@ class ImagingSourceCamera(CameraABC):
 
         return roi_x, roi_y, roi_width, roi_height
 
-    def set_roi(self, no_roi=True):
+    def set_roi(self, no_roi=False):
         """Set up region of interest in the camera (from settings).
 
         Parameters
@@ -388,11 +472,13 @@ class ImagingSourceCamera(CameraABC):
             roi_x, roi_y, roi_width, roi_height = self.roi
             x_center, y_center = (roi_x + roi_width/2, roi_y + roi_height/2)
         x_center, y_center = round(x_center), round(y_center)
-        *_, color = self.driver.image_info
+        color = self.color_format
 
+        self.driver.set_video_format(
+            f"{color.name} ({roi_width}x{roi_height})"
+            )
         self.driver.set_vcd_property("Partial scan", "X Offset", x_center)
         self.driver.set_vcd_property("Partial scan", "Y Offset", y_center)
-        self.set_video_format(f"{color.name} ({roi_width}x{roi_height})")
 
     def get_roi_size_limits(self):
         """Return minimum, maximum and granularity of the ROI.
@@ -410,13 +496,15 @@ class ImagingSourceCamera(CameraABC):
             minimum allowed increments for width and height of
             the region of interest
         """
-        roi_min, roi_max = self.driver.video_format_shape_range
+        roi_range = self.driver.video_format_shape_range
         roi_increments = self.driver.video_format_shape_increments
-        return roi_min, roi_max, roi_increments
+        return roi_range[:2], roi_range[2:], roi_increments
 
+    @gl.print_call
     def start_frame_rate_optimization(self):
         """Start estimation of the best frame rate."""
         self.is_finding_best_frame_rate = True
+        self.process_info.clear_times()
 
         # Begin delivering frames at maximum speed.
         # The on_frame_ready callback will take care of
@@ -455,17 +543,25 @@ class ImagingSourceCamera(CameraABC):
         """Start the camera in self.mode."""
         self.n_frames_done = 0
 
-        self.start_frame_rate_optimization()
-        # Postpone actual starting to after optimization is over.
-        # Once done, the camera will be automatically started with
-        # a call to __start_postponed() (connected in __init__ to
-        # the done_estimating_frame_rate signal).
-        # If we ever decide to not do this, we can simply replace
-        # the call above with a direct call to __start_postponed()
+        if self.n_frames_estimate > 0:
+            # Optimize now the frame rate to minimize frame losses.
+            # Postpone actual starting to after optimization is over.
+            # Once done, the camera will be automatically started with
+            # a call to __start_postponed() (connected in __init__ to
+            # the done_estimating_frame_rate signal).
+            # If we ever decide to not do this, we can simply replace
+            # the call above with a direct call to __start_postponed()
+            self.start_frame_rate_optimization()
+        else:
+            self.best_next_rate = 1024
+            self.__start_postponed()
 
+    @gl.print_call
     def __start_postponed(self):
         # Call base that starts the processing thread if needed
         super().start()
+        self.driver.frame_rate = self.best_next_rate
+        self.process_info.clear_times()
         mode = self.mode if self.mode == 'triggered' else 'continuous'
         self.driver.start(mode)
 
