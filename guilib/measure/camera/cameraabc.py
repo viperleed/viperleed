@@ -22,6 +22,8 @@ from viperleed.guilib.measure.hardwarebase import (
 from viperleed.guilib.measure.camera.imageprocess import (ImageProcessor,
                                                           ImageProcessInfo)
 
+# TODO: look at QtMultimedia.QCamera
+
 
 class CameraErrors(ViPErLEEDErrorEnum):
     """Data class for base camera errors."""
@@ -72,7 +74,7 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
     _mandatory_settings = [
             ('camera_settings', 'class_name'),
             ('camera_settings', 'device_name'),
-            ('measurement_settings', 'camera_exposure'),
+            ('measurement_settings', 'exposure'),
             ]
 
     # _abstract is a list of features for which setter and getter
@@ -91,7 +93,7 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
     # and set_mode, and in the same order they are listed in this list.
     hardware_supported_features = []
 
-    def __init__(self, driver, *args, settings=None, **kwargs):
+    def __init__(self, driver, *args, settings=None, parent=None, **kwargs):
         """Initialize instance.
 
         Parameters
@@ -113,13 +115,15 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
             'measurement_settings'/'camera_exposure'
                 Exposure time in milliseconds to be used for
                 acquiring each frame.
+        parent : QObject
+            The parent QObject of this Camera.
         **kwargs : object
-            Other unused keyword arguments
+            Other unused keyword arguments.
         """
+        super().__init__(parent=parent)
         self.driver = driver
         self.__busy = False
         self.__settings = None
-        self.set_settings(settings)
 
         self.process_info = ImageProcessInfo()
         self.process_info.camera = self
@@ -129,6 +133,7 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         self.n_frames_done = 0
 
         self.frame_ready.connect(self.__on_frame_ready)
+        self.set_settings(settings)
 
     @property
     def binning(self):
@@ -197,14 +202,14 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         """
         try:
             exposure_time = self.settings.getfloat('measurement_settings',
-                                                   'camera_exposure')
+                                                   'exposure')
         except ValueError:  # Cannot be read as float
             exposure_time = -1
 
         min_exposure, max_exposure = self.get_exposure_limits()
         if exposure_time < min_exposure or exposure_time > max_exposure:
             emit_error(self, CameraErrors.INVALID_SETTINGS,
-                       'measurement_settings/camera_exposure')
+                       'measurement_settings/exposure')
         return exposure_time
 
     @property
@@ -219,15 +224,37 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         """
         try:
             gain = self.settings.getfloat('measurement_settings',
-                                          'camera_gain', fallback=0)
+                                          'gain', fallback=0)
         except ValueError:  # Cannot be read as float
             gain = -1
 
         min_gain, max_gain = self.get_gain_limits()
         if gain < min_gain or gain > max_gain:
             emit_error(self, CameraErrors.INVALID_SETTINGS,
-                       'measurement_settings/camera_gain')
+                       'measurement_settings/gain')
         return gain
+
+    @property
+    @abstractmethod
+    def image_info(self):
+        """Return information about the last image.
+
+        Returns
+        -------
+        width, height : int
+            Width and height of the image in pixels
+        n_bytes : int
+            Number of bytes per pixel and per color
+        n_colors : int
+            Number of color channels
+        """
+        return
+
+    @property
+    @abstractmethod
+    def is_running(self):
+        """Return whether the camera is currently running."""
+        return False
 
     @property
     def mode(self):
@@ -365,7 +392,9 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
             return
 
         self.__settings = new_settings
-        self.stop()
+        if self.is_running:
+            self.stop()
+        self.close()
         self.connect()  # Also loads self.settings to camera
 
     settings = property(__get_settings, set_settings)
@@ -443,23 +472,9 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
 
     def disconnect(self):
         """Disconnect the device."""
+        print("ABC disconnect")
         self.stop()
         self.close()
-
-    @abstractmethod
-    def image_info(self):
-        """Return information about the last image.
-
-        Returns
-        -------
-        width, height : int
-            Width and height of the image in pixels
-        n_bytes : int
-            Number of bytes per pixel and per color
-        n_colors : int
-            Number of color channels
-        """
-        return
 
     @abstractmethod
     def list_devices(self):
@@ -584,7 +599,7 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
                 "but self.get_binning_limits() was not reimplemented."
                 )
         min_binning = 1
-        _, (max_roi_w, max_roi_h) = self.get_roi_size_limits()
+        _, (max_roi_w, max_roi_h), _ = self.get_roi_size_limits()
         max_binning = min(max_roi_w, max_roi_h)
         return min_binning, max_binning
 
@@ -793,7 +808,7 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         """
         return tuple()
 
-    def set_roi(self, no_roi=True):
+    def set_roi(self, no_roi=False):
         """Set up region of interest in the camera.
 
         This method should be reimplemented only if the camera natively
@@ -808,7 +823,7 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         ----------
         no_roi : bool, optional
             If True, set the ROI to the full size of the sensor rather
-            than using the value from the settings. Default is True.
+            than using the value from the settings. Default is False.
 
         Returns
         -------
@@ -916,6 +931,7 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         -------
         None.
         """
+        self.process_info.clear_times()
         if self.__process_thread.isRunning():
             self.__process_thread.quit()
 
