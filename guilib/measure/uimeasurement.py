@@ -26,8 +26,6 @@ from viperleed.guilib.measure.measurement import ALL_MEASUREMENTS
 from viperleed.guilib.measure.hardwarebase import class_from_name
 from viperleed.guilib.basewidgets import MeasurementFigureCanvas as Figure
 
-from viperleed.guilib.measure.measurement.time_resolved import TimeResolved # TEMP
-
 TITLE = 'Measurement UI'
 
 
@@ -48,7 +46,7 @@ class Measure(gl.ViPErLEEDPluginBase):
             'Start energy': qtw.QLineEdit(''),
             'End energy': qtw.QLineEdit(''),
             'Delta energy': qtw.QLineEdit(''),
-            'save': qtw.QPushButton("Save"),
+            'save': qtw.QPushButton("Store settings"),
             'plots': [],
             # TODO: add times/ make separate class/ read stuff from config and put it in the box upon opening extra window/add save button
             }
@@ -71,23 +69,22 @@ class Measure(gl.ViPErLEEDPluginBase):
 
         self._ctrls['measure'].setFont(gl.AllGUIFonts().buttonFont)
         self._ctrls['measure'].ensurePolished()
-        self._ctrls['measure'].clicked.connect(self.do_stuff)
-        self._ctrls['measure'].setEnabled(False)
-        
+        self._ctrls['measure'].clicked.connect(self.__on_start_pressed)
+        self._ctrls['measure'].setEnabled(True)
+
         self._ctrls['abort'].setFont(gl.AllGUIFonts().buttonFont)
         self._ctrls['abort'].ensurePolished()
-        # self._ctrls['abort'].clicked.connect(self.do_stuff)
         self._ctrls['abort'].setEnabled(False)
-        
+
         self._ctrls['save'].setFont(gl.AllGUIFonts().buttonFont)
         self._ctrls['save'].ensurePolished()
         # self._ctrls['save'].clicked.connect(TODO: this)
-        # self._ctrls['save'].setEnabled(False)
+        self._ctrls['save'].setEnabled(False)
 
         self._ctrls['select'].addItems(ALL_MEASUREMENTS.keys())
         self._ctrls['select'].setFont(gl.AllGUIFonts().buttonFont)
         self._ctrls['select'].ensurePolished()
-        self._ctrls['select'].activated.connect(self.__on_element_selected)
+
 
         layout = self.centralWidget().layout()
 
@@ -109,14 +106,13 @@ class Measure(gl.ViPErLEEDPluginBase):
         layout.addWidget(self._ctrls['Delta energy'], 5, 2, 1, 1)
         layout.addWidget(self._ctrls['save'], 6, 1, 1, 2)
         self.statusBar().showMessage('Ready')
-        
+
         # temp: prepare a single plot and plot a line there
         fig = Figure()
         self._ctrls['plots'].append(fig)
         layout.addWidget(fig, 7, 1, 1, 2)
-        fig.ax.plot([0,1,2], [0,1,2], 'r.')
 
-    def do_stuff(self, checked):
+    def do_stuff(self):
         self.do_this.error_occurred.connect(self.error_occurred)
         self.do_this.finished.connect(self.__on_finished)
         self.do_this.finished.connect(self.__on_stuff_done)
@@ -127,6 +123,8 @@ class Measure(gl.ViPErLEEDPluginBase):
 
         self.do_this.begin_measurement_preparation()
         self._ctrls['measure'].setEnabled(False)
+        self._ctrls['select'].setEnabled(False)
+        self._ctrls['abort'].setEnabled(True)
         self.statusBar().showMessage('Busy')
 
     def __on_finished(self, *_):
@@ -135,12 +133,15 @@ class Measure(gl.ViPErLEEDPluginBase):
                            *self.do_this.secondary_controllers):
             if controller:
                 controller.serial.serial_disconnect()
+        self._ctrls['measure'].setEnabled(True)
+        self._ctrls['select'].setEnabled(True)
+        self._ctrls['abort'].setEnabled(False)
         self.statusBar().showMessage('Ready')
 
     def __on_stuff_done(self, *_):
         print("\n#### DONE! ####")
 
-    def __on_element_selected(self):
+    def __on_start_pressed(self):
         text = self._ctrls['select'].currentText()
         if self.do_this:
             self.do_this.thread.quit()
@@ -160,18 +161,19 @@ class Measure(gl.ViPErLEEDPluginBase):
             return
         measurement_cls = ALL_MEASUREMENTS[text]
         self.do_this = measurement_cls(config)
-        
-        if not isinstance(self.do_this, TimeResolved):  # TEMP. TODO: Handle data structure of time resolved
-            self.do_this.new_data_available.connect(self.on_new_data)
 
-        self._ctrls['measure'].setEnabled(True)
+        if not isinstance(self.do_this, ALL_MEASUREMENTS['Time resolved']):  # TEMP. TODO: Handle data structure of time resolved
+            self.do_this.new_data_available.connect(self.__on_new_data)
+        self._ctrls['abort'].clicked.connect(self.do_this.abort)
 
-    def on_new_data(self):
+        self.do_stuff()
+
+    def __on_new_data(self):
         """Replot measured data."""
         fig = self._ctrls['plots'][0]
         fig.ax.cla()  # Clear old stuff
         meas = self.sender()
-        
+
         fig.ax.plot(meas.data_points['nominal_energy'],
                     meas.data_points['I0'], '.')
         fig.ax.figure.canvas.draw_idle()

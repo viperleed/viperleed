@@ -325,7 +325,6 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
         if self.__unsent_messages or self.serial.busy:
             self.__unsent_messages.append(data)
             return
-        print(self.serial.port_name, *data)
         self.serial.send_message(*data)
 
     def send_unsent_messages(self, serial_busy):
