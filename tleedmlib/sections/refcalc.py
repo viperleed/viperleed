@@ -65,7 +65,6 @@ def compile_refcalc(comptask):
     """Function meant to be executed by parallelized workers. Executes a
     RefcalcCompileTask."""
     logger = logging.getLogger("tleedm.refcalc")
-    #home = os.getcwd()
     has_muftin = False
     if os.path.isfile("muftin.f"):
         has_muftin = True
@@ -131,7 +130,6 @@ def run_refcalc(runtask):
     """Runs a part of a reference calculation in a subfolder, or the whole
     refcalc here if in single-threaded mode."""
     logger = logging.getLogger("tleedm.refcalc")
-    #home = os.getcwd()
     base = runtask.comptask.basedir
     workfolder = base
     task_name = "(single-threaded)"
@@ -245,10 +243,12 @@ def edit_fin_energy_lmax(runtask):
     energy = (eformatter.write([runtask.energy, runtask.energy + 0.01, 1.0])
               .ljust(lj) + 'EI,EF,DE')
     # now replace LMAX - now makes sure LMAX can be part of directory name
-    # this works because even if the directory were to be named LMAX, there is a timestap after it rather than a \n
+    # this works because even if the directory were to be named LMAX, there is
+    #   a timestap after it rather than a \n
     before_LMAX, after_LMAX = rest.split("   LMAX", maxsplit=1)
     before_LMAX = splitMaxRight(before_LMAX, "\n")[0]
-    after_LMAX = str(runtask.comptask.lmax).rjust(3).ljust(45) + "LMAX" + after_LMAX
+    after_LMAX = (str(runtask.comptask.lmax).rjust(3).ljust(45)
+                  + "LMAX" + after_LMAX)
     # fin = finparts[0] + "\n" + nl + finparts[1]
     fin = "\n".join((comment, energy, before_LMAX, after_LMAX))
     return fin
@@ -390,7 +390,6 @@ def refcalc(sl, rp, subdomain=False, parent_dir=""):
 
     # set up log
     logname = "refcalc-"+rp.timestamp+".log"
-    # rp.manifest.append(logname) # no longer in manifest, instead moved to SUPP at cleanup
     if not single_threaded:
         try:
             with open(logname, "w") as wf:
@@ -562,10 +561,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=""):
     except Exception:
         logger.warning("Error writing THEOBEAMS.pdf after reference "
                        "calculation.")
-        
-# plot_iv(data, filename, labels=[], annotations=[], 
-#             legends=[], formatting=None)
-    # rename and move files
+
     try:
         os.rename('fd.out', 'refcalc-fd.out')
     except Exception:

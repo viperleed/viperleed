@@ -132,8 +132,6 @@ def readFdOut(readfile="fd.out", for_error=False):
     if filelines[0].startswith(" SOME ERROR OCCURED WHILE READING"):
         logger.error("File "+readfile+" reports error: "+filelines[0])
         raise Exception("File "+readfile+" reports error.")
-      #    if ".  CORRECT TERMINATION" in fdout:   # happens for superpos output...
-#        fdout = fdout.split(".  CORRECT TERMINATION")[0]
     fdout = ""
     theobeams = []
     i = 1   # number lines as in text editor - be careful about indexing!
@@ -158,9 +156,10 @@ def readFdOut(readfile="fd.out", for_error=False):
     # Collect them, skipping empty lines
     blocks = []
     for line in filelines[i-1:]:
-        if ".  CORRECT TERMINATION" in line:    # sometimes superpos output is not in right line. sync issue? 
+        if ".  CORRECT TERMINATION" in line:
+            # sometimes superpos output is not in right line. sync issue?
             continue
-        fdout +=  line + "\n"
+        fdout += line + "\n"
         llist = line.split()
         if len(llist) == 0:
             continue  # skip empty lines
@@ -394,9 +393,9 @@ def writeAUXNONSTRUCT(sl, rp):
                      'ints': ff.FortranRecordWriter('I3'),
                      }
     output = ''
-    
-    output += (formatter['tst'].write([rp.ATTENUATION_EPS]).ljust(18) + 
-               '>>>>> ! <<<<<              TST\n')
+
+    output += (formatter['tst'].write([rp.ATTENUATION_EPS]).ljust(18)
+               + '>>>>> ! <<<<<              TST\n')
     output += formatter['beamnums'].write(beamnums)+'\n'
     output += (formatter['incidence'].write([rp.THETA, rp.PHI]).ljust(45)
                + 'THETA FI\n')
@@ -624,7 +623,7 @@ def writeAUXGEO(sl, rp):
         ol = i3.write([n]) + formatter['geo'].write([v[2],
                                                      v[0], v[1]])
         output += (ol.ljust(lj) + 'layer '+str(n)+': layer type '+str(n)
-                   +', interlayer vector below\n')
+                   + ', interlayer vector below\n')
         ol = i3.write([rp.TENSOR_OUTPUT[layer.num]]).ljust(lj)
         output += (ol + '0/1: Tensor output is required for this layer '
                    '(TENSOR_OUTPUT)\n')
@@ -734,4 +733,3 @@ C  set substrate / overlayer imaginary part of inner potential
                      exc_info=True)
         raise
     return
-    

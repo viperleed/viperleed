@@ -407,7 +407,7 @@ def writeIVBEAMS(sl, rp, filename="IVBEAMS", domains=False):
         return []
     output = ("  h         k          Beams to calculate, automatically "
               "generated from EXPBEAMS\n")
-    if rp.AVERAGE_BEAMS != False:
+    if rp.AVERAGE_BEAMS is not False:
         makebeams = project_to_first_domain([b.hkfrac for b in rp.expbeams],
                                             *d)
         ivbeams = [tl.Beam(hk) for hk in makebeams]

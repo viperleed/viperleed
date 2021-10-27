@@ -382,7 +382,6 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                     break
         return v
 
-
     def setNumericalParameter(rp, param, value, varname=None, type_=float,
                               range_=(None, None), haltingOnFail=1,
                               range_exclude=(False, False),
@@ -1321,7 +1320,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                     if i not in rpars.SYMMETRY_BULK['rotation']:
                         rpars.SYMMETRY_BULK['rotation'].append(i)
                 elif v.startswith("m"):
-                    if not "[" in v or not "]" in v:
+                    if "[" not in v or "]" not in v:
                         logger.warning(
                             "PARAMETERS file: error reading value '" + v
                             + "' in SYMMETRY_BULK: no direction recognized.")
