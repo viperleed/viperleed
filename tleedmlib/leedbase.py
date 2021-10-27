@@ -89,7 +89,7 @@ elementAtomicMass = {
 #                FUNCTIONS                    #
 ###############################################
 
-def monitoredPool(rp, poolsize, function, tasks):
+def monitoredPool(rp, poolsize, function, tasks, update_from=""):
     """
     The 'function' and 'tasks' arguments are passed on to a multiprocessing
     pool of size 'poolsize' with apply_async. While waiting for the pool to
@@ -107,6 +107,8 @@ def monitoredPool(rp, poolsize, function, tasks):
     tasks : list of arguments
         treated like the arguments of pool.map, i.e. each element is passed on
         in a seperate call of 'function' via multiprocessing.Pool.apply_async
+    update_from : str
+        directory from which PARAMETERS should be read for updates
 
     Returns
     -------
@@ -141,7 +143,7 @@ def monitoredPool(rp, poolsize, function, tasks):
         while not all(r.ready() for r in results):
             if killed:
                 break
-            updatePARAMETERS(rp)
+            updatePARAMETERS(rp, update_from=update_from)
             if rp.STOP:
                 kill_pool(pool)
                 logger.info("Stopped by STOP parameter.")

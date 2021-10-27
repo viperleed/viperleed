@@ -723,6 +723,9 @@ def preserve_original_input(rp, init_logger, path=""):
         rp.setHaltingLevel(1)
 
     # copy all files to orig_inputs that were used as original input
+    # !!! TODO: rp.fileLoaded contains only files that were needed so far,
+    #  and EXPBEAMS is missing the .csv extension -> probably better to list
+    #  all input files explicitly here
     for file in rp.fileLoaded:
         if rp.fileLoaded[file]:
             # copy to original input
@@ -732,7 +735,8 @@ def preserve_original_input(rp, init_logger, path=""):
                 else:
                     raise FileNotFoundError
             except Exception:
-                init_logger.warning("Could not copy file {} to ".format(file) + folder_name)
+                init_logger.warning("Could not copy file {} to ".format(file)
+                                    + folder_name)
                 rp.setHaltingLevel(1)
     return
 

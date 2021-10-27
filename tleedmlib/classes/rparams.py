@@ -129,14 +129,17 @@ class Rparams:
         self.LOG_SEARCH = True
         self.N_BULK_LAYERS = 1           # number of bulk layers
         self.N_CORES = 0                 # number of cores
+        self.OPTIMIZE = {"which": "none", "step": 0., "minpoints": 4,
+                         "maxpoints": 10, "convergence": 0., "maxstep": 0.}
+                    # settings for fd optimization
         self.PARABOLA_FIT = {"type": "none", "alpha": 1e-2, "mincurv": 5e-3,
                              "localize": 0}
         self.PHASESHIFT_EPS = 0  # defined in updateDerivedParams
         self.PHASESHIFTS_CALC_OLD = True # use old EEASiSSS version # TODO: once established, set to False or remove
         self.PHASESHIFTS_OUT_OLD = True  # output old PHASESHIFTS file # TODO: once established, set to False or remove
         self.PHI = 0.0           # from BEAM_INCIDENCE
-        self.PLOT_RFACTOR = {'axes': 'all', 'colors': None,
-                             'legend': 'all', 'overbar': False, 'perpage': 2}
+        self.PLOT_IV = {'axes': 'all', 'colors': [],
+                        'legend': 'all', 'overbar': False, 'perpage': 2}
         self.RUN = [0, 1, 2, 3]        # what segments should be run
         self.R_FACTOR_TYPE = 1  # 1: Pendry, 2: R2, 3: Zanazzi-Jona
         self.R_FACTOR_SMOOTH = 0

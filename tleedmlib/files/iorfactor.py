@@ -15,6 +15,7 @@ import os
 
 from viperleed.tleedmlib.files.beams import writeAUXEXPBEAMS
 from viperleed.tleedmlib.leedbase import getBeamCorrespondence, getYfunc
+from viperleed.tleedmlib.files.ivplot import plot_iv
 
 try:
     import matplotlib
@@ -338,10 +339,57 @@ C           gaps in the spectra set MNGAP to 1 to avoid zero-sized arrays)
     return
 
 
+def read_rfactor_columns(cols_dir=''):
+    """
+    Reads data from the theo.column and exp.column files in a given directory.
+
+    Parameters
+    ----------
+    cols_dir : str, optional
+        The directory to read from. The default is ''.
+
+    Returns
+    -------
+    list [theo_beams, exp_beams]
+        Both the theoretical and the experimental beams are formatted as lists
+        of 2D numpy arrays, each of which has the form [[en1, intens1], ...]
+    """
+
+    fnames = ['theo.column', 'exp.column']
+    xxyy = []
+    for fname in fnames:
+        try:
+            f = open(os.path.join(cols_dir, fname), 'r')
+        except FileNotFoundError:
+            logger.error("read_rfactor_columns: File {} not found. Aborting."
+                         .format(fname))
+            return []
+        except PermissionError:
+            logger.error("read_rfactor_columns: Cannot open file {}. Aborting."
+                         .format(fname))
+            return []
+
+        cols = np.array([[float(col) for col in line.split()] for line in f])
+        xy = np.split(cols, np.shape(cols)[1]/2, axis=1)
+        # xy is now a list of 2D arrays.
+        # Each array has the form [[en1, intens1], ...]
+        #
+        # for each beam, get rid of the points that have (en, intens) = (0, 0)
+        # so that they don't screw up the plots later
+        xy = [coords[~np.all(coords < 1e-3, axis=1)] for coords in xy]
+        if xy:
+            xxyy.append(xy)
+        else:
+            logger.warning("File " + fname + " contains no usable data.")
+    # xxyy now contains first the theoretical, then the experimental beams
+    return xxyy
+
+
 def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
                     analysisFile='', v0i=0., formatting=None):
     '''
-    Creates a single PDF file containing the plots of R-factors
+    Creates a single PDF file containing the plots of R-factors, using plot_iv.
+    If analysisFile is defined, a second 'analysis' PDF will be generated.
 
     Parameters
     ----------
@@ -394,67 +442,23 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
     None
 
     '''
+
     global plotting
     if not plotting:
         logger.debug("Necessary modules for plotting not found. Skipping "
                      "R-factor plotting.")
         return
 
-    # set formatting parameters
-    figs_per_page = 2
-    plotcolors = None
-    print_legend = 'all'
-    print_axes = 'all'
-    if formatting is not None:
-        if 'axes' in formatting:
-            print_axes = formatting['axes']
-        if 'colors' in formatting:
-            plotcolors = formatting['colors']
-        if 'legend' in formatting:
-            print_legend = formatting['legend']
-        if 'perpage' in formatting:
-            figs_per_page = formatting['perpage']
+    xyTheo, xyExp = read_rfactor_columns(cols_dir=colsDir)
+    labels, rfacs = zip(*beams)
+    rfac_str = ["R = {:.4f}".format(r) for r in rfacs]
+    plot_iv([xyTheo, xyExp], outName, legends=['Theoretical', 'Experimental'],
+            labels=labels, annotations=rfac_str, formatting=formatting)
 
-    fnames = ['theo.column', 'exp.column']
-
-    if not hasattr(beams, '__len__'):
-        logger.error("writeRfactorPdf: First argument should be list, not "
-                     + str(type(beams)))
+    if not analysisFile:
         return
 
-    xxyy = []
-    for fname in fnames:
-        try:
-            f = open(os.path.join(colsDir, fname), 'r')
-        except FileNotFoundError:
-            logger.error("writeRfactorPdf: File {} not found. Aborting."
-                         .format(fname))
-            return
-        except PermissionError:
-            logger.error("writeRfactorPdf: Cannot open file {}. Aborting."
-                         .format(fname))
-            return
-
-        cols = [[float(col) for col in line.split()] for line in f]
-
-        if(np.shape(cols)[1] != 2*len(beams)):
-            logger.error("writeRfactorPdf: Number of beams in file {} does "
-                         "not match the input. Aborting.".format(fname))
-            return
-
-        cols = np.array(cols)
-        xy = np.split(cols, len(beams), axis=1)
-        # xy is now a list of 2D arrays.
-        # Each array has the form [[en1, intens1], ...]
-        #
-        # for each beam, get rid of the points that have (en, intens) = (0, 0)
-        # so that they don't screw up the plots later
-        xy = [coords[~np.all(coords < 1e-3, axis=1)] for coords in xy]
-        if xy:
-            xxyy.append(xy)
-
-    xyTheo = xxyy[0]
-    xyExp = xxyy[1]
+    # write R-factor analysis
 
     # find min and max values of x and y for plotting all curves
     # on the same horizontal scale and leaving a little y space for the legend
@@ -465,166 +469,18 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
     ymax = max(max(xy[:, 1]) for xy in [*xyTheo, *xyExp] if len(xy) != 0)
     dy = ymax - ymin
 
-    # Figure out how to arrange the figures
-    if type(figs_per_page) == int:
-        xfigs = int(np.round(np.sqrt(figs_per_page/2)))
-        yfigs = int(np.ceil(figs_per_page / xfigs))
-        if xfigs*yfigs != figs_per_page:
-            logger.debug("R-factor plots: Figures per page corrected from {} "
-                         "to {}".format(figs_per_page, xfigs*yfigs))
-            figs_per_page = xfigs*yfigs
-    else:
-        xfigs, yfigs = figs_per_page
-        figs_per_page = xfigs*yfigs
-    figsize = (7., 3.5 * yfigs / xfigs)
-
-    # Set up stuff needed for the plots
-
-    try:
-        pdf = PdfPages(outName)
-    except PermissionError:
-        logger.error("writeRfactorPdf: Cannot open file {}. Aborting."
-                     .format(outName))
-        return
-
     # set ticks spacing to 50 eV and round the x limits to a multiple of it
     tick = 50
     oritick = plticker.MultipleLocator(base=tick)
-    majortick = oritick
-    minortick = None
     xlims = (np.floor(xmin/tick)*tick,
              np.ceil(xmax/tick)*tick)
     dx = xlims[1] - xlims[0]
 
-    # positions and scales, depending on number of figures per page
-    figs = []
-    fontscale = 1 / np.sqrt(xfigs)
-    linewidth = 1.5 * fontscale
-    ylims = (ymin - 0.02*dy, ymax + 0.22*dy/fontscale)
-    namePos = (xlims[0] + 0.02*dx, ylims[1] - 0.1*dy/fontscale)
-    rPos = (namePos[0], namePos[1]-0.085*dy/fontscale)
-
-    if dx / (tick * fontscale) > 16:  # too many labelled ticks
-        minortick = majortick
-        newbase = int(np.ceil(dx / (tick * fontscale * 16))) * tick
-        majortick = plticker.MultipleLocator(base=newbase)
-    ticklen = 3*fontscale
-
-    # axes helper variables
-    axes_visible = {'left': True, 'right': True, 'bottom': True, 'top': True}
-    if print_axes != 'all':
-        axes_visible['top'] = False
-        axes_visible['right'] = False
-        if 'l' not in print_axes:
-            axes_visible['left'] = False
-        if print_axes == 'none':
-            axes_visible['bottom'] = False
-
-    # the following will spam the logger with debug messages; disable.
-    loglevel = logger.level
-    logger.setLevel(logging.INFO)
-    try:
-        for ct, (name, rfact, theo, exp) in enumerate(zip(*zip(*beams),
-                                                          xyTheo, xyExp)):
-            if len(exp) == 0:
-                continue
-            if ct % figs_per_page == 0:
-                # need a new figure
-                fig, axs = plt.subplots(yfigs, xfigs, figsize=figsize,
-                                        squeeze=False)
-                axs = axs.flatten(order='C')  # flatten row-style
-                fig.subplots_adjust(left=(0.03 / (xfigs * fontscale)),
-                                    right=(1 - 0.03 / (xfigs * fontscale)),
-                                    bottom=(0.14 / (yfigs * fontscale)),
-                                    top=(1 - 0.02 / (yfigs * fontscale)),
-                                    wspace=0.04 / fontscale,
-                                    hspace=0.02 / fontscale)
-                figs.append(fig)
-                [ax.set_xlim(*xlims) for ax in axs]
-                [ax.set_ylim(*ylims) for ax in axs]
-                [ax.get_yaxis().set_visible(False) for ax in axs]
-                [sp.set_linewidth(0.7*linewidth) for ax in axs
-                 for sp in ax.spines.values()]
-                [ax.xaxis.set_major_locator(majortick) for ax in axs]
-                if minortick is not None:
-                    [ax.xaxis.set_minor_locator(minortick) for ax in axs]
-                for i, ax in enumerate(axs):
-                    for k in axes_visible:
-                        ax.spines[k].set_visible(axes_visible[k])
-                    if (((i//xfigs) + 1 == figs_per_page//xfigs)
-                            or len(beams) - (ct + i) <= xfigs):
-                        ax.set_xlabel("Energy (eV)", fontsize=10*fontscale,
-                                      labelpad=4*fontscale)
-                        ax.tick_params(
-                            which='both', bottom=True,
-                            top=axes_visible['top'], axis='x',
-                            direction='in', labelsize=9*fontscale,
-                            pad=5*fontscale, width=0.7*linewidth,
-                            length=ticklen)
-                        ax.spines['bottom'].set_visible(True)
-                    else:
-                        ax.tick_params(
-                            which='both', bottom=axes_visible['bottom'],
-                            top=axes_visible['top'], axis='x', direction='in',
-                            labelbottom=False, width=0.7*linewidth,
-                            length=ticklen)
-                    if minortick is not None:
-                        ax.tick_params(which='minor', length=ticklen*0.5)
-            idx = ct % figs_per_page
-            if plotcolors is not None:
-                if not all([matplotlib.colors.is_color_like(s)
-                            for s in plotcolors]):
-                    plotcolors = None
-                    logger.warning("writeRfactorPdf: Specified colors not "
-                                   "recognized, reverting to default colors")
-            if plotcolors is None:
-                axs[idx].plot(theo[:, 0], theo[:, 1], label='Theoretical',
-                              linewidth=linewidth)
-                axs[idx].plot(exp[:, 0], exp[:, 1], label='Experimental',
-                              linewidth=linewidth)
-            else:
-                axs[idx].plot(theo[:, 0], theo[:, 1], label='Theoretical',
-                              color=plotcolors[0], linewidth=linewidth)
-                axs[idx].plot(exp[:, 0], exp[:, 1], label='Experimental',
-                              color=plotcolors[1], linewidth=linewidth)
-            axs[idx].annotate(name, namePos, fontsize=10*fontscale)
-            axs[idx].annotate("R = {:.4f}".format(rfact), rPos,
-                              fontsize=10*fontscale)
-            if (print_legend == 'all'
-                    or (print_legend == 'first' and idx == 0)
-                    or (print_legend == 'tr'
-                        and (idx//xfigs == 0 and ((idx+1) % xfigs == 0
-                                                  or ct + 1 == len(beams))))):
-                legend = axs[idx].legend(fontsize=9*fontscale,
-                                         loc="upper right", frameon=False)
-                legend.get_frame().set_linewidth(linewidth)
-
-        # finally, in case the last figure is empty (i.e. the number of beams
-        # is odd) turn off the last axes (but leave the blank space).
-        if len(beams) % figs_per_page != 0:
-            for a in axs[-(figs_per_page - len(beams) % figs_per_page):]:
-                a.axis('off')
-
-        for fig in figs:
-            pdf.savefig(fig)
-            plt.close(fig)
-    except Exception:
-        logger.error("writeRfactorPdf: Error while writing rfactor pdf: ",
-                     exc_info=True)
-    finally:
-        pdf.close()
-        logger.setLevel(loglevel)
-
-    if not analysisFile:
-        return
-
-    # write R-factor analysis
-    try:
-        pdf = PdfPages(analysisFile)
-    except PermissionError:
-        logger.error("writeRfactorPdf: Cannot open file {}. Aborting."
-                     .format(analysisFile))
-        return
+    # set formatting parameters
+    plotcolors = []
+    if formatting is not None:
+        if 'colors' in formatting:
+            plotcolors = formatting['colors']
 
     figsize = (5.8, 8.3)
     figs = []
@@ -632,6 +488,13 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
     ylims = (ymin - 0.02*dy, ymax + 0.22*dy)
     namePos = (xlims[0] + 0.45*dx, ylims[1] - 0.1*dy)
     rPos = (namePos[0], namePos[1]-0.085*dy)
+
+    try:
+        pdf = PdfPages(analysisFile)
+    except PermissionError:
+        logger.error("writeRfactorPdf: Cannot open file {}. Aborting."
+                     .format(analysisFile))
+        return
     # the following will spam the logger with debug messages; disable.
     loglevel = logger.level
     logger.setLevel(logging.INFO)
@@ -655,28 +518,39 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
             [ax.xaxis.set_major_locator(oritick) for ax in axs]
             axs[0].set_ylabel("Intensity (arb. units)")
             axs[1].set_ylabel("Y")
-            axs[2].set_ylabel("\u2211(\u0394Y)\u00b2")    # sum delta Y ^2
+            axs[2].set_ylabel(r'$\sum\Delta Y^2 / \left(Y_1^2 + Y_2^2\right)$')
             axs[2].set_xlabel("Energy (eV)")
 
             ytheo = getYfunc(theo, v0i)
+            y_theo_sq = np.copy(ytheo)
+            y_theo_sq[:, 1] = y_theo_sq[:, 1]**2
             yexp = getYfunc(exp, v0i)
+            y_exp_sq = np.copy(yexp)
+            y_exp_sq[:, 1] = y_exp_sq[:, 1]**2
             dy = np.array([(ytheo[j, 0], yexp[j, 1] - ytheo[j, 1])
                            for j in range(0, min(len(ytheo), len(yexp)))])
             dysq = np.copy(dy)
             dysq[:, 1] = dysq[:, 1]**2
-            idysq = np.array([dysq[0]])
-            for j in range(1, len(dysq)):
-                idysq = np.append(idysq, [[dysq[j, 0],
-                                           idysq[j-1, 1]+dysq[j, 1]]], axis=0)
-
+            norm_y_squares = np.array(
+                [[dysq[j, 0], (dysq[j, 1]
+                               / (y_theo_sq[j, 1] + y_exp_sq[j, 1]))]
+                 for j in range(len(dysq))])
+            sum_norm_y_squares = np.array([norm_y_squares[0]])
+            for j in range(1, len(norm_y_squares)):
+                sum_norm_y_squares = (
+                    np.append(sum_norm_y_squares,
+                              [[norm_y_squares[j, 0],
+                               (sum_norm_y_squares[j-1, 1]
+                                + norm_y_squares[j, 1])]],
+                              axis=0))
             axs[1].plot(xlims, [0., 0.], color='grey', alpha=0.2)
-            if plotcolors is not None:
+            if not plotcolors:
                 if not all([matplotlib.colors.is_color_like(s)
                             for s in plotcolors]):
-                    plotcolors = None
+                    plotcolors = []
                     logger.warning("writeRfactorPdf: Specified colors not "
                                    "recognized, reverting to default colors")
-            if plotcolors is None:
+            if not plotcolors:
                 axs[0].plot(theo[:, 0], theo[:, 1], label='Theoretical')
                 axs[0].plot(exp[:, 0], exp[:, 1], label='Experimental')
                 axs[1].plot(ytheo[:, 0], ytheo[:, 1], label='Theoretical')
@@ -694,8 +568,8 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
                         linewidth=0.5)
             axs[1].fill_between(dy[:, 0], dy[:, 1], 0., facecolor='grey',
                                 alpha=0.5)
-            axs[2].plot(idysq[:, 0], idysq[:, 1], color="black",
-                        drawstyle="steps-mid")
+            axs[2].plot(sum_norm_y_squares[:, 0], sum_norm_y_squares[:, 1],
+                        color="black", drawstyle="steps-mid")
 
             axs[0].annotate(name, namePos, fontsize=10)
             axs[0].annotate("R = {:.4f}".format(rfact), rPos, fontsize=10)

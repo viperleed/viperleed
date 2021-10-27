@@ -5,3 +5,4 @@ from .deltas import deltas, deltas_domains
 from .search import search
 from .superpos import superpos
 from .errorcalc import errorcalc
+from .fd_optimization import fd_optimization

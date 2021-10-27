@@ -29,14 +29,16 @@ suppfiles = ["AUXBEAMS", "AUXGEO", "AUXLATGEO", "AUXNONSTRUCT", "BEAMLIST",
 
 supp_dirs = ["original_inputs", "compile_logs"]
 
-outfiles = ["THEOBEAMS.csv", "THEOBEAMS_norm.csv",
+outfiles = ["THEOBEAMS.csv", "THEOBEAMS_norm.csv", "THEOBEAMS.pdf",
             "PatternInfo.tlm", "SD.TL", "refcalc-fd.out",
             "Rfactor_plots_refcalc.pdf", "control.chem",
             "Search-progress.pdf", "Search-progress.csv",
             "Search-report.pdf", "FITBEAMS.csv", "FITBEAMS_norm.csv",
             "superpos-spec.out", "Rfactor_plots_superpos.pdf",
             "Rfactor_analysis_refcalc.pdf",
-            "Rfactor_analysis_superpos.pdf", "Errors.csv", "Errors.pdf"]
+            "Rfactor_analysis_superpos.pdf", "Errors.csv", "Errors.pdf",
+            "FD_Optimization.csv", "FD_Optimization.pdf",
+            "FD_Optimization_beams.pdf"]
 
 logger = logging.getLogger("tleedm.sections.cleanup")
 
@@ -188,16 +190,19 @@ def sortfiles(tensorIndex, delete_unzipped=False, tensors=True,
             logger.error("Error creating {} folder: ".format(t), exc_info=True)
         if t == "SUPP":
             filelist = suppfiles
-            directory_list = supp_dirs # move directories original_inputs and compile_logs to SUPP
+            # move directories original_inputs and compile_logs to SUPP
+            directory_list = supp_dirs
             # Also add log files (except for tleedm) into SUPP
-            logs_to_supp = [f for f in os.listdir(path) if f.endswith(".log") and not f.startswith("tleedm")]
+            logs_to_supp = [f for f in os.listdir(path) if f.endswith(".log")
+                            and not f.startswith("tleedm")]
             for f in logs_to_supp:
                 filelist.append(f)
         else:
             filelist = outfiles
             directory_list = []
         for f in [f for f in filelist
-                  if os.path.isfile(os.path.join(path, f))]: # copies files into SUPP and OUT directories
+                  if os.path.isfile(os.path.join(path, f))]:
+            # copies files into SUPP and OUT directories
             try:
                 shutil.copy2(os.path.join(path, f), os.path.join(path, t, f))
             except Exception:
@@ -206,7 +211,8 @@ def sortfiles(tensorIndex, delete_unzipped=False, tensors=True,
         for d in directory_list:
             if os.path.isdir(os.path.join(path, d)):
                 try:
-                    shutil.copytree(os.path.join(path, d), os.path.join(path, t, d))
+                    shutil.copytree(os.path.join(path, d),
+                                    os.path.join(path, t, d))
                 except Exception:
                     logger.error("Error moving {} directory {}: ".format(t, d),
                                  exc_info=True)

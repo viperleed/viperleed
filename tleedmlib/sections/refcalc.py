@@ -22,6 +22,7 @@ from viperleed.tleedmlib.base import splitMaxRight
 from viperleed.tleedmlib.files.parameters import modifyPARAMETERS
 import viperleed.tleedmlib.files.beams as beams
 import viperleed.tleedmlib.files.iorefcalc as io
+from viperleed.tleedmlib.files.ivplot import plot_iv
 
 logger = logging.getLogger("tleedm.refcalc")
 
@@ -253,7 +254,7 @@ def edit_fin_energy_lmax(runtask):
     return fin
 
 
-def refcalc(sl, rp, subdomain=False):
+def refcalc(sl, rp, subdomain=False, parent_dir=""):
     """Main function to execute the reference calculation segment."""
     if rp.domainParams:
         refcalc_domains(rp)
@@ -459,13 +460,15 @@ def refcalc(sl, rp, subdomain=False):
         # compile files
         logger.info("Compiling fortran files...")
         poolsize = min(len(comp_tasks), rp.N_CORES)
-        monitoredPool(rp, poolsize, compile_refcalc, comp_tasks)
+        monitoredPool(rp, poolsize, compile_refcalc, comp_tasks,
+                      update_from=parent_dir)
         if rp.STOP:
             return
         # run executions
         logger.info("Running reference calculations...")
         poolsize = min(len(ref_tasks), rp.N_CORES)
-        monitoredPool(rp, poolsize, run_refcalc, ref_tasks)
+        monitoredPool(rp, poolsize, run_refcalc, ref_tasks,
+                      update_from=parent_dir)
         if rp.STOP:
             return
         logger.info("Reference calculations finished. Processing files...")
@@ -478,8 +481,12 @@ def refcalc(sl, rp, subdomain=False):
             source_file = os.path.join(ct.basedir, ct.foldername,
                                        log_file_name)
             target_file_name = ct.foldername + ".log"
-            target_file = os.path.join(rp.workdir, compile_log_dir,
-                                       target_file_name)
+            if not parent_dir:
+                target_file = os.path.join(rp.workdir, compile_log_dir,
+                                           target_file_name)
+            else:
+                target_file = os.path.join(parent_dir, compile_log_dir,
+                                           target_file_name)
             shutil.copy2(source_file, target_file)
         except Exception:
             logger.warning("Error copying refcalc compile log from folder "
@@ -550,6 +557,14 @@ def refcalc(sl, rp, subdomain=False):
         logger.error("Error writing THEOBEAMS after reference "
                      "calculation: ", exc_info=True)
         rp.setHaltingLevel(2)
+    try:
+        plot_iv(theobeams_norm, "THEOBEAMS.pdf", formatting=rp.PLOT_IV)
+    except Exception:
+        logger.warning("Error writing THEOBEAMS.pdf after reference "
+                       "calculation.")
+        
+# plot_iv(data, filename, labels=[], annotations=[], 
+#             legends=[], formatting=None)
     # rename and move files
     try:
         os.rename('fd.out', 'refcalc-fd.out')

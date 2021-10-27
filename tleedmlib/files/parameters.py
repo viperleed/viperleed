@@ -24,8 +24,9 @@ knownParams = [
     'DOMAIN_STEP', 'ELEMENT_MIX',
     'ELEMENT_RENAME', 'FILAMENT_WF', 'FORTRAN_COMP', 'HALTING',
     'IV_SHIFT_RANGE', 'LAYER_CUTS', 'LAYER_STACK_VERTICAL', 'LMAX',
-    'LOG_DEBUG', 'LOG_SEARCH', 'N_BULK_LAYERS', 'N_CORES', 'PARABOLA_FIT',
-    'PHASESHIFT_EPS', 'PHASESHIFTS_CALC_OLD', 'PHASESHIFTS_OUT_OLD', 'PLOT_RFACTOR', 'RUN', 'R_FACTOR_SMOOTH',
+    'LOG_DEBUG', 'LOG_SEARCH', 'N_BULK_LAYERS', 'N_CORES', 'OPTIMIZE',
+    'PARABOLA_FIT', 'PHASESHIFT_EPS', 'PHASESHIFTS_CALC_OLD',
+    'PHASESHIFTS_OUT_OLD', 'PLOT_IV', 'RUN', 'R_FACTOR_SMOOTH',
     'R_FACTOR_TYPE', 'SCREEN_APERTURE', 'SEARCH_BEAMS', 'SEARCH_CONVERGENCE',
     'SEARCH_CULL', 'SEARCH_MAX_GEN', 'SEARCH_POPULATION', 'SEARCH_START',
     'SITE_DEF', 'SUPERLATTICE', 'SUPPRESS_EXECUTION', 'SYMMETRIZE_INPUT',
@@ -40,13 +41,14 @@ paramAlias = {
     'bulksymmetry': 'SYMMETRY_BULK',
     'fortrancompile': 'FORTRAN_COMP', 'compiler': 'FORTRAN_COMP',
     'fortrancompiler': 'FORTRAN_COMP',
-    'plotrfactors': 'PLOT_RFACTOR',
+    'fdoptimize': 'OPTIMIZE', 'fdoptimization': 'OPTIMIZE',
+    'plotrfactor': 'PLOT_IV', 'plotrfactors': 'PLOT_IV', 'ivplot': 'PLOT_IV',
               }
 for p in knownParams:
     paramAlias[p.lower().replace("_", "")] = p
 
 
-def updatePARAMETERS(rp, filename='PARAMETERS'):
+def updatePARAMETERS(rp, filename='PARAMETERS', update_from="."):
     """
     Reads PARAMETERS file again, but ignores everything not concerning the
     search or STOP. Updates the given Rparams object accordingly.
@@ -65,7 +67,7 @@ def updatePARAMETERS(rp, filename='PARAMETERS'):
 
     """
     try:
-        with open(filename, 'r') as rf:
+        with open(os.path.join(update_from, filename), 'r') as rf:
             lines = rf.readlines()
     except FileNotFoundError:
         logger.warning("updatePARAMETERS routine: PARAMETERS file not found.")
@@ -861,6 +863,53 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                                    'bound will be set to 18.')
                     il[1] = 18
                 rpars.LMAX = il
+        elif param == 'OPTIMIZE':
+            if len(plist) == 1:
+                logger.warning('PARAMETERS file: OPTIMIZE: Parameter to '
+                               'optimize not defined. Input will be ignored.')
+                rpars.setHaltingLevel(1)
+                continue
+            which = plist[1].lower()
+            if which not in ['theta', 'phi', 'v0i',
+                             'a', 'b', 'c', 'ab', 'abc']:
+                logger.warning('PARAMETERS file: OPTIMIZE: Parameter "{}" '
+                               'not recognized. Input will be ignored.'
+                               .format(which))
+                rpars.setHaltingLevel(1)
+                continue
+            rpars.OPTIMIZE['which'] = which
+            if len(llist) == 1:
+                try:
+                    rpars.OPTIMIZE['step'] = float(llist[0])
+                    continue
+                except ValueError:
+                    pass   # will be caught below
+            sublists = tl.base.splitSublists(llist, ',')
+            for sl in sublists:
+                if len(sl) != 2:
+                    logger.warning('PARAMETERS file: OPTIMIZE: Expected '
+                                   '"flag value" pairs, found ' + " ".join(sl))
+                    rpars.setHaltingLevel(1)
+                    continue
+                flag = sl[0].lower()
+                if flag not in ['step', 'convergence',
+                                'minpoints', 'maxpoints', 'maxstep']:
+                    logger.warning('PARAMETERS file: OPTIMIZE: Flag "{}" '
+                                   'not recognized.'.format(sl[0]))
+                    rpars.setHaltingLevel(1)
+                    continue
+                partype = {'step': float, 'convergence': float,
+                           'minpoints': int, 'maxpoints': int,
+                           'maxstep': float}
+                value_error = ('PARAMETERS file: OPTIMIZE: Value {} is '
+                               'not valid for flag {}. Value will be ignored.'
+                               .format(sl[1], sl[0]))
+                try:
+                    rpars.OPTIMIZE[flag] = partype[flag](sl[1])
+                except ValueError:
+                    logger.warning(value_error)
+                    rpars.setHaltingLevel(1)
+                    continue
         elif param == 'PARABOLA_FIT':
             if llist[0] == 'off':
                 rpars.PARABOLA_FIT['type'] = 'none'
@@ -915,9 +964,9 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                     'PARAMETERS file: PHASESHIFT_EPS: Unexpected value '
                     '(should be between 0 and 1). Input will be ignored.')
                 rpars.setHaltingLevel(1)
-        elif param == 'PLOT_RFACTOR':
+        elif param == 'PLOT_IV':
             if len(plist) == 1:
-                logger.warning('PARAMETERS file: PLOT_RFACTOR: Found no flag. '
+                logger.warning('PARAMETERS file: PLOT_IV: Found no flag. '
                                'Input will be ignored.')
                 rpars.setHaltingLevel(1)
                 continue
@@ -925,54 +974,42 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
             if flag not in ('color', 'colour', 'colors', 'colours', 'perpage',
                             'border', 'borders', 'axes', 'legend', 'legends',
                             'layout', 'overbar', 'overline'):
-                logger.warning('PARAMETERS file: PLOT_RFACTOR: Flag {} not '
+                logger.warning('PARAMETERS file: PLOT_IV: Flag {} not '
                                'recognized. Input will be ignored.'
                                .format(flag))
                 rpars.setHaltingLevel(1)
                 continue
             if flag in ('border', 'borders', 'axes'):
                 if llist[0].lower() in ('all', 'none'):
-                    rpars.PLOT_RFACTOR['axes'] = llist[0].lower()
+                    rpars.PLOT_IV['axes'] = llist[0].lower()
                 elif llist[0].lower() in ('less', 'lb'):
-                    rpars.PLOT_RFACTOR['axes'] = 'lb'
+                    rpars.PLOT_IV['axes'] = 'lb'
                 elif llist[0].lower() in ('bottom', 'b'):
-                    rpars.PLOT_RFACTOR['axes'] = 'b'
+                    rpars.PLOT_IV['axes'] = 'b'
                 else:
                     logger.warning(
-                        'PARAMETERS file: PLOT_RFACTOR {}: Value not '
+                        'PARAMETERS file: PLOT_IV {}: Value not '
                         'recognized. Input will be ignored.'.format(flag))
             elif flag in ('color', 'colour', 'colors', 'colours'):
-                if len(llist) >= 2:
-                    if len(llist) > 2:
-                        logger.warning(
-                            'PARAMETERS file: PLOT_RFACTOR colors: Expected '
-                            'two values, found {}. First two values will be '
-                            'used.'.format(len(llist)))
-                    rpars.PLOT_RFACTOR['colors'] = (llist[0], llist[1])
-                else:
-                    logger.warning(
-                        'PARAMETERS file: PLOT_RFACTOR colors: Expected two '
-                        'values, found {}. Input will be ignored.'
-                        .format(len(llist)))
-                    continue
+                rpars.PLOT_IV['colors'] = llist
             elif flag in ('legend', 'legends'):
                 if llist[0].lower() in ('all', 'first', 'none'):
-                    rpars.PLOT_RFACTOR['legend'] = llist[0].lower()
+                    rpars.PLOT_IV['legend'] = llist[0].lower()
                 elif llist[0].lower() in ('topright', 'tr'):
-                    rpars.PLOT_RFACTOR['legend'] = 'tr'
+                    rpars.PLOT_IV['legend'] = 'tr'
                 else:
                     logger.warning(
-                        'PARAMETERS file: PLOT_RFACTOR {}: Value not '
+                        'PARAMETERS file: PLOT_IV {}: Value not '
                         'recognized. Input will be ignored.'.format(flag))
                     continue
             elif flag in ('overbar', 'overline'):
                 if llist[0].lower().startswith("t"):
-                    rpars.PLOT_RFACTOR['overbar'] = True
+                    rpars.PLOT_IV['overbar'] = True
                 elif llist[0].lower().startswith("f"):
-                    rpars.PLOT_RFACTOR['overbar'] = False
+                    rpars.PLOT_IV['overbar'] = False
                 else:
                     logger.warning(
-                        'PARAMETERS file: PLOT_RFACTOR {}: Value not '
+                        'PARAMETERS file: PLOT_IV {}: Value not '
                         'recognized. Input will be ignored.'.format(flag))
                     continue
             elif flag in ('perpage', 'layout'):
@@ -981,31 +1018,31 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                         i = int(llist[0])
                     except (ValueError, IndexError):
                         logger.warning(
-                            'PARAMETERS file: PLOT_RFACTOR perpage: Could not '
+                            'PARAMETERS file: PLOT_IV perpage: Could not '
                             'convert value to integer. Input will be ignored.')
                         continue
                     if i <= 0:
                         logger.warning(
-                            'PARAMETERS file: PLOT_RFACTOR perpage: Value has '
+                            'PARAMETERS file: PLOT_IV perpage: Value has '
                             'to be positive integer. Input will be ignored.')
                         continue
-                    rpars.PLOT_RFACTOR['perpage'] = i
+                    rpars.PLOT_IV['perpage'] = i
                 elif len(llist) >= 2:
                     try:
                         il = [int(v) for v in llist[:2]]
                     except (ValueError, IndexError):
                         logger.warning(
-                            'PARAMETERS file: PLOT_RFACTOR perpage: Could not '
+                            'PARAMETERS file: PLOT_IV perpage: Could not '
                             'convert values to integers. Input will be '
                             'ignored.')
                         continue
                     if any([i <= 0 for i in il]):
                         logger.warning(
-                            'PARAMETERS file: PLOT_RFACTOR perpage: Values '
+                            'PARAMETERS file: PLOT_IV perpage: Values '
                             'have to be positive integers. Input will be '
                             'ignored.')
                         continue
-                    rpars.PLOT_RFACTOR['perpage'] = tuple(il)
+                    rpars.PLOT_IV['perpage'] = tuple(il)
         elif param == 'RUN':
             rl = []
             aliases = {0: ["initialization", "initialisation", "init", "ini"],
@@ -1016,7 +1053,8 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                        3: ["search"],
                        31: ["superpos", "super", "sup"],
                        4: ["domains", "domain", "dom"],
-                       5: ["error", "err"]
+                       5: ["error", "err"],
+                       6: ["opt", "optimize", "fdopt"]
                        }
             for s in llist:
                 for ind in aliases:
@@ -1035,7 +1073,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                     logger.info('Found domain search.')
                 i = 0
                 while i < len(rl):
-                    if rl[i] not in (0, 1, 2, 3, 4, 5, 11, 12, 31):
+                    if rl[i] not in (0, 1, 2, 3, 4, 5, 6, 11, 12, 31):
                         logger.warning(
                             'PARAMETERS file: RUN: Value {} does not '
                             'correspond to a segment and will be skipped.'
@@ -1581,13 +1619,12 @@ def modifyPARAMETERS(rp, modpar, new="", comment="", path="",
                 if (modpar+" = "+new.strip()) == line.split("!")[0].strip():
                     output += line
                 else:
-                    if comment == "":
-                        comment = "line automatically changed to:"
-                    output += "!"+line[:-1] + " ! " + comment + "\n"
+                    output += ("!"+line[:-1]
+                               + " ! line automatically changed to:\n")
                     if not include_left:
-                        output += modpar + " = " + new + "\n"
+                        output += modpar + " = " + new + " ! " + comment + "\n"
                     else:
-                        output += new + "\n"
+                        output += new + " ! " + comment + "\n"
             else:
                 if comment == "":
                     comment = "line commented out automatically"

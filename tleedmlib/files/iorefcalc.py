@@ -299,7 +299,8 @@ def writePARAM(sl, rp, lmax=-1):
 
 def collectFIN(version=0.):
     """Combines AUXLATGEO, BEAMLIST, AUXNONSTRUCT, PHASESHIFTS, AUXBEAMS
-    and AUXGEO into one string (input for refcalc), which it returns."""
+    and AUXGEO into one string (input for refcalc), which it returns. Pass
+    beamlist to avoid reading it again."""
     if version < 1.72:
         filenames = ["AUXLATGEO", "BEAMLIST", "AUXNONSTRUCT", "PHASESHIFTS",
                      "AUXBEAMS", "AUXGEO"]

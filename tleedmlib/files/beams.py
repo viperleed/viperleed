@@ -473,8 +473,7 @@ def writeAUXBEAMS(ivbeams=None, beamlist=None, beamsfile='IVBEAMS',
     if ivbeams is None:         # if 'ivbeams' is empty, try to fill it
         ivbeams = readIVBEAMS(beamsfile)
 
-    output = '   1               IFORM\n'
-    # !!! WHAT IS THIS VALUE? WHERE TO GET IT FROM?
+    output = '   1               IFORM\n'  # always use formatted input+output
 
     # read BEAMLIST
     if beamlist is None:

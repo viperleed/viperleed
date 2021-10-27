@@ -52,7 +52,8 @@ def run_section(index, sl, rp):
                     11: "R-FACTOR CALCULATION",
                     12: "R-FACTOR CALCULATION",
                     31: "SUPERPOS",
-                    5:  "ERROR CALCULATION"}
+                    5:  "ERROR CALCULATION",
+                    6:  "FULL-DYNAMIC OPTIMIZATION"}
     # files that need to be there for the different parts to run
     requiredFiles = {0: ["POSCAR", "PARAMETERS", "VIBROCC", "IVBEAMS"],
                      1: ["BEAMLIST", "PHASESHIFTS", "POSCAR", "PARAMETERS",
@@ -66,7 +67,9 @@ def run_section(index, sl, rp):
                      31: ["BEAMLIST", "POSCAR", "PARAMETERS", "IVBEAMS",
                           "VIBROCC", "DISPLACEMENTS"],
                      5: ["BEAMLIST", "PHASESHIFTS", "POSCAR", "PARAMETERS",
-                         "IVBEAMS", "VIBROCC", "DISPLACEMENTS", "EXPBEAMS"]}
+                         "IVBEAMS", "VIBROCC", "DISPLACEMENTS", "EXPBEAMS"],
+                     6: ["BEAMLIST", "PHASESHIFTS", "POSCAR", "PARAMETERS",
+                         "IVBEAMS", "VIBROCC", "EXPBEAMS"]}
 
     checkfiles = requiredFiles[index][:]
     o = "\nSTARTING SECTION: "+sectionNames[index]
@@ -171,7 +174,7 @@ def run_section(index, sl, rp):
                         logger.error(
                             "PHASESHIFTS file generation is only supported "
                             "during initialization. Stopping execution...")
-                        raise RuntimeError("Inconsistent _PHASESHIFT file")
+                        raise RuntimeError("Inconsistent PHASESHIFT file")
                     elif newpsWrite:
                         logger.warning(
                             "Writing a new PHASESHIFTS file is "
@@ -215,6 +218,8 @@ def run_section(index, sl, rp):
             sections.superpos(sl, rp)
         elif index == 5:
             sections.errorcalc(sl, rp)
+        elif index == 6:
+            sections.fd_optimization(sl, rp)
     except Exception:
         logger.error("Error in section {}".format(sectionNames[index]))
         raise
@@ -245,7 +250,7 @@ def section_loop(rp, sl):
         3: exit due to Exception during main loop
 
     """
-    sectionorder = [0, 1, 11, 2, 3, 31, 12, 4, 5]
+    sectionorder = [0, 1, 6, 11, 2, 3, 31, 12, 4, 5]
     searchLoopR = None
     searchLoopLevel = 0
     initHalt = False

@@ -133,7 +133,7 @@ def rfactor(sl, rp, index, for_error=False, only_vary=None):
         logger.warning("SUPPRESS_EXECUTION parameter is on. R-factor "
                        "calculation will not proceed. Stopping...")
         rp.setHaltingLevel(3)
-        return
+        return []
     logger.info("Compiling fortran input files...")
     rfacname = "rfactor-"+rp.timestamp
     if rp.FORTRAN_COMP[0] == "":
@@ -178,7 +178,7 @@ def rfactor(sl, rp, index, for_error=False, only_vary=None):
     if not os.path.isfile(os.path.join(".", "ROUT")):
         logger.error("No ROUT file was found after R-Factor calculation!")
         rp.setHaltingLevel(2)
-        return
+        return []
 
     # read output
     if for_error:
@@ -231,7 +231,7 @@ def rfactor(sl, rp, index, for_error=False, only_vary=None):
             rfaclist = [-1]*len(rp.expbeams)
         outname = "Rfactor_plots_{}.pdf".format(name)
         aname = "Rfactor_analysis_{}.pdf".format(name)
-        if rp.PLOT_RFACTOR["overbar"]:
+        if rp.PLOT_IV["overbar"]:
             labelstyle = "overbar"
         else:
             labelstyle = "minus"
@@ -244,7 +244,7 @@ def rfactor(sl, rp, index, for_error=False, only_vary=None):
                                 for (i, b) in enumerate(rp.expbeams)],
                                outName=outname, analysisFile=aname,
                                v0i=rp.V0_IMAG,
-                               formatting=rp.PLOT_RFACTOR)
+                               formatting=rp.PLOT_IV)
         except Exception:
             logger.warning("Error plotting R-factors.", exc_info=True)
-    return
+    return rfaclist
