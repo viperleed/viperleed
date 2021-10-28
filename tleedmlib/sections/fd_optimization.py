@@ -245,11 +245,25 @@ def fd_optimization(sl, rp):
                           all(abs(v - x) < rp.OPTIMIZE["convergence"]
                               for v in right)):  # take step to right
                         x = current_scope[1] + abs(rp.OPTIMIZE["step"])
-                    else:            # take midpoint
+                    elif all(abs(v - x) < rp.OPTIMIZE["convergence"]
+                             for v in (max(left), min(right))):
+                        # points are very close already, default to adding
+                        #   points outside of scope
+                        if (len(right) > len(left)):
+                            x = current_scope[0] - abs(rp.OPTIMIZE["step"])
+                        else:
+                            x = current_scope[1] + abs(rp.OPTIMIZE["step"])
+                    else:        # take midpoint
                         x = (max(left) + min(right)) / 2
                 logger.info("Currently predicting minimum at {:.4f} with R = "
                             "{:.4f}, adding data point at {:.4f}"
                             .format(new_min, parabola(new_min), x))
+
+        # write out results
+        if known_points:
+            io.write_fd_opt_csv(known_points, which)
+        if len(known_points) > 2:
+            io.write_fd_opt_pdf(known_points, which, parabola=parabola)
 
         # create test objects tsl, trp and set parameters
         tsl = copy.deepcopy(sl)
@@ -283,10 +297,6 @@ def fd_optimization(sl, rp):
                 "points has been reached. This may indicate that optimization "
                 "did not fully converge.")
             break
-        # if loop continues, write out results
-        io.write_fd_opt_csv(known_points, which)
-        if len(known_points) > 2:
-            io.write_fd_opt_pdf(known_points, which, parabola=parabola)
 
     # optimization loop finished; re-fit points, analyze:
     parabola = Polynomial.fit(known_points[:, 0], known_points[:, 1], 2)
