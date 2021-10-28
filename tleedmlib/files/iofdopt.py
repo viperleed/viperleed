@@ -186,7 +186,6 @@ def write_fd_opt_beams_pdf(rp, points, which, tmpdirs, best_rfactors,
     best_point_ind = np.argmin(points[:, 1])
 
     theodata = []
-    best_rfactors = []
     exp_to_use = None
 
     for i, path in enumerate(tmpdirs):
