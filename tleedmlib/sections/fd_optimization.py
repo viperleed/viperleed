@@ -237,9 +237,13 @@ def fd_optimization(sl, rp):
                        for v in known_points[:, 0]):
                     left = [v for v in known_points[:, 0] if v < x]
                     right = [v for v in known_points[:, 0] if v > x]
-                    if not left:     # take step to left
+                    if (not left or
+                        all(abs(v - x) < rp.OPTIMIZE["convergence"]
+                            for v in left)):     # take step to left
                         x = current_scope[0] - abs(rp.OPTIMIZE["step"])
-                    elif not right:  # take step to right
+                    elif (not right or
+                          all(abs(v - x) < rp.OPTIMIZE["convergence"]
+                              for v in right)):  # take step to right
                         x = current_scope[1] + abs(rp.OPTIMIZE["step"])
                     else:            # take midpoint
                         x = (max(left) + min(right)) / 2
