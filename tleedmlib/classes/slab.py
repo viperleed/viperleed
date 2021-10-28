@@ -1342,7 +1342,7 @@ class Slab:
                 if at.layer.isBulk and at not in duplicated:
                     newbulkats.append(at.duplicate())
                     duplicated.append(at)
-                    newbulkats[-1].oriN = len(ts.atlist) + 1
+                    newbulkats[-1].oriN = len(ts.atlist)
                 at.cartpos = at.cartpos + bulkc
             ts.collapseCartesianCoordinates(updateOrigin=True)
             ts.sortOriginal()
