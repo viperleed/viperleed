@@ -260,7 +260,7 @@ def fd_optimization(sl, rp):
                             .format(new_min, parabola(new_min), x))
 
         # write out results
-        if known_points:
+        if len(known_points) != 0:
             io.write_fd_opt_csv(known_points, which)
         if len(known_points) > 2:
             io.write_fd_opt_pdf(known_points, which, parabola=parabola)
