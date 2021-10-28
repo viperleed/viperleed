@@ -162,7 +162,7 @@ def run_tleedm(system_name="", console_output=True, slab=None,
             rp.SYMMETRY_FIND_ORI = False
 
     rp.systemName = system_name
-    rp.sourcedir = source
+    rp.sourcedir = os.path.abspath(source)
     if not rp.systemName:
         # use name of parent folder
         rp.systemName = os.path.basename(os.path.abspath(
