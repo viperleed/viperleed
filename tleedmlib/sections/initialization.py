@@ -730,6 +730,7 @@ def preserve_original_input(rp, init_logger, path=""):
         if rp.fileLoaded[file]:
             # copy to original input
             try:
+                if file == "EXPBEAMS": file += ".csv" # file is called EXPBEAMS.csv
                 if os.path.isfile(file):
                     shutil.copy2(os.path.join(path, file), orig_inputs_path)
                 else:

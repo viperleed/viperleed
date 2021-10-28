@@ -144,8 +144,13 @@ def superpos(sl, rp, subdomain=False, for_error=False, only_vary=None):
     sposname = "superpos-"+rp.timestamp
     logger.info("Compiling fortran input files...")
     try:
+        compile_log = "compile-superpos.log"
         fortran_compile(rp.FORTRAN_COMP[0]+" -o", sposname+" "
-                        + srcname + " " + libname, rp.FORTRAN_COMP[1])
+                        + srcname + " " + libname, rp.FORTRAN_COMP[1], logname = compile_log)
+        try:
+            shutil.move(compile_log, os.path.join("compile_logs", compile_log))
+        except Exception:
+            logger.warning("Could not move compile-superpos.log to SUPP")
     except Exception:
         logger.error("Error compiling fortran files: ", exc_info=True)
         raise

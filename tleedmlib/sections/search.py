@@ -676,7 +676,12 @@ def search(sl, rp):
         to_link += " intarr_hashing.o"
     ctasks.append((fcomp[0] + " -o " + searchname, to_link, fcomp[1]))
     try:
-        fortran_compile_batch(ctasks)
+        compile_log = "compile-search.log"
+        fortran_compile_batch(ctasks, logname=compile_log) # file compile-search.log
+        try:
+            shutil.move(compile_log, os.path.join("compile_logs", compile_log))
+        except Exception:
+            logger.warning("Could not move "+ compile_log +" to SUPP")
     except Exception:
         logger.error("Error compiling fortran files: ", exc_info=True)
         raise
@@ -783,7 +788,7 @@ def search(sl, rp):
         printt = searchStartTime
         filepos = 0
         timestep = 1  # time step to check files
-        # !!! evaluation time could be higher - keep low only for debugging
+        # !!! evaluation time could be higher - keep low only for debugging; TODO
         evaluationTime = 60  # how often should SD.TL be evaluated
         lastEval = 0  # last evaluation time (s), counting from searchStartTime
         comment = ""

@@ -145,7 +145,13 @@ def rfactor(sl, rp, index, for_error=False, only_vary=None):
     ctasks.append((rp.FORTRAN_COMP[0]+" -o "+rfacname, "rfacsb.o main.o",
                    rp.FORTRAN_COMP[1]))
     try:
-        fortran_compile_batch(ctasks)
+        compile_log = "compile-rfactor.log"
+        fortran_compile_batch(ctasks, logname=compile_log)
+        # move log file to supp
+        try:
+            shutil.move(compile_log, os.path.join("compile_logs", compile_log))
+        except Exception:
+            logger.warning("Could not move compile-rfactor.log to SUPP")
     except Exception:
         logger.error("Error compiling fortran files: ", exc_info=True)
         raise

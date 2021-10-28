@@ -20,7 +20,7 @@ import viperleed.tleedmlib.files.iodeltas as io
 from viperleed.tleedmlib.files.beams import writeAUXBEAMS
 from viperleed.tleedmlib.files.displacements import readDISPLACEMENTS_block
 # from viperleed.tleedmlib.files.parameters import updatePARAMETERS
-from viperleed.tleedmlib.leedbase import monitoredPool
+from viperleed.tleedmlib.leedbase import monitoredPool, copy_compile_folder
 
 logger = logging.getLogger("tleedm.deltas")
 
@@ -497,10 +497,11 @@ def deltas(sl, rp, subdomain=False):
         return
     logger.info("Delta calculations finished.")
 
-    # clean up
+    # clean up compile folders - AMI: move logs first to compile_logs !
     for ct in deltaCompTasks:
+        copy_compile_folder(ct, rp)
         try:
-            shutil.rmtree(os.path.join(ct.basedir, ct.foldername))
+            shutil.rmtree(os.path.join(ct.basedir, ct.foldername)) # AMI here
         except Exception:
             logger.warning("Error deleting delta compile folder "
                            + ct.foldername)
@@ -568,6 +569,7 @@ def deltas_domains(rp):
 
     # clean up
     for ct in deltaCompTasks:
+        copy_compile_folder(ct, rp) # copy compile folder
         d = os.path.join(ct.basedir, ct.foldername)
         try:
             shutil.rmtree(d)

@@ -53,8 +53,14 @@ def bookkeeper():
     # make list of stuff to move
     tomove = [d for d in os.listdir() if os.path.isdir(d)
               and (d == "OUT" or d == "SUPP")]
-    tomove.extend([f for f in os.listdir() if os.path.isfile(f)
-                   and f.endswith(".log")])
+    # logs will be saved to history; tleedm in root, others in SUPP
+    tomove_logs = []
+    for file in os.listdir():
+        if os.path.isfile(file) and file.endswith(".log"):
+            if file.startswith("tleedm"):
+                tomove.extend(file)
+            else:
+                tomove_logs.extend(file)
     # if there's nothing to move, return.
     if len(tomove) == 0:
         found = False
@@ -206,6 +212,20 @@ def bookkeeper():
                     print("Failed to discard file " + f)
             except Exception:
                 print("Failed to discard directory " + f)
+    # move log files to SUPP (except for general log tleedm....log)
+    for log_file in tomove_logs:
+        if not args.discard:
+            try:
+                supp_path = os.path.join(tdir, 'SUPP')
+                shutil.move(f, os.path.join(supp_path, f))
+            except Exception:
+                print("Error: Failed to move " + log_file)
+        else: # delete instead
+            try:
+                os.remove(f)
+            except Exception:
+                print("Failed to discard file " + f)
+
     # if there is a workhist folder, go through it and move contents as well
     tensornums = {tnum}
     if os.path.isdir(workhistname) and not args.discard:
