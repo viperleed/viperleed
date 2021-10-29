@@ -48,11 +48,11 @@ def on_frame_ready(__grabber_handle, image_start_pixel,
         frames was initiated (i.e., since the camera was started)
     process_info : ImageProcessInfo
         The image processing information object
-    
+
     Returns
     -------
     None.
-    
+
     Emits
     -----
     camera.done_estimating_frame_rate
@@ -83,11 +83,11 @@ def on_frame_ready(__grabber_handle, image_start_pixel,
     # Prepare the actual image
     width, height, n_bytes, n_colors = camera.image_info
     *_, color_fmt = camera.driver.image_info
-    
+
     # (1) shape: notice that height and width are swapped, since
     #            the image is stored row-by-row
     shape = (height, width, n_colors)
-        
+
     # (2) data type
     if n_bytes == 1:
         dtype = np.uint8
@@ -96,16 +96,16 @@ def on_frame_ready(__grabber_handle, image_start_pixel,
     else:
         raise ValueError(f"Cannot work with images having {n_bytes} bytes "
                          "per color channel")
-    
+
     # (3) Make pointer to the whole array, such that the size is known
     #     to numpy later on.
     buff_size = width * height * n_colors * n_bytes * 8
     img_ptr = POINTER(c_ubyte * buff_size)
-    
+
     # (4.1) create array with all color channels
     img_buffer = c_cast(image_start_pixel, img_ptr).contents
     image = np.ndarray(buffer=img_buffer, dtype=dtype, shape=shape)
-    
+
     # (4.2) pick only the relevant one (i.e., green for multicolor),
     #       making the image 2D.
     image = image[:,:,color_fmt.green_channel]
@@ -239,7 +239,7 @@ class ImagingSourceCamera(CameraABC):
             color_fmt = SinkFormat.Y16
         self.settings.set('camera_settings', 'color_format', color_fmt.name)
         return color_fmt
-    
+
     @color_format.setter
     def color_format(self, color_fmt):
         """Set a new color format."""
@@ -254,11 +254,11 @@ class ImagingSourceCamera(CameraABC):
     @property
     def n_frames_estimate(self):
         """Return no. of frames for frame rate optimization.
-        
+
         The number of frames for estimates scales with the
         exposure time such that it never takes more than 5
         seconds to perform the initial optimization.
-        
+
         Returns
         -------
         n_frames : int
@@ -336,7 +336,7 @@ class ImagingSourceCamera(CameraABC):
         """Set a color format in the camera."""
         self.driver.sink_format = self.color_format
         _ = self.driver.sink_format  # update also video format
-    
+
     def get_color_format(self):
         """Return the color format set in the camera."""
         return self.driver.sink_format
@@ -500,7 +500,6 @@ class ImagingSourceCamera(CameraABC):
         roi_increments = self.driver.video_format_shape_increments
         return roi_range[:2], roi_range[2:], roi_increments
 
-    @gl.print_call
     def start_frame_rate_optimization(self):
         """Start estimation of the best frame rate."""
         self.is_finding_best_frame_rate = True
@@ -554,9 +553,8 @@ class ImagingSourceCamera(CameraABC):
             self.start_frame_rate_optimization()
         else:
             self.best_next_rate = 1024
-            self.__start_postponed()
+            self.done_estimating_frame_rate.emit()
 
-    @gl.print_call
     def __start_postponed(self):
         # Call base that starts the processing thread if needed
         super().start()
