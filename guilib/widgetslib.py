@@ -188,6 +188,15 @@ def get_all_children_widgets(parent, exclude_parent=False, recursive=True):
     return childrenWidgs
 
 
+def screen_fraction(obj, size):
+    """Return the fraction of the screen of obj occupied by size."""
+    try:
+        scr_size = obj.window().windowHandle().screen().availableSize()
+    except AttributeError:
+        return -1
+    return max(size.width()/scr_size.width(), size.height()/scr_size.height())
+
+
 ################################################################################
 #                                   CLASSES                                    #
 ################################################################################
