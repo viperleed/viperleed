@@ -486,7 +486,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
         elif param == 'V0_Z_ONSET':
             setNumericalParameter(rpars, param, llist[0])
         elif param == 'ATTENUATION_EPS':
-            setNumericalParameter(rpars, param, llist[0], range_=(0.0001, 1),
+            setNumericalParameter(rpars, param, llist[0], range_=(1e-6, 1),
                                   range_exclude=(False, True))
         elif param == 'BULKDOUBLING_EPS':
             setNumericalParameter(rpars, param, llist[0],
