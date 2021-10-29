@@ -212,7 +212,8 @@ def sortfiles(tensorIndex, delete_unzipped=False, tensors=True,
             if os.path.isdir(os.path.join(path, d)):
                 try:
                     shutil.copytree(os.path.join(path, d),
-                                    os.path.join(path, t, d))
+                                    os.path.join(path, t, d),
+                                    dirs_exist_ok=True)
                 except Exception:
                     logger.error("Error moving {} directory {}: ".format(t, d),
                                  exc_info=True)
