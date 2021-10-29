@@ -698,7 +698,11 @@ C  work function should be positive (added to exp. energy EEV)
 C  set real part of inner potential
 
 """
-    oline = "      VV = "+rp.V0_REAL
+    if type(rp.V0_REAL) == list:
+        oline = ("      VV = workfn-max({:.2f}, (({:.2f})+({:.2f})/sqrt("
+                 "EEV+workfn+({:.2f}))))".format(*rp.V0_REAL))
+    else:
+        oline = "      VV = "+rp.V0_REAL
     output += tl.base.fortranContLine(oline) + "\n"
     output += """
       write(6,*) workfn, EEV

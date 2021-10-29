@@ -75,6 +75,31 @@ def initialization(sl, rp, subdomain=False):
                 "read it. A new PHASESHIFTS file will be generated."
                 "The exception during read was: ", exc_info=True)
             rp.setHaltingLevel(1)
+    if rp.TL_VERSION >= 1.71 and rp.V0_REAL != 'default':
+        # check V0_REAL - may have to replace firstline
+        if type(rp.V0_REAL) != list:
+            logger.warning("Parameter V0_REAL currently does not support "
+                           "values other than Rundgren-type potentials."
+                           "Input for V0_REAL will be ignored.")
+            rp.setHaltingLevel(2)
+            newpsGen, newpsWrite = True, True
+        else:
+            llist = rp.phaseshifts_firstline.split()
+            firstline_write = False
+            try:
+                flist = [float(llist[i+1]) for i in range(4)]
+            except (ValueError, IndexError):
+                firstline_write = True
+            else:
+                if any([abs(flist[i] - rp.V0_REAL[i]) >= 1e-2
+                        for i in range(4)]):
+                    firstline_write = True
+            if firstline_write:
+                newpsWrite = True
+                rp.phaseshifts_firstline = (
+                    rp.phaseshifts_firstline[:4]
+                    + "{:8.2f}{:8.2f}{:8.2f}{:8.2f}".format(*rp.V0_REAL)
+                    + rp.phaseshifts_firstline[36:])
     if newpsGen:
         try:
             rundgrenpath = os.path.join('tensorleed', 'EEASiSSS.x')
@@ -82,13 +107,13 @@ def initialization(sl, rp, subdomain=False):
             logger.info("Generating phaseshifts data... ")
             if rp.PHASESHIFTS_CALC_OLD:
                 (rp.phaseshifts_firstline,
-                 rp.phaseshifts) = runPhaseshiftGen_old(sl, rp,
-                                                    psgensource=rundgrenpath,
-                                                    excosource=serneliuspath)
+                 rp.phaseshifts) = runPhaseshiftGen_old(
+                     sl, rp, psgensource=rundgrenpath,
+                     excosource=serneliuspath)
             else:
                 (rp.phaseshifts_firstline,
-                 rp.phaseshifts) = runPhaseshiftGen(sl, rp,
-                                                        psgensource=rundgrenpath)
+                 rp.phaseshifts) = runPhaseshiftGen(
+                     sl, rp, psgensource=rundgrenpath)
             logger.debug("Finished generating phaseshift data")
         except Exception:
             logger.error("Exception while calling phaseshiftgen: ")

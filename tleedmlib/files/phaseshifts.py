@@ -189,15 +189,18 @@ def readPHASESHIFTS(sl, rp, readfile='PHASESHIFTS', check=True,
                        rp.THEO_ENERGIES[2])
         psmin = round(phaseshifts[0][0]*27.211396, 2)
         psmax = round(phaseshifts[-1][0]*27.211396, 2)
-        if rp.V0_REAL == "default":
-            llist = firstline.split()
-            c = []
-            try:
-                for i in range(0, 4):
-                    c.append(float(llist[i+1]))
-            except (ValueError, IndexError):
-                checkfail = True
+        if rp.V0_REAL == "default" or type(rp.V0_REAL) == list:
+            if type(rp.V0_REAL) == list:
+                c = rp.V0_REAL
             else:
+                llist = firstline.split()
+                c = []
+                try:
+                    for i in range(0, 4):
+                        c.append(float(llist[i+1]))
+                except (ValueError, IndexError):
+                    checkfail = True
+            if c and not checkfail:
                 er_inner = [e + (rp.FILAMENT_WF - max(c[0],
                                  c[1] + (c[2]/np.sqrt(e + c[3]
                                                       + rp.FILAMENT_WF))))
@@ -205,7 +208,7 @@ def readPHASESHIFTS(sl, rp, readfile='PHASESHIFTS', check=True,
         else:
             try:
                 v0r = float(rp.V0_REAL)
-            except ValueError:
+            except (ValueError, TypeError):
                 checkfail = True
             else:
                 er_inner = [e + v0r for e in er]

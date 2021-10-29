@@ -1516,12 +1516,8 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                     c = []
                     for i in range(0, 4):
                         c.append(float(llist[i+1]))
-                    setTo = (
-                        "workfn-max("+str(round(c[0], 3))
-                        + ", (("+str(round(c[1], 3)) + ")+("
-                        + str(round(c[2], 3)) + ")/sqrt(EEV+workfn+("
-                        + str(round(c[3], 3)) + "))))")
-                except ValueError:
+                    setTo = c
+                except (ValueError, IndexError):
                     logger.warning(
                         "PARAMETERS file: V0_REAL parameter: "
                         "could not parse constants for Rundgren-type "
@@ -1529,7 +1525,8 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                     rpars.setHaltingLevel(1)
             else:
                 setTo = re.sub("(?i)EE", "EEV+workfn", value)
-            setTo = setTo.rstrip()
+            if type(setTo) == str:
+                setTo = setTo.rstrip()
             rpars.V0_REAL = setTo
     logger.setLevel(loglevel)
     return

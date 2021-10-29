@@ -389,8 +389,7 @@ class Rparams:
                     logger.error("Could not read Muftin parameters from "
                                  "PHASESHIFTS file.")
                     raise
-                self.V0_REAL = ("workfn-max({:.2f}, (({:.2f})+({:.2f})/sqrt("
-                                "EEV+workfn+({:.2f}))))".format(*c))
+                self.V0_REAL = c
 
     def updateCores(self):
         """
