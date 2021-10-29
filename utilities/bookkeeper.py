@@ -58,9 +58,9 @@ def bookkeeper():
     for file in os.listdir():
         if os.path.isfile(file) and file.endswith(".log"):
             if file.startswith("tleedm"):
-                tomove.extend(file)
+                tomove.append(file)
             else:
-                tomove_logs.extend(file)
+                tomove_logs.append(file)
     # if there's nothing to move, return.
     if len(tomove) == 0:
         found = False
@@ -217,14 +217,14 @@ def bookkeeper():
         if not args.discard:
             try:
                 supp_path = os.path.join(tdir, 'SUPP')
-                shutil.move(f, os.path.join(supp_path, f))
+                shutil.move(log_file, os.path.join(supp_path, log_file))
             except Exception:
                 print("Error: Failed to move " + log_file)
-        else: # delete instead
+        else:   # delete instead
             try:
-                os.remove(f)
+                os.remove(log_file)
             except Exception:
-                print("Failed to discard file " + f)
+                print("Failed to discard file " + log_file)
 
     # if there is a workhist folder, go through it and move contents as well
     tensornums = {tnum}
@@ -234,7 +234,7 @@ def bookkeeper():
                         and rgx.match(d) and ("previous" in d)]
         for d in workhistprev:
             try:
-                shutil.rmtree(d)
+                shutil.rmtree(os.path.join(workhistname, d))
             except Exception:
                 print("Failed to delete "+d+" directory from "+workhistname)
         workhistdirs = [d for d in os.listdir(workhistname) if
