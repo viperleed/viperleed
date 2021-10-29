@@ -66,6 +66,10 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
     # Whenever this signal is emitted, the new frame will be processed
     # (in a separate thread).
     frame_ready = qtc.pyqtSignal(np.ndarray)
+    
+    # image_processed is emitted when operating in triggered mode
+    # after all post-processing steps have been performed.
+    image_processed = qtc.pyqtSignal(np.ndarray)
 
     # __process_frame is a private signal used to pass frames to
     # the processing thread
@@ -472,7 +476,6 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
 
     def disconnect(self):
         """Disconnect the device."""
-        print("ABC disconnect")
         self.stop()
         self.close()
 
@@ -1033,9 +1036,10 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         # TODO: do I need to keep a reference here??
 
         processor = ImageProcessor()
+        processor.image_processed.connect(self.image_processed)
         processor.image_saved.connect(self.__on_image_saved)
         processor.image_saved.connect(processor.deleteLater)
-        self.__process_thread.finished.connec(processor.deleteLater)
+        self.__process_thread.finished.connect(processor.deleteLater)
         self.__process_frame.connect(processor.process_frame)
         processor.prepare_to_process(self.process_info.copy(), image)
         processor.moveToThread(self.__process_thread)                     # TODO: may need to be moved before connecting

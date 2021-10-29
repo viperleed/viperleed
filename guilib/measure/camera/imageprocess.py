@@ -178,6 +178,7 @@ class ImageProcessInfo:
 class ImageProcessor(qtc.QObject):
     """Class that processes frames."""
 
+    image_processed = qtc.pyqtSignal(np.ndarray)
     image_saved = qtc.pyqtSignal()
 
     def __init__(self):
@@ -255,6 +256,7 @@ class ImageProcessor(qtc.QObject):
         self.remove_bad_pixels()
         self.apply_roi()
         self.bin_and_average()
+        self.image_processed.emit(self.processed_image)
         self.save()
         self.image_saved.emit()
 
