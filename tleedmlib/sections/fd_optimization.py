@@ -214,25 +214,7 @@ def fd_optimization(sl, rp):
                     x = max(0, x)
                 if which in ["a", "b", "ab", "c", "abc"]:
                     x = max(0.1, x)   # shouldn't happen, just in case
-                # check convergence
-                if len(known_points) >= rp.OPTIMIZE["minpoints"]:
-                    current_best = known_points[np.argmin(known_points, 0)[1]]
-                    if (abs(new_min - current_best[0])
-                            < rp.OPTIMIZE["convergence"]):
-                        if (current_best[0] == min(known_points[:, 0]) or
-                                current_best[0] == max(known_points[:, 0])):
-                            logger.info(
-                                "Minimum has converged, but is at the edge of "
-                                "the tested range. Proceeding with "
-                                "optimization.")
-                        else:
-                            logger.info(
-                                "Stopping optimization: Predicted new minimum "
-                                "{:.4f} is within convergence limits to known "
-                                "best point {:.4f}".format(new_min,
-                                                           current_best[0]))
-                            break  # within convergence limit to current best
-                # if close to point that is already known: replace
+                # check whether we're close to point that is already known
                 if any(abs(v - x) < rp.OPTIMIZE["convergence"]
                        for v in known_points[:, 0]):
                     left = [v for v in known_points[:, 0] if v < x]
@@ -245,8 +227,9 @@ def fd_optimization(sl, rp):
                           all(abs(v - x) < rp.OPTIMIZE["convergence"]
                               for v in right)):  # take step to right
                         x = current_scope[1] + abs(rp.OPTIMIZE["step"])
-                    elif all(abs(v - x) < rp.OPTIMIZE["convergence"]
-                             for v in (max(left), min(right))):
+                    elif (all(abs(v - x) < rp.OPTIMIZE["convergence"]
+                              for v in (max(left), min(right)))
+                          and len(known_points) < rp.OPTIMIZE["minpoints"]):
                         # points are very close already, default to adding
                         #   points outside of scope
                         if (len(right) > len(left)):
@@ -255,6 +238,24 @@ def fd_optimization(sl, rp):
                             x = current_scope[1] + abs(rp.OPTIMIZE["step"])
                     else:        # take midpoint
                         x = (max(left) + min(right)) / 2
+                    # stop if minpoints and convergence
+                    if len(known_points) >= rp.OPTIMIZE["minpoints"]:
+                        if not (current_scope[0] < x < current_scope[1]):
+                            logger.info(
+                                "Minimum has converged, but is at the edge of "
+                                "the tested range. Proceeding with "
+                                "optimization.")
+                        else:
+                            lowest_dist = min([abs(v - new_min) for v
+                                               in known_points[:, 0]])
+                            closest_point = [
+                                v for v in known_points[:, 0]
+                                if abs(v - new_min) == lowest_dist][0]
+                            logger.info(
+                                "Stopping optimization: Predicted new minimum "
+                                "{:.4f} is within convergence limits to known "
+                                "point {:.4f}".format(new_min, closest_point))
+                            break  # within convergence limit
                 logger.info("Currently predicting minimum at {:.4f} with R = "
                             "{:.4f}, adding data point at {:.4f}"
                             .format(new_min, parabola(new_min), x))
