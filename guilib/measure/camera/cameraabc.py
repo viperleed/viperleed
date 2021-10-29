@@ -71,9 +71,10 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
     # after all post-processing steps have been performed.
     image_processed = qtc.pyqtSignal(np.ndarray)
     
-    # started is emitted whenever the camera is started. Use
-    # self.mode to deduce the mode the camera is running in.
+    # started/stopped are emitted whenever the camera is started/stopped.
+    # When started, self.mode can be used to deduce the camera mode.
     started = qtc.pyqtSignal()
+    stopped = qtc.pyqtSignal()
 
     # __process_frame is a private signal used to pass frames to
     # the processing thread
@@ -942,6 +943,7 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         self.process_info.clear_times()
         if self.__process_thread.isRunning():
             self.__process_thread.quit()
+        self.stopped.emit()
 
     @abstractmethod
     def trigger_now(self):
