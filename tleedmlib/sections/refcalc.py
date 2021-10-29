@@ -17,7 +17,8 @@ import numpy as np
 
 from viperleed import fortranformat as ff
 from viperleed.tleedmlib.leedbase import (
-    fortran_compile_batch, getTLEEDdir, getMaxTensorIndex, monitoredPool, copy_compile_folder)
+    fortran_compile_batch, getTLEEDdir, getMaxTensorIndex, monitoredPool,
+    copy_compile_folder)
 from viperleed.tleedmlib.base import splitMaxRight
 from viperleed.tleedmlib.files.parameters import modifyPARAMETERS
 import viperleed.tleedmlib.files.beams as beams
@@ -474,7 +475,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=""):
 
     # clean up compile folders - AMI: move logs first to compile_logs !
     for ct in comp_tasks:
-        copy_compile_folder(ct, rp)
+        copy_compile_folder(ct, rp, compile_log_base=parent_dir)
         try:
             shutil.rmtree(os.path.join(ct.basedir, ct.foldername))
         except Exception:

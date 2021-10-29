@@ -873,13 +873,15 @@ def getBeamCorrespondence(sl, rp):
             beamcorr_list[i] = rp.expbeams.index(beamcorr[tb])
     return beamcorr_list
 
-def copy_compile_folder(ct, rp):
+
+def copy_compile_folder(ct, rp, compile_log_base=""):
     try:
-        compile_log_dir = "compile_logs"
+        compile_log_dir = os.path.join(compile_log_base, "compile_logs")
         log_file_name = "fortran-compile.log"
         source_file = os.path.join(ct.basedir, ct.foldername, log_file_name)
         target_file_name = ct.foldername + ".log"
-        target_file = os.path.join(rp.workdir, compile_log_dir, target_file_name)
+        target_file = os.path.join(rp.workdir, compile_log_dir,
+                                   target_file_name)
         shutil.copy2(source_file, target_file)
     except Exception:
         logger.warning("Error copying refcalc compile log from folder "
