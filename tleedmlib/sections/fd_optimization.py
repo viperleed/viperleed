@@ -278,7 +278,7 @@ def fd_optimization(sl, rp):
             trp.PHI = x
         else:       # geometry: x is a scaling factor for the unit cell
             x = max(0.1, x)
-            apply_scaling(sl, rp, which, x)
+            apply_scaling(tsl, trp, which, x)
 
         # create subfolder and calculate there
         if type(x) == int:
