@@ -124,7 +124,7 @@ class ImageProcessInfo:
     def bad_pixels(self):
         """Return bad pixels as a list of (x, y) coordinates."""
         # TODO: return the list of bad pixels recalculated on the ROI
-        # (bad pixels are a wrt full sensor), skipping those whose
+        # (bad pixels are wrt full sensor), skipping those whose
         # transformed coordinates are < 0 or > roi width/height.
         return self.__bad_pixels
 
@@ -164,7 +164,7 @@ class ImageProcessInfo:
         if np.shape(bad_pixels)[1] != 2:
             raise ValueError("bad_pixels should have shape (N, 2)")
 
-        self.__bad_pixels = bad_pixels
+        self.__bad_pixels = np.asarray(bad_pixels)
 
     def copy(self):
         """Return a deep-copy of self."""
@@ -253,7 +253,7 @@ class ImageProcessor(qtc.QObject):
             return
 
         # All frames arrived
-        self.remove_bad_pixels()
+        self.remove_bad_pixels()  # TODO: remove bad pixels AFTER the ROI. Requires ImageProcessInfo to return shifted coordinates
         self.apply_roi()
         self.bin_and_average()
         self.image_processed.emit(self.processed_image)
@@ -291,7 +291,7 @@ class ImageProcessor(qtc.QObject):
                                                     roi_y:roi_y+roi_h]
 
     def bin_and_average(self):
-        """Apply binning to the processed image."""
+        """Apply binning and frame averaging to the processed image."""
         bin_fact = self.process_info.binning
 
         if not bin_fact or bin_fact == 1:
