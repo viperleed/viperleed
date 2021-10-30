@@ -35,6 +35,8 @@ class CameraViewer(qtw.QScrollArea):
     ----------
     image_size : QtCore.QSize
         Size in pixel (without scaling) of the image shown.
+    roi : RegionOfInterest
+        Region of interest object.
     screen : QtGui.QScreen
         The screen on which this widget is currently shown.
 
@@ -50,7 +52,15 @@ class CameraViewer(qtw.QScrollArea):
     closeEvent(event)
         Stop camera when user closes the window.
     keyPressEvent(event)
-        Handle zooming.
+        Handle zooming and ROI visibility/scaling/movements.
+    mouseDoubleClickEvent(event)
+        Prevent propagation to parent if ROI is visible.
+    mouseMoveEvent(event)
+        Draw a ROI.
+    mousePressEvent(event)
+        Initiate ROI drawing.
+    mouseReleaseEvent(event)
+        Prevent propagation to parent if ROI is visible.
     showEvent(event)
         Resize self and image when shown.
     sizeHint()
@@ -99,6 +109,9 @@ class CameraViewer(qtw.QScrollArea):
         self.__img_view = ImageViewer()
         self.__img_size = qtc.QSize()
         self.__camera = camera
+        self.__roi = RegionOfInterest(parent=self.__img_view)
+        self.roi.limits = camera.get_roi_size_limits()
+        self.roi.update_size_limits()
 
         self.__compose()
         self.__connect()
@@ -127,6 +140,11 @@ class CameraViewer(qtw.QScrollArea):
             self.image_size_changed.emit()
 
     @property
+    def roi(self):
+        """Return the RegionOfInterest object of self."""
+        return self.__roi
+
+    @property
     def screen(self):
         """Return a the QScreen on which self is shown."""
         try:
@@ -143,7 +161,7 @@ class CameraViewer(qtw.QScrollArea):
                 # If window got maximized, adjust image to fit
                 self.__img_view.get_scaling_to_fit(self.size()
                                                    - qtc.QSize(2, 2))
-                self.__img_view.scale_to_pixmap()
+                self.__img_view.scale_to_image()
 
             elif was_maximized and not self.isMaximized():
                 # If it is turned from maximized to normal,
@@ -159,18 +177,116 @@ class CameraViewer(qtw.QScrollArea):
         super().closeEvent(event)
 
     def keyPressEvent(self, event):
-        """Extend keyPressEvent for zooming."""
+        """Extend keyPressEvent for zooming and ROI movements.
+
+        Pressing '+' or '-' resizes the image (and self),
+        pressing 'Esc' hides the ROI, pressing arrow keys
+        while holding down the Control key (Command on Mac)
+        affects the ROI: If Alt is also pressed, the ROI is
+        resized, otherwise it is moved. If Shift is pressed,
+        movements/scalings are 10 times larger.
+
+        Parameters
+        ----------
+        event : QtGui.QKeyEvent
+            The event corresponding to a key press
+
+        Returns
+        -------
+        None.
+        """
         if event.key() == qtc.Qt.Key.Key_Plus:
             self.__zoom('in')
         elif event.key() == qtc.Qt.Key.Key_Minus:
             self.__zoom('out')
+        elif event.key() == qtc.Qt.Key.Key_Escape:
+            self.roi.hide()
+        elif (self.roi.isVisible()
+              and event.modifiers() & qtc.Qt.ControlModifier
+              and event.key() in (qtc.Qt.Key_Left, qtc.Qt.Key_Right,
+                                  qtc.Qt.Key_Up, qtc.Qt.Key_Down)):
+            # Move/resize ROI if visible
+            move_resize = qtc.QPoint(0, 0)
+            delta = 10 if event.modifiers() & qtc.Qt.ShiftModifier else 1
+            if event.key() == qtc.Qt.Key_Left:
+                move_resize += qtc.QPoint(-delta, 0)
+            if event.key() == qtc.Qt.Key_Right:
+                move_resize += qtc.QPoint(delta, 0)
+            if event.key() == qtc.Qt.Key_Up:
+                move_resize += qtc.QPoint(0, -delta)
+            if event.key() == qtc.Qt.Key_Down:
+                move_resize += qtc.QPoint(0, delta)
+            if event.modifiers() & qtc.Qt.AltModifier:
+                self.roi.scale(move_resize)
+            else:
+                self.roi.translate(move_resize)
+            return
         super().keyPressEvent(event)
+
+    def mouseDoubleClickEvent(self, event):
+        """Prevent parent propagation if ROI is visible."""
+        if not self.roi.isVisible():
+            super().mouseDoubleClickEvent(event)
+
+    def mouseMoveEvent(self, event):
+        """Extend mouseMoveEvent to draw a ROI (if visible).
+
+        If Control (Command on Mac) is held down, the ROI will
+        be square.
+
+        Parameters
+        ----------
+        event : QtGui.QMouseEvent
+            The mouse move event that triggered this call.
+
+        Returns
+        -------
+        None.
+        """
+        if not self.roi.isVisible():
+            super().mouseMoveEvent(event)
+            return
+        roi_pos = self.roi.parent().mapFromGlobal(event.globalPos())
+        new_roi = qtc.QRect(self.roi.origin, roi_pos).normalized()
+        if event.modifiers() & qtc.Qt.ShiftModifier:
+            # Make square region
+            new_side = min(new_roi.width(), new_roi.height())
+            min_side = max(*self.roi.minimum)*self.roi.image_scaling
+            new_side = round(max(min_side, new_side))
+            new_roi.setWidth(new_side)
+            new_roi.setHeight(new_side)
+        self.roi.setGeometry(new_roi)
+
+    def mousePressEvent(self, event):
+        """Reimplement mousePressEvent to begin drawing a ROI."""
+        if not self.roi.isVisible():
+            self.roi.show()
+        self.roi.origin = self.roi.parent().mapFromGlobal(event.globalPos())
+        self.roi.setGeometry(qtc.QRect(self.roi.origin, qtc.QSize()))
+
+    def mouseReleaseEvent(self, event):
+        """Extend mouseReleaseEvent to handle ROI drawing."""
+        if not self.roi.isVisible():
+            super().mouseReleaseEvent(event)
 
     def scale_image(self, by_factor):
         """Scale self and image by the given factor."""
+        # Keep track of the (scaled) offset and size of the region
+        # of interest. NB: this should be done before actually scaling
+        # the underlying image, as this also changes ROI size limits.
+        scaled_roi_offset = (by_factor - 1) * self.roi.pos()
+        scaled_roi_size = by_factor * self.roi.size()
+
+        # Rescale the image viewer
         self.__img_view.image_scaling = (by_factor
                                          * self.__img_view.image_scaling)
-        self.__img_view.scale_to_pixmap()
+        self.__img_view.scale_to_image()
+
+        # Rescale and reposition the region of interest, if visible
+        if self.roi.isVisible():
+            new_roi = qtc.QRect(self.roi.pos() + scaled_roi_offset,
+                                scaled_roi_size)
+            self.roi.setGeometry(new_roi)
 
         # Now decide whether it makes sense to scale also self
         new_self_size = self.__img_view.size() + qtc.QSize(2, 2)
@@ -216,7 +332,7 @@ class CameraViewer(qtw.QScrollArea):
         return self.__img_view.sizeHint() + qtc.QSize(2, 2)
 
     def wheelEvent(self, event):
-        """Extend wheelEvent for zooming."""
+        """Extend wheelEvent for zooming while Control is pressed."""
         if not event.modifiers() & qtc.Qt.ControlModifier:
             super().wheelEvent(event)
             return
@@ -280,6 +396,9 @@ class CameraViewer(qtw.QScrollArea):
     def __on_image_scaled(self):
         """React to a change of zoom factor."""
         new_scaling = self.__img_view.image_scaling
+        self.roi.image_scaling = new_scaling
+        self.roi.update_size_limits()
+
         title, *_ = self.windowTitle().split(' - ')
         title += f' - {100*new_scaling:.1f}%'
         self.setWindowTitle(title)
@@ -348,7 +467,7 @@ class ImageViewer(qtw.QLabel):
     --------------
     scale_to_optimum()
         Scale self and pixmap to self.optimum_size.
-    scale_to_pixmap()
+    scale_to_image()
         Scale self to fully fit the (scaled) pixmap.
     set_image(image)
         Set a QImage to be shown.
@@ -407,10 +526,10 @@ class ImageViewer(qtw.QLabel):
     def scale_to_optimum(self):
         """Resize self to the optimal size."""
         if self.optimum_size:
+            self.image_scaling = self.__optimum_scaling
             self.resize(self.optimum_size)
-        self.image_scaling = self.__optimum_scaling
 
-    def scale_to_pixmap(self):
+    def scale_to_image(self):
         """Resize self to the (scaled) size of the current pixmap."""
         self.resize(self.scaled_image_size)
 
@@ -475,3 +594,187 @@ class ImageViewer(qtw.QLabel):
         self.__optimum_scaling = self.image_scaling
         self.optimum_size = self.scaled_image_size
         return self.optimum_size
+
+
+class RegionOfInterest(qtw.QWidget):
+    """Class for a rectangular rubber-band used for ROI.
+
+    Attributes
+    ----------
+    image_scaling : float
+        Current scaling factor of the image on which this
+        rubber-band rectangle is shown. Used to convert
+        screen coordinates into image coordinates.
+    origin : QtCore.QPoint
+        The origin of the ROI while drawing or moving.
+    increments : tuple
+        Two elements. Minimum change of width and height
+        in image coordinates (i.e., pixels).
+    limits : tuple
+        Three elements, corresponding to self.minimum,
+        self.maximum and self.increments.
+    maximum : tuple
+        Two elements. Maximum width and height in image
+        coordinates (i.e., pixels).
+    minimum : tuple
+        Two elements. Minimum width and height in image
+        coordinates (i.e., pixels).
+
+    Reimplement methods
+    -------------------
+    enterEvent(event)
+        Edit mouse cursor when mouse enters the widget.
+    leaveEvent(event)
+        Reset mouse cursor when mouse exits the widget.
+    mouseDoubleClickEvent(event)
+        Reimplement to prevent propagation to parent.
+    mouseMoveEvent(event)
+        Move rubber-band within parent frame.
+    mousePressEvent(event)
+        Initiate rubber-band movement on mouse click.
+    mouseReleaseEvent(event)
+        Reimplement to prevent propagation to parent.
+    resizeEvent(event)
+        Resize also rubber-band.
+
+    Public methods
+    --------------
+    update_size_limits()
+        Update the size limits in current-view coordinates
+        using self.limits and self.image_scaling.
+    scale(delta_scale)
+        Resize self by delta_scale increments in image coordinates.
+    translate(delta_pixels)
+        Move self by delta_pixels pixels in image coordinates.
+    """
+
+    def __init__(self, *args, parent=None, increments=(1, 1), **kwargs):
+
+        super().__init__(parent=parent)
+        self.__rubberband = qtw.QRubberBand(qtw.QRubberBand.Rectangle, self)
+        self.__min = (1, 1)
+        self.__max = (1000000, 1000000)
+        self.__incr = increments
+        self.__drag_origin = qtc.QPoint(0, 0)
+        self.image_scaling = 1
+        self.origin = qtc.QPoint(0, 0)
+
+        self.setWindowFlags(qtc.Qt.SubWindow)
+
+        self.__compose()
+        self.update_size_limits()
+
+    @property
+    def increments(self):
+        """Return the smallest change of width/height in image coordinates."""
+        return self.__incr
+
+    @property
+    def limits(self):
+        """Return .minimum, .maximum., .increments."""
+        return self.minimum, self.maximum, self.increments
+
+    @limits.setter
+    def limits(self, new_limits):
+        """Set .minimum, .maximum., .increments."""
+        self.__min, self.__max, self.__incr = new_limits
+
+    @property
+    def maximum(self):
+        """Return the largest width/height in image coordinates."""
+        return self.__max
+
+    @property
+    def minimum(self):
+        """Return the smallest width/height in image coordinates."""
+        return self.__min
+
+    def enterEvent(self, event):
+        """Change mouse cursor when entering the widget."""
+        self.setCursor(qtc.Qt.SizeAllCursor)
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        """Reset mouse cursor when exiting the widget."""
+        self.unsetCursor()
+        super().leaveEvent(event)
+
+    def mouseDoubleClickEvent(self, event):
+        """Reimplement to prevent propagation to parent."""
+        event.accept()
+
+    def mouseMoveEvent(self, event):
+        """Reimplement mouseMoveEvent to move rubber-band."""
+        new_pos = self.origin + event.globalPos() - self.__drag_origin
+        # Make sure that self does not go beyond the frame of the parent
+        parent = self.parent()
+        if parent:
+            new_x = max(0, new_pos.x())
+            new_x -= max(new_x + self.width() - parent.width(), 0)
+            new_y = max(0, new_pos.y())
+            new_y -= max(new_y + self.height() - parent.height(), 0)
+            new_pos.setX(new_x)
+            new_pos.setY(new_y)
+        self.move(new_pos)
+
+    def mousePressEvent(self, event):
+        """Reimplement mousePressEvent to initiate rubber-band move."""
+        self.origin = self.pos()
+        self.__drag_origin = event.globalPos()
+
+    def mouseReleaseEvent(self, event):
+        """Reimplement to prevent propagation to parent."""
+        event.accept()
+
+    def resizeEvent(self, event):
+        """Reimplement to resize the rubber-band."""
+        self.__rubberband.resize(self.size())
+
+    def scale(self, delta_scale):
+        """Resize by delta_scale increments, in image coordinates."""
+        d_width, d_height = self.increments
+        delta_size = qtc.QSize(delta_scale.x()*d_width,
+                               delta_scale.y()*d_height) * self.image_scaling
+        self.resize(self.size() + delta_size)
+
+    def translate(self, delta_pixels):
+        """Translate self by delta_pixels, in image coordinates."""
+        delta_pos = delta_pixels*self.image_scaling
+        if all(p == 0 for p in (delta_pos.x(), delta_pos.y())):
+            # Image is scaled down so much that no movement
+            # would result from this. Rather use delta_pixels
+            # as shift in the current-view coordinates
+            delta_pos = delta_pixels
+        self.move(self.pos() + delta_pos)
+
+    def update_size_limits(self):
+        """Update the size limits in viewing pixels.
+
+        Essentially converts self.limits into view pixels by
+        scaling with self.image_scaling.
+
+        Returns
+        -------
+        None.
+        """
+        self.setMinimumSize(self.image_scaling * qtc.QSize(*self.minimum))
+        self.setMaximumSize(self.image_scaling * qtc.QSize(*self.maximum))
+        self.setSizeIncrement(self.image_scaling * qtc.QSize(*self.increments))
+
+    def __compose(self):
+        """Place children widgets."""
+        # The layout contains only four size grips for resizing
+        # (at corners), while the rubber-band is parented directly
+        # to self in __init__, and stays on top of all.
+        layout = qtw.QGridLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(qtw.QSizeGrip(self), 0, 0,
+                         qtc.Qt.AlignLeft | qtc.Qt.AlignTop)
+        layout.addWidget(qtw.QSizeGrip(self), 1, 1,
+                         qtc.Qt.AlignRight | qtc.Qt.AlignBottom)
+        layout.addWidget(qtw.QSizeGrip(self), 0, 1,
+                         qtc.Qt.AlignRight | qtc.Qt.AlignTop)
+        layout.addWidget(qtw.QSizeGrip(self), 1, 0,
+                         qtc.Qt.AlignLeft | qtc.Qt.AlignBottom)
+        self.__rubberband.show()
+        self.hide()
