@@ -63,15 +63,15 @@ from PyQt5 import QtCore as qtc
 #     b'\x01\x17\x00\x04\x00\x00\x00\x01' + n_cols*n_rows*n_bits/8 (4 bytes)
 
 TIFF_TAGS = (
-    b'MM\x00\x2a\x00\x00\x00\x08\x00\x07'                  # header
-    + b'\x01\x00\x00\x04\x00\x00\x00\x01%(n_cols)b'        # 'ImageWidth'
-    + b'\x01\x01\x00\x04\x00\x00\x00\x01%(n_rows)b'        # 'ImageLength'
-    + b'\x01\x02\x00\x03\x00\x00\x00\x01%(n_bits)\x00\x00' # 'BitsPerSample'
-    + b'\x01\x06\x00\x03\x00\x00\x00\x01\x00\x01\x00\x00'  # no.262
-    + b'\x01\x11\x00\x04\x00\x00\x00\x01\x00\x00\x00\x62'  # 'StripOffsets'
-    + b'\x01\x16\x00\x04\x00\x00\x00\x01%(n_rows)b'        # 'RowsPerStrip'
-    + b'\x01\x17\x00\x04\x00\x00\x00\x01%(b_count)b'       # 'StripByteCounts'
-    + b'\x00\x00\x00\x00'                                  # IFD termination
+    b'MM\x00\x2a\x00\x00\x00\x08\x00\x07'                   # header
+    + b'\x01\x00\x00\x04\x00\x00\x00\x01%(n_cols)b'         # 'ImageWidth'
+    + b'\x01\x01\x00\x04\x00\x00\x00\x01%(n_rows)b'         # 'ImageLength'
+    + b'\x01\x02\x00\x03\x00\x00\x00\x01%(n_bits)b\x00\x00' # 'BitsPerSample'
+    + b'\x01\x06\x00\x03\x00\x00\x00\x01\x00\x01\x00\x00'   # no.262
+    + b'\x01\x11\x00\x04\x00\x00\x00\x01\x00\x00\x00\x62'   # 'StripOffsets'
+    + b'\x01\x16\x00\x04\x00\x00\x00\x01%(n_rows)b'         # 'RowsPerStrip'
+    + b'\x01\x17\x00\x04\x00\x00\x00\x01%(b_count)b'        # 'StripByteCounts'
+    + b'\x00\x00\x00\x00'                                   # IFD termination
     )
 
 @dataclass
@@ -113,7 +113,7 @@ class ImageProcessInfo:
     """
 
     __bad_pixels: typing.Sequence = tuple()  # Nx2 sequence
-    filename: typing.Union[str, Path] = Path('')
+    filename: str = ''
     n_frames: int = 0
     roi: typing.Sequence = tuple()
     binning: int = 0
@@ -161,7 +161,7 @@ class ImageProcessInfo:
         if not isinstance(bad_pixels, Sequence):
             raise TypeError("bad_pixels should be a list of tuples")
 
-        if np.shape(bad_pixels)[1] != 2:
+        if bad_pixels and np.shape(bad_pixels)[1] != 2:
             raise ValueError("bad_pixels should have shape (N, 2)")
 
         self.__bad_pixels = np.asarray(bad_pixels)
@@ -212,7 +212,7 @@ class ImageProcessor(qtc.QObject):
         n_frames_to_process : int
             The number of frames to process
         """
-        return self.process_info.nframes
+        return self.process_info.n_frames
 
     def prepare_to_process(self, process_info, first_frame):
         """Prepare the necessary attributes for processing.
@@ -244,25 +244,24 @@ class ImageProcessor(qtc.QObject):
 
     def process_frame(self, frame):
         """Process a new frame."""
-        if self.missing_frames:
+        if self.missing_frames > 0:
             # Add the new frame
             self.processed_image += frame
             self.n_frames_received += 1
 
-        if self.missing_frames:
+        if self.missing_frames > 0:
             return
 
         # All frames arrived
         self.remove_bad_pixels()  # TODO: remove bad pixels AFTER the ROI. Requires ImageProcessInfo to return shifted coordinates
         self.apply_roi()
         self.bin_and_average()
-        self.image_processed.emit(self.processed_image)
         self.save()
         self.image_saved.emit()
 
     def remove_bad_pixels(self):
         """Remove a list of bad pixels by neighbor averaging."""
-        if not self.process_info.bad_pixels:
+        if not self.process_info.bad_pixels.size:
             return
 
         # Transpose because indexing needs to be (2, N)
@@ -300,7 +299,8 @@ class ImageProcessor(qtc.QObject):
             # Do only averaging, if necessary.
             if self.n_frames_to_process == 1:
                 return
-            self.processed_image *= 1 / self.n_frames_to_process
+            averaging_fact = 1 / self.n_frames_to_process
+            self.processed_image = self.processed_image * averaging_fact
             return
 
         # Binning factors should be compatible with ROI settings,
@@ -335,7 +335,10 @@ class ImageProcessor(qtc.QObject):
         dtype, n_bits = ('>u4', 32) if self.frame_bits > 16 else ('>u2', 16)
 
         data = self.processed_image.astype(dtype)
-        fname = self.process_info['filename']
+        self.image_processed.emit(data)
+        fname = self.process_info.filename
+        if not fname:
+            return
 
         # TODO: probably what follows could easily go into a TIFFImage
         # class. Some notes can be found in ___test_tiff.py
