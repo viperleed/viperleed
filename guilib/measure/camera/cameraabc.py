@@ -66,11 +66,11 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
     # Whenever this signal is emitted, the new frame will be processed
     # (in a separate thread).
     frame_ready = qtc.pyqtSignal(np.ndarray)
-    
+
     # image_processed is emitted when operating in triggered mode
     # after all post-processing steps have been performed.
     image_processed = qtc.pyqtSignal(np.ndarray)
-    
+
     # started/stopped are emitted whenever the camera is started/stopped.
     # When started, self.mode can be used to deduce the camera mode.
     started = qtc.pyqtSignal()
@@ -137,12 +137,16 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         self.process_info = ImageProcessInfo()
         self.process_info.camera = self
         self.__process_thread = qtc.QThread()
+        self.__image_processors = []
 
         # Number of frames accumulated for averaging
         self.n_frames_done = 0
 
-        self.frame_ready.connect(self.__on_frame_ready)
         self.set_settings(settings)
+
+    def __deepcopy__(self, memo):
+        """Return self rather than a deep copy of self."""
+        return self
 
     @property
     def binning(self):
@@ -927,6 +931,19 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         """
         if self.mode == 'triggered':
             self.__process_thread.start()
+
+        # Connect the frame_ready signal if not connected already. Should
+        # be done here rather than in __init__ as the camera may need to
+        # be internally started (via .driver) to perform some of the
+        # other pre-starting operations, and may deliver frames in the
+        # meantime. The signal is also disconnected in .stop() for the
+        # same reason.
+        try:
+            self.frame_ready.connect(self.__on_frame_ready,
+                                     type=qtc.Qt.UniqueConnection)
+        except TypeError:
+            # Already connected
+            pass
         self.started.emit()
 
     @abstractmethod
@@ -943,6 +960,11 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         self.process_info.clear_times()
         if self.__process_thread.isRunning():
             self.__process_thread.quit()
+        try:
+            self.frame_ready.disconnect(self.__on_frame_ready)
+        except TypeError:
+            # Already disconnected
+            pass
         self.stopped.emit()
 
     @abstractmethod
@@ -1006,12 +1028,18 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         # Disconnect the last processor to prevent
         # duplicate processing of the next frame
         processor = qtc.QObject().sender()
-        if processor:
-            try:
-                self.__process_frame.disconnect(processor.process_frame)
-            except TypeError:
-                # Not connected
-                pass
+        if not processor:
+            return
+        try:
+            self.__process_frame.disconnect(processor.process_frame)
+        except TypeError:
+            # Not connected
+            pass
+        try:
+            self.__image_processors.remove(processor)
+        except ValueError:
+            # Not in list
+            pass
 
     def __on_frame_ready(self, image):
         """React to receiving a new frame from the camera.
@@ -1042,15 +1070,19 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         #       both should be taken care of by the measurement.
         # TODO: do I need to keep a reference here??
 
-        processor = ImageProcessor()
-        processor.image_processed.connect(self.image_processed)
-        processor.image_saved.connect(self.__on_image_saved)
-        processor.image_saved.connect(processor.deleteLater)
-        self.__process_thread.finished.connect(processor.deleteLater)
-        self.__process_frame.connect(processor.process_frame)
-        processor.prepare_to_process(self.process_info.copy(), image)
-        processor.moveToThread(self.__process_thread)                     # TODO: may need to be moved before connecting
-        # processor.moveToThread(self.__process_thread.currentThread())   # TODO: may be the way to go as the thread is running already
+        if self.n_frames_done == 0:
+            processor = ImageProcessor()
+            processor.image_processed.connect(self.image_processed)
+            processor.image_saved.connect(self.__on_image_saved)
+            processor.image_saved.connect(processor.deleteLater)
+            self.__process_thread.finished.connect(processor.deleteLater)
+            self.__process_frame.connect(processor.process_frame)
+            processor.prepare_to_process(self.process_info.copy(), image)
+            processor.moveToThread(self.__process_thread)
+
+            # Keep a reference to the processor to
+            # prevent it from being garbage-collected
+            self.__image_processors.append(processor)
 
         self.__process_frame.emit(image)
         self.n_frames_done += 1
