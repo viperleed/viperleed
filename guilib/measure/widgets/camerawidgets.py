@@ -11,6 +11,7 @@ Created: 2021-10-29
 Author: Michele Riva
 """
 
+import numpy as np
 
 from PyQt5 import (QtCore as qtc,
                    QtWidgets as qtw,
@@ -30,6 +31,7 @@ class CameraViewer(qtw.QScrollArea):
 
     Zooming can be performed when pressing '+' and '-' or by
     holding down the Control key (Command on Mac) while scrolling.
+    A region of interest can be selected and moved/resized.
 
     Attributes
     ----------
@@ -406,6 +408,12 @@ class CameraViewer(qtw.QScrollArea):
 
     def __show_image(self, img_array):
         """Show the gray-scale image in the img_array numpy.ndarray."""
+        if img_array.dtype != np.uint16:
+            # images coming from triggering are ready for TIFF,
+            # and have an improper data type for viewing as a
+            # QImage with Grayscale16 format.
+            img_array = np.uint16(img_array)
+
         width, height = img_array.shape
 
         # Notice the swapping of width and height!
