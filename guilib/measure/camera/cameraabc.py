@@ -931,6 +931,7 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         """
         if self.mode == 'triggered':
             self.__process_thread.start()
+            self.n_frames_done = 0
 
         # Connect the frame_ready signal if not connected already. Should
         # be done here rather than in __init__ as the camera may need to
@@ -958,6 +959,8 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         None.
         """
         self.process_info.clear_times()
+        self.n_frames_done = 0
+
         if self.__process_thread.isRunning():
             self.__process_thread.quit()
         try:
