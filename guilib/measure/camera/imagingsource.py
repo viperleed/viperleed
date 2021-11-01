@@ -352,7 +352,7 @@ class ImagingSourceCamera(CameraABC):
         -------
         binning : {0}
         """
-        return 0
+        return super().get_binning()
 
     def get_exposure(self):
         """Return the exposure time (milliseconds) set in the camera."""
@@ -415,7 +415,7 @@ class ImagingSourceCamera(CameraABC):
 
     def get_n_frames(self):
         """Return zero as the camera does not support frame averaging."""
-        return 0
+        return super().get_n_frames()
 
     def get_n_frames_limits(self):
         """Return the minimum and maximum number of frames supported.
