@@ -144,7 +144,7 @@ class SinkFormat(Enum):
         raise ImagingSourceError(f"Format {self} does not have a "
                                  "defined number of color channels.",
                                  err_code=DLLReturns.INVALID_SINK_FORMAT)
-    
+
     @property
     def n_bytes(self):
         """Return the number of bytes per pixel and per color channel."""
@@ -152,7 +152,7 @@ class SinkFormat(Enum):
         if self in (SinkFormat.Y16,):
             return 2
         return 1
-    
+
     @property
     def green_channel(self):
         """Return the 0-based index of the green channel."""
@@ -161,7 +161,7 @@ class SinkFormat(Enum):
         if self.name.startswith('Y'):
             return 0  # monochrome
         raise ValueError(f"No green channel for {self.name} format.")
-        
+
 
 
 class StreamMode(Enum):
@@ -480,7 +480,7 @@ class  WindowsCamera:
 
         n_colors = color_format.n_colors
         bytes_per_pixel = (bits_per_pixel.value / n_colors) // 8
-        
+
         return (width.value, height.value, int(bytes_per_pixel),
                 color_format.n_colors, color_format)
 
@@ -610,9 +610,9 @@ class  WindowsCamera:
         Parameters
         ----------
         n_frames : int
-            Number of frames that should be used in a trigger                  TODO: can I use the fact that changing this while acquiring works
-            burst. Notice that if trigger_burst_count is                             e.g., by switching it to 1 after I got all frames I wanted
-            changed after send_software_trigger() and before                         even if frames are dropped?
+            Number of frames that should be used in a trigger
+            burst. Notice that if trigger_burst_count is
+            changed after send_software_trigger() and before
             all frames are acquired, the updated number of
             frames will be honored. If n_frames is larger than
             the maximum allowed (typically 1000), the maximum
@@ -745,6 +745,13 @@ class  WindowsCamera:
         width = self._dll_video_format_width(self.__handle)
         height = self._dll_video_format_height(self.__handle)
         return width, height
+
+    def abort_trigger_burst(self):
+        """Abort frame delivery."""
+        if not self.trigger_enabled:
+            return
+        self.stop()
+        self.start('triggered')
 
     _dll_close_device = _dll.IC_CloseVideoCaptureDevice
     _dll_close_device.restype = None  # Returns void

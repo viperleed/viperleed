@@ -169,7 +169,7 @@ class ImageProcessInfo:
     def copy(self):
         """Return a deep-copy of self."""
         return copy.deepcopy(self)
-    
+
     def clear_times(self):
         """Clear the frame arrival times."""
         self.frame_times = []

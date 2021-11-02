@@ -24,7 +24,6 @@ from viperleed.guilib.measure.camera.drivers.imagingsource import (
 from viperleed.guilib.measure.camera.cameraabc import CameraABC, CameraErrors
 from viperleed.guilib.measure.camera.imageprocess import ImageProcessInfo
 from viperleed.guilib.measure.hardwarebase import emit_error
-from viperleed import guilib as gl
 
 @FrameReadyCallbackType
 def on_frame_ready(__grabber_handle, image_start_pixel,
@@ -32,7 +31,9 @@ def on_frame_ready(__grabber_handle, image_start_pixel,
     """Prepare a frame to be processed.
 
     This is the callback function that will be automatically called
-    whenever a new frame arrives at the PC.
+    whenever a new frame arrives at the PC. According to the ctypes
+    documentation, this callback is executed in a separate python
+    thread.
 
     Parameters
     ----------
@@ -64,9 +65,9 @@ def on_frame_ready(__grabber_handle, image_start_pixel,
     """
     process_info.frame_times.append(timer())
     camera = process_info.camera
+    n_frames_received = len(process_info.frame_times)
 
-    if (camera.n_frames_done > 2
-            or len(process_info.frame_times) > 2):
+    if n_frames_received > 2:
         n_lost, best_rate = estimate_frame_loss(process_info.frame_times,
                                                 camera.driver.frame_rate,
                                                 camera.exposure)
@@ -74,11 +75,21 @@ def on_frame_ready(__grabber_handle, image_start_pixel,
 
     if camera.is_finding_best_frame_rate:
         # No need to display images while estimating the best frame rate
-        if len(process_info.frame_times) >= camera.n_frames_estimate:
+        if n_frames_received >= camera.n_frames_estimate:
             camera.driver.stop_delivering_frames()
             camera.is_finding_best_frame_rate = False
             camera.done_estimating_frame_rate.emit()
         return
+
+    # This may happen if the camera was set to 'triggered' and it
+    # supports trigger burst, as we keep a little safety margin
+    # in case frames are actually lost. Notice the use of a signal:
+    # A direct call makes the program access the camera from two
+    # different threads (main, and the thread in which this callback
+    # runs) and crashes the whole application.
+    if (camera.supports_trigger_burst
+            and n_frames_received >= camera.n_frames):
+        camera.abort_trigger_burst.emit()
 
     # Prepare the actual image
     width, height, n_bytes, n_colors = camera.image_info
@@ -161,6 +172,7 @@ def estimate_frame_loss(frame_times, frame_rate, exposure):
 class ImagingSourceCamera(CameraABC):
     """Concrete subclass of CameraABC handling Imaging Source Hardware."""
 
+    abort_trigger_burst = qtc.pyqtSignal()
     done_estimating_frame_rate = qtc.pyqtSignal()
 
     def __init__(self, *args, settings=None, parent=None, **kwargs):
@@ -193,13 +205,13 @@ class ImagingSourceCamera(CameraABC):
 
         super().__init__(ImagingSourceDriver(), *args,
                          settings=settings, parent=parent, **kwargs)
-        # try:
-            # self.done_estimating_frame_rate.connect(self.__start_postponed,
-                                                    # qtc.Qt.UniqueConnection)
-        # except TypeError:
-            # # Already connected
-            # pass
-        self.done_estimating_frame_rate.connect(self.__start_postponed)
+        try:
+            self.done_estimating_frame_rate.connect(self.__start_postponed,
+                                                    qtc.Qt.UniqueConnection)
+        except TypeError:
+            # Already connected
+            pass
+        self.abort_trigger_burst.connect(self.driver.abort_trigger_burst)
 
     @property
     def image_info(self):
@@ -582,5 +594,13 @@ class ImagingSourceCamera(CameraABC):
         super().trigger_now()
         self.driver.frame_rate = self.best_next_rate
         if self.supports_trigger_burst:
-            self.driver.trigger_burst_count = self.n_frames
+            trigger_burst = self.n_frames
+            if trigger_burst > 1:
+                # If more than one trigger frame, keep a little
+                # safety margin, in case some frames are lost.
+                # NB: the estimate of the best frame rate seems
+                # to work pretty well, so only 20% more frames
+                # should be enough.
+                trigger_burst = ceil(trigger_burst * 1.2)
+            self.driver.trigger_burst_count = trigger_burst
         self.driver.send_software_trigger()
