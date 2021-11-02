@@ -748,7 +748,7 @@ class  WindowsCamera:
 
     def abort_trigger_burst(self):
         """Abort frame delivery."""
-        if not self.trigger_enabled:
+        if not self.is_running or not self.trigger_enabled:
             return
         self.stop()
         self.start('triggered')
