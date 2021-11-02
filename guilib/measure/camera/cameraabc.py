@@ -108,7 +108,7 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         Parameters
         ----------
         driver : object
-            A reference to the library/class that handles
+            An instance of the library/class that handles
             the communication with the camera firmware.
         *args : object
             Other unused positional arguments
@@ -138,11 +138,27 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         self.process_info.camera = self
         self.__process_thread = qtc.QThread()
         self.__image_processors = []
+        self.__init_errors = []  # Report these with a little delay
+        self.__init_err_timer = qtc.QTimer(self)
+        self.__init_err_timer.setSingleShot(True)
+
+        self.error_occurred.connect(self.__on_init_errors)
+        self.__init_err_timer.timeout.connect(self.__report_init_errors)
 
         # Number of frames accumulated for averaging
         self.n_frames_done = 0
 
-        self.set_settings(settings)
+        try:
+            self.set_settings(settings)
+        except OSError:  # Other cameras may raise others: fill in!!
+            # Start a short QTimer to report errors that occurred here
+            # AFTER the whole __init__ is done, i.e., when we suppose
+            # that the error_occurred signal is already connected
+            # externally.
+            pass
+        if self.__init_errors:
+            self.__init_err_timer.start(20)
+        self.error_occurred.disconnect(self.__on_init_errors)
 
     def __deepcopy__(self, memo):
         """Return self rather than a deep copy of self."""
@@ -168,7 +184,9 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         min_bin, max_bin = self.get_binning_limits()
         if binning_factor < min_bin or binning_factor > max_bin:
             emit_error(self, CameraErrors.INVALID_SETTING_WITH_FALLBACK,
-                       binning_factor, 'camera_settings/binning', 1)
+                       f"{binning_factor} "
+                       f"[out of range ({min_bin}, {max_bin})]",
+                       'camera_settings/binning', 1)
             binning_factor = 1
             self.settings.set('camera_settings', 'binning', '1')
         return binning_factor
@@ -222,7 +240,9 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         min_exposure, max_exposure = self.get_exposure_limits()
         if exposure_time < min_exposure or exposure_time > max_exposure:
             emit_error(self, CameraErrors.INVALID_SETTINGS,
-                       'measurement_settings/exposure')
+                       'measurement_settings/exposure [out of range '
+                       f'({min_exposure}, {max_exposure})]')
+            exposure_time = min_exposure
         return exposure_time
 
     @property
@@ -244,7 +264,10 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         min_gain, max_gain = self.get_gain_limits()
         if gain < min_gain or gain > max_gain:
             emit_error(self, CameraErrors.INVALID_SETTINGS,
-                       'measurement_settings/gain')
+                       'measurement_settings/gain [out of range '
+                       f'({min_gain}, {max_gain})]')
+            gain = min_gain
+            self.settings.set('measurement_settings', 'gain', str(gain))
         return gain
 
     @property
@@ -300,7 +323,8 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         min_n, max_n = self.get_n_frames_limits()
         if n_frames < min_n or n_frames > max_n:
             emit_error(self, CameraErrors.INVALID_SETTING_WITH_FALLBACK,
-                       n_frames, 'measurement_settings/n_frames', 1)
+                       f"{n_frames} [out of range ({min_n}, {max_n})]",
+                       'measurement_settings/n_frames', 1)
             n_frames = 1
             self.settings.set('measurement_settings', 'n_frames', '1')
 
@@ -509,7 +533,7 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
             set_exposure(),  set_gain(),  set_mode()
             <setters associated to self.hardware_supported_features>
             [set_binning()], [set_n_frames()], [set_roi()]
-        The last 3 are called only if they are not hardware-supported
+        The last 3 are called only if they are not hardware-supported.
         Should the method be reimplemented, the reimplementation should
         call self.check_loaded_settings() at the end, to verify that
         the settings have been correctly loaded.
@@ -995,6 +1019,7 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         if self.mode != 'triggered':
             emit_error(self, CameraErrors.UNSUPPORTED_OPERATION,
                        'trigger', 'live')
+            return
         self.busy = True
         self.n_frames_done = 0
 
@@ -1026,24 +1051,6 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
             return False
         return True
 
-    def __on_image_saved(self):
-        """React to an image being saved."""
-        # Disconnect the last processor to prevent
-        # duplicate processing of the next frame
-        processor = qtc.QObject().sender()
-        if not processor:
-            return
-        try:
-            self.__process_frame.disconnect(processor.process_frame)
-        except TypeError:
-            # Not connected
-            pass
-        try:
-            self.__image_processors.remove(processor)
-        except ValueError:
-            # Not in list
-            pass
-
     def __on_frame_ready(self, image):
         """React to receiving a new frame from the camera.
 
@@ -1071,7 +1078,6 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
                        'camera_settings/bad_pixels', 'no bad pixels')
         # TODO: file name. Probably needs a temp path + a file name
         #       both should be taken care of by the measurement.
-        # TODO: do I need to keep a reference here??
 
         if self.n_frames_done == 0:
             processor = ImageProcessor()
@@ -1098,3 +1104,31 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         else:
             # All frames are done
             self.busy = False
+
+    def __on_image_saved(self):
+        """React to an image being saved."""
+        # Disconnect the last processor to prevent
+        # duplicate processing of the next frame
+        processor = qtc.QObject().sender()
+        if not processor:
+            return
+        try:
+            self.__process_frame.disconnect(processor.process_frame)
+        except TypeError:
+            # Not connected
+            pass
+        try:
+            self.__image_processors.remove(processor)
+        except ValueError:
+            # Not in list
+            pass
+
+    def __on_init_errors(self, err):
+        """Collect initialization errors to report later."""
+        self.__init_errors.append(err)
+
+    def __report_init_errors(self):
+        """Emit error_occurred for each initialization error."""
+        for error in self.__init_errors:
+            self.error_occurred.emit(error)
+        self.__init_errors = []
