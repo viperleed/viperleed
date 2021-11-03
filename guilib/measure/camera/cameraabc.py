@@ -373,7 +373,8 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
             emit_error(self, CameraErrors.INVALID_SETTINGS,
                        'camera_settings/roi')
             self.settings.set('camera_settings', 'roi', 'None')
-            return tuple()
+            _, (max_roi_w, max_roi_h), _ = self.get_roi_size_limits()
+            return 0, 0, max_roi_w, max_roi_h
 
         # See if the roi width and height fit with the binning factor
         *roi_offsets, roi_w, roi_h = roi
