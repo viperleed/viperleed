@@ -1,4 +1,4 @@
-"""Module ui-measurement of viperleed.guilib.measure
+"""Module uimeasurement of viperleed.guilib.measure
 
 ===============================================
       ViPErLEED Graphical User Interface
@@ -25,6 +25,7 @@ from viperleed import guilib as gl
 from viperleed.guilib.measure.measurement import ALL_MEASUREMENTS
 from viperleed.guilib.measure.hardwarebase import class_from_name
 from viperleed.guilib.basewidgets import MeasurementFigureCanvas as Figure
+from viperleed.guilib.basewidgets import QDoubleValidatorNoDot
 
 TITLE = 'Measurement UI'
 
@@ -48,6 +49,8 @@ class Measure(gl.ViPErLEEDPluginBase):
             'Delta energy': qtw.QLineEdit(''),
             'save': qtw.QPushButton("Store settings"),
             'plots': [],
+            'energy_input': qtw.QLineEdit(''),
+            'set_energy': qtw.QPushButton("Set energy"),
             # TODO: add times/ make separate class/ read stuff from config and put it in the box upon opening extra window/add save button
             }
 
@@ -85,15 +88,17 @@ class Measure(gl.ViPErLEEDPluginBase):
         self._ctrls['select'].setFont(gl.AllGUIFonts().buttonFont)
         self._ctrls['select'].ensurePolished()
 
+        self._ctrls['set_energy'].setFont(gl.AllGUIFonts().buttonFont)
+        self._ctrls['set_energy'].ensurePolished()
+        self._ctrls['set_energy'].setEnabled(False)
 
         layout = self.centralWidget().layout()
 
-        for key in ('Start energy', 'End energy', 'Delta energy'):
+        for key in ('Start energy', 'End energy', 'Delta energy', 'energy_input'):
             self._ctrls[key].setFont(gl.AllGUIFonts().labelFont)
             self._ctrls[key].ensurePolished()
-            self._ctrls[key].setValidator(qtg.QDoubleValidator())
+            self._ctrls[key].setValidator(QDoubleValidatorNoDot())
             self._ctrls[key].validator().setLocale(qtc.QLocale.c())
-            # self._ctrls[key].editingFinished.connect(self.__temp)
 
         layout.addWidget(self._ctrls['measure'], 1, 1, 1, 1)
         layout.addWidget(self._ctrls['abort'], 1, 2, 1, 1)
@@ -105,12 +110,13 @@ class Measure(gl.ViPErLEEDPluginBase):
         layout.addWidget(qtw.QLabel('Delta energy ='), 5, 1, 1, 1)
         layout.addWidget(self._ctrls['Delta energy'], 5, 2, 1, 1)
         layout.addWidget(self._ctrls['save'], 6, 1, 1, 2)
+        layout.addWidget(self._ctrls['set_energy'], 7, 1, 1, 1)
+        layout.addWidget(self._ctrls['energy_input'], 7, 2, 1, 1)
         self.statusBar().showMessage('Ready')
 
-        # temp: prepare a single plot and plot a line there
         fig = Figure()
         self._ctrls['plots'].append(fig)
-        layout.addWidget(fig, 7, 1, 1, 2)
+        layout.addWidget(fig, 8, 1, 1, 2)
 
     def do_stuff(self):
         self.do_this.begin_measurement_preparation()
@@ -153,8 +159,9 @@ class Measure(gl.ViPErLEEDPluginBase):
 
         if not isinstance(self.do_this, ALL_MEASUREMENTS['Time resolved']):  # TEMP. TODO: Handle data structure of time resolved
             self.do_this.new_data_available.connect(self.__on_new_data)
-            
+
         self._ctrls['abort'].clicked.connect(self.do_this.abort)
+        self._ctrls['set_energy'].clicked.connect(self.__on_set_energy)
         self.do_this.error_occurred.connect(self.error_occurred)
         self.do_this.finished.connect(self.__on_finished)
         self.do_this.finished.connect(self.__on_stuff_done)
@@ -179,3 +186,8 @@ class Measure(gl.ViPErLEEDPluginBase):
     def __on_controllers_prepared(self):
         """Enable abort button."""
         self._ctrls['abort'].setEnabled(True)
+
+    def __on_set_energy(self):
+        """Set energy on primary controller."""
+        energy = float(self._ctrls['select'].currentText())
+        self.do_this.set_LEED_energy((energy,0))
