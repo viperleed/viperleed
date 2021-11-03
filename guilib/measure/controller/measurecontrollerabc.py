@@ -438,3 +438,16 @@ class MeasureController(ControllerABC):
                 pass
         if not continuous and in_finalization:
            self.serial.serial_busy.connect(self.set_busy)
+
+    @abstractmethod
+    def stop(self):
+        """Stop.
+
+        Stop whatever the controller is doing right now
+        and return to idle state.
+
+        Returns
+        -------
+        None.
+        """
+        super().stop()

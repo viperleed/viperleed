@@ -380,3 +380,16 @@ class ViPErinoController(MeasureController):
                                            'continuous_measurement_no')
         self.send_message(continuous_mode, [mode_on, 0, 0])
 
+    def stop(self):
+        """Stop.
+        
+        Stop whatever the controller is doing right now
+        and return to idle state.
+        
+        Returns
+        -------
+        None.
+        """
+        stop = self.settings.get('available_commands','pc_stop')
+        super().stop()
+        self.send_message(stop)

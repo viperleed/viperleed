@@ -365,3 +365,20 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
         None.
         """
         return
+
+    @abstractmethod
+    def stop(self):
+        """Stop.
+
+        Stop whatever the controller is doing right now
+        and return to idle state.
+
+        Returns
+        -------
+        None.
+        """
+        try:
+            self.serial.serial_busy.connect(self.set_busy,
+                                            type=qtc.Qt.UniqueConnection)
+        except TypeError:
+            pass
