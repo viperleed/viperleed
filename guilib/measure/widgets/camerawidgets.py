@@ -17,7 +17,7 @@ from PyQt5 import (QtCore as qtc,
                    QtWidgets as qtw,
                    QtGui as qtg)
 
-from viperleed.guilib.measure.camera.cameraabc import CameraABC
+from viperleed.guilib.measure.camera.abc import CameraABC
 from viperleed.guilib.widgetslib import screen_fraction
 
 
