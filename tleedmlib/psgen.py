@@ -757,10 +757,10 @@ def make_atoms_input_blocks(atom_types, uct):
         for atom in atom_type.atoms:
             # rescale atomic coordinates from fractional to absolute
             # for this multiply fractional positon by unit cell matrix
-            fractional_vec = np.array([pos for pos in atom.pos])
-            position_vec = uct.dot(fractional_vec)
+            #fractional_vec = np.array([pos for pos in atom.pos])
+            #position_vec = uct.dot(fractional_vec)
 
-            atom_coords_table += ' '.join(['{: .5f}'.format(pos) for pos in position_vec])
+            atom_coords_table += ' '.join(['{: .5f}'.format(pos) for pos in atom.cartpos])
             atom_coords_table += '\n'
         input_file_atom_pos_block += atom_coords_table
 
