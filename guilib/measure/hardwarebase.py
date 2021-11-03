@@ -57,6 +57,7 @@ def class_from_name(package, class_name):
             ) from err
     return cls
 
+
 def config_has_sections_and_options(caller, config, mandatory_settings):
     """Make sure settings are fine, and return it as a ConfigParser.
 
