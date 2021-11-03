@@ -922,3 +922,8 @@ class PainterMatrix(qtw.QWidget):  ## --> use it in a special QPushButton with a
                                                     # line
         painter.restore()  # and back to the initial state
 
+class QDoubleValidatorNoDot(qtg.QDoubleValidator):
+    def validate(self, text:str, cursor_pos:int):
+        text = text.replace(',', '.')
+        return super().validate(text, cursor_pos)
+
