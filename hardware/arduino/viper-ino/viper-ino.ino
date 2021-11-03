@@ -16,7 +16,7 @@ Date: 16.04.2021
 
 // Firmware version (MAX: v255.255). CURENTLY: v0.3
 #define FIRMWARE_VERSION_MAJOR    0  // max 255
-#define FIRMWARE_VERSION_MINOR    3  // max 255
+#define FIRMWARE_VERSION_MINOR    4  // max 255
 
 
 
@@ -125,7 +125,8 @@ void updateState() {
     if (msgLength > 1) return; //We received data
 
     if (data_received[0] != PC_CONFIGURATION 
-        and data_received[0] != PC_RESET 
+        and data_received[0] != PC_RESET
+        and data_received[0] != PC_STOP
         and hardwareNotKnown()) return;
     
     switch(data_received[0]){
@@ -167,6 +168,10 @@ void updateState() {
             waitingForDataFromPC = true;
             initialTime = millis();
             currentState = STATE_CHANGE_MEASUREMENT_MODE;
+            break;
+        case PC_STOP:
+            currentState = STATE_IDLE;
+            encodeAndSend(PC_OK);
             break;
     }
     newMessage = false;
@@ -398,6 +403,7 @@ bool decodeAndCheckMessage(){
         case PC_SET_VOLTAGE: break;
         case PC_MEASURE_ONLY: break;
         case PC_CHANGE_MEAS_MODE: break;
+        case PC_STOP: break;
         default:
             raise(ERROR_MSG_UNKNOWN);
             return false;
