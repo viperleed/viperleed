@@ -1,4 +1,4 @@
-"""Module serialabc of ViPErLEED
+"""Module abc of viperleed.guilib.measure.serial.
 
 ========================================
    ViPErLEED Graphical User Interface

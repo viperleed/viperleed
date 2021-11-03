@@ -1,4 +1,4 @@
-"""Package measurement of viperleed.guilib.measure
+"""Package measurement of viperleed.guilib.measure.
 
 ========================================
    ViPErLEED Graphical User Interface

@@ -1,4 +1,5 @@
-"""Module measurementabc of viperleed.
+"""Module abc of viperleed.guilib.measure.measurement.
+
 ========================================
    ViPErLEED Graphical User Interface
 ========================================

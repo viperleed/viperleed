@@ -1,4 +1,4 @@
-"""Module viperinocontroller of ViPErLEED
+"""Module viperinocontroller of viperleed.guilib.measure.controller.
 
 ========================================
    ViPErLEED Graphical User Interface
@@ -17,8 +17,7 @@ import ast
 from collections import defaultdict
 
 # ViPErLEED modules
-from viperleed.guilib.measure.controller.\
-     measurecontrollerabc import MeasureController
+from viperleed.guilib.measure.controller.abc import MeasureControllerABC
 from viperleed.guilib.measure.hardwarebase import (ViPErLEEDErrorEnum,
                                                    emit_error)
 
@@ -45,7 +44,7 @@ class ViPErinoErrors(ViPErLEEDErrorEnum):
                              "not.")
 
 
-class ViPErinoController(MeasureController):
+class ViPErinoController(MeasureControllerABC):
     """Controller class for the ViPErLEED Arduino Micro."""
 
     # def __init__(self, settings=None, port_name='', sets_energy=False):

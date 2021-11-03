@@ -1,4 +1,4 @@
-"""Module viperleedserial of ViPErLEED
+"""Module viperleedserial of viperleed.guilib.measure.serial.
 
 ========================================
    ViPErLEED Graphical User Interface
@@ -19,8 +19,7 @@ import struct
 from collections.abc import Sequence
 
 # ViPErLEED modules
-from viperleed.guilib.measure.serial.serialabc import (ExtraSerialErrors,
-                                                       SerialABC)
+from viperleed.guilib.measure.serial.abc import ExtraSerialErrors, SerialABC
 from viperleed.guilib.measure.hardwarebase import (
     ViPErLEEDErrorEnum,
     config_has_sections_and_options,

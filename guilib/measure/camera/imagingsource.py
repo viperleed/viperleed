@@ -1,4 +1,4 @@
-"""Module imagainsourcecamera of viperleed.guilib.measure.camera.drivers
+"""Module imagainsource of viperleed.guilib.measure.camera.
 
 ===============================================
       ViPErLEED Graphical User Interface
@@ -21,7 +21,7 @@ from viperleed.guilib.measure.camera.drivers.imagingsource import (
     ISCamera as ImagingSourceDriver, FrameReadyCallbackType,
     ImagingSourceError, SinkFormat,
     )
-from viperleed.guilib.measure.camera.cameraabc import CameraABC, CameraErrors
+from viperleed.guilib.measure.camera.abc import CameraABC, CameraErrors
 from viperleed.guilib.measure.camera.imageprocess import ImageProcessInfo
 from viperleed.guilib.measure.hardwarebase import emit_error
 

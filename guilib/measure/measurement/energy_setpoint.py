@@ -1,4 +1,5 @@
-"""Module energy_setpoint of viperleed.
+"""Module energy_setpoint of viperleed.guilib.measure.measurement.
+
 ========================================
    ViPErLEED Graphical User Interface
 ========================================
@@ -15,7 +16,7 @@ import ast
 from numpy.polynomial.polynomial import Polynomial
 
 # ViPErLEED modules
-from viperleed.guilib.measure.measurement.measurementabc import MeasurementABC
+from viperleed.guilib.measure.measurement.abc import MeasurementABC
 
 
 class MeasureEnergySetpoint(MeasurementABC):

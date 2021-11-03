@@ -1,5 +1,4 @@
-"""Module imageprocessor of viperleed.guilib.measure
-
+"""Module imageprocessor of viperleed.guilib.measure.camera.
 
 ========================================
    ViPErLEED Graphical User Interface

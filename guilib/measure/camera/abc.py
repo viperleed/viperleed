@@ -1,4 +1,4 @@
-"""Module cameraabc of viperleed.?????.
+"""Module abc of viperleed.guilib.measure.camera.
 
 ========================================
    ViPErLEED Graphical User Interface

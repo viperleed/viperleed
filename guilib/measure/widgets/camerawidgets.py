@@ -1,4 +1,4 @@
-"""Module camerawidgets of viperleed.guilib.measure.
+"""Module camerawidgets of viperleed.guilib.measure.widgets.
 
 ========================================
    ViPErLEED Graphical User Interface

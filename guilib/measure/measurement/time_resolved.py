@@ -1,4 +1,5 @@
-"""Module time_resolved of viperleed.
+"""Module time_resolved of viperleed.guilib.measure.measurement.
+
 ========================================
    ViPErLEED Graphical User Interface
 ========================================
@@ -15,7 +16,7 @@ import ast
 from PyQt5 import QtCore as qtc
 
 # ViPErLEED modules
-from viperleed.guilib.measure.measurement.measurementabc import MeasurementABC
+from viperleed.guilib.measure.measurement.abc import MeasurementABC
 
 
 class TimeResolved(MeasurementABC):
