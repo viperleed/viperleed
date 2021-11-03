@@ -360,31 +360,8 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         -------
         None.
         """
-        self.abort_action.emit()
-        self.current_energy = 0
-        # Set LEED energy to 0
-        try:
-            self.primary_controller.data_ready.disconnect()
-        except TypeError:
-            pass
-        try:
-            self.disconnect_secondary_controllers()
-        except TypeError:
-            pass
-        for controller in self.secondary_controllers:
-            controller.busy = False
-        self.disconnect_cameras()
-        for camera in self.cameras:
-            camera.busy = False
-        self.set_LEED_energy(self.current_energy, 1000)
-        try:
-            self.disconnect_primary_controller()
-        except TypeError:
-            pass
-        self.primary_controller.busy = False
+        self.prepare_finalization()
 
-        self.finished.emit((self.plot_info, self.data_points))
-        # TODO: check if this function works as intended, not waiting for OK from primary controller
 
     def connect_cameras(self):
         """Connect necessary camera signals."""
@@ -409,7 +386,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
                                           type=qtc.Qt.UniqueConnection)
             self.ready_for_measurement.connect(controller.measure_now,
                                                type=qtc.Qt.UniqueConnection)
-            self.abort_action.connect(controller.abort_and_reset,
+            self.abort_action.connect(controller.stop,
                                       type=qtc.Qt.UniqueConnection)
             self.begin_preparation.connect(
                 controller.trigger_begin_preparation,
@@ -427,7 +404,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             self.receive_from_controller, type=qtc.Qt.UniqueConnection
             )
         self.abort_action.connect(
-            self.primary_controller.abort_and_reset,
+            self.primary_controller.stop,
             type=qtc.Qt.UniqueConnection
             )
         self.begin_preparation.connect(
@@ -457,8 +434,12 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
                 continue
             controller.serial.serial_disconnect()
             controller.data_ready.disconnect(self.receive_from_controller)
-            self.ready_for_measurement.disconnect(controller.measure_now)
-            self.abort_action.disconnect(controller.abort_and_reset)
+            try:
+                self.ready_for_measurement.disconnect(controller.measure_now)
+            except TypeError:
+                # controller was aborting instead of standard finalizing
+                pass
+            self.abort_action.disconnect(controller.stop)
             self.begin_preparation.disconnect(
                 controller.trigger_begin_preparation
                 )
@@ -480,7 +461,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             except TypeError:
                 # data_ready is already disconnected from all its slots
                 pass
-            self.abort_action.disconnect(self.primary_controller.abort_and_reset)
+            self.abort_action.disconnect(self.primary_controller.stop)
             self.begin_preparation.disconnect(
                 self.primary_controller.trigger_begin_preparation
                 )
@@ -874,4 +855,16 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         -------
         None.
         """
-        self.finalize()
+        for controller in self.secondary_controllers:
+            if not controller:
+                continue
+            self.ready_for_measurement.disconnect(controller.measure_now)
+        for controller in self.controllers:
+            try:
+                controller.controller_busy.disconnect()
+            except TypeError:
+                pass
+            controller.controller_busy.connect(self.finalize,
+                                               type=qtc.Qt.UniqueConnection)
+            controller.busy = True
+        self.abort_action.emit()
