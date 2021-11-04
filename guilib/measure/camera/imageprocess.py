@@ -1,4 +1,4 @@
-"""Module imageprocessor of viperleed.guilib.measure.camera.
+"""Module imageprocess of viperleed.guilib.measure.camera.
 
 ========================================
    ViPErLEED Graphical User Interface
@@ -122,11 +122,11 @@ class ImageProcessInfo:
 
     @property
     def bad_pixels(self):
-        """Return bad pixels as a list of (x, y) coordinates."""
+        """Return bad pixels as an array of (x, y) coordinates."""
         # TODO: return the list of bad pixels recalculated on the ROI
         # (bad pixels are wrt full sensor), skipping those whose
         # transformed coordinates are < 0 or > roi width/height.
-        return self.__bad_pixels
+        return np.asarray(self.__bad_pixels)
 
     @bad_pixels.setter
     def bad_pixels(self, bad_pixels):
@@ -190,7 +190,7 @@ class ImageProcessor(qtc.QObject):
             The camera that is producing the frames to be processed.
         """
         super().__init__()
-        self.process_info = dict()
+        self.process_info = ImageProcessInfo()
         self.processed_image = np.zeros(0)
         self.n_frames_received = 0
         self.frame_bits = 16
@@ -270,13 +270,13 @@ class ImageProcessor(qtc.QObject):
         # Convolution kernel for 4-neighbor averaging
         kernel = np.array(((0, 1, 0), (1, 0, 1), (0, 1, 0)))
 
-        neigbor_sum = convolve2d(self.processed_image,
-                                 kernel, mode='same')
-        neigbor_count = convolve2d(np.ones(self.processed_image.shape),
-                                   kernel, mode='same')
-        neigbor_ave = neigbor_sum / neigbor_count
+        neighbor_sum = convolve2d(self.processed_image,
+                                  kernel, mode='same')
+        neighbor_count = convolve2d(np.ones(self.processed_image.shape),
+                                    kernel, mode='same')
+        neighbor_ave = neighbor_sum / neighbor_count
 
-        self.processed_image[bad_x, bad_y] = neighbor_ave[bad_x, bad_y]        # TODO: check that this is OK with x and y!
+        self.processed_image[bad_y, bad_x] = neighbor_ave[bad_y, bad_x]
 
     def apply_roi(self):
         """Crop the image to a region of interest."""
