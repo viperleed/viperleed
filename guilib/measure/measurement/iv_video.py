@@ -20,12 +20,16 @@ from viperleed.guilib.measure.measurement.abc import MeasurementABC
 
 class IVVideo(MeasurementABC):
     """Measurement class for LEED I(V) videos."""
-    
+
     display_name = 'I(V) video'
 
     def __init__(self, measurement_settings):
         """Initialise measurement class."""
+        self.camera_timer = qtc.QTimer()
+        self.camera_timer.setSingleShot(True)
+
         super().__init__(measurement_settings)
+        self.camera_timer.setParent(self)
         self.__end_energy = self.settings.getfloat('measurement_settings',
                                                    'end_energy')
         self.__delta_energy = self.settings.getfloat('measurement_settings',
@@ -34,8 +38,6 @@ class IVVideo(MeasurementABC):
             'measurement_settings', 'hv_settle_time')
         self.__i0_settle_time = self.primary_controller.settings.getint(
             'measurement_settings', 'i0_settle_time')
-        self.camera_timer = qtc.QTimer(parent=self)
-        self.camera_timer.setSingleShot(True)
 
     def start_next_measurement(self):
         """Set energy and measure.
@@ -52,6 +54,10 @@ class IVVideo(MeasurementABC):
             controller.busy = True
         self.data_points['nominal_energy'].append(self.current_energy)
         self.set_LEED_energy(self.current_energy, self.__i0_settle_time)
+        self.counter += 1
+        for camera in self.cameras:
+            camera.process_info.filename = (str(self.current_energy) + 'eV_' +
+                str(self.counter) + '.tiff')
         self.camera_timer.start(self.__hv_settle_time)
 
     def is_finished(self):
@@ -87,15 +93,18 @@ class IVVideo(MeasurementABC):
         if not cameras:
             cameras = self.cameras
         for camera in cameras:
-            if camera:
-                camera.camera_busy.connect(
-                    self.receive_from_camera, type=qtc.Qt.UniqueConnection
-                    )
-                self.camera_timer.timeout.connect(
-                    camera.trigger_now,
-                    type=qtc.Qt.UniqueConnection
-                    )
+            camera.camera_busy.connect(self.receive_from_camera,
+                                       type=qtc.Qt.UniqueConnection)
+            self.camera_timer.timeout.connect(camera.trigger_now,
+                                              type=qtc.Qt.UniqueConnection)
         # camera.disconnect does not need to be hooked up to the
         # abort_action signal as it is called in the disconnecting
         # of the camera signals anyway.
+
+    def disconnect_cameras(self):
+        """Disconnect necessary camera signals."""
+        for camera in self.cameras:
+            camera.disconnect()
+            camera.camera_busy.disconnect(self.receive_from_camera)
+            self.camera_timer.timeout.disconnect(camera.trigger_now)
 

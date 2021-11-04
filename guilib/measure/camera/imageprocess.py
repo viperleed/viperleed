@@ -113,6 +113,7 @@ class ImageProcessInfo:
 
     __bad_pixels: typing.Sequence = tuple()  # Nx2 sequence
     filename: str = ''
+    base_path: str = ''
     n_frames: int = 0
     roi: typing.Sequence = tuple()
     binning: int = 0
@@ -353,5 +354,10 @@ class ImageProcessor(qtc.QObject):
             b'b_count': b_count.to_bytes(4, 'big')
             }
 
+        fname = Path(self.process_info.base_path) / fname
+        if fname.suffix != '.tiff':
+            raise ValueError("Can only save .tiff files. Found invalid "
+                             f"extension {fname.suffix}")
+        
         with open(fname, 'wb') as tiff_file:
             tiff_file.write(tags + data.tobytes())

@@ -12,12 +12,14 @@ This module contains the definition of the measurementABC class
 which gives commands to the controller classes and its associated
 ViPErLEEDErrorEnum class MeasurementErrors.
 """
+import os
+import shutil
 from collections import defaultdict
 from abc import abstractmethod
 import csv
 import ast
 from configparser import ConfigParser
-# from time import localtime, strftime  # Used in commented code
+from time import localtime, strftime
 
 from PyQt5 import QtCore as qtc
 
@@ -71,9 +73,10 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
     # Abort current task on the controller side.
     # Is emitted if measurement is aborted.
     abort_action = qtc.pyqtSignal()
-    # TODO: test signal below
+    # Make the GUI update the current display of collected data.
     new_data_available = qtc.pyqtSignal()
-    # TODO: test signabelow
+    # Let the GUI know that the preparation for the
+    # measurement is finished.
     prepared = qtc.pyqtSignal()
 
     # The reimplementation may introduce more/other keys.
@@ -102,6 +105,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         self.__primary_controller = None
         self.__secondary_controllers = []
         self.__cameras = []
+        self.counter = 0
         self.start_energy = 0
         self.thread = qtc.QThread()
         # The reimplementation may introduce more/other keys.
@@ -220,10 +224,20 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         # Instantiate camera classes
         cameras = []
         camera_set = ast.literal_eval(
-             self.__settings.get('devices', 'cameras'))
+             self.__settings.get('devices', 'cameras')
+             )
         for camera_settings in camera_set:
             cameras.append(self.__make_camera(camera_settings))
         self.cameras = cameras
+        path = self.settings.get('measurement_settings', 'save_here')
+        try:
+            os.mkdir(path + 'tmp/')
+        except FileExistsError:
+            # Folder already exists.
+            pass
+        for camera in self.cameras:
+            camera.process_info.base_path = path + 'tmp/' + camera.name
+            os.mkdir(camera.process_info.base_path)
 
     settings = property(__get_settings, set_settings)
 
@@ -313,12 +327,15 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         -------
         None.
         """
+        path = self.settings.get('measurement_settings', 'save_here')
+        clock = strftime("%Y-%m-%d_%H-%M-%S/", localtime())
         # class_name = self.__class__.__name__
-        # clock = strftime("_%Y-%m-%d_%H-%M-%S", localtime())
-        # csv_name = class_name + clock + ".csv"
-        csv_name = "measurement_data.csv"
+        os.mkdir(path + clock)
+        to_move_list = os.listdir(path + 'tmp/')
+        for to_move in to_move_list:
+            shutil.move(path + 'tmp/' + to_move, path + clock + to_move)
+        csv_name = path + clock + 'measurement.csv'
         length = len(self.data_points['nominal_energy'])
-        # TODO: Where to save this? Need to add folder creation, this solution is only temporary. Images and measurement data from controllers will be saved with the configuration files in a zip folder.
         with open(csv_name, 'w', encoding='UTF8', newline='') as file_name:
             writer = csv.writer(file_name)
             writer.writerow(self.data_points.keys())
@@ -328,6 +345,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
                     if self.data_points[key]:
                         values.append(self.data_points[key][i])
                 writer.writerow(values)
+        os.rmdir(path + 'tmp/')
 
     def set_LEED_energy(self, *message):
         """Set the electron energy used for LEED.
@@ -363,17 +381,13 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         """
         self.prepare_finalization()
 
-
     def connect_cameras(self):
         """Connect necessary camera signals."""
         for camera in self.cameras:
-            if camera:
-                camera.camera_busy.connect(
-                    self.receive_from_camera, type=qtc.Qt.UniqueConnection
-                    )
-                self.ready_for_measurement.connect(
-                    camera.trigger_now, type=qtc.Qt.UniqueConnection
-                    )
+            camera.camera_busy.connect(self.receive_from_camera,
+                                       type=qtc.Qt.UniqueConnection)
+            self.ready_for_measurement.connect(camera.trigger_now,
+                                               type=qtc.Qt.UniqueConnection)
         # camera.disconnect does not need to be hooked up to the
         # abort_action signal as it is called in the disconnecting
         # of the camera signals anyway.
@@ -423,10 +437,9 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
     def disconnect_cameras(self):
         """Disconnect necessary camera signals."""
         for camera in self.cameras:
-            if camera:
-                camera.disconnect()
-                camera.camera_busy.disconnect(self.receive_from_camera)
-                self.ready_for_measurement.disconnect(camera.trigger_now)
+            camera.disconnect()
+            camera.camera_busy.disconnect(self.receive_from_camera)
+            self.ready_for_measurement.disconnect(camera.trigger_now)
 
     def disconnect_secondary_controllers(self):
         """Disconnect necessary controller signals."""
@@ -569,6 +582,8 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         self.current_energy = self.start_energy
         self.begin_preparation.emit((self.start_energy,
                                      self.__long_settle_time))
+        for camera in self.cameras:
+            camera.start()
 
     def continue_measurement_preparation(self, busy):
         """Continue preparation for measurements.
@@ -808,22 +823,22 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         config, invalid = config_has_sections_and_options(
             self,
             camera_settings,
-            [('camera', 'camera_class'), ('camera', 'port_name')]
+            [('camera_settings', 'class_name'),]
             )
         if invalid:
+            print('invalid')
             emit_error(self, MeasurementErrors.MISSING_CLASS_NAME,
-                       ('camera', 'camera_class'))
+                       ('camera_settings', 'class_name'))
             return
 
-        camera_cls_name = config.get('camera', 'camera_class')
-        port_name = config.get('camera', 'port_name')
+        camera_cls_name = config.get('camera_settings', 'class_name')
         try:
             camera_class = class_from_name('camera', camera_cls_name)
         except ValueError:
             emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
-                       'camera/camera_class')
+                       'camera_settings/class_name')
             return
-        instance = camera_class(config, port_name)
+        instance = camera_class(settings=config)
         return instance
 
     def return_to_gui(self, *__args):

@@ -10,3 +10,4 @@ from viperleed.guilib.measure.serial.viperleedserial import (
     )
 
 from viperleed.guilib.measure import controller
+from viperleed.guilib.measure import camera
