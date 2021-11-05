@@ -7,9 +7,10 @@ import numpy as np
 import os
 
 def main():
-    filelist = os.listdir('./' + 'atlib/')
+    filelist = os.listdir('./')
     for filename in filelist:
-        filename = 'atlib/'+ filename
+        if filename == "charge_density_check.py":
+            continue
         with open(filename) as file:
             file.readline() #skip 1
             z_line = file.readline().split()
