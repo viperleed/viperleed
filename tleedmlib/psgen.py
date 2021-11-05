@@ -5,7 +5,7 @@ major rework Sep&Oct 2021
 
 @author: Florian Kraushofer & Alexander M. Imre
 """
-
+import copy
 import os
 import numpy as np
 import logging
@@ -19,6 +19,13 @@ from viperleed import fortranformat as ff
 
 logger = logging.getLogger("tleedm.psgen")
 
+###############################################
+#                 GLOBALS                     #
+###############################################
+
+# Conversion factor Bohr-radii <-> Angstrom
+angst_to_bohr = 1.8897259886
+bohr_to_angst = 0.529177249
 
 def runPhaseshiftGen_old(sl, rp,
                      psgensource=os.path.join('tensorleed', 'EEASiSSS.x'),
@@ -435,11 +442,123 @@ def runPhaseshiftGen(sl, rp, psgensource=os.path.join('tensorleed', 'eeasisss_ne
     Returns phaseshift information (but does not yet write PHASSHIFTS file) in addition with the firstline string which
     contains the muffin tin potential paramenters.
     """
-    nsl, newbulkats = sl.addBulkLayers(rp)
-    outvals = {}
-    # dict containing lists of values to output: outvals[energy][block][L]
 
-    blocks = []  # tuples of sites (with poscar elements) and elements
+    ###############################################
+    #                 Settings                    #
+    ###############################################
+
+    # l_max always set to 18 (not expensive)
+    l_max = 18
+
+    additional_layers = 5  # variable ?
+
+    input_file_name = "EEASISSS-input.txt"
+    log_filename = "EEASISSS-log.txt"  # log file
+
+    # subdirectory with phaseshifts
+    ps_outdir = 'PS_out'
+    remove_outdir = True
+
+    # Energy grid paramenters
+    E2 = round(float(rp.THEO_ENERGIES[1]) + 20, 2)  # add 20 eV to energy range
+    Estep = round(float(rp.THEO_ENERGIES[2]), 2)
+
+    ###############################################
+    #                 Start code                  #
+    ###############################################
+
+    # Take atoms from slab; build supercell matching the approximate mixed element concentrations; order into atom_types
+    atom_types, nsl, uct = make_atom_types(rp, sl,
+                                           additional_layers)  # uct is unit cell vectors, nsl is slab with added bulk
+
+    atom_pos_block, mt_params_block = make_atoms_input_blocks(atom_types, additional_layers)
+
+    # The unction below takes care of formatting the input so it can be used with eeasisss
+    # calls function to format and organize atoms
+    input_file_txt = format_eeasisss_input(atom_types, uct, atom_pos_block, mt_params_block, l_max, E2, Estep, rp)
+
+    # Write input file
+    try:
+        with open(input_file_name, 'w') as wf:
+            wf.write(input_file_txt)
+    except Exception:
+        logger.error("Phaseshift data generation: Failed to write "
+                     + input_file_name + ". Proceeding with execution...")
+
+    ###############################################
+    # Call EEASISSS with input file
+    ###############################################
+
+    psgensource = os.path.join('tensorleed', 'eeasisss_new', 'eeasisss')
+    psgensource = os.path.join(rp.sourcedir, psgensource) # otherwise the location would not be known
+    atlib_dir = os.path.join('tensorleed', 'eeasisss_new', 'atlib/') # atom density files, by Sernelius
+    atlib_dir = os.path.join(rp.sourcedir, atlib_dir)
+    outdir_path = os.path.join(".",ps_outdir+"/")
+    # create directory for individual phaseshift files if not yet present
+    os.makedirs(outdir_path, exist_ok=True)
+
+    # execution of EEASISSS requires the executable eeasisss to be copied to work directory
+    eeasisss_exec_path = os.path.join('tensorleed', 'eeasisss_new', 'eeasisss')
+    eeasisss_exec_path = os.path.join(rp.sourcedir, eeasisss_exec_path)
+    try:
+        shutil.copy2(eeasisss_exec_path, ".")
+    except Exception:
+        logger.error("Could not copy file eeasisss required by EEASISSS. Phaseshift generation will fail if not present.")
+        rp.setHaltinglevel(2)
+
+    # We are now ready to call EEASISS
+    psgencommand = [psgensource, '-i', input_file_name, '-l', log_filename, '-a', atlib_dir, '-o', outdir_path]
+    logger.debug("Now calling EEASISSS...")
+    try:
+        complete = subprocess.run(psgencommand, capture_output=True, text=True)  # returns Subprocess.complete instance
+        complete.check_returncode()  # If returncode is non-zero, raise a CalledProcessError. -> except & finally
+        logger.debug("EEASISSS execution finished without error. See EEASISSS-log.txt") # -> only if returncode == 0
+    except Exception:  # can subprocess even fail?
+        logger.error("Error during EEASISSS execution.")
+        raise RuntimeError("Subprocess EEASISSS failed")
+    finally:
+        if complete.stdout != "":
+            logger.debug("EEASISSS stdout:\n" + str(complete.stdout))
+        if complete.stderr != "":
+            logger.error("EEASISSS stderr:\n" + str(complete.stderr)) # Put error from Fortran into log!
+
+    #when done, remove eeasisss executable from work directory again:
+    try:
+        os.remove('eeasisss')
+    except Exception:
+        logger.warning("Could not remove eeasisss executable from work directory.") # Not a big deal if this happens.
+
+    # Now the results of the phaseshift calculation are read out and formatted for further processing
+    firstline, phaseshifts = convert_eeasisss_output(sl, rp, atom_types, l_max, E2, Estep, ps_outdir)
+
+    # Finish up by moving relevant files to work directory and then removing the out_dir
+    move_EEASISSS_files(ps_outdir, log_filename, remove_outdir, Vxc0_files = ['Vxc0Einc', 'Vxc0EincAprx', 'Vxc0EincAprx_v0coef'])
+
+    return (firstline, phaseshifts)
+
+
+def make_atom_types(rp, sl, additional_layers):
+    """Takes slab object and performs various manipulations to produce and sort into atom types.
+    To satisfy element mixing, a supercell is created, where sites are occupied roughly matching the expected element
+    ratios. The atoms from this extended cell are sorted by site, element bulk layer (if applicable).
+    A number of additional bulk layers are added below the surface cell for phaseshift generation. These will be given
+    converging muffin tin boundary radii, to fulfill a theoretical requirement."""
+
+    # sl = original slab, nsl = extended
+
+    trial_slab = copy.deepcopy(sl)
+    _, added_bulk = trial_slab.addBulkLayers(rp, n=1)
+    number_of_atoms_in_bulk_layer = len(added_bulk)
+    extended_cell, new_bulk_atoms = sl.addBulkLayers(rp, n=additional_layers)
+    extended_cell.projectCToZ() # project C to Z for phaseshifts only
+    extended_cell.collapseCartesianCoordinates()
+    uct = extended_cell.ucell.transpose() # unit cell vectors in matrix
+    nsl = extended_cell
+
+    # lowest z position from original slab: (anything below is new bulk) !!! LEED coordinates
+    max_z_sl = max([atom.cartpos[2] for atom in sl.atlist])
+
+    blocks = []
     #        (same as POSCAR if no ELEMENT_MIX, ELEMENT_MIX elements if not)
     for site in nsl.sitelist:
         if site.el in rp.ELEMENT_MIX:
@@ -447,8 +566,7 @@ def runPhaseshiftGen(sl, rp, psgensource=os.path.join('tensorleed', 'eeasisss_ne
                 blocks.append((site, el))
         else:
             blocks.append((site, site.el))
-    scsize = 1 # Super cell size
-
+    scsize = 1  # Super cell size
     if len(rp.ELEMENT_MIX) > 0:
         minnum = -1
         for (site, el) in [(site, el) for (site, el) in blocks if site.el
@@ -485,13 +603,13 @@ def runPhaseshiftGen(sl, rp, psgensource=os.path.join('tensorleed', 'eeasisss_ne
                 minsize = max(minsize, int(np.ceil(2 * els / ats)))
             scsize = max(minsize, int(maxats / len(nsl.atlist)))
 
-    subatlists = {}  # atlist per block tuple
+
     if scsize > 1:  # construct supercell to get enough atoms
         xsize = int(np.ceil(np.sqrt(scsize)))  # if scsize is not prime, try
         while scsize % xsize != 0:  # making it close to square
             xsize += 1
         ysize = int(scsize / xsize)
-        cpatlist = nsl.atlist[:]
+        cpatlist = nsl.atlist[:]  # seems to be deep copy even though not explicit
         for at in cpatlist:
             for i in range(0, xsize):
                 for j in range(0, ysize):
@@ -505,6 +623,22 @@ def runPhaseshiftGen(sl, rp, psgensource=os.path.join('tensorleed', 'eeasisss_ne
                            nsl.ucell)
         nsl.getFractionalCoordinates()
 
+    # Write new unit cell vectors; to be used for input
+    uct = nsl.ucell.transpose()
+
+    nsl.getCartesianCoordinates()
+    # Cell is now fully expanded and has right size
+
+    # Generate dict with nearest neighbour distances, used to determine MT radii !!
+    # Also used as atom list instead of nsl.atlist
+    NN_dict = nsl.getNearestNeigbours()
+    nsl.getCartesianCoordinates()
+
+    # Here we introduce the atom_types dict, which will be very important going forward
+    atom_types = {}
+    atom_types_in_bulk = {}  # bulk layers added into this dict for now, will be combined later
+
+    # Go through sites, decide if element mix is necessary. If so, take care of it
     for site in nsl.sitelist:
         if site.el in rp.ELEMENT_MIX:
             occdict = {}
@@ -514,98 +648,78 @@ def runPhaseshiftGen(sl, rp, psgensource=os.path.join('tensorleed', 'eeasisss_ne
             # sort by occupancy values
             occdict = dict(sorted(occdict.items(),
                                   key=lambda kv: (kv[1], kv[0])))
-            al = [at for at in nsl.atlist if at.site == site]
+            al = [atom for atom in NN_dict.keys() if atom.site == site]
             totats = len(al)
             for el in occdict:
-                subatlists[(site, el)] = []
                 reqats = int(np.ceil(totats * site.occ[el]))
                 reqats = max(2, reqats)
                 while reqats > 0 and len(al) > 0:
-                    at = random.choice(al)
-                    subatlists[(site, el)].append(at)
-                    al.remove(at)
+                    atom = random.choice(al)
+                    new_bulk = True if atom.cartpos[2] > max_z_sl else False
+                    NN_dist = NN_dict[at]
+                    if not new_bulk:
+                        if (site, el, new_bulk) not in atom_types.keys():
+                            atom_types[(site, el, new_bulk)] = tl.classes.sitetype.Atom_type(el, str(site),
+                                                                                             new_bulk)
+                        atom_types[(site, el, new_bulk)].add_atom(atom, NN_dist)
+                    else:
+                        if (site, el, new_bulk) not in atom_types_in_bulk.keys():
+                            atom_types_in_bulk[(site, el, new_bulk)] = tl.classes.sitetype.Atom_type(el, str(site),
+                                                                                                     new_bulk)
+                        atom_types_in_bulk[(site, el, new_bulk)].add_atom(atom, NN_dist)
+                    al.remove(atom)
                     reqats -= 1
             if len(al) > 0:  # should never happen
                 logger.warning("Error in PHASESHIFTS file "
                                "generation: Not all atoms were distributed!")
         else:
-            subatlists[(site, site.el)] = [at for at in nsl.atlist
-                                           if at.site == site]
-    blocks = [(site, el) for (site, el) in blocks
-              if len(subatlists[(site, el)]) > 0]
-
-    ###########
-    # subdirecory with phaseshifts
-    ps_outdir = 'PS_out'
-
-    # Function below takes care of formatting the input so it can be used with eeasisss
-    # calls function to format and organize atoms
-    atom_types, input_file_txt, lmax, E2, Estep = format_eeasisss_input(nsl, newbulkats, rp)
-
-    # Write input file
-    input_file_name = "EEASISSS-input.txt" # hardcoded, change?
-    try:
-        with open(input_file_name, 'w') as wf:
-            wf.write(input_file_txt)
-    except Exception:
-        logger.error("Phaseshift data generation: Failed to write "
-                     + input_file_name + ". Proceeding with execution...")
-
-    #################
-    # Call EEASISSS with input file
-    #################
-    log_filename = "EEASISSS-log.txt" # log file
-    psgensource = os.path.join('tensorleed', 'eeasisss_new', 'eeasisss')
-    psgensource = os.path.join(rp.sourcedir, psgensource) # otherwise the location would not be known
-    atlib_dir = os.path.join('tensorleed', 'eeasisss_new', 'atlib/') # atom density files, by Sernelius
-    atlib_dir = os.path.join(rp.sourcedir, atlib_dir)
-    outdir_path = os.path.join(".",ps_outdir+"/")
-    # create directory for individual phaseshift files if not yet present
-    os.makedirs(outdir_path, exist_ok=True)
-
-    # execution of EEASISSS requires the executable eeas to be in the work directory
-    # (a shell script is created and executes eeas from the work directory, which is hardcoded)
-    # -> copy eeas to work directory beforehand and remove it afterwards
-    eeasisss_exec_path = os.path.join('tensorleed', 'eeasisss_new', 'eeasisss')
-    eeasisss_exec_path = os.path.join(rp.sourcedir, eeasisss_exec_path)
-    try:
-        shutil.copy2(eeasisss_exec_path, ".")
-    except Exception:
-        logger.error("Could not copy file eeas required by EEASISSS. Phaseshift generation will fail if not present.")
-        rp.setHaltinglevel(2)
-
-    # We are now ready to call EEASISS
-    psgencommand = [psgensource, '-i', input_file_name, '-l', log_filename, '-a', atlib_dir, '-o', outdir_path]
-    logger.debug("Now calling EEASISSS...")
-    try:
-        complete = subprocess.run(psgencommand, capture_output=True, text=True)  # returns Subprocess.complete instance
-        complete.check_returncode()  # If returncode is non-zero, raise a CalledProcessError. -> except & finally
-        logger.debug("EEASISSS execution finished without error. See EEASISSS-log.txt") # -> only if returncode == 0
-    except Exception:  # can subprocess even fail?
-        logger.error("Error during EEASISSS execution.")
-        raise RuntimeError("Subprocess EEASISSS failed")
-    finally:
-        if complete.stdout != "":
-            logger.debug("EEASISSS stdout:\n" + str(complete.stdout))
-        if complete.stderr != "":
-            logger.error("EEASISSS stderr:\n" + str(complete.stderr)) # Put error from Fortran into log!
-
-    #when done, remove eeas executable from work directory again:
-    try:
-        os.remove('eeasisss')
-    except Exception:
-        logger.warning("Could not remove eeasisss executable from work directory.") # Not a big deal if this happens.
-
-    # Now the results of the phaseshift calculation are read out and formatted for further processing
-    firstline, phaseshifts = convert_eeasisss_output(sl, rp, atom_types, lmax, E2, Estep, ps_outdir)
-
-    # Finish up by moving relevant files to work directory and then removing the out_dir
-    move_EEASISSS_files(ps_outdir, log_filename, Vxc0_files = ['Vxc0Einc', 'Vxc0EincAprx', 'Vxc0EincAprx_v0coef'])
-
-    return (firstline, phaseshifts)
+            for atom in NN_dict.keys():
+                if atom.site == site:
+                    new_bulk = True if atom.cartpos[2] > max_z_sl else False
+                    NN_dist = NN_dict[atom]
+                    if not new_bulk:
+                        if (atom.site, atom.el, new_bulk) not in atom_types.keys():
+                            atom_types[(atom.site, atom.el, new_bulk)] = tl.classes.sitetype.Atom_type(atom.el,
+                                                                                                       str(atom.site),
+                                                                                                       new_bulk)
+                        atom_types[(atom.site, atom.el, new_bulk)].add_atom(atom, NN_dist)
+                    else:
+                        if (atom.site, atom.el, new_bulk) not in atom_types_in_bulk.keys():
+                            atom_types_in_bulk[(atom.site, atom.el, new_bulk)] = tl.classes.sitetype.Atom_type(atom.el,
+                                                                                                               str(atom.site),
+                                                                                                               new_bulk)
+                        atom_types_in_bulk[(atom.site, atom.el, new_bulk)].add_atom(atom, NN_dist)
 
 
-def format_eeasisss_input(nsl, newbulkats, rp):
+    # Now simplify by remapping atom_types to a new dict with unique integer ID...
+    re_map = {}
+    for type_id, old_ref in enumerate(atom_types.keys(),
+                                      1):  # old_ref is (sublayer_id, atom.site, atom.el, new_bulk)
+        re_map[old_ref] = type_id
+    atom_types = {re_map[id]: atom_types[id] for id in re_map}  # list comprehension magic
+
+
+    types_to_add = {} # bulk layers (by type) to be added to atom_types
+    for (site, el, new_bulk) in atom_types_in_bulk:
+        for atom in atom_types_in_bulk[(site, el, new_bulk)].atoms:
+            NN_dist = atom_types_in_bulk[(site, el, new_bulk)].smallest_NN_dist
+            layer = estimate_bulk_layer(atom, nsl, max_z_sl, additional_layers)
+            if (site, el, layer) not in types_to_add.keys():
+                types_to_add[(site, el, layer)] = tl.classes.sitetype.Atom_type(el, str(site), new_bulk, layer)
+            types_to_add[(site, el, layer)].add_atom(atom, NN_dist)
+
+    # Finally, add the new bulk to atom_types
+    for i in range(additional_layers+1):
+        for key in types_to_add.keys():
+            if i == key[2]:
+                type_id += 1
+                atom_types[type_id] = types_to_add[key]
+            else:
+                continue
+    return atom_types, nsl, uct
+
+
+def format_eeasisss_input(atom_types, uct, atom_pos_block, mt_block, l_max, E2, Estep, rp):
     """
     Produces the input file for EEASISSS (version from 2021).
     """
@@ -622,10 +736,10 @@ def format_eeasisss_input(nsl, newbulkats, rp):
     #######
     input_file_uc_block = ""  # unit cell block to be written into input file
     # Unit of length
-    input_file_length_line = '1.889727\t!UnitOfLength conversion to Bohr radii\n'  # EEAS converts to Bohr radii internally
+    input_file_length_line = '1.889727\t!UnitOfLength conversion to Bohr radii\n'  # EEAS converts to Bohr radii internally, conversion factor bohr-Angstrom
     # and thus needs to be given a conversion factor
     # below adapted from old code
-    uct = nsl.ucell.transpose()
+
     for i in range(0, 3):
         ol = ''
         for j in range(0, 3):
@@ -637,22 +751,17 @@ def format_eeasisss_input(nsl, newbulkats, rp):
     ############################
     # Organize atoms and create input block with atom positions
     ############################
-    atom_types = organize_atoms_by_types(newbulkats, nsl)
-    input_file_atom_pos_block, input_file_mt_params_block = make_atoms_input_blocks(atom_types, uct)
+
+
 
     ##############################
     # Options block
     ##############################
 
-    # l_max always set to 18 (not expensive)
-    l_max = 18
-
     # energy range
-    E2 = round(float(rp.THEO_ENERGIES[1]) + 20, 2) # add 20 eV to energy range
     E2_str = str(E2)
-    Estep = round(float(rp.THEO_ENERGIES[2]), 2)
     Estep_str = str(Estep)
-    n_cores_str = str(rp.N_CORES)  # number of threads
+
 
     input_options = ""
     input_options += "OPTIONS:" + '\n'
@@ -662,14 +771,14 @@ def format_eeasisss_input(nsl, newbulkats, rp):
     input_options += "'n' !'yes'/'no': Pot print?\"" + '\n'
     input_options += "'n' !'yes'/'no': WaveFunction print?\"" + '\n'
     input_options += " 000.00  " + E2_str + "    " + Estep_str + " !energy interval E1,E2,Estep" + '\n'
-    input_options += "   " + n_cores_str + "   " + str(l_max) + "                !nthread,lmax" + '\n'
+    input_options += "   " + str(1) + "   " + str(l_max) + "                !nthread,lmax" + '\n' # nthread set to 1 since multithreading is disabled for EEASISSS anyways
     input_options += "  1.d-06 1.d-09         !relerr abserr" + '\n'    # I hope these are reasonable values?
     input_options += " DIFFERENTIAL EVOLUTION METHOD" + '\n'
     # TODO check params below
     input_options += "    0.80   0.50         !F_XC,CR_XC" + '\n'       # does this need changing?
     input_options += "    0   1   0           !method" + '\n'           # what does this actually do?
     input_options += "    2   0.800000        !strategy,F_CR" + '\n'
-    input_options += "  8000    0             !itermax"                 # fix itermax and other params?
+    input_options += " 10000    0             !itermax"                 # fix itermax and other params?
 
     ##############################
     # Assemble input file
@@ -679,14 +788,15 @@ def format_eeasisss_input(nsl, newbulkats, rp):
     input_file_txt += input_file_length_line
     input_file_txt += input_file_uc_block
     input_file_txt += str(len(atom_types)) + '          ! # inequivalent atoms\n'
-    input_file_txt += input_file_atom_pos_block
-    input_file_txt += input_file_mt_params_block
+    input_file_txt += atom_pos_block
+    input_file_txt += mt_block
     input_file_txt += input_options
 
-    return atom_types, input_file_txt, l_max, E2, Estep
+    return input_file_txt
 
 
-def organize_atoms_by_types(newbulkats, nsl):
+# TODO depreacted recently, replaced by make_atom_types
+def organize_atoms_by_types(newbulkats, nsl, sl, rp, additional_layers):
     """
     Takes atoms from the slab (nsl) and groups them for the EEASISSS input. Atoms need to be organized into groups of
     same element and site. Note that a site could have mixed occupation.
@@ -694,13 +804,19 @@ def organize_atoms_by_types(newbulkats, nsl):
     the input blocks containing the atom positions are produced here.
     """
     atom_types = {} # dict will contain Atom types
-    for atom in nsl.atlist:
-        new_bulk = True if atom in newbulkats else False
-        if (atom.site, atom.el, new_bulk) not in atom_types.keys():
-            atom_types[(atom.site, atom.el, new_bulk)] = tl.classes.sitetype.Atom_type(atom.el, str(atom.site), new_bulk)
-            atom_types[(atom.site, atom.el, new_bulk)].add_atom(atom)
+
+    number_of_atoms_in_bulk_layer = len(newbulkats)
+    extended_slab, new_bulk_atoms = sl.addBulkLayers(rp, additional_layers)
+    for atom in extended_slab.atlist:
+        if atom not in new_bulk_atoms:
+            new_bulk = False
+            if (atom.site, atom.el, new_bulk) not in atom_types.keys():
+                atom_types[(atom.site, atom.el, new_bulk)] = tl.classes.sitetype.Atom_type(atom.el, str(atom.site), new_bulk)
+                atom_types[(atom.site, atom.el, new_bulk)].add_atom(atom)
+            else:
+                atom_types[(atom.site, atom.el, new_bulk)].add_atom(atom)
         else:
-            atom_types[(atom.site, atom.el, new_bulk)].add_atom(atom)
+            continue
 
     # Now simplify by remapping atom_types to a new dict with unique integer ID...
     re_map = {}
@@ -709,9 +825,36 @@ def organize_atoms_by_types(newbulkats, nsl):
         re_map[old_ref] = type_id
     atom_types = {re_map[id]: atom_types[id] for id in re_map}  # list comprehension magic
 
+    # now add a couple of bulk layers to input
+    for i in range(additional_layers):
+        atoms_add = new_bulk_atoms[(i+0)*number_of_atoms_in_bulk_layer:(i+1)*number_of_atoms_in_bulk_layer]
+        types_to_add = {}
+        new_bulk = True
+        for atom in atoms_add:
+            if (atom.site, atom.el) not in types_to_add.keys():
+                types_to_add[(atom.site, atom.el)] = tl.classes.sitetype.Atom_type(atom.el, str(atom.site), new_bulk)
+                types_to_add[(atom.site, atom.el)].add_atom(atom)
+            else:
+                types_to_add[(atom.site, atom.el)].add_atom(atom)
+        for key in types_to_add.keys():
+            type_id += 1
+            atom_types[type_id] = types_to_add[key]
+
     return atom_types
 
 
+def estimate_bulk_layer(atom, nsl, max_z_sl, additional_layers):
+    """Returns the bulk layer the atom belongs to based on the z coordinate."""
+    max_z_nsl = max([atom.cartpos[2] for atom in nsl.atlist])
+    bulk_layer_thickness = (max_z_nsl - max_z_sl) / additional_layers
+    if atom.cartpos[2] < max_z_sl:
+        layer = None
+    else:
+        layer = int(np.ceil((atom.cartpos[2] - max_z_sl) / bulk_layer_thickness))
+    return layer
+
+
+# TODO was deprecated for a while
 def organize_atoms_by_sublayers(newbulkats, nsl):
     """
     Unused and outdated.
@@ -742,14 +885,45 @@ def organize_atoms_by_sublayers(newbulkats, nsl):
     return atom_types
 
 
-def make_atoms_input_blocks(atom_types, uct):
+def make_atoms_input_blocks(atom_types, bulk_layers):
+    # Initialize
     input_file_atom_pos_block = ""
     input_file_mt_params_block = ""
+
     for type_id in atom_types.keys():  # should be ordered
+
         atom_type = atom_types[type_id]
+
+        # determine rmtmin & rmtmax
+        NN_dist = atom_type.get_type_NN_dist()
+        if NN_dist > 1e9:
+
+            raise RuntimeError("Nearest Neighbour assignment failed for atom type " + str(atom_type.label))
+        layer = atom_type.get_layer()
+        # If atom in new bulk, a layer should have been specified
+        if atom_type.new_bulk and atom_type.get_layer() == None:
+            raise ValueError("Bulk atom type has no layer specified.")
+
+        if not atom_type.new_bulk:
+            rmtmin = 0.3*NN_dist
+            rmtmax = 0.9*NN_dist
+        else:
+            # factor that starts small and approaches 1 the closer it is to the last layer
+            layer_factor = layer / bulk_layers
+            rmtmin = 0.3*NN_dist*(1-layer_factor) + 0.501*NN_dist*layer_factor
+            rmtmax = 0.9*NN_dist*(1-layer_factor) + 0.499*NN_dist*layer_factor
+
+        # Very important – convert from Angstrom to Bohr Units!
+        rmtmin *= angst_to_bohr
+        rmtmax *= angst_to_bohr
+
+        overlap_s = atom_type.S
+        element = atom_type.el
+
+
         type_header = '\t'.join([str(len(atom_type.atoms)), str(atom_type.get_atomic_number()), str(type_id),
-                                 str(type_id), '{: .4f}'.format(atom_type.rmtmin),
-                                 '{: .4f}'.format(atom_type.rmtmax), '{: .4f}'.format(atom_type.S), atom_type.el])
+                                 str(type_id), '{: .4f}'.format(rmtmin),
+                                 '{: .4f}'.format(rmtmax), '{: .4f}'.format(overlap_s), element])
         if atom_type.new_bulk == True:  # for easy visibility
             type_header += '\t !atom in new bulk'
         input_file_atom_pos_block += type_header + '\n'
@@ -764,8 +938,8 @@ def make_atoms_input_blocks(atom_types, uct):
             atom_coords_table += '\n'
         input_file_atom_pos_block += atom_coords_table
 
-        input_file_mt_params_block += ' '.join([str(type_id), '{: .4f}'.format(atom_type.rmtmin),
-                                                '{: .4f}'.format(atom_type.rmtmax), '{: .4f}'.format(atom_type.S),
+        input_file_mt_params_block += ' '.join([str(type_id), '{: .4f}'.format(rmtmin),
+                                                '{: .4f}'.format(rmtmax), '{: .4f}'.format(atom_type.S),
                                                 '{: .4f}'.format(atom_type.fxc), atom_type.el])
         if type_id == 1:  # only in first line
             input_file_mt_params_block += '\t!iA rmtmin rmtmax rmtS fxc elem'
@@ -904,7 +1078,7 @@ def read_V0_coefficients(coef_file_path='PS_out/Vxc0EincAprx_v0coef'):
     return c0,c1,c2,c3
 
 
-def move_EEASISSS_files(ps_outdir, log_filename, Vxc0_files = ['Vxc0Einc', 'Vxc0EincAprx', 'Vxc0EincAprx_v0coef']):
+def move_EEASISSS_files(ps_outdir, log_filename, remove_outdir, Vxc0_files = ['Vxc0Einc', 'Vxc0EincAprx', 'Vxc0EincAprx_v0coef']):
     """
     Moves files from PS_out folder to work folder and then removes PS_out.
     """
@@ -916,7 +1090,8 @@ def move_EEASISSS_files(ps_outdir, log_filename, Vxc0_files = ['Vxc0Einc', 'Vxc0
         shutil.move(os.path.join(outdir_path, file), os.path.join(".", file))
     # only remaining files are individual phaseshift files; can be discarded since they are combines in PHASESHIFTS
     # remove PS_out folder with contents
-    shutil.rmtree(outdir_path)
+    if remove_outdir:
+        shutil.rmtree(outdir_path)
 
     # remove files ulog*, udat* and uinp* created by eeasisss programme
     files_in_directory = os.listdir(".")
@@ -924,3 +1099,30 @@ def move_EEASISSS_files(ps_outdir, log_filename, Vxc0_files = ['Vxc0Einc', 'Vxc0
                                                      or file.startswith('udat') or file.startswith('uinp'))]
     for file in filtered_files:
         os.remove(os.path.join(".", file))
+
+
+def count_atoms(types_dict):
+    """Counts number of atoms in atom_types dict. Used for debugging."""
+    n = 0
+    for key in types_dict.keys():
+        n += len(types_dict[key].atoms)
+
+    return n
+
+
+def compare_atoms(types_dict1, types_dict2):
+    """Compares two atom type dicts and returns atoms unique to each. Used for debugging."""
+    atoms_list1 = []
+    for key in types_dict1.keys():
+        for atom in types_dict1[key].atoms:
+            atoms_list1.append(atom)
+
+    atoms_list2 = []
+    for key in types_dict2.keys():
+        for atom in types_dict2[key].atoms:
+            atoms_list2.append(atom)
+
+    only1 = [atom for atom in atoms_list1 if atom not in atoms_list2]
+    only2 = [atom for atom in atoms_list2 if atom not in atoms_list1]
+
+    return only1, only2
