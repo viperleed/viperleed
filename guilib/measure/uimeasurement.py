@@ -27,6 +27,10 @@ from viperleed.guilib.measure.hardwarebase import class_from_name
 from viperleed.guilib.basewidgets import MeasurementFigureCanvas as Figure
 from viperleed.guilib.basewidgets import QDoubleValidatorNoDot
 
+from viperleed.guilib.measure.camera.abc import CameraABC
+from viperleed.guilib.measure.controller.abc import ControllerABC
+from viperleed.guilib.measure.measurement.abc import MeasurementABC
+
 TITLE = 'Measurement UI'
 
 
@@ -63,6 +67,11 @@ class Measure(gl.ViPErLEEDPluginBase):
 
         self.__compose()
         self.do_this = None
+        self.error_occurred.connect(self.__on_error_occurred)
+        self.__errors = []
+        self.__error_report_timer = qtc.QTimer(parent=self)
+        self.__error_report_timer.setSingleShot(True)
+        self.__error_report_timer.timeout.connect(self.__report_errors)
 
     def __compose(self):
         """Prepare menu."""
@@ -163,13 +172,14 @@ class Measure(gl.ViPErLEEDPluginBase):
         self._ctrls['abort'].clicked.connect(self.do_this.abort)
         self._ctrls['set_energy'].clicked.connect(self.__on_set_energy)
         self.do_this.error_occurred.connect(self.error_occurred)
+        for controller in self.do_this.controllers:
+            controller.error_occurred.connect(self.error_occurred)
+        for camera in self.do_this.cameras:
+            camera.error_occurred.connect(self.error_occurred)
         self.do_this.finished.connect(self.__on_finished)
         self.do_this.finished.connect(self.__on_stuff_done)
         self.do_this.prepared.connect(self.__on_controllers_prepared)
-        self.do_this.primary_controller.error_occurred.connect(self.error_occurred)
-        for controller in self.do_this.secondary_controllers:
-            if controller:
-                controller.error_occurred.connect(self.error_occurred)
+        self._ctrls['abort'].setEnabled(True)                                   #tmp
 
         self.do_stuff()
 
@@ -191,3 +201,33 @@ class Measure(gl.ViPErLEEDPluginBase):
         """Set energy on primary controller."""
         energy = float(self._ctrls['select'].currentText())
         self.do_this.set_LEED_energy((energy,0))
+
+    def __on_error_occurred(self, error_info):
+        """React to an error."""
+        sender = self.sender()
+        self.__errors.append((sender, *error_info))
+        self.__error_report_timer.start(50)
+
+    def __report_errors(self):
+        if not self.__errors:
+            return
+
+        err_text = []
+        for sender, error_code, error_message in self.__errors:
+            if isinstance(sender, CameraABC):
+                source = f"camera {sender.name}"
+            elif isinstance(sender, ControllerABC):
+                source = f"controller at {sender.serial.port_name}"
+            elif isinstance(sender, MeasurementABC):
+                source = f"measurement {sender.__class__.__name__}"
+            else:
+                source = "system or unknown"
+            
+            err_text.append(f"ERROR from {source}\n  "
+                            f"error code: {error_code}"
+                            f"\n{error_message}")
+        
+        _ = qtw.QMessageBox.critical(self, "Error", 
+                                     "\n\n".join(err_text),
+                                     qtw.QMessageBox.Ok)
+        self.__errors = []
