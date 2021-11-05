@@ -88,23 +88,24 @@ class IVVideo(MeasurementABC):
         """
         super().abort()
 
-    def connect_cameras(self, cameras=None):
+    def connect_cameras(self):
         """Connect necessary camera signals."""
-        if not cameras:
-            cameras = self.cameras
-        for camera in cameras:
+        for camera in self.cameras:
             camera.camera_busy.connect(self.receive_from_camera,
                                        type=qtc.Qt.UniqueConnection)
             self.camera_timer.timeout.connect(camera.trigger_now,
-                                              type=qtc.Qt.UniqueConnection)
-        # camera.disconnect does not need to be hooked up to the
-        # abort_action signal as it is called in the disconnecting
-        # of the camera signals anyway.
+                                          type=qtc.Qt.UniqueConnection)
 
     def disconnect_cameras(self):
         """Disconnect necessary camera signals."""
         for camera in self.cameras:
             camera.disconnect()
-            camera.camera_busy.disconnect(self.receive_from_camera)
-            self.camera_timer.timeout.disconnect(camera.trigger_now)
+            try:
+                camera.camera_busy.disconnect(self.receive_from_camera)
+            except TypeError:
+                pass
+            try:
+                self.camera_timer.timeout.disconnect(camera.trigger_now)
+            except TypeError:
+                pass
 

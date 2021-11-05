@@ -259,11 +259,12 @@ class ViPErinoController(MeasureControllerABC):
         -------
         None.
         """
-        if (not self.begin_prepare_todos['get_hardware']
-                and self.begin_prepare_todos['calibrate_adcs']):
+        if isinstance(receive, dict):
+            # Got hardware info
             self.__hardware = receive
             return
 
+        # Otherwise it is data
         for i, measurement in enumerate(self.__adc_measurement_types):
             if measurement is not None:
                 self.measurements[measurement] = receive[i]

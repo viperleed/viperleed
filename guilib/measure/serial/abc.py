@@ -17,6 +17,7 @@ Graphical User Interface.
 """
 # Python standard modules
 from abc import abstractmethod
+from time import sleep
 
 # Non-standard modules
 from PyQt5 import (QtCore as qtc,
@@ -749,19 +750,19 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
                 encoded[:0] = self.msg_markers['START']
             encoded.extend(self.msg_markers['END'])
             self.__port.write(encoded)
+            # Wait a vey tiny bit to prevent writing to the port
+            # while it is still writing the previous message
+            sleep(0.01)
 
     def serial_connect(self, *__args):
         """Connect to currently selected port."""
         if not self.__port.open(self.__port.ReadWrite):
             emit_error(self, ExtraSerialErrors.PORT_NOT_OPEN)
-            print('Not open', flush=True)  # TEMP
             print(self.port_name)
             self.print_port_config()
             return
 
-        self.print_port_config()  # TEMP
         self.__set_up_serial_port()
-        self.print_port_config()  # TEMP
 
         self.__port.readyRead.connect(self.__on_bytes_ready_to_read)
         self.__port.errorOccurred.connect(self.__on_serial_error)
@@ -835,7 +836,6 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             return
 
         msg = bytes(self.__port.readAll())
-
         if self.msg_markers['END'] not in msg:
             # Only a fraction of a message has been read.
             self.__last_partial_message.extend(msg)

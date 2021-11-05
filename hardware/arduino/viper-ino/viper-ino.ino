@@ -127,6 +127,7 @@ void updateState() {
     if (data_received[0] != PC_CONFIGURATION 
         and data_received[0] != PC_RESET
         and data_received[0] != PC_STOP
+        and data_received[0] != PC_CHANGE_MEAS_MODE
         and hardwareNotKnown()) return;
     
     switch(data_received[0]){

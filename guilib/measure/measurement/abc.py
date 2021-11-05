@@ -105,6 +105,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         self.__primary_controller = None
         self.__secondary_controllers = []
         self.__cameras = []
+        self.__aborted = False
         self.counter = 0
         self.start_energy = 0
         self.thread = qtc.QThread()
@@ -237,7 +238,14 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             pass
         for camera in self.cameras:
             camera.process_info.base_path = path + 'tmp/' + camera.name
-            os.mkdir(camera.process_info.base_path)
+            try:
+                os.mkdir(camera.process_info.base_path)
+            except FileExistsError:
+            # Folder already exists.
+                pass
+
+        for device in (*self.controllers, *self.cameras):
+            device.error_occurred.connect(self.__on_hardware_error)
 
     settings = property(__get_settings, set_settings)
 
@@ -314,7 +322,10 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         finally:
             self.current_energy = 0
             # Set LEED energy to 0.
-            self.primary_controller.data_ready.disconnect()
+            try:
+                self.primary_controller.data_ready.disconnect()
+            except TypeError:
+                pass
             self.primary_controller.data_ready.connect(self.return_to_gui)
             self.disconnect_secondary_controllers()
             self.disconnect_cameras()
@@ -379,6 +390,9 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         -------
         None.
         """
+        if self.__aborted:
+            return
+        self.__aborted = True
         self.prepare_finalization()
 
     def connect_cameras(self):
@@ -414,95 +428,105 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
 
     def connect_primary_controller(self):
         """Connect signals of the primary controller."""
-
-        self.primary_controller.data_ready.connect(
-            self.receive_from_controller, type=qtc.Qt.UniqueConnection
-            )
-        self.abort_action.connect(
-            self.primary_controller.stop,
-            type=qtc.Qt.UniqueConnection
-            )
-        self.begin_preparation.connect(
-            self.primary_controller.trigger_begin_preparation,
-            type=qtc.Qt.UniqueConnection
-            )
-        self.continue_preparation.connect(
-            self.primary_controller.trigger_continue_preparation,
-            type=qtc.Qt.UniqueConnection
-            )
-        self.primary_controller.about_to_trigger.connect(
-            self.do_next_measurement, type=qtc.Qt.UniqueConnection
-            )
+        primary = self.primary_controller
+        primary.data_ready.connect(self.receive_from_controller,
+                                   type=qtc.Qt.UniqueConnection)
+        self.abort_action.connect(primary.stop, type=qtc.Qt.UniqueConnection)
+        self.begin_preparation.connect(primary.trigger_begin_preparation,
+                                       type=qtc.Qt.UniqueConnection)
+        self.continue_preparation.connect(primary.trigger_continue_preparation,
+                                          type=qtc.Qt.UniqueConnection)
+        primary.about_to_trigger.connect(self.do_next_measurement,
+                                         type=qtc.Qt.UniqueConnection)
 
     def disconnect_cameras(self):
         """Disconnect necessary camera signals."""
         for camera in self.cameras:
             camera.disconnect()
-            camera.camera_busy.disconnect(self.receive_from_camera)
-            self.ready_for_measurement.disconnect(camera.trigger_now)
+            try:
+                camera.camera_busy.disconnect(self.receive_from_camera)
+            except TypeError:
+                pass
+            try:
+                self.ready_for_measurement.disconnect(camera.trigger_now)
+            except TypeError:
+                pass
 
     def disconnect_secondary_controllers(self):
         """Disconnect necessary controller signals."""
         for controller in self.secondary_controllers:
             if not controller:
                 continue
-            controller.serial.serial_disconnect()
-            controller.data_ready.disconnect(self.receive_from_controller)
+            try:
+                controller.serial.serial_disconnect()
+            except TypeError:
+                pass
+            try:
+                controller.data_ready.disconnect(self.receive_from_controller)
+            except TypeError:
+                pass
             try:
                 self.ready_for_measurement.disconnect(controller.measure_now)
             except TypeError:
-                # controller was aborting instead of standard finalizing
                 pass
-            self.abort_action.disconnect(controller.stop)
-            self.begin_preparation.disconnect(
-                controller.trigger_begin_preparation
-                )
-            self.continue_preparation.disconnect(
-                controller.trigger_continue_preparation
-                )
+            try:
+                self.abort_action.disconnect(controller.stop)
+            except TypeError:
+                pass
+            try:
+                self.begin_preparation.disconnect(
+                    controller.trigger_begin_preparation
+                    )
+            except TypeError:
+                pass
+            try:
+                self.continue_preparation.disconnect(
+                    controller.trigger_continue_preparation
+                    )
+            except TypeError:
+                pass
             try:
                 controller.controller_busy.disconnect()
             except TypeError:
-                # controller_busy was not connected at the time
                 pass
 
     def disconnect_primary_controller(self):
         """Disconnect signals of the primary controller."""
-        if self.primary_controller is not None:
-            self.primary_controller.serial.serial_disconnect()
-            try:
-                self.primary_controller.data_ready.disconnect()
-            except TypeError:
-                # data_ready is already disconnected from all its slots
+        primary = self.primary_controller
+        if primary is None:
+            return
+        try:
+            primary.serial.serial_disconnect()
+        except TypeError:
                 pass
-            self.abort_action.disconnect(self.primary_controller.stop)
+        try:
+            primary.data_ready.disconnect()
+        except TypeError:
+            pass
+        try:
+            self.abort_action.disconnect(primary.stop)
+        except TypeError:
+                pass
+        try:
             self.begin_preparation.disconnect(
-                self.primary_controller.trigger_begin_preparation
+                primary.trigger_begin_preparation
                 )
+        except TypeError:
+                pass
+        try:
             self.continue_preparation.disconnect(
-                self.primary_controller.trigger_continue_preparation
+                primary.trigger_continue_preparation
                 )
-            self.primary_controller.about_to_trigger.disconnect()
-            try:
-                self.primary_controller.controller_busy.disconnect()
-            except TypeError:
-                    # controller_busy was not connected at the time
-                    pass
-
-    def prepare_cameras(self):
-        """Prepare cameras for a measurement.
-
-        Can be a no-op if the connected cameras do not need
-        to be prepared. Otherwise this function should do
-        everything needed to prepare the cameras for a full
-        measurement cycle.
-
-        Returns
-        -------
-        None.
-        """
-        return
-        # TODO: call it when controllers prepare, basic implementation?
+        except TypeError:
+                pass
+        try:
+            primary.about_to_trigger.disconnect()
+        except TypeError:
+                pass
+        try:
+            primary.controller_busy.disconnect()
+        except TypeError:
+                pass
 
     def switch_signals_for_preparation(self):
         """Switch signals for preparation.
@@ -578,6 +602,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             a tuple of energies and times with it.
 
         """
+        self.__aborted = False
         self.switch_signals_for_preparation()
         self.current_energy = self.start_energy
         self.begin_preparation.emit((self.start_energy,
@@ -701,7 +726,6 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             If the received measurement contains a label that is
             not specified in the data_points dictionary.
         """
-        # print(receive)
         for key in receive:
             if key not in self.data_points.keys():
                 emit_error(self, MeasurementErrors.INVALID_MEASUREMENT)
@@ -826,7 +850,6 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             [('camera_settings', 'class_name'),]
             )
         if invalid:
-            print('invalid')
             emit_error(self, MeasurementErrors.MISSING_CLASS_NAME,
                        ('camera_settings', 'class_name'))
             return
@@ -874,13 +897,20 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         for controller in self.secondary_controllers:
             if not controller:
                 continue
-            self.ready_for_measurement.disconnect(controller.measure_now)
+            try:
+                self.ready_for_measurement.disconnect(controller.measure_now)
+            except TypeError:
+                pass
         for controller in self.controllers:
             try:
                 controller.controller_busy.disconnect()
             except TypeError:
                 pass
+            controller.busy = True
             controller.controller_busy.connect(self.finalize,
                                                type=qtc.Qt.UniqueConnection)
-            controller.busy = True
         self.abort_action.emit()
+    
+    def __on_hardware_error(self, *_):
+        """Abort if a hardware error occurs."""
+        self.abort()

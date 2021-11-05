@@ -115,6 +115,9 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
         # a tuple containing the command and its associated data
         # and the timeout parameter.
         self.__unsent_messages = []
+        self.serial.error_occurred.connect(self.error_occurred)
+        self.serial.serial_busy.connect(self.send_unsent_messages,
+                                        type=qtc.Qt.UniqueConnection)
 
     def __get_busy(self):
         """Return whether the controller is busy."""
@@ -345,14 +348,13 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
         if serial_busy:
             return
         if self.__unsent_messages:
-            data = self.__unsent_messages.pop()
+            data = self.__unsent_messages.pop(0)
             self.serial.send_message(*data)
 
     def flush(self):
         """Clear unsent, set busy false and send abort"""
         self.__unsent_messages = []
         self.busy = False
-        self.abort_and_reset()
 
     @abstractmethod
     def abort_and_reset(self):
@@ -380,10 +382,13 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
         None.
         """
         try:
-            self.serial.serial_busy.connect(self.set_busy,
-                                            type=qtc.Qt.UniqueConnection)
+            self.serial.serial_busy.disconnect()
         except TypeError:
             pass
+        self.serial.serial_busy.connect(self.send_unsent_messages,
+                                        type=qtc.Qt.UniqueConnection)
+        self.serial.serial_busy.connect(self.set_busy,
+                                        type=qtc.Qt.UniqueConnection)
 
 
 class MeasureControllerABC(ControllerABC):
@@ -570,7 +575,8 @@ class MeasureControllerABC(ControllerABC):
             return
 
         self.serial.serial_busy.disconnect()
-        self.serial.serial_busy.connect(self.send_unsent_messages)
+        self.serial.serial_busy.connect(self.send_unsent_messages,
+                                        type=qtc.Qt.UniqueConnection)
         self.busy = False
 
     @abstractmethod
@@ -804,16 +810,3 @@ class MeasureControllerABC(ControllerABC):
                 pass
         if not continuous and in_finalization:
            self.serial.serial_busy.connect(self.set_busy)
-
-    @abstractmethod
-    def stop(self):
-        """Stop.
-
-        Stop whatever the controller is doing right now
-        and return to idle state.
-
-        Returns
-        -------
-        None.
-        """
-        super().stop()
