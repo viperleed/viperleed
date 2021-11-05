@@ -1,4 +1,16 @@
-  !=======================================================================
+!                                 Supplemental Material
+!
+!           Low-Energy Electron Diffraction With Energy Invariant Carrier Wave
+!                Wavenumber Modulated by Exchange-Correlation Interaction
+!
+!                John Rundgren,1, Wolfgang Moritz,2, and Bo E. Sernelius,3
+!
+!     1,Department of Physics, KTH Royal Institute of Technology, 10691 Stockholm, Sweden
+!      2,Department of Earth and Environmental Sciences, Ludwig-Maximilians-University,
+!                      Theresienstrasse 41, 80333 Munich, Germany
+!3,Department of Physics, Chemistry and Biology, Linköping University, 58183 Linköping, Sweden
+!
+  !=====================================================================
   !This program is free software under the terms of the GNU General Public
   !License as published by the Free Software Foundation.
   !Author: John O. Rundgren, jru@KTH.se ,

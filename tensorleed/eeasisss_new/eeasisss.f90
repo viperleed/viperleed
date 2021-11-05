@@ -402,7 +402,7 @@ close(19) ! AMI: Fortran peculiarity – re-opening file with same unit (here: o
  !neq(ir) =number of equivalent atoms of type ir,
  !nlat    =number of lattice points in unit cell,
  !z(ir)   =atomic number of type ir.
- read(5,*) nieq !
+ read(5,*) nieq
  !
  allocate(z(nieq),neq(nieq),dx(nieq),idZA(nieq),idElemA(nieq),nx(nieq), &
    rmin(nieq),rmax(nieq),ieq(nieq),rmtovl(nieq),xcfac(nieq), &
@@ -425,6 +425,7 @@ close(19) ! AMI: Fortran peculiarity – re-opening file with same unit (here: o
      nlat=nlat+1
      if(nlat>1000)then
        write(61,'(a)')'nlat>dimension 1000, stop'; stop
+         ! FK, AMI: this may be problematic at some point - think about increasing to 10k
      endif
      read(5,*) rk_tmp(1:3,nlat)
      rk_tmp(1:3,nlat)=rk_tmp(1:3,nlat)*UOL
