@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Created on Mon Aug 17 15:32:12 2020
-major rework Sep&Oct 2021
+major rework Sep-Nov 2021
 
 @author: Florian Kraushofer & Alexander M. Imre
 """
@@ -457,7 +457,7 @@ def runPhaseshiftGen(sl, rp, psgensource=os.path.join('tensorleed', 'eeasisss_ne
 
     # subdirectory with phaseshifts
     ps_outdir = 'PS_out'
-    remove_outdir = True
+    remove_outdir = False # INFO: useful for debugging
 
     # Energy grid paramenters
     E2 = round(float(rp.THEO_ENERGIES[1]) + 20, 2)  # add 20 eV to energy range
