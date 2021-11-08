@@ -89,6 +89,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
     plot_info['Isample'] = ['V', 'log']
     plot_info['temperature'] = ['°C', 'lin']
     plot_info['cold_junction'] = ['°C', 'lin']
+    plot_info['images'] = ['Number']
 
     _mandatory_settings = [
         ('devices', 'primary_controller'),
@@ -109,10 +110,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         self.counter = 0
         self.start_energy = 0
         self.thread = qtc.QThread()
-        # The reimplementation may introduce more/other keys.
-        self.data_points = defaultdict(list)
-        for key in self.plot_info:
-            self.data_points[key] = []
+        self.data_points = []
 
         self.__init_errors = []  # Report these with a little delay
         self.__init_err_timer = qtc.QTimer(self)
@@ -159,6 +157,11 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         """Return a tuple of all controllers."""
         controllers = (self.primary_controller, *self.secondary_controllers)
         return tuple(c for c in controllers if c)
+
+    @property
+    def devices(self):
+        """Return all controllers and cameras."""
+        return *self.controllers, *self.cameras
 
     def __get_settings(self):
         """Return the current settings for the measurement.
@@ -367,15 +370,15 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         for to_move in to_move_list:
             shutil.move(path + 'tmp/' + to_move, path + clock + to_move)
         csv_name = path + clock + 'measurement.csv'
-        length = len(self.data_points['nominal_energy'])
+        length = len(self.data_points)
         with open(csv_name, 'w', encoding='UTF8', newline='') as file_name:
             writer = csv.writer(file_name)
-            writer.writerow(self.data_points.keys())
+            writer.writerow(self.data_points[0].keys())
             for i in range(length-1):
                 values = []
-                for key in self.data_points.keys():
-                    if self.data_points[key]:
-                        values.append(self.data_points[key][i])
+                for key in self.data_points[i].keys():
+                    if self.data_points[i][key]:
+                        values.append(self.data_points[i][key])
                 writer.writerow(values)
         os.rmdir(path + 'tmp/')
 
@@ -424,6 +427,9 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
                                        type=qtc.Qt.UniqueConnection)
             self.ready_for_measurement.connect(camera.trigger_now,
                                                type=qtc.Qt.UniqueConnection)
+            self.begin_preparation.connect(camera.start,
+                                           type=qtc.Qt.UniqueConnection)                              
+                                               
         # camera.disconnect does not need to be hooked up to the
         # abort_action signal as it is called in the disconnecting
         # of the camera signals anyway.
@@ -471,6 +477,10 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
                 pass
             try:
                 self.ready_for_measurement.disconnect(camera.trigger_now)
+            except TypeError:
+                pass
+            try:
+                self.begin_preparation.disconnect(camera.start)
             except TypeError:
                 pass
 
@@ -629,10 +639,8 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         self.current_energy = self.start_energy
         self.begin_preparation.emit((self.start_energy,
                                      self.__long_settle_time))
-        for camera in self.cameras:
-            camera.start()
 
-    def continue_measurement_preparation(self, busy):
+    def continue_measurement_preparation(self, _):
         """Continue preparation for measurements.
 
         Prepare the controllers for a measurement which starts
@@ -659,12 +667,15 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             Starts the second part of the measurement
             preparation.
         """
-        if busy or any(controller.busy for controller in self.controllers):
+        if any(controller.busy for controller in self.controllers):
             return
         self.switch_signals_for_preparation()
         for controller in self.controllers:
             controller.controller_busy.connect(self.is_preparation_finished,
                                                type=qtc.Qt.UniqueConnection)
+        for camera in self.cameras:
+            camera.camera_busy.connect(self.is_preparation_finished,
+                                       type=qtc.Qt.UniqueConnection)
         self.continue_preparation.emit()
 
     def ready_for_next_measurement(self):
@@ -677,7 +688,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         -------
         None.
         """
-        if any(obj.busy for obj in (*self.controllers, *self.cameras)):
+        if any(device.busy for device in self.devices):
             return
         if self.is_finished():
             self.prepare_finalization()
@@ -698,7 +709,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         -------
         None.
         """
-        if any(controller.busy for controller in self.controllers):
+        if any(device.busy for device in self.devices):
             return
         for controller in self.controllers:
             controller.controller_busy.disconnect()
@@ -746,13 +757,13 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         -----
         error_occurred
             If the received measurement contains a label that is
-            not specified in the data_points dictionary.
+            not specified in the data_points[-1] dictionary.
         """
         for key in receive:
-            if key not in self.data_points.keys():
+            if key not in self.data_points[-1].keys():
                 emit_error(self, MeasurementErrors.INVALID_MEASUREMENT)
             else:
-                self.data_points[key].append(receive[key])
+                self.data_points[-1][key].append(receive[key])
         self.ready_for_next_measurement()
 
     def do_next_measurement(self):
@@ -786,7 +797,11 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         -------
         None.
         """
-        return
+        # The reimplementation may introduce more/other keys.
+        data_points_dict = defaultdict(list)
+        for key in self.plot_info:
+            data_points_dict[key] = []
+        self.data_points.append(data_points_dict)
 
     def __make_controller(self, controller_settings, is_primary=False):
         """Instantiate controller class object.

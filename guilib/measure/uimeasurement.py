@@ -188,9 +188,13 @@ class Measure(gl.ViPErLEEDPluginBase):
         fig = self._ctrls['plots'][0]
         fig.ax.cla()  # Clear old stuff
         meas = self.sender()
-
-        fig.ax.plot(meas.data_points['nominal_energy'],
-                    meas.data_points['I0'], '.')
+        nominal_energies = []
+        I0_data = []
+        length = len(meas.data_points)
+        for i in range(length-1):
+            nominal_energies.append(*meas.data_points[i]['nominal_energy'])
+            I0_data.append(*meas.data_points[i]['I0'])
+        fig.ax.plot(nominal_energies, I0_data, '.')
         fig.ax.figure.canvas.draw_idle()
 
     def __on_controllers_prepared(self):

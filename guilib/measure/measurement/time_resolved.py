@@ -66,17 +66,18 @@ class TimeResolved(MeasurementABC):
         -------
         None.
         """
+        super().start_next_measurement()
         if self.__measurement_time <= self.__limit_continuous:
             for controller in self.controllers:
                 controller.busy = True
-            for key in self.data_points.keys():
-                self.data_points[key].append([])
-            self.data_points['nominal_energy'][-1].append(self.current_energy)
+            for key in self.data_points[-1].keys():
+                self.data_points[-1][key].append([])
+            self.data_points[-1]['nominal_energy'][-1].append(self.current_energy)
             self.connect_continuous_mode_set()
             self.continuous_mode.emit([True, False])
             pass
         else:
-            self.data_points['nominal_energy'].append(self.current_energy)
+            self.data_points[-1]['nominal_energy'].append(self.current_energy)
             self.timer.start(self.__measurement_time)
             self.set_LEED_energy(self.current_energy, self.__settle_time)
             pass
@@ -146,8 +147,13 @@ class TimeResolved(MeasurementABC):
         else:
             # TODO: emit error
             pass
-        measured = self.data_points[measure]
-        set_energies = self.data_points['nominal_energy']
+        
+        measured = []
+        set_energies = []
+        length = len(self.data_points)
+        for i in range(length-1):
+            measured.append(*self.data_points[i][measure])
+            set_energies.append(*self.data_points[i]['nominal_energy'])
 
         if self.__measurement_time <= self.__limit_continuous:
             for j, step in enumerate(measured):
@@ -301,16 +307,16 @@ class TimeResolved(MeasurementABC):
         -----
         error_occurred
             If the received measurement contains a label that is
-            not specified in the data_points dictionary.
+            not specified in the data_points[-1] dictionary.
         """
         for key in receive:
-            if key not in self.data_points.keys():
+            if key not in self.data_points[-1].keys():
                 emit_error(self, MeasurementErrors.INVALID_MEASUREMENT)
             else:
                 if self.__measurement_time <= self.__limit_continuous:
-                    self.data_points[key][-1].append(receive[key])
+                    self.data_points[-1][key][-1].append(receive[key])
                 else:
-                    self.data_points[key].append(receive[key])
+                    self.data_points[-1][key].append(receive[key])
 
 
     def connect_continuous_mode_set(self):

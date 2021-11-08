@@ -50,9 +50,10 @@ class IVVideo(MeasurementABC):
         -------
         None.
         """
+        super().start_next_measurement()
         for controller in self.controllers:
             controller.busy = True
-        self.data_points['nominal_energy'].append(self.current_energy)
+        self.data_points[-1]['nominal_energy'].append(self.current_energy)
         self.set_LEED_energy(self.current_energy, self.__i0_settle_time)
         self.counter += 1
         for camera in self.cameras:
@@ -95,6 +96,8 @@ class IVVideo(MeasurementABC):
                                        type=qtc.Qt.UniqueConnection)
             self.camera_timer.timeout.connect(camera.trigger_now,
                                           type=qtc.Qt.UniqueConnection)
+            self.begin_preparation.connect(camera.start,
+                                           type=qtc.Qt.UniqueConnection)   
 
     def disconnect_cameras(self):
         """Disconnect necessary camera signals."""
@@ -106,6 +109,10 @@ class IVVideo(MeasurementABC):
                 pass
             try:
                 self.camera_timer.timeout.disconnect(camera.trigger_now)
+            except TypeError:
+                pass
+            try:
+                self.begin_preparation.disconnect(camera.start)
             except TypeError:
                 pass
 

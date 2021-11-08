@@ -73,9 +73,10 @@ class MeasureEnergySetpoint(MeasurementABC):
         -------
         None.
         """
+        super().start_next_measurement()
         for controller in self.controllers:
             controller.busy = True
-        self.data_points['nominal_energy'].append(self.current_energy)
+        self.data_points[-1]['nominal_energy'].append(self.current_energy)
         self.set_LEED_energy(self.current_energy, self.__hv_settle_time)
 
     def is_finished(self):
@@ -119,8 +120,12 @@ class MeasureEnergySetpoint(MeasurementABC):
         -------
         None
         """
-        nominal_energies = self.data_points['nominal_energy']
-        measured_energies = self.data_points['HV']
+        nominal_energies = []
+        measured_energies = []
+        length = len(self.data_points)
+        for i in range(length-1):
+            nominal_energies.append(*self.data_points[i]['nominal_energy'])
+            measured_energies.append(*self.data_points[i]['HV'])
         print(nominal_energies, measured_energies)
         domain = ast.literal_eval(
             self.primary_controller.settings['energy_calibration']['domain'])
