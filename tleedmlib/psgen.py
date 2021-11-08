@@ -450,6 +450,7 @@ def runPhaseshiftGen(sl, rp, psgensource=os.path.join('tensorleed', 'eeasisss_ne
     # l_max always set to 18 (not expensive)
     l_max = 18
 
+    S_overlap = rp.S_OVL
     additional_layers = 5  # variable ?
 
     input_file_name = "EEASISSS-input.txt"
@@ -471,7 +472,7 @@ def runPhaseshiftGen(sl, rp, psgensource=os.path.join('tensorleed', 'eeasisss_ne
     atom_types, nsl, uct = make_atom_types(rp, sl,
                                            additional_layers)  # uct is unit cell vectors, nsl is slab with added bulk
 
-    atom_pos_block, mt_params_block = make_atoms_input_blocks(atom_types, additional_layers)
+    atom_pos_block, mt_params_block = make_atoms_input_blocks(atom_types, additional_layers, S_overlap)
 
     # The unction below takes care of formatting the input so it can be used with eeasisss
     # calls function to format and organize atoms
@@ -885,7 +886,7 @@ def organize_atoms_by_sublayers(newbulkats, nsl):
     return atom_types
 
 
-def make_atoms_input_blocks(atom_types, bulk_layers):
+def make_atoms_input_blocks(atom_types, bulk_layers, S_ovl):
     # Initialize
     input_file_atom_pos_block = ""
     input_file_mt_params_block = ""
@@ -917,13 +918,14 @@ def make_atoms_input_blocks(atom_types, bulk_layers):
         rmtmin *= angst_to_bohr
         rmtmax *= angst_to_bohr
 
-        overlap_s = atom_type.S
+        overlap = S_ovl
         element = atom_type.el
+        fxc = atom_type.fxc
 
 
         type_header = '\t'.join([str(len(atom_type.atoms)), str(atom_type.get_atomic_number()), str(type_id),
                                  str(type_id), '{: .4f}'.format(rmtmin),
-                                 '{: .4f}'.format(rmtmax), '{: .4f}'.format(overlap_s), element])
+                                 '{: .4f}'.format(rmtmax), '{: .4f}'.format(overlap), element])
         if atom_type.new_bulk == True:  # for easy visibility
             type_header += '\t !atom in new bulk'
         input_file_atom_pos_block += type_header + '\n'
@@ -939,8 +941,8 @@ def make_atoms_input_blocks(atom_types, bulk_layers):
         input_file_atom_pos_block += atom_coords_table
 
         input_file_mt_params_block += ' '.join([str(type_id), '{: .4f}'.format(rmtmin),
-                                                '{: .4f}'.format(rmtmax), '{: .4f}'.format(atom_type.S),
-                                                '{: .4f}'.format(atom_type.fxc), atom_type.el])
+                                                '{: .4f}'.format(rmtmax), '{: .4f}'.format(overlap),
+                                                '{: .4f}'.format(fxc), element])
         if type_id == 1:  # only in first line
             input_file_mt_params_block += '\t!iA rmtmin rmtmax rmtS fxc elem'
         elif type_id == 2:  # only in second line
