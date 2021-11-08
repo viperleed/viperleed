@@ -17,7 +17,9 @@ from numpy.polynomial import Polynomial
 
 import viperleed.tleedmlib as tl
 import viperleed.tleedmlib.files.iofdopt as io
+import viperleed.tleedmlib.psgen as psgen
 from viperleed.tleedmlib.files.parameters import modifyPARAMETERS
+
 
 logger = logging.getLogger("tleedm.fdopt")
 
@@ -102,6 +104,10 @@ def apply_scaling(sl, rp, which, scale):
         rp.BULK_REPEAT = np.dot(rp.BULK_REPEAT, m)
 
 
+def get_fd_phaseshifts(sl, rp, S_ovl):
+    rundgrenpath = os.path.join('tensorleed', 'EEASiSSS.x')
+    (first_line, phaseshifts) = psgen.runPhaseshiftGen(tsl, trp, psgensource=rundgrenpath)
+
 def fd_optimization(sl, rp):
     """
     Runs multiple consecutive reference calculations and r-factor calculations
@@ -141,6 +147,8 @@ def fd_optimization(sl, rp):
             rp.OPTIMIZE["step"] = 0.5
         elif which == "phi":
             rp.OPTIMIZE["step"] = 2.
+        elif which == "S_ovl":
+            rp.OPTIMIZE["step"] = 0.05
         else:   # unit cell size
             rp.OPTIMIZE["step"] = 0.01
         logger.debug("Initial step size undefined, defaulting to {}"
@@ -162,6 +170,8 @@ def fd_optimization(sl, rp):
         x0 = rp.THETA
     elif which == "phi":
         x0 = rp.PHI
+    elif which == "S_ovl":
+        x0 = rp.S_OVL
     else:
         x0 = 1.   # geometry: x is a scaling factor
 
@@ -214,6 +224,9 @@ def fd_optimization(sl, rp):
                     x = max(0, x)
                 if which in ["a", "b", "ab", "c", "abc"]:
                     x = max(0.1, x)   # shouldn't happen, just in case
+                if which == "S_ovl":
+                    x = min(1, x)
+                    x = max(0, x)
                 # check whether we're close to point that is already known
                 if any(abs(v - x) < rp.OPTIMIZE["convergence"]
                        for v in known_points[:, 0]):
@@ -276,6 +289,9 @@ def fd_optimization(sl, rp):
             trp.THETA = x
         elif which == "phi":
             trp.PHI = x
+        elif which == "S_ovl":
+            trp.S_OVL = x
+            get_fd_phaseshifts(sl, rp, x)
         else:       # geometry: x is a scaling factor for the unit cell
             x = max(0.1, x)
             apply_scaling(tsl, trp, which, x)
@@ -337,6 +353,9 @@ def fd_optimization(sl, rp):
         modifyPARAMETERS(rp, "BEAM_INCIDENCE", new=("THETA {:.4f}, PHI {:.4f}"
                                                     .format(rp.THETA, rp.PHI)),
                          comment=comment)
+    elif which == "S_ovl":
+        rp.S_ovl = new_min
+        modifyPARAMETERS(rp, "S_OVL", "{:.4f}".format(new_min), comment=comment)
     else:       # geometry: x is a scaling factor for the unit cell
         apply_scaling(sl, rp, which, new_min)
         if type(rp.BULK_REPEAT) != float or "c" in which:

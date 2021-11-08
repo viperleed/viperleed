@@ -12,6 +12,7 @@ import re
 import numpy as np
 
 import viperleed.tleedmlib as tl
+from viperleed.tleedmlib.leedbase import elementCovalentRadii
 
 logger = logging.getLogger("tleedm.sitetype")
 
@@ -94,14 +95,16 @@ class Atom_type(Sitetype):
     """
     Collection of atoms with the same element and same site; inherited fromm Sitetype. Used for EEASiSSS input.
     """
-    def __init__(self, el, name, new_bulk):
+    def __init__(self, el, name, new_bulk, layer = None):
         super().__init__(el, name)
         self.label = self.el + '_in_' + self.name
-        self.rmtmin = 1.0
-        self.rmtmax = 2.5
+        self.covalent_radius = elementCovalentRadii[el.capitalize()]
         self.S = 0.32
         self.fxc = 1.0
+        self.smallest_NN_dist = 1e10 # smallest NN distance of any atom of this type
         self.atoms = []
+        self.bulk_layer = layer
+
         try:
             self.atomic_number = tl.leedbase.periodic_table.index(el.capitalize())+1
         except ValueError:
@@ -132,8 +135,17 @@ class Atom_type(Sitetype):
         self.rmtmax = rmtmax
         self.S = S
 
-    def add_atom(self, atom):
+    def add_atom(self, atom, NN_dist):
         self.atoms.append(atom)
+        if NN_dist < self.smallest_NN_dist:
+            self.smallest_NN_dist = NN_dist
+
 
     def get_atomic_number(self):
         return self.atomic_number
+
+    def get_type_NN_dist(self):
+        return self.smallest_NN_dist
+
+    def get_layer(self):
+        return self.bulk_layer

@@ -27,7 +27,7 @@ knownParams = [
     'LOG_DEBUG', 'LOG_SEARCH', 'N_BULK_LAYERS', 'N_CORES', 'OPTIMIZE',
     'PARABOLA_FIT', 'PHASESHIFT_EPS', 'PHASESHIFTS_CALC_OLD',
     'PHASESHIFTS_OUT_OLD', 'PLOT_IV', 'RUN', 'R_FACTOR_SMOOTH',
-    'R_FACTOR_TYPE', 'SCREEN_APERTURE', 'SEARCH_BEAMS', 'SEARCH_CONVERGENCE',
+    'R_FACTOR_TYPE', 'S_OVL', 'SCREEN_APERTURE', 'SEARCH_BEAMS', 'SEARCH_CONVERGENCE',
     'SEARCH_CULL', 'SEARCH_MAX_GEN', 'SEARCH_POPULATION', 'SEARCH_START',
     'SITE_DEF', 'SUPERLATTICE', 'SUPPRESS_EXECUTION', 'SYMMETRIZE_INPUT',
     'SYMMETRY_BULK',
@@ -43,6 +43,7 @@ paramAlias = {
     'fortrancompiler': 'FORTRAN_COMP',
     'fdoptimize': 'OPTIMIZE', 'fdoptimization': 'OPTIMIZE',
     'plotrfactor': 'PLOT_IV', 'plotrfactors': 'PLOT_IV', 'ivplot': 'PLOT_IV',
+    'overlap': 'S_OVL', 'MT_overlap': 'S_OVL'
               }
 for p in knownParams:
     paramAlias[p.lower().replace("_", "")] = p
@@ -480,7 +481,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
             setNumericalParameter(rpars, param, llist[0], type_=int,
                                   range_=(1, None))
         # positive-only floats
-        elif param in ['T_DEBYE', 'T_EXPERIMENT', 'V0_IMAG', 'TL_VERSION']:
+        elif param in ['T_DEBYE', 'T_EXPERIMENT', 'V0_IMAG', 'TL_VERSION', 'S_OVL']:
             setNumericalParameter(rpars, param, llist[0], range_=(0, None))
         # simple numericals
         elif param == 'V0_Z_ONSET':
@@ -870,7 +871,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                 continue
             which = plist[1].lower()
             if which not in ['theta', 'phi', 'v0i',
-                             'a', 'b', 'c', 'ab', 'abc']:
+                             'a', 'b', 'c', 'ab', 'abc', 'S_ovl']:
                 logger.warning('PARAMETERS file: OPTIMIZE: Parameter "{}" '
                                'not recognized. Input will be ignored.'
                                .format(which))

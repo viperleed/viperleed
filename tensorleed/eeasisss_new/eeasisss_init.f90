@@ -59,6 +59,7 @@ contains
   real(dp) :: rx(nx),f(nx),s(nx),dx,dxh,a1,a2
   dxh=dx*0.5d0
   s(j1)=0; a1=f(j1)*rx(j1)
+  a1 = 0.d0 ! was not initialized
   do i=j1+1,j2
     a2=f(i)*rx(i)
     s(i)=s(i-1)+a1+a2
@@ -584,7 +585,7 @@ contains
    !    0.001% in ALL cases. (see charge_density_check.py in atlib/)
    if(abs(z(ir)-HFz(nx(ir))) > 0.08)then ! Why 0.08 anyways?
    !  write(61,'(a, f9.4)')'Difference in nuclear charge: ', abs(z(ir)-HFz(nx(ir)))
-     write(61,'(a)')'stop - Difference in nuclear charge bigger then 0.08' !;stop ! AMI: uncomment to cause stop
+     write(61,'(a)')'stop - Difference in nuclear charge bigger than 0.08' !;stop ! AMI: uncomment to cause stop
    endif
    !avoiding numerical noise of large-radius atrho4pir2.
    do i=nx(ir),nx(ir)/2,-1
