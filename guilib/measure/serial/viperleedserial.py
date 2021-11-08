@@ -235,7 +235,8 @@ class ViPErLEEDSerial(SerialABC):
         # the name of the state (key)
         arduino_states = {int(code): state
                           for state, code
-                          in self.port_settings['arduino_states'].items()}
+                          in self.port_settings['arduino_states'].items()
+                          if not state.startswith('#')}
         # Preparing message which will be formatted and emitted.
         msg_to_format = ("ViPErLEED hardware {error_name} occurred while in"
                          " {state}. Reason: {err_details}")
@@ -311,7 +312,7 @@ class ViPErLEEDSerial(SerialABC):
             Whether message is an error message.
         """
         pc_error = self.port_settings.getint('available_commands', 'PC_ERROR')
-
+        pc_error = pc_error.to_bytes(1, self.byte_order)
         return len(message) == 1 and message == pc_error
 
     def is_message_supported(self, messages):

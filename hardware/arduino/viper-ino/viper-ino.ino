@@ -1039,12 +1039,12 @@ void measureADCs(){
     //       the Arduino goes to STATE_ADC_VALUES_READY, swallowing
     //       the error. It could be solved easily by a simple check:
     //       if (currentState == STATE_ERROR) return;
+    if (checkIfTimedOut()){
+      return;
+    }
     if(numMeasurementsDone == numMeasurementsToDo){
         currentState = STATE_ADC_VALUES_READY;
-        return;
     }
-
-    checkIfTimedOut();
 }
 
 

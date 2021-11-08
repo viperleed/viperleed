@@ -120,6 +120,9 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
                                                    'start_energy')
         self.__long_settle_time = self.primary_controller.settings.getint(
             'measurement_settings', 'first_settle_time')
+        self.force_return_timer = qtc.QTimer(parent=self)
+        self.force_return_timer.setSingleShot(True)
+        self.force_return_timer.timeout.connect(self.return_to_gui)
 
     @property
     def cameras(self):
@@ -329,7 +332,8 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             self.primary_controller.data_ready.connect(self.return_to_gui)
             self.disconnect_secondary_controllers()
             self.disconnect_cameras()
-            self.set_LEED_energy(self.current_energy, 1000)
+            self.set_LEED_energy(self.current_energy, 50)
+            self.force_return_timer.start(20000)
 
     def save_data(self):
         """Save data.
@@ -879,6 +883,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             A signal containing all collected data.
         """
         self.disconnect_primary_controller()
+        self.force_return_timer.stop()
         self.thread.quit()
         self.finished.emit((self.plot_info, self.data_points))
 
