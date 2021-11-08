@@ -910,8 +910,8 @@ def make_atoms_input_blocks(atom_types, bulk_layers):
         else:
             # factor that starts small and approaches 1 the closer it is to the last layer
             layer_factor = layer / bulk_layers
-            rmtmin = 0.3*NN_dist*(1-layer_factor) + 0.501*NN_dist*layer_factor
-            rmtmax = 0.9*NN_dist*(1-layer_factor) + 0.499*NN_dist*layer_factor
+            rmtmin = 0.3*NN_dist*(1-layer_factor) + 0.499*NN_dist*layer_factor
+            rmtmax = 0.9*NN_dist*(1-layer_factor) + 0.501*NN_dist*layer_factor
 
         # Very important – convert from Angstrom to Bohr Units!
         rmtmin *= angst_to_bohr
