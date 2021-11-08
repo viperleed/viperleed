@@ -550,7 +550,7 @@ class ImagingSourceCamera(CameraABC):
         self.driver.set_frame_ready_callback(on_frame_ready,
                                              self.process_info)
 
-    def start(self):
+    def start(self, *_):
         """Start the camera in self.mode."""
         self.n_frames_done = 0
 

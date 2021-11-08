@@ -942,7 +942,7 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         return
 
     @abstractmethod
-    def start(self):
+    def start(self, *_):
         """Start the camera.
 
         The camera is started in the mode returned by self.mode.
