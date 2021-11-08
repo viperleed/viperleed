@@ -167,7 +167,7 @@ bool continuousMeasurement = false;   // Decides if the Arduino continues to mea
 
 /** -------------------- Globals for firmware functions -------------------- **/
 // Timers (defined in milliseconds)
-#define TIMEOUT 5000                  // Max 5 seconds to do stuff
+#define TIMEOUT 4000                  // Max 4 seconds to do stuff
 unsigned long initialTime;            // System time when switching to a new state
 uint16_t      dacSettlingTime = 100;  // The time interval for the DAC output to be stable
                                       //   This is just a default value. The actual one comes

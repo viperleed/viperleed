@@ -29,6 +29,8 @@ from viperleed.guilib.measure.hardwarebase import (
     config_has_sections_and_options,
     emit_error
     )
+from viperleed.guilib.decorators import print_call
+
 
 SERIAL_ERROR_MESSAGES = {
     qts.QSerialPort.NoError: "",
@@ -100,6 +102,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
     data_received = qtc.pyqtSignal(object)
     serial_busy = qtc.pyqtSignal(bool)
     about_to_trigger = qtc.pyqtSignal()
+    __stop_timer = qtc.pyqtSignal()
 
     _mandatory_settings = [
             ('serial_port_settings', 'MSG_END'),
@@ -132,6 +135,14 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             If no settings are given.
         """
         super().__init__(**kwargs)
+
+        self.__init_errors = []  # Report these with a little delay
+        self.__init_err_timer = qtc.QTimer(self)
+        self.__init_err_timer.setSingleShot(True)
+
+        self.error_occurred.connect(self.__on_init_errors)
+        self.__init_err_timer.timeout.connect(self.__report_init_errors)
+
         self.__port = qts.QSerialPort(port_name, parent=self)
 
         # .__serial_settings is set via the following call to
@@ -173,6 +184,13 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         self.__timeout = qtc.QTimer(parent=self)
         self.__timeout.setSingleShot(True)
         self.__timeout.timeout.connect(self.__on_serial_timeout)
+        self.__stop_timer.connect(self.__timeout.stop)
+        
+        self.__open = False
+
+        if self.__init_errors:
+            self.__init_err_timer.start(20)
+        self.error_occurred.disconnect(self.__on_init_errors)
 
     @property
     def byte_order(self):
@@ -405,7 +423,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         identify_error after the error has been correctly identified.
         """
         self.__port.clearError()
-        self.__timeout.stop()
+        self.__stop_timer.emit()
         self.__messages_since_error = []
         self.__got_unacceptable_response = False
 
@@ -728,7 +746,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         None.
         """
         all_messages = (message, *other_messages)
-        if not self.is_message_supported(all_messages):
+        if not self.__open or not self.is_message_supported(all_messages):
             return
 
         self.__got_unacceptable_response = False
@@ -760,17 +778,21 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             emit_error(self, ExtraSerialErrors.PORT_NOT_OPEN)
             print(self.port_name)
             self.print_port_config()
+            self.__open = False
             return
-
+        
+        self.__open = True
         self.__set_up_serial_port()
 
         self.__port.readyRead.connect(self.__on_bytes_ready_to_read)
         self.__port.errorOccurred.connect(self.__on_serial_error)
+        _ = self.__port.readAll()
 
     def serial_disconnect(self, *__args):
         """Disconnect from connected serial port."""
         self.clear_errors()
         self.__port.close()
+        self.__open = False
         try:
             self.__port.readyRead.disconnect(self.__on_bytes_ready_to_read)
         except TypeError:
@@ -831,7 +853,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
 
     def __on_bytes_ready_to_read(self):
         """Read the message(s) received."""
-        self.__timeout.stop()
+        self.__stop_timer.emit()
         if self.__got_unacceptable_response:
             return
 
@@ -857,7 +879,6 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
                 self.__got_unacceptable_response = True
                 return
             messages[i] = decoded
-
         if self.__messages_since_error:
             # We got an error sometime before, but we did not yet
             # process information about the error because it did
@@ -978,3 +999,13 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             f"stopBits: {self.__port.stopBits()}",
             sep='\n', end='\n\n'
             )
+
+    def __on_init_errors(self, err):
+        """Collect initialization errors to report later."""
+        self.__init_errors.append(err)
+
+    def __report_init_errors(self):
+        """Emit error_occurred for each initialization error."""
+        for error in self.__init_errors:
+            self.error_occurred.emit(error)
+        self.__init_errors = []

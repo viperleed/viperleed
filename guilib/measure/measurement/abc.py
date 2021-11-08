@@ -114,6 +114,13 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         for key in self.plot_info:
             self.data_points[key] = []
 
+        self.__init_errors = []  # Report these with a little delay
+        self.__init_err_timer = qtc.QTimer(self)
+        self.__init_err_timer.setSingleShot(True)
+
+        self.error_occurred.connect(self.__on_init_errors)
+        self.__init_err_timer.timeout.connect(self.__report_init_errors)
+
         self.set_settings(measurement_settings)
 
         self.start_energy = self.settings.getfloat('measurement_settings',
@@ -123,6 +130,10 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         self.force_return_timer = qtc.QTimer(parent=self)
         self.force_return_timer.setSingleShot(True)
         self.force_return_timer.timeout.connect(self.return_to_gui)
+
+        if self.__init_errors:
+            self.__init_err_timer.start(20)
+        self.error_occurred.disconnect(self.__on_init_errors)
 
     @property
     def cameras(self):
@@ -318,6 +329,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         -------
         None.
         """
+        primary = self.primary_controller
         if busy or any(controller.busy for controller in self.controllers):
             return
         try:
@@ -326,14 +338,19 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             self.current_energy = 0
             # Set LEED energy to 0.
             try:
-                self.primary_controller.data_ready.disconnect()
+                primary.data_ready.disconnect()
             except TypeError:
                 pass
-            self.primary_controller.data_ready.connect(self.return_to_gui)
+            try:
+                primary.controller_busy.disconnect()
+            except TypeError:
+                pass
             self.disconnect_secondary_controllers()
             self.disconnect_cameras()
+            primary.busy = True
+            primary.controller_busy.connect(self.return_to_gui,
+                                            type=qtc.Qt.UniqueConnection)
             self.set_LEED_energy(self.current_energy, 50)
-            self.force_return_timer.start(20000)
 
     def save_data(self):
         """Save data.
@@ -397,6 +414,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         if self.__aborted:
             return
         self.__aborted = True
+        self.force_return_timer.start(4500)
         self.prepare_finalization()
 
     def connect_cameras(self):
@@ -915,7 +933,17 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             controller.controller_busy.connect(self.finalize,
                                                type=qtc.Qt.UniqueConnection)
         self.abort_action.emit()
-    
+
     def __on_hardware_error(self, *_):
         """Abort if a hardware error occurs."""
         self.abort()
+
+    def __on_init_errors(self, err):
+        """Collect initialization errors to report later."""
+        self.__init_errors.append(err)
+
+    def __report_init_errors(self):
+        """Emit error_occurred for each initialization error."""
+        for error in self.__init_errors:
+            self.error_occurred.emit(error)
+        self.__init_errors = []

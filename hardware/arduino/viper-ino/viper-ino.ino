@@ -1643,6 +1643,9 @@ void makeAndSumMeasurements() {
         checkMeasurementInADCRange(&adc0Gain, &adc0ShouldDecreaseGain,
                                    measurement, adc0RipplePP);
         }
+    if (checkIfTimedOut()){
+      return;
+    }
     if (hardwareDetected.asInt & ADC_1_PRESENT){
         measurement = AD7705waitAndReadData(CS_ADC_1, adc1Channel);
         summedMeasurements[1] += measurement;

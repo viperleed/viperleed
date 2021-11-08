@@ -96,6 +96,13 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
             settings.set('controller', 'port_name', port_name)
         self.__port_name = port_name
 
+        self.__init_errors = []  # Report these with a little delay
+        self.__init_err_timer = qtc.QTimer(self)
+        self.__init_err_timer.setSingleShot(True)
+
+        self.error_occurred.connect(self.__on_init_errors)
+        self.__init_err_timer.timeout.connect(self.__report_init_errors)
+
         self.set_settings(settings)
 
         # Is used to determine if the next step
@@ -115,9 +122,11 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
         # a tuple containing the command and its associated data
         # and the timeout parameter.
         self.__unsent_messages = []
-        self.serial.error_occurred.connect(self.error_occurred)
         self.serial.serial_busy.connect(self.send_unsent_messages,
                                         type=qtc.Qt.UniqueConnection)
+        if self.__init_errors:
+            self.__init_err_timer.start(20)
+        self.error_occurred.disconnect(self.__on_init_errors)
 
     def __get_busy(self):
         """Return whether the controller is busy."""
@@ -229,6 +238,7 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
             self.__serial = serial_class(new_settings,
                                          port_name=self.__port_name,
                                          parent=self)
+            self.serial.error_occurred.connect(self.error_occurred)
         else:
             # The next line will also check that new_settings contains
             # appropriate settings for the serial port class used.
@@ -389,6 +399,16 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
                                         type=qtc.Qt.UniqueConnection)
         self.serial.serial_busy.connect(self.set_busy,
                                         type=qtc.Qt.UniqueConnection)
+
+    def __on_init_errors(self, err):
+        """Collect initialization errors to report later."""
+        self.__init_errors.append(err)
+
+    def __report_init_errors(self):
+        """Emit error_occurred for each initialization error."""
+        for error in self.__init_errors:
+            self.error_occurred.emit(error)
+        self.__init_errors = []
 
 
 class MeasureControllerABC(ControllerABC):
@@ -810,3 +830,4 @@ class MeasureControllerABC(ControllerABC):
                 pass
         if not continuous and in_finalization:
            self.serial.serial_busy.connect(self.set_busy)
+

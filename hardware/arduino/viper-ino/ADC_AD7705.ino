@@ -169,7 +169,7 @@ void AD7705waitForCalibration(byte chipSelectPin, byte channel) {
     uint32_t timeoutCounter = 0;
     AD7705startIO(chipSelectPin);
     do {
-        if (timeoutCounter > 50100) //50100 == 5.01 seconds > than our arduino timeout (5 seconds)
+        if (timeoutCounter > 40100) //40100 == 4.01 seconds > than our arduino timeout (4 seconds)
             return;
         delayMicroseconds(AD7705_DELAY_MICRO);
         SPI.transfer(AD7705_REG_SETUP | AD7705_READ_REG | channel);
@@ -183,7 +183,7 @@ void AD7705waitForCalibration(byte chipSelectPin, byte channel) {
 int16_t AD7705waitAndReadData(byte chipSelectPin, byte channel) {
     uint32_t timeoutCounter = 0;
     while (AD7705readCommRegister(chipSelectPin, channel) & AD7705_DRDY) {//DRDY bit is 0 when ready
-        if (timeoutCounter > 50100) //50100 == 5.01 seconds > than our arduino timeout (5 seconds)
+        if (timeoutCounter > 40100) //40100 == 4.01 seconds > than our arduino timeout (4 seconds)
             return -1;
         delayMicroseconds(AD7705_DELAY_MICRO);
         timeoutCounter++;
