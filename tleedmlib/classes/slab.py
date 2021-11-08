@@ -14,6 +14,7 @@ import copy
 import re
 import scipy.spatial as sps
 import itertools
+from scipy.spatial import KDTree
 
 try:
     import ase
@@ -1269,7 +1270,7 @@ class Slab:
                     for j in range(0, transformDiag[1]):
                         if i == j == 0:
                             continue
-                        tmpat = at.duplicate()
+                        tmpat = at.duplicate() # duplicate saves duplicated atom in slab
                         tmpat.pos[0] += i
                         tmpat.pos[1] += j
         ts.resetAtomOriN()
@@ -1644,3 +1645,40 @@ class Slab:
         if not b3ds:
             return "None"
         return b3ds
+
+    def getNearestNeigbours(self):
+        """Returns a list listing the nearest neighbor distance for all atoms in the slab taking periodic
+        boundary conditions into account. For this calculation, the cell is internally expanded into a supercell."""
+
+        #unit vectors
+        a = self.ucell[:,0] # vector a
+        b = self.ucell[:,1] # vector b
+
+        # Compare unit vector lengths and decide based on this how many cells to add around
+        # A minimum 3x3 supercell is constructed for nearest neighbor query, but may be exteneded if vector lengths
+        # are very different
+        max_length = max(np.linalg.norm(a), np.linalg.norm(b))
+        i = np.ceil(max_length/np.linalg.norm(a))
+        j = np.ceil(max_length/np.linalg.norm(b))
+
+        # Makes supercell minimum size 3x3 original
+        transform = np.array([[2*i+1,0],
+                              [0,2*j+1]])
+        supercell = self.makeSupercell(transform)
+
+
+        atom_coords = [atom.cartpos for atom in supercell.atlist] # Atom coordinates in supercell
+        # For NN query use KDTree from scipy.spacial
+        tree = KDTree(atom_coords)
+
+        NN_dict = {} # Dict containing Atom and NN will be returned
+
+        # Now query atoms in center cell for NN distances and save to dict
+        for atom in self.atlist:
+            coord = atom.cartpos
+            coord += (i+1)*a + (j+1)*b # central cell
+
+            dists, _ = tree.query(coord,k=2) # second argument irrelevant; would be index of NN atoms (supercell, not original!)
+            NN_dict[atom] = dists[1] # element 0 is distance to atom itself (< 1e-15)
+
+        return NN_dict

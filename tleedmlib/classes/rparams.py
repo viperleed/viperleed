@@ -143,6 +143,7 @@ class Rparams:
         self.RUN = [0, 1, 2, 3]        # what segments should be run
         self.R_FACTOR_TYPE = 1  # 1: Pendry, 2: R2, 3: Zanazzi-Jona
         self.R_FACTOR_SMOOTH = 0
+        self.S_OVL = 0.3 # Muffin tin overlap parameter after Rundgren 2021, default is 0.3 - set or optimize in FD
         self.SCREEN_APERTURE = 110.
         self.SEARCH_BEAMS = 0   # 0: average, 1: integer, 2: fractional
         self.SEARCH_CULL = 0.1  # fraction of all, or absolute N if >1
