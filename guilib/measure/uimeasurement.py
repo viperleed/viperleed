@@ -66,12 +66,19 @@ class Measure(gl.ViPErLEEDPluginBase):
         self.setAcceptDrops(True)
 
         self.__compose()
-        self.do_this = None
+        self.measurement = None
         self.error_occurred.connect(self.__on_error_occurred)
         self.__errors = []
         self.__error_report_timer = qtc.QTimer(parent=self)
         self.__error_report_timer.setSingleShot(True)
         self.__error_report_timer.timeout.connect(self.__report_errors)
+        
+        self.__retry_close = qtc.QTimer(parent=self)
+        self.__retry_close.timeout.connect(self.close)
+        
+        self.__delayed_start = qtc.QTimer(parent=self)
+        self.__delayed_start.setSingleShot(True)
+        self.__delayed_start.timeout.connect(self.__run_measurement)
 
     def __compose(self):
         """Prepare menu."""
@@ -103,7 +110,8 @@ class Measure(gl.ViPErLEEDPluginBase):
 
         layout = self.centralWidget().layout()
 
-        for key in ('Start energy', 'End energy', 'Delta energy', 'energy_input'):
+        for key in ('Start energy', 'End energy',
+                    'Delta energy', 'energy_input'):
             self._ctrls[key].setFont(gl.AllGUIFonts().labelFont)
             self._ctrls[key].ensurePolished()
             self._ctrls[key].setValidator(QDoubleValidatorNoDot())
@@ -127,28 +135,29 @@ class Measure(gl.ViPErLEEDPluginBase):
         self._ctrls['plots'].append(fig)
         layout.addWidget(fig, 8, 1, 1, 2)
 
-    def do_stuff(self):
-        self.do_this.begin_measurement_preparation()
+    def __run_measurement(self):
+        self.measurement.begin_measurement_preparation()
         self._ctrls['measure'].setEnabled(False)
         self._ctrls['select'].setEnabled(False)
+        self._ctrls['abort'].setEnabled(True)
         self.statusBar().showMessage('Busy')
 
     def __on_finished(self, *_):
         # After the measurement is done, close the serial ports.
-        for controller in self.do_this.controllers:
+        for controller in self.measurement.controllers:
             controller.serial.serial_disconnect()
         self._ctrls['measure'].setEnabled(True)
         self._ctrls['select'].setEnabled(True)
         self._ctrls['abort'].setEnabled(False)
         self.statusBar().showMessage('Ready')
 
-    def __on_stuff_done(self, *_):
+    def __on_measurement_finished(self, *_):
         print("\n#### DONE! ####")
 
     def __on_start_pressed(self):
         text = self._ctrls['select'].currentText()
-        if self.do_this:
-            self.do_this.thread.quit()
+        if self.measurement:
+            self.measurement.thread.quit()
             self.__on_finished()
         config = configparser.ConfigParser(comment_prefixes='/',
                                            allow_no_value=True)
@@ -164,24 +173,22 @@ class Measure(gl.ViPErLEEDPluginBase):
                                     "correct folder.")
             return
         measurement_cls = ALL_MEASUREMENTS[text]
-        self.do_this = measurement_cls(config)
+        self.measurement = measurement_cls(config)
 
-        if not isinstance(self.do_this, ALL_MEASUREMENTS['Time resolved']):  # TEMP. TODO: Handle data structure of time resolved
-            self.do_this.new_data_available.connect(self.__on_new_data)
+        if not isinstance(self.measurement, ALL_MEASUREMENTS['Time resolved']):  # TEMP. TODO: Handle data structure of time resolved
+            self.measurement.new_data_available.connect(self.__on_new_data)
 
-        self._ctrls['abort'].clicked.connect(self.do_this.abort)
+        self._ctrls['abort'].clicked.connect(self.measurement.abort)
         self._ctrls['set_energy'].clicked.connect(self.__on_set_energy)
-        self.do_this.error_occurred.connect(self.error_occurred)
-        for controller in self.do_this.controllers:
+        self.measurement.error_occurred.connect(self.error_occurred)
+        for controller in self.measurement.controllers:
             controller.error_occurred.connect(self.error_occurred)
-        for camera in self.do_this.cameras:
+        for camera in self.measurement.cameras:
             camera.error_occurred.connect(self.error_occurred)
-        self.do_this.finished.connect(self.__on_finished)
-        self.do_this.finished.connect(self.__on_stuff_done)
-        self.do_this.prepared.connect(self.__on_controllers_prepared)
-        self._ctrls['abort'].setEnabled(True)                                   #tmp
+        self.measurement.finished.connect(self.__on_finished)
+        self.measurement.finished.connect(self.__on_measurement_finished)
 
-        self.do_stuff()
+        self.__delayed_start.start(50)
 
     def __on_new_data(self):
         """Replot measured data."""
@@ -197,20 +204,17 @@ class Measure(gl.ViPErLEEDPluginBase):
         fig.ax.plot(nominal_energies, I0_data, '.')
         fig.ax.figure.canvas.draw_idle()
 
-    def __on_controllers_prepared(self):
-        """Enable abort button."""
-        self._ctrls['abort'].setEnabled(True)
-
     def __on_set_energy(self):
         """Set energy on primary controller."""
         energy = float(self._ctrls['select'].currentText())
-        self.do_this.set_LEED_energy((energy,0))
+        self.measurement.set_LEED_energy((energy,0))
 
     def __on_error_occurred(self, error_info):
         """React to an error."""
         sender = self.sender()
         self.__errors.append((sender, *error_info))
-        self.__error_report_timer.start(50)
+        self.__error_report_timer.start(35)
+        self.__delayed_start.stop()
 
     def __report_errors(self):
         if not self.__errors:
@@ -235,3 +239,12 @@ class Measure(gl.ViPErLEEDPluginBase):
                                      "\n\n".join(err_text),
                                      qtw.QMessageBox.Ok)
         self.__errors = []
+
+    def closeEvent(self, event):
+        """Reimplement closeEvent to abort measurements as well."""
+        if self.measurement and self.measurement.running:
+            self.measurement.abort()
+            self.__retry_close.start(50)
+            event.ignore()
+            return
+        super().closeEvent(event)
