@@ -112,8 +112,14 @@ class CameraViewer(qtw.QScrollArea):
         self.__img_size = qtc.QSize()
         self.__camera = camera
         self.__roi = RegionOfInterest(parent=self.__img_view)
-        self.roi.limits = camera.get_roi_size_limits()
-        self.roi.update_size_limits()
+
+        try:
+            self.roi.limits = camera.get_roi_size_limits()
+        except camera.exceptions:
+            # Most likely camera is not open
+            pass
+        else:
+            self.roi.update_size_limits()
 
         self.__compose()
         self.__connect()

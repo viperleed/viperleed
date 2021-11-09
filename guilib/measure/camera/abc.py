@@ -22,6 +22,8 @@ from viperleed.guilib.measure.hardwarebase import (
 from viperleed.guilib.measure.camera.imageprocess import (ImageProcessor,
                                                           ImageProcessInfo)
 
+from viperleed.guilib.decorators import print_call
+
 # TODO: look at QtMultimedia.QCamera
 
 
@@ -35,7 +37,10 @@ class CameraErrors(ViPErLEEDErrorEnum):
     MISSING_SETTINGS = (201,
                         "Camera cannot operate without settings. Load "
                         "an appropriate settings file before proceeding.")
-    CAMERA_NOT_FOUND = (202, "Could not find camera {}.")
+    CAMERA_NOT_FOUND = (202,
+                        "Could not find camera {}.\nMake sure the camera is "
+                        "connected and has power. Try (re-)plugging it, and "
+                        "give the camera enough time to boot up.")
 
     SETTINGS_MISMATCH = (203,
                          "Different {} settings found in camera and "
@@ -221,6 +226,20 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         if was_busy is not is_busy:
             self.__busy = is_busy
             self.camera_busy.emit(self.busy)
+
+    @property
+    @abstractmethod
+    def exceptions(self):
+        """Return a tuple of camera exceptions.
+
+        Returns
+        -------
+        exceptions : tuple
+            Each element is a Exception subclass of exceptions
+            that the camera may raise in case internal driver
+            errors occur.
+        """
+        return tuple()
 
     @property
     def exposure(self):
@@ -501,6 +520,7 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         """
         return
 
+    @print_call
     def connect(self):
         """Connect to the camera."""
         if not self.open():

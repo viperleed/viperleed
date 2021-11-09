@@ -25,6 +25,8 @@ from viperleed.guilib.measure.camera.abc import CameraABC, CameraErrors
 from viperleed.guilib.measure.camera.imageprocess import ImageProcessInfo
 from viperleed.guilib.measure.hardwarebase import emit_error
 
+from viperleed.guilib.decorators import print_call
+
 
 @FrameReadyCallbackType
 def on_frame_ready(__grabber_handle, image_start_pixel,
@@ -212,6 +214,11 @@ class ImagingSourceCamera(CameraABC):
         self.abort_trigger_burst.connect(self.driver.abort_trigger_burst)
 
     @property
+    def exceptions(self):
+        """Return a tuple of camera exceptions."""
+        return (ImagingSourceError,)
+
+    @property
     def image_info(self):
         """Return information about the last image.
 
@@ -315,6 +322,7 @@ class ImagingSourceCamera(CameraABC):
         """
         return self.driver.devices
 
+    @print_call
     def open(self):
         """Open the camera device.
 
