@@ -25,6 +25,7 @@ from viperleed.guilib.measure.camera.abc import CameraABC, CameraErrors
 from viperleed.guilib.measure.camera.imageprocess import ImageProcessInfo
 from viperleed.guilib.measure.hardwarebase import emit_error
 
+
 @FrameReadyCallbackType
 def on_frame_ready(__grabber_handle, image_start_pixel,
                    frame_number, process_info):
@@ -56,10 +57,13 @@ def on_frame_ready(__grabber_handle, image_start_pixel,
 
     Emits
     -----
-    camera.done_estimating_frame_rate
+    camera.camera_busy(False)
         After enough frames have been received while estimating the
         optimal frame rate.
-    camera.frame_ready
+    camera.abort_trigger_burst()
+        When camera is triggered, supports trigger burst,
+        and enough frames have been received.
+    camera.frame_ready(image)
         Each time, except while estimating the frame rate. Carries
         a numpy array with a copy of the image data.
     """
@@ -78,7 +82,7 @@ def on_frame_ready(__grabber_handle, image_start_pixel,
         if n_frames_received >= camera.n_frames_estimate:
             camera.driver.stop_delivering_frames()
             camera.is_finding_best_frame_rate = False
-            camera.done_estimating_frame_rate.emit()
+            camera.busy = False
         return
 
     # This may happen if the camera was set to 'triggered' and it
@@ -87,7 +91,8 @@ def on_frame_ready(__grabber_handle, image_start_pixel,
     # A direct call makes the program access the camera from two
     # different threads (main, and the thread in which this callback
     # runs) and crashes the whole application.
-    if (camera.supports_trigger_burst
+    if (camera.mode == 'triggered'
+        and camera.supports_trigger_burst
             and n_frames_received >= camera.n_frames):
         camera.abort_trigger_burst.emit()
 
@@ -173,7 +178,6 @@ class ImagingSourceCamera(CameraABC):
     """Concrete subclass of CameraABC handling Imaging Source Hardware."""
 
     abort_trigger_burst = qtc.pyqtSignal()
-    done_estimating_frame_rate = qtc.pyqtSignal()
 
     def __init__(self, *args, settings=None, parent=None, **kwargs):
         """Initialize instance.
@@ -205,12 +209,6 @@ class ImagingSourceCamera(CameraABC):
 
         super().__init__(ImagingSourceDriver(), *args,
                          settings=settings, parent=parent, **kwargs)
-        try:
-            self.done_estimating_frame_rate.connect(self.__start_postponed,
-                                                    qtc.Qt.UniqueConnection)
-        except TypeError:
-            # Already connected
-            pass
         self.abort_trigger_burst.connect(self.driver.abort_trigger_burst)
 
     @property
@@ -514,8 +512,20 @@ class ImagingSourceCamera(CameraABC):
 
     def start_frame_rate_optimization(self):
         """Start estimation of the best frame rate."""
+        # Connect the busy signal here. The callback
+        # takes care of making the camera not busy
+        # when done with the estimate.
+        try:
+            self.camera_busy.connect(self.__start_postponed,
+                                     qtc.Qt.UniqueConnection)
+        except TypeError:
+            # Already connected
+            pass
+
         self.is_finding_best_frame_rate = True
         self.process_info.clear_times()
+
+        self.busy = True
 
         # Begin delivering frames at maximum speed.
         # The on_frame_ready callback will take care of
@@ -558,16 +568,38 @@ class ImagingSourceCamera(CameraABC):
             # Optimize now the frame rate to minimize frame losses.
             # Postpone actual starting to after optimization is over.
             # Once done, the camera will be automatically started with
-            # a call to __start_postponed() (connected in __init__ to
-            # the done_estimating_frame_rate signal).
-            # If we ever decide to not do this, we can simply replace
-            # the call above with a direct call to __start_postponed()
+            # a call to __start_postponed() (connected in the next
+            # call to the camera_busy signal).
             self.start_frame_rate_optimization()
         else:
             self.best_next_rate = 1024
-            self.done_estimating_frame_rate.emit()
+            self.__start_postponed()
 
-    def __start_postponed(self):
+    def __start_postponed(self, *_):
+        """Actually start camera after frame-rate estimate is over.
+
+        This method is connected to the camera_busy signal right
+        before the camera starts estimating the best frame rate.
+
+        Parameters
+        ----------
+        *_ : object
+            Unused arguments. Necessary to allow connection to
+            the camera_busy signal.
+
+        Returns
+        -------
+        None.
+        """
+        if self.is_finding_best_frame_rate:
+            return
+
+        try:
+            self.camera_busy.disconnect(self.__start_postponed)
+        except TypeError:
+            # Not connected
+            pass
+
         # Call base that starts the processing thread if needed
         super().start()
         self.driver.frame_rate = self.best_next_rate

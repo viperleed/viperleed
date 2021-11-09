@@ -985,6 +985,7 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         """
         self.process_info.clear_times()
         self.n_frames_done = 0
+        self.busy = False
 
         if self.__process_thread.isRunning():
             self.__process_thread.quit()

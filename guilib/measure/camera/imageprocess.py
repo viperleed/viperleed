@@ -61,6 +61,7 @@ from PyQt5 import QtCore as qtc
 # (7) 'StripByteCounts' (no.279) [only 1 strip]
 #     b'\x01\x17\x00\x04\x00\x00\x00\x01' + n_cols*n_rows*n_bits/8 (4 bytes)
 
+
 TIFF_TAGS = (
     b'MM\x00\x2a\x00\x00\x00\x08\x00\x07'                   # header
     + b'\x01\x00\x00\x04\x00\x00\x00\x01%(n_cols)b'         # 'ImageWidth'
@@ -72,6 +73,7 @@ TIFF_TAGS = (
     + b'\x01\x17\x00\x04\x00\x00\x00\x01%(b_count)b'        # 'StripByteCounts'
     + b'\x00\x00\x00\x00'                                   # IFD termination
     )
+
 
 @dataclass
 class ImageProcessInfo:
@@ -358,6 +360,6 @@ class ImageProcessor(qtc.QObject):
         if fname.suffix != '.tiff':
             raise ValueError("Can only save .tiff files. Found invalid "
                              f"extension {fname.suffix}")
-        
+
         with open(fname, 'wb') as tiff_file:
             tiff_file.write(tags + data.tobytes())
