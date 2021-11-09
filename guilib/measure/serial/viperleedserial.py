@@ -367,7 +367,8 @@ class ViPErLEEDSerial(SerialABC):
 
         need_data = [self.port_settings['available_commands'][value]
                         for value in ('PC_CHANGE_MEAS_MODE', 'PC_SET_VOLTAGE',
-                                      'PC_CALIBRATION', 'PC_SET_UP_ADCS')]
+                                      'PC_CALIBRATION', 'PC_SET_UP_ADCS',
+                                      'PC_SET_VOLTAGE_ONLY')]
         if command in need_data:
             if not data:
                 # Too little data available
@@ -459,7 +460,8 @@ class ViPErLEEDSerial(SerialABC):
                 # [n_averaging_points, adc0_channel, adc1_channel],
                 # where n_averaging_points has to be 2 bytes
                 data[:1] = data[0].to_bytes(2, self.byte_order)
-            elif message == commands['PC_SET_VOLTAGE'].encode():
+            elif message in (commands['PC_SET_VOLTAGE'].encode(),
+                             commands['PC_SET_VOLTAGE_ONLY'].encode()):
                 # data is a 2N-long sequence of the format
                 # voltage, waiting, voltage, waiting, ....
                 # where each entry has to be turned into 2

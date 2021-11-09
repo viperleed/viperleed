@@ -253,7 +253,7 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
     settings = property(__get_settings, set_settings)
 
     @abstractmethod
-    def set_energy(self, energy, *other_data):
+    def set_energy(self, energy, *other_data, **kwargs):
         """Set electron energy on LEED controller.
 
         This method must be reimplemented in subclasses. The
@@ -278,6 +278,8 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
             not contain information about recalibration of
             the energy itself, as this should be done via
             self.true_energy_to_setpoint(energy).
+        **kwargs : object
+            Unused keyword arguments.
 
         Returns
         -------
@@ -655,7 +657,7 @@ class MeasureControllerABC(ControllerABC):
             self.measurements[key] = []
 
     @abstractmethod
-    def set_energy(self, energy, *other_data):
+    def set_energy(self, energy, *other_data, measure=True, **kwargs):
         """Set electron energy on LEED controller.
 
         This method must be reimplemented in subclasses. The
@@ -683,6 +685,12 @@ class MeasureControllerABC(ControllerABC):
             not contain information about recalibration of
             the energy itself, as this should be done via
             self.true_energy_to_setpoint(energy).
+        measure : bool, optional
+            True if the controller is supposed to take
+            measurements after the energy has been set.
+            Default is True.
+        **kwargs : object
+            Other unused keyword arguments.
 
         Returns
         -------

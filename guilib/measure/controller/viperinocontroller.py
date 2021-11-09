@@ -95,7 +95,7 @@ class ViPErinoController(MeasureControllerABC):
 
         self.__hardware = defaultdict()
 
-    def set_energy(self, energy, time, *more_steps):
+    def set_energy(self, energy, time, *more_steps, measure=True):
         """Set energy with associated settling time.
 
         Take the energy (or energies), get setpoint energy (or
@@ -120,9 +120,13 @@ class ViPErinoController(MeasureControllerABC):
             will be the final energy that is set and should have
             the longest waiting time to allow the electronics to
             stabilize.
+        measure : bool, optional
+            True if the controller is supposed to take
+            measurements after the energy has been set.
+            Default is True.
         """
-        pc_set_voltage = self.settings.get('available_commands',
-                                           'PC_SET_VOLTAGE')
+        __command = 'PC_SET_VOLTAGE' if measure else 'PC_SET_VOLTAGE_ONLY'
+        pc_set_voltage = self.settings.get('available_commands', __command)
         v_ref_dac = self.settings.getfloat('measurement_settings',
                                            'v_ref_dac')
 
