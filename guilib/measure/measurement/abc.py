@@ -94,7 +94,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
     _mandatory_settings = [
         ('devices', 'primary_controller'),
         ('measurement_settings', 'start_energy')
-    ]
+        ]
 
     def __init__(self, measurement_settings):
         """Initialise measurement class"""
@@ -111,6 +111,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         self.start_energy = 0
         self.thread = qtc.QThread()
         self.data_points = []
+        self.running = False
 
         self.__init_errors = []  # Report these with a little delay
         self.__init_err_timer = qtc.QTimer(self)
@@ -249,19 +250,19 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         self.cameras = cameras
         path = self.settings.get('measurement_settings', 'save_here')
         try:
-            os.mkdir(path + 'tmp/')
+            os.mkdir(path + '__tmp__/')
         except FileExistsError:
             # Folder already exists.
             pass
         for camera in self.cameras:
-            camera.process_info.base_path = path + 'tmp/' + camera.name
+            camera.process_info.base_path = path + '__tmp__/' + camera.name
             try:
                 os.mkdir(camera.process_info.base_path)
             except FileExistsError:
             # Folder already exists.
                 pass
 
-        for device in (*self.controllers, *self.cameras):
+        for device in self.devices:
             device.error_occurred.connect(self.__on_hardware_error)
 
     settings = property(__get_settings, set_settings)
@@ -353,7 +354,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             primary.busy = True
             primary.controller_busy.connect(self.return_to_gui,
                                             type=qtc.Qt.UniqueConnection)
-            self.set_LEED_energy(self.current_energy, 50)
+            self.set_LEED_energy(self.current_energy, 50, measure=False)
 
     def save_data(self):
         """Save data.
@@ -366,23 +367,21 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         clock = strftime("%Y-%m-%d_%H-%M-%S/", localtime())
         # class_name = self.__class__.__name__
         os.mkdir(path + clock)
-        to_move_list = os.listdir(path + 'tmp/')
+        to_move_list = os.listdir(path + '__tmp__/')
         for to_move in to_move_list:
-            shutil.move(path + 'tmp/' + to_move, path + clock + to_move)
+            shutil.move(path + '__tmp__/' + to_move, path + clock + to_move)
+        os.rmdir(path + '__tmp__/')
+        if not self.data_points:
+            return
         csv_name = path + clock + 'measurement.csv'
-        length = len(self.data_points)
         with open(csv_name, 'w', encoding='UTF8', newline='') as file_name:
             writer = csv.writer(file_name)
             writer.writerow(self.data_points[0].keys())
-            for i in range(length-1):
-                values = []
-                for key in self.data_points[i].keys():
-                    if self.data_points[i][key]:
-                        values.append(self.data_points[i][key])
+            for data_point in self.data_points:
+                values = [v for _, v in data_point.items() if v]
                 writer.writerow(values)
-        os.rmdir(path + 'tmp/')
 
-    def set_LEED_energy(self, *message):
+    def set_LEED_energy(self, *message, measure=True):
         """Set the electron energy used for LEED.
 
         In order to achieve quicker settling times for the
@@ -400,7 +399,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         -------
         None.
         """
-        self.primary_controller.set_energy(*message)
+        self.primary_controller.set_energy(*message, measure=measure)
 
     @abstractmethod
     def abort(self):
@@ -635,6 +634,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
 
         """
         self.__aborted = False
+        self.running = True
         self.switch_signals_for_preparation()
         self.current_energy = self.start_energy
         self.begin_preparation.emit((self.start_energy,
@@ -918,6 +918,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         self.disconnect_primary_controller()
         self.force_return_timer.stop()
         self.thread.quit()
+        self.running = False
         self.finished.emit((self.plot_info, self.data_points))
 
     def prepare_finalization(self):
