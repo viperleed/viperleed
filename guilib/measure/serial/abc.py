@@ -29,7 +29,6 @@ from viperleed.guilib.measure.hardwarebase import (
     config_has_sections_and_options,
     emit_error
     )
-from viperleed.guilib.decorators import print_call
 
 
 SERIAL_ERROR_MESSAGES = {
@@ -776,7 +775,6 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         """Connect to currently selected port."""
         if not self.__port.open(self.__port.ReadWrite):
             emit_error(self, ExtraSerialErrors.PORT_NOT_OPEN)
-            print(self.port_name)
             self.print_port_config()
             self.__open = False
             return
@@ -931,7 +929,9 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         error_occurred(ExtraSerialErrors.TIMEOUT_ERROR)
             Always
         """
-        emit_error(self, ExtraSerialErrors.TIMEOUT_ERROR)
+        timeout = self.port_settings.getint('serial_port_settings', 'timeout')
+        emit_error(self, ExtraSerialErrors.TIMEOUT_ERROR,
+                   round(timeout/1000, 1))
 
     def __set_up_serial_port(self):
         """Load settings to serial port."""
