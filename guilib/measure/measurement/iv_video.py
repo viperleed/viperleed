@@ -57,8 +57,12 @@ class IVVideo(MeasurementABC):
         self.set_LEED_energy(self.current_energy, self.__i0_settle_time)
         self.counter += 1
         for camera in self.cameras:
-            camera.process_info.filename = (str(self.current_energy) + 'eV_' +
-                str(self.counter) + '.tiff')
+            camera.process_info.filename = (
+                f"{self.counter}_{self.current_energy:.1f}eV_.tiff"
+                )
+        self.data_points[-1]['images'].append(
+            f"{self.counter}_{self.current_energy:.1f}eV_.tiff"
+            )
         self.camera_timer.start(self.__hv_settle_time)
 
     def is_finished(self):
