@@ -16,7 +16,7 @@ Date: 16.04.2021
 
 // Firmware version (MAX: v255.255). CURENTLY: v0.3
 #define FIRMWARE_VERSION_MAJOR    0  // max 255
-#define FIRMWARE_VERSION_MINOR    4  // max 255
+#define FIRMWARE_VERSION_MINOR    5  // max 255
 
 
 
@@ -128,6 +128,7 @@ void updateState() {
         and data_received[0] != PC_RESET
         and data_received[0] != PC_STOP
         and data_received[0] != PC_CHANGE_MEAS_MODE
+        and data_received[0] != PC_SET_VOLTAGE_ONLY
         and hardwareNotKnown()) return;
     
     switch(data_received[0]){
@@ -147,6 +148,7 @@ void updateState() {
             currentState = STATE_SET_UP_ADCS;
             break;
         case PC_SET_VOLTAGE:
+            takeMeasurements = true;
             waitingForDataFromPC = true;
             initialTime = millis();
             nextVoltageStep = 0;
@@ -174,6 +176,13 @@ void updateState() {
             currentState = STATE_IDLE;
             encodeAndSend(PC_OK);
             break;
+        case PC_SET_VOLTAGE_ONLY:
+            takeMeasurements = false;
+            waitingForDataFromPC = true;
+            initialTime = millis();
+            nextVoltageStep = 0;
+            currentState = STATE_SET_VOLTAGE;
+            break;      
     }
     newMessage = false;
 }
@@ -405,6 +414,7 @@ bool decodeAndCheckMessage(){
         case PC_MEASURE_ONLY: break;
         case PC_CHANGE_MEAS_MODE: break;
         case PC_STOP: break;
+        case PC_SET_VOLTAGE_ONLY: break;
         default:
             raise(ERROR_MSG_UNKNOWN);
             return false;
@@ -982,10 +992,16 @@ void setVoltageWaitAndTrigger(){
         return;
     }
 
-    // Finally tell the PC we're done waiting,
-    // and trigger the ADCs for measurement
+    // Finally tell the PC we're done waiting, and
+    // trigger the ADCs for measurement if needed
     encodeAndSend(PC_OK);
-    triggerMeasurements();  // This switches to STATE_MEASURE_ADCS
+    if (takeMeasurements){
+        triggerMeasurements();  // This switches to STATE_MEASURE_ADCS
+    }
+    else {
+      currentState = STATE_IDLE;
+      takeMeasurements = true;
+    }
     nextVoltageStep = 0;    // This is not strictly needed, but nicer for cleanup
 }
 

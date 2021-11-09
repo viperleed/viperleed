@@ -67,8 +67,9 @@ union floatOrBytes{
 #define PC_RESET          82    // PC requested a global reset (ASCII 'R')
 #define PC_SET_VOLTAGE    86    // PC requested to set a certain energy (ASCII 'V')
 #define PC_MEASURE_ONLY   77    // PC requested measurement without changing Voltage (ASCII 'M')
-#define PC_CHANGE_MEAS_MODE 109  // PC requested a change between continuous and single measurement mode
-#define PC_STOP          120    // PC requested a stop on all activity. Return to idle.
+#define PC_CHANGE_MEAS_MODE 109  // PC requested a change between continuous and single measurement mode (ASCII 'm')
+#define PC_STOP          120    // PC requested a stop on all activity. Return to idle (ASCII 'x')
+#define PC_SET_VOLTAGE_ONLY 118  // PC requested set energy without follow up measurement (ASCII 'v')
 
 // Error codes
 #define ERROR_NO_ERROR            0   // No error
@@ -177,6 +178,7 @@ byte nextVoltageStep;                 // Counter for multiple voltage steps
 
 uint16OrBytes hardwareDetected;       // Bits set indicate this hardware is present/jumper closed
 bool hardwareNeverChecked = true;     // Is set false if the PC asked for the hardware configuration
+bool takeMeasurements = true;         // Is set according to set voltage command. True if measurements are requested.
 
 // ADCs: measurement frequency, channel, gain
 byte     adcUpdateRate;        // Update rate for both ADCs (will be set for line frequency)
