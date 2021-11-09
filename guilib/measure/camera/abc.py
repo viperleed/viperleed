@@ -22,8 +22,6 @@ from viperleed.guilib.measure.hardwarebase import (
 from viperleed.guilib.measure.camera.imageprocess import (ImageProcessor,
                                                           ImageProcessInfo)
 
-from viperleed.guilib.decorators import print_call
-
 # TODO: look at QtMultimedia.QCamera
 
 
@@ -520,7 +518,6 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         """
         return
 
-    @print_call
     def connect(self):
         """Connect to the camera."""
         if not self.open():

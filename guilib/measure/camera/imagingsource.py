@@ -25,8 +25,6 @@ from viperleed.guilib.measure.camera.abc import CameraABC, CameraErrors
 from viperleed.guilib.measure.camera.imageprocess import ImageProcessInfo
 from viperleed.guilib.measure.hardwarebase import emit_error
 
-from viperleed.guilib.decorators import print_call
-
 
 @FrameReadyCallbackType
 def on_frame_ready(__grabber_handle, image_start_pixel,
@@ -322,7 +320,6 @@ class ImagingSourceCamera(CameraABC):
         """
         return self.driver.devices
 
-    @print_call
     def open(self):
         """Open the camera device.
 
@@ -617,7 +614,8 @@ class ImagingSourceCamera(CameraABC):
 
     def stop(self):
         """Stop the camera."""
-        self.driver.stop()
+        if self.is_running:
+            self.driver.stop()
         super().stop()
 
     def trigger_now(self):
