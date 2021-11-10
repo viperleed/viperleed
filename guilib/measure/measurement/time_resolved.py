@@ -70,17 +70,11 @@ class TimeResolved(MeasurementABC):
         if self.__measurement_time <= self.__limit_continuous:
             for controller in self.controllers:
                 controller.busy = True
-            for key in self.data_points[-1].keys():
-                self.data_points[-1][key].append([])
-            self.data_points[-1]['nominal_energy'][-1].append(self.current_energy)
             self.connect_continuous_mode_set()
             self.continuous_mode.emit([True, False])
-            pass
         else:
-            self.data_points[-1]['nominal_energy'].append(self.current_energy)
             self.timer.start(self.__measurement_time)
             self.set_LEED_energy(self.current_energy, self.__settle_time)
-            pass
 
     def continuous_mode_set(self, busy):
         """Check if continuous mode has been set on all controllers.
@@ -151,36 +145,37 @@ class TimeResolved(MeasurementABC):
         measured = []
         set_energies = []
         length = len(self.data_points)
-        for i in range(length-1):
-            measured.append(*self.data_points[i][measure])
-            set_energies.append(*self.data_points[i]['nominal_energy'])
+        # TODO: probably range(length) is correct instead of range(length-1)    IMPORTANT!!!!!!!!!!!!!!!!!!!!!!
+        # for i in range(length-1):
+            # measured.append(*self.data_points[i][measure])
+            # set_energies.append(*self.data_points[i]['nominal_energy'])
 
-        if self.__measurement_time <= self.__limit_continuous:
-            for j, step in enumerate(measured):
-                length = len(step)-1
-                data_points = 0
-                for i, measurement in enumerate(step):
-                    if abs(step[length-i] - set_energies[j][0]) < step_height:
-                        data_points += 1
-                    else:
-                        break
-                print(length+1)
-                print(data_points)
-                settle_time = int(1000*data_points/update_rate)
-                if settle_time > self.__settle_time:
-                    self.__settle_time = settle_time
-                print(self.__settle_time)
+        # if self.__measurement_time <= self.__limit_continuous:
+            # for j, step in enumerate(measured):
+                # length = len(step)-1
+                # data_points = 0
+                # for i, measurement in enumerate(step):
+                    # if abs(step[length-i] - set_energies[j][0]) < step_height:
+                        # data_points += 1
+                    # else:
+                        # break
+                # print(length+1)
+                # print(data_points)
+                # settle_time = int(1000*data_points/update_rate)
+                # if settle_time > self.__settle_time:
+                    # self.__settle_time = settle_time
+                # print(self.__settle_time)
 
-            self.primary_controller.settings.set(
-                'measurement_settings', to_change, str(self.__settle_time))
-            file_name = ast.literal_eval(
-                            self.settings.get('devices', 'primary_controller')
-                            )[0]
-            with open(file_name, 'w') as configfile:
-                self.primary_controller.settings.write(configfile)
-        else:
-            pass
-            # TODO: save I0 (or I00) or only images for wiggle
+            # self.primary_controller.settings.set(
+                # 'measurement_settings', to_change, str(self.__settle_time))
+            # file_name = ast.literal_eval(
+                            # self.settings.get('devices', 'primary_controller')
+                            # )[0]
+            # with open(file_name, 'w') as configfile:
+                # self.primary_controller.settings.write(configfile)
+        # else:
+            # pass
+            # # TODO: save I0 (or I00) or only images for wiggle
 
     def is_preparation_finished(self):
         """Check if measurement preparation is done.
@@ -309,15 +304,18 @@ class TimeResolved(MeasurementABC):
             If the received measurement contains a label that is
             not specified in the data_points[-1] dictionary.
         """
-        for key in receive:
-            if key not in self.data_points[-1].keys():
+        sender = self.sender()
+        controller = self.controllers.index(sender)
+        for measured, value in receive.items():
+            if measured not in self.data_points[-1]:
                 emit_error(self, MeasurementErrors.INVALID_MEASUREMENT)
             else:
-                if self.__measurement_time <= self.__limit_continuous:
-                    self.data_points[-1][key][-1].append(receive[key])
-                else:
-                    self.data_points[-1][key].append(receive[key])
-
+                self.data_points[-1][measured][controller].append(value)
+        if not self.data_points[-1]['meas_start_t'][controller]:
+            time = sender.serial.time_stamp
+            if sender is self.primary_controller:
+                time += self.total_primary_delay/1000
+            self.data_points[-1]['meas_start_t'][controller] = time
 
     def connect_continuous_mode_set(self):
         """Connect controller busy signal to continuous_mode_set.

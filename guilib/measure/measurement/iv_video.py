@@ -38,6 +38,9 @@ class IVVideo(MeasurementABC):
             'measurement_settings', 'hv_settle_time')
         self.__i0_settle_time = self.primary_controller.settings.getint(
             'measurement_settings', 'i0_settle_time')
+        num_meas = (1 + round((self.__end_energy - self.start_energy)
+                               /self.__delta_energy))
+        self.__n_digits = len(str(num_meas))
 
     def start_next_measurement(self):
         """Set energy and measure.
@@ -53,16 +56,14 @@ class IVVideo(MeasurementABC):
         super().start_next_measurement()
         for controller in self.controllers:
             controller.busy = True
-        self.data_points[-1]['nominal_energy'].append(self.current_energy)
         self.set_LEED_energy(self.current_energy, self.__i0_settle_time)
         self.counter += 1
-        for camera in self.cameras:
-            camera.process_info.filename = (
-                f"{self.counter}_{self.current_energy:.1f}eV_.tiff"
-                )
-        self.data_points[-1]['images'].append(
-            f"{self.counter}_{self.current_energy:.1f}eV_.tiff"
-            )
+        # TODO: may want to add camera name to image name
+        image_name = (f"{self.counter:0>{self.__n_digits}}_"
+                      f"{self.current_energy:.1f}eV_.tiff")
+        for i, camera in enumerate(self.cameras):
+            camera.process_info.filename = image_name
+            self.data_points[-1]['images'][i] = image_name
         self.camera_timer.start(self.__hv_settle_time)
 
     def is_finished(self):

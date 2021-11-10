@@ -85,7 +85,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
     plot_info['nominal_energy'] = ['eV', 'lin']
     plot_info['I0'] = ['uA', 'lin']
     plot_info['HV'] = ['eV', 'lin']
-    plot_info['elapsed_time'] = ['ms', 'lin']
+    plot_info['meas_start_t'] = ['s', 'lin']
     plot_info['Isample'] = ['V', 'log']
     plot_info['temperature'] = ['°C', 'lin']
     plot_info['cold_junction'] = ['°C', 'lin']
@@ -109,9 +109,12 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         self.__aborted = False
         self.counter = 0
         self.start_energy = 0
-        self.thread = qtc.QThread()
+        self.threads = []
         self.data_points = []
         self.running = False
+        # TODO: check if we really want this to be a private property of the measrurementABC class
+        self.total_primary_delay = 0
+        self.__exceptional_keys = ('images', 'nominal_energy', 'meas_start_t')
 
         self.__init_errors = []  # Report these with a little delay
         self.__init_err_timer = qtc.QTimer(self)
@@ -125,7 +128,8 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         self.start_energy = self.settings.getfloat('measurement_settings',
                                                    'start_energy')
         self.__long_settle_time = self.primary_controller.settings.getint(
-            'measurement_settings', 'first_settle_time')
+            'measurement_settings', 'first_settle_time'
+            )
         self.force_return_timer = qtc.QTimer(parent=self)
         self.force_return_timer.setSingleShot(True)
         self.force_return_timer.timeout.connect(self.return_to_gui)
@@ -235,10 +239,12 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         for secondary_config, secondary_measures in secondary_set:
             ctrl = self.__make_controller(secondary_config, is_primary=False)
             ctrl.what_to_measure(secondary_measures)
-            ctrl.moveToThread(self.thread)
+            self.threads.append(qtc.QThread())
+            ctrl.moveToThread(self.threads[-1])
             secondary_controllers.append(ctrl)
         self.secondary_controllers = secondary_controllers
-        self.thread.start()
+        for thread in self.threads:
+            thread.start(priority=thread.TimeCriticalPriority)
 
         # Instantiate camera classes
         cameras = []
@@ -354,7 +360,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             primary.busy = True
             primary.controller_busy.connect(self.return_to_gui,
                                             type=qtc.Qt.UniqueConnection)
-            self.set_LEED_energy(self.current_energy, 50, measure=False)
+            self.set_LEED_energy(self.current_energy, 50, trigger_meas=False)
 
     def save_data(self):
         """Save data.
@@ -365,7 +371,6 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         """
         path = self.settings.get('measurement_settings', 'save_here')
         clock = strftime("%Y-%m-%d_%H-%M-%S/", localtime())
-        # class_name = self.__class__.__name__
         os.mkdir(path + clock)
         to_move_list = os.listdir(path + '__tmp__/')
         for to_move in to_move_list:
@@ -373,15 +378,72 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         os.rmdir(path + '__tmp__/')
         if not self.data_points:
             return
-        csv_name = path + clock + 'measurement.csv'
-        with open(csv_name, 'w', encoding='UTF8', newline='') as file_name:
-            writer = csv.writer(file_name)
-            writer.writerow(self.data_points[0].keys())
-            for data_point in self.data_points:
-                values = [v for _, v in data_point.items() if v]
-                writer.writerow(values)
 
-    def set_LEED_energy(self, *message, measure=True):
+        csv_name = path + clock + 'measurement.csv'
+        first_line = []
+        for camera in self.cameras:
+            first_line.append(camera.name)
+        first_line.append('nominal_energy')
+        for controller in self.controllers:
+            first_line.append(f"meas_start_t_{controller.serial.port_name}")
+        keys_to_delete = []
+        for key, measurements in self.data_points[0].items():
+            if key not in self.__exceptional_keys:
+                if not any(measurements):
+                    keys_to_delete.append(key)
+                    continue
+                indexes_to_pop = []
+                for i, measurement in enumerate(measurements):
+                    if measurement:
+                        first_line.append(f"{key}_{self.controllers[i].serial.port_name}")
+                    else:
+                        indexes_to_pop.append(i)
+                indexes_to_pop.sort(reverse=True)
+                for i in indexes_to_pop:
+                    for j, data_point in enumerate(self.data_points):
+                        self.data_points[j][key].pop(i)
+        for key in keys_to_delete:
+            for j, data_point in enumerate(self.data_points):
+                del self.data_points[j][key]
+        # TODO: easier solution?
+
+        for data_point in self.data_points:
+            if not all(data_point['meas_start_t']):
+                break
+            primary_time = data_point['meas_start_t'][0]
+            for i, time in enumerate(data_point['meas_start_t']):
+                data_point['meas_start_t'][i] -= primary_time
+
+        with open(csv_name, 'w', encoding='UTF8', newline='') as file_name:
+            writer = csv.writer(file_name, delimiter = ';')
+            writer.writerow(first_line)
+            for data_point in self.data_points:
+                images = data_point['images']
+                energy = data_point['nominal_energy']
+                times = data_point['meas_start_t']
+                max_length = max(
+                    len(m)
+                    for k, measurements in data_point.items()
+                    if k not in self.__exceptional_keys
+                    for m in measurements
+                    )
+                for key, measurements in data_point.items():
+                    if key not in self.__exceptional_keys:
+                        for measurement in measurements:
+                            extra_length = max_length - len(measurement)
+                            measurement += ['Nan']*extra_length
+                for i in range(max_length):
+                    line = []
+                    line.extend(images)
+                    line.append(energy)
+                    line.extend(times)
+                    for key, measurements in data_point.items():
+                        if key not in self.__exceptional_keys:
+                            for measurement in measurements:
+                                line.append(measurement[i])
+                    writer.writerow(line)
+
+    def set_LEED_energy(self, *message, trigger_meas=True, **kwargs):
         """Set the electron energy used for LEED.
 
         In order to achieve quicker settling times for the
@@ -395,11 +457,22 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         message : tuple
             Contains data necessary to set the energy.
 
+        trigger_meas : bool, optional
+            True if the controllers are supposed to take
+            measurements after the energy has been set.
+            Default is True.
+        **kwargs : object
+            Other unused keyword arguments.
+
         Returns
         -------
         None.
         """
-        self.primary_controller.set_energy(*message, measure=measure)
+        self.primary_controller.set_energy(*message, trigger_meas=trigger_meas)
+        self.total_primary_delay = 0
+        for i, value in enumerate(message):
+            if i%2 != 0:
+                self.total_primary_delay += value
 
     @abstractmethod
     def abort(self):
@@ -427,8 +500,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             self.ready_for_measurement.connect(camera.trigger_now,
                                                type=qtc.Qt.UniqueConnection)
             self.begin_preparation.connect(camera.start,
-                                           type=qtc.Qt.UniqueConnection)                              
-                                               
+                                           type=qtc.Qt.UniqueConnection)
         # camera.disconnect does not need to be hooked up to the
         # abort_action signal as it is called in the disconnecting
         # of the camera signals anyway.
@@ -759,11 +831,21 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             If the received measurement contains a label that is
             not specified in the data_points[-1] dictionary.
         """
-        for key in receive:
-            if key not in self.data_points[-1].keys():
+        # TODO: check if one controller can return data while
+        # another controller has changed his busy state but
+        # hasn't returned data yet. (race condition)
+        sender = self.sender()
+        controller = self.controllers.index(sender)
+        for measured, value in receive.items():
+            if measured not in self.data_points[-1]:
                 emit_error(self, MeasurementErrors.INVALID_MEASUREMENT)
             else:
-                self.data_points[-1][key].append(receive[key])
+                self.data_points[-1][measured][controller].append(value)
+        if not self.data_points[-1]['meas_start_t'][controller]:
+            time = sender.serial.time_stamp
+            if sender is self.primary_controller:
+                time += self.total_primary_delay/1000
+            self.data_points[-1]['meas_start_t'][controller] = time
         self.ready_for_next_measurement()
 
     def do_next_measurement(self):
@@ -797,11 +879,19 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         -------
         None.
         """
-        # The reimplementation may introduce more/other keys.
         data_points_dict = defaultdict(list)
         for key in self.plot_info:
             data_points_dict[key] = []
         self.data_points.append(data_points_dict)
+        for key in self.data_points[-1].keys():
+            if key not in self.__exceptional_keys:
+                for i in range(len(self.controllers)):
+                    self.data_points[-1][key].append([])
+        for i in range(len(self.controllers)):
+            self.data_points[-1]['meas_start_t'].append(None)
+        for i in range(len(self.cameras)):
+            self.data_points[-1]['images'].append(None)
+        self.data_points[-1]['nominal_energy'] = self.current_energy
 
     def __make_controller(self, controller_settings, is_primary=False):
         """Instantiate controller class object.
@@ -917,7 +1007,8 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         """
         self.disconnect_primary_controller()
         self.force_return_timer.stop()
-        self.thread.quit()
+        for thread in self.threads:
+            thread.quit()
         self.running = False
         self.finished.emit((self.plot_info, self.data_points))
 
