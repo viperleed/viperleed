@@ -86,7 +86,8 @@ class CameraViewer(qtw.QScrollArea):
     image_size_changed = qtc.pyqtSignal()
     zoom_changed = qtc.pyqtSignal(float)  # new zoom factor
 
-    def __init__(self, camera, *args, parent=None, **kwargs):
+    def __init__(self, camera, *args, parent=None, stop_on_close=True,
+                 **kwargs):
         """Initialize widget.
 
         Parameters
@@ -98,6 +99,8 @@ class CameraViewer(qtw.QScrollArea):
             QScrollArea.__init__
         parent : QWidget, optional
             Parent widget of self. Default is None.
+        stop_on_close : bool
+            Stop the camera when this widget is closed.
         **kwargs : object
             Other unused optional arguments, passed to
             QScrollArea.__init__
@@ -111,6 +114,7 @@ class CameraViewer(qtw.QScrollArea):
         self.__img_view = ImageViewer()
         self.__img_size = qtc.QSize()
         self.__camera = camera
+        self.__stop_on_close = bool(stop_on_close)
         self.__roi = RegionOfInterest(parent=self.__img_view)
 
         try:
@@ -180,7 +184,9 @@ class CameraViewer(qtw.QScrollArea):
 
     def closeEvent(self, event):
         """Extend to stop camera when window is closed by the user."""
-        if event.spontaneous() and self.__camera.is_running:
+        if (event.spontaneous()
+            and self.__camera.is_running
+                and self.__stop_on_close):
             self.__camera.stop()
         super().closeEvent(event)
 
