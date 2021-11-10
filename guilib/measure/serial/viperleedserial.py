@@ -647,3 +647,14 @@ class ViPErLEEDSerial(SerialABC):
         if not (hardware_config['adc_0'] or hardware_config['adc_1']):
             emit_error(self, ViPErLEEDHardwareError.ERROR_NO_HARDWARE_DETECTED)
         return firmware_version, hardware_config
+
+    def is_measure_command(self, command):
+        """Returns true if the command sent is a
+        command that will return a measurement."""
+        pc_set_voltage = self.port_settings.get('available_commands',
+                                                'PC_SET_VOLTAGE')
+        pc_measure_only = self.port_settings.get('available_commands',
+                                                 'PC_MEASURE_ONLY')
+        if command in (pc_set_voltage, pc_measure_only):
+            return True
+        return False
