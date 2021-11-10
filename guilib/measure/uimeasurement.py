@@ -30,6 +30,7 @@ from viperleed.guilib.basewidgets import QDoubleValidatorNoDot
 from viperleed.guilib.measure.camera.abc import CameraABC
 from viperleed.guilib.measure.controller.abc import ControllerABC
 from viperleed.guilib.measure.measurement.abc import MeasurementABC
+from viperleed.guilib.measure.widgets.camerawidgets import CameraViewer
 
 TITLE = 'Measurement UI'
 
@@ -79,6 +80,7 @@ class Measure(gl.ViPErLEEDPluginBase):
         self.__delayed_start = qtc.QTimer(parent=self)
         self.__delayed_start.setSingleShot(True)
         self.__delayed_start.timeout.connect(self.__run_measurement)
+        self.__camera_viewers = []
 
     def __compose(self):
         """Prepare menu."""
@@ -157,8 +159,12 @@ class Measure(gl.ViPErLEEDPluginBase):
     def __on_start_pressed(self):
         text = self._ctrls['select'].currentText()
         if self.measurement:
-            self.measurement.thread.quit()
+            for thread in self.measurement.threads:
+                thread.quit()
             self.__on_finished()
+        for viewer in self.__camera_viewers:
+            viewer.close()
+        self.__camera_viewers = []
         config = configparser.ConfigParser(comment_prefixes='/',
                                            allow_no_value=True)
         file_name = Path('C:/Users/Florian/Documents/Uni/Masterarbeit/ViperLEED/viperleed/guilib/measure/configuration/viperleed_config.ini')
@@ -185,22 +191,29 @@ class Measure(gl.ViPErLEEDPluginBase):
             controller.error_occurred.connect(self.error_occurred)
         for camera in self.measurement.cameras:
             camera.error_occurred.connect(self.error_occurred)
+            self.__camera_viewers.append(CameraViewer(camera,
+                                                      stop_on_close=False))
         self.measurement.finished.connect(self.__on_finished)
         self.measurement.finished.connect(self.__on_measurement_finished)
+            
 
         self.__delayed_start.start(50)
 
     def __on_new_data(self):
         """Replot measured data."""
+        # TODO: this plotting delays the measurement of secondary controllers
         fig = self._ctrls['plots'][0]
         fig.ax.cla()  # Clear old stuff
         meas = self.sender()
         nominal_energies = []
         I0_data = []
         length = len(meas.data_points)
-        for i in range(length-1):
-            nominal_energies.append(*meas.data_points[i]['nominal_energy'])
-            I0_data.append(*meas.data_points[i]['I0'])
+        for data_point in meas.data_points:
+            nominal_energies.append(data_point['nominal_energy'])
+            for measurement in data_point['I0']:
+                # TODO: can only handle one controller measuring selected quantity right now, this is a crap solution
+                if measurement:
+                    I0_data.append(*measurement)
         fig.ax.plot(nominal_energies, I0_data, '.')
         fig.ax.figure.canvas.draw_idle()
 
