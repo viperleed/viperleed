@@ -871,7 +871,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                 continue
             which = plist[1].lower()
             if which not in ['theta', 'phi', 'v0i',
-                             'a', 'b', 'c', 'ab', 'abc', 'S_ovl']:
+                             'a', 'b', 'c', 'ab', 'abc', 's_ovl']:
                 logger.warning('PARAMETERS file: OPTIMIZE: Parameter "{}" '
                                'not recognized. Input will be ignored.'
                                .format(which))

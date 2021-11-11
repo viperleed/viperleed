@@ -170,7 +170,7 @@ def fd_optimization(sl, rp):
         x0 = rp.THETA
     elif which == "phi":
         x0 = rp.PHI
-    elif which == "S_ovl":
+    elif which == "s_ovl":
         x0 = rp.S_OVL
     else:
         x0 = 1.   # geometry: x is a scaling factor
