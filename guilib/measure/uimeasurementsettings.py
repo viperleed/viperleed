@@ -19,6 +19,7 @@ import PyQt5.QtGui as qtg
 
 # ViPErLEED modules
 from viperleed import guilib as gl
+from viperleed.guilib.basewidgets import QDoubleValidatorNoDot
 
 TITLE = 'Measurement Settings'
 
@@ -30,4 +31,90 @@ class SettingsEditor(gl.ViPErLEEDPluginBase):
         super().__init__(parent, name=TITLE)
         # Keep references to controls, dialogs, and some globals
         self._ctrls = {
+            'start_energy': qtw.QLineEdit(''),
+            'end_energy': qtw.QLineEdit(''),
+            'delta_energy': qtw.QLineEdit(''),
+            'measurement_time' : qtw.QLineEdit(''),
+            'limit_continuous' : qtw.QLineEdit(''),
+            'cycle_time' : qtw.QLineEdit(''),
+            'save': qtw.QPushButton("Apply changes"),
+            'undo': qtw.QPushButton("Undo"),
             }
+
+        self._dialogs = {}
+        self._glob = {}
+
+        self.__parameters = ('start_energy', 'end_energy', 'delta_energy',
+                             'measurement_time', 'limit_continuous',
+                             'cycle_time')
+        self.__file_name = Path(('C:/Users/Florian/Documents/Uni/Masterarbeit/'
+                               'ViperLEED/viperleed/guilib/measure/configura'
+                               'tion/viperleed_config.ini'))
+        self.__settings = None
+        self.__read_settings()
+        self.__compose()
+        # Set window properties
+        self.setWindowTitle(TITLE)
+        self.setAcceptDrops(False)
+        # TODO: add times/ make separate class/ read stuff from config and put it in the box upon opening extra window/add save button
+
+    def __compose(self):
+        """Prepare settings editor."""
+        self.setCentralWidget(qtw.QWidget())
+        self.centralWidget().setLayout(qtw.QGridLayout())
+
+        self._ctrls['save'].setFont(gl.AllGUIFonts().buttonFont)
+        self._ctrls['save'].ensurePolished()
+        self._ctrls['save'].clicked.connect(self.__on_save_pressed)
+        self._ctrls['save'].setEnabled(True)
+
+        self._ctrls['undo'].setFont(gl.AllGUIFonts().buttonFont)
+        self._ctrls['undo'].ensurePolished()
+        self._ctrls['undo'].clicked.connect(self.__on_undo_pressed)
+        self._ctrls['undo'].setEnabled(True)
+
+        layout = self.centralWidget().layout()
+
+        for key in self.__parameters:
+            self._ctrls[key].setFont(gl.AllGUIFonts().labelFont)
+            self._ctrls[key].ensurePolished()
+            self._ctrls[key].setValidator(QDoubleValidatorNoDot())
+            self._ctrls[key].validator().setLocale(qtc.QLocale.c())
+            text = self.__settings.get('measurement_settings', key)
+            self._ctrls[key].setText(text)
+
+        layout.addWidget(qtw.QLabel('Start energy ='), 1, 1, 1, 1)
+        layout.addWidget(self._ctrls['start_energy'], 1, 2, 1, 1)
+        layout.addWidget(qtw.QLabel('End energy ='), 2, 1, 1, 1)
+        layout.addWidget(self._ctrls['end_energy'], 2, 2, 1, 1)
+        layout.addWidget(qtw.QLabel('Delta energy ='), 3, 1, 1, 1)
+        layout.addWidget(self._ctrls['delta_energy'], 3, 2, 1, 1)
+        layout.addWidget(qtw.QLabel('measurement_time ='), 4, 1, 1, 1)
+        layout.addWidget(self._ctrls['measurement_time'], 4, 2, 1, 1)
+        layout.addWidget(qtw.QLabel('limit_continuous ='), 5, 1, 1, 1)
+        layout.addWidget(self._ctrls['limit_continuous'], 5, 2, 1, 1)
+        layout.addWidget(qtw.QLabel('cycle_time ='), 6, 1, 1, 1)
+        layout.addWidget(self._ctrls['cycle_time'], 6, 2, 1, 1)
+        layout.addWidget(self._ctrls['undo'], 7, 1, 1, 1)
+        layout.addWidget(self._ctrls['save'], 7, 2, 1, 1)
+
+    def __read_settings(self):
+        """Read configuration file."""
+        self.__settings = configparser.ConfigParser(comment_prefixes='/',
+                                                    allow_no_value=True,
+                                                    strict=False)
+        self.__settings.read(self.__file_name)
+
+    def __on_undo_pressed(self):
+        """Undo changes in QLineEdits."""
+        for key in self.__parameters:
+            text = self.__settings.get('measurement_settings', key)
+            self._ctrls[key].setText(text)
+
+    def __on_save_pressed(self):
+        """Save changes to settings."""
+        for key in self.__parameters:
+            text = self._ctrls[key].displayText()
+            self.__settings.set('measurement_settings', key, text)
+        with open(self.__file_name, 'w') as configfile:
+            self.__settings.write(configfile)

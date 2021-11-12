@@ -31,6 +31,7 @@ from viperleed.guilib.measure.camera.abc import CameraABC
 from viperleed.guilib.measure.controller.abc import ControllerABC
 from viperleed.guilib.measure.measurement.abc import MeasurementABC
 from viperleed.guilib.measure.widgets.camerawidgets import CameraViewer
+from viperleed.guilib.measure.uimeasurementsettings import SettingsEditor
 
 TITLE = 'Measurement UI'
 
@@ -49,17 +50,15 @@ class Measure(gl.ViPErLEEDPluginBase):
             'measure': qtw.QPushButton("Start Measurement"),
             'abort': qtw.QPushButton("Abort"),
             'select': qtw.QComboBox(),
-            'Start energy': qtw.QLineEdit(''),
-            'End energy': qtw.QLineEdit(''),
-            'Delta energy': qtw.QLineEdit(''),
-            'save': qtw.QPushButton("Store settings"),
             'plots': [],
             'energy_input': qtw.QLineEdit(''),
             'set_energy': qtw.QPushButton("Set energy"),
-            # TODO: add times/ make separate class/ read stuff from config and put it in the box upon opening extra window/add save button
+            'settings_editor': qtw.QPushButton("Open settings editor"),
             }
 
-        self._dialogs = {}
+        self._dialogs = {
+            'change_settings': SettingsEditor(),
+            }
         self._glob = {}
 
         # Set window properties
@@ -97,11 +96,6 @@ class Measure(gl.ViPErLEEDPluginBase):
         self._ctrls['abort'].ensurePolished()
         self._ctrls['abort'].setEnabled(False)
 
-        self._ctrls['save'].setFont(gl.AllGUIFonts().buttonFont)
-        self._ctrls['save'].ensurePolished()
-        # self._ctrls['save'].clicked.connect(TODO: this)
-        self._ctrls['save'].setEnabled(False)
-
         self._ctrls['select'].addItems(ALL_MEASUREMENTS.keys())
         self._ctrls['select'].setFont(gl.AllGUIFonts().buttonFont)
         self._ctrls['select'].ensurePolished()
@@ -109,33 +103,31 @@ class Measure(gl.ViPErLEEDPluginBase):
         self._ctrls['set_energy'].setFont(gl.AllGUIFonts().buttonFont)
         self._ctrls['set_energy'].ensurePolished()
         self._ctrls['set_energy'].setEnabled(False)
+        
+        self._ctrls['settings_editor'].setFont(gl.AllGUIFonts().buttonFont)
+        self._ctrls['settings_editor'].ensurePolished()
+        self._ctrls['settings_editor'].clicked.connect(self.__on_change_settings_pressed)
+        self._ctrls['settings_editor'].setEnabled(True)
+
+        self._ctrls['energy_input'].setFont(gl.AllGUIFonts().labelFont)
+        self._ctrls['energy_input'].ensurePolished()
+        self._ctrls['energy_input'].setValidator(QDoubleValidatorNoDot())
+        self._ctrls['energy_input'].validator().setLocale(qtc.QLocale.c())
 
         layout = self.centralWidget().layout()
-
-        for key in ('Start energy', 'End energy',
-                    'Delta energy', 'energy_input'):
-            self._ctrls[key].setFont(gl.AllGUIFonts().labelFont)
-            self._ctrls[key].ensurePolished()
-            self._ctrls[key].setValidator(QDoubleValidatorNoDot())
-            self._ctrls[key].validator().setLocale(qtc.QLocale.c())
 
         layout.addWidget(self._ctrls['measure'], 1, 1, 1, 1)
         layout.addWidget(self._ctrls['abort'], 1, 2, 1, 1)
         layout.addWidget(self._ctrls['select'], 2, 1, 1, 2)
-        layout.addWidget(qtw.QLabel('Start energy ='), 3, 1, 1, 1)
-        layout.addWidget(self._ctrls['Start energy'], 3, 2, 1, 1)
-        layout.addWidget(qtw.QLabel('End energy ='), 4, 1, 1, 1)
-        layout.addWidget(self._ctrls['End energy'], 4, 2, 1, 1)
-        layout.addWidget(qtw.QLabel('Delta energy ='), 5, 1, 1, 1)
-        layout.addWidget(self._ctrls['Delta energy'], 5, 2, 1, 1)
-        layout.addWidget(self._ctrls['save'], 6, 1, 1, 2)
-        layout.addWidget(self._ctrls['set_energy'], 7, 1, 1, 1)
-        layout.addWidget(self._ctrls['energy_input'], 7, 2, 1, 1)
+        layout.addWidget(self._ctrls['set_energy'], 3, 1, 1, 1)
+        layout.addWidget(self._ctrls['energy_input'], 3, 2, 1, 1)
+        layout.addWidget(self._ctrls['settings_editor'], 4, 1, 1, 2)
+        
         self.statusBar().showMessage('Ready')
 
         fig = Figure()
         self._ctrls['plots'].append(fig)
-        layout.addWidget(fig, 8, 1, 1, 2)
+        layout.addWidget(fig, 5, 1, 1, 2)
 
     def __run_measurement(self):
         self.measurement.begin_measurement_preparation()
@@ -166,7 +158,8 @@ class Measure(gl.ViPErLEEDPluginBase):
             viewer.close()
         self.__camera_viewers = []
         config = configparser.ConfigParser(comment_prefixes='/',
-                                           allow_no_value=True)
+                                           allow_no_value=True,
+                                           strict=False)
         file_name = Path('C:/Users/Florian/Documents/Uni/Masterarbeit/ViperLEED/viperleed/guilib/measure/configuration/viperleed_config.ini')
         # TODO: path here not nice
         try:
@@ -205,16 +198,22 @@ class Measure(gl.ViPErLEEDPluginBase):
         fig = self._ctrls['plots'][0]
         fig.ax.cla()  # Clear old stuff
         meas = self.sender()
+        measured_quantity = meas.settings.get('measurement_settings',
+                                              'measure_this')
         nominal_energies = []
-        I0_data = []
-        length = len(meas.data_points)
+        data = []
+        for measurement in meas.data_points[0][measured_quantity]:
+            if measurement:
+                data.append([])
         for data_point in meas.data_points:
             nominal_energies.append(data_point['nominal_energy'])
-            for measurement in data_point['I0']:
-                # TODO: can only handle one controller measuring selected quantity right now, this is a crap solution
+            i = 0
+            for measurement in data_point[measured_quantity]:
                 if measurement:
-                    I0_data.append(*measurement)
-        fig.ax.plot(nominal_energies, I0_data, '.')
+                    data[i].append(*measurement)
+                    i += 1
+        for data_set in data:
+            fig.ax.plot(nominal_energies, data_set, '.')
         fig.ax.figure.canvas.draw_idle()
 
     def __on_set_energy(self):
@@ -261,3 +260,20 @@ class Measure(gl.ViPErLEEDPluginBase):
             event.ignore()
             return
         super().closeEvent(event)
+
+    def __on_change_settings_pressed(self):
+        settings = SettingsEditor()
+        self._dialogs['change_settings'] = settings
+        # Change settings is already open
+        if settings:
+            settings.show()
+            # Move window to front
+            settings.raise_()
+            # Show as a window, also in case it is minimized
+            settings.setWindowState(settings.windowState()
+                                  & ~qtc.Qt.WindowMinimized
+                                  | qtc.Qt.WindowActive)
+            return
+        
+
+        settings.show()
