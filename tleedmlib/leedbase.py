@@ -562,7 +562,7 @@ def readWoodsNotation(s, ucell):
     return mat
 
 
-def checkLattice(ab, eps=1e-4):
+def checkLattice(ab, eps=1e-3):
     """Takes unit vectors a,b as a 2x2 matrix, returns (lat,t), where lat is
     a string "square", "rectangular", "hexagonal", "rhombic" or "oblique", and
     t is a 2x2 transformation matrix which will transform the cell to obtuse
@@ -590,7 +590,7 @@ def checkLattice(ab, eps=1e-4):
     return (lat, t)
 
 
-def reduceUnitCell(ab, eps=1e-4):
+def reduceUnitCell(ab, eps=1e-3):
     """Takes an obtuse unit cell as a (2x2) matrix and reduces it to minimum
     circumference, keeping the area constant. This might reduce oblique unit
     cells to rectangular or hexagonal ones. Returns (ab, t, celltype), where
