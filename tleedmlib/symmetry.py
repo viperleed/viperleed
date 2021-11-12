@@ -232,18 +232,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
 
     # check cell type again
     abst = np.transpose(sl.ucell[:2, :2])
-    dp = np.dot(abst[0], abst[1])
-    if abs(dp) < eps:   # square or rectangular
-        if abs(np.linalg.norm(abst[0])-np.linalg.norm(abst[1])) < eps:
-            celltype = "square"
-        else:
-            celltype = "rectangular"
-    elif abs(np.linalg.norm(abst[0]) - np.linalg.norm(abst[1])) >= eps:
-        celltype = "oblique"
-    elif abs(abs(angle(abst[0], abst[1])) - (2*np.pi/3)) < eps:
-        celltype = "hexagonal"
-    else:
-        celltype = "rhombic"
+    celltype, _ = tl.leedbase.checkLattice(abst)
     sl.celltype = celltype
     if output:
         logger.info("Found unit cell type: "+celltype)
@@ -1062,7 +1051,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
             ang = angle(np.array([1, 0]), testplane.dir)
             rotm = rotation_matrix(ang)
             m = np.dot(rotm, np.dot(np.array([[1, 0], [0, -1]]),
-                                                   np.linalg.inv(rotm)))
+                                    np.linalg.inv(rotm)))
             for (sli, sl1) in enumerate(sl.sublayers):
                 for (ati, at1) in enumerate(sl1.atlist):
                     for (atj, at2) in enumerate(tmpslab.sublayers[sli]
