@@ -381,11 +381,17 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
 
         csv_name = path + clock + 'measurement.csv'
         first_line = []
+        update_rates = []
         for camera in self.cameras:
             first_line.append(camera.name)
         first_line.append('nominal_energy')
         for controller in self.controllers:
             first_line.append(f"meas_start_t_{controller.serial.port_name}")
+            update_rate_raw = controller.settings.get('controller',
+                                                      'update_rate')
+            update_rate = controller.settings.getint('adc_update_rate',
+                                                     update_rate_raw)
+            update_rates.append(update_rate)
         keys_to_delete = []
         for key, measurements in self.data_points[0].items():
             if key not in self.__exceptional_keys:
@@ -436,7 +442,8 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
                     line = []
                     line.extend(images)
                     line.append(energy)
-                    line.extend(times)
+                    for j in range(len(self.controllers)):
+                        line.append(times[j]+i/update_rates[j])
                     for key, measurements in data_point.items():
                         if key not in self.__exceptional_keys:
                             for measurement in measurements:
