@@ -159,6 +159,11 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
     busy = property(__get_busy, set_busy)
 
     @property
+    def initial_delay(self):
+        """Return the initial time delay of a measurement in seconds."""
+        return self.settings.getfloat('controller', 'initial_delay')
+
+    @property
     def serial(self):
         """Return the serial port instance used."""
         return self.__serial

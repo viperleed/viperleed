@@ -95,6 +95,13 @@ class ViPErinoController(MeasureControllerABC):
 
         self.__hardware = defaultdict()
 
+    @property
+    def initial_delay(self):
+        """Return the initial time delay of a measurement in seconds."""
+        update_rate_raw = self.settings.get('controller', 'update_rate')
+        update_rate = self.settings.getint('adc_update_rate', update_rate_raw)
+        return 3/update_rate
+
     def set_energy(self, energy, time, *more_steps, trigger_meas=True):
         """Set energy with associated settling time.
 
@@ -386,10 +393,10 @@ class ViPErinoController(MeasureControllerABC):
 
     def stop(self):
         """Stop.
-        
+
         Stop whatever the controller is doing right now
         and return to idle state.
-        
+
         Returns
         -------
         None.
