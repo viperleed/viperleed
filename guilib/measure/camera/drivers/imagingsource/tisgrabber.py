@@ -37,6 +37,9 @@ from viperleed.guilib.measure.camera.drivers.imagingsource.properties import (
     store_property, SwitchProperty, VCDPropertyInterface,
     PropertyDiscoveryCallbackType, CameraProperty, VideoProperty
     )
+from viperleed.guilib.measure.camera.drivers.imagingsource.models import (
+    ISModels
+    )
 
 dll_path = Path(__file__).parent.resolve()
 try:
@@ -206,10 +209,6 @@ FrameReadyCallbackType = CFUNCTYPE(
 FrameReadyCallbackType.__ctypeswrapper__ = 'FrameReadyCallbackType'
 
 
-# TODO: also look at (ip-config) https://github.com/TheImagingSource/IC-Imaging-Control-Samples/tree/master/c%23/Open%20GigE%20Camera%20by%20IP%20Address
-
-# TODO: try removing some of the many functions, especially those we will never use
-
 class  WindowsCamera:
     """Interface class for Imaging Source camera in Windows."""
 
@@ -240,6 +239,7 @@ class  WindowsCamera:
         self.__video_fmt_info = {'min_w': None, 'min_h': None,
                                  'max_w': None, 'max_h': None,
                                  'd_w': None, 'd_h': None}
+        self.__model = ''
 
     @classmethod
     def __init_library(cls, license_key=None):
@@ -302,6 +302,11 @@ class  WindowsCamera:
         names = (self.__unique_name_from_index(i)
                  for i in range(self.__n_devices))
         return [n for n in names if n]
+
+    @property
+    def dynamic_range(self):
+        """Return the dynamic range in bits for the open camera."""
+        return ISModels[self.__model].dynamic_range
 
     @property
     def exposure_range(self):
@@ -858,6 +863,15 @@ class  WindowsCamera:
         """
         self._dll_open_by_unique_name(self.__handle,
                                       _to_bytes(unique_name))
+        self.__model = '_'.join(unique_name.split()[:2]).replace('.', '_')
+        try:
+            ISModels[self.__model]
+        except AttributeError:
+            raise RuntimeError("Could not find Imaging Source camera model "
+                               f"{self.__model} in the known model list. "
+                               "Please update models.py accordingly.")
+            self.close()
+            return
 
         # Do some of the slow stuff already here, such that
         # following calls will be fast.
