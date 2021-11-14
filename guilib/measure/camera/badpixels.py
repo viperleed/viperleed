@@ -897,4 +897,12 @@ class BadPixels:
     def __has_info(self):
         """Return whether bad pixel information is present."""
         return np.nan not in self.__bad_coords
+    
+    def __bool__(self):
+        """Return the truth value of self."""
+        if not self.__has_info:
+            return False
+        if not self.bad_pixel_coordinates.size:
+            return False
+        return True
 
