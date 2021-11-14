@@ -233,6 +233,25 @@ class ImagingSourceCamera(CameraABC):
         return info
 
     @property
+    def intensity_limits(self):
+        """Return the minimum and maximum value for a pixel.
+        
+        Returns
+        -------
+        pixel_min : int
+            Minimum intensity for a pixel
+        pixel_max : int
+            Maximum intensity for a pixel
+        """
+        *_, n_bytes, _ = self.image_info
+        min_bit = 8*n_bytes - self.driver.dynamic_range
+        if n_bytes == 1:
+            pixel_min = 0
+        else:
+            pixel_min = 2**min_bit
+        return pixel_min, 2**(8*n_bytes) - 1
+
+    @property
     def is_running(self):
         """Return whether the camera is currently running."""
         try:

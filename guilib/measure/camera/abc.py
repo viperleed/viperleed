@@ -39,7 +39,6 @@ class CameraErrors(ViPErLEEDErrorEnum):
                         "Could not find camera {}.\nMake sure the camera is "
                         "connected and has power. Try (re-)plugging it, and "
                         "give the camera enough time to boot up.")
-
     SETTINGS_MISMATCH = (203,
                          "Different {} settings found in camera and "
                          "configuration file: camera={}, settings={}.")
@@ -300,6 +299,20 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
             Number of bytes per pixel and per color
         n_colors : int
             Number of color channels
+        """
+        return
+
+    @property
+    @abstractmethod
+    def intensity_limits(self):
+        """Return the minimum and maximum value for a pixel.
+        
+        Returns
+        -------
+        pixel_min : int
+            Minimum intensity for a pixel
+        pixel_max : int
+            Maximum intensity for a pixel
         """
         return
 
@@ -1005,7 +1018,8 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         self.busy = False
 
         if self.__process_thread.isRunning():
-            self.__process_thread.quit()
+            # self.__process_thread.quit()
+            self.__process_thread.requestInterruption()
         try:
             self.frame_ready.disconnect(self.__on_frame_ready)
         except TypeError:
@@ -1095,8 +1109,6 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         except (TypeError, ValueError):
             emit_error(self, CameraErrors.INVALID_SETTING_WITH_FALLBACK,
                        'camera_settings/bad_pixels', 'no bad pixels')
-        # TODO: file name. Probably needs a temp path + a file name
-        #       both should be taken care of by the measurement.
 
         if self.n_frames_done == 0:
             processor = ImageProcessor()
