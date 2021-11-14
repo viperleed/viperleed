@@ -81,9 +81,9 @@ class ImageProcessInfo:
 
     Attributes
     ----------
-    bad_pixels : Sequence
-        Shape (N, 2). Each row is the (x, y) position of a bad pixel,
-        measured with respect to the top-left corner
+    bad_pixels : BadPixels
+        BadPixels object holding information about which of the camera
+        pixels are bad and how to correct them.
     filename : str or pathlib.Path
         Absolute path to the name of the file to be saved to disk after
         processing is over
@@ -112,8 +112,6 @@ class ImageProcessInfo:
     copy()
         Return a deep-copy of self
     """
-
-    __bad_pixels: typing.Sequence = tuple()  # Nx2 sequence
     filename: str = ''
     base_path: str = ''
     n_frames: int = 0
@@ -124,49 +122,8 @@ class ImageProcessInfo:
 
     @property
     def bad_pixels(self):
-        """Return bad pixels as an array of (x, y) coordinates."""
-        # TODO: return the list of bad pixels recalculated on the ROI
-        # (bad pixels are wrt full sensor), skipping those whose
-        # transformed coordinates are < 0 or > roi width/height.
-        return np.asarray(self.__bad_pixels)
-
-    @bad_pixels.setter
-    def bad_pixels(self, bad_pixels):
-        """Set the bad pixels list.
-
-        Parameters
-        ----------
-        bad_pixels : Sequence of tuples or str
-            Coordinates of bad pixels. Each element is the (x, y)
-            position of a bad pixel as measured with respect to
-            the top-left corner of an image.
-
-        Raises
-        ------
-        ValueError
-            If bad_pixels is a string but cannot be evaluated to
-            a Sequence of tuples, or if it has an invalid shape
-        TypeError
-            If bad_pixels is not a Sequence, possibly after
-            evaluation, if a string is given
-        """
-        if isinstance(bad_pixels, str):
-            # From ConfigParser
-            try:
-                bad_pixels = ast.literal_eval(bad_pixels)
-            except (SyntaxError, ValueError) as err:
-                # Invalid list
-                raise ValueError(
-                    "Invalid string expression for bad_pixels. "
-                    "Cannot be evaluated as a Sequence of tuples."
-                    )
-        if not isinstance(bad_pixels, Sequence):
-            raise TypeError("bad_pixels should be a list of tuples")
-
-        if bad_pixels and np.shape(bad_pixels)[1] != 2:
-            raise ValueError("bad_pixels should have shape (N, 2)")
-
-        self.__bad_pixels = np.asarray(bad_pixels)
+        """Return bad pixel info as a BadPixels object."""
+        return self.camera.bad_pixels
 
     def copy(self):
         """Return a deep-copy of self."""
@@ -255,13 +212,27 @@ class ImageProcessor(qtc.QObject):
             return
 
         # All frames arrived
-        self.remove_bad_pixels()  # TODO: remove bad pixels AFTER the ROI. Requires ImageProcessInfo to return shifted coordinates
+        # self.remove_bad_pixels_old()
         self.apply_roi()
+        self.remove_bad_pixels()
         self.bin_and_average()
         self.save()
         self.image_saved.emit()
 
     def remove_bad_pixels(self):
+        """Remove bad pixels by neighbor averaging."""
+        if not self.process_info.bad_pixels:
+            return
+        bad = self.process_info.bad_pixels
+        bad_coords = bad.bad_pixel_coordinates.T  # correct?
+        repl_offsets = bad.replacement_offsets.T  # correct?
+
+        # (right shift by 1 bit is division by 2)
+        replacements = (self.processed_image[bad_coords + repl_offsets]
+                        + self.processed_image[bad_coords - repl_offsets]) >> 1
+        self.processed_image[bad_coords] = replacements  # correct?
+
+    def remove_bad_pixels_old(self):
         """Remove a list of bad pixels by neighbor averaging."""
         if not self.process_info.bad_pixels.size:
             return
