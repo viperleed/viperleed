@@ -21,6 +21,7 @@ from viperleed.guilib.measure.hardwarebase import (
     )
 from viperleed.guilib.measure.camera.imageprocess import (ImageProcessor,
                                                           ImageProcessInfo)
+from viperleed.guilib.measure.camera.bad_pixels import BadPixels
 
 # TODO: look at QtMultimedia.QCamera
 
@@ -29,9 +30,9 @@ class CameraErrors(ViPErLEEDErrorEnum):
     """Data class for base camera errors."""
 
     INVALID_SETTINGS = (200,
-                        "Invalid camera settings: Required "
-                        "settings {!r} missing or values "
-                        "inappropriate. Check configuration file.")
+                        "Invalid camera settings: Required settings "
+                        "{!r} missing or values inappropriate. "
+                        "Check configuration file.\n{}")
     MISSING_SETTINGS = (201,
                         "Camera cannot operate without settings. Load "
                         "an appropriate settings file before proceeding.")
@@ -135,6 +136,7 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         self.driver = driver
         self.__busy = False
         self.__settings = None
+        self.__bad_pixels = None
 
         self.process_info = ImageProcessInfo()
         self.process_info.camera = self
@@ -165,6 +167,29 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
     def __deepcopy__(self, memo):
         """Return self rather than a deep copy of self."""
         return self
+
+    @property
+    def bad_pixels(self):
+        """Return a BadPixels object for this camera."""
+        # If __bad_pixels is None (i.e., info never read),
+        # attempt reading the bad pixels info from file,
+        # based on the path in settings.
+        if self.__bad_pixels is None:
+            self.__bad_pixels = BadPixels(self)
+            bad_pix_path = self.settings.get("camera_settings",
+                                             "bad_pixels_path",
+                                             fallback='')
+            try:
+                self.__bad_pixels.read(bad_pix_path)
+            except (FileNotFoundError, ValueError) as err:
+                emit_error(
+                    self, CameraErrors.INVALID_SETTINGS,
+                    'camera_settings/bad_pixels_path',
+                    f'Info: {err}'
+                    )
+            else:
+                self.__bad_pixels.apply_roi()
+        return self.__bad_pixels
 
     @property
     def binning(self):
@@ -256,8 +281,8 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         min_exposure, max_exposure = self.get_exposure_limits()
         if exposure_time < min_exposure or exposure_time > max_exposure:
             emit_error(self, CameraErrors.INVALID_SETTINGS,
-                       'measurement_settings/exposure [out of range '
-                       f'({min_exposure}, {max_exposure})]')
+                       'measurement_settings/exposure',
+                       f'Info: out of range ({min_exposure}, {max_exposure})')
             exposure_time = min_exposure
         return exposure_time
 
@@ -280,8 +305,8 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         min_gain, max_gain = self.get_gain_limits()
         if gain < min_gain or gain > max_gain:
             emit_error(self, CameraErrors.INVALID_SETTINGS,
-                       'measurement_settings/gain [out of range '
-                       f'({min_gain}, {max_gain})]')
+                       'measurement_settings/gain',
+                       f'Info: out of range ({min_gain}, {max_gain})')
             gain = min_gain
             self.settings.set('measurement_settings', 'gain', str(gain))
         return gain
@@ -306,7 +331,7 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
     @abstractmethod
     def intensity_limits(self):
         """Return the minimum and maximum value for a pixel.
-        
+
         Returns
         -------
         pixel_min : int
@@ -401,7 +426,7 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
 
         if not self.__is_valid_roi(roi):
             emit_error(self, CameraErrors.INVALID_SETTINGS,
-                       'camera_settings/roi')
+                       'camera_settings/roi', 'Info: ROI is invalid.')
             self.settings.set('camera_settings', 'roi', 'None')
             _, (max_roi_w, max_roi_h), _ = self.get_roi_size_limits()
             return 0, 0, max_roi_w, max_roi_h
@@ -455,15 +480,24 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
             self._mandatory_settings
             )
         for setting in invalid:
-            emit_error(self, CameraErrors.INVALID_SETTINGS, setting)
+            emit_error(self, CameraErrors.INVALID_SETTINGS, setting, '')
         if invalid:
             return
+
+        # Keep track of the old ROI: will recalculate
+        # bad pixel coordinates if ROI changes
+        old_roi = tuple()
+        if self.settings is not None:
+            old_roi = self.roi
 
         self.__settings = new_settings
         if self.is_running:
             self.stop()
         self.close()
         self.connect()  # Also loads self.settings to camera
+
+        if self.roi != old_roi and self.bad_pixels:
+            self.bad_pixels.apply_roi()
 
     settings = property(__get_settings, set_settings)
 
