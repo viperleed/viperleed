@@ -93,6 +93,7 @@ def gui_main():
     qtg.QGuiApplication.setAttribute(qtc.Qt.AA_EnableHighDpiScaling)
     qtg.QGuiApplication.setAttribute(qtc.Qt.AA_UseHighDpiPixmaps)
     app = qtw.QApplication(sys.argv)
+    app.setWindowIcon(qtg.QIcon(gl.pluginsbase.LOGO))
 
     # Import some fonts from ./fonts folder
     font_path = resources_path("guilib/fonts")
