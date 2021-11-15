@@ -21,7 +21,7 @@ from viperleed.guilib.measure.hardwarebase import (
     )
 from viperleed.guilib.measure.camera.imageprocess import (ImageProcessor,
                                                           ImageProcessInfo)
-from viperleed.guilib.measure.camera.bad_pixels import BadPixels
+from viperleed.guilib.measure.camera import badpixels
 
 # TODO: look at QtMultimedia.QCamera
 
@@ -175,7 +175,7 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         # attempt reading the bad pixels info from file,
         # based on the path in settings.
         if self.__bad_pixels is None:
-            self.__bad_pixels = BadPixels(self)
+            self.__bad_pixels = badpixels.BadPixels(self)
             bad_pix_path = self.settings.get("camera_settings",
                                              "bad_pixels_path",
                                              fallback='')

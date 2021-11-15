@@ -12,11 +12,11 @@ This module defines the ImageProcessor class that is used to process
 single camera frames into a final image. The following processing
 steps take place:
     (1) Summing frames
-    (2) Removal of hot pixels
-    (3) Application of a region of interest
+    (2) Application of a region of interest
+    (3) Removal of bad pixels
     (4) Binning
     (5) Averaging (i.e., sum/counts)
-Steps 3 and 4 are skipped if the camera supports them as a native
+Steps 2 and 4 are skipped if the camera supports them as a native
 hardware feature; steps 1 and 5 are also skipped if the camera
 supports frame averaging at the hardware level.
 """

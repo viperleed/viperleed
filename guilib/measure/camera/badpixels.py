@@ -25,7 +25,7 @@ from PyQt5 import (QtCore as qtc,
 
 from viperleed.guilib.measure.hardwarebase import (emit_error,
                                                    ViPErLEEDErrorEnum)
-from viperleed.guilib.measure.camera.abc import CameraABC, CameraErrors
+from viperleed.guilib.measure.camera import abc
 from viperleed.guilib.measure.widgets.camerawidgets import CameraViewer
 from viperleed.guilib.helpers import array2string
 
@@ -53,7 +53,7 @@ class BadPixelsFinder(qtc.QObject):
 
     def __init__(self, camera, parent=None):
         """Initialize object."""
-        if not isinstance(camera, CameraABC):
+        if not isinstance(camera, abc.CameraABC):
             raise TypeError(
                 f"{self.__class__.__name__}: invalid type "
                 f"'{type(camera).__name__}' for camera argument. "
@@ -215,7 +215,7 @@ class BadPixelsFinder(qtc.QObject):
         if self.__camera.busy:
             # Cannot start detecting bad pixels as long as the
             # camera is busy (esp. right after it is started)
-            emit_error(self, CameraErrors.UNSUPPORTED_WHILE_BUSY,
+            emit_error(self, abc.CameraErrors.UNSUPPORTED_WHILE_BUSY,
                       'find bad pixels')
             return
 
@@ -587,7 +587,7 @@ class BadPixels:
                 f"replacement_offsets ({len(replacement_offsets)})."
                 )
 
-        if not isinstance(camera, CameraABC):
+        if not isinstance(camera, abc.CameraABC):
             raise TypeError(f"{self.__class__.__name__}: invalid type "
                             f"{type(camera).__name__} for camera argument. "
                             "Expected a subclass of CameraABC.")

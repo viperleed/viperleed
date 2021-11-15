@@ -17,7 +17,7 @@ from PyQt5 import (QtCore as qtc,
                    QtWidgets as qtw,
                    QtGui as qtg)
 
-from viperleed.guilib.measure.camera.abc import CameraABC
+from viperleed.guilib.measure.camera import abc
 from viperleed.guilib.widgetslib import screen_fraction
 
 
@@ -102,7 +102,7 @@ class CameraViewer(qtw.QScrollArea):
             Other unused optional arguments, passed to
             QScrollArea.__init__
         """
-        if not isinstance(camera, CameraABC):
+        if not isinstance(camera, abc.CameraABC):
             raise TypeError(f"{self.__class__.__name__}: camera argument "
                             "must be a subclass of CameraABC.")
 
