@@ -8,7 +8,6 @@
 ! Note: file extentsion .f95 required for f2py compatibility, but new standard is used...
 
 module r_factor_new
-
     contains
 
 
@@ -76,7 +75,6 @@ subroutine r_factor_beam(y1, size_y1, y2, size_y2, E_start1, E_start2, E_step, V
 
     ! calc diff between Ys
     allocate(y_diff(N_overlapping_points), y_squared_sum(N_overlapping_points))
-    y_diff(:) = y1(y1_start_id + i) -y2(y2_start_id + i) ! difference between Y functions
     y_squared_sum=y1(y1_start_id:y1_start_id+N_overlapping_points)**2+y2(y2_start_id:y2_start_id+N_overlapping_points)**2
 
     ! caclulate numerator = integral (Y1-Y2)**2 dE
@@ -280,7 +278,6 @@ subroutine pendry_y(intensity, de, v0i, i_prime, y_func, n_data)
 !f2py intent(hide) :: i_prime                  ! invisible from python interface
     real(8), dimension(0:n_data-1) :: y_func   ! where the y function is stored
 !f2py real(8), optional, intent(in, out), dimension(0:n_data-1) :: y_func      ! leave the caller the option to provide buffer
-    external :: derivative
 
     call derivative(intensity, de, i_prime, n_data)
     y_func = intensity * i_prime / (intensity**2 + v0i**2 * i_prime**2)  ! TODO: Maybe can be better optimized?
