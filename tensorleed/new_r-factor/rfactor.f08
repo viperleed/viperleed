@@ -286,6 +286,8 @@ end subroutine pendry_y
 pure function parabolic_optimize(values) result(minimum_pair)
     implicit none
 
+    real, intent(in) :: values(2,:)
+    real, intent(out) :: minimum_pair(2)
     integer known_values
 
     real minium_pair(2)

@@ -1,0 +1,73 @@
+!    -*- f90 -*-
+! Note: the context of this file is case sensitive.
+
+python module rfactor ! in 
+    interface  ! in :rfactor
+        module r_factor_new ! in :rfactor:rfactor.f08
+            subroutine r_factor_beam(y1,size_y1,y2,size_y2,e_start1,e_start2,e_step,v0r_shift,r_pendry,numerator,denominator,n_overlapping_points) ! in :rfactor:rfactor.f08:r_factor_new
+                real dimension(size_y1),intent(in) :: y1
+                integer, optional,intent(in),check(len(y1)>=size_y1),depend(y1) :: size_y1=len(y1)
+                real dimension(size_y2),intent(in) :: y2
+                integer, optional,intent(in),check(len(y2)>=size_y2),depend(y2) :: size_y2=len(y2)
+                real intent(in) :: e_start1
+                real intent(in) :: e_start2
+                real intent(in) :: e_step
+                real intent(in) :: v0r_shift
+                real intent(out) :: r_pendry
+                real intent(out) :: numerator
+                real intent(out) :: denominator
+                integer intent(out) :: n_overlapping_points
+            end subroutine r_factor_beam
+            subroutine rfactor_beamset(y1,y2,sizes_y1,sizes_y2,e_start1,e_start2,nr_beams,e_step,v0rshift,beamtypes,r_pe_weighted,r_pe_beams,n_overlapping_points) ! in :rfactor:rfactor.f08:r_factor_new
+                real dimension(:,:) :: y1
+                real dimension(:,:) :: y2
+                integer dimension(nr_beams) :: sizes_y1
+                integer dimension(nr_beams),depend(nr_beams) :: sizes_y2
+                real dimension(nr_beams),depend(nr_beams) :: e_start1
+                real dimension(nr_beams),depend(nr_beams) :: e_start2
+                integer, optional,check(len(sizes_y1)>=nr_beams),depend(sizes_y1) :: nr_beams=len(sizes_y1)
+                real :: e_step
+                real intent(in) :: v0rshift
+                integer dimension(nr_beams),intent(in),depend(nr_beams) :: beamtypes
+                real intent(out) :: r_pe_weighted
+                real dimension(nr_beams),intent(out),depend(nr_beams) :: r_pe_beams
+                integer dimension(nr_beams),intent(out),depend(nr_beams) :: n_overlapping_points
+            end subroutine rfactor_beamset
+            subroutine rfactor_v0ropt(opt_type,min_steps,max_steps) ! in :rfactor:rfactor.f08:r_factor_new
+                integer intent(in) :: opt_type
+                integer intent(in) :: min_steps
+                integer intent(in) :: max_steps
+            end subroutine rfactor_v0ropt
+            subroutine prepare_beams ! in :rfactor:rfactor.f08:r_factor_new
+            end subroutine prepare_beams
+            subroutine limit_range ! in :rfactor:rfactor.f08:r_factor_new
+            end subroutine limit_range
+            subroutine derivative(data_in,dx,deriv,n_data) ! in :rfactor:rfactor.f08:r_factor_new
+                real(kind=8) dimension(n_data),intent(in) :: data_in
+                real(kind=8), optional,intent(in) :: dx=1.0
+                real(kind=8), optional,dimension(n_data),intent(in,out),depend(n_data) :: deriv
+                integer, optional,intent(in),check(len(data_in)>=n_data),depend(data_in) :: n_data=len(data_in)
+            end subroutine derivative
+            subroutine pendry_y(intensity,de,v0i,i_prime,y_func,n_data) ! in :rfactor:rfactor.f08:r_factor_new
+                real(kind=8) dimension(n_data),intent(in) :: intensity
+                real(kind=8), optional,intent(in) :: de=1.0
+                real(kind=8), optional,intent(in) :: v0i=5.0
+                real(kind=8) dimension(n_data),intent(hide),depend(n_data) :: i_prime
+                real(kind=8), optional,dimension(n_data),intent(in,out),depend(n_data) :: y_func
+                integer, optional,intent(in),check(len(intensity)>=n_data),depend(intensity) :: n_data=len(intensity)
+            end subroutine pendry_y
+            function parabolic_optimize(values) result (minimum_pair) ! in :rfactor:rfactor.f08:r_factor_new
+                real dimension(2,:),intent(in) :: values
+                real dimension(2),intent(out) :: minimum_pair
+            end function parabolic_optimize
+            function trapez_integration_const_dx(f,dx) result (integral) ! in :rfactor:rfactor.f08:r_factor_new
+                real dimension(:),intent(in) :: f
+                real intent(in) :: dx
+                real :: integral
+            end function trapez_integration_const_dx
+        end module r_factor_new
+    end interface 
+end python module rfactor
+
+! This file was auto-generated with f2py (version:1.21.2).
+! See http://cens.ioc.ee/projects/f2py2e/
