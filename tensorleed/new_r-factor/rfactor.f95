@@ -5,6 +5,8 @@
 ! Author: Alexander M. Imre, 2021
 ! for license info see ViPErLEED Package
 
+! Note: file extentsion .f95 required for f2py compatibility, but new standard is used...
+
 module r_factor_new
 
     contains
@@ -134,7 +136,7 @@ subroutine Rfactor_beamset(y1, y2, sizes_y1, sizes_y2, E_start1, E_start2, nr_be
 end subroutine Rfactor_beamset
 
 
-subroutine Rfactor_v0ropt(opt_type, min_steps, max_steps)
+subroutine Rfactor_v0ropt(opt_type, min_steps, max_steps, nr_used_v0)
     !Rfactor_v0ropt:
     !INPUT: same as above, but with v0rmin/v0rmax, maybe v0rstep, optimization_type
     !DOES: V0r optimization with Rfactor_beamset, either as loop over grid, or parabola
@@ -142,6 +144,8 @@ subroutine Rfactor_v0ropt(opt_type, min_steps, max_steps)
     implicit none
     integer, intent(in) :: opt_type, min_steps, max_steps
     integer, intent(out) :: nr_used_v0
+
+    !integer beamtypes(:)
 
     real V0, R_Pe_V0
     ! Decide which optimization is used
@@ -170,8 +174,8 @@ subroutine Rfactor_v0ropt(opt_type, min_steps, max_steps)
 
     ! Calculate R factor, check if converged
 
-    call Rfactor_beamset(y1, y2, sizes_y1, sizes_y2, E_start1, E_start2, nr_beams, E_step, V0, &
-                         beamtypes, R_Pe_V0, R_Pe_beams, N_overlapping_points)
+    !call Rfactor_beamset(y1, y2, sizes_y1, sizes_y2, E_start1, E_start2, nr_beams, E_step, V0, &
+    !                     beamtypes, R_Pe_V0, R_Pe_beams, N_overlapping_points)
 
 
 end subroutine Rfactor_v0ropt
@@ -286,13 +290,13 @@ end subroutine pendry_y
 pure function parabolic_optimize(values) result(minimum_pair)
     implicit none
 
-    real, intent(in) :: values(2,:)
-    real, intent(out) :: minimum_pair(2)
+    real, intent(in) :: values(:)
+    real :: minimum_pair(2) ! Don't declare as intent(out)
     integer known_values
 
     real minium_pair(2)
 
-    known_values = size(values, 2)
+    known_values = size(values)
 
     if (known_values < 3) then
         ! Not allowed; Problem since Parabola fit is impossible - return something?
@@ -300,6 +304,7 @@ pure function parabolic_optimize(values) result(minimum_pair)
         ! Should be the case!
     end if
 
+    minimum_pair = (2d0, 2d0)
     return
 end function parabolic_optimize
 
