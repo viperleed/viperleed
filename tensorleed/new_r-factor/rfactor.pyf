@@ -18,21 +18,36 @@ python module rfactor ! in
                 real intent(out) :: denominator
                 integer intent(out) :: n_overlapping_points
             end subroutine r_factor_beam
-            subroutine rfactor_beamset(y1,y2,sizes_y1,sizes_y2,e_start1,e_start2,nr_beams,e_step,v0rshift,beamtypes,r_pe_weighted,r_pe_beams,n_overlapping_points) ! in :rfactor:rfactor.f90:r_factor_new
-                real dimension(:,:) :: y1
-                real dimension(:,:) :: y2
-                integer dimension(nr_beams) :: sizes_y1
-                integer dimension(nr_beams),depend(nr_beams) :: sizes_y2
-                real dimension(nr_beams),depend(nr_beams) :: e_start1
-                real dimension(nr_beams),depend(nr_beams) :: e_start2
-                integer, optional,check(len(sizes_y1)>=nr_beams),depend(sizes_y1) :: nr_beams=len(sizes_y1)
-                real :: e_step
+            subroutine rfactor_beamset(y1,sizes_y1,y2,sizes_y2,e_start1,e_start2,nr_beams,e_step,v0rshift,r_pe_weighted,r_pe_beams,n_overlapping_points) ! in :rfactor:rfactor.f90:r_factor_new
+                real dimension(:,:),intent(in) :: y1
+                integer dimension(nr_beams),intent(in),depend(nr_beams) :: sizes_y1
+                real dimension(:,:),intent(in) :: y2
+                integer dimension(nr_beams),intent(in),depend(nr_beams) :: sizes_y2
+                real dimension(nr_beams),intent(in) :: e_start1
+                real dimension(nr_beams),intent(in),depend(nr_beams) :: e_start2
+                integer, hidden,optional,intent(in),check(len(e_start1)==len(e_start2)),depend(e_start1,e_start2) :: nr_beams=len(e_start1)
+                real intent(in) :: e_step
                 real intent(in) :: v0rshift
-                integer dimension(nr_beams),intent(in),depend(nr_beams) :: beamtypes
                 real intent(out) :: r_pe_weighted
                 real dimension(nr_beams),intent(out),depend(nr_beams) :: r_pe_beams
                 integer dimension(nr_beams),intent(out),depend(nr_beams) :: n_overlapping_points
             end subroutine rfactor_beamset
+            subroutine rfactor_beamtypes(y1,sizes_y1,y2,sizes_y2,e_start1,e_start2,nr_beams,e_step,v0rshift,beamtypes,nr_beamtypes,r_pe_weighted,r_pe_beams,n_overlapping_points) ! in :rfactor:rfactor.f90:r_factor_new
+                real dimension(:,:),intent(in) :: y1
+                integer dimension(nr_beams),intent(in),depend(nr_beams) :: sizes_y1
+                real dimension(:,:),intent(in) :: y2
+                integer dimension(nr_beams),intent(in),depend(nr_beams) :: sizes_y2
+                real dimension(nr_beams),intent(in) :: e_start1
+                real dimension(nr_beams),intent(in),depend(nr_beams) :: e_start2
+                integer, hidden,optional,intent(in),check(len(e_start1)==len(e_start2)),depend(e_start1,e_start2) :: nr_beams=len(e_start1)
+                real intent(in) :: e_step
+                real intent(in) :: v0rshift
+                integer dimension(nr_beams),intent(in),depend(nr_beams) :: beamtypes
+                integer intent(in) :: nr_beamtypes
+                real dimension(nr_beamtypes),intent(out),depend(nr_beamtypes) :: r_pe_weighted
+                real dimension(nr_beams),intent(out),depend(nr_beams) :: r_pe_beams
+                integer dimension(:),intent(out) :: n_overlapping_points
+            end subroutine rfactor_beamtypes
             subroutine rfactor_v0ropt(opt_type,min_steps,max_steps,nr_used_v0) ! in :rfactor:rfactor.f90:r_factor_new
                 integer intent(in) :: opt_type
                 integer intent(in) :: min_steps

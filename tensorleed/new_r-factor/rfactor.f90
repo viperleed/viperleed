@@ -5,14 +5,15 @@
 ! Author: Alexander M. Imre, 2021
 ! for license info see ViPErLEED Package
 
-! Note: file extentsion .f95 required for f2py compatibility, but new standard is used...
+! Note: file extentsion .f95 required for f2py compatibility, but newder standard can be used.
 
 module r_factor_new
     implicit none
     contains
 
 
-! f2py -m rfactor rfactor.f08 only:r_factor_beam -h rfactor.pyf --overwrite-signature --debug-capi
+! f2py -m rfactor rfactor.f90 -h rfactor.pyf --overwrite-signature -debug-capi
+! f2py -c rfactor.pyf rfactor.f90
 
 subroutine r_factor_beam(y1, size_y1, y2, size_y2, E_start1, E_start2, E_step, V0r_shift, R_pendry, &
                          numerator, denominator, N_overlapping_points)
@@ -89,8 +90,10 @@ end subroutine r_factor_beam
 
 
 !V0rshift not yet implemented
+    ! beamtypes not yet implemented -> does it really make sense to do that here even?
+    ! maybe extra subroutine actually
 subroutine Rfactor_beamset(y1, sizes_y1, y2, sizes_y2, E_start1, E_start2, nr_beams, E_step, V0rshift, &
-                           beamtypes, R_Pe_weighted, R_Pe_beams, N_overlapping_points)
+                           R_Pe_weighted, R_Pe_beams, N_overlapping_points)
     !Rfactor_beamset:
     !INPUT: set of arrays Y1, Y2, Estart1, Estart2, V0rshift, beamtypes -> calls the above in a loop over beams
     !DOES: call above, average based on overlapping points, also split into types ("integer/fractional")
@@ -100,47 +103,98 @@ subroutine Rfactor_beamset(y1, sizes_y1, y2, sizes_y2, E_start1, E_start2, nr_be
     !###############
     !INPUTS
     !###############
+!f2py integer, hidden, intent(in), depend(E_start1, E_start2), check(len(E_start1)==len(E_start2)) :: nr_beams=len(E_start1)
     integer nr_beams
+!f2py real, intent(in) :: E_step
     real E_step
-!f2py depend(sizes_y1) nr_beams
-!f2py depend(sizes_y2) nr_beams
-    integer sizes_y1(nr_beams), sizes_y2(nr_beams)
+!f2py integer, intent(in) :: sizes_y1
+    integer, intent(in) :: sizes_y1(nr_beams)
+!f2py integer, intent(in) :: sizes_y2
+    integer, intent(in) :: sizes_y2(nr_beams)
+!f2py real intent(in) :: y1(:,:), y2(:,:)
     real, intent(in) :: y1 (:,:), y2 (:,:)
-!f2py depend(E_start1) nr_beams
-!f2py depend(E_start2) nr_beams
-    real E_start1(nr_beams), E_start2(nr_beams)
-    integer, intent(in) ::  beamtypes(nr_beams)
-!f2py integer, intent(out), depend(N_overlapping_points) nr_beams
+!f2py intent(in) E_start_1
+!f2py intent(in) E_start_2
+    real, intent(in)    :: E_start1(nr_beams), E_start2(nr_beams)
+!f2py integer, intent(out) :: N_overlapping_points
     integer, intent(out) :: N_overlapping_points(nr_beams)
-!f2py real intent(out), depend(R_Pe_beams) nr_beams
-!f2py real intent(out) R_Pe_weighted
+!f2py real, intent(out) :: R_Pe_beams(nr_beams), R_Pe_weighted
     real, intent(out) :: R_Pe_beams(nr_beams), R_Pe_weighted
-!f2py real, intent(in)  V0rshift
+!f2py real, intent(in)::  V0rshift
     real, intent(in) :: V0rshift
-
-
 
     real numerators(nr_beams), denominators(nr_beams)
 
     ! temporay variables used in subroutine
     integer i
-    integer sum_points
+    integer total_points
     real temp_num, temp_denom
-
 
     ! iterate over beams and call subroutine r_factor_beam
     do i=1, nr_beams
         call r_factor_beam(y1(i,:), sizes_y1(i), y2(i,:), sizes_y2(i), E_start1(i), E_start2(i), E_step, &
-                           V0rshift, R_Pe_beams(i), temp_num, temp_denom, N_overlapping_points(i))
-        numerators(i) = temp_num*N_overlapping_points(i)
-        denominators(i) = temp_denom*N_overlapping_points(i)
+                           V0rshift, R_Pe_beams(i), numerators(i), denominators(i), N_overlapping_points(i))
     end do
-
-    R_Pe_weighted = sum(numerators/denominators)
+    total_points = sum(N_overlapping_points)
+    R_Pe_weighted = sum(numerators/denominators*N_overlapping_points)/total_points
 
     return
 end subroutine Rfactor_beamset
 
+subroutine Rfactor_beamtypes(y1, sizes_y1, y2, sizes_y2, E_start1, E_start2, nr_beams, E_step, V0rshift, &
+                           beamtypes, nr_beamtypes, R_Pe_weighted, R_Pe_beams, N_overlapping_points)
+    !###############
+    !INPUTS
+    !###############
+!f2py integer, hidden, intent(in), depend(E_start1, E_start2), check(len(E_start1)==len(E_start2)) :: nr_beams=len(E_start1)
+    integer nr_beams
+!f2py real, intent(in) :: E_step
+    real E_step
+!f2py integer, intent(in) :: sizes_y1
+    integer, intent(in) :: sizes_y1(nr_beams)
+!f2py integer, intent(in) :: sizes_y2
+    integer, intent(in) :: sizes_y2(nr_beams)
+!f2py real intent(in) :: y1(:,:), y2(:,:)
+    real, intent(in) :: y1 (:,:), y2 (:,:)
+!f2py intent(in) E_start_1
+!f2py intent(in) E_start_2
+    real, intent(in)    :: E_start1(nr_beams), E_start2(nr_beams)
+    integer, intent(in) :: beamtypes(nr_beams)
+    integer, intent(in) :: nr_beamtypes
+!f2py integer, intent(out) :: N_overlapping_points(:)
+    integer, intent(out) :: N_overlapping_points(nr_beams)
+!f2py real, intent(out) :: R_Pe_beams(nr_beams), R_Pe_weighted(nr_beamtypes)
+    real, intent(out) :: R_Pe_beams(nr_beams), R_Pe_weighted(nr_beamtypes)
+!f2py real, intent(in)::  V0rshift
+    real, intent(in) :: V0rshift
+
+    ! variables used internally
+    integer beam, group, points_group, tmp_points(nr_beams)
+    !
+    real tmp_num(nr_beams), tmp_denom(nr_beams), tmp_pendry
+
+
+    ! beamtypes is array that contains assignment o beamtype group for each beam
+    ! contains integers from 1 to nr_beamtypes
+
+    ! Loop over beamtype groups
+    do group=1, nr_beamtypes
+        tmp_points = 0
+        tmp_num = 0d0
+        tmp_denom = 0d0
+        do beam = 1, nr_beams
+            if (beamtypes(beam)==group) then
+                call r_factor_beam(y1(beam,:), sizes_y1(beam), y2(beam,:), sizes_y2(beam), E_start1(beam), &
+                        E_start2(beam), E_step, V0rshift, tmp_pendry, tmp_num, tmp_denom, tmp_points(beam))
+            end if
+        end do
+        points_group = sum(tmp_points)
+        R_Pe_weighted(group) = sum(tmp_num/tmp_denom*points_group)/points_group
+
+    end do
+
+    return
+end subroutine Rfactor_beamtypes
 
 subroutine Rfactor_v0ropt(opt_type, min_steps, max_steps, nr_used_v0)
     !Rfactor_v0ropt:
