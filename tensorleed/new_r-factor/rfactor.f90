@@ -89,7 +89,7 @@ end subroutine r_factor_beam
 
 
 !V0rshift not yet implemented
-subroutine Rfactor_beamset(y1, y2, sizes_y1, sizes_y2, E_start1, E_start2, nr_beams, E_step, V0rshift, &
+subroutine Rfactor_beamset(y1, sizes_y1, y2, sizes_y2, E_start1, E_start2, nr_beams, E_step, V0rshift, &
                            beamtypes, R_Pe_weighted, R_Pe_beams, N_overlapping_points)
     !Rfactor_beamset:
     !INPUT: set of arrays Y1, Y2, Estart1, Estart2, V0rshift, beamtypes -> calls the above in a loop over beams
@@ -102,12 +102,20 @@ subroutine Rfactor_beamset(y1, y2, sizes_y1, sizes_y2, E_start1, E_start2, nr_be
     !###############
     integer nr_beams
     real E_step
+!f2py depend(sizes_y1) nr_beams
+!f2py depend(sizes_y2) nr_beams
     integer sizes_y1(nr_beams), sizes_y2(nr_beams)
-    real :: y1 (:,:), y2 (:,:)
+    real, intent(in) :: y1 (:,:), y2 (:,:)
+!f2py depend(E_start1) nr_beams
+!f2py depend(E_start2) nr_beams
     real E_start1(nr_beams), E_start2(nr_beams)
     integer, intent(in) ::  beamtypes(nr_beams)
+!f2py integer, intent(out), depend(N_overlapping_points) nr_beams
     integer, intent(out) :: N_overlapping_points(nr_beams)
+!f2py real intent(out), depend(R_Pe_beams) nr_beams
+!f2py real intent(out) R_Pe_weighted
     real, intent(out) :: R_Pe_beams(nr_beams), R_Pe_weighted
+!f2py real, intent(in)  V0rshift
     real, intent(in) :: V0rshift
 
 
