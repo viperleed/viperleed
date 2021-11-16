@@ -51,34 +51,31 @@ subroutine r_factor_beam(y1, size_y1, y2, size_y2, E_start1, E_start2, E_step, V
     E_end1 = E_start1+size_y1*E_step
     E_end2 = E_start2+size_y2*E_step
 
-    if ((E_start2 >= E_start1) .and. (E_end2>= E_start1)) then
-        E_start = E_start2
-        E_end = E_start1
-    elseif ((E_start2 >= E_start1) .and. (E_end1>= E_start2)) then
-        E_start = E_start2
-        E_end = E_start2
-    elseif ((E_start1 >= E_start2) .and. (E_end2>= E_start1)) then
-        E_start = E_start1
-        E_end = E_start1
-    elseif ((E_start1 >= E_start2) .and. (E_end1>= E_start2)) then
-        E_start = E_start1
-        E_end = E_start2
-    else
-        ! SOMETHING WENT WRONG
-        write(6,*) "point reached that should not be possible" ! improve message TODO
-    end if
+    E_start = max(E_start1, E_start2)
+    E_end = min(E_end1, E_end2)
+
 
     ! Caclulate number of overlapping points - can be used as weight of R_factor outside
     E_range = E_end - E_start
-    N_overlapping_points = int(E_range/E_step)+1
+    write(*,*) "E_range: ", E_range
+    write(*,*) "E_start: ", E_start
+    write(*,*) "E_step: ", E_step
+    N_overlapping_points = int(E_range/E_step)
+    write(*,*) "N_ovl: ", N_overlapping_points
 
     y1_start_id = int(E_start1-E_start)+1 !Fortan counting starts at 1
     y2_start_id = int(E_start2-E_start)+1
 
-    ! calc diff between Ys
+    ! Allocate array sizes; not technically required in Fortran 2003 standard
     allocate(y_diff(N_overlapping_points), y_squared_sum(N_overlapping_points))
-    y_diff = y1(y1_start_id + i) -y2(y2_start_id + i) ! difference between Y functions
-    y_squared_sum=y1(y1_start_id:y1_start_id+N_overlapping_points)**2+y2(y2_start_id:y2_start_id+N_overlapping_points)**2
+
+    y_diff=y1(y1_start_id: y1_start_id + N_overlapping_points-1) - y2(y2_start_id: y2_start_id + N_overlapping_points-1) ! difference between Y functions
+    y_squared_sum=y1(y1_start_id:y1_start_id+N_overlapping_points-1)**2+y2(y2_start_id:y2_start_id+N_overlapping_points-1)**2
+
+    write(*,*) "y_1: ", y1
+    write(*,*) "y_2: ", y2
+    write(*,*) "y_diff: ", y_diff
+    write(*,*) "y_squared_sum: ", y_squared_sum
 
     ! caclulate numerator = integral (Y1-Y2)**2 dE
     numerator = trapez_integration_const_dx(y_diff**2, E_step)
