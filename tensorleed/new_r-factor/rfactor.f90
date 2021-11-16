@@ -5,7 +5,7 @@
 ! Author: Alexander M. Imre, 2021
 ! for license info see ViPErLEED Package
 
-! Note: file extentsion .f95 required for f2py compatibility, but newder standard can be used.
+! Note: file extentsion .f95 required for f2py compatibility, but newer standard can be used.
 
 module r_factor_new
     implicit none
@@ -240,20 +240,67 @@ subroutine Rfactor_v0ropt(opt_type, min_steps, max_steps, nr_used_v0)
 
 end subroutine Rfactor_v0ropt
 
-subroutine prepare_beams()
+subroutine prepare_beams(n_beams, intesity, E_min, E_step, NE, E_grid_step, averaging_scheme, smoothing, E_min_cut, E_max_cut)
     !Prepare_beams:
     !INPUT: array[I, E_min, E_step, NE], E_grid_step, averaging_scheme, smoothing?, E_min, E_max
     !DOES: (0) Limit_range, (1) Average/discard/reorder according to scheme; (2) smooth?; (3) interpolate on grid; (4) compute Y on new grid
     !Probably call several functions... see existing PREEXP, similar!
     !RETURNS: array of Y
+
+    integer n_beams
+    real intensity(:,:)
+    real E_min(n_beams), E_step(n_beams), NE(n_beams)
+    real E_grid_step
+    integer averaging_scheme(n_beams)
+    integer smoothing
+    real E_min_cut, E_max_cut
+
+    ! Everything assumes, experimental beams are recorded on the same energy grid already. This should always be the case.
+
+
 end subroutine prepare_beams
 
 subroutine limit_range()
     !Limit_range:
     !INPUT: E_min, E_max, array[I, E_min, E_step, NE]
     !RETURNS: Beam cut to only within [E_min, E_max]
-end subroutine limit_range
 
+    ! Takes beams recorded on the same energy grid and cut off any parts below or above a certain threshold Energy.
+    ! Returns beams on uniform size array, cut to right size. Also returns E_min of each beam + new min_index and cut NE
+    ! Works for one or for multiple beams (though the latter may defeat the purpose)
+
+    integer, intent(in) :: n_beams
+    real, intent(in) :: in_beams(:,:)
+    real, intent(out), allocatable :: out_beams(:,:)
+
+    real, intent(in) :: E_min_current, E_step
+    real, intent(in) :: E_min_beams(:)
+    real, intent(in) :: E_min_cut, E_max_cut
+    integer, intent(in)  :: NE(:)
+    integer, intent(out) :: new_NE
+
+
+    ! Internal
+    integer steps, to_new_min, i
+    real new_max, new_min
+
+    steps = int((E_max_cut-E_min_cut)/E_step) ! typecast to integer; will cut off float...
+    ! Obviously max needs to be larger than min
+    ! steps from current to new E_min = int((E_min_cut-E_min_current)/E_step):
+    to_new_min = int((E_min_cut-E_min_current)/E_step)
+
+    ! allocate out_beams to right size
+    allocate(out_beams(n_beams, steps))
+    out_beams = in_beams(:,to_new_min : to_new_min + steps)
+
+    ! Determine new boundary indices E_min& NE:
+    do i=0, n_beams:
+        new_max = min(E_max_cut, Emin(i)+NE(i)*E_step)
+        new_min = max(E_min(i), E_min_cut)
+        new_NE(i) = int((new_max-new_min)/E_step)
+    end do
+
+end subroutine limit_range
 
 
 
