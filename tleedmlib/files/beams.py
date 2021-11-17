@@ -436,7 +436,7 @@ def writeOUTBEAMS(beams, filename="THEOBEAMS.csv", sep="; ",
     if which == "intensity":
         minwidth = 11
     else:
-        minwidth = 18
+        minwidth = 17
     w = max(minwidth, len(beams[0].label))
     energies = []
     for b in beams:
