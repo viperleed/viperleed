@@ -30,7 +30,7 @@ suppfiles = ["AUXBEAMS", "AUXGEO", "AUXLATGEO", "AUXNONSTRUCT", "BEAMLIST",
 supp_dirs = ["original_inputs", "compile_logs"]
 
 outfiles = ["THEOBEAMS.csv", "THEOBEAMS_norm.csv", "THEOBEAMS.pdf",
-            "PatternInfo.tlm", "SD.TL", "refcalc-fd.out",
+            "PatternInfo.tlm", "SD.TL", "refcalc-fd.out", "refcalc-amp.out",
             "Rfactor_plots_refcalc.pdf", "control.chem",
             "Search-progress.pdf", "Search-progress.csv",
             "Search-report.pdf", "FITBEAMS.csv", "FITBEAMS_norm.csv",
@@ -38,7 +38,8 @@ outfiles = ["THEOBEAMS.csv", "THEOBEAMS_norm.csv", "THEOBEAMS.pdf",
             "Rfactor_analysis_refcalc.pdf",
             "Rfactor_analysis_superpos.pdf", "Errors.csv", "Errors.pdf",
             "FD_Optimization.csv", "FD_Optimization.pdf",
-            "FD_Optimization_beams.pdf"]
+            "FD_Optimization_beams.pdf", "Complex_amplitudes_imag.csv",
+            "Complex_amplitudes_real.csv"]
 
 logger = logging.getLogger("tleedm.sections.cleanup")
 

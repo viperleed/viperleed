@@ -73,55 +73,109 @@ def combine_tensors(oripath=".", targetpath=".", buffer=0):
 
 
 def combine_fdout(oripath=".", targetpath="."):
-    """Combines fd.out files in oripath into a common file at targetpath."""
-    outlines = []
-    fdfiles = [f for f in os.listdir(oripath)
-               if os.path.isfile(os.path.join(oripath, f))
-               and f.startswith("fd_") and f.endswith("eV.out")]
-    i = 0
-    while i < len(fdfiles):
-        try:
-            float(fdfiles[i].split("fd_")[1].split("eV.out")[0])
-            i += 1
-        except ValueError:
-            fdfiles.pop(i)
-    if len(fdfiles) == 0:
-        logger.error("Found no fd.out files to combine.")
-        raise RuntimeError("No fd.out files found")
-    fdfiles.sort(key=lambda x: float(x.split("fd_")[1].split("eV.out")[0]))
-    nbeams = 0
-    for f in fdfiles:
-        with open(os.path.join(oripath, f), "r") as rf:
-            lines = rf.readlines()
-        lines = [s for s in lines if ".  CORRECT TERMINATION" not in s
-                 and len(s.strip()) >= 1]
-        if len(outlines) == 0:
+    """Combines fd.out and amp.out files in oripath into a common file at
+    targetpath."""
+    for filetype in ("fd", "amp"):
+        outlines = []
+        startstr = filetype + "_"
+        filelist = [f for f in os.listdir(oripath)
+                    if os.path.isfile(os.path.join(oripath, f))
+                    and f.startswith(startstr) and f.endswith("eV.out")]
+        i = 0
+        while i < len(filelist):
             try:
-                nbeams = int(lines[1].strip().split()[0])
+                float(filelist[i].split(startstr)[1].split("eV.out")[0])
+                i += 1
+            except ValueError:
+                filelist.pop(i)
+        if len(filelist) == 0:
+            if filetype == "amp":
+                return   # return without error, we don't need amp files
+            logger.error("Found no fd.out files to combine.")
+            raise RuntimeError("No fd.out files found")
+        filelist.sort(key=lambda x: float(x.split(startstr)[1]
+                                          .split("eV.out")[0]))
+        nbeams = 0
+        for f in filelist:
+            with open(os.path.join(oripath, f), "r") as rf:
+                lines = rf.readlines()
+            lines = [s for s in lines if ".  CORRECT TERMINATION" not in s
+                     and len(s.strip()) >= 1]
+            if len(outlines) == 0:
+                try:
+                    nbeams = int(lines[1].strip().split()[0])
+                except Exception:
+                    logger.error("Failed to combine {}.out".format(filetype),
+                                 exc_info=True)
+                    raise
+                outlines += lines
+            else:
+                outlines += lines[nbeams+2:]
+            if (nbeams % 5) == 4:
+                outlines += "\n"  # expects an empty line (fortran formatting)
+            try:
+                os.remove(os.path.join(oripath, f))
             except Exception:
-                logger.error("Failed to combine fd.out", exc_info=True)
-                raise
-            outlines += lines
-        else:
-            outlines += lines[nbeams+2:]
-        if (nbeams % 5) == 4:
-            outlines += "\n"  # expects an empty line (fortran formatting..)
+                logger.warning("Failed to delete file " + f)
         try:
-            os.remove(os.path.join(oripath, f))
+            with open(os.path.join(targetpath, (filetype + ".out")),
+                      "w") as wf:
+                wf.write("".join(outlines))
         except Exception:
-            logger.warning("Failed to delete file " + f)
-    try:
-        with open(os.path.join(targetpath, "fd.out"), "w") as wf:
-            wf.write("".join(outlines))
-    except Exception:
-        logger.error("Failed to write combined fd.out")
-        raise
+            logger.error("Failed to write combined {}.out".format(filetype))
+            raise
     return
 
 
-def readFdOut(readfile="fd.out", for_error=False):
+def readFdOut(readfile="fd.out", for_error=False, ampfile="amp.out"):
     """Reads the fd.out file produced by the refcalc and returns a list of
-    Beam objects."""
+    Beam objects. If 'ampfile' is set, will attempt to read complex amplitudes
+    from the given file as well."""
+
+    def parse_data(lines, which, filename, theobeams):
+        out_str = ""
+        blocks = []
+        for line in lines:
+            if ".  CORRECT TERMINATION" in line:
+                # sometimes superpos output is not in right line. sync issue?
+                continue
+            out_str += line + "\n"
+            llist = line.split()
+            if len(llist) == 0:
+                continue  # skip empty lines
+            try:
+                float(llist[0])
+            except ValueError:
+                break  # end of data
+            blocks.extend(llist)
+
+        # Each block contains exactly nbeams+2 entries (double for amp)
+        # reshape blocks so that each line corresponds to one block
+        if which == "fd":
+            blocks = np.reshape(blocks, (-1, nbeams+2))
+        else:
+            blocks = np.reshape(blocks, (-1, 2*nbeams+2))
+
+        # and parse the data
+        warned = False
+        for block in blocks:
+            if block[1] != "0.0001":
+                if not for_error and not warned:
+                    warned = True
+                    logger.warning("File " + filename + "contains unexpected "
+                                   "data for more than one structural "
+                                   "variation. Only the first block was read.")
+                continue
+            en = float(block[0])
+            values = [float(s) for s in block[2:]]
+            for (j, beam) in enumerate(theobeams):
+                if which == "fd":
+                    beam.intens[en] = values[j]
+                else:
+                    beam.complex_amplitude[en] = complex(values[2*j],
+                                                         values[2*j + 1])
+        return out_str
+
     try:
         with open(readfile, 'r') as rf:
             filelines = [line[:-1] for line in rf.readlines()]
@@ -152,41 +206,18 @@ def readFdOut(readfile="fd.out", for_error=False):
     for beam in theobeams:
         beam.label = beam.getLabel(lwidth=mw)[0]
 
-    # From now on, all the lines correspond to blocks of beam intensities.
-    # Collect them, skipping empty lines
-    blocks = []
-    for line in filelines[i-1:]:
-        if ".  CORRECT TERMINATION" in line:
-            # sometimes superpos output is not in right line. sync issue?
-            continue
-        fdout += line + "\n"
-        llist = line.split()
-        if len(llist) == 0:
-            continue  # skip empty lines
-        try:
-            float(llist[0])
-        except ValueError:
-            break  # end of data
-        blocks.extend(llist)
+    fdout += parse_data(filelines[i-1:], "fd", readfile, theobeams)
 
-    # Each block contains exactly nbeams+2 entries
-    # reshape blocks so that each line corresponds to one block
-    blocks = np.reshape(blocks, (-1, nbeams+2))
-
-    # and parse the data
-    warned = False
-    for block in blocks:
-        if block[1] != "0.0001":
-            if not for_error and not warned:
-                warned = True
-                logger.warning("File " + readfile + "contains unexpected "
-                               "data for more than one structural "
-                               "variation. Only the first block was read.")
-            continue
-        en = float(block[0])
-        values = [float(s) for s in block[2:]]
-        for (j, beam) in enumerate(theobeams):
-            beam.intens[en] = values[j]
+    if ampfile and os.path.isfile(ampfile):
+        with open(ampfile, 'r') as rf:
+            amplines = [line[:-1] for line in rf.readlines()]
+        # check header
+        if any(amplines[i] != filelines[i] for i in range(1, nbeams + 2)):
+            logger.warning("Failed to read " + ampfile + ": Header does not "
+                           "match " + readfile)
+            return theobeams, fdout
+        # now read the rest
+        parse_data(amplines[nbeams+2:], "amp", ampfile, theobeams)
     return theobeams, fdout
 
 

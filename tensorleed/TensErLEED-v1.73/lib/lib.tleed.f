@@ -3716,6 +3716,7 @@ C  PHSS STORES THE INPUT PHASE SHIFTS (RADIAN)
 !  BEAMS SPECIFIED IN NPUC.
 !
 !  This is a simplified version that removes support for symmetry codes
+!  FK 2021-11-17: Add output of real and imaginary party of 
 !
 !   N= NO. OF BEAMS AT CURRENT ENERGY.
 !   WV= INPUT REFLECTED AMPLITUDES.
@@ -3735,14 +3736,19 @@ C  PHSS STORES THE INPUT PHASE SHIFTS (RADIAN)
 !   E= CURRENT ENERGY IN HARTREES ABOVE SUBSTRATE MUFFIN-TIN CONSTANT.
 !   VPI= IMAGINARY PART OF CURRENT ENERGY.
 !   CK2,CK3= PARALLEL COMPONENTS OF PRIMARY INCIDENT K-VECTOR.
+!   ANGSCALE= angular scaling factor per beam
       SUBROUTINE RINT_SIMPLE(N,WV,AT,ATP,PQ,PQF,VV,THETA,FI,
-     &                       MPU,NPUC,EEV,AP,NPNCH,IFILE)
+     &                       MPU,NPUC,EEV,AP,NPNCH,XIST,
+     &                       IFILE,IFILE2)
       DIMENSION  WV(N), PQ(2,N), PQF(2,N), AT(N)
-      DIMENSION  NPUC(MPU),ATP(MPU)
-      COMPLEX WV
+      DIMENSION  NPUC(MPU),ATP(MPU),XIST(MPU)
+      COMPLEX WV, XIST
+      REAL ANGSCALE
+      DIMENSION ANGSCALE(N)
       COMMON  E, CK2, CK3, VPI
 
    35 FORMAT(1F7.2,1F7.4,4E14.5,/,100(5E14.5,/))                         140779
+   36 FORMAT(1F7.2,1F7.4,8E18.10,/,100(10E18.10,/))
       AK = SQRT(AMAX1(2.0 * E - 2.0 * VV, 0.0))
       BK2 = AK * SIN(THETA) * COS(FI)
       BK3 = AK * SIN(THETA) * SIN(FI)
@@ -3758,8 +3764,10 @@ C  PHSS STORES THE INPUT PHASE SHIFTS (RADIAN)
           WI = AIMAG(WV(J))
 !         AT IS REFLECTED INTENSITY (FOR UNIT INCIDENT CURRENT)
           AT(J) = (WR * WR + WI * WI) * A/C
+          ANGSCALE(J) = SQRT(A/C)    ! for amplitude output below
         ELSE
           AT(J) = 0.0
+          ANGSCALE(J) = 0.0   ! this will set printed complex amplitudes to zero for evanescent beams
         ENDIF
       ENDDO
 
@@ -3769,12 +3777,15 @@ C  PHSS STORES THE INPUT PHASE SHIFTS (RADIAN)
         NPC = NPUC(K)
         IF (NPC.EQ.0) THEN  ! This beam was not requested
           ATP(K) = 0.0
+          XIST(K) = (0.0, 0.0)
         ELSE
           ATP(K) = AT(NPC)
+          XIST(K) = WV(NPC) * ANGSCALE(NPC)
         ENDIF
       ENDDO
 
       WRITE(IFILE, 35) EEV, AP, (ATP(K), K=1,MPU)
+      WRITE(IFILE2, 36) EEV, AP, (XIST(K), K=1,MPU)
       RETURN
       END
 

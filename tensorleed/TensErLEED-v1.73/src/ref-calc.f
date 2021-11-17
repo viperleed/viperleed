@@ -636,6 +636,8 @@ C*************************************************************
 
       OPEN(7,FILE='fd.out')
       CALL HEAD(7,TITLE,NPUN,NPU,KNT,SPQF,KSYM)
+      OPEN(8,FILE='amp.out')
+      CALL HEAD(8,TITLE,NPUN,NPU,KNT,SPQF,KSYM)
 
       IOUT = 11
       DO ISTACK = 1,NSTACK,1
@@ -1273,7 +1275,7 @@ C*************************************************************
 C  7 is output unit - file fd.out
 
         CALL RINT_SIMPLE(NT,XI,AT,ATP,PQ,PQF,VV,THETA,FI,MPU,NPUC,EEV,
-     +                   AIDENT,1,7)
+     +                   AIDENT,1,XIST,7,8)
 
         DO ISTACK = 1,NSTACK,1
           IF (TENS(ISTACK).eq.1) THEN

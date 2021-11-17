@@ -426,24 +426,45 @@ def writeIVBEAMS(sl, rp, filename="IVBEAMS", domains=False):
     return ivbeams
 
 
-def writeOUTBEAMS(beams, filename="THEOBEAMS.csv", sep="; "):
+def writeOUTBEAMS(beams, filename="THEOBEAMS.csv", sep="; ",
+                  which="intensity"):
     """Takes a list of Beam objects and writes them to a comma-separated
-    file."""
+    file. Parameter 'which' defines what to write; set to 'amp_real' or
+    'amp_imag' to write real and imaginary parts of complex amplitudes."""
     nan = "NaN"  # what to put when no value
     output = "E".rjust(7)+sep
-    w = max(11, len(beams[0].label))
+    if which == "intensity":
+        minwidth = 11
+    else:
+        minwidth = 18
+    w = max(minwidth, len(beams[0].label))
     energies = []
     for b in beams:
         output += b.label.rjust(w)+sep
-        energies.extend([k for k in b.intens if k not in energies])
+        if which == "intensity":
+            energies.extend([k for k in b.intens if k not in energies])
+        else:
+            energies.extend([k for k in b.complex_amplitude
+                             if k not in energies])
     output = output[:-len(sep)]
     output += "\n"
     energies.sort()
     for en in energies:
         output += '{:7.2f}'.format(en) + sep
         for b in beams:
-            if en in b.intens:
-                output += '{:0.5E}'.format(b.intens[en]).rjust(w) + sep
+            if which == "intensity":
+                write_dict = b.intens
+            else:
+                write_dict = b.complex_amplitude
+            if en in write_dict:
+                if which == "intensity":
+                    output += '{:0.5E}'.format(b.intens[en]).rjust(w) + sep
+                else:
+                    if which == "amp_real":
+                        v = b.complex_amplitude[en].real
+                    else:
+                        v = b.complex_amplitude[en].imag
+                    output += '{:0.10E}'.format(v).rjust(w) + sep
             else:
                 output += nan.rjust(w) + sep
         output = output[:-len(sep)]

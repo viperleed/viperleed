@@ -207,6 +207,15 @@ def run_refcalc(runtask):
                      " to main folder.", exc_info=True)
         return ("Error encountered by RefcalcRunTask " + task_name
                 + ": Failed to copy fd.out file out.")
+    try:
+        shutil.copy2(os.path.join(workfolder, "amp.out"),
+                     os.path.join(targetpath, "amp" + en_str + ".out"))
+    except FileNotFoundError:
+        if runtask.tl_version >= 1.73:
+            logger.warning("Refcalc output file amp.out not found.")
+    except Exception as e:      # warn but continue
+        logger.warning("Failed to copy refcalc output file amp.out "
+                       "to main folder: " + str(e))
     # append log
     log = ""
     try:
@@ -542,6 +551,17 @@ def refcalc(sl, rp, subdomain=False, parent_dir=""):
         logger.error("Error writing THEOBEAMS after reference "
                      "calculation: ", exc_info=True)
         rp.setHaltingLevel(2)
+    if len(rp.theobeams["refcalc"][0].complex_amplitude) != 0:
+        try:
+            beams.writeOUTBEAMS(rp.theobeams["refcalc"],
+                                filename="Complex_amplitudes_real.csv",
+                                which="amp_real")
+            beams.writeOUTBEAMS(rp.theobeams["refcalc"],
+                                filename="Complex_amplitudes_imag.csv",
+                                which="amp_imag")
+        except Exception:
+            logger.error("Error writing complex amplitudes after reference "
+                         "calculation.", exc_info=rp.LOG_DEBUG)
     try:
         plot_iv(theobeams_norm, "THEOBEAMS.pdf", formatting=rp.PLOT_IV)
     except Exception:
@@ -553,6 +573,13 @@ def refcalc(sl, rp, subdomain=False, parent_dir=""):
     except Exception:
         logger.warning("Failed to rename refcalc output file fd.out to "
                        "refcalc-fd.out")
+    try:
+        os.rename('amp.out', 'refcalc-amp.out')
+    except FileNotFoundError:
+        pass
+    except Exception:
+        logger.warning("Failed to rename refcalc output file amp.out to "
+                       "refcalc-amp.out")
     if 1 not in rp.TENSOR_OUTPUT:
         return
     # move and zip tensor files

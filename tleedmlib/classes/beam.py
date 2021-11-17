@@ -23,6 +23,8 @@ class Beam:
         The h and k coordinates of the beam as float
     intens : dict {float: float}
         contains {energy: intensity} pairs
+    complex_amplitude : dict {float: complex}
+        contains {energy: amplitude} pairs
     label : str
         Label for the beam
     """
@@ -36,6 +38,7 @@ class Beam:
             self.hkfrac = (Fraction(hk[0]).limit_denominator(maxdenom),
                            Fraction(hk[1]).limit_denominator(maxdenom))
         self.intens = {}
+        self.complex_amplitude = {}
         self.label, _ = self.getLabel()
 
     def updateIndex(self, hk, maxdenom=99):
