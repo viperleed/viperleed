@@ -49,9 +49,9 @@ subroutine MS_smoother(data, isMS1, degree, m, out_data)
     real(8), intent(out) :: out_data(size(data))
 
     ! Internal
-    integer max_degree, m_min, radius, ncoeffs
+    integer max_degree, m_min, radius, ncoeffs, fitlength, p
     real(8), allocatable :: extended_data(:), extended_smoothed(:), fit_weights(:), kernel(:), coeffs(:)
-
+    real(8) :: first_zero, beta
 
     max_degree = 10
     if ((degree<2).or.(degree>max_degree).or.(modulo(degree,2)==1)) then
@@ -65,23 +65,39 @@ subroutine MS_smoother(data, isMS1, degree, m, out_data)
     if (isMS1 == 1) then
         coeffs = get_coefficients_MS1(degree, m)
         ncoeffs = size(coeffs)
-        fit_weights = make_fit_weights_MS1(degree, m) ! should be allocated automaticaly
+        first_zero = (m+1)/(1+0.5d0*degree)
+        beta = 0.65d0 + 0.35d0*exp(-0.55d0*(degree-4))
+        fitlength = int(ceiling(first_zero*beta))
+        allocate(fit_weights(fitlength))
+        do p = 1, fitlength+1
+            fit_weights(p) = (cos(0.5d0*pi/(first_zero*beta)*(p-1)))**2
+        end do
         kernel = make_kernel_MS1(degree, m, coeffs, ncoeffs) ! should be allocated automaticaly
     else
         coeffs = get_coefficients_MS(degree, m)
         ncoeffs = size(coeffs)
-        fit_weights = make_fit_weights_MS(degree, m) ! should be allocated automaticaly
+        first_zero = (m+1)/(1.5d0+0.5d0*degree)
+        beta = 0.7d0 + 0.14d0*exp(-0.6d0*(degree-4))
+        fitlength = int(ceiling(first_zero*beta))
+        write(*,*) "a fitlen", fitlength
+        allocate(fit_weights(fitlength))
+        do p = 1, fitlength+1
+            fit_weights(p) = (cos(0.5d0*pi/(first_zero*beta)*(p-1)))**2
+        end do
         kernel = make_kernel_MS(degree, m, coeffs, ncoeffs) ! should be allocated automaticaly
     end if
 
     radius = size(kernel) - 1
-    allocate(extended_data(size(data)+2*radius), extended_smoothed(size(data)+2*radius))
+    !allocate(extended_data(size(data)+2*radius), extended_smoothed(size(data)+2*radius))
+    write(*,*) "allocate extended"
+
     extended_data = extend_data(data, fit_weights, m)
+    write(*,*) "a extended_data"
     extended_smoothed = smooth_except_boundaries(data, kernel)
+    write(*,*) "a smooth_except_boundaies"
     out_data = extended_smoothed(radius+1:radius+1+size(data))
     return
 end subroutine MS_smoother
-
 
 pure function make_kernel_MS(degree, m, coeffs, ncoeffs) result(kernel)
     implicit none
@@ -176,7 +192,6 @@ pure function get_coefficients_MS(degree, m) result(coeffs)
     integer n_coeffs, n_corr_lines, i
     real(8) :: abc(3), cm
 
-
     if (degree == 0) then
         n_corr_lines = 0
     elseif (degree == 2) then
@@ -210,7 +225,7 @@ end function get_coefficients_MS
 pure function get_coefficients_MS1(degree, m) result(coeffs)
     implicit none
     integer, intent(in) :: degree, m
-
+!f2py real(8), intent(out) :: coeffs(:)
     real(8), allocatable :: coeffs(:)
 
     ! Internal
@@ -251,43 +266,7 @@ pure function get_coefficients_MS1(degree, m) result(coeffs)
 
 end function get_coefficients_MS1
 
-pure function make_fit_weights_MS(degree, m) result(weights)
-    implicit none
-    integer, intent(in) :: degree, m
-
-    real(8), allocatable :: weights(:)
-
-    real first_zero, beta
-    integer fitlength, p
-
-    first_zero = (m+1)/(1+0.5d0*degree)
-    beta = 0.65d0 + 0.35d0*exp(-0.55d0*(degree-4))
-    fitlength = int(ceiling(first_zero*beta))
-    allocate(weights(fitlength))
-    do p = 0, fitlength
-        weights(p) = sqrt(cos(0.5d0*pi/(first_zero*beta)*p))
-    end do
-end function make_fit_weights_MS
-
-pure function make_fit_weights_MS1(degree, m) result(weights)
-    implicit none
-   integer, intent(in) :: degree, m
-
-    real(8), allocatable :: weights(:)
-
-    real first_zero, beta
-    integer fitlength, p
-
-    first_zero = (m+1)/(1.5d0+0.5d0*degree)
-    beta = 0.7d0 + 0.14d0*exp(-0.6d0*(degree-4))
-    fitlength = int(ceiling(first_zero*beta))
-    allocate(weights(fitlength))
-    do p = 0, fitlength
-        weights(p) = sqrt(cos(0.5d0*pi/(first_zero*beta)*p))
-    end do
-end function make_fit_weights_MS1
-
-pure function extend_data(data, fit_weights, m) result(extended)
+function extend_data(data, fit_weights, m) result(extended)
     implicit none
     integer, intent(in) :: m
     real(8), intent(in) :: data(:), fit_weights(:)
@@ -302,30 +281,36 @@ pure function extend_data(data, fit_weights, m) result(extended)
 
     fit_length = int(min(size(fit_weights), size(data)))
     allocate(lin_reg_x(fit_length), lin_reg_y(fit_length), lin_reg_weights(fit_length))
-
-    do concurrent (p = 0: fit_length-1)
+    write(*,*) "b concurrent"
+    write(*,*) "fit length", fit_length
+    do concurrent (p = 1: fit_length)
         lin_reg_x(p) = p
         lin_reg_y(p) = data(p)
         lin_reg_weights(p) = fit_weights(p)
     end do
+    write(*,*) "x,y,w", lin_reg_x, lin_reg_y, lin_reg_weights
     d_k =linear_regression_weighted(lin_reg_x, lin_reg_y, lin_reg_weights)
-
-    do p =1, m
-        extended(m-p) = d_k(1) - d_k(2)*p
+    write(*,*) "a d_k assign", d_k
+    allocate(extended(size(data)+2*m))
+    do p = 1, m
+        write(*,*) "p = ", p
+        extended(1+m-p) = d_k(1) - d_k(2)*p
     end do
-
-    do concurrent (p = 0: fit_length-1)
+    write(*,*) extended
+    do concurrent (p = 1: fit_length)
         lin_reg_x(p) = p
         lin_reg_y(p) = data(size(data)-p) ! -p rather than -(p+1) due to Fortran indices
-        lin_reg_weights(p) = fit_weights(p) ! fit weights are of the form sqrt(cos(a*p)), which is symmertric thus p can be used as index
+        lin_reg_weights(p) = fit_weights(p) ! fit weights are of the form (cos(a*p))**2, which is symmertric thus p can be used as index
     end do
     d_k =linear_regression_weighted(lin_reg_x, lin_reg_y, lin_reg_weights)
-
-    allocate(extended(size(data+2*m)))
+    write(*,*) "a 2nd regression"
     do p =1, m
-        extended((size(data)+m-1+p)) = d_k(1) - d_k(2)*p
+        extended((size(data)+m+p)) = d_k(1) - d_k(2)*p
     end do
-    extended(m: size(data)+m) = data
+    extended(m+1: size(data)+m+1) = data
+    write(*,*) "end"
+    write(*,*) extended
+    write(*,*) size(extended)
     return
 end function extend_data
 
@@ -349,7 +334,7 @@ pure function smooth_except_boundaries(data, kernel) result(smoothed_data)
 
 end function  smooth_except_boundaries
 
-pure function linear_regression_weighted(x, y, weights) result(d_k)
+function linear_regression_weighted(x, y, weights) result(d_k)
     implicit none
     real(8), intent(in) :: x(:), y(:), weights(:)
 
@@ -369,7 +354,7 @@ pure function linear_regression_weighted(x, y, weights) result(d_k)
     sum_y2 = sum(y**2*weights)
 
     ! Slope
-    d_k(2) = sum_xy-sum_x*sum_y*(1/sum_weights)/(sum_x2*sum_x**2*(1/sum_weights))
+    d_k(2) = (sum_xy-sum_x*sum_y*(1/sum_weights))/(sum_x2-sum_x**2*(1/sum_weights))
     ! Intercept
     d_k(1) = (sum_y-d_k(2)*sum_x)/sum_weights
 
