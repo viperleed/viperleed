@@ -183,7 +183,7 @@ def sortIVBEAMS(sl, rp):
     return ivsorted
 
 
-def readOUTBEAMS(filename="EXPBEAMS.csv", sep=";", enrange=None):
+def readOUTBEAMS(filename="EXPBEAMS.csv", sep=",", enrange=None):
     """Reads beams from an EXPBEAMS.csv or THEOBEAMS.csv file. Returns a list
     of Beam objects. The 'sep' parameter defines the separator. If an energy
     range 'enrange' is passed, beams that contain no data within that range
@@ -206,7 +206,7 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=";", enrange=None):
     rgx = re.compile(r'[\*\(\s]*(?P<h>[-0-9/]+)\s*\|\s*(?P<k>[-0-9/]+)')
     for line in lines:
         if firstline and sep not in line:   # try some other separators
-            for sep2 in [s for s in [";", ","] if s != sep]:
+            for sep2 in [s for s in [",", ";"] if s != sep]:
                 if sep2 in line and len(line.split(sep2)) > 2:
                     logger.info("Found separator '"+sep2+"' in "+filename
                                 + ", expected '"+sep+"'. Attempting to read "
@@ -426,7 +426,7 @@ def writeIVBEAMS(sl, rp, filename="IVBEAMS", domains=False):
     return ivbeams
 
 
-def writeOUTBEAMS(beams, filename="THEOBEAMS.csv", sep="; ",
+def writeOUTBEAMS(beams, filename="THEOBEAMS.csv", sep=", ",
                   which="intensity"):
     """Takes a list of Beam objects and writes them to a comma-separated
     file. Parameter 'which' defines what to write; set to 'amp_real' or
