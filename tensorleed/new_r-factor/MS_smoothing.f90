@@ -1,5 +1,9 @@
 module smoothing
 implicit none
+
+! f2py -m smoothing MS_smoothing.f90 -h smoothing.pyf --overwrite-signature --debug-capi
+! f2py -c smoothing.pyf MS_smoothing.f90
+
 real, parameter :: pi = 3.14159265358979323846
 ! Coefficients for the MS1 filters, for obtaining a flat passband.
 ! The innermost arrays contain a, b, c for the fit
@@ -60,18 +64,19 @@ subroutine MS_smoother(data, isMS1, degree, m, out_data)
 
     if (isMS1 == 1) then
         coeffs = get_coefficients_MS1(degree, m)
+        ncoeffs = size(coeffs)
         fit_weights = make_fit_weights_MS1(degree, m) ! should be allocated automaticaly
         kernel = make_kernel_MS1(degree, m, coeffs, ncoeffs) ! should be allocated automaticaly
     else
         coeffs = get_coefficients_MS(degree, m)
+        ncoeffs = size(coeffs)
         fit_weights = make_fit_weights_MS(degree, m) ! should be allocated automaticaly
         kernel = make_kernel_MS(degree, m, coeffs, ncoeffs) ! should be allocated automaticaly
     end if
 
-    ncoeffs = size(coeffs)
     radius = size(kernel) - 1
     allocate(extended_data(size(data)+2*radius), extended_smoothed(size(data)+2*radius))
-    extended_data = extend_data(data, fit_weights, degree, m)
+    extended_data = extend_data(data, fit_weights, m)
     extended_smoothed = smooth_except_boundaries(data, kernel)
     out_data = extended_smoothed(radius+1:radius+1+size(data))
     return
@@ -167,7 +172,6 @@ pure function get_coefficients_MS(degree, m) result(coeffs)
     real(8), allocatable :: coeffs(:)
 
     ! Internal
-    real(8), allocatable :: correctionData(:,:)
     real(8), allocatable ::corrForDeg(:,:)
     integer n_coeffs, n_corr_lines, i
     real(8) :: abc(3), cm
@@ -210,7 +214,6 @@ pure function get_coefficients_MS1(degree, m) result(coeffs)
     real(8), allocatable :: coeffs(:)
 
     ! Internal
-    real(8), allocatable :: correctionData(:,:)
     real(8), allocatable ::corrForDeg(:,:)
     integer n_coeffs, n_corr_lines, i
     real(8) :: abc(3), cm
@@ -284,13 +287,13 @@ pure function make_fit_weights_MS1(degree, m) result(weights)
     end do
 end function make_fit_weights_MS1
 
-pure function extend_data(data, fit_weights, degree, m) result(extended)
+pure function extend_data(data, fit_weights, m) result(extended)
     implicit none
-    integer, intent(in) :: m, degree
+    integer, intent(in) :: m
     real(8), intent(in) :: data(:), fit_weights(:)
 
     !Output
-    real(8) extended(size(data+2*m))
+    real(8), allocatable :: extended(:)
 
     integer fit_length, p
     real(8), allocatable :: lin_reg_x(:), lin_reg_y(:), lin_reg_weights(:)
@@ -318,6 +321,7 @@ pure function extend_data(data, fit_weights, degree, m) result(extended)
     end do
     d_k =linear_regression_weighted(lin_reg_x, lin_reg_y, lin_reg_weights)
 
+    allocate(extended(size(data+2*m)))
     do p =1, m
         extended((size(data)+m-1+p)) = d_k(1) - d_k(2)*p
     end do
@@ -332,7 +336,7 @@ pure function smooth_except_boundaries(data, kernel) result(smoothed_data)
     real(8) :: smoothed_data(size(data))
 
     integer radius, i, j
-    real(8) sum
+
 
     radius = size(kernel) -1
 
