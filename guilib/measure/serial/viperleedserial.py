@@ -399,7 +399,8 @@ class ViPErLEEDSerial(SerialABC):
             # print(f"{data[0][0]=} and {data[0]=}")
             self.__is_continuous_mode = bool(data[0][0])
 
-        self.__last_request_sent = command
+        if command != change_mode:
+            self.__last_request_sent = command
 
         return True
 
@@ -538,9 +539,9 @@ class ViPErLEEDSerial(SerialABC):
                                                   pc_measure_only):
                     self.__measurements.append(self.__bytes_to_float(message))
                     if len(self.__measurements) < 3:
-                        # Not enough data yet
+                        # Not enough data yet.
                         continue
-                    self.data_received.emit(self.__measurements)
+                    self.data_received.emit(self.__measurements.copy())
                     self.__measurements = []
                 elif self.__is_continuous_mode:
                     pass
