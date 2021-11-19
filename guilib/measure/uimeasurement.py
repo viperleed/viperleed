@@ -72,10 +72,10 @@ class Measure(gl.ViPErLEEDPluginBase):
         self.__error_report_timer = qtc.QTimer(parent=self)
         self.__error_report_timer.setSingleShot(True)
         self.__error_report_timer.timeout.connect(self.__report_errors)
-        
+
         self.__retry_close = qtc.QTimer(parent=self)
         self.__retry_close.timeout.connect(self.close)
-        
+
         self.__delayed_start = qtc.QTimer(parent=self)
         self.__delayed_start.setSingleShot(True)
         self.__delayed_start.timeout.connect(self.__run_measurement)
@@ -103,10 +103,12 @@ class Measure(gl.ViPErLEEDPluginBase):
         self._ctrls['set_energy'].setFont(gl.AllGUIFonts().buttonFont)
         self._ctrls['set_energy'].ensurePolished()
         self._ctrls['set_energy'].setEnabled(False)
-        
+
         self._ctrls['settings_editor'].setFont(gl.AllGUIFonts().buttonFont)
         self._ctrls['settings_editor'].ensurePolished()
-        self._ctrls['settings_editor'].clicked.connect(self.__on_change_settings_pressed)
+        self._ctrls['settings_editor'].clicked.connect(
+            self.__on_change_settings_pressed
+            )
         self._ctrls['settings_editor'].setEnabled(True)
 
         self._ctrls['energy_input'].setFont(gl.AllGUIFonts().labelFont)
@@ -122,7 +124,7 @@ class Measure(gl.ViPErLEEDPluginBase):
         layout.addWidget(self._ctrls['set_energy'], 3, 1, 1, 1)
         layout.addWidget(self._ctrls['energy_input'], 3, 2, 1, 1)
         layout.addWidget(self._ctrls['settings_editor'], 4, 1, 1, 2)
-        
+
         self.statusBar().showMessage('Ready')
 
         fig = Figure()
@@ -174,8 +176,14 @@ class Measure(gl.ViPErLEEDPluginBase):
         measurement_cls = ALL_MEASUREMENTS[text]
         self.measurement = measurement_cls(config)
 
-        if not isinstance(self.measurement, ALL_MEASUREMENTS['Time resolved']):  # TEMP. TODO: Handle data structure of time resolved
-            self.measurement.new_data_available.connect(self.__on_new_data)
+        if not isinstance(self.measurement, ALL_MEASUREMENTS['Time resolved']):
+            self.measurement.new_data_available.connect(
+                self.__on_energy_resolved_data
+                )
+        else:
+            self.measurement.new_data_available.connect(
+                self.__on_time_resolved_data
+                )
 
         self._ctrls['abort'].clicked.connect(self.measurement.abort)
         self._ctrls['set_energy'].clicked.connect(self.__on_set_energy)
@@ -188,32 +196,54 @@ class Measure(gl.ViPErLEEDPluginBase):
                                                       stop_on_close=False))
         self.measurement.finished.connect(self.__on_finished)
         self.measurement.finished.connect(self.__on_measurement_finished)
-            
+
 
         self.__delayed_start.start(50)
 
-    def __on_new_data(self):
+    def __on_energy_resolved_data(self):
         """Replot measured data."""
+        return
         # TODO: this plotting delays the measurement of secondary controllers
         fig = self._ctrls['plots'][0]
         fig.ax.cla()  # Clear old stuff
         meas = self.sender()
+        if not isinstance(meas, MeasurementABC):
+            raise RuntimeError(
+                f"Got unexpected sender class {meas.__class__.__name__}"
+                "for plotting energy-resolved measurements"
+                )
         measured_quantity = meas.settings.get('measurement_settings',
                                               'measure_this')
-        nominal_energies = []
-        data = []
-        for measurement in meas.data_points[0][measured_quantity]:
-            if measurement:
-                data.append([])
-        for data_point in meas.data_points:
-            nominal_energies.append(data_point['nominal_energy'])
-            i = 0
-            for measurement in data_point[measured_quantity]:
-                if measurement:
-                    data[i].append(*measurement)
-                    i += 1
+        data, nominal_energies = (
+            self.measurement.data_points.get_energy_resolved_data(
+                measured_quantity, include_energies=True
+                )
+            )
         for data_set in data:
             fig.ax.plot(nominal_energies, data_set, '.')
+        fig.ax.figure.canvas.draw_idle()
+
+    def __on_time_resolved_data(self):
+        """Replot measured data."""
+        # return
+        fig = self._ctrls['plots'][0]
+        fig.ax.cla()  # Clear old stuff
+        meas = self.sender()
+        if not isinstance(meas, MeasurementABC):
+            raise RuntimeError(
+                f"Got unexpected sender class {meas.__class__.__name__}"
+                "for plotting time-resolved measurements"
+                )
+        measured_quantity = meas.settings.get('measurement_settings',
+                                              'measure_this')
+        data, times = (
+            self.measurement.data_points.get_time_resolved_data(
+                measured_quantity, include_times=True
+                )
+            )
+        for ctrl_times, ctrl_data in zip(times, data):
+            for times_set, data_set in zip(ctrl_times, ctrl_data):
+                fig.ax.plot(times_set, data_set, '.')
         fig.ax.figure.canvas.draw_idle()
 
     def __on_set_energy(self):
@@ -242,12 +272,12 @@ class Measure(gl.ViPErLEEDPluginBase):
                 source = f"measurement {sender.__class__.__name__}"
             else:
                 source = "system or unknown"
-            
+
             err_text.append(f"ERROR from {source}\n  "
                             f"error code: {error_code}"
                             f"\n{error_message}")
-        
-        _ = qtw.QMessageBox.critical(self, "Error", 
+
+        _ = qtw.QMessageBox.critical(self, "Error",
                                      "\n\n".join(err_text),
                                      qtw.QMessageBox.Ok)
         self.__errors = []
@@ -274,6 +304,6 @@ class Measure(gl.ViPErLEEDPluginBase):
                                   & ~qtc.Qt.WindowMinimized
                                   | qtc.Qt.WindowActive)
             return
-        
+
 
         settings.show()
