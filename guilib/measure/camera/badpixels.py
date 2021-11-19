@@ -835,7 +835,7 @@ class BadPixels:
             bad_x, bad_y = self.uncorrectable.T     # TODO: correct??
             mask[bad_x, bad_y] = 255                # TODO: correct??
 
-        date_time = self.__base_name.replace(f'{self.__camera.name}_'
+        date_time = self.__base_name.replace(f'{self.__camera.name}_', '')
         date_time = (
             #            YYYY:              mm:              dd
             f"{date_time[:4]}:{date_time[4:6]}:{date_time[6:8]} "
