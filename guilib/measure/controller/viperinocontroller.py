@@ -89,13 +89,18 @@ class ViPErinoController(MeasureControllerABC):
                 'set_energy'
                 ] = True
         self.continue_prepare_todos['start_autogain'] = True
-
         self.__adc_measurement_types = []
         self.__adc_channels = []
-
         self.__hardware = defaultdict()
 
-    def set_energy(self, energy, time, *more_steps, measure=True):
+    @property
+    def initial_delay(self):
+        """Return the initial time delay of a measurement in seconds."""
+        update_rate_raw = self.settings.get('controller', 'update_rate')
+        update_rate = self.settings.getint('adc_update_rate', update_rate_raw)
+        return 3/update_rate
+
+    def set_energy(self, energy, time, *more_steps, trigger_meas=True):
         """Set energy with associated settling time.
 
         Take the energy (or energies), get setpoint energy (or
@@ -120,12 +125,12 @@ class ViPErinoController(MeasureControllerABC):
             will be the final energy that is set and should have
             the longest waiting time to allow the electronics to
             stabilize.
-        measure : bool, optional
-            True if the controller is supposed to take
+        trigger_meas : bool, optional
+            True if the controllers are supposed to take
             measurements after the energy has been set.
             Default is True.
         """
-        __command = 'PC_SET_VOLTAGE' if measure else 'PC_SET_VOLTAGE_ONLY'
+        __command = 'PC_SET_VOLTAGE' if trigger_meas else 'PC_SET_VOLTAGE_ONLY'
         pc_set_voltage = self.settings.get('available_commands', __command)
         v_ref_dac = self.settings.getfloat('measurement_settings',
                                            'v_ref_dac')
@@ -355,6 +360,7 @@ class ViPErinoController(MeasureControllerABC):
                     break
             else:
                 emit_error(self, ViPErinoErrors.INVALID_REQUEST)
+        super().what_to_measure(requested)
 
     def set_continuous_mode(self, data):
         """Set continuous mode.
@@ -386,10 +392,10 @@ class ViPErinoController(MeasureControllerABC):
 
     def stop(self):
         """Stop.
-        
+
         Stop whatever the controller is doing right now
         and return to idle state.
-        
+
         Returns
         -------
         None.
@@ -397,3 +403,10 @@ class ViPErinoController(MeasureControllerABC):
         stop = self.settings.get('available_commands','pc_stop')
         super().stop()
         self.send_message(stop)
+
+    @property
+    def measurement_interval(self):
+        """Return the time interval between measurements in seconds."""
+        update_rate_raw = self.settings.get('controller', 'update_rate')
+        meas_f = self.settings.getint('adc_update_rate', update_rate_raw)
+        return 1/meas_f

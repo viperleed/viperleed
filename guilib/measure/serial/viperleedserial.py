@@ -399,7 +399,8 @@ class ViPErLEEDSerial(SerialABC):
             # print(f"{data[0][0]=} and {data[0]=}")
             self.__is_continuous_mode = bool(data[0][0])
 
-        self.__last_request_sent = command
+        if command != change_mode:
+            self.__last_request_sent = command
 
         return True
 
@@ -538,9 +539,9 @@ class ViPErLEEDSerial(SerialABC):
                                                   pc_measure_only):
                     self.__measurements.append(self.__bytes_to_float(message))
                     if len(self.__measurements) < 3:
-                        # Not enough data yet
+                        # Not enough data yet.
                         continue
-                    self.data_received.emit(self.__measurements)
+                    self.data_received.emit(self.__measurements.copy())
                     self.__measurements = []
                 elif self.__is_continuous_mode:
                     pass
@@ -647,3 +648,14 @@ class ViPErLEEDSerial(SerialABC):
         if not (hardware_config['adc_0'] or hardware_config['adc_1']):
             emit_error(self, ViPErLEEDHardwareError.ERROR_NO_HARDWARE_DETECTED)
         return firmware_version, hardware_config
+
+    def is_measure_command(self, command):
+        """Returns true if the command sent is a
+        command that will return a measurement."""
+        pc_set_voltage = self.port_settings.get('available_commands',
+                                                'PC_SET_VOLTAGE')
+        pc_measure_only = self.port_settings.get('available_commands',
+                                                 'PC_MEASURE_ONLY')
+        if command in (pc_set_voltage, pc_measure_only):
+            return True
+        return False

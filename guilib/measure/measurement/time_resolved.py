@@ -16,7 +16,9 @@ import ast
 from PyQt5 import QtCore as qtc
 
 # ViPErLEED modules
-from viperleed.guilib.measure.measurement.abc import MeasurementABC
+from viperleed.guilib.measure.measurement.abc import (MeasurementABC,
+                                                      MeasurementErrors)
+from viperleed.guilib.measure.hardwarebase import emit_error
 
 
 class TimeResolved(MeasurementABC):
@@ -30,21 +32,32 @@ class TimeResolved(MeasurementABC):
         self.__settle_time = 0
         # Settle time has to be 0 for calibration
         self.__time_over = False
-
-        self.__delta_energy = self.settings.getfloat('measurement_settings',
-                                                     'delta_energy')
-        self.__end_energy = self.settings.getfloat('measurement_settings',
-                                                   'end_energy')
-        self.__endless = self.settings.getboolean('measurement_settings',
-                                                  'endless')
-        self.__measurement_time = self.settings.getint('measurement_settings',
-                                                       'measurement_time')
-        self.__constant_energy = self.settings.getboolean(
-            'measurement_settings', 'constant_energy')
-        self.__limit_continuous = self.settings.getint('measurement_settings',
-                                                       'limit_continuous')
-        self.__cycle_time = self.settings.getint('measurement_settings',
-                                                 'cycle_time')
+        self.__end_energy = 0
+        self.__delta_energy = 1
+        self.__endless = False
+        self.__measurement_time = 0
+        self.__constant_energy = False
+        self.__limit_continuous = 0
+        self.__cycle_time = 0
+        if self.settings:
+            self.__delta_energy = self.settings.getfloat(
+                'measurement_settings', 'delta_energy'
+                )
+            self.__end_energy = self.settings.getfloat('measurement_settings',
+                                                       'end_energy')
+            self.__endless = self.settings.getboolean('measurement_settings',
+                                                      'endless')
+            self.__measurement_time = self.settings.getint(
+                'measurement_settings', 'measurement_time'
+                )
+            self.__constant_energy = self.settings.getboolean(
+                'measurement_settings', 'constant_energy'
+                )
+            self.__limit_continuous = self.settings.getint(
+                'measurement_settings', 'limit_continuous'
+                )
+            self.__cycle_time = self.settings.getint('measurement_settings',
+                                                     'cycle_time')
 
         self.timer = qtc.QTimer(parent=self)
         self.timer.setSingleShot(True)
@@ -70,17 +83,11 @@ class TimeResolved(MeasurementABC):
         if self.__measurement_time <= self.__limit_continuous:
             for controller in self.controllers:
                 controller.busy = True
-            for key in self.data_points[-1].keys():
-                self.data_points[-1][key].append([])
-            self.data_points[-1]['nominal_energy'][-1].append(self.current_energy)
             self.connect_continuous_mode_set()
             self.continuous_mode.emit([True, False])
-            pass
         else:
-            self.data_points[-1]['nominal_energy'].append(self.current_energy)
             self.timer.start(self.__measurement_time)
             self.set_LEED_energy(self.current_energy, self.__settle_time)
-            pass
 
     def continuous_mode_set(self, busy):
         """Check if continuous mode has been set on all controllers.
@@ -115,7 +122,7 @@ class TimeResolved(MeasurementABC):
         if self.__time_over or self.current_energy >= self.__end_energy:
             self.on_finished()
             return True
-        self.new_data_available.emit()        # TODO: check for plot delay. Alternative: fire a Qtimer at regular intervals (e.g. ~150 ms)
+        self.new_data_available.emit()
         self.current_energy = self.energy_generator()
         return False
 
@@ -147,29 +154,23 @@ class TimeResolved(MeasurementABC):
         else:
             # TODO: emit error
             pass
-        
-        measured = []
-        set_energies = []
-        length = len(self.data_points)
-        for i in range(length-1):
-            measured.append(*self.data_points[i][measure])
-            set_energies.append(*self.data_points[i]['nominal_energy'])
+
+        measured, nominal_energies = self.data_points.get_time_resolved_data(
+            measure, include_energies=True
+            )
 
         if self.__measurement_time <= self.__limit_continuous:
-            for j, step in enumerate(measured):
+            for j, step in enumerate(measured[0]):
                 length = len(step)-1
-                data_points = 0
+                points = 0
                 for i, measurement in enumerate(step):
-                    if abs(step[length-i] - set_energies[j][0]) < step_height:
-                        data_points += 1
+                    if abs(step[length-i] - nominal_energies[j]) < step_height:
+                        points += 1
                     else:
                         break
-                print(length+1)
-                print(data_points)
-                settle_time = int(1000*data_points/update_rate)
+                settle_time = int(1000*points/update_rate)
                 if settle_time > self.__settle_time:
                     self.__settle_time = settle_time
-                print(self.__settle_time)
 
             self.primary_controller.settings.set(
                 'measurement_settings', to_change, str(self.__settle_time))
@@ -270,24 +271,12 @@ class TimeResolved(MeasurementABC):
         self.timer.stop()
         super().abort()
 
-    def ready_for_next_measurement(self):
-        """Check if continuous measurement is done.
-
-        Returns
-        -------
-        None.
-        """
-        if self.is_finished():
-            self.prepare_finalization()
-        else:
-            self.start_next_measurement()
-
     def receive_from_camera(self, busy):
         """Do nothing."""
         # TODO: We may want a live stream if we do the energy wiggle.
         pass
 
-    def receive_from_controller(self, receive):
+    def receive_from_controller(self, controller, receive):
         """Receive measurement data from the controller.
 
         Append received data to the internal dictionary. Emit an
@@ -296,6 +285,8 @@ class TimeResolved(MeasurementABC):
 
         Parameters
         ----------
+        controller : ControllerABC
+            The controller object that is sending data.
         receive : dictionary
             A dictionary containing the measurements.
 
@@ -309,15 +300,10 @@ class TimeResolved(MeasurementABC):
             If the received measurement contains a label that is
             not specified in the data_points[-1] dictionary.
         """
-        for key in receive:
-            if key not in self.data_points[-1].keys():
-                emit_error(self, MeasurementErrors.INVALID_MEASUREMENT)
-            else:
-                if self.__measurement_time <= self.__limit_continuous:
-                    self.data_points[-1][key][-1].append(receive[key])
-                else:
-                    self.data_points[-1][key].append(receive[key])
-
+        if controller == self.primary_controller:
+            self.data_points.add_data(receive, controller, self.primary_delay)
+        else:
+            self.data_points.add_data(receive, controller)
 
     def connect_continuous_mode_set(self):
         """Connect controller busy signal to continuous_mode_set.

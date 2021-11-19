@@ -14,9 +14,7 @@ ViPErLEEDErrorEnum class MeasurementErrors.
 """
 import os
 import shutil
-from collections import defaultdict
 from abc import abstractmethod
-import csv
 import ast
 from configparser import ConfigParser
 from time import localtime, strftime
@@ -28,34 +26,27 @@ from viperleed.guilib.measure.hardwarebase import (
     emit_error, ViPErLEEDErrorEnum, QMetaABC,
     config_has_sections_and_options, class_from_name
     )
+from viperleed.guilib.measure.datapoints import DataPoints
 
 
 class MeasurementErrors(ViPErLEEDErrorEnum):
     """Errors that might occur during a measurement cycle."""
-    INVALID_MEASUREMENT = (300,
-                           "The returned data dictionary contained a section "
-                           "that was not specified in the measurement class.")
-    MISSING_SETTINGS = (301,
+    MISSING_SETTINGS = (300,
                         "Measurements cannot be taken without settings. "
                         "Load an appropriate settings file before "
                         "proceeding.")
-    INVALID_MEAS_SETTINGS = (302,
+    INVALID_MEAS_SETTINGS = (301,
                              "Invalid measurement settings: Required "
                              "settings {!r} missing or wrong. Check "
                              "configuration file.")
-    MISSING_CLASS_NAME = (303,
+    MISSING_CLASS_NAME = (302,
                           "{!r} is missing the name "
                           "of its related class object.")
+    RUNTIME_ERROR = (303, "Runtime error. Info: {}")
 
 
 class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
-    """Generic measurement class.
-
-    The plot_info dictionary in this class may be reimplemented
-    in subclasses. Each section (label) needs to contain
-    the unit and the scaling ('lin' for linear and 'log' for
-    logarithmic scaling.
-    """
+    """Generic measurement class."""
     # Is emitted if a measurement cycle has been completed.
     # Contains measurement data as a tuple of dictionaries.
     finished = qtc.pyqtSignal(tuple)
@@ -79,28 +70,17 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
     # measurement is finished.
     prepared = qtc.pyqtSignal()
 
-    # The reimplementation may introduce more/other keys.
-    # See ViPErinoController for an example on how to do this.
-    plot_info = defaultdict(list)
-    plot_info['nominal_energy'] = ['eV', 'lin']
-    plot_info['I0'] = ['uA', 'lin']
-    plot_info['HV'] = ['eV', 'lin']
-    plot_info['elapsed_time'] = ['ms', 'lin']
-    plot_info['Isample'] = ['V', 'log']
-    plot_info['temperature'] = ['°C', 'lin']
-    plot_info['cold_junction'] = ['°C', 'lin']
-    plot_info['images'] = ['Number']
-
     _mandatory_settings = [
         ('devices', 'primary_controller'),
-        ('measurement_settings', 'start_energy')
+        ('measurement_settings', 'start_energy'),
         ]
 
     def __init__(self, measurement_settings):
         """Initialise measurement class"""
-
         super().__init__()
-
+        self._other_mandatory_settings = [('measurement_settings',
+                                           'measurement_class',
+                                           (self.__class__.__name__,))]
         self.current_energy = 0
         self.__settings = None
         self.__primary_controller = None
@@ -109,9 +89,12 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         self.__aborted = False
         self.counter = 0
         self.start_energy = 0
-        self.thread = qtc.QThread()
-        self.data_points = []
+        self.__long_settle_time = 0
+        self.threads = []
         self.running = False
+        self.primary_delay = 0
+        self.data_points = DataPoints()
+        self.data_points.error_occurred.connect(self.error_occurred)
 
         self.__init_errors = []  # Report these with a little delay
         self.__init_err_timer = qtc.QTimer(self)
@@ -122,10 +105,13 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
 
         self.set_settings(measurement_settings)
 
-        self.start_energy = self.settings.getfloat('measurement_settings',
-                                                   'start_energy')
-        self.__long_settle_time = self.primary_controller.settings.getint(
-            'measurement_settings', 'first_settle_time')
+        if self.settings:
+            self.start_energy = self.settings.getfloat('measurement_settings',
+                                                       'start_energy')
+            self.__long_settle_time = self.primary_controller.settings.getint(
+                'measurement_settings', 'first_settle_time'
+                )
+
         self.force_return_timer = qtc.QTimer(parent=self)
         self.force_return_timer.setSingleShot(True)
         self.force_return_timer.timeout.connect(self.return_to_gui)
@@ -211,7 +197,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         new_settings, invalid = config_has_sections_and_options(
             self,
             new_settings,
-            self._mandatory_settings
+            (*self._mandatory_settings, *self._other_mandatory_settings)
             )
         for setting in invalid:
             emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS, setting)
@@ -235,10 +221,12 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         for secondary_config, secondary_measures in secondary_set:
             ctrl = self.__make_controller(secondary_config, is_primary=False)
             ctrl.what_to_measure(secondary_measures)
-            ctrl.moveToThread(self.thread)
+            self.threads.append(qtc.QThread())
+            ctrl.moveToThread(self.threads[-1])
             secondary_controllers.append(ctrl)
         self.secondary_controllers = secondary_controllers
-        self.thread.start()
+        for thread in self.threads:
+            thread.start(priority=thread.TimeCriticalPriority)
 
         # Instantiate camera classes
         cameras = []
@@ -264,6 +252,9 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
 
         for device in self.devices:
             device.error_occurred.connect(self.__on_hardware_error)
+
+        self.data_points.primary_controller = self.primary_controller
+        self.data_points.controllers = self.controllers
 
     settings = property(__get_settings, set_settings)
 
@@ -354,7 +345,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             primary.busy = True
             primary.controller_busy.connect(self.return_to_gui,
                                             type=qtc.Qt.UniqueConnection)
-            self.set_LEED_energy(self.current_energy, 50, measure=False)
+            self.set_LEED_energy(self.current_energy, 50, trigger_meas=False)
 
     def save_data(self):
         """Save data.
@@ -365,7 +356,6 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         """
         path = self.settings.get('measurement_settings', 'save_here')
         clock = strftime("%Y-%m-%d_%H-%M-%S/", localtime())
-        # class_name = self.__class__.__name__
         os.mkdir(path + clock)
         to_move_list = os.listdir(path + '__tmp__/')
         for to_move in to_move_list:
@@ -374,14 +364,9 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         if not self.data_points:
             return
         csv_name = path + clock + 'measurement.csv'
-        with open(csv_name, 'w', encoding='UTF8', newline='') as file_name:
-            writer = csv.writer(file_name)
-            writer.writerow(self.data_points[0].keys())
-            for data_point in self.data_points:
-                values = [v for _, v in data_point.items() if v]
-                writer.writerow(values)
+        self.data_points.save_data(csv_name)
 
-    def set_LEED_energy(self, *message, measure=True):
+    def set_LEED_energy(self, *message, trigger_meas=True, **kwargs):
         """Set the electron energy used for LEED.
 
         In order to achieve quicker settling times for the
@@ -395,11 +380,22 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         message : tuple
             Contains data necessary to set the energy.
 
+        trigger_meas : bool, optional
+            True if the controllers are supposed to take
+            measurements after the energy has been set.
+            Default is True.
+        **kwargs : object
+            Other unused keyword arguments.
+
         Returns
         -------
         None.
         """
-        self.primary_controller.set_energy(*message, measure=measure)
+        self.primary_controller.set_energy(*message, trigger_meas=trigger_meas)
+        self.primary_delay = 0
+        for i, value in enumerate(message):
+            if i%2 != 0:
+                self.primary_delay += value
 
     @abstractmethod
     def abort(self):
@@ -427,8 +423,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             self.ready_for_measurement.connect(camera.trigger_now,
                                                type=qtc.Qt.UniqueConnection)
             self.begin_preparation.connect(camera.start,
-                                           type=qtc.Qt.UniqueConnection)                              
-                                               
+                                           type=qtc.Qt.UniqueConnection)
         # camera.disconnect does not need to be hooked up to the
         # abort_action signal as it is called in the disconnecting
         # of the camera signals anyway.
@@ -690,6 +685,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         """
         if any(device.busy for device in self.devices):
             return
+        self.data_points.calculate_times()
         if self.is_finished():
             self.prepare_finalization()
         else:
@@ -735,7 +731,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         if not busy:
             self.ready_for_next_measurement()
 
-    def receive_from_controller(self, receive):
+    def receive_from_controller(self, controller, receive):
         """Receive measurement data from the controller.
 
         Append received data to the internal dictionary. Emit an
@@ -746,6 +742,8 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
 
         Parameters
         ----------
+        controller : ControllerABC
+            The controller object that is sending data.
         receive : dictionary
             A dictionary containing the measurements.
 
@@ -759,11 +757,13 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             If the received measurement contains a label that is
             not specified in the data_points[-1] dictionary.
         """
-        for key in receive:
-            if key not in self.data_points[-1].keys():
-                emit_error(self, MeasurementErrors.INVALID_MEASUREMENT)
-            else:
-                self.data_points[-1][key].append(receive[key])
+        # TODO: check if one controller can return data while
+        # another controller has changed his busy state but
+        # hasn't returned data yet. (race condition)
+        if controller == self.primary_controller:
+            self.data_points.add_data(receive, controller, self.primary_delay)
+        else:
+            self.data_points.add_data(receive, controller)
         self.ready_for_next_measurement()
 
     def do_next_measurement(self):
@@ -793,15 +793,17 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         controllers immediately without waiting for an
         about_to_trigger signal.
 
+        super().start_next_measurement() must be called in
+        subclasses in order to create a new data_point for
+        the next measurement at the beginning of
+        start_next_ measurement.
+
         Returns
         -------
         None.
         """
-        # The reimplementation may introduce more/other keys.
-        data_points_dict = defaultdict(list)
-        for key in self.plot_info:
-            data_points_dict[key] = []
-        self.data_points.append(data_points_dict)
+        self.data_points.new_data_point(self.current_energy, self.controllers,
+                                        self.cameras)
 
     def __make_controller(self, controller_settings, is_primary=False):
         """Instantiate controller class object.
@@ -917,9 +919,11 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         """
         self.disconnect_primary_controller()
         self.force_return_timer.stop()
-        self.thread.quit()
+        for thread in self.threads:
+            thread.quit()
         self.running = False
-        self.finished.emit((self.plot_info, self.data_points))
+        # self.finished.emit(self.data_points)
+        self.finished.emit(())
 
     def prepare_finalization(self):
         """Prepare for finalization.

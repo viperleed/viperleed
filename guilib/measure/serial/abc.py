@@ -17,7 +17,7 @@ Graphical User Interface.
 """
 # Python standard modules
 from abc import abstractmethod
-from time import sleep
+import time
 
 # Non-standard modules
 from PyQt5 import (QtCore as qtc,
@@ -29,7 +29,6 @@ from viperleed.guilib.measure.hardwarebase import (
     config_has_sections_and_options,
     emit_error
     )
-
 
 SERIAL_ERROR_MESSAGES = {
     qts.QSerialPort.NoError: "",
@@ -184,8 +183,10 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         self.__timeout.setSingleShot(True)
         self.__timeout.timeout.connect(self.__on_serial_timeout)
         self.__stop_timer.connect(self.__timeout.stop)
-        
+
         self.__open = False
+        
+        self.time_stamp = None
 
         if self.__init_errors:
             self.__init_err_timer.start(20)
@@ -744,6 +745,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         -------
         None.
         """
+        sent_command = message
         all_messages = (message, *other_messages)
         if not self.__open or not self.is_message_supported(all_messages):
             return
@@ -769,7 +771,9 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             self.__port.write(encoded)
             # Wait a vey tiny bit to prevent writing to the port
             # while it is still writing the previous message
-            sleep(0.01)
+            time.sleep(0.01)
+        if self.is_measure_command(sent_command):
+            self.time_stamp = time.perf_counter()
 
     def serial_connect(self, *__args):
         """Connect to currently selected port."""
@@ -778,7 +782,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             self.print_port_config()
             self.__open = False
             return
-        
+
         self.__open = True
         self.__set_up_serial_port()
 
@@ -1009,3 +1013,10 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         for error in self.__init_errors:
             self.error_occurred.emit(error)
         self.__init_errors = []
+
+    @abstractmethod
+    def is_measure_command(self, command):
+        """Returns true if the command sent is a
+        command that will return a measurement."""
+        return
+

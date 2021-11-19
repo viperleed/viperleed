@@ -32,12 +32,18 @@ class MeasureEnergySetpoint(MeasurementABC):
         read from the settings and made private properties.
         """
         super().__init__(measurement_settings)
-        self.__end_energy = self.settings.getfloat('measurement_settings',
-                                                   'end_energy')
-        self.__delta_energy = self.settings.getfloat('measurement_settings',
-                                                     'delta_energy')
-        self.__hv_settle_time = self.primary_controller.settings.getint(
-            'measurement_settings', 'hv_settle_time')
+        self.__end_energy = 0
+        self.__delta_energy = 1
+        self.__hv_settle_time = 0
+        if self.settings:
+            self.__end_energy = self.settings.getfloat('measurement_settings',
+                                                       'end_energy')
+            self.__delta_energy = self.settings.getfloat(
+                'measurement_settings', 'delta_energy'
+                )
+            self.__hv_settle_time = self.primary_controller.settings.getint(
+                'measurement_settings', 'hv_settle_time'
+                )
 
     def begin_measurement_preparation(self):
         """Start preparation for measurements.
@@ -76,7 +82,6 @@ class MeasureEnergySetpoint(MeasurementABC):
         super().start_next_measurement()
         for controller in self.controllers:
             controller.busy = True
-        self.data_points[-1]['nominal_energy'].append(self.current_energy)
         self.set_LEED_energy(self.current_energy, self.__hv_settle_time)
 
     def is_finished(self):
@@ -120,16 +125,14 @@ class MeasureEnergySetpoint(MeasurementABC):
         -------
         None
         """
-        nominal_energies = []
-        measured_energies = []
-        length = len(self.data_points)
-        for i in range(length-1):
-            nominal_energies.append(*self.data_points[i]['nominal_energy'])
-            measured_energies.append(*self.data_points[i]['HV'])
-        print(nominal_energies, measured_energies)
+        measured_energies, nominal_energies = (
+            self.data_points.get_energy_resolved_data(
+                'HV', include_energies=True
+                )
+            )
         domain = ast.literal_eval(
             self.primary_controller.settings['energy_calibration']['domain'])
-        fit_polynomial = Polynomial.fit(measured_energies, nominal_energies,
+        fit_polynomial = Polynomial.fit(measured_energies[0], nominal_energies,
                                         1, domain=domain, window=domain)
         coefficients = str(list(fit_polynomial.coef))
         self.primary_controller.settings.set(
