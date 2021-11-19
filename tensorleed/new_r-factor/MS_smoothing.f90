@@ -62,9 +62,9 @@ subroutine MS_smoother(data, isMS1, degree, m, out_data)
         ! problem, invalid input
     end if
 
+    call get_coefficients(isMS1, degree, m, ncoeffs, coeffs)
     if (isMS1 == 1) then
-        coeffs = get_coefficients_MS1(degree, m)
-        ncoeffs = size(coeffs)
+
         first_zero = (m+1)/(1+0.5d0*degree)
         beta = 0.65d0 + 0.35d0*exp(-0.55d0*(degree-4))
         fitlength = int(ceiling(first_zero*beta))
@@ -72,10 +72,8 @@ subroutine MS_smoother(data, isMS1, degree, m, out_data)
         do p = 1, fitlength+1
             fit_weights(p) = (cos(0.5d0*pi/(first_zero*beta)*(p-1)))**2
         end do
-        kernel = make_kernel_MS1(degree, m, coeffs, ncoeffs) ! should be allocated automaticaly
+        kernel = make_kernel(isMS1, degree, m, coeffs, ncoeffs) ! should be allocated automaticaly
     else
-        coeffs = get_coefficients_MS(degree, m)
-        ncoeffs = size(coeffs)
         first_zero = (m+1)/(1.5d0+0.5d0*degree)
         beta = 0.7d0 + 0.14d0*exp(-0.6d0*(degree-4))
         fitlength = int(ceiling(first_zero*beta))
@@ -84,9 +82,9 @@ subroutine MS_smoother(data, isMS1, degree, m, out_data)
         do p = 1, fitlength+1
             fit_weights(p) = (cos(0.5d0*pi/(first_zero*beta)*(p-1)))**2
         end do
-        kernel = make_kernel_MS(degree, m, coeffs, ncoeffs) ! should be allocated automaticaly
+        kernel = make_kernel(isMS1, degree, m, coeffs, ncoeffs) ! should be allocated automaticaly
     end if
-
+    write(*,*) "coeffs", coeffs
     radius = size(kernel) - 1
     !allocate(extended_data(size(data)+2*radius), extended_smoothed(size(data)+2*radius))
     write(*,*) "data", data
@@ -101,7 +99,7 @@ subroutine MS_smoother(data, isMS1, degree, m, out_data)
     return
 end subroutine MS_smoother
 
-pure function make_kernel(isMS1, degree, m, coeffs, ncoeffs) result(kernel)
+function make_kernel(isMS1, degree, m, coeffs, ncoeffs) result(kernel)
     implicit none
     integer, intent(in) :: isMS1, degree, m, ncoeffs
     real(8), intent(in) :: coeffs(ncoeffs)
@@ -110,9 +108,8 @@ pure function make_kernel(isMS1, degree, m, coeffs, ncoeffs) result(kernel)
     real(8) sum, x, sinc_arg, k, decay
     integer nu, i, j
 
-
     sum = 0d0
-    if (MS1 == 1) then
+    if (isMS1 == 1) then
         decay = 2 !MS: decay alpha =2: 13.5% at end without correction, 2sqrt2 sigma
         if (modulo((degree/2),2)==0) then
             nu = 2
@@ -124,30 +121,36 @@ pure function make_kernel(isMS1, degree, m, coeffs, ncoeffs) result(kernel)
         ! nu not needed
     end if
 
-    do i=1, m-1
-            x = i*(1d0/(m+1))
-            sinc_arg = pi*0.5d0*(degree+2)*x
+    do i=0, m
+            x = i*(1/(m+1))
+            if (isMS1 == 1) then
+                sinc_arg = pi*0.5d0*(degree+2)*x ! depends on isMS1
+            else
+                sinc_arg = pi*0.5d0*(degree+4)*x ! depends on isMS1
+            end if
+            sinc_arg = pi*0.5d0*(degree+2)*x ! depends on isMS1
             if (i==0) then
                 k = 1 ! lim x->0 sin(x)/x = 1 (saved from 0/0 by l'Hopitals' rule)
             else
                 k = sin(sinc_arg)/sinc_arg ! sinc = sin(x)/x
             end if
             if (isMS1 == 1) then
-                do j=1, ncoeffs
-                    k = k + coeffs(j)*x*sin((2*j+nu)*pi*x)
+                do j=0, ncoeffs-1
+                    k = k + coeffs(j+1)*x*sin((2*j+nu)*pi*x)
                 end do
             else
                 do j=1, ncoeffs
-                    k = k + coeffs(j)*x*sin((j+1)*pi*x)
+                    k = k + coeffs(j+1)*x*sin((j+1)*pi*x)
                 end do
             end if
             k = k*(exp(-x**2*decay) + exp(-(x-2)**2*decay) + exp(-(x+2)**2*decay) - 2*exp(-decay) - exp(-9*decay))
-            kernel(i) = k
+            kernel(i+1) = k
             if (i>0) then
                 sum = sum + 2*k !MS: off-center kernel elements appear twice
             else
                 sum = sum + k
             end if
+        write(*,*) k
         end do
 
 
@@ -156,36 +159,61 @@ pure function make_kernel(isMS1, degree, m, coeffs, ncoeffs) result(kernel)
     return
 end function make_kernel
 
-pure function get_coefficients_MS(degree, m) result(coeffs)
+subroutine get_coefficients(isMS1, degree, m, ncoeffs, coeffs)
     implicit none
     integer, intent(in) :: degree, m
 
     real(8), allocatable :: coeffs(:)
 
     ! Internal
-    real(8), allocatable ::corrForDeg(:,:)
+    real(8), allocatable :: corrForDeg(:,:)
     integer n_coeffs, n_corr_lines, i
     real(8) :: abc(3), cm
 
-    if (degree == 0) then
-        n_corr_lines = 0
-    elseif (degree == 2) then
-        n_corr_lines = 0
-    elseif (degree == 4) then
-        n_corr_lines = 0
-    elseif (degree == 6) then
-        n_corr_lines = 1
-        allocate(corrForDeg(3,n_corr_lines))
-        corrForDeg = correction_data_MS_6
-    elseif (degree == 8) then
-        n_corr_lines = 2
-        allocate(corrForDeg(3,n_corr_lines))
-        corrForDeg = correction_data_MS_8
-    elseif (degree == 10) then
-        n_corr_lines = 2
-        allocate(corrForDeg(3,n_corr_lines))
-        corrForDeg = correction_data_MS_10
+    if (isMS1 == 1) then ! MS1
+        if (degree == 0) then
+            n_corr_lines = 0
+        elseif (degree == 2) then
+            n_corr_lines = 0
+        elseif (degree == 4) then
+            n_corr_lines = 1
+            allocate(corrForDeg(3,n_corr_lines))
+            corrForDeg = correction_data_MS1_4
+        elseif (degree == 6) then
+            n_corr_lines = 2
+            allocate(corrForDeg(3,n_corr_lines))
+            corrForDeg = correction_data_MS1_6
+        elseif (degree == 8) then
+            n_corr_lines = 3
+            allocate(corrForDeg(3,n_corr_lines))
+            corrForDeg = correction_data_MS1_8
+        elseif (degree == 10) then
+            n_corr_lines = 4
+            allocate(corrForDeg(3,n_corr_lines))
+            corrForDeg = correction_data_MS1_10
+        end if
+    else ! MS
+        if (degree == 0) then
+            n_corr_lines = 0
+        elseif (degree == 2) then
+            n_corr_lines = 0
+        elseif (degree == 4) then
+            n_corr_lines = 0
+        elseif (degree == 6) then
+            n_corr_lines = 1
+            allocate(corrForDeg(3,n_corr_lines))
+            corrForDeg = correction_data_MS_6
+        elseif (degree == 8) then
+            n_corr_lines = 2
+            allocate(corrForDeg(3,n_corr_lines))
+            corrForDeg = correction_data_MS_8
+        elseif (degree == 10) then
+            n_corr_lines = 2
+            allocate(corrForDeg(3,n_corr_lines))
+            corrForDeg = correction_data_MS_10
+        end if
     end if
+
     n_coeffs = n_corr_lines*3
     allocate(coeffs(n_coeffs))
 
@@ -195,52 +223,9 @@ pure function get_coefficients_MS(degree, m) result(coeffs)
         coeffs(i) = abc(1) + abc(2)/(cm**3)
     end do
 
-end function get_coefficients_MS
 
-pure function get_coefficients_MS1(degree, m) result(coeffs)
-    implicit none
-    integer, intent(in) :: degree, m
-!f2py real(8), intent(out) :: coeffs(:)
-    real(8), allocatable :: coeffs(:)
-
-    ! Internal
-    real(8), allocatable ::corrForDeg(:,:)
-    integer n_coeffs, n_corr_lines, i
-    real(8) :: abc(3), cm
-
-
-    if (degree == 0) then
-        n_corr_lines = 0
-    elseif (degree == 2) then
-        n_corr_lines = 0
-    elseif (degree == 4) then
-        n_corr_lines = 1
-        allocate(corrForDeg(3,n_corr_lines))
-        corrForDeg = correction_data_MS1_4
-    elseif (degree == 6) then
-        n_corr_lines = 2
-        allocate(corrForDeg(3,n_corr_lines))
-        corrForDeg = correction_data_MS1_6
-    elseif (degree == 8) then
-        n_corr_lines = 3
-        allocate(corrForDeg(3,n_corr_lines))
-        corrForDeg = correction_data_MS1_8
-    elseif (degree == 10) then
-        n_corr_lines = 4
-        allocate(corrForDeg(3,n_corr_lines))
-        corrForDeg = correction_data_MS1_10
-    end if
-    n_coeffs = n_corr_lines*3
-    allocate(coeffs(n_coeffs))
-
-    do i = 1, n_corr_lines
-        abc = corrForDeg(:,i)
-        cm = abc(3) - m
-        coeffs(i) = abc(1) + abc(2)/(cm**3)
-    end do
-
-end function get_coefficients_MS1
-
+end subroutine get_coefficients
+    
 function extend_data(data, fit_weights, m) result(extended)
     implicit none
     integer, intent(in) :: m
