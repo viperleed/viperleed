@@ -26,13 +26,12 @@ from PyQt5 import (QtCore as qtc,
 from viperleed.guilib.measure.hardwarebase import (emit_error,
                                                    ViPErLEEDErrorEnum)
 from viperleed.guilib.measure.camera import abc
+from viperleed.guilib.measure.camera import tifffile
 from viperleed.guilib.measure.widgets.camerawidgets import CameraViewer
 from viperleed.guilib.helpers import array2string
 
-from viperleed.guilib.decorators import print_call
 
-
-N_DARK = 5  # Number of dark frames used for finding bad pixels
+N_DARK = 100  # Number of dark frames used for finding bad pixels
 
 
 class BadPixelsFinderErrors(ViPErLEEDErrorEnum):
@@ -824,8 +823,6 @@ class BadPixels:
         RuntimeError
             If called before any bad pixel info is present.
         """
-        raise NotImplementedError(f"{self.__class__.__name__}: Requires "
-                                  "implementation of TiffImage class.")
         if not self.__has_info:
             raise RuntimeError(f"{self.__class__.__name__}: No "
                                "bad pixel information present.")
@@ -838,9 +835,21 @@ class BadPixels:
             bad_x, bad_y = self.uncorrectable.T     # TODO: correct??
             mask[bad_x, bad_y] = 255                # TODO: correct??
 
-        filename = Path(filepath) / f"{self.__base_name}_uncorr_mask.tiff"
-        image = TiffImage(mask)
-        image.save(filename)
+        date_time = self.__base_name.replace(f'{self.__camera.name}_'
+        date_time = (
+            #            YYYY:              mm:              dd
+            f"{date_time[:4]}:{date_time[4:6]}:{date_time[6:8]} "
+            #                HH:                MM:                SS
+            f"{date_time[9:11]}:{date_time[11:13]}:{date_time[13:15]}"
+            )
+        filename = Path(filepath, f"{self.__base_name}_uncorr_mask.tiff")
+        tiff = tifffile.TiffFile.from_array(
+            mask,
+            comment=f"Uncorrectable bad pixels mask for {self.__camera.name}",
+            model=self.__camera.name,
+            date_time=date_time
+            )
+        tiff.write(filename)
 
     def write(self, filepath=''):
         """Write bad pixel information to file.
