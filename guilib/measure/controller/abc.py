@@ -47,6 +47,19 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
     """Base class for giving orders to the LEED electronics."""
 
     error_occurred = qtc.pyqtSignal(tuple)
+    
+    # This signal is only used by the primary controller which
+    # sets the energy. If the primary controller does not take
+    # measurements then this signal needs to be emitted after
+    # the primary controller has set the energy as well as an
+    # empty data_ready signal.
+    about_to_trigger = qtc.pyqtSignal()
+    
+    # Signal which is used to forward data and let the MeasurementABC
+    # class know that the controller is done measuring. If the
+    # primary controller does not take measurements it should emit an
+    # empty dictionary.
+    data_ready = qtc.pyqtSignal(object, dict)
 
     _mandatory_settings = [
         ('controller', 'serial_port_class'),
@@ -85,6 +98,8 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
         self.__sets_energy = sets_energy
         self.__settings = None
         self.__serial = None
+        self.__hash = -1
+        self.measured_quantities = []
 
         if not port_name:
             if not settings.has_option('controller', 'port_name'):
@@ -127,6 +142,11 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
         if self.__init_errors:
             self.__init_err_timer.start(20)
         self.error_occurred.disconnect(self.__on_init_errors)
+    def __hash__(self):
+        """Return modified hash of self."""
+        if self.__hash == -1:
+            self.__hash = hash((id(self), self.__port_name))
+        return self.__hash
 
     def __get_busy(self):
         """Return whether the controller is busy."""
@@ -157,6 +177,11 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
             self.controller_busy.emit(self.busy)
 
     busy = property(__get_busy, set_busy)
+
+    @property
+    def initial_delay(self):
+        """Return the initial time delay of a measurement in seconds."""
+        return self.settings.getfloat('controller', 'initial_delay')
 
     @property
     def serial(self):
@@ -209,16 +234,14 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
 
         # The next extra setting is mandatory only for a controller
         # that sets the LEED energy on the optics
-        extra_mandatory_list = [('measurement_settings', 'i0_settle_time'),
-                                ('measurement_settings', 'hv_settle_time')]
-        for extra_mandatory in extra_mandatory_list:
-            if (self.sets_energy
-                    and extra_mandatory not in self._mandatory_settings):
-                self._mandatory_settings.append(extra_mandatory)
+        extra_mandatory_list = []
+        if self.sets_energy:
+            extra_mandatory_list = [('measurement_settings', 'i0_settle_time'),
+                                    ('measurement_settings', 'hv_settle_time')]
 
         new_settings, invalid = config_has_sections_and_options(
             self, new_settings,
-            self._mandatory_settings
+            (*self._mandatory_settings, *extra_mandatory_list)
             )
 
         if invalid:
@@ -249,11 +272,16 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
         # settings are invalid (i.e., missing mandatory fields)!
         self.serial.serial_connect()
         self.__settings = self.serial.port_settings
+        self.__hash = -1
 
     settings = property(__get_settings, set_settings)
 
+    def measures(self, quantity):
+        """Return whether this controller measures quantity."""
+        return quantity in self.measured_quantities
+
     @abstractmethod
-    def set_energy(self, energy, *other_data, **kwargs):
+    def set_energy(self, energy, *other_data, trigger_meas=True, **kwargs):
         """Set electron energy on LEED controller.
 
         This method must be reimplemented in subclasses. The
@@ -278,6 +306,13 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
             not contain information about recalibration of
             the energy itself, as this should be done via
             self.true_energy_to_setpoint(energy).
+        trigger_meas : bool, optional
+            True if the controllers are supposed to take
+            measurements after the energy has been set.
+            Default is True. The base ControllerABC cannot
+            take measurements, therefore this parameter
+            is only used to emit an about to trigger
+            if True.
         **kwargs : object
             Unused keyword arguments.
 
@@ -412,17 +447,13 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
             self.error_occurred.emit(error)
         self.__init_errors = []
 
+    def what_to_measure(self, *args, **kwargs):
+        """Set measured_quantities property."""
+        self.measured_quantities = []
+
 
 class MeasureControllerABC(ControllerABC):
     """Controller class for measurement controllers."""
-
-    # Signal which is used to forward data and let the MeasurementABC
-    # class know that the controller is done measuring.
-    data_ready = qtc.pyqtSignal(object)
-
-    # This signal is only used by the primary controller which
-    # sets the energy.
-    about_to_trigger = qtc.pyqtSignal()
 
     _mandatory_settings = [*ControllerABC._mandatory_settings,
                            ('controller', 'measurement_devices')]
@@ -512,6 +543,12 @@ class MeasureControllerABC(ControllerABC):
         """
         return
 
+    @property
+    @abstractmethod
+    def measurement_interval(self):
+        """Return the time interval between measurements in seconds."""
+        return
+        
     # @qtc.pyqtSlot(bool)
     def begin_preparation(self, serial_busy):
         """Prepare the controller for a measurement.
@@ -630,7 +667,6 @@ class MeasureControllerABC(ControllerABC):
         """
 
         self.measurements_done()
-        return
 
     def measurements_done(self):
         """Emit measurements and change busy mode.
@@ -652,12 +688,12 @@ class MeasureControllerABC(ControllerABC):
         None.
         """
         self.busy = False
-        self.data_ready.emit(self.measurements)
+        self.data_ready.emit(self, self.measurements.copy())
         for key in self.measurements:
             self.measurements[key] = []
 
     @abstractmethod
-    def set_energy(self, energy, *other_data, measure=True, **kwargs):
+    def set_energy(self, energy, *other_data, trigger_meas=True, **kwargs):
         """Set electron energy on LEED controller.
 
         This method must be reimplemented in subclasses. The
@@ -685,8 +721,8 @@ class MeasureControllerABC(ControllerABC):
             not contain information about recalibration of
             the energy itself, as this should be done via
             self.true_energy_to_setpoint(energy).
-        measure : bool, optional
-            True if the controller is supposed to take
+        trigger_meas : bool, optional
+            True if the controllers are supposed to take
             measurements after the energy has been set.
             Default is True.
         **kwargs : object
@@ -751,11 +787,9 @@ class MeasureControllerABC(ControllerABC):
         from the MeasurementABC class (i.e.: I0, Isample, ...),
         check if those types are available and not conflicting
         with each other and decide which channels to use.
-
-        Additionally, class attributes should be implemented
-        in subclasses which remember which measurements were
-        requested in order to use them afterwards when creating
-        dictionaries to return data.
+            
+        super().what_to_measure(requested) must be called in
+        subclasses at the end of the reimplementation.
 
         Parameters
         ----------
@@ -767,7 +801,7 @@ class MeasureControllerABC(ControllerABC):
         -------
         None.
         """
-        return
+        self.measured_quantities = requested
 
     def set_settings(self, new_settings):
         """Set new settings for this controller.
