@@ -89,56 +89,21 @@ subroutine MS_smoother(data, isMS1, degree, m, out_data)
 
     radius = size(kernel) - 1
     !allocate(extended_data(size(data)+2*radius), extended_smoothed(size(data)+2*radius))
-    write(*,*) "allocate extended"
-
+    write(*,*) "data", data
+    write(*,*) "kernel", kernel
+    write(*,*) "fit_weights", fit_weights
     extended_data = extend_data(data, fit_weights, m)
-    write(*,*) "a extended_data"
-    extended_smoothed = smooth_except_boundaries(data, kernel)
-    write(*,*) "a smooth_except_boundaies"
+    write(*,*) "extended_data", extended_data
+    extended_smoothed = smooth_except_boundaries(extended_data, kernel)
+    write(*,*) "smooth_except_boundaies", extended_smoothed
     out_data = extended_smoothed(radius+1:radius+1+size(data))
+    write(*,*) "out", out_data
     return
 end subroutine MS_smoother
 
-pure function make_kernel_MS(degree, m, coeffs, ncoeffs) result(kernel)
+pure function make_kernel(isMS1, degree, m, coeffs, ncoeffs) result(kernel)
     implicit none
-    integer, intent(in) :: degree, m, ncoeffs
-    real(8), intent(in) :: coeffs(ncoeffs)
-
-    real(8) kernel(m+1)
-    real(8) sum, x, sinc_arg, k, decay
-    integer nu, i, j
-
-    sum = 0d0
-    decay = 4 !MS: decay alpha =2: 13.5% at end without correction, 2sqrt2 sigma
-
-    do i=1, m-1
-        x = i*(1d0/(m+1))
-        sinc_arg = pi*0.5d0*(degree+4)*x
-        if (i==0) then
-            k = 1 ! lim x->0 sin(x)/x = 1 (saved from 0/0 by l'Hopitals' rule)
-        else
-            k = sin(sinc_arg)/sinc_arg ! sinc = sin(x)/x
-        end if
-        do j=1, ncoeffs
-            k = k + coeffs(j)*x*sin((j+1)*pi*x)
-        end do
-        k = k*(exp(-x**2*decay) + exp(-(x-2)**2*decay) + exp(-(x+2)**2*decay) - 2*exp(-decay) - exp(-9*decay))
-        kernel(i) = k
-
-        if (i>0) then
-            sum = sum + 2*k !MS: off-center kernel elements appear twice
-        else
-            sum = sum + k
-        end if
-    end do
-    !Finally normalize kernel elements
-    kernel = kernel*(1/sum) ! Whole array operation
-    return
-end function make_kernel_MS
-
-pure function make_kernel_MS1(degree, m, coeffs, ncoeffs) result(kernel)
-    implicit none
-    integer, intent(in) :: degree, m, ncoeffs
+    integer, intent(in) :: isMS1, degree, m, ncoeffs
     real(8), intent(in) :: coeffs(ncoeffs)
 
     real(8) kernel(m+1)
@@ -147,39 +112,49 @@ pure function make_kernel_MS1(degree, m, coeffs, ncoeffs) result(kernel)
 
 
     sum = 0d0
-    decay = 2 !MS: decay alpha =2: 13.5% at end without correction, 2sqrt2 sigma
-
-    if (modulo((degree/2),2)==0) then
-        nu = 2
+    if (MS1 == 1) then
+        decay = 2 !MS: decay alpha =2: 13.5% at end without correction, 2sqrt2 sigma
+        if (modulo((degree/2),2)==0) then
+            nu = 2
+        else
+            nu = 1
+        end if
     else
-        nu = 1
+        decay = 4 !MS: decay alpha =2: 13.5% at end without correction, 2sqrt2 sigma
+        ! nu not needed
     end if
 
     do i=1, m-1
-        x = i*(1d0/(m+1))
-        sinc_arg = pi*0.5d0*(degree+2)*x
-        if (i==0) then
-            k = 1 ! lim x->0 sin(x)/x = 1 (saved from 0/0 by l'Hopitals' rule)
-        else
-            k = sin(sinc_arg)/sinc_arg ! sinc = sin(x)/x
-        end if
-
-        do j=1, ncoeffs
-            k = k + coeffs(j)*x*sin((2*j+nu)*pi*x)
+            x = i*(1d0/(m+1))
+            sinc_arg = pi*0.5d0*(degree+2)*x
+            if (i==0) then
+                k = 1 ! lim x->0 sin(x)/x = 1 (saved from 0/0 by l'Hopitals' rule)
+            else
+                k = sin(sinc_arg)/sinc_arg ! sinc = sin(x)/x
+            end if
+            if (isMS1 == 1) then
+                do j=1, ncoeffs
+                    k = k + coeffs(j)*x*sin((2*j+nu)*pi*x)
+                end do
+            else
+                do j=1, ncoeffs
+                    k = k + coeffs(j)*x*sin((j+1)*pi*x)
+                end do
+            end if
+            k = k*(exp(-x**2*decay) + exp(-(x-2)**2*decay) + exp(-(x+2)**2*decay) - 2*exp(-decay) - exp(-9*decay))
+            kernel(i) = k
+            if (i>0) then
+                sum = sum + 2*k !MS: off-center kernel elements appear twice
+            else
+                sum = sum + k
+            end if
         end do
 
-        k = k*(exp(-x**2*decay) + exp(-(x-2)**2*decay) + exp(-(x+2)**2*decay) - 2*exp(-decay) - exp(-9*decay))
-        kernel(i) = k
-        if (i>0) then
-            sum = sum + 2*k !MS: off-center kernel elements appear twice
-        else
-            sum = sum + k
-        end if
-    end do
+
     !Finally normalize kernel elements
     kernel = kernel*(1/sum) ! Whole array operation
     return
-end function make_kernel_MS1
+end function make_kernel
 
 pure function get_coefficients_MS(degree, m) result(coeffs)
     implicit none
@@ -288,33 +263,25 @@ function extend_data(data, fit_weights, m) result(extended)
         lin_reg_y(p) = data(p)
         lin_reg_weights(p) = fit_weights(p)
     end do
-    write(*,*) "x,y,w", lin_reg_x, lin_reg_y, lin_reg_weights
     d_k =linear_regression_weighted(lin_reg_x, lin_reg_y, lin_reg_weights)
-    write(*,*) "a d_k assign", d_k
     allocate(extended(size(data)+2*m))
     do p = 1, m
-        write(*,*) "p = ", p
         extended(1+m-p) = d_k(1) - d_k(2)*p
     end do
-    write(*,*) extended
     do concurrent (p = 1: fit_length)
         lin_reg_x(p) = p
         lin_reg_y(p) = data(size(data)-p) ! -p rather than -(p+1) due to Fortran indices
         lin_reg_weights(p) = fit_weights(p) ! fit weights are of the form (cos(a*p))**2, which is symmertric thus p can be used as index
     end do
     d_k =linear_regression_weighted(lin_reg_x, lin_reg_y, lin_reg_weights)
-    write(*,*) "a 2nd regression"
     do p =1, m
         extended((size(data)+m+p)) = d_k(1) - d_k(2)*p
     end do
     extended(m+1: size(data)+m+1) = data
-    write(*,*) "end"
-    write(*,*) extended
-    write(*,*) size(extended)
     return
 end function extend_data
 
-pure function smooth_except_boundaries(data, kernel) result(smoothed_data)
+function smooth_except_boundaries(data, kernel) result(smoothed_data)
     implicit none
     real(8), intent(in) :: data(:), kernel(:)
 
@@ -322,15 +289,17 @@ pure function smooth_except_boundaries(data, kernel) result(smoothed_data)
 
     integer radius, i, j
 
-
     radius = size(kernel) -1
-
-    do concurrent (i = radius: size(data)-radius)
+    write(*,*) "smoothed, alloc:", smoothed_data
+    write(*,*) "radius:", radius
+    write(*,*) "size:", size(data)
+    do concurrent (i = radius: size(data)-radius-1)
         smoothed_data(i) = kernel(1)*data(i)
-        do j = 1, size(kernel)-1
+        do j = 2, size(kernel)-1
             smoothed_data(i) = smoothed_data(i) + kernel(j)*(data(i-j)+data(i+j))
         end do
     end do
+    write(*,*) "smoothed, fin:", smoothed_data
 
 end function  smooth_except_boundaries
 
