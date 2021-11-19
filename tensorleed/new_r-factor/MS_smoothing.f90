@@ -6,6 +6,7 @@ implicit none
 
 real, parameter :: pi = 3.14159265358979323846
 integer, parameter :: max_coeffs_rows = 4
+integer, parameter :: max_degree = 10
 ! Coefficients for the MS1 filters, for obtaining a flat passband.
 ! The innermost arrays contain a, b, c for the fit
 ! kappa = a + b/(c - m) */
@@ -44,9 +45,11 @@ contains
 
 subroutine MS_smoother(data, isMS1, degree, m, out_data)
     implicit none
+    ! Input
     integer, intent(in) :: degree, m, isMS1
     real(8), intent(in) :: data(:)
 
+    ! Output
     real(8), intent(out) :: out_data(size(data))
 
     ! Internal
@@ -55,49 +58,39 @@ subroutine MS_smoother(data, isMS1, degree, m, out_data)
     real(8), allocatable :: extended_data(:), extended_smoothed(:), fit_weights(:), kernel(:)
     real(8) :: first_zero, beta
 
-    max_degree = 10
-    if ((degree<2).or.(degree>max_degree).or.(modulo(degree,2)==1)) then
-        !invalid input
-    end if
-    m_min = int(degree/2)+2
-    if (m < m_min) then
-        ! problem, invalid input
-    end if
-
+    ! Get coefficients from parameters above
     call get_coefficients(isMS1, degree, m, ncoeffs, coeffs)
-    if (isMS1 == 1) then
 
+    if (isMS1 == 1) then
         first_zero = (m+1)/(1+0.5d0*degree)
         beta = 0.65d0 + 0.35d0*exp(-0.55d0*(degree-4))
-        fitlength = int(ceiling(first_zero*beta))
-        allocate(fit_weights(fitlength))
-        do p = 1, fitlength+1
-            fit_weights(p) = (cos(0.5d0*pi/(first_zero*beta)*(p-1)))**2
-        end do
-        kernel = make_kernel(isMS1, degree, m, coeffs, ncoeffs) ! should be allocated automaticaly
     else
         first_zero = (m+1)/(1.5d0+0.5d0*degree)
         beta = 0.7d0 + 0.14d0*exp(-0.6d0*(degree-4))
         fitlength = int(ceiling(first_zero*beta))
-        write(*,*) "a fitlen", fitlength
-        allocate(fit_weights(fitlength))
-        do p = 1, fitlength+1
-            fit_weights(p) = (cos(0.5d0*pi/(first_zero*beta)*(p-1)))**2
-        end do
-        kernel = make_kernel(isMS1, degree, m, coeffs, ncoeffs) ! should be allocated automaticaly
     end if
-    write(*,*) "ncoeffs", ncoeffs
-    write(*,*) "coeffs", coeffs
+
+    fitlength = int(ceiling(first_zero*beta))
+    allocate(fit_weights(fitlength))
+    do p = 1, fitlength+1
+        fit_weights(p) = (cos(0.5d0*pi/(first_zero*beta)*(p-1)))**2
+    end do
+
+    kernel = make_kernel(isMS1, degree, m, coeffs, ncoeffs) ! should be allocated automaticaly
     radius = size(kernel) - 1
-    !allocate(extended_data(size(data)+2*radius), extended_smoothed(size(data)+2*radius))
-    write(*,*) "kernel", kernel
-    write(*,*) "fit_weights", fit_weights
     extended_data = extend_data(data, fit_weights, m)
-    write(*,*) "extended_data", extended_data
     extended_smoothed = smooth_except_boundaries(extended_data, kernel)
-    write(*,*) "smooth_except_boundaies", extended_smoothed
     out_data = extended_smoothed(radius+1:radius+1+size(data))
-    write(*,*) "out", out_data
+
+    ! Below can be used for debugging; uncomment to print out arrays/values
+    !write(*,*) "ncoeffs: ", ncoeffs
+    !write(*,*) "coeffs: ", coeffs
+    !write(*,*) "kernel: ", kernel
+    !write(*,*) "fitlength: ", fitlength
+    !write(*,*) "fit_weights: ", fit_weights
+    !write(*,*) "extended_data: ", extended_data
+    !write(*,*) "smooth_except_boundaies: ", extended_smoothed
+    !write(*,*) "out: ", out_data
     return
 end subroutine MS_smoother
 
@@ -277,15 +270,12 @@ function smooth_except_boundaries(data, kernel) result(smoothed_data)
 
     smoothed_data = 0d0 ! initialization
     radius = size(kernel) -1
-    write(*,*) "radius:", radius
-    write(*,*) "size:", size(data)
     do concurrent (i = radius: size(data)-radius-1)
         smoothed_data(i+1) = kernel(1)*data(i+1)
         do j = 1, size(kernel)-1
             smoothed_data(i+1) = smoothed_data(i+1) + kernel(j+1)*(data(i-j+1)+data(i+j+1))
         end do
     end do
-    write(*,*) "smoothed, fin:", smoothed_data
 
 end function  smooth_except_boundaries
 
