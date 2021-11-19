@@ -1136,14 +1136,6 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
             # In live mode, the frames will be handled by the GUI
             return
 
-        try:
-            self.process_info.bad_pixels = self.settings.get(
-                'camera_settings', 'bad_pixels', fallback=tuple()
-                )
-        except (TypeError, ValueError):
-            emit_error(self, CameraErrors.INVALID_SETTING_WITH_FALLBACK,
-                       'camera_settings/bad_pixels', 'no bad pixels')
-
         if self.n_frames_done == 0:
             processor = ImageProcessor()
             processor.image_processed.connect(self.image_processed)
