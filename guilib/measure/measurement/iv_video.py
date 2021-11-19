@@ -30,14 +30,22 @@ class IVVideo(MeasurementABC):
 
         super().__init__(measurement_settings)
         self.camera_timer.setParent(self)
-        self.__end_energy = self.settings.getfloat('measurement_settings',
-                                                   'end_energy')
-        self.__delta_energy = self.settings.getfloat('measurement_settings',
-                                                     'delta_energy')
-        self.__hv_settle_time = self.primary_controller.settings.getint(
-            'measurement_settings', 'hv_settle_time')
-        self.__i0_settle_time = self.primary_controller.settings.getint(
-            'measurement_settings', 'i0_settle_time')
+        self.__end_energy = 0
+        self.__delta_energy = 1
+        self.__hv_settle_time = 0
+        self.__i0_settle_time = 0
+        if self.settings:
+            self.__end_energy = self.settings.getfloat('measurement_settings',
+                                                       'end_energy')
+            self.__delta_energy = self.settings.getfloat(
+                'measurement_settings', 'delta_energy'
+                )
+            self.__hv_settle_time = self.primary_controller.settings.getint(
+                'measurement_settings', 'hv_settle_time'
+                )
+            self.__i0_settle_time = self.primary_controller.settings.getint(
+                'measurement_settings', 'i0_settle_time'
+                )
         num_meas = (1 + round((self.__end_energy - self.start_energy)
                                /self.__delta_energy))
         self.__n_digits = len(str(num_meas))
@@ -58,12 +66,11 @@ class IVVideo(MeasurementABC):
             controller.busy = True
         self.set_LEED_energy(self.current_energy, self.__i0_settle_time)
         self.counter += 1
-        # TODO: may want to add camera name to image name
         image_name = (f"{self.counter:0>{self.__n_digits}}_"
                       f"{self.current_energy:.1f}eV_.tiff")
         for i, camera in enumerate(self.cameras):
             camera.process_info.filename = image_name
-            self.data_points[-1]['images'][i] = image_name
+            self.data_points.add_image_names(image_name)
         self.camera_timer.start(self.__hv_settle_time)
 
     def is_finished(self):

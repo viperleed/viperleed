@@ -32,12 +32,18 @@ class MeasureEnergySetpoint(MeasurementABC):
         read from the settings and made private properties.
         """
         super().__init__(measurement_settings)
-        self.__end_energy = self.settings.getfloat('measurement_settings',
-                                                   'end_energy')
-        self.__delta_energy = self.settings.getfloat('measurement_settings',
-                                                     'delta_energy')
-        self.__hv_settle_time = self.primary_controller.settings.getint(
-            'measurement_settings', 'hv_settle_time')
+        self.__end_energy = 0
+        self.__delta_energy = 1
+        self.__hv_settle_time = 0
+        if self.settings:
+            self.__end_energy = self.settings.getfloat('measurement_settings',
+                                                       'end_energy')
+            self.__delta_energy = self.settings.getfloat(
+                'measurement_settings', 'delta_energy'
+                )
+            self.__hv_settle_time = self.primary_controller.settings.getint(
+                'measurement_settings', 'hv_settle_time'
+                )
 
     def begin_measurement_preparation(self):
         """Start preparation for measurements.
@@ -119,18 +125,14 @@ class MeasureEnergySetpoint(MeasurementABC):
         -------
         None
         """
-        nominal_energies = []
-        measured_energies = []
-        for i, measured in enumerate(self.data_points[0]['HV']):
-            index = i
-            if measured:
-                break
-        for data_point in self.data_points:
-            nominal_energies.append(data_point['nominal_energy'])
-            measured_energies.append(*data_point['HV'][index])
+        measured_energies, nominal_energies = (
+            self.data_points.get_energy_resolved_data(
+                'HV', include_energies=True
+                )
+            )
         domain = ast.literal_eval(
             self.primary_controller.settings['energy_calibration']['domain'])
-        fit_polynomial = Polynomial.fit(measured_energies, nominal_energies,
+        fit_polynomial = Polynomial.fit(measured_energies[0], nominal_energies,
                                         1, domain=domain, window=domain)
         coefficients = str(list(fit_polynomial.coef))
         self.primary_controller.settings.set(
