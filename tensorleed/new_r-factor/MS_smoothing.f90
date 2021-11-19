@@ -236,7 +236,6 @@ function extend_data(data, fit_weights, m) result(extended)
 
     fit_length = int(min(size(fit_weights), size(data)))
     allocate(lin_reg_x(fit_length), lin_reg_y(fit_length), lin_reg_weights(fit_length))
-    write(*,*) "fit length", fit_length
     do concurrent (p = 1: fit_length)
         lin_reg_x(p) = p
         lin_reg_y(p) = data(p)
