@@ -161,13 +161,14 @@ end function make_kernel
 
 subroutine get_coefficients(isMS1, degree, m, ncoeffs, coeffs)
     implicit none
-    integer, intent(in) :: degree, m
+    integer, intent(in) :: isMS1, degree, m
 
-    real(8), allocatable :: coeffs(:)
+    integer, intent(out) :: ncoeffs
+    real(8), intent(out), allocatable :: coeffs(:)
 
     ! Internal
     real(8), allocatable :: corrForDeg(:,:)
-    integer n_coeffs, n_corr_lines, i
+    integer n_corr_lines, i
     real(8) :: abc(3), cm
 
     if (isMS1 == 1) then ! MS1
@@ -214,7 +215,7 @@ subroutine get_coefficients(isMS1, degree, m, ncoeffs, coeffs)
         end if
     end if
 
-    n_coeffs = n_corr_lines*3
+    ncoeffs = n_corr_lines*3
     allocate(coeffs(n_coeffs))
 
     do i = 1, n_corr_lines
@@ -225,7 +226,7 @@ subroutine get_coefficients(isMS1, degree, m, ncoeffs, coeffs)
 
 
 end subroutine get_coefficients
-    
+
 function extend_data(data, fit_weights, m) result(extended)
     implicit none
     integer, intent(in) :: m
