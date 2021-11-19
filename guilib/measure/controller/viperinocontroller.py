@@ -89,10 +89,8 @@ class ViPErinoController(MeasureControllerABC):
                 'set_energy'
                 ] = True
         self.continue_prepare_todos['start_autogain'] = True
-
         self.__adc_measurement_types = []
         self.__adc_channels = []
-
         self.__hardware = defaultdict()
 
     @property
@@ -362,6 +360,7 @@ class ViPErinoController(MeasureControllerABC):
                     break
             else:
                 emit_error(self, ViPErinoErrors.INVALID_REQUEST)
+        super().what_to_measure(requested)
 
     def set_continuous_mode(self, data):
         """Set continuous mode.
@@ -404,3 +403,10 @@ class ViPErinoController(MeasureControllerABC):
         stop = self.settings.get('available_commands','pc_stop')
         super().stop()
         self.send_message(stop)
+
+    @property
+    def measurement_interval(self):
+        """Return the time interval between measurements in seconds."""
+        update_rate_raw = self.settings.get('controller', 'update_rate')
+        meas_f = self.settings.getint('adc_update_rate', update_rate_raw)
+        return 1/meas_f
