@@ -90,7 +90,6 @@ subroutine MS_smoother(data, isMS1, degree, m, out_data)
     write(*,*) "coeffs", coeffs
     radius = size(kernel) - 1
     !allocate(extended_data(size(data)+2*radius), extended_smoothed(size(data)+2*radius))
-    write(*,*) "data", data
     write(*,*) "kernel", kernel
     write(*,*) "fit_weights", fit_weights
     extended_data = extend_data(data, fit_weights, m)
@@ -244,7 +243,6 @@ function extend_data(data, fit_weights, m) result(extended)
 
     fit_length = int(min(size(fit_weights), size(data)))
     allocate(lin_reg_x(fit_length), lin_reg_y(fit_length), lin_reg_weights(fit_length))
-    write(*,*) "b concurrent"
     write(*,*) "fit length", fit_length
     do concurrent (p = 1: fit_length)
         lin_reg_x(p) = p
@@ -277,14 +275,14 @@ function smooth_except_boundaries(data, kernel) result(smoothed_data)
 
     integer radius, i, j
 
+    smoothed_data = 0d0 ! initialization
     radius = size(kernel) -1
-    write(*,*) "smoothed, alloc:", smoothed_data
     write(*,*) "radius:", radius
     write(*,*) "size:", size(data)
     do concurrent (i = radius: size(data)-radius-1)
-        smoothed_data(i) = kernel(1)*data(i)
-        do j = 2, size(kernel)-1
-            smoothed_data(i) = smoothed_data(i) + kernel(j)*(data(i-j)+data(i+j))
+        smoothed_data(i+1) = kernel(1)*data(i+1)
+        do j = 1, size(kernel)-1
+            smoothed_data(i+1) = smoothed_data(i+1) + kernel(j+1)*(data(i-j+1)+data(i+j+1))
         end do
     end do
     write(*,*) "smoothed, fin:", smoothed_data
