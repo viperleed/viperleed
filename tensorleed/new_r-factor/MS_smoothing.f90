@@ -5,6 +5,7 @@ implicit none
 ! f2py -c smoothing.pyf MS_smoothing.f90
 
 real, parameter :: pi = 3.14159265358979323846
+integer, parameter :: max_coeffs_rows = 4
 ! Coefficients for the MS1 filters, for obtaining a flat passband.
 ! The innermost arrays contain a, b, c for the fit
 ! kappa = a + b/(c - m) */
@@ -50,7 +51,8 @@ subroutine MS_smoother(data, isMS1, degree, m, out_data)
 
     ! Internal
     integer max_degree, m_min, radius, ncoeffs, fitlength, p
-    real(8), allocatable :: extended_data(:), extended_smoothed(:), fit_weights(:), kernel(:), coeffs(:)
+    real(8) :: coeffs(3*max_coeffs_rows)
+    real(8), allocatable :: extended_data(:), extended_smoothed(:), fit_weights(:), kernel(:)
     real(8) :: first_zero, beta
 
     max_degree = 10
@@ -84,6 +86,7 @@ subroutine MS_smoother(data, isMS1, degree, m, out_data)
         end do
         kernel = make_kernel(isMS1, degree, m, coeffs, ncoeffs) ! should be allocated automaticaly
     end if
+    write(*,*) "ncoeffs", ncoeffs
     write(*,*) "coeffs", coeffs
     radius = size(kernel) - 1
     !allocate(extended_data(size(data)+2*radius), extended_smoothed(size(data)+2*radius))
@@ -122,13 +125,13 @@ function make_kernel(isMS1, degree, m, coeffs, ncoeffs) result(kernel)
     end if
 
     do i=0, m
-            x = i*(1/(m+1))
+            x = real(i)*(1d0/(m+1))
             if (isMS1 == 1) then
                 sinc_arg = pi*0.5d0*(degree+2)*x ! depends on isMS1
             else
                 sinc_arg = pi*0.5d0*(degree+4)*x ! depends on isMS1
             end if
-            sinc_arg = pi*0.5d0*(degree+2)*x ! depends on isMS1
+
             if (i==0) then
                 k = 1 ! lim x->0 sin(x)/x = 1 (saved from 0/0 by l'Hopitals' rule)
             else
@@ -139,7 +142,7 @@ function make_kernel(isMS1, degree, m, coeffs, ncoeffs) result(kernel)
                     k = k + coeffs(j+1)*x*sin((2*j+nu)*pi*x)
                 end do
             else
-                do j=1, ncoeffs
+                do j=0, ncoeffs-1
                     k = k + coeffs(j+1)*x*sin((j+1)*pi*x)
                 end do
             end if
@@ -150,8 +153,7 @@ function make_kernel(isMS1, degree, m, coeffs, ncoeffs) result(kernel)
             else
                 sum = sum + k
             end if
-        write(*,*) k
-        end do
+    end do
 
 
     !Finally normalize kernel elements
@@ -164,13 +166,14 @@ subroutine get_coefficients(isMS1, degree, m, ncoeffs, coeffs)
     integer, intent(in) :: isMS1, degree, m
 
     integer, intent(out) :: ncoeffs
-    real(8), intent(out), allocatable :: coeffs(:)
+    real(8), intent(out):: coeffs(3*max_coeffs_rows)
 
     ! Internal
     real(8), allocatable :: corrForDeg(:,:)
     integer n_corr_lines, i
     real(8) :: abc(3), cm
 
+    coeffs = 0
     if (isMS1 == 1) then ! MS1
         if (degree == 0) then
             n_corr_lines = 0
@@ -216,12 +219,11 @@ subroutine get_coefficients(isMS1, degree, m, ncoeffs, coeffs)
     end if
 
     ncoeffs = n_corr_lines*3
-    allocate(coeffs(n_coeffs))
 
-    do i = 1, n_corr_lines
-        abc = corrForDeg(:,i)
+    do i = 0, n_corr_lines-1
+        abc = corrForDeg(:,i+1)
         cm = abc(3) - m
-        coeffs(i) = abc(1) + abc(2)/(cm**3)
+        coeffs(i+1) = abc(1) + abc(2)/(cm**3)
     end do
 
 
@@ -252,16 +254,16 @@ function extend_data(data, fit_weights, m) result(extended)
     d_k =linear_regression_weighted(lin_reg_x, lin_reg_y, lin_reg_weights)
     allocate(extended(size(data)+2*m))
     do p = 1, m
-        extended(1+m-p) = d_k(1) - d_k(2)*p
+        extended(1+m-p) = d_k(1) - d_k(2)*(p-1)
     end do
     do concurrent (p = 1: fit_length)
         lin_reg_x(p) = p
-        lin_reg_y(p) = data(size(data)-p) ! -p rather than -(p+1) due to Fortran indices
+        lin_reg_y(p) = data(size(data)-p+1) ! -p+1 rather than -p due to Fortran indices
         lin_reg_weights(p) = fit_weights(p) ! fit weights are of the form (cos(a*p))**2, which is symmertric thus p can be used as index
     end do
     d_k =linear_regression_weighted(lin_reg_x, lin_reg_y, lin_reg_weights)
     do p =1, m
-        extended((size(data)+m+p)) = d_k(1) - d_k(2)*p
+        extended((size(data)+m+p)) = d_k(1) - d_k(2)*(p-1)
     end do
     extended(m+1: size(data)+m+1) = data
     return
