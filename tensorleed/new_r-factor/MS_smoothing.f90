@@ -54,7 +54,7 @@ subroutine MS_smoother(data, isMS1, degree, m, out_data)
 
     ! Internal
     integer max_degree, m_min, radius, ncoeffs, fitlength, p
-    real(8) :: coeffs(3*max_coeffs_rows)
+    real(8) :: coeffs(3*4) !TODO: use paramter max_coeffs_rows here
     real(8), allocatable :: extended_data(:), extended_smoothed(:), fit_weights(:), kernel(:)
     real(8) :: first_zero, beta
 
@@ -94,7 +94,7 @@ subroutine MS_smoother(data, isMS1, degree, m, out_data)
     return
 end subroutine MS_smoother
 
-function make_kernel(isMS1, degree, m, coeffs, ncoeffs) result(kernel)
+pure function make_kernel(isMS1, degree, m, coeffs, ncoeffs) result(kernel)
     implicit none
     integer, intent(in) :: isMS1, degree, m, ncoeffs
     real(8), intent(in) :: coeffs(ncoeffs)
@@ -158,7 +158,7 @@ subroutine get_coefficients(isMS1, degree, m, ncoeffs, coeffs)
     integer, intent(in) :: isMS1, degree, m
 
     integer, intent(out) :: ncoeffs
-    real(8), intent(out):: coeffs(3*max_coeffs_rows)
+    real(8), intent(out) :: coeffs(3*4) !TODO: use paramter max_coeffs_rows here
 
     ! Internal
     real(8), allocatable :: corrForDeg(:,:)
@@ -221,7 +221,7 @@ subroutine get_coefficients(isMS1, degree, m, ncoeffs, coeffs)
 
 end subroutine get_coefficients
 
-function extend_data(data, fit_weights, m) result(extended)
+pure function extend_data(data, fit_weights, m) result(extended)
     implicit none
     integer, intent(in) :: m
     real(8), intent(in) :: data(:), fit_weights(:)
@@ -259,7 +259,7 @@ function extend_data(data, fit_weights, m) result(extended)
     return
 end function extend_data
 
-function smooth_except_boundaries(data, kernel) result(smoothed_data)
+pure function smooth_except_boundaries(data, kernel) result(smoothed_data)
     implicit none
     real(8), intent(in) :: data(:), kernel(:)
 
@@ -278,7 +278,7 @@ function smooth_except_boundaries(data, kernel) result(smoothed_data)
 
 end function  smooth_except_boundaries
 
-function linear_regression_weighted(x, y, weights) result(d_k)
+pure function linear_regression_weighted(x, y, weights) result(d_k)
     implicit none
     real(8), intent(in) :: x(:), y(:), weights(:)
 
