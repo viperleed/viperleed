@@ -224,13 +224,21 @@ class ImageProcessor(qtc.QObject):
         if not self.process_info.bad_pixels:
             return
         bad = self.process_info.bad_pixels
-        bad_coords = bad.bad_pixel_coordinates.T  # correct?
-        repl_offsets = bad.replacement_offsets.T  # correct?
+        bad_coords = bad.bad_pixel_coordinates.T
+        repl_offsets = bad.replacement_offsets.T
 
-        # (right shift by 1 bit is division by 2)
-        replacements = (self.processed_image[bad_coords + repl_offsets]
-                        + self.processed_image[bad_coords - repl_offsets]) >> 1
-        self.processed_image[bad_coords] = replacements  # correct?
+        # In the following, the conversion to tuple when indexing
+        # is critical, as it changes the indexing behavior to the
+        # correct one: it is like doing (x1+x2, y1+y2). Without it,
+        # indexing of an array A with another one (ind) would return
+        # as many arrays as there are indices in ind[0], with
+        # return[i] == A[ind[0][i]] (i.e., the rows of A with indices
+        # ind[0][i]).
+        replacements = (
+            self.processed_image[tuple(bad_coords + repl_offsets)]
+            + self.processed_image[tuple(bad_coords - repl_offsets)]
+            ) >> 1  # right shift by 1 bit is division by 2
+        self.processed_image[tuple(bad_coords)] = replacements
 
     def remove_bad_pixels_old(self):
         """Remove a list of bad pixels by neighbor averaging."""

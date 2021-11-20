@@ -305,8 +305,8 @@ class BadPixelsFinder(qtc.QObject):
         badness = self.__badness.copy()
 
         bad_coords = np.asarray(np.where(badness >= 6))
-        bad_x, bad_y = bad_coords
-        badness[bad_x, bad_y] = np.inf
+        bad_y, bad_x = bad_coords
+        badness[bad_y, bad_x] = np.inf
         width, height = badness.shape
 
         # For each offset, calculate the total badness
@@ -328,13 +328,13 @@ class BadPixelsFinder(qtc.QObject):
                              np.all(repl_minus < (width, height), axis=1)),
                             axis=0)
 
-            plus_x, plus_y = repl_plus[inside].T
-            minus_x, minus_y = repl_minus[inside].T
-            bad_inside_x, bad_inside_y = np.transpose(bad_coords.T[inside])
+            plus_y, plus_x = repl_plus[inside].T
+            minus_y, minus_x = repl_minus[inside].T
+            bad_inside_y, bad_inside_x = np.transpose(bad_coords.T[inside])
 
-            total_badness[i][bad_inside_x, bad_inside_y] = (
-                minus_badness[minus_x, minus_y]
-                + plus_badness[plus_x, plus_y]
+            total_badness[i][bad_inside_y, bad_inside_x] = (
+                minus_badness[minus_y, minus_x]
+                + plus_badness[plus_y, plus_x]
                 )
 
         # Finally, pick as replacements for the bad pixels those
@@ -345,23 +345,22 @@ class BadPixelsFinder(qtc.QObject):
         # that are uncorrectable. They are such that the 'best'
         # replacement is still a bad pixel. Keep also track of them,
         # for information purposes.
-        correctable = np.isfinite(best_badness[bad_x, bad_y])
-        uncorrectable = np.asarray((bad_x[~correctable],
-                                    bad_y[~correctable])).T
+        correctable = np.isfinite(best_badness[bad_y, bad_x])
+        uncorrectable = np.asarray((bad_y[~correctable],
+                                    bad_x[~correctable])).T
 
-        bad_x, bad_y = bad_x[correctable], bad_y[correctable]
+        bad_y, bad_x = bad_y[correctable], bad_x[correctable]
 
 
         # Finally, get the offsets of the replacement pixels,
         # and store all the info in a BadPixels object.
-        best_offset_indices = total_badness.argmin(axis=0)[bad_x, bad_y]
+        best_offset_indices = total_badness.argmin(axis=0)[bad_y, bad_x]
         self.__bad_pixels = BadPixels(
             self.__camera,
-            bad_coordinates=np.asarray((bad_x, bad_y)).T,
+            bad_coordinates=np.asarray((bad_y, bad_x)).T,
             replacement_offsets=offsets[best_offset_indices],
             uncorrectable=uncorrectable
             )
-        self.__bad_pixels.write()
 
     def __find_dead_pixels(self):
         """Detect dead pixels from flat frame.
@@ -398,11 +397,11 @@ class BadPixelsFinder(qtc.QObject):
         flat_bad_ones[bad_px_mask] = 0
 
         # 5x5 kernel for averaging a diamond-shaped patch of neighbors
-        kernel = np.array((0, 0, 1, 0, 0),
-                          (0, 1, 1, 1, 0),
-                          (1, 1, 0, 1, 1),
-                          (0, 1, 1, 1, 0),
-                          (0, 0, 1, 0, 0))
+        kernel = np.array(((0, 0, 1, 0, 0),
+                           (0, 1, 1, 1, 0),
+                           (1, 1, 0, 1, 1),
+                           (0, 1, 1, 1, 0),
+                           (0, 0, 1, 0, 0)))
 
         neighbor_sum = convolve2d(flat_bad, kernel, mode='same')
         neighbor_count = convolve2d(flat_bad_ones, kernel, mode='same')
@@ -481,6 +480,15 @@ class BadPixelsFinder(qtc.QObject):
             return intensity < 0.2*intensity_range
         return 0.45*intensity_range < intensity < 0.55*intensity_range
 
+    def __save_and_cleanup(self):
+        """Save a bad pixels file and finish."""
+        bp_path = self.__camera.settings.get("camera_settings",
+                                             "bad_pixels_path",
+                                             fallback='')
+        self.__bad_pixels.write(bp_path)
+        self.__camera.settings = self.__old_camera_info['settings']
+        self.__camera.process_info = self.__old_camera_info['info']
+
     def __trigger_next_frame(self, *_):
         """Trigger acquisition of a new frame if necessary."""
         if self.__camera.busy:
@@ -499,6 +507,7 @@ class BadPixelsFinder(qtc.QObject):
             self.__find_hot_pixels()
             self.__find_dead_pixels()
             self.__find_bad_and_replacements()
+            self.__save_and_cleanup()
         else:
             self.__current_section = sections[next_idx]
             self.__frames_done = 0
@@ -599,10 +608,11 @@ class BadPixels:
         self.__bad_coords_roi = bad_coordinates
         self.__replacements_roi = replacement_offsets
         self.__uncorrectable_roi = uncorrectable
+        self.__datetime = datetime.now()
 
         # Prepare a base name used for saving bad-pixel info to disk
         cam_name = self.__camera.name.replace(' ', '_')
-        now = datetime.now().strftime("%Y%m%d_%H%M%S")
+        now = self.__datetime.strftime("%Y%m%d_%H%M%S")
         self.__base_name = f"{cam_name}_{now}"
 
     def __str__(self):
@@ -630,6 +640,44 @@ class BadPixels:
             corresponds to the (x, y) coordinates of a bad pixel.
         """
         return self.__bad_coords_roi
+
+    @property
+    def n_bad_pixels_sensor(self):
+        """Return the total number of bad pixels.
+
+        The count includes the uncorrectable ones. Use
+        n_bad_pixels_roi for those that are within the
+        current region of interest.
+
+        Returns
+        -------
+        n_bad_pixels_sensor : int
+            Total number of bad pixels for this camera.
+        """
+        return len(self.__bad_coords) + self.n_uncorrectable_sensor
+
+    @property
+    def n_bad_pixels_roi(self):
+        """Return the number of bad pixels in the current ROI.
+
+        The count includes the uncorrectable ones.
+
+        Returns
+        -------
+        n_bad_pixels_roi : int
+            Number of bad pixels in the current region of interest.
+        """
+        return len(self.__bad_coords_roi) + self.n_uncorrectable_roi
+
+    @property
+    def n_uncorrectable_sensor(self):
+        """Return the total number of uncorrectable pixels."""
+        return len(self.__uncorrectable)
+
+    @property
+    def n_uncorrectable_roi(self):
+        """Return the number of uncorrectable pixels in the current ROI."""
+        return len(self.__uncorrectable_roi)
 
     @property
     def replacement_offsets(self):
@@ -710,7 +758,8 @@ class BadPixels:
         top_x, top_y, width, height = self.__camera.roi
 
         # Recalculate coordinates based on the new origin
-        bad_coords = self.__bad_coords - (top_x, top_y)
+        # NB: the bad coordinates are (row#, col#)!
+        bad_coords = self.__bad_coords - (top_y, top_x)
         repl_minus = bad_coords - self.__replacements
         repl_plus = bad_coords + self.__replacements
 
@@ -718,9 +767,9 @@ class BadPixels:
         mask = np.all((np.all(bad_coords >= (0, 0), axis=1),
                        np.all(repl_minus >= (0, 0), axis=1),
                        np.all(repl_plus >= (0, 0), axis=1),
-                       np.all(bad_coords < (width, height), axis=1),
-                       np.all(repl_minus < (width, height), axis=1),
-                       np.all(repl_plus < (width, height), axis=1)),
+                       np.all(bad_coords < (height, width), axis=1),
+                       np.all(repl_minus < (height, width), axis=1),
+                       np.all(repl_plus < (height, width), axis=1)),
                       axis=0)
 
         self.__bad_coords_roi = bad_coords[mask]
@@ -729,9 +778,9 @@ class BadPixels:
         # Do the same for uncorrectable pixels (if any)
         if self.__uncorrectable is None or not len(self.__uncorrectable):
             return
-        uncorrectable = self.__uncorrectable - (top_x, top_y)
+        uncorrectable = self.__uncorrectable - (top_y, top_x)
         mask = np.all((np.all(uncorrectable >= (0, 0), axis=1),
-                       np.all(uncorrectable < (width, height), axis=1)),
+                       np.all(uncorrectable < (height, width), axis=1)),
                       axis=0)
         self.__uncorrectable_roi = uncorrectable[mask]
 
@@ -829,19 +878,13 @@ class BadPixels:
 
         # Prepare the image
         width, height, *_ = self.__camera.image_info
-        mask = np.zeros(height, width, dtype='uint8')
+        mask = np.zeros((height, width), dtype='uint8')
 
         if len(self.uncorrectable):
-            bad_x, bad_y = self.uncorrectable.T     # TODO: correct??
-            mask[bad_x, bad_y] = 255                # TODO: correct??
+            bad_y, bad_x = self.uncorrectable.T
+            mask[bad_y, bad_x] = 255
 
-        date_time = self.__base_name.replace(f'{self.__camera.name}_', '')
-        date_time = (
-            #            YYYY:              mm:              dd
-            f"{date_time[:4]}:{date_time[4:6]}:{date_time[6:8]} "
-            #                HH:                MM:                SS
-            f"{date_time[9:11]}:{date_time[11:13]}:{date_time[13:15]}"
-            )
+        date_time = self.__datetime.strftime("%Y:%m:%d %H:%M:%S")
         filename = Path(filepath, f"{self.__base_name}_uncorr_mask.tiff")
         tiff = tifffile.TiffFile.from_array(
             mask,
@@ -888,10 +931,10 @@ class BadPixels:
         bad_width = max(len('# Bad pixels'), *(len(row) for row in columns[0]))
         repl_width = max(len(row) for row in columns[1])
 
+        # And format the lines
         columns[0][0] = f"#{columns[0][0]:>{bad_width-1}}"
         columns[0][1:] = [f"{row:>{bad_width}}" for row in columns[0][1:]]
         columns[1] = [f"{row:>{repl_width}}" for row in columns[1]]
-
         lines = '\n'.join(f'{bad}, {repl}' for bad, repl in zip(*columns))
 
         filepath = Path(filepath)
@@ -899,14 +942,26 @@ class BadPixels:
             filepath.mkdir(parents=True)
         filename = filepath / f"{self.__base_name}.badpx"
 
+        width, height, *_ = self.__camera.image_info
+        n_bad = self.n_bad_pixels_sensor
+        n_uncorr = self.n_uncorrectable_sensor
+        comment = (f"# Bad pixels file for camera {self.__camera.name}. \n"
+                   f"# Total number of bad pixels: {n_bad}, i.e., "
+                   f"{100*n_bad/(width*height):.2f}% of the sensor.\n")
+        if n_uncorr:
+            comment += f"# Of these, {n_uncorr} cannot be corrected.\n"
+        comment += ("# Bad pixel coordinates are (row number, column "
+                    "number), i.e., (y, x).\n#\n")
+
         with open(filename, 'w') as bad_px_file:
+            bad_px_file.write(comment)
             bad_px_file.write(lines)
 
     @property
     def __has_info(self):
         """Return whether bad pixel information is present."""
         return np.nan not in self.__bad_coords
-    
+
     def __bool__(self):
         """Return the truth value of self."""
         if not self.__has_info:
@@ -914,4 +969,3 @@ class BadPixels:
         if not self.bad_pixel_coordinates.size:
             return False
         return True
-
