@@ -11,6 +11,8 @@ Created: 2021-10-29
 Author: Michele Riva
 """
 
+import weakref
+
 import numpy as np
 
 from PyQt5 import (QtCore as qtc,
@@ -82,9 +84,49 @@ class CameraViewer(qtw.QScrollArea):
         camera frames changes. Carries the new zoom factor.
     """
 
+    # _viewers is a dict of {camera: viewer} used to prevent
+    # creating multiple viewers for the same camera. It holds
+    # weak references to the viewer objects, so that we don't
+    # risk creating cyclic references.
+    _viewers = {}
+
     shown = qtc.pyqtSignal()
     image_size_changed = qtc.pyqtSignal()
     zoom_changed = qtc.pyqtSignal(float)  # new zoom factor
+
+    def __new__(cls, camera, *args, **kwargs):
+        """Return a CameraViewer instance.
+
+        This method is reimplemented such that only one viewer
+        can exists for a given camera.
+
+        Parameters
+        ----------
+        camera : CameraABC
+            The camera object whose frames are displayed.
+        *args : object
+            Other positional arguments not used within__new__.
+        **kwargs : object
+            Optional arguments not used within __new__.
+
+        Returns
+        -------
+        viewer : CameraViewer
+            The viewer object.
+        """
+        if camera in cls._viewers:
+            return cls._viewers[camera]
+        new_viewer = super().__new__(cls, camera, *args, **kwargs)
+        cls._viewers[camera] = weakref.ref(new_viewer)
+        return new_viewer
+
+    def __del__(self):
+        """Remove self from the dictionary of viewers."""
+        self._viewers.pop(self.__camera)
+        try:
+            super().__del__()
+        except AttributeError:
+            pass
 
     def __init__(self, camera, *args, parent=None, stop_on_close=True,
                  **kwargs):
