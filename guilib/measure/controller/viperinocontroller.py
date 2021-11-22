@@ -400,7 +400,7 @@ class ViPErinoController(MeasureControllerABC):
         -------
         None.
         """
-        stop = self.settings.get('available_commands','pc_stop')
+        stop = self.settings.get('available_commands', 'pc_stop')
         super().stop()
         self.send_message(stop)
 

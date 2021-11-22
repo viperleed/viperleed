@@ -67,7 +67,7 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
         ]
     controller_busy = qtc.pyqtSignal(bool)
 
-    def __init__(self, settings, port_name='', sets_energy=False):                # NOTE: we will need a settings file that remembers which devices were connected to which port ------ Do we?
+    def __init__(self, settings, port_name='', sets_energy=False):
         """Initialise the controller instance.
 
         Parameters
@@ -142,6 +142,7 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
         if self.__init_errors:
             self.__init_err_timer.start(20)
         self.error_occurred.disconnect(self.__on_init_errors)
+
     def __hash__(self):
         """Return modified hash of self."""
         if self.__hash == -1:
@@ -872,4 +873,3 @@ class MeasureControllerABC(ControllerABC):
                 pass
         if not continuous and in_finalization:
            self.serial.serial_busy.connect(self.set_busy)
-

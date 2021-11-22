@@ -247,7 +247,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             try:
                 os.mkdir(camera.process_info.base_path)
             except FileExistsError:
-            # Folder already exists.
+                # Folder already exists.
                 pass
 
         for device in self.devices:
@@ -394,7 +394,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         self.primary_controller.set_energy(*message, trigger_meas=trigger_meas)
         self.primary_delay = 0
         for i, value in enumerate(message):
-            if i%2 != 0:
+            if i % 2 != 0:
                 self.primary_delay += value
 
     @abstractmethod
@@ -524,7 +524,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         try:
             primary.serial.serial_disconnect()
         except TypeError:
-                pass
+            pass
         try:
             primary.data_ready.disconnect()
         except TypeError:
@@ -532,27 +532,27 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         try:
             self.abort_action.disconnect(primary.stop)
         except TypeError:
-                pass
+            pass
         try:
             self.begin_preparation.disconnect(
                 primary.trigger_begin_preparation
                 )
         except TypeError:
-                pass
+            pass
         try:
             self.continue_preparation.disconnect(
                 primary.trigger_continue_preparation
                 )
         except TypeError:
-                pass
+            pass
         try:
             primary.about_to_trigger.disconnect()
         except TypeError:
-                pass
+            pass
         try:
             primary.controller_busy.disconnect()
         except TypeError:
-                pass
+            pass
 
     def switch_signals_for_preparation(self):
         """Switch signals for preparation.
@@ -646,11 +646,6 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         Signals are switched back and the busy signal is
         connected to a function which checks if all the
         controllers are done with the preparation.
-
-        Parameters
-        ----------
-        busy : bool
-            Busy state of the emitting controller.
 
         Returns
         -------
@@ -882,11 +877,10 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             from the given name.
         """
         config = ConfigParser()
-
         config, invalid = config_has_sections_and_options(
             self,
             camera_settings,
-            [('camera_settings', 'class_name'),]
+            [('camera_settings', 'class_name'), ]
             )
         if invalid:
             emit_error(self, MeasurementErrors.MISSING_CLASS_NAME,

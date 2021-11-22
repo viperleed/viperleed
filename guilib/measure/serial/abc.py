@@ -90,7 +90,7 @@ class ExtraSerialErrors(ViPErLEEDErrorEnum):
                         "Load an appropriate settings file before "
                         "proceeding.")
     PORT_NOT_OPEN = (56,
-                     "Serial port could not be openend.")
+                     "Serial port could not be opened.")
 
 
 class SerialABC(qtc.QObject, metaclass=QMetaABC):
@@ -295,7 +295,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
     def set_port(self, port_name):
         """Create a new QSerialPort with name port_name.
 
-        Port settings should should alreadz exist.
+        Port settings should should already exist.
 
         Parameters
         ----------

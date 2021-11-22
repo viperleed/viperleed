@@ -447,7 +447,7 @@ class ViPErLEEDSerial(SerialABC):
         # necessary.  'other_messages' is the data for the command.
         message = message.encode()
         if not other_messages:
-            return (bytearray(message),)
+            return bytearray(message),
         messages_to_return = []
         messages_to_return.append(bytearray(message))
         # Now process the data depending on the command
