@@ -37,6 +37,7 @@ class SettingsEditor(gl.ViPErLEEDPluginBase):
             'measurement_time' : qtw.QLineEdit(''),
             'limit_continuous' : qtw.QLineEdit(''),
             'cycle_time' : qtw.QLineEdit(''),
+            'measure_this' : qtw.QLineEdit(''),
             'save': qtw.QPushButton("Apply changes"),
             'undo': qtw.QPushButton("Undo"),
             }
@@ -44,9 +45,10 @@ class SettingsEditor(gl.ViPErLEEDPluginBase):
         self._dialogs = {}
         self._glob = {}
 
-        self.__parameters = ('start_energy', 'end_energy', 'delta_energy',
+        self.__para_validator = ('start_energy', 'end_energy', 'delta_energy',
                              'measurement_time', 'limit_continuous',
                              'cycle_time')
+        self.__para_text = ('measure_this',)
         self.__file_name = Path(('C:/Users/Florian/Documents/Uni/Masterarbeit/'
                                'ViperLEED/viperleed/guilib/measure/configura'
                                'tion/viperleed_config.ini'))
@@ -56,7 +58,6 @@ class SettingsEditor(gl.ViPErLEEDPluginBase):
         # Set window properties
         self.setWindowTitle(TITLE)
         self.setAcceptDrops(False)
-        # TODO: add times/ make separate class/ read stuff from config and put it in the box upon opening extra window/add save button
 
     def __compose(self):
         """Prepare settings editor."""
@@ -75,7 +76,12 @@ class SettingsEditor(gl.ViPErLEEDPluginBase):
 
         layout = self.centralWidget().layout()
 
-        for key in self.__parameters:
+        self._ctrls['measure_this'].setFont(gl.AllGUIFonts().labelFont)
+        self._ctrls['measure_this'].ensurePolished()
+        text = self.__settings.get('measurement_settings', 'measure_this')
+        self._ctrls['measure_this'].setText(text)
+
+        for key in self.__para_validator:
             self._ctrls[key].setFont(gl.AllGUIFonts().labelFont)
             self._ctrls[key].ensurePolished()
             self._ctrls[key].setValidator(QDoubleValidatorNoDot())
@@ -95,8 +101,10 @@ class SettingsEditor(gl.ViPErLEEDPluginBase):
         layout.addWidget(self._ctrls['limit_continuous'], 5, 2, 1, 1)
         layout.addWidget(qtw.QLabel('cycle_time ='), 6, 1, 1, 1)
         layout.addWidget(self._ctrls['cycle_time'], 6, 2, 1, 1)
-        layout.addWidget(self._ctrls['undo'], 7, 1, 1, 1)
-        layout.addWidget(self._ctrls['save'], 7, 2, 1, 1)
+        layout.addWidget(qtw.QLabel('important quantity ='), 7, 1, 1, 1)
+        layout.addWidget(self._ctrls['measure_this'], 7, 2, 1, 1)
+        layout.addWidget(self._ctrls['undo'], 8, 1, 1, 1)
+        layout.addWidget(self._ctrls['save'], 8, 2, 1, 1)
 
     def __read_settings(self):
         """Read configuration file."""
@@ -107,13 +115,13 @@ class SettingsEditor(gl.ViPErLEEDPluginBase):
 
     def __on_undo_pressed(self):
         """Undo changes in QLineEdits."""
-        for key in self.__parameters:
+        for key in (*self.__para_validator, *self.__para_text):
             text = self.__settings.get('measurement_settings', key)
             self._ctrls[key].setText(text)
 
     def __on_save_pressed(self):
         """Save changes to settings."""
-        for key in self.__parameters:
+        for key in (*self.__para_validator, *self.__para_text):
             text = self._ctrls[key].displayText()
             self.__settings.set('measurement_settings', key, text)
         with open(self.__file_name, 'w') as configfile:
