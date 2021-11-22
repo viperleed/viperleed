@@ -7,6 +7,17 @@ Created on Wed Dec 16 17:45 2019
 Reads an AUXEXPBEAMS file and writes the contents in EXPBEAMS.csv format.
 """
 
+import os
+import sys
+
+cd = os.path.realpath(os.path.dirname(__file__))
+# NB: it's necessary to add vpr_path to sys.path so that viperleed
+#     can be loaded correctly at the top-level package
+vpr_path = os.path.realpath(os.path.join(cd, '..'))
+for import_path in (cd, vpr_path):
+    if import_path not in sys.path:
+        sys.path.append(import_path)
+
 from tleedmlib.files.beams import readAUXEXPBEAMS, writeOUTBEAMS
 
 
