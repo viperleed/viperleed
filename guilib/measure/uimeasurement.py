@@ -174,6 +174,10 @@ class Measure(gl.ViPErLEEDPluginBase):
                                     "correct folder.")
             return
         measurement_cls = ALL_MEASUREMENTS[text]
+        config.set('measurement_settings', 'measurement_class',
+            measurement_cls.__name__)
+        with open(file_name, 'w') as configfile:
+            config.write(configfile)
         self.measurement = measurement_cls(config)
 
         if not isinstance(self.measurement, ALL_MEASUREMENTS['Time resolved']):
@@ -202,7 +206,6 @@ class Measure(gl.ViPErLEEDPluginBase):
 
     def __on_energy_resolved_data(self):
         """Replot measured data."""
-        return
         # TODO: this plotting delays the measurement of secondary controllers
         fig = self._ctrls['plots'][0]
         fig.ax.cla()  # Clear old stuff
