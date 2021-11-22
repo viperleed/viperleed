@@ -21,7 +21,7 @@ from viperleed.guilib.measure.measurement.abc import MeasurementABC
 
 class MeasureEnergySetpoint(MeasurementABC):
     """Energy calibration class."""
-    
+
     display_name = 'Energy calibration'
 
     def __init__(self, measurement_settings):
@@ -95,11 +95,11 @@ class MeasureEnergySetpoint(MeasurementABC):
         -------
         bool
         """
+        self.new_data_available.emit()
         if self.current_energy >= self.__end_energy:
             self.calibrate_energy_setpoint()
             return True
         self.current_energy += self.__delta_energy
-        self.new_data_available.emit()
         return False
 
     def calibrate_energy_setpoint(self):
@@ -145,9 +145,9 @@ class MeasureEnergySetpoint(MeasurementABC):
 
     def abort(self):
         """Abort all current actions.
-        
+
         Abort and reset all variables.
-        
+
         Returns
         -------
         None.

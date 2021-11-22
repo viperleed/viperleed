@@ -18,7 +18,6 @@ from PyQt5 import QtCore as qtc
 # ViPErLEED modules
 from viperleed.guilib.measure.measurement.abc import (MeasurementABC,
                                                       MeasurementErrors)
-from viperleed.guilib.measure.hardwarebase import emit_error
 
 
 class TimeResolved(MeasurementABC):
@@ -117,12 +116,12 @@ class TimeResolved(MeasurementABC):
         -------
         bool
         """
+        self.new_data_available.emit()
         if self.__measurement_time <= self.__limit_continuous:
             self.continuous_mode.emit([False, False])
         if self.__time_over or self.current_energy >= self.__end_energy:
             self.on_finished()
             return True
-        self.new_data_available.emit()
         self.current_energy = self.energy_generator()
         return False
 
@@ -139,14 +138,15 @@ class TimeResolved(MeasurementABC):
         """
         # TODO: This will either be moved to a subclass or a separate processor
         # TODO: currently using nominal energy on an uncalibrated energy measurement: offset might be larger than step height!!!
-        step_height = 0.5
-        # This step height will be the aimed for height used later
-        # in the LEED I(V) video.
         int_update_rate = self.primary_controller.settings.get(
                             'controller', 'update_rate')
         update_rate = self.primary_controller.settings.getint(
                             'adc_update_rate', int_update_rate)
         measure = self.settings.get('measurement_settings', 'measure_this')
+        percentage = self.settings.getfloat('measurement_settings',
+                                            'percentage')
+        points = self.settings.getint('measurement_settings',
+                                      'relevant_points')
         if measure == 'HV':
             to_change = 'hv_settle_time'
         elif measure == 'I0':
@@ -155,19 +155,23 @@ class TimeResolved(MeasurementABC):
             # TODO: emit error
             pass
 
-        measured, nominal_energies = self.data_points.get_time_resolved_data(
-            measure, include_energies=True
-            )
+        measured = self.data_points.get_time_resolved_data(measure)
 
         if self.__measurement_time <= self.__limit_continuous:
             for j, step in enumerate(measured[0]):
-                length = len(step)-1
+                if j == 0:
+                    previous_height = sum(step[-points:])/points
+                    continue
+                current_height = sum(step[-points:])/points
+                max_deviation = (current_height - previous_height) * percentage
+                step.reverse()
                 points = 0
-                for i, measurement in enumerate(step):
-                    if abs(step[length-i] - nominal_energies[j]) < step_height:
+                for measurement in step:
+                    if abs(measurement - current_height) < max_deviation:
                         points += 1
                     else:
                         break
+                previous_height = current_height
                 settle_time = int(1000*points/update_rate)
                 if settle_time > self.__settle_time:
                     self.__settle_time = settle_time

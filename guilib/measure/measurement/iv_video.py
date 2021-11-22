@@ -47,7 +47,7 @@ class IVVideo(MeasurementABC):
                 'measurement_settings', 'i0_settle_time'
                 )
         num_meas = (1 + round((self.__end_energy - self.start_energy)
-                               /self.__delta_energy))
+                              / self.__delta_energy))
         self.__n_digits = len(str(num_meas))
 
     def start_next_measurement(self):
@@ -84,10 +84,10 @@ class IVVideo(MeasurementABC):
         -------
         bool
         """
+        self.new_data_available.emit()
         if self.current_energy >= self.__end_energy:
             return True
         self.current_energy += self.__delta_energy
-        self.new_data_available.emit()
         return False
 
     def abort(self):
@@ -107,9 +107,9 @@ class IVVideo(MeasurementABC):
             camera.camera_busy.connect(self.receive_from_camera,
                                        type=qtc.Qt.UniqueConnection)
             self.camera_timer.timeout.connect(camera.trigger_now,
-                                          type=qtc.Qt.UniqueConnection)
+                                              type=qtc.Qt.UniqueConnection)
             self.begin_preparation.connect(camera.start,
-                                           type=qtc.Qt.UniqueConnection)   
+                                           type=qtc.Qt.UniqueConnection)
 
     def disconnect_cameras(self):
         """Disconnect necessary camera signals."""
@@ -127,4 +127,3 @@ class IVVideo(MeasurementABC):
                 self.begin_preparation.disconnect(camera.start)
             except TypeError:
                 pass
-
