@@ -33,6 +33,8 @@ from numpy.lib.stride_tricks import as_strided
 from scipy.signal import convolve2d
 from PyQt5 import QtCore as qtc
 
+from viperleed.guilib.measure.camera import tifffile as tiff
+
 
 # TIFF_TAGS contains the tiff header info as follows
 # (see https://www.fileformat.info/format/tiff/corion.htm)
@@ -84,9 +86,13 @@ class ImageProcessInfo:
     bad_pixels : BadPixels
         BadPixels object holding information about which of the camera
         pixels are bad and how to correct them.
-    filename : str or pathlib.Path
-        Absolute path to the name of the file to be saved to disk after
-        processing is over
+    filename : str
+        Name of the file to be saved to disk after processing is over.
+        If not given, no image will be saved after processing. It must
+        have a '.tiff' suffix.
+    base_path : str, optional
+        Path to which filename will be saved. If not given, the current
+        directory is used.
     n_frames : int
         The number of frames to be averaged. The truth value of this
         attribute should be False if the camera handles frame averaging
@@ -106,6 +112,14 @@ class ImageProcessInfo:
         List of frame-arrival times.
     camera : CameraABC
         The camera to which these image processing infos are related.
+    energy : str or float, optional
+        The current LEED energy used, in electron-volts. Only used for
+        storing information.
+    date_time : datetime, optional
+        The datetime.now() object for the current image.
+    comment : str, optional
+        Any user comment that will be stored with the image (e.g.,
+        sample surface, preparation details, etc.).
 
     Methods
     ------
@@ -118,7 +132,10 @@ class ImageProcessInfo:
     roi: typing.Sequence = tuple()
     binning: int = 0
     frame_times: typing.Sequence = field(default_factory=list)
-    camera: typing.Any = None  # the camera object
+    camera: typing.Any = None     # the camera object
+    energy: typing.Any = None     # energy in eV, typically float
+    date_time: typing.Any = None  # datetime object
+    comment: str = ''
 
     @property
     def bad_pixels(self):
@@ -321,24 +338,25 @@ class ImageProcessor(qtc.QObject):
         if not fname:
             return
 
-        # TODO: probably what follows could easily go into a TIFFImage
-        # class. Some notes can be found in ___test_tiff.py
-        # Would be nice, so it can also be used from the GUI
-        # when saving a frame.
-        n_rows, n_cols = data.shape
-        b_count = n_cols * n_rows * n_bits // 8
-
-        tags = TIFF_TAGS % {
-            b'n_rows': n_rows.to_bytes(4, 'big'),
-            b'n_cols': n_cols.to_bytes(4, 'big'),
-            b'n_bits': n_bits.to_bytes(2, 'big'),
-            b'b_count': b_count.to_bytes(4, 'big')
-            }
-
         fname = Path(self.process_info.base_path) / fname
-        if fname.suffix != '.tiff':
+        if '.tif' not in fname.suffix:
             raise ValueError("Can only save .tiff files. Found invalid "
                              f"extension {fname.suffix}")
+        
+        cam = self.process_info.camera
+        bin = self.process_info.binning
+        comment = (f"Average of {self.process_info.n_frames}; "
+                   f"Exposure: {cam.exposure} ms; "
+                   f"Gain: {10**(cam.gain/20):.1f} ({cam.gain:.1f} dB); "
+                   f"Binning: {bin}x{bin} pixels; ")
 
-        with open(fname, 'wb') as tiff_file:
-            tiff_file.write(tags + data.tobytes())
+        info = {'model': cam.name, 'comment': comment,}
+        if self.process_info.comment:
+            info['comment'] = self.process_info.comment + '\n' + comment
+        if self.process_info.energy:
+            info['energy'] = self.process_info.energy
+        if self.process_info.date_time:
+            info['date_time'] = self.process_info.date_time
+        
+        img = tif.TiffFile.from_array(data, **info)
+        img.write(fname)
