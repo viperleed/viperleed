@@ -14,6 +14,7 @@ by multiple ViPErLEED hardware objects.
 
 from abc import ABCMeta
 from configparser import ConfigParser
+import inspect
 from pathlib import Path
 import enum
 import sys
@@ -212,6 +213,45 @@ def emit_error(sender, error, *msg_args, **msg_kwargs):
     error_code, error_msg = error
     error_msg = error_msg.format(*msg_args, **msg_kwargs)
     sender.error_occurred.emit((error_code, error_msg))
+
+
+def get_devices(package):
+    """Return all supported and available devices from a package.
+
+    Supported devices are those for which a driver class exists.
+    Each class should implement a .list_devices() method.
+    
+    Parameters
+    ----------
+    package : str
+        Name of the viperleed.measure package for which supported,
+        available devices should be listed. Typically 'controller'
+        or 'camera'.
+    
+    Returns
+    -------
+    devices : dict
+        Dictionary of available, supported devices. Keys are
+        names of available devices, values are the driver classes
+        that can be used to handle the devices (one class per
+        device).
+    """
+    try:
+        getattr(sys.modules[__package__], package)
+    except AttributeError as err:
+        raise AttributeError(f"{__package__} does not contain "
+                             f"a package named {package}") from err
+
+    package_name = f"{__package__}.{package}"
+    devices = {}
+    for _, cls in inspect.getmembers(sys.modules[package_name],
+                                     inspect.isclass):
+        if hasattr(cls, 'list_devices'):
+            dummy_instance = cls()
+            dev_list = dummy_instance.list_devices()
+            for dev_name in dev_list:
+                devices[dev_name] = cls
+    return devices
 
 
 ################################### CLASSES ###################################
