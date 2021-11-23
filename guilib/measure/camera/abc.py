@@ -154,7 +154,7 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
 
         try:
             self.set_settings(settings)
-        except OSError:  # Other cameras may raise others: fill in!!
+        except self.exceptions:
             # Start a short QTimer to report errors that occurred here
             # AFTER the whole __init__ is done, i.e., when we suppose
             # that the error_occurred signal is already connected
