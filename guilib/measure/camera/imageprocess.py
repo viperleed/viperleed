@@ -36,47 +36,6 @@ from PyQt5 import QtCore as qtc
 from viperleed.guilib.measure.camera import tifffile as tiff
 
 
-# TIFF_TAGS contains the tiff header info as follows
-# (see https://www.fileformat.info/format/tiff/corion.htm)
-# header:
-#    'MM'(2 bytes) [big endian]
-#    '42'(2 bytes) [type]
-#    start_of_tags(4 bytes)
-#    'no.tags[=7]'(2 bytes)
-# 7 tags:
-# (1) 'ImageWidth' (no.256)
-#     b'\x01\x00\x00\x04\x00\x00\x00\x01' + n_cols (4 bytes)
-# (2) 'ImageLength', i.e. height (no.257)
-#     b'\x01\x01\x00\x04\x00\x00\x00\x01' + n_rows (4 bytes)
-# (3) 'BitsPerSample' (no.258); Left-justified to the first word,
-#     i.e., the last word is 0, the pre-last is n_bits (2 bytes)
-#     b'\x01\x02\x00\x03\x00\x00\x00\x01' + n_bits + b'\x00\x00'
-# (4) 'PhotometricInterpretation' (no.262); black is zero
-#      b'\x01\x06\x00\x03\x00\x00\x00\x01\x00\x01\x00\x00'
-# (5) 'StripOffsets' (n.273); will have one strip only
-#     The beginning of the data also includes
-#     4 == len(b'\x00\x00\x00\x00'), due to the IFD. Thus
-#     data_offs = len(header) + 12*n_tags + 4 = 10 + 12*7 + 4 = 98
-#     i.e., data_offs = b'\x00\x00\x00\x62'
-# (6) 'RowsPerStrip' (no.278) [only 1 strip]
-#     b'\x01\x16\x00\x04\x00\x00\x00\x01' + n_rows (4 bytes)
-# (7) 'StripByteCounts' (no.279) [only 1 strip]
-#     b'\x01\x17\x00\x04\x00\x00\x00\x01' + n_cols*n_rows*n_bits/8 (4 bytes)
-
-
-TIFF_TAGS = (
-    b'MM\x00\x2a\x00\x00\x00\x08\x00\x07'                   # header
-    + b'\x01\x00\x00\x04\x00\x00\x00\x01%(n_cols)b'         # 'ImageWidth'
-    + b'\x01\x01\x00\x04\x00\x00\x00\x01%(n_rows)b'         # 'ImageLength'
-    + b'\x01\x02\x00\x03\x00\x00\x00\x01%(n_bits)b\x00\x00' # 'BitsPerSample'
-    + b'\x01\x06\x00\x03\x00\x00\x00\x01\x00\x01\x00\x00'   # no.262
-    + b'\x01\x11\x00\x04\x00\x00\x00\x01\x00\x00\x00\x62'   # 'StripOffsets'
-    + b'\x01\x16\x00\x04\x00\x00\x00\x01%(n_rows)b'         # 'RowsPerStrip'
-    + b'\x01\x17\x00\x04\x00\x00\x00\x01%(b_count)b'        # 'StripByteCounts'
-    + b'\x00\x00\x00\x00'                                   # IFD termination
-    )
-
-
 @dataclass
 class ImageProcessInfo:
     """Data class storing information needed for processing images.
