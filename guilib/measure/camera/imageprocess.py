@@ -108,6 +108,16 @@ class ImageProcessInfo:
     def clear_times(self):
         """Clear the frame arrival times."""
         self.frame_times = []
+    
+    def restore_from(self, other):
+        """Restore this instance from another one."""
+        if not isinstance(other, ImageProcessInfo):
+            raise ValueError(f"{self.__class__.__name__}: Cannot restore "
+                             f"from a {other.__class__.__name__} instance")
+        for attr, value in vars(other).items():
+            if not hasattr(self, attr):
+                continue
+            setattr(self, attr, value)
 
 
 class ImageProcessor(qtc.QObject):
@@ -197,9 +207,9 @@ class ImageProcessor(qtc.QObject):
 
     def remove_bad_pixels(self):
         """Remove bad pixels by neighbor averaging."""
-        if not self.process_info.bad_pixels:
-            return
         bad = self.process_info.bad_pixels
+        if not bad:
+            return
         bad_coords = bad.bad_pixel_coordinates.T
         repl_offsets = bad.replacement_offsets.T
 
