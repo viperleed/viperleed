@@ -171,24 +171,13 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
     @property
     def bad_pixels(self):
         """Return a BadPixels object for this camera."""
-        # If __bad_pixels is None (i.e., info never read),
+        # If __bad_pixels is False-y (i.e., info never read),
         # attempt reading the bad pixels info from file,
         # based on the path in settings.
-        if self.__bad_pixels is None:
-            self.__bad_pixels = badpixels.BadPixels(self)
-            bad_pix_path = self.settings.get("camera_settings",
-                                             "bad_pixels_path",
-                                             fallback='')
-            try:
-                self.__bad_pixels.read(bad_pix_path)
-            except (FileNotFoundError, ValueError) as err:
-                emit_error(
-                    self, CameraErrors.INVALID_SETTINGS,
-                    'camera_settings/bad_pixels_path',
-                    f'Info: {err}'
-                    )
-            else:
-                self.__bad_pixels.apply_roi()
+        if not self.__bad_pixels:
+            if self.__bad_pixels is None:
+                self.__bad_pixels = badpixels.BadPixels(self)
+            self.update_bad_pixels()
         return self.__bad_pixels
 
     @property
@@ -632,6 +621,43 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
             True if the device was opened successfully.
         """
         return False
+
+    def update_bad_pixels(self):
+        """Update the list of bad pixels from the settings.
+
+        This function should be explicitly called after the
+        path containing bad pixels files is changed in the
+        settings. Calling this function may take a little
+        time, as bad pixel coordinates are read from scratch
+        and recalculated.
+
+        Returns
+        -------
+        None.
+
+        Emits
+        -----
+        error_occurred(CameraErrors.INVALID_SETTINGS)
+            If settings file does not have a 'bad_pixels_path' option
+            in section 'camera_settings'.
+        error_occurred(CameraErrors.INVALID_SETTINGS)
+            If the path specified does not contain a valid bad-pixels
+            file for this camera.
+        """
+        bad_pix_path = self.settings.get("camera_settings", "bad_pixels_path",
+                                         fallback='')
+        if not bad_pix_path:
+            emit_error(self, CameraErrors.INVALID_SETTINGS,
+                       'camera_settings/bad_pixels_path',
+                       f'Info: No bad_pixel_path found.')
+            return
+        try:
+            self.__bad_pixels.read(bad_pix_path)
+        except (FileNotFoundError, ValueError) as err:
+            emit_error(self, CameraErrors.INVALID_SETTINGS,
+                       'camera_settings/bad_pixels_path', f'Info: {err}')
+            return
+        self.__bad_pixels.apply_roi()
 
     @abstractmethod
     def get_binning(self):
