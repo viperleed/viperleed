@@ -220,14 +220,14 @@ def get_devices(package):
 
     Supported devices are those for which a driver class exists.
     Each class should implement a .list_devices() method.
-    
+
     Parameters
     ----------
     package : str
         Name of the viperleed.measure package for which supported,
         available devices should be listed. Typically 'controller'
         or 'camera'.
-    
+
     Returns
     -------
     devices : dict
@@ -310,3 +310,8 @@ class ViPErLEEDErrorEnum(tuple, enum.Enum):
                 f"Unknown {cls.__name__} error with code {code}"
                 ) from err
         return getattr(cls, error_name)
+
+    @property
+    def code(self):
+        """Return the code of this error."""
+        return self.value[0]
