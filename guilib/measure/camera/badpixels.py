@@ -209,6 +209,11 @@ class BadPixelsFinder(qtc.QObject):
         self.__camera.settings = self.__new_settings
         self.__camera.start()
 
+    def abort(self):
+        """Abort finding bad pixels."""
+        self.__restore_camera_settings()  # Also stops
+        self.__frames_done = 0
+
     def find(self):
         """Find bad pixels in the camera."""
         if self.__camera.busy:
@@ -480,14 +485,18 @@ class BadPixelsFinder(qtc.QObject):
             return intensity < 0.2*intensity_range
         return 0.45*intensity_range < intensity < 0.55*intensity_range
 
+    def __restore_camera_settings(self):
+        """Restore the original settings of the camera."""
+        self.__camera.settings = self.__old_camera_info['settings']
+        self.__camera.process_info.restore_from(self.__old_camera_info['info'])
+
     def __save_and_cleanup(self):
         """Save a bad pixels file and finish."""
         bp_path = self.__camera.settings.get("camera_settings",
                                              "bad_pixels_path",
                                              fallback='')
         self.__bad_pixels.write(bp_path)
-        self.__camera.settings = self.__old_camera_info['settings']
-        self.__camera.process_info = self.__old_camera_info['info']
+        self.__restore_camera_settings()
 
     def __trigger_next_frame(self, *_):
         """Trigger acquisition of a new frame if necessary."""
@@ -568,12 +577,12 @@ class BadPixels:
                 )
 
         if bad_coordinates is None:
-            bad_coordinates = np.ones((1,2))*np.nan
+            bad_coordinates = np.ones((1, 2))*np.nan
         else:
             bad_coordinates = np.asarray(bad_coordinates)
 
         if replacement_offsets is None:
-            replacement_offsets = np.ones((1,2))*np.nan
+            replacement_offsets = np.ones((1, 2))*np.nan
         else:
             replacement_offsets = np.asarray(replacement_offsets)
 
@@ -619,8 +628,8 @@ class BadPixels:
         """Return a string representation of self."""
         formatter = "{}->{}"
         txt_lst = [formatter.format(b, r)
-                   for b,r in zip(self.__bad_coords, self.__replacements)]
-        return f"BadPixelsFinder({', '.join(txt_lst)})"
+                   for b, r in zip(self.__bad_coords, self.__replacements)]
+        return f"BadPixels({', '.join(txt_lst)})"
 
     @property
     def bad_pixel_coordinates(self):
@@ -640,6 +649,13 @@ class BadPixels:
             corresponds to the (x, y) coordinates of a bad pixel.
         """
         return self.__bad_coords_roi
+
+    @property
+    def file_name(self):
+        """Return the currently read file name."""
+        if not self.__has_info:
+            return ''
+        return self.__base_name
 
     @property
     def n_bad_pixels_sensor(self):
@@ -812,7 +828,7 @@ class BadPixels:
         filepath = Path(filepath)
         cam_name = self.__camera.name.replace(' ', '_')
 
-        # Search in filepath for bad pixels file of the current camera
+        # Search in filepath for bad pixels files of the current camera
         bad_px_files = list(filepath.glob(f"{cam_name}*.badpx"))
         if not bad_px_files:
             raise FileNotFoundError(
@@ -960,7 +976,7 @@ class BadPixels:
     @property
     def __has_info(self):
         """Return whether bad pixel information is present."""
-        return np.nan not in self.__bad_coords
+        return np.all(np.isfinite(self.__bad_coords))
 
     def __bool__(self):
         """Return the truth value of self."""
