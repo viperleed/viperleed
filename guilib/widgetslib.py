@@ -20,9 +20,9 @@ from viperleed import guilib as gl
 # import guilib as gl
 
 
-################################################################################
-#                                   FUNCTIONS                                  #
-################################################################################
+###############################################################################
+#                                   FUNCTIONS                                 #
+###############################################################################
 
 
 def change_control_text_color(ctrl, color):
@@ -35,16 +35,19 @@ def change_control_text_color(ctrl, color):
     ----------
     ctrl_name : QWidget
         The control whose color has to be changed.
-    color : QColor
+    color : QColor or str
         Color to be used
 
     Returns
     -------
     None.
     """
+    color = qtg.QColor(color)
     palette = ctrl.palette()
     if isinstance(ctrl, qtw.QPushButton):
         palette.setColor(palette.ButtonText, color)
+    elif isinstance(ctrl, qtw.QLabel):
+        palette.setColor(palette.WindowText, color)
     else:
         palette.setColor(palette.Text, color)
     ctrl.setPalette(palette)
