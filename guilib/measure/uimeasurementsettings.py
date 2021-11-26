@@ -75,7 +75,7 @@ class SettingsEditor(qtw.QDialog):
         self._ctrls['undo'].setEnabled(True)
 
         layout = self.layout()
-○
+
         for key in self.__para_validator:
             self._ctrls[key].setFont(gl.AllGUIFonts().labelFont)
             self._ctrls[key].ensurePolished()
