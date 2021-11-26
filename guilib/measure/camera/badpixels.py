@@ -14,6 +14,7 @@ from a camera and computes a pixel-badness array.
 from ast import literal_eval
 from copy import deepcopy
 from datetime import datetime
+from enum import Enum
 from pathlib import Path
 
 import numpy as np
@@ -34,6 +35,24 @@ from viperleed.guilib.helpers import array2string
 N_DARK = 100  # Number of dark frames used for finding bad pixels
 
 
+def _report_progress(func):
+    """Decorate calculation functions."""
+
+    def _wrapper(self, *args, **kwargs):
+        """Wrap decorated function."""
+        _, what, *_ = func.__name__.replace('__', '').split('_')
+        section = _FinderSection.from_short_name(what)
+        tasks = section.n_tasks
+        self.progress_occurred.emit(section.long_name, section.value,
+                                    section.n_sections, 0, tasks)
+        ret_val = func(self, *args, **kwargs)
+        self.progress_occurred.emit(section.long_name, section.value,
+                                    section.n_sections, tasks, tasks)
+        return ret_val
+
+    return _wrapper
+
+
 class BadPixelsFinderErrors(ViPErLEEDErrorEnum):
     """Class for bad-pixel-finder errors."""
     DARK_FRAME_TOO_BRIGHT = (210,
@@ -44,11 +63,64 @@ class BadPixelsFinderErrors(ViPErLEEDErrorEnum):
                               "adjust exposure time and gain.")
 
 
+class _FinderSection(Enum):
+    """Enumeration class for bad-pixel finder sections."""
+
+    ACQUIRE_DARK_SHORT, ACQUIRE_DARK_LONG, ACQUIRE_FLAT = 1, 2, 3
+    CALCULATE_FLICKERY, CALCULATE_HOT, CALCULATE_DEAD = 4, 5, 6
+    CALCULATE_BAD = 7
+    DONE = 8
+
+    @property
+    def long_name(self):
+        """Return a long description for this section."""
+        if self.name == 'DONE':
+            return "Done."
+        operation, what, *_ = self.name.split('_')
+
+        if operation == "ACQUIRE":
+            txt = f"Acquiring {what.lower()} frame"
+            txt += "s " if what == "DARK" else " "
+            return txt + "with {:.1f} ms exposure..."
+        # Calculating
+        return f"Calculating coordinates of {what.lower()} pixels..."
+
+    @property
+    def n_sections(self):
+        """Return the total number of sections."""
+        return 8
+
+    @property
+    def n_tasks(self):
+        """Return the number of tasks in this section."""
+        if 'DARK' in self.name:
+            return N_DARK
+        return 1
+
+    @classmethod
+    def from_short_name(cls, name):
+        """Return an instance from a short name."""
+        if name.lower() in ('dark-short', 'dark-long', 'flat'):
+            elem = f"ACQUIRE_{name.replace('-', '_').upper()}"
+        elif name.lower() == 'done':
+            elem = "DONE"
+        else:
+            elem = f"CALCULATE_{name.upper()}"
+        return getattr(cls, elem)
+
 
 class BadPixelsFinder(qtc.QObject):
     """Class for finding bad pixels."""
 
     error_occurred = qtc.pyqtSignal(tuple)
+    done = qtc.pyqtSignal()
+    progress_occurred = qtc.pyqtSignal(
+        str,  # current operation
+        int,  # current operation index (1-based)
+        int,  # total no. operations
+        int,  # current progress
+        int   # total tasks in this section
+        )
 
     def __init__(self, camera, parent=None):
         """Initialize object."""
@@ -61,28 +133,34 @@ class BadPixelsFinder(qtc.QObject):
         super().__init__(parent=parent)
 
         self.__camera = camera
-        self.__viewer = CameraViewer(self.__camera)
+        self.__viewer = CameraViewer(self.__camera, stop_on_close=False,
+                                     visible=False)
 
         self.__camera.error_occurred.connect(self.error_occurred)
         self.__camera.image_processed.connect(self.__check_and_store_frame)
         self.__camera.camera_busy.connect(self.__trigger_next_frame)
 
         self.__frames_done = 0
+        self.__adjustments = 0  # used for progress reporting
 
-        # Keep track of the old camera settings, as we
-        # will need to change them on the fly later.
-        self.__old_camera_info = {'settings': deepcopy(self.__camera.settings),
-                                  'info': self.__camera.process_info.copy()}
+        # Keep track of the old camera settings, as we will need to
+        # change them on the fly later. Also, store the previous
+        # visibility state of the viewer. This may not match the
+        # False above, as there can only be one camera viewer per
+        # each camera object.
+        self.__original = {'settings': deepcopy(self.__camera.settings),
+                           'process': self.__camera.process_info.copy(),
+                           'visible': self.__viewer.visible,
+                           'was_visible': self.__viewer.isVisible()}
 
         # Now set new settings that will be used
         # throughout the rest of the processing.
+        self.__viewer.visible = False
+        self.__viewer.hide()
         self.__new_settings = self.__camera.settings
         self.__new_settings.set('camera_settings', 'bad_pixels', '()')
 
-        try:
-            _, (max_roi_w, max_roi_h), _ = self.__camera.get_roi_size_limits()
-        except:
-            max_roi_w, max_roi_h = 1536, 2048
+        _, (max_roi_w, max_roi_h), _ = self.__camera.get_roi_size_limits()
         full_roi = f"(0, 0, {max_roi_w}, {max_roi_h})"
         self.__new_settings.set('camera_settings', 'roi', full_roi)
         self.__new_settings.set('camera_settings', 'binning', '1')
@@ -207,11 +285,12 @@ class BadPixelsFinder(qtc.QObject):
         # frames, and a camera_busy, which will trigger
         # acquisition of the next frame, if needed.
         self.__camera.settings = self.__new_settings
+        self.__report_acquisition_progress()
         self.__camera.start()
 
     def abort(self):
         """Abort finding bad pixels."""
-        self.__restore_camera_settings()  # Also stops
+        self.__restore_settings()  # Also stops
         self.__frames_done = 0
 
     def find(self):
@@ -266,6 +345,8 @@ class BadPixelsFinder(qtc.QObject):
         self.__new_settings.set('measurement_settings', 'gain',
                                 f'{new_gain:.1f}')
         self.__camera.settings = self.__new_settings
+        self.__adjustments += 1
+        self.__report_acquisition_progress()
         self.__camera.start()
 
     def __check_and_store_frame(self, frame):
@@ -283,7 +364,17 @@ class BadPixelsFinder(qtc.QObject):
         else:
             self.__imgs[sec][:, :] = frame
         self.__frames_done += 1
+        self.__report_acquisition_progress()
 
+    def __report_acquisition_progress(self):
+        """Report progress of acquisition."""
+        section = _FinderSection.from_short_name(self.__current_section)
+        name = section.long_name.format(self.__camera.exposure)
+        self.progress_occurred.emit(name, section.value, section.n_sections,
+                                    self.__frames_done + self.__adjustments,
+                                    section.n_tasks + self.__adjustments)
+
+    @_report_progress
     def __find_bad_and_replacements(self):
         """Find bad pixels and their optimal replacements.
 
@@ -367,6 +458,7 @@ class BadPixelsFinder(qtc.QObject):
             uncorrectable=uncorrectable
             )
 
+    @_report_progress
     def __find_dead_pixels(self):
         """Detect dead pixels from flat frame.
 
@@ -423,6 +515,7 @@ class BadPixelsFinder(qtc.QObject):
 
         self.__badness += delta_badness
 
+    @_report_progress
     def __find_flickery_pixels(self):
         """Prepare badness based on how flickery pixels are.
 
@@ -449,6 +542,7 @@ class BadPixelsFinder(qtc.QObject):
         self.__badness = (long_flicker / long_flicker.mean() - 1
                           + short_flicker / short_flicker.mean() - 1)
 
+    @_report_progress
     def __find_hot_pixels(self):
         """Set badness of hot pixels to infinity."""
         pix_min, pix_max = self.__camera.intensity_limits
@@ -485,10 +579,13 @@ class BadPixelsFinder(qtc.QObject):
             return intensity < 0.2*intensity_range
         return 0.45*intensity_range < intensity < 0.55*intensity_range
 
-    def __restore_camera_settings(self):
+    def __restore_settings(self):
         """Restore the original settings of the camera."""
-        self.__camera.settings = self.__old_camera_info['settings']
-        self.__camera.process_info.restore_from(self.__old_camera_info['info'])
+        self.__camera.settings = self.__original['settings']
+        self.__camera.process_info.restore_from(self.__original['process'])
+        self.__viewer.visible = self.__original['visible']
+        if self.__original['was_visible']:
+            self.__viewer.show()
 
     def __save_and_cleanup(self):
         """Save a bad pixels file and finish."""
@@ -496,11 +593,16 @@ class BadPixelsFinder(qtc.QObject):
                                              "bad_pixels_path",
                                              fallback='')
         self.__bad_pixels.write(bp_path)
-        self.__restore_camera_settings()
+        self.__restore_settings()
+        done = _FinderSection.DONE
+        self.progress_occurred.emit(done.long_name, done.value,
+                                    done.n_sections,
+                                    done.n_tasks, done.n_tasks)
+        self.done.emit()
 
     def __trigger_next_frame(self, *_):
         """Trigger acquisition of a new frame if necessary."""
-        if self.__camera.busy:
+        if self.__camera.busy or not self.__camera.is_running:
             return
 
         if self.missing_frames:
@@ -520,6 +622,7 @@ class BadPixelsFinder(qtc.QObject):
         else:
             self.__current_section = sections[next_idx]
             self.__frames_done = 0
+            self.__adjustments = 0
             self.begin_acquiring()
 
 
