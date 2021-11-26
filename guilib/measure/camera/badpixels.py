@@ -169,16 +169,10 @@ class BadPixelsFinder(qtc.QObject):
 
         # And set them into the camera. This stops
         # the camera if it is currently running.
-        try:
-            self.__camera.settings = self.__new_settings
-        except:
-            pass
+        self.__camera.settings = self.__new_settings
         self.__camera.process_info.filename = ''
 
-        try:
-            width, height, n_bytes, _ = self.__camera.image_info
-        except:
-            width, height, n_bytes = 1536, 2048, 2
+        width, height, n_bytes, _ = self.__camera.image_info
         dtype = np.uint8 if n_bytes == 1 else np.uint16
 
         # __imgs contains: the short- and long-exposure movies
@@ -201,10 +195,7 @@ class BadPixelsFinder(qtc.QObject):
         # pixel coordinates and their replacements
         self.__bad_pixels = BadPixels(self.__camera)
 
-        try:
-            name = camera.name
-        except:
-            name = 'None'
+        name = camera.name
 
         self.__info = qtw.QMessageBox(parent=parent)
         self.__info.setWindowTitle(f"Bad pixel detection for {name}")
@@ -256,7 +247,8 @@ class BadPixelsFinder(qtc.QObject):
                 "piece of paper right in front of the lens. Normal room "
                 "light should be uniform enough.\n\nPress 'OK' when ready."
                 )
-        self.__info.exec_()
+        if 'long' not in self.__current_section:
+            self.__info.exec_()
 
         if 'dark' in self.__current_section:
             # Here we set fixed gain and exposure time

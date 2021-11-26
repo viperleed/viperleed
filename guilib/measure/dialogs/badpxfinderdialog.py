@@ -406,7 +406,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
 
         # Now prepare strings
         fmt = "{} ({:.2f}% of sensor)"
-        fmt_previous = "\t[Previous: {}]"
+        fmt_previous = "\t\t[Previous: {}]"
         date_time_txt = (f"{new['date_time']}"
                          + fmt_previous.format(old['date_time']))
 
