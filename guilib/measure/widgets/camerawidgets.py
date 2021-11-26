@@ -115,7 +115,12 @@ class CameraViewer(qtw.QScrollArea):
             The viewer object.
         """
         if camera in cls._viewers:
-            return cls._viewers[camera]
+            viewer = cls._viewers[camera]()
+            if viewer is not None:
+                # Viewer is alive
+                return viewer
+            # Viewer has been garbage-collected. Remove it from cache.
+            cls._viewers.pop(camera)
         new_viewer = super().__new__(cls, camera, *args, **kwargs)
         cls._viewers[camera] = weakref.ref(new_viewer)
         return new_viewer
@@ -129,7 +134,7 @@ class CameraViewer(qtw.QScrollArea):
             pass
 
     def __init__(self, camera, *args, parent=None, stop_on_close=True,
-                 **kwargs):
+                 visible=True, **kwargs):
         """Initialize widget.
 
         Parameters
@@ -157,6 +162,7 @@ class CameraViewer(qtw.QScrollArea):
         self.__img_size = qtc.QSize()
         self.__camera = camera
         self.__stop_on_close = bool(stop_on_close)
+        self.visible = bool(visible)
         self.__roi = RegionOfInterest(parent=self.__img_view)
 
         try:
@@ -477,7 +483,7 @@ class CameraViewer(qtw.QScrollArea):
 
         self.__img_view.set_image(image)
         self.image_size = image.size()
-        if not self.isVisible():
+        if self.visible and not self.isVisible():
             self.show()
 
     def __zoom(self, direction='in'):
