@@ -23,12 +23,13 @@ from viperleed.guilib.basewidgets import QDoubleValidatorNoDot
 
 TITLE = 'Measurement Settings'
 
-class SettingsEditor(gl.ViPErLEEDPluginBase):
-    """A class that allows simulating LEED Patterns."""
+
+class SettingsEditor(qtw.QDialog):
+    """Settings editor window."""
 
     def __init__(self, parent=None):
         """Initialize window."""
-        super().__init__(parent, name=TITLE)
+        super().__init__(parent)
         # Keep references to controls, dialogs, and some globals
         self._ctrls = {
             'start_energy': qtw.QLineEdit(''),
@@ -61,8 +62,7 @@ class SettingsEditor(gl.ViPErLEEDPluginBase):
 
     def __compose(self):
         """Prepare settings editor."""
-        self.setCentralWidget(qtw.QWidget())
-        self.centralWidget().setLayout(qtw.QGridLayout())
+        self.setLayout(qtw.QGridLayout())
 
         self._ctrls['save'].setFont(gl.AllGUIFonts().buttonFont)
         self._ctrls['save'].ensurePolished()
@@ -74,18 +74,19 @@ class SettingsEditor(gl.ViPErLEEDPluginBase):
         self._ctrls['undo'].clicked.connect(self.__on_undo_pressed)
         self._ctrls['undo'].setEnabled(True)
 
-        layout = self.centralWidget().layout()
-
-        self._ctrls['measure_this'].setFont(gl.AllGUIFonts().labelFont)
-        self._ctrls['measure_this'].ensurePolished()
-        text = self.__settings.get('measurement_settings', 'measure_this')
-        self._ctrls['measure_this'].setText(text)
-
+        layout = self.layout()
+○
         for key in self.__para_validator:
             self._ctrls[key].setFont(gl.AllGUIFonts().labelFont)
             self._ctrls[key].ensurePolished()
             self._ctrls[key].setValidator(QDoubleValidatorNoDot())
             self._ctrls[key].validator().setLocale(qtc.QLocale.c())
+            text = self.__settings.get('measurement_settings', key)
+            self._ctrls[key].setText(text)
+
+        for key in self.__para_text:
+            self._ctrls[key].setFont(gl.AllGUIFonts().labelFont)
+            self._ctrls[key].ensurePolished()
             text = self.__settings.get('measurement_settings', key)
             self._ctrls[key].setText(text)
 
