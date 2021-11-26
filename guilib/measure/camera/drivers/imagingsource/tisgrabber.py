@@ -209,7 +209,7 @@ FrameReadyCallbackType = CFUNCTYPE(
 FrameReadyCallbackType.__ctypeswrapper__ = 'FrameReadyCallbackType'
 
 
-class  WindowsCamera:
+class WindowsCamera:
     """Interface class for Imaging Source camera in Windows."""
 
     # To prevent creating bindings to the dll functions each time
@@ -245,8 +245,8 @@ class  WindowsCamera:
     def __init_library(cls, license_key=None):
         """Initialize the IC Imaging Control DLL library.
 
-        This function must be called only once before any other
-        functions of the DLL are called.
+        This function must be called at least once before any
+        other functions of the DLL are called.
 
         Parameters
         ----------
@@ -256,9 +256,7 @@ class  WindowsCamera:
 
         Returns
         -------
-        ret_val : int
-            SUCCESS on success, ERROR if license key is wrong or for
-            other generic errors.
+        None.
         """
         if not cls.__initalized:
             _dll_init = cls._dll.IC_InitLibrary
