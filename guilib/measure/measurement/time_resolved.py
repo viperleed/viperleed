@@ -171,6 +171,8 @@ class TimeResolved(MeasurementABC):
                         points += 1
                     else:
                         break
+                if points == 0:
+                    points = 1
                 previous_height = current_height
                 settle_time = int(1000*points/update_rate)
                 if settle_time > self.__settle_time:
