@@ -772,7 +772,7 @@ def getLEEDdict(sl, rp):
 def getSymEqBeams(sl, rp):
     """Returns a list of tuples ((hf,kf), index), where (hf,kf) are beams and
     index is the group of other beams they are equivalent to"""
-    if rp.AVERAGE_BEAMS == False:
+    if rp.AVERAGE_BEAMS is False:
         return []
     if not rp.domainParams:
         d = [getLEEDdict(sl, rp)]
