@@ -44,7 +44,7 @@ outfiles = ["THEOBEAMS.csv", "THEOBEAMS_norm.csv", "THEOBEAMS.pdf",
             "Complex_amplitudes_real.csv"]
 
 # output files that can be used as input in future runs - keep during prerun
-iofiles = ["control.chem", "refcalc-fd.out", "superpos-fd.out"]
+iofiles = ["control.chem", "refcalc-fd.out", "superpos-spec.out"]
 
 logger = logging.getLogger("tleedm.sections.cleanup")
 
