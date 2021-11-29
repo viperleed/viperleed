@@ -166,7 +166,7 @@ def readSDTL_end(filename="SD.TL", n_expect=0):
             while ("CCCCCCCCCCC    GENERATION" not in lines[-1]
                    and len(bwr.data) > 0):
                 lines.append(bwr.readline().rstrip())
-            if len([l for l in lines if "|" in l]) > n_expect:
+            if len([line for line in lines if "|" in line]) > n_expect:
                 break
             lines = [""]
         lines.reverse()
@@ -762,10 +762,10 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                 controllines = [s+"\n"
                                 for s in rp.controlChemBackup.split("\n")]
     if rp.SEARCH_START == "random":
-        output += (formatter['int'].write([0]).ljust(16) + 
+        output += (formatter['int'].write([0]).ljust(16) +
                    "Certain start position (1) or random configuration (0)\n")
     else:
-        output += (formatter['int'].write([1]).ljust(16) + 
+        output += (formatter['int'].write([1]).ljust(16) +
                    "Certain start position (1) or random configuration (0)\n")
         if rp.SEARCH_START == "control":
             if cull and rp.SEARCH_CULL > 0:

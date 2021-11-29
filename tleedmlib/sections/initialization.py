@@ -185,7 +185,7 @@ def initialization(sl, rp, subdomain=False):
         tl.symmetry.getSymBaseSymmetry(sl, rp)
         try:
             writePOSCAR(sl.symbaseslab, filename='POSCAR_mincell',
-                         comments='all')
+                        comments='all')
         except Exception:
             logger.warning("Exception occurred while writing POSCAR_mincell")
 
@@ -311,7 +311,7 @@ def initialization(sl, rp, subdomain=False):
             n += 1
     try:
         writePOSCAR(sl.addBulkLayers(rp, n=n)[0],
-                     filename='POSCAR_bulk_appended')
+                    filename='POSCAR_bulk_appended')
     except Exception:
         logger.warning("Exception occurred while writing POSCAR_bulk_appended")
 

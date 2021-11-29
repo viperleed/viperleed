@@ -271,6 +271,12 @@ def refcalc(sl, rp, subdomain=False, parent_dir=""):
         return
     sl.getCartesianCoordinates(updateOrigin=True)
     sl.updateLayerCoordinates()
+    # delete old refcalc-fd.out if present - not earlier because can be input
+    #   for r-factor calculation if no refcalc is executed
+    try:
+        os.remove("refcalc-fd.out")
+    except FileNotFoundError:
+        pass
     try:
         io.writeAUXLATGEO(sl, rp)
     except Exception:
