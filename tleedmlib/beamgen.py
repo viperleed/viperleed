@@ -42,9 +42,9 @@ def runBeamGen(sl, rp, beamgensource='', domains=False):
     ucbulk = np.transpose(sl.bulkslab.ucell[:2, :2])
     output += formatter['uc'].write(ucbulk[0]).ljust(36) + 'ARA1\n'
     output += formatter['uc'].write(ucbulk[1]).ljust(36) + 'ARA2\n'
-    ol = formatter['latmat'].write([int(round(f)) for f in rp.SUPERLATTICE[0]])
+    ol = formatter['latmat'].write([int(round(f)) for f in rp.SUPERLATTICE.T[0]])
     output += ol.ljust(36) + 'LATMAT - overlayer\n'
-    ol = formatter['latmat'].write([int(round(f)) for f in rp.SUPERLATTICE[1]])
+    ol = formatter['latmat'].write([int(round(f)) for f in rp.SUPERLATTICE.T[1]])
     output += ol.ljust(36) + 'LATMAT -  matrix\n'
     if rp.TL_VERSION < 1.7:
         output += ('  1                                 SSYM - symmetry code'
