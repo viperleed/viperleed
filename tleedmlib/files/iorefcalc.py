@@ -244,7 +244,7 @@ def writePARAM(sl, rp, lmax=-1):
     output = ('C  Dimension statements for Tensor LEED reference calculation, '
               '\nC  version v1.2\n\n')
     output += 'C  1. lattice symmetry\n\n'
-    m = rp.SUPERLATTICE.copy()
+    m = rp.SUPERLATTICE.T.copy()
     if m[1, 1] != 0:      # m[1] not parallel to a_bulk
         if m[0, 1] != 0:  # m[0] not parallel to a_bulk
             # find basis in which m[0] is parallel to a_bulk
