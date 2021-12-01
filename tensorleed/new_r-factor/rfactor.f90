@@ -240,7 +240,7 @@ subroutine Rfactor_v0ropt(opt_type, min_steps, max_steps, nr_used_v0)
 
 end subroutine Rfactor_v0ropt
 
-subroutine prepare_beams(n_beams, intesity, E_min, E_step, NE, averaging_scheme, smoothing, E_min_intpol, NE_intpol, E_grid_step)
+subroutine prepare_beams( intesity, n_beams, NE_in, E_min, E_step, NE_beams , averaging_scheme, smoothing, NE_after, E_min_after, E_step_after)
     !Prepare_beams:
     !INPUT: array[I, E_min, E_step, NE], E_grid_step, averaging_scheme, smoothing?, E_min, E_max
     !DOES: (0) Limit_range, (1) Average/discard/reorder according to scheme; (2) smooth?; (3) interpolate on grid; (4) compute Y on new grid
@@ -250,23 +250,31 @@ subroutine prepare_beams(n_beams, intesity, E_min, E_step, NE, averaging_scheme,
     !###############
     !INPUTS
     !###############
-    integer, intent(in) :: n_beams ! number of beams
-    real, intent(in) :: intensity(:,:) ! beam intensities
-    real, intent(in) :: E_min(n_beams), E_step(n_beams), NE(n_beams) ! minimum energies, energy steps and nr of steps
+    integer, intent(in) :: n_beams, NE_in ! number of beams, number of passed energies
+    real, intent(in) :: intensity(NE_in,n_beams) ! beam intensities
+    real, intent(in) :: E_min(n_beams), E_step(n_beams), NE(n_beams) ! minimum energies, nr of steps
     integer, intent(in) :: averaging_scheme(n_beams)
     integer, intent(in) :: smoothing ! smooth or not?
-    real, intent(in) :: E_min_intpol, E_grid_step ! desired grid step after interpolation
-    integer, intent(in) :: NE_intpol ! number of steps (size E_grid_step) after interpolation
+    integer, intent(in) :: NE_after ! number of steps (size E_grid_step) after interpolation
+    real, intent(in) :: E_min_after, E_step_after ! desired grid step after interpolation
+
+    !###############
+    ! Internal
+    !###############
+    real :: E_max_after
 
     ! Everything assumes, experimental beams are recorded on the same energy grid already. This should always be the case.
+    ! Thus only the information of E_min and NE are required for each beam
 
+    E_max_after = E_min_after + NE_after*E_step_after
     !###############
     ! Limit range of beams
     !###############
     ! relies on below subroutine limit_beams
 
+    !call limit_range()
     ! TODO: implement
-    
+
     !###############
     ! Smoothing
     !###############
@@ -291,7 +299,24 @@ subroutine prepare_beams(n_beams, intesity, E_min, E_step, NE, averaging_scheme,
 
 end subroutine prepare_beams
 
-subroutine limit_range(in_beams, n_beams, E_min_beams, E_min_current, E_step, NE, E_min_cut, E_max_cut, out_beams, new_NE)
+subroutine limit_range_Energy(in_beams, n_beams, n_energies, E_min_current, E_step, beam_starts, NE_beams, &
+                       E_min_cut, E_max_cut, out_beams, new_NE))
+
+    integer, intent(in) :: n_beams, n_energies ! number of beams, number of energies in in_beams
+    real, intent(in) :: in_beams(n_energies, n_beams)
+    real, intent(out), allocatable :: out_beams(:,:)
+
+    real, intent(in) :: E_min_current, E_step
+    real, intent(in) :: E_min_beams(:)
+    real, intent(in) :: E_min_cut, E_max_cut
+    integer, intent(in)  :: NE(:)
+    integer, intent(out) :: new_NE
+    steps = int((E_max_cut-E_min_cut)/E_step) ! typecast to integer; will cut off float...
+
+end subroutine limit_range_Energy
+
+subroutine limit_range_index(in_beams, n_beams, n_energies, E_min_current, E_step, beam_starts, NE_beams, &
+                       NE_out_start, NE_out_stop, out_beams, new_NE)
     !Limit_range:
     !INPUT: E_min, E_max, array[I, E_min, E_step, NE]
     !RETURNS: Beam cut to only within [E_min, E_max]
@@ -300,13 +325,13 @@ subroutine limit_range(in_beams, n_beams, E_min_beams, E_min_current, E_step, NE
     ! Returns beams on uniform size array, cut to right size. Also returns E_min of each beam + new min_index and cut NE
     ! Works for one or for multiple beams (though the latter may defeat the purpose)
 
-    integer, intent(in) :: n_beams
-    real, intent(in) :: in_beams(:,:)
+    integer, intent(in) :: n_beams, n_energies ! number of beams, number of energies in in_beams
+    real, intent(in) :: in_beams(n_energies, n_beams)
     real, intent(out), allocatable :: out_beams(:,:)
 
     real, intent(in) :: E_min_current, E_step
     real, intent(in) :: E_min_beams(:)
-    real, intent(in) :: E_min_cut, E_max_cut
+    integer, intent(in) :: NE_out_start, NE_out_stop
     integer, intent(in)  :: NE(:)
     integer, intent(out) :: new_NE
 
@@ -321,7 +346,7 @@ subroutine limit_range(in_beams, n_beams, E_min_beams, E_min_current, E_step, NE
     to_new_min = int((E_min_cut-E_min_current)/E_step)
 
     ! allocate out_beams to right size
-    allocate(out_beams(n_beams, steps))
+    allocate(out_beams(steps, n_beams))
     out_beams = in_beams(:,to_new_min : to_new_min + steps)
 
     ! Determine new boundary indices E_min& NE:
