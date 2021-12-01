@@ -1,0 +1,61 @@
+!    -*- f90 -*-
+! Note: the context of this file is case sensitive.
+
+python module smoothing ! in 
+    interface  ! in :smoothing
+        module smoothing ! in :smoothing:MS_smoothing.f90
+            real, parameter,optional :: pi=3.141592653589793
+            integer, parameter,optional :: max_coeffs_rows=4
+            integer, parameter,optional :: max_degree=10
+            real(kind=8), parameter,optional,dimension(3,1) :: correction_data_ms_6=reshape((/0.001717576, 0.02437382, 1.64375/),(/3,1/))
+            real(kind=8), parameter,optional,dimension(3,2) :: correction_data_ms_8=reshape((/0.0043993373, 0.088211164, 2.359375,0.006146815, 0.024715371, 3.6359375/),(/3,2/))
+            real(kind=8), parameter,optional,dimension(3,2) :: correction_data_ms_10=reshape((/0.0011840032, 0.04219344, 2.746875,0.0036718843, 0.12780383, 2.7703125/),(/3,2/))
+            real(kind=8), parameter,optional,dimension(3,1) :: correction_data_ms1_4=reshape((/0.021944195, 0.050284006, 0.765625/),(/3,1/))
+            real(kind=8), parameter,optional,dimension(3,2) :: correction_data_ms1_6=reshape((/0.0018977303, 0.008476806, 1.2625,0.023064667, 0.13047926, 1.2265625/),(/3,2/))
+            real(kind=8), parameter,optional,dimension(3,3) :: correction_data_ms1_8=reshape((/0.0065903002, 0.057929456, 1.915625,0.0023234477, 0.010298849, 2.2726562,0.021046653, 0.16646601, 1.98125/),(/3,3/))
+            real(kind=8), parameter,optional,dimension(3,4) :: correction_data_ms1_10=reshape((/9.749618e-4, 0.0020742896, 3.74375,0.008975366, 0.09902466, 2.7078125,0.0024195414, 0.010064855, 3.296875,0.019185117, 0.18953617, 2.784961/),(/3,4/))
+            subroutine ms_smoother(data,isms1,degree,m,out_data) ! in :smoothing:MS_smoothing.f90:smoothing
+                real(kind=8) dimension(:),intent(in) :: data
+                integer intent(in) :: isms1
+                integer intent(in) :: degree
+                integer intent(in) :: m
+                real(kind=8) dimension(size(data)),intent(out),depend(data) :: out_data
+            end subroutine ms_smoother
+            function make_kernel(isms1,degree,m,coeffs,ncoeffs) result (kernel) ! in :smoothing:MS_smoothing.f90:smoothing
+                integer intent(in) :: isms1
+                integer intent(in) :: degree
+                integer intent(in) :: m
+                real(kind=8) dimension(ncoeffs),intent(in) :: coeffs
+                integer, optional,intent(in),check(len(coeffs)>=ncoeffs),depend(coeffs) :: ncoeffs=len(coeffs)
+                real(kind=8) dimension(m + 1) :: kernel
+            end function make_kernel
+            subroutine get_coefficients(isms1,degree,m,ncoeffs,coeffs) ! in :smoothing:MS_smoothing.f90:smoothing
+                integer intent(in) :: isms1
+                integer intent(in) :: degree
+                integer intent(in) :: m
+                integer intent(out) :: ncoeffs
+                real(kind=8) dimension(12),intent(out) :: coeffs
+            end subroutine get_coefficients
+            function extend_data(data,fit_weights,m) result (extended) ! in :smoothing:MS_smoothing.f90:smoothing
+                real(kind=8) dimension(:),intent(in) :: data
+                real(kind=8) dimension(:),intent(in) :: fit_weights
+                integer intent(in) :: m
+                real(kind=8), allocatable,dimension(:) :: extended
+            end function extend_data
+            function smooth_except_boundaries(data,kernel) result (smoothed_data) ! in :smoothing:MS_smoothing.f90:smoothing
+                real(kind=8) dimension(:),intent(in) :: data
+                real(kind=8) dimension(:),intent(in) :: kernel
+                real(kind=8) dimension(size(data)) :: smoothed_data
+            end function smooth_except_boundaries
+            function linear_regression_weighted(x,y,weights) result (d_k) ! in :smoothing:MS_smoothing.f90:smoothing
+                real(kind=8) dimension(:),intent(in) :: x
+                real(kind=8) dimension(:),intent(in) :: y
+                real(kind=8) dimension(:),intent(in) :: weights
+                real(kind=8) dimension(2) :: d_k
+            end function linear_regression_weighted
+        end module smoothing
+    end interface 
+end python module smoothing
+
+! This file was auto-generated with f2py (version:2).
+! See http://cens.ioc.ee/projects/f2py2e/
