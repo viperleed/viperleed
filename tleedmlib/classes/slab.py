@@ -1457,6 +1457,11 @@ class Slab:
         bulk layers is deleted. Returns that bulk slab."""
         # construct bulk slab
         bsl = copy.deepcopy(self)
+        # ensure atoms in bsl are correctly as duplicates of original slab – used in psgen
+        for slat in self.atlist:
+            for bslat in bsl.atlist:
+                if (np.linalg.norm(slat.pos - bslat.pos) < 10e-6):
+                    bslat.duplicateOf = slat
         bsl.resetSymmetry()
         bsl.atlist = [at for at in bsl.atlist if at.layer.isBulk]
         bsl.layers = [lay for lay in bsl.layers if lay.isBulk]
