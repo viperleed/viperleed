@@ -547,8 +547,8 @@ def refcalc(sl, rp, subdomain=False, parent_dir=""):
             small_intensities.append(b.label)
         if small_intensities:
             logger.warning(
-                "The following beams only contain very small intensities."
-                " This may indicate that the beams do not exist for this "
+                "Some calculated beams only contain very small intensities. "
+                "This may indicate that the beams do not exist for this "
                 "structure. Consider removing them from IVBEAMS: "
                 + ", ".join(small_intensities))
     try:
