@@ -9,6 +9,8 @@ properties. Includes functions for manipulation of those properties.
 """
 
 import logging
+
+import matplotlib
 import numpy as np
 import copy
 import re
@@ -1687,3 +1689,110 @@ class Slab:
             NN_dict[atom] = dists[1] # element 0 is distance to atom itself (< 1e-15)
 
         return NN_dict
+
+def bulk_slab_get_touching_atom_radii(bulk):
+    atlist = bulk.atlist
+    n_at = len(atlist)
+
+    # get initial guesses for atom radii:
+    r = np.zeros([n_at])
+    for i in range(n_at):
+        at = atlist[i]
+        at.make_initial_guess_touching_radius()
+        r[i] = at.radius_initial_guess
+
+
+    #plot_radii_3D(radii)
+    # Check if atoms overlap:
+    overlapping_atoms = set([])
+    threshhold = 10e-6
+
+    for i in range(0, len(atlist)):
+        for j in range(i, len(atlist)):
+            if i == j:
+                print("Wrong combo")
+                continue
+            if (np.linalg.norm(atlist[i].pos - atlist[j].pos) < threshhold):
+                overlapping_atoms.add(i)
+                overlapping_atoms.add(j)
+
+    while len(overlapping_atoms) > 0:
+        for id in overlapping_atoms:
+            radii[id] *= 0.9 # decrease by 10 percent
+        still_overlapping_atoms = set([])
+        for i in range(len(overlapping_atoms)-1):
+            for j in range(len(overlapping_atoms)):
+                if i == j:
+                    print("Wrong combo 2")
+                    continue
+                if (np.linalg.norm(atlist[i].pos - atlist[j].pos) < threshhold):
+                    still_overlapping_atoms.add(i)
+                    still_overlapping_atoms.add(j)
+        overlapping_atoms = still_overlapping_atoms
+        continue
+
+    # Now increase size of atom radii until they touch
+
+    # locations
+    x = np.zeros([n_at, 3])
+    for i in range(n_at):
+        x[i,:] = atlist[i].cartpos
+    # scaling factors vector
+    f = np.ones([n_at])
+    # distance matrix
+    D = np.zeros([n_at, n_at])
+    # sum of scaled radii matrix
+    R = np.zeros([n_at, n_at])
+    # separation matrix S = D-R
+    S = np.zeros([n_at, n_at])
+    min_dist = 10.e8
+
+    # only care about upper triangular part of matrix, excluding diagonal
+    for i in range(0,n_at):
+        for j in range(i+1, n_at):
+
+            for i1 in [-1,0,1]:
+                for i2 in [-1,0,1]:
+                    for i3 in [-1,0,1]:
+                        cartpos = atlist[j].cartpos
+                        cartpos = cartpos + i1*bulk.ucell[0] + i2*bulk.ucell[1] + i3*bulk.ucell[2]
+                        dist = np.linalg.norm(x[i,:] - cartpos)
+                        if (dist < min_dist):
+                            min_dist = dist
+            D[i,j] = min_dist
+            R[i,j] = r[i] + r[j]
+            S[i,j] = D[i,j] - R[i,j]
+
+    min = 10e8
+    for i in range(0,n_at):
+        for j in range(i+1, n_at):
+            s = S[i,j]/R[i,j]
+            if (s<min):
+                min = s
+    f[:] = s
+
+    # element wise multiplication
+    r = f*r
+
+
+
+
+def radii_overlap(radii, at1, at2, threshhold = 10e-6):
+
+        return
+
+def plot_radii_3D(radii):
+    import matplotlib.pyplot as plt
+    from mpl_toolkits import mplot3d
+    fig = plt.figure()
+    ax = plt.axes(projection="3d")
+    for atom in radii.keys():
+        radius = radii[atom]
+        u, v = np.mgrid[0:2*np.pi:20j, 0:np.pi:10j]
+        x = atom.cartpos[0] + radius*np.cos(u)*np.sin(v)
+        y = atom.cartpos[1] + radius*np.sin(u)*np.sin(v)
+        z = atom.cartpos[2] + radius*np.cos(v)
+        ax.plot_wireframe(x, y, z)
+    plt.savefig("radii.png")
+    matplotlib.use("MacOSX")
+    plt.show()
