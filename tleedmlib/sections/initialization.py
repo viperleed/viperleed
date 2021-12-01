@@ -781,3 +781,20 @@ def make_compile_logs_dir(rp, init_logger, path=""):
         logger.warning("Could not create directory {}".format(folder_name))
         rp.setHaltingLevel(1)
     return
+
+
+def quick_PS_output_multicol_hartree(rp, basename):
+    ps_data = rp.phaseshifts
+    nr_sites = len(ps_data[0][1])
+    for j_site in range(nr_sites):
+        filename = "PS_" + basename + "_" + str(j_site+1)
+        with open(filename, "w") as file:
+            for i_en in range(len(ps_data)):
+                energy_hartree = ps_data[i_en][0]
+                ps_string = ['{:.4f}'.format(ps_data[i_en][1][j_site][i]) for i in range(17)]
+                ps_string.insert(0, '{:.4f}'.format(energy_hartree))
+                ps_line = '\t\t'.join(ps_string)
+                ps_line += "\n"
+                file.write(ps_line)
+
+    return
