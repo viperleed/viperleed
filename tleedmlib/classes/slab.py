@@ -1769,14 +1769,8 @@ def bulk_slab_get_touching_atom_radii(bulk):
 
     r_MT = f*r
 
-    return r, r_MT, x, D, R, S
+    return r_MT
 
-
-
-
-def radii_overlap(radii, at1, at2, threshhold = 10e-6):
-
-        return
 
 def plot_radii_3D(atlist, r):
     import matplotlib
