@@ -300,7 +300,7 @@ subroutine prepare_beams( intesity, n_beams, NE_in, E_min, E_step, NE_beams , av
 end subroutine prepare_beams
 
 subroutine limit_range_Energy(in_beams, n_beams, n_energies, E_min_current, E_step, beam_starts, NE_beams, &
-                       E_min_cut, E_max_cut, out_beams, new_NE))
+                       E_min_cut, E_max_cut, out_beams, new_NE)
 
     integer, intent(in) :: n_beams, n_energies ! number of beams, number of energies in in_beams
     real, intent(in) :: in_beams(n_energies, n_beams)
@@ -311,12 +311,23 @@ subroutine limit_range_Energy(in_beams, n_beams, n_energies, E_min_current, E_st
     real, intent(in) :: E_min_cut, E_max_cut
     integer, intent(in)  :: NE(:)
     integer, intent(out) :: new_NE
-    steps = int((E_max_cut-E_min_cut)/E_step) ! typecast to integer; will cut off float...
+
+    ! Internal
+    integer :: steps, start_NE, stop_NE
+
+
+    steps = floor((E_max_cut-E_min_cut)/E_step) ! typecast to integer; will cut off float...
+
+    start_NE = (E_min_cut - E_min_current)/E_step
+    stop_NE = start_NE + steps
+
+    call limit_range_index(in_beams, n_beams, n_energies, E_min_current, E_step, beam_starts, NE_beams, &
+                           start_NE, stop_NE, out_beams, new_NE, new_NE_beams, new_start_id)
 
 end subroutine limit_range_Energy
 
 subroutine limit_range_index(in_beams, n_beams, n_energies, E_min_current, E_step, beam_starts, NE_beams, &
-                       NE_out_start, NE_out_stop, out_beams, new_NE)
+                       NE_out_start, NE_out_stop, out_beams, new_NE, new_NE_beams, new_start_id)
     !Limit_range:
     !INPUT: E_min, E_max, array[I, E_min, E_step, NE]
     !RETURNS: Beam cut to only within [E_min, E_max]
@@ -340,23 +351,22 @@ subroutine limit_range_index(in_beams, n_beams, n_energies, E_min_current, E_ste
     integer steps, to_new_min, i
     real new_max, new_min
 
-    steps = int((E_max_cut-E_min_cut)/E_step) ! typecast to integer; will cut off float...
-    ! Obviously max needs to be larger than min
-    ! steps from current to new E_min = int((E_min_cut-E_min_current)/E_step):
-    to_new_min = int((E_min_cut-E_min_current)/E_step)
+    new_NE = NE_out_stop-NE_out_start+1
+    
 
     ! allocate out_beams to right size
-    allocate(out_beams(steps, n_beams))
-    out_beams = in_beams(:,to_new_min : to_new_min + steps)
+    allocate(out_beams(new_NE, n_beams))
+    out_beams = in_beams(NE_out_start : NE_out_stop, :)
 
     ! Determine new boundary indices E_min& NE:
     do i=0, n_beams
-        new_max = min(E_max_cut, Emin(i)+NE(i)*E_step)
+        new_max = min(E_max_cut, Emin(i)+NE_beams(i)*E_step)
         new_min = max(E_min(i), E_min_cut)
-        new_NE(i) = int((new_max-new_min)/E_step)
+        new_start_id(i) = max(beams_start - NE_out_start, 1)
+        new_NE_beams(i) = nint((new_max-new_min)/E_step)
     end do
 
-end subroutine limit_range
+end subroutine limit_range_index
 
 
     ! Library functions
