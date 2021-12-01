@@ -273,7 +273,7 @@ def initialization(sl, rp, subdomain=False):
     if bsl.planegroup == "unknown":
         # find minimum in-plane unit cell for bulk:
         logger.info("Checking bulk unit cell...")
-        changecell, mincell = bsl.getMinUnitCell(rp)
+        changecell, mincell = bsl.getMinUnitCell(rp, warn_convention=True)
         if changecell:
             sl.changeBulkCell(rp, mincell)
             bsl = sl.bulkslab
