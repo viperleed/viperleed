@@ -611,8 +611,8 @@ class PS_props:
     def get_id(self):
         return self.index
 
-    def set_MT_radii(self, radii):
-        self.MT_radii = radii
+    def set_MT_radius(self, radius):
+        self.MT_radius = radius
         return
 
     def get_MT_radii(self):
