@@ -541,12 +541,16 @@ def refcalc(sl, rp, subdomain=False, parent_dir=""):
         rp.setHaltingLevel(2)
     # check for beams with very low values
     if not subdomain:
+        small_intensities = []
         for b in [b for b in rp.theobeams["refcalc"]
                   if max(b.intens.values()) < 1e-10]:
+            small_intensities.append(b.label)
+        if small_intensities:
             logger.warning(
-                "Beam {} only contains very small intensities. This may "
-                "indicate that the beam does not exist for this structure. "
-                "Consider removing it from IVBEAMS.".format(b.label))
+                "The following beams only contain very small intensities."
+                " This may indicate that the beams do not exist for this "
+                "structure. Consider removing them from IVBEAMS: "
+                + ", ".join(small_intensities))
     try:
         beams.writeOUTBEAMS(rp.theobeams["refcalc"], filename="THEOBEAMS.csv")
         theobeams_norm = copy.deepcopy(rp.theobeams["refcalc"])

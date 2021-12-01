@@ -142,6 +142,8 @@ def sortIVBEAMS(sl, rp):
             if len(fl) == 2:
                 blfs.append(fl)
     # now figure out if there are beams in IVBEAMS without a partner
+    not_found = []
+    found_equivalent = []
     for (ind, ib) in enumerate(rp.ivbeams):
         found = any([ib.isEqual_hk(lb, eps=err) for lb in blfs])
         if found:
@@ -156,10 +158,7 @@ def sortIVBEAMS(sl, rp):
                     # rename the beam
                     if any([ib2.isEqual_hk(eqb, eps=err)
                             for ib2 in rp.ivbeams]):
-                        logger.debug(
-                            "Beam " + ib.label + " is not in "
-                            "BEAMLIST, but an equivalent beam already is. "
-                            "Beam will be dropped.")
+                        found_equivalent.append(ib.label)
                     else:
                         b = tl.Beam(eqb)
                         logger.debug(
@@ -172,9 +171,16 @@ def sortIVBEAMS(sl, rp):
             if found:
                 break
         if not found:
-            logger.warning(
-                'IVBEAMS contains beam ' + ib.label + ', which '
-                'was not found in the BEAMLIST file. Beam will be dropped.')
+            not_found.append(ib.label)
+    if found_equivalent:
+        logger.debug(
+            "The following beams from IVBEAMS will be dropped because they "
+            "are not in BEAMLIST, but equivalent beams already are: "
+            + ", ".join(found_equivalent))
+    if not_found:
+        logger.warning(
+            "The following beams from IVBEAMS are not in BEAMLIST and will be "
+            "dropped: " + ", ".join(not_found))
     # now sort
     ivsorted = []
     for lb in blfs:
@@ -262,9 +268,10 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=",", enrange=None):
                     (enrange[1] > 0 and min(b.intens) > enrange[1])):
                 # beam has no data in given interval; remove
                 remlist.append(b)
-                logger.warning("Experimental beam "+b.label+" contains no "
-                               "data in the given energy range. The beam "
-                               "will be ignored.")
+        if remlist:
+            logger.warning("The following beams contain no data in the given "
+                           "energy range and will be ignored: "
+                           + ", ".join([b.label for b in remlist]))
         for b in remlist:
             beams.remove(b)
     if enrange is None:
@@ -524,9 +531,10 @@ def writeAUXBEAMS(ivbeams=None, beamlist=None, beamsfile='IVBEAMS',
                     numlist.append(int(line.split('.')[-1]))
         else:
             blocks += 1
-    for beam in [b for b in ivbeams if b not in foundbeams]:
-        logger.warning('IVBEAMS contains beam ' + beam.label + ', which was '
-                       'not found in '+blstr)
+    not_found = [b.label for b in ivbeams if b not in foundbeams]
+    if not_found:
+        logger.warning('IVBEAMS contains beams that are not in ' + blstr + ": "
+                       + ", ".join(not_found))
     if write:
         if not writefile == 'AUXBEAMS':
             wfstr = 'AUXBEAMS file (filename '+writefile+')'
