@@ -14,6 +14,10 @@ import copy
 
 logger = logging.getLogger("tleedm.atom")
 
+# Constants for log fit - put here temporaritly and move later
+a = 0.119352
+b = 0.341868
+c = 0.657536
 
 class Atom:
     """To be used for Slab; each atom has an element and a position.
@@ -575,3 +579,76 @@ class Atom:
             if np.linalg.norm(p-pos) < eps:
                 return True
         return False
+
+    def make_initial_guess_touching_radius(self):
+        from viperleed.tleedmlib.leedbase import periodic_table
+        self.atom_number = periodic_table.index(self.el) + 1
+        self.radius_initial_guess = a + b*np.log(c*self.atom_number)
+        return
+
+class PS_props:
+    """
+    Attributes
+    ----------
+    location: str
+        Either "surf",  "trans" or "bulk". Determines how MT radius is calculated.
+    """
+    def __init__(self, atom: Atom, el_occ: str, location: str, bulk_layer: int, NN_dist: float, fxc = 1):
+
+        self.atom = atom
+        self.el_occ = el_occ
+        self.location = location
+        self.bulk_layer = bulk_layer
+        self.index = None
+        self.NN_dist = NN_dist
+        self.fxc = fxc
+        return
+
+    def set_id(self, index):
+        self.index = id
+        return
+
+    def get_id(self):
+        return self.index
+
+    def set_MT_radii(self, radii):
+        self.MT_radii = radii
+        return
+
+    def get_MT_radii(self):
+        return self.MT_radii
+
+    def get_atom_relpos(self):
+        return self.atom.pos
+
+    def get_atom_cartpos(self):
+        return self.atom.cartpos
+
+    def radii_bulk_atoms(self):
+        pass
+
+    def radii_trans_atoms(self):
+        pass
+
+    def radii_surf_atoms(self):
+        pass
+
+
+
+
+
+def log_func(x, a, b, c):
+    res = a + b*np.log(c*x)
+    return res
+
+def sqrt_func(x, a, b, c):
+    res = a + b*np.sqrt(c*x)
+    return res
+
+
+"""
+Stuff to calculate coefficients; take care of this later
+        noble_gases = ["He", "Ne", "Ar", "Kr", "Xe", "Rn"]
+        noble_gases_Z = [(periodic_table.index(ng) + 1) for ng in noble_gases]
+        noble_gases_cov_radii = [elementCovalentRadii[ng] for ng in noble_gases]
+"""
