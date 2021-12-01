@@ -240,22 +240,53 @@ subroutine Rfactor_v0ropt(opt_type, min_steps, max_steps, nr_used_v0)
 
 end subroutine Rfactor_v0ropt
 
-subroutine prepare_beams(n_beams, intesity, E_min, E_step, NE, E_grid_step, averaging_scheme, smoothing, E_min_cut, E_max_cut)
+subroutine prepare_beams(n_beams, intesity, E_min, E_step, NE, averaging_scheme, smoothing, E_min_intpol, NE_intpol, E_grid_step)
     !Prepare_beams:
     !INPUT: array[I, E_min, E_step, NE], E_grid_step, averaging_scheme, smoothing?, E_min, E_max
     !DOES: (0) Limit_range, (1) Average/discard/reorder according to scheme; (2) smooth?; (3) interpolate on grid; (4) compute Y on new grid
     !Probably call several functions... see existing PREEXP, similar!
     !RETURNS: array of Y
 
-    integer n_beams
-    real intensity(:,:)
-    real E_min(n_beams), E_step(n_beams), NE(n_beams)
-    real E_grid_step
-    integer averaging_scheme(n_beams)
-    integer smoothing
-    real E_min_cut, E_max_cut
+    !###############
+    !INPUTS
+    !###############
+    integer, intent(in) :: n_beams ! number of beams
+    real, intent(in) :: intensity(:,:) ! beam intensities
+    real, intent(in) :: E_min(n_beams), E_step(n_beams), NE(n_beams) ! minimum energies, energy steps and nr of steps
+    integer, intent(in) :: averaging_scheme(n_beams)
+    integer, intent(in) :: smoothing ! smooth or not?
+    real, intent(in) :: E_min_intpol, E_grid_step ! desired grid step after interpolation
+    integer, intent(in) :: NE_intpol ! number of steps (size E_grid_step) after interpolation
 
     ! Everything assumes, experimental beams are recorded on the same energy grid already. This should always be the case.
+
+    !###############
+    ! Limit range of beams
+    !###############
+    ! relies on below subroutine limit_beams
+
+    ! TODO: implement
+    
+    !###############
+    ! Smoothing
+    !###############
+    ! if smoothing set 0 (True) do smoothing
+
+    if (smoothing == 0) then
+        write(*,*) "Smoothing not yet implemented!" ! TODO: implement smoothing in prepare_beams
+    end if
+
+    !###############
+    ! Interpolation on new grid
+    !###############
+
+    ! TODO: implement
+
+    !###############
+    ! Y function calculation on new grid
+    !###############
+
+    ! TODO: implement
 
 
 end subroutine prepare_beams
