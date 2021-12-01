@@ -9,8 +9,6 @@ properties. Includes functions for manipulation of those properties.
 """
 
 import logging
-
-import matplotlib
 import numpy as np
 import copy
 import re
@@ -1707,10 +1705,9 @@ def bulk_slab_get_touching_atom_radii(bulk):
     overlapping_atoms = set([])
     threshhold = 10e-6
 
-    for i in range(0, len(atlist)):
-        for j in range(i, len(atlist)):
+    for i in range(0, n_at):
+        for j in range(i+1, n_at):
             if i == j:
-                print("Wrong combo")
                 continue
             if (np.linalg.norm(atlist[i].pos - atlist[j].pos) < threshhold):
                 overlapping_atoms.add(i)
@@ -1723,7 +1720,6 @@ def bulk_slab_get_touching_atom_radii(bulk):
         for i in range(len(overlapping_atoms)-1):
             for j in range(len(overlapping_atoms)):
                 if i == j:
-                    print("Wrong combo 2")
                     continue
                 if (np.linalg.norm(atlist[i].pos - atlist[j].pos) < threshhold):
                     still_overlapping_atoms.add(i)
@@ -1745,18 +1741,16 @@ def bulk_slab_get_touching_atom_radii(bulk):
     R = np.zeros([n_at, n_at])
     # separation matrix S = D-R
     S = np.zeros([n_at, n_at])
-    min_dist = 10.e8
 
     # only care about upper triangular part of matrix, excluding diagonal
     for i in range(0,n_at):
         for j in range(i+1, n_at):
-
+            min_dist = 10.e8
             for i1 in [-1,0,1]:
                 for i2 in [-1,0,1]:
                     for i3 in [-1,0,1]:
-                        cartpos = atlist[j].cartpos
-                        cartpos = cartpos + i1*bulk.ucell[0] + i2*bulk.ucell[1] + i3*bulk.ucell[2]
-                        dist = np.linalg.norm(x[i,:] - cartpos)
+                        j_cartpos = x[j,:] + i1*bulk.ucell[0] + i2*bulk.ucell[1] + i3*bulk.ucell[2]
+                        dist = np.linalg.norm(x[i,:] - j_cartpos)
                         if (dist < min_dist):
                             min_dist = dist
             D[i,j] = min_dist
@@ -1772,7 +1766,10 @@ def bulk_slab_get_touching_atom_radii(bulk):
     f[:] = s
 
     # element wise multiplication
-    r = f*r
+
+    r_MT = f*r
+
+    return r, r_MT, x, D, R, S
 
 
 
@@ -1781,13 +1778,15 @@ def radii_overlap(radii, at1, at2, threshhold = 10e-6):
 
         return
 
-def plot_radii_3D(radii):
+def plot_radii_3D(atlist, r):
+    import matplotlib
     import matplotlib.pyplot as plt
     from mpl_toolkits import mplot3d
     fig = plt.figure()
     ax = plt.axes(projection="3d")
-    for atom in radii.keys():
-        radius = radii[atom]
+    for id in range(len(atlist)):
+        atom = atlist[id]
+        radius = r[id]
         u, v = np.mgrid[0:2*np.pi:20j, 0:np.pi:10j]
         x = atom.cartpos[0] + radius*np.cos(u)*np.sin(v)
         y = atom.cartpos[1] + radius*np.sin(u)*np.sin(v)
