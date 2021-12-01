@@ -1131,7 +1131,16 @@ class Slab:
                 mincell = abs(mincell)
             # by convention, make the shorter vector the first one
             if np.linalg.norm(mincell[0]) > np.linalg.norm(mincell[1]) + eps:
-                mincell = np.dot(np.array([[0, 1], [-1, 0]]), mincell)
+                if abs(mincell[1, 0]) < eps and abs(mincell[0, 1]) < eps:
+                    # if matrix is diagonal, DO NOT make it off-diagonal
+                    logger.warning(
+                        "The unit cell orientation does not follow standard "
+                        "convention: to keep SUPERLATTICE matrix diagonal, "
+                        "the first bulk vector must be larger than the "
+                        "second. Consider rotating the unit cell by 90 "
+                        "degrees.")
+                else:
+                    mincell = np.dot(np.array([[0, 1], [-1, 0]]), mincell)
             # finally, make sure it's right-handed
             if angle(mincell[0], mincell[1]) < 0:
                 mincell = np.dot(np.array([[1, 0], [0, -1]]), mincell)
