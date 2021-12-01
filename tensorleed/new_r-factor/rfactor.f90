@@ -12,7 +12,7 @@ module r_factor_new
     contains
 
 
-! f2py -m rfactor rfactor.f90 -h rfactor.pyf --overwrite-signature -debug-capi
+! f2py -m rfactor rfactor.f90 -h rfactor.pyf --overwrite-signature --debug-capi
 ! f2py -c rfactor.pyf rfactor.f90
 
 subroutine r_factor_beam(y1, size_y1, y2, size_y2, E_start1, E_start2, E_step, V0r_shift, R_pendry, &
@@ -260,7 +260,7 @@ subroutine prepare_beams(n_beams, intesity, E_min, E_step, NE, E_grid_step, aver
 
 end subroutine prepare_beams
 
-subroutine limit_range()
+subroutine limit_range(in_beams, n_beams, E_min_beams, E_min_current, E_step, NE, E_min_cut, E_max_cut, out_beams, new_NE)
     !Limit_range:
     !INPUT: E_min, E_max, array[I, E_min, E_step, NE]
     !RETURNS: Beam cut to only within [E_min, E_max]
@@ -294,7 +294,7 @@ subroutine limit_range()
     out_beams = in_beams(:,to_new_min : to_new_min + steps)
 
     ! Determine new boundary indices E_min& NE:
-    do i=0, n_beams:
+    do i=0, n_beams
         new_max = min(E_max_cut, Emin(i)+NE(i)*E_step)
         new_min = max(E_min(i), E_min_cut)
         new_NE(i) = int((new_max-new_min)/E_step)
@@ -303,8 +303,7 @@ subroutine limit_range()
 end subroutine limit_range
 
 
-
-! Library functions
+    ! Library functions
 
 subroutine derivative(data_in, dx, deriv, n_data)
 !   subroutine derivative computes the first derivative of the data array given
