@@ -1138,8 +1138,8 @@ class Slab:
                             "The unit cell orientation does not follow "
                             "standard convention: to keep SUPERLATTICE matrix "
                             "diagonal, the first bulk vector must be larger "
-                            "than the second. Consider rotating the unit cell "
-                            "by 90 degrees.")
+                            "than the second. Consider swapping the unit cell "
+                            "vectors.")
                 else:
                     mincell = np.dot(np.array([[0, 1], [-1, 0]]), mincell)
             # finally, make sure it's right-handed
