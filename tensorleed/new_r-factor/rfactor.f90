@@ -185,7 +185,7 @@ subroutine Rfactor_beamtypes(y1, sizes_y1, y2, sizes_y2, E_start1, E_start2, nr_
         do beam = 1, nr_beams
             if (beamtypes(beam)==group) then
                 call r_factor_beam(y1(beam,:), sizes_y1(beam), y2(beam,:), sizes_y2(beam), E_start1(beam), &
-                        E_start2(beam), E_step, V0rshift, tmp_pendry, tmp_num, tmp_denom, tmp_points(beam))
+                        E_start2(beam), E_step, V0rshift, tmp_pendry, tmp_num(beam), tmp_denom(beam), tmp_points(beam))
             end if
         end do
         points_group = sum(tmp_points)
@@ -240,7 +240,8 @@ subroutine Rfactor_v0ropt(opt_type, min_steps, max_steps, nr_used_v0)
 
 end subroutine Rfactor_v0ropt
 
-subroutine prepare_beams( intesity, n_beams, NE_in, E_min, E_step, NE_beams , averaging_scheme, smoothing, NE_after, E_min_after, E_step_after)
+subroutine prepare_beams(intensity, n_beams, NE_in, E_min, E_step, NE_beams , averaging_scheme, smoothing,&
+                         NE_after, E_min_after, E_step_after)
     !Prepare_beams:
     !INPUT: array[I, E_min, E_step, NE], E_grid_step, averaging_scheme, smoothing?, E_min, E_max
     !DOES: (0) Limit_range, (1) Average/discard/reorder according to scheme; (2) smooth?; (3) interpolate on grid; (4) compute Y on new grid
@@ -252,7 +253,7 @@ subroutine prepare_beams( intesity, n_beams, NE_in, E_min, E_step, NE_beams , av
     !###############
     integer, intent(in) :: n_beams, NE_in ! number of beams, number of passed energies
     real, intent(in) :: intensity(NE_in,n_beams) ! beam intensities
-    real, intent(in) :: E_min(n_beams), E_step(n_beams), NE(n_beams) ! minimum energies, nr of steps
+    real, intent(in) :: E_min(n_beams), E_step(n_beams), NE_beams(n_beams) ! minimum energies, nr of steps
     integer, intent(in) :: averaging_scheme(n_beams)
     integer, intent(in) :: smoothing ! smooth or not?
     integer, intent(in) :: NE_after ! number of steps (size E_grid_step) after interpolation
@@ -299,32 +300,26 @@ subroutine prepare_beams( intesity, n_beams, NE_in, E_min, E_step, NE_beams , av
 
 end subroutine prepare_beams
 
-subroutine limit_range_Energy(in_beams, n_beams, n_energies, E_min_current, E_step, beam_starts, NE_beams, &
-                       E_min_cut, E_max_cut, out_beams, new_NE)
 
-    integer, intent(in) :: n_beams, n_energies ! number of beams, number of energies in in_beams
-    real, intent(in) :: in_beams(n_energies, n_beams)
-    real, intent(out), allocatable :: out_beams(:,:)
+subroutine range_index_from_Energy(E_min_current, NE_in, E_step, E_min_cut, E_max_cut, new_start_stop_step)
+    integer, intent(in) :: NE_in
+    real, intent(in) :: E_min_current, E_min_cut, E_max_cut, E_step
 
-    real, intent(in) :: E_min_current, E_step
-    real, intent(in) :: E_min_beams(:)
-    real, intent(in) :: E_min_cut, E_max_cut
-    integer, intent(in)  :: NE(:)
-    integer, intent(out) :: new_NE
+    integer , intent(out) :: new_start_stop_step(3)
 
-    ! Internal
-    integer :: steps, start_NE, stop_NE
+    real :: old_max, new_max, new_min
 
+    old_max = E_min_current + E_step*NE_in
+    new_max = min(E_max_cut, old_max)
+    new_min = max(E_min_current, E_min_cut)
 
-    steps = floor((E_max_cut-E_min_cut)/E_step) ! typecast to integer; will cut off float...
+    new_start_stop_step(3) = floor((E_max_cut-E_min_cut)/E_step) ! typecast to integer; will cut off float...
 
-    start_NE = (E_min_cut - E_min_current)/E_step
-    stop_NE = start_NE + steps
-
-    call limit_range_index(in_beams, n_beams, n_energies, E_min_current, E_step, beam_starts, NE_beams, &
-                           start_NE, stop_NE, out_beams, new_NE, new_NE_beams, new_start_id)
-
-end subroutine limit_range_Energy
+    new_start_stop_step(1) = (E_min_cut - E_min_current)/E_step
+    new_start_stop_step(2) = start_NE + steps
+    return
+end subroutine range_index_from_Energy
+    
 
 subroutine limit_range_index(in_beams, n_beams, n_energies, E_min_current, E_step, beam_starts, NE_beams, &
                        NE_out_start, NE_out_stop, out_beams, new_NE, new_NE_beams, new_start_id)
@@ -338,32 +333,30 @@ subroutine limit_range_index(in_beams, n_beams, n_energies, E_min_current, E_ste
 
     integer, intent(in) :: n_beams, n_energies ! number of beams, number of energies in in_beams
     real, intent(in) :: in_beams(n_energies, n_beams)
-    real, intent(out), allocatable :: out_beams(:,:)
+    real, intent(out) :: out_beams(NE_out_stop-NE_out_start+1, n_beams)
 
     real, intent(in) :: E_min_current, E_step
-    real, intent(in) :: E_min_beams(:)
     integer, intent(in) :: NE_out_start, NE_out_stop
-    integer, intent(in)  :: NE(:)
-    integer, intent(out) :: new_NE
+    integer, intent(in)  :: beam_starts(n_beams), NE_beams(n_beams)
+    integer, intent(out) :: new_NE, new_NE_beams(n_beams)
 
 
     ! Internal
-    integer steps, to_new_min, i
-    real new_max, new_min
+    integer steps, to_new_min, i, new_end_id(n_beams)
+    real new_max, new_min, new_start_id(n_beams)
 
     new_NE = NE_out_stop-NE_out_start+1
     
 
     ! allocate out_beams to right size
-    allocate(out_beams(new_NE, n_beams))
+    !allocate(out_beams(new_NE, n_beams))
     out_beams = in_beams(NE_out_start : NE_out_stop, :)
 
     ! Determine new boundary indices E_min& NE:
     do i=0, n_beams
-        new_max = min(E_max_cut, Emin(i)+NE_beams(i)*E_step)
-        new_min = max(E_min(i), E_min_cut)
-        new_start_id(i) = max(beams_start - NE_out_start, 1)
-        new_NE_beams(i) = nint((new_max-new_min)/E_step)
+        new_start_id(i) = max(beam_starts(i) - NE_out_start, 1)
+        new_end_id(i) = min(beam_starts(i) + NE_beams(i)-NE_out_start, NE_out_stop)
+        new_NE_beams(i) = new_end_id(i) - new_start_id(i) +1
     end do
 
 end subroutine limit_range_index
