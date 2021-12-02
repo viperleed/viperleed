@@ -74,10 +74,15 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
     # after all post-processing steps have been performed.
     image_processed = qtc.pyqtSignal(np.ndarray)
 
-    # started/stopped are emitted whenever the camera is started/stopped.
-    # When started, self.mode can be used to deduce the camera mode.
+    # started/stopped are emitted whenever the camera is
+    # started/stopped. When started, self.mode can be used
+    # to deduce the camera mode.
     started = qtc.pyqtSignal()
     stopped = qtc.pyqtSignal()
+
+    # preparing is emitted every time a camera begins (True)
+    # or finishes (False) any pre-acquisition tasks.
+    preparing = qtc.pyqtSignal(bool)
 
     # __process_frame is a private signal used to pass frames to
     # the processing thread
@@ -596,6 +601,8 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         -------
         None.
         """
+        self.busy = True
+        self.preparing.emit(self.busy)
         setters = dict.fromkeys((*self._abstract,
                                  *self.hardware_supported_features,
                                  'binning', 'n_frames', 'roi'))
@@ -603,6 +610,8 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
             setter = getattr(self, f"set_{key}")
             setter()
         self.check_loaded_settings()
+        self.busy = False
+        self.preparing.emit(self.busy)
 
     @abstractmethod
     def open(self):

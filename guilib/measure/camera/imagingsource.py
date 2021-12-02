@@ -83,6 +83,8 @@ def on_frame_ready(__grabber_handle, image_start_pixel,
             camera.driver.stop_delivering_frames()
             camera.is_finding_best_frame_rate = False
             camera.busy = False
+            # TODO: report that frames were lost, i.e., exposure
+            # time can be made longer.
         return
 
     # This may happen if the camera was set to 'triggered' and it
@@ -113,8 +115,8 @@ def on_frame_ready(__grabber_handle, image_start_pixel,
         raise ValueError(f"Cannot work with images having {n_bytes} bytes "
                          "per color channel")
 
-    # (3) Make pointer to the whole array, such that the size is known
-    #     to numpy later on.
+    # (3) Make a pointer to the whole array, such
+    #     that the size is known to numpy later on.
     buff_size = width * height * n_colors * n_bytes * 8
     img_ptr = POINTER(c_ubyte * buff_size)
 
@@ -549,6 +551,7 @@ class ImagingSourceCamera(CameraABC):
         self.is_finding_best_frame_rate = True
         self.process_info.clear_times()
 
+        self.preparing.emit(True)
         self.busy = True
 
         # Begin delivering frames at maximum speed.
@@ -630,6 +633,7 @@ class ImagingSourceCamera(CameraABC):
         self.process_info.clear_times()
         mode = self.mode if self.mode == 'triggered' else 'continuous'
         self.driver.start(mode)
+        self.preparing.emit(False)
 
     def stop(self):
         """Stop the camera."""
