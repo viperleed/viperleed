@@ -40,7 +40,8 @@ def _report_progress(func):
 
     def _wrapper(self, *args, **kwargs):
         """Wrap decorated function."""
-        _, what, *_ = func.__name__.replace('__', '').split('_')
+        # Names are of the form "find_WHAT_other_stuff"
+        _, what, *_ = func.__name__.split('_')
         section = _FinderSection.from_short_name(what)
         tasks = section.n_tasks
         self.progress_occurred.emit(section.long_name, section.value,
@@ -203,6 +204,8 @@ class BadPixelsFinder(qtc.QObject):
         self.__info.setText(
             f"Frames will be acquired from {name} camera."
             )
+        
+        self.__calc_thread = _BadPixCalculationThread(self)
 
     @property
     def short_exposure(self):
@@ -367,7 +370,7 @@ class BadPixelsFinder(qtc.QObject):
                                     section.n_tasks + self.__adjustments)
 
     @_report_progress
-    def __find_bad_and_replacements(self):
+    def find_bad_and_replacements(self):
         """Find bad pixels and their optimal replacements.
 
         The best replacements are chosen among opposing
@@ -451,7 +454,7 @@ class BadPixelsFinder(qtc.QObject):
             )
 
     @_report_progress
-    def __find_dead_pixels(self):
+    def find_dead_pixels(self):
         """Detect dead pixels from flat frame.
 
         Dead pixels are those whose intensity is much smaller
@@ -508,7 +511,7 @@ class BadPixelsFinder(qtc.QObject):
         self.__badness += delta_badness
 
     @_report_progress
-    def __find_flickery_pixels(self):
+    def find_flickery_pixels(self):
         """Prepare badness based on how flickery pixels are.
 
         Badness will be set according to how much each pixel
@@ -535,7 +538,7 @@ class BadPixelsFinder(qtc.QObject):
                           + short_flicker / short_flicker.mean() - 1)
 
     @_report_progress
-    def __find_hot_pixels(self):
+    def find_hot_pixels(self):
         """Set badness of hot pixels to infinity."""
         pix_min, pix_max = self.__camera.intensity_limits
         intensity_range = pix_max - pix_min
@@ -579,7 +582,7 @@ class BadPixelsFinder(qtc.QObject):
         if self.__original['was_visible']:
             self.__viewer.show()
 
-    def __save_and_cleanup(self):
+    def save_and_cleanup(self):
         """Save a bad pixels file and finish."""
         bp_path = self.__camera.settings.get("camera_settings",
                                              "bad_pixels_path",
@@ -606,16 +609,27 @@ class BadPixelsFinder(qtc.QObject):
         next_idx = sections.index(self.__current_section) + 1
         if next_idx >= len(sections):
             # Done with all sections. Can proceed to calculations.
-            self.__find_flickery_pixels()
-            self.__find_hot_pixels()
-            self.__find_dead_pixels()
-            self.__find_bad_and_replacements()
-            self.__save_and_cleanup()
+            # Do it in a separate threat to keep the UI responsive.
+            self.__calc_thread.start()
         else:
             self.__current_section = sections[next_idx]
             self.__frames_done = 0
             self.__adjustments = 0
             self.begin_acquiring()
+
+
+class _BadPixCalculationThread(qtc.QThread):
+
+    def __init__(self, finder, parent=None):
+        super().__init__(parent=parent)
+        self.__finder = finder
+
+    def run(self):
+        self.__finder.find_flickery_pixels()
+        self.__finder.find_hot_pixels()
+        self.__finder.find_dead_pixels()
+        self.__finder.find_bad_and_replacements()
+        self.__finder.save_and_cleanup()
 
 
 class BadPixels:
