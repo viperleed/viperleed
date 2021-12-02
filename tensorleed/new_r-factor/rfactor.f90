@@ -240,7 +240,8 @@ subroutine Rfactor_v0ropt(opt_type, min_steps, max_steps, nr_used_v0)
 
 end subroutine Rfactor_v0ropt
 
-subroutine prepare_beams(intensity, n_beams, NE_in, E_min, E_step, NE_beams , averaging_scheme, smoothing,&
+subroutine prepare_beams(intensity, n_beams, NE_in, E_min_global, E_min, E_step, NE_beams, &
+                         skip_stages, averaging_scheme, n_averaging_types, &
                          NE_after, E_min_after, E_step_after)
     !Prepare_beams:
     !INPUT: array[I, E_min, E_step, NE], E_grid_step, averaging_scheme, smoothing?, E_min, E_max
@@ -252,7 +253,8 @@ subroutine prepare_beams(intensity, n_beams, NE_in, E_min, E_step, NE_beams , av
     !INPUTS
     !###############
     integer, intent(in) :: n_beams, NE_in ! number of beams, number of passed energies
-    real, intent(in) :: intensity(NE_in,n_beams) ! beam intensities
+    integer, intent(in) :: stages(5) ! which stages to execute
+    real, intent(in) :: intensity(NE_in,n_beams), E_min_global ! beam intensities
     real, intent(in) :: E_min(n_beams), E_step(n_beams), NE_beams(n_beams) ! minimum energies, nr of steps
     integer, intent(in) :: averaging_scheme(n_beams)
     integer, intent(in) :: smoothing ! smooth or not?
@@ -263,18 +265,38 @@ subroutine prepare_beams(intensity, n_beams, NE_in, E_min, E_step, NE_beams , av
     ! Internal
     !###############
     real :: E_max_after
+    integer :: new_start_stop_step(3)
+    real, allocatable :: cut_intensity(:,:)
 
-    ! Everything assumes, experimental beams are recorded on the same energy grid already. This should always be the case.
-    ! Thus only the information of E_min and NE are required for each beam
-
-    E_max_after = E_min_after + NE_after*E_step_after
     !###############
     ! Limit range of beams
     !###############
-    ! relies on below subroutine limit_beams
+    ! Everything assumes, experimental beams are recorded on the same energy grid already. This should always be the case.
+    ! Thus only the information of E_min and NE are required for each beam
+    if (skip_stages(1).EQ.0) then
+    E_max_after = E_min_after + NE_after*E_step_after
+        ! range_index_from_Energy will calculate size of intensity array after cutting to desired energy range
+        call range_index_from_Energy(E_min_global, NE_in, E_step, E_min_afer, E_max_after, new_start_stop_step)
 
-    !call limit_range()
-    ! TODO: implement
+        allocate(cut_intensity(new_start_stop_step(3),n_beams))
+
+        ! limit_range_index cuts range of intensity array
+        call limit_range_index(intensity, n_beams, n_energies, E_min_current, E_step, beam_starts, NE_beams, &
+                           new_start_stop_step(1), new_start_stop_step(2), cut_intensity, new_NE, new_NE_beams, new_start_id)
+    else
+        new_start_stop_step(3) = NE_in
+    end if
+
+    !###############
+    ! Average/discard/reorder
+    !###############
+
+    if (skip_stages(2).EQ.0) then
+
+        allocate(averaged_intensity(new_start_stop_step(3),n_averaging_types))
+
+    end if
+
 
     !###############
     ! Smoothing
@@ -316,10 +338,10 @@ subroutine range_index_from_Energy(E_min_current, NE_in, E_step, E_min_cut, E_ma
     new_start_stop_step(3) = floor((E_max_cut-E_min_cut)/E_step) ! typecast to integer; will cut off float...
 
     new_start_stop_step(1) = (E_min_cut - E_min_current)/E_step
-    new_start_stop_step(2) = start_NE + steps
+    new_start_stop_step(2) = new_start_stop_step(1) + new_start_stop_step(3)
     return
 end subroutine range_index_from_Energy
-    
+
 
 subroutine limit_range_index(in_beams, n_beams, n_energies, E_min_current, E_step, beam_starts, NE_beams, &
                        NE_out_start, NE_out_stop, out_beams, new_NE, new_NE_beams, new_start_id)
@@ -361,7 +383,32 @@ subroutine limit_range_index(in_beams, n_beams, n_energies, E_min_current, E_ste
 
 end subroutine limit_range_index
 
+subroutine avg_scheme(in_beams, n_beams, NE, averaging_scheme, avg_types averaged_beams)
+    real, intent(in), dimension(NE, n_beams) :: in_beams
+    integer, intent(in) :: n_beams, NE, avg_types
+! avg_types = max(averging_scheme)
+    real, intent(out), dimension(NE, avg_types) :: averaged_beams
+    ! any beam with scheme 0 is discarded (intentionally)
 
+    ! Internal
+    integer, dimension(avg_types) :: avg_counter
+    ! initialize
+    avg_counter(:) = 0
+    averaged_beams(:,:) = 0
+
+    do concurrent (i = 1:avg_types)
+        do j = 1,n_beams+1
+            if (avg_scheme(j) == i) then
+                averaged_beams(:,i) = averaged_beams(:,i) + in_beams(:,j)
+                avg_counter(i) = avg_counter(i) +1
+            end if
+        end do
+        if (avg_counter(i)>0) then
+        averaged_beams(:,i) = averaged_beams(:,i)/avg_counter(i)
+        end if
+    end do
+
+end subroutine avg_scheme
     ! Library functions
 
 subroutine derivative(data_in, dx, deriv, n_data)
