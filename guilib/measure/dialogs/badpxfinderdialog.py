@@ -21,6 +21,7 @@ from PyQt5 import (QtWidgets as qtw,
 from viperleed.guilib.measure.hardwarebase import get_devices
 from viperleed.guilib.measure.camera import badpixels
 from viperleed.guilib.measure.camera import abc as camera_abc
+from viperleed.guilib.measure.dialogs.busywindow import BusyWindow
 from viperleed.guilib.widgetslib import change_control_text_color
 
 # temporary solution till we have a system config file
@@ -61,23 +62,23 @@ class BadPixelsFinderDialog(qtw.QDialog):
         self.__bad_px_info = {
             'date_time': qtw.QLabel("Date/Time: \u2014"),
             'n_bad': qtw.QLabel("No. bad pixels: \u2014"),
-            'n_uncorrectable': qtw.QLabel("No. uncorrectable: \u2014")
+            'n_uncorrectable': qtw.QLabel("No. uncorrectable: \u2014"),
+            'date_time_old': qtw.QLabel(""),
+            'n_bad_old': qtw.QLabel(""),
+            'n_uncorrectable_old': qtw.QLabel(""),
             }
         self.__timers = {
             # 'update_list' will update the list of camera
             # devices every 2 seconds
             'update_list': (qtc.QTimer(self), 2000),
-            # 'process_events' will force processing of currently
-            # non-handled GUI events to improve response time
-            # of the UI. This is necessary because the camera
-            # may take a while to start up, and makes the UI
-            # unresponsive.
-            'process_events': (qtc.QTimer(self), 10)
+            # 'delay_busy_hide' will delay shortly the hiding
+            # of the camera-busy dialog.
+            'delay_busy_hide': (qtc.QTimer(self), 100),
             }
 
-        timer, interval = self.__timers['process_events']
-        timer.timeout.connect(qtw.qApp.processEvents)
-        timer.start(interval)
+        self.__camera_busy = BusyWindow(parent=self,
+                                        text="Preparing camera...",
+                                        max_onscreen_time=10)
 
         self.__available_cameras = {}
         self.active_camera = None
@@ -94,9 +95,6 @@ class BadPixelsFinderDialog(qtw.QDialog):
         """Extend showEvent to update controls."""
         self.__reset_progress_bars()
         self.__progress['group'].hide()
-        timer, interval = self.__timers['process_events']
-        timer.timeout.connect(qtw.qApp.processEvents)
-        timer.start(interval)
         self.update_available_camera_list()
         self.adjustSize()
         super().showEvent(event)
@@ -170,11 +168,14 @@ class BadPixelsFinderDialog(qtw.QDialog):
 
     def __compose_bad_pixel_info(self):
         group = qtw.QGroupBox("Bad pixels information")
-        layout = qtw.QVBoxLayout()
+        layout = qtw.QGridLayout()
         layout.setAlignment(qtc.Qt.AlignLeft)
-        layout.addWidget(self.__bad_px_info['date_time'])
-        layout.addWidget(self.__bad_px_info['n_bad'])
-        layout.addWidget(self.__bad_px_info['n_uncorrectable'])
+        layout.addWidget(self.__bad_px_info['date_time'], 0, 0)
+        layout.addWidget(self.__bad_px_info['date_time_old'], 0, 1)
+        layout.addWidget(self.__bad_px_info['n_bad'], 1, 0)
+        layout.addWidget(self.__bad_px_info['n_bad_old'], 1, 1)
+        layout.addWidget(self.__bad_px_info['n_uncorrectable'], 2, 0)
+        layout.addWidget(self.__bad_px_info['n_uncorrectable_old'], 2, 1)
         group.setLayout(layout)
         return group
 
@@ -234,6 +235,10 @@ class BadPixelsFinderDialog(qtw.QDialog):
         timer, _ = self.__timers['update_list']
         timer.setSingleShot(True)
         timer.timeout.connect(self.update_available_camera_list)
+
+        timer, _ = self.__timers['delay_busy_hide']
+        timer.setSingleShot(True)
+        timer.timeout.connect(self.__camera_busy.hide)
 
     def __enable_controls(self, enabled):
         """Enable or disable controls."""
@@ -336,6 +341,16 @@ class BadPixelsFinderDialog(qtw.QDialog):
                 )
         return camera_config_files[0]
 
+    def __on_camera_preparing(self, busy):
+        """Show a busy dialog while camera prepares to acquire."""
+        timer, interval = self.__timers['delay_busy_hide']
+        if busy:
+            if not self.__camera_busy.isVisible():
+                self.__camera_busy.show()
+            timer.stop()
+        else:
+            timer.start(interval)
+
     def __on_camera_selected(self, camera_name):
         """React to selection of a new camera."""
         if not camera_name:
@@ -346,17 +361,15 @@ class BadPixelsFinderDialog(qtw.QDialog):
             # Same selection
             return
 
-        # TODO: pop up a small modal window reporting that
-        # the camera is being set up. To be closed as soon
-        # as the camera object is instantiated correctly
-
         # New camera selected.
+        if not self.__camera_busy.isVisible():
+            self.__camera_busy.show()
         settings = self.__get_camera_config(camera_name)
         cls = self.__available_cameras[camera_name]
         self.active_camera = cls()
-        # self.active_camera.moveToThread(self.__finder_thread)
         self.active_camera.error_occurred.connect(self.__on_error_occurred)
         self.active_camera.started.connect(self.adjustSize)
+        self.active_camera.preparing.connect(self.__on_camera_preparing)
         self.__set_camera_settings.connect(self.active_camera.set_settings,
                                            type=qtc.Qt.QueuedConnection)
         self.__set_camera_settings.emit(settings)
@@ -406,24 +419,31 @@ class BadPixelsFinderDialog(qtw.QDialog):
 
         # Now prepare strings
         fmt = "{} ({:.2f}% of sensor)"
-        fmt_previous = "\t\t[Previous: {}]"
-        date_time_txt = (f"{new['date_time']}"
-                         + fmt_previous.format(old['date_time']))
+        fmt_previous = "[Previous: {}]"
+        date_time_txt = f"{new['date_time']}"
+        date_time_txt_old = fmt_previous.format(old['date_time'])
 
         bad_txt = fmt.format(new['n_bad'], new['bad_fraction'])
+        bad_txt_old = ""
         if old['n_bad'] is not None:
-            bad_txt += fmt_previous.format(old['n_bad'])
+            bad_txt_old = fmt_previous.format(old['n_bad'])
 
         uncorrectable_txt = fmt.format(new['n_uncorrectable'],
                                        new['uncorrectable_fraction'])
+        uncorrectable_txt_old = ""
         if old['n_uncorrectable'] is not None:
-            uncorrectable_txt += fmt_previous.format(old['n_uncorrectable'])
+            uncorrectable_txt_old = fmt_previous.format(old['n_uncorrectable'])
 
         self.__bad_px_info['date_time'].setText(f"Date/Time: {date_time_txt}")
         self.__bad_px_info['n_bad'].setText(f"No. bad pixels: {bad_txt}")
         self.__bad_px_info['n_uncorrectable'].setText(
-                f"No. uncorrectable: {uncorrectable_txt}"
-                )
+            f"No. uncorrectable: {uncorrectable_txt}"
+            )
+        self.__bad_px_info['date_time_old'].setText(date_time_txt_old)
+        self.__bad_px_info['n_bad_old'].setText(bad_txt_old)
+        self.__bad_px_info['n_uncorrectable_old'].setText(
+            uncorrectable_txt_old
+            )
 
         self.__enable_controls(True)
 
@@ -471,6 +491,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
         self.__enable_controls(False)
         self.__reset_progress_bars()
         self.__progress['group'].show()
+        self.__camera_busy.show()
 
         # Process events to have the progress
         # bars properly shown immediately.
@@ -479,12 +500,14 @@ class BadPixelsFinderDialog(qtw.QDialog):
         self.__finder = badpixels.BadPixelsFinder(self.active_camera)
         self.__finder.progress_occurred.connect(self.__on_progress)
         self.__finder.done.connect(self.__on_finder_done)
+        self.__finder.done.connect(self.__finder.deleteLater)
+        self.__finder.aborted.connect(self.__finder.deleteLater)
+        self.__finder_thread.finished.connect(self.__finder.deleteLater)
         self.__finder.error_occurred.connect(self.__on_error_occurred)
         self.__start_finder.connect(self.__finder.find)
         self.__abort_finder.connect(self.__finder.abort)
         self.__finder.moveToThread(self.__finder_thread)
         self.__start_finder.emit()
-        # self.__finder.find()
 
     def __stop_timers(self):
         """Stop all timers."""
@@ -511,6 +534,8 @@ class BadPixelsFinderDialog(qtw.QDialog):
         self.__bad_px_info['n_uncorrectable'].setText(
                 f"No. uncorrectable: {uncorrectable_txt}"
                 )
+        for key in ('date_time_old', 'n_bad_old', 'n_uncorrectable_old'):
+            self.__bad_px_info[key].setText("")
 
     def __update_controls(self):
         """Update the contents of controls from a camera."""

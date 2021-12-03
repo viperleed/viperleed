@@ -115,6 +115,7 @@ class BadPixelsFinder(qtc.QObject):
 
     error_occurred = qtc.pyqtSignal(tuple)
     done = qtc.pyqtSignal()
+    aborted = qtc.pyqtSignal()
     progress_occurred = qtc.pyqtSignal(
         str,  # current operation
         int,  # current operation index (1-based)
@@ -287,6 +288,7 @@ class BadPixelsFinder(qtc.QObject):
         """Abort finding bad pixels."""
         self.__restore_settings()  # Also stops
         self.__frames_done = 0
+        self.aborted.emit()
 
     def find(self):
         """Find bad pixels in the camera."""
