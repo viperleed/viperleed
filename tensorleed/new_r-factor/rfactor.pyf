@@ -54,10 +54,42 @@ python module rfactor ! in
                 integer intent(in) :: max_steps
                 integer intent(out) :: nr_used_v0
             end subroutine rfactor_v0ropt
-            subroutine prepare_beams ! in :rfactor:rfactor.f90:r_factor_new
+            subroutine prepare_beams(intensity,n_beams,ne_in,e_min,e_step,ne_beams,averaging_scheme,smoothing,ne_after,e_min_after,e_step_after) ! in :rfactor:rfactor.f90:r_factor_new
+                real dimension(ne_in,n_beams),intent(in) :: intensity
+                integer, optional,intent(in),check(shape(intensity,1)==n_beams),depend(intensity) :: n_beams=shape(intensity,1)
+                integer, optional,intent(in),check(shape(intensity,0)==ne_in),depend(intensity) :: ne_in=shape(intensity,0)
+                real dimension(n_beams),intent(in),depend(n_beams) :: e_min
+                real dimension(n_beams),intent(in),depend(n_beams) :: e_step
+                real dimension(n_beams),intent(in),depend(n_beams) :: ne_beams
+                integer dimension(n_beams),intent(in),depend(n_beams) :: averaging_scheme
+                integer intent(in) :: smoothing
+                integer intent(in) :: ne_after
+                real intent(in) :: e_min_after
+                real intent(in) :: e_step_after
             end subroutine prepare_beams
-            subroutine limit_range ! in :rfactor:rfactor.f90:r_factor_new
-            end subroutine limit_range
+            subroutine range_index_from_energy(e_min_current,ne_in,e_step,e_min_cut,e_max_cut,new_start_stop_step) ! in :rfactor:rfactor.f90:r_factor_new
+                real intent(in) :: e_min_current
+                integer intent(in) :: ne_in
+                real intent(in) :: e_step
+                real intent(in) :: e_min_cut
+                real intent(in) :: e_max_cut
+                integer dimension(3),intent(out) :: new_start_stop_step
+            end subroutine range_index_from_energy
+            subroutine limit_range_index(in_beams,n_beams,n_energies,e_min_current,e_step,beam_starts,ne_beams,ne_out_start,ne_out_stop,out_beams,new_ne,new_ne_beams,new_start_id) ! in :rfactor:rfactor.f90:r_factor_new
+                real dimension(n_energies,n_beams),intent(in) :: in_beams
+                integer, optional,intent(in),check(shape(in_beams,1)==n_beams),depend(in_beams) :: n_beams=shape(in_beams,1)
+                integer, optional,intent(in),check(shape(in_beams,0)==n_energies),depend(in_beams) :: n_energies=shape(in_beams,0)
+                real intent(in) :: e_min_current
+                real intent(in) :: e_step
+                integer dimension(n_beams),intent(in),depend(n_beams) :: beam_starts
+                integer dimension(n_beams),intent(in),depend(n_beams) :: ne_beams
+                integer intent(in) :: ne_out_start
+                integer intent(in) :: ne_out_stop
+                real dimension(ne_out_stop-ne_out_start+1,n_beams),intent(out),depend(ne_out_start,ne_out_stop,n_beams) :: out_beams
+                integer intent(out) :: new_ne
+                integer dimension(n_beams),intent(out),depend(n_beams) :: new_ne_beams
+                real dimension(n_beams),depend(n_beams) :: new_start_id
+            end subroutine limit_range_index
             subroutine derivative(data_in,dx,deriv,n_data) ! in :rfactor:rfactor.f90:r_factor_new
                 real(kind=8) dimension(n_data),intent(in) :: data_in
                 real(kind=8), optional,intent(in) :: dx=1.0

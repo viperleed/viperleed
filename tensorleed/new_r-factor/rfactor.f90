@@ -293,17 +293,17 @@ subroutine prepare_beams(intensity, n_beams, NE_in, E_min_global, E_min, E_step,
 
     if (skip_stages(2).EQ.0) then
 
-        allocate(averaged_intensity(new_start_stop_step(3),n_averaging_types))
-
+        allocate(averaged_intensity(new_start_stop_step(3), n_averaging_types))
+        call avg_scheme(cut_intensity, n_beams, NE, averaging_scheme, n_averaging_types, averaged_intensity)
+        n_beams = n_averaging_types
     end if
 
 
     !###############
     ! Smoothing
     !###############
-    ! if smoothing set 0 (True) do smoothing
 
-    if (smoothing == 0) then
+    if (skip_stages(3).EQ.0) then
         write(*,*) "Smoothing not yet implemented!" ! TODO: implement smoothing in prepare_beams
     end if
 
@@ -311,11 +311,14 @@ subroutine prepare_beams(intensity, n_beams, NE_in, E_min_global, E_min, E_step,
     ! Interpolation on new grid
     !###############
 
+    if (skip_stages(4).EQ.0) then
     ! TODO: implement
+    end if
 
     !###############
     ! Y function calculation on new grid
     !###############
+
 
     ! TODO: implement
 
@@ -409,6 +412,8 @@ subroutine avg_scheme(in_beams, n_beams, NE, averaging_scheme, avg_types average
     end do
 
 end subroutine avg_scheme
+
+
     ! Library functions
 
 subroutine derivative(data_in, dx, deriv, n_data)
