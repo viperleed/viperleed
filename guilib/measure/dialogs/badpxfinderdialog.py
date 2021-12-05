@@ -15,8 +15,7 @@ import inspect
 from pathlib import Path
 
 from PyQt5 import (QtWidgets as qtw,
-                   QtCore as qtc,
-                   QtGui as qtg)
+                   QtCore as qtc)
 
 from viperleed.guilib.measure.hardwarebase import get_devices
 from viperleed.guilib.measure.camera import badpixels
@@ -43,42 +42,45 @@ class BadPixelsFinderDialog(qtw.QDialog):
         """Initialize dialog."""
         super().__init__(parent=parent)
 
-        self.__ctrls = {
-            'camera': qtw.QComboBox(),
-            'bad_px_path': qtw.QLabel("None selected"),
+        self.__children = {
+            'ctrls': {
+                'camera': qtw.QComboBox(),
+                'bad_px_path': qtw.QLabel("None selected"),
+                },
+            'buttons' : {
+                'done': qtw.QPushButton("&Done"),
+                'abort': qtw.QPushButton("&Abort"),
+                'find': qtw.QPushButton("&Find"),
+                'set_bad_px_path': qtw.QToolButton(),
+                },
+            'bad_px_info': {
+                'date_time': qtw.QLabel("Date/Time: \u2014"),
+                'n_bad': qtw.QLabel("No. bad pixels: \u2014"),
+                'n_uncorrectable': qtw.QLabel("No. uncorrectable: \u2014"),
+                'date_time_old': qtw.QLabel(""),
+                'n_bad_old': qtw.QLabel(""),
+                'n_uncorrectable_old': qtw.QLabel(""),
+                },
+            'progress': {
+                'group' : qtw.QGroupBox("Progress"),
+                'total': qtw.QProgressBar(),
+                'section_text': qtw.QLabel(),
+                'section': qtw.QProgressBar(),
+                },
+            'timers': {
+                # 'update_list' will update the list of camera
+                # devices every 2 seconds
+                'update_list': (qtc.QTimer(self), 2000),
+                # 'delay_busy_hide' will delay shortly the hiding
+                # of the camera-busy dialog.
+                'delay_busy_hide': (qtc.QTimer(self), 100),
+                },
+            'dialogs': {
+                'camera_busy': BusyWindow(parent=self,
+                                          text="Preparing camera...",
+                                          max_onscreen_time=10)
+                }
             }
-        self.__progress = {
-            'group' : qtw.QGroupBox("Progress"),
-            'total': qtw.QProgressBar(),
-            'section_text': qtw.QLabel(),
-            'section': qtw.QProgressBar(),
-            }
-        self.__buttons = {
-            'done': qtw.QPushButton("&Done"),
-            'abort': qtw.QPushButton("&Abort"),
-            'find': qtw.QPushButton("&Find"),
-            'set_bad_px_path': qtw.QToolButton(),
-            }
-        self.__bad_px_info = {
-            'date_time': qtw.QLabel("Date/Time: \u2014"),
-            'n_bad': qtw.QLabel("No. bad pixels: \u2014"),
-            'n_uncorrectable': qtw.QLabel("No. uncorrectable: \u2014"),
-            'date_time_old': qtw.QLabel(""),
-            'n_bad_old': qtw.QLabel(""),
-            'n_uncorrectable_old': qtw.QLabel(""),
-            }
-        self.__timers = {
-            # 'update_list' will update the list of camera
-            # devices every 2 seconds
-            'update_list': (qtc.QTimer(self), 2000),
-            # 'delay_busy_hide' will delay shortly the hiding
-            # of the camera-busy dialog.
-            'delay_busy_hide': (qtc.QTimer(self), 100),
-            }
-
-        self.__camera_busy = BusyWindow(parent=self,
-                                        text="Preparing camera...",
-                                        max_onscreen_time=10)
 
         self.__available_cameras = {}
         self.active_camera = None
@@ -91,7 +93,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
         self.__compose()
         self.__connect()
 
-    def showEvent(self, event):
+    def showEvent(self, event):  # pylint: disable=invalid-name
         """Extend showEvent to update controls."""
         self.__reset_progress_bars()
         self.__progress['group'].hide()
@@ -123,6 +125,36 @@ class BadPixelsFinderDialog(qtw.QDialog):
             if old_selection:
                 camera_combo.setCurrentText(old_selection)
         self.__enable_controls(True)
+
+    @property
+    def __bad_px_info(self):
+        """Return controls for reporting bad-pixel information."""
+        return self.__children['bad_px_info']
+
+    @property
+    def __camera_busy(self):
+        """Return a reference to the modal camera-busy window."""
+        return self.__children['dialogs']['camera_busy']
+
+    @property
+    def __buttons(self):
+        """Return a dictionary of buttons."""
+        return self.__children['buttons']
+
+    @property
+    def __ctrls(self):
+        """Return controls to be enabled/disabled."""
+        return self.__children['ctrls']
+
+    @property
+    def __progress(self):
+        """Return controls for progress reporting."""
+        return self.__children['progress']
+
+    @property
+    def __timers(self):
+        """Return a dictionary of timers."""
+        return self.__children['timers']
 
     def __abort(self, *_):
         """Abort bad-pixel-finder routine."""
@@ -405,17 +437,17 @@ class BadPixelsFinderDialog(qtw.QDialog):
         # Store the old bad pixel information
         keys = ('date_time', 'n_bad', 'bad_fraction',
                 'n_uncorrectable', 'uncorrectable_fraction')
-        old = {k: v for k, v in zip(keys, self.__get_bad_pixel_info())}
+        old = dict(zip(keys, self.__get_bad_pixel_info()))
         if old['n_bad'] < 0:
             # No file
             old['date_time'] = "None"
             for key in keys[1:]:
-                old['key'] = None
+                old[key] = None
 
         # Now update the bad pixel info in the camera. This will
         # read the newly created bad-pixels file.
         self.active_camera.update_bad_pixels()
-        new = {k: v for k, v in zip(keys, self.__get_bad_pixel_info())}
+        new = dict(zip(keys, self.__get_bad_pixel_info()))
 
         # Now prepare strings
         fmt = "{} ({:.2f}% of sensor)"
@@ -481,9 +513,10 @@ class BadPixelsFinderDialog(qtw.QDialog):
         self.__update_controls()
 
     def __reset_progress_bars(self):
-        for bar in (self.__progress['total'], self.__progress['section']):
-            bar.setMinimum(0)
-            bar.setValue(0)
+        for progress_bar in (self.__progress['total'],
+                             self.__progress['section']):
+            progress_bar.setMinimum(0)
+            progress_bar.setValue(0)
         self.__progress['section_text'].setText('')
 
     def __start(self, *_):
@@ -550,6 +583,9 @@ class BadPixelsFinderDialog(qtw.QDialog):
             bad_pixels_path = ""
 
         if bad_pixels_path:
+            # pylint: disable=redefined-variable-type
+            #         Disabled for str->Path as it is easier
+            #         than making a new variable name
             bad_pixels_path = Path(bad_pixels_path)
             if not bad_pixels_path.exists():
                 bad_pixels_path = ""

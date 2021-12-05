@@ -76,7 +76,7 @@ class BusyWindow(qtw.QWidget):
         self.setLayout(layout)
         self.adjustSize()
 
-    def showEvent(self, event):
+    def showEvent(self, event):  # pylint: disable=invalid-name
         """Reimplement to have a max visible time."""
         timer, interval = self.__timers['on_screen']
         if interval >= 0:
@@ -127,16 +127,16 @@ class _RotatingCircle(qtw.QWidget):
         self.__angle = new_angle
         self.repaint()
 
-    def hideEvent(self, event):
+    def hideEvent(self, event):  # pylint: disable=invalid-name
         """Stop rotating when hidden."""
         super().hideEvent(event)
         self.__rotation.stop()
 
-    def minimumSizeHint(self):
+    def minimumSizeHint(self):  # pylint: disable=invalid-name
         """Return a reasonable minimum size for self."""
         return self.sizeHint()
 
-    def paintEvent(self, *_):
+    def paintEvent(self, *_):  # pylint: disable=invalid-name
         """Draw self."""
         circle_size = self.__size - self.__stroke_width
         circle_margin = round(self.__stroke_width / 2)
@@ -158,11 +158,11 @@ class _RotatingCircle(qtw.QWidget):
                         round(self.angle * 16), 240 * 16)
         painter.end()
 
-    def showEvent(self, event):
+    def showEvent(self, event):  # pylint: disable=invalid-name
         """Start rotating when shown."""
         self.__rotation.start()
         super().showEvent(event)
 
-    def sizeHint(self):
+    def sizeHint(self):  # pylint: disable=invalid-name
         """Return a reasonable size for self."""
         return qtc.QSize(self.__size, self.__size)

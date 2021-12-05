@@ -23,8 +23,6 @@ from viperleed.guilib.measure.camera import abc
 from viperleed.guilib.widgetslib import screen_fraction
 
 
-# TODO: zooming is still a little weird when done around the mouse
-#       cursor, both zoom in and zoom out.
 # TODO: ImageViewer.optimum_size is not updated when screen is changed
 
 
@@ -151,6 +149,11 @@ class CameraViewer(qtw.QScrollArea):
         **kwargs : object
             Other unused optional arguments, passed to
             QScrollArea.__init__
+
+        Raises
+        ------
+        TypeError
+            If camera is not a subclass of CameraABC
         """
         if not isinstance(camera, abc.CameraABC):
             raise TypeError(f"{self.__class__.__name__}: camera argument "
@@ -213,7 +216,7 @@ class CameraViewer(qtw.QScrollArea):
             screen = None
         return screen
 
-    def changeEvent(self, event):
+    def changeEvent(self, event):  # pylint: disable=invalid-name
         """Extend changeEvent to react to window maximization."""
         if event.type() == event.WindowStateChange:
             was_maximized = event.oldState() & qtc.Qt.WindowMaximized
@@ -230,7 +233,7 @@ class CameraViewer(qtw.QScrollArea):
                 self.adjustSize()
         super().changeEvent(event)
 
-    def closeEvent(self, event):
+    def closeEvent(self, event):  # pylint: disable=invalid-name
         """Extend to stop camera when window is closed by the user."""
         if (event.spontaneous()
             and self.__camera.is_running
@@ -238,7 +241,7 @@ class CameraViewer(qtw.QScrollArea):
             self.__camera.stop()
         super().closeEvent(event)
 
-    def keyPressEvent(self, event):
+    def keyPressEvent(self, event):  # pylint: disable=invalid-name
         """Extend keyPressEvent for zooming and ROI movements.
 
         Pressing '+' or '-' resizes the image (and self),
@@ -257,6 +260,12 @@ class CameraViewer(qtw.QScrollArea):
         -------
         None.
         """
+        # pylint: disable=no-member
+        #    I could not find a solution to the no-member
+        #    errors raised by pylint for Key.Key_*
+        #    Should be fixed by white-listing PyQt5, but it
+        #    is possible that Key_* attributes are added at
+        #    runtime depending on the system.
         if event.key() == qtc.Qt.Key.Key_Plus:
             self.__zoom('in')
         elif event.key() == qtc.Qt.Key.Key_Minus:
@@ -283,14 +292,17 @@ class CameraViewer(qtw.QScrollArea):
             else:
                 self.roi.translate(move_resize)
             return
+        # pylint: enable=no-member
         super().keyPressEvent(event)
 
+    # pylint: disable=invalid-name
     def mouseDoubleClickEvent(self, event):
         """Prevent parent propagation if ROI is visible."""
         if not self.roi.isVisible():
             super().mouseDoubleClickEvent(event)
+    # pylint: enable=invalid-name
 
-    def mouseMoveEvent(self, event):
+    def mouseMoveEvent(self, event):  # pylint: disable=invalid-name
         """Extend mouseMoveEvent to draw a ROI (if visible).
 
         If Control (Command on Mac) is held down, the ROI will
@@ -319,14 +331,14 @@ class CameraViewer(qtw.QScrollArea):
             new_roi.setHeight(new_side)
         self.roi.setGeometry(new_roi)
 
-    def mousePressEvent(self, event):
+    def mousePressEvent(self, event):  # pylint: disable=invalid-name
         """Reimplement mousePressEvent to begin drawing a ROI."""
         if not self.roi.isVisible():
             self.roi.show()
         self.roi.origin = self.roi.parent().mapFromGlobal(event.globalPos())
         self.roi.setGeometry(qtc.QRect(self.roi.origin, qtc.QSize()))
 
-    def mouseReleaseEvent(self, event):
+    def mouseReleaseEvent(self, event):  # pylint: disable=invalid-name
         """Extend mouseReleaseEvent to handle ROI drawing."""
         if not self.roi.isVisible():
             super().mouseReleaseEvent(event)
@@ -374,7 +386,7 @@ class CameraViewer(qtw.QScrollArea):
 
         self.__adjust_scroll_bars(by_factor)
 
-    def showEvent(self, event):
+    def showEvent(self, event):  # pylint: disable=invalid-name
         """Extend showEvent to rescale self and the image to optimum."""
         super().showEvent(event)
         # Distinguish whether the showEvent was triggered because
@@ -387,13 +399,13 @@ class CameraViewer(qtw.QScrollArea):
             self.adjustSize()
         self.shown.emit()
 
-    def sizeHint(self):
+    def sizeHint(self):  # pylint: disable=invalid-name
         """Reimplement sizeHint to bind to the underlying image."""
         # Adding (2, 2) ensures that scroll bars are
         # visible only if the image does not fit.
         return self.__img_view.sizeHint() + qtc.QSize(2, 2)
 
-    def wheelEvent(self, event):
+    def wheelEvent(self, event):  # pylint: disable=invalid-name
         """Extend wheelEvent for zooming while Control is pressed."""
         if not event.modifiers() & qtc.Qt.ControlModifier:
             super().wheelEvent(event)
@@ -408,17 +420,20 @@ class CameraViewer(qtw.QScrollArea):
             # Zoom in at the current mouse position
             mouse_offset = (self.mapFromGlobal(qtg.QCursor.pos())
                             - self.widget().pos()) * (by_factor - 1)
-            for bar, mouse_offs in zip(
+            for scroll_bar, mouse_offs in zip(
                     (self.horizontalScrollBar(), self.verticalScrollBar()),
                     (mouse_offset.x(), mouse_offset.y())
                     ):
-                bar.setValue(bar.value() + mouse_offs)
+                scroll_bar.setValue(scroll_bar.value() + mouse_offs)
             return
 
         # Zoom centered when the mouse cursor is somewhere else
-        for bar in (self.horizontalScrollBar(), self.verticalScrollBar()):
-            bar.setValue(int(by_factor * bar.value()
-                             + ((by_factor - 1) * bar.pageStep()/2)))
+        for scroll_bar in (self.horizontalScrollBar(),
+                           self.verticalScrollBar()):
+            scroll_bar.setValue(
+                int(by_factor * scroll_bar.value()
+                    + ((by_factor - 1) * scroll_bar.pageStep()/2))
+                )
 
     def __compose(self):
         """Place children widgets."""
@@ -558,7 +573,6 @@ class ImageViewer(qtw.QLabel):
 
     def __init__(self, *args, parent=None, **kwargs):
         """Initialize widget."""
-
         super().__init__(*args, parent=parent, **kwargs)
 
         self.__image_scaling = 1
@@ -636,7 +650,7 @@ class ImageViewer(qtw.QLabel):
         self.image_scaling = scaling
         return scaling
 
-    def sizeHint(self):
+    def sizeHint(self):  # pylint: disable=invalid-name
         """Return optimal size for self."""
         pixmap = self.pixmap()
         if (not pixmap
@@ -716,13 +730,27 @@ class RegionOfInterest(qtw.QWidget):
         Move self by delta_pixels pixels in image coordinates.
     """
 
-    def __init__(self, *args, parent=None, increments=(1, 1), **kwargs):
+    def __init__(self, *__args, parent=None, increments=(1, 1), **__kwargs):
+        """Initialize RegionOfInterest instance.
 
+        Parameters
+        ----------
+        parent : QWidget, optional
+            The widget on which this region-of-interest rubber-band
+            is shown. Typically a CameraViewer. Default is None.
+        increments : tuple, optional
+            Two elements. Minimum increments of width and height
+            in image coordinates (i.e., pixels).
+
+        Returns
+        -------
+        None.
+        """
         super().__init__(parent=parent)
         self.__rubberband = qtw.QRubberBand(qtw.QRubberBand.Rectangle, self)
-        self.__min = (1, 1)
-        self.__max = (1000000, 1000000)
-        self.__incr = increments
+        self.__limits = {'min': (1, 1),
+                         'max': (1000000, 1000000),
+                         'increments': increments}
         self.__drag_origin = qtc.QPoint(0, 0)
         self.image_scaling = 1
         self.origin = qtc.QPoint(0, 0)
@@ -735,7 +763,7 @@ class RegionOfInterest(qtw.QWidget):
     @property
     def increments(self):
         """Return the smallest change of width/height in image coordinates."""
-        return self.__incr
+        return self.__limits['increments']
 
     @property
     def limits(self):
@@ -745,33 +773,39 @@ class RegionOfInterest(qtw.QWidget):
     @limits.setter
     def limits(self, new_limits):
         """Set .minimum, .maximum., .increments."""
-        self.__min, self.__max, self.__incr = new_limits
+        (self.__limits['min'],
+         self.__limits['max'],
+         self.__limits['increments']) = new_limits
 
     @property
     def maximum(self):
         """Return the largest width/height in image coordinates."""
-        return self.__max
+        return self.__limits['max']
 
     @property
     def minimum(self):
         """Return the smallest width/height in image coordinates."""
-        return self.__min
+        return self.__limits['min']
 
-    def enterEvent(self, event):
+    def enterEvent(self, event):  # pylint: disable=invalid-name
         """Change mouse cursor when entering the widget."""
         self.setCursor(qtc.Qt.SizeAllCursor)
         super().enterEvent(event)
 
-    def leaveEvent(self, event):
+    def leaveEvent(self, event):  # pylint: disable=invalid-name
         """Reset mouse cursor when exiting the widget."""
         self.unsetCursor()
         super().leaveEvent(event)
 
+    # pylint: disable=invalid-name,no-self-use
+    # Disable invalid-name no-self-use as the name
+    # and signature must stay unaltered
     def mouseDoubleClickEvent(self, event):
         """Reimplement to prevent propagation to parent."""
         event.accept()
+    # pylint: enable=invalid-name,no-self-use
 
-    def mouseMoveEvent(self, event):
+    def mouseMoveEvent(self, event):  # pylint: disable=invalid-name
         """Reimplement mouseMoveEvent to move rubber-band."""
         new_pos = self.origin + event.globalPos() - self.__drag_origin
         # Make sure that self does not go beyond the frame of the parent
@@ -785,16 +819,20 @@ class RegionOfInterest(qtw.QWidget):
             new_pos.setY(new_y)
         self.move(new_pos)
 
-    def mousePressEvent(self, event):
+    def mousePressEvent(self, event):  # pylint: disable=invalid-name
         """Reimplement mousePressEvent to initiate rubber-band move."""
         self.origin = self.pos()
         self.__drag_origin = event.globalPos()
 
+    # pylint: disable=invalid-name,no-self-use
+    # Disable invalid-name no-self-use as the name
+    # and signature must stay unaltered
     def mouseReleaseEvent(self, event):
         """Reimplement to prevent propagation to parent."""
         event.accept()
+    # pylint: enable=invalid-name,no-self-use
 
-    def resizeEvent(self, event):
+    def resizeEvent(self, __event):  # pylint: disable=invalid-name
         """Reimplement to resize the rubber-band."""
         self.__rubberband.resize(self.size())
 
@@ -808,7 +846,7 @@ class RegionOfInterest(qtw.QWidget):
     def translate(self, delta_pixels):
         """Translate self by delta_pixels, in image coordinates."""
         delta_pos = delta_pixels*self.image_scaling
-        if all(p == 0 for p in (delta_pos.x(), delta_pos.y())):
+        if all(abs(p) < 1e-3 for p in (delta_pos.x(), delta_pos.y())):
             # Image is scaled down so much that no movement
             # would result from this. Rather use delta_pixels
             # as shift in the current-view coordinates
