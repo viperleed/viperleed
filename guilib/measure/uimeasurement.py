@@ -32,6 +32,7 @@ from viperleed.guilib.measure.controller.abc import ControllerABC
 from viperleed.guilib.measure.measurement.abc import MeasurementABC
 from viperleed.guilib.measure.widgets.camerawidgets import CameraViewer
 from viperleed.guilib.measure.uimeasurementsettings import SettingsEditor
+from viperleed.guilib.measure.datapoints import DataPoints
 
 TITLE = 'Measurement UI'
 
@@ -54,6 +55,7 @@ class Measure(gl.ViPErLEEDPluginBase):
             'energy_input': qtw.QLineEdit(''),
             'set_energy': qtw.QPushButton("Set energy"),
             'settings_editor': qtw.QPushButton("Open settings editor"),
+            'read': qtw.QPushButton("Read measurement data"),
             }
 
         self._dialogs = {
@@ -104,6 +106,11 @@ class Measure(gl.ViPErLEEDPluginBase):
         self._ctrls['set_energy'].ensurePolished()
         self._ctrls['set_energy'].setEnabled(False)
 
+        self._ctrls['read'].setFont(gl.AllGUIFonts().buttonFont)
+        self._ctrls['read'].ensurePolished()
+        self._ctrls['read'].clicked.connect(self.__on_read_pressed)
+        self._ctrls['read'].setEnabled(True)
+
         self._ctrls['settings_editor'].setFont(gl.AllGUIFonts().buttonFont)
         self._ctrls['settings_editor'].ensurePolished()
         self._ctrls['settings_editor'].clicked.connect(
@@ -124,18 +131,20 @@ class Measure(gl.ViPErLEEDPluginBase):
         layout.addWidget(self._ctrls['set_energy'], 3, 1, 1, 1)
         layout.addWidget(self._ctrls['energy_input'], 3, 2, 1, 1)
         layout.addWidget(self._ctrls['settings_editor'], 4, 1, 1, 2)
+        layout.addWidget(self._ctrls['read'], 5, 1, 1, 2)
 
         self.statusBar().showMessage('Ready')
 
         fig = Figure()
         self._ctrls['plots'].append(fig)
-        layout.addWidget(fig, 5, 1, 1, 2)
+        layout.addWidget(fig, 6, 1, 1, 2)
 
     def __run_measurement(self):
         self.measurement.begin_measurement_preparation()
         self._ctrls['measure'].setEnabled(False)
         self._ctrls['select'].setEnabled(False)
         self._ctrls['abort'].setEnabled(True)
+        self._ctrls['read'].setEnabled(False)
         self.statusBar().showMessage('Busy')
 
     def __on_finished(self, *_):
@@ -145,6 +154,7 @@ class Measure(gl.ViPErLEEDPluginBase):
         self._ctrls['measure'].setEnabled(True)
         self._ctrls['select'].setEnabled(True)
         self._ctrls['abort'].setEnabled(False)
+        self._ctrls['read'].setEnabled(True)
         self.statusBar().showMessage('Ready')
 
     def __on_measurement_finished(self, *_):
@@ -228,7 +238,6 @@ class Measure(gl.ViPErLEEDPluginBase):
 
     def __on_time_resolved_data(self):
         """Replot measured data."""
-        # return
         fig = self._ctrls['plots'][0]
         fig.ax.cla()  # Clear old stuff
         meas = self.sender()
@@ -307,6 +316,9 @@ class Measure(gl.ViPErLEEDPluginBase):
                                   & ~qtc.Qt.WindowMinimized
                                   | qtc.Qt.WindowActive)
             return
-
-
         settings.show()
+
+    def __on_read_pressed(self):
+        path = qtw.QFileDialog.getOpenFileName()
+        data = DataPoints()
+        data.read_data(path[0])
