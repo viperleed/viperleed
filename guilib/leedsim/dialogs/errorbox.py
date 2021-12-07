@@ -7,7 +7,12 @@ from PyQt5 import QtWidgets as qtw
 
 
 class ErrorBox(qtw.QMessageBox):
-    """A pop-up dialog reporting errors."""
+    """A pop-up dialog reporting errors.
+
+    This class should be used to catch Exceptions and report
+    them to the user in a graphical manner. It would be typically
+    used when overriding sys.excepthook.
+    """
 
     def __init__(self, error_while="", text="", silent=False, parent=None):
         """Initialize dialog.
@@ -19,7 +24,7 @@ class ErrorBox(qtw.QMessageBox):
             will be "Error while <error_while>".
         text : str, optional
             Descriptive text that will be used every time
-            the dialog is shown. 
+            the dialog is shown.
         silent : bool, optional
             If True, no dialog is shown when an error occurs.
             Can be accessed via the .silent attribute. Default
@@ -56,13 +61,13 @@ class ErrorBox(qtw.QMessageBox):
             Text to be appended to the one given at instantiation.
         """
         if self.silent:
-            return
+            return self.Ok
 
         trace = traceback.format_exc()
         if trace.startswith('NoneType'):
             # Do not execute if there is no exception
-            return
+            return self.Ok
 
         self.setText(self.base_text + extra_text)
         self.setDetailedText(f"Error details:\n{trace}")
-        super().exec_()
+        return super().exec_()
