@@ -98,7 +98,7 @@ class _RotatingCircle(qtw.QWidget):
         """Initialize widget."""
         super().__init__(parent=parent)
         self.__size = size
-        stroke = ((0.1 * size + 1) // 2) * 2
+        stroke = int((0.1 * size + 1) // 2) * 2
         self.__stroke_width = max(stroke, 2)
         self.__angle = 0
 
