@@ -172,9 +172,10 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
             return
         # was_busy = self.__busy
         was_busy = self.busy
-        is_busy = bool(is_busy)
+        self.__busy = bool(is_busy) if not self.serial.busy else True
+        is_busy = self.busy
         if was_busy is not is_busy:
-            self.__busy = is_busy if not self.serial.busy else True
+            # self.__busy = is_busy if not self.serial.busy else True
             self.controller_busy.emit(self.busy)
 
     busy = property(__get_busy, set_busy)
@@ -839,37 +840,29 @@ class MeasureControllerABC(ControllerABC):
             self.serial.about_to_trigger.connect(self.about_to_trigger.emit)
 
     @abstractmethod
-    def set_continuous_mode(self, data):
+    def set_continuous_mode(self, continuous):
         """Set continuous mode.
 
         Has to be reimplemented in subclasses. If continuous is
         true the controller has to continue measuring and return
-        data without receiving further instructions. in_finalization
-        is used to reconnect the serial_busy signal which is used to
-        check if the controller has indeed turned off continuous mode
-        at the end of a measurement cycle. The serial_busy has to be
-        hooked up to the busy state of the controller. Call super()
-        to enable switching of busy state of controller once the
-        continuous mode has been set on the hardware controller.
+        data without receiving further instructions. The serial_busy
+        has to be hooked up to the busy state of the controller.
+        Call super() to enable switching of busy state of controller
+        once the continuous mode has been set on the hardware
+        controller.
 
         Parameters
         ----------
-        data : list of bools
-            A list containing the continuous and
-            in_finalization bools.
+        continuous : bool
+            Wether continuous mode should be on.
+            Used in subclass.
 
         Returns
         -------
         None.
         """
-        continuous, in_finalization = data
-        if continuous:
-            self.serial.serial_busy.connect(self.set_busy)
-        else:
-            try:
-                self.serial.serial_busy.disconnect(self.set_busy)
-            except TypeError:
-                # serial_busy has not been connected to anything
-                pass
-        if not continuous and in_finalization:
-           self.serial.serial_busy.connect(self.set_busy)
+        try:
+            self.serial.serial_busy.connect(self.set_busy,
+                                            type=qtc.Qt.UniqueConnection)
+        except TypeError:
+            pass

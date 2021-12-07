@@ -362,7 +362,7 @@ class ViPErinoController(MeasureControllerABC):
                 emit_error(self, ViPErinoErrors.INVALID_REQUEST)
         super().what_to_measure(requested)
 
-    def set_continuous_mode(self, data):
+    def set_continuous_mode(self, continuous):
         """Set continuous mode.
 
         If continuous is true the controller will continue
@@ -370,16 +370,14 @@ class ViPErinoController(MeasureControllerABC):
 
         Parameters
         ----------
-        data : list of bools
-            A list containing the continuous and
-            in_finalization bools.
+        continuous : bool
+            Wether continuous mode should be on.
 
         Returns
         -------
         None.
         """
-        super().set_continuous_mode(data)
-        continuous, in_finalization = data
+        super().set_continuous_mode(continuous)
         continuous_mode = self.settings.get('available_commands',
                                             'pc_change_meas_mode')
         if continuous:

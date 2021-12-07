@@ -22,7 +22,7 @@ from viperleed.guilib.measure.measurement.abc import (MeasurementABC,
 
 class TimeResolved(MeasurementABC):
     """Time resolved measurement class."""
-    continuous_mode = qtc.pyqtSignal([list])
+    continuous_mode = qtc.pyqtSignal(bool)
     display_name = 'Time resolved'
 
     def __init__(self, measurement_settings):
@@ -81,9 +81,11 @@ class TimeResolved(MeasurementABC):
         super().start_next_measurement()
         if self.__measurement_time <= self.__limit_continuous:
             for controller in self.controllers:
+                # Necessary to force secondaries into busy,
+                # before the primary returns not busy anymore.
                 controller.busy = True
             self.connect_continuous_mode_set()
-            self.continuous_mode.emit([True, False])
+            self.continuous_mode.emit(True)
         else:
             self.timer.start(self.__measurement_time)
             self.set_LEED_energy(self.current_energy, self.__settle_time)
@@ -117,8 +119,6 @@ class TimeResolved(MeasurementABC):
         bool
         """
         self.new_data_available.emit()
-        if self.__measurement_time <= self.__limit_continuous:
-            self.continuous_mode.emit([False, False])
         if self.__time_over or self.current_energy >= self.__end_energy:
             self.on_finished()
             return True
@@ -392,8 +392,43 @@ class TimeResolved(MeasurementABC):
                 controller.controller_busy.disconnect()
             except TypeError:
                 pass
+            # Necessary to force secondaries into busy,
+            # before the primary returns not busy anymore.
             controller.busy = True
             controller.controller_busy.connect(self.finalize,
                                                type=qtc.Qt.UniqueConnection)
-        self.continuous_mode.emit([False, True])
+        self.continuous_mode.emit(False)
         self.abort_action.emit()
+
+    def ready_for_next_measurement(self):
+        """Start check if all measurements have been received.
+
+        After all measurements have been received, a check if
+        the loop is done will be called after the continuous
+        mode has been turned off on the primary controller.
+
+        Returns
+        -------
+        None.
+        """
+        for controller in self.controllers:
+            # Necessary to force secondaries into busy,
+            # before the primary returns not busy anymore.
+            controller.busy = True
+            controller.controller_busy.connect(self.check_is_finished,
+                                               type=qtc.Qt.UniqueConnection)
+        if self.__measurement_time <= self.__limit_continuous:
+            self.continuous_mode.emit(False)
+
+    def check_is_finished(self):
+        """Check if the full measurement is finished."""
+        if any(device.busy for device in self.devices):
+            return
+        for controller in self.controllers:
+            controller.controller_busy.disconnect()
+        self.data_points.calculate_times()
+        if self.is_finished():
+            self.prepare_finalization()
+        else:
+            self.start_next_measurement()
+
