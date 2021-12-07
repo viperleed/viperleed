@@ -287,9 +287,14 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         -------
         None.
         """
-        with open(csv_name, 'r', encoding='UTF8', newline='') as file_name:
-            reader = csv.DictReader(file_name, delimiter=self.delimiter)
+        with open(csv_name, 'r', encoding='UTF8', newline='') as csv_file:
+            reader = csv.DictReader(csv_file, delimiter=self.delimiter)
             first_row = next(reader)
+            if 'nominal_energy' not in first_row:
+                # Read file is not a ViPErLEED measurement.
+                raise RuntimeError(
+                    f'{csv_name} is not a ViPErLEED measurement.'
+                    )
             key_dict = {}
             extractor = re.compile(r'(.*)\((.*)\)')
             for key in first_row:
