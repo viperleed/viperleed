@@ -40,23 +40,26 @@ class TimeResolved(MeasurementABC):
         self.__cycle_time = 0
         if self.settings:
             self.__delta_energy = self.settings.getfloat(
-                'measurement_settings', 'delta_energy'
+                'measurement_settings', 'delta_energy', fallback=10
                 )
-            self.__end_energy = self.settings.getfloat('measurement_settings',
-                                                       'end_energy')
-            self.__endless = self.settings.getboolean('measurement_settings',
-                                                      'endless')
+            self.__end_energy = self.settings.getfloat(
+                'measurement_settings', 'end_energy', fallback=10
+                )            
+            self.__endless = self.settings.getboolean(
+                'measurement_settings', 'endless', fallback=False
+                )
             self.__measurement_time = self.settings.getint(
-                'measurement_settings', 'measurement_time'
+                'measurement_settings', 'measurement_time', fallback=100
                 )
             self.__constant_energy = self.settings.getboolean(
-                'measurement_settings', 'constant_energy'
+                'measurement_settings', 'constant_energy', fallback=False
                 )
             self.__limit_continuous = self.settings.getint(
-                'measurement_settings', 'limit_continuous'
+                'measurement_settings', 'limit_continuous', fallback=10
                 )
-            self.__cycle_time = self.settings.getint('measurement_settings',
-                                                     'cycle_time')
+            self.__cycle_time = self.settings.getint(
+                'measurement_settings', 'cycle_time', fallback=100
+                )
 
         self.timer = qtc.QTimer(parent=self)
         self.timer.setSingleShot(True)
@@ -138,24 +141,24 @@ class TimeResolved(MeasurementABC):
         """
         # TODO: This will either be moved to a subclass or a separate processor
         # TODO: currently using nominal energy on an uncalibrated energy measurement: offset might be larger than step height!!!
-        int_update_rate = self.primary_controller.settings.get(
-                            'controller', 'update_rate')
-        update_rate = self.primary_controller.settings.getint(
-                            'adc_update_rate', int_update_rate)
-        measure = self.settings.get('measurement_settings', 'measure_this')
+        measure = self.settings.get(
+            'measurement_settings', 'measure_this', fallback='None'
+            )
         percentage = self.settings.getfloat('measurement_settings',
-                                            'percentage')
-        points = self.settings.getint('measurement_settings',
-                                      'relevant_points')
+                                            'percentage', fallback=0.1)
+        points = self.settings.getint(
+            'measurement_settings', 'relevant_points', fallback=10
+            )
         if measure == 'HV':
             to_change = 'hv_settle_time'
         elif measure == 'I0':
             to_change = 'i0_settle_time'
         else:
             # TODO: emit error
-            pass
+            return
 
         measured = self.data_points.get_time_resolved_data(measure)
+        interval = self.primary_controller.measurement_interval
 
         if self.__measurement_time <= self.__limit_continuous:
             for j, step in enumerate(measured[0]):
@@ -174,7 +177,7 @@ class TimeResolved(MeasurementABC):
                 if points == 0:
                     points = 1
                 previous_height = current_height
-                settle_time = int(1000*points/update_rate)
+                settle_time = int(1000*points*interval)
                 if settle_time > self.__settle_time:
                     self.__settle_time = settle_time
 

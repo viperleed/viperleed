@@ -96,9 +96,7 @@ class ViPErinoController(MeasureControllerABC):
     @property
     def initial_delay(self):
         """Return the initial time delay of a measurement in seconds."""
-        update_rate_raw = self.settings.get('controller', 'update_rate')
-        update_rate = self.settings.getint('adc_update_rate', update_rate_raw)
-        return 3/update_rate
+        return 3*self.measurement_interval
 
     def set_energy(self, energy, time, *more_steps, trigger_meas=True):
         """Set energy with associated settling time.
@@ -187,8 +185,8 @@ class ViPErinoController(MeasureControllerABC):
         pc_set_up_adcs = self.settings.get('available_commands',
                                            'PC_SET_UP_ADCS')
         num_meas_to_average = self.settings.getint(
-                                'measurement_settings', 'num_meas_to_average'
-                                )
+            'measurement_settings', 'num_meas_to_average', fallback=1
+            )
         message = [num_meas_to_average, *self.__adc_channels[:2]]
         self.send_message(pc_set_up_adcs, message)
 
@@ -234,7 +232,9 @@ class ViPErinoController(MeasureControllerABC):
         """
         pc_calibration = self.settings.get('available_commands',
                                            'PC_CALIBRATION')
-        update_rate = self.settings.getint('controller', 'update_rate')
+        update_rate = self.settings.getint(
+            'controller', 'update_rate', fallback=4
+            )
         message = [update_rate, *self.__adc_channels[:2]]
         self.send_message(pc_calibration, message)
 
@@ -405,6 +405,10 @@ class ViPErinoController(MeasureControllerABC):
     @property
     def measurement_interval(self):
         """Return the time interval between measurements in seconds."""
-        update_rate_raw = self.settings.get('controller', 'update_rate')
-        meas_f = self.settings.getint('adc_update_rate', update_rate_raw)
+        update_rate_raw = self.settings.get(
+            'controller', 'update_rate', fallback=4
+            )
+        meas_f = self.settings.getint(
+            'adc_update_rate', update_rate_raw, fallback=50
+            )
         return 1/meas_f

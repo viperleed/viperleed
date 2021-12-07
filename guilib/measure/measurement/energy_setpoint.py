@@ -36,13 +36,14 @@ class MeasureEnergySetpoint(MeasurementABC):
         self.__delta_energy = 1
         self.__hv_settle_time = 0
         if self.settings:
-            self.__end_energy = self.settings.getfloat('measurement_settings',
-                                                       'end_energy')
             self.__delta_energy = self.settings.getfloat(
-                'measurement_settings', 'delta_energy'
+                'measurement_settings', 'delta_energy', fallback=10
+                )
+            self.__end_energy = self.settings.getfloat(
+                'measurement_settings', 'end_energy', fallback=10
                 )
             self.__hv_settle_time = self.primary_controller.settings.getint(
-                'measurement_settings', 'hv_settle_time'
+                'measurement_settings', 'hv_settle_time', fallback=2000
                 )
 
     def begin_measurement_preparation(self):

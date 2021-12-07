@@ -73,6 +73,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
     _mandatory_settings = [
         ('devices', 'primary_controller'),
         ('measurement_settings', 'start_energy'),
+        ('measurement_settings', 'save_here'), # TODO: change name, move to global settings
         ]
 
     def __init__(self, measurement_settings):
@@ -106,10 +107,11 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         self.set_settings(measurement_settings)
 
         if self.settings:
-            self.start_energy = self.settings.getfloat('measurement_settings',
-                                                       'start_energy')
+            self.start_energy = self.settings.getfloat(
+                'measurement_settings', 'start_energy', fallback=0
+                )
             self.__long_settle_time = self.primary_controller.settings.getint(
-                'measurement_settings', 'first_settle_time'
+                'measurement_settings', 'first_settle_time', fallback=3000
                 )
 
         self.force_return_timer = qtc.QTimer(parent=self)
@@ -217,7 +219,10 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         # Instantiate secondary controller classes
         secondary_controllers = []
         secondary_set = ast.literal_eval(
-             self.__settings.get('devices', 'secondary_controllers'))
+             self.__settings.get(
+                'devices', 'secondary_controllers', fallback='()'
+                )
+             )
         for secondary_config, secondary_measures in secondary_set:
             ctrl = self.__make_controller(secondary_config, is_primary=False)
             ctrl.what_to_measure(secondary_measures)
@@ -231,7 +236,9 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         # Instantiate camera classes
         cameras = []
         camera_set = ast.literal_eval(
-             self.__settings.get('devices', 'cameras')
+             self.__settings.get(
+                 'devices', 'cameras', fallback='()'
+                 )
              )
         for camera_settings in camera_set:
             cameras.append(self.__make_camera(camera_settings))
@@ -365,6 +372,21 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         csv_name = path + clock + 'measurement.csv'
         self.data_points.save_data(csv_name)
 
+        for controller in self.controllers:
+            file_name = (path + clock + 'controller_' +
+                controller.serial.port_name + '.ini')
+            with open(file_name, 'w') as configfile:
+                controller.settings.write(configfile)
+        for camera in self.cameras:
+            name = camera.name.replace(' ', '_')
+            file_name = path + clock + 'camera_' + name + '.ini'
+            with open(file_name, 'w') as configfile:
+                camera.settings.write(configfile)
+
+        file_name = path + clock + 'measuement.ini'
+        with open(file_name, 'w') as configfile:
+            self.settings.write(configfile)
+
     def set_LEED_energy(self, *message, trigger_meas=True, **kwargs):
         """Set the electron energy used for LEED.
 
@@ -411,6 +433,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         if self.__aborted:
             return
         self.__aborted = True
+        self.settings.set('measurement_settings', 'was_aborted', 'True')
         self.force_return_timer.start(4500)
         self.prepare_finalization()
 
@@ -628,6 +651,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
 
         """
         self.__aborted = False
+        self.settings.set('measurement_settings', 'was_aborted', 'False')
         self.running = True
         self.switch_signals_for_preparation()
         self.current_energy = self.start_energy
@@ -836,6 +860,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         if invalid:
             emit_error(self, MeasurementErrors.MISSING_CLASS_NAME,
                        ('controller', 'controller_class'))
+            # TODO: we do this if the class name AND if the port name is missing, will need to be edited once we add the serial numbers
             return
 
         controller_cls_name = config.get('controller', 'controller_class')

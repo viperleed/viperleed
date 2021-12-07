@@ -106,7 +106,8 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
                 raise TypeError("No port name given, and none found in the "
                                 "configuration file. Cannot instantiate "
                                 "a controller without a valid port.")
-            port_name = settings.get('controller', 'port_name')
+            port_name = settings.get('controller', 'port_name',
+                                     fallback='None')
         else:
             settings.set('controller', 'port_name', port_name)
         self.__port_name = port_name
@@ -183,7 +184,9 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
     @property
     def initial_delay(self):
         """Return the initial time delay of a measurement in seconds."""
-        return self.settings.getfloat('controller', 'initial_delay')
+        return self.settings.getfloat(
+            'controller', 'initial_delay', fallback=0
+            )
 
     @property
     def serial(self):
@@ -359,7 +362,8 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
 
     def make_serial(self):
         """Create serial port object and connect to it."""
-        self.serial.port = self.settings.get('controller', 'port_name')
+        self.serial.port = self.settings.get('controller', 'port_name',
+                                             fallback='None')
 
     def send_message(self, *data):
         """Use serial to send message.

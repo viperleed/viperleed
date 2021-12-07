@@ -226,7 +226,10 @@ class Measure(gl.ViPErLEEDPluginBase):
                 "for plotting energy-resolved measurements"
                 )
         measured_quantity = meas.settings.get('measurement_settings',
-                                              'measure_this')
+                                              'measure_this',
+                                              fallback=None)
+        if not measured_quantity:
+            return
         data, nominal_energies = (
             self.measurement.data_points.get_energy_resolved_data(
                 measured_quantity, include_energies=True
@@ -247,7 +250,10 @@ class Measure(gl.ViPErLEEDPluginBase):
                 "for plotting time-resolved measurements"
                 )
         measured_quantity = meas.settings.get('measurement_settings',
-                                              'measure_this')
+                                              'measure_this',
+                                              fallback=None)
+        if not measured_quantity:
+            return
         data, times = (
             self.measurement.data_points.get_time_resolved_data(
                 measured_quantity, include_times=True
