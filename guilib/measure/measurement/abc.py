@@ -342,7 +342,6 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
                 pass
             self.disconnect_secondary_controllers()
             self.disconnect_cameras()
-            primary.busy = True
             primary.controller_busy.connect(self.return_to_gui,
                                             type=qtc.Qt.UniqueConnection)
             self.set_LEED_energy(self.current_energy, 50, trigger_meas=False)
@@ -943,6 +942,8 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
                 controller.controller_busy.disconnect()
             except TypeError:
                 pass
+            # Necessary to force secondaries into busy,
+            # before the primary returns not busy anymore.
             controller.busy = True
             controller.controller_busy.connect(self.finalize,
                                                type=qtc.Qt.UniqueConnection)

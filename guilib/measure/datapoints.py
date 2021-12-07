@@ -11,6 +11,8 @@ Author: Florian Doerr
 Defines the DaDataPointsta class.
 """
 import csv
+import re
+import copy
 from collections.abc import MutableSequence, Sequence
 
 from PyQt5 import QtCore as qtc
@@ -39,14 +41,14 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
     error_occurred = qtc.pyqtSignal(tuple)
 
     plot_info = {}
-    plot_info['images'] = ['Number']
-    plot_info['nominal_energy'] = ['eV', 'lin']
-    plot_info['measurement_t'] = ['s', 'lin']
-    plot_info['I0'] = ['uA', 'lin']
-    plot_info['HV'] = ['eV', 'lin']
-    plot_info['Isample'] = ['V', 'log']
-    plot_info['temperature'] = ['°C', 'lin']
-    plot_info['cold_junction'] = ['°C', 'lin']
+    plot_info['images'] = ['Number', str]
+    plot_info['nominal_energy'] = ['eV', 'lin', float]
+    plot_info['measurement_t'] = ['s', 'lin', float]
+    plot_info['I0'] = ['uA', 'lin', float]
+    plot_info['HV'] = ['eV', 'lin', float]
+    plot_info['Isample'] = ['V', 'log', float]
+    plot_info['temperature'] = ['°C', 'lin', float]
+    plot_info['cold_junction'] = ['°C', 'lin', float]
 
     def __init__(self, *args):
         """Initialise data class."""
@@ -58,6 +60,8 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         # before starting measurements.
         self.primary_controller = None
         self.controllers = None
+        self.delimiter = ';'
+        # self.primary_first_time = None
 
     @property
     def nominal_energies(self):
@@ -129,8 +133,13 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         primary_time = (
                 self[-1]['measurement_t'][self.primary_controller][0]
                 )
+        # if not self.primary_first_time:
+            # self.primary_first_time = (
+                    # self[0]['measurement_t'][self.primary_controller][0]
+                    # )
         for ctrl in self[-1]['measurement_t']:
-            self[-1]['measurement_t'][ctrl][0] -= primary_time
+            # self[-1]['measurement_t'][ctrl][0] -= primary_time
+            # self[-1]['measurement_t'][ctrl][0] -= self.primary_first_time
             self[-1]['measurement_t'][ctrl][0] += ctrl.initial_delay
             quantity = ctrl.measured_quantities[0]
             length = len(self[-1][quantity][ctrl])
@@ -265,6 +274,61 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         data_points_dict['nominal_energy'] = energy
         self.append(data_points_dict)
 
+    def read_data(self, csv_name):
+        """Read data from csv file.
+
+        Parameters
+        ----------
+        csv_name : Path
+            Full path and file name to
+            which the data will be saved.
+
+        Returns
+        -------
+        None.
+        """
+        with open(csv_name, 'r', encoding='UTF8', newline='') as file_name:
+            reader = csv.DictReader(file_name, delimiter=self.delimiter)
+            first_row = next(reader)
+            key_dict = {}
+            extractor = re.compile(r'(.*)\((.*)\)')
+            for key in first_row:
+                if key == 'nominal_energy':
+                    key_dict[key] = (key, None)
+                    continue
+                extracted = extractor.match(key)
+                if not extracted:
+                    continue
+                key_dict[key] = list(extracted.groups())
+
+            data_points_dict = {'nominal_energy': -1}
+            for key in key_dict:
+                quantity, device = key_dict[key]
+                if quantity == 'nominal_energy':
+                    continue
+                if quantity not in data_points_dict:
+                    data_points_dict[quantity] = {}
+                data_points_dict[quantity][device] = []
+            self.append(copy.deepcopy(data_points_dict))
+
+            for row in (first_row, *reader):
+                for column, value in row.items():
+                    quantity, device = key_dict[column]
+                    converter = self.plot_info[quantity][-1]
+                    value = converter(value)
+                    if column == 'nominal_energy':
+                        if self[-1]['nominal_energy'] == -1:
+                            self[-1]['nominal_energy'] = value
+                        if value != self[-1]['nominal_energy']:
+                            self.append(copy.deepcopy(data_points_dict))
+                            self[-1]['nominal_energy'] = value
+                    else:
+                        self[-1][quantity][device].append(value)
+            for point in self:
+                print(point)
+                print('####################################')
+
+
     def save_data(self, csv_name):
         """Save data.
 
@@ -286,11 +350,11 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
             if quantity not in self.__exceptional_keys:
                 for controller in ctrl_dict:
                     first_line.append(
-                        f"{quantity}_{controller.serial.port_name}"
+                        f"{quantity}({controller.serial.port_name})"
                         )
 
         with open(csv_name, 'w', encoding='UTF8', newline='') as file_name:
-            writer = csv.writer(file_name, delimiter = ';')
+            writer = csv.writer(file_name, delimiter=self.delimiter)
             writer.writerow(first_line)
             for data_point in self:
                 data = []

@@ -63,6 +63,8 @@ class IVVideo(MeasurementABC):
         """
         super().start_next_measurement()
         for controller in self.controllers:
+            # Necessary to force secondaries into busy,
+            # before the primary returns not busy anymore.
             controller.busy = True
         self.set_LEED_energy(self.current_energy, self.__i0_settle_time)
         self.counter += 1
