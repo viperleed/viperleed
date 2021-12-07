@@ -344,3 +344,29 @@ def is_integer_matrix(matrix, eps=1e-3):
     matrix = np.asarray(matrix)
 
     return np.all(np.abs(matrix - matrix.round()) < eps)
+
+def justify_sequences(sequences, filler=None):
+    """Justify sequences to same length.
+
+    Each of the given sequences is left-justified into a sequence
+    as long as the longest sequence given, with missing vaules
+    replaced by filler.
+
+    Parameters
+    ----------
+    sequences : Sequence
+        Sequences to be justified. These sequences are not altered.
+    filler : object, optional
+        Inserted object in vacant spaces. Default is None.
+
+    Returns
+    -------
+    justified : Sequence
+        Sequence with justified copies of the input sequences.
+        This return value preserves the type of both the outer
+        and the inner sequences.
+    """
+    max_length = max(len(l) for l in sequences)
+    just = (l + type(l)((filler,))*(max_length-len(l)) for l in sequences)
+    return type(sequences)(just)
+    
