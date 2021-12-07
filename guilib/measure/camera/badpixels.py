@@ -942,6 +942,8 @@ class BadPixels:
         # Search in filepath for bad pixels files of the current camera
         bad_px_files = list(filepath.glob(f"{cam_name}*.badpx"))
         if not bad_px_files:
+            # Invalidate the information, then complain
+            self.__bad_coords = np.ones((1, 2)) * np.nan
             raise FileNotFoundError(
                 f"{self.__class__.__name__}: could not find a "
                 f"bad pixels file for camera {self.__camera.name} "
@@ -974,6 +976,8 @@ class BadPixels:
                     uncorrectable.append(literal_eval(bad.strip()))
 
         if not bad_pixels and not uncorrectable:
+            # Invalidate the information, then complain
+            self.__bad_coords = np.ones((1, 2)) * np.nan
             raise ValueError("Could not read bad pixel information "
                              f"from file {filename}")
         self.__bad_coords = np.array(bad_pixels)
