@@ -29,6 +29,8 @@ from viperleed.guilib import measure as vpr_measure
 
 DEFAULT_CONFIG_PATH = (Path(inspect.getfile(vpr_measure)).parent
                        / 'configuration')
+NOT_FOUND = "No file found!"
+NOT_SET = "\u2014"
 
 
 class BadPixelsFinderDialog(qtw.QDialog):
@@ -52,11 +54,14 @@ class BadPixelsFinderDialog(qtw.QDialog):
                 'abort': qtw.QPushButton("&Abort"),
                 'find': qtw.QPushButton("&Find"),
                 'set_bad_px_path': qtw.QToolButton(),
+                'save_uncorr_mask': qtw.QPushButton(
+                    "Save uncorrectable &mask"
+                    ),
                 },
             'bad_px_info': {
-                'date_time': qtw.QLabel("Date/Time: \u2014"),
-                'n_bad': qtw.QLabel("No. bad pixels: \u2014"),
-                'n_uncorrectable': qtw.QLabel("No. uncorrectable: \u2014"),
+                'date_time': qtw.QLabel(f"Date/Time: {NOT_SET}"),
+                'n_bad': qtw.QLabel(f"No. bad pixels: {NOT_SET}"),
+                'n_uncorrectable': qtw.QLabel(f"No. uncorrectable: {NOT_SET}"),
                 'date_time_old': qtw.QLabel(""),
                 'n_bad_old': qtw.QLabel(""),
                 'n_uncorrectable_old': qtw.QLabel(""),
@@ -201,13 +206,13 @@ class BadPixelsFinderDialog(qtw.QDialog):
     def __compose_bad_pixel_info(self):
         group = qtw.QGroupBox("Bad pixels information")
         layout = qtw.QGridLayout()
-        layout.setAlignment(qtc.Qt.AlignLeft)
         layout.addWidget(self.__bad_px_info['date_time'], 0, 0)
         layout.addWidget(self.__bad_px_info['date_time_old'], 0, 1)
         layout.addWidget(self.__bad_px_info['n_bad'], 1, 0)
         layout.addWidget(self.__bad_px_info['n_bad_old'], 1, 1)
         layout.addWidget(self.__bad_px_info['n_uncorrectable'], 2, 0)
         layout.addWidget(self.__bad_px_info['n_uncorrectable_old'], 2, 1)
+        layout.addWidget(self.__buttons['save_uncorr_mask'], 3, 0, 1, 2)
         group.setLayout(layout)
         return group
 
@@ -258,6 +263,9 @@ class BadPixelsFinderDialog(qtw.QDialog):
         self.__buttons['set_bad_px_path'].triggered.connect(
             self.__on_set_bad_pixel_directory
             )
+        self.__buttons['save_uncorr_mask'].clicked.connect(
+                self.__on_save_mask_clicked
+                )
 
         self.__ctrls['camera'].currentTextChanged.connect(
             self.__on_camera_selected,
@@ -292,6 +300,11 @@ class BadPixelsFinderDialog(qtw.QDialog):
         bad_pix_enabled = enabled and has_camera
         find_enabled = bad_pix_enabled and has_bad_px_path
         abort_enabled = not enabled and has_camera
+        has_bad_px_info = (
+            find_enabled
+            and NOT_FOUND not in self.__bad_px_info['date_time'].text()
+            and NOT_SET not in self.__bad_px_info['date_time'].text()
+            )
 
         for ctrl in (self.__ctrls['bad_px_path'],
                      self.__buttons['set_bad_px_path']):
@@ -302,6 +315,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
 
         self.__buttons['abort'].setEnabled(abort_enabled)
         self.__buttons['find'].setEnabled(find_enabled)
+        self.__buttons['save_uncorr_mask'].setEnabled(has_bad_px_info)
 
     def __get_bad_pixel_info(self):
         """Return bad pixel info from the active camera.
@@ -330,7 +344,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
         """
         cam = self.active_camera
         if not cam.bad_pixels.file_name:
-            return "\u2014", -1, -1, -1, -1
+            return NOT_SET, -1, -1, -1, -1
 
         *_, date, time = cam.bad_pixels.file_name.split('_')
         date_time = (f"{date[:4]}-{date[4:6]}-{date[6:]} "
@@ -405,7 +419,6 @@ class BadPixelsFinderDialog(qtw.QDialog):
         self.__set_camera_settings.connect(self.active_camera.set_settings,
                                            type=qtc.Qt.QueuedConnection)
         self.__set_camera_settings.emit(settings)
-
         self.__update_controls()
 
     def __on_error_occurred(self, error_info):
@@ -499,6 +512,23 @@ class BadPixelsFinderDialog(qtw.QDialog):
             total_progress -= 1
         bar_total.setValue(total_progress)
 
+    def __on_save_mask_clicked(self, *_):
+        """React to a request to save an uncorrectable pixels mask."""
+        cam = self.active_camera
+        if not cam or not cam.bad_pixels:
+            # This should never happen: the button
+            # is disabled if this is the case
+            return
+        mask_path = qtw.QFileDialog.getExistingDirectory(
+            parent=self,
+            caption="Set directory for uncorrectable pixels mask",
+            directory=self.__ctrls['bad_px_path'].text()
+            )
+        if not mask_path:
+            # User exited without selecting
+            return
+        cam.bad_pixels.save_uncorrectable_mask(mask_path)
+
     def __on_set_bad_pixel_directory(self, *_):
         """React to a user request to set the bad pixel directory."""
         new_directory = qtw.QFileDialog.getExistingDirectory(
@@ -508,7 +538,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
             # User exited without selecting
             return
         cam = self.active_camera
-        cam.settings.set("camera_settings",  "bad_pixels_path", new_directory)
+        cam.settings.set("camera_settings", "bad_pixels_path", new_directory)
         cam.update_bad_pixels()
         self.__update_controls()
 
@@ -554,8 +584,8 @@ class BadPixelsFinderDialog(qtw.QDialog):
 
         if n_bad < 0:
             # No file found
-            date_time_txt = "No file found!"
-            bad_txt = uncorrectable_txt = "\u2014"  # em-dash
+            date_time_txt = NOT_FOUND
+            bad_txt = uncorrectable_txt = NOT_SET  # em-dash
         else:
             fmt = "{} ({:.2f}% of sensor)"
             date_time_txt = date_time
@@ -593,12 +623,13 @@ class BadPixelsFinderDialog(qtw.QDialog):
             # Cannot read bad pixels, nor save them.
             self.__buttons['find'].setEnabled(False)
             self.__ctrls['bad_px_path'].setText("None selected")
-            self.__bad_px_info['date_time'].setText("Date/Time: \u2014")
-            self.__bad_px_info['n_bad'].setText("No. bad pixels: \u2014")
+            self.__bad_px_info['date_time'].setText(f"Date/Time: {NOT_SET}")
+            self.__bad_px_info['n_bad'].setText(f"No. bad pixels: {NOT_SET}")
             self.__bad_px_info['n_uncorrectable'].setText(
-                "No. uncorrectable: \u2014"
+                f"No. uncorrectable: {NOT_SET}"
                 )
             return
 
         self.__ctrls['bad_px_path'].setText(str(bad_pixels_path.resolve()))
         self.__update_bad_px_info_latest()
+        self.__enable_controls(True)
