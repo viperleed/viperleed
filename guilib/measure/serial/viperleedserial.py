@@ -115,6 +115,7 @@ class ViPErLEEDSerial(SerialABC):
         self.__last_request_sent = ''
         self.__measurements = []
         self.__is_continuous_mode = False
+        self.__changed_mode = False
 
         self._mandatory_settings.extend((
             ('hardware_bits',),
@@ -401,6 +402,9 @@ class ViPErLEEDSerial(SerialABC):
 
         if command != change_mode:
             self.__last_request_sent = command
+            self.__changed_mode = False
+        else:
+            self.__changed_mode = True
 
         return True
 
@@ -514,13 +518,14 @@ class ViPErLEEDSerial(SerialABC):
             if len(self.unprocessed_messages) != 1:
                 self.unprocessed_messages = []
                 return
-        # print(self.port_name, self.unprocessed_messages)
         for message in self.unprocessed_messages:
             # If the length of the message is 1, then it has to be a
             # PC_OK byte.
             if len(message) == 1:
                 if message == pc_ok.encode():
-                    if self.__last_request_sent == pc_set_voltage:
+                    if self.__changed_mode:
+                        self.__changed_mode = False
+                    elif self.__last_request_sent == pc_set_voltage:
                         self.about_to_trigger.emit()
                     self.busy = False
             # Hardware config and measurement values are both 4 bytes long.
