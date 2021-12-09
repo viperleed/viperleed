@@ -21,6 +21,7 @@ from viperleed.guilib.measure.hardwarebase import get_devices
 from viperleed.guilib.measure.camera import badpixels
 from viperleed.guilib.measure.camera import abc as camera_abc
 from viperleed.guilib.measure.dialogs.busywindow import BusyWindow
+from viperleed.guilib.measure.dialogs.dropdowndialog import DropdownDialog
 from viperleed.guilib.widgetslib import change_control_text_color
 
 # temporary solution till we have a system config file
@@ -31,6 +32,7 @@ DEFAULT_CONFIG_PATH = (Path(inspect.getfile(vpr_measure)).parent
                        / 'configuration')
 NOT_FOUND = "No file found!"
 NOT_SET = "\u2014"
+NO_BAD_PX_PATH = "None selected"
 
 
 class BadPixelsFinderDialog(qtw.QDialog):
@@ -47,7 +49,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
         self.__children = {
             'ctrls': {
                 'camera': qtw.QComboBox(),
-                'bad_px_path': qtw.QLabel("None selected"),
+                'bad_px_path': qtw.QLabel(NO_BAD_PX_PATH),
                 },
             'buttons' : {
                 'done': qtw.QPushButton("&Done"),
@@ -103,6 +105,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
         self.__reset_progress_bars()
         self.__progress['group'].hide()
         self.update_available_camera_list()
+        self.__ctrls['camera'].setCurrentIndex(-1)
         self.adjustSize()
         super().showEvent(event)
 
@@ -179,6 +182,13 @@ class BadPixelsFinderDialog(qtw.QDialog):
 
     def __compose(self):
         """Place children widgets."""
+        # Remove the '?' button from the title bar
+        self.setWindowFlags(self.windowFlags()
+                            & ~qtc.Qt.WindowContextHelpButtonHint)
+
+        # Make all buttons not the 'default' button (i.e.,
+        # the one that is automatically triggered when the
+        # user presses "Enter".
         for btn in self.__buttons.values():
             try:
                 btn.setAutoDefault(False)
@@ -222,7 +232,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
         layout.addWidget(self.__buttons['set_bad_px_path'])
         layout.addWidget(self.__ctrls['bad_px_path'], stretch=1)
 
-        has_bad_px_path = self.__ctrls['bad_px_path'].text() != 'None selected'
+        has_bad_px_path = self.__ctrls['bad_px_path'].text() != NO_BAD_PX_PATH
         change_control_text_color(self.__ctrls['bad_px_path'],
                                   'black' if has_bad_px_path else 'red')
         group.setLayout(layout)
@@ -240,6 +250,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
         layout = qtw.QHBoxLayout()
         layout.addWidget(qtw.QLabel("Camera:"))
         layout.addWidget(self.__ctrls['camera'], stretch=1)
+        self.__ctrls['camera'].setPlaceholderText("<Select camera>")
         return layout
 
     def __compose_progress_bars(self):
@@ -267,7 +278,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
                 self.__on_save_mask_clicked
                 )
 
-        self.__ctrls['camera'].currentTextChanged.connect(
+        self.__ctrls['camera'].textActivated.connect(
             self.__on_camera_selected,
             type=qtc.Qt.QueuedConnection
             )
@@ -293,9 +304,12 @@ class BadPixelsFinderDialog(qtw.QDialog):
 
         # Decide whether controls can be enabled. This
         # depends on whether there is any camera. Cannot
-        # find anything if there is no camera...
-        has_camera = self.__ctrls['camera'].count() > 0
-        has_bad_px_path = self.__ctrls['bad_px_path'].text() != 'None selected'
+        # find anything if there is no camera, or if
+        # settings are invalid
+        has_camera = (self.__ctrls['camera'].count() > 0
+                      and bool(self.active_camera)
+                      and bool(self.active_camera.settings))
+        has_bad_px_path = self.__ctrls['bad_px_path'].text() != NO_BAD_PX_PATH
 
         bad_pix_enabled = enabled and has_camera
         find_enabled = bad_pix_enabled and has_bad_px_path
@@ -363,28 +377,52 @@ class BadPixelsFinderDialog(qtw.QDialog):
         return (date_time, n_bad, bad_fraction,
                 n_uncorrectable, uncorrectable_fraction)
 
-    def __get_camera_config(self, camera_name):  # TODO: use self to report errors
+    def __get_camera_config(self, camera_name, directory=DEFAULT_CONFIG_PATH):
         """Return the configuration file for a camera with a given name."""
-        config_path = DEFAULT_CONFIG_PATH
-        config_files = [f for f in config_path.glob('**/*')
+        directory = Path(directory)
+        config_files = [f for f in directory.glob('**/*')
                         if f.is_file() and f.suffix == '.ini']
         camera_config_files = []
-        for config_path in config_files:
-            with open(config_path, 'r') as config_file:
+        for config_name in config_files:
+            with open(config_name, 'r') as config_file:
                 if camera_name in config_file.read():
-                    camera_config_files.append(config_path)
+                    camera_config_files.append(config_name)
 
         if not camera_config_files:
-            # TODO: report error with a dialog
-            raise RuntimeError(
-                f"Found no config file for camera {camera_name}."
+            msg_box = qtw.QMessageBox(parent=self)
+            msg_box.setWindowTitle("No settings file found")
+            msg_box.setText(
+                f"Directory {directory} and its subfolders do not contain "
+                f"any settings file for camera {camera_name}. Select "
+                "a different directory."
                 )
+            msg_box.setIcon(msg_box.Critical)
+            msg_box.addButton(msg_box.Cancel)
+            btn = msg_box.addButton("Select path", msg_box.ActionRole)
+            msg_box.exec_()
+            if msg_box.clickedButton() is btn:
+                new_path = qtw.QFileDialog.getExistingDirectory(
+                    parent=self,
+                    caption="Choose directory of camera settings",
+                    directory=str(directory)
+                    )
+                if new_path:
+                    return self.__get_camera_config(camera_name, new_path)
+            return None
         if len(camera_config_files) > 1:
-            # TODO: report error with a dialog
-            raise RuntimeError(
-                f"Found multiple ({len(camera_config_files)} configuration"
-                f"files for camera {camera_name}."
+            # Let the use pick which one to use
+            names = [f.name for f in camera_config_files]
+            dropdown = DropdownDialog(
+                "Found multiple settings files",
+                "Found multiple settings files for camera "
+                f"{camera_name} in {directory} and subfolders.\n"
+                "Select which one should be used:",
+                names, parent=self
                 )
+            config = None
+            if dropdown.exec_() == dropdown.Apply:
+                config = camera_config_files[names.index(dropdown.selection)]
+            return config
         return camera_config_files[0]
 
     def __on_camera_preparing(self, busy):
@@ -408,9 +446,15 @@ class BadPixelsFinderDialog(qtw.QDialog):
             return
 
         # New camera selected.
+        settings = self.__get_camera_config(camera_name)
+
+        # Signal errors by picking an invalid entry
+        if not settings:
+            self.__ctrls['camera'].setCurrentIndex(-1)
+            return
+
         if not self.__camera_busy.isVisible():
             self.__camera_busy.show()
-        settings = self.__get_camera_config(camera_name)
         cls = self.__available_cameras[camera_name]
         self.active_camera = cls()
         self.active_camera.error_occurred.connect(self.__on_error_occurred)
@@ -622,7 +666,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
         if not bad_pixels_path:
             # Cannot read bad pixels, nor save them.
             self.__buttons['find'].setEnabled(False)
-            self.__ctrls['bad_px_path'].setText("None selected")
+            self.__ctrls['bad_px_path'].setText(NO_BAD_PX_PATH)
             self.__bad_px_info['date_time'].setText(f"Date/Time: {NOT_SET}")
             self.__bad_px_info['n_bad'].setText(f"No. bad pixels: {NOT_SET}")
             self.__bad_px_info['n_uncorrectable'].setText(
