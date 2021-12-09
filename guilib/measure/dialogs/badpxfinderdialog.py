@@ -533,7 +533,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
         self.__bad_px_info['n_uncorrectable_old'].setText(
             uncorrectable_txt_old
             )
-
+        self.__report_uncorrectable()
         self.__enable_controls(True)
 
     def __on_progress(self, *args):
@@ -592,6 +592,30 @@ class BadPixelsFinderDialog(qtw.QDialog):
             progress_bar.setMinimum(0)
             progress_bar.setValue(0)
         self.__progress['section_text'].setText('')
+
+    def __report_uncorrectable(self):
+        """Report an error if there are many uncorrectable pixels."""
+        bad_px = self.active_camera.bad_pixels
+        cluster_sizes = bad_px.get_uncorrectable_clusters_sizes()
+
+        # Complain only if there are clusters larger than 1
+        cluster_sizes = [s for s in cluster_sizes if s > 1]
+
+        if not cluster_sizes:
+            return
+        qtw.QMessageBox.critical(
+            self,  # parent
+            "Too many uncorrectable bad pixels",  # title
+            f"Camera {self.active_camera.name} has a significant number "
+            "of bad pixels that cannot be corrected. This will have a "
+            "serious impact on the quality of your LEED-IV data. Consider "
+            f"replacing the camera!\nFound {len(cluster_sizes)} bad-pixel "
+            f"clusters with sizes as large as {max(cluster_sizes)} pixels.\n"
+            "\nAs a temporary solution you can create an uncorrectable-"
+            "pixels mask, process it the same way as your images, and "
+            "combine it with the mask for the LEED screen and electron "
+            "gun to discard the damaged areas of the sensor."
+            )
 
     def __start(self, *_):
         """Begin finding bad pixels for the selected camera."""
