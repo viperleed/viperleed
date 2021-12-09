@@ -141,7 +141,7 @@ class TimeResolved(MeasurementABC):
         """
         # TODO: This will either be moved to a subclass or a separate processor
         # TODO: currently using nominal energy on an uncalibrated energy measurement: offset might be larger than step height!!!
-        measure = self.settings.get(
+        quantity = self.settings.get(
             'measurement_settings', 'measure_this', fallback='None'
             )
         percentage = self.settings.getfloat('measurement_settings',
@@ -149,15 +149,17 @@ class TimeResolved(MeasurementABC):
         points = self.settings.getint(
             'measurement_settings', 'relevant_points', fallback=10
             )
-        if measure == 'HV':
+        if quantity == 'HV':
             to_change = 'hv_settle_time'
-        elif measure == 'I0':
+        elif quantity == 'I0':
             to_change = 'i0_settle_time'
         else:
             # TODO: emit error
             return
 
-        measured = self.data_points.get_time_resolved_data(measure)
+        measured, _ = self.data_points.get_time_resolved_data(
+            quantity, separate_steps=True, absolute_times=True
+            )
         interval = self.primary_controller.measurement_interval
 
         if self.__measurement_time <= self.__limit_continuous:

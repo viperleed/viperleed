@@ -383,7 +383,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             with open(file_name, 'w') as configfile:
                 camera.settings.write(configfile)
 
-        file_name = path + clock + 'measuement.ini'
+        file_name = path + clock + 'measurement.ini'
         with open(file_name, 'w') as configfile:
             self.settings.write(configfile)
 

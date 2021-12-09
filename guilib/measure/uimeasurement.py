@@ -17,8 +17,7 @@ from pathlib import Path
 import PyQt5.QtCore as qtc
 import PyQt5.QtWidgets as qtw
 import PyQt5.QtGui as qtg
-
-import time
+import numpy as np
 
 # ViPErLEED modules
 from viperleed import guilib as gl
@@ -35,6 +34,8 @@ from viperleed.guilib.measure.uimeasurementsettings import SettingsEditor
 from viperleed.guilib.measure.datapoints import DataPoints
 
 TITLE = 'Measurement UI'
+
+PLOT_FLAT = True  # TODO: make this a tick box
 
 
 # @gl.broadcast_mouse
@@ -61,7 +62,7 @@ class Measure(gl.ViPErLEEDPluginBase):
         self._dialogs = {
             'change_settings': SettingsEditor(),
             }
-        self._glob = {}
+        self._glob = {'plot_lines': []}
 
         # Set window properties
         self.setWindowTitle(TITLE)
@@ -141,21 +142,29 @@ class Measure(gl.ViPErLEEDPluginBase):
 
     def __run_measurement(self):
         self.measurement.begin_measurement_preparation()
-        self._ctrls['measure'].setEnabled(False)
-        self._ctrls['select'].setEnabled(False)
-        self._ctrls['abort'].setEnabled(True)
-        self._ctrls['read'].setEnabled(False)
+        self.__switch_enabled(False)
         self.statusBar().showMessage('Busy')
 
     def __on_finished(self, *_):
         # After the measurement is done, close the serial ports.
         for controller in self.measurement.controllers:
             controller.serial.serial_disconnect()
-        self._ctrls['measure'].setEnabled(True)
-        self._ctrls['select'].setEnabled(True)
-        self._ctrls['abort'].setEnabled(False)
-        self._ctrls['read'].setEnabled(True)
+        self.__switch_enabled(True)
         self.statusBar().showMessage('Ready')
+
+    def __switch_enabled(self, running):
+        """Switch enabled status of buttons.
+
+        Parameters
+        ----------
+        running : boolean
+            False when a measurement is running.
+        """
+        self._ctrls['measure'].setEnabled(running)
+        self._ctrls['select'].setEnabled(running)
+        self._ctrls['abort'].setEnabled(not running)
+        self._ctrls['read'].setEnabled(running)
+        self._ctrls['settings_editor'].setEnabled(running)
 
     def __on_measurement_finished(self, *_):
         print("\n#### DONE! ####")
@@ -211,7 +220,7 @@ class Measure(gl.ViPErLEEDPluginBase):
         self.measurement.finished.connect(self.__on_finished)
         self.measurement.finished.connect(self.__on_measurement_finished)
 
-
+        self._ctrls['plots'][0].ax.clear()
         self.__delayed_start.start(50)
 
     def __on_energy_resolved_data(self):
@@ -242,7 +251,6 @@ class Measure(gl.ViPErLEEDPluginBase):
     def __on_time_resolved_data(self):
         """Replot measured data."""
         fig = self._ctrls['plots'][0]
-        fig.ax.cla()  # Clear old stuff
         meas = self.sender()
         if not isinstance(meas, MeasurementABC):
             raise RuntimeError(
@@ -254,15 +262,31 @@ class Measure(gl.ViPErLEEDPluginBase):
                                               fallback=None)
         if not measured_quantity:
             return
+        separate_steps = True
         data, times = (
             self.measurement.data_points.get_time_resolved_data(
-                measured_quantity, include_times=True
+                measured_quantity, separate_steps=separate_steps,
+                absolute_times=not separate_steps
                 )
             )
-        for ctrl_times, ctrl_data in zip(times, data):
-            for times_set, data_set in zip(ctrl_times, ctrl_data):
-                fig.ax.plot(times_set, data_set, '.')
-        fig.ax.figure.canvas.draw_idle()
+        n_controllers = len(data)
+        # Loop over controllers
+        for i, (ctrl_times, ctrl_data) in enumerate(zip(times, data)):
+            if separate_steps:
+                # Enough to plot the last step for each
+                fig.ax.plot(ctrl_times[-1], ctrl_data[-1], '.')
+            else:
+                if len(self._glob['plot_lines']) < n_controllers:
+                    self._glob['plot_lines'].extend(
+                        fig.ax.plot(ctrl_times, ctrl_data, '.')
+                        )
+                    continue
+                line = self._glob['plot_lines'][i]
+                line.set_data(ctrl_times, ctrl_data)
+        if not separate_steps:
+            fig.ax.relim()
+            fig.ax.autoscale_view()
+        fig.draw_idle()
 
     def __on_set_energy(self):
         """Set energy on primary controller."""
@@ -325,6 +349,31 @@ class Measure(gl.ViPErLEEDPluginBase):
         settings.show()
 
     def __on_read_pressed(self):
-        path = qtw.QFileDialog.getOpenFileName()
+        csv_name, _ = qtw.QFileDialog.getOpenFileName(parent=self)
+        if not csv_name:
+            return
         data = DataPoints()
-        data.read_data(path[0])
+        try:
+            data.read_data(csv_name)
+        except RuntimeError as err:
+            qtw.QMessageBox.critical(self, "Error", str(err),
+                                     qtw.QMessageBox.Ok)
+
+        config_name = csv_name.replace(".csv", ".ini")
+        config = configparser.ConfigParser(comment_prefixes='/',
+                                           allow_no_value=True,
+                                           strict=False)
+        try:
+            f = open(config_name, 'r')
+            f.close()
+            config.read(config_name)
+        except OSError:
+            raise FileNotFoundError(f"Could not open/read file: {config_name}."
+                                    " Check if this file exists and is in the "
+                                    "correct folder.")
+            return
+
+        meas_type = config.get('measurement_settings', 'measurement_class')
+        measured_quantity = config.get('measurement_settings',
+                                              'measure_this',
+                                              fallback=None)
