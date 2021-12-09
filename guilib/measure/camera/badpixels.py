@@ -19,6 +19,7 @@ from pathlib import Path
 
 import numpy as np
 from scipy.signal import convolve2d
+from scipy import ndimage
 
 from PyQt5 import (QtCore as qtc,
                    QtGui as qtg,
@@ -205,7 +206,7 @@ class BadPixelsFinder(qtc.QObject):
         self.__info.setText(
             f"Frames will be acquired from {name} camera."
             )
-        
+
         self.__calc_thread = _BadPixCalculationThread(self)
 
     @property
@@ -910,6 +911,43 @@ class BadPixels:
                        np.all(uncorrectable < (height, width), axis=1)),
                       axis=0)
         self.__uncorrectable_roi = uncorrectable[mask]
+
+    def get_uncorrectable_clusters_sizes(self):
+        """Return a sorted list of sizes for uncorrectable clusters.
+
+        Only the uncorrectable pixels in the current
+        region of interest will be considered.
+
+        Returns
+        -------
+        sizes : list
+            Each element is the number of pixels in a
+            cluster of uncorrectable ones.
+
+        Raises
+        ------
+        RuntimeError
+            If this method is called before any bad-pixel
+            information has been loaded.
+        """
+        if not self:
+            raise RuntimeError("No bad pixel information present")
+
+        if not self.n_uncorrectable_roi:
+            return []
+
+        # Prepare an image of uncorrectable pixels
+        width, height, *_ = self.__camera.image_info
+        uncorrectable = np.zeros((height, width), dtype='uint8')
+        bad_y, bad_x = self.uncorrectable.T
+        uncorrectable[bad_y, bad_x] = 255
+
+        # Then label 4-connected features, and find their sizes
+        labelled, _ = ndimage.label(uncorrectable)
+        clusters = ndimage.find_objects(labelled)
+        return sorted(
+            (np.count_nonzero(labelled[c]) for c in clusters)
+            )
 
     def read(self, filepath=''):
         """Read bad pixel information from a file path.
