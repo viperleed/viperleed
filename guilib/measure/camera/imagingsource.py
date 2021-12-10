@@ -203,7 +203,7 @@ class ImagingSourceCamera(CameraABC):
         **kwargs : object
             Other unused keyword arguments
         """
-        self.hardware_supported_features.append('color_format')
+        self.hardware_supported_features.extend(['roi', 'color_format'])
         self.is_finding_best_frame_rate = False
         self.best_next_rate = 1024
 
@@ -479,12 +479,9 @@ class ImagingSourceCamera(CameraABC):
             roi_width, roi_height : int
                 Width and height of the region of interest in pixels
         """
-        x_center = self.driver.get_vcd_property("Partial scan", "X Offset")
-        y_center = self.driver.get_vcd_property("Partial scan", "Y Offset")
+        roi_x = self.driver.get_vcd_property("Partial scan", "X Offset")
+        roi_y = self.driver.get_vcd_property("Partial scan", "Y Offset")
         roi_width, roi_height = self.driver.video_format_shape
-
-        roi_x = round(x_center - roi_width/2)
-        roi_y = round(y_center - roi_height/2)
 
         return roi_x, roi_y, roi_width, roi_height
 
@@ -502,19 +499,17 @@ class ImagingSourceCamera(CameraABC):
         None.
         """
         if no_roi:
-            *_, roi_width, roi_height = self.driver.video_format_shape_range
-            x_center, y_center = roi_width/2, roi_height/2
+            roi = self.driver.video_format_shape_range
         else:
-            roi_x, roi_y, roi_width, roi_height = self.roi
-            x_center, y_center = (roi_x + roi_width/2, roi_y + roi_height/2)
-        x_center, y_center = round(x_center), round(y_center)
+            roi = self.roi
+        roi_x, roi_y, roi_width, roi_height = roi
         color = self.color_format
 
         self.driver.set_video_format(
             f"{color.name} ({roi_width}x{roi_height})"
             )
-        self.driver.set_vcd_property("Partial scan", "X Offset", x_center)
-        self.driver.set_vcd_property("Partial scan", "Y Offset", y_center)
+        self.driver.set_vcd_property("Partial scan", "X Offset", roi_x)
+        self.driver.set_vcd_property("Partial scan", "Y Offset", roi_y)
 
     def get_roi_size_limits(self):
         """Return minimum, maximum and granularity of the ROI.
