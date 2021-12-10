@@ -253,8 +253,8 @@ class ImageProcessor(qtc.QObject):
             return
 
         roi_x, roi_y, roi_w, roi_h = roi
-        self.processed_image = self.processed_image[roi_x:roi_x+roi_w,
-                                                    roi_y:roi_y+roi_h]
+        self.processed_image = self.processed_image[roi_y:roi_y+roi_h,
+                                                    roi_x:roi_x+roi_w]
 
     def bin_and_average(self):
         """Apply binning and frame averaging to the processed image."""
