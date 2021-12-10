@@ -153,12 +153,12 @@ class BadPixelsFinder(qtc.QObject):
         # each camera object.
         self.__original = {'settings': deepcopy(self.__camera.settings),
                            'process': self.__camera.process_info.copy(),
-                           'visible': self.__viewer.visible,
+                           'show_auto': self.__viewer.show_auto,
                            'was_visible': self.__viewer.isVisible()}
 
         # Now set new settings that will be used
         # throughout the rest of the processing.
-        self.__viewer.visible = False
+        self.__viewer.show_auto = False
         self.__viewer.hide()
         self.__new_settings = self.__camera.settings
         self.__new_settings.set('camera_settings', 'bad_pixels', '()')
@@ -581,7 +581,7 @@ class BadPixelsFinder(qtc.QObject):
         """Restore the original settings of the camera."""
         self.__camera.settings = self.__original['settings']
         self.__camera.process_info.restore_from(self.__original['process'])
-        self.__viewer.visible = self.__original['visible']
+        self.__viewer.show_auto = self.__original['show_auto']
         if self.__original['was_visible']:
             self.__viewer.show()
 
