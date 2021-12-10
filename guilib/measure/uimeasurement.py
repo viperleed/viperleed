@@ -16,8 +16,6 @@ from pathlib import Path
 
 import PyQt5.QtCore as qtc
 import PyQt5.QtWidgets as qtw
-import PyQt5.QtGui as qtg
-import numpy as np
 
 # ViPErLEED modules
 from viperleed import guilib as gl
@@ -40,7 +38,7 @@ PLOT_FLAT = True  # TODO: make this a tick box
 
 # @gl.broadcast_mouse
 class Measure(gl.ViPErLEEDPluginBase):
-    """A class that allows simulating LEED Patterns."""
+    """A class that allows to take measurements."""
 
     error_occurred = qtc.pyqtSignal(tuple)
 
@@ -227,7 +225,6 @@ class Measure(gl.ViPErLEEDPluginBase):
         """Replot measured data."""
         # TODO: this plotting delays the measurement of secondary controllers
         fig = self._ctrls['plots'][0]
-        fig.ax.cla()  # Clear old stuff
         meas = self.sender()
         if not isinstance(meas, MeasurementABC):
             raise RuntimeError(
@@ -245,7 +242,7 @@ class Measure(gl.ViPErLEEDPluginBase):
                 )
             )
         for data_set in data:
-            fig.ax.plot(nominal_energies, data_set, '.')
+            fig.ax.plot(nominal_energies[-1], data_set[-1], '.')
         fig.ax.figure.canvas.draw_idle()
 
     def __on_time_resolved_data(self):
