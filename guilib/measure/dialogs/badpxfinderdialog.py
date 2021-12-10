@@ -364,10 +364,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
         date_time = (f"{date[:4]}-{date[4:6]}-{date[6:]} "
                      f"{time[:2]}:{time[2:4]}:{time[4:]}")
 
-        # We suppose that the camera ROI is currently set
-        # to be the whole sensor, as it should whenever
-        # this function is called
-        width, height, *_ = cam.image_info
+        width, height = cam.sensor_size
         sensor = width*height
         n_bad = cam.bad_pixels.n_bad_pixels_sensor
         n_uncorrectable = cam.bad_pixels.n_uncorrectable_sensor
