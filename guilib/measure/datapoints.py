@@ -8,7 +8,7 @@ Created: 2021-11-12
 Author: Michele Riva
 Author: Florian Doerr
 
-Defines the DaDataPointsta class.
+Defines the DataPoints class.
 """
 import csv
 import re
