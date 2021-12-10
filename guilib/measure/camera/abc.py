@@ -436,6 +436,22 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
             self.settings.set('camera_settings', 'roi', str(roi))
         return roi
 
+    @property
+    def sensor_size(self):
+        """Return the full width and height of the sensor.
+
+        The base implementation relies on the results returned
+        by .get_roi_size_limits(). This property should be
+        reimplemented if the sensor size is larger than the
+        largest ROI applicable.
+
+        Returns
+        -------
+        width, height : int
+            Width and height of the sensor in pixels.
+        """
+        return self.get_roi_size_limits()[1]
+
     # .settings getter
     def __get_settings(self):
         """Return the settings used for the camera."""
@@ -603,9 +619,11 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         """
         self.busy = True
         self.preparing.emit(self.busy)
+        extra = (k for k in ('binning', 'n_frames', 'roi')
+                 if k not in self.hardware_supported_features)
         setters = dict.fromkeys((*self._abstract,
                                  *self.hardware_supported_features,
-                                 'binning', 'n_frames', 'roi'))
+                                 *extra))
         for key in setters:
             setter = getattr(self, f"set_{key}")
             setter()
