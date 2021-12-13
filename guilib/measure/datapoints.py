@@ -19,7 +19,8 @@ from PyQt5 import QtCore as qtc
 
 # ViPErLEED modules
 from viperleed.guilib.measure.hardwarebase import (
-    ViPErLEEDErrorEnum, QMetaABC, emit_error)
+    ViPErLEEDErrorEnum, emit_error, QMetaABC
+    )
 
 
 class DataErrors(ViPErLEEDErrorEnum):
@@ -261,7 +262,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                     for i, time_set in enumerate(times[ctrl_idx]):
                         start_time = times[ctrl_idx][i][0]
                         for j , time in enumerate(time_set):
-                            times[ctrl_idx][i][j] -= start_time  
+                            times[ctrl_idx][i][j] -= start_time
                 ctrl_idx += 1
 
         if include_energies:
@@ -360,7 +361,6 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                 print(point)
                 print('####################################')
 
-
     def save_data(self, csv_name):
         """Save data.
 
@@ -408,3 +408,18 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                 for line in zip(*data):
                     writer.writerow(line)
 
+    def is_time_resolved(self):
+        """Check if the contained data is time-resolved."""
+        if self.has_data():
+            # Only if there are times saved already it is possible to
+            # decide if the measurement is a time or energy resolved
+            # measurement.
+            if any(len(t) > 1 for t in self[0]['measurement_t'].values()):
+                return True
+        return False
+
+    def has_data(self):
+        """Check if there is already data in the class."""
+        if any(t for t in self[0]['measurement_t'].values()):
+            return True
+        return False
