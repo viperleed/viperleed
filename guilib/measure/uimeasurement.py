@@ -30,13 +30,13 @@ from viperleed.guilib.measure.measurement.abc import MeasurementABC
 from viperleed.guilib.measure.widgets.camerawidgets import CameraViewer
 from viperleed.guilib.measure.uimeasurementsettings import SettingsEditor
 from viperleed.guilib.measure.datapoints import DataPoints
+from viperleed.guilib.measure.widgets.measurement_plot import MeasurementPlot
+
+from viperleed.guilib.measure.widgets.checkcombobox import CheckComboBox
 
 TITLE = 'Measurement UI'
 
-PLOT_FLAT = True  # TODO: make this a tick box
 
-
-# @gl.broadcast_mouse
 class Measure(gl.ViPErLEEDPluginBase):
     """A class that allows to take measurements."""
 
@@ -50,17 +50,20 @@ class Measure(gl.ViPErLEEDPluginBase):
             'measure': qtw.QPushButton("Start Measurement"),
             'abort': qtw.QPushButton("Abort"),
             'select': qtw.QComboBox(),
-            'plots': [],
             'energy_input': qtw.QLineEdit(''),
             'set_energy': qtw.QPushButton("Set energy"),
             'settings_editor': qtw.QPushButton("Open settings editor"),
             'read': qtw.QPushButton("Read measurement data"),
+            # TODO: remove this test again and use it in the MeasurementPlot class to decide which data gets plotted
+            'test': CheckComboBox()
             }
 
         self._dialogs = {
             'change_settings': SettingsEditor(),
             }
-        self._glob = {'plot_lines': []}
+        self._glob = {
+            'plot': MeasurementPlot()
+            }
 
         # Set window properties
         self.setWindowTitle(TITLE)
@@ -101,6 +104,10 @@ class Measure(gl.ViPErLEEDPluginBase):
         self._ctrls['select'].setFont(gl.AllGUIFonts().buttonFont)
         self._ctrls['select'].ensurePolished()
 
+        self._ctrls['test'].addItems(['option1', 'option2', 'option3'])
+        self._ctrls['test'].setFont(gl.AllGUIFonts().buttonFont)
+        self._ctrls['test'].ensurePolished()
+
         self._ctrls['set_energy'].setFont(gl.AllGUIFonts().buttonFont)
         self._ctrls['set_energy'].ensurePolished()
         self._ctrls['set_energy'].setEnabled(False)
@@ -131,12 +138,10 @@ class Measure(gl.ViPErLEEDPluginBase):
         layout.addWidget(self._ctrls['energy_input'], 3, 2, 1, 1)
         layout.addWidget(self._ctrls['settings_editor'], 4, 1, 1, 2)
         layout.addWidget(self._ctrls['read'], 5, 1, 1, 2)
+        layout.addWidget(self._ctrls['test'], 6, 1, 1, 2)
 
+        self._glob['plot'].show()
         self.statusBar().showMessage('Ready')
-
-        fig = Figure()
-        self._ctrls['plots'].append(fig)
-        layout.addWidget(fig, 6, 1, 1, 2)
 
     def __run_measurement(self):
         self.measurement.begin_measurement_preparation()
@@ -180,7 +185,7 @@ class Measure(gl.ViPErLEEDPluginBase):
                                            allow_no_value=True,
                                            strict=False)
         file_name = Path('C:/Users/Florian/Documents/Uni/Masterarbeit/ViperLEED/viperleed/guilib/measure/configuration/viperleed_config.ini')
-        # TODO: path here not nice
+        #                                                       TODO: path here not nice
         try:
             f = open(file_name, 'r')
             f.close()
@@ -197,14 +202,7 @@ class Measure(gl.ViPErLEEDPluginBase):
             config.write(configfile)
         self.measurement = measurement_cls(config)
 
-        if not isinstance(self.measurement, ALL_MEASUREMENTS['Time resolved']):
-            self.measurement.new_data_available.connect(
-                self.__on_energy_resolved_data
-                )
-        else:
-            self.measurement.new_data_available.connect(
-                self.__on_time_resolved_data
-                )
+        self.measurement.new_data_available.connect(self.__on_data_received)
 
         self._ctrls['abort'].clicked.connect(self.measurement.abort)
         self._ctrls['set_energy'].clicked.connect(self.__on_set_energy)
@@ -218,72 +216,26 @@ class Measure(gl.ViPErLEEDPluginBase):
         self.measurement.finished.connect(self.__on_finished)
         self.measurement.finished.connect(self.__on_measurement_finished)
 
-        self._ctrls['plots'][0].ax.clear()
+        self._glob['plot'].data_points = self.measurement.data_points
+        self._glob['plot'].show()
         self.__delayed_start.start(50)
 
-    def __on_energy_resolved_data(self):
-        """Replot measured data."""
-        # TODO: this plotting delays the measurement of secondary controllers
-        fig = self._ctrls['plots'][0]
+    def __on_data_received(self):
+        """Plot measured data."""
         meas = self.sender()
+        # TODO: this check won't work when plotting data that has been read in from a file.
         if not isinstance(meas, MeasurementABC):
             raise RuntimeError(
                 f"Got unexpected sender class {meas.__class__.__name__}"
-                "for plotting energy-resolved measurements"
+                "for plotting measurements."
                 )
         measured_quantity = meas.settings.get('measurement_settings',
                                               'measure_this',
                                               fallback=None)
         if not measured_quantity:
             return
-        data, nominal_energies = (
-            self.measurement.data_points.get_energy_resolved_data(
-                measured_quantity, include_energies=True
-                )
-            )
-        for data_set in data:
-            fig.ax.plot(nominal_energies[-1], data_set[-1], '.')
-        fig.ax.figure.canvas.draw_idle()
-
-    def __on_time_resolved_data(self):
-        """Replot measured data."""
-        fig = self._ctrls['plots'][0]
-        meas = self.sender()
-        if not isinstance(meas, MeasurementABC):
-            raise RuntimeError(
-                f"Got unexpected sender class {meas.__class__.__name__}"
-                "for plotting time-resolved measurements"
-                )
-        measured_quantity = meas.settings.get('measurement_settings',
-                                              'measure_this',
-                                              fallback=None)
-        if not measured_quantity:
-            return
-        separate_steps = True
-        data, times = (
-            self.measurement.data_points.get_time_resolved_data(
-                measured_quantity, separate_steps=separate_steps,
-                absolute_times=not separate_steps
-                )
-            )
-        n_controllers = len(data)
-        # Loop over controllers
-        for i, (ctrl_times, ctrl_data) in enumerate(zip(times, data)):
-            if separate_steps:
-                # Enough to plot the last step for each
-                fig.ax.plot(ctrl_times[-1], ctrl_data[-1], '.')
-            else:
-                if len(self._glob['plot_lines']) < n_controllers:
-                    self._glob['plot_lines'].extend(
-                        fig.ax.plot(ctrl_times, ctrl_data, '.')
-                        )
-                    continue
-                line = self._glob['plot_lines'][i]
-                line.set_data(ctrl_times, ctrl_data)
-        if not separate_steps:
-            fig.ax.relim()
-            fig.ax.autoscale_view()
-        fig.draw_idle()
+        #                        TODO: make new widget class plot new data properly
+        self._glob['plot'].plot_new_data(measured_quantity)
 
     def __on_set_energy(self):
         """Set energy on primary controller."""
