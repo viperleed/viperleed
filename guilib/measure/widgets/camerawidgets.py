@@ -33,11 +33,10 @@ from viperleed.guilib.widgetslib import screen_fraction
 # TODO: ROI show size in image coordinates as it is resized (tooltip?)
 # TODO: ROI context menu: precisely set with coordinates
 # TODO: context
-#   * reset ROI to max
 #   * snap image
-#   * set roi (checked)
-#   * Auto show on new frames (checked)
 # TODO: image size in title bar : "-- wxh [<if roi>/w_fullxh_full]"
+# BUG: set roi with roi applied does not work properly. The problem is in
+#      .image_coordinates
 
 
 class CameraViewer(qtw.QScrollArea):
@@ -59,6 +58,8 @@ class CameraViewer(qtw.QScrollArea):
         The screen on which this widget is currently shown.
     show_auto : bool
         Whether the widget is made visible when new frames arrive.
+    stop_on_close : bool
+        Whether the camera is stopped when the window is closed.
 
     Public methods
     --------------
@@ -199,6 +200,8 @@ class CameraViewer(qtw.QScrollArea):
         self.__show_auto = bool(show_auto)
         self.__roi_visible = bool(roi_visible)
         self.__roi = RegionOfInterest(parent=self.__img_view)
+        self.__context_menu = qtw.QMenu(parent=self)
+        self.__mouse_button = None
 
         try:
             self.roi.limits = camera.get_roi_size_limits()
@@ -248,6 +251,8 @@ class CameraViewer(qtw.QScrollArea):
     def roi_visible(self, visible):
         """Set the ROI to be made visible upon user interaction."""
         self.__roi_visible = bool(visible)
+        if not self.roi_visible:
+            self.roi.hide()
 
     @property
     def screen(self):
@@ -267,6 +272,16 @@ class CameraViewer(qtw.QScrollArea):
     def show_auto(self, enabled):
         """Set if self should be shown automatically on new frames."""
         self.__show_auto = bool(enabled)
+
+    @property
+    def stop_on_close(self):
+        """Return whether the camera is stopped when closing the widget."""
+        return self.__stop_on_close
+    
+    @stop_on_close.setter
+    def stop_on_close(self, stop):
+        """Set whether the camera is stopped when closing the widget."""
+        self.__stop_on_close = bool(stop)
 
     def changeEvent(self, event):  # pylint: disable=invalid-name
         """Extend changeEvent to react to window maximization."""
@@ -289,7 +304,7 @@ class CameraViewer(qtw.QScrollArea):
         """Extend to stop camera when window is closed by the user."""
         if (event.spontaneous()
             and self.__camera.is_running
-                and self.__stop_on_close):
+                and self.stop_on_close):
             self.__camera.stop()
         super().closeEvent(event)
 
@@ -369,7 +384,8 @@ class CameraViewer(qtw.QScrollArea):
         -------
         None.
         """
-        if not self.roi.isVisible():
+        if (not self.roi.isVisible()
+                or self.__mouse_button == qtc.Qt.RightButton):
             super().mouseMoveEvent(event)
             return
         roi_pos = self.roi.parent().mapFromGlobal(event.globalPos())
@@ -385,6 +401,7 @@ class CameraViewer(qtw.QScrollArea):
 
     def mousePressEvent(self, event):  # pylint: disable=invalid-name
         """Reimplement mousePressEvent to begin drawing a ROI."""
+        self.__mouse_button = event.button()
         if not self.roi_visible or event.button() == qtc.Qt.RightButton:
             super().mousePressEvent(event)
             return
@@ -395,6 +412,7 @@ class CameraViewer(qtw.QScrollArea):
 
     def mouseReleaseEvent(self, event):  # pylint: disable=invalid-name
         """Extend mouseReleaseEvent to handle ROI drawing."""
+        self.__mouse_button = None
         if not self.roi.isVisible():
             super().mouseReleaseEvent(event)
 
@@ -499,9 +517,10 @@ class CameraViewer(qtw.QScrollArea):
         self.__camera.settings = settings
 
         # Remove the rubber-band, and restart the camera.
+        was_running = self.__camera.is_running
         self.roi.hide()
-        self.__camera.start()
-        print(self.__camera.roi, self.__camera.get_roi())
+        if was_running:
+            self.__camera.start()
 
     def __compose(self):
         """Place children widgets."""
@@ -513,14 +532,35 @@ class CameraViewer(qtw.QScrollArea):
         self.adjustSize()
         self.setWindowTitle(self.__camera.name)
 
-        # Set up to receive context-menu requests (i.e. right click)
+        # Set up to receive context-menu requests (i.e.,
+        # right click), and prepare the context menu
         self.setContextMenuPolicy(qtc.Qt.CustomContextMenu)
+        self.__context_menu.addAction("Reset ROI")
+        act = self.__context_menu.addAction("Snap image")
+        act.setEnabled(False)  #  TODO: open file dialog and save frame
+        self.__context_menu.addSeparator()
+        act = self.__context_menu.addAction("Allow setting ROI")
+        act.setCheckable(True)
+        act.setChecked(
+            qtc.Qt.Checked if self.roi_visible else qtc.Qt.Unchecked
+            )
+        act = self.__context_menu.addAction("Show on new frames")
+        act.setCheckable(True)
+        act.setChecked(
+            qtc.Qt.Checked if self.show_auto else qtc.Qt.Unchecked
+            )
+        act = self.__context_menu.addAction("Stop camera when closed")
+        act.setCheckable(True)
+        act.setChecked(
+            qtc.Qt.Checked if self.stop_on_close else qtc.Qt.Unchecked
+            )
 
     def __connect(self):
         """Connect signals."""
         self.__img_view.image_scaling_changed.connect(self.__on_image_scaled)
         self.__camera.started.connect(self.__on_camera_started)
         self.customContextMenuRequested.connect(self.__show_context_menu)
+        self.__context_menu.triggered.connect(self.__on_context_menu_triggered)
         self.roi.apply_roi_requested.connect(self.__apply_roi)
 
     def __on_camera_started(self):
@@ -543,6 +583,23 @@ class CameraViewer(qtw.QScrollArea):
             # Already connected
             pass
 
+    def __on_context_menu_triggered(self, action):
+        """React to a selection in the context menu."""
+        text = action.text().lower()
+        if "allow" in text:
+            self.roi_visible = action.isChecked()
+        elif "show" in text:
+            self.show_auto = action.isChecked()
+        elif "reset" in text:
+            was_running = self.__camera.is_running
+            self.__camera.stop()
+            self.__camera.set_roi(no_roi=True)
+            if was_running:
+                self.__camera.start()
+        elif "stop" in text:
+            self.stop_on_close = action.isChecked()
+        print(action.text())
+
     def __on_image_scaled(self):
         """React to a change of zoom factor."""
         new_scaling = self.__img_view.image_scaling
@@ -556,7 +613,7 @@ class CameraViewer(qtw.QScrollArea):
 
     def __show_context_menu(self, position):
         """Show a context menu when right-clicking at position."""
-        print("Context menu requested at", position)
+        self.__context_menu.popup(self.mapToGlobal(position))
 
     def __show_image(self, img_array):
         """Show the gray-scale image in the img_array numpy.ndarray."""
@@ -816,7 +873,7 @@ class RegionOfInterest(qtw.QWidget):
         Move self by delta_pixels pixels in image coordinates.
     """
 
-    apply_roi_requested = qtc.pyqtSignal(qtw.QAction)
+    apply_roi_requested = qtc.pyqtSignal()
 
     def __init__(self, *__args, parent=None, increments=(1, 1), **__kwargs):
         """Initialize RegionOfInterest instance.
@@ -1018,8 +1075,10 @@ class RegionOfInterest(qtw.QWidget):
         # a single QAction for applying the ROI
         self.setContextMenuPolicy(qtc.Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.__show_context_menu)
-        self.__context_menu.triggered.connect(self.apply_roi_requested)
+        self.__context_menu.triggered.connect(self.__on_context_menu_triggered)
         self.__context_menu.addAction("Apply ROI")
+        act = self.__context_menu.addAction("Set ROI coordinates")
+        act.setEnabled(False)  # TODO: open up a dialog
 
     def __normalized_size(self, size):
         """Return a size that fits with increments."""
@@ -1043,3 +1102,10 @@ class RegionOfInterest(qtw.QWidget):
     def __show_context_menu(self, position):
         """Show a context menu when right-clicking at position."""
         self.__context_menu.popup(self.mapToGlobal(position))
+    
+    def __on_context_menu_triggered(self, action):
+        """React to a user selection in the context menu."""
+        if "apply" in action.text().lower():
+            self.apply_roi_requested.emit()
+            return
+        print("Set requested")
