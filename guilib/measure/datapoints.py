@@ -61,7 +61,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         # before starting measurements.
         self.primary_controller = None
         self.controllers = None
-        self.delimiter = ';'
+        self.delimiter = ','
         self.primary_first_time = None
 
     @property
@@ -71,7 +71,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
 
     @property
     def cameras(self):
-        return tuple(camera for camera, _ in self[0]['images'])
+        return tuple(self[0]['images'].keys())
 
     def __str__(self):
         return str(self.__list)
@@ -133,6 +133,8 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                     self[0]['measurement_t'][self.primary_controller][0]
                     )
         for ctrl in self[-1]['measurement_t']:
+            if not len(self[-1]['measurement_t'][ctrl]):
+                continue
             self[-1]['measurement_t'][ctrl][0] -= self.primary_first_time
             self[-1]['measurement_t'][ctrl][0] += ctrl.initial_delay
             quantity = ctrl.measured_quantities[0]
@@ -174,7 +176,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                 if len(measurement) == 1:
                     data[i].append(*measurement)
                 else:
-                    raise ValueError('DataPoints contains timeresolved data '
+                    raise ValueError('DataPoints contains time-resolved data '
                                      'but it was attempted to return energy '
                                      'resolved data.')
                 i += 1
@@ -250,7 +252,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
             ctrl_idx = 0
             for ctrl, measurements in data_point[key].items():
                 if len(measurements) == 1:
-                    raise ValueError('DataPoints contains energy resolved '
+                    raise ValueError('DataPoints contains energy-resolved '
                                      'data but it was attempted to return '
                                      'time resolved data.')
                 if not separate_steps:
@@ -395,7 +397,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                     for ctrl, mt in data_point['measurement_t'].items()
                     )
                 for camera in self.cameras:
-                    images = [data_points_dict['images'][camera]]*max_length
+                    images = [data_point['images'][camera]]*max_length
                     data.append(images)
                 energy_list = [data_point['nominal_energy']]*max_length
                 data.append(energy_list)
