@@ -40,7 +40,6 @@ class BadPixelsFinderDialog(qtw.QDialog):
 
     __start_finder = qtc.pyqtSignal()
     __abort_finder = qtc.pyqtSignal()
-    __set_camera_settings = qtc.pyqtSignal(object)
 
     def __init__(self, parent=None):
         """Initialize dialog."""
@@ -457,9 +456,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
         self.active_camera.error_occurred.connect(self.__on_error_occurred)
         self.active_camera.started.connect(self.adjustSize)
         self.active_camera.preparing.connect(self.__on_camera_preparing)
-        self.__set_camera_settings.connect(self.active_camera.set_settings,
-                                           type=qtc.Qt.QueuedConnection)
-        self.__set_camera_settings.emit(settings)
+        self.active_camera.settings = settings
         self.__update_controls()
 
     def __on_error_occurred(self, error_info):
