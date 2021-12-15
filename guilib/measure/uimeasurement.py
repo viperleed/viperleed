@@ -20,7 +20,7 @@ import PyQt5.QtWidgets as qtw
 # ViPErLEED modules
 from viperleed import guilib as gl
 from viperleed.guilib.measure.measurement import ALL_MEASUREMENTS
-from viperleed.guilib.measure.hardwarebase import class_from_name
+from viperleed.guilib.measure.hardwarebase import get_devices
 from viperleed.guilib.basewidgets import MeasurementFigureCanvas as Figure
 from viperleed.guilib.basewidgets import QDoubleValidatorNoDot
 
@@ -53,9 +53,10 @@ class Measure(gl.ViPErLEEDPluginBase):
             'energy_input': qtw.QLineEdit(''),
             'set_energy': qtw.QPushButton("Set energy"),
             'settings_editor': qtw.QPushButton("Open settings editor"),
-            'read': qtw.QPushButton("Read measurement data"),
             # TODO: remove this test again and use it in the MeasurementPlot class to decide which data gets plotted
-            'test': CheckComboBox()
+            'test': CheckComboBox(),
+            'menus': {'file': qtw.QMenu("&File"),
+                      'devices': qtw.QMenu("&Devices")},
             }
 
         self._dialogs = {
@@ -112,11 +113,6 @@ class Measure(gl.ViPErLEEDPluginBase):
         self._ctrls['set_energy'].ensurePolished()
         self._ctrls['set_energy'].setEnabled(False)
 
-        self._ctrls['read'].setFont(gl.AllGUIFonts().buttonFont)
-        self._ctrls['read'].ensurePolished()
-        self._ctrls['read'].clicked.connect(self.__on_read_pressed)
-        self._ctrls['read'].setEnabled(True)
-
         self._ctrls['settings_editor'].setFont(gl.AllGUIFonts().buttonFont)
         self._ctrls['settings_editor'].ensurePolished()
         self._ctrls['settings_editor'].clicked.connect(
@@ -137,11 +133,25 @@ class Measure(gl.ViPErLEEDPluginBase):
         layout.addWidget(self._ctrls['set_energy'], 3, 1, 1, 1)
         layout.addWidget(self._ctrls['energy_input'], 3, 2, 1, 1)
         layout.addWidget(self._ctrls['settings_editor'], 4, 1, 1, 2)
-        layout.addWidget(self._ctrls['read'], 5, 1, 1, 2)
-        layout.addWidget(self._ctrls['test'], 6, 1, 1, 2)
+        layout.addWidget(self._ctrls['test'], 5, 1, 1, 2)
 
         self._glob['plot'].show()
         self.statusBar().showMessage('Ready')
+        
+        # Menus
+        menu = self.menuBar()
+        file_menu = self._ctrls['menus']['file']
+        menu.insertMenu(self.about_action, file_menu)
+        act = file_menu.addAction("&Open...")
+        act.setShortcut("Ctrl+O")
+        act.triggered.connect(self.__on_read_pressed)
+        
+        devices_menu = self._ctrls['menus']['devices']
+        menu.insertMenu(self.about_action, devices_menu)
+        cam_devices = devices_menu.addMenu("Cameras")
+        controller_devices = devices_menu.addMenu("Controllers")
+        for camera in get_devices("camera"):
+            cam_devices.addAction(camera)
 
     def __run_measurement(self):
         self.measurement.begin_measurement_preparation()
@@ -155,19 +165,19 @@ class Measure(gl.ViPErLEEDPluginBase):
         self.__switch_enabled(True)
         self.statusBar().showMessage('Ready')
 
-    def __switch_enabled(self, running):
+    def __switch_enabled(self, idle):
         """Switch enabled status of buttons.
 
         Parameters
         ----------
-        running : boolean
+        idle : boolean
             False when a measurement is running.
         """
-        self._ctrls['measure'].setEnabled(running)
-        self._ctrls['select'].setEnabled(running)
-        self._ctrls['abort'].setEnabled(not running)
-        self._ctrls['read'].setEnabled(running)
-        self._ctrls['settings_editor'].setEnabled(running)
+        self._ctrls['measure'].setEnabled(idle)
+        self._ctrls['select'].setEnabled(idle)
+        self._ctrls['abort'].setEnabled(not idle)
+        self._ctrls['settings_editor'].setEnabled(idle)
+        self.menuBar().setEnabled(idle)
 
     def __on_measurement_finished(self, *_):
         print("\n#### DONE! ####")
