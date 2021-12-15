@@ -327,5 +327,5 @@ class ImageProcessor(qtc.QObject):
         if self.process_info.date_time:
             info['date_time'] = self.process_info.date_time
         
-        img = tif.TiffFile.from_array(data, **info)
+        img = tiff.TiffFile.from_array(data, **info)
         img.write(fname)
