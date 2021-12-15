@@ -13,6 +13,7 @@ Defines the CheckComboBox class.
 
 import PyQt5.QtCore as qtc
 import PyQt5.QtWidgets as qtw
+import PyQt5.QtGui as qtg
 
 
 class CheckComboBox(qtw.QComboBox):
@@ -61,3 +62,25 @@ class CheckComboBox(qtw.QComboBox):
 
     def ensure_change(self):
         self.__changed = True
+
+    def is_item_checked(self, item):
+        return item.checkState() == qtc.Qt.Checked
+
+    def get_items(self):
+        checkedItems = []
+        for i in range(self.count()):
+            item = self.model().item(i, 0)
+            if self.is_item_checked(item):
+                checkedItems.append(item.text())
+        return checkedItems
+
+    def paintEvent(self, event):
+        painter = qtw.QStylePainter(self)
+        painter.setPen(self.palette().color(qtg.QPalette.Text))
+        opt = qtw.QStyleOptionComboBox()
+        self.initStyleOption(opt)
+        opt.currentText = ", ".join(self.get_items())
+        if not opt.currentText:
+            opt.currentText = '<Select option(s)>'
+        painter.drawComplexControl(qtw.QStyle.CC_ComboBox, opt)
+        painter.drawControl(qtw.QStyle.CE_ComboBoxLabel, opt)
