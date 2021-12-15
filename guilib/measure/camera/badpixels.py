@@ -805,6 +805,8 @@ class BadPixels:
     @property
     def n_uncorrectable_roi(self):
         """Return the number of uncorrectable pixels in the current ROI."""
+        if self.__uncorrectable_roi is None:
+            return 0
         return len(self.__uncorrectable_roi)
 
     @property
