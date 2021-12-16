@@ -66,6 +66,7 @@ class MeasurementPlot(qtw.QWidget):
                 )
         self.__data_points = data_points
         self.__canvas.ax.clear()
+        self.__canvas.draw_idle()
 
     def plot_all_data(self, measured_quantity):
         """Plot data on the canvas for the first time.
