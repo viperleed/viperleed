@@ -314,7 +314,7 @@ class ImageProcessor(qtc.QObject):
         
         cam = self.process_info.camera
         bin = self.process_info.binning
-        comment = (f"Average of {self.process_info.n_frames}; "
+        comment = (f"Average of {self.process_info.n_frames} frames; "
                    f"Exposure: {cam.exposure} ms; "
                    f"Gain: {10**(cam.gain/20):.1f} ({cam.gain:.1f} dB); "
                    f"Binning: {bin}x{bin} pixels; ")

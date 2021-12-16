@@ -50,7 +50,7 @@ class CameraErrors(ViPErLEEDErrorEnum):
     UNSUPPORTED_OPERATION = (205, "Cannot {} in {} mode. Switch mode before.")
     BINNING_ROI_MISMATCH = (206,
                             "Region of interest size ({} x {}) is incompatible"
-                            " with binning factor {}.Reducing region of "
+                            " with binning factor {}. Reducing region of "
                             "interest to ({} x {}). A few pixels on the "
                             "lower-right corner may be removed.")
     UNSUPPORTED_WHILE_BUSY = (207, "Cannot {} while camera is busy.")
@@ -705,7 +705,7 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         """
         return 0
 
-    def set_binning(self, no_binning=True):
+    def set_binning(self, no_binning=False):
         """Define binning factor for images.
 
         Do not reimplement this method, unless the camera internally
@@ -713,10 +713,10 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
 
         Parameters
         ----------
-        no_binning : bool
+        no_binning : bool, optional
             True if binning should be deactivated, independently of
             the settings. If False, self.binning must be used as the
-            binning factor.
+            binning factor. Default is False.
 
         Returns
         -------
