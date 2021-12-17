@@ -143,6 +143,11 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         self.__settings = None
         self.__bad_pixels = None
 
+        # Keep track of some errors that we want to report
+        # only once. This list is cleared every time a
+        # camera is disconnected.
+        self.__reported_errors = set()
+
         self.process_info = ImageProcessInfo()
         self.process_info.camera = self
         self.__process_thread = qtc.QThread()
@@ -425,15 +430,25 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
             _, (max_roi_w, max_roi_h), _ = self.get_roi_size_limits()
             return 0, 0, max_roi_w, max_roi_h
 
-        # See if the roi width and height fit with the binning factor
+        # See if the ROI width and height fit with the binning factor
         *roi_offsets, roi_w, roi_h = roi
         if roi_w % self.binning or roi_h % self.binning:
-            new_roi_w = (roi_w // self.binning)*self.binning
-            new_roi_h = (roi_h // self.binning)*self.binning
-            emit_error(self, CameraErrors.BINNING_ROI_MISMATCH,
-                       roi_w, roi_h, self.binning, new_roi_w, new_roi_h)
-            roi = (*roi_offsets, new_roi_w, new_roi_h)
-            self.settings.set('camera_settings', 'roi', str(roi))
+            new_roi_w = (roi_w // self.binning) * self.binning
+            new_roi_h = (roi_h // self.binning) * self.binning
+            error = (CameraErrors.BINNING_ROI_MISMATCH,
+                     roi_w, roi_h, self.binning, new_roi_w, new_roi_h)
+            if not self.__already_reported(error):
+                emit_error(self, *error)
+                self.__reported_errors.add(error)
+            # Update the ROI in the settings only if the
+            # new ROI is a valid one for the camera. The
+            # image processor will anyway crop off the
+            # extra pixels on the lower-right corner of
+            # the image to apply binning.
+            new_roi = (*roi_offsets, new_roi_w, new_roi_h)
+            if self.__is_valid_roi(new_roi):
+                self.settings.set('camera_settings', 'roi', str(new_roi))
+                roi = new_roi
         return roi
 
     @property
@@ -584,6 +599,7 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
 
     def disconnect(self):
         """Disconnect the device."""
+        self.__reported_errors = set()
         self.stop()
         self.close()
 
@@ -1145,6 +1161,20 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
 
         if self.supports_trigger_burst:
             self.process_info.clear_times()
+
+    def __already_reported(self, error_details):
+        """Return whether an error was already reported.
+
+        Parameters
+        ----------
+        error_details : tuple
+            The error to be checked. Typically the first element
+            is a ViPErLEEDErrorEnum. The following entries are
+            parameters of the specific error. They should be
+            given only in case a specific error with certain
+            specific values of the parameters should be checked.
+        """
+        return error_details in self.__reported_errors
 
     def __is_valid_roi(self, roi):
         """Check that ROI is OK and fits with limits.
