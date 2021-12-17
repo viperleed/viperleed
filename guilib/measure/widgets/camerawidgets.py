@@ -12,6 +12,7 @@ Author: Michele Riva
 """
 
 import weakref
+from copy import deepcopy
 
 import numpy as np
 
@@ -533,7 +534,7 @@ class CameraViewer(qtw.QScrollArea):
 
         # Give the camera new, updated settings. This is the easier way
         # to go, as it will update all the information in the camera.
-        settings = self.__camera.settings
+        settings = deepcopy(self.__camera.settings)
         settings.set("camera_settings", "roi",
                      f"({old_roi_x + new_roi_x}, {old_roi_y + new_roi_y}, "
                      f"{roi_w}, {roi_h})")

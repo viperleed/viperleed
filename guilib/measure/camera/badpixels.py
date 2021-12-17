@@ -151,6 +151,11 @@ class BadPixelsFinder(qtc.QObject):
         # visibility state of the viewer. This may not match the
         # False above, as there can only be one camera viewer per
         # each camera object.
+        # Notice the deep copies of camera settings, which make sure
+        # that camera.settings, self.__original['settings'] and
+        # self.__new_settings are distinct objects. This is necessary
+        # because the camera does some checks for quantities changed
+        # to decide whether to recalculate stuff.
         self.__original = {'settings': deepcopy(self.__camera.settings),
                            'process': self.__camera.process_info.copy(),
                            'show_auto': self.__viewer.show_auto,
@@ -160,7 +165,7 @@ class BadPixelsFinder(qtc.QObject):
         # throughout the rest of the processing.
         self.__viewer.show_auto = False
         self.__viewer.hide()
-        self.__new_settings = self.__camera.settings
+        self.__new_settings = deepcopy(self.__camera.settings)
         self.__new_settings.set('camera_settings', 'bad_pixels', '()')
 
         _, (max_roi_w, max_roi_h), _ = self.__camera.get_roi_size_limits()
@@ -172,7 +177,7 @@ class BadPixelsFinder(qtc.QObject):
 
         # And set them into the camera. This stops
         # the camera if it is currently running.
-        self.__camera.settings = self.__new_settings
+        self.__camera.settings = deepcopy(self.__new_settings)
         self.__camera.process_info.filename = ''
 
         width, height, n_bytes, _ = self.__camera.image_info
@@ -281,7 +286,7 @@ class BadPixelsFinder(qtc.QObject):
         # image_processed, which will trigger storage of
         # frames, and a camera_busy, which will trigger
         # acquisition of the next frame, if needed.
-        self.__camera.settings = self.__new_settings
+        self.__camera.settings = deepcopy(self.__new_settings)
         self.__report_acquisition_progress()
         self.__camera.start()
 
@@ -342,7 +347,7 @@ class BadPixelsFinder(qtc.QObject):
                                 f'{new_exposure:.3f}')
         self.__new_settings.set('measurement_settings', 'gain',
                                 f'{new_gain:.1f}')
-        self.__camera.settings = self.__new_settings
+        self.__camera.settings = deepcopy(self.__new_settings)
         self.__adjustments += 1
         self.__report_acquisition_progress()
         self.__camera.start()
