@@ -66,6 +66,8 @@ class MeasurementPlot(qtw.QWidget):
                 )
         self.__data_points = data_points
         self.__canvas.ax.clear()
+        self._glob['plot_lines'] = []
+        self.__canvas.draw_idle()
 
     def plot_all_data(self, measured_quantity):
         """Plot data on the canvas for the first time.
@@ -78,8 +80,7 @@ class MeasurementPlot(qtw.QWidget):
         if not self.data_points or not self.data_points.has_data():
             return
         self.__canvas.ax.clear()
-        if not SEPARATE_STEPS:
-            self._glob['plot_lines'] = []
+        self._glob['plot_lines'] = []
 
         if self.data_points.is_time_resolved():
             self.__plot_all_time_resolved_data(measured_quantity)
@@ -121,7 +122,9 @@ class MeasurementPlot(qtw.QWidget):
                 )
             )
         for ctrl_data in data:
-            self.__canvas.ax.plot(nominal_energies, ctrl_data, marker)
+            self._glob['plot_lines'].extend(
+                self.__canvas.ax.plot(nominal_energies, ctrl_data, marker)
+                )
 
     def __plot_all_time_resolved_data(self, measured_quantity):
         fig = self.__canvas
@@ -143,14 +146,25 @@ class MeasurementPlot(qtw.QWidget):
                     )
 
     def __plot_new_energy_resolved_data(self, measured_quantity):
+        fig = self.__canvas
         marker = self.__markers[0]  # TODO: will have to loop through different quantities
         data, nominal_energies = (
             self.data_points.get_energy_resolved_data(
                 measured_quantity, include_energies=True
                 )
             )
-        for ctrl_data in data:
-            self.__canvas.ax.plot(nominal_energies[-1], ctrl_data[-1], marker)
+        n_controllers = len(data)
+        # Loop over controllers
+        for i, ctrl_data in enumerate(data):
+            if len(self._glob['plot_lines']) < n_controllers:
+                self._glob['plot_lines'].extend(
+                    fig.ax.plot(nominal_energies[-1], ctrl_data[-1], marker)
+                    )
+                continue
+            line = self._glob['plot_lines'][i]
+            line.set_data(nominal_energies, ctrl_data)
+        fig.ax.relim()
+        fig.ax.autoscale_view()
 
     def __plot_new_time_resolved_data(self, measured_quantity):
         fig = self.__canvas
