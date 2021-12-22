@@ -1285,8 +1285,8 @@ C  7 is output unit - file fd.out
                 CAF(IL) = TMAT(STYPE(LTYPE(ISTACK),ISUB),IL)
               ENDDO
 
-              CALL OUTXIST(OUTNO(ISTACK,ISUB),IFORM,E,PQF,NPU,
-     +                     NT0,NT,XI,XIST,L1,CAF)
+              CALL OUTXIST(OUTNO(ISTACK,ISUB),IFORM,E,PQF,SPQF,
+     +                     NPU,NT0,NT,XI,XIST,L1,CAF)
 
             ENDDO
           END IF
