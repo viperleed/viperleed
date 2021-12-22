@@ -773,8 +773,8 @@ C  surface
       DO IBEAM = 1,NT0
 
         DO I = 1,2
-          PSQ(I,IBEAM) = PQF(1,NPU(IBEAM)) * RAR1(I) +
-     +                   PQF(2,NPU(IBEAM)) * RAR2(I)
+          PSQ(I,IBEAM) = SPQF(1,NPU(IBEAM)) * RAR1(I) +
+     +                   SPQF(2,NPU(IBEAM)) * RAR2(I)
         ENDDO
 
         AK2M(IBEAM) = - (AK2 + PSQ(1,IBEAM))
@@ -1324,6 +1324,7 @@ C  known wave-field from above
         END IF
 
 C  produce ALM and output if desired
+
 
         IF (TENS(ISTACK).eq.1) THEN
 
