@@ -19,25 +19,37 @@ work_path is where to run tleedm (note: creates lots of files!) - can be provide
 import os
 import sys
 import shutil
+import argparse
 
 # path to directory containing viperleed source - define explicitly here or pass as command line argument
 vpr_path = None   # without final /viperleed - i.e. "/home/path/to/source/"
 work_path = None    # where to run, without final /work - i.e. "."
+
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "-s", "--source",
+    help=("specify ViPErLEED source directory (without final /viperleed)"),
+    type=str)
+parser.add_argument(
+    "-w", "--work",
+    help=("specify work directory containing input files"),
+    type=str)
+args = parser.parse_args()
+
+if args.source:
+    vpr_path = args.source
+if args.work:
+    work_path = args.work
+
+# If paths not supplied as command line argument - use explicit form if given above, otherwise raise Error
+if not (vpr_path and work_path):
+    raise ValueError("ViPErLEED source and/or work directory not defined!")
 
 try:
     from bookkeeper import bookkeeper
     bookie_exists = True
 except ModuleNotFoundError:
     bookie_exists = False
-
-try:
-    # if paths are given as command line arguments use those
-    vpr_path = sys.argv[1] # sys.argv[0] is the script name!
-    work_path = sys.argv[2]
-except IndexError:
-    # paths not supplied as command line argument - use explicit form if given, otherwise raise Error
-    if not (vpr_path and work_path):
-        raise ValueError("ViPErLEED source and/or work directory not defined!")
 
 work_path = os.path.join(work_path, "work") #make /work subdirectory
 
