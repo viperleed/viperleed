@@ -2,7 +2,7 @@
 """
 Created on Thu Jun 17 17:29:24 2021
 
-@author: Florian Kraushofer
+@author: Florian Kraushofer, Alexander Imre
 
 Quick-and-dirty job script to run viperleed in a given work directory.
 
@@ -11,8 +11,8 @@ Usage:
   - define the globals vpr_path and work_path manually in this script
   - place bookkeeper.py in the same folder if you want it to run automatically
   - run (precise behaviour controlled by PARAMETERS)
-vpr_path is where to find the viperleed source code
-work_path is where to run tleedm (note: creates lots of files!)
+vpr_path is where to find the viperleed source code - can be provided as command line argument
+work_path is where to run tleedm (note: creates lots of files!) - can be provided as command line argument
 
 """
 
@@ -20,15 +20,26 @@ import os
 import sys
 import shutil
 
+# path to directory containing viperleed source - define explicitly here or pass as command line argument
+vpr_path = None   # without final /viperleed - i.e. "/home/path/to/source/"
+work_path = None    # where to run, without final /work - i.e. "."
+
 try:
     from bookkeeper import bookkeeper
     bookie_exists = True
 except ModuleNotFoundError:
     bookie_exists = False
 
-# path to directory containing viperleed source - define explicitly
-vpr_path = "/home/path/to/source/"       # without final /viperleed
-work_path = os.path.join(".", "work")    # where to run
+try:
+    # if paths are given as command line arguments use those
+    vpr_path = sys.argv[0]
+    work_path = sys.argv[1]
+except IndexError:
+    # paths not supplied as command line argument - use explicit form if given, otherwise raise Error
+    if not (vpr_path and work_path):
+        raise ValueError("ViPErLEED source and/or work directory not defined!")
+
+work_path = os.path.join(work_path, "work") #make /work subdirectory
 
 delete_workdir = False   # delete the work_path after copying back?
 all_tensors = False      # copy all tensor files or just highest number?
