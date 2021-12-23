@@ -34,7 +34,8 @@ parser.add_argument(
     "-w", "--work",
     help=("specify work directory containing input files"),
     type=str)
-args = parser.parse_args()
+args, bookie_args = parser.parse_known_args()
+sys.argv = sys.argv[:1] + bookie_args
 
 if args.source:
     vpr_path = args.source
@@ -50,8 +51,6 @@ try:
     bookie_exists = True
 except ModuleNotFoundError:
     bookie_exists = False
-
-work_path = os.path.join(work_path, "work") #make /work subdirectory
 
 delete_workdir = False   # delete the work_path after copying back?
 all_tensors = False      # copy all tensor files or just highest number?
@@ -75,6 +74,8 @@ def main():
     if bookie_exists:
         print("Running bookkeeper...")
         bookkeeper()
+
+    work_path = os.path.join(work_path, "work")  # make /work subdirectory
 
     # create work directory if necessary
     os.makedirs(work_path, exist_ok=True)
