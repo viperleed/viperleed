@@ -32,8 +32,8 @@ except ModuleNotFoundError:
 
 try:
     # if paths are given as command line arguments use those
-    vpr_path = sys.argv[0]
-    work_path = sys.argv[1]
+    vpr_path = sys.argv[1] # sys.argv[0] is the script name!
+    work_path = sys.argv[2]
 except IndexError:
     # paths not supplied as command line argument - use explicit form if given, otherwise raise Error
     if not (vpr_path and work_path):
