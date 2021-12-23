@@ -10,7 +10,7 @@ Author: Michele Riva
 Created: 2021-03-13
 """
 
-from collections import Sequence
+from collections.abc import Sequence
 import itertools
 
 import numpy as np
