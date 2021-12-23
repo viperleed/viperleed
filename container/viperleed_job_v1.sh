@@ -26,6 +26,7 @@ echo "Working directory:	$work_path"
 echo
 
 # run ViPErLEED in Singularity image – /gpfs needs to be bound to /gpfs for access to $DATA
-singularity exec --bind /gpfs:/gpfs $image_path python3 job.py $vpr_path $work_path
+cd $work_path
+singularity exec --bind /gpfs:/gpfs $image_path python3 job.py -s $vpr_path -w $work_path
 
 echo "ViPErLEED finished"
