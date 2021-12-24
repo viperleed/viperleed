@@ -408,6 +408,10 @@ class ImagingSourceCamera(CameraABC):
         """
         return self.driver.exposure_range
 
+    def get_frame_rate(self):
+        """Return the number of frames delivered per second."""
+        return min(self.driver.frame_rate, 1000/self.exposure)
+
     def get_gain(self):
         """Get the gain (in decibel) from the camera device."""
         return self.driver.gain

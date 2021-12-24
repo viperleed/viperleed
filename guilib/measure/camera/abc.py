@@ -8,6 +8,11 @@ Created: 2021-07-12
 Author: Michele Riva
 Author: Florian Doerr
 
+Defines the abstract functionality for all cameras that should
+be supported by ViPErLEED. This includes error codes/messages
+relative to the cameras (CameraErrors class) and the abstract
+base-class CameraABC. All classes handling cameras should be
+concrete subclasses of CameraABC.
 """
 
 from abc import abstractmethod
@@ -54,6 +59,10 @@ class CameraErrors(ViPErLEEDErrorEnum):
                             "interest to ({} x {}). A few pixels on the "
                             "lower-right corner may be removed.")
     UNSUPPORTED_WHILE_BUSY = (207, "Cannot {} while camera is busy.")
+    TIMEOUT = (208,   # Only in triggered mode
+               "No frames returned by camera {} in the last {} seconds. "
+               "Check that the camera is plugged in and powered. If it "
+               "is, try rebooting the camera.")
 
 
 class CameraABC(qtc.QObject, metaclass=QMetaABC):
@@ -142,6 +151,9 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         self.__busy = False
         self.__settings = None
         self.__bad_pixels = None
+        self.__timeout = qtc.QTimer(parent=self)
+        self.__timeout.setSingleShot(True)
+        self.__timeout.timeout.connect(self.__on_timed_out)
 
         # Keep track of some errors that we want to report
         # only once. This list is cleared every time a
@@ -818,6 +830,23 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         return
 
     @abstractmethod
+    def get_frame_rate(self):
+        """Return the number of frames delivered per second.
+
+        This property should be reimplemented in concrete
+        subclasses. Notice that this may be smaller than
+        1000/self.exposure, as a camera may take longer than
+        self.exposure to transmit back large images acquired
+        with short exposure.
+
+        Returns
+        -------
+        frame_rate : float
+            Number of frames delivered per second.
+        """
+        return
+
+    @abstractmethod
     def get_gain(self):
         """Get the gain from the camera device.
 
@@ -1162,6 +1191,12 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         if self.supports_trigger_burst:
             self.process_info.clear_times()
 
+        # Start the timeout timer: will fire if it takes
+        # more than 5 s longer than the expected time to
+        # receive all frames needed for averaging.
+        frame_time = max(self.exposure, 1000/self.get_frame_rate())
+        self.__timeout.start(frame_time * self.n_frames + 5000)
+
     def __already_reported(self, error_details):
         """Return whether an error was already reported.
 
@@ -1244,6 +1279,7 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         else:
             # All frames are done
             self.busy = False
+            self.__timeout.stop()
 
     def __on_image_saved(self):
         """React to an image being saved."""
@@ -1266,6 +1302,10 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
     def __on_init_errors(self, err):
         """Collect initialization errors to report later."""
         self.__init_errors.append(err)
+
+    def __on_timed_out(self):
+        """Report a timeout error while in triggered mode."""
+        emit_error(self, CameraErrors.TIMEOUT, self.name, 5)
 
     def __report_init_errors(self):
         """Emit error_occurred for each initialization error."""
