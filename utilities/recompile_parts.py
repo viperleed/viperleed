@@ -13,13 +13,6 @@ import logging
 import argparse
 import time
 
-############################
-# SPECIFY COMPILERS						# OpenMPI or Intel compilers
-############################
-TensErLEED_version = "1.73"
-
-
-
 suppress_fortran_warnings = True		# Supress warnings in log file. (Deprecated features in soure will throw a large amount of warnings and make logfile hard to read.)
 
 ############################
@@ -222,7 +215,7 @@ def main():
 	
 	beamgen_version = "1.7"
 	
-	beamgen = to_compile()
+	beamgen = to_compile(logger)
 	sources = ["beamgen.v" +beamgen_version + ".f"]
 	destination_filename = "beamgen.v" +beamgen_version 	# no file ending!
 	flags = "-O2"										# optimization level 3
