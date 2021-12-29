@@ -15,18 +15,19 @@
 # load conda environment - must already exist
 module purge
 spack load -r /fffbmf3
+source ~/.bashrc
 conda activate viperleed
 
 # intel compilers
 module load intel/19.1.3 intel-mpi/2019.7
-
+module load intel-mkl/2019.3
 echo "Loading finished"
 
 vpr_path=$DATA/source/
 work_path=$DATA/Tests/
 
-echo "ViPErLEED Source:		$vpr_path"
-echo "Working directory:	$work_path"
+echo "ViPErLEED Source:         $vpr_path"
+echo "Working directory:        $work_path"
 echo
 
 # run ViPErLEED in Singularity image – /gpfs needs to be bound to /gpfs for access to $DATA
