@@ -12,15 +12,19 @@
 #SBATCH --ntasks-per-core=2
 
 
-# load singularity
+# load conda environment - must already exist
 module purge
-spack load -r /fp2564h
-echo "Singularity loaded"
+spack load -r /fffbmf3
+conda activate viperleed
 
-image_path=$HOME/singularity_images/viperleed_testv1.sif
-vpr_path=$HOME/source/
+# intel compilers
+module load intel/19.1.3 intel-mpi/2019.7
+
+echo "Loading finished"
+
+vpr_path=$DATA/source/
 work_path=$DATA/Tests/
-echo "Using image:			$image_path"
+
 echo "ViPErLEED Source:		$vpr_path"
 echo "Working directory:	$work_path"
 echo
