@@ -18,8 +18,8 @@ spack load -r /fffbmf3
 source ~/.bashrc
 conda activate viperleed
 
-# intel compilers
-module load intel/19.1.3 intel-mpi/2019.7
+# intel compilers - DO NOT USE intel-mpi/2019 # A known issue will cause error!
+module load intel/19.1.3 intel-mpi/latest
 module load intel-mkl/2019.3
 echo "Loading finished"
 
