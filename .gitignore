@@ -8,8 +8,9 @@ test.py
 .DS_Store
 **/.DS_Store
 
-# Ignore files from Jetbrains IDEs
+# Ignore files from IDEs
 .idea/
+.vscode/
 
 # Ignore log file from recompile script
 utilities/recompile_parts.log
