@@ -13,7 +13,7 @@ import logging
 import argparse
 import time
 
-suppress_fortran_warnings = True		# Supress warnings in log file. (Deprecated features in soure will throw a large amount of warnings and make logfile hard to read.)
+suppress_fortran_warnings = True  # Supress warnings in log file. (Deprecated features in soure will throw a large amount of warnings and make logfile hard to read.)
 
 ############################
 # SCRIPT BELOW
@@ -193,9 +193,9 @@ def main():
 	EEASiSSS.set_compiler(fortran_compiler) 		# This needs to be MPI compiled
 	
 	for source_filename in sources:
-		source_path = this_directory.parent / 'tensorleed' / 'eeasisss_code' / 'modified' / source_filename
+		source_path = TensErLEED_path.parent / 'tensorleed' / 'eeasisss_code' / 'modified' / source_filename
 		EEASiSSS.add_source(source_path)
-	destination_path = this_directory.parent / 'tensorleed' / destination_filename
+	destination_path = TensErLEED_path.parent / 'tensorleed' / destination_filename
 	EEASiSSS.set_destination(destination_path)
 	
 	# Place module (.mod) files in specified directory rather then working directory (= utilities directory)
@@ -222,9 +222,9 @@ def main():
 	beamgen.set_compiler(fortran_mpi_compiler)				# This needs to be MPI compiled
 	
 	for source_filename in sources:
-		source_path = this_directory.parent / 'tensorleed' / 'beamgen_source' / source_filename
+		source_path = TensErLEED_path.parent / 'tensorleed' / 'beamgen_source' / source_filename
 		beamgen.add_source(source_path)
-	destination_path = this_directory.parent / 'tensorleed' / destination_filename
+	destination_path = TensErLEED_path.parent / 'tensorleed' / destination_filename
 	beamgen.set_destination(destination_path)
 
 	beamgen.set_flags(flags)
