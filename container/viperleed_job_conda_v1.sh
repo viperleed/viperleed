@@ -5,7 +5,7 @@
 #SBATCH -n 5
 #SBATCH --mem=8G
 
-#SBATCH --qos=devel_0096
+#SBATCH --qos=mem_0096 # can put to devel_0096 for testing
 #SBATCH --partition=mem_0096
 #SBATCH --account=p71704
 
@@ -14,7 +14,7 @@
 
 # load conda environment - must already exist
 module purge
-spack load -r /fffbmf3
+spack load -r /fffbmf3 # miniconda3
 source ~/.bashrc
 conda activate viperleed
 
@@ -30,7 +30,7 @@ echo "ViPErLEED Source:         $vpr_path"
 echo "Working directory:        $work_path"
 echo
 
-# run ViPErLEED in Singularity image – /gpfs needs to be bound to /gpfs for access to $DATA
+# run ViPErLEED in conda environment with all required packages
 cd $work_path
 python3 job.py -s $vpr_path -w $work_path
 
