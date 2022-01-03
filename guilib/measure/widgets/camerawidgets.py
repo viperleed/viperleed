@@ -27,8 +27,7 @@ from viperleed.guilib.widgetslib import screen_fraction
 # TODO: ImageViewer.optimum_size is not updated when screen is changed
 # TODO: ROI show size in image coordinates as it is resized (tooltip?)
 # TODO: ROI context menu: precisely set with coordinates
-# TODO: context -- snap image
-# TODO: image size in title bar : "-- wxh [<if roi>/w_fullxh_full]"
+# TODO: context -- snap image, properties
 
 
 class CameraViewer(qtw.QScrollArea):
@@ -557,6 +556,23 @@ class CameraViewer(qtw.QScrollArea):
         self.setWindowTitle(self.__camera.name)
         self.__compose_context_menu()
 
+    def __update_title(self):
+        """Update the window title with camera information."""
+        img_w, img_h = self.image_size.width(), self.image_size.height()
+        full_w, full_h = self.__camera.sensor_size
+
+        img_size = f"{img_w}x{img_h}"
+        if img_w != full_w or img_h != full_h:
+            img_size += f" of {full_w}x{full_h}"
+        try:
+            scale = self.windowTitle().split(' - ')[1]
+        except IndexError:
+            scale = ""
+        title = f"{self.__camera.name} ({img_size})"
+        if scale:
+            title += f" - {scale}"
+        self.setWindowTitle(title)
+
     def __compose_context_menu(self):
         """Set up the context menu."""
         menu = self.__children["context_menu"]
@@ -588,6 +604,7 @@ class CameraViewer(qtw.QScrollArea):
 
     def __connect(self):
         """Connect signals."""
+        self.image_size_changed.connect(self.__update_title)
         self.__img_view.image_scaling_changed.connect(self.__on_image_scaled)
         self.__camera.started.connect(self.__on_camera_started)
         self.customContextMenuRequested.connect(self.__show_context_menu)
