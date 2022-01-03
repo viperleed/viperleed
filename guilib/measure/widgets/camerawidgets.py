@@ -25,8 +25,6 @@ from viperleed.guilib.widgetslib import screen_fraction
 
 
 # TODO: ImageViewer.optimum_size is not updated when screen is changed
-# BUG: ROI behaves weirdly on rescaling window (e.g.: maximize,
-#      or reopen with a ROI already present)
 # TODO: ROI show size in image coordinates as it is resized (tooltip?)
 # TODO: ROI context menu: precisely set with coordinates
 # TODO: context -- snap image
@@ -279,6 +277,11 @@ class CameraViewer(qtw.QScrollArea):
 
     def changeEvent(self, event):  # pylint: disable=invalid-name
         """Extend changeEvent to react to window maximization."""
+        # Keep track of quantities for later adjusting the ROI
+        old_scaling = self.__img_view.image_scaling
+        old_roi_size = self.roi.size()
+        old_roi_pos = self.roi.pos()
+
         if event.type() == event.WindowStateChange:
             was_maximized = event.oldState() & qtc.Qt.WindowMaximized
             if not was_maximized and self.isMaximized():
@@ -292,6 +295,14 @@ class CameraViewer(qtw.QScrollArea):
                 # scale it to optimum (i.e., same as after shown)
                 self.__img_view.scale_to_optimum()
                 self.adjustSize()
+
+            by_factor = self.__img_view.image_scaling / old_scaling
+            if abs(by_factor - 1) > 1e-3:
+                # Image has been scaled. Adjust also the ROI.
+                new_roi = qtc.QRect(by_factor * old_roi_pos,
+                                    by_factor * old_roi_size)
+                self.roi.setGeometry(new_roi)
+
         super().changeEvent(event)
 
     def closeEvent(self, event):  # pylint: disable=invalid-name
@@ -1050,9 +1061,10 @@ class RegionOfInterest(qtw.QWidget):
         event.accept()
     # pylint: enable=invalid-name,no-self-use
 
-    def resizeEvent(self, __event):  # pylint: disable=invalid-name
+    def resizeEvent(self, event):  # pylint: disable=invalid-name
         """Reimplement to resize the rubber-band."""
         self.__rubberband.resize(self.__normalized_size(self.size()))
+        super().resizeEvent(event)
 
     # pylint: disable=invalid-name
     def setGeometry(self, new_rect):
@@ -1074,7 +1086,7 @@ class RegionOfInterest(qtw.QWidget):
             norm_rect.setBottom(new_bottom)
             new_size.setWidth(norm_rect.width() * np.sign(new_size.width()))
             new_size.setHeight(norm_rect.height() * np.sign(new_size.height()))
-        
+
         # Force the size to minimum and maximum constraints
         # as well as to minimum increments in both directions
         new_rect.setSize(self.__normalized_size(new_size))
