@@ -8,7 +8,6 @@ module interpolation
     integer, parameter :: dp = REAL64
     integer, parameter :: qp = REAL128
     
-    
     contains
 
     subroutine cube_spline()
@@ -31,7 +30,6 @@ module interpolation
         real(dp), intent (out) :: coeffs(5*n_in)
 
     end subroutine equidist_quint_spline_coeffs
-
 
 
     subroutine interpolate(x, y, n, knots, n_knots, deg, bc_type, do_checks, ierr)
@@ -77,44 +75,63 @@ module interpolation
 
     ! bc_types: 0 = "not-a-knot", 1 = natural, 2 = clamped
 
-    integer pure function get_n_knots(deg, n) result(n_knots)
-
+    pure integer function get_n_knots(deg, n) result(n_knots)
+        use, intrinsic :: iso_fortran_env
+        implicit none
+        integer, parameter :: dp = REAL64
         !in
         integer, INTENT(IN) :: deg,n
         
-        n_knots = n + deg + 1
+        n_knots = n + 2*deg
         RETURN
     end function get_n_knots
 
-    pure function get_knots_bc_0(x, n, deg) result(knots)
-            ! in
-            integer, intent(in) :: n, deg
-            real(dp), intent(in) :: x(n)
-            ! out
-            real(dp) :: knots(n + deg + 1)
-            ! internal
-            integer :: m
+    ! remove below? - will not used I think
+    pure subroutine get_knots_bc_0(x, n, deg, knots)
+        ! in
+        integer, intent(in) :: n, deg
+        real(dp), intent(in) :: x(n)
+        ! out
+        real(dp), INTENT(OUT) :: knots(n + deg + 1)
+        ! internal
+        integer :: m
 
-            m = (deg - 1) / 2 ! integer divison
+        m = (deg - 1) / 2 ! integer divison
 
-            knots(m:m+n) = x
-            knots(1:m-1) = x(1)
-            knots(m+n+1:n+deg+1) = x(n)
+        knots(m:m+n) = x
+        knots(1:m-1) = x(1)
+        knots(m+n+1:n+deg+1) = x(n)
+        
+        return
 
-        end function get_knots_bc_0
+    end subroutine get_knots_bc_0
 
+    pure subroutine get_natural_knots(x, n, deg, knots, n_knots)
+        use, intrinsic :: iso_fortran_env
+        implicit none
+        integer, parameter :: dp = REAL64
 
+        ! in
+        integer,intent(in) :: n, deg
+        real(dp), INTENT(IN) :: x(n)
 
+        ! out
+        real(dp), intent(out) ::  knots(n + 2*deg)
+        integer, INTENT(OUT) :: n_knots
 
+        n_knots = n + 2*deg
 
-    end module interpolation
+        knots(1       : deg     ) = x(1)
+        knots(1+deg   : n+deg   ) = x(:)
+        knots(n+deg+1 : n_knots ) = x(n)
+        RETURN
+    end subroutine get_natural_knots
 
     subroutine build_colloc_matrix(x, n, knots, n_knots, deg, AB, ab_cols, ab_rows)
         ! -> bspl._colloc from scipy
         use, intrinsic :: iso_fortran_env
         implicit none
         integer, parameter :: dp = REAL64
-        integer, external :: find_interval
 
         ! in
         integer, INTENT(IN) :: deg, n, n_knots, ab_cols, ab_rows
@@ -236,7 +253,7 @@ module interpolation
 
     end subroutine deBoor_D
 
-    integer pure function find_interval(knots, n_knots, deg, x_val, prev_l, extrapolate) result(interval)
+    pure integer function find_interval(knots, n_knots, deg, x_val, prev_l, extrapolate) result(interval)
         use, intrinsic :: iso_fortran_env
         implicit none
         integer, parameter :: dp = REAL64
@@ -275,8 +292,10 @@ module interpolation
         do while ((x_val>=knots(l+1)).and.(l.ne.n)) !Fortran index
             l = l + 1
         end do
+
         interval = l-1
 
         return
     end function find_interval
 
+end module interpolation
