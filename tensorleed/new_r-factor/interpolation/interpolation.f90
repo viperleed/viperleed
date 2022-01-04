@@ -21,7 +21,7 @@ module interpolation
         ! output: y data on new grid
     end subroutine equidist_spline
 
-    subroutine equidist_quint_spline_coeffs()
+    subroutine equidist_quint_spline_coeffs(in_data, n_in, coeffs)
         ! input: x,y data, new grid
         ! output: coefficiencts and knots for evaluation
 
@@ -54,13 +54,24 @@ module interpolation
         real(dp), INTENT(IN) :: x(n), y(n), knots(n_knots)
         integer, INTENT(IN) :: bc_type, do_checks
         integer, INTENT(OUT) :: ierr ! error code
+
+        integer :: ab_cols, ab_rows, kl, ku, nt
+        real(dp), ALLOCATABLE :: AB(:,:)
+
         ! called with known knots
 
         !TODO implement checks
 
         ierr = 10 ! undefined error
+        
+        
 
-        !allocate(Ab) stuff
+        kl = deg
+        ku = deg
+        ab_cols =2*kl + ku +1
+        ab_rows = nt
+        allocate(ab(ab_cols, ab_rows))
+        call build_colloc_matrix(x, n, knots, n_knots, deg, AB, ab_cols, ab_rows)
         
     end subroutine interpolate_knots
 
@@ -103,6 +114,7 @@ module interpolation
         use, intrinsic :: iso_fortran_env
         implicit none
         integer, parameter :: dp = REAL64
+        integer, external :: find_interval
 
         ! in
         integer, INTENT(IN) :: deg, n, n_knots, ab_cols, ab_rows
@@ -110,34 +122,34 @@ module interpolation
         ! out
         real(dp), INTENT(INOUT) :: AB(ab_cols,ab_rows)
         ! internal
-        integer :: left, j, a, kl, ku, clmn, nt
+        integer :: left, j, a, kl, ku, clmn, nt, offset
         real(dp) :: x_val
         real(dp), ALLOCATABLE :: work(:)
 
-        ku = k
-        kl = k
+        ku = deg
+        kl = deg
         nt = size(knots) - deg - 1
 
 
-        allocate(work(2*k+2))
+        allocate(work(2*deg+2))
 
         left = deg
         ! TODO fix indices
         do j=0, n
             x_val = x(j+1)
-            left = find_interval(t,k, x_val, left, extrapolate)
+            left = find_interval(knots, n_knots, deg, x_val, left, 0) ! 0 is extrapolate = False
 
-            deBoor_D(t, x_val, deg, left, 0, work)
+            call deBoor_D(knots, n_knots, x_val, deg, left, 0, work)
 
-            do a = 0, k+1
-                clmn = left - k + a
+            do a = 0, deg+1
+                clmn = left - deg + a
                 AB(kl + ku + j + offset - clmn + 1, clmn + 1) = work(a +1)
             end do
         end do
 
     end subroutine build_colloc_matrix
 
-    subroutine deBoor_D(knots, x, deg, ell, m, result)
+    subroutine deBoor_D(knots, n_knots, x, deg, ell, m, result)
         ! analogous to _deBoor_D from fitpack.h in scipy
         ! Comment from SciPy:
 
@@ -149,17 +161,22 @@ module interpolation
         ! Implements a recursive algorithm similar to the original algorithm of
         ! deBoor.
 
+        use, intrinsic :: iso_fortran_env
+        implicit none
+        integer, parameter :: dp = REAL64
+
         !in
+        integer, INTENT(IN) :: n_knots, ell
         integer, INTENT(IN) :: deg !degree
         integer, INTENT(IN) :: m ! which derivatives to evaluate
 
-        real(dp), INTENT(IN) :: knots
+        real(dp), INTENT(IN) :: x, knots(n_knots)
 
         real(dp), INTENT(INOUT) :: result(deg+1)
 
         !internal
         real(dp) :: xb, xa, w
-        integer :: ind, j, n
+        integer :: ind, j, n, i
         real(dp) :: hh(deg)
 
         ! Comment from SciPy:
@@ -167,26 +184,26 @@ module interpolation
         ! so that h contains the k+1 non-zero values of beta_{ell,k-m}(x)
         ! needed to calculate the remaining derivatives.
         
-        result(1) = 1.0d
+        result(1) = 1.0d0
         j =1
-        do while (j<= k-m)
+        do while (j<= deg-m)
             do i=1,j
                 hh(i) = result(i)
             end do
             j = j+1
-            result(1) = 0.0d
+            result(1) = 0.0d0
             n = 1
             do while (n<=j)
                 n = n+1
                 ind = ell +n
-                xb = t(ind +1)
-                xa = t(ind -j +1)
+                xb = knots(ind +1)
+                xa = knots(ind -j +1)
                 if (xb == xa) then
-                    h(n+1) = 0.0d
+                    result(n+1) = 0.0d0
                     continue
                 end if
                 w = hh(n-1 +1)/(xb-xa)
-                result(n-1+1) += result(n-1+1) + w*(xb-x)
+                result(n-1+1) = result(n-1+1) + w*(xb-x)
                 result(n+1) = w*(x-xa)
             end do
         end do
@@ -194,13 +211,13 @@ module interpolation
         ! Comment form SciPy:
         ! Now do m "derivative" recursions
         ! to convert the values of beta into the mth derivative
-        j = k-m+1
-        do while(j<=k)
+        j = deg-m+1
+        do while(j<=deg)
             do i=1,j
                 hh(i) = result(i)
             end do
             j = j+1
-            h(1) = 0.0d
+            result(1) = 0.0d0
             n = 1
             do while(n<=j)
                 n= n+1
@@ -208,12 +225,12 @@ module interpolation
                 xb= knots(ind +1)
                 xa = knots(ind -j +1)
                 if (xb == xa) then
-                    h(m +1) = 0.0d
+                    result(m +1) = 0.0d0
                     continue
                 end if
                 w = j*hh(n-1+1)/(xb-xa)
-                h(n-1+1) = h(n-1) -w
-                h(n+1) = w
+                result(n-1+1) = result(n-1) -w
+                result(n+1) = w
             end do
         end do
 
@@ -221,6 +238,7 @@ module interpolation
 
     integer pure function find_interval(knots, n_knots, deg, x_val, prev_l, extrapolate) result(interval)
         use, intrinsic :: iso_fortran_env
+        implicit none
         integer, parameter :: dp = REAL64
 
         integer, INTENT(IN) :: n_knots, deg, extrapolate, prev_l
@@ -242,13 +260,13 @@ module interpolation
             RETURN
         end if 
 
-        if ((k < pref_l).and.(prev_l<n)) then
+        if ((deg < prev_l).and.(prev_l<n)) then
             l = prev_l
         else
-            l = k
+            l = deg
         end if
 
-        do while ((x_val < knots(l+1)).and.(l.ne.k)) !Fortran index
+        do while ((x_val < knots(l+1)).and.(l.ne.deg)) !Fortran index
             l = l-1
         end do
 
