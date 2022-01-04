@@ -30,6 +30,10 @@ from viperleed.guilib.widgetslib import screen_fraction
 # TODO: context -- snap image, properties
 
 
+# pylint: disable=too-many-instance-attributes
+# Disabled because pylint counts also class attributes, but
+# pyqtSignals cannot be grouped into a container like other
+# attributes and returned as @property.
 class CameraViewer(qtw.QScrollArea):
     """Class for displaying camera frames with scroll bars.
 
@@ -726,6 +730,7 @@ class CameraViewer(qtw.QScrollArea):
             if screen_fraction(self, img_size) < 0.1:
                 return
             self.scale_image(0.8)
+# pylint: enable=too-many-instance-attributes
 
 
 class ImageViewer(qtw.QLabel):
