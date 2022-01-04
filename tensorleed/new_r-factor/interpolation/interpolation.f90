@@ -32,12 +32,12 @@ module interpolation
     end subroutine equidist_quint_spline_coeffs
 
 
-    subroutine interpolate(x, y, n, knots, n_knots, deg, bc_type, do_checks, ierr)
+    subroutine interpolate(x, y, n, knots, n_knots, deg, do_checks, ierr)
         
         integer, INTENT(IN) :: n, n_knots ! length of x, y, knots
         integer, INTENT(IN) :: deg ! degree
         real(dp), INTENT(IN) :: x(n), y(n), knots(n_knots)
-        integer, INTENT(IN) :: bc_type, do_checks
+        integer, INTENT(IN) :: do_checks
         integer, INTENT(OUT) :: ierr ! error code
 
         ! Checks: x sorted ascending, deg sensible
@@ -46,34 +46,94 @@ module interpolation
         
     end subroutine interpolate
 
-    subroutine interpolate_knots(x, y, n, knots, n_knots, deg, bc_type, do_checks, ierr)
+    subroutine interpolate_knots(x, y, n, knots, n_knots, deg, do_checks, rhs, ierr)
         integer, INTENT(IN) :: n, n_knots ! length of x, y, knots
         integer, INTENT(IN) :: deg ! degree
         real(dp), INTENT(IN) :: x(n), y(n), knots(n_knots)
-        integer, INTENT(IN) :: bc_type, do_checks
+        integer, INTENT(IN) :: do_checks
         integer, INTENT(OUT) :: ierr ! error code
 
         integer :: ab_cols, ab_rows, kl, ku, nt
         real(dp), ALLOCATABLE :: AB(:,:)
+
+        integer :: derivs_known_l, derivs_known_r, nleft, nright
+        integer, ALLOCATABLE :: derivs_l_ord(:), derivs_r_ord(:)
+        real(dp), ALLOCATABLE :: derivs_l_val(:), derivs_r_val(:)
+
+        real(dp), ALLOCATABLE :: rhs(:)
+
+        !for lapack
+        integer :: info
+        integer, ALLOCATABLE :: ipiv
 
         ! called with known knots
 
         !TODO implement checks
 
         ierr = 10 ! undefined error
-        
-        
+        derivs_known_l = 1
+        derivs_known_r = 1
+        ALLOCATE(derivs_l_ord(derivs_known_l), derivs_r_ord(derivs_known_r))
+        ALLOCATE(derivs_l_val(derivs_known_l), derivs_r_val(derivs_known_r))
 
+        derivs_l_ord = (/2/)
+        derivs_l_val = (/0d0/)
+
+        derivs_r_ord = (/2/)
+        derivs_r_val = (/0d0/)
+
+        nleft = size(derivs_l_ord)
+        nright = size(derivs_r_ord)
+
+        ! Set up left hand side
+        nt = n_knots - deg - 1
         kl = deg
         ku = deg
         ab_cols =2*kl + ku +1
         ab_rows = nt
-        allocate(ab(ab_cols, ab_rows))
-        call build_colloc_matrix(x, n, knots, n_knots, deg, AB, ab_cols, ab_rows)
+        allocate(AB(ab_rows, ab_cols))
+        AB = 0.0d0
         
+        call build_colloc_matrix(x, n, knots, n_knots, deg, AB, ab_cols, ab_rows, nleft)
+        if (nleft>0) then
+            call handle_lhs_derivatives(knots, n_knots, deg, x(1), AB, ab_rows, ab_cols, kl, ku, &
+            derivs_l_ord, derivs_known_l, 0)
+        end if
+        if (nright>0) then
+            call handle_lhs_derivatives(knots, n_knots, deg, x(n), AB, ab_rows, ab_cols, kl, ku, &
+            derivs_r_ord, derivs_known_r,  nright)
+        end if
+
+        ! Set up right hand side
+        ! extradim in scipy can be ignored since we are interpolating only one set of y values
+
+        ALLOCATE(rhs(nt))
+        if (nleft>0) then
+            rhs(1:nleft) = derivs_l_val
+        end if
+        if (nright>0) then
+            rhs(nt - nright +1: nt) = derivs_l_val
+        end if
+        rhs(nleft+1:nt-nright) = y ! assign y values
+
+        ! Now we are ready to solve the matrix!
+        ! Using LAPACKs' GBSV routine
+        ! On exit, rhs is overwritten by the solution c
+        call GBSV(nt, kl, ku, 1, AB, 2*kl+ku+1, ipiv, rhs, nt, info)
+
+        if ((info >0).or.(info<0)) then
+            print*, "LAPACK ERROR"
+        end if
+
+        ! coeff matrix:
+        
+        print*, rhs
+
+        
+
     end subroutine interpolate_knots
 
-    ! bc_types: 0 = "not-a-knot", 1 = natural, 2 = clamped
+    ! bc_types: 0 = "not-a-knot", 1 = natural, 2 = clamped - needed?
 
     pure integer function get_n_knots(deg, n) result(n_knots)
         use, intrinsic :: iso_fortran_env
@@ -127,7 +187,7 @@ module interpolation
         RETURN
     end subroutine get_natural_knots
 
-    subroutine build_colloc_matrix(x, n, knots, n_knots, deg, AB, ab_cols, ab_rows)
+    subroutine build_colloc_matrix(x, n, knots, n_knots, deg, AB, ab_rows, ab_cols, offset)
         ! -> bspl._colloc from scipy
         use, intrinsic :: iso_fortran_env
         implicit none
@@ -137,7 +197,7 @@ module interpolation
         integer, INTENT(IN) :: deg, n, n_knots, ab_cols, ab_rows
         real(dp), intent(IN) :: x(n), knots(n_knots)
         ! out
-        real(dp), INTENT(INOUT) :: AB(ab_cols,ab_rows)
+        real(dp), INTENT(INOUT) :: AB(ab_rows,ab_cols)
         ! internal
         integer :: left, j, a, kl, ku, clmn, nt, offset
         real(dp) :: x_val
@@ -145,22 +205,22 @@ module interpolation
 
         ku = deg
         kl = deg
-        nt = size(knots) - deg - 1
+        nt = n_knots - deg - 1
 
 
         allocate(work(2*deg+2))
 
         left = deg
         ! TODO fix indices
-        do j=0, n
+        do j=0, n-1
             x_val = x(j+1)
             left = find_interval(knots, n_knots, deg, x_val, left, 0) ! 0 is extrapolate = False
 
             call deBoor_D(knots, n_knots, x_val, deg, left, 0, work)
 
-            do a = 0, deg+1
+            do a = 0, deg
                 clmn = left - deg + a
-                AB(kl + ku + j + offset - clmn + 1, clmn + 1) = work(a +1)
+                AB(kl + ku + j + offset - clmn + 1, clmn +1 ) = work(a +1)
             end do
         end do
 
@@ -207,11 +267,9 @@ module interpolation
             do i=1,j
                 hh(i) = result(i)
             end do
-            j = j+1
             result(1) = 0.0d0
             n = 1
             do while (n<=j)
-                n = n+1
                 ind = ell +n
                 xb = knots(ind +1)
                 xa = knots(ind -j +1)
@@ -222,7 +280,9 @@ module interpolation
                 w = hh(n-1 +1)/(xb-xa)
                 result(n-1+1) = result(n-1+1) + w*(xb-x)
                 result(n+1) = w*(x-xa)
+            n = n+1
             end do
+        j = j+1
         end do
 
         ! Comment form SciPy:
@@ -233,11 +293,9 @@ module interpolation
             do i=1,j
                 hh(i) = result(i)
             end do
-            j = j+1
             result(1) = 0.0d0
             n = 1
             do while(n<=j)
-                n= n+1
                 ind = ell + n
                 xb= knots(ind +1)
                 xa = knots(ind -j +1)
@@ -248,10 +306,40 @@ module interpolation
                 w = j*hh(n-1+1)/(xb-xa)
                 result(n-1+1) = result(n-1) -w
                 result(n+1) = w
+            n= n+1
             end do
+        j = j+1
         end do
 
     end subroutine deBoor_D
+
+    subroutine handle_lhs_derivatives(knots, n_knots, deg, x_val, AB, ab_rows, ab_cols, kl, ku, deriv_ords, n_derivs, offset)
+        use, intrinsic :: iso_fortran_env
+        implicit none
+        integer, parameter :: dp = REAL64
+
+        ! in
+        integer, INTENT(IN) :: deg, n_knots, ab_cols, ab_rows, offset, kl, ku, n_derivs, deriv_ords(n_derivs)
+        real(dp), intent(IN) :: knots(n_knots), x_val
+        ! out
+        real(dp), INTENT(INOUT) :: AB(ab_rows,ab_cols)
+        ! internal
+        integer :: j, a, left, nu, row, clmn
+
+        real(dp), ALLOCATABLE :: work(:)
+
+        ! derivatives @ x_val
+        left = find_interval(knots, n_knots, deg, x_val, deg, 0)
+        do row=0, n_derivs
+            nu = deriv_ords(row+1)
+            call deBoor_D(knots, n_knots, x_val, deg, left, nu, work)
+
+            do a = 0, deg
+                clmn = left - deg + a
+                AB(kl + ku + j + offset - clmn + 1, clmn +1 ) = work(a +1)
+            end do
+        end do
+    end subroutine handle_lhs_derivatives
 
     pure integer function find_interval(knots, n_knots, deg, x_val, prev_l, extrapolate) result(interval)
         use, intrinsic :: iso_fortran_env
@@ -272,7 +360,7 @@ module interpolation
 
         ! reference code checks for NaN in x_val -> skipped here
 
-        if (((x_val < tb).or.(x_val > te)).and.(extrapolate == 0)) then
+        if (((x_val < tb).or.(x_val > te)).and.(extrapolate==0)) then
             interval = -1
             RETURN
         end if 
