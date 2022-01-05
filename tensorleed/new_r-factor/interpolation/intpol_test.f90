@@ -2,13 +2,13 @@ program intpol_test
     
     use, intrinsic :: iso_fortran_env
 
-    use interpolation!
+    use interpolation
     implicit none
     
-
-    real(dp) :: x_data(6), data_out(30), y_data(6)
+    integer :: n_points, n_points_supersampled
+    real(dp), ALLOCATABLE :: x_data(:), y_real(:), y_data(:)
     real(dp), ALLOCATABLE :: knots(:), work(:)
-    integer :: n, n_knots, deg, m, ell
+    integer :: n, n_knots, deg, m, ell, i
 
     integer :: kl, ku, ab_cols, ab_rows, offset
     real(dp), ALLOCATABLE :: ab(:,:)
@@ -17,10 +17,28 @@ program intpol_test
     integer ierr
     real(dp), ALLOCATABLE :: c(:)
 
+    n_points = 30
+    n_points_supersampled = 300
+    Allocate(x_data(n_points))
+    ALLOCATE(y_data(n_points))
+    ALLOCATE(y_real(n_points_supersampled))
 
-    x_data = (/0,1,2,3,4,5/)
-    n = size(x_data)
-    y_data = (/0,1,2,3,-3,-1/)
+    OPEN(10, file = "x_data.csv")
+    OPEN(20, file = "y_data.csv")
+    OPEN(30, file = "y_real.csv")
+    do i= 1,n_points
+        read(10, *) x_data(i)
+        read(20, *) y_data(i)
+    end do
+    do i = 1, n_points_supersampled
+        read(30, *) y_real(i)
+    end do
+    CLOSE(10)
+    CLOSE(20)
+    Close(30)
+
+    n = n_points
+
     
     print*, "x_data: ", x_data
     print*, "y_data: ", y_data
