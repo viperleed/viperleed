@@ -39,9 +39,8 @@ program intpol_test
 
     n = n_points
 
-    
-    print*, "x_data: ", x_data
-    print*, "y_data: ", y_data
+    !print*, "x_data: ", x_data
+    !print*, "y_data: ", y_data
     
     deg = 3
     ALLOCATE(knots(get_n_knots(deg,n)))
@@ -53,8 +52,6 @@ program intpol_test
     ab_rows = 2*kl + ku +1
     ab_cols =n_knots - deg -1
     offset = 1
-    allocate(AB(ab_rows, ab_cols))
-    call build_colloc_matrix(x_data, n, knots, n_knots, deg, AB, ab_rows, ab_cols, offset)
 
     print*, "Test interpolation"
     call interpolate_knots(x_data, y_data, n, knots, n_knots, deg, 0, c, ierr)

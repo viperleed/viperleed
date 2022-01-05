@@ -64,7 +64,7 @@ module interpolation
 
         !for lapack
         integer :: info
-        integer, ALLOCATABLE :: ipiv
+        integer, ALLOCATABLE :: ipiv(:)
 
         ! called with known knots
 
@@ -89,19 +89,19 @@ module interpolation
         nt = n_knots - deg - 1
         kl = deg
         ku = deg
-        ab_cols =2*kl + ku +1
-        ab_rows = nt
+        ab_rows =2*kl + ku +1
+        ab_cols = nt
         allocate(AB(ab_rows, ab_cols))
         AB = 0.0d0
         
-        call build_colloc_matrix(x, n, knots, n_knots, deg, AB, ab_cols, ab_rows, nleft)
+        call build_colloc_matrix(x, n, knots, n_knots, deg, AB, ab_rows, ab_cols, nleft)
         if (nleft>0) then
             call handle_lhs_derivatives(knots, n_knots, deg, x(1), AB, ab_rows, ab_cols, kl, ku, &
             derivs_l_ord, derivs_known_l, 0)
         end if
         if (nright>0) then
             call handle_lhs_derivatives(knots, n_knots, deg, x(n), AB, ab_rows, ab_cols, kl, ku, &
-            derivs_r_ord, derivs_known_r,  nright)
+            derivs_r_ord, derivs_known_r,  nt-nright)
         end if
 
         ! Set up right hand side
@@ -119,7 +119,8 @@ module interpolation
         ! Now we are ready to solve the matrix!
         ! Using LAPACKs' GBSV routine
         ! On exit, rhs is overwritten by the solution c
-        call GBSV(nt, kl, ku, 1, AB, 2*kl+ku+1, ipiv, rhs, nt, info)
+        ALLOCATE(ipiv(nt))
+        call DGBSV(nt, kl, ku, 1, AB, 2*kl+ku+1, ipiv, rhs, nt, info)
 
         if ((info >0).or.(info<0)) then
             print*, "LAPACK ERROR"
@@ -304,7 +305,7 @@ module interpolation
                     continue
                 end if
                 w = j*hh(n-1+1)/(xb-xa)
-                result(n-1+1) = result(n-1) -w
+                result(n-1+1) = result(n-1+1) -w
                 result(n+1) = w
             n= n+1
             end do
@@ -324,19 +325,22 @@ module interpolation
         ! out
         real(dp), INTENT(INOUT) :: AB(ab_rows,ab_cols)
         ! internal
-        integer :: j, a, left, nu, row, clmn
+        integer :: a, left, nu, row, clmn
 
         real(dp), ALLOCATABLE :: work(:)
-
+        
         ! derivatives @ x_val
         left = find_interval(knots, n_knots, deg, x_val, deg, 0)
-        do row=0, n_derivs
+
+        ! allocate work array
+        ALLOCATE(work(2*deg+2))
+        do row=0, n_derivs-1
             nu = deriv_ords(row+1)
             call deBoor_D(knots, n_knots, x_val, deg, left, nu, work)
 
             do a = 0, deg
                 clmn = left - deg + a
-                AB(kl + ku + j + offset - clmn + 1, clmn +1 ) = work(a +1)
+                AB(kl + ku + offset + row - clmn + 1, clmn +1 ) = work(a +1)
             end do
         end do
     end subroutine handle_lhs_derivatives
