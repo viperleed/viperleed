@@ -47,7 +47,7 @@ program intpol_test
     !print*, "x_data: ", x_data
     !print*, "y_data: ", y_data
     
-    deg = 3
+    deg = 5
     ALLOCATE(knots(get_n_knots(deg,n)))
     call get_natural_knots(x_data, n, deg, knots, n_knots)
 

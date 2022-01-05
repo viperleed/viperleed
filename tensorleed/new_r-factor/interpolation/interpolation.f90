@@ -46,6 +46,49 @@ module interpolation
         
     end subroutine interpolate
 
+    subroutine prepare_derivs_nat_bc(deg, derivs_known_l, derivs_known_r, nleft, nright,&
+        derivs_l_ord, derivs_r_ord, derivs_l_val, derivs_r_val)
+        integer, INTENT(IN) :: deg
+        
+
+        integer, INTENT(OUT) :: derivs_known_l, derivs_known_r, nleft, nright
+        integer, ALLOCATABLE, INTENT(OUT) :: derivs_l_ord(:), derivs_r_ord(:)
+        real(dp), ALLOCATABLE, INTENT(OUT) :: derivs_l_val(:), derivs_r_val(:)
+
+        if (deg==3) then
+            derivs_known_l = 1
+            derivs_known_r = 1
+            ALLOCATE(derivs_l_ord(derivs_known_l), derivs_r_ord(derivs_known_r))
+            ALLOCATE(derivs_l_val(derivs_known_l), derivs_r_val(derivs_known_r))
+
+            derivs_l_ord = (/2/)
+            derivs_l_val = (/0d0/)
+
+            derivs_r_ord = (/2/)
+            derivs_r_val = (/0d0/)
+
+            
+        else if (deg == 5) then
+            derivs_known_l = 2
+            derivs_known_r = 2
+            ALLOCATE(derivs_l_ord(derivs_known_l), derivs_r_ord(derivs_known_r))
+            ALLOCATE(derivs_l_val(derivs_known_l), derivs_r_val(derivs_known_r))
+            derivs_l_ord = (/2, 3/)
+            derivs_l_val = (/0d0, 0d0/)
+
+            derivs_r_ord = (/2, 3/)
+            derivs_r_val = (/0d0, 0d0/)
+        else
+            print*, "Only order 3 and 5 supported so far"
+            stop
+        end if
+
+        nleft = size(derivs_l_ord)
+        nright = size(derivs_r_ord)
+        RETURN
+
+    end subroutine     
+
     subroutine interpolate_knots(x, y, n, knots, n_knots, deg, do_checks, new_x, new_y, new_n, ierr)
         integer, INTENT(IN) :: n, n_knots ! length of x, y, knots
         integer, INTENT(IN) :: deg ! degree
@@ -76,19 +119,9 @@ module interpolation
         !TODO implement checks
 
         ierr = 10 ! undefined error
-        derivs_known_l = 1
-        derivs_known_r = 1
-        ALLOCATE(derivs_l_ord(derivs_known_l), derivs_r_ord(derivs_known_r))
-        ALLOCATE(derivs_l_val(derivs_known_l), derivs_r_val(derivs_known_r))
 
-        derivs_l_ord = (/2/)
-        derivs_l_val = (/0d0/)
-
-        derivs_r_ord = (/2/)
-        derivs_r_val = (/0d0/)
-
-        nleft = size(derivs_l_ord)
-        nright = size(derivs_r_ord)
+        call prepare_derivs_nat_bc(deg, derivs_known_l, derivs_known_r, nleft, nright,&
+        derivs_l_ord, derivs_r_ord, derivs_l_val, derivs_r_val)
 
         ! Set up left hand side
         nt = n_knots - deg - 1
