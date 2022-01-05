@@ -46,11 +46,16 @@ module interpolation
         
     end subroutine interpolate
 
-    subroutine interpolate_knots(x, y, n, knots, n_knots, deg, do_checks, rhs, ierr)
+    subroutine interpolate_knots(x, y, n, knots, n_knots, deg, do_checks, new_x, new_y, new_n, ierr)
         integer, INTENT(IN) :: n, n_knots ! length of x, y, knots
         integer, INTENT(IN) :: deg ! degree
         real(dp), INTENT(IN) :: x(n), y(n), knots(n_knots)
         integer, INTENT(IN) :: do_checks
+        
+        integer, INTENT(IN) :: new_n ! number of new points
+        real(dp), INTENT(IN) :: new_x(new_n) !new_x positions where to evaluate
+
+        real(dp), INTENT(OUT) :: new_y(new_n) ! interpolated y values at new_x positions
         integer, INTENT(OUT) :: ierr ! error code
 
         integer :: ab_cols, ab_rows, kl, ku, nt
@@ -126,14 +131,16 @@ module interpolation
             print*, "LAPACK ERROR"
         end if
 
-        ! coeff matrix:
+        ! Nice, if you made it here, you have all coefficients!
         
-        print*, rhs
+        ! Now use them to evaluate at new_x positions
 
+        call evaluate_bspline(knots, n_knots, new_x, new_y, new_n, deg, 0, rhs, nt)
         
+        RETURN
 
     end subroutine interpolate_knots
-
+ 
     ! bc_types: 0 = "not-a-knot", 1 = natural, 2 = clamped - needed?
 
     pure integer function get_n_knots(deg, n) result(n_knots)
@@ -389,5 +396,42 @@ module interpolation
 
         return
     end function find_interval
+
+    subroutine evaluate_bspline(knots, n_knots, x_new, y_new, n_new, deg, nu, coeffs, n)
+        use, intrinsic :: iso_fortran_env
+        implicit none
+        integer, parameter :: dp = REAL64
+
+        ! in
+        integer, INTENT(IN) :: deg, n, n_knots, n_new
+        integer, INTENT(IN) :: nu ! Order of derivative to evaluate (0 if interp value)
+        real(dp), intent(IN) :: x_new(n_new), knots(n_knots), coeffs(n)
+        ! out
+        real(dp), INTENT(OUT) :: y_new(n_new)
+        ! internal
+        integer :: interval, a, i
+        real(dp), ALLOCATABLE :: work(:)
+
+        ! allocate work
+        ALLOCATE(work(2*deg+2))
+
+        interval = deg
+        ! loop over new x_values
+        do i = 1, n_new
+            interval = find_interval(knots, n_knots, deg, x_new(i), interval, 0)
+            ! Could check here if interval <0
+            if (interval < 0) then
+                print*, "Interval Error in evaluate. x_new monotonic?"
+            end if
+            ! Evaluate k+1 which are non-zero in the interval
+            call deBoor_D(knots, n_knots, x_new(i), deg, interval, nu, work)
+
+            y_new(i) = 0
+            do a = 0,deg
+                y_new(i) = y_new(i) + coeffs(interval + a - deg+1)*work(a+1)
+            end do
+        end do
+        RETURN
+    end subroutine evaluate_bspline
 
 end module interpolation
