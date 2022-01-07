@@ -2,6 +2,7 @@
 
 module interpolation
     use, intrinsic :: iso_fortran_env
+    use, intrinsic :: ieee_arithmetic
     implicit none
     
     integer, parameter :: sp = REAL32
@@ -19,17 +20,6 @@ module interpolation
         ! input: x,y data, new grid
         ! output: y data on new grid
     end subroutine equidist_spline
-
-    subroutine equidist_quint_spline_coeffs(in_data, n_in, coeffs)
-        ! input: x,y data, new grid
-        ! output: coefficiencts and knots for evaluation
-
-        integer, intent (in) :: n_in
-        real(dp), intent (in) :: in_data(n_in)
-
-        real(dp), intent (out) :: coeffs(5*n_in)
-
-    end subroutine equidist_quint_spline_coeffs
 
     ! Called with unknown knots
     subroutine interpolate(x, y, n, deg, do_checks, new_x, new_y, new_n, knots, n_knots, ierr)
@@ -166,7 +156,7 @@ module interpolation
         end if
 
 
-        !!!! Everything above does not need to be repeated for every calculation!!!
+        !!!! Everything above does not need to be repeated if x and grid stay the same!!!
         rhs(nleft+1:nt-nright) = y ! assign y values
 
         ! Now we are ready to solve the matrix!
@@ -481,5 +471,96 @@ module interpolation
         end do
         RETURN
     end subroutine evaluate_bspline
+
+    subroutine build_LHS(x, n, knots, n_knots, deg, AB, nt, kl, ku, ierr)
+        implicit none
+        ! in
+        integer,intent(in) :: n, n_knots, deg
+        real(dp), intent(in) :: x(n), knots(n_knots)
+
+        !out
+        integer, INTENT(OUT) :: nt, ku, kl, ab_rows, ab_cols, ierr
+        real(dp), INTENT(OUT), ALLOCATABLE :: AB(:,:)
+
+        ! Set up left hand side
+        nt = n_knots - deg - 1
+        kl = deg
+        ku = deg
+        ab_rows =2*kl + ku +1
+        ab_cols = nt
+        allocate(AB(ab_rows, ab_cols))
+        AB = 0.0d0
+
+        call build_colloc_matrix(x, n, knots, n_knots, deg, AB, ab_rows, ab_cols, nleft)
+        if (nleft>0) then
+            call handle_lhs_derivatives(knots, n_knots, deg, x(1), AB, ab_rows, ab_cols, kl, ku, &
+            derivs_l_ord, derivs_known_l, 0)
+        end if
+        if (nright>0) then
+            call handle_lhs_derivatives(knots, n_knots, deg, x(n), AB, ab_rows, ab_cols, kl, ku, &
+            derivs_r_ord, derivs_known_r,  nt-nright)
+        end if
+
+    end subroutine build_LHS
+
+    subroutine pre_factorize_LHS(AB, ab_rows, ab_cols, n, kl, ku, nt, ipiv, info)
+
+        ! in
+        integer, INTENT(IN) :: ab_rows, ab_cols
+        integer, INTENT(IN) :: n, nt, kl, ku
+
+        ! inplace
+        real(dp), INTENT(INOUT) :: AB(ab_rows, ab_rows)
+
+        ! out
+        real(dp), Allocatable, INTENT(OUT) :: ipiv(:) ! TODO is this even needed afterwards?
+        integer, INTENT(OUT) :: info
+
+        ! Compute the LU factorization of the band matrix A.
+
+        ALLOCATE(ipiv(nt))
+
+        CALL dgbtrf( n, n, kl, ku, AB, 2*kl+ku+1, ipiv, info )
+        if (info.ne.0) then
+            !error?
+            print*, "Error in pre_factorize"
+        end if
+
+    end subroutine pre_factorize_LHS
+
+    subroutine prepare_RHS(nt, nleft, nright, derivs_l_val, derivs_r_val, rhs)
+        ! in
+        integer, INTENT(IN) :: nt, nleft, nright
+        real(dp), INTENT(IN) :: derivs_l_val(nleft), derivs_r_val(nright)
+
+        ! out
+        real(dp), ALLOCATABLE, INTENT(OUT) :: rhs(:)
+
+
+        ALLOCATE(rhs(nt))
+
+        if (nleft>0) then
+            rhs(1:nleft) = derivs_l_val
+        end if
+        if (nright>0) then
+            rhs(nt - nright +1: nt) = derivs_l_val
+        end if
+        ! Assign NaNs in all places where y needs to go, so that if the array is used without assignment, an error will be thrown.
+        rhs(nleft + 1 : nt - nright) = ieee_value(real(dp), ieee_signaling_nan)
+        RETURN
+    end subroutine prepare_RHS
+
+    subroutine assign_y_to_RHS(y, rhs, nt, nleft, nright)
+        ! in
+        integer, INTENT(IN) :: nt, nleft, nright
+        real(dp), INTENT(IN) :: y(nt - nleft - nright)
+        ! inout
+        real(dp), INTENT(INOUT) :: rhs(nt)
+
+        rhs(nleft+1:nt-nright) = y ! assign y values
+        RETURN
+    end subroutine assign_y_to_RHS
+
+
 
 end module interpolation
