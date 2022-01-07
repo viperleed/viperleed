@@ -31,18 +31,34 @@ module interpolation
 
     end subroutine equidist_quint_spline_coeffs
 
-
-    subroutine interpolate(x, y, n, knots, n_knots, deg, do_checks, ierr)
-        
-        integer, INTENT(IN) :: n, n_knots ! length of x, y, knots
+    ! Called with unknown knots
+    subroutine interpolate(x, y, n, deg, do_checks, new_x, new_y, new_n, knots, n_knots, ierr)
+        integer, INTENT(IN) :: n ! length of x, y
         integer, INTENT(IN) :: deg ! degree
-        real(dp), INTENT(IN) :: x(n), y(n), knots(n_knots)
+        real(dp), INTENT(IN) :: x(n), y(n)
         integer, INTENT(IN) :: do_checks
+        
+        integer, INTENT(IN) :: new_n ! number of new points
+        real(dp), INTENT(IN) :: new_x(new_n) !new_x positions where to evaluate
+
+        real(dp), INTENT(OUT) :: new_y(new_n) ! interpolated y values at new_x positions
         integer, INTENT(OUT) :: ierr ! error code
 
-        ! Checks: x sorted ascending, deg sensible
-        ! Not checked: x same size as y
+        ! internal variables and arrays
+        integer :: n_knots
+        real(dp), ALLOCATABLE :: knots(:)
+        
+        ierr = 0
 
+        !TODO implement checks
+        if (do_checks.ne.0) then
+            print*, "Checks not yet implemented"
+            ierr = 99
+        end if
+        ! Compute knots, then hand off to interpolate_knots
+        call get_natural_knots(x, n, deg, knots, n_knots)
+
+        call interpolate_knots(x, y, n, knots, n_knots, deg, new_x, new_y, new_n, ierr)
         
     end subroutine interpolate
 
@@ -73,10 +89,10 @@ module interpolation
             derivs_known_r = 2
             ALLOCATE(derivs_l_ord(derivs_known_l), derivs_r_ord(derivs_known_r))
             ALLOCATE(derivs_l_val(derivs_known_l), derivs_r_val(derivs_known_r))
-            derivs_l_ord = (/2, 3/)
+            derivs_l_ord = (/3, 4/)
             derivs_l_val = (/0d0, 0d0/)
 
-            derivs_r_ord = (/2, 3/)
+            derivs_r_ord = (/3, 4/)
             derivs_r_val = (/0d0, 0d0/)
         else
             print*, "Only order 3 and 5 supported so far"
@@ -87,13 +103,13 @@ module interpolation
         nright = size(derivs_r_ord)
         RETURN
 
-    end subroutine     
+    end subroutine prepare_derivs_nat_bc
 
-    subroutine interpolate_knots(x, y, n, knots, n_knots, deg, do_checks, new_x, new_y, new_n, ierr)
+    ! Called with known knots
+    subroutine interpolate_knots(x, y, n, knots, n_knots, deg, new_x, new_y, new_n, ierr)
         integer, INTENT(IN) :: n, n_knots ! length of x, y, knots
         integer, INTENT(IN) :: deg ! degree
         real(dp), INTENT(IN) :: x(n), y(n), knots(n_knots)
-        integer, INTENT(IN) :: do_checks
         
         integer, INTENT(IN) :: new_n ! number of new points
         real(dp), INTENT(IN) :: new_x(new_n) !new_x positions where to evaluate
@@ -114,11 +130,7 @@ module interpolation
         integer :: info
         integer, ALLOCATABLE :: ipiv(:)
 
-        ! called with known knots
-
-        !TODO implement checks
-
-        ierr = 10 ! undefined error
+        ierr = 0 ! undefined error
 
         call prepare_derivs_nat_bc(deg, derivs_known_l, derivs_known_r, nleft, nright,&
         derivs_l_ord, derivs_r_ord, derivs_l_val, derivs_r_val)
@@ -131,7 +143,7 @@ module interpolation
         ab_cols = nt
         allocate(AB(ab_rows, ab_cols))
         AB = 0.0d0
-        
+
         call build_colloc_matrix(x, n, knots, n_knots, deg, AB, ab_rows, ab_cols, nleft)
         if (nleft>0) then
             call handle_lhs_derivatives(knots, n_knots, deg, x(1), AB, ab_rows, ab_cols, kl, ku, &
@@ -152,6 +164,9 @@ module interpolation
         if (nright>0) then
             rhs(nt - nright +1: nt) = derivs_l_val
         end if
+
+
+        !!!! Everything above does not need to be repeated for every calculation!!!
         rhs(nleft+1:nt-nright) = y ! assign y values
 
         ! Now we are ready to solve the matrix!
@@ -173,8 +188,6 @@ module interpolation
         RETURN
 
     end subroutine interpolate_knots
- 
-    ! bc_types: 0 = "not-a-knot", 1 = natural, 2 = clamped - needed?
 
     pure integer function get_n_knots(deg, n) result(n_knots)
         use, intrinsic :: iso_fortran_env
@@ -207,7 +220,7 @@ module interpolation
 
     end subroutine get_knots_bc_0
 
-    pure subroutine get_natural_knots(x, n, deg, knots, n_knots)
+    subroutine get_natural_knots(x, n, deg, knots, n_knots)
         use, intrinsic :: iso_fortran_env
         implicit none
         integer, parameter :: dp = REAL64
@@ -217,11 +230,11 @@ module interpolation
         real(dp), INTENT(IN) :: x(n)
 
         ! out
-        real(dp), intent(out) ::  knots(n + 2*deg)
+        real(dp), intent(out), ALLOCATABLE ::  knots(:)
         integer, INTENT(OUT) :: n_knots
 
         n_knots = n + 2*deg
-
+        ALLOCATE(knots(n_knots))
         knots(1       : deg     ) = x(1)
         knots(1+deg   : n+deg   ) = x(:)
         knots(n+deg+1 : n_knots ) = x(n)
@@ -247,7 +260,6 @@ module interpolation
         ku = deg
         kl = deg
         nt = n_knots - deg - 1
-
 
         allocate(work(2*deg+2))
 
@@ -319,7 +331,7 @@ module interpolation
                     continue
                 end if
                 w = hh(n-1 +1)/(xb-xa)
-                result(n-1+1) = result(n-1+1) + w*(xb-x)
+                result(n-1+1) = result(n-1+1) + w*(xb-x) ! result(n) += w*(xb-x)
                 result(n+1) = w*(x-xa)
             n = n+1
             end do
@@ -385,7 +397,7 @@ module interpolation
         end do
     end subroutine handle_lhs_derivatives
 
-    pure integer function find_interval(knots, n_knots, deg, x_val, prev_l, extrapolate) result(interval)
+    integer function find_interval(knots, n_knots, deg, x_val, prev_l, extrapolate) result(interval)
         use, intrinsic :: iso_fortran_env
         implicit none
         integer, parameter :: dp = REAL64
@@ -405,6 +417,9 @@ module interpolation
         ! reference code checks for NaN in x_val -> skipped here
 
         if (((x_val < tb).or.(x_val > te)).and.(extrapolate==0)) then
+            print*, "Some error occured"
+            print*, knots
+            print*, x_val
             interval = -1
             RETURN
         end if 
