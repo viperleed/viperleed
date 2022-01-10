@@ -52,6 +52,138 @@ module interpolation
         
     end subroutine interpolate
 
+    subroutine interpolate_new(x, y, n, deg, do_checks, new_x, new_y, new_n, knots, n_knots, &
+                                nleft, nright, LHS, RHS, LHS_rows, LHS_cols, RHS_cols, nt, kl, ku,&
+                                ipiv, intervals, deBoor_matrix, ierr)
+        integer, INTENT(IN) :: n, do_checks ! length of x, y, knots
+        integer, INTENT(IN) :: deg ! degree
+        real(dp), INTENT(IN) :: x(n), y(n)
+        
+        integer, INTENT(IN) :: new_n ! number of new points
+        real(dp), INTENT(IN) :: new_x(new_n) !new_x positions where to evaluate
+
+        integer, INTENT(OUT) :: n_knots
+        real(dp), intent(OUT), ALLOCATABLE :: knots(:)
+        real(dp), INTENT(OUT) :: new_y(new_n) ! interpolated y values at new_x positions
+        integer, INTENT(OUT) :: ierr ! error code
+
+        integer :: ab_cols, ab_rows
+        integer, INTENT(out) :: kl, ku, nt
+        real(dp), ALLOCATABLE :: AB(:,:)
+
+        integer, INTENT(out) :: nleft, nright
+        integer :: derivs_known_l, derivs_known_r
+        integer, ALLOCATABLE :: derivs_l_ord(:), derivs_r_ord(:)
+        real(dp), ALLOCATABLE :: derivs_l_val(:), derivs_r_val(:)
+
+        integer :: LHS_rows, LHS_cols, RHS_cols
+        real(dp), ALLOCATABLE :: rhs(:), coeffs(:), LHS(:,:)
+
+
+        !for lapack
+        integer :: info
+        integer, INTENT(out), ALLOCATABLE :: ipiv(:)
+
+        ! for eval bspline
+        integer,  INTENT(out) :: intervals(new_n)
+        real(dp), ALLOCATABLE, INTENT(out) :: deBoor_matrix(:,:)
+
+        ierr = 0 ! undefined error
+
+        !TODO implement checks
+        if (do_checks.ne.0) then
+            print*, "Checks not yet implemented"
+            ierr = 99
+        end if
+        ! Compute knots, then hand off to interpolate_knots
+        call get_natural_knots(x, n, deg, knots, n_knots)
+
+
+        call prepare_derivs_nat_bc(deg, derivs_known_l, derivs_known_r, nleft, nright,&
+        derivs_l_ord, derivs_r_ord, derivs_l_val, derivs_r_val)
+
+        call build_LHS(x, n, knots, n_knots, deg, derivs_known_l, derivs_known_r, nleft, nright, &
+                derivs_l_ord, derivs_r_ord, AB, ab_rows, ab_cols, nt, kl, ku, ierr)
+
+        ! Set up right hand side
+        ! extradim in scipy can be ignored since we are interpolating only one set of y values
+
+        call prepare_RHS(nt, nleft, nright, derivs_l_val, derivs_r_val, rhs)
+        call assign_y_to_RHS(y, rhs, nt, nleft, nright)
+
+        !!!! Everything above does not need to be repeated if x and grid stay the same!!!
+
+
+        call pre_factorize_LHS(AB, ab_rows, ab_cols, nt, kl, ku, ipiv, info)
+
+        ! Now, here, we need to interject: RHS and LHS would be overwritten
+        RHS_cols = nt
+        LHS_rows = ab_rows
+        LHS_cols = ab_cols
+
+        ALLOCATE(LHS(LHS_rows, LHS_cols), coeffs(RHS_cols))
+
+        LHS = AB
+        coeffs = RHS
+
+
+        call solve_coeffcients(nt, kl, ku, ab_rows, ab_cols, AB, coeffs, ipiv, info)
+
+        if ((info >0).or.(info<0)) then
+            print*, "LAPACK ERROR"
+        end if
+
+
+        ! Nice, if you made it here, you have all coefficients!
+        
+        ! Now use them to evaluate at new_x positions
+
+        call pre_eval_bspline(knots, n_knots, new_x, new_n, deg, 0, intervals, deBoor_matrix)
+
+        call evaluate_bspline(knots, n_knots, new_x, new_y, new_n, deg, 0, coeffs, nt)
+
+
+        RETURN
+    end subroutine interpolate_new
+
+    subroutine interpolate_fast(deg, nt, kl, ku, knots, n_knots, LHS, RHS, LHS_rows, LHS_cols, RHS_cols, ipiv, new_x, new_n,&
+                                intervals, deBoor_matrix,  new_y)
+        integer, INTENT(in) :: deg, nt, kl, ku
+        integer, INTENT(in) :: LHS_rows, LHS_cols, RHS_cols, new_n, n_knots
+        integer, INTENT(INOUT) :: ipiv(nt)
+        integer :: info
+
+        real(dp), intent(in) :: LHS(LHS_rows, LHS_cols), RHS(RHS_cols), new_x(new_n), knots(n_knots)
+
+        ! for eval bspline
+        integer,  INTENT(in) :: intervals(new_n)
+        real(dp), ALLOCATABLE, INTENT(in) :: deBoor_matrix(:,:)
+
+        ! OUT
+        real(dp), intent(out) :: new_y(new_n)
+        ! INTERNAL
+        real(dp) :: LHS_copy(LHS_rows, LHS_cols), coeffs(RHS_cols)
+
+        ! Copy LHS, RHS:
+
+        LHS_copy = LHS
+        coeffs = RHS
+
+
+        call solve_coeffcients(nt, kl, ku, lhs_rows, lhs_cols, LHS_copy, coeffs, ipiv, info)
+        if ((info >0).or.(info<0)) then
+            print*, "LAPACK ERROR"
+        end if
+
+        ! Nice, if you made it here, you have all coefficients!
+        
+        ! Now use them to evaluate at new_x positions
+        call eval_bspline_fast(deg, coeffs, intervals, deBoor_matrix, new_n, new_y)
+
+        RETURN
+    end subroutine interpolate_fast
+
+
     subroutine prepare_derivs_nat_bc(deg, derivs_known_l, derivs_known_r, nleft, nright,&
         derivs_l_ord, derivs_r_ord, derivs_l_val, derivs_r_val)
         integer, INTENT(IN) :: deg
@@ -353,7 +485,6 @@ module interpolation
             end do
         j = j+1
         end do
-
     end subroutine deBoor_D
 
     subroutine handle_lhs_derivatives(knots, n_knots, deg, x_val, AB, ab_rows, ab_cols, kl, ku, deriv_ords, n_derivs, offset)
@@ -435,6 +566,23 @@ module interpolation
         return
     end function find_interval
 
+    subroutine get_intervals(knots, n_knots, deg, x, n, extrapolate, intervals)
+
+        ! in
+        integer, INTENT(IN) :: deg, n, n_knots, extrapolate
+        real(dp), INTENT(IN) :: knots(n_knots), x(n)
+
+        integer, INTENT(out) :: intervals(n)
+
+        integer :: i, prev_l
+
+        prev_l = deg
+        do i=1,n
+            intervals(i) = find_interval(knots, n_knots, deg, x(i), prev_l, extrapolate)
+        end do
+        RETURN
+    end subroutine get_intervals
+
     subroutine evaluate_bspline(knots, n_knots, x_new, y_new, n_new, deg, nu, coeffs, n)
         use, intrinsic :: iso_fortran_env
         implicit none
@@ -472,11 +620,15 @@ module interpolation
         RETURN
     end subroutine evaluate_bspline
 
-    subroutine build_LHS(x, n, knots, n_knots, deg, AB, nt, kl, ku, ierr)
+    subroutine build_LHS(x, n, knots, n_knots, deg, derivs_known_l, derivs_known_r, nleft, nright, &
+                            derivs_l_ord, derivs_r_ord, AB, ab_rows, ab_cols, nt, kl, ku, ierr)
         implicit none
         ! in
         integer,intent(in) :: n, n_knots, deg
         real(dp), intent(in) :: x(n), knots(n_knots)
+        integer, INTENT(IN) :: derivs_known_l, derivs_known_r, nleft, nright
+        integer, INTENT(IN) :: derivs_l_ord(derivs_known_l)
+        integer, INTENT(IN) :: derivs_r_ord(derivs_known_r)
 
         !out
         integer, INTENT(OUT) :: nt, ku, kl, ab_rows, ab_cols, ierr
@@ -498,35 +650,53 @@ module interpolation
         end if
         if (nright>0) then
             call handle_lhs_derivatives(knots, n_knots, deg, x(n), AB, ab_rows, ab_cols, kl, ku, &
-            derivs_r_ord, derivs_known_r,  nt-nright)
+            derivs_r_ord, derivs_known_r, nt-nright)
         end if
-
     end subroutine build_LHS
 
-    subroutine pre_factorize_LHS(AB, ab_rows, ab_cols, n, kl, ku, nt, ipiv, info)
+    subroutine pre_factorize_LHS(AB, ab_rows, ab_cols, nt, kl, ku, ipiv, info)
 
         ! in
         integer, INTENT(IN) :: ab_rows, ab_cols
-        integer, INTENT(IN) :: n, nt, kl, ku
+        integer, INTENT(IN) :: nt, kl, ku
 
         ! inplace
         real(dp), INTENT(INOUT) :: AB(ab_rows, ab_rows)
 
         ! out
-        real(dp), Allocatable, INTENT(OUT) :: ipiv(:) ! TODO is this even needed afterwards?
+        integer, Allocatable, INTENT(OUT) :: ipiv(:) ! TODO is this even needed afterwards?
         integer, INTENT(OUT) :: info
 
         ! Compute the LU factorization of the band matrix A.
 
         ALLOCATE(ipiv(nt))
 
-        CALL dgbtrf( n, n, kl, ku, AB, 2*kl+ku+1, ipiv, info )
+        CALL dgbtrf(nt, nt, kl, ku, AB, 2*kl+ku+1, ipiv, info )
         if (info.ne.0) then
             !error?
             print*, "Error in pre_factorize"
         end if
-
     end subroutine pre_factorize_LHS
+
+    subroutine solve_coeffcients(nt, kl, ku, ab_rows, ab_cols, LHS, RHS, ipiv, info)
+        ! Now we are ready to solve the matrix!
+        ! Using LAPACKs' GBSV routine
+        ! On exit, rhs is overwritten by the solution coeffs
+
+        ! in
+        integer, INTENT(IN) :: nt, kl, ku, ab_rows, ab_cols
+        real(dp), intent(in) :: LHS(ab_rows, ab_cols), RHS(nt)
+
+        ! inout
+        integer, intent(INOUT) :: ipiv(nt) ! must be inout, but not actually used
+        integer, INTENT(INOUT) :: info
+    
+        ! result (= coeffs) get written into RHS -> thus copy first
+        ! LHS will also be overwritten! TODO
+        call dgbtrs('No transpose', nt, kl, ku, 1, LHS, 2*kl+ku+1, ipiv, RHS, nt, info)
+
+        return
+    end subroutine solve_coeffcients
 
     subroutine prepare_RHS(nt, nleft, nright, derivs_l_val, derivs_r_val, rhs)
         ! in
@@ -561,6 +731,52 @@ module interpolation
         RETURN
     end subroutine assign_y_to_RHS
 
+    subroutine pre_eval_bspline(knots, n_knots, x_new, n_new, deg, nu, intervals, deBoor_matrix)
+        integer, INTENT(in) :: n_knots, n_new, deg, nu
+        real(dp), INTENT(in) :: knots(n_knots), x_new(n_new)
 
+        integer, INTENT(out) :: intervals(n_new)
+        real(dp), intent(out), ALLOCATABLE :: deBoor_matrix(:,:)
+
+        real(dp), ALLOCATABLE :: work(:)
+
+        ! internal
+        integer :: i
+
+
+        ! calculate interval vector
+        call get_intervals(knots, n_knots, deg, x_new, n_new, 0, intervals)
+
+        ALLOCATE(deBoor_matrix(n_new, 2*deg+2))
+        ALLOCATE(work(2*deg+2))
+        do i = 1, n_new
+            call deBoor_D(knots, n_knots, x_new(i), deg, intervals(i), nu, work)
+            deBoor_matrix(i,:) = work
+        end do
+        RETURN
+    end subroutine pre_eval_bspline
+
+    subroutine eval_bspline_fast(deg, coeffs, intervals, deBoor_matrix, n_new, y_new)
+
+        ! in
+        integer, INTENT(in) :: deg, n_new
+        integer, intent(in) :: intervals(n_new)
+        real(dp), INTENT(in) :: coeffs(n_new), deBoor_matrix(n_new, 2*deg+2)
+
+        ! out
+        real(dp), intent(out) :: y_new(n_new)
+
+        ! internal
+        integer :: i, a
+
+        y_new = 0.0d0
+        do i = 1, n_new
+            
+            do a = 0, deg
+                y_new(i) = y_new(i) + coeffs(intervals(i) +a -deg+1)*deBoor_matrix(i, a+1)
+            end do
+        end do
+        RETURN
+    end subroutine eval_bspline_fast
 
 end module interpolation
