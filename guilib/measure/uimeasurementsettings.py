@@ -19,6 +19,7 @@ import PyQt5.QtWidgets as qtw
 # ViPErLEED modules
 from viperleed import guilib as gl
 from viperleed.guilib.basewidgets import QDoubleValidatorNoDot
+from viperleed.guilib.measure import uimeasurement
 
 TITLE = 'Measurement Settings'
 
@@ -49,9 +50,8 @@ class SettingsEditor(qtw.QDialog):
                              'measurement_time', 'limit_continuous',
                              'cycle_time')
         self.__para_text = ('measure_this',)
-        self.__file_name = Path(('C:/Users/Florian/Documents/Uni/Masterarbeit/'
-                               'ViperLEED/viperleed/guilib/measure/configura'
-                               'tion/viperleed_config.ini'))
+        self.__file_name = (uimeasurement.DEFAULT_CONFIG_PATH
+                            / 'viperleed_config.ini')
         self.__settings = None
         self.__read_settings()
         self.__compose()
