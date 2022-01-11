@@ -790,7 +790,7 @@ class MeasureControllerABC(ControllerABC):
 
         This method must be reimplemented in subclasses. It
         should take requested measurement types as strings
-        from the MeasurementABC class (i.e.: I0, Isample, ...),
+        from the MeasurementABC class (i.e.: I0, I_Sample, ...),
         check if those types are available and not conflicting
         with each other and decide which channels to use.
             
