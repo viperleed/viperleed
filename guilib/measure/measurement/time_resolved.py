@@ -62,6 +62,7 @@ class TimeResolved(MeasurementABC):
                 'measurement_settings', 'cycle_time', fallback=100
                 )
 
+        self.check_controller_averaging()
         self.timer = qtc.QTimer(parent=self)
         self.timer.setSingleShot(True)
         self.timer.timeout.connect(self.ready_for_next_measurement)
@@ -70,6 +71,18 @@ class TimeResolved(MeasurementABC):
             self.cycle_timer = qtc.QTimer(parent=self)
             self.cycle_timer.setSingleShot(True)
             self.cycle_timer.timeout.connect(self.__set_time_over)
+
+    def check_controller_averaging(self):
+        """Check if controllers are allowed to average.
+        
+        The number of measurements to average over
+        is always 1 in continuous measurements.
+        """
+        if self.__measurement_time <= self.__limit_continuous:
+            for ctrl in self.controllers:
+                ctrl.settings.set(
+                    'measurement_settings', 'num_meas_to_average', '1'
+                    )
 
     def start_next_measurement(self):
         """Set energy and measure.
@@ -145,14 +158,15 @@ class TimeResolved(MeasurementABC):
         quantity = self.settings.get(
             'measurement_settings', 'measure_this', fallback='None'
             )
+        quantity_obj = QuantityInfo.from_label(quantity)
         percentage = self.settings.getfloat('measurement_settings',
                                             'percentage', fallback=0.1)
         points = self.settings.getint(
             'measurement_settings', 'relevant_points', fallback=10
             )
-        if quantity == QuantityInfo.HV:
+        if quantity_obj == QuantityInfo.HV:
             to_change = 'hv_settle_time'
-        elif quantity == QuantityInfo.I0:
+        elif quantity_obj == QuantityInfo.I0:
             to_change = 'i0_settle_time'
         else:
             print('not one of the expected quantities measured')
@@ -160,7 +174,7 @@ class TimeResolved(MeasurementABC):
             return
 
         measured, _ = self.data_points.get_time_resolved_data(
-            quantity, separate_steps=True, absolute_times=True
+            quantity_obj, separate_steps=True, absolute_times=True
             )
         interval = self.primary_controller.measurement_interval
 
