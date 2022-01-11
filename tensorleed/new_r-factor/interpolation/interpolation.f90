@@ -195,7 +195,7 @@ module interpolation
     end subroutine pre_evaluate_grid
 
 
-    subroutine pre_evaluate_deriv(nu, n_new, x_new, knots, info_values, intervals, deriv_deBoor_matrix, ierr)
+    subroutine pre_evaluate_deriv(nu, n_new, x_new, info_values, knots, intervals, deriv_deBoor_matrix, ierr)
         ! IN
         integer, INTENT(IN) :: n_new            !! # points target grid
         real(dp), INTENT(IN):: x_new(n_new)     !! result grid values
@@ -235,19 +235,17 @@ module interpolation
         ierr = 0
 
         ! check if x values are sorted
-        do i = 2, n
+        do concurrent (i = 2: n)
             if (x(i).le.x(i-1)) then
                 ! origin grid not sorted
                 ierr = 11
-                RETURN
             end if
         end do
 
-        do i = 2, n_new
+        do concurrent (i = 2: n_new)
             if (x_new(i).le.x_new(i-1)) then
                 ! target grid not sorted
                 ierr = 12
-                RETURN
             end if
         end do
 
@@ -424,9 +422,6 @@ module interpolation
 
     subroutine build_colloc_matrix(x, n, knots, n_knots, deg, AB, LHS_rows, LHS_cols, offset)
         ! -> bspl._colloc from scipy
-        use, intrinsic :: iso_fortran_env
-        implicit none
-        integer, parameter :: dp = REAL64
 
         ! in
         integer, INTENT(IN) :: deg, n, n_knots, LHS_cols, LHS_rows
@@ -448,7 +443,7 @@ module interpolation
         ! TODO fix indices
         do j=0, n-1
             x_val = x(j+1)
-            left = find_interval(knots, n_knots, deg, x_val, left, 0) ! 0 is extrapolate = False
+            left = find_interval(knots, n_knots, deg, x_val, left, 0) ! 0 means extrapolate = False
 
             call deBoor_D(knots, n_knots, x_val, deg, left, 0, work)
 
@@ -462,9 +457,7 @@ module interpolation
 
 
     subroutine handle_lhs_derivatives(knots, n_knots, deg, x_val, AB, LHS_rows, LHS_cols, kl, ku, deriv_ords, n_derivs, offset)
-        use, intrinsic :: iso_fortran_env
         implicit none
-        integer, parameter :: dp = REAL64
 
         ! in
         integer, INTENT(IN) :: deg, n_knots, LHS_cols, LHS_rows, offset, kl, ku, n_derivs, deriv_ords(n_derivs)
@@ -481,7 +474,7 @@ module interpolation
 
         ! allocate work array
         ALLOCATE(work(2*deg+2))
-        do row=0, n_derivs-1
+        do concurrent (row=0: n_derivs-1)
             nu = deriv_ords(row+1)
             call deBoor_D(knots, n_knots, x_val, deg, left, nu, work)
 
@@ -495,7 +488,7 @@ module interpolation
 ! *****************************************************************************************
 ! de Boor B-spline evaluation
 
-    subroutine deBoor_D(knots, n_knots, x, deg, ell, m, result)
+    pure subroutine deBoor_D(knots, n_knots, x, deg, ell, m, result)
         ! analogous to _deBoor_D from fitpack.h in scipy
         ! Comment from SciPy:
 
@@ -584,10 +577,8 @@ module interpolation
 ! *****************************************************************************************
 ! Assigning grid points to spline intervals
 
-    integer function find_interval(knots, n_knots, deg, x_val, prev_l, extrapolate) result(interval)
-        use, intrinsic :: iso_fortran_env
+    pure integer function find_interval(knots, n_knots, deg, x_val, prev_l, extrapolate) result(interval)
         implicit none
-        integer, parameter :: dp = REAL64
 
         integer, INTENT(IN) :: n_knots, deg, extrapolate, prev_l
         real(dp), INTENT(IN) :: knots(n_knots), x_val
@@ -604,9 +595,7 @@ module interpolation
         ! reference code checks for NaN in x_val -> skipped here
 
         if (((x_val < tb).or.(x_val > te)).and.(extrapolate==0)) then
-            print*, "Some error occured"
-            print*, knots
-            print*, x_val
+            ! TODO implement ierr here!
             interval = -1
             RETURN
         end if 
@@ -824,9 +813,9 @@ module interpolation
         integer :: i, a ! loop variables
 
         y_new = 0.0d0
-        do i = 1, n_new
-            do a = 0, deg
-                y_new(i) = y_new(i) + coeffs(intervals(i) +a -deg+1)*deBoor_matrix(a+1, i)
+        do concurrent (i = 1:n_new)
+            do concurrent (a = 1:deg+1)
+                y_new(i) = y_new(i) + coeffs(intervals(i) +a -deg)*deBoor_matrix(a, i)
             end do
         end do
         RETURN
