@@ -14,6 +14,7 @@ import csv
 import re
 import copy
 from collections.abc import MutableSequence, Sequence
+import enum
 
 from PyQt5 import QtCore as qtc
 
@@ -30,48 +31,93 @@ class DataErrors(ViPErLEEDErrorEnum):
                            "that was not specified in the DataPoints class.")
 
 
+_ALIASES = {'Energy': ('nominal_energy',),
+            'Measured_Energy': ('hv',),
+            'I_Sample': ('isample',),
+           }
+
+
+class QuantityInfo(enum.Enum):
+    """Measurement types with unit, scaling, type and name."""
+    IMAGES = ('Number', None, str, 'Images')
+    ENERGY = ('eV', 'lin', float, 'Energy')
+    TIMES = ('s', 'lin', float, 'Times')
+    I0 = ('uA', 'lin', float, 'I0')
+    HV = ('eV', 'lin', float, 'Measured_Energy')
+    ISAMPLE = ('V', 'lin', float, 'I_Sample')
+    TEMPERATURE = ('°C', 'lin', float, 'Temperature')
+    COLD_JUNCTION = ('°C', 'lin', float, 'Cold_Junction')
+
+    @classmethod
+    def from_label(cls, label):
+        if not isinstance(label, str):
+            raise TypeError(f'Unexpected type {type(label).__name__} for '
+                            'QuantityInfo.from_label. Expected str.')
+        try:
+            return getattr(cls, label)
+        except AttributeError:
+            pass
+        for quantity, aliases in _ALIASES.items():
+            if label.lower() in aliases:
+                label = quantity
+                break
+        try:
+            return cls.get_labels()[label]
+        except AttributeError as err:
+            raise AttributeError(f'Unknown {label=} for quantity in '
+                                 'QuantityInfo')
+
+    @property
+    def label(self):
+        return self.value[3]
+
+    @property
+    def dtype(self):
+        return self.value[2]
+
+    @property
+    def units(self):
+        return self.value[0]
+
+    @property
+    def plot_scale(self):
+        return self.value[1]
+    
+    @classmethod
+    def get_labels(cls):
+        return {l.label: l for l in cls}
+
+
 class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
-    """Data storage class
-    .
-    The plot_info dictionary in this class may be edited.
-    Each section (label) needs to contain the unit and
-    the scaling ('lin' for linear and 'log' for logarithmic
-    scaling.)
-    """
+    """Data storage class."""
     # Is emitted when an error occurs
     error_occurred = qtc.pyqtSignal(tuple)
-
-    plot_info = {}
-    plot_info['images'] = ['Number', str]
-    plot_info['nominal_energy'] = ['eV', 'lin', float]
-    plot_info['measurement_t'] = ['s', 'lin', float]
-    plot_info['I0'] = ['uA', 'lin', float]
-    plot_info['HV'] = ['eV', 'lin', float]
-    plot_info['Isample'] = ['V', 'log', float]
-    plot_info['temperature'] = ['°C', 'lin', float]
-    plot_info['cold_junction'] = ['°C', 'lin', float]
 
     def __init__(self, *args):
         """Initialise data class."""
         super().__init__()
         self.__list = list(args)
-        # self.__exceptional_keys = ('images', 'nominal_energy', 'measurement_t')
-        self.__exceptional_keys = ('images', 'nominal_energy')
         # primary_controller needs to be given to this class
         # before starting measurements.
         self.primary_controller = None
         self.controllers = None
         self.delimiter = ','
         self.primary_first_time = None
+        self.energy_label = QuantityInfo.ENERGY.label
+        self.time_label = QuantityInfo.TIMES.label
+        self.image_label = QuantityInfo.IMAGES.label
+        self.__exceptional_keys = (self.image_label, self.energy_label )
 
     @property
     def nominal_energies(self):
         """Return energies."""
-        return [d['nominal_energy'] for d in self]
+        return [d[self.energy_label] for d in self]
 
     @property
     def cameras(self):
-        return tuple(self[0]['images'].keys())
+        if not self.image_label in self[0]:
+            return tuple()
+        return tuple(self[0][self.image_label].keys())
 
     def __str__(self):
         return str(self.__list)
@@ -106,42 +152,42 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
             raise ValueError(f'{self.__class__.__name__}: received '
                              'unexpected data type')
 
-    def add_data(self, receive, controller, primary_delay=None):
+    def add_data(self, new_data, controller, primary_delay=None):
         """Add received data to currently active data point."""
-        for quantity, value in receive.items():
+        for quantity, value in new_data.items():
             if quantity not in self[-1]:
                 emit_error(self, DataErrors.INVALID_MEASUREMENT)
             else:
                 self[-1][quantity][controller].append(value)
 
-        if not self[-1]['measurement_t'][controller]:
+        if not self[-1][self.time_label][controller]:
             time = controller.serial.time_stamp
             if primary_delay:
                 time += primary_delay/1000
-            self[-1]['measurement_t'][controller].append(time)
+            self[-1][self.time_label][controller].append(time)
 
     def add_image_names(self, name):
         """Add image names to currently active data point."""
-        for camera in self[-1]['images']:
+        for camera in self[-1][self.image_label]:
             # TODO: may want to add camera name to image name
-            self[-1]['images'][camera] = name
+            self[-1][self.image_label][camera] = name
 
     def calculate_times(self):
         """Calculate times for the last data point."""
         if not self.primary_first_time:
             self.primary_first_time = (
-                    self[0]['measurement_t'][self.primary_controller][0]
+                    self[0][self.time_label][self.primary_controller][0]
                     )
-        for ctrl in self[-1]['measurement_t']:
-            if not len(self[-1]['measurement_t'][ctrl]):
+        for ctrl in self[-1][self.time_label]:
+            if not len(self[-1][self.time_label][ctrl]):
                 continue
-            self[-1]['measurement_t'][ctrl][0] -= self.primary_first_time
-            self[-1]['measurement_t'][ctrl][0] += ctrl.initial_delay
+            self[-1][self.time_label][ctrl][0] -= self.primary_first_time
+            self[-1][self.time_label][ctrl][0] += ctrl.initial_delay
             quantity = ctrl.measured_quantities[0]
             length = len(self[-1][quantity][ctrl])
             for i in range(length - 1):
-                self[-1]['measurement_t'][ctrl].append(
-                    self[-1]['measurement_t'][ctrl][0] +
+                self[-1][self.time_label][ctrl].append(
+                    self[-1][self.time_label][ctrl][0] +
                     ctrl.measurement_interval * (i + 1)
                     )
 
@@ -257,14 +303,14 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                                      'time resolved data.')
                 if not separate_steps:
                     data[ctrl_idx].extend(measurements)
-                    times[ctrl_idx].extend(data_point['measurement_t'][ctrl])
+                    times[ctrl_idx].extend(data_point[self.time_label][ctrl])
                 else:
                     data[ctrl_idx].append(measurements)
-                    times[ctrl_idx].append(data_point['measurement_t'][ctrl])
+                    times[ctrl_idx].append(data_point[self.time_label][ctrl])
                     for i, time_set in enumerate(times[ctrl_idx]):
                         start_time = times[ctrl_idx][i][0]
-                        for j , time in enumerate(time_set):
-                            times[ctrl_idx][i][j] -= start_time
+                        times[ctrl_idx][i] = [t - start_time
+                                              for t in times[ctrl_idx][i]]
                 ctrl_idx += 1
 
         if include_energies:
@@ -288,20 +334,20 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         None.
         """
         data_points_dict = {}
-        for quantity in self.plot_info:
-            if any(ctrl.measures(quantity) for ctrl in controllers):
-                data_points_dict[quantity] = {
+        for quantity in QuantityInfo:
+            if any(ctrl.measures(quantity.label) for ctrl in controllers):
+                data_points_dict[quantity.label] = {
                     controller: []
                     for controller in controllers
-                    if controller.measures(quantity)
+                    if controller.measures(quantity.label)
                     }
-        data_points_dict['measurement_t'] = {}
-        data_points_dict['images'] = {}
+        data_points_dict[self.time_label] = {}
+        data_points_dict[self.image_label] = {}
         for controller in controllers:
-            data_points_dict['measurement_t'][controller] = []
+            data_points_dict[self.time_label][controller] = []
         for camera in cameras:
-            data_points_dict['images'][camera] = None
-        data_points_dict['nominal_energy'] = energy
+            data_points_dict[self.image_label][camera] = None
+        data_points_dict[self.energy_label] = energy
         self.append(data_points_dict)
 
     def read_data(self, csv_name):
@@ -320,7 +366,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         with open(csv_name, 'r', encoding='UTF8', newline='') as csv_file:
             reader = csv.DictReader(csv_file, delimiter=self.delimiter)
             first_row = next(reader)
-            if 'nominal_energy' not in first_row:
+            if self.energy_label not in first_row:
                 # Read file is not a ViPErLEED measurement.
                 raise RuntimeError(
                     f'{csv_name} is not a ViPErLEED measurement.'
@@ -328,7 +374,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
             key_dict = {}
             extractor = re.compile(r'(.*)\((.*)\)')
             for key in first_row:
-                if key == 'nominal_energy':
+                if key == self.energy_label:
                     key_dict[key] = (key, None)
                     continue
                 extracted = extractor.match(key)
@@ -336,10 +382,10 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                     continue
                 key_dict[key] = list(extracted.groups())
 
-            data_points_dict = {'nominal_energy': -1}
+            data_points_dict = {self.energy_label: -1}
             for key in key_dict:
                 quantity, device = key_dict[key]
-                if quantity == 'nominal_energy':
+                if quantity == self.energy_label:
                     continue
                 if quantity not in data_points_dict:
                     data_points_dict[quantity] = {}
@@ -349,14 +395,17 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
             for row in (first_row, *reader):
                 for column, value in row.items():
                     quantity, device = key_dict[column]
-                    converter = self.plot_info[quantity][-1]
+                    for allowed_quantity in QuantityInfo:
+                        if quantity == allowed_quantity.label:
+                            converter = allowed_quantity.dtype
+                            break
                     value = converter(value)
-                    if column == 'nominal_energy':
-                        if self[-1]['nominal_energy'] == -1:
-                            self[-1]['nominal_energy'] = value
-                        if value != self[-1]['nominal_energy']:
+                    if column == self.energy_label:
+                        if self[-1][self.energy_label] == -1:
+                            self[-1][self.energy_label] = value
+                        if value != self[-1][self.energy_label]:
                             self.append(copy.deepcopy(data_points_dict))
-                            self[-1]['nominal_energy'] = value
+                            self[-1][self.energy_label] = value
                     else:
                         self[-1][quantity][device].append(value)
             for point in self:
@@ -377,9 +426,10 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         None.
         """
         first_line = []
-        for camera in self.cameras:
-            first_line.append(camera.name)
-        first_line.append('nominal_energy')
+        if self.cameras:
+            for camera in self.cameras:
+                first_line.append(camera.name)
+        first_line.append(self.energy_label)
         for quantity, ctrl_dict in self[0].items():
             if quantity not in self.__exceptional_keys:
                 for controller in ctrl_dict:
@@ -394,12 +444,15 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                 data = []
                 max_length = max(
                     len(mt)
-                    for ctrl, mt in data_point['measurement_t'].items()
+                    for ctrl, mt in data_point[self.time_label].items()
                     )
-                for camera in self.cameras:
-                    images = [data_point['images'][camera]]*max_length
-                    data.append(images)
-                energy_list = [data_point['nominal_energy']]*max_length
+                if self.cameras:
+                    for camera in self.cameras:
+                        images = [
+                            data_point[self.image_label][camera]
+                            ]*max_length
+                        data.append(images)
+                energy_list = [data_point[self.energy_label]]*max_length
                 data.append(energy_list)
                 for quantity, ctrl_dict in data_point.items():
                     if quantity not in self.__exceptional_keys:
@@ -416,12 +469,12 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
             # Only if there are times saved already it is possible to
             # decide if the measurement is a time or energy resolved
             # measurement.
-            if any(len(t) > 1 for t in self[0]['measurement_t'].values()):
+            if any(len(t) > 1 for t in self[0][self.time_label].values()):
                 return True
         return False
 
     def has_data(self):
         """Check if there is already data in the class."""
-        if any(t for t in self[0]['measurement_t'].values()):
+        if any(t for t in self[0][self.time_label].values()):
             return True
         return False

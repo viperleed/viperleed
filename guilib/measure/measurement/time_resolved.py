@@ -18,6 +18,7 @@ from PyQt5 import QtCore as qtc
 # ViPErLEED modules
 from viperleed.guilib.measure.measurement.abc import (MeasurementABC,
                                                       MeasurementErrors)
+from viperleed.guilib.measure.datapoints import QuantityInfo
 
 
 class TimeResolved(MeasurementABC):
@@ -44,7 +45,7 @@ class TimeResolved(MeasurementABC):
                 )
             self.__end_energy = self.settings.getfloat(
                 'measurement_settings', 'end_energy', fallback=10
-                )            
+                )
             self.__endless = self.settings.getboolean(
                 'measurement_settings', 'endless', fallback=False
                 )
@@ -149,11 +150,12 @@ class TimeResolved(MeasurementABC):
         points = self.settings.getint(
             'measurement_settings', 'relevant_points', fallback=10
             )
-        if quantity == 'HV':
+        if quantity == QuantityInfo.HV.label:
             to_change = 'hv_settle_time'
-        elif quantity == 'I0':
+        elif quantity == QuantityInfo.I0.label:
             to_change = 'i0_settle_time'
         else:
+            print('not one of the expected quantities measured')
             # TODO: emit error
             return
 
@@ -169,9 +171,8 @@ class TimeResolved(MeasurementABC):
                     continue
                 current_height = sum(step[-points:])/points
                 max_deviation = (current_height - previous_height) * percentage
-                step.reverse()
                 points = 0
-                for measurement in step:
+                for measurement in reversed(step):
                     if abs(measurement - current_height) < max_deviation:
                         points += 1
                     else:
@@ -362,6 +363,7 @@ class TimeResolved(MeasurementABC):
             return self.start_energy
         energy = self.current_energy + self.__delta_energy
         if self.__endless:
+            self.new_data_available.emit()
             if energy >= self.__end_energy:
                 energy = self.start_energy
         return energy

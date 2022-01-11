@@ -17,6 +17,7 @@ from numpy.polynomial.polynomial import Polynomial
 
 # ViPErLEED modules
 from viperleed.guilib.measure.measurement.abc import MeasurementABC
+from viperleed.guilib.measure.datapoints import QuantityInfo
 
 
 class MeasureEnergySetpoint(MeasurementABC):
@@ -137,7 +138,7 @@ class MeasureEnergySetpoint(MeasurementABC):
         """
         measured_energies, nominal_energies = (
             self.data_points.get_energy_resolved_data(
-                'HV', include_energies=True
+                QuantityInfo.HV.label, include_energies=True
                 )
             )
         domain = ast.literal_eval(

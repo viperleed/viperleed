@@ -14,7 +14,7 @@ Defines the MeasurementPlot class.
 from PyQt5 import QtWidgets as qtw
 
 from viperleed.guilib.basewidgets import MeasurementFigureCanvas as Canvas
-from viperleed.guilib.measure.datapoints import DataPoints
+from viperleed.guilib.measure.datapoints import DataPoints, QuantityInfo
 
 
 # TODO: temporarily one can adjust here the structure in which a
