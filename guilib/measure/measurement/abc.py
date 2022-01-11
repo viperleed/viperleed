@@ -746,8 +746,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         -------
         None.
         """
-        if not busy:
-            self.ready_for_next_measurement()
+        self.ready_for_next_measurement()
 
     def receive_from_controller(self, controller, receive):
         """Receive measurement data from the controller.

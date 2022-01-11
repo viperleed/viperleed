@@ -13,6 +13,7 @@ Defines the Measure class.
 
 import configparser
 from pathlib import Path
+import inspect
 
 import PyQt5.QtCore as qtc
 import PyQt5.QtWidgets as qtw
@@ -29,10 +30,18 @@ from viperleed.guilib.measure.controller.abc import ControllerABC
 from viperleed.guilib.measure.measurement.abc import MeasurementABC
 from viperleed.guilib.measure.widgets.camerawidgets import CameraViewer
 from viperleed.guilib.measure.uimeasurementsettings import SettingsEditor
-from viperleed.guilib.measure.datapoints import DataPoints
+from viperleed.guilib.measure.datapoints import DataPoints, QuantityInfo
 from viperleed.guilib.measure.widgets.measurement_plot import MeasurementPlot
+from viperleed.guilib.measure import dialogs
 
 from viperleed.guilib.measure.widgets.checkcombobox import CheckComboBox
+
+# temporary solution till we have a system config file
+from viperleed.guilib import measure as vpr_measure
+
+
+DEFAULT_CONFIG_PATH = (Path(inspect.getfile(vpr_measure)).parent
+                       / 'configuration')
 
 TITLE = 'Measurement UI'
 
@@ -55,12 +64,16 @@ class Measure(gl.ViPErLEEDPluginBase):
             'settings_editor': qtw.QPushButton("Open settings editor"),
             # TODO: remove this test again and use it in the MeasurementPlot class to decide which data gets plotted
             'test': CheckComboBox(),
-            'menus': {'file': qtw.QMenu("&File"),
-                      'devices': qtw.QMenu("&Devices")},
+            'menus': {
+                'file': qtw.QMenu("&File"),
+                'devices': qtw.QMenu("&Devices"),
+                'tools': qtw.QMenu("&Tools"),
+                },
             }
 
         self._dialogs = {
             'change_settings': SettingsEditor(),
+            'bad_px_finder': dialogs.BadPixelsFinderDialog(parent=self),
             }
         self._glob = {
             'plot': MeasurementPlot()
@@ -137,7 +150,7 @@ class Measure(gl.ViPErLEEDPluginBase):
 
         self._glob['plot'].show()
         self.statusBar().showMessage('Ready')
-        
+
         # Menus
         menu = self.menuBar()
         file_menu = self._ctrls['menus']['file']
@@ -145,13 +158,19 @@ class Measure(gl.ViPErLEEDPluginBase):
         act = file_menu.addAction("&Open...")
         act.setShortcut("Ctrl+O")
         act.triggered.connect(self.__on_read_pressed)
-        
+
         devices_menu = self._ctrls['menus']['devices']
         menu.insertMenu(self.about_action, devices_menu)
         cam_devices = devices_menu.addMenu("Cameras")
         controller_devices = devices_menu.addMenu("Controllers")
         for camera in get_devices("camera"):
             cam_devices.addAction(camera)
+
+        tools_menu = self._ctrls['menus']['tools']
+        menu.insertMenu(self.about_action, tools_menu)
+        act = tools_menu.addAction("Find bad pixels...")
+        act.triggered.connect(self._dialogs['bad_px_finder'].show)
+        self._dialogs['bad_px_finder'].setModal(True)
 
     def __run_measurement(self):
         self.measurement.begin_measurement_preparation()
@@ -194,8 +213,7 @@ class Measure(gl.ViPErLEEDPluginBase):
         config = configparser.ConfigParser(comment_prefixes='/',
                                            allow_no_value=True,
                                            strict=False)
-        file_name = Path('C:/Users/Florian/Documents/Uni/Masterarbeit/ViperLEED/viperleed/guilib/measure/configuration/viperleed_config.ini')
-        #                                                       TODO: path here not nice
+        file_name = DEFAULT_CONFIG_PATH / 'viperleed_config.ini'
         try:
             f = open(file_name, 'r')
             f.close()
@@ -245,7 +263,9 @@ class Measure(gl.ViPErLEEDPluginBase):
         if not measured_quantity:
             return
         #                        TODO: make new widget class plot new data properly
-        self._glob['plot'].plot_new_data(measured_quantity)
+        self._glob['plot'].plot_new_data(
+            QuantityInfo.from_label(measured_quantity)
+            )
 
     def __on_set_energy(self):
         """Set energy on primary controller."""
@@ -290,6 +310,11 @@ class Measure(gl.ViPErLEEDPluginBase):
             self.__retry_close.start(50)
             event.ignore()
             return
+        if self._glob['plot']:
+            self._glob['plot'].close
+        # accept has to be called in order to
+        # savely quit the dialog and its threads.
+        self._dialogs['bad_px_finder'].accept()
         super().closeEvent(event)
 
     def __on_change_settings_pressed(self):
@@ -333,6 +358,6 @@ class Measure(gl.ViPErLEEDPluginBase):
             return
 
         meas_type = config.get('measurement_settings', 'measurement_class')
-        measured_quantity = config.get('measurement_settings',
-                                              'measure_this',
-                                              fallback=None)
+        # measured_quantity = config.get('measurement_settings',
+                                              # 'measure_this',
+                                              # fallback=None)

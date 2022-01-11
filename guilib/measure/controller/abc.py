@@ -28,6 +28,7 @@ from viperleed.guilib.measure.hardwarebase import (
     config_has_sections_and_options, class_from_name, emit_error, QMetaABC,
     ViPErLEEDErrorEnum
     )
+from viperleed.guilib.measure.datapoints import QuantityInfo
 
 
 class ControllerErrors(ViPErLEEDErrorEnum):
@@ -790,12 +791,14 @@ class MeasureControllerABC(ControllerABC):
 
         This method must be reimplemented in subclasses. It
         should take requested measurement types as strings
-        from the MeasurementABC class (i.e.: I0, Isample, ...),
+        from the MeasurementABC class (i.e.: I0, I_Sample, ...),
         check if those types are available and not conflicting
         with each other and decide which channels to use.
             
         super().what_to_measure(requested) must be called in
-        subclasses at the end of the reimplementation.
+        subclasses at the end of the reimplementation in order
+        to convert the requested quantities into QuantityInfo
+        objects.
 
         Parameters
         ----------
@@ -807,7 +810,8 @@ class MeasureControllerABC(ControllerABC):
         -------
         None.
         """
-        self.measured_quantities = requested
+        requested_quantities = [QuantityInfo.from_label(q) for q in requested]
+        self.measured_quantities = requested_quantities
 
     def set_settings(self, new_settings):
         """Set new settings for this controller.
