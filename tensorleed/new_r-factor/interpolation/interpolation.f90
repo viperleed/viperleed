@@ -25,23 +25,30 @@ module interpolation
     subroutine interp_equidist_single(n, x_start, x_step, y, n_new, x_new_start, x_new_step, do_checks, y_new, ierr)
         ! Used for ...
         ! Calculates x and x_new from given steps and calls interpolate_single
+
+        ! IN
+        integer, INTENT(IN)  :: n, n_new
+        integer, INTENT(IN)  :: deg
+        integer, INTENT(IN)  :: do_checks
         real(dp), INTENT(IN) :: x_start, x_step
         real(dp), INTENT(IN) :: x_new_start, x_new_step
 
+        ! OUT
+        integer, INTENT(OUT) :: ierr
+        real(dp), INTENT(OUT):: y_new
+
+        ! Internal
         real(dp) :: x(n), x_new(n_new)
 
-        do i = 1, n
-            x(i) = x_start + x_step*(i-1)
-        end do
-        do i = 1, n_new
-            x_new(i) = x_new_start + x_new_step*(i-1)
-        end do
+        ! transform to array
+        call equidist_to_array(n, x_start, x_step, x)
+        call equidist_to_array(n_new, x_new_start, x_new_step, x_new)
 
         call interpolate_single(n, x, y, n, deg, n_new, x_new, do_checks, y_new, ierr)
         RETURN        
     end subroutine interp_equidist_single
 
-    subroutine interpolate_single(n, x, y, n, deg, n_new, x_new, do_checks, y_new, ierr)
+    subroutine interpolate_single(n, x, y, deg, n_new, x_new, do_checks, y_new, ierr)
         integer, INTENT(IN) :: n ! length of x, y
         integer, INTENT(IN) :: deg ! degree
         real(dp), INTENT(IN) :: x(n), y(n)
@@ -59,30 +66,31 @@ module interpolation
         
         ierr = 0
         if (do_checks.ne.0) then
-            call perform_checks()
+            call perform_checks(n, x, y, n_new, x_new, ierr)
         end if
 
-        
+        call pre_evaluate_grid(x, n, x_new, n_new, deg, nt, kl, ku, &
+        knots, n_knots, LHS, LHS_rows, LHS_cols, RHS, RHS_cols, ipiv, intervals, deBoor_matrix)
+
+        call interpolate_fast(n, y, deg, nt, kl, ku, knots, n_knots, LHS, RHS, LHS_rows, LHS_cols, RHS_cols, ipiv, x_new, n_new,&
+        intervals, deBoor_matrix, y_new)
+
+        !Done
+        RETURN
         
     end subroutine interpolate_single
 
 ! *****************************************************************************************
 ! Pre-Evaluation
  
-    subroutine equidist_pre_evaluate_grid()
-    end subroutine equidist_pre_evaluate_grid
-
-
-    subroutine pre_evaluate_grid(x, n, x_new, n_new, deg, nt, kl, ku, &
-        knots, n_knots, LHS, LHS_rows, LHS_cols, RHS, RHS_cols, ipiv, intervals, deBoor_matrix)
-        ! Sets up and pre-evaluate parts of the caluclation related to ...
-
+    subroutine equidist_pre_evaluate_grid(n, x_start, x_step, n_new, x_new_start, x_new_step, deg, do_checks, nt, kl, ku, &
+        knots, n_knots, LHS, LHS_rows, LHS_cols, RHS, RHS_cols, ipiv, intervals, deBoor_matrix, ierr)
         ! IN
-        integer, INTENT(IN) :: deg              !! order of spline
-        integer, INTENT(IN) :: n, n_new         !! # points in, out
-        real(dp), INTENT(IN):: x(n)             !! origin grid values
-        real(dp), INTENT(IN):: x_new(n_new)     !! result grid values
-
+         integer, INTENT(IN)  :: n, n_new
+         integer, INTENT(IN)  :: deg
+         integer, INTENT(IN)  :: do_checks
+         real(dp), INTENT(IN) :: x_start, x_step
+         real(dp), INTENT(IN) :: x_new_start, x_new_step
 
         ! OUT
         integer, INTENT(OUT)                :: n_knots              !! # knots
@@ -90,15 +98,50 @@ module interpolation
         integer, INTENT(OUT)                :: nt, kl, ku           !! matrix shape specifiers
         integer, INTENT(OUT)                :: LHS_rows, LHS_cols   !! shape LHS
         integer, INTENT(OUT)                :: RHS_cols             !! shape RHS
-        real(dp), INTENT(OUT), ALLOCATABLE  :: LHS(:,:)
-        real(dp), INTENT(OUT), ALLOCATABLE  :: RHS(:)
-        integer, INTENT(OUT), ALLOCATABLE   :: ipiv(:)
-        integer, INTENT(OUT)                :: intervals(n_new)
-        real(dp), INTENT(OUT), ALLOCATABLE  :: deBoor_matrix(:,:)
+        real(dp), INTENT(OUT), ALLOCATABLE  :: LHS(:,:)             !! 2D array containing the left hand side of the equation for spline coefficients
+        real(dp), INTENT(OUT), ALLOCATABLE  :: RHS(:)               !! 1D array for the right hand side of the equation for spline coefficients. After pre-evaluation, this contains the correct edge values and NaN where the y values that are solved for go. Must be assigned using assign_y_to_RHS.
+        integer, INTENT(OUT), ALLOCATABLE   :: ipiv(:)              !! 1D integer array of pivot-positions, needed by LAPACK
+        integer, INTENT(OUT)                :: intervals(n_new)     !! 1D integer array containg information, which spline interval the new grid points fall into.
+        real(dp), INTENT(OUT), ALLOCATABLE  :: deBoor_matrix(:,:)   !! pre-evaluated deBoor matrix, required for evaluation of values on the new grid.
+        integer, INTENT(OUT)                :: ierr                 !! integer error code
+
+        !TODO continue here tomorrow
+
+         call equidist_to_array(n, x_start, x_step, x)
+         call equidist_to_array(n_new, x_new_start, x_new_step, x_new)
+
+         call pre_evaluate_grid(x, n, x_new, n_new, deg, do_checks, nt, kl, ku, &
+         knots, n_knots, LHS, LHS_rows, LHS_cols, RHS, RHS_cols, ipiv, intervals, deBoor_matrix)
+        RETURN
+    end subroutine equidist_pre_evaluate_grid
 
 
-        ! Internal
+    subroutine pre_evaluate_grid(x, n, x_new, n_new, deg, do_checks, nt, kl, ku, &
+        knots, n_knots, LHS, LHS_rows, LHS_cols, RHS, RHS_cols, ipiv, intervals, deBoor_matrix, ierr)
+        ! Sets up and pre-evaluate parts of the caluclation related to ...
 
+        ! IN
+        integer, INTENT(IN) :: deg              !! order of spline
+        integer, INTENT(IN) :: n, n_new         !! # points in, out
+        real(dp), INTENT(IN):: x(n)             !! origin grid values
+        real(dp), INTENT(IN):: x_new(n_new)     !! result grid values
+        integer, INTENT(IN) :: do_checks        !! whether to perform checks on input data
+
+        ! OUT
+        integer, INTENT(OUT)                :: n_knots              !! # knots
+        real(dp), INTENT(OUT), ALLOCATABLE  :: knots(:)             !! knot points
+        integer, INTENT(OUT)                :: nt, kl, ku           !! matrix shape specifiers
+        integer, INTENT(OUT)                :: LHS_rows, LHS_cols   !! shape LHS
+        integer, INTENT(OUT)                :: RHS_cols             !! shape RHS
+        real(dp), INTENT(OUT), ALLOCATABLE  :: LHS(:,:)             !! 2D array containing the left hand side of the equation for spline coefficients
+        real(dp), INTENT(OUT), ALLOCATABLE  :: RHS(:)               !! 1D array for the right hand side of the equation for spline coefficients. After pre-evaluation, this contains the correct edge values and NaN where the y values that are solved for go. Must be assigned using assign_y_to_RHS.
+        integer, INTENT(OUT), ALLOCATABLE   :: ipiv(:)              !! 1D integer array of pivot-positions, needed by LAPACK
+        integer, INTENT(OUT)                :: intervals(n_new)     !! 1D integer array containg information, which spline interval the new grid points fall into.
+        real(dp), INTENT(OUT), ALLOCATABLE  :: deBoor_matrix(:,:)   !! pre-evaluated deBoor matrix, required for evaluation of values on the new grid.
+        integer, INTENT(OUT)                :: ierr                 !! integer error code
+
+        ! perform checks on input data
+        call perform_checks(n, x, x, n_new, x_new, ierr)
 
         ! Compute knot vector and size
         call get_natural_knots(x, n, deg, knots, n_knots)
@@ -127,9 +170,9 @@ module interpolation
 
         RETURN
     end subroutine pre_evaluate_grid
+    
 
-
-    subroutine perform_checks(x, y, n, x_new, n_new, ierr)
+    subroutine perform_checks(n, x, y, n_new, x_new, ierr)
         implicit none
         integer, intent(in) :: n, n_new
         real(dp), INTENT(IN) :: x(n), y(n), x_new(n)
@@ -158,6 +201,20 @@ module interpolation
 
         RETURN
     end subroutine perform_checks
+
+    pure subroutine equidist_to_array(n, x_start, x_step, x)
+        integer, INTENT(IN)  :: n
+        real(dp), INTENT(IN) :: x_start, x_step
+
+        real(dp), INTENT(OUT) :: x(n)
+
+        integer :: i
+
+        do i = 1, n
+            x(i) = x_start + x_step*(i-1)
+        end do
+        RETURN
+    end subroutine equidist_to_array
 
 ! *****************************************************************************************
 ! Fast Evaluation using prepared values
@@ -257,9 +314,10 @@ module interpolation
         RETURN
     end subroutine interpolate_new
 
-    subroutine interpolate_fast(deg, nt, kl, ku, knots, n_knots, LHS, RHS, LHS_rows, LHS_cols, RHS_cols, ipiv, x_new, n_new,&
+    subroutine interpolate_fast(n, y, deg, nt, kl, ku, knots, n_knots, LHS, RHS, LHS_rows, LHS_cols, RHS_cols, ipiv, x_new, n_new,&
                                 intervals, deBoor_matrix, y_new)
-        integer, INTENT(in) :: deg
+        integer, INTENT(in) :: deg, n
+        real(dp), INTENT(IN) :: y(n)
         integer, INTENT(in) :: LHS_rows, LHS_cols, RHS_cols, n_new, n_knots
         integer, INTENT(INOUT) :: ipiv(nt)
         integer :: info
@@ -273,17 +331,17 @@ module interpolation
         ! OUT
         real(dp), intent(out) :: y_new(n_new)
         ! INTERNAL
-        real(dp) :: LHS_copy(LHS_rows, LHS_cols), coeffs(RHS_cols)
+        real(dp) :: coeffs(RHS_cols)
         integer  :: nt, kl, ku
 
         
-        ! Copy LHS, RHS:
-        LHS_copy = LHS
+        ! RHS into coeffs, because it would be overwritten
+        ! LHS is not overwritten in solve_coefficients, thus no need to copy
         coeffs = RHS
 
         call assign_y_to_RHS()
 
-        call solve_coeffcients(nt, kl, ku, lhs_rows, lhs_cols, LHS_copy, coeffs, ipiv, info)
+        call solve_coeffcients(nt, kl, ku, lhs_rows, lhs_cols, LHS, coeffs, ipiv, info)
         if ((info >0).or.(info<0)) then
             print*, "LAPACK ERROR"
         end if
