@@ -61,9 +61,10 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
     # Start second part of the preparation for measurements
     # Is emitted after the starting energy is set.
     continue_preparation = qtc.pyqtSignal()
-    # Abort current task on the controller side.
-    # Is emitted if measurement is aborted.
-    abort_action = qtc.pyqtSignal()
+    # Abort current tasks on the connected devices.
+    request_stop_devices = qtc.pyqtSignal()
+    # Abort current tasks on the primary controller.
+    request_stop_primary = qtc.pyqtSignal()
     # Make the GUI update the current display of collected data.
     new_data_available = qtc.pyqtSignal()
     # Let the GUI know that the preparation for the
@@ -447,7 +448,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             self.begin_preparation.connect(camera.start,
                                            type=qtc.Qt.UniqueConnection)
         # camera.disconnect does not need to be hooked up to the
-        # abort_action signal as it is called in the disconnecting
+        # request_stop_devices signal as it is called in the disconnecting
         # of the camera signals anyway.
 
     def connect_secondary_controllers(self):
@@ -459,8 +460,8 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
                                           type=qtc.Qt.UniqueConnection)
             self.ready_for_measurement.connect(controller.measure_now,
                                                type=qtc.Qt.UniqueConnection)
-            self.abort_action.connect(controller.stop,
-                                      type=qtc.Qt.UniqueConnection)
+            self.request_stop_devices.connect(controller.stop,
+                                              type=qtc.Qt.UniqueConnection)
             self.begin_preparation.connect(
                 controller.trigger_begin_preparation,
                 type=qtc.Qt.UniqueConnection
@@ -475,7 +476,10 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         primary = self.primary_controller
         primary.data_ready.connect(self.receive_from_controller,
                                    type=qtc.Qt.UniqueConnection)
-        self.abort_action.connect(primary.stop, type=qtc.Qt.UniqueConnection)
+        self.request_stop_devices.connect(primary.stop,
+                                          type=qtc.Qt.UniqueConnection)
+        self.request_stop_primary.connect(primary.stop,
+                                          type=qtc.Qt.UniqueConnection)
         self.begin_preparation.connect(primary.trigger_begin_preparation,
                                        type=qtc.Qt.UniqueConnection)
         self.continue_preparation.connect(primary.trigger_continue_preparation,
@@ -518,7 +522,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             except TypeError:
                 pass
             try:
-                self.abort_action.disconnect(controller.stop)
+                self.request_stop_devices.disconnect(controller.stop)
             except TypeError:
                 pass
             try:
@@ -552,7 +556,11 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         except TypeError:
             pass
         try:
-            self.abort_action.disconnect(primary.stop)
+            self.request_stop_devices.disconnect(primary.stop)
+        except TypeError:
+            pass
+        try:
+            self.request_stop_primary.disconnect(primary.stop)
         except TypeError:
             pass
         try:
@@ -971,7 +979,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             controller.busy = True
             controller.controller_busy.connect(self.finalize,
                                                type=qtc.Qt.UniqueConnection)
-        self.abort_action.emit()
+        self.request_stop_devices.emit()
 
     def __on_hardware_error(self, *_):
         """Abort if a hardware error occurs."""
