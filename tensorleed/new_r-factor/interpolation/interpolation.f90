@@ -1,12 +1,16 @@
 ! Created by Alexander M. Imre on 04.12.21.
 !
-! Fast Bspline Interpolation
+! Fast B-Spline Interpolation
 ! A part of ViPErLEED
 !
-! This module is designed to allow for a fast and repeated interpolation of values to a denser subgrid using natural boundary conditions.
-! It allows to separate the setup of the system of equations form the actual interpolation.
+! This module is designed to enable fast interpolation tailored to the requirements of TensorLEED calculations in ViPErLEED.
+! At its heart, it performs a spline interpolation in the b-spline basis. The structure search of TensorLEED calculations requires frequent interpolation from
+! a less dense origin grid to a more dense target grid. Unlike more general interpolation libraries, this module leverages that fact, by separating the interpolation
+! into a pre-evaluation that only depends on the abcissaes of the grids, and an actual interpolation between the ordinate values.
+! Large parts of the required calculations, e.g. the setup of the entire left hand side of the matrix equation, thus need only be performed once and can then be reused
+! to interpolate an aribtrary number of datasets on the same grid.
 ! 
-!
+! This module is a part of ViPErLEED and is distributed under the same license.
 
 module interpolation
     use, intrinsic :: iso_fortran_env
@@ -52,6 +56,7 @@ module interpolation
     end subroutine interp_equidist_single
 
     subroutine interpolate_single(n, x, y, deg, n_new, x_new, do_checks, y_new, ierr)
+        ! IN
         integer, INTENT(IN) :: n ! length of x, y
         integer, INTENT(IN) :: deg ! degree
         real(dp), INTENT(IN) :: x(n), y(n)
@@ -59,19 +64,19 @@ module interpolation
         
         integer, INTENT(IN) :: n_new ! number of new points
         real(dp), INTENT(IN) :: x_new(n_new) !x_new positions where to evaluate
-
+        ! OUT
         real(dp), INTENT(OUT) :: y_new(n_new) ! interpolated y values at x_new positions
         integer, INTENT(OUT) :: ierr ! error code
 
         ! internal variables and arrays
-        real(dp), ALLOCATABLE  :: knots(:)                 !! knot points
-        real(dp), ALLOCATABLE  :: LHS(:,:)                !! 2D array containing the left hand side of the equation for spline coefficients
+        real(dp), ALLOCATABLE  :: knots(:)                     !! knot points
+        real(dp), ALLOCATABLE  :: LHS(:,:)                     !! 2D array containing the left hand side of the equation for spline coefficients
         real(dp), ALLOCATABLE  :: RHS_prep(:)                  !! 1D array for the right hand side of the equation for spline coefficients.
         integer                :: info_values(info_size)
 
-        integer, ALLOCATABLE   :: ipiv(:)                 !! 1D integer array of pivot-positions, needed by LAPACK
-        integer                :: intervals(n_new)        !! 1D integer array containg information, which spline interval the new grid points fall into.
-        real(dp), ALLOCATABLE  :: deBoor_matrix(:,:)      !! pre-evaluated deBoor matrix, required for evaluation of values on the new grid.
+        integer, ALLOCATABLE   :: ipiv(:)                      !! 1D integer array of pivot-positions, needed by LAPACK
+        integer                :: intervals(n_new)             !! 1D integer array containg information, which spline interval the new grid points fall into.
+        real(dp), ALLOCATABLE  :: deBoor_matrix(:,:)           !! pre-evaluated deBoor matrix, required for evaluation of values on the new grid.
         real(dp), ALLOCATABLE  :: coeffs(:)
 
         ierr = 0
