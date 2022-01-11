@@ -30,7 +30,7 @@ from viperleed.guilib.measure.controller.abc import ControllerABC
 from viperleed.guilib.measure.measurement.abc import MeasurementABC
 from viperleed.guilib.measure.widgets.camerawidgets import CameraViewer
 from viperleed.guilib.measure.uimeasurementsettings import SettingsEditor
-from viperleed.guilib.measure.datapoints import DataPoints
+from viperleed.guilib.measure.datapoints import DataPoints, QuantityInfo
 from viperleed.guilib.measure.widgets.measurement_plot import MeasurementPlot
 from viperleed.guilib.measure import dialogs
 
@@ -263,7 +263,9 @@ class Measure(gl.ViPErLEEDPluginBase):
         if not measured_quantity:
             return
         #                        TODO: make new widget class plot new data properly
-        self._glob['plot'].plot_new_data(measured_quantity)
+        self._glob['plot'].plot_new_data(
+            QuantityInfo.from_label(measured_quantity)
+            )
 
     def __on_set_energy(self):
         """Set energy on primary controller."""
@@ -356,6 +358,6 @@ class Measure(gl.ViPErLEEDPluginBase):
             return
 
         meas_type = config.get('measurement_settings', 'measurement_class')
-        measured_quantity = config.get('measurement_settings',
-                                              'measure_this',
-                                              fallback=None)
+        # measured_quantity = config.get('measurement_settings',
+                                              # 'measure_this',
+                                              # fallback=None)

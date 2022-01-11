@@ -20,6 +20,7 @@ from collections import defaultdict
 from viperleed.guilib.measure.controller.abc import MeasureControllerABC
 from viperleed.guilib.measure.hardwarebase import (ViPErLEEDErrorEnum,
                                                    emit_error)
+from viperleed.guilib.measure.datapoints import QuantityInfo
 
 
 class ViPErinoErrors(ViPErLEEDErrorEnum):
@@ -353,7 +354,9 @@ class ViPErinoController(MeasureControllerABC):
                     if self.__adc_measurement_types[i] is not None:
                         emit_error(self,
                                    ViPErinoErrors.OVERLAPPING_MEASUREMENTS)
-                    self.__adc_measurement_types[i] = request
+                    self.__adc_measurement_types[i] = QuantityInfo.from_label(
+                                                        request
+                                                        )
                     self.__adc_channels[i] = self.settings.getint(
                         'controller', request
                         )

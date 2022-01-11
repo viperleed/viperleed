@@ -138,7 +138,7 @@ class MeasureEnergySetpoint(MeasurementABC):
         """
         measured_energies, nominal_energies = (
             self.data_points.get_energy_resolved_data(
-                QuantityInfo.HV.label, include_energies=True
+                QuantityInfo.HV, include_energies=True
                 )
             )
         domain = ast.literal_eval(

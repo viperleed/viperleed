@@ -150,9 +150,9 @@ class TimeResolved(MeasurementABC):
         points = self.settings.getint(
             'measurement_settings', 'relevant_points', fallback=10
             )
-        if quantity == QuantityInfo.HV.label:
+        if quantity == QuantityInfo.HV:
             to_change = 'hv_settle_time'
-        elif quantity == QuantityInfo.I0.label:
+        elif quantity == QuantityInfo.I0:
             to_change = 'i0_settle_time'
         else:
             print('not one of the expected quantities measured')
