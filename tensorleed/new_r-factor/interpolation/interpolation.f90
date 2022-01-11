@@ -292,7 +292,39 @@ module interpolation
     end subroutine interpolate_fast
 
 ! *****************************************************************************************
-! Internal routines for setup
+! Handeling of knots and boundary conditions
+
+    pure integer function get_n_knots(deg, n) result(n_knots)
+        implicit none
+        !in
+        integer, INTENT(IN) :: deg,n
+        
+        n_knots = n + 2*deg
+        RETURN
+    end function get_n_knots
+
+    
+    subroutine get_natural_knots(x, n, deg, knots, n_knots)
+        use, intrinsic :: iso_fortran_env
+        implicit none
+        integer, parameter :: dp = REAL64
+
+        ! in
+        integer,intent(in) :: n, deg
+        real(dp), INTENT(IN) :: x(n)
+
+        ! out
+        real(dp), intent(out), ALLOCATABLE ::  knots(:)
+        integer, INTENT(OUT) :: n_knots
+
+        n_knots = get_n_knots(deg, n)
+        ALLOCATE(knots(n_knots))
+        knots(1       : deg     ) = x(1)
+        knots(1+deg   : n+deg   ) = x(:)
+        knots(n+deg+1 : n_knots ) = x(n)
+        RETURN
+    end subroutine get_natural_knots
+
 
     subroutine prepare_derivs_nat_bc(deg, derivs_known_l, derivs_known_r, nleft, nright,&
         derivs_l_ord, derivs_r_ord, derivs_l_val, derivs_r_val)
@@ -337,121 +369,8 @@ module interpolation
 
     end subroutine prepare_derivs_nat_bc
 
-    ! Remove - not needed anymore?
-    subroutine interpolate_knots(x, y, n, knots, n_knots, deg, x_new, y_new, n_new, ierr)
-        integer, INTENT(IN) :: n, n_knots ! length of x, y, knots
-        integer, INTENT(IN) :: deg ! degree
-        real(dp), INTENT(IN) :: x(n), y(n), knots(n_knots)
-        
-        integer, INTENT(IN) :: n_new ! number of new points
-        real(dp), INTENT(IN) :: x_new(n_new) !x_new positions where to evaluate
-
-        real(dp), INTENT(OUT) :: y_new(n_new) ! interpolated y values at x_new positions
-        integer, INTENT(OUT) :: ierr ! error code
-
-        integer :: LHS_cols, LHS_rows, kl, ku, nt
-        real(dp), ALLOCATABLE :: AB(:,:)
-
-        integer :: derivs_known_l, derivs_known_r, nleft, nright
-        integer, ALLOCATABLE :: derivs_l_ord(:), derivs_r_ord(:)
-        real(dp), ALLOCATABLE :: derivs_l_val(:), derivs_r_val(:)
-
-        real(dp), ALLOCATABLE :: rhs(:)
-
-        !for lapack
-        integer :: info
-        integer, ALLOCATABLE :: ipiv(:)
-
-        ierr = 0 ! undefined error
-
-        call prepare_derivs_nat_bc(deg, derivs_known_l, derivs_known_r, nleft, nright,&
-        derivs_l_ord, derivs_r_ord, derivs_l_val, derivs_r_val)
-
-        ! Set up left hand side
-        nt = n_knots - deg - 1
-        kl = deg
-        ku = deg
-        LHS_rows =2*kl + ku +1
-        LHS_cols = nt
-        allocate(AB(LHS_rows, LHS_cols))
-        AB = 0.0d0
-
-        call build_colloc_matrix(x, n, knots, n_knots, deg, AB, LHS_rows, LHS_cols, nleft)
-        if (nleft>0) then
-            call handle_lhs_derivatives(knots, n_knots, deg, x(1), AB, LHS_rows, LHS_cols, kl, ku, &
-            derivs_l_ord, derivs_known_l, 0)
-        end if
-        if (nright>0) then
-            call handle_lhs_derivatives(knots, n_knots, deg, x(n), AB, LHS_rows, LHS_cols, kl, ku, &
-            derivs_r_ord, derivs_known_r,  nt-nright)
-        end if
-
-        ! Set up right hand side
-        ! extradim in scipy can be ignored since we are interpolating only one set of y values
-
-        ALLOCATE(rhs(nt))
-        if (nleft>0) then
-            rhs(1:nleft) = derivs_l_val
-        end if
-        if (nright>0) then
-            rhs(nt - nright +1: nt) = derivs_l_val
-        end if
-
-
-        !!!! Everything above does not need to be repeated if x and grid stay the same!!!
-        rhs(nleft+1:nt-nright) = y ! assign y values
-
-        ! Now we are ready to solve the matrix!
-        ! Using LAPACKs' GBSV routine
-        ! On exit, rhs is overwritten by the solution c
-        ALLOCATE(ipiv(nt))
-        call DGBSV(nt, kl, ku, 1, AB, 2*kl+ku+1, ipiv, rhs, nt, info)
-
-        if ((info >0).or.(info<0)) then
-            print*, "LAPACK ERROR"
-        end if
-
-        ! Nice, if you made it here, you have all coefficients!
-        
-        ! Now use them to evaluate at x_new positions
-
-        call evaluate_bspline(knots, n_knots, x_new, y_new, n_new, deg, 0, rhs, nt)
-        
-        RETURN
-
-    end subroutine interpolate_knots
-
-    pure integer function get_n_knots(deg, n) result(n_knots)
-        use, intrinsic :: iso_fortran_env
-        implicit none
-        integer, parameter :: dp = REAL64
-        !in
-        integer, INTENT(IN) :: deg,n
-        
-        n_knots = n + 2*deg
-        RETURN
-    end function get_n_knots
-
-    subroutine get_natural_knots(x, n, deg, knots, n_knots)
-        use, intrinsic :: iso_fortran_env
-        implicit none
-        integer, parameter :: dp = REAL64
-
-        ! in
-        integer,intent(in) :: n, deg
-        real(dp), INTENT(IN) :: x(n)
-
-        ! out
-        real(dp), intent(out), ALLOCATABLE ::  knots(:)
-        integer, INTENT(OUT) :: n_knots
-
-        n_knots = get_n_knots(deg, n)
-        ALLOCATE(knots(n_knots))
-        knots(1       : deg     ) = x(1)
-        knots(1+deg   : n+deg   ) = x(:)
-        knots(n+deg+1 : n_knots ) = x(n)
-        RETURN
-    end subroutine get_natural_knots
+! *****************************************************************************************
+! Internals for building LHS
 
     subroutine build_colloc_matrix(x, n, knots, n_knots, deg, AB, LHS_rows, LHS_cols, offset)
         ! -> bspl._colloc from scipy
@@ -490,6 +409,41 @@ module interpolation
         end do
 
     end subroutine build_colloc_matrix
+
+
+    subroutine handle_lhs_derivatives(knots, n_knots, deg, x_val, AB, LHS_rows, LHS_cols, kl, ku, deriv_ords, n_derivs, offset)
+        use, intrinsic :: iso_fortran_env
+        implicit none
+        integer, parameter :: dp = REAL64
+
+        ! in
+        integer, INTENT(IN) :: deg, n_knots, LHS_cols, LHS_rows, offset, kl, ku, n_derivs, deriv_ords(n_derivs)
+        real(dp), intent(IN) :: knots(n_knots), x_val
+        ! out
+        real(dp), INTENT(INOUT) :: AB(LHS_rows,LHS_cols)
+        ! internal
+        integer :: a, left, nu, row, clmn
+
+        real(dp), ALLOCATABLE :: work(:)
+        
+        ! derivatives @ x_val
+        left = find_interval(knots, n_knots, deg, x_val, deg, 0)
+
+        ! allocate work array
+        ALLOCATE(work(2*deg+2))
+        do row=0, n_derivs-1
+            nu = deriv_ords(row+1)
+            call deBoor_D(knots, n_knots, x_val, deg, left, nu, work)
+
+            do a = 0, deg
+                clmn = left - deg + a
+                AB(kl + ku + offset + row - clmn + 1, clmn +1 ) = work(a +1)
+            end do
+        end do
+    end subroutine handle_lhs_derivatives
+
+! *****************************************************************************************
+! de Boor B-spline evaluation
 
     subroutine deBoor_D(knots, n_knots, x, deg, ell, m, result)
         ! analogous to _deBoor_D from fitpack.h in scipy
@@ -577,36 +531,8 @@ module interpolation
         end do
     end subroutine deBoor_D
 
-    subroutine handle_lhs_derivatives(knots, n_knots, deg, x_val, AB, LHS_rows, LHS_cols, kl, ku, deriv_ords, n_derivs, offset)
-        use, intrinsic :: iso_fortran_env
-        implicit none
-        integer, parameter :: dp = REAL64
-
-        ! in
-        integer, INTENT(IN) :: deg, n_knots, LHS_cols, LHS_rows, offset, kl, ku, n_derivs, deriv_ords(n_derivs)
-        real(dp), intent(IN) :: knots(n_knots), x_val
-        ! out
-        real(dp), INTENT(INOUT) :: AB(LHS_rows,LHS_cols)
-        ! internal
-        integer :: a, left, nu, row, clmn
-
-        real(dp), ALLOCATABLE :: work(:)
-        
-        ! derivatives @ x_val
-        left = find_interval(knots, n_knots, deg, x_val, deg, 0)
-
-        ! allocate work array
-        ALLOCATE(work(2*deg+2))
-        do row=0, n_derivs-1
-            nu = deriv_ords(row+1)
-            call deBoor_D(knots, n_knots, x_val, deg, left, nu, work)
-
-            do a = 0, deg
-                clmn = left - deg + a
-                AB(kl + ku + offset + row - clmn + 1, clmn +1 ) = work(a +1)
-            end do
-        end do
-    end subroutine handle_lhs_derivatives
+! *****************************************************************************************
+! Assigning grid points to spline intervals
 
     integer function find_interval(knots, n_knots, deg, x_val, prev_l, extrapolate) result(interval)
         use, intrinsic :: iso_fortran_env
@@ -656,6 +582,7 @@ module interpolation
         return
     end function find_interval
 
+
     subroutine get_intervals(knots, n_knots, deg, x, n, extrapolate, intervals)
 
         ! in
@@ -673,43 +600,6 @@ module interpolation
         RETURN
     end subroutine get_intervals
 
-    ! Can get rid of below? - deprecated?
-    subroutine evaluate_bspline(knots, n_knots, x_new, y_new, n_new, deg, nu, coeffs, n)
-        use, intrinsic :: iso_fortran_env
-        implicit none
-        integer, parameter :: dp = REAL64
-
-        ! in
-        integer, INTENT(IN) :: deg, n, n_knots, n_new
-        integer, INTENT(IN) :: nu ! Order of derivative to evaluate (0 if interp value)
-        real(dp), intent(IN) :: x_new(n_new), knots(n_knots), coeffs(n)
-        ! out
-        real(dp), INTENT(OUT) :: y_new(n_new)
-        ! internal
-        integer :: interval, a, i
-        real(dp), ALLOCATABLE :: work(:)
-
-        ! allocate work
-        ALLOCATE(work(2*deg+2))
-
-        interval = deg
-        ! loop over new x_values
-        do i = 1, n_new
-            interval = find_interval(knots, n_knots, deg, x_new(i), interval, 0)
-            ! Could check here if interval <0
-            if (interval < 0) then
-                print*, "Interval Error in evaluate. x_new monotonic?"
-            end if
-            ! Evaluate k+1 which are non-zero in the interval
-            call deBoor_D(knots, n_knots, x_new(i), deg, interval, nu, work)
-
-            y_new(i) = 0
-            do a = 0,deg
-                y_new(i) = y_new(i) + coeffs(interval + a - deg+1)*work(a+1)
-            end do
-        end do
-        RETURN
-    end subroutine evaluate_bspline
 ! *****************************************************************************************
 ! Preparing the left hand side (LHS) of the equation. The LHs holds the original grid (knots) and info on the boundary conditions.
 ! As long as the origin grid and boundary conditions stay the same, the LHS is unchanged and can be pre-evaluated.    
