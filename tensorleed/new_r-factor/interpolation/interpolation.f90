@@ -860,22 +860,22 @@ module interpolation
         ! calculate interval vector
         call get_intervals(knots, n_knots, deg, x_new, n_new, 0, intervals)
 
-        ALLOCATE(deBoor_matrix(n_new, 2*deg+2))
+        ALLOCATE(deBoor_matrix(2*deg+2, n_new))
         ALLOCATE(work(2*deg+2))
         do i = 1, n_new
             call deBoor_D(knots, n_knots, x_new(i), deg, intervals(i), nu, work)
-            deBoor_matrix(i,:) = work
+            deBoor_matrix(:,i) = work
         end do
         RETURN
     end subroutine pre_eval_bspline
 
 
     subroutine eval_bspline_fast(deg, coeffs, intervals, deBoor_matrix, n_new, y_new)
-
+        ! TODO: see if this can be sped up. This is the rate limiting procedure
         ! in
         integer, INTENT(in) :: deg, n_new
         integer, intent(in) :: intervals(n_new)
-        real(dp), INTENT(in) :: coeffs(n_new), deBoor_matrix(n_new, 2*deg+2)
+        real(dp), INTENT(in) :: coeffs(n_new), deBoor_matrix(2*deg+2, n_new)
 
         ! out
         real(dp), intent(out) :: y_new(n_new)
@@ -886,7 +886,7 @@ module interpolation
         y_new = 0.0d0
         do i = 1, n_new
             do a = 0, deg
-                y_new(i) = y_new(i) + coeffs(intervals(i) +a -deg+1)*deBoor_matrix(i, a+1) ! TODO: reshape this to be in column major order!!
+                y_new(i) = y_new(i) + coeffs(intervals(i) +a -deg+1)*deBoor_matrix(a+1, i)
             end do
         end do
         RETURN
