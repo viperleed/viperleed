@@ -76,7 +76,7 @@ module interpolation
 
         ierr = 0
         if (do_checks.ne.0) then
-            call perform_checks(n, x, y, n_new, x_new, ierr)
+            call perform_checks(n, x, n_new, x_new, ierr)
         end if
 
         call pre_evaluate_grid(x, n, x_new, n_new, deg, do_checks, info_values, &
@@ -162,7 +162,7 @@ module interpolation
         integer                             :: info !LAPACK return
 
         ! perform checks on input data
-        call perform_checks(n, x, x, n_new, x_new, ierr)
+        call perform_checks(n, x, n_new, x_new, ierr)
 
         ! Compute knot vector and size
         call get_natural_knots(x, n, deg, knots, n_knots)
@@ -195,10 +195,10 @@ module interpolation
     end subroutine pre_evaluate_grid
 
 
-    subroutine perform_checks(n, x, y, n_new, x_new, ierr)
+    subroutine perform_checks(n, x, n_new, x_new, ierr)
         implicit none
         integer, intent(in) :: n, n_new
-        real(dp), INTENT(IN) :: x(n), y(n), x_new(n)
+        real(dp), INTENT(IN) :: x(n), x_new(n_new)
         integer,intent(out) ::  ierr
 
         integer :: i ! loop var
@@ -262,7 +262,7 @@ module interpolation
         real(dp), intent(out)   :: y_new(n_new)
         integer, INTENT(OUT)    :: ierr !! error code
         ! INTERNAL
-        real(dp) :: coeffs(info_values(9)) ! RHS_prep is copied into this array and then overwritten by the spline coefficients
+        real(dp), ALLOCATABLE   :: coeffs(:) ! RHS_prep is copied into this array and then overwritten by the spline coefficients
         
         ! Internal - upacked from infovalues
         integer  :: n_knots
@@ -808,7 +808,9 @@ module interpolation
         real(dp), INTENT(IN) :: y(nt - nleft - nright)
         real(dp), INTENT(IN) :: rhs_prep(nt)
         ! out
-        real(dp), INTENT(INOUT) :: rhs(nt)
+        real(dp), INTENT(OUT), ALLOCATABLE :: rhs(:)
+
+        ALLOCATE(rhs(nt))
 
         ! Since rhs will be overwritten by LAPACK, it needs to be copied at some point prior
         rhs = rhs_prep
