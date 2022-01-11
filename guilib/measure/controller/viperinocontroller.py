@@ -97,7 +97,10 @@ class ViPErinoController(MeasureControllerABC):
     @property
     def initial_delay(self):
         """Return the initial time delay of a measurement in seconds."""
-        return 3*self.measurement_interval
+        num_meas_to_average = self.settings.getint(
+            'measurement_settings', 'num_meas_to_average', fallback=1
+            )
+        return (num_meas_to_average+2)*self.measurement_interval
 
     def set_energy(self, energy, time, *more_steps, trigger_meas=True):
         """Set energy with associated settling time.
