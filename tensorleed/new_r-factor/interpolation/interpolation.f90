@@ -24,7 +24,7 @@ module interpolation
 ! inputs : x, y, n | deg, deriv | x_new, n_new
 ! outputs : y_new 
 ! setup LHS
-    subroutine interp_equidist_single(n, x_start, x_step, y, n_new, x_new_start, x_new_step, do_checks, y_new, ierr)
+    subroutine interp_equidist_single(n, x_start, x_step, y, deg, n_new, x_new_start, x_new_step, do_checks, y_new, ierr)
         ! Used for ...
         ! Calculates x and x_new from given steps and calls interpolate_single
 
@@ -34,10 +34,11 @@ module interpolation
         integer, INTENT(IN)  :: do_checks
         real(dp), INTENT(IN) :: x_start, x_step
         real(dp), INTENT(IN) :: x_new_start, x_new_step
+        real(dp), INTENT(IN) :: y(n)
 
         ! OUT
         integer, INTENT(OUT) :: ierr
-        real(dp), INTENT(OUT):: y_new
+        real(dp), INTENT(OUT):: y_new(n_new)
 
         ! Internal
         real(dp) :: x(n), x_new(n_new)
@@ -46,7 +47,7 @@ module interpolation
         call equidist_to_array(n, x_start, x_step, x)
         call equidist_to_array(n_new, x_new_start, x_new_step, x_new)
 
-        call interpolate_single(n, x, y, n, deg, n_new, x_new, do_checks, y_new, ierr)
+        call interpolate_single(n, x, y, deg, n_new, x_new, do_checks, y_new, ierr)
         RETURN        
     end subroutine interp_equidist_single
 
@@ -63,19 +64,26 @@ module interpolation
         integer, INTENT(OUT) :: ierr ! error code
 
         ! internal variables and arrays
-        integer :: n_knots
-        real(dp), ALLOCATABLE :: knots(:)
-        
+        real(dp), ALLOCATABLE  :: knots(:)                 !! knot points
+        real(dp), ALLOCATABLE  :: LHS(:,:)                !! 2D array containing the left hand side of the equation for spline coefficients
+        real(dp), ALLOCATABLE  :: RHS_prep(:)                  !! 1D array for the right hand side of the equation for spline coefficients.
+        integer                :: info_values(info_size)
+
+        integer, ALLOCATABLE   :: ipiv(:)                 !! 1D integer array of pivot-positions, needed by LAPACK
+        integer                :: intervals(n_new)        !! 1D integer array containg information, which spline interval the new grid points fall into.
+        real(dp), ALLOCATABLE  :: deBoor_matrix(:,:)      !! pre-evaluated deBoor matrix, required for evaluation of values on the new grid.
+
+
         ierr = 0
         if (do_checks.ne.0) then
             call perform_checks(n, x, y, n_new, x_new, ierr)
         end if
 
-        call pre_evaluate_grid(x, n, x_new, n_new, deg, nt, kl, ku, &
-        knots, n_knots, LHS, LHS_rows, LHS_cols, RHS, RHS_cols, ipiv, intervals, deBoor_matrix)
+        call pre_evaluate_grid(x, n, x_new, n_new, deg, do_checks, info_values, &
+        knots, LHS, RHS_prep, ipiv, intervals, deBoor_matrix, ierr)
 
-        call interpolate_fast(n, y, deg, nt, kl, ku, knots, n_knots, LHS, RHS, LHS_rows, LHS_cols, RHS_cols, ipiv, x_new, n_new,&
-        intervals, deBoor_matrix, y_new)
+        call interpolate_fast(n, y, deg, info_values, knots, LHS, RHS_prep, ipiv, x_new,&
+        n_new, intervals, deBoor_matrix, y_new, ierr)
 
         !Done
         RETURN
@@ -259,8 +267,11 @@ module interpolation
         ! Internal - upacked from infovalues
         integer  :: n_knots
         integer  :: nt, kl, ku
+        integer  :: nleft, nright
         integer  :: LHS_rows, LHS_cols
         integer  :: RHS_cols
+        ! Internal - LAPACK check value
+        integer  :: info
 
         call unpack_values(info_values, n_knots, nt, kl, ku, nleft, nright, LHS_rows, LHS_cols, RHS_cols)
         
@@ -271,7 +282,7 @@ module interpolation
 
         call solve_coeffcients(nt, kl, ku, lhs_rows, lhs_cols, LHS, coeffs, ipiv, info)
         if ((info >0).or.(info<0)) then
-            print*, "LAPACK ERROR"
+            ierr = 31 ! LAPACK Error
         end if
         
         ! Now use to evaluate at x_new positions
@@ -790,6 +801,7 @@ module interpolation
         RETURN
     end subroutine prepare_RHS
 
+
     subroutine assign_y_to_RHS(y, rhs_prep, nt, nleft, nright, rhs)
         ! in
         integer, INTENT(IN) :: nt, nleft, nright
@@ -867,13 +879,12 @@ module interpolation
         real(dp), intent(out) :: y_new(n_new)
 
         ! internal
-        integer :: i, a
+        integer :: i, a ! loop variables
 
         y_new = 0.0d0
         do i = 1, n_new
-            
             do a = 0, deg
-                y_new(i) = y_new(i) + coeffs(intervals(i) +a -deg+1)*deBoor_matrix(i, a+1)
+                y_new(i) = y_new(i) + coeffs(intervals(i) +a -deg+1)*deBoor_matrix(i, a+1) ! TODO: reshape this to be in column major order!!
             end do
         end do
         RETURN
@@ -903,7 +914,7 @@ module interpolation
         RETURN
     end subroutine pack_values
 
-    
+
     subroutine unpack_values(info_values, n_knots, nt, kl, ku, nleft, nright, LHS_rows, LHS_cols, RHS_cols)
         integer, INTENT(IN)                 :: info_values(info_size)
 
