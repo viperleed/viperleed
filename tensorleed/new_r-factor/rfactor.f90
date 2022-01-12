@@ -5,16 +5,24 @@
 ! Author: Alexander M. Imre, 2021
 ! for license info see ViPErLEED Package
 
-! Note: file extentsion .f95 required for f2py compatibility, but newer standard can be used.
+! Note: file extentsion .f90 required for f2py compatibility, but newer standard can be used.
 
 module r_factor_new
     implicit none
+
+    use interpolation
     contains
 
 
 ! f2py -m rfactor rfactor.f90 -h rfactor.pyf --overwrite-signature --debug-capi
 ! f2py -c rfactor.pyf rfactor.f90
 
+
+
+! The equidistant final grid is defined by the array E_new with length n_E_new.  This is equivalently defined by the set of integers n_E_new, E_new_start, E_new_step.
+
+! Experimental data may come in as arrays 
+   
 subroutine r_factor_beam(y1, size_y1, y2, size_y2, E_start1, E_start2, E_step, V0r_shift, R_pendry, &
                          numerator, denominator, N_overlapping_points)
     ! Innermost function Rfactor_beam:
@@ -103,24 +111,24 @@ subroutine Rfactor_beamset(y1, sizes_y1, y2, sizes_y2, E_start1, E_start2, nr_be
     !###############
     !INPUTS
     !###############
-!f2py integer, hidden, intent(in), depend(E_start1, E_start2), check(len(E_start1)==len(E_start2)) :: nr_beams=len(E_start1)
+    !f2py integer, hidden, intent(in), depend(E_start1, E_start2), check(len(E_start1)==len(E_start2)) :: nr_beams=len(E_start1)
     integer nr_beams
-!f2py real, intent(in) :: E_step
+    !f2py real, intent(in) :: E_step
     real E_step
-!f2py integer, intent(in) :: sizes_y1
+    !f2py integer, intent(in) :: sizes_y1
     integer, intent(in) :: sizes_y1(nr_beams)
-!f2py integer, intent(in) :: sizes_y2
+    !f2py integer, intent(in) :: sizes_y2
     integer, intent(in) :: sizes_y2(nr_beams)
-!f2py real intent(in) :: y1(:,:), y2(:,:)
+    !f2py real intent(in) :: y1(:,:), y2(:,:)
     real, intent(in) :: y1 (:,:), y2 (:,:)
-!f2py intent(in) E_start_1
-!f2py intent(in) E_start_2
+    !f2py intent(in) E_start_1
+    !f2py intent(in) E_start_2
     real, intent(in)    :: E_start1(nr_beams), E_start2(nr_beams)
-!f2py integer, intent(out) :: N_overlapping_points
+    !f2py integer, intent(out) :: N_overlapping_points
     integer, intent(out) :: N_overlapping_points(nr_beams)
-!f2py real, intent(out) :: R_Pe_beams(nr_beams), R_Pe_weighted
+    !f2py real, intent(out) :: R_Pe_beams(nr_beams), R_Pe_weighted
     real, intent(out) :: R_Pe_beams(nr_beams), R_Pe_weighted
-!f2py real, intent(in)::  V0rshift
+    !f2py real, intent(in)::  V0rshift
     real, intent(in) :: V0rshift
 
     real numerators(nr_beams), denominators(nr_beams)
@@ -146,26 +154,26 @@ subroutine Rfactor_beamtypes(y1, sizes_y1, y2, sizes_y2, E_start1, E_start2, nr_
     !###############
     !INPUTS
     !###############
-!f2py integer, hidden, intent(in), depend(E_start1, E_start2), check(len(E_start1)==len(E_start2)) :: nr_beams=len(E_start1)
+    !f2py integer, hidden, intent(in), depend(E_start1, E_start2), check(len(E_start1)==len(E_start2)) :: nr_beams=len(E_start1)
     integer nr_beams
-!f2py real, intent(in) :: E_step
+    !f2py real, intent(in) :: E_step
     real E_step
-!f2py integer, intent(in) :: sizes_y1
+    !f2py integer, intent(in) :: sizes_y1
     integer, intent(in) :: sizes_y1(nr_beams)
-!f2py integer, intent(in) :: sizes_y2
+    !f2py integer, intent(in) :: sizes_y2
     integer, intent(in) :: sizes_y2(nr_beams)
-!f2py real intent(in) :: y1(:,:), y2(:,:)
+    !f2py real intent(in) :: y1(:,:), y2(:,:)
     real, intent(in) :: y1 (:,:), y2 (:,:)
-!f2py intent(in) E_start_1
-!f2py intent(in) E_start_2
+    !f2py intent(in) E_start_1
+    !f2py intent(in) E_start_2
     real, intent(in)    :: E_start1(nr_beams), E_start2(nr_beams)
     integer, intent(in) :: beamtypes(nr_beams)
     integer, intent(in) :: nr_beamtypes
-!f2py integer, intent(out) :: N_overlapping_points(:)
+    !f2py integer, intent(out) :: N_overlapping_points(:)
     integer, intent(out) :: N_overlapping_points(nr_beams)
-!f2py real, intent(out) :: R_Pe_beams(nr_beams), R_Pe_weighted(nr_beamtypes)
+    !f2py real, intent(out) :: R_Pe_beams(nr_beams), R_Pe_weighted(nr_beamtypes)
     real, intent(out) :: R_Pe_beams(nr_beams), R_Pe_weighted(nr_beamtypes)
-!f2py real, intent(in)::  V0rshift
+    !f2py real, intent(in)::  V0rshift
     real, intent(in) :: V0rshift
 
     ! variables used internally
@@ -240,9 +248,8 @@ subroutine Rfactor_v0ropt(opt_type, min_steps, max_steps, nr_used_v0)
 
 end subroutine Rfactor_v0ropt
 
-subroutine prepare_beams(intensity, n_beams, NE_in, E_min_global, E_min, E_step, NE_beams, &
-                         skip_stages, averaging_scheme, n_averaging_types, &
-                         NE_after, E_min_after, E_step_after)
+subroutine prepare_beams(n_E_in, E_grid_in, n_beams, intensity, beams_E_min, beams_n_E, n_E_final, E_grid_final,&
+                         skip_stages, averaging_scheme, n_averaging_types)
     !Prepare_beams:
     !INPUT: array[I, E_min, E_step, NE], E_grid_step, averaging_scheme, smoothing?, E_min, E_max
     !DOES: (0) Limit_range, (1) Average/discard/reorder according to scheme; (2) smooth?; (3) interpolate on grid; (4) compute Y on new grid
@@ -253,7 +260,7 @@ subroutine prepare_beams(intensity, n_beams, NE_in, E_min_global, E_min, E_step,
     !INPUTS
     !###############
     integer, intent(in) :: n_beams, NE_in ! number of beams, number of passed energies
-    integer, intent(in) :: stages(5) ! which stages to execute
+    integer, intent(in) :: skip_stages(5) ! which stages to execute
     real, intent(in) :: intensity(NE_in,n_beams), E_min_global ! beam intensities
     real, intent(in) :: E_min(n_beams), E_step(n_beams), NE_beams(n_beams) ! minimum energies, nr of steps
     integer, intent(in) :: averaging_scheme(n_beams)
@@ -413,9 +420,17 @@ subroutine avg_scheme(in_beams, n_beams, NE, averaging_scheme, avg_types average
 
 end subroutine avg_scheme
 
+subroutine pre_eval_grid_beamset(n_grid_in, E_grid_in, n_grid_final, E_grid_final,)
+implicit none
+type1,intent(in) :: arg1
+type2,intent(out) ::  arg2
+
+end subroutine intesetpE_grid_in, E_grid_final,
+
 
     ! Library functions
 
+! get rid of below - not required due to interpolation!
 subroutine derivative(data_in, dx, deriv, n_data)
 !   subroutine derivative computes the first derivative of the data array given
 !   as input, using a step size dx of the independent variable. The routine uses
