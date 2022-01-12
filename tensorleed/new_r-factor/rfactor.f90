@@ -420,12 +420,12 @@ subroutine avg_scheme(in_beams, n_beams, NE, averaging_scheme, avg_types average
 
 end subroutine avg_scheme
 
-subroutine pre_eval_grid_beamset(n_grid_in, E_grid_in, n_grid_final, E_grid_final,)
+subroutine pre_eval_grid_beamset(n_beams, n_grid_in, E_grid_in, n_grid_final, E_grid_final,)
 implicit none
 type1,intent(in) :: arg1
 type2,intent(out) ::  arg2
 
-end subroutine intesetpE_grid_in, E_grid_final,
+end subroutine pre_eval_grid_beamset
 
 
     ! Library functions
