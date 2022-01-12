@@ -804,7 +804,7 @@ module interpolation
     end subroutine pre_eval_bspline
 
 
-    subroutine eval_bspline_fast(deg, coeffs, intervals, deBoor_matrix, n_new, y_new)
+    pure subroutine eval_bspline_fast(deg, coeffs, intervals, deBoor_matrix, n_new, y_new)
         ! TODO: see if this can be sped up. This is the rate limiting procedure
         ! in
         integer, INTENT(in) :: deg, n_new
@@ -815,13 +815,12 @@ module interpolation
         real(dp), intent(out) :: y_new(n_new)
 
         ! internal
-        integer :: i, a ! loop variables
+        integer :: i ! loop variable
 
         y_new = 0.0d0
         do concurrent (i = 1:n_new)
-            do concurrent (a = 1:deg+1)
-                y_new(i) = y_new(i) + coeffs(intervals(i) +a -deg)*deBoor_matrix(a, i)
-            end do
+            ! whole array operations like the one below are faster than manual loops
+            y_new(i) = sum(coeffs(intervals(i)-deg+1:intervals(i)+1)*deBoor_matrix(1:deg+1,i))
         end do
         RETURN
     end subroutine eval_bspline_fast
@@ -835,18 +834,13 @@ module interpolation
         
         ! OUT
         real(dp), intent(out), ALLOCATABLE :: deriv_deBoor_matrix(:,:)
-        
-        ! Internal
-        real(dp), ALLOCATABLE :: work(:)
 
         ! internal
         integer :: i
 
         ALLOCATE(deriv_deBoor_matrix(2*deg+2, n_new))
-        ALLOCATE(work(2*deg+2))
         do i = 1, n_new
-            call deBoor_D(knots, n_knots, x_new(i), deg, intervals(i), nu, work)
-            deriv_deBoor_matrix(:,i) = work
+            call deBoor_D(knots, n_knots, x_new(i), deg, intervals(i), nu, deriv_deBoor_matrix(:,i))
         end do
         RETURN
         ! work is deallocated automatically when it goes out of scope
