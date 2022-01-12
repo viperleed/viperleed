@@ -65,6 +65,14 @@ class TimeResolved(MeasurementABC):
 
         if self.is_continuous_measurement:
             self.prepare_continuous_mode()
+        else:
+            self.__hv_settle_time = 0
+            self.__hv_settle_time = self.primary_controller.settings.getint(
+                'measurement_settings', 'hv_settle_time', fallback=0
+                )
+            num_meas = (1 + round((self.__end_energy - self.start_energy)
+                       / self.__delta_energy))
+            self.__n_digits = len(str(num_meas))
         self.timer = qtc.QTimer(parent=self)
         self.timer.setSingleShot(True)
         self.timer.timeout.connect(self.ready_for_next_measurement)
@@ -107,6 +115,15 @@ class TimeResolved(MeasurementABC):
         super().start_next_measurement()
         self.timer.start(self.__measurement_time)
         self.set_LEED_energy(self.current_energy, self.__settle_time)
+        if not self.is_continuous_measurement:
+            # TODO: decide if we really want to save images (flag)
+            self.counter += 1
+            image_name = (f"{self.counter:0>{self.__n_digits}}_"
+                          f"{self.current_energy:.1f}eV_.tiff")
+            for i, camera in enumerate(self.cameras):
+                camera.process_info.filename = image_name
+                self.data_points.add_image_names(image_name)
+            self.camera_timer.start(self.__hv_settle_time)
 
     def is_finished(self):
         """Check if the full measurement cycle is done.
@@ -156,15 +173,16 @@ class TimeResolved(MeasurementABC):
             print('not one of the expected quantities measured')
             # TODO: emit error
             return
-
-        measured, _ = self.data_points.get_time_resolved_data(
-            quantity_obj, separate_steps=True, absolute_times=True
-            )
+        # TODO:                             get_time_resolved_data currently throws an index error
+        # measured, _ = self.data_points.get_time_resolved_data(
+            # quantity_obj, separate_steps=True, absolute_times=True
+            # )
         interval = self.primary_controller.measurement_interval
 
         if self.is_continuous_measurement:
             for ctrl in self.controllers:
                 del ctrl.continue_prepare_todos['set_continuous_mode']
+            return
             for j, step in enumerate(measured[0]):
                 if j == 0:
                     previous_height = sum(step[-points:])/points
@@ -204,26 +222,13 @@ class TimeResolved(MeasurementABC):
 
     def is_preparation_finished(self):
         """Check if measurement preparation is done.
-
-        Whenever a controller is done with its preparation
-        this function will be called. The busy attribute is
-        used to check if all controllers are done with their
-        preparation. If this is true, the busy signal going to
-        this function will be disconnected and the first
-        measurement will immediately be started.
-
-        Returns
-        -------
-        None.
         """
-        if any(controller.busy for controller in self.controllers):
+        # TODO: remove this once the energy generators have the ability to do the same energy multiple times.
+        if any(device.busy for device in self.devices):
             return
-        for controller in self.controllers:
-            controller.controller_busy.disconnect()
         if self.__cycle_time > 0:
             self.cycle_timer.start(self.__cycle_time)
-        self.prepared.emit()
-        self.start_next_measurement()
+        super().is_preparation_finished()
 
     def connect_cameras(self):
         """Connect necessary camera signals."""
@@ -292,8 +297,7 @@ class TimeResolved(MeasurementABC):
 
     def receive_from_camera(self, busy):
         """Do nothing."""
-        # TODO: We may want a live stream if we do the energy wiggle.
-        pass
+        return
 
     def receive_from_controller(self, controller, receive):
         """Receive measurement data from the controller.
@@ -395,13 +399,11 @@ class TimeResolved(MeasurementABC):
         None.
         """
         if self.is_continuous_measurement:
-            for controller in self.controllers:
-                # Necessary to force secondaries into busy,
-                # before the primary returns not busy anymore.
-                controller.busy = True
-                controller.controller_busy.connect(self.check_is_finished,
-                                                   type=qtc.Qt.UniqueConnection)
-            self.request_stop_devices.emit() # TODO: only stop primary controller here, for now all controllers are stopped
+            self.primary_controller.busy = True
+            self.primary_controller.controller_busy.connect(
+                self.check_is_finished, type=qtc.Qt.UniqueConnection
+                )
+            self.request_stop_primary.emit()
         else:
             self.check_is_finished()
 
@@ -410,12 +412,25 @@ class TimeResolved(MeasurementABC):
         if self.is_continuous_measurement:
             if any(device.busy for device in self.devices):
                 return
-            for controller in self.controllers:
-                controller.controller_busy.disconnect()
-        # TODO: check time calculation for non-continuous time resolved measurements
-        self.data_points.calculate_times()
+            self.primary_controller.controller_busy.disconnect()
+            self.data_points.calculate_times(continuous=True)
+        else:
+            self.data_points.calculate_times()
         if self.is_finished():
             self.prepare_finalization()
         else:
             self.start_next_measurement()
+
+    def do_next_measurement(self):
+        """Do the next measurement.
+
+        Start measuring on all secondary controllers if the
+        measurement is not continuous.
+        """
+        if self.is_continuous_measurement:
+            self.primary_controller.about_to_trigger.disconnect(
+                self.do_next_measurement
+                )
+        self.ready_for_measurement.emit()
+
 
