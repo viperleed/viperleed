@@ -105,6 +105,10 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         self.error_occurred.connect(self.__on_init_errors)
         self.__init_err_timer.timeout.connect(self.__report_init_errors)
 
+        self.camera_timer = qtc.QTimer()
+        self.camera_timer.setSingleShot(True)
+        self.camera_timer.setParent(self)
+
         self.set_settings(measurement_settings)
 
         if self.settings:
@@ -118,6 +122,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         self.force_return_timer = qtc.QTimer(parent=self)
         self.force_return_timer.setSingleShot(True)
         self.force_return_timer.timeout.connect(self.return_to_gui)
+
 
         if self.__init_errors:
             self.__init_err_timer.start(20)
@@ -443,8 +448,8 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         for camera in self.cameras:
             camera.camera_busy.connect(self.receive_from_camera,
                                        type=qtc.Qt.UniqueConnection)
-            self.ready_for_measurement.connect(camera.trigger_now,
-                                               type=qtc.Qt.UniqueConnection)
+            self.camera_timer.timeout.connect(camera.trigger_now,
+                                              type=qtc.Qt.UniqueConnection)
             self.begin_preparation.connect(camera.start,
                                            type=qtc.Qt.UniqueConnection)
         # camera.disconnect does not need to be hooked up to the
@@ -496,7 +501,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             except TypeError:
                 pass
             try:
-                self.ready_for_measurement.disconnect(camera.trigger_now)
+                self.camera_timer.timeout.disconnect(camera.trigger_now)
             except TypeError:
                 pass
             try:
@@ -720,9 +725,9 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
     def is_preparation_finished(self):
         """Check if measurement preparation is done.
 
-        Whenever a controller is done with its preparation
+        Whenever a device is done with its preparation
         this function will be called. The busy attribute is
-        used to check if all controllers are done with their
+        used to check if all devices are done with their
         preparation. If this is true, the busy signal going to
         this function will be disconnected and the first
         measurement will immediately be started.
@@ -735,6 +740,8 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             return
         for controller in self.controllers:
             controller.controller_busy.disconnect()
+        for camera in self.cameras:
+            camera.camera_busy.disconnect(self.is_preparation_finished)
         self.prepared.emit()
         self.start_next_measurement()
 

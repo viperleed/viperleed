@@ -25,11 +25,8 @@ class IVVideo(MeasurementABC):
 
     def __init__(self, measurement_settings):
         """Initialise measurement class."""
-        self.camera_timer = qtc.QTimer()
-        self.camera_timer.setSingleShot(True)
-
         super().__init__(measurement_settings)
-        self.camera_timer.setParent(self)
+
         self.__end_energy = 0
         self.__delta_energy = 1
         self.__hv_settle_time = 0
@@ -104,29 +101,3 @@ class IVVideo(MeasurementABC):
         """
         super().abort()
 
-    def connect_cameras(self):
-        """Connect necessary camera signals."""
-        for camera in self.cameras:
-            camera.camera_busy.connect(self.receive_from_camera,
-                                       type=qtc.Qt.UniqueConnection)
-            self.camera_timer.timeout.connect(camera.trigger_now,
-                                              type=qtc.Qt.UniqueConnection)
-            self.begin_preparation.connect(camera.start,
-                                           type=qtc.Qt.UniqueConnection)
-
-    def disconnect_cameras(self):
-        """Disconnect necessary camera signals."""
-        for camera in self.cameras:
-            camera.disconnect()
-            try:
-                camera.camera_busy.disconnect(self.receive_from_camera)
-            except TypeError:
-                pass
-            try:
-                self.camera_timer.timeout.disconnect(camera.trigger_now)
-            except TypeError:
-                pass
-            try:
-                self.begin_preparation.disconnect(camera.start)
-            except TypeError:
-                pass
