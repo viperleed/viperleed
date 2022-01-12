@@ -23,6 +23,30 @@ module interpolation
 
     integer, PARAMETER :: info_size=10
     
+    type :: info_values
+        integer :: deg
+        integer :: n_knots
+        integer :: nt
+        integer :: kl, ku
+        integer :: nleft, nright
+        integer :: LHS_rows, LHS_cols
+        integer :: RHS_cols
+    end type info_values
+
+    type :: grid_translation(n_origin, n_target)
+        integer, len :: n_origin, n_target
+        real(dp) :: x(n_origin), x_new(n_target)
+
+        type(info_values) :: infos
+
+        real(dp), ALLOCATABLE :: knots(:)
+        real(dp), ALLOCATABLE :: LHS(:,:), RHS(:)
+        integer, ALLOCATABLE  :: ipiv(:), intervals(:)
+        real(dp), ALLOCATABLE ::deBoor_matrices(:,:,:)
+
+
+    end type grid_translation
+
     contains
 
 ! inputs : x, y, n | deg, deriv | x_new, n_new
@@ -132,7 +156,7 @@ module interpolation
     end subroutine equidist_pre_evaluate_grid
 
 
-    subroutine pre_evaluate_grid(x, n, x_new, n_new, deg, do_checks, info_values, &
+    subroutine pre_evaluate_grid(x, n, x_new, n_new, deg, do_checks, info, &
         knots, LHS, RHS, ipiv, intervals, deBoor_matrix, ierr)
         ! Sets up and pre-evaluate parts of the caluclation related to ...
 
@@ -144,7 +168,7 @@ module interpolation
         integer, INTENT(IN) :: do_checks        !! whether to perform checks on input data
 
         ! OUT
-        integer, INTENT(OUT)                :: info_values(info_size)   !! 
+        type(info_values), INTENT(OUT)      :: info   !! 
         real(dp), INTENT(OUT), ALLOCATABLE  :: knots(:)                 !! knot points
         real(dp), INTENT(OUT), ALLOCATABLE  :: LHS(:,:)                !! 2D array containing the left hand side of the equation for spline coefficients
         real(dp), INTENT(OUT), ALLOCATABLE  :: RHS(:)                  !! 1D array for the right hand side of the equation for spline coefficients. After pre-evaluation, this contains the correct edge values and NaN where the y values that are solved for go. Must be assigned using assign_y_to_RHS.
@@ -164,7 +188,7 @@ module interpolation
         integer, ALLOCATABLE                :: derivs_l_ord(:), derivs_r_ord(:)
         real(dp), ALLOCATABLE               :: derivs_l_val(:), derivs_r_val(:)
         ! Internal -other
-        integer                             :: info !LAPACK return
+        integer                             :: LAPACK_info !LAPACK return
 
         ! perform checks on input data
         call perform_checks(n, x, n_new, x_new, ierr)
@@ -181,7 +205,7 @@ module interpolation
         derivs_l_ord, derivs_r_ord, LHS, LHS_rows, LHS_cols, nt, kl, ku, ierr)
 
         ! with this done, we can now prefactorize the LHS
-        call pre_factorize_LHS(LHS, LHS_rows, LHS_cols, nt, kl, ku, ipiv, info)
+        call pre_factorize_LHS(LHS, LHS_rows, LHS_cols, nt, kl, ku, ipiv, LAPACK_info)
 
         if (info.ne.0) then
             ! Error in pre-factorization
@@ -193,20 +217,20 @@ module interpolation
 
         ! Build up the deBoor Matrix and the intervals array
         call pre_eval_bspline(knots, n_knots, x_new, n_new, deg, intervals, deBoor_matrix)
-            
+        
         call pack_values(deg, n_knots, nt, kl, ku, nleft, nright, LHS_rows, LHS_cols, RHS_cols, info_values)
 
         RETURN
     end subroutine pre_evaluate_grid
 
 
-    subroutine pre_evaluate_deriv(nu, n_new, x_new, info_values, knots, intervals, deriv_deBoor_matrix, ierr)
+    subroutine pre_evaluate_deriv(nu, n_new, x_new, info, knots, intervals, deriv_deBoor_matrix, ierr)
         ! IN
         integer, INTENT(IN) :: n_new            !! # points target grid
         real(dp), INTENT(IN):: x_new(n_new)     !! result grid values
         integer, INTENT(IN) :: nu               !! order of derivative to calculate
-        integer, INTENT(IN) :: info_values(info_size)   !! info values
-        real(dp), INTENT(IN):: knots(info_values(2))                 !! knot points
+        type(info_values), INTENT(IN) :: info   !! info values
+        real(dp), INTENT(IN):: knots(info%n_knots)                 !! knot points
         integer, INTENT(IN) :: intervals(n_new)        !! 1D integer array containg information, which spline interval the new grid points fall into.
         
         ! OUT
@@ -222,7 +246,7 @@ module interpolation
         integer                             :: LHS_rows, LHS_cols   !! shape LHS
         integer                             :: RHS_cols             !! shape RHS
 
-        call unpack_values(info_values, deg, n_knots, nt, kl, ku, nleft, nright, LHS_rows, LHS_cols, RHS_cols)
+        call unpack_values(info, deg, n_knots, nt, kl, ku, nleft, nright, LHS_rows, LHS_cols, RHS_cols)
 
         call pre_eval_spline_deriv(n_knots, knots, n_new, x_new, deg, nu, intervals, deriv_deBoor_matrix)
         RETURN
@@ -275,16 +299,16 @@ module interpolation
 ! *****************************************************************************************
 ! Fast Evaluation using prepared values
     !TODO clean up comments
-    subroutine interpolate_fast(n, y, info_values, knots, LHS, RHS_prep, ipiv, x_new,&
+    subroutine interpolate_fast(n, y, info, knots, LHS, RHS_prep, ipiv, x_new,&
          n_new, intervals, deBoor_matrix, y_new, coeffs, ierr)
         integer, INTENT(in) :: n, n_new
         real(dp), INTENT(IN) :: y(n)
-        integer, INTENT(IN) :: info_values(info_size)
-        integer, INTENT(INOUT) :: ipiv(info_values(3))
+        type(info_values), INTENT(IN) :: info
+        integer, INTENT(INOUT) :: ipiv(info%nt)
         
 
-        real(dp), intent(in) :: LHS(info_values(8), info_values(9)), RHS_prep(info_values(10))
-        real(dp), INTENT(IN) :: x_new(n_new), knots(info_values(2))
+        real(dp), intent(in) :: LHS(info%LHS_rows, info%LHS_cols), RHS_prep(info%RHS_cols)
+        real(dp), INTENT(IN) :: x_new(n_new), knots(info%n_knots)
 
         ! for eval bspline
         integer,  INTENT(in)                :: intervals(n_new)
@@ -303,17 +327,17 @@ module interpolation
         integer  :: LHS_rows, LHS_cols
         integer  :: RHS_cols
         ! Internal - LAPACK check value
-        integer  :: info
+        integer  :: LAPACK_info
 
-        call unpack_values(info_values, deg, n_knots, nt, kl, ku, nleft, nright, LHS_rows, LHS_cols, RHS_cols)
+        call unpack_values(info, deg, n_knots, nt, kl, ku, nleft, nright, LHS_rows, LHS_cols, RHS_cols)
         
         ! RHS is copied into coeffs by assign_y_to_RHS, because it would be overwritten
         ! LHS is not overwritten in solve_coefficients, thus no need to copy
 
         call assign_y_to_RHS(y, rhs_prep, nt, nleft, nright, coeffs)
 
-        call solve_coeffcients(nt, kl, ku, lhs_rows, lhs_cols, LHS, coeffs, ipiv, info)
-        if ((info >0).or.(info<0)) then
+        call solve_coeffcients(nt, kl, ku, lhs_rows, lhs_cols, LHS, coeffs, ipiv, LAPACK_info)
+        if ((LAPACK_info >0).or.(LAPACK_info<0)) then
             ierr = 31 ! LAPACK Error
         end if
         
@@ -323,9 +347,9 @@ module interpolation
         RETURN
     end subroutine interpolate_fast
 
-    subroutine interpolate_deriv_fast(info_values, n_new, intervals, coeffs, deriv_deBoor_matrix, y_deriv, ierr)
+    subroutine interpolate_deriv_fast(info, n_new, intervals, coeffs, deriv_deBoor_matrix, y_deriv, ierr)
         integer, INTENT(in) :: n_new
-        integer, INTENT(IN) :: info_values(info_size)
+        type(info_values), INTENT(IN) :: info
         integer,  INTENT(in)                :: intervals(n_new)
         real(dp), INTENT(in)   :: deriv_deBoor_matrix(:,:)
         real(dp), INTENT(IN), ALLOCATABLE   :: coeffs(:)
@@ -340,7 +364,7 @@ module interpolation
         integer  :: nleft, nright
         integer  :: LHS_rows, LHS_cols
         integer  :: RHS_cols
-        call unpack_values(info_values, deg, n_knots, nt, kl, ku, nleft, nright, LHS_rows, LHS_cols, RHS_cols)
+        call unpack_values(info, deg, n_knots, nt, kl, ku, nleft, nright, LHS_rows, LHS_cols, RHS_cols)
         call eval_bspline_fast(deg, coeffs, intervals, deriv_deBoor_matrix, n_new, y_deriv)
     end subroutine interpolate_deriv_fast
 
@@ -358,10 +382,6 @@ module interpolation
 
     
     subroutine get_natural_knots(x, n, deg, knots, n_knots)
-        use, intrinsic :: iso_fortran_env
-        implicit none
-        integer, parameter :: dp = REAL64
-
         ! in
         integer,intent(in) :: n, deg
         real(dp), INTENT(IN) :: x(n)
@@ -849,7 +869,7 @@ module interpolation
 ! *****************************************************************************************
 ! Packing and upacking of various annoying integer
 
-    subroutine pack_values(deg, n_knots, nt, kl, ku, nleft, nright, LHS_rows, LHS_cols, RHS_cols, info_values)
+    subroutine pack_values(deg, n_knots, nt, kl, ku, nleft, nright, LHS_rows, LHS_cols, RHS_cols, info)
         integer, INTENT(IN)                :: deg                  !! degree of spline
         integer, INTENT(IN)                :: n_knots              !! # knots
         integer, INTENT(IN)                :: nt, kl, ku           !! matrix shape specifiers
@@ -857,24 +877,24 @@ module interpolation
         integer, INTENT(IN)                :: LHS_rows, LHS_cols   !! shape LHS
         integer, INTENT(IN)                :: RHS_cols             !! shape RHS
         
-        integer, INTENT(OUT)               :: info_values(info_size)
+        type(info_values), INTENT(OUT)               :: info(info_size)
 
-        info_values(1) = deg
-        info_values(2) = n_knots
-        info_values(3) = nt
-        info_values(4) = kl
-        info_values(5) = ku
-        info_values(6) = nleft 
-        info_values(7) = nright
-        info_values(8) = LHS_rows
-        info_values(9) = LHS_cols
-        info_values(10) = RHS_cols
+        info%deg       = deg
+        info%n_knots   = n_knots
+        info%nt        = nt
+        info%kl        = kl
+        info%ku        = ku
+        info%nleft     = nleft 
+        info%nright    = nright
+        info%LHS_rows  = LHS_rows
+        info%LHS_cols  = LHS_cols
+        info%RHS_cols  = RHS_cols
         RETURN
     end subroutine pack_values
 
 
-    subroutine unpack_values(info_values, deg, n_knots, nt, kl, ku, nleft, nright, LHS_rows, LHS_cols, RHS_cols)
-        integer, INTENT(IN)                 :: info_values(info_size)
+    subroutine unpack_values(info, deg, n_knots, nt, kl, ku, nleft, nright, LHS_rows, LHS_cols, RHS_cols)
+        type(info_values), INTENT(IN)       :: info
 
         integer, INTENT(OUT)                :: deg                  !! degree of spline
         integer, INTENT(OUT)                :: n_knots              !! # knots
@@ -883,16 +903,16 @@ module interpolation
         integer, INTENT(OUT)                :: LHS_rows, LHS_cols   !! shape LHS
         integer, INTENT(OUT)                :: RHS_cols             !! shape RHS
         
-        deg         = info_values(1)
-        n_knots     = info_values(2)
-        nt          = info_values(3)
-        kl          = info_values(4)
-        ku          = info_values(5)
-        nleft       = info_values(6)
-        nright      = info_values(7)
-        LHS_rows    = info_values(7)
-        LHS_cols    = info_values(9)
-        RHS_cols    = info_values(10)
+        deg         = info%deg
+        n_knots     = info%n_knots
+        nt          = info%nt
+        kl          = info%kl
+        ku          = info%ku
+        nleft       = info%nleft
+        nright      = info%nright
+        LHS_rows    = info%LHS_rows
+        LHS_cols    = info%LHS_cols
+        RHS_cols    = info%RHS_cols
         RETURN
     end subroutine unpack_values
 
