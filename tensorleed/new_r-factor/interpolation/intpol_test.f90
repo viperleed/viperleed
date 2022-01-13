@@ -15,7 +15,7 @@ program intpol_test
     ! Test data
     integer :: n_points, n_points_supersampled
     real(fdp), external :: test_data
-    real(fdp), ALLOCATABLE :: x_data(:), y_data(:), new_y(:), new_y_comp(:), x_ss(:), y_ss(:), my_knots(:)
+    real(fdp), ALLOCATABLE :: x_data(:), y_data(:), new_y(:), new_y_comp(:), x_ss(:), y_ss(:), my_knots(:), y_new_deriv(:)
     real(wp), ALLOCATABLE :: x(:), y(:), nx(:), ny(:)
     integer :: deg, i, j, new_n, ierr, n_my_knots
     real(fdp), ALLOCATABLE :: LHS(:,:), RHS(:), RHS_prep(:)
@@ -23,7 +23,7 @@ program intpol_test
     integer, ALLOCATABLE :: ipiv(:)
 
     integer, ALLOCATABLE :: intervals(:)
-    real(fdp), ALLOCATABLE :: deBoor_matrix(:,:)
+    real(fdp), ALLOCATABLE :: deBoor_matrix(:,:), coeffs(:), deriv_deBoor_matrix(:,:)
     integer :: info_values(info_size)
 
     ! For Bsplines module
@@ -42,7 +42,7 @@ program intpol_test
 
     ! Setup Data to interpolate
     repeats = 10000
-    n_points = 800
+    n_points = 600
     n_points_supersampled = n_points*5
 
     print*, "Interpolation Benchmark"
@@ -83,44 +83,48 @@ program intpol_test
     Close(30)
     CLOSE(40)
 
-    ! ! Test out interpolation as used in TensErLEED Refcalc
-    ! ngp = n_points_supersampled+200 ! array size; bigger than n_points and n_points_supersampled
-    ! NE = n_points
-    ! EINCR = x_ss(2)-x_ss(1) ! Delta E value
-    ! ib = 1 !beam number, dummy
-    ! ipr = 0 ! write flag, dummy (!= 2)
-    ! ALLOCATE(A(NGP), E(NGP), WORYT(NGP), X_TL(NGP))
-    ! A = 0.0
-    ! E = 0.0
-    ! A(1:NE) = y_data
-    ! E(1:NE) = x_data
-    ! X_TL = 0.0
-    ! WORYT = 0.0
+    ! Test out interpolation as used in TensErLEED Refcalc
+    ngp = n_points_supersampled+200 ! array size; bigger than n_points and n_points_supersampled
+    NE = n_points
+    EINCR = x_ss(2)-x_ss(1) ! Delta E value
+    ib = 1 !beam number, dummy
+    ipr = 0 ! write flag, dummy (!= 2)
+    ALLOCATE(A(NGP), E(NGP), WORYT(NGP), X_TL(NGP))
+    A = 0.0
+    E = 0.0
+    A(1:NE) = y_data
+    E(1:NE) = x_data
+    X_TL = 0.0
+    WORYT = 0.0
 
-    ! call cpu_time(start)
-    ! do i=1, repeats
-    !     CALL INTPOL(A,NE,E,NGP,EINCR,IPR,X_TL,WORYT,IB)
-    ! end do
-    ! call cpu_time(finish)
-    ! exec_time = (finish - start)/repeats
-    ! print*, "TensErLEED Interpolation:         ", exec_time, "s."!," For results see file: ", "y_out_TLEED.csv" 
-    ! OPEN(99, file = "y_out_TLEED.csv", STATUS='REPLACE')
-    ! do i=2, n_points_supersampled
-    !     WRITE(99,*) A(i-1)
-    ! end do
-    ! CLOSE(99)
+    call cpu_time(start)
+    do i=1, repeats
+        CALL INTPOL(A,NE,E,NGP,EINCR,IPR,X_TL,WORYT,IB)
+    end do
+    call cpu_time(finish)
+    exec_time = (finish - start)/repeats
+    print*, "TensErLEED Interpolation:         ", exec_time, "s."!," For results see file: ", "y_out_TLEED.csv" 
+    OPEN(99, file = "y_out_TLEED.csv", STATUS='REPLACE')
+    do i=2, n_points_supersampled
+        WRITE(99,*) A(i-1)
+    end do
+    CLOSE(99)
 
-    !Test out interpolation via my own module
+    ! Test out interpolation via my own module
     
     deg = 5
     new_y_comp = 1.0d0
     call cpu_time(start)
     ALLOCATE(intervals(n_points_supersampled))
+    ALLOCATE(y_new_deriv(n_points_supersampled))
+
     call pre_evaluate_grid(x_data, n_points, x_ss, n_points_supersampled, deg, 1, info_values, &
     my_knots, LHS, RHS, ipiv, intervals, deBoor_matrix, ierr)
+    !call pre_evaluate_deriv(2, n_points_supersampled, x_ss, info_values, my_knots, intervals, deriv_deBoor_matrix, ierr)
     do i=1, repeats
-        call interpolate_fast(n_points, y_data, deg, info_values, my_knots, LHS, RHS, ipiv, x_ss,&
-        n_points_supersampled, intervals, deBoor_matrix, new_y_comp, ierr)
+        call interpolate_fast(n_points, y_data, info_values, my_knots, LHS, RHS, ipiv, x_ss,&
+        n_points_supersampled, intervals, deBoor_matrix, new_y_comp, coeffs, ierr)
+        !call interpolate_deriv_fast(info_values, n_points_supersampled, intervals, coeffs, deriv_deBoor_matrix, y_new_deriv, ierr)
     end do
     call cpu_time(finish)
     exec_time = (finish - start)/repeats
@@ -128,16 +132,19 @@ program intpol_test
         print*, "Error thrown", ierr
     end if
     print*, "My Interpolation 5th Order (new): ", exec_time, "s."!, " For results see file: ", "y_out_my_5.csv" 
-    !OPEN(99, file = "y_out_my_5.csv", STATUS='REPLACE')
-    !do i=1, n_points_supersampled
-    !    WRITE(99,*) new_y(i)
-    !end do
-    !CLOSE(99)
+    OPEN(99, file = "y_out_my_5.csv", STATUS='REPLACE')
+    OPEN(98, file = "y_out_my_5_deriv.csv", STATUS='REPLACE')
+    do i=1, n_points_supersampled
+        WRITE(99,*) new_y_comp(i)
+        WRITE(98,*) y_new_deriv(i)
+    end do
+    CLOSE(99)
+    CLOSE(98)
     DEALLOCATE(my_knots)
     DEALLOCATE(intervals)
     DEALLOCATE(LHS, RHS)
-
-
+    DEALLOCATE(coeffs)
+    DEALLOCATE(y_new_deriv)
 
 
     ! ! Test out interpolation with Fortran-Bsplines library
@@ -177,39 +184,39 @@ program intpol_test
     ! DEALLOCATE(ny)
     ! DEALLOCATE(work)
 
-    ! ! Test out interpolation with Fortran-Bsplines library
-    ! deg = 5
-    ! new_y = 1.0d0
-    ! x = x_data
-    ! y = y_data
-    ! nx = x_ss
+    ! Test out interpolation with Fortran-Bsplines library
+    deg = 5
+    new_y = 1.0d0
+    x = x_data
+    y = y_data
+    nx = x_ss
     
-    ! k = deg+1
-    ! np = n_points
-    ! one = 1
-    ! zero = 0
-    ! extrap = .False.  
-    ! call cpu_time(start)
-    ! ALLOCATE(knots(np+k))
-    ! ALLOCATE(bcoef(np))
-    ! ALLOCATE(ny(n_points_supersampled))
-    ! ALLOCATE(work(3*k))
-    ! !CALL db1ink(x, k, np, y, 0, knots, bcoef, iflag
-    ! do i = 1, repeats
-    !     call db1ink(x,np,y,k,zero,knots,bcoef,iflag)
-    !     do j=1,n_points_supersampled
-    !         call db1val(nx(j), zero, knots, np, k, bcoef, ny(j), iflag, one, work, extrap)
-    !     end do
-    ! end do
-    ! call cpu_time(finish)
-    ! exec_time = (finish - start)/repeats
-    ! print*, "F-Bspline Package 5th Order:      ", exec_time, "s." !," For results see file: ", "y_out_bspline_pckg3.csv" 
-    ! OPEN(99, file = "y_out_bsplines_pckg5.csv", STATUS='REPLACE')
-    ! do i=1, n_points_supersampled
-    !     WRITE(99,*) ny(i)
+    k = deg+1
+    np = n_points
+    one = 1
+    zero = 0
+    extrap = .False.  
+    call cpu_time(start)
+    ALLOCATE(knots(np+k))
+    ALLOCATE(bcoef(np))
+    ALLOCATE(ny(n_points_supersampled))
+    ALLOCATE(work(3*k))
+    !CALL db1ink(x, k, np, y, 0, knots, bcoef, iflag
+    do i = 1, repeats
+        call db1ink(x,np,y,k,zero,knots,bcoef,iflag)
+        do j=1,n_points_supersampled
+            call db1val(nx(j), zero, knots, np, k, bcoef, ny(j), iflag, one, work, extrap)
+        end do
+    end do
+    call cpu_time(finish)
+    exec_time = (finish - start)/repeats
+    print*, "F-Bspline Package 5th Order:      ", exec_time, "s." !," For results see file: ", "y_out_bspline_pckg3.csv" 
+    OPEN(99, file = "y_out_bsplines_pckg5.csv", STATUS='REPLACE')
+    do i=1, n_points_supersampled
+        WRITE(99,*) ny(i)
     
-    ! end do
-    ! CLOSE(99)
+    end do
+    CLOSE(99)
 
 !   !  Test out interpolation with Fortran-Utils Module
 !    deg = 3
@@ -235,8 +242,11 @@ function test_data(x_in) result(y_out)
     integer, PARAMETER :: dp = real64
     real(dp), INTENT(IN) :: x_in
     real(dp) :: y_out
+    real(dp) :: a
+    a = 5
 
-    y_out = 2d0 + cos(x_in*8) + 3*exp(-abs(x_in-2.0d0)**2) + 0.2d0*sin(1.5*x_in) +min(tan(x_in)**2,2.0d0)
+    y_out = 2d0 + cos(a*(x_in-3.0d0))*exp(-(x_in-3.0d0)**2)
+    !y_out = 2d0 + cos(x_in*8) + 3*exp(-abs(x_in-2.0d0)**2) + 0.2d0*sin(1.5*x_in) +min(tan(x_in)**2,2.0d0)
     return
 end function test_data
 
