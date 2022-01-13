@@ -420,13 +420,66 @@ subroutine avg_scheme(in_beams, n_beams, NE, averaging_scheme, avg_types average
 
 end subroutine avg_scheme
 
-subroutine pre_eval_grid_beamset(n_grid_in, E_grid_in, n_grid_final, E_grid_final,)
-implicit none
-type1,intent(in) :: arg1
-type2,intent(out) ::  arg2
+subroutine pre_evaluate_grid_beamset(n_beams, n_grid_in, E_grid_in, n_grid_final, E_grid_final, deg, grids)
+    integer, INTENT(IN) :: n_beams
+    integer, INTENT(IN) :: n_grid_in(n_beams), n_grid_final(n_beams)
+    real(dp), INTENT(IN) :: E_grid_in(n_grid_in, n_beams), E_grid_final(n_grid_final, n_beams)
+    integer, INTENT(IN) :: deg
 
-end subroutine intesetpE_grid_in, E_grid_final,
+    type(grid_pre_evaluation) :: grids_pre_eval(nbeams)
+    type(deriv_pre_evaluation) :: grids_1st_deriv_pre_eval(nbeams)
+    type(deriv_pre_evaluation) :: grids_2nd_deriv_pre_eval(nbeams)
 
+    integer :: ierrs(n_beams)
+    
+    type(grid_translation), INTENT(OUT) :: grids(n_beams)
+    
+    do concurrent (i = 1: n_beams)
+        ! calculate grid translations
+        call pre_evaluate_grid_beam(n_grid_in(i), E_grid_in, n_grid_final, E_grid_final(i), deg, grids_pre_eval(i), ierrs(i))
+
+    end do    
+    return
+end subroutine pre_evaluate_grid_beamset
+
+subroutine pre_evaluate_grid_beam(n_grid_in, E_grid_in, n_grid_final, E_grid_final, deg, grid_pre_eval, ierr)
+    integer, INTENT(IN) :: n_grid_in, n_grid_final
+    real(dp), INTENT(IN) :: E_grid_in(n_grid_in), E_grid_final(n_grid_final)
+    integer, INTENT(IN) :: deg
+
+    type(grid_pre_evaluation), INTENT(OUT) :: grid_pre_eval
+    integer, INTENT(OUT) :: ierr
+
+    pre_evaluate_grid(E_grid_in, n_grid_in, E_grid_final, n_grid_final, &
+    deg, 1, grids_pre_eval, ierrs ! the 1 means do_checks ON
+end subroutine pre_evaluate_grid_beam
+
+subroutine pre_evaluate_beamset_deriv(n_beams, grids_pre_eval, n_derivs, nu, grids_deriv_pre_eval, ierrs)
+    integer, INTENT(IN) :: n_derivs
+    integer, INTENT(IN) :: nu(n_derivs)
+    type(grid_pre_evaluation), INTENT(IN) :: grid_pre_eval(n_beams)
+
+    type(grid_deriv_pre_evaluation), INTENT(OUT) :: derivs_pre_eval(n_beams, n_nu)
+    integer, INTENT(OUT) :: ierrs(n_beams, n_nu)
+
+    do concurrent (i = 1:n_beams)
+        do concurrent (j = 1:n_derivs)
+            pre_evaluate_beam_deriv(pre_eval(i), nu(j), derivs_pre_eval(i,j), ierrs(i,j))
+        end do
+    end do
+
+    return
+end subroutine pre_evaluate_grid_beam
+
+subroutine pre_evaluate_beam_deriv(grid_pre_eval, nu, grid_deriv_pre_eval, ierr)
+    integer, INTENT(IN) :: nu
+    type(grid_pre_evaluation), INTENT(IN) :: grid_pre_eval
+
+    type(grid_deriv_pre_evaluation), INTENT(OUT) :: deriv_pre_eval
+    integer, INTENT(OUT) :: ierr
+
+    pre_evaluate_deriv(pre_eval, nu, deriv_pre_eval, ierr)
+end subroutine pre_evaluate_grid_beam
 
     ! Library functions
 
