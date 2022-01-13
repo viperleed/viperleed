@@ -12,6 +12,15 @@
 ! 
 ! This module is a part of ViPErLEED and is distributed under the same license.
 
+
+! Error codes:
+! 0 .. no error 
+! 1-10 .. ?
+! 11-19 .. error raised while performing checks on input data
+! 11 ... origin grid not sorted
+! 12 ... target grid not sorted
+
+
 module interpolation
     use, intrinsic :: iso_fortran_env
     use, intrinsic :: ieee_arithmetic
@@ -106,26 +115,16 @@ module interpolation
         integer, INTENT(OUT) :: ierr ! error code
 
         ! internal variables and arrays
-        real(dp), ALLOCATABLE  :: knots(:)                     !! knot points
-        real(dp), ALLOCATABLE  :: LHS(:,:)                     !! 2D array containing the left hand side of the equation for spline coefficients
-        real(dp), ALLOCATABLE  :: RHS_prep(:)                  !! 1D array for the right hand side of the equation for spline coefficients.
-        integer                :: info_values(info_size)
-
-        integer, ALLOCATABLE   :: ipiv(:)                      !! 1D integer array of pivot-positions, needed by LAPACK
-        integer                :: intervals(n_new)             !! 1D integer array containg information, which spline interval the new grid points fall into.
-        real(dp), ALLOCATABLE  :: deBoor_matrix(:,:)           !! pre-evaluated deBoor matrix, required for evaluation of values on the new grid.
-        real(dp), ALLOCATABLE  :: coeffs(:)
+        type(grid_pre_evaluation) :: pre_eval
 
         ierr = 0
         if (do_checks.ne.0) then
             call perform_checks(n, x, n_new, x_new, ierr)
         end if
 
-        !call pre_evaluate_grid(x, n, x_new, n_new, deg, do_checks, info_values, &
-        !knots, LHS, RHS_prep, ipiv, intervals, deBoor_matrix, ierr)
+        call pre_evaluate_grid(x, n, x_new, n_new, deg, do_checks, pre_eval, ierr)
 
-        !call interpolate_fast(n, y, info_values, knots, LHS, RHS_prep, ipiv, x_new,&
-        !n_new, intervals, deBoor_matrix, y_new, coeffs, ierr)
+        call interpolate_fast(n, y, pre_eval, y_new, coeffs, ierr)
 
         !Done
         RETURN
@@ -247,31 +246,21 @@ module interpolation
     end subroutine pre_evaluate_grid
 
 
-    subroutine pre_evaluate_deriv(nu, n_new, x_new, info, knots, intervals, deriv_deBoor_matrix, ierr)
+    subroutine pre_evaluate_deriv(pre_eval, nu, deriv_pre_eval, ierr)
         ! IN
-        integer, INTENT(IN) :: n_new            !! # points target grid
-        real(dp), INTENT(IN):: x_new(n_new)     !! result grid values
+        type(grid_pre_evaluation) :: pre_eval
         integer, INTENT(IN) :: nu               !! order of derivative to calculate
-        type(info_values), INTENT(IN) :: info   !! info values
-        real(dp), INTENT(IN):: knots(info%n_knots)                 !! knot points
-        integer, INTENT(IN) :: intervals(n_new)        !! 1D integer array containg information, which spline interval the new grid points fall into.
         
         ! OUT
-        real(dp), INTENT(OUT), ALLOCATABLE  :: deriv_deBoor_matrix(:,:)      !! pre-evaluated deBoor matrix, required for evaluation of values on the new grid.
+        type(deriv_pre_evaluation), INTENT(OUT) :: deriv_pre_eval
+        real(dp), ALLOCATABLE  :: deriv_deBoor_matrix(:,:)      !! pre-evaluated deBoor matrix, required for evaluation of values on the new grid.
         integer, INTENT(OUT)                :: ierr                    !! integer error code        
 
 
-        ! Internal - packed into output by pack_values
-        integer                             :: deg                  !! degree of the spline
-        integer                             :: n_knots              !! # knots
-        integer                             :: nt, kl, ku           !! matrix shape specifiers
-        integer                             :: nleft, nright        !! number of knots for bc left and right
-        integer                             :: LHS_rows, LHS_cols   !! shape LHS
-        integer                             :: RHS_cols             !! shape RHS
+        call pre_eval_spline_deriv(pre_eval%infos%n_knots, pre_eval%knots, pre_eval%grid_target%n, pre_eval%grid_target%x, &
+                                    pre_eval%infos%deg, nu, pre_eval%intervals, deriv_deBoor_matrix)
 
-        call unpack_values(info, deg, n_knots, nt, kl, ku, nleft, nright, LHS_rows, LHS_cols, RHS_cols)
-
-        call pre_eval_spline_deriv(n_knots, knots, n_new, x_new, deg, nu, intervals, deriv_deBoor_matrix)
+        deriv_pre_eval = deriv_pre_evaluation(nu=nu, deriv_deBoor_matrix=deriv_deBoor_matrix, infos=pre_eval%infos)
         RETURN
     end subroutine pre_evaluate_deriv
 
