@@ -240,7 +240,8 @@ class Measure(gl.ViPErLEEDPluginBase):
         for camera in self.measurement.cameras:
             camera.error_occurred.connect(self.error_occurred)
             self.__camera_viewers.append(CameraViewer(camera,
-                                                      stop_on_close=False))
+                                                      stop_on_close=False,
+                                                      roi_visible=False))
         self.measurement.finished.connect(self.__on_finished)
         self.measurement.finished.connect(self.__on_measurement_finished)
 

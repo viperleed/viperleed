@@ -637,7 +637,10 @@ class MeasureControllerABC(ControllerABC):
 
         if next_to_do:
             self.continue_prepare_todos[next_to_do.__name__] = False
-            next_to_do()
+            if next_to_do == self.set_continuous_mode:
+                next_to_do(True)
+            else:
+                next_to_do()
             return
 
         self.serial.serial_busy.disconnect()

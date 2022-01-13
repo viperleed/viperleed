@@ -38,7 +38,10 @@ _ALIASES = {'Energy': ('nominal_energy',),
 
 
 class QuantityInfo(enum.Enum):
-    """Measurement types with unit, scaling, type and name."""
+    """Measurement types with unit, scaling, type and name.
+    
+    New measurement types have to be added here.
+    """
     IMAGES = ('Number', None, str, 'Images')
     ENERGY = ('eV', 'lin', float, 'Energy')
     TIMES = ('s', 'lin', float, 'Times')
@@ -169,7 +172,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
             # TODO: may want to add camera name to image name
             self[-1][QuantityInfo.IMAGES][camera] = name
 
-    def calculate_times(self):
+    def calculate_times(self, continuous=False):
         """Calculate times for the last data point."""
         if not self.primary_first_time:
             self.primary_first_time = (
@@ -178,8 +181,12 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         for ctrl in self[-1][QuantityInfo.TIMES]:
             if not len(self[-1][QuantityInfo.TIMES][ctrl]):
                 continue
-            self[-1][QuantityInfo.TIMES][ctrl][0] -= self.primary_first_time
-            self[-1][QuantityInfo.TIMES][ctrl][0] += ctrl.initial_delay
+            if not continuous:
+                self[-1][QuantityInfo.TIMES][ctrl][0] -= self.primary_first_time
+                self[-1][QuantityInfo.TIMES][ctrl][0] += ctrl.initial_delay
+            else:
+                if len(self) > 1 and not ctrl == self.primary_controller:
+                    self[-1][QuantityInfo.TIMES][ctrl][0] = self[-2][QuantityInfo.TIMES][ctrl][-1] + ctrl.measurement_interval
             quantity = ctrl.measured_quantities[0]
             length = len(self[-1][quantity][ctrl])
             for i in range(length - 1):
