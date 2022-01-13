@@ -3,8 +3,8 @@
 program intpol_test
 
     USE tenserleed_intpol
-    use bspline_module
-    use bspline_kinds_module, only: wp, ip
+    !use bspline_module
+    !use bspline_kinds_module, only: wp, ip
     use, intrinsic :: iso_fortran_env
     use lapack
     use utils
@@ -16,19 +16,20 @@ program intpol_test
     integer :: n_points, n_points_supersampled
     real(fdp), external :: test_data
     real(fdp), ALLOCATABLE :: x_data(:), y_data(:), new_y(:), new_y_comp(:), x_ss(:), y_ss(:), my_knots(:), y_new_deriv(:)
-    real(wp), ALLOCATABLE :: x(:), y(:), nx(:), ny(:)
+    !real(wp), ALLOCATABLE :: x(:), y(:), nx(:), ny(:)
     integer :: deg, i, j, new_n, ierr, n_my_knots
     real(fdp), ALLOCATABLE :: LHS(:,:), RHS(:), RHS_prep(:)
     integer :: nt, kl, ku, lhs_rows, lhs_cols, RHS_cols, nleft, nright
     integer, ALLOCATABLE :: ipiv(:)
+    type(grid_pre_evaluation) :: pre_eval
 
     integer, ALLOCATABLE :: intervals(:)
     real(fdp), ALLOCATABLE :: deBoor_matrix(:,:), coeffs(:), deriv_deBoor_matrix(:,:)
-    integer :: info_values(info_size)
+    !integer :: info_values(info_size)
 
     ! For Bsplines module
-    integer(ip) :: iflag, np, k, one, zero
-    real(wp), ALLOCATABLE :: bcoef(:), knots(:), work(:)
+    !integer(ip) :: iflag, np, k, one, zero
+    !real(wp), ALLOCATABLE :: bcoef(:), knots(:), work(:)
     logical :: extrap
 
     ! for timing the calls
@@ -118,12 +119,10 @@ program intpol_test
     ALLOCATE(intervals(n_points_supersampled))
     ALLOCATE(y_new_deriv(n_points_supersampled))
 
-    call pre_evaluate_grid(x_data, n_points, x_ss, n_points_supersampled, deg, 1, info_values, &
-    my_knots, LHS, RHS, ipiv, intervals, deBoor_matrix, ierr)
+    call pre_evaluate_grid(x_data, n_points, x_ss, n_points_supersampled, deg, 1, pre_eval, ierr)
     !call pre_evaluate_deriv(2, n_points_supersampled, x_ss, info_values, my_knots, intervals, deriv_deBoor_matrix, ierr)
     do i=1, repeats
-        call interpolate_fast(n_points, y_data, info_values, my_knots, LHS, RHS, ipiv, x_ss,&
-        n_points_supersampled, intervals, deBoor_matrix, new_y_comp, coeffs, ierr)
+        call interpolate_fast(n_points, y_data, pre_eval, new_y_comp, coeffs, ierr)
         !call interpolate_deriv_fast(info_values, n_points_supersampled, intervals, coeffs, deriv_deBoor_matrix, y_new_deriv, ierr)
     end do
     call cpu_time(finish)
@@ -140,11 +139,11 @@ program intpol_test
     end do
     CLOSE(99)
     CLOSE(98)
-    DEALLOCATE(my_knots)
-    DEALLOCATE(intervals)
-    DEALLOCATE(LHS, RHS)
-    DEALLOCATE(coeffs)
-    DEALLOCATE(y_new_deriv)
+    !DEALLOCATE(my_knots)
+    !DEALLOCATE(intervals)
+    !DEALLOCATE(LHS, RHS)
+    !DEALLOCATE(coeffs)
+    !DEALLOCATE(y_new_deriv)
 
 
     ! ! Test out interpolation with Fortran-Bsplines library
@@ -185,38 +184,38 @@ program intpol_test
     ! DEALLOCATE(work)
 
     ! Test out interpolation with Fortran-Bsplines library
-    deg = 5
-    new_y = 1.0d0
-    x = x_data
-    y = y_data
-    nx = x_ss
+    ! deg = 5
+    ! new_y = 1.0d0
+    ! x = x_data
+    ! y = y_data
+    ! nx = x_ss
     
-    k = deg+1
-    np = n_points
-    one = 1
-    zero = 0
-    extrap = .False.  
-    call cpu_time(start)
-    ALLOCATE(knots(np+k))
-    ALLOCATE(bcoef(np))
-    ALLOCATE(ny(n_points_supersampled))
-    ALLOCATE(work(3*k))
-    !CALL db1ink(x, k, np, y, 0, knots, bcoef, iflag
-    do i = 1, repeats
-        call db1ink(x,np,y,k,zero,knots,bcoef,iflag)
-        do j=1,n_points_supersampled
-            call db1val(nx(j), zero, knots, np, k, bcoef, ny(j), iflag, one, work, extrap)
-        end do
-    end do
-    call cpu_time(finish)
-    exec_time = (finish - start)/repeats
-    print*, "F-Bspline Package 5th Order:      ", exec_time, "s." !," For results see file: ", "y_out_bspline_pckg3.csv" 
-    OPEN(99, file = "y_out_bsplines_pckg5.csv", STATUS='REPLACE')
-    do i=1, n_points_supersampled
-        WRITE(99,*) ny(i)
+    ! k = deg+1
+    ! np = n_points
+    ! one = 1
+    ! zero = 0
+    ! extrap = .False.  
+    ! call cpu_time(start)
+    ! ALLOCATE(knots(np+k))
+    ! ALLOCATE(bcoef(np))
+    ! ALLOCATE(ny(n_points_supersampled))
+    ! ALLOCATE(work(3*k))
+    ! !CALL db1ink(x, k, np, y, 0, knots, bcoef, iflag
+    ! do i = 1, repeats
+    !     call db1ink(x,np,y,k,zero,knots,bcoef,iflag)
+    !     do j=1,n_points_supersampled
+    !         call db1val(nx(j), zero, knots, np, k, bcoef, ny(j), iflag, one, work, extrap)
+    !     end do
+    ! end do
+    ! call cpu_time(finish)
+    ! exec_time = (finish - start)/repeats
+    ! print*, "F-Bspline Package 5th Order:      ", exec_time, "s." !," For results see file: ", "y_out_bspline_pckg3.csv" 
+    ! OPEN(99, file = "y_out_bsplines_pckg5.csv", STATUS='REPLACE')
+    ! do i=1, n_points_supersampled
+    !     WRITE(99,*) ny(i)
     
-    end do
-    CLOSE(99)
+    ! end do
+    ! CLOSE(99)
 
 !   !  Test out interpolation with Fortran-Utils Module
 !    deg = 3
