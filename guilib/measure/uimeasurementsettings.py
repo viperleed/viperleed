@@ -38,7 +38,6 @@ class SettingsEditor(qtw.QDialog):
             'measurement_time' : qtw.QLineEdit(''),
             'limit_continuous' : qtw.QLineEdit(''),
             'cycle_time' : qtw.QLineEdit(''),
-            'measure_this' : qtw.QLineEdit(''),
             'save': qtw.QPushButton("Apply changes"),
             'undo': qtw.QPushButton("Undo"),
             }
@@ -49,7 +48,7 @@ class SettingsEditor(qtw.QDialog):
         self.__para_validator = ('start_energy', 'end_energy', 'delta_energy',
                              'measurement_time', 'limit_continuous',
                              'cycle_time')
-        self.__para_text = ('measure_this',)
+        self.__para_text = ()
         self.__file_name = (uimeasurement.DEFAULT_CONFIG_PATH
                             / 'viperleed_config.ini')
         self.__settings = None
@@ -101,10 +100,8 @@ class SettingsEditor(qtw.QDialog):
         layout.addWidget(self._ctrls['limit_continuous'], 5, 2, 1, 1)
         layout.addWidget(qtw.QLabel('cycle_time ='), 6, 1, 1, 1)
         layout.addWidget(self._ctrls['cycle_time'], 6, 2, 1, 1)
-        layout.addWidget(qtw.QLabel('important quantity ='), 7, 1, 1, 1)
-        layout.addWidget(self._ctrls['measure_this'], 7, 2, 1, 1)
-        layout.addWidget(self._ctrls['undo'], 8, 1, 1, 1)
-        layout.addWidget(self._ctrls['save'], 8, 2, 1, 1)
+        layout.addWidget(self._ctrls['undo'], 7, 1, 1, 1)
+        layout.addWidget(self._ctrls['save'], 7, 2, 1, 1)
 
     def __read_settings(self):
         """Read configuration file."""

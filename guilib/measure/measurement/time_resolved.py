@@ -156,9 +156,10 @@ class TimeResolved(MeasurementABC):
         """
         # TODO: calculation will be moved to datapoints class
         # TODO: currently using nominal energy on an uncalibrated energy measurement: offset might be larger than step height!!!
-        quantity = self.settings.get(
-            'measurement_settings', 'measure_this', fallback='None'
-            )
+        # quantity = self.settings.get(
+            # 'measurement_settings', 'measure_this', fallback='None'          measure_this not in config anymore
+            # )
+        return
         quantity_obj = QuantityInfo.from_label(quantity)
         percentage = self.settings.getfloat('measurement_settings',
                                             'percentage', fallback=0.1)
@@ -182,7 +183,7 @@ class TimeResolved(MeasurementABC):
         if self.is_continuous_measurement:
             for ctrl in self.controllers:
                 del ctrl.continue_prepare_todos['set_continuous_mode']
-            return
+
             for j, step in enumerate(measured[0]):
                 if j == 0:
                     previous_height = sum(step[-points:])/points

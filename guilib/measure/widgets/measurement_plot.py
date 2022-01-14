@@ -13,8 +13,10 @@ Defines the MeasurementPlot class.
 
 from PyQt5 import QtWidgets as qtw
 
+from viperleed import guilib as gl
 from viperleed.guilib.basewidgets import MeasurementFigureCanvas as Canvas
 from viperleed.guilib.measure.datapoints import DataPoints, QuantityInfo
+from viperleed.guilib.measure.widgets.checkcombobox import CheckComboBox
 
 
 # TODO: temporarily one can adjust here the structure in which a
@@ -29,8 +31,8 @@ class MeasurementPlot(qtw.QWidget):
     def __init__(self, parent=None):
         """Initialise class."""
         super().__init__(parent=parent)
-        self._contrls = {}
-        self._glob = {'plot_lines': []}
+        self._ctrls = {'quantities': PlotComboBox(),}
+        self._glob = {'plot_lines': {}}
         self.__markers = ('.', 'o', 'x', '+', '*')
         self.__data_points = None
         self.__canvas = Canvas()
@@ -66,10 +68,15 @@ class MeasurementPlot(qtw.QWidget):
                 )
         self.__data_points = data_points
         self.__canvas.ax.clear()
-        self._glob['plot_lines'] = []
+        self._glob['plot_lines'] = {}
         self.__canvas.draw_idle()
 
-    def plot_all_data(self, measured_quantity):
+    @property
+    def plotted_quantities(self):
+        """Return plotted quantities."""
+        return self._ctrls['quantities'].selected_quantities
+
+    def plot_all_data(self):
         """Plot data on the canvas for the first time.
 
         This function is called if there is no plotted
@@ -80,18 +87,29 @@ class MeasurementPlot(qtw.QWidget):
         if not self.data_points or not self.data_points.has_data():
             return
         self.__canvas.ax.clear()
-        self._glob['plot_lines'] = []
+        self._glob['plot_lines'] = {}
 
         if self.data_points.is_time_resolved():
-            self.__plot_all_time_resolved_data(measured_quantity)
+            self.__plot_all_time_resolved_data()
+            label = f"Time ({QuantityInfo.TIMES.units})"
         else:
-            self.__plot_all_energy_resolved_data(measured_quantity)
+            self.__plot_all_energy_resolved_data()
+            label = (f"{QuantityInfo.ENERGY.label} "
+                     f"({QuantityInfo.ENERGY.units})")
+        self.__canvas.ax.set_xlabel(label)
+
+        if self.plotted_quantities:
+            if len(self.plotted_quantities) == 1:
+                self.__canvas.ax.set_ylabel(
+                    f"{self.plotted_quantities[0].label} "
+                    f"({self.plotted_quantities[0].units})")
+            else:
+                self.__canvas.ax.set_ylabel(
+                    f"{self.plotted_quantities[0].common_label} "
+                    f"({self.plotted_quantities[0].units})")
         self.__canvas.draw_idle()
 
-    # TODO: temporarily we will still use the measured_quantity
-    # variable for plotting with the new class.
-    # it is passed on from the Measure class
-    def plot_new_data(self, measured_quantity):
+    def plot_new_data(self):
         """Plot new data to already-plotted data.
 
         This function is called if there is already
@@ -102,93 +120,168 @@ class MeasurementPlot(qtw.QWidget):
             return
 
         if self.data_points.is_time_resolved():
-            self.__plot_new_time_resolved_data(measured_quantity)
+            self.__plot_new_time_resolved_data()
+            label = f"Time ({QuantityInfo.TIMES.units})"
         else:
-            self.__plot_new_energy_resolved_data(measured_quantity)
+            self.__plot_new_energy_resolved_data()
+            label = (f"{QuantityInfo.ENERGY.label} "
+                     f"({QuantityInfo.ENERGY.units})")
+        self.__canvas.ax.set_xlabel(label)
+
+        if self.plotted_quantities:
+            if len(self.plotted_quantities) == 1:
+                self.__canvas.ax.set_ylabel(
+                    f"{self.plotted_quantities[0].label} "
+                    f"({self.plotted_quantities[0].units})")
+            else:
+                self.__canvas.ax.set_ylabel(
+                    f"{self.plotted_quantities[0].common_label} "
+                    f"({self.plotted_quantities[0].units})")
+
         self.__canvas.draw_idle()
 
     def __compose(self):
         """Prepare widget."""
         layout = qtw.QVBoxLayout()
-        layout.addWidget(self.__canvas)
+        self._ctrls['quantities'].addItems(QuantityInfo.get_axis_labels('y'))
+        self._ctrls['quantities'].setFont(gl.AllGUIFonts().buttonFont)
+        self._ctrls['quantities'].ensurePolished()
 
+        layout.addWidget(self._ctrls['quantities'])
+        layout.addWidget(self.__canvas)
         self.setLayout(layout)
 
-    def __plot_all_energy_resolved_data(self, measured_quantity):
+    def __plot_all_energy_resolved_data(self):
         marker = self.__markers[0]
-        data, nominal_energies = (
-            self.data_points.get_energy_resolved_data(
-                measured_quantity, include_energies=True
+        for measured_quantity in self.plotted_quantities:
+            self._glob['plot_lines'][measured_quantity] = []
+            data, nominal_energies = (
+                self.data_points.get_energy_resolved_data(
+                    measured_quantity, include_energies=True
+                    )
                 )
-            )
-        for ctrl_data in data:
-            self._glob['plot_lines'].extend(
-                self.__canvas.ax.plot(nominal_energies, ctrl_data, marker)
-                )
-
-    def __plot_all_time_resolved_data(self, measured_quantity):
-        fig = self.__canvas
-        marker = self.__markers[0]
-        data, times = (
-            self.data_points.get_time_resolved_data(
-                measured_quantity, separate_steps=SEPARATE_STEPS,
-                absolute_times=not SEPARATE_STEPS, include_energies=False
-                )
-            )
-
-        for ctrl_times, ctrl_data in zip(times, data):
-            if SEPARATE_STEPS:
-                for step_time, step_data in zip(ctrl_times, ctrl_data):
-                    fig.ax.plot(step_time, step_data, marker)
-            else:
-                self._glob['plot_lines'].extend(
-                    fig.ax.plot(ctrl_times, ctrl_data, marker)
+            for ctrl_data in data:
+                self._glob['plot_lines'][measured_quantity].extend(
+                    self.__canvas.ax.plot(nominal_energies, ctrl_data, marker)
                     )
 
-    def __plot_new_energy_resolved_data(self, measured_quantity):
+    def __plot_all_time_resolved_data(self):
         fig = self.__canvas
-        marker = self.__markers[0]  # TODO: will have to loop through different quantities
-        data, nominal_energies = (
-            self.data_points.get_energy_resolved_data(
-                measured_quantity, include_energies=True
-                )
-            )
-        n_controllers = len(data)
-        # Loop over controllers
-        for i, ctrl_data in enumerate(data):
-            if len(self._glob['plot_lines']) < n_controllers:
-                self._glob['plot_lines'].extend(
-                    fig.ax.plot(nominal_energies[-1], ctrl_data[-1], marker)
+        marker = self.__markers[0]
+        for measured_quantity in self.plotted_quantities:
+            self._glob['plot_lines'][measured_quantity] = []
+            data, times = (
+                self.data_points.get_time_resolved_data(
+                    measured_quantity, separate_steps=SEPARATE_STEPS,
+                    absolute_times=not SEPARATE_STEPS, include_energies=False
                     )
-                continue
-            line = self._glob['plot_lines'][i]
-            line.set_data(nominal_energies, ctrl_data)
+                )
+
+            for ctrl_times, ctrl_data in zip(times, data):
+                if SEPARATE_STEPS:
+                    for step_time, step_data in zip(ctrl_times, ctrl_data):
+                        fig.ax.plot(step_time, step_data, marker)
+                else:
+                    self._glob['plot_lines'][measured_quantity].extend(
+                        fig.ax.plot(ctrl_times, ctrl_data, marker)
+                        )
+
+    def __plot_new_energy_resolved_data(self):
+        fig = self.__canvas
+        marker = self.__markers[0]
+        for measured_quantity in self.plotted_quantities:
+            if measured_quantity not in self._glob['plot_lines']:
+                self._glob['plot_lines'][measured_quantity] = []
+            data, nominal_energies = (
+                self.data_points.get_energy_resolved_data(
+                    measured_quantity, include_energies=True
+                    )
+                )
+            n_controllers = len(data)
+            # Loop over controllers
+            for i, ctrl_data in enumerate(data):
+                if len(self._glob['plot_lines'][measured_quantity]) < n_controllers:
+                    self._glob['plot_lines'][measured_quantity].extend(
+                        fig.ax.plot(nominal_energies[-1], ctrl_data[-1], marker)
+                        )
+                    continue
+                line = self._glob['plot_lines'][measured_quantity][i]
+                line.set_data(nominal_energies, ctrl_data)
         fig.ax.relim()
         fig.ax.autoscale_view()
 
-    def __plot_new_time_resolved_data(self, measured_quantity):
+    def __plot_new_time_resolved_data(self):
         fig = self.__canvas
-        marker = self.__markers[0]  # TODO: will have to loop through different quantities
-        data, times = (
-            self.data_points.get_time_resolved_data(
-                measured_quantity, separate_steps=SEPARATE_STEPS,
-                absolute_times=not SEPARATE_STEPS, include_energies=False
+        marker = self.__markers[0]
+        for measured_quantity in self.plotted_quantities:
+            if measured_quantity not in self._glob['plot_lines']:
+                self._glob['plot_lines'][measured_quantity] = []
+            data, times = (
+                self.data_points.get_time_resolved_data(
+                    measured_quantity, separate_steps=SEPARATE_STEPS,
+                    absolute_times=not SEPARATE_STEPS, include_energies=False
+                    )
                 )
-            )
-        n_controllers = len(data)
-        # Loop over controllers
-        for i, (ctrl_times, ctrl_data) in enumerate(zip(times, data)):
-            if SEPARATE_STEPS:
-                # Enough to plot the last step for each
-                fig.ax.plot(ctrl_times[-1], ctrl_data[-1], marker)
-            else:
-                if len(self._glob['plot_lines']) < n_controllers:
-                    self._glob['plot_lines'].extend(
-                        fig.ax.plot(ctrl_times, ctrl_data, marker)
-                        )
-                    continue
-                line = self._glob['plot_lines'][i]
-                line.set_data(ctrl_times, ctrl_data)
+            n_controllers = len(data)
+            # Loop over controllers
+            for i, (ctrl_times, ctrl_data) in enumerate(zip(times, data)):
+                if SEPARATE_STEPS:
+                    # Enough to plot the last step for each
+                    fig.ax.plot(ctrl_times[-1], ctrl_data[-1], marker)
+                else:
+                    if len(self._glob['plot_lines'][measured_quantity]) < n_controllers:
+                        self._glob['plot_lines'][measured_quantity].extend(
+                            fig.ax.plot(ctrl_times, ctrl_data, marker)
+                            )
+                        continue
+                    line = self._glob['plot_lines'][measured_quantity][i]
+                    line.set_data(ctrl_times, ctrl_data)
         if not SEPARATE_STEPS:
             fig.ax.relim()
             fig.ax.autoscale_view()
+
+
+class PlotComboBox(CheckComboBox):
+    """A CheckComboBox which can QuantityInfo objeczts."""
+
+    def __init__(self, parent=None):
+        """ Initialize instance.
+
+        Parameters
+        ----------
+        parent : QWidget
+            The parent widget of this combo box.
+
+        Returns
+        -------
+        None.
+        """
+        super().__init__(parent=parent)
+
+    @property
+    def selected_quantities(self):
+        """Return checked QuantityInfo objects."""
+        checked = self.selected_items
+        for index, item in enumerate(checked):
+            checked[index] = QuantityInfo.from_label(item)
+        return checked
+
+    def toggle_checked(self, name):     # pylint: disable=invalid-name
+        """Toggle the checked state of an entry with given name."""
+        item = self.model().findItems(name)[0]
+        super().toggle_checked(name)
+        quantity = QuantityInfo.from_label(name)
+        if self.is_item_checked(item):
+            for i in range(self.count()):
+                label = self.model().item(i, 0).text()
+                other_quantity = QuantityInfo.from_label(label)
+
+                if quantity.units != other_quantity.units:
+                     disable = self.model().findItems(label)[0]
+                     disable.setEnabled(False)
+        else:
+            if not self.selected_items:
+                for i in range(self.count()):
+                    enable = self.model().item(i, 0)
+                    enable.setEnabled(True)
+

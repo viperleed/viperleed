@@ -39,17 +39,17 @@ _ALIASES = {'Energy': ('nominal_energy',),
 
 class QuantityInfo(enum.Enum):
     """Measurement types with unit, scaling, type and name.
-    
+
     New measurement types have to be added here.
     """
-    IMAGES = ('Number', None, str, 'Images')
-    ENERGY = ('eV', 'lin', float, 'Energy')
-    TIMES = ('s', 'lin', float, 'Times')
-    I0 = ('uA', 'lin', float, 'I0')
-    HV = ('eV', 'lin', float, 'Measured_Energy')
-    ISAMPLE = ('V', 'lin', float, 'I_Sample')
-    TEMPERATURE = ('°C', 'lin', float, 'Temperature')
-    COLD_JUNCTION = ('°C', 'lin', float, 'Cold_Junction')
+    IMAGES = ('Number', None, str, 'Images', None, None)
+    ENERGY = ('eV', 'lin', float, 'Energy', 'x', None)
+    HV = ('eV', 'lin', float, 'Measured_Energy', 'y', 'Voltage')
+    TIMES = ('s', 'lin', float, 'Times', 'x', None)
+    I0 = ('uA', 'lin', float, 'I0', 'y', 'Current')
+    ISAMPLE = ('uA', 'lin', float, 'I_Sample', 'y', 'Current')
+    TEMPERATURE = ('°C', 'lin', float, 'Temperature', 'y', 'Temperature')
+    COLD_JUNCTION = ('°C', 'lin', float, 'Cold_Junction', 'y', 'Temperature')
 
     @classmethod
     def from_label(cls, label):
@@ -71,6 +71,14 @@ class QuantityInfo(enum.Enum):
                                  'QuantityInfo')
 
     @property
+    def common_label(self):
+         return self.value[5]
+
+    @property
+    def axis(self):
+        return self.value[4]
+
+    @property
     def label(self):
         return self.value[3]
 
@@ -79,16 +87,20 @@ class QuantityInfo(enum.Enum):
         return self.value[2]
 
     @property
+    def plot_scale(self):
+        return self.value[1]
+
+    @property
     def units(self):
         return self.value[0]
 
-    @property
-    def plot_scale(self):
-        return self.value[1]
-    
     @classmethod
     def get_labels(cls):
         return {l.label: l for l in cls}
+
+    @classmethod
+    def get_axis_labels(cls, axis):
+        return [q.label for q in cls if q.axis == axis]
 
 
 class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
