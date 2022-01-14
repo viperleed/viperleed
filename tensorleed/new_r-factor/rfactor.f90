@@ -245,14 +245,15 @@ subroutine Rfactor_v0ropt(opt_type, min_steps, max_steps, nr_used_v0)
     !call Rfactor_beamset(y1, y2, sizes_y1, sizes_y2, E_start1, E_start2, nr_beams, E_step, V0, &
     !                     beamtypes, R_Pe_V0, R_Pe_beams, N_overlapping_points)
 
-
+    RETURN
 end subroutine Rfactor_v0ropt
 
-subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities, E_start_beams, n_E_beams &
+
+subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities, E_start_beams, n_E_beams, &
                          skip_stages, n_averaging_types, averaging_scheme, n_beams_final,&
                          n_E_out, E_grid_out, &
                          E_start_beams_out, n_E_beams_out, &
-                         interpolated_intensities, inerpolated_derivs, y_funcs)
+                         beams)
     !Prepare_beams:
     !INPUT: array[I, E_min, E_step, NE], E_grid_step, averaging_scheme, smoothing?, E_min, E_max
     !DOES: (0) Limit_range, (1) Average/discard/reorder according to scheme; (2) smooth?; (3) interpolate on grid; (4) compute Y on new grid
@@ -262,24 +263,28 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities, E_start_beams,
     !###############
     !INPUTS
     !###############
-    integer, intent(in) :: n_beams, n_E_in, n_E_out ! number of beams, number of passed energies
+    integer, intent(inout) :: n_beams, n_E_in, n_E_out ! number of beams, number of passed energies
     integer, intent(in) :: skip_stages(5) ! which stages to execute
     real, intent(in) :: intensities(n_E_in,n_beams) ! beam intensities
     real(dp), INTENT(IN) :: E_grid_in(n_E_in), E_grid_out(n_E_out)
-    integer, intent(in) :: E_start_beams(n_beams), n_E_beams(n_beams) ! minimum energies, nr of steps
+    integer, intent(inout) :: E_start_beams(n_beams), n_E_beams(n_beams) ! minimum energies, nr of steps
     integer, intent(in) :: averaging_scheme(n_beams), n_averaging_types, n_beams_final
 
     integer, INTENT(OUT) :: E_start_beams_out(n_beams), n_E_beams_out(n_beams)
-    real(dp), INTENT(OUT) :: interpolated_intensities
-    real(dp), INTENT(OUT) :: inerpolated_derivs
-    real(dp), INTENT(OUT) :: y_funcs
+    type(beam_type), INTENT(OUT) :: beams(n_beams)
 
     !###############
     ! Internal
     !###############
     real :: E_max_after
-    integer :: new_min_index, new_max_index
+    integer :: new_min_index, new_max_index, n_E_in_cut
     real, allocatable :: cut_intensity(:,:)
+
+    TYPE(grid_pre_evaluation) :: girds_pre_eval(n_beams)
+    type(deriv_pre_evaluation) :: pre_eval_derivs(n_beams)
+
+    integer :: ierrs(n_beams)
+    real(dp) :: v0i
 
     integer :: i, j
     !###############
@@ -300,22 +305,22 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities, E_start_beams,
             new_min_index = max(1, find_interval(E_grid_in, n_E_in, 0, E_grid_out(1),1, 0))
         else
             print* , "This should not happen"
-            id_start = 1
+            !id_start = 1
         end if
         if (E_grid_in(n_E_in) > E_grid_out(n_E_out)) then
-            new_max_index = find_interval(E_grid_in, n_E_in, 0, E_grid_out(n_E_out),1, 0))
+            new_max_index = find_interval(E_grid_in, n_E_in, 0, E_grid_out(n_E_out),1, 0)
         else
             print* , "This should not happen"
-            id_end = n_E_in
+            !id_end = n_E_in
         end if
 
         n_E_in_cut =  new_max_index - new_min_index +1
-        ALLOCATE(cut_intensity(n_beams, n_E_in_cut))
-        cut_intensity = intensities(new_min_index, new_max_index)
+        ALLOCATE(cut_intensity(n_E_in_cut, n_beams))
+        cut_intensity = intensities(new_min_index: new_max_index, :)
 
         ! new start and end indices
-        E_start_beam(i) = max(E_start_beam(i)-new_min_index+1, new_min_index)
-        n_E_beams(i) = min(new_max_index, E_start_beam(i)+n_E_beams(i)- new_min_index+1) - E_start_beam(i)
+        E_start_beams(i) = max(E_start_beams(i)-new_min_index+1, new_min_index)
+        n_E_beams(i) = min(new_max_index, E_start_beams(i)+n_E_beams(i)- new_min_index+1) - E_start_beams(i)
 
 
 
@@ -346,6 +351,20 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities, E_start_beams,
 
 
     !###############
+    ! Transfer to beam type - makes this a whole lot less confusing
+    !############### 
+    v0i = 5.0d0
+    !origin = grid(n_E_beams(i), E_grid_in(E_start_beams(i) : E_start_beams(i) + n_E_beams(i)))
+    do i =1,n_beams
+        call find_index_on_new_grid(n_E_in, E_grid_in, n_E_out, E_grid_out, E_start_beams(i), n_E_beams(i), &
+                                        E_start_beams_out(i), n_E_beams_out(i))
+
+        beams(i)%grid_origin = grid(n_E_beams_out(i), E_grid_in(E_start_beams(i): E_start_beams(i) + n_E_beams(i)))
+        beams(i)%grid_intpol = grid(n_E_beams_out(i), E_grid_out(E_start_beams_out(i): E_start_beams_out(i) + n_E_beams_out(i)))
+        beams(i)%intensity_in = cut_intensity(E_start_beams(i): E_start_beams(i) + n_E_beams(i), i) 
+    end do
+
+    !###############
     ! Smoothing
     !###############
 
@@ -360,34 +379,24 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities, E_start_beams,
     ! Interpolation on new grid
     !###############
 
-    interpolated_intensities = 0.0d0
-    interpolated_derivs = 0.0d0
-    y_functions = 0.0d0
 
     if (skip_stages(4).EQ.0) then
-        call pre_evaluate_grid_beamset(n_beams, n_E_in, E_grid_in, E_start_beams, n_E_beams, n_E_out, E_grid_out, 5, grids, ierrs)
-        call pre_evaluate_beamset_deriv(n_beams, girds_pre_eval, 1, pre_evals_derivs, ierrs)
-        do concurrent (i=1:n_beams)
-            find_index_on_new_grid(n_E_in, E_grid_in, n_E_out, E_grid_out, E_start_beams(i), n_E_beams(i), &
-                                    E_start_beams_out(i), n_E_beams_out(i))
+
+        do i= 1,n_beams
+            call pre_evaluate_grid_beam(beams(i), 5, girds_pre_eval(i), ierrs(i))
+            call pre_evaluate_deriv(girds_pre_eval(i), 1, pre_eval_derivs(i), ierrs(i))
+            call interpolate_beam(beams(i)%intensity_in, girds_pre_eval(i), beams(i)%intensity_intpol, beams(i)%coeffs, ierrs(i))
+            call interpolate_deriv_beam(girds_pre_eval(i), pre_eval_derivs(i), beams(i)%coeffs, beams(i)%deriv_intpol, ierrs(i))
+            ! Y function calculation on new grid
+            call pendry_y(beams(i)%grid_intpol%n, beams(i)%intensity_intpol, beams(i)%deriv_intpol, v0i, beams(i)%y_intpol)
         end do
-
-        call interpolate_beamset(n_beams, intensities, grids_pre_eval, E_start_beams_out, n_E_beams_out, &
-                                 n_E_out, interpolated_intensities, coeffs, ierrs)
         
-        call interpolate_beamset_derivs(n_beams, grids_pre_eval, E_start_beams_out, n_E_beams_out, &
-        n_E_out, coeffs, intensity_derivs, ierrs)
-
     end if
 
     !###############
     ! Y function calculation on new grid
     !###############
 
-    do concurrent (i=1:n_beams)
-        call pendry_y(n_E_beams(i), interpolated_intensities(E_start_beams(i):E_start_beams(i) + n_E_beams(i)), &
-        interpolated_derivs(E_start_beams(i):E_start_beams(i) + n_E_beams(i)), v0i, y_func(E_start_beams(i):E_start_beams(i) + n_E_beams(i)))
-    end do
     ! TODO: clean up implementation
 
     ! output is the y functions
@@ -395,7 +404,7 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities, E_start_beams,
 
 end subroutine prepare_beams
 
-subroutine find_index_on_new_grid(n_E_in, E_in, n_E_out, E_out, id_start_in, n_steps_in,&
+pure subroutine find_index_on_new_grid(n_E_in, E_in, n_E_out, E_out, id_start_in, n_steps_in,&
                                   id_start_out, n_steps_out)
     integer, INTENT(IN) :: n_E_in, n_E_out
     real(dp), INTENT(IN) :: E_in(n_E_in), E_out(n_E_out)
@@ -432,63 +441,65 @@ subroutine range_index_from_Energy(E_min_current, NE_in, E_step, E_min_cut, E_ma
 end subroutine range_index_from_Energy
 
 
-subroutine limit_range_index(in_beams, n_beams, n_energies, E_min_current, E_step, beam_starts, NE_beams, &
-                       NE_out_start, NE_out_stop, out_beams, new_NE, new_NE_beams, new_start_id)
-    !Limit_range:
-    !INPUT: E_min, E_max, array[I, E_min, E_step, NE]
-    !RETURNS: Beam cut to only within [E_min, E_max]
+! subroutine limit_range_index(in_beams, n_beams, n_energies, E_min_current, E_step, beam_starts, NE_beams, &
+!                        NE_out_start, NE_out_stop, out_beams, new_NE, new_NE_beams, new_start_id)
+!     !Limit_range:
+!     !INPUT: E_min, E_max, array[I, E_min, E_step, NE]
+!     !RETURNS: Beam cut to only within [E_min, E_max]
 
-    ! Takes beams recorded on the same energy grid and cut off any parts below or above a certain threshold Energy.
-    ! Returns beams on uniform size array, cut to right size. Also returns E_min of each beam + new min_index and cut NE
-    ! Works for one or for multiple beams (though the latter may defeat the purpose)
+!     ! Takes beams recorded on the same energy grid and cut off any parts below or above a certain threshold Energy.
+!     ! Returns beams on uniform size array, cut to right size. Also returns E_min of each beam + new min_index and cut NE
+!     ! Works for one or for multiple beams (though the latter may defeat the purpose)
 
-    integer, intent(in) :: n_beams, n_energies ! number of beams, number of energies in in_beams
-    real, intent(in) :: in_beams(n_energies, n_beams)
-    real, intent(out) :: out_beams(NE_out_stop-NE_out_start+1, n_beams)
+!     integer, intent(in) :: n_beams, n_energies ! number of beams, number of energies in in_beams
+!     real, intent(in) :: in_beams(n_energies, n_beams)
+!     real, intent(out) :: out_beams(NE_out_stop-NE_out_start+1, n_beams)
 
-    real, intent(in) :: E_min_current, E_step
-    integer, intent(in) :: NE_out_start, NE_out_stop
-    integer, intent(in)  :: beam_starts(n_beams), NE_beams(n_beams)
-    integer, intent(out) :: new_NE, new_NE_beams(n_beams)
+!     real, intent(in) :: E_min_current, E_step
+!     integer, intent(in) :: NE_out_start, NE_out_stop
+!     integer, intent(in)  :: beam_starts(n_beams), NE_beams(n_beams)
+!     integer, intent(out) :: new_NE, new_NE_beams(n_beams)
 
 
-    ! Internal
-    integer steps, to_new_min, i, new_end_id(n_beams)
-    real new_max, new_min, new_start_id(n_beams)
+!     ! Internal
+!     integer steps, to_new_min, i, new_end_id(n_beams)
+!     real new_max, new_min, new_start_id(n_beams)
 
-    new_NE = NE_out_stop-NE_out_start+1
+!     new_NE = NE_out_stop-NE_out_start+1
     
 
-    ! allocate out_beams to right size
-    !allocate(out_beams(new_NE, n_beams))
-    out_beams = in_beams(NE_out_start : NE_out_stop, :)
+!     ! allocate out_beams to right size
+!     !allocate(out_beams(new_NE, n_beams))
+!     out_beams = in_beams(NE_out_start : NE_out_stop, :)
 
-    ! Determine new boundary indices E_min& NE:
-    do i=0, n_beams
-        new_start_id(i) = max(beam_starts(i) - NE_out_start, 1)
-        new_end_id(i) = min(beam_starts(i) + NE_beams(i)-NE_out_start, NE_out_stop)
-        new_NE_beams(i) = new_end_id(i) - new_start_id(i) +1
-    end do
+!     ! Determine new boundary indices E_min& NE:
+!     do i=0, n_beams
+!         new_start_id(i) = max(beam_starts(i) - NE_out_start, 1)
+!         new_end_id(i) = min(beam_starts(i) + NE_beams(i)-NE_out_start, NE_out_stop)
+!         new_NE_beams(i) = new_end_id(i) - new_start_id(i) +1
+!     end do
 
-end subroutine limit_range_index
+! end subroutine limit_range_index
 
-subroutine avg_scheme(in_beams, n_beams, NE, averaging_scheme, avg_types averaged_beams)
-    real, intent(in), dimension(NE, n_beams) :: in_beams
+subroutine avg_scheme(in_beams, n_beams, NE, averaging_scheme, avg_types, averaged_beams)
     integer, intent(in) :: n_beams, NE, avg_types
-    integer, INTENT(IN) :: averaging_scheme
+    integer, INTENT(IN) :: averaging_scheme(n_beams)
+    real(dp), intent(in) :: in_beams(NE, n_beams)
+
     ! avg_types = max(averging_scheme)
-    real, intent(out), dimension(NE, avg_types) :: averaged_beams
+    real(dp), intent(out), dimension(NE, avg_types) :: averaged_beams
     ! any beam with scheme 0 is discarded (intentionally)
 
     ! Internal
     integer, dimension(avg_types) :: avg_counter
+    integer :: i, j
     ! initialize
     avg_counter(:) = 0
     averaged_beams(:,:) = 0
 
     do concurrent (i = 1:avg_types)
         do j = 1,n_beams+1
-            if (avg_scheme(j) == i) then
+            if (averaging_scheme(j) == i) then
                 averaged_beams(:,i) = averaged_beams(:,i) + in_beams(:,j)
                 avg_counter(i) = avg_counter(i) +1
             end if
@@ -500,90 +511,29 @@ subroutine avg_scheme(in_beams, n_beams, NE, averaging_scheme, avg_types average
 
 end subroutine avg_scheme
 
-subroutine pre_evaluate_grid_beamset(n_beams, n_grid_in, E_grid_in, E_start_beams, n_E_beams, n_grid_final, E_grid_final, deg, grids)
-    integer, INTENT(IN) :: n_beams
-    integer, INTENT(IN) :: E_start_beams(n_beams), n_E_beams(n_beams)
-    integer, INTENT(IN) :: n_grid_in(n_beams), n_grid_final(n_beams)
-    real(dp), INTENT(IN) :: E_grid_in(n_grid_in, n_beams), E_grid_final(n_grid_final, n_beams)
+subroutine pre_evaluate_grid_beam(beam, deg, grid_pre_eval, ierr)
     integer, INTENT(IN) :: deg
-
-    type(grid_pre_evaluation) :: grids_pre_eval(nbeams)
-    type(deriv_pre_evaluation) :: grids_1st_deriv_pre_eval(nbeams)
-    type(deriv_pre_evaluation) :: grids_2nd_deriv_pre_eval(nbeams)
-
-    integer :: ierrs(n_beams)
-    
-    type(grid_translation), INTENT(OUT) :: grids(n_beams)
-    
-    do concurrent (i = 1: n_beams)
-        ! calculate grid translations
-        call pre_evaluate_grid_beam(n_grid_in(E_start_beams(i):E_start_beams(i) + n_E_beams(i)), E_grid_in(E_start_beams(i):E_start_beams(i) + n_E_beams(i)),
-                                    n_grid_final, E_grid_final(i), deg, grids_pre_eval(i), ierrs(i))
-
-    end do    
-    return
-end subroutine pre_evaluate_grid_beamset
-
-subroutine pre_evaluate_grid_beam(n_grid_in, E_grid_in, n_grid_final, E_grid_final, deg, grid_pre_eval, ierr)
-    integer, INTENT(IN) :: n_grid_in, n_grid_final
-    real(dp), INTENT(IN) :: E_grid_in(n_grid_in), E_grid_final(n_grid_final)
-    integer, INTENT(IN) :: deg
+    type(beam_type), INTENT(IN) :: beam
 
     type(grid_pre_evaluation), INTENT(OUT) :: grid_pre_eval
     integer, INTENT(OUT) :: ierr
 
-    pre_evaluate_grid(E_grid_in, n_grid_in, E_grid_final, n_grid_final, &
-    deg, 1, grids_pre_eval, ierrs) ! the 1 means do_checks ON
+    call pre_evaluate_grid(beam%grid_origin%x, beam%grid_origin%n, beam%grid_intpol%x, beam%grid_intpol%n, &
+                            deg, 1, grid_pre_eval, ierr) ! the 1 means do_checks ON
     RETURN
 end subroutine pre_evaluate_grid_beam
 
-subroutine pre_evaluate_beamset_deriv(n_beams, grids_pre_eval, nu, grids_deriv_pre_eval, ierrs)
-    integer, INTENT(IN) :: n_beams
-    integer, INTENT(IN) :: n_derivs
-    integer, INTENT(IN) :: nu(n_derivs)
-    type(grid_pre_evaluation), INTENT(IN) :: grids_pre_eval(n_beams)
-
-    type(grid_deriv_pre_evaluation), INTENT(OUT) :: grids_deriv_pre_eval(n_beams)
-    integer, INTENT(OUT) :: ierrs(n_beams)
-
-    do concurrent (i = 1:n_beams)
-       pre_evaluate_beam_deriv(pre_eval(i), nu(j), derivs_pre_eval(i,j), ierrs(i,j))
-    end do
-
-    return
-end subroutine pre_evaluate_beamset_deriv
 
 subroutine pre_evaluate_beam_deriv(grid_pre_eval, nu, grid_deriv_pre_eval, ierr)
     integer, INTENT(IN) :: nu
     type(grid_pre_evaluation), INTENT(IN) :: grid_pre_eval
 
-    type(grid_deriv_pre_evaluation), INTENT(OUT) :: grid_deriv_pre_eval
+    type(deriv_pre_evaluation), INTENT(OUT) :: grid_deriv_pre_eval
     integer, INTENT(OUT) :: ierr
 
-    pre_evaluate_deriv(pre_eval, nu, deriv_pre_eval, ierr)
+    call pre_evaluate_deriv(grid_pre_eval, nu, grid_deriv_pre_eval, ierr)
 end subroutine pre_evaluate_beam_deriv
 
-subroutine interpolate_beamset(n_beams, intensities, grids_pre_eval, E_start_beams_out, n_E_beams_out, n_E_out, interpolated, coeffs, ierrs)
-    integer, INTENT(IN) :: n_beams
-    integer, INTENT(IN) :: n_E_out
-    type(grid_pre_evaluation), INTENT(IN) :: grids_pre_eval(n_beams)
-    real(dp), INTENT(IN) :: intensities(n_beams, n_E_out)
-    integer, INTENT(IN) :: E_start_beams_out, n_E_beams_out
-    type(intpol_coeffs), INTENT(OUT) :: coeffs(n_beams)
-    
-    real(dp), INTENT(OUT) :: interpolated(n_beams, n_E_out)
-    integer, INTENT(OUT) :: ierrs(n_beams)
-
-
-    do concurrent (i = 1,n_beams)
-        call interpolate_beam(intensities(), &
-                              grids_pre_eval(i), interpolated(E_start_beams_out(i):E_start_beams_out(i)+n_E_beams_out(i)),&
-                              coeffs(i), ierrs(i))
-
-    end do
-    RETURN
-end subroutine interpolate_beamset
-    
 
 subroutine interpolate_beam(intensity, grid_pre_eval, interpolated_intensity, coeffs, ierr)
     type(grid_pre_evaluation), INTENT(IN) :: grid_pre_eval
@@ -591,28 +541,26 @@ subroutine interpolate_beam(intensity, grid_pre_eval, interpolated_intensity, co
 
     real(dp), INTENT(OUT) :: interpolated_intensity(grid_pre_eval%grid_target%n)
     integer, INTENT(OUT) :: ierr
-    type(intpol_coeffs), INTENT(OUT) :: coeffs
+    real(dp), ALLOCATABLE, INTENT(OUT) :: coeffs(:)
 
     call interpolate_fast(grid_pre_eval%grid_origin%n, intensity, grid_pre_eval, interpolated_intensity, coeffs, ierr)
 end subroutine interpolate_beam
 
-subroutine interpolate_deriv_beamset(n_beams, grids_pre_eval, E_start_beams_out, n_E_beams_out, &
-                                        n_E_out, coeffs, intensity_derivs, ierrs)
-    integer, INTENT(IN) :: n_beams
-    integer, INTENT(IN) :: n_E_out
-    type(grid_pre_evaluation) :: grids_pre_eval(n_beams)
-    integer, INTENT(IN) :: E_start_beams_out, n_E_beams_out
-    type(intpol_coeffs), INTENT(IN) :: coeffs(n_beams)
+subroutine interpolate_deriv_beam(grid_pre_eval, deriv_pre_eval, coeffs, intensity_deriv, ierr)
 
-    real(dp), INTENT(OUT) :: intensity_derivs(n_beams)
-    integer, INTENT(OUT) :: ierrs(n_beams)
+    type(grid_pre_evaluation), INTENT(IN) :: grid_pre_eval
+    TYPE(deriv_pre_evaluation), INTENT(IN):: deriv_pre_eval
+    real(dp), INTENT(IN), ALLOCATABLE :: coeffs(:)
 
-    do concurrent (i = 1:n_beams)
-        call interpolate_deriv_fast(grids_pre_eval%infos, grids_pre_eval%grid_target%n, grids_pre_eval%intervals, coeffs(i), &
-                                    intensity_derivs(i), ierrs(i))
-    end do
+    real(dp), INTENT(OUT), ALLOCATABLE :: intensity_deriv(:)
+    integer, INTENT(OUT) :: ierr
+
+    call interpolate_deriv_fast(grid_pre_eval%infos, grid_pre_eval%grid_target%n, grid_pre_eval%intervals, coeffs, &
+                                deriv_pre_eval%deriv_deBoor_matrix, intensity_deriv, ierr)
     RETURN
-end subroutine interpolate_deriv_beamset
+end subroutine interpolate_deriv_beam
+
+
 
 
 ! Library functions    
@@ -622,7 +570,7 @@ end subroutine interpolate_deriv_beamset
 subroutine pendry_y(n_data, intensity, derivative, v0i, y_func)
     integer, INTENT(IN) :: n_data
     real(dp), INTENT(IN) :: intensity(n_data)
-    real(dp), INTENT(IN) :: derovative(n_data)
+    real(dp), INTENT(IN) :: derivative(n_data)
     real(dp), INTENT(IN) :: v0i
 
     real(dp), INTENT(OUT) :: y_func(n_data)
