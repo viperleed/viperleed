@@ -11,18 +11,24 @@ Author: Florian Doerr
 Defines the MeasurementPlot class.
 """
 
+import PyQt5.QtCore as qtc
 from PyQt5 import QtWidgets as qtw
+import numpy as np
+from matplotlib.cm import get_cmap
 
 from viperleed import guilib as gl
 from viperleed.guilib.basewidgets import MeasurementFigureCanvas as Canvas
 from viperleed.guilib.measure.datapoints import DataPoints, QuantityInfo
 from viperleed.guilib.measure.widgets.checkcombobox import CheckComboBox
 
+from matplotlib.markers import MarkerStyle
+
 
 # TODO: temporarily one can adjust here the structure in which a
 # measurement will be plotted (flat or step-wise). Will then become
 # a combo box.
-SEPARATE_STEPS = False
+SEPARATE_STEPS = True
+COLOR_FRACTION = 0.7
 
 
 class MeasurementPlot(qtw.QWidget):
@@ -33,11 +39,17 @@ class MeasurementPlot(qtw.QWidget):
         super().__init__(parent=parent)
         self._ctrls = {'quantities': PlotComboBox(),}
         self._glob = {'plot_lines': {}}
-        self.__markers = ('.', 'o', 'x', '+', '*')
+        self.__markers = (MarkerStyle('o', 'full'), MarkerStyle('o', 'none'),
+                          'x', '+', '*')
+        
+        self.__colors = [get_cmap('Greys'), get_cmap('Blues'),
+                         get_cmap('Oranges'),  get_cmap('Greens'),
+                         get_cmap('Purples'), get_cmap('Reds'),]
         self.__data_points = None
         self.__canvas = Canvas()
 
         self.__compose()
+        self._ctrls['quantities'].check_changed.connect(self.plot_all_data)
 
     @property
     def data_points(self):
@@ -152,89 +164,129 @@ class MeasurementPlot(qtw.QWidget):
         self.setLayout(layout)
 
     def __plot_all_energy_resolved_data(self):
-        marker = self.__markers[0]
-        for measured_quantity in self.plotted_quantities:
+        for i, measured_quantity in enumerate(self.plotted_quantities):
+            marker = self.__markers[i]
             self._glob['plot_lines'][measured_quantity] = []
-            data, nominal_energies = (
-                self.data_points.get_energy_resolved_data(
-                    measured_quantity, include_energies=True
+            try:
+                data, nominal_energies = (
+                    self.data_points.get_energy_resolved_data(
+                        measured_quantity, include_energies=True
+                        )
                     )
-                )
-            for ctrl_data in data:
+            except ValueError:
+                self.__canvas.ax.text(0,0, 'No data')
+                continue
+
+            for j, ctrl_data in enumerate(data):
+                color = self.__colors[j](COLOR_FRACTION)
                 self._glob['plot_lines'][measured_quantity].extend(
-                    self.__canvas.ax.plot(nominal_energies, ctrl_data, marker)
+                    self.__canvas.ax.plot(nominal_energies, ctrl_data,
+                                          marker=marker, linestyle='',
+                                          color=color)
                     )
 
     def __plot_all_time_resolved_data(self):
         fig = self.__canvas
-        marker = self.__markers[0]
-        for measured_quantity in self.plotted_quantities:
+        for i, measured_quantity in enumerate(self.plotted_quantities):
+            marker = self.__markers[i]
             self._glob['plot_lines'][measured_quantity] = []
-            data, times = (
-                self.data_points.get_time_resolved_data(
-                    measured_quantity, separate_steps=SEPARATE_STEPS,
-                    absolute_times=not SEPARATE_STEPS, include_energies=False
+            try:
+                data, times = (
+                    self.data_points.get_time_resolved_data(
+                        measured_quantity, separate_steps=SEPARATE_STEPS,
+                        absolute_times=not SEPARATE_STEPS,
+                        include_energies=False
+                        )
                     )
-                )
+            except ValueError:
+                self.__canvas.ax.text(0, 0, 'No data')
+                continue
 
-            for ctrl_times, ctrl_data in zip(times, data):
+            for j, (ctrl_times, ctrl_data) in enumerate(zip(times, data)):
                 if SEPARATE_STEPS:
-                    for step_time, step_data in zip(ctrl_times, ctrl_data):
-                        fig.ax.plot(step_time, step_data, marker)
+                    color = self.__colors[j](np.linspace(0.2, 0.8,
+                                                         len(ctrl_data)))
+                    for k, (step_time, step_data) in enumerate(zip(ctrl_times, ctrl_data)):
+                        # Cannot construct a big array of arrays and
+                        # plot in parallel bacause each step may (and
+                        # usually will) have a variable number of data
+                        fig.ax.plot(step_time, step_data, marker=marker,
+                                    linestyle='', color=color[k])
                 else:
+                    color = self.__colors[j](COLOR_FRACTION)
                     self._glob['plot_lines'][measured_quantity].extend(
-                        fig.ax.plot(ctrl_times, ctrl_data, marker)
+                        fig.ax.plot(ctrl_times, ctrl_data, marker=marker,
+                                    linestyle='', color=color)
                         )
 
     def __plot_new_energy_resolved_data(self):
         fig = self.__canvas
-        marker = self.__markers[0]
-        for measured_quantity in self.plotted_quantities:
+        for i, measured_quantity in enumerate(self.plotted_quantities):
+            marker = self.__markers[i]
             if measured_quantity not in self._glob['plot_lines']:
                 self._glob['plot_lines'][measured_quantity] = []
-            data, nominal_energies = (
-                self.data_points.get_energy_resolved_data(
-                    measured_quantity, include_energies=True
+            try:
+                data, nominal_energies = (
+                    self.data_points.get_energy_resolved_data(
+                        measured_quantity, include_energies=True
+                        )
                     )
-                )
+            except ValueError:
+                self.__canvas.ax.text(0,0, 'No data')
+                continue
+
             n_controllers = len(data)
             # Loop over controllers
-            for i, ctrl_data in enumerate(data):
+            for j, ctrl_data in enumerate(data):
+                color = self.__colors[j](COLOR_FRACTION)
                 if len(self._glob['plot_lines'][measured_quantity]) < n_controllers:
                     self._glob['plot_lines'][measured_quantity].extend(
-                        fig.ax.plot(nominal_energies[-1], ctrl_data[-1], marker)
+                        fig.ax.plot(nominal_energies[-1], ctrl_data[-1],
+                                    marker=marker, linestyle='', color=color)
                         )
                     continue
-                line = self._glob['plot_lines'][measured_quantity][i]
+                line = self._glob['plot_lines'][measured_quantity][j]
                 line.set_data(nominal_energies, ctrl_data)
         fig.ax.relim()
         fig.ax.autoscale_view()
 
     def __plot_new_time_resolved_data(self):
         fig = self.__canvas
-        marker = self.__markers[0]
-        for measured_quantity in self.plotted_quantities:
+        for i, measured_quantity in enumerate(self.plotted_quantities):
+            marker = self.__markers[i]
             if measured_quantity not in self._glob['plot_lines']:
                 self._glob['plot_lines'][measured_quantity] = []
-            data, times = (
-                self.data_points.get_time_resolved_data(
-                    measured_quantity, separate_steps=SEPARATE_STEPS,
-                    absolute_times=not SEPARATE_STEPS, include_energies=False
+            try:
+                data, times = (
+                    self.data_points.get_time_resolved_data(
+                        measured_quantity, separate_steps=SEPARATE_STEPS,
+                        absolute_times=not SEPARATE_STEPS,
+                        include_energies=False
+                        )
                     )
-                )
+            except ValueError:
+                self.__canvas.ax.text(0,0, 'No data')
+                continue
+
             n_controllers = len(data)
             # Loop over controllers
-            for i, (ctrl_times, ctrl_data) in enumerate(zip(times, data)):
+            for j, (ctrl_times, ctrl_data) in enumerate(zip(times, data)):
                 if SEPARATE_STEPS:
+                    color = self.__colors[j](np.linspace(
+                        0.2, 0.8, self.data_points.num_measurements
+                        ))
                     # Enough to plot the last step for each
-                    fig.ax.plot(ctrl_times[-1], ctrl_data[-1], marker)
+                    fig.ax.plot(ctrl_times[-1], ctrl_data[-1], marker=marker,
+                                linestyle='', color=color[len(ctrl_data)-1])
                 else:
+                    color = self.__colors[j](COLOR_FRACTION)
                     if len(self._glob['plot_lines'][measured_quantity]) < n_controllers:
                         self._glob['plot_lines'][measured_quantity].extend(
-                            fig.ax.plot(ctrl_times, ctrl_data, marker)
+                            fig.ax.plot(ctrl_times, ctrl_data, marker=marker,
+                                        linestyle='', color=color)
                             )
                         continue
-                    line = self._glob['plot_lines'][measured_quantity][i]
+                    line = self._glob['plot_lines'][measured_quantity][j]
                     line.set_data(ctrl_times, ctrl_data)
         if not SEPARATE_STEPS:
             fig.ax.relim()
@@ -243,6 +295,8 @@ class MeasurementPlot(qtw.QWidget):
 
 class PlotComboBox(CheckComboBox):
     """A CheckComboBox which can QuantityInfo objeczts."""
+
+    check_changed = qtc.pyqtSignal()
 
     def __init__(self, parent=None):
         """ Initialize instance.
@@ -284,4 +338,5 @@ class PlotComboBox(CheckComboBox):
                 for i in range(self.count()):
                     enable = self.model().item(i, 0)
                     enable.setEnabled(True)
+        self.check_changed.emit()
 
