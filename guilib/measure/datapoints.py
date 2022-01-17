@@ -35,6 +35,7 @@ _ALIASES = {'Energy': ('nominal_energy',),
             'Measured_Energy': ('hv',),
             'I_Sample': ('isample',),
            }
+NAN = float('nan')
 
 
 class QuantityInfo(enum.Enum):
@@ -119,6 +120,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         self.delimiter = ','
         self.primary_first_time = None
         self.__exceptional_keys = (QuantityInfo.IMAGES, QuantityInfo.ENERGY )
+        self.num_measurements = None
 
     @property
     def nominal_energies(self):
@@ -186,19 +188,47 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
 
     def calculate_times(self, continuous=False):
         """Calculate times for the last data point."""
+        time = QuantityInfo.TIMES
         if not self.primary_first_time:
             self.primary_first_time = (
-                    self[0][QuantityInfo.TIMES][self.primary_controller][0]
+                    self[0][time][self.primary_controller][0]
                     )
+        for ctrl in self[-1][time]:
+            if not len(self[-1][time][ctrl]):
+                continue
+            if not continuous:
+                self[-1][time][ctrl][0] -= self.primary_first_time
+                self[-1][time][ctrl][0] += ctrl.initial_delay
+            else:
+                if len(self) > 1 and not ctrl == self.primary_controller:
+                    self[-1][time][ctrl][0] = (
+                        self[-2][time][ctrl][-1] +
+                        ctrl.measurement_interval
+                        )
+                else:
+                    self[-1][time][ctrl][0] -= self.primary_first_time
+                    self[-1][time][ctrl][0] += ctrl.initial_delay
+            quantity = ctrl.measured_quantities[0]
+            length = len(self[-1][quantity][ctrl])
+            for i in range(length - 1):
+                self[-1][time][ctrl].append(
+                    self[-1][time][ctrl][0] +
+                    ctrl.measurement_interval * (i + 1)
+                    )
+    def recalculate_last_setp_times(self):
+        """Recalculate last step time for continuous mode.
+
+        This is necessary because the secondaries keep returning
+        measurements before they are turned off.
+        """
+        if not self.has_data():
+            return
         for ctrl in self[-1][QuantityInfo.TIMES]:
             if not len(self[-1][QuantityInfo.TIMES][ctrl]):
                 continue
-            if not continuous:
-                self[-1][QuantityInfo.TIMES][ctrl][0] -= self.primary_first_time
-                self[-1][QuantityInfo.TIMES][ctrl][0] += ctrl.initial_delay
-            else:
-                if len(self) > 1 and not ctrl == self.primary_controller:
-                    self[-1][QuantityInfo.TIMES][ctrl][0] = self[-2][QuantityInfo.TIMES][ctrl][-1] + ctrl.measurement_interval
+            time = self[-1][QuantityInfo.TIMES][ctrl][0]
+            self[-1][QuantityInfo.TIMES][ctrl] = []
+            self[-1][QuantityInfo.TIMES][ctrl].append(time)
             quantity = ctrl.measured_quantities[0]
             length = len(self[-1][quantity][ctrl])
             for i in range(length - 1):
@@ -317,12 +347,15 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                     raise ValueError('DataPoints contains energy-resolved '
                                      'data but it was attempted to return '
                                      'time resolved data.')
+                ctrl_time = data_point[QuantityInfo.TIMES][ctrl]
+                if not len(measurements) == len(ctrl_time):
+                    continue
                 if not separate_steps:
                     data[ctrl_idx].extend(measurements)
-                    times[ctrl_idx].extend(data_point[QuantityInfo.TIMES][ctrl])
+                    times[ctrl_idx].extend(ctrl_time)
                 else:
                     data[ctrl_idx].append(measurements)
-                    times[ctrl_idx].append(data_point[QuantityInfo.TIMES][ctrl])
+                    times[ctrl_idx].append(ctrl_time)
                     for i, time_set in enumerate(times[ctrl_idx]):
                         start_time = times[ctrl_idx][i][0]
                         times[ctrl_idx][i] = [t - start_time
@@ -479,7 +512,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                     if quantity not in self.__exceptional_keys:
                         for ctrl, measurement in ctrl_dict.items():
                             extra_length = max_length - len(measurement)
-                            measurement += ['Nan']*extra_length
+                            measurement += [NAN]*extra_length
                             data.append(measurement)
                 for line in zip(*data):
                     writer.writerow(line)
@@ -496,6 +529,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
 
     def has_data(self):
         """Check if there is already data in the class."""
-        if any(t for t in self[0][QuantityInfo.TIMES].values()):
-            return True
+        if len(self)>=1:
+            if any(t for t in self[0][QuantityInfo.TIMES].values()):
+                return True
         return False

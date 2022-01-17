@@ -106,7 +106,6 @@ class MeasureEnergySetpoint(MeasurementABC):
         -------
         bool
         """
-        self.new_data_available.emit()
         if self.current_energy >= self.__end_energy:
             self.calibrate_energy_setpoint()
             return True

@@ -716,10 +716,13 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         """
         if any(device.busy for device in self.devices):
             return
-        self.data_points.calculate_times()
         if self.is_finished():
             self.prepare_finalization()
+            self.data_points.calculate_times()
+            self.new_data_available.emit()
         else:
+            self.data_points.calculate_times()
+            self.new_data_available.emit()
             self.start_next_measurement()
 
     def is_preparation_finished(self):

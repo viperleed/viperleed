@@ -63,15 +63,16 @@ class TimeResolved(MeasurementABC):
                 'measurement_settings', 'cycle_time', fallback=100
                 )
 
+        num_meas = (1 + round((self.__end_energy - self.start_energy)
+                   / self.__delta_energy))
         if self.is_continuous_measurement:
             self.prepare_continuous_mode()
+            self.data_points.num_measurements = num_meas
         else:
             self.__hv_settle_time = 0
             self.__hv_settle_time = self.primary_controller.settings.getint(
                 'measurement_settings', 'hv_settle_time', fallback=0
                 )
-            num_meas = (1 + round((self.__end_energy - self.start_energy)
-                       / self.__delta_energy))
             self.__n_digits = len(str(num_meas))
         self.timer = qtc.QTimer(parent=self)
         self.timer.setSingleShot(True)
@@ -136,7 +137,7 @@ class TimeResolved(MeasurementABC):
         -------
         bool
         """
-        self.new_data_available.emit()
+        # self.new_data_available.emit()
         if self.__time_over or self.current_energy >= self.__end_energy:
             self.on_finished()
             return True
@@ -417,6 +418,7 @@ class TimeResolved(MeasurementABC):
             self.data_points.calculate_times(continuous=True)
         else:
             self.data_points.calculate_times()
+        self.new_data_available.emit()
         if self.is_finished():
             self.prepare_finalization()
         else:
@@ -434,4 +436,22 @@ class TimeResolved(MeasurementABC):
                 )
         self.ready_for_measurement.emit()
 
+    def finalize(self, busy=False):
+        """Finish the measurement cycle.
+
+        Save data and set energy to zero.
+
+        Parameters
+        ----------
+        busy : bool
+            Needed if the finalize is called by the controller
+            busy state change signal. (continuous measurement mode)
+
+        Returns
+        -------
+        None.
+        """
+        if self.is_continuous_measurement:
+            self.data_points.recalculate_last_setp_times()
+        super().finalize(busy=busy)
 
