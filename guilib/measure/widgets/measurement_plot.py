@@ -15,6 +15,7 @@ import PyQt5.QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 import numpy as np
 from matplotlib.cm import get_cmap
+from matplotlib.lines import Line2D
 
 from viperleed import guilib as gl
 from viperleed.guilib.basewidgets import MeasurementFigureCanvas as Canvas
@@ -27,7 +28,7 @@ from matplotlib.markers import MarkerStyle
 # TODO: temporarily one can adjust here the structure in which a
 # measurement will be plotted (flat or step-wise). Will then become
 # a combo box.
-SEPARATE_STEPS = True
+SEPARATE_STEPS = False
 COLOR_FRACTION = 0.7
 
 
@@ -39,12 +40,11 @@ class MeasurementPlot(qtw.QWidget):
         super().__init__(parent=parent)
         self._ctrls = {'quantities': PlotComboBox(),}
         self._glob = {'plot_lines': {}}
-        self.__markers = (MarkerStyle('o', 'full'), MarkerStyle('o', 'none'),
-                          'x', '+', '*')
-        
+        self.__markers = ('o', 'P', '*', 'v', 'h', 's')
         self.__colors = [get_cmap('Greys'), get_cmap('Blues'),
                          get_cmap('Oranges'),  get_cmap('Greens'),
                          get_cmap('Purples'), get_cmap('Reds'),]
+        self.__ctrl_color = {}
         self.__data_points = None
         self.__canvas = Canvas()
 
@@ -119,6 +119,7 @@ class MeasurementPlot(qtw.QWidget):
                 self.__canvas.ax.set_ylabel(
                     f"{self.plotted_quantities[0].common_label} "
                     f"({self.plotted_quantities[0].units})")
+        self.__canvas.ax.legend(handles=self.__make_legend(), loc='center left', bbox_to_anchor=(1, 0.5))
         self.__canvas.draw_idle()
 
     def plot_new_data(self):
@@ -149,7 +150,7 @@ class MeasurementPlot(qtw.QWidget):
                 self.__canvas.ax.set_ylabel(
                     f"{self.plotted_quantities[0].common_label} "
                     f"({self.plotted_quantities[0].units})")
-
+        self.__canvas.ax.legend(handles=self.__make_legend(), loc='center left', bbox_to_anchor=(1, 0.5))
         self.__canvas.draw_idle()
 
     def __compose(self):
@@ -291,6 +292,27 @@ class MeasurementPlot(qtw.QWidget):
         if not SEPARATE_STEPS:
             fig.ax.relim()
             fig.ax.autoscale_view()
+
+    def __make_legend(self):
+        """Create the legend for the displayed plot."""
+        controllers = []
+        quantities = {}
+        # legend = [[], []]
+        legend_elements = []
+        j = 0
+        for i, measured_quantity in enumerate(self.plotted_quantities):
+            marker = self.__markers[i]
+            # TODO: throws an error if key does not exist in data_points fix!!!!!
+            for controller in self.data_points[0][measured_quantity]:
+                if controller.serial.port_name not in controllers:
+                    controllers.append(controller.serial.port_name)
+                    legend_elements.append(Line2D([0], [0], marker='o', color='w', label=controller.serial.port_name, markerfacecolor=self.__colors[j](COLOR_FRACTION), markersize=7))
+                    j += 1
+            if measured_quantity not in quantities:
+                quantities[measured_quantity] = marker
+        for quantity, marker in quantities.items():
+            legend_elements.append(Line2D([0], [0], marker=marker, color='w', label=quantity.label, markerfacecolor='#000000', markersize=7))
+        return legend_elements
 
 
 class PlotComboBox(CheckComboBox):
