@@ -373,7 +373,7 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities, E_start_beams,
 
             n_E_beams_out(i) = - E_start_beams_out(i) + &
                 find_grid_correspondence( &
-                E_grid_in(cut_E_start_beams(i) + cut_n_E_beams(i)), &
+                E_grid_in(cut_E_start_beams(i) + cut_n_E_beams(i) - 1), &
                 n_E_out, &
                 E_grid_out, &
                 E_start_beams_out(i) &
@@ -389,8 +389,16 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities, E_start_beams,
     end if
 
     !print*, "new_min_index, new_max_index", new_min_index, new_max_index
-    !print*, "E_start_beams, E_start_beams_out", E_start_beams, E_start_beams_out
-    !print*, "n_E_beams, n_E_beams_out", n_E_beams, n_E_beams_out
+    !print*, "E_start_beams", cut_E_start_beams(15:20)
+    !print*, "E_start_beams_out", E_start_beams_out(15:20)
+    !do i=15,20
+    !    print*, "E_in(E_start_beams)", E_grid_in(cut_E_start_beams(i))
+    !    print*, "E_out(E_start_beams_out)", E_grid_out(E_start_beams_out(i))
+    !    print*, "stop_in", E_grid_in(cut_E_start_beams(i) + cut_n_E_beams(i)-1)
+    !    print*, "stop_out", E_grid_out(E_start_beams_out(i) + n_E_beams_out(i)-1)
+    !end do
+    !print*, "n_E_beams", n_E_beams(15:20)
+    !print*, "n_E_beams_out", n_E_beams_out(15:20)
     !print*, "n_beams, n_E_in, n_E_out, deg", n_beams, n_E_in, n_E_out, deg
     !print*, " cut_E_start_beams, cut_n_E_beams", cut_E_start_beams, cut_n_E_beams
 
@@ -526,7 +534,6 @@ pure integer function find_grid_correspondence(value, n_steps, steps, min_bound)
     do i = min_bound, n_steps
         if (steps(i) < value) then
             interval = interval + 1
-            continue
         else
             RETURN
         end if
