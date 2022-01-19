@@ -1,0 +1,67 @@
+        # TODO: calculation will be moved to datapoints class
+        # TODO: currently using nominal energy on an uncalibrated energy measurement: offset might be larger than step height!!!
+        # quantity = self.settings.get(
+            # 'measurement_settings', 'measure_this', fallback='None'          measure_this not in config anymore
+            # )
+        return
+        quantity_obj = QuantityInfo.from_label(quantity)
+        percentage = self.settings.getfloat('measurement_settings',
+                                            'percentage', fallback=0.1)
+        points = self.settings.getint(
+            'measurement_settings', 'relevant_points', fallback=10
+            )
+        if quantity_obj == QuantityInfo.HV:
+            to_change = 'hv_settle_time'
+        elif quantity_obj == QuantityInfo.I0:
+            to_change = 'i0_settle_time'
+        else:
+            print('not one of the expected quantities measured')
+            # TODO: emit error
+            return
+        # TODO:                             get_time_resolved_data currently throws an index error
+        # TODO: consider new dictionary data structure here
+        # measured, _ = self.data_points.get_time_resolved_data(
+            # quantity_obj, separate_steps=True, absolute_times=True
+            # )
+        interval = self.primary_controller.measurement_interval
+
+        if self.is_continuous_measurement:
+            for ctrl in self.controllers:
+                del ctrl.continue_prepare_todos['set_continuous_mode']
+
+            for j, step in enumerate(measured[0]):
+                if j == 0:
+                    previous_height = sum(step[-points:])/points
+                    continue
+                current_height = sum(step[-points:])/points
+                max_deviation = (current_height - previous_height) * percentage
+                points = 0
+                for measurement in reversed(step):
+                    if abs(measurement - current_height) < max_deviation:
+                        points += 1
+                    else:
+                        break
+                if points == 0:
+                    points = 1
+                previous_height = current_height
+                settle_time = int(1000*points*interval)
+                if settle_time > self.__settle_time:
+                    self.__settle_time = settle_time
+
+            self.primary_controller.settings.set(
+                'measurement_settings', to_change, str(self.__settle_time))
+            file_name = ast.literal_eval(
+                            self.settings.get('devices', 'primary_controller')
+                            )[0]
+            # Create a dummy of the settings in order to keep the
+            # original number of measurements to average over.
+            orig_settings = ConfigParser(comment_prefixes='/',
+                                         allow_no_value=True)
+            orig_settings.read(file_name)
+            orig_settings.set(
+                'measurement_settings', to_change, str(self.__settle_time))
+            with open(file_name, 'w') as configfile:
+                orig_settings.write(configfile)
+        else:
+            pass
+            # TODO: save I0 (or I00) or only images for wiggle
