@@ -215,6 +215,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                     self[-1][time][ctrl][0] +
                     ctrl.measurement_interval * (i + 1)
                     )
+
     def recalculate_last_setp_times(self):
         """Recalculate last step time for continuous mode.
 
@@ -237,46 +238,50 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                     ctrl.measurement_interval * (i + 1)
                     )
 
-    def get_energy_resolved_data(self, key, include_energies=False):
+    def get_energy_resolved_data(self, *keys, include_energies=False):
         """Get energy resolved data for each controller.
 
         Parameters
         ----------
-        key : str
-            The key associated with the requested
-            measured quantity.
+        keys : QuantityInfo objects
+            The keys associated with the requested
+            measured quantities.
         include_energies : bool, optional
             Whether energy should be returned. Default is False.
 
         Returns
         -------
-        data : list
-            Contains measurements.
-        self.nominal_energies : list
-            Contains set energies.
+        extracted : dict
+            Contains all requested data.
         """
-        data = []
-        if key not in self[0]:
-            raise ValueError(f'{self.__class__.__name__}: invalid key {key}')
-        for measurement in self[0][key]:
-            if measurement:
-                data.append([])
+        extracted = {}
+        check_length = False
+        for key in keys:
+            if key not in self[0]:
+                continue
 
-        for data_point in self:
-            i = 0
-            for ctrl, measurement in data_point[key].items():
-                if len(measurement) == 1:
-                    data[i].append(*measurement)
-                else:
-                    raise ValueError('DataPoints contains time-resolved data '
-                                     'but it was attempted to return energy '
-                                     'resolved data.')
-                i += 1
+            for ctrl in self[0][key]:
+                if ctrl:
+                    if ctrl not in extracted:
+                        extracted[ctrl] = {}
+                    extracted[ctrl][key] = []
+
+            for data_point in self:
+                for ctrl, measurement in data_point[key].items():
+                    if len(measurement) == 1:
+                        extracted[ctrl][key].append(*measurement)
+                    elif len(measurement) == 0:
+                        # Measurement not ready on this controller yet
+                        pass
+                    else:
+                        raise ValueError('DataPoints contains time-resolved '
+                                         'data but it was attempted to return '
+                                         'energy resolved data.')
         if include_energies:
-            return data, self.nominal_energies
-        return data
+            return extracted, self.nominal_energies
+        return extracted
 
-    def get_time_resolved_data(self, key, include_energies=False,
+    def get_time_resolved_data(self, *keys, include_energies=False,
                                separate_steps=True, absolute_times=False):
         """Get time resolved data for each controller.
 
@@ -286,9 +291,9 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
 
         Parameters
         ----------
-        key : str
-            The key associated with the requested
-            measured quantity.
+        keys : QuantityInfo objects
+            The keys associated with the requested
+            measured quantities.
         include_energies : bool, optional
             Whether energy should be returned. Default is False.
         separate_steps : bool, optional
@@ -304,67 +309,50 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
 
         Returns
         -------
-        data : list
-            Contains measurements and associated
-            starting times.
-        times : list
-            Contains times at which measurements
-            were taken.
-        nominal_energies : list
-            Contains set energies. This is only returned if
-            include_energies == True.
+        extracted : dict
+            Contains all requested data.
         """
         if not separate_steps and not absolute_times:
             raise ValueError('Cannot return flat data '
                              'with relative times.')
-        data = []
-        times = []
-        if key not in self[0]:
-            raise ValueError(f'{self.__class__.__name__}: invalid key {key}')
+        extracted = {}
+        ctrl_time_done = []
+        q_time = QuantityInfo.TIMES
+        for key in keys:
+            if key not in self[0]:
+                continue
 
-        # Prepare data and times to contain as many empty lists as
-        # there are controllers that measured key during the first
-        # (and all the other) energy step.
-        for controller in self[0][key]:
-            if controller:
-                data.append([])
-                times.append([])
+            for ctrl in self[0][key]:
+                if ctrl:
+                    if ctrl not in extracted:
+                        extracted[ctrl] = {}
+                        extracted[ctrl][q_time] = []
+                    extracted[ctrl][key] = []
 
-        # Run over each energy step
-        # For each energy step we add information from the
-        # ctrl_idx-th controller into data[ctrl_idx]. At the
-        # end, data[ctrl_idx] will contain all the measurements
-        # done by the ctrl_idx-th controller at all energy steps,
-        # with the energy being the 'innermost' index.
-        for data_point in self:
-            # ctrl_idx is an index running over controllers that
-            # measured key. We cannot simply enumerate, because
-            # there may be controllers that did not measure the
-            # stuff.
-            ctrl_idx = 0
-            for ctrl, measurements in data_point[key].items():
-                if len(measurements) == 1:
-                    raise ValueError('DataPoints contains energy-resolved '
-                                     'data but it was attempted to return '
-                                     'time resolved data.')
-                ctrl_time = data_point[QuantityInfo.TIMES][ctrl]
-                if not len(measurements) == len(ctrl_time):
-                    continue
-                if not separate_steps:
-                    data[ctrl_idx].extend(measurements)
-                    times[ctrl_idx].extend(ctrl_time)
-                else:
-                    data[ctrl_idx].append(measurements)
-                    times[ctrl_idx].append(ctrl_time)
-                    for i, time_set in enumerate(times[ctrl_idx]):
-                        start_time = times[ctrl_idx][i][0]
-                        times[ctrl_idx][i] = [t - start_time
-                                              for t in times[ctrl_idx][i]]
-                ctrl_idx += 1
+            for data_point in self:
+                start_time = data_point[q_time][self.primary_controller][0]
+                for ctrl, measurements in data_point[key].items():
+                    ctrl_time = data_point[q_time][ctrl]
+                    if len(measurements) != len(ctrl_time):
+                        # step is not over yet
+                        continue
+                    if not separate_steps:
+                        extracted[ctrl][key].extend(measurements)
+                        if ctrl not in ctrl_time_done:
+                            extracted[ctrl][q_time].extend(ctrl_time)
+                    else:
+                        extracted[ctrl][key].append(measurements)
+                        if ctrl not in ctrl_time_done:
+                            ctrl_time = [t - start_time for t in ctrl_time]
+                            extracted[ctrl][q_time].append(ctrl_time)
+
+            for ctrl in extracted:
+                if ctrl not in ctrl_time_done:
+                    ctrl_time_done.append(ctrl)
 
         if include_energies:
-            return data, times, self.nominal_energies
-        return data, times
+            return extracted, self.nominal_energies
+        return extracted
 
     def new_data_point(self, energy, controllers, cameras):
         """Create a new data_point.

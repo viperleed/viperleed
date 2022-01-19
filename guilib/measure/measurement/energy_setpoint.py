@@ -135,14 +135,20 @@ class MeasureEnergySetpoint(MeasurementABC):
         -------
         None
         """
-        measured_energies, nominal_energies = (
+        data, nominal_energies = (
             self.data_points.get_energy_resolved_data(
                 QuantityInfo.HV, include_energies=True
                 )
             )
+        measured_energies = []
+        for ctrl, measurements in data.items():
+            measured_energies = measurements[QuantityInfo.HV]
+            break
+        # for ctrl, measurements in data.items():
+            # TODO: loop over all controllers, calculate polynomial and plot in the future
         domain = ast.literal_eval(
             self.primary_controller.settings['energy_calibration']['domain'])
-        fit_polynomial = Polynomial.fit(measured_energies[0], nominal_energies,
+        fit_polynomial = Polynomial.fit(measured_energies, nominal_energies,
                                         1, domain=domain, window=domain)
         coefficients = str(list(fit_polynomial.coef))
         self.primary_controller.settings.set(

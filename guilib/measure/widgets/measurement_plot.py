@@ -165,130 +165,144 @@ class MeasurementPlot(qtw.QWidget):
         self.setLayout(layout)
 
     def __plot_all_energy_resolved_data(self):
-        for i, measured_quantity in enumerate(self.plotted_quantities):
-            marker = self.__markers[i]
-            self._glob['plot_lines'][measured_quantity] = []
-            try:
-                data, nominal_energies = (
-                    self.data_points.get_energy_resolved_data(
-                        measured_quantity, include_energies=True
-                        )
-                    )
-            except ValueError:
-                self.__canvas.ax.text(0,0, 'No data')
-                continue
+        fig = self.__canvas
+        data, nominal_energies = (
+            self.data_points.get_energy_resolved_data(
+                *self.plotted_quantities, include_energies=True
+                ))
+        if not data:
+            fig.ax.text(0,0, 'No data')
+            return
+        self.__ctrl_color = {}
+        for color, ctrl in zip(self.__colors, data):
+            self.__ctrl_color[ctrl] = color
 
-            for j, ctrl_data in enumerate(data):
-                color = self.__colors[j](COLOR_FRACTION)
-                self._glob['plot_lines'][measured_quantity].extend(
-                    self.__canvas.ax.plot(nominal_energies, ctrl_data,
-                                          marker=marker, linestyle='',
-                                          color=color)
+        for marker, quantity in zip(self.__markers, self.plotted_quantities):
+            self._glob['plot_lines'][quantity] = {}
+            for ctrl, measurements in data.items():
+                if quantity not in measurements:
+                    continue
+                ctrl_data = measurements[quantity]
+                color = self.__ctrl_color[ctrl](COLOR_FRACTION)
+                if len(nominal_energies) == len(ctrl_data):
+                    energies = nominal_energies
+                else:
+                    energies = nominal_energies[:-1]
+                self._glob['plot_lines'][quantity][ctrl] = (
+                    fig.ax.plot(energies, ctrl_data, marker=marker,
+                                linestyle='', color=color)[0]
                     )
 
     def __plot_all_time_resolved_data(self):
         fig = self.__canvas
-        for i, measured_quantity in enumerate(self.plotted_quantities):
-            marker = self.__markers[i]
-            self._glob['plot_lines'][measured_quantity] = []
-            try:
-                data, times = (
-                    self.data_points.get_time_resolved_data(
-                        measured_quantity, separate_steps=SEPARATE_STEPS,
-                        absolute_times=not SEPARATE_STEPS,
-                        include_energies=False
-                        )
-                    )
-            except ValueError:
-                self.__canvas.ax.text(0, 0, 'No data')
-                continue
+        data = self.data_points.get_time_resolved_data(
+                 *self.plotted_quantities, separate_steps=SEPARATE_STEPS,
+                absolute_times=not SEPARATE_STEPS, include_energies=False
+                )
+        if not data:
+            fig.ax.text(0,0, 'No data')
+            return
+        self.__ctrl_color = {}
+        for color, ctrl in zip(self.__colors, data):
+            self.__ctrl_color[ctrl] = color
 
-            for j, (ctrl_times, ctrl_data) in enumerate(zip(times, data)):
+        for marker, quantity in zip(self.__markers, self.plotted_quantities):
+            self._glob['plot_lines'][quantity] = {}
+            for ctrl, measurements in data.items():
+                if quantity not in measurements:
+                    continue
+                ctrl_data = measurements[quantity]
+                ctrl_times = measurements[QuantityInfo.TIMES]
+
                 if SEPARATE_STEPS:
-                    color = self.__colors[j](np.linspace(0.2, 0.8,
-                                                         len(ctrl_data)))
+                    color = self.__ctrl_color[ctrl](np.linspace(0.2, 0.8,
+                                                    len(ctrl_data)))
                     for k, (step_time, step_data) in enumerate(zip(ctrl_times, ctrl_data)):
                         # Cannot construct a big array of arrays and
                         # plot in parallel bacause each step may (and
-                        # usually will) have a variable number of data
+                        # usually will) have a variable number of data.
                         fig.ax.plot(step_time, step_data, marker=marker,
                                     linestyle='', color=color[k])
                 else:
-                    color = self.__colors[j](COLOR_FRACTION)
-                    self._glob['plot_lines'][measured_quantity].extend(
+                    color = self.__ctrl_color[ctrl](COLOR_FRACTION)
+                    self._glob['plot_lines'][quantity][ctrl] = (
                         fig.ax.plot(ctrl_times, ctrl_data, marker=marker,
-                                    linestyle='', color=color)
+                                    linestyle='', color=color)[0]
                         )
 
     def __plot_new_energy_resolved_data(self):
         fig = self.__canvas
-        for i, measured_quantity in enumerate(self.plotted_quantities):
-            marker = self.__markers[i]
-            if measured_quantity not in self._glob['plot_lines']:
-                self._glob['plot_lines'][measured_quantity] = []
-            try:
-                data, nominal_energies = (
-                    self.data_points.get_energy_resolved_data(
-                        measured_quantity, include_energies=True
-                        )
-                    )
-            except ValueError:
-                self.__canvas.ax.text(0,0, 'No data')
-                continue
+        data, nominal_energies = (
+            self.data_points.get_energy_resolved_data(
+                *self.plotted_quantities, include_energies=True
+                ))
+        if not data:
+            fig.ax.text(0,0, 'No data')
+            return
+        self.__ctrl_color = {}
+        for color, ctrl in zip(self.__colors, data):
+            self.__ctrl_color[ctrl] = color
 
-            n_controllers = len(data)
-            # Loop over controllers
-            for j, ctrl_data in enumerate(data):
-                color = self.__colors[j](COLOR_FRACTION)
-                if len(self._glob['plot_lines'][measured_quantity]) < n_controllers:
-                    self._glob['plot_lines'][measured_quantity].extend(
-                        fig.ax.plot(nominal_energies[-1], ctrl_data[-1],
-                                    marker=marker, linestyle='', color=color)
-                        )
+        for marker, quantity in zip(self.__markers, self.plotted_quantities):
+            if quantity not in self._glob['plot_lines']:
+                self._glob['plot_lines'][quantity] =  {}
+
+            for ctrl, measurements in data.items():
+                if quantity not in measurements:
                     continue
-                line = self._glob['plot_lines'][measured_quantity][j]
-                line.set_data(nominal_energies, ctrl_data)
+                ctrl_data = measurements[quantity]
+                color = self.__ctrl_color[ctrl](COLOR_FRACTION)
+                lines = self._glob['plot_lines'][quantity]
+                if ctrl not in lines:
+                    lines[ctrl] = (
+                        fig.ax.plot(nominal_energies[-1], ctrl_data[-1],
+                                    marker=marker, linestyle='',
+                                    color=color)[0]
+                        )
+                lines[ctrl].set_data(nominal_energies, ctrl_data)
+
         fig.ax.relim()
         fig.ax.autoscale_view()
 
     def __plot_new_time_resolved_data(self):
         fig = self.__canvas
-        for i, measured_quantity in enumerate(self.plotted_quantities):
-            marker = self.__markers[i]
-            if measured_quantity not in self._glob['plot_lines']:
-                self._glob['plot_lines'][measured_quantity] = []
-            try:
-                data, times = (
-                    self.data_points.get_time_resolved_data(
-                        measured_quantity, separate_steps=SEPARATE_STEPS,
-                        absolute_times=not SEPARATE_STEPS,
-                        include_energies=False
-                        )
-                    )
-            except ValueError:
-                self.__canvas.ax.text(0,0, 'No data')
-                continue
+        data = self.data_points.get_time_resolved_data(
+                *self.plotted_quantities, separate_steps=SEPARATE_STEPS,
+                absolute_times=not SEPARATE_STEPS, include_energies=False
+                )
+        if not data:
+            fig.ax.text(0,0, 'No data')
+            return
+        self.__ctrl_color = {}
+        for color, ctrl in zip(self.__colors, data):
+            self.__ctrl_color[ctrl] = color
 
-            n_controllers = len(data)
-            # Loop over controllers
-            for j, (ctrl_times, ctrl_data) in enumerate(zip(times, data)):
+        for marker, quantity in zip(self.__markers, self.plotted_quantities):
+            if quantity not in self._glob['plot_lines']:
+                self._glob['plot_lines'][quantity] = {}
+            for ctrl, measurements in data.items():
+                if quantity not in measurements:
+                    continue
+                ctrl_data = measurements[quantity]
+                ctrl_times = measurements[QuantityInfo.TIMES]
                 if SEPARATE_STEPS:
-                    color = self.__colors[j](np.linspace(
+                    color = self.__ctrl_color[ctrl](np.linspace(
                         0.2, 0.8, self.data_points.num_measurements
                         ))
                     # Enough to plot the last step for each
                     fig.ax.plot(ctrl_times[-1], ctrl_data[-1], marker=marker,
                                 linestyle='', color=color[len(ctrl_data)-1])
                 else:
-                    color = self.__colors[j](COLOR_FRACTION)
-                    if len(self._glob['plot_lines'][measured_quantity]) < n_controllers:
-                        self._glob['plot_lines'][measured_quantity].extend(
+                    color = self.__ctrl_color[ctrl](COLOR_FRACTION)
+                    lines = self._glob['plot_lines'][quantity]
+                    if ctrl not in lines:
+                        lines[ctrl] = (
                             fig.ax.plot(ctrl_times, ctrl_data, marker=marker,
-                                        linestyle='', color=color)
+                                        linestyle='', color=color)[0]
                             )
                         continue
-                    line = self._glob['plot_lines'][measured_quantity][j]
-                    line.set_data(ctrl_times, ctrl_data)
+                    lines[ctrl].set_data(ctrl_times, ctrl_data)
+
         if not SEPARATE_STEPS:
             fig.ax.relim()
             fig.ax.autoscale_view()
@@ -297,19 +311,14 @@ class MeasurementPlot(qtw.QWidget):
         """Create the legend for the displayed plot."""
         controllers = []
         quantities = {}
-        # legend = [[], []]
         legend_elements = []
-        j = 0
-        for i, measured_quantity in enumerate(self.plotted_quantities):
-            marker = self.__markers[i]
-            # TODO: throws an error if key does not exist in data_points fix!!!!!
-            for controller in self.data_points[0][measured_quantity]:
-                if controller.serial.port_name not in controllers:
-                    controllers.append(controller.serial.port_name)
-                    legend_elements.append(Line2D([0], [0], marker='o', color='w', label=controller.serial.port_name, markerfacecolor=self.__colors[j](COLOR_FRACTION), markersize=7))
-                    j += 1
-            if measured_quantity not in quantities:
-                quantities[measured_quantity] = marker
+        for marker, quantity in zip(self.__markers, self.plotted_quantities):
+            for ctrl, color in self.__ctrl_color.items():
+                if ctrl.serial.port_name not in controllers:
+                    controllers.append(ctrl.serial.port_name)
+                    legend_elements.append(Line2D([0], [0], marker='o', color='w', label=ctrl.serial.port_name, markerfacecolor=color(COLOR_FRACTION), markersize=7))
+            if quantity not in quantities:
+                quantities[quantity] = marker
         for quantity, marker in quantities.items():
             legend_elements.append(Line2D([0], [0], marker=marker, color='w', label=quantity.label, markerfacecolor='#000000', markersize=7))
         return legend_elements
