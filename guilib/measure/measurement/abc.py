@@ -380,7 +380,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
 
         for controller in self.controllers:
             file_name = (path + clock + 'controller_' +
-                controller.serial.port_name + '.ini')
+                controller.name + '.ini')
             with open(file_name, 'w') as configfile:
                 controller.settings.write(configfile)
         for camera in self.cameras:

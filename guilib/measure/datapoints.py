@@ -31,9 +31,13 @@ class DataErrors(ViPErLEEDErrorEnum):
                            "that was not specified in the DataPoints class.")
 
 
-_ALIASES = {'Energy': ('nominal_energy',),
-            'Measured_Energy': ('hv',),
-            'I_Sample': ('isample',),
+_ALIASES = {'Energy': ('nominal_energy', 'energy',),
+            'Measured_Energy': ('hv', 'measured_energy',),
+            'Times': ('times', 'measurement_t',),
+            'I0': ('i0',),
+            'I_Sample': ('isample', 'i_sample',),
+            'Temperature': ('temperature',),
+            'Cold_Junction': ('cold_junction',),
            }
 NAN = float('nan')
 
@@ -400,12 +404,11 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         -------
         None.
         """
-        # TODO: fix reading!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        # Does not check for aliases yet.
         with open(csv_name, 'r', encoding='UTF8', newline='') as csv_file:
             reader = csv.DictReader(csv_file, delimiter=self.delimiter)
             first_row = next(reader)
-            if QuantityInfo.ENERGY.label not in first_row:
+            if not any(key.lower() == label for key in first_row 
+                       for label in _ALIASES['Energy']):
                 # Read file is not a ViPErLEED measurement.
                 raise RuntimeError(
                     f'{csv_name} is not a ViPErLEED measurement.'
@@ -413,7 +416,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
             key_dict = {}
             extractor = re.compile(r'(.*)\((.*)\)')
             for key in first_row:
-                if key == QuantityInfo.ENERGY.label:
+                if any(key.lower() == label for label in _ALIASES['Energy']):
                     key_dict[key] = (key, None)
                     continue
                 extracted = extractor.match(key)
@@ -422,19 +425,25 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                 key_dict[key] = list(extracted.groups())
 
             data_points_dict = {QuantityInfo.ENERGY: -1}
-            for key in key_dict:
+            for key in key_dict.copy():
                 quantity, device = key_dict[key]
-                quantity_obj = QuantityInfo.from_label(quantity)
+                try:
+                    quantity_obj = QuantityInfo.from_label(quantity)
+                except KeyError:
+                    print(f'{key} is not a ViPErLEED key')
+                    del key_dict[key]
+                    continue
                 if quantity_obj == QuantityInfo.ENERGY:
                     continue
                 if quantity_obj not in data_points_dict:
                     data_points_dict[quantity_obj] = {}
                 data_points_dict[quantity_obj][device] = []
             self.append(copy.deepcopy(data_points_dict))
-
             for row in (first_row, *reader):
                 for column, value in row.items():
-                    quantity, device = key_dict[column]
+                    quantity, device = key_dict.get(column, (None, None))
+                    if not quantity:
+                        continue
                     quantity_obj = QuantityInfo.from_label(quantity)
                     for allowed_quantity in QuantityInfo:
                         if quantity_obj == allowed_quantity:
@@ -450,9 +459,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                             self[-1][QuantityInfo.ENERGY] = value
                     else:
                         self[-1][quantity_obj][device].append(value)
-            for point in self:
-                print(point)
-                print('####################################')
+            self.primary_controller = list(self[0][QuantityInfo.TIMES].keys())[0]
 
     def save_data(self, csv_name):
         """Save data.
@@ -476,7 +483,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
             if quantity not in self.__exceptional_keys:
                 for controller in ctrl_dict:
                     first_line.append(
-                        f"{quantity.label}({controller.serial.port_name})"
+                        f"{quantity.label}({controller.name})"
                         )
 
         with open(csv_name, 'w', encoding='UTF8', newline='') as file_name:

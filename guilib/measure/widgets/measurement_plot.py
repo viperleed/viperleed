@@ -79,9 +79,7 @@ class MeasurementPlot(qtw.QWidget):
                 "Expected a DataPoints object."
                 )
         self.__data_points = data_points
-        self.__canvas.ax.clear()
-        self._glob['plot_lines'] = {}
-        self.__canvas.draw_idle()
+        self.clear()
 
     @property
     def plotted_quantities(self):
@@ -314,34 +312,33 @@ class MeasurementPlot(qtw.QWidget):
         legend_elements = []
         for marker, quantity in zip(self.__markers, self.plotted_quantities):
             for ctrl, color in self.__ctrl_color.items():
-                if ctrl.serial.port_name not in controllers:
-                    controllers.append(ctrl.serial.port_name)
-                    legend_elements.append(Line2D([0], [0], marker='o', color='w', label=ctrl.serial.port_name, markerfacecolor=color(COLOR_FRACTION), markersize=7))
+                try:
+                    ctrl_name = ctrl.name
+                except AttributeError:
+                    ctrl_name = ctrl
+                if ctrl_name not in controllers:
+                    controllers.append(ctrl_name)
+                    legend_elements.append(
+                        Line2D([0], [0], marker='o', color='w',
+                               label=ctrl_name,
+                               markerfacecolor=color(COLOR_FRACTION),
+                               markersize=7)
+                        )
             if quantity not in quantities:
                 quantities[quantity] = marker
         for quantity, marker in quantities.items():
             legend_elements.append(Line2D([0], [0], marker=marker, color='w', label=quantity.label, markerfacecolor='#000000', markersize=7))
         return legend_elements
 
+    def clear(self):
+        """Clear the plot."""
+        self.__canvas.ax.clear()
+        self._glob['plot_lines'] = {}
+        self.__canvas.draw_idle()
+        self._ctrls['quantities'].uncheck_all()
 
 class PlotComboBox(CheckComboBox):
     """A CheckComboBox which can QuantityInfo objeczts."""
-
-    check_changed = qtc.pyqtSignal()
-
-    def __init__(self, parent=None):
-        """ Initialize instance.
-
-        Parameters
-        ----------
-        parent : QWidget
-            The parent widget of this combo box.
-
-        Returns
-        -------
-        None.
-        """
-        super().__init__(parent=parent)
 
     @property
     def selected_quantities(self):
@@ -351,7 +348,7 @@ class PlotComboBox(CheckComboBox):
             checked[index] = QuantityInfo.from_label(item)
         return checked
 
-    def toggle_checked(self, name):     # pylint: disable=invalid-name
+    def toggle_checked(self, name):
         """Toggle the checked state of an entry with given name."""
         item = self.model().findItems(name)[0]
         super().toggle_checked(name)
@@ -369,5 +366,4 @@ class PlotComboBox(CheckComboBox):
                 for i in range(self.count()):
                     enable = self.model().item(i, 0)
                     enable.setEnabled(True)
-        self.check_changed.emit()
 

@@ -243,7 +243,6 @@ class Measure(gl.ViPErLEEDPluginBase):
     def __on_data_received(self):
         """Plot measured data."""
         meas = self.sender()
-        # TODO: this check won't work when plotting data that has been read in from a file.
         if not isinstance(meas, MeasurementABC):
             raise RuntimeError(
                 f"Got unexpected sender class {meas.__class__.__name__}"
@@ -273,7 +272,7 @@ class Measure(gl.ViPErLEEDPluginBase):
             if isinstance(sender, CameraABC):
                 source = f"camera {sender.name}"
             elif isinstance(sender, ControllerABC):
-                source = f"controller at {sender.serial.port_name}"
+                source = f"controller at {sender.name}"
             elif isinstance(sender, MeasurementABC):
                 source = f"measurement {sender.__class__.__name__}"
             else:
@@ -296,7 +295,7 @@ class Measure(gl.ViPErLEEDPluginBase):
             event.ignore()
             return
         if self._glob['plot']:
-            self._glob['plot'].close
+            self._glob['plot'].close()
         # accept has to be called in order to
         # savely quit the dialog and its threads.
         self._dialogs['bad_px_finder'].accept()
@@ -341,5 +340,4 @@ class Measure(gl.ViPErLEEDPluginBase):
                                     " Check if this file exists and is in the "
                                     "correct folder.")
             return
-
-        meas_type = config.get('measurement_settings', 'measurement_class')
+        self._glob['plot'].data_points = data

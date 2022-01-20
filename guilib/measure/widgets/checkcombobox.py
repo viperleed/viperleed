@@ -18,6 +18,8 @@ from PyQt5 import (QtCore as qtc,
 class CheckComboBox(qtw.QComboBox):
     """A QComboBox that allows selecting multiple options."""
 
+    check_changed = qtc.pyqtSignal()
+
     def __init__(self, parent=None):
         """Initialize instance.
 
@@ -157,7 +159,7 @@ class CheckComboBox(qtw.QComboBox):
             self.model().findItems(name)[0].setCheckState(qtc.Qt.Unchecked)
     # pylint: enable=invalid-name
 
-    def toggle_checked(self, name):     # pylint: disable=invalid-name
+    def toggle_checked(self, name):
         """Toggle the checked state of an entry with given name."""
         item = self.model().findItems(name)[0]
         self.__changed = True
@@ -165,6 +167,7 @@ class CheckComboBox(qtw.QComboBox):
             item.setCheckState(qtc.Qt.Unchecked)
         else:
             item.setCheckState(qtc.Qt.Checked)
+        self.check_changed.emit()
 
     def __ensure_changed(self):
         """Set __changed flag to True.
@@ -199,3 +202,11 @@ class CheckComboBox(qtw.QComboBox):
             opt.currentText = '-- Select option(s) --'
         painter.drawComplexControl(qtw.QStyle.CC_ComboBox, opt)
         painter.drawControl(qtw.QStyle.CE_ComboBoxLabel, opt)
+
+    def uncheck_all(self):
+        """Uncheck all checked options."""
+        for i in range(self.count()):
+            item = self.model().item(i, 0)
+            if self.is_item_checked(item):
+                item.setCheckState(qtc.Qt.Unchecked)
+            item.setEnabled(True)
