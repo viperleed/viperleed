@@ -21,9 +21,14 @@ module r_factor_new
 ! The equidistant final grid is defined by the array E_new with length n_E_new.  This is equivalently defined by the set of integers n_E_new, E_new_start, E_new_step.
 
 ! Experimental data may come in as arrays 
+
+
+
+
+
    
-subroutine r_factor_beam(y1, size_y1, y2, size_y2, E_start1, E_start2, E_step, V0r_shift, R_pendry, &
-                         numerator, denominator, N_overlapping_points)
+subroutine r_pendry_beam_y(n_E, E_step, y1, y2, id_start_y1, id_start_y2, n_y1, n_y2, V0r_shift, &
+                         R_pendry, numerator, denominator, N_overlapping_points)
     ! Innermost function Rfactor_beam:
     ! INPUT: Y1, Y2, Estart1, Estart2, V0rshift -> Y1 and Y2 are already prepared (i.e. same grid steps, I(V) was previously interpolated)
     ! DOES: figure out overlap region, calculate RPe
@@ -34,55 +39,31 @@ subroutine r_factor_beam(y1, size_y1, y2, size_y2, E_start1, E_start2, E_step, V
     !INPUTS
     !###############
 
-    !f2py intent(in) size_y1, size_y2
-    !f2py depend(y1) size_y1
-    !f2py depend(y2) size_y2
-    integer, intent (in)                    :: size_y1, size_y2
+    !f2py intent(in) n_E
+    integer, intent(in) :: n_E
+    real(dp), INTENT(IN) :: E_step
+    integer, INTENT(IN) :: id_start_y1, id_start_y2
+    integer, INTENT(IN) :: n_y1, n_y2
     !f2py intent(in) y1
-    real, intent (in), dimension(size_y1)   :: y1
+    real(dp), intent (in), dimension(n_E)   :: y1
     !f2py intent(in) y2
-    real, intent (in), dimension(size_y2)   :: y2
-    real, intent (in)                       ::  E_start1, E_start2, E_step, V0r_shift
+    real(dp), intent (in), dimension(n_E)   :: y2
+    real(dp), intent (in)                   :: V0r_shift
     ! outputs
-    real, intent (out)                      ::  R_pendry, numerator, denominator
-    integer,  intent (out)                  ::  N_overlapping_points
+    real(dp), intent (out)                  :: R_pendry, numerator, denominator
+    integer,  intent (out)              :: N_overlapping_points
 
-    real E_end1, E_end2, E_start, E_end, E_range
-    real diff_start
-    real, dimension (:), allocatable         :: y_diff, y_squared_sum
-    integer y1_start_id, y2_start_id
-    integer i
+    real(dp), dimension (:), allocatable         :: y_diff, y_squared_sum
 
+    integer :: id_min, id_max
 
-    ! end of energy ranges of Y functions
-    E_end1 = E_start1+size_y1*E_step
-    E_end2 = E_start2+size_y2*E_step
-
-    E_start = max(E_start1, E_start2)
-    E_end = min(E_end1, E_end2)
-
-
-    ! Caclulate number of overlapping points - can be used as weight of R_factor outside
-    E_range = E_end - E_start
-    write(*,*) "E_range: ", E_range
-    write(*,*) "E_start: ", E_start
-    write(*,*) "E_step: ", E_step
-    N_overlapping_points = int(E_range/E_step)
-    write(*,*) "N_ovl: ", N_overlapping_points
-
-    y1_start_id = int(E_start1-E_start)+1 !Fortan counting starts at 1
-    y2_start_id = int(E_start2-E_start)+1
-
-    ! Allocate array sizes; not technically required in Fortran 2003 standard
+    id_min = max(id_start_y1, id_start_y2)
+    id_max = min(id_start_y1 + n_y1, id_start_y2+ n_y2)
+    N_overlapping_points = id_max - id_min
     allocate(y_diff(N_overlapping_points), y_squared_sum(N_overlapping_points))
 
-    y_diff=y1(y1_start_id: y1_start_id + N_overlapping_points-1) - y2(y2_start_id: y2_start_id + N_overlapping_points-1) ! difference between Y functions
-    y_squared_sum=y1(y1_start_id:y1_start_id+N_overlapping_points-1)**2+y2(y2_start_id:y2_start_id+N_overlapping_points-1)**2
-
-    write(*,*) "y_1: ", y1
-    write(*,*) "y_2: ", y2
-    write(*,*) "y_diff: ", y_diff
-    write(*,*) "y_squared_sum: ", y_squared_sum
+    y_diff=y1(id_min: id_max) - y2(id_min: id_max) ! difference between Y functions
+    y_squared_sum=y1(id_min: id_max)**2+y2(id_min: id_max)**2
 
     ! caclulate numerator = integral (Y1-Y2)**2 dE
     numerator = trapez_integration_const_dx(y_diff**2, E_step)
@@ -92,14 +73,15 @@ subroutine r_factor_beam(y1, size_y1, y2, size_y2, E_start1, E_start2, E_step, V
     R_pendry = numerator/denominator
     return
 
-end subroutine r_factor_beam
+end subroutine r_pendry_beam_y
+
 
 
 !V0rshift not yet implemented
     ! beamtypes not yet implemented -> does it really make sense to do that here even?
     ! maybe extra subroutine actually
-subroutine Rfactor_beamset(y1, sizes_y1, y2, sizes_y2, E_start1, E_start2, nr_beams, E_step, V0rshift, &
-                           R_Pe_weighted, R_Pe_beams, N_overlapping_points)
+subroutine r_pendry_beamset_y(n_E, E_step, n_beams, y1, y2, id_start_y1, id_start_y2, n_y1, n_y2, V0r_shift, &
+    r_pendry_weighted, r_pendry_beams, n_overlapping_points)
     !Rfactor_beamset:
     !INPUT: set of arrays Y1, Y2, Estart1, Estart2, V0rshift, beamtypes -> calls the above in a loop over beams
     !DOES: call above, average based on overlapping points, also split into types ("integer/fractional")
@@ -110,42 +92,42 @@ subroutine Rfactor_beamset(y1, sizes_y1, y2, sizes_y2, E_start1, E_start2, nr_be
     !INPUTS
     !###############
     !f2py integer, hidden, intent(in), depend(E_start1, E_start2), check(len(E_start1)==len(E_start2)) :: nr_beams=len(E_start1)
-    integer nr_beams
-    !f2py real, intent(in) :: E_step
-    real E_step
-    !f2py integer, intent(in) :: sizes_y1
-    integer, intent(in) :: sizes_y1(nr_beams)
-    !f2py integer, intent(in) :: sizes_y2
-    integer, intent(in) :: sizes_y2(nr_beams)
-    !f2py real intent(in) :: y1(:,:), y2(:,:)
-    real, intent(in) :: y1 (:,:), y2 (:,:)
-    !f2py intent(in) E_start_1
-    !f2py intent(in) E_start_2
-    real, intent(in)    :: E_start1(nr_beams), E_start2(nr_beams)
-    !f2py integer, intent(out) :: N_overlapping_points
-    integer, intent(out) :: N_overlapping_points(nr_beams)
-    !f2py real, intent(out) :: R_Pe_beams(nr_beams), R_Pe_weighted
-    real, intent(out) :: R_Pe_beams(nr_beams), R_Pe_weighted
-    !f2py real, intent(in)::  V0rshift
-    real, intent(in) :: V0rshift
+    integer :: n_E ! number of energy steps
+    integer n_beams
+    !f2py real(dp), intent(in) :: E_step
+    real(dp) :: E_step
+    !f2py real intent(in) :: y1 (n_E, n_beams), y2 (n_E, n_beams)
+    real(dp), intent(in) :: y1 (n_E, n_beams), y2 (n_E, n_beams)
+    !f2py integer, intent(in) id_start_y1
+    !f2py integer, intent(in) id_start_y2
+    integer, intent(in)    :: id_start_y1(n_beams) ,id_start_y2(n_beams)
+    !f2py integer, intent(in) n_y1
+    !f2py integer, intent(in) n_y2
+    integer, intent(in)    :: n_y1(n_beams) ,n_y2(n_beams)
+    !f2py integer, intent(out) :: n_overlapping_points
+    integer, intent(out) :: n_overlapping_points(n_beams)
+    !f2py real(dp), intent(out) :: r_pendry_beams(n_beams), r_pendry_weighted
+    real(dp), intent(out) :: r_pendry_beams(n_beams), r_pendry_weighted
+    !f2py real(dp), intent(in)::  V0r_shift
+    real(dp), intent(in) :: V0r_shift
 
-    real numerators(nr_beams), denominators(nr_beams)
+    real(dp) numerators(n_beams), denominators(n_beams)
 
     ! temporay variables used in subroutine
     integer i
     integer total_points
-    real temp_num, temp_denom
+    real(dp) temp_num, temp_denom
 
     ! iterate over beams and call subroutine r_factor_beam
-    do i=1, nr_beams
-        call r_factor_beam(y1(i,:), sizes_y1(i), y2(i,:), sizes_y2(i), E_start1(i), E_start2(i), E_step, &
-                           V0rshift, R_Pe_beams(i), numerators(i), denominators(i), N_overlapping_points(i))
+    do i=1 , n_beams
+        call r_pendry_beam_y(n_E, E_step, y1(:, i), y2(:, i), id_start_y1(i), id_start_y2(i), n_y1(i), n_y2(i), V0r_shift, &
+            r_pendry_beams(i), numerators(i), denominators(i), n_overlapping_points(i))
     end do
     total_points = sum(N_overlapping_points)
-    R_Pe_weighted = sum(numerators/denominators*N_overlapping_points)/total_points
+    r_pendry_weighted = sum(numerators/denominators*N_overlapping_points)/total_points
 
     return
-end subroutine Rfactor_beamset
+end subroutine r_pendry_beamset_y
 
 subroutine Rfactor_beamtypes(y1, sizes_y1, y2, sizes_y2, E_start1, E_start2, nr_beams, E_step, V0rshift, &
                            beamtypes, nr_beamtypes, R_Pe_weighted, R_Pe_beams, N_overlapping_points)
@@ -154,30 +136,30 @@ subroutine Rfactor_beamtypes(y1, sizes_y1, y2, sizes_y2, E_start1, E_start2, nr_
     !###############
     !f2py integer, hidden, intent(in), depend(E_start1, E_start2), check(len(E_start1)==len(E_start2)) :: nr_beams=len(E_start1)
     integer nr_beams
-    !f2py real, intent(in) :: E_step
-    real E_step
+    !f2py real(dp), intent(in) :: E_step
+    real(dp) E_step
     !f2py integer, intent(in) :: sizes_y1
     integer, intent(in) :: sizes_y1(nr_beams)
     !f2py integer, intent(in) :: sizes_y2
     integer, intent(in) :: sizes_y2(nr_beams)
     !f2py real intent(in) :: y1(:,:), y2(:,:)
-    real, intent(in) :: y1 (:,:), y2 (:,:)
+    real(dp), intent(in) :: y1 (:,:), y2 (:,:)
     !f2py intent(in) E_start_1
     !f2py intent(in) E_start_2
-    real, intent(in)    :: E_start1(nr_beams), E_start2(nr_beams)
+    real(dp), intent(in)    :: E_start1(nr_beams), E_start2(nr_beams)
     integer, intent(in) :: beamtypes(nr_beams)
     integer, intent(in) :: nr_beamtypes
     !f2py integer, intent(out) :: N_overlapping_points(:)
     integer, intent(out) :: N_overlapping_points(nr_beams)
-    !f2py real, intent(out) :: R_Pe_beams(nr_beams), R_Pe_weighted(nr_beamtypes)
-    real, intent(out) :: R_Pe_beams(nr_beams), R_Pe_weighted(nr_beamtypes)
-    !f2py real, intent(in)::  V0rshift
-    real, intent(in) :: V0rshift
+    !f2py real(dp), intent(out) :: R_Pe_beams(nr_beams), R_Pe_weighted(nr_beamtypes)
+    real(dp), intent(out) :: R_Pe_beams(nr_beams), R_Pe_weighted(nr_beamtypes)
+    !f2py real(dp), intent(in)::  V0rshift
+    real(dp), intent(in) :: V0rshift
 
     ! variables used internally
     integer beam, group, points_group, tmp_points(nr_beams)
     !
-    real tmp_num(nr_beams), tmp_denom(nr_beams), tmp_pendry
+    real(dp) tmp_num(nr_beams), tmp_denom(nr_beams), tmp_pendry
 
 
     ! beamtypes is array that contains assignment o beamtype group for each beam
@@ -190,8 +172,8 @@ subroutine Rfactor_beamtypes(y1, sizes_y1, y2, sizes_y2, E_start1, E_start2, nr_
         tmp_denom = 0d0
         do beam = 1, nr_beams
             if (beamtypes(beam)==group) then
-                call r_factor_beam(y1(beam,:), sizes_y1(beam), y2(beam,:), sizes_y2(beam), E_start1(beam), &
-                        E_start2(beam), E_step, V0rshift, tmp_pendry, tmp_num(beam), tmp_denom(beam), tmp_points(beam))
+                !call r_factor_beam(y1(beam,:), sizes_y1(beam), y2(beam,:), sizes_y2(beam), E_start1(beam), &
+                !        E_start2(beam), E_step, V0rshift, tmp_pendry, tmp_num(beam), tmp_denom(beam), tmp_points(beam))
             end if
         end do
         points_group = sum(tmp_points)
@@ -213,7 +195,7 @@ subroutine Rfactor_v0ropt(opt_type, min_steps, max_steps, nr_used_v0)
 
     !integer beamtypes(:)
 
-    real V0, R_Pe_V0
+    real(dp) V0, R_Pe_V0
     ! Decide which optimization is used
     nr_used_v0 = 0 ! initialize to 0
 
@@ -363,13 +345,14 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
             RETURN
             !id_end = n_E_in
         end if
-        
+         
         cut_n_E_in =  new_max_index - new_min_index +1
         
         do concurrent( i=1: n_beams)
             ! new start and end indices
-            cut_E_start_beams(i) = max(E_start_beams(i)-new_min_index+1, new_min_index)
-            cut_n_E_beams(i) = min(new_max_index, E_start_beams(i)+n_E_beams(i)- new_min_index+1) - E_start_beams(i)
+            !cut_E_start_beams(i) = max(E_start_beams(i)-new_min_index+1, new_min_index)
+            cut_E_start_beams(i) = max(E_start_beams(i), new_min_index)
+            cut_n_E_beams(i) = min(new_max_index, E_start_beams(i)+n_E_beams(i)) - cut_E_start_beams(i)
             if (cut_n_E_beams(i) < 2*deg+1) then
                 ! Beam cannot be used ...skip somehow...
                 ierrs(i) = 12345 !TODO give error code... at least one beam did not contain usable information... - return averaging_scheme with corresponding beams?
@@ -399,7 +382,7 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
     end do
 
 
-
+    if (ANY(ieee_is_nan(intensities))) print*,"NaN before average"
 
     !###############
     ! Average/discard/reorder
@@ -425,10 +408,10 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
             RETURN
         end if
     end if
-    print*, "E_start_beams:"
-    print*, cut_E_start_beams
-    print*, "n_E_beams:"
-    print*, cut_n_E_beams
+    !print*, "E_start_beams:"
+    !print*, cut_E_start_beams
+    !print*, "n_E_beams:"
+    !print*, cut_n_E_beams
 
     E_start_beams_out(:) = 0
     n_E_beams_out(:) = 0 
@@ -463,8 +446,9 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
 
     v0i = 2.0d0
     do i =1,n_beams_out
-        grid_origin(i) = grid(cut_n_E_beams(i), E_grid_in(cut_E_start_beams(i): cut_E_start_beams(i) + cut_n_E_beams(i) -1))
-        grid_target(i) = grid(n_E_beams_out(i), E_grid_out(E_start_beams_out(i): E_start_beams_out(i) + n_E_beams_out(i) -1 ))
+        ! TODO does this  need the -1?
+        grid_origin(i) = grid(cut_n_E_beams(i), E_grid_in(cut_E_start_beams(i): cut_E_start_beams(i) + cut_n_E_beams(i)))
+        grid_target(i) = grid(n_E_beams_out(i), E_grid_out(E_start_beams_out(i): E_start_beams_out(i) + n_E_beams_out(i)))
     end do
     !print*, "grid origin(1)", grid_origin(1)%n, grid_origin(1)%x
     !print*, "grid target(1)", grid_target(1)%n, grid_target(1)%x
@@ -478,6 +462,7 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
         write(*,*) "Smoothing not yet implemented!" ! TODO: implement smoothing in prepare_beams
     end if
 
+    if (ANY(ieee_is_nan(intensities))) print*,"NaN before interpolation"
 
     !###############
     ! Interpolation on new grid
@@ -493,8 +478,17 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
         intpol_intensity = 0
         y_func = 0
 
-
+        !print*, intensities(cut_E_start_beams(5):cut_E_start_beams(5)+n_E_beams_out(5),5)
+        
         do i= 1,n_beams_out
+            !DEBUG
+            !print*, i
+            !print*, grid_origin(i)%n, grid_target(i)%n
+            !print*, cut_E_start_beams(i), cut_E_start_beams(i)+cut_n_E_beams(i)
+            !print*, E_start_beams_out(i), E_start_beams_out(i)+n_E_beams_out(i)
+            !print*, intensities(cut_E_start_beams(i), i)
+            !print*, intensities(cut_E_start_beams(i)+cut_n_E_beams(i), i)
+            
 
             call pre_evaluate_grid_beam( &
                 5, grid_origin(i), grid_target(i), grid_pre_eval(i), ierrs(i) &
@@ -666,11 +660,11 @@ end subroutine avg_reo_disc
 
 subroutine range_index_from_Energy(E_min_current, NE_in, E_step, E_min_cut, E_max_cut, new_start_stop_step)
     integer, intent(in) :: NE_in
-    real, intent(in) :: E_min_current, E_min_cut, E_max_cut, E_step
+    real(dp), intent(in) :: E_min_current, E_min_cut, E_max_cut, E_step
 
     integer , intent(out) :: new_start_stop_step(3)
 
-    real :: old_max, new_max, new_min
+    real(dp) :: old_max, new_max, new_min
 
     old_max = E_min_current + E_step*NE_in
     new_max = min(E_max_cut, old_max)
@@ -695,10 +689,10 @@ end subroutine range_index_from_Energy
 !     ! Works for one or for multiple beams (though the latter may defeat the purpose)
 
 !     integer, intent(in) :: n_beams, n_energies ! number of beams, number of energies in in_beams
-!     real, intent(in) :: in_beams(n_energies, n_beams)
-!     real, intent(out) :: out_beams(NE_out_stop-NE_out_start+1, n_beams)
+!     real(dp), intent(in) :: in_beams(n_energies, n_beams)
+!     real(dp), intent(out) :: out_beams(NE_out_stop-NE_out_start+1, n_beams)
 
-!     real, intent(in) :: E_min_current, E_step
+!     real(dp), intent(in) :: E_min_current, E_step
 !     integer, intent(in) :: NE_out_start, NE_out_stop
 !     integer, intent(in)  :: beam_starts(n_beams), NE_beams(n_beams)
 !     integer, intent(out) :: new_NE, new_NE_beams(n_beams)
@@ -801,11 +795,11 @@ end subroutine pendry_y
 pure function parabolic_optimize(values) result(minimum_pair)
     implicit none
 
-    real, intent(in) :: values(:)
-    real :: minimum_pair(2) ! Don't declare as intent(out)
+    real(dp), intent(in) :: values(:)
+    real(dp) :: minimum_pair(2) ! Don't declare as intent(out)
     integer known_values
 
-    real minium_pair(2)
+    real(dp) minium_pair(2)
 
     known_values = size(values)
 
@@ -821,9 +815,9 @@ end function parabolic_optimize
 
 pure function trapez_integration_const_dx(f, dx) result(integral)
     implicit none
-    real, intent(in)    :: f(:)
-    real, intent(in)    :: dx
-    real integral
+    real(dp), intent(in)    :: f(:)
+    real(dp), intent(in)    :: dx
+    real(dp) integral
     integer n
 
     n = size(f)
@@ -834,8 +828,8 @@ end function trapez_integration_const_dx
 
 pure function test_exec(input) result(output)
     implicit none
-    real, intent(in) :: input
-    real output
+    real(dp), intent(in) :: input
+    real(dp) output
 
     output = input
 
