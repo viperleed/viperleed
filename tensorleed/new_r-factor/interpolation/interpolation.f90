@@ -14,6 +14,7 @@
 
 
 ! Error codes:
+! ViPErLEED Interpolation Error codes start with 6
 ! 0 .. no error 
 ! 1-10 .. ?
 ! 11-19 .. error raised while performing checks on input data
@@ -30,240 +31,358 @@ module interpolation
     integer, parameter :: dp = REAL64
     integer, parameter :: qp = REAL128
 
-    integer, PARAMETER :: info_size=10
-
-    type :: grid
-        integer :: n
-        real(dp), ALLOCATABLE :: x(:)
-    end type grid
-    
-    type :: info_values
-        integer :: deg
-        integer :: n_knots
-        integer :: nt
-        integer :: kl, ku
-        integer :: nleft, nright
-        integer :: LHS_rows, LHS_cols
-        integer :: RHS_cols
-    end type info_values
-
-    type :: grid_pre_evaluation
-        type(grid) :: grid_origin, grid_target
-
-        type(info_values) :: infos
-
-        real(dp), ALLOCATABLE :: knots(:)
-        real(dp), ALLOCATABLE :: LHS(:,:), RHS(:)
-        integer, ALLOCATABLE  :: ipiv(:), intervals(:)
-        real(dp), ALLOCATABLE :: deBoor_matrix(:,:)
-        real(dp), ALLOCATABLE :: deriv_deBoor_matrix(:,:)
-        
-    end type grid_pre_evaluation
-
-    type :: deriv_pre_evaluation
-        integer :: nu
-        type(info_values) :: infos
-        real(dp), ALLOCATABLE :: deriv_deBoor_matrix(:,:)
-    end type deriv_pre_evaluation
-
-
-
-
     contains
 
-! inputs : x, y, n | deg, deriv | x_new, n_new
-! outputs : y_new 
-! setup LHS
-    subroutine interp_equidist_single(n, x_start, x_step, y, deg, n_new, x_new_start, x_new_step, do_checks, y_new, ierr)
-        ! Used for ...
-        ! Calculates x and x_new from given steps and calls interpolate_single
+! *****************************************************************************************
+! Routines to get array sizes
 
-        ! IN
-        integer, INTENT(IN)  :: n, n_new
-        integer, INTENT(IN)  :: deg
-        integer, INTENT(IN)  :: do_checks
-        real(dp), INTENT(IN) :: x_start, x_step
-        real(dp), INTENT(IN) :: x_new_start, x_new_step
-        real(dp), INTENT(IN) :: y(n)
+    pure subroutine get_array_sizes(n, deg, n_knots, nt, LHS_rows)
+        ! Returns sizes of arrays used various parts of the interpolation. This is necessary since F2PY 
+        ! wrapping requires explicit array shapes and does not allow for allocatable or assumed shape arrays.
+        integer, INTENT(IN) :: n, deg
 
-        ! OUT
-        integer, INTENT(OUT) :: ierr
-        real(dp), INTENT(OUT):: y_new(n_new)
+        integer, INTENT(OUT) :: n_knots
+        integer, INTENT(OUT) :: nt
+        integer, INTENT(OUT) :: LHS_rows
 
-        ! Internal
-        real(dp) :: x(n), x_new(n_new)
+        integer :: kl, ku
 
-        ! transform to array
-        call equidist_to_array(n, x_start, x_step, x)
-        call equidist_to_array(n_new, x_new_start, x_new_step, x_new)
-
-        call interpolate_single(n, x, y, deg, n_new, x_new, do_checks, y_new, ierr)
-        RETURN        
-    end subroutine interp_equidist_single
-
-    subroutine interpolate_single(n, x, y, deg, n_new, x_new, do_checks, y_new, ierr)
-        ! IN
-        integer, INTENT(IN) :: n ! length of x, y
-        integer, INTENT(IN) :: deg ! degree
-        real(dp), INTENT(IN) :: x(n), y(n)
-        integer, INTENT(IN) :: do_checks
-        
-        integer, INTENT(IN) :: n_new ! number of new points
-        real(dp), INTENT(IN) :: x_new(n_new) !x_new positions where to evaluate
-        ! OUT
-        real(dp), INTENT(OUT) :: y_new(n_new) ! interpolated y values at x_new positions
-        integer, INTENT(OUT) :: ierr ! error code
-
-        ! internal variables and arrays
-        type(grid_pre_evaluation) :: pre_eval
-
-        ierr = 0
-        if (do_checks.ne.0) then
-            call perform_checks(n, x, n_new, x_new, ierr)
-        end if
-
-        call pre_evaluate_grid(x, n, x_new, n_new, deg, do_checks, pre_eval, ierr)
-
-        call interpolate_fast(n, y, pre_eval, y_new, coeffs, ierr)
-
-        !Done
+        n_knots = n + 2*deg
+        nt = n_knots - deg - 1
+        kl = deg
+        ku = deg
+        LHS_rows = 2*kl + ku + 1
         RETURN
-        
-    end subroutine interpolate_single
+    end subroutine get_array_sizes
+
+    pure subroutine de_Boor_size(n_new, deg, de_Boor_dim)
+        ! Returns the size of the de Boor coefficient matrix
+        integer,intent(in) :: n_new
+        integer,intent(in) :: deg
+
+        integer,INTENT(OUT) :: de_Boor_dim(2)
+
+        de_Boor_dim(1) = 2*deg + 2
+        de_Boor_dim(2) = n_new
+        RETURN
+    end subroutine de_Boor_size
 
 ! *****************************************************************************************
-! Pre-Evaluation
- 
-    subroutine equidist_pre_evaluate_grid(n, x_start, x_step, n_new, x_new_start, x_new_step, deg, do_checks, &
-        info_values ,knots, LHS, RHS, ipiv, intervals, deBoor_matrix, ierr)
-        ! IN
-         integer, INTENT(IN)  :: n, n_new
-         integer, INTENT(IN)  :: deg
-         integer, INTENT(IN)  :: do_checks
-         real(dp), INTENT(IN) :: x_start, x_step
-         real(dp), INTENT(IN) :: x_new_start, x_new_step
+! Input grid pre-evaluation and spline coefficients
 
-        ! OUT
-        integer, INTENT(OUT)                :: info_values(info_size)
-
-        real(dp), INTENT(OUT), ALLOCATABLE  :: knots(:)             !! knot points
-        real(dp), INTENT(OUT), ALLOCATABLE  :: LHS(:,:)             !! 2D array containing the left hand side of the equation for spline coefficients
-        real(dp), INTENT(OUT), ALLOCATABLE  :: RHS(:)               !! 1D array for the right hand side of the equation for spline coefficients. After pre-evaluation, this contains the correct edge values and NaN where the y values that are solved for go. Must be assigned using assign_y_to_RHS.
-        integer, INTENT(OUT), ALLOCATABLE   :: ipiv(:)              !! 1D integer array of pivot-positions, needed by LAPACK
-        integer, INTENT(OUT)                :: intervals(n_new)     !! 1D integer array containg information, which spline interval the new grid points fall into.
-        real(dp), INTENT(OUT), ALLOCATABLE  :: deBoor_matrix(:,:)   !! pre-evaluated deBoor matrix, required for evaluation of values on the new grid.
-        integer, INTENT(OUT)                :: ierr                 !! integer error code
-
-        ! Internal - grid arrays
-        real(dp)                            :: x(n), x_new(n_new)
-
-        !TODO continue here tomorrow
-
-         call equidist_to_array(n, x_start, x_step, x)
-         call equidist_to_array(n_new, x_new_start, x_new_step, x_new)
-
-         !call pre_evaluate_grid(x, n, x_new, n_new, deg, do_checks, &
-         !nfo_values, knots, LHS, RHS, ipiv, intervals, deBoor_matrix, ierr)
-        RETURN
-    end subroutine equidist_pre_evaluate_grid
-
-
-    subroutine pre_evaluate_grid(x, n, x_new, n_new, deg, do_checks, pre_eval, ierr)
-        ! Sets up and pre-evaluate parts of the caluclation related to ...
+    subroutine single_calc_spline(&
+        n, x, y, &
+        deg, &
+        n_knots, nt, LHS_rows, &
+        knots, &
+        coeffs, &
+        ierr)
 
         ! IN
         integer, INTENT(IN) :: deg              !! order of spline
-        integer, INTENT(IN) :: n, n_new         !! # points in, out
+        integer, INTENT(IN) :: n        !! # points in
         real(dp), INTENT(IN):: x(n)             !! origin grid values
-        real(dp), INTENT(IN):: x_new(n_new)     !! result grid values
-        integer, INTENT(IN) :: do_checks        !! whether to perform checks on input data
+        real(dp), INTENT(IN):: y(n)
+        integer, INTENT(IN) :: n_knots, nt, LHS_rows
 
         ! OUT
-        type(grid_pre_evaluation), INTENT(OUT) :: pre_eval
-        type(info_values)      :: infos   !! 
-        real(dp), ALLOCATABLE  :: knots(:)                 !! knot points
-        real(dp), ALLOCATABLE  :: LHS(:,:)                !! 2D array containing the left hand side of the equation for spline coefficients
-        real(dp), ALLOCATABLE  :: RHS(:)                  !! 1D array for the right hand side of the equation for spline coefficients. After pre-evaluation, this contains the correct edge values and NaN where the y values that are solved for go. Must be assigned using assign_y_to_RHS.
-        integer, ALLOCATABLE   :: ipiv(:)                 !! 1D integer array of pivot-positions, needed by LAPACK
-        integer              :: intervals(n_new)        !! 1D integer array containg information, which spline interval the new grid points fall into.
-        real(dp), ALLOCATABLE  :: deBoor_matrix(:,:)      !! pre-evaluated deBoor matrix, required for evaluation of values on the new grid.
-        integer, INTENT(OUT)                :: ierr                    !! integer error code
+        real(dp), INTENT(OUT)  :: knots(n_knots)                 !! knot points
+        real(dp), INTENT(OUT)  :: coeffs(nt)
+        integer, INTENT(OUT)   :: ierr                    !! integer error code
 
-        ! Internal - packed into output by pack_values
-        type(grid)                          :: grid_origin, grid_target
-        integer                             :: n_knots              !! # knots
-        integer                             :: nt, kl, ku           !! matrix shape specifiers
-        integer                             :: nleft, nright        !! number of knots for bc left and right
-        integer                             :: LHS_rows, LHS_cols   !! shape LHS
-        integer                             :: RHS_cols             !! shape RHS
-        ! Internal - info on derivatives, not passed out
+        ! Internal
+        integer  :: nleft, nright
+        real(dp) :: LHS(LHS_rows, nt)
+        real(dp) :: RHS (nt)
+        integer  :: ipiv(nt)
+
+        ierr = 0
+
+        call pre_eval_input_grid(n, x, deg, &
+            n_knots, nt, LHS_rows, &
+            nleft, nright, &
+            knots, LHS, RHS, ipiv, &
+            ierr &
+            )
+
+        if (ierr .ne. 0) RETURN
+
+        call calc_spline_with_pre_eval(&
+            n, deg, &
+            y, &
+            n_knots, nt, LHS_rows, &
+            knots, &
+            nleft, nright, &
+            LHS, RHS, ipiv, &
+            coeffs, &
+            ierr)
+
+    end subroutine single_calc_spline
+
+
+    subroutine pre_eval_input_grid( &
+        n, x, deg, &                                ! actual input arguments
+        n_knots, nt, LHS_rows, & ! array sizes of output - formal input arguments
+        nleft, nright, &
+        knots, &
+        LHS, &
+        RHS, &
+        ipiv, &
+        ierr &
+        )
+        ! prepares LHS and RHS of the matrix equation for the spline coefficiencts
+        ! Used in Structure search where many theoretical intensities need to be interpolated
+        ! from the same starting grid.
+        ! If you use this version, you should first call subroutine get_array_sizes to get the sizes
+        ! of the arrays to expect returned.
+
+        ! IN
+        integer, INTENT(IN) :: n
+        real(dp), INTENT(IN):: x(n)             !! origin grid values
+        integer, INTENT(IN) :: deg
+
+        integer, INTENT(IN) :: n_knots
+        integer, INTENT(IN) :: nt ! Size of LHS_cols, RHS_cols, coeffs and ipiv
+        integer, INTENT(IN) :: LHS_rows
+        
+
+        ! OUT
+        integer, INTENT(OUT)  :: nleft, nright !! number of knots for bc left and right
+        real(dp), INTENT(OUT) :: knots(n_knots) !! knot points
+        real(dp), INTENT(OUT) :: LHS(LHS_rows, nt)
+        real(dp), INTENT(OUT) :: RHS (nt)
+        integer, INTENT(OUT) :: ipiv(nt)
+        
+        integer, INTENT(OUT)   :: ierr                    !! integer error code
+
+        ! Internal
+        integer                             :: kl, ku           !! matrix shape specifiers - in our case always equal deg
+        integer                             :: LAPACK_info
         integer                             :: derivs_known_l, derivs_known_r
         integer, ALLOCATABLE                :: derivs_l_ord(:), derivs_r_ord(:)
         real(dp), ALLOCATABLE               :: derivs_l_val(:), derivs_r_val(:)
-        ! Internal -other
-        integer                             :: LAPACK_info !LAPACK return
 
-        ! perform checks on input data
-        call perform_checks(n, x, n_new, x_new, ierr)
-
-        grid_origin = grid(n = n, x = x)
-        grid_target = grid(n = n_new, x = x_new)
-
-
+        ierr = 0
 
         ! Compute knot vector and size
-        call get_natural_knots(x, n, deg, knots, n_knots)
+        call get_natural_knots(x, n, deg, n_knots, knots)
 
         ! Get the correct derivatives at the edge for the degree givennatural boundary conditions
         call prepare_derivs_nat_bc(deg, derivs_known_l, derivs_known_r, nleft, nright,&
         derivs_l_ord, derivs_r_ord, derivs_l_val, derivs_r_val)
 
         ! Using the derivatives and the x_values, we build up the LHS of the equation
-        call build_LHS(x, n, knots, n_knots, deg, derivs_known_l, derivs_known_r, nleft, nright, &
-        derivs_l_ord, derivs_r_ord, LHS, LHS_rows, LHS_cols, nt, kl, ku, ierr)
+        call build_LHS(n, x, n_knots, knots, deg, derivs_known_l, derivs_known_r, nleft, nright, &
+            derivs_l_ord, derivs_r_ord, nt, LHS_rows, LHS)
+
+        kl = deg
+        ku = deg
 
         ! with this done, we can now prefactorize the LHS
-        call pre_factorize_LHS(LHS, LHS_rows, LHS_cols, nt, kl, ku, ipiv, LAPACK_info)
+        call pre_factorize_LHS(LHS, LHS_rows, nt, kl, ku, ipiv, LAPACK_info)
 
         if (LAPACK_info.ne.0) then
             ! Error in pre-factorization
-            ierr = 25
+            ierr = 621
+            RETURN
         end if
 
         ! Now set up the RHS
-        call prepare_RHS(nt, nleft, nright, derivs_l_val, derivs_r_val, rhs)
+        call prepare_RHS(nt, nleft, nright, derivs_l_val, derivs_r_val, RHS)
 
-        ! Build up the deBoor Matrix and the intervals array
-        call pre_eval_bspline(knots, n_knots, x_new, n_new, deg, intervals, deBoor_matrix)
-        
-        call pack_values(deg, n_knots, nt, kl, ku, nleft, nright, LHS_rows, LHS_cols, RHS_cols, infos)
-    
-        pre_eval = grid_pre_evaluation(grid_origin=grid_origin, grid_target=grid_target, deBoor_matrix=deBoor_matrix, &
-                                       knots=knots, intervals=intervals, LHS=LHS, RHS=RHS, ipiv=ipiv, infos=infos)
-        
+    end subroutine pre_eval_input_grid
 
+
+    subroutine calc_spline_with_pre_eval(&
+        n, deg, &
+        y, &
+        n_knots, nt, LHS_rows, &
+        knots, &
+        nleft, nright, &
+        LHS, RHS, ipiv, &
+        coeffs, &
+        ierr)
+        ! Calculate spline coefficients given pre-calculated LHS and RHS from routine pre_eval_input_grid
+
+        integer, INTENT(IN):: n
+        real(dp), INTENT(IN):: y(n)
+        integer, INTENT(IN) :: deg
+
+        integer, INTENT(IN)   :: n_knots, nt, LHS_rows
+        real(dp), INTENT(IN)  :: knots(n_knots)
+        integer, INTENT(IN)   :: nleft, nright
+        real(dp), INTENT(IN)  :: LHS(LHS_rows, nt)
+        real(dp), INTENT(IN)  :: RHS(nt)
+        integer, INTENT(IN)  :: ipiv(nt)
+
+        real(dp), INTENT(OUT) :: coeffs(nt)
+        integer, INTENT(OUT) :: ierr
+
+        ! Internal
+        integer :: kl, ku, LAPACK_info
+
+        ierr = 0
+
+        call assign_y_to_RHS(y, RHS, nt, nleft, nright, coeffs)
+
+        kl = deg
+        ku = deg
+
+        call solve_coeffcients(nt, kl, ku, LHS_rows, LHS, coeffs, ipiv, LAPACK_info)
+        if ((LAPACK_info >0).or.(LAPACK_info<0)) then
+            ierr = 631 ! LAPACK Error
+        end if
         RETURN
-    end subroutine pre_evaluate_grid
+    end subroutine calc_spline_with_pre_eval
 
+! *****************************************************************************************
+! Output grid pre-evaluation and interpolation
 
-    subroutine pre_evaluate_deriv(pre_eval, nu, deriv_pre_eval, ierr)
+    subroutine single_interpolate_coeffs_to_grid(n_knots, knots, nt, coeffs, deg, &
+        n_new, x_new, &
+        nu, &
+        y_new)
+
         ! IN
-        type(grid_pre_evaluation) :: pre_eval
-        integer, INTENT(IN) :: nu               !! order of derivative to calculate
+        integer, INTENT(IN) :: deg              !! order of spline
+        integer, INTENT(IN) :: n_knots, nt, n_new         !! # points in, out
+        real(dp), INTENT(IN):: x_new(n_new)     !! result grid values
+        real(dp), INTENT(IN):: knots(n_knots)
+        real(dp), INTENT(IN):: coeffs(nt)
+        integer, INTENT(IN) :: nu
+
+        !OUT
+        real(dp), INTENT(OUT):: y_new(n_new)
+        ! Internal
+        integer              :: intervals(n_new)        !! 1D integer array containg information, which spline interval the new grid points fall into.
+        real(dp), ALLOCATABLE  :: deBoor_matrix(:,:)      !! pre-evaluated deBoor matrix, required for evaluation of values on the new grid.
+        integer :: de_Boor_dim(2)
+
+        ! calculate interval vector for x_new
+        call get_intervals(n_knots, knots, n_new, x_new, deg, intervals)
+
+        call de_Boor_size(n_new, deg, de_Boor_dim)
+
+        ALLOCATE(deBoor_matrix(de_Boor_dim(1), de_Boor_dim(2)))
+
+        ! Build up the deBoor Matrix for x_new
+        call calc_deBoor(n_knots, knots, n_new, x_new, deg, nu, intervals, deBoor_matrix)
+
+        call eval_bspline_fast(deg, nt, n_new, coeffs, intervals, deBoor_matrix, y_new)
+        
+    end subroutine single_interpolate_coeffs_to_grid
+
+
+    subroutine get_intervals(n_knots, knots, n_new, x_new, deg, intervals)
+
+        ! in
+        integer, INTENT(IN) :: deg, n_new, n_knots
+        real(dp), INTENT(IN) :: knots(n_knots), x_new(n_new)
+
+        integer, INTENT(out) :: intervals(n_new)
+
+        integer :: extrapolate
+        integer :: i, prev_l
+
+        extrapolate = 0
+        prev_l = deg
+        do i=1,n_new
+            intervals(i) = find_interval(knots, n_knots, deg, x_new(i), prev_l, extrapolate)
+        end do
+        RETURN
+    end subroutine get_intervals
+
+
+    subroutine calc_deBoor(n_knots, knots, n_new, x_new, deg, nu, intervals, deBoor_matrix)
+        ! Calculates the deBoor_matrix
+        ! IN
+        integer, INTENT(in) :: n_knots, n_new, deg, nu
+        real(dp), INTENT(in) :: knots(n_knots), x_new(n_new)
+        integer, INTENT(in) :: intervals(n_new)
         
         ! OUT
-        type(deriv_pre_evaluation), INTENT(OUT) :: deriv_pre_eval
-        real(dp), ALLOCATABLE  :: deriv_deBoor_matrix(:,:)      !! pre-evaluated deBoor matrix, required for evaluation of values on the new grid.
-        integer, INTENT(OUT)                :: ierr                    !! integer error code        
+        real(dp), intent(out), ALLOCATABLE :: deBoor_matrix(:,:)
 
+        ! internal
+        integer :: i
 
-        call pre_eval_spline_deriv(pre_eval%infos%n_knots, pre_eval%knots, pre_eval%grid_target%n, pre_eval%grid_target%x, &
-                                    pre_eval%infos%deg, nu, pre_eval%intervals, deriv_deBoor_matrix)
-
-        deriv_pre_eval = deriv_pre_evaluation(nu=nu, deriv_deBoor_matrix=deriv_deBoor_matrix, infos=pre_eval%infos)
+        ALLOCATE(deBoor_matrix(2*deg+2, n_new))
+        do i = 1, n_new
+            call deBoor_D(knots, n_knots, x_new(i), deg, intervals(i), nu, deBoor_matrix(:,i))
+        end do
         RETURN
-    end subroutine pre_evaluate_deriv
+    end subroutine calc_deBoor
 
+! *****************************************************************************************
+! Fast Evaluation of the B-Spline using prepared values
+
+    pure subroutine eval_bspline_fast(&
+        deg, nt, n_new, &
+        coeffs, &
+        intervals, &
+        deBoor_matrix, &
+        y_new &
+        )
+        ! TODO: see if this can be sped up. This is the rate limiting procedure
+
+        ! in
+        integer, INTENT(in) :: deg, n_new
+        integer, INTENT(IN) :: nt
+        integer, intent(in) :: intervals(n_new)
+        real(dp), INTENT(in) :: coeffs(nt)
+        real(dp), INTENT(IN):: deBoor_matrix(2*deg+2, n_new)
+
+        ! out
+        real(dp), intent(out) :: y_new(n_new)
+
+        ! internal
+        integer :: i ! loop variable
+
+        y_new = 0.0d0
+        do concurrent (i = 1:n_new)
+            ! whole array operations like the one below are faster than manual loops
+            y_new(i) = sum(coeffs(intervals(i)-deg+1:intervals(i)+1)*deBoor_matrix(1:deg+1,i))
+        end do
+        RETURN
+    end subroutine eval_bspline_fast
+
+    pure subroutine eval_y_pendry_fast(&
+        deg, nt, n_new, &
+        coeffs, &
+        intervals, &
+        v0i, &
+        deBoor_matrix_deriv_0, deBoor_matrix_deriv_1, &
+        y_func &
+        )
+        ! evaluates the B-spline in the same way as eval_bspline_fast, but does it at once for
+        ! the intensity and the derivative and returns the Pendry Y function directly.
+
+        ! in
+        integer, INTENT(in) :: deg, n_new, nt
+        integer, intent(in) :: intervals(n_new)
+        real(dp), INTENT(in) :: coeffs(nt)
+        real(dp), INTENT(in) :: deBoor_matrix_deriv_0(2*deg+2, n_new)
+        real(dp), INTENT(in) :: deBoor_matrix_deriv_1(2*deg+2, n_new)
+        real(dp), INTENT(IN) :: v0i
+    
+        ! OUT
+        real(dp), INTENT(OUT) :: y_func(n_new)
+
+        ! Internal
+        integer i
+        real(dp) :: intensity(n_new), derivative(n_new)
+        
+        y_func = 0.0d0
+        do concurrent (i=1:n_new)
+            intensity(i) = sum(coeffs(intervals(i)-deg+1:intervals(i)+1)*deBoor_matrix_deriv_0(1:deg+1,i))
+            derivative(i) = sum(coeffs(intervals(i)-deg+1:intervals(i)+1)*deBoor_matrix_deriv_1(1:deg+1,i))
+            y_func(i) = intensity(i)*derivative(i) /(intensity(i)*intensity(i) + v0i*v0i*derivative(i)*derivative(i))
+        end do
+
+    end subroutine eval_y_pendry_fast
+
+! *****************************************************************************************
+! Utility procedures
 
     subroutine perform_checks(n, x, n_new, x_new, ierr)
         implicit none
@@ -279,14 +398,14 @@ module interpolation
         do concurrent (i = 2: n)
             if (x(i).le.x(i-1)) then
                 ! origin grid not sorted
-                ierr = 11
+                ierr = 611
             end if
         end do
 
         do concurrent (i = 2: n_new)
             if (x_new(i).le.x_new(i-1)) then
                 ! target grid not sorted
-                ierr = 12
+                ierr = 612
             end if
         end do
 
@@ -309,101 +428,18 @@ module interpolation
     end subroutine equidist_to_array
 
 ! *****************************************************************************************
-! Fast Evaluation using prepared values
-    !TODO clean up comments
-    subroutine interpolate_fast(n, y, pre_eval, y_new, coeffs, ierr)
-        integer, INTENT(in) :: n
-        type(grid_pre_evaluation), INTENT(IN) :: pre_eval
-        real(dp), INTENT(IN) :: y(n)
-        !type(info_values), INTENT(IN) :: info
-        !integer, INTENT(INOUT) :: ipiv(pre_eval%info%nt)
-        
-
-        !real(dp), intent(in) :: LHS(info%LHS_rows, info%LHS_cols), RHS_prep(info%RHS_cols)
-        !real(dp), INTENT(IN) :: x_new(n_new), knots(info%n_knots)
-
-        ! for eval bspline
-        !integer,  INTENT(in)                :: intervals(n_new)
-        !real(dp), ALLOCATABLE, INTENT(in)   :: deBoor_matrix(:,:)
-
-        ! OUT
-        real(dp), intent(out)   :: y_new(pre_eval%grid_target%n)
-        integer, INTENT(OUT)    :: ierr !! error code
-        real(dp), INTENT(OUT), ALLOCATABLE   :: coeffs(:) ! RHS_prep is copied into this array and then overwritten by the spline coefficients
-        
-        ! Internal - upacked from infovalues
-        integer  :: deg
-        integer  :: n_knots
-        integer  :: nt, kl, ku
-        integer  :: nleft, nright
-        integer  :: LHS_rows, LHS_cols
-        integer  :: RHS_cols
-        ! Internal - LAPACK check value
-        integer  :: LAPACK_info
-
-        call unpack_values(pre_eval%infos, deg, n_knots, nt, kl, ku, nleft, nright, LHS_rows, LHS_cols, RHS_cols)
-        
-        ! RHS is copied into coeffs by assign_y_to_RHS, because it would be overwritten
-        ! LHS is not overwritten in solve_coefficients, thus no need to copy
-
-        call assign_y_to_RHS(y, pre_eval%RHS, nt, nleft, nright, coeffs)
-
-        call solve_coeffcients(nt, kl, ku, lhs_rows, lhs_cols, pre_eval%LHS, coeffs, pre_eval%ipiv, LAPACK_info)
-        if ((LAPACK_info >0).or.(LAPACK_info<0)) then
-            ierr = 31 ! LAPACK Error
-        end if
-        
-        ! Now use to evaluate at x_new positions
-        call eval_bspline_fast(deg, coeffs, pre_eval%intervals, pre_eval%deBoor_matrix, pre_eval%grid_target%n, y_new)
-
-        RETURN
-    end subroutine interpolate_fast
-
-    subroutine interpolate_deriv_fast(info, n_new, intervals, coeffs, deriv_deBoor_matrix, y_deriv, ierr)
-        integer, INTENT(in) :: n_new
-        type(info_values), INTENT(IN) :: info
-        integer,  INTENT(in)                :: intervals(n_new)
-        real(dp), INTENT(in)   :: deriv_deBoor_matrix(:,:)
-        real(dp), INTENT(IN), ALLOCATABLE   :: coeffs(:)
-
-        real(dp), intent(out)   :: y_deriv(n_new)
-        integer, INTENT(OUT)                :: ierr                    !! integer error code
-                
-        ! Internal - upacked from infovalues
-        integer  :: deg
-        integer  :: n_knots
-        integer  :: nt, kl, ku
-        integer  :: nleft, nright
-        integer  :: LHS_rows, LHS_cols
-        integer  :: RHS_cols
-        call unpack_values(info, deg, n_knots, nt, kl, ku, nleft, nright, LHS_rows, LHS_cols, RHS_cols)
-        call eval_bspline_fast(deg, coeffs, intervals, deriv_deBoor_matrix, n_new, y_deriv)
-    end subroutine interpolate_deriv_fast
-
-! *****************************************************************************************
 ! Handeling of knots and boundary conditions
-
-    pure integer function get_n_knots(deg, n) result(n_knots)
-        implicit none
-        !in
-        integer, INTENT(IN) :: deg,n
-        
-        n_knots = n + 2*deg
-        RETURN
-    end function get_n_knots
-
-    
-    subroutine get_natural_knots(x, n, deg, knots, n_knots)
+   
+    subroutine get_natural_knots(x, n, deg, n_knots, knots)
         ! in
         integer,intent(in) :: n, deg
         real(dp), INTENT(IN) :: x(n)
+        integer, INTENT(IN) :: n_knots
 
         ! out
-        real(dp), intent(out), ALLOCATABLE ::  knots(:)
-        integer, INTENT(OUT) :: n_knots
+        real(dp), intent(out) ::  knots(n_knots)
 
-        n_knots = get_n_knots(deg, n)
-        ALLOCATE(knots(n_knots))
+
         knots(1       : deg     ) = x(1)
         knots(1+deg   : n+deg   ) = x(:)
         knots(n+deg+1 : n_knots ) = x(n)
@@ -659,29 +695,12 @@ module interpolation
     end function find_interval
 
 
-    subroutine get_intervals(knots, n_knots, deg, x, n, extrapolate, intervals)
-
-        ! in
-        integer, INTENT(IN) :: deg, n, n_knots, extrapolate
-        real(dp), INTENT(IN) :: knots(n_knots), x(n)
-
-        integer, INTENT(out) :: intervals(n)
-
-        integer :: i, prev_l
-
-        prev_l = deg
-        do i=1,n
-            intervals(i) = find_interval(knots, n_knots, deg, x(i), prev_l, extrapolate)
-        end do
-        RETURN
-    end subroutine get_intervals
-
 ! *****************************************************************************************
 ! Preparing the left hand side (LHS) of the equation. The LHs holds the original grid (knots) and info on the boundary conditions.
 ! As long as the origin grid and boundary conditions stay the same, the LHS is unchanged and can be pre-evaluated.    
 
-    subroutine build_LHS(x, n, knots, n_knots, deg, derivs_known_l, derivs_known_r, nleft, nright, &
-                            derivs_l_ord, derivs_r_ord, AB, LHS_rows, LHS_cols, nt, kl, ku, ierr)
+    subroutine build_LHS(n, x, n_knots, knots, deg, derivs_known_l, derivs_known_r, nleft, nright, &
+                            derivs_l_ord, derivs_r_ord, nt, LHS_rows, LHS)
         implicit none
         ! in
         integer,intent(in) :: n, n_knots, deg
@@ -689,54 +708,49 @@ module interpolation
         integer, INTENT(IN) :: derivs_known_l, derivs_known_r, nleft, nright
         integer, INTENT(IN) :: derivs_l_ord(derivs_known_l)
         integer, INTENT(IN) :: derivs_r_ord(derivs_known_r)
+        integer, INTENT(IN) :: nt, LHS_rows
 
         !out
-        integer, INTENT(OUT) :: nt, ku, kl, LHS_rows, LHS_cols, ierr
-        real(dp), INTENT(OUT), ALLOCATABLE :: AB(:,:)
+        real(dp), INTENT(OUT) :: LHS(LHS_rows, nt)
+
+        ! Internal
+        integer :: kl, ku
 
         ! Set up left hand side
-        nt = n_knots - deg - 1
-        kl = deg
-        ku = deg
-        LHS_rows =2*kl + ku +1
-        LHS_cols = nt
-        allocate(AB(LHS_rows, LHS_cols))
-        AB = 0.0d0
+        LHS = 0.0d0
 
-        call build_colloc_matrix(x, n, knots, n_knots, deg, AB, LHS_rows, LHS_cols, nleft)
+        ku = deg
+        kl = deg
+
+        call build_colloc_matrix(x, n, knots, n_knots, deg, LHS, LHS_rows, nt, nleft)
         if (nleft>0) then
-            call handle_lhs_derivatives(knots, n_knots, deg, x(1), AB, LHS_rows, LHS_cols, kl, ku, &
+            call handle_lhs_derivatives(knots, n_knots, deg, x(1), LHS, LHS_rows, nt, kl, ku, &
             derivs_l_ord, derivs_known_l, 0)
         end if
         if (nright>0) then
-            call handle_lhs_derivatives(knots, n_knots, deg, x(n), AB, LHS_rows, LHS_cols, kl, ku, &
+            call handle_lhs_derivatives(knots, n_knots, deg, x(n), LHS, LHS_rows, nt, kl, ku, &
             derivs_r_ord, derivs_known_r, nt-nright)
         end if
     end subroutine build_LHS
 
 
-    subroutine pre_factorize_LHS(AB, LHS_rows, LHS_cols, nt, kl, ku, ipiv, info)
+    subroutine pre_factorize_LHS(LHS, LHS_rows, nt, kl, ku, ipiv, info)
 
         ! in
-        integer, INTENT(IN) :: LHS_rows, LHS_cols
+        integer, INTENT(IN) :: LHS_rows
         integer, INTENT(IN) :: nt, kl, ku
 
         ! inplace
-        real(dp), INTENT(INOUT) :: AB(LHS_rows, LHS_rows)
+        real(dp), INTENT(INOUT) :: LHS(LHS_rows, nt)
 
         ! out
-        integer, Allocatable, INTENT(OUT) :: ipiv(:) ! TODO is this even needed afterwards?
+        integer, INTENT(OUT) :: ipiv(nt) ! TODO is this even needed afterwards?
         integer, INTENT(OUT) :: info
 
         ! Compute the LU factorization of the band matrix A.
 
-        ALLOCATE(ipiv(nt))
+        CALL dgbtrf(nt, nt, kl, ku, LHS, 2*kl+ku+1, ipiv, info)
 
-        CALL dgbtrf(nt, nt, kl, ku, AB, 2*kl+ku+1, ipiv, info )
-        if (info.ne.0) then
-            !error?
-            print*, "Error in pre_factorize"
-        end if
     end subroutine pre_factorize_LHS
 
 ! *****************************************************************************************
@@ -751,16 +765,14 @@ module interpolation
         real(dp), INTENT(IN) :: derivs_l_val(nleft), derivs_r_val(nright)
 
         ! out
-        real(dp), ALLOCATABLE, INTENT(OUT) :: rhs(:)
+        real(dp), INTENT(OUT) :: rhs(nt)
 
-
-        ALLOCATE(rhs(nt))
 
         if (nleft>0) then
             rhs(1:nleft) = derivs_l_val
         end if
         if (nright>0) then
-            rhs(nt - nright +1: nt) = derivs_l_val
+            rhs(nt - nright +1: nt) = derivs_r_val
         end if
         ! Assign NaNs in all places where y needs to go, so that if the array is used without assignment, an error will be thrown.
         rhs(nleft + 1 : nt - nright) = ieee_value(real(dp), ieee_signaling_nan)
@@ -774,9 +786,7 @@ module interpolation
         real(dp), INTENT(IN) :: y(nt - nleft - nright)
         real(dp), INTENT(IN) :: rhs_prep(nt)
         ! out
-        real(dp), INTENT(OUT), ALLOCATABLE :: rhs(:)
-
-        ALLOCATE(rhs(nt))
+        real(dp), INTENT(OUT) :: rhs(nt)
 
         ! Since rhs will be overwritten by LAPACK, it needs to be copied at some point prior
         rhs = rhs_prep
@@ -787,14 +797,14 @@ module interpolation
 ! *****************************************************************************************
 ! Solve for the B-Spline coefficients given prepared LHS and RHS
 
-    subroutine solve_coeffcients(nt, kl, ku, LHS_rows, LHS_cols, LHS, RHS, ipiv, info)
+    subroutine solve_coeffcients(nt, kl, ku, LHS_rows, LHS, RHS, ipiv, info)
         ! Now we are ready to solve the matrix!
         ! Using LAPACKs' GBSV routine
         ! On exit, rhs is overwritten by the solution coeffs
 
         ! in
-        integer, INTENT(IN) :: nt, kl, ku, LHS_rows, LHS_cols
-        real(dp), intent(in) :: LHS(LHS_rows, LHS_cols)
+        integer, INTENT(IN) :: nt, kl, ku, LHS_rows
+        real(dp), intent(in) :: LHS(LHS_rows, nt)
         real(dp), INTENT(INOUT) :: RHS(nt)
 
         ! inout
@@ -808,125 +818,5 @@ module interpolation
         return
     end subroutine solve_coeffcients
 
-! *****************************************************************************************
-! Evaluation of the B-Spline
-
-    subroutine pre_eval_bspline(knots, n_knots, x_new, n_new, deg, intervals, deBoor_matrix)
-        integer, INTENT(in) :: n_knots, n_new, deg
-        real(dp), INTENT(in) :: knots(n_knots), x_new(n_new)
-
-        integer, INTENT(out) :: intervals(n_new)
-        real(dp), intent(out), ALLOCATABLE :: deBoor_matrix(:,:)
-
-        real(dp), ALLOCATABLE :: work(:)
-
-        ! internal
-        integer :: i
-
-        ! calculate interval vector
-        call get_intervals(knots, n_knots, deg, x_new, n_new, 0, intervals)
-
-        ALLOCATE(deBoor_matrix(2*deg+2, n_new))
-        ALLOCATE(work(2*deg+2))
-        do i = 1, n_new
-            call deBoor_D(knots, n_knots, x_new(i), deg, intervals(i), 0, work)
-            deBoor_matrix(:,i) = work
-        end do
-        RETURN
-        ! work is deallocated automatically when it goes out of scope
-    end subroutine pre_eval_bspline
-
-
-    pure subroutine eval_bspline_fast(deg, coeffs, intervals, deBoor_matrix, n_new, y_new)
-        ! TODO: see if this can be sped up. This is the rate limiting procedure
-        ! in
-        integer, INTENT(in) :: deg, n_new
-        integer, intent(in) :: intervals(n_new)
-        real(dp), INTENT(in) :: coeffs(n_new), deBoor_matrix(2*deg+2, n_new)
-
-        ! out
-        real(dp), intent(out) :: y_new(n_new)
-
-        ! internal
-        integer :: i ! loop variable
-
-        y_new = 0.0d0
-        do concurrent (i = 1:n_new)
-            ! whole array operations like the one below are faster than manual loops
-            y_new(i) = sum(coeffs(intervals(i)-deg+1:intervals(i)+1)*deBoor_matrix(1:deg+1,i))
-        end do
-        RETURN
-    end subroutine eval_bspline_fast
-
-
-    subroutine pre_eval_spline_deriv(n_knots, knots, n_new, x_new, deg, nu, intervals, deriv_deBoor_matrix)
-        ! IN
-        integer, INTENT(in) :: n_knots, n_new, deg, nu
-        real(dp), INTENT(in) :: knots(n_knots), x_new(n_new)
-        integer, INTENT(in) :: intervals(n_new)
-        
-        ! OUT
-        real(dp), intent(out), ALLOCATABLE :: deriv_deBoor_matrix(:,:)
-
-        ! internal
-        integer :: i
-
-        ALLOCATE(deriv_deBoor_matrix(2*deg+2, n_new))
-        do i = 1, n_new
-            call deBoor_D(knots, n_knots, x_new(i), deg, intervals(i), nu, deriv_deBoor_matrix(:,i))
-        end do
-        RETURN
-        ! work is deallocated automatically when it goes out of scope
-    end subroutine pre_eval_spline_deriv
-
-! *****************************************************************************************
-! Packing and upacking of various annoying integer
-
-    subroutine pack_values(deg, n_knots, nt, kl, ku, nleft, nright, LHS_rows, LHS_cols, RHS_cols, info)
-        integer, INTENT(IN)                :: deg                  !! degree of spline
-        integer, INTENT(IN)                :: n_knots              !! # knots
-        integer, INTENT(IN)                :: nt, kl, ku           !! matrix shape specifiers
-        integer, INTENT(IN)                :: nleft, nright        !! number of knots for bc left and right
-        integer, INTENT(IN)                :: LHS_rows, LHS_cols   !! shape LHS
-        integer, INTENT(IN)                :: RHS_cols             !! shape RHS
-        
-        type(info_values), INTENT(OUT)               :: info
-
-        info%deg       = deg
-        info%n_knots   = n_knots
-        info%nt        = nt
-        info%kl        = kl
-        info%ku        = ku
-        info%nleft     = nleft 
-        info%nright    = nright
-        info%LHS_rows  = LHS_rows
-        info%LHS_cols  = LHS_cols
-        info%RHS_cols  = RHS_cols
-        RETURN
-    end subroutine pack_values
-
-
-    subroutine unpack_values(info, deg, n_knots, nt, kl, ku, nleft, nright, LHS_rows, LHS_cols, RHS_cols)
-        type(info_values), INTENT(IN)       :: info
-
-        integer, INTENT(OUT)                :: deg                  !! degree of spline
-        integer, INTENT(OUT)                :: n_knots              !! # knots
-        integer, INTENT(OUT)                :: nt, kl, ku           !! matrix shape specifiers
-        integer, INTENT(OUT)                :: nleft, nright        !! number of knots for bc left and right
-        integer, INTENT(OUT)                :: LHS_rows, LHS_cols   !! shape LHS
-        integer, INTENT(OUT)                :: RHS_cols             !! shape RHS
-        
-        deg         = info%deg
-        n_knots     = info%n_knots
-        nt          = info%nt
-        kl          = info%kl
-        ku          = info%ku
-        nleft       = info%nleft
-        nright      = info%nright
-        LHS_rows    = info%LHS_rows
-        LHS_cols    = info%LHS_cols
-        RHS_cols    = info%RHS_cols
-        RETURN
-    end subroutine unpack_values
 
 end module interpolation
