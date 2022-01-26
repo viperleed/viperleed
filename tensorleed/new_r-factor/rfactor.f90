@@ -59,7 +59,7 @@ subroutine r_pendry_beam_y(n_E, E_step, y1, y2, id_start_y1, id_start_y2, n_y1, 
 
     id_min = max(id_start_y1, id_start_y2)
     id_max = min(id_start_y1 + n_y1, id_start_y2+ n_y2)
-    N_overlapping_points = id_max - id_min
+    N_overlapping_points = id_max - id_min + 1
     allocate(y_diff(N_overlapping_points), y_squared_sum(N_overlapping_points))
 
     y_diff=y1(id_min: id_max) - y2(id_min: id_max) ! difference between Y functions
@@ -328,16 +328,15 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
         !print*, E_grid_in
         !print*, E_grid_out
         ! minimum index to keep:
-        if (E_grid_in(1) < E_grid_out(1)) then
-            new_min_index = find_grid_correspondence(E_grid_out(1), n_E_in, E_grid_in, 1) - 1
+        if (E_grid_in(1) .le. E_grid_out(1)) then
+            new_min_index = find_grid_correspondence(E_grid_out(1), n_E_in, E_grid_in, 1)
         else
             print* , "This should not happen"
             ierrs(:) = 211
             RETURN
-            !id_start = 1
         end if
 
-        if (E_grid_in(n_E_in) > E_grid_out(n_E_out)) then
+        if (E_grid_in(n_E_in) .ge. E_grid_out(n_E_out)) then
             new_max_index = find_grid_correspondence(E_grid_out(n_E_out), n_E_in, E_grid_in, new_min_index)
         else
             print* , "This should not happen"
@@ -359,8 +358,8 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
                 ! Change energy range or discard beam 
                 averaging_scheme(i) = 0 ! (can I implement this via averaging group 0?)
             end if
-            print*, "cut_n_E_in", cut_n_E_in
-            print*, "cut_E_start_beams", cut_E_start_beams(i)
+            !print*, "cut_n_E_in", cut_n_E_in
+            !print*, "cut_E_start_beams", cut_E_start_beams(i)
             
         end do
         
@@ -373,13 +372,8 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
 
     !print*, "new_min_index, new_max_index", new_min_index, new_max_index
     !print*, "E_start_beams", cut_E_start_beams(15:20)
-    print*, "n_E_out", n_E_out
-    do i=55,55
-        print*, "E_in(E_start_beams)", E_grid_in(cut_E_start_beams(i))
-        print*, "E_out(E_start_beams_out)", E_grid_out(E_start_beams_out(i))
-        print*, "stop_in", E_grid_in(cut_E_start_beams(i) + cut_n_E_beams(i)-1)
-        print*, "stop_out", E_grid_out(E_start_beams_out(i) + n_E_beams_out(i)-1)
-    end do
+    !print*, "n_E_out", n_E_out
+    
 
 
     if (ANY(ieee_is_nan(intensities))) print*,"NaN before average"
@@ -532,11 +526,6 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
 
     ! output is the y functions
 
-    print*, "E_start_beams", E_start_beams
-    print*, "E_start_beams_out", E_start_beams_out
-    print*, "n_E_beams", n_E_beams
-    print*, "n_E_beams_out", n_E_beams_out
-
     RETURN
 
 end subroutine prepare_beams
@@ -605,16 +594,12 @@ subroutine avg_reo_disc(n_beams_in, n_beams_out, n_E, scheme, min_len, &
     integer :: i,j
     integer :: avg_counter(n_beams_out)
 
-    print*, scheme
-
-
     intensities_in = intensities
     beam_start_in = beam_start
     beam_n_in = beam_n
 
     beam_start(:) = 0
     beam_n(:) = n_E
-
 
     ! Adjust beam length if necessary...
     do i = 1, n_beams_out
@@ -630,7 +615,6 @@ subroutine avg_reo_disc(n_beams_in, n_beams_out, n_E, scheme, min_len, &
         end do
     end do
 
-    print*, beam_n
     ! Decreasing the beam lengths may have made some beams unviable for calculations...
     do j = 1, n_beams_in
         if (beam_n(j) < min_len) then
@@ -826,14 +810,5 @@ pure function trapez_integration_const_dx(f, dx) result(integral)
     return
 end function trapez_integration_const_dx
 
-pure function test_exec(input) result(output)
-    implicit none
-    real(dp), intent(in) :: input
-    real(dp) output
-
-    output = input
-
-    return
-end function test_exec
 
 end module r_factor_new
