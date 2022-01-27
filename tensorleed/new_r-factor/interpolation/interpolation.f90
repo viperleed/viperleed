@@ -23,7 +23,7 @@
 
 
 module interpolation
-    use, intrinsic :: iso_fortran_env
+    use, intrinsic :: iso_fortran_env, only: real32, real64, real128
     use, intrinsic :: ieee_arithmetic
     implicit none
     
@@ -650,11 +650,12 @@ module interpolation
 ! *****************************************************************************************
 ! Assigning grid points to spline intervals
 
-    pure integer function find_interval(knots, n_knots, deg, x_val, prev_l, extrapolate) result(interval)
-        implicit none
+    pure function find_interval(knots, n_knots, deg, x_val, prev_l, extrapolate) result(interval)
 
         integer, INTENT(IN) :: n_knots, deg, extrapolate, prev_l
         real(dp), INTENT(IN) :: knots(n_knots), x_val
+
+        integer interval
 
         ! internal
         integer :: l, n
