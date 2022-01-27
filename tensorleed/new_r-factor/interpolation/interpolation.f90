@@ -23,14 +23,9 @@
 
 
 module interpolation
-    use, intrinsic :: iso_fortran_env, only: real32, real64, real128
     use, intrinsic :: ieee_arithmetic
     implicit none
     
-    integer, parameter :: sp = REAL32
-    integer, parameter :: dp = REAL64
-    integer, parameter :: qp = REAL128
-
     contains
 
 ! *****************************************************************************************
@@ -81,19 +76,19 @@ module interpolation
         ! IN
         integer, INTENT(IN) :: deg              !! order of spline
         integer, INTENT(IN) :: n        !! # points in
-        real(dp), INTENT(IN):: x(n)             !! origin grid values
-        real(dp), INTENT(IN):: y(n)
+        real(8), INTENT(IN):: x(n)             !! origin grid values
+        real(8), INTENT(IN):: y(n)
         integer, INTENT(IN) :: n_knots, nt, LHS_rows
 
         ! OUT
-        real(dp), INTENT(OUT)  :: knots(n_knots)                 !! knot points
-        real(dp), INTENT(OUT)  :: coeffs(nt)
+        real(8), INTENT(OUT)  :: knots(n_knots)                 !! knot points
+        real(8), INTENT(OUT)  :: coeffs(nt)
         integer, INTENT(OUT)   :: ierr                    !! integer error code
 
         ! Internal
         integer  :: nleft, nright
-        real(dp) :: LHS(LHS_rows, nt)
-        real(dp) :: RHS (nt)
+        real(8) :: LHS(LHS_rows, nt)
+        real(8) :: RHS (nt)
         integer  :: ipiv(nt)
 
         ierr = 0
@@ -138,7 +133,7 @@ module interpolation
 
         ! IN
         integer, INTENT(IN) :: n
-        real(dp), INTENT(IN):: x(n)             !! origin grid values
+        real(8), INTENT(IN):: x(n)             !! origin grid values
         integer, INTENT(IN) :: deg
 
         integer, INTENT(IN) :: n_knots
@@ -148,9 +143,9 @@ module interpolation
 
         ! OUT
         integer, INTENT(OUT)  :: nleft, nright !! number of knots for bc left and right
-        real(dp), INTENT(OUT) :: knots(n_knots) !! knot points
-        real(dp), INTENT(OUT) :: LHS(LHS_rows, nt)
-        real(dp), INTENT(OUT) :: RHS (nt)
+        real(8), INTENT(OUT) :: knots(n_knots) !! knot points
+        real(8), INTENT(OUT) :: LHS(LHS_rows, nt)
+        real(8), INTENT(OUT) :: RHS (nt)
         integer, INTENT(OUT) :: ipiv(nt)
         
         integer, INTENT(OUT)   :: ierr                    !! integer error code
@@ -160,7 +155,7 @@ module interpolation
         integer                             :: LAPACK_info
         integer                             :: derivs_known_l, derivs_known_r
         integer, ALLOCATABLE                :: derivs_l_ord(:), derivs_r_ord(:)
-        real(dp), ALLOCATABLE               :: derivs_l_val(:), derivs_r_val(:)
+        real(8), ALLOCATABLE               :: derivs_l_val(:), derivs_r_val(:)
 
         ierr = 0
 
@@ -205,17 +200,17 @@ module interpolation
         ! Calculate spline coefficients given pre-calculated LHS and RHS from routine pre_eval_input_grid
 
         integer, INTENT(IN):: n
-        real(dp), INTENT(IN):: y(n)
+        real(8), INTENT(IN):: y(n)
         integer, INTENT(IN) :: deg
 
         integer, INTENT(IN)   :: n_knots, nt, LHS_rows
-        real(dp), INTENT(IN)  :: knots(n_knots)
+        real(8), INTENT(IN)  :: knots(n_knots)
         integer, INTENT(IN)   :: nleft, nright
-        real(dp), INTENT(IN)  :: LHS(LHS_rows, nt)
-        real(dp), INTENT(IN)  :: RHS(nt)
+        real(8), INTENT(IN)  :: LHS(LHS_rows, nt)
+        real(8), INTENT(IN)  :: RHS(nt)
         integer, INTENT(IN)  :: ipiv(nt)
 
-        real(dp), INTENT(OUT) :: coeffs(nt)
+        real(8), INTENT(OUT) :: coeffs(nt)
         integer, INTENT(OUT) :: ierr
 
         ! Internal
@@ -246,16 +241,16 @@ module interpolation
         ! IN
         integer, INTENT(IN) :: deg              !! order of spline
         integer, INTENT(IN) :: n_knots, nt, n_new         !! # points in, out
-        real(dp), INTENT(IN):: x_new(n_new)     !! result grid values
-        real(dp), INTENT(IN):: knots(n_knots)
-        real(dp), INTENT(IN):: coeffs(nt)
+        real(8), INTENT(IN):: x_new(n_new)     !! result grid values
+        real(8), INTENT(IN):: knots(n_knots)
+        real(8), INTENT(IN):: coeffs(nt)
         integer, INTENT(IN) :: nu
 
         !OUT
-        real(dp), INTENT(OUT):: y_new(n_new)
+        real(8), INTENT(OUT):: y_new(n_new)
         ! Internal
         integer              :: intervals(n_new)        !! 1D integer array containg information, which spline interval the new grid points fall into.
-        real(dp), ALLOCATABLE  :: deBoor_matrix(:,:)      !! pre-evaluated deBoor matrix, required for evaluation of values on the new grid.
+        real(8), ALLOCATABLE  :: deBoor_matrix(:,:)      !! pre-evaluated deBoor matrix, required for evaluation of values on the new grid.
         integer :: de_Boor_dim(2)
 
         ! calculate interval vector for x_new
@@ -266,7 +261,8 @@ module interpolation
         ALLOCATE(deBoor_matrix(de_Boor_dim(1), de_Boor_dim(2)))
 
         ! Build up the deBoor Matrix for x_new
-        call calc_deBoor(n_knots, knots, n_new, x_new, deg, nu, intervals, deBoor_matrix)
+        call calc_deBoor(n_knots, knots, n_new, x_new, deg, nu, intervals, &
+            de_Boor_dim(1), de_Boor_dim(2), deBoor_matrix)
 
         call eval_bspline_fast(deg, nt, n_new, coeffs, intervals, deBoor_matrix, y_new)
         
@@ -277,7 +273,7 @@ module interpolation
 
         ! in
         integer, INTENT(IN) :: deg, n_new, n_knots
-        real(dp), INTENT(IN) :: knots(n_knots), x_new(n_new)
+        real(8), INTENT(IN) :: knots(n_knots), x_new(n_new)
 
         integer, INTENT(out) :: intervals(n_new)
 
@@ -293,20 +289,20 @@ module interpolation
     end subroutine get_intervals
 
 
-    subroutine calc_deBoor(n_knots, knots, n_new, x_new, deg, nu, intervals, deBoor_matrix)
+    subroutine calc_deBoor(n_knots, knots, n_new, x_new, deg, nu, intervals, deBoor_rows, deBoor_cols, deBoor_matrix)
         ! Calculates the deBoor_matrix
         ! IN
         integer, INTENT(in) :: n_knots, n_new, deg, nu
-        real(dp), INTENT(in) :: knots(n_knots), x_new(n_new)
+        real(8), INTENT(in) :: knots(n_knots), x_new(n_new)
         integer, INTENT(in) :: intervals(n_new)
+        integer, INTENT(IN) :: deBoor_rows, deBoor_cols
         
         ! OUT
-        real(dp), intent(out), ALLOCATABLE :: deBoor_matrix(:,:)
+        real(8), intent(out) :: deBoor_matrix(deBoor_rows, deBoor_cols)
 
         ! internal
         integer :: i
 
-        ALLOCATE(deBoor_matrix(2*deg+2, n_new))
         do i = 1, n_new
             call deBoor_D(knots, n_knots, x_new(i), deg, intervals(i), nu, deBoor_matrix(:,i))
         end do
@@ -329,11 +325,11 @@ module interpolation
         integer, INTENT(in) :: deg, n_new
         integer, INTENT(IN) :: nt
         integer, intent(in) :: intervals(n_new)
-        real(dp), INTENT(in) :: coeffs(nt)
-        real(dp), INTENT(IN):: deBoor_matrix(2*deg+2, n_new)
+        real(8), INTENT(in) :: coeffs(nt)
+        real(8), INTENT(IN):: deBoor_matrix(2*deg+2, n_new)
 
         ! out
-        real(dp), intent(out) :: y_new(n_new)
+        real(8), intent(out) :: y_new(n_new)
 
         ! internal
         integer :: i ! loop variable
@@ -360,17 +356,17 @@ module interpolation
         ! in
         integer, INTENT(in) :: deg, n_new, nt
         integer, intent(in) :: intervals(n_new)
-        real(dp), INTENT(in) :: coeffs(nt)
-        real(dp), INTENT(in) :: deBoor_matrix_deriv_0(2*deg+2, n_new)
-        real(dp), INTENT(in) :: deBoor_matrix_deriv_1(2*deg+2, n_new)
-        real(dp), INTENT(IN) :: v0i
+        real(8), INTENT(in) :: coeffs(nt)
+        real(8), INTENT(in) :: deBoor_matrix_deriv_0(2*deg+2, n_new)
+        real(8), INTENT(in) :: deBoor_matrix_deriv_1(2*deg+2, n_new)
+        real(8), INTENT(IN) :: v0i
     
         ! OUT
-        real(dp), INTENT(OUT) :: y_func(n_new)
+        real(8), INTENT(OUT) :: y_func(n_new)
 
         ! Internal
         integer i
-        real(dp) :: intensity(n_new), derivative(n_new)
+        real(8) :: intensity(n_new), derivative(n_new)
         
         y_func = 0.0d0
         do concurrent (i=1:n_new)
@@ -387,7 +383,7 @@ module interpolation
     subroutine perform_checks(n, x, n_new, x_new, ierr)
         implicit none
         integer, intent(in) :: n, n_new
-        real(dp), INTENT(IN) :: x(n), x_new(n_new)
+        real(8), INTENT(IN) :: x(n), x_new(n_new)
         integer,intent(out) ::  ierr
 
         integer :: i ! loop var
@@ -415,9 +411,9 @@ module interpolation
 
     pure subroutine equidist_to_array(n, x_start, x_step, x)
         integer, INTENT(IN)  :: n
-        real(dp), INTENT(IN) :: x_start, x_step
+        real(8), INTENT(IN) :: x_start, x_step
 
-        real(dp), INTENT(OUT) :: x(n)
+        real(8), INTENT(OUT) :: x(n)
 
         integer :: i
 
@@ -433,11 +429,11 @@ module interpolation
     subroutine get_natural_knots(x, n, deg, n_knots, knots)
         ! in
         integer,intent(in) :: n, deg
-        real(dp), INTENT(IN) :: x(n)
+        real(8), INTENT(IN) :: x(n)
         integer, INTENT(IN) :: n_knots
 
         ! out
-        real(dp), intent(out) ::  knots(n_knots)
+        real(8), intent(out) ::  knots(n_knots)
 
 
         knots(1       : deg     ) = x(1)
@@ -454,7 +450,7 @@ module interpolation
 
         integer, INTENT(OUT) :: derivs_known_l, derivs_known_r, nleft, nright
         integer, ALLOCATABLE, INTENT(OUT) :: derivs_l_ord(:), derivs_r_ord(:)
-        real(dp), ALLOCATABLE, INTENT(OUT) :: derivs_l_val(:), derivs_r_val(:)
+        real(8), ALLOCATABLE, INTENT(OUT) :: derivs_l_val(:), derivs_r_val(:)
 
         if (deg==3) then
             derivs_known_l = 1
@@ -498,13 +494,13 @@ module interpolation
 
         ! in
         integer, INTENT(IN) :: deg, n, n_knots, LHS_cols, LHS_rows
-        real(dp), intent(IN) :: x(n), knots(n_knots)
+        real(8), intent(IN) :: x(n), knots(n_knots)
         ! out
-        real(dp), INTENT(INOUT) :: AB(LHS_rows,LHS_cols)
+        real(8), INTENT(INOUT) :: AB(LHS_rows,LHS_cols)
         ! internal
         integer :: left, j, a, kl, ku, clmn, nt, offset
-        real(dp) :: x_val
-        real(dp), ALLOCATABLE :: work(:)
+        real(8) :: x_val
+        real(8), ALLOCATABLE :: work(:)
 
         ku = deg
         kl = deg
@@ -534,13 +530,13 @@ module interpolation
 
         ! in
         integer, INTENT(IN) :: deg, n_knots, LHS_cols, LHS_rows, offset, kl, ku, n_derivs, deriv_ords(n_derivs)
-        real(dp), intent(IN) :: knots(n_knots), x_val
+        real(8), intent(IN) :: knots(n_knots), x_val
         ! out
-        real(dp), INTENT(INOUT) :: AB(LHS_rows,LHS_cols)
+        real(8), INTENT(INOUT) :: AB(LHS_rows,LHS_cols)
         ! internal
         integer :: a, left, nu, row, clmn
 
-        real(dp), ALLOCATABLE :: work(:)
+        real(8), ALLOCATABLE :: work(:)
         
         ! derivatives @ x_val
         left = find_interval(knots, n_knots, deg, x_val, deg, 0)
@@ -582,14 +578,14 @@ module interpolation
         integer, INTENT(IN) :: deg !degree
         integer, INTENT(IN) :: m ! which derivatives to evaluate
 
-        real(dp), INTENT(IN) :: x, knots(n_knots)
+        real(8), INTENT(IN) :: x, knots(n_knots)
 
-        real(dp), INTENT(INOUT) :: result(deg+1)
+        real(8), INTENT(INOUT) :: result(deg+1)
 
         !internal
-        real(dp) :: xb, xa, w
+        real(8) :: xb, xa, w
         integer :: ind, j, n, i
-        real(dp) :: hh(deg)
+        real(8) :: hh(deg)
 
         ! Comment from SciPy:
         ! Perform k-m "standard" deBoor iterations
@@ -653,13 +649,13 @@ module interpolation
     pure function find_interval(knots, n_knots, deg, x_val, prev_l, extrapolate) result(interval)
 
         integer, INTENT(IN) :: n_knots, deg, extrapolate, prev_l
-        real(dp), INTENT(IN) :: knots(n_knots), x_val
+        real(8), INTENT(IN) :: knots(n_knots), x_val
 
         integer interval
 
         ! internal
         integer :: l, n
-        real(dp) :: tb, te
+        real(8) :: tb, te
 
         ! TODO Fortran indices fix!
         n = n_knots - deg - 1
@@ -705,14 +701,14 @@ module interpolation
         implicit none
         ! in
         integer,intent(in) :: n, n_knots, deg
-        real(dp), intent(in) :: x(n), knots(n_knots)
+        real(8), intent(in) :: x(n), knots(n_knots)
         integer, INTENT(IN) :: derivs_known_l, derivs_known_r, nleft, nright
         integer, INTENT(IN) :: derivs_l_ord(derivs_known_l)
         integer, INTENT(IN) :: derivs_r_ord(derivs_known_r)
         integer, INTENT(IN) :: nt, LHS_rows
 
         !out
-        real(dp), INTENT(OUT) :: LHS(LHS_rows, nt)
+        real(8), INTENT(OUT) :: LHS(LHS_rows, nt)
 
         ! Internal
         integer :: kl, ku
@@ -742,7 +738,7 @@ module interpolation
         integer, INTENT(IN) :: nt, kl, ku
 
         ! inplace
-        real(dp), INTENT(INOUT) :: LHS(LHS_rows, nt)
+        real(8), INTENT(INOUT) :: LHS(LHS_rows, nt)
 
         ! out
         integer, INTENT(OUT) :: ipiv(nt) ! TODO is this even needed afterwards?
@@ -763,10 +759,10 @@ module interpolation
         ! The other values are set to NaN and need to be filled in by the y values for actual interpolation
         ! in
         integer, INTENT(IN) :: nt, nleft, nright
-        real(dp), INTENT(IN) :: derivs_l_val(nleft), derivs_r_val(nright)
+        real(8), INTENT(IN) :: derivs_l_val(nleft), derivs_r_val(nright)
 
         ! out
-        real(dp), INTENT(OUT) :: rhs(nt)
+        real(8), INTENT(OUT) :: rhs(nt)
 
 
         if (nleft>0) then
@@ -776,7 +772,7 @@ module interpolation
             rhs(nt - nright +1: nt) = derivs_r_val
         end if
         ! Assign NaNs in all places where y needs to go, so that if the array is used without assignment, an error will be thrown.
-        rhs(nleft + 1 : nt - nright) = ieee_value(real(dp), ieee_signaling_nan)
+        rhs(nleft + 1 : nt - nright) = ieee_value(real(8), ieee_signaling_nan)
         RETURN
     end subroutine prepare_RHS
 
@@ -784,10 +780,10 @@ module interpolation
     subroutine assign_y_to_RHS(y, rhs_prep, nt, nleft, nright, rhs)
         ! in
         integer, INTENT(IN) :: nt, nleft, nright
-        real(dp), INTENT(IN) :: y(nt - nleft - nright)
-        real(dp), INTENT(IN) :: rhs_prep(nt)
+        real(8), INTENT(IN) :: y(nt - nleft - nright)
+        real(8), INTENT(IN) :: rhs_prep(nt)
         ! out
-        real(dp), INTENT(OUT) :: rhs(nt)
+        real(8), INTENT(OUT) :: rhs(nt)
 
         ! Since rhs will be overwritten by LAPACK, it needs to be copied at some point prior
         rhs = rhs_prep
@@ -805,8 +801,8 @@ module interpolation
 
         ! in
         integer, INTENT(IN) :: nt, kl, ku, LHS_rows
-        real(dp), intent(in) :: LHS(LHS_rows, nt)
-        real(dp), INTENT(INOUT) :: RHS(nt)
+        real(8), intent(in) :: LHS(LHS_rows, nt)
+        real(8), INTENT(INOUT) :: RHS(nt)
 
         ! inout
         integer, intent(IN) :: ipiv(nt) ! must be inout, but not actually used
