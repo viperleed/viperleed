@@ -2,11 +2,10 @@ from cmath import exp
 from unicodedata import name
 import numpy as np
 from rfactor import r_factor_new as rf
-from numpy import asfortranarray
+from interpolation import interpolation as intpol
 import time
 import timeit  # dependency for testing! Don't use in Viperleed build
 from matplotlib import pyplot as plt
-import pickle
 import random
 
 """
@@ -83,6 +82,75 @@ def prepare(data, in_grid, out_grid):
         intpol_derivative,
         y_func)
 
+def test_y_intpol(super_s_y, beam):
+
+    
+
+    grid_exp, exp  = read_beams_csv("testdata/EXPBEAMS.csv", delim=",")
+
+    min_energy = 71
+    max_energy = 799.5
+    n_orig = 1458
+    n_E = n_orig*100
+    out_grid = np.linspace(min_energy, max_energy, n_E)
+
+
+    prep_exp = prepare(exp, grid_exp, out_grid)
+
+    x = out_grid[prep_exp[0][beam]:prep_exp[0][beam]+prep_exp[1][beam]]
+    y_func_test = prep_exp[-1][prep_exp[0][beam]:prep_exp[0][beam]+prep_exp[1][beam], beam]
+    plt.plot(x, y_func_test, label="x100", color="blue")
+
+    ######
+
+    min_energy = 71
+    max_energy = 799.5
+    n_orig = 1458
+    n_E = n_orig
+    out_grid = np.linspace(min_energy, max_energy, n_E)
+
+    prep_exp = prepare(exp, grid_exp, out_grid)
+
+    x = out_grid[prep_exp[0][beam]:prep_exp[0][beam]+prep_exp[1][beam]]
+    y_func_test = prep_exp[-1][prep_exp[0][beam]:prep_exp[0][beam]+prep_exp[1][beam], beam]
+    plt.plot(x, y_func_test, label=f"Y func original data grid", color="orange", ls = "", marker = "x", ms =5)
+
+    ######
+
+    for i in super_s_y:
+        n_E = n_orig * i
+        out_grid = np.linspace(min_energy, max_energy, n_E)
+
+
+        prep_exp = prepare(exp, grid_exp, out_grid)
+
+        x = out_grid[prep_exp[0][beam]:prep_exp[0][beam]+prep_exp[1][beam]]
+        y_func_test = prep_exp[-1][prep_exp[0][beam]:prep_exp[0][beam]+prep_exp[1][beam], beam]
+
+        for deg in (3, 5,):
+
+            n_knots, nt, LHS_rows = intpol.get_array_sizes(y_func_test.shape[0], deg)
+
+            knots, coeffs, ierr = intpol.single_calc_spline(x, y_func_test, deg, n_knots, nt, LHS_rows)
+
+            n_new = 100*(y_func_test.shape[0]-1)
+
+            
+            # With this, the abstract representation of the Y function is achived!
+
+            x_new = np.linspace(min_energy, max_energy, n_new)
+
+            y_func_out = intpol.single_interpolate_coeffs_to_grid(knots, coeffs, deg, x_new, 0)
+
+
+            plt.plot(x_new, y_func_out, label=f"Re-interpolated deg={deg}, Y_supersample_rate={i}", ls  = "--")
+
+    plt.xlim(out_grid[prep_exp[0][beam]],out_grid[prep_exp[0][beam]+prep_exp[1][beam]])
+    plt.ylim([-1,1])
+    plt.legend()
+    plt.show()
+
+
 
 if __name__ == "__main__":
 
@@ -91,7 +159,7 @@ if __name__ == "__main__":
 
     min_energy = 71
     max_energy = 799.5
-    n_E = 1458
+    n_E = 1458 
     out_grid = np.linspace(min_energy, max_energy, n_E)
 
 
@@ -166,3 +234,5 @@ if __name__ == "__main__":
     y_ax.legend()
 
     fig.show()
+    plt.clf()
+
