@@ -41,19 +41,19 @@ subroutine r_pendry_beam_y(n_E, E_step, y1, y2, id_start_y1, id_start_y2, n_y1, 
 
     !f2py intent(in) n_E
     integer, intent(in) :: n_E
-    real(dp), INTENT(IN) :: E_step
+    real(8), INTENT(IN) :: E_step
     integer, INTENT(IN) :: id_start_y1, id_start_y2
     integer, INTENT(IN) :: n_y1, n_y2
     !f2py intent(in) y1
-    real(dp), intent (in), dimension(n_E)   :: y1
+    real(8), intent (in), dimension(n_E)   :: y1
     !f2py intent(in) y2
-    real(dp), intent (in), dimension(n_E)   :: y2
-    real(dp), intent (in)                   :: V0r_shift
+    real(8), intent (in), dimension(n_E)   :: y2
+    real(8), intent (in)                   :: V0r_shift
     ! outputs
-    real(dp), intent (out)                  :: R_pendry, numerator, denominator
+    real(8), intent (out)                  :: R_pendry, numerator, denominator
     integer,  intent (out)              :: N_overlapping_points
 
-    real(dp), dimension (:), allocatable         :: y_diff, y_squared_sum
+    real(8), dimension (:), allocatable         :: y_diff, y_squared_sum
 
     integer :: id_min, id_max
 
@@ -94,10 +94,10 @@ subroutine r_pendry_beamset_y(n_E, E_step, n_beams, y1, y2, id_start_y1, id_star
     !f2py integer, hidden, intent(in), depend(E_start1, E_start2), check(len(E_start1)==len(E_start2)) :: nr_beams=len(E_start1)
     integer :: n_E ! number of energy steps
     integer n_beams
-    !f2py real(dp), intent(in) :: E_step
-    real(dp) :: E_step
+    !f2py real(8), intent(in) :: E_step
+    real(8) :: E_step
     !f2py real intent(in) :: y1 (n_E, n_beams), y2 (n_E, n_beams)
-    real(dp), intent(in) :: y1 (n_E, n_beams), y2 (n_E, n_beams)
+    real(8), intent(in) :: y1 (n_E, n_beams), y2 (n_E, n_beams)
     !f2py integer, intent(in) id_start_y1
     !f2py integer, intent(in) id_start_y2
     integer, intent(in)    :: id_start_y1(n_beams) ,id_start_y2(n_beams)
@@ -106,17 +106,17 @@ subroutine r_pendry_beamset_y(n_E, E_step, n_beams, y1, y2, id_start_y1, id_star
     integer, intent(in)    :: n_y1(n_beams) ,n_y2(n_beams)
     !f2py integer, intent(out) :: n_overlapping_points
     integer, intent(out) :: n_overlapping_points(n_beams)
-    !f2py real(dp), intent(out) :: r_pendry_beams(n_beams), r_pendry_weighted
-    real(dp), intent(out) :: r_pendry_beams(n_beams), r_pendry_weighted
-    !f2py real(dp), intent(in)::  V0r_shift
-    real(dp), intent(in) :: V0r_shift
+    !f2py real(8), intent(out) :: r_pendry_beams(n_beams), r_pendry_weighted
+    real(8), intent(out) :: r_pendry_beams(n_beams), r_pendry_weighted
+    !f2py real(8), intent(in)::  V0r_shift
+    real(8), intent(in) :: V0r_shift
 
-    real(dp) numerators(n_beams), denominators(n_beams)
+    real(8) numerators(n_beams), denominators(n_beams)
 
     ! temporay variables used in subroutine
     integer i
     integer total_points
-    real(dp) temp_num, temp_denom
+    real(8) temp_num, temp_denom
 
     ! iterate over beams and call subroutine r_factor_beam
     do i=1 , n_beams
@@ -136,30 +136,30 @@ subroutine Rfactor_beamtypes(y1, sizes_y1, y2, sizes_y2, E_start1, E_start2, nr_
     !###############
     !f2py integer, hidden, intent(in), depend(E_start1, E_start2), check(len(E_start1)==len(E_start2)) :: nr_beams=len(E_start1)
     integer nr_beams
-    !f2py real(dp), intent(in) :: E_step
-    real(dp) E_step
+    !f2py real(8), intent(in) :: E_step
+    real(8) E_step
     !f2py integer, intent(in) :: sizes_y1
     integer, intent(in) :: sizes_y1(nr_beams)
     !f2py integer, intent(in) :: sizes_y2
     integer, intent(in) :: sizes_y2(nr_beams)
     !f2py real intent(in) :: y1(:,:), y2(:,:)
-    real(dp), intent(in) :: y1 (:,:), y2 (:,:)
+    real(8), intent(in) :: y1 (:,:), y2 (:,:)
     !f2py intent(in) E_start_1
     !f2py intent(in) E_start_2
-    real(dp), intent(in)    :: E_start1(nr_beams), E_start2(nr_beams)
+    real(8), intent(in)    :: E_start1(nr_beams), E_start2(nr_beams)
     integer, intent(in) :: beamtypes(nr_beams)
     integer, intent(in) :: nr_beamtypes
     !f2py integer, intent(out) :: N_overlapping_points(:)
     integer, intent(out) :: N_overlapping_points(nr_beams)
-    !f2py real(dp), intent(out) :: R_Pe_beams(nr_beams), R_Pe_weighted(nr_beamtypes)
-    real(dp), intent(out) :: R_Pe_beams(nr_beams), R_Pe_weighted(nr_beamtypes)
-    !f2py real(dp), intent(in)::  V0rshift
-    real(dp), intent(in) :: V0rshift
+    !f2py real(8), intent(out) :: R_Pe_beams(nr_beams), R_Pe_weighted(nr_beamtypes)
+    real(8), intent(out) :: R_Pe_beams(nr_beams), R_Pe_weighted(nr_beamtypes)
+    !f2py real(8), intent(in)::  V0rshift
+    real(8), intent(in) :: V0rshift
 
     ! variables used internally
     integer beam, group, points_group, tmp_points(nr_beams)
     !
-    real(dp) tmp_num(nr_beams), tmp_denom(nr_beams), tmp_pendry
+    real(8) tmp_num(nr_beams), tmp_denom(nr_beams), tmp_pendry
 
 
     ! beamtypes is array that contains assignment o beamtype group for each beam
@@ -195,7 +195,7 @@ subroutine Rfactor_v0ropt(opt_type, min_steps, max_steps, nr_used_v0)
 
     !integer beamtypes(:)
 
-    real(dp) V0, R_Pe_V0
+    real(8) V0, R_Pe_V0
     ! Decide which optimization is used
     nr_used_v0 = 0 ! initialize to 0
 
@@ -266,8 +266,8 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
     integer, INTENT(IN) :: deg ! Degree of interpolation to use
 
     ! Energy grids
-    real(dp), INTENT(IN)                         :: E_grid_in(n_E_in) ! Input energy grid
-    real(dp), INTENT(IN)                         :: E_grid_out(n_E_out) ! Output energy grid
+    real(8), INTENT(IN)                         :: E_grid_in(n_E_in) ! Input energy grid
+    real(8), INTENT(IN)                         :: E_grid_out(n_E_out) ! Output energy grid
 
     ! Intensities is a rectangular array with values for each beam at each possible energy, though values will unused if the beam does not have data over the entire
     ! energy range. The array E_start_beams determines the index of the first used energy, the array n_E_beams determines the number of the number of
@@ -275,7 +275,7 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
     ! Input Data
     integer, intent(in)                          :: E_start_beams(n_beams) ! First energy step to be used for the beam
     integer, intent(in)                          :: n_E_beams(n_beams) ! Number of energy steps to use for the beam
-    real(dp), intent(in)                         :: intensities_in(n_E_in, n_beams) ! Beam intensities - input data
+    real(8), intent(in)                         :: intensities_in(n_E_in, n_beams) ! Beam intensities - input data
     
 
     !f2py integer, intent(out), dimension(n_beams) :: E_start_beams_out
@@ -288,7 +288,7 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
     ! Internal
     !###############
     integer :: new_min_index, new_max_index, cut_n_E_in
-    !real(dp), allocatable :: cut_intensities(:,:)
+    !real(8), allocatable :: cut_intensities(:,:)
     integer                          :: cut_E_start_beams(n_beams) ! First energy step to be used for the beam
     integer                          :: cut_n_E_beams(n_beams) ! Number of energy steps to use for the beam
 
@@ -296,17 +296,17 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
     type(deriv_pre_evaluation):: pre_eval_derivs(n_beams)
     type(grid)                :: grid_origin(n_beams)
     type(grid)                :: grid_target(n_beams)
-    real(dp)                  :: coeffs(n_E_in+deg, n_beams)
+    real(8)                  :: coeffs(n_E_in+deg, n_beams)
 
-    real(dp)    :: intensities(n_E_in, n_beams)
+    real(8)    :: intensities(n_E_in, n_beams)
 
-    real(dp), INTENT(OUT) :: intpol_intensity(n_E_out, n_beams)
-    real(dp), INTENT(OUT) :: intpol_derivative(n_E_out, n_beams)
-    real(dp), INTENT(OUT) :: y_func(n_E_out, n_beams)
+    real(8), INTENT(OUT) :: intpol_intensity(n_E_out, n_beams)
+    real(8), INTENT(OUT) :: intpol_derivative(n_E_out, n_beams)
+    real(8), INTENT(OUT) :: y_func(n_E_out, n_beams)
 
     integer :: ierr
     integer :: ierrs(n_beams)
-    real(dp) :: v0i
+    real(8) :: v0i
 
     integer :: i ! Loop indices
 
@@ -533,7 +533,7 @@ end subroutine prepare_beams
 pure subroutine find_index_on_new_grid(n_E_in, E_in, n_E_out, E_out, id_start_in, n_steps_in,&
                                   id_start_out, n_steps_out)
     integer, INTENT(IN) :: n_E_in, n_E_out
-    real(dp), INTENT(IN) :: E_in(n_E_in), E_out(n_E_out)
+    real(8), INTENT(IN) :: E_in(n_E_in), E_out(n_E_out)
     integer, INTENT(IN) :: id_start_in, n_steps_in
 
     integer, INTENT(OUT) :: id_start_out, n_steps_out
@@ -549,9 +549,9 @@ end subroutine find_index_on_new_grid
 
 pure integer function find_grid_correspondence(value, n_steps, steps, min_bound) result(interval)
     ! returns the index of the step lower than value
-    real(dp), INTENT(IN) :: value
+    real(8), INTENT(IN) :: value
     integer, INTENT(IN) :: n_steps
-    real(dp), INTENT(IN) :: steps(n_steps)
+    real(8), INTENT(IN) :: steps(n_steps)
     integer, INTENT(IN) :: min_bound
 
     integer :: i
@@ -580,13 +580,13 @@ subroutine avg_reo_disc(n_beams_in, n_beams_out, n_E, scheme, min_len, &
     integer, INTENT(IN) :: n_beams_out
     integer, INTENT(IN) :: n_E
     integer, INTENT(IN) :: min_len
-    real(dp), INTENT(INOUT) :: intensities(n_E, n_beams_in)
+    real(8), INTENT(INOUT) :: intensities(n_E, n_beams_in)
     integer, INTENT(INOUT) :: scheme(n_beams_in)
     integer, INTENT(INOUT) :: beam_start(n_beams_in)
     integer, INTENT(INOUT) :: beam_n(n_beams_in)
 
 
-    real(dp) :: intensities_in(n_E,  n_beams_in)
+    real(8) :: intensities_in(n_E,  n_beams_in)
     integer :: beam_start_in(n_beams_in)
     integer:: beam_n_in(n_beams_in)
     integer, INTENT(OUT) :: ierr
@@ -644,11 +644,11 @@ end subroutine avg_reo_disc
 
 subroutine range_index_from_Energy(E_min_current, NE_in, E_step, E_min_cut, E_max_cut, new_start_stop_step)
     integer, intent(in) :: NE_in
-    real(dp), intent(in) :: E_min_current, E_min_cut, E_max_cut, E_step
+    real(8), intent(in) :: E_min_current, E_min_cut, E_max_cut, E_step
 
     integer , intent(out) :: new_start_stop_step(3)
 
-    real(dp) :: old_max, new_max, new_min
+    real(8) :: old_max, new_max, new_min
 
     old_max = E_min_current + E_step*NE_in
     new_max = min(E_max_cut, old_max)
@@ -673,10 +673,10 @@ end subroutine range_index_from_Energy
 !     ! Works for one or for multiple beams (though the latter may defeat the purpose)
 
 !     integer, intent(in) :: n_beams, n_energies ! number of beams, number of energies in in_beams
-!     real(dp), intent(in) :: in_beams(n_energies, n_beams)
-!     real(dp), intent(out) :: out_beams(NE_out_stop-NE_out_start+1, n_beams)
+!     real(8), intent(in) :: in_beams(n_energies, n_beams)
+!     real(8), intent(out) :: out_beams(NE_out_stop-NE_out_start+1, n_beams)
 
-!     real(dp), intent(in) :: E_min_current, E_step
+!     real(8), intent(in) :: E_min_current, E_step
 !     integer, intent(in) :: NE_out_start, NE_out_stop
 !     integer, intent(in)  :: beam_starts(n_beams), NE_beams(n_beams)
 !     integer, intent(out) :: new_NE, new_NE_beams(n_beams)
@@ -731,13 +731,13 @@ end subroutine pre_evaluate_beam_deriv
 
 subroutine interpolate_beam(intensity, grid_pre_eval, interpolated_intensity, coeffs, ierr)
     type(grid_pre_evaluation), INTENT(IN) :: grid_pre_eval
-    real(dp), INTENT(IN) :: intensity(grid_pre_eval%grid_origin%n)
+    real(8), INTENT(IN) :: intensity(grid_pre_eval%grid_origin%n)
 
-    real(dp), INTENT(OUT) :: interpolated_intensity(grid_pre_eval%grid_target%n)
+    real(8), INTENT(OUT) :: interpolated_intensity(grid_pre_eval%grid_target%n)
     integer, INTENT(OUT) :: ierr
-    real(dp), INTENT(INOUT) :: coeffs(grid_pre_eval%infos%nt)
+    real(8), INTENT(INOUT) :: coeffs(grid_pre_eval%infos%nt)
 
-    real(dp), ALLOCATABLE :: coeffs_tmp(:)
+    real(8), ALLOCATABLE :: coeffs_tmp(:)
 
     call interpolate_fast(grid_pre_eval%grid_origin%n, intensity, grid_pre_eval, interpolated_intensity, coeffs_tmp, ierr)
     coeffs = coeffs_tmp
@@ -747,9 +747,9 @@ subroutine interpolate_deriv_beam(grid_pre_eval, deriv_pre_eval, coeffs, intensi
 
     type(grid_pre_evaluation), INTENT(IN) :: grid_pre_eval
     TYPE(deriv_pre_evaluation), INTENT(IN):: deriv_pre_eval
-    real(dp), INTENT(IN) :: coeffs(grid_pre_eval%infos%nt)
+    real(8), INTENT(IN) :: coeffs(grid_pre_eval%infos%nt)
 
-    real(dp), INTENT(OUT) :: intensity_deriv(grid_pre_eval%grid_target%n)
+    real(8), INTENT(OUT) :: intensity_deriv(grid_pre_eval%grid_target%n)
     integer, INTENT(OUT) :: ierr
 
     call interpolate_deriv_fast(grid_pre_eval%infos, grid_pre_eval%grid_target%n, grid_pre_eval%intervals, coeffs, &
@@ -765,11 +765,11 @@ end subroutine interpolate_deriv_beam
 
 subroutine pendry_y(n_data, intensity, derivative, v0i, y_func)
     integer, INTENT(IN) :: n_data
-    real(dp), INTENT(IN) :: intensity(n_data)
-    real(dp), INTENT(IN) :: derivative(n_data)
-    real(dp), INTENT(IN) :: v0i
+    real(8), INTENT(IN) :: intensity(n_data)
+    real(8), INTENT(IN) :: derivative(n_data)
+    real(8), INTENT(IN) :: v0i
 
-    real(dp), INTENT(OUT) :: y_func(n_data)
+    real(8), INTENT(OUT) :: y_func(n_data)
 
     y_func = intensity*derivative /(intensity*intensity + v0i*v0i*derivative*derivative)
 
@@ -779,11 +779,11 @@ end subroutine pendry_y
 pure function parabolic_optimize(values) result(minimum_pair)
     implicit none
 
-    real(dp), intent(in) :: values(:)
-    real(dp) :: minimum_pair(2) ! Don't declare as intent(out)
+    real(8), intent(in) :: values(:)
+    real(8) :: minimum_pair(2) ! Don't declare as intent(out)
     integer known_values
 
-    real(dp) minium_pair(2)
+    real(8) minium_pair(2)
 
     known_values = size(values)
 
@@ -799,9 +799,9 @@ end function parabolic_optimize
 
 pure function trapez_integration_const_dx(f, dx) result(integral)
     implicit none
-    real(dp), intent(in)    :: f(:)
-    real(dp), intent(in)    :: dx
-    real(dp) integral
+    real(8), intent(in)    :: f(:)
+    real(8), intent(in)    :: dx
+    real(8) integral
     integer n
 
     n = size(f)
