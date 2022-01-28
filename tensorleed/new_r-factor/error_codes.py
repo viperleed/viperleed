@@ -19,5 +19,8 @@ error_codes = {
     30: "",
     40: "",
     # 6xx : Interpolation
-    60: "",
+    611: "Origin grid not sorted in ascending order",
+    612: "Target grid not sorted in ascending order",
+    621: "Error in pre-factorize LHS",
+    631: "LAPACK error in solve_coefficients"
 }
