@@ -292,11 +292,14 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
     integer                          :: cut_E_start_beams(n_beams) ! First energy step to be used for the beam
     integer                          :: cut_n_E_beams(n_beams) ! Number of energy steps to use for the beam
 
-    TYPE(grid_pre_evaluation) :: grid_pre_eval(n_beams)
-    type(deriv_pre_evaluation):: pre_eval_derivs(n_beams)
-    type(grid)                :: grid_origin(n_beams)
-    type(grid)                :: grid_target(n_beams)
-    real(8)                  :: coeffs(n_E_in+deg, n_beams)
+    integer :: max_n_knots, max_nt, max_LHS_rows
+    integer :: n_knots_beams(n_beams), nt_beams(n_beams), LHS_rows_beams(n_beams)
+    real(8), ALLOCATABLE :: knots(:,:), LHS(:,:,:), coeffs(:,:)
+
+    ! TYPE(grid_pre_evaluation) :: grid_pre_eval(n_beams)
+    ! type(deriv_pre_evaluation):: pre_eval_derivs(n_beams)
+    ! type(grid)                :: grid_origin(n_beams)
+    ! type(grid)                :: grid_target(n_beams)
 
     real(8)    :: intensities(n_E_in, n_beams)
 
@@ -364,6 +367,8 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
         end do
         
     else
+        new_min_index = 1
+        new_max_index = n_E_in
         cut_E_start_beams = E_start_beams
         cut_n_E_beams = n_E_beams
         cut_n_E_in = n_E_in
@@ -439,13 +444,7 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
     end do
 
     v0i = 2.0d0
-    do i =1,n_beams_out
-        ! TODO does this  need the -1?
-        grid_origin(i) = grid(cut_n_E_beams(i), E_grid_in(cut_E_start_beams(i): cut_E_start_beams(i) + cut_n_E_beams(i)))
-        grid_target(i) = grid(n_E_beams_out(i), E_grid_out(E_start_beams_out(i): E_start_beams_out(i) + n_E_beams_out(i)))
-    end do
-    !print*, "grid origin(1)", grid_origin(1)%n, grid_origin(1)%x
-    !print*, "grid target(1)", grid_target(1)%n, grid_target(1)%x
+
 
     !###############
     ! Smoothing
@@ -472,8 +471,14 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
         intpol_intensity = 0
         y_func = 0
 
-        !print*, intensities(cut_E_start_beams(5):cut_E_start_beams(5)+n_E_beams_out(5),5)
+        call perform_checks(cut_n_E_in, E_grid_in(new_min_index:new_max_index), n_E_out, E_grid_out, ierr)
+        if (ierr .ne. 0) RETURN
+
+        call get_array_sizes(cut_n_E_in, deg, max_n_knots, max_nt, max_LHS_rows)
+        Allocate(knots(max_n_knots, n_beams), LHS(max_LHS_rows, max_nt, n_beams), coeffs(max_nt, n_beams))
         
+
+
         do i= 1,n_beams_out
             !DEBUG
             !print*, i
@@ -483,30 +488,36 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
             !print*, intensities(cut_E_start_beams(i), i)
             !print*, intensities(cut_E_start_beams(i)+cut_n_E_beams(i), i)
             
+            call get_array_sizes(n_E_beams(i), deg, n_knots_beams(i), nt_beams(i), LHS_rows_beams(i))
 
-            call pre_evaluate_grid_beam( &
-                5, grid_origin(i), grid_target(i), grid_pre_eval(i), ierrs(i) &
-                )
-            call pre_evaluate_deriv( &
-                grid_pre_eval(i), 1, pre_eval_derivs(i), ierrs(i) &
-                )
-
-            call interpolate_beam( &
-                intensities(cut_E_start_beams(i):cut_E_start_beams(i)+cut_n_E_beams(i), i), &
-                grid_pre_eval(i), &
-                intpol_intensity(E_start_beams_out(i):E_start_beams_out(i)+n_E_beams_out(i), i), &
-                coeffs(1 :grid_pre_eval(i)%infos%nt, i), &
+            call single_calc_spline(&
+                cut_n_E_beams(i), &
+                E_grid_in(cut_E_start_beams(i) : cut_E_start_beams(i) + cut_n_E_beams(i)), &
+                intensities_in(cut_E_start_beams(i) : cut_E_start_beams(i) + cut_n_E_beams(i), i), &
+                deg, &
+                n_knots_beams(i), nt_beams(i), LHS_rows_beams(i), &
+                knots(1:n_knots_beams(i), i), &
+                coeffs(1:nt_beams(i), i), &
                 ierrs(i))
+            ! Interpolate intensitites
+            call single_interpolate_coeffs_to_grid( &
+                n_knots_beams(i), knots(1:n_knots_beams(i), i), nt_beams(i), coeffs(1:nt_beams(i), i), &
+                deg, &
+                n_E_beams_out(i), &
+                E_grid_out(E_start_beams_out(i) : E_start_beams_out(i) + n_E_beams_out(i)), &
+                0, &
+                intpol_intensity(E_start_beams_out(i) : E_start_beams_out(i) + n_E_beams_out(i), i))
+            
+                ! Interpolate derivatives
+            call single_interpolate_coeffs_to_grid( &
+                n_knots_beams(i), knots(1:n_knots_beams(i), i), nt_beams(i), coeffs(1:nt_beams(i), i), &
+                deg, &
+                n_E_beams_out(i), &
+                E_grid_out(E_start_beams_out(i) : E_start_beams_out(i) + n_E_beams_out(i)), &
+                1, &
+                intpol_derivative(E_start_beams_out(i) : E_start_beams_out(i) + n_E_beams_out(i), i))
 
-            call interpolate_deriv_beam( &
-                grid_pre_eval(i), &
-                pre_eval_derivs(i), &
-                coeffs( 1:grid_pre_eval(i)%infos%nt, i), &
-                intpol_derivative(E_start_beams_out(i):E_start_beams_out(i)+n_E_beams_out(i), i), &
-                ierrs(i) &
-                )
-
-            ! Y function calculation on new grid
+            ! Calculate pendry Y function
             call pendry_y( &
                 n_E_beams_out(i), &
                 intpol_intensity(E_start_beams_out(i):E_start_beams_out(i)+n_E_beams_out(i), i), &
@@ -703,59 +714,78 @@ end subroutine range_index_from_Energy
 ! end subroutine limit_range_index
 
 
-subroutine pre_evaluate_grid_beam(deg, grid_origin, grid_target, grid_pre_eval, ierr)
-    integer, INTENT(IN) :: deg
-    type(grid), INTENT(IN) :: grid_origin
-    type(grid), INTENT(IN) :: grid_target
+! subroutine pre_evaluate_grid_beam(n, x, deg, grid_origin, grid_target, grid_pre_eval, ierr)
+!     integer, INTENT(IN) :: deg
+!     type(grid), INTENT(IN) :: grid_origin
+!     type(grid), INTENT(IN) :: grid_target
     
 
-    type(grid_pre_evaluation), INTENT(OUT) :: grid_pre_eval
-    integer, INTENT(OUT) :: ierr
+!     type(grid_pre_evaluation), INTENT(OUT) :: grid_pre_eval
+!     integer, INTENT(OUT) :: ierr
 
-    call pre_evaluate_grid(grid_origin%x, grid_origin%n, grid_target%x, grid_target%n, &
-                            deg, 1, grid_pre_eval, ierr) ! the 1 means do_checks ON
-    RETURN
-end subroutine pre_evaluate_grid_beam
+!     ! Internal
+!     integer :: max_n_knots, max_nt, max_LHS_rows
+!     integer :: n_knots_beams(n_beams), nt_beams(n_beams), LHS_rows_beams(n_beams)
+!     real(8) :: knots(max_n_knots, n_beams), LHS(max_LHS_rows, max_nt, n_beams), coeffs(max_nt, n_beams)
 
+!     call get_array_sizes(n_E, deg, max_n_knots, max_nt, max_LHS_rows)
 
-subroutine pre_evaluate_beam_deriv(grid_pre_eval, nu, grid_deriv_pre_eval, ierr)
-    integer, INTENT(IN) :: nu
-    type(grid_pre_evaluation), INTENT(IN) :: grid_pre_eval
-
-    type(deriv_pre_evaluation), INTENT(OUT) :: grid_deriv_pre_eval
-    integer, INTENT(OUT) :: ierr
-
-    call pre_evaluate_deriv(grid_pre_eval, nu, grid_deriv_pre_eval, ierr)
-end subroutine pre_evaluate_beam_deriv
+!     call perform_checks(n_E, E_grid, n_E_out, E_grid_out, ierr)
 
 
-subroutine interpolate_beam(intensity, grid_pre_eval, interpolated_intensity, coeffs, ierr)
-    type(grid_pre_evaluation), INTENT(IN) :: grid_pre_eval
-    real(8), INTENT(IN) :: intensity(grid_pre_eval%grid_origin%n)
 
-    real(8), INTENT(OUT) :: interpolated_intensity(grid_pre_eval%grid_target%n)
-    integer, INTENT(OUT) :: ierr
-    real(8), INTENT(INOUT) :: coeffs(grid_pre_eval%infos%nt)
+!     do i=1,n_beams
+!         call get_array_sizes(n_E_beams(i), deg, n_knots_beams(i), nt_beams(i), LHS_rows_beams(i))
+!     end do
 
-    real(8), ALLOCATABLE :: coeffs_tmp(:)
+!     call single_calc_spline(n_E_beams(i), E_beams(:), ...)
 
-    call interpolate_fast(grid_pre_eval%grid_origin%n, intensity, grid_pre_eval, interpolated_intensity, coeffs_tmp, ierr)
-    coeffs = coeffs_tmp
-end subroutine interpolate_beam
+!     ALLOCATE(knots(n_knots, n_beams), LHS(LHS_rows, nt, n_beams), coeffs(nt))
 
-subroutine interpolate_deriv_beam(grid_pre_eval, deriv_pre_eval, coeffs, intensity_deriv, ierr)
+!     call pre_evaluate_grid(grid_origin%x, grid_origin%n, grid_target%x, grid_target%n, &
+!                             deg, 1, grid_pre_eval, ierr) ! the 1 means do_checks ON
+!     RETURN
+! end subroutine pre_evaluate_grid_beam
 
-    type(grid_pre_evaluation), INTENT(IN) :: grid_pre_eval
-    TYPE(deriv_pre_evaluation), INTENT(IN):: deriv_pre_eval
-    real(8), INTENT(IN) :: coeffs(grid_pre_eval%infos%nt)
 
-    real(8), INTENT(OUT) :: intensity_deriv(grid_pre_eval%grid_target%n)
-    integer, INTENT(OUT) :: ierr
+! subroutine pre_evaluate_beam_deriv(grid_pre_eval, nu, grid_deriv_pre_eval, ierr)
+!     integer, INTENT(IN) :: nu
+!     type(grid_pre_evaluation), INTENT(IN) :: grid_pre_eval
 
-    call interpolate_deriv_fast(grid_pre_eval%infos, grid_pre_eval%grid_target%n, grid_pre_eval%intervals, coeffs, &
-                                deriv_pre_eval%deriv_deBoor_matrix, intensity_deriv, ierr)
-    RETURN
-end subroutine interpolate_deriv_beam
+!     type(deriv_pre_evaluation), INTENT(OUT) :: grid_deriv_pre_eval
+!     integer, INTENT(OUT) :: ierr
+
+!     call pre_evaluate_deriv(grid_pre_eval, nu, grid_deriv_pre_eval, ierr)
+! end subroutine pre_evaluate_beam_deriv
+
+
+! subroutine interpolate_beam(intensity, grid_pre_eval, interpolated_intensity, coeffs, ierr)
+!     type(grid_pre_evaluation), INTENT(IN) :: grid_pre_eval
+!     real(8), INTENT(IN) :: intensity(grid_pre_eval%grid_origin%n)
+
+!     real(8), INTENT(OUT) :: interpolated_intensity(grid_pre_eval%grid_target%n)
+!     integer, INTENT(OUT) :: ierr
+!     real(8), INTENT(INOUT) :: coeffs(grid_pre_eval%infos%nt)
+
+!     real(8), ALLOCATABLE :: coeffs_tmp(:)
+
+!     call interpolate_fast(grid_pre_eval%grid_origin%n, intensity, grid_pre_eval, interpolated_intensity, coeffs_tmp, ierr)
+!     coeffs = coeffs_tmp
+! end subroutine interpolate_beam
+
+! subroutine interpolate_deriv_beam(grid_pre_eval, deriv_pre_eval, coeffs, intensity_deriv, ierr)
+
+!     type(grid_pre_evaluation), INTENT(IN) :: grid_pre_eval
+!     TYPE(deriv_pre_evaluation), INTENT(IN):: deriv_pre_eval
+!     real(8), INTENT(IN) :: coeffs(grid_pre_eval%infos%nt)
+
+!     real(8), INTENT(OUT) :: intensity_deriv(grid_pre_eval%grid_target%n)
+!     integer, INTENT(OUT) :: ierr
+
+!     call interpolate_deriv_fast(grid_pre_eval%infos, grid_pre_eval%grid_target%n, grid_pre_eval%intervals, coeffs, &
+!                                 deriv_pre_eval%deriv_deBoor_matrix, intensity_deriv, ierr)
+!     RETURN
+! end subroutine interpolate_deriv_beam
 
 
 
