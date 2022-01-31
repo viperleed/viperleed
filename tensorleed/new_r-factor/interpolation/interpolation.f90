@@ -99,19 +99,16 @@ module interpolation
             knots, LHS, RHS, ipiv, &
             ierr &
             )
-
-        if (ierr .ne. 0) RETURN
+            if (ierr .ne. 0) RETURN
 
         call calc_spline_with_pre_eval(&
             n, deg, &
             y, &
-            n_knots, nt, LHS_rows, &
-            knots, &
+            nt, LHS_rows, &
             nleft, nright, &
             LHS, RHS, ipiv, &
             coeffs, &
             ierr)
-
     end subroutine single_calc_spline
 
 
@@ -191,8 +188,7 @@ module interpolation
     subroutine calc_spline_with_pre_eval(&
         n, deg, &
         y, &
-        n_knots, nt, LHS_rows, &
-        knots, &
+        nt, LHS_rows, &
         nleft, nright, &
         LHS, RHS, ipiv, &
         coeffs, &
@@ -203,8 +199,7 @@ module interpolation
         real(8), INTENT(IN):: y(n)
         integer, INTENT(IN) :: deg
 
-        integer, INTENT(IN)   :: n_knots, nt, LHS_rows
-        real(8), INTENT(IN)  :: knots(n_knots)
+        integer, INTENT(IN)   :: nt, LHS_rows
         integer, INTENT(IN)   :: nleft, nright
         real(8), INTENT(IN)  :: LHS(LHS_rows, nt)
         real(8), INTENT(IN)  :: RHS(nt)
@@ -215,11 +210,8 @@ module interpolation
 
         ! Internal
         integer :: kl, ku, LAPACK_info
-
         ierr = 0
-
         call assign_y_to_RHS(y, RHS, nt, nleft, nright, coeffs)
-
         kl = deg
         ku = deg
 
@@ -246,7 +238,7 @@ module interpolation
         real(8), INTENT(IN):: coeffs(nt)
         integer, INTENT(IN) :: nu
 
-        !OUT
+        ! OUT
         real(8), INTENT(OUT):: y_new(n_new)
         ! Internal
         integer              :: intervals(n_new)        !! 1D integer array containg information, which spline interval the new grid points fall into.
@@ -257,15 +249,12 @@ module interpolation
         call get_intervals(n_knots, knots, n_new, x_new, deg, intervals)
 
         call de_Boor_size(n_new, deg, de_Boor_dim)
-
         ALLOCATE(deBoor_matrix(de_Boor_dim(1), de_Boor_dim(2)))
 
         ! Build up the deBoor Matrix for x_new
         call calc_deBoor(n_knots, knots, n_new, x_new, deg, nu, intervals, &
             de_Boor_dim(1), de_Boor_dim(2), deBoor_matrix)
-
         call eval_bspline_fast(deg, nt, n_new, coeffs, intervals, deBoor_matrix, y_new)
-        
     end subroutine single_interpolate_coeffs_to_grid
 
 
