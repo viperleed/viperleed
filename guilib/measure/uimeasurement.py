@@ -34,8 +34,6 @@ from viperleed.guilib.measure.datapoints import DataPoints, QuantityInfo
 from viperleed.guilib.measure.widgets.measurement_plot import MeasurementPlot
 from viperleed.guilib.measure import dialogs
 
-from viperleed.guilib.measure.widgets.checkcombobox import CheckComboBox
-
 # temporary solution till we have a system config file
 from viperleed.guilib import measure as vpr_measure
 
@@ -62,8 +60,6 @@ class Measure(gl.ViPErLEEDPluginBase):
             'energy_input': qtw.QLineEdit(''),
             'set_energy': qtw.QPushButton("Set energy"),
             'settings_editor': qtw.QPushButton("Open settings editor"),
-            # TODO: remove this test again and use it in the MeasurementPlot class to decide which data gets plotted
-            'test': CheckComboBox(),
             'menus': {
                 'file': qtw.QMenu("&File"),
                 'devices': qtw.QMenu("&Devices"),
@@ -118,10 +114,6 @@ class Measure(gl.ViPErLEEDPluginBase):
         self._ctrls['select'].setFont(gl.AllGUIFonts().buttonFont)
         self._ctrls['select'].ensurePolished()
 
-        self._ctrls['test'].addItems(['option1', 'option2', 'option3'])
-        self._ctrls['test'].setFont(gl.AllGUIFonts().buttonFont)
-        self._ctrls['test'].ensurePolished()
-
         self._ctrls['set_energy'].setFont(gl.AllGUIFonts().buttonFont)
         self._ctrls['set_energy'].ensurePolished()
         self._ctrls['set_energy'].setEnabled(False)
@@ -146,7 +138,6 @@ class Measure(gl.ViPErLEEDPluginBase):
         layout.addWidget(self._ctrls['set_energy'], 3, 1, 1, 1)
         layout.addWidget(self._ctrls['energy_input'], 3, 2, 1, 1)
         layout.addWidget(self._ctrls['settings_editor'], 4, 1, 1, 2)
-        layout.addWidget(self._ctrls['test'], 5, 1, 1, 2)
 
         self._glob['plot'].show()
         self.statusBar().showMessage('Ready')
@@ -252,21 +243,13 @@ class Measure(gl.ViPErLEEDPluginBase):
     def __on_data_received(self):
         """Plot measured data."""
         meas = self.sender()
-        # TODO: this check won't work when plotting data that has been read in from a file.
         if not isinstance(meas, MeasurementABC):
             raise RuntimeError(
                 f"Got unexpected sender class {meas.__class__.__name__}"
                 "for plotting measurements."
                 )
-        measured_quantity = meas.settings.get('measurement_settings',
-                                              'measure_this',
-                                              fallback=None)
-        if not measured_quantity:
-            return
-        #                        TODO: make new widget class plot new data properly
-        self._glob['plot'].plot_new_data(
-            QuantityInfo.from_label(measured_quantity)
-            )
+
+        self._glob['plot'].plot_new_data()
 
     def __on_set_energy(self):
         """Set energy on primary controller."""
@@ -289,7 +272,7 @@ class Measure(gl.ViPErLEEDPluginBase):
             if isinstance(sender, CameraABC):
                 source = f"camera {sender.name}"
             elif isinstance(sender, ControllerABC):
-                source = f"controller at {sender.serial.port_name}"
+                source = f"controller at {sender.name}"
             elif isinstance(sender, MeasurementABC):
                 source = f"measurement {sender.__class__.__name__}"
             else:
@@ -312,7 +295,7 @@ class Measure(gl.ViPErLEEDPluginBase):
             event.ignore()
             return
         if self._glob['plot']:
-            self._glob['plot'].close
+            self._glob['plot'].close()
         # accept has to be called in order to
         # savely quit the dialog and its threads.
         self._dialogs['bad_px_finder'].accept()
@@ -357,8 +340,4 @@ class Measure(gl.ViPErLEEDPluginBase):
                                     " Check if this file exists and is in the "
                                     "correct folder.")
             return
-
-        meas_type = config.get('measurement_settings', 'measurement_class')
-        # measured_quantity = config.get('measurement_settings',
-                                              # 'measure_this',
-                                              # fallback=None)
+        self._glob['plot'].data_points = data

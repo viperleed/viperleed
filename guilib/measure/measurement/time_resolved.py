@@ -63,15 +63,16 @@ class TimeResolved(MeasurementABC):
                 'measurement_settings', 'cycle_time', fallback=100
                 )
 
+        num_meas = (1 + round((self.__end_energy - self.start_energy)
+                   / self.__delta_energy))
         if self.is_continuous_measurement:
             self.prepare_continuous_mode()
+            self.data_points.num_measurements = num_meas
         else:
             self.__hv_settle_time = 0
             self.__hv_settle_time = self.primary_controller.settings.getint(
                 'measurement_settings', 'hv_settle_time', fallback=0
                 )
-            num_meas = (1 + round((self.__end_energy - self.start_energy)
-                       / self.__delta_energy))
             self.__n_digits = len(str(num_meas))
         self.timer = qtc.QTimer(parent=self)
         self.timer.setSingleShot(True)
@@ -116,7 +117,7 @@ class TimeResolved(MeasurementABC):
         self.timer.start(self.__measurement_time)
         self.set_LEED_energy(self.current_energy, self.__settle_time)
         if not self.is_continuous_measurement:
-            # TODO: decide if we really want to save images (flag)
+            # TODO: use a flag to decide if we want to save images
             self.counter += 1
             image_name = (f"{self.counter:0>{self.__n_digits}}_"
                           f"{self.current_energy:.1f}eV_.tiff")
@@ -136,89 +137,11 @@ class TimeResolved(MeasurementABC):
         -------
         bool
         """
-        self.new_data_available.emit()
+        # self.new_data_available.emit()
         if self.__time_over or self.current_energy >= self.__end_energy:
-            self.on_finished()
             return True
         self.current_energy = self.energy_generator()
         return False
-
-    def on_finished(self):
-        """Calculate settling time.
-
-        Takes measured energies and calculates settling time
-        from them. Writes settling time to primary controller
-        configuration file afterwards.
-
-        Returns
-        -------
-        None.
-        """
-        # TODO: calculation will be moved to datapoints class
-        # TODO: currently using nominal energy on an uncalibrated energy measurement: offset might be larger than step height!!!
-        quantity = self.settings.get(
-            'measurement_settings', 'measure_this', fallback='None'
-            )
-        quantity_obj = QuantityInfo.from_label(quantity)
-        percentage = self.settings.getfloat('measurement_settings',
-                                            'percentage', fallback=0.1)
-        points = self.settings.getint(
-            'measurement_settings', 'relevant_points', fallback=10
-            )
-        if quantity_obj == QuantityInfo.HV:
-            to_change = 'hv_settle_time'
-        elif quantity_obj == QuantityInfo.I0:
-            to_change = 'i0_settle_time'
-        else:
-            print('not one of the expected quantities measured')
-            # TODO: emit error
-            return
-        # TODO:                             get_time_resolved_data currently throws an index error
-        # measured, _ = self.data_points.get_time_resolved_data(
-            # quantity_obj, separate_steps=True, absolute_times=True
-            # )
-        interval = self.primary_controller.measurement_interval
-
-        if self.is_continuous_measurement:
-            for ctrl in self.controllers:
-                del ctrl.continue_prepare_todos['set_continuous_mode']
-            return
-            for j, step in enumerate(measured[0]):
-                if j == 0:
-                    previous_height = sum(step[-points:])/points
-                    continue
-                current_height = sum(step[-points:])/points
-                max_deviation = (current_height - previous_height) * percentage
-                points = 0
-                for measurement in reversed(step):
-                    if abs(measurement - current_height) < max_deviation:
-                        points += 1
-                    else:
-                        break
-                if points == 0:
-                    points = 1
-                previous_height = current_height
-                settle_time = int(1000*points*interval)
-                if settle_time > self.__settle_time:
-                    self.__settle_time = settle_time
-
-            self.primary_controller.settings.set(
-                'measurement_settings', to_change, str(self.__settle_time))
-            file_name = ast.literal_eval(
-                            self.settings.get('devices', 'primary_controller')
-                            )[0]
-            # Create a dummy of the settings in order to keep the
-            # original number of measurements to average over.
-            orig_settings = ConfigParser(comment_prefixes='/',
-                                         allow_no_value=True)
-            orig_settings.read(file_name)
-            orig_settings.set(
-                'measurement_settings', to_change, str(self.__settle_time))
-            with open(file_name, 'w') as configfile:
-                orig_settings.write(configfile)
-        else:
-            pass
-            # TODO: save I0 (or I00) or only images for wiggle
 
     def is_preparation_finished(self):
         """Check if measurement preparation is done.
@@ -416,6 +339,7 @@ class TimeResolved(MeasurementABC):
             self.data_points.calculate_times(continuous=True)
         else:
             self.data_points.calculate_times()
+        self.new_data_available.emit()
         if self.is_finished():
             self.prepare_finalization()
         else:
@@ -433,4 +357,22 @@ class TimeResolved(MeasurementABC):
                 )
         self.ready_for_measurement.emit()
 
+    def finalize(self, busy=False):
+        """Finish the measurement cycle.
+
+        Save data and set energy to zero.
+
+        Parameters
+        ----------
+        busy : bool
+            Needed if the finalize is called by the controller
+            busy state change signal. (continuous measurement mode)
+
+        Returns
+        -------
+        None.
+        """
+        if self.is_continuous_measurement:
+            self.data_points.recalculate_last_setp_times()
+        super().finalize(busy=busy)
 

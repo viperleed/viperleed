@@ -48,14 +48,14 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
     """Base class for giving orders to the LEED electronics."""
 
     error_occurred = qtc.pyqtSignal(tuple)
-    
+
     # This signal is only used by the primary controller which
     # sets the energy. If the primary controller does not take
     # measurements then this signal needs to be emitted after
     # the primary controller has set the energy as well as an
     # empty data_ready signal.
     about_to_trigger = qtc.pyqtSignal()
-    
+
     # Signal which is used to forward data and let the MeasurementABC
     # class know that the controller is done measuring. If the
     # primary controller does not take measurements it should emit an
@@ -148,7 +148,7 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
     def __hash__(self):
         """Return modified hash of self."""
         if self.__hash == -1:
-            self.__hash = hash((id(self), self.__port_name))
+            self.__hash = hash((id(self), self.name))
         return self.__hash
 
     def __get_busy(self):
@@ -188,6 +188,11 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
         return self.settings.getfloat(
             'controller', 'initial_delay', fallback=0
             )
+
+    @property
+    def name(self):
+        """Return a unique name."""
+        return self.serial.port_name
 
     @property
     def serial(self):
@@ -555,7 +560,7 @@ class MeasureControllerABC(ControllerABC):
     def measurement_interval(self):
         """Return the time interval between measurements in seconds."""
         return
-        
+
     # @qtc.pyqtSlot(bool)
     def begin_preparation(self, serial_busy):
         """Prepare the controller for a measurement.
@@ -797,7 +802,7 @@ class MeasureControllerABC(ControllerABC):
         from the MeasurementABC class (i.e.: I0, I_Sample, ...),
         check if those types are available and not conflicting
         with each other and decide which channels to use.
-            
+
         super().what_to_measure(requested) must be called in
         subclasses at the end of the reimplementation in order
         to convert the requested quantities into QuantityInfo
