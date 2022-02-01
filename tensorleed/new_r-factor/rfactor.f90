@@ -11,7 +11,10 @@ module r_factor_new
     use interpolation
     implicit none
 
+    integer, PARAMETER :: n_start_guesses = 3
     contains
+
+    
 
 ! f2py -m rfactor rfactor.f90 -h rfactor.pyf --overwrite-signature --debug-capi
 ! f2py -c rfactor.pyf rfactor.f90
@@ -81,10 +84,253 @@ subroutine r_pendry_beam_y(n_E, E_step, y1, y2, id_start_y1, id_start_y2, n_y1, 
 end subroutine r_pendry_beam_y
 
 
+subroutine r_pendry_beamset_V0r_opt_on_grid( &
+        range, start_guess, fast_search, best_id, best_id_real, best_R, best_V0r, &       
+        n_E, E_step, n_beams, y1, y2, id_start_y1, id_start_y2, n_y1, n_y2, V0r_shift, &
+        r_pendry_weighted, r_pendry_beams, n_overlapping_points, &
+        ierr)
+    ! IN
+    integer, intent(in) :: range(2)
+    integer, INTENT(IN) :: start_guess(n_start_guesses)
 
-!V0rshift not yet implemented
-    ! beamtypes not yet implemented -> does it really make sense to do that here even?
-    ! maybe extra subroutine actually
+    ! OUT
+    logical, INTENT(INOUT) :: fast_search
+    integer, INTENT(OUT):: best_id
+    real(8), INTENT(OUT):: best_R, best_V0r ! best_V0r as "real"
+    real(8), INTENT(OUT) :: best_id_real
+    integer, INTENT(OUT) :: ierr
+
+    ! Internal variables used for V0r optimization
+    real(8), ALLOCATABLE :: R_V0r(:), weights(:)
+    integer :: n_steps
+    real(8) :: fit_V0r_id
+    real(8) :: fit_x_min, fit_y_min, fit_curvature
+    real(8), ALLOCATABLE :: arrange(:)
+    real(8) :: para_coeff(3)
+    logical, ALLOCATABLE :: evaluated(:)
+
+    integer :: i
+    integer :: additional_steps, additional_steps_limit
+    integer :: best_additional, best_kick_out
+
+    ! Pass-through I/O for r_pendry_beamset
+    !f2py integer, hidden, intent(in), depend(E_start1, E_start2), check(len(E_start1)==len(E_start2)) :: nr_beams=len(E_start1)
+    integer :: n_E ! number of energy steps
+    integer n_beams
+    !f2py real(8), intent(in) :: E_step
+    real(8) :: E_step
+    !f2py real intent(in) :: y1 (n_E, n_beams), y2 (n_E, n_beams)
+    real(8), intent(in) :: y1 (n_E, n_beams), y2 (n_E, n_beams)
+    !f2py integer, intent(in) id_start_y1
+    !f2py integer, intent(in) id_start_y2
+    integer, intent(in)    :: id_start_y1(n_beams) ,id_start_y2(n_beams)
+    !f2py integer, intent(in) n_y1
+    !f2py integer, intent(in) n_y2
+    integer, intent(in)    :: n_y1(n_beams) ,n_y2(n_beams)
+    !f2py integer, intent(out) :: n_overlapping_points
+    integer, intent(out) :: n_overlapping_points(n_beams)
+    !f2py real(8), intent(out) :: r_pendry_beams(n_beams), r_pendry_weighted
+    real(8), intent(out) :: r_pendry_beams(n_beams), r_pendry_weighted
+    !f2py integer, intent(in)::  V0r_shift
+    integer, intent(in) :: V0r_shift
+
+    ! integer, intent(out):: ierr
+
+    ! *****************************************************************************************
+
+    tol_R = 0.05
+    additional_steps_limit = 4
+
+
+    ! %install_ext https://raw.github.com/mgaitan/fortran_magic/master/fortranmagic.py
+
+    n_steps = range(2) - range(1)
+    
+    if (n_steps .le. 5) then
+        ierr = 851
+        RETURN
+    end if
+    
+    ALLOCATE(arrange(n_steps), R_V0r(n_steps), weights(n_steps))
+    do i = 1, n_step
+        arrange(i) = range(1) + i - 1
+    end do
+
+    ! Assign NaNs to unknown R_V0r and impossibly large value to best_R
+    R_V0r = 5d3
+    best_R = 5d3
+    weights = 0
+    evaluated = .False.
+    n_evaluated = 0
+    additional_steps = 0
+
+
+
+    next_step = start_guess(1)
+
+    do while(fast_search)
+        call r_pendry_beamset_y(n_E, E_step, n_beams, y1, y2, id_start_y1, id_start_y2, n_y1, n_y2, &
+            next_step, & 
+            r_pendry_weighted, r_pendry_beams, &
+            N_overlapping_points, &
+            ierr)
+        ! Pass out possible R factor error message
+        if (ierr .ne. 0) RETURN
+
+        ! Calculate next point
+        call update_best_V0r(best_R, best_id, R_V0r(i), i)
+        weights(start_guess(i)) = 1
+        evaluated(start_guess(i)) = .True.
+        n_evaluated = n_evaluated + 1
+
+        ! Do 3 guesses initially
+        if (n_evaluated < n_start_guesses) then
+            next_step = start_guess(n_evaluated + 1)
+            CYCLE
+        end if
+
+        if (n_evaluated == n_steps) then
+            ierr = 852
+            exit
+        end if
+
+        ! Fit parabola to values
+        call parabola_lsq_fit(n_steps, arrange, R_V0r, weights, para_coeff, ierr)
+        if (ierr .ne. 0) = RETURN ! Error
+
+        ! perform parabola fit -> fit_V0r_id, fit_R, curvature,
+        fit_curvature = 2*para_coeff(1)
+        fit_x_min = -para_coeff(2)/para_coeff(1)/2
+        fit_y_min = para_coeff(3) - para_coeff(2)**2/para_coeff(1)/4
+
+        ! decide if fast search possible
+        closest_step = NINT(fit_x_min)
+        if ((closest_step .le. range(1)) .or. (closest_step .ge. range(2)) .or. (fit_curvature .le. 0)) then
+            ! Parabola fit doesnt work...
+            fast_search = .False.
+        end if
+
+        ! Have we calculated the point closest to the predicted minimum yet?
+        if (.not. evaluated(closest_step)) CYCLE
+
+        ! Decide if fast search is good enough...
+        if (abs(best_R - R_V0r(closest_step)) .le. tol_R) then
+            ! Statisfied
+            RETURN
+
+        else if (additional_steps < additional_steps_limit) then
+            ! Try to kick out the step furthest from the minimum and add the "mostest closest" that has not been evaluated yet
+            best_kick_out = closest_step 
+            best_additional = range(1) - range(2)
+            do i = range(1), range(2)
+                if (evaluated(i)) then
+                    ! see if we can kick that one out
+                    if (i-closest_step < best_kick_out - closest_step) best_kick_out = i
+                else
+                    ! see if we can add that one
+                    if (i-closest_step < best_additional - closest_step) best_additional = i
+                end if
+            end do
+            weights(best_kick_out) = 0
+            next_step = best_additional
+        else
+            ! Brute force instead
+            fast_search = .False.
+            exit
+        end if
+    end do
+
+    ! Brute force grid - not efficient, but will always give a result
+
+    do i = 1, n_steps
+        if (.not. evaluated(i)) then
+            !call r_pendry_beamset_y
+            call update_best_V0r(best_R, best_id, R_V0r(i), i)
+        else
+            CYCLE
+        end if
+    end do
+
+    ! If brute forced, report best V0r as the best step
+    best_id_real = best_id
+
+    RETURN
+
+end subroutine  r_pendry_beamset_V0r_opt_on_grid
+
+subroutine update_best_V0r(curr_best_R, curr_best_id, R, id)
+    real(8), INTENT(INOUT) :: curr_best_R
+    integer, INTENT(INOUT) :: curr_best_id
+
+    real(8), INTENT(IN) :: R
+    integer, INTENT(IN) :: id
+
+    if (R < curr_best_R) then
+        curr_best_R = R
+        curr_best_id = id
+    end if
+    RETURN
+end subroutine update_best_V0r
+
+subroutine parabola_lsq_fit(n,x,y, w, B, ierr)
+    integer, INTENT(IN) :: n 
+    real(8), INTENT(IN) :: x(n), y(n), w(n)
+
+    real(8), INTENT(OUT) :: B(3,1)
+    integer,  INTENT(OUT):: ierr
+
+    real(8) :: s_x, s_x2, s_y, s_x3, s_x4, s_xy, s_x2y
+    real(8) :: A(3,3)
+    integer :: LAPACK_info, i, ipiv(3)
+    integer :: WORK(18)
+    real(8) :: n_real
+
+    n_real = n
+    s_x     = 0
+    s_x2    = 0
+    s_y     = 0
+    s_x3    = 0
+    s_xy    = 0
+    s_x4    = 0
+    s_x2y   = 0
+
+    A = 0
+    B = 0
+
+    do i = 1, n
+        A(1,1) = A(1,1) + w(i)*x(i)**4
+        A(1,2) = A(1,2) + w(i)*x(i)**3
+        A(1,3) = A(1,3) + w(i)*x(i)**2
+        A(2,3) = A(2,3) + w(i)*x(i)
+
+        B(1,1) = B(1,1) + w(i)*y(i)*x(i)**2
+        B(2,1) = B(2,1) + w(i)*y(i)*x(i)
+        B(3,1) = B(3,1) + w(i)*y(i)
+
+    end do
+    ! Impose symmetry afterwards and save statements in loop
+    A(2,1) = A(1,2)
+    A(2,2) = A(1,3)
+    A(3,1) = A(1,3)
+    A(3,2) = A(2,3)
+    A(3,3) = n
+
+    ! print*, "A"
+    ! print*, A(1,1:3)
+    ! print*, A(2, 1:3)
+    ! print*, A(3, 1:3)
+    ! print*, "B"
+    ! print*, B
+
+    call DSYSV('U', 3, 1, A, 3, ipiv, b, 3, work, 18, LAPACK_info)
+    if (LAPACK_info .ne. 0) ierr = 860
+
+
+
+
+end subroutine parabola_lsq_fit
+
+
 subroutine r_pendry_beamset_y(n_E, E_step, n_beams, y1, y2, id_start_y1, id_start_y2, n_y1, n_y2, V0r_shift, &
     r_pendry_weighted, r_pendry_beams, n_overlapping_points, ierr)
     !Rfactor_beamset:
