@@ -157,6 +157,10 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         # Number of frames accumulated for averaging
         self.n_frames_done = 0
 
+        self.processor_stop_timer = qtc.QTimer()
+        self.processor_stop_timer.setSingleShot(True)
+        self.processor_stop_timer.setParent(self)
+
         try:
             self.set_settings(settings)
         except self.exceptions:
@@ -1105,8 +1109,11 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         self.busy = False
 
         if self.__process_thread.isRunning():
-            # self.__process_thread.quit()
-            self.__process_thread.requestInterruption()
+            if any(processor.busy for processor in self.__image_processors):
+                self.processor_stop_timer.start(100)
+                self.processor_stop_timer.connect(self.retry_stop)
+                return
+            self.__process_thread.quit()
         try:
             self.frame_ready.disconnect(self.__on_frame_ready)
         except TypeError:
@@ -1242,3 +1249,22 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         for error in self.__init_errors:
             self.error_occurred.emit(error)
         self.__init_errors = []
+
+    def retry_stop(self):
+        """Retry stopping the camera.
+
+        Returns
+        -------
+        None.
+        """
+        if any(processor.busy for processor in self.__image_processors):
+            self.processor_stop_timer.start(100)
+            return
+        self.processor_stop_timer.disconnect()
+        self.__process_thread.quit()
+        try:
+            self.frame_ready.disconnect(self.__on_frame_ready)
+        except TypeError:
+            # Already disconnected
+            pass
+        self.stopped.emit()

@@ -108,7 +108,7 @@ class ImageProcessInfo:
     def clear_times(self):
         """Clear the frame arrival times."""
         self.frame_times = []
-    
+
     def restore_from(self, other):
         """Restore this instance from another one."""
         if not isinstance(other, ImageProcessInfo):
@@ -139,6 +139,35 @@ class ImageProcessor(qtc.QObject):
         self.processed_image = np.zeros(0)
         self.n_frames_received = 0
         self.frame_bits = 16
+        self.__busy = False
+
+    @property
+    def busy(self):
+        """Return whether the processor is busy.
+
+        Returns
+        -------
+        busy : bool
+            True if the processor is busy.
+        """
+        return self.__busy
+
+    @busy.setter
+    def busy(self, is_busy):
+        """Set the busy state of the processor.
+
+        If the busy state of the processor changes, the busy_changed
+        signal will be emitted, carrying the current busy state.
+
+        Emits
+        -----
+        busy_changed(self.busy)
+            If the busy state changes.
+        """
+        was_busy = self.busy
+        is_busy = bool(is_busy)
+        if was_busy is not is_busy:
+            self.__busy = is_busy
 
     @property
     def missing_frames(self):
@@ -174,6 +203,7 @@ class ImageProcessor(qtc.QObject):
             used to properly set up the size and data type of
             the array that will contain the processed image.
         """
+        self.busy = True
         self.process_info = process_info
         self.n_frames_received = 0
 
@@ -311,7 +341,7 @@ class ImageProcessor(qtc.QObject):
         if '.tif' not in fname.suffix:
             raise ValueError("Can only save .tiff files. Found invalid "
                              f"extension {fname.suffix}")
-        
+
         cam = self.process_info.camera
         bin = self.process_info.binning
         comment = (f"Average of {self.process_info.n_frames} frames; "
@@ -326,6 +356,7 @@ class ImageProcessor(qtc.QObject):
             info['energy'] = self.process_info.energy
         if self.process_info.date_time:
             info['date_time'] = self.process_info.date_time
-        
+
         img = tiff.TiffFile.from_array(data, **info)
         img.write(fname)
+        self.busy = False
