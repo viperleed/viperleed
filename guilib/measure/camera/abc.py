@@ -156,16 +156,20 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         self.__timeout.timeout.connect(self.__on_timed_out)
 
         # Keep track of some errors that we want to report
-        # only once. This list is cleared every time a
+        # only once. This 'list' is cleared every time a
         # camera is disconnected.
         self.__reported_errors = set()
 
         self.process_info = ImageProcessInfo()
         self.process_info.camera = self
-        self.__process_thread = qtc.QThread()
         self.__image_processors = []
+        self.__process_thread = qtc.QThread()
+        self.__retry_stop_timer = qtc.QTimer(parent=self)
+        self.__retry_stop_timer.setSingleShot(True)
+        self.__retry_stop_timer.timeout.connect(self.__stop_now_or_retry)
+
         self.__init_errors = []  # Report these with a little delay
-        self.__init_err_timer = qtc.QTimer(self)
+        self.__init_err_timer = qtc.QTimer(parent=self)
         self.__init_err_timer.setSingleShot(True)
 
         self.error_occurred.connect(self.__on_init_errors)
@@ -173,10 +177,6 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
 
         # Number of frames accumulated for averaging
         self.n_frames_done = 0
-
-        self.processor_stop_timer = qtc.QTimer()
-        self.processor_stop_timer.setSingleShot(True)
-        self.processor_stop_timer.setParent(self)
 
         try:
             self.set_settings(settings)
@@ -1142,6 +1142,12 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
     def stop(self):
         """Stop the camera.
 
+        The camera may not be immediately stopped if there is any
+        image processing currently running. In this case, stopping
+        will be attempted multiple times with a 100 ms interval.
+        Once the camera has effectively stopped, the .stopped()
+        signal is emitted.
+
         This method should be extended in concrete subclasses, i.e.,
         super().stop() must be called in the reimplementation.
 
@@ -1149,22 +1155,7 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         -------
         None.
         """
-        self.process_info.clear_times()
-        self.n_frames_done = 0
-        self.busy = False
-
-        if self.__process_thread.isRunning():
-            if any(processor.busy for processor in self.__image_processors):
-                self.processor_stop_timer.start(100)
-                self.processor_stop_timer.connect(self.retry_stop)
-                return
-            self.__process_thread.quit()
-        try:
-            self.frame_ready.disconnect(self.__on_frame_ready)
-        except TypeError:
-            # Already disconnected
-            pass
-        self.stopped.emit()
+        self.__stop_now_or_retry()
 
     @abstractmethod
     def trigger_now(self):
@@ -1320,18 +1311,24 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
             self.error_occurred.emit(error)
         self.__init_errors = []
 
-    def retry_stop(self):
-        """Retry stopping the camera.
-
-        Returns
-        -------
-        None.
-        """
-        if any(processor.busy for processor in self.__image_processors):
-            self.processor_stop_timer.start(100)
+    def __stop_now_or_retry(self):
+        """Stop camera if image processing is over."""
+        # Delay the stopping as long as there are image
+        # processors that have not finished their tasks
+        if (self.__process_thread.isRunning()
+                and any(p.busy for p in self.__image_processors)):
+            if not self.__retry_stop_timer.isActive():
+                self.__retry_stop_timer.start(100)
             return
-        self.processor_stop_timer.disconnect()
-        self.__process_thread.quit()
+
+        # Now it is safe to clean up and stop
+        self.__retry_stop_timer.stop()
+        self.process_info.clear_times()
+        self.n_frames_done = 0
+        self.busy = False
+        if self.__process_thread.isRunning():
+            self.__process_thread.quit()
+
         try:
             self.frame_ready.disconnect(self.__on_frame_ready)
         except TypeError:
