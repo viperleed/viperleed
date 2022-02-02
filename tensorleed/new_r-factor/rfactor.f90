@@ -11,7 +11,6 @@ module r_factor_new
     use interpolation
     implicit none
 
-    integer, PARAMETER :: n_start_guesses = 3
     contains
 
     
@@ -86,9 +85,12 @@ end subroutine r_pendry_beam_y
 
 subroutine r_pendry_beamset_V0r_opt_on_grid( &
         range, start_guess, fast_search, best_id, best_id_real, best_R, best_V0r, &       
-        n_E, E_step, n_beams, y1, y2, id_start_y1, id_start_y2, n_y1, n_y2, V0r_shift, &
+        n_E, E_step, n_beams, y1, y2, id_start_y1, id_start_y2, n_y1, n_y2, &
         r_pendry_weighted, r_pendry_beams, n_overlapping_points, &
         ierr)
+    
+    implicit none
+    integer, parameter :: n_start_guesses = 3
     ! IN
     integer, intent(in) :: range(2)
     integer, INTENT(IN) :: start_guess(n_start_guesses)
@@ -109,9 +111,17 @@ subroutine r_pendry_beamset_V0r_opt_on_grid( &
     real(8) :: para_coeff(3)
     logical, ALLOCATABLE :: evaluated(:)
 
+    real(8) :: tol_R
     integer :: i
+    integer :: n_evaluated
     integer :: additional_steps, additional_steps_limit
+    integer :: next_step, closest_step
     integer :: best_additional, best_kick_out
+
+    ! holder_arrays for passout
+    integer, ALLocatable :: N_overlapping_points_V0r(:,:)
+    real(8), ALLocatable :: r_pendry_beams_V0r(:,:)
+
 
     ! Pass-through I/O for r_pendry_beamset
     !f2py integer, hidden, intent(in), depend(E_start1, E_start2), check(len(E_start1)==len(E_start2)) :: nr_beams=len(E_start1)
@@ -131,8 +141,7 @@ subroutine r_pendry_beamset_V0r_opt_on_grid( &
     integer, intent(out) :: n_overlapping_points(n_beams)
     !f2py real(8), intent(out) :: r_pendry_beams(n_beams), r_pendry_weighted
     real(8), intent(out) :: r_pendry_beams(n_beams), r_pendry_weighted
-    !f2py integer, intent(in)::  V0r_shift
-    integer, intent(in) :: V0r_shift
+
 
     ! integer, intent(out):: ierr
 
@@ -140,6 +149,8 @@ subroutine r_pendry_beamset_V0r_opt_on_grid( &
 
     tol_R = 0.05
     additional_steps_limit = 4
+
+ 
 
 
     ! %install_ext https://raw.github.com/mgaitan/fortran_magic/master/fortranmagic.py
@@ -150,9 +161,11 @@ subroutine r_pendry_beamset_V0r_opt_on_grid( &
         ierr = 851
         RETURN
     end if
-    
+    print*, "n_steps", n_steps
     ALLOCATE(arrange(n_steps), R_V0r(n_steps), weights(n_steps))
-    do i = 1, n_step
+    ALLOCATE(r_pendry_beams_V0r(n_steps, n_beams), N_overlapping_points_V0r(n_steps, n_beams))
+
+    do i = 1, n_steps
         arrange(i) = range(1) + i - 1
     end do
 
@@ -164,22 +177,28 @@ subroutine r_pendry_beamset_V0r_opt_on_grid( &
     n_evaluated = 0
     additional_steps = 0
 
-
+    !Debug!
+    print*, "n_steps", n_steps
 
     next_step = start_guess(1)
 
     do while(fast_search)
+        print*, "next step", next_step
         call r_pendry_beamset_y(n_E, E_step, n_beams, y1, y2, id_start_y1, id_start_y2, n_y1, n_y2, &
             next_step, & 
-            r_pendry_weighted, r_pendry_beams, &
-            N_overlapping_points, &
+            R_V0r(i), &
+            r_pendry_beams_V0r(i, :), &
+            N_overlapping_points_V0r(i, :), &
             ierr)
         ! Pass out possible R factor error message
         if (ierr .ne. 0) RETURN
 
         ! Calculate next point
-        call update_best_V0r(best_R, best_id, R_V0r(i), i)
-        weights(start_guess(i)) = 1
+        call update_best_V0r(n_steps, n_beams, best_R, best_id, R_V0r(i), i, &
+            N_overlapping_points_V0r, N_overlapping_points, &
+            r_pendry_beams_V0r, r_pendry_beams)
+
+         weights(start_guess(i)) = 1
         evaluated(start_guess(i)) = .True.
         n_evaluated = n_evaluated + 1
 
@@ -196,7 +215,7 @@ subroutine r_pendry_beamset_V0r_opt_on_grid( &
 
         ! Fit parabola to values
         call parabola_lsq_fit(n_steps, arrange, R_V0r, weights, para_coeff, ierr)
-        if (ierr .ne. 0) = RETURN ! Error
+        if (ierr .ne. 0) RETURN ! Error
 
         ! perform parabola fit -> fit_V0r_id, fit_R, curvature,
         fit_curvature = 2*para_coeff(1)
@@ -244,8 +263,15 @@ subroutine r_pendry_beamset_V0r_opt_on_grid( &
 
     do i = 1, n_steps
         if (.not. evaluated(i)) then
-            !call r_pendry_beamset_y
-            call update_best_V0r(best_R, best_id, R_V0r(i), i)
+            call r_pendry_beamset_y(n_E, E_step, n_beams, y1, y2, id_start_y1, id_start_y2, n_y1, n_y2, &
+            next_step, & 
+            R_V0r(i), &
+            r_pendry_beams_V0r(i, :), &
+            N_overlapping_points_V0r(i, :), &
+            ierr)
+            call update_best_V0r(n_steps, n_beams, best_R, best_id, R_V0r(i), i, &
+                N_overlapping_points_V0r, N_overlapping_points, &
+                r_pendry_beams_V0r, r_pendry_beams)
         else
             CYCLE
         end if
@@ -256,18 +282,31 @@ subroutine r_pendry_beamset_V0r_opt_on_grid( &
 
     RETURN
 
-end subroutine  r_pendry_beamset_V0r_opt_on_grid
+end subroutine r_pendry_beamset_V0r_opt_on_grid
 
-subroutine update_best_V0r(curr_best_R, curr_best_id, R, id)
+subroutine update_best_V0r(n_steps, n_beams, curr_best_R, curr_best_id, R, id, &
+                N_overlapping_points_V0r, N_overlapping_points, &
+                r_pendry_beams_V0r, r_pendry_beams)
+    integer :: n_steps
+    integer :: n_beams
     real(8), INTENT(INOUT) :: curr_best_R
     integer, INTENT(INOUT) :: curr_best_id
 
     real(8), INTENT(IN) :: R
     integer, INTENT(IN) :: id
 
+    integer, INTENT(IN) :: N_overlapping_points_V0r(n_steps, n_beams)
+    real(8), INTENT(IN) :: r_pendry_beams_V0r(n_steps, n_beams)
+
+    integer, INTENT(OUT) :: N_overlapping_points(n_beams)
+    real(8), INTENT(OUT) :: r_pendry_beams(n_beams)
+
+
     if (R < curr_best_R) then
         curr_best_R = R
         curr_best_id = id
+        N_overlapping_points = N_overlapping_points_V0r(id, :)
+        r_pendry_beams = r_pendry_beams_V0r(id, :)
     end if
     RETURN
 end subroutine update_best_V0r
