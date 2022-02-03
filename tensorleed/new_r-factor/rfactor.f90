@@ -26,8 +26,6 @@ module r_factor_new
 
 
 
-
-
    
 subroutine r_pendry_beam_y(n_E, E_step, y1, y2, id_start_y1, id_start_y2, n_y1, n_y2, V0r_shift, &
                          R_pendry, numerator, denominator, N_overlapping_points)
@@ -84,10 +82,11 @@ end subroutine r_pendry_beam_y
 
 
 subroutine r_pendry_beamset_V0r_opt_on_grid( &
-        range, start_guess, fast_search, best_id, best_id_real, best_R, best_V0r, &       
+        range, start_guess, fast_search, best_V0r_step, best_V0r, best_R, n_evaluated, &       
         n_E, E_step, n_beams, y1, y2, id_start_y1, id_start_y2, n_y1, n_y2, &
-        r_pendry_weighted, r_pendry_beams, n_overlapping_points, &
-        ierr)
+        r_pendry_beams, n_overlapping_points, &
+        ierr, &
+        tol_R, additional_steps_limit)
     
     implicit none
     integer, parameter :: n_start_guesses = 3
@@ -97,9 +96,9 @@ subroutine r_pendry_beamset_V0r_opt_on_grid( &
 
     ! OUT
     logical, INTENT(INOUT) :: fast_search
-    integer, INTENT(OUT):: best_id
-    real(8), INTENT(OUT):: best_R, best_V0r ! best_V0r as "real"
-    real(8), INTENT(OUT) :: best_id_real
+    integer, INTENT(OUT) :: best_V0r_step
+    real(8), INTENT(OUT) :: best_R, best_V0r ! best_V0r as "real"
+    integer, INTENT(OUT) :: n_evaluated
     integer, INTENT(OUT) :: ierr
 
     ! Internal variables used for V0r optimization
@@ -107,16 +106,26 @@ subroutine r_pendry_beamset_V0r_opt_on_grid( &
     integer :: n_steps
     real(8) :: fit_V0r_id
     real(8) :: fit_x_min, fit_y_min, fit_curvature
-    real(8), ALLOCATABLE :: arrange(:)
+    integer, ALLOCATABLE :: V0r_step(:)
+    real(8), ALLOCATABLE :: V0r_step_real(:)
     real(8) :: para_coeff(3)
     logical, ALLOCATABLE :: evaluated(:)
 
-    real(8) :: tol_R
-    integer :: i
-    integer :: n_evaluated
-    integer :: additional_steps, additional_steps_limit
+    ! Optionals
+!f2py real(8), optional :: tol_R = 0.00001
+    real(8), INTENT(IN) :: tol_R
+!f2py integer, optional :: additional_steps_limit = 6
+    integer, INTENT(IN) :: additional_steps_limit
+
+    integer :: i, j
+
+    integer :: additional_steps
     integer :: next_step, closest_step
-    integer :: best_additional, best_kick_out
+    integer :: worst_step
+    integer :: best_id
+    integer :: left, right
+    integer :: closest_step_id
+    real(8) :: R2
 
     ! holder_arrays for passout
     integer, ALLocatable :: N_overlapping_points_V0r(:,:)
@@ -140,71 +149,71 @@ subroutine r_pendry_beamset_V0r_opt_on_grid( &
     !f2py integer, intent(out) :: n_overlapping_points
     integer, intent(out) :: n_overlapping_points(n_beams)
     !f2py real(8), intent(out) :: r_pendry_beams(n_beams), r_pendry_weighted
-    real(8), intent(out) :: r_pendry_beams(n_beams), r_pendry_weighted
+    real(8), intent(out) :: r_pendry_beams(n_beams)
 
 
     ! integer, intent(out):: ierr
 
     ! *****************************************************************************************
 
-    tol_R = 0.05
-    additional_steps_limit = 4
-
- 
-
-
     ! %install_ext https://raw.github.com/mgaitan/fortran_magic/master/fortranmagic.py
 
-    n_steps = range(2) - range(1)
+    n_steps = range(2) - range(1) + 1
     
     if (n_steps .le. 5) then
         ierr = 851
         RETURN
     end if
-    print*, "n_steps", n_steps
-    ALLOCATE(arrange(n_steps), R_V0r(n_steps), weights(n_steps))
+
+    ALLOCATE(V0r_step(n_steps), V0r_step_real(n_steps))
+    ALLOCATE(R_V0r(n_steps), weights(n_steps))
     ALLOCATE(r_pendry_beams_V0r(n_steps, n_beams), N_overlapping_points_V0r(n_steps, n_beams))
+    ALLOCATE(evaluated(n_steps))
 
     do i = 1, n_steps
-        arrange(i) = range(1) + i - 1
+        V0r_step(i) = range(1) + i - 1
+        V0r_step_real(i) = range(1) + i - 1
     end do
 
     ! Assign NaNs to unknown R_V0r and impossibly large value to best_R
     R_V0r = 5d3
+
     best_R = 5d3
     weights = 0
     evaluated = .False.
+
     n_evaluated = 0
     additional_steps = 0
 
-    !Debug!
-    print*, "n_steps", n_steps
-
-    next_step = start_guess(1)
+    next_step = start_guess(1) - range(1) + 1
 
     do while(fast_search)
-        print*, "next step", next_step
+
+        !print*, "Evaluated:", n_evaluated, "next step", next_step
         call r_pendry_beamset_y(n_E, E_step, n_beams, y1, y2, id_start_y1, id_start_y2, n_y1, n_y2, &
-            next_step, & 
-            R_V0r(i), &
-            r_pendry_beams_V0r(i, :), &
-            N_overlapping_points_V0r(i, :), &
+            V0r_step(next_step), & 
+            R_V0r(next_step), &
+            r_pendry_beams_V0r(next_step, :), &
+            N_overlapping_points_V0r(next_step, :), &
             ierr)
         ! Pass out possible R factor error message
         if (ierr .ne. 0) RETURN
+        print*, ""
+        print*, "Smart step:", V0r_step(next_step), "R = ", R_V0r(next_step)
+
 
         ! Calculate next point
-        call update_best_V0r(n_steps, n_beams, best_R, best_id, R_V0r(i), i, &
+        call update_best_V0r(n_steps, n_beams, best_R, best_id, R_V0r(next_step), next_step, &
             N_overlapping_points_V0r, N_overlapping_points, &
             r_pendry_beams_V0r, r_pendry_beams)
 
-         weights(start_guess(i)) = 1
-        evaluated(start_guess(i)) = .True.
+        weights(next_step) = 1
+        evaluated(next_step) = .True.
         n_evaluated = n_evaluated + 1
 
         ! Do 3 guesses initially
-        if (n_evaluated < n_start_guesses) then
-            next_step = start_guess(n_evaluated + 1)
+        if (n_evaluated < 3) then
+            next_step = start_guess(n_evaluated + 1) -range(1) +1
             CYCLE
         end if
 
@@ -214,7 +223,7 @@ subroutine r_pendry_beamset_V0r_opt_on_grid( &
         end if
 
         ! Fit parabola to values
-        call parabola_lsq_fit(n_steps, arrange, R_V0r, weights, para_coeff, ierr)
+        call parabola_lsq_fit(n_steps, V0r_step_real, R_V0r, weights, para_coeff, ierr)
         if (ierr .ne. 0) RETURN ! Error
 
         ! perform parabola fit -> fit_V0r_id, fit_R, curvature,
@@ -222,64 +231,118 @@ subroutine r_pendry_beamset_V0r_opt_on_grid( &
         fit_x_min = -para_coeff(2)/para_coeff(1)/2
         fit_y_min = para_coeff(3) - para_coeff(2)**2/para_coeff(1)/4
 
+
+        print*, "Expecting minimum of R =", fit_y_min, "at V0r fraction = ", fit_x_min
+
+
         ! decide if fast search possible
-        closest_step = NINT(fit_x_min)
-        if ((closest_step .le. range(1)) .or. (closest_step .ge. range(2)) .or. (fit_curvature .le. 0)) then
+        closest_step = NINT(fit_x_min) -(range(1)) + 1
+        
+        if ((closest_step .le. 1) .or. (closest_step .ge. n_steps) .or. (fit_curvature .le. 0.005)) then
             ! Parabola fit doesnt work...
             fast_search = .False.
+            print*, "Parabola is futile!"
+            print*, "curvature", fit_curvature
+            exit
         end if
 
         ! Have we calculated the point closest to the predicted minimum yet?
-        if (.not. evaluated(closest_step)) CYCLE
-
-        ! Decide if fast search is good enough...
-        if (abs(best_R - R_V0r(closest_step)) .le. tol_R) then
-            ! Statisfied
+        if (.not. evaluated(closest_step)) then
+            next_step = closest_step
+            CYCLE
+        else if (n_evaluated == 3) then
+            ! In case the closest step was in the initial guesses, we may only have
+            ! 3 points evaluated so far. We want a minimum of 4 points though, to calculate the
+            ! mean square error. (R^2 for a parabola fit to 3 points is 0 !)
+            ! -> calc next best point
+            do i = 1, n_steps
+                if (.not. evaluated(closest_step - i)) next_step = closest_step - i; CYCLE
+                if (.not. evaluated(closest_step + i)) next_step = closest_step + i; CYCLE
+            end do
+            ! This point should not be possible to reach since we check at the beginning if there are more than 5 points
+            ierr = 853
             RETURN
+        end if
 
+
+        ! Decide how to proceed:
+        ! *****************************************************************************************
+        ! Convergence criterion: R^2_old - R^2_new < tol
+
+        R2 = parabola_R_squared(n_steps, V0r_step_real, R_V0r, weights, para_coeff(1), para_coeff(2), para_coeff(3))
+        print*, "Getting R^2 = ", R2
+
+        if (R2  < tol_R) then
+            ! Statisfied
+            best_V0r = fit_x_min
+            best_R = fit_y_min
+            best_V0r_step = V0r_step(best_id)
+            print*, ""
+            print*, "Smart search success"
+            RETURN
+        
         else if (additional_steps < additional_steps_limit) then
-            ! Try to kick out the step furthest from the minimum and add the "mostest closest" that has not been evaluated yet
-            best_kick_out = closest_step 
-            best_additional = range(1) - range(2)
-            do i = range(1), range(2)
-                if (evaluated(i)) then
-                    ! see if we can kick that one out
-                    if (i-closest_step < best_kick_out - closest_step) best_kick_out = i
-                else
-                    ! see if we can add that one
-                    if (i-closest_step < best_additional - closest_step) best_additional = i
+
+            do i = 1, n_steps
+                if (.not. evaluated(closest_step - i)) then
+                    next_step = closest_step - i
+                    print*, "adding step", V0r_step(next_step)
+                    EXIT
+                else if (.not. evaluated(closest_step + i)) then
+                    next_step = closest_step + i
+                    print*, "adding step", V0r_step(next_step)
+                    EXIT
                 end if
             end do
-            weights(best_kick_out) = 0
-            next_step = best_additional
+
+            if (sum(weights) > 5) then
+                worst_step = closest_step
+                do i = 1, n_steps
+                    if ((abs(i - closest_step) > abs(worst_step - closest_step)) &
+                        .and. (evaluated(i)) .and. (weights(i) > 0.1) ) then
+                        worst_step = i
+                    end if
+                end do
+                weights(worst_step) = 0
+                print*, "kicked out step:", V0r_step(worst_step)
+            end if
+
+            additional_steps = additional_steps +1
+
+            CYCLE
+        
+        ! And if none of that works, brute force it
         else
-            ! Brute force instead
             fast_search = .False.
-            exit
+            EXIT
         end if
     end do
 
+    ! *****************************************************************************************
     ! Brute force grid - not efficient, but will always give a result
 
     do i = 1, n_steps
         if (.not. evaluated(i)) then
             call r_pendry_beamset_y(n_E, E_step, n_beams, y1, y2, id_start_y1, id_start_y2, n_y1, n_y2, &
-            next_step, & 
+            V0r_step(i), & 
             R_V0r(i), &
             r_pendry_beams_V0r(i, :), &
             N_overlapping_points_V0r(i, :), &
             ierr)
+            evaluated(i) = .True.
             call update_best_V0r(n_steps, n_beams, best_R, best_id, R_V0r(i), i, &
                 N_overlapping_points_V0r, N_overlapping_points, &
                 r_pendry_beams_V0r, r_pendry_beams)
+            print*, "Brute force. step:", V0r_step(i), "R = ", R_V0r(i)
         else
             CYCLE
         end if
     end do
 
     ! If brute forced, report best V0r as the best step
-    best_id_real = best_id
-
+    best_V0r_step = V0r_step(best_id)
+    best_V0r = V0r_step_real(best_id)
+    best_R = R_V0r(best_id)
     RETURN
 
 end subroutine r_pendry_beamset_V0r_opt_on_grid
@@ -341,6 +404,7 @@ subroutine parabola_lsq_fit(n,x,y, w, B, ierr)
         A(1,2) = A(1,2) + w(i)*x(i)**3
         A(1,3) = A(1,3) + w(i)*x(i)**2
         A(2,3) = A(2,3) + w(i)*x(i)
+        A(3,3) = A(3,3) + w(i)
 
         B(1,1) = B(1,1) + w(i)*y(i)*x(i)**2
         B(2,1) = B(2,1) + w(i)*y(i)*x(i)
@@ -352,7 +416,6 @@ subroutine parabola_lsq_fit(n,x,y, w, B, ierr)
     A(2,2) = A(1,3)
     A(3,1) = A(1,3)
     A(3,2) = A(2,3)
-    A(3,3) = n
 
     ! print*, "A"
     ! print*, A(1,1:3)
@@ -368,6 +431,36 @@ subroutine parabola_lsq_fit(n,x,y, w, B, ierr)
 
 
 end subroutine parabola_lsq_fit
+
+function parabola(x, a, b, c) result(y)
+    real(8), INTENT(IN)  :: x
+    real(8), INTENT(IN)  :: a, b, c
+    real(8) :: y
+
+    y = a*(x**2) + b*x + c
+    RETURN
+end function parabola
+
+function parabola_R_squared(n, x, y, w, a, b, c) result(R_squared)
+    integer, INTENT(IN) :: n
+    real(8), INTENT(IN) :: x(n), y(n), w(n)
+    real(8), INTENT(IN) :: a, b, c
+    real(8) :: R_squared
+
+    real(8) :: y_tmp, sum_weights
+    integer :: i
+
+    R_squared = 0
+    sum_weights = 0
+    do i = 1, n
+        y_tmp = parabola(x(i), a, b, c)
+        R_squared = R_squared + w(i)*(y(i) - y_tmp)**2
+        sum_weights = sum_weights + w(i)
+    end do
+    
+    R_squared = R_squared/sum_weights
+
+end function parabola_R_squared
 
 
 subroutine r_pendry_beamset_y(n_E, E_step, n_beams, y1, y2, id_start_y1, id_start_y2, n_y1, n_y2, V0r_shift, &
@@ -843,7 +936,6 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
     ! output is the y functions
 
 
-    print*, "New verison successfull"
 
     RETURN
 
