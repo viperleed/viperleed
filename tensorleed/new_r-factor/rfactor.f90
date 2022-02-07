@@ -86,7 +86,7 @@ subroutine r_pendry_beamset_V0r_opt_on_grid( &
         n_E, E_step, n_beams, y1, y2, id_start_y1, id_start_y2, n_y1, n_y2, &
         r_pendry_beams, n_overlapping_points, &
         ierr, &
-        tol_R, additional_steps_limit)
+        tol_R, tol_R_2, max_fit_range)
     
     implicit none
     integer, parameter :: n_start_guesses = 3
@@ -97,7 +97,7 @@ subroutine r_pendry_beamset_V0r_opt_on_grid( &
     ! OUT
     logical, INTENT(INOUT) :: fast_search
     integer, INTENT(OUT) :: best_V0r_step
-    real(8), INTENT(OUT) :: best_R, best_V0r ! best_V0r as "real"
+    real(8), INTENT(OUT) :: best_R, best_V0r ! best_V0r as real
     integer, INTENT(OUT) :: n_evaluated
     integer, INTENT(OUT) :: ierr
 
@@ -112,20 +112,20 @@ subroutine r_pendry_beamset_V0r_opt_on_grid( &
     logical, ALLOCATABLE :: evaluated(:)
 
     ! Optionals
-!f2py real(8), optional :: tol_R = 0.00001
-    real(8), INTENT(IN) :: tol_R
-!f2py integer, optional :: additional_steps_limit = 6
-    integer, INTENT(IN) :: additional_steps_limit
+    !f2py real(8), optional :: tol_R = 0.00001
+    real(8), INTENT(IN) :: tol_R, tol_R_2
+    integer, INTENT(IN) :: max_fit_range
 
     integer :: i, j
 
-    integer :: additional_steps
+    integer :: fit_range, min_fit_range
     integer :: next_step, closest_step
     integer :: worst_step
     integer :: best_id
     integer :: left, right
     integer :: closest_step_id
     real(8) :: R2
+    integer :: ierr_tmp
 
     ! holder_arrays for passout
     integer, ALLocatable :: N_overlapping_points_V0r(:,:)
@@ -183,14 +183,16 @@ subroutine r_pendry_beamset_V0r_opt_on_grid( &
     evaluated = .False.
 
     n_evaluated = 0
-    additional_steps = 0
+    fit_range = max_fit_range
+    min_fit_range = max(max_fit_range - 6, 5)
 
     next_step = start_guess(1) - range(1) + 1
 
     do while(fast_search)
 
         !print*, "Evaluated:", n_evaluated, "next step", next_step
-        call r_pendry_beamset_y(n_E, E_step, n_beams, y1, y2, id_start_y1, id_start_y2, n_y1, n_y2, &
+        call r_pendry_beamset_y(n_E, E_step, n_beams, y1, y2, &
+            id_start_y1, id_start_y2, n_y1, n_y2, &
             V0r_step(next_step), & 
             R_V0r(next_step), &
             r_pendry_beams_V0r(next_step, :), &
@@ -207,72 +209,110 @@ subroutine r_pendry_beamset_V0r_opt_on_grid( &
             N_overlapping_points_V0r, N_overlapping_points, &
             r_pendry_beams_V0r, r_pendry_beams)
 
-        weights(next_step) = 1
         evaluated(next_step) = .True.
         n_evaluated = n_evaluated + 1
+        weights(next_step) = 1
 
         ! Do 3 guesses initially
         if (n_evaluated < 3) then
-            next_step = start_guess(n_evaluated + 1) -range(1) +1
+            next_step = start_guess(n_evaluated + 1) - range(1) +1
             CYCLE
-        end if
+        else if (n_evaluated == 3) then
+            call parabola_lsq_fit(n_steps, V0r_step_real, R_V0r, weights, para_coeff, ierr)
+            if (ierr .ne. 0) RETURN ! Error
+            fit_curvature = 2*para_coeff(1)
+            fit_x_min = -para_coeff(2)/para_coeff(1)/2
+            closest_step = NINT(fit_x_min) - (range(1)) + 1
 
-        if (n_evaluated == n_steps) then
+            
+        else if (n_evaluated == n_steps) then
             ierr = 852
             exit
         end if
 
-        ! Fit parabola to values
-        call parabola_lsq_fit(n_steps, V0r_step_real, R_V0r, weights, para_coeff, ierr)
-        if (ierr .ne. 0) RETURN ! Error
-
-        ! perform parabola fit -> fit_V0r_id, fit_R, curvature,
-        fit_curvature = 2*para_coeff(1)
-        fit_x_min = -para_coeff(2)/para_coeff(1)/2
-        fit_y_min = para_coeff(3) - para_coeff(2)**2/para_coeff(1)/4
-
-
-        print*, "Expecting minimum of R =", fit_y_min, "at V0r fraction = ", fit_x_min
-
-
-        ! decide if fast search possible
-        closest_step = NINT(fit_x_min) -(range(1)) + 1
-        
-        if ((closest_step .le. 1) .or. (closest_step .ge. n_steps) .or. (fit_curvature .le. 0.005)) then
-            ! Parabola fit doesnt work...
-            fast_search = .False.
-            print*, "Parabola is futile!"
-            print*, "curvature", fit_curvature
-            exit
-        end if
-
-        ! Have we calculated the point closest to the predicted minimum yet?
-        if (.not. evaluated(closest_step)) then
-            next_step = closest_step
-            CYCLE
-        else if (n_evaluated == 3) then
-            ! In case the closest step was in the initial guesses, we may only have
-            ! 3 points evaluated so far. We want a minimum of 4 points though, to calculate the
-            ! mean square error. (R^2 for a parabola fit to 3 points is 0 !)
-            ! -> calc next best point
-            do i = 1, n_steps
-                if (.not. evaluated(closest_step - i)) next_step = closest_step - i; CYCLE
-                if (.not. evaluated(closest_step + i)) next_step = closest_step + i; CYCLE
-            end do
-            ! This point should not be possible to reach since we check at the beginning if there are more than 5 points
-            ierr = 853
-            RETURN
-        end if
-
+        print*, "Current guess for closest step:", closest_step
 
         ! Decide how to proceed:
         ! *****************************************************************************************
-        ! Convergence criterion: R^2_old - R^2_new < tol
+
+
+        ! Everything withing fit_range of closest_step is taken for parabola
+        if (n_evaluated > 3) then
+            weights = 0
+            weights(next_step) = 1
+        end if
+
+        do i = 0, fit_range
+            if ((closest_step - i < 1) .or. (closest_step + i > n_steps)) then
+                ierr = 854
+                fast_search = .False.
+                print*, "outside range!"
+                EXIT
+            end if
+            if (evaluated(closest_step - i)) then
+                weights(closest_step - i) = 1
+            end if
+            if (evaluated(closest_step + i)) then
+                weights(closest_step + i) = 1
+            end if
+        end do
+
+        if (.not. fast_search) EXIT
+
+        print*, "SUM weights", sum(weights), n_evaluated
+
+        if (sum(weights) < 3.9) then
+            if (.not. evaluated(closest_step)) then
+                next_step = closest_step
+                CYCLE
+            end if
+            do i = 1, fit_range
+                if (.not. evaluated(closest_step - i)) then
+                    next_step = closest_step - i
+                    EXIT
+                end if
+                if (.not. evaluated(closest_step + i)) then
+                    next_step = closest_step + i
+                    EXIT
+                end if
+            end do
+            CYCLE
+        else 
+            !Fit parabola to values
+            call parabola_lsq_fit(n_steps, V0r_step_real, R_V0r, weights, para_coeff, ierr)
+            if (ierr .ne. 0) RETURN ! Error
+    
+            ! perform parabola fit -> fit_V0r_id, fit_R, curvature,
+            fit_curvature = 2*para_coeff(1)
+            fit_x_min = -para_coeff(2)/para_coeff(1)/2
+            fit_y_min = para_coeff(3) - para_coeff(2)**2/para_coeff(1)/4
+    
+            print*, "Expecting minimum of R =", fit_y_min, "at V0r fraction = ", fit_x_min
+    
+    
+            ! decide if fast search possible
+            closest_step = NINT(fit_x_min) - (range(1)) + 1
+            
+            if ((closest_step .le. 1) .or. (closest_step .ge. n_steps) .or. (fit_curvature .le. 0.005)) then
+                ! Parabola fit doesnt work...
+                fast_search = .False.
+                print*, "Parabola is futile!"
+                print*, "curvature", fit_curvature
+                exit
+            end if
+    
+            ! Have we calculated the point closest to the predicted minimum yet?
+            if (.not. evaluated(closest_step)) then
+                next_step = closest_step
+                CYCLE
+            end if
+        end if
 
         R2 = parabola_R_squared(n_steps, V0r_step_real, R_V0r, weights, para_coeff(1), para_coeff(2), para_coeff(3))
-        print*, "Getting R^2 = ", R2
+        print*, "Getting R^2 = ", R2, sum(weights)
 
-        if (R2  < tol_R) then
+
+        if (R2 > tol_R) then
             ! Statisfied
             best_V0r = fit_x_min
             best_R = fit_y_min
@@ -281,41 +321,41 @@ subroutine r_pendry_beamset_V0r_opt_on_grid( &
             print*, "Smart search success"
             RETURN
         
-        else if (additional_steps < additional_steps_limit) then
-
-            do i = 1, n_steps
+        else if (sum(weights) < 2*fit_range + 1) then
+            ! add another point in the range
+            do i = 1, fit_range
                 if (.not. evaluated(closest_step - i)) then
                     next_step = closest_step - i
-                    print*, "adding step", V0r_step(next_step)
                     EXIT
                 else if (.not. evaluated(closest_step + i)) then
                     next_step = closest_step + i
-                    print*, "adding step", V0r_step(next_step)
                     EXIT
                 end if
             end do
+            CYCLE
 
-            if (sum(weights) > 5) then
-                worst_step = closest_step
-                do i = 1, n_steps
-                    if ((abs(i - closest_step) > abs(worst_step - closest_step)) &
-                        .and. (evaluated(i)) .and. (weights(i) > 0.1) ) then
-                        worst_step = i
-                    end if
-                end do
-                weights(worst_step) = 0
-                print*, "kicked out step:", V0r_step(worst_step)
+        else if (R2 > tol_R_2) then
+            ! try to limit fit_range and see if it gets better
+
+            if (fit_range > min_fit_range) then
+                fit_range = fit_range - 1
+            else
+                ! Minimum present, but not well behaved. Return minimum value on grid instead of prediciton.
+                ierr = 856
+                best_V0r = V0r_step_real(best_id)
+                best_V0r_step = V0r_step(best_id)
+                best_R = R_V0r(best_id)
+                RETURN
             end if
 
-            additional_steps = additional_steps +1
-
-            CYCLE
-        
-        ! And if none of that works, brute force it
         else
+            !Default to brute force
+            ierr = 855
             fast_search = .False.
-            EXIT
+            exit
         end if
+
+
     end do
 
     ! *****************************************************************************************
@@ -328,12 +368,14 @@ subroutine r_pendry_beamset_V0r_opt_on_grid( &
             R_V0r(i), &
             r_pendry_beams_V0r(i, :), &
             N_overlapping_points_V0r(i, :), &
-            ierr)
+            ierr_tmp)
             evaluated(i) = .True.
+            n_evaluated = n_evaluated + 1
             call update_best_V0r(n_steps, n_beams, best_R, best_id, R_V0r(i), i, &
                 N_overlapping_points_V0r, N_overlapping_points, &
                 r_pendry_beams_V0r, r_pendry_beams)
-            print*, "Brute force. step:", V0r_step(i), "R = ", R_V0r(i)
+            !print*, "Brute force. step:", V0r_step(i), "R = ", R_V0r(i)
+            if (ierr_tmp .ne. 0) ierr = ierr_tmp
         else
             CYCLE
         end if
@@ -447,18 +489,23 @@ function parabola_R_squared(n, x, y, w, a, b, c) result(R_squared)
     real(8), INTENT(IN) :: a, b, c
     real(8) :: R_squared
 
-    real(8) :: y_tmp, sum_weights
+    real(8) :: y_tmp, sum_weights, y_avg
     integer :: i
+    real(8) :: SS_res, SS_tot
+
+    y_avg = sum(y*w)/sum(w)
 
     R_squared = 0
-    sum_weights = 0
+
     do i = 1, n
         y_tmp = parabola(x(i), a, b, c)
-        R_squared = R_squared + w(i)*(y(i) - y_tmp)**2
-        sum_weights = sum_weights + w(i)
+        SS_res = SS_res + w(i)*((y(i) - y_tmp)**2)
+        SS_tot = SS_tot + w(i)*((y(i) - y_avg)**2)
     end do
+
+    print*, SS_res, SS_tot
     
-    R_squared = R_squared/sum_weights
+    R_squared = 1 - SS_res/SS_tot
 
 end function parabola_R_squared
 
@@ -625,6 +672,7 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
                          skip_stages, n_beams_out, averaging_scheme, &
                          deg, &
                          n_E_out, E_grid_out, &
+                         V0i, &
                          E_start_beams_out, n_E_beams_out, &
                          intpol_intensity, intpol_derivative, y_func, ierr)
     !Prepare_beams:
@@ -669,6 +717,7 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
     integer, intent(in)                          :: n_E_beams(n_beams) ! Number of energy steps to use for the beam
     real(8), intent(in)                         :: intensities_in(n_E_in, n_beams) ! Beam intensities - input data
     
+    real(8), INTENT(IN) :: V0i
 
     !f2py integer, intent(out), dimension(n_beams) :: E_start_beams_out
     integer, INTENT(OUT) :: E_start_beams_out(n_beams) ! First energy step for each beam of the interpolated data
@@ -683,6 +732,10 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
     integer :: new_min_index, new_max_index, cut_n_E_in
     integer                          :: cut_E_start_beams(n_beams) ! First energy step to be used for the beam
     integer                          :: cut_n_E_beams(n_beams) ! Number of energy steps to use for the beam
+
+    integer :: beams_max_id_in(n_beams)
+    integer :: cut_beams_max_id_in(n_beams)
+    integer :: beams_max_id_out(n_beams_out)
 
     integer :: max_n_knots, max_nt, max_LHS_rows
     integer :: n_knots_beams(n_beams), nt_beams(n_beams), LHS_rows_beams(n_beams)
@@ -700,13 +753,15 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
     real(8), INTENT(OUT) :: y_func(n_E_out, n_beams)
 
     integer :: ierrs(n_beams)
-    real(8) :: v0i
+
 
     integer :: i ! Loop indices
 
     ierr = 0
     ierrs = 0
     intensities = intensities_in
+
+    beams_max_id_in = E_start_beams + n_E_beams -1
 
     !###############
     ! Limit range of beams
@@ -740,13 +795,14 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
             !id_end = n_E_in
         end if
          
-        cut_n_E_in =  new_max_index - new_min_index +1
+        cut_n_E_in = new_max_index - new_min_index + 1
         
         do concurrent( i=1: n_beams)
             ! new start and end indices
             !cut_E_start_beams(i) = max(E_start_beams(i)-new_min_index+1, new_min_index)
             cut_E_start_beams(i) = max(E_start_beams(i), new_min_index)
-            cut_n_E_beams(i) = min(new_max_index, E_start_beams(i)+n_E_beams(i)) - cut_E_start_beams(i)
+            cut_beams_max_id_in(i) = min(new_max_index, beams_max_id_in(i))
+            cut_n_E_beams(i) = cut_beams_max_id_in(i) - cut_E_start_beams(i) + 1
             if (cut_n_E_beams(i) < 2*deg+1) then
                 ! Beam cannot be used ...skip somehow...
                 ierrs(i) = 12345 !TODO give error code... at least one beam did not contain usable information... - return averaging_scheme with corresponding beams?
@@ -764,17 +820,16 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
         cut_E_start_beams = E_start_beams
         cut_n_E_beams = n_E_beams
         cut_n_E_in = n_E_in
+        cut_beams_max_id_in = beams_max_id_in
 
     end if
 
-    ! print*, "new_min_index, new_max_index", new_min_index, new_max_index
-    ! print*, "E_start_beams", cut_E_start_beams(15:20)
-    ! print*, "n_E_out", n_E_out
+    !print*, "new_min_index, new_max_index", new_min_index, new_max_index
+    !print*, "E_start_beams", cut_E_start_beams(15:20)
+    !print*, "n_E_out", n_E_out(15:20)
+    !print*, "max id beams", cut_beams_max_id_in(15:20)
+
     
-
-
-    if (ANY(ieee_is_nan(intensities))) print*,"NaN before average"
-
     !###############
     ! Average/discard/reorder
     !###############
@@ -810,32 +865,31 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
     do concurrent( i=1: n_beams_out)
         ! Set out beam indices & length
         E_start_beams_out(i) = find_grid_correspondence( &
-            E_grid_in(cut_E_start_beams(i)), &
-            n_E_out, &
-            E_grid_out, &
-            1 &
+                E_grid_in(cut_E_start_beams(i)), &
+                n_E_out, &
+                E_grid_out, &
+                1 &
             )
 
         n_E_beams_out(i) = - E_start_beams_out(i) + &
             find_grid_correspondence( &
-            E_grid_in(cut_E_start_beams(i) + cut_n_E_beams(i) - 1), &
-            n_E_out, &
-            E_grid_out, &
-            E_start_beams_out(i) &
-            )
+                E_grid_in(cut_beams_max_id_in(i)), &
+                n_E_out, &
+                E_grid_out, &
+                E_start_beams_out(i) &
+            ) + 1
+        beams_max_id_out(i) = E_start_beams_out(i) + n_E_beams_out(i) -1
     end do
 
     ! Debug below...
     do i = 1, n_beams
-        if (E_grid_in(cut_E_start_beams(i) + cut_n_E_beams(i)-1) < E_grid_out(E_start_beams_out(i) + n_E_beams_out(i)-1)) then
+        if (E_grid_in(cut_beams_max_id_in(i)) < E_grid_out(beams_max_id_out(i))) then
             print*, "issue size out - beam", i
         end if
         if (E_grid_in(cut_E_start_beams(i))>E_grid_out(E_start_beams_out(i))) then
             print*, "issue size in - beam", i
         end if
     end do
-
-    v0i = 2.0d0
 
 
     !###############
@@ -844,10 +898,9 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
 
     if (skip_stages(3).EQ.0) then
         ierr = 23
-        write(*,*) "Smoothing not yet implemented!" ! TODO: implement smoothing in prepare_beams
+        !write(*,*) "Smoothing not yet implemented!" ! TODO: implement smoothing in prepare_beams
     end if
 
-    !if (ANY(ieee_is_nan(intensities))) print*,"NaN before interpolation"
 
     !###############
     ! Interpolation on new grid
@@ -880,8 +933,8 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
             call get_array_sizes(cut_n_E_beams(i), deg, n_knots_beams(i), nt_beams(i), LHS_rows_beams(i))
             call single_calc_spline(&
                 cut_n_E_beams(i), &
-                E_grid_in(cut_E_start_beams(i) : cut_E_start_beams(i) + cut_n_E_beams(i)), &
-                intensities_in(cut_E_start_beams(i) : cut_E_start_beams(i) + cut_n_E_beams(i), i), &
+                E_grid_in(cut_E_start_beams(i) : cut_beams_max_id_in(i)), &
+                intensities_in(cut_E_start_beams(i) : cut_beams_max_id_in(i), i), &
                 deg, &
                 n_knots_beams(i), nt_beams(i), LHS_rows_beams(i), &
                 knots(1:n_knots_beams(i), i), &
@@ -901,9 +954,9 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
                 n_knots_beams(i), knots(1:n_knots_beams(i), i), nt_beams(i), coeffs(1:nt_beams(i), i), &
                 deg, &
                 n_E_beams_out(i), &
-                E_grid_out(E_start_beams_out(i) : E_start_beams_out(i) + n_E_beams_out(i)), &
+                E_grid_out(E_start_beams_out(i) : beams_max_id_out(i)), &
                 0, &
-                intpol_intensity(E_start_beams_out(i) : E_start_beams_out(i) + n_E_beams_out(i), i))
+                intpol_intensity(E_start_beams_out(i) : beams_max_id_out(i), i))
             !print*, "Intpol"
             !print*, intpol_intensity(E_start_beams_out(i) : E_start_beams_out(i) + n_E_beams_out(i),i)
                 ! Interpolate derivatives
@@ -911,17 +964,17 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
                 n_knots_beams(i), knots(1:n_knots_beams(i), i), nt_beams(i), coeffs(1:nt_beams(i), i), &
                 deg, &
                 n_E_beams_out(i), &
-                E_grid_out(E_start_beams_out(i) : E_start_beams_out(i) + n_E_beams_out(i)), &
+                E_grid_out(E_start_beams_out(i) : beams_max_id_out(i)), &
                 1, &
-                intpol_derivative(E_start_beams_out(i) : E_start_beams_out(i) + n_E_beams_out(i), i))
+                intpol_derivative(E_start_beams_out(i) : beams_max_id_out(i), i))
 
             ! Calculate pendry Y function
             call pendry_y( &
                 n_E_beams_out(i), &
-                intpol_intensity(E_start_beams_out(i):E_start_beams_out(i)+n_E_beams_out(i), i), &
-                intpol_derivative(E_start_beams_out(i):E_start_beams_out(i)+n_E_beams_out(i), i), &
+                intpol_intensity(E_start_beams_out(i):beams_max_id_out(i), i), &
+                intpol_derivative(E_start_beams_out(i):beams_max_id_out(i), i), &
                 v0i, &
-                y_func(E_start_beams_out(i):E_start_beams_out(i)+n_E_beams_out(i), i) &
+                y_func(E_start_beams_out(i):beams_max_id_out(i), i) &
                 )
         end do
         ierr = MAXVAL(ierrs)
@@ -934,6 +987,25 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
     ! TODO: clean up implementation
 
     ! output is the y functions
+
+    ! i = 4
+
+    ! print* , n_E_beams(i), cut_n_E_beams(i), n_E_beams_out(i)
+
+    ! print*, "Intensities old index l:", intensities_in(E_start_beams(i), i), &
+    ! intensities(E_start_beams(i) +1, i)
+    ! print*, "Intensities old index u:", intensities_in(E_start_beams(i) + n_E_beams(i) - 2, i), &
+    ! intensities(E_start_beams(i) + n_E_beams(i) -1, i)
+
+    ! print*, "Intensities new id:", intensities(cut_E_start_beams(i), i), &
+    ! intensities(cut_E_start_beams(i) +1, i)
+    ! print*, "Intensities new id:", intensities(cut_beams_max_id_in(i) -1, i), &
+    ! intensities(cut_beams_max_id_in(i), i)
+
+    ! print*, "Intensities out l:", intpol_intensity(E_start_beams_out(i), i), &
+    ! intpol_intensity(E_start_beams_out(i) +1, i)
+    ! print*, "Intensities out u:", intpol_intensity(beams_max_id_out(i) -1, i), &
+    ! intpol_intensity(beams_max_id_out(i), i)
 
 
 
