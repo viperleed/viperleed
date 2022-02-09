@@ -739,7 +739,7 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
         if (E_grid_in(1) .le. E_grid_out(1)) then
             new_min_index = find_grid_correspondence(E_grid_out(1), n_E_in, E_grid_in, 1)
         else
-            print* , "This should not happen"
+            print* , "This should not happen - lower"
             ierrs(:) = 211
             RETURN
         end if
@@ -747,17 +747,17 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
         if (E_grid_in(n_E_in) .ge. E_grid_out(n_E_out)) then
             new_max_index = find_grid_correspondence(E_grid_out(n_E_out), n_E_in, E_grid_in, new_min_index)
         else
-            print* , "This should not happen"
+            print* , "This should not happen - upper"
             ierrs(:) = 211
             RETURN
             !id_end = n_E_in
         end if
-         
+        
+
         cut_n_E_in = new_max_index - new_min_index + 1
         
         do concurrent( i=1: n_beams)
             ! new start and end indices
-            !cut_E_start_beams(i) = max(E_start_beams(i)-new_min_index+1, new_min_index)
             cut_E_start_beams(i) = max(E_start_beams(i), new_min_index)
             cut_beams_max_id_in(i) = min(new_max_index, beams_max_id_in(i))
             cut_n_E_beams(i) = cut_beams_max_id_in(i) - cut_E_start_beams(i) + 1
@@ -835,9 +835,13 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
                 n_E_out, &
                 E_grid_out, &
                 E_start_beams_out(i) &
-            ) + 1
-        beams_max_id_out(i) = E_start_beams_out(i) + n_E_beams_out(i) -1
+            )
+        beams_max_id_out(i) = E_start_beams_out(i) + n_E_beams_out(i) - 1
     end do
+
+    print*, n_E_out
+
+    print*, beams_max_id_out
 
     ! Debug below...
     do i = 1, n_beams
@@ -883,32 +887,39 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
 
         do i= 1,n_beams_out
             !DEBUG
-            !print*, cut_E_start_beams(i), cut_E_start_beams(i)+cut_n_E_beams(i)
-            !print*, E_start_beams_out(i), E_start_beams_out(i)+n_E_beams_out(i)
-            !print*, intensities(cut_E_start_beams(i), i)
-            !print*, intensities(cut_E_start_beams(i)+cut_n_E_beams(i), i)
+            print*, cut_E_start_beams(i), cut_E_start_beams(i)+cut_n_E_beams(i) - 1
+            print*, E_start_beams_out(i), E_start_beams_out(i)+n_E_beams_out(i) - 1
+            print*, intensities(cut_E_start_beams(i), i)
+            print*, intensities( cut_beams_max_id_in(i) , i)
+            print*, E_grid_in(cut_E_start_beams(i))
+            print*, E_grid_in(cut_beams_max_id_in(i))
             
             call get_array_sizes(cut_n_E_beams(i), deg, n_knots_beams(i), nt_beams(i), LHS_rows_beams(i))
+            !print*, cut_E_start_beams(i), cut_beams_max_id_in(i)
+
+
+
             call single_calc_spline(&
                 cut_n_E_beams(i), &
                 E_grid_in(cut_E_start_beams(i) : cut_beams_max_id_in(i)), &
-                intensities_in(cut_E_start_beams(i) : cut_beams_max_id_in(i), i), &
+                intensities(cut_E_start_beams(i) : cut_beams_max_id_in(i), i), &
                 deg, &
                 n_knots_beams(i), nt_beams(i), LHS_rows_beams(i), &
                 knots(1:n_knots_beams(i), i), &
                 coeffs(1:nt_beams(i), i), &
                 ierrs(i))
-            ! Interpolate intensitites
-                ! print*, "ierr", ierr
-                ! print*, "First and last intensity in"
-                ! print*, intensities_in(cut_E_start_beams(i),i)
-                ! print*, intensities_in(cut_E_start_beams(i)+ cut_n_E_beams(i), i)
-                ! print*, "Any NAN?", ANY(ieee_is_nan(intensities_in))
-                ! print*, "First and last knot"
-                ! print*, knots(1,i)
-                ! print*, knots(n_knots_beams(i), i)
-                ! print*, "n_knots, nt, deg, LHS_rows", n_knots_beams(i), nt_beams(i), deg, LHS_rows_beams(i)
-            call single_interpolate_coeffs_to_grid( &
+            ! !Interpolate intensitites
+            !     print*, "ierr", ierr
+            !     print*, "First and last intensity in"
+            !     print*, intensities_in(cut_E_start_beams(i),i)
+            !     print*, intensities_in(cut_E_start_beams(i) + cut_n_E_beams(i) - 1, i)
+            !     print*, "Any NAN?", ANY(ieee_is_nan(intensities_in))
+            !     print*, "First and last knot"
+            !     print*, knots(1,i)
+            !     print*, knots(n_knots_beams(i), i)
+            !     print*, "n_knots, nt, deg, LHS_rows", n_knots_beams(i), nt_beams(i), deg, LHS_rows_beams(i)
+
+                call single_interpolate_coeffs_to_grid( &
                 n_knots_beams(i), knots(1:n_knots_beams(i), i), nt_beams(i), coeffs(1:nt_beams(i), i), &
                 deg, &
                 n_E_beams_out(i), &
@@ -918,6 +929,7 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
             !print*, "Intpol"
             !print*, intpol_intensity(E_start_beams_out(i) : E_start_beams_out(i) + n_E_beams_out(i),i)
                 ! Interpolate derivatives
+
             call single_interpolate_coeffs_to_grid( &
                 n_knots_beams(i), knots(1:n_knots_beams(i), i), nt_beams(i), coeffs(1:nt_beams(i), i), &
                 deg, &
@@ -925,7 +937,6 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
                 E_grid_out(E_start_beams_out(i) : beams_max_id_out(i)), &
                 1, &
                 intpol_derivative(E_start_beams_out(i) : beams_max_id_out(i), i))
-
             ! Calculate pendry Y function
             call pendry_y( &
                 n_E_beams_out(i), &
@@ -1283,7 +1294,7 @@ subroutine translate_evaluation_grid(EMIN, EMAX, EINCR, &
 
     n_E = int((EMAX-EMIN)/EINCR)
     allocate(energies(n_E))
-    
+
     do i = 1, n_E
         energies(i) = real(EMIN,8) + (i-1)*real(EINCR,8)
     end do
@@ -1343,7 +1354,7 @@ end subroutine translate_exp
 
 
 subroutine translate_theo(n_beams,  MNGP, MNBTD, ES, ATS, &
-    n_E, theo_grid, n_E_beams, E_start_beams, intensities)
+    n_E, theo_grid, E_start_beams, n_E_beams,  intensities)
 
     integer, INTENT(IN) :: n_beams
     integer, INTENT(IN) :: MNGP, MNBTD
@@ -1396,7 +1407,6 @@ subroutine translate_theo(n_beams,  MNGP, MNBTD, ES, ATS, &
             ATS(1, beam, E_start_beams(beam) : E_start_beams(beam) + n_E_beams(beam) - 1)
     end do
 
-    print*, n_E, MNBTD
     RETURN
 end subroutine translate_theo
 
