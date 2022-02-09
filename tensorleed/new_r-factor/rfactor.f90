@@ -80,6 +80,10 @@ subroutine r_pendry_beam_y(n_E, E_step, y1, y2, id_start_y1, id_start_y2, n_y1, 
     denominator = trapez_integration_const_dx(y_squared_sum, E_step)
 
     R_pendry = numerator/denominator
+    if (ieee_is_nan(R_pendry)) then
+        print*, "GOt you!!!"
+        print*, y2(id_min + V0r_shift: id_max + V0r_shift)
+    end if
     return
 
 end subroutine r_pendry_beam_y
@@ -160,8 +164,6 @@ subroutine r_pendry_beamset_V0r_opt_on_grid( &
 
     ! *****************************************************************************************
 
-    ! %install_ext https://raw.github.com/mgaitan/fortran_magic/master/fortranmagic.py
-
     n_steps = range(2) - range(1) + 1
     
     if (n_steps .le. 5) then
@@ -232,19 +234,16 @@ subroutine r_pendry_beamset_V0r_opt_on_grid( &
         else if (n_evaluated == n_steps) then
             ierr = 852
             exit
+        else if (n_evaluated > 3) then
+            weights = 0
+            weights(next_step) = 1
         end if
 
-        print*, "Current guess for closest step:", closest_step
 
         ! Decide how to proceed:
         ! *****************************************************************************************
 
-
         ! Everything withing fit_range of closest_step is taken for parabola
-        if (n_evaluated > 3) then
-            weights = 0
-            weights(next_step) = 1
-        end if
 
         do i = 0, fit_range
             if ((closest_step - i < 1) .or. (closest_step + i > n_steps)) then
@@ -500,14 +499,14 @@ function parabola_R_squared(n, x, y, w, a, b, c) result(R_squared)
     y_avg = sum(y*w)/sum(w)
 
     R_squared = 0
+    SS_res = 0
+    SS_tot = 0
 
     do i = 1, n
         y_tmp = parabola(x(i), a, b, c)
         SS_res = SS_res + w(i)*((y(i) - y_tmp)**2)
         SS_tot = SS_tot + w(i)*((y(i) - y_avg)**2)
     end do
-
-    print*, SS_res, SS_tot
     
     R_squared = 1 - SS_res/SS_tot
 
@@ -565,6 +564,12 @@ subroutine r_pendry_beamset_y(n_E, E_step, n_beams, y1, y2, id_start_y1, id_star
 
     if (ANY(ieee_is_nan(r_pendry_beams))) then
         r_pendry_weighted = ieee_value(real(8), ieee_signaling_nan)
+
+        do i =1, n_beams
+            if (ieee_is_nan(r_pendry_beams(i))) then
+                print*,"NaN in beam ", i
+            end if
+        end do
         ierr = 811
     end if
     r_pendry_weighted = sum(numerators/denominators*N_overlapping_points)/total_points
@@ -572,60 +577,6 @@ subroutine r_pendry_beamset_y(n_E, E_step, n_beams, y1, y2, id_start_y1, id_star
     return
 end subroutine r_pendry_beamset_y
 
-subroutine Rfactor_beamtypes(y1, sizes_y1, y2, sizes_y2, E_start1, E_start2, nr_beams, E_step, V0rshift, &
-                           beamtypes, nr_beamtypes, R_Pe_weighted, R_Pe_beams, N_overlapping_points)
-    !###############
-    !INPUTS
-    !###############
-    !f2py integer, hidden, intent(in), depend(E_start1, E_start2), check(len(E_start1)==len(E_start2)) :: nr_beams=len(E_start1)
-    integer nr_beams
-    !f2py real(8), intent(in) :: E_step
-    real(8) E_step
-    !f2py integer, intent(in) :: sizes_y1
-    integer, intent(in) :: sizes_y1(nr_beams)
-    !f2py integer, intent(in) :: sizes_y2
-    integer, intent(in) :: sizes_y2(nr_beams)
-    !f2py real intent(in) :: y1(:,:), y2(:,:)
-    real(8), intent(in) :: y1 (:,:), y2 (:,:)
-    !f2py intent(in) E_start_1
-    !f2py intent(in) E_start_2
-    real(8), intent(in)    :: E_start1(nr_beams), E_start2(nr_beams)
-    integer, intent(in) :: beamtypes(nr_beams)
-    integer, intent(in) :: nr_beamtypes
-    !f2py integer, intent(out) :: N_overlapping_points(:)
-    integer, intent(out) :: N_overlapping_points(nr_beams)
-    !f2py real(8), intent(out) :: R_Pe_beams(nr_beams), R_Pe_weighted(nr_beamtypes)
-    real(8), intent(out) :: R_Pe_beams(nr_beams), R_Pe_weighted(nr_beamtypes)
-    !f2py real(8), intent(in)::  V0rshift
-    real(8), intent(in) :: V0rshift
-
-    ! variables used internally
-    integer beam, group, points_group, tmp_points(nr_beams)
-    !
-    real(8) tmp_num(nr_beams), tmp_denom(nr_beams), tmp_pendry
-
-
-    ! beamtypes is array that contains assignment o beamtype group for each beam
-    ! contains integers from 1 to nr_beamtypes
-
-    ! Loop over beamtype groups
-    do group=1, nr_beamtypes
-        tmp_points = 0
-        tmp_num = 0d0
-        tmp_denom = 0d0
-        do beam = 1, nr_beams
-            if (beamtypes(beam)==group) then
-                !call r_factor_beam(y1(beam,:), sizes_y1(beam), y2(beam,:), sizes_y2(beam), E_start1(beam), &
-                !        E_start2(beam), E_step, V0rshift, tmp_pendry, tmp_num(beam), tmp_denom(beam), tmp_points(beam))
-            end if
-        end do
-        points_group = sum(tmp_points)
-        R_Pe_weighted(group) = sum(tmp_num/tmp_denom*points_group)/points_group
-
-    end do
-
-    return
-end subroutine Rfactor_beamtypes
 
 subroutine Rfactor_v0ropt(opt_type, min_steps, max_steps, nr_used_v0)
     !Rfactor_v0ropt:
@@ -723,6 +674,12 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
     
     real(8), INTENT(IN) :: V0i
 
+
+    real(8), INTENT(OUT) :: intpol_intensity(n_E_out, n_beams)
+    real(8), INTENT(OUT) :: intpol_derivative(n_E_out, n_beams)
+    real(8), INTENT(OUT) :: y_func(n_E_out, n_beams)
+
+
     !f2py integer, intent(out), dimension(n_beams) :: E_start_beams_out
     integer, INTENT(OUT) :: E_start_beams_out(n_beams) ! First energy step for each beam of the interpolated data
     !f2py integer, intent(out), dimension(n_beams):: n_E_beams_out
@@ -752,9 +709,6 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
 
     real(8)    :: intensities(n_E_in, n_beams)
 
-    real(8), INTENT(OUT) :: intpol_intensity(n_E_out, n_beams)
-    real(8), INTENT(OUT) :: intpol_derivative(n_E_out, n_beams)
-    real(8), INTENT(OUT) :: y_func(n_E_out, n_beams)
 
     integer :: ierrs(n_beams)
 
@@ -1316,5 +1270,134 @@ pure function trapez_integration_const_dx(f, dx) result(integral)
     return
 end function trapez_integration_const_dx
 
+! Compatibility functions
+subroutine translate_evaluation_grid(EMIN, EMAX, EINCR, &
+    n_E, energies)
+
+    real(4), INTENT(IN) :: EMIN, EMAX, EINCR
+
+    integer, INTENT(OUT) :: n_E
+    real(8), INTENT(OUT), ALLOCATABLE :: energies(:)
+
+    integer i
+
+    n_E = int((EMAX-EMIN)/EINCR)
+    allocate(energies(n_E))
+    
+    do i = 1, n_E
+        energies(i) = real(EMIN,8) + (i-1)*real(EINCR,8)
+    end do
+    RETURN
+end subroutine translate_evaluation_grid
+
+
+subroutine translate_exp(n_beams, MNGP, NEE, EE, AE, &
+    n_E, exp_grid, E_start_beams, n_E_beams, intensities)
+    
+    integer, INTENT(IN) :: n_beams
+    integer, INTENT(IN) :: MNGP
+    integer, INTENT(IN) :: NEE(n_beams)
+    real(4), INTENT(IN) :: EE(n_beams, MNGP), AE(n_beams, MNGP)
+    
+    integer, INTENT(OUT) :: n_E
+    integer, INTENT(OUT) :: n_E_beams(n_beams), E_start_beams(n_beams)
+    real(8), INTENT(OUT), ALLOCATABLE :: exp_grid(:), intensities(:,:)
+  
+    
+    real(8) :: min_energy, max_energy, E_step
+    integer :: i, beam
+    
+    n_E_beams = NEE
+
+    ! get E_step
+    E_step = real(EE(1,2) - EE(1,1), 8)
+    
+    min_energy = MINVAL(EE(:,1))
+    max_energy = MAXVAL(EE)
+    print*, min_energy, max_energy, E_step
+
+    n_E = NINT((max_energy - min_energy) / E_step) + 1
+    allocate(exp_grid(n_E))
+
+    do i = 1, n_E
+      exp_grid(i) = min_energy + E_step*(i-1)
+    end do
+    
+    allocate(intensities(n_E, n_beams))
+    intensities = ieee_value(real(8), ieee_signaling_nan)
+        ! row major order used in EE for some reason
+        
+    do beam = 1, n_beams
+        do i = 1, n_E
+            if (ABS(EE(beam,1) - exp_grid(i)) < 0.01) then
+                E_start_beams(beam) = i
+                exit
+            end if
+        end do
+        
+        intensities(E_start_beams(beam) : E_start_beams(beam) + n_E_beams(beam) -1, beam) = &
+            AE(beam, 1 : NEE(beam))
+    end do
+    RETURN
+end subroutine translate_exp
+
+
+subroutine translate_theo(n_beams,  MNGP, MNBTD, ES, ATS, &
+    n_E, theo_grid, n_E_beams, E_start_beams, intensities)
+
+    integer, INTENT(IN) :: n_beams
+    integer, INTENT(IN) :: MNGP, MNBTD
+    real(4), INTENT(IN) :: ES(MNGP), ATS(1, MNBTD, MNGP)
+
+    integer, INTENT(OUT) :: n_E
+    real(8), INTENT(OUT), ALLOCATABLE :: theo_grid(:)
+
+    integer, INTENT(OUT) :: n_E_beams(n_beams), E_start_beams(n_beams)
+    real(8), INTENT(OUT), ALLOCATABLE :: intensities(:,:)
+
+    integer :: i, beam, en
+    integer :: tmp_max_id_in_grid, tmp_max_id_out_grid
+
+
+    ! Theory data is available for all energies - find which ones
+    do i = 1, MNGP
+        if ((ES(i) < 0.01)) then
+            n_E = i - 1
+            EXIT
+        end if
+    end do
+
+    allocate(theo_grid(n_E))
+    theo_grid = ES(1:n_E)
+    
+    ! is all data always available for 
+    n_E_beams = n_E
+
+    ALLOCATE(intensities(n_E, n_beams))
+    intensities = ieee_value(real(8), ieee_signaling_nan)
+
+    do beam = 1,MNBTD
+        do en = 1,n_E
+            if (ATS(1, beam, en) > 1e-8) then
+                E_start_beams(beam) = en
+                EXIT
+            end if
+        end do
+        n_E_beams(beam) = n_E - E_start_beams(beam) + 1
+        do en = E_start_beams(beam), n_E
+            if (ATS(1, beam, en) < 1e-8) then
+                ! max id reached
+                n_E_beams = en - E_start_beams(beam) + 1
+                EXIT
+            end if
+        end do
+
+        intensities(E_start_beams(beam) : E_start_beams(beam) + n_E_beams(beam) - 1, beam) =  &
+            ATS(1, beam, E_start_beams(beam) : E_start_beams(beam) + n_E_beams(beam) - 1)
+    end do
+
+    print*, n_E, MNBTD
+    RETURN
+end subroutine translate_theo
 
 end module r_factor_new
