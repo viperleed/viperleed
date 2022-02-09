@@ -63,13 +63,17 @@ subroutine r_pendry_beam_y(n_E, E_step, y1, y2, id_start_y1, id_start_y2, n_y1, 
 
     id_min = max(id_start_y1_tmp, id_start_y2_tmp)
     id_max = min(id_start_y1_tmp + n_y1, id_start_y2_tmp+ n_y2)
-    N_overlapping_points = id_max - id_min
+    N_overlapping_points = id_max - id_min + 1
     allocate(y_diff(N_overlapping_points), y_squared_sum(N_overlapping_points))
 
     ! Remember that indices are shifted by V0r
-    y_diff=y1(id_min: id_max) - y2(id_min + V0r_shift: id_max + V0r_shift) ! difference between Y functions
-    y_squared_sum=y1(id_min: id_max)**2+y2(id_min + V0r_shift: id_max +V0r_shift)**2
-
+    if (V0r_shift .ge. 0) then
+        y_diff=y1(id_min +V0r_shift: id_max) - y2(id_min: id_max - V0r_shift) ! difference between Y functions
+        y_squared_sum=y1(id_min + V0r_shift: id_max)**2+y2(id_min: id_max - V0r_shift)**2
+    else
+        y_diff=y1(id_min: id_max + V0r_shift) - y2(id_min -V0r_shift : id_max) ! difference between Y functions
+        y_squared_sum=y1(id_min: id_max + V0r_shift)**2+y2(id_min - V0r_shift: id_max)**2
+    end if
     ! caclulate numerator = integral (Y1-Y2)**2 dE
     numerator = trapez_integration_const_dx(y_diff**2, E_step)
     ! calculate denominator = integral (Y1**2+Y2**2) dE
