@@ -14,17 +14,12 @@ that are used for serial communication with the Arduino Micro controller
 used by ViPErLEED. The serial communication happens in a separate thread
 to prevent stalling the Graphical User Interface.
 """
-# Python standard modules
-import struct
-from collections.abc import Sequence
 
-# ViPErLEED modules
+import struct
+
 from viperleed.guilib.measure.serial.abc import ExtraSerialErrors, SerialABC
-from viperleed.guilib.measure.hardwarebase import (
-    ViPErLEEDErrorEnum,
-    config_has_sections_and_options,
-    emit_error
-    )
+from viperleed.guilib.measure.hardwarebase import (ViPErLEEDErrorEnum,
+                                                   emit_error)
 
 
 class ViPErLEEDHardwareError(ViPErLEEDErrorEnum):
@@ -73,18 +68,16 @@ class ViPErLEEDHardwareError(ViPErLEEDErrorEnum):
     ERROR_NO_HARDWARE_DETECTED = (15,
                                   "No ADC detected. External power "
                                   "supply may be disconnected.")
-    ERROR_VERSIONS_DO_NOT_MATCH = (16,
-                                   "The version of the firmware installed on "
-                                   "the ViPErLEED hardware (v{arduino_version})"
-                                   " does not match the one on the PC "
-                                   "(v{local_version}). May be incompatible.")
+    ERROR_VERSIONS_DO_NOT_MATCH = (
+        16,
+        "The version of the firmware installed on the ViPErLEED "
+        "hardware (v{arduino_version}) does not match the one on "
+        "the PC (v{local_version}). May be incompatible."
+        )
 
 
 class ViPErLEEDSerial(SerialABC):
-    """
-    Class for serial communication with
-    the Arduino Micro ViPErLEED controller.
-    """
+    """Class for communication with Arduino Micro ViPErLEED controller."""
 
     def __init__(self, settings, port_name='', **kwargs):
         """Initialize serial worker object.
@@ -101,10 +94,10 @@ class ViPErLEEDSerial(SerialABC):
             of set_port_settings() for more details on other mandatory
             content of the settings argument.
         port_name : str or QSerialPortInfo, optional
-            The name (or info) of the serial port. If not given, it
-            must be set via the .port_name attribute, or the setter
-            set_port_name(), before any communication can be
-            established. Default is an empty string.
+            The name (or info) of the serial port. If not given,
+            it must be set via the .port_name attribute before any
+            communication can be established. Default is an empty
+            string.
 
         Raises
         ------
@@ -175,6 +168,13 @@ class ViPErLEEDSerial(SerialABC):
         -------
         message : bytearray
             The encoded message
+
+        Raises
+        ------
+        ValueError
+            If, after encoding, the message is longer than 62 bytes,
+            as this would, together with start- and end-marker chars
+            fill up the whole serial buffer of the Arduino board.
         """
         special_byte = self.port_settings.getint('serial_port_settings',
                                                  'SPECIAL_BYTE')
@@ -216,10 +216,6 @@ class ViPErLEEDSerial(SerialABC):
             is a bytes object, containing the already decoded message.
             All messages_since_error will be discarded after the error
             has been identified.
-
-        Returns
-        -------
-        None.
 
         Emits
         -----
@@ -281,7 +277,7 @@ class ViPErLEEDSerial(SerialABC):
         """
         msg_length, *msg_data = message
         # Check if message length greater than zero
-        if msg_length == 0:
+        if not msg_length:
             emit_error(self, ExtraSerialErrors.NO_MESSAGE_ERROR)
             return False
         # Check if message length consistent with sent length
@@ -316,7 +312,7 @@ class ViPErLEEDSerial(SerialABC):
         pc_error = pc_error.to_bytes(1, self.byte_order)
         return len(message) == 1 and message == pc_error
 
-    def is_message_supported(self, messages):
+    def is_message_supported(self, message):
         """Check if message contains one allowed command.
 
         Check whether the message is a supported command or not and
@@ -332,9 +328,11 @@ class ViPErLEEDSerial(SerialABC):
 
         Parameters
         ----------
-        messages : str, object
+        message : Sequence
             The same message given to self.send_message(), right
-            before encoding and sending to the device
+            before encoding and sending to the device. message[0]
+            is a string (the command to send). The other elements
+            contain the data associated with the command.
 
         Returns
         -------
@@ -347,13 +345,21 @@ class ViPErLEEDSerial(SerialABC):
         error_occurred
             If the first message is not a known command or if
             the message contains more than one command.
+
+        Raises
+        ------
+        RuntimeError
+            If the command to be sent requires data, but there is
+            no data in message.
+        RuntimeError
+            If there is more than one block of data in message.
         """
-        # Remember!: messages[0] has to be of type Str
-        # Check if message is valid data. Since the length of messages
+        # Remember!: message[0] has to be of type Str
+        # Check if message is valid data. Since the length of message
         # can vary, the only reasonable check is if single bytes are
         # indeed a command specified in the config.
         available_commands = self.port_settings['available_commands'].values()
-        command, *data = messages
+        command, *data = message
 
         if command not in available_commands:
             # The first message must be a command
@@ -367,18 +373,17 @@ class ViPErLEEDSerial(SerialABC):
             return False
 
         need_data = [self.port_settings['available_commands'][value]
-                        for value in ('PC_CHANGE_MEAS_MODE', 'PC_SET_VOLTAGE',
-                                      'PC_CALIBRATION', 'PC_SET_UP_ADCS',
-                                      'PC_SET_VOLTAGE_ONLY')]
-        if command in need_data:
-            if not data:
-                # Too little data available
-                # This is meant as a safeguard for future code changes
-                raise RuntimeError(
-                    "{self.__class.__name__}.is_message_supported: "
-                    "No data message for one of the Arduino commands "
-                    "that requires data. Check implementation!"
-                    )
+                     for value in ('PC_CHANGE_MEAS_MODE', 'PC_SET_VOLTAGE',
+                                   'PC_CALIBRATION', 'PC_SET_UP_ADCS',
+                                   'PC_SET_VOLTAGE_ONLY')]
+        if command in need_data and not data:
+            # Too little data available
+            # This is meant as a safeguard for future code changes
+            raise RuntimeError(
+                f"{self.__class.__name__}.is_message_supported: "
+                "No data message for one of the Arduino commands "
+                "that requires data. Check implementation!"
+                )
         if len(data) > 1:
             # Too much data available: we never send more than
             # two messages (one command, one data).
@@ -386,7 +391,7 @@ class ViPErLEEDSerial(SerialABC):
             # data for a command as a single entity. It is meant as
             # a safeguard for future changes of the code.
             raise RuntimeError(
-                "{self.__class.__name__}.is_message_supported: "
+                f"{self.__class.__name__}.is_message_supported: "
                 "At most one data message should be given for each "
                 "command to the Arduino. Wrap data for one command into "
                 "a single Sequence."
@@ -408,11 +413,13 @@ class ViPErLEEDSerial(SerialABC):
 
         return True
 
-    def message_requires_response(self, command, *__args):
+    def message_requires_response(self, *messages):
         """Return whether the messages to be sent require a response.
 
         Currently all commands return a PC_OK or other data.
 
+        Parameters
+        ----------
         *messages : tuple
             Same arguments passed to send_message
 
@@ -451,7 +458,7 @@ class ViPErLEEDSerial(SerialABC):
         # necessary.  'other_messages' is the data for the command.
         message = message.encode()
         if not other_messages:
-            return bytearray(message),
+            return (bytearray(message),)
         messages_to_return = []
         messages_to_return.append(bytearray(message))
         # Now process the data depending on the command
@@ -485,7 +492,7 @@ class ViPErLEEDSerial(SerialABC):
         # all the elements in data are 1-byte-long integers.
         return messages_to_return
 
-    def process_received_messages(self):
+    def process_received_messages(self):                                        # TODO: too-complex: split off parts
         """Convert received data into human understandable information.
 
         Process data according to its type and emit data that will be
@@ -505,6 +512,7 @@ class ViPErLEEDSerial(SerialABC):
         if not self.unprocessed_messages:
             # No messages came yet
             return
+
         pc_configuration = self.port_settings.get('available_commands',
                                                   'PC_CONFIGURATION')
         pc_set_voltage = self.port_settings.get('available_commands',
@@ -512,22 +520,23 @@ class ViPErLEEDSerial(SerialABC):
         pc_measure_only = self.port_settings.get('available_commands',
                                                  'PC_MEASURE_ONLY')
         pc_ok = self.port_settings.get('available_commands', 'PC_OK')
+
         # The following check catches data that is received
         # from setting up a connection to the micro controller.
-        if self.__last_request_sent == pc_configuration:
-            if len(self.unprocessed_messages) != 1:
-                self.unprocessed_messages = []
-                return
+        if (self.__last_request_sent == pc_configuration
+                and len(self.unprocessed_messages) != 1):
+            self.unprocessed_messages = []
+            return
+
         for message in self.unprocessed_messages:
             # If the length of the message is 1, then it has to be a
             # PC_OK byte.
-            if len(message) == 1:
-                if message == pc_ok.encode():
-                    if self.__changed_mode:
-                        self.__changed_mode = False
-                    elif self.__last_request_sent == pc_set_voltage:
-                        self.about_to_trigger.emit()
-                    self.busy = False
+            if len(message) == 1 and message == pc_ok.encode():
+                if self.__changed_mode:
+                    self.__changed_mode = False
+                elif self.__last_request_sent == pc_set_voltage:
+                    self.about_to_trigger.emit()
+                self.busy = False
             # Hardware config and measurement values are both 4 bytes long.
             # Both commands are differentiated by the __last_request_sent
             # attribute and get processed accordingly. If continuous mode
@@ -535,9 +544,8 @@ class ViPErLEEDSerial(SerialABC):
             # sent, nothing is done with it.
             elif len(message) == 4:
                 if self.__last_request_sent == pc_configuration:
-                    firmware, hardware = self.__firmware_and_hardware(message)
-                    # self.data_received.emit((firmware, hardware))
                     # Firmware already checked on serial side.
+                    _, hardware = self.__firmware_and_hardware(message)
                     self.data_received.emit(hardware)
                     self.busy = False
                 elif self.__last_request_sent in (pc_set_voltage,
@@ -560,7 +568,6 @@ class ViPErLEEDSerial(SerialABC):
             else:
                 emit_error(self, ViPErLEEDHardwareError.ERROR_MSG_RCVD_INVALID)
         self.unprocessed_messages = []
-        return
 
     def __bytes_to_float(self, bytes_in):
         """Convert four bytes to float.
@@ -573,6 +580,13 @@ class ViPErLEEDSerial(SerialABC):
         Returns
         -------
         float
+
+        Raises
+        ------
+        TypeError
+            If bytes_in is not bytes ot bytearray
+        ValueError
+            If bytes_in does not contain exactly 4 bytes.
         """
         if (not hasattr(bytes_in, '__len__')
                 or not isinstance(bytes_in, (bytes, bytearray))):

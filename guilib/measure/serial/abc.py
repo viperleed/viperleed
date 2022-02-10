@@ -122,10 +122,10 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             of set_port_settings() for more details on other mandatory
             content of the settings argument.
         port_name : str or QSerialPortInfo, optional
-            The name (or info) of the serial port. If not given, it
-            must be set via the .port_name attribute, or the setter
-            set_port_name(), before any communication can be
-            established. Default is an empty string.
+            The name (or info) of the serial port. If not given,
+            it must be set via the .port_name attribute before any
+            communication can be established. Default is an empty
+            string.
 
         Raises
         ------
@@ -185,7 +185,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         self.__stop_timer.connect(self.__timeout.stop)
 
         self.__open = False
-        
+
         self.time_stamp = None
 
         if self.__init_errors:
@@ -226,11 +226,13 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             self.__busy = is_busy
             self.serial_busy.emit(self.busy)
 
-    def get_port_name(self):
+    @property
+    def port_name(self):
         """Return the name of the current port as a string."""
         return self.__port.portName()
 
-    def set_port_name(self, new_port_name):
+    @port_name.setter
+    def port_name(self, new_port_name):
         """Set a new port name.
 
         This will disconnect an already-open port, but will not
@@ -264,8 +266,6 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
                 "Should be 'str' or 'QSerialPortInfo'"
                 )
 
-    port_name = property(get_port_name, set_port_name)
-
     @property
     def msg_markers(self):
         """Return the markers signaling beginning/end of messages.
@@ -288,11 +288,13 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
                     'serial_port_settings', 'MSG_END'
                     ).to_bytes(1, self.byte_order)}
 
-    def __get_port(self):
+    @property
+    def port(self):
         """Return the underlying QSerialPort."""
         return self.__port
 
-    def set_port(self, port_name):
+    @port.setter
+    def port(self, port_name):
         """Create a new QSerialPort with name port_name.
 
         Port settings should should already exist.
@@ -307,9 +309,10 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         self.__port = qts.QSerialPort(port_name, parent=self)
         self.serial_connect()
 
-    port = property(__get_port, set_port)
-
-    def get_port_settings(self):
+    # Disable pylint check because of false positive. The method
+    # is used below as the getter for property port_settings
+    # pylint: disable=unused-private-member
+    def __get_port_settings(self):
         """Return the current settings for the port.
 
         Returns
@@ -320,6 +323,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             'serial_port_settings'.
         """
         return self.__serial_settings
+    # pylint: enable=unused-private-member
 
     def set_port_settings(self, new_settings):
         """Change settings of the port.
@@ -414,7 +418,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         self.__serial_settings = new_settings
         self.__port.close()
 
-    port_settings = property(get_port_settings, set_port_settings)
+    port_settings = property(__get_port_settings, set_port_settings)
 
     def clear_errors(self):
         """Clear all errors.
@@ -427,9 +431,6 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         self.__messages_since_error = []
         self.__got_unacceptable_response = False
 
-    # Disable pylint check as this is supposed
-    # to be the signature for subclasses
-    # pylint: disable=no-self-use
     def decode(self, message):
         """Decode a message received from the serial.
 
@@ -452,7 +453,6 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         if not self.is_decoded_message_acceptable(message):
             return bytearray()
         return bytearray(message)
-    # pylint: enable=no-self-use
 
     # Disable pylint check as this is supposed
     # to be the signature for subclasses
@@ -486,11 +486,6 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         """
         return message
     # pylint: enable=no-self-use
-
-    def flush(self):
-        """Remove unsent messages from the queue."""
-        self.unsent_messages = []
-        self.busy = False
 
     @abstractmethod
     def identify_error(self, messages_since_error):
@@ -646,6 +641,8 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         """
         return True
 
+    # pylint: disable=no-self-use
+    # Method is to be potentially reimplemented
     def prepare_message_for_encoding(self, message, *other_messages):
         """Prepare a message to be encoded.
 
@@ -679,6 +676,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             should have one of the types acceptable for encode()
         """
         return message, *other_messages
+    # pylint: enable=no-self-use
 
     @abstractmethod
     def process_received_messages(self):
@@ -727,7 +725,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             The message to send. This message will be encoded as
             per the self.encode() method. Typically will be either
             a bytes/bytearray, a number, or a string.
-        other_messages : tuple of objects
+        *other_messages : objects
             Additional messages if the hardware needs to receive
             multiple consecutive messages.
         timeout : int or None, optional
@@ -763,8 +761,8 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         all_messages = self.prepare_message_for_encoding(*all_messages)
         if self.message_requires_response(*all_messages):
             self.busy = True
-        for message in all_messages:
-            encoded = self.encode(message)
+        for msg in all_messages:
+            encoded = self.encode(msg)
             if self.msg_markers['START'] is not None:
                 encoded[:0] = self.msg_markers['START']
             encoded.extend(self.msg_markers['END'])
@@ -779,7 +777,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         """Connect to currently selected port."""
         if not self.__port.open(self.__port.ReadWrite):
             emit_error(self, ExtraSerialErrors.PORT_NOT_OPEN)
-            self.print_port_config()
+            self.__print_port_config()
             self.__open = False
             return
 
@@ -989,7 +987,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
                             fallback=self.__port.stopBits())
             )
 
-    def print_port_config(self):
+    def __print_port_config(self):  # For debug
         """Print the configuration of an open port."""
         print(
             f"### Serial port settings of {self.__port.portName()} ###",
@@ -1015,8 +1013,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         self.__init_errors = []
 
     @abstractmethod
-    def is_measure_command(self, command):
+    def is_measure_command(self, command):                                      # TODO: not nice. Better say what this is used for (keep track of the time the message was sent).
         """Returns true if the command sent is a
         command that will return a measurement."""
         return
-
