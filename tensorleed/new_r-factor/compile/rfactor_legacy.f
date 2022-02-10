@@ -66,8 +66,13 @@ C  cf purpose of quantity FAC in subroutine READE.
 
 
       PROGRAM RFACTOR
+
+      
+
       USE r_factor_new
       USE interpolation
+
+
 
 C  include problem dependent parameter statements for dimensions
 
@@ -107,6 +112,23 @@ C  include problem dependent parameter statements for dimensions
       real(8), ALLOCATABLE :: y_exp(:,:), y_theo(:,:)
       
 
+      ! R factor calculation
+
+      integer :: range(2), start_guess(3), max_fit_range
+      real(8) :: tol_R, tol_R_2
+      real(8) :: E_step
+      logical :: fast_search
+
+      integer, ALLOCATABLE :: n_overlapping_points(:)
+      real(8), ALLOCATABLE :: r_pendry_beams(:)
+
+      integer :: n_evaluated
+      integer :: best_V0r_step
+      real(8) :: best_V0r
+      real(8) :: best_R
+
+      integer :: beam
+      
 
 C  variables in namelist NL1
 
@@ -507,18 +529,30 @@ C  read data from experiment or pseudoexperiment
       END IF                                                             RTHTH
 
 
-!*****************************************************************************      
-      if (use_new) print*, "Diverting to new Rfactor!"
-      print*, "Branching!!"
+!*****************************************************************************   
+
+      ! Preprocessor directives
+#ifdef NEW
+      use_new = .True.
+#else
+      use_new = .False.
+#endif
+
+#ifdef DEG3
+      deg = 3
+#else
+      deg = 5
+#endif
+      
+      if (use_new) then
+      print*, "Diverting to new Rfactor!"
+
       
       ! OPEN(50,FILE='EE')
       ! WRite(50,*)EE(1,:)
       ! CLOSE(50)
 
       n_beams = NBED
-
-
-
 
       ! Experimental Data
 
@@ -576,16 +610,16 @@ C  read in calculated energies and intensities (in range EMIN to EMAX)
       CALL translate_evaluation_grid(
      *  real(MAX(EMIN, exp_grid(1),theo_grid(1)), 4), 
      *  real(MIN(EMAX, exp_grid(n_E_exp), theo_grid(n_E_theo)), 4),
-     *  EINCR, 
-     *  n_E_out, energies_out)
+     *  EINCR, VINCR,
+     *  n_E_out, energies_out, E_step)
+
 
       ALLOCATE(intpol_intensity(n_E_out, n_beams))
       ALLOCATE(intpol_derivative(n_E_out, n_beams))
-      ALLOCATE(y_exp(n_E_out, n_beams), y_theo(n_E_out, n_bemas))
+      ALLOCATE(y_exp(n_E_out, n_beams), y_theo(n_E_out, n_beams))
 
 
       skip_stages = (/0,0,0,0,0/)
-      deg = 5
       V0i = real(VI, 8)
       ALLOCATE(averaging_scheme_exp(n_beams))
       
@@ -593,6 +627,7 @@ C  read in calculated energies and intensities (in range EMIN to EMAX)
 
       ALLOCATE(E_start_beams_out_exp(n_beams))
       ALLOCATE(n_E_beams_out_exp(n_beams))
+
 
       ! Prepare Experimental
 
@@ -608,9 +643,8 @@ C  read in calculated energies and intensities (in range EMIN to EMAX)
 
       print*, "Prepare experimental success", ierr
 
-      ! Prepare Theoretical
 
-      print*, "what is up with theo?"
+       ! Prepare Theoretical
 
       CALL prepare_beams(n_beams, n_E_theo, theo_grid, intensities_theo, 
      * E_start_beams_theo, n_E_beams_theo, skip_stages, n_beams, 
@@ -622,24 +656,99 @@ C  read in calculated energies and intensities (in range EMIN to EMAX)
      * n_E_beams_out_theo,
      * intpol_intensity, intpol_derivative, y_theo, ierr)
 
-      print*, "prepare theo success"
-      print*, ierr
-      ! range = (/, /)
-      ! start_guess = ()
-      ! fast_search = .True.
-      
-      ! E_step = EINCR
+      print*, "prepare theo success", ierr
 
-      ! CALL r_pendry_beamset_V0r_opt_on_grid(
+      ! **** R Factor ****
 
-      ! n_E, E_step, n_beams, y1, y2, id_start_y1, id_start_y2, n_y1, n_y2, 
-      ! )
-      ! print*, "Best V0r:", best_V0r
+      fast_search = .True.
+      
 
-      if (ierr .ne. 0) print*, "Error encountered:" , ierr
+      range = (/ INT((-V0RR + V01)/E_step) -1,
+     *        INT((-V0RR +V02)/E_step) +1/)
+    
+      start_guess = (/INT((-V0RR + V01)/E_step/2) , 0 ,
+     *        INT((-V0RR + V02)/E_step/2) /)
+
+      ALLOCATE(r_pendry_beams(n_beams))
+      ALLOCATE(n_overlapping_points(n_beams))
+
+      tol_R =   1 - 1d-4
+      tol_R_2 = 1 - 1d-2
+      max_fit_range = 5
+
+      print*, "Starting R factor calculation"
+      print*, "range: ", range
+      print*, "start_guess :", start_guess
+      print*, "Estep :", E_step
+
+
+      CALL r_pendry_beamset_V0r_opt_on_grid(
+     *  range, start_guess, fast_search,
+     *  best_V0r_step, best_V0r, best_R, n_evaluated,     
+     *  n_E_out, E_step, n_beams, 
+     *  y_exp, y_theo, 
+     *  E_start_beams_out_exp, E_start_beams_out_theo,
+     *  n_E_beams_out_exp, n_E_beams_out_theo,
+     *  r_pendry_beams, n_overlapping_points,
+     *  ierr, 
+     *  tol_R, tol_R_2, max_fit_range)
+
+      print*, "Evaluted V0r:", n_evaluated
+
+    ! **** Write out to file ****
+
       
-      print*, "Return control to legacy"
-      
+929   FORMAT(1X,/,6X,'BEAM',12X,'IBE',3X,'D12',5X,'V0R',4X,'EMIN',4X,
+     *       'EMAX',5X,'OVL',5X,'RAV')
+
+980   FORMAT(5A4,I5,1F8.4,3F8.2,1F10.2,1F8.4)
+9125  FORMAT('AV.-INT             ',I5,F8.4,3F8.2,1F10.2,F8.4,'  <---')             260187
+9126  FORMAT('AV.-FRAC ORD        ',I5,F8.4,3F8.2,1F10.2,F8.4,'  <---')             260187
+9127  FORMAT('AVERAGE             ',I5,F8.4,3F8.2,1F10.2,F8.4,'  <---')
+9128  FORMAT('RELATION FRAC TO INT BEAM INTENSITIES:',F6.3,
+     *       ' FOR EXP DATA,',F6.3,' FOR THEOR DATA')
+9129  FORMAT(' ')
+9130  FORMAT(F8.4)
+9175  FORMAT(30HBEST GEOMETRY ENCOUNTERED, NO.,1I5,
+     *       25H, CHARACTERIZED BY VALUE ,1F7.4,/,
+     *       27HWITH INNER POTENTIAL SHIFT ,1F7.2,
+     *       24H EV, AVERAGE R-FACTOR = ,1F7.4)
+9180  FORMAT(20H*CORRECT TERMINATION)
+
+    ! Write best beam only
+      ! D12 is some weird index for the geometry, that is unused in ViperLEED
+      D12 = 0.0001
+      WRITE(7,929) !Header
+      do beam = 1, n_beams
+        WRITE(7,980) (BENAME(I,beam),I=1,5),beam,D12,best_V0r,EMIN,EMAX,
+     *  n_overlapping_points(beam)*E_step, r_pendry_beams(beam)
+      end do
+
+      ! Unused feature with integer and fractional beams - may implement at a later time
+
+      ! IF (NINT.NE.0) THEN
+      !   WRITE(7,125) -1,D12,V0R,EMIN,EMAX,ERANGM(1),RAVM(1)              141290
+      ! ENDIF
+
+      ! IF (NFRAC.NE.0) THEN
+      !   WRITE(7,126) -1,D12,V0R,EMIN,EMAX,ERANGM(2),RAVM(2)              141290
+      ! ENDIF
+  
+      WRITE(7,9127)  0,D12,best_V0R,EMIN,EMAX,
+     *  sum(n_overlapping_points)*E_step, best_R                        141290
+     
+      WRITE(7,9129) 
+      WRITE(9,9130) BGRAV ! file ROUTSHORT
+
+
+      !WRITE(7,9175) NSB,VALUES(NSB),BV0,BRAV
+      ! IF (NFRAC.NE.0.AND.NINT.NE.0) THEN
+      !   WRITE(7,128) BCIFE,BCIFT
+      ! ENDIF
+
+      ! **** END of new R factor ****
+      Close(7)
+      else
       
 ! not sure how to deal with BENAME
 ! Forget about IPR - just a flag for verbosity
@@ -880,6 +989,9 @@ C  produce some integrals over experimental data
 
       CLOSE(8)           !! REMEMBER TO CLOSE IN BRANCH, BETTER: MOVE HIGHER UP
 
+
+
+      ! **** return control to legacy code here ****
 C  read and write title of theoretical data (supplied by LEED program)  # KEEP THIS PART
 
       READ(5,22) TEXT
@@ -1524,6 +1636,7 @@ C  write best average R-factor to output files
 
       WRITE(6,180)
 
+      end if
       STOP
 
       END
