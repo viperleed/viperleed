@@ -373,6 +373,6 @@ class TimeResolved(MeasurementABC):
         None.
         """
         if self.is_continuous_measurement:
-            self.data_points.recalculate_last_setp_times()
+            self.data_points.recalculate_last_step_times()
         super().finalize(busy=busy)
 

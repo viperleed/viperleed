@@ -94,12 +94,12 @@ class MeasurementPlot(qtw.QWidget):
         is changed. This method is much slower than calling
         plot_new_data()
         """
-        if not self.data_points or not self.data_points.has_data():
+        if not self.data_points or not self.data_points.has_data:
             return
         self.__canvas.ax.clear()
         self._glob['plot_lines'] = {}
 
-        if self.data_points.is_time_resolved():
+        if self.data_points.is_time_resolved:
             self.__plot_all_time_resolved_data()
             label = f"Time ({QuantityInfo.TIMES.units})"
         else:
@@ -127,10 +127,10 @@ class MeasurementPlot(qtw.QWidget):
         plotted data and new data has to be added to
         the plot.
         """
-        if not self.data_points or not self.data_points.has_data():
+        if not self.data_points or not self.data_points.has_data:
             return
 
-        if self.data_points.is_time_resolved():
+        if self.data_points.is_time_resolved:
             self.__plot_new_time_resolved_data()
             label = f"Time ({QuantityInfo.TIMES.units})"
         else:
@@ -165,9 +165,8 @@ class MeasurementPlot(qtw.QWidget):
     def __plot_all_energy_resolved_data(self):
         fig = self.__canvas
         data, nominal_energies = (
-            self.data_points.get_energy_resolved_data(
-                *self.plotted_quantities, include_energies=True
-                ))
+            self.data_points.get_energy_resolved_data(*self.plotted_quantities)
+            )
         if not data:
             fig.ax.text(0,0, 'No data')
             return
@@ -193,10 +192,10 @@ class MeasurementPlot(qtw.QWidget):
 
     def __plot_all_time_resolved_data(self):
         fig = self.__canvas
-        data = self.data_points.get_time_resolved_data(
-                 *self.plotted_quantities, separate_steps=SEPARATE_STEPS,
-                absolute_times=not SEPARATE_STEPS, include_energies=False
-                )
+        data, _ = self.data_points.get_time_resolved_data(
+            *self.plotted_quantities,
+            separate_steps=SEPARATE_STEPS
+            )
         if not data:
             fig.ax.text(0,0, 'No data')
             return
@@ -231,9 +230,8 @@ class MeasurementPlot(qtw.QWidget):
     def __plot_new_energy_resolved_data(self):
         fig = self.__canvas
         data, nominal_energies = (
-            self.data_points.get_energy_resolved_data(
-                *self.plotted_quantities, include_energies=True
-                ))
+            self.data_points.get_energy_resolved_data(*self.plotted_quantities)
+            )
         if not data:
             fig.ax.text(0,0, 'No data')
             return
@@ -264,10 +262,10 @@ class MeasurementPlot(qtw.QWidget):
 
     def __plot_new_time_resolved_data(self):
         fig = self.__canvas
-        data = self.data_points.get_time_resolved_data(
-                *self.plotted_quantities, separate_steps=SEPARATE_STEPS,
-                absolute_times=not SEPARATE_STEPS, include_energies=False
-                )
+        data, _ = self.data_points.get_time_resolved_data(
+            *self.plotted_quantities,
+            separate_steps=SEPARATE_STEPS
+            )
         if not data:
             fig.ax.text(0,0, 'No data')
             return

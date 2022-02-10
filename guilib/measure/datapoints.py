@@ -12,11 +12,13 @@ Defines the DataPoints class.
 """
 import csv
 import re
-import copy
+from copy import deepcopy
 from collections.abc import MutableSequence, Sequence
+from collections import defaultdict
 import enum
 
 from PyQt5 import QtCore as qtc
+import numpy as np
 
 # ViPErLEED modules
 from viperleed.guilib.measure.hardwarebase import (
@@ -24,22 +26,27 @@ from viperleed.guilib.measure.hardwarebase import (
     )
 
 
+_ALIASES = {
+    'Energy': ('nominal_energy', 'energy',),
+    'Measured_Energy': ('hv', 'measured_energy',),
+    'Times': ('times', 'measurement_t',),
+    'I0': ('i0',),
+    'I_Sample': ('isample', 'i_sample',),
+    'Temperature': ('temperature',),
+    'Cold_Junction': ('cold_junction',),
+    }
+
+
+NAN = float('nan')
+
+
 class DataErrors(ViPErLEEDErrorEnum):
     """Errors that might occur during a measurement cycle."""
     INVALID_MEASUREMENT = (400,
                            "The returned data dictionary contained a section "
                            "that was not specified in the DataPoints class.")
-
-
-_ALIASES = {'Energy': ('nominal_energy', 'energy',),
-            'Measured_Energy': ('hv', 'measured_energy',),
-            'Times': ('times', 'measurement_t',),
-            'I0': ('i0',),
-            'I_Sample': ('isample', 'i_sample',),
-            'Temperature': ('temperature',),
-            'Cold_Junction': ('cold_junction',),
-           }
-NAN = float('nan')
+    UNKOWN_QUANTITIES = (401,
+                         "Unkown quantite(s) {} will be ignored")
 
 
 class QuantityInfo(enum.Enum):
@@ -58,11 +65,31 @@ class QuantityInfo(enum.Enum):
 
     @classmethod
     def from_label(cls, label):
+        """Return the QuantityInfo member associated with label.
+
+        Parameters
+        ----------
+        label : str
+            The label to search for. It may be the .name of the
+            attribute or one of the known aliases.
+
+        Returns
+        -------
+        member : QuantityInfo
+            The member of QuantityInfo associated to label.
+
+        Raises
+        ------
+        TypeError
+            If label is not a str
+        ValueError
+            If label does not match any of the known QuantityInfo(s).
+        """
         if not isinstance(label, str):
             raise TypeError(f'Unexpected type {type(label).__name__} for '
                             'QuantityInfo.from_label. Expected str.')
         try:
-            return getattr(cls, label)
+            return getattr(cls, label.upper())
         except AttributeError:
             pass
         for quantity, aliases in _ALIASES.items():
@@ -71,41 +98,71 @@ class QuantityInfo(enum.Enum):
                 break
         try:
             return cls.get_labels()[label]
-        except AttributeError as err:
-            raise AttributeError(f'Unknown {label=} for quantity in '
-                                 'QuantityInfo')
+        except KeyError as err:
+            raise ValueError(f'{cls.__name__}: {label!r} unknown') from err
 
-    @property
-    def common_label(self):
-         return self.value[5]
+    @classmethod
+    def get_axis_labels(cls, axis):
+        """Return all members of QuantityInfo with .axis == axis.
+
+        Parameters
+        ----------
+        axis : str
+            The axis to be searched for. Can only be one of
+            'x' or 'y'.
+
+        Returns
+        -------
+        members : list
+            Each element is the label of the QuantityInfo(s)
+            whose .axis is equal to axis.
+        """
+        return [q.label for q in cls if q.axis == axis]
+
+    @classmethod
+    def get_labels(cls):
+        """Return a dict {label: enum} of all members of QuantityInfo."""
+        return {l.label: l for l in cls}
 
     @property
     def axis(self):
+        """Return the default axis on which self is plotted.
+
+        Typically, only TIMES and ENERGY are used as
+        abscissae ('x'), while all the other quantities
+        are represented as ordinates ('y').
+
+        Returns
+        -------
+        axis : {'x', 'y'}
+            The default plot axis for this quantity.
+        """
         return self.value[4]
 
     @property
-    def label(self):
-        return self.value[3]
+    def common_label(self):                                                     # TODO: rename generic_label?
+        """Return the generic name of self (e.g., "Current", "Voltage")."""
+        return self.value[5]
 
     @property
     def dtype(self):
+        """Return the data type of self as a callable (e.g., float)."""
         return self.value[2]
 
     @property
+    def label(self):
+        """Return the unique label of self as a str (e.g., "Energy")."""
+        return self.value[3]
+
+    @property
     def plot_scale(self):
+        """Return the default plotting scale ('lin', 'log') for self."""
         return self.value[1]
 
     @property
     def units(self):
+        """Return the units of measure for self as a string."""
         return self.value[0]
-
-    @classmethod
-    def get_labels(cls):
-        return {l.label: l for l in cls}
-
-    @classmethod
-    def get_axis_labels(cls, axis):
-        return [q.label for q in cls if q.axis == axis]
 
 
 class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
@@ -117,36 +174,64 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         """Initialise data class."""
         super().__init__()
         self.__list = list(args)
+        self.__delimiter = ','
+        self.__primary_first_time = None
+        self.__exceptional_keys = (QuantityInfo.IMAGES, QuantityInfo.ENERGY)
         # primary_controller needs to be given to this class
         # before starting measurements.
         self.primary_controller = None
-        self.controllers = None
-        self.delimiter = ','
-        self.primary_first_time = None
-        self.__exceptional_keys = (QuantityInfo.IMAGES, QuantityInfo.ENERGY )
-        self.num_measurements = None
 
     @property
     def nominal_energies(self):
-        """Return energies."""
+        """Return energies as a list."""
         return [d[QuantityInfo.ENERGY] for d in self]
 
     @property
     def cameras(self):
-        if not QuantityInfo.IMAGES in self[0]:
+        """Return cameras as a tuple."""
+        if QuantityInfo.IMAGES not in self[0]:
             return tuple()
         return tuple(self[0][QuantityInfo.IMAGES].keys())
 
+    @property
+    def controllers(self):
+        """Return controllers as a tuple."""
+        if not self:
+            return tuple()
+        return tuple(c for c in self[0][QuantityInfo.TIMES])
+
+    @property
+    def has_data(self):
+        """Check if there is already data in the class."""
+        if self and any(t for t in self[0][QuantityInfo.TIMES].values()):
+            return True
+        return False
+
+    @property
+    def is_time_resolved(self):
+        """Check if the contained data is time-resolved."""
+        if self.has_data:
+            # Only if there are times saved already it is possible to
+            # decide if the measurement is a time or energy resolved
+            # measurement.
+            if any(len(t) > 1 for t in self[0][QuantityInfo.TIMES].values()):
+                return True
+        return False
+
     def __str__(self):
+        """Return a string representation of self."""
         return str(self.__list)
 
     def __repr__(self):
+        """Return a string representation of self."""
         return f"DataPoints({self.__list})"
 
     def __getitem__(self, index):
+        """Return element(s) at index or slice."""
         return self.__list[index]
 
     def __setitem__(self, index, value):
+        """Set element(s) at index or slice."""
         if isinstance(value, Sequence):
             for element in value:
                 self.__check_data(element)
@@ -155,23 +240,40 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         self.__list[index] = value
 
     def __delitem__(self, index):
+        """Delete element(s) at index or slice."""
         del self.__list[index]
 
     def __len__(self):
+        """Return the length of self."""
         return len(self.__list)
 
     def insert(self, index, value):
+        """Insert one element at index."""
         self.__check_data(value)
         self.__list.insert(index, value)
 
-    def __check_data(self, value):
-        """Check if received data is acceptable."""
-        if not isinstance(value, dict):
-            raise ValueError(f'{self.__class__.__name__}: received '
-                             'unexpected data type')
+    def add_data(self, new_data, controller, primary_delay=0):
+        """Add new data to the currently active data point.
 
-    def add_data(self, new_data, controller, primary_delay=None):
-        """Add received data to currently active data point."""
+        Parameters
+        ----------
+        new_data : dict
+            keys : QuantityInfo
+                The quantity for which data should be added.
+            values : float
+                The data to be added for this quantity.
+        controller : ControllerABC
+            The controller that performed the measurement.
+        primary_delay : float, optional                                         # TODO: wouldn't it be easier to make it a property of ControllerABC (updated whenever .set_energy is called)? Perhaps we should wait the energy generators though.
+            Time in milliseconds between when the primary
+            controller was sent a command to set the current
+            energy and the time it triggered measurements                       # TODO: correct?
+
+        Emits
+        -----
+        DataErrors.INVALID_MEASUREMENT
+            If new_data contains unexpected quantitites.
+        """
         for quantity, value in new_data.items():
             if quantity not in self[-1]:
                 emit_error(self, DataErrors.INVALID_MEASUREMENT)
@@ -179,7 +281,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                 self[-1][quantity][controller].append(value)
 
         if not self[-1][QuantityInfo.TIMES][controller]:
-            time = controller.serial.time_stamp
+            time = controller.serial.time_stamp                                 # TODO: make it a controller property, perhaps with a nicer name?
             if primary_delay:
                 time += primary_delay/1000
             self[-1][QuantityInfo.TIMES][controller].append(time)
@@ -193,100 +295,94 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
     def calculate_times(self, continuous=False):
         """Calculate times for the last data point."""
         time = QuantityInfo.TIMES
-        if not self.primary_first_time:
-            self.primary_first_time = (
+        if self.__primary_first_time is None:
+            self.__primary_first_time = (
                     self[0][time][self.primary_controller][0]
                     )
-        for ctrl in self[-1][time]:
-            if not len(self[-1][time][ctrl]):
+        for ctrl, ctrl_times in self[-1][time].items():
+            if not ctrl_times:
                 continue
-            if not continuous:
-                self[-1][time][ctrl][0] -= self.primary_first_time
-                self[-1][time][ctrl][0] += ctrl.initial_delay
+            first_time = ctrl_times[0]
+            if (not continuous
+                or len(self) == 1  # First energy step
+                    or ctrl == self.primary_controller):
+                first_time -= self.__primary_first_time
+                first_time += ctrl.initial_delay
             else:
-                if len(self) > 1 and not ctrl == self.primary_controller:
-                    self[-1][time][ctrl][0] = (
-                        self[-2][time][ctrl][-1] +
-                        ctrl.measurement_interval
-                        )
-                else:
-                    self[-1][time][ctrl][0] -= self.primary_first_time
-                    self[-1][time][ctrl][0] += ctrl.initial_delay
+                first_time = (self[-2][time][ctrl][-1] +
+                              ctrl.measurement_interval)
             quantity = ctrl.measured_quantities[0]
-            length = len(self[-1][quantity][ctrl])
-            for i in range(length - 1):
-                self[-1][time][ctrl].append(
-                    self[-1][time][ctrl][0] +
-                    ctrl.measurement_interval * (i + 1)
-                    )
+            n_measurements = len(self[-1][quantity][ctrl])
+            self[-1][time][ctrl] = (
+                first_time
+                + ctrl.measurement_interval * np.arange(n_measurements)
+                )
 
-    def recalculate_last_setp_times(self):
-        """Recalculate last step time for continuous mode.
+    def get_energy_resolved_data(self, *quantities):
+        """Return energy resolved data for each controller.
 
-        This is necessary because the secondaries keep returning
-        measurements before they are turned off.
-        """
-        if not self.has_data():
-            return
-        for ctrl in self[-1][QuantityInfo.TIMES]:
-            if not len(self[-1][QuantityInfo.TIMES][ctrl]):
-                continue
-            time = self[-1][QuantityInfo.TIMES][ctrl][0]
-            self[-1][QuantityInfo.TIMES][ctrl] = []
-            self[-1][QuantityInfo.TIMES][ctrl].append(time)
-            quantity = ctrl.measured_quantities[0]
-            length = len(self[-1][quantity][ctrl])
-            for i in range(length - 1):
-                self[-1][QuantityInfo.TIMES][ctrl].append(
-                    self[-1][QuantityInfo.TIMES][ctrl][0] +
-                    ctrl.measurement_interval * (i + 1)
-                    )
-
-    def get_energy_resolved_data(self, *keys, include_energies=False):
-        """Get energy resolved data for each controller.
+        This method can only be called on non-time-resolved
+        data.
 
         Parameters
         ----------
-        keys : QuantityInfo objects
-            The keys associated with the requested
-            measured quantities.
-        include_energies : bool, optional
-            Whether energy should be returned. Default is False.
+        *quantities : QuantityInfo
+            The measured quantities to be returned. Only those
+            quantities that have been measured are returned.
 
         Returns
         -------
         extracted : dict
             Contains all requested data.
+            keys : ControllerABC or str
+                The controller that measured data. keys are
+                strings if data was read from a saved file.
+            values : dict
+                keys are QuantityInfo objects (from quantities),
+                values are lists of the measurements for the
+                quantities (one value per each energy). Only those
+                requested data that were measured by this controller
+                are returned.
+        energies : list
+            Electron energies (in electronvolts).
+
+        Raises
+        ------
+        RuntimeError
+            If this method is called on a time-resolved data series.
         """
-        extracted = {}
-        check_length = False
-        for key in keys:
-            if key not in self[0]:
-                continue
+        # Keep only the quantities that were measured
+        quantities = [q for q in quantities if q in self[0]]
 
-            for ctrl in self[0][key]:
-                if ctrl:
-                    if ctrl not in extracted:
-                        extracted[ctrl] = {}
-                    extracted[ctrl][key] = []
+        # Prepare the structure of the dictionary to be returned:
+        #   {controller:
+        #        {quantity: list of measurements (one per energy)}
+        #   }
+        # including only those controllers that measured (at least
+        # one of) the requested quantities.
+        extracted = {controller: defaultdict(list)
+                     for quantity in quantities
+                     for controller in self[0][quantity]}
 
-            for data_point in self:
-                for ctrl, measurement in data_point[key].items():
-                    if len(measurement) == 1:
-                        extracted[ctrl][key].append(*measurement)
-                    elif len(measurement) == 0:
-                        # Measurement not ready on this controller yet
-                        pass
-                    else:
-                        raise ValueError('DataPoints contains time-resolved '
-                                         'data but it was attempted to return '
-                                         'energy resolved data.')
-        if include_energies:
-            return extracted, self.nominal_energies
-        return extracted
+        # Now fill in the dictionary, looping through the energies.
+        # There should only be one measurement for each energy.
+        for data_point in self:
+            for quantity in quantities:
+                for controller, measurements in data_point[quantity].items():
+                    if not measurements:
+                        # No data for this controller (yet).
+                        continue
+                    if len(measurements) > 1:
+                        raise RuntimeError(
+                            f"{self.__class__.__name__}: cannot return "
+                            "energy-resolved data from a time-resolved "
+                            "series."
+                            )
+                    extracted[controller][quantity].append(measurements[0])
 
-    def get_time_resolved_data(self, *keys, include_energies=False,
-                               separate_steps=True, absolute_times=False):
+        return extracted, self.nominal_energies
+
+    def get_time_resolved_data(self, *quantities, separate_steps=True):
         """Get time resolved data for each controller.
 
         Separate_steps cannot be False if absolute_times is False.
@@ -295,71 +391,78 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
 
         Parameters
         ----------
-        keys : QuantityInfo objects
-            The keys associated with the requested
-            measured quantities.
-        include_energies : bool, optional
-            Whether energy should be returned. Default is False.
+        *quantities : QuantityInfo
+            The measured quantities to be returned. Only those
+            quantities that have been measured are returned.
         separate_steps : bool, optional
             If True, return one list per nominal energy for each
-            controller. If False, return only a single list for
-            each controller, containing data from all energies.
+            controller. Additionally, each energy step has its time
+            axis starting at zero seconds when the energy was changed.
+            If False, return only a single list for each controller,
+            containing data from all energies. In this case, times
+            are all relative to the moment the first energy was set.
             Default is True.
-        absolute_times: bool, optional
-            If True, the times returned are 'absolute' (but relative
-            to the beginning of the first step), otherwise, each energy
-            step starts at time == 0. This argument is ignored if
-            include_times is False. Default is False.
 
         Returns
         -------
         extracted : dict
-            Contains all requested data.
+            Contains all requested data. Times are always included.
+            keys : ControllerABC or str
+                The controller that measured data. keys are
+                strings if data was read from a saved file.
+            values : dict
+                keys are QuantityInfo objects (from quantities),
+                values are lists of the measurements for the
+                quantities. Only those requested data that were
+                measured by this controller are returned. Values
+                are 1D lists of floats if separate_steps is False,
+                otherwise lists of lists, one per energy step.
+        energies : list
+            One element per each energy step, i.e.,
+            len(energies) == len(self).
         """
-        if not separate_steps and not absolute_times:
-            raise ValueError('Cannot return flat data '
-                             'with relative times.')
-        extracted = {}
-        ctrl_time_done = []
+        # Keep only the quantities that were measured
+        quantities = [q for q in quantities if q in self[0]]
+
+        # Prepare the structure of the dictionary to be returned:
+        #       {controller: {quantity: measurements}, }
+        # including only those controllers that measured (at least
+        # one of) the requested quantities. measurements may be
+        # a single, "flat" list (if not separate_steps) or a list
+        # of lists (one per energy step).
+        extracted = {controller: defaultdict(list)
+                     for quantity in quantities
+                     for controller in self[0][quantity]}
+
+        # Loop through each energy step and fill in the data
         q_time = QuantityInfo.TIMES
-        for key in keys:
-            if key not in self[0]:
-                continue
-
-            for ctrl in self[0][key]:
-                if ctrl:
-                    if ctrl not in extracted:
-                        extracted[ctrl] = {}
-                        extracted[ctrl][q_time] = []
-                    extracted[ctrl][key] = []
-
-            for data_point in self:
-                start_time = data_point[q_time][self.primary_controller][0]
-                for ctrl, measurements in data_point[key].items():
-                    ctrl_time = data_point[q_time][ctrl]
-                    if len(measurements) != len(ctrl_time):
+        for data_point in self:
+            # First, fill in all the quantities requested
+            for quantity in quantities:
+                for ctrl, measurements in data_point[quantity].items():
+                    ctrl_times = data_point[q_time][ctrl]
+                    if len(measurements) != len(ctrl_times):
                         # step is not over yet
                         continue
                     if not separate_steps:
-                        extracted[ctrl][key].extend(measurements)
-                        if ctrl not in ctrl_time_done:
-                            extracted[ctrl][q_time].extend(ctrl_time)
+                        extracted[ctrl][quantity].extend(measurements)
                     else:
-                        extracted[ctrl][key].append(measurements)
-                        if ctrl not in ctrl_time_done:
-                            ctrl_time = [t - start_time for t in ctrl_time]
-                            extracted[ctrl][q_time].append(ctrl_time)
+                        extracted[ctrl][quantity].append(measurements)
 
+            # Then, take care of the times
+            start_time = data_point[q_time][self.primary_controller][0]
             for ctrl in extracted:
-                if ctrl not in ctrl_time_done:
-                    ctrl_time_done.append(ctrl)
+                ctrl_times = data_point[q_time][ctrl]
+                if not separate_steps:
+                    extracted[ctrl][q_time].extend(ctrl_times)
+                else:
+                    ctrl_times -= start_time
+                    extracted[ctrl][q_time].append(ctrl_times)
 
-        if include_energies:
-            return extracted, self.nominal_energies
-        return extracted
+        return extracted, self.nominal_energies
 
     def new_data_point(self, energy, controllers, cameras):
-        """Create a new data_point.
+        """Append a blank data point at a new energy.
 
         Parameters
         ----------
@@ -370,103 +473,127 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         cameras : list of cameras
             All cameras used.
 
-        Returns
+        Raises
         -------
-        None.
+        RuntimeError
+            If this method is called before .primary_controller
+            was set.
         """
-        data_points_dict = {}
-        for quantity in QuantityInfo:
-            if any(ctrl.measures(quantity) for ctrl in controllers):
-                data_points_dict[quantity] = {
-                    controller: []
-                    for controller in controllers
-                    if controller.measures(quantity)
-                    }
-        data_points_dict[QuantityInfo.TIMES] = {}
-        data_points_dict[QuantityInfo.IMAGES] = {}
-        for controller in controllers:
-            data_points_dict[QuantityInfo.TIMES][controller] = []
-        for camera in cameras:
-            data_points_dict[QuantityInfo.IMAGES][camera] = None
-        data_points_dict[QuantityInfo.ENERGY] = energy
-        self.append(data_points_dict)
+        if not self.primary_controller:
+            raise RuntimeError(
+                f"{self.__class__.__name__}: cannot add "
+                "a new data point before .primary_controller "
+                "has been set."
+                )
+        quantities = (q for q in QuantityInfo
+                      if any(c.measures(q) for c in controllers))
+        data_point = {q: defaultdict(list) for q in quantities}
+        data_point[QuantityInfo.TIMES] = {c: [] for c in controllers}
+        data_point[QuantityInfo.ENERGY] = energy
+        if cameras:
+            data_point[QuantityInfo.IMAGES] = {c: "" for c in cameras}
+        self.append(data_point)
 
     def read_data(self, csv_name):
         """Read data from csv file.
 
         Parameters
         ----------
-        csv_name : Path
-            Full path and file name to
-            which the data will be saved.
+        csv_name : str or Path
+            Full path (incl. file name) to the file
+            from which data is to be read.
 
-        Returns
+        Raises
         -------
-        None.
+        RuntimeError
+            If the file to read does not contain a valid energy column
         """
         with open(csv_name, 'r', encoding='UTF8', newline='') as csv_file:
-            reader = csv.DictReader(csv_file, delimiter=self.delimiter)
+            reader = csv.DictReader(csv_file, delimiter=self.__delimiter)
             first_row = next(reader)
-            if not any(key.lower() == label for key in first_row 
-                       for label in _ALIASES['Energy']):
-                # Read file is not a ViPErLEED measurement.
+
+            # Prepare a dictionary of the form
+            #    {column_label: (QuantityInfo, controller)}
+            # that we will later use to populate the data points.
+            column_map, invalid = self.__make_column_header_map(first_row)
+
+            # Make sure there is an energy column, and report
+            # any problems encountered with other column headers
+            if not any(i is QuantityInfo.ENERGY
+                       for i, _ in column_map.values()):
                 raise RuntimeError(
                     f'{csv_name} is not a ViPErLEED measurement.'
                     )
-            key_dict = {}
-            extractor = re.compile(r'(.*)\((.*)\)')
-            for key in first_row:
-                if any(key.lower() == label for label in _ALIASES['Energy']):
-                    key_dict[key] = (key, None)
-                    continue
-                extracted = extractor.match(key)
-                if not extracted:
-                    continue
-                key_dict[key] = list(extracted.groups())
+            if invalid:
+                emit_error(self, DataErrors.UNKOWN_QUANTITIES,
+                           ", ".join(invalid))
 
-            data_points_dict = {QuantityInfo.ENERGY: -1}
-            for key in key_dict.copy():
-                quantity, device = key_dict[key]
-                try:
-                    quantity_obj = QuantityInfo.from_label(quantity)
-                except KeyError:
-                    print(f'{key} is not a ViPErLEED key')
-                    del key_dict[key]
-                    continue
-                if quantity_obj == QuantityInfo.ENERGY:
-                    continue
-                if quantity_obj not in data_points_dict:
-                    data_points_dict[quantity_obj] = {}
-                data_points_dict[quantity_obj][device] = []
-            self.append(copy.deepcopy(data_points_dict))
+            # Prepare a dummy data point dictionary
+            # {energy: value, other_quantity: {device: [values]}, ...}
+            # that will be appended to self each time the energy
+            # changes, and then populated.
+            empty_data_point = {q: defaultdict(list)
+                                for q, _ in column_map.values()}
+            empty_data_point[QuantityInfo.ENERGY] = -1
+
+            # Start filling up self
+            self.__list = []
+            self.append(deepcopy(empty_data_point))
             for row in (first_row, *reader):
                 for column, value in row.items():
-                    quantity, device = key_dict.get(column, (None, None))
-                    if not quantity:
+                    quantity, device = column_map.get(column, (None, None))
+                    if not quantity:  # Unknown --> skip
                         continue
-                    quantity_obj = QuantityInfo.from_label(quantity)
-                    for allowed_quantity in QuantityInfo:
-                        if quantity_obj == allowed_quantity:
-                            converter = allowed_quantity.dtype
-                            break
-                    value = converter(value)
-                    # if QuantityInfo.from_label(column) == QuantityInfo.ENERGY:
-                    if quantity_obj == QuantityInfo.ENERGY:
-                        if self[-1][QuantityInfo.ENERGY] == -1:
-                            self[-1][QuantityInfo.ENERGY] = value
-                        if value != self[-1][QuantityInfo.ENERGY]:
-                            self.append(copy.deepcopy(data_points_dict))
-                            self[-1][QuantityInfo.ENERGY] = value
-                    else:
-                        self[-1][quantity_obj][device].append(value)
-            self.primary_controller = list(self[0][QuantityInfo.TIMES].keys())[0]
+                    value = quantity.dtype(value)
+
+                    # Take care of all quantities but energies
+                    if quantity is not QuantityInfo.ENERGY:
+                        self[-1][quantity][device].append(value)
+                        continue
+
+                    # Now energy: if changed, we add a new entry
+                    last_energy = self[-1][quantity]
+                    if last_energy == -1:
+                        # Energy not set yet for this data point.
+                        # Effectively this happens only for the
+                        # first data point. All others are handled
+                        # by the next condition.
+                        self[-1][quantity] = value
+                    if value != last_energy:
+                        self.append(deepcopy(empty_data_point))
+                        self[-1][quantity] = value
+
+            # Finally define a primary controller:
+            # always the first one in the times entry
+            controllers = list(self[0][QuantityInfo.TIMES].keys())
+            self.primary_controller = controllers[0]
+
+    def recalculate_last_step_times(self):
+        """Recalculate the whole time axis for the last energy step.
+
+        This is necessary because the secondaries keep returning
+        measurements before they are turned off.
+        """
+        if not self.has_data:
+            return
+        for ctrl, ctrl_times in self[-1][QuantityInfo.TIMES].items():
+            if not ctrl_times:
+                # Controller has not yet finished measuring this step
+                continue
+            first_time = ctrl_times[0]
+            quantity = ctrl.measured_quantities[0]
+            n_measurements = len(self[-1][quantity][ctrl])
+            self[-1][QuantityInfo.TIMES][ctrl] = (
+                first_time
+                + ctrl.measurement_interval * np.arange(n_measurements)
+                )
 
     def save_data(self, csv_name):
-        """Save data.
+        """Save data to file.
 
         Parameters
         ----------
-        csv_name : Path
+        csv_name : str or Path
             Full path and file name to
             which the data will be saved.
 
@@ -474,57 +601,116 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         -------
         None.
         """
-        first_line = []
-        if self.cameras:
-            for camera in self.cameras:
-                first_line.append(camera.name)
-        first_line.append(QuantityInfo.ENERGY.label)
-        for quantity, ctrl_dict in self[0].items():
-            if quantity not in self.__exceptional_keys:
-                for controller in ctrl_dict:
-                    first_line.append(
-                        f"{quantity.label}({controller.name})"
-                        )
+        # TBD: left-pad columns to make it look nice in a text editor.
+        #      CANNOT BE DONE WITH csv, have to write manually.
+        with open(csv_name, 'w', encoding='UTF8', newline='') as csv_file:
+            writer = csv.writer(csv_file, delimiter=self.__delimiter)
+            writer.writerow(self.__make_header_line())
 
-        with open(csv_name, 'w', encoding='UTF8', newline='') as file_name:
-            writer = csv.writer(file_name, delimiter=self.delimiter)
-            writer.writerow(first_line)
+            # Now write each energy step consecutively.
+            # To write to file, we un-rag possibily ragged lists
+            # of data (each controller may have retured a different
+            # number of values) by 'padding' with not-a-number towards
+            # the end of the energy step. Each block will be as long
+            # as the longest list of data.
             for data_point in self:
-                data = []
                 max_length = max(
-                    len(mt)
-                    for ctrl, mt in data_point[QuantityInfo.TIMES].items()
+                    len(times)
+                    for times in data_point[QuantityInfo.TIMES].values()
                     )
-                if self.cameras:
-                    for camera in self.cameras:
-                        images = [
-                            data_point[QuantityInfo.IMAGES][camera]
-                            ]*max_length
-                        data.append(images)
-                energy_list = [data_point[QuantityInfo.ENERGY]]*max_length
-                data.append(energy_list)
+                data = [[data_point[QuantityInfo.IMAGES][camera]]*max_length
+                        for camera in self.cameras]
+                data.append([data_point[QuantityInfo.ENERGY]]*max_length)
                 for quantity, ctrl_dict in data_point.items():
-                    if quantity not in self.__exceptional_keys:
-                        for ctrl, measurement in ctrl_dict.items():
-                            extra_length = max_length - len(measurement)
-                            measurement += [NAN]*extra_length
-                            data.append(measurement)
+                    if quantity in self.__exceptional_keys:
+                        # images and energies, already processed
+                        continue
+                    for measurement in ctrl_dict.values():
+                        extra_length = max_length - len(measurement)
+                        data.append(measurement + [NAN]*extra_length)
                 for line in zip(*data):
                     writer.writerow(line)
 
-    def is_time_resolved(self):
-        """Check if the contained data is time-resolved."""
-        if self.has_data():
-            # Only if there are times saved already it is possible to
-            # decide if the measurement is a time or energy resolved
-            # measurement.
-            if any(len(t) > 1 for t in self[0][QuantityInfo.TIMES].values()):
-                return True
-        return False
+    def __check_data(self, value):
+        """Check if an element is of acceptable type."""
+        if not isinstance(value, dict):
+            raise TypeError(
+                f"{self.__class__.__name__}: invalid data "
+                f"type {type(value).__name__!r}. Expected 'dict'"
+                )
 
-    def has_data(self):
-        """Check if there is already data in the class."""
-        if len(self)>=1:
-            if any(t for t in self[0][QuantityInfo.TIMES].values()):
-                return True
-        return False
+    @staticmethod
+    def __make_column_header_map(headers):
+        """Return a dict of QuantityInfo from text headers.
+
+        Used for reading in data from file.
+
+        Parameters
+        ----------
+        headers : iterable
+            Sequence of strings that will be used for
+            constructing the map.
+
+        Returns
+        -------
+        mapping : dict
+            keys: items in headers that could be converted
+            to QuantityInfo objects.
+            values: (QuantityInfo, str), where str is whatever
+            else was found in header that did not match and
+            acceptable QuantityInfo.
+        skipped : list
+            Entries in headers that could not be parsed/converted.
+        """
+        # All column headers, except for the "energy" one are
+        # expected to be of the form "quantity(measuring_device_id)".
+        extractor = re.compile(
+            r'\s*(?P<quantity>.*)\s*\(\s*(?P<ctrl>.*)\s*\)\s*'
+            )
+
+        # Keep track of non-matching or unknown
+        # quantities for reporting to the user.
+        skipped = []
+
+        column_map = {}
+        for label in headers:
+            if any(label.lower() == e for e in _ALIASES['Energy']):
+                column_map[label] = (QuantityInfo.ENERGY, None)
+                continue
+            extracted = extractor.match(label)
+            if not extracted:     # Invalid format
+                skipped.append(label)
+                continue
+            try:
+                info = QuantityInfo.from_label(extracted.group("quantity"))
+            except ValueError:    # Unknown quantity
+                skipped.append(label)
+                continue
+            column_map[label] = (info, extracted.group("ctrl"))
+
+        return column_map, skipped
+
+    def __make_header_line(self):
+        """Return a header line that can be written to file.
+
+        Used for saving data to file.
+
+        Returns
+        -------
+        header : list
+            One entry per 'column'. Default order is:
+            <all camera names> <energy>
+            <quantities for each controller>
+            <times for each controller>
+        """
+        header = [camera.name for camera in self.cameras]
+        header.append(QuantityInfo.ENERGY.label)
+        for quantity, controllers in self[0].items():
+            if quantity in self.__exceptional_keys:
+                # cameras and energy, already processed
+                continue
+            for controller in controllers:
+                header.append(
+                    f"{quantity.label}({controller.name})"
+                    )
+        return header

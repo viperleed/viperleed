@@ -217,7 +217,8 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
 
         # Instantiate primary controller class
         primary_config, primary_measures = ast.literal_eval(
-            self.__settings.get('devices', 'primary_controller'))
+            self.settings.get('devices', 'primary_controller')
+            )
         self.primary_controller = self.__make_controller(primary_config,
                                                          is_primary=True)
         self.primary_controller.what_to_measure(primary_measures)
@@ -225,7 +226,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         # Instantiate secondary controller classes
         secondary_controllers = []
         secondary_set = ast.literal_eval(
-             self.__settings.get(
+             self.settings.get(
                 'devices', 'secondary_controllers', fallback='()'
                 )
              )
@@ -242,7 +243,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         # Instantiate camera classes
         cameras = []
         camera_set = ast.literal_eval(
-             self.__settings.get(
+             self.settings.get(
                  'devices', 'cameras', fallback='()'
                  )
              )
@@ -267,7 +268,6 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             device.error_occurred.connect(self.__on_hardware_error)
 
         self.data_points.primary_controller = self.primary_controller
-        self.data_points.controllers = self.controllers
 
     settings = property(__get_settings, set_settings)
 
