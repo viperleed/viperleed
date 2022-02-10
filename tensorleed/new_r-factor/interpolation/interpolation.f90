@@ -146,14 +146,14 @@ module interpolation
         integer, INTENT(OUT) :: ipiv(nt)
         
         integer, INTENT(OUT)   :: ierr                    !! integer error code
-
         ! Internal
         integer                             :: kl, ku           !! matrix shape specifiers - in our case always equal deg
         integer                             :: LAPACK_info
         integer                             :: derivs_known_l, derivs_known_r
         integer, ALLOCATABLE                :: derivs_l_ord(:), derivs_r_ord(:)
-        real(8), ALLOCATABLE               :: derivs_l_val(:), derivs_r_val(:)
+        real(8), ALLOCATABLE                :: derivs_l_val(:), derivs_r_val(:)
 
+   
         ierr = 0
 
         ! Compute knot vector and size
@@ -428,6 +428,7 @@ module interpolation
         knots(1       : deg     ) = x(1)
         knots(1+deg   : n+deg   ) = x(:)
         knots(n+deg+1 : n_knots ) = x(n)
+
         RETURN
     end subroutine get_natural_knots
 
@@ -441,7 +442,7 @@ module interpolation
         integer, ALLOCATABLE, INTENT(OUT) :: derivs_l_ord(:), derivs_r_ord(:)
         real(8), ALLOCATABLE, INTENT(OUT) :: derivs_l_val(:), derivs_r_val(:)
 
-        if (deg==3) then
+        if (deg == 3) then
             derivs_known_l = 1
             derivs_known_r = 1
             ALLOCATE(derivs_l_ord(derivs_known_l), derivs_r_ord(derivs_known_r))
