@@ -59,6 +59,9 @@ def class_from_name(package, class_name):
     return cls
 
 
+# too-complex, too-many-branches  -> may be solved by moving
+# the str/Path/dict cases into the new HardwareSettings class.
+# This whole function can then be a method of the class.
 def config_has_sections_and_options(caller, config, mandatory_settings):
     """Make sure settings are fine, and return it as a ConfigParser.
 
@@ -133,7 +136,7 @@ def config_has_sections_and_options(caller, config, mandatory_settings):
                                     "correct folder.")
         tmp_config = ConfigParser(comment_prefixes='/', allow_no_value=True)
         tmp_config.read(config)
-        config = tmp_config
+        config = tmp_config  # pylint: disable=redefined-variable-type
 
     if isinstance(config, dict):
         tmp_config = ConfigParser()
@@ -146,23 +149,24 @@ def config_has_sections_and_options(caller, config, mandatory_settings):
             raise TypeError(f"Invalid mandatory setting {setting}. "
                             f"with length {len(setting)}. Expected "
                             "length <= 3.")
-        elif len(setting) == 1:
-            # (<section>,)
+        # (<section>,)
+        if len(setting) == 1:
             if not config.has_section(setting[0]):
                 invalid_settings.append(setting)
-                continue
-        elif len(setting) in (2, 3):
-            # (<section>, <option>) or (<section>, <option>, <admissible>)
-            section, option = setting[:2]
-            if not config.has_option(section, option):
+            continue
+
+        # (<section>, <option>) or (<section>, <option>, <admissible>)
+        section, option = setting[:2]
+        if not config.has_option(section, option):
+            invalid_settings.append(setting)
+            continue
+
+        # (<section>, <option>, <admissible>)
+        if len(setting) == 3:
+            admissible_values = setting[2]
+            value = config.get(section, option)
+            if value not in admissible_values:
                 invalid_settings.append(setting)
-                continue
-            if len(setting) == 3:
-                # (<section>, <option>, <admissible>)
-                admissible_values = setting[2]
-                value = config.get(section, option)
-                if value not in admissible_values:
-                    invalid_settings.append(setting)
 
     if invalid_settings:
         config = None
@@ -200,8 +204,8 @@ def emit_error(sender, error, *msg_args, **msg_kwargs):
                         "to emit. Probably an inappropriate type")
     try:
         _ = len(error)
-    except TypeError:
-        raise TypeError(f"Invalid error {error} cannot be emitted")
+    except TypeError as err:
+        raise TypeError(f"Invalid error {error} cannot be emitted") from err
 
     if len(error) != 2:
         raise ValueError(f"Invalid error {error} cannot be emitted")
@@ -235,6 +239,11 @@ def get_devices(package):
         names of available devices, values are the driver classes
         that can be used to handle the devices (one class per
         device).
+
+    Raises
+    ------
+    AttributeError
+        If package is not one of the guilib.measure subpackages.
     """
     try:
         getattr(sys.modules[__package__], package)
@@ -257,10 +266,8 @@ def get_devices(package):
 ################################### CLASSES ###################################
 
 
-class QMetaABC(type(qtc.QObject), ABCMeta):
+class QMetaABC(ABCMeta, type(qtc.QObject)):
     """Metaclass common to QObject and ABCMeta allowing @abstractmethod."""
-
-    pass
 
 
 class ViPErLEEDErrorEnum(tuple, enum.Enum):
