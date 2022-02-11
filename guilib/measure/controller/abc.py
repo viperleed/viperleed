@@ -24,14 +24,15 @@ from numpy.polynomial.polynomial import Polynomial
 from PyQt5 import QtCore as qtc
 
 # ViPErLEED modules
-from viperleed.guilib.measure.hardwarebase import (
-    config_has_sections_and_options, class_from_name, emit_error, QMetaABC,
-    ViPErLEEDErrorEnum
-    )
+# from viperleed.guilib.measure.hardwarebase import (
+    # config_has_sections_and_options, class_from_name, emit_error, QMetaABC,
+    # ViPErLEEDErrorEnum
+    # )
+from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.datapoints import QuantityInfo
 
 
-class ControllerErrors(ViPErLEEDErrorEnum):
+class ControllerErrors(base.ViPErLEEDErrorEnum):
     # The following two are fatal errors, and should make the GUI
     # essentially unusable, apart from loading appropriate settings.
     INVALID_CONTROLLER_SETTINGS = (100,
@@ -44,7 +45,7 @@ class ControllerErrors(ViPErLEEDErrorEnum):
                         "proceeding.")
 
 
-class ControllerABC(qtc.QObject, metaclass=QMetaABC):
+class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
     """Base class for giving orders to the LEED electronics."""
 
     error_occurred = qtc.pyqtSignal(tuple)
@@ -108,7 +109,7 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
                                 "configuration file. Cannot instantiate "
                                 "a controller without a valid port.")
             port_name = settings.get('controller', 'port_name',
-                                     fallback='None')
+                                     fallback='')
         else:
             settings.set('controller', 'port_name', port_name)
         self.__port_name = port_name
@@ -240,7 +241,7 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
             be instantiated.
         """
         if new_settings is None:
-            emit_error(self, ControllerErrors.MISSING_SETTINGS)
+            base.emit_error(self, ControllerErrors.MISSING_SETTINGS)
             return
 
         # The next extra setting is mandatory only for a controller
@@ -250,24 +251,26 @@ class ControllerABC(qtc.QObject, metaclass=QMetaABC):
             extra_mandatory_list = [('measurement_settings', 'i0_settle_time'),
                                     ('measurement_settings', 'hv_settle_time')]
 
-        new_settings, invalid = config_has_sections_and_options(
+        new_settings, invalid = base.config_has_sections_and_options(
             self, new_settings,
             (*self._mandatory_settings, *extra_mandatory_list)
             )
 
         if invalid:
             error_msg = ', '.join(invalid)
-            emit_error(self, ControllerErrors.INVALID_CONTROLLER_SETTINGS,
-                       error_msg)
+            base.emit_error(self, ControllerErrors.INVALID_CONTROLLER_SETTINGS,
+                            error_msg)
             return
 
         serial_cls_name = new_settings.get('controller', 'serial_port_class')
         if self.serial.__class__.__name__ != serial_cls_name:
             try:
-                serial_class = class_from_name('serial', serial_cls_name)
+                serial_class = base.class_from_name('serial', serial_cls_name)
             except ValueError:
-                emit_error(self, ControllerErrors.INVALID_CONTROLLER_SETTINGS,
-                           'controller/serial_port_class')
+                base.emit_error(
+                    self, ControllerErrors.INVALID_CONTROLLER_SETTINGS,
+                    'controller/serial_port_class'
+                    )
                 return
             self.__serial = serial_class(new_settings,
                                          port_name=self.__port_name,

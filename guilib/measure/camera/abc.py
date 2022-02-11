@@ -16,17 +16,16 @@ import ast
 import numpy as np
 from PyQt5 import QtCore as qtc
 
-from viperleed.guilib.measure.hardwarebase import (
-    ViPErLEEDErrorEnum, config_has_sections_and_options, emit_error, QMetaABC
-    )
+# from viperleed.guilib.measure.hardwarebase import (
+    # ViPErLEEDErrorEnum, config_has_sections_and_options, emit_error, QMetaABC
+    # )
+from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.camera.imageprocess import (ImageProcessor,
                                                           ImageProcessInfo)
 from viperleed.guilib.measure.camera import badpixels
 
-# TODO: look at QtMultimedia.QCamera
 
-
-class CameraErrors(ViPErLEEDErrorEnum):
+class CameraErrors(base.ViPErLEEDErrorEnum):
     """Data class for base camera errors."""
 
     INVALID_SETTINGS = (200,
@@ -56,7 +55,7 @@ class CameraErrors(ViPErLEEDErrorEnum):
     UNSUPPORTED_WHILE_BUSY = (207, "Cannot {} while camera is busy.")
 
 
-class CameraABC(qtc.QObject, metaclass=QMetaABC):
+class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
     """Abstract base class for ViPErLEED cameras."""
 
     camera_busy = qtc.pyqtSignal(bool)
@@ -208,10 +207,10 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
 
         min_bin, max_bin = self.get_binning_limits()
         if binning_factor < min_bin or binning_factor > max_bin:
-            emit_error(self, CameraErrors.INVALID_SETTING_WITH_FALLBACK,
-                       f"{binning_factor} "
-                       f"[out of range ({min_bin}, {max_bin})]",
-                       'camera_settings/binning', 1)
+            base.emit_error(self, CameraErrors.INVALID_SETTING_WITH_FALLBACK,
+                            f"{binning_factor} "
+                            f"[out of range ({min_bin}, {max_bin})]",
+                            'camera_settings/binning', 1)
             binning_factor = 1
             self.settings.set('camera_settings', 'binning', '1')
         return binning_factor
@@ -278,9 +277,9 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
 
         min_exposure, max_exposure = self.get_exposure_limits()
         if exposure_time < min_exposure or exposure_time > max_exposure:
-            emit_error(self, CameraErrors.INVALID_SETTINGS,
-                       'measurement_settings/exposure',
-                       f'Info: out of range ({min_exposure}, {max_exposure})')
+            base.emit_error(self, CameraErrors.INVALID_SETTINGS,
+                            'measurement_settings/exposure',
+                            f'Info: out of range ({min_exposure}, {max_exposure})')
             exposure_time = min_exposure
         return exposure_time
 
@@ -302,9 +301,9 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
 
         min_gain, max_gain = self.get_gain_limits()
         if gain < min_gain or gain > max_gain:
-            emit_error(self, CameraErrors.INVALID_SETTINGS,
-                       'measurement_settings/gain',
-                       f'Info: out of range ({min_gain}, {max_gain})')
+            base.emit_error(self, CameraErrors.INVALID_SETTINGS,
+                            'measurement_settings/gain',
+                            f'Info: out of range ({min_gain}, {max_gain})')
             gain = min_gain
             self.settings.set('measurement_settings', 'gain', str(gain))
         return gain
@@ -358,8 +357,8 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
                                  fallback='triggered')
 
         if mode not in ('live', 'triggered'):
-            emit_error(self, CameraErrors.INVALID_SETTING_WITH_FALLBACK,
-                       mode, 'camera_settings/mode', 'triggered')
+            base.emit_error(self, CameraErrors.INVALID_SETTING_WITH_FALLBACK,
+                            mode, 'camera_settings/mode', 'triggered')
             mode = 'triggered'
             self.settings.set('camera_settings', 'mode', mode)
         return mode
@@ -375,9 +374,9 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
 
         min_n, max_n = self.get_n_frames_limits()
         if n_frames < min_n or n_frames > max_n:
-            emit_error(self, CameraErrors.INVALID_SETTING_WITH_FALLBACK,
-                       f"{n_frames} [out of range ({min_n}, {max_n})]",
-                       'measurement_settings/n_frames', 1)
+            base.emit_error(self, CameraErrors.INVALID_SETTING_WITH_FALLBACK,
+                            f"{n_frames} [out of range ({min_n}, {max_n})]",
+                            'measurement_settings/n_frames', 1)
             n_frames = 1
             self.settings.set('measurement_settings', 'n_frames', '1')
 
@@ -423,8 +422,8 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
                 roi = tuple()
 
         if not self.__is_valid_roi(roi):
-            emit_error(self, CameraErrors.INVALID_SETTINGS,
-                       'camera_settings/roi', 'Info: ROI is invalid.')
+            base.emit_error(self, CameraErrors.INVALID_SETTINGS,
+                            'camera_settings/roi', 'Info: ROI is invalid.')
             self.settings.set('camera_settings', 'roi', 'None')
             _, (max_roi_w, max_roi_h), _ = self.get_roi_size_limits()
             return 0, 0, max_roi_w, max_roi_h
@@ -434,8 +433,8 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         if roi_w % self.binning or roi_h % self.binning:
             new_roi_w = (roi_w // self.binning)*self.binning
             new_roi_h = (roi_h // self.binning)*self.binning
-            emit_error(self, CameraErrors.BINNING_ROI_MISMATCH,
-                       roi_w, roi_h, self.binning, new_roi_w, new_roi_h)
+            base.emit_error(self, CameraErrors.BINNING_ROI_MISMATCH,
+                            roi_w, roi_h, self.binning, new_roi_w, new_roi_h)
             roi = (*roi_offsets, new_roi_w, new_roi_h)
             self.settings.set('camera_settings', 'roi', str(roi))
         return roi
@@ -489,12 +488,12 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
             return
 
         # Checking of non-mandatory data is done in property getters
-        new_settings, invalid = config_has_sections_and_options(
+        new_settings, invalid = base.config_has_sections_and_options(
             self, new_settings,
             self._mandatory_settings
             )
         for setting in invalid:
-            emit_error(self, CameraErrors.INVALID_SETTINGS, setting, '')
+            base.emit_error(self, CameraErrors.INVALID_SETTINGS, setting, '')
         if invalid:
             return
 
@@ -582,7 +581,7 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
     def connect(self):
         """Connect to the camera."""
         if not self.open():
-            emit_error(self, CameraErrors.CAMERA_NOT_FOUND, self.name)
+            base.emit_error(self, CameraErrors.CAMERA_NOT_FOUND, self.name)
             return
         self.load_camera_settings()
 
@@ -678,15 +677,15 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         bad_pix_path = self.settings.get("camera_settings", "bad_pixels_path",
                                          fallback='')
         if not bad_pix_path:
-            emit_error(self, CameraErrors.INVALID_SETTINGS,
-                       'camera_settings/bad_pixels_path',
-                       f'Info: No bad_pixel_path found.')
+            base.emit_error(self, CameraErrors.INVALID_SETTINGS,
+                            'camera_settings/bad_pixels_path',
+                            f'Info: No bad_pixel_path found.')
             return
         try:
             self.__bad_pixels.read(bad_pix_path)
         except (FileNotFoundError, ValueError) as err:
-            emit_error(self, CameraErrors.INVALID_SETTINGS,
-                       'camera_settings/bad_pixels_path', f'Info: {err}')
+            base.emit_error(self, CameraErrors.INVALID_SETTINGS,
+                            'camera_settings/bad_pixels_path', f'Info: {err}')
             return
         self.__bad_pixels.apply_roi()
 
@@ -1144,8 +1143,8 @@ class CameraABC(qtc.QObject, metaclass=QMetaABC):
         error_occurred(CameraErrors.UNSUPPORTED_OPERATION)
         """
         if self.mode != 'triggered':
-            emit_error(self, CameraErrors.UNSUPPORTED_OPERATION,
-                       'trigger', 'live')
+            base.emit_error(self, CameraErrors.UNSUPPORTED_OPERATION,
+                            'trigger', 'live')
             return
         self.busy = True
         self.n_frames_done = 0
