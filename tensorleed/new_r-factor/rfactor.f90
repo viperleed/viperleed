@@ -190,8 +190,6 @@ subroutine r_pendry_beamset_V0r_opt_on_grid( &
     min_fit_range = max(max_fit_range - 6, 5)
 
     next_step = start_guess(1) - range(1) + 1
-    print*, "size y1", size(y1)
-    call flush()
     do while(fast_search)
 
         !print*, "Evaluated:", n_evaluated, "next step", next_step
@@ -310,7 +308,7 @@ subroutine r_pendry_beamset_V0r_opt_on_grid( &
         end if
 
         R2 = parabola_R_squared(n_steps, V0r_step_real, R_V0r, weights, para_coeff(1), para_coeff(2), para_coeff(3))
-        print*, "Getting R^2 = ", R2, sum(weights)
+        print*, "Getting R^2 = ", R2
 
 
         if (R2 > tol_R) then
@@ -320,6 +318,7 @@ subroutine r_pendry_beamset_V0r_opt_on_grid( &
             best_V0r_step = V0r_step(best_id)
             print*, ""
             print*, "Smart search success"
+            print*, "Energy overlapp: ", sum(N_overlapping_points_V0r(:,best_id) -1)*E_step
             RETURN
         
         else if (sum(weights) < 2*fit_range + 1) then
@@ -837,6 +836,9 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
 
     ! Debug below...
     do i = 1, n_beams
+        print*, i
+        print*, n_E_out
+        print*, beams_max_id_out(i)
         if (E_grid_in(cut_beams_max_id_in(i)) < E_grid_out(beams_max_id_out(i))) then
             print*, "issue size out - beam", i
         end if
@@ -850,9 +852,16 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
     ! Smoothing
     !###############
 
+    ! Smoothing is not (yet) implemented.
+
+    ! This is a tricky issue, because excessive smoothing strongly affects the R-factor, so you want to avoid over-smoothing at all cost.
+    ! We expect the experimental data to come in from the beam-extraction already pre-smoothed. If we implement an additional later smoothing here,
+    ! it only makes sense to do it equally on experimental and theoretical data. Thus, both should use the same smoothing kernel and probably not 
+    ! use a smoothing parameter larger than ~6 eV.y
+
     if (skip_stages(3).EQ.0) then
         ierr = 23
-        !write(*,*) "Smoothing not yet implemented!" ! TODO: implement smoothing in prepare_beams
+        continue
     end if
 
 
@@ -1108,81 +1117,6 @@ subroutine range_index_from_Energy(E_min_current, NE_in, E_step, E_min_cut, E_ma
 end subroutine range_index_from_Energy
 
 
-! subroutine limit_range_index(in_beams, n_beams, n_energies, E_min_current, E_step, beam_starts, NE_beams, &
-!                        NE_out_start, NE_out_stop, out_beams, new_NE, new_NE_beams, new_start_id)
-!     !Limit_range:
-!     !INPUT: E_min, E_max, array[I, E_min, E_step, NE]
-!     !RETURNS: Beam cut to only within [E_min, E_max]
-
-!     ! Takes beams recorded on the same energy grid and cut off any parts below or above a certain threshold Energy.
-!     ! Returns beams on uniform size array, cut to right size. Also returns E_min of each beam + new min_index and cut NE
-!     ! Works for one or for multiple beams (though the latter may defeat the purpose)
-
-!     integer, intent(in) :: n_beams, n_energies ! number of beams, number of energies in in_beams
-!     real(8), intent(in) :: in_beams(n_energies, n_beams)
-!     real(8), intent(out) :: out_beams(NE_out_stop-NE_out_start+1, n_beams)
-
-!     real(8), intent(in) :: E_min_current, E_step
-!     integer, intent(in) :: NE_out_start, NE_out_stop
-!     integer, intent(in)  :: beam_starts(n_beams), NE_beams(n_beams)
-!     integer, intent(out) :: new_NE, new_NE_beams(n_beams)
-
-
-!     ! Internal
-!     integer steps, to_new_min, i, new_end_id(n_beams)
-!     real new_max, new_min, new_start_id(n_beams)
-
-!     new_NE = NE_out_stop-NE_out_start+1
-    
-
-!     ! allocate out_beams to right size
-!     !allocate(out_beams(new_NE, n_beams))
-!     out_beams = in_beams(NE_out_start : NE_out_stop, :)
-
-!     ! Determine new boundary indices E_min& NE:
-!     do i=0, n_beams
-!         new_start_id(i) = max(beam_starts(i) - NE_out_start, 1)
-!         new_end_id(i) = min(beam_starts(i) + NE_beams(i)-NE_out_start, NE_out_stop)
-!         new_NE_beams(i) = new_end_id(i) - new_start_id(i) +1
-!     end do
-
-! end subroutine limit_range_index
-
-
-! subroutine pre_evaluate_grid_beam(n, x, deg, grid_origin, grid_target, grid_pre_eval, ierr)
-!     integer, INTENT(IN) :: deg
-!     type(grid), INTENT(IN) :: grid_origin
-!     type(grid), INTENT(IN) :: grid_target
-    
-
-!     type(grid_pre_evaluation), INTENT(OUT) :: grid_pre_eval
-!     integer, INTENT(OUT) :: ierr
-
-!     ! Internal
-!     integer :: max_n_knots, max_nt, max_LHS_rows
-!     integer :: n_knots_beams(n_beams), nt_beams(n_beams), LHS_rows_beams(n_beams)
-!     real(8) :: knots(max_n_knots, n_beams), LHS(max_LHS_rows, max_nt, n_beams), coeffs(max_nt, n_beams)
-
-!     call get_array_sizes(n_E, deg, max_n_knots, max_nt, max_LHS_rows)
-
-!     call perform_checks(n_E, E_grid, n_E_out, E_grid_out, ierr)
-
-
-
-!     do i=1,n_beams
-!         call get_array_sizes(n_E_beams(i), deg, n_knots_beams(i), nt_beams(i), LHS_rows_beams(i))
-!     end do
-
-!     call single_calc_spline(n_E_beams(i), E_beams(:), ...)
-
-!     ALLOCATE(knots(n_knots, n_beams), LHS(LHS_rows, nt, n_beams), coeffs(nt))
-
-!     call pre_evaluate_grid(grid_origin%x, grid_origin%n, grid_target%x, grid_target%n, &
-!                             deg, 1, grid_pre_eval, ierr) ! the 1 means do_checks ON
-!     RETURN
-! end subroutine pre_evaluate_grid_beam
-
-
 
 
 
@@ -1203,27 +1137,6 @@ subroutine pendry_y(n_data, intensity, derivative, v0i, y_func)
 end subroutine pendry_y
 
 
-pure function parabolic_optimize(values) result(minimum_pair)
-    implicit none
-
-    real(8), intent(in) :: values(:)
-    real(8) :: minimum_pair(2) ! Don't declare as intent(out)
-    integer known_values
-
-    real(8) minium_pair(2)
-
-    known_values = size(values)
-
-    if (known_values < 3) then
-        ! Not allowed; Problem since Parabola fit is impossible - return something?
-    else
-        ! Should be the case!
-    end if
-
-    minimum_pair = (2d0, 2d0)
-    return
-end function parabolic_optimize
-
 pure function trapez_integration_const_dx(f, dx) result(integral)
     implicit none
     real(8), intent(in)    :: f(:)
@@ -1236,6 +1149,8 @@ pure function trapez_integration_const_dx(f, dx) result(integral)
     integral = sum(f(1:n-1)+f(2:n))*dx/2
     return
 end function trapez_integration_const_dx
+
+
 
 ! Compatibility functions
 subroutine translate_evaluation_grid(e_min, e_max, EINCR, VINCR, V0RR, V01, V02, &
