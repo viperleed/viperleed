@@ -21,16 +21,11 @@ program intpol_test
     real(fdp), ALLOCATABLE :: LHS(:,:), RHS(:), RHS_prep(:)
     integer :: nt, kl, ku, lhs_rows, lhs_cols, RHS_cols, nleft, nright
     integer, ALLOCATABLE :: ipiv(:)
-    type(grid_pre_evaluation) :: pre_eval
 
     integer, ALLOCATABLE :: intervals(:)
     real(fdp), ALLOCATABLE :: deBoor_matrix(:,:), coeffs(:), deriv_deBoor_matrix(:,:)
     !integer :: info_values(info_size)
 
-    ! For Bsplines module
-    !integer(ip) :: iflag, np, k, one, zero
-    !real(wp), ALLOCATABLE :: bcoef(:), knots(:), work(:)
-    logical :: extrap
 
     ! for timing the calls
     real(fdp) :: start, finish, exec_time
@@ -41,8 +36,12 @@ program intpol_test
     real(fdp), ALLOCATABLE :: A(:), E(:), X_TL(:), WORYT(:)
     real(fdp) :: EINCR
 
+    integer :: n_knots, de_Boor_dim(2) !, nt, LHS_rows
+    real(fdp), ALLOCATABLE :: knots(:)
+
     ! Setup Data to interpolate
-    repeats = 10000
+    print*, "Version with custom datatypes"
+    repeats = 1000
     n_points = 600
     n_points_supersampled = n_points*5
 
@@ -116,15 +115,55 @@ program intpol_test
     deg = 5
     new_y_comp = 1.0d0
     call cpu_time(start)
-    ALLOCATE(intervals(n_points_supersampled))
-    ALLOCATE(y_new_deriv(n_points_supersampled))
 
-    call pre_evaluate_grid(x_data, n_points, x_ss, n_points_supersampled, deg, 1, pre_eval, ierr)
-    !call pre_evaluate_deriv(2, n_points_supersampled, x_ss, info_values, my_knots, intervals, deriv_deBoor_matrix, ierr)
+
+
+    call get_array_sizes(n_points, deg, n_knots, nt, LHS_rows)
+    call de_Boor_size(n_points_supersampled, deg, de_Boor_dim)
+
+    ALLOCATE(knots(n_knots), coeffs(nt), LHS(lhs_rows, nt))
+    ALLOCATE(deBoor_matrix(de_Boor_dim(1), de_Boor_dim(2)))
+    DEALLOCATE(LHS)
+    ALLOCATE(LHS(lhs_rows, nt), RHS(nt), ipiv(nt), intervals(n_points_supersampled))
+
+ 
+
+    call pre_eval_input_grid( &
+        n_points, x_data, deg, &                                ! actual input arguments
+        n_knots, nt, LHS_rows, & ! array sizes of output - formal input arguments
+        nleft, nright, &
+        knots, &
+        LHS, &
+        RHS, &
+        ipiv, &
+        ierr &
+        )
+
+    call get_intervals(n_knots, knots, n_points_supersampled, x_ss, deg, intervals)
+
+    call calc_deBoor(n_knots, knots, n_points_supersampled, x_ss, deg, 0, intervals, deBoor_matrix)
+
     do i=1, repeats
-        call interpolate_fast(n_points, y_data, pre_eval, new_y_comp, coeffs, ierr)
-        !call interpolate_deriv_fast(info_values, n_points_supersampled, intervals, coeffs, deriv_deBoor_matrix, y_new_deriv, ierr)
+        call calc_spline_with_pre_eval(&
+        n_points, deg, &
+        y_data, &
+        n_knots, nt, LHS_rows, &
+        knots, &
+        nleft, nright, &
+        LHS, RHS, ipiv, &
+        coeffs, &
+        ierr)
+
+        call eval_bspline_fast(&
+            deg, nt, n_points_supersampled, &
+            coeffs, &
+            intervals, &
+            deBoor_matrix, &
+            new_y_comp &
+            )
+        
     end do
+
     call cpu_time(finish)
     exec_time = (finish - start)/repeats
     if (ierr.ne.0) then
@@ -135,10 +174,12 @@ program intpol_test
     OPEN(98, file = "y_out_my_5_deriv.csv", STATUS='REPLACE')
     do i=1, n_points_supersampled
         WRITE(99,*) new_y_comp(i)
-        WRITE(98,*) y_new_deriv(i)
+        !WRITE(98,*) y_new_deriv(i)
     end do
     CLOSE(99)
     CLOSE(98)
+
+    
     !DEALLOCATE(my_knots)
     !DEALLOCATE(intervals)
     !DEALLOCATE(LHS, RHS)
