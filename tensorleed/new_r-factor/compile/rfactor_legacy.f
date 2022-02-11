@@ -605,12 +605,17 @@ C  read in calculated energies and intensities (in range EMIN to EMAX)
 
       print*, "theo translated"
 
+      do i = 1, n_beams
+        print*,i,exp_grid(E_start_beams_exp(i)+n_E_beams_exp(i)-1)>
+     *  theo_grid( E_start_beams_theo(i) + n_E_beams_theo(i)-1)
+      end do 
+
       ! **** Prepare ****
 
       CALL translate_evaluation_grid(
      *  real(MAX(EMIN, exp_grid(1),theo_grid(1)), 4), 
      *  real(MIN(EMAX, exp_grid(n_E_exp), theo_grid(n_E_theo)), 4),
-     *  EINCR, VINCR,
+     *  EINCR, VINCR, V0RR, V01, V02,
      *  n_E_out, energies_out, E_step)
 
 
@@ -657,6 +662,24 @@ C  read in calculated energies and intensities (in range EMIN to EMAX)
      * intpol_intensity, intpol_derivative, y_theo, ierr)
 
       print*, "prepare theo success", ierr
+
+      print*, n_E_theo
+      print*, n_E_beams_theo
+
+
+    !   do i = 1, n_beams
+    !     print*, "beam", "exp", "theo", "exp out", "theo out"
+    !     print*, i, exp_grid(E_start_beams_exp(i)), 
+    !  *  theo_grid(E_start_beams_theo(i)), 
+    !  *  energies_out(E_start_beams_out_exp(i)), 
+    !  *  energies_out(E_start_beams_out_theo(i))
+    !     print*, i, exp_grid(E_start_beams_exp(i) + n_E_beams_exp(i) -1), 
+    !  *  theo_grid(E_start_beams_theo(i) + n_E_beams_theo(i) -1), 
+    !  *  energies_out(E_start_beams_out_exp(i) + n_E_beams_out_exp(i)-1), 
+    !  *  energies_out(E_start_beams_out_theo(i)+n_E_beams_out_theo(i)-1)
+    !   end do
+
+
 
       ! **** R Factor ****
 
@@ -721,7 +744,8 @@ C  read in calculated energies and intensities (in range EMIN to EMAX)
       WRITE(7,929) !Header
       do beam = 1, n_beams
         WRITE(7,980) (BENAME(I,beam),I=1,5),beam,D12,best_V0r,EMIN,EMAX,
-     *  n_overlapping_points(beam)*E_step, r_pendry_beams(beam)
+        !Overlapping energy range = (overlapping points -1 )*E_step
+     *  (n_overlapping_points(beam) -1)*E_step, r_pendry_beams(beam)
       end do
 
       ! Unused feature with integer and fractional beams - may implement at a later time
@@ -735,7 +759,7 @@ C  read in calculated energies and intensities (in range EMIN to EMAX)
       ! ENDIF
   
       WRITE(7,9127)  0,D12,best_V0R,EMIN,EMAX,
-     *  sum(n_overlapping_points)*E_step, best_R                        141290
+     *  sum(n_overlapping_points - 1)*E_step, best_R                        141290
      
       WRITE(7,9129) 
       WRITE(9,9130) BGRAV ! file ROUTSHORT

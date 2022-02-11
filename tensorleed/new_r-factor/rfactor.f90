@@ -60,7 +60,7 @@ subroutine r_pendry_beam_y(n_E, E_step, y1, y2, id_start_y1, id_start_y2, n_y1, 
     ! V0r_shift shifts y2 by some number of grid points -> id_start_y2 = id_start_y2 + V0r_shift
     id_min = max(id_start_y1, id_start_y2 + V0r_shift)
     id_max = min(id_start_y1 + n_y1 - 1, id_start_y2 + n_y2 - 1 + V0r_shift)
-
+    
     N_overlapping_points = id_max - id_min + 1
 
     allocate(y_diff(N_overlapping_points), y_squared_sum(N_overlapping_points))
@@ -78,10 +78,7 @@ subroutine r_pendry_beam_y(n_E, E_step, y1, y2, id_start_y1, id_start_y2, n_y1, 
     denominator = trapez_integration_const_dx(y_squared_sum, E_step)
 
     R_pendry = numerator/denominator
-    if (ieee_is_nan(R_pendry)) then
-        print*, "GOt you!!!"
-        print*, y2(id_min + V0r_shift: id_max + V0r_shift)
-    end if
+
     return
 
 end subroutine r_pendry_beam_y
@@ -741,18 +738,13 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
         if (E_grid_in(1) .le. E_grid_out(1)) then
             new_min_index = find_grid_correspondence(E_grid_out(1), n_E_in, E_grid_in, 1)
         else
-            print* , "This should not happen - lower"
-            ierrs(:) = 211
-            RETURN
+            new_min_index = 1
         end if
 
         if (E_grid_in(n_E_in) .ge. E_grid_out(n_E_out)) then
             new_max_index = find_grid_correspondence(E_grid_out(n_E_out), n_E_in, E_grid_in, new_min_index)
         else
-            print* , "This should not happen - upper"
-            ierrs(:) = 211
-            RETURN
-            !id_end = n_E_in
+            new_max_index = n_E_in
         end if
         
 
@@ -837,7 +829,7 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
                 n_E_out, &
                 E_grid_out, &
                 E_start_beams_out(i) &
-            )
+            ) + 1
         beams_max_id_out(i) = E_start_beams_out(i) + n_E_beams_out(i) - 1
     end do
 
@@ -1191,44 +1183,6 @@ end subroutine range_index_from_Energy
 ! end subroutine pre_evaluate_grid_beam
 
 
-! subroutine pre_evaluate_beam_deriv(grid_pre_eval, nu, grid_deriv_pre_eval, ierr)
-!     integer, INTENT(IN) :: nu
-!     type(grid_pre_evaluation), INTENT(IN) :: grid_pre_eval
-
-!     type(deriv_pre_evaluation), INTENT(OUT) :: grid_deriv_pre_eval
-!     integer, INTENT(OUT) :: ierr
-
-!     call pre_evaluate_deriv(grid_pre_eval, nu, grid_deriv_pre_eval, ierr)
-! end subroutine pre_evaluate_beam_deriv
-
-
-! subroutine interpolate_beam(intensity, grid_pre_eval, interpolated_intensity, coeffs, ierr)
-!     type(grid_pre_evaluation), INTENT(IN) :: grid_pre_eval
-!     real(8), INTENT(IN) :: intensity(grid_pre_eval%grid_origin%n)
-
-!     real(8), INTENT(OUT) :: interpolated_intensity(grid_pre_eval%grid_target%n)
-!     integer, INTENT(OUT) :: ierr
-!     real(8), INTENT(INOUT) :: coeffs(grid_pre_eval%infos%nt)
-
-!     real(8), ALLOCATABLE :: coeffs_tmp(:)
-
-!     call interpolate_fast(grid_pre_eval%grid_origin%n, intensity, grid_pre_eval, interpolated_intensity, coeffs_tmp, ierr)
-!     coeffs = coeffs_tmp
-! end subroutine interpolate_beam
-
-! subroutine interpolate_deriv_beam(grid_pre_eval, deriv_pre_eval, coeffs, intensity_deriv, ierr)
-
-!     type(grid_pre_evaluation), INTENT(IN) :: grid_pre_eval
-!     TYPE(deriv_pre_evaluation), INTENT(IN):: deriv_pre_eval
-!     real(8), INTENT(IN) :: coeffs(grid_pre_eval%infos%nt)
-
-!     real(8), INTENT(OUT) :: intensity_deriv(grid_pre_eval%grid_target%n)
-!     integer, INTENT(OUT) :: ierr
-
-!     call interpolate_deriv_fast(grid_pre_eval%infos, grid_pre_eval%grid_target%n, grid_pre_eval%intervals, coeffs, &
-!                                 deriv_pre_eval%deriv_deBoor_matrix, intensity_deriv, ierr)
-!     RETURN
-! end subroutine interpolate_deriv_beam
 
 
 
@@ -1284,24 +1238,33 @@ pure function trapez_integration_const_dx(f, dx) result(integral)
 end function trapez_integration_const_dx
 
 ! Compatibility functions
-subroutine translate_evaluation_grid(EMIN, EMAX, EINCR, VINCR, &
+subroutine translate_evaluation_grid(e_min, e_max, EINCR, VINCR, V0RR, V01, V02, &
     n_E, energies, E_step)
 
-    real(4), INTENT(IN) :: EMIN, EMAX, EINCR, VINCR
+    ! e_min != EMIN, e_max != EMAX
+    real(4), INTENT(IN) :: e_min, e_max, EINCR, VINCR
+    real(4), INTENT(IN) :: V0RR, V01, V02
 
     integer, INTENT(OUT) :: n_E
     real(8), INTENT(OUT), ALLOCATABLE :: energies(:)
     real(8), INTENT(OUT) :: E_step
 
     integer i
+    real(8) :: min_tmp, max_tmp
 
     E_step = real(ABS(MIN(EINCR, VINCR)), 8)
+    ! V01 and V02 need to be considered, because we want to keep extra data for V0r shifts
+    min_tmp = e_min + real(-V0RR + V01, 8)
+    max_tmp = e_max + real(-V0RR + V02, 8) + E_step
 
-    n_E = int((EMAX-EMIN)/E_step)
+    n_E = int((max_tmp - min_tmp)/E_step)
+
     allocate(energies(n_E))
 
+    print*, size(energies)
+
     do i = 1, n_E
-        energies(i) = real(EMIN,8) + (i-1)*E_step
+        energies(i) = min_tmp + (i-1)*E_step
     end do
     RETURN
 end subroutine translate_evaluation_grid
