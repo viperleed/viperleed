@@ -605,10 +605,10 @@ C  read in calculated energies and intensities (in range EMIN to EMAX)
 
       print*, "theo translated"
 
-      do i = 1, n_beams
-        print*,i,exp_grid(E_start_beams_exp(i)+n_E_beams_exp(i)-1)>
-     *  theo_grid( E_start_beams_theo(i) + n_E_beams_theo(i)-1)
-      end do 
+    !   do i = 1, n_beams
+    !     print*,i,exp_grid(E_start_beams_exp(i)+n_E_beams_exp(i)-1)>
+    !  *  theo_grid( E_start_beams_theo(i) + n_E_beams_theo(i)-1)
+    !   end do 
 
       ! **** Prepare ****
 
@@ -649,6 +649,8 @@ C  read in calculated energies and intensities (in range EMIN to EMAX)
       print*, "Prepare experimental success", ierr
 
 
+
+
        ! Prepare Theoretical
 
       CALL prepare_beams(n_beams, n_E_theo, theo_grid, intensities_theo, 
@@ -663,8 +665,6 @@ C  read in calculated energies and intensities (in range EMIN to EMAX)
 
       print*, "prepare theo success", ierr
 
-      print*, n_E_theo
-      print*, n_E_beams_theo
 
 
     !   do i = 1, n_beams
@@ -680,6 +680,13 @@ C  read in calculated energies and intensities (in range EMIN to EMAX)
     !   end do
 
 
+      !Write out intensity
+    !   open(345, file = "new_theo_intensity.csv", status = "new")
+    !   do j = 1, n_E_out
+    !       write(345,*) energies_out(j), intpol_intensity(j,:)/
+    !  *    maxval(intpol_intensity)
+    !   end do 
+    !   close(345)
 
       ! **** R Factor ****
 
@@ -695,8 +702,8 @@ C  read in calculated energies and intensities (in range EMIN to EMAX)
       ALLOCATE(r_pendry_beams(n_beams))
       ALLOCATE(n_overlapping_points(n_beams))
 
-      tol_R =   1 - 1d-4
-      tol_R_2 = 1 - 1d-2
+      tol_R =   1 - 5d-2
+      tol_R_2 = 1 - 5d-2
       max_fit_range = 5
 
       print*, "Starting R factor calculation"
