@@ -67,9 +67,10 @@ union floatOrBytes{
 #define PC_RESET          82    // PC requested a global reset (ASCII 'R')
 #define PC_SET_VOLTAGE    86    // PC requested to set a certain energy (ASCII 'V')
 #define PC_MEASURE_ONLY   77    // PC requested measurement without changing Voltage (ASCII 'M')
-#define PC_CHANGE_MEAS_MODE 109  // PC requested a change between continuous and single measurement mode (ASCII 'm')
+#define PC_CHANGE_MEAS_MODE 109 // PC requested a change between continuous and single measurement mode (ASCII 'm')
 #define PC_STOP          120    // PC requested a stop on all activity. Return to idle (ASCII 'x')
-#define PC_SET_VOLTAGE_ONLY 118  // PC requested set energy without follow up measurement (ASCII 'v')
+#define PC_SET_VOLTAGE_ONLY 118 // PC requested set energy without follow up measurement (ASCII 'v')
+#define PC_SERIAL 115           // PC requested serial number (ASCII 's')
 
 // Error codes
 #define ERROR_NO_ERROR            0   // No error
@@ -117,6 +118,7 @@ byte data_send[MSG_MAX_LENGTH];
 #define STATE_GET_CONFIGURATION    7  // Find current hardware configuration and return it with the firmware version
 #define STATE_CALIBRATE_ADCS       8  // Figure out correct offset and calibration factors for ADCs at all gains.
 #define STATE_ERROR                9  // An error occurred
+#define STATE_SET_SERIAL_NR       10  // Read serial number from EEPROM
 uint16_t currentState = STATE_IDLE;   // Keeps track of the current state
 bool waitingForDataFromPC = false;    // Keeps track of whether we are in a state that is waiting for the PC to send something
 bool continuousMeasurement = false;   // Decides if the Arduino continues to measure and return data or if it stops after doing so once

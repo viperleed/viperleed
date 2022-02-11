@@ -2,21 +2,22 @@
 ViPErLEED - Firmware for Arduino hardware controller
 ---------------------
 Author: Bernhard Mayr, Michael Schmid, Michele Riva, Florian Dörr
-Date: 16.04.2021
+Date: 09.02.2022
 ---------------------
 */
 
 // Libraries
 #include <Arduino.h>
 #include <SPI.h>
+#include <EEPROM.h>
 
 #include "viper-ino.h"   // Arduino-related settings. Includes ADC and DAC
 
 #define DEBUG   false    // Debug mode, writes to serial line, for use in serial monitor
 
-// Firmware version (MAX: v255.255). CURENTLY: v0.3
+// Firmware version (MAX: v255.255). CURENTLY: v0.6
 #define FIRMWARE_VERSION_MAJOR    0  // max 255
-#define FIRMWARE_VERSION_MINOR    5  // max 255
+#define FIRMWARE_VERSION_MINOR    6  // max 255
 
 
 
@@ -97,6 +98,9 @@ void loop() {
         case STATE_CHANGE_MEASUREMENT_MODE:
             changeMeasurementMode();
             break;
+        case STATE_SET_SERIAL_NR:
+            setSerialNr();
+            break;
     }
 }
 
@@ -129,6 +133,7 @@ void updateState() {
         and data_received[0] != PC_STOP
         and data_received[0] != PC_CHANGE_MEAS_MODE
         and data_received[0] != PC_SET_VOLTAGE_ONLY
+        and data_received[0] != PC_SERIAL 
         and hardwareNotKnown()) return;
     
     switch(data_received[0]){
@@ -182,7 +187,12 @@ void updateState() {
             initialTime = millis();
             nextVoltageStep = 0;
             currentState = STATE_SET_VOLTAGE;
-            break;      
+            break;
+        case PC_SERIAL:
+            waitingForDataFromPC = true;
+            initialTime = millis();
+            currentState = STATE_SET_SERIAL_NR;
+            break;
     }
     newMessage = false;
 }
@@ -415,6 +425,7 @@ bool decodeAndCheckMessage(){
         case PC_CHANGE_MEAS_MODE: break;
         case PC_STOP: break;
         case PC_SET_VOLTAGE_ONLY: break;
+        case PC_SERIAL: break;
         default:
             raise(ERROR_MSG_UNKNOWN);
             return false;
@@ -568,7 +579,8 @@ void triggerMeasurements() {
 
 /** Handler of STATE_GET_CONFIGURATION */
 void getConfiguration(){
-    /**Send firmware version and hardware configuration to PC.
+    /**Send firmware version, hardware configuration and serial number to PC.
+    The serial number is read from the EEPROM.
 
     Writes
     -----
@@ -576,9 +588,10 @@ void getConfiguration(){
 
     Msg to PC
     ---------
-    6 data bytes
-        first four are firmware version (M, M, m, m)
-        last two are hardware configuration as bitmask
+    8 data bytes
+        first two are the firmware version (M, m)
+        two are the hardware configuration as bitmask
+        last 4 are the serial number
 
     Goes to state
     -------------
@@ -596,11 +609,16 @@ void getConfiguration(){
     // little-endiam memory layout, i.e., LSB is
     // at lower memory index
     hardwareDetected.asInt = getHardwarePresent();
-    byte configuration[4] = {FIRMWARE_VERSION_MAJOR,
+    byte configuration[8] = {FIRMWARE_VERSION_MAJOR,
                              FIRMWARE_VERSION_MINOR,
                              hardwareDetected.asBytes[1],
                              hardwareDetected.asBytes[0]};
-    encodeAndSend(configuration, 4);
+    int address = 0;
+    while(address <= 3){
+      configuration[address + 4] = EEPROM.read(address);
+      address += 1;
+    }
+    encodeAndSend(configuration, 8);
     hardwareNeverChecked = false;    
     currentState = STATE_IDLE;
 }
@@ -1926,6 +1944,61 @@ bool hardwareNotKnown(){
         return true;
     }
     return false;
+}
+
+void setSerialNr() {
+   /**
+    Writes the assigned serial number to the EEPROM.
+
+    Reads
+    -----
+    data_received
+
+    Msg to PC
+    ---------
+    PC_OK
+
+    Goes to state
+    -------------
+    STATE_ERROR : ERROR_RUNTIME
+        If this function is not called within STATE_SET_SERIAL_NR
+    STATE_ERROR : ERROR_MSG_DATA_INVALID
+        If the sent serial number is not 4 bytes long
+    STATE_ERROR : ERROR_TIMEOUT
+        If more than 5s pass between the PC_SERIAL message
+        and the receipt of data
+    STATE_IDLE
+        Successfully finished
+    **/
+    if (currentState != STATE_SET_SERIAL_NR){
+        raise(ERROR_RUNTIME);
+        return;
+    }
+    
+    if (not newMessage){  // waiting for data from the PC
+        checkIfTimedOut();
+        return;
+    }
+
+    // Data has arrived
+    waitingForDataFromPC = false;
+    newMessage = false;
+    
+    // Check that we got 4 bytes for the serial number.
+    if (msgLength != 4){
+        raise(ERROR_MSG_DATA_INVALID);
+        return;
+    }
+
+    int address = 0;
+    while(address <= 3){
+      EEPROM.update(address, data_received[address]);
+      address += 1;
+    }
+    // Serial number is stored on EEPROM bytes with addresses 0 to 3.
+
+    encodeAndSend(PC_OK);
+    currentState = STATE_IDLE;
 }
 
 /** -------------------------- ARDUINO UTILITIES --------------------------- **/
