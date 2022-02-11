@@ -9,7 +9,7 @@ error_codes = {
     10: "",
     # 2 ... prepare_beams
     # 21.. limit range
-    211: "???",
+    # 211: "???", # removed
     212: "???",
     # 22 ... averaging
     220: "given n_beams_out > n_beams",
