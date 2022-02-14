@@ -857,8 +857,8 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
 
     def __on_bytes_ready_to_read(self):
         """Read the message(s) received."""
-        self.__stop_timer.emit()
         if self.__got_unacceptable_response:
+            self.__stop_timer.emit()
             return
 
         msg = bytes(self.__port.readAll())
@@ -866,6 +866,8 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             # Only a fraction of a message has been read.
             self.__last_partial_message.extend(msg)
             return
+
+        self.__stop_timer.emit()
 
         head, *messages, tail = msg.split(self.msg_markers['END'])
         messages.insert(0, self.__last_partial_message + head)

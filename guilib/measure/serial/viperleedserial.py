@@ -107,7 +107,6 @@ class ViPErLEEDSerial(SerialABC):
 
         self.__last_request_sent = ''
         self.__measurements = []
-        self.__is_continuous_mode = False
         self.__changed_mode = False
 
         self._mandatory_settings.extend((
@@ -145,8 +144,7 @@ class ViPErLEEDSerial(SerialABC):
         # Iterate through message and add special bytes up
         for index, value in enumerate(msg_data):
             if value == special_byte:
-                msg_data[index] += msg_data[index+1]
-                msg_data.pop(index + 1)
+                msg_data[index] += msg_data.pop(index + 1)
         msg_to_check = bytearray((msg_length, *msg_data))
         if not self.is_decoded_message_acceptable(msg_to_check):
             return bytearray()
@@ -398,12 +396,6 @@ class ViPErLEEDSerial(SerialABC):
                 )
         change_mode = self.port_settings.get('available_commands',
                                              'PC_CHANGE_MEAS_MODE')
-        if command == change_mode:
-            # Continuous measurement is the only thing we have to check
-            # as it will potentially spam us with a lot of measurements
-            # so we should react appropriately
-            # print(f"{data[0][0]=} and {data[0]=}")
-            self.__is_continuous_mode = bool(data[0][0])
 
         if command != change_mode:
             self.__last_request_sent = command
@@ -556,8 +548,6 @@ class ViPErLEEDSerial(SerialABC):
                         continue
                     self.data_received.emit(self.__measurements.copy())
                     self.__measurements = []
-                elif self.__is_continuous_mode:
-                    pass
             elif len(message) == 8:
                 if self.__last_request_sent == pc_configuration:
                     firmware, hardware = self.__firmware_and_hardware(message)
