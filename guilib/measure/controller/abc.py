@@ -99,7 +99,6 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
             settings file.
         """
         super().__init__()
-        settings = None
         self.__sets_energy = sets_energy
         self.__settings = None
         self.__serial = None
@@ -533,10 +532,9 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
             )
         return config
 
-    # @abstractmethod
+    @abstractmethod
     def list_devices(self):
         """List all devices of this class."""
-                                                                                #TODO: implement in subclass
         return
 
     def disconnect_(self):
