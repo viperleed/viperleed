@@ -128,7 +128,6 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         self.force_return_timer.setSingleShot(True)
         self.force_return_timer.timeout.connect(self.return_to_gui)
 
-
         if self.__init_errors:
             self.__init_err_timer.start(20)
         self.error_occurred.disconnect(self.__on_init_errors)

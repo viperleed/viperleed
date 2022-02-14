@@ -313,10 +313,10 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                               ctrl.measurement_interval)
             quantity = ctrl.measured_quantities[0]
             n_measurements = len(self[-1][quantity][ctrl])
-            self[-1][time][ctrl] = (
-                first_time
-                + ctrl.measurement_interval * np.arange(n_measurements)
-                )
+            self[-1][time][ctrl] = [
+                first_time + ctrl.measurement_interval * i
+                for i in range(n_measurements)
+                ]
 
     def get_energy_resolved_data(self, *quantities):
         """Return energy resolved data for each controller.
@@ -583,10 +583,10 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
             first_time = ctrl_times[0]
             quantity = ctrl.measured_quantities[0]
             n_measurements = len(self[-1][quantity][ctrl])
-            self[-1][QuantityInfo.TIMES][ctrl] = (
-                first_time
-                + ctrl.measurement_interval * np.arange(n_measurements)
-                )
+            self[-1][QuantityInfo.TIMES][ctrl] = [
+                first_time + ctrl.measurement_interval * i
+                for i in range(n_measurements)
+                ]
 
     def save_data(self, csv_name):
         """Save data to file.
