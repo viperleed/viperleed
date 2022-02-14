@@ -238,19 +238,19 @@ class AboutViPErLEED(qtw.QWidget):
         layout.setSpacing(20)
         max_width = 600
         papers = (
-            'X. Y, X. Y, and X. Y, ViPErLEED I, <I>Journal</I> <B>Vol</B>,'
-            'pages (2021).',
-            'X. Y, X. Y, and X. Y, ViPErLEED II, <I>Journal</I> <B>Vol</B>,'
-            'pages (2021).',
-            'X. Y, X. Y, and X. Y, ViPErLEED III, <I>Journal</I> <B>Vol</B>,'
-            'pages (2021).',
+            'X. Y, X. Y, and X. Y, ViPErLEED I, <I>Journal</I> <B>Vol</B>, '
+            'pages (2022).',
+            'X. Y, X. Y, and X. Y, ViPErLEED II, <I>Journal</I> <B>Vol</B>, '
+            'pages (2022).',
+            'X. Y, X. Y, and X. Y, ViPErLEED III, <I>Journal</I> <B>Vol</B>, '
+            'pages (2022).',
             )
         contrib = ('Michele Riva', 'Florian Kraushofer', 'Michael Schmid',
                    'Lutz Hammer', 'Tilman Ki\u00dflinger', 'Florian D\u00f6rr',
                    'Bernhard Mayr',)
 
         txt = qtw.QLabel(
-            'Copyright (2019\u22122021) ViPErLEED Team<p>'
+            'Copyright (2019\u22122022) ViPErLEED Team<p>'
             '<p>ViPErLEED (i.e., the Vienna Package for Erlangen LEED) is an '
             'open-source project that aims at making LEED-I(V) accessible to '
             'the broad scientific community for solving surface structures.<p>'
@@ -268,7 +268,7 @@ class AboutViPErLEED(qtw.QWidget):
             '<a href="https://www.gnu.org/licenses/gpl-3.0">version 3</a>'
             ' or later.<p>Bugs can be reported using the GitHub '
             '<a href="https://github.com/viperleed/viperleed/issues">Issues'
-            '</a> or via email (<a href="mailto:riva@iap.tuwien.ac.at>'
+            '</a> or via email (<a href="mailto:riva@iap.tuwien.ac.at">'
             'riva@iap.tuwien.ac.at</a>).<p>ViPErLEED is developed as a '
             'collaboration between the Surface Physics group at the '
             '<a href="https://www.iap.tuwien.ac.at/www/surface/index">'

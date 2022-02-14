@@ -134,9 +134,7 @@ class MeasureEnergySetpoint(MeasurementABC):
         None
         """
         data, nominal_energies = (
-            self.data_points.get_energy_resolved_data(
-                QuantityInfo.HV, include_energies=True
-                )
+            self.data_points.get_energy_resolved_data(QuantityInfo.HV)
             )
         measured_energies = []
         for ctrl, measurements in data.items():

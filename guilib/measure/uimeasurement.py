@@ -321,9 +321,10 @@ class Measure(gl.ViPErLEEDPluginBase):
         if not csv_name:
             return
         data = DataPoints()
+        data.error_occurred.connect(self.error_occurred)
         try:
             data.read_data(csv_name)
-        except RuntimeError as err:
+        except RuntimeError as err:                                             # TODO: may want to make it also an error_occurred?
             qtw.QMessageBox.critical(self, "Error", str(err),
                                      qtw.QMessageBox.Ok)
 

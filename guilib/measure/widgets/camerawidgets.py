@@ -12,6 +12,7 @@ Author: Michele Riva
 """
 
 import weakref
+from copy import deepcopy
 
 import numpy as np
 
@@ -24,19 +25,15 @@ from viperleed.guilib.widgetslib import screen_fraction
 
 
 # TODO: ImageViewer.optimum_size is not updated when screen is changed
-# BUG: ROI behaves weirdly on rescaling window (e.g.: maximize,
-#      or reopen with a ROI already present)
-# BUG: ROI behaves weirdly when dragging from right to left due
-#      to minimum sizes. Improve by doing something like in
-#      rect.normalized(), but better (probably fixing bottom-right
-#      corner rather then top-left?)
-# BUG: Limit roi size while drawing the first time
 # TODO: ROI show size in image coordinates as it is resized (tooltip?)
 # TODO: ROI context menu: precisely set with coordinates
-# TODO: context -- snap image
-# TODO: image size in title bar : "-- wxh [<if roi>/w_fullxh_full]"
+# TODO: context -- snap image, properties
 
 
+# pylint: disable=too-many-instance-attributes
+# Disabled because pylint counts also class attributes, but
+# pyqtSignals cannot be grouped into a container like other
+# attributes and returned as @property.
 class CameraViewer(qtw.QScrollArea):
     """Class for displaying camera frames with scroll bars.
 
@@ -283,6 +280,11 @@ class CameraViewer(qtw.QScrollArea):
 
     def changeEvent(self, event):  # pylint: disable=invalid-name
         """Extend changeEvent to react to window maximization."""
+        # Keep track of quantities for later adjusting the ROI
+        old_scaling = self.__img_view.image_scaling
+        old_roi_size = self.roi.size()
+        old_roi_pos = self.roi.pos()
+
         if event.type() == event.WindowStateChange:
             was_maximized = event.oldState() & qtc.Qt.WindowMaximized
             if not was_maximized and self.isMaximized():
@@ -296,6 +298,14 @@ class CameraViewer(qtw.QScrollArea):
                 # scale it to optimum (i.e., same as after shown)
                 self.__img_view.scale_to_optimum()
                 self.adjustSize()
+
+            by_factor = self.__img_view.image_scaling / old_scaling
+            if abs(by_factor - 1) > 1e-3:
+                # Image has been scaled. Adjust also the ROI.
+                new_roi = qtc.QRect(by_factor * old_roi_pos,
+                                    by_factor * old_roi_size)
+                self.roi.setGeometry(new_roi)
+
         super().changeEvent(event)
 
     def closeEvent(self, event):  # pylint: disable=invalid-name
@@ -386,16 +396,10 @@ class CameraViewer(qtw.QScrollArea):
                 or self.__mouse_button == qtc.Qt.RightButton):
             super().mouseMoveEvent(event)
             return
-        roi_pos = self.roi.parent().mapFromGlobal(event.globalPos())
-        new_roi = qtc.QRect(self.roi.origin, roi_pos).normalized()
-        if event.modifiers() & qtc.Qt.ShiftModifier:
-            # Make square region
-            new_side = min(new_roi.width(), new_roi.height())
-            min_side = max(*self.roi.minimum)*self.roi.image_scaling
-            new_side = round(max(min_side, new_side))
-            new_roi.setWidth(new_side)
-            new_roi.setHeight(new_side)
-        self.roi.setGeometry(new_roi)
+        mouse_pos = self.roi.parent().mapFromGlobal(event.globalPos())
+        self.roi.setGeometry(
+            qtc.QRect(self.roi.origin, mouse_pos)
+            )
 
     def mousePressEvent(self, event):  # pylint: disable=invalid-name
         """Reimplement mousePressEvent to begin drawing a ROI."""
@@ -533,14 +537,14 @@ class CameraViewer(qtw.QScrollArea):
 
         # Give the camera new, updated settings. This is the easier way
         # to go, as it will update all the information in the camera.
-        settings = self.__camera.settings
+        settings = deepcopy(self.__camera.settings)
         settings.set("camera_settings", "roi",
                      f"({old_roi_x + new_roi_x}, {old_roi_y + new_roi_y}, "
                      f"{roi_w}, {roi_h})")
+        was_running = self.__camera.is_running
         self.__camera.settings = settings
 
         # Remove the rubber-band, and restart the camera.
-        was_running = self.__camera.is_running
         self.roi.hide()
         if was_running:
             self.__camera.start()
@@ -555,6 +559,23 @@ class CameraViewer(qtw.QScrollArea):
         self.adjustSize()
         self.setWindowTitle(self.__camera.name)
         self.__compose_context_menu()
+
+    def __update_title(self):
+        """Update the window title with camera information."""
+        img_w, img_h = self.image_size.width(), self.image_size.height()
+        full_w, full_h = self.__camera.sensor_size
+
+        img_size = f"{img_w}x{img_h}"
+        if img_w != full_w or img_h != full_h:
+            img_size += f" of {full_w}x{full_h}"
+        try:
+            scale = self.windowTitle().split(' - ')[1]
+        except IndexError:
+            scale = ""
+        title = f"{self.__camera.name} ({img_size})"
+        if scale:
+            title += f" - {scale}"
+        self.setWindowTitle(title)
 
     def __compose_context_menu(self):
         """Set up the context menu."""
@@ -587,6 +608,7 @@ class CameraViewer(qtw.QScrollArea):
 
     def __connect(self):
         """Connect signals."""
+        self.image_size_changed.connect(self.__update_title)
         self.__img_view.image_scaling_changed.connect(self.__on_image_scaled)
         self.__camera.started.connect(self.__on_camera_started)
         self.customContextMenuRequested.connect(self.__show_context_menu)
@@ -708,6 +730,7 @@ class CameraViewer(qtw.QScrollArea):
             if screen_fraction(self, img_size) < 0.1:
                 return
             self.scale_image(0.8)
+# pylint: enable=too-many-instance-attributes
 
 
 class ImageViewer(qtw.QLabel):
@@ -1060,14 +1083,52 @@ class RegionOfInterest(qtw.QWidget):
         event.accept()
     # pylint: enable=invalid-name,no-self-use
 
-    def resizeEvent(self, __event):  # pylint: disable=invalid-name
+    def resizeEvent(self, event):  # pylint: disable=invalid-name
         """Reimplement to resize the rubber-band."""
         self.__rubberband.resize(self.__normalized_size(self.size()))
+        super().resizeEvent(event)
 
-    def setGeometry(self, new_rect):  # pylint: disable=invalid-name
+    # pylint: disable=invalid-name
+    def setGeometry(self, new_rect):
         """Reimplement setGeometry to edit sizes according to increments."""
-        new_rect.setSize(self.__normalized_size(new_rect.size()))
+        # Make sure the new rectangle does not exceed the parent
+        # frame. This has to be done on a 'normalized' rectangle
+        # with left() < right() and top() < bottom()
+        new_size = new_rect.size()
+        parent = self.parentWidget()
+        if parent:
+            norm_rect = new_rect.normalized()
+            new_left = max(0, norm_rect.left())
+            new_right = min(norm_rect.right(), parent.width())
+            new_top = max(0, norm_rect.top())
+            new_bottom = min(norm_rect.bottom(), parent.height())
+            norm_rect.setLeft(new_left)
+            norm_rect.setRight(new_right)
+            norm_rect.setTop(new_top)
+            norm_rect.setBottom(new_bottom)
+            new_size.setWidth(norm_rect.width() * np.sign(new_size.width()))
+            new_size.setHeight(norm_rect.height() * np.sign(new_size.height()))
+
+        # Force the size to minimum and maximum constraints
+        # as well as to minimum increments in both directions
+        new_rect.setSize(self.__normalized_size(new_size))
+
+        # Swap top/left/bottom/right in case the rectangle
+        # has width()/height() < 0.
+        new_rect = new_rect.normalized()
+
+        # Check again that new_rect fits the parent. This time,
+        # however, keep the size constant and rather translate
+        # the rectangle.
+        if parent:
+            new_x = max(0, new_rect.left())
+            new_x -= max(new_x + new_rect.width() - parent.width(), 0)
+            new_y = max(0, new_rect.top())
+            new_y -= max(new_y + new_rect.height() - parent.height(), 0)
+            new_rect.translate(new_x - new_rect.x(), new_y - new_rect.y())
+
         super().setGeometry(new_rect)
+    # pylint: enable=invalid-name
 
     def scale(self, delta_scale):
         """Resize by delta_scale increments, in image coordinates."""
@@ -1130,7 +1191,8 @@ class RegionOfInterest(qtw.QWidget):
     def __normalized_size(self, size):
         """Return a size that fits with increments."""
         # Make sure size is within limits
-        width, height = size.width(), size.height()
+        signed_width, signed_height = size.width(), size.height()
+        width, height = abs(signed_width), abs(signed_height)
         min_w, min_h = (m * self.image_scaling for m in self.minimum)
         max_w, max_h = (m * self.image_scaling for m in self.maximum)
 
@@ -1142,8 +1204,8 @@ class RegionOfInterest(qtw.QWidget):
         width = min_w + round((width - min_w)/min_dx) * min_dx
         height = min_h + round((height - min_h)/min_dy) * min_dy
 
-        size.setWidth(round(width))
-        size.setHeight(round(height))
+        size.setWidth(round(width) * np.sign(signed_width))
+        size.setHeight(round(height) * np.sign(signed_height))
         return size
 
     def __show_context_menu(self, position):

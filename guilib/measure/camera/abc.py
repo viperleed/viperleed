@@ -8,6 +8,11 @@ Created: 2021-07-12
 Author: Michele Riva
 Author: Florian Doerr
 
+Defines the abstract functionality for all cameras that should
+be supported by ViPErLEED. This includes error codes/messages
+relative to the cameras (CameraErrors class) and the abstract
+base-class CameraABC. All classes handling cameras should be
+concrete subclasses of CameraABC.
 """
 
 from abc import abstractmethod
@@ -53,6 +58,10 @@ class CameraErrors(base.ViPErLEEDErrorEnum):
                             "interest to ({} x {}). A few pixels on the "
                             "lower-right corner may be removed.")
     UNSUPPORTED_WHILE_BUSY = (207, "Cannot {} while camera is busy.")
+    TIMEOUT = (208,   # Only in triggered mode
+               "No frames returned by camera {} in the last {} seconds. "
+               "Check that the camera is plugged in and powered. If it "
+               "is, try rebooting the camera.")
 
 
 class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
@@ -141,13 +150,25 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         self.__busy = False
         self.__settings = None
         self.__bad_pixels = None
+        self.__timeout = qtc.QTimer(parent=self)
+        self.__timeout.setSingleShot(True)
+        self.__timeout.timeout.connect(self.__on_timed_out)
+
+        # Keep track of some errors that we want to report
+        # only once. This 'list' is cleared every time a
+        # camera is disconnected.
+        self.__reported_errors = set()
 
         self.process_info = ImageProcessInfo()
         self.process_info.camera = self
-        self.__process_thread = qtc.QThread()
         self.__image_processors = []
+        self.__process_thread = qtc.QThread()
+        self.__retry_stop_timer = qtc.QTimer(parent=self)
+        self.__retry_stop_timer.setSingleShot(True)
+        self.__retry_stop_timer.timeout.connect(self.__stop_now_or_retry)
+
         self.__init_errors = []  # Report these with a little delay
-        self.__init_err_timer = qtc.QTimer(self)
+        self.__init_err_timer = qtc.QTimer(parent=self)
         self.__init_err_timer.setSingleShot(True)
 
         self.error_occurred.connect(self.__on_init_errors)
@@ -155,10 +176,6 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
 
         # Number of frames accumulated for averaging
         self.n_frames_done = 0
-
-        self.processor_stop_timer = qtc.QTimer()
-        self.processor_stop_timer.setSingleShot(True)
-        self.processor_stop_timer.setParent(self)
 
         try:
             self.set_settings(settings)
@@ -428,15 +445,25 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             _, (max_roi_w, max_roi_h), _ = self.get_roi_size_limits()
             return 0, 0, max_roi_w, max_roi_h
 
-        # See if the roi width and height fit with the binning factor
+        # See if the ROI width and height fit with the binning factor
         *roi_offsets, roi_w, roi_h = roi
         if roi_w % self.binning or roi_h % self.binning:
-            new_roi_w = (roi_w // self.binning)*self.binning
-            new_roi_h = (roi_h // self.binning)*self.binning
-            base.emit_error(self, CameraErrors.BINNING_ROI_MISMATCH,
-                            roi_w, roi_h, self.binning, new_roi_w, new_roi_h)
-            roi = (*roi_offsets, new_roi_w, new_roi_h)
-            self.settings.set('camera_settings', 'roi', str(roi))
+            new_roi_w = (roi_w // self.binning) * self.binning
+            new_roi_h = (roi_h // self.binning) * self.binning
+            error = (CameraErrors.BINNING_ROI_MISMATCH,
+                     roi_w, roi_h, self.binning, new_roi_w, new_roi_h)
+            if not self.__already_reported(error):
+                emit_error(self, *error)
+                self.__reported_errors.add(error)
+            # Update the ROI in the settings only if the
+            # new ROI is a valid one for the camera. The
+            # image processor will anyway crop off the
+            # extra pixels on the lower-right corner of
+            # the image to apply binning.
+            new_roi = (*roi_offsets, new_roi_w, new_roi_h)
+            if self.__is_valid_roi(new_roi):
+                self.settings.set('camera_settings', 'roi', str(new_roi))
+                roi = new_roi
         return roi
 
     @property
@@ -587,6 +614,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
 
     def disconnect(self):
         """Disconnect the device."""
+        self.__reported_errors = set()
         self.stop()
         self.close()
 
@@ -801,6 +829,23 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         -------
         min_exposure, max_exposure : float
             Shortest and longest exposure times in milliseconds
+        """
+        return
+
+    @abstractmethod
+    def get_frame_rate(self):
+        """Return the number of frames delivered per second.
+
+        This property should be reimplemented in concrete
+        subclasses. Notice that this may be smaller than
+        1000/self.exposure, as a camera may take longer than
+        self.exposure to transmit back large images acquired
+        with short exposure.
+
+        Returns
+        -------
+        frame_rate : float
+            Number of frames delivered per second.
         """
         return
 
@@ -1096,6 +1141,12 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
     def stop(self):
         """Stop the camera.
 
+        The camera may not be immediately stopped if there is any
+        image processing currently running. In this case, stopping
+        will be attempted multiple times with a 100 ms interval.
+        Once the camera has effectively stopped, the .stopped()
+        signal is emitted.
+
         This method should be extended in concrete subclasses, i.e.,
         super().stop() must be called in the reimplementation.
 
@@ -1103,22 +1154,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         -------
         None.
         """
-        self.process_info.clear_times()
-        self.n_frames_done = 0
-        self.busy = False
-
-        if self.__process_thread.isRunning():
-            if any(processor.busy for processor in self.__image_processors):
-                self.processor_stop_timer.start(100)
-                self.processor_stop_timer.connect(self.retry_stop)
-                return
-            self.__process_thread.quit()
-        try:
-            self.frame_ready.disconnect(self.__on_frame_ready)
-        except TypeError:
-            # Already disconnected
-            pass
-        self.stopped.emit()
+        self.__stop_now_or_retry()
 
     @abstractmethod
     def trigger_now(self):
@@ -1151,6 +1187,26 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
 
         if self.supports_trigger_burst:
             self.process_info.clear_times()
+
+        # Start the timeout timer: will fire if it takes
+        # more than 5 s longer than the expected time to
+        # receive all frames needed for averaging.
+        frame_time = max(self.exposure, 1000/self.get_frame_rate())
+        self.__timeout.start(frame_time * self.n_frames + 5000)
+
+    def __already_reported(self, error_details):
+        """Return whether an error was already reported.
+
+        Parameters
+        ----------
+        error_details : tuple
+            The error to be checked. Typically the first element
+            is a ViPErLEEDErrorEnum. The following entries are
+            parameters of the specific error. They should be
+            given only in case a specific error with certain
+            specific values of the parameters should be checked.
+        """
+        return error_details in self.__reported_errors
 
     def __is_valid_roi(self, roi):
         """Check that ROI is OK and fits with limits.
@@ -1220,6 +1276,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         else:
             # All frames are done
             self.busy = False
+            self.__timeout.stop()
 
     def __on_image_saved(self):
         """React to an image being saved."""
@@ -1243,24 +1300,34 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         """Collect initialization errors to report later."""
         self.__init_errors.append(err)
 
+    def __on_timed_out(self):
+        """Report a timeout error while in triggered mode."""
+        emit_error(self, CameraErrors.TIMEOUT, self.name, 5)
+
     def __report_init_errors(self):
         """Emit error_occurred for each initialization error."""
         for error in self.__init_errors:
             self.error_occurred.emit(error)
         self.__init_errors = []
 
-    def retry_stop(self):
-        """Retry stopping the camera.
-
-        Returns
-        -------
-        None.
-        """
-        if any(processor.busy for processor in self.__image_processors):
-            self.processor_stop_timer.start(100)
+    def __stop_now_or_retry(self):
+        """Stop camera if image processing is over."""
+        # Delay the stopping as long as there are image
+        # processors that have not finished their tasks
+        if (self.__process_thread.isRunning()
+                and any(p.busy for p in self.__image_processors)):
+            if not self.__retry_stop_timer.isActive():
+                self.__retry_stop_timer.start(100)
             return
-        self.processor_stop_timer.disconnect()
-        self.__process_thread.quit()
+
+        # Now it is safe to clean up and stop
+        self.__retry_stop_timer.stop()
+        self.process_info.clear_times()
+        self.n_frames_done = 0
+        self.busy = False
+        if self.__process_thread.isRunning():
+            self.__process_thread.quit()
+
         try:
             self.frame_ready.disconnect(self.__on_frame_ready)
         except TypeError:

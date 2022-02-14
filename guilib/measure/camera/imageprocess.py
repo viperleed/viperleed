@@ -335,6 +335,7 @@ class ImageProcessor(qtc.QObject):
         self.image_processed.emit(data)
         fname = self.process_info.filename
         if not fname:
+            self.busy = False
             return
 
         fname = Path(self.process_info.base_path) / fname
