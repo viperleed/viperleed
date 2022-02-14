@@ -28,7 +28,7 @@ for import_path in (cd, vpr_path):
     if import_path not in sys.path:
         sys.path.append(import_path)
 
-from viperleed.guilib.measure import ViPErLEEDSerial
+from viperleed.guilib.measure.serial.viperleedserial import ViPErLEEDSerial
 
 TIMEOUT = 30000  # milliseconds
 
