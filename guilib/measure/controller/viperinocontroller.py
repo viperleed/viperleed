@@ -48,8 +48,7 @@ class ViPErinoErrors(ViPErLEEDErrorEnum):
 class ViPErinoController(MeasureControllerABC):
     """Controller class for the ViPErLEED Arduino Micro."""
 
-    # def __init__(self, settings=None, port_name='', sets_energy=False):
-    def __init__(self, settings, port_name='', sets_energy=False):
+    def __init__(self, settings=None, port_name='', sets_energy=False):
         """Initialise ViPErino controller object.
 
         Initialise prepare_todos dictionaries. The key is a
@@ -80,7 +79,8 @@ class ViPErinoController(MeasureControllerABC):
             If no port_name is given, and none was present in the
             settings file.
         """
-        super().__init__(settings, port_name=port_name, sets_energy=sets_energy)
+        super().__init__(settings=settings, port_name=port_name,
+                         sets_energy=sets_energy)
         # Initialise dictionaries for the measurement preparation.
         self.begin_prepare_todos['get_hardware'] = True
         self.begin_prepare_todos['calibrate_adcs'] = True
@@ -343,6 +343,8 @@ class ViPErinoController(MeasureControllerABC):
         -------
         None.
         """
+        if not self.settings:
+            return
         measurement_devices = ast.literal_eval(
             self.settings['controller']['measurement_devices']
             )
@@ -404,9 +406,12 @@ class ViPErinoController(MeasureControllerABC):
         -------
         None.
         """
-        stop = self.settings.get('available_commands', 'pc_stop')
-        super().stop()
-        self.send_message(stop)
+        try:
+            stop = self.settings.get('available_commands', 'pc_stop')
+            super().stop()
+            self.send_message(stop)
+        except AttributeError:
+            return
 
     @property
     def measurement_interval(self):

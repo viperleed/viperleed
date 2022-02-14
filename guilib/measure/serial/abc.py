@@ -185,7 +185,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         self.__stop_timer.connect(self.__timeout.stop)
 
         self.__open = False
-        
+
         self.time_stamp = None
 
         if self.__init_errors:
@@ -745,9 +745,13 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         -------
         None.
         """
+        if not self.__open:
+            emit_error(self, ExtraSerialErrors.PORT_NOT_OPEN)
+            return
+
         sent_command = message
         all_messages = (message, *other_messages)
-        if not self.__open or not self.is_message_supported(all_messages):
+        if not self.is_message_supported(all_messages):
             return
 
         self.__got_unacceptable_response = False

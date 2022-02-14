@@ -18,6 +18,8 @@ from abc import abstractmethod
 import ast
 from configparser import ConfigParser
 from time import localtime, strftime
+import inspect
+from pathlib import Path
 
 from PyQt5 import QtCore as qtc
 
@@ -27,6 +29,11 @@ from viperleed.guilib.measure.hardwarebase import (
     config_has_sections_and_options, class_from_name
     )
 from viperleed.guilib.measure.datapoints import DataPoints
+from viperleed.guilib import measure as vpr_measure
+
+
+SYSTEM_CONFIG_PATH = (Path(inspect.getfile(vpr_measure)).parent
+                       / '_defaults/_system_settings.ini')
 
 
 class MeasurementErrors(ViPErLEEDErrorEnum):
@@ -212,10 +219,20 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             return
 
         self.__settings = new_settings
+        
+        sys_config = ConfigParser()
+        sys_config, invalid = config_has_sections_and_options(
+            self,
+            SYSTEM_CONFIG_PATH,
+            [('settings', 'configuration_path'),]
+            )
+        device_config_path = sys_config.get('settings', 'configuration_path')
 
         # Instantiate primary controller class
         primary_config, primary_measures = ast.literal_eval(
             self.__settings.get('devices', 'primary_controller'))
+        primary_config = primary_config.replace('__CONFIG__',
+                                                device_config_path)
         self.primary_controller = self.__make_controller(primary_config,
                                                          is_primary=True)
         self.primary_controller.what_to_measure(primary_measures)
@@ -228,6 +245,8 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
                 )
              )
         for secondary_config, secondary_measures in secondary_set:
+            secondary_config = secondary_config.replace('__CONFIG__',
+                                                        device_config_path)
             ctrl = self.__make_controller(secondary_config, is_primary=False)
             ctrl.what_to_measure(secondary_measures)
             self.threads.append(qtc.QThread())
@@ -245,6 +264,8 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
                  )
              )
         for camera_settings in camera_set:
+            camera_settings = camera_settings.replace('__CONFIG__',
+                                                      device_config_path)
             cameras.append(self.__make_camera(camera_settings))
         self.cameras = cameras
         path = self.settings.get('measurement_settings', 'save_here')
@@ -512,10 +533,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         for controller in self.secondary_controllers:
             if not controller:
                 continue
-            try:
-                controller.serial.serial_disconnect()
-            except TypeError:
-                pass
+            controller.disconnect_()
             try:
                 controller.data_ready.disconnect(self.receive_from_controller)
             except TypeError:
@@ -550,10 +568,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         primary = self.primary_controller
         if primary is None:
             return
-        try:
-            primary.serial.serial_disconnect()
-        except TypeError:
-            pass
+        primary.disconnect_()
         try:
             primary.data_ready.disconnect()
         except TypeError:
