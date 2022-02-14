@@ -19,7 +19,14 @@ from pathlib import Path
 import enum
 import sys
 
-from PyQt5 import QtCore as qtc
+from PyQt5 import (QtWidgets as qtw, QtCore as qtc)
+
+from viperleed.guilib import measure as vpr_measure
+
+
+DEFAULT_CONFIG_PATH = (Path(inspect.getfile(vpr_measure)).parent
+                       / '_defaults')
+
 
 ################################## FUNCTIONS ##################################
 
@@ -149,20 +156,20 @@ def config_has_sections_and_options(caller, config, mandatory_settings):
         elif len(setting) == 1:
             # (<section>,)
             if not config.has_section(setting[0]):
-                invalid_settings.append(setting)
+                invalid_settings.append(setting[0])
                 continue
         elif len(setting) in (2, 3):
             # (<section>, <option>) or (<section>, <option>, <admissible>)
             section, option = setting[:2]
             if not config.has_option(section, option):
-                invalid_settings.append(setting)
+                invalid_settings.append("/".join(setting))
                 continue
             if len(setting) == 3:
                 # (<section>, <option>, <admissible>)
                 admissible_values = setting[2]
                 value = config.get(section, option)
                 if value not in admissible_values:
-                    invalid_settings.append(setting)
+                    invalid_settings.append("/".join(setting))
 
     if invalid_settings:
         config = None
@@ -214,6 +221,62 @@ def emit_error(sender, error, *msg_args, **msg_kwargs):
     error_msg = error_msg.format(*msg_args, **msg_kwargs)
     sender.error_occurred.emit((error_code, error_msg))
 
+
+def get_device_config(device_name, directory=DEFAULT_CONFIG_PATH,
+                      parent_widget=None, prompt_if_invalid=True):
+    """Return the configuration file for a specific device."""
+    directory = Path(directory)
+    config_files = [f for f in directory.glob('**/*')
+                    if f.is_file() and f.suffix == '.ini']
+    device_config_files = []
+    for config_name in config_files:
+        with open(config_name, 'r') as config_file:
+            if device_name in config_file.read():
+                device_config_files.append(config_name)
+
+    if device_config_files and len(device_config_files) == 1:
+        # Found exactly one config file
+        return device_config_files[0]
+
+    if not prompt_if_invalid:
+        return None
+
+    if not device_config_files:
+        msg_box = qtw.QMessageBox(parent=parent_widget)
+        msg_box.setWindowTitle("No settings file found")
+        msg_box.setText(
+            f"Directory {directory} and its subfolders do not contain "
+            f"any settings file for device {device_name}. Select "
+            "a different directory."
+            )
+        msg_box.setIcon(msg_box.Critical)
+        msg_box.addButton(msg_box.Cancel)
+        btn = msg_box.addButton("Select path", msg_box.ActionRole)
+        msg_box.exec_()
+        if msg_box.clickedButton() is btn:
+            new_path = qtw.QFileDialog.getExistingDirectory(
+                parent=parent_widget,
+                caption="Choose directory of device settings",
+                directory=str(directory)
+                )
+            if new_path:
+                return get_device_config(device_name, new_path)
+        return None
+
+    # Found multiple config files that match.
+    # Let the use pick which one to use
+    names = [f.name for f in device_config_files]
+    dropdown = vpr_measure.dialogs.DropdownDialog(
+        "Found multiple settings files",
+        "Found multiple settings files for device "
+        f"{device_name} in {directory} and subfolders.\n"
+        "Select which one should be used:",
+        names, parent=parent_widget
+        )
+    config = None
+    if dropdown.exec_() == dropdown.Apply:
+        config = device_config_files[names.index(dropdown.selection)]
+    return config
 
 def get_devices(package):
     """Return all supported and available devices from a package.

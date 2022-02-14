@@ -17,11 +17,10 @@ from pathlib import Path
 from PyQt5 import (QtWidgets as qtw,
                    QtCore as qtc)
 
-from viperleed.guilib.measure.hardwarebase import get_devices
+from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.camera import badpixels
 from viperleed.guilib.measure.camera import abc as camera_abc
-from viperleed.guilib.measure.dialogs.busywindow import BusyWindow
-from viperleed.guilib.measure.dialogs.dropdowndialog import DropdownDialog
+from viperleed.guilib.measure import dialogs
 from viperleed.guilib.widgetslib import change_control_text_color
 
 # temporary solution till we have a system config file
@@ -82,9 +81,9 @@ class BadPixelsFinderDialog(qtw.QDialog):
                 'delay_busy_hide': (qtc.QTimer(self), 100),
                 },
             'dialogs': {
-                'camera_busy': BusyWindow(parent=self,
-                                          text="Preparing camera...",
-                                          max_onscreen_time=10)
+                'camera_busy': dialogs.BusyWindow(parent=self,
+                                                  text="Preparing camera...",
+                                                  max_onscreen_time=10)
                 }
             }
 
@@ -122,7 +121,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
         """Update the list of available cameras."""
         camera_combo = self.__ctrls['camera']
         old_selection = camera_combo.currentText()
-        self.__available_cameras = get_devices('camera')
+        self.__available_cameras = base.get_devices('camera')
         old_items = set(camera_combo.itemText(i)
                         for i in range(camera_combo.count()))
         if old_items != set(self.__available_cameras.keys()):
@@ -373,54 +372,6 @@ class BadPixelsFinderDialog(qtw.QDialog):
         return (date_time, n_bad, bad_fraction,
                 n_uncorrectable, uncorrectable_fraction)
 
-    def __get_camera_config(self, camera_name, directory=DEFAULT_CONFIG_PATH):
-        """Return the configuration file for a camera with a given name."""
-        directory = Path(directory)
-        config_files = [f for f in directory.glob('**/*')
-                        if f.is_file() and f.suffix == '.ini']
-        camera_config_files = []
-        for config_name in config_files:
-            with open(config_name, 'r') as config_file:
-                if camera_name in config_file.read():
-                    camera_config_files.append(config_name)
-
-        if not camera_config_files:
-            msg_box = qtw.QMessageBox(parent=self)
-            msg_box.setWindowTitle("No settings file found")
-            msg_box.setText(
-                f"Directory {directory} and its subfolders do not contain "
-                f"any settings file for camera {camera_name}. Select "
-                "a different directory."
-                )
-            msg_box.setIcon(msg_box.Critical)
-            msg_box.addButton(msg_box.Cancel)
-            btn = msg_box.addButton("Select path", msg_box.ActionRole)
-            msg_box.exec_()
-            if msg_box.clickedButton() is btn:
-                new_path = qtw.QFileDialog.getExistingDirectory(
-                    parent=self,
-                    caption="Choose directory of camera settings",
-                    directory=str(directory)
-                    )
-                if new_path:
-                    return self.__get_camera_config(camera_name, new_path)
-            return None
-        if len(camera_config_files) > 1:
-            # Let the use pick which one to use
-            names = [f.name for f in camera_config_files]
-            dropdown = DropdownDialog(
-                "Found multiple settings files",
-                "Found multiple settings files for camera "
-                f"{camera_name} in {directory} and subfolders.\n"
-                "Select which one should be used:",
-                names, parent=self
-                )
-            config = None
-            if dropdown.exec_() == dropdown.Apply:
-                config = camera_config_files[names.index(dropdown.selection)]
-            return config
-        return camera_config_files[0]
-
     def __on_camera_preparing(self, busy):
         """Show a busy dialog while camera prepares to acquire."""
         timer, interval = self.__timers['delay_busy_hide']
@@ -442,7 +393,9 @@ class BadPixelsFinderDialog(qtw.QDialog):
             return
 
         # New camera selected.
-        settings = self.__get_camera_config(camera_name)
+        settings = base.get_device_config(camera_name,
+                                          directory=DEFAULT_CONFIG_PATH,
+                                          parent_widget=self)
 
         # Signal errors by picking an invalid entry
         if not settings:
