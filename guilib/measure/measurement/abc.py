@@ -115,9 +115,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             self.start_energy = self.settings.getfloat(
                 'measurement_settings', 'start_energy', fallback=0
                 )
-            self.__long_settle_time = self.primary_controller.settings.getint(
-                'measurement_settings', 'first_settle_time', fallback=3000
-                )
+            self.__long_settle_time = self.primary_controller.long_settle_time
 
         self.force_return_timer = qtc.QTimer(parent=self)
         self.force_return_timer.setSingleShot(True)

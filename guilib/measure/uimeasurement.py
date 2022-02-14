@@ -171,7 +171,7 @@ class Measure(gl.ViPErLEEDPluginBase):
     def __on_finished(self, *_):
         # After the measurement is done, close the serial ports.
         for controller in self.measurement.controllers:
-            controller.serial.serial_disconnect()
+            controller.disconnect_()
         self.__switch_enabled(True)
         self.statusBar().showMessage('Ready')
 

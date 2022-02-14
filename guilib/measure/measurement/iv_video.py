@@ -38,12 +38,8 @@ class IVVideo(MeasurementABC):
             self.__end_energy = self.settings.getfloat(
                 'measurement_settings', 'end_energy', fallback=10
                 )
-            self.__hv_settle_time = self.primary_controller.settings.getint(
-                'measurement_settings', 'hv_settle_time', fallback=2000
-                )
-            self.__i0_settle_time = self.primary_controller.settings.getint(
-                'measurement_settings', 'i0_settle_time', fallback=2000
-                )
+        self.__hv_settle_time = self.primary_controller.hv_settle_time
+        self.__i0_settle_time = self.primary_controller.i0_settle_time
         num_meas = (1 + round((self.__end_energy - self.start_energy)
                               / self.__delta_energy))
         self.__n_digits = len(str(num_meas))

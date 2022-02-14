@@ -184,6 +184,24 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
     busy = property(__get_busy, set_busy)
 
     @property
+    def hv_settle_time(self):
+        """Return the energy settle time."""
+        if self.settings:
+            return self.settings.getint(
+                'measurement_settings', 'hv_settle_time', fallback=2000
+                )
+        return 2000
+
+    @property
+    def i0_settle_time(self):
+        """Return the current settle time."""
+        if self.settings:
+            return self.settings.getint(
+                'measurement_settings', 'i0_settle_time', fallback=2000
+                )
+        return 2000
+
+    @property
     def initial_delay(self):
         """Return the initial time delay of a measurement in seconds."""
         return self.settings.getfloat(
@@ -191,9 +209,23 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
             )
 
     @property
+    def long_settle_time(self):
+        """Return the first settle time."""
+        if self.settings:
+            return self.settings.getint(
+                'measurement_settings', 'first_settle_time', fallback=3000
+                )
+        return 3000
+
+    @property
     def name(self):
         """Return a unique name."""
-        return self.serial.port_name
+        name = ""
+        try:
+            name = self.serial.port_name
+        except AttributeError:
+            pass
+        return name if name else 'UNKNOWN PORT'
 
     @property
     def serial(self):
@@ -465,6 +497,13 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
     def what_to_measure(self, *args, **kwargs):
         """Set measured_quantities property."""
         self.measured_quantities = []
+
+    def disconnect_(self):
+        """Diconnect serial port."""
+        try:
+            self.serial.serial_disconnect()
+        except (TypeError, AttributeError):
+            pass
 
 
 class MeasureControllerABC(ControllerABC):
