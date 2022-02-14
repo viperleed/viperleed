@@ -18,17 +18,19 @@ The original tisgrabber.py module was:
 Created on Mon Nov 21 09:44:40 2016
 @author: Daniel Vassmer, Stefan_Geissler
 """
+
+# pylint: disable=too-many-lines
+# Does not really make sense to split this module apart, especially
+# considering that the WindowsCamera class already exceeds the 1000
+# lines limit.
+
 from enum import Enum
 from ctypes import (Structure as CStructure, WinDLL, CFUNCTYPE, cast as c_cast,
-                    sizeof as c_sizeof, c_uint8, c_int, c_long, c_ulong,
-                    c_ubyte, c_float, py_object, POINTER, c_char_p, c_void_p,
-                    c_char)
+                    c_int, c_long, c_ulong, c_ubyte, c_float, py_object,
+                    POINTER, c_char_p, c_void_p, c_char)
 import os
 from pathlib import Path
 import sys
-import time  # TEMP
-
-import numpy as np
 
 from viperleed.guilib.measure.camera.drivers.imagingsource.winerrors import (
     DLLReturns, check_dll_return, ImagingSourceError
@@ -84,6 +86,8 @@ def _to_bytes(string):
 
 
 class SinkFormat(Enum):
+    """Available video formats for Imaging Source cameras."""
+
     Y800 = 0      # Monochrome 1-byte;    top-left
     RGB24 = 1     # 3 bytes: B G R;       top-left
     RGB32 = 2     # 4 bytes: B G R alpha; top-left; alpha unused == 0
@@ -129,7 +133,7 @@ class SinkFormat(Enum):
             raise ImagingSourceError("Invalid sink/video "
                                      f"format {sink_format.name}",
                                      err_code=DLLReturns.INVALID_SINK_FORMAT)
-        elif sink_format == SinkFormat.MEGA:
+        if sink_format == SinkFormat.MEGA:
             raise ImagingSourceError("Camera should never return "
                                      "SinkFormat.MEGA",
                                      err_code=DLLReturns.INVALID_SINK_FORMAT)
@@ -184,12 +188,17 @@ class StreamMode(Enum):
     SNAP = 1
 
 
+# pylint: disable=too-few-public-methods
+# Just an interface class to which we can make C pointers to.
 class GrabberHandle(CStructure):
+    """C-interface class for Imaging Source camera handle."""
+
     _fields_ = [('unused', c_int)]
 
     def __repr__(self):
         """Return string representation of self."""
         return f"{self.__class__.__name__}({self.unused})"
+# pylint: enable=too-few-public-methods
 
 
 # ctypes.POINTER returns a class
@@ -209,6 +218,8 @@ FrameReadyCallbackType = CFUNCTYPE(
 FrameReadyCallbackType.__ctypeswrapper__ = 'FrameReadyCallbackType'
 
 
+# pylint: disable=too-many-public-methods,too-many-instance-attributes
+# Bugs? I count 17/20 (not 35/20) methods and 7/7 (not 8/7) attributes
 class WindowsCamera:
     """Interface class for Imaging Source camera in Windows."""
 
@@ -522,8 +533,10 @@ class WindowsCamera:
         try:
             sink_format = SinkFormat.get(sink_format_c)
         except ValueError as err:
-            raise ImagingSourceError(err.args[0] + " received",
-                                     err_code=DLLReturns.INVALID_SINK_FORMAT)
+            raise ImagingSourceError(
+                err.args[0] + " received",
+                err_code=DLLReturns.INVALID_SINK_FORMAT
+                ) from err
         except ImagingSourceError:
             if sink_format_c == SinkFormat.NONE.value:
                 # Camera was not yet started: sink format is unavailable.
@@ -538,12 +551,12 @@ class WindowsCamera:
                     raise ImagingSourceError(
                         err.args[0] + " received",
                         err_code=DLLReturns.INVALID_SINK_FORMAT
-                        )
-                except ImagingSourceError:
+                        ) from err
+                except ImagingSourceError as err:
                     raise ImagingSourceError(
                         "Could not retrieve sink format.",
                         err_code=DLLReturns.INVALID_SINK_FORMAT
-                        )
+                        ) from err
             else:  # Mega
                 raise
         return sink_format
@@ -563,7 +576,7 @@ class WindowsCamera:
 
         Parameters
         ----------
-        sink_type : str, int, or SinkFormat
+        sink_format : str or int or SinkFormat
             One of the values in SinkFormat. Note that UYVY can
             only be used in conjunction with a UYVY video format
         """
@@ -642,23 +655,8 @@ class WindowsCamera:
         enabled : bool
             If True, the device will afterwards be responsive to a
             (hardware or software) trigger signal.
-
-        Returns
-        -------
-        None
         """
         self.set_vcd_property('Trigger', 'Enable', bool(enabled))
-
-        # When using triggering, it is a good idea to set the image
-        # readout rate to the maximum, as its inverse just adds
-        # as an offset to the actual time it takes to get a frame.
-        # Setting an unreasonably large value will internally set
-        # the maximum allowed frame_rate.
-        # ACTUALLY, NOT A GOOD IDEA! Setting a too-high frame rate
-        # leads to frame dropping if the GigE hardware is not able
-        # to transmit frames in time.
-        # if enabled:
-            # self.frame_rate = 1024
 
     @property
     def vcd_properties(self):
@@ -685,9 +683,8 @@ class WindowsCamera:
             heights = []
             for vid_fmt in self.__default_video_formats:
                 # formats are of the form "<type> (wxh)"
-                width, height = (
-                    vid_fmt.split()[1].replace('(','').replace(')','').split('x')
-                    )
+                vid_fmt = vid_fmt.split()[1].replace('(','').replace(')','')
+                width, height = vid_fmt.split('x')
                 widths.append(int(width))
                 heights.append(int(height))
             self.__video_fmt_info['min_w'] = min(widths)
@@ -799,9 +796,11 @@ class WindowsCamera:
         enabled : bool
             Enable if True, disable otherwise.
 
-        Returns
+        Raises
         -------
-        None
+        ImagingSourceError
+            If the method fails to enable/disable some
+            of the available automatic properties.
         """
         enabled = bool(enabled)
         check_enabled = c_int()
@@ -825,7 +824,7 @@ class WindowsCamera:
                                                   cam_prop.value,
                                                   enabled)
             except ImagingSourceError:
-                    failed.append(cam_prop)
+                failed.append(cam_prop)
 
         for vcd_prop in ("Gain", "Exposure"):
             self.set_vcd_property(vcd_prop, 'Auto', enabled)
@@ -858,6 +857,13 @@ class WindowsCamera:
         ----------
         unique_name : bytes
             Unique name of the device to be opened
+
+        Raises
+        ------
+        RuntimeError
+            If the camera model contained in unique_name is
+            unknown. Requires adding the model (and its info)
+            to the models.py module.
         """
         self._dll_open_by_unique_name(self.__handle,
                                       _to_bytes(unique_name))
@@ -865,11 +871,12 @@ class WindowsCamera:
         try:
             ISModels[self.__model]
         except AttributeError:
-            raise RuntimeError("Could not find Imaging Source camera model "
-                               f"{self.__model} in the known model list. "
-                               "Please update models.py accordingly.")
             self.close()
-            return
+            raise RuntimeError(
+                "Could not find Imaging Source camera model "
+                f"{self.__model} in the known model list. "
+                "Please update models.py accordingly."
+                ) from None
 
         # Do some of the slow stuff already here, such that
         # following calls will be fast.
@@ -923,7 +930,11 @@ class WindowsCamera:
         TypeError
             If on_frame_ready is not callable
         ValueError
-            If on_frame_ready was not decorated with @FrameReadyCallbackType.
+            If on_frame_ready was not decorated with
+            @FrameReadyCallbackType
+        ImagingSourceError
+            If this method is called more than once
+            before rebooting a camera.
         """
         # Make sure the frame-ready callback has been wrapped correctly
         if not hasattr(on_frame_ready, '__call__'):
@@ -931,8 +942,8 @@ class WindowsCamera:
                             "is not a callable")
         if (not hasattr(on_frame_ready, '__ctypeswrapper__')
                 or on_frame_ready.__ctypeswrapper__ != 'FrameReadyCallbackType'):
-            raise ValueError(f"Frame-ready callback was not decorated with "
-                             f"@FrameReadyCallbackType. This is needed to "
+            raise ValueError("Frame-ready callback was not decorated with "
+                             "@FrameReadyCallbackType. This is needed to "
                              "ensure appropriate type checking/conversions")
         if not self.__has_frame_ready_callback:
             self._dll_set_frame_ready_callback(self.__handle, on_frame_ready,
@@ -965,23 +976,18 @@ class WindowsCamera:
 
         Parameters
         ----------
-        mode : {None, 'triggered', 'continuous'}, optional
+        mode : None or str, optional
             Which mode should the camera be started in. 'triggered'
-            automatically enables triggering, 'continuous' will stream
-            frames every 1/frame_rate seconds. If None, the
-            mode will be derived from whether triggering is enabled
-            or not. Default is None.
+            automatically enables triggering, 'continuous' (or any
+            other value) will stream frames every 1/frame_rate seconds.
+            If None, the mode will be derived from whether triggering
+            is enabled or not. Default is None.
         show_video : bool, optional
             Do not show a video if False, show one if True. Frames
             will be delivered in any case (i.e., callbacks can be
             used). The value of this argument is used only when
             mode == 'continuous'; no video is ever shown in
             'triggered' mode. Default is False.
-
-        Returns
-        -------
-        ret_val : int
-            SUCCESS on success, ERROR if something went wrong.
         """
         if mode is None:
             mode = 'triggered' if self.trigger_enabled else 'continuous'
@@ -1085,6 +1091,16 @@ class WindowsCamera:
         property_value : int, float or SwitchProperty
             The value of the property/element. The return type
             depends on the choice of method.
+
+        Raises
+        ------
+        ImagingSourceError
+            If errors occur in retrieving properties.
+        NotImplementedError
+            If the property required is only accessible via the
+            MAPSTRINGS interface method. Currently unsupported.
+        ValueError
+            If method is not one of the interface methods known.
         """
         (prop_name,
          elem_name,
@@ -1101,7 +1117,7 @@ class WindowsCamera:
             getter = self._dll_get_on_off_property
             property_value = c_long()
         elif method is VCDPropertyInterface.MAPSTRINGS:
-             raise NotImplementedError("Map strings not yet implemented")
+            raise NotImplementedError("Map strings not yet implemented")
         else:
             raise ValueError(
                 f"Unexpected method {method} for getting VCD "
@@ -1140,6 +1156,11 @@ class WindowsCamera:
         ------
         ImagingSourceError
             If errors occur in setting properties.
+        NotImplementedError
+            If the property required is only accessible via the
+            MAPSTRINGS interface method. Currently unsupported.
+        ValueError
+            If method is not one of the interface methods known.
         """
         (prop_name,
          elem_name,
@@ -1157,7 +1178,7 @@ class WindowsCamera:
             setter = self._dll_set_on_off_property
             value = SwitchProperty.get(value).value
         elif method is VCDPropertyInterface.MAPSTRINGS:
-             raise NotImplementedError("Map strings not yet implemented")
+            raise NotImplementedError("Map strings not yet implemented")
         else:
             raise ValueError(
                 f"Unexpected method {method} for setting VCD "
@@ -1190,6 +1211,17 @@ class WindowsCamera:
             The minimum and maximum values of the property/element.
             The return type depends on the method chosen: int for
             VCDPropertyInterface.RANGE, float for .ABSOLUTEVALUE.
+
+        Raises
+        ------
+        ImagingSourceError
+            If errors occur in retrieving property ranges.
+        NotImplementedError
+            If the property required is only accessible via the
+            MAPSTRINGS interface method. Currently unsupported.
+        ValueError
+            If method is not one of the interface methods known,
+            or if this method is called on a SWITCH property.
         """
         (prop_name,
          elem_name,
@@ -1241,7 +1273,7 @@ class WindowsCamera:
 
         Parameters
         ----------
-        video_format : str, bytes, or bytearray
+        video_format : str or bytes or bytearray
             The desired video format. Should be in the form
             '<format> (<width>x<height>)', where <format> is
             one of the names in SinkFormat, and <width> and
@@ -1311,7 +1343,7 @@ class WindowsCamera:
         ----------
         property_name : str or bytes
             The name of the property to be triggered (e.g., 'Trigger')
-        element_name : str, bytes, or None, optional
+        element_name : str or bytes or None, optional
             The name of the setting to be accessed (e.g., 'Software
             Trigger').
         """
@@ -1342,7 +1374,7 @@ class WindowsCamera:
         n_max_formats = 80
         n_max_chars = 40
         formats_arr = ((c_char * n_max_chars) * n_max_formats)()
-        n_formats = self._dll_list_video_formats(
+        self._dll_list_video_formats(
             self.__handle, c_cast(formats_arr, c_char_p), n_max_chars
             )
         formats = [c_cast(f, c_char_p).value.decode()
@@ -1467,8 +1499,9 @@ class WindowsCamera:
         # Pick an element
         if len(vcd_prop) > 1 and not elem_name:
             raise ValueError(f"Property {prop_name} has the following "
-                             f"elements: {[e for e in vcd_prop]}. Pick one.")
-        elif len(vcd_prop) == 1:
+                             f"elements: {list(vcd_prop.keys())}. "
+                             "Pick one.")
+        if len(vcd_prop) == 1:
             elem_name = tuple(vcd_prop)[0]
         vcd_elem = vcd_prop.get(elem_name, None)
         if vcd_elem is None:
@@ -1482,7 +1515,7 @@ class WindowsCamera:
                 f"Property/Element {prop_name}/{elem_name} has the "
                 f"following methods: {[i.name for i in vcd_elem]}. Pick one."
                 )
-        elif len(vcd_elem) == 1:
+        if len(vcd_elem) == 1:
             method = vcd_elem[0]
 
         method = VCDPropertyInterface.get(method)
@@ -1510,11 +1543,16 @@ class WindowsCamera:
             will be passed to the frame-ready callback function
             automatically. If SNAP, images are returned only
             when IC_SnapImage() is called.
+
+        Raises
+        ------
+        ValueError
+            If mode is not a valid StreamMode
         """
         try:
             mode = StreamMode(mode)
         except ValueError as err:
-            raise ValueError(f"Invalid stream mode {mode}")
+            raise ValueError(f"Invalid stream mode {mode}") from err
 
         was_running = self.is_running
         if was_running:

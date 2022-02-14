@@ -5,6 +5,10 @@ Author: Michele Riva
 """
 from enum import Enum
 
+# pylint: disable=missing-param-doc,missing-type-doc
+# Unreported bug. Multiple arguments listed on the left
+# of the docstring appear not to be correctly identified,
+# although the numpy style allows this.
 def check_dll_return(success='int', include_errors=tuple(),
                      exclude_errors=tuple(), valid_returns=()):
     """Return an appropriate callable for checking DLL errors.
@@ -28,7 +32,7 @@ def check_dll_return(success='int', include_errors=tuple(),
         the same value. Default is an empty tuple for both, i.e., take
         all the returns.
     valid_returns : Sequence, optional
-        Which returns values are to also be considered 'valid'. This
+        Which return values are to also be considered 'valid'. This
         argument is used only for 'int' checking, and makes sense to
         be given only if the function is a checker, returning SUCCESS
         when something is found, and one of these values when it is
@@ -40,6 +44,12 @@ def check_dll_return(success='int', include_errors=tuple(),
     checker : callable
         Error checker suitable for using with ctypes
         _FuncPtr.errcheck attribute.
+
+    Raises
+    ------
+    ValueError
+        If both include_errors and exclude_errors are given, or
+        if 'success' is not one of the acceptable checker specifiers.
     """
     if include_errors and exclude_errors:
         raise ValueError("Can only give include_errors "
@@ -54,16 +64,16 @@ def check_dll_return(success='int', include_errors=tuple(),
                   if e not in exclude}
     else:
         errors = DLLReturns.as_dict()
-    
+
     if valid_returns:
         valid_returns = [getattr(DLLReturns, e).value for e in valid_returns]
 
-    limit = 0
+    limit = 0.0
     success = success.replace(' ', '')
     if success.startswith('>='):
-            limit = float(success[2:])
+        limit = float(success[2:])
     elif success.startswith('>'):
-            limit = float(success[1:])
+        limit = float(success[1:])
 
     def int_checker(result, func, args):
         """Check validity of the return of a int-returning function."""
@@ -82,20 +92,18 @@ def check_dll_return(success='int', include_errors=tuple(),
             f"{error.name}: {error.message}", err_code=error
             )
 
-    def pointer_checker(result, func, args):
-        """Check that the return of the function is a valid pointer."""
-        # print(f"{func.__name__}{args} returned {result}")
-        if not result:
-            # pointer to NULL
-            raise ImagingSourceError(
-                f"{func.__name__}{args} returned a pointer to NULL",
-                err_code = DLLReturns.NULL_POINTER
-                )
+    def ge_checker(result, func, args):
+        """Check that the return is larger or equal than a limit."""
+        err_txt = f"{func.__name__}{args} returned {result} < {limit}."
+        error = errors.get(result, None)
+        if error is not None:
+            err_txt += f" This is error {error.name}: {error.message}."
+        if result < limit:
+            raise ImagingSourceError(err_txt, err_code=error)
         return result
 
     def gt_checker(result, func, args):
         """Check that the return is larger than a limit."""
-        # print(f"{func.__name__}{args} returned {result}")
         err_txt = f"{func.__name__}{args} returned {result} <= {limit}."
         error = errors.get(result, None)
         if error is not None:
@@ -104,15 +112,14 @@ def check_dll_return(success='int', include_errors=tuple(),
             raise ImagingSourceError(err_txt, err_code=error)
         return result
 
-    def ge_checker(result, func, args):
-        """Check that the return is larger or equal than a limit."""
-        # print(f"{func.__name__}{args} returned {result}")
-        err_txt = f"{func.__name__}{args} returned {result} < {limit}"
-        error = errors.get(result, None)
-        if error is not None:
-            err_txt += f" This is error {error.name}: {error.message}."
-        if result < limit:
-            raise ImagingSourceError(err_txt, err_code=error)
+    def pointer_checker(result, func, args):
+        """Check that the return of the function is a valid pointer."""
+        if not result:
+            # pointer to NULL
+            raise ImagingSourceError(
+                f"{func.__name__}{args} returned a pointer to NULL",
+                err_code = DLLReturns.NULL_POINTER
+                )
         return result
 
     if success == 'int':
@@ -185,10 +192,16 @@ class DLLReturns(tuple, Enum):
         """
         return {e.value: e for e in cls}
 
+    # pylint: disable=invalid-overridden-method
+    # Bug? .value is a @types.DynamicClassAttribute, i.e., somewhat
+    # similar to a @property, not a method/callable as the error
+    # message suggests. Seemes solved from Issue #2306, but looks
+    # like it actually is not.
     @property
     def value(self):
         """Reimplement .value to return only the numeric code."""
         return self[0]
+    # pylint: enable=invalid-overridden-method
 
     @property
     def message(self):

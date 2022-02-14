@@ -22,7 +22,6 @@ from scipy.signal import convolve2d
 from scipy import ndimage
 
 from PyQt5 import (QtCore as qtc,
-                   QtGui as qtg,
                    QtWidgets as qtw)
 
 # from viperleed.guilib.measure.hardwarebase import (emit_error,
@@ -31,7 +30,6 @@ from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.camera import abc
 from viperleed.guilib.measure.camera import tifffile
 from viperleed.guilib.measure.widgets.camerawidgets import CameraViewer
-from viperleed.guilib.helpers import array2string
 
 
 N_DARK = 100  # Number of dark frames used for finding bad pixels
@@ -339,7 +337,7 @@ class BadPixelsFinder(qtc.QObject):
             base.emit_error(self, BadPixelsFinderErrors.FLAT_FRAME_WRONG_LIGHT,
                             'bright')
             return
-        elif new_gain > max_gain:
+        if new_gain > max_gain:
             # Too little intensity
             base.emit_error(self, BadPixelsFinderErrors.FLAT_FRAME_WRONG_LIGHT,
                             'bright')
@@ -417,9 +415,7 @@ class BadPixelsFinder(qtc.QObject):
         for i, offset in enumerate(offsets):
             repl_plus = bad_coords.T + offset
             repl_minus = bad_coords.T - offset
-            weight = offset[0]**2 + offset[1]**2
-            plus_badness = badness * weight
-            minus_badness = badness * weight
+            weighted_badness = badness * (offset[0]**2 + offset[1]**2)
 
             # Pick only those bad pixels whose replacements
             # are on the inside of the image.
@@ -434,8 +430,8 @@ class BadPixelsFinder(qtc.QObject):
             bad_inside_y, bad_inside_x = np.transpose(bad_coords.T[inside])
 
             total_badness[i][bad_inside_y, bad_inside_x] = (
-                minus_badness[minus_y, minus_x]
-                + plus_badness[plus_y, plus_x]
+                weighted_badness[minus_y, minus_x]
+                + weighted_badness[plus_y, plus_x]
                 )
 
         # Finally, pick as replacements for the bad pixels those
@@ -635,6 +631,7 @@ class _BadPixCalculationThread(qtc.QThread):
         self.__finder = finder
 
     def run(self):
+        """Run calculations."""
         self.__finder.find_flickery_pixels()
         self.__finder.find_hot_pixels()
         self.__finder.find_dead_pixels()
@@ -642,6 +639,9 @@ class _BadPixCalculationThread(qtc.QThread):
         self.__finder.save_and_cleanup()
 
 
+# pylint: disable=too-many-instance-attributes
+# Nine seems alright here, especially as they
+# all are private attributes.
 class BadPixels:
     """Class for reading, writing and manipulating bad pixels."""
 
@@ -871,10 +871,6 @@ class BadPixels:
             If True, deactivate region of interest completely.
             Default is False.
 
-        Returns
-        -------
-        None.
-
         Raises
         ------
         RuntimeError
@@ -913,7 +909,7 @@ class BadPixels:
         self.__replacements_roi = self.__replacements[mask]
 
         # Do the same for uncorrectable pixels (if any)
-        if self.__uncorrectable is None or not len(self.__uncorrectable):
+        if self.__uncorrectable is None or not self.__uncorrectable.size:
             return
         uncorrectable = self.__uncorrectable - (top_y, top_x)
         mask = np.all((np.all(uncorrectable >= (0, 0), axis=1),
@@ -970,10 +966,6 @@ class BadPixels:
             current directory will be searched. Default is
             an empty string.
 
-        Returns
-        -------
-        None.
-
         Raises
         ------
         FileNotFoundError
@@ -1004,7 +996,7 @@ class BadPixels:
         replacements = []
         uncorrectable = []
 
-        with open(filename, 'r') as bad_px_file:
+        with open(filename, 'r', encoding='utf-8') as bad_px_file:
             for line in bad_px_file:
                 if line.strip().startswith('#'):  # Comment
                     continue
@@ -1040,10 +1032,6 @@ class BadPixels:
         pixels within the current ROI. Use .apply_roi(no_roi=True)
         if an image of the uncorrectable pixels on the whole camera
         sensor is needed.
-
-        Returns
-        -------
-        None.
 
         Raises
         ------
@@ -1081,10 +1069,6 @@ class BadPixels:
             Path to the folder containing a bad pixel file.
             If an empty string, the file will be saved in the
             current directory. Default is an empty string.
-
-        Returns
-        -------
-        None.
 
         Raises
         ------
@@ -1131,7 +1115,7 @@ class BadPixels:
         comment += ("# Bad pixel coordinates are (row number, column "
                     "number), i.e., (y, x).\n#\n")
 
-        with open(filename, 'w') as bad_px_file:
+        with open(filename, 'w', encoding='utf-8') as bad_px_file:
             bad_px_file.write(comment)
             bad_px_file.write(lines)
 

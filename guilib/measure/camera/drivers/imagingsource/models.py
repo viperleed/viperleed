@@ -47,10 +47,18 @@ class _Sensors(Enum):
 
     @property
     def dynamic_range(self):
+        """Return the dynamic range of pixels in bits."""
         return self.value[0]
 
 
 class ISModels(Enum):
+    """Available model numbers for Imaging Source cameras."""
+    # pylint: disable=invalid-name
+    # The invalid-name would be issued for camera models
+    # that contain the small "e" (PoE models). Easier to
+    # disable the invalid-name in this case than rewriting
+    # the attribute getter for the class.
+
     DMK_38GX267 = _Sensors.IMX267
     DMK_38GX304	= _Sensors.IMX304
     DMK_33G618 = _Sensors.ICX618
@@ -95,6 +103,7 @@ class ISModels(Enum):
     DMK_23G445_I = _Sensors.ICX445ALA
     DMK_23G274_I = _Sensors.ICX274AL
     DMK_23GP031_I = _Sensors.MT9P031
+    # pylint: enable=invalid-name
 
     @property
     def dynamic_range(self):

@@ -30,6 +30,14 @@ from viperleed.guilib.measure.camera.imageprocess import (ImageProcessor,
 from viperleed.guilib.measure.camera import badpixels
 
 
+# pylint: disable=too-many-lines,too-many-public-methods
+# Disabled too-many-lines because many are documentation
+# of the abstract methods, and too-many-public-methods
+# because they are only meant to be reimplemented in
+# concrete subclasses and used internally, not called
+# from user code.
+
+
 class CameraErrors(base.ViPErLEEDErrorEnum):
     """Data class for base camera errors."""
 
@@ -118,7 +126,8 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
     # and set_mode, and in the same order they are listed in this list.
     hardware_supported_features = []
 
-    def __init__(self, driver, *args, settings=None, parent=None, **kwargs):
+    def __init__(self, driver, *__args,
+                 settings=None, parent=None, **__kwargs):
         """Initialize instance.
 
         Parameters
@@ -290,6 +299,8 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             exposure_time = self.settings.getfloat('measurement_settings',
                                                    'exposure')
         except ValueError:  # Cannot be read as float
+            # pylint: disable=redefined-variable-type
+            # Seems a bug: getfloat always returns a float
             exposure_time = -1
 
         min_exposure, max_exposure = self.get_exposure_limits()
@@ -314,6 +325,8 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             gain = self.settings.getfloat('measurement_settings',
                                           'gain', fallback=0)
         except ValueError:  # Cannot be read as float
+            # pylint: disable=redefined-variable-type
+            # Seems a bug: getfloat always returns a float
             gain = -1
 
         min_gain, max_gain = self.get_gain_limits()
@@ -387,6 +400,8 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             n_frames = self.settings.getint('measurement_settings',
                                             'n_frames', fallback=1)
         except ValueError:  # Cannot be read as int
+            # pylint: disable=redefined-variable-type
+            # Seems a bug: getint always returns an integer
             n_frames = -1
 
         min_n, max_n = self.get_n_frames_limits()
@@ -453,7 +468,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             error = (CameraErrors.BINNING_ROI_MISMATCH,
                      roi_w, roi_h, self.binning, new_roi_w, new_roi_h)
             if not self.__already_reported(error):
-                emit_error(self, *error)
+                base.emit_error(self, *error)
                 self.__reported_errors.add(error)
             # Update the ROI in the settings only if the
             # new ROI is a valid one for the camera. The
@@ -482,10 +497,13 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         """
         return self.get_roi_size_limits()[1]
 
+    # pylint: disable=unused-private-member
+    # Bug. See issue #4756.
     # .settings getter
     def __get_settings(self):
         """Return the settings used for the camera."""
         return self.__settings
+    # pylint: enable=unused-private-member
 
     # .settings setter
     def set_settings(self, new_settings):
@@ -559,7 +577,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         """
         return False
 
-    def check_loaded_settings(self):
+    def check_loaded_settings(self):  # TODO: private?
         """Check that camera and configuration settings are the same.
 
         Returns
@@ -689,10 +707,6 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         time, as bad pixel coordinates are read from scratch
         and recalculated.
 
-        Returns
-        -------
-        None.
-
         Emits
         -----
         error_occurred(CameraErrors.INVALID_SETTINGS)
@@ -707,7 +721,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         if not bad_pix_path:
             base.emit_error(self, CameraErrors.INVALID_SETTINGS,
                             'camera_settings/bad_pixels_path',
-                            f'Info: No bad_pixel_path found.')
+                            'Info: No bad_pixel_path found.')
             return
         try:
             self.__bad_pixels.read(bad_pix_path)
@@ -749,9 +763,11 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             the settings. If False, self.binning must be used as the
             binning factor. Default is False.
 
-        Returns
-        -------
-        None.
+        Raises
+        ------
+        NotImplementedError
+            If this method is not reimplemented for a camera
+            that natively supports binning.
         """
         if self.get_binning():
             raise NotImplementedError(
@@ -777,6 +793,12 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         -------
         min_binning, max_binning : int
             The smallest and largest supported binning factors
+
+        Raises
+        ------
+        NotImplementedError
+            If this method is not reimplemented for a camera
+            that natively supports binning.
         """
         if self.get_binning():
             raise NotImplementedError(
@@ -973,6 +995,13 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         -------
         min_n_frames, max_n_frames : int
             Minimum and maximum number of frames usable for averaging
+
+        Raises
+        ------
+        NotImplementedError
+            If this method is not reimplemented for cameras that
+            natively support averaging over multiple frames, or
+            for those that natively support a trigger-burst mode
         """
         if self.get_n_frames():
             raise NotImplementedError(
@@ -1027,9 +1056,11 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             If True, set the ROI to the full size of the sensor rather
             than using the value from the settings. Default is False.
 
-        Returns
+        Raises
         -------
-        None.
+        NotImplementedError
+            If this method is not reimplemented when the camera
+            natively supports applying a region of interest.
         """
         if self.get_roi():
             raise NotImplementedError(
@@ -1227,11 +1258,13 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             return False
         roi_x, roi_y, roi_w, roi_h = roi
         (min_w, min_h), (max_w, max_h), (d_w, d_h) = self.get_roi_size_limits()
-        if (roi_x < 0 or roi_y < 0 or roi_w < min_w or roi_h < min_h
-            or roi_x + roi_w > max_w or roi_y + roi_h > max_h
-                or roi_w % d_w or roi_h % d_h):
-            return False
-        return True
+
+        roi_outside = (roi_x < 0 or roi_y < 0
+                       or roi_x + roi_w > max_w
+                       or roi_y + roi_h > max_h)
+        roi_small = roi_w < min_w or roi_h < min_h
+        roi_not_multiple = roi_w % d_w or roi_h % d_h
+        return not (roi_outside or roi_small or roi_not_multiple)
 
     def __on_frame_ready(self, image):
         """React to receiving a new frame from the camera.
@@ -1251,7 +1284,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             # In live mode, the frames will be handled by the GUI
             return
 
-        if self.n_frames_done == 0:
+        if self.n_frames_done == 0:  # pylint: disable=compare-to-zero
             processor = ImageProcessor()
             processor.image_processed.connect(self.image_processed)
             processor.image_saved.connect(self.__on_image_saved)
@@ -1302,7 +1335,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
 
     def __on_timed_out(self):
         """Report a timeout error while in triggered mode."""
-        emit_error(self, CameraErrors.TIMEOUT, self.name, 5)
+        base.emit_error(self, CameraErrors.TIMEOUT, self.name, 5)
 
     def __report_init_errors(self):
         """Emit error_occurred for each initialization error."""

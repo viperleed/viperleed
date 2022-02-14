@@ -21,8 +21,6 @@ hardware feature; steps 1 and 5 are also skipped if the camera
 supports frame averaging at the hardware level.
 """
 
-import ast
-from collections.abc import Sequence
 import copy
 from dataclasses import dataclass, field
 import typing
@@ -139,35 +137,7 @@ class ImageProcessor(qtc.QObject):
         self.processed_image = np.zeros(0)
         self.n_frames_received = 0
         self.frame_bits = 16
-        self.__busy = False
-
-    @property
-    def busy(self):
-        """Return whether the processor is busy.
-
-        Returns
-        -------
-        busy : bool
-            True if the processor is busy.
-        """
-        return self.__busy
-
-    @busy.setter
-    def busy(self, is_busy):
-        """Set the busy state of the processor.
-
-        If the busy state of the processor changes, the busy_changed
-        signal will be emitted, carrying the current busy state.
-
-        Emits
-        -----
-        busy_changed(self.busy)
-            If the busy state changes.
-        """
-        was_busy = self.busy
-        is_busy = bool(is_busy)
-        if was_busy is not is_busy:
-            self.__busy = is_busy
+        self.busy = False
 
     @property
     def missing_frames(self):
@@ -329,7 +299,8 @@ class ImageProcessor(qtc.QObject):
         was the original size of the camera frames. The data
         is stored in big-endian byte order.
         """
-        dtype, n_bits = ('>u4', 32) if self.frame_bits > 16 else ('>u2', 16)
+        # dtype, n_bits = ('>u4', 32) if self.frame_bits > 16 else ('>u2', 16)
+        dtype = '>u4' if self.frame_bits > 16 else '>u2'
 
         data = self.processed_image.astype(dtype)
         self.image_processed.emit(data)
@@ -344,11 +315,11 @@ class ImageProcessor(qtc.QObject):
                              f"extension {fname.suffix}")
 
         cam = self.process_info.camera
-        bin = self.process_info.binning
+        bin_factor = self.process_info.binning
         comment = (f"Average of {self.process_info.n_frames} frames; "
                    f"Exposure: {cam.exposure} ms; "
                    f"Gain: {10**(cam.gain/20):.1f} ({cam.gain:.1f} dB); "
-                   f"Binning: {bin}x{bin} pixels; ")
+                   f"Binning: {bin_factor}x{bin_factor} pixels; ")
 
         info = {'model': cam.name, 'comment': comment,}
         if self.process_info.comment:

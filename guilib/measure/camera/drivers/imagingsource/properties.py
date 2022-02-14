@@ -59,7 +59,7 @@ class CameraProperty(Enum):
 
         Parameters
         ----------
-        cam_property : str, int, or CameraProperty
+        cam_property : str or int or CameraProperty
             Some reference to a camera property. If a string, lookup
             is done by name (not case sensitive), otherwise by value.
 
@@ -135,7 +135,7 @@ class SwitchProperty(Enum):
                 raise ValueError(
                     f"Invalid string {on_off} for SwitchProperty. "
                     "Should be 'on' or 'off' (not case sensitive)"
-                    )
+                    ) from err
         else:
             switch_property = cls(bool(on_off))
         return switch_property

@@ -166,9 +166,11 @@ class TiffTag:
 
         try:
             self.__field_type = self.__field_types[new_field_type - 1]
-        except IndexError:
-            raise ValueError(f"{self.__class__.__name__}: Unknown TiffTag "
-                             f"field type ordinal {new_field_type}")
+        except IndexError as err:
+            raise ValueError(
+                f"{self.__class__.__name__}: Unknown "
+                f"field type ordinal {new_field_type}"
+                ) from err
 
     @property
     def item_size(self):
@@ -194,6 +196,12 @@ class TiffTag:
         value : Sequence
             The value of this TiffTag. If only one value,
             it is returned as the first element of a tuple.
+
+        Raises
+        ------
+        RuntimeError
+            If this property is accessed before the value of
+            this tag was not set nor read from bytes before.
         """
         if self.__value is None:
             raise RuntimeError(f"{self.__class__.__name__}: value "
@@ -234,7 +242,7 @@ class TiffTag:
         if any(v is None for v in self.value):
             print(f"{self.name=}, {self.n_entries=}, {self.value=}")
             raise RuntimeError(f"No valid value for Tag {self.name}")
-        bytes_fmt = '>' if byte_order == 'big' else '<'
+        byte_fmt = '>' if byte_order == 'big' else '<'
         bytes_value = b''
         if self.field_type == 'string':
             bytes_value = ''.join(self.value).encode('utf-8') + b'\x00'
@@ -327,6 +335,12 @@ class TiffTag:
         -------
         adjusted_value : iterable
             Always returns an iterable
+
+        Raises
+        ------
+        ValueError
+            If the number of "elements" in value does not match
+            what is expected for this tag.
         """
         if value is None or not value:
             return tuple()
@@ -431,73 +445,6 @@ class TiffFile:
         self.__set_extra_info(**infos)
         return self
 
-    def __set_extra_info(self, **infos):
-        """Set optional images information from a dictionary."""
-        self.__image_info = [None]*len(self.images)
-
-        zzip = zip(
-            ('make', 'model', 'energy', 'date_time', 'comment'),
-            ('Make', 'Model', 'ElectronEnergy', 'DateTime', 'ImageDescription')
-            )
-
-        for key, tag_name in zzip:
-            if key not in infos:
-                continue
-            values = infos[key]
-            if isinstance(values, (str, Number, datetime)):
-                values = [values]
-            # Check number of entries == number of images
-            if len(values) != len(self.images):
-                raise ValueError(f"Not enough entries ({len(values)}) "
-                                 f"in info {key}. Expected {len(self.images)}")
-
-            # Convert all to string, and check stuff
-            # that requires a specific format.
-            str_values = []
-            if key not in ('date_time', 'energy'):
-                str_values = [str(v) for v in values]
-            elif key == 'date_time':
-                # Here we need the format "YYYY:MM:DD HH:MM:SS"
-                for value in values:
-                    if not value:
-                        str_values.append('None')
-                        continue
-                    if isinstance(value, datetime):
-                        value = value.strftime("%Y:%m:%d %H:%M:%S")
-                    if (len(value) != 19
-                            or not all(value[i] == ':' for i in (4, 7, 13, 16))
-                            or value[10] != ' '):
-                        raise ValueError(
-                            f"Invalid date_time info {value}. "
-                            "Requires format 'YYYY:MM:DD HH:MM:SS'. "
-                            "Use strftime('%Y:%m:%d %H:%M:%S')"
-                            )
-                    str_values.append(value)
-            else:  # energy
-                for value in values:
-                    if value in (None, 'None', ''):
-                        str_values.append('None')
-                        continue
-                    if isinstance(value, Number):
-                        str_values.append(f"{value:.1f} eV")
-                    else:
-                        str_values.append(str(value))
-
-            # Finally, pack them into __image_info
-            for i, value in enumerate(str_values):
-                if not self.__image_info[i]:
-                    self.__image_info[i] = {}
-                if value != 'None':
-                    self.__image_info[i][tag_name] = value
-
-        # And add the user name of this PC
-        user = getpass.getuser()
-        for i, info in enumerate(self.__image_info):
-            if info is None:
-                info = {}
-                self.__image_info[i] = info
-            info['HostComputer'] = user
-
     @classmethod
     def read(cls, filename):
         """Read image from a file.
@@ -561,6 +508,85 @@ class TiffFile:
         """Return images as an iterable of numpy.ndarrays."""
         return self.__images
 
+    def __set_extra_info(self, **infos):
+        """Set optional images information from a dictionary."""
+        self.__check_extra_infos(infos)  # Raises if not OK
+        self.__image_info = [None]*len(self.images)
+
+        zzip = zip(
+            ('make', 'model', 'energy', 'date_time', 'comment'),
+            ('Make', 'Model', 'ElectronEnergy', 'DateTime', 'ImageDescription')
+            )
+
+        for key, tag_name in zzip:
+            # Pick an appropriate string-converter
+            # pylint: disable=redefined-variable-type
+            _to_str = str
+            if key == 'date_time':
+                _to_str = self.__datetime_to_str
+            elif key == 'energy':
+                _to_str = self.__energy_to_str
+
+            # Pack converted values into __image_info
+            values = infos.get(key, tuple())
+            for i, value in enumerate(_to_str(v) for v in values):
+                if not self.__image_info[i]:
+                    self.__image_info[i] = {}
+                if value != 'None':
+                    self.__image_info[i][tag_name] = value
+
+        # And add the user name of this PC
+        user = getpass.getuser()
+        for i, info in enumerate(self.__image_info):
+            if info is None:
+                info = {}
+                self.__image_info[i] = info
+            info['HostComputer'] = user
+
+    def __check_extra_infos(self, infos):
+        """Check consistency of infos with number of images."""
+        # Check that no. of entries == no. images
+        # while allowing also to pass single values
+        # if there is ony one image to be saved.
+        n_images = len(self.images)
+        for key, val in infos.items():
+            if isinstance(val, (str, Number, datetime)):
+                infos[key] = (val,)
+            # Check number of entries == number of images
+            n_entries = len(infos[key])
+            if n_entries != n_images:
+                raise ValueError(f"Not enough entries ({n_entries}) "
+                                 f"in info {key}. Expected {n_images}")
+
+    @staticmethod
+    def __datetime_to_str(date_time):
+        """Convert a date-time-like object to string."""
+        if not date_time:
+            return 'None'
+
+        # Expect the format "YYYY:MM:DD HH:MM:SS"
+        if isinstance(date_time, datetime):
+            date_time = date_time.strftime("%Y:%m:%d %H:%M:%S")
+
+        if (len(date_time) != 19
+                or not all(date_time[i] == ':' for i in (4, 7, 13, 16))
+                or date_time[10] != ' '):
+            raise ValueError(
+                f"Invalid date_time info {date_time}. "
+                "Requires format 'YYYY:MM:DD HH:MM:SS'. "
+                "Use strftime('%Y:%m:%d %H:%M:%S')"
+                )
+        return date_time
+
+    @staticmethod
+    def __energy_to_str(energy):
+        """Convert an energy value to the expected string format."""
+        if energy in (None, 'None', ''):
+            return 'None'
+        if isinstance(energy, Number):
+            return f"{energy:.1f} eV"
+        return str(energy)
+
     def info(self, img_index):
         """Return the info of an image.
 
@@ -568,6 +594,11 @@ class TiffFile:
         -------
         info : dict
             keys are tag names, values are tag values.
+
+        Raises
+        ------
+        RuntimeError
+            If this method is called before the file was saved.
         """
         try:
             info = self.__image_info[img_index]
@@ -614,6 +645,16 @@ class TiffFile:
             Offset in bytes from the beginning of the file
             at which the next image-file directory starts.
             Will be zero if this was the last IFD.
+
+        Raises
+        ------
+        ValueError
+            If the file from which the IFD is to be read does
+            not contain the minimum set of tags that allows
+            interpretation as a TIFF grayscale image.
+        RuntimeError
+            If an unknown "SampleFormat" tag value (i.e., data
+            type per pixel) is found.
         """
         n_tags = int.from_bytes(self.__tiff_file.read(2), self.__byte_order)
         tags = dict(self.__read_tag() for _ in range(n_tags))
@@ -657,17 +698,16 @@ class TiffFile:
             strip = self.__tiff_file.read(b_count)
             pixel_intensity.append(
                 np.frombuffer(strip, dtype=dtype)
-            # pixel_intensity.extend(
-                # int.from_bytes(strip[i:i+bytes_per_px], self.__byte_order)
-                # for i in range(0, b_count, bytes_per_px)
                 )
-        # dtype = f'>u{bytes_per_px}'
-        # image = np.asarray(pixel_intensity, dtype=dtype).reshape(
+
         image = np.concatenate(pixel_intensity).reshape(
             tags['ImageLength'],
             tags['ImageWidth']
             )
 
+        # pylint: disable=compare-to-zero
+        # Disable as it can only be zero or 1, and
+        # explicit comparison feels clearer here.
         if tags['PhotometricInterpretation'] == 0:
             image = 2**tags['BitsPerSample'] - 1 - image
 
@@ -730,10 +770,109 @@ class TiffFile:
 
         Returns
         -------
-        None.
+        None
+        """
+        # Prepare the tags for this image, including
+        # extra information that may be present
+        image = self.images[img_number]
+        try:
+            extras = self.info(img_number)
+        except RuntimeError:
+            # No extra info for this image
+            extras = {}
+
+        (tags,
+         strip_offsets,
+         total_n_bytes) = self.__make_tags_for_image(image, extras)
+
+        # Here begins the 'header' for this IFD
+        # (H.1) number of tags
+        n_tags = len(tags)
+        self.__tiff_file.write(n_tags.to_bytes(2, self.__byte_order))
+
+        # Prepare to later write the data of each tag. We start after
+        # the end of this IFD 'header', i.e., current position + 12
+        # bytes per tag, + 4 bytes for next IFD offset
+        curr_pos = self.__tiff_file.tell()
+        tag_data_offset = curr_pos + 12*n_tags + 4
+
+        # tag_data_offset needs to be even:
+        tag_data_offset = ((tag_data_offset + 1) // 2) * 2
+
+        # Set up the data offsets for each tag
+        for tag in tags:
+            if tag.has_value_outside:
+                tag.offset = tag_data_offset
+                tag_data_offset += tag.size
+                tag_data_offset = ((tag_data_offset + 1) // 2) * 2
+
+        # Now update StripOffsets. This will directly point to the
+        # first image data byte, as we use only one strip. It will
+        # go right after the tag data.
+        strip_offsets.value = tag_data_offset
+
+        # (H.2) Now write all tags...
+        for tag in tags:
+            self.__tiff_file.write(tag.as_bytes(self.__byte_order))
+
+        # ...store them as image info...
+        self.__image_info[img_number] = {tag.name: tag.value for tag in tags}
+
+        # (H.3)...and write the next IFD offset.
+        # This concludes the IFD 'header'.
+        if img_number == len(self.images) - 1:
+            # Last image. Write four zeros to signal the end.
+            next_ifd_offset = b'\x00\x00\x00\x00'
+        else:
+            next_ifd_offset = tag_data_offset + total_n_bytes
+            next_ifd_offset = next_ifd_offset.to_bytes(4, self.__byte_order)
+        self.__tiff_file.write(next_ifd_offset)
+
+        # Finally, tag data...
+        for tag in tags:
+            if tag.has_value_outside:
+                self.__tiff_file.seek(tag.offset)
+                self.__tiff_file.write(tag.value_as_bytes(self.__byte_order))
+
+        # ...and the actual pixels, after
+        # converting to the right byte order
+        new_dtype = image.dtype.newbyteorder(self.__byte_order)
+        if new_dtype != image.dtype:
+            image = image.astype(new_dtype)
+        self.__tiff_file.seek(strip_offsets.value[0])
+        self.__tiff_file.write(image.tobytes())
+
+    def __make_tags_for_image(self, image, extras):
+        """Return a list of tags for an image.
+
+        Extra informaiton are also included.
+
+        Parameters
+        ----------
+        image : numpy.ndarray
+            The image for which tags should be returned
+        extras : dict
+            Extra information for this image in the form
+            {<tag_name>: <tag_value>}.
+
+        Returns
+        -------
+        tags : list
+            Sorted list of tags that describe this image.
+        strip_offsets : TiffTag
+            The "StripOffsets" tag that requires updating while
+            other tags are being written to file.
+        total_n_bytes : int
+            Total number of bytes that this image takes.
+
+        Raises
+        -------
+        ValueError
+            If image has an invalid data type. Acceptable data
+            types are signed and unsigned integers, bytes, and
+            float.
         """
         # Read some info from the image:
-        image = self.images[img_number]
         dtype = image.dtype
         if not dtype.kind in 'ifub':
             raise ValueError(f"{self.__class__.__name__}: Cannot save image "
@@ -770,71 +909,11 @@ class TiffFile:
             TiffTag(name='SampleFormat', value=pixel_type),
             TiffTag(name='Software', value=f"ViPErLEED v{GLOBALS['version']}"),
             ]
-        
-        # And add extra information that may be present
-        try:
-            extras = self.info(img_number)
-        except RuntimeError:
-            # No extra info for this image
-            extras = {}
+
         for name, value in extras.items():
             tags.append(TiffTag(name=name, value=value))
 
         # Tags should be written in increasing ordinal number
         tags.sort(key=lambda tag: tag.index)
 
-        # Write the number of tags for this IFD
-        n_tags = len(tags)
-        self.__tiff_file.write(n_tags.to_bytes(2, self.__byte_order))
-
-        # Prepare to write the data of each tag. We start after the
-        # end of this IFD 'header', i.e., current position + 12 bytes
-        # per tag, + 4 bytes for next IFD offset
-        curr_pos = self.__tiff_file.tell()
-        tag_data_offset = curr_pos + 12*len(tags) + 4
-
-        # tag_data_offset needs to be even:
-        tag_data_offset = ((tag_data_offset + 1) // 2) * 2
-
-        # Set up the data offsets for each tag
-        for tag in tags:
-            if tag.has_value_outside:
-                tag.offset = tag_data_offset
-                tag_data_offset += tag.size
-                tag_data_offset = ((tag_data_offset + 1) // 2) * 2
-
-        # Now update StripOffsets. This will directly point to the
-        # first image data byte, as we use only one strip. It will
-        # go right after the tag data.
-        strip_offsets.value = tag_data_offset
-
-        # Now write all tags...
-        for tag in tags:
-            self.__tiff_file.write(tag.as_bytes(self.__byte_order))
-
-        # ...store them as image info...
-        self.__image_info[img_number] = {tag.name: tag.value for tag in tags}
-
-        # ...and write the next IFD offset.
-        # This concludes the IFD 'header'.
-        if img_number == len(self.images) - 1:
-            # Last image. Write four zeros to signal the end.
-            next_ifd_offset = b'\x00\x00\x00\x00'
-        else:
-            next_ifd_offset = tag_data_offset + total_n_bytes
-            next_ifd_offset = next_ifd_offset.to_bytes(4, self.__byte_order)
-        self.__tiff_file.write(next_ifd_offset)
-
-        # Finally, tag data...
-        for tag in tags:
-            if tag.has_value_outside:
-                self.__tiff_file.seek(tag.offset)
-                self.__tiff_file.write(tag.value_as_bytes(self.__byte_order))
-
-        # ...and the actual pixels, after
-        # converting to the right byte order
-        new_dtype = dtype.newbyteorder(self.__byte_order)
-        if new_dtype != dtype:
-            image = image.astype(new_dtype)
-        self.__tiff_file.seek(strip_offsets.value[0])
-        self.__tiff_file.write(image.tobytes())
+        return tags, strip_offsets, total_n_bytes

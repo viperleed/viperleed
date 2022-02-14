@@ -31,7 +31,7 @@ DEFAULT_CONFIG_PATH = (Path(inspect.getfile(vpr_measure)).parent
 ################################## FUNCTIONS ##################################
 
 def class_from_name(package, class_name):
-    """Return the serial class given its name.
+    """Return a class given its name.
 
     Parameters
     ----------

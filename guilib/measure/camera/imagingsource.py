@@ -22,13 +22,15 @@ from viperleed.guilib.measure.camera.drivers.imagingsource import (
     ImagingSourceError, SinkFormat,
     )
 from viperleed.guilib.measure.camera.abc import CameraABC, CameraErrors
-from viperleed.guilib.measure.camera.imageprocess import ImageProcessInfo
 from viperleed.guilib.measure.hardwarebase import emit_error
 
 
+# pylint: disable=useless-param-doc,useless-type-doc
+# I prefer to keep the documentation of the (unused) arguments
+# to remember the signature required by the driver.
 @FrameReadyCallbackType
-def on_frame_ready(__grabber_handle, image_start_pixel,
-                   frame_number, process_info):
+def on_frame_ready_(__grabber_handle, image_start_pixel,
+                    __frame_number, process_info):
     """Prepare a frame to be processed.
 
     This is the callback function that will be automatically called
@@ -45,15 +47,11 @@ def on_frame_ready(__grabber_handle, image_start_pixel,
         Pointer to the first byte of image data, i.e., the MSB??
         of the bottom-left pixel. Image data is stored from bottom
         to top and from left to right.
-    frame_number : ctypes.c_ulong
+    __frame_number : ctypes.c_ulong
         Progressive index of current frame since the stream of
         frames was initiated (i.e., since the camera was started)
     process_info : ImageProcessInfo
         The image processing information object
-
-    Returns
-    -------
-    None.
 
     Emits
     -----
@@ -72,6 +70,9 @@ def on_frame_ready(__grabber_handle, image_start_pixel,
     n_frames_received = len(process_info.frame_times)
 
     if n_frames_received > 2:
+        # pylint: disable=unused-variable
+        # n_lost is currently unused but will be as soon as
+        # the todo below is taken care of.
         n_lost, best_rate = estimate_frame_loss(process_info.frame_times,
                                                 camera.driver.frame_rate,
                                                 camera.exposure)
@@ -98,6 +99,33 @@ def on_frame_ready(__grabber_handle, image_start_pixel,
             and n_frames_received >= camera.n_frames):
         camera.abort_trigger_burst.emit()
 
+    # Prepare the actual image and send it out
+    image = _img_ptr_to_numpy(image_start_pixel, camera)
+    camera.frame_ready.emit(image.copy())
+# pylint: enable=useless-param-doc,useless-type-doc
+
+
+def _img_ptr_to_numpy(image_start_pixel, camera):
+    """Return an image as numpy array from a ctypes.POINTER.
+
+    Parameters
+    ----------
+    image_start_pixel : ctypes.POINTER
+        Pointer to the first byte of the first pixel of the image.
+    camera : ImagingSourceCamera
+        The camera that acquired the image.
+
+    Returns
+    -------
+    image : numpy.ndarray
+        Grayscale image. The first index runs along rows,
+        the second one along pixels within a row.
+
+    Raises
+    ------
+    ValueError
+        If the camera returns images with bit depth larger than 32.
+    """
     # Prepare the actual image
     width, height, n_bytes, n_colors = camera.image_info
     *_, color_fmt = camera.driver.image_info
@@ -126,9 +154,7 @@ def on_frame_ready(__grabber_handle, image_start_pixel,
 
     # (4.2) pick only the relevant one (i.e., green for multicolor),
     #       making the image 2D.
-    image = image[:,:,color_fmt.green_channel]
-
-    camera.frame_ready.emit(image.copy())
+    return image[:,:,color_fmt.green_channel]
 
 
 def estimate_frame_loss(frame_times, frame_rate, exposure):
@@ -154,6 +180,12 @@ def estimate_frame_loss(frame_times, frame_rate, exposure):
         reflected in optimal_frame_rate.
     optimal_frame_rate : float
         Maximum frame rate that will prevent frame loss.
+
+    Raises
+    ------
+    ValueError
+        If this function is called on a zero- or
+         one-element-long sequence of frame times.
     """
     n_frames = len(frame_times)
     if n_frames <= 1:
@@ -176,6 +208,10 @@ def estimate_frame_loss(frame_times, frame_rate, exposure):
     return n_lost, opt_rate
 
 
+# pylint: disable=too-many-public-methods
+# pylint counts 33, I count 26. Of those, 17 are actually
+# reimplentations of abstract methods that are only supposed
+# to be used internally (i.e., they are the driver interface)
 class ImagingSourceCamera(CameraABC):
     """Concrete subclass of CameraABC handling Imaging Source Hardware."""
 
@@ -237,7 +273,7 @@ class ImagingSourceCamera(CameraABC):
     @property
     def intensity_limits(self):
         """Return the minimum and maximum value for a pixel.
-        
+
         Returns
         -------
         pixel_min : int
@@ -270,6 +306,8 @@ class ImagingSourceCamera(CameraABC):
         try:
             color_fmt = SinkFormat.get(color_fmt)
         except (ValueError, ImagingSourceError):
+            # pylint: disable=redefined-variable-type
+            # Probably a bug.
             emit_error(self, CameraErrors.INVALID_SETTING_WITH_FALLBACK,
                        color_fmt, 'camera_settings/color_format', 'Y16')
             color_fmt = SinkFormat.Y16
@@ -282,6 +320,8 @@ class ImagingSourceCamera(CameraABC):
         try:
             color_fmt = SinkFormat.get(color_fmt)
         except (ValueError, ImagingSourceError):
+            # pylint: disable=redefined-variable-type
+            # Probably a bug.
             emit_error(self, CameraErrors.INVALID_SETTING_WITH_FALLBACK,
                        color_fmt, 'camera_settings/color_format', 'Y16')
             color_fmt = SinkFormat.Y16
@@ -362,7 +402,7 @@ class ImagingSourceCamera(CameraABC):
         self.set_roi(no_roi=True)
         self.driver.enable_auto_properties(False)
         if not self.__has_callback:
-            self.set_callback(on_frame_ready)
+            self.set_callback(on_frame_ready_)
             self.__has_callback = True
         self.set_roi()
 
@@ -388,7 +428,7 @@ class ImagingSourceCamera(CameraABC):
         -------
         binning : {0}
         """
-        return super().get_binning()
+        return 0
 
     def get_exposure(self):
         """Return the exposure time (milliseconds) set in the camera."""
@@ -455,7 +495,7 @@ class ImagingSourceCamera(CameraABC):
 
     def get_n_frames(self):
         """Return zero as the camera does not support frame averaging."""
-        return super().get_n_frames()
+        return 0
 
     def get_n_frames_limits(self):
         """Return the minimum and maximum number of frames supported.
@@ -554,7 +594,7 @@ class ImagingSourceCamera(CameraABC):
         self.busy = True
 
         # Begin delivering frames at maximum speed.
-        # The on_frame_ready callback will take care of
+        # The on_frame_ready_ callback will take care of
         # stopping whenever enough frames arrived and
         # will set the optimal frame rate.
         self.driver.start_delivering_frames(readout_rate=1024)
@@ -578,13 +618,8 @@ class ImagingSourceCamera(CameraABC):
             The function that will be called by the camera each time
             a new frame arrives. Takes self.process_info as the last
             argument.
-
-        Returns
-        -------
-        None
         """
-        self.driver.set_frame_ready_callback(on_frame_ready,
-                                             self.process_info)
+        self.driver.set_frame_ready_callback(on_frame_ready, self.process_info)
 
     def start(self, *_):
         """Start the camera in self.mode."""
@@ -643,10 +678,6 @@ class ImagingSourceCamera(CameraABC):
     def trigger_now(self):
         """Start acquiring one (or more) frames now.
 
-        Returns
-        -------
-        None.
-
         Emits
         -----
         error_occurred(CameraErrors.UNSUPPORTED_OPERATION)
@@ -664,3 +695,4 @@ class ImagingSourceCamera(CameraABC):
                 trigger_burst = ceil(trigger_burst * 1.2)
             self.driver.trigger_burst_count = trigger_burst
         self.driver.send_software_trigger()
+# pylint: enable=too-many-public-methods
