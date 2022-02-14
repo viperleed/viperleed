@@ -25,8 +25,9 @@ from PyQt5 import (QtCore as qtc,
                    QtGui as qtg,
                    QtWidgets as qtw)
 
-from viperleed.guilib.measure.hardwarebase import (emit_error,
-                                                   ViPErLEEDErrorEnum)
+# from viperleed.guilib.measure.hardwarebase import (emit_error,
+                                                   # ViPErLEEDErrorEnum)
+from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.camera import abc
 from viperleed.guilib.measure.camera import tifffile
 from viperleed.guilib.measure.widgets.camerawidgets import CameraViewer
@@ -55,7 +56,7 @@ def _report_progress(func):
     return _wrapper
 
 
-class BadPixelsFinderErrors(ViPErLEEDErrorEnum):
+class BadPixelsFinderErrors(base.ViPErLEEDErrorEnum):
     """Class for bad-pixel-finder errors."""
     DARK_FRAME_TOO_BRIGHT = (210,
                              "Dark frame has too much intensity. Camera "
@@ -301,8 +302,8 @@ class BadPixelsFinder(qtc.QObject):
         if self.__camera.busy:
             # Cannot start detecting bad pixels as long as the
             # camera is busy (esp. right after it is started)
-            emit_error(self, abc.CameraErrors.UNSUPPORTED_WHILE_BUSY,
-                      'find bad pixels')
+            base.emit_error(self, abc.CameraErrors.UNSUPPORTED_WHILE_BUSY,
+                            'find bad pixels')
             return
 
         self.__current_section = "dark-short"
@@ -335,13 +336,13 @@ class BadPixelsFinder(qtc.QObject):
         min_gain, max_gain = self.__camera.get_gain_limits()
         if new_gain < min_gain:
             # Too much intensity
-            emit_error(self, BadPixelsFinderErrors.FLAT_FRAME_WRONG_LIGHT,
-                       'bright')
+            base.emit_error(self, BadPixelsFinderErrors.FLAT_FRAME_WRONG_LIGHT,
+                            'bright')
             return
         elif new_gain > max_gain:
             # Too little intensity
-            emit_error(self, BadPixelsFinderErrors.FLAT_FRAME_WRONG_LIGHT,
-                       'bright')
+            base.emit_error(self, BadPixelsFinderErrors.FLAT_FRAME_WRONG_LIGHT,
+                            'bright')
             return
         self.__new_settings.set('measurement_settings', 'exposure',
                                 f'{new_exposure:.3f}')
@@ -357,7 +358,8 @@ class BadPixelsFinder(qtc.QObject):
         sec = self.__current_section
         if not self.__frame_acceptable(frame):
             if 'dark' in sec:
-                emit_error(self, BadPixelsFinderErrors.DARK_FRAME_TOO_BRIGHT)
+                base.emit_error(self,
+                                BadPixelsFinderErrors.DARK_FRAME_TOO_BRIGHT)
             else:
                 self.__adjust_exposure_and_gain(frame)
             return

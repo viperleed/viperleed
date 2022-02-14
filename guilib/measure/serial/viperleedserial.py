@@ -286,7 +286,7 @@ class ViPErLEEDSerial(SerialABC):
                        ViPErLEEDHardwareError.ERROR_MSG_RCVD_INCONSISTENT)
             return False
         # Check if message length is one of the expected lengths
-        if msg_length not in (1, 2, 4):
+        if msg_length not in (1, 2, 4, 8):
             emit_error(self, ViPErLEEDHardwareError.ERROR_MSG_RCVD_INVALID)
             return False
         return True
@@ -558,6 +558,11 @@ class ViPErLEEDSerial(SerialABC):
                     self.__measurements = []
                 elif self.__is_continuous_mode:
                     pass
+            elif len(message) == 8:
+                if self.__last_request_sent == pc_configuration:
+                    firmware, hardware = self.__firmware_and_hardware(message)
+                    self.data_received.emit(hardware)
+                    self.busy = False
             # If the message is 2 bytes long, then it is most likely the
             # identifier for an error and ended up here somehow
             elif len(message) == 2:
@@ -605,14 +610,17 @@ class ViPErLEEDSerial(SerialABC):
         Decode the message containing the configuration and return the
         hardware. If the firmware_version does not fit the version
         specified in the configuration files emit an error. If no ADC
-        has been detected emit an error.
+        has been detected emit an error. The hardware configuration
+        contains data about the internal setting of the controller
+        and the serial number stored in its EEPROM.
 
         Parameters
         ----------
         message : bytearray
-            Should have length 4
+            Should have length 8
             Contains firmware as bytes 0 and 1 and hardware
             configuration as bytes 2 and 3
+            serial number as bytes 4 to 7
 
         Returns
         -------
@@ -620,13 +628,15 @@ class ViPErLEEDSerial(SerialABC):
             Firmware version as "<major>.<minor>"
         hardware_config : dict
             keys : {'adc_0', 'adc_1', 'lm35', 'relay',
-                    'i0_range', 'aux_range'}
+                    'i0_range', 'aux_range', 'sr_number'}
             values : bool or str
                 Values are True/False for 'adc_0', 'adc_1',
                 'lm35', and 'relay', corresponding to the
                 hardware having access to the devices; Values
                 for 'i0_range' and 'aux_range' are the strings
-                '0 -- 2.5 V' or '0 -- 10 V'.
+                '0 -- 2.5 V' or '0 -- 10 V'; a human readable
+                (numbers and letters) serial number as str for
+                'sr_number'.
 
         Emits
         -----
@@ -636,7 +646,7 @@ class ViPErLEEDSerial(SerialABC):
             not detect any ADCs to take measurements with.
         """
         local_version = self.port_settings['controller']['FIRMWARE_VERSION']
-        major, minor, *hardware = message
+        major, minor, *hardware = message[:4]
         firmware_version = f"{major}.{minor}"
         if firmware_version != local_version:
             emit_error(self,
@@ -649,7 +659,8 @@ class ViPErLEEDSerial(SerialABC):
                            'lm35': False,
                            'relay': False,
                            'i0_range': '0 -- 10 V',
-                           'aux_range': '0 -- 10 V'}
+                           'aux_range': '0 -- 10 V',
+                           'sr_number': ''}
 
         hardware = int.from_bytes(hardware, self.byte_order)
         for key, value in hardware_bits.items():
@@ -666,6 +677,7 @@ class ViPErLEEDSerial(SerialABC):
             hardware_config[key] = present_or_closed
         if not (hardware_config['adc_0'] or hardware_config['adc_1']):
             emit_error(self, ViPErLEEDHardwareError.ERROR_NO_HARDWARE_DETECTED)
+        hardware_config['sr_number'] = ''.join([chr(v) for v in message[4:]])
         return firmware_version, hardware_config
 
     def is_measure_command(self, command):

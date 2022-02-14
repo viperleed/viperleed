@@ -69,10 +69,7 @@ class TimeResolved(MeasurementABC):
             self.prepare_continuous_mode()
             self.data_points.num_measurements = num_meas
         else:
-            self.__hv_settle_time = 0
-            self.__hv_settle_time = self.primary_controller.settings.getint(
-                'measurement_settings', 'hv_settle_time', fallback=0
-                )
+            self.__hv_settle_time = self.primary_controller.hv_settle_time
             self.__n_digits = len(str(num_meas))
         self.timer = qtc.QTimer(parent=self)
         self.timer.setSingleShot(True)
