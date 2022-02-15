@@ -100,6 +100,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
     data_received = qtc.pyqtSignal(object)
     serial_busy = qtc.pyqtSignal(bool)
     about_to_trigger = qtc.pyqtSignal()
+    __start_timer = qtc.pyqtSignal(int)
     __stop_timer = qtc.pyqtSignal()
 
     _mandatory_settings = [
@@ -182,6 +183,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         self.__timeout = qtc.QTimer(parent=self)
         self.__timeout.setSingleShot(True)
         self.__timeout.timeout.connect(self.__on_serial_timeout)
+        self.__start_timer.connect(self.__timeout.start)
         self.__stop_timer.connect(self.__timeout.stop)
 
         self.__open = False
@@ -761,7 +763,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
 
         timeout = int(timeout)
         if timeout >= 0:
-            self.__timeout.start(timeout)
+            self.__start_timer.emit(timeout)
         all_messages = self.prepare_message_for_encoding(*all_messages)
         if self.message_requires_response(*all_messages):
             self.busy = True
@@ -776,7 +778,6 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             time.sleep(0.01)
         if self.is_measure_command(sent_command):
             self.time_stamp = time.perf_counter()
-
     def serial_connect(self, *__args):
         """Connect to currently selected port."""
         if not self.__port.open(self.__port.ReadWrite):
