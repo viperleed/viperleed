@@ -14,6 +14,7 @@ Author: Michele Riva
 import sys
 import os
 import time
+import random
 from configparser import ConfigParser
 
 from PyQt5 import (QtWidgets as qtw,
@@ -35,7 +36,7 @@ TIMEOUT = 30000  # milliseconds
 
 CONFIG = ConfigParser()
 CONFIG.read(
-    os.path.join(cd, 'guilib/measure/configuration/original_backup.ini')
+    os.path.join(cd, 'guilib/measure/configuration/viperleed_hardware.ini')
     )
 
 class MainWindow(qtw.QWidget):
@@ -51,7 +52,8 @@ class MainWindow(qtw.QWidget):
                        'disconnect': qtw.QPushButton('Disconnect'),
                        'send': qtw.QPushButton('Send'),
                        'msg_to_send': qtw.QLineEdit(),
-                       'msg_received': qtw.QLineEdit()}
+                       'msg_received': qtw.QLineEdit(),
+                       'serial_nr': qtw.QPushButton('Set serial nr')}
 
         self.__port = ViPErLEEDSerial(settings=CONFIG)
 
@@ -74,6 +76,7 @@ class MainWindow(qtw.QWidget):
         layout.addWidget(self._ctrls['msg_to_send'], 2, 0)
         layout.addWidget(self._ctrls['send'], 2, 1)
         layout.addWidget(self._ctrls['msg_received'], 3, 0)
+        layout.addWidget(self._ctrls['serial_nr'], 3, 1)
 
         self._ctrls['msg_received'].setReadOnly(True)
         self._ctrls['msg_to_send'].setEnabled(False)
@@ -91,12 +94,13 @@ class MainWindow(qtw.QWidget):
         self._ctrls['send'].clicked.connect(self.send_message)
         self._ctrls['update_ports'].clicked.connect(self.update_port_list)
         self._ctrls['msg_to_send'].editingFinished.connect(self.send_message)
+        self._ctrls['serial_nr'].clicked.connect(self.set_serial_number)
 
     def update_port_list(self, *__args):
         """Update list of available ports."""
         ports = qts.QSerialPortInfo().availablePorts()
 
-        port_list = [f"{port.portName()}:{port.description()}"
+        port_list = [f"{port.portName()}:{port.description()} VID={hex(port.vendorIdentifier())} PID={hex(port.productIdentifier())}"
                      for port in ports]
 
         self._ctrls['select_port'].clear()
@@ -128,9 +132,10 @@ class MainWindow(qtw.QWidget):
 
         self.__port.error_occurred.disconnect(self.on_error_occurred)
 
-    def send_message(self, *__args):
+    def send_message(self, *__args, msg_to_send=None):
         """Send message to port, and wait for reply."""
-        msg_to_send = self._ctrls['msg_to_send'].text()
+        if not msg_to_send:
+            msg_to_send = self._ctrls['msg_to_send'].text()
         if not msg_to_send:
             print('No message', flush=True)
             return
@@ -185,6 +190,29 @@ class MainWindow(qtw.QWidget):
             f"stopBits: {self.__port.stopBits()}",
             sep='\n', end='\n\n'
             )
+
+    def set_serial_number(self):
+        """Generate and write serial number to device."""
+        sr_nr = self.generate_serial_number()
+        self.send_message(msg_to_send=f"s;{sr_nr}")
+        print(sr_nr)
+        return
+
+    def generate_serial_number(self):
+        """Generate a valid serial number."""
+        sr_nr = 4*[None]
+        for i, _ in enumerate(sr_nr):
+            sr_nr[i] = self.get_random_sr_byte()
+        sr_nr_string = ",".join(str(v) for v in sr_nr)
+        return sr_nr_string
+
+    def get_random_sr_byte(self):
+        """Get random value."""
+        unacceptable_values = [58 + i for i in range(7)]
+        random_value = random.randint(48,90)
+        if random_value in unacceptable_values:
+            random_value = self.get_random_sr_byte()
+        return random_value
 
 
 if __name__ == '__main__':
