@@ -1137,6 +1137,56 @@ end subroutine range_index_from_Energy
 
 
 
+! Routines for working with rfactors
+
+subroutine r_pendry_beamtype_grouping(n_beams, numerators, denominators, n_overlapping_points, &
+        n_groups, grouping, r_factor_groups, n_overlapping_points_groups, ierr)
+
+    integer, INTENT(IN) :: n_beams
+    real(8), INTENT(IN) :: numerators(n_beams)
+    real(8), INTENT(IN) :: denominators (n_beams)
+    integer, INTENT(IN) :: n_overlapping_points(n_beams)
+
+    integer, INTENT(IN) :: n_groups
+    integer, INTENT(IN) :: grouping(n_beams)
+
+    real(8), INTENT(OUT) :: r_factor_groups(n_groups)
+    integer, INTENT(OUT) :: ierr
+
+    integer, INTENT(OUT) :: n_overlapping_points_groups(n_groups)
+
+    integer :: group, i
+    real(8) :: num(n_groups), denom(n_groups)
+
+    ierr = 0
+    
+    ! initialize
+    num = 0
+    denom = 0
+    n_overlapping_points_groups = 0
+    
+    if (ANY(grouping < 0) .or. ANY(grouping > n_groups)) then
+        ierr = 902
+        RETURN
+    end if
+
+    do i = 1, n_beams
+        group = grouping(i)
+        if (group == 0) CYCLE
+        num(group) = num(group) + numerators(i)
+        denom(group) = denom(group) + denominators(i)
+        n_overlapping_points_groups(group) = n_overlapping_points_groups(group) + n_overlapping_points(i)
+    end do
+
+    do group = 1, n_groups
+        r_factor_groups = num(group)/denom(group)
+    end do
+
+end subroutine r_pendry_beamtype_grouping 
+
+
+
+
 
 ! Library functions    
 
