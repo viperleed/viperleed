@@ -1159,7 +1159,7 @@ subroutine r_pendry_beamtype_grouping(n_beams, numerators, denominators, n_overl
     real(8) :: num(n_groups), denom(n_groups)
 
     ierr = 0
-    
+
     ! initialize
     num = 0
     denom = 0
@@ -1179,7 +1179,7 @@ subroutine r_pendry_beamtype_grouping(n_beams, numerators, denominators, n_overl
     end do
 
     do group = 1, n_groups
-        r_factor_groups = num(group)/denom(group)
+        r_factor_groups(group) = num(group)/denom(group)
     end do
 
 end subroutine r_pendry_beamtype_grouping 
