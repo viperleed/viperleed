@@ -523,10 +523,8 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         settings_path = base.get_device_config(self.__class__.__name__,
                                                prompt_if_invalid=False)
         if not settings_path:
-            print('settings path not found')
             base.emit_error(self, ControllerErrors.DEFAULT_SETTINGS_CORRUPTED,
                             self.__class__.__name__)
-        print(settings_path)
         config, invalid = base.config_has_sections_and_options(                 #TODO: not a nice solution
             self, settings_path, []
             )

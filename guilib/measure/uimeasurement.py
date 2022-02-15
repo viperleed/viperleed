@@ -156,6 +156,8 @@ class Measure(gl.ViPErLEEDPluginBase):
         controller_devices = devices_menu.addMenu("Controllers")
         for camera in get_devices("camera"):
             cam_devices.addAction(camera)
+        for controller in get_devices("controller"):
+            controller_devices.addAction(controller)
 
         tools_menu = self._ctrls['menus']['tools']
         menu.insertMenu(self.about_action, tools_menu)

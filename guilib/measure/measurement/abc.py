@@ -901,7 +901,8 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
                        'controller/controller_class')
             return
-        instance = controller_class(config, port_name, sets_energy=is_primary)
+        instance = controller_class(settings=config, port_name=port_name,
+                                    sets_energy=is_primary)
         return instance
 
     def __make_camera(self, camera_settings):

@@ -14,7 +14,11 @@ which gives commands to the ViPErinoSerialWorker class.
 """
 
 import ast
+import time
 from collections import defaultdict
+
+from PyQt5 import QtCore as qtc
+from PyQt5 import QtSerialPort as qts
 
 # ViPErLEED modules
 from viperleed.guilib.measure.controller.abc import MeasureControllerABC
@@ -47,6 +51,8 @@ class ViPErinoErrors(ViPErLEEDErrorEnum):
 
 class ViPErinoController(MeasureControllerABC):
     """Controller class for the ViPErLEED Arduino Micro."""
+
+    __request_info = qtc.pyqtSignal()
 
     def __init__(self, settings=None, port_name='', sets_energy=False):
         """Initialise ViPErino controller object.
@@ -92,7 +98,7 @@ class ViPErinoController(MeasureControllerABC):
         self.continue_prepare_todos['start_autogain'] = True
         self.__adc_measurement_types = []
         self.__adc_channels = []
-        self.__hardware = defaultdict()
+        self.hardware = defaultdict()
 
     @property
     def initial_delay(self):
@@ -274,7 +280,7 @@ class ViPErinoController(MeasureControllerABC):
         """
         if isinstance(receive, dict):
             # Got hardware info
-            self.__hardware = receive
+            self.hardware = receive
             return
 
         # Otherwise it is data
@@ -322,7 +328,7 @@ class ViPErinoController(MeasureControllerABC):
 
         self.__adc_measurement_types = []
         self.__adc_channels = []
-        self.__hardware = defaultdict()
+        self.hardware = defaultdict()
         self.measurements = defaultdict(list)
         self.__energies_and_times = []
 
@@ -423,3 +429,39 @@ class ViPErinoController(MeasureControllerABC):
             'adc_update_rate', update_rate_raw, fallback=50
             )
         return 1/meas_f
+
+    def list_devices(self):
+        """List Arduino Micro VipErLEED hardware.
+        
+        This function will take between 70 to slightly more
+        than 100 ms to run.
+        """
+        ports = qts.QSerialPortInfo().availablePorts()
+        device_list = []
+        threads = []
+        controllers = []
+        for port in ports:
+            ctrl = ViPErinoController(port_name=port.portName(),
+                                      sets_energy=False)
+            threads.append(qtc.QThread())
+            ctrl.moveToThread(threads[-1])
+            controllers.append(ctrl)
+        for thread in threads:
+            thread.start(priority=thread.TimeCriticalPriority)
+        for ctrl in controllers:
+            self.__request_info.connect(ctrl.get_hardware)
+        self.__request_info.emit()
+        if controllers:
+            controllers[0].serial.port.waitForReadyRead(100)
+        for ctrl in controllers:
+            sr_number = ctrl.hardware.get('sr_number', None)
+            ctrl.disconnect_()
+            if sr_number:
+                device_list.append(f"ViPErLEED:{sr_number}({ctrl.name})")
+                # print(sr_number, ctrl.name, flush=True)
+            else:
+                print("Not a ViPErLEED controller at", ctrl.name, flush=True)
+        for thread in threads:
+            thread.quit()
+        time.sleep(0.001)
+        return device_list
