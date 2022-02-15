@@ -83,6 +83,46 @@ subroutine r_pendry_beam_y(n_E, E_step, y1, y2, id_start_y1, id_start_y2, n_y1, 
 
 end subroutine r_pendry_beam_y
 
+subroutine r2_beam_intensity(n_E, E_step, int_1, int_2, id_start_1, id_start_2, n_1, n_2, &
+    V0r_shift, R2, n_overlapping_points)
+
+    integer, intent(in) :: n_E
+    real(8), INTENT(IN) :: E_step
+    integer, INTENT(IN) :: id_start_1, id_start_2
+    integer, INTENT(IN) :: n_1, n_2
+    !f2py intent(in) int_1
+    real(8), intent (in), dimension(n_E)   :: int_1
+    !f2py intent(in) int_2
+    real(8), intent (in), dimension(n_E)   :: int_2
+    integer, intent (in)                   :: V0r_shift
+    ! outputs
+    real(8), intent (out)                  :: R2
+    integer,  intent (out)              :: n_overlapping_points
+
+    real(8), dimension (:), allocatable         :: int_diff, y_squared_sum
+
+
+    integer :: id_min, id_max
+    real(8) :: A, c
+
+    id_min = max(id_start_1, id_start_2 + V0r_shift)
+    id_max = min(id_start_1 + n_1 - 1, id_start_2 + n_2 - 1 + V0r_shift)
+
+    n_overlapping_points = id_max - id_min + 1
+
+    
+    A = 1/trapez_integration_const_dx(int_1(id_min: id_max)**2, E_step)
+
+    c = trapez_integration_const_dx(int_1(id_min: id_max), E_step) / &
+        trapez_integration_const_dx(int_2(id_min -V0r_shift : id_max - V0r_shift), E_step)
+
+    R2 = A*trapez_integration_const_dx( ( int_1(id_min: id_max) - &
+        c*int_2(id_min -V0r_shift : id_max - V0r_shift) )**2, &
+        E_step )
+
+
+end subroutine r2_beam_intensity
+
 
 subroutine r_pendry_beamset_V0r_opt_on_grid( &
         range, start_guess, fast_search, best_V0r_step, best_V0r, best_R, n_evaluated, &       
@@ -583,12 +623,58 @@ subroutine r_pendry_beamset_y(n_E, E_step, n_beams, y1, y2, id_start_y1, id_star
         ! end do
 
         ierr = 811
+        RETURN
     end if
     
     r_pendry_weighted = sum(numerators)/sum(denominators)
 
     return
 end subroutine r_pendry_beamset_y
+
+subroutine r2_beamset_intensity(n_E, E_step, n_beams, int_1, int_2, id_start_1, id_start_2, n_1, n_2, V0r_shift, &
+    r2_weighted, r2_beams,  n_overlapping_points, ierr)
+
+    !###############
+    !INPUTS
+    !###############
+    !f2py integer, hidden, intent(in), depend(E_start1, E_start2), check(len(E_start1)==len(E_start2)) :: nr_beams=len(E_start1)
+    integer :: n_E ! number of energy steps
+    integer n_beams
+    !f2py real(8), intent(in) :: E_step
+    real(8) :: E_step
+    real(8), intent(in) :: int_1 (n_E, n_beams), int_2 (n_E, n_beams)
+    integer, intent(in)    :: id_start_1(n_beams) ,id_start_2(n_beams)
+    integer, intent(in)    :: n_1(n_beams) ,n_2(n_beams)
+    !f2py integer, intent(out) :: n_overlapping_points
+    integer, intent(out) :: n_overlapping_points(n_beams)
+    real(8), intent(out) :: r2_beams(n_beams), r2_weighted
+    !f2py integer, intent(in)::  V0r_shift
+    integer, intent(in) :: V0r_shift
+
+    integer, intent(out):: ierr
+
+    ! temporay variables used in subroutine
+    integer i
+    real(8) temp_num, temp_denom
+
+    ierr = 0
+
+    ! iterate over beams and call subroutine r_factor_beam
+    do i=1 , n_beams
+        call r2_beam_intensity(n_E, E_step, int_1(:, i), int_2(:, i), id_start_1(i), id_start_2(i), n_1(i), n_2(i), V0r_shift, &
+            r2_beams(i), n_overlapping_points(i))
+    end do
+
+    if (ANY(ieee_is_nan(r2_beams))) then
+        r2_weighted = ieee_value(real(8), ieee_signaling_nan)
+        ierr = 811
+        RETURN
+    end if
+    
+    r2_weighted = sum(r2_beams*(n_overlapping_points - 1))/(sum(n_overlapping_points - 1)*E_step)
+
+    return
+end subroutine r2_beamset_intensity
 
 
 subroutine Rfactor_v0ropt(opt_type, min_steps, max_steps, nr_used_v0)
@@ -638,11 +724,12 @@ end subroutine Rfactor_v0ropt
 
 subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_beams, n_E_beams, &
                          skip_stages, n_beams_out, averaging_scheme, &
+                         which_R, &
                          deg, &
                          n_E_out, E_grid_out, &
                          V0i, &
                          E_start_beams_out, n_E_beams_out, &
-                         intpol_intensity, intpol_derivative, y_func, ierr)
+                         intpol_intensity, y_func, ierr)
     !Prepare_beams:
     !INPUT: array[I, E_min, E_step, NE], E_grid_step, averaging_scheme, smoothing?, E_min, E_max
     !DOES: (0) Limit_range, (1) Average/discard/reorder according to scheme; (2) smooth?; (3) interpolate on grid; (4) compute Y on new grid
@@ -672,6 +759,7 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
                                                      ! Integer between 1 and n_averaging_types - determines with which beams to average together
     !f2py intent(in) :: deg
     integer, INTENT(IN) :: deg ! Degree of interpolation to use
+    integer, INTENT(IN) :: which_R ! Which R factor to prepare for (1: pendry, 2: R2)
 
     ! Energy grids
     real(8), INTENT(IN)                         :: E_grid_in(n_E_in) ! Input energy grid
@@ -689,7 +777,7 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
 
 
     real(8), INTENT(OUT) :: intpol_intensity(n_E_out, n_beams)
-    real(8), INTENT(OUT) :: intpol_derivative(n_E_out, n_beams)
+    real(8) :: intpol_derivative(n_E_out, n_beams)
     real(8), INTENT(OUT) :: y_func(n_E_out, n_beams)
 
 
@@ -900,74 +988,106 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
         call get_array_sizes(cut_n_E_in, deg, max_n_knots, max_nt, max_LHS_rows)
         Allocate(knots(max_n_knots+1, n_beams), LHS(max_LHS_rows+1, max_nt+1, n_beams), coeffs(max_nt+1, n_beams))
         
+        if (which_R == 1) then
+            do i= 1,n_beams_out
+                ! print*, "beam: ", i
+                ! !DEBUG
+                ! print*, cut_E_start_beams(i), cut_E_start_beams(i)+cut_n_E_beams(i) - 1
+                ! print*, E_start_beams_out(i), E_start_beams_out(i)+n_E_beams_out(i) - 1
+                ! print*, intensities(cut_E_start_beams(i), i)
+                ! print*, intensities( cut_beams_max_id_in(i) , i)
+                ! print*, E_grid_in(cut_E_start_beams(i))
+                ! print*, E_grid_in(cut_beams_max_id_in(i))
+                
+                call get_array_sizes(cut_n_E_beams(i), deg, n_knots_beams(i), nt_beams(i), LHS_rows_beams(i))
+                ! print*, cut_E_start_beams(i), cut_beams_max_id_in(i)
+                ! print*, ""
+                ! print*, n_knots_beams(i), nt_beams(i)
 
-        do i= 1,n_beams_out
-            ! print*, "beam: ", i
-            ! !DEBUG
-            ! print*, cut_E_start_beams(i), cut_E_start_beams(i)+cut_n_E_beams(i) - 1
-            ! print*, E_start_beams_out(i), E_start_beams_out(i)+n_E_beams_out(i) - 1
-            ! print*, intensities(cut_E_start_beams(i), i)
-            ! print*, intensities( cut_beams_max_id_in(i) , i)
-            ! print*, E_grid_in(cut_E_start_beams(i))
-            ! print*, E_grid_in(cut_beams_max_id_in(i))
-            
-            call get_array_sizes(cut_n_E_beams(i), deg, n_knots_beams(i), nt_beams(i), LHS_rows_beams(i))
-            ! print*, cut_E_start_beams(i), cut_beams_max_id_in(i)
-            ! print*, ""
-            ! print*, n_knots_beams(i), nt_beams(i)
 
+                call single_calc_spline(&
+                    cut_n_E_beams(i), &
+                    E_grid_in(cut_E_start_beams(i) : cut_beams_max_id_in(i)), &
+                    intensities(cut_E_start_beams(i) : cut_beams_max_id_in(i), i), &
+                    deg, &
+                    n_knots_beams(i), nt_beams(i), LHS_rows_beams(i), &
+                    knots(1:n_knots_beams(i), i), &
+                    coeffs(1:nt_beams(i), i), &
+                    ierrs(i))
+                ! !Interpolate intensitites
+                !     print*, "ierr", ierr
+                !     print*, "First and last intensity in"
+                !     print*, intensities_in(cut_E_start_beams(i),i)
+                !     print*, intensities_in(cut_E_start_beams(i) + cut_n_E_beams(i) - 1, i)
+                !     print*, "Any NAN?", ANY(ieee_is_nan(intensities_in))
+                !     print*, "First and last knot"
+                !     print*, knots(1,i)
+                !     print*, knots(n_knots_beams(i), i)
+                !     print*, "n_knots, nt, deg, LHS_rows", n_knots_beams(i), nt_beams(i), deg, LHS_rows_beams(i)
 
-            call single_calc_spline(&
-                cut_n_E_beams(i), &
-                E_grid_in(cut_E_start_beams(i) : cut_beams_max_id_in(i)), &
-                intensities(cut_E_start_beams(i) : cut_beams_max_id_in(i), i), &
-                deg, &
-                n_knots_beams(i), nt_beams(i), LHS_rows_beams(i), &
-                knots(1:n_knots_beams(i), i), &
-                coeffs(1:nt_beams(i), i), &
-                ierrs(i))
-            ! !Interpolate intensitites
-            !     print*, "ierr", ierr
-            !     print*, "First and last intensity in"
-            !     print*, intensities_in(cut_E_start_beams(i),i)
-            !     print*, intensities_in(cut_E_start_beams(i) + cut_n_E_beams(i) - 1, i)
-            !     print*, "Any NAN?", ANY(ieee_is_nan(intensities_in))
-            !     print*, "First and last knot"
-            !     print*, knots(1,i)
-            !     print*, knots(n_knots_beams(i), i)
-            !     print*, "n_knots, nt, deg, LHS_rows", n_knots_beams(i), nt_beams(i), deg, LHS_rows_beams(i)
+                call single_interpolate_coeffs_to_grid( &
+                    n_knots_beams(i), knots(1:n_knots_beams(i), i), nt_beams(i), coeffs(1:nt_beams(i), i), &
+                    deg, &
+                    n_E_beams_out(i), &
+                    E_grid_out(E_start_beams_out(i) : beams_max_id_out(i)), &
+                    0, &
+                    intpol_intensity(E_start_beams_out(i) : beams_max_id_out(i), i))
+                !print*, "Intpol"
+                !print*, intpol_intensity(E_start_beams_out(i) : E_start_beams_out(i) + n_E_beams_out(i),i)
+                    ! Interpolate derivatives
 
-            call single_interpolate_coeffs_to_grid( &
-                n_knots_beams(i), knots(1:n_knots_beams(i), i), nt_beams(i), coeffs(1:nt_beams(i), i), &
-                deg, &
-                n_E_beams_out(i), &
-                E_grid_out(E_start_beams_out(i) : beams_max_id_out(i)), &
-                0, &
-                intpol_intensity(E_start_beams_out(i) : beams_max_id_out(i), i))
-            !print*, "Intpol"
-            !print*, intpol_intensity(E_start_beams_out(i) : E_start_beams_out(i) + n_E_beams_out(i),i)
-                ! Interpolate derivatives
+                ! Intensity must be > 0, so set to 0 if not:
+                intpol_intensity = max(intpol_intensity, 0d0)
 
-            ! Intensity must be > 0, so set to 0 if not:
-            intpol_intensity = max(intpol_intensity, 0d0)
+                call single_interpolate_coeffs_to_grid( &
+                    n_knots_beams(i), knots(1:n_knots_beams(i), i), nt_beams(i), coeffs(1:nt_beams(i), i), &
+                    deg, &
+                    n_E_beams_out(i), &
+                    E_grid_out(E_start_beams_out(i) : beams_max_id_out(i)), &
+                    1, &
+                    intpol_derivative(E_start_beams_out(i) : beams_max_id_out(i), i))
 
-            call single_interpolate_coeffs_to_grid( &
-                n_knots_beams(i), knots(1:n_knots_beams(i), i), nt_beams(i), coeffs(1:nt_beams(i), i), &
-                deg, &
-                n_E_beams_out(i), &
-                E_grid_out(E_start_beams_out(i) : beams_max_id_out(i)), &
-                1, &
-                intpol_derivative(E_start_beams_out(i) : beams_max_id_out(i), i))
-            ! Calculate pendry Y function
-            call pendry_y( &
-                n_E_beams_out(i), &
-                intpol_intensity(E_start_beams_out(i):beams_max_id_out(i), i), &
-                intpol_derivative(E_start_beams_out(i):beams_max_id_out(i), i), &
-                v0i, &
-                y_func(E_start_beams_out(i):beams_max_id_out(i), i) &
-                )
-        end do
-        ierr = MAXVAL(ierrs)
+                ! Calculate pendry Y function
+                call pendry_y( &
+                    n_E_beams_out(i), &
+                    intpol_intensity(E_start_beams_out(i):beams_max_id_out(i), i), &
+                    intpol_derivative(E_start_beams_out(i):beams_max_id_out(i), i), &
+                    v0i, &
+                    y_func(E_start_beams_out(i):beams_max_id_out(i), i) &
+                    )
+            end do
+            ierr = MAXVAL(ierrs)
+            !end Pendry
+        else if (which_R == 2) then
+            ! Beginn R2
+            do i= 1,n_beams_out
+                
+                call get_array_sizes(cut_n_E_beams(i), deg, n_knots_beams(i), nt_beams(i), LHS_rows_beams(i))
+
+                call single_calc_spline(&
+                    cut_n_E_beams(i), &
+                    E_grid_in(cut_E_start_beams(i) : cut_beams_max_id_in(i)), &
+                    intensities(cut_E_start_beams(i) : cut_beams_max_id_in(i), i), &
+                    deg, &
+                    n_knots_beams(i), nt_beams(i), LHS_rows_beams(i), &
+                    knots(1:n_knots_beams(i), i), &
+                    coeffs(1:nt_beams(i), i), &
+                    ierrs(i))
+
+                call single_interpolate_coeffs_to_grid( &
+                    n_knots_beams(i), knots(1:n_knots_beams(i), i), nt_beams(i), coeffs(1:nt_beams(i), i), &
+                    deg, &
+                    n_E_beams_out(i), &
+                    E_grid_out(E_start_beams_out(i) : beams_max_id_out(i)), &
+                    0, &
+                    intpol_intensity(E_start_beams_out(i) : beams_max_id_out(i), i))
+                
+                ! Done! R2 only needs intensities
+                y_func = ieee_value(real(8), ieee_signaling_nan) ! Assign NaNs so it throws if used by accident
+            end do
+        else
+            ierr = 701
+        end if
     end if
 
     !###############
@@ -996,7 +1116,6 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
     ! intpol_intensity(E_start_beams_out(i) +1, i)
     ! print*, "Intensities out u:", intpol_intensity(beams_max_id_out(i) -1, i), &
     ! intpol_intensity(beams_max_id_out(i), i)
-
 
 
     RETURN
@@ -1179,7 +1298,12 @@ subroutine r_pendry_beamtype_grouping(n_beams, numerators, denominators, n_overl
     end do
 
     do group = 1, n_groups
-        r_factor_groups(group) = num(group)/denom(group)
+        if (abs(denom(group)) .ge. 1e-10) then
+            r_factor_groups(group) = num(group)/denom(group)
+        else
+            r_factor_groups(group) = ieee_value(real(8), ieee_signaling_nan)
+            ierr = 903
+        end if 
     end do
 
 end subroutine r_pendry_beamtype_grouping 
