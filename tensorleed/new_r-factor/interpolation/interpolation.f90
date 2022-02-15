@@ -359,7 +359,8 @@ module interpolation
         
         y_func = 0.0d0
         do concurrent (i=1:n_new)
-            intensity(i) = sum(coeffs(intervals(i)-deg+1:intervals(i)+1)*deBoor_matrix_deriv_0(1:deg+1,i))
+            ! intensity must be larger 0! (If not set to 0)
+            intensity(i) = max(sum(coeffs(intervals(i)-deg+1:intervals(i)+1)*deBoor_matrix_deriv_0(1:deg+1,i)), 0d0)
             derivative(i) = sum(coeffs(intervals(i)-deg+1:intervals(i)+1)*deBoor_matrix_deriv_1(1:deg+1,i))
             y_func(i) = intensity(i)*derivative(i) /(intensity(i)*intensity(i) + v0i*v0i*derivative(i)*derivative(i))
         end do
