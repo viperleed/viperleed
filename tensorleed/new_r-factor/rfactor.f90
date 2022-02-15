@@ -87,7 +87,7 @@ end subroutine r_pendry_beam_y
 subroutine r_pendry_beamset_V0r_opt_on_grid( &
         range, start_guess, fast_search, best_V0r_step, best_V0r, best_R, n_evaluated, &       
         n_E, E_step, n_beams, y1, y2, id_start_y1, id_start_y2, n_y1, n_y2, &
-        r_pendry_beams, n_overlapping_points, &
+        r_pendry_beams, numerators, denominators, n_overlapping_points, &
         ierr, &
         tol_R, tol_R_2, max_fit_range)
     
@@ -133,6 +133,7 @@ subroutine r_pendry_beamset_V0r_opt_on_grid( &
     ! holder_arrays for passout
     integer, ALLocatable :: N_overlapping_points_V0r(:,:)
     real(8), ALLocatable :: r_pendry_beams_V0r(:,:)
+    real(8), ALLOCATABLE :: numerators_V0r(:,:), denominators_V0r(:,:)
 
 
     ! Pass-through I/O for r_pendry_beamset
@@ -153,9 +154,8 @@ subroutine r_pendry_beamset_V0r_opt_on_grid( &
     integer, intent(out) :: n_overlapping_points(n_beams)
     !f2py real(8), intent(out) :: r_pendry_beams(n_beams), r_pendry_weighted
     real(8), intent(out) :: r_pendry_beams(n_beams)
+    real(8), intent(out) :: numerators(n_beams), denominators(n_beams)
 
-
-    ! integer, intent(out):: ierr
 
     ! *****************************************************************************************
 
@@ -171,6 +171,7 @@ subroutine r_pendry_beamset_V0r_opt_on_grid( &
     ALLOCATE(R_V0r(n_steps), weights(n_steps))
     ! Below arrays are allocated with beam index in first position, because step changes more slowly!
     ALLOCATE(r_pendry_beams_V0r(n_beams, n_steps), N_overlapping_points_V0r(n_beams, n_steps))
+    ALLOCATE(numerators_V0r(n_beams, n_steps), denominators_V0r(n_beams, n_steps))
     ALLOCATE(evaluated(n_steps))
 
     do i = 1, n_steps
@@ -198,6 +199,7 @@ subroutine r_pendry_beamset_V0r_opt_on_grid( &
             V0r_step(next_step), & 
             R_V0r(next_step), &
             r_pendry_beams_V0r(:, next_step), &
+            numerators_V0r(:, next_step), denominators_V0r(:, next_step), &
             N_overlapping_points_V0r(:, next_step), &
             ierr)
         ! Pass out possible R factor error message
@@ -209,6 +211,8 @@ subroutine r_pendry_beamset_V0r_opt_on_grid( &
         ! Calculate next point
         call update_best_V0r(n_steps, n_beams, best_R, best_id, R_V0r(next_step), next_step, &
             N_overlapping_points_V0r, N_overlapping_points, &
+            numerators_V0r, numerators, &
+            denominators_V0r, denominators, &
             r_pendry_beams_V0r, r_pendry_beams)
 
         evaluated(next_step) = .True.
@@ -364,15 +368,18 @@ subroutine r_pendry_beamset_V0r_opt_on_grid( &
     do i = 1, n_steps
         if (.not. evaluated(i)) then
             call r_pendry_beamset_y(n_E, E_step, n_beams, y1, y2, id_start_y1, id_start_y2, n_y1, n_y2, &
-            V0r_step(i), & 
-            R_V0r(i), &
-            r_pendry_beams_V0r(:, i), &
-            N_overlapping_points_V0r(:, i), &
-            ierr_tmp)
+                V0r_step(i), & 
+                R_V0r(i), &
+                r_pendry_beams_V0r(:, i), &
+                numerators_V0r(:, i), denominators_V0r(:, i), &
+                N_overlapping_points_V0r(:, i), &
+                ierr_tmp)
             evaluated(i) = .True.
             n_evaluated = n_evaluated + 1
             call update_best_V0r(n_steps, n_beams, best_R, best_id, R_V0r(i), i, &
                 N_overlapping_points_V0r, N_overlapping_points, &
+                numerators_V0r, numerators, &
+                denominators_V0r, denominators, &
                 r_pendry_beams_V0r, r_pendry_beams)
             !print*, "Brute force. step:", V0r_step(i), "R = ", R_V0r(i)
             if (ierr_tmp .ne. 0) ierr = ierr_tmp
@@ -392,6 +399,8 @@ end subroutine r_pendry_beamset_V0r_opt_on_grid
 
 subroutine update_best_V0r(n_steps, n_beams, curr_best_R, curr_best_id, R, id, &
                 N_overlapping_points_V0r, N_overlapping_points, &
+                numerators_V0r, numerators, &
+                denominators_V0r, denominators, &
                 r_pendry_beams_V0r, r_pendry_beams)
     integer :: n_steps
     integer :: n_beams
@@ -402,9 +411,13 @@ subroutine update_best_V0r(n_steps, n_beams, curr_best_R, curr_best_id, R, id, &
     integer, INTENT(IN) :: id
 
     integer, INTENT(IN) :: N_overlapping_points_V0r(n_beams, n_steps)
+    real(8), INTENT(IN) :: numerators_V0r(n_beams, n_steps)
+    real(8), INTENT(IN) :: denominators_V0r(n_beams, n_steps)
     real(8), INTENT(IN) :: r_pendry_beams_V0r(n_beams, n_steps)
 
     integer, INTENT(OUT) :: N_overlapping_points(n_beams)
+    real(8), INTENT(OUT) :: numerators(n_beams)
+    real(8), INTENT(OUT) :: denominators(n_beams)
     real(8), INTENT(OUT) :: r_pendry_beams(n_beams)
 
 
@@ -412,6 +425,8 @@ subroutine update_best_V0r(n_steps, n_beams, curr_best_R, curr_best_id, R, id, &
         curr_best_R = R
         curr_best_id = id
         N_overlapping_points = N_overlapping_points_V0r(:, id)
+        numerators = numerators_V0r(:, id)
+        denominators = denominators_V0r(:, id)
         r_pendry_beams = r_pendry_beams_V0r(:, id)
     end if
     RETURN
@@ -512,7 +527,7 @@ end function parabola_R_squared
 
 
 subroutine r_pendry_beamset_y(n_E, E_step, n_beams, y1, y2, id_start_y1, id_start_y2, n_y1, n_y2, V0r_shift, &
-    r_pendry_weighted, r_pendry_beams, n_overlapping_points, ierr)
+    r_pendry_weighted, r_pendry_beams, numerators, denominators, n_overlapping_points, ierr)
     !Rfactor_beamset:
     !INPUT: set of arrays Y1, Y2, Estart1, Estart2, V0rshift, beamtypes -> calls the above in a loop over beams
     !DOES: call above, average based on overlapping points, also split into types ("integer/fractional")
@@ -539,16 +554,14 @@ subroutine r_pendry_beamset_y(n_E, E_step, n_beams, y1, y2, id_start_y1, id_star
     integer, intent(out) :: n_overlapping_points(n_beams)
     !f2py real(8), intent(out) :: r_pendry_beams(n_beams), r_pendry_weighted
     real(8), intent(out) :: r_pendry_beams(n_beams), r_pendry_weighted
+    real(8), intent(out) :: numerators(n_beams), denominators(n_beams)
     !f2py integer, intent(in)::  V0r_shift
     integer, intent(in) :: V0r_shift
 
     integer, intent(out):: ierr
 
-    real(8) numerators(n_beams), denominators(n_beams)
-
     ! temporay variables used in subroutine
     integer i
-    integer total_points
     real(8) temp_num, temp_denom
 
     ierr = 0
@@ -558,19 +571,21 @@ subroutine r_pendry_beamset_y(n_E, E_step, n_beams, y1, y2, id_start_y1, id_star
         call r_pendry_beam_y(n_E, E_step, y1(:, i), y2(:, i), id_start_y1(i), id_start_y2(i), n_y1(i), n_y2(i), V0r_shift, &
             r_pendry_beams(i), numerators(i), denominators(i), n_overlapping_points(i))
     end do
-    total_points = sum(N_overlapping_points)
+    !total_points = sum(N_overlapping_points)
 
     if (ANY(ieee_is_nan(r_pendry_beams))) then
         r_pendry_weighted = ieee_value(real(8), ieee_signaling_nan)
 
-        do i =1, n_beams
-            if (ieee_is_nan(r_pendry_beams(i))) then
-                print*,"NaN in beam ", i
-            end if
-        end do
+        ! do i =1, n_beams
+        !     if (ieee_is_nan(r_pendry_beams(i))) then
+        !         print*,"NaN in beam ", i
+        !     end if
+        ! end do
+
         ierr = 811
     end if
-    r_pendry_weighted = sum(numerators/denominators*N_overlapping_points)/total_points
+    
+    r_pendry_weighted = sum(numerators)/sum(denominators)
 
     return
 end subroutine r_pendry_beamset_y
@@ -836,9 +851,9 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
 
     ! Debug below...
     do i = 1, n_beams
-        print*, i
-        print*, n_E_out
-        print*, beams_max_id_out(i)
+       ! print*, i
+       ! print*, n_E_out
+       ! print*, beams_max_id_out(i)
         if (E_grid_in(cut_beams_max_id_in(i)) < E_grid_out(beams_max_id_out(i))) then
             print*, "issue size out - beam", i
         end if
@@ -922,7 +937,7 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
             !     print*, knots(n_knots_beams(i), i)
             !     print*, "n_knots, nt, deg, LHS_rows", n_knots_beams(i), nt_beams(i), deg, LHS_rows_beams(i)
 
-                call single_interpolate_coeffs_to_grid( &
+            call single_interpolate_coeffs_to_grid( &
                 n_knots_beams(i), knots(1:n_knots_beams(i), i), nt_beams(i), coeffs(1:nt_beams(i), i), &
                 deg, &
                 n_E_beams_out(i), &
@@ -932,6 +947,9 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
             !print*, "Intpol"
             !print*, intpol_intensity(E_start_beams_out(i) : E_start_beams_out(i) + n_E_beams_out(i),i)
                 ! Interpolate derivatives
+
+            ! Intensity must be > 0, so set to 0 if not:
+            intpol_intensity = max(intpol_intensity, 0d0)
 
             call single_interpolate_coeffs_to_grid( &
                 n_knots_beams(i), knots(1:n_knots_beams(i), i), nt_beams(i), coeffs(1:nt_beams(i), i), &
@@ -1121,7 +1139,6 @@ end subroutine range_index_from_Energy
 
 
 ! Library functions    
-! get rid of below - not required due to interpolation!
 
 
 subroutine pendry_y(n_data, intensity, derivative, v0i, y_func)
@@ -1176,7 +1193,7 @@ subroutine translate_evaluation_grid(e_min, e_max, EINCR, VINCR, V0RR, V01, V02,
 
     allocate(energies(n_E))
 
-    print*, size(energies)
+    !print*, size(energies)
 
     do i = 1, n_E
         energies(i) = min_tmp + (i-1)*E_step
