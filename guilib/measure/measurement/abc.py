@@ -218,7 +218,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             return
 
         self.__settings = new_settings
-        
+
         sys_config = ConfigParser()
         sys_config, invalid = config_has_sections_and_options(
             self,
@@ -332,12 +332,15 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
 
         This function must be reimplemented in subclasses. It
         should check if the measurement cycle is done via the
-        settings.
+        stings. super().is_finished() is supposed to be
+        called in subclasses in order to increment the step
+        counter properly.
 
         Returns
         -------
         bool
         """
+        self.data_points.n_steps += 1
         return True
 
     def finalize(self, busy=False):
@@ -970,7 +973,6 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         for thread in self.threads:
             thread.quit()
         self.running = False
-        # self.finished.emit(self.data_points)
         self.finished.emit(())
 
     def prepare_finalization(self):

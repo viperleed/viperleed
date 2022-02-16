@@ -170,16 +170,18 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
     # Is emitted when an error occurs
     error_occurred = qtc.pyqtSignal(tuple)
 
-    def __init__(self, *args):
+    def __init__(self, *args, time_resolved=None):
         """Initialise data class."""
         super().__init__()
         self.__list = list(args)
         self.__delimiter = ','
         self.__primary_first_time = None
         self.__exceptional_keys = (QuantityInfo.IMAGES, QuantityInfo.ENERGY)
+        self.__time_resolved = time_resolved
         # primary_controller needs to be given to this class
         # before starting measurements.
         self.primary_controller = None
+        self.n_steps = 0
 
     @property
     def nominal_energies(self):
@@ -210,6 +212,8 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
     @property
     def is_time_resolved(self):
         """Check if the contained data is time-resolved."""
+        if self.time_resolved != None:
+            return self.time_resolved
         if self.has_data:
             # Only if there are times saved already it is possible to
             # decide if the measurement is a time or energy resolved
@@ -217,6 +221,24 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
             if any(len(t) > 1 for t in self[0][QuantityInfo.TIMES].values()):
                 return True
         return False
+
+    @property
+    def time_resolved(self):
+        """Return whether data is time-resolved.
+
+        None if it has not been set.
+        """
+        return self.__time_resolved
+
+    @time_resolved.setter
+    def time_resolved(self, resolved):
+        """Set whether data is time-resolved if not present."""
+        if self.__time_resolved != None:
+            raise RuntimeError(
+                "time_resolved can only be set once, "
+                "but it was attempted to set it again."
+                )
+        self.__time_resolved = bool(resolved)
 
     def __str__(self):
         """Return a string representation of self."""
@@ -419,7 +441,9 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                 otherwise lists of lists, one per energy step.
         energies : list
             One element per each energy step, i.e.,
-            len(energies) == len(self).
+            len(energies) == len(self). Notice that energies
+            may be longer then the data extracted if the last
+            step underway is not finished yet.
         """
         # Keep only the quantities that were measured
         quantities = [q for q in quantities if q in self[0]]
@@ -436,14 +460,10 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
 
         # Loop through each energy step and fill in the data
         q_time = QuantityInfo.TIMES
-        for data_point in self:
+        for data_point in self[:self.n_steps]:
             # First, fill in all the quantities requested
             for quantity in quantities:
                 for ctrl, measurements in data_point[quantity].items():
-                    ctrl_times = data_point[q_time][ctrl]
-                    if len(measurements) != len(ctrl_times):
-                        # step is not over yet
-                        continue
                     if not separate_steps:
                         extracted[ctrl][quantity].extend(measurements)
                     else:
@@ -485,9 +505,30 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                 "a new data point before .primary_controller "
                 "has been set."
                 )
+        if self:
+            if set(controllers) != set(self.controllers):
+                raise ValueError(
+                    f"{self.__class__.__name__}: inconsistent "
+                    "controllers passed to new_data_point. Must "
+                    "always contain the same controllers."
+                    )
+            if set(cameras) != set(self.cameras):
+                raise ValueError(
+                    f"{self.__class__.__name__}: inconsistent "
+                    "cameras passed to new_data_point. Must "
+                    "always contain the same cameras."
+                    )
+            controllers = self.controllers
+            cameras = self.cameras
+
         quantities = (q for q in QuantityInfo
                       if any(c.measures(q) for c in controllers))
-        data_point = {q: defaultdict(list) for q in quantities}
+        # Create a new data point, keeping only those controllers
+        # that measured a certain quantity. We cannot simply use
+        # a defaultdict(list) for the inner dictionary because
+        # we need to maintain the same order of controllers.
+        data_point = {q: {c: [] for c in controllers if c.measures(q)}
+                      for q in quantities}
         data_point[QuantityInfo.TIMES] = {c: [] for c in controllers}
         data_point[QuantityInfo.ENERGY] = energy
         if cameras:
@@ -567,6 +608,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
             # always the first one in the times entry
             controllers = list(self[0][QuantityInfo.TIMES].keys())
             self.primary_controller = controllers[0]
+        self.n_steps = len(self)
 
     def recalculate_last_step_times(self):
         """Recalculate the whole time axis for the last energy step.
@@ -613,7 +655,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
             # number of values) by 'padding' with not-a-number towards
             # the end of the energy step. Each block will be as long
             # as the longest list of data.
-            for data_point in self:
+            for data_point in self[:self.n_steps]:
                 max_length = max(
                     len(times)
                     for times in data_point[QuantityInfo.TIMES].values()

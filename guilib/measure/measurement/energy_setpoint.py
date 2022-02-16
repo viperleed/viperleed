@@ -104,6 +104,7 @@ class MeasureEnergySetpoint(MeasurementABC):
         -------
         bool
         """
+        super().is_finished()
         if self.current_energy >= self.__end_energy:
             self.calibrate_energy_setpoint()
             return True

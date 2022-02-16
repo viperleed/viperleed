@@ -65,6 +65,7 @@ class TimeResolved(MeasurementABC):
 
         num_meas = (1 + round((self.__end_energy - self.start_energy)
                    / self.__delta_energy))
+        self.data_points.time_resolved = True
         if self.is_continuous_measurement:
             self.prepare_continuous_mode()
             self.data_points.num_measurements = num_meas
@@ -134,7 +135,7 @@ class TimeResolved(MeasurementABC):
         -------
         bool
         """
-        # self.new_data_available.emit()
+        super().is_finished()
         if self.__time_over or self.current_energy >= self.__end_energy:
             return True
         self.current_energy = self.energy_generator()
@@ -336,10 +337,15 @@ class TimeResolved(MeasurementABC):
             self.data_points.calculate_times(continuous=True)
         else:
             self.data_points.calculate_times()
-        self.new_data_available.emit()
         if self.is_finished():
+            # The self.new_data_available.emit() here includes the
+            # last data point while a self.new_data_available.emit()
+            # before the is_finished() check would miss the
+            # last data point.
+            self.new_data_available.emit()
             self.prepare_finalization()
         else:
+            self.new_data_available.emit()
             self.start_next_measurement()
 
     def do_next_measurement(self):
