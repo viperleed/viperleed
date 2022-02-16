@@ -118,7 +118,8 @@ subroutine r2_beam_intensity(n_E, E_step, int_1, int_2, id_start_1, id_start_2, 
 
     R2 = A*trapez_integration_const_dx( ( int_1(id_min: id_max) - &
         c*int_2(id_min -V0r_shift : id_max - V0r_shift) )**2, &
-        E_step )
+        E_step ) / 2
+    ! not entirely sure where this factor of 1/2 comes from, but it was implemented in TensErLEED
 
 
 end subroutine r2_beam_intensity
@@ -671,7 +672,9 @@ subroutine r2_beamset_intensity(n_E, E_step, n_beams, int_1, int_2, id_start_1, 
         RETURN
     end if
     
-    r2_weighted = sum(r2_beams*(n_overlapping_points - 1))/(sum(n_overlapping_points - 1)*E_step)
+    ! factro E_step in numerator and denominator cancels out
+    ! we use (n_overlapping_points - 1) for the range since 1 overlapping point would mean energy interval of 0
+    r2_weighted = sum(r2_beams*(n_overlapping_points - 1))/(sum(n_overlapping_points - 1))
 
     return
 end subroutine r2_beamset_intensity
