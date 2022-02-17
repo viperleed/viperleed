@@ -185,7 +185,7 @@ class ViPErLEEDSettings(ConfigParser):
 
     def __bool__(self):
         """Return True if there is any section."""
-        return bool(self.sections)
+        return bool(self.sections())
 
     @property
     def comments(self):
