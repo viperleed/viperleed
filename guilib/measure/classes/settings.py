@@ -13,11 +13,13 @@ equipment and measurements.
 """
 
 from configparser import (ConfigParser, MissingSectionHeaderError,
-                          DuplicateSectionError, DuplicateOptionError)
+                          DuplicateSectionError, DuplicateOptionError,
+                          SectionProxy)
 from collections import defaultdict
-import io
+import inspect
 import os
 from pathlib import Path
+import sys
 
 from viperleed import guilib as gl
 
@@ -39,7 +41,7 @@ def _interpolate_config_path(filenames):
     with the path contained in the system-wide settings,
     unless (i) there is no valid system-wide setting, or
     (ii) a filename contains "__CONFIG__" multiple times.
-    
+
     Parameters
     ----------
     filenames : Sequence
@@ -59,6 +61,15 @@ def _interpolate_config_path(filenames):
 
 
 class MissingSettingsFileError(Exception):
+    """Exception raised when failed to read settings file(s)."""
+
+
+class NoSettingsError(Exception):
+    """Exception raised when failed to read settings file(s)."""
+
+
+class NoDefaultSettingsError(Exception):
+    """Exception raised when no default settings file was found."""
 
 
 class ViPErLEEDSettings(ConfigParser):
@@ -68,39 +79,131 @@ class ViPErLEEDSettings(ConfigParser):
     can be updated by calling .update_file(), and remembers all
     the comments, which are rewritten to file right below each
     section header.
+
+    The initialization arguments are changed as follows relative
+    to ConfigParser:
+    * allow_no_value : fixed to True
+    * comment_prefixes : fixed to "#" and ";"
+    * inline_comment_prefixes : fixed to None
+    * empty_lines_in_values : fixed to False
+    * strict : fixed to True
+    * interpolate_paths : bool, optional
+        New keyword-only argument used while reading. If True,
+        the parser will try to replace an intial "__CONFIG__"
+        in the path(s) to be read with the default path of the
+        configuration files found in the system-wide settings.
+        Defaults to True
     """
 
     def __init__(self, *args, **kwargs):
-        """Initalize instance with custom defaults."""
+        """Init instance with custom defaults."""
         # ConfigParser has 3 positional-or-keyword arguments. We
-        # want to set the third (allow_no_value) always to False.
+        # want to set the third (allow_no_value) always to True.
         args = args[:2]  # skip positional allow_no_value
-        kwargs["allow_no_value"] = False
+        kwargs["allow_no_value"] = True
 
         kwargs["comment_prefixes"] = "#;"
         kwargs["inline_comment_prefixes"] = ""  # no in-line comments
 
-        # Disallow empty lines in values, as this has
-        # the potential to create mess; and make it strict
+        # Disallow empty lines in values, as this has the potential
+        # to create mess; also make the parser strict (no duplicates)
         kwargs["empty_lines_in_values"] = False
         kwargs["strict"] = True
 
+        self.__interpolate_paths = kwargs.pop("interpolate_paths", True)
         super().__init__(*args, **kwargs)
 
         self.__comments = defaultdict(list)
         self.__last_file = ""
 
+    @classmethod
+    def from_settings(cls, settings, find_from=None):
+        """Return a ViPErLEEDSettings from the settings passed.
+
+        Parameters
+        ----------
+        settings : str or os.PathLike or ViPErLEEDSettings or None
+            The settings to load from. If settings is None,
+            find_from will be used to search for a default settings.
+            If a ViPErLEEDSettings, no copy is made.
+        find_from : str or None, optional
+            The string to look for in a configuration file to
+            be loaded and returned. If None, no search will be
+            performed.
+
+        Returns
+        -------
+        loaded_settings : ViPErLEEDSettings
+            The ViPErLEEDSettings after loading settings.
+
+        Raises
+        ------
+        ValueError
+            If settings is None and find_from is False-y.
+        NoSettingsError
+            If settings is invalid and find_from was not given.
+        NoDefaultSettingsError
+            If settings is invalid, and looking for default settings
+            failed.
+        """
+        if settings is None and not find_from:
+            raise ValueError(f"{cls.__name__}: cannot create from nothing.")
+        if isinstance(settings, cls):
+            return settings
+
+        config = cls()
+        if isinstance(settings, (dict, ConfigParser)):
+            config.read_dict(settings)
+            return config
+
+        try:
+            config.read(settings)
+        except (TypeError, MissingSettingsFileError):
+            pass
+        else:
+            return config
+
+        if not find_from:
+            raise NoSettingsError(
+                f"{cls.__name__}: could not load settings, and "
+                "no find_from was provided to look for a default."
+                )
+
+        # Failed to read from settings. Try with find_from.
+        get_cfg = gl.measure.hardwarebase.get_device_config
+        settings = get_cfg(find_from, prompt_if_invalid=False)
+        if settings:
+            try:
+                config.read(settings)
+            except MissingSettingsFileError:
+                pass
+            else:
+                return config
+        raise NoDefaultSettingsError(
+            f"{cls.__name__}: could not find (or load) a suitable default."
+            )
+
     def __bool__(self):
         """Return True if there is any section."""
         return bool(self.sections)
 
-    def has_settings(self, required_settings):
+    @property
+    def comments(self):
+        """Return all comments."""
+        return self.__comments
+
+    @property
+    def last_file(self):
+        """Return the path to the last file read."""
+        return self.__last_file
+
+    def has_settings(self, *required_settings):
         """Check whether self has given settings.
 
         Parameters
         ----------
-        required_settings : Sequence
-            Each element is a tuple of the forms
+        *required_settings : tuple
+            Each required setting should be a tuple of the forms
             (<section>, )
                 Check that config contains the section <section>.
                 No options are checked.
@@ -158,7 +261,7 @@ class ViPErLEEDSettings(ConfigParser):
 
         return invalid_settings
 
-    def read(self, filenames, encoding=None, interpolate=True):
+    def read(self, filenames, encoding=None):
         """Read and parse a filename or an iterable of filenames.
 
         This extension of the ConfigParser implementation stores
@@ -188,7 +291,7 @@ class ViPErLEEDSettings(ConfigParser):
         """
         if isinstance(filenames, (str, bytes, os.PathLike)):
             filenames = [filenames]
-        if interpolate:
+        if self.__interpolate_paths:
             _interpolate_config_path(filenames)
 
         read_ok = super().read(filenames, encoding=encoding)
@@ -212,22 +315,7 @@ class ViPErLEEDSettings(ConfigParser):
         return read_ok
 
     def read_file(self, f, source=None):
-        """Read from a file-like object.
-
-        Parameters
-        ----------
-        f : file-like
-            The `f' argument must be iterable, returning one line
-            at a time.
-        source : str or None, optional
-            The name of the file being read. If None, it is taken
-            from f.name. If `f' has no `name' attribute, `<???>' is
-            used. Default is None.
-
-        Returns
-        -------
-        None.
-        """
+        """Read from a file-like object."""
         fname = ""
         try:
             fname = f.name
@@ -243,7 +331,7 @@ class ViPErLEEDSettings(ConfigParser):
         if not self.__last_file:
             raise RuntimeError(f"{self.__class__.__name__}: no known "
                                "last file read to be updated.")
-        with open(self.__last_file, 'w') as fproxy:
+        with open(self.__last_file, 'w', encoding='utf-8') as fproxy:
             self.write(fproxy)
 
     def write(self, fp, space_around_delimiters=True):
@@ -251,7 +339,7 @@ class ViPErLEEDSettings(ConfigParser):
 
         Parameters
         ----------
-        fp : file-like
+        fp : io.TextIOBase
             The open file-like object to write to. Should be
             open in "write-text" mode.
         space_around_delimiters : bool
@@ -274,34 +362,11 @@ class ViPErLEEDSettings(ConfigParser):
 
         super().write(fp, space_around_delimiters)
 
-    def __store_if_comment(self, line, sectname):
-        """Store a line as comment if it is one.
-
-        Used while reading from file. Comment lines are stored if
-        they are not duplicates.
-
-        Parameters
-        ----------
-        line : str
-            The line to be checked an stored
-        sectname : str or None
-            The name of the section where the comment appeared.
-            None if the line appears before any section header.
-
-        Returns
-        -------
-        is_comment : bool
-            True if the line was a comment (whether it was stored
-            or not).
-        """
-        for prefix in self._comment_prefixes:
-            if line.strip().startswith(prefix):
-                if line not in self.__comments[sectname]:
-                    self.__comments[sectname].append(line)
-                return True
-        return False
-
-    def _read(self, fileproxy, fpname):
+    # pylint: disable=too-complex,too-many-locals
+    # pylint: disable=too-many-branches,too-many-statements
+    # The code below is essentially a (simplified) copy of the
+    # one in the configparser standard library for RawConfigParser.
+    def _read(self, fp, fpname):
         """Reimplement to preserve comments."""
         elements_added = set()
         cursect = None                        # None, or a dictionary
@@ -310,7 +375,7 @@ class ViPErLEEDSettings(ConfigParser):
         lineno = 0
         indent_level = 0
         err = None                            # None, or an exception
-        for lineno, line in enumerate(fileproxy, start=1):
+        for lineno, line in enumerate(fp, start=1):
             # Keep track of full-line comments, but prevent creating
             # duplicates when reading two files with the same sections
             # and the same comments.
@@ -328,6 +393,8 @@ class ViPErLEEDSettings(ConfigParser):
             cur_indent_level = first_nonspace.start() if first_nonspace else 0
             if (cursect is not None and optname and
                     cur_indent_level > indent_level):
+                # pylint: disable=unsubscriptable-object
+                # bug? cursect is subscriptable if we enter this
                 cursect[optname].append(value)
                 continue
 
@@ -360,7 +427,7 @@ class ViPErLEEDSettings(ConfigParser):
             # an option line?
             _match = self._optcre.match(value)
             if _match:
-                optname, vi, optval = _match.group('option', 'vi', 'value')
+                optname, optval = _match.group('option', 'value')
                 if not optname:
                     err = self._handle_error(err, fpname, lineno, line)
                 optname = self.optionxform(optname.rstrip())
@@ -388,6 +455,8 @@ class ViPErLEEDSettings(ConfigParser):
         # if any parsing errors occurred, raise an exception
         if err:
             raise err
+    # pylint: enable=too-complex,too-many-locals
+    # pylint: enable=too-many-branches,too-many-statements
 
     def _write_section(self, fp, section_name, section_items, delimiter):
         """Write a single section to the specified `fp'."""
@@ -408,3 +477,30 @@ class ViPErLEEDSettings(ConfigParser):
                 value = ""
             fp.write(f"{key}{value}\n")
         fp.write("\n")
+
+    def __store_if_comment(self, line, sectname):
+        """Store a line as comment if it is one.
+
+        Used while reading from file. Comment lines are stored if
+        they are not duplicates.
+
+        Parameters
+        ----------
+        line : str
+            The line to be checked an stored
+        sectname : str or None
+            The name of the section where the comment appeared.
+            None if the line appears before any section header.
+
+        Returns
+        -------
+        is_comment : bool
+            True if the line was a comment (whether it was stored
+            or not).
+        """
+        for prefix in self._comment_prefixes:
+            if line.strip().startswith(prefix):
+                if line not in self.__comments[sectname]:
+                    self.__comments[sectname].append(line)
+                return True
+        return False
