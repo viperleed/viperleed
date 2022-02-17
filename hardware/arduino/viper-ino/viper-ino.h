@@ -70,7 +70,7 @@ union floatOrBytes{
 #define PC_CHANGE_MEAS_MODE 109 // PC requested a change between continuous and single measurement mode (ASCII 'm')
 #define PC_STOP          120    // PC requested a stop on all activity. Return to idle (ASCII 'x')
 #define PC_SET_VOLTAGE_ONLY 118 // PC requested set energy without follow up measurement (ASCII 'v')
-#define PC_SERIAL 115           // PC requested serial number (ASCII 's')
+#define PC_SET_SERIAL_NR 115           // PC requested serial number (ASCII 's')
 
 // Error codes
 #define ERROR_NO_ERROR            0   // No error

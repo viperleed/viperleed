@@ -133,7 +133,7 @@ void updateState() {
         and data_received[0] != PC_STOP
         and data_received[0] != PC_CHANGE_MEAS_MODE
         and data_received[0] != PC_SET_VOLTAGE_ONLY
-        and data_received[0] != PC_SERIAL 
+        and data_received[0] != PC_SET_SERIAL_NR 
         and hardwareNotKnown()) return;
     
     switch(data_received[0]){
@@ -188,7 +188,7 @@ void updateState() {
             nextVoltageStep = 0;
             currentState = STATE_SET_VOLTAGE;
             break;
-        case PC_SERIAL:
+        case PC_SET_SERIAL_NR:
             waitingForDataFromPC = true;
             initialTime = millis();
             currentState = STATE_SET_SERIAL_NR;
@@ -425,7 +425,7 @@ bool decodeAndCheckMessage(){
         case PC_CHANGE_MEAS_MODE: break;
         case PC_STOP: break;
         case PC_SET_VOLTAGE_ONLY: break;
-        case PC_SERIAL: break;
+        case PC_SET_SERIAL_NR: break;
         default:
             raise(ERROR_MSG_UNKNOWN);
             return false;
@@ -1965,7 +1965,7 @@ void setSerialNr() {
     STATE_ERROR : ERROR_MSG_DATA_INVALID
         If the sent serial number is not 4 bytes long
     STATE_ERROR : ERROR_TIMEOUT
-        If more than 5s pass between the PC_SERIAL message
+        If more than 5s pass between the PC_SET_SERIAL_NR message
         and the receipt of data
     STATE_IDLE
         Successfully finished
