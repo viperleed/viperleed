@@ -161,7 +161,7 @@ def rfactor(sl, rp, index, for_error=False, only_vary=None):
 
         deg = rp.INTPOL_DEG
         v0i = rp.V0_IMAG
-        
+
         skip_stages = np.int32([0, 0, 0, 0, 0])
         n_beams_out = n_beams
         averaging_scheme = np.int32(np.arange(n_beams) + 1)  # Fortran index
@@ -273,7 +273,7 @@ def rfactor(sl, rp, index, for_error=False, only_vary=None):
         # error 903 and 904 are acceptable - that just means there are no integer/fractional beams
         if ierr != 0 :
             if ierr in (903, 904):
-                logger.info(f"ViperLEED found not integer or fractional beams")
+                logger.debug(f"ViperLEED found not integer or fractional beams")
             else:
                 logger.error(f"ViPErLEED Fortran error code {ierr}: {error_codes[ierr]}")
                 raise

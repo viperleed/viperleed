@@ -756,8 +756,8 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                         'Could not interpret flags. Value will be ignored.')
                     rpars.setHaltingLevel(1)
         elif param == 'INTPOL_DEG':
-            if llist[0] in (3, 5):
-                rpars.INTPOL_DEG = llist[0]
+            if llist[0] in ('3', '5'):
+                rpars.INTPOL_DEG = int(llist[0])
             else:
                 logger.warning(
                     'PARAMETERS file: INTPOL_DEG parameter: '
