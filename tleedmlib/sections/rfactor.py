@@ -119,20 +119,17 @@ def rfactor(sl, rp, index, for_error=False, only_vary=None):
         for b in rp.expbeams:
             expEnergies.extend([k for k in b.intens if k not in expEnergies])
         expEnergies.sort()
-        minen = max(min(expEnergies), rp.THEO_ENERGIES[0])
-        maxen = min(max(expEnergies), rp.THEO_ENERGIES[1])
+
         if not for_error:
             real_iv_shift = rp.IV_SHIFT_RANGE[:2]
         else:
             real_iv_shift = [rp.best_v0r] * 2
 
         # extend energy range if they are close together
-        if abs(min(expEnergies) - rp.THEO_ENERGIES[0]) < abs(real_iv_shift[0]):
-            minen = (max(min(expEnergies), rp.THEO_ENERGIES[0])
-                     - real_iv_shift[0])
-        if abs(max(expEnergies) - rp.THEO_ENERGIES[1]) < abs(real_iv_shift[1]):
-            maxen = (min(max(expEnergies), rp.THEO_ENERGIES[1])
-                     + real_iv_shift[1])
+
+        minen = (min(min(expEnergies), rp.THEO_ENERGIES[0]) - abs(real_iv_shift[0]))
+        maxen = (max(max(expEnergies), rp.THEO_ENERGIES[1]) + real_iv_shift[1])
+
         intpol_step = min(expEnergies[1] - expEnergies[0], theoEnergies[1] - theoEnergies[0])
         if rp.IV_SHIFT_RANGE[2] > 0:
             intpol_step = min(intpol_step, rp.IV_SHIFT_RANGE[2])
@@ -273,7 +270,7 @@ def rfactor(sl, rp, index, for_error=False, only_vary=None):
         # error 903 and 904 are acceptable - that just means there are no integer/fractional beams
         if ierr != 0 :
             if ierr in (903, 904):
-                logger.debug(f"ViperLEED found not integer or fractional beams")
+                logger.debug(f"ViperLEED found no integer or fractional beams")
             else:
                 logger.error(f"ViPErLEED Fortran error code {ierr}: {error_codes[ierr]}")
                 raise
