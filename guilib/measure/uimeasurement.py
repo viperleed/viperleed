@@ -274,7 +274,7 @@ class Measure(gl.ViPErLEEDPluginBase):
             if isinstance(sender, CameraABC):
                 source = f"camera {sender.name}"
             elif isinstance(sender, ControllerABC):
-                source = f"controller at {sender.name}"
+                source = f"controller {sender.name} at {sender.port_name}"
             elif isinstance(sender, MeasurementABC):
                 source = f"measurement {sender.__class__.__name__}"
             else:
