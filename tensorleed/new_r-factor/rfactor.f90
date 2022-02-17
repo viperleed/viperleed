@@ -1301,10 +1301,13 @@ end subroutine range_index_from_Energy
 
 ! Routines for working with rfactors
 
-subroutine r_pendry_beamtype_grouping(n_beams, numerators, denominators, n_overlapping_points, &
+subroutine r_beamtype_grouping(which_r, &
+        n_beams, r_beams, numerators, denominators, n_overlapping_points, &
         n_groups, grouping, r_factor_groups, n_overlapping_points_groups, ierr)
 
+    integer, INTENT(IN) :: which_r
     integer, INTENT(IN) :: n_beams
+    real(8), INTENT(IN) :: r_beams(n_beams)
     real(8), INTENT(IN) :: numerators(n_beams)
     real(8), INTENT(IN) :: denominators (n_beams)
     integer, INTENT(IN) :: n_overlapping_points(n_beams)
@@ -1318,38 +1321,61 @@ subroutine r_pendry_beamtype_grouping(n_beams, numerators, denominators, n_overl
     integer, INTENT(OUT) :: n_overlapping_points_groups(n_groups)
 
     integer :: group, i
-    real(8) :: num(n_groups), denom(n_groups)
+    real(8) :: num(n_groups), denom(n_groups), r2_group(n_groups)
 
     ierr = 0
 
-    ! initialize
-    num = 0
-    denom = 0
-    n_overlapping_points_groups = 0
-    
     if (ANY(grouping < 0) .or. ANY(grouping > n_groups)) then
         ierr = 902
         RETURN
     end if
 
-    do i = 1, n_beams
-        group = grouping(i)
-        if (group == 0) CYCLE
-        num(group) = num(group) + numerators(i)
-        denom(group) = denom(group) + denominators(i)
-        n_overlapping_points_groups(group) = n_overlapping_points_groups(group) + n_overlapping_points(i)
-    end do
+    if (which_r == 1) then ! R Pendry
+        ! initialize
+        num = 0
+        denom = 0
+        n_overlapping_points_groups = 0
 
-    do group = 1, n_groups
-        if (abs(denom(group)) .ge. 1e-10) then
-            r_factor_groups(group) = num(group)/denom(group)
-        else
-            r_factor_groups(group) = ieee_value(real(8), ieee_signaling_nan)
-            ierr = 903
-        end if 
-    end do
+        do i = 1, n_beams
+            group = grouping(i)
+            if (group == 0) CYCLE
+            num(group) = num(group) + numerators(i)
+            denom(group) = denom(group) + denominators(i)
+            n_overlapping_points_groups(group) = n_overlapping_points_groups(group) + n_overlapping_points(i)
+        end do
 
-end subroutine r_pendry_beamtype_grouping 
+        do group = 1, n_groups
+            if (abs(denom(group)) .ge. 1e-10) then
+                r_factor_groups(group) = num(group)/denom(group)
+            else
+                r_factor_groups(group) = ieee_value(real(8), ieee_signaling_nan)
+                ierr = 903
+            end if 
+        end do
+
+    else if (which_r == 2) then ! R2
+        do i = 1, n_beams
+            group = grouping(i)
+            if (group == 0) CYCLE
+            n_overlapping_points_groups(group) = n_overlapping_points_groups(group) + n_overlapping_points(i) - 1
+            r2_group(group) = r2_group(group) + r_beams(i)*(n_overlapping_points(i) - 1)
+        end do
+
+        do group = 1, n_groups
+            if (n_overlapping_points_groups(group) .ge. 0) then ! avoid division by 0
+                r_factor_groups(group) = r2_group(group)/n_overlapping_points_groups(group)
+            else
+                r_factor_groups(group) = ieee_value(real(8), ieee_signaling_nan)
+                ierr = 904
+            end if
+        end do
+
+    else
+        ierr = 701
+        RETURN
+    end if
+
+end subroutine r_beamtype_grouping 
 
 
 
