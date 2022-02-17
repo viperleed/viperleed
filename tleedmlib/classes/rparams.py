@@ -121,6 +121,7 @@ class Rparams:
         self.GAUSSIAN_WIDTH = 0.5
         self.GAUSSIAN_WIDTH_SCALING = 0.5
         self.HALTING = 2    # 2: major concerns, 1: minor warnings, 0: always
+        self.INTPOL_DEG = 3 # Degree of interpolation spline used in R-factor calculation
         self.IV_SHIFT_RANGE = [-3, 3, -1]  # step of -1: init from data
         self.LAYER_CUTS = ["dz(1.2)"]  # list of either str or c coordinates
         self.LAYER_STACK_VERTICAL = True

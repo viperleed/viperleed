@@ -159,10 +159,9 @@ def rfactor(sl, rp, index, for_error=False, only_vary=None):
         theo_grid, theo_id_start, theo_n_E_beams, theo_intensities_in = \
             io.beamlist_to_array(corr_theobeams)
 
-
-
-        deg = 5
+        deg = rp.INTPOL_DEG
         v0i = rp.V0_IMAG
+        
         skip_stages = np.int32([0, 0, 0, 0, 0])
         n_beams_out = n_beams
         averaging_scheme = np.int32(np.arange(n_beams) + 1)  # Fortran index

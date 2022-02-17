@@ -22,7 +22,7 @@ knownParams = [
     'ATTENUATION_EPS', 'AVERAGE_BEAMS', 'BEAM_INCIDENCE', 'BULKDOUBLING_EPS',
     'BULKDOUBLING_MAX', 'BULK_LIKE_BELOW', 'BULK_REPEAT', 'DOMAIN',
     'DOMAIN_STEP', 'ELEMENT_MIX',
-    'ELEMENT_RENAME', 'FILAMENT_WF', 'FORTRAN_COMP', 'HALTING',
+    'ELEMENT_RENAME', 'FILAMENT_WF', 'FORTRAN_COMP', 'HALTING', 'INTPOL_DEG',
     'IV_SHIFT_RANGE', 'LAYER_CUTS', 'LAYER_STACK_VERTICAL', 'LMAX',
     'LOG_DEBUG', 'LOG_SEARCH', 'N_BULK_LAYERS', 'N_CORES', 'OPTIMIZE',
     'PARABOLA_FIT', 'PHASESHIFT_EPS', 'PHASESHIFTS_CALC_OLD',
@@ -755,6 +755,15 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                         'PARAMETERS file: FORTRAN_COMP parameter: '
                         'Could not interpret flags. Value will be ignored.')
                     rpars.setHaltingLevel(1)
+        elif param == 'INTPOL_DEG':
+            if llist[0] in (3, 5):
+                rpars.INTPOL_DEG = llist[0]
+            else:
+                logger.warning(
+                    'PARAMETERS file: INTPOL_DEG parameter: '
+                    'Only degree 3 and 5 supported at the moment. Defaulting to 3.'
+                )
+                rpars.setHaltingLevel(1)
         elif param == 'IV_SHIFT_RANGE':
             if len(llist) in (2, 3):
                 fl = []
