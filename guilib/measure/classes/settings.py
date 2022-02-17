@@ -23,9 +23,8 @@ import sys
 
 from viperleed import guilib as gl
 
-
-SYSTEM_CONFIG_PATH = (Path(inspect.getfile(gl.measure)).parent
-                      / "_defaults" / "_system_settings.ini")
+_MEASURE_PATH = Path(__file__).parent.parent
+SYSTEM_CONFIG_PATH = _MEASURE_PATH / "_defaults" / "_system_settings.ini"
 
 
 def get_system_config():
@@ -54,7 +53,10 @@ def _interpolate_config_path(filenames):
         return
 
     for i, fname in enumerate(filenames):
-        fname = str(fname)
+        if isinstance(fname, os.PathLike):
+            fname = os.fspath(fname)
+        if not isinstance(fname, (str, bytes)):
+            continue
         if (fname.startswith("__CONFIG__/")
                 and fname.count("__CONFIG__") == 1):
             filenames[i] = fname.replace("__CONFIG__", _sys_path)
@@ -139,7 +141,8 @@ class ViPErLEEDSettings(ConfigParser):
         Raises
         ------
         ValueError
-            If settings is None and find_from is False-y.
+            If settings is not a ViPErLEEDSettings, it is
+            False-y and find_from is False-y.
         NoSettingsError
             If settings is invalid and find_from was not given.
         NoDefaultSettingsError
@@ -150,6 +153,9 @@ class ViPErLEEDSettings(ConfigParser):
             raise ValueError(f"{cls.__name__}: cannot create from nothing.")
         if isinstance(settings, cls):
             return settings
+
+        if not settings and not find_from:
+            raise ValueError(f"{cls.__name__}: cannot create from nothing.")
 
         config = cls()
         if isinstance(settings, (dict, ConfigParser)):

@@ -12,4 +12,3 @@ module, and that do not belong to oter subpackages (i.e., are not
 necessarily only camera-, controller-, measurement-, etc-related)
 """
 
-from viperleed.guilib.measure.classes.settings import ViPErLEEDSettings
