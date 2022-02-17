@@ -333,12 +333,15 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
             else:
                 first_time = (self[-2][time][ctrl][-1] +
                               ctrl.measurement_interval)
-            quantity = ctrl.measured_quantities[0]
-            n_measurements = len(self[-1][quantity][ctrl])
-            self[-1][time][ctrl] = [
-                first_time + ctrl.measurement_interval * i
-                for i in range(n_measurements)
-                ]
+            if ctrl.measured_quantities:
+                quantity = ctrl.measured_quantities[0]
+                n_measurements = len(self[-1][quantity][ctrl])
+                self[-1][time][ctrl] = [
+                    first_time + ctrl.measurement_interval * i
+                    for i in range(n_measurements)
+                    ]
+            else:
+                self[-1][time][ctrl][0] = first_time
 
     def get_energy_resolved_data(self, *quantities):
         """Return energy resolved data for each controller.
@@ -623,12 +626,16 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                 # Controller has not yet finished measuring this step
                 continue
             first_time = ctrl_times[0]
-            quantity = ctrl.measured_quantities[0]
-            n_measurements = len(self[-1][quantity][ctrl])
-            self[-1][QuantityInfo.TIMES][ctrl] = [
-                first_time + ctrl.measurement_interval * i
-                for i in range(n_measurements)
-                ]
+            if ctrl.measured_quantities:
+                quantity = ctrl.measured_quantities[0]
+                n_measurements = len(self[-1][quantity][ctrl])
+                self[-1][QuantityInfo.TIMES][ctrl] = [
+                    first_time + ctrl.measurement_interval * i
+                    for i in range(n_measurements)
+                    ]
+            else:
+                self[-1][time][ctrl][0] = first_time         
+
 
     def save_data(self, csv_name):
         """Save data to file.
