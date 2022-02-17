@@ -104,8 +104,8 @@ def rfactor(sl, rp, index, for_error=False, only_vary=None):
 
     # Branch off for new R factor calculation
     new_rf = True
-    if (new_rf):
-        pass
+    if (not rp.R_FACTOR_LEGACY):
+        logger.debug("Using new R-factor calculation. This is still experimental!")
         which_r = rp.R_FACTOR_TYPE
         real_iv_shift = rp.IV_SHIFT_RANGE[:2]
         # expbeams is in rp.expbeams

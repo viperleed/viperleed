@@ -141,6 +141,7 @@ class Rparams:
         self.PLOT_IV = {'axes': 'all', 'colors': [],
                         'legend': 'all', 'overbar': False, 'perpage': 2}
         self.RUN = [0, 1, 2, 3]        # what segments should be run
+        self.R_FACTOR_LEGACY = True # use old runtime-compiled R-factor calculation
         self.R_FACTOR_TYPE = 1  # 1: Pendry, 2: R2, 3: Zanazzi-Jona
         self.R_FACTOR_SMOOTH = 0
         self.S_OVL = 0.3 # Muffin tin overlap parameter after Rundgren 2021, default is 0.3 - set or optimize in FD

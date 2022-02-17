@@ -26,7 +26,7 @@ knownParams = [
     'IV_SHIFT_RANGE', 'LAYER_CUTS', 'LAYER_STACK_VERTICAL', 'LMAX',
     'LOG_DEBUG', 'LOG_SEARCH', 'N_BULK_LAYERS', 'N_CORES', 'OPTIMIZE',
     'PARABOLA_FIT', 'PHASESHIFT_EPS', 'PHASESHIFTS_CALC_OLD',
-    'PHASESHIFTS_OUT_OLD', 'PLOT_IV', 'RUN', 'R_FACTOR_SMOOTH',
+    'PHASESHIFTS_OUT_OLD', 'PLOT_IV', 'RUN', 'R_FACTOR_LEGACY', 'R_FACTOR_SMOOTH',
     'R_FACTOR_TYPE', 'S_OVL', 'SCREEN_APERTURE', 'SEARCH_BEAMS', 'SEARCH_CONVERGENCE',
     'SEARCH_CULL', 'SEARCH_MAX_GEN', 'SEARCH_POPULATION', 'SEARCH_START',
     'SITE_DEF', 'SUPERLATTICE', 'SUPPRESS_EXECUTION', 'SYMMETRIZE_INPUT',
@@ -468,7 +468,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
             rpars.VIBR_AMP_SCALE.extend(value.split(","))
         # simple bool parameters
         elif param in ['LOG_DEBUG', 'LOG_SEARCH', 'PHASESHIFTS_CALC_OLD',
-                       'PHASESHIFTS_OUT_OLD', 'SUPPRESS_EXECUTION',
+                       'PHASESHIFTS_OUT_OLD', 'R_FACTOR_LEGACY', 'SUPPRESS_EXECUTION',
                        'SYMMETRIZE_INPUT', 'SYMMETRY_FIND_ORI']:
             setBoolParameter(rpars, param, llist[0])
         # slightly more complicated bools
