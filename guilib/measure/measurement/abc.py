@@ -235,7 +235,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
                                                 device_config_path)
         self.primary_controller = self.__make_controller(primary_config,
                                                          is_primary=True)
-        self.primary_controller.what_to_measure(primary_measures)
+        self.primary_controller.set_measurements(primary_measures)
 
         # Instantiate secondary controller classes
         secondary_controllers = []
@@ -248,7 +248,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             secondary_config = secondary_config.replace('__CONFIG__',
                                                         device_config_path)
             ctrl = self.__make_controller(secondary_config, is_primary=False)
-            ctrl.what_to_measure(secondary_measures)
+            ctrl.set_measurements(secondary_measures)
             self.threads.append(qtc.QThread())
             ctrl.moveToThread(self.threads[-1])
             secondary_controllers.append(ctrl)

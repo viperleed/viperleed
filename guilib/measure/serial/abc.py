@@ -24,11 +24,11 @@ from PyQt5 import (QtCore as qtc,
                    QtSerialPort as qts)
 
 # ViPErLEED modules
-from viperleed.guilib.measure.hardwarebase import (
-    ViPErLEEDErrorEnum, QMetaABC,
-    config_has_sections_and_options,
-    emit_error
-    )
+from viperleed.guilib.measure.hardwarebase import (ViPErLEEDErrorEnum,
+                                                   QMetaABC, emit_error)
+from viperleed.guilib.measure.classes.settings import (ViPErLEEDSettings,
+                                                       NoSettingsError)
+
 
 SERIAL_ERROR_MESSAGES = {
     qts.QSerialPort.NoError: "",
@@ -74,7 +74,8 @@ class ExtraSerialErrors(ViPErLEEDErrorEnum):
                              "Probably a communication error.")
     TIMEOUT_ERROR = (52,
                      "Serial Timeout: No message received in the "
-                     "last {} sec. Check the communication cable.")
+                     "last {} sec. Check the communication cable "
+                     "and/or serial-port settings in .ini file.")
     UNSUPPORTED_COMMAND_ERROR = (53,
                                  "Command {} is not supported "
                                  "by the controller. Check implementation "
@@ -146,7 +147,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
 
         # .__serial_settings is set via the following call to
         # set_port_settings() for extra checks and preprocessing
-        self.__serial_settings = None
+        self.__serial_settings = ViPErLEEDSettings()
         self.set_port_settings(settings)
 
         # .unprocessed_messages is a list of all the messages
@@ -355,9 +356,9 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             'MSG_START' : bytes, optional
                 Byte to be used as a marker for the beginning of a
                 message. Default is no start marker.
-            'baud_rate': number
+            'baud_rate': number, optional
                 Baud rate for the transmission. Will be interpreted
-                as an integer.
+                as an integer. Default is 9600.
             'break_enabled' : bool, optional
                 Whether the transmission line should be placed in
                 the break state. Default is False.
@@ -401,15 +402,13 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             If any element of the new_settings does not fit the
             mandatory_settings.
         """
-        if new_settings is None:
+        try:
+            new_settings = ViPErLEEDSettings.from_settings(new_settings)
+        except (ValueError, NoSettingsError):
             emit_error(self, ExtraSerialErrors.MISSING_SETTINGS)
             return
 
-        new_settings, invalid = config_has_sections_and_options(
-            self,
-            new_settings,
-            self._mandatory_settings
-            )
+        invalid = new_settings.has_settings(*self._mandatory_settings)
 
         if invalid:
             error_msg = invalid
@@ -778,6 +777,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             time.sleep(0.01)
         if self.is_measure_command(sent_command):
             self.time_stamp = time.perf_counter()
+
     def serial_connect(self, *__args):
         """Connect to currently selected port."""
         if not self.__port.open(self.__port.ReadWrite):

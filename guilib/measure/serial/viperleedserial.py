@@ -650,7 +650,7 @@ class ViPErLEEDSerial(SerialABC):
                            'relay': False,
                            'i0_range': '0 -- 10 V',
                            'aux_range': '0 -- 10 V',
-                           'sr_number': ''}
+                           'serial_nr': 'NO_SERIAL_NR'}
 
         hardware = int.from_bytes(hardware, self.byte_order)
         for key, value in hardware_bits.items():
@@ -667,7 +667,7 @@ class ViPErLEEDSerial(SerialABC):
             hardware_config[key] = present_or_closed
         if not (hardware_config['adc_0'] or hardware_config['adc_1']):
             emit_error(self, ViPErLEEDHardwareError.ERROR_NO_HARDWARE_DETECTED)
-        hardware_config['sr_number'] = ''.join([chr(v) for v in message[4:]])
+        hardware_config['serial_nr'] = ''.join([chr(v) for v in message[4:]])
         return firmware_version, hardware_config
 
     def is_measure_command(self, command):

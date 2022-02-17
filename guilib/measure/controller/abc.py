@@ -14,30 +14,28 @@ ViPErLEEDErrorEnum class ControllerErrors used for giving basic
 commands to the LEED electronics.
 """
 
-# Python standard modules
 import ast
 from abc import abstractmethod
 from collections import defaultdict
-from configparser import ConfigParser
 
 from numpy.polynomial.polynomial import Polynomial
 from PyQt5 import QtCore as qtc
 
-# ViPErLEED modules
-# from viperleed.guilib.measure.hardwarebase import (
-    # config_has_sections_and_options, class_from_name, emit_error, QMetaABC,
-    # ViPErLEEDErrorEnum
-    # )
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.datapoints import QuantityInfo
+from viperleed.guilib.measure.classes.settings import (
+    ViPErLEEDSettings, NoDefaultSettingsError, NoSettingsError
+    )
 
 
 class ControllerErrors(base.ViPErLEEDErrorEnum):
-    # The following two are fatal errors, and should make the GUI
-    # essentially unusable, apart from loading appropriate settings.
+    """Class for controller errors."""
+    # The following three are fatal errors, and should make the GUI
+    # essentially unusable, apart from allowing to load appropriate
+    # settings.
     INVALID_CONTROLLER_SETTINGS = (100,
                                    "Invalid controller settings: Required "
-                                   "settings {!r} missing or values "
+                                   "settings {} missing or values "
                                    "inappropriate. Check configuration file.")
     MISSING_SETTINGS = (101,
                         "Controller cannot operate without settings. "
@@ -46,6 +44,10 @@ class ControllerErrors(base.ViPErLEEDErrorEnum):
     DEFAULT_SETTINGS_CORRUPTED = (102,
                                   "No or multiple default settings "
                                   "found for controller class {!r}.")
+    CANNOT_MEASURE = (103,
+                      "A subclass of ControllerABC is not supposed to "
+                      "measure any quantities. Subclass MeasureControllerABC "
+                      "instead.")
 
 
 class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
@@ -68,7 +70,6 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
 
     _mandatory_settings = [
         ('controller', 'serial_port_class'),
-        ('available_commands',)
         ]
     controller_busy = qtc.pyqtSignal(bool)
 
@@ -77,15 +78,18 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
 
         Parameters
         ----------
-        settings : ConfigParser, optional
-            The controller settings
+        settings : ViPErLEEDSettings or str or path-like, optional
+            The controller settings. If not given, it should be set
+            via the .settings property before the controller can
+            be used.
         port_name : str, optional
             Name of the serial port to be used to communicate with
-            the controller. This parameter is optional only in case
-            settings contains a 'controller'/'port_name' option. If
-            this is given, it will also be stored in the settings
-            file, overriding the value that may be there. Default is
-            an empty string.
+            the controller. If this is given, it will also be stored
+            in the settings file, overriding the value that may be
+            there. If not given and no value is present in the
+            "controller/port_name" field, a port name should be set
+            explicitly via the .serial.port_name property. Default
+            is an empty string.
         sets_energy : bool, optional
             Used to determine whether this controller is responsible
             for setting the electron energy by communicating with the
@@ -100,38 +104,25 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         """
         super().__init__()
         self.__sets_energy = sets_energy
-        self.__settings = None
+        self.__settings = ViPErLEEDSettings()
         self.__serial = None
         self.__hash = -1
-        self.measured_quantities = []
+
+        # measured_quantities cannot be set to anything else than
+        # an empty list in ControllerABC subclasses. It is kept
+        # just to prevent raising AttributeError when a mix of
+        # ControllerABC and MeasureControllerABC subclasses exists.
+        # Only for the latter it can be a non-empty iterable.
+        self.__measured_quantities = []
 
         self.__init_errors = []  # Report these with a little delay
         self.__init_err_timer = qtc.QTimer(self)
         self.__init_err_timer.setSingleShot(True)
+        self.__init_err_timer.timeout.connect(self.__report_init_errors)
 
-        self.error_occurred.connect(self.__on_init_errors)
-
-        if not settings:
-            # Get default settings to instantiate controller class.
-            settings = self.get_default_settings()
-            if not settings:
-                settings = {}
-
-        if not port_name:
-            if not settings.has_option('controller', 'port_name'):
-                raise TypeError("No port name given, and none found in the "
-                                "configuration file. Cannot instantiate "
-                                "a controller without a valid port.")
-            port_name = settings.get('controller', 'port_name',
-                                     fallback='')
-        else:
-            try:
-                settings.set('controller', 'port_name', port_name)
-            except AttributeError:
-                pass
         self.__port_name = port_name
 
-        self.__init_err_timer.timeout.connect(self.__report_init_errors)
+        self.error_occurred.connect(self.__on_init_errors)
 
         self.set_settings(settings)
 
@@ -165,7 +156,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
             self.__hash = hash((id(self), self.name))
         return self.__hash
 
-    def __get_busy(self):
+    def __get_busy(self):  # pylint: disable=unused-private-member
         """Return whether the controller is busy."""
         if self.serial and self.serial.busy:
             return True
@@ -231,14 +222,49 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         return 3000
 
     @property
+    @abstractmethod
     def name(self):
-        """Return a unique name."""
+        """Return a unique name for this controller."""
+        return ""
+
+    @measured_quantities
+    def measured_quantities(self):
+        """Return measured quantities.
+
+        This property can only be set by calling .set_measurements.
+
+        Returns
+        -------
+        None.
+        """
+        # In ControllerABC, this method always returns an
+        # empty list, as __measured_quantities cannot be set
+        # otherwise.
+        return self.__measured_quantities
+
+    @property
+    def port_name(self):
+        """Return the name of the serial port for this controller."""
         name = ""
         try:
             name = self.serial.port_name
         except AttributeError:
             pass
         return name if name else 'UNKNOWN PORT'
+
+    @port_name.setter
+    def port_name(self, port_name):
+        """Set the port name for this controller."""
+        if not isinstance(port_name, str):
+            raise TypeError("port_name must be a string")
+        self.__port_name = port_name
+        if self.settings:
+            self.settings.set('controller', 'port_name', port_name)
+        if not self.serial:
+            return
+        self.serial.port_name = port_name
+        if port_name:
+            self.serial.serial_connect()
 
     @property
     def serial(self):
@@ -261,21 +287,33 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         """
         self.__sets_energy = bool(energy_setter)
 
-    def __get_settings(self):
+    def __get_settings(self):  # pylint: disable=unused-private-member
         """Return the current settings used as a ConfigParser."""
         return self.__settings
 
-    def set_settings(self, new_settings):
+    def set_settings(self, new_settings):  # too-complex
         """Set new settings for this controller.
 
         Settings are accepted and loaded only if they are valid.
+        Notice that the serial port name in the new settings will
+        be used only the first time a valid settings is loaded if
+        no valid port_name was given before (either at instantiation
+        or using the .port_name property). Explicitly use the
+        .port_name property to set a new communication port. If
+        you want the port name to be taken from new settings, set
+        .port_name to an empty string, then load the new settings.
 
         Parameters
         ----------
-        new_settings : dict or ConfigParser
-            The new settings. Will be checked for the following
+        new_settings : dict or ConfigParser or None
+            The new settings. If False-y, an attempt to retrieve
+            settings from a default file will be made. new_settings
+            (or the default) will be checked for the following
             mandatory sections/options:
                 'controller'/'serial_port_class'
+            (if self.sets_energy:
+                'measurement_settings'/'i0_settle_time'
+                'measurement_settings'/'hv_settle_time')
 
         Emits
         -----
@@ -285,27 +323,40 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
             or if the serial class specified in the settings could not
             be instantiated.
         """
-        if new_settings is None:
+        # Look for a default only if no settings are given
+        _name = self.__class__.__name__ if not new_settings else None
+        try:
+            new_settings = ViPErLEEDSettings.from_settings(new_settings,
+                                                           find_from=_name)
+        except NoDefaultSettingsError:
+            base.emit_error(self, ControllerErrors.DEFAULT_SETTINGS_CORRUPTED,
+                            _name)
+            return
+        except NoSettingsError:
             base.emit_error(self, ControllerErrors.MISSING_SETTINGS)
             return
 
-        # The next extra setting is mandatory only for a controller
-        # that sets the LEED energy on the optics
-        extra_mandatory_list = []
+        # The next extra settings are mandatory only for a
+        # controller that sets the LEED energy on the optics
+        extra_mandatory = []
         if self.sets_energy:
-            extra_mandatory_list = [('measurement_settings', 'i0_settle_time'),
-                                    ('measurement_settings', 'hv_settle_time')]
+            extra_mandatory = [('measurement_settings', 'i0_settle_time'),
+                               ('measurement_settings', 'hv_settle_time')]
 
-        new_settings, invalid = base.config_has_sections_and_options(
-            self, new_settings,
-            (*self._mandatory_settings, *extra_mandatory_list)
-            )
+        invalid = new_settings.has_settings(*self._mandatory_settings,
+                                            *extra_mandatory)
 
         if invalid:
             error_msg = ', '.join(invalid)
             base.emit_error(self, ControllerErrors.INVALID_CONTROLLER_SETTINGS,
                             error_msg)
             return
+
+        if not self.__port_name:
+            self.__port_name = new_settings.get('controller', 'port_name',
+                                                fallback=self.__port_name)
+        else:
+            new_settings['controller']['port_name'] = self.__port_name
 
         serial_cls_name = new_settings.get('controller', 'serial_port_class')
         if self.serial.__class__.__name__ != serial_cls_name:
@@ -328,7 +379,8 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
             self.serial.port_name = self.__port_name
 
         # Notice that the .connect() will run anyway, even if the
-        # settings are invalid (i.e., missing mandatory fields)!
+        # settings are invalid (i.e., missing mandatory fields for
+        # the serial)!
         if self.__port_name:
             self.serial.serial_connect()
         self.__settings = self.serial.port_settings
@@ -336,9 +388,9 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
 
     settings = property(__get_settings, set_settings)
 
-    def measures(self, quantity):
+    def measures(self, _):
         """Return whether this controller measures quantity."""
-        return quantity in self.measured_quantities
+        return False
 
     @abstractmethod
     def set_energy(self, energy, *other_data, trigger_meas=True, **kwargs):
@@ -428,8 +480,10 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
 
         Parameters
         ----------
-        data : tuple
+        *data : object
             Any data the controller class may need to send.
+            Should have the same types and number of elements
+            as self.serial.send_message.
 
         Returns
         -------
@@ -508,27 +562,10 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
             self.error_occurred.emit(error)
         self.__init_errors = []
 
-    def what_to_measure(self, *args, **kwargs):
+    def set_measurements(self, quantities):
         """Set measured_quantities property."""
-        self.measured_quantities = []
-
-    def get_default_settings(self):
-        """Get standard settings.
-
-        These settings cannot be used  to measure as
-        they do lack a COM port but they do allow
-        creating a controller object.
-        """
-        config = ConfigParser()
-        settings_path = base.get_device_config(self.__class__.__name__,
-                                               prompt_if_invalid=False)
-        if not settings_path:
-            base.emit_error(self, ControllerErrors.DEFAULT_SETTINGS_CORRUPTED,
-                            self.__class__.__name__)
-        config, invalid = base.config_has_sections_and_options(                 #TODO: not a nice solution
-            self, settings_path, []
-            )
-        return config
+        if quantities:
+            base.emit_error(self, ControllerErrors.CANNOT_MEASURE)
 
     @abstractmethod
     def list_devices(self):
@@ -543,11 +580,8 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
             pass
 
 
-class MeasureControllerABC(ControllerABC):
+class MeasureControllerABC(ControllerABC):                                      # TODO: discuss why stuff is not in base controller
     """Controller class for measurement controllers."""
-
-    _mandatory_settings = [*ControllerABC._mandatory_settings,
-                           ('controller', 'measurement_devices')]
 
     def __init__(self, settings=None, port_name='', sets_energy=False):
         """Initialise controller class object.
@@ -641,6 +675,10 @@ class MeasureControllerABC(ControllerABC):
         """Return the time interval between measurements in seconds."""
         return
 
+    def measures(self, quantity):
+        """Return whether this controller measures quantity."""
+        return quantity in self.measured_quantities
+
     # @qtc.pyqtSlot(bool)
     def begin_preparation(self, serial_busy):
         """Prepare the controller for a measurement.
@@ -677,7 +715,7 @@ class MeasureControllerABC(ControllerABC):
             break
         if next_to_do:
             self.begin_prepare_todos[next_to_do.__name__] = False
-            if next_to_do == self.set_energy:
+            if next_to_do is self.set_energy:
                 next_to_do(*self.__energies_and_times)
             else:
                 next_to_do()
@@ -722,7 +760,7 @@ class MeasureControllerABC(ControllerABC):
 
         if next_to_do:
             self.continue_prepare_todos[next_to_do.__name__] = False
-            if next_to_do == self.set_continuous_mode:
+            if next_to_do is self.set_continuous_mode:
                 next_to_do(True)
             else:
                 next_to_do()
@@ -874,7 +912,7 @@ class MeasureControllerABC(ControllerABC):
         self.continue_preparation(serial_busy=False)
 
     @abstractmethod
-    def what_to_measure(self, requested):
+    def set_measurements(self, quantities):
         """Decide what to measure.
 
         This method must be reimplemented in subclasses. It
@@ -883,14 +921,13 @@ class MeasureControllerABC(ControllerABC):
         check if those types are available and not conflicting
         with each other and decide which channels to use.
 
-        super().what_to_measure(requested) must be called in
-        subclasses at the end of the reimplementation in order
-        to convert the requested quantities into QuantityInfo
-        objects.
+        super().set_measurements(requested) must be called in
+        subclasses at the end of the reimplementation to actually
+        store the measured quantities.
 
         Parameters
         ----------
-        requested : list of strings
+        quantities : list of strings
             Contains all of the requested
             measurement types.
 
@@ -898,8 +935,8 @@ class MeasureControllerABC(ControllerABC):
         -------
         None.
         """
-        requested_quantities = [QuantityInfo.from_label(q) for q in requested]
-        self.measured_quantities = requested_quantities
+        self.__measured_quantities = [QuantityInfo.from_label(q)
+                                      for q in quantities]
 
     def set_settings(self, new_settings):
         """Set new settings for this controller.

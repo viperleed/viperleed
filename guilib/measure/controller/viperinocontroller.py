@@ -28,6 +28,7 @@ from viperleed.guilib.measure.datapoints import QuantityInfo
 
 
 class ViPErinoErrors(ViPErLEEDErrorEnum):
+    """Errors specific to Arduino-based ViPErLEED controllers."""
     TOO_MANY_MEASUREMENT_TYPES = (150,
                                   "The ViPErinoController can only handle "
                                   "as many measurement requests as there are "
@@ -53,6 +54,12 @@ class ViPErinoController(MeasureControllerABC):
     """Controller class for the ViPErLEED Arduino Micro."""
 
     __request_info = qtc.pyqtSignal()
+
+    _mandatory_settings = [
+        *MeasureControllerABC._mandatory_settings,
+        ('available_commands',),
+        ('controller', 'measurement_devices'),
+        ]
 
     def __init__(self, settings=None, port_name='', sets_energy=False):
         """Initialise ViPErino controller object.
@@ -108,7 +115,22 @@ class ViPErinoController(MeasureControllerABC):
             )
         return (num_meas_to_average+2)*self.measurement_interval
 
-    def set_energy(self, energy, time, *more_steps, trigger_meas=True):
+    @property
+    def name(self):
+        """Return a name for this controller.
+
+        The name will be unique only if this controller has been
+        requested (and responded) for a serial number.
+
+        Returns
+        -------
+        name : str
+            The name of this controller
+        """
+        serial_nr = self.hardware.get('serial_nr', 'UNKNOWN_SERIAL_NR')
+        return f"ViPErLEED {serial_nr}"
+
+    def set_energy(self, energy, settle_time, *more_steps, trigger_meas=True):
         """Set energy with associated settling time.
 
         Take the energy (or energies), get setpoint energy (or
@@ -121,22 +143,26 @@ class ViPErinoController(MeasureControllerABC):
 
         Parameters
         ----------
-        energy: float
+        energy : float
             True electron energy in electronvolts.
-        time: integer
+        settle_time : integer
             Interval in milliseconds that the controller will wait
             before deeming the LEED optics stable at set energy.
-        *more_steps: float and integer (alternating)
-            The first element in each pair is again one energy, the
-            second element the time interval to wait. Multiple steps
-            can be executed quickly after each other. The last step
-            will be the final energy that is set and should have
-            the longest waiting time to allow the electronics to
-            stabilize.
+        *more_steps : Number
+            If given, it should be an even number of elements.
+            Odd elements are energies, even ones settle-time intervals.
+            Multiple steps can be executed quickly after each other.
+            The last step will be the final energy that is set and
+            should ensure stabilization of the electronics.
         trigger_meas : bool, optional
             True if the controllers are supposed to take
             measurements after the energy has been set.
             Default is True.
+
+        Raises
+        ------
+        TypeError
+            If an odd number of more_steps are given
         """
         __command = 'PC_SET_VOLTAGE' if trigger_meas else 'PC_SET_VOLTAGE_ONLY'
         pc_set_voltage = self.settings.get('available_commands', __command)
@@ -148,8 +174,8 @@ class ViPErinoController(MeasureControllerABC):
         conversion_factor = dac_out_vs_nominal_energy * 65536 / (v_ref_dac *
                                                                  output_gain)
 
-        energies_and_times = [energy, time, *more_steps]
-        if len(more_steps) % 2 != 0:
+        energies_and_times = [energy, settle_time, *more_steps]
+        if len(more_steps) % 2:  # odd
             raise TypeError(f"{self.__class__.__name__}.set_energy: "
                             "Number of energy and time steps do not match. "
                             "Expected an even number of arguments, found "
@@ -159,10 +185,7 @@ class ViPErinoController(MeasureControllerABC):
         for i in range(number_of_steps):
             tmp_energy = self.true_energy_to_setpoint(energies_and_times[2*i])
             tmp_energy = int(round(tmp_energy * conversion_factor))
-            if tmp_energy >= 65536:
-                tmp_energy = 65535
-            if tmp_energy <= 0:
-                tmp_energy = 0
+            tmp_energy = max(min(tmp_energy, 65535), 0)
             energies_and_times[2*i] = tmp_energy
         self.send_message(pc_set_voltage, energies_and_times)
 
@@ -332,7 +355,7 @@ class ViPErinoController(MeasureControllerABC):
         self.measurements = defaultdict(list)
         self.__energies_and_times = []
 
-    def what_to_measure(self, requested):
+    def set_measurements(self, quantities):
         """Decide what to measure.
 
         Receive requested measurement types from MeasurementABC
@@ -357,24 +380,24 @@ class ViPErinoController(MeasureControllerABC):
         n_devices = len(measurement_devices)
         self.__adc_measurement_types = [None]*n_devices
         self.__adc_channels = [0]*n_devices
-        if len(requested) > n_devices:
+        if len(quantities) > n_devices:
             emit_error(self, ViPErinoErrors.TOO_MANY_MEASUREMENT_TYPES)
-        for request in requested:
+        for quantity in quantities:
             for i, measurement_device in enumerate(measurement_devices):
-                if request in measurement_device:
+                if quantity in measurement_device:
                     if self.__adc_measurement_types[i] is not None:
                         emit_error(self,
                                    ViPErinoErrors.OVERLAPPING_MEASUREMENTS)
                     self.__adc_measurement_types[i] = QuantityInfo.from_label(
-                                                        request
+                                                        quantity
                                                         )
                     self.__adc_channels[i] = self.settings.getint(
-                        'controller', request
+                        'controller', quantity
                         )
                     break
             else:
                 emit_error(self, ViPErinoErrors.INVALID_REQUEST)
-        super().what_to_measure(requested)
+        super().set_measurements(quantities)
 
     def set_continuous_mode(self, continuous):
         """Set continuous mode.
@@ -432,7 +455,7 @@ class ViPErinoController(MeasureControllerABC):
 
     def list_devices(self):
         """List Arduino Micro VipErLEED hardware.
-        
+
         This function will take between 70 to slightly more
         than 100 ms to run.
         """
