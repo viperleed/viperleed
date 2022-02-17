@@ -29,6 +29,8 @@ from viperleed.guilib.measure.hardwarebase import (
     config_has_sections_and_options, class_from_name
     )
 from viperleed.guilib.measure.datapoints import DataPoints
+from viperleed.guilib.measure.classes.settings import (ViPErLEEDSettings,
+                                                       NoSettingsError)
 from viperleed.guilib import measure as vpr_measure
 
 
@@ -91,7 +93,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
                                            'measurement_class',
                                            (self.__class__.__name__,))]
         self.current_energy = 0
-        self.__settings = None
+        self.__settings = ViPErLEEDSettings()
         self.__primary_controller = None
         self.__secondary_controllers = []
         self.__cameras = []
@@ -116,17 +118,18 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         self.camera_timer.setSingleShot(True)
         self.camera_timer.setParent(self)
 
+        self.force_return_timer = qtc.QTimer(parent=self)
+        self.force_return_timer.setSingleShot(True)
+        self.force_return_timer.timeout.connect(self.return_to_gui)
+
         self.set_settings(measurement_settings)
 
         if self.settings:
             self.start_energy = self.settings.getfloat(
                 'measurement_settings', 'start_energy', fallback=0
                 )
+        if self.primary_controller:
             self.__long_settle_time = self.primary_controller.long_settle_time
-
-        self.force_return_timer = qtc.QTimer(parent=self)
-        self.force_return_timer.setSingleShot(True)
-        self.force_return_timer.timeout.connect(self.return_to_gui)
 
         if self.__init_errors:
             self.__init_err_timer.start(20)
@@ -202,15 +205,14 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             If any element of the new_settings does not fit the
             mandatory_settings.
         """
-        if new_settings is None:
-            emit_error(self, MeasurementErrors.MISSING_SETTINGS)
+        try:
+            new_settings = ViPErLEEDSettings.from_settings(new_settings)
+        except (ValueError, NoSettingsError):
+            base.emit_error(self, MeasurementErrors.MISSING_SETTINGS)
             return
 
-        new_settings, invalid = config_has_sections_and_options(
-            self,
-            new_settings,
-            (*self._mandatory_settings, *self._other_mandatory_settings)
-            )
+        invalid = new_settings.has_settings(*self._mandatory_settings,
+                                            *self._other_mandatory_settings)
         for setting in invalid:
             emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS, setting)
 
@@ -219,7 +221,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
 
         self.__settings = new_settings
 
-        sys_config = ConfigParser()
+        sys_config = ConfigParser()                                                 # TODO: remove after camera
         sys_config, invalid = config_has_sections_and_options(
             self,
             SYSTEM_CONFIG_PATH,
@@ -231,10 +233,11 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         primary_config, primary_measures = ast.literal_eval(
             self.settings.get('devices', 'primary_controller')
             )
-        primary_config = primary_config.replace('__CONFIG__',
-                                                device_config_path)
-        self.primary_controller = self.__make_controller(primary_config,
-                                                         is_primary=True)
+        ctrl = self.__make_controller(primary_config, is_primary=True)
+        if not ctrl:
+            return
+
+        self.primary_controller = ctrl
         self.primary_controller.set_measurements(primary_measures)
 
         # Instantiate secondary controller classes
@@ -245,9 +248,9 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
                 )
              )
         for secondary_config, secondary_measures in secondary_set:
-            secondary_config = secondary_config.replace('__CONFIG__',
-                                                        device_config_path)
             ctrl = self.__make_controller(secondary_config, is_primary=False)
+            if not ctrl:
+                continue
             ctrl.set_measurements(secondary_measures)
             self.threads.append(qtc.QThread())
             ctrl.moveToThread(self.threads[-1])
@@ -268,6 +271,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
                                                       device_config_path)
             cameras.append(self.__make_camera(camera_settings))
         self.cameras = cameras
+
         path = self.settings.get('measurement_settings', 'save_here')
         try:
             os.mkdir(path + '__tmp__/')
@@ -401,7 +405,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
 
         for controller in self.controllers:
             file_name = (path + clock + 'controller_' +
-                controller.name + '.ini')
+                controller.name.replace(' ', '_') + '.ini')
             with open(file_name, 'w') as configfile:
                 controller.settings.write(configfile)
         for camera in self.cameras:
@@ -883,16 +887,21 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             If the controller could not be instantiated
             from the given name.
         """
-        config = ConfigParser()
-        config, invalid = config_has_sections_and_options(
-            self,
-            controller_settings,
-            [('controller', 'controller_class'), ('controller', 'port_name')]
-            )
+        try:
+            config = ViPErLEEDSettings.from_settings(controller_settings)
+        except (ValueError, NoSettingsError):
+            emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
+                       ('devices', 'path to controller configuration'))
+            return
+
+        invalid = config.has_settings(('controller', 'controller_class'),
+                                      ('controller', 'port_name'))
         if invalid:
             emit_error(self, MeasurementErrors.MISSING_CLASS_NAME,
                        ('controller', 'controller_class'))
-            # TODO: we do this if the class name AND if the port name is missing, will need to be edited once we add the serial numbers
+            # TODO: we do this if the class name AND if the port name is
+            # missing, will need to be edited once we add the serial numbers.
+            # Will need to get the port from list_devices
             return
 
         controller_cls_name = config.get('controller', 'controller_class')
