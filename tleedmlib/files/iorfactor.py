@@ -60,6 +60,7 @@ def readROUT(filename="ROUT"):
         raise
     line = ""
     i = 0
+    # finds line at end of ROUT file that states best v0r and corresponding R-factor
     while "AVERAGE R-FACTOR =" not in line and i+1 < len(lines):
         i += 1
         line = lines[-i]
@@ -69,6 +70,7 @@ def readROUT(filename="ROUT"):
     rfac_int = -1
     rfac_frac = -1
     v0rshift = 0
+    # writes best V0r to v0rshift and best R-factor to rfac
     rgx = re.compile(r'.+SHIFT\s*(?P<shift>[-0-9.]+).+=\s*(?P<rfac>[-0-9.]+)')
     m = rgx.match(line)
     if m:
@@ -83,7 +85,7 @@ def readROUT(filename="ROUT"):
                          + filename)
     else:
         return (0, 0, 0), 0, []
-    # now read the R-factors per beam at v0rshift
+    # now read the R-factors per beam only at best V0r
     rfaclist = []
     for line in [li for li in lines if len(li) >= 70]:
         line = line.strip()
@@ -586,3 +588,32 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
         pdf.close()
         logger.setLevel(loglevel)
     return
+
+
+def beamlist_to_array(beams):
+    # turn list of Beam objects into an array of intensities
+
+    n_beams = len(beams)
+    energies = []
+    for b in beams:
+        energies.extend([k for k in b.intens if k not in energies])
+    energies.sort()
+    in_grid = np.array(energies)
+    n_E = len(energies)
+
+
+    beam_arr = np.empty([n_E, n_beams])
+    beam_arr[:] = np.NaN
+
+    id_start = np.int32(np.zeros([n_beams]))
+    n_E_beams = np.int32(np.zeros([n_beams]))
+
+    for i, b in enumerate(beams):
+        # write beams into colums of beam_arr
+        id_start[i] = np.where(np.isclose(energies, min(b.intens.keys())))[0][0]
+        n_E_beams[i] = len(b.intens)
+        beam_arr[id_start[i]: id_start[i] + n_E_beams[i] , i] = list(b.intens.values())
+
+
+    return in_grid, id_start, n_E_beams, beam_arr
+
