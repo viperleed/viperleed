@@ -108,13 +108,6 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         self.__serial = None
         self.__hash = -1
 
-        # measured_quantities cannot be set to anything else than
-        # an empty list in ControllerABC subclasses. It is kept
-        # just to prevent raising AttributeError when a mix of
-        # ControllerABC and MeasureControllerABC subclasses exists.
-        # Only for the latter it can be a non-empty iterable.
-        self.__measured_quantities = []
-
         self.__init_errors = []  # Report these with a little delay
         self.__init_err_timer = qtc.QTimer(self)
         self.__init_err_timer.setSingleShot(True)
@@ -227,7 +220,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         """Return a unique name for this controller."""
         return ""
 
-    @measured_quantities
+    @property
     def measured_quantities(self):
         """Return measured quantities.
 
@@ -240,7 +233,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         # In ControllerABC, this method always returns an
         # empty list, as __measured_quantities cannot be set
         # otherwise.
-        return self.__measured_quantities
+        return tuple()
 
     @property
     def port_name(self):
@@ -635,6 +628,7 @@ class MeasureControllerABC(ControllerABC):                                      
         # tuple used to store the energies and times sent
         # by the MeasurementABC class in alternating order.
         self.__energies_and_times = []
+        self.__measured_quantities = tuple()
 
     @abstractmethod
     def abort_and_reset(self):
@@ -668,6 +662,11 @@ class MeasureControllerABC(ControllerABC):                                      
         None.
         """
         return
+
+    @property
+    def measured_quantities(self):
+        """Return a list of measured quantities."""
+        return self.__measured_quantities
 
     @property
     @abstractmethod
@@ -715,7 +714,7 @@ class MeasureControllerABC(ControllerABC):                                      
             break
         if next_to_do:
             self.begin_prepare_todos[next_to_do.__name__] = False
-            if next_to_do is self.set_energy:
+            if next_to_do == self.set_energy:
                 next_to_do(*self.__energies_and_times)
             else:
                 next_to_do()
@@ -760,7 +759,7 @@ class MeasureControllerABC(ControllerABC):                                      
 
         if next_to_do:
             self.continue_prepare_todos[next_to_do.__name__] = False
-            if next_to_do is self.set_continuous_mode:
+            if next_to_do == self.set_continuous_mode:
                 next_to_do(True)
             else:
                 next_to_do()
@@ -935,8 +934,8 @@ class MeasureControllerABC(ControllerABC):                                      
         -------
         None.
         """
-        self.__measured_quantities = [QuantityInfo.from_label(q)
-                                      for q in quantities]
+        self.__measured_quantities = tuple(QuantityInfo.from_label(q)
+                                           for q in quantities)
 
     def set_settings(self, new_settings):
         """Set new settings for this controller.

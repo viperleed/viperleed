@@ -477,13 +477,13 @@ class ViPErinoController(MeasureControllerABC):
         if controllers:
             controllers[0].serial.port.waitForReadyRead(100)
         for ctrl in controllers:
-            sr_number = ctrl.hardware.get('sr_number', None)
+            serial_nr = ctrl.hardware.get('serial_nr', None)
             ctrl.disconnect_()
-            if sr_number:
-                device_list.append(f"ViPErLEED:{sr_number}({ctrl.name})")
-                # print(sr_number, ctrl.name, flush=True)
+            if serial_nr:
+                device_list.append(f"{ctrl.name} ({ctrl.port_name})")
             else:
-                print("Not a ViPErLEED controller at", ctrl.name, flush=True)
+                print("Not a ViPErLEED controller at", ctrl.port_name,
+                      flush=True)
         for thread in threads:
             thread.quit()
         time.sleep(0.001)
