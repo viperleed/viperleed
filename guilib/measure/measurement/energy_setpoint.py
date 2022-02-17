@@ -46,7 +46,8 @@ class MeasureEnergySetpoint(MeasurementABC):
             self.__min_energy = self.settings.getfloat(
                 'measurement_settings', 'min_energy', fallback=0
                 )
-        self.__hv_settle_time = self.primary_controller.hv_settle_time
+        if self.primary_controller:
+            self.__hv_settle_time = self.primary_controller.hv_settle_time
         # Set minimum energy to avoid calibrating for
         # non-linearity in low energy regime.
         if self.start_energy < self.__min_energy:

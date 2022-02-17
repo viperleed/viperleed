@@ -32,6 +32,7 @@ class TimeResolved(MeasurementABC):
         super().__init__(measurement_settings)
         self.__settle_time = 0
         # Settle time has to be 0 for calibration
+        self.__hv_settle_time = 0
         self.__time_over = False
         self.__end_energy = 0
         self.__delta_energy = 1
@@ -40,6 +41,12 @@ class TimeResolved(MeasurementABC):
         self.__constant_energy = False
         self.__limit_continuous = 0
         self.__cycle_time = 0
+        self.__n_digits = 0
+        self.timer = qtc.QTimer(parent=self)
+        self.timer.setSingleShot(True)
+        self.timer.timeout.connect(self.ready_for_next_measurement)
+        self.cycle_timer = qtc.QTimer(parent=self)
+
         if self.settings:
             self.__delta_energy = self.settings.getfloat(
                 'measurement_settings', 'delta_energy', fallback=10
@@ -62,6 +69,8 @@ class TimeResolved(MeasurementABC):
             self.__cycle_time = self.settings.getint(
                 'measurement_settings', 'cycle_time', fallback=100
                 )
+        if not self.primary_controller:
+            return
 
         num_meas = (1 + round((self.__end_energy - self.start_energy)
                    / self.__delta_energy))
@@ -72,12 +81,8 @@ class TimeResolved(MeasurementABC):
         else:
             self.__hv_settle_time = self.primary_controller.hv_settle_time
             self.__n_digits = len(str(num_meas))
-        self.timer = qtc.QTimer(parent=self)
-        self.timer.setSingleShot(True)
-        self.timer.timeout.connect(self.ready_for_next_measurement)
 
         if self.__cycle_time > 0:
-            self.cycle_timer = qtc.QTimer(parent=self)
             self.cycle_timer.setSingleShot(True)
             self.cycle_timer.timeout.connect(self.__set_time_over)
 
