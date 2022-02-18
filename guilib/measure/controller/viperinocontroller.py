@@ -109,11 +109,21 @@ class ViPErinoController(MeasureControllerABC):
 
     @property
     def initial_delay(self):
-        """Return the initial time delay of a measurement in seconds."""
-        num_meas_to_average = self.settings.getint(
+        """Return the initial time delay of a measurement in seconds.
+
+        Returns
+        -------
+        initial_delay : float
+            The time interval between when a measurement was requested
+            and when the measurement was actually acquired. If mutliple
+            measurements are averaged over, the "time when measurements
+            are actually acqiuired" is the middle time between the
+            beginning and the end of the measurement.
+        """
+        nr_average = self.settings.getint(
             'measurement_settings', 'num_meas_to_average', fallback=1
             )
-        return (num_meas_to_average+2)*self.measurement_interval
+        return (3 + (nr_average - 1) / 2)*self.measurement_interval
 
     @property
     def name(self):
@@ -130,7 +140,8 @@ class ViPErinoController(MeasureControllerABC):
         serial_nr = self.hardware.get('serial_nr', 'UNKNOWN_SERIAL_NR')
         return f"ViPErLEED {serial_nr}"
 
-    def set_energy(self, energy, settle_time, *more_steps, trigger_meas=True):
+    def set_energy(self, energy, settle_time, *more_steps,
+                   trigger_meas=True, **_):
         """Set energy with associated settling time.
 
         Take the energy (or energies), get setpoint energy (or
@@ -144,7 +155,7 @@ class ViPErinoController(MeasureControllerABC):
         Parameters
         ----------
         energy : float
-            True electron energy in electronvolts.
+            Nominal electron energy in electronvolts.
         settle_time : integer
             Interval in milliseconds that the controller will wait
             before deeming the LEED optics stable at set energy.
