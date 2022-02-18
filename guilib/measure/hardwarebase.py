@@ -66,120 +66,6 @@ def class_from_name(package, class_name):
     return cls
 
 
-# too-complex, too-many-branches  -> may be solved by moving
-# the str/Path/dict cases into the new HardwareSettings class.
-# This whole function can then be a method of the class.
-def config_has_sections_and_options(caller, config, mandatory_settings):
-    """Make sure settings are fine, and return it as a ConfigParser.
-
-    Dictionaries are converted into ConfigParsers and checked.
-    ConfigParsers are only checked. Strings are converted into
-    path objects and paths are used to access files from which
-    data is read into ConfigParsers and checked.
-
-    Parameters
-    ----------
-    caller : object
-        The object calling this method
-    config : dict, ConfigParser, str, path or None
-        The configuration to be checked. It is advisable to
-        NOT pass a dict, as the return value will be a copy,
-        and will not be up to date among objects sharing the
-        same configuration.
-    mandatory_settings : Sequence
-        Each element is a tuple of the forms
-        (<section>, )
-            Checks that config contains the section <section>.
-            No options are checked.
-        (<section>, <option>)
-            Checks that the config contains <option> in the
-            existing section <section>. No values are checked
-            for <option>.
-        (<section>, <option>, <admissible_values>)
-            Checks that the config contains <option> in the
-            existing section <section>, and that <option> is
-            one of the <admissible_values>. In this case,
-            <admissible_values> is a Sequence of strings.
-
-    Returns
-    -------
-    config : ConfigParser or None
-        The same config, but as a ConfigParser, provided
-        the settings are OK. Returns None if some of the
-        mandatory_settings is invalid or if the original
-        config was None.
-    invalid_settings : list
-        Invalid mandatory_settings of config. None in case
-        settings are OK, list if settings are invalid, True
-        if config was None.
-
-    Raises
-    ------
-    TypeError
-        If settings is not a dict, str, path, or a
-        ConfigParser or mandatory_settings contains invalid
-        data (i.e., one of the entries is not a Sequence
-        with length <= 3).
-    FileNotFoundError
-        If the requested configuration file could not be
-        found/opened.
-    """
-    if config is None:
-        return None, mandatory_settings
-
-    if not isinstance(config, (dict, ConfigParser, str, Path)):
-        raise TypeError(
-            f"{caller.__class__.__name__}: invalid type "
-            f"{type(config).__name__} for settings. "
-            "Should be 'dict', 'str' or 'ConfigParser'."
-            )
-
-    if isinstance(config, str):
-        config = Path(config)
-    if isinstance(config, Path):
-        if not config.is_file():
-            raise FileNotFoundError(f"Could not open/read file: {config}. "
-                                    "Check if this file exists and is in the "
-                                    "correct folder.")
-        tmp_config = ConfigParser(comment_prefixes='/', allow_no_value=True)
-        tmp_config.read(config)
-        config = tmp_config  # pylint: disable=redefined-variable-type
-
-    if isinstance(config, dict):
-        tmp_config = ConfigParser()
-        tmp_config.read_dict(config)
-        config = tmp_config
-
-    invalid_settings = []
-    for setting in mandatory_settings:
-        if not setting or len(setting) > 3:
-            raise TypeError(f"Invalid mandatory setting {setting}. "
-                            f"with length {len(setting)}. Expected "
-                            "length <= 3.")
-        # (<section>,)
-        if len(setting) == 1:
-            if not config.has_section(setting[0]):
-                invalid_settings.append(setting[0])
-            continue
-
-        # (<section>, <option>) or (<section>, <option>, <admissible>)
-        section, option = setting[:2]
-        if not config.has_option(section, option):
-            invalid_settings.append("/".join(setting))
-            continue
-
-        # (<section>, <option>, <admissible>)
-        if len(setting) == 3:
-            admissible_values = setting[2]
-            value = config.get(section, option)
-            if value not in admissible_values:
-                invalid_settings.append("/".join(setting))
-
-    if invalid_settings:
-        config = None
-    return config, invalid_settings
-
-
 def emit_error(sender, error, *msg_args, **msg_kwargs):
     """Emit a ViPErLEEDErrorEnum-like error.
 
@@ -227,8 +113,41 @@ def emit_error(sender, error, *msg_args, **msg_kwargs):
 
 
 def get_device_config(device_name, directory=DEFAULT_CONFIG_PATH,
-                      parent_widget=None, prompt_if_invalid=True):
-    """Return the configuration file for a specific device."""
+                      prompt_if_invalid=True, parent_widget=None):
+    """Return the configuration file for a specific device.
+
+    Only configuration files with a .ini suffix are considered.
+
+    Parameters
+    ----------
+    device_name : str
+        String to be looked up in the configuration files
+        to identify that a file is meant for the device.
+    directory : str or Path, optional
+        The base of the directory tree in which the
+        configuration file should be looked for. The
+        search is recursive. Default is the path to
+        the _defaults drectory.
+    prompt_if_invalid : bool, optional
+        In case the search for a config file failed, pop up
+        a dialog asking the user for input. The search is
+        considered failed in case no config file was found,
+        or if multiple config files matched the criterion.
+        Defaul is True.
+    parent_widget : QWidget or None, optional
+        The parent widget of the pop up. Unless parent_widget
+        is None, the pop up will be blocking user events for
+        parent_widget till the user closes it. Used only
+        if prompt_if_invalid is True. Default is None.
+
+    Returns
+    -------
+    path_to_config : Path or None
+        The path to the only configuration file succesfully
+        found. None if no configuraiton file was found (either
+        because prompt_if_invalid is False, or because the
+        user dismissed the pop-up).
+    """
     directory = Path(directory)
     config_files = [f for f in directory.glob('**/*')
                     if f.is_file() and f.suffix == '.ini']
@@ -264,7 +183,7 @@ def get_device_config(device_name, directory=DEFAULT_CONFIG_PATH,
                 directory=str(directory)
                 )
             if new_path:
-                return get_device_config(device_name, new_path)
+                return get_device_config(device_name, directory=new_path)
         return None
 
     # Found multiple config files that match.
