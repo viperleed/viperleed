@@ -283,7 +283,7 @@ class MeasurementPlot(qtw.QWidget):
                 ctrl_times = measurements[QuantityInfo.TIMES]
                 if SEPARATE_STEPS:
                     color = self.__ctrl_color[ctrl](np.linspace(
-                        0.2, 0.8, self.data_points.num_measurements
+                        0.2, 0.8, self.data_points.nr_steps_total
                         ))
                     # Enough to plot the last step for each
                     fig.ax.plot(ctrl_times[-1], ctrl_data[-1], marker=marker,

@@ -63,8 +63,7 @@ class IVVideo(MeasurementABC):
             # before the primary returns not busy anymore.
             controller.busy = True
         self.set_LEED_energy(self.current_energy, self.__i0_settle_time)
-        self.counter += 1
-        image_name = (f"{self.counter:0>{self.__n_digits}}_"
+        image_name = (f"{self.current_step_nr:0>{self.__n_digits}}_"
                       f"{self.current_energy:.1f}eV_.tiff")
         for i, camera in enumerate(self.cameras):
             camera.process_info.filename = image_name

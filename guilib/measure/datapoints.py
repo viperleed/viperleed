@@ -178,10 +178,30 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         self.__primary_first_time = None
         self.__exceptional_keys = (QuantityInfo.IMAGES, QuantityInfo.ENERGY)
         self.__time_resolved = time_resolved
+
+        # Keep track of whether times were calculated already for
+        # the most-recent data point, to prevent multiple calls
+        # to functions that would screw up stuff.
+        self.__times_calculated = True
+
         # primary_controller needs to be given to this class
         # before starting measurements.
         self.primary_controller = None
-        self.n_steps = 0
+
+        # Here some counters (set from outside):
+        # .nr_steps_done
+        #       number of steps that have been completed, i.e.,
+        #       excluding steps that already have data but new
+        #       measurements can still arrive.
+        # .nr_steps_total
+        #       Total number of steps to be done. This value is
+        #       immutable for one DataPoints instance. Once all
+        #       data has been acquired, len(self) == .nr_steps_total
+        #       Currently this is only used for the colors of
+        #       plotted curves in separate_steps mode.
+        #       TODO: is there a better way to do this?
+        self.nr_steps_done = 0
+        self.nr_steps_total = 1
 
     @property
     def nominal_energies(self):
@@ -316,6 +336,13 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
 
     def calculate_times(self, continuous=False):
         """Calculate times for the last data point."""
+        if self.__times_calculated:
+            raise RuntimeError(
+                "Times were already calculated for this data "
+                "point. Use .recalculate_last_step_times()."
+                )
+
+        self.__times_calculated = True
         time = QuantityInfo.TIMES
         if self.__primary_first_time is None:
             self.__primary_first_time = (
@@ -323,6 +350,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                     )
         for ctrl, ctrl_times in self[-1][time].items():
             if not ctrl_times:
+                # Should never happen
                 continue
             first_time = ctrl_times[0]
             if (not continuous
@@ -463,7 +491,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
 
         # Loop through each energy step and fill in the data
         q_time = QuantityInfo.TIMES
-        for data_point in self[:self.n_steps]:
+        for data_point in self[:self.nr_steps_done]:
             # First, fill in all the quantities requested
             for quantity in quantities:
                 for ctrl, measurements in data_point[quantity].items():
@@ -537,6 +565,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         if cameras:
             data_point[QuantityInfo.IMAGES] = {c: "" for c in cameras}
         self.append(data_point)
+        self.__times_calculated = False
 
     def read_data(self, csv_name):
         """Read data from csv file.
@@ -611,7 +640,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
             # always the first one in the times entry
             controllers = list(self[0][QuantityInfo.TIMES].keys())
             self.primary_controller = controllers[0]
-        self.n_steps = len(self)
+        self.nr_steps_done = len(self)
 
     def recalculate_last_step_times(self):
         """Recalculate the whole time axis for the last energy step.
@@ -634,7 +663,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                     for i in range(n_measurements)
                     ]
             else:
-                self[-1][time][ctrl][0] = first_time         
+                self[-1][time][ctrl][0] = first_time
 
 
     def save_data(self, csv_name):
@@ -662,7 +691,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
             # number of values) by 'padding' with not-a-number towards
             # the end of the energy step. Each block will be as long
             # as the longest list of data.
-            for data_point in self[:self.n_steps]:
+            for data_point in self[:self.nr_steps_done]:
                 max_length = max(
                     len(times)
                     for times in data_point[QuantityInfo.TIMES].values()

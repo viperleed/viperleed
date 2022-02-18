@@ -16,7 +16,8 @@ import ast
 from numpy.polynomial.polynomial import Polynomial
 
 # ViPErLEED modules
-from viperleed.guilib.measure.measurement.abc import MeasurementABC
+from viperleed.guilib.measure.measurement.abc import (MeasurementABC,
+                                                      MeasurementErrors)
 from viperleed.guilib.measure.datapoints import QuantityInfo
 
 
@@ -43,15 +44,43 @@ class MeasureEnergySetpoint(MeasurementABC):
             self.__end_energy = self.settings.getfloat(
                 'measurement_settings', 'end_energy', fallback=10
                 )
-            self.__min_energy = self.settings.getfloat(
-                'measurement_settings', 'min_energy', fallback=0
-                )
+
         if self.primary_controller:
             self.__hv_settle_time = self.primary_controller.hv_settle_time
-        # Set minimum energy to avoid calibrating for
-        # non-linearity in low energy regime.
-        if self.start_energy < self.__min_energy:
-            self.start_energy = self.__min_energy
+
+    @property
+    def start_energy(self):
+        """Return the first energy for the energy ramp.
+
+        The returned value is limited below by a minimum energy
+        (as found in 'measurement_settings/min_energy' if present,
+        5 eV otherwise). This is useful to avoid calibrating for
+        the non-linearity of LEED electronics in the low-energy
+        regime.
+
+        Returns
+        -------
+        start_energy : float
+            The first energy of the energy ramp.
+        """
+        if not self.settings:
+            return 0.0
+        try:
+            start_e = self.settings.getfloat('measurement_settings',
+                                             'start_energy', fallback=0.0)
+        except (TypeError, ValueError):
+            # Not a float
+            emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
+                       'measurement_settings/start_energy')
+            start_e = 0.0
+
+        try:
+            min_e = self.settings.getfloat('measurement_settings',
+                                           'min_energy', fallback=5.0)
+        except (TypeError, ValueError):
+            # Not a float
+            min_e = 5.0
+        return max(min_e, start_e)
 
     def begin_measurement_preparation(self):
         """Start preparation for measurements.

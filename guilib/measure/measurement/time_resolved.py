@@ -77,7 +77,7 @@ class TimeResolved(MeasurementABC):
         self.data_points.time_resolved = True
         if self.is_continuous_measurement:
             self.prepare_continuous_mode()
-            self.data_points.num_measurements = num_meas
+            self.data_points.nr_steps_total = num_meas
         else:
             self.__hv_settle_time = self.primary_controller.hv_settle_time
             self.__n_digits = len(str(num_meas))
@@ -121,8 +121,7 @@ class TimeResolved(MeasurementABC):
         self.set_LEED_energy(self.current_energy, self.__settle_time)
         if not self.is_continuous_measurement:
             # TODO: use a flag to decide if we want to save images
-            self.counter += 1
-            image_name = (f"{self.counter:0>{self.__n_digits}}_"
+            image_name = (f"{self.current_step_nr:0>{self.__n_digits}}_"
                           f"{self.current_energy:.1f}eV_.tiff")
             for i, camera in enumerate(self.cameras):
                 camera.process_info.filename = image_name
@@ -147,8 +146,7 @@ class TimeResolved(MeasurementABC):
         return False
 
     def is_preparation_finished(self):
-        """Check if measurement preparation is done.
-        """
+        """Check if measurement preparation is done."""
         # TODO: remove this once the energy generators have the ability to do the same energy multiple times.
         if any(device.busy for device in self.devices):
             return
@@ -167,8 +165,6 @@ class TimeResolved(MeasurementABC):
     def connect_secondary_controllers(self):
         """Connect necessary controller signals."""
         for controller in self.secondary_controllers:
-            if not controller:
-                continue
             self.continuous_mode.connect(controller.set_continuous_mode,
                                          type=qtc.Qt.UniqueConnection)
         super().connect_secondary_controllers()
@@ -192,8 +188,6 @@ class TimeResolved(MeasurementABC):
         """Disconnect necessary controller signals."""
         super().disconnect_secondary_controllers()
         for controller in self.secondary_controllers:
-            if not controller:
-                continue
             try:
                 self.continuous_mode.disconnect(controller.set_continuous_mode)
             except TypeError:

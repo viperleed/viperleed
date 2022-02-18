@@ -89,11 +89,9 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         self.__secondary_controllers = []
         self.__cameras = []
         self.__aborted = False
-        self.counter = 0                                                        # TODO: ??
-        self.start_energy = 0                                                   # @property reading from settings?
-        self.__long_settle_time = 0                                             # @property reading from primary_controller?
+
         self.threads = []
-        self.running = False                                                    # TODO: used for what?
+        self.running = False  # used for aborting from outside
         self.primary_delay = 0                                                  # TODO: bad name?
         self.data_points = DataPoints()
         self.data_points.error_occurred.connect(self.error_occurred)
@@ -105,7 +103,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
 
         self.error_occurred.connect(self.__on_init_errors)
 
-        self.camera_timer = qtc.QTimer(parent=self)                             # TODO: public?
+        self.camera_timer = qtc.QTimer(parent=self)
         self.camera_timer.setSingleShot(True)
 
         self.force_return_timer = qtc.QTimer(parent=self)
@@ -113,13 +111,6 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         self.force_return_timer.timeout.connect(self.return_to_gui)
 
         self.set_settings(measurement_settings)
-
-        if self.settings:
-            self.start_energy = self.settings.getfloat(
-                'measurement_settings', 'start_energy', fallback=0              # TODO: Can never fall-back if mandatory?
-                )
-        if self.primary_controller:
-            self.__long_settle_time = self.primary_controller.long_settle_time
 
         if self.__init_errors:
             self.__init_err_timer.start(20)
@@ -151,9 +142,28 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         return tuple(c for c in controllers if c)
 
     @property
+    def current_step_nr(self):
+        """Return an incremental number for the current energy step."""
+        return len(self.datapoints)
+
+    @property
     def devices(self):
         """Return all controllers and cameras."""
         return *self.controllers, *self.cameras
+
+    @property
+    def start_energy(self):
+        """Return the first energy for the energy ramp."""
+        if not self.settings:
+            return 0
+        try:
+            return self.settings.getfloat('measurement_settings',
+                                          'start_energy', fallback=0)
+        except (TypeError, ValueError):
+            # Not a float
+            emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
+                       'measurement_settings/start_energy')
+            return 0
 
     def __get_settings(self):
         """Return the current settings for the measurement.
@@ -215,12 +225,16 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         primary_config, primary_measures = ast.literal_eval(
             self.settings.get('devices', 'primary_controller')
             )
-        ctrl = self.__make_controller(primary_config, is_primary=True)              # TODO: take directly (config, measured_quantities, is_primary)
-        if not ctrl:
+        try:
+            ctrl = self.__make_controller(primary_config, is_primary=True)
+        except RuntimeError:
+            # something went wrong with instantiating, and is
+            # already reported by emitting in __make_controller
             return
 
+        ctrl.error_occurred.connect(self.__on_hardware_error)
+        ctrl.set_measurements(primary_measures)
         self.primary_controller = ctrl
-        self.primary_controller.set_measurements(primary_measures)
 
         # Instantiate secondary controller classes
         secondary_controllers = []
@@ -229,9 +243,12 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
                               fallback='()')
             )
         for secondary_config, secondary_measures in secondary_set:
-            ctrl = self.__make_controller(secondary_config, is_primary=False)
-            if not ctrl:
+            try:
+                ctrl = self.__make_controller(secondary_config,
+                                              is_primary=False)
+            except RuntimeError:
                 continue
+            ctrl.error_occurred.connect(self.__on_hardware_error)
             ctrl.set_measurements(secondary_measures)
             self.threads.append(qtc.QThread())
             ctrl.moveToThread(self.threads[-1])
@@ -246,15 +263,15 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             self.settings.get('devices', 'cameras', fallback='()')
             )
         for camera_settings in camera_set:
-            cam = self.__make_camera(camera_settings)
-            if cam:
-                cameras.append(cam)
+            try:
+                cam = self.__make_camera(camera_settings)
+            except RuntimeError:
+                continue
+            cam.error_occurred.connect(self.__on_hardware_error)
+            cameras.append(cam)
         self.cameras = cameras
 
         self.__make_tmp_directory_tree()
-
-        for device in self.devices:
-            device.error_occurred.connect(self.__on_hardware_error)             # TODO: not good. The set_measurements errors would never show up. Should be connected earlier.
 
         self.data_points.primary_controller = self.primary_controller
 
@@ -335,7 +352,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         -------
         bool
         """
-        self.data_points.n_steps += 1
+        self.data_points.nr_steps_done += 1
         return True
 
     def finalize(self, busy=False):
@@ -389,10 +406,8 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         # Move all camera images
         shutil.move(tmp_path, final_path)
 
-        if not self.data_points:                                                # Why not saving .ini files?
-            return
-
-        self.data_points.save_data(final_path + 'measurement.csv')
+        if self.data_points:
+            self.data_points.save_data(final_path + 'measurement.csv')
 
         ctrl_locations = []
         for ctrl in self.controllers:
@@ -416,7 +431,8 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         with open(file_name, 'w', encoding='utf-8') as configfile:
             self.settings.write(configfile)
 
-    def set_LEED_energy(self, *message, trigger_meas=True, **kwargs):
+    def set_LEED_energy(self, energy, settle_time, *more_steps,
+                        trigger_meas=True, **_):
         """Set the electron energy used for LEED.
 
         In order to achieve quicker settling times for the LEED
@@ -426,25 +442,30 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
 
         Parameters
         ----------
-        *message : Number
-            Data necessary to set the energy. Odd arguments are
-            energies in electronvolts, even ones times to wait (in
-            milliseconds) before moving to the next 'step'. These
-            arguments are passed unaltered to the primary controller.
+        energy : float
+            Nominal electron energy in electronvolts.
+        settle_time : integer
+            Interval in milliseconds that the controller will wait
+            before deeming the LEED optics stable at set energy.
+        *more_steps : Number
+            If given, it should be an even number of elements.
+            Odd elements are energies, even ones settle-time intervals.
+            Multiple steps can be executed quickly after each other.
+            The last step will be the final energy that is set and
+            should ensure stabilization of the electronics.
         trigger_meas : bool, optional
             True if the controllers are supposed to take
             measurements after the energy has been set.
             Default is True.
-        **kwargs : object
-            Other unused keyword arguments.
 
         Returns
         -------
         None.
         """
-        self.primary_controller.set_energy(*message, trigger_meas=trigger_meas)
-        self.primary_delay = 0
-        for i, value in enumerate(message):
+        self.primary_controller.set_energy(energy, settle_time, *more_steps,
+                                           trigger_meas=trigger_meas)
+        self.primary_delay = settle_time
+        for i, value in enumerate(more_steps):
             if i % 2 != 0:
                 self.primary_delay += value
 
@@ -483,8 +504,6 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
     def connect_secondary_controllers(self):
         """Connect necessary controller signals."""
         for controller in self.secondary_controllers:
-            if not controller:                                                  # should not happen
-                continue
             controller.data_ready.connect(self.receive_from_controller,
                                           type=qtc.Qt.UniqueConnection)
             self.ready_for_measurement.connect(controller.measure_now,
@@ -536,8 +555,6 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
     def disconnect_secondary_controllers(self):
         """Disconnect necessary controller signals."""
         for controller in self.secondary_controllers:
-            if not controller:                                                  # should not happen
-                continue
             controller.disconnect_()
             try:
                 controller.data_ready.disconnect(self.receive_from_controller)
@@ -687,7 +704,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         self.switch_signals_for_preparation()
         self.current_energy = self.start_energy
         self.begin_preparation.emit((self.start_energy,
-                                     self.__long_settle_time))
+                                     self.primary_controller.long_settle_time))
 
     def continue_measurement_preparation(self, _):
         """Continue preparation for measurements.
@@ -858,7 +875,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         self.data_points.new_data_point(self.current_energy, self.controllers,
                                         self.cameras)
 
-    def __make_controller(self, controller_settings, is_primary=False):         # Not nice: can return None or a ControllerABC. Perhaps should raise something instead?
+    def __make_controller(self, controller_settings, is_primary=False):
         """Instantiate controller class object.
 
         Take controller settings and generate a controller object
@@ -878,6 +895,11 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         instance : controller class object
             The controller that is going to handle the hardware.
 
+        Raises
+        ------
+        RuntimeError
+            If anything goes wrong with the creation of the controller
+
         Emits
         -----
         MeasurementErrors.MISSING_CLASS_NAME
@@ -891,7 +913,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         except (ValueError, NoSettingsError):
             emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
                        ('devices', 'path to controller configuration'))
-            return
+            raise RuntimeError from None
 
         invalid = config.has_settings(('controller', 'controller_class'),
                                       ('controller', 'port_name'))
@@ -901,7 +923,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             # TODO: we do this if the class name AND if the port name is
             # missing, will need to be edited once we add the serial numbers.
             # Will need to get the port from list_devices.
-            return
+            raise RuntimeError
 
         controller_cls_name = config.get('controller', 'controller_class')
         port_name = config.get('controller', 'port_name')
@@ -911,12 +933,12 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         except ValueError:
             emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
                        'controller/controller_class')
-            return
+            raise RuntimeError
         instance = controller_class(settings=config, port_name=port_name,
                                     sets_energy=is_primary)
         return instance
 
-    def __make_camera(self, camera_settings):                                   # Not nice: can return None or a CameraABC. Perhaps should raise something instead?
+    def __make_camera(self, camera_settings):
         """Instantiate camera class object.
 
         Take camera settings and generate a camera object from it.
@@ -933,10 +955,15 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         instance : camera class object
             The camara class used for the connected camera.
 
+        Raises
+        ------
+        RuntimeError
+            If anything goes wrong with instantiation.
+
         Emits
         -----
         MeasurementErrors.MISSING_CLASS_NAME
-            If the camera class name is missing.
+            If the camera class name is missing or invalid.
         MeasurementErrors.INVALID_MEAS_SETTINGS
             If the camera could not be instantiated
             from the given name.
@@ -946,13 +973,13 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         except (ValueError, NoSettingsError):
             emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
                        ('devices', 'path to camera configuration'))
-            return
+            raise RuntimeError from None
 
         invalid = config.has_settings(('camera_settings', 'class_name'))
         if invalid:
             emit_error(self, MeasurementErrors.MISSING_CLASS_NAME,
                        ('camera_settings', 'class_name'))
-            return
+            raise RuntimeError
 
         camera_cls_name = config.get('camera_settings', 'class_name')
         try:
@@ -960,7 +987,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         except ValueError:
             emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
                        'camera_settings/class_name')
-            return
+            raise RuntimeError
 
         instance = camera_class(settings=config)
         return instance
@@ -999,8 +1026,6 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         None.
         """
         for controller in self.secondary_controllers:
-            if not controller:
-                continue
             try:
                 self.ready_for_measurement.disconnect(controller.measure_now)
             except TypeError:
