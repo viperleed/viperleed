@@ -14,9 +14,9 @@ equipment and measurements.
 
 from configparser import (ConfigParser, MissingSectionHeaderError,
                           DuplicateSectionError, DuplicateOptionError,
-                          SectionProxy)
+                          SectionProxy, _UNSET)
 from collections import defaultdict
-import inspect
+from collections.abc import Sequence
 import os
 from pathlib import Path
 import sys
@@ -72,6 +72,10 @@ class NoSettingsError(Exception):
 
 class NoDefaultSettingsError(Exception):
     """Exception raised when no default settings file was found."""
+
+
+class NotASequenceError(Exception):
+    """Exception raised when gettuple cannot return a tuple."""
 
 
 class ViPErLEEDSettings(ConfigParser):
@@ -202,6 +206,22 @@ class ViPErLEEDSettings(ConfigParser):
     def last_file(self):
         """Return the path to the last file read."""
         return self.__last_file
+
+    def getsequence(self, section, option, *, raw=False, vars=None,
+                 fallback=_UNSET, **kwargs):
+        """Return a section/option as a sequence."""
+        conv = ast.literal_eval
+        try:
+            converted = self._get_conv(section, option, conv, raw=raw,
+                                       vars=vars, fallback=fallback, **kwargs)
+        except (ValueError, TypeError, SyntaxError,
+                MemoryError, RecursionError) as err:
+            raise NotASequenceError(f"Could not convert {section}/{option} "
+                                    "into a sequence") from err
+        if converted is not fallback and not isinstance(converted, Sequence):
+            raise NotASequenceError(f"Could not convert {section}/{option} "
+                                    "into a sequence")
+        return converted
 
     def has_settings(self, *required_settings):
         """Check whether self has given settings.
