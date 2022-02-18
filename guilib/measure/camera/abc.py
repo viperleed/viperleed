@@ -21,9 +21,6 @@ import ast
 import numpy as np
 from PyQt5 import QtCore as qtc
 
-# from viperleed.guilib.measure.hardwarebase import (
-    # ViPErLEEDErrorEnum, config_has_sections_and_options, emit_error, QMetaABC
-    # )
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.camera.imageprocess import (ImageProcessor,
                                                           ImageProcessInfo)
@@ -230,7 +227,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         try:
             binning_factor = self.settings.getint('camera_settings',
                                                   'binning', fallback=1)
-        except ValueError:  # Cannot be read as int
+        except (TypeError, ValueError):  # Cannot be read as int
             binning_factor = -1
 
         min_bin, max_bin = self.get_binning_limits()
@@ -300,7 +297,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         try:
             exposure_time = self.settings.getfloat('measurement_settings',
                                                    'exposure')
-        except ValueError:  # Cannot be read as float
+        except (TypeError, ValueError):  # Cannot be read as float
             # pylint: disable=redefined-variable-type
             # Seems a bug: getfloat always returns a float
             exposure_time = -1
@@ -326,7 +323,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         try:
             gain = self.settings.getfloat('measurement_settings',
                                           'gain', fallback=0)
-        except ValueError:  # Cannot be read as float
+        except (TypeError, ValueError):  # Cannot be read as float
             # pylint: disable=redefined-variable-type
             # Seems a bug: getfloat always returns a float
             gain = -1
@@ -401,7 +398,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         try:
             n_frames = self.settings.getint('measurement_settings',
                                             'n_frames', fallback=1)
-        except ValueError:  # Cannot be read as int
+        except (TypeError, ValueError):  # Cannot be read as int
             # pylint: disable=redefined-variable-type
             # Seems a bug: getint always returns an integer
             n_frames = -1
