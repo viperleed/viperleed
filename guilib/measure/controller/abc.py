@@ -200,7 +200,17 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
 
     @property
     def initial_delay(self):
-        """Return the initial time delay of a measurement in seconds."""
+        """Return the initial time delay of a measurement in seconds.
+
+        Returns
+        -------
+        initial_delay : float
+            The time interval between when a measurement was requested
+            and when the measurement was actually acquired. If mutliple
+            measurements are averaged over, the "time when measurements
+            are actually acqiuired" should be the middle time between
+            the beginning and the end of the measurement.
+        """
         return self.settings.getfloat(
             'controller', 'initial_delay', fallback=0
             )
@@ -385,7 +395,8 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         return False
 
     @abstractmethod
-    def set_energy(self, energy, *other_data, trigger_meas=True, **kwargs):
+    def set_energy(self, energy, settle_time, *more_steps,
+                   trigger_meas=True, **_):
         """Set electron energy on LEED controller.
 
         This method must be reimplemented in subclasses. The
@@ -403,13 +414,16 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         Parameters
         ----------
         energy : float
-            Nominal electron energy in electronvolts
-        *other_data : object, optional
-            Other information that the controller may need
-            to be able to set the energy. This data should
-            not contain information about recalibration of
-            the energy itself, as this should be done via
-            self.true_energy_to_setpoint(energy).
+            Nominal electron energy in electronvolts.
+        settle_time : integer
+            Interval in milliseconds that the controller will wait
+            before deeming the LEED optics stable at set energy.
+        *more_steps : Number
+            If given, it should be an even number of elements.
+            Odd elements are energies, even ones settle-time intervals.
+            Multiple steps can be executed quickly after each other.
+            The last step will be the final energy that is set and
+            should ensure stabilization of the electronics.
         trigger_meas : bool, optional
             True if the controllers are supposed to take
             measurements after the energy has been set.
@@ -417,8 +431,6 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
             take measurements, therefore this parameter
             is only used to emit an about to trigger
             if True.
-        **kwargs : object
-            Unused keyword arguments.
 
         Returns
         -------
@@ -824,7 +836,8 @@ class MeasureControllerABC(ControllerABC):                                      
             self.measurements[key] = []
 
     @abstractmethod
-    def set_energy(self, energy, *other_data, trigger_meas=True, **kwargs):
+    def set_energy(self, energy, settle_time, *more_steps,
+                   trigger_meas=True, **_):
         """Set electron energy on LEED controller.
 
         This method must be reimplemented in subclasses. The
@@ -846,12 +859,15 @@ class MeasureControllerABC(ControllerABC):                                      
         ----------
         energy : float
             Nominal electron energy in electronvolts
-        *other_data : object, optional
-            Other information that the controller may need
-            to be able to set the energy. This data should
-            not contain information about recalibration of
-            the energy itself, as this should be done via
-            self.true_energy_to_setpoint(energy).
+        settle_time : integer
+            Interval in milliseconds that the controller will wait
+            before deeming the LEED optics stable at set energy.
+        *more_steps : Number
+            If given, it should be an even number of elements.
+            Odd elements are energies, even ones settle-time intervals.
+            Multiple steps can be executed quickly after each other.
+            The last step will be the final energy that is set and
+            should ensure stabilization of the electronics.
         trigger_meas : bool, optional
             True if the controllers are supposed to take
             measurements after the energy has been set.
