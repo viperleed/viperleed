@@ -103,7 +103,6 @@ def rfactor(sl, rp, index, for_error=False, only_vary=None):
     expbeams = rp.expbeams
 
     # Branch off for new R factor calculation
-    new_rf = True
     if (not rp.R_FACTOR_LEGACY):
         logger.debug("Using new R-factor calculation. This is still experimental!")
         which_r = rp.R_FACTOR_TYPE

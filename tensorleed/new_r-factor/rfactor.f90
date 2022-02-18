@@ -976,15 +976,22 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
                 E_start_beams_out(i) &
             ) + 1
         beams_max_id_out(i) = E_start_beams_out(i) + n_E_beams_out(i) - 1
+        ! TODO: is there a better solution than below?
+        if (beams_max_id_out(i) > n_E_out) then 
+            beams_max_id_out(i) = n_E_out
+            n_E_beams_out(i) = beams_max_id_out(i) - E_start_beams_out(i) + 1
+        end if
     end do
 
 
 
     ! Debug below...
     do i = 1, n_beams
-       ! print*, i
+       print*, i
        ! print*, n_E_out
-       ! print*, beams_max_id_out(i)
+       print*, "n_E in", cut_n_E_beams(i)
+       print*, "n_E out", n_E_beams_out(i)
+       print*, beams_max_id_out(i)
         if (E_grid_in(cut_beams_max_id_in(i)) < E_grid_out(beams_max_id_out(i))) then
             print*, "issue size out - beam", i
         end if
