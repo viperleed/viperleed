@@ -8,34 +8,26 @@ Created: 2021-07-19
 Author: Michele Riva
 Author: Florian Doerr
 
-This module contains the definition of the measurementABC class
+This module contains the definition of the MeasurementABC class
 which gives commands to the controller classes and its associated
 ViPErLEEDErrorEnum class MeasurementErrors.
 """
-import os
+
 import shutil
 from abc import abstractmethod
 import ast
-from configparser import ConfigParser
 from time import localtime, strftime
-import inspect
 from pathlib import Path
 
 from PyQt5 import QtCore as qtc
 
-# ViPErLEED modules
 from viperleed.guilib.measure.hardwarebase import (
-    emit_error, ViPErLEEDErrorEnum, QMetaABC,
-    config_has_sections_and_options, class_from_name
+    emit_error, ViPErLEEDErrorEnum, QMetaABC, class_from_name
     )
 from viperleed.guilib.measure.datapoints import DataPoints
-from viperleed.guilib.measure.classes.settings import (ViPErLEEDSettings,
-                                                       NoSettingsError)
-from viperleed.guilib import measure as vpr_measure
-
-
-SYSTEM_CONFIG_PATH = (Path(inspect.getfile(vpr_measure)).parent
-                       / '_defaults/_system_settings.ini')
+from viperleed.guilib.measure.classes.settings import (
+    ViPErLEEDSettings, NoSettingsError, get_system_config
+    )
 
 
 class MeasurementErrors(ViPErLEEDErrorEnum):
@@ -83,7 +75,6 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
     _mandatory_settings = [
         ('devices', 'primary_controller'),
         ('measurement_settings', 'start_energy'),
-        ('measurement_settings', 'save_here'), # TODO: change name, move to global settings
         ]
 
     def __init__(self, measurement_settings):
@@ -98,25 +89,24 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         self.__secondary_controllers = []
         self.__cameras = []
         self.__aborted = False
-        self.counter = 0
-        self.start_energy = 0
-        self.__long_settle_time = 0
+        self.counter = 0                                                        # TODO: ??
+        self.start_energy = 0                                                   # @property reading from settings?
+        self.__long_settle_time = 0                                             # @property reading from primary_controller?
         self.threads = []
-        self.running = False
-        self.primary_delay = 0
+        self.running = False                                                    # TODO: used for what?
+        self.primary_delay = 0                                                  # TODO: bad name?
         self.data_points = DataPoints()
         self.data_points.error_occurred.connect(self.error_occurred)
 
         self.__init_errors = []  # Report these with a little delay
-        self.__init_err_timer = qtc.QTimer(self)
+        self.__init_err_timer = qtc.QTimer(parent=self)
         self.__init_err_timer.setSingleShot(True)
-
-        self.error_occurred.connect(self.__on_init_errors)
         self.__init_err_timer.timeout.connect(self.__report_init_errors)
 
-        self.camera_timer = qtc.QTimer()
+        self.error_occurred.connect(self.__on_init_errors)
+
+        self.camera_timer = qtc.QTimer(parent=self)                             # TODO: public?
         self.camera_timer.setSingleShot(True)
-        self.camera_timer.setParent(self)
 
         self.force_return_timer = qtc.QTimer(parent=self)
         self.force_return_timer.setSingleShot(True)
@@ -126,7 +116,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
 
         if self.settings:
             self.start_energy = self.settings.getfloat(
-                'measurement_settings', 'start_energy', fallback=0
+                'measurement_settings', 'start_energy', fallback=0              # TODO: Can never fall-back if mandatory?
                 )
         if self.primary_controller:
             self.__long_settle_time = self.primary_controller.long_settle_time
@@ -213,27 +203,19 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
 
         invalid = new_settings.has_settings(*self._mandatory_settings,
                                             *self._other_mandatory_settings)
-        for setting in invalid:
-            emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS, setting)
 
         if invalid:
+            emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
+                       ', '.join(invalid))
             return
 
         self.__settings = new_settings
-
-        sys_config = ConfigParser()                                                 # TODO: remove after camera
-        sys_config, invalid = config_has_sections_and_options(
-            self,
-            SYSTEM_CONFIG_PATH,
-            [('settings', 'configuration_path'),]
-            )
-        device_config_path = sys_config.get('settings', 'configuration_path')
 
         # Instantiate primary controller class
         primary_config, primary_measures = ast.literal_eval(
             self.settings.get('devices', 'primary_controller')
             )
-        ctrl = self.__make_controller(primary_config, is_primary=True)
+        ctrl = self.__make_controller(primary_config, is_primary=True)              # TODO: take directly (config, measured_quantities, is_primary)
         if not ctrl:
             return
 
@@ -243,10 +225,9 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         # Instantiate secondary controller classes
         secondary_controllers = []
         secondary_set = ast.literal_eval(
-             self.settings.get(
-                'devices', 'secondary_controllers', fallback='()'
-                )
-             )
+            self.settings.get('devices', 'secondary_controllers',
+                              fallback='()')
+            )
         for secondary_config, secondary_measures in secondary_set:
             ctrl = self.__make_controller(secondary_config, is_primary=False)
             if not ctrl:
@@ -262,36 +243,46 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         # Instantiate camera classes
         cameras = []
         camera_set = ast.literal_eval(
-             self.settings.get(
-                 'devices', 'cameras', fallback='()'
-                 )
-             )
+            self.settings.get('devices', 'cameras', fallback='()')
+            )
         for camera_settings in camera_set:
-            camera_settings = camera_settings.replace('__CONFIG__',
-                                                      device_config_path)
-            cameras.append(self.__make_camera(camera_settings))
+            cam = self.__make_camera(camera_settings)
+            if cam:
+                cameras.append(cam)
         self.cameras = cameras
 
-        path = self.settings.get('measurement_settings', 'save_here')
-        try:
-            os.mkdir(path + '__tmp__/')
-        except FileExistsError:
-            # Folder already exists.
-            pass
-        for camera in self.cameras:
-            camera.process_info.base_path = path + '__tmp__/' + camera.name
-            try:
-                os.mkdir(camera.process_info.base_path)
-            except FileExistsError:
-                # Folder already exists.
-                pass
+        self.__make_tmp_directory_tree()
 
         for device in self.devices:
-            device.error_occurred.connect(self.__on_hardware_error)
+            device.error_occurred.connect(self.__on_hardware_error)             # TODO: not good. The set_measurements errors would never show up. Should be connected earlier.
 
         self.data_points.primary_controller = self.primary_controller
 
     settings = property(__get_settings, set_settings)
+
+    def __make_tmp_directory_tree(self):
+        """Prepare temporary folder tree where data will be saved."""
+        sys_config = get_system_config()
+        base_path = sys_config.get("PATHS", "measurements", fallback=None)
+        if not base_path:
+            # TODO: emit a SystemSettingsError of some kind
+            raise RuntimeError("Invalid path in system config file")
+
+        base_path = Path(base_path) / "__tmp__"
+        try:
+            base_path.mkdir(parents=True)
+        except FileExistsError:
+            # Folder already exists.
+            pass
+
+        for camera in self.cameras:
+            cam_dir = base_path / camera.name
+            camera.process_info.base_path = str(cam_dir)
+            try:
+                cam_dir.mkdir()
+            except FileExistsError:
+                # Folder already exists.
+                pass
 
     @property
     def secondary_controllers(self):
@@ -385,53 +376,61 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             self.set_LEED_energy(self.current_energy, 50, trigger_meas=False)
 
     def save_data(self):
-        """Save data.
+        """Save data."""
+        sys_config = get_system_config()
+        base_path = sys_config.get("PATHS", "measurements", fallback=None)
+        if not base_path:
+            # TODO: emit a SystemSettingsError of some kind
+            raise RuntimeError("Invalid path in system config file")
 
-        Returns
-        -------
-        None.
-        """
-        path = self.settings.get('measurement_settings', 'save_here')
-        clock = strftime("%Y-%m-%d_%H-%M-%S/", localtime())
-        os.mkdir(path + clock)
-        to_move_list = os.listdir(path + '__tmp__/')
-        for to_move in to_move_list:
-            shutil.move(path + '__tmp__/' + to_move, path + clock + to_move)
-        os.rmdir(path + '__tmp__/')
-        if not self.data_points:
+        tmp_path = base_path + "__tmp__/"
+        final_path = base_path + strftime("%Y-%m-%d_%H-%M-%S/", localtime())
+
+        # Move all camera images
+        shutil.move(tmp_path, final_path)
+
+        if not self.data_points:                                                # Why not saving .ini files?
             return
-        csv_name = path + clock + 'measurement.csv'
-        self.data_points.save_data(csv_name)
 
-        for controller in self.controllers:
-            file_name = (path + clock + 'controller_' +
-                controller.name.replace(' ', '_') + '.ini')
-            with open(file_name, 'w') as configfile:
-                controller.settings.write(configfile)
+        self.data_points.save_data(final_path + 'measurement.csv')
+
+        ctrl_locations = []
+        for ctrl in self.controllers:
+            fname = "controller_" + ctrl.name.replace(' ', '_') + ".ini"
+            with open(final_path + fname, 'w', encoding='utf-8') as fproxy:
+                controller.settings.write(fproxy)
+            ctrl_locations.append("./" + fname)
+
+        cam_locations = []
         for camera in self.cameras:
-            name = camera.name.replace(' ', '_')
-            file_name = path + clock + 'camera_' + name + '.ini'
-            with open(file_name, 'w') as configfile:
-                camera.settings.write(configfile)
+            fname = "camera_" + camera.name.replace(' ', '_') + ".ini"
+            with open(final_path + fname, 'w', encoding='utf-8') as fproxy:
+                camera.settings.write(fproxy)
+            cam_locations.append("./" + fname)
 
-        file_name = path + clock + 'measurement.ini'
-        with open(file_name, 'w') as configfile:
+        # TODO: do the same for all controllers
+        if cam_locations:
+            self.settings.set("devices", "cameras", str(tuple(cam_locations)))
+
+        file_name = final_path + "measurement.ini"
+        with open(file_name, 'w', encoding='utf-8') as configfile:
             self.settings.write(configfile)
 
     def set_LEED_energy(self, *message, trigger_meas=True, **kwargs):
         """Set the electron energy used for LEED.
 
-        In order to achieve quicker settling times for the
-        LEED electronics one can do quick steps after each
-        other whose effects cancel each other out.
-        i.e.: A small energy overshoot with an immediate
-        correction afterwards.
+        In order to achieve quicker settling times for the LEED
+        electronics one can do quick steps after one another
+        whose effects cancel each other out. E.g., a small energy
+        overshoot quickly followed by a correction.
 
         Parameters
         ----------
-        message : tuple
-            Contains data necessary to set the energy.
-
+        *message : Number
+            Data necessary to set the energy. Odd arguments are
+            energies in electronvolts, even ones times to wait (in
+            milliseconds) before moving to the next 'step'. These
+            arguments are passed unaltered to the primary controller.
         trigger_meas : bool, optional
             True if the controllers are supposed to take
             measurements after the energy has been set.
@@ -484,7 +483,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
     def connect_secondary_controllers(self):
         """Connect necessary controller signals."""
         for controller in self.secondary_controllers:
-            if not controller:
+            if not controller:                                                  # should not happen
                 continue
             controller.data_ready.connect(self.receive_from_controller,
                                           type=qtc.Qt.UniqueConnection)
@@ -537,7 +536,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
     def disconnect_secondary_controllers(self):
         """Disconnect necessary controller signals."""
         for controller in self.secondary_controllers:
-            if not controller:
+            if not controller:                                                  # should not happen
                 continue
             controller.disconnect_()
             try:
@@ -859,7 +858,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         self.data_points.new_data_point(self.current_energy, self.controllers,
                                         self.cameras)
 
-    def __make_controller(self, controller_settings, is_primary=False):
+    def __make_controller(self, controller_settings, is_primary=False):         # Not nice: can return None or a ControllerABC. Perhaps should raise something instead?
         """Instantiate controller class object.
 
         Take controller settings and generate a controller object
@@ -901,7 +900,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
                        ('controller', 'controller_class'))
             # TODO: we do this if the class name AND if the port name is
             # missing, will need to be edited once we add the serial numbers.
-            # Will need to get the port from list_devices
+            # Will need to get the port from list_devices.
             return
 
         controller_cls_name = config.get('controller', 'controller_class')
@@ -917,7 +916,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
                                     sets_energy=is_primary)
         return instance
 
-    def __make_camera(self, camera_settings):
+    def __make_camera(self, camera_settings):                                   # Not nice: can return None or a CameraABC. Perhaps should raise something instead?
         """Instantiate camera class object.
 
         Take camera settings and generate a camera object from it.
@@ -942,12 +941,14 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             If the camera could not be instantiated
             from the given name.
         """
-        config = ConfigParser()
-        config, invalid = config_has_sections_and_options(
-            self,
-            camera_settings,
-            [('camera_settings', 'class_name'), ]
-            )
+        try:
+            config = ViPErLEEDSettings.from_settings(camera_settings)
+        except (ValueError, NoSettingsError):
+            emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
+                       ('devices', 'path to camera configuration'))
+            return
+
+        invalid = config.has_settings(('camera_settings', 'class_name'))
         if invalid:
             emit_error(self, MeasurementErrors.MISSING_CLASS_NAME,
                        ('camera_settings', 'class_name'))
@@ -960,6 +961,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
                        'camera_settings/class_name')
             return
+
         instance = camera_class(settings=config)
         return instance
 

@@ -28,6 +28,8 @@ from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.camera.imageprocess import (ImageProcessor,
                                                           ImageProcessInfo)
 from viperleed.guilib.measure.camera import badpixels
+from viperleed.guilib.measure.classes.settings import (ViPErLEEDSettings,
+                                                       NoSettingsError)
 
 
 # pylint: disable=too-many-lines,too-many-public-methods
@@ -157,7 +159,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         super().__init__(parent=parent)
         self.driver = driver
         self.__busy = False
-        self.__settings = None
+        self.__settings = ViPErLEEDSettings()
         self.__bad_pixels = None
         self.__timeout = qtc.QTimer(parent=self)
         self.__timeout.setSingleShot(True)
@@ -528,24 +530,23 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
                 Exposure time in milliseconds to be used for
                 acquiring each frame.
         """
-        if new_settings is None:
-            self.error_occurred.emit(CameraErrors.MISSING_SETTINGS)
+        try:
+            new_settings = ViPErLEEDSettings.from_settings(new_settings)
+        except (ValueError, NoSettingsError):
+            base.emit_error(self, CameraErrors.MISSING_SETTINGS)
             return
 
         # Checking of non-mandatory data is done in property getters
-        new_settings, invalid = base.config_has_sections_and_options(
-            self, new_settings,
-            self._mandatory_settings
-            )
-        for setting in invalid:
-            base.emit_error(self, CameraErrors.INVALID_SETTINGS, setting, '')
+        invalid = new_settings.has_settings(*self._mandatory_settings)
         if invalid:
+            base.emit_error(self, CameraErrors.INVALID_SETTINGS,
+                            ', '.join(invalid), '')
             return
 
         # Keep track of the old ROI: will recalculate
         # bad pixel coordinates if ROI changes
         old_roi = tuple()
-        if self.settings is not None:
+        if self.settings:
             old_roi = self.roi
 
         self.__settings = new_settings

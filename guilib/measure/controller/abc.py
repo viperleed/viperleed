@@ -340,9 +340,8 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
                                             *extra_mandatory)
 
         if invalid:
-            error_msg = ', '.join(invalid)
             base.emit_error(self, ControllerErrors.INVALID_CONTROLLER_SETTINGS,
-                            error_msg)
+                            ', '.join(invalid))
             return
 
         if not self.__port_name:

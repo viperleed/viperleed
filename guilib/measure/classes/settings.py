@@ -48,7 +48,7 @@ def _interpolate_config_path(filenames):
         done in-place.
     """
     cfg = get_system_config()
-    _sys_path = cfg.get('settings', 'configuration_path', fallback=None)
+    _sys_path = cfg.get('PATHS', 'configuration', fallback=None)
     if not _sys_path:
         return
 
