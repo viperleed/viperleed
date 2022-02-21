@@ -413,7 +413,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         for ctrl in self.controllers:
             fname = "controller_" + ctrl.name.replace(' ', '_') + ".ini"
             with open(final_path + fname, 'w', encoding='utf-8') as fproxy:
-                controller.settings.write(fproxy)
+                ctrl.settings.write(fproxy)
             ctrl_locations.append("./" + fname)
 
         cam_locations = []

@@ -489,9 +489,9 @@ class ViPErLEEDSettings(ConfigParser):
         # Header
         fp.write(f"[{section_name}]\n")
 
-        # All comments
+        # All comments (newlines were not stripped)
         if self.__comments[section_name]:
-            fp.write("\n".join(self.__comments[section_name]) + "\n")
+            fp.write("".join(self.__comments[section_name]))
 
         # And all the options/values
         for key, value in section_items:

@@ -33,6 +33,7 @@ from viperleed.guilib.measure.uimeasurementsettings import SettingsEditor
 from viperleed.guilib.measure.datapoints import DataPoints, QuantityInfo
 from viperleed.guilib.measure.widgets.measurement_plot import MeasurementPlot
 from viperleed.guilib.measure import dialogs
+from viperleed.guilib.measure.classes.settings import ViPErLEEDSettings
 
 # temporary solution till we have a system config file
 from viperleed.guilib import measure as vpr_measure
@@ -203,15 +204,13 @@ class Measure(gl.ViPErLEEDPluginBase):
         for viewer in self.__camera_viewers:
             viewer.close()
         self.__camera_viewers = []
-        config = configparser.ConfigParser(comment_prefixes='/',
-                                           allow_no_value=True,
-                                           strict=False)
+        config = ViPErLEEDSettings()
         file_name = DEFAULT_CONFIG_PATH / 'viperleed_config.ini'
         try:
             f = open(file_name, 'r')
             f.close()
             config.read(file_name)
-        except OSError:
+        except OSError:  # TODO: probably ViPErLEEDSettings does not raise this
             raise FileNotFoundError(f"Could not open/read file: {file_name}. "
                                     "Check if this file exists and is in the "
                                     "correct folder.")
@@ -219,8 +218,8 @@ class Measure(gl.ViPErLEEDPluginBase):
         measurement_cls = ALL_MEASUREMENTS[text]
         config.set('measurement_settings', 'measurement_class',
             measurement_cls.__name__)
-        with open(file_name, 'w') as configfile:
-            config.write(configfile)
+        config.update_file()
+
         self.measurement = measurement_cls(config)
 
         self.measurement.new_data_available.connect(self.__on_data_received)
