@@ -148,7 +148,7 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
     @property
     def current_step_nr(self):
         """Return an incremental number for the current energy step."""
-        return len(self.datapoints)
+        return len(self.data_points)
 
     @property
     def devices(self):

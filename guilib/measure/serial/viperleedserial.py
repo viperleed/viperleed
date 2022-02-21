@@ -661,7 +661,7 @@ class ViPErLEEDSerial(SerialABC):
             not detect any ADCs to take measurements with.
         """
         local_version = self.port_settings['controller']['FIRMWARE_VERSION']
-        local_major, local_minor = local_version.split(".")
+        local_major, local_minor = (int(m) for m in local_version.split("."))
         major, minor, *hardware = message[:4]
         firmware_version = f"{major}.{minor}"
         if (major < local_major
