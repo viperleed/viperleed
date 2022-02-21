@@ -12,6 +12,7 @@ subclass used to read/write and handle configurations for hardware
 equipment and measurements.
 """
 
+import ast
 from configparser import (ConfigParser, MissingSectionHeaderError,
                           DuplicateSectionError, DuplicateOptionError,
                           SectionProxy, _UNSET)

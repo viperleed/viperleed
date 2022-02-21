@@ -11,12 +11,9 @@ Author: Florian Doerr
 This module contains the definition of the TimeResolved class
 which gives commands to the controller classes.
 """
-import ast
-from configparser import ConfigParser
 
 from PyQt5 import QtCore as qtc
 
-# ViPErLEED modules
 from viperleed.guilib.measure.measurement.abc import (MeasurementABC,
                                                       MeasurementErrors)
 from viperleed.guilib.measure.datapoints import QuantityInfo

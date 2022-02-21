@@ -17,7 +17,6 @@ concrete subclasses of CameraABC.
 
 from abc import abstractmethod
 
-import ast
 import numpy as np
 from PyQt5 import QtCore as qtc
 
@@ -25,8 +24,9 @@ from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.camera.imageprocess import (ImageProcessor,
                                                           ImageProcessInfo)
 from viperleed.guilib.measure.camera import badpixels
-from viperleed.guilib.measure.classes.settings import (ViPErLEEDSettings,
-                                                       NoSettingsError)
+from viperleed.guilib.measure.classes.settings import (
+    ViPErLEEDSettings, NoSettingsError, NotASequenceError
+    )
 
 
 # pylint: disable=too-many-lines,too-many-public-methods
@@ -441,16 +441,15 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
                 Width and height of the region of interest in pixels
         """
         try:
-            roi = ast.literal_eval(
-                self.settings.get('camera_settings', 'roi', fallback='None')
-                )
-        except (SyntaxError, ValueError):  # Invalid ROI string
+            roi = self.settings.getsequence('camera_settings', 'roi',
+                                            fallback=tuple())
+        except NotASequenceError:  # Invalid ROI string
             roi = tuple()
-        if roi:
-            try:
-                roi = tuple(int(r) for r in roi)
-            except (TypeError, ValueError):  # Not iterable or not ints
-                roi = tuple()
+
+        try:
+            roi = tuple(int(r) for r in roi)
+        except (TypeError, ValueError):  # Not iterable or not ints
+            roi = tuple()
 
         if not self.__is_valid_roi(roi):
             base.emit_error(self, CameraErrors.INVALID_SETTINGS,

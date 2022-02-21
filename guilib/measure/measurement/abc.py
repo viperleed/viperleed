@@ -15,7 +15,6 @@ ViPErLEEDErrorEnum class MeasurementErrors.
 
 import shutil
 from abc import abstractmethod
-import ast
 from time import localtime, strftime
 from pathlib import Path
 
@@ -26,7 +25,7 @@ from viperleed.guilib.measure.hardwarebase import (
     )
 from viperleed.guilib.measure.datapoints import DataPoints
 from viperleed.guilib.measure.classes.settings import (
-    ViPErLEEDSettings, NoSettingsError, get_system_config
+    ViPErLEEDSettings, NoSettingsError, get_system_config, NotASequenceError
     )
 
 
@@ -222,9 +221,15 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         self.__settings = new_settings
 
         # Instantiate primary controller class
-        primary_config, primary_measures = ast.literal_eval(
-            self.settings.get('devices', 'primary_controller')
-            )
+        try:
+            primary_config, primary_measures = self.settings.getsequence(       # TODO: take as one
+                'devices', 'primary_controller'
+                )
+        except NotASequenceError:
+            emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
+                       'devices/primary_controller')
+            return
+
         try:
             ctrl = self.__make_controller(primary_config, is_primary=True)
         except RuntimeError:
@@ -237,11 +242,16 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         self.primary_controller = ctrl
 
         # Instantiate secondary controller classes
+        try:
+            secondary_set = self.settings.getsequence(
+                'devices', 'secondary_controllers', fallback=()
+                )
+        except NotASequenceError:
+            emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
+                       'devices/primary_controller')
+            secondary_set = tuple()
+
         secondary_controllers = []
-        secondary_set = ast.literal_eval(
-            self.settings.get('devices', 'secondary_controllers',
-                              fallback='()')
-            )
         for secondary_config, secondary_measures in secondary_set:
             try:
                 ctrl = self.__make_controller(secondary_config,
@@ -258,10 +268,13 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
             thread.start(priority=thread.TimeCriticalPriority)
 
         # Instantiate camera classes
+        try:
+            camera_set = self.settings.getsequence('devices', 'cameras',
+                                                   fallback=())
+        except NotASequenceError:
+            camera_set = tuple()
+
         cameras = []
-        camera_set = ast.literal_eval(
-            self.settings.get('devices', 'cameras', fallback='()')
-            )
         for camera_settings in camera_set:
             try:
                 cam = self.__make_camera(camera_settings)
