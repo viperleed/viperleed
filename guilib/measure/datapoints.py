@@ -302,7 +302,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         new_data : dict
             keys : QuantityInfo
                 The quantity for which data should be added.
-            values : float
+            values : Sequence of float
                 The data to be added for this quantity.
         controller : ControllerABC
             The controller that performed the measurement.
@@ -316,11 +316,11 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         DataErrors.INVALID_MEASUREMENT
             If new_data contains unexpected quantitites.
         """
-        for quantity, value in new_data.items():
+        for quantity, values in new_data.items():
             if quantity not in self[-1]:
                 emit_error(self, DataErrors.INVALID_MEASUREMENT)
             else:
-                self[-1][quantity][controller].append(value)
+                self[-1][quantity][controller].extend(values)
 
         if not self[-1][QuantityInfo.TIMES][controller]:
             time = controller.serial.time_stamp                                 # TODO: make it a controller property, perhaps with a nicer name?

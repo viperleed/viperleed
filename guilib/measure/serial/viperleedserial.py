@@ -79,6 +79,11 @@ class ViPErLEEDHardwareError(ViPErLEEDErrorEnum):
 class ViPErLEEDSerial(SerialABC):
     """Class for communication with Arduino Micro ViPErLEED controller."""
 
+    _mandatory_settings = [*SerialABC._mandatory_settings,
+                           ('hardware_bits',), ('available_commands',),
+                           ('arduino_states',), ('error_bytes',),
+                           ('controller', 'FIRMWARE_VERSION'),]
+
     def __init__(self, settings, port_name='', **kwargs):
         """Initialize serial worker object.
 
@@ -109,15 +114,32 @@ class ViPErLEEDSerial(SerialABC):
         self.__measurements = []
         self.__changed_mode = False
 
-        self._mandatory_settings.extend((
-            ('hardware_bits',),
-            ('available_commands',),
-            ('arduino_states',),
-            ('error_bytes',),
-            ('controller', 'FIRMWARE_VERSION')
-            ))
-
         super().__init__(settings, port_name=port_name, **kwargs)
+
+    @property
+    def commands_requiring_data(self):
+        """Return a list of the commands that require extra data.
+
+        Commands that need data are those that require multiple
+        messages to be sent: one message with the command itself,
+        one message with the data.
+
+        Returns
+        -------
+        commands : Sequence of strings
+            Each element is the string representation of the byte
+            that will be sent over the serial.
+        """
+        cmd_names = ('PC_CHANGE_MEAS_MODE', 'PC_SET_VOLTAGE', 'PC_CALIBRATION',
+                     'PC_SET_UP_ADCS', 'PC_SET_VOLTAGE_ONLY')
+        # Here, for newer firmware versions, one would:
+        # version = self.port_settings.getfloat('controller', 'firmware_version',
+        #                                       fallback=1.0)
+        # if version >= SOMETHING:
+        #     cmd_names += (NEW_COMMAND_1, NEW_COMMAND_2, ...)
+
+        _cmds = self.port_settings['available_commands']
+        return [_cmds[name] for name in cmd_names]
 
     def decode(self, message):
         """Decodes messages received from the Arduino.
@@ -370,17 +392,22 @@ class ViPErLEEDSerial(SerialABC):
             emit_error(self, ViPErLEEDHardwareError.ERROR_TOO_MANY_COMMANDS)
             return False
 
-        need_data = [self.port_settings['available_commands'][value]
-                     for value in ('PC_CHANGE_MEAS_MODE', 'PC_SET_VOLTAGE',
-                                   'PC_CALIBRATION', 'PC_SET_UP_ADCS',
-                                   'PC_SET_VOLTAGE_ONLY')]
-        if command in need_data and not data:
+        _need_data = self.commands_requiring_data
+        if command in _need_data and not data:
             # Too little data available
             # This is meant as a safeguard for future code changes
             raise RuntimeError(
                 f"{self.__class.__name__}.is_message_supported: "
                 "No data message for one of the Arduino commands "
                 "that requires data. Check implementation!"
+                )
+        if command not in _need_data and data:
+            # Too much data available
+            # This is meant as a safeguard for future code changes
+            raise RuntimeError(
+                f"{self.__class.__name__}.is_message_supported: "
+                "Got a data message for one of the Arduino commands "
+                "that does not require data. Check implementation!"
                 )
         if len(data) > 1:
             # Too much data available: we never send more than
@@ -448,37 +475,37 @@ class ViPErLEEDSerial(SerialABC):
         """
         # Convert 'message' (i.e., the command) into a bytearray if
         # necessary.  'other_messages' is the data for the command.
-        message = message.encode()
         if not other_messages:
-            return (bytearray(message),)
-        messages_to_return = []
-        messages_to_return.append(bytearray(message))
+            return (bytearray(message.encode()),)
+        messages_to_return = [bytearray(message.encode()),]
         # Now process the data depending on the command
         commands = self.port_settings['available_commands']
         for data in other_messages:
             # In the following, we treat the special cases of:
             # "some of the pieces of information passed to send_message
             # is an int that has to be turned into bytes with length >= 2"
-            if message == commands['PC_SET_UP_ADCS'].encode():
+            if message == commands['PC_SET_UP_ADCS']:
                 # data is a 3-element Sequence, with
                 # [n_averaging_points, adc0_channel, adc1_channel],
                 # where n_averaging_points has to be 2 bytes
                 data[:1] = data[0].to_bytes(2, self.byte_order)
-            elif message in (commands['PC_SET_VOLTAGE'].encode(),
-                             commands['PC_SET_VOLTAGE_ONLY'].encode()):
+            elif message in (commands['PC_SET_VOLTAGE'],
+                             commands['PC_SET_VOLTAGE_ONLY']):
                 # data is a 2N-long sequence of the format
                 # voltage, waiting, voltage, waiting, ....
                 # where each entry has to be turned into 2
                 # bytes.
                 # Run over a copy to avoid infinite loop.
-                # print(f"Before byte splitting: {data=}")
                 for i, elem in enumerate(data.copy()):
                     data[2*i:2*i+1] = elem.to_bytes(2, self.byte_order)
-                # print(f"After byte splitting: {data=}")
-            elif message == commands['PC_CHANGE_MEAS_MODE'].encode():
+            elif message == commands['PC_CHANGE_MEAS_MODE']:
                 # Here the data is [mode, time] where time
-                # has to be turned into 2 bytes.
-                data[1:] = data[-1].to_bytes(2, self.byte_order)
+                # has to be turned into 2 bytes. We do not convert
+                # mode as it is hardcoded to 0 (off) or 1 (on).
+                data[1:] = data[1].to_bytes(2, self.byte_order)
+            # If more commands are introduced in newer firmware
+            # versions, one should use the firmware version of the
+            # settings here to preserve backwards compatibility.
             messages_to_return.append(bytearray(data))
         # Note that PC_CALIBRATION also requires data, but
         # all the elements in data are 1-byte-long integers.
@@ -537,8 +564,8 @@ class ViPErLEEDSerial(SerialABC):
             elif len(message) == 4:
                 if self.__last_request_sent == pc_configuration:
                     # Firmware already checked on serial side.
-                    _, hardware = self.__firmware_and_hardware(message)
-                    self.data_received.emit(hardware)
+                    info = self.__firmware_and_hardware(message)
+                    self.data_received.emit(info)
                     self.busy = False
                 elif self.__last_request_sent in (pc_set_voltage,
                                                   pc_measure_only):
@@ -550,8 +577,8 @@ class ViPErLEEDSerial(SerialABC):
                     self.__measurements = []
             elif len(message) == 8:
                 if self.__last_request_sent == pc_configuration:
-                    firmware, hardware = self.__firmware_and_hardware(message)
-                    self.data_received.emit(hardware)
+                    info = self.__firmware_and_hardware(message)
+                    self.data_received.emit(info)
                     self.busy = False
             # If the message is 2 bytes long, then it is most likely the
             # identifier for an error and ended up here somehow
@@ -614,19 +641,17 @@ class ViPErLEEDSerial(SerialABC):
 
         Returns
         -------
-        firmware_version : str
-            Firmware version as "<major>.<minor>"
         hardware_config : dict
-            keys : {'adc_0', 'adc_1', 'lm35', 'relay',
-                    'i0_range', 'aux_range', 'sr_number'}
+            keys : {'adc_0', 'adc_1', 'lm35', 'relay', 'i0_range',
+                    'aux_range', 'serial_nr', 'firmware'}
             values : bool or str
-                Values are True/False for 'adc_0', 'adc_1',
-                'lm35', and 'relay', corresponding to the
-                hardware having access to the devices; Values
-                for 'i0_range' and 'aux_range' are the strings
-                '0 -- 2.5 V' or '0 -- 10 V'; a human readable
-                (numbers and letters) serial number as str for
-                'sr_number'.
+                Values are True/False for 'adc_0', 'adc_1', 'lm35',
+                and 'relay', corresponding to the hardware having
+                access to the devices; Values for 'i0_range' and
+                'aux_range' are the strings '0 -- 2.5 V' or
+                '0 -- 10 V'; a human readable (numbers and letters)
+                serial number as str for 'serial_nr', and a string
+                of the form '<major>.<minor>' for 'firmware'.
 
         Emits
         -----
@@ -636,26 +661,30 @@ class ViPErLEEDSerial(SerialABC):
             not detect any ADCs to take measurements with.
         """
         local_version = self.port_settings['controller']['FIRMWARE_VERSION']
+        local_major, local_minor = local_version.split(".")
         major, minor, *hardware = message[:4]
         firmware_version = f"{major}.{minor}"
-        if firmware_version != local_version:
+        if (major < local_major
+                or (major == local_major and minor < local_minor)):
             emit_error(self,
                        ViPErLEEDHardwareError.ERROR_VERSIONS_DO_NOT_MATCH,
                        arduino_version=firmware_version,
                        local_version=local_version)
+        # TODO: here we may want to report a (non fatal) warning in
+        # case the firmware version in the hardware is newer than the
+        # one of the settings.
         hardware_bits = self.port_settings['hardware_bits']
-        hardware_config = {'adc_0': False,
-                           'adc_1': False,
-                           'lm35': False,
-                           'relay': False,
-                           'i0_range': '0 -- 10 V',
-                           'aux_range': '0 -- 10 V',
-                           'serial_nr': 'NO_SERIAL_NR'}
+        info = {'adc_0': False,
+                'adc_1': False,
+                'lm35': False,
+                'relay': False,
+                'i0_range': '0 -- 10 V',
+                'aux_range': '0 -- 10 V',
+                'serial_nr': 'NO_SERIAL_NR',
+                'firmware': None}
 
         hardware = int.from_bytes(hardware, self.byte_order)
         for key, value in hardware_bits.items():
-            if key.startswith('#'):  # line is a comment
-                continue
             present_or_closed = bool(int(value) & hardware)
             key = key.lower().replace('_present', '')
             if 'closed' in key:
@@ -664,11 +693,12 @@ class ViPErLEEDSerial(SerialABC):
                 else:
                     present_or_closed = '0 -- 10 V'
                 key = 'i0_range' if 'i0' in key else 'aux_range'
-            hardware_config[key] = present_or_closed
-        if not (hardware_config['adc_0'] or hardware_config['adc_1']):
+            info[key] = present_or_closed
+        if not (info['adc_0'] or info['adc_1']):
             emit_error(self, ViPErLEEDHardwareError.ERROR_NO_HARDWARE_DETECTED)
-        hardware_config['serial_nr'] = ''.join([chr(v) for v in message[4:]])
-        return firmware_version, hardware_config
+        info['serial_nr'] = ''.join([chr(v) for v in message[4:]])
+        info['firmware'] = firmware_version
+        return info
 
     def is_measure_command(self, command):
         """Returns true if the command sent is a

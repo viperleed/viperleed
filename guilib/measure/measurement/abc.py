@@ -43,6 +43,11 @@ class MeasurementErrors(ViPErLEEDErrorEnum):
                           "{!r} is missing the name "
                           "of its related class object.")
     RUNTIME_ERROR = (303, "Runtime error. Info: {}")
+    INVALID_SETTING_WITH_FALLBACK = (
+        304,
+        "Invalid/unreadable measurement settings value {} for setting {!r}. "
+        "Using {} instead. Consider fixing your configuration file."
+        )
 
 
 class MeasurementABC(qtc.QObject, metaclass=QMetaABC):

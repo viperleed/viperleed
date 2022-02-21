@@ -12,13 +12,13 @@ This module contains the definition of the MeasureEnergySetpoint class
 which gives commands to the controller classes.
 """
 
-import ast
 from numpy.polynomial.polynomial import Polynomial
 
-# ViPErLEED modules
+from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.measurement.abc import (MeasurementABC,
                                                       MeasurementErrors)
 from viperleed.guilib.measure.datapoints import QuantityInfo
+from viperleed.guilib.measure.classes.settings import NotASequenceError
 
 
 class MeasureEnergySetpoint(MeasurementABC):
@@ -34,15 +34,15 @@ class MeasureEnergySetpoint(MeasurementABC):
         read from the settings and made private properties.
         """
         super().__init__(measurement_settings)
-        self.__end_energy = 0
+        self.__end_energy = 0                                                   # TODO: all attributes to properties
         self.__delta_energy = 1
         self.__hv_settle_time = 0
         if self.settings:
-            self.__delta_energy = self.settings.getfloat(
-                'measurement_settings', 'delta_energy', fallback=10
+            self.__delta_energy = self.settings.getfloat(                       # TODO: float exceptions
+                'measurement_settings', 'delta_energy', fallback=1
                 )
-            self.__end_energy = self.settings.getfloat(
-                'measurement_settings', 'end_energy', fallback=10
+            self.__end_energy = self.settings.getfloat(                         # TODO: float exceptions
+                'measurement_settings', 'end_energy', fallback=0
                 )
 
         if self.primary_controller:
@@ -70,8 +70,8 @@ class MeasureEnergySetpoint(MeasurementABC):
                                              'start_energy', fallback=0.0)
         except (TypeError, ValueError):
             # Not a float
-            emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
-                       'measurement_settings/start_energy')
+            base.emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
+                            'measurement_settings/start_energy')
             start_e = 0.0
 
         try:
@@ -169,22 +169,46 @@ class MeasureEnergySetpoint(MeasurementABC):
             )
         measured_energies = []
         for ctrl, measurements in data.items():
+            # TODO: loop over all controllers, join data. Then
+            # calculate polynomial and plot in the future.
             measured_energies = measurements[QuantityInfo.HV]
             break
-        # for ctrl, measurements in data.items():
-            # TODO: loop over all controllers, calculate polynomial and plot in the future
-        domain = ast.literal_eval(
-            self.primary_controller.settings['energy_calibration']['domain'])
+
+        primary = self.primary_controller
+        try:
+            domain = primary.settings.getsequence('energy_calibration',
+                                                  'domain',
+                                                  fallback=(-10, 1100))
+        except NotASequenceError:
+            domain = (-10, 1100)
+            base.emit_error(self,
+                            MeasurementErrors.INVALID_SETTING_WITH_FALLBACK,
+                            "", 'energy_calibration/domain', domain)
+
         fit_polynomial = Polynomial.fit(measured_energies, nominal_energies,
                                         1, domain=domain, window=domain)
-        coefficients = str(list(fit_polynomial.coef))
-        self.primary_controller.settings.set(
-            'energy_calibration', 'coefficients', coefficients)
-        file_name = ast.literal_eval(
-                        self.settings.get('devices', 'primary_controller')
-                        )[0]
+
+        primary.settings.set('energy_calibration', 'coefficients',
+                             str(list(fit_polynomial.coef)))
+        primary.settings.set('energy_calibration', 'domain', str(domain))
+
+        # TODO: may not want to save this to file yet and ask user.
+        try:
+            primary.settings.update_file()
+        except RuntimeError:
+            pass
+
+        try:
+            file_name, _ = self.settings.getsequence('devices',
+                                                     'primary_controller')
+        except (NotASequenceError, ValueError):
+            # Something wrong with the settings?
+            base.emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
+                            'devices/primary_controller')
+            return
+
         with open(file_name, 'w') as configfile:
-            self.primary_controller.settings.write(configfile)
+            primary.settings.write(configfile)
 
     def abort(self):
         """Abort all current actions.

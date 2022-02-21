@@ -14,7 +14,6 @@ ViPErLEEDErrorEnum class ControllerErrors used for giving basic
 commands to the LEED electronics.
 """
 
-import ast
 from abc import abstractmethod
 from collections import defaultdict
 
@@ -24,7 +23,8 @@ from PyQt5 import QtCore as qtc
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.datapoints import QuantityInfo
 from viperleed.guilib.measure.classes.settings import (
-    ViPErLEEDSettings, NoDefaultSettingsError, NoSettingsError
+    ViPErLEEDSettings, NoDefaultSettingsError,
+    NoSettingsError, NotASequenceError,
     )
 
 
@@ -48,6 +48,11 @@ class ControllerErrors(base.ViPErLEEDErrorEnum):
                       "A subclass of ControllerABC is not supposed to "
                       "measure any quantities. Subclass MeasureControllerABC "
                       "instead.")
+    INVALID_SETTING_WITH_FALLBACK = (
+        104,
+        "Invalid/unreadable controller settings value {} for setting {!r}. "
+        "Using {} instead. Consider fixing your configuration file."
+        )
 
 
 class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
@@ -114,6 +119,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         self.__init_err_timer.timeout.connect(self.__report_init_errors)
 
         self.__port_name = port_name
+        self.__energy_calibration = None
 
         self.error_occurred.connect(self.__on_init_errors)
 
@@ -179,6 +185,41 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
             self.controller_busy.emit(self.busy)
 
     busy = property(__get_busy, set_busy)
+
+    @property
+    def energy_calibration_curve(self):
+        """Return a callable for converting energies.
+
+        Returns
+        -------
+        energy_calibration_curve : callable
+            When called with an array-like argument, interprets
+            the argument as nominal electron energies and returns
+            the corresponding setpoint energies for the LEED optics.
+        """
+        if self.__energy_calibration is None:
+            try:
+                coef = self.settings.getsequence('energy_calibration',
+                                                 'coefficients',
+                                                 fallback=(0, 1))
+            except NotASequenceError:
+                coef = (0, 1)
+                base.emit_error(
+                    self, ControllerErrors.INVALID_SETTING_WITH_FALLBACK,
+                    '', 'energy_calibration/coefficients', coef
+                    )
+            try:
+                domain = self.settings.getsequence('energy_calibration',
+                                                   'domain',
+                                                   fallback=(-10, 1100))
+            except NotASequenceError:
+                # No reasonable need to bother the user with this. We
+                # anyway construct the polynomial from scratch.
+                domain = (-10, 1100)
+
+            self.__energy_calibration = Polynomial(coef, domain=domain,
+                                                   window=domain)
+        return self.__energy_calibration
 
     @property
     def hv_settle_time(self):
@@ -339,19 +380,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
             base.emit_error(self, ControllerErrors.MISSING_SETTINGS)
             return
 
-        # The next extra settings are mandatory only for a
-        # controller that sets the LEED energy on the optics
-        extra_mandatory = []
-        if self.sets_energy:
-            extra_mandatory = [('measurement_settings', 'i0_settle_time'),
-                               ('measurement_settings', 'hv_settle_time')]
-
-        invalid = new_settings.has_settings(*self._mandatory_settings,
-                                            *extra_mandatory)
-
-        if invalid:
-            base.emit_error(self, ControllerErrors.INVALID_CONTROLLER_SETTINGS,
-                            ', '.join(invalid))
+        if not self.are_settings_ok(new_settings):
             return
 
         if not self.__port_name:
@@ -395,6 +424,50 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         return False
 
     @abstractmethod
+    def are_settings_ok(self, settings):
+        """Return whether a ViPErLEEDSettings is compatible with self.
+
+        This method should be extended in subclasses, i.e., it
+        should return False if super().are_settings_ok(settings)
+        returns False. This method is guaranteed to be called
+        once each time new settings are loaded, either via
+        .set_settings() or via the .settings property. It is
+        always passed a ViPErLEEDSettings instance. Settings will
+        be loaded successfully only if this method returns True.
+        The base implementation automatically checks for the
+        presence of all _mandatory_settings. Thus, reimplementations
+        may simply expand _mandatory_settings, then call super().
+
+        Reimplementations can emit self.error_occured to inform
+        users of invalid settings.
+
+        Parameters
+        ----------
+        settings : ViPErLEEDSettings
+            The settings to be checked.
+
+        Returns
+        -------
+        settings_ok : bool
+            True if settings are ok.
+        """
+        # The next extra settings are mandatory only for a
+        # controller that sets the LEED energy on the optics
+        extra_mandatory = []
+        if self.sets_energy:
+            extra_mandatory = [('measurement_settings', 'i0_settle_time'),
+                               ('measurement_settings', 'hv_settle_time')]
+
+        invalid = settings.has_settings(*self._mandatory_settings,
+                                        *extra_mandatory)
+
+        if invalid:
+            base.emit_error(self, ControllerErrors.INVALID_CONTROLLER_SETTINGS,
+                            ', '.join(invalid))
+            return False
+        return True
+
+    @abstractmethod
     def set_energy(self, energy, settle_time, *more_steps,
                    trigger_meas=True, **_):
         """Set electron energy on LEED controller.
@@ -425,12 +498,10 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
             The last step will be the final energy that is set and
             should ensure stabilization of the electronics.
         trigger_meas : bool, optional
-            True if the controllers are supposed to take
-            measurements after the energy has been set.
-            Default is True. The base ControllerABC cannot
-            take measurements, therefore this parameter
-            is only used to emit an about to trigger
-            if True.
+            True if the controllers are supposed to take measurements
+            after the energy has been set. Default is True. The base
+            ControllerABC cannot take measurements, therefore this
+            parameter is only used to emit an about to trigger if True.
 
         Returns
         -------
@@ -456,20 +527,9 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         Returns
         -------
         new_energy : float
-            Energy to set in eV in order
-            to get requested energy.
+            Energy to set in eV in order to get requested energy.
         """
-        calibration_coef = ast.literal_eval(
-            self.settings['energy_calibration']['coefficients']
-            )
-        calibration_domain = ast.literal_eval(
-            self.settings['energy_calibration']['domain']
-            )
-        calibration = Polynomial(calibration_coef, domain=calibration_domain,
-                                 window=calibration_domain)
-        new_energy = calibration(energy)
-
-        return new_energy
+        return self.energy_calibration_curve(energy)
 
     def make_serial(self):
         """Create serial port object and connect to it."""
@@ -726,7 +786,7 @@ class MeasureControllerABC(ControllerABC):                                      
         if next_to_do:
             self.begin_prepare_todos[next_to_do.__name__] = False
             if next_to_do == self.set_energy:
-                next_to_do(*self.__energies_and_times)
+                next_to_do(*self.__energies_and_times)                          # TODO: is there a better way with functools.partial?
             else:
                 next_to_do()
             return
@@ -872,8 +932,6 @@ class MeasureControllerABC(ControllerABC):                                      
             True if the controllers are supposed to take
             measurements after the energy has been set.
             Default is True.
-        **kwargs : object
-            Other unused keyword arguments.
 
         Returns
         -------
@@ -901,9 +959,8 @@ class MeasureControllerABC(ControllerABC):                                      
         None.
         """
         self.busy = True
+        self.reset_preparation_todos()
         self.__energies_and_times = energies_and_times
-        for key in self.begin_prepare_todos:
-            self.begin_prepare_todos[key] = True
         self.serial.serial_busy.connect(self.begin_preparation,
                                         type=qtc.Qt.UniqueConnection)
         self.begin_preparation(serial_busy=False)
@@ -919,11 +976,32 @@ class MeasureControllerABC(ControllerABC):                                      
         None.
         """
         self.busy = True
-        for key in self.continue_prepare_todos:
-            self.continue_prepare_todos[key] = True
         self.serial.serial_busy.connect(self.continue_preparation,
                                         type=qtc.Qt.UniqueConnection)
         self.continue_preparation(serial_busy=False)
+
+    def reset_preparation_todos(self):
+        """Reset all the segments of preparation.
+
+        Segments are in the form [key: bool}. Those segments for
+        which the value is True will be done one at a time, in
+        the order in which keys are inserted. Segments are stored
+        in self.begin_prepare_todos and self.continue_prepare_todos.
+
+        This method can be reimplemented in subclasses if some segments
+        are to be skipped (e.g., depending on the firmware version of
+        the hardware).
+
+        The base-class implementation sets all segments to True.
+
+        Returns
+        -------
+        None.
+        """
+        for key in self.begin_prepare_todos:
+            self.begin_prepare_todos[key] = True
+        for key in self.continue_prepare_todos:
+            self.continue_prepare_todos[key] = True
 
     @abstractmethod
     def set_measurements(self, quantities):
