@@ -309,6 +309,17 @@ def rfactor(sl, rp, index, for_error=False, only_vary=None):
                           for beam in rp.expbeams])
 
         # TODO: implement plotting - need workaround for the colums format
+        labels = [beam.label for beam in expbeams] # TODO is this the right ordering?
+
+        io.writeRfactorPdf_new(n_beams, labels, R_beams,
+                               out_grid, exp_e_start_beams_out, theo_e_start_beams_out,
+                               exp_n_e_beams_out, theo_n_e_beams_out,
+                               exp_intpol_intensity, theo_intpol_intensity,
+                               exp_yfunc, theo_yfunc,
+                               outName=outname, analysisFile=aname,
+                               v0i=rp.V0_IMAG,
+                               formatting=rp.PLOT_IV
+                               )
         """
         try:
             io.writeRfactorPdf([(b.getLabel(lwidth=labelwidth,

@@ -590,6 +590,47 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
     return
 
 
+def writeRfactorPdf_new(n_beams, labels, rfactor_beams,
+                        energies, id_start_1, id_start_2,
+                        n_E_beams_1, n_E_beams_2,
+                        int_1, int_2, y_1, y_2 , outName='Rfactor_plots.pdf',
+                        analysisFile='', v0i = 0., formatting=None):
+    global plotting
+    if not plotting:
+        logger.debug("Necessary modules for plotting not found. Skipping "
+                     "R-factor plotting.")
+        return
+
+    # must transfer
+
+    # get data
+    exp_xy = []
+    theo_xy = []
+    for i in range(n_beams):
+        xy = np.empty([n_E_beams_1[i], 2])
+        xy[:, 0] = energies[id_start_1[i] -1: id_start_1[i] + n_E_beams_1[i] -1]
+        xy[:, 1] = int_1[id_start_1[i] -1: id_start_1[i] + n_E_beams_1[i] -1, i]
+        # normalize to max of beam:
+        xy[:, 1] /= np.max(xy[:, 1])
+        exp_xy.append(xy)
+
+
+        xy = np.empty([n_E_beams_1[i], 2]) # want this at same range as exp only!
+        xy[:, 0] = energies[id_start_1[i] -1: id_start_1[i] + n_E_beams_1[i] -1]
+        xy[:, 1] = int_2[id_start_1[i] -1: id_start_1[i] + n_E_beams_1[i] -1, i]
+        # normalize to max of beam:
+        xy[:, 1] /= np.max(xy[:, 1])
+        theo_xy.append(xy)
+
+    data = [theo_xy, exp_xy]
+
+    rfac_str = ["R = {:.4f}".format(r) for r in rfactor_beams]
+    plot_iv(data, outName, legends=['Theoretical', 'Experimental'],
+            labels=labels, annotations=rfac_str, formatting=formatting)
+
+    return
+
+
 def beamlist_to_array(beams):
     # turn list of Beam objects into an array of intensities
 
