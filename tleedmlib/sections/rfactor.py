@@ -308,7 +308,6 @@ def rfactor(sl, rp, index, for_error=False, only_vary=None):
             labelwidth = max([beam.getLabel(style=labelstyle)[1]
                               for beam in rp.expbeams])
 
-            # TODO: implement plotting - need workaround for the colums format
             labels = [beam.label for beam in expbeams] # TODO is this the right ordering?
 
             io.writeRfactorPdf_new(n_beams, labels, R_beams,
@@ -320,19 +319,7 @@ def rfactor(sl, rp, index, for_error=False, only_vary=None):
                                    v0i=rp.V0_IMAG,
                                    formatting=rp.PLOT_IV
                                    )
-        """
-        try:
-            io.writeRfactorPdf([(b.getLabel(lwidth=labelwidth,
-                                            style=labelstyle)[0],
-                                 rfaclist[i])
-                                for (i, b) in enumerate(rp.expbeams)],
-                               outName=outname, analysisFile=aname,
-                               v0i=rp.V0_IMAG,
-                               formatting=rp.PLOT_IV)
-        except Exception:
-            logger.warning("Error plotting R-factors.", exc_info=True)
-        return rfaclist
-        """
+
     else:
 
         if index == 11:

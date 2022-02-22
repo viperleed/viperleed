@@ -615,7 +615,7 @@ def writeRfactorPdf_new(n_beams, labels, rfactor_beams,
         xy[:, 0] = energies[id_start_1[i] -1: id_start_1[i] + n_E_beams_1[i] -1]
         xy[:, 1] = int_1[id_start_1[i] -1: id_start_1[i] + n_E_beams_1[i] -1, i]
         # normalize to max of beam:
-        xy[:, 1] /= np.max(xy[:, 1])
+        xy[:, 1] /= np.max(int_1)
         exp_xy.append(xy)
 
 
@@ -623,7 +623,7 @@ def writeRfactorPdf_new(n_beams, labels, rfactor_beams,
         xy[:, 0] = energies[id_start_1[i] -1: id_start_1[i] + n_E_beams_1[i] -1]
         xy[:, 1] = int_2[id_start_1[i] -1: id_start_1[i] + n_E_beams_1[i] -1, i]
         # normalize to max of beam:
-        xy[:, 1] /= np.max(xy[:, 1])
+        xy[:, 1] /= np.max(int_2)
         theo_xy.append(xy)
 
     data = [theo_xy, exp_xy]
@@ -634,8 +634,6 @@ def writeRfactorPdf_new(n_beams, labels, rfactor_beams,
 
     if not analysisFile:
         return
-
-    #TODO: fill this out
 
     figs, figsize, namePos, oritick, plotcolors, rPos, xlims, ylims = prepare_analysis_plot(formatting, exp_xy, theo_xy)
 

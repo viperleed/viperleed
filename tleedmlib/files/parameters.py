@@ -991,7 +991,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
             if flag == 'plot':
             #should it plot?
                 if llist[0].lower() in ('true'):
-                    rpars.PLOT_IV['plot'] = True
+                     rpars.PLOT_IV['plot'] = True
                 elif llist[0].lower() in ('false', 'none'):
                     rpars.PLOT_IV['plot'] = False
             if flag in ('border', 'borders', 'axes'):
