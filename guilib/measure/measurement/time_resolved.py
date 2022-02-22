@@ -17,6 +17,7 @@ from PyQt5 import QtCore as qtc
 from viperleed.guilib.measure.measurement.abc import (MeasurementABC,
                                                       MeasurementErrors)
 from viperleed.guilib.measure.datapoints import QuantityInfo
+from viperleed.guilig.measure import hardwarebase as base
 
 
 class TimeResolved(MeasurementABC):
@@ -184,21 +185,16 @@ class TimeResolved(MeasurementABC):
     def disconnect_secondary_controllers(self):
         """Disconnect necessary controller signals."""
         super().disconnect_secondary_controllers()
-        for controller in self.secondary_controllers:
-            try:
-                self.continuous_mode.disconnect(controller.set_continuous_mode)
-            except TypeError:
-                pass
+        for ctrl in self.secondary_controllers:
+            base.safe_disconnect(self.continuous_mode,
+                                 ctrl.set_continuous_mode)
 
     def disconnect_primary_controller(self):
         """Disconnect signals of the primary controller."""
         super().disconnect_primary_controller()
         if self.primary_controller is not None:
-            try:
-                self.continuous_mode.disconnect(
-                    self.primary_controller.set_continuous_mode)
-            except TypeError:
-                pass
+            base.safe_disconnect(self.continuous_mode, 
+                                 self.primary_controller.set_continuous_mode)
 
     def abort(self):
         """Abort all current actions.
@@ -292,10 +288,7 @@ class TimeResolved(MeasurementABC):
             Tell the controller to turn continuous mode off.
         """
         for controller in self.controllers:
-            try:
-                controller.controller_busy.disconnect()
-            except TypeError:
-                pass
+            base.safe_disconnect(controller.controller_busy)
             # Necessary to force secondaries into busy,
             # before the primary returns not busy anymore.
             controller.busy = True
