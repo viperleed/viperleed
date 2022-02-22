@@ -11,6 +11,7 @@ Author: Florian Doerr
 This module contains the definition of the MeasureEnergySetpoint class
 which gives commands to the controller classes.
 """
+from configparser import NoSectionError, NoOptionError
 
 from numpy.polynomial.polynomial import Polynomial
 
@@ -18,9 +19,7 @@ from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.measurement.abc import (MeasurementABC,
                                                       MeasurementErrors)
 from viperleed.guilib.measure.datapoints import QuantityInfo
-from viperleed.guilib.measure.classes.settings import (
-    NotASequenceError, NoSectionError, NoOptionError
-    )
+from viperleed.guilib.measure.classes.settings import NotASequenceError
 
 
 class MeasureEnergySetpoint(MeasurementABC):
