@@ -982,12 +982,18 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
             flag = plist[1].lower()
             if flag not in ('color', 'colour', 'colors', 'colours', 'perpage',
                             'border', 'borders', 'axes', 'legend', 'legends',
-                            'layout', 'overbar', 'overline'):
+                            'layout', 'overbar', 'overline', 'plot'):
                 logger.warning('PARAMETERS file: PLOT_IV: Flag {} not '
                                'recognized. Input will be ignored.'
                                .format(flag))
                 rpars.setHaltingLevel(1)
                 continue
+            if flag == 'plot':
+            #should it plot?
+                if llist[0].lower() in ('true'):
+                    rpars.PLOT_IV['plot'] = True
+                elif llist[0].lower() in ('false', 'none'):
+                    rpars.PLOT_IV['plot'] = False
             if flag in ('border', 'borders', 'axes'):
                 if llist[0].lower() in ('all', 'none'):
                     rpars.PLOT_IV['axes'] = llist[0].lower()

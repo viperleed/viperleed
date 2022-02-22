@@ -297,29 +297,29 @@ def rfactor(sl, rp, index, for_error=False, only_vary=None):
             rp.last_R = best_R
             rp.stored_R[name] = (best_R, r_int, r_frac)
 
+        if rp.PLOT_IV['plot']:
+            # Plot R-factor
+            outname = "Rfactor_plots_{}.pdf".format(name)
+            aname = "Rfactor_analysis_{}.pdf".format(name)
+            if rp.PLOT_IV["overbar"]:
+                labelstyle = "overbar"
+            else:
+                labelstyle = "minus"
+            labelwidth = max([beam.getLabel(style=labelstyle)[1]
+                              for beam in rp.expbeams])
 
-        # Plot R-factor
-        outname = "Rfactor_plots_{}.pdf".format(name)
-        aname = "Rfactor_analysis_{}.pdf".format(name)
-        if rp.PLOT_IV["overbar"]:
-            labelstyle = "overbar"
-        else:
-            labelstyle = "minus"
-        labelwidth = max([beam.getLabel(style=labelstyle)[1]
-                          for beam in rp.expbeams])
+            # TODO: implement plotting - need workaround for the colums format
+            labels = [beam.label for beam in expbeams] # TODO is this the right ordering?
 
-        # TODO: implement plotting - need workaround for the colums format
-        labels = [beam.label for beam in expbeams] # TODO is this the right ordering?
-
-        io.writeRfactorPdf_new(n_beams, labels, R_beams,
-                               out_grid, exp_e_start_beams_out, theo_e_start_beams_out,
-                               exp_n_e_beams_out, theo_n_e_beams_out,
-                               exp_intpol_intensity, theo_intpol_intensity,
-                               exp_yfunc, theo_yfunc,
-                               outName=outname, analysisFile=aname,
-                               v0i=rp.V0_IMAG,
-                               formatting=rp.PLOT_IV
-                               )
+            io.writeRfactorPdf_new(n_beams, labels, R_beams,
+                                   out_grid, exp_e_start_beams_out, theo_e_start_beams_out,
+                                   exp_n_e_beams_out, theo_n_e_beams_out,
+                                   exp_intpol_intensity, theo_intpol_intensity,
+                                   exp_yfunc, theo_yfunc,
+                                   outName=outname, analysisFile=aname,
+                                   v0i=rp.V0_IMAG,
+                                   formatting=rp.PLOT_IV
+                                   )
         """
         try:
             io.writeRfactorPdf([(b.getLabel(lwidth=labelwidth,
@@ -473,23 +473,25 @@ def rfactor(sl, rp, index, for_error=False, only_vary=None):
                 logger.warning("Failed to read R-Factors per beam from "
                                "R-factor output file ROUT.")
                 rfaclist = [-1]*len(rp.expbeams)
-            outname = "Rfactor_plots_{}.pdf".format(name)
-            aname = "Rfactor_analysis_{}.pdf".format(name)
-            if rp.PLOT_IV["overbar"]:
-                labelstyle = "overbar"
-            else:
-                labelstyle = "minus"
-            labelwidth = max([beam.getLabel(style=labelstyle)[1]
-                              for beam in rp.expbeams])
-            try:
-                io.writeRfactorPdf([(b.getLabel(lwidth=labelwidth,
-                                                style=labelstyle)[0],
-                                     rfaclist[i])
-                                    for (i, b) in enumerate(rp.expbeams)],
-                                   outName=outname, analysisFile=aname,
-                                   v0i=rp.V0_IMAG,
-                                   formatting=rp.PLOT_IV)
-            except Exception:
-                logger.warning("Error plotting R-factors.", exc_info=True)
+
+            if rp.PLOT_IV['plot']:
+                outname = "Rfactor_plots_{}.pdf".format(name)
+                aname = "Rfactor_analysis_{}.pdf".format(name)
+                if rp.PLOT_IV["overbar"]:
+                    labelstyle = "overbar"
+                else:
+                    labelstyle = "minus"
+                labelwidth = max([beam.getLabel(style=labelstyle)[1]
+                                  for beam in rp.expbeams])
+                try:
+                    io.writeRfactorPdf([(b.getLabel(lwidth=labelwidth,
+                                                    style=labelstyle)[0],
+                                         rfaclist[i])
+                                        for (i, b) in enumerate(rp.expbeams)],
+                                       outName=outname, analysisFile=aname,
+                                       v0i=rp.V0_IMAG,
+                                       formatting=rp.PLOT_IV)
+                except Exception:
+                    logger.warning("Error plotting R-factors.", exc_info=True)
         return rfaclist
 

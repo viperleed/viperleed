@@ -139,7 +139,7 @@ class Rparams:
         self.PHASESHIFTS_CALC_OLD = True # use old EEASiSSS version # TODO: once established, set to False or remove
         self.PHASESHIFTS_OUT_OLD = True  # output old PHASESHIFTS file # TODO: once established, set to False or remove
         self.PHI = 0.0           # from BEAM_INCIDENCE
-        self.PLOT_IV = {'axes': 'all', 'colors': [],
+        self.PLOT_IV = {'plot': True, 'axes': 'all', 'colors': [],
                         'legend': 'all', 'overbar': False, 'perpage': 2}
         self.RUN = [0, 1, 2, 3]        # what segments should be run
         self.R_FACTOR_LEGACY = True # use old runtime-compiled R-factor calculation
