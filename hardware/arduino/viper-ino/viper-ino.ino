@@ -1960,7 +1960,9 @@ void setSerialNr() {
     STATE_ERROR : ERROR_RUNTIME
         If this function is not called within STATE_SET_SERIAL_NR
     STATE_ERROR : ERROR_MSG_DATA_INVALID
-        If the sent serial number is not 4 bytes long
+        If the sent serial number is not 4 bytes long or if the
+        sent data contains bytes that do not match the decimal
+        ASCII representation of a capital letter or a number.
     STATE_ERROR : ERROR_TIMEOUT
         If more than 5s pass between the PC_SET_SERIAL_NR message
         and the receipt of data
