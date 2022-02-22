@@ -20,16 +20,14 @@ from pathlib import Path
 
 from PyQt5 import QtCore as qtc
 
-from viperleed.guilib.measure.hardwarebase import (
-    emit_error, ViPErLEEDErrorEnum, QMetaABC, class_from_name
-    )
+from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.datapoints import DataPoints
 from viperleed.guilib.measure.classes.settings import (
     ViPErLEEDSettings, NoSettingsError, get_system_config, NotASequenceError
     )
 
 
-class MeasurementErrors(ViPErLEEDErrorEnum):
+class MeasurementErrors(base.ViPErLEEDErrorEnum):                                    # TODO: fix text
     """Errors that might occur during a measurement cycle."""
     MISSING_SETTINGS = (300,
                         "Measurements cannot be taken without settings. "
@@ -40,7 +38,7 @@ class MeasurementErrors(ViPErLEEDErrorEnum):
                              "settings {!r} missing or wrong. Check "
                              "configuration file.")
     MISSING_CLASS_NAME = (302,
-                          "{!r} is missing the name "
+                          "{} is missing the name "
                           "of its related class object.")
     RUNTIME_ERROR = (303, "Runtime error. Info: {}")
     INVALID_SETTING_WITH_FALLBACK = (
@@ -50,7 +48,7 @@ class MeasurementErrors(ViPErLEEDErrorEnum):
         )
 
 
-class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
+class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                          # TODO: doc about inner workings
     """Generic measurement class."""
     # Is emitted if a measurement cycle has been completed.
     # Contains measurement data as a tuple of dictionaries.
@@ -156,18 +154,41 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         return *self.controllers, *self.cameras
 
     @property
-    def start_energy(self):
-        """Return the first energy for the energy ramp."""
-        if not self.settings:
-            return 0
-        try:
-            return self.settings.getfloat('measurement_settings',
-                                          'start_energy', fallback=0)
-        except (TypeError, ValueError):
-            # Not a float
-            emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
-                       'measurement_settings/start_energy')
-            return 0
+    def primary_controller(self):
+        """Return the primary controllers used by this class."""
+        return self.__primary_controller
+
+    @primary_controller.setter
+    def primary_controller(self, new_controller):
+        """Set the primary controller.
+
+        Parameters
+        ----------
+        new_controller : controller class object
+            Controller that sets the energy.
+        """
+        self.disconnect_primary_controller()
+        self.__primary_controller = new_controller
+        self.connect_primary_controller()
+
+    @property
+    def secondary_controllers(self):
+        """Return the controllers used by this class."""
+        return self.__secondary_controllers
+
+    @secondary_controllers.setter
+    def secondary_controllers(self, new_controllers):
+        """Set the controllers which should be
+        used and handle signals.
+
+        Parameters
+        ----------
+        new_controllers : list
+            List of controller class objects.
+        """
+        self.disconnect_secondary_controllers()
+        self.__secondary_controllers = new_controllers
+        self.connect_secondary_controllers()
 
     def __get_settings(self):
         """Return the current settings for the measurement.
@@ -219,159 +240,216 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
                                             *self._other_mandatory_settings)
 
         if invalid:
-            emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
-                       ', '.join(invalid))
+            base.emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
+                            ', '.join(invalid))
             return
 
         self.__settings = new_settings
 
-        # Instantiate primary controller class
-        try:
-            primary_config, primary_measures = self.settings.getsequence(       # TODO: take as one
-                'devices', 'primary_controller'
-                )
-        except NotASequenceError:
-            emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
-                       'devices/primary_controller')
+        self.__make_primary_ctrl()
+        if not self.primary_controller:
+            # Something went wrong (already reported in __make_primary)
             return
 
-        try:
-            ctrl = self.__make_controller(primary_config, is_primary=True)
-        except RuntimeError:
-            # something went wrong with instantiating, and is
-            # already reported by emitting in __make_controller
-            return
-
-        ctrl.error_occurred.connect(self.__on_hardware_error)
-        ctrl.set_measurements(primary_measures)
-        self.primary_controller = ctrl
-
-        # Instantiate secondary controller classes
-        try:
-            secondary_set = self.settings.getsequence(
-                'devices', 'secondary_controllers', fallback=()
-                )
-        except NotASequenceError:
-            emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
-                       'devices/primary_controller')
-            secondary_set = tuple()
-
-        secondary_controllers = []
-        for secondary_config, secondary_measures in secondary_set:
-            try:
-                ctrl = self.__make_controller(secondary_config,
-                                              is_primary=False)
-            except RuntimeError:
-                continue
-            ctrl.error_occurred.connect(self.__on_hardware_error)
-            ctrl.set_measurements(secondary_measures)
-            self.threads.append(qtc.QThread())
-            ctrl.moveToThread(self.threads[-1])
-            secondary_controllers.append(ctrl)
-        self.secondary_controllers = secondary_controllers
-        for thread in self.threads:
-            thread.start(priority=thread.TimeCriticalPriority)
-
-        # Instantiate camera classes
-        try:
-            camera_set = self.settings.getsequence('devices', 'cameras',
-                                                   fallback=())
-        except NotASequenceError:
-            camera_set = tuple()
-
-        cameras = []
-        for camera_settings in camera_set:
-            try:
-                cam = self.__make_camera(camera_settings)
-            except RuntimeError:
-                continue
-            cam.error_occurred.connect(self.__on_hardware_error)
-            cameras.append(cam)
-        self.cameras = cameras
-
+        self.__make_secondary_ctrls()
+        self.__make_cameras()
         self.__make_tmp_directory_tree()
 
         self.data_points.primary_controller = self.primary_controller
 
     settings = property(__get_settings, set_settings)
 
-    def __make_tmp_directory_tree(self):
-        """Prepare temporary folder tree where data will be saved."""
-        sys_config = get_system_config()
-        base_path = sys_config.get("PATHS", "measurements", fallback=None)
-        if not base_path:
-            # TODO: emit a SystemSettingsError of some kind
-            raise RuntimeError("Invalid path in system config file")
-
-        base_path = Path(base_path) / "__tmp__"
+    @property
+    def start_energy(self):
+        """Return the first energy for the energy ramp."""
+        if not self.settings:
+            return 0
         try:
-            base_path.mkdir(parents=True)
-        except FileExistsError:
-            # Folder already exists.
-            pass
-
-        for camera in self.cameras:
-            cam_dir = base_path / camera.name
-            camera.process_info.base_path = str(cam_dir)
-            try:
-                cam_dir.mkdir()
-            except FileExistsError:
-                # Folder already exists.
-                pass
-
-    @property
-    def secondary_controllers(self):
-        """Return the controllers used by this class."""
-        return self.__secondary_controllers
-
-    @secondary_controllers.setter
-    def secondary_controllers(self, new_controllers):
-        """Set the controllers which should be
-        used and handle signals.
-
-        Parameters
-        ----------
-        new_controllers : list
-            List of controller class objects.
-        """
-        self.disconnect_secondary_controllers()
-        self.__secondary_controllers = new_controllers
-        self.connect_secondary_controllers()
-
-    @property
-    def primary_controller(self):
-        """Return the primary controllers used by this class."""
-        return self.__primary_controller
-
-    @primary_controller.setter
-    def primary_controller(self, new_controller):
-        """Set the primary controller.
-
-        Parameters
-        ----------
-        new_controller : controller class object
-            Controller that sets the energy.
-        """
-        self.disconnect_primary_controller()
-        self.__primary_controller = new_controller
-        self.connect_primary_controller()
+            return self.settings.getfloat('measurement_settings',
+                                          'start_energy', fallback=0)
+        except (TypeError, ValueError):
+            # Not a float
+            base.emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
+                            'measurement_settings/start_energy')
+            return 0
 
     @abstractmethod
-    def is_finished(self):
-        """Check if the full measurement cycle is done.
+    def abort(self):
+        """Abort all current actions.
 
-        This function must be reimplemented in subclasses. It
-        should check if the measurement cycle is done via the
-        stings. super().is_finished() is supposed to be
-        called in subclasses in order to increment the step
-        counter properly.
+        This function needs to be reimplemented in subclasses.
+        Implementation needs to reset all variables used in loop
+        operation. Then call super.
 
         Returns
         -------
-        bool
+        None.
         """
-        self.data_points.nr_steps_done += 1
-        return True
+        if self.__aborted:
+            return
+        self.__aborted = True
+        self.settings.set('measurement_settings', 'was_aborted', 'True')
+        self.force_return_timer.start(4500)
+        self.prepare_finalization()
+
+    def begin_measurement_preparation(self):
+        """Start preparation for measurements.
+
+        Prepare the controllers for a measurement which starts
+        the measurement cycle. This function only performs the
+        first part. (Everything that is done before the starting
+        energy is set.)
+
+        Signals are switched to allow preparation to take place.
+
+        Returns
+        -------
+        None.
+
+        Emits
+        -----
+        begin_preparation
+            Starts the measurement preparation and carries
+            a tuple of energies and times with it.
+
+        """
+        self.__aborted = False
+        self.settings.set('measurement_settings', 'was_aborted', 'False')
+        self.running = True
+        self.switch_signals_for_preparation()
+        self.current_energy = self.start_energy
+        self.begin_preparation.emit((self.start_energy,
+                                     self.primary_controller.long_settle_time))
+
+    def connect_cameras(self):
+        """Connect necessary camera signals."""
+        # camera.disconnect does not need to be hooked up to the
+        # request_stop_devices signal as it is always called in
+        # finalize() via .disconnect_cameras()
+        for camera in self.cameras:
+            camera.camera_busy.connect(self.receive_from_camera,
+                                       type=qtc.Qt.UniqueConnection)
+            self.camera_timer.timeout.connect(camera.trigger_now,
+                                              type=qtc.Qt.UniqueConnection)
+            self.begin_preparation.connect(camera.start,
+                                           type=qtc.Qt.UniqueConnection)
+
+    def connect_primary_controller(self):
+        """Connect signals of the primary controller."""
+        primary = self.primary_controller
+        self.request_stop_primary.connect(primary.stop,
+                                          type=qtc.Qt.UniqueConnection)
+        primary.about_to_trigger.connect(self.do_next_measurement,
+                                         type=qtc.Qt.UniqueConnection)
+        primary.data_ready.connect(self.receive_from_controller,                # TODO: same for all
+                                   type=qtc.Qt.UniqueConnection)
+        self.request_stop_devices.connect(primary.stop,
+                                          type=qtc.Qt.UniqueConnection)
+        self.begin_preparation.connect(primary.trigger_begin_preparation,
+                                       type=qtc.Qt.UniqueConnection)
+        self.continue_preparation.connect(primary.trigger_continue_preparation,
+                                          type=qtc.Qt.UniqueConnection)
+
+    def connect_secondary_controllers(self):
+        """Connect necessary controller signals."""
+        for controller in self.secondary_controllers:
+            self.ready_for_measurement.connect(controller.measure_now,
+                                               type=qtc.Qt.UniqueConnection)
+            controller.data_ready.connect(self.receive_from_controller,
+                                          type=qtc.Qt.UniqueConnection)
+            self.request_stop_devices.connect(controller.stop,
+                                              type=qtc.Qt.UniqueConnection)
+            self.begin_preparation.connect(
+                controller.trigger_begin_preparation,
+                type=qtc.Qt.UniqueConnection
+                )
+            self.continue_preparation.connect(
+                controller.trigger_continue_preparation,
+                type=qtc.Qt.UniqueConnection
+                )
+
+    def continue_measurement_preparation(self, _):
+        """Continue preparation for measurements.
+
+        Prepare the controllers for a measurement which starts
+        the measurement cycle. This function only performs the
+        second part. (Everything that is done after the starting
+        energy is set.)
+
+        Signals are switched back and the busy signal is
+        connected to a function which checks if all the
+        controllers are done with the preparation.
+
+        Returns
+        -------
+        None.
+
+        Emits
+        -----
+        continue_preparation
+            Starts the second part of the measurement
+            preparation.
+        """
+        if any(controller.busy for controller in self.controllers):
+            return
+        self.switch_signals_for_preparation()
+        for controller in self.controllers:
+            controller.controller_busy.connect(self.is_preparation_finished,
+                                               type=qtc.Qt.UniqueConnection)
+        for camera in self.cameras:
+            camera.camera_busy.connect(self.is_preparation_finished,
+                                       type=qtc.Qt.UniqueConnection)
+        self.continue_preparation.emit()
+
+    def disconnect_cameras(self):
+        """Disconnect necessary camera signals."""
+        for camera in self.cameras:
+            camera.disconnect()                                                 # TODO: rename disconnect_!!
+            base.safe_disconnect(camera.camera_busy, self.receive_from_camera)
+            base.safe_disconnect(self.camera_timer.timeout, camera.trigger_now)
+            base.safe_disconnect(self.begin_preparation, camera.start)
+
+    def disconnect_primary_controller(self):
+        """Disconnect signals of the primary controller."""
+        primary = self.primary_controller
+        if primary is None:
+            return
+        base.safe_disconnect(self.request_stop_primary, primary.stop)
+        base.safe_disconnect(primary.about_to_trigger)
+        primary.disconnect_()
+        base.safe_disconnect(primary.data_ready)
+        base.safe_disconnect(self.request_stop_devices, primary.stop)
+        base.safe_disconnect(self.begin_preparation,
+                             primary.trigger_begin_preparation)
+        base.safe_disconnect(self.continue_preparation,
+                             primary.trigger_continue_preparation)
+        base.safe_disconnect(primary.controller_busy)
+
+    def disconnect_secondary_controllers(self):
+        """Disconnect necessary controller signals."""
+        for ctrl in self.secondary_controllers:
+            base.safe_disconnect(self.ready_for_measurement, ctrl.measure_now)
+            ctrl.disconnect_()                                                  # TODO: same for all controllers
+            base.safe_disconnect(ctrl.data_ready, self.receive_from_controller)
+            base.safe_disconnect(self.request_stop_devices, ctrl.stop)
+            base.safe_disconnect(self.begin_preparation,
+                                 ctrl.trigger_begin_preparation)
+            base.safe_disconnect(self.continue_preparation,
+                                 ctrl.trigger_continue_preparation)
+            base.safe_disconnect(ctrl.controller_busy)
+
+    def do_next_measurement(self):
+        """Do the next measurement.
+
+        Start measuring on all secondary controllers and cameras
+        as soon as the about_to_trigger signal has been received
+        from the primary controller.
+
+        Returns
+        -------
+        None.
+        """
+        self.ready_for_measurement.emit()
 
     def finalize(self, busy=False):
         """Finish the measurement cycle.
@@ -396,19 +474,127 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         finally:
             self.current_energy = 0
             # Set LEED energy to 0.
-            try:
-                primary.data_ready.disconnect()
-            except TypeError:
-                pass
-            try:
-                primary.controller_busy.disconnect()
-            except TypeError:
-                pass
+            base.safe_disconnect(primary.data_ready)
+            base.safe_disconnect(primary.controller_busy)
             self.disconnect_secondary_controllers()
             self.disconnect_cameras()
             primary.controller_busy.connect(self.return_to_gui,
                                             type=qtc.Qt.UniqueConnection)
             self.set_LEED_energy(self.current_energy, 50, trigger_meas=False)
+
+    @abstractmethod
+    def is_finished(self):
+        """Check if the full measurement cycle is done.
+
+        This function must be reimplemented in subclasses. It
+        should check if the measurement cycle is done via the
+        stings. super().is_finished() is supposed to be
+        called in subclasses in order to increment the step
+        counter properly.
+
+        Returns
+        -------
+        bool
+        """
+        self.data_points.nr_steps_done += 1
+        return True
+
+    def is_preparation_finished(self):
+        """Check if measurement preparation is done.
+
+        Whenever a device is done with its preparation
+        this function will be called. The busy attribute is
+        used to check if all devices are done with their
+        preparation. If this is true, the busy signal going to
+        this function will be disconnected and the first
+        measurement will immediately be started.
+
+        Returns
+        -------
+        None.
+        """
+        if any(device.busy for device in self.devices):
+            return
+        for controller in self.controllers:
+            controller.controller_busy.disconnect()
+        for camera in self.cameras:
+            camera.camera_busy.disconnect(self.is_preparation_finished)
+        self.prepared.emit()
+        self.start_next_measurement()
+
+    def ready_for_next_measurement(self):
+        """Check if all measurements have been received.
+
+        After all measurements have been received, a check if
+        the loop is done will be called.
+
+        Returns
+        -------
+        None.
+        """
+        if any(device.busy for device in self.devices):
+            return
+        if self.is_finished():
+            self.prepare_finalization()
+            self.data_points.calculate_times()
+            self.new_data_available.emit()
+        else:
+            self.data_points.calculate_times()
+            self.new_data_available.emit()
+            self.start_next_measurement()
+
+    def receive_from_camera(self, busy):
+        """Receive not busy signal from camera.
+
+        Receive the camera_busy signal and check if all cameras
+        and controllers are ready if the camera that emitted the
+        signal was not busy.
+
+        Parameters
+        ----------
+        busy : bool
+            busy state of the camera
+
+        Returns
+        -------
+        None.
+        """
+        self.ready_for_next_measurement()
+
+    def receive_from_controller(self, controller, receive):
+        """Receive measurement data from the controller.
+
+        Append received data to the internal dictionary. Emit an
+        error if received dictionary contains a section that does
+        not exist in the internal dictionary. After appending all
+        measurements check if all of the connected controllers are
+        ready for the next measurement.
+
+        Parameters
+        ----------
+        controller : ControllerABC
+            The controller object that is sending data.
+        receive : dictionary
+            A dictionary containing the measurements.
+
+        Returns
+        -------
+        None.
+
+        Emits
+        -----
+        error_occurred
+            If the received measurement contains a label that is
+            not specified in the data_points[-1] dictionary.
+        """
+        # TODO: check if one controller can return data while
+        # another controller has changed his busy state but
+        # hasn't returned data yet. (race condition)
+        if controller == self.primary_controller:
+            self.data_points.add_data(receive, controller, self.primary_delay)
+        else:
+            self.data_points.add_data(receive, controller)
+        self.ready_for_next_measurement()
 
     def save_data(self):
         """Save data."""
@@ -488,161 +674,32 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
                 self.primary_delay += value
 
     @abstractmethod
-    def abort(self):
-        """Abort all current actions.
+    def start_next_measurement(self):
+        """Set energy (if required) and measure.
 
-        This function needs to be reimplemented in subclasses.
-        Implementation needs to reset all variables used in loop
-        operation. Then call super.
+        If the primary controller sets an energy:
+        Set energy via the primary controller. Once this is done
+        the returned about_to_trigger signal should start the
+        measurement on all secondary controllers.
+
+        If the primary controller does not set an energy:
+        Start the measurement on the primary and all secondary
+        controllers immediately without waiting for an
+        about_to_trigger signal.
+
+        super().start_next_measurement() must be called in
+        subclasses in order to create a new data_point for
+        the next measurement at the beginning of
+        start_next_ measurement.
 
         Returns
         -------
         None.
         """
-        if self.__aborted:
-            return
-        self.__aborted = True
-        self.settings.set('measurement_settings', 'was_aborted', 'True')
-        self.force_return_timer.start(4500)
-        self.prepare_finalization()
+        self.data_points.new_data_point(self.current_energy, self.controllers,
+                                        self.cameras)
 
-    def connect_cameras(self):
-        """Connect necessary camera signals."""
-        for camera in self.cameras:
-            camera.camera_busy.connect(self.receive_from_camera,
-                                       type=qtc.Qt.UniqueConnection)
-            self.camera_timer.timeout.connect(camera.trigger_now,
-                                              type=qtc.Qt.UniqueConnection)
-            self.begin_preparation.connect(camera.start,
-                                           type=qtc.Qt.UniqueConnection)
-        # camera.disconnect does not need to be hooked up to the
-        # request_stop_devices signal as it is called in the disconnecting
-        # of the camera signals anyway.
-
-    def connect_secondary_controllers(self):
-        """Connect necessary controller signals."""
-        for controller in self.secondary_controllers:
-            controller.data_ready.connect(self.receive_from_controller,
-                                          type=qtc.Qt.UniqueConnection)
-            self.ready_for_measurement.connect(controller.measure_now,
-                                               type=qtc.Qt.UniqueConnection)
-            self.request_stop_devices.connect(controller.stop,
-                                              type=qtc.Qt.UniqueConnection)
-            self.begin_preparation.connect(
-                controller.trigger_begin_preparation,
-                type=qtc.Qt.UniqueConnection
-                )
-            self.continue_preparation.connect(
-                controller.trigger_continue_preparation,
-                type=qtc.Qt.UniqueConnection
-                )
-
-    def connect_primary_controller(self):
-        """Connect signals of the primary controller."""
-        primary = self.primary_controller
-        primary.data_ready.connect(self.receive_from_controller,
-                                   type=qtc.Qt.UniqueConnection)
-        self.request_stop_devices.connect(primary.stop,
-                                          type=qtc.Qt.UniqueConnection)
-        self.request_stop_primary.connect(primary.stop,
-                                          type=qtc.Qt.UniqueConnection)
-        self.begin_preparation.connect(primary.trigger_begin_preparation,
-                                       type=qtc.Qt.UniqueConnection)
-        self.continue_preparation.connect(primary.trigger_continue_preparation,
-                                          type=qtc.Qt.UniqueConnection)
-        primary.about_to_trigger.connect(self.do_next_measurement,
-                                         type=qtc.Qt.UniqueConnection)
-
-    def disconnect_cameras(self):
-        """Disconnect necessary camera signals."""
-        for camera in self.cameras:
-            camera.disconnect()
-            try:
-                camera.camera_busy.disconnect(self.receive_from_camera)
-            except TypeError:
-                pass
-            try:
-                self.camera_timer.timeout.disconnect(camera.trigger_now)
-            except TypeError:
-                pass
-            try:
-                self.begin_preparation.disconnect(camera.start)
-            except TypeError:
-                pass
-
-    def disconnect_secondary_controllers(self):
-        """Disconnect necessary controller signals."""
-        for controller in self.secondary_controllers:
-            controller.disconnect_()
-            try:
-                controller.data_ready.disconnect(self.receive_from_controller)
-            except TypeError:
-                pass
-            try:
-                self.ready_for_measurement.disconnect(controller.measure_now)
-            except TypeError:
-                pass
-            try:
-                self.request_stop_devices.disconnect(controller.stop)
-            except TypeError:
-                pass
-            try:
-                self.begin_preparation.disconnect(
-                    controller.trigger_begin_preparation
-                    )
-            except TypeError:
-                pass
-            try:
-                self.continue_preparation.disconnect(
-                    controller.trigger_continue_preparation
-                    )
-            except TypeError:
-                pass
-            try:
-                controller.controller_busy.disconnect()
-            except TypeError:
-                pass
-
-    def disconnect_primary_controller(self):
-        """Disconnect signals of the primary controller."""
-        primary = self.primary_controller
-        if primary is None:
-            return
-        primary.disconnect_()
-        try:
-            primary.data_ready.disconnect()
-        except TypeError:
-            pass
-        try:
-            self.request_stop_devices.disconnect(primary.stop)
-        except TypeError:
-            pass
-        try:
-            self.request_stop_primary.disconnect(primary.stop)
-        except TypeError:
-            pass
-        try:
-            self.begin_preparation.disconnect(
-                primary.trigger_begin_preparation
-                )
-        except TypeError:
-            pass
-        try:
-            self.continue_preparation.disconnect(
-                primary.trigger_continue_preparation
-                )
-        except TypeError:
-            pass
-        try:
-            primary.about_to_trigger.disconnect()
-        except TypeError:
-            pass
-        try:
-            primary.controller_busy.disconnect()
-        except TypeError:
-            pass
-
-    def switch_signals_for_preparation(self):
+    def switch_signals_for_preparation(self):                                   # TODO: counterintitive. See if it can be made simpler to understand
         """Switch signals for preparation.
 
         The about_to_trigger signal has to be disconnected
@@ -695,321 +752,6 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
                 controller.data_ready.connect(self.receive_from_controller,
                                               type=qtc.Qt.UniqueConnection)
 
-    def begin_measurement_preparation(self):
-        """Start preparation for measurements.
-
-        Prepare the controllers for a measurement which starts
-        the measurement cycle. This function only performs the
-        first part. (Everything that is done before the starting
-        energy is set.)
-
-        Signals are switched to allow preparation to take place.
-
-        Returns
-        -------
-        None.
-
-        Emits
-        -----
-        begin_preparation
-            Starts the measurement preparation and carries
-            a tuple of energies and times with it.
-
-        """
-        self.__aborted = False
-        self.settings.set('measurement_settings', 'was_aborted', 'False')
-        self.running = True
-        self.switch_signals_for_preparation()
-        self.current_energy = self.start_energy
-        self.begin_preparation.emit((self.start_energy,
-                                     self.primary_controller.long_settle_time))
-
-    def continue_measurement_preparation(self, _):
-        """Continue preparation for measurements.
-
-        Prepare the controllers for a measurement which starts
-        the measurement cycle. This function only performs the
-        second part. (Everything that is done after the starting
-        energy is set.)
-
-        Signals are switched back and the busy signal is
-        connected to a function which checks if all the
-        controllers are done with the preparation.
-
-        Returns
-        -------
-        None.
-
-        Emits
-        -----
-        continue_preparation
-            Starts the second part of the measurement
-            preparation.
-        """
-        if any(controller.busy for controller in self.controllers):
-            return
-        self.switch_signals_for_preparation()
-        for controller in self.controllers:
-            controller.controller_busy.connect(self.is_preparation_finished,
-                                               type=qtc.Qt.UniqueConnection)
-        for camera in self.cameras:
-            camera.camera_busy.connect(self.is_preparation_finished,
-                                       type=qtc.Qt.UniqueConnection)
-        self.continue_preparation.emit()
-
-    def ready_for_next_measurement(self):
-        """Check if all measurements have been received.
-
-        After all measurements have been received, a check if
-        the loop is done will be called.
-
-        Returns
-        -------
-        None.
-        """
-        if any(device.busy for device in self.devices):
-            return
-        if self.is_finished():
-            self.prepare_finalization()
-            self.data_points.calculate_times()
-            self.new_data_available.emit()
-        else:
-            self.data_points.calculate_times()
-            self.new_data_available.emit()
-            self.start_next_measurement()
-
-    def is_preparation_finished(self):
-        """Check if measurement preparation is done.
-
-        Whenever a device is done with its preparation
-        this function will be called. The busy attribute is
-        used to check if all devices are done with their
-        preparation. If this is true, the busy signal going to
-        this function will be disconnected and the first
-        measurement will immediately be started.
-
-        Returns
-        -------
-        None.
-        """
-        if any(device.busy for device in self.devices):
-            return
-        for controller in self.controllers:
-            controller.controller_busy.disconnect()
-        for camera in self.cameras:
-            camera.camera_busy.disconnect(self.is_preparation_finished)
-        self.prepared.emit()
-        self.start_next_measurement()
-
-    def receive_from_camera(self, busy):
-        """Receive not busy signal from camera.
-
-        Receive the camera_busy signal and check if all cameras
-        and controllers are ready if the camera that emitted the
-        signal was not busy.
-
-        Parameters
-        ----------
-        busy : bool
-            busy state of the camera
-
-        Returns
-        -------
-        None.
-        """
-        self.ready_for_next_measurement()
-
-    def receive_from_controller(self, controller, receive):
-        """Receive measurement data from the controller.
-
-        Append received data to the internal dictionary. Emit an
-        error if received dictionary contains a section that does
-        not exist in the internal dictionary. After appending all
-        measurements check if all of the connected controllers are
-        ready for the next measurement.
-
-        Parameters
-        ----------
-        controller : ControllerABC
-            The controller object that is sending data.
-        receive : dictionary
-            A dictionary containing the measurements.
-
-        Returns
-        -------
-        None.
-
-        Emits
-        -----
-        error_occurred
-            If the received measurement contains a label that is
-            not specified in the data_points[-1] dictionary.
-        """
-        # TODO: check if one controller can return data while
-        # another controller has changed his busy state but
-        # hasn't returned data yet. (race condition)
-        if controller == self.primary_controller:
-            self.data_points.add_data(receive, controller, self.primary_delay)
-        else:
-            self.data_points.add_data(receive, controller)
-        self.ready_for_next_measurement()
-
-    def do_next_measurement(self):
-        """Do the next measurement.
-
-        Start measuring on all secondary controllers and cameras
-        as soon as the about_to_trigger signal has been received
-        from the primary controller.
-
-        Returns
-        -------
-        None.
-        """
-        self.ready_for_measurement.emit()
-
-    @abstractmethod
-    def start_next_measurement(self):
-        """Set energy (if required) and measure.
-
-        If the primary controller sets an energy:
-        Set energy via the primary controller. Once this is done
-        the returned about_to_trigger signal should start the
-        measurement on all secondary controllers.
-
-        If the primary controller does not set an energy:
-        Start the measurement on the primary and all secondary
-        controllers immediately without waiting for an
-        about_to_trigger signal.
-
-        super().start_next_measurement() must be called in
-        subclasses in order to create a new data_point for
-        the next measurement at the beginning of
-        start_next_ measurement.
-
-        Returns
-        -------
-        None.
-        """
-        self.data_points.new_data_point(self.current_energy, self.controllers,
-                                        self.cameras)
-
-    def __make_controller(self, controller_settings, is_primary=False):
-        """Instantiate controller class object.
-
-        Take controller settings and generate a controller object
-        from it.
-
-        Parameters
-        ----------
-        controller_settings : dict, ConfigParser, str, path
-            Settings used for the instantiated controller.
-            Has to contain the name of the controller class
-            to be instantiated.
-        is_primary : boolean
-            True if the controller is the primary controller.
-
-        Returns
-        -------
-        instance : controller class object
-            The controller that is going to handle the hardware.
-
-        Raises
-        ------
-        RuntimeError
-            If anything goes wrong with the creation of the controller
-
-        Emits
-        -----
-        MeasurementErrors.MISSING_CLASS_NAME
-            If the controller class name is missing.
-        MeasurementErrors.INVALID_MEAS_SETTINGS
-            If the controller could not be instantiated
-            from the given name.
-        """
-        try:
-            config = ViPErLEEDSettings.from_settings(controller_settings)
-        except (ValueError, NoSettingsError):
-            emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
-                       ('devices', 'path to controller configuration'))
-            raise RuntimeError from None
-
-        invalid = config.has_settings(('controller', 'controller_class'),
-                                      ('controller', 'port_name'))
-        if invalid:
-            emit_error(self, MeasurementErrors.MISSING_CLASS_NAME,
-                       ('controller', 'controller_class'))
-            # TODO: we do this if the class name AND if the port name is
-            # missing, will need to be edited once we add the serial numbers.
-            # Will need to get the port from list_devices.
-            raise RuntimeError
-
-        controller_cls_name = config.get('controller', 'controller_class')
-        port_name = config.get('controller', 'port_name')
-        try:
-            controller_class = class_from_name('controller',
-                                               controller_cls_name)
-        except ValueError:
-            emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
-                       'controller/controller_class')
-            raise RuntimeError
-        instance = controller_class(settings=config, port_name=port_name,
-                                    sets_energy=is_primary)
-        return instance
-
-    def __make_camera(self, camera_settings):
-        """Instantiate camera class object.
-
-        Take camera settings and generate a camera object from it.
-
-        Parameters
-        ----------
-        camera_settings : dict, ConfigParser, str, path
-            Settings used for the instantiated camera.
-            Has to contain the name of the camera class
-            to be instantiated.
-
-        Returns
-        -------
-        instance : camera class object
-            The camara class used for the connected camera.
-
-        Raises
-        ------
-        RuntimeError
-            If anything goes wrong with instantiation.
-
-        Emits
-        -----
-        MeasurementErrors.MISSING_CLASS_NAME
-            If the camera class name is missing or invalid.
-        MeasurementErrors.INVALID_MEAS_SETTINGS
-            If the camera could not be instantiated
-            from the given name.
-        """
-        try:
-            config = ViPErLEEDSettings.from_settings(camera_settings)
-        except (ValueError, NoSettingsError):
-            emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
-                       ('devices', 'path to camera configuration'))
-            raise RuntimeError from None
-
-        invalid = config.has_settings(('camera_settings', 'class_name'))
-        if invalid:
-            emit_error(self, MeasurementErrors.MISSING_CLASS_NAME,
-                       ('camera_settings', 'class_name'))
-            raise RuntimeError
-
-        camera_cls_name = config.get('camera_settings', 'class_name')
-        try:
-            camera_class = class_from_name('camera', camera_cls_name)
-        except ValueError:
-            emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
-                       'camera_settings/class_name')
-            raise RuntimeError
-
-        instance = camera_class(settings=config)
-        return instance
-
     def return_to_gui(self, *__args):
         """Return collected data to gui.
 
@@ -1044,21 +786,226 @@ class MeasurementABC(qtc.QObject, metaclass=QMetaABC):
         None.
         """
         for controller in self.secondary_controllers:
-            try:
-                self.ready_for_measurement.disconnect(controller.measure_now)
-            except TypeError:
-                pass
+            base.safe_disconnect(self.ready_for_measurement.disconnect,
+                                 controller.measure_now)
         for controller in self.controllers:
-            try:
-                controller.controller_busy.disconnect()
-            except TypeError:
-                pass
+            base.safe_disconnect(controller.controller_busy)
             # Necessary to force secondaries into busy,
             # before the primary returns not busy anymore.
             controller.busy = True
             controller.controller_busy.connect(self.finalize,
                                                type=qtc.Qt.UniqueConnection)
         self.request_stop_devices.emit()
+
+    def __make_camera(self, camera_settings):
+        """Instantiate camera class object.
+
+        Take camera settings and generate a camera object from it.
+
+        Parameters
+        ----------
+        camera_settings : dict, ConfigParser, str, path
+            Settings used for the instantiated camera.
+            Has to contain the name of the camera class
+            to be instantiated.
+
+        Returns
+        -------
+        instance : camera class object
+            The camara class used for the connected camera.
+
+        Raises
+        ------
+        RuntimeError
+            If anything goes wrong with instantiation.
+
+        Emits
+        -----
+        MeasurementErrors.MISSING_CLASS_NAME
+            If the camera class name is missing or invalid.
+        MeasurementErrors.INVALID_MEAS_SETTINGS
+            If the camera could not be instantiated
+            from the given name.
+        """
+        try:
+            config = ViPErLEEDSettings.from_settings(camera_settings)
+        except (ValueError, NoSettingsError):
+            base.emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
+                            'devices/path to camera configuration')
+            raise RuntimeError from None
+
+        invalid = config.has_settings(('camera_settings', 'class_name'))
+        if invalid:
+            base.emit_error(self, MeasurementErrors.MISSING_CLASS_NAME,         # TODO: camera error?
+                            'camera_settings/class_name')
+            raise RuntimeError
+
+        camera_cls_name = config.get('camera_settings', 'class_name')
+        try:
+            camera_class = base.class_from_name('camera', camera_cls_name)
+        except ValueError:
+            base.emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,      # TODO: camera error?
+                            'camera_settings/class_name')
+            raise RuntimeError
+
+        instance = camera_class(settings=config)
+        return instance
+
+    def __make_cameras(self):
+        """Make cameras from self.settings."""
+        try:
+            cam_settings = self.settings.getsequence('devices', 'cameras',
+                                                     fallback=())
+        except NotASequenceError:
+            cam_settings = tuple()
+
+        cameras = []
+        for settings in cam_settings:
+            try:
+                cam = self.__make_camera(settings)
+            except RuntimeError:
+                continue
+            cam.error_occurred.connect(self.__on_hardware_error)
+            cameras.append(cam)
+        self.cameras = cameras
+
+    def __make_controller(self, configname, measurements, is_primary=False):
+        """Instantiate controller class object.
+
+        Take controller settings and generate a controller object
+        from it. This method is used exclusively in .set_settings
+        to generate controllers.
+
+        Parameters
+        ----------
+        configname : str or path
+            Path to the file of the settings to be given to the
+            returned controller. In addition to the mandatory
+            settings required by the controller, the file pointed
+            by this path must contain the name of the controller
+            class to be instantiated.
+        measurements : Sequence of str
+            The quantities measured by this controller. Expected to
+            be compatible with the argument of .set_measurements in
+            MeasureControllerABC.
+        is_primary : boolean
+            True if the controller is the primary controller.
+
+        Returns
+        -------
+        controller : ControllerABC
+            The controller that is going to handle the hardware.
+            May be a subclass of ControllerABC.
+
+        Raises
+        ------
+        RuntimeError
+            If anything goes wrong with the creation of the controller
+
+        Emits
+        -----
+        MeasurementErrors.MISSING_CLASS_NAME
+            If the controller class name is missing.
+        MeasurementErrors.INVALID_MEAS_SETTINGS
+            If the controller could not be instantiated
+            from the given name.
+        """
+        try:
+            config = ViPErLEEDSettings.from_settings(controller_settings)
+        except (ValueError, NoSettingsError):
+            base.emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
+                            'devices/path to controller configuration')
+            raise RuntimeError from None
+
+        invalid = config.has_settings(('controller', 'controller_class'),
+                                      ('controller', 'port_name'))
+        if invalid:
+            base.emit_error(self, MeasurementErrors.MISSING_CLASS_NAME,         # TODO: we do this if the class name AND if the port name is
+                            config.last_file)                                   # missing, will need to be edited once we add the serial numbers.
+            raise RuntimeError                                                  # Will need to get the port from list_devices.
+
+        cls_name = config['controller']['controller_class']
+        port_name = config.get('controller', 'port_name')                       # TODO: do we need this?
+        try:
+            cls = base.class_from_name('controller', cls_name)
+        except ValueError:
+            base.emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,      # TODO: isn't this a controller error?
+                            'controller/controller_class')
+            raise RuntimeError
+
+        controller = cls(settings=config, port_name=port_name,
+                         sets_energy=is_primary)
+        controller.error_occurred.connect(self.__on_hardware_error)
+        controller.set_measurements(measurements)
+        return controller
+
+    def __make_primary_ctrl(self):
+        """Make primary controller from self.settings."""
+        try:
+            info = self.settings.getsequence('devices', 'primary_controller')
+        except NotASequenceError:
+            info = ()
+
+        if len(info) != 2:
+            base.emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
+                            'devices/primary_controller')
+            return
+
+        try:
+            ctrl = self.__make_controller(*info, is_primary=True)
+        except RuntimeError:
+            # something went wrong with instantiating, and is
+            # already reported by emitting in __make_controller
+            return
+
+        self.primary_controller = ctrl
+
+    def __make_secondary_ctrls(self):
+        """Make secondary controllers from self.settings."""
+        # infos should be a sequence with elements
+        # of the form (path, (stuff, to, measure))
+        try:
+            infos = self.settings.getsequence(
+                'devices', 'secondary_controllers', fallback=()
+                )
+        except NotASequenceError:
+            base.emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
+                            'devices/secondary_controllers')
+            infos = tuple()
+
+        secondary_controllers = []
+        for info in infos:
+            if not len(info) == 2:
+                base.emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
+                                'devices/secondary_controllers')
+                continue
+            try:
+                ctrl = self.__make_controller(*info, is_primary=False)
+            except RuntimeError:
+                continue
+
+            self.threads.append(qtc.QThread())
+            ctrl.moveToThread(self.threads[-1])
+            secondary_controllers.append(ctrl)
+        self.secondary_controllers = secondary_controllers
+        for thread in self.threads:
+            thread.start(priority=thread.TimeCriticalPriority)
+
+    def __make_tmp_directory_tree(self):
+        """Prepare temporary folder tree where data will be saved."""
+        sys_config = get_system_config()
+        base_path = sys_config.get("PATHS", "measurements", fallback=None)
+        if not base_path:
+            # TODO: emit a SystemSettingsError of some kind
+            raise RuntimeError("Invalid path in system config file")
+
+        base_path = Path(base_path) / "__tmp__"
+        base_path.mkdir(parents=True, exist_ok=True)
+
+        for camera in self.cameras:
+            cam_dir = base_path / camera.name
+            camera.process_info.base_path = str(cam_dir)
+            cam_dir.mkdir(exist_ok=True)
 
     def __on_hardware_error(self, *_):
         """Abort if a hardware error occurs."""

@@ -201,6 +201,7 @@ def get_device_config(device_name, directory=DEFAULT_CONFIG_PATH,
         config = device_config_files[names.index(dropdown.selection)]
     return config
 
+
 def get_devices(package):
     """Return all supported and available devices from a package.
 
@@ -243,6 +244,38 @@ def get_devices(package):
             for dev_name in dev_list:
                 devices[dev_name] = cls
     return devices
+
+
+def safe_connect(signal, slot, **kwargs):
+    """Connect signal to slot swallowing TypeError."""
+    if not callable(slot) and not isinstance(slot, qtc.pyqtSignal):
+        raise TypeError(f"{slot} is not a valid slot")
+    for arg in kwargs:
+        if arg not in ("type", "no_receiver_check"):
+            raise TypeError("safe_connect got an unexpeced "
+                            f"keyord argument {arg!r}")
+    try:
+        signal.connect(slot, **kwargs)
+    except TypeError:
+        # typically happens when type=QtCore.Qt.UniquConnection
+        # and there is already a valid connection between signal
+        # and slot.
+        pass
+
+
+def safe_disconnect(signal, *slot):
+    """Disconnect signal from optional slot swallowing TypeError."""
+    if (slot and not callable(slot[0])
+            and not isinstance(slot[0], qtc.pyqtSignal)):
+        raise TypeError(f"{slot} is not a valid slot")
+    if len(slot) > 1:
+        raise TypeError("safe_disconnect: slot should be a "
+                        "single slot when given.")
+    try:
+        signal.disconnect(*slot)
+    except TypeError:
+        # Was not connected to begin with
+        pass
 
 
 ################################### CLASSES ###################################
