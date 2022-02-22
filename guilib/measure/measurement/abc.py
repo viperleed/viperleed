@@ -15,6 +15,7 @@ ViPErLEEDErrorEnum class MeasurementErrors.
 
 import shutil
 from abc import abstractmethod
+from collections.abc import Sequence
 from time import localtime, strftime
 from pathlib import Path
 
@@ -25,6 +26,11 @@ from viperleed.guilib.measure.datapoints import DataPoints
 from viperleed.guilib.measure.classes.settings import (
     ViPErLEEDSettings, NoSettingsError, get_system_config, NotASequenceError
     )
+from viperleed.guilib.measure.camera.abc import CameraErrors
+from viperleed.guilib.measure.controller.abc import ControllerErrors
+
+
+_UNIQUE = qtc.Qt.UniqueConnection
 
 
 class MeasurementErrors(base.ViPErLEEDErrorEnum):                                    # TODO: fix text
@@ -33,26 +39,21 @@ class MeasurementErrors(base.ViPErLEEDErrorEnum):                               
                         "Measurements cannot be taken without settings. "
                         "Load an appropriate settings file before "
                         "proceeding.")
-    INVALID_MEAS_SETTINGS = (301,
-                             "Invalid measurement settings: Required "
-                             "settings {!r} missing or wrong. Check "
-                             "configuration file.")
-    MISSING_CLASS_NAME = (302,
-                          "{} is missing the name "
-                          "of its related class object.")
-    RUNTIME_ERROR = (303, "Runtime error. Info: {}")
+    INVALID_SETTINGS = (301,
+                        "Invalid measurement settings: Required "
+                        "settings {!r} missing or wrong. Check "
+                        "configuration file.\n{}")
     INVALID_SETTING_WITH_FALLBACK = (
-        304,
+        302,
         "Invalid/unreadable measurement settings value {} for setting {!r}. "
         "Using {} instead. Consider fixing your configuration file."
         )
+    RUNTIME_ERROR = (303, "Runtime error. Info: {}")
 
 
-class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                          # TODO: doc about inner workings
+class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     # TODO: doc about inner workings
     """Generic measurement class."""
-    # Is emitted if a measurement cycle has been completed.
-    # Contains measurement data as a tuple of dictionaries.
-    finished = qtc.pyqtSignal(tuple)
+    finished = qtc.pyqtSignal()  # Emitted when measurement is over
     # Is emitted when an error occurs
     error_occurred = qtc.pyqtSignal(tuple)
     # Start measurement on all controllers
@@ -226,7 +227,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         -----
         ExtraSerialErrors.MISSING_SETTINGS
             If new_settings is missing.
-        ExtraSerialErrors.INVALID_MEAS_SETTINGS
+        ExtraSerialErrors.INVALID_SETTINGS
             If any element of the new_settings does not fit the
             mandatory_settings.
         """
@@ -240,8 +241,8 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
                                             *self._other_mandatory_settings)
 
         if invalid:
-            base.emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
-                            ', '.join(invalid))
+            base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
+                            ', '.join(invalid), '')
             return
 
         self.__settings = new_settings
@@ -269,8 +270,8 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
                                           'start_energy', fallback=0)
         except (TypeError, ValueError):
             # Not a float
-            base.emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
-                            'measurement_settings/start_energy')
+            base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
+                            'measurement_settings/start_energy', '')
             return 0
 
     @abstractmethod
@@ -326,47 +327,37 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         # camera.disconnect does not need to be hooked up to the
         # request_stop_devices signal as it is always called in
         # finalize() via .disconnect_cameras()
+        # Also, it is not necessary to call .connect_(), as it
+        # is called already in the settings setter of the camera.
+        # We are thus supposing that the camera objects already
+        # have the right settings.
         for camera in self.cameras:
-            camera.camera_busy.connect(self.receive_from_camera,
-                                       type=qtc.Qt.UniqueConnection)
-            self.camera_timer.timeout.connect(camera.trigger_now,
-                                              type=qtc.Qt.UniqueConnection)
-            self.begin_preparation.connect(camera.start,
-                                           type=qtc.Qt.UniqueConnection)
+            camera.camera_busy.connect(self.receive_from_camera, type=_UNIQUE)
+            self.camera_timer.timeout.connect(camera.trigger_now, type=_UNIQUE)
+            self.begin_preparation.connect(camera.start, type=_UNIQUE)
 
     def connect_primary_controller(self):
         """Connect signals of the primary controller."""
         primary = self.primary_controller
-        self.request_stop_primary.connect(primary.stop,
-                                          type=qtc.Qt.UniqueConnection)
+        self.request_stop_primary.connect(primary.stop, type=_UNIQUE)
         primary.about_to_trigger.connect(self.do_next_measurement,
-                                         type=qtc.Qt.UniqueConnection)
-        primary.data_ready.connect(self.receive_from_controller,                # TODO: same for all
-                                   type=qtc.Qt.UniqueConnection)
-        self.request_stop_devices.connect(primary.stop,
-                                          type=qtc.Qt.UniqueConnection)
-        self.begin_preparation.connect(primary.trigger_begin_preparation,
-                                       type=qtc.Qt.UniqueConnection)
-        self.continue_preparation.connect(primary.trigger_continue_preparation,
-                                          type=qtc.Qt.UniqueConnection)
+                                         type=_UNIQUE)
+        self._connect_controller(primary)
 
     def connect_secondary_controllers(self):
         """Connect necessary controller signals."""
-        for controller in self.secondary_controllers:
-            self.ready_for_measurement.connect(controller.measure_now,
-                                               type=qtc.Qt.UniqueConnection)
-            controller.data_ready.connect(self.receive_from_controller,
-                                          type=qtc.Qt.UniqueConnection)
-            self.request_stop_devices.connect(controller.stop,
-                                              type=qtc.Qt.UniqueConnection)
-            self.begin_preparation.connect(
-                controller.trigger_begin_preparation,
-                type=qtc.Qt.UniqueConnection
-                )
-            self.continue_preparation.connect(
-                controller.trigger_continue_preparation,
-                type=qtc.Qt.UniqueConnection
-                )
+        for ctrl in self.secondary_controllers:
+            self.ready_for_measurement.connect(ctrl.measure_now, type=_UNIQUE)
+            self._connect_controller(ctrl)
+
+    def _connect_controller(self, ctrl):
+        """Connect signals of a controller."""
+        ctrl.data_ready.connect(self.receive_from_controller, type=_UNIQUE)
+        self.request_stop_devices.connect(ctrl.stop, type=_UNIQUE)
+        self.begin_preparation.connect(ctrl.trigger_begin_preparation,
+                                       type=_UNIQUE)
+        self.continue_preparation.connect(ctrl.trigger_continue_preparation,
+                                          type=_UNIQUE)
 
     def continue_measurement_preparation(self, _):
         """Continue preparation for measurements.
@@ -395,16 +386,16 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         self.switch_signals_for_preparation()
         for controller in self.controllers:
             controller.controller_busy.connect(self.is_preparation_finished,
-                                               type=qtc.Qt.UniqueConnection)
+                                               type=_UNIQUE)
         for camera in self.cameras:
             camera.camera_busy.connect(self.is_preparation_finished,
-                                       type=qtc.Qt.UniqueConnection)
+                                       type=_UNIQUE)
         self.continue_preparation.emit()
 
     def disconnect_cameras(self):
         """Disconnect necessary camera signals."""
         for camera in self.cameras:
-            camera.disconnect()                                                 # TODO: rename disconnect_!!
+            camera.disconnect_()
             base.safe_disconnect(camera.camera_busy, self.receive_from_camera)
             base.safe_disconnect(self.camera_timer.timeout, camera.trigger_now)
             base.safe_disconnect(self.begin_preparation, camera.start)
@@ -416,27 +407,24 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
             return
         base.safe_disconnect(self.request_stop_primary, primary.stop)
         base.safe_disconnect(primary.about_to_trigger)
-        primary.disconnect_()
-        base.safe_disconnect(primary.data_ready)
-        base.safe_disconnect(self.request_stop_devices, primary.stop)
-        base.safe_disconnect(self.begin_preparation,
-                             primary.trigger_begin_preparation)
-        base.safe_disconnect(self.continue_preparation,
-                             primary.trigger_continue_preparation)
-        base.safe_disconnect(primary.controller_busy)
+        self._disconnect_controller(primary)
 
     def disconnect_secondary_controllers(self):
         """Disconnect necessary controller signals."""
         for ctrl in self.secondary_controllers:
             base.safe_disconnect(self.ready_for_measurement, ctrl.measure_now)
-            ctrl.disconnect_()                                                  # TODO: same for all controllers
-            base.safe_disconnect(ctrl.data_ready, self.receive_from_controller)
-            base.safe_disconnect(self.request_stop_devices, ctrl.stop)
-            base.safe_disconnect(self.begin_preparation,
-                                 ctrl.trigger_begin_preparation)
-            base.safe_disconnect(self.continue_preparation,
-                                 ctrl.trigger_continue_preparation)
-            base.safe_disconnect(ctrl.controller_busy)
+            self._disconnect_controller(ctrl)
+
+    def _disconnect_controller(self, ctrl):
+        """Disconnect a generic controller."""
+        ctrl.disconnect_()
+        base.safe_disconnect(ctrl.data_ready, self.receive_from_controller)
+        base.safe_disconnect(self.request_stop_devices, ctrl.stop)
+        base.safe_disconnect(self.begin_preparation,
+                             ctrl.trigger_begin_preparation)
+        base.safe_disconnect(self.continue_preparation,
+                             ctrl.trigger_continue_preparation)
+        base.safe_disconnect(ctrl.controller_busy)
 
     def do_next_measurement(self):
         """Do the next measurement.
@@ -478,8 +466,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
             base.safe_disconnect(primary.controller_busy)
             self.disconnect_secondary_controllers()
             self.disconnect_cameras()
-            primary.controller_busy.connect(self.return_to_gui,
-                                            type=qtc.Qt.UniqueConnection)
+            primary.controller_busy.connect(self.return_to_gui, type=_UNIQUE)
             self.set_LEED_energy(self.current_energy, 50, trigger_meas=False)
 
     @abstractmethod
@@ -600,8 +587,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         """Save data."""
         sys_config = get_system_config()
         base_path = sys_config.get("PATHS", "measurements", fallback=None)
-        if not base_path:
-            # TODO: emit a SystemSettingsError of some kind
+        if not base_path:                                                       # TODO: emit a SystemSettingsError of some kind
             raise RuntimeError("Invalid path in system config file")
 
         tmp_path = base_path + "__tmp__/"
@@ -627,8 +613,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
                 camera.settings.write(fproxy)
             cam_locations.append("./" + fname)
 
-        # TODO: do the same for all controllers
-        if cam_locations:
+        if cam_locations:                                                       # TODO: do the same for all controllers
             self.settings.set("devices", "cameras", str(tuple(cam_locations)))
 
         file_name = final_path + "measurement.ini"
@@ -737,7 +722,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         """
         try:
             self.primary_controller.about_to_trigger.connect(
-                self.do_next_measurement, type=qtc.Qt.UniqueConnection
+                self.do_next_measurement, type=_UNIQUE
                 )
         except TypeError:
             self.primary_controller.about_to_trigger.disconnect()
@@ -750,7 +735,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
             for controller in self.controllers:
                 controller.controller_busy.disconnect()
                 controller.data_ready.connect(self.receive_from_controller,
-                                              type=qtc.Qt.UniqueConnection)
+                                              type=_UNIQUE)
 
     def return_to_gui(self, *__args):
         """Return collected data to gui.
@@ -771,7 +756,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         for thread in self.threads:
             thread.quit()
         self.running = False
-        self.finished.emit(())
+        self.finished.emit()
 
     def prepare_finalization(self):
         """Prepare for finalization.
@@ -793,8 +778,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
             # Necessary to force secondaries into busy,
             # before the primary returns not busy anymore.
             controller.busy = True
-            controller.controller_busy.connect(self.finalize,
-                                               type=qtc.Qt.UniqueConnection)
+            controller.controller_busy.connect(self.finalize, type=_UNIQUE)
         self.request_stop_devices.emit()
 
     def __make_camera(self, camera_settings):
@@ -821,31 +805,31 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
 
         Emits
         -----
-        MeasurementErrors.MISSING_CLASS_NAME
-            If the camera class name is missing or invalid.
-        MeasurementErrors.INVALID_MEAS_SETTINGS
-            If the camera could not be instantiated
-            from the given name.
+        MeasurementErrors.INVALID_SETTINGS
+            If the camera_settings given could not be found.
+        CameraErrors.INVALID_SETTINGS
+            If failed to make a camera instance.
         """
         try:
             config = ViPErLEEDSettings.from_settings(camera_settings)
         except (ValueError, NoSettingsError):
-            base.emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
-                            'devices/path to camera configuration')
+            base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
+                            'devices/path to camera configuration', '')
             raise RuntimeError from None
 
         invalid = config.has_settings(('camera_settings', 'class_name'))
         if invalid:
-            base.emit_error(self, MeasurementErrors.MISSING_CLASS_NAME,         # TODO: camera error?
-                            'camera_settings/class_name')
+            base.emit_error(self, CameraErrors.INVALID_SETTINGS,
+                            'camera_settings/class_name',
+                            f'No class_name in {config.last_file}')
             raise RuntimeError
 
         camera_cls_name = config.get('camera_settings', 'class_name')
         try:
             camera_class = base.class_from_name('camera', camera_cls_name)
         except ValueError:
-            base.emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,      # TODO: camera error?
-                            'camera_settings/class_name')
+            base.emit_error(self, CameraErrors.INVALID_SETTINGS,
+                            'camera_settings/class_name', '')
             raise RuntimeError
 
         instance = camera_class(settings=config)
@@ -906,32 +890,57 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         -----
         MeasurementErrors.MISSING_CLASS_NAME
             If the controller class name is missing.
-        MeasurementErrors.INVALID_MEAS_SETTINGS
+        MeasurementErrors.INVALID_SETTINGS
             If the controller could not be instantiated
             from the given name.
         """
         try:
             config = ViPErLEEDSettings.from_settings(configname)
         except (ValueError, NoSettingsError):
-            base.emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
-                            'devices/path to controller configuration')
+            base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
+                            'devices/path to controller configuration', '')
             raise RuntimeError from None
 
-        invalid = config.has_settings(('controller', 'controller_class'),
-                                      ('controller', 'port_name'))
+        invalid = config.has_settings(('controller', 'controller_class'))
         if invalid:
-            base.emit_error(self, MeasurementErrors.MISSING_CLASS_NAME,         # TODO: we do this if the class name AND if the port name is
-                            config.last_file)                                   # missing, will need to be edited once we add the serial numbers.
-            raise RuntimeError                                                  # Will need to get the port from list_devices.
+            base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
+                            'controller/controller_class',
+                            f'No controller_class in {config.last_file}')
+            raise RuntimeError
+
+        # For now, check that the port name is in the settings.                 # TODO: add getting port name from device list
+        # Later on, this check will only happen if the unique name
+        # of the controller in the settings file that I was passed
+        # is not found in the device list.
+        invalid = config.has_settings(('controller', 'port_name'))
+        if invalid:
+            base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
+                            'controller/port_name',
+                            f'No port_name in {config.last_file}')
+            raise RuntimeError
+        port_name = config.get('controller', 'port_name')
+        if not port_name:
+            base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
+                            'controller/port_name',
+                            f'No port_name in {config.last_file}')
+            raise RuntimeError
 
         cls_name = config['controller']['controller_class']
-        port_name = config.get('controller', 'port_name')                       # TODO: do we need this?
         try:
             cls = base.class_from_name('controller', cls_name)
         except ValueError:
-            base.emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,      # TODO: isn't this a controller error?
-                            'controller/controller_class')
+            base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
+                            'controller/controller_class',
+                            f'Unkown class {cls_name} in {config.last_file}')
             raise RuntimeError
+
+        if not isinstance(measurements, Sequence):
+            section = ('primary_controller' if is_primary
+                       else 'secondary_controllers')
+            base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
+                            f"devices/{section}",
+                            "Measured quantities is not a sequence "
+                            f"in {self.settings.last_file}")
 
         controller = cls(settings=config, port_name=port_name,
                          sets_energy=is_primary)
@@ -947,8 +956,8 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
             info = ()
 
         if len(info) != 2:
-            base.emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
-                            'devices/primary_controller')
+            base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
+                            'devices/primary_controller', '')
             return
 
         try:
@@ -969,15 +978,15 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
                 'devices', 'secondary_controllers', fallback=()
                 )
         except NotASequenceError:
-            base.emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
-                            'devices/secondary_controllers')
+            base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
+                            'devices/secondary_controllers', '')
             infos = tuple()
 
         secondary_controllers = []
         for info in infos:
-            if not len(info) == 2:
-                base.emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
-                                'devices/secondary_controllers')
+            if len(info) != 2:
+                base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
+                                'devices/secondary_controllers', '')
                 continue
             try:
                 ctrl = self.__make_controller(*info, is_primary=False)
@@ -995,8 +1004,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         """Prepare temporary folder tree where data will be saved."""
         sys_config = get_system_config()
         base_path = sys_config.get("PATHS", "measurements", fallback=None)
-        if not base_path:
-            # TODO: emit a SystemSettingsError of some kind
+        if not base_path:                                                       # TODO: emit a SystemSettingsError of some kind
             raise RuntimeError("Invalid path in system config file")
 
         base_path = Path(base_path) / "__tmp__"

@@ -140,7 +140,7 @@ class QuantityInfo(enum.Enum):
         return self.value[4]
 
     @property
-    def common_label(self):                                                     # TODO: rename generic_label?
+    def common_label(self):                                                     # TODO: rename generic_label? denomination?
         """Return the generic name of self (e.g., "Current", "Voltage")."""
         return self.value[5]
 
@@ -294,7 +294,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         self.__check_data(value)
         self.__list.insert(index, value)
 
-    def add_data(self, new_data, controller, primary_delay=0):
+    def add_data(self, new_data, controller, primary_delay=0):                  # time_to_trigger?
         """Add new data to the currently active data point.
 
         Parameters
@@ -309,7 +309,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         primary_delay : float, optional                                         # TODO: wouldn't it be easier to make it a property of ControllerABC (updated whenever .set_energy is called)? Perhaps we should wait the energy generators though.
             Time in milliseconds between when the primary
             controller was sent a command to set the current
-            energy and the time it triggered measurements                       # TODO: correct?
+            energy and the time it triggered measurements
 
         Emits
         -----

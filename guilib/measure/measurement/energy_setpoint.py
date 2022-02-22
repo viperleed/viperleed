@@ -18,35 +18,15 @@ from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.measurement.abc import (MeasurementABC,
                                                       MeasurementErrors)
 from viperleed.guilib.measure.datapoints import QuantityInfo
-from viperleed.guilib.measure.classes.settings import NotASequenceError
+from viperleed.guilib.measure.classes.settings import (
+    NotASequenceError, NoSectionError, NoOptionError
+    )
 
 
 class MeasureEnergySetpoint(MeasurementABC):
     """Energy calibration class."""
 
     display_name = 'Energy calibration'
-
-    def __init__(self, measurement_settings):
-        """Initialise measurement class.
-
-        This is an upgraded version of its parent class.
-        __end_energy, __delta_energy and __hv_settle_time are
-        read from the settings and made private properties.
-        """
-        super().__init__(measurement_settings)
-        self.__end_energy = 0                                                   # TODO: all attributes to properties
-        self.__delta_energy = 1
-        self.__hv_settle_time = 0
-        if self.settings:
-            self.__delta_energy = self.settings.getfloat(                       # TODO: float exceptions
-                'measurement_settings', 'delta_energy', fallback=1
-                )
-            self.__end_energy = self.settings.getfloat(                         # TODO: float exceptions
-                'measurement_settings', 'end_energy', fallback=0
-                )
-
-        if self.primary_controller:
-            self.__hv_settle_time = self.primary_controller.hv_settle_time
 
     @property
     def start_energy(self):
@@ -70,8 +50,8 @@ class MeasureEnergySetpoint(MeasurementABC):
                                              'start_energy', fallback=0.0)
         except (TypeError, ValueError):
             # Not a float
-            base.emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
-                            'measurement_settings/start_energy')
+            base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
+                            'measurement_settings/start_energy', '')
             start_e = 0.0
 
         try:
@@ -81,6 +61,50 @@ class MeasureEnergySetpoint(MeasurementABC):
             # Not a float
             min_e = 5.0
         return max(min_e, start_e)
+
+    @property
+    def __delta_energy(self):
+        """Return the amplitude of an energy step in eV."""
+        # Eventually, this will be an attribute of an energy generator,
+        # and it is unclear whether we will actualy need it.
+        fallback = 5
+        if not self.settings:
+            return fallback
+        try:
+            delta = self.settings.getfloat('measurement_settings',
+                                           'delta_energy')
+        except (TypeError, ValueError, NoSectionError, NoOptionError):
+            # Not a float or not present
+            delta = fallback
+            base.emit_error(self,
+                            MeasurementErrors.INVALID_SETTING_WITH_FALLBACK,
+                            '', 'measurement_settings/delta_energy', fallback)
+        return delta
+
+    @property
+    def __end_energy(self):
+        """Return the energy (in eV) at which the energy ramp ends."""
+        # Eventually, this will be an attribute of an energy generator,
+        # and it is unclear whether we will actualy need it.
+        fallback = 1000
+        if not self.settings:
+            return fallback
+        try:
+            egy = self.settings.getfloat('measurement_settings', 'end_energy')
+        except (TypeError, ValueError, NoSectionError, NoOptionError):
+            # Not a float or not present
+            egy = fallback
+            base.emit_error(self,
+                            MeasurementErrors.INVALID_SETTING_WITH_FALLBACK,
+                            '', 'measurement_settings/end_energy', fallback)
+        return egy
+    
+    @property
+    def __hv_settle_time(self):
+        """Return the time interval for the settling of energies."""
+        if not self.primary_controller:
+            return 0
+        return self.primary_controller.hv_settle_time
 
     def begin_measurement_preparation(self):
         """Start preparation for measurements.
@@ -100,6 +124,15 @@ class MeasureEnergySetpoint(MeasurementABC):
             Starts the measurement preparation and carries
             a tuple of energies and times with it.
         """
+        if not any(c.measures(QuantityInfo.HV) for c in self.controllers):
+            base.emit_error(
+                self, MeasurementErrors.INVALID_SETTINGS,
+                'devices/primary_controller or devices/primary_controller',
+                'Cannot run an energy calibration if no '
+                'controller measures the beam energy.'
+                )
+            return
+
         self.primary_controller.settings.set('energy_calibration',
                                              'coefficients', '(0, 1)')
         super().begin_measurement_preparation()
@@ -140,7 +173,7 @@ class MeasureEnergySetpoint(MeasurementABC):
         self.current_energy += self.__delta_energy
         return False
 
-    def calibrate_energy_setpoint(self):
+    def calibrate_energy_setpoint(self):                                        # TODO: move this to DataPoints?
         """Calibrate the energy setpoint of the LEED electronics
 
         The offset is measured in the measure_energy_setpoint()
@@ -204,23 +237,9 @@ class MeasureEnergySetpoint(MeasurementABC):
                                                      'primary_controller')
         except (NotASequenceError, ValueError):
             # Something wrong with the settings?
-            base.emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
-                            'devices/primary_controller')
+            base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
+                            'devices/primary_controller', '')
             return
 
         with open(file_name, 'w') as configfile:
             primary.settings.write(configfile)
-
-    def abort(self):
-        """Abort all current actions.
-
-        Abort and reset all variables.
-
-        Returns
-        -------
-        None.
-        """
-        if self.primary_controller.settings:
-            self.primary_controller.settings.set('energy_calibration',          # TODO: Why? 
-                                                 'coefficients', '(0, 1)')
-        super().abort()

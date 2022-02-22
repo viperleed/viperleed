@@ -22,7 +22,7 @@ from viperleed.guilib.measure.camera.drivers.imagingsource import (
     ImagingSourceError, SinkFormat,
     )
 from viperleed.guilib.measure.camera.abc import CameraABC, CameraErrors
-from viperleed.guilib.measure.hardwarebase import emit_error
+from viperleed.guilib.measure import hardwarebase as base
 
 
 # pylint: disable=useless-param-doc,useless-type-doc
@@ -308,8 +308,8 @@ class ImagingSourceCamera(CameraABC):
         except (ValueError, ImagingSourceError):
             # pylint: disable=redefined-variable-type
             # Probably a bug.
-            emit_error(self, CameraErrors.INVALID_SETTING_WITH_FALLBACK,
-                       color_fmt, 'camera_settings/color_format', 'Y16')
+            base.emit_error(self, CameraErrors.INVALID_SETTING_WITH_FALLBACK,
+                            color_fmt, 'camera_settings/color_format', 'Y16')
             color_fmt = SinkFormat.Y16
         self.settings.set('camera_settings', 'color_format', color_fmt.name)
         return color_fmt
@@ -322,8 +322,8 @@ class ImagingSourceCamera(CameraABC):
         except (ValueError, ImagingSourceError):
             # pylint: disable=redefined-variable-type
             # Probably a bug.
-            emit_error(self, CameraErrors.INVALID_SETTING_WITH_FALLBACK,
-                       color_fmt, 'camera_settings/color_format', 'Y16')
+            base.emit_error(self, CameraErrors.INVALID_SETTING_WITH_FALLBACK,
+                            color_fmt, 'camera_settings/color_format', 'Y16')
             color_fmt = SinkFormat.Y16
         self.settings.set('camera_settings', 'color_format', color_fmt.name)
 
@@ -405,7 +405,6 @@ class ImagingSourceCamera(CameraABC):
             self.set_callback(on_frame_ready_)
             self.__has_callback = True
         self.set_roi()
-
         return True
 
     def set_color_format(self):
@@ -580,12 +579,8 @@ class ImagingSourceCamera(CameraABC):
         # Connect the busy signal here. The callback
         # takes care of making the camera not busy
         # when done with the estimate.
-        try:
-            self.camera_busy.connect(self.__start_postponed,
-                                     qtc.Qt.UniqueConnection)
-        except TypeError:
-            # Already connected
-            pass
+        base.safe_connect(self.camera_busy, self.__start_postponed,
+                          type=qtc.Qt.UniqueConnection)
 
         self.is_finding_best_frame_rate = True
         self.process_info.clear_times()
@@ -655,11 +650,7 @@ class ImagingSourceCamera(CameraABC):
         if self.is_finding_best_frame_rate:
             return
 
-        try:
-            self.camera_busy.disconnect(self.__start_postponed)
-        except TypeError:
-            # Not connected
-            pass
+        base.safe_disconnect(self.camera_busy, self.__start_postponed)
 
         # Call base that starts the processing thread if needed
         super().start()

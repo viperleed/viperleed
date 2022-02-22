@@ -33,10 +33,10 @@ class ControllerErrors(base.ViPErLEEDErrorEnum):
     # The following three are fatal errors, and should make the GUI
     # essentially unusable, apart from allowing to load appropriate
     # settings.
-    INVALID_CONTROLLER_SETTINGS = (100,
-                                   "Invalid controller settings: Required "
-                                   "settings {} missing or values "
-                                   "inappropriate. Check configuration file.")
+    INVALID_SETTINGS = (100,
+                        "Invalid controller settings: Required "
+                        "settings {} missing or values "
+                        "inappropriate. Check configuration file.\n{}")
     MISSING_SETTINGS = (101,
                         "Controller cannot operate without settings. "
                         "Load an appropriate settings file before "
@@ -395,8 +395,8 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
                 serial_class = base.class_from_name('serial', serial_cls_name)
             except ValueError:
                 base.emit_error(
-                    self, ControllerErrors.INVALID_CONTROLLER_SETTINGS,
-                    'controller/serial_port_class'
+                    self, ControllerErrors.INVALID_SETTINGS,
+                    'controller/serial_port_class', ''
                     )
                 return
             self.__serial = serial_class(new_settings,
@@ -462,8 +462,8 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
                                         *extra_mandatory)
 
         if invalid:
-            base.emit_error(self, ControllerErrors.INVALID_CONTROLLER_SETTINGS,
-                            ', '.join(invalid))
+            base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
+                            ', '.join(invalid), '')
             return False
         return True
 
@@ -1086,8 +1086,5 @@ class MeasureControllerABC(ControllerABC):                                      
         -------
         None.
         """
-        try:
-            self.serial.serial_busy.connect(self.set_busy,
-                                            type=qtc.Qt.UniqueConnection)
-        except TypeError:
-            pass
+        base.safe_connect(self.serial.serial_busy, self.set_busy,
+                          type=qtc.Qt.UniqueConnection)

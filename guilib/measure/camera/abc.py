@@ -549,7 +549,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         if self.is_running:
             self.stop()
         self.close()
-        self.connect()  # Also loads self.settings to camera
+        self.connect_()  # Also loads self.settings to camera
 
         if self.roi != old_roi and self.bad_pixels:
             self.bad_pixels.apply_roi()
@@ -612,7 +612,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         """Close the camera device.
 
         This method is guaranteed to be called exactly once every
-        time .disconnect() runs.
+        time .disconnect_() runs.
 
         Returns
         -------
@@ -620,14 +620,14 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         """
         return
 
-    def connect(self):
+    def connect_(self):
         """Connect to the camera."""
         if not self.open():
             base.emit_error(self, CameraErrors.CAMERA_NOT_FOUND, self.name)
             return
         self.load_camera_settings()
 
-    def disconnect(self):
+    def disconnect_(self):
         """Disconnect the device."""
         self.__reported_errors = set()
         self.stop()
@@ -681,9 +681,9 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
     def open(self):
         """Open the camera device.
 
-        This method is guaranteed to be called exactly once every time
-        .connect() is called. If the device is already open, the method
-        should return True, and typically do nothing.
+        This method is guaranteed to be called exactly once every
+        time .connect_() is called. If the device is already open,
+        the method should return True, and typically do nothing.
 
         The reimplementation can use self.name to access the device
         name for this camera.
@@ -1157,12 +1157,8 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         # other pre-starting operations, and may deliver frames in the
         # meantime. The signal is also disconnected in .stop() for the
         # same reason.
-        try:
-            self.frame_ready.connect(self.__on_frame_ready,
-                                     type=qtc.Qt.UniqueConnection)
-        except TypeError:
-            # Already connected
-            pass
+        base.safe_connect(self.frame_ready, self.__on_frame_ready,
+                          type=qtc.Qt.UniqueConnection)
         self.started.emit()
 
     @abstractmethod
@@ -1315,11 +1311,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         processor = qtc.QObject().sender()
         if not processor:
             return
-        try:
-            self.__process_frame.disconnect(processor.process_frame)
-        except TypeError:
-            # Not connected
-            pass
+        base.safe_disconnect(self.__process_frame, processor.process_frame)
         try:
             self.__image_processors.remove(processor)
         except ValueError:
@@ -1357,10 +1349,5 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         self.busy = False
         if self.__process_thread.isRunning():
             self.__process_thread.quit()
-
-        try:
-            self.frame_ready.disconnect(self.__on_frame_ready)
-        except TypeError:
-            # Already disconnected
-            pass
+        base.safe_disconnect(self.frame_ready, self.__on_frame_ready)
         self.stopped.emit()

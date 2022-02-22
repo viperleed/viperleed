@@ -152,49 +152,29 @@ class TimeResolved(MeasurementABC):
             self.cycle_timer.start(self.__cycle_time)
         super().is_preparation_finished()
 
-    def connect_cameras(self):
-        """Connect necessary camera signals."""
-        for camera in self.cameras:
+    # def connect_cameras(self):
+        # """Connect necessary camera signals."""
+        # for camera in self.cameras:
             # self.continuous_mode.connect(TODO: Function here.,
                                          # type=qtc.Qt.UniqueConnection)
-            pass
-        super().connect_cameras()
+        # super().connect_cameras()
 
-    def connect_secondary_controllers(self):
+    def _connect_controller(self, ctrl):
         """Connect necessary controller signals."""
-        for controller in self.secondary_controllers:
-            self.continuous_mode.connect(controller.set_continuous_mode,
-                                         type=qtc.Qt.UniqueConnection)
-        super().connect_secondary_controllers()
+        super()._connect_controller(ctrl)
+        self.continuous_mode.connect(ctrl.set_continuous_mode,
+                                     type=qtc.Qt.UniqueConnection)
 
-    def connect_primary_controller(self):
-        """Connect signals of the primary controller."""
-        self.continuous_mode.connect(
-            self.primary_controller.set_continuous_mode,
-            type=qtc.Qt.UniqueConnection
-            )
-        super().connect_primary_controller()
-
-    def disconnect_cameras(self):
-        """Disconnect necessary camera signals."""
-        super().disconnect_cameras()
-        for camera in self.cameras:
+    # def disconnect_cameras(self):
+        # """Disconnect necessary camera signals."""
+        # super().disconnect_cameras()
+        # for camera in self.cameras:
             # self.continuous_mode.disconnect(TODO: Function here.)
-            pass
 
-    def disconnect_secondary_controllers(self):
+    def _disconnect_controller(self, ctrl):
         """Disconnect necessary controller signals."""
-        super().disconnect_secondary_controllers()
-        for ctrl in self.secondary_controllers:
-            base.safe_disconnect(self.continuous_mode,
-                                 ctrl.set_continuous_mode)
-
-    def disconnect_primary_controller(self):
-        """Disconnect signals of the primary controller."""
-        super().disconnect_primary_controller()
-        if self.primary_controller is not None:
-            base.safe_disconnect(self.continuous_mode, 
-                                 self.primary_controller.set_continuous_mode)
+        super()._disconnect_controller(ctrl)
+        base.safe_disconnect(self.continuous_mode, ctrl.set_continuous_mode)
 
     def abort(self):
         """Abort all current actions.

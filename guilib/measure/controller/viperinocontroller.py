@@ -19,11 +19,9 @@ from collections import defaultdict
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtSerialPort as qts
 
-# ViPErLEED modules
 from viperleed.guilib.measure.controller.abc import (MeasureControllerABC,
                                                      ControllerErrors)
-from viperleed.guilib.measure.hardwarebase import (ViPErLEEDErrorEnum,
-                                                   emit_error)
+from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.datapoints import QuantityInfo
 from viperleed.guilib.measure.classes.settings import NotASequenceError
 
@@ -34,7 +32,7 @@ _MANDATORY_CMD_NAMES = (
     "PC_CHANGE_MEAS_MODE", "PC_STOP", "PC_SET_VOLTAGE_ONLY", "PC_SET_SERIAL_NR"
     )
 
-class ViPErinoErrors(ViPErLEEDErrorEnum):
+class ViPErinoErrors(base.ViPErLEEDErrorEnum):
     """Errors specific to Arduino-based ViPErLEED controllers."""
     TOO_MANY_MEASUREMENT_TYPES = (150,
                                   "The ViPErinoController can only handle "
@@ -66,7 +64,7 @@ class ViPErinoController(MeasureControllerABC):
         *MeasureControllerABC._mandatory_settings,
         ('available_commands',),
         ('controller', 'measurement_devices'),
-        ('controller', 'FIRMWARE_VERSION'),  # also mandatory on serial
+        ('controller', 'firmware_version'),  # also mandatory on serial
         ('measurement_settings', 'v_ref_dac'),
         ]
 
@@ -133,8 +131,10 @@ class ViPErinoController(MeasureControllerABC):
                 )
         except (TypeError, ValueError):
             nr_average = 1
-            emit_error(self, ControllerErrors.INVALID_SETTING_WITH_FALLBACK,
-                       '', 'measurement_settings/num_meas_to_average', 1)
+            base.emit_error(
+                self, ControllerErrors.INVALID_SETTING_WITH_FALLBACK,
+                '', 'measurement_settings/num_meas_to_average', nr_average
+                )
         return (3 + (nr_average - 1) / 2) * self.measurement_interval
 
     @property
@@ -177,8 +177,8 @@ class ViPErinoController(MeasureControllerABC):
         except (TypeError, ValueError):
             version = -1.0
         if version < 0:
-            emit_error(self, ControllerErrors.INVALID_CONTROLLER_SETTINGS,
-                       "controller/firmware_version")
+            base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
+                            "controller/firmware_version", "")
             return False
 
         mandatory_commands = [("available_commands", cmd)
@@ -233,8 +233,8 @@ class ViPErinoController(MeasureControllerABC):
             v_ref_dac = self.settings.getfloat('measurement_settings',
                                                'v_ref_dac')
         except (TypeError, ValueError):
-            emit_error(self, ControllerErrors.INVALID_CONTROLLER_SETTINGS,
-                       'measurement_settings/v_ref_dac')
+            base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
+                            'measurement_settings/v_ref_dac', "")
 
         dac_out_vs_nominal_energy = 10/1000  # 10V / 1000 eV
         output_gain = 4  # Gain of the output stage on board
@@ -289,8 +289,10 @@ class ViPErinoController(MeasureControllerABC):
                 )
         except (TypeError, ValueError):
             num_meas_to_average = 1
-            emit_error(self, ControllerErrors.INVALID_SETTING_WITH_FALLBACK,
-                       '', 'measurement_settings/num_meas_to_average', 1)
+            base.emit_error(
+                self, ControllerErrors.INVALID_SETTING_WITH_FALLBACK,
+                '', 'measurement_settings/num_meas_to_average', 1
+                )
         message = [num_meas_to_average, *self.__adc_channels[:2]]
         self.send_message(cmd, message)
 
@@ -339,8 +341,8 @@ class ViPErinoController(MeasureControllerABC):
                                                fallback=4)
         except (TypeError, ValueError):
             # Cannot convert to int
-            emit_error(self, ControllerErrors.INVALID_CONTROLLER_SETTINGS,
-                       'controller/update_rate')
+            base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
+                            'controller/update_rate', '')
             return
         message = [update_rate, *self.__adc_channels[:-1]]
         self.send_message(cmd, message)
@@ -444,22 +446,23 @@ class ViPErinoController(MeasureControllerABC):
                 'controller', 'measurement_devices'
                 )
         except NotASequenceError:
-            emit_error(self, ControllerErrors.INVALID_CONTROLLER_SETTINGS,
-                       'controller/measurement_devices')
+            base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
+                            'controller/measurement_devices', '')
             return
 
         n_devices = len(measurement_devices)
         self.__adc_measurement_types = [None]*n_devices
         self.__adc_channels = [0]*n_devices
         if len(quantities) > n_devices:
-            emit_error(self, ViPErinoErrors.TOO_MANY_MEASUREMENT_TYPES)
+            base.emit_error(self, ViPErinoErrors.TOO_MANY_MEASUREMENT_TYPES)
             return
         for quantity in quantities:
             for i, measurement_device in enumerate(measurement_devices):
                 if quantity not in measurement_device:
                     continue
                 if self.__adc_measurement_types[i] is not None:
-                    emit_error(self, ViPErinoErrors.OVERLAPPING_MEASUREMENTS)
+                    base.emit_error(self,
+                                    ViPErinoErrors.OVERLAPPING_MEASUREMENTS)
                     return
                 try:
                     channel = self.settings.getint('controller', quantity,
@@ -468,10 +471,8 @@ class ViPErinoController(MeasureControllerABC):
                     # Cannot convert to int
                     channel = -1
                 if channel < 0:
-                    emit_error(
-                        self, ControllerErrors.INVALID_CONTROLLER_SETTINGS,
-                        f'controller/{quantity}'
-                        )
+                    base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
+                                    f'controller/{quantity}', '')
                     return
                 self.__adc_channels[i] = channel
                 self.__adc_measurement_types[i] = (
@@ -479,7 +480,7 @@ class ViPErinoController(MeasureControllerABC):
                     )
                 break
             else:
-                emit_error(self, ViPErinoErrors.INVALID_REQUEST)
+                base.emit_error(self, ViPErinoErrors.INVALID_REQUEST)
                 return
         super().set_measurements(quantities)
 
@@ -534,8 +535,8 @@ class ViPErinoController(MeasureControllerABC):
                                           fallback=50)
         except (TypeError, ValueError):
             meas_f = 50
-            emit_error(self, ControllerErrors.INVALID_CONTROLLER_SETTINGS,
-                       f"adc_update_rate/{update_rate_raw}")
+            base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
+                            f"adc_update_rate/{update_rate_raw}", "")
         return 1/meas_f
 
     def list_devices(self):

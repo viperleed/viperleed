@@ -22,6 +22,7 @@ from PyQt5 import (QtCore as qtc,
 
 from viperleed.guilib.measure.camera import abc
 from viperleed.guilib.widgetslib import screen_fraction
+from viperleed.guilib.measure import hardwarebase as base
 
 
 # TODO: ImageViewer.optimum_size is not updated when screen is changed
@@ -626,16 +627,10 @@ class CameraViewer(qtw.QScrollArea):
         else:
             connect_to = self.__camera.frame_ready
             disconnect_from = self.__camera.image_processed
-        try:
-            disconnect_from.disconnect(self.__show_image)
-        except TypeError:
-            # Not connected
-            pass
-        try:
-            connect_to.connect(self.__show_image, qtc.Qt.UniqueConnection)
-        except TypeError:
-            # Already connected
-            pass
+        
+        base.safe_disconnect(disconnect_from, self.__show_image)
+        base.safe_connect(connect_to, self.__show_image,
+                          type=qtc.Qt.UniqueConnection)
 
     def __on_context_menu_triggered(self, action):
         """React to a selection in the context menu."""
