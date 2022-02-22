@@ -100,9 +100,8 @@ class MeasureEnergySetpoint(MeasurementABC):
             Starts the measurement preparation and carries
             a tuple of energies and times with it.
         """
-        coefficients = '(0, 1)'
-        self.primary_controller.settings.set(
-            'energy_calibration', 'coefficients', coefficients)
+        self.primary_controller.settings.set('energy_calibration',
+                                             'coefficients', '(0, 1)')
         super().begin_measurement_preparation()
 
     def start_next_measurement(self):
@@ -197,6 +196,8 @@ class MeasureEnergySetpoint(MeasurementABC):
             primary.settings.update_file()
         except RuntimeError:
             pass
+        else:
+            return
 
         try:
             file_name, _ = self.settings.getsequence('devices',
@@ -219,8 +220,7 @@ class MeasureEnergySetpoint(MeasurementABC):
         -------
         None.
         """
-        coefficients = '(0, 1)'
         if self.primary_controller.settings:
-            self.primary_controller.settings.set(
-                'energy_calibration', 'coefficients', coefficients)
+            self.primary_controller.settings.set('energy_calibration',          # TODO: Why? 
+                                                 'coefficients', '(0, 1)')
         super().abort()
