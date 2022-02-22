@@ -130,8 +130,9 @@ class ViPErLEEDSerial(SerialABC):
             Each element is the string representation of the byte
             that will be sent over the serial.
         """
-        cmd_names = ('PC_CHANGE_MEAS_MODE', 'PC_SET_VOLTAGE', 'PC_CALIBRATION',
-                     'PC_SET_UP_ADCS', 'PC_SET_VOLTAGE_ONLY')
+        cmd_names = ('PC_CHANGE_MEAS_MODE', 'PC_SET_VOLTAGE',
+                     'PC_CALIBRATION', 'PC_SET_UP_ADCS',
+                     'PC_SET_VOLTAGE_ONLY', 'PC_SET_SERIAL_NR')
         # Here, for newer firmware versions, one would:
         # version = self.port_settings.getfloat('controller', 'firmware_version',
         #                                       fallback=1.0)
@@ -264,9 +265,17 @@ class ViPErLEEDSerial(SerialABC):
         except AttributeError:
             current_error = ViPErLEEDHardwareError.ERROR_UNKNOWN_ERROR
         # Set values and format the string which will be emitted.
-        fmt_data = {'error_name': current_error.name,
-                    'state': arduino_states[error_state],
-                    'err_details': current_error[1]}
+        try:
+            fmt_data = {'error_name': current_error.name,
+                        'state': arduino_states[error_state],
+                        'err_details': current_error[1]}
+        except KeyError:
+            # error_state is not present in the config file.
+            emit_error(self, ExtraSerialErrors.INVALID_PORT_SETTINGS,
+                       f'arduino_states with code {error_state}')
+            fmt_data = {'error_name': current_error.name,
+                        'state': f"state with code {error_state}",
+                        'err_details': current_error[1]}
         # Emit error and clear errors.
         emit_error(self, (error_code, msg_to_format), **fmt_data)
         self.clear_errors()
@@ -397,7 +406,7 @@ class ViPErLEEDSerial(SerialABC):
             # Too little data available
             # This is meant as a safeguard for future code changes
             raise RuntimeError(
-                f"{self.__class.__name__}.is_message_supported: "
+                f"{self.__class__.__name__}.is_message_supported: "
                 "No data message for one of the Arduino commands "
                 "that requires data. Check implementation!"
                 )
@@ -405,7 +414,7 @@ class ViPErLEEDSerial(SerialABC):
             # Too much data available
             # This is meant as a safeguard for future code changes
             raise RuntimeError(
-                f"{self.__class.__name__}.is_message_supported: "
+                f"{self.__class__.__name__}.is_message_supported: "
                 "Got a data message for one of the Arduino commands "
                 "that does not require data. Check implementation!"
                 )
@@ -416,7 +425,7 @@ class ViPErLEEDSerial(SerialABC):
             # data for a command as a single entity. It is meant as
             # a safeguard for future changes of the code.
             raise RuntimeError(
-                f"{self.__class.__name__}.is_message_supported: "
+                f"{self.__class__.__name__}.is_message_supported: "
                 "At most one data message should be given for each "
                 "command to the Arduino. Wrap data for one command into "
                 "a single Sequence."

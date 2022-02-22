@@ -1909,12 +1909,15 @@ void changeMeasurementMode() {
     waitingForDataFromPC = false;
     newMessage = false;
     
-    if (msgLength < 3){
+    if (msgLength < 2){
         raise(ERROR_MSG_DATA_INVALID);
         return;
     }
 
     continuous_mode = data_received[0];
+    // Note that data_received[1] is currently unused
+    // but necessary in order to not confuse this data
+    // message with a command.
     
     if (continuous_mode == 1){
         continuousMeasurement = true;
@@ -1927,12 +1930,6 @@ void changeMeasurementMode() {
       raise(ERROR_MSG_DATA_INVALID);
       return;
     }
-    
-    // This is not being used yet. If we want to include a time to wait in between 
-    // measurements we need to implement this in the sendMeasuredValues() function. 
-    // We would do this there because we decided to never call the trigger function. 
-    // Possibly a TODO.
-    continuousMeasurementInterval = data_received[1] << 8 | data_received[2];
 
     encodeAndSend(PC_OK);
     currentState = STATE_IDLE;
@@ -1990,7 +1987,20 @@ void setSerialNr() {
         return;
     }
 
+    // Check if address only contains allowed values.
     int address = 0;
+    byte tmp_char;
+    while(address <= 3){
+      tmp_char = data_received[address];
+      if (not ((tmp_char > 47 and tmp_char < 58)
+                || (tmp_char > 64 and tmp_char < 91))){
+        raise(ERROR_MSG_DATA_INVALID);
+        return;
+      }
+      address += 1;
+    }
+
+    address = 0;
     while(address <= 3){
       EEPROM.update(address, data_received[address]);
       address += 1;
