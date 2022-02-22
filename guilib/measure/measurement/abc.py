@@ -786,7 +786,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         None.
         """
         for controller in self.secondary_controllers:
-            base.safe_disconnect(self.ready_for_measurement.disconnect,
+            base.safe_disconnect(self.ready_for_measurement,
                                  controller.measure_now)
         for controller in self.controllers:
             base.safe_disconnect(controller.controller_busy)
@@ -911,7 +911,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
             from the given name.
         """
         try:
-            config = ViPErLEEDSettings.from_settings(controller_settings)
+            config = ViPErLEEDSettings.from_settings(configname)
         except (ValueError, NoSettingsError):
             base.emit_error(self, MeasurementErrors.INVALID_MEAS_SETTINGS,
                             'devices/path to controller configuration')

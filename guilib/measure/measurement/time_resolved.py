@@ -17,7 +17,7 @@ from PyQt5 import QtCore as qtc
 from viperleed.guilib.measure.measurement.abc import (MeasurementABC,
                                                       MeasurementErrors)
 from viperleed.guilib.measure.datapoints import QuantityInfo
-from viperleed.guilig.measure import hardwarebase as base
+from viperleed.guilib.measure import hardwarebase as base
 
 
 class TimeResolved(MeasurementABC):
