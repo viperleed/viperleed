@@ -29,10 +29,9 @@ from viperleed.guilib.measure.classes.settings import NotASequenceError
 
 
 _MANDATORY_CMD_NAMES = (
-    "pc_configuration", "pc_set_up_adcs", "pc_ok", "pc_reset",
-    "pc_set_voltage", "pc_autogain", "pc_error", "pc_calibration",
-    "pc_measure_only", "pc_change_meas_mode", "pc_stop", "pc_set_voltage_only",
-    "pc_set_serial_nr"
+    "PC_AUTOGAIN", "PC_CONFIGURATION", "PC_SET_UP_ADCS", "PC_OK", "PC_RESET",
+    "PC_SET_VOLTAGE", "PC_ERROR", "PC_CALIBRATION", "PC_MEASURE_ONLY",
+    "PC_CHANGE_MEAS_MODE", "PC_STOP", "PC_SET_VOLTAGE_ONLY", "PC_SET_SERIAL_NR"
     )
 
 class ViPErinoErrors(ViPErLEEDErrorEnum):
@@ -136,7 +135,7 @@ class ViPErinoController(MeasureControllerABC):
             nr_average = 1
             emit_error(self, ControllerErrors.INVALID_SETTING_WITH_FALLBACK,
                        '', 'measurement_settings/num_meas_to_average', 1)
-        return (3 + (nr_average - 1) / 2)*self.measurement_interval
+        return (3 + (nr_average - 1) / 2) * self.measurement_interval
 
     @property
     def name(self):
@@ -522,7 +521,7 @@ class ViPErinoController(MeasureControllerABC):
             # super().stop accesses serial_busy, which may
             # not exist if settings are somewhat funky.
             return
-        stop = self.settings.get('available_commands', 'pc_stop')
+        stop = self.settings.get('available_commands', 'PC_STOP')
         self.send_message(stop)
 
     @property

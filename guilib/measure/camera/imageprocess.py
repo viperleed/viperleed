@@ -226,7 +226,7 @@ class ImageProcessor(qtc.QObject):
             ) >> 1  # right shift by 1 bit is division by 2
         self.processed_image[tuple(bad_coords)] = replacements
 
-    def remove_bad_pixels_old(self):
+    def remove_bad_pixels_old(self):  # TODO: remove
         """Remove a list of bad pixels by neighbor averaging."""
         if not self.process_info.bad_pixels.size:
             return
