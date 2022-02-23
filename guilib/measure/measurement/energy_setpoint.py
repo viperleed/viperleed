@@ -256,6 +256,6 @@ class MeasureEnergySetpoint(MeasurementABC):
         """Abort all current actions."""
         if self.__old_coefficients:
             self.primary_controller.settings.set('energy_calibration',
-                                                 'coefficients'
+                                                 'coefficients',
                                                  self.__old_coefficients)
         super().abort()
