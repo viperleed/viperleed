@@ -632,7 +632,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                         # first data point. All others are handled
                         # by the next condition.
                         self[-1][quantity] = value
-                    if value != last_energy:
+                    elif value != last_energy:
                         self.append(deepcopy(empty_data_point))
                         self[-1][quantity] = value
 

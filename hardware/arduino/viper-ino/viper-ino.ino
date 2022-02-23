@@ -1792,7 +1792,7 @@ void getFloatMeasurements() {
     **/
     if (hardwareDetected.asInt & ADC_0_PRESENT) {
         fDataOutput[0].asFloat = summedMeasurements[0] * voltsPerBit[adc0Gain] / numMeasurementsDone;
-        // ADC#0, channel 0: I0 input (Volts).
+        // ADC#0, channel 0: I0 input (returned as milliVolts).
         // The actual voltage at the input can be in either 0-2.5 V
         // (jumper closed) or 0-10 V (jumper open) ranges. This means
         // scaling the value by ADC_0_CH0_SCALE_JO if the jumper is open,
