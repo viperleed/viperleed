@@ -1795,7 +1795,7 @@ void getFloatMeasurements() {
         // ADC#0, channel 0: I0 input (Volts).
         // The actual voltage at the input can be in either 0-2.5 V
         // (jumper closed) or 0-10 V (jumper open) ranges. This means
-        // scaling the vale by ADC_0_CH0_SCALE_JO if the jumper is open,
+        // scaling the value by ADC_0_CH0_SCALE_JO if the jumper is open,
         // and doing nothing if it's closed (ADC range is already 0-2.5V)
         if (adc0Channel == AD7705_CH0) {
             if ((hardwareDetected.asInt & JP_I0_CLOSED) == 0)  // 0-10 V with jumper open
@@ -1890,6 +1890,9 @@ void changeMeasurementMode() {
     STATE_ERROR : ERROR_TIMEOUT
         If more than 5s pass between the PC_CHANGE_MEAS_MODE message
         and the receipt of data
+    STATE_ERROR : ERROR_MSG_DATA_INVALID
+        If the message is not at least 2 bytes long, or if the received data
+        does not describe on or off.
     STATE_CHANGE_MEASUREMENT_MODE (stays)
         While waiting for data from the PC
     STATE_IDLE
@@ -1965,7 +1968,7 @@ void setSerialNr() {
         ASCII representation of a capital letter or a number.
     STATE_ERROR : ERROR_TIMEOUT
         If more than 5s pass between the PC_SET_SERIAL_NR message
-        and the receipt of data
+        and the receipt of data.
     STATE_IDLE
         Successfully finished
     **/
