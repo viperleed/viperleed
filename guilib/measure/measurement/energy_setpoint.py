@@ -27,6 +27,11 @@ class MeasureEnergySetpoint(MeasurementABC):
 
     display_name = 'Energy calibration'
 
+    def __init__(self, measurement_settings):
+        """Initialise measurement class"""
+        super().__init__(measurement_settings)
+        self.__old_coefficients = ""
+
     @property
     def start_energy(self):
         """Return the first energy for the energy ramp.
@@ -97,7 +102,7 @@ class MeasureEnergySetpoint(MeasurementABC):
                             MeasurementErrors.INVALID_SETTING_WITH_FALLBACK,
                             '', 'measurement_settings/end_energy', fallback)
         return egy
-    
+
     @property
     def __hv_settle_time(self):
         """Return the time interval for the settling of energies."""
@@ -131,6 +136,10 @@ class MeasureEnergySetpoint(MeasurementABC):
                 'controller measures the beam energy.'
                 )
             return
+
+        self.__old_coefficients = self.primary_controller.settings.get(
+            'energy_calibration', 'coefficients', fallback=''
+            )
 
         self.primary_controller.settings.set('energy_calibration',
                                              'coefficients', '(0, 1)')
@@ -242,3 +251,11 @@ class MeasureEnergySetpoint(MeasurementABC):
 
         with open(file_name, 'w') as configfile:
             primary.settings.write(configfile)
+
+    def abort(self):
+        """Abort all current actions."""
+        if self.__old_coefficients:
+            self.primary_controller.settings.set('energy_calibration',
+                                                 'coefficients'
+                                                 self.__old_coefficients)
+        super().abort()
