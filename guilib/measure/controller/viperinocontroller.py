@@ -420,7 +420,7 @@ class ViPErinoController(MeasureControllerABC):
         self.__adc_channels = []
         self.hardware = {}
         self.measurements = {}
-        self.__energies_and_times = []
+        self.first_energies_and_times = []
 
     def set_measurements(self, quantities):
         """Decide what to measure.
@@ -484,7 +484,7 @@ class ViPErinoController(MeasureControllerABC):
                 return
         super().set_measurements(quantities)
 
-    def set_continuous_mode(self, continuous):
+    def set_continuous_mode(self, continuous=True):
         """Set continuous mode.
 
         If continuous is true the controller will continue
@@ -492,8 +492,9 @@ class ViPErinoController(MeasureControllerABC):
 
         Parameters
         ----------
-        continuous : bool
+        continuous : bool, optional
             Wether continuous mode should be on.
+            Default is True
 
         Returns
         -------

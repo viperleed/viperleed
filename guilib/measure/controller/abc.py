@@ -55,6 +55,8 @@ class ControllerErrors(base.ViPErLEEDErrorEnum):
         )
 
 
+# too-many-public-methods
+# too-many-instance-attributes
 class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
     """Base class for giving orders to the LEED electronics."""
 
@@ -121,6 +123,12 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         self.__port_name = port_name
         self.__energy_calibration = None
 
+        # __can_continue_preparation decides whether the controller
+        # can start the second part of the preparation, i.e., the
+        # one that contains steps to be done after the LEED energy
+        # has be already set.
+        self.__can_continue_preparation = False
+
         self.error_occurred.connect(self.__on_init_errors)
 
         self.set_settings(settings)
@@ -140,9 +148,9 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         self.begin_prepare_todos = defaultdict(bool)
         self.continue_prepare_todos = defaultdict(bool)
 
-        # tuple used to store the energies and times sent
-        # by the MeasurementABC class in alternating order.
-        self.__energies_and_times = []
+        # Sequence used to store the energies and times (in
+        # alternating order) to be set during the preparation.
+        self.first_energies_and_times = []
 
         # __unsent_messages is a list of messages that have been
         # stored by the controller because it was not yet possible
@@ -228,6 +236,8 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
                                                    'domain',
                                                    fallback=(-10, 1100))
             except NotASequenceError:
+                # pylint: disable=redefined-variable-type
+                # Likely pylint bug? domain is Sequence also before.
                 # No reasonable need to bother the user with this. We
                 # anyway construct the polynomial from scratch.
                 domain = (-10, 1100)
@@ -346,9 +356,15 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         """
         self.__sets_energy = bool(energy_setter)
 
-    def __get_settings(self):  # pylint: disable=unused-private-member
+    @property
+    def settings(self):
         """Return the current settings used as a ConfigParser."""
         return self.__settings
+
+    @settings.setter
+    def settings(self, new_settings):
+        """Set new settings for this controller."""
+        self.set_settings(new_settings)
 
     def set_settings(self, new_settings):  # too-complex
         """Set new settings for this controller.
@@ -432,11 +448,12 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         self.__settings = self.serial.port_settings
         self.__hash = -1
 
-    settings = property(__get_settings, set_settings)
-
+    # pylint: disable=no-self-use
+    # Method is here for consistency with MeasureControllerABC
     def measures(self, _):
         """Return whether this controller measures quantity."""
         return False
+    # pylint: enable=no-self-use
 
     @abstractmethod
     def are_settings_ok(self, settings):
@@ -484,7 +501,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
 
     @abstractmethod
     def set_energy(self, energy, settle_time, *more_steps,
-                   trigger_meas=True, **_):
+                   trigger_meas=True, **kwargs):
         """Set electron energy on LEED controller.
 
         This method must be reimplemented in subclasses. The
@@ -517,6 +534,9 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
             after the energy has been set. Default is True. The base
             ControllerABC cannot take measurements, therefore this
             parameter is only used to emit an about to trigger if True.
+        **kwargs : object
+            Other keyword-only arguments that may be necessary in
+            concrete subclasses.
 
         Returns
         -------
@@ -544,7 +564,8 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         new_energy : float
             Energy to set in eV in order to get requested energy.
         """
-        return self.energy_calibration_curve(energy)
+        to_setpoint = self.energy_calibration_curve
+        return to_setpoint(energy)
 
     def make_serial(self):
         """Create serial port object and connect to it."""
@@ -658,25 +679,20 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         except (TypeError, AttributeError):
             pass
 
-    def begin_preparation(self, serial_busy):
+    def __do_preparation_step(self, serial_busy=False):
         """Prepare the controller for a measurement cycle.
 
-        The begin_prepare_todos dictionary used in this method
-        must be reimplemented in subclasses. The
-        reimplementation should call functions that take the
-        settings property and use it to do all required tasks
-        before a measurement. (i.e. calibrating the electronics,
-        selecting channels, determining the gain, ...)
-
-        It should be able to select the update rate of the
-        measurement electronics and change channels if there
-        are more than one.
+        Runs, in key-insertion order, over the self.begin_prepare_todos
+        and self.continue_prepare_todos dictionaries. The two dicts
+        should be populated by subclasses. The former contains tasks
+        used during the first 'step' of the preparation: all those
+        that can be done with the LEED energy set to zero. The latter
+        all the tasks that require a nonzero LEED energy.
 
         Parameters
         ----------
-        serial_busy : boolean
-            Busy state of the serial.
-            If not busy, send next command.
+        serial_busy : bool
+            Busy state of the serial. If not busy, send next command.
 
         Returns
         -------
@@ -685,96 +701,71 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         if serial_busy:
             return
 
+        todos = self.begin_prepare_todos
+        if self.__can_continue_preparation:
+            todos = self.continue_prepare_todos
+
         next_to_do = None
-        for key, to_do in self.begin_prepare_todos.items():
-            if not to_do:
+        for method_name, to_be_done in todos.items():
+            if not to_be_done:
                 continue
-            next_to_do = getattr(self, key)
+            next_to_do = getattr(self, method_name)
             break
         if next_to_do:
-            self.begin_prepare_todos[next_to_do.__name__] = False
-            if next_to_do == self.set_energy:
-                next_to_do(*self.__energies_and_times)                          # TODO: is there a better way with functools.partial?
-            else:
-                next_to_do()
-            return
-        self.serial.serial_busy.disconnect()
-        self.busy = False
-
-    def continue_preparation(self, serial_busy):
-        """Prepare the controller for a measurement cycle.
-
-        The continue_prepare_todos dictionary used in this
-        method must be reimplemented in subclasses. The
-        reimplementation should call functions that take the
-        settings property derived from the configuration file
-        and use it to do all required tasks before a measurement.
-        (i.e. calibrating the electronics, selecting channels,
-        determining the gain, ...)
-
-        It should be able to select the update rate of the
-        measurement electronics and change channels if there
-        are more than one.
-
-        Parameters
-        ----------
-        serial_busy : boolean
-            Busy state of the serial.
-            If not busy, send next command.
-
-        Returns
-        -------
-        None.
-        """
-        if serial_busy:
-            return
-        next_to_do = None
-        for key, to_do in self.continue_prepare_todos.items():
-            if not to_do:
-                continue
-            next_to_do = getattr(self, key)
-            break
-
-        if next_to_do:
-            self.continue_prepare_todos[next_to_do.__name__] = False
-            if next_to_do == self.set_continuous_mode:
-                next_to_do(True)
+            todos[next_to_do.__name__] = False
+            if next_to_do.__name__ == 'set_energy':
+                next_to_do(*self.first_energies_and_times)
             else:
                 next_to_do()
             return
 
-        self.serial.serial_busy.disconnect()
-        self.serial.serial_busy.connect(self.send_unsent_messages,
-                                        type=qtc.Qt.UniqueConnection)
+        # Disconnect signal: will be reconnected
+        # during the call to continue_preparation
+        self.serial.serial_busy.disconnect(self.__do_preparation_step)
+        if self.__can_continue_preparation:
+            # The whole preparation is now over.
+            # Guarantee that any unsent message that may have come
+            # while the preparation was running is now sent.
+            base.safe_connect(self.serial.serial_busy,
+                              self.send_unsent_messages,
+                              type=qtc.Qt.UniqueConnection)
         self.busy = False
 
-    def trigger_begin_preparation(self, energies_and_times):
+    def begin_preparation(self, energies_and_times):
         """Trigger the first step in the preparation for measurements.
 
-        Set self.busy to true, reset all begin_prepare_todos
-        and start first step of the preparation.
-        energies_and_times is a tuple containing the energies
-        and times to set during the preparation. First the energy
-        should be set and afterwards the gain should be determined.
+        Set self.busy to true, reset all begin_prepare_todos and
+        start first step of the preparation.
 
         Parameters
         ----------
         energies_and_times : tuple
-            Starting energies and times the controller will
-            use if sets_energy is true.
+            Starting sequence of energies and times the controller
+            will use to set the energy during preparation. These
+            quantities are used only if self.sets_energy is True.
 
         Returns
         -------
         None.
         """
-        self.busy = True
         self.reset_preparation_todos()
-        self.__energies_and_times = energies_and_times
-        self.serial.serial_busy.connect(self.begin_preparation,
-                                        type=qtc.Qt.UniqueConnection)
-        self.begin_preparation(serial_busy=False)
+        self.first_energies_and_times = energies_and_times
 
-    def trigger_continue_preparation(self):
+        # Clear any unsent messages. Any message that comes during
+        # preparation will not be sent till the end of the whole
+        # preparation. This excludes a call to .stop(), which is
+        # always done as soon as possible.
+        self.__unsent_messages = []
+        self.__can_continue_preparation = False
+
+        self.busy = True
+        base.safe_disconnect(self.serial.serial_busy,
+                             self.send_unsent_messages)
+        base.safe_connect(self.serial.serial_busy, self.__do_preparation_step,
+                          type=qtc.Qt.UniqueConnection)
+        self.__do_preparation_step()
+
+    def continue_preparation(self):
         """Trigger the second step in the preparation for measurements.
 
         Set self.busy to true, reset all continue_prepare_todos
@@ -784,10 +775,14 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         -------
         None.
         """
+        self.__can_continue_preparation = True
+
         self.busy = True
-        self.serial.serial_busy.connect(self.continue_preparation,
-                                        type=qtc.Qt.UniqueConnection)
-        self.continue_preparation(serial_busy=False)
+        base.safe_disconnect(self.serial.serial_busy,
+                             self.send_unsent_messages)
+        base.safe_connect(self.serial.serial_busy, self.__do_preparation_step,
+                          type=qtc.Qt.UniqueConnection)
+        self.__do_preparation_step()
 
     def reset_preparation_todos(self):
         """Reset all the segments of preparation.
@@ -963,7 +958,7 @@ class MeasureControllerABC(ControllerABC):
 
     @abstractmethod
     def set_energy(self, energy, settle_time, *more_steps,
-                   trigger_meas=True, **_):
+                   trigger_meas=True, **kwargs):
         """Set electron energy on LEED controller.
 
         This method must be reimplemented in subclasses. The
@@ -998,6 +993,9 @@ class MeasureControllerABC(ControllerABC):
             True if the controllers are supposed to take
             measurements after the energy has been set.
             Default is True.
+        **kwargs : object
+            Other keyword-only arguments that may be necessary in
+            concrete subclasses.
 
         Returns
         -------
@@ -1067,7 +1065,7 @@ class MeasureControllerABC(ControllerABC):
             self.serial.about_to_trigger.connect(self.about_to_trigger.emit)
 
     @abstractmethod
-    def set_continuous_mode(self, continuous):
+    def set_continuous_mode(self, continuous=True):
         """Set continuous mode.
 
         Has to be reimplemented in subclasses. If continuous is
@@ -1080,9 +1078,9 @@ class MeasureControllerABC(ControllerABC):
 
         Parameters
         ----------
-        continuous : bool
+        continuous : bool, optional
             Wether continuous mode should be on.
-            Used in subclass.
+            Used in subclass. Default is True.
 
         Returns
         -------

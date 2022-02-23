@@ -362,9 +362,8 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         """Connect signals of a controller."""
         ctrl.data_ready.connect(self.receive_from_controller, type=_UNIQUE)
         self.request_stop_devices.connect(ctrl.stop, type=_UNIQUE)
-        self.begin_preparation.connect(ctrl.trigger_begin_preparation,
-                                       type=_UNIQUE)
-        self.continue_preparation.connect(ctrl.trigger_continue_preparation,
+        self.begin_preparation.connect(ctrl.begin_preparation, type=_UNIQUE)
+        self.continue_preparation.connect(ctrl.continue_preparation,
                                           type=_UNIQUE)
 
     def continue_measurement_preparation(self, _):
@@ -428,10 +427,9 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         ctrl.disconnect_()
         base.safe_disconnect(ctrl.data_ready, self.receive_from_controller)
         base.safe_disconnect(self.request_stop_devices, ctrl.stop)
-        base.safe_disconnect(self.begin_preparation,
-                             ctrl.trigger_begin_preparation)
+        base.safe_disconnect(self.begin_preparation, ctrl.begin_preparation)
         base.safe_disconnect(self.continue_preparation,
-                             ctrl.trigger_continue_preparation)
+                             ctrl.continue_preparation)
         base.safe_disconnect(ctrl.controller_busy)
 
     def do_next_measurement(self):
