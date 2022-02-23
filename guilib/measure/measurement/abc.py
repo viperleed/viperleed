@@ -27,7 +27,9 @@ from viperleed.guilib.measure.classes.settings import (
     ViPErLEEDSettings, NoSettingsError, get_system_config, NotASequenceError
     )
 from viperleed.guilib.measure.camera.abc import CameraErrors
-from viperleed.guilib.measure.controller.abc import ControllerErrors
+from viperleed.guilib.measure.controller.abc import (
+    ControllerErrors, MeasureControllerABC
+    )
 
 
 _UNIQUE = qtc.Qt.UniqueConnection
@@ -49,6 +51,12 @@ class MeasurementErrors(base.ViPErLEEDErrorEnum):                               
         "Using {} instead. Consider fixing your configuration file."
         )
     RUNTIME_ERROR = (303, "Runtime error. Info: {}")
+    WRONG_CONTROLLER_CLASS = (
+        304,
+        "The secondary controller on port {!r} is not a subclass "
+        "of MeasureControllerABC. All secondary controllers need "
+        "to be a subclass of MeasureControllerABC."
+        )
 
 
 class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     # TODO: doc about inner workings
@@ -992,7 +1000,10 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
                 ctrl = self.__make_controller(*info, is_primary=False)
             except RuntimeError:
                 continue
-
+            if not isinstance(ctrl, MeasureControllerABC):
+                base.emit_error(self, MeasurementErrors.WRONG_CONTROLLER_CLASS,
+                                ctrl.port_name)
+                continue
             self.threads.append(qtc.QThread())
             ctrl.moveToThread(self.threads[-1])
             secondary_controllers.append(ctrl)
