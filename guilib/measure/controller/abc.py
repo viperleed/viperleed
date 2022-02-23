@@ -129,6 +129,21 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         # in the measurement cycle can be done.
         self.__busy = False
 
+        # These dictionaries must be reimplemented in subclasses.
+        # They must contain all functions the MeasureController has
+        # to call in the order to bring the controller into a state
+        # ready for setting the energy/taking measurements.
+        # begin_prepare_todos contains everything that has to be
+        # done before the starting energy has been set.
+        # continue_prepare_todos contains everything that has to be
+        # done after the starting energy has been set.
+        self.begin_prepare_todos = defaultdict(bool)
+        self.continue_prepare_todos = defaultdict(bool)
+
+        # tuple used to store the energies and times sent
+        # by the MeasurementABC class in alternating order.
+        self.__energies_and_times = []
+
         # __unsent_messages is a list of messages that have been
         # stored by the controller because it was not yet possible
         # to send them to the hardware controller. New messages
@@ -643,8 +658,162 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         except (TypeError, AttributeError):
             pass
 
+    def begin_preparation(self, serial_busy):
+        """Prepare the controller for a measurement cycle.
 
-class MeasureControllerABC(ControllerABC):                                      # TODO: discuss why stuff is not in base controller
+        The begin_prepare_todos dictionary used in this method
+        must be reimplemented in subclasses. The
+        reimplementation should call functions that take the
+        settings property and use it to do all required tasks
+        before a measurement. (i.e. calibrating the electronics,
+        selecting channels, determining the gain, ...)
+
+        It should be able to select the update rate of the
+        measurement electronics and change channels if there
+        are more than one.
+
+        Parameters
+        ----------
+        serial_busy : boolean
+            Busy state of the serial.
+            If not busy, send next command.
+
+        Returns
+        -------
+        None.
+        """
+        if serial_busy:
+            return
+
+        next_to_do = None
+        for key, to_do in self.begin_prepare_todos.items():
+            if not to_do:
+                continue
+            next_to_do = getattr(self, key)
+            break
+        if next_to_do:
+            self.begin_prepare_todos[next_to_do.__name__] = False
+            if next_to_do == self.set_energy:
+                next_to_do(*self.__energies_and_times)                          # TODO: is there a better way with functools.partial?
+            else:
+                next_to_do()
+            return
+        self.serial.serial_busy.disconnect()
+        self.busy = False
+
+    def continue_preparation(self, serial_busy):
+        """Prepare the controller for a measurement cycle.
+
+        The continue_prepare_todos dictionary used in this
+        method must be reimplemented in subclasses. The
+        reimplementation should call functions that take the
+        settings property derived from the configuration file
+        and use it to do all required tasks before a measurement.
+        (i.e. calibrating the electronics, selecting channels,
+        determining the gain, ...)
+
+        It should be able to select the update rate of the
+        measurement electronics and change channels if there
+        are more than one.
+
+        Parameters
+        ----------
+        serial_busy : boolean
+            Busy state of the serial.
+            If not busy, send next command.
+
+        Returns
+        -------
+        None.
+        """
+        if serial_busy:
+            return
+        next_to_do = None
+        for key, to_do in self.continue_prepare_todos.items():
+            if not to_do:
+                continue
+            next_to_do = getattr(self, key)
+            break
+
+        if next_to_do:
+            self.continue_prepare_todos[next_to_do.__name__] = False
+            if next_to_do == self.set_continuous_mode:
+                next_to_do(True)
+            else:
+                next_to_do()
+            return
+
+        self.serial.serial_busy.disconnect()
+        self.serial.serial_busy.connect(self.send_unsent_messages,
+                                        type=qtc.Qt.UniqueConnection)
+        self.busy = False
+
+    def trigger_begin_preparation(self, energies_and_times):
+        """Trigger the first step in the preparation for measurements.
+
+        Set self.busy to true, reset all begin_prepare_todos
+        and start first step of the preparation.
+        energies_and_times is a tuple containing the energies
+        and times to set during the preparation. First the energy
+        should be set and afterwards the gain should be determined.
+
+        Parameters
+        ----------
+        energies_and_times : tuple
+            Starting energies and times the controller will
+            use if sets_energy is true.
+
+        Returns
+        -------
+        None.
+        """
+        self.busy = True
+        self.reset_preparation_todos()
+        self.__energies_and_times = energies_and_times
+        self.serial.serial_busy.connect(self.begin_preparation,
+                                        type=qtc.Qt.UniqueConnection)
+        self.begin_preparation(serial_busy=False)
+
+    def trigger_continue_preparation(self):
+        """Trigger the second step in the preparation for measurements.
+
+        Set self.busy to true, reset all continue_prepare_todos
+        and start second step of the preparation.
+
+        Returns
+        -------
+        None.
+        """
+        self.busy = True
+        self.serial.serial_busy.connect(self.continue_preparation,
+                                        type=qtc.Qt.UniqueConnection)
+        self.continue_preparation(serial_busy=False)
+
+    def reset_preparation_todos(self):
+        """Reset all the segments of preparation.
+
+        Segments are in the form [key: bool}. Those segments for
+        which the value is True will be done one at a time, in
+        the order in which keys are inserted. Segments are stored
+        in self.begin_prepare_todos and self.continue_prepare_todos.
+
+        This method can be reimplemented in subclasses if some segments
+        are to be skipped (e.g., depending on the firmware version of
+        the hardware).
+
+        The base-class implementation sets all segments to True.
+
+        Returns
+        -------
+        None.
+        """
+        for key in self.begin_prepare_todos:
+            self.begin_prepare_todos[key] = True
+        for key in self.continue_prepare_todos:
+            self.continue_prepare_todos[key] = True
+
+
+class MeasureControllerABC(ControllerABC):
     """Controller class for measurement controllers."""
 
     def __init__(self, settings=None, port_name='', sets_energy=False):
@@ -686,19 +855,8 @@ class MeasureControllerABC(ControllerABC):                                      
         # class responsible for receiving data from this controller.
         self.measurements = defaultdict(list)
 
-        # These dictionaries must be reimplemented in subclasses.
-        # They must contain all functions the MeasureController has
-        # to call in the order to bring the controller into a state
-        # ready for measurements. begin_prepare_todos contains
-        # everything that has to be done before the starting energy
-        # has been set. continue_prepare_todos contains everything
-        # that has to be done after the starting energy has been set.
-        self.begin_prepare_todos = defaultdict(bool)
-        self.continue_prepare_todos = defaultdict(bool)
-
-        # tuple used to store the energies and times sent
-        # by the MeasurementABC class in alternating order.
-        self.__energies_and_times = []
+        # This tuple contains the QuantityInfo Enums associated with
+        # the selected quantities to measure.
         self.__measured_quantities = tuple()
 
     @abstractmethod
@@ -748,98 +906,6 @@ class MeasureControllerABC(ControllerABC):                                      
     def measures(self, quantity):
         """Return whether this controller measures quantity."""
         return quantity in self.measured_quantities
-
-    # @qtc.pyqtSlot(bool)
-    def begin_preparation(self, serial_busy):
-        """Prepare the controller for a measurement.
-
-        The begin_prepare_todos dictionary used in this method
-        must be reimplemented in subclasses. The
-        reimplementation should call functions that take the
-        settings property and use it to do all required tasks
-        before a measurement. (i.e. calibrating the electronics,
-        selecting channels, determining the gain, ...)
-
-        It should be able to select the update rate of the
-        measurement electronics and change channels if there
-        are more than one.
-
-        Parameters
-        ----------
-        serial_busy : boolean
-            Busy state of the serial.
-            If not busy, send next command.
-
-        Returns
-        -------
-        None.
-        """
-        if serial_busy:
-            return
-
-        next_to_do = None
-        for key, to_do in self.begin_prepare_todos.items():
-            if not to_do:
-                continue
-            next_to_do = getattr(self, key)
-            break
-        if next_to_do:
-            self.begin_prepare_todos[next_to_do.__name__] = False
-            if next_to_do == self.set_energy:
-                next_to_do(*self.__energies_and_times)                          # TODO: is there a better way with functools.partial?
-            else:
-                next_to_do()
-            return
-        self.serial.serial_busy.disconnect()
-        self.busy = False
-
-    # @qtc.pyqtSlot(bool)
-    def continue_preparation(self, serial_busy):
-        """Prepare the controller for a measurement.
-
-        The continue_prepare_todos dictionary used in this
-        method must be reimplemented in subclasses. The
-        reimplementation should call functions that take the
-        settings property derived from the configuration file
-        and use it to do all required tasks before a measurement.
-        (i.e. calibrating the electronics, selecting channels,
-        determining the gain, ...)
-
-        It should be able to select the update rate of the
-        measurement electronics and change channels if there
-        are more than one.
-
-        Parameters
-        ----------
-        serial_busy : boolean
-            Busy state of the serial.
-            If not busy, send next command.
-
-        Returns
-        -------
-        None.
-        """
-        if serial_busy:
-            return
-        next_to_do = None
-        for key, to_do in self.continue_prepare_todos.items():
-            if not to_do:
-                continue
-            next_to_do = getattr(self, key)
-            break
-
-        if next_to_do:
-            self.continue_prepare_todos[next_to_do.__name__] = False
-            if next_to_do == self.set_continuous_mode:
-                next_to_do(True)
-            else:
-                next_to_do()
-            return
-
-        self.serial.serial_busy.disconnect()
-        self.serial.serial_busy.connect(self.send_unsent_messages,
-                                        type=qtc.Qt.UniqueConnection)
-        self.busy = False
 
     @abstractmethod
     def receive_measurements(self, receive):
@@ -938,70 +1004,6 @@ class MeasureControllerABC(ControllerABC):                                      
         None.
         """
         return
-
-    def trigger_begin_preparation(self, energies_and_times):
-        """Trigger the first step in the preparation for measurements.
-
-        Set self.busy to true, reset all begin_prepare_todos
-        and start first step of the preparation.
-        energies_and_times is a tuple containing the energies
-        and times to set during the preparation. First the energy
-        should be set and afterwards the gain should be determined.
-
-        Parameters
-        ----------
-        energies_and_times : tuple
-            Starting energies and times the controller will
-            use if sets_energy is true.
-
-        Returns
-        -------
-        None.
-        """
-        self.busy = True
-        self.reset_preparation_todos()
-        self.__energies_and_times = energies_and_times
-        self.serial.serial_busy.connect(self.begin_preparation,
-                                        type=qtc.Qt.UniqueConnection)
-        self.begin_preparation(serial_busy=False)
-
-    def trigger_continue_preparation(self):
-        """Trigger the second step in the preparation for measurements.
-
-        Set self.busy to true, reset all continue_prepare_todos
-        and start second step of the preparation.
-
-        Returns
-        -------
-        None.
-        """
-        self.busy = True
-        self.serial.serial_busy.connect(self.continue_preparation,
-                                        type=qtc.Qt.UniqueConnection)
-        self.continue_preparation(serial_busy=False)
-
-    def reset_preparation_todos(self):
-        """Reset all the segments of preparation.
-
-        Segments are in the form [key: bool}. Those segments for
-        which the value is True will be done one at a time, in
-        the order in which keys are inserted. Segments are stored
-        in self.begin_prepare_todos and self.continue_prepare_todos.
-
-        This method can be reimplemented in subclasses if some segments
-        are to be skipped (e.g., depending on the firmware version of
-        the hardware).
-
-        The base-class implementation sets all segments to True.
-
-        Returns
-        -------
-        None.
-        """
-        for key in self.begin_prepare_todos:
-            self.begin_prepare_todos[key] = True
-        for key in self.continue_prepare_todos:
-            self.continue_prepare_todos[key] = True
 
     @abstractmethod
     def set_measurements(self, quantities):
