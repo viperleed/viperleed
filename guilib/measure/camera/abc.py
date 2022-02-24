@@ -1216,7 +1216,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         # more than 5 s longer than the expected time to
         # receive all frames needed for averaging.
         frame_time = max(self.exposure, 1000/self.get_frame_rate())
-        self.__timeout.start(frame_time * self.n_frames + 5000)
+        self.__timeout.start(int(frame_time * self.n_frames + 5000))
 
     def __already_reported(self, error_details):
         """Return whether an error was already reported.
