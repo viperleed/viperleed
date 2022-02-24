@@ -584,6 +584,11 @@ class ViPErLEEDSerial(SerialABC):
                         continue
                     self.data_received.emit(self.__measurements.copy())
                     self.__measurements = []
+                else:
+                    # We may have read only a part of the three
+                    # ADC measurements. Throw them all away. This
+                    # may swallow stray 4-long messages.
+                    self.__measurements = []
             elif len(message) == 8:
                 if self.__last_request_sent == pc_configuration:
                     info = self.__firmware_and_hardware(message)
