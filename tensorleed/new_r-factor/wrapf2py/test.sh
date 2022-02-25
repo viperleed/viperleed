@@ -10,7 +10,7 @@ cp ../rfactor.f90 ./rfactor.f90
 gfortran -c -g -Og rfactor.f90 -fbacktrace -fcheck=all -Wuninitialized -static
 
 # Subroutines must be given in lowercase letters here
-f2py -m rfactor rfactor.f90 -h rfactor.pyf --overwrite-signature --debug-capi only: prepare_beams r_pendry_beam_y r_pendry_beamset_y r_beamset_v0r_opt_on_grid parabola_lsq_fit parabola parabola_r_squared r_beamtype_grouping r2_beam_intensity r2_beamset_intensity
+f2py -m rfactor rfactor.f90 -h rfactor.pyf --overwrite-signature --debug-capi only: prepare_beams r_pendry_beam_y r_pendry_beamset_y r_beamset_v0r_opt_on_grid parabola_lsq_fit parabola parabola_r_squared r_beamtype_grouping r2_beam_intensity r2_beamset_intensity apply_beamset_shift
 f2py -c --f90flags="-g -Og -fbacktrace -fcheck=all" rfactor.pyf rfactor.f90 -I interpolation.o
 
 cp interpolation.cpython-38-darwin.so ../../../tleedmlib/wrapped

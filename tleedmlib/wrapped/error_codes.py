@@ -39,4 +39,6 @@ error_codes = {
     902: "R factor grouping was given invalid group indices",
     903: "R factor grouping encountered denominator of 0 for at least one beam",
     904: "R factor grouping for R2 encountered group with 0 total energy overlapp",
+
+    921: "Error in apply_beamset_shift, check value for fill_outside",
 }

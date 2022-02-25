@@ -77,11 +77,79 @@ subroutine r_pendry_beam_y(n_E, E_step, y1, y2, id_start_1, id_start_2, n_1, n_2
     ! calculate denominator = integral (Y1**2+Y2**2) dE
     denominator = trapez_integration_const_dx(y_squared_sum, E_step)
 
+    if (denominator < 1d-5) then
+        print*, "denominator = 0"
+        print*, "overlapp", N_overlapping_points 
+    end if
+    
     R_pendry = numerator/denominator
 
     return
 
 end subroutine r_pendry_beam_y
+
+subroutine apply_beamset_shift(n_E, n_beams, &
+    & data_1, id_start_1, n_1, &
+    & data_2, id_start_2, n_2, &
+    & shift, &
+    & fill_outside, &
+    & ierr )
+    integer, INTENT(IN)         :: n_E, n_beams
+    real(8), DIMENSION(n_E, n_beams), INTENT(INOUT)    :: data_1, data_2
+    integer, INTENT(INOUT), DIMENSION(n_beams)         :: id_start_1, id_start_2
+    integer, INTENT(INOUT), DIMENSION(n_beams)         :: n_1, n_2
+    integer, INTENT(IN)         :: shift
+
+    !f2py integer, optional :: fill_outside = 1
+    integer, INTENT(IN)                     :: fill_outside
+
+    integer, INTENT(OUT)                    :: ierr
+
+    INTEGER, DIMENSION(n_beams) :: id_min, id_max, n_overlapp
+    Integer                     ::ii
+    logical                     :: fill_NaN_internal
+    ! Takes two data arrays with n_E and E_start information and applies provided V0r shift
+    ! The rest is filled with NaNs 
+
+    ierr = 0
+
+    if (fill_outside == 1) then
+        fill_NaN_internal = .True.
+    else if (fill_outside == 0) then
+        fill_NaN_internal = .False.
+    else
+        ierr = 921
+    end if
+
+    do concurrent (ii = 1:n_beams)
+        id_min(ii) = max(id_start_1(ii), id_start_2(ii) + shift)
+        id_max(ii) = min(id_start_1(ii) + n_1(ii) - 1, id_start_2(ii) + n_2(ii) - 1 + shift)
+        n_overlapp(ii) = id_max(ii) - id_min(ii) + 1
+
+        id_start_1(ii) = id_min(ii)
+        id_start_2(ii) = id_min(ii)
+        n_1(ii) = n_overlapp(ii)
+        n_2(ii) = n_overlapp(ii)
+
+        data_1(id_min(ii) : id_max(ii), ii) = data_1(id_min(ii) : id_max(ii), ii)
+        data_2(id_min(ii) : id_max(ii), ii) = data_2(id_min(ii) - shift: id_max(ii) - shift, ii)
+
+        if (fill_NaN_internal) then
+            data_1(:id_min(ii)-1, ii) = ieee_value(real(8), ieee_signaling_nan)
+            data_1(id_max(ii)+1:, ii) = ieee_value(real(8), ieee_signaling_nan)
+            data_2(:id_min(ii)-1, ii) = ieee_value(real(8), ieee_signaling_nan)
+            data_2(id_max(ii)+1:, ii) = ieee_value(real(8), ieee_signaling_nan)
+        else
+            data_1(:id_min(ii)-1, ii) = 0
+            data_1(id_max(ii)+1:, ii) = 0
+            data_2(:id_min(ii)-1, ii) = 0
+            data_2(id_max(ii)+1:, ii) = 0
+        end if
+        
+    end do
+
+    return
+end subroutine apply_beamset_shift
 
 subroutine r2_beam_intensity(n_E, E_step, int_1, int_2, id_start_1, id_start_2, n_1, n_2, &
     V0r_shift, R2, n_overlapping_points)
@@ -247,8 +315,7 @@ subroutine r_beamset_V0r_opt_on_grid( &
     denominators_v0r = ieee_value(real(8), ieee_signaling_nan)
 
     do while(fast_search)
-
-        !print*, "Evaluated:", n_evaluated, "next step", next_step
+        print*, "Evaluated:", n_evaluated, "next step", next_step
         if (.not. evaluated(i)) then
             if (which_R == 1) then
                 call r_pendry_beamset_y(n_E, E_step, n_beams, data_1, data_2, id_start_1, id_start_2, n_1, n_2, &
@@ -432,7 +499,7 @@ subroutine r_beamset_V0r_opt_on_grid( &
 
     ! *****************************************************************************************
     ! Brute force grid - not efficient, but will always give a result
-
+    best_id = 1
     do i = 1, n_steps
         if (.not. evaluated(i)) then
             if (which_R == 1) then
@@ -657,11 +724,13 @@ subroutine r_pendry_beamset_y(n_E, E_step, n_beams, y1, y2, id_start_1, id_start
     if (ANY(ieee_is_nan(r_pendry_beams))) then
         r_pendry_weighted = ieee_value(real(8), ieee_signaling_nan)
 
-        ! do i =1, n_beams
-        !     if (ieee_is_nan(r_pendry_beams(i))) then
-        !         print*,"NaN in beam ", i
-        !     end if
-        ! end do
+        do i =1, n_beams
+            if (ieee_is_nan(r_pendry_beams(i))) then
+                print*,"NaN in beam ", i
+                print*, "num", numerators(i)
+                print*, "denom", denominators(i)
+            end if
+        end do
 
         ierr = 811
         RETURN
@@ -987,11 +1056,11 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
 
     ! Debug below...
     do i = 1, n_beams
-       print*, i
+       ! print*, i
        ! print*, n_E_out
-       print*, "n_E in", cut_n_E_beams(i)
-       print*, "n_E out", n_E_beams_out(i)
-       print*, beams_max_id_out(i)
+       ! print*, "n_E in", cut_n_E_beams(i)
+       ! print*, "n_E out", n_E_beams_out(i)
+       ! print*, beams_max_id_out(i)
         if (E_grid_in(cut_beams_max_id_in(i)) < E_grid_out(beams_max_id_out(i))) then
             print*, "issue size out - beam", i
         end if
