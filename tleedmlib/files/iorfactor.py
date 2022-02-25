@@ -617,7 +617,7 @@ def writeRfactorPdf_new(n_beams, labels, rfactor_beams,
         xy[:, 0] = energies[id_start[i] -1: id_start[i] + n_E_beams[i] -1]
         xy[:, 1] = int_1[id_start[i] -1: id_start[i] + n_E_beams[i] -1, i]
         # normalize to max of beam:
-        xy[:, 1] /= np.nanmax(int_1)
+        xy[:, 1] /= np.nanmax(xy[:, 1])
         exp_xy.append(xy)
 
 
@@ -625,7 +625,7 @@ def writeRfactorPdf_new(n_beams, labels, rfactor_beams,
         xy[:, 0] = energies[id_start[i] -1: id_start[i] + n_E_beams[i] -1]
         xy[:, 1] = int_2[id_start[i] -1: id_start[i] + n_E_beams[i] -1, i]
         # normalize to max of beam:
-        xy[:, 1] /= np.nanmax(int_2)
+        xy[:, 1] /= np.nanmax(xy[:, 1])
         theo_xy.append(xy)
 
     data = [theo_xy, exp_xy]

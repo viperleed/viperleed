@@ -272,7 +272,7 @@ def rfactor(sl, rp, index, for_error=False, only_vary=None):
         # error 903 and 904 are acceptable - that just means there are no integer/fractional beams
         if ierr != 0 :
             if ierr in (903, 904):
-                logger.debug(f"ViperLEED found not integer or fractional beams")
+                logger.debug(f"ViperLEED found either no integer or no fractional beams")
             else:
                 logger.error(f"ViPErLEED Fortran error code {ierr}: {error_codes[ierr]}")
                 raise
@@ -332,12 +332,11 @@ def rfactor(sl, rp, index, for_error=False, only_vary=None):
                 raise
             ierr = rf.apply_beamset_shift(
                 shifted_y_exp, np.copy(exp_e_start_beams_out), np.copy(exp_n_e_beams_out),
-                shifted_y_theo, np.copy(theo_e_start_beams_out), np.copy(exp_n_e_beams_out),
+                shifted_y_theo, np.copy(theo_e_start_beams_out), np.copy(theo_n_e_beams_out),
                 shift=best_v0r_step, fill_outside=1)
             if ierr != 0:
                 logger.error(f"ViPErLEED Fortran error code {ierr}: {error_codes[ierr]}")
                 raise
-
 
             # shifted_E_start_exp must be now same as shifted_E_start_theo -> no need to pass both
             # same for n_e_beams
