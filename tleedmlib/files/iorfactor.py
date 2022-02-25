@@ -595,35 +595,37 @@ def plot_analysis(exp, figs, figsize, name, namePos, oritick, plotcolors, rPos, 
 
 
 def writeRfactorPdf_new(n_beams, labels, rfactor_beams,
-                        energies, id_start_1, id_start_2,
-                        n_E_beams_1, n_E_beams_2,
-                        int_1, int_2, y_1, y_2 , outName='Rfactor_plots.pdf',
+                        energies, id_start,
+                        n_E_beams,
+                        int_1, int_2, y_1, y_2 ,
+                        outName='Rfactor_plots.pdf',
                         analysisFile='', v0i = 0., formatting=None):
+
+    # after applying the V0r shift outside, the id_start and n_E_beams should be same for experiment and theory
     global plotting
     if not plotting:
         logger.debug("Necessary modules for plotting not found. Skipping "
                      "R-factor plotting.")
         return
 
-    # must transfer
 
     # get data
     exp_xy = []
     theo_xy = []
     for i in range(n_beams):
-        xy = np.empty([n_E_beams_1[i], 2])
-        xy[:, 0] = energies[id_start_1[i] -1: id_start_1[i] + n_E_beams_1[i] -1]
-        xy[:, 1] = int_1[id_start_1[i] -1: id_start_1[i] + n_E_beams_1[i] -1, i]
+        xy = np.empty([n_E_beams[i], 2])
+        xy[:, 0] = energies[id_start[i] -1: id_start[i] + n_E_beams[i] -1]
+        xy[:, 1] = int_1[id_start[i] -1: id_start[i] + n_E_beams[i] -1, i]
         # normalize to max of beam:
-        xy[:, 1] /= np.max(int_1)
+        xy[:, 1] /= np.nanmax(int_1)
         exp_xy.append(xy)
 
 
-        xy = np.empty([n_E_beams_1[i], 2]) # want this at same range as exp only!
-        xy[:, 0] = energies[id_start_1[i] -1: id_start_1[i] + n_E_beams_1[i] -1]
-        xy[:, 1] = int_2[id_start_1[i] -1: id_start_1[i] + n_E_beams_1[i] -1, i]
+        xy = np.empty([n_E_beams[i], 2]) # want this at same range as exp only!
+        xy[:, 0] = energies[id_start[i] -1: id_start[i] + n_E_beams[i] -1]
+        xy[:, 1] = int_2[id_start[i] -1: id_start[i] + n_E_beams[i] -1, i]
         # normalize to max of beam:
-        xy[:, 1] /= np.max(int_2)
+        xy[:, 1] /= np.nanmax(int_2)
         theo_xy.append(xy)
 
     data = [theo_xy, exp_xy]
@@ -635,7 +637,8 @@ def writeRfactorPdf_new(n_beams, labels, rfactor_beams,
     if not analysisFile:
         return
 
-    figs, figsize, namePos, oritick, plotcolors, rPos, xlims, ylims = prepare_analysis_plot(formatting, exp_xy, theo_xy)
+    figs, figsize, namePos, oritick, plotcolors, rPos, xlims, ylims = \
+        prepare_analysis_plot(formatting, exp_xy, theo_xy)
 
 
     try:
@@ -648,17 +651,20 @@ def writeRfactorPdf_new(n_beams, labels, rfactor_beams,
     loglevel = logger.level
     logger.setLevel(logging.INFO)
 
+    # proper minus character
+    labels = [label.replace("-", "−") for label in labels]
+
     try:
         for i in range(n_beams):
             exp = exp_xy[i]
             theo = theo_xy[i]
-            beam_energies = energies[id_start_1[i] -1: id_start_1[i] + n_E_beams_1[i] -1]
-            y_exp = np.empty([n_E_beams_1[i], 2])
-            y_theo = np.empty([n_E_beams_1[i], 2])
+            beam_energies = energies[id_start[i] -1: id_start[i] + n_E_beams[i] -1]
+            y_exp = np.empty([n_E_beams[i], 2])
+            y_theo = np.empty([n_E_beams[i], 2])
             y_exp[:, 0] = beam_energies
-            y_exp[:, 1] = y_1[id_start_1[i] -1: id_start_1[i] + n_E_beams_1[i] -1, i]
+            y_exp[:, 1] = y_1[id_start[i] -1: id_start[i] + n_E_beams[i] -1, i]
             y_theo[:, 0] = beam_energies
-            y_theo[:, 1] = y_2[id_start_1[i] -1: id_start_1[i] + n_E_beams_1[i] -1, i]
+            y_theo[:, 1] = y_2[id_start[i] -1: id_start[i] + n_E_beams[i] -1, i]
 
             plot_analysis(exp, figs, figsize, labels[i], namePos, oritick, plotcolors, rPos, rfactor_beams[i],
                           theo, xlims, y_exp, ylims, y_theo)

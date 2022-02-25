@@ -6,7 +6,7 @@ Created on Tue Dec  3 13:39:04 2019
 
 Class storing properties and data of a beam
 """
-
+import numpy as np
 from quicktions import Fraction
 import math
 

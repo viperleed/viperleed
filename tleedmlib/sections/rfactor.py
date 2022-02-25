@@ -310,11 +310,42 @@ def rfactor(sl, rp, index, for_error=False, only_vary=None):
 
             labels = [beam.label for beam in expbeams] # TODO is this the right ordering?
 
+            # Apply v0r shift to arrays for plotting
+
+
+            shifted_intpol_exp = np.copy(exp_intpol_intensity)
+            shifted_intpol_theo = np.copy(theo_intpol_intensity)
+            shifted_y_exp = np.copy(exp_yfunc)
+            shifted_y_theo = np.copy(theo_yfunc)
+            shifted_E_start_exp = np.copy(exp_e_start_beams_out)
+            shifted_E_start_theo = np.copy(theo_e_start_beams_out)
+            shifted_n_exp = np.copy(exp_n_e_beams_out)
+            shifted_n_theo = np.copy(theo_n_e_beams_out)
+
+
+            ierr = rf.apply_beamset_shift(
+                shifted_intpol_exp, shifted_E_start_exp, shifted_n_exp,
+                shifted_intpol_theo, shifted_E_start_theo, shifted_n_theo,
+                shift=best_v0r_step, fill_outside = 1)
+            if ierr != 0:
+                logger.error(f"ViPErLEED Fortran error code {ierr}: {error_codes[ierr]}")
+                raise
+            ierr = rf.apply_beamset_shift(
+                shifted_y_exp, np.copy(exp_e_start_beams_out), np.copy(exp_n_e_beams_out),
+                shifted_y_theo, np.copy(theo_e_start_beams_out), np.copy(exp_n_e_beams_out),
+                shift=best_v0r_step, fill_outside=1)
+            if ierr != 0:
+                logger.error(f"ViPErLEED Fortran error code {ierr}: {error_codes[ierr]}")
+                raise
+
+
+            # shifted_E_start_exp must be now same as shifted_E_start_theo -> no need to pass both
+            # same for n_e_beams
             io.writeRfactorPdf_new(n_beams, labels, R_beams,
-                                   out_grid, exp_e_start_beams_out, theo_e_start_beams_out,
-                                   exp_n_e_beams_out, theo_n_e_beams_out,
-                                   exp_intpol_intensity, theo_intpol_intensity,
-                                   exp_yfunc, theo_yfunc,
+                                   out_grid, shifted_E_start_exp,
+                                   shifted_n_exp,
+                                   shifted_intpol_exp, shifted_intpol_theo,
+                                   shifted_y_exp, shifted_y_theo,
                                    outName=outname, analysisFile=aname,
                                    v0i=rp.V0_IMAG,
                                    formatting=rp.PLOT_IV
