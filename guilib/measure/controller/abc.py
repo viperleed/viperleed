@@ -786,7 +786,8 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         if next_to_do:
             todos[next_to_do.__name__] = False
             if next_to_do.__name__ == 'set_energy':
-                next_to_do(*self.first_energies_and_times)
+                # Never trigger measurements during preparation
+                next_to_do(*self.first_energies_and_times, trigger_meas=False)
             else:
                 next_to_do()
             return
@@ -806,8 +807,9 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
     def begin_preparation(self, energies_and_times):
         """Trigger the first step in the preparation for measurements.
 
-        Set self.busy to true, reset all begin_prepare_todos and
-        start first step of the preparation.
+        Set self.busy to True, reset all begin_prepare_todos and start
+        first step of the preparation. The .controller_busy() signal
+        will be emitted carrying False once all steps are complete.
 
         Parameters
         ----------
