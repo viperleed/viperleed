@@ -10,16 +10,16 @@ Author: Florian Doerr
 
 Defines the SettingsEditor class.
 """
-import configparser
-from pathlib import Path
 
-import PyQt5.QtCore as qtc
-import PyQt5.QtWidgets as qtw
+from PyQt5 import (QtCore as qtc,
+                   QtWidgets as qtw)
 
 # ViPErLEED modules
 from viperleed import guilib as gl
 from viperleed.guilib.basewidgets import QDoubleValidatorNoDot
 from viperleed.guilib.measure import uimeasurement
+from viperleed.guilib.measure.classes.settings import ViPErLEEDSettings
+
 
 TITLE = 'Measurement Settings'
 
@@ -46,8 +46,8 @@ class SettingsEditor(qtw.QDialog):
         self._glob = {}
 
         self.__para_validator = ('start_energy', 'end_energy', 'delta_energy',
-                             'measurement_time', 'limit_continuous',
-                             'cycle_time')
+                                 'measurement_time', 'limit_continuous',
+                                 'cycle_time')
         self.__para_text = ()
         self.__file_name = (uimeasurement.DEFAULT_CONFIG_PATH
                             / 'viperleed_config.ini')
@@ -105,9 +105,7 @@ class SettingsEditor(qtw.QDialog):
 
     def __read_settings(self):
         """Read configuration file."""
-        self.__settings = configparser.ConfigParser(comment_prefixes='/',
-                                                    allow_no_value=True,
-                                                    strict=False)
+        self.__settings = ViPErLEEDSettings()
         self.__settings.read(self.__file_name)
 
     def __on_undo_pressed(self):
@@ -121,5 +119,4 @@ class SettingsEditor(qtw.QDialog):
         for key in (*self.__para_validator, *self.__para_text):
             text = self._ctrls[key].displayText()
             self.__settings.set('measurement_settings', key, text)
-        with open(self.__file_name, 'w') as configfile:
-            self.__settings.write(configfile)
+        self.__settings.update_file()
