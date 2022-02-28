@@ -14,7 +14,6 @@ which gives commands to the ViPErinoSerialWorker class.
 """
 
 import time
-from collections import defaultdict
 
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtSerialPort as qts
@@ -34,21 +33,20 @@ _MANDATORY_CMD_NAMES = (
 
 class ViPErinoErrors(base.ViPErLEEDErrorEnum):
     """Errors specific to Arduino-based ViPErLEED controllers."""
-    TOO_MANY_MEASUREMENT_TYPES = (150,
-                                  "The ViPErinoController can only handle "
-                                  "as many measurement requests as there are "
-                                  "ADCs installed but more have been "
-                                  "requested.")
-    OVERLAPPING_MEASUREMENTS = (151,
-                                "At least two requested measurements concern "
-                                "the same ADC. Consider installing another "
-                                "controller to do both measurements in "
-                                "parallel.")
-    INVALID_REQUEST = (152,                                                     # TODO: fix
-                       "A measurement type has been requested that is not "
-                       "implemented on the controller side. Maybe "
-                       "implemented type has not been added in the "
-                       "controller configuration file.")
+    TOO_MANY_MEASUREMENT_TYPES = (
+        150,
+        "Can measure up to {} quantities (one per ADC), but {} were requested."
+        )
+    OVERLAPPING_MEASUREMENTS = (
+        151,
+        "Cannot measure {} and {} at the same time. "
+        "Measurements are performed by the same ADC."
+        )
+    INVALID_REQUEST = (
+        152,
+        "Cannot measure {0}. If your hardware can measure {0}, "
+        "update its corresponding configuration file (check also typos!)."
+        )
     REQUESTED_ADC_OFFLINE = (153,
                              "Requested measurement type needs associated "
                              "ADC to be available for measurements but it is "
@@ -114,13 +112,13 @@ class ViPErinoController(MeasureControllerABC):
 
     @property
     def initial_delay(self):
-        """Return the initial time delay of a measurement in seconds.
+        """Return the initial time delay of a measurement (msec).
 
         Returns
         -------
         initial_delay : float
-            The time interval between when a measurement was requested
-            and when the measurement was actually acquired. If mutliple
+            The time interval between when a measurement was triggered
+            and when the measurement was actually acquired. If multiple
             measurements are averaged over, the "time when measurements
             are actually acqiuired" is the middle time between the
             beginning and the end of the measurement.
@@ -171,12 +169,12 @@ class ViPErinoController(MeasureControllerABC):
 
     def are_settings_ok(self, settings):
         """Return whether a ViPErLEEDSettings is compatible with self."""
+        version = settings.get("controller", "firmware_version", fallback="-1")
         try:
-            version = settings.getfloat("controller", "firmware_version",
-                                        fallback=-1.0)
+            fversion = float(version)
         except (TypeError, ValueError):
-            version = -1.0
-        if version < 0:
+            fversion = -1.0
+        if fversion < 0:
             base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
                             "controller/firmware_version", "")
             return False
@@ -187,22 +185,27 @@ class ViPErinoController(MeasureControllerABC):
         # if version >= something:
         #     mandatory_commands.extend([new_command_1, new_command_2, ...])
 
+        # pylint: disable=protected-access
+        # Need to access the classe's _mandatory_settings rather
+        # than the one of self to prevent mandatory settings from
+        # newer firmware versions to stay if settings for earlier
+        # versions are loaded.
         self._mandatory_settings = [*self.__class__._mandatory_settings,
                                     *mandatory_commands]
 
         return super().are_settings_ok(settings)
 
-    def set_energy(self, energy, settle_time, *more_steps,
-                   trigger_meas=True, **_):
+    def set_energy(self, energy, settle_time, *more_steps, trigger_meas=True):
         """Set energy with associated settling time.
 
         Take the energy (or energies), get setpoint energy (or
         energies) and convert it to an integer value for the DAC.
         Afterwards send energy and time to the hardware via the
         serial. The controller will automatically trigger and
-        start measuring after setting the voltage. Each energy
-        will need a settling time associated with it which is the
-        time the hardware will wait before setting the next energy.
+        start measuring after setting the voltage if trigger_meas
+        is True. Each energy will need a settling time associated
+        with it which is the time the hardware will wait before
+        setting the next energy.
 
         Parameters
         ----------
@@ -218,15 +221,20 @@ class ViPErinoController(MeasureControllerABC):
             The last step will be the final energy that is set and
             should ensure stabilization of the electronics.
         trigger_meas : bool, optional
-            True if the controllers are supposed to take
-            measurements after the energy has been set.
-            Default is True.
+            True if the controller is supposed to take measurements
+            after the energy has been set. Default is True.
 
         Raises
         ------
         TypeError
             If an odd number of more_steps are given
         """
+        # super() call needed to store time_to_trigger.
+        super().set_energy(energy, settle_time, *more_steps,
+                           trigger_meas=trigger_meas)
+        # pylint: disable=too-many-locals
+        # Count = 16. Quite a few, but makes it easier to understand
+        # the nominal-energy-to-DAC-value conversion.
         _cmd_name = 'PC_SET_VOLTAGE' if trigger_meas else 'PC_SET_VOLTAGE_ONLY'
         cmd = self.settings.get('available_commands', _cmd_name)
         try:
@@ -236,7 +244,7 @@ class ViPErinoController(MeasureControllerABC):
             base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
                             'measurement_settings/v_ref_dac', "")
 
-        dac_out_vs_nominal_energy = 10/1000  # 10V / 1000 eV
+        dac_out_vs_nominal_energy = 10/1000  # 10 V / 1000 eV
         output_gain = 4  # Gain of the output stage on board
         conversion_factor = dac_out_vs_nominal_energy * 65536 / (v_ref_dac *
                                                                  output_gain)
@@ -247,12 +255,12 @@ class ViPErinoController(MeasureControllerABC):
                             "Number of energy and time steps do not match. "
                             "Expected an even number of arguments, found "
                             f"{len(more_steps) + 2} arguments.")
-        number_of_steps = int(len(energies_and_times)/2)
+        number_of_steps = len(energies_and_times) // 2
 
         for i in range(number_of_steps):
             tmp_energy = self.true_energy_to_setpoint(energies_and_times[2*i])
             tmp_energy = int(round(tmp_energy * conversion_factor))
-            tmp_energy = max(min(tmp_energy, 65535), 0)
+            tmp_energy = max(0, min(tmp_energy, 65535))
             energies_and_times[2*i] = tmp_energy
         self.send_message(cmd, energies_and_times)
 
@@ -288,6 +296,8 @@ class ViPErinoController(MeasureControllerABC):
                 'measurement_settings', 'num_meas_to_average', fallback=1
                 )
         except (TypeError, ValueError):
+            # pylint: disable=redefined-variable-type
+            # Seems a pylint bug
             num_meas_to_average = 1
             base.emit_error(
                 self, ControllerErrors.INVALID_SETTING_WITH_FALLBACK,
@@ -347,7 +357,7 @@ class ViPErinoController(MeasureControllerABC):
         message = [update_rate, *self.__adc_channels[:-1]]
         self.send_message(cmd, message)
 
-    def receive_measurements(self, receive):
+    def receive_measurements(self, receive):                                    # TODO: counterintuitive as it also gets hardware/firmware info
         """Receive measurements from the serial.
 
         For measurements:
@@ -369,9 +379,8 @@ class ViPErinoController(MeasureControllerABC):
         Parameters
         ----------
         receive : list or dict
-            Data received from the serial.
-            list if a measurement has been received
-            dict if the hardware configuration has been received
+            Data received from the serial: list if a measurement,
+            dict if the hardware configuration.
 
         Returns
         -------
@@ -383,6 +392,9 @@ class ViPErinoController(MeasureControllerABC):
             return
 
         # Otherwise it is data
+        # TODO: here we have to actually convert "I0 (in mV)" to
+        # "I0 (in uA)". Similarly, here we could convert the mV
+        # of the thermocouple into a temperature.
         for i, measurement in enumerate(self.__adc_measurement_types):
             if measurement is not None:
                 self.measurements[measurement] = [receive[i]]
@@ -399,6 +411,7 @@ class ViPErinoController(MeasureControllerABC):
         -------
         None.
         """
+        super().measure_now()
         cmd = self.settings.get('available_commands', 'PC_MEASURE_ONLY')
         self.send_message(cmd)
 
@@ -412,6 +425,7 @@ class ViPErinoController(MeasureControllerABC):
         -------
         None.
         """
+        super().abort_and_reset()
         pc_reset = self.settings.get('available_commands', 'PC_RESET')
         self.send_message(pc_reset)
 
@@ -431,9 +445,9 @@ class ViPErinoController(MeasureControllerABC):
 
         Parameters
         ----------
-        requested : list of strings
-            Contains all of the requested
-            measurement types.
+        quantities : Sequence
+            All the quantities to be measured. Each should be
+            convertible to a QuantityInfo.
 
         Returns
         -------
@@ -454,33 +468,40 @@ class ViPErinoController(MeasureControllerABC):
         self.__adc_measurement_types = [None]*n_devices
         self.__adc_channels = [0]*n_devices
         if len(quantities) > n_devices:
-            base.emit_error(self, ViPErinoErrors.TOO_MANY_MEASUREMENT_TYPES)
+            base.emit_error(self, ViPErinoErrors.TOO_MANY_MEASUREMENT_TYPES,
+                            n_devices, len(quantities))
             return
         for quantity in quantities:
             for i, measurement_device in enumerate(measurement_devices):
                 if quantity not in measurement_device:
                     continue
                 if self.__adc_measurement_types[i] is not None:
-                    base.emit_error(self,
-                                    ViPErinoErrors.OVERLAPPING_MEASUREMENTS)
+                    base.emit_error(
+                        self, ViPErinoErrors.OVERLAPPING_MEASUREMENTS,
+                        quantity, self.__adc_measurement_types[i].label
+                        )
                     return
+
                 try:
                     channel = self.settings.getint('controller', quantity,
                                                    fallback=-1)
                 except (TypeError, ValueError):
+                    # pylint: disable=redefined-variable-type
+                    # Seems a pylint bug.
                     # Cannot convert to int
                     channel = -1
                 if channel < 0:
                     base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
                                     f'controller/{quantity}', '')
                     return
+
                 self.__adc_channels[i] = channel
                 self.__adc_measurement_types[i] = (
                     QuantityInfo.from_label(quantity)
                     )
                 break
             else:
-                base.emit_error(self, ViPErinoErrors.INVALID_REQUEST)
+                base.emit_error(self, ViPErinoErrors.INVALID_REQUEST, quantity)
                 return
         super().set_measurements(quantities)
 
@@ -528,17 +549,19 @@ class ViPErinoController(MeasureControllerABC):
 
     @property
     def measurement_interval(self):
-        """Return the time interval between measurements in seconds."""
+        """Return the time interval between measurements (msec)."""
         update_rate_raw = self.settings.get('controller', 'update_rate',
                                             fallback='4')
         try:
             meas_f = self.settings.getint('adc_update_rate', update_rate_raw,
                                           fallback=50)
         except (TypeError, ValueError):
+            # pylint: disable=redefined-variable-type
+            # Seems a pylint bug.
             meas_f = 50
             base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
                             f"adc_update_rate/{update_rate_raw}", "")
-        return 1/meas_f
+        return 1000 / meas_f
 
     def list_devices(self):
         """List Arduino Micro VipErLEED hardware.

@@ -8,7 +8,7 @@ Created: 2021-11-12
 Author: Michele Riva
 Author: Florian Doerr
 
-Defines the DataPoints class.
+Defines the QuantityInfo and DataPoints classes.
 """
 import csv
 import re
@@ -18,7 +18,6 @@ from collections import defaultdict
 import enum
 
 from PyQt5 import QtCore as qtc
-import numpy as np
 
 # ViPErLEED modules
 from viperleed.guilib.measure.hardwarebase import (
@@ -165,6 +164,7 @@ class QuantityInfo(enum.Enum):
         return self.value[0]
 
 
+# too-many-instance-attributes
 class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
     """Data storage class."""
     # Is emitted when an error occurs
@@ -232,11 +232,11 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
     @property
     def is_time_resolved(self):
         """Check if the contained data is time-resolved."""
-        if self.time_resolved != None:
+        if self.time_resolved is not None:
             return self.time_resolved
         if self.has_data:
             # Only if there are times saved already it is possible to
-            # decide if the measurement is a time or energy resolved
+            # decide if the measurement is a time- or energy-resolved
             # measurement.
             if any(len(t) > 1 for t in self[0][QuantityInfo.TIMES].values()):
                 return True
@@ -246,14 +246,17 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
     def time_resolved(self):
         """Return whether data is time-resolved.
 
-        None if it has not been set.
+        Returns
+        -------
+        time_resolved : bool or None
+            None if it has not been set yet.
         """
         return self.__time_resolved
 
     @time_resolved.setter
     def time_resolved(self, resolved):
         """Set whether data is time-resolved if not present."""
-        if self.__time_resolved != None:
+        if self.__time_resolved is not None:
             raise RuntimeError(
                 "time_resolved can only be set once, "
                 "but it was attempted to set it again."
@@ -294,7 +297,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         self.__check_data(value)
         self.__list.insert(index, value)
 
-    def add_data(self, new_data, controller, primary_delay=0):                  # time_to_trigger?
+    def add_data(self, new_data, controller):
         """Add new data to the currently active data point.
 
         Parameters
@@ -306,10 +309,6 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                 The data to be added for this quantity.
         controller : ControllerABC
             The controller that performed the measurement.
-        primary_delay : float, optional                                         # TODO: wouldn't it be easier to make it a property of ControllerABC (updated whenever .set_energy is called)? Perhaps we should wait the energy generators though.
-            Time in milliseconds between when the primary
-            controller was sent a command to set the current
-            energy and the time it triggered measurements
 
         Emits
         -----
@@ -323,9 +322,8 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                 self[-1][quantity][controller].extend(values)
 
         if not self[-1][QuantityInfo.TIMES][controller]:
-            time = controller.serial.time_stamp                                 # TODO: make it a controller property, perhaps with a nicer name?
-            if primary_delay:
-                time += primary_delay/1000
+            time = (controller.serial.time_stamp
+                    + controller.time_to_trigger/1000)
             self[-1][QuantityInfo.TIMES][controller].append(time)
 
     def add_image_names(self, name):
@@ -357,15 +355,15 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                 or len(self) == 1  # First energy step
                     or ctrl == self.primary_controller):
                 first_time -= self.__primary_first_time
-                first_time += ctrl.initial_delay
+                first_time += ctrl.initial_delay / 1000
             else:
                 first_time = (self[-2][time][ctrl][-1] +
-                              ctrl.measurement_interval)
+                              ctrl.measurement_interval / 1000)
             if ctrl.measured_quantities:
                 quantity = ctrl.measured_quantities[0]
                 n_measurements = len(self[-1][quantity][ctrl])
                 self[-1][time][ctrl] = [
-                    first_time + ctrl.measurement_interval * i
+                    first_time + ctrl.measurement_interval * i / 1000
                     for i in range(n_measurements)
                     ]
             else:
@@ -529,6 +527,10 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         RuntimeError
             If this method is called before .primary_controller
             was set.
+        ValueError
+            If the new_data_point created does not fit with
+            already present data (i.e., if it contains different
+            controllers and different cameras than already there).
         """
         if not self.primary_controller:
             raise RuntimeError(
@@ -659,12 +661,11 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                 quantity = ctrl.measured_quantities[0]
                 n_measurements = len(self[-1][quantity][ctrl])
                 self[-1][QuantityInfo.TIMES][ctrl] = [
-                    first_time + ctrl.measurement_interval * i
+                    first_time + ctrl.measurement_interval * i / 1000
                     for i in range(n_measurements)
                     ]
             else:
-                self[-1][time][ctrl][0] = first_time
-
+                self[-1][QuantityInfo.TIMES][ctrl][0] = first_time
 
     def save_data(self, csv_name):
         """Save data to file.

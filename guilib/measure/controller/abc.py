@@ -16,6 +16,7 @@ commands to the LEED electronics.
 
 from abc import abstractmethod
 from collections import defaultdict
+from copy import deepcopy
 
 from numpy.polynomial.polynomial import Polynomial
 from PyQt5 import QtCore as qtc
@@ -73,12 +74,13 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
     # class know that the controller is done measuring. If the
     # primary controller does not take measurements it should emit an
     # empty dictionary.
-    data_ready = qtc.pyqtSignal(object, dict)
+    data_ready = qtc.pyqtSignal(dict)
+
+    controller_busy = qtc.pyqtSignal(bool)
 
     _mandatory_settings = [
         ('controller', 'serial_port_class'),
         ]
-    controller_busy = qtc.pyqtSignal(bool)
 
     def __init__(self, settings=None, port_name='', sets_energy=False):
         """Initialise the controller instance.
@@ -122,6 +124,9 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
 
         self.__port_name = port_name
         self.__energy_calibration = None
+
+        # Set in self.set_energy to the sum of the waiting times
+        self._time_to_trigger = 0
 
         # __can_continue_preparation decides whether the controller
         # can start the second part of the preparation, i.e., the
@@ -248,47 +253,98 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
 
     @property
     def hv_settle_time(self):
-        """Return the energy settle time."""
-        if self.settings:
-            return self.settings.getint(
-                'measurement_settings', 'hv_settle_time', fallback=2000
-                )
-        return 2000
+        """Return the time it takes to settle the energy (msec)."""
+        if not self.sets_energy:
+            raise RuntimeError("Should never ask the hv_settle_time for "
+                               "a controller that does not .sets_energy")
+        # pylint: disable=redefined-variable-type
+        # Seems a pylint bug
+        fallback = 2000
+        if not self.settings:
+            return fallback
+        try:
+            # Mandatory for a controller that .sets_energy.
+            settle_t = self.settings.getint('measurement_settings',
+                                            'hv_settle_time')
+        except (TypeError, ValueError):
+            # Not an int
+            settle_t = fallback
+            base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
+                            'measurement_settings/hv_settle_time')
+        return settle_t
 
     @property
     def i0_settle_time(self):
-        """Return the current settle time."""
-        if self.settings:
-            return self.settings.getint(
-                'measurement_settings', 'i0_settle_time', fallback=2000
-                )
-        return 2000
+        """Return the time it takes to settle the beam current (msec)."""
+        if not self.sets_energy:
+            raise RuntimeError("Should never ask the i0_settle_time for "
+                               "a controller that does not .sets_energy")
+        # pylint: disable=redefined-variable-type
+        # Seems a pylint bug
+        fallback = 2000
+        if not self.settings:
+            return fallback
+        try:
+            # Mandatory for a controller that .sets_energy
+            settle_t = self.settings.getint('measurement_settings',
+                                            'i0_settle_time')
+        except (TypeError, ValueError):
+            # Not an int
+            settle_t = fallback
+            base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
+                            'measurement_settings/i0_settle_time')
+        return settle_t
 
     @property
     def initial_delay(self):
-        """Return the initial time delay of a measurement in seconds.
+        """Return the initial time delay of a measurement (msec).
 
         Returns
         -------
         initial_delay : float
-            The time interval between when a measurement was requested
+            The time interval between when a measurement was triggered
             and when the measurement was actually acquired. If mutliple
             measurements are averaged over, the "time when measurements
             are actually acqiuired" should be the middle time between
             the beginning and the end of the measurement.
         """
-        return self.settings.getfloat(
-            'controller', 'initial_delay', fallback=0
-            )
+        # pylint: disable=redefined-variable-type
+        # Seems a pylint bug
+        fallback = 0.0
+        if not self.settings:
+            return fallback
+        try:
+            delay = self.settings.getfloat('controller', 'initial_delay',
+                                           fallback=fallback)
+        except (TypeError, ValueError):
+            # Not a float
+            delay = fallback
+            base.emit_error(self,
+                            ControllerErrors.INVALID_SETTING_WITH_FALLBACK,
+                            '', 'controller/initial_delay', delay)
+        return delay
 
     @property
     def long_settle_time(self):
-        """Return the first settle time."""
-        if self.settings:
-            return self.settings.getint(
-                'measurement_settings', 'first_settle_time', fallback=3000
-                )
-        return 3000
+        """Return the first settle time (msec)."""                              # TODO: doc
+        if not self.sets_energy:
+            raise RuntimeError("Should never ask the long_settle_time for "
+                               "a controller that does not .sets_energy")
+        # pylint: disable=redefined-variable-type
+        # Seems a pylint bug
+        fallback = 5000
+        if not self.settings:
+            return fallback
+        try:
+            # Mandatory for a controller that .sets_energy
+            settle_t = self.settings.getint('measurement_settings',
+                                            'first_settle_time')
+        except (TypeError, ValueError):
+            # Not an int
+            settle_t = fallback
+            base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
+                            'measurement_settings/i0_settle_time')
+        return settle_t
 
     @property
     @abstractmethod
@@ -365,6 +421,22 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
     def settings(self, new_settings):
         """Set new settings for this controller."""
         self.set_settings(new_settings)
+
+    @property
+    def time_to_trigger(self):
+        """Return the time required for triggering measurements.
+
+        Returns
+        -------
+        time_to_trigger : int
+            Time interval in milliseconds between setting the
+            last energy and emitting the .about_to_trigger
+            signal. If this controller is not responsible for
+            setting energies, time_to_trigger is zero.
+        """
+        if not self.sets_energy:
+            return 0
+        return self._time_to_trigger
 
     def set_settings(self, new_settings):  # too-complex
         """Set new settings for this controller.
@@ -446,6 +518,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         if self.__port_name:
             self.serial.serial_connect()
         self.__settings = self.serial.port_settings
+        self._time_to_trigger = 0
         self.__hash = -1
 
     # pylint: disable=no-self-use
@@ -485,10 +558,11 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         """
         # The next extra settings are mandatory only for a
         # controller that sets the LEED energy on the optics
-        extra_mandatory = []
+        extra_mandatory = ()
         if self.sets_energy:
-            extra_mandatory = [('measurement_settings', 'i0_settle_time'),
-                               ('measurement_settings', 'hv_settle_time')]
+            extra_mandatory = (('measurement_settings', 'i0_settle_time'),
+                               ('measurement_settings', 'hv_settle_time'),
+                               ('measurement_settings', 'first_settle_time'))
 
         invalid = settings.has_settings(*self._mandatory_settings,
                                         *extra_mandatory)
@@ -500,15 +574,15 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         return True
 
     @abstractmethod
-    def set_energy(self, energy, settle_time, *more_steps,
-                   trigger_meas=True, **kwargs):
+    def set_energy(self, energy, settle_time, *more_steps, trigger_meas=True):
         """Set electron energy on LEED controller.
 
-        This method must be reimplemented in subclasses. The
-        reimplementation should take the energy value in eV
-        and other optional data needed by the serial interface
-        and turn them into a message that can be sent via
-        self.__serial.send_message(message, *other_messages).
+        This method must be extended in subclasses by calling super()
+        ant some point. The reimplementation should take the energy
+        value(s) in eV, the wating times (in msec) and the keyword
+        argument trigger_meas, together with other optional data to be
+        read from self.settings, and turn them into messages that can
+        be sent via self.send_message(*messages).
 
         Conversion from the desired, true electron energy (i.e.,
         the energy that the electrons will have when exiting the
@@ -534,15 +608,12 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
             after the energy has been set. Default is True. The base
             ControllerABC cannot take measurements, therefore this
             parameter is only used to emit an about to trigger if True.
-        **kwargs : object
-            Other keyword-only arguments that may be necessary in
-            concrete subclasses.
 
         Returns
         -------
         None.
         """
-        return
+        self._time_to_trigger = settle_time + sum(more_steps[1::2])
 
     def true_energy_to_setpoint(self, energy):
         """Take requested energy and convert it to the energy to set.
@@ -567,7 +638,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         to_setpoint = self.energy_calibration_curve
         return to_setpoint(energy)
 
-    def make_serial(self):
+    def make_serial(self):   # TODO: unused?
         """Create serial port object and connect to it."""
         self.serial.port = self.settings.get('controller', 'port_name',
                                              fallback='None')
@@ -619,18 +690,19 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         self.busy = False
 
     @abstractmethod
-    def abort_and_reset(self):
+    def abort_and_reset(self):  # TODO: Confusing. Perhaps remove altogether?
         """Abort current task and reset the controller.
 
-        This method must be reimplemented in subclasses.
-        Abort what the controller is doing right now, reset
-        it and return to waiting for further instructions.
+        This method must be extended in subclasses by calling
+        super(). Abort what the controller is doing right now,
+        reset it and return to waiting for further instructions.
 
         Returns
         -------
         None.
         """
-        return
+        self._time_to_trigger = 0
+        # TODO: check other stuff that has to be reset.
 
     @abstractmethod
     def stop(self):
@@ -855,37 +927,23 @@ class MeasureControllerABC(ControllerABC):
         self.__measured_quantities = tuple()
 
     @abstractmethod
-    def abort_and_reset(self):
-        """Abort current task and reset the controller.
-
-        This method must be reimplemented in subclasses.
-        Abort what the controller is doing right now, reset
-        it and return to waiting for further instructions.
-
-        Returns
-        -------
-        None.
-        """
-        return
-
-    @abstractmethod
     def measure_now(self):
         """Take a measurement.
 
-        This method must be reimplemented in subclasses. It is
-        supposed to be called after preparing the controller for
-        a measurement and after an energy has been set on the
-        controller. It should only trigger a measurement and
-        send additional data if needed.
+        This method must be extended in subclasses by calling
+        super(). It is supposed to be called after preparing
+        the controller for a measurement and after an energy
+        has been set on the controller. It should only trigger
+        measurements (and send additional data if needed).
 
         It should take all required data for this operation from
-        the settings property derived from the configuration file.
+        self.settings (and other attributes of self).
 
         Returns
         -------
         None.
         """
-        return
+        self._time_to_trigger = 0
 
     @property
     def measured_quantities(self):
@@ -895,7 +953,7 @@ class MeasureControllerABC(ControllerABC):
     @property
     @abstractmethod
     def measurement_interval(self):
-        """Return the time interval between measurements in seconds."""
+        """Return the time interval between measurements (msec)."""
         return
 
     def measures(self, quantity):
@@ -903,7 +961,7 @@ class MeasureControllerABC(ControllerABC):
         return quantity in self.measured_quantities
 
     @abstractmethod
-    def receive_measurements(self, receive):
+    def receive_measurements(self, receive):                                    # TODO: rename on_measurements_ready?
         """Receive measurements from the serial.
 
         This function has to be reimplemented in subclasses.
@@ -936,7 +994,7 @@ class MeasureControllerABC(ControllerABC):
         """Emit measurements and change busy mode.
 
         The busy attribute will let the measurement class know if
-        it can continue with the next step in´the measurement cycle.
+        it can continue with the next step in the measurement cycle.
         Once all of the controllers and cameras are not busy anymore,
         the signal for the next step will be sent.
 
@@ -952,13 +1010,12 @@ class MeasureControllerABC(ControllerABC):
         None.
         """
         self.busy = False
-        self.data_ready.emit(self, self.measurements.copy())
+        self.data_ready.emit(deepcopy(self.measurements))
         for key in self.measurements:
             self.measurements[key] = []
 
     @abstractmethod
-    def set_energy(self, energy, settle_time, *more_steps,
-                   trigger_meas=True, **kwargs):
+    def set_energy(self, energy, settle_time, *more_steps, trigger_meas=True):
         """Set electron energy on LEED controller.
 
         This method must be reimplemented in subclasses. The
@@ -993,15 +1050,13 @@ class MeasureControllerABC(ControllerABC):
             True if the controllers are supposed to take
             measurements after the energy has been set.
             Default is True.
-        **kwargs : object
-            Other keyword-only arguments that may be necessary in
-            concrete subclasses.
 
         Returns
         -------
         None.
         """
-        return
+        super().set_energy(energy, settle_time, *more_steps,
+                           trigger_meas=trigger_meas)
 
     @abstractmethod
     def set_measurements(self, quantities):
@@ -1062,7 +1117,7 @@ class MeasureControllerABC(ControllerABC):
 
             # Connect serial about_to_trigger signal to controller
             # about_to_trigger signal.
-            self.serial.about_to_trigger.connect(self.about_to_trigger.emit)
+            self.serial.about_to_trigger.connect(self.about_to_trigger)
 
     @abstractmethod
     def set_continuous_mode(self, continuous=True):
