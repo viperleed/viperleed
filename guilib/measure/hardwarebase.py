@@ -13,7 +13,6 @@ by multiple ViPErLEED hardware objects.
 """
 
 from abc import ABCMeta
-from configparser import ConfigParser
 import inspect
 from pathlib import Path
 import enum
@@ -24,8 +23,8 @@ from PyQt5 import (QtWidgets as qtw, QtCore as qtc)
 from viperleed.guilib import measure as vpr_measure
 
 
-DEFAULT_CONFIG_PATH = (Path(inspect.getfile(vpr_measure)).parent
-                       / '_defaults')
+DEFAULTS_PATH = (Path(inspect.getfile(vpr_measure)).parent                      # TODO: get it from system settings
+                 / '_defaults')
 
 
 ################################## FUNCTIONS ##################################
@@ -112,7 +111,7 @@ def emit_error(sender, error, *msg_args, **msg_kwargs):
     sender.error_occurred.emit((error_code, error_msg))
 
 
-def get_device_config(device_name, directory=DEFAULT_CONFIG_PATH,
+def get_device_config(device_name, directory=DEFAULTS_PATH,
                       prompt_if_invalid=True, parent_widget=None):
     """Return the configuration file for a specific device.
 
@@ -153,7 +152,7 @@ def get_device_config(device_name, directory=DEFAULT_CONFIG_PATH,
                     if f.is_file() and f.suffix == '.ini']
     device_config_files = []
     for config_name in config_files:
-        with open(config_name, 'r') as config_file:
+        with open(config_name, 'r', encoding='utf-8') as config_file:
             if device_name in config_file.read():
                 device_config_files.append(config_name)
 

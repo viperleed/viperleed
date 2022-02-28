@@ -28,11 +28,12 @@ _MEASURE_PATH = Path(__file__).parent.parent
 SYSTEM_CONFIG_PATH = _MEASURE_PATH / "_defaults" / "_system_settings.ini"
 
 
-def get_system_config():
+def get_system_config():                                                        # TODO: move to hardwarebase?
     """Return a ConfigParser loaded with system settings."""
     config = ConfigParser()
     config.read(SYSTEM_CONFIG_PATH)
     return config
+
 
 def _interpolate_config_path(filenames):
     """Interpolate filenames with system settings.
@@ -123,7 +124,7 @@ class ViPErLEEDSettings(ConfigParser):
         self.__comments = defaultdict(list)
         self.__last_file = ""
 
-    @classmethod
+    @classmethod  # too-complex
     def from_settings(cls, settings, find_from=None):
         """Return a ViPErLEEDSettings from the settings passed.
 
@@ -208,13 +209,12 @@ class ViPErLEEDSettings(ConfigParser):
         """Return the path to the last file read."""
         return self.__last_file
 
-    def getsequence(self, section, option, *, raw=False, vars=None,
-                 fallback=_UNSET, **kwargs):
+    def getsequence(self, section, option, *, fallback=_UNSET, **kwargs):
         """Return a section/option as a sequence."""
         conv = ast.literal_eval
         try:
-            converted = self._get_conv(section, option, conv, raw=raw,
-                                       vars=vars, fallback=fallback, **kwargs)
+            converted = self._get_conv(section, option, conv,
+                                       fallback=fallback, **kwargs)
         except (ValueError, TypeError, SyntaxError,
                 MemoryError, RecursionError) as err:
             raise NotASequenceError(f"Could not convert {section}/{option} "

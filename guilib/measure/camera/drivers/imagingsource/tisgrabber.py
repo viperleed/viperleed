@@ -118,6 +118,8 @@ class SinkFormat(Enum):
         ImagingSourceError
             If sink_format would yield .NONE or .MEGA
         """
+        # pylint: disable=redefined-variable-type
+        # Easier not to have different names.
         if isinstance(sink_format, str):
             sink_format = getattr(cls, sink_format, None)
             if sink_format is None:

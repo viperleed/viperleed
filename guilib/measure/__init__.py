@@ -1,5 +1,15 @@
-"""
-TLEEDMAP GUI - measure module
+"""Package measure of viperleed.guilib.
+
+========================================
+   ViPErLEED Graphical User Interface
+========================================
+
+Created: 2021-12-09
+Author: Michele Riva
+Author: Florian Doerr
+
+This package contains all the functionality necessary to perform
+LEED-IV measurements with ViPErLEED.
 """
 
 # from viperleed.guilib.measure.hardwarebase import class_from_name

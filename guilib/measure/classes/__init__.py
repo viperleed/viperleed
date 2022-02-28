@@ -11,4 +11,3 @@ This package contains generic classes used throughout the measure
 module, and that do not belong to oter subpackages (i.e., are not
 necessarily only camera-, controller-, measurement-, etc-related)
 """
-

@@ -301,15 +301,15 @@ class ImagingSourceCamera(CameraABC):
     @property
     def color_format(self):
         """Return the the color format used."""
-        color_fmt = self.settings.get('camera_settings', 'color_format',
-                                      fallback='Y16')
+        color_fmt_s = self.settings.get('camera_settings', 'color_format',
+                                          fallback='Y16')
         try:
-            color_fmt = SinkFormat.get(color_fmt)
+            color_fmt = SinkFormat.get(color_fmt_s)
         except (ValueError, ImagingSourceError):
             # pylint: disable=redefined-variable-type
             # Probably a bug.
             base.emit_error(self, CameraErrors.INVALID_SETTING_WITH_FALLBACK,
-                            color_fmt, 'camera_settings/color_format', 'Y16')
+                            color_fmt_s, 'camera_settings/color_format', 'Y16')
             color_fmt = SinkFormat.Y16
         self.settings.set('camera_settings', 'color_format', color_fmt.name)
         return color_fmt

@@ -495,13 +495,15 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         """
         return self.get_roi_size_limits()[1]
 
-    # pylint: disable=unused-private-member
-    # Bug. See issue #4756.
-    # .settings getter
-    def __get_settings(self):
+    @property
+    def settings(self):
         """Return the settings used for the camera."""
         return self.__settings
-    # pylint: enable=unused-private-member
+
+    @settings.setter
+    def settings(self, new_settings):
+        """Set new settings for the camera."""
+        self.set_settings(new_settings)
 
     # .settings setter
     def set_settings(self, new_settings):
@@ -554,8 +556,6 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         if self.roi != old_roi and self.bad_pixels:
             self.bad_pixels.apply_roi()
 
-    settings = property(__get_settings, set_settings)
-
     @property
     @abstractmethod
     def supports_trigger_burst(self):
@@ -574,7 +574,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         """
         return False
 
-    def check_loaded_settings(self):  # TODO: private?
+    def check_loaded_settings(self):
         """Check that camera and configuration settings are the same.
 
         Returns
