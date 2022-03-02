@@ -764,8 +764,9 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         if timeout >= 0:
             self.__start_timer.emit(timeout)
         all_messages = self.prepare_message_for_encoding(*all_messages)
-        if self.message_requires_response(*all_messages):
-            self.busy = True
+
+        _requires_response = self.message_requires_response(*all_messages)
+        self.busy = True
         for msg in all_messages:
             encoded = self.encode(msg)
             if self.msg_markers['START'] is not None:
@@ -777,6 +778,8 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             time.sleep(0.01)
         if self.is_measure_command(sent_command):
             self.time_stamp = time.perf_counter()
+        if not _requires_response:
+            self.busy = False
 
     def serial_connect(self, *__args):
         """Connect to currently selected port."""
