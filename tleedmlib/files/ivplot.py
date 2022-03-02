@@ -223,12 +223,14 @@ def plot_iv(data, filename, labels=[], annotations=[],
     loglevel = logger.level
     logger.setLevel(logging.INFO)
     try:
+        fig_exists = False
         for ct in range(n_beams):   # iterate through beams
             if all([len(xy_per_beam_per_dataset[i][ct]) == 0
                     for i in range(len(data))]):
                 continue   # no data for this beam in any dataset, skip
-            if ct % figs_per_page == 0:
+            if (ct % figs_per_page == 0) or (not fig_exists):
                 # need a new figure
+                fig_exists = True # at least one fig exists
                 fig, axs = plt.subplots(yfigs, xfigs, figsize=figsize,
                                         squeeze=False)
                 axs = axs.flatten(order='C')  # flatten row-style
