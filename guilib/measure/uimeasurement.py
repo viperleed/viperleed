@@ -11,7 +11,6 @@ Author: Florian Doerr
 Defines the Measure class.
 """
 
-import configparser
 from pathlib import Path
 import inspect
 
@@ -21,8 +20,7 @@ import PyQt5.QtWidgets as qtw
 # ViPErLEED modules
 from viperleed import guilib as gl
 from viperleed.guilib.measure.measurement import ALL_MEASUREMENTS
-from viperleed.guilib.measure.hardwarebase import get_devices
-from viperleed.guilib.basewidgets import MeasurementFigureCanvas as Figure
+from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.basewidgets import QDoubleValidatorNoDot
 
 from viperleed.guilib.measure.camera.abc import CameraABC
@@ -30,21 +28,30 @@ from viperleed.guilib.measure.controller.abc import ControllerABC
 from viperleed.guilib.measure.measurement.abc import MeasurementABC
 from viperleed.guilib.measure.widgets.camerawidgets import CameraViewer
 from viperleed.guilib.measure.uimeasurementsettings import SettingsEditor
-from viperleed.guilib.measure.datapoints import DataPoints, QuantityInfo
+from viperleed.guilib.measure.datapoints import DataPoints
 from viperleed.guilib.measure.widgets.measurement_plot import MeasurementPlot
 from viperleed.guilib.measure import dialogs
-from viperleed.guilib.measure.classes.settings import ViPErLEEDSettings
+from viperleed.guilib.measure.classes.settings import (
+    ViPErLEEDSettings, MissingSettingsFileError
+    )
 
 # temporary solution till we have a system config file
 from viperleed.guilib import measure as vpr_measure
 
 
-DEFAULT_CONFIG_PATH = (Path(inspect.getfile(vpr_measure)).parent
+DEFAULT_CONFIG_PATH = (Path(inspect.getfile(vpr_measure)).parent                # TODO: Get it from system settings
                        / 'configuration')
 
 TITLE = 'Measurement UI'
 
 
+class UIErrors(base.ViPErLEEDErrorEnum):
+    """Class for errors occurring in the UI."""
+    FILE_NOT_FOUND_ERROR = (1000, "Could not find file {}.\n{}")
+    FILE_UNSUPPORTED = (1001, "Cannot open {}.\n{}")
+
+
+# too-many-instance-attributes
 class Measure(gl.ViPErLEEDPluginBase):
     """A class that allows to take measurements."""
 
@@ -96,7 +103,7 @@ class Measure(gl.ViPErLEEDPluginBase):
         self.__delayed_start.timeout.connect(self.__run_measurement)
         self.__camera_viewers = []
 
-    def __compose(self):
+    def __compose(self):  # too-many-statements
         """Prepare menu."""
         self.setStatusBar(qtw.QStatusBar())
         self.setCentralWidget(qtw.QWidget())
@@ -155,9 +162,9 @@ class Measure(gl.ViPErLEEDPluginBase):
         menu.insertMenu(self.about_action, devices_menu)
         cam_devices = devices_menu.addMenu("Cameras")
         controller_devices = devices_menu.addMenu("Controllers")
-        for camera in get_devices("camera"):
+        for camera in base.get_devices("camera"):
             cam_devices.addAction(camera)
-        for controller in get_devices("controller"):
+        for controller in base.get_devices("controller"):
             controller_devices.addAction(controller)
 
         tools_menu = self._ctrls['menus']['tools']
@@ -167,7 +174,7 @@ class Measure(gl.ViPErLEEDPluginBase):
         self._dialogs['bad_px_finder'].setModal(True)
 
     def __run_measurement(self):
-        self.measurement.begin_measurement_preparation()
+        self.measurement.begin_preparation()
         self.__switch_enabled(False)
         self.statusBar().showMessage('Busy')
 
@@ -177,6 +184,7 @@ class Measure(gl.ViPErLEEDPluginBase):
             controller.disconnect_()
         self.__switch_enabled(True)
         self.statusBar().showMessage('Ready')
+        print("\n#### DONE! ####")
 
     def __switch_enabled(self, idle):
         """Switch enabled status of buttons.
@@ -192,9 +200,6 @@ class Measure(gl.ViPErLEEDPluginBase):
         self._ctrls['settings_editor'].setEnabled(idle)
         self.menuBar().setEnabled(idle)
 
-    def __on_measurement_finished(self, *_):
-        print("\n#### DONE! ####")
-
     def __on_start_pressed(self):
         text = self._ctrls['select'].currentText()
         if self.measurement:
@@ -205,16 +210,14 @@ class Measure(gl.ViPErLEEDPluginBase):
             viewer.close()
         self.__camera_viewers = []
         config = ViPErLEEDSettings()
-        file_name = DEFAULT_CONFIG_PATH / 'viperleed_config.ini'
+        file_name = DEFAULT_CONFIG_PATH / 'viperleed_config.ini'                # TODO: will be one "default" per measurement type
         try:
-            f = open(file_name, 'r')
-            f.close()
             config.read(file_name)
-        except OSError:  # TODO: probably ViPErLEEDSettings does not raise this
-            raise FileNotFoundError(f"Could not open/read file: {file_name}. "
-                                    "Check if this file exists and is in the "
-                                    "correct folder.")
+        except MissingSettingsFileError as err:
+            base.emit_error(self, UIErrors.FILE_NOT_FOUND_ERROR,
+                            file_name, err)
             return
+
         measurement_cls = ALL_MEASUREMENTS[text]
         config.set('measurement_settings', 'measurement_class',
             measurement_cls.__name__)
@@ -235,7 +238,6 @@ class Measure(gl.ViPErLEEDPluginBase):
                                                       stop_on_close=False,
                                                       roi_visible=False))
         self.measurement.finished.connect(self.__on_finished)
-        self.measurement.finished.connect(self.__on_measurement_finished)
 
         self._glob['plot'].data_points = self.measurement.data_points
         self._glob['plot'].show()
@@ -255,7 +257,7 @@ class Measure(gl.ViPErLEEDPluginBase):
     def __on_set_energy(self):
         """Set energy on primary controller."""
         energy = float(self._ctrls['select'].currentText())
-        self.measurement.set_LEED_energy((energy,0))
+        self.measurement.set_leed_energy((energy,0))
 
     def __on_error_occurred(self, error_info):
         """React to an error."""
@@ -325,21 +327,16 @@ class Measure(gl.ViPErLEEDPluginBase):
         data.error_occurred.connect(self.error_occurred)
         try:
             data.read_data(csv_name)
-        except RuntimeError as err:                                             # TODO: may want to make it also an error_occurred?
-            qtw.QMessageBox.critical(self, "Error", str(err),
-                                     qtw.QMessageBox.Ok)
+        except RuntimeError as err:
+            base.emit_error(self, UIErrors.FILE_UNSUPPORTED, csv_name, err)
+            return
 
         config_name = csv_name.replace(".csv", ".ini")
-        config = configparser.ConfigParser(comment_prefixes='/',
-                                           allow_no_value=True,
-                                           strict=False)
+        config = ViPErLEEDSettings()
         try:
-            f = open(config_name, 'r')
-            f.close()
             config.read(config_name)
-        except OSError:
-            raise FileNotFoundError(f"Could not open/read file: {config_name}."
-                                    " Check if this file exists and is in the "
-                                    "correct folder.")
+        except MissingSettingsFileError as err:
+            base.emit_error(self, UIErrors.FILE_NOT_FOUND_ERROR,
+                            config_name, err)
             return
         self._glob['plot'].data_points = data
