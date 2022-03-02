@@ -13,6 +13,7 @@ Defines the Measure class.
 
 from pathlib import Path
 import inspect
+import time
 
 import PyQt5.QtCore as qtc
 import PyQt5.QtWidgets as qtw
@@ -56,6 +57,7 @@ class Measure(gl.ViPErLEEDPluginBase):
     """A class that allows to take measurements."""
 
     error_occurred = qtc.pyqtSignal(tuple)
+    _dummy_signal = qtc.pyqtSignal()
 
     def __init__(self, parent=None):
         """Initialize window."""
@@ -104,7 +106,7 @@ class Measure(gl.ViPErLEEDPluginBase):
         self.__camera_viewers = []
 
     def __compose(self):  # too-many-statements
-        """Prepare menu."""
+        """Place children widgets and menus."""
         self.setStatusBar(qtw.QStatusBar())
         self.setCentralWidget(qtw.QWidget())
         self.centralWidget().setLayout(qtw.QGridLayout())
@@ -150,7 +152,10 @@ class Measure(gl.ViPErLEEDPluginBase):
         self._glob['plot'].show()
         self.statusBar().showMessage('Ready')
 
-        # Menus
+        self.__compose_menu()
+
+    def __compose_menu(self):
+        """Put together menu."""
         menu = self.menuBar()
         file_menu = self._ctrls['menus']['file']
         menu.insertMenu(self.about_action, file_menu)
@@ -162,10 +167,14 @@ class Measure(gl.ViPErLEEDPluginBase):
         menu.insertMenu(self.about_action, devices_menu)
         cam_devices = devices_menu.addMenu("Cameras")
         controller_devices = devices_menu.addMenu("Controllers")
-        for camera in base.get_devices("camera"):
-            cam_devices.addAction(camera)
-        for controller in base.get_devices("controller"):
-            controller_devices.addAction(controller)
+        for cam_name, cam_cls in base.get_devices("camera").items():
+            act = cam_devices.addAction(cam_name)
+            act.setData(cam_cls)
+            act.triggered.connect(self.__on_camera_clicked)
+        for ctrl_name, ctrl_cls in base.get_devices("controller").items():
+            act = controller_devices.addAction(ctrl_name)
+            act.setData(ctrl_cls)
+            act.triggered.connect(self.__on_controller_clicked)
 
         tools_menu = self._ctrls['menus']['tools']
         menu.insertMenu(self.about_action, tools_menu)
@@ -178,12 +187,39 @@ class Measure(gl.ViPErLEEDPluginBase):
         self.__switch_enabled(False)
         self.statusBar().showMessage('Busy')
 
+    def __on_camera_clicked(self, *_):
+        cam_name = self.sender().text()
+        cam_cls = self.sender().data()
+        print(cam_name, cam_cls)
+
+    def __on_controller_clicked(self, *_):
+        action = self.sender()
+        ctrl_name = action.text()
+        ctrl_cls = action.data()
+        ctrl_port = ctrl_name.split("(")[1].replace(")", "")
+        ctrl = ctrl_cls(port_name=ctrl_port)                                    # TODO: would be better to get the right config file already
+
+        # TEMP FOR VIPERINO ONLY!                                               # TODO: move to a device info dialog (prob. without QThread)
+        thread = qtc.QThread()
+        ctrl.moveToThread(thread)
+        thread.start()
+        self._dummy_signal.connect(ctrl.get_hardware)
+        self._dummy_signal.emit()
+        ctrl.serial.port.waitForReadyRead(100)
+
+        print(ctrl.hardware)
+        ctrl.disconnect_()
+        thread.quit()
+        time.sleep(0.01)
+
     def __on_finished(self, *_):
         # After the measurement is done, close the serial ports.
         for controller in self.measurement.controllers:
             controller.disconnect_()
         self.__switch_enabled(True)
         self.statusBar().showMessage('Ready')
+
+    def __print_done(self):
         print("\n#### DONE! ####")
 
     def __switch_enabled(self, idle):
@@ -206,7 +242,7 @@ class Measure(gl.ViPErLEEDPluginBase):
             for thread in self.measurement.threads:
                 thread.quit()
             self.__on_finished()
-        for viewer in self.__camera_viewers:
+        for viewer in self.__camera_viewers:                                    # Maybe only those relevant for measurement?
             viewer.close()
         self.__camera_viewers = []
         config = ViPErLEEDSettings()
@@ -219,8 +255,8 @@ class Measure(gl.ViPErLEEDPluginBase):
             return
 
         measurement_cls = ALL_MEASUREMENTS[text]
-        config.set('measurement_settings', 'measurement_class',
-            measurement_cls.__name__)
+        config.set('measurement_settings', 'measurement_class',                 # TODO: should eventually not do this!
+                   measurement_cls.__name__)
         config.update_file()
 
         self.measurement = measurement_cls(config)
@@ -228,7 +264,7 @@ class Measure(gl.ViPErLEEDPluginBase):
         self.measurement.new_data_available.connect(self.__on_data_received)
 
         self._ctrls['abort'].clicked.connect(self.measurement.abort)
-        self._ctrls['set_energy'].clicked.connect(self.__on_set_energy)
+        self._ctrls['set_energy'].clicked.connect(self.__on_set_energy)         # NOT NICE! Keeps live the measurement, and appends data at random.
         self.measurement.error_occurred.connect(self.error_occurred)
         for controller in self.measurement.controllers:
             controller.error_occurred.connect(self.error_occurred)
@@ -238,6 +274,7 @@ class Measure(gl.ViPErLEEDPluginBase):
                                                       stop_on_close=False,
                                                       roi_visible=False))
         self.measurement.finished.connect(self.__on_finished)
+        self.measurement.finished.connect(self.__print_done)
 
         self._glob['plot'].data_points = self.measurement.data_points
         self._glob['plot'].show()
@@ -251,13 +288,12 @@ class Measure(gl.ViPErLEEDPluginBase):
                 f"Got unexpected sender class {meas.__class__.__name__}"
                 "for plotting measurements."
                 )
-
         self._glob['plot'].plot_new_data()
 
     def __on_set_energy(self):
         """Set energy on primary controller."""
         energy = float(self._ctrls['select'].currentText())
-        self.measurement.set_leed_energy((energy,0))
+        self.measurement.set_leed_energy(energy, 0, trigger_meas=False)
 
     def __on_error_occurred(self, error_info):
         """React to an error."""
@@ -314,8 +350,8 @@ class Measure(gl.ViPErLEEDPluginBase):
             settings.raise_()
             # Show as a window, also in case it is minimized
             settings.setWindowState(settings.windowState()
-                                  & ~qtc.Qt.WindowMinimized
-                                  | qtc.Qt.WindowActive)
+                                    & ~qtc.Qt.WindowMinimized
+                                    | qtc.Qt.WindowActive)
             return
         settings.show()
 
