@@ -554,7 +554,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         """
         self.ready_for_next_measurement()
 
-    def receive_from_controller(self, controller, receive):
+    def receive_from_controller(self, receive):
         """Receive measurement data from the controller.
 
         Append received data to the internal dictionary. Emit an
@@ -583,10 +583,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         # TODO: check if one controller can return data while
         # another controller has changed his busy state but
         # hasn't returned data yet. (race condition)
-        if controller == self.primary_controller:
-            self.data_points.add_data(receive, controller, self.primary_delay)
-        else:
-            self.data_points.add_data(receive, controller)
+        self.data_points.add_data(receive, self.sender())
         self.ready_for_next_measurement()
 
     def save_data(self):

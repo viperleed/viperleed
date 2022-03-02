@@ -192,7 +192,7 @@ class TimeResolved(MeasurementABC):
         """Do nothing."""
         return
 
-    def receive_from_controller(self, controller, receive):
+    def receive_from_controller(self, receive):
         """Receive measurement data from the controller.
 
         Append received data to the internal dictionary. Emit an
@@ -216,10 +216,7 @@ class TimeResolved(MeasurementABC):
             If the received measurement contains a label that is
             not specified in the data_points[-1] dictionary.
         """
-        if controller == self.primary_controller:
-            self.data_points.add_data(receive, controller, self.primary_delay)
-        else:
-            self.data_points.add_data(receive, controller)
+        self.data_points.add_data(receive, self.sender())
 
     def energy_generator(self):
         """Determine next energy to set.
