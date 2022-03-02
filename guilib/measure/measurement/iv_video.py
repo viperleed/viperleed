@@ -12,39 +12,79 @@ This module contains the definition of the IVVideo class
 which gives commands to the controller classes.
 """
 
-from PyQt5 import QtCore as qtc
-
-# ViPErLEED modules
-from viperleed.guilib.measure.measurement.abc import MeasurementABC
+from viperleed.guilib.measure import hardwarebase as base
+from viperleed.guilib.measure.measurement.abc import (MeasurementABC,
+                                                      MeasurementErrors)
 
 
 class IVVideo(MeasurementABC):
     """Measurement class for LEED I(V) videos."""
 
     display_name = 'I(V) video'
+    _mandatory_settings = [*MeasurementABC._mandatory_settings,
+                           ('measurement_settings', 'end_energy'),
+                           ('measurement_settings', 'delta_energy'),]
 
     def __init__(self, measurement_settings):
-        """Initialise measurement class."""
+        """Initialise measurement instance."""
         super().__init__(measurement_settings)
+        self.data_points.time_resolved = False
 
-        self.__end_energy = 0
-        self.__delta_energy = 1
-        self.__hv_settle_time = 0
-        self.__i0_settle_time = 0
-        if self.settings:
-            self.__delta_energy = self.settings.getfloat(
-                'measurement_settings', 'delta_energy', fallback=10
-                )
-            self.__end_energy = self.settings.getfloat(
-                'measurement_settings', 'end_energy', fallback=10
-                )
-        if self.primary_controller:
-            self.__hv_settle_time = self.primary_controller.hv_settle_time
-            self.__i0_settle_time = self.primary_controller.i0_settle_time
+    @property
+    def __delta_energy(self):
+        """Return the amplitude of an energy step in eV."""
+        # pylint: disable=redefined-variable-type
+        # Seems a pylint bug
 
+        # Eventually, this will be an attribute of an energy generator,
+        # and it is unclear whether we will actualy need it.
+        fallback = 0.5
+        if not self.settings:
+            return fallback
+        try:
+            delta = self.settings.getfloat('measurement_settings',
+                                           'delta_energy')
+        except (TypeError, ValueError):
+            # Not a float
+            delta = fallback
+            base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
+                            'measurement_settings/delta_energy')
+        return delta
+
+    @property
+    def __end_energy(self):
+        """Return the energy (in eV) at which the energy ramp ends."""
+        # pylint: disable=redefined-variable-type
+        # Seems a pylint bug
+
+        # Eventually, this will be an attribute of an energy generator,
+        # and it is unclear whether we will actualy need it.
+        fallback = 0
+        if not self.settings:
+            return fallback
+        try:
+            egy = self.settings.getfloat('measurement_settings', 'end_energy')
+        except (TypeError, ValueError):
+            # Not a float
+            egy = fallback
+            base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
+                            'measurement_settings/end_energy')
+        return egy
+
+    @property
+    def __i0_settle_time(self):
+        """Return the time interval for the settling of I0."""
+        if not self.primary_controller:
+            return 0
+        return self.primary_controller.i0_settle_time
+
+    @property
+    def __n_digits(self):
+        """Return the number of digts needed to represent each step."""
+        # Used for zero-padding counter in image names.
         num_meas = (1 + round((self.__end_energy - self.start_energy)
                               / self.__delta_energy))
-        self.__n_digits = len(str(num_meas))
+        return len(str(num_meas))
 
     def start_next_measurement(self):
         """Set energy and measure.
@@ -62,15 +102,18 @@ class IVVideo(MeasurementABC):
             # Necessary to force secondaries into busy,
             # before the primary returns not busy anymore.
             controller.busy = True
-        self.set_LEED_energy(self.current_energy, self.__i0_settle_time)
+        self.set_leed_energy(self.current_energy, self.__i0_settle_time)
         image_name = (f"{self.current_step_nr:0>{self.__n_digits}}_"
                       f"{self.current_energy:.1f}eV_.tiff")
-        for i, camera in enumerate(self.cameras):
+        for camera in self.cameras:
             camera.process_info.filename = image_name
             self.data_points.add_image_names(image_name)
-        self.camera_timer.start(self.__hv_settle_time)
+        # TODO: here we should start the camera no earlier than
+        # hv_settle_time, but such that image acquisition
+        # overlaps as much as possible with the measurement time!
+        self._camera_timer.start(self.hv_settle_time)
 
-    def is_finished(self):
+    def _is_finished(self):
         """Check if the full measurement cycle is done.
 
         If the energy is above the __end_energy the cycle is
@@ -81,20 +124,16 @@ class IVVideo(MeasurementABC):
         -------
         bool
         """
-        super().is_finished()
+        super()._is_finished()
         if self.current_energy >= self.__end_energy:
             return True
         self.current_energy += self.__delta_energy
         return False
 
+    # pylint: disable=useless-super-delegation
+    # We don't have anything much to do in abort() that is not
+    # already done in the ABC, but abort is abstract.
     def abort(self):
-        """Abort all current actions.
-
-        Abort and reset all variables.
-
-        Returns
-        -------
-        None.
-        """
+        """Abort all current actions."""
         super().abort()
-
+    # pylint: enable=useless-super-delegation

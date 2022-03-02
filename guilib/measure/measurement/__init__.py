@@ -19,4 +19,3 @@ from viperleed.guilib.measure.measurement.iv_video import IVVideo
 ALL_MEASUREMENTS = {cls.display_name: cls for cls in (MeasureEnergySetpoint,
                                                       TimeResolved,
                                                       IVVideo)}
-

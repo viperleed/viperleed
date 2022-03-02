@@ -31,6 +31,7 @@ class MeasureEnergySetpoint(MeasurementABC):
         """Initialise measurement class"""
         super().__init__(measurement_settings)
         self.__old_coefficients = ""
+        self.data_points.time_resolved = False
 
     @property
     def start_energy(self):
@@ -47,6 +48,8 @@ class MeasureEnergySetpoint(MeasurementABC):
         start_energy : float
             The first energy of the energy ramp.
         """
+        # pylint: disable=redefined-variable-type
+        # Seems a pylint bug
         if not self.settings:
             return 0.0
         try:
@@ -69,9 +72,12 @@ class MeasureEnergySetpoint(MeasurementABC):
     @property
     def __delta_energy(self):
         """Return the amplitude of an energy step in eV."""
+        # pylint: disable=redefined-variable-type
+        # Seems a pylint bug
+
         # Eventually, this will be an attribute of an energy generator,
         # and it is unclear whether we will actualy need it.
-        fallback = 5
+        fallback = 5.0
         if not self.settings:
             return fallback
         try:
@@ -88,6 +94,9 @@ class MeasureEnergySetpoint(MeasurementABC):
     @property
     def __end_energy(self):
         """Return the energy (in eV) at which the energy ramp ends."""
+        # pylint: disable=redefined-variable-type
+        # Seems a pylint bug
+
         # Eventually, this will be an attribute of an energy generator,
         # and it is unclear whether we will actualy need it.
         fallback = 1000
@@ -103,14 +112,7 @@ class MeasureEnergySetpoint(MeasurementABC):
                             '', 'measurement_settings/end_energy', fallback)
         return egy
 
-    @property
-    def __hv_settle_time(self):
-        """Return the time interval for the settling of energies."""
-        if not self.primary_controller:
-            return 0
-        return self.primary_controller.hv_settle_time
-
-    def begin_measurement_preparation(self):
+    def begin_preparation(self):
         """Start preparation for measurements.
 
         Prepare the controllers for a measurement which starts
@@ -118,13 +120,9 @@ class MeasureEnergySetpoint(MeasurementABC):
         first part. (Everything that is done before the starting
         energy is set.)
 
-        Returns
-        -------
-        None.
-
         Emits
         -----
-        begin_preparation
+        __preparation_started
             Starts the measurement preparation and carries
             a tuple of energies and times with it.
         """
@@ -143,7 +141,7 @@ class MeasureEnergySetpoint(MeasurementABC):
 
         self.primary_controller.settings.set('energy_calibration',
                                              'coefficients', '(0, 1)')
-        super().begin_measurement_preparation()
+        super().begin_preparation()
 
     def start_next_measurement(self):
         """Set energy and measure.
@@ -161,9 +159,9 @@ class MeasureEnergySetpoint(MeasurementABC):
             # Necessary to force secondaries into busy,
             # before the primary returns not busy anymore.
             controller.busy = True
-        self.set_LEED_energy(self.current_energy, self.__hv_settle_time)
+        self.set_leed_energy(self.current_energy, self.hv_settle_time)
 
-    def is_finished(self):
+    def _is_finished(self):
         """Check if the full measurement cycle is done.
 
         If the energy is above the __end_energy the cycle is
@@ -174,7 +172,7 @@ class MeasureEnergySetpoint(MeasurementABC):
         -------
         bool
         """
-        super().is_finished()
+        super()._is_finished()
         if self.current_energy >= self.__end_energy:
             self.calibrate_energy_setpoint()
             return True
@@ -202,7 +200,7 @@ class MeasureEnergySetpoint(MeasurementABC):
 
         Returns
         -------
-        None
+        None.
         """
         data, nominal_energies = (
             self.data_points.get_energy_resolved_data(QuantityInfo.HV)
@@ -249,7 +247,7 @@ class MeasureEnergySetpoint(MeasurementABC):
                             'devices/primary_controller', '')
             return
 
-        with open(file_name, 'w') as configfile:
+        with open(file_name, 'w', encoding='utf-8') as configfile:
             primary.settings.write(configfile)
 
     def abort(self):
