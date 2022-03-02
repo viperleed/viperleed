@@ -35,9 +35,9 @@ class SettingsEditor(qtw.QDialog):
             'start_energy': qtw.QLineEdit(''),
             'end_energy': qtw.QLineEdit(''),
             'delta_energy': qtw.QLineEdit(''),
-            'measurement_time' : qtw.QLineEdit(''),
-            'limit_continuous' : qtw.QLineEdit(''),
-            'cycle_time' : qtw.QLineEdit(''),
+            'measurement_interval' : qtw.QLineEdit(''),
+            # 'limit_continuous' : qtw.QLineEdit(''),
+            'energy_step_duration' : qtw.QLineEdit(''),
             'save': qtw.QPushButton("Apply changes"),
             'undo': qtw.QPushButton("Undo"),
             }
@@ -46,8 +46,8 @@ class SettingsEditor(qtw.QDialog):
         self._glob = {}
 
         self.__para_validator = ('start_energy', 'end_energy', 'delta_energy',
-                                 'measurement_time', 'limit_continuous',
-                                 'cycle_time')
+                                 'measurement_interval', # 'limit_continuous',
+                                 'energy_step_duration')
         self.__para_text = ()
         self.__file_name = (uimeasurement.DEFAULT_CONFIG_PATH
                             / 'viperleed_config.ini')
@@ -94,12 +94,12 @@ class SettingsEditor(qtw.QDialog):
         layout.addWidget(self._ctrls['end_energy'], 2, 2, 1, 1)
         layout.addWidget(qtw.QLabel('Delta energy ='), 3, 1, 1, 1)
         layout.addWidget(self._ctrls['delta_energy'], 3, 2, 1, 1)
-        layout.addWidget(qtw.QLabel('measurement_time ='), 4, 1, 1, 1)
-        layout.addWidget(self._ctrls['measurement_time'], 4, 2, 1, 1)
-        layout.addWidget(qtw.QLabel('limit_continuous ='), 5, 1, 1, 1)
-        layout.addWidget(self._ctrls['limit_continuous'], 5, 2, 1, 1)
-        layout.addWidget(qtw.QLabel('cycle_time ='), 6, 1, 1, 1)
-        layout.addWidget(self._ctrls['cycle_time'], 6, 2, 1, 1)
+        layout.addWidget(qtw.QLabel('measurement_interval ='), 4, 1, 1, 1)
+        layout.addWidget(self._ctrls['measurement_interval'], 4, 2, 1, 1)
+        # layout.addWidget(qtw.QLabel('limit_continuous ='), 5, 1, 1, 1)
+        # layout.addWidget(self._ctrls['limit_continuous'], 5, 2, 1, 1)
+        layout.addWidget(qtw.QLabel('energy_step_duration ='), 6, 1, 1, 1)
+        layout.addWidget(self._ctrls['energy_step_duration'], 6, 2, 1, 1)
         layout.addWidget(self._ctrls['undo'], 7, 1, 1, 1)
         layout.addWidget(self._ctrls['save'], 7, 2, 1, 1)
 
