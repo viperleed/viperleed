@@ -230,6 +230,33 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             self.serial_busy.emit(self.busy)
 
     @property
+    def is_open(self):
+        """Return whether this port is currently open."""
+        return self.__open
+
+    @property
+    def msg_markers(self):
+        """Return the markers signaling beginning/end of messages.
+
+        Returns
+        -------
+        msg_markers : dict
+            keys : {'START', 'END'}
+            values : bytes or None
+                Only the 'START' marker may be None, in case no
+                start marker is used.
+        """
+        start_marker = self.port_settings.getint('serial_port_settings',
+                                                 'MSG_START', fallback=None)
+        if start_marker is not None:
+            start_marker = start_marker.to_bytes(1, self.byte_order)
+
+        return {'START':  start_marker,
+                'END': self.port_settings.getint(
+                    'serial_port_settings', 'MSG_END'
+                    ).to_bytes(1, self.byte_order)}
+
+    @property
     def port_name(self):
         """Return the name of the current port as a string."""
         return self.__port.portName()
@@ -268,28 +295,6 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
                 f"name type {type(new_port_name).__name__!r}. "
                 "Should be 'str' or 'QSerialPortInfo'"
                 )
-
-    @property
-    def msg_markers(self):
-        """Return the markers signaling beginning/end of messages.
-
-        Returns
-        -------
-        msg_markers : dict
-            keys : {'START', 'END'}
-            values : bytes or None
-                Only the 'START' marker may be None, in case no
-                start marker is used.
-        """
-        start_marker = self.port_settings.getint('serial_port_settings',
-                                                 'MSG_START', fallback=None)
-        if start_marker is not None:
-            start_marker = start_marker.to_bytes(1, self.byte_order)
-
-        return {'START':  start_marker,
-                'END': self.port_settings.getint(
-                    'serial_port_settings', 'MSG_END'
-                    ).to_bytes(1, self.byte_order)}
 
     @property
     def port(self):

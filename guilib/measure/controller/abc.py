@@ -744,6 +744,14 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         """List all devices of this class."""
         return
 
+    def connect_(self):
+        """Connect serial port."""
+        # TODO: should we complain if .__port_name is False-y?
+        if self.serial.is_open:
+            # Already connected
+            return
+        self.serial.serial_connect()
+
     def disconnect_(self):
         """Diconnect serial port."""
         try:
