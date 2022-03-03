@@ -129,8 +129,8 @@ class MeasureEnergySetpoint(MeasurementABC):
         if not any(c.measures(QuantityInfo.HV) for c in self.controllers):
             base.emit_error(
                 self, MeasurementErrors.INVALID_SETTINGS,
-                'devices/primary_controller or devices/primary_controller',
-                'Cannot run an energy calibration if no '
+                'devices/primary_controller or devices/secondary_controllers',
+                '\nCannot run an energy calibration if no '
                 'controller measures the beam energy.'
                 )
             return

@@ -109,6 +109,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         self.__init_err_timer.timeout.connect(self.__report_init_errors)
 
         self.error_occurred.connect(self.__on_init_errors)
+        self.error_occurred.connect(self.__on_hardware_error)  # aborts
 
         self._camera_timer = qtc.QTimer(parent=self)
         self._camera_timer.setSingleShot(True)
