@@ -17,6 +17,7 @@ from PyQt5 import QtCore as qtc
 from viperleed.guilib.measure.measurement.abc import (MeasurementABC,
                                                       MeasurementErrors)
 from viperleed.guilib.measure import hardwarebase as base
+from viperleed.guilib.measure.controller.abc import ControllerABC
 
 
 _UNIQUE = qtc.Qt.UniqueConnection
@@ -436,6 +437,18 @@ class TimeResolved(MeasurementABC):
         -------
         None.
         """
+        if not isinstance(self.sender(), ControllerABC):
+            # This is a safguard, and should never happen,
+            # although it did happen for me a couple of times
+            # at random (i.e., not reproducibly.)
+            base.emit_error(
+                self, MeasurementErrors.RUNTIME_ERROR,
+                "_on_controller_data_ready got an unexpected sender "
+                f"{self.sender()}. (?== self: {self == self.sender()}). "
+                "Was expecting a ControllerABC. Energy is "
+                f"{self.current_energy}."
+                )
+            return
         self.data_points.add_data(data, self.sender())
 
     def __prepare_continuous_mode(self):

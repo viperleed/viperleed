@@ -27,7 +27,7 @@ from viperleed.guilib.measure.classes.settings import (
     )
 from viperleed.guilib.measure.camera.abc import CameraErrors
 from viperleed.guilib.measure.controller.abc import (
-    ControllerErrors, MeasureControllerABC
+    ControllerErrors, MeasureControllerABC, ControllerABC
     )
 
 
@@ -932,6 +932,19 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         -------
         None.
         """
+        if not isinstance(self.sender(), ControllerABC):
+            # This is a safguard, and should never happen,
+            # although it did happen for me a couple of times
+            # at random (i.e., not reproducibly.)
+            base.emit_error(
+                self, MeasurementErrors.RUNTIME_ERROR,
+                "_on_controller_data_ready got an unexpected sender "
+                f"{self.sender()}. (?== self: {self == self.sender()}). "
+                "Was expecting a ControllerABC. Energy is "
+                f"{self.current_energy}."
+                )
+            return
+
         # TODO: check if one controller can return data while
         # another controller has changed his busy state but
         # hasn't returned data yet. (race condition)
