@@ -627,7 +627,7 @@ class CameraViewer(qtw.QScrollArea):
         else:
             connect_to = self.__camera.frame_ready
             disconnect_from = self.__camera.image_processed
-        
+
         base.safe_disconnect(disconnect_from, self.__show_image)
         base.safe_connect(connect_to, self.__show_image,
                           type=qtc.Qt.UniqueConnection)

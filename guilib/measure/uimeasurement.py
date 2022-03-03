@@ -270,9 +270,9 @@ class Measure(gl.ViPErLEEDPluginBase):
             controller.error_occurred.connect(self.error_occurred)
         for camera in self.measurement.cameras:
             camera.error_occurred.connect(self.error_occurred)
-            self.__camera_viewers.append(CameraViewer(camera,
-                                                      stop_on_close=False,
-                                                      roi_visible=False))
+            self.__camera_viewers.append(
+                CameraViewer(camera, stop_on_close=False, roi_visible=False)
+                )
         self.measurement.finished.connect(self.__on_finished)
         self.measurement.finished.connect(self.__print_done)
 
@@ -329,6 +329,8 @@ class Measure(gl.ViPErLEEDPluginBase):
     def closeEvent(self, event):
         """Reimplement closeEvent to abort measurements as well."""
         if self.measurement and self.measurement.running:
+            # TODO: Perhaps would be nicer to ask for confirmation
+            # rather than always (silently) aborting the measurement
             self.measurement.abort()
             self.__retry_close.start(50)
             event.ignore()
@@ -336,7 +338,7 @@ class Measure(gl.ViPErLEEDPluginBase):
         if self._glob['plot']:
             self._glob['plot'].close()
         # accept has to be called in order to
-        # savely quit the dialog and its threads.
+        # safely quit the dialog and its threads
         self._dialogs['bad_px_finder'].accept()
         super().closeEvent(event)
 
