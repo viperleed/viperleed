@@ -70,6 +70,7 @@ subroutine r_pendry_beam_y(n_E, E_step, y1, y2, id_start_1, id_start_2, n_1, n_2
     ! Remember that indices are shifted by V0r
 
     y_diff=y1(id_min : id_max) - y2(id_min - V0r_shift: id_max - V0r_shift) ! difference between Y functions
+    !y_diff=abs(y1(id_min : id_max))
     y_squared_sum=y1(id_min: id_max)**2 + y2(id_min - V0r_shift: id_max - V0r_shift)**2
     
     ! caclulate numerator = integral (Y1-Y2)**2 dE
@@ -87,6 +88,7 @@ subroutine r_pendry_beam_y(n_E, E_step, y1, y2, id_start_1, id_start_2, n_1, n_2
     return
 
 end subroutine r_pendry_beam_y
+
 
 subroutine apply_beamset_shift(n_E, n_beams, &
     & data_1, id_start_1, n_1, &
@@ -921,6 +923,7 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
     ! type(grid)                :: grid_target(n_beams)
 
     real(8)    :: intensities(n_E_in, n_beams)
+    real(8) :: min_intensity_beam
 
 
     integer :: ierrs(n_beams)
@@ -1155,8 +1158,13 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
                 !print*, intpol_intensity(E_start_beams_out(i) : E_start_beams_out(i) + n_E_beams_out(i),i)
                     ! Interpolate derivatives
 
-                ! Intensity must be > 0, so set to 0 if not:
-                intpol_intensity = max(intpol_intensity, 0d0)
+                ! TODO: add error for this
+                do concurrent (i = 1:n_beams)
+                    min_intensity_beam = minval(intpol_intensity(:,i))
+                    if (min_intensity_beam < 0) then
+                        intpol_intensity(:, i) = intpol_intensity(:, i) + abs(min_intensity_beam)
+                    end if
+                end do
 
                 call single_interpolate_coeffs_to_grid( &
                     n_knots_beams(i), knots(1:n_knots_beams(i), i), nt_beams(i), coeffs(1:nt_beams(i), i), &
@@ -1486,6 +1494,30 @@ pure function trapez_integration_const_dx(f, dx) result(integral)
     return
 end function trapez_integration_const_dx
 
+
+! integration from tenserleed
+! SUBROUTINE tenser_INTSUM(n_data, func, dx, I1, I2, integral)
+
+!     integer, INTENT(IN) :: n_data
+!     real(8), INTENT(IN) :: func(n_data)
+!     real(8), INTENT(IN) :: dx
+!     integer, INTENT(IN) :: I1, I2 !Integration bounds
+
+!     real(8), intent(out) :: integral
+
+!     integer :: j
+!     real(8) :: A
+
+!     A=0
+!     integral=0
+!     DO J=I1,I2
+!         A=A+func(J)
+!     end do
+
+!     integral= A-0.5*(func(I1)+func(I2))
+!     integral= integral*dx
+!     RETURN
+! END SUBROUTINE tenser_INTSUM
 
 
 ! Compatibility functions

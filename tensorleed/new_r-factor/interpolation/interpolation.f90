@@ -356,14 +356,21 @@ module interpolation
         ! Internal
         integer i
         real(8) :: intensity(n_new), derivative(n_new)
+        real(8) :: min_intensity
         
         y_func = 0.0d0
         do concurrent (i=1:n_new)
-            ! intensity must be larger 0! (If not set to 0)
-            intensity(i) = max(sum(coeffs(intervals(i)-deg+1:intervals(i)+1)*deBoor_matrix_deriv_0(1:deg+1,i)), 0d0)
+            ! intensity must be larger 0! (If not, add offset to raise above 0) ! TODO: add ierr for this!
+            intensity(i) = sum(coeffs(intervals(i)-deg+1:intervals(i)+1)*deBoor_matrix_deriv_0(1:deg+1,i))
+            min_intensity = minval(intensity)
+            if (min_intensity < 0) then
+                intensity = intensity + abs(min_intensity)
+            end if
             derivative(i) = sum(coeffs(intervals(i)-deg+1:intervals(i)+1)*deBoor_matrix_deriv_1(1:deg+1,i))
             y_func(i) = intensity(i)*derivative(i) /(intensity(i)*intensity(i) + v0i*v0i*derivative(i)*derivative(i))
         end do
+
+
 
     end subroutine eval_y_pendry_fast
 
