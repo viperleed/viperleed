@@ -282,6 +282,17 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=";", enrange=None):
                        - max(min(b.intens), minmax[0]))
     logger.info("Loaded "+filename+" file containing {} beams (total energy "
                 "range: {:.2g} eV).".format(len(beams), totalrange))
+
+    # Add an energy offset such that the minimum beam energy is 0 and warn accordingly.
+    for beam in beams:
+        min_intensity = min([beam.intens[en] for en in beam.intens.keys()])
+        if min_intensity < 0:
+            logger.warning(f"Negative intensity encountered in beam {beam.label} while reading {filename}."
+                           f"An offset was added so that the minimum intensity of this beam is 0.")
+            rp.setHaltingLevel(3)
+            for en in beam.intens.keys():
+                beam[en] += min_intensity
+
     return beams
 
 
@@ -543,6 +554,8 @@ def writeAUXEXPBEAMS(beams, filename="AUXEXPBEAMS", header="Unknown system",
     for beam in beams:
         # renormalize
         minintens = min(beam.intens.values())
+        # Alex March 2022: This is quite important actually!!! Will mess up otherwise if negative values in EXPBEAMS
+        # TODO: add warining if any Intensity in EXPBEAMS < 0 !!!
         offset = max(0, -minintens)  # if beams contain negative values, offset
         scaling = 999.99 / (max(beam.intens.values()) + offset)
         for k in beam.intens:
