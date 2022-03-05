@@ -952,13 +952,13 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
         !print*, E_grid_in
         !print*, E_grid_out
         ! minimum index to keep:
-        if (E_grid_in(1) .le. E_grid_out(1)) then
+        if (E_grid_in(1) .lt. E_grid_out(1)) then
             new_min_index = find_grid_correspondence(E_grid_out(1), n_E_in, E_grid_in, 1)
         else
             new_min_index = 1
         end if
 
-        if (E_grid_in(n_E_in) .ge. E_grid_out(n_E_out)) then
+        if (E_grid_in(n_E_in) .gt. E_grid_out(n_E_out)) then
             new_max_index = find_grid_correspondence(E_grid_out(n_E_out), n_E_in, E_grid_in, new_min_index)
         else
             new_max_index = n_E_in
@@ -1158,13 +1158,15 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
                 !print*, intpol_intensity(E_start_beams_out(i) : E_start_beams_out(i) + n_E_beams_out(i),i)
                     ! Interpolate derivatives
 
+                !If interpolated intensity dropy below 0, set to zero
+                intpol_intensity(:) = max(intpol_intensity, 0.0d0)
                 ! TODO: add error for this
-                do concurrent (i = 1:n_beams)
-                    min_intensity_beam = minval(intpol_intensity(:,i))
-                    if (min_intensity_beam < 0) then
-                        intpol_intensity(:, i) = intpol_intensity(:, i) + abs(min_intensity_beam)
-                    end if
-                end do
+                !do concurrent (i = 1:n_beams)
+                    !min_intensity_beam = minval(intpol_intensity(:,i))
+                    !if (min_intensity_beam < 0) then
+                    !    intpol_intensity(:, i) = intpol_intensity(:, i) + abs(min_intensity_beam)
+                    !end if
+                !end do
 
                 call single_interpolate_coeffs_to_grid( &
                     n_knots_beams(i), knots(1:n_knots_beams(i), i), nt_beams(i), coeffs(1:nt_beams(i), i), &
