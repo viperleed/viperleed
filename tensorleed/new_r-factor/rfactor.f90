@@ -1159,7 +1159,7 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
                     ! Interpolate derivatives
 
                 !If interpolated intensity dropy below 0, set to zero
-                intpol_intensity(:) = max(intpol_intensity, 0.0d0)
+                intpol_intensity = max(intpol_intensity, 0.0d0)
                 ! TODO: add error for this
                 !do concurrent (i = 1:n_beams)
                     !min_intensity_beam = minval(intpol_intensity(:,i))
