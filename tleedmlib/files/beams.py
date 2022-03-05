@@ -290,7 +290,7 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=";", enrange=None):
             logger.warning(f"Negative intensity encountered in beam {beam.label} while reading {filename}."
                            f"An offset was added so that the minimum intensity of this beam is 0.")
             for en in beam.intens.keys():
-                beam[en] += abs(min_intensity)
+                beam.intens[en] += abs(min_intensity)
 
     return beams
 
