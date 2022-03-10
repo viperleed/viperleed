@@ -223,12 +223,15 @@ def plot_iv(data, filename, labels=[], annotations=[],
     loglevel = logger.level
     logger.setLevel(logging.INFO)
     try:
+        fig_exists = False
         for ct in range(n_beams):   # iterate through beams
             if all([len(xy_per_beam_per_dataset[i][ct]) == 0
                     for i in range(len(data))]):
                 continue   # no data for this beam in any dataset, skip
-            if ct % figs_per_page == 0:
+            if (ct % figs_per_page == 0) or (not fig_exists):
                 # need a new figure
+                fig_exists = True # at least one fig exists
+                idx = 0
                 fig, axs = plt.subplots(yfigs, xfigs, figsize=figsize,
                                         squeeze=False)
                 axs = axs.flatten(order='C')  # flatten row-style
@@ -269,7 +272,6 @@ def plot_iv(data, filename, labels=[], annotations=[],
                             length=ticklen)
                     if minortick is not None:
                         ax.tick_params(which='minor', length=ticklen*0.5)
-            idx = ct % figs_per_page
             if plotcolors:
                 if not all([matplotlib.colors.is_color_like(s)
                             for s in plotcolors]):
@@ -311,6 +313,7 @@ def plot_iv(data, filename, labels=[], annotations=[],
                                          loc="upper right", frameon=False,
                                          ncol=(len(data) // 3 + 1))
                 legend.get_frame().set_linewidth(linewidth)
+            idx += 1
 
         # finally, in case the last figure is empty (i.e. the number of beams
         # is odd) turn off the last axes (but leave the blank space).
