@@ -288,7 +288,7 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=";", enrange=None):
         min_intensity = min([beam.intens[en] for en in beam.intens.keys()])
         if min_intensity < 0:
             logger.warning(f"Negative intensity encountered in beam {beam.label} while reading {filename}."
-                           f"An offset was added so that the minimum intensity of this beam is 0.")
+                           f" An offset was added so that the minimum intensity of this beam is 0.")
             for en in beam.intens.keys():
                 beam.intens[en] += abs(min_intensity)
 
@@ -554,7 +554,6 @@ def writeAUXEXPBEAMS(beams, filename="AUXEXPBEAMS", header="Unknown system",
         # renormalize
         minintens = min(beam.intens.values())
         # Alex March 2022: This is quite important actually!!! Will mess up otherwise if negative values in EXPBEAMS
-        # TODO: add warining if any Intensity in EXPBEAMS < 0 !!!
         offset = max(0, -minintens)  # if beams contain negative values, offset
         scaling = 999.99 / (max(beam.intens.values()) + offset)
         for k in beam.intens:
