@@ -322,6 +322,18 @@ def rfactor(sl, rp, index, for_error=False, only_vary=None):
             shifted_n_exp = np.copy(exp_n_e_beams_out)
             shifted_n_theo = np.copy(theo_n_e_beams_out)
 
+            """
+            np.savetxt("viper_exp_start.csv", exp_e_start_beams_out, delimiter = ',')
+            np.savetxt("viper_exp_n_beams.csv", exp_n_e_beams_out, delimiter = ',')
+            np.savetxt("viper_exp_y.csv", exp_yfunc, delimiter = ',')
+            np.savetxt("viper_exp_intensity.csv", exp_intpol_intensity, delimiter = ',')
+            np.savetxt("viper_theo_start.csv", theo_e_start_beams_out, delimiter = ',')
+            np.savetxt("viper_theo_n_beams.csv", theo_n_e_beams_out, delimiter = ',')
+            np.savetxt("viper_theo_y.csv", theo_yfunc, delimiter = ',')
+            np.savetxt("viper_theo_intensity.csv", theo_intpol_intensity, delimiter = ',')
+            np.savetxt("viper_theo_energies.csv", theo_grid, delimiter = ',')
+            np.savetxt("viper_exp_energies.csv", exp_grid, delimiter = ',')
+            """
 
             ierr = rf.apply_beamset_shift(
                 shifted_intpol_exp, shifted_E_start_exp, shifted_n_exp,
