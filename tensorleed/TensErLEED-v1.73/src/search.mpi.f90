@@ -94,7 +94,7 @@ C  no LEED analysis has gone before, will be indebted to you eternally.
 *************************************************************************
 
 C 
-
+This subroutine deals with the experimental data preparation
       PROGRAM SEARCH
       use intarr_hashing
       include 'mpif.h'
@@ -186,7 +186,7 @@ C  OVLG is total energy range (sum of all used experimental beams)
       INTEGER MITTEL
       DIMENSION MITTEL(MNBED)
       
-C  Arrays for data to compare search results to from WEXPEL via READE or READT
+C  Arrays for data to compare search results to from WEXPEL via READE or READT ! AMI: I thought WEXPEL is no longer used??
 
 C  AE is array for measured experimental intensity data (or theor. comparison data
 C     if EOT=1.) 
@@ -1152,7 +1152,7 @@ C  Determine parameters of next population
 
       end if
 
-      CALL MPI_BARRIER(MPI_COMM_WORLD,IERR)      
+      CALL MPI_BARRIER(MPI_COMM_WORLD,IERR)     ! AMI: TODO remove this, should be unnecessary...
       CALL MPI_FINALIZE(IERR)
 
       END
