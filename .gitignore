@@ -31,3 +31,4 @@ Tests/
 tleedmlib/wrapped/source/wrapf2py
 tleedmlib/wrapped/source/interpolation_benchmarks
 tleedmlib/wrapped/source/compile
+tleedmlib/wrapped/verification_data
