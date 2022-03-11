@@ -121,6 +121,7 @@ subroutine apply_beamset_shift(n_E, n_beams, &
         fill_NaN_internal = .False.
     else
         ierr = 921
+        RETURN
     end if
 
     do concurrent (ii = 1:n_beams)
