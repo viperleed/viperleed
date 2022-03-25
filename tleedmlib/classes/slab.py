@@ -1453,7 +1453,7 @@ class Slab:
         return (-newC, slab_cuts)
 
     def makeBulkSlab(self, rp):
-        """Copies self to create a bulk slab, in which evething apart from the
+        """Copies self to create a bulk slab, in which everything apart from the
         bulk layers is deleted. Returns that bulk slab."""
         # construct bulk slab
         bsl = copy.deepcopy(self)
@@ -1682,3 +1682,16 @@ class Slab:
             NN_dict[atom] = dists[1] # element 0 is distance to atom itself (< 1e-15)
 
         return NN_dict
+
+    def apply_matrix_transformation(self, trafo_matrix):
+        self.ucell = np.matmul(trafo_matrix, self.ucell)
+        for at in self.atlist:
+            at.cartpos = np.dot(trafo_matrix, at.cartpos)
+
+        self.getCartesianCoordinates(updateOrigin=True)
+        return
+
+    def apply_isotropic_scaling(self, scaling_factor):
+        trafo_matrix = np.diag([scaling_factor, scaling_factor, scaling_factor])
+        self.apply_matrix_transformation(trafo_matrix)
+        return
