@@ -558,6 +558,11 @@ def search(sl, rp):
     except Exception:
         logger.error("Error generating search input")
         raise
+    # delete old control.chem if present - not earlier because can be input!
+    try:
+        os.remove("control.chem")
+    except FileNotFoundError:
+        pass
     if rp.indyPars == 0:  # never for calculations with domains # !!! CHECK
         logger.info("Found nothing to vary in search. Will proceed "
                     "directly to writing output and starting SUPERPOS.")
@@ -669,7 +674,7 @@ def search(sl, rp):
         format_tag = "-fixed"
         if any([s in fcomp[0] for s in ("gfortran", "mpifort")]):
             # assume that mpifort also uses gfortran
-            format_tag = "--fixed-form"  #  different formatting string
+            format_tag = "--fixed-form"  # different formatting string
     ctasks.append((fcomp[0]+" -o search.o -c "+format_tag, srcname, fcomp[1]))
     to_link = "search.o random_.o lib.search.o restrict.o"
     if hashname:
@@ -677,11 +682,11 @@ def search(sl, rp):
     ctasks.append((fcomp[0] + " -o " + searchname, to_link, fcomp[1]))
     try:
         compile_log = "compile-search.log"
-        fortran_compile_batch(ctasks, logname=compile_log) # file compile-search.log
+        fortran_compile_batch(ctasks, logname=compile_log)
         try:
             shutil.move(compile_log, os.path.join("compile_logs", compile_log))
         except Exception:
-            logger.warning("Could not move "+ compile_log +" to SUPP")
+            logger.warning("Could not move " + compile_log + " to SUPP")
     except Exception:
         logger.error("Error compiling fortran files: ", exc_info=True)
         raise
@@ -690,9 +695,6 @@ def search(sl, rp):
     if rp.LOG_SEARCH:
         searchlogname = searchname+".log"
         logger.info("Search log will be written to file "+searchlogname)
-        if rp.TL_VERSION > 1.6:
-            pass
-            # rp.manifest.append(searchlogname) # no longer in manifest, instead moved to SUPP at cleanup
     # if there is an old SD.TL file, it needs to be removed
     if os.path.isfile("SD.TL"):
         try:

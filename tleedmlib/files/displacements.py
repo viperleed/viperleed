@@ -374,8 +374,8 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
         if mode == 1:
             rgx = re.compile(
                 r'\s*(?P<nums>(([-:0-9]|((l|L)\([-:0-9\s]+\))'
-                r')\s*)*)(?P<dir>(z|((ab|xy)\s*)?\[[-0-9]+\s+[-0-9]+\]|'
-                r'(azi|r)\(?((ab|xy)\s*)?\[[-0-9\.]+\s+[-0-9\.]+\]\)?)?'
+                r')\s*)*)(?P<dir>(z|((ab|xy)\s*)?\[\s*[-0-9]+\s+[-0-9]+\s*\]|'
+                r'(azi|r)\(?((ab|xy)\s*)?\[\s*[-0-9\.]+\s+[-0-9\.]+\s*\]\)?)?'
                 r'(\s*offset)?)')
         else:
             rgx = re.compile(r'(?P<nums>(([-:0-9]|((l|L)\([-:0-9\s]+\)))\s*)*)'
@@ -418,8 +418,9 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                 if "[" in dr:
                     if "azi" not in dr and "r" not in dr:
                         try:
-                            dirints = (int(dr.split("[")[1].split(" ")[0]),
-                                       int(dr.split(" ")[1].split("]")[0]))
+                            dirints = (
+                                int(dr.split("[")[1].strip().split()[0]),
+                                int(dr.split("]")[0].strip().split()[-1]))
                         except ValueError:
                             logger.warning(
                                 'DISPLACEMENTS file: could not parse '
@@ -429,8 +430,8 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                     else:
                         try:
                             dirfloats = (
-                                float(dr.split("[")[1].split(" ")[0]),
-                                float(dr.split(" ")[1].split("]")[0]))
+                                float(dr.split("[")[1].strip().split()[0]),
+                                float(dr.split("]")[0].strip().split()[-1]))
                         except ValueError:
                             logger.warning(
                                 'DISPLACEMENTS file: could not parse '

@@ -636,6 +636,8 @@ C*************************************************************
 
       OPEN(7,FILE='fd.out')
       CALL HEAD(7,TITLE,NPUN,NPU,KNT,SPQF,KSYM)
+      OPEN(8,FILE='amp.out')
+      CALL HEAD(8,TITLE,NPUN,NPU,KNT,SPQF,KSYM)
 
       IOUT = 11
       DO ISTACK = 1,NSTACK,1
@@ -771,8 +773,8 @@ C  surface
       DO IBEAM = 1,NT0
 
         DO I = 1,2
-          PSQ(I,IBEAM) = PQF(1,NPU(IBEAM)) * RAR1(I) +
-     +                   PQF(2,NPU(IBEAM)) * RAR2(I)
+          PSQ(I,IBEAM) = SPQF(1,NPU(IBEAM)) * RAR1(I) +
+     +                   SPQF(2,NPU(IBEAM)) * RAR2(I)
         ENDDO
 
         AK2M(IBEAM) = - (AK2 + PSQ(1,IBEAM))
@@ -1273,7 +1275,7 @@ C*************************************************************
 C  7 is output unit - file fd.out
 
         CALL RINT_SIMPLE(NT,XI,AT,ATP,PQ,PQF,VV,THETA,FI,MPU,NPUC,EEV,
-     +                   AIDENT,1,7)
+     +                   AIDENT,1,XIST,7,8)
 
         DO ISTACK = 1,NSTACK,1
           IF (TENS(ISTACK).eq.1) THEN
@@ -1283,8 +1285,8 @@ C  7 is output unit - file fd.out
                 CAF(IL) = TMAT(STYPE(LTYPE(ISTACK),ISUB),IL)
               ENDDO
 
-              CALL OUTXIST(OUTNO(ISTACK,ISUB),IFORM,E,PQF,NPU,
-     +                     NT0,NT,XI,XIST,L1,CAF)
+              CALL OUTXIST(OUTNO(ISTACK,ISUB),IFORM,E,PQF,SPQF,
+     +                     NPU,NT0,NT,XI,XIST,L1,CAF)
 
             ENDDO
           END IF
@@ -1322,6 +1324,7 @@ C  known wave-field from above
         END IF
 
 C  produce ALM and output if desired
+
 
         IF (TENS(ISTACK).eq.1) THEN
 

@@ -17,6 +17,7 @@ import re
 
 from viperleed.tleedmlib.base import get_elapsed_time_str
 
+# files to go in SUPP
 suppfiles = ["AUXBEAMS", "AUXGEO", "AUXLATGEO", "AUXNONSTRUCT", "BEAMLIST",
              "POSCAR_oricell", "POSCAR_bulk", "muftin.f",
              "refcalc-PARAM", "refcalc-FIN", "rfactor-WEXPEL",
@@ -29,8 +30,9 @@ suppfiles = ["AUXBEAMS", "AUXGEO", "AUXLATGEO", "AUXNONSTRUCT", "BEAMLIST",
 
 supp_dirs = ["original_inputs", "compile_logs"]
 
+# files to go in OUT
 outfiles = ["THEOBEAMS.csv", "THEOBEAMS_norm.csv", "THEOBEAMS.pdf",
-            "PatternInfo.tlm", "SD.TL", "refcalc-fd.out",
+            "PatternInfo.tlm", "SD.TL", "refcalc-fd.out", "refcalc-amp.out",
             "Rfactor_plots_refcalc.pdf", "control.chem",
             "Search-progress.pdf", "Search-progress.csv",
             "Search-report.pdf", "FITBEAMS.csv", "FITBEAMS_norm.csv",
@@ -38,7 +40,11 @@ outfiles = ["THEOBEAMS.csv", "THEOBEAMS_norm.csv", "THEOBEAMS.pdf",
             "Rfactor_analysis_refcalc.pdf",
             "Rfactor_analysis_superpos.pdf", "Errors.csv", "Errors.pdf",
             "FD_Optimization.csv", "FD_Optimization.pdf",
-            "FD_Optimization_beams.pdf"]
+            "FD_Optimization_beams.pdf", "Complex_amplitudes_imag.csv",
+            "Complex_amplitudes_real.csv"]
+
+# output files that can be used as input in future runs - keep during prerun
+iofiles = ["control.chem", "refcalc-fd.out", "superpos-spec.out"]
 
 logger = logging.getLogger("tleedm.sections.cleanup")
 
@@ -299,7 +305,7 @@ def move_oldruns(rp, prerun=False):
     if prerun:
         filelist = [f for f in os.listdir() if os.path.isfile(f) and
                     (f.endswith(".log") or f in outfiles or f in suppfiles)
-                    and f not in rp.manifest]
+                    and f not in rp.manifest and f not in iofiles]
         dirlist = ["SUPP", "OUT"]
     else:
         filelist = [f for f in rp.manifest if os.path.isfile(f) and not
@@ -308,7 +314,7 @@ def move_oldruns(rp, prerun=False):
                    d not in ["Tensors", "Deltas", "workhistory"]]
     for f in filelist:
         try:
-            if not prerun:
+            if not prerun or f in iofiles:
                 shutil.copy2(f, os.path.join(dirpath, f))
             else:
                 shutil.move(f, os.path.join(dirpath, f))

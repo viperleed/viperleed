@@ -142,6 +142,8 @@ def sortIVBEAMS(sl, rp):
             if len(fl) == 2:
                 blfs.append(fl)
     # now figure out if there are beams in IVBEAMS without a partner
+    not_found = []
+    found_equivalent = []
     for (ind, ib) in enumerate(rp.ivbeams):
         found = any([ib.isEqual_hk(lb, eps=err) for lb in blfs])
         if found:
@@ -156,10 +158,7 @@ def sortIVBEAMS(sl, rp):
                     # rename the beam
                     if any([ib2.isEqual_hk(eqb, eps=err)
                             for ib2 in rp.ivbeams]):
-                        logger.debug(
-                            "Beam " + ib.label + " is not in "
-                            "BEAMLIST, but an equivalent beam already is. "
-                            "Beam will be dropped.")
+                        found_equivalent.append(ib.label)
                     else:
                         b = tl.Beam(eqb)
                         logger.debug(
@@ -172,9 +171,16 @@ def sortIVBEAMS(sl, rp):
             if found:
                 break
         if not found:
-            logger.warning(
-                'IVBEAMS contains beam ' + ib.label + ', which '
-                'was not found in the BEAMLIST file. Beam will be dropped.')
+            not_found.append(ib.label)
+    if found_equivalent:
+        logger.debug(
+            "The following beams from IVBEAMS will be dropped because they "
+            "are not in BEAMLIST, but equivalent beams already are: "
+            + ", ".join(found_equivalent))
+    if not_found:
+        logger.warning(
+            "The following beams from IVBEAMS are not in BEAMLIST and will be "
+            "dropped: " + ", ".join(not_found))
     # now sort
     ivsorted = []
     for lb in blfs:
@@ -183,7 +189,7 @@ def sortIVBEAMS(sl, rp):
     return ivsorted
 
 
-def readOUTBEAMS(filename="EXPBEAMS.csv", sep=";", enrange=None):
+def readOUTBEAMS(filename="EXPBEAMS.csv", sep=",", enrange=None):
     """Reads beams from an EXPBEAMS.csv or THEOBEAMS.csv file. Returns a list
     of Beam objects. The 'sep' parameter defines the separator. If an energy
     range 'enrange' is passed, beams that contain no data within that range
@@ -206,7 +212,7 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=";", enrange=None):
     rgx = re.compile(r'[\*\(\s]*(?P<h>[-0-9/]+)\s*\|\s*(?P<k>[-0-9/]+)')
     for line in lines:
         if firstline and sep not in line:   # try some other separators
-            for sep2 in [s for s in [";", ","] if s != sep]:
+            for sep2 in [s for s in [",", ";"] if s != sep]:
                 if sep2 in line and len(line.split(sep2)) > 2:
                     logger.info("Found separator '"+sep2+"' in "+filename
                                 + ", expected '"+sep+"'. Attempting to read "
@@ -262,9 +268,10 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=";", enrange=None):
                     (enrange[1] > 0 and min(b.intens) > enrange[1])):
                 # beam has no data in given interval; remove
                 remlist.append(b)
-                logger.warning("Experimental beam "+b.label+" contains no "
-                               "data in the given energy range. The beam "
-                               "will be ignored.")
+        if remlist:
+            logger.warning("The following beams contain no data in the given "
+                           "energy range and will be ignored: "
+                           + ", ".join([b.label for b in remlist]))
         for b in remlist:
             beams.remove(b)
     if enrange is None:
@@ -436,24 +443,45 @@ def writeIVBEAMS(sl, rp, filename="IVBEAMS", domains=False):
     return ivbeams
 
 
-def writeOUTBEAMS(beams, filename="THEOBEAMS.csv", sep="; "):
+def writeOUTBEAMS(beams, filename="THEOBEAMS.csv", sep=", ",
+                  which="intensity"):
     """Takes a list of Beam objects and writes them to a comma-separated
-    file."""
+    file. Parameter 'which' defines what to write; set to 'amp_real' or
+    'amp_imag' to write real and imaginary parts of complex amplitudes."""
     nan = "NaN"  # what to put when no value
     output = "E".rjust(7)+sep
-    w = max(11, len(beams[0].label))
+    if which == "intensity":
+        minwidth = 11
+    else:
+        minwidth = 17
+    w = max(minwidth, len(beams[0].label))
     energies = []
     for b in beams:
         output += b.label.rjust(w)+sep
-        energies.extend([k for k in b.intens if k not in energies])
+        if which == "intensity":
+            energies.extend([k for k in b.intens if k not in energies])
+        else:
+            energies.extend([k for k in b.complex_amplitude
+                             if k not in energies])
     output = output[:-len(sep)]
     output += "\n"
     energies.sort()
     for en in energies:
         output += '{:7.2f}'.format(en) + sep
         for b in beams:
-            if en in b.intens:
-                output += '{:0.5E}'.format(b.intens[en]).rjust(w) + sep
+            if which == "intensity":
+                write_dict = b.intens
+            else:
+                write_dict = b.complex_amplitude
+            if en in write_dict:
+                if which == "intensity":
+                    output += '{:0.5E}'.format(b.intens[en]).rjust(w) + sep
+                else:
+                    if which == "amp_real":
+                        v = b.complex_amplitude[en].real
+                    else:
+                        v = b.complex_amplitude[en].imag
+                    output += '{:0.10E}'.format(v).rjust(w) + sep
             else:
                 output += nan.rjust(w) + sep
         output = output[:-len(sep)]
@@ -513,9 +541,10 @@ def writeAUXBEAMS(ivbeams=None, beamlist=None, beamsfile='IVBEAMS',
                     numlist.append(int(line.split('.')[-1]))
         else:
             blocks += 1
-    for beam in [b for b in ivbeams if b not in foundbeams]:
-        logger.warning('IVBEAMS contains beam ' + beam.label + ', which was '
-                       'not found in '+blstr)
+    not_found = [b.label for b in ivbeams if b not in foundbeams]
+    if not_found:
+        logger.warning('IVBEAMS contains beams that are not in ' + blstr + ": "
+                       + ", ".join(not_found))
     if write:
         if not writefile == 'AUXBEAMS':
             wfstr = 'AUXBEAMS file (filename '+writefile+')'

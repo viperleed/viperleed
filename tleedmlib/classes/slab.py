@@ -1077,7 +1077,7 @@ class Slab:
                     self.collapseCartesianCoordinates()
             self.ucell_mod = self.ucell_mod[:len(restoreTo)]
 
-    def getMinUnitCell(self, rp):
+    def getMinUnitCell(self, rp, warn_convention=False):
         """Checks whether there is a unit cell (a,b) with a smaller area than
         the current one. If so, returns True and the minimized unit cell, else
         returns False and the current unit cell."""
@@ -1131,7 +1131,17 @@ class Slab:
                 mincell = abs(mincell)
             # by convention, make the shorter vector the first one
             if np.linalg.norm(mincell[0]) > np.linalg.norm(mincell[1]) + eps:
-                mincell = np.dot(np.array([[0, 1], [-1, 0]]), mincell)
+                if abs(mincell[1, 0]) < eps and abs(mincell[0, 1]) < eps:
+                    # if matrix is diagonal, DO NOT make it off-diagonal
+                    if warn_convention:
+                        logger.warning(
+                            "The unit cell orientation does not follow "
+                            "standard convention: to keep SUPERLATTICE matrix "
+                            "diagonal, the first bulk vector must be larger "
+                            "than the second. Consider swapping the unit cell "
+                            "vectors.")
+                else:
+                    mincell = np.dot(np.array([[0, 1], [-1, 0]]), mincell)
             # finally, make sure it's right-handed
             if angle(mincell[0], mincell[1]) < 0:
                 mincell = np.dot(np.array([[1, 0], [0, -1]]), mincell)

@@ -2984,18 +2984,25 @@ C  XIST(NT0): ORIGINAL AMPLITUDES OF EACH EXIT BEAM
 C                FOR EACH ENERGY: =0 IF IG=FRACTIONAL
 C                ORDER BEAM.
 C
-      SUBROUTINE OUTXIST(IFILE,IFORM,E,PQF,NPU,NT0,NT,XI,XIST,
+      SUBROUTINE OUTXIST(IFILE,IFORM,E,PQF,SPQF,NPU,NT0,NT,XI,XIST,
      1                    L1,CAF)
 C
-      DIMENSION PQF(2,NT),NPU(NT0)
+      DIMENSION PQF(2,NT),SPQF(2,NT),NPU(NT0)
       COMPLEX XI(NT), XIST(NT0), CAF(L1)
       COMMON /ADS/ ASE,VPIS,VPIO,VV ! note: V0 removed!
 
 C   START LOOP OVER EXIT BEAMS.
 
-       DO I=1,NT0
-         XIST(I) = XI(NPU(I))
-       ENDDO
+       DO IG=1,NT0
+         XIST(IG)=CMPLX(0.0,0.0)
+         DO JG=1,NT
+           P1=ABS(PQF(1,JG)-SPQF(1,NPU(IG)))
+           P2=ABS(PQF(2,JG)-SPQF(2,NPU(IG)))
+           IF((P1+P2).LT.0.000001) THEN
+             XIST(IG)=XI(JG)
+           ENDIF
+         ENDDO
+       ENDDO 
 
 C  NOW WRITE ALL AMPLITUDES TO FILE # IFILE
 
@@ -3716,6 +3723,7 @@ C  PHSS STORES THE INPUT PHASE SHIFTS (RADIAN)
 !  BEAMS SPECIFIED IN NPUC.
 !
 !  This is a simplified version that removes support for symmetry codes
+!  FK 2021-11-17: Add output of complex amplitudes in second file IFILE2
 !
 !   N= NO. OF BEAMS AT CURRENT ENERGY.
 !   WV= INPUT REFLECTED AMPLITUDES.
@@ -3731,18 +3739,24 @@ C  PHSS STORES THE INPUT PHASE SHIFTS (RADIAN)
 !   A= STRUCTURAL PARAMETER OR OTHER IDENTIFIER TO BE PUNCHED ON CARDS.
 !   NPNCH=0  NO PUNCH DESIRED.
 !   NPNCH.NE.0  PUNCH DESIRED.
+!   XIST= TEMPORARY STORAGE OF OUTPUT AMPLITUDES
 !  IN COMMON BLOCKS
 !   E= CURRENT ENERGY IN HARTREES ABOVE SUBSTRATE MUFFIN-TIN CONSTANT.
 !   VPI= IMAGINARY PART OF CURRENT ENERGY.
 !   CK2,CK3= PARALLEL COMPONENTS OF PRIMARY INCIDENT K-VECTOR.
+!   ANGSCALE= angular scaling factor per beam
       SUBROUTINE RINT_SIMPLE(N,WV,AT,ATP,PQ,PQF,VV,THETA,FI,
-     &                       MPU,NPUC,EEV,AP,NPNCH,IFILE)
+     &                       MPU,NPUC,EEV,AP,NPNCH,XIST,
+     &                       IFILE,IFILE2)
       DIMENSION  WV(N), PQ(2,N), PQF(2,N), AT(N)
-      DIMENSION  NPUC(MPU),ATP(MPU)
-      COMPLEX WV
+      DIMENSION  NPUC(MPU),ATP(MPU),XIST(MPU)
+      COMPLEX WV, XIST
+      REAL ANGSCALE
+      DIMENSION ANGSCALE(N)
       COMMON  E, CK2, CK3, VPI
 
    35 FORMAT(1F7.2,1F7.4,4E14.5,/,100(5E14.5,/))                         140779
+   36 FORMAT(1F7.2,1F7.4,8E18.10,/,100(10E18.10,/))
       AK = SQRT(AMAX1(2.0 * E - 2.0 * VV, 0.0))
       BK2 = AK * SIN(THETA) * COS(FI)
       BK3 = AK * SIN(THETA) * SIN(FI)
@@ -3758,8 +3772,10 @@ C  PHSS STORES THE INPUT PHASE SHIFTS (RADIAN)
           WI = AIMAG(WV(J))
 !         AT IS REFLECTED INTENSITY (FOR UNIT INCIDENT CURRENT)
           AT(J) = (WR * WR + WI * WI) * A/C
+          ANGSCALE(J) = SQRT(A/C)    ! for amplitude output below
         ELSE
           AT(J) = 0.0
+          ANGSCALE(J) = 0.0   ! this will set printed complex amplitudes to zero for evanescent beams
         ENDIF
       ENDDO
 
@@ -3769,12 +3785,15 @@ C  PHSS STORES THE INPUT PHASE SHIFTS (RADIAN)
         NPC = NPUC(K)
         IF (NPC.EQ.0) THEN  ! This beam was not requested
           ATP(K) = 0.0
+          XIST(K) = (0.0, 0.0)
         ELSE
           ATP(K) = AT(NPC)
+          XIST(K) = WV(NPC) * ANGSCALE(NPC)
         ENDIF
       ENDDO
 
       WRITE(IFILE, 35) EEV, AP, (ATP(K), K=1,MPU)
+      WRITE(IFILE2, 36) EEV, AP, (XIST(K), K=1,MPU)
       RETURN
       END
 

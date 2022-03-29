@@ -30,7 +30,7 @@ logger = logging.getLogger("tleedm.files.ioerrorcalc")
 logger.setLevel(logging.INFO)
 
 
-def write_errors_csv(errors, filename="Errors.csv", sep=";"):
+def write_errors_csv(errors, filename="Errors.csv", sep=","):
     """
     Writes errors from the error calculation into a CSV file
 
@@ -41,7 +41,7 @@ def write_errors_csv(errors, filename="Errors.csv", sep=";"):
     filename : str, optional
         Name of the csv file to write. The default is "Errors.csv".
     sep : str, optional
-        The separator to use. The default is ";".
+        The separator to use. The default is ",".
 
     Returns
     -------

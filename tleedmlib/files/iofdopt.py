@@ -32,7 +32,7 @@ logger = logging.getLogger("tleedm.files.iofdout")
 logger.setLevel(logging.INFO)
 
 
-def write_fd_opt_csv(points, which, filename="FD_Optimization.csv", sep=";"):
+def write_fd_opt_csv(points, which, filename="FD_Optimization.csv", sep=","):
     """
     Writes results from the full dynamic optimization into a CSV file
 
@@ -45,7 +45,7 @@ def write_fd_opt_csv(points, which, filename="FD_Optimization.csv", sep=";"):
     filename : str, optional
         Name of the csv file to write. The default is "FD_Optimization.csv".
     sep : str, optional
-        The separator to use. The default is ";".
+        The separator to use. The default is ",".
 
     Returns
     -------
