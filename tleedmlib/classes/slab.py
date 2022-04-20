@@ -1465,6 +1465,11 @@ class Slab:
     def makeBulkSlab(self, rp):
         """Copies self to create a bulk slab, in which everything apart from the
         bulk layers is deleted. Returns that bulk slab."""
+        if  len(self.layers) < 2:
+            err_txt = "Less than two layers detected. Check POSCAR and consider modifying LAYER_CUTS."
+            logger.error(err_txt)
+            raise RuntimeError(err_txt)
+            
         # construct bulk slab
         bsl = copy.deepcopy(self)
         bsl.resetSymmetry()
@@ -1480,6 +1485,7 @@ class Slab:
                 bulkc = -bulkc
         else:
             cvec = bsl.ucell[:, 2]
+            zdiff = 0
             if rp.BULK_REPEAT is None:
                 # assume that interlayer vector from bottom non-bulk to top
                 #  bulk layer is the same as between bulk units
@@ -1487,6 +1493,10 @@ class Slab:
                          - self.layers[bsl.layers[0].num-1].cartbotz)
             elif isinstance(rp.BULK_REPEAT, (float, np.floating)):
                 zdiff = rp.BULK_REPEAT
+            if  abs(zdiff) < 1e-5:
+                err_txt = "Unable to detect bulk interlayer vector. Check POSCAR and consider explicitly setting BULK_REPEAT."
+                logger.error(err_txt)
+                raise RuntimeError(err_txt)   
             bulkc = cvec * zdiff / cvec[2]
         bsl.ucell[:, 2] = bulkc
         # reduce dimensions in xy
@@ -1694,14 +1704,21 @@ class Slab:
         return NN_dict
 
     def apply_matrix_transformation(self, trafo_matrix):
-        self.ucell = np.matmul(trafo_matrix, self.ucell)
+        """Applies a transformation matrix to the cell.
+        
+        This can be used to e.g. switch indices b & c of the slab by passing np.array([[1,0,0],[0,0,1],[0,1,0]])."""
+        
+        self.ucell = trafo_matrix .dot(self.ucell).dot(trafo_matrix)
         for at in self.atlist:
-            at.cartpos = np.dot(trafo_matrix, at.cartpos)
-
+            at.pos = trafo_matrix.dot(at.pos)
         self.getCartesianCoordinates(updateOrigin=True)
         return
 
     def apply_isotropic_scaling(self, scaling_factor):
-        trafo_matrix = np.diag([scaling_factor, scaling_factor, scaling_factor])
-        self.apply_matrix_transformation(trafo_matrix)
+        """Applies isotropic scaling to the unit cell by multiplication with a constant.
+        
+        The new unit cell will be: old unit cell * scaling factor"""
+        
+        isotropic_mat = np.identity(3)*scaling_factor
+        self.apply_matrix_transformation(isotropic_mat)
         return
