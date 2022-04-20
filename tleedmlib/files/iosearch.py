@@ -580,7 +580,7 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
             output += (
                 "------- Information about site {}: -----------------------"
                 "-----------------------\n".format(i+1))
-            surf = 1 if at in surfats else 0
+            surf = 1 if at in surfats else 0 # Flag that goes into variable NSURF used by search in GetInt
             output += (formatter['int'].write([surf]).ljust(16)
                        + "Surface (0/1)\n")
             if at.displist in csl.displists:

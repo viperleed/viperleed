@@ -389,7 +389,7 @@ class Atom:
                          index=None):
         """
         Assign a displacement constraint to this atom. Can be assigned for all
-        elements of only one. Constraint is either a fixed value, or another
+        elements or only one. Constraint is either a fixed value, or another
         (Atom, element) pair to link to.
 
         Parameters

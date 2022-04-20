@@ -36,6 +36,7 @@ def rfactor(sl, rp, index, for_error=False, only_vary=None):
     if for_error and rp.best_v0r is None:
         logger.error("Cannot calculate R-factor for error without a stored"
                      "V0r value. Execute a normal R-factor calculation first.")
+    # Both refcalc (11) and superpos should work fine  with new R-factor
     if index == 11:
         name = "refcalc"
     else:
@@ -249,9 +250,8 @@ def rfactor(sl, rp, index, for_error=False, only_vary=None):
             max_fit_range = max_fit_range,
         )
 
-        # TODO: !! implement for error calculation
         if ierr != 0:
-            logger.error(f"ViPErLEED Fortran error code {ierr}: {error_codes[ierr]}")
+            logger.error(f"ViPErLEED Fortran error code {ierr}: {efrror_codes[ierr]}")
             raise
 
         logger.info("With inner potential shift of {:.2f} eV: "
@@ -308,7 +308,7 @@ def rfactor(sl, rp, index, for_error=False, only_vary=None):
             labelwidth = max([beam.getLabel(style=labelstyle)[1]
                               for beam in rp.expbeams])
 
-            labels = [beam.label for beam in expbeams] # TODO is this the right ordering?
+            labels = [beam.label for beam in expbeams]
 
             # Apply v0r shift to arrays for plotting
 
