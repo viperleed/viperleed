@@ -64,15 +64,8 @@ def refcalc_for_ase_structure(exec_path,
     # Transfer ASE object into slab object for ViPErLEED
     slab = Slab(ase_atoms=ase_object)
     
-    # instead give trafo matrix - off diag in 2nd,3rd element np.array([[1,0,0],[0,0,1],[0,1,0]]) TODO - explain better in docstring
     # TODO. docstring conforming to numpy standard
     
-    # Switch b and c
-    if (switch_b_c):
-        slab.ucell = np.diag(np.diag(slab.ucell)[[0, 2, 1]])
-        for at in slab.atlist:
-            at.pos[[1, 2]] = at.pos[[2, 1]]
-        slab.getCartesianCoordinates(updateOrigin=True)
 
     # Transformation of slab object: Rotation or isotropic streching/shrinking
     if uc_transformation_matrix is not None:
