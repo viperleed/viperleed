@@ -27,18 +27,26 @@ from viperleed.tleedmlib.wrapped.error_codes import error_codes
 
 def refcalc_for_ase_structure(exec_path,
                               ase_object = None,
-                              cut_symmetric_cell_height_fraction = 0.4, use_which_part_of_cell="keep_above", flip_cell_in_z=False,
-                              switch_b_c = False,
-                              uc_transformation_matrix = None, uc_isotropic_scaling = None):
+                              cut_symmetric_cell_height_fraction = 0.4, use_which_part_of_cell="keep_above",
+                              uc_transformation_matrix = None, uc_scaling = [1,1,1]):
     """
+    
+    Parameters
+    ----------
+    TODO
     inputs_path: TODO
-    exec_path: Path where to execute the reference calculation
-    ase_object: ase type object that contains the slab for use with ViPErLEED
-    cut_symmetric_cell_height_fraction: float, where to cut the ase object cell (ViPErLEED can not use symmetric cells)
-    use_which_part_of_cell: string, wether to keep the part above or below cut_symmetric_cell_height_fraction (use "keep_above" or "keep_below")
-    flip_cell_in_z: bool, wether to flip in z direction (useful in case the lower part of a symmetric cell is kept
-    uc_transformation_matrix: 3x3 np array, can contain an arbitray scaling and rotation that will be applied to the cell
-    uc_isotropic_scaling: float, isotropic scaling of the cell. Can be used to e.g. quickly change the lattice constant in a cubic cell.
+    exec_path: string
+        Path where to execute the reference calculation
+    ase_object : ASE atoms
+        ase type object that contains the slab for use with ViPErLEED
+    cut_symmetric_cell_height_fraction : float
+        Where to cut the ase object cell (ViPErLEED can not use symmetric cells)
+    use_which_part_of_cell: string, optional
+        Wether to keep the part above or below cut_symmetric_cell_height_fraction (use "keep_above" or "keep_below").
+    uc_transformation_matrix : np.ndarray, optional
+        3x3 np array, can contain an arbitray scaling and rotation that will be applied to the cell
+    uc_isotropic_scaling : float or list of float, optional
+        Scaling to be applied to the cell. Can be used to e.g. quickly change the lattice constant.
     """
 
     # check the provided path
@@ -64,7 +72,6 @@ def refcalc_for_ase_structure(exec_path,
     # Transfer ASE object into slab object for ViPErLEED
     slab = Slab(ase_atoms=ase_object)
     
-    # TODO. docstring conforming to numpy standard
     
 
     # Transformation of slab object: Rotation or isotropic streching/shrinking
@@ -286,19 +293,36 @@ def _check_ierr(ierr):
         raise RuntimeError(f"ViPErLEED Fortran error code {ierr}: {error_codes[ierr]}")
     
 def rot_mat_x(theta):
+    """Generates a rotation matrix around the x axis.
+    
+    Parameters
+    ----------
+    theta : flaot
+            Angle of rotation in radians (use e.g. np.radians(deg) to convert from degrees).""""
+    
     rot_mat = [[1, 0, 0],
-               [0,  np.cos(theta), -np.sin(theta)],
-               [0, np.sin(theta), np.cos(theta)]]
+               [0, np.cos(theta), -np.sin(theta)],
+               [0, np.sin(theta),  np.cos(theta)]]
     rot_mat = np.array(rot_mat)
     return rot_mat
 
     
 def rot_mat_z(theta):
-    rot_mat = [[ np.cos(theta), -np.sin(theta), 0],
-               [np.sin(theta), np.cos(theta), 0],
+    """Generates a rotation matrix around the z axis.
+    
+    Parameters
+    ----------
+    theta : flaot
+            Angle of rotation in radians (use e.g. np.radians(deg) to convert from degrees).""""
+    
+    rot_mat = [[np.cos(theta), -np.sin(theta), 0],
+               [np.sin(theta),  np.cos(theta), 0],
                [0, 0, 1]]
     rot_mat = np.array(rot_mat)
     return rot_mat
 
+# some other usefull matrices
+switch_b_c_mat = np.array([[1,0,0],[0,0,1],[0,1,0]]) # switches vectors b & c
+switch_a_b_mat = np.array([[0,1,0],[1,0,0],[0,0,1]]) # switches vectors a & b
 
-switch_b_c_mat = np.array([[1,0,0],[0,0,1],[0,1,0]])
+flip_c_mat = np.array([[1,0,0],[0,1,0],[0,0,-1]]) # flips the cell along c (usefull in case the lower half of the symmetric cell is kept)

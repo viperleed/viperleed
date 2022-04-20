@@ -1704,21 +1704,88 @@ class Slab:
         return NN_dict
 
     def apply_matrix_transformation(self, trafo_matrix):
-        """Applies a transformation matrix to the cell.
+        """Applies an orthoognal transformation to the unit cell and all atoms.
         
-        This can be used to e.g. switch indices b & c of the slab by passing np.array([[1,0,0],[0,0,1],[0,1,0]])."""
+        The transformation is described by an orthogonal transfomation matrix (O) which is applied to both the unit cell and all atomic positions.
         
-        self.ucell = trafo_matrix .dot(self.ucell).dot(trafo_matrix)
+        This transformation is essentially equivalent to a change of basis.
+        The transformation of the unit cell (U) is of the form O^(-1)UO. Atom positions (v) are transformed as vOS.
+        This method can be used to switch indices, rotate the slab, etc..
+        
+        Parameters
+        ----------
+        scaling : np.ndarray
+                trafo_matrix must be an orthogonal 3-by-3 matrix. Contains the transformation matrix (O) describing the applied transformation.
+                
+        Examples
+        ----------
+        >>> theta = np.pi/2
+        >>> rot_mat = [[np.cos(theta), -np.sin(theta), 0],
+                       [np.sin(theta),  np.cos(theta), 0],
+                       [0, 0, 1]]
+        >>> rot_mat = np.array(rot_mat) # transform matrix into a numpy array
+        >>> slab.apply_matrix_transformation(rot_mat)
+                
+            Applies a rotation by 90 degrees around the z axis to the unit cell.
+            
+        >>> swap_b_c = [1, 0, 0],
+                       [0, 0, 1],
+                       [0, 1, 0]]
+        >>> swap_b_c = np.array(swap_b_c) # transform matrix into a numpy array
+        >>> slab.apply_matrix_transformation(swap_b_c)
+                
+            Applies a transformation that switches the unit cell vectors b and c."""
+        
+        if (np.abs(np.linalg.det(trafo_matrix)) - 1 < 1e-5):
+            # orthogonal transforamtions have determinate of +/-1
+            raise RuntimeException("apply_matrix_transformation was given a non-orthogonal transformation matrix. Use apply_scaling for this purpose.")
+        
+        self.ucell = trafo_matrix.dot(self.ucell).dot(np.linalg.inv(trafo_matrix))
         for at in self.atlist:
             at.pos = trafo_matrix.dot(at.pos)
         self.getCartesianCoordinates(updateOrigin=True)
         return
+    
+    def apply_scaling(self, scaling):
+        """Applies a scaling along the unit cell vectors.
+        
+        This can be used to apply an isotropic scaling in all directions or to strech/compress along unit cell vectors in order to change lattice constants in some direction.
+        To apply other transformations (e.g. rotation, flipping), use apply_matrix_transformation.
+        
+        Parameters
+        ----------
+        scaling : float, list
+                  If the scaling is given as a float or a list containing one item, an isotropic scaling will be applied to the unit cell and atom positions. If a list with 3 entries is provided, the scaling will be applied along the unit cell vector in the given order.
+        
+        Examples
+        ----------
+        >>> slab.apply_scaling(2)
+        
+            Streches the unit cell by a factor of two along a, b and c. This doubles the lattice constant and increases the volume 8-fold. 
+        >>> slab.apply_scaling([1,1,1/3])
+        
+            Compresses the unit cell by a factor of 3 along c.
+        """
+        
+        if type(scaling) == float:
+            scaling_mat = np.identity(3)*scaling_factor
+        elif type(scaling) == list or np.ndarray:
+            if len(scaling) == 1:
+                scaling_mat = np.identity(3)*scaling[0]
+            elif len(scaling) == 3:
+                scaling_mat = np.zeros([3,3])
+                for i in range(3):
+                    scaling_mat[i,i] = scaling[i]
+            else:
+                raise RuntimeError("Parameter scaling in Slab.apply_scaling could not be interpreted.")
+        else:
+            raise RuntimeError("Parameter scaling in Slab.apply_scaling could not be interpreted.")
+        
 
-    def apply_isotropic_scaling(self, scaling_factor):
-        """Applies isotropic scaling to the unit cell by multiplication with a constant.
-        
-        The new unit cell will be: old unit cell * scaling factor"""
-        
-        isotropic_mat = np.identity(3)*scaling_factor
-        self.apply_matrix_transformation(isotropic_mat)
+        self.ucell = scaling_mat.dot(self.ucell) # apply to unit cell (basis)
+        for at in self.atlist:
+            at.pos = trafo_matrix.dot(at.pos) # apply to atoms (vectors)
+            
+        self.getCartesianCoordinates(updateOrigin=True) # update cartesian values
         return
+        
