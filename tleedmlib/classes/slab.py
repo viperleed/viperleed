@@ -1736,9 +1736,9 @@ class Slab:
                 
             Applies a transformation that switches the unit cell vectors b and c."""
         
-        if (np.abs(np.linalg.det(trafo_matrix)) - 1 < 1e-5):
+        if not (np.abs(np.linalg.det(trafo_matrix)) - 1 < 1e-5):
             # orthogonal transforamtions have determinate of +/-1
-            raise RuntimeException("apply_matrix_transformation was given a non-orthogonal transformation matrix. Use apply_scaling for this purpose.")
+            raise RuntimeError("apply_matrix_transformation was given a non-orthogonal transformation matrix. Use apply_scaling for this purpose.")
         
         self.ucell = trafo_matrix.dot(self.ucell).dot(np.linalg.inv(trafo_matrix))
         for at in self.atlist:

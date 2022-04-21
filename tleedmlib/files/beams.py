@@ -203,6 +203,7 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=",", enrange=None, file_StringIO =
     if filename is None:
         try:
             lines = [li[:-1] for li in file_StringIO.readlines()]
+            filename = "StringIO"
         except Exception:
             logger.error("readOUTBEAMS passed None as filename but unable to read from file_StringIO. "
                          "If you are passing the file as a string check the format, otherwise check filename.")
