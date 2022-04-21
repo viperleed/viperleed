@@ -214,7 +214,7 @@ def refcalc_for_ase_structure(
 def run_rfactor_from_csv(
     beams_files,
     V0i,
-    beams_file_is_content = (False, False),
+    beams_file_is_content=(False, False),
     V0r_shift_range=[-3, 3],
     intpol_deg=5,
     intpol_step=0.5,
@@ -254,17 +254,17 @@ def run_rfactor_from_csv(
     err_msg = ""
 
     # Check if file is supposed to be read from disk or from memory and pass it to readOUTBEMS accordingly.
-    if (beams_file_is_content[0]):
+    if beams_file_is_content[0]:
         io_file = SringIO(beams_files[0])
-        beams1 = readOUTBEAMS(filename = None, sep = ",", file_StringIO = io_file)
+        beams1 = readOUTBEAMS(filename=None, sep=",", file_StringIO=io_file)
     else:
-        beams1 = readOUTBEAMS(filename = beams_files[0], sep = ",")
-        
-    if (beams_file_is_content[1]):
+        beams1 = readOUTBEAMS(filename=beams_files[0], sep=",")
+
+    if beams_file_is_content[1]:
         io_file = SringIO(beams_files[1])
-        beams2 = readOUTBEAMS(filename = None, sep = ",", file_StringIO = io_file)
+        beams2 = readOUTBEAMS(filename=None, sep=",", file_StringIO=io_file)
     else:
-        beams2 = readOUTBEAMS(filename = beams_files[1], sep = ",")
+        beams2 = readOUTBEAMS(filename=beams_files[1], sep=",")
 
     # Check for common beams
     beam1_has_correspondece = [False] * len(beams1)
@@ -315,8 +315,8 @@ def run_rfactor_from_csv(
 
     grid = np.arange(minen, maxen + intpol_step, intpol_step)
 
-    skip_stages = np.int32([0, 0, 0, 0, 0]) # usused - we don't skip anything
-    averaging_scheme = np.int32(np.arange(n_beams) + 1) # don't average
+    skip_stages = np.int32([0, 0, 0, 0, 0])  # usused - we don't skip anything
+    averaging_scheme = np.int32(np.arange(n_beams) + 1)  # don't average
 
     # interpolate and prepare beam arrays
     (
