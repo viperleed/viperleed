@@ -5,7 +5,6 @@
 based on tleedm_from_ase.py by Florian Kraushofer
 """
 
-
 import sys
 import os
 import numpy as np
@@ -25,35 +24,60 @@ from viperleed.tleedmlib.files.iorfactor import beamlist_to_array
 from viperleed.tleedmlib.wrapped.rfactor import r_factor_new as rf
 from viperleed.tleedmlib.wrapped.error_codes import error_codes
 
-def refcalc_for_ase_structure(exec_path,
-                              ase_object = None,
+def refcalc_for_ase_structure(exec_path, ase_object, inputs_path = None,
                               cut_symmetric_cell_height_fraction = 0.4, use_which_part_of_cell="keep_above",
                               uc_transformation_matrix = None, uc_scaling = [1,1,1]):
-    """
+    """Performs a ViPErLEED reference calulation starting from a provided ASE atoms object.
+    
+    This function is a core part of the API for ViPErLEED. It alows to run a reference calulation from a ASE type object.
+    The ASE object which is expected to conatin a symmetric simulation cell will be cut at a specified height fraction, transformed into a ViPErLEED Slab and written to a POSCAR file. The ViPErLEED reference calculation will then be executed on the given structure using the input files found either in inputs_path or exec_path. This ultimatetly yiels reference electron scattering amplitudes and intensities. These are collected in CSV files which are returned as strings for further processing.
     
     Parameters
     ----------
-    TODO
-    inputs_path: TODO
     exec_path: string
-        Path where to execute the reference calculation
-    ase_object : ASE atoms
-        ase type object that contains the slab for use with ViPErLEED
-    cut_symmetric_cell_height_fraction : float
-        Where to cut the ase object cell (ViPErLEED can not use symmetric cells)
-    use_which_part_of_cell: string, optional
+        Path where to execute the reference calculation. Directory will be created if it does not exist yet and files will be copied from inputs_path if provided - otherwise it is assumed that all input files are already in exec_path. Temporary files will be stored in a subdirectory called work.
+    ase_object : ASE atoms object
+        ASE type object that contains the atoms for the slab to be used with ViPErLEED. This is expected to contain a symmetric simulation cell which will be cut as described below.
+    inputs_path: string, optional
+        Path to input files (PARAMETERS, VIBROCC, etc.) for ViPErLEED calculation. If provided, files will be copied from inputs_path to exec_path (overwriting existing files there!).
+    cut_symmetric_cell_height_fraction : float, default = 0.4
+        Where to cut the ase object cell (ViPErLEED can not use symmetric cells). Cutting will be performed along the vector c AFTER all transformations (see uc_transformation_matrix) are applied.
+    use_which_part_of_cell: string, default="keep_above"
         Wether to keep the part above or below cut_symmetric_cell_height_fraction (use "keep_above" or "keep_below").
     uc_transformation_matrix : np.ndarray, optional
-        3x3 np array, can contain an arbitray scaling and rotation that will be applied to the cell
-    uc_isotropic_scaling : float or list of float, optional
-        Scaling to be applied to the cell. Can be used to e.g. quickly change the lattice constant.
+        3x3 np array, can contain an arbitray orthogonal transforamtion that will be applied to the cell. Default is None which implies no transformation.
+        The transformation is described by an orthogonal transfomation matrix (O) which is applied to both the unit cell and all atomic positions. This transformation is essentially equivalent to a change of basis.
+        The transformation of the unit cell (U) is of the form O^(-1)UO. Atom positions (v) are transformed as vOS.
+        This parameter can be used to switch indices, rotate the slab, etc..
+    uc_isotropic_scaling : float or list of float, default = [1,1,1]
+        Scaling to be applied to the cell. Default is None which implies no scaling.
+        This can be used to apply an isotropic scaling in all directions or to strech/compress along unit cell vectors in order to change lattice constants in some direction.
+        If the scaling is given as a float or a list containing one item, an isotropic scaling will be applied to the unit cell and atom positions. If a list with 3 entries is provided, the scaling will be applied along the unit cell vector in the given order.
+        
+    Returns
+    -------
+    theobeams_file_str : string
+        String containg the contents of the file "THEOBEAMS.csv", i.e. the scattering intensities as calculated in the reference calculation.
+    amp_real_file_str : string
+        String containg the contents of the file "Complex_amplitudes_real.csv", i.e. the real part of the scattering amplitudes as calculated in the reference calculation.
+    amp_imag_file_str : string
+        String containg the contents of the file "Complex_amplitudes_imag.csv", i.e. the imaginary part of the scattering amplitudes as calculated in the reference calculation.
+        
+    Notes
+    -------
+    The parameter uc_transformation matrix can be used to apply some useful transformations to the Slab object. Examples include swapping vectors b and c, rotations around an axis and flipping the cell along c (in case the lower half of the symmetric cell is kept).
+    For these standard applications, have a look at the matrices we provide as part of this file:
+        switch_b_c_mat : switches vectors b & c
+        switch_a_b_mat : switches vectors a & b
+        flip_c_mat : flips cell along c
+        rot_mat_c(theta) : function that generates a rotation matrix around c (by angle theta)
+        rot_mat_a(theta) : function that generates a rotaiton matrix around a (by angle theta)
     """
 
-    # check the provided path
 
     if not os.path.isdir(exec_path):
         # Invalid path given
-        raise RuntimeError("Provided path is invalid")
+        raise RuntimeError("Provided exec_path is invalid")
 
     # check for PARAMETERS file
     parameters_name = "PARAMETERS"
@@ -292,8 +316,8 @@ def _check_ierr(ierr):
     if ierr != 0:
         raise RuntimeError(f"ViPErLEED Fortran error code {ierr}: {error_codes[ierr]}")
     
-def rot_mat_x(theta):
-    """Generates a rotation matrix around the x axis.
+def rot_mat_a(theta):
+    """Generates a rotation matrix around the a axis.
     
     Parameters
     ----------
@@ -307,8 +331,8 @@ def rot_mat_x(theta):
     return rot_mat
 
     
-def rot_mat_z(theta):
-    """Generates a rotation matrix around the z axis.
+def rot_mat_c(theta):
+    """Generates a rotation matrix around the c axis.
     
     Parameters
     ----------

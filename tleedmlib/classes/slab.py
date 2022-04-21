@@ -1714,7 +1714,7 @@ class Slab:
         
         Parameters
         ----------
-        scaling : np.ndarray
+        trafo_matrix : np.ndarray
                 trafo_matrix must be an orthogonal 3-by-3 matrix. Contains the transformation matrix (O) describing the applied transformation.
                 
         Examples
