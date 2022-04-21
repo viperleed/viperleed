@@ -1744,6 +1744,7 @@ class Slab:
         for at in self.atlist:
             at.pos = trafo_matrix.dot(at.pos)
         self.getCartesianCoordinates(updateOrigin=True)
+        self.collapseFractionalCoordinates()
         return
     
     def apply_scaling(self, scaling):
@@ -1787,5 +1788,6 @@ class Slab:
             at.pos = trafo_matrix.dot(at.pos) # apply to atoms (vectors)
             
         self.getCartesianCoordinates(updateOrigin=True) # update cartesian values
+        self.collapseFractionalCoordinates()
         return
         

@@ -35,7 +35,6 @@ def refcalc_for_ase_structure(
     ase_object,
     inputs_path=None,
     cut_symmetric_cell_height_fraction=0.4,
-    use_which_part_of_cell="keep_above",
     uc_transformation_matrix=None,
     uc_scaling=None,
 ):
@@ -53,14 +52,12 @@ def refcalc_for_ase_structure(
     inputs_path: string, optional
         Path to input files (PARAMETERS, VIBROCC, etc.) for ViPErLEED calculation. If provided, files will be copied from inputs_path to exec_path (overwriting existing files there!).
     cut_symmetric_cell_height_fraction : float, default = 0.4
-        Where to cut the ase object cell (ViPErLEED can not use symmetric cells). Cutting will be performed along the vector c AFTER all transformations (see uc_transformation_matrix) are applied.
-    use_which_part_of_cell: string, default="keep_above"
-        Wether to keep the part above or below cut_symmetric_cell_height_fraction (use "keep_above" or "keep_below").
+        Where to cut the ase object cell (ViPErLEED can not use symmetric cells). Cutting will be performed along the vector c AFTER all transformations (see uc_transformation_matrix) are applied. Only the part of the cell above this value will be kept and everything else WILL be discarded.
     uc_transformation_matrix : np.ndarray, optional
         3x3 np array, can contain an arbitray orthogonal transforamtion that will be applied to the cell. Default is None which implies no transformation. The transformation will be applied BEFORE scaling, i.e. using the original unit cell.
         The transformation is described by an orthogonal transfomation matrix (O) which is applied to both the unit cell and all atomic positions. This transformation is essentially equivalent to a change of basis.
         The transformation of the unit cell (U) is of the form O^(-1)UO. Atom positions (v) are transformed as vOS.
-        This parameter can be used to switch indices, rotate the slab, etc..
+        This parameter can be used to switch indices, rotate the slab, etc.. Make sure though that vectors a & b do not have any components in z direction as this is not allowed and will raise an error.
     uc_scaling : float or list of float, default = None
         Scaling to be applied to the cell. Default is None which implies no scaling. Scaling will be applied AFTER the transformation, i.e. along the new unit cell vectors.
         This can be used to apply an isotropic scaling in all directions or to strech/compress along unit cell vectors in order to change lattice constants in some direction.
@@ -133,21 +130,20 @@ def refcalc_for_ase_structure(
     elif uc_isotropic_scaling is not None:
         slab.apply_isotropic_scaling(uc_isotropic_scaling)
 
-    # Cut the symmetric slab in half so we can work with just the surface
-    # Remove everything below cut_fraction
-    if use_which_part_of_cell.lower() == "keep_above":
-        slab.atlist = [
-            at for at in slab.atlist if at.pos[2] > cut_symmetric_cell_height_fraction
-        ]
-    elif use_which_part_of_cell.lower() == "keep_below":
-        slab.atlist = [
-            at for at in slab.atlist if at.pos[2] < cut_symmetric_cell_height_fraction
-        ]
-    else:
-        raise RuntimeError(
-            "use_which_part_of_cell must be either 'keep_above' or 'keep_below'"
-        )
-
+       
+    # check if the now transformed slab has any z components in vectors a & b
+    # raise an error because this would mess up parts of the Tenserleed calculations
+    a = slab.ucell[0, :]
+    b = slab.ucell[1, :]
+    if (abs(a[2]) > 1e-5 or abs(b[2]) > 1e-5):
+        raise RuntimeError("z-component found in unit cell vector a or b. This is not allowed in the TensErLEED calculation. "
+                           "Check eventual transformations applied to the unit cell and make sure a and b are parallel to the surface.")
+    
+    # Cut the symmetric slab at the value given in cut_symmetric_cell_height_fraction - very important
+    slab.atlist = [
+        at for at in slab.atlist if at.pos[2] > cut_symmetric_cell_height_fraction
+    ]
+    # Update Slab
     slab.updateAtomNumbers()
     slab.updateElementCount()
 
