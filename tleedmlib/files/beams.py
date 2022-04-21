@@ -14,6 +14,7 @@ import re
 import os
 from viperleed import fortranformat as ff
 import copy
+from io import StringIO
 
 import viperleed.tleedmlib as tl
 from viperleed.guilib import project_to_first_domain
@@ -189,25 +190,34 @@ def sortIVBEAMS(sl, rp):
     return ivsorted
 
 
-def readOUTBEAMS(filename="EXPBEAMS.csv", sep=",", enrange=None):
+def readOUTBEAMS(filename="EXPBEAMS.csv", sep=",", enrange=None, file_StringIO = None):
     """Reads beams from an EXPBEAMS.csv or THEOBEAMS.csv file. Returns a list
     of Beam objects. The 'sep' parameter defines the separator. If an energy
     range 'enrange' is passed, beams that contain no data within that range
     will be filtered out before returning. If a Slab and Rparams object are
     passed, will also check whether any of the experimental beams should be
     equivalent, and if they are, warn, discard one and raise the halting
-    level."""
+    level.
+    If filename is None, data is read from a StringIO (in file_StringIO)."""
     beams = []
-    try:
-        with open(filename, 'r') as rf:
-            lines = [li[:-1] for li in rf.readlines()]
-    except FileNotFoundError:
-        if filename.endswith(".csv") and os.path.isfile(filename[:-4]):
-            with open(filename[:-4], 'r') as rf:
+    if filename is None:
+        try:
+            lines = [li[:-1] for li in file_StringIO.readlines()]
+        except Exception:
+            logger.error("readOUTBEAMS passed None as filename but unable to read from file_StringIO. "
+                         "If you are passing the file as a string check the format, otherwise check filename.")
+    else:
+        try:
+            with open(filename, 'r') as rf:
                 lines = [li[:-1] for li in rf.readlines()]
-        else:
-            logger.error("Error reading "+filename)
-            raise
+        except FileNotFoundError:
+            if filename.endswith(".csv") and os.path.isfile(filename[:-4]):
+                with open(filename[:-4], 'r') as rf:
+                    lines = [li[:-1] for li in rf.readlines()]
+            else:
+                logger.error("Error reading "+filename)
+                raise
+
     firstline = True
     rgx = re.compile(r'[\*\(\s]*(?P<h>[-0-9/]+)\s*\|\s*(?P<k>[-0-9/]+)')
     for line in lines:

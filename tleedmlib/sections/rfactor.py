@@ -3,7 +3,7 @@
 """
 Created on Aug 11 2020
 
-@author: Florian Kraushofer
+@author: Florian Kraushofer, Alexander M. Imre
 
 Tensor LEED Manager section Rfactor
 """
