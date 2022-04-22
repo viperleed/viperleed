@@ -602,7 +602,7 @@ C Global variables
       REAL RPEIND,WSK,WIDT,RMUT
       DIMENSION WIDT(NPRMK)
       DIMENSION RPEIND(NPS),WSK(NSTEP)
-      INTEGER random
+      INTEGER random ! connected to random_.o
 
 C Local variables
       INTEGER MKLP1,MKLP2,MKLP5,INDEX
@@ -613,7 +613,8 @@ C Local variables
 C      write(4,*) "now in sea_rcd"
 C      write(4,*) NPS,NPRMK,PNUM
 
-      DO 1856 IPOP=1,NPS
+      DO 1856 IPOP=1,NPS ! populations
+      !  PNUM is total number of parameters (including conc steps), must be equal MNPRMK
       DO 1855 IPARAM=1,PNUM
       
 C If parameter is dependent on another, we can skip everything
@@ -625,6 +626,7 @@ C If parameter is dependent on another, we can skip everything
 
 C      write(8,*) "PARAMETER",IPARAM,"IN POP",IPOP,"started"
 
+        ! probably width of gaussian
       IF(ABS(WIDT(IPARAM)-1).LE.1E-4) THEN
       width=2.
       ELSE
@@ -633,8 +635,10 @@ C      write(8,*) "PARAMETER",IPARAM,"IN POP",IPOP,"started"
 c      WRITE(8,*) 'width=',width
 
 
+!  VARST = variable step
+!  VARST is array containing number of grid points for each parameter
 
-      DO 1851 IPVAL=1,VARST(IPARAM)
+      DO IPVAL=1,VARST(IPARAM)
 
 c      write(8,*) "start probability of",IPVAL
 
@@ -650,16 +654,22 @@ C  open up parameter space completely if r-factor is not good enough
          HELP=RPEIND(IPOP)+0.05
          HELP=HELP*HELP
       ENDIF
+      !  WSK is gaussian probability distribution plus a small constant offset
+      ! in sea_rcd, only used there, but needs variable dimensions
       WSK(IPVAL)=exp(-0.5*FMKSQR/((width*width)*HELP))
 
 c      write(8,*)"probability of value",IPVAL," is",WSK(IPVAL)
 
- 1851 CONTINUE
+      END DO
+      CONTINUE
 
 C Normalization of PB-Distribution
       MKSUM=0.
-      DO 1852 IPVAL=1,VARST(IPARAM)
- 1852    MKSUM=MKSUM+WSK(IPVAL)
+      DO IPVAL=1,VARST(IPARAM)
+         MKSUM=MKSUM+WSK(IPVAL)
+      END DO
+
+C  VARST is array containing number of grid points for each parameter
 
 C  MKSUM is now used to normalise distribution to an integral value of 1.
 C  Instead, the gaussian distribution is now normalised to an integral value
@@ -2439,7 +2449,7 @@ C  unformatted files
               READ(CNTFIL,'(6E13.7)') (XISTMK(IDOM,IDATT,I), I=1,NT0)
 
               READ(CNTFIL,'(6E13.7)') 
-     +             ((DELMK(IDATT,I,J,IDOM,IPLACE,IFILE), 
+     +             ((DELMK(IDATT,I,J,IDOM,IPLACE,IFILE),
      +             J=1,NT0), I=1,NCSTEP)
 
             END IF
@@ -2824,7 +2834,7 @@ C  cutoff for maximum intensity - caution if occurs!!
 
               RPRE = CABS(PRE)
               ATSAS(IDOM, IBEAM, IDATT) = 
-     .             AmpAbs*AmpAbs * RPRE*RPRE * A/C
+     .             AmpAbs*AmpAbs * RPRE*RPRE * A/ C
             END IF
 
           ELSE
