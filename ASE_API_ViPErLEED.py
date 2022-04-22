@@ -130,15 +130,16 @@ def refcalc_for_ase_structure(
     elif uc_isotropic_scaling is not None:
         slab.apply_isotropic_scaling(uc_isotropic_scaling)
 
-       
     # check if the now transformed slab has any z components in vectors a & b
     # raise an error because this would mess up parts of the Tenserleed calculations
     a = slab.ucell[0, :]
     b = slab.ucell[1, :]
-    if (abs(a[2]) > 1e-5 or abs(b[2]) > 1e-5):
-        raise RuntimeError("z-component found in unit cell vector a or b. This is not allowed in the TensErLEED calculation. "
-                           "Check eventual transformations applied to the unit cell and make sure a and b are parallel to the surface.")
-    
+    if abs(a[2]) > 1e-5 or abs(b[2]) > 1e-5:
+        raise RuntimeError(
+            "z-component found in unit cell vector a or b. This is not allowed in the TensErLEED calculation. "
+            "Check eventual transformations applied to the unit cell and make sure a and b are parallel to the surface."
+        )
+
     # Cut the symmetric slab at the value given in cut_symmetric_cell_height_fraction - very important
     slab.atlist = [
         at for at in slab.atlist if at.pos[2] > cut_symmetric_cell_height_fraction
@@ -276,6 +277,7 @@ def run_rfactor_from_csv(
 
     for beam_id in beam2_correspondence:
         if (beam2_correspondence.count(beam_id) != 1) and (beam_id is not None):
+            # print(beams1[beam_id].hkfrac, beams2[beam_id].hkfrac)
             raise RuntimeError("Multiple beams sharing the same index encountered!")
 
     corr_beams1 = []
@@ -305,9 +307,15 @@ def run_rfactor_from_csv(
         corr_beams2
     )
 
-    # extend range by V0r_shift_rang to accomodate maximum possible shift
-    minen = min(np.min(beams1_en), np.min(beams2_en)) + V0r_shift_range[0]
-    maxen = max(np.max(beams1_en), np.min(beams2_en)) + V0r_shift_range[1]
+    if abs(np.min(beams1_en) - np.min(beams2_en)) < abs(V0r_shift_range[0]):
+        minen = max(np.min(beams1_en), np.min(beams2_en)) - V0r_shift_range[0]
+    else:
+        minen = max(np.min(beams1_en), np.min(beams2_en))
+
+    if abs(np.max(beams1_en) - np.max(beams2_en)) < abs(V0r_shift_range[1]):
+        maxen = min(np.max(beams1_en), np.max(beams2_en)) + V0r_shift_range[1]
+    else:
+        maxen = min(np.max(beams1_en), np.max(beams2_en))
 
     averaging_scheme = np.int32(np.arange(n_beams) + 1)
 
@@ -408,7 +416,17 @@ def run_rfactor_from_csv(
 
 def _comp_beam_index(id1, id2, eps=1e-5):
     # Compares diffraction beam indices and checks if they refer to the same beam
-    check = np.abs(float(id1[0] - id2[0])) + np.abs(float(id1[1] - id2[1])) < eps
+    # for beam1 (a|b) and beam2 (c|d) check:
+    denom_magnitude_equal = abs(float(abs(id1[1]) - abs(id2[1]))) < eps  # |a|=|c|
+    num_magnitude_equal = abs(float(abs(id1[0]) - abs(id2[0]))) < eps  # |b|=|d|
+    fraction_equivalent = (
+        abs(float(id1[0]) * float(id2[1])) - abs(float(id1[1]) * float(id2[0])) < eps
+    )  # |a*d| = |c*b| (same as a/b= +/- c/d)
+    direction_equal = (
+        abs(float(id1[0]) - float(id2[0])) + abs(float(id1[1]) - float(id2[1])) < eps
+    )
+
+    check = denom_magnitude_equal and num_magnitude_equal and direction_equal
     return check
 
 
@@ -422,7 +440,7 @@ def rot_mat_a(theta):
     
     Parameters
     ----------
-    theta : flaot
+    theta : float
         Angle of rotation in radians (use e.g. np.radians(deg) to convert from degrees).
     """
 
@@ -440,7 +458,7 @@ def rot_mat_c(theta):
     
     Parameters
     ----------
-    theta : flaot
+    theta : float
         Angle of rotation in radians (use e.g. np.radians(deg) to convert from degrees).
     """
 
