@@ -14,7 +14,7 @@ import subprocess
 import os
 import shutil
 import copy
-import psutil
+import psutil #maybe think about replacing this with something else? Only used in one call to kill a process and is a dependency nightmare
 import multiprocessing
 import time
 from quicktions import Fraction
