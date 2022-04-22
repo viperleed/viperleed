@@ -14,6 +14,7 @@ import re
 import os
 from viperleed import fortranformat as ff
 import copy
+from io import StringIO
 
 import viperleed.tleedmlib as tl
 from viperleed.guilib import project_to_first_domain
@@ -189,25 +190,35 @@ def sortIVBEAMS(sl, rp):
     return ivsorted
 
 
-def readOUTBEAMS(filename="EXPBEAMS.csv", sep=",", enrange=None):
+def readOUTBEAMS(filename="EXPBEAMS.csv", sep=",", enrange=None, file_StringIO = None):
     """Reads beams from an EXPBEAMS.csv or THEOBEAMS.csv file. Returns a list
     of Beam objects. The 'sep' parameter defines the separator. If an energy
     range 'enrange' is passed, beams that contain no data within that range
     will be filtered out before returning. If a Slab and Rparams object are
     passed, will also check whether any of the experimental beams should be
     equivalent, and if they are, warn, discard one and raise the halting
-    level."""
+    level.
+    If filename is None, data is read from a StringIO (in file_StringIO)."""
     beams = []
-    try:
-        with open(filename, 'r') as rf:
-            lines = [li[:-1] for li in rf.readlines()]
-    except FileNotFoundError:
-        if filename.endswith(".csv") and os.path.isfile(filename[:-4]):
-            with open(filename[:-4], 'r') as rf:
+    if filename is None:
+        try:
+            lines = [li[:-1] for li in file_StringIO.readlines()]
+            filename = "StringIO"
+        except Exception:
+            logger.error("readOUTBEAMS passed None as filename but unable to read from file_StringIO. "
+                         "If you are passing the file as a string check the format, otherwise check filename.")
+    else:
+        try:
+            with open(filename, 'r') as rf:
                 lines = [li[:-1] for li in rf.readlines()]
-        else:
-            logger.error("Error reading "+filename)
-            raise
+        except FileNotFoundError:
+            if filename.endswith(".csv") and os.path.isfile(filename[:-4]):
+                with open(filename[:-4], 'r') as rf:
+                    lines = [li[:-1] for li in rf.readlines()]
+            else:
+                logger.error("Error reading "+filename)
+                raise
+
     firstline = True
     rgx = re.compile(r'[\*\(\s]*(?P<h>[-0-9/]+)\s*\|\s*(?P<k>[-0-9/]+)')
     for line in lines:
@@ -289,6 +300,16 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=",", enrange=None):
                        - max(min(b.intens), minmax[0]))
     logger.info("Loaded "+filename+" file containing {} beams (total energy "
                 "range: {:.2g} eV).".format(len(beams), totalrange))
+
+    # Add an energy offset such that the minimum beam energy is 0 and warn accordingly.
+    for beam in beams:
+        min_intensity = min([beam.intens[en] for en in beam.intens.keys()])
+        if min_intensity < 0:
+            logger.warning(f"Negative intensity encountered in beam {beam.label} while reading {filename}."
+                           f" An offset was added so that the minimum intensity of this beam is 0.")
+            for en in beam.intens.keys():
+                beam.intens[en] += abs(min_intensity)
+
     return beams
 
 
@@ -572,6 +593,7 @@ def writeAUXEXPBEAMS(beams, filename="AUXEXPBEAMS", header="Unknown system",
     for beam in beams:
         # renormalize
         minintens = min(beam.intens.values())
+        # Alex March 2022: This is quite important actually!!! Will mess up otherwise if negative values in EXPBEAMS
         offset = max(0, -minintens)  # if beams contain negative values, offset
         scaling = 999.99 / (max(beam.intens.values()) + offset)
         for k in beam.intens:

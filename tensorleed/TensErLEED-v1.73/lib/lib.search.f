@@ -1823,21 +1823,22 @@ C  IS MADE
 110   Y4(N)=B2(IS2,IB2,IES)
       DE=0.1*EINCR
       NN=10*(N-1)+1
-      DO 120 IE=1,NN
-      X=FLOAT(IE-1)*DE
-      ITIL=0
-      ITIH=0
-      AA1=YVAL(X,Y1(1),Y,N,ITIL,ITIH)
-      ITIL=0
-      ITIH=0
-      AA2=YVAL(X,Y2(1),Y,N,ITIL,ITIH)
-      ITIL=0
-      ITIH=0
-      AB1=YVAL(X,Y3(1),Y,N,ITIL,ITIH)
-      ITIL=0
-      ITIH=0
-      AB2=YVAL(X,Y4(1),Y,N,ITIL,ITIH)
-120   YY(IE)=ABS(AB1-C*AB2)*ABS(AA1-C*AA2)/(ABS(AA1)+EPS)
+      DO IE=1,NN
+          X=FLOAT(IE-1)*DE
+          ITIL=0
+          ITIH=0
+          AA1=YVAL(X,Y1(1),Y,N,ITIL,ITIH)
+          ITIL=0
+          ITIH=0
+          AA2=YVAL(X,Y2(1),Y,N,ITIL,ITIH)
+          ITIL=0
+          ITIH=0
+          AB1=YVAL(X,Y3(1),Y,N,ITIL,ITIH)
+          ITIL=0
+          ITIH=0
+          AB2=YVAL(X,Y4(1),Y,N,ITIL,ITIH)
+          YY(IE)=ABS(AB1-C*AB2)*ABS(AA1-C*AA2)/(ABS(AA1)+EPS)
+      END DO
       CALL INTSUM(YY,1,1,1,1,DE,1,NN,S)
       RETURN
       END

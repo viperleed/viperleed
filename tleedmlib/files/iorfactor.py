@@ -60,6 +60,7 @@ def readROUT(filename="ROUT"):
         raise
     line = ""
     i = 0
+    # finds line at end of ROUT file that states best v0r and corresponding R-factor
     while "AVERAGE R-FACTOR =" not in line and i+1 < len(lines):
         i += 1
         line = lines[-i]
@@ -69,6 +70,7 @@ def readROUT(filename="ROUT"):
     rfac_int = -1
     rfac_frac = -1
     v0rshift = 0
+    # writes best V0r to v0rshift and best R-factor to rfac
     rgx = re.compile(r'.+SHIFT\s*(?P<shift>[-0-9.]+).+=\s*(?P<rfac>[-0-9.]+)')
     m = rgx.match(line)
     if m:
@@ -83,7 +85,7 @@ def readROUT(filename="ROUT"):
                          + filename)
     else:
         return (0, 0, 0), 0, []
-    # now read the R-factors per beam at v0rshift
+    # now read the R-factors per beam only at best V0r
     rfaclist = []
     for line in [li for li in lines if len(li) >= 70]:
         line = line.strip()
@@ -459,36 +461,7 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
     if not analysisFile:
         return
 
-    # write R-factor analysis
-
-    # find min and max values of x and y for plotting all curves
-    # on the same horizontal scale and leaving a little y space for the legend
-    xmin = min(min(xy[:, 0]) for xy in [*xyTheo, *xyExp] if len(xy) != 0)
-    xmax = max(max(xy[:, 0]) for xy in [*xyTheo, *xyExp] if len(xy) != 0)
-
-    ymin = min(min(xy[:, 1]) for xy in [*xyTheo, *xyExp] if len(xy) != 0)
-    ymax = max(max(xy[:, 1]) for xy in [*xyTheo, *xyExp] if len(xy) != 0)
-    dy = ymax - ymin
-
-    # set ticks spacing to 50 eV and round the x limits to a multiple of it
-    tick = 50
-    oritick = plticker.MultipleLocator(base=tick)
-    xlims = (np.floor(xmin/tick)*tick,
-             np.ceil(xmax/tick)*tick)
-    dx = xlims[1] - xlims[0]
-
-    # set formatting parameters
-    plotcolors = []
-    if formatting is not None:
-        if 'colors' in formatting:
-            plotcolors = formatting['colors']
-
-    figsize = (5.8, 8.3)
-    figs = []
-
-    ylims = (ymin - 0.02*dy, ymax + 0.22*dy)
-    namePos = (xlims[0] + 0.45*dx, ylims[1] - 0.1*dy)
-    rPos = (namePos[0], namePos[1]-0.085*dy)
+    figs, figsize, namePos, oritick, plotcolors, rPos, xlims, ylims = prepare_analysis_plot(formatting, xyExp, xyTheo)
 
     try:
         pdf = PdfPages(analysisFile)
@@ -502,80 +475,14 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
     try:
         for i, (name, rfact, theo, exp) in enumerate(zip(*zip(*beams),
                                                          xyTheo, xyExp)):
+
             if len(exp) == 0:
                 continue
-            fig, axs = plt.subplots(3, figsize=figsize,
-                                    squeeze=True)
-            fig.subplots_adjust(left=0.06, right=0.94,
-                                bottom=0.07, top=0.98,
-                                wspace=0, hspace=0.08)
-            figs.append(fig)
-            [ax.set_xlim(*xlims) for ax in axs]
-            axs[0].set_ylim(*ylims)
-            [ax.get_yaxis().set_ticks([]) for ax in axs]
-            [ax.tick_params(bottom=True,
-                            top=True,
-                            axis='x', direction='in') for ax in axs]
-            [ax.xaxis.set_major_locator(oritick) for ax in axs]
-            axs[0].set_ylabel("Intensity (arb. units)")
-            axs[1].set_ylabel("Y")
-            axs[2].set_ylabel(r'$\sum\Delta Y^2 / \left(Y_1^2 + Y_2^2\right)$')
-            axs[2].set_xlabel("Energy (eV)")
-
             ytheo = getYfunc(theo, v0i)
-            y_theo_sq = np.copy(ytheo)
-            y_theo_sq[:, 1] = y_theo_sq[:, 1]**2
             yexp = getYfunc(exp, v0i)
-            y_exp_sq = np.copy(yexp)
-            y_exp_sq[:, 1] = y_exp_sq[:, 1]**2
-            dy = np.array([(ytheo[j, 0], yexp[j, 1] - ytheo[j, 1])
-                           for j in range(0, min(len(ytheo), len(yexp)))])
-            dysq = np.copy(dy)
-            dysq[:, 1] = dysq[:, 1]**2
-            norm_y_squares = np.array(
-                [[dysq[j, 0], (dysq[j, 1]
-                               / (y_theo_sq[j, 1] + y_exp_sq[j, 1]))]
-                 for j in range(len(dysq))])
-            sum_norm_y_squares = np.array([norm_y_squares[0]])
-            for j in range(1, len(norm_y_squares)):
-                sum_norm_y_squares = (
-                    np.append(sum_norm_y_squares,
-                              [[norm_y_squares[j, 0],
-                               (sum_norm_y_squares[j-1, 1]
-                                + norm_y_squares[j, 1])]],
-                              axis=0))
-            axs[1].plot(xlims, [0., 0.], color='grey', alpha=0.2)
-            if not plotcolors:
-                if not all([matplotlib.colors.is_color_like(s)
-                            for s in plotcolors]):
-                    plotcolors = []
-                    logger.warning("writeRfactorPdf: Specified colors not "
-                                   "recognized, reverting to default colors")
-            if not plotcolors:
-                axs[0].plot(theo[:, 0], theo[:, 1], label='Theoretical')
-                axs[0].plot(exp[:, 0], exp[:, 1], label='Experimental')
-                axs[1].plot(ytheo[:, 0], ytheo[:, 1], label='Theoretical')
-                axs[1].plot(yexp[:, 0], yexp[:, 1], label="Experimental")
-            else:
-                axs[0].plot(theo[:, 0], theo[:, 1], label='Theoretical',
-                            color=plotcolors[0])
-                axs[0].plot(exp[:, 0], exp[:, 1], label='Experimental',
-                            color=plotcolors[1])
-                axs[1].plot(ytheo[:, 0], ytheo[:, 1], label='Theoretical',
-                            color=plotcolors[0], linewidth=0.75)
-                axs[1].plot(yexp[:, 0], yexp[:, 1], label="Experimental",
-                            color=plotcolors[0], linewidth=0.75)
-            axs[1].plot(dy[:, 0], dy[:, 1], label="\u0394Y", color="black",
-                        linewidth=0.5)
-            axs[1].fill_between(dy[:, 0], dy[:, 1], 0., facecolor='grey',
-                                alpha=0.5)
-            axs[2].plot(sum_norm_y_squares[:, 0], sum_norm_y_squares[:, 1],
-                        color="black", drawstyle="steps-mid")
 
-            axs[0].annotate(name, namePos, fontsize=10)
-            axs[0].annotate("R = {:.4f}".format(rfact), rPos, fontsize=10)
-            axs[0].legend()
-            axs[1].legend()
+            plot_analysis(exp, figs, figsize, name, namePos, oritick, plotcolors, rPos, rfact, theo, xlims, yexp, ylims,
+                          ytheo)
 
         for fig in figs:
             pdf.savefig(fig)
@@ -587,3 +494,218 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
         pdf.close()
         logger.setLevel(loglevel)
     return
+
+
+def prepare_analysis_plot(formatting, xyExp, xyTheo):
+    # write R-factor analysis
+    # find min and max values of x and y for plotting all curves
+    # on the same horizontal scale and leaving a little y space for the legend
+    xmin = min(min(xy[:, 0]) for xy in [*xyTheo, *xyExp] if len(xy) != 0)
+    xmax = max(max(xy[:, 0]) for xy in [*xyTheo, *xyExp] if len(xy) != 0)
+    ymin = min(min(xy[:, 1]) for xy in [*xyTheo, *xyExp] if len(xy) != 0)
+    ymax = max(max(xy[:, 1]) for xy in [*xyTheo, *xyExp] if len(xy) != 0)
+    dy = ymax - ymin
+    # set ticks spacing to 50 eV and round the x limits to a multiple of it
+    tick = 50
+    oritick = plticker.MultipleLocator(base=tick)
+    xlims = (np.floor(xmin / tick) * tick,
+             np.ceil(xmax / tick) * tick)
+    dx = xlims[1] - xlims[0]
+    # set formatting parameters
+    plotcolors = []
+    if formatting is not None:
+        if 'colors' in formatting:
+            plotcolors = formatting['colors']
+    figsize = (5.8, 8.3)
+    figs = []
+    ylims = (ymin - 0.02 * dy, ymax + 0.22 * dy)
+    namePos = (xlims[0] + 0.45 * dx, ylims[1] - 0.1 * dy)
+    rPos = (namePos[0], namePos[1] - 0.085 * dy)
+    return figs, figsize, namePos, oritick, plotcolors, rPos, xlims, ylims
+
+
+def plot_analysis(exp, figs, figsize, name, namePos, oritick, plotcolors, rPos, rfact, theo, xlims, yexp, ylims, ytheo):
+    fig, axs = plt.subplots(3, figsize=figsize,
+                            squeeze=True)
+    fig.subplots_adjust(left=0.06, right=0.94,
+                        bottom=0.07, top=0.98,
+                        wspace=0, hspace=0.08)
+    figs.append(fig)
+    [ax.set_xlim(*xlims) for ax in axs]
+    axs[0].set_ylim(*ylims)
+    [ax.get_yaxis().set_ticks([]) for ax in axs]
+    [ax.tick_params(bottom=True,
+                    top=True,
+                    axis='x', direction='in') for ax in axs]
+    [ax.xaxis.set_major_locator(oritick) for ax in axs]
+    axs[0].set_ylabel("Intensity (arb. units)")
+    axs[1].set_ylabel("Y")
+    axs[2].set_ylabel(r'$\sum\Delta Y^2 / \left(Y_1^2 + Y_2^2\right)$')
+    axs[2].set_xlabel("Energy (eV)")
+    y_theo_sq = np.copy(ytheo)
+    y_theo_sq[:, 1] = y_theo_sq[:, 1] ** 2
+    y_exp_sq = np.copy(yexp)
+    y_exp_sq[:, 1] = y_exp_sq[:, 1] ** 2
+    dy = np.array([(ytheo[j, 0], yexp[j, 1] - ytheo[j, 1])
+                   for j in range(0, min(len(ytheo), len(yexp)))])
+    dysq = np.copy(dy)
+    dysq[:, 1] = dysq[:, 1] ** 2
+    norm_y_squares = np.array(
+        [[dysq[j, 0], (dysq[j, 1]
+                       / (y_theo_sq[j, 1] + y_exp_sq[j, 1]))]
+         for j in range(len(dysq))])
+    sum_norm_y_squares = np.array([norm_y_squares[0]])
+    for j in range(1, len(norm_y_squares)):
+        sum_norm_y_squares = (
+            np.append(sum_norm_y_squares,
+                      [[norm_y_squares[j, 0],
+                        (sum_norm_y_squares[j - 1, 1]
+                         + norm_y_squares[j, 1])]],
+                      axis=0))
+    axs[1].plot(xlims, [0., 0.], color='grey', alpha=0.2)
+    if not plotcolors:
+        if not all([matplotlib.colors.is_color_like(s)
+                    for s in plotcolors]):
+            plotcolors = []
+            logger.warning("writeRfactorPdf: Specified colors not "
+                           "recognized, reverting to default colors")
+    if not plotcolors:
+        axs[0].plot(theo[:, 0], theo[:, 1], label='Theoretical')
+        axs[0].plot(exp[:, 0], exp[:, 1], label='Experimental')
+        axs[1].plot(ytheo[:, 0], ytheo[:, 1], label='Theoretical')
+        axs[1].plot(yexp[:, 0], yexp[:, 1], label="Experimental")
+    else:
+        axs[0].plot(theo[:, 0], theo[:, 1], label='Theoretical',
+                    color=plotcolors[0])
+        axs[0].plot(exp[:, 0], exp[:, 1], label='Experimental',
+                    color=plotcolors[1])
+        axs[1].plot(ytheo[:, 0], ytheo[:, 1], label='Theoretical',
+                    color=plotcolors[0], linewidth=0.75)
+        axs[1].plot(yexp[:, 0], yexp[:, 1], label="Experimental",
+                    color=plotcolors[0], linewidth=0.75)
+    axs[1].plot(dy[:, 0], dy[:, 1], label="\u0394Y", color="black",
+                linewidth=0.5)
+    axs[1].fill_between(dy[:, 0], dy[:, 1], 0., facecolor='grey',
+                        alpha=0.5)
+    axs[2].plot(sum_norm_y_squares[:, 0], sum_norm_y_squares[:, 1],
+                color="black", drawstyle="steps-mid")
+    axs[0].annotate(name, namePos, fontsize=10)
+    axs[0].annotate("R = {:.4f}".format(rfact), rPos, fontsize=10)
+    axs[0].legend()
+    axs[1].legend()
+
+
+def writeRfactorPdf_new(n_beams, labels, rfactor_beams,
+                        energies, id_start,
+                        n_E_beams,
+                        int_1, int_2, y_1, y_2 ,
+                        outName='Rfactor_plots.pdf',
+                        analysisFile='', v0i = 0., formatting=None):
+
+    # after applying the V0r shift outside, the id_start and n_E_beams should be same for experiment and theory
+    global plotting
+    if not plotting:
+        logger.debug("Necessary modules for plotting not found. Skipping "
+                     "R-factor plotting.")
+        return
+
+
+    # get data
+    exp_xy = []
+    theo_xy = []
+    for i in range(n_beams):
+        xy = np.empty([n_E_beams[i], 2])
+        xy[:, 0] = energies[id_start[i] -1: id_start[i] + n_E_beams[i] -1]
+        xy[:, 1] = int_1[id_start[i] -1: id_start[i] + n_E_beams[i] -1, i]
+        # normalize to max of beam:
+        xy[:, 1] /= np.nanmax(xy[:, 1])
+        exp_xy.append(xy)
+
+
+        xy = np.empty([n_E_beams[i], 2]) # want this at same range as exp only!
+        xy[:, 0] = energies[id_start[i] -1: id_start[i] + n_E_beams[i] -1]
+        xy[:, 1] = int_2[id_start[i] -1: id_start[i] + n_E_beams[i] -1, i]
+        # normalize to max of beam:
+        xy[:, 1] /= np.nanmax(xy[:, 1])
+        theo_xy.append(xy)
+
+    data = [theo_xy, exp_xy]
+
+    rfac_str = ["R = {:.4f}".format(r) for r in rfactor_beams]
+    plot_iv(data, outName, legends=['Theoretical', 'Experimental'],
+            labels=labels, annotations=rfac_str, formatting=formatting)
+
+    if not analysisFile:
+        return
+
+    figs, figsize, namePos, oritick, plotcolors, rPos, xlims, ylims = \
+        prepare_analysis_plot(formatting, exp_xy, theo_xy)
+
+
+    try:
+        pdf = PdfPages(analysisFile)
+    except PermissionError:
+        logger.error("writeRfactorPdf: Cannot open file {}. Aborting."
+                     .format(analysisFile))
+        return
+    # the following will spam the logger with debug messages; disable.
+    loglevel = logger.level
+    logger.setLevel(logging.INFO)
+
+    # proper minus character
+    labels = [label.replace("-", "−") for label in labels]
+
+    try:
+        for i in range(n_beams):
+            exp = exp_xy[i]
+            theo = theo_xy[i]
+            beam_energies = energies[id_start[i] -1: id_start[i] + n_E_beams[i] -1]
+            y_exp = np.empty([n_E_beams[i], 2])
+            y_theo = np.empty([n_E_beams[i], 2])
+            y_exp[:, 0] = beam_energies
+            y_exp[:, 1] = y_1[id_start[i] -1: id_start[i] + n_E_beams[i] -1, i]
+            y_theo[:, 0] = beam_energies
+            y_theo[:, 1] = y_2[id_start[i] -1: id_start[i] + n_E_beams[i] -1, i]
+
+            plot_analysis(exp, figs, figsize, labels[i], namePos, oritick, plotcolors, rPos, rfactor_beams[i],
+                          theo, xlims, y_exp, ylims, y_theo)
+
+        for fig in figs:
+            pdf.savefig(fig)
+            plt.close(fig)
+    except Exception:
+        logger.error("writeRfactorPdf: Error while writing analysis pdf: ",
+                     exc_info=True)
+    finally:
+         pdf.close()
+         logger.setLevel(loglevel)
+    return
+
+
+def beamlist_to_array(beams):
+    # turn list of Beam objects into an array of intensities
+
+    n_beams = len(beams)
+    energies = []
+    for b in beams:
+        energies.extend([k for k in b.intens if k not in energies])
+    energies.sort()
+    in_grid = np.array(energies)
+    n_E = len(energies)
+
+
+    beam_arr = np.empty([n_E, n_beams])
+    beam_arr[:] = np.NaN
+
+    id_start = np.int32(np.zeros([n_beams]))
+    n_E_beams = np.int32(np.zeros([n_beams]))
+
+    for i, b in enumerate(beams):
+        # write beams into colums of beam_arr
+        id_start[i] = np.where(np.isclose(energies, min(b.intens.keys())))[0][0]
+        n_E_beams[i] = len(b.intens)
+        beam_arr[id_start[i]: id_start[i] + n_E_beams[i] , i] = list(b.intens.values())
+
+
+    return in_grid, id_start, n_E_beams, beam_arr
+

@@ -55,9 +55,9 @@ C        are to be enlarged
 C  set derived parameters
 
       PARAMETER (MNFAC = 4*MLMAX + 3)
-      PARAMETER (MN = 2*MLMAX+1, MNN = MN*MN)
+      PARAMETER (MN = 2*MLMAX+1, MNN = MN*MN) !Huge
       PARAMETER (MNN1=MN,MNN2=MLMAX1,MNN3=MLMAX1)
-      PARAMETER (MKLM = MN*(MN+1)/2)
+      PARAMETER (MKLM = MN*(MN+1)/2) !Huge
       PARAMETER (MLEV = MLMAX1*(MLMAX1+1)/2)
       PARAMETER (MLEV2 = 2 * MLEV)
       PARAMETER (MLOD = MLMMAX-MLEV)
@@ -181,7 +181,7 @@ C  TENS  : tensor output for layer ISTACK desired?
       DIMENSION NSUB(MNLTYPE),LATT(MNLTYPE),STYPE(MNLTYPE,MNSUB)
       DIMENSION LBRAV(MNLTYPE),LCOMP(MNLTYPE)
       REAL SUBPOS
-      DIMENSION SUBPOS(MNLTYPE,MNSUB,3)
+      DIMENSION SUBPOS(MNLTYPE,MNSUB,3) ! size on the order of 300
       INTEGER TSLAB,TOPLAYB,BOTLAYB
       REAL ASA
       DIMENSION ASA(3)
@@ -250,7 +250,7 @@ C  PPP  : gaunt coefficients for temperature-dependent phaseshifts
       DIMENSION LX(MLMMAX),LXI(MLMMAX),LXM(MLMMAX),LT(MLMMAX)
       INTEGER NN1,NN2,NN3
       REAL PPP
-      DIMENSION PPP(MNN1,MNN2,MNN3)
+      DIMENSION PPP(MNN1,MNN2,MNN3) !small, kB
 
 C  variables used in energy loop
 
@@ -393,8 +393,8 @@ C         unlike TENSOV, these must not be used as pointers.
       INTEGER IPLE,IPLO
       DIMENSION IPLE(MLEV),IPLO(MLOD)
       COMPLEX REPSTO,TRAPSTO,REMSTO,TRAMSTO
-      DIMENSION REPSTO(MNLTYPE,MKNT,MKNT),TRAPSTO(MNLTYPE,MKNT,MKNT)
-      DIMENSION REMSTO(MNLTYPE,MKNT,MKNT),TRAMSTO(MNLTYPE,MKNT,MKNT)
+      DIMENSION REPSTO(MNLTYPE,MKNT,MKNT),TRAPSTO(MNLTYPE,MKNT,MKNT) !Huge but used throughout
+      DIMENSION REMSTO(MNLTYPE,MKNT,MKNT),TRAMSTO(MNLTYPE,MKNT,MKNT) !Huge but used throughout
       COMPLEX XEVSTO,XODSTO
       DIMENSION XEVSTO(MLEV,MLEV,MNBRAV2),XODSTO(MLOD,MLOD,MNBRAV2)
 
@@ -463,7 +463,7 @@ C         method saves a considerable amount of time.
       DIMENSION TEST(MNSUB2)
       COMPLEX GH,RG,TS,TG,VT,TH
       COMPLEX RG_PERP ! Added MRiva 22021-09-21. Replaces the last 'row' of RG, which is now 2 instead of 3
-      DIMENSION GH(MLMG,MLMMAX),RG(2,MNSUB,MKNT),TS(MLMN),TG(2,MLM2N)
+      DIMENSION GH(MLMG,MLMMAX),RG(2,MNSUB,MKNT),TS(MLMN),TG(2,MLM2N) !make GH, RG allocatable
       DIMENSION RG_PERP(MKNT)
       DIMENSION VT(MLM2N),TH(MLMNI,MLMNI)
       INTEGER IPL
@@ -471,7 +471,7 @@ C         method saves a considerable amount of time.
       COMPLEX XH,HGHD,RG1,RG2
       DIMENSION XH(MLEV),HGHD(MN),RG1(MNSUB),RG2(MNSUB)
       COMPLEX TENSOV
-      DIMENSION TENSOV(2,MLMN,MKNT,MNCOMP)
+      DIMENSION TENSOV(2,MLMN,MKNT,MNCOMP) ! Huge, Tensors
 
 C  dimensions for layer stacking
 
@@ -582,6 +582,10 @@ C  common blocks
 
 
 C  end header - begin actual computation
+
+! AMI TODO: allocate some arrays here to reduce the bss size of the executable
+! Allocate() TH, RG, GH etc.
+
 
       EMACH = MEMACH
 
@@ -707,6 +711,7 @@ C  DEPENDENT PHASE SHIFTS, CPPP
       NN3=LMAX+1
       NN2=LMAX+1
       NN1=NN2+NN3-1
+
 
       CALL  CPPP (PPP,NN1,NN2,NN3,NFAC,FAC)
 
@@ -1424,3 +1429,4 @@ C  that's all, folks!
 C*************************************************************
 
       END
+

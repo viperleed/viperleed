@@ -8,8 +8,9 @@ test.py
 .DS_Store
 **/.DS_Store
 
-# Ignore files from Jetbrains IDEs
+# Ignore files from IDEs
 .idea/
+.vscode/
 
 # Ignore log file from recompile script
 utilities/recompile_parts.log
@@ -17,7 +18,24 @@ utilities/recompile_parts.log
 # Ignore testing folder
 Tests/
 
-# Ignore compiled versions of random_.c and beamgen
+# Ignore compiled versions of random_.c, beamgen, .x files and .so files
 **/random_.o
 **/MPIrandom_.o
 **/beamgen.v1.7
+*.x
+*.so
+*.mod
+*.o
+
+
+tleedmlib/wrapped/source/wrapf2py
+tleedmlib/wrapped/source/interpolation_benchmarks
+tleedmlib/wrapped/source/compile
+tleedmlib/wrapped/verification_data
+
+test_exec
+*.ipynb*
+tensorleed/eeasisss_new/eeasisss
+tensorleed/eeasisss_new/Fortran_quicktests
+*.plist
+*.mod

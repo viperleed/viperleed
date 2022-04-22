@@ -22,11 +22,11 @@ knownParams = [
     'ATTENUATION_EPS', 'AVERAGE_BEAMS', 'BEAM_INCIDENCE', 'BULKDOUBLING_EPS',
     'BULKDOUBLING_MAX', 'BULK_LIKE_BELOW', 'BULK_REPEAT', 'DOMAIN',
     'DOMAIN_STEP', 'ELEMENT_MIX',
-    'ELEMENT_RENAME', 'FILAMENT_WF', 'FORTRAN_COMP', 'HALTING',
+    'ELEMENT_RENAME', 'FILAMENT_WF', 'FORTRAN_COMP', 'HALTING', 'INTPOL_DEG',
     'IV_SHIFT_RANGE', 'LAYER_CUTS', 'LAYER_STACK_VERTICAL', 'LMAX',
     'LOG_DEBUG', 'LOG_SEARCH', 'N_BULK_LAYERS', 'N_CORES', 'OPTIMIZE',
     'PARABOLA_FIT', 'PHASESHIFT_EPS', 'PHASESHIFTS_CALC_OLD',
-    'PHASESHIFTS_OUT_OLD', 'PLOT_IV', 'RUN', 'R_FACTOR_SMOOTH',
+    'PHASESHIFTS_OUT_OLD', 'PLOT_IV', 'RUN', 'R_FACTOR_LEGACY', 'R_FACTOR_SMOOTH',
     'R_FACTOR_TYPE', 'S_OVL', 'SCREEN_APERTURE', 'SEARCH_BEAMS', 'SEARCH_CONVERGENCE',
     'SEARCH_CULL', 'SEARCH_MAX_GEN', 'SEARCH_POPULATION', 'SEARCH_START',
     'SITE_DEF', 'SUPERLATTICE', 'SUPPRESS_EXECUTION', 'SYMMETRIZE_INPUT',
@@ -468,7 +468,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
             rpars.VIBR_AMP_SCALE.extend(value.split(","))
         # simple bool parameters
         elif param in ['LOG_DEBUG', 'LOG_SEARCH', 'PHASESHIFTS_CALC_OLD',
-                       'PHASESHIFTS_OUT_OLD', 'SUPPRESS_EXECUTION',
+                       'PHASESHIFTS_OUT_OLD', 'R_FACTOR_LEGACY', 'SUPPRESS_EXECUTION',
                        'SYMMETRIZE_INPUT', 'SYMMETRY_FIND_ORI']:
             setBoolParameter(rpars, param, llist[0])
         # slightly more complicated bools
@@ -755,6 +755,15 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                         'PARAMETERS file: FORTRAN_COMP parameter: '
                         'Could not interpret flags. Value will be ignored.')
                     rpars.setHaltingLevel(1)
+        elif param == 'INTPOL_DEG':
+            if llist[0] in ('3', '5'):
+                rpars.INTPOL_DEG = int(llist[0])
+            else:
+                logger.warning(
+                    'PARAMETERS file: INTPOL_DEG parameter: '
+                    'Only degree 3 and 5 supported at the moment. Defaulting to 3.'
+                )
+                rpars.setHaltingLevel(1)
         elif param == 'IV_SHIFT_RANGE':
             if len(llist) in (2, 3):
                 fl = []
@@ -973,12 +982,18 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
             flag = plist[1].lower()
             if flag not in ('color', 'colour', 'colors', 'colours', 'perpage',
                             'border', 'borders', 'axes', 'legend', 'legends',
-                            'layout', 'overbar', 'overline'):
+                            'layout', 'overbar', 'overline', 'plot'):
                 logger.warning('PARAMETERS file: PLOT_IV: Flag {} not '
                                'recognized. Input will be ignored.'
                                .format(flag))
                 rpars.setHaltingLevel(1)
                 continue
+            if flag == 'plot':
+            #should it plot?
+                if llist[0].lower() in ('true'):
+                     rpars.PLOT_IV['plot'] = True
+                elif llist[0].lower() in ('false', 'none'):
+                    rpars.PLOT_IV['plot'] = False
             if flag in ('border', 'borders', 'axes'):
                 if llist[0].lower() in ('all', 'none'):
                     rpars.PLOT_IV['axes'] = llist[0].lower()

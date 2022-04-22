@@ -469,7 +469,7 @@ C  read data from experiment or pseudoexperiment
         CALL READT(AE,EE,NBED,MNGP,NEE,BENAME,IPR)                       RTHTH
       END IF                                                             RTHTH
 
-C  read information about gaps in the experimental spectra 
+C  read information about gaps in the experimental spectra .... BRANCH OFF HERE
 
       DO IB = 1,NBED
         GCOUNT(IB) = 0
@@ -704,9 +704,9 @@ C  produce some integrals over experimental data
 
       ENDDO
 
-      CLOSE(8)
+      CLOSE(8)           !! REMEMBER TO CLOSE IN BRANCH, BETTER: MOVE HIGHER UP
 
-C  read and write title of theoretical data (supplied by LEED program)
+C  read and write title of theoretical data (supplied by LEED program)  # KEEP THIS PART
 
       READ(5,22) TEXT
       WRITE(7,22) TEXT
@@ -1153,6 +1153,8 @@ C  R-factor according to Pendry (mult. by 0.5)
       IF (WR(3).GT.1.E-6) THEN
 
         RPE(IBE) = SY2 / (SEY2 + STY2)
+        print*, "nume", IBE, SY2
+        print*, "deno", IBE, (SEY2 + STY2)
         RAZ = RAZ + WB(IBE) * SY2
         RAN = RAN + WB(IBE) * (SEY2 + STY2)
         IF (KMIT.NE.0) THEN                                              201103

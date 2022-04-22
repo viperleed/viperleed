@@ -121,6 +121,7 @@ class Rparams:
         self.GAUSSIAN_WIDTH = 0.5
         self.GAUSSIAN_WIDTH_SCALING = 0.5
         self.HALTING = 2    # 2: major concerns, 1: minor warnings, 0: always
+        self.INTPOL_DEG = 3 # Degree of interpolation spline used in R-factor calculation
         self.IV_SHIFT_RANGE = [-3, 3, -1]  # step of -1: init from data
         self.LAYER_CUTS = ["dz(1.2)"]  # list of either str or c coordinates
         self.LAYER_STACK_VERTICAL = True
@@ -138,9 +139,10 @@ class Rparams:
         self.PHASESHIFTS_CALC_OLD = True # use old EEASiSSS version # TODO: once established, set to False or remove
         self.PHASESHIFTS_OUT_OLD = True  # output old PHASESHIFTS file # TODO: once established, set to False or remove
         self.PHI = 0.0           # from BEAM_INCIDENCE
-        self.PLOT_IV = {'axes': 'all', 'colors': [],
+        self.PLOT_IV = {'plot': True, 'axes': 'all', 'colors': [],
                         'legend': 'all', 'overbar': False, 'perpage': 2}
         self.RUN = [0, 1, 2, 3]        # what segments should be run
+        self.R_FACTOR_LEGACY = True # use old runtime-compiled R-factor calculation
         self.R_FACTOR_TYPE = 1  # 1: Pendry, 2: R2, 3: Zanazzi-Jona
         self.R_FACTOR_SMOOTH = 0
         self.S_OVL = 0.3 # Muffin tin overlap parameter after Rundgren 2021, default is 0.3 - set or optimize in FD
