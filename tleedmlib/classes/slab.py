@@ -9,17 +9,20 @@ properties. Includes functions for manipulation of those properties.
 """
 
 import logging
-import numpy as np
 import copy
 import re
-import scipy.spatial as sps
 import itertools
+from numbers import Real
+from typing import Sequence
+
+import numpy as np
+import scipy.spatial as sps
 from scipy.spatial import KDTree
 
 try:
     import ase
     has_ase = True
-except Exception:
+except ImportError:
     has_ase = False
 
 from viperleed.tleedmlib.base import (angle, rotation_matrix_order,
@@ -1704,90 +1707,121 @@ class Slab:
         return NN_dict
 
     def apply_matrix_transformation(self, trafo_matrix):
-        """Applies an orthoognal transformation to the unit cell and all atoms.
+        """Applies an orthogonal transformation to the unit cell and all atoms.
         
-        The transformation is described by an orthogonal transfomation matrix (O) which is applied to both the unit cell and all atomic positions.
+        The transformation is described by an orthogonal transfomation matrix
+        (O) which is applied to both the unit cell and all atomic positions.
         
         This transformation is essentially equivalent to a change of basis.
-        The transformation of the unit cell (U) is of the form O^(-1)UO. Atom positions (v) are transformed as vOS.
+        The transformation of the unit cell (U) is applied as U' = OUO^T.
+        Fractional and cartesian atomic positions (v) are transformed as Ov.
         This method can be used to switch indices, rotate the slab, etc..
         
         Parameters
         ----------
-        trafo_matrix : np.ndarray
-                trafo_matrix must be an orthogonal 3-by-3 matrix. Contains the transformation matrix (O) describing the applied transformation.
-                
-        Examples
-        ----------
+        trafo_matrix : Sequence
+                trafo_matrix must be an orthogonal 3-by-3 matrix.
+                Contains the transformation matrix (O) describing
+                the applied transformation.
+        
+        Raises
+        ------
+        ValueError
+            If trafo_matrix is not 3-by-3 or not orthogonal.
+        
+        Examples                                                               # TODO check direction of rotations!
+        --------
         >>> theta = np.pi/2
         >>> rot_mat = [[np.cos(theta), -np.sin(theta), 0],
                        [np.sin(theta),  np.cos(theta), 0],
                        [0, 0, 1]]
-        >>> rot_mat = np.array(rot_mat) # transform matrix into a numpy array
         >>> slab.apply_matrix_transformation(rot_mat)
                 
-            Applies a rotation by 90 degrees around the z axis to the unit cell.
+            Applies a rotation by 90 deg around the z axis to the unit cell.
             
-        >>> swap_b_c = [1, 0, 0],
-                       [0, 0, 1],
-                       [0, 1, 0]]
-        >>> swap_b_c = np.array(swap_b_c) # transform matrix into a numpy array
+        >>> swap_b_c = [[1, 0, 0],
+                        [0, 0, 1],
+                        [0, 1, 0]]
         >>> slab.apply_matrix_transformation(swap_b_c)
                 
-            Applies a transformation that switches the unit cell vectors b and c."""
+            Applies a transformation that switches the unit cell vectors b
+            and c in a non-handedness-conserving manner.
+        """
+        trafo_matrix = np.asarray(trafo_matrix)
+        if trafo_matrix.shape != (3, 3):
+            raise ValueError(
+                "apply_matrix_transformation: not a 3-by-3 matrix"
+            )
         
-        if not (np.abs(np.linalg.det(trafo_matrix)) - 1 < 1e-5):
-            # orthogonal transforamtions have determinate of +/-1
-            raise RuntimeError("apply_matrix_transformation was given a non-orthogonal transformation matrix. Use apply_scaling for this purpose.")
+        if not np.allclose(np.linalg.inv(trafo_matrix), trafo_matrix.T):
+            raise ValueError("apply_matrix_transformation: matrix is not "
+                             "orthogonal. Consider unsing apply_scaling.")
         
-        self.ucell = trafo_matrix.dot(self.ucell).dot(np.linalg.inv(trafo_matrix))
-        for at in self.atlist:
-            at.pos = trafo_matrix.dot(at.pos)
+        self.ucell = trafo_matrix.dot(self.ucell).dot(trafo_matrix.T)
+        for atom in self.atlist:
+            atom.pos = trafo_matrix.dot(atom.pos)
         self.getCartesianCoordinates(updateOrigin=True)
         self.collapseFractionalCoordinates()
-        return
     
     def apply_scaling(self, scaling):
         """Applies a scaling along the unit cell vectors.
         
-        This can be used to apply an isotropic scaling in all directions or to strech/compress along unit cell vectors in order to change lattice constants in some direction.
-        To apply other transformations (e.g. rotation, flipping), use apply_matrix_transformation.
+        This can be used to apply an isotropic scaling in all directions
+        or to strech/compress along unit cell vectors in order to change
+        lattice constants in some direction. To apply other (orthogonal)
+        transformations (e.g. rotation, flipping), use apply_matrix_transformation.
         
         Parameters
         ----------
-        scaling : float, list
-                  If the scaling is given as a float or a list containing one item, an isotropic scaling will be applied to the unit cell and atom positions. If a list with 3 entries is provided, the scaling will be applied along the unit cell vector in the given order.
+        scaling : Real, Sequence
+            If the scaling is given as a number or a list containing one item, an
+            isotropic scaling will be applied to the unit cell and atom positions.
+            If a list with 3 entries is provided, the scaling will be applied along
+            the unit cell vector in the given order.
+        
+        Raises
+        ------
+        TypeError
+            If scaling is not a real number nor a sequence
+        ValueError
+            If scaling is a Sequence with length different than 1 or 3,
+            or if scaling would make the unit cell singular (i.e., reduce
+            the length of a unit vecotr to zero).
         
         Examples
         ----------
         >>> slab.apply_scaling(2)
         
-            Streches the unit cell by a factor of two along a, b and c. This doubles the lattice constant and increases the volume 8-fold. 
+            Streches the unit cell by a factor of two along a, b and c. This doubles
+            the lattice constant and increases the volume 8-fold. 
         >>> slab.apply_scaling([1,1,1/3])
         
             Compresses the unit cell by a factor of 3 along c.
         """
-        
-        if type(scaling) == float:
-            scaling_mat = np.identity(3)*scaling_factor
-        elif type(scaling) == list or np.ndarray:
+        if isinstance(scaling, Real):
+            scaling = (scaling,)*3
+        elif isinstance(scaling, (np.ndarray, Sequence)):
+            if (len(scaling) not in (1, 3)
+                    or len(np.shape(scaling)) != 1):
+                raise ValueError(
+                    "Slab.apply_scaling: only 1-, or 3-sequences allowed"
+                    )
             if len(scaling) == 1:
-                scaling_mat = np.identity(3)*scaling[0]
-            elif len(scaling) == 3:
-                scaling_mat = np.zeros([3,3])
-                for i in range(3):
-                    scaling_mat[i,i] = scaling[i]
-            else:
-                raise RuntimeError("Parameter scaling in Slab.apply_scaling could not be interpreted.")
+                scaling = (scaling[0],)*3
         else:
-            raise RuntimeError("Parameter scaling in Slab.apply_scaling could not be interpreted.")
+            raise TypeError(
+                "Slab.apply_scaling: invalid type {!r}. ".format(type(scaling))
+                "Expected number or Sequence."
+            )
         
+        if any(abs(s) < 1e-5 for s in scaling):
+            raise ValueError("Slab.apply_scaling: cannot reduce unit"
+                             "vector(s) to zero length")
+        scaling_mat = np.diag(scaling)
 
-        self.ucell = scaling_mat.dot(self.ucell) # apply to unit cell (basis)
-        for at in self.atlist:
-            at.pos = trafo_matrix.dot(at.pos) # apply to atoms (vectors)
+        # Apply to unit cell (basis). Notice the inverted order, because the
+        # unit cell is stored with unit vectors as columns (i.e., a = ucell[:, 0])
+        self.ucell = self.ucell.dot(scaling_mat)
             
         self.getCartesianCoordinates(updateOrigin=True) # update cartesian values
-        self.collapseFractionalCoordinates()
-        return
         
