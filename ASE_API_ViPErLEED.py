@@ -127,7 +127,7 @@ def refcalc_for_ase_structure(
     # Transformation of slab object: Rotation or isotropic streching/shrinking
     if uc_transformation_matrix is not None:
         slab.apply_matrix_transformation(uc_transformation_matrix)
-    elif uc_isotropic_scaling is not None:
+    elif uc_scaling is not None:
         slab.apply_isotropic_scaling(uc_isotropic_scaling)
 
     # check if the now transformed slab has any z components in vectors a & b
