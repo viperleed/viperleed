@@ -190,23 +190,37 @@ def sortIVBEAMS(sl, rp):
     return ivsorted
 
 
-def readOUTBEAMS(filename="EXPBEAMS.csv", sep=",", enrange=None, file_StringIO = None):
-    """Reads beams from an EXPBEAMS.csv or THEOBEAMS.csv file. Returns a list
-    of Beam objects. The 'sep' parameter defines the separator. If an energy
-    range 'enrange' is passed, beams that contain no data within that range
-    will be filtered out before returning. If a Slab and Rparams object are
-    passed, will also check whether any of the experimental beams should be
-    equivalent, and if they are, warn, discard one and raise the halting
-    level.
-    If filename is None, data is read from a StringIO (in file_StringIO)."""
+def readOUTBEAMS(filename="EXPBEAMS.csv", sep=",", enrange=None):
+    """Reads beams from an EXPBEAMS.csv or THEOBEAMS.csv file.
+    
+    The beams are returned as a list of Beam objects.
+    
+    Parameters
+    ----------
+    filename : str, StringIO, optional
+        If string, interpret as the path to the file to read. If
+        a StringIO object, assume it contains already the contents
+        of the file to be interpreted. Default is "EXPBEAMS.csv".
+    sep: str, optional
+        Separator character for splitting beams. Default is ",".
+    enrange : Sequence, or None, optional
+        Energy range to be used to filter beams. Beams that contain no
+        data within the range will be filtered out before returning.
+        If given and not None, it should be a Sequence with two elements
+        (min and max). If enrange is not None, all beams returned have
+        non-negative intensities (by offsetting). Warnings are issued
+        if this happend. It is unclear whether it is intended that this
+        happens only if enrange is given (probably not).
+    
+    Returns
+    -------
+    beams : list of Beam
+        Beam objects with info read from the input given.
+    """
     beams = []
-    if filename is None:
-        try:
-            lines = [li[:-1] for li in file_StringIO.readlines()]
-            filename = "StringIO"
-        except Exception:
-            logger.error("readOUTBEAMS passed None as filename but unable to read from file_StringIO. "
-                         "If you are passing the file as a string check the format, otherwise check filename.")
+    if isinstance(filename, StringIO):
+        lines = (li[:-1] for li in filename)
+        filename = "StringIO"
     else:
         try:
             with open(filename, 'r') as rf:
@@ -301,9 +315,12 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=",", enrange=None, file_StringIO =
     logger.info("Loaded "+filename+" file containing {} beams (total energy "
                 "range: {:.2g} eV).".format(len(beams), totalrange))
 
-    # Add an energy offset such that the minimum beam energy is 0 and warn accordingly.
+    # Add an offset such that intensities are always positive, and warn.
+    # NOTE: It is unclear whether it was intended for this part of the code
+    # to only run if enrange is given (and not None). Could be moved before
+    # the return statement above.
     for beam in beams:
-        min_intensity = min([beam.intens[en] for en in beam.intens.keys()])
+        min_intensity = min(beam.intens.values())
         if min_intensity < 0:
             logger.warning(f"Negative intensity encountered in beam {beam.label} while reading {filename}."
                            f" An offset was added so that the minimum intensity of this beam is 0.")
