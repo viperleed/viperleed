@@ -686,16 +686,11 @@ def beamlist_to_array(beams):
     # turn list of Beam objects into an array of intensities
 
     n_beams = len(beams)
-    energies = []
-    for b in beams:
-        energies.extend([k for k in b.intens if k not in energies])
-    energies.sort()
+    energies = sorted({e for b in beams for e in b.intens})
     in_grid = np.array(energies)
-    n_E = len(energies)
+    n_E = in_grid.shape[0]
 
-
-    beam_arr = np.empty([n_E, n_beams])
-    beam_arr[:] = np.NaN
+    beam_arr = np.full([n_E, n_beams], fill_value=np.NaN)
 
     id_start = np.int32(np.zeros([n_beams]))
     n_E_beams = np.int32(np.zeros([n_beams]))
@@ -704,7 +699,7 @@ def beamlist_to_array(beams):
         # write beams into colums of beam_arr
         id_start[i] = np.where(np.isclose(energies, min(b.intens.keys())))[0][0]
         n_E_beams[i] = len(b.intens)
-        beam_arr[id_start[i]: id_start[i] + n_E_beams[i] , i] = list(b.intens.values())
+        beam_arr[id_start[i]: id_start[i] + n_E_beams[i], i] = list(b.intens.values())
 
 
     return in_grid, id_start, n_E_beams, beam_arr
