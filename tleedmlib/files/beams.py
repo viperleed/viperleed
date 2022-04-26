@@ -191,6 +191,7 @@ def sortIVBEAMS(sl, rp):
 
 
 def readOUTBEAMS(filename="EXPBEAMS.csv", sep=",", enrange=None):
+    #TODO: this need some optimizing; use csv and dict reader class
     """Reads beams from an EXPBEAMS.csv or THEOBEAMS.csv file.
     
     The beams are returned as a list of Beam objects.
@@ -207,10 +208,7 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=",", enrange=None):
         Energy range to be used to filter beams. Beams that contain no
         data within the range will be filtered out before returning.
         If given and not None, it should be a Sequence with two elements
-        (min and max). If enrange is not None, all beams returned have
-        non-negative intensities (by offsetting). Warnings are issued
-        if this happend. It is unclear whether it is intended that this
-        happens only if enrange is given (probably not).
+        (min and max).
     
     Returns
     -------
@@ -258,7 +256,7 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=",", enrange=None):
                 sh = m.group("h")   # string h
                 sk = m.group("k")   # string k
                 try:
-                    if "/" in sh:
+                    if "/" in sh: # TODO if fractionals found - pass fractions already to beam
                         h = int(sh.split("/")[0]) / int(sh.split("/")[1])
                     else:
                         h = float(sh)
@@ -284,7 +282,7 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=",", enrange=None):
                     if not np.isnan(f):
                         beams[i].intens[en] = f
                 except (ValueError, IndexError):
-                    f = None
+                    pass
     if enrange is not None and len(enrange) == 2:
         remlist = []
         for b in beams:
@@ -299,6 +297,16 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=",", enrange=None):
                            + ", ".join([b.label for b in remlist]))
         for b in remlist:
             beams.remove(b)
+
+    # Add an offset such that intensities are always positive, and warn.
+    for beam in beams:
+        min_intensity = min(beam.intens.values())
+        if min_intensity < 0:
+            logger.warning(f"Negative intensity encountered in beam {beam.label} while reading {filename}."
+                           f" An offset was added so that the minimum intensity of this beam is 0.")
+            for en in beam.intens.keys():
+                beam.intens[en] += abs(min_intensity)
+
     if enrange is None:
         return beams
     totalrange = 0.
@@ -314,18 +322,6 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=",", enrange=None):
                        - max(min(b.intens), minmax[0]))
     logger.info("Loaded "+filename+" file containing {} beams (total energy "
                 "range: {:.2g} eV).".format(len(beams), totalrange))
-
-    # Add an offset such that intensities are always positive, and warn.
-    # NOTE: It is unclear whether it was intended for this part of the code
-    # to only run if enrange is given (and not None). Could be moved before
-    # the return statement above.
-    for beam in beams:
-        min_intensity = min(beam.intens.values())
-        if min_intensity < 0:
-            logger.warning(f"Negative intensity encountered in beam {beam.label} while reading {filename}."
-                           f" An offset was added so that the minimum intensity of this beam is 0.")
-            for en in beam.intens.keys():
-                beam.intens[en] += abs(min_intensity)
 
     return beams
 
