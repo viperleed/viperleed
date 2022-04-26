@@ -1729,7 +1729,7 @@ class Slab:
         ValueError
             If trafo_matrix is not 3-by-3 or not orthogonal.
         
-        Examples                                                               # TODO check direction of rotations!
+        Examples
         --------
         >>> theta = np.pi/2
         >>> rot_mat = [[np.cos(theta), -np.sin(theta), 0],
@@ -1738,6 +1738,7 @@ class Slab:
         >>> slab.apply_matrix_transformation(rot_mat)
                 
             Applies a rotation by 90 deg around the z axis to the unit cell.
+            (In positive direction, i.e. clockwise looking along z)
             
         >>> swap_b_c = [[1, 0, 0],
                         [0, 0, 1],
@@ -1810,8 +1811,8 @@ class Slab:
                 scaling = (scaling[0],)*3
         else:
             raise TypeError(
-                "Slab.apply_scaling: invalid type {!r}. ".format(type(scaling))
-                "Expected number or Sequence."
+                f"Slab.apply_scaling: invalid type {type(scaling)}. "
+                f"Expected number or Sequence."
             )
         
         if any(abs(s) < 1e-5 for s in scaling):
