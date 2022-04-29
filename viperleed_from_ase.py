@@ -28,9 +28,10 @@ from viperleed.tleedmlib.files.iorfactor import beamlist_to_array
 from viperleed.tleedmlib.wrapped.rfactor import r_factor_new as rf
 from viperleed.tleedmlib.wrapped.error_codes import error_codes
 
-#for plot_iv_from_csv
+# for plot_iv_from_csv
 from viperleed.tleedmlib.files.ivplot import plot_iv
 from typing import Sequence
+
 
 def run_from_ase(
     exec_path,
@@ -120,6 +121,8 @@ def run_from_ase(
     v0i : float
         Imaginary part of the inner potential as read from "PARAMETERS". This is
         returned here since it is an input parameter for the R-factor calculation.
+        The value is read from PARAMETERS and left unchanged - it is not a result
+        of the calculation and is returned here for convenience only.
     
     Raises
     ------
@@ -294,7 +297,7 @@ def rfactor_from_csv(
     v0r_shift_range=(-3, 3),
     intpol_deg=5,
     intpol_step=0.5,
-): ## TODO: add kwarg for mapping for averaging
+):  ## TODO: add kwarg for mapping for averaging
     """Compute the Pendry R-factor between two CSV files (in ViPErLEED format).
     
     Read in two CSV files containing LEED-I(V) spectra and compute the mutual
@@ -373,7 +376,7 @@ def rfactor_from_csv(
                 f"Multiple beams sharing the same index encountered"
                 f" in input beamset {i}!"
             )
-    
+
     # Check for common beams
     beam_corr_1_2 = {}
 
@@ -422,7 +425,7 @@ def rfactor_from_csv(
         maxen += v0r_shift_range[1]
 
     grid = np.arange(minen, maxen + intpol_step, intpol_step)
-    
+
     skip_stages = np.int32([0, 0, 0, 0, 0])  # usused - we don't skip anything
     averaging_scheme = np.int32(np.arange(n_beams) + 1)  # don't average
 
@@ -508,11 +511,8 @@ def _check_ierr(ierr):
 
 
 def plot_iv_from_csv(
-    beam_file,
-    output_file,
-    beam_file_is_content=False,
-    which_beams = []
-    ):
+    beam_file, output_file, beam_file_is_content=False, which_beams=[]
+):
     """Plots LEED-I(V) spectra directly from a CSV file.
 
     This function can be used to plot LEED-I(V) spectra directly from
@@ -546,11 +546,13 @@ def plot_iv_from_csv(
 
     if beam_file_is_content:
         beam_file = StringIO(beam_file)
-    beam_list = readOUTBEAMS(filename = beam_file, sep = ",")
+    beam_list = readOUTBEAMS(filename=beam_file, sep=",")
 
     if which_beams == [] or which_beams == "all" or which_beams is None:
         pass
-    elif isinstance(which_beams, range) or all([type(label) is int for label in which_beams]):
+    elif isinstance(which_beams, range) or all(
+        [type(label) is int for label in which_beams]
+    ):
         beam_list = [beam_list[i] for i in which_beams]
     elif all([type(label) is str for label in which_beams]):
         new_beam_list = []
@@ -563,11 +565,12 @@ def plot_iv_from_csv(
 
     # normalize each beam by the max intensity
     for beam in beam_list:
-        maxint= max(beam.intens.values())
-        beam.intens = {en: i/maxint for en, i in beam.intens.items()}
+        maxint = max(beam.intens.values())
+        beam.intens = {en: i / maxint for en, i in beam.intens.items()}
 
     plot_iv(beam_list, output_file, labels=[beam.label for beam in beam_list])
     return
+
 
 def rot_mat_a(theta):
     """Generates a rotation matrix around the a axis.
