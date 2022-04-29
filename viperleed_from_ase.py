@@ -28,6 +28,9 @@ from viperleed.tleedmlib.files.iorfactor import beamlist_to_array
 from viperleed.tleedmlib.wrapped.rfactor import r_factor_new as rf
 from viperleed.tleedmlib.wrapped.error_codes import error_codes
 
+#for plot_iv_from_csv
+from viperleed.tleedmlib.files.ivplot import plot_iv
+from typing import Sequence
 
 def run_from_ase(
     exec_path,
@@ -309,7 +312,7 @@ def rfactor_from_csv(
     v0i : float
         Imaginary part of the inner potential (in eV).
     beams_file_is_content : tuple of two bool, default=(False, False)
-        If either value is set to true, it is assumed that the
+        If either value is set to True, it is assumed that the
         corresponding element of beams_file contains a string with
         the CSV contents rather than a path to the file. For reading,
         a StringIO will be used internally.
@@ -503,6 +506,68 @@ def _check_ierr(ierr):
     if ierr:
         raise RuntimeError(f"ViPErLEED Fortran error code {ierr}: {error_codes[ierr]}")
 
+
+def plot_iv_from_csv(
+    beam_file,
+    output_file,
+    beam_file_is_content=False,
+    which_beams = []
+    ):
+    """Plots LEED-I(V) spectra directly from a CSV file.
+
+    This function can be used to plot LEED-I(V) spectra directly from
+    a CSV file without running any other calculations.
+    It is assumed that the CSV file uses the format used by ViPErLEED.
+    Returns nothing but writes the pdf file.
+
+
+    Parameters
+    ----------
+    beam_file : string
+        If beam_file_is_content is set as True, the string is expected
+        to contain the contents of the CSV file, otherwise it should be
+        a path to the file.
+    beam_file_is_content : bool, default = False
+        If set to True, it is assumed that the beam_file
+        contains a string with the CSV contents rather than a path to
+        the file. For reading, a StringIO will be used internally.
+    output_pdf output_pdf : string
+        Path to the PDF file where the plot will be saved. (File is
+        created.)
+    which_beams : range or Sequence of int or strings
+        Indices specifying which beams to plot. Order is the same as in the csv.
+
+    Raises
+    ------
+    RuntimeError
+        If which_beams is not Sequence containing just integers or
+        strings.
+    """
+
+    if beam_file_is_content:
+        beam_file = StringIO(beam_file)
+    beam_list = readOUTBEAMS(filename = beam_file, sep = ",")
+
+    if which_beams == [] or which_beams == "all" or which_beams is None:
+        pass
+    elif isinstance(which_beams, range) or all([type(label) is int for label in which_beams]):
+        beam_list = [beam_list[i] for i in which_beams]
+    elif all([type(label) is str for label in which_beams]):
+        new_beam_list = []
+        for beam in beam_list:
+            if beam.label in which_beams:
+                new_beam_list.append(beam)
+        beam_list = new_beam_list
+    else:
+        raise RuntimeError("Invalid argument plot_beams in plot_iv_from_csv()")
+
+    # normalize each beam by the max intensity
+    for beam in beam_list:
+        maxint= max(beam.intens.values())
+        beam.intens = {en: i/maxint for en, i in beam.intens.items()}
+
+    plot_iv(beam_list, output_file, labels=[beam.label for beam in beam_list])
+    return
 
 def rot_mat_a(theta):
     """Generates a rotation matrix around the a axis.
