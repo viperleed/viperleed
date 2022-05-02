@@ -23,6 +23,8 @@ def read_delta_file(filename, n_E):
     # - can we improve performance?
     # - comments in Englisch
     # - comments that explain why things are done a certain way
+    # - conform to Python snake_case, PEP8 where possible
+    # - write docstring; talk to me about how to do that
         
     #Daten- und Hilfslisten des jeweiligen Files
     HeaderBlock1=[]
@@ -198,3 +200,118 @@ def read_delta_file(filename, n_E):
         HeaderBlock6,
         amplitudes_ref,
         amplitudes_del)
+
+#ganz dringend die -0.0000001 weggeben, nur da wegen ganzzahligen Indizes bei denen x2 zu groß werden würde
+def GetInt(HeaderBlock1_g, HeaderBlock2_g, HeaderBlock3_g, HeaderBlock5_g, E_list_g, VPI_list_g, VV_list_g, ReferenzAmplituden_g, DeltaAmplituden_g, \
+          NCSurf, delta_steps, filename_list):
+    
+    #zähler gefällt mir noch nicht
+    #Conc wird probably auch als input parameter genommen
+    CXDisp=1000
+    XDisp=0
+    zähler=0
+    Conc=1
+    for name in filename_list:
+        HeaderBlock5=HeaderBlock5_g[name]
+        if(NCSurf[zähler]==1):
+            Int0, NAtoms, NCSteps = HeaderBlock2_g[name]  
+            for j in range(NAtoms):
+                fill=delta_steps[zähler]-0.0000001     #probably besserer Name als fill finden
+                x1=int(fill//1)
+                x2=x1+1
+                x=fill-x1
+                y1=HeaderBlock5[0][x1,j,0]
+                y2=HeaderBlock5[0][x2,j,0]
+                CDisp=x*(y2-y1)+y1
+                XDisp=Conc*CDisp
+                if(XDisp<CXDisp):
+                    CXDisp=XDisp
+        zähler=zähler+1
+
+    
+    #unter der Annahme, dass HB1, HB3, E, VPI, VV, RA Listen immer gleich sind für alle Files
+    for name in filename_list:
+        HeaderBlock1=HeaderBlock1_g[name]
+        #HeaderBlock2=HeaderBlock2_g[name]
+        HeaderBlock3=HeaderBlock3_g[name]
+        #HeaderBlock5=HeaderBlock5_g[name]
+        E_list=E_list_g[name]
+        VPI_list=VPI_list_g[name]
+        VV_list=VV_list_g[name]
+        ReferenzAmplituden=ReferenzAmplituden_g[name]
+        #DeltaAmplituden=DeltaAmplituden_g[name]
+        
+        Trar1=[0,0]
+        Trar2=[0,0]
+        Theta, Phi, Trar1[0], Trar1[1], Trar2[0], Trar2[1] = HeaderBlock1
+        break
+
+        #Int0, NAtoms, NCSteps = HeaderBlock2    
+
+    ATSAS_matrix=np.zeros([len(E_list), Int0])
+        
+              
+    #Loop über die Energien
+    for Energy in range(len(E_list)):
+        #Definieren von Variablen, die in der jeweiligen Energie gleichbleiben
+        E=E_list[Energy]
+        VV=VV_list[Energy]
+        VPI=VPI_list[Energy]
+
+        AK=np.sqrt(max(2*E-2*VV,0))
+        C=AK*np.cos(Theta)
+        BK2=AK*np.sin(Theta)*np.cos(Phi)
+        BK3=AK*np.sin(Theta)*np.sin(Phi)
+        BKZ=np.sqrt(complex(2*E-BK2**2-BK3**2,-2*VPI))
+
+        #Loop über die Beams
+        for Beam in range(Int0):
+            #Variablen pro Beam
+            h=HeaderBlock3[Beam][0]
+            k=HeaderBlock3[Beam][1]
+            AK2=BK2+h*Trar1[0]+k*Trar2[0]
+            AK3=BK3+h*Trar1[1]+k*Trar2[1]
+            AK=2*E-AK2**2-AK3**2
+            AKZ=complex(AK,-2*VPI)
+            APERP=AK-2*VV
+
+            #Hier kommen später noch die Delta Amplituden ebenfalls ins Spiel, wird gerade gemacht
+            #Herausfinden welche NCStep deltas man nimmt mit delta_step matrix
+            DelAct=ReferenzAmplituden[Energy][Beam]
+            zähler=0
+            for name in filename_list:
+                #noch genau schauen wie genau gewollt
+                Int0, NAtoms, NCSteps = HeaderBlock2_g[name]
+                
+                #Interpolation der Float delta_step Werte
+                #iwie random dass x1 extra als int definiert werden muss, damit sich python nicht aufregt
+                j=delta_steps[zähler]-0.0000001
+                x1=int(j//1)
+                x2=x1+1
+                x=j-x1
+                y1=DeltaAmplituden_g[name][Energy][x1,Beam]
+                y2=DeltaAmplituden_g[name][Energy][x2,Beam]
+                Interpolation=x*(y2-y1)+y1
+
+                
+                DelAct=DelAct+Interpolation
+                zähler=zähler+1
+
+
+            if(APERP>0):
+                A=np.sqrt(APERP)
+                PRE=(BKZ+AKZ)*CXDisp
+                PRE=np.exp(complex(0,-1)*PRE)
+                AmpAbs=abs(DelAct)
+                if(AmpAbs>10**10):
+                    ATSAS=10**20
+                else:
+                    RPRE=abs(PRE)
+                    ATSAS=AmpAbs**2*RPRE**2*A/C
+            else:
+                ATSAS=0
+
+            ATSAS_matrix[Energy,Beam]=ATSAS
+            #Atsas hier in ein Dictionary mit dem Key name abspeichern; nope worked so immernoch
+    
+    return ATSAS_matrix
