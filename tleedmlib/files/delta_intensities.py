@@ -204,19 +204,25 @@ def read_delta_file(filename, n_E):
 #ganz dringend die -0.0000001 weggeben, nur da wegen ganzzahligen Indizes bei denen x2 zu groß werden würde
 def GetInt(HeaderBlock1_g, HeaderBlock2_g, HeaderBlock3_g, HeaderBlock5_g, E_list_g, VPI_list_g, VV_list_g, ReferenzAmplituden_g, DeltaAmplituden_g, \
           NCSurf, delta_steps, filename_list):
-    
-    #zähler gefällt mir noch nicht
+    # TODO:
+    #  - all inputs and outputs should be numpy arrays. This is VERY important for performance
+    # inputs should not contain filenames or dicts
+    # for case of multiple input arrays, we should use touples, keyword arguments etc
+    # - output ATSAS needs to be in a very specific format - talk to me about what it should look like
+    # - improve readability: add comments and refactor stuff into short functions where possible
+    # - comments in Englisch
+
     #Conc wird probably auch als input parameter genommen
     CXDisp=1000
     XDisp=0
-    zähler=0
+    counter=0
     Conc=1
     for name in filename_list:
         HeaderBlock5=HeaderBlock5_g[name]
-        if(NCSurf[zähler]==1):
+        if(NCSurf[counter]==1):
             Int0, NAtoms, NCSteps = HeaderBlock2_g[name]  
             for j in range(NAtoms):
-                fill=delta_steps[zähler]-0.0000001     #probably besserer Name als fill finden
+                fill=delta_steps[counter]-0.0000001     #probably besserer Name als fill finden
                 x1=int(fill//1)
                 x2=x1+1
                 x=fill-x1
@@ -226,7 +232,7 @@ def GetInt(HeaderBlock1_g, HeaderBlock2_g, HeaderBlock3_g, HeaderBlock5_g, E_lis
                 XDisp=Conc*CDisp
                 if(XDisp<CXDisp):
                     CXDisp=XDisp
-        zähler=zähler+1
+        counter=counter+1
 
     
     #unter der Annahme, dass HB1, HB3, E, VPI, VV, RA Listen immer gleich sind für alle Files
@@ -243,8 +249,8 @@ def GetInt(HeaderBlock1_g, HeaderBlock2_g, HeaderBlock3_g, HeaderBlock5_g, E_lis
         
         Trar1=[0,0]
         Trar2=[0,0]
-        Theta, Phi, Trar1[0], Trar1[1], Trar2[0], Trar2[1] = HeaderBlock1
-        break
+        theat, phi, Trar1[0], Trar1[1], Trar2[0], Trar2[1] = HeaderBlock1
+        break # @Tobi: what does this loop do? It break at first iteration..
 
         #Int0, NAtoms, NCSteps = HeaderBlock2    
 
@@ -259,9 +265,9 @@ def GetInt(HeaderBlock1_g, HeaderBlock2_g, HeaderBlock3_g, HeaderBlock5_g, E_lis
         VPI=VPI_list[Energy]
 
         AK=np.sqrt(max(2*E-2*VV,0))
-        C=AK*np.cos(Theta)
-        BK2=AK*np.sin(Theta)*np.cos(Phi)
-        BK3=AK*np.sin(Theta)*np.sin(Phi)
+        C=AK*np.cos(theat)
+        BK2=AK*np.sin(theat)*np.cos(phi)
+        BK3=AK*np.sin(theat)*np.sin(phi)
         BKZ=np.sqrt(complex(2*E-BK2**2-BK3**2,-2*VPI))
 
         #Loop über die Beams
@@ -278,14 +284,14 @@ def GetInt(HeaderBlock1_g, HeaderBlock2_g, HeaderBlock3_g, HeaderBlock5_g, E_lis
             #Hier kommen später noch die Delta Amplituden ebenfalls ins Spiel, wird gerade gemacht
             #Herausfinden welche NCStep deltas man nimmt mit delta_step matrix
             DelAct=ReferenzAmplituden[Energy][Beam]
-            zähler=0
+            counter=0
             for name in filename_list:
                 #noch genau schauen wie genau gewollt
                 Int0, NAtoms, NCSteps = HeaderBlock2_g[name]
                 
                 #Interpolation der Float delta_step Werte
                 #iwie random dass x1 extra als int definiert werden muss, damit sich python nicht aufregt
-                j=delta_steps[zähler]-0.0000001
+                j=delta_steps[counter]-0.0000001
                 x1=int(j//1)
                 x2=x1+1
                 x=j-x1
@@ -295,19 +301,19 @@ def GetInt(HeaderBlock1_g, HeaderBlock2_g, HeaderBlock3_g, HeaderBlock5_g, E_lis
 
                 
                 DelAct=DelAct+Interpolation
-                zähler=zähler+1
+                counter=counter+1
 
 
             if(APERP>0):
                 A=np.sqrt(APERP)
                 PRE=(BKZ+AKZ)*CXDisp
                 PRE=np.exp(complex(0,-1)*PRE)
-                AmpAbs=abs(DelAct)
-                if(AmpAbs>10**10):
-                    ATSAS=10**20
+                amp_abs=abs(DelAct)
+                if(amp_abs>10e10):
+                    ATSAS=10e20
                 else:
                     RPRE=abs(PRE)
-                    ATSAS=AmpAbs**2*RPRE**2*A/C
+                    ATSAS=amp_abs**2*RPRE**2*A/C
             else:
                 ATSAS=0
 
