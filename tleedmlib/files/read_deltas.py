@@ -1,4 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
 
+@author: Tobias Hable, Alexander M. Imre
+
+Reads in delta files.
+"""
 from re import I
 import sys
 import numpy as np
@@ -8,6 +14,9 @@ import scipy
 import os
 
 def read_delta_file(filename, n_E):
+    """
+    TODO: write docstring.
+    """
     #TODO:
     # - get rid of HeaderBlocks ang give them propper names
     # - better readability!
