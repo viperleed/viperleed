@@ -190,7 +190,8 @@ def read_delta_file(filename, n_E):
         listdummy2.clear()
 
     # think about what is sensible to return here
-    return ((phi, theta),
+    return (
+        (phi, theta),
         (trar1, trar2),
         (Int0, n_atoms, NCSteps),
         (E_array, VPI_array, VV_array),
