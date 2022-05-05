@@ -14,26 +14,63 @@ import scipy
 import os
 
 def read_delta_file(filename, n_E):
+    """This function reads in one file of data and stores the data in arrays, which can be used in later functions (ex.: GetInt)
+    
+    #INPUT:
+    #filename:
+    #The filename describes which file you want to read in (path from the function location to the file)
+    #
+    #n_E:
+    #n_E is the number of different energy levels. This should be a known factor for your files
+    #
+    #
+    #OUTPUT:
+    #(phi, theta):
+    #Angles of how the beam hits the sample
+    #
+    #(trar1, trar2):
+    #Vectors of the normal and the reciprocal unit cell of the sample
+    #
+    #int0:
+    #Number of beams that are reflected by the sample 
+    #
+    #n_atoms:
+    #TBD
+    #
+    #nc_steps:
+    #Number of permutations between direction deltas and vibration deltas
+    #
+    #E_array:
+    #Array that contains all the energies of the file
+    #
+    #VPI_array:
+    #Imaginary part of the inner potential of the surface
+    #
+    #VV_array:
+    #Real part of the inner potential of the surface
+    #
+    #Beam_places:
+    #Array with the order of beams
+    #
+    #Cundisp:
+    #TBD always 0
+    #
+    #CDisp:
+    #Geometric displacement of given delta
+    #
+    #Aid:
+    #TBD unused in tensorleed
+    #
+    #amplitudes_ref:
+    #Array that contains all values of the reference amplitudes
+    #
+    #amplitudes_del:
+    #Array that contains all values of the delta amplitudes
     """
-    TODO: write docstring.
-    """
-    #TODO:
-    # - get rid of HeaderBlocks ang give them propper names
-    # - better readability!
-    # - can we improve performance?
-    # - comments in Englisch
-    # - comments that explain why things are done a certain way
-    # - conform to Python snake_case, PEP8 where possible
-    # - write docstring; talk to me about how to do that
         
-    #Daten- und Hilfslisten des jeweiligen Files
+    #Lists and Arrays needed; E,VPI,VV are numpy arrays that get returned, the others are lists that help saving the other data
     HeaderBlock1=[]
     HeaderBlock2=[]
-    HeaderBlock3=[]
-    HeaderBlock4=[]
-    HeaderBlock5=[]
-    HeaderBlock6=[]
-    Parameter_list=[]
     E_array= np.full(n_E, fill_value = np.NaN)
     VPI_array= np.full(n_E, fill_value = np.NaN)
     VV_array= np.full(n_E, fill_value = np.NaN)
@@ -44,13 +81,13 @@ def read_delta_file(filename, n_E):
     ff_reader_6E13_7 = ff.FortranRecordReader("6E13.7")
     ff_reader_10F7_4 = ff.FortranRecordReader("10F7.4")
 
-    #Einlesen der Daten eines Files
+    #Reading in the data of a file
     with open(filename, mode = "r") as file:
         content = file.readlines()
     # make into an iterator
     file_lines = iter(content)
 
-    #1.Block of Header - only 1 line
+    #1.Block of Header - only 1 line - theta, phi, trar1, trar2 variables
     line=next(file_lines)
     HeaderBlock1=ff_reader_6E13_7.read(line)
     trar1=[0,0]
@@ -59,83 +96,76 @@ def read_delta_file(filename, n_E):
     trar1 = np.array(trar1)
     trar2 = np.array(trar2)
 
-    #2.Block of Header - also only 1 line
+    #2.Block of Header - also only 1 line - int0, n_atoms, nc_steps variables
     line=next(file_lines)
     z2_elemente=line.split()
     for part in z2_elemente:
         HeaderBlock2.append(int(part))
-    Int0, n_atoms, NCSteps = HeaderBlock2
+    int0, n_atoms, nc_steps = HeaderBlock2
 
-    #3.Block of Header
-    while(len(HeaderBlock3)<Int0):
+    #3.Block of Header - Positions of the beams
+    while(len(listdummy2)<2*int0):
         line=next(file_lines)
-        Delta_Amp=line.split()
-        for part in Delta_Amp:
-            listdummy.append(part)
-        # AMI: this is unreadable, make nicer
-        if(len(listdummy)==2*Int0):
-            for j in range(2*Int0):
-                if(j%2==0):
-                    e1=float(listdummy[j])
-                elif(j%2==1):
-                    e2=float(listdummy[j])
-                    Element=[e1,e2]
-                    HeaderBlock3.append(Element)
-            listdummy.clear()
+        listdummy=line.split()
+        for part in listdummy:
+            listdummy2.append(part)
+        #dieses if wieder redundant?
+        if(len(listdummy2)>=2*int0):
+            Beam_places=(np.full(shape=[int0,2],fill_value=np.NaN))
+            for i in range(int0):
+                for j in range(2):
+                    Beam_places[i,j]=listdummy2[2*i+j]
+    listdummy.clear()
+    listdummy2.clear()
 
-    #4.Block of Header
-    while(len(HeaderBlock4)<n_atoms):
+    #4.Block of Header - Cundisp
+    while(len(listdummy2)<3*n_atoms):
         line=next(file_lines)
-        Cundisp=line.split()
-        for part in Cundisp:
-            listdummy.append(part)
-        # same as above
-        if(len(listdummy)>=3*n_atoms):
-            for j in range(3*n_atoms):
-                if(j%3==0):
-                    e1=float(listdummy[j])
-                elif(j%3==1):
-                    e2=float(listdummy[j])
-                elif(j%3==2):
-                    e3=float(listdummy[j])
-                    Element=[e1,e2,e3]
-                    HeaderBlock4.append(Element)
-            listdummy.clear()
+        listdummy=line.split()
+        for part in listdummy:
+            listdummy2.append(part)
+        #if redundant?
+        if(len(listdummy2)>=3*n_atoms):
+            Cundisp=(np.full(shape=[n_atoms,3],fill_value=np.NaN))
+            for i in range(n_atoms):
+                for j in range(3):
+                    Cundisp[i,j]=listdummy2[3*i+j]
+    listdummy.clear()
+    listdummy2.clear()
 
-    #5.Block of Header
-    while(len(HeaderBlock5)<1):
+    #5.Block of Header - CDisp
+    while(len(listdummy2)<3*n_atoms*nc_steps):
         line=next(file_lines)
         listdummy=ff_reader_10F7_4.read(line)
         for part in listdummy:
             listdummy2.append(part)
-        if(len(listdummy2)>=3*n_atoms*NCSteps):
-        # d=1
-            #zeile6block=i
-            matrix=np.zeros([NCSteps,n_atoms,3])
-            for j in range(NCSteps):
+            #maybe getting rid of the if again
+        if(len(listdummy2)>=3*n_atoms*nc_steps):
+            CDisp=(np.full(shape=[nc_steps,n_atoms,3],fill_value=np.NaN))
+            for j in range(nc_steps): #some syntax error here
                 for k in range(n_atoms):
                     for l in range(3):
-                        matrix[j,k,l]=listdummy2[n_atoms*3*j+3*k+l]
-            HeaderBlock5.append(matrix)
-            listdummy.clear()
-            listdummy2.clear()
+                        CDisp[j,k,l]=listdummy2[n_atoms*3*j+3*k+l]
+    listdummy.clear()
+    listdummy2.clear()
 
-    #6.Block of Header
-    while(len(HeaderBlock6)<NCSteps):
+    #6.Block of Header - Aid
+    while(len(listdummy2)<nc_steps):
         line=next(file_lines)
         listdummy=ff_reader_10F7_4.read(line)
         for part in listdummy:
             listdummy2.append(part)
-        if(len(listdummy2)>=NCSteps):
-            for j in range(NCSteps):
-                HeaderBlock6.append(listdummy2[j])
-            listdummy.clear()
-            listdummy2.clear()
+        if(len(listdummy2)>=nc_steps):
+            Aid=(np.full(shape=[nc_steps],fill_value=np.NaN))
+            for i in range(nc_steps):
+                Aid[i]=listdummy2[i]
+    listdummy.clear()
+    listdummy2.clear()
 
     # Initialize arrays for reference and delta amplitudes
-    amplitudes_ref = (np.full(shape = [n_E, Int0], 
+    amplitudes_ref = (np.full(shape = [n_E, int0], 
         fill_value = np.nan, dtype = complex))
-    amplitudes_del = (np.full(shape = [n_E, NCSteps, Int0], 
+    amplitudes_del = (np.full(shape = [n_E, nc_steps, int0], 
         fill_value = np.nan, dtype = complex))
 
     # maybe working arrays for transfer into amplitude arrays ?
@@ -148,13 +178,15 @@ def read_delta_file(filename, n_E):
         listdummy=ff_reader_6E13_7.read(line)
         for part in listdummy:
             if(part is not None):
-                Parameter_list.append(part)
-        E, VPI, VV = Parameter_list
+                listdummy2.append(part)
+        E, VPI, VV = listdummy2
+        #transversing  Hartree to eV
+        E=E*27.211396641308                            
         E_array[e_index] = E
         VPI_array[e_index] = VPI
         VV_array[e_index] = VV
         listdummy.clear()
-        Parameter_list.clear()
+        listdummy2.clear()
 
         # @Tobi: these conditions below are not nice.
         # think about:
@@ -162,45 +194,45 @@ def read_delta_file(filename, n_E):
         # do you need the if at all?
         #
         # for performance and readability:
-        # move loops over j  / j&k into an extra function
+        # move loops over j  / j&k into an extra function   # how would that be shorther than just writing it?
 
         # Reference amplitudes
-        while(len(listdummy2)<2*Int0):
+        while(len(listdummy2)<2*int0):
             line=next(file_lines)
             listdummy=ff_reader_6E13_7.read(line)
             for part in listdummy:
                 listdummy2.append(part)
-            if(len(listdummy2)>=2*Int0):
-                for j in range(Int0):
-                    amplitudes_ref[e_index, j] = complex(listdummy2[2*j], listdummy2[2*j+1])
+        for j in range(int0):
+            amplitudes_ref[e_index, j] = complex(listdummy2[2*j], listdummy2[2*j+1])
         listdummy.clear()
-        listdummy2.clear()
-
+        listdummy2.clear()       
+        
         # Delta amplitudes
-        while(len(listdummy2)<2*Int0*NCSteps):
+        while(len(listdummy2)<2*int0*nc_steps):
             line=next(file_lines)
             listdummy=ff_reader_6E13_7.read(line)
             for part in listdummy:
                 listdummy2.append(part)
-            if(len(listdummy2)>=2*Int0*NCSteps):
-                for j in range(NCSteps):
-                    for k in range(Int0):
-                        amplitudes_del[e_index, j, k] = complex(listdummy2[2*Int0*j+k*2], listdummy2[2*Int0*j+k*2+1]) 
+        for j in range(nc_steps):
+            for k in range(int0):
+                amplitudes_del[e_index, j, k] = complex(listdummy2[2*int0*j+k*2], listdummy2[2*int0*j+k*2+1]) 
         listdummy.clear()
         listdummy2.clear()
-
+        
+    #print("end of file")
     # think about what is sensible to return here
     return (
         (phi, theta),
         (trar1, trar2),
-        (Int0, n_atoms, NCSteps),
+        (int0, n_atoms, nc_steps),
+        Beam_places,
+        Cundisp,
+        CDisp,
+        Aid,
         (E_array, VPI_array, VV_array),
-        HeaderBlock3,
-        HeaderBlock4,
-        HeaderBlock5,
-        HeaderBlock6,
         amplitudes_ref,
         amplitudes_del)
+
 
 #ganz dringend die -0.0000001 weggeben, nur da wegen ganzzahligen Indizes bei denen x2 zu groß werden würde
 def GetInt(HeaderBlock1_g, HeaderBlock2_g, HeaderBlock3_g, HeaderBlock5_g, E_list_g, VPI_list_g, VV_list_g, ReferenzAmplituden_g, DeltaAmplituden_g, \
