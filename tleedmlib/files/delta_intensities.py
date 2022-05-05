@@ -222,102 +222,126 @@ def read_delta_file(filename, n_E):
         amplitudes_del)
 
 
-#ganz dringend die -0.0000001 weggeben, nur da wegen ganzzahligen Indizes bei denen x2 zu groß werden würde
-def GetInt(HeaderBlock1_g, HeaderBlock2_g, HeaderBlock3_g, HeaderBlock5_g, E_list_g, VPI_list_g, VV_list_g, ReferenzAmplituden_g, DeltaAmplituden_g, \
-          NCSurf, delta_steps, filename_list):
-    # TODO:
-    #  - all inputs and outputs should be numpy arrays. This is VERY important for performance
-    # inputs should not contain filenames or dicts
-    # for case of multiple input arrays, we should use touples, keyword arguments etc
-    # - output ATSAS needs to be in a very specific format - talk to me about what it should look like
-    # - improve readability: add comments and refactor stuff into short functions where possible
-    # - comments in Englisch
+def GetInt(Phi, Theta, Trar1, Trar2, Beam_variables, Beam_places, ph_CDisp, E_array, VPI_array, VV_array, amplitudes_ref, amplitudes_del, \
+          filename_list, NCSurf, delta_steps):
+    """This function reads in the values of the function Transform and uses them to get the ATSAS_matrix
+    
+    INPUT:
+    filename:
+    The filename describes which file u want to read in (path from the function location to the file)
+    
+    Phi, Theta:
+    Angles of how the beam hits the sample
+    
+    Trar1, Trar2:
+    Vectors of the normal and the reciprocal unit cell of the sample
+    
+    Beam_variables:
+    The variables int0, n_atoms, nc_steps for each file stored in an array
+    
+    Beam_places:
+    Array with the order of beams
+    
+    ph_CDisp:
+    Geometric displacements of the atom
+    
+    E_array:
+    Array that contains all the energies of the file
+    
+    VPI_array:
+    Imaginary part of the inner potential of the surface
+    
+    VV_array:
+    Real part of the inner potential of the surface
+    
+    amplitudes_ref:
+    Array that contains all values of the reference amplitudes
+    
+    amplitudes_del:
+    Array that contains all values of the delta amplitudes
+    
+    filename_list:
+    List of the filenames that contain the data
+    
+    NCSurf:
+    List of 0 and 1 to decide which file takes part in creating the CXDisp
+    
+    delta_step:
+    List of numbers that decide which geometric displacement this atom has
+    
+    
+    OUTPUT:
+    ATSAS_matrix:
+    Array that contains the intensities of the different beams with each energy
+    """
 
     #Conc wird probably auch als input parameter genommen
     CXDisp=1000
     XDisp=0
-    counter=0
     Conc=1
-    for name in filename_list:
-        HeaderBlock5=HeaderBlock5_g[name]
-        if(NCSurf[counter]==1):
-            Int0, NAtoms, NCSteps = HeaderBlock2_g[name]  
-            for j in range(NAtoms):
-                fill=delta_steps[counter]-0.0000001     #probably besserer Name als fill finden
+    for i in range(len(filename_list)):
+        #C_Disp[:,:,:]=ph_CDisp[i,:,:,:]
+        if(NCSurf[i]==1):
+            int0, n_atoms, nc_steps = Beam_variables[i,:]
+            int0=int(int0)
+            n_atoms=int(n_atoms)
+            nc_steps=int(nc_steps)
+            for j in range(n_atoms):
+                fill=delta_steps[i]-0.0000001     #probably besserer Name als fill finden
                 x1=int(fill//1)
                 x2=x1+1
                 x=fill-x1
-                y1=HeaderBlock5[0][x1,j,0]
-                y2=HeaderBlock5[0][x2,j,0]
+                y1=ph_CDisp[i,x1,j,0]
+                y2=ph_CDisp[i,x2,j,0]
                 CDisp=x*(y2-y1)+y1
                 XDisp=Conc*CDisp
                 if(XDisp<CXDisp):
                     CXDisp=XDisp
-        counter=counter+1
 
-    
-    #unter der Annahme, dass HB1, HB3, E, VPI, VV, RA Listen immer gleich sind für alle Files
-    for name in filename_list:
-        HeaderBlock1=HeaderBlock1_g[name]
-        #HeaderBlock2=HeaderBlock2_g[name]
-        HeaderBlock3=HeaderBlock3_g[name]
-        #HeaderBlock5=HeaderBlock5_g[name]
-        E_list=E_list_g[name]
-        VPI_list=VPI_list_g[name]
-        VV_list=VV_list_g[name]
-        ReferenzAmplituden=ReferenzAmplituden_g[name]
-        #DeltaAmplituden=DeltaAmplituden_g[name]
-        
-        Trar1=[0,0]
-        Trar2=[0,0]
-        theat, phi, Trar1[0], Trar1[1], Trar2[0], Trar2[1] = HeaderBlock1
-        break # @Tobi: what does this loop do? It break at first iteration..
-
-        #Int0, NAtoms, NCSteps = HeaderBlock2    
-
-    ATSAS_matrix=np.zeros([len(E_list), Int0])
-        
+    ATSAS_matrix=np.zeros([len(E_array), int0])       
               
     #Loop über die Energien
-    for Energy in range(len(E_list)):
+    for e_index in range(len(E_array)):
         #Definieren von Variablen, die in der jeweiligen Energie gleichbleiben
-        E=E_list[Energy]
-        VV=VV_list[Energy]
-        VPI=VPI_list[Energy]
+        E=E_array[e_index]
+        VV=VV_array[e_index]
+        VPI=VPI_array[e_index]
 
         AK=np.sqrt(max(2*E-2*VV,0))
-        C=AK*np.cos(theat)
-        BK2=AK*np.sin(theat)*np.cos(phi)
-        BK3=AK*np.sin(theat)*np.sin(phi)
+        C=AK*np.cos(Theta)
+        BK2=AK*np.sin(Theta)*np.cos(Phi)
+        BK3=AK*np.sin(Theta)*np.sin(Phi)
         BKZ=np.sqrt(complex(2*E-BK2**2-BK3**2,-2*VPI))
 
         #Loop über die Beams
-        for Beam in range(Int0):
+        for b_index in range(int0):
             #Variablen pro Beam
-            h=HeaderBlock3[Beam][0]
-            k=HeaderBlock3[Beam][1]
+            h=Beam_places[b_index,0]
+            k=Beam_places[b_index,1]
             AK2=BK2+h*Trar1[0]+k*Trar2[0]
             AK3=BK3+h*Trar1[1]+k*Trar2[1]
             AK=2*E-AK2**2-AK3**2
             AKZ=complex(AK,-2*VPI)
             APERP=AK-2*VV
 
-            #Hier kommen später noch die Delta Amplituden ebenfalls ins Spiel, wird gerade gemacht
             #Herausfinden welche NCStep deltas man nimmt mit delta_step matrix
-            DelAct=ReferenzAmplituden[Energy][Beam]
+            DelAct=amplitudes_ref[e_index,b_index]
             counter=0
-            for name in filename_list:
+            for i in range(len(filename_list)):
                 #noch genau schauen wie genau gewollt
-                Int0, NAtoms, NCSteps = HeaderBlock2_g[name]
+                int0, n_atoms, nc_steps = Beam_variables[i]
+                int0=int(int0)
+                n_atoms=int(n_atoms)
+                nc_steps=int(nc_steps)
                 
                 #Interpolation der Float delta_step Werte
                 #iwie random dass x1 extra als int definiert werden muss, damit sich python nicht aufregt
-                j=delta_steps[counter]-0.0000001
-                x1=int(j//1)
+                fill=delta_steps[i]-0.0000001
+                x1=int(fill//1)
                 x2=x1+1
-                x=j-x1
-                y1=DeltaAmplituden_g[name][Energy][x1,Beam]
-                y2=DeltaAmplituden_g[name][Energy][x2,Beam]
+                x=fill-x1
+                y1=amplitudes_del[i,e_index,x1,b_index]
+                y2=amplitudes_del[i,e_index,x2,b_index]
                 Interpolation=x*(y2-y1)+y1
 
                 
@@ -338,7 +362,7 @@ def GetInt(HeaderBlock1_g, HeaderBlock2_g, HeaderBlock3_g, HeaderBlock5_g, E_lis
             else:
                 ATSAS=0
 
-            ATSAS_matrix[Energy,Beam]=ATSAS
+            ATSAS_matrix[e_index,b_index]=ATSAS
             #Atsas hier in ein Dictionary mit dem Key name abspeichern; nope worked so immernoch
     
     return ATSAS_matrix
