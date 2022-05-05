@@ -16,56 +16,55 @@ import os
 def read_delta_file(filename, n_E):
     """This function reads in one file of data and stores the data in arrays, which can be used in later functions (ex.: GetInt)
     
-    #INPUT:
-    #filename:
-    #The filename describes which file you want to read in (path from the function location to the file)
-    #
-    #n_E:
-    #n_E is the number of different energy levels. This should be a known factor for your files
-    #
-    #
-    #OUTPUT:
-    #(phi, theta):
-    #Angles of how the beam hits the sample
-    #
-    #(trar1, trar2):
-    #Vectors of the normal and the reciprocal unit cell of the sample
-    #
-    #int0:
-    #Number of beams that are reflected by the sample 
-    #
-    #n_atoms:
-    #TBD
-    #
-    #nc_steps:
-    #Number of permutations between direction deltas and vibration deltas
-    #
-    #E_array:
-    #Array that contains all the energies of the file
-    #
-    #VPI_array:
-    #Imaginary part of the inner potential of the surface
-    #
-    #VV_array:
-    #Real part of the inner potential of the surface
-    #
-    #Beam_places:
-    #Array with the order of beams
-    #
-    #Cundisp:
-    #TBD always 0
-    #
-    #CDisp:
-    #Geometric displacement of given delta
-    #
-    #Aid:
-    #TBD unused in tensorleed
-    #
-    #amplitudes_ref:
-    #Array that contains all values of the reference amplitudes
-    #
-    #amplitudes_del:
-    #Array that contains all values of the delta amplitudes
+    Parameters
+    ----------
+    filename : string
+    The filename describes which file you want to read in (path from the function location to the file)
+    
+    n_E : int
+    Number of different energy levels. This should be a known factor for your files
+    
+    
+    Returns
+    -------
+    (phi, theta): tuple of float
+    Angles of how the beam hits the sample
+    
+    (trar1, trar2) : tuple of ndarray
+    Vectors of the normal and the reciprocal unit cell of the sample
+    
+    int0 : int
+    Number of beams that are reflected by the sample 
+    
+    n_atoms: int
+    TBD
+    
+    nc_steps: ndarray
+    Number of permutations between direction deltas and vibration deltas
+    
+    E_array : ndarray
+    Array that contains all the energies of the file
+    
+    VPI_array : ndarray
+    Imaginary part of the inner potential of the surface
+    
+    VV_array : ndarray
+    Real part of the inner potential of the surface
+    
+    Beam_places : ndarray
+    Array with the order of beams
+    
+    Cundisp : ndarray
+    TBD always 0
+    
+    CDisp : ndarry
+    Geometric displacement of given delta
+    
+    amplitudes_ref : ndarray
+    Array that contains all values of the reference amplitudes
+    
+    amplitudes_del : ndarray
+    Array that contains all values of the delta amplitudes
     """
         
     #Lists and Arrays needed; E,VPI,VV are numpy arrays that get returned, the others are lists that help saving the other data
@@ -188,14 +187,6 @@ def read_delta_file(filename, n_E):
         listdummy.clear()
         listdummy2.clear()
 
-        # @Tobi: these conditions below are not nice.
-        # think about:
-        # do you need to have the if inside the loop?
-        # do you need the if at all?
-        #
-        # for performance and readability:
-        # move loops over j  / j&k into an extra function   # how would that be shorther than just writing it?
-
         # Reference amplitudes
         while(len(listdummy2)<2*int0):
             line=next(file_lines)
@@ -219,8 +210,6 @@ def read_delta_file(filename, n_E):
         listdummy.clear()
         listdummy2.clear()
         
-    #print("end of file")
-    # think about what is sensible to return here
     return (
         (phi, theta),
         (trar1, trar2),
@@ -228,7 +217,6 @@ def read_delta_file(filename, n_E):
         Beam_places,
         Cundisp,
         CDisp,
-        Aid,
         (E_array, VPI_array, VV_array),
         amplitudes_ref,
         amplitudes_del)
