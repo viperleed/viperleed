@@ -84,8 +84,6 @@ def create_search_params_array(rp):
         real_params[idp_id] = idp_par.center - 1 # -1 here because center is a Fortran index
         real_params_bounds.append((0, idp_par.steps -1)) # -1 here because center is a Fortran index
 
-
-
     params_relation = np.zeros([len(geo_idp_params), n_pars], dtype="int32")
 
     #create the correspondence matrix between dependent and independent atoms
@@ -99,6 +97,14 @@ def create_search_params_array(rp):
 
     return real_params, real_params_bounds, params_relation, geo_idp_params, geo_all_params
 
+def get_nc_surf(rp, sl, geo_all_params):
+    nc_surf = np.full([len(geo_all_params)], False, dtype="bool") # flag if atom is considered to be at the surface or not
+    surface_atoms = sl.getSurfaceAtoms(rp)
+    for id, par in enumerate(geo_all_params):
+        if par.atom in surface_atoms:
+            nc_surf[id] = True
+
+    return nc_surf
 
 #@jit
 def expand_params(real_params, params_relation, offsets):
