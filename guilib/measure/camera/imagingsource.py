@@ -1,4 +1,4 @@
-"""Module imagainsource of viperleed.guilib.measure.camera.
+"""Module imagingsource of viperleed.guilib.measure.camera.
 
 ===============================================
       ViPErLEED Graphical User Interface
@@ -542,7 +542,7 @@ class ImagingSourceCamera(CameraABC):
         None.
         """
         if no_roi:
-            roi = self.driver.video_format_shape_range
+            roi = (0, 0, *self.driver.video_format_shape_range[2:])
         else:
             roi = self.roi
         roi_x, roi_y, roi_width, roi_height = roi
