@@ -221,8 +221,14 @@ class TimeResolved(MeasurementABC):
 
     def abort(self):
         """Interrupt measurement, save partial data, set energy to zero."""
-        self.__trigger_one_measurement.stop()
-        self.__energy_step_timer.stop()
+        try:
+            timers = (self.__trigger_one_measurement, self.__energy_step_timer)
+        except AttributeError:
+            # .abort() happened during super().__init__
+            timers = tuple()
+
+        for timer in timers:
+            timer.stop()
         super().abort()
 
     def energy_generator(self):     # TODO: move to parent; improve.
