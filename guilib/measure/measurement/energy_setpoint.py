@@ -110,7 +110,7 @@ class MeasureEnergySetpoint(MeasurementABC):
             base.emit_error(self,
                             MeasurementErrors.INVALID_SETTING_WITH_FALLBACK,
                             '', 'measurement_settings/end_energy', fallback)
-        return egy
+        return egy                                                              # TODO: warn if end == 1000
 
     def begin_preparation(self):
         """Start preparation for measurements.

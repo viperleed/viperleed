@@ -240,7 +240,7 @@ class TiffTag:
     def value_as_bytes(self, byte_order):
         """Return the value of self as bytes."""
         if any(v is None for v in self.value):
-            print(f"{self.name=}, {self.n_entries=}, {self.value=}")
+            # print(f"{self.name=}, {self.n_entries=}, {self.value=}")
             raise RuntimeError(f"No valid value for Tag {self.name}")
         byte_fmt = '>' if byte_order == 'big' else '<'
         bytes_value = b''

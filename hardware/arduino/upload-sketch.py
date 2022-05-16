@@ -61,7 +61,7 @@ def get_arduino_cli_from_git():
             url_latest = asset['browser_download_url']
             correct_name = asset['name']
             break
-    if not url_latest:
+    else:
         raise RuntimeError("Could not find a suitable precompiled "
                            "version of the Arduino CLI. You may have "
                            "to compile from the source at "
@@ -141,8 +141,10 @@ def get_boards():
     try:
         cli.check_returncode()
     except subprocess.CalledProcessError as err:
-        raise RuntimeError("Arduino CLI failed with return code "
-                           f"{cli.returncode}. The error was:\n{cli.stderr}")
+        raise RuntimeError(
+            "Arduino CLI failed with return code "
+            f"{cli.returncode}. The error was:\n{cli.stderr}"
+            ) from err
     return json.loads(cli.stdout)
 
 

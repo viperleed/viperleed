@@ -38,7 +38,7 @@ def get_system_config():                                                        
 def _interpolate_config_path(filenames):
     """Interpolate filenames with system settings.
 
-    Replaces "__CONFIG__" at the baginning of filenames
+    Replaces "__CONFIG__" at the beginning of filenames
     with the path contained in the system-wide settings,
     unless (i) there is no valid system-wide setting, or
     (ii) a filename contains "__CONFIG__" multiple times.

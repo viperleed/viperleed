@@ -593,7 +593,7 @@ class ViPErinoController(MeasureControllerABC):
                 device_list.append(f"{ctrl.name} ({ctrl.port_name})")
             else:
                 print("Not a ViPErLEED controller at", ctrl.port_name,
-                      flush=True)
+                      ctrl.hardware, flush=True)
         for thread in threads:
             thread.quit()
         time.sleep(0.001)

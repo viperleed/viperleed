@@ -17,6 +17,8 @@ from viperleed.guilib.measure.measurement.abc import (MeasurementABC,
                                                       MeasurementErrors)
 
 
+# TODO: complain if started without a camera
+
 class IVVideo(MeasurementABC):
     """Measurement class for LEED I(V) videos."""
 
