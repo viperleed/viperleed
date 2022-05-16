@@ -13,6 +13,7 @@ Author: Michele Riva
 
 import weakref
 from copy import deepcopy
+from time import perf_counter as timer                                          # TEMP: till "saturating" is fixed
 
 import numpy as np
 
@@ -21,6 +22,7 @@ from PyQt5 import (QtCore as qtc,
                    QtGui as qtg)
 
 from viperleed.guilib.measure.camera import abc
+from viperleed.guilib.measure.camera.imageprocess import ImageProcessor
 from viperleed.guilib.widgetslib import screen_fraction
 from viperleed.guilib.measure import hardwarebase as base
 
@@ -28,7 +30,7 @@ from viperleed.guilib.measure import hardwarebase as base
 # TODO: ImageViewer.optimum_size is not updated when screen is changed
 # TODO: ROI show size in image coordinates as it is resized (tooltip?)
 # TODO: ROI context menu: precisely set with coordinates
-# TODO: context -- snap image, properties
+# TODO: context -- properties
 
 
 # pylint: disable=too-many-instance-attributes
@@ -140,7 +142,7 @@ class CameraViewer(qtw.QScrollArea):
 
     def __del__(self):
         """Remove self from the dictionary of viewers."""
-        self._viewers.pop(self.__camera)
+        self._viewers.pop(self.camera)
         try:
             super().__del__()
         except AttributeError:
@@ -194,7 +196,8 @@ class CameraViewer(qtw.QScrollArea):
                         "roi_visible": bool(roi_visible),}
         self.__glob = {"image_size": qtc.QSize(),
                        "camera": camera,
-                       "mouse_button": None,}
+                       "mouse_button": None,
+                       "img_array": None}                                       # TODO: may not be necessary
         self.__children = {"viewer": ImageViewer(),
                            "context_menu": qtw.QMenu(parent=self)}
         self.__children["roi"] = RegionOfInterest(parent=self.__img_view)
@@ -209,6 +212,11 @@ class CameraViewer(qtw.QScrollArea):
 
         self.__compose()
         self.__connect()
+
+    @property
+    def camera(self):
+        """Return the camera whose frames are displayed."""
+        return self.__glob["camera"]
 
     @property
     def image_size(self):
@@ -312,9 +320,9 @@ class CameraViewer(qtw.QScrollArea):
     def closeEvent(self, event):  # pylint: disable=invalid-name
         """Extend to stop camera when window is closed by the user."""
         if (event.spontaneous()
-            and self.__camera.is_running
+            and self.camera.is_running
                 and self.stop_on_close):
-            self.__camera.stop()
+            self.camera.stop()
         super().closeEvent(event)
 
     def keyPressEvent(self, event):  # pylint: disable=invalid-name
@@ -491,11 +499,6 @@ class CameraViewer(qtw.QScrollArea):
         self.__zoom(direction=direction)
 
     @property
-    def __camera(self):
-        """Return the camera whose frames are displayed."""
-        return self.__glob["camera"]
-
-    @property
     def __img_view(self):
         """Return the ImageViewer children."""
         return self.__children["viewer"]
@@ -533,22 +536,23 @@ class CameraViewer(qtw.QScrollArea):
 
     def __apply_roi(self, *_):
         """Set a new ROI in the camera."""
-        old_roi_x, old_roi_y, *_ = self.__camera.roi
+        old_roi_x, old_roi_y, *_ = self.camera.roi
         new_roi_x, new_roi_y, roi_w, roi_h = self.roi.image_coordinates
 
         # Give the camera new, updated settings. This is the easier way
         # to go, as it will update all the information in the camera.
-        settings = deepcopy(self.__camera.settings)
+        settings = deepcopy(self.camera.settings)
         settings.set("camera_settings", "roi",
                      f"({old_roi_x + new_roi_x}, {old_roi_y + new_roi_y}, "
                      f"{roi_w}, {roi_h})")
-        was_running = self.__camera.is_running
-        self.__camera.settings = settings
+        was_running = self.camera.is_running
+        self.camera.settings = settings
+        self.camera.settings.update_file()
 
         # Remove the rubber-band, and restart the camera.
         self.roi.hide()
         if was_running:
-            self.__camera.start()
+            self.camera.start()
 
     def __compose(self):
         """Place children widgets."""
@@ -558,13 +562,13 @@ class CameraViewer(qtw.QScrollArea):
         self.setWidget(self.__img_view)
         self.setAlignment(qtc.Qt.AlignCenter)
         self.adjustSize()
-        self.setWindowTitle(self.__camera.name)
+        self.setWindowTitle(self.camera.name)
         self.__compose_context_menu()
 
     def __update_title(self):
         """Update the window title with camera information."""
         img_w, img_h = self.image_size.width(), self.image_size.height()
-        full_w, full_h = self.__camera.sensor_size
+        full_w, full_h = self.camera.sensor_size
 
         img_size = f"{img_w}x{img_h}"
         if img_w != full_w or img_h != full_h:
@@ -573,7 +577,7 @@ class CameraViewer(qtw.QScrollArea):
             scale = self.windowTitle().split(' - ')[1]
         except IndexError:
             scale = ""
-        title = f"{self.__camera.name} ({img_size})"
+        title = f"{self.camera.name} ({img_size})"
         if scale:
             title += f" - {scale}"
         self.setWindowTitle(title)
@@ -587,7 +591,6 @@ class CameraViewer(qtw.QScrollArea):
 
         menu.addAction("Reset ROI")
         act = menu.addAction("Snap image")
-        act.setEnabled(False)  #  TODO: open file dialog and save frame
 
         # Flags
         menu.addSeparator()
@@ -611,7 +614,7 @@ class CameraViewer(qtw.QScrollArea):
         """Connect signals."""
         self.image_size_changed.connect(self.__update_title)
         self.__img_view.image_scaling_changed.connect(self.__on_image_scaled)
-        self.__camera.started.connect(self.__on_camera_started)
+        self.camera.started.connect(self.__on_camera_started)
         self.customContextMenuRequested.connect(self.__show_context_menu)
         self.__children["context_menu"].triggered.connect(
             self.__on_context_menu_triggered
@@ -620,13 +623,13 @@ class CameraViewer(qtw.QScrollArea):
 
     def __on_camera_started(self):
         """React to a start of the camera."""
-        mode = self.__camera.mode
+        mode = self.camera.mode
         if mode == 'triggered':
-            connect_to = self.__camera.image_processed
-            disconnect_from = self.__camera.frame_ready
+            connect_to = self.camera.image_processed
+            disconnect_from = self.camera.frame_ready
         else:
-            connect_to = self.__camera.frame_ready
-            disconnect_from = self.__camera.image_processed
+            connect_to = self.camera.frame_ready
+            disconnect_from = self.camera.image_processed
 
         base.safe_disconnect(disconnect_from, self.__show_image)
         base.safe_connect(connect_to, self.__show_image,
@@ -641,16 +644,14 @@ class CameraViewer(qtw.QScrollArea):
         if "show" in text:
             self.show_auto = action.isChecked()
             return
-        if "reset" in text:
-            was_running = self.__camera.is_running
-            if was_running:
-                self.__camera.stop()
-            self.__camera.set_roi(no_roi=True)
-            if was_running:
-                self.__camera.start()
+        if "reset" in text:  # reset ROI
+            self.__reset_roi()
             return
         if "stop" in text:
             self.stop_on_close = action.isChecked()
+            return
+        if "snap" in text:
+            self.__on_snap_image()
             return
         print(action.text(), ": not implemented yet")
 
@@ -664,6 +665,37 @@ class CameraViewer(qtw.QScrollArea):
         title += f' - {100*new_scaling:.1f}%'
         self.setWindowTitle(title)
         self.zoom_changed.emit(new_scaling)
+    
+    def __on_snap_image(self):
+        """Save current frame to file."""
+        image = self.__glob['img_array'].copy()
+        fname, _ = qtw.QFileDialog.getSaveFileName(                             # TODO: add default filename?
+            parent=self,
+            filter="TIFF Image (*.tiff *.tif)"
+            )
+        if not fname:  # No file selected
+            return
+        if not (fname.endswith('.tif') or fname.endswith('.tiff')):
+            fname += '.tiff'
+        process_info = self.camera.process_info.copy()
+        process_info.filename = fname
+        process_info.n_frames = 1
+        processor = ImageProcessor()
+        processor.prepare_to_process(process_info, image)
+        processor.process_frame(image)
+
+    def __reset_roi(self):
+        """Reset camera ROI to full sensor and update settings."""
+        was_running = self.camera.is_running
+        if was_running:
+            self.camera.stop()
+        self.camera.set_roi(no_roi=True)
+        self.camera.settings.set("camera_settings", "roi",
+                                 str(self.camera.get_roi()))
+        self.camera.settings.update_file()
+        self.camera.bad_pixels.apply_roi(no_roi=True)
+        if was_running:
+            self.camera.start()
 
     def __show_context_menu(self, position):
         """Show a context menu when right-clicking at position."""
@@ -680,14 +712,21 @@ class CameraViewer(qtw.QScrollArea):
         # If the camera does not support ROI at the hardware
         # level, show only the portion of the image inside
         # the ROI.
-        supports_roi = ('roi' in self.__camera.hardware_supported_features
-                        or self.__camera.get_roi())
+        supports_roi = ('roi' in self.camera.hardware_supported_features
+                        or self.camera.get_roi())
         if not supports_roi:
-            roi_x, roi_y, roi_w, roi_h = self.__camera.roi
+            roi_x, roi_y, roi_w, roi_h = self.camera.roi
             img_array = img_array[roi_y:roi_y+roi_h, roi_x:roi_x+roi_w]
+
+        self.__glob['img_array'] = img_array                                    # TODO: used for snapping. Maybe take from ImageViewer?
 
         # Notice the swapping of width and height!
         height, width = img_array.shape
+        
+        _, max_int = self.camera.intensity_limits
+        
+        if np.any(img_array > .95*max_int):
+            print("saturating", timer())                                        # TEMP. Will show overlay
 
         image = qtg.QImage(img_array, width, height,
                            img_array.strides[0],
@@ -728,7 +767,7 @@ class CameraViewer(qtw.QScrollArea):
 # pylint: enable=too-many-instance-attributes
 
 
-class ImageViewer(qtw.QLabel):
+class ImageViewer(qtw.QLabel):                                                  # TODO: add children (QLabel?) that holds saturation overlay
     """A QLabel that displays images in a CameraViewer.
 
     The images are scaled with a smooth transform, which makes
