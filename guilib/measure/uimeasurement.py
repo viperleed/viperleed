@@ -33,17 +33,15 @@ from viperleed.guilib.measure.datapoints import DataPoints
 from viperleed.guilib.measure.widgets.measurement_plot import MeasurementPlot
 from viperleed.guilib.measure import dialogs
 from viperleed.guilib.measure.classes.settings import (
-    ViPErLEEDSettings, MissingSettingsFileError
+    ViPErLEEDSettings, MissingSettingsFileError, get_system_config
     )
 
-# temporary solution till we have a system config file
-from viperleed.guilib import measure as vpr_measure
-
-
-DEFAULT_CONFIG_PATH = (Path(inspect.getfile(vpr_measure)).parent                # TODO: Get it from system settings
-                       / 'configuration')
 
 TITLE = 'Measurement UI'
+
+DEFAULT_CONFIG_PATH = Path(
+    get_system_config().get("PATHS", 'configuration', fallback='')
+    )
 
 
 class UIErrors(base.ViPErLEEDErrorEnum):
@@ -157,30 +155,52 @@ class Measure(gl.ViPErLEEDPluginBase):
     def __compose_menu(self):
         """Put together menu."""
         menu = self.menuBar()
+
+        # File
         file_menu = self._ctrls['menus']['file']
         menu.insertMenu(self.about_action, file_menu)
         act = file_menu.addAction("&Open...")
         act.setShortcut("Ctrl+O")
         act.triggered.connect(self.__on_read_pressed)
 
-        devices_menu = self._ctrls['menus']['devices']
+        # Devices
+        devices_menu = self._ctrls['menus']['devices']                          # TODO: have to update the lists regularly. Use timer to update_device_lists.
+        devices_menu.aboutToShow.connect(self.update_device_lists)
         menu.insertMenu(self.about_action, devices_menu)
-        cam_devices = devices_menu.addMenu("Cameras")
-        controller_devices = devices_menu.addMenu("Controllers")
-        for cam_name, cam_cls in base.get_devices("camera").items():
-            act = cam_devices.addAction(cam_name)
-            act.setData(cam_cls)
-            act.triggered.connect(self.__on_camera_clicked)
-        for ctrl_name, ctrl_cls in base.get_devices("controller").items():
-            act = controller_devices.addAction(ctrl_name)
-            act.setData(ctrl_cls)
-            act.triggered.connect(self.__on_controller_clicked)
+        devices_menu.addMenu("Cameras")
+        devices_menu.addMenu("Controllers")
+        self.update_device_lists()
 
+        # Tools
         tools_menu = self._ctrls['menus']['tools']
         menu.insertMenu(self.about_action, tools_menu)
         act = tools_menu.addAction("Find bad pixels...")
         act.triggered.connect(self._dialogs['bad_px_finder'].show)
         self._dialogs['bad_px_finder'].setModal(True)
+
+        act = tools_menu.addAction("Upload/upgrade firmware...")
+        act.setEnabled(False)                                                   # TODO: fix when implemented
+        # act.triggered.connect(self._dialogs['firmware_upgrade'].show)
+
+    def update_device_lists(self):
+        """Update entries in "Devices" menu."""
+        menu = self._ctrls['menus']['devices']
+        cameras, controllers = [a.menu() for a in menu.actions()]
+        cameras.clear()
+        controllers.clear()
+
+        for cam_name, cam_cls in base.get_devices("camera").items():
+            act = cameras.addAction(cam_name)
+            act.setData(cam_cls)
+            act.triggered.connect(self.__on_camera_clicked)
+        for ctrl_name, ctrl_cls in base.get_devices("controller").items():
+            act = controllers.addAction(ctrl_name)
+            act.setData(ctrl_cls)
+            act.triggered.connect(self.__on_controller_clicked)
+
+        # Leave enabled only those containing entries
+        cameras.setEnabled(bool(cameras.actions()))
+        controllers.setEnabled(bool(controllers.actions()))
 
     def __run_measurement(self):
         self.measurement.begin_preparation()
@@ -190,7 +210,38 @@ class Measure(gl.ViPErLEEDPluginBase):
     def __on_camera_clicked(self, *_):
         cam_name = self.sender().text()
         cam_cls = self.sender().data()
-        print(cam_name, cam_cls)
+
+        cfg_path = base.get_device_config(cam_name,
+                                          directory=DEFAULT_CONFIG_PATH,
+                                          prompt_if_invalid=False)
+
+        # Decide whether we can take the camera object
+        # (and its settings) from the known camera viewers
+        for viewer in self.__camera_viewers:
+            if cam_name != viewer.camera.name:
+                continue
+            camera = viewer.camera
+            viewer.stop_on_close = True
+            if camera.mode != 'live':
+                camera.stop()
+            if cfg_path:  # TEMP: re-read config to apply changes. Will eventually be different when I have a settings editor. Also the following "if live mode" can be merged back.
+                camera.settings.read(cfg_path)
+            if camera.mode != 'live':
+                camera.settings['camera_settings']['mode'] = 'live'
+            camera.load_camera_settings()                                       # TODO: this can be done only in the "if" when we have a settings editor
+            break
+        else:  # Not already available. Make a new camera.
+            if not cfg_path:
+                print("no config found", cfg_path)                              # TODO: error out here
+                return
+            cfg = ViPErLEEDSettings.from_settings(cfg_path)
+            cfg['camera_settings']['mode'] = 'live'
+            camera = cam_cls(settings=cfg)
+            viewer = CameraViewer(camera, stop_on_close=True,
+                                  roi_visible=False)
+            self.__camera_viewers.append(viewer)
+        if not camera.is_running:
+            camera.start()
 
     def __on_controller_clicked(self, *_):
         action = self.sender()
@@ -207,7 +258,6 @@ class Measure(gl.ViPErLEEDPluginBase):
         self._dummy_signal.emit()
         ctrl.serial.port.waitForReadyRead(100)
 
-        print(ctrl.hardware)
         ctrl.disconnect_()
         thread.quit()
         time.sleep(0.01)
@@ -340,6 +390,20 @@ class Measure(gl.ViPErLEEDPluginBase):
         # accept has to be called in order to
         # safely quit the dialog and its threads
         self._dialogs['bad_px_finder'].accept()
+
+        retry_later = False
+        # Stop all cameras
+        for viewer in self.__camera_viewers:
+            camera = viewer.camera
+            if camera and camera.is_running:
+                camera.stop()
+                retry_later = True
+
+        if retry_later:
+            self.__retry_close.start(50)
+            event.ignore()
+            return
+
         super().closeEvent(event)
 
     def __on_change_settings_pressed(self):
