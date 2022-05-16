@@ -466,7 +466,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             error = (CameraErrors.BINNING_ROI_MISMATCH,
                      roi_w, roi_h, self.binning, new_roi_w, new_roi_h)
             if not self.__already_reported(error):
-                base.emit_error(self, *error)
+                # base.emit_error(self, *error)                                 # TODO: make this a non-critical warning!
                 self.__reported_errors.add(error)
             # Update the ROI in the settings only if the
             # new ROI is a valid one for the camera. The
