@@ -309,7 +309,9 @@ class ImageProcessor(qtc.QObject):
             self.busy = False
             return
 
-        fname = Path(self.process_info.base_path) / fname
+        fname = Path(fname)
+        if self.process_info.base_path:
+            fname = self.process_info.base_path / fname
         if '.tif' not in fname.suffix:
             raise ValueError("Can only save .tiff files. Found invalid "
                              f"extension {fname.suffix}")
