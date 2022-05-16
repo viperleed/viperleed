@@ -22,13 +22,12 @@ from viperleed.guilib.measure.camera import badpixels
 from viperleed.guilib.measure.camera import abc as camera_abc
 from viperleed.guilib.measure import dialogs
 from viperleed.guilib.widgetslib import change_control_text_color
-
-# temporary solution till we have a system config file
-from viperleed.guilib import measure as vpr_measure
+from viperleed.guilib.measure.classes.settings import get_system_config
 
 
-DEFAULT_CONFIG_PATH = (Path(inspect.getfile(vpr_measure)).parent
-                       / 'configuration')
+DEFAULT_CONFIG_PATH = Path(
+    get_system_config().get("PATHS", 'configuration', fallback='')
+    )
 NOT_FOUND = "No file found!"
 NOT_SET = "\u2014"
 NO_BAD_PX_PATH = "None selected"
@@ -531,6 +530,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
         cam = self.active_camera
         cam.settings.set("camera_settings", "bad_pixels_path", new_directory)
         cam.update_bad_pixels()
+        cam.settings.update_file()
         self.__update_controls()
 
     def __reset_progress_bars(self):
