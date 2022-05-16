@@ -581,10 +581,11 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         """Disconnect necessary camera signals."""
         disconnect = base.safe_disconnect
         for camera in self.cameras:
-            camera.disconnect_()
             disconnect(camera.camera_busy, self._on_camera_busy_changed)
             disconnect(self._camera_timer.timeout, camera.trigger_now)
             disconnect(self.__preparation_started, camera.start)
+            disconnect(camera.stopped, self._finalize)
+            camera.disconnect_()
 
     def _disconnect_controller(self, ctrl):
         """Disconnect a generic controller."""
@@ -714,15 +715,22 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
                             'camera_settings/class_name', '')
             raise RuntimeError from None
 
-        instance = camera_class(settings=config)
-        return instance
+        camera = camera_class(settings=config)
+        if camera.mode != 'triggered':
+            # Force mode to be triggered
+            camera.settings.set("camera_settings", "mode", "triggered")
+            camera.settings.update_file()
+            # base.emit_error(self, CameraErrors.INVALID_SETTINGS,              # TODO: Should we make this a non-critical warning?
+                            # 'camera_settings/mode', 'Camera {camera.name}: '
+                            # 'Cannot measure in live mode.')
+        return camera
 
     def _make_cameras(self):
         """Make cameras from self.settings."""
         try:
             cam_settings = self.settings.getsequence('devices', 'cameras',
                                                      fallback=())
-        except NotASequenceError:
+        except NotASequenceError:                                               # TODO: probably report the error
             cam_settings = tuple()
 
         cameras = []
