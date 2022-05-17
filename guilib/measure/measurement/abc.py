@@ -56,6 +56,11 @@ class MeasurementErrors(base.ViPErLEEDErrorEnum):
         "of MeasureControllerABC. All secondary controllers need "
         "to be a subclass of MeasureControllerABC."
         )
+    MISSING_CAMERA = (
+        305,
+        "No camera available for the measurement. Check both the "
+        "measurement and the camera configuration files."
+        )
 
 
 # too-many-instance-attributes
@@ -234,6 +239,11 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         new_settings : dict, ConfigParser, string or path
             Configuration of the measurement.
 
+        Returns
+        -------
+        settings_valid : bool
+            True if the new settings given were accepted.
+
         Raises
         ------
         TypeError
@@ -243,9 +253,9 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
 
         Emits
         -----
-        ExtraSerialErrors.MISSING_SETTINGS
+        MeasurementErrors.MISSING_SETTINGS
             If new_settings is missing.
-        ExtraSerialErrors.INVALID_SETTINGS
+        MeasurementErrors.INVALID_SETTINGS
             If any element of the new_settings does not fit the
             mandatory_settings.
         """
@@ -253,7 +263,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
             new_settings = ViPErLEEDSettings.from_settings(new_settings)
         except (ValueError, NoSettingsError):
             base.emit_error(self, MeasurementErrors.MISSING_SETTINGS)
-            return
+            return False
 
         invalid = new_settings.has_settings(*self._mandatory_settings,
                                             *self._other_mandatory_settings)
@@ -261,7 +271,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         if invalid:
             base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
                             ', '.join(invalid), '')
-            return
+            return False
 
         self.__settings = new_settings
 
@@ -275,6 +285,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         self.__make_tmp_directory_tree()
 
         self.data_points.primary_controller = self.primary_controller
+        return True
 
     @property
     def start_energy(self):
