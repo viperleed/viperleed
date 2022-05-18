@@ -39,8 +39,9 @@ from viperleed.guilib.measure.classes.settings import (
 
 TITLE = 'Measurement UI'
 
+SYS_CFG = get_system_config()
 DEFAULT_CONFIG_PATH = Path(
-    get_system_config().get("PATHS", 'configuration', fallback='')
+    SYS_CFG.get("PATHS", 'configuration', fallback='')
     )
 
 
@@ -80,7 +81,8 @@ class Measure(gl.ViPErLEEDPluginBase):
             'bad_px_finder': dialogs.BadPixelsFinderDialog(parent=self),
             }
         self._glob = {
-            'plot': MeasurementPlot()
+            'plot': MeasurementPlot(),
+            'last_dir': SYS_CFG.get("PATHS", "measurements", fallback=""),
             }
 
         # Set window properties
@@ -422,7 +424,10 @@ class Measure(gl.ViPErLEEDPluginBase):
         settings.show()
 
     def __on_read_pressed(self):
-        csv_name, _ = qtw.QFileDialog.getOpenFileName(parent=self)
+        """Read data from a measurement file."""
+        csv_name, _ = qtw.QFileDialog.getOpenFileName(
+            parent=self, directory=self._glob['last_dir']
+            )
         if not csv_name:
             return
         data = DataPoints()
@@ -432,6 +437,8 @@ class Measure(gl.ViPErLEEDPluginBase):
         except RuntimeError as err:
             base.emit_error(self, UIErrors.FILE_UNSUPPORTED, csv_name, err)
             return
+
+        self._glob['last_dir'] = str(Path(csv_name).parent)
 
         config_name = csv_name.replace(".csv", ".ini")
         config = ViPErLEEDSettings()
