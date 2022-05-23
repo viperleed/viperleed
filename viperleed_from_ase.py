@@ -349,9 +349,8 @@ def rfactor_from_csv(
     beams_tmp = [None, None]
     for i, (is_content, file) in enumerate(zip(beams_file_is_content, beams_files)):
         if is_content:
-            file = StringIO(file)
-            beams_tmp[i] = readOUTBEAMS(filename=file, sep=",")
-            file.close() # close StringIO (not sure if required)
+            with StringIO(file) as fproxy:
+                beams_tmp[i] = readOUTBEAMS(filename=fproxy, sep=",")
         else:
             beams_tmp[i] = readOUTBEAMS(filename=file, sep=",")
  
