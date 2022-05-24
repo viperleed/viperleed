@@ -302,7 +302,7 @@ class TimeResolved(MeasurementABC):
         # we are waiting for the camera. So images and measurements
         # are not overlapping in time. This is less than ideal.
         image_name = (f"{self.current_step_nr:0>{self.__n_digits}}_"
-                      f"{self.current_energy:.1f}eV_.tiff")
+                      f"{self.current_energy:.1f}eV.tiff")
         for camera in self.cameras:
             camera.process_info.filename = image_name
             self.data_points.add_image_names(image_name)

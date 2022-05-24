@@ -669,7 +669,7 @@ class CameraViewer(qtw.QScrollArea):
     def __on_snap_image(self):
         """Save current frame to file."""
         image = self.__glob['img_array'].copy()
-        fname, _ = qtw.QFileDialog.getSaveFileName(                             # TODO: add default filename?
+        fname, _ = qtw.QFileDialog.getSaveFileName(                             # TODO: add default filename and directory?
             parent=self,
             filter="TIFF Image (*.tiff *.tif)"
             )

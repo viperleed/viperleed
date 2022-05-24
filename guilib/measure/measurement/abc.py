@@ -17,6 +17,7 @@ from abc import abstractmethod
 from collections.abc import Sequence
 from time import localtime, strftime
 from pathlib import Path
+from zipfile import ZipFile, ZIP_DEFLATED
 
 from PyQt5 import QtCore as qtc
 
@@ -102,6 +103,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         self.__secondary_controllers = []
         self.__cameras = []
         self.__aborted = False
+        self.__temp_dir = None   # Directory for saving files
 
         self.threads = []
         self.running = False     # Used for aborting from outside
@@ -365,17 +367,15 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
             (self.start_energy, primary.long_settle_time)
             )
 
-    def save_data(self):                                                        # TODO: zip
+    def save_data(self):                                                        # TODO: clean up after testing zip
         """Save data."""
-        sys_config = get_system_config()
-        base_path = sys_config.get("PATHS", "measurements", fallback=None)
-        if not base_path:                                                       # TODO: emit a SystemSettingsError of some kind
-            raise RuntimeError("Invalid path in system config file")
+        if not self.__temp_dir:
+            return
 
-        base_path = Path(base_path)
-
-        tmp_path = base_path / "__tmp__"
+        tmp_path = self.__temp_dir
+        base_path = tmp_path.parent
         final_path = base_path / strftime("%Y-%m-%d_%H-%M-%S", localtime())
+        move_to_archive = []
 
         # Move all camera images (by renaming the temp folder)
         tmp_path.rename(final_path)
@@ -388,6 +388,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
             fname = "controller_" + ctrl.name.replace(' ', '_') + ".ini"
             with open(final_path / fname, 'w', encoding='utf-8') as fproxy:
                 ctrl.settings.write(fproxy)
+            move_to_archive.append(final_path / fname)
             ctrl_locations.append("./" + fname)
 
         cam_locations = []
@@ -395,14 +396,36 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
             fname = "camera_" + camera.name.replace(' ', '_') + ".ini"
             with open(final_path / fname, 'w', encoding='utf-8') as fproxy:
                 camera.settings.write(fproxy)
+            move_to_archive.append(final_path / fname)
             cam_locations.append("./" + fname)
 
-        if cam_locations:                                                       # TODO: do the same for all controllers
+        if cam_locations:                                                       # TODO: do the same for all controllers (without editing the measured stuff!)
             self.settings.set("devices", "cameras", str(tuple(cam_locations)))
 
         file_name = final_path / "measurement.ini"
+        move_to_archive.append(file_name)
         with open(file_name, 'w', encoding='utf-8') as configfile:
             self.settings.write(configfile)
+
+        arch_name = base_path / '__tmp__.zip'
+        with ZipFile(arch_name, 'a', compression=ZIP_DEFLATED,
+                     compresslevel=2) as archive:
+            for fname in move_to_archive:
+                archive.write(fname, fname.relative_to(final_path))
+        arch_name.rename(arch_name.with_stem(final_path.stem))
+
+        return  # TODO: remove
+
+        for fname in move_to_archive:
+            fname.unlink()
+        for fname in tuple(final_path.glob('*')):                               # TODO: not sure I want to do this cleanup. Maybe just remove camera folders higher up?
+            if fname.is_file():
+                fname.unlink()
+                continue
+            try:
+                fname.rmdir()
+            except OSError:
+                pass
 
     def set_leed_energy(self, energy, settle_time, *more_steps,
                         trigger_meas=True):
@@ -501,7 +524,8 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         Emits
         -----
         finished
-            A signal containing all collected data.
+            Emitted right before this method returns. All
+            operations are done when this happens.
         """
         self.__disconnect_primary_controller()
         self.__force_end_timer.stop()
@@ -562,6 +586,8 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
                               type=_UNIQUE)
             base.safe_connect(self.__preparation_started, camera.start,
                               type=_UNIQUE)
+            base.safe_connect(camera.image_saved, self.__on_image_saved,
+                              type=_UNIQUE)
 
     def _connect_controller(self, ctrl):
         """Connect port and signals of a controller."""
@@ -596,6 +622,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
             disconnect(self._camera_timer.timeout, camera.trigger_now)
             disconnect(self.__preparation_started, camera.start)
             disconnect(camera.stopped, self._finalize)
+            disconnect(camera.image_saved, self.__on_image_saved)
             camera.disconnect_()
 
     def _disconnect_controller(self, ctrl):
@@ -749,6 +776,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
             try:
                 cam = self.__make_camera(settings)
             except RuntimeError:
+                print("error making camera")
                 continue
             cam.error_occurred.connect(self.__on_hardware_error)
             cameras.append(cam)
@@ -915,10 +943,17 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         base_path = Path(base_path) / "__tmp__"
         base_path.mkdir(parents=True, exist_ok=True)
 
+        self.__temp_dir = base_path
+
         for camera in self.cameras:
             cam_dir = base_path / camera.name
             camera.process_info.base_path = str(cam_dir)
             cam_dir.mkdir(exist_ok=True)
+
+        # Create a blank zip archive (or delete
+        # the contents if one is already present)
+        with ZipFile(self.__temp_dir.parent / '__tmp__.zip', 'w'):
+            pass
 
     def _on_camera_busy_changed(self, *_):
         """Receive not busy signal from camera.
@@ -973,6 +1008,21 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
     def __on_hardware_error(self, *_):
         """Abort if a hardware error occurs."""
         self.abort()
+
+    def __on_image_saved(self, img_name):
+        """Archive the latest image saved."""
+        if not self.__temp_dir or not self.__temp_dir.exists():
+            return
+        img_name = Path(img_name)
+        arch_name = self.__temp_dir.parent / '__tmp__.zip'
+        with ZipFile(arch_name, 'a', compression=ZIP_DEFLATED,
+                     compresslevel=2) as archive:
+            archive.write(img_name, img_name.relative_to(self.__temp_dir))
+
+        return  # TODO: remove after testing
+
+        # Remove the image just appended to the archive
+        img_name.unlink()
 
     def __on_init_errors(self, err):
         """Collect initialization errors to report later."""
