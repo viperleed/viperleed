@@ -122,7 +122,7 @@ class ImageProcessor(qtc.QObject):
     """Class that processes frames."""
 
     image_processed = qtc.pyqtSignal(np.ndarray)
-    image_saved = qtc.pyqtSignal()
+    image_saved = qtc.pyqtSignal(str)  # path to file
 
     def __init__(self):
         """Initialize the instance.
@@ -202,8 +202,8 @@ class ImageProcessor(qtc.QObject):
         self.apply_roi()
         self.remove_bad_pixels()
         self.bin_and_average()
-        self.save()
-        self.image_saved.emit()
+        fname = self.save()
+        self.image_saved.emit(fname)
 
     def remove_bad_pixels(self):
         """Remove bad pixels by neighbor averaging."""
@@ -295,11 +295,19 @@ class ImageProcessor(qtc.QObject):
     def save(self):
         """Save image to disc as uncompressed TIFF.
 
+        The image is saved only if there is a filename in the
+        ImageProcessInfo stored in self.process_info.
+
         The TIFF data type is 16 or 32 bits depending on what
         was the original size of the camera frames. The data
         is stored in big-endian byte order.
+
+        Returns
+        -------
+        full_path : str
+            Path to file saved. An empty string is returned
+            if no file was saved (because no filename was given).
         """
-        # dtype, n_bits = ('>u4', 32) if self.frame_bits > 16 else ('>u2', 16)
         dtype = '>u4' if self.frame_bits > 16 else '>u2'
 
         data = self.processed_image.astype(dtype)
@@ -307,7 +315,7 @@ class ImageProcessor(qtc.QObject):
         fname = self.process_info.filename
         if not fname:
             self.busy = False
-            return
+            return ""
 
         fname = Path(fname)
         if self.process_info.base_path:
@@ -334,3 +342,4 @@ class ImageProcessor(qtc.QObject):
         img = tiff.TiffFile.from_array(data, **info)
         img.write(fname)
         self.busy = False
+        return str(fname.resolve())

@@ -89,6 +89,10 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
     # after all post-processing steps have been performed.
     image_processed = qtc.pyqtSignal(np.ndarray)
 
+    # image_saved is emitted after an image has been saved to
+    # disk, carrying the path to the file saved.
+    image_saved = qtc.pyqtSignal(str)
+
     # started/stopped are emitted whenever the camera is
     # started/stopped. When started, self.mode can be used
     # to deduce the camera mode.
@@ -1281,7 +1285,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             processor = ImageProcessor()
             processor.image_processed.connect(self.image_processed)
             processor.image_saved.connect(self.__on_image_saved)
-            processor.image_saved.connect(processor.deleteLater)
+            # processor.image_saved.connect(processor.deleteLater)
             self.__process_thread.finished.connect(processor.deleteLater)
             self.__process_frame.connect(processor.process_frame)
             processor.prepare_to_process(self.process_info.copy(), image)
@@ -1304,19 +1308,24 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             self.busy = False
             self.__timeout.stop()
 
-    def __on_image_saved(self):
+    def __on_image_saved(self, fpath):
         """React to an image being saved."""
-        # Disconnect the last processor to prevent
-        # duplicate processing of the next frame
-        processor = qtc.QObject().sender()
+        processor = self.sender()
         if not processor:
             return
+
+        # Disconnect the sender processor to prevent
+        # duplicate processing of the next frame
         base.safe_disconnect(self.__process_frame, processor.process_frame)
         try:
             self.__image_processors.remove(processor)
         except ValueError:
             # Not in list
             pass
+
+        # Emit image_saved only if a file was actually saved
+        if fpath:
+            self.image_saved.emit(fpath)
 
     def __on_init_errors(self, err):
         """Collect initialization errors to report later."""
