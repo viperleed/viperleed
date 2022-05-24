@@ -220,14 +220,12 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         """Return controllers as a tuple."""
         if not self:
             return tuple()
-        return tuple(c for c in self[0][QuantityInfo.TIMES])
+        return tuple(self[0][QuantityInfo.TIMES].keys())
 
     @property
     def has_data(self):
         """Check if there is already data in the class."""
-        if self and any(t for t in self[0][QuantityInfo.TIMES].values()):
-            return True
-        return False
+        return bool(self and any(self[0][QuantityInfo.TIMES].values()))
 
     @property
     def is_time_resolved(self):
@@ -326,11 +324,14 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                     + controller.time_to_trigger/1000)
             self[-1][QuantityInfo.TIMES][controller].append(time)
 
-    def add_image_names(self, name):
+    def add_image_names(self, name):                                            # TODO: this will not work correctly for a time-resolved with multiple "acquisitions" per energy (i.e., not continuous) -- right now we take only one image, which is inadequate.
         """Add image names to currently active data point."""
         for camera in self[-1][QuantityInfo.IMAGES]:
-            # TODO: may want to add camera name to image name
-            self[-1][QuantityInfo.IMAGES][camera] = name
+            # TODO: camera name added to file name in a 'path'
+            # format. Unclear if it isn't just simpler to use
+            # the information in the header to decide from
+            # which folder images should be opened (in ImageJ)
+            self[-1][QuantityInfo.IMAGES][camera] = f"{camera.name}/{name}"
 
     def calculate_times(self, continuous=False):
         """Calculate times for the last data point."""
@@ -569,7 +570,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         self.append(data_point)
         self.__times_calculated = False
 
-    def read_data(self, csv_name):
+    def read_csv(self, csv_name):
         """Read data from csv file.
 
         Parameters
@@ -581,67 +582,84 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         Raises
         -------
         RuntimeError
-            If the file to read does not contain a valid energy column
+            If the file to read does not contain a valid energy
+            column, or it contains no valid data.
         """
         with open(csv_name, 'r', encoding='UTF8', newline='') as csv_file:
-            reader = csv.DictReader(csv_file, delimiter=self.__delimiter)
+            self.read_lines(csv_file, source=csv_name)
+
+    def read_lines(self, lines, source=''):                                     # TODO: reading from archive. Can read_lines from: measurement.csv into StringIO, .decode().split('\n'); probably good to set self.time_resolved by reading the class name in measurement.ini
+        """Read data from an iterable returning lines of data.
+
+        Parameters
+        ----------
+        lines : iterable
+            Each element is a string of comma-separated values.
+            The first line is expected to contain the "header".
+        source : string, optional
+            The source from which  data is read. Used exclusively
+            for error-reporting purposes.
+
+        Raises
+        ------
+        RuntimeError
+            If the lines to read do not contain a valid energy
+            column, or they contain no valid data.
+        """
+        reader = csv.DictReader(lines, delimiter=self.__delimiter)
+        try:
             first_row = next(reader)
+        except StopIteration:
+            raise RuntimeError(f'{source} contains no data.') from None
 
-            # Prepare a dictionary of the form
-            #    {column_label: (QuantityInfo, controller)}
-            # that we will later use to populate the data points.
-            column_map, invalid = self.__make_column_header_map(first_row)
+        # Prepare a dictionary mapping of the form
+        #    {column_label: (QuantityInfo, device)}
+        # that we will later use to populate the data points.
+        (column_map,
+         egy_col,
+         invalid) = self.__make_column_header_map(first_row)
 
-            # Make sure there is an energy column, and report
-            # any problems encountered with other column headers
-            if not any(i is QuantityInfo.ENERGY
-                       for i, _ in column_map.values()):
-                raise RuntimeError(
-                    f'{csv_name} is not a ViPErLEED measurement.'
-                    )
-            if invalid:
-                emit_error(self, DataErrors.UNKOWN_QUANTITIES,
-                           ", ".join(invalid))
+        if invalid:
+            emit_error(self, DataErrors.UNKOWN_QUANTITIES,
+                       ", ".join(invalid))
 
-            # Prepare a dummy data point dictionary
-            # {energy: value, other_quantity: {device: [values]}, ...}
-            # that will be appended to self each time the energy
-            # changes, and then populated.
-            empty_data_point = {q: defaultdict(list)
-                                for q, _ in column_map.values()}
-            empty_data_point[QuantityInfo.ENERGY] = -1
+        _egy = QuantityInfo.ENERGY
+        # Prepare a dummy data point dictionary
+        # {energy: value, other_quantity: {device: [values]}, ...}
+        # that will be appended to self each time the energy
+        # changes, and then populated.
+        empty_data_point = {q: defaultdict(list)
+                            for q, _ in column_map.values()}
+        empty_data_point[_egy] = None
 
-            # Start filling up self
-            self.__list = []
-            self.append(deepcopy(empty_data_point))
-            for row in (first_row, *reader):
-                for column, value in row.items():
-                    quantity, device = column_map.get(column, (None, None))
-                    if not quantity:  # Unknown --> skip
-                        continue
-                    value = quantity.dtype(value)
+        # Start filling up self
+        self.__list = []
+        self.append(deepcopy(empty_data_point))
+        for row in (first_row, *reader):
+            # Handle energy before other quantities
+            curr_energy = _egy.dtype(row[egy_col])
+            last_energy = self[-1][_egy]
+            if last_energy is None:
+                # Energy not set yet for this data point.
+                # Effectively this happens only for the
+                # first data point. All others are handled
+                # by the next condition.
+                self[-1][QuantityInfo.ENERGY] = curr_energy
+            elif abs(curr_energy - last_energy) > 1e-5:
+                # Energy changed --> add a new entry
+                self.append(deepcopy(empty_data_point))
+                self[-1][_egy] = curr_energy
 
-                    # Take care of all quantities but energies
-                    if quantity is not QuantityInfo.ENERGY:
-                        self[-1][quantity][device].append(value)
-                        continue
+            for column, value in row.items():
+                quantity, device = column_map.get(column, (None, None))
+                if not quantity or quantity is _egy:
+                    # Unknown or energy --> skip
+                    continue
+                value = quantity.dtype(value)
+                self[-1][quantity][device].append(value)
 
-                    # Now energy: if changed, we add a new entry
-                    last_energy = self[-1][quantity]
-                    if last_energy == -1:
-                        # Energy not set yet for this data point.
-                        # Effectively this happens only for the
-                        # first data point. All others are handled
-                        # by the next condition.
-                        self[-1][quantity] = value
-                    elif value != last_energy:
-                        self.append(deepcopy(empty_data_point))
-                        self[-1][quantity] = value
-
-            # Finally define a primary controller:
-            # always the first one in the times entry
-            controllers = list(self[0][QuantityInfo.TIMES].keys())
-            self.primary_controller = controllers[0]
+        # Finally define a primary controller
+        self.primary_controller = self.controllers[0]
         self.nr_steps_done = len(self)
 
     def recalculate_last_step_times(self):
@@ -680,8 +698,8 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         -------
         None.
         """
-        # TBD: left-pad columns to make it look nice in a text editor.
-        #      CANNOT BE DONE WITH csv, have to write manually.
+        # TODO: left-pad columns to make it look nice in a text editor.
+        #       CANNOT BE DONE WITH csv, have to write manually.
         with open(csv_name, 'w', encoding='UTF8', newline='') as csv_file:
             writer = csv.writer(csv_file, delimiter=self.__delimiter)
             writer.writerow(self.__make_header_line())
@@ -689,7 +707,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
             # Now write each energy step consecutively.
             # To write to file, we un-rag possibily ragged lists
             # of data (each controller may have retured a different
-            # number of values) by 'padding' with not-a-number towards
+            # number of values) by 'padding' with not-a-number toward
             # the end of the energy step. Each block will be as long
             # as the longest list of data.
             for data_point in self[:self.nr_steps_done]:
@@ -738,8 +756,17 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
             values: (QuantityInfo, str), where str is whatever
             else was found in header that did not match and
             acceptable QuantityInfo.
+        egy_col : str
+            The column label for the only column containing
+            energies
         skipped : list
             Entries in headers that could not be parsed/converted.
+
+        Raises
+        -------
+        RuntimeError
+            If the headers do not contain a valid energy column,
+            or they contains no valid data.
         """
         # All column headers, except for the "energy" one are
         # expected to be of the form "quantity(measuring_device_id)".
@@ -767,7 +794,31 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                 continue
             column_map[label] = (info, extracted.group("ctrl"))
 
-        return column_map, skipped
+        # Make sure there is only one energy column, at
+        # least one times column, and report any problems
+        # encountered with other column headers
+        _egy = QuantityInfo.ENERGY
+        egy_col = [col
+                   for col, (q, _) in column_map.items()
+                   if q is _egy]
+        if not egy_col:
+            raise RuntimeError(
+                f'Could not find an "{_egy.label}" column. '
+                'File may not be not a ViPErLEED measurement.'
+                )
+        if len(egy_col) > 1:
+            raise RuntimeError(
+                f'Multiple columns labeled "{_egy.label}". '
+                'File may not be not a ViPErLEED measurement.'
+                )
+        egy_col = egy_col[0]
+
+        if not any(q is QuantityInfo.TIMES
+                   for q, _ in column_map.values()):
+            raise RuntimeError('File is a ViPErLEED measurement, '
+                               'but it contains no data.')
+
+        return column_map, egy_col, skipped
 
     def __make_header_line(self):
         """Return a header line that can be written to file.
@@ -782,7 +833,8 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
             <quantities for each controller>
             <times for each controller>
         """
-        header = [camera.name for camera in self.cameras]
+        _img = QuantityInfo.IMAGES.label
+        header = [f"{_img}({camera.name})" for camera in self.cameras]
         header.append(QuantityInfo.ENERGY.label)
         for quantity, controllers in self[0].items():
             if quantity in self.__exceptional_keys:
