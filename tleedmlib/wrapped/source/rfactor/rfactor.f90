@@ -1,6 +1,6 @@
 ! Subroutines and functions for R factor calculation in ViPErLEED
 !
-! v0.1.0
+! v0.2.0
 !
 ! Author: Alexander M. Imre, 2021
 ! for license info see ViPErLEED Package
@@ -9,6 +9,7 @@
 
 module r_factor_new
     use interpolation
+    use ieee_arithmetic
     implicit none
 
     contains
@@ -23,7 +24,6 @@ module r_factor_new
 ! The equidistant final grid is defined by the array E_new with length n_E_new.  This is equivalently defined by the set of integers n_E_new, E_new_start, E_new_step.
 
 ! Experimental data may come in as arrays 
-
 
 
    
@@ -57,33 +57,36 @@ subroutine r_pendry_beam_y(n_E, E_step, y1, y2, id_start_1, id_start_2, n_1, n_2
 
     integer :: id_min, id_max
 
-    ! V0r_shift shifts y2 by some number of grid points -> id_start_2 = id_start_2 + V0r_shift
-    id_min = max(id_start_1, id_start_2 + V0r_shift)
-    id_max = min(id_start_1 + n_1 - 1, id_start_2 + n_2 - 1 + V0r_shift)
+    if (n_1 == 0 .or. n_2 == 0) then
+        N_overlapping_points = 0
+        numerator = 0
+        denominator = 0
+        R_pendry = ieee_value(real(8), ieee_signaling_nan)
+    else
     
-    N_overlapping_points = id_max - id_min + 1
+        ! V0r_shift shifts y2 by some number of grid points -> id_start_2 = id_start_2 + V0r_shift
+        id_min = max(id_start_1, id_start_2 + V0r_shift)
+        id_max = min(id_start_1 + n_1 - 1, id_start_2 + n_2 - 1 + V0r_shift)
+        
+        N_overlapping_points = id_max - id_min + 1
 
-    allocate(y_diff(N_overlapping_points), y_squared_sum(N_overlapping_points))
+        allocate(y_diff(N_overlapping_points), y_squared_sum(N_overlapping_points))
 
-    ! Shift it around
+        ! Shift it around
 
-    ! Remember that indices are shifted by V0r
+        ! Remember that indices are shifted by V0r
 
-    y_diff=y1(id_min : id_max) - y2(id_min - V0r_shift: id_max - V0r_shift) ! difference between Y functions
-    !y_diff=abs(y1(id_min : id_max))
-    y_squared_sum=y1(id_min: id_max)**2 + y2(id_min - V0r_shift: id_max - V0r_shift)**2
-    
-    ! caclulate numerator = integral (Y1-Y2)**2 dE
-    numerator = trapez_integration_const_dx(y_diff**2, E_step)
-    ! calculate denominator = integral (Y1**2+Y2**2) dE
-    denominator = trapez_integration_const_dx(y_squared_sum, E_step)
-
-    if (denominator < 1d-5) then
-        print*, "denominator = 0"
-        print*, "overlapp", N_overlapping_points 
+        y_diff=y1(id_min : id_max) - y2(id_min - V0r_shift: id_max - V0r_shift) ! difference between Y functions
+        !y_diff=abs(y1(id_min : id_max))
+        y_squared_sum=y1(id_min: id_max)**2 + y2(id_min - V0r_shift: id_max - V0r_shift)**2
+        
+        ! caclulate numerator = integral (Y1-Y2)**2 dE
+        numerator = trapez_integration_const_dx(y_diff**2, E_step)
+        ! calculate denominator = integral (Y1**2+Y2**2) dE
+        denominator = trapez_integration_const_dx(y_squared_sum, E_step)
+        
+        R_pendry = numerator/denominator
     end if
-    
-    R_pendry = numerator/denominator
 
     return
 
@@ -314,11 +317,13 @@ subroutine r_beamset_V0r_opt_on_grid( &
     next_step = start_guess(1) - range(1) + 1
 
     ! if using factor R2 don't return numerators and denominators
-    numerators_V0r = ieee_value(real(8), ieee_signaling_nan)
-    denominators_v0r = ieee_value(real(8), ieee_signaling_nan)
+    if (which_r == 2) then
+        numerators_V0r = ieee_value(real(8), ieee_signaling_nan)
+        denominators_v0r = ieee_value(real(8), ieee_signaling_nan)
+    end if
 
     do while(fast_search)
-        print*, "Evaluated:", n_evaluated, "next step", next_step
+        ! print*, "Evaluated:", n_evaluated, "next step", next_step
         if (.not. evaluated(i)) then
             if (which_R == 1) then
                 call r_pendry_beamset_y(n_E, E_step, n_beams, data_1, data_2, id_start_1, id_start_2, n_1, n_2, &
@@ -512,7 +517,7 @@ subroutine r_beamset_V0r_opt_on_grid( &
                     r_beams_v0r(:, i), &
                     numerators_V0r(:, i), denominators_V0r(:, i), &
                     N_overlapping_points_V0r(:, i), &
-                    ierr_tmp)
+                    ierr)
             else if (which_R == 2) then
                 call r2_beamset_intensity(n_E, E_step, n_beams, data_1, data_2, id_start_1, id_start_2, n_1, n_2, &
                     V0r_step(i), &
@@ -532,9 +537,7 @@ subroutine r_beamset_V0r_opt_on_grid( &
                 numerators_V0r, numerators, &
                 denominators_V0r, denominators, &
                 r_beams_v0r, r_beams)
-            !print*, "Brute force. step:", V0r_step(i), "R = ", R_V0r(i)
-            if (ierr_tmp .ne. 0) ierr = ierr_tmp
-            !print*, "V0r:", V0r_step(i)*E_step, "Overlapp:", sum(N_overlapping_points_V0r(:,i))*E_step
+
         else
             CYCLE
         end if
@@ -709,11 +712,13 @@ subroutine r_pendry_beamset_y(n_E, E_step, n_beams, y1, y2, id_start_1, id_start
     !f2py integer, intent(in)::  V0r_shift
     integer, intent(in) :: V0r_shift
 
+    ! Error code
     integer, intent(out):: ierr
 
     ! temporay variables used in subroutine
     integer i
-    real(8) temp_num, temp_denom
+    ! Sum variables for numerator and denominator
+    real(8) num_sum, den_sum
 
     ierr = 0
 
@@ -722,24 +727,29 @@ subroutine r_pendry_beamset_y(n_E, E_step, n_beams, y1, y2, id_start_1, id_start
         call r_pendry_beam_y(n_E, E_step, y1(:, i), y2(:, i), id_start_1(i), id_start_2(i), n_1(i), n_2(i), V0r_shift, &
             r_pendry_beams(i), numerators(i), denominators(i), n_overlapping_points(i))
     end do
-    !total_points = sum(N_overlapping_points)
 
-    if (ANY(ieee_is_nan(r_pendry_beams))) then
-        r_pendry_weighted = ieee_value(real(8), ieee_signaling_nan)
+    ! If any beam R-factor is reported as NaN, denominator and numerator will be set to 0 - thus sum still works regardless
+    ! However, we need to watch out for the case of numerator/denominator being NaNs. (This may be caused by the intensity being constant 0.)
 
-        do i =1, n_beams
-            if (ieee_is_nan(r_pendry_beams(i))) then
-                print*,"NaN in beam ", i
-                print*, "num", numerators(i)
-                print*, "denom", denominators(i)
+    if (.not.((ALL(ieee_is_normal(numerators)) .and. ALL(ieee_is_normal(denominators))))) then
+        ! Can still calcuate an R factor, but it may be unsable. Give back R and warning
+        ierr = -812
+        ! initialize sum variables
+        num_sum = 0
+        den_sum = 0
+
+        do i=1, n_beams
+            if ((ieee_is_normal(numerators(i)) .or. ieee_is_normal(denominators(i)))) then
+                num_sum = num_sum + numerators(i)
+                den_sum = den_sum + denominators(i)
             end if
         end do
 
-        ierr = 811
-        RETURN
+        r_pendry_weighted = num_sum/den_sum
+
+    else
+        r_pendry_weighted = sum(numerators)/sum(denominators)
     end if
-    
-    r_pendry_weighted = sum(numerators)/sum(denominators)
 
     return
 end subroutine r_pendry_beamset_y
@@ -838,13 +848,13 @@ end subroutine Rfactor_v0ropt
 
 
 subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_beams, n_E_beams, &
-                         skip_stages, n_beams_out, averaging_scheme, &
                          which_R, &
                          deg, &
                          n_E_out, E_grid_out, &
                          V0i, &
                          E_start_beams_out, n_E_beams_out, &
-                         intpol_intensity, y_func, ierr)
+                         intpol_intensity, y_func, &
+                         ierr)
     !Prepare_beams:
     !INPUT: array[I, E_min, E_step, NE], E_grid_step, averaging_scheme, smoothing?, E_min, E_max
     !DOES: (0) Limit_range, (1) Average/discard/reorder according to scheme; (2) smooth?; (3) interpolate on grid; (4) compute Y on new grid
@@ -865,13 +875,6 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
     !f2py integer, intent(hide), depend(E_grid_out) :: n_E_out=shape(E_grid_out,0)
 
     ! Operation information
-    !f2py integer, intent(in), dimension(5) :: skip_stages
-    integer, intent(in) :: skip_stages(5) ! which stages to execute
-    !f2py integer, intent(in) :: n_beams_out
-    integer, INTENT(IN) :: n_beams_out ! How many non-equivalent beams are there?
-    !f2py integer, intent(in), dimension(n_beams) :: averaging_scheme
-    integer, intent(inout) :: averaging_scheme(n_beams) ! How to average the beams
-                                                     ! Integer between 1 and n_averaging_types - determines with which beams to average together
     !f2py intent(in) :: deg
     integer, INTENT(IN) :: deg ! Degree of interpolation to use
     integer, INTENT(IN) :: which_R ! Which R factor to prepare for (1: pendry, 2: R2)
@@ -886,7 +889,7 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
     ! Input Data
     integer, intent(in)                          :: E_start_beams(n_beams) ! First energy step to be used for the beam
     integer, intent(in)                          :: n_E_beams(n_beams) ! Number of energy steps to use for the beam
-    real(8), intent(in)                         :: intensities_in(n_E_in, n_beams) ! Beam intensities - input data
+    real(8), intent(in)                          :: intensities_in(n_E_in, n_beams) ! Beam intensities - input data
     
     real(8), INTENT(IN) :: V0i
 
@@ -912,7 +915,7 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
 
     integer :: beams_max_id_in(n_beams)
     integer :: cut_beams_max_id_in(n_beams)
-    integer :: beams_max_id_out(n_beams_out)
+    integer :: beams_max_id_out(n_beams)
 
     integer :: max_n_knots, max_nt, max_LHS_rows
     integer :: n_knots_beams(n_beams), nt_beams(n_beams), LHS_rows_beams(n_beams)
@@ -926,9 +929,7 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
     real(8)    :: intensities(n_E_in, n_beams)
     real(8) :: min_intensity_beam
 
-
     integer :: ierrs(n_beams)
-
 
     integer :: i ! Loop indices
 
@@ -949,90 +950,38 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
     ! 1) cutting the E_grid_in
     ! 2) recalculating the starting and end indices of all beams on the new grid
 
-    if (skip_stages(1).EQ.0) then
-        !print*, E_grid_in
-        !print*, E_grid_out
-        ! minimum index to keep:
-        if (E_grid_in(1) .lt. E_grid_out(1)) then
-            new_min_index = find_grid_correspondence(E_grid_out(1), n_E_in, E_grid_in, 1)
-        else
-            new_min_index = 1
-        end if
-
-        if (E_grid_in(n_E_in) .gt. E_grid_out(n_E_out)) then
-            new_max_index = find_grid_correspondence(E_grid_out(n_E_out), n_E_in, E_grid_in, new_min_index)
-        else
-            new_max_index = n_E_in
-        end if
-        
-
-        cut_n_E_in = new_max_index - new_min_index + 1
-        
-        do concurrent( i=1: n_beams)
-            ! new start and end indices
-            cut_E_start_beams(i) = max(E_start_beams(i), new_min_index)
-            cut_beams_max_id_in(i) = min(new_max_index, beams_max_id_in(i))
-            cut_n_E_beams(i) = cut_beams_max_id_in(i) - cut_E_start_beams(i) + 1
-            if (cut_n_E_beams(i) < 2*deg+1) then
-                ! Beam cannot be used ...skip somehow...
-                ierrs(i) = 12345 !TODO give error code... at least one beam did not contain usable information... - return averaging_scheme with corresponding beams?
-                ! Change energy range or discard beam 
-                averaging_scheme(i) = 0 ! (can I implement this via averaging group 0?)
-            end if
-            !print*, "cut_n_E_in", cut_n_E_in
-            !print*, "cut_E_start_beams", cut_E_start_beams(i)
-            
-        end do
-        ierr = MAXVAL(ierrs)
+    
+    ! minimum index to keep:
+    if (E_grid_in(1) .lt. E_grid_out(1)) then
+        new_min_index = find_grid_correspondence(E_grid_out(1), n_E_in, E_grid_in, 1)
     else
         new_min_index = 1
-        new_max_index = n_E_in
-        cut_E_start_beams = E_start_beams
-        cut_n_E_beams = n_E_beams
-        cut_n_E_in = n_E_in
-        cut_beams_max_id_in = beams_max_id_in
-
     end if
 
-    !print*, "new_min_index, new_max_index", new_min_index, new_max_index
-    !print*, "E_start_beams", cut_E_start_beams(15:20)
-    !print*, "n_E_out", n_E_out(15:20)
-    !print*, "max id beams", cut_beams_max_id_in(15:20)
-
-    
-    !###############
-    ! Average/discard/reorder
-    !###############
-
-    ! TODO implement/ fix averaging
-    if (skip_stages(2).EQ.0) then
-        if (n_beams_out > n_beams) then
-            ierr = 220
-            RETURN
-        end if
-        call avg_reo_disc(n_beams, n_beams_out, n_E_in, averaging_scheme, 2*deg+1, &
-        intensities, cut_E_start_beams, cut_n_E_beams, &
-        ierr)
-
-        if (ierr .ne. 0) then
-            print*, "Oh no!", ierr
-            RETURN
-        end if
+    if (E_grid_in(n_E_in) .gt. E_grid_out(n_E_out)) then
+        new_max_index = find_grid_correspondence(E_grid_out(n_E_out), n_E_in, E_grid_in, new_min_index)
     else
-        if (n_beams_out .ne. n_beams) then
-            ierr = 223
-            RETURN
-        end if
+        new_max_index = n_E_in
     end if
-    ! print*, "E_start_beams:"
-    ! print*, cut_E_start_beams
-    ! print*, "n_E_beams:"
-    ! print*, cut_n_E_beams
+    
+
+    cut_n_E_in = new_max_index - new_min_index + 1
+    
+
+    do concurrent( i=1: n_beams)
+        ! new start and end indices
+        cut_E_start_beams(i) = max(E_start_beams(i), new_min_index)
+        cut_beams_max_id_in(i) = min(new_max_index, beams_max_id_in(i))
+        cut_n_E_beams(i) = cut_beams_max_id_in(i) - cut_E_start_beams(i) + 1
+        ! If beam now contains less than 2*deg +1 values, we can not use it - but we deal with that later
+    end do
+
 
     E_start_beams_out(:) = 0
     n_E_beams_out(:) = 0 
 
-    do concurrent( i=1: n_beams_out)
+    ! what does this do again exactly? 
+    do concurrent( i=1: n_beams)
         ! Set out beam indices & length
         E_start_beams_out(i) = find_grid_correspondence( &
                 E_grid_in(cut_E_start_beams(i)), &
@@ -1056,15 +1005,8 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
         end if
     end do
 
-
-
-    ! Debug below...
+    ! Debug check - hopefully can be removed now?
     do i = 1, n_beams
-       ! print*, i
-       ! print*, n_E_out
-       ! print*, "n_E in", cut_n_E_beams(i)
-       ! print*, "n_E out", n_E_beams_out(i)
-       ! print*, beams_max_id_out(i)
         if (E_grid_in(cut_beams_max_id_in(i)) < E_grid_out(beams_max_id_out(i))) then
             print*, "issue size out - beam", i
         end if
@@ -1083,12 +1025,7 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
     ! This is a tricky issue, because excessive smoothing strongly affects the R-factor, so you want to avoid over-smoothing at all cost.
     ! We expect the experimental data to come in from the beam-extraction already pre-smoothed. If we implement an additional later smoothing here,
     ! it only makes sense to do it equally on experimental and theoretical data. Thus, both should use the same smoothing kernel and probably not 
-    ! use a smoothing parameter larger than ~6 eV.y
-
-    if (skip_stages(3).EQ.0) then
-        ierr = 23
-        continue
-    end if
+    ! use a smoothing parameter larger than ~6 eV.
 
 
     !###############
@@ -1098,155 +1035,148 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
     ! How to deal with coeffs array? - size depends on deg:
     ! size of coeffs is nt= n_knots - deg -1 = n + 2*deg -deg -1 = n + deg -1 
     ! where max(n) is the number of datapoints in, i.e. n_E_in. Thus max(nt) = n_E_in + deg + 1.
-    ! Allocating coeffs with size (n_E_in + deg) should therfore cover all possible beam sizes. Unfortunately, we need to keep track of the number of coeffs per beam in an array though.
-    if (skip_stages(4).EQ.0) then
+    ! Allocating coeffs with size (n_E_in + deg) should therefor cover all possible beam sizes. Unfortunately, we need to keep track of the number of coeffs per beam in an array though.
 
-        intpol_derivative  = 0
-        intpol_intensity = 0
-        y_func = 0
+    ! Initialize to NaNs
+    intpol_derivative  = ieee_value(real(8), ieee_signaling_nan)
+    intpol_intensity = ieee_value(real(8), ieee_signaling_nan)
+    y_func = ieee_value(real(8), ieee_signaling_nan)
 
-        call perform_checks(cut_n_E_in, E_grid_in(new_min_index:new_max_index), n_E_out, E_grid_out, ierr)
-        if (ierr .ne. 0) RETURN
+    call perform_checks(cut_n_E_in, E_grid_in(new_min_index:new_max_index), n_E_out, E_grid_out, ierr)
+    if (ierr .ne. 0) RETURN
 
-        call get_array_sizes(cut_n_E_in, deg, max_n_knots, max_nt, max_LHS_rows)
-        Allocate(knots(max_n_knots+1, n_beams), LHS(max_LHS_rows+1, max_nt+1, n_beams), coeffs(max_nt+1, n_beams))
-        
-        if (which_R == 1) then
-            do i= 1,n_beams_out
-                ! print*, "beam: ", i
-                ! !DEBUG
-                ! print*, cut_E_start_beams(i), cut_E_start_beams(i)+cut_n_E_beams(i) - 1
-                ! print*, E_start_beams_out(i), E_start_beams_out(i)+n_E_beams_out(i) - 1
-                ! print*, intensities(cut_E_start_beams(i), i)
-                ! print*, intensities( cut_beams_max_id_in(i) , i)
-                ! print*, E_grid_in(cut_E_start_beams(i))
-                ! print*, E_grid_in(cut_beams_max_id_in(i))
-                
-                call get_array_sizes(cut_n_E_beams(i), deg, n_knots_beams(i), nt_beams(i), LHS_rows_beams(i))
-                ! print*, cut_E_start_beams(i), cut_beams_max_id_in(i)
-                ! print*, ""
-                ! print*, n_knots_beams(i), nt_beams(i)
+    call get_array_sizes(cut_n_E_in, deg, max_n_knots, max_nt, max_LHS_rows)
+    Allocate(knots(max_n_knots+1, n_beams), LHS(max_LHS_rows+1, max_nt+1, n_beams), coeffs(max_nt+1, n_beams))
+    
+    if (which_R == 1) then
+        do i= 1,n_beams
+            ! Any beam that has not enough datapoints is unusable for interpolation etc.
+            ! Therefore we reduce number of points to 0 and fill with NaNs
+            if (cut_n_E_beams(i) <= 2*deg+1) then
+                cut_n_E_beams(i) = 0
+                intensities(:,i) = ieee_value(real(8), ieee_signaling_nan)
+                intpol_intensity(:, i) = ieee_value(real(8), ieee_signaling_nan)
+                intpol_derivative(:, i) = ieee_value(real(8), ieee_signaling_nan)
+                y_func(:, i) = ieee_value(real(8), ieee_signaling_nan)
+                n_E_beams_out(i) = 0
+                ierr = -703
+                CYCLE
+            end if
+
+            
+            call get_array_sizes(cut_n_E_beams(i), deg, n_knots_beams(i), nt_beams(i), LHS_rows_beams(i))
 
 
-                call single_calc_spline(&
-                    cut_n_E_beams(i), &
-                    E_grid_in(cut_E_start_beams(i) : cut_beams_max_id_in(i)), &
-                    intensities(cut_E_start_beams(i) : cut_beams_max_id_in(i), i), &
-                    deg, &
-                    n_knots_beams(i), nt_beams(i), LHS_rows_beams(i), &
-                    knots(1:n_knots_beams(i), i), &
-                    coeffs(1:nt_beams(i), i), &
-                    ierrs(i))
-                ! !Interpolate intensitites
-                !     print*, "ierr", ierr
-                !     print*, "First and last intensity in"
-                !     print*, intensities_in(cut_E_start_beams(i),i)
-                !     print*, intensities_in(cut_E_start_beams(i) + cut_n_E_beams(i) - 1, i)
-                !     print*, "Any NAN?", ANY(ieee_is_nan(intensities_in))
-                !     print*, "First and last knot"
-                !     print*, knots(1,i)
-                !     print*, knots(n_knots_beams(i), i)
-                !     print*, "n_knots, nt, deg, LHS_rows", n_knots_beams(i), nt_beams(i), deg, LHS_rows_beams(i)
+            call single_calc_spline(&
+                cut_n_E_beams(i), &
+                E_grid_in(cut_E_start_beams(i) : cut_beams_max_id_in(i)), &
+                intensities(cut_E_start_beams(i) : cut_beams_max_id_in(i), i), &
+                deg, &
+                n_knots_beams(i), nt_beams(i), LHS_rows_beams(i), &
+                knots(1:n_knots_beams(i), i), &
+                coeffs(1:nt_beams(i), i), &
+                ierrs(i))
+            ! !Interpolate intensitites
+            !     print*, "ierr", ierr
+            !     print*, "First and last intensity in"
+            !     print*, intensities_in(cut_E_start_beams(i),i)
+            !     print*, intensities_in(cut_E_start_beams(i) + cut_n_E_beams(i) - 1, i)
+            !     print*, "Any NAN?", ANY(ieee_is_nan(intensities_in))
+            !     print*, "First and last knot"
+            !     print*, knots(1,i)
+            !     print*, knots(n_knots_beams(i), i)
+            !     print*, "n_knots, nt, deg, LHS_rows", n_knots_beams(i), nt_beams(i), deg, LHS_rows_beams(i)
 
-                call single_interpolate_coeffs_to_grid( &
-                    n_knots_beams(i), knots(1:n_knots_beams(i), i), nt_beams(i), coeffs(1:nt_beams(i), i), &
-                    deg, &
-                    n_E_beams_out(i), &
-                    E_grid_out(E_start_beams_out(i) : beams_max_id_out(i)), &
-                    0, &
-                    intpol_intensity(E_start_beams_out(i) : beams_max_id_out(i), i))
-                !print*, "Intpol"
-                !print*, intpol_intensity(E_start_beams_out(i) : E_start_beams_out(i) + n_E_beams_out(i),i)
-                    ! Interpolate derivatives
+            call single_interpolate_coeffs_to_grid( &
+                n_knots_beams(i), knots(1:n_knots_beams(i), i), nt_beams(i), coeffs(1:nt_beams(i), i), &
+                deg, &
+                n_E_beams_out(i), &
+                E_grid_out(E_start_beams_out(i) : beams_max_id_out(i)), &
+                0, &
+                intpol_intensity(E_start_beams_out(i) : beams_max_id_out(i), i))
+            !print*, "Intpol"
+            !print*, intpol_intensity(E_start_beams_out(i) : E_start_beams_out(i) + n_E_beams_out(i),i)
+                ! Interpolate derivatives
 
-                !If interpolated intensity dropy below 0, set to zero
-                intpol_intensity = max(intpol_intensity, 0.0d0)
-                ! TODO: add error for this
-                !do concurrent (i = 1:n_beams)
-                    !min_intensity_beam = minval(intpol_intensity(:,i))
-                    !if (min_intensity_beam < 0) then
-                    !    intpol_intensity(:, i) = intpol_intensity(:, i) + abs(min_intensity_beam)
-                    !end if
-                !end do
+            !If interpolated intensity dropy below 0, set to zero
+            intpol_intensity = max(intpol_intensity, 0.0d0)
+            ! TODO: add error for this
+            !do concurrent (i = 1:n_beams)
+                !min_intensity_beam = minval(intpol_intensity(:,i))
+                !if (min_intensity_beam < 0) then
+                !    intpol_intensity(:, i) = intpol_intensity(:, i) + abs(min_intensity_beam)
+                !end if
+            !end do
 
-                call single_interpolate_coeffs_to_grid( &
-                    n_knots_beams(i), knots(1:n_knots_beams(i), i), nt_beams(i), coeffs(1:nt_beams(i), i), &
-                    deg, &
-                    n_E_beams_out(i), &
-                    E_grid_out(E_start_beams_out(i) : beams_max_id_out(i)), &
-                    1, &
-                    intpol_derivative(E_start_beams_out(i) : beams_max_id_out(i), i))
+            call single_interpolate_coeffs_to_grid( &
+                n_knots_beams(i), knots(1:n_knots_beams(i), i), nt_beams(i), coeffs(1:nt_beams(i), i), &
+                deg, &
+                n_E_beams_out(i), &
+                E_grid_out(E_start_beams_out(i) : beams_max_id_out(i)), &
+                1, &
+                intpol_derivative(E_start_beams_out(i) : beams_max_id_out(i), i))
 
-                ! Calculate pendry Y function
-                call pendry_y( &
-                    n_E_beams_out(i), &
-                    intpol_intensity(E_start_beams_out(i):beams_max_id_out(i), i), &
-                    intpol_derivative(E_start_beams_out(i):beams_max_id_out(i), i), &
-                    v0i, &
-                    y_func(E_start_beams_out(i):beams_max_id_out(i), i) &
-                    )
-            end do
-            ierr = MAXVAL(ierrs)
-            !end Pendry
-        else if (which_R == 2) then
-            ! Beginn R2
-            do i= 1,n_beams_out
-                
-                call get_array_sizes(cut_n_E_beams(i), deg, n_knots_beams(i), nt_beams(i), LHS_rows_beams(i))
+            ! Calculate pendry Y function
+            call pendry_y( &
+                n_E_beams_out(i), &
+                intpol_intensity(E_start_beams_out(i):beams_max_id_out(i), i), &
+                intpol_derivative(E_start_beams_out(i):beams_max_id_out(i), i), &
+                v0i, &
+                y_func(E_start_beams_out(i):beams_max_id_out(i), i) &
+                )
 
-                call single_calc_spline(&
-                    cut_n_E_beams(i), &
-                    E_grid_in(cut_E_start_beams(i) : cut_beams_max_id_in(i)), &
-                    intensities(cut_E_start_beams(i) : cut_beams_max_id_in(i), i), &
-                    deg, &
-                    n_knots_beams(i), nt_beams(i), LHS_rows_beams(i), &
-                    knots(1:n_knots_beams(i), i), &
-                    coeffs(1:nt_beams(i), i), &
-                    ierrs(i))
+            if (ierrs(i) .ne. 0 )then
+                ierr = ierrs(i)
+            end if
+        end do
+        ierr = MAXVAL(ierrs)
+        !end Pendry
 
-                call single_interpolate_coeffs_to_grid( &
-                    n_knots_beams(i), knots(1:n_knots_beams(i), i), nt_beams(i), coeffs(1:nt_beams(i), i), &
-                    deg, &
-                    n_E_beams_out(i), &
-                    E_grid_out(E_start_beams_out(i) : beams_max_id_out(i)), &
-                    0, &
-                    intpol_intensity(E_start_beams_out(i) : beams_max_id_out(i), i))
-                
-                ! Done! R2 only needs intensities
-                y_func = ieee_value(real(8), ieee_signaling_nan) ! Assign NaNs so it throws if used by accident
-            end do
-        else
-            ierr = 701
-        end if
+    else if (which_R == 2) then
+        ! Beginn R2
+        do i= 1,n_beams
+
+            if (cut_n_E_beams(i) <= 2*deg+1) then
+                cut_n_E_beams(i) = 0
+                intensities(:,i) = ieee_value(real(8), ieee_signaling_nan)
+                intpol_intensity(:, i) = ieee_value(real(8), ieee_signaling_nan)
+                n_E_beams_out(i) = 0
+                ierr = -703
+                CYCLE
+            end if
+            
+            call get_array_sizes(cut_n_E_beams(i), deg, n_knots_beams(i), nt_beams(i), LHS_rows_beams(i))
+
+            call single_calc_spline(&
+                cut_n_E_beams(i), &
+                E_grid_in(cut_E_start_beams(i) : cut_beams_max_id_in(i)), &
+                intensities(cut_E_start_beams(i) : cut_beams_max_id_in(i), i), &
+                deg, &
+                n_knots_beams(i), nt_beams(i), LHS_rows_beams(i), &
+                knots(1:n_knots_beams(i), i), &
+                coeffs(1:nt_beams(i), i), &
+                ierrs(i))
+
+            call single_interpolate_coeffs_to_grid( &
+                n_knots_beams(i), knots(1:n_knots_beams(i), i), nt_beams(i), coeffs(1:nt_beams(i), i), &
+                deg, &
+                n_E_beams_out(i), &
+                E_grid_out(E_start_beams_out(i) : beams_max_id_out(i)), &
+                0, &
+                intpol_intensity(E_start_beams_out(i) : beams_max_id_out(i), i))
+            
+            if (ierrs(i) .ne. 0 )then
+                ierr = ierrs(i)
+            end if
+
+            ! Done! R2 only needs intensities
+        end do
+        y_func = ieee_value(real(8), ieee_signaling_nan) ! Assign NaNs so it is not used by accident
+
+    else
+        ! Error because unsupported R-factor was requested
+        ierr = 701
     end if
-
-    !###############
-    ! Y function calculation on new grid
-    !###############
-
-    ! TODO: clean up implementation
-
-    ! output is the y functions
-
-    ! i = 4
-
-    ! print* , n_E_beams(i), cut_n_E_beams(i), n_E_beams_out(i)
-
-    ! print*, "Intensities old index l:", intensities_in(E_start_beams(i), i), &
-    ! intensities(E_start_beams(i) +1, i)
-    ! print*, "Intensities old index u:", intensities_in(E_start_beams(i) + n_E_beams(i) - 2, i), &
-    ! intensities(E_start_beams(i) + n_E_beams(i) -1, i)
-
-    ! print*, "Intensities new id:", intensities(cut_E_start_beams(i), i), &
-    ! intensities(cut_E_start_beams(i) +1, i)
-    ! print*, "Intensities new id:", intensities(cut_beams_max_id_in(i) -1, i), &
-    ! intensities(cut_beams_max_id_in(i), i)
-
-    ! print*, "Intensities out l:", intpol_intensity(E_start_beams_out(i), i), &
-    ! intpol_intensity(E_start_beams_out(i) +1, i)
-    ! print*, "Intensities out u:", intpol_intensity(beams_max_id_out(i) -1, i), &
-    ! intpol_intensity(beams_max_id_out(i), i)
-
 
     RETURN
 
@@ -1341,7 +1271,8 @@ subroutine avg_reo_disc(n_beams_in, n_beams_out, n_E, scheme, min_len, &
     do j = 1, n_beams_in
         if (beam_n(j) < min_len) then
             scheme(j) = 0
-            ierr = 211
+            beam_n(i) = 0 ! this beam is now considered to contain no data
+            !ierr = 211
         end if
     end do
 
@@ -1382,7 +1313,6 @@ subroutine range_index_from_Energy(E_min_current, NE_in, E_step, E_min_cut, E_ma
     new_start_stop_step(2) = new_start_stop_step(1) + new_start_stop_step(3)
     return
 end subroutine range_index_from_Energy
-
 
 
 
@@ -1463,7 +1393,6 @@ subroutine r_beamtype_grouping(which_r, &
     end if
 
 end subroutine r_beamtype_grouping 
-
 
 
 

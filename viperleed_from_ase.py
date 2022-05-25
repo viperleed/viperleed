@@ -432,7 +432,6 @@ def rfactor_from_csv(
 
     grid = np.arange(minen, maxen + intpol_step, intpol_step)
 
-    skip_stages = np.int32([0, 0, 0, 0, 0])  # usused - we don't skip anything
     averaging_scheme = np.int32(np.arange(n_beams) + 1)  # don't average
 
     # interpolate and prepare beam arrays
@@ -447,9 +446,6 @@ def rfactor_from_csv(
         beams1_arr,
         beams1_id_start + 1,
         beams1_n_E_beams,
-        skip_stages,
-        n_beams,
-        averaging_scheme,
         which_r,
         intpol_deg,
         grid,
@@ -468,16 +464,14 @@ def rfactor_from_csv(
         beams2_arr,
         beams2_id_start + 1,
         beams2_n_E_beams,
-        skip_stages,
-        n_beams,
-        averaging_scheme,
         which_r,
         intpol_deg,
         grid,
         v0i,
     )
+    #return beams1_yfunc
     _check_ierr(ierr)
-
+    
     # Ready to calculate R-factor
     v0r_shift_range_int = np.int32([round(v / intpol_step) for v in v0r_shift_range])
     v0r_center = sum(v0r_shift_range_int) // 2
@@ -489,7 +483,7 @@ def rfactor_from_csv(
     tol_r_2 = (1 - 5e-2,)
     max_fit_range = 6
 
-    (_, best_v0r, best_r, *_, ierr) = rf.r_beamset_v0r_opt_on_grid(
+    (_, best_v0r, best_r, n_evaluated, r_beams, numerators, denominators, _, ierr) = rf.r_beamset_v0r_opt_on_grid(
         which_r,
         v0r_shift_range_int,
         start_guess,

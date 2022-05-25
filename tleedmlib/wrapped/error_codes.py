@@ -8,13 +8,15 @@ error_codes = {
 
     # Warnings
     -1 : "Undefined Warning",
+
+    -812: "At least one numerator or denominator in Pendry R-factor caclulation was NaN",
+
     # No error, normal exit
     0: "No error",
 
 
     # 1... General Errors
     1: "Undefined error",
-    10: "",
     # Compiler test failure
     10: 'Compilation check failed - NaN values are not recognized. This may have unexpected consequences. Make sure compiler option "-fno-finite-math-only" is enabled.',
     # 2 ... prepare_beams
@@ -22,7 +24,7 @@ error_codes = {
     # 211: "???", # removed
     212: "???",
     # 22 ... averaging
-    220: "given n_beams_out > n_beams",
+    220: "given n_beams_out > n_beams", # deprecated, now unused
     221: "Common averaging interval for (at least) one beam is too short",
     223: "Averaging skipped but given n_beams_out != n_beams",
     # 23 ... smoothing
