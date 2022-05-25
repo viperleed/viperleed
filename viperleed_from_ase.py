@@ -342,6 +342,9 @@ def rfactor_from_csv(
     #         in the API (if so, the code below will need a few ajustments)
     which_r = 1
 
+    # Check compilation of wrapped R-factor code
+    _check_ierr(rf.test_compilation())
+
     err_msg = ""
 
     # Check if file is supposed to be read from disk or from memory and pass
@@ -509,9 +512,15 @@ def rfactor_from_csv(
 
 
 def _check_ierr(ierr):
-    if ierr:
+    if ierr and ierr > 0:
+        # Error
         raise RuntimeError(f"ViPErLEED Fortran error code {ierr}: {error_codes[ierr]}")
-
+    elif ierr and ierr < 0:
+        # Warining
+        warnings.warn(
+            f"ViPErLEED Fortran warning code {ierr}: {error_codes[ierr]}",
+            category=RuntimeWarning,
+        )
 
 def plot_iv_from_csv(
     beam_file, output_file, beam_file_is_content=False, which_beams=[]

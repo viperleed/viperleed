@@ -1664,4 +1664,22 @@ subroutine translate_theo(n_beams,  MNGP, MNBTD, ES, ATS, &
     RETURN
 end subroutine translate_theo
 
+integer function test_compilation() result(ierr)
+    real(8) :: test_value_nan, test_value_div
+
+    test_value_nan = ieee_value(real(8), ieee_signaling_nan)
+    test_value_div = 1.d0
+    test_value_div = 1.d0/(1.d0 - test_value_div)
+
+    if (ieee_is_finite(test_value_div) .or. ieee_is_normal(test_value_nan)) then
+        ! Error in compilation
+        ierr = 10
+    else
+        ! We are good to go
+        ierr = 0
+    end if
+
+    return
+end function test_compilation
+
 end module r_factor_new

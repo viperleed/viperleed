@@ -4,9 +4,19 @@ Error codes for the rfactor and interpolation
 """
 
 error_codes = {
+    # Negative values correspond to warnings and non-fatal errors
+
+    # Warnings
+    -1 : "Undefined Warning",
+    # No error, normal exit
+    0: "No error",
+
+
     # 1... General Errors
     1: "Undefined error",
     10: "",
+    # Compiler test failure
+    10: 'Compilation check failed - NaN values are not recognized. This may have unexpected consequences. Make sure compiler option "-fno-finite-math-only" is enabled.',
     # 2 ... prepare_beams
     # 21.. limit range
     # 211: "???", # removed
