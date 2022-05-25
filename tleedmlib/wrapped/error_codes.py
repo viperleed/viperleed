@@ -8,8 +8,8 @@ error_codes = {
 
     # Warnings
     -1 : "Undefined Warning",
-
-    -812: "At least one numerator or denominator in Pendry R-factor caclulation was NaN",
+    -703: "At least one beam has not enough datapoints for interpolation. Consider using a lower interpolation degree or dropping short beams.",
+    -812: "At least one numerator or denominator in Pendry R-factor caclulation was NaN.",
 
     # No error, normal exit
     0: "No error",
