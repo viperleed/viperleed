@@ -26,6 +26,7 @@ Tests/
 *.so
 *.mod
 *.o
+*.pyf
 
 
 tleedmlib/wrapped/source/wrapf2py
