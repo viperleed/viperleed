@@ -225,11 +225,8 @@ def read_delta_file(filename, n_E):
         amplitudes_del)
 
 
-
-
-
-@njit(fastmath=True, parallel=True)
-def GetInt(Phi, Theta, Trar1, Trar2, Beam_variables, beam_indices, ph_CDisp, E_array, VPI_array, VV_array, amplitudes_ref, amplitudes_del, \
+@njit(fastmath=True, parallel=True, nogil=True)
+def GetInt(phi, theta, trar1, trar2, Beam_variables, beam_indices, ph_CDisp, E_array, VPI_array, VV_array, amplitudes_ref, amplitudes_del, \
           n_files, NCSurf, delta_steps,number_z_steps):
     """This function reads in the values of the function Transform and uses them to get the ATSAS_matrix
     
@@ -238,10 +235,10 @@ def GetInt(Phi, Theta, Trar1, Trar2, Beam_variables, beam_indices, ph_CDisp, E_a
     n_files: int
     Number of files
     
-    Phi, Theta:
+    phi, theta:
     Angles of how the beam hits the sample
     
-    Trar1, Trar2:
+    trar1, trar2:
     Vectors of the normal and the reciprocal unit cell of the sample
     
     Beam_variables:
@@ -323,9 +320,9 @@ def GetInt(Phi, Theta, Trar1, Trar2, Beam_variables, beam_indices, ph_CDisp, E_a
         VPI=VPI_array[e_index]
 
         AK=np.sqrt(max(2*E-2*VV,0))
-        C=AK*np.cos(Theta)
-        BK2=AK*np.sin(Theta)*np.cos(Phi)
-        BK3=AK*np.sin(Theta)*np.sin(Phi)
+        C=AK*np.cos(theta)
+        BK2=AK*np.sin(theta)*np.cos(phi)
+        BK3=AK*np.sin(theta)*np.sin(phi)
         BKZ=np.sqrt(complex(2*E-BK2**2-BK3**2,-2*VPI))
 
         #Loop über die Beams
@@ -333,8 +330,8 @@ def GetInt(Phi, Theta, Trar1, Trar2, Beam_variables, beam_indices, ph_CDisp, E_a
             #Variablen per Beam
             h=beam_indices[b_index,0]
             k=beam_indices[b_index,1]
-            AK2=BK2+h*Trar1[0]+k*Trar2[0]
-            AK3=BK3+h*Trar1[1]+k*Trar2[1]
+            AK2=BK2+h*trar1[0]+k*trar2[0]
+            AK3=BK3+h*trar1[1]+k*trar2[1]
             AK=2*E-AK2**2-AK3**2
             AKZ=complex(AK,-2*VPI)
             APERP=AK-2*VV
@@ -386,65 +383,64 @@ def GetInt(Phi, Theta, Trar1, Trar2, Beam_variables, beam_indices, ph_CDisp, E_a
 
 
 
-@njit(fastmath=True,parallel=True)
-def GetInt2D(Phi, Theta, Trar1, Trar2, Beam_variables, beam_indices, ph_CDisp, E_array, VPI_array, VV_array, amplitudes_ref, amplitudes_del, \
+@njit(fastmath=True,parallel=True, nogil=True)
+def GetInt2D(phi, theta, trar1, trar2, Beam_variables, beam_indices, ph_CDisp, E_array, VPI_array, VV_array, amplitudes_ref, amplitudes_del, \
           n_files, NCSurf, delta_steps,number_z_steps,number_vib_steps):
     
-    #This function reads in the values of the function Transform and uses them to get the ATSAS_matrix
-    #
-    #INPUT:
-    #filename:
-    #The filename describes which file u want to read in (path from the function location to the file)
-    #
-    #Phi, Theta:
-    #Angles of how the beam hits the sample
-    #
-    #Trar1, Trar2:
-    #Vectors of the normal and the reciprocal unit cell of the sample
-    #
-    #Beam_variables:
-    #The variables int0, n_atoms, nc_steps for each file stored in an array
-    #
-    #beam_indices:
-    #Array with the order of beams
-    #
-    #ph_CDisp:
-    #Geometric displacements of the atom
-    #
-    #E_array:
-    #Array that contains all the energies of the file
-    #
-    #VPI_array:
-    #Imaginary part of the inner potential of the surface
-    #
-    #VV_array:
-    #Real part of the inner potential of the surface
-    #
-    #amplitudes_ref:
-    #Array that contains all values of the reference amplitudes
-    #
-    #amplitudes_del:
-    #Array that contains all values of the delta amplitudes
-    #
-    #n_files: int
-    #Number of files
-    #
-    #NCSurf:
-    #List of 0 and 1 to decide which file takes part in creating the CXDisp
-    #
-    #delta_step:
-    #List of numbers that decide which geometric displacement this atom has
-    #
-    #number_z_steps:
-    #Total number of different delta_z values
-    #
-    #number_vib_steps:
-    #Total number of different delta_vib values
-    #
-    #OUTPUT:
-    #ATSAS_matrix:
-    #Array that contains the intensities of the different beams with each energy
+    """This function reads in the values of the function Transform and uses them to get the ATSAS_matrix
     
+    Parameters
+    ----------
+    phi, theta:
+    Angles of how the beam hits the sample
+    
+    trar1, trar2:
+    Vectors of the normal and the reciprocal unit cell of the sample
+    
+    Beam_variables:
+    The variables int0, n_atoms, nc_steps for each file stored in an array
+    
+    beam_indices:
+    Array with the order of beams
+    
+    ph_CDisp:
+    Geometric displacements of the atom
+    
+    E_array:
+    Array that contains all the energies of the file
+    
+    VPI_array:
+    Imaginary part of the inner potential of the surface
+    
+    VV_array:
+    Real part of the inner potential of the surface
+    
+    amplitudes_ref:
+    Array that contains all values of the reference amplitudes
+    
+    amplitudes_del:
+    Array that contains all values of the delta amplitudes
+    
+    n_files: int
+    Number of files
+    
+    NCSurf:
+    List of 0 and 1 to decide which file takes part in creating the CXDisp
+    
+    delta_step:
+    List of numbers that decide which geometric displacement this atom has
+    
+    number_z_steps:
+    Total number of different delta_z values
+    
+    number_vib_steps:
+    Total number of different delta_vib values
+    
+    Returns
+    ----------
+    ATSAS_matrix:
+    Array that contains the intensities of the different beams with each energy
+    """
 
     #Conc will probably taken in as an Input parameter
     CXDisp=1000
@@ -481,9 +477,9 @@ def GetInt2D(Phi, Theta, Trar1, Trar2, Beam_variables, beam_indices, ph_CDisp, E
         VPI=VPI_array[e_index]
 
         AK=np.sqrt(max(2*E-2*VV,0))
-        C=AK*np.cos(Theta)
-        BK2=AK*np.sin(Theta)*np.cos(Phi)
-        BK3=AK*np.sin(Theta)*np.sin(Phi)
+        C=AK*np.cos(theta)
+        BK2=AK*np.sin(theta)*np.cos(phi)
+        BK3=AK*np.sin(theta)*np.sin(phi)
         BKZ=np.sqrt(complex(2*E-BK2**2-BK3**2,-2*VPI))
 
         #Loop over the beams
@@ -491,15 +487,14 @@ def GetInt2D(Phi, Theta, Trar1, Trar2, Beam_variables, beam_indices, ph_CDisp, E
             #variables that differ with each beam
             h=beam_indices[b_index,0]
             k=beam_indices[b_index,1]
-            AK2=BK2+h*Trar1[0]+k*Trar2[0]
-            AK3=BK3+h*Trar1[1]+k*Trar2[1]
+            AK2=BK2+h*trar1[0]+k*trar2[0]
+            AK3=BK3+h*trar1[1]+k*trar2[1]
             AK=2*E-AK2**2-AK3**2
             AKZ=complex(AK,-2*VPI)
             APERP=AK-2*VV
 
             #finding out which NCStep you take with the delta_step matrix
             DelAct=amplitudes_ref[e_index,b_index]
-            counter=0
             for i in range(n_files):
                 int0, n_atoms, nc_steps = Beam_variables[i]
                 int0=int(int0)
@@ -540,8 +535,6 @@ def GetInt2D(Phi, Theta, Trar1, Trar2, Beam_variables, beam_indices, ph_CDisp, E
                 ip_final=v*(ip2-ip1)+ip1
                         
                 DelAct=DelAct+ip_final
-                counter=counter+1
-
 
             if(APERP>0):
                 A=np.sqrt(APERP)
@@ -567,57 +560,54 @@ def hartree_to_eV(E_hartree):
     return E_hartree*27.211396
 
 
-#aid von ami rausgenommen, muss noch etwas ändern
 
 def Transform(n_E,directory):
-    
-    #This function transforms the read in data to a form, where it can be read in by the GetInt function
-    #
-    #
-    #INPUT:
-    #
-    #n_E:
-    #Number of different energies of one file
-    #
-    #directory:
-    #Relative path to the file that gets read in
-    #
-    #
-    #OUTPUT:
-    #
-    #Phi, Theta:
-    #Angles of how the beam hits the sample
-    #
-    #Trar1, Trar2:
-    #Vectors of the normal and the reciprocal unit cell of the sample
-    #
-    #Beam_variables:
-    #The variables int0, n_atoms, nc_steps for each file stored in an array
-    #
-    #beam_indices:
-    #Array with the order of beams
-    #
-    #CDisp:
-    #Geometric displacements of the atom
-    #
-    #E_array:
-    #Array that contains all the energies of the file
-    #
-    #VPI_array:
-    #Imaginary part of the inner potential of the surface
-    #
-    #VV_array:
-    #Real part of the inner potential of the surface
-    #
-    #amplitudes_ref:
-    #Array that contains all values of the reference amplitudes
-    #
-    #amplitudes_del:
-    #Array that contains all values of the delta amplitudes
-    #
-    #filename_list:
-    #List of the filenames that contain the data
+    """This function transforms the read in data to a form, where it can be read in by the GetInt function
 
+    Parameters
+    ----------
+    n_E:
+    Number of different energies of one file
+    
+    directory:
+    Relative path to the file that gets read in
+    
+    
+    Returns 
+    ----------
+    phi, theta:
+    Angles of how the beam hits the sample
+    
+    trar1, trar2:
+    Vectors of the normal and the reciprocal unit cell of the sample
+    
+    Beam_variables:
+    The variables int0, n_atoms, nc_steps for each file stored in an array
+    
+    beam_indices:
+    Array with the order of beams
+    
+    CDisp:
+    Geometric displacements of the atom
+    
+    E_array:
+    Array that contains all the energies of the file
+    
+    VPI_array:
+    Imaginary part of the inner potential of the surface
+    
+    VV_array:
+    Real part of the inner potential of the surface
+    
+    amplitudes_ref:
+    Array that contains all values of the reference amplitudes
+    
+    amplitudes_del:
+    Array that contains all values of the delta amplitudes
+    
+    filename_list:
+    List of the filenames that contain the data
+    """
     
     filename_list=[]
     data_list_all={}
@@ -686,10 +676,10 @@ def PlotMaker(phi,theta,trar1,trar2,Beam_variables,beam_indices,CDisp,E_array,VP
     #
     #INPUT:
     #
-    #Phi, Theta, Phi_g, Theta_g:
+    #phi, theta, phi_g, theta_g:
     #Angles of how the beam hits the sample
     #
-    #Trar1, Trar2, Trar1_g, Trar2_g:
+    #trar1, trar2, trar1_g, trar2_g:
     #Vectors of the normal and the reciprocal unit cell of the sample
     #
     #Beam_variables, Beam_variables_g:
