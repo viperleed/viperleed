@@ -289,9 +289,6 @@ def calc_delta_intensities(
     amplitudes_del:
     Array that contains all values of the delta amplitudes
     
-    filename_list:
-    List of the filenames that contain the data
-    
     nc_surf: np.array of bool
     Bool array with flags that decide if atom is considered to be at the surface.
     
