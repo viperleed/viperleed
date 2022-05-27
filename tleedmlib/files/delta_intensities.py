@@ -316,16 +316,16 @@ def calc_delta_intensities(
         if nc_surf[i]:
             int0, n_atoms, nc_steps = Beam_variables[i, :]
             for j in range(n_atoms):
-                fill = delta_steps[i]  # probably besserer Name als fill finden
-                x1 = int(fill // 1)
+                delta_fraction = delta_steps[i]  # probably besserer Name als fill finden
+                delta_step_left = int(delta_fraction // 1)
                 # necessary so that the x2 doesnt go out of the index range
-                if x1 == number_z_steps - 1:
-                    x1 = x1 - 1
-                x2 = x1 + 1
-                x = fill - x1
-                y1 = ph_CDisp[i, x1, j, 0]
-                y2 = ph_CDisp[i, x2, j, 0]
-                CDisp = x * (y2 - y1) + y1
+                if delta_step_left == number_z_steps - 1:
+                    delta_step_left = delta_step_left - 1
+                delta_step_right = delta_step_left + 1
+                x = delta_fraction - delta_step_left
+                del_left = ph_CDisp[i, delta_step_left, j, 0]
+                del_right = ph_CDisp[i, delta_step_right, j, 0]
+                CDisp = x * (del_right - del_left) + del_left
                 XDisp = Conc * CDisp
                 if XDisp < CXDisp:
                     CXDisp = XDisp
@@ -360,22 +360,17 @@ def calc_delta_intensities(
             DelAct = amplitudes_ref[e_index, b_index]
             for i in range(n_files):
                 # noch genau schauen wie genau gewollt
-                int0, n_atoms, nc_steps = Beam_variables[i]
-
                 # Interpolation of float delta_step values
-                # iwie random dass x1 extra als int definiert werden muss, damit sich python nicht aufregt
-                fill = delta_steps[i]
-                x1 = int(fill // 1)
-                # necessary so that the x2 doesnt go out of the index range
-                if x1 == number_z_steps - 1:
-                    x1 = x1 - 1
-                x2 = x1 + 1
-                x = fill - x1
-                y1 = amplitudes_del[i, e_index, x1, b_index]
-                y2 = amplitudes_del[i, e_index, x2, b_index]
-                Interpolation = x * (y2 - y1) + y1
-
-                DelAct = DelAct + Interpolation
+                delta_fraction = delta_steps[i]
+                delta_step_left = int(delta_fraction)
+                delta_step_right = min(delta_step_left+1, number_z_steps)
+                x = delta_fraction - delta_step_left
+                del_left = amplitudes_del[i, e_index, delta_step_left, b_index]
+                del_right = amplitudes_del[i, e_index, delta_step_right, b_index]
+                # 1D interpolation formula
+                intpol_value = x * (del_right - del_left) + del_left
+                # ###
+                DelAct += intpol_value
 
             if APERP > 0:
                 A = sqrt(APERP)
@@ -392,6 +387,14 @@ def calc_delta_intensities(
             ATSAS_matrix[e_index, b_index] = ATSAS
 
     return ATSAS_matrix
+
+@njit(fastmath = True, nogil = True)
+def bilinear_interpolation_unit_square(x_vals, y_vals, func_vals):
+    x1, x2, x = x_vals
+    y1, y2, y = y_vals
+    f11, f12, f21, f22 = func_vals
+
+    return (x2-x)*(f11*(y2-y) + f12*(y-y1)) + (x-x1)*(f21*(y2-y) + f22*(y-y1))
 
 
 @njit(fastmath=True, parallel=True, nogil=True)
@@ -477,19 +480,13 @@ def calc_delta_intensities_2D(
     for i in range(n_files):
         if nc_surf[i]:
             int0, n_atoms, nc_steps = Beam_variables[i, :]
-            int0 = int(int0)
-            n_atoms = int(n_atoms)
-            nc_steps = int(nc_steps)
             for j in range(n_atoms):
-                fill = delta_steps[
+                z_step = delta_steps[
                     i, 0
-                ]  # probably besserer Name als fill finden #2er numpy array machen
-                x1 = int(fill // 1)
-                # necessary so that the x2 doesnt go out of the index range
-                if x1 == number_z_steps - 1:
-                    x1 = x1 - 1
-                x2 = x1 + 1
-                x = fill - x1
+                ]
+                x1 = int(z_step)
+                x2 = min(x1+1, number_z_steps)
+                x = z_step - x1
                 y1 = ph_CDisp[i, x1, j, 0]
                 y2 = ph_CDisp[i, x2, j, 0]
                 CDisp = x * (y2 - y1) + y1
@@ -526,41 +523,26 @@ def calc_delta_intensities_2D(
             # finding out which NCStep you take with the delta_step matrix
             DelAct = amplitudes_ref[e_index, b_index]
             for i in range(n_files):
-                int0, n_atoms, nc_steps = Beam_variables[i]
-
                 # Interpolation of the float delta_step values
-                # iwie random dass x1 extra als int definiert werden muss, damit sich python nicht aufregt
 
-                z_step = delta_steps[i, 0]
-                vib_step = delta_steps[i, 1]
+                z = delta_steps[i, 0]
+                v = delta_steps[i, 1]
+                z1 = int(z)
+                z2 = min(z1+1, number_z_steps)
+                v1 = int(v) 
+                v2 = min(v1+1, number_vib_steps)
 
-                z1 = int(z_step // 1)
-                # necessary so that the z2 doesnt go out of the index range
-                if z1 == number_z_steps - 1:
-                    z1 = z1 - 1
-                z2 = z1 + 1
-                v1 = int(vib_step // 1)
-                # necessary so that the v2 doesnt go out of the index range
-                if v1 == number_vib_steps - 1:
-                    v1 = v1 - 1
-                v2 = v1 + 1
+                da_z1_v1 = amplitudes_del[i, e_index, v1 * number_vib_steps + z1, b_index]
+                da_z1_v2 = amplitudes_del[i, e_index, v2 * number_vib_steps + z1, b_index]
+                da_z2_v1 = amplitudes_del[i, e_index, v1 * number_vib_steps + z2, b_index]
+                da_z2_v2 = amplitudes_del[i, e_index, v2 * number_vib_steps + z2, b_index]
 
-                z = z_step - z1
-                v = vib_step - v1
-
-                # could be an error here, need to look closer at this
-                # maybe change the delta_step intervalls to see how the peaks behave
-                value1 = amplitudes_del[i, e_index, v1 * 11 + z1, b_index]
-                value2 = amplitudes_del[i, e_index, v1 * 11 + z2, b_index]
-                ip1 = z * (value2 - value1) + value1
-
-                value3 = amplitudes_del[i, e_index, v2 * 11 + z1, b_index]
-                value4 = amplitudes_del[i, e_index, v2 * 11 + z2, b_index]
-                ip2 = z * (value4 - value3) + value3
-
-                ip_final = v * (ip2 - ip1) + ip1
-
-                DelAct = DelAct + ip_final
+                intpol_value = bilinear_interpolation_unit_square(
+                    (z1, z2, z),
+                    (v1, v2, v), 
+                    (da_z1_v1, da_z1_v2, da_z2_v1, da_z2_v2)
+                )
+                DelAct += intpol_value
 
             if APERP > 0:
                 A = sqrt(APERP)
@@ -651,7 +633,7 @@ def Transform(n_E, directory):
     n_files = len(filename_list)
 
     # int0, n_atoms, nc_steps in an array(nc_steps can change, n_atoms maybe too)
-    Beam_variables = np.full(shape=[n_files, 3], fill_value=np.NaN, dtype = int)
+    Beam_variables = np.full(shape=[n_files, 3], fill_value=np.NaN, dtype=int)
     for i, name in enumerate(filename_list):
         Beam_variables[i, :] = data_list_all[name][2]
 
@@ -660,19 +642,17 @@ def Transform(n_E, directory):
     nc_steps_max = int(np.max(Beam_variables[:, 2]))
 
     # saving the changing data in arrays
-    counter = 0
     CDisp = np.full(shape=(n_files, nc_steps_max, n_atoms_max, 3), fill_value=np.NaN)
     amplitudes_del = np.full(
         shape=(n_files, n_E, nc_steps_max, int0), fill_value=np.NaN, dtype=complex
     )
-    for name in filename_list:
-        int0, n_atoms, nc_steps = Beam_variables[counter]
+    for i, name in enumerate(filename_list):
+        int0, n_atoms, nc_steps = Beam_variables[i]
         int0 = int(int0)
         n_atoms = int(n_atoms)
         nc_steps = int(nc_steps)
-        CDisp[counter, 0:nc_steps, 0:n_atoms, :] = data_list_all[name][5]
-        amplitudes_del[counter, :, 0:nc_steps, :] = data_list_all[name][8]
-        counter = counter + 1
+        CDisp[i, 0:nc_steps, 0:n_atoms, :] = data_list_all[name][5]
+        amplitudes_del[i, :, 0:nc_steps, :] = data_list_all[name][8]
 
     return (
         phi,
