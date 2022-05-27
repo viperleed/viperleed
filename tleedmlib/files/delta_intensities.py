@@ -8,6 +8,7 @@ Reads in delta files.
 from re import I
 import sys
 import numpy as np
+from numpy import sin, cos, sqrt
 import fortranformat as ff
 import matplotlib.pyplot as plt
 import scipy
@@ -314,9 +315,6 @@ def calc_delta_intensities(
     for i in range(n_files):
         if nc_surf[i]:
             int0, n_atoms, nc_steps = Beam_variables[i, :]
-            int0 = int(int0)
-            n_atoms = int(n_atoms)
-            nc_steps = int(nc_steps)
             for j in range(n_atoms):
                 fill = delta_steps[i]  # probably besserer Name als fill finden
                 x1 = int(fill // 1)
@@ -341,11 +339,11 @@ def calc_delta_intensities(
         VV = VV_array[e_index]
         VPI = VPI_array[e_index]
 
-        AK = np.sqrt(max(2 * E - 2 * VV, 0))
-        C = AK * np.cos(theta)
-        BK2 = AK * np.sin(theta) * np.cos(phi)
-        BK3 = AK * np.sin(theta) * np.sin(phi)
-        BKZ = np.sqrt(complex(2 * E - BK2 ** 2 - BK3 ** 2, -2 * VPI))
+        AK = sqrt(max(2 * E - 2 * VV, 0))
+        C = AK * cos(theta)
+        BK2 = AK * sin(theta) * cos(phi)
+        BK3 = AK * sin(theta) * sin(phi)
+        BKZ = sqrt(complex(2 * E - BK2 ** 2 - BK3 ** 2, -2 * VPI))
 
         # Loop über die Beams
         for b_index in range(int0):
@@ -380,15 +378,14 @@ def calc_delta_intensities(
                 DelAct = DelAct + Interpolation
 
             if APERP > 0:
-                A = np.sqrt(APERP)
+                A = sqrt(APERP)
                 PRE = (BKZ + AKZ) * CXDisp
                 PRE = np.exp(complex(0, -1) * PRE)
                 amp_abs = abs(DelAct)
                 if amp_abs > 10e10:
                     ATSAS = 10e20
                 else:
-                    RPRE = abs(PRE)
-                    ATSAS = amp_abs ** 2 * RPRE ** 2 * A / C
+                    ATSAS = amp_abs ** 2 * abs(PRE) ** 2 * A / C
             else:
                 ATSAS = 0
 
@@ -478,7 +475,7 @@ def calc_delta_intensities_2D(
     XDisp = 0
     Conc = 1
     for i in range(n_files):
-        if nc_surf:
+        if nc_surf[i]:
             int0, n_atoms, nc_steps = Beam_variables[i, :]
             int0 = int(int0)
             n_atoms = int(n_atoms)
@@ -509,11 +506,11 @@ def calc_delta_intensities_2D(
         VV = VV_array[e_index]
         VPI = VPI_array[e_index]
 
-        AK = np.sqrt(max(2 * E - 2 * VV, 0))
-        C = AK * np.cos(theta)
-        BK2 = AK * np.sin(theta) * np.cos(phi)
-        BK3 = AK * np.sin(theta) * np.sin(phi)
-        BKZ = np.sqrt(complex(2 * E - BK2 ** 2 - BK3 ** 2, -2 * VPI))
+        AK = sqrt(max(2 * E - 2 * VV, 0))
+        C = AK * cos(theta)
+        BK2 = AK * sin(theta) * cos(phi)
+        BK3 = AK * sin(theta) * sin(phi)
+        BKZ = sqrt(complex(2 * E - BK2 ** 2 - BK3 ** 2, -2 * VPI))
 
         # Loop over the beams
         for b_index in range(int0):
@@ -566,7 +563,7 @@ def calc_delta_intensities_2D(
                 DelAct = DelAct + ip_final
 
             if APERP > 0:
-                A = np.sqrt(APERP)
+                A = sqrt(APERP)
                 PRE = (BKZ + AKZ) * CXDisp
                 PRE = np.exp(complex(0, -1) * PRE)
                 amp_abs = abs(DelAct)
@@ -894,8 +891,8 @@ def PlotMaker1D(
     for i in tqdm(range(101)):
 
         delta_step_einzeln = np.full(shape=(40), fill_value=5.0)
-        delta_step_einzeln[0] = i * 1 / (10 * np.sqrt(2)) + 1.464
-        delta_step_einzeln[1] = i * 1 / (10 * np.sqrt(2)) + 1.464
+        delta_step_einzeln[0] = i * 1 / (10 * sqrt(2)) + 1.464
+        delta_step_einzeln[1] = i * 1 / (10 * sqrt(2)) + 1.464
 
         delta_step_dig = np.full(shape=(20), fill_value=5.0)
         delta_step_dig[0] = i / 10
