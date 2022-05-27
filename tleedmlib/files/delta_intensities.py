@@ -233,7 +233,7 @@ def read_delta_file(filename, n_E):
 
 
 @njit(fastmath=True, parallel=True, nogil=True)
-def GetInt(
+def calc_delta_intensities(
     phi,
     theta,
     trar1,
@@ -247,7 +247,7 @@ def GetInt(
     amplitudes_ref,
     amplitudes_del,
     n_files,
-    NCSurf,
+    nc_surf,
     delta_steps,
     number_z_steps,
 ):
@@ -291,8 +291,8 @@ def GetInt(
     filename_list:
     List of the filenames that contain the data
     
-    NCSurf:
-    List of 0 and 1 to decide which file takes part in creating the CXDisp
+    nc_surf: np.array of bool
+    Bool array with flags that decide if atom is considered to be at the surface.
     
     delta_steps:
     List of numbers that decide which geometric displacement this atom has
@@ -312,7 +312,7 @@ def GetInt(
     XDisp = 0
     Conc = 1
     for i in range(n_files):
-        if NCSurf[i] == 1:
+        if nc_surf[i]:
             int0, n_atoms, nc_steps = Beam_variables[i, :]
             int0 = int(int0)
             n_atoms = int(n_atoms)
@@ -363,9 +363,6 @@ def GetInt(
             for i in range(n_files):
                 # noch genau schauen wie genau gewollt
                 int0, n_atoms, nc_steps = Beam_variables[i]
-                int0 = int(int0)
-                n_atoms = int(n_atoms)
-                nc_steps = int(nc_steps)
 
                 # Interpolation of float delta_step values
                 # iwie random dass x1 extra als int definiert werden muss, damit sich python nicht aufregt
@@ -401,7 +398,7 @@ def GetInt(
 
 
 @njit(fastmath=True, parallel=True, nogil=True)
-def GetInt2D(
+def calc_delta_intensities_2D(
     phi,
     theta,
     trar1,
@@ -415,7 +412,7 @@ def GetInt2D(
     amplitudes_ref,
     amplitudes_del,
     n_files,
-    NCSurf,
+    nc_surf,
     delta_steps,
     number_z_steps,
     number_vib_steps,
@@ -458,8 +455,8 @@ def GetInt2D(
     n_files: int
     Number of files
     
-    NCSurf:
-    List of 0 and 1 to decide which file takes part in creating the CXDisp
+    nc_surf: np.array of bool
+    Bool array with flags that decide if atom is considered to be at the surface.
     
     delta_step:
     List of numbers that decide which geometric displacement this atom has
@@ -481,7 +478,7 @@ def GetInt2D(
     XDisp = 0
     Conc = 1
     for i in range(n_files):
-        if NCSurf[i] == 1:
+        if nc_surf:
             int0, n_atoms, nc_steps = Beam_variables[i, :]
             int0 = int(int0)
             n_atoms = int(n_atoms)
@@ -533,9 +530,6 @@ def GetInt2D(
             DelAct = amplitudes_ref[e_index, b_index]
             for i in range(n_files):
                 int0, n_atoms, nc_steps = Beam_variables[i]
-                int0 = int(int0)
-                n_atoms = int(n_atoms)
-                nc_steps = int(nc_steps)
 
                 # Interpolation of the float delta_step values
                 # iwie random dass x1 extra als int definiert werden muss, damit sich python nicht aufregt
@@ -660,11 +654,9 @@ def Transform(n_E, directory):
     n_files = len(filename_list)
 
     # int0, n_atoms, nc_steps in an array(nc_steps can change, n_atoms maybe too)
-    counter = 0
-    Beam_variables = np.full(shape=[n_files, 3], fill_value=np.NaN)
-    for name in filename_list:
-        Beam_variables[counter, :] = data_list_all[name][2]
-        counter = counter + 1
+    Beam_variables = np.full(shape=[n_files, 3], fill_value=np.NaN, dtype = int)
+    for i, name in enumerate(filename_list):
+        Beam_variables[i, :] = data_list_all[name][2]
 
     int0 = int(np.max(Beam_variables[:, 0]))
     n_atoms_max = int(np.max(Beam_variables[:, 1]))
@@ -809,7 +801,7 @@ def PlotMaker(
             delta_step_g[0, 0] = j / 10
             delta_step_g[0, 1] = i / 10
 
-            matrix_z_vib_einzeln = GetInt(
+            matrix_z_vib_einzeln = calc_delta_intensities(
                 phi,
                 theta,
                 trar1,
@@ -828,7 +820,7 @@ def PlotMaker(
                 number_z_steps,
             )
 
-            matrix_z_vib_g = GetInt2D(
+            matrix_z_vib_g = calc_delta_intensities_2D(
                 phi_g,
                 theta_g,
                 trar1_g,
@@ -908,7 +900,7 @@ def PlotMaker1D(
         delta_step_dig = np.full(shape=(20), fill_value=5.0)
         delta_step_dig[0] = i / 10
 
-        matrix_z_vib_einzeln = GetInt(
+        matrix_z_vib_einzeln = calc_delta_intensities(
             phi,
             theta,
             trar1,
@@ -927,7 +919,7 @@ def PlotMaker1D(
             number_z_steps,
         )
 
-        matrix_z_vib_g = GetInt(
+        matrix_z_vib_g = calc_delta_intensities(
             phi_g,
             theta_g,
             trar1_g,
