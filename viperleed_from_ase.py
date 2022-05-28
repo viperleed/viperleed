@@ -433,44 +433,78 @@ def rfactor_from_csv(
     grid = np.arange(minen, maxen + intpol_step, intpol_step)
 
     averaging_scheme = np.int32(np.arange(n_beams) + 1)  # don't average
+    n_derivs = 1
 
     # interpolate and prepare beam arrays
+
+    # initialize beam arrays
     (
         beams1_e_start_beams_out,
         beams1_n_e_beams_out,
-        beams1_intpol_intensity,  # may be needed for R2
-        beams1_yfunc,
+        beams1_intpol_intensity,
+        beams1_deriv_y,
         ierr,
-    ) = rf.prepare_beams(
+    ) = rf.alloc_beams_arrays(n_beams, len(grid))
+    _check_ierr(ierr)
+
+    ierr = rf.prepare_beams(
         beams1_en,
         beams1_arr,
         beams1_id_start + 1,
         beams1_n_E_beams,
-        which_r,
         intpol_deg,
+        n_derivs,
         grid,
         v0i,
+        beams1_e_start_beams_out,
+        beams1_n_e_beams_out,
+        beams1_intpol_intensity,
+        beams1_deriv_y,
     )
     _check_ierr(ierr)
 
+    rf.pendry_y_beamset(
+        beams1_intpol_intensity,
+        beams1_deriv_y,
+        beams1_id_start + 1,
+        beams1_n_e_beams_out,
+        v0i
+    )
+
+    # Beams 2
     (
         beams2_e_start_beams_out,
         beams2_n_e_beams_out,
-        beams2_intpol_intensity,  # may be needed for R2
-        beams2_yfunc,
+        beams2_intpol_intensity,
+        beams2_deriv_y,
         ierr,
-    ) = rf.prepare_beams(
+    ) = rf.alloc_beams_arrays(n_beams, len(grid))
+    _check_ierr(ierr)
+
+    ierr = rf.prepare_beams(
         beams2_en,
         beams2_arr,
         beams2_id_start + 1,
         beams2_n_E_beams,
-        which_r,
         intpol_deg,
+        n_derivs,
         grid,
         v0i,
+        beams2_e_start_beams_out,
+        beams2_n_e_beams_out,
+        beams2_intpol_intensity,
+        beams2_deriv_y,
+
     )
-    #return beams1_yfunc
     _check_ierr(ierr)
+
+    rf.pendry_y_beamset(
+        beams2_intpol_intensity,
+        beams2_deriv_y,
+        beams2_id_start +1 ,
+        beams2_n_e_beams_out,
+        v0i
+    )
     
     # Ready to calculate R-factor
     v0r_shift_range_int = np.int32([round(v / intpol_step) for v in v0r_shift_range])
@@ -489,8 +523,8 @@ def rfactor_from_csv(
         start_guess,
         fast_search,
         intpol_step,
-        beams1_yfunc,
-        beams2_yfunc,
+        beams1_deriv_y,
+        beams2_deriv_y,
         beams1_e_start_beams_out,
         beams2_e_start_beams_out,
         beams1_n_e_beams_out,
