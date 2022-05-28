@@ -38,6 +38,8 @@ error_codes = {
     # 7xx : other in prepare
     701: "Unknown R factor requested. Only Pendry(1) and R2(2) are allowed.",
     702: "Invalid data passed to V0r optimization. Check if correct R factor is selected.",
+    703: "In prepare_beams: more derivatives requested than are available.",
+    704: "2nd derivative is not implemented yet", #2nd derivative will likely be needed in the future
     # 8: R-factor
     811: "At least one R-factor returned as NaN",
     851: "V0r optimization range too small",
