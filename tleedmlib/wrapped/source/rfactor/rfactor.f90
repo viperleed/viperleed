@@ -869,9 +869,6 @@ subroutine alloc_beams_arrays( &
     ! n_beams: int
     ! Number of beams.
     !
-    ! n_e_grid_in: int
-    ! Number of energies before interpolation.
-    !
     ! n_e_grid_out: int
     ! Number of energies after interpolation.
     !
@@ -918,7 +915,6 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
                          deg, &
                          n_derivs, &
                          n_E_out, E_grid_out, &
-                         V0i, &
                          E_start_beams_out, &
                          n_E_beams_out, &
                          intpol_intensity, &
@@ -958,9 +954,6 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
     integer, intent(in)                          :: E_start_beams(n_beams) ! First energy step to be used for the beam
     integer, intent(in)                          :: n_E_beams(n_beams) ! Number of energy steps to use for the beam
     real(8), intent(in)                          :: intensities_in(n_E_in, n_beams) ! Beam intensities - input data
-    
-    real(8), INTENT(IN) :: V0i
-
 
     real(8), intent(inout) :: intpol_intensity(n_E_out, n_beams)
     real(8), intent(inout) :: intpol_derivative(n_E_out, n_beams)

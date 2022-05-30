@@ -455,7 +455,6 @@ def rfactor_from_csv(
         intpol_deg,
         n_derivs,
         grid,
-        v0i,
         beams1_e_start_beams_out,
         beams1_n_e_beams_out,
         beams1_intpol_intensity,
@@ -489,7 +488,6 @@ def rfactor_from_csv(
         intpol_deg,
         n_derivs,
         grid,
-        v0i,
         beams2_e_start_beams_out,
         beams2_n_e_beams_out,
         beams2_intpol_intensity,
@@ -501,7 +499,7 @@ def rfactor_from_csv(
     rf.pendry_y_beamset(
         beams2_intpol_intensity,
         beams2_deriv_y,
-        beams2_id_start +1 ,
+        beams2_id_start + 1,
         beams2_n_e_beams_out,
         v0i
     )
