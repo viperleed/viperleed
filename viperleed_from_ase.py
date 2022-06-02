@@ -27,7 +27,7 @@ from viperleed.tleedmlib.files.parameters import readPARAMETERS, interpretPARAME
 from viperleed.tleedmlib.files.beams import readOUTBEAMS
 from viperleed.tleedmlib.files.iorfactor import beamlist_to_array
 from viperleed.tleedmlib.wrapped.rfactor import r_factor_new as rf
-from viperleed.tleedmlib.wrapped.error_codes import error_codes
+from viperleed.tleedmlib.wrapped.error_codes import error_codes, check_ierr
 
 # for plot_iv_from_csv
 from viperleed.tleedmlib.files.ivplot import plot_iv
@@ -348,7 +348,7 @@ def rfactor_from_csv(
     which_r = 1
 
     # Check compilation of wrapped R-factor code
-    _check_ierr(rf.test_compilation())
+    check_ierr(rf.test_compilation())
 
     err_msg = ""
 
@@ -449,7 +449,7 @@ def rfactor_from_csv(
         beams1_deriv_y,
         ierr,
     ) = rf.alloc_beams_arrays(n_beams, len(grid))
-    _check_ierr(ierr)
+    check_ierr(ierr)
 
     ierr = rf.prepare_beams(
         beams1_en,
@@ -464,7 +464,7 @@ def rfactor_from_csv(
         beams1_intpol_intensity,
         beams1_deriv_y,
     )
-    _check_ierr(ierr)
+    check_ierr(ierr)
 
     beams1_der = beams1_deriv_y.copy()
 
@@ -485,7 +485,7 @@ def rfactor_from_csv(
         beams2_deriv_y,
         ierr,
     ) = rf.alloc_beams_arrays(n_beams, len(grid))
-    _check_ierr(ierr)
+    check_ierr(ierr)
 
     ierr = rf.prepare_beams(
         beams2_en,
@@ -501,7 +501,7 @@ def rfactor_from_csv(
         beams2_deriv_y,
 
     )
-    _check_ierr(ierr)
+    check_ierr(ierr)
 
     beams2_der = beams2_deriv_y.copy()
 
@@ -542,25 +542,15 @@ def rfactor_from_csv(
         max_fit_range=max_fit_range,
     )
     # If encountered an error
-    _check_ierr(ierr)
+    check_ierr(ierr)
 
     #  for debugging, we have the option of returning the beam_arrays, y-Functions etc.
     if (return_beam_arrays):
-        return best_r, best_v0r, (beams1_intpol_intensity, beams2_intpol_intensity), (beams1_deriv_y, beams2_deriv_y), r_beams, n_overlapping_points
+        return best_r, best_v0r, (beams1_intpol_intensity, beams2_intpol_intensity), (beams1_deriv_y, beams2_deriv_y), r_beams, n_overlapping_points, (beams1, beams2)
 
     return best_r, best_v0r
 
 
-def _check_ierr(ierr):
-    if ierr and ierr > 0:
-        # Error
-        raise RuntimeError(f"ViPErLEED Fortran error code {ierr}: {error_codes[ierr]}")
-    elif ierr and ierr < 0:
-        # Warining
-        warnings.warn(
-            f"ViPErLEED Fortran warning code {ierr}: {error_codes[ierr]}",
-            category=RuntimeWarning,
-        )
 
 def plot_iv_from_csv(
     beam_file, output_file, beam_file_is_content=False, which_beams=[]

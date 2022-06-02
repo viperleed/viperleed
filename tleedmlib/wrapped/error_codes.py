@@ -3,6 +3,9 @@ Error codes for the rfactor and interpolation
 
 """
 
+import warnings
+import logging
+
 error_codes = {
     # Negative values correspond to warnings and non-fatal errors
 
@@ -56,3 +59,23 @@ error_codes = {
 
     921: "Error in apply_beamset_shift, check value for fill_outside",
 }
+
+
+def check_ierr(ierr, logger=None):
+    if ierr and ierr > 0:
+        # Error
+        err_msg = f"ViPErLEED Fortran error code {ierr}: {error_codes[ierr]}"
+
+        if logger:
+            logger.error(err_msg)
+        else:
+            raise RuntimeError(err_msg)
+
+    elif ierr and ierr < 0:
+        # Warning
+        warn_msg = f"ViPErLEED Fortran warning code {ierr}: {error_codes[ierr]}"
+
+        if logger:
+            logger.warn(warn_msg)
+        else:
+            warnings.warn(warn_msg, category=RuntimeWarning)
