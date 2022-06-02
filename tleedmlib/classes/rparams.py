@@ -44,7 +44,7 @@ class SearchPar:
         self.deltaname = deltaname
         self.steps = 1
         self.edges = (None, None)  # the first and last value in the range
-        self.center = 1  # the index closest to "no change"
+        self.center = 1  # the index closest to "no change" (Fortran index starting at 1)
         self.non_zero = False   # whether the center is truly "unchanged"
         self.restrictTo = None  # None, Index, or other search par
         self.linkedTo = None    # other search par linked via 'atom number'
@@ -54,7 +54,7 @@ class SearchPar:
         if mode == "occ":
             el = next(iter(atom.disp_occ.keys()))  # look at any element
             self.steps = len(atom.disp_occ[el])
-            self.center = atom.disp_center_index[mode][el] + 1
+            self.center = atom.disp_center_index[mode][el] + 1 # (Fortran index starting at 1)
             self.non_zero = (abs(atom.disp_occ[el][self.center-1]
                                  - atom.site.occ[el]) >= 1e-4)
             edges = []

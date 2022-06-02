@@ -689,7 +689,8 @@ def beamlist_to_array(beams):
     energies = sorted({e for b in beams for e in b.intens})
     in_grid = np.array(energies)
     n_E = in_grid.shape[0]
-
+    
+    # fill with NaNs as default value
     beam_arr = np.full([n_E, n_beams], fill_value=np.NaN)
 
     id_start = np.int32(np.zeros([n_beams]))

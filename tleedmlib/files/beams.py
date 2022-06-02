@@ -216,6 +216,7 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=",", enrange=None):
         Beam objects with info read from the input given.
     """
     beams = []
+    # Deals with input in the form of a StingIO (can be used to feed file input as a string)
     if isinstance(filename, StringIO):
         lines = (li[:-1] for li in filename)
         filename = "StringIO"
@@ -283,6 +284,23 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=",", enrange=None):
                         beams[i].intens[en] = f
                 except (ValueError, IndexError):
                     pass
+                
+    # cleanup of beams
+    threshold_intes = 1e-8  # threshold value of TensErLEED (rfacsb.f in subroutine grid)
+    for beam in beams:
+
+        unfiltered_intens = copy.deepcopy(list(beam.intens.items())) 
+        # find first intensity > threshold
+        for en, intensity in unfiltered_intens:
+            if intensity > threshold_intes:
+                lowest_real_en = en
+                break
+
+        # remove parts of beam that are set to NaN or below threshhold
+        for en, intensity in unfiltered_intens:
+            if (np.isnan(intensity) or (en < lowest_real_en)):
+                beam.intens.pop(en)
+
     if enrange is not None and len(enrange) == 2:
         remlist = []
         for b in beams:

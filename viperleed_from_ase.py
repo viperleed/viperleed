@@ -13,6 +13,7 @@ from pathlib import Path
 import numpy as np
 import shutil
 from io import StringIO
+import copy
 
 import viperleed
 
@@ -297,6 +298,7 @@ def rfactor_from_csv(
     v0r_shift_range=(-3, 3),
     intpol_deg=5,
     intpol_step=0.5,
+    return_beam_arrays = False,
 ):  ## TODO: add kwarg for mapping for averaging
     """Compute the Pendry R-factor between two CSV files (in ViPErLEED format).
     
@@ -329,6 +331,9 @@ def rfactor_from_csv(
     intpol_step : float, default=0.5
         Step size of the energy grid the beam data will be interpolated
         on (in eV).
+    return_beam_arrays : bool, default = False
+        For debugging, you can optionally return the interpolated beams,
+        y-functions, number of overlapping points & per-beam R-factors.
         
     Returns
     -------
@@ -356,7 +361,6 @@ def rfactor_from_csv(
                 beams_tmp[i] = readOUTBEAMS(filename=fproxy, sep=",")
         else:
             beams_tmp[i] = readOUTBEAMS(filename=file, sep=",")
- 
 
     beams1, beams2 = beams_tmp
 
@@ -455,7 +459,6 @@ def rfactor_from_csv(
         intpol_deg,
         n_derivs,
         grid,
-        v0i,
         beams1_e_start_beams_out,
         beams1_n_e_beams_out,
         beams1_intpol_intensity,
@@ -463,10 +466,13 @@ def rfactor_from_csv(
     )
     _check_ierr(ierr)
 
+    beams1_der = beams1_deriv_y.copy()
+
+    # writes y into deriv_y
     rf.pendry_y_beamset(
         beams1_intpol_intensity,
         beams1_deriv_y,
-        beams1_id_start + 1,
+        beams1_e_start_beams_out,
         beams1_n_e_beams_out,
         v0i
     )
@@ -489,7 +495,6 @@ def rfactor_from_csv(
         intpol_deg,
         n_derivs,
         grid,
-        v0i,
         beams2_e_start_beams_out,
         beams2_n_e_beams_out,
         beams2_intpol_intensity,
@@ -498,10 +503,13 @@ def rfactor_from_csv(
     )
     _check_ierr(ierr)
 
+    beams2_der = beams2_deriv_y.copy()
+
+    # writes y into deriv_y
     rf.pendry_y_beamset(
         beams2_intpol_intensity,
         beams2_deriv_y,
-        beams2_id_start +1 ,
+        beams2_e_start_beams_out,
         beams2_n_e_beams_out,
         v0i
     )
@@ -517,7 +525,7 @@ def rfactor_from_csv(
     tol_r_2 = (1 - 5e-2,)
     max_fit_range = 6
 
-    (_, best_v0r, best_r, n_evaluated, r_beams, numerators, denominators, _, ierr) = rf.r_beamset_v0r_opt_on_grid(
+    (_, best_v0r, best_r, n_evaluated, r_beams, numerators, denominators, n_overlapping_points, ierr) = rf.r_beamset_v0r_opt_on_grid(
         which_r,
         v0r_shift_range_int,
         start_guess,
@@ -535,6 +543,10 @@ def rfactor_from_csv(
     )
     # If encountered an error
     _check_ierr(ierr)
+
+    #  for debugging, we have the option of returning the beam_arrays, y-Functions etc.
+    if (return_beam_arrays):
+        return best_r, best_v0r, (beams1_intpol_intensity, beams2_intpol_intensity), (beams1_deriv_y, beams2_deriv_y), r_beams, n_overlapping_points
 
     return best_r, best_v0r
 
@@ -601,7 +613,7 @@ def plot_iv_from_csv(
                 new_beam_list.append(beam)
         beam_list = new_beam_list
     else:
-        raise RuntimeError("Invalid argument plot_beams in plot_iv_from_csv()")
+        raise RuntimeError("Invalid argument which_beams in plot_iv_from_csv()")
 
     # normalize each beam by the max intensity
     for beam in beam_list:
