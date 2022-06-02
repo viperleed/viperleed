@@ -1,6 +1,6 @@
 ! Subroutines and functions for R factor calculation in ViPErLEED
 !
-! v0.2.1
+! v0.2.2
 !
 ! Author: Alexander M. Imre, 2021
 ! for license info see ViPErLEED Package
@@ -217,7 +217,7 @@ subroutine r_beamset_V0r_opt_on_grid( &
     logical, INTENT(INOUT) :: fast_search
     integer, INTENT(OUT) :: best_V0r_step
     real(8), INTENT(OUT) :: best_R, best_V0r ! best_V0r as real
-    integer, INTENT(OUT) :: n_evaluated
+    integer, INTENT(OUT) :: n_evaluated ! number of evaluated V0r values to find best
     integer, INTENT(OUT) :: ierr
 
     ! Internal variables used for V0r optimization
@@ -734,7 +734,8 @@ subroutine r_pendry_beamset_y(n_E, E_step, n_beams, y1, y2, id_start_1, id_start
     ! If any beam R-factor is reported as NaN, denominator and numerator will be set to 0 - thus sum still works regardless
     ! However, we need to watch out for the case of numerator/denominator being NaNs. (This may be caused by the intensity being constant 0.)
 
-    if (.not.((ALL(ieee_is_normal(numerators)) .and. ALL(ieee_is_normal(denominators))))) then
+    ! Sum numerators, denominators, r_pendry_beams because if any contains a NaN or +/-Inf, the sum will too
+    if (.not.((ALL(ieee_is_normal(numerators + denominators + r_pendry_beams))))) then
         ! Can still calcuate an R factor, but it may be unsable. Give back R and warning
         ierr = -812
         ! initialize sum variables
@@ -742,7 +743,7 @@ subroutine r_pendry_beamset_y(n_E, E_step, n_beams, y1, y2, id_start_1, id_start
         den_sum = 0
 
         do i=1, n_beams
-            if ((ieee_is_normal(numerators(i)) .or. ieee_is_normal(denominators(i)))) then
+            if ((ieee_is_normal(numerators(i) + denominators(i) + r_pendry_beams(i)))) then
                 num_sum = num_sum + numerators(i)
                 den_sum = den_sum + denominators(i)
             end if
@@ -1066,7 +1067,7 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
     end do
 
     ! Debug check - hopefully can be removed now?
-    do i = 1, n_beams
+    do i = 1, n_beams ! TODO urgent: this can still fail somehow!!
         if (E_grid_in(cut_beams_max_id_in(i)) < E_grid_out(beams_max_id_out(i))) then
             print*, "issue size out - beam", i
         end if
