@@ -1,6 +1,6 @@
 ! Subroutines and functions for R factor calculation in ViPErLEED
 !
-! v0.2.2
+! v0.2.3
 !
 ! Author: Alexander M. Imre, 2021
 ! for license info see ViPErLEED Package
@@ -284,6 +284,9 @@ subroutine r_beamset_V0r_opt_on_grid( &
         r_beams(:) = 999d0
         RETURN
     end if
+
+    ! initialize to some value ! TODO: find a better way to deal with this
+    closest_step = 0
 
 
     ALLOCATE(V0r_step(n_steps), V0r_step_real(n_steps))
