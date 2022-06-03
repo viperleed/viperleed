@@ -1422,7 +1422,7 @@ subroutine r_beamtype_grouping(which_r, &
                 r_factor_groups(group) = num(group)/denom(group)
             else
                 r_factor_groups(group) = ieee_value(real(8), ieee_signaling_nan)
-                ierr = 903
+                ierr = -903
             end if 
         end do
 
@@ -1439,7 +1439,7 @@ subroutine r_beamtype_grouping(which_r, &
                 r_factor_groups(group) = r2_group(group)/n_overlapping_points_groups(group)
             else
                 r_factor_groups(group) = ieee_value(real(8), ieee_signaling_nan)
-                ierr = 904
+                ierr = -904
             end if
         end do
 
