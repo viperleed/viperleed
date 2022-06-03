@@ -140,7 +140,7 @@ def plot_iv(data, filename, labels=[], annotations=[],
         else:    # list of beams
             xy_per_beam = []
             if readlabels:
-                if formatting["overbar"]:
+                if formatting and formatting["overbar"]:
                     labelstyle = "overbar"
                 else:
                     labelstyle = "minus"
