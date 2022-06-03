@@ -2634,8 +2634,8 @@ C  Quantities for dimensions
 
 C  surface, current delta amp set, no of files per place
 
-      INTEGER NSURF, IFNUM, NFIL
-      DIMENSION NSURF(NDOM,MNPLACES),IFNUM(NDOM,MNPLACES,NFILES)
+      INTEGER NSURF, IFNUM, NFIL !surface (flag 0/1), current delta amp set, no of files per place
+      DIMENSION NSURF(NDOM,MNPLACES),IFNUM(NDOM,MNPLACES,NFILES) !nsurf: one index per domain and atom; ifnum: one index per domain, atom and file
       DIMENSION NFIL(NDOM,MNPLACES)
 
 C  concentration, displacement, current concentration parameter
