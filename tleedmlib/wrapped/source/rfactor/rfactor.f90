@@ -992,7 +992,7 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
 
     integer :: ierrs(n_beams)
 
-    integer :: i ! Loop indices
+    integer :: i, jj ! Loop indices
 
     ierr = 0
     ierrs = 0
@@ -1037,8 +1037,8 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
         ! If beam now contains less than 2*deg +1 values, we can not use it - but we deal with that later
     end do
 
-
-    E_start_beams_out(:) = 0
+    ! can not set to NaNs due to integer
+    E_start_beams_out(:) = n_E_out
     n_E_beams_out(:) = 0 
 
     ! what does this do again exactly? 
@@ -1146,17 +1146,18 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
         !     print*, "n_knots, nt, deg, LHS_rows", n_knots_beams(i), nt_beams(i), deg, LHS_rows_beams(i)
  
 
-        !If interpolated intensity dropy below 0, set to zero
-        intpol_intensity = max(intpol_intensity, 0.0d0)
-
         call single_interpolate_coeffs_to_grid( &
             n_knots_beams(i), knots(1:n_knots_beams(i), i), nt_beams(i), coeffs(1:nt_beams(i), i), &
             deg, &
             n_E_beams_out(i), &
             E_grid_out(E_start_beams_out(i) : beams_max_id_out(i)), &
-            1, &
-            intpol_derivative(E_start_beams_out(i) : beams_max_id_out(i), i))
+            0, &
+            intpol_intensity(E_start_beams_out(i) : beams_max_id_out(i), i))
 
+        ! If interpolated intensity dropy below 0, set to zero
+        ! This must be limited to the correct indices - otherwise it will overwrite the Nans outside!
+        intpol_intensity(E_start_beams_out(i): beams_max_id_out(i), i) = &
+            max(intpol_intensity(E_start_beams_out(i): beams_max_id_out(i), i), 0.d0)
 
         if (ierrs(i) .ne. 0 )then
             ierr = ierrs(i)
@@ -1180,8 +1181,8 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
             deg, &
             n_E_beams_out(i), &
             E_grid_out(E_start_beams_out(i) : beams_max_id_out(i)), &
-            0, &
-            intpol_intensity(E_start_beams_out(i) : beams_max_id_out(i), i))
+            1, &
+            intpol_derivative(E_start_beams_out(i) : beams_max_id_out(i), i))
 
         end do
 
