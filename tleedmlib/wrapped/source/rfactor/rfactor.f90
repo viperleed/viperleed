@@ -915,7 +915,7 @@ subroutine alloc_beams_arrays( &
 end subroutine alloc_beams_arrays
 
 
-subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_beams, n_E_beams, &
+subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities, E_start_beams, n_E_beams, &
                          deg, &
                          n_derivs, &
                          n_E_out, E_grid_out, &
@@ -957,7 +957,7 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
     ! Input Data
     integer, intent(in)                          :: E_start_beams(n_beams) ! First energy step to be used for the beam
     integer, intent(in)                          :: n_E_beams(n_beams) ! Number of energy steps to use for the beam
-    real(8), intent(in)                          :: intensities_in(n_E_in, n_beams) ! Beam intensities - input data
+    real(8), intent(in)                          :: intensities(n_E_in, n_beams) ! Beam intensities - input data
 
     real(8), intent(inout) :: intpol_intensity(n_E_out, n_beams)
     real(8), intent(inout) :: intpol_derivative(n_E_out, n_beams)
@@ -990,7 +990,6 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
     ! type(grid)                :: grid_origin(n_beams)
     ! type(grid)                :: grid_target(n_beams)
 
-    real(8)    :: intensities(n_E_in, n_beams)
     real(8) :: min_intensity_beam
 
     integer :: ierrs(n_beams)
@@ -999,7 +998,6 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
 
     ierr = 0
     ierrs = 0
-    intensities = intensities_in
 
     beams_max_id_in = E_start_beams + n_E_beams -1
 
@@ -1117,7 +1115,6 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
         ! Therefore we reduce number of points to 0 and fill with NaNs
         if (cut_n_E_beams(i) <= 2*deg+1) then
             cut_n_E_beams(i) = 0
-            intensities(:,i) = ieee_value(real(8), ieee_signaling_nan)
             intpol_intensity(:, i) = ieee_value(real(8), ieee_signaling_nan)
             n_E_beams_out(i) = 0
             ierr = -703
