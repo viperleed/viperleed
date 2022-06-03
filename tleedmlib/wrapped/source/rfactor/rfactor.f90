@@ -994,7 +994,7 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities, E_start_beams,
 
     integer :: ierrs(n_beams)
 
-    integer :: i, jj ! Loop indices
+    integer :: ii, jj ! Loop indices
 
     ierr = 0
     ierrs = 0
@@ -1043,37 +1043,37 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities, E_start_beams,
     n_E_beams_out(:) = 0 
 
     ! what does this do again exactly? 
-    do concurrent( i=1: n_beams)
+    do concurrent( ii=1: n_beams)
         ! Set out beam indices & length
-        E_start_beams_out(i) = find_grid_correspondence( &
-                E_grid_in(cut_E_start_beams(i)), &
-                n_E_out, &
-                E_grid_out, &
-                1 &
-            )
+        E_start_beams_out(ii) = find_grid_correspondence( &
+            E_grid_in(cut_E_start_beams(ii)), &
+            n_E_out, &
+            E_grid_out, &
+            1 &
+        )
 
-        n_E_beams_out(i) = - E_start_beams_out(i) + &
-            find_grid_correspondence( &
-                E_grid_in(cut_beams_max_id_in(i)), &
-                n_E_out, &
-                E_grid_out, &
-                E_start_beams_out(i) &
-            ) + 1
-        beams_max_id_out(i) = E_start_beams_out(i) + n_E_beams_out(i) - 1
-        ! TODO: is there a better solution than below?
-        if (beams_max_id_out(i) > n_E_out) then 
-            beams_max_id_out(i) = n_E_out
-            n_E_beams_out(i) = beams_max_id_out(i) - E_start_beams_out(i) + 1
-        end if
+        beams_max_id_out(ii) = find_grid_correspondence( &
+            E_grid_in(cut_beams_max_id_in(ii)), &
+            n_E_out, &
+            E_grid_out, &
+            E_start_beams_out(ii) &
+        ) - 1
+
+        n_E_beams_out(ii) = beams_max_id_out(ii) - E_start_beams_out(ii) + 1
+        ! compensate for over-estimation
+        n_E_beams_out(ii) = min(n_E_beams_out(ii), n_E_out - E_start_beams_out(ii) + 1)
+        beams_max_id_out(ii) = n_E_beams_out(ii) + E_start_beams_out(ii) - 1
+        
     end do
 
     ! Debug check - hopefully can be removed now?
-    do i = 1, n_beams ! TODO urgent: this can still fail somehow!!
-        if (E_grid_in(cut_beams_max_id_in(i)) < E_grid_out(beams_max_id_out(i))) then
-            print*, "issue size out - beam", i
+    do ii = 1, n_beams !> @TODO urgent: this can still fail somehow!!
+        if (E_grid_in(cut_beams_max_id_in(ii)) < E_grid_out(beams_max_id_out(ii))) then
+            print*, "issue size out - beam", ii
+            print*, E_grid_in(cut_beams_max_id_in(ii)), E_grid_out(beams_max_id_out(ii)) 
         end if
-        if (E_grid_in(cut_E_start_beams(i))>E_grid_out(E_start_beams_out(i))) then
-            print*, "issue size in - beam", i
+        if (E_grid_in(cut_E_start_beams(ii))>E_grid_out(E_start_beams_out(ii))) then
+            print*, "issue size in - beam", ii
         end if
     end do
 
