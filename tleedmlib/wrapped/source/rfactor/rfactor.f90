@@ -985,10 +985,6 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities, E_start_beams,
     integer :: n_knots_beams(n_beams), nt_beams(n_beams), LHS_rows_beams(n_beams)
     real(8), ALLOCATABLE :: knots(:,:), LHS(:,:,:), coeffs(:,:)
 
-    ! TYPE(grid_pre_evaluation) :: grid_pre_eval(n_beams)
-    ! type(deriv_pre_evaluation):: pre_eval_derivs(n_beams)
-    ! type(grid)                :: grid_origin(n_beams)
-    ! type(grid)                :: grid_target(n_beams)
 
     real(8) :: min_intensity_beam
 
@@ -1001,16 +997,16 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities, E_start_beams,
 
     beams_max_id_in = E_start_beams + n_E_beams -1
 
-    !###############
-    ! Limit range of beams
-    !###############
-    ! Assumes, experimental beams are recorded on the same energy grid already. This should always be the case.
-    ! Thus only the information of E_min and n_E are required for each beam
-    
-    ! discard all data outside of final grid (except one data point on either side for interpolation, if available)
-    ! This requires:
-    ! 1) cutting the E_grid_in
-    ! 2) recalculating the starting and end indices of all beams on the new grid
+    !> ###############
+    !! Limit range of beams
+    !! ###############
+    !! Assumes, experimental beams are recorded on the same energy grid already. This should always be the case.
+    !! Thus only the information of E_min and n_E are required for each beam
+    !!
+    !! discard all data outside of final grid (except one data point on either side for interpolation, if available)
+    !! This requires:
+    !! 1) cutting the E_grid_in
+    !! 2) recalculating the starting and end indices of all beams on the new grid
 
     
     ! minimum index to keep:
@@ -1030,15 +1026,15 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities, E_start_beams,
     cut_n_E_in = new_max_index - new_min_index + 1
     
 
-    do concurrent( i=1: n_beams)
-        ! new start and end indices
-        cut_E_start_beams(i) = max(E_start_beams(i), new_min_index)
-        cut_beams_max_id_in(i) = min(new_max_index, beams_max_id_in(i))
-        cut_n_E_beams(i) = cut_beams_max_id_in(i) - cut_E_start_beams(i) + 1
-        ! If beam now contains less than 2*deg +1 values, we can not use it - but we deal with that later
+    do concurrent( ii=1: n_beams)
+        !> set new start and end indices
+        cut_E_start_beams(ii) = max(E_start_beams(ii), new_min_index)
+        cut_beams_max_id_in(ii) = min(new_max_index, beams_max_id_in(ii))
+        cut_n_E_beams(ii) = cut_beams_max_id_in(ii) - cut_E_start_beams(ii) + 1
+        !> If beam now contains less than 2*deg +1 values, we can not use it - but we deal with that later
     end do
 
-    ! can not set to NaNs due to integer
+    ! can not set to NaNs because integer
     E_start_beams_out(:) = n_E_out
     n_E_beams_out(:) = 0 
 
@@ -1066,7 +1062,7 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities, E_start_beams,
         
     end do
 
-    ! Debug check - hopefully can be removed now?
+    !> Debug check - hopefully can be removed now?
     do ii = 1, n_beams !> @TODO urgent: this can still fail somehow!!
         if (E_grid_in(cut_beams_max_id_in(ii)) < E_grid_out(beams_max_id_out(ii))) then
             print*, "issue size out - beam", ii
@@ -1078,30 +1074,27 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities, E_start_beams,
     end do
 
 
-    !###############
-    ! Smoothing
-    !###############
-
-    ! Smoothing is not (yet) implemented.
-
-    ! This is a tricky issue, because excessive smoothing strongly affects the R-factor, so you want to avoid over-smoothing at all cost.
-    ! We expect the experimental data to come in from the beam-extraction already pre-smoothed. If we implement an additional later smoothing here,
-    ! it only makes sense to do it equally on experimental and theoretical data. Thus, both should use the same smoothing kernel and probably not 
-    ! use a smoothing parameter larger than ~6 eV.
+    !> ###############
+    !!  Smoothing
+    !! ###############
+    !!
+    !!  Smoothing is not (yet) implemented.
+    !!
+    !!  This is a tricky issue, because excessive smoothing strongly affects the R-factor, so you want to avoid over-smoothing at all cost.
+    !!  We expect the experimental data to come in from the beam-extraction already pre-smoothed. If we implement an additional later smoothing here,
+    !!  it only makes sense to do it equally on experimental and theoretical data. Thus, both should use the same smoothing kernel and probably not 
+    !!  use a smoothing parameter larger than ~6 eV.
 
 
     !###############
     ! Interpolation on new grid
     !###############
 
-    ! How to deal with coeffs array? - size depends on deg:
-    ! size of coeffs is nt= n_knots - deg -1 = n + 2*deg -deg -1 = n + deg -1 
-    ! where max(n) is the number of datapoints in, i.e. n_E_in. Thus max(nt) = n_E_in + deg + 1.
-    ! Allocating coeffs with size (n_E_in + deg) should therefor cover all possible beam sizes. Unfortunately, we need to keep track of the number of coeffs per beam in an array though.
+    !> How to deal with coeffs array? - size depends on deg:
+    !! size of coeffs is nt= n_knots - deg -1 = n + 2*deg -deg -1 = n + deg -1 
+    !! where max(n) is the number of datapoints in, i.e. n_E_in. Thus max(nt) = n_E_in + deg + 1.
+    !! Allocating coeffs with size (n_E_in + deg) should therefor cover all possible beam sizes. Unfortunately, we need to keep track of the number of coeffs per beam in an array though.
 
-    ! Initialize to NaNs - unnecessary since they are allocated elsewhere
-    ! intpol_derivative  = ieee_value(real(8), ieee_signaling_nan)
-    ! intpol_intensity = ieee_value(real(8), ieee_signaling_nan)
 
     call perform_checks(cut_n_E_in, E_grid_in(new_min_index:new_max_index), n_E_out, E_grid_out, ierr)
     if (ierr .ne. 0) RETURN
@@ -1109,31 +1102,31 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities, E_start_beams,
     call get_array_sizes(cut_n_E_in, deg, max_n_knots, max_nt, max_LHS_rows)
     Allocate(knots(max_n_knots+1, n_beams), LHS(max_LHS_rows+1, max_nt+1, n_beams), coeffs(max_nt+1, n_beams))
     
-    do i= 1,n_beams
+    do ii= 1,n_beams
 
-        ! Any beam that has not enough datapoints is unusable for interpolation etc.
-        ! Therefore we reduce number of points to 0 and fill with NaNs
-        if (cut_n_E_beams(i) <= 2*deg+1) then
-            cut_n_E_beams(i) = 0
-            intpol_intensity(:, i) = ieee_value(real(8), ieee_signaling_nan)
-            n_E_beams_out(i) = 0
+        !> Any beam that has not enough datapoints is unusable for interpolation etc.
+        !! Therefore we reduce number of points to 0 and fill with NaNs
+        if (cut_n_E_beams(ii) <= 2*deg+1) then
+            cut_n_E_beams(ii) = 0
+            intpol_intensity(:, ii) = ieee_value(real(8), ieee_signaling_nan)
+            n_E_beams_out(ii) = 0
             ierr = -703
             CYCLE
         end if
 
         
-        call get_array_sizes(cut_n_E_beams(i), deg, n_knots_beams(i), nt_beams(i), LHS_rows_beams(i))
+        call get_array_sizes(cut_n_E_beams(ii), deg, n_knots_beams(ii), nt_beams(ii), LHS_rows_beams(ii))
 
 
         call single_calc_spline(&
-            cut_n_E_beams(i), &
-            E_grid_in(cut_E_start_beams(i) : cut_beams_max_id_in(i)), &
-            intensities(cut_E_start_beams(i) : cut_beams_max_id_in(i), i), &
+            cut_n_E_beams(ii), &
+            E_grid_in(cut_E_start_beams(ii) : cut_beams_max_id_in(ii)), &
+            intensities(cut_E_start_beams(ii) : cut_beams_max_id_in(ii), ii), &
             deg, &
-            n_knots_beams(i), nt_beams(i), LHS_rows_beams(i), &
-            knots(1:n_knots_beams(i), i), &
-            coeffs(1:nt_beams(i), i), &
-            ierrs(i))
+            n_knots_beams(ii), nt_beams(ii), LHS_rows_beams(ii), &
+            knots(1:n_knots_beams(ii), ii), &
+            coeffs(1:nt_beams(ii), ii), &
+            ierrs(ii))
         ! !Interpolate intensitites
         !     print*, "ierr", ierr
         !     print*, "First and last intensity in"
@@ -1147,42 +1140,42 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities, E_start_beams,
  
 
         call single_interpolate_coeffs_to_grid( &
-            n_knots_beams(i), knots(1:n_knots_beams(i), i), nt_beams(i), coeffs(1:nt_beams(i), i), &
+            n_knots_beams(ii), knots(1:n_knots_beams(ii), ii), nt_beams(ii), coeffs(1:nt_beams(ii), ii), &
             deg, &
-            n_E_beams_out(i), &
-            E_grid_out(E_start_beams_out(i) : beams_max_id_out(i)), &
+            n_E_beams_out(ii), &
+            E_grid_out(E_start_beams_out(ii) : beams_max_id_out(ii)), &
             0, &
-            intpol_intensity(E_start_beams_out(i) : beams_max_id_out(i), i))
+            intpol_intensity(E_start_beams_out(ii) : beams_max_id_out(ii), ii))
 
         ! If interpolated intensity dropy below 0, set to zero
         ! This must be limited to the correct indices - otherwise it will overwrite the Nans outside!
-        intpol_intensity(E_start_beams_out(i): beams_max_id_out(i), i) = &
-            max(intpol_intensity(E_start_beams_out(i): beams_max_id_out(i), i), 0.d0)
+        intpol_intensity(E_start_beams_out(ii): beams_max_id_out(ii), ii) = &
+            max(intpol_intensity(E_start_beams_out(ii): beams_max_id_out(ii), ii), 0.d0)
 
-        if (ierrs(i) .ne. 0 )then
-            ierr = ierrs(i)
+        if (ierrs(ii) .ne. 0 )then
+            ierr = ierrs(ii)
         end if
     end do
 
     ! Derivates may be skipped if we want to calculate R2 or just plot interpolated intensities
     if (n_derivs == 1) then
-        do i= 1,n_beams
+        do ii= 1,n_beams
             ! Also here there may be beams with an invalid number of datapoints
-            if (cut_n_E_beams(i) <= 2*deg+1) then
+            if (cut_n_E_beams(ii) <= 2*deg+1) then
                 ! Just assign deriv NaNs and cycle, since this must have been dealt with already above
-                intpol_derivative(:, i) = ieee_value(real(8), ieee_signaling_nan)
+                intpol_derivative(:, ii) = ieee_value(real(8), ieee_signaling_nan)
                 ierr = -703
                 CYCLE
             end if 
 
             ! 1st derivative of interpolated beams
             call single_interpolate_coeffs_to_grid( &
-            n_knots_beams(i), knots(1:n_knots_beams(i), i), nt_beams(i), coeffs(1:nt_beams(i), i), &
+            n_knots_beams(ii), knots(1:n_knots_beams(ii), ii), nt_beams(ii), coeffs(1:nt_beams(ii), ii), &
             deg, &
-            n_E_beams_out(i), &
-            E_grid_out(E_start_beams_out(i) : beams_max_id_out(i)), &
+            n_E_beams_out(ii), &
+            E_grid_out(E_start_beams_out(ii) : beams_max_id_out(ii)), &
             1, &
-            intpol_derivative(E_start_beams_out(i) : beams_max_id_out(i), i))
+            intpol_derivative(E_start_beams_out(ii) : beams_max_id_out(ii), ii))
 
         end do
 

@@ -11,7 +11,7 @@ error_codes = {
     # Warnings
     -1: "Undefined Warning",
     -703: "At least one beam has not enough datapoints for interpolation. Consider using a lower interpolation degree or dropping short beams.",
-    -812: "At least one numerator or denominator in Pendry R-factor caclulation was NaN.",
+    -812: "At least one numerator or denominator in Pendry R-factor caclulation was NaN. This may be because at least one beams did not contain usable data",
     -903: "R factor grouping encountered denominator of 0 for at least one beam",
     -904: "R factor grouping for R2 encountered group with 0 total energy overlapp",
     # No error, normal exit
