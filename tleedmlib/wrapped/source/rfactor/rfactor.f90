@@ -973,13 +973,10 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities, E_start_beams,
     !###############
     ! Internal
     !###############
-    integer :: new_min_index, new_max_index, cut_n_E_in
-    integer                          :: cut_E_start_beams(n_beams) ! First energy step to be used for the beam
-    integer                          :: cut_n_E_beams(n_beams) ! Number of energy steps to use for the beam
-
     integer :: beams_max_id_in(n_beams)
-    integer :: cut_beams_max_id_in(n_beams)
     integer :: beams_max_id_out(n_beams)
+
+    integer :: min_index, max_index
 
     integer :: max_n_knots, max_nt, max_LHS_rows
     integer :: n_knots_beams(n_beams), nt_beams(n_beams), LHS_rows_beams(n_beams)
@@ -995,44 +992,18 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities, E_start_beams,
     ierr = 0
     ierrs = 0
 
-    beams_max_id_in = E_start_beams + n_E_beams -1
+    beams_max_id_in = E_start_beams + n_E_beams - 1
 
     !> ###############
     !! Limit range of beams
     !! ###############
     !! Assumes, experimental beams are recorded on the same energy grid already. This should always be the case.
     !! Thus only the information of E_min and n_E are required for each beam
-    !!
-    !! discard all data outside of final grid (except one data point on either side for interpolation, if available)
-    !! This requires:
-    !! 1) cutting the E_grid_in
-    !! 2) recalculating the starting and end indices of all beams on the new grid
 
     
-    ! minimum index to keep:
-    if (E_grid_in(1) .lt. E_grid_out(1)) then
-        new_min_index = find_grid_correspondence(E_grid_out(1), n_E_in, E_grid_in, 1)
-    else
-        new_min_index = 1
-    end if
-
-    if (E_grid_in(n_E_in) .gt. E_grid_out(n_E_out)) then
-        new_max_index = find_grid_correspondence(E_grid_out(n_E_out), n_E_in, E_grid_in, new_min_index)
-    else
-        new_max_index = n_E_in
-    end if
+    min_index = 1
+    max_index = n_E_in
     
-
-    cut_n_E_in = new_max_index - new_min_index + 1
-    
-
-    do concurrent( ii=1: n_beams)
-        !> set new start and end indices
-        cut_E_start_beams(ii) = max(E_start_beams(ii), new_min_index)
-        cut_beams_max_id_in(ii) = min(new_max_index, beams_max_id_in(ii))
-        cut_n_E_beams(ii) = cut_beams_max_id_in(ii) - cut_E_start_beams(ii) + 1
-        !> If beam now contains less than 2*deg +1 values, we can not use it - but we deal with that later
-    end do
 
     ! can not set to NaNs because integer
     E_start_beams_out(:) = n_E_out
@@ -1042,14 +1013,14 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities, E_start_beams,
     do concurrent( ii=1: n_beams)
         ! Set out beam indices & length
         E_start_beams_out(ii) = find_grid_correspondence( &
-            E_grid_in(cut_E_start_beams(ii)), &
+            E_grid_in(E_start_beams(ii)), &
             n_E_out, &
             E_grid_out, &
             1 &
         )
 
         beams_max_id_out(ii) = find_grid_correspondence( &
-            E_grid_in(cut_beams_max_id_in(ii)), &
+            E_grid_in(beams_max_id_in(ii)), &
             n_E_out, &
             E_grid_out, &
             E_start_beams_out(ii) &
@@ -1064,11 +1035,11 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities, E_start_beams,
 
     !> Debug check - hopefully can be removed now?
     do ii = 1, n_beams !> @TODO urgent: this can still fail somehow!!
-        if (E_grid_in(cut_beams_max_id_in(ii)) < E_grid_out(beams_max_id_out(ii))) then
+        if (E_grid_in(beams_max_id_in(ii)) < E_grid_out(beams_max_id_out(ii))) then
             print*, "issue size out - beam", ii
-            print*, E_grid_in(cut_beams_max_id_in(ii)), E_grid_out(beams_max_id_out(ii)) 
+            print*, E_grid_in(beams_max_id_in(ii)), E_grid_out(beams_max_id_out(ii)) 
         end if
-        if (E_grid_in(cut_E_start_beams(ii))>E_grid_out(E_start_beams_out(ii))) then
+        if (E_grid_in(E_start_beams(ii))>E_grid_out(E_start_beams_out(ii))) then
             print*, "issue size in - beam", ii
         end if
     end do
@@ -1096,18 +1067,17 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities, E_start_beams,
     !! Allocating coeffs with size (n_E_in + deg) should therefor cover all possible beam sizes. Unfortunately, we need to keep track of the number of coeffs per beam in an array though.
 
 
-    call perform_checks(cut_n_E_in, E_grid_in(new_min_index:new_max_index), n_E_out, E_grid_out, ierr)
+    call perform_checks(n_E_in, E_grid_in(min_index:max_index), n_E_out, E_grid_out, ierr)
     if (ierr .ne. 0) RETURN
 
-    call get_array_sizes(cut_n_E_in, deg, max_n_knots, max_nt, max_LHS_rows)
+    call get_array_sizes(n_E_in, deg, max_n_knots, max_nt, max_LHS_rows)
     Allocate(knots(max_n_knots+1, n_beams), LHS(max_LHS_rows+1, max_nt+1, n_beams), coeffs(max_nt+1, n_beams))
     
     do ii= 1,n_beams
 
         !> Any beam that has not enough datapoints is unusable for interpolation etc.
         !! Therefore we reduce number of points to 0 and fill with NaNs
-        if (cut_n_E_beams(ii) <= 2*deg+1) then
-            cut_n_E_beams(ii) = 0
+        if (n_E_beams(ii) <= 2*deg+1) then
             intpol_intensity(:, ii) = ieee_value(real(8), ieee_signaling_nan)
             n_E_beams_out(ii) = 0
             ierr = -703
@@ -1115,13 +1085,13 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities, E_start_beams,
         end if
 
         
-        call get_array_sizes(cut_n_E_beams(ii), deg, n_knots_beams(ii), nt_beams(ii), LHS_rows_beams(ii))
+        call get_array_sizes(n_E_beams(ii), deg, n_knots_beams(ii), nt_beams(ii), LHS_rows_beams(ii))
 
 
         call single_calc_spline(&
-            cut_n_E_beams(ii), &
-            E_grid_in(cut_E_start_beams(ii) : cut_beams_max_id_in(ii)), &
-            intensities(cut_E_start_beams(ii) : cut_beams_max_id_in(ii), ii), &
+            n_E_beams(ii), &
+            E_grid_in(E_start_beams(ii) : beams_max_id_in(ii)), &
+            intensities(E_start_beams(ii) : beams_max_id_in(ii), ii), &
             deg, &
             n_knots_beams(ii), nt_beams(ii), LHS_rows_beams(ii), &
             knots(1:n_knots_beams(ii), ii), &
@@ -1130,8 +1100,8 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities, E_start_beams,
         ! !Interpolate intensitites
         !     print*, "ierr", ierr
         !     print*, "First and last intensity in"
-        !     print*, intensities_in(cut_E_start_beams(i),i)
-        !     print*, intensities_in(cut_E_start_beams(i) + cut_n_E_beams(i) - 1, i)
+        !     print*, intensities_in(E_start_beams(i),i)
+        !     print*, intensities_in(E_start_beams(i) + n_E_beams(i) - 1, i)
         !     print*, "Any NAN?", ANY(ieee_is_nan(intensities_in))
         !     print*, "First and last knot"
         !     print*, knots(1,i)
@@ -1161,7 +1131,7 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities, E_start_beams,
     if (n_derivs == 1) then
         do ii= 1,n_beams
             ! Also here there may be beams with an invalid number of datapoints
-            if (cut_n_E_beams(ii) <= 2*deg+1) then
+            if (n_E_beams(ii) <= 2*deg+1) then
                 ! Just assign deriv NaNs and cycle, since this must have been dealt with already above
                 intpol_derivative(:, ii) = ieee_value(real(8), ieee_signaling_nan)
                 ierr = -703
