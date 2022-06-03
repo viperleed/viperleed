@@ -158,8 +158,9 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
     @property
     def controllers(self):
         """Return a tuple of all controllers."""
-        controllers = (self.primary_controller, *self.secondary_controllers)
-        return tuple(c for c in controllers if c)
+        if not self.primary_controller:
+            return tuple()
+        return (self.primary_controller, *self.secondary_controllers)
 
     @property
     def current_step_nr(self):
@@ -280,6 +281,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         self.__make_primary_ctrl()
         if not self.primary_controller:
             # Something went wrong (already reported in __make_primary)
+            # TODO: probably good to clean up secondaries and cameras!
             return
 
         self.__make_secondary_ctrls()
@@ -732,11 +734,11 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
             If failed to make a camera instance.
         """
         try:
-            config = ViPErLEEDSettings.from_settings(camera_settings)
-        except (ValueError, NoSettingsError):
+            config = self.__get_device_settings(camera_settings)
+        except RuntimeError as err:
             base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
-                            'devices/path to camera configuration', '')
-            raise RuntimeError from None
+                            'devices/path to camera configuration', err)
+            raise
 
         invalid = config.has_settings(('camera_settings', 'class_name'))
         if invalid:
@@ -757,7 +759,6 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         if camera.mode != 'triggered':
             # Force mode to be triggered
             camera.settings.set("camera_settings", "mode", "triggered")
-            camera.settings.update_file()
             # base.emit_error(self, CameraErrors.INVALID_SETTINGS,              # TODO: Should we make this a non-critical warning?
                             # 'camera_settings/mode', 'Camera {camera.name}: '
                             # 'Cannot measure in live mode.')
@@ -824,11 +825,11 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
             from the given name.
         """
         try:
-            config = ViPErLEEDSettings.from_settings(configname)
-        except (ValueError, NoSettingsError):
+            config = self.__get_device_settings(configname)
+        except RuntimeError as err:
             base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
-                            'devices/path to controller configuration', '')
-            raise RuntimeError from None
+                            'devices/path to controller configuration', err)
+            raise
 
         invalid = config.has_settings(('controller', 'controller_class'))
         if invalid:
@@ -1043,9 +1044,13 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         -------
         None.
         """
-        about_to_trigger = self.primary_controller.about_to_trigger
-        for ctrl in self.secondary_controllers:
-            base.safe_disconnect(about_to_trigger, ctrl.measure_now)
+        if self.primary_controller:
+            # This check is to prevent raising AttributeError
+            # when this method is called because of errors in
+            # setting up the primary controller.
+            about_to_trigger = self.primary_controller.about_to_trigger
+            for ctrl in self.secondary_controllers:
+                base.safe_disconnect(about_to_trigger, ctrl.measure_now)
 
         for ctrl in self.controllers:
             base.safe_disconnect(ctrl.controller_busy,
@@ -1091,3 +1096,60 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         for error in self.__init_errors:
             self.error_occurred.emit(error)
         self.__init_errors = []
+
+    def __get_device_settings(self, configname):
+        """Return a ViPErLEEDSettings for a device given its path.
+
+        This method reads the correct settings, distinguishing
+        the two cases in which self.settings was read from an
+        actual file or from within an archive.
+
+        Returns
+        -------
+        device_settings : ViPErLEEDSettings
+            The loaded settings
+
+        Raises
+        ------
+        RuntimeError
+            In case any error occurs while loading the settings.
+        """
+        configname = configname.strip()
+        device_cfg = ViPErLEEDSettings()
+
+        # Treat now different cases:
+        # (1) configname does not begin with './' --> read file
+        if not configname.startswith('./'):
+            try:
+                device_cfg = device_cfg.from_settings(configname)
+            except (ValueError, NoSettingsError):
+                raise RuntimeError() from None
+            return device_cfg
+
+        # (2) configname begins with './' --> has to be replaced
+        configname = configname[2:]
+
+        # (2.1) self.settings was read from an archive
+        # --> attempt reading config from the same archive
+        if self.settings.base_dir.endswith('.zip'):
+            with ZipFile(self.settings.base_dir, 'r') as arch:
+                try:
+                    cfg_lines = arch.read(configname).decode()
+                except KeyError as err:
+                    raise RuntimeError(
+                        f"No config file '{configname}' in "
+                        f"archive {self.settings.base_dir}"
+                        ) from None
+            device_cfg.read_string(cfg_lines)
+            device_cfg.base_dir = self.settings.base_dir
+            return device_cfg
+
+        # (2.2) self.settings was read from a folder
+        # --> attempt reading config from the same folder
+        configname = Path(self.settings.base_dir) / configname
+        try:
+            device_cfg = device_cfg.from_settings(configname)
+        except (ValueError, NoSettingsError):
+            raise RuntimeError(f"No config file '{configname}' in "
+                               f"folder {self.settings.base_dir}") from None
+        return device_cfg

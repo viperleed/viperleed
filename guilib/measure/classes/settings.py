@@ -122,7 +122,15 @@ class ViPErLEEDSettings(ConfigParser):
         super().__init__(*args, **kwargs)
 
         self.__comments = defaultdict(list)
+
+        # Keep track of the last .ini file loaded, if read from
+        # a file on disk, and the path to the "directory" containing
+        # it. This is necessary to resolve special "./" paths in
+        # the config file. __base_dir should be set from the outside
+        # using the .base_dir property to the "<path/to/archive.zip>"
+        # when the content of the config was read from an archive.
         self.__last_file = ""
+        self.__base_dir = ""
 
     @classmethod  # too-complex
     def from_settings(cls, settings, find_from=None):
@@ -198,6 +206,16 @@ class ViPErLEEDSettings(ConfigParser):
     def __bool__(self):
         """Return True if there is any section."""
         return bool(self.sections())
+
+    @property
+    def base_dir(self):
+        """Return the directory from which the config was read."""
+        return self.__base_dir
+
+    @base_dir.setter
+    def base_dir(self, new_dir):
+        """Set the directory from which the config was read."""
+        self.__base_dir = str(new_dir)
 
     @property
     def comments(self):
@@ -323,7 +341,8 @@ class ViPErLEEDSettings(ConfigParser):
 
         read_ok = super().read(filenames, encoding=encoding)
         if read_ok:
-            self.__last_file = Path(read_ok[-1])
+            self.__last_file = Path(read_ok[-1]).resolve()
+            self.base_dir = self.__last_file.parent
 
         if len(read_ok) != len(filenames):
             # Need to run through again, as super().read
@@ -350,7 +369,8 @@ class ViPErLEEDSettings(ConfigParser):
             pass
 
         if fname:
-            self.__last_file = Path(fname)
+            self.__last_file = Path(fname).resolve()
+            self.base_dir = self.__last_file.parent
         super().read_file(f, source)
 
     def update_file(self):
@@ -383,9 +403,11 @@ class ViPErLEEDSettings(ConfigParser):
 
         # And store this file's name
         try:
-            self.__last_file = Path(fp.name)
+            self.__last_file = Path(fp.name).resolve()
         except AttributeError:
             pass
+        else:
+            self.base_dir = self.__last_file.parent
 
         super().write(fp, space_around_delimiters)
 

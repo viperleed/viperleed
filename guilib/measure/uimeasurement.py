@@ -12,6 +12,7 @@ Defines the Measure class.
 """
 
 from pathlib import Path
+from zipfile import ZipFile
 import inspect
 import time
 
@@ -37,7 +38,7 @@ from viperleed.guilib.measure.classes.settings import (
     )
 
 
-TITLE = 'Measurement UI'
+TITLE = 'Measure LEED-IV'
 
 SYS_CFG = get_system_config()
 DEFAULT_CONFIG_PATH = Path(
@@ -53,10 +54,10 @@ class UIErrors(base.ViPErLEEDErrorEnum):
 
 # too-many-instance-attributes
 class Measure(gl.ViPErLEEDPluginBase):
-    """A class that allows to take measurements."""
+    """A GUI that allows to take measurements."""
 
     error_occurred = qtc.pyqtSignal(tuple)
-    _dummy_signal = qtc.pyqtSignal()
+    _dummy_signal = qtc.pyqtSignal()                                            # TEMP
 
     def __init__(self, parent=None):
         """Initialize window."""
@@ -83,6 +84,9 @@ class Measure(gl.ViPErLEEDPluginBase):
         self._glob = {
             'plot': MeasurementPlot(),
             'last_dir': SYS_CFG.get("PATHS", "measurements", fallback=""),
+            # Keep track of the last config used for a measurement.
+            # Useful if one wants to repeat a measurement.
+            'last_cfg': ViPErLEEDSettings(),
             }
 
         # Set window properties
@@ -265,7 +269,7 @@ class Measure(gl.ViPErLEEDPluginBase):
         time.sleep(0.01)
 
     def __on_finished(self, *_):
-        # After the measurement is done, close the serial ports.
+        """Reset all after a measurement is over."""
         for controller in self.measurement.controllers:
             controller.disconnect_()
         self.__switch_enabled(True)
@@ -289,15 +293,16 @@ class Measure(gl.ViPErLEEDPluginBase):
         self.menuBar().setEnabled(idle)
 
     def __on_start_pressed(self):
+        """Prepare to begin a measurement."""
         text = self._ctrls['select'].currentText()
         if self.measurement:
             for thread in self.measurement.threads:
                 thread.quit()
             self.__on_finished()
-        for viewer in self.__camera_viewers:                                    # Maybe only those relevant for measurement?
+        for viewer in self.__camera_viewers:                                    # TODO: Maybe only those relevant for measurement?
             viewer.close()
         self.__camera_viewers = []
-        config = ViPErLEEDSettings()
+        config = ViPErLEEDSettings()                                            # TODO: should decide whether to use the 'last_cfg' or the default here!
         file_name = DEFAULT_CONFIG_PATH / 'viperleed_config.ini'                # TODO: will be one "default" per measurement type
         try:
             config.read(file_name)
@@ -312,7 +317,6 @@ class Measure(gl.ViPErLEEDPluginBase):
         config.update_file()
 
         self.measurement = measurement_cls(config)
-
         self.measurement.new_data_available.connect(self.__on_data_received)
 
         self._ctrls['abort'].clicked.connect(self.measurement.abort)
@@ -330,6 +334,7 @@ class Measure(gl.ViPErLEEDPluginBase):
 
         self._glob['plot'].data_points = self.measurement.data_points
         self._glob['plot'].show()
+        self._glob['last_cfg'] = self.measurement.settings
         self.__delayed_start.start(50)
 
     def __on_data_received(self):
@@ -337,7 +342,7 @@ class Measure(gl.ViPErLEEDPluginBase):
         meas = self.sender()
         if not isinstance(meas, MeasurementABC):
             raise RuntimeError(
-                f"Got unexpected sender class {meas.__class__.__name__}"
+                f"Got unexpected sender class {meas.__class__.__name__} "
                 "for plotting measurements."
                 )
         self._glob['plot'].plot_new_data()
@@ -423,29 +428,85 @@ class Measure(gl.ViPErLEEDPluginBase):
             return
         settings.show()
 
-    def __on_read_pressed(self):
+    def __on_read_pressed(self, *_):
         """Read data from a measurement file."""
-        csv_name, _ = qtw.QFileDialog.getOpenFileName(
+        fname, _ = qtw.QFileDialog.getOpenFileName(
             parent=self, directory=self._glob['last_dir']
             )
-        if not csv_name:
+        if not fname:
             return
+
         data = DataPoints()
         data.error_occurred.connect(self.error_occurred)
-        try:
-            data.read_data(csv_name)
-        except RuntimeError as err:
-            base.emit_error(self, UIErrors.FILE_UNSUPPORTED, csv_name, err)
+        config = ViPErLEEDSettings()
+
+        if fname.endswith('csv'):
+            # Read from folder
+            if not self.__read_folder(fname, data, config):
+                return
+        elif fname.endswith('zip'):
+            # Read from archive
+            if not self.__read_archive(fname, data, config):
+                return
+        else:
+            base.emit_error(self, UIErrors.FILE_UNSUPPORTED, fname, '')
             return
 
-        self._glob['last_dir'] = str(Path(csv_name).parent)
+        self._glob['last_dir'] = str(Path(fname).parent)
+        self._glob['plot'].data_points = data
+        self._glob['last_cfg'] = config
+
+        # Select the measurement type that was just loaded.
+        # NB: we do not actually instantiate the new measurement
+        # because it can take time to handle the communication
+        # with the devices. It makes sense to do this only once
+        # the user actually wants to start a measurement.
+        cls_name = config['measurement_settings']['measurement_class']
+        meas_dict = {c.__name__: t for t, c in ALL_MEASUREMENTS.items()}
+        self._ctrls['select'].setCurrentText(meas_dict[cls_name])
+
+    def __read_folder(self, csv_name, datapts, meas_config):
+        """Read data from a folder containing .csv and .ini."""
+        try:
+            datapts.read_csv(csv_name)
+        except RuntimeError as err:
+            base.emit_error(self, UIErrors.FILE_UNSUPPORTED, csv_name, err)
+            return False
 
         config_name = csv_name.replace(".csv", ".ini")
-        config = ViPErLEEDSettings()
         try:
-            config.read(config_name)
+            meas_config.read(config_name)
         except MissingSettingsFileError as err:
             base.emit_error(self, UIErrors.FILE_NOT_FOUND_ERROR,
                             config_name, err)
-            return
-        self._glob['plot'].data_points = data
+            return False
+        return True
+
+    def __read_archive(self, fname, datapts, meas_config):
+        """Read from a .zip archive containing .csv and .ini."""
+        fname = Path(fname)
+        with ZipFile(fname, 'r') as arch:
+            try:
+                csv_lines = arch.read("measurement.csv").decode().split('\n')
+            except KeyError as err:
+                # not found
+                base.emit_error(self, UIErrors.FILE_NOT_FOUND_ERROR,
+                                fname / "measurement.csv", err)
+                return False
+
+            try:
+                cfg_lines = arch.read("measurement.ini").decode()
+            except KeyError as err:
+                # not found
+                base.emit_error(self, UIErrors.FILE_NOT_FOUND_ERROR,
+                                fname / "measurement.ini", err)
+                return False
+        try:
+            datapts.read_lines(csv_lines)
+        except RuntimeError as err:
+            base.emit_error(self, UIErrors.FILE_UNSUPPORTED, fname, err)
+            return False
+
+        meas_config.read_string(cfg_lines)
+        meas_config.base_dir = fname
+        return True
