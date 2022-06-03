@@ -635,17 +635,9 @@ subroutine parabola_lsq_fit(n,x,y, w, B, ierr)
     A(3,1) = A(1,3)
     A(3,2) = A(2,3)
 
-    ! print*, "A"
-    ! print*, A(1,1:3)
-    ! print*, A(2, 1:3)
-    ! print*, A(3, 1:3)
-    ! print*, "B"
-    ! print*, B
-
+    !> Call Lapack subroutine
     call DSYSV('U', 3, 1, A, 3, ipiv, b, 3, work, 18, LAPACK_info)
     if (LAPACK_info .ne. 0) ierr = 860
-
-
 
 
 end subroutine parabola_lsq_fit
@@ -734,10 +726,10 @@ subroutine r_pendry_beamset_y(n_E, E_step, n_beams, y1, y2, id_start_1, id_start
             r_pendry_beams(i), numerators(i), denominators(i), n_overlapping_points(i))
     end do
 
-    ! If any beam R-factor is reported as NaN, denominator and numerator will be set to 0 - thus sum still works regardless
-    ! However, we need to watch out for the case of numerator/denominator being NaNs. (This may be caused by the intensity being constant 0.)
+    !> If any beam R-factor is reported as NaN, denominator and numerator will be set to 0 - thus sum still works regardless
+    !! However, we need to watch out for the case of numerator/denominator being NaNs. (This may be caused by the intensity being constant 0.)
 
-    ! Sum numerators, denominators, r_pendry_beams because if any contains a NaN or +/-Inf, the sum will too
+    !> Sum numerators, denominators, r_pendry_beams because if any contains a NaN or +/-Inf, the sum will too
     if (.not.((ALL(ieee_is_normal(numerators + denominators + r_pendry_beams))))) then
         ! Can still calcuate an R factor, but it may be unsable. Give back R and warning
         ierr = -812
@@ -824,19 +816,19 @@ subroutine Rfactor_v0ropt(opt_type, min_steps, max_steps, nr_used_v0)
     ! Decide which optimization is used
     nr_used_v0 = 0 ! initialize to 0
 
-    ! For grid search: V0 will be sampled on an equally spaced grid in range (V0_min, V0_max) with max_steps steps.
-    ! For  example, with values V0_min = 2, V0_max = 5 and max_steps = 10, the sampled points would be:
-    ! 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0
-    ! The optional paramter min_steps is unused in this case.
-    !
-    ! For parabola search: V0 will initially be sampled in three points (V0_min, V0_max and (V0_min + V0_max)/2),
-    ! then an attempt is made to fit a parbola of the form R(V0) = a*V0**2 + b*V0 + c. If the curvature of the parabola
-    ! is negative, subsequent V0s are choosen close to the predicted minimum and such as to test the fit. The
-    ! optimization will stop if the resultant R-factor has converged (criterion V0_conv) though at least
-    ! min_steps values of V0 are evaluated. If the curvature of the parabola is positive, or the fit of the parabola
-    ! becomes continually worse the optimization defaults to sampling a grid. (Similar as above, though already
-    ! evaluated values will not be discarded).
-    !
+    !> For grid search: V0 will be sampled on an equally spaced grid in range (V0_min, V0_max) with max_steps steps.
+    !! For  example, with values V0_min = 2, V0_max = 5 and max_steps = 10, the sampled points would be:
+    !! 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0
+    !! The optional paramter min_steps is unused in this case.
+    !!
+    !! For parabola search: V0 will initially be sampled in three points (V0_min, V0_max and (V0_min + V0_max)/2),
+    !! then an attempt is made to fit a parbola of the form R(V0) = a*V0**2 + b*V0 + c. If the curvature of the parabola
+    !! is negative, subsequent V0s are choosen close to the predicted minimum and such as to test the fit. The
+    !! optimization will stop if the resultant R-factor has converged (criterion V0_conv) though at least
+    !! min_steps values of V0 are evaluated. If the curvature of the parabola is positive, or the fit of the parabola
+    !! becomes continually worse the optimization defaults to sampling a grid. (Similar as above, though already
+    !! evaluated values will not be discarded).
+
     if (opt_type == 0) then
     ! optimize grid
     elseif (opt_type == 1) then
@@ -861,34 +853,34 @@ subroutine alloc_beams_arrays( &
     deriv_y_out_array, &
     ierr &
     )
-    ! Allocates arrays of the right size to be used by prepare_beams
-    !
-    ! Allocation of arrays is bad for performance, so arrays should be reused where possible.
-    ! For the r-factor calculation we need to interpolate the beams and calculate the Y-function
-    ! via the derivative. These operations reqire relatively large arrays that are only used once or twice. 
-    ! By reusing some of the arrays, we can save time.
-    !
-    ! Parameters
-    ! ----------
-    ! n_beams: int
-    ! Number of beams.
-    !
-    ! n_e_grid_out: int
-    ! Number of energies after interpolation.
-    !
-    ! Returns
-    ! -------
-    ! beams_out_array: array of float
-    ! Float array for interpolated beams. Initialized to NaNs.
-    !    
-    ! deriv_y_out_array : array of float
-    ! Float array to hold derivatives of beams (may subsequently be overwritten by the Y-function). Initalized to NaNs.
-    !
-    ! e_start_beams_out:  array of int
-    ! Integer array for the start positions of beams. Initilaized to NaNs.
-    !
-    ! n_e_beams_out: array of int
-    ! Integer array for the number of values for each beams. Initilaized to NaNs.
+    !> Allocates arrays of the right size to be used by prepare_beams
+    !!
+    !! Allocation of arrays is bad for performance, so arrays should be reused where possible.
+    !! For the r-factor calculation we need to interpolate the beams and calculate the Y-function
+    !! via the derivative. These operations reqire relatively large arrays that are only used once or twice. 
+    !! By reusing some of the arrays, we can save time.
+    !!
+    !! Parameters
+    !! ----------
+    !! n_beams: int
+    !! Number of beams.
+    !!
+    !! n_e_grid_out: int
+    !! Number of energies after interpolation.
+    !!
+    !! Returns
+    !! -------
+    !! beams_out_array: array of float
+    !! Float array for interpolated beams. Initialized to NaNs.
+    !!    
+    !! deriv_y_out_array : array of float
+    !! Float array to hold derivatives of beams (may subsequently be overwritten by the Y-function). Initalized to NaNs.
+    !!
+    !! e_start_beams_out:  array of int
+    !! Integer array for the start positions of beams. Initilaized to NaNs.
+    !!
+    !! n_e_beams_out: array of int
+    !! Integer array for the number of values for each beams. Initilaized to NaNs.
 
     ! Input parameters
     integer, intent(in) :: n_beams
@@ -951,10 +943,11 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities, E_start_beams,
     real(8), INTENT(IN)                         :: E_grid_in(n_E_in) ! Input energy grid
     real(8), INTENT(IN)                         :: E_grid_out(n_E_out) ! Output energy grid
 
-    ! Intensities is a rectangular array with values for each beam at each possible energy, though values will unused if the beam does not have data over the entire
-    ! energy range. The array E_start_beams determines the index of the first used energy, the array n_E_beams determines the number of the number of
-    ! energy steps to used by the beam. Gaps in the beam are not allowed here, but they can be implemented externally using the averaging functionalities.
-    ! Input Data
+    !> Intensities is a rectangular array with values for each beam at each possible energy, though values will unused if the beam does not have data over the entire
+    !! energy range. The array E_start_beams determines the index of the first used energy, the array n_E_beams determines the number of the number of
+    !! energy steps to used by the beam. Gaps in the beam are not allowed here, but they can be implemented externally using the averaging functionalities.
+    
+    !! Input Data
     integer, intent(in)                          :: E_start_beams(n_beams) ! First energy step to be used for the beam
     integer, intent(in)                          :: n_E_beams(n_beams) ! Number of energy steps to use for the beam
     real(8), intent(in)                          :: intensities(n_E_in, n_beams) ! Beam intensities - input data
@@ -1127,18 +1120,18 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities, E_start_beams,
         end if
     end do
 
-    ! Derivates may be skipped if we want to calculate R2 or just plot interpolated intensities
+    !> Derivates may be skipped if we want to calculate R2 or just plot interpolated intensities
     if (n_derivs == 1) then
         do ii= 1,n_beams
-            ! Also here there may be beams with an invalid number of datapoints
+            !> Also here there may be beams with an invalid number of datapoints
             if (n_E_beams(ii) <= 2*deg+1) then
-                ! Just assign deriv NaNs and cycle, since this must have been dealt with already above
+                !> Just assign deriv NaNs and cycle, since this must have been dealt with already above
                 intpol_derivative(:, ii) = ieee_value(real(8), ieee_signaling_nan)
                 ierr = -703
                 CYCLE
             end if 
 
-            ! 1st derivative of interpolated beams
+            !> 1st derivative of interpolated beams
             call single_interpolate_coeffs_to_grid( &
             n_knots_beams(ii), knots(1:n_knots_beams(ii), ii), nt_beams(ii), coeffs(1:nt_beams(ii), ii), &
             deg, &
@@ -1153,7 +1146,7 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities, E_start_beams,
         ! 2nd deriv not implemented yet
         ierr = 704
     else
-        ! Error because more derivatives were requested than are implemented
+        !> Error because more derivatives were requested than are implemented
         ierr = 703
     end if
 
@@ -1169,8 +1162,8 @@ subroutine pendry_y_beamset( &
     beams_n_e, &
     v0i &
 )
-    ! Calculates the Pendry Y function for a given beamset from the intensities and first derivative.
-    ! The Y function is saved into the array that contained the derivative overwriting it in the process.
+    !> Calculates the Pendry Y function for a given beamset from the intensities and first derivative.
+    !! The Y function is saved into the array that contained the derivative overwriting it in the process.
 
     ! Input parameters
     integer, intent(in) :: n_beams
@@ -1243,10 +1236,10 @@ end function find_grid_correspondence
 subroutine avg_reo_disc(n_beams_in, n_beams_out, n_E, scheme, min_len, &
     intensities, beam_start, beam_n, &
     ierr)
-    ! Average, reorder and discard beams according to scheme
-    ! scheme is an array of integers between 0 and n_beams_out
-    ! beams are averaged into the 
-    ! For any beam with scheme == 0, the beam is discarded.
+    !> Average, reorder and discard beams according to scheme
+    !! scheme is an array of integers between 0 and n_beams_out
+    !! beams are averaged into the 
+    !! For any beam with scheme == 0, the beam is discarded.
     integer, INTENT(IN) :: n_beams_in
     integer, INTENT(IN) :: n_beams_out
     integer, INTENT(IN) :: n_E
@@ -1272,7 +1265,7 @@ subroutine avg_reo_disc(n_beams_in, n_beams_out, n_E, scheme, min_len, &
     beam_start(:) = 0
     beam_n(:) = n_E
 
-    ! Adjust beam length if necessary...
+    !> Adjust beam length if necessary...
     do i = 1, n_beams_out
         do j = 1, n_beams_in
             if(scheme(j)==i) then
@@ -1418,7 +1411,7 @@ end subroutine r_beamtype_grouping
 
 ! Library functions    
 
-! TODO: optimize; could be made elemental but f2py compiler with gfortran won't let you... 
+!> @TODO: optimize; could be made elemental but f2py compiler with gfortran won't let you... 
 pure subroutine pendry_y(n_data, intensity, deriv_y_func, v0i)
     integer, intent(in) :: n_data
     real(8), intent(in) :: intensity(n_data)
@@ -1443,31 +1436,6 @@ pure function trapez_integration_const_dx(f, dx) result(integral)
     integral = sum(f(1:n-1)+f(2:n))*dx/2
     return
 end function trapez_integration_const_dx
-
-
-! integration from tenserleed
-! SUBROUTINE tenser_INTSUM(n_data, func, dx, I1, I2, integral)
-
-!     integer, INTENT(IN) :: n_data
-!     real(8), INTENT(IN) :: func(n_data)
-!     real(8), INTENT(IN) :: dx
-!     integer, INTENT(IN) :: I1, I2 !Integration bounds
-
-!     real(8), intent(out) :: integral
-
-!     integer :: j
-!     real(8) :: A
-
-!     A=0
-!     integral=0
-!     DO J=I1,I2
-!         A=A+func(J)
-!     end do
-
-!     integral= A-0.5*(func(I1)+func(I2))
-!     integral= integral*dx
-!     RETURN
-! END SUBROUTINE tenser_INTSUM
 
 
 ! Compatibility functions
@@ -1611,7 +1579,11 @@ subroutine translate_theo(n_beams,  MNGP, MNBTD, ES, ATS, &
     RETURN
 end subroutine translate_theo
 
+
 integer function test_compilation() result(ierr)
+    !> This function tests if the module was correctly compiled.
+    !! Some compilation flags may disable correct functioning of NaN 
+    !! values which are required for the correct functioning of this module.
     real(8) :: test_value_nan, test_value_div
 
     test_value_nan = ieee_value(real(8), ieee_signaling_nan)
@@ -1619,10 +1591,10 @@ integer function test_compilation() result(ierr)
     test_value_div = 1.d0/(1.d0 - test_value_div)
 
     if (ieee_is_finite(test_value_div) .or. ieee_is_normal(test_value_nan)) then
-        ! Error in compilation
+        !> Error in compilation
         ierr = 10
     else
-        ! We are good to go
+        !> We are good to go
         ierr = 0
     end if
 
