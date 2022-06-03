@@ -2,8 +2,8 @@
 gcomp := gfortran
 ccomp := gcc
 
-GFOPTFLAGS := -Ofast
-COPTFLAGS := -Ofast
+GFOPTFLAGS := -Ofast -fno-finite-math-only
+COPTFLAGS := -Ofast -fno-finite-math-only
 
 all: beamgen.v1.7 EEASiSSS.x
 
