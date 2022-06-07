@@ -242,13 +242,13 @@ def calc_delta_intensities(
     Beam_variables,
     beam_indices,
     ph_CDisp,
-    E_array,
+    E_kin_array,
     VPI_array,
     VV_array,
     amplitudes_ref,
     amplitudes_del,
     n_files,
-    nc_surf,
+    is_surface_atom,
     delta_steps,
     number_z_steps,
 ):
@@ -274,7 +274,7 @@ def calc_delta_intensities(
     ph_CDisp:
     Geometric displacements of the atom
     
-    E_array:
+    E_kin_array:
     Array that contains all the energies of the file
     
     VPI_array:
@@ -310,14 +310,14 @@ def calc_delta_intensities(
     XDisp = 0
     Conc = 1
     for i in range(n_files):
-        if nc_surf[i]:
-            int0, n_atoms, nc_steps = Beam_variables[i, :]
+        if is_surface_atom[i]:
+            n_beams, n_atoms, nc_steps = Beam_variables[i, :]
             for j in range(n_atoms):
                 delta_fraction = delta_steps[i]  # probably besserer Name als fill finden
                 delta_step_left = int(delta_fraction // 1)
                 # necessary so that the x2 doesnt go out of the index range
                 if delta_step_left == number_z_steps - 1:
-                    delta_step_left = delta_step_left - 1
+                    delta_step_left -= 1
                 delta_step_right = delta_step_left + 1
                 x = delta_fraction - delta_step_left
                 del_left = ph_CDisp[i, delta_step_left, j, 0]
@@ -327,15 +327,18 @@ def calc_delta_intensities(
                 if XDisp < CXDisp:
                     CXDisp = XDisp
 
-    ATSAS_matrix = np.zeros((len(E_array), int0))
-
-    # Loop über die Energien
-    for e_index in prange(len(E_array)):
+    ATSAS_matrix = np.zeros((len(E_kin_array), n_beams))
+    
+    # many optimizations possible here...
+    
+    
+    
+    # Loop over energies
+    for e_index in prange(len(E_kin_array)):
         # Definieren von Variablen, die in der jeweiligen Energie gleichbleiben
-        E = E_array[e_index]
+        E = E_kin_array[e_index]
         VV = VV_array[e_index]
         VPI = VPI_array[e_index]
-
         AK = sqrt(max(2 * E - 2 * VV, 0))
         C = AK * cos(theta)
         BK2 = AK * sin(theta) * cos(phi)
@@ -343,34 +346,34 @@ def calc_delta_intensities(
         BKZ = sqrt(complex(2 * E - BK2 ** 2 - BK3 ** 2, -2 * VPI))
 
         # Loop über die Beams
-        for b_index in range(int0):
+        for beam_index in range(n_beams):
             # Variablen per Beam
-            h = beam_indices[b_index, 0]
-            k = beam_indices[b_index, 1]
+            h = beam_indices[beam_index, 0]
+            k = beam_indices[beam_index, 1]
+            # could be done in matrix form - not sure if that gives better performance
             AK2 = BK2 + h * trar1[0] + k * trar2[0]
             AK3 = BK3 + h * trar1[1] + k * trar2[1]
             AK = 2 * E - AK2 ** 2 - AK3 ** 2
             AKZ = complex(AK, -2 * VPI)
-            APERP = AK - 2 * VV
+            A_perpendicular = AK - 2 * VV
 
             # Herausfinden welche NCStep deltas man nimmt mit delta_step matrix
-            DelAct = amplitudes_ref[e_index, b_index]
+            DelAct = amplitudes_ref[e_index, beam_index]
             for i in range(n_files):
                 # noch genau schauen wie genau gewollt
                 # Interpolation of float delta_step values
                 delta_fraction = delta_steps[i]
                 delta_step_left = int(delta_fraction)
                 delta_step_right = min(delta_step_left+1, number_z_steps)
-                x = delta_fraction - delta_step_left
-                del_left = amplitudes_del[i, e_index, delta_step_left, b_index]
-                del_right = amplitudes_del[i, e_index, delta_step_right, b_index]
+                del_left = amplitudes_del[i, e_index, delta_step_left, beam_index]
+                del_right = amplitudes_del[i, e_index, delta_step_right, beam_index]
                 # 1D interpolation formula
-                intpol_value = x * (del_right - del_left) + del_left
+                intpol_value = (delta_fraction - delta_step_left) * (del_right - del_left) + del_left
                 # ###
                 DelAct += intpol_value
 
-            if APERP > 0:
-                A = sqrt(APERP)
+            if A_perpendicular > 0:
+                A = sqrt(A_perpendicular)
                 PRE = (BKZ + AKZ) * CXDisp
                 PRE = np.exp(complex(0, -1) * PRE)
                 amp_abs = abs(DelAct)
@@ -381,11 +384,11 @@ def calc_delta_intensities(
             else:
                 ATSAS = 0
 
-            ATSAS_matrix[e_index, b_index] = ATSAS
+            ATSAS_matrix[e_index, beam_index] = ATSAS
 
     return ATSAS_matrix
 
-@njit(fastmath = True, nogil = True)
+@njit(fastmath = True, parallel = True, nogil = True)
 def bilinear_interpolation_unit_square(x_vals, y_vals, func_vals):
     x1, x2, x = x_vals
     y1, y2, y = y_vals
