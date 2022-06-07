@@ -66,8 +66,8 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
     # This signal is only used by the primary controller which
     # sets the energy. If the primary controller does not take
     # measurements then this signal needs to be emitted after
-    # the primary controller has set the energy as well as an
-    # empty data_ready signal.
+    # the primary controller has set the energy. See also the
+    # data_ready signal.
     about_to_trigger = qtc.pyqtSignal()
 
     # Signal which is used to forward data and let the MeasurementABC
@@ -192,10 +192,16 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
     def set_busy(self, is_busy):
         """Set the controller to busy True/False.
 
+        No change of the busy state can occur if the controller
+        has a queue of messages that have still to be sent to
+        the hardware. Also, the value given is discarded if the
+        serial port is currently busy (i.e., waiting for a response).
+        In this latter case, the controller will always be busy.
+
         Parameters
         ----------
         is_busy : bool
-            True if the controller is busy
+            True if the controller is busy.
 
         Emits
         -----
