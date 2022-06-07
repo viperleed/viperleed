@@ -21,8 +21,6 @@ dependencies:
   - mamba
   - pandas
   - numba
-  - gfortran
-  - blas
   - black
   - plotly
   - sympy
