@@ -725,7 +725,7 @@ class CameraViewer(qtw.QScrollArea):
         
         _, max_int = self.camera.intensity_limits
         
-        if np.any(img_array > .95*max_int):
+        if np.sum(img_array > .95*max_int) > 5:
             print("saturating", timer())                                        # TEMP. Will show overlay
 
         image = qtg.QImage(img_array, width, height,
