@@ -414,7 +414,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
                      compresslevel=2) as archive:
             for fname in move_to_archive:
                 archive.write(fname, fname.relative_to(final_path))
-        arch_name.rename(arch_name.with_stem(final_path.stem))
+        arch_name.rename(arch_name.with_name(final_path.name + '.zip'))
 
         return  # TODO: remove
 
@@ -988,7 +988,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         None.
         """
         if not isinstance(self.sender(), ControllerABC):
-            # This is a safguard, and should never happen,
+            # This is a safeguard, and should never happen,
             # although it did happen for me a couple of times
             # at random (i.e., not reproducibly.)
             base.emit_error(
