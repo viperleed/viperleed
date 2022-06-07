@@ -19,6 +19,7 @@ Defines the Measure class.
 # TODO: progress bar for non-endless
 # TODO: quick IV video to find max intensity, and adjust camera
 
+from copy import deepcopy
 from pathlib import Path
 from zipfile import ZipFile
 import inspect
@@ -232,7 +233,7 @@ class Measure(gl.ViPErLEEDPluginBase):
         self.__switch_enabled(False)
         self.statusBar().showMessage('Busy')
 
-    def __on_camera_clicked(self, *_):
+    def __on_camera_clicked(self, *_):                                          # TODO: may want to display a busy dialog with "starting camera <name>..."
         cam_name = self.sender().text()
         cam_cls = self.sender().data()
 
@@ -242,22 +243,27 @@ class Measure(gl.ViPErLEEDPluginBase):
 
         # Decide whether we can take the camera object
         # (and its settings) from the known camera viewers
-        for viewer in self.__camera_viewers:
+        for viewer in self.__camera_viewers.copy():
             if cam_name != viewer.camera.name:
                 continue
             camera = viewer.camera
             viewer.stop_on_close = True
-            if viewer.isVisible():
-                # Camera and viewer are already running
-                move_to_front(viewer)
-                return
-            if camera.mode != 'live':
+            cfg = deepcopy(camera.settings)
+            if cfg_path:  # TEMP: re-read config to apply changes. Will eventually be different when I have a settings editor.
+                cfg.read(cfg_path)
+            cfg['camera_settings']['mode'] = 'live'
+            if cfg != camera.settings:
+                # Since there is some obscure bug in the driver
+                # of ImagingSource cameras, the safest way is to
+                # let the garbage collector take care of the
+                # camera after deleting a reference to its viewer
+                # (The bug seem to prevent stopping while triggered)
+                viewer.close()
                 camera.stop()
-            if cfg_path:  # TEMP: re-read config to apply changes. Will eventually be different when I have a settings editor. Also the following "if live mode" can be merged back.
-                camera.settings.read(cfg_path)
-            if camera.mode != 'live':
-                camera.settings['camera_settings']['mode'] = 'live'
-            camera.load_camera_settings()                                       # TODO: this can be done only in the "if" when we have a settings editor
+                self.__camera_viewers.remove(viewer)
+                continue
+            if viewer.isVisible():
+                move_to_front(viewer)
             break
         else:  # Not already available. Make a new camera.
             if not cfg_path:
