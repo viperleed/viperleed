@@ -11,6 +11,14 @@ Author: Florian Doerr
 Defines the Measure class.
 """
 
+# BUG: energy calibration, then try to open camera --> crash (VCD property)
+#      Happens also with IVVideo. Do we keep camera objects live??
+#      Likely connected: start measurment with viewer visible
+#      raises "camera not found" (still delivering frames!)
+
+# TODO: progress bar for non-endless
+# TODO: quick IV video to find max intensity, and adjust camera
+
 from pathlib import Path
 from zipfile import ZipFile
 import inspect
@@ -44,6 +52,17 @@ SYS_CFG = get_system_config()
 DEFAULT_CONFIG_PATH = Path(
     SYS_CFG.get("PATHS", 'configuration', fallback='')
     )
+
+
+def move_to_front(window):  # TODO: move to a nicer place
+    """Move a window to the front."""
+    window.show()
+    # Move window to front
+    window.raise_()
+    # Show as a window, also in case it is minimized
+    window.setWindowState(window.windowState()
+                          & ~qtc.Qt.WindowMinimized
+                          | qtc.Qt.WindowActive)
 
 
 class UIErrors(base.ViPErLEEDErrorEnum):
@@ -228,6 +247,10 @@ class Measure(gl.ViPErLEEDPluginBase):
                 continue
             camera = viewer.camera
             viewer.stop_on_close = True
+            if viewer.isVisible():
+                # Camera and viewer are already running
+                move_to_front(viewer)
+                return
             if camera.mode != 'live':
                 camera.stop()
             if cfg_path:  # TEMP: re-read config to apply changes. Will eventually be different when I have a settings editor. Also the following "if live mode" can be merged back.
@@ -300,6 +323,7 @@ class Measure(gl.ViPErLEEDPluginBase):
                 thread.quit()
             self.__on_finished()
         for viewer in self.__camera_viewers:                                    # TODO: Maybe only those relevant for measurement?
+            viewer.camera.disconnect_()
             viewer.close()
         self.__camera_viewers = []
         config = ViPErLEEDSettings()                                            # TODO: should decide whether to use the 'last_cfg' or the default here!
@@ -418,13 +442,7 @@ class Measure(gl.ViPErLEEDPluginBase):
         self._dialogs['change_settings'] = settings
         # Change settings is already open
         if settings:
-            settings.show()
-            # Move window to front
-            settings.raise_()
-            # Show as a window, also in case it is minimized
-            settings.setWindowState(settings.windowState()
-                                    & ~qtc.Qt.WindowMinimized
-                                    | qtc.Qt.WindowActive)
+            move_to_front(settings)
             return
         settings.show()
 
