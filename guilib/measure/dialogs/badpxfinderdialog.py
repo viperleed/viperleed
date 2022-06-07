@@ -102,7 +102,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
         self.__reset_progress_bars()
         self.__progress['group'].hide()
         self.update_available_camera_list()
-        self.__ctrls['camera'].setCurrentIndex(-1)
+        self.__ctrls['camera'].setCurrentIndex(-1)  # TODO: path label not updated correctly
         self.adjustSize()
         super().showEvent(event)
 
@@ -328,8 +328,16 @@ class BadPixelsFinderDialog(qtw.QDialog):
         self.__buttons['find'].setEnabled(find_enabled)
         self.__buttons['save_uncorr_mask'].setEnabled(has_bad_px_info)
 
-    def __get_bad_pixel_info(self):
+    def __get_bad_pixel_info(self, previous=False):
         """Return bad pixel info from the active camera.
+        
+        Parameters
+        ----------
+        previous : bool, optional
+            If True, return the info from the pre-last bad pixels
+            file in the folder. If False, take the info from the
+            most recent (i.e., the one loaded in the camera).
+            Default is False.
 
         Returns
         -------
@@ -354,17 +362,27 @@ class BadPixelsFinderDialog(qtw.QDialog):
             pixels file was found.
         """
         cam = self.active_camera
-        if not cam.bad_pixels.file_name:
+        if not previous:
+            bad_px = cam.bad_pixels
+        else:
+            bad_px = badpixels.BadPixels(cam)
+            try:
+                bad_px.read(self.__ctrls['bad_px_path'].text(),
+                            most_recent=False)
+            except FileNotFoundError:
+                bad_px = None
+
+        if not bad_px or not bad_px.file_name:
             return NOT_SET, -1, -1, -1, -1
 
-        *_, date, time = cam.bad_pixels.file_name.split('_')
+        *_, date, time = bad_px.file_name.split('_')
         date_time = (f"{date[:4]}-{date[4:6]}-{date[6:]} "
                      f"{time[:2]}:{time[2:4]}:{time[4:]}")
 
         width, height = cam.sensor_size
         sensor = width*height
-        n_bad = cam.bad_pixels.n_bad_pixels_sensor
-        n_uncorrectable = cam.bad_pixels.n_uncorrectable_sensor
+        n_bad = bad_px.n_bad_pixels_sensor
+        n_uncorrectable = bad_px.n_uncorrectable_sensor
         bad_fraction = 100*n_bad/sensor
         uncorrectable_fraction = 100*n_uncorrectable/sensor
 
@@ -440,7 +458,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
         # Store the old bad pixel information
         keys = ('date_time', 'n_bad', 'bad_fraction',
                 'n_uncorrectable', 'uncorrectable_fraction')
-        old = dict(zip(keys, self.__get_bad_pixel_info()))
+        old = dict(zip(keys, self.__get_bad_pixel_info(previous=True)))
         if old['n_bad'] < 0:
             # No file
             old['date_time'] = "None"

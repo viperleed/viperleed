@@ -165,7 +165,6 @@ class BadPixelsFinder(qtc.QObject):
         self.__viewer.show_auto = False
         self.__viewer.hide()
         self.__new_settings = deepcopy(self.__camera.settings)
-        self.__new_settings.set('camera_settings', 'bad_pixels', '()')
 
         _, (max_roi_w, max_roi_h), _ = self.__camera.get_roi_size_limits()
         full_roi = f"(0, 0, {max_roi_w}, {max_roi_h})"
@@ -173,11 +172,17 @@ class BadPixelsFinder(qtc.QObject):
         self.__new_settings.set('camera_settings', 'binning', '1')
         self.__new_settings.set('camera_settings', 'mode', 'triggered')
         self.__new_settings.set('measurement_settings', 'n_frames', '1')
+        self.__new_settings.set('camera_settings', 'bad_pixels_path', '')
 
         # And set them into the camera. This stops
         # the camera if it is currently running.
         self.__camera.settings = deepcopy(self.__new_settings)
         self.__camera.process_info.filename = ''
+
+        # Clear any bad pixel info in the camera (frames should be raw)
+        bad_old = self.__camera.bad_pixels
+        if bad_old:
+            bad_old.clear()
 
         width, height, n_bytes, _ = self.__camera.image_info
         dtype = np.uint8 if n_bytes == 1 else np.uint16
@@ -292,6 +297,7 @@ class BadPixelsFinder(qtc.QObject):
     def abort(self):
         """Abort finding bad pixels."""
         self.__restore_settings()  # Also stops
+        self.__camera.update_bad_pixels()  # Restore old file
         self.__frames_done = 0
         self.aborted.emit()
 
@@ -590,9 +596,9 @@ class BadPixelsFinder(qtc.QObject):
 
     def save_and_cleanup(self):
         """Save a bad pixels file and finish."""
-        bp_path = self.__camera.settings.get("camera_settings",
-                                             "bad_pixels_path",
-                                             fallback='')
+        bp_path = self.__original['settings'].get("camera_settings",
+                                                  "bad_pixels_path",
+                                                  fallback='')
         self.__bad_pixels.write(bp_path)
         self.__restore_settings()
         done = _FinderSection.DONE
@@ -917,6 +923,17 @@ class BadPixels:
                       axis=0)
         self.__uncorrectable_roi = uncorrectable[mask]
 
+    def clear(self):
+        """Clear any bad-pixel information in the object.
+
+        After this method is called, bool(self) returns False.
+
+        Returns
+        -------
+        None.
+        """
+        self.__init__(self.__camera)
+
     def get_uncorrectable_clusters_sizes(self):
         """Return a sorted list of sizes for uncorrectable clusters.
 
@@ -954,17 +971,21 @@ class BadPixels:
             (np.count_nonzero(labelled[c]) for c in clusters)
             )
 
-    def read(self, filepath=''):
+    def read(self, filepath='', most_recent=True):
         """Read bad pixel information from a file path.
 
         Parameters
         ----------
         filepath : str or Path, optional
             Path to the folder containing a bad pixel file.
-            The most recent bad pixel file for the current
-            camera will be read. If an empty string, the
-            current directory will be searched. Default is
-            an empty string.
+            If an empty string, the current directory will
+            be searched. Default is an empty string.
+        most_recent : bool, optional
+            If True, the most recent bad pixel file for the
+            current camera will be read. If False, the second-
+            most-recent file will be loaded. If False and there
+            was no second-most-recent file, a FileNotFoundError
+            is raised. Default is True.
 
         Raises
         ------
@@ -988,9 +1009,23 @@ class BadPixels:
                 f"bad pixels file for camera {self.__camera.name} "
                 f"in directory {filepath.resolve()}"
                 )
-        # Get the most recent bad pixels file
-        base_name, filename = sorted(((f.stem, f) for f in bad_px_files),
-                                     reverse=True)[0]
+
+        idx = 0      # the most recent
+        if not most_recent:
+            idx = 1  # the second most recent
+
+        # Get the correct bad pixels file
+        try:
+            base_name, filename = sorted(((f.stem, f) for f in bad_px_files),
+                                         reverse=True)[idx]
+        except IndexError:
+            self.__bad_coords = np.ones((1, 2)) * np.nan
+            raise FileNotFoundError(
+                f"{self.__class__.__name__}: found only one "
+                f"bad pixels file for camera {self.__camera.name} "
+                f"in directory {filepath.resolve()}. Cannot load "
+                "the second-most recent file."
+                ) from None
 
         bad_pixels = []
         replacements = []
