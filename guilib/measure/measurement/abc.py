@@ -379,32 +379,31 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         final_path = base_path / strftime("%Y-%m-%d_%H-%M-%S", localtime())
         move_to_archive = []
 
-        # Move all camera images (by renaming the temp folder)
-        tmp_path.rename(final_path)
-
         if self.data_points:
-            self.data_points.save_data(final_path / 'measurement.csv')
+            fname = tmp_path / 'measurement.csv'
+            self.data_points.save_data(fname)
+            move_to_archive.append(fname)
 
         ctrl_locations = []
         for ctrl in self.controllers:
             fname = "controller_" + ctrl.name.replace(' ', '_') + ".ini"
-            with open(final_path / fname, 'w', encoding='utf-8') as fproxy:
+            with open(tmp_path / fname, 'w', encoding='utf-8') as fproxy:
                 ctrl.settings.write(fproxy)
-            move_to_archive.append(final_path / fname)
+            move_to_archive.append(tmp_path / fname)
             ctrl_locations.append("./" + fname)
 
         cam_locations = []
         for camera in self.cameras:
             fname = "camera_" + camera.name.replace(' ', '_') + ".ini"
-            with open(final_path / fname, 'w', encoding='utf-8') as fproxy:
+            with open(tmp_path / fname, 'w', encoding='utf-8') as fproxy:
                 camera.settings.write(fproxy)
-            move_to_archive.append(final_path / fname)
+            move_to_archive.append(tmp_path / fname)
             cam_locations.append("./" + fname)
 
         if cam_locations:                                                       # TODO: do the same for all controllers (without editing the measured stuff!)
             self.settings.set("devices", "cameras", str(tuple(cam_locations)))
 
-        file_name = final_path / "measurement.ini"
+        file_name = tmp_path / "measurement.ini"
         move_to_archive.append(file_name)
         with open(file_name, 'w', encoding='utf-8') as configfile:
             self.settings.write(configfile)
@@ -413,8 +412,17 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         with ZipFile(arch_name, 'a', compression=ZIP_DEFLATED,
                      compresslevel=2) as archive:
             for fname in move_to_archive:
-                archive.write(fname, fname.relative_to(final_path))
-        arch_name.rename(arch_name.with_name(final_path.name + '.zip'))
+                archive.write(fname, fname.relative_to(tmp_path))
+
+        # Move all files by renaming the archive and temp folder
+        try:
+            arch_name.rename(arch_name.with_name(final_path.name + '.zip'))
+        except OSError as err:
+            base.emit_error(self, MeasurementErrors.RUNTIME_ERROR, err)
+        try:
+            tmp_path.rename(final_path)
+        except OSError as err:
+            base.emit_error(self, MeasurementErrors.RUNTIME_ERROR, err)
 
         return  # TODO: remove
 
