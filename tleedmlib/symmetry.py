@@ -8,11 +8,12 @@ Functions for determining and setting slab symmetry
 """
 
 import logging
-import numpy as np
 import copy
-import re
-import scipy.spatial as sps
 import itertools
+import re
+import numpy as np
+import scipy.spatial as sps
+
 
 import viperleed.tleedmlib as tl
 from viperleed.tleedmlib.base import (angle,
@@ -169,7 +170,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
     eps = rp.SYMMETRY_EPS
     epsz = rp.SYMMETRY_EPS_Z
     # reduce surface unit cell
-    abst = np.transpose(sl.ucell[:2, :2])  # surface unit cell, transposed
+    abst = sl.ucell[:2, :2].T  # surface unit cell, transposed
 #        usurf = np.array([[1,0],[0,1]])
     if rp.SYMMETRY_FIX != "p1":
         abst, usurf, celltype = tl.leedbase.reduceUnitCell(abst)
@@ -231,7 +232,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
         #   collapses appropriately
 
     # check cell type again
-    abst = np.transpose(sl.ucell[:2, :2])
+    abst = sl.ucell[:2, :2].T
     celltype, _ = tl.leedbase.checkLattice(abst)
     sl.celltype = celltype
     if output:
@@ -303,7 +304,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
     # test potential rotation axes:
     toprotsym = 0   # keep track of the highest rotational symmetry so far
 
-    toprotlist = []
+    toprotlist = []  # positions of highest rot-symmetry points
     for p in comsymposlist:
         rotsymorder = 0
         if ts.isRotationSymmetric(p, 2, eps):
@@ -325,6 +326,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
         logger.debug("Highest rotation axis has order " + str(toprotsym))
 
     if toprotsym == 0 or toprotlist:
+        # no rotation symmetry or multiple rotation centers with same order
         if output:
             logger.debug("Checking for mirror/glide planes...")
 
@@ -394,7 +396,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
         sl.getFractionalCoordinates()
         ts.getFractionalCoordinates()
 
-    if toprotsym == 0:
+    if toprotsym == 0: # should be an else
         # identify group:
         oriplane = None
         if not mirror:
@@ -432,22 +434,9 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
                         planegroup = "rcm"
                 elif (celltype == "hexagonal"
                       and tuple(oriplane.par) not in [(1, 1), (1, -1)]):
-                    # Special case - required rotation of unit cell
-                    logger.warning(
-                        "The POSCAR unit cell was changed to a higher "
-                        "symmetry form. Make sure to check beam labels for "
-                        "compatibility with new unit cell.")
-                    rp.checklist.append("Check modified unit cell")
-                    rp.setHaltingLevel(2)
-                    ang = angle(abst[0]+abst[1], oriplane.dir)
-                    m = rotation_matrix(ang, dim=3)
-                    sl.getCartesianCoordinates()
-                    sl.ucell_mod.append(('lmul', m))
-                    sl.ucell = np.dot(m, sl.ucell)
-                    abst = np.transpose(sl.ucell[:2, :2])
-                    sl.collapseCartesianCoordinates(updateOrigin=True)
-                    oriplane = SymPlane(np.array([0, 0]),
-                                        abst[0]+abst[1], abst)
+                    # Special case - requires rotation of unit cell to bring
+                    # mirror/glide along either (11) or (1-1) direction. 
+                    abst, oriplane = mirror_to_diagonal(sl, rp, abst, oriplane)
         if oriplane is not None and oriplane.distanceFromOrigin(abst) > eps:
             # shift to closest point on oriplane
             shiftv = (np.array([oriplane.dir[1], -oriplane.dir[0]])
@@ -637,6 +626,37 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
         planegroup = setSymmetry(sl, rp, rp.SYMMETRY_FIX)
 
     return planegroup
+
+def mirror_to_diagonal(sl, rp, abst, oriplane):
+    """Rotate cell to bring oriplane along a diagonal.
+    
+    The correct direction among (11) and (1-1) is the one
+    forming a 60deg angle with the symmetry plane.
+    """
+    directions = (abst[0]+abst[1], abst[0]-abst[1])
+    angles = [angle(d, oriplane.dir) for d in directions]
+    dev_from_60 =  [(a+1e-5) % np.radians(60) < 1e-3
+                                    for a in angles]
+    if not any(dev_from_60) or all(dev_from_60):
+        err = ("The POSCAR cell could not be "
+                               "rotated to a higher symmetry")
+        logger.error(err)
+        raise RuntimeError(err)
+    idx = 0 if dev_from_60[0] else 1
+    m = rotation_matrix(angles[idx], dim=3)
+    sl.getCartesianCoordinates()
+    sl.ucell_mod.append(('lmul', m))
+    sl.ucell = np.dot(m, sl.ucell)
+    abst = sl.ucell[:2, :2].T
+    direction = (abst[0]+abst[1], abst[0]-abst[1])[idx]
+    sl.collapseCartesianCoordinates(updateOrigin=True)
+    oriplane = SymPlane(np.array([0, 0]), direction, abst)
+    logger.warning("The POSCAR unit cell was changed to a higher "
+                   "symmetry form. Make sure to check beam labels for "
+                   "compatibility with new unit cell.")
+    rp.checklist.append("Check modified unit cell")
+    rp.setHaltingLevel(2)
+    return abst,oriplane
 
 
 def setSymmetry(sl, rp, targetsym):
