@@ -11,13 +11,11 @@ Author: Florian Doerr
 Defines the Measure class.
 """
 
-# BUG: energy calibration, then try to open camera --> crash (VCD property)
-#      Happens also with IVVideo. Do we keep camera objects live??
-#      Likely connected: start measurment with viewer visible
-#      raises "camera not found" (still delivering frames!)
+# BUG: unplug camera with live view. no problems till try again --> crash.
 
 # TODO: progress bar for non-endless
 # TODO: quick IV video to find max intensity, and adjust camera
+# TODO: auto-scale contrast on camera viewer.
 
 from copy import deepcopy
 from pathlib import Path
@@ -97,9 +95,11 @@ class Measure(gl.ViPErLEEDPluginBase):
                 },
             }
 
+        # Parent-less dialogs show up in the task bar. They
+        # are set to modal where appropriate (in __compose)
         self._dialogs = {
             'change_settings': SettingsEditor(),
-            'bad_px_finder': dialogs.BadPixelsFinderDialog(parent=self),
+            'bad_px_finder': dialogs.BadPixelsFinderDialog(),
             }
         self._glob = {
             'plot': MeasurementPlot(),
@@ -253,15 +253,13 @@ class Measure(gl.ViPErLEEDPluginBase):
                 cfg.read(cfg_path)
             cfg['camera_settings']['mode'] = 'live'
             if cfg != camera.settings:
-                # Since there is some obscure bug in the driver
-                # of ImagingSource cameras, the safest way is to
-                # let the garbage collector take care of the
-                # camera after deleting a reference to its viewer
-                # (The bug seem to prevent stopping while triggered)
-                viewer.close()
-                camera.stop()
-                self.__camera_viewers.remove(viewer)
-                continue
+                if not camera.connected:
+                    # There's no speed advantage over recreating the
+                    # camera object with the settings (and its viewer)
+                    viewer.close()
+                    self.__camera_viewers.remove(viewer)
+                    continue
+                camera.settings = cfg
             if viewer.isVisible():
                 move_to_front(viewer)
             break
@@ -272,6 +270,7 @@ class Measure(gl.ViPErLEEDPluginBase):
             cfg = ViPErLEEDSettings.from_settings(cfg_path)
             cfg['camera_settings']['mode'] = 'live'
             camera = cam_cls(settings=cfg)
+            camera.error_occurred.connect(self.error_occurred)
             viewer = CameraViewer(camera, stop_on_close=True,
                                   roi_visible=False)
             self.__camera_viewers.append(viewer)
@@ -332,7 +331,7 @@ class Measure(gl.ViPErLEEDPluginBase):
             viewer.camera.disconnect_()
             viewer.close()
         self.__camera_viewers = []
-        config = ViPErLEEDSettings()                                            # TODO: should decide whether to use the 'last_cfg' or the default here!
+        config = ViPErLEEDSettings()                                            # TODO: should decide whether to use the 'last_cfg' or the default here! Probably open dialog.
         file_name = DEFAULT_CONFIG_PATH / 'viperleed_config.ini'                # TODO: will be one "default" per measurement type
         try:
             config.read(file_name)
