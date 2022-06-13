@@ -502,7 +502,10 @@ class WindowsCamera:
 
     _dll_is_running = _dll.IC_IsLive
     _dll_is_running.argtypes = (GrabberHandlePtr,)
-    _dll_is_running.errcheck = check_dll_return(">=0")
+    _dll_is_running.errcheck = check_dll_return(
+        ">=0",
+        exclude_errors=("WRONG_XML_FORMAT", "CAMERA_PROPERTY_NOT_AVAILABLE")
+        )
 
     @property
     def is_running(self):

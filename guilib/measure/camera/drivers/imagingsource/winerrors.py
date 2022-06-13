@@ -107,7 +107,7 @@ def check_dll_return(success='int', include_errors=tuple(),
         err_txt = f"{func.__name__}{args} returned {result} <= {limit}."
         error = errors.get(result, None)
         if error is not None:
-            err_txt += f" This is error {error.name}: {error.message}."
+            err_txt += f" This is error {error.name}: {error.message}"
         if result <= limit:
             raise ImagingSourceError(err_txt, err_code=error)
         return result
@@ -142,9 +142,8 @@ class DLLReturns(tuple, Enum):
     NO_HANDLE = (-1, "Grabber handle is invalid. Call create_grabber().")
     NO_DEVICE = (-2,
                  "Method requires an open device, but no device is open. "
-                 "Call open_video_capture_device(dev_name).")
-    CAMERA_PROPERTY_NOT_AVAILABLE = (-2,
-                                     "Property not available")
+                 "Call open(dev_name).")
+    CAMERA_PROPERTY_NOT_AVAILABLE = (-2, "Property not available.")
     NOT_AVAILABLE = (-3, "Device does not support a {!r} property.")
     NO_PROPERTYSET = (-3,
                       "The property set was not queried for the device. "
@@ -173,7 +172,7 @@ class DLLReturns(tuple, Enum):
         -4, "Some properties in file {} could not be restored."
         )
     DEVICE_NOT_FOUND = (
-    -5, "Could not open device while loading settings from file."
+        -5, "Could not open device while loading settings from file."
     )
     FILE_NOT_FOUND = (35, "File {} does not exist.")
     UNKOWN = (-2000, "Unknown or unspecified error.")
