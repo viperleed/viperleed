@@ -167,8 +167,8 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         # a valid answer from the hardware it will automatically
         # trigger an attempt to send the next message in
         # __unsent_messages. Each element of unsent_messages is
-        # a tuple containing the command and its associated data
-        # and the timeout parameter.
+        # a tuple whose first element is the command and its associated
+        # data, and with second element the timeout parameter.
         self.__unsent_messages = []
         if self.serial:
             self.serial.serial_busy.connect(self.send_unsent_messages,
@@ -644,12 +644,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         to_setpoint = self.energy_calibration_curve
         return to_setpoint(energy)
 
-    def make_serial(self):   # TODO: unused?
-        """Create serial port object and connect to it."""
-        self.serial.port = self.settings.get('controller', 'port_name',
-                                             fallback='None')
-
-    def send_message(self, *data):
+    def send_message(self, *data, **kwargs):
         """Use serial to send message.
 
         Send message via serial. Save it if serial is busy
@@ -661,15 +656,17 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
             Any data the controller class may need to send.
             Should have the same types and number of elements
             as self.serial.send_message.
+        **kwargs : dict
+            Keyword arguments passed on to self.serial.send_message.
 
         Returns
         -------
         None.
         """
         if self.__unsent_messages or self.serial.busy:
-            self.__unsent_messages.append(data)
+            self.__unsent_messages.append((data, kwargs))
             return
-        self.serial.send_message(*data)
+        self.serial.send_message(*data, **kwargs)
 
     def send_unsent_messages(self, serial_busy):
         """Send messages that have been stored.
@@ -687,11 +684,11 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         if serial_busy:
             return
         if self.__unsent_messages:
-            data = self.__unsent_messages.pop(0)
-            self.serial.send_message(*data)
+            data, kwargs = self.__unsent_messages.pop(0)
+            self.serial.send_message(*data, **kwargs)
 
     def flush(self):
-        """Clear unsent, set busy false and send abort"""
+        """Clear unsent messages and set not busy."""
         self.__unsent_messages = []
         self.busy = False
 
