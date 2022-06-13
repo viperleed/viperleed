@@ -323,6 +323,14 @@ class CameraViewer(qtw.QScrollArea):
             and self.camera.is_running
                 and self.stop_on_close):
             self.camera.stop()
+
+            # Disconnect signals that may pop up the window
+            # again should a frame arrive in the meantime
+            if self.show_auto:
+                base.safe_disconnect(self.camera.image_processed,
+                                     self.__show_image)
+                base.safe_disconnect(self.camera.frame_ready,
+                                     self.__show_image)
         super().closeEvent(event)
 
     def keyPressEvent(self, event):  # pylint: disable=invalid-name
@@ -665,7 +673,7 @@ class CameraViewer(qtw.QScrollArea):
         title += f' - {100*new_scaling:.1f}%'
         self.setWindowTitle(title)
         self.zoom_changed.emit(new_scaling)
-    
+
     def __on_snap_image(self):
         """Save current frame to file."""
         image = self.__glob['img_array'].copy()
@@ -722,9 +730,9 @@ class CameraViewer(qtw.QScrollArea):
 
         # Notice the swapping of width and height!
         height, width = img_array.shape
-        
+
         _, max_int = self.camera.intensity_limits
-        
+
         if np.sum(img_array > .95*max_int) > 5:
             print("saturating", timer())                                        # TEMP. Will show overlay
 
