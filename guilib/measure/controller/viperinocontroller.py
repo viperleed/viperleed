@@ -263,7 +263,19 @@ class ViPErinoController(MeasureControllerABC):
             tmp_energy = int(round(tmp_energy * conversion_factor))
             tmp_energy = max(0, min(tmp_energy, 65535))
             energies_and_times[2*i] = tmp_energy
-        self.send_message(cmd, energies_and_times)
+
+        # Since we may wait a potentially long time here, we
+        # explicitly set the timeout keyword to be the timeout
+        # from the settings plus the total waiting time.
+        try:
+            timeout = self.settings.getint("serial_port_settings", "timeout",
+                                           fallback=0)
+        except (TypeError, ValueError):
+            base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
+                            'serial_port_settings/timeout', "")
+            timeout = 0
+        timeout = max(timeout, 0) + self.time_to_trigger
+        self.send_message(cmd, energies_and_times, timeout=timeout)
 
     def start_autogain(self):
         """Determine starting gain.
