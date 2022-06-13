@@ -97,7 +97,8 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         self._other_mandatory_settings = [('measurement_settings',
                                            'measurement_class',
                                            (self.__class__.__name__,))]
-        self.current_energy = 0
+        self.__current_energy = 0
+        self.__previous_energy = 0
         self.__settings = ViPErLEEDSettings()
         self.__primary_controller = None
         self.__secondary_controllers = []
@@ -161,6 +162,27 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         if not self.primary_controller:
             return tuple()
         return (self.primary_controller, *self.secondary_controllers)
+
+    @property
+    def current_energy(self):
+        """Return the current energy in electronvolts."""
+        return self.__current_energy
+
+    @current_energy.setter
+    def current_energy(self, new_energy):
+        """Set a new value of the current_energy.
+
+        Notice that this DOES NOT actually set the energy
+        in the LEED electronics. Call set_leed_energy for
+        that purpose.
+
+        Parameters
+        ----------
+        new_energy : float
+            The new current energy
+        """
+        self.__previous_energy = self.current_energy
+        self.__current_energy = new_energy
 
     @property
     def current_step_nr(self):
@@ -468,12 +490,19 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         -------
         None.
         """
-        # TODO: here one would decide whether to actually set the
-        # energy (if different from the last one) or not. In the
-        # latter case, rather call primary.measure_now() and emit
-        # primary.about_to_trigger().
-        self.primary_controller.set_energy(energy, settle_time, *more_steps,
-                                           trigger_meas=trigger_meas)
+        if self.current_energy != self.__previous_energy:
+            self.primary_controller.set_energy(energy, settle_time,
+                                               *more_steps,
+                                               trigger_meas=trigger_meas)
+            return
+
+        # When the energy did not change, we can avoid resetting it
+        try:
+            self.primary_controller.measure_now()
+        except AttributeError:
+            # not a MeasureControllerABC
+            pass
+        self.primary_controller.about_to_trigger.emit()
 
     @abstractmethod
     def start_next_measurement(self):
@@ -524,6 +553,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         self.__connect_secondary_controllers()
 
         self.prepared.emit()           # Signal that we're done.
+        self.current_energy = self.start_energy
         self.start_next_measurement()  # And start the measurment loop
 
     def __cleanup_and_end(self, *__args):
