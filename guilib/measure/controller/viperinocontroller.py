@@ -243,6 +243,7 @@ class ViPErinoController(MeasureControllerABC):
         except (TypeError, ValueError):
             base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
                             'measurement_settings/v_ref_dac', "")
+            v_ref_dac = 2.5
 
         dac_out_vs_nominal_energy = 10/1000  # 10 V / 1000 eV
         output_gain = 4  # Gain of the output stage on board
