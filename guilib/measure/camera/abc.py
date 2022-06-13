@@ -160,6 +160,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         super().__init__(parent=parent)
         self.driver = driver
         self.__busy = False
+        self.__connected = False
         self.__settings = ViPErLEEDSettings()
         self.__bad_pixels = None
         self.__timeout = qtc.QTimer(parent=self)
@@ -274,6 +275,20 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         if was_busy is not is_busy:
             self.__busy = is_busy
             self.camera_busy.emit(self.busy)
+
+    @property
+    def connected(self):
+        """Return whether the camera is connected.
+
+        Notice that a camera may be connected [i.e., .connect_()
+        was called] but not running [i.e., .start() was not].
+
+        Returns
+        -------
+        connected : bool
+            True if the camera is connected.
+        """
+        return self.__connected
 
     @property
     @abstractmethod
@@ -628,14 +643,17 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         """Connect to the camera."""
         if not self.open():
             base.emit_error(self, CameraErrors.CAMERA_NOT_FOUND, self.name)
+            self.__connected = False
             return
         self.load_camera_settings()
+        self.__connected = True
 
     def disconnect_(self):
         """Disconnect the device."""
         self.__reported_errors = set()
         self.stop()
         self.close()
+        self.__connected = False
 
     @abstractmethod
     def list_devices(self):
@@ -1345,7 +1363,8 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         """Stop camera if image processing is over."""
         # Delay the stopping as long as there are image
         # processors that have not finished their tasks
-        if (self.__process_thread.isRunning()
+        if (self.is_running
+            and self.__process_thread.isRunning()
                 and any(p.busy for p in self.__image_processors)):
             if not self.__retry_stop_timer.isActive():
                 self.__retry_stop_timer.start(100)
@@ -1353,6 +1372,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
 
         # Now it is safe to clean up and stop
         self.__retry_stop_timer.stop()
+        self.__timeout.stop()
         self.process_info.clear_times()
         self.n_frames_done = 0
         self.busy = False
