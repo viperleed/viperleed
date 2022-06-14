@@ -291,7 +291,7 @@ class ViPErLEEDSettings(ConfigParser):
             # (<section>, <option>) or (<section>, <option>, <admissible>)
             section, option = setting[:2]
             if not self.has_option(section, option):
-                invalid_settings.append("/".join(setting))
+                invalid_settings.append(f"{section}/{option}")
                 continue
 
             # (<section>, <option>, <admissible>)

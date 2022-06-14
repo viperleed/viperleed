@@ -82,7 +82,8 @@ class ViPErLEEDSerial(SerialABC):
     _mandatory_settings = [*SerialABC._mandatory_settings,
                            ('hardware_bits',), ('available_commands',),
                            ('arduino_states',), ('error_bytes',),
-                           ('controller', 'FIRMWARE_VERSION'),]
+                           ('controller', 'FIRMWARE_VERSION'),
+                           ('serial_port_settings', 'special_byte'),]
 
     def __init__(self, settings, port_name='', **kwargs):
         """Initialize serial worker object.
@@ -109,7 +110,6 @@ class ViPErLEEDSerial(SerialABC):
         TypeError
             If no settings are given.
         """
-
         self.__last_request_sent = ''
         self.__measurements = []
         self.__changed_mode = False

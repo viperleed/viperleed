@@ -17,7 +17,6 @@ from PyQt5 import (QtWidgets as qtw,
 import numpy as np
 from matplotlib.cm import get_cmap
 from matplotlib.lines import Line2D
-from matplotlib.markers import MarkerStyle
 
 from viperleed import guilib as gl
 from viperleed.guilib.basewidgets import MeasurementFigureCanvas as Canvas

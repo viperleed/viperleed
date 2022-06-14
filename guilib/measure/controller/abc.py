@@ -750,8 +750,8 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
     def connect_(self):
         """Connect serial port."""
         # TODO: should we complain if .__port_name is False-y?
-        if self.serial.is_open:
-            # Already connected
+        if not self.serial or self.serial.is_open:
+            # Invalid or already connected
             return
         self.serial.serial_connect()
 

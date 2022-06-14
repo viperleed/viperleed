@@ -20,7 +20,6 @@ Defines the Measure class.
 from copy import deepcopy
 from pathlib import Path
 from zipfile import ZipFile
-import inspect
 import time
 
 import PyQt5.QtCore as qtc
@@ -463,14 +462,12 @@ class Measure(gl.ViPErLEEDPluginBase):
         data.error_occurred.connect(self.error_occurred)
         config = ViPErLEEDSettings()
 
-        if fname.endswith('csv'):
-            # Read from folder
-            if not self.__read_folder(fname, data, config):
-                return
-        elif fname.endswith('zip'):
-            # Read from archive
-            if not self.__read_archive(fname, data, config):
-                return
+        if (fname.endswith('csv')
+                and not self.__read_folder(fname, data, config)):
+            return
+        elif (fname.endswith('zip')
+              and not self.__read_archive(fname, data, config)):
+            return
         else:
             base.emit_error(self, UIErrors.FILE_UNSUPPORTED, fname, '')
             return

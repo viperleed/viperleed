@@ -11,7 +11,6 @@ Defines the BadPixelsFinderDialog class that handles user interaction
 while finding bad pixels for a camera.
 """
 
-import inspect
 from pathlib import Path
 
 from PyQt5 import (QtWidgets as qtw,
@@ -330,7 +329,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
 
     def __get_bad_pixel_info(self, previous=False):
         """Return bad pixel info from the active camera.
-        
+
         Parameters
         ----------
         previous : bool, optional

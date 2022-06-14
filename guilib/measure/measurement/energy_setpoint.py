@@ -48,19 +48,10 @@ class MeasureEnergySetpoint(MeasurementABC):
         start_energy : float
             The first energy of the energy ramp.
         """
+        start_e = super().start_energy
+
         # pylint: disable=redefined-variable-type
         # Seems a pylint bug
-        if not self.settings:
-            return 0.0
-        try:
-            start_e = self.settings.getfloat('measurement_settings',
-                                             'start_energy', fallback=0.0)
-        except (TypeError, ValueError):
-            # Not a float
-            base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
-                            'measurement_settings/start_energy', '')
-            start_e = 0.0
-
         try:
             min_e = self.settings.getfloat('measurement_settings',
                                            'min_energy', fallback=5.0)
@@ -159,7 +150,7 @@ class MeasureEnergySetpoint(MeasurementABC):
             # Necessary to force secondaries into busy,
             # before the primary returns not busy anymore.
             controller.busy = True
-        self.set_leed_energy(self.current_energy, self.hv_settle_time)
+        self.set_leed_energy(self.current_energy, self.hv_settle_time)          # TODO: step shape here
 
     def _is_finished(self):
         """Check if the full measurement cycle is done.
@@ -252,7 +243,8 @@ class MeasureEnergySetpoint(MeasurementABC):
 
     def abort(self):
         """Abort all current actions."""
-        if self.__old_coefficients:
+        if (hasattr(self, "__old_coefficients")
+                and self.__old_coefficients):
             self.primary_controller.settings.set('energy_calibration',
                                                  'coefficients',
                                                  self.__old_coefficients)

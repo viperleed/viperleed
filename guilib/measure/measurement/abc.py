@@ -300,11 +300,10 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
 
         self.__settings = new_settings
 
-        self.__make_primary_ctrl()
-        if not self.primary_controller:
+        if not self.__make_primary_ctrl():
             # Something went wrong (already reported in __make_primary)
             # TODO: probably good to clean up secondaries and cameras!
-            return
+            return False
 
         self.__make_secondary_ctrls()
         self._make_cameras()
@@ -317,7 +316,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
     def start_energy(self):
         """Return the first energy for the energy ramp."""
         if not self.settings:
-            return 0
+            return 0.0
         try:
             return self.settings.getfloat('measurement_settings',
                                           'start_energy', fallback=0)
@@ -325,7 +324,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
             # Not a float
             base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
                             'measurement_settings/start_energy', '')
-            return 0
+            return 0.0
 
     @abstractmethod
     def abort(self):
@@ -496,7 +495,11 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
                                                trigger_meas=trigger_meas)
             return
 
-        # When the energy did not change, we can avoid resetting it
+        # When the energy did not change, we can avoid setting
+        # it again and go straight to measuring, if desired
+        if not trigger_meas:
+            return
+
         try:
             self.primary_controller.measure_now()
         except AttributeError:
@@ -815,8 +818,8 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
             try:
                 cam = self.__make_camera(settings)
             except RuntimeError:
-                print("error making camera")
                 continue
+            cam.error_occurred.connect(self.__on_init_errors)
             cam.error_occurred.connect(self.__on_hardware_error)
             cameras.append(cam)
         self.cameras = cameras
@@ -912,6 +915,11 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
 
         controller = cls(settings=config, port_name=port_name,
                          sets_energy=is_primary)
+        # Connect error signal. The connection with __on_init_errors
+        # has any impact only during initialization of self, but it
+        # does not hurt to leave it connected. __on_hardware_error
+        # causes abortion of the measurement.
+        controller.error_occurred.connect(self.__on_init_errors)
         controller.error_occurred.connect(self.__on_hardware_error)
         controller.set_measurements(measurements)
         return controller
@@ -926,16 +934,17 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         if len(info) != 2:
             base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
                             'devices/primary_controller', '')
-            return
+            return False
 
         try:
             ctrl = self.__make_controller(*info, is_primary=True)
         except RuntimeError:
             # something went wrong with instantiating, and is
             # already reported by emitting in __make_controller
-            return
+            return False
 
         self.primary_controller = ctrl
+        return True
 
     def __make_secondary_ctrls(self):
         """Make secondary controllers from self.settings."""
@@ -1173,7 +1182,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
             with ZipFile(self.settings.base_dir, 'r') as arch:
                 try:
                     cfg_lines = arch.read(configname).decode()
-                except KeyError as err:
+                except KeyError:
                     raise RuntimeError(
                         f"No config file '{configname}' in "
                         f"archive {self.settings.base_dir}"

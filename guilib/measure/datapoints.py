@@ -588,7 +588,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         with open(csv_name, 'r', encoding='UTF8', newline='') as csv_file:
             self.read_lines(csv_file, source=csv_name)
 
-    def read_lines(self, lines, source=''):                                     # TODO: reading from archive. Can read_lines from: measurement.csv into StringIO, .decode().split('\n'); probably good to set self.time_resolved by reading the class name in measurement.ini
+    def read_lines(self, lines, source=''):
         """Read data from an iterable returning lines of data.
 
         Parameters

@@ -18,6 +18,7 @@ Graphical User Interface.
 # Python standard modules
 from abc import abstractmethod
 import time
+from configparser import NoSectionError, NoOptionError
 
 # Non-standard modules
 from PyQt5 import (QtCore as qtc,
@@ -222,6 +223,11 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         ----------
         is_busy : bool
             True if serial is busy
+
+        Emits
+        -----
+        serial_busy(self.busy)
+            If the busy state changes.
         """
         was_busy = self.busy
         is_busy = bool(is_busy)
@@ -974,18 +980,20 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
                                 fallback=self.__port.isDataTerminalReady())
             )
 
-        flow_control = getattr(
-            self.__port, settings.get('serial_port_settings',
-                                      'flow_control',
-                                      fallback=self.__port.flowControl())
-            )
+        try:
+            setting = settings.get('serial_port_settings', 'flow_control')
+        except (NoSectionError, NoOptionError):
+            flow_control = self.__port.flowControl()
+        else:
+            flow_control = getattr(self.__port, setting)
         self.__port.setFlowControl(flow_control)
 
-        parity = getattr(
-            self.__port, settings.get('serial_port_settings',
-                                      'parity',
-                                      fallback=self.__port.parity())
-            )
+        try:
+            setting = settings.get('serial_port_settings', 'parity')
+        except (NoSectionError, NoOptionError):
+            parity = self.__port.parity()
+        else:
+            parity = getattr(self.__port, setting)
         self.__port.setParity(parity)
 
         if flow_control is not self.__port.HardwareControl:

@@ -235,6 +235,8 @@ class ViPErinoController(MeasureControllerABC):
         # pylint: disable=too-many-locals
         # Count = 16. Quite a few, but makes it easier to understand
         # the nominal-energy-to-DAC-value conversion.
+        # pylint: disable=redefined-variable-type
+        # Seems a pylint bug.
         _cmd_name = 'PC_SET_VOLTAGE' if trigger_meas else 'PC_SET_VOLTAGE_ONLY'
         cmd = self.settings.get('available_commands', _cmd_name)
         try:

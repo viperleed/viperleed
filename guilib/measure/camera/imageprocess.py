@@ -307,6 +307,13 @@ class ImageProcessor(qtc.QObject):
         full_path : str
             Path to file saved. An empty string is returned
             if no file was saved (because no filename was given).
+
+        Raises
+        ------
+        ValueError
+            If this method is called while self.process_info
+            contains a non-empty .filename that des not have
+            a .tif* extension.
         """
         dtype = '>u4' if self.frame_bits > 16 else '>u2'
 
