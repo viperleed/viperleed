@@ -974,33 +974,38 @@ class MeasureControllerABC(ControllerABC):
         return quantity in self.measured_quantities
 
     @abstractmethod
-    def receive_measurements(self, receive):                                    # TODO: rename on_measurements_ready?
-        """Receive measurements from the serial.
+    def on_data_ready(self, data):
+        """Receive and store data from the serial.
 
-        This function has to be reimplemented in subclasses.
-        Upon receiving the data_received signal this function
-        is supposed to process and append measurements to the
-        appropriate attribute of the class.
+        This method is the slot connected to the data_received
+        signal of self.serial and has to be reimplemented in
+        subclasses.
 
-        All of the settings required for processing different
-        measurements should be derived from the configuration
-        file. (i.e.: Different measurements may require other
-        conversion factors.) The channels selected in the
-        settings can be used to determine to which section of
-        the data_points library the measurement should be
-        appended to.
+        Measurements received from the serial should be processed,
+        appropriately converted to the correct physical units
+        and stored into self.measurements, a dictionary whose
+        keys are QuantityInfo objects.
+
+        When all the measurements expected has been received,
+        this method should call self.measurements_done().
+
+        Notice that data may also be non-measurement information.
+        This should also be processed and stored, if needed. In
+        this case, do not call .measurements_done().
+
+        All of the settings required for processing data should
+        be derived from self.settings. This includes, for example,
+        conversion factors/curves.
 
         Parameters
         ----------
-        receive : object
-            Data received from the serial, most
-            likely an array/a list of floats.
+        data : object
+            Data received from self.serial.
 
         Returns
         -------
         None.
         """
-
         self.measurements_done()
 
     def measurements_done(self):
@@ -1125,8 +1130,8 @@ class MeasureControllerABC(ControllerABC):
 
         if self.serial is not None:
             # Connect data_received signal from the serial to
-            # the receive_measurements function in this class.
-            self.serial.data_received.connect(self.receive_measurements)
+            # the on_data_ready function in this class.
+            self.serial.data_received.connect(self.on_data_ready)
 
             # Connect serial about_to_trigger signal to controller
             # about_to_trigger signal.

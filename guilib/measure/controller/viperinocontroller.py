@@ -372,47 +372,39 @@ class ViPErinoController(MeasureControllerABC):
         message = [update_rate, *self.__adc_channels[:-1]]
         self.send_message(cmd, message)
 
-    def receive_measurements(self, receive):                                    # TODO: counterintuitive as it also gets hardware/firmware info
-        """Receive measurements from the serial.
-
-        For measurements:
-        Append measurements to the according section. Done via the
-        settings. The chosen ADC channels will determine which
-        value was measured.
-
-        The receive parameter has to have the measurements listed
-        in the same order as the measurement devices are listed in
-        the controller configuration, otherwise the measurements
-        will not be saved in the correct section.
-
-        For hardware:
-        Save received data into a dictionary to store the hardware
-        configuration for future use. Hardware is only sent after
-        the get_hardware function has been executed and before the
-        calibration is done.
-
-        Parameters
-        ----------
-        receive : list or dict
-            Data received from the serial: list if a measurement,
-            dict if the hardware configuration.
-
-        Returns
-        -------
-        None.
-        """
-        if isinstance(receive, dict):
+    def on_data_ready(self, data):
+        """Receive and store data from the serial."""
+        # We may receive two types of data: hardware&firmware
+        # information (a dictionary) and actual measurements
+        if isinstance(data, dict):
             # Got hardware info
-            self.hardware = receive
+            self.hardware = data
             return
 
-        # Otherwise it is data
-        # TODO: here we have to actually convert "I0 (in mV)" to
-        # "I0 (in uA)". Similarly, here we could convert the mV
-        # of the thermocouple into a temperature.
-        for i, measurement in enumerate(self.__adc_measurement_types):
-            if measurement is not None:
-                self.measurements[measurement] = [receive[i]]
+        # Otherwise it is a list of data: [ADC0, ADC1, LM35]
+        # The order is the same as stored in the config file under
+        # controller/measurement_devices. The ADC channels chosen
+        # via set_measurements() determine which value was measured
+        for value, quantity in zip(data, self.__adc_measurement_types):
+            if quantity is None:
+                # Was not requested (but measured nontheless)
+                continue
+            if quantity is QuantityInfo.I0:
+                # The value returned by the Arduino is correctly
+                # in microamps only under the assumption that
+                #   (i) in 0--10V range 1uA produces 1V at the BNC
+                #  (ii) in 0--2.5V range 1mA produces 1V at the BNC
+                try:
+                    conv_ = self.settings.getfloat('conversions', 'i0_gain',
+                                                   fallback=1.0)
+                except (TypeError, ValueError):
+                    conv_ = 1.0
+                value *= conv_
+            self.measurements[quantity] = [value]
+
+        # TODO: here we should convert the mV of the thermocouple
+        # and the cold junction into a compensated temperature
+
         self.measurements_done()
 
     def measure_now(self):
