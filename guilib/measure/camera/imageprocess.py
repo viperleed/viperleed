@@ -226,25 +226,6 @@ class ImageProcessor(qtc.QObject):
             ) >> 1  # right shift by 1 bit is division by 2
         self.processed_image[tuple(bad_coords)] = replacements
 
-    def remove_bad_pixels_old(self):  # TODO: remove
-        """Remove a list of bad pixels by neighbor averaging."""
-        if not self.process_info.bad_pixels.size:
-            return
-
-        # Transpose because indexing needs to be (2, N)
-        bad_x, bad_y = np.asarray(self.process_info.bad_pixels).T
-
-        # Convolution kernel for 4-neighbor averaging
-        kernel = np.array(((0, 1, 0), (1, 0, 1), (0, 1, 0)))
-
-        neighbor_sum = convolve2d(self.processed_image,
-                                  kernel, mode='same')
-        neighbor_count = convolve2d(np.ones(self.processed_image.shape),
-                                    kernel, mode='same')
-        neighbor_ave = neighbor_sum / neighbor_count
-
-        self.processed_image[bad_y, bad_x] = neighbor_ave[bad_y, bad_x]
-
     def apply_roi(self):
         """Crop the image to a region of interest."""
         roi = self.process_info.roi

@@ -13,11 +13,11 @@ Author: Michele Riva
 import inspect
 import re
 
+import PyQt5.QtCore as qtc
 import PyQt5.QtGui as qtg
 import PyQt5.QtWidgets as qtw
 
 from viperleed import guilib as gl
-# import guilib as gl
 
 
 ###############################################################################
@@ -136,6 +136,7 @@ def drawText(painter, text, transform=None, combine=False):
         painter.translate(advance)
     painter.restore()
 
+
 def get_all_children_widgets(parent, exclude_parent=False, recursive=True):
     """
     This is an extension of the QObject.children() method that finds
@@ -189,6 +190,17 @@ def get_all_children_widgets(parent, exclude_parent=False, recursive=True):
         childrenWidgs.discard(parent)
 
     return childrenWidgs
+
+
+def move_to_front(window):  # TODO: move to a nicer place
+    """Move a window to the front."""
+    window.show()
+    # Move window to front
+    window.raise_()
+    # Show as a window, also in case it is minimized
+    window.setWindowState(window.windowState()
+                          & ~qtc.Qt.WindowMinimized
+                          | qtc.Qt.WindowActive)
 
 
 def screen_fraction(obj, size):

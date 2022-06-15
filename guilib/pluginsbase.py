@@ -20,7 +20,7 @@ from PyQt5 import (QtWidgets as qtw,
                    QtGui as qtg)
 
 from viperleed.gui import resources_path
-from viperleed import guilib as gl
+from viperleed.guilib.widgetslib import AllGUIFonts
 
 
 LOGO = resources_path('guilib/icons/viperleed_logo_circled_48x48.png')
@@ -223,11 +223,6 @@ class AboutViPErLEED(qtw.QWidget):
                             | qtc.Qt.CustomizeWindowHint
                             | qtc.Qt.WindowTitleHint)
         self.setWindowTitle('About ViPErLEED')
-        # self.setWindowFlags(qtc.Qt.Window | qtc.Qt.FramelessWindowHint)
-
-        #                    | (qtc.Qt.CustomizeWindowHint
-        #                       & ~qtc.Qt.WindowMinMaxButtonsHint
-        #                       & ~qtc.Qt.WindowCloseButtonHint)
 
         self.__compose()
         self.__connect()
@@ -277,7 +272,7 @@ class AboutViPErLEED(qtw.QWidget):
             'State Physics</a> of the FAU Erlangen-N\u0252rnberg.<p>'
             f'Contributors: {", ".join(contrib)}'
             )
-        txt_font = gl.AllGUIFonts().labelFont
+        txt_font = AllGUIFonts().labelFont
         txt_font.setPointSize(9)
         txt.setFont(txt_font)
         txt.setWordWrap(True)

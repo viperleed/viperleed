@@ -345,6 +345,7 @@ def is_integer_matrix(matrix, eps=1e-3):
 
     return np.all(np.abs(matrix - matrix.round()) < eps)
 
+
 def justify_sequences(sequences, filler=None):
     """Justify sequences to same length.
 
@@ -369,4 +370,3 @@ def justify_sequences(sequences, filler=None):
     max_length = max(len(l) for l in sequences)
     just = (l + type(l)((filler,))*(max_length-len(l)) for l in sequences)
     return type(sequences)(just)
-    

@@ -20,9 +20,9 @@ from PyQt5 import (QtCore as qtc,
 
 from viperleed import guilib as gl
 from viperleed.gui import resources_path
-from viperleed.guilib.pluginsbase import logo_one_line
+from viperleed.guilib.pluginsbase import logo_one_line, ViPErLEEDPluginBase
 from viperleed.guilib.measure.uimeasurement import Measure
-
+from viperleed.guilib.widgetslib import move_to_front
 
 PRE_RELEASE = True
 
@@ -46,7 +46,7 @@ def show_pre_release_popup():
     msg_box.exec()
 
 
-class ViPErLEEDSelectPlugin(gl.ViPErLEEDPluginBase):
+class ViPErLEEDSelectPlugin(ViPErLEEDPluginBase):
     """Window to pick what to do."""
 
     # modules is a dictionary of the available modules.
@@ -165,13 +165,7 @@ class ViPErLEEDSelectPlugin(gl.ViPErLEEDPluginBase):
 
         # Module is already open
         if module:
-            module.show()
-            # Move window to front
-            module.raise_()
-            # Show as a window, also in case it is minimized
-            module.setWindowState(module.windowState()
-                                  & ~qtc.Qt.WindowMinimized
-                                  | qtc.Qt.WindowActive)
+            move_to_front(module)
             return
 
         _, cls = self.modules[name]

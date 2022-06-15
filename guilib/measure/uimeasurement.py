@@ -16,6 +16,8 @@ Defines the Measure class.
 # TODO: progress bar for non-endless
 # TODO: quick IV video to find max intensity, and adjust camera
 # TODO: auto-scale contrast on camera viewer.
+# TODO: busy dialog where appropriate
+# TODO: fix the documentation in .ini files
 
 from copy import deepcopy
 from pathlib import Path
@@ -26,7 +28,8 @@ import PyQt5.QtCore as qtc
 import PyQt5.QtWidgets as qtw
 
 # ViPErLEED modules
-from viperleed import guilib as gl
+from viperleed.guilib.pluginsbase import ViPErLEEDPluginBase
+from viperleed.guilib.widgetslib import move_to_front, AllGUIFonts
 from viperleed.guilib.measure.measurement import ALL_MEASUREMENTS
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.basewidgets import QDoubleValidatorNoDot
@@ -52,17 +55,6 @@ DEFAULT_CONFIG_PATH = Path(
     )
 
 
-def move_to_front(window):  # TODO: move to a nicer place
-    """Move a window to the front."""
-    window.show()
-    # Move window to front
-    window.raise_()
-    # Show as a window, also in case it is minimized
-    window.setWindowState(window.windowState()
-                          & ~qtc.Qt.WindowMinimized
-                          | qtc.Qt.WindowActive)
-
-
 class UIErrors(base.ViPErLEEDErrorEnum):
     """Class for errors occurring in the UI."""
     FILE_NOT_FOUND_ERROR = (1000, "Could not find file {}.\n{}")
@@ -70,7 +62,7 @@ class UIErrors(base.ViPErLEEDErrorEnum):
 
 
 # too-many-instance-attributes
-class Measure(gl.ViPErLEEDPluginBase):
+class Measure(ViPErLEEDPluginBase):
     """A GUI that allows to take measurements."""
 
     error_occurred = qtc.pyqtSignal(tuple)
@@ -134,31 +126,31 @@ class Measure(gl.ViPErLEEDPluginBase):
         self.setCentralWidget(qtw.QWidget())
         self.centralWidget().setLayout(qtw.QGridLayout())
 
-        self._ctrls['measure'].setFont(gl.AllGUIFonts().buttonFont)
+        self._ctrls['measure'].setFont(AllGUIFonts().buttonFont)
         self._ctrls['measure'].ensurePolished()
         self._ctrls['measure'].clicked.connect(self.__on_start_pressed)
         self._ctrls['measure'].setEnabled(True)
 
-        self._ctrls['abort'].setFont(gl.AllGUIFonts().buttonFont)
+        self._ctrls['abort'].setFont(AllGUIFonts().buttonFont)
         self._ctrls['abort'].ensurePolished()
         self._ctrls['abort'].setEnabled(False)
 
         self._ctrls['select'].addItems(ALL_MEASUREMENTS.keys())
-        self._ctrls['select'].setFont(gl.AllGUIFonts().buttonFont)
+        self._ctrls['select'].setFont(AllGUIFonts().buttonFont)
         self._ctrls['select'].ensurePolished()
 
-        self._ctrls['set_energy'].setFont(gl.AllGUIFonts().buttonFont)
+        self._ctrls['set_energy'].setFont(AllGUIFonts().buttonFont)
         self._ctrls['set_energy'].ensurePolished()
         self._ctrls['set_energy'].setEnabled(False)
 
-        self._ctrls['settings_editor'].setFont(gl.AllGUIFonts().buttonFont)
+        self._ctrls['settings_editor'].setFont(AllGUIFonts().buttonFont)
         self._ctrls['settings_editor'].ensurePolished()
         self._ctrls['settings_editor'].clicked.connect(
             self.__on_change_settings_pressed
             )
         self._ctrls['settings_editor'].setEnabled(True)
 
-        self._ctrls['energy_input'].setFont(gl.AllGUIFonts().labelFont)
+        self._ctrls['energy_input'].setFont(AllGUIFonts().labelFont)
         self._ctrls['energy_input'].ensurePolished()
         self._ctrls['energy_input'].setValidator(QDoubleValidatorNoDot())
         self._ctrls['energy_input'].validator().setLocale(qtc.QLocale.c())
