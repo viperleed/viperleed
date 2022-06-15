@@ -226,7 +226,6 @@ class Measure(ViPErLEEDPluginBase):
     def __on_camera_clicked(self, *_):                                          # TODO: may want to display a busy dialog with "starting camera <name>..."
         cam_name = self.sender().text()
         cam_cls = self.sender().data()
-        print(self.sender())
 
         cfg_path = base.get_device_config(cam_name,
                                           directory=DEFAULT_CONFIG_PATH,
@@ -290,16 +289,10 @@ class Measure(ViPErLEEDPluginBase):
         ctrl = ctrl_cls(port_name=ctrl_port)                                    # TODO: would be better to get the right config file already
 
         # TEMP FOR VIPERINO ONLY!                                               # TODO: move to a device info dialog (prob. without QThread)
-        thread = qtc.QThread()
-        ctrl.moveToThread(thread)
-        thread.start()
-        self._dummy_signal.connect(ctrl.get_hardware)
-        self._dummy_signal.emit()
+        ctrl.get_hardware()
         ctrl.serial.port.waitForReadyRead(100)
-
         ctrl.disconnect_()
-        thread.quit()
-        time.sleep(0.01)
+
         print(ctrl.hardware)
 
     def __on_finished(self, *_):
