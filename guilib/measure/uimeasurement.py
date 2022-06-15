@@ -11,8 +11,6 @@ Author: Florian Doerr
 Defines the Measure class.
 """
 
-# BUG: unplug camera with live view. no problems till try again --> crash.
-
 # TODO: progress bar for non-endless
 # TODO: quick IV video to find max intensity, and adjust camera
 # TODO: auto-scale contrast on camera viewer.
@@ -59,6 +57,7 @@ class UIErrors(base.ViPErLEEDErrorEnum):
     """Class for errors occurring in the UI."""
     FILE_NOT_FOUND_ERROR = (1000, "Could not find file {}.\n{}")
     FILE_UNSUPPORTED = (1001, "Cannot open {}.\n{}")
+    RUNTIME_ERROR = (1002, "{}")
 
 
 # too-many-instance-attributes
@@ -227,6 +226,7 @@ class Measure(ViPErLEEDPluginBase):
     def __on_camera_clicked(self, *_):                                          # TODO: may want to display a busy dialog with "starting camera <name>..."
         cam_name = self.sender().text()
         cam_cls = self.sender().data()
+        print(self.sender())
 
         cfg_path = base.get_device_config(cam_name,
                                           directory=DEFAULT_CONFIG_PATH,
@@ -235,25 +235,8 @@ class Measure(ViPErLEEDPluginBase):
         # Decide whether we can take the camera object
         # (and its settings) from the known camera viewers
         for viewer in self.__camera_viewers.copy():
-            if cam_name != viewer.camera.name:
-                continue
-            camera = viewer.camera
-            viewer.stop_on_close = True
-            cfg = deepcopy(camera.settings)
-            if cfg_path:  # TEMP: re-read config to apply changes. Will eventually be different when I have a settings editor.
-                cfg.read(cfg_path)
-            cfg['camera_settings']['mode'] = 'live'
-            if cfg != camera.settings:
-                if not camera.connected:
-                    # There's no speed advantage over recreating the
-                    # camera object with the settings (and its viewer)
-                    viewer.close()
-                    self.__camera_viewers.remove(viewer)
-                    continue
-                camera.settings = cfg
-            if viewer.isVisible():
-                move_to_front(viewer)
-            break
+            if self.__can_take_camera_from_viewer(cam_name, viewer, cfg_path):
+                break
         else:  # Not already available. Make a new camera.
             if not cfg_path:
                 print("no config found", cfg_path)                              # TODO: error out here
@@ -265,8 +248,39 @@ class Measure(ViPErLEEDPluginBase):
             viewer = CameraViewer(camera, stop_on_close=True,
                                   roi_visible=False)
             self.__camera_viewers.append(viewer)
-        if not camera.is_running:
             camera.start()
+
+    def __can_take_camera_from_viewer(self, cam_name, viewer, cfg_path):
+        """Return whether cam_name can be taken from viewer."""
+        camera = viewer.camera
+        if cam_name != camera.name:
+            return False
+        viewer.stop_on_close = True
+        cfg = deepcopy(camera.settings)
+        if cfg_path:                                # TODO: TEMP: re-read config to apply changes. Will not be done when I have a settings editor.
+            cfg.read(cfg_path)
+        cfg['camera_settings']['mode'] = 'live'     # TODO: this and the next check will not be useful when we have an editor. Can simply check .mode == 'live'
+        if cfg != camera.settings:
+            if not camera.connected:
+                # There's no speed advantage over recreating the
+                # camera object with the settings (and its viewer)
+                viewer.close()
+                self.__camera_viewers.remove(viewer)
+                return False
+            camera.settings = cfg
+
+        # Try starting it. If not possible, we probably lost it
+        if not camera.is_running:
+            try:
+                camera.start()
+            except camera.exceptions:
+                # Probably lost the device
+                viewer.close()
+                self.__camera_viewers.remove(viewer)
+                return False
+        if viewer.isVisible():
+            move_to_front(viewer)
+        return True
 
     def __on_controller_clicked(self, *_):
         action = self.sender()
@@ -286,6 +300,7 @@ class Measure(ViPErLEEDPluginBase):
         ctrl.disconnect_()
         thread.quit()
         time.sleep(0.01)
+        print(ctrl.hardware)
 
     def __on_finished(self, *_):
         """Reset all after a measurement is over."""

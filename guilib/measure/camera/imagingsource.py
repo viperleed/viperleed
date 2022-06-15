@@ -662,8 +662,13 @@ class ImagingSourceCamera(CameraABC):
 
     def stop(self):
         """Stop the camera."""
-        if self.is_running:
+        # One could wrap the next line in if self.is_running,
+        # but it seems that there is a bug in the driver that
+        # can return True if the device was lost.
+        try:
             self.driver.stop()
+        except ImagingSourceError:
+            pass
         super().stop()
 
     def trigger_now(self):
