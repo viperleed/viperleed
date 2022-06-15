@@ -206,6 +206,22 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         """Return self rather than a deep copy of self."""
         return self
 
+    def __del__(self):
+        """Delete camera after terminating threads."""
+        try:
+            thread = self.__process_thread
+        except AttributeError:
+            pass
+        else:
+            thread.quit()
+            if not thread.wait(50):
+                thread.terminate()
+                thread.wait()
+        try:
+            super().__del__()
+        except AttributeError:
+            pass
+
     @property
     def bad_pixels(self):
         """Return a BadPixels object for this camera."""

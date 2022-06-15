@@ -13,8 +13,6 @@ class and its associated ViPErLEEDErrorEnum class ViPErinoErrors
 which gives commands to the ViPErinoSerialWorker class.
 """
 
-import time
-
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtSerialPort as qts
 
@@ -603,5 +601,9 @@ class ViPErinoController(MeasureControllerABC):
                       ctrl.hardware, flush=True)
         for thread in threads:
             thread.quit()
-        time.sleep(0.001)
+        for thread in threads:
+            # wait max 100 ms for each thread to quit
+            if not thread.wait(100):
+                thread.terminate()
+                thread.wait()
         return device_list
