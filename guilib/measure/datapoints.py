@@ -506,7 +506,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                 if not separate_steps:
                     extracted[ctrl][q_time].extend(ctrl_times)
                 else:
-                    ctrl_times -= start_time
+                    ctrl_times = [t - start_time for t in ctrl_times]
                     extracted[ctrl][q_time].append(ctrl_times)
 
         return extracted, self.nominal_energies
