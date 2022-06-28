@@ -470,15 +470,33 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         except (TypeError, ValueError):  # Not iterable or not ints
             roi = tuple()
 
+        _, (max_w, max_h), _, (roi_dx, roi_dy) = self.get_roi_size_limits()
+
         if not self.__is_valid_roi(roi):
             base.emit_error(self, CameraErrors.INVALID_SETTINGS,
-                            'camera_settings/roi', 'Info: ROI is invalid.')
+                            'camera_settings/roi',
+                            'Info: ROI is invalid.')
             self.settings.set('camera_settings', 'roi', 'None')
-            _, (max_roi_w, max_roi_h), _ = self.get_roi_size_limits()
-            return 0, 0, max_roi_w, max_roi_h
+            return 0, 0, max_w, max_h
+
+        # See if the ROI position offsets fit the
+        # increments, and adjust if necessary
+        *roi_offsets, roi_w, roi_h = roi
+        roi_x, roi_y = roi_offsets
+        if roi_x % roi_dx or roi_y % roi_dy:
+            roi_offsets = ((roi_x // roi_dx) * roi_dx,
+                           (roi_y // roi_dy) * roi_dy)
+            new_roi = (*roi_offsets, roi_w, roi_h)
+            if not self.__is_valid_roi(roi):
+                base.emit_error(self, CameraErrors.INVALID_SETTINGS,
+                                'camera_settings/roi',
+                                f'Info: ROI {new_roi} is invalid after '
+                                'adjusting top-left corner position')
+                self.settings.set('camera_settings', 'roi', 'None')
+                return 0, 0, max_w, max_h
+            self.settings.set('camera_settings', 'roi', str(new_roi))
 
         # See if the ROI width and height fit with the binning factor
-        *roi_offsets, roi_w, roi_h = roi
         if roi_w % self.binning or roi_h % self.binning:
             new_roi_w = (roi_w // self.binning) * self.binning
             new_roi_h = (roi_h // self.binning) * self.binning
@@ -825,7 +843,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
                 "but self.get_binning_limits() was not reimplemented."
                 )
         min_binning = 1
-        _, (max_roi_w, max_roi_h), _ = self.get_roi_size_limits()
+        _, (max_roi_w, max_roi_h), *_ = self.get_roi_size_limits()
         max_binning = min(max_roi_w, max_roi_h)
         return min_binning, max_binning
 
@@ -1111,8 +1129,12 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             Two elements, both integers, corresponding to the
             minimum allowed increments for width and height of
             the region of interest
+        roi_offset_increments : tuple
+            Two elements, both integers, corresponding to the
+            minimum allowed increments for the horizontal and
+            vertical position of the roi.
         """
-        return tuple(), tuple(), tuple()
+        return tuple(), tuple(), tuple(), tuple()
 
     @abstractmethod
     def reset(self):
@@ -1272,7 +1294,10 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         if len(roi) != 4:
             return False
         roi_x, roi_y, roi_w, roi_h = roi
-        (min_w, min_h), (max_w, max_h), (d_w, d_h) = self.get_roi_size_limits()
+        ((min_w, min_h),
+         (max_w, max_h),
+         (d_w, d_h),
+          _) = self.get_roi_size_limits()
 
         roi_outside = (roi_x < 0 or roi_y < 0
                        or roi_x + roi_w > max_w

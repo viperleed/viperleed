@@ -24,6 +24,8 @@ from viperleed.guilib.measure.camera.drivers.imagingsource import (
 from viperleed.guilib.measure.camera.abc import CameraABC, CameraErrors
 from viperleed.guilib.measure import hardwarebase as base
 
+# TODO: test roi offset increments with models other than IMX265
+
 
 # pylint: disable=useless-param-doc,useless-type-doc
 # I prefer to keep the documentation of the (unused) arguments
@@ -569,10 +571,14 @@ class ImagingSourceCamera(CameraABC):
             Two elements, both integers, corresponding to the
             minimum allowed increments for width and height of
             the region of interest
+        roi_offset_increments : tuple
+            Two elements, both integers, corresponding to the
+            minimum allowed increments for the horizontal and
+            vertical position of the roi.
         """
         roi_range = self.driver.video_format_shape_range
         roi_increments = self.driver.video_format_shape_increments
-        return roi_range[:2], roi_range[2:], roi_increments
+        return roi_range[:2], roi_range[2:], roi_increments, (2, 2)
 
     def start_frame_rate_optimization(self):
         """Start estimation of the best frame rate."""

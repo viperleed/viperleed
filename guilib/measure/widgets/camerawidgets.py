@@ -31,6 +31,7 @@ from viperleed.guilib.measure import hardwarebase as base
 # TODO: ROI show size in image coordinates as it is resized (tooltip?)
 # TODO: ROI context menu: precisely set with coordinates
 # TODO: context -- properties
+# TODO: use ROI position increments
 
 
 # pylint: disable=too-many-instance-attributes
@@ -595,7 +596,7 @@ class CameraViewer(qtw.QScrollArea):
         self.setContextMenuPolicy(qtc.Qt.CustomContextMenu)
 
         menu.addAction("Reset ROI")
-        act = menu.addAction("Snap image")
+        menu.addAction("Snap image")
 
         # Flags
         menu.addSeparator()
@@ -994,7 +995,8 @@ class RegionOfInterest(qtw.QWidget):
         self.__rubberband = qtw.QRubberBand(qtw.QRubberBand.Rectangle, self)
         self.__limits = {'min': (1, 1),
                          'max': (1000000, 1000000),
-                         'increments': increments}
+                         'increments': increments,
+                         'pos_increments': (1, 1)}
         self.__drag_origin = qtc.QPoint(0, 0)
         self.image_scaling = 1
         self.origin = qtc.QPoint(0, 0)
@@ -1065,7 +1067,8 @@ class RegionOfInterest(qtw.QWidget):
         """Set .minimum, .maximum., .increments."""
         (self.__limits['min'],
          self.__limits['max'],
-         self.__limits['increments']) = new_limits
+         self.__limits['increments'],
+         self.__limits['pos_increments']) = new_limits
 
     @property
     def maximum(self):

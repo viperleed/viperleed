@@ -166,7 +166,7 @@ class BadPixelsFinder(qtc.QObject):
         self.__viewer.hide()
         self.__new_settings = deepcopy(self.__camera.settings)
 
-        _, (max_roi_w, max_roi_h), _ = self.__camera.get_roi_size_limits()
+        _, (max_roi_w, max_roi_h), *_ = self.__camera.get_roi_size_limits()
         full_roi = f"(0, 0, {max_roi_w}, {max_roi_h})"
         self.__new_settings.set('camera_settings', 'roi', full_roi)
         self.__new_settings.set('camera_settings', 'binning', '1')
@@ -660,16 +660,16 @@ class BadPixels:
         bad_coordinates : Sequence or None, optional
             Coordinates of bad pixels. Should be a (N,2)-shaped
             sequence with N elements, each of which corresponds
-            to the x and y coordinate of a bad pixel. If None,
-            methods that manipulate or write bad pixels will
-            raise RuntimeError. Bad pixels can be read from a
+            to the row_no and col_no coordinate of a bad pixel.
+            If None, methods that manipulate or write bad pixels
+            will raise RuntimeError. Bad pixels can be read from a
             file with the .read(filename) method. Default is None.
         replacement_offsets : Sequence or None, optional
             Offsets of pixels to be used as replacements for
-            the bad ones. Should be a (N,2)-shaped sequence
+            the bad ones. Should be a (N, 2)-shaped sequence
             with the same number of elements N as bad_pixels.
-            Each element is an (x, y) offset (in pixels) of
-            pixels to be used for replacement of the bad ones.
+            Each element is a (row_no, col_no) offset (in pixels)
+            of pixels to be used for replacement of the bad ones.
             Default is None.
         uncorrectable : Sequence or None, optional
             Coordinates of bad pixels that cannot be corrected
@@ -683,7 +683,7 @@ class BadPixels:
         ------
         TypeError
             If the shape of bad_pixels or replacement_offsets
-            is not (N,2).
+            is not (N, 2).
         TypeError
             If camera is not a CameraABC subclass.
         ValueError
@@ -771,7 +771,8 @@ class BadPixels:
         -------
         bad_pixel_coordinates : numpy.ndarray
             Shape (N, 2), with N number of bad pixels. Each entry
-            corresponds to the (x, y) coordinates of a bad pixel.
+            corresponds to the (row_no, col_no) coordinates of a
+            bad pixel.
         """
         return self.__bad_coords_roi
 
@@ -1068,6 +1069,12 @@ class BadPixels:
         if an image of the uncorrectable pixels on the whole camera
         sensor is needed.
 
+        Parameters
+        ----------
+        filepath : str or Path, optional
+            Base directory where the image should be saved.
+            Default is '', i.e., current directory.
+
         Raises
         ------
         RuntimeError
@@ -1090,6 +1097,46 @@ class BadPixels:
         tiff = tifffile.TiffFile.from_array(
             mask,
             comment=f"Uncorrectable bad pixels mask for {self.__camera.name}",
+            model=self.__camera.name,
+            date_time=date_time
+            )
+        tiff.write(filename)
+
+    def save_bad_px_mask(self, filepath=''):
+        """Save an image with bad pixels as white.
+
+        The image will always contain only the bad pixels within the
+        current ROI. Use .apply_roi(no_roi=True) if an image of the
+        bad pixels on the whole camera sensor is needed.
+
+        Parameters
+        ----------
+        filepath : str or Path, optional
+            Base directory where the image should be saved.
+            Default is '', i.e., current directory.
+
+        Raises
+        ------
+        RuntimeError
+            If called before any bad pixel info is present.
+        """
+        if not self.__has_info:
+            raise RuntimeError(f"{self.__class__.__name__}: No "
+                               "bad pixel information present.")
+
+        # Prepare the image
+        width, height, *_ = self.__camera.image_info
+        mask = np.zeros((height, width), dtype='uint8')
+
+        if len(self.bad_pixel_coordinates):
+            bad_y, bad_x = self.bad_pixel_coordinates.T
+            mask[bad_y, bad_x] = 255
+
+        date_time = self.__datetime.strftime("%Y:%m:%d %H:%M:%S")
+        filename = Path(filepath, f"{self.__base_name}_bad_mask.tiff")
+        tiff = tifffile.TiffFile.from_array(
+            mask,
+            comment=f"Bad pixels mask for {self.__camera.name}",
             model=self.__camera.name,
             date_time=date_time
             )
