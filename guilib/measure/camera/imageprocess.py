@@ -198,7 +198,6 @@ class ImageProcessor(qtc.QObject):
             return
 
         # All frames arrived
-        # self.remove_bad_pixels_old()
         self.apply_roi()
         self.remove_bad_pixels()
         self.bin_and_average()

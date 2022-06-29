@@ -1251,7 +1251,6 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
                             'trigger', 'live')
             return
         self.busy = True
-        self.n_frames_done = 0
 
         if self.supports_trigger_burst:
             self.process_info.clear_times()
@@ -1347,6 +1346,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             self.trigger_now()
         else:
             # All frames are done
+            self.n_frames_done = 0
             self.busy = False
             self.__timeout.stop()
 
