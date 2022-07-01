@@ -105,6 +105,7 @@ def profile_lines(func):
         finally:
             profiler.print_stats()
         return result
+    _wrapper.__name__ = func.__name__
     return _wrapper
 
 
