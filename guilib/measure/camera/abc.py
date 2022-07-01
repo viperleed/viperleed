@@ -1346,9 +1346,9 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             self.trigger_now()
         else:
             # All frames are done
+            self.__timeout.stop()
             self.n_frames_done = 0
             self.busy = False
-            self.__timeout.stop()
 
     def __on_image_saved(self, fpath):
         """React to an image being saved."""
