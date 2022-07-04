@@ -47,7 +47,6 @@ class TimeResolved(MeasurementABC):
         # sit at each energy for self.energy_step_duration millisecs
         self.__energy_step_timer = qtc.QTimer(parent=self)
         self.__energy_step_timer.setSingleShot(True)
-        self.__energy_step_timer.setInterval(self.energy_step_duration)
         self.__energy_step_timer.timeout.connect(
             self._ready_for_next_measurement
             )
@@ -59,7 +58,6 @@ class TimeResolved(MeasurementABC):
         # controller to return measurements. The time interval
         # is read from the settings.
         self.__trigger_one_measurement = qtc.QTimer(parent=self)
-        self.__trigger_one_measurement.setInterval(self.measurement_interval)
         for ctrl in self.controllers:
             self.__connect_trigger_timeout(ctrl)
 
@@ -264,8 +262,17 @@ class TimeResolved(MeasurementABC):
         None.
         """
         super().start_next_measurement()
-        self.__energy_step_timer.start()
+        self.__energy_step_timer.setInterval(self.energy_step_duration)
         _continuous = self.is_continuous
+        about_to_trigger = self.primary_controller.about_to_trigger
+
+        # Each energy step will begin when the energy has settled,
+        # i.e., when the primary_controller is done setting the
+        # last energy (self.current_energy), i.e., when it emits
+        # .about_to_trigger. This is necessary, since we may be
+        # using a non-abrupt self.step_profile.
+        base.safe_connect(about_to_trigger, self.__energy_step_timer.start,
+                          type=_UNIQUE)
 
         if _continuous and self.current_step_nr == 2:
             # In continuous mode, the secondary controllers
@@ -291,6 +298,7 @@ class TimeResolved(MeasurementABC):
             # spam measurements at max speed
             return
 
+        self.__trigger_one_measurement.setInterval(self.measurement_interval)
         self.__trigger_one_measurement.start()
 
         # TODO: use a flag to decide if we want to save images
@@ -324,6 +332,10 @@ class TimeResolved(MeasurementABC):
         """
         base.safe_disconnect(self.primary_controller.controller_busy,
                              self.__check_is_finished)
+        if self.aborted:
+            # We entered this call after the measurement was aborted,
+            # likely while processing an unprocessed timeout event
+            return
 
         self.data_points.calculate_times(continuous=True)
         self.data_points.nr_steps_done += 1
