@@ -778,15 +778,15 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
 
         _requires_response = self.message_requires_response(*all_messages)
         self.busy = True
+        encoded_messages = bytearray()
         for msg in all_messages:
             encoded = self.encode(msg)
             if self.msg_markers['START'] is not None:
                 encoded[:0] = self.msg_markers['START']
             encoded.extend(self.msg_markers['END'])
-            self.__port.write(encoded)
-            # Wait a vey tiny bit to prevent writing to the port
-            # while it is still writing the previous message
-            time.sleep(0.01)
+            encoded_messages += encoded
+        self.__port.write(encoded_messages)
+
         if self.is_measure_command(sent_command):
             self.time_stamp = time.perf_counter()
         if not _requires_response:
