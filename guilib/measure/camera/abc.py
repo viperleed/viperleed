@@ -1242,7 +1242,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
 
         # Warn if exposure settings are somewhat stupid
         frame_interval = self.frame_interval
-        if (self.exposure - frame_interval) < 1:
+        if self.exposure < frame_interval:
             print(                                                              # TODO: should become a non-fatal warning
                 f"WARNING: Exposure ({self.exposure} ms) of camera "
                 f"{self.name} is shorter than the time it takes to "
