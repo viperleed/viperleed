@@ -1029,6 +1029,8 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
     for site in sl.sitelist:
         siteats = [at for at in sl.atlist if at.site == site
                    and not at.layer.isBulk]
+        if not siteats: # site is only found in bulk
+            continue
         for el in site.occ:
             total_occ = 0
             # n_occ = 0
