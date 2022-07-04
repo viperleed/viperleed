@@ -198,7 +198,8 @@ class CameraViewer(qtw.QScrollArea):
         self.__glob = {"image_size": qtc.QSize(),
                        "camera": camera,
                        "mouse_button": None,
-                       "img_array": None}                                       # TODO: may not be necessary
+                       "img_array": None,                                       # TODO: may not be necessary
+                       "max_intensity": 2**15 - 1,}
         self.__children = {"viewer": ImageViewer(),
                            "context_menu": qtw.QMenu(parent=self)}
         self.__children["roi"] = RegionOfInterest(parent=self.__img_view)
@@ -640,6 +641,7 @@ class CameraViewer(qtw.QScrollArea):
         base.safe_disconnect(disconnect_from, self.__show_image)
         base.safe_connect(connect_to, self.__show_image,
                           type=qtc.Qt.UniqueConnection)
+        _, self.__glob['max_intensity'] = self.camera.intensity_limits
 
     def __on_context_menu_triggered(self, action):
         """React to a selection in the context menu."""
@@ -729,8 +731,7 @@ class CameraViewer(qtw.QScrollArea):
         # Notice the swapping of width and height!
         height, width = img_array.shape
 
-        _, max_int = self.camera.intensity_limits
-
+        max_int = self.__glob['max_intensity']
         if np.sum(img_array > .95*max_int) > 5:
             print("saturating", timer())                                        # TEMP. Will show overlay
 
