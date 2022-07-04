@@ -291,7 +291,8 @@ class TimeResolved(MeasurementABC):
         # done by the __trigger_one_measurement timer rather than by
         # the energy setter. This means that we will start measuring
         # after .measurement_interval msec rather than right now.
-        self.set_leed_energy(self.current_energy, 0, trigger_meas=_continuous)
+        self.set_leed_energy(*self.step_profile, self.current_energy, 0,
+                             trigger_meas=_continuous)
 
         if _continuous:
             # No camera images saved when we

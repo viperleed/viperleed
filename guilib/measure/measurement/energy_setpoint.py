@@ -150,7 +150,8 @@ class MeasureEnergySetpoint(MeasurementABC):
             # Necessary to force secondaries into busy,
             # before the primary returns not busy anymore.
             controller.busy = True
-        self.set_leed_energy(self.current_energy, self.hv_settle_time)          # TODO: step shape here
+        self.set_leed_energy(*self.step_profile,
+                             self.current_energy, self.hv_settle_time)
 
     def _is_finished(self):
         """Check if the full measurement cycle is done.

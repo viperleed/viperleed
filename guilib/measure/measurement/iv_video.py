@@ -102,7 +102,9 @@ class IVVideo(MeasurementABC):
             # Necessary to force secondaries into busy,
             # before the primary returns not busy anymore.
             controller.busy = True
-        self.set_leed_energy(self.current_energy, self.__i0_settle_time)        # TODO: multiple steps here
+        profile = self.step_profile
+        self.set_leed_energy(*profile,
+                             self.current_energy, self.__i0_settle_time)
         image_name = (f"{self.current_step_nr:0>{self.__n_digits}}_"
                       f"{self.current_energy:.1f}eV.tiff")
         for camera in self.cameras:
@@ -118,8 +120,9 @@ class IVVideo(MeasurementABC):
         # overlaps as much as possible with the measurement time!
         # Frame delivery from the camera should take:
         # (exposure + 1000/fr_rate) + (n_frames - 1) * fr_interval
-        profile_duration = (
-            self.primary_controller.time_to_trigger - self.__i0_settle_time
+        profile_duration = max(
+            self.primary_controller.time_to_trigger - self.__i0_settle_time,
+            sum(profile[1::2])
             )
         camera_delay = profile_duration + self.hv_settle_time
         self._camera_timer.start(camera_delay)

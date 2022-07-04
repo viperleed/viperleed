@@ -340,6 +340,122 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
                             'measurement_settings/start_energy', '')
             return 0.0
 
+    @property
+    def step_profile(self):                                                     # TODO: probably move to generator class?
+        """Return a list of energies and times for setting the next energy.
+
+        The returned value excludes the very last step, i.e.,
+        self.current_energy and the settling time for it.
+        A typical call to set_leed_energy would be
+            self.set_leed_energy(*self.step_profile,
+                                 self.current_energy,
+                                 last_settle_time,
+                                 ...)
+
+        Returns
+        -------
+        step_profile : tuple
+            Sequence of energies and waiting intervals.
+        """
+        try:
+            profile = self.settings.getsequence("measurement_settings",
+                                                "step_profile",
+                                                fallback=("abrupt",))
+        except NotASequenceError:
+            profile = self.settings["measurement_settings"]["step_profile"]
+
+        if isinstance(profile, str):
+            profile = (profile,)
+
+        # Now we have two acceptable cases:
+        # (1) the sequence can be cast to (float, int, float, int...)
+        # (2) the first entry is a known profile shape
+        try:
+            return self.__step_profile_from_strings(profile)
+        except (ValueError, TypeError):
+            pass
+
+        shape, *params = profile
+        if shape.lower() == 'abrupt':
+            values = tuple()
+        elif shape.lower() == 'linear':
+            values = self.__get_linear_step(*params)
+        else:
+            base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
+                            'measurement_settings/step_profile',
+                            f'Unkown profile shape {shape}')
+            values = tuple()
+        return values
+
+    def __step_profile_from_strings(self, profile):
+        """Return a tuple of energies and times from strings."""
+        delta = self.current_energy - self.__previous_energy
+        if abs(delta) < 1e-4:
+            return tuple()
+
+        energies_times = [0]*len(profile)
+        for i, fraction in enumerate(profile[::2]):
+            energies_times[2*i] = float(fraction)*delta + self.current_energy
+        for i, time_ in enumerate(profile[1::2]):
+            time_ = int(time_)
+            if time_ < 0:
+                base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
+                                'measurement_settings/step_profile',
+                                'Info: Time intervals must be non-negative')
+                return tuple()
+            energies_times[2*i+1] = time_
+        return tuple(energies_times)
+
+    def __get_linear_step(self, *params):
+        """Return energies and times for a simple linear step."""
+        if len(params) != 2:
+            # Too many/too few
+            base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
+                            'measurement_settings/step_profile',
+                            'Too many/few parameters for linear profile. '
+                            f'Expected 2, found {len(params)}')
+            return tuple()
+
+        try:
+            n_steps, tot_time = (int(p) for p in params)
+        except (TypeError, ValueError):
+            base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
+                            'measurement_settings/step_profile',
+                            'Could not convert to integer the '
+                            'parameters for linear profile')
+            return tuple()
+
+        if n_steps <= 0 or tot_time < 0:
+            base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
+                            'measurement_settings/step_profile',
+                            'Linear-step parameters should be '
+                            'positive integers')
+            return tuple()
+
+        delta_t = tot_time // n_steps
+        delta_e = self.current_energy - self.__previous_energy
+        if not delta_t or abs(delta_e) < 1e-4:
+            return tuple()
+
+        # Make a line of the form f(t) = t/tot_time, with t == 0
+        # the time at which self.current_energy is set, and choose
+        # an (almost) equally-spaced time grid, with the first
+        # interval compensating for non integer-divisibility
+        times = [-tot_time,
+                 *(-(i-1)*delta_t for i in range(n_steps, 0, -1))]
+        intervals = (tj - ti for ti, tj in zip(times, times[1:]))
+
+        # The best way to approximate a function with a piecewise
+        # constant signal is to have values fk equal to the average
+        # of f over the k-th interval. For our line, this means
+        # f[k] = (t[k] + t[k+1]) / (2*tot_time)
+        slope = delta_e / (2 * tot_time)
+        energies = (slope*(ti + tj) + self.current_energy
+                    for ti, tj in zip(times, times[1:]))
+
+        # Finally interleave energies and times
+        return tuple(v for tup in zip(energies, intervals) for v in tup)
+
     @abstractmethod
     def abort(self):
         """Interrupt measurement, save partial data, set energy to zero.
