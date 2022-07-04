@@ -77,7 +77,7 @@ class NoDefaultSettingsError(Exception):
 
 
 class NotASequenceError(Exception):
-    """Exception raised when gettuple cannot return a tuple."""
+    """Exception raised when getsequence fails to return a sequence."""
 
 
 class ViPErLEEDSettings(ConfigParser):
