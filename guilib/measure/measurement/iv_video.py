@@ -108,10 +108,21 @@ class IVVideo(MeasurementABC):
         for camera in self.cameras:
             camera.process_info.filename = image_name
             self.data_points.add_image_names(image_name)
+            # Setting cameras busy prevents going to the next
+            # energy before an image has been acquired: in fact,
+            # triggering is delayed, using self._camera_timer
+            camera.busy = True
+
         # TODO: here we should start the camera no earlier than
         # hv_settle_time, but such that image acquisition
         # overlaps as much as possible with the measurement time!
-        self._camera_timer.start(self.hv_settle_time)
+        # Frame delivery from the camera should take:
+        # (exposure + 1000/fr_rate) + (n_frames - 1) * fr_interval
+        profile_duration = (
+            self.primary_controller.time_to_trigger - self.__i0_settle_time
+            )
+        camera_delay = profile_duration + self.hv_settle_time
+        self._camera_timer.start(camera_delay)
 
     def _is_finished(self):
         """Check if the full measurement cycle is done.

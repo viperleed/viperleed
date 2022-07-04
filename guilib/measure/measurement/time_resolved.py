@@ -212,12 +212,13 @@ class TimeResolved(MeasurementABC):
     @property
     def measurement_interval_min(self):                                         # TODO: depending on how we handle cameras, should also account for them
         """Return the smallest measurement-time interval."""
-        min_interval = 50
+        _MIN = 50                                                               # TODO: should probably be OS-dependent? This estimate is actually pretty bad (too small) when there's a lot of data to be plotted.
+        min_interval = _MIN
         if self.controllers:
             min_interval = 2 * max(c.initial_delay for c in self.controllers)
             # add a little, in case initial_delay == N*measurement_interval
             min_interval += 5
-        return max(50, min_interval)
+        return max(_MIN, round(min_interval))
 
     def abort(self):
         """Interrupt measurement, save partial data, set energy to zero."""
@@ -247,7 +248,7 @@ class TimeResolved(MeasurementABC):
         energy = self.current_energy + self.__delta_energy
         if self.__endless:
             self.new_data_available.emit()
-            if energy >= self.__end_energy:
+            if energy > self.__end_energy:
                 energy = self.start_energy
         return energy
 
@@ -270,7 +271,6 @@ class TimeResolved(MeasurementABC):
             # In continuous mode, the secondary controllers
             # return measurements undisturbed, and should not
             # be triggered, except for the first energy step.
-            about_to_trigger = self.primary_controller.about_to_trigger
             for ctrl in self.secondary_controllers:
                 base.safe_disconnect(about_to_trigger, ctrl.measure_now)
 
@@ -280,7 +280,7 @@ class TimeResolved(MeasurementABC):
         # at short-term time traces); "triggered" mode can be used for
         # either long-term stability measurements or I(t). Both would
         # normally be done at fixed energy.
-        # For a "triggered" measurement type, let the triggering be             # TODO: couldn't we instead connect the about_to_trigger to __trigger_one_measurement.start?
+        # For a "triggered" measurement type, let the triggering be             # TODO: couldn't we instead always measure, and rather connect the about_to_trigger to __trigger_one_measurement.start?
         # done by the __trigger_one_measurement timer rather than by
         # the energy setter. This means that we will start measuring
         # after .measurement_interval msec rather than right now.
@@ -316,7 +316,7 @@ class TimeResolved(MeasurementABC):
         decides whether we should go to the next step or if the whole
         loop is over. It is needed in continuous mode so we can
         wait the acknowledgment from the primary controller that it
-        has been in fact stopped at the end of a energy step.
+        has been in fact stopped at the end of an energy step.
 
         Returns
         -------
@@ -394,7 +394,7 @@ class TimeResolved(MeasurementABC):
         bool
         """
         super()._is_finished()
-        if self.current_energy >= self.__end_energy:
+        if self.current_energy > self.__end_energy:
             return True
         self.current_energy = self.energy_generator()
         return False
@@ -415,15 +415,17 @@ class TimeResolved(MeasurementABC):
     # than the other data (if controllers return data after the image).
     # In practice this is not going to happen now, as we're acquiring
     # only a single image per energy step.
-    def _on_camera_busy_changed(self, *_):
+    def _on_camera_busy_changed(self, busy):
         """Do nothing when continuous."""
+        if busy:
+            return
         if self.is_continuous:
             # Should never happen as there is no camera!
             raise RuntimeError("SOMETHING WRONG: THIS SHOULD NEVER HAPPEN")
         if not self.__energy_step_timer.isActive():
             # We are at the end of an energy step, and
             # waiting for the last image to be acquired
-            super()._on_camera_busy_changed()
+            super()._on_camera_busy_changed(busy)
 
     def _on_controller_data_ready(self, data):
         """Receive measurement data from the controller.
@@ -443,19 +445,20 @@ class TimeResolved(MeasurementABC):
         -------
         None.
         """
-        if not isinstance(self.sender(), ControllerABC):
+        controller = self.sender()
+        if not isinstance(controller, ControllerABC):
             # This is a safguard, and should never happen,
             # although it did happen for me a couple of times
             # at random (i.e., not reproducibly.)
             base.emit_error(
                 self, MeasurementErrors.RUNTIME_ERROR,
                 "_on_controller_data_ready got an unexpected sender "
-                f"{self.sender()}. (?== self: {self == self.sender()}). "
+                f"{controller}. (?== self: {self == controller}). "
                 "Was expecting a ControllerABC. Energy is "
                 f"{self.current_energy}."
                 )
             return
-        self.data_points.add_data(data, self.sender())
+        self.data_points.add_data(data, controller)
 
     def __prepare_continuous_mode(self):
         """Adjust the preparations to fit continuous mode.

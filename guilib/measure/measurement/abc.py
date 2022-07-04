@@ -64,6 +64,15 @@ class MeasurementErrors(base.ViPErLEEDErrorEnum):
         )
 
 
+# Progression:
+# Entry: .begin_preparation()
+# * .__continue_preparation()
+# * .__check_preparation_finished()
+# * BEGIN MEASURING by auto-call to .start_next_measurement()
+# * END OF CURRENT STEP: _on_controller_data_ready/_on_camera_busy_changed,
+#   which call ._ready_for_next_measurement(). This decides to call
+# * .start_next_measurement() or ._prepare_finalization()
+
 # too-many-instance-attributes
 class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     # TODO: doc about inner workings
     """Generic measurement class."""
@@ -155,6 +164,11 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         self.__disconnect_cameras()
         self.__cameras = new_cameras
         self.__connect_cameras()
+
+    @property
+    def aborted(self):
+        """Return whether the measurement was aborted."""
+        return self.__aborted
 
     @property
     def controllers(self):
@@ -341,6 +355,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         if self.__aborted:
             return
         self.__aborted = True
+        self._camera_timer.stop()
         self.settings.set('measurement_settings', 'was_aborted', 'True')
         self.__force_end_timer.start()
         self._prepare_finalization()
@@ -383,6 +398,13 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
             # When controllers will turn "not busy" at the end of
             # this first preparation segment, go to second segment
             ctrl.controller_busy.connect(self.__continue_preparation)
+
+        # Disconnect the camera_busy signal here, and reconnect
+        # it later in .__check_preparation_finished(). This prevents
+        # early calls to _on_camera_busy_changed.
+        for camera in self.cameras:
+            base.safe_disconnect(camera.camera_busy,
+                                 self._on_camera_busy_changed)
 
         # Notice that we have to handle only controllers:
         # .__preparation_started is already connected to camera.start
@@ -503,8 +525,10 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         try:
             self.primary_controller.measure_now()
         except AttributeError:
-            # not a MeasureControllerABC
-            pass
+            # Not a MeasureControllerABC: store explicitly
+            # the information that, at the current step, we
+            # trigger immediately.
+            self.primary_controller._time_to_trigger = 0
         self.primary_controller.about_to_trigger.emit()
 
     @abstractmethod
@@ -518,7 +542,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         implementation only prepares a new 'data point'.
 
         Reimplementations should set the new energy by calling
-        self.set_leed_energy(self.current_energy, ...).
+        self.set_leed_energy(..., self.current_energy, ...).
 
         Returns
         -------
@@ -550,10 +574,11 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         for camera in self.cameras:
             camera.camera_busy.disconnect(self.__check_preparation_finished)
 
-        # Finally, reconnect primary and secondaries to
+        # Finally, reconnect all devices to
         # be ready to actually take measurements
         self.__connect_primary_controller()
         self.__connect_secondary_controllers()
+        self.__connect_cameras()
 
         self.prepared.emit()           # Signal that we're done.
         self.current_energy = self.start_energy
@@ -622,7 +647,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         # have the right settings.
         for camera in self.cameras:
             base.safe_connect(camera.camera_busy, self._on_camera_busy_changed,
-                              type=_UNIQUE)
+                              type=_UNIQUE | qtc.Qt.QueuedConnection)
             base.safe_connect(self._request_stop_devices, camera.stop,
                               type=_UNIQUE)
             base.safe_connect(self._camera_timer.timeout, camera.trigger_now,
@@ -1003,7 +1028,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         with ZipFile(self.__temp_dir.parent / '__tmp__.zip', 'w'):
             pass
 
-    def _on_camera_busy_changed(self, *_):
+    def _on_camera_busy_changed(self, busy):
         """Receive not busy signal from camera.
 
         Receive the camera_busy signal and check if all cameras
@@ -1014,7 +1039,8 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         -------
         None.
         """
-        self._ready_for_next_measurement()
+        if not busy:
+            self._ready_for_next_measurement()
 
     def _on_controller_data_ready(self, data):
         """Receive measurement data from the controller.
@@ -1034,14 +1060,15 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         -------
         None.
         """
-        if not isinstance(self.sender(), ControllerABC):
+        controller = self.sender()
+        if not isinstance(controller, ControllerABC):
             # This is a safeguard, and should never happen,
             # although it did happen for me a couple of times
             # at random (i.e., not reproducibly.)
             base.emit_error(
                 self, MeasurementErrors.RUNTIME_ERROR,
                 "_on_controller_data_ready got an unexpected sender "
-                f"{self.sender()}. (?== self: {self == self.sender()}). "
+                f"{controller}. (?== self: {self == controller}). "
                 "Was expecting a ControllerABC. Energy is "
                 f"{self.current_energy}."
                 )
@@ -1050,7 +1077,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         # TODO: check if one controller can return data while
         # another controller has changed his busy state but
         # hasn't returned data yet. (race condition)
-        self.data_points.add_data(data, self.sender())
+        self.data_points.add_data(data, controller)
         self._ready_for_next_measurement()
 
     def __on_hardware_error(self, *_):
@@ -1111,7 +1138,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
                               type=_UNIQUE)
 
         for camera in self.cameras:
-            camera.stopped.connect(self._finalize, type=_UNIQUE)
+            base.safe_connect(camera.stopped, self._finalize, type=_UNIQUE)
 
         self._request_stop_devices.emit()
 
@@ -1131,7 +1158,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
 
         self.data_points.calculate_times()
         self.data_points.nr_steps_done += 1
-        self.new_data_available.emit()
+        self.new_data_available.emit()  # slow
 
         if self._is_finished():
             self._prepare_finalization()
