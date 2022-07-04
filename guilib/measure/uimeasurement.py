@@ -11,11 +11,30 @@ Author: Florian Doerr
 Defines the Measure class.
 """
 
+# BUG: there seems to be a problem with keeping track of timing appropriately
+#      for the primary controller (visible in continuous time-resolved with
+#      two controllers, and, e.g., a freq.gen). It looks like the primary
+#      controller times are calculated to be too short by ~20ms each step (so
+#      delays accumulate) when running both controllers at 500Hz. The probem
+#      seems much less critical for operation at 50Hz. Could it be related to
+#      some relatively slow calculation?
+# BUG: slowly resizing the plot window can cause loss of characters from
+#      the serial line of the primary controller. Most likely can be solved
+#      by moving the measurement, its data_points, and its primary controller
+#      to a non-GUI thread.
+# BUG: closing selector, closes this, but does not stop correctly a
+#      running measurement and crashes with "QThread: Destroyed while
+#      thread is still running"
+
 # TODO: progress bar for non-endless
 # TODO: quick IV video to find max intensity, and adjust camera
 # TODO: auto-scale contrast on camera viewer.
 # TODO: busy dialog where appropriate
 # TODO: fix the documentation in .ini files
+# TODO: can we use a decorator on class (or __init__) for reporting init errors
+#       with delay? The complication is that one needs to call QObject.__init__
+#       before using object as parent (e.g., timers) and before signals can be
+#       connected.
 
 from copy import deepcopy
 from pathlib import Path
@@ -118,6 +137,7 @@ class Measure(ViPErLEEDPluginBase):
         self.__delayed_start.setSingleShot(True)
         self.__delayed_start.timeout.connect(self.__run_measurement)
         self.__camera_viewers = []
+        self._timestamps = {'start': -1, 'prepared': -1, 'finished': -1}
 
     def __compose(self):  # too-many-statements
         """Place children widgets and menus."""
@@ -219,9 +239,13 @@ class Measure(ViPErLEEDPluginBase):
         controllers.setEnabled(bool(controllers.actions()))
 
     def __run_measurement(self):
+        self._timestamps['start'] = time.perf_counter()
         self.measurement.begin_preparation()
         self.__switch_enabled(False)
         self.statusBar().showMessage('Busy')
+
+    def __on_measurement_prepared(self):
+        self._timestamps['prepared'] = time.perf_counter()
 
     def __on_camera_clicked(self, *_):                                          # TODO: may want to display a busy dialog with "starting camera <name>..."
         cam_name = self.sender().text()
@@ -297,6 +321,7 @@ class Measure(ViPErLEEDPluginBase):
 
     def __on_finished(self, *_):
         """Reset all after a measurement is over."""
+        self._timestamps['finished'] = time.perf_counter()
         for controller in self.measurement.controllers:
             controller.disconnect_()
         self.__switch_enabled(True)
@@ -304,6 +329,14 @@ class Measure(ViPErLEEDPluginBase):
 
     def __print_done(self):
         print("\n#### DONE! ####")
+        start, prep, finish = self._timestamps.values()
+        n_steps = self.measurement.data_points.nr_steps_done
+        txt = (f"Measurement took {finish-start:.2f} s, of "
+              f"which {prep-start:.2f} s for preparation. ")
+        if n_steps:
+            txt += (f"This is on average {1000*(finish-prep)/n_steps:.2f} ms"
+                    " per energy step")
+        print(txt, "\n")
 
     def __switch_enabled(self, idle):
         """Switch enabled status of buttons.
@@ -346,6 +379,7 @@ class Measure(ViPErLEEDPluginBase):
 
         self.measurement = measurement_cls(config)
         self.measurement.new_data_available.connect(self.__on_data_received)
+        self.measurement.prepared.connect(self.__on_measurement_prepared)
 
         self._ctrls['abort'].clicked.connect(self.measurement.abort)
         self._ctrls['set_energy'].clicked.connect(self.__on_set_energy)         # NOT NICE! Keeps live the measurement, and appends data at random.
@@ -461,18 +495,18 @@ class Measure(ViPErLEEDPluginBase):
         data = DataPoints()
         data.error_occurred.connect(self.error_occurred)
         config = ViPErLEEDSettings()
+        fname = Path(fname)
+        suffix = fname.suffix
 
-        if (fname.endswith('csv')
-                and not self.__read_folder(fname, data, config)):
-            return
-        elif (fname.endswith('zip')
-              and not self.__read_archive(fname, data, config)):
-            return
-        else:
+        if suffix not in ('.csv', '.zip'):                                        # TODO: may make sense to rather look for a (single) .csv file in the folder before erroring out
             base.emit_error(self, UIErrors.FILE_UNSUPPORTED, fname, '')
             return
+        if (suffix == '.csv' and not self.__read_folder(fname, data, config)):
+            return
+        if (suffix == '.zip' and not self.__read_archive(fname, data, config)):
+            return
 
-        self._glob['last_dir'] = str(Path(fname).parent)
+        self._glob['last_dir'] = str(fname.parent)
         self._glob['plot'].data_points = data
         self._glob['last_cfg'] = config
 
