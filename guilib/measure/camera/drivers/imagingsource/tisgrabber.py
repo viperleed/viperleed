@@ -43,6 +43,7 @@ from viperleed.guilib.measure.camera.drivers.imagingsource.models import (
     ISModels
     )
 
+
 dll_path = Path(__file__).parent.resolve()
 try:
     os.add_dll_directory(dll_path)
@@ -346,7 +347,7 @@ class WindowsCamera:
         self.set_vcd_property("Exposure", "Value", exposure_time, method=int)
 
     @property
-    def frame_rate_range(self):
+    def frame_rate_range(self):     # TODO: slow. Store property? When does it change? Probably only with video/sink format
         """Return the minimum and maximum available image readout rates."""
         # This is a bit of a workaround: IC_GetAvailableFrameRates
         # seems not to return the correct range. Will instead set
@@ -419,7 +420,7 @@ class WindowsCamera:
         """
         was_running = self.is_running
         if was_running:
-            self.stop()
+            self.pause()
         self._dll_set_frame_rate(self.__handle, rate)
         if was_running:
             self.start()
@@ -600,7 +601,7 @@ class WindowsCamera:
         # Reset stream mode to continuous as then it is just a
         # matter of having enable_trigger(True/False) for getting
         # single frames delivered upon request [start('triggered')
-        # + send_software_trigger] or a continuous stream of
+        # + send_software_trigger()] or a continuous stream of
         # images [start('continuous')].
         self.trigger_enabled = was_triggered
         self.__set_frame_acquisition_mode(StreamMode.CONTINUOUS)
@@ -651,9 +652,8 @@ class WindowsCamera:
         """Enable or disable capability to respond to a trigger signal.
 
         Trigger signals may either be via hardware or via software.
-        This method also sets the frame_rate to its maximum
-        value when enabling the trigger. After disabling the trigger,
-        one should explicitly set the desired frame_rate.
+        Notice that disabling the trigger while the camera was
+        already .start()ed makes it return a stream of frames.
 
         Parameters
         ----------
@@ -755,8 +755,8 @@ class WindowsCamera:
         """Abort frame delivery."""
         if not self.is_running or not self.trigger_enabled:
             return
-        self.stop()
-        self.start('triggered')
+        self.pause()
+        self._dll_start_live(self.__handle, False)
 
     _dll_close_device = _dll.IC_CloseVideoCaptureDevice
     _dll_close_device.restype = None  # Returns void
@@ -895,6 +895,23 @@ class WindowsCamera:
         # images [start('continuous')].
         self.__set_frame_acquisition_mode(StreamMode.CONTINUOUS)
 
+    _dll_pause_live = _dll.IC_SuspendLive
+    _dll_pause_live.errcheck = check_dll_return()
+    _dll_pause_live.argtypes = (GrabberHandlePtr,)
+
+    def pause(self):
+        """Pause camera.
+
+        A puased camera can be .start()ed a bit more quickly than
+        a .stop()ped one. However, one should not attempt to edit
+        .video_format or .sink_format.
+
+        Returns
+        -------
+        None.
+        """
+        self._dll_pause_live(self.__handle)
+
     _dll_set_frame_ready_callback = _dll.IC_SetFrameReadyCallback
     _dll_set_frame_ready_callback.errcheck = check_dll_return()
     # The py_object at the end is the same that will later be passed
@@ -1002,7 +1019,7 @@ class WindowsCamera:
         else:
             self.trigger_enabled = False
         if self.is_running:
-            self.stop()
+            self.stop()             # could we use pause()?
         self._dll_start_live(self.__handle, bool(show_video))
 
     _dll_stop_live = _dll.IC_StopLive

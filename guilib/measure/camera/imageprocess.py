@@ -187,6 +187,7 @@ class ImageProcessor(qtc.QObject):
         self.processed_image = np.zeros_like(first_frame,
                                              dtype=f"{kind}int{process_bits}")
 
+    @qtc.pyqtSlot(np.ndarray)
     def process_frame(self, frame):
         """Process a new frame."""
         if self.missing_frames > 0:

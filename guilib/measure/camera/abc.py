@@ -167,6 +167,12 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         self.__timeout.setSingleShot(True)
         self.__timeout.timeout.connect(self.__on_timed_out)
 
+        # Store some property values to limit the number
+        # of potentially slow checks. Values are set in
+        # the property getters where appropriate
+        self.__properties = {'binning': 1, 'exposure': 1.0, 'gain': 0.0,
+                             'n_frames': 1, 'roi': tuple()}
+
         # Keep track of some errors that we want to report
         # only once. This 'list' is cleared every time a
         # camera is disconnected.
@@ -235,6 +241,10 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         except (TypeError, ValueError):  # Cannot be read as int
             binning_factor = -1
 
+        _stored = self.__properties['binning']
+        if _stored == binning_factor:
+            return binning_factor
+
         min_bin, max_bin = self.get_binning_limits()
         if binning_factor < min_bin or binning_factor > max_bin:
             base.emit_error(self, CameraErrors.INVALID_SETTING_WITH_FALLBACK,
@@ -243,6 +253,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
                             'camera_settings/binning', 1)
             binning_factor = 1
             self.settings.set('camera_settings', 'binning', '1')
+        self.__properties['binning'] = binning_factor
         return binning_factor
 
     @property
@@ -321,13 +332,23 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             # Seems a bug: getfloat always returns a float
             exposure_time = -1
 
-        min_exposure, max_exposure = self.get_exposure_limits()
-        if exposure_time < min_exposure or exposure_time > max_exposure:
+        _stored = self.__properties['exposure']
+        if _stored == exposure_time:
+            return exposure_time
+
+        min_exp, max_exp = self.get_exposure_limits()
+        if exposure_time < min_exp or exposure_time > max_exp:
             base.emit_error(self, CameraErrors.INVALID_SETTINGS,
                             'measurement_settings/exposure',
-                            f'Info: out of range ({min_exposure}, {max_exposure})')
-            exposure_time = min_exposure
+                            f'Info: out of range ({min_exp}, {max_exp})')
+            exposure_time = min_exp
+        self.__properties['exposure'] = exposure_time
         return exposure_time
+
+    @property
+    def frame_interval(self):
+        """Return the time interval (msec) between frames."""
+        return max(self.exposure, 1000/self.get_frame_rate())
 
     @property
     def gain(self):
@@ -347,6 +368,10 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             # Seems a bug: getfloat always returns a float
             gain = -1
 
+        _stored = self.__properties['gain']
+        if _stored == gain:
+            return gain
+
         min_gain, max_gain = self.get_gain_limits()
         if gain < min_gain or gain > max_gain:
             base.emit_error(self, CameraErrors.INVALID_SETTINGS,
@@ -354,6 +379,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
                             f'Info: out of range ({min_gain}, {max_gain})')
             gain = min_gain
             self.settings.set('measurement_settings', 'gain', str(gain))
+        self.__properties['gain'] = gain
         return gain
 
     @property
@@ -422,6 +448,10 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             # Seems a bug: getint always returns an integer
             n_frames = -1
 
+        _stored = self.__properties['n_frames']
+        if _stored == n_frames:
+            return n_frames
+
         min_n, max_n = self.get_n_frames_limits()
         if n_frames < min_n or n_frames > max_n:
             base.emit_error(self, CameraErrors.INVALID_SETTING_WITH_FALLBACK,
@@ -429,7 +459,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
                             'measurement_settings/n_frames', 1)
             n_frames = 1
             self.settings.set('measurement_settings', 'n_frames', '1')
-
+        self.__properties['n_frames'] = n_frames
         return n_frames
 
     @property
@@ -470,12 +500,15 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         except (TypeError, ValueError):  # Not iterable or not ints
             roi = tuple()
 
+        _stored = self.__properties['roi']
+        if _stored and _stored == roi:
+            return roi
+
         _, (max_w, max_h), _, (roi_dx, roi_dy) = self.get_roi_size_limits()
 
         if not self.__is_valid_roi(roi):
             base.emit_error(self, CameraErrors.INVALID_SETTINGS,
-                            'camera_settings/roi',
-                            'Info: ROI is invalid.')
+                            'camera_settings/roi', 'Info: ROI is invalid.')
             self.settings.set('camera_settings', 'roi', 'None')
             return 0, 0, max_w, max_h
 
@@ -514,6 +547,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             if self.__is_valid_roi(new_roi):
                 self.settings.set('camera_settings', 'roi', str(new_roi))
                 roi = new_roi
+        self.__properties['roi'] = roi
         return roi
 
     @property
@@ -895,11 +929,13 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
     def get_frame_rate(self):
         """Return the number of frames delivered per second.
 
-        This property should be reimplemented in concrete
-        subclasses. Notice that this may be smaller than
-        1000/self.exposure, as a camera may take longer than
-        self.exposure to transmit back large images acquired
-        with short exposure.
+        This property should be reimplemented in concrete subclasses.
+
+        Notice that this quantity is unrelated to 1000/self.exposure.
+        If self.exposure/1000 is larger than 1/frame_rate, frames are
+        returned at self.exposure time intervals. Otherwise at intervals
+        of 1/frame_rate duration. You can use self.frame_interval to
+        get the correct time interval between frames.
 
         Returns
         -------
@@ -1203,6 +1239,16 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         # same reason.
         base.safe_connect(self.frame_ready, self.__on_frame_ready,
                           type=qtc.Qt.UniqueConnection)
+
+        # Warn if exposure settings are somewhat stupid
+        frame_interval = self.frame_interval
+        if (self.exposure - frame_interval) < 1:
+            print(                                                              # TODO: should become a non-fatal warning
+                f"WARNING: Exposure ({self.exposure} ms) of camera "
+                f"{self.name} is shorter than the time it takes to "
+                f"deliver frames ({frame_interval:.2f} ms). Increase "
+                "the exposure time to avoid wasting time."
+                )
         self.started.emit()
 
     @abstractmethod
@@ -1258,8 +1304,14 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         # Start the timeout timer: will fire if it takes
         # more than 5 s longer than the expected time to
         # receive all frames needed for averaging.
-        frame_time = max(self.exposure, 1000/self.get_frame_rate())
-        self.__timeout.start(int(frame_time * self.n_frames + 5000))
+        # The correct time interval would be
+        #         exposure + 1/frame_rate
+        #        + (n_frames - 1) * self.frame_interval
+        # with .frame_interval == max(exposure, 1/frame_rate).
+        # However, we don't need to be super precise here,
+        # and we can overestimate the interval to:
+        frames_time = (self.n_frames + 1) * self.frame_interval
+        self.__timeout.start(int(frames_time + 5000))
 
     def __already_reported(self, error_details):
         """Return whether an error was already reported.

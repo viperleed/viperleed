@@ -76,7 +76,7 @@ def on_frame_ready_(__grabber_handle, image_start_pixel,
         # n_lost is currently unused but will be as soon as
         # the todo below is taken care of.
         n_lost, best_rate = estimate_frame_loss(process_info.frame_times,
-                                                camera.driver.frame_rate,
+                                                camera.get_frame_rate(),
                                                 camera.exposure)
         camera.best_next_rate = best_rate
 
@@ -90,15 +90,15 @@ def on_frame_ready_(__grabber_handle, image_start_pixel,
             # time can be made longer.
         return
 
-    # This may happen if the camera was set to 'triggered' and it
-    # supports trigger burst, as we keep a little safety margin
-    # in case frames are actually lost. Notice the use of a signal:
-    # A direct call makes the program access the camera from two
-    # different threads (main, and the thread in which this callback
-    # runs) and crashes the whole application.
+    # Interrut when all frames arrived. This may happen if the camera
+    # was set to 'triggered' and it supports trigger burst, as we keep
+    # a little safety margin in case frames are actually lost. Notice
+    # the use of a signal: A direct call makes the program access the
+    # camera from two different threads (main, and the thread in which
+    # this callback runs) and silently crashes the whole application.
     if (camera.mode == 'triggered'
         and camera.supports_trigger_burst
-            and n_frames_received >= camera.n_frames):
+            and n_frames_received >= camera.n_frames > 1):
         camera.abort_trigger_burst.emit()
 
     # Prepare the actual image and send it out
@@ -155,7 +155,7 @@ def _img_ptr_to_numpy(image_start_pixel, camera):
     image = np.ndarray(buffer=img_buffer, dtype=dtype, shape=shape)
 
     # (4.2) pick only the relevant one (i.e., green for multicolor),
-    #       making the image 2D.
+    #       making the image 2D. Notice that this returns a VIEW!
     return image[:,:,color_fmt.green_channel]
 
 
@@ -244,6 +244,7 @@ class ImagingSourceCamera(CameraABC):
         self.hardware_supported_features.extend(['roi', 'color_format'])
         self.is_finding_best_frame_rate = False
         self.best_next_rate = 1024
+        self.__burst_count = -1
 
         self.__has_callback = False
 
@@ -451,7 +452,7 @@ class ImagingSourceCamera(CameraABC):
 
     def get_frame_rate(self):
         """Return the number of frames delivered per second."""
-        return min(self.driver.frame_rate, 1000/self.exposure)
+        return self.driver.frame_rate
 
     def get_gain(self):
         """Get the gain (in decibel) from the camera device."""
@@ -660,7 +661,8 @@ class ImagingSourceCamera(CameraABC):
 
         # Call base that starts the processing thread if needed
         super().start()
-        self.driver.frame_rate = self.best_next_rate
+        if abs(self.best_next_rate - self.driver.frame_rate) > 1:
+            self.driver.frame_rate = self.best_next_rate
         self.process_info.clear_times()
         mode = self.mode if self.mode == 'triggered' else 'continuous'
         self.driver.start(mode)
@@ -685,16 +687,21 @@ class ImagingSourceCamera(CameraABC):
         error_occurred(CameraErrors.UNSUPPORTED_OPERATION)
         """
         super().trigger_now()
-        self.driver.frame_rate = self.best_next_rate
+        if abs(self.best_next_rate - self.driver.frame_rate) > 1:
+            self.driver.frame_rate = self.best_next_rate
         if self.supports_trigger_burst:
-            trigger_burst = self.n_frames
-            if trigger_burst > 1:
+            burst_count = self.n_frames
+            if burst_count > 1:
                 # If more than one trigger frame, keep a little
                 # safety margin, in case some frames are lost.
                 # NB: the estimate of the best frame rate seems
                 # to work pretty well, so only 20% more frames
                 # should be enough.
-                trigger_burst = ceil(trigger_burst * 1.2)
-            self.driver.trigger_burst_count = trigger_burst
+                # TODO: does it make sense to scale the excess with
+                #       how far the frame rate is from the maximum?
+                burst_count = ceil(burst_count * 1.2)
+            if burst_count != self.__burst_count:
+                self.driver.trigger_burst_count = burst_count
+                self.__burst_count =  self.driver.trigger_burst_count
         self.driver.send_software_trigger()
 # pylint: enable=too-many-public-methods
