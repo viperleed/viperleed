@@ -46,6 +46,9 @@ class DataErrors(ViPErLEEDErrorEnum):
                            "that was not specified in the DataPoints class.")
     UNKOWN_QUANTITIES = (401,
                          "Unkown quantite(s) {} will be ignored")
+    NO_DATA_FOR_CONTROLLER = (402,
+                              "Controller at {} did not return any data. "
+                              "Consider increasing energy_step_duration.")
 
 
 class QuantityInfo(enum.Enum):
@@ -349,7 +352,11 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                     )
         for ctrl, ctrl_times in self[-1][time].items():
             if not ctrl_times:
-                # Should never happen
+                # May happen in time-resolved when the energy step              # TODO: this happens especially while replotting. May be solved by moving measurement (and primary) to its own thread.
+                # duration is so small that (typically the primary)
+                # controller did not yet return any measurement.
+                emit_error(self, DataErrors.NO_DATA_FOR_CONTROLLER,
+                           ctrl.port_name)
                 continue
             first_time = ctrl_times[0]
             if (not continuous
@@ -500,7 +507,10 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                         extracted[ctrl][quantity].append(measurements)
 
             # Then, take care of the times
-            start_time = data_point[q_time][self.primary_controller][0]
+            try:
+                start_time = data_point[q_time][self.primary_controller][0]
+            except IndexError:
+                start_time = 0
             for ctrl in extracted:
                 ctrl_times = data_point[q_time][ctrl]
                 if not separate_steps:
