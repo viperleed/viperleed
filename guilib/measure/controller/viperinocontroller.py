@@ -23,11 +23,20 @@ from viperleed.guilib.measure.datapoints import QuantityInfo
 from viperleed.guilib.measure.classes.settings import NotASequenceError
 
 
+# TODO: it looks like the nominal ADC frequencies are not necessarily
+#       quite correct. This is at the origin of a misalignment on the
+#       time axis when using multiple controllers. It appears as if
+#       the 50Hz is quite correct, but the 500Hz can deviate a few
+#       percent from the nominal value. It may make sense to have a
+#       tool for calibrating such frequencies.
+
+
 _MANDATORY_CMD_NAMES = (
     "PC_AUTOGAIN", "PC_CONFIGURATION", "PC_SET_UP_ADCS", "PC_OK", "PC_RESET",
     "PC_SET_VOLTAGE", "PC_ERROR", "PC_CALIBRATION", "PC_MEASURE_ONLY",
     "PC_CHANGE_MEAS_MODE", "PC_STOP", "PC_SET_VOLTAGE_ONLY", "PC_SET_SERIAL_NR"
     )
+
 
 class ViPErinoErrors(base.ViPErLEEDErrorEnum):
     """Errors specific to Arduino-based ViPErLEED controllers."""
@@ -132,6 +141,22 @@ class ViPErinoController(MeasureControllerABC):
                 '', 'measurement_settings/num_meas_to_average', nr_average
                 )
         return (3 + (nr_average - 1) / 2) * self.measurement_interval
+
+    @property
+    def measurement_interval(self):
+        """Return the time interval between measurements (msec)."""
+        update_rate_raw = self.settings.get('controller', 'update_rate',
+                                            fallback='4')
+        try:
+            meas_f = self.settings.getfloat('adc_update_rate', update_rate_raw,
+                                            fallback=50)
+        except (TypeError, ValueError):
+            # pylint: disable=redefined-variable-type
+            # Seems a pylint bug.
+            meas_f = 50.0
+            base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
+                            f"adc_update_rate/{update_rate_raw}", "")
+        return 1000 / meas_f
 
     @property
     def name(self):
@@ -256,13 +281,12 @@ class ViPErinoController(MeasureControllerABC):
                             "Number of energy and time steps do not match. "
                             "Expected an even number of arguments, found "
                             f"{len(more_steps) + 2} arguments.")
-        number_of_steps = len(energies_and_times) // 2
 
-        for i in range(number_of_steps):
-            tmp_energy = self.true_energy_to_setpoint(energies_and_times[2*i])
-            tmp_energy = int(round(tmp_energy * conversion_factor))
-            tmp_energy = max(0, min(tmp_energy, 65535))
-            energies_and_times[2*i] = tmp_energy
+        for i, energy in enumerate(energies_and_times[::2]):
+            energy = self.true_energy_to_setpoint(energy)
+            energy = int(round(energy * conversion_factor))
+            energy = max(0, min(energy, 65535))
+            energies_and_times[2*i] = energy
 
         # Since we may wait a potentially long time here, we
         # explicitly set the timeout keyword to be the timeout
@@ -274,7 +298,7 @@ class ViPErinoController(MeasureControllerABC):
             base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
                             'serial_port_settings/timeout', "")
             timeout = 0
-        timeout = max(timeout, 0) + self.time_to_trigger
+        timeout = max(timeout, 0) + sum(energies_and_times[1::2])
         self.send_message(cmd, energies_and_times, timeout=timeout)
 
     def start_autogain(self):
@@ -551,22 +575,6 @@ class ViPErinoController(MeasureControllerABC):
             return
         stop = self.settings.get('available_commands', 'PC_STOP')
         self.send_message(stop)
-
-    @property
-    def measurement_interval(self):
-        """Return the time interval between measurements (msec)."""
-        update_rate_raw = self.settings.get('controller', 'update_rate',
-                                            fallback='4')
-        try:
-            meas_f = self.settings.getint('adc_update_rate', update_rate_raw,
-                                          fallback=50)
-        except (TypeError, ValueError):
-            # pylint: disable=redefined-variable-type
-            # Seems a pylint bug.
-            meas_f = 50
-            base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
-                            f"adc_update_rate/{update_rate_raw}", "")
-        return 1000 / meas_f
 
     def list_devices(self):
         """List Arduino Micro VipErLEED hardware.

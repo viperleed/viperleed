@@ -251,10 +251,9 @@ class ViPErLEEDSerial(SerialABC):
 
         # Flipping the arduino_states section in order to access
         # the name of the state (key)
-        arduino_states = {int(code): state
+        arduino_states = {int(code): state.upper()
                           for state, code
-                          in self.port_settings['arduino_states'].items()
-                          if not state.startswith('#')}
+                          in self.port_settings['arduino_states'].items()}
         # Preparing message which will be formatted and emitted.
         msg_to_format = ("ViPErLEED hardware {error_name} occurred while in"
                          " {state}. Reason: {err_details}")
@@ -549,9 +548,11 @@ class ViPErLEEDSerial(SerialABC):
                                                  'PC_MEASURE_ONLY')
         pc_ok = self.port_settings.get('available_commands', 'PC_OK')
 
+        last_cmd = self.__last_request_sent
+
         # The following check catches data that is received
         # from setting up a connection to the micro controller.
-        if (self.__last_request_sent == pc_configuration
+        if (last_cmd == pc_configuration
                 and len(self.unprocessed_messages) != 1):
             self.unprocessed_messages = []
             return
@@ -562,7 +563,7 @@ class ViPErLEEDSerial(SerialABC):
             if len(message) == 1 and message == pc_ok.encode():
                 if self.__changed_mode:
                     self.__changed_mode = False
-                elif self.__last_request_sent == pc_set_voltage:
+                elif last_cmd == pc_set_voltage:
                     self.about_to_trigger.emit()
                 self.busy = False
             # Hardware config and measurement values are both 4 bytes long.
@@ -571,13 +572,12 @@ class ViPErLEEDSerial(SerialABC):
             # is on and data got returned after a new request has been
             # sent, nothing is done with it.
             elif len(message) == 4:
-                if self.__last_request_sent == pc_configuration:
+                if last_cmd == pc_configuration:
                     # Firmware already checked on serial side.
                     info = self.__firmware_and_hardware(message)
                     self.data_received.emit(info)
                     self.busy = False
-                elif self.__last_request_sent in (pc_set_voltage,
-                                                  pc_measure_only):
+                elif last_cmd in (pc_set_voltage, pc_measure_only):
                     self.__measurements.append(self.__bytes_to_float(message))
                     if len(self.__measurements) < 3:
                         # Not enough data yet.
@@ -590,7 +590,7 @@ class ViPErLEEDSerial(SerialABC):
                     # may swallow stray 4-long messages.
                     self.__measurements = []
             elif len(message) == 8:
-                if self.__last_request_sent == pc_configuration:
+                if last_cmd == pc_configuration:
                     info = self.__firmware_and_hardware(message)
                     self.data_received.emit(info)
                     self.busy = False

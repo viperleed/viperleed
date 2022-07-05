@@ -11,13 +11,6 @@ Author: Florian Doerr
 Defines the Measure class.
 """
 
-# BUG: there seems to be a problem with keeping track of timing appropriately
-#      for the primary controller (visible in continuous time-resolved with
-#      two controllers, and, e.g., a freq.gen). It looks like the primary
-#      controller times are calculated to be too short by ~20ms each step (so
-#      delays accumulate) when running both controllers at 500Hz. The probem
-#      seems much less critical for operation at 50Hz. Could it be related to
-#      some relatively slow calculation?
 # BUG: slowly resizing the plot window can cause loss of characters from
 #      the serial line of the primary controller. Most likely can be solved
 #      by moving the measurement, its data_points, and its primary controller
