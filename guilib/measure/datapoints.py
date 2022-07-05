@@ -371,7 +371,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                 quantity = ctrl.measured_quantities[0]
                 n_measurements = len(self[-1][quantity][ctrl])
                 self[-1][time][ctrl] = [
-                    first_time + ctrl.measurement_interval * i / 1000
+                    first_time + ctrl.measurement_interval * i / 1000           # TODO: incorrect for non-continuous. Should probably use the timestamps from triggering.
                     for i in range(n_measurements)
                     ]
             else:
@@ -412,6 +412,8 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         """
         # Keep only the quantities that were measured
         quantities = [q for q in quantities if q in self[0]]
+        if not quantities:
+            return {}, []
 
         # Prepare the structure of the dictionary to be returned:
         #   {controller:
@@ -484,6 +486,8 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         """
         # Keep only the quantities that were measured
         quantities = [q for q in quantities if q in self[0]]
+        if not quantities:
+            return {}, []
 
         # Prepare the structure of the dictionary to be returned:
         #       {controller: {quantity: measurements}, }

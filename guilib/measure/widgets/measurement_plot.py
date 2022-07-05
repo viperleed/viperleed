@@ -144,7 +144,9 @@ class MeasurementPlot(qtw.QWidget):
         plotted data and new data has to be added to
         the plot.
         """
-        if not self.data_points or not self.data_points.has_data:
+        if (not self.data_points
+            or not self.data_points.has_data
+                or not self.plotted_quantities):
             return
 
         if self.data_points.is_time_resolved:
