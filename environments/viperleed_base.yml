@@ -1,0 +1,17 @@
+name: viperleed
+channels:
+  - defaults
+dependencies:
+  - python=3.8
+  - numpy
+  - scipy
+  - wrapt
+  - matplotlib
+  - scikit-learn
+  - psutil # on linux, may require sudo apt install pythonxx.xx-dev to build
+  - line_profiler
+  - pip
+  - pip:
+    - quicktions
+    - pyqt5
+    - mplcairo

@@ -941,7 +941,7 @@ def search(sl, rp):
                             and (repeat or checkrepeat or not stop)):
                         try:
                             processSearchResults(sl, rp, final=False)
-                        except Exception as e:
+                        except Exception as e: # too general
                             logger.warning("Failed to update POSCAR_OUT "
                                            "and VIBROCC_OUT: " + str(e))
                 if stop:

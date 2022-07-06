@@ -91,7 +91,9 @@ def readROUT(filename="ROUT"):
         line = line.strip()
         if line.endswith("<---"):
             line = line[:-4]
-        values = line[16:].split()
+
+        # rfactor.f reserves 5A4 i.e. 20 characters for the beam name
+        values = line[19:].split()
         try:
             index = int(values[0])
             v0r = float(values[2])

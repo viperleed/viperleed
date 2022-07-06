@@ -1,6 +1,6 @@
 ! Subroutines and functions for R factor calculation in ViPErLEED
 !
-! v0.2.2
+! v0.2.3
 !
 ! Author: Alexander M. Imre, 2021
 ! for license info see ViPErLEED Package
@@ -284,6 +284,9 @@ subroutine r_beamset_V0r_opt_on_grid( &
         r_beams(:) = 999d0
         RETURN
     end if
+
+    ! initialize to some value ! TODO: find a better way to deal with this
+    closest_step = 0
 
 
     ALLOCATE(V0r_step(n_steps), V0r_step_real(n_steps))
@@ -632,17 +635,9 @@ subroutine parabola_lsq_fit(n,x,y, w, B, ierr)
     A(3,1) = A(1,3)
     A(3,2) = A(2,3)
 
-    ! print*, "A"
-    ! print*, A(1,1:3)
-    ! print*, A(2, 1:3)
-    ! print*, A(3, 1:3)
-    ! print*, "B"
-    ! print*, B
-
+    !> Call Lapack subroutine
     call DSYSV('U', 3, 1, A, 3, ipiv, b, 3, work, 18, LAPACK_info)
     if (LAPACK_info .ne. 0) ierr = 860
-
-
 
 
 end subroutine parabola_lsq_fit
@@ -731,10 +726,10 @@ subroutine r_pendry_beamset_y(n_E, E_step, n_beams, y1, y2, id_start_1, id_start
             r_pendry_beams(i), numerators(i), denominators(i), n_overlapping_points(i))
     end do
 
-    ! If any beam R-factor is reported as NaN, denominator and numerator will be set to 0 - thus sum still works regardless
-    ! However, we need to watch out for the case of numerator/denominator being NaNs. (This may be caused by the intensity being constant 0.)
+    !> If any beam R-factor is reported as NaN, denominator and numerator will be set to 0 - thus sum still works regardless
+    !! However, we need to watch out for the case of numerator/denominator being NaNs. (This may be caused by the intensity being constant 0.)
 
-    ! Sum numerators, denominators, r_pendry_beams because if any contains a NaN or +/-Inf, the sum will too
+    !> Sum numerators, denominators, r_pendry_beams because if any contains a NaN or +/-Inf, the sum will too
     if (.not.((ALL(ieee_is_normal(numerators + denominators + r_pendry_beams))))) then
         ! Can still calcuate an R factor, but it may be unsable. Give back R and warning
         ierr = -812
@@ -821,19 +816,19 @@ subroutine Rfactor_v0ropt(opt_type, min_steps, max_steps, nr_used_v0)
     ! Decide which optimization is used
     nr_used_v0 = 0 ! initialize to 0
 
-    ! For grid search: V0 will be sampled on an equally spaced grid in range (V0_min, V0_max) with max_steps steps.
-    ! For  example, with values V0_min = 2, V0_max = 5 and max_steps = 10, the sampled points would be:
-    ! 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0
-    ! The optional paramter min_steps is unused in this case.
-    !
-    ! For parabola search: V0 will initially be sampled in three points (V0_min, V0_max and (V0_min + V0_max)/2),
-    ! then an attempt is made to fit a parbola of the form R(V0) = a*V0**2 + b*V0 + c. If the curvature of the parabola
-    ! is negative, subsequent V0s are choosen close to the predicted minimum and such as to test the fit. The
-    ! optimization will stop if the resultant R-factor has converged (criterion V0_conv) though at least
-    ! min_steps values of V0 are evaluated. If the curvature of the parabola is positive, or the fit of the parabola
-    ! becomes continually worse the optimization defaults to sampling a grid. (Similar as above, though already
-    ! evaluated values will not be discarded).
-    !
+    !> For grid search: V0 will be sampled on an equally spaced grid in range (V0_min, V0_max) with max_steps steps.
+    !! For  example, with values V0_min = 2, V0_max = 5 and max_steps = 10, the sampled points would be:
+    !! 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0
+    !! The optional paramter min_steps is unused in this case.
+    !!
+    !! For parabola search: V0 will initially be sampled in three points (V0_min, V0_max and (V0_min + V0_max)/2),
+    !! then an attempt is made to fit a parbola of the form R(V0) = a*V0**2 + b*V0 + c. If the curvature of the parabola
+    !! is negative, subsequent V0s are choosen close to the predicted minimum and such as to test the fit. The
+    !! optimization will stop if the resultant R-factor has converged (criterion V0_conv) though at least
+    !! min_steps values of V0 are evaluated. If the curvature of the parabola is positive, or the fit of the parabola
+    !! becomes continually worse the optimization defaults to sampling a grid. (Similar as above, though already
+    !! evaluated values will not be discarded).
+
     if (opt_type == 0) then
     ! optimize grid
     elseif (opt_type == 1) then
@@ -858,34 +853,34 @@ subroutine alloc_beams_arrays( &
     deriv_y_out_array, &
     ierr &
     )
-    ! Allocates arrays of the right size to be used by prepare_beams
-    !
-    ! Allocation of arrays is bad for performance, so arrays should be reused where possible.
-    ! For the r-factor calculation we need to interpolate the beams and calculate the Y-function
-    ! via the derivative. These operations reqire relatively large arrays that are only used once or twice. 
-    ! By reusing some of the arrays, we can save time.
-    !
-    ! Parameters
-    ! ----------
-    ! n_beams: int
-    ! Number of beams.
-    !
-    ! n_e_grid_out: int
-    ! Number of energies after interpolation.
-    !
-    ! Returns
-    ! -------
-    ! beams_out_array: array of float
-    ! Float array for interpolated beams. Initialized to NaNs.
-    !    
-    ! deriv_y_out_array : array of float
-    ! Float array to hold derivatives of beams (may subsequently be overwritten by the Y-function). Initalized to NaNs.
-    !
-    ! e_start_beams_out:  array of int
-    ! Integer array for the start positions of beams. Initilaized to NaNs.
-    !
-    ! n_e_beams_out: array of int
-    ! Integer array for the number of values for each beams. Initilaized to NaNs.
+    !> Allocates arrays of the right size to be used by prepare_beams
+    !!
+    !! Allocation of arrays is bad for performance, so arrays should be reused where possible.
+    !! For the r-factor calculation we need to interpolate the beams and calculate the Y-function
+    !! via the derivative. These operations reqire relatively large arrays that are only used once or twice. 
+    !! By reusing some of the arrays, we can save time.
+    !!
+    !! Parameters
+    !! ----------
+    !! n_beams: int
+    !! Number of beams.
+    !!
+    !! n_e_grid_out: int
+    !! Number of energies after interpolation.
+    !!
+    !! Returns
+    !! -------
+    !! beams_out_array: array of float
+    !! Float array for interpolated beams. Initialized to NaNs.
+    !!    
+    !! deriv_y_out_array : array of float
+    !! Float array to hold derivatives of beams (may subsequently be overwritten by the Y-function). Initalized to NaNs.
+    !!
+    !! e_start_beams_out:  array of int
+    !! Integer array for the start positions of beams. Initilaized to NaNs.
+    !!
+    !! n_e_beams_out: array of int
+    !! Integer array for the number of values for each beams. Initilaized to NaNs.
 
     ! Input parameters
     integer, intent(in) :: n_beams
@@ -912,7 +907,7 @@ subroutine alloc_beams_arrays( &
 end subroutine alloc_beams_arrays
 
 
-subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_beams, n_E_beams, &
+subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities, E_start_beams, n_E_beams, &
                          deg, &
                          n_derivs, &
                          n_E_out, E_grid_out, &
@@ -948,13 +943,14 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
     real(8), INTENT(IN)                         :: E_grid_in(n_E_in) ! Input energy grid
     real(8), INTENT(IN)                         :: E_grid_out(n_E_out) ! Output energy grid
 
-    ! Intensities is a rectangular array with values for each beam at each possible energy, though values will unused if the beam does not have data over the entire
-    ! energy range. The array E_start_beams determines the index of the first used energy, the array n_E_beams determines the number of the number of
-    ! energy steps to used by the beam. Gaps in the beam are not allowed here, but they can be implemented externally using the averaging functionalities.
-    ! Input Data
+    !> Intensities is a rectangular array with values for each beam at each possible energy, though values will unused if the beam does not have data over the entire
+    !! energy range. The array E_start_beams determines the index of the first used energy, the array n_E_beams determines the number of the number of
+    !! energy steps to used by the beam. Gaps in the beam are not allowed here, but they can be implemented externally using the averaging functionalities.
+    
+    !! Input Data
     integer, intent(in)                          :: E_start_beams(n_beams) ! First energy step to be used for the beam
     integer, intent(in)                          :: n_E_beams(n_beams) ! Number of energy steps to use for the beam
-    real(8), intent(in)                          :: intensities_in(n_E_in, n_beams) ! Beam intensities - input data
+    real(8), intent(in)                          :: intensities(n_E_in, n_beams) ! Beam intensities - input data
 
     real(8), intent(inout) :: intpol_intensity(n_E_out, n_beams)
     real(8), intent(inout) :: intpol_derivative(n_E_out, n_beams)
@@ -970,175 +966,135 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
     !###############
     ! Internal
     !###############
-    integer :: new_min_index, new_max_index, cut_n_E_in
-    integer                          :: cut_E_start_beams(n_beams) ! First energy step to be used for the beam
-    integer                          :: cut_n_E_beams(n_beams) ! Number of energy steps to use for the beam
-
     integer :: beams_max_id_in(n_beams)
-    integer :: cut_beams_max_id_in(n_beams)
     integer :: beams_max_id_out(n_beams)
+
+    integer :: min_index, max_index
 
     integer :: max_n_knots, max_nt, max_LHS_rows
     integer :: n_knots_beams(n_beams), nt_beams(n_beams), LHS_rows_beams(n_beams)
     real(8), ALLOCATABLE :: knots(:,:), LHS(:,:,:), coeffs(:,:)
 
-    ! TYPE(grid_pre_evaluation) :: grid_pre_eval(n_beams)
-    ! type(deriv_pre_evaluation):: pre_eval_derivs(n_beams)
-    ! type(grid)                :: grid_origin(n_beams)
-    ! type(grid)                :: grid_target(n_beams)
 
-    real(8)    :: intensities(n_E_in, n_beams)
     real(8) :: min_intensity_beam
 
     integer :: ierrs(n_beams)
 
-    integer :: i ! Loop indices
+    integer :: ii, jj ! Loop indices
 
     ierr = 0
     ierrs = 0
-    intensities = intensities_in
 
-    beams_max_id_in = E_start_beams + n_E_beams -1
+    beams_max_id_in = E_start_beams + n_E_beams - 1
 
-    !###############
-    ! Limit range of beams
-    !###############
-    ! Assumes, experimental beams are recorded on the same energy grid already. This should always be the case.
-    ! Thus only the information of E_min and n_E are required for each beam
-    
-    ! discard all data outside of final grid (except one data point on either side for interpolation, if available)
-    ! This requires:
-    ! 1) cutting the E_grid_in
-    ! 2) recalculating the starting and end indices of all beams on the new grid
+    !> ###############
+    !! Limit range of beams
+    !! ###############
+    !! Assumes, experimental beams are recorded on the same energy grid already. This should always be the case.
+    !! Thus only the information of E_min and n_E are required for each beam
 
     
-    ! minimum index to keep:
-    if (E_grid_in(1) .lt. E_grid_out(1)) then
-        new_min_index = find_grid_correspondence(E_grid_out(1), n_E_in, E_grid_in, 1)
-    else
-        new_min_index = 1
-    end if
-
-    if (E_grid_in(n_E_in) .gt. E_grid_out(n_E_out)) then
-        new_max_index = find_grid_correspondence(E_grid_out(n_E_out), n_E_in, E_grid_in, new_min_index)
-    else
-        new_max_index = n_E_in
-    end if
+    min_index = 1
+    max_index = n_E_in
     
 
-    cut_n_E_in = new_max_index - new_min_index + 1
-    
-
-    do concurrent( i=1: n_beams)
-        ! new start and end indices
-        cut_E_start_beams(i) = max(E_start_beams(i), new_min_index)
-        cut_beams_max_id_in(i) = min(new_max_index, beams_max_id_in(i))
-        cut_n_E_beams(i) = cut_beams_max_id_in(i) - cut_E_start_beams(i) + 1
-        ! If beam now contains less than 2*deg +1 values, we can not use it - but we deal with that later
-    end do
-
-
-    E_start_beams_out(:) = 0
+    ! can not set to NaNs because integer
+    E_start_beams_out(:) = n_E_out
     n_E_beams_out(:) = 0 
 
     ! what does this do again exactly? 
-    do concurrent( i=1: n_beams)
+    do concurrent( ii=1: n_beams)
         ! Set out beam indices & length
-        E_start_beams_out(i) = find_grid_correspondence( &
-                E_grid_in(cut_E_start_beams(i)), &
-                n_E_out, &
-                E_grid_out, &
-                1 &
-            )
+        E_start_beams_out(ii) = find_grid_correspondence( &
+            E_grid_in(E_start_beams(ii)), &
+            n_E_out, &
+            E_grid_out, &
+            1 &
+        )
 
-        n_E_beams_out(i) = - E_start_beams_out(i) + &
-            find_grid_correspondence( &
-                E_grid_in(cut_beams_max_id_in(i)), &
-                n_E_out, &
-                E_grid_out, &
-                E_start_beams_out(i) &
-            ) + 1
-        beams_max_id_out(i) = E_start_beams_out(i) + n_E_beams_out(i) - 1
-        ! TODO: is there a better solution than below?
-        if (beams_max_id_out(i) > n_E_out) then 
-            beams_max_id_out(i) = n_E_out
-            n_E_beams_out(i) = beams_max_id_out(i) - E_start_beams_out(i) + 1
+        beams_max_id_out(ii) = find_grid_correspondence( &
+            E_grid_in(beams_max_id_in(ii)), &
+            n_E_out, &
+            E_grid_out, &
+            E_start_beams_out(ii) &
+        ) - 1
+
+        n_E_beams_out(ii) = beams_max_id_out(ii) - E_start_beams_out(ii) + 1
+        ! compensate for over-estimation
+        n_E_beams_out(ii) = min(n_E_beams_out(ii), n_E_out - E_start_beams_out(ii) + 1)
+        beams_max_id_out(ii) = n_E_beams_out(ii) + E_start_beams_out(ii) - 1
+        
+    end do
+
+    !> Debug check - hopefully can be removed now?
+    do ii = 1, n_beams !> @TODO urgent: this can still fail somehow!!
+        if (E_grid_in(beams_max_id_in(ii)) < E_grid_out(beams_max_id_out(ii))) then
+            print*, "issue size out - beam", ii
+            print*, E_grid_in(beams_max_id_in(ii)), E_grid_out(beams_max_id_out(ii)) 
+        end if
+        if (E_grid_in(E_start_beams(ii))>E_grid_out(E_start_beams_out(ii))) then
+            print*, "issue size in - beam", ii
         end if
     end do
 
-    ! Debug check - hopefully can be removed now?
-    do i = 1, n_beams ! TODO urgent: this can still fail somehow!!
-        if (E_grid_in(cut_beams_max_id_in(i)) < E_grid_out(beams_max_id_out(i))) then
-            print*, "issue size out - beam", i
-        end if
-        if (E_grid_in(cut_E_start_beams(i))>E_grid_out(E_start_beams_out(i))) then
-            print*, "issue size in - beam", i
-        end if
-    end do
 
-
-    !###############
-    ! Smoothing
-    !###############
-
-    ! Smoothing is not (yet) implemented.
-
-    ! This is a tricky issue, because excessive smoothing strongly affects the R-factor, so you want to avoid over-smoothing at all cost.
-    ! We expect the experimental data to come in from the beam-extraction already pre-smoothed. If we implement an additional later smoothing here,
-    ! it only makes sense to do it equally on experimental and theoretical data. Thus, both should use the same smoothing kernel and probably not 
-    ! use a smoothing parameter larger than ~6 eV.
+    !> ###############
+    !!  Smoothing
+    !! ###############
+    !!
+    !!  Smoothing is not (yet) implemented.
+    !!
+    !!  This is a tricky issue, because excessive smoothing strongly affects the R-factor, so you want to avoid over-smoothing at all cost.
+    !!  We expect the experimental data to come in from the beam-extraction already pre-smoothed. If we implement an additional later smoothing here,
+    !!  it only makes sense to do it equally on experimental and theoretical data. Thus, both should use the same smoothing kernel and probably not 
+    !!  use a smoothing parameter larger than ~6 eV.
 
 
     !###############
     ! Interpolation on new grid
     !###############
 
-    ! How to deal with coeffs array? - size depends on deg:
-    ! size of coeffs is nt= n_knots - deg -1 = n + 2*deg -deg -1 = n + deg -1 
-    ! where max(n) is the number of datapoints in, i.e. n_E_in. Thus max(nt) = n_E_in + deg + 1.
-    ! Allocating coeffs with size (n_E_in + deg) should therefor cover all possible beam sizes. Unfortunately, we need to keep track of the number of coeffs per beam in an array though.
+    !> How to deal with coeffs array? - size depends on deg:
+    !! size of coeffs is nt= n_knots - deg -1 = n + 2*deg -deg -1 = n + deg -1 
+    !! where max(n) is the number of datapoints in, i.e. n_E_in. Thus max(nt) = n_E_in + deg + 1.
+    !! Allocating coeffs with size (n_E_in + deg) should therefor cover all possible beam sizes. Unfortunately, we need to keep track of the number of coeffs per beam in an array though.
 
-    ! Initialize to NaNs - unnecessary since they are allocated elsewhere
-    ! intpol_derivative  = ieee_value(real(8), ieee_signaling_nan)
-    ! intpol_intensity = ieee_value(real(8), ieee_signaling_nan)
 
-    call perform_checks(cut_n_E_in, E_grid_in(new_min_index:new_max_index), n_E_out, E_grid_out, ierr)
+    call perform_checks(n_E_in, E_grid_in(min_index:max_index), n_E_out, E_grid_out, ierr)
     if (ierr .ne. 0) RETURN
 
-    call get_array_sizes(cut_n_E_in, deg, max_n_knots, max_nt, max_LHS_rows)
+    call get_array_sizes(n_E_in, deg, max_n_knots, max_nt, max_LHS_rows)
     Allocate(knots(max_n_knots+1, n_beams), LHS(max_LHS_rows+1, max_nt+1, n_beams), coeffs(max_nt+1, n_beams))
     
-    do i= 1,n_beams
+    do ii= 1,n_beams
 
-        ! Any beam that has not enough datapoints is unusable for interpolation etc.
-        ! Therefore we reduce number of points to 0 and fill with NaNs
-        if (cut_n_E_beams(i) <= 2*deg+1) then
-            cut_n_E_beams(i) = 0
-            intensities(:,i) = ieee_value(real(8), ieee_signaling_nan)
-            intpol_intensity(:, i) = ieee_value(real(8), ieee_signaling_nan)
-            n_E_beams_out(i) = 0
+        !> Any beam that has not enough datapoints is unusable for interpolation etc.
+        !! Therefore we reduce number of points to 0 and fill with NaNs
+        if (n_E_beams(ii) <= 2*deg+1) then
+            intpol_intensity(:, ii) = ieee_value(real(8), ieee_signaling_nan)
+            n_E_beams_out(ii) = 0
             ierr = -703
             CYCLE
         end if
 
         
-        call get_array_sizes(cut_n_E_beams(i), deg, n_knots_beams(i), nt_beams(i), LHS_rows_beams(i))
+        call get_array_sizes(n_E_beams(ii), deg, n_knots_beams(ii), nt_beams(ii), LHS_rows_beams(ii))
 
 
         call single_calc_spline(&
-            cut_n_E_beams(i), &
-            E_grid_in(cut_E_start_beams(i) : cut_beams_max_id_in(i)), &
-            intensities(cut_E_start_beams(i) : cut_beams_max_id_in(i), i), &
+            n_E_beams(ii), &
+            E_grid_in(E_start_beams(ii) : beams_max_id_in(ii)), &
+            intensities(E_start_beams(ii) : beams_max_id_in(ii), ii), &
             deg, &
-            n_knots_beams(i), nt_beams(i), LHS_rows_beams(i), &
-            knots(1:n_knots_beams(i), i), &
-            coeffs(1:nt_beams(i), i), &
-            ierrs(i))
+            n_knots_beams(ii), nt_beams(ii), LHS_rows_beams(ii), &
+            knots(1:n_knots_beams(ii), ii), &
+            coeffs(1:nt_beams(ii), ii), &
+            ierrs(ii))
         ! !Interpolate intensitites
         !     print*, "ierr", ierr
         !     print*, "First and last intensity in"
-        !     print*, intensities_in(cut_E_start_beams(i),i)
-        !     print*, intensities_in(cut_E_start_beams(i) + cut_n_E_beams(i) - 1, i)
+        !     print*, intensities_in(E_start_beams(i),i)
+        !     print*, intensities_in(E_start_beams(i) + n_E_beams(i) - 1, i)
         !     print*, "Any NAN?", ANY(ieee_is_nan(intensities_in))
         !     print*, "First and last knot"
         !     print*, knots(1,i)
@@ -1146,42 +1102,43 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
         !     print*, "n_knots, nt, deg, LHS_rows", n_knots_beams(i), nt_beams(i), deg, LHS_rows_beams(i)
  
 
-        !If interpolated intensity dropy below 0, set to zero
-        intpol_intensity = max(intpol_intensity, 0.0d0)
-
         call single_interpolate_coeffs_to_grid( &
-            n_knots_beams(i), knots(1:n_knots_beams(i), i), nt_beams(i), coeffs(1:nt_beams(i), i), &
+            n_knots_beams(ii), knots(1:n_knots_beams(ii), ii), nt_beams(ii), coeffs(1:nt_beams(ii), ii), &
             deg, &
-            n_E_beams_out(i), &
-            E_grid_out(E_start_beams_out(i) : beams_max_id_out(i)), &
-            1, &
-            intpol_derivative(E_start_beams_out(i) : beams_max_id_out(i), i))
+            n_E_beams_out(ii), &
+            E_grid_out(E_start_beams_out(ii) : beams_max_id_out(ii)), &
+            0, &
+            intpol_intensity(E_start_beams_out(ii) : beams_max_id_out(ii), ii))
 
+        ! If interpolated intensity dropy below 0, set to zero
+        ! This must be limited to the correct indices - otherwise it will overwrite the Nans outside!
+        intpol_intensity(E_start_beams_out(ii): beams_max_id_out(ii), ii) = &
+            max(intpol_intensity(E_start_beams_out(ii): beams_max_id_out(ii), ii), 0.d0)
 
-        if (ierrs(i) .ne. 0 )then
-            ierr = ierrs(i)
+        if (ierrs(ii) .ne. 0 )then
+            ierr = ierrs(ii)
         end if
     end do
 
-    ! Derivates may be skipped if we want to calculate R2 or just plot interpolated intensities
+    !> Derivates may be skipped if we want to calculate R2 or just plot interpolated intensities
     if (n_derivs == 1) then
-        do i= 1,n_beams
-            ! Also here there may be beams with an invalid number of datapoints
-            if (cut_n_E_beams(i) <= 2*deg+1) then
-                ! Just assign deriv NaNs and cycle, since this must have been dealt with already above
-                intpol_derivative(:, i) = ieee_value(real(8), ieee_signaling_nan)
+        do ii= 1,n_beams
+            !> Also here there may be beams with an invalid number of datapoints
+            if (n_E_beams(ii) <= 2*deg+1) then
+                !> Just assign deriv NaNs and cycle, since this must have been dealt with already above
+                intpol_derivative(:, ii) = ieee_value(real(8), ieee_signaling_nan)
                 ierr = -703
                 CYCLE
             end if 
 
-            ! 1st derivative of interpolated beams
+            !> 1st derivative of interpolated beams
             call single_interpolate_coeffs_to_grid( &
-            n_knots_beams(i), knots(1:n_knots_beams(i), i), nt_beams(i), coeffs(1:nt_beams(i), i), &
+            n_knots_beams(ii), knots(1:n_knots_beams(ii), ii), nt_beams(ii), coeffs(1:nt_beams(ii), ii), &
             deg, &
-            n_E_beams_out(i), &
-            E_grid_out(E_start_beams_out(i) : beams_max_id_out(i)), &
-            0, &
-            intpol_intensity(E_start_beams_out(i) : beams_max_id_out(i), i))
+            n_E_beams_out(ii), &
+            E_grid_out(E_start_beams_out(ii) : beams_max_id_out(ii)), &
+            1, &
+            intpol_derivative(E_start_beams_out(ii) : beams_max_id_out(ii), ii))
 
         end do
 
@@ -1189,7 +1146,7 @@ subroutine prepare_beams(n_beams, n_E_in, E_grid_in, intensities_in, E_start_bea
         ! 2nd deriv not implemented yet
         ierr = 704
     else
-        ! Error because more derivatives were requested than are implemented
+        !> Error because more derivatives were requested than are implemented
         ierr = 703
     end if
 
@@ -1205,8 +1162,8 @@ subroutine pendry_y_beamset( &
     beams_n_e, &
     v0i &
 )
-    ! Calculates the Pendry Y function for a given beamset from the intensities and first derivative.
-    ! The Y function is saved into the array that contained the derivative overwriting it in the process.
+    !> Calculates the Pendry Y function for a given beamset from the intensities and first derivative.
+    !! The Y function is saved into the array that contained the derivative overwriting it in the process.
 
     ! Input parameters
     integer, intent(in) :: n_beams
@@ -1279,10 +1236,10 @@ end function find_grid_correspondence
 subroutine avg_reo_disc(n_beams_in, n_beams_out, n_E, scheme, min_len, &
     intensities, beam_start, beam_n, &
     ierr)
-    ! Average, reorder and discard beams according to scheme
-    ! scheme is an array of integers between 0 and n_beams_out
-    ! beams are averaged into the 
-    ! For any beam with scheme == 0, the beam is discarded.
+    !> Average, reorder and discard beams according to scheme
+    !! scheme is an array of integers between 0 and n_beams_out
+    !! beams are averaged into the 
+    !! For any beam with scheme == 0, the beam is discarded.
     integer, INTENT(IN) :: n_beams_in
     integer, INTENT(IN) :: n_beams_out
     integer, INTENT(IN) :: n_E
@@ -1308,7 +1265,7 @@ subroutine avg_reo_disc(n_beams_in, n_beams_out, n_E, scheme, min_len, &
     beam_start(:) = 0
     beam_n(:) = n_E
 
-    ! Adjust beam length if necessary...
+    !> Adjust beam length if necessary...
     do i = 1, n_beams_out
         do j = 1, n_beams_in
             if(scheme(j)==i) then
@@ -1421,7 +1378,7 @@ subroutine r_beamtype_grouping(which_r, &
                 r_factor_groups(group) = num(group)/denom(group)
             else
                 r_factor_groups(group) = ieee_value(real(8), ieee_signaling_nan)
-                ierr = 903
+                ierr = -903
             end if 
         end do
 
@@ -1438,7 +1395,7 @@ subroutine r_beamtype_grouping(which_r, &
                 r_factor_groups(group) = r2_group(group)/n_overlapping_points_groups(group)
             else
                 r_factor_groups(group) = ieee_value(real(8), ieee_signaling_nan)
-                ierr = 904
+                ierr = -904
             end if
         end do
 
@@ -1454,7 +1411,7 @@ end subroutine r_beamtype_grouping
 
 ! Library functions    
 
-! TODO: optimize; could be made elemental but f2py compiler with gfortran won't let you... 
+!> @TODO: optimize; could be made elemental but f2py compiler with gfortran won't let you... 
 pure subroutine pendry_y(n_data, intensity, deriv_y_func, v0i)
     integer, intent(in) :: n_data
     real(8), intent(in) :: intensity(n_data)
@@ -1479,31 +1436,6 @@ pure function trapez_integration_const_dx(f, dx) result(integral)
     integral = sum(f(1:n-1)+f(2:n))*dx/2
     return
 end function trapez_integration_const_dx
-
-
-! integration from tenserleed
-! SUBROUTINE tenser_INTSUM(n_data, func, dx, I1, I2, integral)
-
-!     integer, INTENT(IN) :: n_data
-!     real(8), INTENT(IN) :: func(n_data)
-!     real(8), INTENT(IN) :: dx
-!     integer, INTENT(IN) :: I1, I2 !Integration bounds
-
-!     real(8), intent(out) :: integral
-
-!     integer :: j
-!     real(8) :: A
-
-!     A=0
-!     integral=0
-!     DO J=I1,I2
-!         A=A+func(J)
-!     end do
-
-!     integral= A-0.5*(func(I1)+func(I2))
-!     integral= integral*dx
-!     RETURN
-! END SUBROUTINE tenser_INTSUM
 
 
 ! Compatibility functions
@@ -1647,7 +1579,11 @@ subroutine translate_theo(n_beams,  MNGP, MNBTD, ES, ATS, &
     RETURN
 end subroutine translate_theo
 
+
 integer function test_compilation() result(ierr)
+    !> This function tests if the module was correctly compiled.
+    !! Some compilation flags may disable correct functioning of NaN 
+    !! values which are required for the correct functioning of this module.
     real(8) :: test_value_nan, test_value_div
 
     test_value_nan = ieee_value(real(8), ieee_signaling_nan)
@@ -1655,10 +1591,10 @@ integer function test_compilation() result(ierr)
     test_value_div = 1.d0/(1.d0 - test_value_div)
 
     if (ieee_is_finite(test_value_div) .or. ieee_is_normal(test_value_nan)) then
-        ! Error in compilation
+        !> Error in compilation
         ierr = 10
     else
-        ! We are good to go
+        !> We are good to go
         ierr = 0
     end if
 

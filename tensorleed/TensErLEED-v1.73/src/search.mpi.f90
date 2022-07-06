@@ -93,8 +93,7 @@ C  no LEED analysis has gone before, will be indebted to you eternally.
 
 *************************************************************************
 
-C 
-This subroutine deals with the experimental data preparation
+C This subroutine deals with the experimental data preparation
       PROGRAM SEARCH
       use intarr_hashing
       include 'mpif.h'
