@@ -15,13 +15,10 @@ Defines the Measure class.
 #      the serial line of the primary controller. Most likely can be solved
 #      by moving the measurement, its data_points, and its primary controller
 #      to a non-GUI thread.
-# BUG: closing selector, closes this, but does not stop correctly a
-#      running measurement and crashes with "QThread: Destroyed while
-#      thread is still running"
 
 # TODO: progress bar for non-endless
 # TODO: quick IV video to find max intensity, and adjust camera
-# TODO: auto-scale contrast on camera viewer.
+# TODO: auto-scale contrast on camera viewer
 # TODO: busy dialog where appropriate
 # TODO: fix the documentation in .ini files
 # TODO: can we use a decorator on class (or __init__) for reporting init errors
@@ -456,6 +453,7 @@ class Measure(ViPErLEEDPluginBase):
         retry_later = False
         # Stop all cameras
         for viewer in self.__camera_viewers:
+            viewer.close()
             camera = viewer.camera
             if camera and camera.is_running:
                 camera.stop()

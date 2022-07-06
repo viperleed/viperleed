@@ -85,8 +85,7 @@ class ViPErLEEDSelectPlugin(ViPErLEEDPluginBase):
                 return
             for module in open_modules:
                 module.close()
-        event.accept()
-        qtw.qApp.quit()
+        super().closeEvent(event)
 
     def keyPressEvent(self, event):  # pylint: disable=invalid-name
         """Reimpement to catch Ctrl+Q and Ctrl+W for quitting."""
@@ -170,7 +169,6 @@ class ViPErLEEDSelectPlugin(ViPErLEEDPluginBase):
 
         _, cls = self.modules[name]
 
-
         module = cls()
         self._open_modules[name] = module
         module.show()
@@ -180,4 +178,4 @@ class ViPErLEEDSelectPlugin(ViPErLEEDPluginBase):
             raise RuntimeError(f"Module {module.__class__.__name__} is "
                                "not a valid ViPErLEED module. All modules "
                                "should be a concrete implementation of the "
-                               "ViPErLEEDModuleBase class") from err
+                               "ViPErLEEDPluginBase class") from err
