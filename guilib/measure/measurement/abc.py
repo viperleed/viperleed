@@ -641,10 +641,8 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         try:
             self.primary_controller.measure_now()
         except AttributeError:
-            # Not a MeasureControllerABC: store explicitly
-            # the information that, at the current step, we
-            # trigger immediately.
-            self.primary_controller._time_to_trigger = 0
+            # Not a MeasureControllerABC
+            pass
         self.primary_controller.about_to_trigger.emit()
 
     @abstractmethod
