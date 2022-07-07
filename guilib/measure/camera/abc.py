@@ -1402,20 +1402,19 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             self.n_frames_done = 0
             self.busy = False
 
+    @qtc.pyqtSlot(str)
     def __on_image_saved(self, fpath):
         """React to an image being saved."""
         processor = self.sender()
-        if not processor:
-            return
-
-        # Disconnect the sender processor to prevent
-        # duplicate processing of the next frame
-        base.safe_disconnect(self.__process_frame, processor.process_frame)
-        try:
-            self.__image_processors.remove(processor)
-        except ValueError:
-            # Not in list
-            pass
+        if processor:
+            # Disconnect the sender processor to prevent
+            # duplicate processing of the next frame
+            base.safe_disconnect(self.__process_frame, processor.process_frame)
+            try:
+                self.__image_processors.remove(processor)
+            except ValueError:
+                # Not in list
+                pass
 
         # Emit image_saved only if a file was actually saved
         if fpath:
