@@ -124,16 +124,8 @@ def rfactor(sl, rp, index, for_error=False, only_vary=None):
 
 def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
     logger.debug("Using new R-factor calculation. This is still experimental!")
-    which_r = rp.R_FACTOR_TYPE
-    real_iv_shift = rp.IV_SHIFT_RANGE[:2]
-
-    if which_r == 1:
-        n_derivs = 1
-    elif which_r == 2:
-        n_derivs = 0
-    else:
-        check_ierr(701, logger)
-
+    
+    deg, v0i, n_beams, which_r, n_derivs, real_iv_shift = get_general_rfactor_params(rp, for_error)
     theo_energies = []
     for b in theobeams:
         theo_energies.extend([k for k in b.intens if k not in theo_energies])
@@ -143,12 +135,7 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
         exp_energies.extend([k for k in b.intens if k not in exp_energies])
     exp_energies.sort()
 
-    if not for_error:
-        real_iv_shift = rp.IV_SHIFT_RANGE[:2]
-    else:
-        real_iv_shift = [rp.best_v0r] * 2
-
-        # extend energy range if they are close together
+    # extend energy range if they are close together
     if abs(min(exp_energies) - rp.THEO_ENERGIES[0]) < abs(real_iv_shift[0]):
         minen = max(min(exp_energies), rp.THEO_ENERGIES[0]) + real_iv_shift[0]
     else:
@@ -178,7 +165,8 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
             iorf.append(1)
     iorf.extend([0] * (len(rp.ivbeams) - len(rp.expbeams)))
 
-    n_beams = len(beamcorr) - beamcorr.count(-1)  # -1 indicates no correspondence
+    # -1 indicates no correspondence
+    n_beams = len(beamcorr) - beamcorr.count(-1)
     exp_grid, exp_id_start, exp_n_E_beams, exp_intensities_in = io.beamlist_to_array(
         rp.expbeams
     )
