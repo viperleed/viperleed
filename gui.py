@@ -88,6 +88,7 @@ def gui_main():
     Graphical User Interface.
     """
     gl.catch_gui_crash()
+    gl.widgetslib.raise_on_qt_messages()
 
     print('Loading GUI...', flush=True, end='')
     qtg.QGuiApplication.setAttribute(qtc.Qt.AA_EnableHighDpiScaling)

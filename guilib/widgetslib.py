@@ -12,6 +12,7 @@ Author: Michele Riva
 
 import inspect
 import re
+import warnings
 
 import PyQt5.QtCore as qtc
 import PyQt5.QtGui as qtg
@@ -212,9 +213,93 @@ def screen_fraction(obj, size):
     return max(size.width()/scr_size.width(), size.height()/scr_size.height())
 
 
+def raise_on_qt_messages():
+    """Produce warnings and Exceptions instead of Qt messages.
+
+    Warns
+    -----
+    QtDebug
+        For QtCore.QtDebugMsg
+    QtWarning
+        For QtCore.QtWarningMsg
+    QtInfo
+        For QtCore.QtInfoMsg
+
+    Raises
+    ------
+    QtCritical
+        For QtCore.QtCriticalMsg or QtCore.QtSystemMsg
+    QtFatal
+        For QtCore.QtFatalMsg
+    """
+
+    _map = {qtc.QtDebugMsg: QtDebug,
+            qtc.QtWarningMsg: QtWarning,
+            qtc.QtInfoMsg: QtInfo,
+            qtc.QtCriticalMsg: QtCritical,
+            qtc.QtSystemMsg: QtCritical,
+            qtc.QtFatalMsg: QtFatal}
+
+    def __handler(severity, context, message):
+        """Handler function for Qt messages.
+
+        Changes the default behavior to merely printing to stderr
+        and rather raise appropriate exceptions/warnings.
+
+        Parameters
+        ----------
+        severity : QtCore.QtMsgType
+            Severity level of the message. Can be QtDebugMsg, QtInfoMsg,
+            QtWarningMsg, QtCriticalMsg, QtFatalMsg, QtSystemMsg.
+        context : QtCore.QMessageLogContext
+            Information on the context in which the message was
+            generated. It normally does not contain any information,
+            except when using debug builds of Qt (and pyqt, and python,
+            and all modules).
+        message : str
+            The original Qt message.
+        
+        Returns
+        -------
+        None.
+        """
+        if context.file:
+            # There's sensible context information
+            message += (f"line: {context.line}, func: {context.function}"
+                        f"file: {context.file}")
+        msg = _map[severity](message)
+        
+        if isinstance(msg, (QtDebug, QtWarning, QtInfo)):
+            warnings.warn(msg, stacklevel=2)
+            return
+        raise msg
+    
+    qtc.qInstallMessageHandler(__handler)
+
+
 ################################################################################
 #                                   CLASSES                                    #
 ################################################################################
+
+
+class QtDebug(RuntimeWarning):
+    pass
+
+
+class QtWarning(RuntimeWarning):
+    pass
+
+
+class QtInfo(RuntimeWarning):
+    pass
+
+
+class QtCritical(Exception):
+    pass
+
+
+class QtFatal(Exception):
+    pass
 
 
 class AllGUIFonts():  ## > Will handle in a different way!
