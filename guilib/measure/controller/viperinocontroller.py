@@ -73,7 +73,8 @@ class ViPErinoController(MeasureControllerABC):
         ('measurement_settings', 'v_ref_dac'),
         ]
 
-    def __init__(self, settings=None, port_name='', sets_energy=False):
+    def __init__(self, parent=None, settings=None,
+                 port_name='', sets_energy=False):
         """Initialise ViPErino controller object.
 
         Initialise prepare_todos dictionaries. The key is a
@@ -104,8 +105,8 @@ class ViPErinoController(MeasureControllerABC):
             If no port_name is given, and none was present in the
             settings file.
         """
-        super().__init__(settings=settings, port_name=port_name,
-                         sets_energy=sets_energy)
+        super().__init__(parent=parent, settings=settings,
+                         port_name=port_name, sets_energy=sets_energy)
         # Initialise dictionaries for the measurement preparation.
         self.begin_prepare_todos['get_hardware'] = True
         self.begin_prepare_todos['calibrate_adcs'] = True
@@ -598,6 +599,12 @@ class ViPErinoController(MeasureControllerABC):
             self.__request_info.connect(ctrl.get_hardware)
         self.__request_info.emit()
         if controllers:
+            # Notice: The next line is quite critical. Using a simple
+            # time.sleep() with the same duration DOES NOT WORK, i.e.,
+            # there's no information in the controller.hardware dict.
+            # However, this line seems to ALWAYS TIME OUT (emitting a
+            # serial timeout error), even if there were bytes read and
+            # correctly interpreted.
             controllers[0].serial.port.waitForReadyRead(100)
         for ctrl in controllers:
             serial_nr = ctrl.hardware.get('serial_nr', None)
@@ -610,7 +617,7 @@ class ViPErinoController(MeasureControllerABC):
         for thread in threads:
             thread.quit()
         for thread in threads:
-            # wait max 100 ms for each thread to quit
+            # wait max 100 ms for each thread to quit, then force
             if not thread.wait(100):
                 thread.terminate()
                 thread.wait()

@@ -173,9 +173,10 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
     # Is emitted when an error occurs
     error_occurred = qtc.pyqtSignal(tuple)
 
-    def __init__(self, *args, time_resolved=None):
+    def __init__(self, *args, time_resolved=None, parent=None):
         """Initialise data class."""
         super().__init__()
+        self.setParent(parent)
         self.__list = list(args)
         self.__delimiter = ','
         self.__primary_first_time = None

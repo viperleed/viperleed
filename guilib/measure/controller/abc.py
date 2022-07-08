@@ -82,7 +82,8 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         ('controller', 'serial_port_class'),
         ]
 
-    def __init__(self, settings=None, port_name='', sets_energy=False):
+    def __init__(self, parent=None, settings=None,
+                 port_name='', sets_energy=False):
         """Initialise the controller instance.
 
         Parameters
@@ -111,7 +112,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
             If no port_name is given, and none was present in the
             settings file.
         """
-        super().__init__()
+        super().__init__(parent=parent)
         self.__sets_energy = sets_energy
         self.__settings = ViPErLEEDSettings()
         self.__serial = None
@@ -896,7 +897,8 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
 class MeasureControllerABC(ControllerABC):
     """Controller class for measurement controllers."""
 
-    def __init__(self, settings=None, port_name='', sets_energy=False):
+    def __init__(self, parent=None, settings=None,
+                 port_name='', sets_energy=False):
         """Initialise controller class object.
 
         This is an upgraded version of its parent class as it
@@ -925,9 +927,8 @@ class MeasureControllerABC(ControllerABC):
             If no port_name is given, and none was present in the
             settings file.
         """
-
-        super().__init__(settings=settings, port_name=port_name,
-                         sets_energy=sets_energy)
+        super().__init__(parent=parent, settings=settings,
+                         port_name=port_name, sets_energy=sets_energy)
 
         # This dictionary must be reimplemented in subclasses.
         # It must contain all possible measurement types the controller
