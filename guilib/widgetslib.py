@@ -27,15 +27,15 @@ from viperleed import guilib as gl
 
 
 def change_control_text_color(ctrl, color):
-    """Change color of the text in a control.
+    """Change colour of the text in a control.
 
-    Typically useful for signaling an error
+    Typically useful for signalling an error
     on user input on some of the controls.
 
     Parameters
     ----------
     ctrl_name : QWidget
-        The control whose color has to be changed.
+        The control whose colour has to be changed.
     color : QColor or str
         Color to be used
 
@@ -243,7 +243,7 @@ def raise_on_qt_messages():
     def __handler(severity, context, message):
         """Handler function for Qt messages.
 
-        Changes the default behavior to merely printing to stderr
+        Changes the default behaviour to merely printing to stderr
         and rather raise appropriate exceptions/warnings.
 
         Parameters
@@ -254,7 +254,7 @@ def raise_on_qt_messages():
         context : QtCore.QMessageLogContext
             Information on the context in which the message was
             generated. It normally does not contain any information,
-            except when using debug builds of Qt (and pyqt, and python,
+            except when using debug builds of Qt (and PyQt, and python,
             and all modules).
         message : str
             The original Qt message.

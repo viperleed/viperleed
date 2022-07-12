@@ -260,8 +260,8 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         """Set whether data is time-resolved if not present."""
         if self.__time_resolved is not None:
             raise RuntimeError(
-                "time_resolved can only be set once, "
-                "but it was attempted to set it again."
+                f"Cannot set {self.__class__.__name__}"
+                ".time_resolved more than once"
                 )
         self.__time_resolved = bool(resolved)
 
