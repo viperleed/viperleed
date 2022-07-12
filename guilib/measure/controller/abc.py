@@ -397,7 +397,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
             return
         self.serial.port_name = port_name
         if port_name:
-            self.serial.serial_connect()
+            self.serial.connect_()
 
     @property
     def serial(self):
@@ -524,7 +524,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         # settings are invalid (i.e., missing mandatory fields for
         # the serial)!
         if self.__port_name:
-            self.serial.serial_connect()
+            self.serial.connect_()
         self.__settings = self.serial.port_settings
         self._time_to_trigger = 0
         self.__hash = -1
@@ -759,12 +759,12 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         if not self.serial or self.serial.is_open:
             # Invalid or already connected
             return
-        self.serial.serial_connect()
+        self.serial.connect_()
 
     def disconnect_(self):
-        """Diconnect serial port."""
+        """Disconnect serial port."""
         try:
-            self.serial.serial_disconnect()
+            self.serial.disconnect_()
         except (TypeError, AttributeError):
             pass
 

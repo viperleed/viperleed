@@ -319,9 +319,9 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             Information needed to create and open a new port
         """
         if self.port:
-            self.serial_disconnect()
+            self.disconnect_()
         self.__port = qts.QSerialPort(port_name, parent=self)
-        self.serial_connect()
+        self.connect_()
 
     # Disable pylint check because of false positive. The method
     # is used below as the getter for property port_settings
@@ -792,8 +792,10 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         if not _requires_response:
             self.busy = False
 
-    def serial_connect(self, *__args):
+    def connect_(self, *__args):
         """Connect to currently selected port."""
+        if self.is_open:
+            return
         if not self.__port.open(self.__port.ReadWrite):
             emit_error(self, ExtraSerialErrors.PORT_NOT_OPEN)
             self.__print_port_config()
@@ -807,7 +809,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         self.__port.errorOccurred.connect(self.__on_serial_error)
         _ = self.__port.readAll()
 
-    def serial_disconnect(self, *__args):
+    def disconnect_(self, *__args):
         """Disconnect from connected serial port."""
         self.clear_errors()
         self.__port.close()
