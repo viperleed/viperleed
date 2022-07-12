@@ -143,6 +143,7 @@ def print_call(func):
         print("Called", fname)
         return func(*args, **kwargs)
 
+    _wrapper.__name__ = func.__name__
     return _wrapper
 
 
