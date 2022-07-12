@@ -323,13 +323,12 @@ class CameraViewer(qtw.QScrollArea):
         """Extend to stop camera when window is closed by the user."""
         camera = self.camera
         if (event.spontaneous() and camera.is_running and self.stop_on_close):
-            camera.stop()
-
             # Disconnect signals that may pop up the window
             # again should a frame arrive in the meantime
             if self.show_auto:
                 base.safe_disconnect(camera.image_processed, self.__show_image)
                 base.safe_disconnect(camera.frame_ready, self.__show_image)
+            camera.stop()
         super().closeEvent(event)
 
     def keyPressEvent(self, event):  # pylint: disable=invalid-name
