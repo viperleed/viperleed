@@ -190,6 +190,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
             return True
         return self.__busy
 
+    @qtc.pyqtSlot(bool)
     def set_busy(self, is_busy):
         """Set the controller to busy True/False.
 
@@ -669,6 +670,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
             return
         self.serial.send_message(*data, **kwargs)
 
+    @qtc.pyqtSlot(bool)
     def send_unsent_messages(self, serial_busy):
         """Send messages that have been stored.
 
@@ -709,6 +711,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         # TODO: check other stuff that has to be reset.
 
     @abstractmethod
+    @qtc.pyqtSlot()
     def stop(self):
         """Stop.
 
@@ -728,10 +731,12 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         self.serial.serial_busy.connect(self.set_busy,
                                         type=qtc.Qt.UniqueConnection)
 
+    @qtc.pyqtSlot(tuple)
     def __on_init_errors(self, err):
         """Collect initialization errors to report later."""
         self.__init_errors.append(err)
 
+    @qtc.pyqtSlot()
     def __report_init_errors(self):
         """Emit error_occurred for each initialization error."""
         for error in self.__init_errors:
@@ -763,6 +768,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         except (TypeError, AttributeError):
             pass
 
+    @qtc.pyqtSlot(bool)
     def __do_preparation_step(self, serial_busy=False):
         """Prepare the controller for a measurement cycle.
 
@@ -816,6 +822,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
                               type=qtc.Qt.UniqueConnection)
         self.busy = False
 
+    @qtc.pyqtSlot(tuple)
     def begin_preparation(self, energies_and_times):
         """Trigger the first step in the preparation for measurements.
 
@@ -851,6 +858,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
                           type=qtc.Qt.UniqueConnection)
         self.__do_preparation_step()
 
+    @qtc.pyqtSlot()
     def continue_preparation(self):
         """Trigger the second step in the preparation for measurements.
 
@@ -941,6 +949,7 @@ class MeasureControllerABC(ControllerABC):
         self.__measured_quantities = tuple()
 
     @abstractmethod
+    @qtc.pyqtSlot()
     def measure_now(self):
         """Take a measurement.
 
@@ -975,6 +984,7 @@ class MeasureControllerABC(ControllerABC):
         return quantity in self.measured_quantities
 
     @abstractmethod
+    @qtc.pyqtSlot(object)
     def on_data_ready(self, data):
         """Receive and store data from the serial.
 
@@ -1139,6 +1149,7 @@ class MeasureControllerABC(ControllerABC):
             self.serial.about_to_trigger.connect(self.about_to_trigger)
 
     @abstractmethod
+    @qtc.pyqtSlot(bool)
     def set_continuous_mode(self, continuous=True):
         """Set continuous mode.
 

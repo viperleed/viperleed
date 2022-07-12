@@ -628,6 +628,7 @@ class CameraViewer(qtw.QScrollArea):
             )
         self.roi.apply_roi_requested.connect(self.__apply_roi)
 
+    @qtc.pyqtSlot()
     def __on_camera_started(self):
         """React to a start of the camera."""
         mode = self.camera.mode
@@ -709,6 +710,7 @@ class CameraViewer(qtw.QScrollArea):
         """Show a context menu when right-clicking at position."""
         self.__children["context_menu"].popup(self.mapToGlobal(position))
 
+    @qtc.pyqtSlot(np.ndarray)
     def __show_image(self, img_array):
         """Show the gray-scale image in the img_array numpy.ndarray."""
         if img_array.dtype != np.uint16:

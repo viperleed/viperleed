@@ -74,7 +74,6 @@ class Measure(ViPErLEEDPluginBase):
     """A GUI that allows to take measurements."""
 
     error_occurred = qtc.pyqtSignal(tuple)
-    _dummy_signal = qtc.pyqtSignal()                                            # TEMP
 
     def __init__(self, parent=None):
         """Initialize window."""
@@ -228,12 +227,14 @@ class Measure(ViPErLEEDPluginBase):
         cameras.setEnabled(bool(cameras.actions()))
         controllers.setEnabled(bool(controllers.actions()))
 
+    @qtc.pyqtSlot()
     def __run_measurement(self):
         self._timestamps['start'] = time.perf_counter()
         self.measurement.begin_preparation()
         self.__switch_enabled(False)
         self.statusBar().showMessage('Busy')
 
+    @qtc.pyqtSlot()
     def __on_measurement_prepared(self):
         self._timestamps['prepared'] = time.perf_counter()
 
@@ -309,6 +310,7 @@ class Measure(ViPErLEEDPluginBase):
 
         print(ctrl.hardware)
 
+    @qtc.pyqtSlot()
     def __on_finished(self, *_):
         """Reset all after a measurement is over."""
         self._timestamps['finished'] = time.perf_counter()
@@ -317,6 +319,7 @@ class Measure(ViPErLEEDPluginBase):
         self.__switch_enabled(True)
         self.statusBar().showMessage('Ready')
 
+    @qtc.pyqtSlot()
     def __print_done(self):
         print("\n#### DONE! ####")
         start, prep, finish = self._timestamps.values()
@@ -389,6 +392,7 @@ class Measure(ViPErLEEDPluginBase):
         self._glob['last_cfg'] = self.measurement.settings
         self.__delayed_start.start(50)
 
+    @qtc.pyqtSlot()
     def __on_data_received(self):
         """Plot measured data."""
         meas = self.sender()

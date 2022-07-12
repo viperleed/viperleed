@@ -1252,6 +1252,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         self.started.emit()
 
     @abstractmethod
+    @qtc.pyqtSlot()
     def stop(self):
         """Stop the camera.
 
@@ -1271,6 +1272,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         self.__stop_now_or_retry()
 
     @abstractmethod
+    @qtc.pyqtSlot()
     def trigger_now(self):
         """Start acquiring one (or more) frames now.
 
@@ -1357,6 +1359,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         roi_not_multiple = roi_w % d_w or roi_h % d_h
         return not (roi_outside or roi_small or roi_not_multiple)
 
+    @qtc.pyqtSlot(np.ndarray)
     def __on_frame_ready(self, image):
         """React to receiving a new frame from the camera.
 
@@ -1420,20 +1423,24 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         if fpath:
             self.image_saved.emit(fpath)
 
+    @qtc.pyqtSlot(tuple)
     def __on_init_errors(self, err):
         """Collect initialization errors to report later."""
         self.__init_errors.append(err)
 
+    @qtc.pyqtSlot()
     def __on_timed_out(self):
         """Report a timeout error while in triggered mode."""
         base.emit_error(self, CameraErrors.TIMEOUT, self.name, 5)
 
+    @qtc.pyqtSlot()
     def __report_init_errors(self):
         """Emit error_occurred for each initialization error."""
         for error in self.__init_errors:
             self.error_occurred.emit(error)
         self.__init_errors = []
 
+    @qtc.pyqtSlot()
     def __stop_now_or_retry(self):
         """Stop camera if image processing is over."""
         # Delay the stopping as long as there are image

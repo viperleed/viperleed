@@ -12,6 +12,8 @@ This module contains the definition of the IVVideo class
 which gives commands to the controller classes.
 """
 
+from PyQt5 import QtCore as qtc
+
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.measurement.abc import (MeasurementABC,
                                                       MeasurementErrors)
@@ -147,6 +149,7 @@ class IVVideo(MeasurementABC):
     # pylint: disable=useless-super-delegation
     # We don't have anything much to do in abort() that is not
     # already done in the ABC, but abort is abstract.
+    @qtc.pyqtSlot()
     def abort(self):
         """Abort all current actions."""
         super().abort()

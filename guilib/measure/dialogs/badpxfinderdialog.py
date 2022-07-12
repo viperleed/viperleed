@@ -93,6 +93,10 @@ class BadPixelsFinderDialog(qtw.QDialog):
 
         self.setWindowTitle("Find bad pixels")
 
+        # May need to manually decorate self.adjustSize as
+        # pyqtSlot in case we have cameras in non-main threads
+        # self.adjustSize = qtc.pyqtSlot()(self.adjustSize)
+
         self.__compose()
         self.__connect()
 
@@ -388,6 +392,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
         return (date_time, n_bad, bad_fraction,
                 n_uncorrectable, uncorrectable_fraction)
 
+    @qtc.pyqtSlot(bool)
     def __on_camera_preparing(self, busy):
         """Show a busy dialog while camera prepares to acquire."""
         timer, interval = self.__timers['delay_busy_hide']
@@ -428,6 +433,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
         self.active_camera.settings = settings
         self.__update_controls()
 
+    @qtc.pyqtSlot(tuple)
     def __on_error_occurred(self, error_info):
         """React to an error situation."""
         error_code, error_msg = error_info

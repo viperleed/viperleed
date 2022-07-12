@@ -344,6 +344,7 @@ class ViPErinoController(MeasureControllerABC):
         message = [num_meas_to_average, *self.__adc_channels[:2]]
         self.send_message(cmd, message)
 
+    @qtc.pyqtSlot()
     def get_hardware(self):
         """Get hardware connected to micro controller.
 
@@ -395,6 +396,7 @@ class ViPErinoController(MeasureControllerABC):
         message = [update_rate, *self.__adc_channels[:-1]]
         self.send_message(cmd, message)
 
+    @qtc.pyqtSlot(object)
     def on_data_ready(self, data):
         """Receive and store data from the serial."""
         # We may receive two types of data: hardware&firmware
@@ -430,6 +432,7 @@ class ViPErinoController(MeasureControllerABC):
 
         self.measurements_done()
 
+    @qtc.pyqtSlot()
     def measure_now(self):
         """Take a measurement.
 
@@ -535,6 +538,7 @@ class ViPErinoController(MeasureControllerABC):
                 return
         super().set_measurements(quantities)
 
+    @qtc.pyqtSlot(bool)
     def set_continuous_mode(self, continuous=True):
         """Set continuous mode.
 
@@ -556,6 +560,7 @@ class ViPErinoController(MeasureControllerABC):
         mode_on = int(bool(continuous))
         self.send_message(cmd, [mode_on, 0])
 
+    @qtc.pyqtSlot()
     def stop(self):
         """Stop.
 

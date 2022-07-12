@@ -870,6 +870,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             return bytearray()
         return bytearray(message)
 
+    @qtc.pyqtSlot()
     def __on_bytes_ready_to_read(self):
         """Read the message(s) received."""
         if self.__got_unacceptable_response:
@@ -921,6 +922,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         self.unprocessed_messages.extend(messages)
         self.process_received_messages()
 
+    @qtc.pyqtSlot(qts.QSerialPort.SerialPortError)
     def __on_serial_error(self, error_code):
         """React to a serial-port error.
 
@@ -940,6 +942,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
                    self.port_name)
         self.clear_errors()
 
+    @qtc.pyqtSlot()
     def __on_serial_timeout(self):
         """React to a serial timeout.
 
@@ -1025,10 +1028,12 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             sep='\n', end='\n\n'
             )
 
+    @qtc.pyqtSlot(tuple)
     def __on_init_errors(self, err):
         """Collect initialization errors to report later."""
         self.__init_errors.append(err)
 
+    @qtc.pyqtSlot()
     def __report_init_errors(self):
         """Emit error_occurred for each initialization error."""
         for error in self.__init_errors:

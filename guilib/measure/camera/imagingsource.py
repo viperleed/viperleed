@@ -623,6 +623,7 @@ class ImagingSourceCamera(CameraABC):
         """
         self.driver.set_frame_ready_callback(on_frame_ready, self.process_info)
 
+    @qtc.pyqtSlot(object)
     def start(self, *_):
         """Start the camera in self.mode."""
         self.n_frames_done = 0
@@ -638,6 +639,7 @@ class ImagingSourceCamera(CameraABC):
             self.best_next_rate = 1024
             self.__start_postponed()
 
+    @qtc.pyqtSlot(bool)
     def __start_postponed(self, *_):
         """Actually start camera after frame-rate estimate is over.
 
@@ -668,6 +670,7 @@ class ImagingSourceCamera(CameraABC):
         self.driver.start(mode)
         self.preparing.emit(False)
 
+    @qtc.pyqtSlot()
     def stop(self):
         """Stop the camera."""
         # One could wrap the next line in if self.is_running,
@@ -679,6 +682,7 @@ class ImagingSourceCamera(CameraABC):
             pass
         super().stop()
 
+    @qtc.pyqtSlot()
     def trigger_now(self):
         """Start acquiring one (or more) frames now.
 

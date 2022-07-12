@@ -457,6 +457,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         return tuple(v for tup in zip(energies, intervals) for v in tup)
 
     @abstractmethod
+    @qtc.pyqtSlot()
     def abort(self):
         """Interrupt measurement, save partial data, set energy to zero.
 
@@ -476,6 +477,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         self.__force_end_timer.start()
         self._prepare_finalization()
 
+    @qtc.pyqtSlot()
     def begin_preparation(self):
         """Start preparation for measurements.
 
@@ -665,7 +667,8 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         self.data_points.new_data_point(self.current_energy, self.controllers,
                                         self.cameras)
 
-    def __check_preparation_finished(self):
+    @qtc.pyqtSlot(bool)
+    def __check_preparation_finished(self, _):
         """Check if measurement preparation is done.
 
         Whenever a device is done with its preparation
@@ -696,8 +699,10 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
 
         self.prepared.emit()           # Signal that we're done.
         self.current_energy = self.start_energy
-        self.start_next_measurement()  # And start the measurment loop
+        self.start_next_measurement()  # And start the measurement loop
 
+    @qtc.pyqtSlot(bool)
+    @qtc.pyqtSlot()
     def __cleanup_and_end(self, *__args):
         """Conclude measurement and clean up.
 
@@ -716,6 +721,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         self.running = False
         self.finished.emit()
 
+    @qtc.pyqtSlot(bool)
     def __continue_preparation(self, _):
         """Continue preparation for measurements.
 
@@ -838,6 +844,8 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
             base.safe_disconnect(about_to_trigger, ctrl.measure_now)
             self._disconnect_controller(ctrl)
 
+    @qtc.pyqtSlot(bool)
+    @qtc.pyqtSlot()
     def _finalize(self, *_):
         """Finish the measurement: save data, then set energy to zero.
 
@@ -851,7 +859,6 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         -------
         None.
         """
-        primary = self.primary_controller
         if any(device.busy for device in self.devices):
             return
         try:
@@ -864,6 +871,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
 
             # Keep only the primary controller connected, so we can
             # set the LEED energy to zero (and detect it has been set)
+            primary = self.primary_controller
             primary.connect_()
             primary.controller_busy.connect(self.__cleanup_and_end,
                                             type=_UNIQUE)
@@ -1142,6 +1150,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         with ZipFile(self.__temp_dir.parent / '__tmp__.zip', 'w'):
             pass
 
+    @qtc.pyqtSlot(bool)
     def _on_camera_busy_changed(self, busy):
         """Receive not busy signal from camera.
 
@@ -1156,6 +1165,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         if not busy:
             self._ready_for_next_measurement()
 
+    @qtc.pyqtSlot(dict)
     def _on_controller_data_ready(self, data):
         """Receive measurement data from the controller.
 
@@ -1194,10 +1204,12 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         self.data_points.add_data(data, controller)
         self._ready_for_next_measurement()
 
+    @qtc.pyqtSlot(tuple)
     def __on_hardware_error(self, *_):
         """Abort if a hardware error occurs."""
         self.abort()
 
+    @qtc.pyqtSlot(str)
     def __on_image_saved(self, img_name):
         """Archive the latest image saved."""
         if not self.__temp_dir or not self.__temp_dir.exists():
@@ -1213,6 +1225,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         # Remove the image just appended to the archive
         img_name.unlink()
 
+    @qtc.pyqtSlot(tuple)
     def __on_init_errors(self, err):
         """Collect initialization errors to report later."""
         self.__init_errors.append(err)
@@ -1246,7 +1259,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
             base.safe_disconnect(ctrl.controller_busy,
                                  self.__check_preparation_finished)
             # Force all controllers to busy, such that ._finalize()
-            # is called for all when they turn "not busy" anymore
+            # is called for all when they turn "not busy" any more
             ctrl.busy = True
             base.safe_connect(ctrl.controller_busy, self._finalize,
                               type=_UNIQUE)
@@ -1279,6 +1292,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         else:
             self.start_next_measurement()
 
+    @qtc.pyqtSlot()
     def __report_init_errors(self):
         """Emit error_occurred for each initialization error."""
         for error in self.__init_errors:

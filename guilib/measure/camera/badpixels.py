@@ -357,6 +357,7 @@ class BadPixelsFinder(qtc.QObject):
         self.__report_acquisition_progress()
         self.__camera.start()
 
+    @qtc.pyqtSlot(np.ndarray)
     def __check_and_store_frame(self, frame):
         """Store a new frame."""
         sec = self.__current_section
@@ -607,6 +608,7 @@ class BadPixelsFinder(qtc.QObject):
                                     done.n_tasks, done.n_tasks)
         self.done.emit()
 
+    @qtc.pyqtSlot(bool)
     def __trigger_next_frame(self, *_):
         """Trigger acquisition of a new frame if necessary."""
         if self.__camera.busy or not self.__camera.is_running:

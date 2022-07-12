@@ -14,6 +14,7 @@ which gives commands to the controller classes.
 from configparser import NoSectionError, NoOptionError
 
 from numpy.polynomial.polynomial import Polynomial
+from PyQt5 import QtCore as qtc
 
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.measurement.abc import (MeasurementABC,
@@ -103,6 +104,7 @@ class MeasureEnergySetpoint(MeasurementABC):
                             '', 'measurement_settings/end_energy', fallback)
         return egy                                                              # TODO: warn if end == 1000
 
+    @qtc.pyqtSlot()
     def begin_preparation(self):
         """Start preparation for measurements.
 
@@ -242,6 +244,7 @@ class MeasureEnergySetpoint(MeasurementABC):
         with open(file_name, 'w', encoding='utf-8') as configfile:
             primary.settings.write(configfile)
 
+    @qtc.pyqtSlot()
     def abort(self):
         """Abort all current actions."""
         if (hasattr(self, "__old_coefficients")
