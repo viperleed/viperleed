@@ -1215,6 +1215,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         return
 
     @abstractmethod
+    @qtc.pyqtSlot(object)
     def start(self, *_):
         """Start the camera.
 
