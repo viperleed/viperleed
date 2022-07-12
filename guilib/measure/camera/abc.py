@@ -184,7 +184,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         self.__process_thread = qtc.QThread()
         self.__retry_stop_timer = qtc.QTimer(parent=self)
         self.__retry_stop_timer.setSingleShot(True)
-        self.__retry_stop_timer.timeout.connect(self.__stop_now_or_retry)
+        self.__retry_stop_timer.timeout.connect(self.stop)
 
         self.__init_errors = []  # Report these with a little delay
         self.__init_err_timer = qtc.QTimer(parent=self)
@@ -1243,7 +1243,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
 
         # Warn if exposure settings are somewhat stupid
         frame_interval = self.frame_interval
-        if self.exposure < frame_interval:
+        if self.exposure < frame_interval - 0.1:
             print(                                                              # TODO: should become a non-fatal warning
                 f"WARNING: Exposure ({self.exposure} ms) of camera "
                 f"{self.name} is shorter than the time it takes to "
@@ -1263,14 +1263,46 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         Once the camera has effectively stopped, the .stopped()
         signal is emitted.
 
-        This method should be extended in concrete subclasses, i.e.,
-        super().stop() must be called in the reimplementation.
+        This method should be extended in concrete subclasses. The
+        pattern of the extended method must be of the form:
+            if not super().stop():
+                return False
+            ... actually stop self.driver ...
+            self.stopped.emit()
+            return True
+
+        Notice that the base implementation DOES NOT EMIT .stopped().
 
         Returns
         -------
-        None.
+        stopped : bool
+            True if the call led to stopping the camera. False if
+            the camera was not running, or if it cannot be stopped
+            yet because some frames are missing.
         """
-        self.__stop_now_or_retry()
+        if not self.is_running:
+            return False
+
+        # Delay the stopping as long as there are image
+        # processors that have not finished their tasks,
+        # i.e., we are still waiting for some frames, or
+        # waiting for images to be processed and saved.
+        if (self.__process_thread.isRunning()
+                and any(p.busy for p in self.__image_processors)):
+            if not self.__retry_stop_timer.isActive():
+                self.__retry_stop_timer.start(100)
+            return False
+
+        # Now it is safe to clean up and stop
+        self.__retry_stop_timer.stop()
+        self.__timeout.stop()
+        self.process_info.clear_times()
+        self.n_frames_done = 0
+        self.busy = False
+        if self.__process_thread.isRunning():
+            self.__process_thread.quit()
+        base.safe_disconnect(self.frame_ready, self.__on_frame_ready)
+        return True
 
     @abstractmethod
     @qtc.pyqtSlot()
@@ -1440,26 +1472,3 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         for error in self.__init_errors:
             self.error_occurred.emit(error)
         self.__init_errors = []
-
-    @qtc.pyqtSlot()
-    def __stop_now_or_retry(self):
-        """Stop camera if image processing is over."""
-        # Delay the stopping as long as there are image
-        # processors that have not finished their tasks
-        if (self.is_running
-            and self.__process_thread.isRunning()
-                and any(p.busy for p in self.__image_processors)):
-            if not self.__retry_stop_timer.isActive():
-                self.__retry_stop_timer.start(100)
-            return
-
-        # Now it is safe to clean up and stop
-        self.__retry_stop_timer.stop()
-        self.__timeout.stop()
-        self.process_info.clear_times()
-        self.n_frames_done = 0
-        self.busy = False
-        if self.__process_thread.isRunning():
-            self.__process_thread.quit()
-        base.safe_disconnect(self.frame_ready, self.__on_frame_ready)
-        self.stopped.emit()

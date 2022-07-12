@@ -673,6 +673,11 @@ class ImagingSourceCamera(CameraABC):
     @qtc.pyqtSlot()
     def stop(self):
         """Stop the camera."""
+        if not super().stop():
+            # No need to stop, or cannot stop yet
+            return False
+
+        # Now actually stop the driver.
         # One could wrap the next line in if self.is_running,
         # but it seems that there is a bug in the driver that
         # can return True if the device was lost.
@@ -680,7 +685,9 @@ class ImagingSourceCamera(CameraABC):
             self.driver.stop()
         except ImagingSourceError:
             pass
-        super().stop()
+
+        self.stopped.emit()
+        return True
 
     @qtc.pyqtSlot()
     def trigger_now(self):
