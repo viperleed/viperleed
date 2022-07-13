@@ -537,7 +537,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
             (self.start_energy, primary.long_settle_time)
             )
 
-    def save_data(self):                                                        # TODO: clean up after testing zip
+    def __save_data(self):                                                        # TODO: clean up after testing zip
         """Save data."""
         if not self.__temp_dir:
             return
@@ -591,6 +591,8 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
             tmp_path.rename(final_path)
         except OSError as err:
             base.emit_error(self, MeasurementErrors.RUNTIME_ERROR, err)
+
+        self.__temp_dir = None  # Prevents re-saving
 
         return  # TODO: remove
 
@@ -870,7 +872,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         if any(device.busy for device in self.devices):
             return
         try:
-            self.save_data()
+            self.__save_data()
         finally:
             # Disconnect all devices and their signals
             self.__disconnect_primary_controller()
