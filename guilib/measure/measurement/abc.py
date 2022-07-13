@@ -115,6 +115,10 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         self.__aborted = False
         self.__temp_dir = None   # Directory for saving files
 
+        # Keep track of which data of which controller was
+        # stored is self.data_points at this energy step
+        self.__data_stored = {}
+
         self.threads = []
         self.running = False     # Used for aborting from outside
         self.data_points = DataPoints()
@@ -323,6 +327,9 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         self._make_cameras()
         self.__make_tmp_directory_tree()
 
+        self.__data_stored = {c: False
+                              for c in self.controllers
+                              if c.measured_quantities}
         self.data_points.primary_controller = self.primary_controller
         return True
 
@@ -664,6 +671,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         -------
         None.
         """
+        self.__data_stored = dict.fromkeys(self.__data_stored.keys(), False)
         self.data_points.new_data_point(self.current_energy, self.controllers,
                                         self.cameras)
 
@@ -1198,11 +1206,18 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
                 )
             return
 
-        # TODO: check if one controller can return data while
-        # another controller has changed his busy state but
-        # hasn't returned data yet. (race condition)
         self.data_points.add_data(data, controller)
-        self._ready_for_next_measurement()
+
+        # Don't even try to go to the next energy if we haven't
+        # processed the data from all controllers. Notice that
+        # this solution prevents a race condition in which one
+        # controller may have returned data while another one
+        # has turned not busy (i.e., all are not busy), but the
+        # data_ready signal of the second controller was not
+        # processed yet.
+        self.__data_stored[controller] = True
+        if all(self.__data_stored.values()):
+            self._ready_for_next_measurement()
 
     @qtc.pyqtSlot(tuple)
     def __on_hardware_error(self, *_):
@@ -1281,6 +1296,8 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         None.
         """
         if any(device.busy for device in self.devices):
+            return
+        if not all(self.__data_stored.values()):
             return
 
         self.data_points.calculate_times()
