@@ -576,7 +576,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         with open(file_name, 'w', encoding='utf-8') as configfile:
             self.settings.write(configfile)
 
-        arch_name = base_path / '__tmp__.zip'
+        arch_name = tmp_path.with_suffix('.zip')
         with ZipFile(arch_name, 'a', compression=ZIP_DEFLATED,
                      compresslevel=2) as archive:
             for fname in move_to_archive:
@@ -870,6 +870,9 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         None.
         """
         if any(device.busy for device in self.devices):
+            return
+        if any(camera.is_running for camera in self.cameras):
+            # Not busy, but some images are still being processed
             return
         try:
             self.__save_data()
@@ -1232,7 +1235,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         if not self.__temp_dir or not self.__temp_dir.exists():
             return
         img_name = Path(img_name)
-        arch_name = self.__temp_dir.parent / '__tmp__.zip'
+        arch_name = self.__temp_dir.with_suffix('.zip')
         with ZipFile(arch_name, 'a', compression=ZIP_DEFLATED,
                      compresslevel=2) as archive:
             archive.write(img_name, img_name.relative_to(self.__temp_dir))
