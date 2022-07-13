@@ -102,8 +102,8 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
     data_received = qtc.pyqtSignal(object)
     serial_busy = qtc.pyqtSignal(bool)
     about_to_trigger = qtc.pyqtSignal()
-    __start_timer = qtc.pyqtSignal(int)
-    __stop_timer = qtc.pyqtSignal()
+
+    __move_to_thread_requested = qtc.pyqtSignal(bool)  # True==connect
 
     _mandatory_settings = [
             ('serial_port_settings', 'MSG_END'),
@@ -185,8 +185,6 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         self.__timeout = qtc.QTimer(parent=self)
         self.__timeout.setSingleShot(True)
         self.__timeout.timeout.connect(self.__on_serial_timeout)
-        self.__start_timer.connect(self.__timeout.start)
-        self.__stop_timer.connect(self.__timeout.stop)
 
         self.__open = False
 
@@ -195,6 +193,8 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         if self.__init_errors:
             self.__init_err_timer.start(20)
         self.error_occurred.disconnect(self.__on_init_errors)
+
+        self.__move_to_thread_requested.connect(self.__on_moved_to_thread)
 
     @property
     def byte_order(self):
@@ -438,8 +438,9 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         This method must be called in the reimplementation of
         identify_error after the error has been correctly identified.
         """
-        self.__port.clearError()
-        self.__stop_timer.emit()
+        if self.__port.error() != qts.QSerialPort.NoError:
+            self.__port.clearError()
+        self.__timeout.stop()
         self.__messages_since_error = []
         self.__got_unacceptable_response = False
 
@@ -653,6 +654,13 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         """
         return True
 
+    def moveToThread(self, thread):
+        was_open = self.is_open
+        if was_open:
+            self.disconnect_()
+        super().moveToThread(thread)
+        self.__move_to_thread_requested.emit(was_open)
+
     # pylint: disable=no-self-use
     # Method is to be potentially reimplemented
     def prepare_message_for_encoding(self, message, *other_messages):
@@ -773,7 +781,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
 
         timeout = int(timeout)
         if timeout >= 0:
-            self.__start_timer.emit(timeout)
+            self.__timeout.start(timeout)
         all_messages = self.prepare_message_for_encoding(*all_messages)
 
         _requires_response = self.message_requires_response(*all_messages)
@@ -876,7 +884,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
     def __on_bytes_ready_to_read(self):
         """Read the message(s) received."""
         if self.__got_unacceptable_response:
-            self.__stop_timer.emit()
+            self.__timeout.stop()
             return
 
         msg = bytes(self.__port.readAll())
@@ -885,7 +893,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             self.__last_partial_message.extend(msg)
             return
 
-        self.__stop_timer.emit()
+        self.__timeout.stop()
 
         head, *messages, tail = msg.split(self.msg_markers['END'])
         messages.insert(0, self.__last_partial_message + head)
@@ -923,6 +931,13 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
                 return
         self.unprocessed_messages.extend(messages)
         self.process_received_messages()
+
+    @qtc.pyqtSlot(bool)
+    def __on_moved_to_thread(self, was_connected):
+        """Remake QSerialPort in the new thread; connect if needed."""
+        self.port = self.port_name
+        if was_connected:
+            self.connect_()
 
     @qtc.pyqtSlot(qts.QSerialPort.SerialPortError)
     def __on_serial_error(self, error_code):

@@ -121,7 +121,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
 
         self.threads = []
         self.running = False     # Used for aborting from outside
-        self.data_points = DataPoints()
+        self.data_points = DataPoints(parent=self)
         self.data_points.error_occurred.connect(self.error_occurred)
 
         self.__init_errors = []  # Report these with a little delay
@@ -536,6 +536,16 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         self.__preparation_started.emit(
             (self.start_energy, primary.long_settle_time)
             )
+
+    def moveToThread(self, thread):  # pylint: disable=invalid-name
+        """Move self and primary controller to a new thread."""
+        # Notice that this explicit extension is necessary as
+        # relying on parent-child relationships is not enough.
+        # In fact, child.moveToThread(thread) is not called,
+        # as is any reimplemented version of the method.
+        super().moveToThread(thread)
+        if self.primary_controller:
+            self.primary_controller.moveToThread(thread)
 
     def __save_data(self):                                                        # TODO: clean up after testing zip
         """Save data."""
@@ -1307,7 +1317,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
 
         self.data_points.calculate_times()
         self.data_points.nr_steps_done += 1
-        self.new_data_available.emit()  # slow
+        self.new_data_available.emit()
 
         if self._is_finished():
             self._prepare_finalization()

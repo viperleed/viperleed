@@ -511,8 +511,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
                     )
                 return
             self.__serial = serial_class(new_settings,
-                                         port_name=self.__port_name,
-                                         parent=self)
+                                         port_name=self.__port_name)
             self.serial.error_occurred.connect(self.error_occurred)
         else:
             # The next line will also check that new_settings contains
@@ -900,6 +899,11 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
             self.begin_prepare_todos[key] = True
         for key in self.continue_prepare_todos:
             self.continue_prepare_todos[key] = True
+
+    def moveToThread(self, thread):
+        """Move self and its serial port to a new thread."""
+        self.serial.moveToThread(thread)
+        super().moveToThread(thread)
 
 
 class MeasureControllerABC(ControllerABC):
