@@ -246,7 +246,7 @@ class TimeResolved(MeasurementABC):
             return self.start_energy
         energy = self.current_energy + self.__delta_energy
         if self.__endless:
-            self.new_data_available.emit()
+            self.new_data_available.emit(self.data_points[-1])
             if energy > self.__end_energy:
                 energy = self.start_energy
         return energy
@@ -342,7 +342,7 @@ class TimeResolved(MeasurementABC):
 
         self.data_points.calculate_times(continuous=True)
         self.data_points.nr_steps_done += 1
-        self.new_data_available.emit()
+        self.new_data_available.emit(self.data_points[-1])
 
         if self._is_finished():
             self._prepare_finalization()

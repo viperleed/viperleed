@@ -361,9 +361,7 @@ class Measure(ViPErLEEDPluginBase):
         print("\n\nSTARTING\n")
         text = self._ctrls['select'].currentText()
         if self.measurement:
-            for thread in self.measurement.threads:
-                thread.quit()
-            self.__on_finished()
+            self.__on_finished()                                                # TODO: necessary?
         for viewer in self._dialogs['camera_viewers']:                          # TODO: Maybe only those relevant for measurement?
             viewer.camera.disconnect_()
             viewer.close()
@@ -387,7 +385,7 @@ class Measure(ViPErLEEDPluginBase):
         self.__connect_measurement()
 
         plot = self._glob['plot']
-        plot.data_points = plot_data = self.measurement.data_points
+        plot.data_points = plot_data = DataPoints()
         plot_data.primary_controller = self.measurement.primary_controller
         plot.show()
         self._glob['last_cfg'] = self.measurement.settings
@@ -416,8 +414,8 @@ class Measure(ViPErLEEDPluginBase):
                 CameraViewer(camera, stop_on_close=False, roi_visible=False)
                 )
 
-    @qtc.pyqtSlot()
-    def __on_data_received(self):
+    @qtc.pyqtSlot(dict)
+    def __on_data_received(self, new_data):
         """Plot measured data."""
         meas = self.sender()
         if not isinstance(meas, MeasurementABC):
@@ -426,7 +424,10 @@ class Measure(ViPErLEEDPluginBase):
                 f"Got unexpected sender class {meas.__class__.__name__} "
                 "for plotting measurements."
                 )
-        self._glob['plot'].plot_new_data()
+        plot = self._glob['plot']
+        plot.data_points.append(new_data)
+        plot.data_points.nr_steps_done += 1
+        plot.plot_new_data()
 
     def __on_set_energy(self):
         """Set energy on primary controller."""

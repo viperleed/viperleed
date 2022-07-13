@@ -77,10 +77,17 @@ class MeasurementErrors(base.ViPErLEEDErrorEnum):
 class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     # TODO: doc about inner workings
     """Generic measurement class."""
 
-    error_occurred = qtc.pyqtSignal(tuple)  # Something went wrong
-    finished = qtc.pyqtSignal()             # Whole measurement is over
-    new_data_available = qtc.pyqtSignal()   # New data can be processed
-    prepared = qtc.pyqtSignal()             # Preparation is finished
+    # Something went wrong
+    error_occurred = qtc.pyqtSignal(tuple)
+
+    # Whole measurement is over
+    finished = qtc.pyqtSignal()
+
+    # New data can be processed
+    new_data_available = qtc.pyqtSignal(dict)
+
+    # Preparation is finished
+    prepared = qtc.pyqtSignal()
 
     # Abort current tasks on all devices/the primary controller
     _request_stop_devices = qtc.pyqtSignal()
@@ -1317,7 +1324,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
 
         self.data_points.calculate_times()
         self.data_points.nr_steps_done += 1
-        self.new_data_available.emit()
+        self.new_data_available.emit(self.data_points[-1])
 
         if self._is_finished():
             self._prepare_finalization()
