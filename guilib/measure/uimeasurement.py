@@ -11,11 +11,6 @@ Author: Florian Doerr
 Defines the Measure class.
 """
 
-# BUG: slowly resizing the plot window can cause loss of characters from
-#      the serial line of the primary controller. Most likely can be solved
-#      by moving the measurement, its data_points, and its primary controller
-#      to a non-GUI thread.
-
 # TODO: progress bar for non-endless
 # TODO: quick IV video to find max intensity, and adjust camera
 # TODO: auto-scale contrast on camera viewer
@@ -60,6 +55,8 @@ SYS_CFG = get_system_config()
 DEFAULT_CONFIG_PATH = Path(
     SYS_CFG.get("PATHS", 'configuration', fallback='')
     )
+
+_TIME_CRITICAL = qtc.QThread.TimeCriticalPriority
 
 
 class UIErrors(base.ViPErLEEDErrorEnum):
@@ -115,6 +112,8 @@ class Measure(ViPErLEEDPluginBase):
             }
 
         self.measurement = None
+        self.__measurement_thread = qtc.QThread()
+        self.__measurement_thread.start(_TIME_CRITICAL)
 
         for timer, interval in (('report_errors', 35),
                                 ('start_measurement', 50)):
@@ -141,13 +140,17 @@ class Measure(ViPErLEEDPluginBase):
             event.ignore()
             return
 
+        retry_later = False
+        if self.__measurement_thread.isRunning():
+            self.__measurement_thread.quit()
+            retry_later = True
+
         if self._glob['plot']:
             self._glob['plot'].close()
         # accept has to be called in order to
         # safely quit the dialog and its threads
         self._dialogs['bad_px_finder'].accept()
 
-        retry_later = False
         # Stop all cameras
         for viewer in self._dialogs['camera_viewers']:
             viewer.close()
@@ -411,6 +414,8 @@ class Measure(ViPErLEEDPluginBase):
     @qtc.pyqtSlot()
     def __on_measurement_started(self):
         self._timestamps['start'] = time.perf_counter()
+        base.safe_disconnect(self.__measurement_thread.started,
+                             self._timers['start_measurement'].start)
         self.__switch_enabled(False)
 
     def __on_read_pressed(self, *_):
@@ -479,6 +484,7 @@ class Measure(ViPErLEEDPluginBase):
         config.update_file()
 
         self.measurement = measurement_cls(config)
+        self.measurement.moveToThread(self.__measurement_thread)
 
         self.__connect_measurement()
 
@@ -488,7 +494,13 @@ class Measure(ViPErLEEDPluginBase):
         plot.show()
         self._glob['last_cfg'] = self.measurement.settings
 
-        self._timers['start_measurement'].start()
+        timer = self._timers['start_measurement']
+        if not self.__measurement_thread.isRunning():
+            base.safe_connect(self.__measurement_thread.started,
+                              timer.start, qct.Qt.UniqueConnection)
+            self.__measurement_thread.start(_TIME_CRITICAL)
+        else:
+            timer.start()
 
     @qtc.pyqtSlot()
     def __print_done(self):
