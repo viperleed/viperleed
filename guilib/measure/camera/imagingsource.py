@@ -250,17 +250,38 @@ class ImagingSourceCamera(CameraABC):
         self.is_finding_best_frame_rate = False
         self.best_next_rate = 1024
         self.__burst_count = -1
+        self.__extra_delay = []  # Duration of abort_trigger_burst
 
         self.__has_callback = False
 
         super().__init__(ImagingSourceDriver(), *args,
                          settings=settings, parent=parent, **kwargs)
-        self.abort_trigger_burst.connect(self.driver.abort_trigger_burst)
+        self.abort_trigger_burst.connect(self.__on_abort_trigger_burst)
+
+    @qtc.pyqtSlot()
+    def __on_abort_trigger_burst(self):
+        """Abort trigger burst."""
+        # Calculate how long this takes, as this is slowing
+        # down the camera, since it requires a pause/start.
+        t_start = self.process_info.frame_times[-1]
+        self.driver.abort_trigger_burst()
+        self.__extra_delay.append(1000*(timer() - t_start))
 
     @property
     def exceptions(self):
         """Return a tuple of camera exceptions."""
         return (ImagingSourceError,)
+    
+    @property
+    def extra_delay(self):
+        """Return the interval spent not measuring when triggered (msec)."""
+        # Imaging Source cameras have significant delay only
+        # when we have to interrupt an oversized trigger burst
+        if (self.mode != 'triggered'
+            or self.n_frames <= 1
+                or not self.supports_trigger_burst):
+            return 0.0
+        return np.mean(self.__extra_delay)
 
     @property
     def image_info(self):
@@ -632,6 +653,7 @@ class ImagingSourceCamera(CameraABC):
     def start(self, *_):
         """Start the camera in self.mode."""
         self.n_frames_done = 0
+        self.__extra_delay = []
 
         if self.n_frames_estimate > 0:
             # Optimize now the frame rate to minimize frame losses.

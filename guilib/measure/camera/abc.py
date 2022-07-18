@@ -346,6 +346,26 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         return exposure_time
 
     @property
+    @abstractmethod
+    def extra_delay(self):
+        """Return the interval spent not measuring when triggered (msec).
+        
+        This quantity is used to judge how long the camera needs to
+        perform one acquisition in triggered mode. The time it takes
+        is typically
+            self.exposure + 1000/self.get_frame_rate()   # First frame
+            + (self.n_frames - 1) * self.frame_interval  # Other frames
+            + self.extra_delay
+        
+        Returns
+        -------
+        extra_delay : float
+            Extra time in milliseconds required by the camera
+            to complete a triggering cycle.
+        """
+        return 0.0
+
+    @property
     def frame_interval(self):
         """Return the time interval (msec) between frames."""
         return max(self.exposure, 1000/self.get_frame_rate())
