@@ -11,6 +11,20 @@ Author: Florian Doerr
 Defines the Measure class.
 """
 
+# TODO: it looks like the largest fraction of the time required by
+#       abort_trigger_burst is in fact on the call to _dll_start_live
+#       (97% of the 80ms), while .pause() takes only a short time
+#       (approx. 3%, i.e., 2.4ms). One could in principle then only
+#       .pause() during abort_trigger_burst, and restart the camera
+#       at the beginning of the next energy step. It is not that trivial
+#       to make it general and thread-safe: one has to decide based on
+#       how long the camera_delay (and perhaps i0_settle_time) are whether
+#       cameras should be started before setting the energy (if too short)
+#       or while setting the energy (if it takes long enough). The additional
+#       issue is that one would need to know in advance how long does it
+#       take for a camera to restart after being paused, as this determines
+#       what 'too short/long' means. It could be potentially an information
+#       to be gathered during preparation.
 # TODO: progress bar for non-endless
 # TODO: quick IV video to find max intensity, and adjust camera
 # TODO: auto-scale contrast on camera viewer
@@ -103,7 +117,8 @@ class Measure(ViPErLEEDPluginBase):
             # Keep track of the last config used for a measurement.
             # Useful if one wants to repeat a measurement.
             'last_cfg': ViPErLEEDSettings(),
-            'errors': [],  # Report a bunch at once
+            'errors': [],       # Report a bunch at once
+            'n_retry_close': 0  # Try at most 50 times, i.e., 2.5 sec
             }
         self._timers = {
             'report_errors': qtc.QTimer(parent=self),
@@ -156,15 +171,22 @@ class Measure(ViPErLEEDPluginBase):
             viewer.close()
             camera = viewer.camera
             if camera and camera.is_running:
+                print(camera.name, "is running")
                 camera.stop()
                 retry_later = True
 
-        if retry_later:
+        if retry_later and self._glob['n_retry_close'] <= 50:
+            self._glob['n_retry_close'] += 1
             self._timers['retry_close'].start()
             event.ignore()
             return
 
         super().closeEvent(event)
+    
+    def showEvent(self, event):  # pylint: disable=invalid-name
+        """Show self."""
+        self._glob['n_retry_close'] = 0
+        super().showEvent(event)
 
     def update_device_lists(self):
         """Update entries in "Devices" menu."""
@@ -507,8 +529,11 @@ class Measure(ViPErLEEDPluginBase):
         print("\n#### DONE! ####")
         start, prep, finish = self._timestamps.values()
         n_steps = self.measurement.data_points.nr_steps_done
-        txt = (f"Measurement took {finish-start:.2f} s, of "
-              f"which {prep-start:.2f} s for preparation. ")
+        txt = f"Measurement took {finish-start:.2f} s"
+        if prep-start > 0:
+            txt += f", of which {prep-start:.2f} s for preparation. "
+        else:
+            txt += ". "
         if n_steps:
             txt += (f"This is on average {1000*(finish-prep)/n_steps:.2f} ms"
                     " per energy step")
