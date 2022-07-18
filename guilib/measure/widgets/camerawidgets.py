@@ -575,9 +575,10 @@ class CameraViewer(qtw.QScrollArea):
         """Update the window title with camera information."""
         img_w, img_h = self.image_size.width(), self.image_size.height()
         full_w, full_h = self.camera.sensor_size
+        bin_factor = self.camera.binning
 
         img_size = f"{img_w}x{img_h}"
-        if img_w != full_w or img_h != full_h:
+        if bin_factor == 1 and (img_w, img_h) != (full_w, full_h):
             img_size += f" of {full_w}x{full_h}"
         try:
             scale = self.windowTitle().split(' - ')[1]
