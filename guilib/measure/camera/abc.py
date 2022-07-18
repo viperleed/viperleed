@@ -1411,6 +1411,12 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             # In live mode, the frames will be handled by the GUI
             return
 
+        if not self.busy:
+            # Some frames arrived, but we haven't asked for them:
+            # we should be busy if we are in triggered mode and
+            # went through self.trigger_now()
+            return
+
         if self.n_frames_done == 0:  # pylint: disable=compare-to-zero
             processor = ImageProcessor()
             processor.image_processed.connect(self.image_processed)

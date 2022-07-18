@@ -89,16 +89,21 @@ def on_frame_ready_(__grabber_handle, image_start_pixel,
             # TODO: report that frames were lost, i.e., exposure
             # time can be made longer.
         return
+    
+    # Don't emit frame_ready if we got more frames than expected
+    if camera.mode == 'triggered' and n_frames_received > camera.n_frames:
+        return
 
-    # Interrut when all frames arrived. This may happen if the camera
+    # Interrupt when all frames arrived. This may happen if the camera
     # was set to 'triggered' and it supports trigger burst, as we keep
-    # a little safety margin in case frames are actually lost. Notice
-    # the use of a signal: A direct call makes the program access the
-    # camera from two different threads (main, and the thread in which
-    # this callback runs) and silently crashes the whole application.
+    # a little safety margin (only for > 1 frame) in case frames are
+    # actually lost. Notice the use of a signal: A direct call makes the
+    # program access the camera from two different threads (main, and the
+    # thread in which this callback runs) and silently crashes the whole
+    # application.
     if (camera.mode == 'triggered'
         and camera.supports_trigger_burst
-            and n_frames_received >= camera.n_frames > 1):
+            and n_frames_received == camera.n_frames > 1):
         camera.abort_trigger_burst.emit()
 
     # Prepare the actual image and send it out
