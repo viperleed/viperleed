@@ -101,12 +101,16 @@ class IVVideo(MeasurementABC):
         """
         super().start_next_measurement()
         for controller in self.controllers:
-            # Necessary to force secondaries into busy,
-            # before the primary returns not busy anymore.
+            # Force all controllers into busy, so we don't
+            # risk the secondary controllers to be not yet
+            # busy when the primary becomes not busy (which
+            # would make us potentially move to the next step)
             controller.busy = True
+
         profile = self.step_profile
         self.set_leed_energy(*profile,
                              self.current_energy, self.__i0_settle_time)
+
         image_name = (f"{self.current_step_nr:0>{self.__n_digits}}_"
                       f"{self.current_energy:.1f}eV.tiff")
         for camera in self.cameras:
@@ -122,12 +126,29 @@ class IVVideo(MeasurementABC):
         # overlaps as much as possible with the measurement time!
         # Frame delivery from the camera should take:
         # (exposure + 1000/fr_rate) + (n_frames - 1) * fr_interval
-        profile_duration = max(
-            self.primary_controller.time_to_trigger - self.__i0_settle_time,
-            sum(profile[1::2])
-            )
+        # Also, we should probably have one timer per camera, as
+        # cameras may potentially deliver frames at different rates!
+        profile_duration = sum(profile[1::2])
         camera_delay = profile_duration + self.hv_settle_time
         self._camera_timer.start(camera_delay)
+
+        # Let the user know how much time we are loosing, at
+        # the second step, because the first one is a non-step
+        if self.current_step_nr != 2:
+            return
+
+        for ctrl in self.controllers:
+            if not ctrl.measured_quantities:
+                continue
+            ctrl_time = (ctrl.time_to_first_measurement + ctrl.time_to_trigger)
+            txt = f"{ctrl.name} at {ctrl.port_name}:"
+            print(txt, f"{ctrl_time:>{30-len(txt)}.2f} ms")
+        for cam in self.cameras:
+            cam_time = (cam.exposure + 1000/cam.get_frame_rate()
+                        + (cam.n_frames - 1) * cam.frame_interval
+                        + cam.extra_delay + camera_delay)
+            txt = f"{cam.name}:"
+            print(txt, f"{cam_time:>{30-len(txt)}.2f} ms")
 
     def _is_finished(self):
         """Check if the full measurement cycle is done.
