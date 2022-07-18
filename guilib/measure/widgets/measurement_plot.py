@@ -76,7 +76,9 @@ class MeasurementPlot(qtw.QWidget):
     def data_points(self, data_points):
         """Set the data points to be plotted.
 
-        Setting also clears all axes.
+        Setting also clears all axes, leaving the selection
+        of plotted quantities unchanged. Call self.clear()
+        to untick all explicitly.
 
         Parameters
         ----------
@@ -95,7 +97,8 @@ class MeasurementPlot(qtw.QWidget):
                 "Expected a DataPoints object."
                 )
         self.__data_points = data_points
-        self.clear()
+        self.clear(uncheck_all=False)
+        self.plot_all_data()
 
     @property
     def lines(self):
@@ -107,13 +110,14 @@ class MeasurementPlot(qtw.QWidget):
         """Return plotted quantities."""
         return self._ctrls['quantities'].selected_quantities
 
-    def clear(self):
+    def clear(self, uncheck_all=True):
         """Clear the plot."""
         self.__canvas.ax.clear()
         self._glob['plot_lines'] = defaultdict(dict)
         self.__canvas.figure.tight_layout()
         self.__canvas.draw_idle()
-        self._ctrls['quantities'].uncheck_all()
+        if uncheck_all:
+            self._ctrls['quantities'].uncheck_all()
 
     def plot_all_data(self):
         """Plot data on the canvas for the first time.
@@ -129,10 +133,11 @@ class MeasurementPlot(qtw.QWidget):
         self.__canvas.ax.clear()
         self._glob['plot_lines'] = defaultdict(dict)
 
-        if self.data_points.is_time_resolved:
-            self.__plot_all_time_resolved_data()
-        else:
-            self.__plot_all_energy_resolved_data()
+        if self.plotted_quantities:                
+            if self.data_points.is_time_resolved:
+                self.__plot_all_time_resolved_data()
+            else:
+                self.__plot_all_energy_resolved_data()
 
         self.__update_labels_and_legend()
         self.__canvas.draw_idle()
