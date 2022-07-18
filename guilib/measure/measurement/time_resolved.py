@@ -213,7 +213,9 @@ class TimeResolved(MeasurementABC):
         _MIN = 50                                                               # TODO: should probably be OS-dependent? This estimate is actually pretty bad (too small) when there's a lot of data to be plotted.
         min_interval = _MIN
         if self.controllers:
-            min_interval = 2 * max(c.initial_delay for c in self.controllers)
+            min_interval = 2 * max(c.initial_delay
+                                   for c in self.controllers
+                                   if c.measured_quantities)
             # add a little, in case initial_delay == N*measurement_interval
             min_interval += 5
         return max(_MIN, round(min_interval))

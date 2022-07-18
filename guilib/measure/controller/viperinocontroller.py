@@ -23,14 +23,6 @@ from viperleed.guilib.measure.datapoints import QuantityInfo
 from viperleed.guilib.measure.classes.settings import NotASequenceError
 
 
-# TODO: it looks like the nominal ADC frequencies are not necessarily
-#       quite correct. This is at the origin of a misalignment on the
-#       time axis when using multiple controllers. It appears as if
-#       the 50Hz is quite correct, but the 500Hz can deviate a few
-#       percent from the nominal value. It may make sense to have a
-#       tool for calibrating such frequencies.
-
-
 _MANDATORY_CMD_NAMES = (
     "PC_AUTOGAIN", "PC_CONFIGURATION", "PC_SET_UP_ADCS", "PC_OK", "PC_RESET",
     "PC_SET_VOLTAGE", "PC_ERROR", "PC_CALIBRATION", "PC_MEASURE_ONLY",
@@ -128,20 +120,10 @@ class ViPErinoController(MeasureControllerABC):
             The time interval between when a measurement was triggered
             and when the measurement was actually acquired. If multiple
             measurements are averaged over, the "time when measurements
-            are actually acqiuired" is the middle time between the
+            are actually acquired" is the middle time between the
             beginning and the end of the measurement.
         """
-        try:
-            nr_average = self.settings.getint(
-                'measurement_settings', 'num_meas_to_average', fallback=1
-                )
-        except (TypeError, ValueError):
-            nr_average = 1
-            base.emit_error(
-                self, ControllerErrors.INVALID_SETTING_WITH_FALLBACK,
-                '', 'measurement_settings/num_meas_to_average', nr_average
-                )
-        return (3 + (nr_average - 1) / 2) * self.measurement_interval
+        return (3 + (self.__nr_average - 1) / 2) * self.measurement_interval
 
     @property
     def measurement_interval(self):
@@ -190,6 +172,11 @@ class ViPErinoController(MeasureControllerABC):
             # in the settings is present and valid.
             version = self.settings.get("controller", "firmware_version")
         return version
+
+    @property
+    def time_to_first_measurement(self):
+        """Return the interval between trigger and 1st measurement (msec)."""
+        return (self.__nr_average + 2) * self.measurement_interval
 
     def are_settings_ok(self, settings):
         """Return whether a ViPErLEEDSettings is compatible with self."""
@@ -583,18 +570,13 @@ class ViPErinoController(MeasureControllerABC):
         self.send_message(stop)
 
     def list_devices(self):
-        """List Arduino Micro VipErLEED hardware.
-
-        This function will take between 70 to slightly more
-        than 100 ms to run.
-        """
+        """List Arduino Micro VipErLEED hardware -- can be slow."""
         ports = qts.QSerialPortInfo().availablePorts()
         device_list = []
         threads = []
         controllers = []
         for port in ports:
-            ctrl = ViPErinoController(port_name=port.portName(),
-                                      sets_energy=False)
+            ctrl = ViPErinoController(port_name=port.portName())
             threads.append(qtc.QThread())
             ctrl.moveToThread(threads[-1])
             controllers.append(ctrl)
@@ -627,3 +609,18 @@ class ViPErinoController(MeasureControllerABC):
                 thread.terminate()
                 thread.wait()
         return device_list
+
+    @property
+    def __nr_average(self):
+        """Return the number of measurements to average over."""
+        try:
+            nr_average = self.settings.getint(
+                'measurement_settings', 'num_meas_to_average', fallback=1
+                )
+        except (TypeError, ValueError):
+            nr_average = 1
+            base.emit_error(
+                self, ControllerErrors.INVALID_SETTING_WITH_FALLBACK,
+                '', 'measurement_settings/num_meas_to_average', nr_average
+                )
+        return nr_average

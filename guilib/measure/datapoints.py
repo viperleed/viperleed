@@ -353,9 +353,9 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                     )
         for ctrl, ctrl_times in self[-1][time].items():
             if not ctrl_times:
-                # May happen in time-resolved when the energy step              # TODO: this happens especially while replotting. May be solved by moving measurement (and primary) to its own thread.
-                # duration is so small that (typically the primary)
-                # controller did not yet return any measurement.
+                # May happen in time-resolved when the energy step
+                # duration is so small that a controller did not yet
+                # return any measurement.
                 emit_error(self, DataErrors.NO_DATA_FOR_CONTROLLER,
                            ctrl.port_name)
                 continue
@@ -364,7 +364,11 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                 or len(self) == 1  # First energy step
                     or ctrl == self.primary_controller):
                 first_time -= self.__primary_first_time
-                first_time += ctrl.initial_delay / 1000
+                try:
+                    first_time += ctrl.initial_delay / 1000
+                except AttributeError:
+                    # Probably just a ControllerABC, not measuring
+                    pass
             else:
                 first_time = (self[-2][time][ctrl][-1] +
                               ctrl.measurement_interval / 1000)

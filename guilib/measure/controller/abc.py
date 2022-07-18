@@ -29,6 +29,9 @@ from viperleed.guilib.measure.classes.settings import (
     )
 
 
+_UNIQUE = qtc.Qt.UniqueConnection
+
+
 class ControllerErrors(base.ViPErLEEDErrorEnum):
     """Class for controller errors."""
     # The following three are fatal errors, and should make the GUI
@@ -173,7 +176,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         self.__unsent_messages = []
         if self.serial:
             self.serial.serial_busy.connect(self.send_unsent_messages,
-                                            type=qtc.Qt.UniqueConnection)
+                                            type=_UNIQUE)
         if self.__init_errors:
             self.__init_err_timer.start(20)
         self.error_occurred.disconnect(self.__on_init_errors)
@@ -302,35 +305,6 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
             base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
                             'measurement_settings/i0_settle_time')
         return settle_t
-
-    @property
-    def initial_delay(self):
-        """Return the initial time delay of a measurement (msec).
-
-        Returns
-        -------
-        initial_delay : float
-            The time interval between when a measurement was triggered
-            and when the measurement was actually acquired. If mutliple
-            measurements are averaged over, the "time when measurements
-            are actually acqiuired" should be the middle time between
-            the beginning and the end of the measurement.
-        """
-        # pylint: disable=redefined-variable-type
-        # Seems a pylint bug
-        fallback = 0.0
-        if not self.settings:
-            return fallback
-        try:
-            delay = self.settings.getfloat('controller', 'initial_delay',
-                                           fallback=fallback)
-        except (TypeError, ValueError):
-            # Not a float
-            delay = fallback
-            base.emit_error(self,
-                            ControllerErrors.INVALID_SETTING_WITH_FALLBACK,
-                            '', 'controller/initial_delay', delay)
-        return delay
 
     @property
     def long_settle_time(self):
@@ -726,9 +700,8 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         except TypeError:
             pass
         self.serial.serial_busy.connect(self.send_unsent_messages,
-                                        type=qtc.Qt.UniqueConnection)
-        self.serial.serial_busy.connect(self.set_busy,
-                                        type=qtc.Qt.UniqueConnection)
+                                        type=_UNIQUE)
+        self.serial.serial_busy.connect(self.set_busy, type=_UNIQUE)
 
     @qtc.pyqtSlot(tuple)
     def __on_init_errors(self, err):
@@ -818,7 +791,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
             # while the preparation was running is now sent.
             base.safe_connect(self.serial.serial_busy,
                               self.send_unsent_messages,
-                              type=qtc.Qt.UniqueConnection)
+                              type=_UNIQUE)
         self.busy = False
 
     @qtc.pyqtSlot(tuple)
@@ -854,7 +827,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         base.safe_disconnect(self.serial.serial_busy,
                              self.send_unsent_messages)
         base.safe_connect(self.serial.serial_busy, self.__do_preparation_step,
-                          type=qtc.Qt.UniqueConnection)
+                          type=_UNIQUE)
         self.__do_preparation_step()
 
     @qtc.pyqtSlot()
@@ -874,7 +847,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         base.safe_disconnect(self.serial.serial_busy,
                              self.send_unsent_messages)
         base.safe_connect(self.serial.serial_busy, self.__do_preparation_step,
-                          type=qtc.Qt.UniqueConnection)
+                          type=_UNIQUE)
         self.__do_preparation_step()
 
     def reset_preparation_todos(self):
@@ -952,6 +925,54 @@ class MeasureControllerABC(ControllerABC):
         # the selected quantities to measure.
         self.__measured_quantities = tuple()
 
+    @property
+    def initial_delay(self):
+        """Return the initial time delay of a measurement (msec).
+
+        Returns
+        -------
+        initial_delay : float
+            The time interval between when a measurement was triggered
+            and when the measurement was actually acquired. If multiple
+            measurements are averaged over, the "time when measurements
+            are actually acquired" should be the middle time between
+            the beginning and the end of the measurement.
+        """
+        # pylint: disable=redefined-variable-type
+        # Seems a pylint bug
+        fallback = 0.0
+        if not self.settings:
+            return fallback
+        try:
+            delay = self.settings.getfloat('controller', 'initial_delay',
+                                           fallback=fallback)
+        except (TypeError, ValueError):
+            # Not a float
+            delay = fallback
+            base.emit_error(self,
+                            ControllerErrors.INVALID_SETTING_WITH_FALLBACK,
+                            '', 'controller/initial_delay', delay)
+        return delay
+
+    @property
+    def measured_quantities(self):
+        """Return a list of measured quantities."""
+        return self.__measured_quantities
+
+    @property
+    @abstractmethod
+    def measurement_interval(self):
+        """Return the time interval between measurements (msec).
+
+        This applies only for continuous delivery of data.
+
+        Returns
+        -------
+        measurement_interval : float
+            Time interval between measurements (in milliseconds)
+        """
+        return 0.0
+
     @abstractmethod
     @qtc.pyqtSlot()
     def measure_now(self):
@@ -971,17 +992,6 @@ class MeasureControllerABC(ControllerABC):
         None.
         """
         self._time_to_trigger = 0
-
-    @property
-    def measured_quantities(self):
-        """Return a list of measured quantities."""
-        return self.__measured_quantities
-
-    @property
-    @abstractmethod
-    def measurement_interval(self):
-        """Return the time interval between measurements (msec)."""
-        return
 
     def measures(self, quantity):
         """Return whether this controller measures quantity."""
@@ -1146,11 +1156,13 @@ class MeasureControllerABC(ControllerABC):
         if self.serial is not None:
             # Connect data_received signal from the serial to
             # the on_data_ready function in this class.
-            self.serial.data_received.connect(self.on_data_ready)
+            base.safe_connect(self.serial.data_received, self.on_data_ready,
+                              type=_UNIQUE)
 
             # Connect serial about_to_trigger signal to controller
             # about_to_trigger signal.
-            self.serial.about_to_trigger.connect(self.about_to_trigger)
+            base.safe_connect(self.serial.about_to_trigger,
+                              self.about_to_trigger, type=_UNIQUE)
 
     @abstractmethod
     @qtc.pyqtSlot(bool)
@@ -1168,12 +1180,37 @@ class MeasureControllerABC(ControllerABC):
         Parameters
         ----------
         continuous : bool, optional
-            Wether continuous mode should be on.
+            Whether continuous mode should be on.
             Used in subclass. Default is True.
 
         Returns
         -------
         None.
         """
-        base.safe_connect(self.serial.serial_busy, self.set_busy,
-                          type=qtc.Qt.UniqueConnection)
+        base.safe_connect(self.serial.serial_busy, self.set_busy, type=_UNIQUE)
+
+    @property
+    @abstractmethod
+    def time_to_first_measurement(self):
+        """Return the interval between trigger and 1st measurement (msec).
+
+        Notice that this duffers from self.initial_delay. This is
+        the total amount of time the controller requires to return
+        its measurement. self.initial_delay is instead the time
+        the measurement was acquired (relative to triggering). The
+        two will coincide only when no averaging is performed by
+        the controller.
+
+        A typical implementation:
+        >>> return (self.initial_delay
+                    + (n_ave - 1)/2 * self.measurement_interval)
+
+        Needs to be reimplemented in subclasses.
+
+        Returns
+        -------
+        time_to_first_measurement : float
+            Time interval in milliseconds needed to return a
+            measurement after triggering.
+        """
+        return 0.0
