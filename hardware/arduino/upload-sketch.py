@@ -73,7 +73,7 @@ def get_arduino_cli_from_git():
     shutil.unpack_archive(base_path / correct_name, base_path)
 
 
-def get_arduino_cli(get_from_git=False):
+def get_arduino_cli(get_from_git=False):                                        # TODO: progress
     """Pick the correct Arduino CLI tool.
 
     The choice is based on the current operating system.
@@ -148,7 +148,7 @@ def get_boards():
     return json.loads(cli.stdout)
 
 
-def install_arduino_core(core_name):
+def install_arduino_core(core_name):                                            # TODO: progress
     """Install a given core to the Arduino CLI.
 
     Parameters
@@ -204,7 +204,7 @@ def get_arduino_cores():
     return json.loads(cli.stdout)
 
 
-def upgrade_arduino_cli():
+def upgrade_arduino_cli():                                                      # TODO: progress
     """Upgrade the outdated cores and libraries."""
     cli = get_arduino_cli()
     cli = subprocess.run([cli, 'upgrade'], capture_output=True)
@@ -226,7 +226,7 @@ def get_viperleed_hardware():
     boards = get_boards()
     if not boards:
         raise RuntimeError("No Arduino boards connected.")
-    board_names = [board['name'] for board in boards]
+    board_names = [b['matching_boards'][0]['name'] for b in boards]
     viper_boards = []
     for name in viperleed_names:
         for i, board_name in enumerate(board_names):
@@ -255,14 +255,15 @@ def compile(for_board, upload=False):
 
     argv = ['compile', '--clean', '-b', for_board['fqbn'], viperino]
     if upload:
-        argv.append(['-u', '-p', for_board['port']])
+        argv.extend(['-u', '-p', for_board['port']['address']])
 
     cli = subprocess.run([cli, *argv], capture_output=True)
     try:
         cli.check_returncode()
     except subprocess.CalledProcessError as err:
         raise RuntimeError("Arduino CLI failed. Return code="
-                           f"{cli.returncode}. The error was:\n{cli.stderr}")
+                           f"{cli.returncode}. The error was:\n"
+                           + cli.stderr.decode())
 
 
 if __name__ == '__main__':
