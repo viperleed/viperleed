@@ -1055,6 +1055,9 @@ class MeasureControllerABC(ControllerABC):
         None.
         """
         self.busy = False
+        self.measurements[QuantityInfo.TIMESTAMPS].append(
+            self.serial.time_stamp + self.time_to_trigger / 1000
+            )
         self.data_ready.emit(deepcopy(self.measurements))
         for key in self.measurements:
             self.measurements[key] = []

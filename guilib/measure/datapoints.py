@@ -64,6 +64,7 @@ class QuantityInfo(enum.Enum):
     ISAMPLE = ('uA', 'lin', float, 'I_Sample', 'y', 'Current')
     TEMPERATURE = ('°C', 'lin', float, 'Temperature', 'y', 'Temperature')
     COLD_JUNCTION = ('°C', 'lin', float, 'Cold_Junction', 'y', 'Temperature')
+    TIMESTAMPS = ('s', None, str, 'Timestamp', None, None)
 
     @classmethod
     def from_label(cls, label):
@@ -167,6 +168,12 @@ class QuantityInfo(enum.Enum):
         return self.value[0]
 
 
+# _EXCEPTIONAL contains quantities that are treated differently
+# while saving data. Either processed separately, or not saved
+_EXCEPTIONAL = (QuantityInfo.IMAGES, QuantityInfo.ENERGY,
+                QuantityInfo.TIMESTAMPS)
+
+
 # too-many-instance-attributes
 class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
     """Data storage class."""
@@ -212,17 +219,9 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
             self.__check_data(element)
         self.__list = list(args)
         self.__delimiter = ','
-        self.__primary_first_time = None
-        self.__exceptional_keys = (QuantityInfo.IMAGES, QuantityInfo.ENERGY)
         self.__time_resolved = True if continuous else time_resolved
         self.__continuous = continuous
         self.primary_controller = primary_controller
-
-        # Keep track of whether times were calculated already for
-        # the most-recent data point, to prevent multiple calls
-        # to functions that would screw up stuff.
-        self.__times_calculated = True
-
 
         # Here some counters (set from outside):
         # .nr_steps_done
@@ -261,7 +260,12 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
     @property
     def has_data(self):
         """Check if there is already data in the class."""
-        return bool(self and any(self[0][QuantityInfo.TIMES].values()))
+        if not self:
+            return False
+        times = QuantityInfo.TIMESTAMPS
+        if times not in self[0]:  #  Loaded from file
+            times = QuantityInfo.TIMES
+        return any(self[0][times].values())
 
     @property
     def continuous(self):
@@ -370,6 +374,10 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
     def add_data(self, new_data, controller):
         """Add new data to the currently active data point.
 
+        When not self.continuous, new_data must contain also
+        a QuantityInfo.TIMESTAMPS key, with as many values as
+        there are in the other quantities.
+
         Parameters
         ----------
         new_data : dict
@@ -385,16 +393,21 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         DataErrors.INVALID_MEASUREMENT
             If new_data contains unexpected quantities.
         """
+        if controller not in self.controllers:
+            raise ValueError(
+                f"Controller {controller} is not in {self.__class__.__name__}"
+                )
         for quantity, values in new_data.items():
             if quantity not in self[-1]:
                 emit_error(self, DataErrors.INVALID_MEASUREMENT)
-            else:
-                self[-1][quantity][controller].extend(values)
-
-        if not self[-1][QuantityInfo.TIMES][controller]:
-            time = (controller.serial.time_stamp
-                    + controller.time_to_trigger/1000)
-            self[-1][QuantityInfo.TIMES][controller].append(time)
+                continue
+            # In continuous-time-resolved mode, store only the first
+            # timestamp (it is strictly needed only for the primary)
+            if (quantity is QuantityInfo.TIMESTAMPS
+                and self.continuous
+                    and self[-1][quantity][controller]):
+                continue
+            self[-1][quantity][controller].extend(values)
 
     def add_image_names(self, name):                                            # TODO: this will not work correctly for a time-resolved with multiple "acquisitions" per energy (i.e., not continuous) -- right now we take only one image, which is inadequate.
         """Add image names to currently active data point."""
@@ -405,50 +418,39 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
             # which folder images should be opened (in ImageJ)
             self[-1][QuantityInfo.IMAGES][camera] = f"{camera.name}/{name}"
 
-    def calculate_times(self):
+    def calculate_times(self, complain=True):
         """Calculate times for the last data point."""
-        if self.__times_calculated:
-            raise RuntimeError(
-                "Times were already calculated for this data "
-                "point. Use .recalculate_last_step_times()."
-                )
+        err = ""
+        if not self.has_data:
+            err = "Cannot calculate_times without data. "
+        if not self.primary_controller:
+            err += "Cannot calculate_times without a primary controller. "
+        if self and not QuantityInfo.TIMESTAMPS in self[0]:
+            err += "Should not calculate_times for data read from file. "
 
-        self.__times_calculated = True
-        time = QuantityInfo.TIMES
-        if self.__primary_first_time is None:
-            self.__primary_first_time = (
-                    self[0][time][self.primary_controller][0]
-                    )
-        for ctrl, ctrl_times in self[-1][time].items():
-            if not ctrl_times:
+        if err and complain:
+            raise RuntimeError(err)
+        if err:
+            return
+
+        start = self[0][QuantityInfo.TIMESTAMPS][self.primary_controller][0]
+        for ctrl, timestamps in self[-1][QuantityInfo.TIMESTAMPS].items():
+            if not ctrl.measures():
+                # No times needed for a non-measuring controller
+                continue
+            if not timestamps:
                 # May happen in time-resolved when the energy step
                 # duration is so small that a controller did not yet
                 # return any measurement.
-                emit_error(self, DataErrors.NO_DATA_FOR_CONTROLLER,
-                           ctrl.port_name)
+                if complain:
+                    emit_error(self, DataErrors.NO_DATA_FOR_CONTROLLER,
+                               ctrl.port_name)
                 continue
-            first_time = ctrl_times[0]
-            if (not self.continuous
-                or len(self) == 1  # First energy step
-                    or ctrl == self.primary_controller):
-                first_time -= self.__primary_first_time
-                try:
-                    first_time += ctrl.initial_delay / 1000
-                except AttributeError:
-                    # Probably just a ControllerABC, not measuring
-                    pass
-            else:
-                first_time = (self[-2][time][ctrl][-1] +
-                              ctrl.measurement_interval / 1000)
-            if ctrl.measures():
-                quantity = ctrl.measured_quantities[0]
-                n_measurements = len(self[-1][quantity][ctrl])
-                self[-1][time][ctrl] = [
-                    first_time + ctrl.measurement_interval * i / 1000           # TODO: incorrect for non-continuous. Should probably use the timestamps from triggering.
-                    for i in range(n_measurements)
-                    ]
-            else:
-                self[-1][time][ctrl][0] = first_time
+
+            if self.continuous:
+                self.__calculate_times_continuous(ctrl, timestamps, start)
+                continue
+            self.__calculate_times_non_continuous(ctrl, timestamps, start)
 
     def get_energy_resolved_data(self, *quantities):
         """Return energy resolved data for each controller.
@@ -656,6 +658,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         data_point = {q: {c: [] for c in controllers if c.measures(q)}
                       for q in quantities}
         data_point[QuantityInfo.TIMES] = {c: [] for c in controllers}
+        data_point[QuantityInfo.TIMESTAMPS] = {c: [] for c in controllers}
         data_point[QuantityInfo.ENERGY] = energy
         if cameras:
             data_point[QuantityInfo.IMAGES] = {c: "" for c in cameras}
@@ -754,29 +757,6 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         self.primary_controller = self.controllers[0]
         self.nr_steps_done = len(self)
 
-    def recalculate_last_step_times(self):
-        """Recalculate the whole time axis for the last energy step.
-
-        This is necessary because the secondaries keep returning
-        measurements before they are turned off.
-        """
-        if not self.has_data:
-            return
-        for ctrl, ctrl_times in self[-1][QuantityInfo.TIMES].items():
-            if not ctrl_times:
-                # Controller has not yet finished measuring this step
-                continue
-            first_time = ctrl_times[0]
-            if ctrl.measures():
-                quantity = ctrl.measured_quantities[0]
-                n_measurements = len(self[-1][quantity][ctrl])
-                self[-1][QuantityInfo.TIMES][ctrl] = [
-                    first_time + ctrl.measurement_interval * i / 1000
-                    for i in range(n_measurements)
-                    ]
-            else:
-                self[-1][QuantityInfo.TIMES][ctrl][0] = first_time
-
     def save_data(self, csv_name):
         """Save data to file.
 
@@ -811,7 +791,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                         for camera in self.cameras]
                 data.append([data_point[QuantityInfo.ENERGY]]*max_length)
                 for quantity, ctrl_dict in data_point.items():
-                    if quantity in self.__exceptional_keys:
+                    if quantity in _EXCEPTIONAL:
                         # images and energies, already processed
                         continue
                     for measurement in ctrl_dict.values():
@@ -820,6 +800,43 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                 for line in zip(*data):
                     writer.writerow(line)
 
+    def __calculate_times_continuous(self, ctrl, timestamps, start):
+        """Calculate time axis for the last step."""
+        # In a continuous, time-resolved measurement we treat the
+        # primary and secondary controllers differently:
+        # - primary: is stopped at each energy step, and has a
+        #            different timestamp that has to be used
+        # - secondary: returns measurements at measurement_interval
+        #            intervals. Its timestamp makes any sense only
+        #            for the first step, and is the same value since.
+        #            Otherwise, we just take the last time of the
+        #            previous step and go from there.
+        is_first_step = (len(self) == 1)
+        if ctrl == self.primary_controller or is_first_step:
+            first_time = timestamps[0] - start
+            first_time += ctrl.initial_delay / 1000
+        else:
+            first_time = (self[-2][QuantityInfo.TIMES][ctrl][-1] +
+                          ctrl.measurement_interval / 1000)
+
+        quantity = ctrl.measured_quantities[0]
+        n_measurements = len(self[-1][quantity][ctrl])
+        self[-1][QuantityInfo.TIMES][ctrl] = [
+            first_time + ctrl.measurement_interval * i / 1000
+            for i in range(n_measurements)
+            ]
+
+    def __calculate_times_non_continuous(self, ctrl, timestamps, start):
+        """Calculate time axis for the last step."""
+        # This may be an energy-resolved measurement (which has
+        # only one timestamp and one measurement) or a triggered
+        # time-resolved one (which has as many timestamps as there
+        # are measurements)
+        self[-1][QuantityInfo.TIMES][ctrl] = times = []
+        for timestamp in timestamps:
+            timestamp -= start
+            timestamp += ctrl.initial_delay / 1000
+            times.append(timestamp)
 
     def __check_attributes(self):
         """Check that .time_resolved (and .continuous) were set."""
@@ -943,7 +960,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         header = [f"{_img}({camera.name})" for camera in self.cameras]
         header.append(QuantityInfo.ENERGY.label)
         for quantity, controllers in self[0].items():
-            if quantity in self.__exceptional_keys:
+            if quantity in _EXCEPTIONAL:
                 # cameras and energy, already processed
                 continue
             for controller in controllers:

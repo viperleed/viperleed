@@ -413,7 +413,11 @@ class TimeResolved(MeasurementABC):
         None.
         """
         if self.is_continuous:
-            self.data_points.recalculate_last_step_times()
+            # Recalculate the times in the last data point, in case
+            # secondary controllers returned more data in the meantime
+            # Notice that we do not allow any errors to be emitted at
+            # this point, since we may end up in an infinite loop
+            self.data_points.calculate_times(complain=False)
         super()._finalize()
 
     def _is_finished(self):
