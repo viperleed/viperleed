@@ -699,7 +699,6 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         for camera in self.cameras:
             camera.process_info.filename = image_name
             camera.process_info.energy = self.current_energy
-            self.data_points.add_image_names(camera.process_info.file_name)
 
     @property
     def _n_digits(self):
@@ -1213,6 +1212,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
 
         # Collected all frames, and will save a processed image later
         camera = self.sender()
+        self.data_points.add_image(camera)
         camera.process_info.count += 1
 
         self._ready_for_next_measurement()

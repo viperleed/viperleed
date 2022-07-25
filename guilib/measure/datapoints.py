@@ -408,14 +408,15 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                 continue
             self[-1][quantity][controller].extend(values)
 
-    def add_image_names(self, name):                                            # TODO: this will not work correctly for a time-resolved with multiple "acquisitions" per energy (i.e., not continuous) -- right now we take only one image, which is inadequate.
-        """Add image names to currently active data point."""
-        for camera in self[-1][QuantityInfo.IMAGES]:
-            # TODO: camera name added to file name in a 'path'
-            # format. Unclear if it isn't just simpler to use
-            # the information in the header to decide from
-            # which folder images should be opened (in ImageJ)
-            self[-1][QuantityInfo.IMAGES][camera] = f"{camera.name}/{name}"
+    def add_image(self, camera):
+        """Add the name of the last image of camera."""
+        # TODO: camera name added to file name in a 'path'
+        # format. Unclear if it isn't just simpler to use
+        # the information in the header to decide from
+        # which folder images should be opened (in ImageJ)
+        self[-1][QuantityInfo.IMAGES][camera].append(
+            f"{camera.name}/{camera.process_info.filename}"
+            )
 
     def calculate_times(self, complain=True):
         """Calculate times for the last data point."""
@@ -660,7 +661,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         data_point[QuantityInfo.TIMESTAMPS] = {c: [] for c in controllers}
         data_point[QuantityInfo.ENERGY] = energy
         if cameras:
-            data_point[QuantityInfo.IMAGES] = {c: "" for c in cameras}
+            data_point[QuantityInfo.IMAGES] = {c: [] for c in cameras}
         self.append(data_point)
         self.__times_calculated = False
 
@@ -777,17 +778,17 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
 
             # Now write each energy step consecutively.
             # To write to file, we un-rag possibly ragged lists
-            # of data (each controller may have returned a different
-            # number of values) by 'padding' with not-a-number toward
-            # the end of the energy step. Each block will be as long
-            # as the longest list of data.
+            # of data (each controller/camera may have returned a
+            # different number of values/images) by 'padding' with
+            # not-a-number/'--' toward the end of the energy step.
+            # Each block will be as long as the longest list of data.
             for data_point in self[:self.nr_steps_done]:
-                max_length = max(
-                    len(times)
-                    for times in data_point[QuantityInfo.TIMES].values()
-                    )
-                data = [[data_point[QuantityInfo.IMAGES][camera]]*max_length
-                        for camera in self.cameras]
+                max_length = self.__block_size(data_point)
+                data = []
+                if self.cameras:
+                    for images in data_point[QuantityInfo.IMAGES].values():
+                        extra_length = max_length - len(images)
+                        data.append(images + ['--']*extra_length)
                 data.append([data_point[QuantityInfo.ENERGY]]*max_length)
                 for quantity, ctrl_dict in data_point.items():
                     if quantity in _EXCEPTIONAL:
@@ -798,6 +799,22 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                         data.append(measurement + [NAN]*extra_length)
                 for line in zip(*data):
                     writer.writerow(line)
+
+    def __block_size(self, block):
+        """Return the longest of the data entries in a block."""
+        max_ctrl = max(
+            len(times)
+            for times in block[QuantityInfo.TIMES].values()
+            )
+        max_ctrl = max(1, max_ctrl)  # at least one entry, even if NaN
+        if not self.cameras:
+            return max_ctrl
+
+        max_cam = max(
+            len(images)
+            for images in block[QuantityInfo.IMAGES].values()
+            )
+        return max(max_ctrl, max_cam)
 
     def __calculate_times_continuous(self, ctrl, timestamps, start):
         """Calculate time axis for the last step."""

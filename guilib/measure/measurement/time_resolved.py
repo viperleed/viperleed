@@ -12,6 +12,8 @@ This module contains the definition of the TimeResolved class
 which gives commands to the controller classes.
 """
 
+from math import ceil
+
 from PyQt5 import QtCore as qtc
 
 from viperleed.guilib.measure.measurement.abc import (MeasurementABC,
@@ -60,6 +62,15 @@ class TimeResolved(MeasurementABC):
         for ctrl in self.controllers:
             self.__connect_trigger_timeout(ctrl)
 
+        # Finally, set the _camera_timer interval to zero, so
+        # we can fire it at the same time as measurements are
+        # acquired (in triggered mode)
+        self._camera_timer.setInterval(0)
+        trigger.timeout.connect(self._camera_timer.start)
+
+        # TODO: use a flag to decide if we want to save images.
+        # If not, we can just disconnect _camera_timer.
+
         if self.settings:
             # pylint: disable=redefined-variable-type
             self.__delta_energy = self.settings.getfloat(
@@ -85,7 +96,7 @@ class TimeResolved(MeasurementABC):
                               / self.__delta_energy))
         if _continuous:
             self.__prepare_continuous_mode()
-            self.data_points.nr_steps_total = num_meas
+            self.data_points.nr_steps_total = num_meas                          # TODO: incorrect for endless and constant energy. Also, unused now that we use different DataPoints for plotting and measurement.
         else:
             # With the next connection, triggering the first
             # measurement at the current energy also starts
@@ -94,12 +105,16 @@ class TimeResolved(MeasurementABC):
             about_to_trigger = self.primary_controller.about_to_trigger
             about_to_trigger.connect(trigger.start)
 
+            # The first measurement should also start the camera
+            about_to_trigger.connect(self._camera_timer.start)
+
     @property
     def _n_digits(self):
         """Return the appropriate number of digits for padding image names."""
         # Used for zero-padding counter in image names.
         num_meas = (1 + round((self.__end_energy - self.start_energy)           # TODO: get it from generator when implemented correctly
                               / self.__delta_energy))
+        num_meas *= ceil(self.energy_step_duration / self.measurement_interval)
         return len(str(num_meas))
 
     @property
@@ -216,17 +231,31 @@ class TimeResolved(MeasurementABC):
                 - self.measurement_interval_min - 5)
 
     @property
-    def measurement_interval_min(self):                                         # TODO: depending on how we handle cameras, should also account for them
+    def measurement_interval_min(self):
         """Return the smallest measurement-time interval."""
         _MIN = 50
-        min_interval = _MIN
-        if any(c.measures() for c in self.controllers):
-            min_interval = 2 * max(c.time_to_first_measurement
-                                   for c in self.controllers
-                                   if c.measures())
+        if not self.devices:
+            return _MIN
+        min_interval_cam = min_interval_ctrl = _MIN
+
+        # Controllers:
+        measuring_ctrls = [c for c in self.controllers if c.measures()]
+        if any(measuring_ctrls):
+            min_interval_ctrl = max(c.time_to_first_measurement
+                                    for c in measuring_ctrls)
             # add a little, in case delay % measurement_interval == 0
-            min_interval += 5
-        return max(_MIN, round(min_interval))
+            min_interval_ctrl += 5
+
+        # Cameras:
+        if self.cameras:
+            min_interval_cam = max(
+                1000/cam.get_frame_rate() + cam.exposure   # 1st frame              # TODO: make this a camera property. Probably calling get_frame_rate() only once (on not at all)
+                + (cam.n_frames - 1) * cam.frame_interval  # other frames
+                + cam.extra_delay                          # extra
+                for cam in self.cameras
+                )
+
+        return max(_MIN, round(min_interval_ctrl), round(min_interval_cam))
 
     @qtc.pyqtSlot()
     def abort(self):
@@ -311,24 +340,13 @@ class TimeResolved(MeasurementABC):
         # type the about_to_trigger emitted when the first measurement
         # is requested also causes __trigger_one_measurement to start.
         # This will keep firing at .measurement_interval, calling
-        # ctrl.measure_now() each time
+        # ctrl.measure_now() and camera.trigger_now() each time
         self.set_leed_energy(*self.step_profile,
                              self.current_energy, settle_time)
 
         if _continuous:
             return
-
         self.__trigger_one_measurement.setInterval(self.measurement_interval)
-
-        # TODO: use a flag to decide if we want to save images
-        # TODO: not really clear how to handle cameras in this case:
-        # Right now we are acquiring a single camera image per each
-        # "energy step" since the __trigger_one_measurement timer
-        # is not connected to camera.trigger_now. Also, we are not
-        # really waiting some time for starting measurements, while
-        # we are waiting for the camera. So images and measurements
-        # are not overlapping in time. This is less than ideal.
-        self._camera_timer.start(self.hv_settle_time)
 
     @qtc.pyqtSlot(bool)
     def __check_is_finished(self, _):                                           # TODO: I'm not happy with the name. __continue_when_primary_stopped?
@@ -444,15 +462,6 @@ class TimeResolved(MeasurementABC):
             self.settings.set('devices', 'cameras', '()')
         super()._make_cameras()
 
-    # Not sure how to handle this appropriately: when continuous,               # TODO
-    # we should never enter this at all, as the measurement never
-    # has any camera to handle (see reimplemented _make_cameras).
-    # In triggered: if we are in the middle of a step (timer active)
-    # we should not do anything. If we're at the end of a step and
-    # waiting for the last image we may end up with one more image
-    # than the other data (if controllers return data after the image).
-    # In practice this is not going to happen now, as we're acquiring
-    # only a single image per energy step.
     @qtc.pyqtSlot(bool)
     def _on_camera_busy_changed(self, busy):
         """Go to next energy if time is over (in triggered mode)."""
@@ -462,6 +471,7 @@ class TimeResolved(MeasurementABC):
 
         # Collected all frames, and will save a processed image later
         camera = self.sender()
+        self.data_points.add_image(camera)
         camera.process_info.count += 1
 
         if not self.__energy_step_timer.isActive():
@@ -532,9 +542,11 @@ class TimeResolved(MeasurementABC):
 
         # Disconnect other signals that we will not need any longer
         trigger = self.__trigger_one_measurement
+        base.safe_disconnect(trigger.timeout, self._camera_timer.start)
         if self.primary_controller:
             about_to_trigger = self.primary_controller.about_to_trigger
             base.safe_disconnect(about_to_trigger, trigger.start)
+            base.safe_disconnect(about_to_trigger, self._camera_timer.start)
 
         super()._prepare_finalization()
 
@@ -573,4 +585,4 @@ class TimeResolved(MeasurementABC):
         primary = self.primary_controller
         primary.busy = True
         primary.controller_busy.connect(self.__check_is_finished, type=_UNIQUE)
-        self._request_stop_primary.emit()
+        self._request_stop_primary.emit()                                       # TODO: why not just .stop()? It's in the same thread
