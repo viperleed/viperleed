@@ -148,10 +148,11 @@ class MeasureEnergySetpoint(MeasurementABC):
         None.
         """
         super().start_next_measurement()
-        for controller in self.controllers:
-            # Necessary to force secondaries into busy,
-            # before the primary returns not busy anymore.
-            controller.busy = True
+        for device in self.devices:
+            # Make all controllers busy, so we do not risk going to the
+            # next energy step too early: the secondary controllers may
+            # be not yet busy when the primary becomes not busy
+            device.busy = True
         self.set_leed_energy(*self.step_profile,
                              self.current_energy, self.hv_settle_time)
 
@@ -172,6 +173,10 @@ class MeasureEnergySetpoint(MeasurementABC):
             return True
         self.current_energy += self.__delta_energy
         return False
+
+    def _make_cameras(self):
+        """Make sure we have no camera."""
+        self.settings.set('devices', 'cameras', '()')
 
     def calibrate_energy_setpoint(self):                                        # TODO: move this to DataPoints?
         """Calibrate the energy setpoint of the LEED electronics
