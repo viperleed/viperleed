@@ -138,7 +138,7 @@ class IVVideo(MeasurementABC):
             return
 
         for ctrl in self.controllers:
-            if not ctrl.measured_quantities:
+            if not ctrl.measures():
                 continue
             ctrl_time = (ctrl.time_to_first_measurement + ctrl.time_to_trigger)
             txt = f"{ctrl.name} at {ctrl.port_name}:"

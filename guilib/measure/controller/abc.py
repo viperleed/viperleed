@@ -502,12 +502,12 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         self._time_to_trigger = 0
         self.__hash = -1
 
-    # pylint: disable=no-self-use
+    # pylint: disable=no-self-use,unused-argument
     # Method is here for consistency with MeasureControllerABC
-    def measures(self, _):
+    def measures(self, quantity=None):
         """Return whether this controller measures quantity."""
         return False
-    # pylint: enable=no-self-use
+    # pylint: enable=no-self-use,unused-argument
 
     @abstractmethod
     def are_settings_ok(self, settings):
@@ -919,7 +919,7 @@ class MeasureControllerABC(ControllerABC):
         # It must contain all possible measurement types the controller
         # can receive using the same keys used in the measurement
         # class responsible for receiving data from this controller.
-        self.measurements = defaultdict(list)
+        self.measurements = defaultdict(list)                                   # TODO: perhaps we should not allow this to be a list.
 
         # This tuple contains the QuantityInfo Enums associated with
         # the selected quantities to measure.
@@ -993,8 +993,10 @@ class MeasureControllerABC(ControllerABC):
         """
         self._time_to_trigger = 0
 
-    def measures(self, quantity):
+    def measures(self, quantity=None):
         """Return whether this controller measures quantity."""
+        if quantity is None:
+            return bool(self.measured_quantities)
         return quantity in self.measured_quantities
 
     @abstractmethod
@@ -1011,7 +1013,7 @@ class MeasureControllerABC(ControllerABC):
         and stored into self.measurements, a dictionary whose
         keys are QuantityInfo objects.
 
-        When all the measurements expected has been received,
+        When all the measurements expected have been received,
         this method should call self.measurements_done().
 
         Notice that data may also be non-measurement information.

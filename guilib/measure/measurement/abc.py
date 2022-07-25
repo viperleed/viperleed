@@ -336,7 +336,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
 
         self.__data_stored = {c: False
                               for c in self.controllers
-                              if c.measured_quantities}
+                              if c.measures()}
         self.data_points.primary_controller = self.primary_controller
         return True
 

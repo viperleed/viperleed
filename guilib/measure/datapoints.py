@@ -372,7 +372,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
             else:
                 first_time = (self[-2][time][ctrl][-1] +
                               ctrl.measurement_interval / 1000)
-            if ctrl.measured_quantities:
+            if ctrl.measures():
                 quantity = ctrl.measured_quantities[0]
                 n_measurements = len(self[-1][quantity][ctrl])
                 self[-1][time][ctrl] = [
@@ -694,7 +694,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                 # Controller has not yet finished measuring this step
                 continue
             first_time = ctrl_times[0]
-            if ctrl.measured_quantities:
+            if ctrl.measures():
                 quantity = ctrl.measured_quantities[0]
                 n_measurements = len(self[-1][quantity][ctrl])
                 self[-1][QuantityInfo.TIMES][ctrl] = [
