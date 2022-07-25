@@ -77,13 +77,18 @@ class ImageProcessInfo:
     comment : str, optional
         Any user comment that will be stored with the image (e.g.,
         sample surface, preparation details, etc.).
+    count : int, optional
+        This is used exclusively if filename contains "{__count__".
+        It can be used to progressively number frames. It is used
+        to produce a filename like follows:
+        filename = filename.format(__count__=count)
 
     Methods
     ------
     copy()
         Return a deep-copy of self
     """
-    filename: str = ''
+    __filename: str = ''
     base_path: str = ''
     n_frames: int = 0
     roi: typing.Sequence = tuple()
@@ -93,11 +98,25 @@ class ImageProcessInfo:
     energy: typing.Any = None     # energy in eV, typically float
     date_time: typing.Any = None  # datetime object
     comment: str = ''
+    count: int = 0
 
     @property
     def bad_pixels(self):
         """Return bad pixel info as a BadPixels object."""
         return self.camera.bad_pixels
+
+    @property
+    def filename(self):
+        """Return the name of the file to save to."""
+        fname = self.__filename
+        if "{__count" in fname:
+            fname = fname.format(__count__=self.count)
+        return fname
+
+    @filename.setter
+    def filename(self, new_name):
+        """Set the name of the file to save to."""
+        self.__filename = new_name
 
     def copy(self):
         """Return a deep-copy of self."""

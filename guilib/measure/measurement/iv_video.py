@@ -81,8 +81,8 @@ class IVVideo(MeasurementABC):
         return self.primary_controller.i0_settle_time
 
     @property
-    def __n_digits(self):
-        """Return the number of digts needed to represent each step."""
+    def _n_digits(self):
+        """Return the number of digits needed to represent each step."""
         # Used for zero-padding counter in image names.
         num_meas = (1 + round((self.__end_energy - self.start_energy)
                               / self.__delta_energy))
@@ -100,26 +100,17 @@ class IVVideo(MeasurementABC):
         None.
         """
         super().start_next_measurement()
-        for controller in self.controllers:
-            # Force all controllers into busy, so we don't
-            # risk the secondary controllers to be not yet
-            # busy when the primary becomes not busy (which
-            # would make us potentially move to the next step)
-            controller.busy = True
+        for device in self.devices:
+            # Make all controllers and cameras busy, so we do not risk
+            # going to the next energy step too early: the secondary
+            # controllers may be not yet busy when the primary becomes
+            # not busy; Same is true for cameras, as they may be
+            # started later and we may go on without acquiring an image
+            device.busy = True
 
         profile = self.step_profile
         self.set_leed_energy(*profile,
                              self.current_energy, self.__i0_settle_time)
-
-        image_name = (f"{self.current_step_nr:0>{self.__n_digits}}_"
-                      f"{self.current_energy:.1f}eV.tiff")
-        for camera in self.cameras:
-            camera.process_info.filename = image_name
-            self.data_points.add_image_names(image_name)
-            # Setting cameras busy prevents going to the next
-            # energy before an image has been acquired: in fact,
-            # triggering is delayed, using self._camera_timer
-            camera.busy = True
 
         # TODO: here we should start the camera no earlier than
         # hv_settle_time, but such that image acquisition

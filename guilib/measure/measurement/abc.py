@@ -694,6 +694,20 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         self.data_points.new_data_point(self.current_energy, self.controllers,
                                         self.cameras)
 
+        image_name = (f"{{__count__:0>{self._n_digits}}}_"
+                      f"{self.current_energy:.1f}eV.tiff")
+        for camera in self.cameras:
+            camera.process_info.filename = image_name
+            camera.process_info.energy = self.current_energy
+            self.data_points.add_image_names(camera.process_info.file_name)
+
+    @property
+    def _n_digits(self):
+        """Return the appropriate number of digits for padding image names."""
+        # With 4 digits we can store 9999 images with the same prefix           # TODO: nicer implementation: ask n_steps to the generator and use a large value for _n_digits if < 0 (i.e., unknown no. steps)
+        # size. More images will have longer file names.
+        return 4
+
     @qtc.pyqtSlot(bool)
     def __check_preparation_finished(self, _):
         """Check if measurement preparation is done.
@@ -998,6 +1012,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
                 continue
             cam.error_occurred.connect(self.__on_init_errors)
             cam.error_occurred.connect(self.__on_hardware_error)
+            cam.process_info.count = 1  # Image counter, start at 1
             cameras.append(cam)
         self.cameras = cameras
 
@@ -1192,8 +1207,15 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         -------
         None.
         """
-        if not busy:
-            self._ready_for_next_measurement()
+        if busy:
+            # Just triggered
+            return
+
+        # Collected all frames, and will save a processed image later
+        camera = self.sender()
+        camera.process_info.count += 1
+
+        self._ready_for_next_measurement()
 
     @qtc.pyqtSlot(dict)
     def _on_controller_data_ready(self, data):

@@ -41,7 +41,6 @@ class TimeResolved(MeasurementABC):
         self.__delta_energy = 1                                                 # --> generator; There may not be a delta_energy (e.g., I(t) at fixed energy)
         self.__endless = False                                                  # --> generator;
         self.__constant_energy = False                                          # --> generator;
-        self.__n_digits = 0                                                     # Again, used for saving images.
 
         # One timer to trigger a change of electron energy: we will
         # sit at each energy for self.energy_step_duration millisecs
@@ -84,8 +83,14 @@ class TimeResolved(MeasurementABC):
         if self.is_continuous:
             self.__prepare_continuous_mode()
             self.data_points.nr_steps_total = num_meas
-        else:
-            self.__n_digits = len(str(num_meas))
+
+    @property
+    def _n_digits(self):
+        """Return the appropriate number of digits for padding image names."""
+        # Used for zero-padding counter in image names.
+        num_meas = (1 + round((self.__end_energy - self.start_energy)           # TODO: get it from generator when implemented correctly
+                              / self.__delta_energy))
+        return len(str(num_meas))
 
     @property
     def energy_step_duration(self):
@@ -322,11 +327,6 @@ class TimeResolved(MeasurementABC):
         # really waiting some time for starting measurements, while
         # we are waiting for the camera. So images and measurements
         # are not overlapping in time. This is less than ideal.
-        image_name = (f"{self.current_step_nr:0>{self.__n_digits}}_"
-                      f"{self.current_energy:.1f}eV.tiff")
-        for camera in self.cameras:
-            camera.process_info.filename = image_name
-            self.data_points.add_image_names(image_name)
         self._camera_timer.start(self.hv_settle_time)
 
     @qtc.pyqtSlot(bool)
@@ -445,16 +445,19 @@ class TimeResolved(MeasurementABC):
     # only a single image per energy step.
     @qtc.pyqtSlot(bool)
     def _on_camera_busy_changed(self, busy):
-        """Do nothing when continuous."""
+        """Go to next energy if time is over (in triggered mode)."""
         if busy:
+            # Just triggered
             return
-        if self.is_continuous:
-            # Should never happen as there is no camera!
-            raise RuntimeError("SOMETHING WRONG: THIS SHOULD NEVER HAPPEN")
+
+        # Collected all frames, and will save a processed image later
+        camera = self.sender()
+        camera.process_info.count += 1
+
         if not self.__energy_step_timer.isActive():
-            # We are at the end of an energy step, and
-            # waiting for the last image to be acquired
-            super()._on_camera_busy_changed(busy)
+            # We are at the end of an energy step, and just finished
+            # waiting for the last image. See if we can go on
+            self._ready_for_next_measurement()
 
     @qtc.pyqtSlot(dict)
     def _on_controller_data_ready(self, data):
