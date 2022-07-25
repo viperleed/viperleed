@@ -253,6 +253,15 @@ class TimeResolved(MeasurementABC):
                 energy = self.start_energy
         return energy
 
+    def set_settings(self, new_settings):
+        """Change settings of the measurement."""
+        settings_ok = super().set_settings(new_settings)
+
+        # Since we should not wait for data to be stored to move
+        # to the next step, invalidate the dictionary of super here
+        self._data_stored = {}
+        return settings_ok
+
     def start_next_measurement(self):
         """Set energy and measure.
 
