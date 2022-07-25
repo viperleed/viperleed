@@ -1,4 +1,4 @@
-"""Module uimeasurement of viperleed.guilib.measure
+"""Module datapoints of viperleed.guilib.measure
 
 ===============================================
       ViPErLEED Graphical User Interface
@@ -42,10 +42,10 @@ NAN = float('nan')
 class DataErrors(ViPErLEEDErrorEnum):
     """Errors that might occur during a measurement cycle."""
     INVALID_MEASUREMENT = (400,
-                           "The returned data dictionary contained a section "
+                           "The returned data dictionary contained a key "
                            "that was not specified in the DataPoints class.")
     UNKOWN_QUANTITIES = (401,
-                         "Unkown quantite(s) {} will be ignored")
+                         "Unknown quantity/quantities {} will be ignored")
     NO_DATA_FOR_CONTROLLER = (402,
                               "Controller at {} did not return any data. "
                               "Consider increasing energy_step_duration.")
@@ -173,26 +173,56 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
     # Is emitted when an error occurs
     error_occurred = qtc.pyqtSignal(tuple)
 
-    def __init__(self, *args, time_resolved=None,
+    def __init__(self, *args, primary_controller=None, time_resolved=None,
                  continuous=None, parent=None):
-        """Initialise data class."""
+        """Initialise data class.
+
+        Parameters
+        ----------
+        *args : Sequence of dict, optional
+            The contents of this DataPoints
+        primary_controller : ControllerABC, or str, optional
+            The primary controller that is used for the measurement
+            in this DataPoints object. It must be set (also later)
+            before any operation can be performed.
+        time_resolved : bool, optional
+            True if this DataPoints object represents a time-resolved
+            series. Can also be set ONLY ONCE later by using the
+            .time_resolved attribute. It must be set before any
+            operation can be done on this object. The value passed
+            may be ignored depending on the <continue> argument.
+        continuous : bool, optional
+            True if this is a time-resolved data series originating
+            from a "continuous" measurement, where data arrives at
+            maximum possible speed. If True, it overrides the value
+            of time_resolved (to True). It can be set ONCE later
+            using the .continuous attribute. It must be set before
+            any operation can be done on this object if it also
+            .is_time_resolved.
+        parent : QtCore.QObject
+            The parent of this DataPoints object
+
+        Returns
+        -------
+        None.
+        """
         super().__init__()
         self.setParent(parent)
+        for element in args:
+            self.__check_data(element)
         self.__list = list(args)
         self.__delimiter = ','
         self.__primary_first_time = None
         self.__exceptional_keys = (QuantityInfo.IMAGES, QuantityInfo.ENERGY)
         self.__time_resolved = True if continuous else time_resolved
         self.__continuous = continuous
+        self.primary_controller = primary_controller
 
         # Keep track of whether times were calculated already for
         # the most-recent data point, to prevent multiple calls
         # to functions that would screw up stuff.
         self.__times_calculated = True
 
-        # primary_controller needs to be given to this class
-        # before starting measurements.
-        self.primary_controller = None
 
         # Here some counters (set from outside):
         # .nr_steps_done
@@ -247,9 +277,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
             a continuous time-resolved measurement. None
             if this information is not available.
         """
-        if not self.is_time_resolved:
-            return False
-        return self.__continuous
+        return False if not self.__time_resolved else self.__continuous
 
     @continuous.setter
     def continuous(self, continuous):
@@ -264,40 +292,24 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                 f"Cannot set {self.__class__.__name__}"
                 ".continuous after there is already data"
                 )
-        if self.time_resolved is False and continuous:
+        if self.__time_resolved is False and continuous:
             raise ValueError(
                 f"{self.__class__.__name__} cannot be "
                 ".continuous and not .time_resolved"
                 )
         self.__continuous = bool(continuous)
+        if continuous:
+            self.__time_resolved = True
 
     @property
     def is_time_resolved(self):
         """Check if the contained data is time-resolved."""
-        if self.time_resolved is not None:
-            return self.time_resolved
-        if self.has_data:
-            # Only if there are times saved already it is possible to
-            # decide if the measurement is a time- or energy-resolved
-            # measurement. However, the next check is not 100% accurate
-            # as it could be that we use a "triggered" time-resolved
-            # which happens to deliver only one data point per energy
-            if any(len(t) > 1 for t in self[0][QuantityInfo.TIMES].values()):
-                return True
-        return False
+        return self.time_resolved
 
     @property
     def time_resolved(self):
-        """Return whether data is time-resolved.
-
-        Returns
-        -------
-        time_resolved : bool or None
-            None if it has not been set yet.
-        """
-        if self.__continuous:
-            return True
-        return self.__time_resolved
+        """Return whether data is time-resolved."""
+        return True if self.__continuous else self.__time_resolved
 
     @time_resolved.setter
     def time_resolved(self, resolved):
@@ -312,13 +324,13 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                 f"Cannot set {self.__class__.__name__}"
                 ".time_resolved after there is already data"
                 )
-        if self.continuous and not resolved:
+        if self.__continuous and not resolved:
             raise ValueError(
                 f"{self.__class__.__name__} cannot be "
                 ".continuous and not .time_resolved"
                 )
         self.__time_resolved = bool(resolved)
-        if not self.__time_resolved:
+        if not resolved:
             self.__continuous = False
 
     def __str__(self):
@@ -371,7 +383,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         Emits
         -----
         DataErrors.INVALID_MEASUREMENT
-            If new_data contains unexpected quantitites.
+            If new_data contains unexpected quantities.
         """
         for quantity, values in new_data.items():
             if quantity not in self[-1]:
@@ -476,6 +488,13 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         if not quantities:
             return {}, []
 
+        self.__check_attributes()
+        if self.is_time_resolved:
+            raise RuntimeError(
+                f"{self.__class__.__name__}: cannot return "
+                "energy-resolved data from a time-resolved series."
+                )
+
         # Prepare the structure of the dictionary to be returned:
         #   {controller:
         #        {quantity: list of measurements (one per energy)}
@@ -494,12 +513,6 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                     if not measurements:
                         # No data for this controller (yet).
                         continue
-                    if len(measurements) > 1:
-                        raise RuntimeError(
-                            f"{self.__class__.__name__}: cannot return "
-                            "energy-resolved data from a time-resolved "
-                            "series."
-                            )
                     extracted[controller][quantity].append(measurements[0])
 
         return extracted, self.nominal_energies
@@ -549,6 +562,8 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         quantities = [q for q in quantities if q in self[0]]
         if not quantities:
             return {}, []
+
+        self.__check_attributes()
 
         # Prepare the structure of the dictionary to be returned:
         #       {controller: {quantity: measurements}, }
@@ -601,8 +616,9 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         Raises
         -------
         RuntimeError
-            If this method is called before .primary_controller
-            was set.
+            If this method is called before .primary_controller,
+            .time_resolved, and (for time-resolved only) .continuous
+            were set
         ValueError
             If the new_data_point created does not fit with
             already present data (i.e., if it contains different
@@ -614,6 +630,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                 "a new data point before .primary_controller "
                 "has been set."
                 )
+        self.__check_attributes()
         if self:
             if set(controllers) != set(self.controllers):
                 raise ValueError(
@@ -780,8 +797,8 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
             writer.writerow(self.__make_header_line())
 
             # Now write each energy step consecutively.
-            # To write to file, we un-rag possibily ragged lists
-            # of data (each controller may have retured a different
+            # To write to file, we un-rag possibly ragged lists
+            # of data (each controller may have returned a different
             # number of values) by 'padding' with not-a-number toward
             # the end of the energy step. Each block will be as long
             # as the longest list of data.
@@ -802,6 +819,20 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                         data.append(measurement + [NAN]*extra_length)
                 for line in zip(*data):
                     writer.writerow(line)
+
+
+    def __check_attributes(self):
+        """Check that .time_resolved (and .continuous) were set."""
+        if self.__time_resolved is None:
+            raise RuntimeError(
+                f"{self.__class__.__name__}.time_resolved "
+                "should be set before data can be added"
+                )
+        if self.__time_resolved and self.__continuous is None:
+            raise RuntimeError(
+                f"{self.__class__.__name__}.continuous "
+                "should be set before data can be added"
+                )
 
     def __check_data(self, value):
         """Check if an element is of acceptable type."""
