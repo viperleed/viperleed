@@ -251,7 +251,7 @@ def safe_connect(signal, slot, **kwargs):
         raise TypeError(f"{slot} is not a valid slot")
     for arg in kwargs:
         if arg not in ("type", "no_receiver_check"):
-            raise TypeError("safe_connect got an unexpeced "
+            raise TypeError("safe_connect got an unexpected "
                             f"keyord argument {arg!r}")
     try:
         signal.connect(slot, **kwargs)
