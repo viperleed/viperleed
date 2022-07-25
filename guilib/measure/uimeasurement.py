@@ -182,7 +182,7 @@ class Measure(ViPErLEEDPluginBase):
             return
 
         super().closeEvent(event)
-    
+
     def showEvent(self, event):  # pylint: disable=invalid-name
         """Show self."""
         self._glob['n_retry_close'] = 0
@@ -467,6 +467,13 @@ class Measure(ViPErLEEDPluginBase):
         cls_name = config['measurement_settings']['measurement_class']
         meas_dict = {c.__name__: t for t, c in ALL_MEASUREMENTS.items()}
         self._ctrls['select'].setCurrentText(meas_dict[cls_name])
+
+        # And use the information in the config for
+        # correctly updating the DataPoints
+        data.time_resolved = (cls_name == "TimeResolved")
+        if data.is_time_resolved:
+            data.continuous = config.getboolean('measurement_settings',
+                                                'is_continuous')
 
     def __on_set_energy(self):
         """Set energy on primary controller."""

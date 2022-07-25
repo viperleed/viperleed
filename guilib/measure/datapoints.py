@@ -173,7 +173,8 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
     # Is emitted when an error occurs
     error_occurred = qtc.pyqtSignal(tuple)
 
-    def __init__(self, *args, time_resolved=None, parent=None):
+    def __init__(self, *args, time_resolved=None,
+                 continuous=None, parent=None):
         """Initialise data class."""
         super().__init__()
         self.setParent(parent)
@@ -181,7 +182,8 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         self.__delimiter = ','
         self.__primary_first_time = None
         self.__exceptional_keys = (QuantityInfo.IMAGES, QuantityInfo.ENERGY)
-        self.__time_resolved = time_resolved
+        self.__time_resolved = True if continuous else time_resolved
+        self.__continuous = continuous
 
         # Keep track of whether times were calculated already for
         # the most-recent data point, to prevent multiple calls
@@ -232,6 +234,44 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         return bool(self and any(self[0][QuantityInfo.TIMES].values()))
 
     @property
+    def continuous(self):
+        """Return whether the data comes from a continuous measurement.
+
+        This information should only be used internally. It will
+        not be correct for data that has been read from file.
+
+        Returns
+        -------
+        continuous : bool or None
+            True if self contains data originating from
+            a continuous time-resolved measurement. None
+            if this information is not available.
+        """
+        if not self.is_time_resolved:
+            return False
+        return self.__continuous
+
+    @continuous.setter
+    def continuous(self, continuous):
+        """Set whether data came from a continuous, t-resolved measurement."""
+        if self.__continuous is not None:
+            raise RuntimeError(
+                f"Cannot set {self.__class__.__name__}"
+                ".continuous more than once"
+                )
+        if self.has_data:
+            raise RuntimeError(
+                f"Cannot set {self.__class__.__name__}"
+                ".continuous after there is already data"
+                )
+        if self.time_resolved is False and continuous:
+            raise ValueError(
+                f"{self.__class__.__name__} cannot be "
+                ".continuous and not .time_resolved"
+                )
+        self.__continuous = bool(continuous)
+
+    @property
     def is_time_resolved(self):
         """Check if the contained data is time-resolved."""
         if self.time_resolved is not None:
@@ -239,7 +279,9 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         if self.has_data:
             # Only if there are times saved already it is possible to
             # decide if the measurement is a time- or energy-resolved
-            # measurement.
+            # measurement. However, the next check is not 100% accurate
+            # as it could be that we use a "triggered" time-resolved
+            # which happens to deliver only one data point per energy
             if any(len(t) > 1 for t in self[0][QuantityInfo.TIMES].values()):
                 return True
         return False
@@ -253,6 +295,8 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         time_resolved : bool or None
             None if it has not been set yet.
         """
+        if self.__continuous:
+            return True
         return self.__time_resolved
 
     @time_resolved.setter
@@ -263,7 +307,19 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                 f"Cannot set {self.__class__.__name__}"
                 ".time_resolved more than once"
                 )
+        if self.has_data:
+            raise RuntimeError(
+                f"Cannot set {self.__class__.__name__}"
+                ".time_resolved after there is already data"
+                )
+        if self.continuous and not resolved:
+            raise ValueError(
+                f"{self.__class__.__name__} cannot be "
+                ".continuous and not .time_resolved"
+                )
         self.__time_resolved = bool(resolved)
+        if not self.__time_resolved:
+            self.__continuous = False
 
     def __str__(self):
         """Return a string representation of self."""
@@ -337,7 +393,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
             # which folder images should be opened (in ImageJ)
             self[-1][QuantityInfo.IMAGES][camera] = f"{camera.name}/{name}"
 
-    def calculate_times(self, continuous=False):
+    def calculate_times(self):
         """Calculate times for the last data point."""
         if self.__times_calculated:
             raise RuntimeError(
@@ -360,7 +416,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                            ctrl.port_name)
                 continue
             first_time = ctrl_times[0]
-            if (not continuous
+            if (not self.continuous
                 or len(self) == 1  # First energy step
                     or ctrl == self.primary_controller):
                 first_time -= self.__primary_first_time

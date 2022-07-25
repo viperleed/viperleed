@@ -77,10 +77,13 @@ class TimeResolved(MeasurementABC):
         if not self.primary_controller:
             return
 
+        _continuous = self.is_continuous
+        self.data_points.time_resolved = True
+        self.data_points.continuous = _continuous
+
         num_meas = (1 + round((self.__end_energy - self.start_energy)
                               / self.__delta_energy))
-        self.data_points.time_resolved = True
-        if self.is_continuous:
+        if _continuous:
             self.__prepare_continuous_mode()
             self.data_points.nr_steps_total = num_meas
         else:
@@ -348,15 +351,7 @@ class TimeResolved(MeasurementABC):
             # We entered this call after the measurement was aborted,
             # likely while processing an unprocessed timeout event
             return
-
-        self.data_points.calculate_times(continuous=True)
-        self.data_points.nr_steps_done += 1
-        self.new_data_available.emit(self.data_points[-1])
-
-        if self._is_finished():
-            self._prepare_finalization()
-        else:
-            self.start_next_measurement()
+        super()._ready_for_next_measurement()
 
     def _connect_controller(self, ctrl):
         """Connect necessary controller signals."""
