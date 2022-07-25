@@ -56,7 +56,7 @@ class TimeResolved(MeasurementABC):
         # time out faster than the longest time it takes any
         # controller to return measurements. The time interval
         # is read from the settings.
-        self.__trigger_one_measurement = qtc.QTimer(parent=self)
+        trigger = self.__trigger_one_measurement = qtc.QTimer(parent=self)
         for ctrl in self.controllers:
             self.__connect_trigger_timeout(ctrl)
 
@@ -83,6 +83,13 @@ class TimeResolved(MeasurementABC):
         if self.is_continuous:
             self.__prepare_continuous_mode()
             self.data_points.nr_steps_total = num_meas
+        else:
+            # With the next connection, triggering the first
+            # measurement at the current energy also starts
+            # __trigger_one_measurement: This triggers more
+            # measurements at .measurement_interval intervals
+            about_to_trigger = self.primary_controller.about_to_trigger
+            about_to_trigger.connect(trigger.start)
 
     @property
     def _n_digits(self):
@@ -134,16 +141,9 @@ class TimeResolved(MeasurementABC):
     @property
     def energy_step_duration_min(self):
         """Return the smallest duration of an energy step."""
-        min_interval = self.measurement_interval_min
-        # The minimum duration of a step depends on whether we are
-        # in continuous or in 'triggered' mode: in the latter case,
-        # we are not measuring for the first __trigger_one_measurement
-        # interval after setting the energy.
-        if self.is_continuous:
-            # Here the extra 5 msec ensure that energy_step_duration
-            # is always a tiny bit longer than measurement_interval.
-            return min_interval + 5
-        return 2 * min_interval
+        # Add an extra 5 ms to ensure that energy_step_duration
+        # is always a tiny bit longer than measurement_interval
+        return self.measurement_interval_min + 5
 
     @property
     def is_continuous(self):
@@ -215,13 +215,13 @@ class TimeResolved(MeasurementABC):
     @property
     def measurement_interval_min(self):                                         # TODO: depending on how we handle cameras, should also account for them
         """Return the smallest measurement-time interval."""
-        _MIN = 50                                                               # TODO: should probably be OS-dependent? This estimate is actually pretty bad (too small) when there's a lot of data to be plotted.
+        _MIN = 50
         min_interval = _MIN
         if any(c.measures() for c in self.controllers):
-            min_interval = 2 * max(c.initial_delay
+            min_interval = 2 * max(c.time_to_first_measurement
                                    for c in self.controllers
                                    if c.measures())
-            # add a little, in case initial_delay == N*measurement_interval
+            # add a little, in case delay % measurement_interval == 0
             min_interval += 5
         return max(_MIN, round(min_interval))
 
@@ -298,26 +298,24 @@ class TimeResolved(MeasurementABC):
             for ctrl in self.secondary_controllers:
                 base.safe_disconnect(about_to_trigger, ctrl.measure_now)
 
-        # Notice that it does not make sense to have an actual settle
-        # time for measurements in a time-resolved: in continuous mode
-        # we want to get measurements as quickly as possible (and look
-        # at short-term time traces); "triggered" mode can be used for
-        # either long-term stability measurements or I(t). Both would
-        # normally be done at fixed energy.
-        # For a "triggered" measurement type, let the triggering be             # TODO: couldn't we instead always measure, and rather connect the about_to_trigger to __trigger_one_measurement.start?
-        # done by the __trigger_one_measurement timer rather than by
-        # the energy setter. This means that we will start measuring
-        # after .measurement_interval msec rather than right now.
-        self.set_leed_energy(*self.step_profile, self.current_energy, 0,
-                             trigger_meas=_continuous)
+        # Pick a different settle time for continuous and triggered:
+        # in continuous mode we want to get measurements as quickly as
+        # possible (and look at short-term time traces); in "triggered"
+        # mode give the user freedom to choose by using hv_settle_time          # TODO: should we use something else, perhaps?
+        settle_time = 0 if _continuous else self.hv_settle_time
+
+        # Always trigger measurements. For a "triggered" measurement
+        # type the about_to_trigger emitted when the first measurement
+        # is requested also causes __trigger_one_measurement to start.
+        # This will keep firing at .measurement_interval, calling
+        # ctrl.measure_now() each time
+        self.set_leed_energy(*self.step_profile,
+                             self.current_energy, settle_time)
 
         if _continuous:
-            # No camera images saved when we
-            # spam measurements at max speed
             return
 
         self.__trigger_one_measurement.setInterval(self.measurement_interval)
-        self.__trigger_one_measurement.start()
 
         # TODO: use a flag to decide if we want to save images
         # TODO: not really clear how to handle cameras in this case:
@@ -363,8 +361,13 @@ class TimeResolved(MeasurementABC):
     def _connect_controller(self, ctrl):
         """Connect necessary controller signals."""
         super()._connect_controller(ctrl)
-        base.safe_connect(self.__request_continuous_mode,
-                          ctrl.set_continuous_mode, type=_UNIQUE)
+        try:
+            base.safe_connect(self.__request_continuous_mode,
+                              ctrl.set_continuous_mode, type=_UNIQUE)
+        except AttributeError:
+            # Not a MeasureController or called during super().__init__
+            pass
+
         self.__connect_trigger_timeout(ctrl)
 
     def __connect_trigger_timeout(self, ctrl):
@@ -380,14 +383,22 @@ class TimeResolved(MeasurementABC):
     def _disconnect_controller(self, ctrl):
         """Disconnect necessary controller signals."""
         super()._disconnect_controller(ctrl)
+        # The next disconnect makes sense only for the primary
+        # controller, but does not hurt to try it for all
+        try:
+            base.safe_disconnect(ctrl.about_to_trigger,
+                                 self.__trigger_one_measurement.start)
+        except AttributeError:
+            # Called during super().__init__(). No need to try others
+            return
+
+        if not ctrl.measures():
+            return
+
         base.safe_disconnect(self.__request_continuous_mode,
                              ctrl.set_continuous_mode)
-        try:
-            base.safe_disconnect(self.__trigger_one_measurement.timeout,
-                                 ctrl.measure_now)
-        except AttributeError:
-            # Not a MeasureController or called during super().__init__
-            pass
+        base.safe_disconnect(self.__trigger_one_measurement.timeout,
+                             ctrl.measure_now)
 
     @qtc.pyqtSlot(bool)
     @qtc.pyqtSlot()
@@ -519,14 +530,21 @@ class TimeResolved(MeasurementABC):
         for ctrl in self.controllers:
             base.safe_disconnect(ctrl.controller_busy,
                                  self.__check_is_finished)
+
+        # Disconnect other signals that we will not need any longer
+        trigger = self.__trigger_one_measurement
+        if self.primary_controller:
+            about_to_trigger = self.primary_controller.about_to_trigger
+            base.safe_disconnect(about_to_trigger, trigger.start)
+
         super()._prepare_finalization()
 
         # Note: here we are effectively asking to send two commands
-        # one after the other. The "change continuous mode" will end
-        # in the unsent messages from the controller, which cannot
-        # turn "not busy" until all unsent messages are sent. In
-        # practice this means that the controllers will turn "not busy"
-        # only after the answer to the second command.
+        # one after the other: stop() in super() call, "change mode"
+        # below. The second one will end in the unsent messages from
+        # the controller, which cannot turn "not busy" till all unsent
+        # messages are sent. This means that the controllers will turn
+        # "not busy" only after the answer to the second command.
         self.__request_continuous_mode.emit(False)
 
     @qtc.pyqtSlot()
@@ -544,7 +562,7 @@ class TimeResolved(MeasurementABC):
         if not self.is_continuous:
             # Stop triggering for this step...
             self.__trigger_one_measurement.stop()
-            # ...and check if we can intiate the next one
+            # ...and check if we can initiate the next one
             super()._ready_for_next_measurement()
             return
 
@@ -552,7 +570,7 @@ class TimeResolved(MeasurementABC):
         # controller from spamming us with measurements before we can
         # set a new energy (or conclude).  Force it to be busy (it
         # usually never is while spamming with measurements) to be
-        # sure it propery turns "not busy" when it is done stopping.
+        # sure it properly turns "not busy" when it is done stopping.
         primary = self.primary_controller
         primary.busy = True
         primary.controller_busy.connect(self.__check_is_finished, type=_UNIQUE)
