@@ -466,20 +466,7 @@ class TimeResolved(MeasurementABC):
         -------
         None.
         """
-        controller = self.sender()
-        if not isinstance(controller, ControllerABC):
-            # This is a safguard, and should never happen,
-            # although it did happen for me a couple of times
-            # at random (i.e., not reproducibly.)
-            base.emit_error(
-                self, MeasurementErrors.RUNTIME_ERROR,
-                "_on_controller_data_ready got an unexpected sender "
-                f"{controller}. (?== self: {self == controller}). "
-                "Was expecting a ControllerABC. Energy is "
-                f"{self.current_energy}."
-                )
-            return
-        self.data_points.add_data(data, controller)
+        self.data_points.add_data(data, self.sender())
 
     def __prepare_continuous_mode(self):
         """Adjust the preparations to fit continuous mode.

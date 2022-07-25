@@ -1215,19 +1215,6 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         None.
         """
         controller = self.sender()
-        if not isinstance(controller, ControllerABC):
-            # This is a safeguard, and should never happen,
-            # although it did happen for me a couple of times
-            # at random (i.e., not reproducibly.)
-            base.emit_error(
-                self, MeasurementErrors.RUNTIME_ERROR,
-                "_on_controller_data_ready got an unexpected sender "
-                f"{controller}. (?== self: {self == controller}). "
-                "Was expecting a ControllerABC. Energy is "
-                f"{self.current_energy}."
-                )
-            return
-
         self.data_points.add_data(data, controller)
 
         # Don't even try to go to the next energy if we haven't

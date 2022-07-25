@@ -401,13 +401,6 @@ class Measure(ViPErLEEDPluginBase):
     @qtc.pyqtSlot(dict)
     def __on_data_received(self, new_data):
         """Plot measured data."""
-        meas = self.sender()
-        if not isinstance(meas, MeasurementABC):
-            base.emit_error(
-                self, RUNTIME_ERROR,
-                f"Got unexpected sender class {meas.__class__.__name__} "
-                "for plotting measurements."
-                )
         plot = self._glob['plot']
         plot.data_points.append(new_data)
         plot.data_points.nr_steps_done += 1
