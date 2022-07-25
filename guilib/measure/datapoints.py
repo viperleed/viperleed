@@ -218,7 +218,6 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         for element in args:
             self.__check_data(element)
         self.__list = list(args)
-        self.__delimiter = ','
         self.__time_resolved = True if continuous else time_resolved
         self.__continuous = continuous
         self.primary_controller = primary_controller
@@ -701,7 +700,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
             If the lines to read do not contain a valid energy
             column, or they contain no valid data.
         """
-        reader = csv.DictReader(lines, delimiter=self.__delimiter)
+        reader = csv.DictReader(lines, delimiter=',')
         try:
             first_row = next(reader)
         except StopIteration:
@@ -773,7 +772,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         # TODO: left-pad columns to make it look nice in a text editor.
         #       CANNOT BE DONE WITH csv, have to write manually.
         with open(csv_name, 'w', encoding='UTF8', newline='') as csv_file:
-            writer = csv.writer(csv_file, delimiter=self.__delimiter)
+            writer = csv.writer(csv_file, delimiter=',')
             writer.writerow(self.__make_header_line())
 
             # Now write each energy step consecutively.
