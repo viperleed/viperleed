@@ -184,8 +184,7 @@ def read_delta_file(filename, n_E):
             if part is not None:
                 listdummy2.append(part)
         E_kin, VPI, VV = listdummy2
-        # transversing  Hartree to eV
-        E_kin = hartree_to_eV(E_kin)
+        # Do NOT translate energy to hartree!
         E_kin_array[e_index] = E_kin
         VPI_array[e_index] = VPI
         VV_array[e_index] = VV
