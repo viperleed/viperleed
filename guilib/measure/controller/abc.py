@@ -889,6 +889,11 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
 class MeasureControllerABC(ControllerABC):
     """Controller class for measurement controllers."""
 
+    _mandatory_settings = [
+        *ControllerABC._mandatory_settings,
+        ('measurement_settings', 'num_meas_to_average'),
+        ]
+
     def __init__(self, parent=None, settings=None,
                  port_name='', sets_energy=False):
         """Initialise controller class object.
@@ -1214,6 +1219,7 @@ class MeasureControllerABC(ControllerABC):
         the controller.
 
         A typical implementation:
+        >>> n_ave = self.nr_averaged_measurements
         >>> return (self.initial_delay
                     + (n_ave - 1)/2 * self.measurement_interval)
 
@@ -1226,3 +1232,26 @@ class MeasureControllerABC(ControllerABC):
             measurement after triggering.
         """
         return 0.0
+
+    @property
+    def nr_averaged_measurements(self):
+        """Return the number of measurements to average over.
+
+        The average is usually performed at the hardware level.
+
+        Returns
+        -------
+        nr_averaged_measurements : int
+            The number of individual measurements that are
+            averaged before a .data_ready signal is emitted
+        """
+        try:
+            nr_average = self.settings.getint('measurement_settings',
+                                              'num_meas_to_average')
+        except (TypeError, ValueError):
+            nr_average = 1
+            base.emit_error(
+                self, ControllerErrors.INVALID_SETTING_WITH_FALLBACK,
+                '', 'measurement_settings/num_meas_to_average', nr_average
+                )
+        return nr_average

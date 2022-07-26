@@ -123,7 +123,8 @@ class ViPErinoController(MeasureControllerABC):
             are actually acquired" is the middle time between the
             beginning and the end of the measurement.
         """
-        return (3 + (self.__nr_average - 1) / 2) * self.measurement_interval
+        n_intervals = (3 + (self.nr_averaged_measurements - 1) / 2)
+        return n_intervals * self.measurement_interval
 
     @property
     def measurement_interval(self):
@@ -176,7 +177,7 @@ class ViPErinoController(MeasureControllerABC):
     @property
     def time_to_first_measurement(self):
         """Return the interval between trigger and 1st measurement (msec)."""
-        return (self.__nr_average + 2) * self.measurement_interval
+        return (self.nr_averaged_measurements + 2) * self.measurement_interval
 
     def are_settings_ok(self, settings):
         """Return whether a ViPErLEEDSettings is compatible with self."""
@@ -399,7 +400,7 @@ class ViPErinoController(MeasureControllerABC):
         # via set_measurements() determine which value was measured
         for value, quantity in zip(data, self.__adc_measurement_types):
             if quantity is None:
-                # Was not requested (but measured nontheless)
+                # Was not requested (but measured nonetheless)
                 continue
             if quantity is QuantityInfo.I0:
                 # The value returned by the Arduino is correctly
@@ -535,7 +536,7 @@ class ViPErinoController(MeasureControllerABC):
         Parameters
         ----------
         continuous : bool, optional
-            Wether continuous mode should be on.
+            Whether continuous mode should be on.
             Default is True
 
         Returns
@@ -609,18 +610,3 @@ class ViPErinoController(MeasureControllerABC):
                 thread.terminate()
                 thread.wait()
         return device_list
-
-    @property
-    def __nr_average(self):
-        """Return the number of measurements to average over."""
-        try:
-            nr_average = self.settings.getint(
-                'measurement_settings', 'num_meas_to_average', fallback=1
-                )
-        except (TypeError, ValueError):
-            nr_average = 1
-            base.emit_error(
-                self, ControllerErrors.INVALID_SETTING_WITH_FALLBACK,
-                '', 'measurement_settings/num_meas_to_average', nr_average
-                )
-        return nr_average
