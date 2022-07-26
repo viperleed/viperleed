@@ -11,6 +11,16 @@ Author: Florian Doerr
 Defines the Measure class.
 """
 
+# TODO: no. measurements to average has to be mandatory for a
+#       MeasureControllerABC since we're setting it to 1 in time resolved.
+# TODO: msg too long with weird ecal coefficients??
+
+# TODO: energy ramps are not equivalent for iv == calibration != time_resolved
+
+# TODO: out to I0, measure HV --> not constant??
+# TODO: Measurement. If primary does not measure, find a better way
+#       than sending an empty data_ready for getting the times right
+
 # TODO: it looks like the largest fraction of the time required by
 #       abort_trigger_burst is in fact on the call to _dll_start_live
 #       (97% of the 80ms), while .pause() takes only a short time
@@ -511,8 +521,7 @@ class Measure(ViPErLEEDPluginBase):
         self.__connect_measurement()
 
         plot = self._glob['plot']
-        plot.data_points = plot_data = DataPoints()
-        plot_data.primary_controller = self.measurement.primary_controller
+        plot.data_points = deepcopy(self.measurement.data_points)
         plot.show()
         self._glob['last_cfg'] = self.measurement.settings
 

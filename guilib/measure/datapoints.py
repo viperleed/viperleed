@@ -336,6 +336,15 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         if not resolved:
             self.__continuous = False
 
+    def __deepcopy__(self, memo):
+        """Return a deep copy of self."""
+        cls = self.__class__
+        result = cls.__new__(cls)
+        memo[id(self)] = result
+        for k, v in self.__dict__.items():
+            setattr(result, k, deepcopy(v, memo))
+        return result
+
     def __str__(self):
         """Return a string representation of self."""
         return str(self.__list)

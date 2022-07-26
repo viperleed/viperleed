@@ -181,6 +181,13 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
             self.__init_err_timer.start(20)
         self.error_occurred.disconnect(self.__on_init_errors)
 
+    def __deepcopy__(self, memo):
+        """Return self rather than a deep copy."""
+        # One has to be very careful, like for cameras
+        # not to try running stuff from different threads
+        # on the same object
+        return self
+
     def __hash__(self):
         """Return modified hash of self."""
         if self.__hash == -1:
