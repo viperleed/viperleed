@@ -243,17 +243,14 @@ class TimeResolved(MeasurementABC):
         if any(measuring_ctrls):
             min_interval_ctrl = max(c.time_to_first_measurement
                                     for c in measuring_ctrls)
-            # add a little, in case delay % measurement_interval == 0
+            # Add a little, in case delay % measurement_interval == 0
             min_interval_ctrl += 5
 
         # Cameras:
         if self.cameras:
-            min_interval_cam = max(
-                1000/cam.get_frame_rate() + cam.exposure   # 1st frame              # TODO: make this a camera property. Probably calling get_frame_rate() only once (on not at all)
-                + (cam.n_frames - 1) * cam.frame_interval  # other frames
-                + cam.extra_delay                          # extra
-                for cam in self.cameras
-                )
+            min_interval_cam = max(cam.time_to_image_ready
+                                   for cam in self.cameras)
+            min_interval_cam += 5  # Same as controller
 
         return max(_MIN, round(min_interval_ctrl), round(min_interval_cam))
 

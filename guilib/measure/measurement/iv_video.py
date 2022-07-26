@@ -135,11 +135,8 @@ class IVVideo(MeasurementABC):
             txt = f"{ctrl.name} at {ctrl.port_name}:"
             print(txt, f"{ctrl_time:>{30-len(txt)}.2f} ms")
         for cam in self.cameras:
-            cam_time = (cam.exposure + 1000/cam.get_frame_rate()
-                        + (cam.n_frames - 1) * cam.frame_interval
-                        + cam.extra_delay + camera_delay)
             txt = f"{cam.name}:"
-            print(txt, f"{cam_time:>{30-len(txt)}.2f} ms")
+            print(txt, f"{cam.time_to_image_ready:>{30-len(txt)}.2f} ms")
 
     def _is_finished(self):
         """Check if the full measurement cycle is done.

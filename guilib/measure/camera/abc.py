@@ -349,14 +349,15 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
     @abstractmethod
     def extra_delay(self):
         """Return the interval spent not measuring when triggered (msec).
-        
+
         This quantity is used to judge how long the camera needs to
         perform one acquisition in triggered mode. The time it takes
         is typically
             self.exposure + 1000/self.get_frame_rate()   # First frame
             + (self.n_frames - 1) * self.frame_interval  # Other frames
             + self.extra_delay
-        
+        as implemented in self.time_to_image_ready
+
         Returns
         -------
         extra_delay : float
@@ -664,6 +665,30 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             deliver all the frames needed.
         """
         return False
+
+    @property
+    def time_to_image_ready(self):
+        """Return the ideal interval (msec) to fully acquire an image.
+
+        Returns
+        -------
+        time_to_image_ready : float
+            The time interval between when .trigger_now() is called
+            and when a full image is ready to be processed (i.e.,
+            the time needed to acquire all .n_frames). This is also
+            the time interval between when camera.busy == True (when
+            triggering) and when camera.busy == False again. This
+            attribute is an estimate.
+        """
+        exposure = self.exposure
+        frame_rate = self.get_frame_rate()
+
+        # Could use self.frame_interval, but we save one call
+        # to .get_frame_rate() by calculating it explicitly
+        interval = max(exposure, 1000/frame_rate)
+        return (exposure + 1000/frame_rate         # first frame
+                + interval * (self.n_frames - 1)   # all other frames
+                + self.extra_delay)
 
     def check_loaded_settings(self):
         """Check that camera and configuration settings are the same.
@@ -1358,15 +1383,8 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
 
         # Start the timeout timer: will fire if it takes
         # more than 5 s longer than the expected time to
-        # receive all frames needed for averaging.
-        # The correct time interval would be
-        #         exposure + 1/frame_rate
-        #        + (n_frames - 1) * self.frame_interval
-        # with .frame_interval == max(exposure, 1/frame_rate).
-        # However, we don't need to be super precise here,
-        # and we can overestimate the interval to:
-        frames_time = (self.n_frames + 1) * self.frame_interval
-        self.__timeout.start(int(frames_time + 5000))
+        # receive all frames needed for averaging
+        self.__timeout.start(int(self.time_to_image_ready + 5000))
 
     def __already_reported(self, error_details):
         """Return whether an error was already reported.
