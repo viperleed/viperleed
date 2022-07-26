@@ -222,9 +222,7 @@ class MeasurementPlot(qtw.QWidget):
         if not has_data:
             return
 
-        self.__ctrl_color = {}
-        for color, ctrl in zip(self.__colors, data):
-            self.__ctrl_color[ctrl] = color
+        self.__ctrl_color = dict(zip(data, self.__colors))
 
         for marker, quantity in zip(self.__markers, self.plotted_quantities):
             for ctrl, measurements in data.items():
@@ -252,9 +250,7 @@ class MeasurementPlot(qtw.QWidget):
         if not has_data:
             return
 
-        self.__ctrl_color = {}
-        for color, ctrl in zip(self.__colors, data):
-            self.__ctrl_color[ctrl] = color
+        self.__ctrl_color = dict(zip(data, self.__colors))
 
         for marker, quantity in zip(self.__markers, self.plotted_quantities):
             for ctrl, measurements in data.items():
@@ -291,7 +287,7 @@ class MeasurementPlot(qtw.QWidget):
         if not has_data:
             return
 
-        self.__ctrl_color = dict(zip(self.__colors, data))                      # TODO: do we need this?
+        self.__ctrl_color = dict(zip(data, self.__colors))                      # TODO: do we need this?
 
         for marker, quantity in zip(self.__markers, self.plotted_quantities):
             for ctrl, measurements in data.items():
@@ -320,7 +316,7 @@ class MeasurementPlot(qtw.QWidget):
         if not has_data:
             return
 
-        self.__ctrl_color = dict(zip(self.__colors, data))                      # TODO: do we need this?
+        self.__ctrl_color = dict(zip(data, self.__colors))                      # TODO: do we need this?
 
         for marker, quantity in zip(self.__markers, self.plotted_quantities):
             for ctrl, measurements in data.items():
