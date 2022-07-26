@@ -11,8 +11,6 @@ Author: Florian Doerr
 Defines the Measure class.
 """
 
-# TODO: no. measurements to average has to be mandatory for a
-#       MeasureControllerABC since we're setting it to 1 in time resolved.
 # TODO: msg too long with weird ecal coefficients??
 
 # TODO: energy ramps are not equivalent for iv == calibration != time_resolved
