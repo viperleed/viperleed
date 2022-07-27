@@ -578,6 +578,9 @@ class ViPErinoController(MeasureControllerABC):
         controllers = []
         for port in ports:
             ctrl = ViPErinoController(port_name=port.portName())
+            if not ctrl.serial.is_open:
+                # Port is already in use
+                continue
             threads.append(qtc.QThread())
             ctrl.moveToThread(threads[-1])
             controllers.append(ctrl)
