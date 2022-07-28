@@ -649,6 +649,7 @@ class ImagingSourceCamera(CameraABC):
         """
         self.driver.set_frame_ready_callback(on_frame_ready, self.process_info)
 
+    @qtc.pyqtSlot()
     @qtc.pyqtSlot(object)
     def start(self, *_):
         """Start the camera in self.mode."""
@@ -696,6 +697,7 @@ class ImagingSourceCamera(CameraABC):
         mode = self.mode if self.mode == 'triggered' else 'continuous'
         self.driver.start(mode)
         self.preparing.emit(False)
+        self.started.emit()
 
     @qtc.pyqtSlot()
     def stop(self):

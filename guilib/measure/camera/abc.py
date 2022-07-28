@@ -529,7 +529,9 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
 
         if not self.__is_valid_roi(roi):
             base.emit_error(self, CameraErrors.INVALID_SETTINGS,
-                            'camera_settings/roi', 'Info: ROI is invalid.')
+                            'camera_settings/roi', 'Info: ROI is invalid. '
+                            'You can use the full sensor: '
+                            f'roi = (0, 0, {max_w}, {max_h})')
             self.settings.set('camera_settings', 'roi', 'None')
             return 0, 0, max_w, max_h
 
@@ -598,6 +600,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         self.set_settings(new_settings)
 
     # .settings setter
+    @qtc.pyqtSlot(object)
     def set_settings(self, new_settings):
         """Set new settings for the camera.
 
@@ -1260,6 +1263,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         return
 
     @abstractmethod
+    @qtc.pyqtSlot()
     @qtc.pyqtSlot(object)
     def start(self, *_):
         """Start the camera.
@@ -1267,7 +1271,9 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         The camera is started in the mode returned by self.mode.
 
         This method should be extended in concrete subclasses, i.e.,
-        super().start() must be called in the reimplementation.
+        super().start() must be called in the reimplementation. The
+        reimplementation must self.started.emit() after the driver
+        has been appropriately started.
 
         Returns
         -------
@@ -1295,7 +1301,6 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
                 f"deliver frames ({frame_interval:.2f} ms). Increase "
                 "the exposure time to avoid wasting time."
                 )
-        self.started.emit()
 
     @abstractmethod
     @qtc.pyqtSlot()
