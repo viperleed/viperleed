@@ -418,7 +418,9 @@ class Measure(ViPErLEEDPluginBase):
     def __on_error_occurred(self, error_info):
         """React to an error."""
         sender = self.sender()
-        self._glob['errors'].append((sender, *error_info))
+        error = (sender, *error_info)
+        if error not in set(self._glob['errors']):
+            self._glob['errors'].append(error)
         self._timers['report_errors'].start()
         self._timers['start_measurement'].stop()
 
