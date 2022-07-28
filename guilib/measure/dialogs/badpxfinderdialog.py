@@ -132,6 +132,8 @@ class BadPixelsFinderDialog(qtw.QDialog):
             camera_combo.addItems(self.__available_cameras.keys())
             if old_selection:
                 camera_combo.setCurrentText(old_selection)
+        if not old_selection:
+            self.__ctrls['bad_px_path'].setText(NO_BAD_PX_PATH)
         self.__enable_controls(True)
 
     @property
@@ -167,6 +169,11 @@ class BadPixelsFinderDialog(qtw.QDialog):
     def __abort(self, *_):
         """Abort bad-pixel-finder routine."""
         self.__abort_finder.emit()
+        if self.__finder:
+            # Prevents multiple finders to execute at the same
+            # time, should the current finder not be deleted
+            # by the time the user clicks "Find" again.
+            base.safe_disconnect(self.__start_finder, self.__finder.find)
         self.__reset_progress_bars()
         self.__progress['group'].hide()
         self.__enable_controls(True)
@@ -452,11 +459,15 @@ class BadPixelsFinderDialog(qtw.QDialog):
             # but we report this 'invalid' situation by having
             # red text.
             return
+
+        self.__buttons['abort'].click()
         qtw.QMessageBox.critical(self, "Error",
                                  f"{error_msg}\n\n(Code: {error_code})")
 
     def __on_finder_done(self):
         """React to bad pixels being found."""
+        if self.__finder:
+            base.safe_disconnect(self.__start_finder, self.__finder.find)
         bar_total = self.__progress['total']
         bar_total.setValue(bar_total.maximum())
 
@@ -505,6 +516,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
         self.__report_uncorrectable()
         self.__enable_controls(True)
 
+    @qtc.pyqtSlot(str, int, int, int, int)
     def __on_progress(self, *args):
         """React to a progress report from the finder."""
         sec_txt, sec_no, tot_secs, progress, n_tasks = args
