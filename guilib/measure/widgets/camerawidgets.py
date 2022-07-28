@@ -703,7 +703,13 @@ class CameraViewer(qtw.QScrollArea):
         self.camera.settings.set("camera_settings", "roi",
                                  str(self.camera.get_roi()))
         self.camera.settings.update_file()
-        self.camera.bad_pixels.apply_roi(no_roi=True)
+        try:
+            self.camera.bad_pixels.apply_roi(no_roi=True)
+        except RuntimeError:
+            # There were no bad pixels to begin with.
+            # Notice that we cannot use if .bad_pixels, as
+            # this checks only those in the (now old) ROI
+            pass
         if was_running:
             self.camera.start()
 
