@@ -329,6 +329,7 @@ class CameraViewer(qtw.QScrollArea):
                 base.safe_disconnect(camera.image_processed, self.__show_image)
                 base.safe_disconnect(camera.frame_ready, self.__show_image)
             camera.stop()
+            qtw.qApp.processEvents()
         super().closeEvent(event)
 
     def keyPressEvent(self, event):  # pylint: disable=invalid-name
