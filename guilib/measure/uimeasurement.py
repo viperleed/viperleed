@@ -609,9 +609,9 @@ class Measure(ViPErLEEDPluginBase):
             else:
                 source = "system or unknown"
 
-            err_text.append(f"ERROR from {source}\n  "
-                            f"error code: {error_code}"
-                            f"\n{error_message}")
+            err_text.append(f"ERROR from {source}\n"
+                            f"(Code: {error_code})"
+                            f"\n\n{error_message}")
 
         _ = qtw.QMessageBox.critical(self, "Error",
                                      "\n\n".join(err_text),
