@@ -415,7 +415,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
             if time_ < 0:
                 base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
                                 'measurement_settings/step_profile',
-                                'Info: Time intervals must be non-negative')
+                                '\nInfo: Time intervals must be non-negative')
                 return tuple()
             energies_times[2*i+1] = time_
         return tuple(energies_times)

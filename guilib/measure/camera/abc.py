@@ -340,7 +340,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         if exposure_time < min_exp or exposure_time > max_exp:
             base.emit_error(self, CameraErrors.INVALID_SETTINGS,
                             'measurement_settings/exposure',
-                            f'Info: out of range ({min_exp}, {max_exp})')
+                            f'\nInfo: out of range ({min_exp}, {max_exp})')
             exposure_time = min_exp
         self.__properties['exposure'] = exposure_time
         return exposure_time
@@ -397,7 +397,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         if gain < min_gain or gain > max_gain:
             base.emit_error(self, CameraErrors.INVALID_SETTINGS,
                             'measurement_settings/gain',
-                            f'Info: out of range ({min_gain}, {max_gain})')
+                            f'\nInfo: out of range ({min_gain}, {max_gain})')
             gain = min_gain
             self.settings.set('measurement_settings', 'gain', str(gain))
         self.__properties['gain'] = gain
@@ -529,7 +529,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
 
         if not self.__is_valid_roi(roi):
             base.emit_error(self, CameraErrors.INVALID_SETTINGS,
-                            'camera_settings/roi', 'Info: ROI is invalid. '
+                            'camera_settings/roi', '\nInfo: ROI is invalid. '
                             'You can use the full sensor: '
                             f'roi = (0, 0, {max_w}, {max_h})')
             self.settings.set('camera_settings', 'roi', 'None')
@@ -546,7 +546,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             if not self.__is_valid_roi(roi):
                 base.emit_error(self, CameraErrors.INVALID_SETTINGS,
                                 'camera_settings/roi',
-                                f'Info: ROI {new_roi} is invalid after '
+                                f'\nInfo: ROI {new_roi} is invalid after '
                                 'adjusting top-left corner position')
                 self.settings.set('camera_settings', 'roi', 'None')
                 return 0, 0, max_w, max_h
@@ -840,13 +840,13 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         if not bad_pix_path:
             base.emit_error(self, CameraErrors.INVALID_SETTINGS,
                             'camera_settings/bad_pixels_path',
-                            'Info: No bad_pixel_path found.')
+                            '\nInfo: No bad_pixel_path found.')
             return
         try:
             self.__bad_pixels.read(bad_pix_path)
         except (FileNotFoundError, ValueError) as err:
             base.emit_error(self, CameraErrors.INVALID_SETTINGS,
-                            'camera_settings/bad_pixels_path', f'Info: {err}')
+                            'camera_settings/bad_pixels_path', f'\nInfo: {err}')
             return
         self.__bad_pixels.apply_roi()
 
