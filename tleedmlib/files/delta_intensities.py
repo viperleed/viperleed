@@ -17,7 +17,7 @@ from tqdm import tqdm
 from numba import njit, prange
 
 
-def read_delta_file(filename, n_E):
+def read_delta_file(filename, n_energies):
     """This function reads in one file of data and stores the data in arrays, which can be used in later functions (ex.: GetInt)
     
     Parameters
@@ -75,14 +75,13 @@ def read_delta_file(filename, n_E):
     # Lists and Arrays needed; E,VPI,VV are numpy arrays that get returned, the others are lists that help saving the other data
     HeaderBlock1 = []
     HeaderBlock2 = []
-    E_kin_array = np.full(n_E, fill_value=np.NaN)
-    VPI_array = np.full(n_E, fill_value=np.NaN)
-    VV_array = np.full(n_E, fill_value=np.NaN)
-    listdummy = []
-    listdummy2 = []
+    e_kin_array = np.full(n_energies, fill_value=np.NaN)
+    v_imag_array = np.full(n_energies, fill_value=np.NaN)
+    v_real_array = np.full(n_energies, fill_value=np.NaN)
 
     # we need two fortran format readers
     ff_reader_6E13_7 = ff.FortranRecordReader("6E13.7")
+    ff_reader_10F10_5 = ff.FortranRecordReader("10F10.5")
     ff_reader_10F7_4 = ff.FortranRecordReader("10F7.4")
 
     # Reading in the data of a file
@@ -100,136 +99,88 @@ def read_delta_file(filename, n_E):
     trar1 = np.array(trar1)
     trar2 = np.array(trar2)
 
-    # 2.Block of Header - also only 1 line - int0, n_atoms, nc_steps variables
+    # 2.Block of Header - also only 1 line - n_beams, n_atoms, n_geo_vib_grid variables
     line = next(file_lines)
     z2_elemente = line.split()
     for part in z2_elemente:
         HeaderBlock2.append(int(part))
-    int0, n_atoms, nc_steps = HeaderBlock2
+    n_beams, n_atoms, n_geo_vib_grid = HeaderBlock2
 
-    # 3.Block of Header - Positions of the beams
-    while len(listdummy2) < 2 * int0:
-        line = next(file_lines)
-        listdummy = line.split()
-        for part in listdummy:
-            listdummy2.append(part)
-        # dieses if wieder redundant?
-        if len(listdummy2) >= 2 * int0:
-            beam_indices = np.full(shape=[int0, 2], fill_value=np.NaN)
-            for i in range(int0):
-                for j in range(2):
-                    beam_indices[i, j] = listdummy2[2 * i + j]
-    listdummy.clear()
-    listdummy2.clear()
+    # 3.Block of Header - (h,k) indices of the beams
+    beam_indices = read_block(reader=ff_reader_10F10_5, lines=file_lines, shape=(n_beams, 2))
 
-    # 4.Block of Header - Cundisp
-    while len(listdummy2) < 3 * n_atoms:
-        line = next(file_lines)
-        listdummy = line.split()
-        for part in listdummy:
-            listdummy2.append(part)
-        # if redundant?
-        if len(listdummy2) >= 3 * n_atoms:
-            Cundisp = np.full(shape=[n_atoms, 3], fill_value=np.NaN)
-            for i in range(n_atoms):
-                for j in range(3):
-                    Cundisp[i, j] = listdummy2[3 * i + j]
-    listdummy.clear()
-    listdummy2.clear()
+    # 4.Block of Header - position of undisplaced atom (Coordinates UNDISPlaced)
+    pos_undisplaced = read_block(reader=ff_reader_10F7_4, lines=file_lines, shape=(n_atoms, 3))
 
-    # 5.Block of Header - CDisp
-    while len(listdummy2) < 3 * n_atoms * nc_steps:
-        line = next(file_lines)
-        listdummy = ff_reader_10F7_4.read(line)
-        for part in listdummy:
-            listdummy2.append(part)
-            # maybe getting rid of the if again
-        if len(listdummy2) >= 3 * n_atoms * nc_steps:
-            CDisp = np.full(shape=[nc_steps, n_atoms, 3], fill_value=np.NaN)
-            for j in range(nc_steps):  # some syntax error here
-                for k in range(n_atoms):
-                    for l in range(3):
-                        CDisp[j, k, l] = listdummy2[n_atoms * 3 * j + 3 * k + l]
-    listdummy.clear()
-    listdummy2.clear()
+    # 5.Block of Header - geometric displacements (Coordinates DISPlaced)
+    # For now, this contains, along the first axis, n_vib repetitions of the same
+    # displacements. We will figure out n_vib firther below, then reshape this
+    geo_delta = read_block(reader=ff_reader_10F7_4, lines=file_lines, shape=(n_geo_vib_grid, n_atoms, 3))
 
-    # 6.Block of Header - Aid
-    while len(listdummy2) < nc_steps:
-        line = next(file_lines)
-        listdummy = ff_reader_10F7_4.read(line)
-        for part in listdummy:
-            listdummy2.append(part)
-        if len(listdummy2) >= nc_steps:
-            Aid = np.full(shape=[nc_steps], fill_value=np.NaN)
-            for i in range(nc_steps):
-                Aid[i] = listdummy2[i]
-    listdummy.clear()
-    listdummy2.clear()
+    # 6.Block of Header - list of (vib, 0,0,0,0,..., vib, 0,0,0,0,...)
+    vib_delta = read_block(reader=ff_reader_10F7_4, lines=file_lines, shape=(n_geo_vib_grid,))
+    n_vib = sum(abs(v)>1e-4 for v in vib_delta)
+    n_geo = n_geo_vib_grid // n_vib
+    assert n_geo_vib_grid % n_vib == 0
+    geo_delta = geo_delta.reshape(n_vib, n_geo, n_atoms, 3)
+    # throw out the zeros from array vib_delta
+    vib_delta = vib_delta[::n_geo]
 
     # Initialize arrays for reference and delta amplitudes
-    amplitudes_ref = np.full(shape=[n_E, int0], fill_value=np.nan, dtype=complex)
+    amplitudes_ref = np.full(shape=(n_energies, n_beams), fill_value=np.nan, dtype=np.complex128)
     amplitudes_del = np.full(
-        shape=[n_E, nc_steps, int0], fill_value=np.nan, dtype=complex
+        shape=(n_energies, n_vib, n_geo, n_beams), fill_value=np.nan, dtype=np.complex128
     )
 
     # maybe working arrays for transfer into amplitude arrays ?
 
     # End of the Header - Start of Reading in the Delta Data
-    for e_index in range(n_E):  # Energy loop
+    for e_index, line in enumerate(file_lines):  # Energy loop
 
         # Energy, VPI and VV header
-        line = next(file_lines)
-        listdummy = ff_reader_6E13_7.read(line)
-        for part in listdummy:
-            if part is not None:
-                listdummy2.append(part)
-        E_kin, VPI, VV = listdummy2
-        # Do NOT translate energy to hartree!
-        E_kin_array[e_index] = E_kin
-        VPI_array[e_index] = VPI
-        VV_array[e_index] = VV
-        listdummy.clear()
-        listdummy2.clear()
+        e_kin, v_imag, v_real = (v for v in ff_reader_6E13_7.read(line) if v is not None)
+        # Do NOT translate energy to eV!
+        if e_index < n_energies:
+            e_kin_array[e_index] = e_kin
+            v_imag_array[e_index] = v_imag
+            v_real_array[e_index] = v_real
 
         # Reference amplitudes
-        while len(listdummy2) < 2 * int0:
-            line = next(file_lines)
-            listdummy = ff_reader_6E13_7.read(line)
-            for part in listdummy:
-                listdummy2.append(part)
-        for j in range(int0):
-            amplitudes_ref[e_index, j] = complex(
-                listdummy2[2 * j], listdummy2[2 * j + 1]
-            )
-        listdummy.clear()
-        listdummy2.clear()
+        as_real = read_block(reader=ff_reader_6E13_7, lines=file_lines, shape=(n_beams, 2))
+        if e_index < n_energies:
+            amplitudes_ref[e_index, :] = as_real.view(dtype=np.complex128)[..., 0]
 
         # Delta amplitudes
-        while len(listdummy2) < 2 * int0 * nc_steps:
-            line = next(file_lines)
-            listdummy = ff_reader_6E13_7.read(line)
-            for part in listdummy:
-                listdummy2.append(part)
-        for j in range(nc_steps):
-            for k in range(int0):
-                amplitudes_del[e_index, j, k] = complex(
-                    listdummy2[2 * int0 * j + k * 2],
-                    listdummy2[2 * int0 * j + k * 2 + 1],
-                )
-        listdummy.clear()
-        listdummy2.clear()
+        as_real = read_block(reader=ff_reader_6E13_7, lines=file_lines, shape=(n_geo_vib_grid*n_beams, 2))
+        as_complex = as_real.view(dtype=np.complex128)
+        if e_index < n_energies:
+            amplitudes_del[e_index, ...] = as_complex.reshape(n_vib, n_geo, n_beams)
+
+    if e_index > n_energies:
+        raise ValueError("Number of energies does not match number of blocks in file: "
+                         f"Found {e_index} blocks")
 
     return (
         (phi, theta),
         (trar1, trar2),
-        (int0, n_atoms, nc_steps),
+        (n_beams, n_atoms, n_geo_vib_grid),
         beam_indices,
-        Cundisp,
-        CDisp,
-        (E_kin_array, VPI_array, VV_array),
+        pos_undisplaced,
+        geo_delta,
+        vib_delta,
+        (e_kin_array, v_imag_array, v_real_array),
         amplitudes_ref,
         amplitudes_del,
     )
+
+def read_block(reader, lines, shape, dtype=np.float64):
+    llist = []
+    len_lim = np.prod(shape)
+    for line in lines:
+        llist.extend((v for v in reader.read(line) if v is not None))
+        if len(llist) >= len_lim:
+            break
+    return np.array(llist, dtype=dtype).reshape(shape)
 
 
 @njit(fastmath=True, parallel=True, nogil=True)
