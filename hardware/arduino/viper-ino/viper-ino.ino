@@ -125,17 +125,17 @@ void updateState() {
     May go anywhere
     **/
     if (not newMessage) return;
-    
+
     if (msgLength > 1) return; //We received data
 
-    if (data_received[0] != PC_CONFIGURATION 
+    if (data_received[0] != PC_CONFIGURATION
         and data_received[0] != PC_RESET
         and data_received[0] != PC_STOP
         and data_received[0] != PC_CHANGE_MEAS_MODE
         and data_received[0] != PC_SET_VOLTAGE_ONLY
-        and data_received[0] != PC_SET_SERIAL_NR 
+        and data_received[0] != PC_SET_SERIAL_NR
         and hardwareNotKnown()) return;
-    
+
     switch(data_received[0]){
         case PC_CONFIGURATION:
             initialTime = millis();
@@ -395,7 +395,7 @@ bool decodeAndCheckMessage(){
       raise(ERROR_MSG_DATA_INVALID);
       return false;
     }
-    
+
     // Check that the number of bytes decoded fits
     if (msgLength != numDecodedBytes){
         raise(ERROR_MSG_INCONSISTENT);
@@ -444,63 +444,51 @@ void encodeAndSend(byte singleByte){
  * names prevents the rest of the code from having to figure out which function
  * to call depending on whether the message is a single byte or a byte array
  *
- * Parameters:
- * -----------
- * singleByte : single byte
- *
- * Return into function:
- * -----------
- * NewVar[]: byte array with one value
+ * Parameters
+ * ----------
+ * singleByte : byte
+ *     The one byte to be sent
  */
-  byte byteArray[1];
-  byteArray[0] = singleByte;
+  byte byteArray[] = {singleByte};
   encodeAndSend(byteArray, 1);
 }
 
 
-void encodeAndSend(byte *byteArray, int len){
+void encodeAndSend(byte *byteArray, byte numBytesBeforeEncoding){
 /*
  * Prepares message before sending it to the PC. Changes every
  * byte which happens to have the same value as a MSG_START, an MSG_END or
- * a MSG_SPECIAL_BYTE to two bytes with a leading "MSG_SPECIAL_BYTE" and a following
- * "byte - MSG_SPECIAL_BYTE."
- * The message is put into the array "data_send[]". The length
- * of the array is defined in the variable "numBytesBeforeEncoding".
+ * a MSG_SPECIAL_BYTE to two bytes with a leading "MSG_SPECIAL_BYTE" and
+ * a following "byte - MSG_SPECIAL_BYTE."
  *
  * Parameters:
  * -----------
- * byteArray : byte array
- * len : integer, length of byte array
- *
- * Returns into globals
- * -----------
- * data_send: byte array
+ * byteArray : byte*
+ *     Pointer to message to be sent
  */
-  byte numBytesAfterEncoding = 0;
-  byte numBytesBeforeEncoding = 0; // !!!!!!! Can we remove this? Byte cast not clear
-  for(int i = 0; i < len; i ++){
-    if(byteArray[i] >= MSG_SPECIAL_BYTE){
-      data_send[numBytesAfterEncoding] = MSG_SPECIAL_BYTE;
+    byte encodedMessage[2*numBytesBeforeEncoding]; // Worst-case: each byte encoded as two
+    byte numBytesAfterEncoding = 0;
+    for(int i=0; i < numBytesBeforeEncoding; i++){
+        if (byteArray[i] >= MSG_SPECIAL_BYTE){
+            encodedMessage[numBytesAfterEncoding] = MSG_SPECIAL_BYTE;
+            numBytesAfterEncoding++;
+            encodedMessage[numBytesAfterEncoding] = byteArray[i] - MSG_SPECIAL_BYTE;
+        }
+        else {
+            encodedMessage[numBytesAfterEncoding] = byteArray[i];
+        }
       numBytesAfterEncoding++;
-      data_send[numBytesAfterEncoding] = byteArray[i] - MSG_SPECIAL_BYTE;
     }
-    else{
-      data_send[numBytesAfterEncoding] = byteArray[i];
-    }
-    numBytesAfterEncoding++;
-  }
-  numBytesBeforeEncoding = len;
-/*
- * Sends byte array "data_send" (i.e., the actual message) to PC as:
- *   MSG_START
- *   numbers of bytes in actual message
- *   actual message
- *   MSG_END
+/*  Send byte array "encodedMessage" (i.e., the actual message) to PC as:
+       * MSG_START
+       * numbers of bytes in actual message (before encoding, excl. itself and markers)
+       * actual message
+       * MSG_END
  */
-  Serial.write(MSG_START);
-  Serial.write(numBytesBeforeEncoding);
-  Serial.write(data_send, numBytesAfterEncoding);
-  Serial.write(MSG_END);
+    Serial.write(MSG_START);
+    Serial.write(numBytesBeforeEncoding);
+    Serial.write(encodedMessage, numBytesAfterEncoding);
+    Serial.write(MSG_END);
 }
 
 
@@ -559,7 +547,7 @@ void triggerMeasurements() {
     // Decrease gain before triggering: need to
     // trigger each time the gain is changed.
     decreaseADCGainsIfNeeded();
-    
+
     // After triggering, 3/updateRate sec pass before the first data is available
     if (hardwareDetected.asInt & ADC_0_PRESENT)
         AD7705setGainAndTrigger(CS_ADC_0, adc0Channel, adc0Gain);
@@ -618,8 +606,8 @@ void getConfiguration(){
       configuration[address + 4] = EEPROM.read(address);
       address += 1;
     }
-    encodeAndSend(configuration, 8);
-    hardwareNeverChecked = false;    
+    encodeAndSend(configuration, LENGTH(configuration));
+    hardwareNeverChecked = false;
     currentState = STATE_IDLE;
 }
 
@@ -725,8 +713,8 @@ void calibrateADCsAtAllGains(){
         waitingForDataFromPC = false;
 
         // Check that we got the data that we expected, i.e.,
-        // (1) at least: 1 byte for update rate + 2 for channels
-        if (msgLength < 3){
+        // (1) at least: 1 byte for update rate + 1 channel per ADC
+        if (msgLength < 1 + N_MAX_ADCS_ON_PCB){
             raise(ERROR_MSG_DATA_INVALID);
             return;
         }
@@ -737,7 +725,7 @@ void calibrateADCsAtAllGains(){
             return;
         }
         adcUpdateRate = data_received[0];
-        
+
         // (3) The channels are acceptable
         for (byte i = 0; i < N_MAX_ADCS_ON_PCB; i++){
             byte channel = data_received[i+1];
@@ -954,7 +942,7 @@ void setVoltageWaitAndTrigger(){
         Successfully finished, accessed via triggerMeasurements()
     **/
     uint16_t dacValue;
-        
+
     if (currentState != STATE_SET_VOLTAGE){
         raise(ERROR_RUNTIME);
         return;
@@ -972,7 +960,7 @@ void setVoltageWaitAndTrigger(){
         newMessage = false;
 
         // Check that it is the right amount of data
-        // For each voltage step: 2 bytes for voltage, 
+        // For each voltage step: 2 bytes for voltage,
         // 2 bytes for dacSettlingTime
         if (msgLength % 4 != 0){
             raise(ERROR_MSG_DATA_INVALID);
@@ -991,7 +979,7 @@ void setVoltageWaitAndTrigger(){
         AD5683setVoltage(CS_DAC, dacValue);
         initialTime = millis();
     }
-    
+
     // Wait for timer if needed
     if((millis() - initialTime) < dacSettlingTime) return;
 
@@ -1003,7 +991,7 @@ void setVoltageWaitAndTrigger(){
     if (offset < msgLength){
         dacValue = data_received[offset] << 8 | data_received[offset+1];
         dacSettlingTime = data_received[offset+2] << 8 | data_received[offset+3];
-        
+
         // Set the new voltage
         AD5683setVoltage(CS_DAC, dacValue);
         initialTime = millis();
@@ -1140,10 +1128,10 @@ void sendMeasuredValues(){
     //       In this case, the worst-case scenario message length would be
     //       N_MAX_MEAS*4(bytes)*2(encoding) + 3 (MSG_START, MSG_END, length)
     getFloatMeasurements();
-    
+
     // Since the ATMega32u4 (Arduino Micro) uses little-endian memory layout, we
     // have flip the bytes over to maintain consistency of our messages, which
-    // are in big-endian order 
+    // are in big-endian order
     byte littleToBigEndian[4];
     for (int iADC = 0; iADC < N_MAX_ADCS_ON_PCB+1; iADC++){  // external ADCs + LM35
         for (int i = 0; i < 4; i++){
@@ -1228,7 +1216,7 @@ void findOptimalADCGains(){
         return;
     }
 
-    // using int32_t because summing int16_t may overflow 
+    // using int32_t because summing int16_t may overflow
     int32_t autogain_value0;
     int32_t autogain_value1;
     autogain_value0 = (max(abs((int32_t)maximumPeak[0]), abs((int32_t)minimumPeak[0]))
@@ -1301,13 +1289,13 @@ void handleErrors(){
     // First, report the error, so the PC knows
     // there may be some cleanup going on
     encodeAndSend(PC_ERROR);
-    encodeAndSend(errorTraceback, 2);
-    
+    encodeAndSend(errorTraceback, LENGTH(errorTraceback));
+
     // Set voltage to zero and forget about gain decrease
     AD5683setVoltage(CS_DAC, 0x0000);
     adc0ShouldDecreaseGain = false;
     adc1ShouldDecreaseGain = false;
-    
+
     // Then clean up possible mess that caused the error
     switch(errorTraceback[1]){
         case ERROR_SERIAL_OVERFLOW:
@@ -1360,7 +1348,7 @@ void reset(){
     nextVoltageStep = 0;
 
     hardwareDetected.asInt = 0;
-    hardwareNeverChecked = true;    
+    hardwareNeverChecked = true;
     adcUpdateRate = AD7705_50HZ;
     adc0Channel = AD7705_CH0;
     adc1Channel = AD7705_CH0;
@@ -1747,7 +1735,7 @@ void checkMeasurementInADCRange(byte* gain, bool* adcShouldDecreaseGain,
         //     as large as the one used in findOptimalADCGains()
         *adcShouldDecreaseGain = true;
     }
-    
+
     if(abs(adcValue) >= ADC_SATURATION){
         if(*gain > 0){
             (*gain)--;
@@ -1870,7 +1858,7 @@ void changeMeasurementMode() {
     To achieve this the continuousMeasurement boolean is set to true or false.
     If the arduino is ordered to do continuous measurements it will set
     numMeasurementsToDo = 1.
-    
+
     Reads
     -----
     data_received
@@ -1911,7 +1899,7 @@ void changeMeasurementMode() {
     // Data has arrived
     waitingForDataFromPC = false;
     newMessage = false;
-    
+
     if (msgLength < 2){
         raise(ERROR_MSG_DATA_INVALID);
         return;
@@ -1921,7 +1909,7 @@ void changeMeasurementMode() {
     // Note that data_received[1] is currently unused
     // but necessary in order to not confuse this data
     // message with a command.
-    
+
     if (continuous_mode == 1){
         continuousMeasurement = true;
         numMeasurementsToDo = 1;
@@ -1976,7 +1964,7 @@ void setSerialNr() {
         raise(ERROR_RUNTIME);
         return;
     }
-    
+
     if (not newMessage){  // waiting for data from the PC
         checkIfTimedOut();
         return;
@@ -1985,7 +1973,7 @@ void setSerialNr() {
     // Data has arrived
     waitingForDataFromPC = false;
     newMessage = false;
-    
+
     // Check that we got 4 bytes for the serial number.
     if (msgLength != 4){
         raise(ERROR_MSG_DATA_INVALID);
