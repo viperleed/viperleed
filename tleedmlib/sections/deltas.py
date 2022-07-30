@@ -334,14 +334,12 @@ def deltas(sl, rp, subdomain=False):
         for el in checkEls:
             dfiles = [f for f in os.listdir(".")
                       if f.startswith("DEL_{}_".format(at.oriN) + el)]
-            found = False
             for df in dfiles:
                 if io.checkDelta(df, at, el, rp):
-                    found = True
                     at.deltasGenerated.append(df)
                     countExisting += 1
                     break
-            if not found:
+            else:
                 atElTodo.append((at, el))
 
     if len(atElTodo) == 0:
@@ -349,7 +347,7 @@ def deltas(sl, rp, subdomain=False):
                     "already present in the Deltas.zip file. Skipping new "
                     "calculations.")
         return
-    elif countExisting > 0:
+    if countExisting > 0:
         logger.info("{} of {} required Delta-files are already present. "
                     "Generating remaining {} files..."
                     .format(countExisting, len(atElTodo) + countExisting,
@@ -388,7 +386,8 @@ def deltas(sl, rp, subdomain=False):
     tensordir = "Tensors_"+str(rp.TENSOR_INDEX).zfill(3)
     for (at, el) in atElTodo:
         din, din_short, param = io.generateDeltaInput(
-            at, el, sl, rp, dbasic, auxbeams, phaseshifts)
+            at, el, sl, rp, dbasic, auxbeams, phaseshifts
+            )
         h = hashlib.md5(param.encode()).digest()
         found = False
         for ct in deltaCompTasks:
