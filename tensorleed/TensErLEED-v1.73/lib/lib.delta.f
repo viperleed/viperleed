@@ -407,7 +407,7 @@ C
 C
 C
 C     LOOP OVER THE ATOMS OF THE RECONSTRUCTED UNIT CELL.
-C
+C     !NATOMS is unused - this should be removed
       DO 5 NR=1,NATOMS
 C
 C     SET NEW DISPLACEMENT
@@ -828,10 +828,10 @@ C        read (5,'(3F7.4)') (CUNDISP(IATOM,IPOS), IPOS=1,3)
 
           do IPOS = 1,3
 
-            CDISP(ICSTEP,IATOM,IPOS) = CDISP(ICSTEP,IATOM,IPOS)
+            CDISP(ICSTEP,IATOM,IPOS) = CDISP(ICSTEP,IATOM,IPOS) !useless
  
             CDISP(ICSTEP,IATOM,IPOS) = CDISP(ICSTEP,IATOM,IPOS) 
-     +                               - CUNDISP(IATOM,IPOS)
+     +                               - CUNDISP(IATOM,IPOS) ! useless as long as CUNDISP is hard set to 0
 
           enddo
 
