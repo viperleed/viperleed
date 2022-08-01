@@ -281,9 +281,13 @@ class TimeResolved(MeasurementABC):
         if self.__constant_energy:
             return self.start_energy
         energy = self.current_energy + self.__delta_energy
+        ramp_finished = energy > self.__end_energy
+        if self.__delta_energy < 0:
+            ramp_finished = energy < self.__end_energy
+
         if self.__endless:
             self.new_data_available.emit(self.data_points[-1])
-            if energy > self.__end_energy:
+            if ramp_finished:
                 energy = self.start_energy
         return energy
 
@@ -447,7 +451,10 @@ class TimeResolved(MeasurementABC):
         bool
         """
         super()._is_finished()
-        if self.current_energy > self.__end_energy:
+        ramp_finished = self.current_energy > self.__end_energy
+        if self.__delta_energy < 0:
+            ramp_finished = self.current_energy < self.__end_energy
+        if ramp_finished:
             return True
         self.current_energy = self.energy_generator()
         return False
@@ -537,13 +544,18 @@ class TimeResolved(MeasurementABC):
             base.safe_disconnect(ctrl.controller_busy,
                                  self.__check_is_finished)
 
-        # Disconnect other signals that we will not need any longer
-        trigger = self.__trigger_one_measurement
-        base.safe_disconnect(trigger.timeout, self._camera_timer.start)
+        # Disconnect other signals that we will not need any longer.
         if self.primary_controller:
             about_to_trigger = self.primary_controller.about_to_trigger
-            base.safe_disconnect(about_to_trigger, trigger.start)
             base.safe_disconnect(about_to_trigger, self._camera_timer.start)
+            try:
+                trigger = self.__trigger_one_measurement
+            except AttributeError:
+                # Error during super().__init__
+                pass
+            else:
+                base.safe_disconnect(about_to_trigger, trigger.start)
+                base.safe_disconnect(trigger.timeout, self._camera_timer.start)
 
         super()._prepare_finalization()
 
