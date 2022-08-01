@@ -110,7 +110,7 @@ class MainWindow(qtw.QWidget):
         """Connect to currently selected port."""
         name = self._ctrls['select_port'].currentText().split(':')[0]
         self.__port.port_name = name
-        self.__port.serial_connect()
+        self.__port.connect_()
 
         self.__port.data_received.connect(self.on_data_received)
         self.__port.error_occurred.connect(self.on_error_occurred)
@@ -123,7 +123,7 @@ class MainWindow(qtw.QWidget):
 
     def serial_disconnect(self, *__args):
         """Disconnect from connected serial port."""
-        self.__port.serial_disconnect()
+        self.__port.disconnect_()
 
         for key in ('select_port', 'update_ports', 'connect'):
             self._ctrls[key].setEnabled(True)
@@ -170,7 +170,7 @@ class MainWindow(qtw.QWidget):
     def closeEvent(self, event):
         """Reimplement closeEvent to also close open ports."""
         try:
-            self.__port.serial_disconnect()
+            self.__port.disconnect_()
         except TypeError:
             # port is already disconnected
             pass
