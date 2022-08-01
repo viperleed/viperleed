@@ -239,7 +239,7 @@ def get_viperleed_hardware():
     return viper_boards
 
 
-def compile(for_board, upload=False):
+def compile_(for_board, upload=False):
     """Compile viper-ino for the specified board.
 
     Parameters
@@ -251,9 +251,11 @@ def compile(for_board, upload=False):
         after successful compilation
     """
     cli = get_arduino_cli()
-    viperino = Path(__file__).parent.resolve() / 'viper-ino.ino'
+    viperino = Path(__file__).parent.resolve() / 'viper-ino'
 
-    argv = ['compile', '--clean', '-b', for_board['fqbn'], viperino]
+    argv = ['compile', '--clean', '-b',
+            for_board['matching_boards'][0]['fqbn'],
+            viperino]
     if upload:
         argv.extend(['-u', '-p', for_board['port']['address']])
 
@@ -267,7 +269,8 @@ def compile(for_board, upload=False):
 
 
 if __name__ == '__main__':
-    # get_arduino_cli(True)
-    print(get_boards())
-    install_arduino_core('arduino:avr')
-    print(get_arduino_cores())
+    get_arduino_cli(True)
+    # print(get_boards())
+    # install_arduino_core('arduino:avr')
+    # print(get_arduino_cores())
+    compile_(get_viperleed_hardware()[0], upload=True)
