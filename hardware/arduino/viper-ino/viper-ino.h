@@ -15,6 +15,7 @@ Date: 26.04.2021
 
 // Useful macros, structs and unions
 #define LENGTH(array)  (sizeof(array) / sizeof((array)[0]))
+#define MIN(a, b)      ((a) < (b) ? (a) : (b))
 #ifndef NAN
     #define NAN   (1.0/0)   // Floating-point not-a-number
 #endif
@@ -51,7 +52,7 @@ union floatOrBytes{
 // Constants for communication with the PC
 #define MSG_START 254              // Beginning of a serial message
 #define MSG_END 255                // End of a serial message
-#define MSG_SPECIAL_BYTE 252       // Prevents clashing of data with (start, end, error)
+#define MSG_SPECIAL_BYTE 251       // Prevents clashing of data with (start, end, error)
 #define MSG_MAX_LENGTH 32          // Max no. of bytes in an incoming serial message
 #ifndef SERIAL_BUFFER_SIZE
     #define SERIAL_BUFFER_SIZE 64  // Arduino limit for serial buffer. If buffer is full, new bytes are DISCARDED
@@ -71,6 +72,7 @@ union floatOrBytes{
 #define PC_STOP             120  // PC requested a stop on all activity. Return to idle (ASCII 'x')
 #define PC_SET_VOLTAGE_ONLY 118  // PC requested set energy without follow up measurement (ASCII 'v')
 #define PC_SET_SERIAL_NR    115  // PC requested serial number (ASCII 's')
+#define PC_DEBUG            252  // Header for debug messages sent to the PC. No debug can come from the PC
 
 // Error codes
 #define ERROR_NO_ERROR            0   // No error

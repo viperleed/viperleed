@@ -10,14 +10,15 @@ Date: 09.02.2022
 #include <Arduino.h>
 #include <SPI.h>
 #include <EEPROM.h>
+#include <stdarg.h>
 
 #include "viper-ino.h"   // Arduino-related settings. Includes ADC and DAC
 
 #define DEBUG   false    // Debug mode, writes to serial line, for use in serial monitor
 
-// Firmware version (MAX: v255.255). CURENTLY: v0.6
+// Firmware version (MAX: v255.255). CURENTLY: v0.7
 #define FIRMWARE_VERSION_MAJOR    0  // max 255
-#define FIRMWARE_VERSION_MINOR    6  // max 255
+#define FIRMWARE_VERSION_MINOR    7  // max 255
 
 
 
@@ -492,6 +493,35 @@ void encodeAndSend(byte *byteArray, byte numBytesBeforeEncoding){
 }
 
 
+void debugMsg(const char *message, ...){  // can be a format string
+    /** Send a debug message to the PC.
+
+    Parameters
+    ----------
+    message:
+        string to be sent. Can contain format characters
+    ...:
+        variable number of arguments, interpreted as the values
+        to be formatted into message.
+
+    The message sent to the PC is "<PC_DEBUG><message % ...>\0", and
+    should be at most 255 characters long. It is encoded like all others.
+    **/
+    va_list args;
+    va_start(args, message);
+
+    byte n_chars;
+    char buffer[255];  // PC_DEBUG + max 253 characters + '\0' at end
+
+    buffer[0] = PC_DEBUG;
+    n_chars = 1;  // the PC_DEBUG
+    n_chars += vsnprintf(buffer+n_chars, 255-n_chars, message, args);
+    va_end(args);
+
+    encodeAndSend(buffer, MIN(n_chars, 255));
+}
+
+
 
 
 
@@ -594,7 +624,7 @@ void getConfiguration(){
     }
 
     // Note that the ATmega32U4 of Arduino Micro uses
-    // little-endiam memory layout, i.e., LSB is
+    // little-endian memory layout, i.e., LSB is
     // at lower memory index
     hardwareDetected.asInt = getHardwarePresent();
     byte configuration[8] = {FIRMWARE_VERSION_MAJOR,
@@ -764,12 +794,9 @@ void calibrateADCsAtAllGains(){
             selfCalibrateAllADCs(adcUpdateRate);
             storeAllSelfCalibrationResults(selfCalDataForMedian[i]);
             #if DEBUG
-                Serial.print("gain=");
-                Serial.print(calibrationGain);
-                Serial.print(" cOffs=");
-                Serial.print(selfCalDataForMedian[i][0][0]);
-                Serial.print(" cGain=");
-                Serial.println(selfCalDataForMedian[i][0][1]);
+                debugMsg("gain=%d, cOffs=%d, cGain=%d",
+                         calibrationGain, selfCalDataForMedian[i][0][0],
+                         selfCalDataForMedian[i][0][1]);
             #endif
         }
 
@@ -1094,7 +1121,7 @@ void sendMeasuredValues(){
     Reads
     -----
     fDataOutput
-    (indirectly) hardwareDetected, summedMeasurements, voltsPerBit,
+    (indirectly) hardwareDetected, summedMeasurements, millivoltsPerBit,
                  numMeasurementsToDo, adc0Channel, adc1Channel,
                  adc0Gain, adc1Gain
 
@@ -1466,6 +1493,7 @@ uint16_t getHardwarePresent() {
   return result;
 }
 
+
 bool isAcceptableADCUpdateRate(byte updateRate){                                // TODO: may later move to the ADC 'library'
     /**Return whether the given update rate in an acceptable value.*/
     return ((updateRate == AD7705_50HZ)
@@ -1771,7 +1799,7 @@ void getFloatMeasurements() {
 
     Reads
     -----
-    hardwareDetected, summedMeasurements, voltsPerBit, numMeasurementsToDo,
+    hardwareDetected, summedMeasurements, millivoltsPerBit, numMeasurementsToDo,
     adc0Channel, adc0Gain, adc1Channel, adc1Gain
 
     Writes
@@ -1779,7 +1807,10 @@ void getFloatMeasurements() {
     fDataOutput
     **/
     if (hardwareDetected.asInt & ADC_0_PRESENT) {
-        fDataOutput[0].asFloat = summedMeasurements[0] * voltsPerBit[adc0Gain] / numMeasurementsDone;
+        fDataOutput[0].asFloat = (
+            summedMeasurements[0] * millivoltsPerBit[adc0Gain]
+            / numMeasurementsDone
+            );
         // ADC#0, channel 0: I0 input (returned as milliVolts).
         // The actual voltage at the input can be in either 0-2.5 V
         // (jumper closed) or 0-10 V (jumper open) ranges. This means
@@ -1795,7 +1826,10 @@ void getFloatMeasurements() {
     }
 
     if (hardwareDetected.asInt & ADC_1_PRESENT) {
-        fDataOutput[1].asFloat = summedMeasurements[1] * voltsPerBit[adc1Gain] / numMeasurementsDone;
+        fDataOutput[1].asFloat = (
+            summedMeasurements[1] * millivoltsPerBit[adc1Gain]
+            / numMeasurementsDone
+            );
         // ADC#1, channel 0: I0 at biased sample (microAmps)
         if (adc1Channel == AD7705_CH0) {
             fDataOutput[1].asFloat *= ADC_1_CH0_SCALE;
@@ -1926,6 +1960,7 @@ void changeMeasurementMode() {
     currentState = STATE_IDLE;
 }
 
+
 bool hardwareNotKnown(){
     if(hardwareNeverChecked){
         raise(ERROR_HARDWARE_UNKNOWN);
@@ -1933,6 +1968,7 @@ bool hardwareNotKnown(){
     }
     return false;
 }
+
 
 void setSerialNr() {
    /**

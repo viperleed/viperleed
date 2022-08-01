@@ -53,7 +53,7 @@ Date: 26.04.2021
 #define REF_OVER_RANGE  (2500.0/32768)  // millivolts (uA@1kOhm) per bit at gain0, bipolar, input 0ohm
 #define R_SOURCE         1300.0         // Source resistance of our circuit at ADC inputs, 1.3 kOhm.
 
-const float voltsPerBit[] = {
+const float millivoltsPerBit[] = {
     REF_OVER_RANGE/R_IN_0*(R_IN_0 + R_SOURCE),         // gain0 = x1
     REF_OVER_RANGE/R_IN_0*2*(R_IN_0/2 + R_SOURCE)/2,   // gain1 = x2 has half R_IN_0
     REF_OVER_RANGE/R_IN_0*4*(R_IN_0/4 + R_SOURCE)/4,   // gain2 = x4 has 1/4 R_IN_0
