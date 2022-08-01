@@ -699,9 +699,8 @@ class ViPErLEEDSerial(SerialABC):
             not detect any ADCs to take measurements with.
         """
         local_version = self.firmware_version
-        local_major, local_minor = (int(m) for m in local_version.split("."))
         major, minor, *hardware = message[:4]
-        firmware_version = Version(major, minor)
+        firmware_version = base.Version(major, minor)
         if firmware_version < local_version:
             base.emit_error(self,
                             ViPErLEEDHardwareError.ERROR_VERSIONS_DO_NOT_MATCH,
