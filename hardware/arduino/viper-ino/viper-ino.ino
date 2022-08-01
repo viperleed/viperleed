@@ -496,6 +496,13 @@ void encodeAndSend(byte *byteArray, byte numBytesBeforeEncoding){
 void debugMsg(const char *message, ...){  // can be a format string
     /** Send a debug message to the PC.
 
+    Caution: when sending a debugMsg to the PC, it is a good idea
+    to do so BEFORE sending out a PC_OK, as the python side may be
+    triggered into doing some other stuff (including sending other
+    serial messages) when a PC_OK is received. Sending a debugMsg
+    can disrupt the progress or hold the serial line busy, preventing
+    new messages to be actually sent without this being noticed.
+
     Parameters
     ----------
     message:

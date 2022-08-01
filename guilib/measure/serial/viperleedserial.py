@@ -17,12 +17,13 @@ to prevent stalling the Graphical User Interface.
 
 import struct
 
+from PyQt5 import QtCore as qtc
+
 from viperleed.guilib.measure.serial.abc import ExtraSerialErrors, SerialABC
-from viperleed.guilib.measure.hardwarebase import (ViPErLEEDErrorEnum,
-                                                   emit_error)
+from viperleed.guilib.measure import hardwarebase as base
 
 
-class ViPErLEEDHardwareError(ViPErLEEDErrorEnum):
+class ViPErLEEDHardwareError(base.ViPErLEEDErrorEnum):
     """This class contains all errors related to the Arduino."""
     ERROR_NO_ERROR = (0, "No error")
     ERROR_SERIAL_OVERFLOW = (1, "Overflow of the hardware serial.")
@@ -79,6 +80,8 @@ class ViPErLEEDHardwareError(ViPErLEEDErrorEnum):
 class ViPErLEEDSerial(SerialABC):
     """Class for communication with Arduino Micro ViPErLEED controller."""
 
+    debug_info_arrived = qtc.pyqtSignal(str)
+
     _mandatory_settings = [*SerialABC._mandatory_settings,
                            ('hardware_bits',), ('available_commands',),
                            ('arduino_states',), ('error_bytes',),
@@ -130,17 +133,20 @@ class ViPErLEEDSerial(SerialABC):
             Each element is the string representation of the byte
             that will be sent over the serial.
         """
-        cmd_names = ('PC_CHANGE_MEAS_MODE', 'PC_SET_VOLTAGE',
+        cmd_names = ['PC_CHANGE_MEAS_MODE', 'PC_SET_VOLTAGE',
                      'PC_CALIBRATION', 'PC_SET_UP_ADCS',
-                     'PC_SET_VOLTAGE_ONLY', 'PC_SET_SERIAL_NR')
-        # Here, for newer firmware versions, one would:
-        # version = self.port_settings.getfloat('controller', 'firmware_version',
-        #                                       fallback=1.0)
-        # if version >= SOMETHING:
-        #     cmd_names += (NEW_COMMAND_1, NEW_COMMAND_2, ...)
+                     'PC_SET_VOLTAGE_ONLY', 'PC_SET_SERIAL_NR']
+        if self.firmware_version >= "0.7":
+            cmd_names.append("PC_DEBUG")
 
         _cmds = self.port_settings['available_commands']
         return [_cmds[name] for name in cmd_names]
+
+    @property
+    def firmware_version(self):
+        return base.Version(
+            self.port_settings.get("controller", "firmware_version")
+            )
 
     def decode(self, message):
         """Decodes messages received from the Arduino.
@@ -200,7 +206,6 @@ class ViPErLEEDSerial(SerialABC):
         special_byte = self.port_settings.getint('serial_port_settings',
                                                  'SPECIAL_BYTE')
 
-        # print(f"before special byte: {message=}")
         payload_length = len(message)
         # Iterate through message and split values that are larger
         # or equals special_byte into two different bytes. The second
@@ -270,13 +275,13 @@ class ViPErLEEDSerial(SerialABC):
                         'err_details': current_error[1]}
         except KeyError:
             # error_state is not present in the config file.
-            emit_error(self, ExtraSerialErrors.INVALID_PORT_SETTINGS,
-                       f'arduino_states with code {error_state}')
+            base.emit_error(self, ExtraSerialErrors.INVALID_PORT_SETTINGS,
+                            f'arduino_states with code {error_state}')
             fmt_data = {'error_name': current_error.name,
                         'state': f"state with code {error_state}",
                         'err_details': current_error[1]}
         # Emit error and clear errors.
-        emit_error(self, (error_code, msg_to_format), **fmt_data)
+        base.emit_error(self, (error_code, msg_to_format), **fmt_data)
         self.clear_errors()
 
     def is_decoded_message_acceptable(self, message):
@@ -306,16 +311,24 @@ class ViPErLEEDSerial(SerialABC):
         msg_length, *msg_data = message
         # Check if message length greater than zero
         if not msg_length:
-            emit_error(self, ExtraSerialErrors.NO_MESSAGE_ERROR)
+            base.emit_error(self, ExtraSerialErrors.NO_MESSAGE_ERROR)
             return False
         # Check if message length consistent with sent length
         if msg_length != len(msg_data):
-            emit_error(self,
-                       ViPErLEEDHardwareError.ERROR_MSG_RCVD_INCONSISTENT)
+            base.emit_error(self,
+                            ViPErLEEDHardwareError.ERROR_MSG_RCVD_INCONSISTENT)
             return False
+
+        if self.firmware_version >= "0.7":
+            _debug = self.port_settings.getint("available_commands",
+                                               "pc_debug")
+            if msg_data[0] == _debug:
+                return True
+
         # Check if message length is one of the expected lengths
         if msg_length not in (1, 2, 4, 8):
-            emit_error(self, ViPErLEEDHardwareError.ERROR_MSG_RCVD_INVALID)
+            base.emit_error(self,
+                            ViPErLEEDHardwareError.ERROR_MSG_RCVD_INVALID)
             return False
         return True
 
@@ -391,13 +404,14 @@ class ViPErLEEDSerial(SerialABC):
 
         if command not in available_commands:
             # The first message must be a command
-            emit_error(self, ExtraSerialErrors.UNSUPPORTED_COMMAND_ERROR,
-                       command)
+            base.emit_error(self, ExtraSerialErrors.UNSUPPORTED_COMMAND_ERROR,
+                            command)
             return False
         if any(message in available_commands for message in data):
             # Only the fist message can be a command; the others (if
             # any) can only be data to accompany the command itself.
-            emit_error(self, ViPErLEEDHardwareError.ERROR_TOO_MANY_COMMANDS)
+            base.emit_error(self,
+                            ViPErLEEDHardwareError.ERROR_TOO_MANY_COMMANDS)
             return False
 
         _need_data = self.commands_requiring_data
@@ -548,6 +562,11 @@ class ViPErLEEDSerial(SerialABC):
                                                  'PC_MEASURE_ONLY')
         pc_ok = self.port_settings.get('available_commands', 'PC_OK')
 
+        pc_debug = None
+        if self.firmware_version >= "0.7":
+            pc_debug = self.port_settings.getint('available_commands',
+                                                 'PC_DEBUG')
+
         last_cmd = self.__last_request_sent
 
         # The following check catches data that is received
@@ -597,12 +616,17 @@ class ViPErLEEDSerial(SerialABC):
             # If the message is 2 bytes long, then it is most likely the
             # identifier for an error and ended up here somehow
             elif len(message) == 2:
-                emit_error(self,
-                           ViPErLEEDHardwareError.ERROR_ERROR_SLIPPED_THROUGH)
+                base.emit_error(
+                    self, ViPErLEEDHardwareError.ERROR_ERROR_SLIPPED_THROUGH
+                    )
+            elif message[0] == pc_debug:
+                self.debug_info_arrived.emit(message[1:].decode('utf-8'))
             # If the message does not fit one of the lengths above, it
             # is no known message type.
             else:
-                emit_error(self, ViPErLEEDHardwareError.ERROR_MSG_RCVD_INVALID)
+                base.emit_error(
+                    self, ViPErLEEDHardwareError.ERROR_MSG_RCVD_INVALID
+                    )
         self.unprocessed_messages = []
 
     def __bytes_to_float(self, bytes_in):
@@ -674,16 +698,15 @@ class ViPErLEEDSerial(SerialABC):
             the hardware do not match up or if the hardware did
             not detect any ADCs to take measurements with.
         """
-        local_version = self.port_settings['controller']['FIRMWARE_VERSION']
+        local_version = self.firmware_version
         local_major, local_minor = (int(m) for m in local_version.split("."))
         major, minor, *hardware = message[:4]
-        firmware_version = f"{major}.{minor}"
-        if (major < local_major
-                or (major == local_major and minor < local_minor)):
-            emit_error(self,
-                       ViPErLEEDHardwareError.ERROR_VERSIONS_DO_NOT_MATCH,
-                       arduino_version=firmware_version,
-                       local_version=local_version)
+        firmware_version = Version(major, minor)
+        if firmware_version < local_version:
+            base.emit_error(self,
+                            ViPErLEEDHardwareError.ERROR_VERSIONS_DO_NOT_MATCH,
+                            arduino_version=firmware_version,
+                            local_version=local_version)
         # TODO: here we may want to report a (non fatal) warning in
         # case the firmware version in the hardware is newer than the
         # one of the settings.
@@ -709,7 +732,8 @@ class ViPErLEEDSerial(SerialABC):
                 key = 'i0_range' if 'i0' in key else 'aux_range'
             info[key] = present_or_closed
         if not (info['adc_0'] or info['adc_1']):
-            emit_error(self, ViPErLEEDHardwareError.ERROR_NO_HARDWARE_DETECTED)
+            base.emit_error(self,
+                            ViPErLEEDHardwareError.ERROR_NO_HARDWARE_DETECTED)
         info['serial_nr'] = ''.join([chr(v) for v in message[4:]])
         info['firmware'] = firmware_version
         return info
