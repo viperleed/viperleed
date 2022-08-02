@@ -1,17 +1,17 @@
 ************************************
 * This section contains coefficients for type B thermocouples for
 * the two subranges of temperature listed below.  The coefficients 
-* are in units of °C and mV and are listed in the order of constant 
+* are in units of Â°C and mV and are listed in the order of constant 
 * term up to the highest order.  The equation is of the form 
 * E = sum(i=0 to n) c_i t^i.
 *
-*     Temperature Range (°C)
+*     Temperature Range (Â°C)
 *        0.000 to 630.615
 *        630.615 to 1820.000
 ************************************
 name: reference function on ITS-90
 type: B
-temperature units: °C
+temperature units: Â°C
 emf units: mV
 range: 0.000, 630.615, 6
   0.000000000000E+00
@@ -38,15 +38,15 @@ range: 630.615, 1820.000, 8
 * functions for type B thermocouples for the subranges of 
 * temperature and voltage listed below. The range of errors of 
 * the approximate inverse function for each subrange is also given. 
-* The coefficients are in units of °C and mV and are listed in 
+* The coefficients are in units of Â°C and mV and are listed in 
 * the order of constant term up to the highest order.
 * The equation is of the form t_90 = d_0 + d_1*E + d_2*E^2 + ... 
 *     + d_n*E^n,
-* where E is in mV and t_90 is in °C.
+* where E is in mV and t_90 is in Â°C.
 *
 *    Temperature        Voltage            Error 
 *      range              range            range
-*      (°C)               (mV)             (° C)
+*      (Â°C)               (mV)             (Â° C)
 *    250. to 700.       0.291 to 2.431    -0.02 to 0.03
 *    700. to 1800.      2.431 to 13.820   -0.01 to 0.02
 ********************************************************
@@ -75,17 +75,17 @@ Temperature   250.           700.
 ************************************
 * This section contains coefficients for type E thermocouples for
 * the two subranges of temperature listed below.  The coefficients 
-* are in units of °C and mV and are listed in the order of constant 
+* are in units of Â°C and mV and are listed in the order of constant 
 * term up to the highest order.  The equation is of the form 
 * E = sum(i=0 to n) c_i t^i.
 *
-*     Temperature Range (°C)
+*     Temperature Range (Â°C)
 *        -270.000 to 0.000  
 *         0.000 to 1000.000
 ************************************
 name: reference function on ITS-90
 type: E
-temperature units: °C
+temperature units: Â°C
 emf units: mV
 range: -270.000, 0.000, 13
   0.000000000000E+00
@@ -121,15 +121,15 @@ range: 0.000, 1000.000, 10
 * functions for type E thermocouples for the subranges of 
 * temperature and voltage listed below. The range of errors of 
 * the approximate inverse function for each subrange is also given. 
-* The coefficients are in units of °C and mV and are listed in 
+* The coefficients are in units of Â°C and mV and are listed in 
 * the order of constant term up to the highest order.
 * The equation is of the form t_90 = d_0 + d_1*E + d_2*E^2 + ... 
 *     + d_n*E^n,
-* where E is in mV and t_90 is in °C.
+* where E is in mV and t_90 is in Â°C.
 *
 *    Temperature        Voltage            Error 
 *      Range              range            range
-*      (°C)               (mV)             (° C)
+*      (Â°C)               (mV)             (Â° C)
 *    -200. to 0.       -8.825 to 0.000    -0.01 to 0.03
 *     0. to 1000.       0.000 to 76.373   -0.02 to 0.02
 ********************************************************
@@ -160,17 +160,17 @@ Temperature  -200.             0.
 ************************************
 * This section contains coefficients for type J thermocouples for
 * the two subranges of temperature listed below.  The coefficients 
-* are in units of °C and mV and are listed in the order of constant 
+* are in units of Â°C and mV and are listed in the order of constant 
 * term up to the highest order.  The equation is of the form 
 * E = sum(i=0 to n) c_i t^i.
 *
-*     Temperature Range (°C)
+*     Temperature Range (Â°C)
 *        -210.000 to 760.000 
 *         760.000 to 1200.000
 ************************************
 name: reference function on ITS-90
 type: J
-temperature units: °C
+temperature units: Â°C
 emf units: mV
 range: -210.000, 760.000, 8
   0.000000000000E+00
@@ -196,15 +196,15 @@ range: 760.000, 1200.000, 5
 * functions for type J thermocouples for the subranges of 
 * temperature and voltage listed below. The range of errors of 
 * the approximate inverse function for each subrange is also given. 
-* The coefficients are in units of °C and mV and are listed in 
+* The coefficients are in units of Â°C and mV and are listed in 
 * the order of constant term up to the highest order.
 * The equation is of the form t_90 = d_0 + d_1*E + d_2*E^2 + ... 
 *     + d_n*E^n,
-* where E is in mV and t_90 is in °C.
+* where E is in mV and t_90 is in Â°C.
 *
 *    Temperature        Voltage            Error 
 *      range              range            range
-*      (°C)               (mV)             (° C)
+*      (Â°C)               (mV)             (Â° C)
 *    -210. to 0.      -8.095 to 0.000    -0.05 to 0.03
 *     0. to 760.       0.000 to 42.919   -0.04 to 0.04
 *     760. to 1200     42.919 to 69.553  -0.04 to 0.03
@@ -234,20 +234,20 @@ Temperature  -210.             0.           760.
 ************************************
 * This section contains coefficients for type K thermocouples for
 * the two subranges of temperature listed below.  The coefficients 
-* are in units of °C and mV and are listed in the order of constant 
-* term up to the highest order.  The equation below 0 °C is of the form 
+* are in units of Â°C and mV and are listed in the order of constant 
+* term up to the highest order.  The equation below 0 Â°C is of the form 
 * E = sum(i=0 to n) c_i t^i.
 *
-* The equation above 0 °C is of the form 
+* The equation above 0 Â°C is of the form 
 * E = sum(i=0 to n) c_i t^i + a0 exp(a1 (t - a2)^2).
 *
-*     Temperature Range (°C)
+*     Temperature Range (Â°C)
 *        -270.000 to 0.000 
 *         0.000 to 1372.000
 ************************************
 name: reference function on ITS-90
 type: K
-temperature units: °C
+temperature units: Â°C
 emf units: mV
 range: -270.000, 0.000, 10
   0.000000000000E+00
@@ -283,15 +283,15 @@ exponential:
 * functions for type K thermocouples for the subranges of 
 * temperature and voltage listed below. The range of errors of 
 * the approximate inverse function for each subrange is also given. 
-* The coefficients are in units of °C and mV and are listed in 
+* The coefficients are in units of Â°C and mV and are listed in 
 * the order of constant term up to the highest order.
 * The equation is of the form t_90 = d_0 + d_1*E + d_2*E^2 + ... 
 *     + d_n*E^n,
-* where E is in mV and t_90 is in °C.
+* where E is in mV and t_90 is in Â°C.
 *
 *    Temperature        Voltage            Error 
 *      range              range            range
-*      (°C)               (mV)             (° C)
+*      (Â°C)               (mV)             (Â° C)
 *    -200. to 0.      -5.891 to 0.000    -0.02 to 0.04
 *     0. to 500.      0.000 to 20.644    -0.05 to 0.04
 *     500. to 1372.   20.644 to 54.886   -0.05 to 0.06
@@ -323,17 +323,17 @@ Temperature  -200.             0.           500.
 ************************************
 * This section contains coefficients for type N thermocouples for
 * the two subranges of temperature listed below.  The coefficients 
-* are in units of °C and mV and are listed in the order of constant 
+* are in units of Â°C and mV and are listed in the order of constant 
 * term up to the highest order.  The equation is of the form 
 * E = sum(i=0 to n) c_i t^i.
 *
-*     Temperature Range (°C)
+*     Temperature Range (Â°C)
 *        -270.000 to 0.000 
 *         0.000 to 1300.000
 ************************************
 name: reference function on ITS-90
 type: N
-temperature units: °C
+temperature units: Â°C
 emf units: mV
 range: -270.000, 0.000, 8
   0.000000000000E+00
@@ -364,15 +364,15 @@ range: 0., 1300., 10
 * functions for type N thermocouples for the subranges of 
 * temperature and voltage listed below. The range of errors of 
 * the approximate inverse function for each subrange is also given. 
-* The coefficients are in units of °C and mV and are listed in 
+* The coefficients are in units of Â°C and mV and are listed in 
 * the order of constant term up to the highest order.
 * The equation is of the form t_90 = d_0 + d_1*E + d_2*E^2 + ... 
 *     + d_n*E^n,
-* where E is in mV and t_90 is in °C.
+* where E is in mV and t_90 is in Â°C.
 *
 *    Temperature        Voltage            Error 
 *      range              range            range
-*      (°C)               (mV)             (° C)
+*      (Â°C)               (mV)             (Â° C)
 *    -200. to 0.      -3.990 to 0.000    -0.02 to 0.03
 *     0. to 600.      0.000 to 20.613    -0.02 to 0.03
 *     600. to 1300.   20.613 to 47.513   -0.04 to 0.02
@@ -403,18 +403,18 @@ Temperature  -200.             0.           600.
 ************************************
 * This section contains coefficients for type R thermocouples for
 * the two subranges of temperature listed below.  The coefficients 
-* are in units of °C and mV and are listed in the order of constant 
+* are in units of Â°C and mV and are listed in the order of constant 
 * term up to the highest order.  The equation is of the form 
 * E = sum(i=0 to n) c_i t^i.
 *
-*     Temperature Range (°C)
+*     Temperature Range (Â°C)
 *        -50.000 to 1064.180 
 *         1064.180 to 1664.500
 *         1664.500 to 1768.100
 ************************************
 name: reference function on ITS-90
 type: R
-temperature units: °C
+temperature units: Â°C
 emf units: mV
 range: -50.000, 1064.180, 9
   0.000000000000E+00
@@ -447,15 +447,15 @@ range: 1664.5, 1768.1, 4
 * functions for type R thermocouples for the subranges of 
 * temperature and voltage listed below. The range of errors of 
 * the approximate inverse function for each subrange is also given. 
-* The coefficients are in units of °C and mV and are listed in 
+* The coefficients are in units of Â°C and mV and are listed in 
 * the order of constant term up to the highest order.
 * The equation is of the form t_90 = d_0 + d_1*E + d_2*E^2 + ... 
 *     + d_n*E^n,
-* where E is in mV and t_90 is in °C.
+* where E is in mV and t_90 is in Â°C.
 *
 *      Temperature        Voltage               Error 
 *         range              range               range
-*         (°C)               (mV)                (° C)
+*         (Â°C)               (mV)                (Â° C)
 *      -50. to 250.      -0.226 to 1.923    -0.02 to 0.02
 *      250. to 1200.      1.923 to 13.228   -0.005 to 0.005
 *     1064. to 1664.5    11.361 to 19.739   -0.0005 to 0.001
@@ -488,18 +488,18 @@ Temperature   -50.           250.          1064.          1664.5
 ************************************
 * This section contains coefficients for type S thermocouples for
 * the two subranges of temperature listed below.  The coefficients 
-* are in units of °C and mV and are listed in the order of constant 
+* are in units of Â°C and mV and are listed in the order of constant 
 * term up to the highest order.  The equation is of the form 
 * E = sum(i=0 to n) c_i t^i.
 *
-*     Temperature Range (°C)
+*     Temperature Range (Â°C)
 *      -50.000 to 1064.180 
 *      1064.180 to 1664.500
 *      1664.500 to 1768.100
 ************************************
 name: reference function on ITS-90
 type: S
-temperature units: °C
+temperature units: Â°C
 emf units: mV
 range: -50.000, 1064.180, 8
   0.000000000000E+00
@@ -530,15 +530,15 @@ range: 1664.5, 1768.1, 4
 * functions for type S thermocouples for the subranges of 
 * temperature and voltage listed below. The range of errors of 
 * the approximate inverse function for each subrange is also given. 
-* The coefficients are in units of °C and mV and are listed in 
+* The coefficients are in units of Â°C and mV and are listed in 
 * the order of constant term up to the highest order.
 * The equation is of the form t_90 = d_0 + d_1*E + d_2*E^2 + ... 
 *     + d_n*E^n,
-* where E is in mV and t_90 is in °C.
+* where E is in mV and t_90 is in Â°C.
 *
 *      Temperature        Voltage               Error 
 *         range              range               range
-*         (°C)               (mV)                (° C)
+*         (Â°C)               (mV)                (Â° C)
 *      -50. to 250.      -0.235 to 1.874     -0.02 to 0.02
 *      250. to 1200.      1.874 to 11.950    -0.01 to 0.01
 *     1064. to 1664.5    10.332 to 17.536    -0.0002 to 0.0002
@@ -570,17 +570,17 @@ Temperature   -50.           250.          1064.          1664.5
 ************************************
 * This section contains coefficients for type T thermocouples for
 * the two subranges of temperature listed below.  The coefficients 
-* are in units of °C and mV and are listed in the order of constant 
+* are in units of Â°C and mV and are listed in the order of constant 
 * term up to the highest order.   The equation is of the form 
 * E = sum(i=0 to n) c_i t^i.
 *
-*     Temperature Range (°C)
+*     Temperature Range (Â°C)
 *       -270.000 to 0.000 
-*        0.000 °C to 400.000
+*        0.000 Â°C to 400.000
 ************************************
 name: reference function on ITS-90
 type: T
-temperature units: °C
+temperature units: Â°C
 emf units: mV
 range: -270.000, 0.000, 14
   0.000000000000E+00
@@ -615,15 +615,15 @@ range: 0.000, 400.000, 8
 * functions for type T thermocouples for the subranges of 
 * temperature and voltage listed below. The range of errors of 
 * the approximate inverse function for each subrange is also given. 
-* The coefficients are in units of °C and mV and are listed in 
+* The coefficients are in units of Â°C and mV and are listed in 
 * the order of constant term up to the highest order.
 * The equation is of the form t_90 = d_0 + d_1*E + d_2*E^2 + ... 
 *     + d_n*E^n,
-* where E is in mV and t_90 is in °C.
+* where E is in mV and t_90 is in Â°C.
 *
 *    Temperature        Voltage            Error 
 *      range              range            range
-*      (°C)               (mV)             (° C)
+*      (Â°C)               (mV)             (Â° C)
 *    -200. to 0.     -5.603 to 0.000    -0.02 to 0.04
 *     .0 to 400.     0.000 to 20.872    -0.03 to 0.03
 ********************************************************

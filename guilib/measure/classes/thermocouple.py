@@ -9,7 +9,10 @@ The file was downloaded on 2022-07-26 from the NIST web page at
 https://srdata.nist.gov/its90/download/download.html. Should other
 thermocouple types be needed, their coefficients can be added to the
 file, and will be generated automatically. If this is the case, the
-format should be kept strictly as in the NIST version.
+format should be kept strictly as in the NIST version. In case new
+coefficients are added, make sure all symbols used are UTF-8. For
+example, saving the NIST file for all coefficients gives non-UTF-8
+symbols for the "degrees".
 """
 
 from math import exp
