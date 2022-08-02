@@ -650,11 +650,11 @@ class ViPErLEEDSerial(SerialABC):
         """
         if (not hasattr(bytes_in, '__len__')
                 or not isinstance(bytes_in, (bytes, bytearray))):
-            raise TypeError("bytes_to_float: invalid type "
+            raise TypeError("__bytes_to_float: invalid type "
                             f"{type(bytes_in).__name__}. Expected 'bytes',"
                             "or 'bytearray'")
         if len(bytes_in) != 4:
-            raise ValueError("bytes_to_float: Invalid number of bytes "
+            raise ValueError("__bytes_to_float: Invalid number of bytes "
                              f"({len(bytes_in)}). Expected 4.")
         float_fmt = '>f' if self.byte_order == 'big' else '<f'
         return struct.unpack(float_fmt, bytes_in)[0]
