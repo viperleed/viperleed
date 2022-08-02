@@ -12,6 +12,7 @@ This module contains the definition of the ViPErinoController
 class and its associated ViPErLEEDErrorEnum class ViPErinoErrors
 which gives commands to the ViPErinoSerialWorker class.
 """
+import threading
 
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtSerialPort as qts
@@ -159,7 +160,7 @@ class ViPErinoController(MeasureControllerABC):
 
     @property
     def firmware_version(self):
-        """Return firware version of the hardware (or the settings).
+        """Return firmware version of the hardware (or the settings).
 
         Returns
         -------
@@ -391,7 +392,8 @@ class ViPErinoController(MeasureControllerABC):
         # information (a dictionary) and actual measurements
         if isinstance(data, dict):
             # Got hardware info
-            self.hardware = data
+            with threading.Lock():
+                self.hardware = data
             return
 
         # Otherwise it is a list of data: [ADC0, ADC1, LM35]
@@ -598,7 +600,8 @@ class ViPErinoController(MeasureControllerABC):
             # correctly interpreted.
             controllers[0].serial.port.waitForReadyRead(100)
         for ctrl in controllers:
-            serial_nr = ctrl.hardware.get('serial_nr', None)
+            with threading.Lock():
+                serial_nr = ctrl.hardware.get('serial_nr', None)
             ctrl.disconnect_()
             if serial_nr:
                 device_list.append(f"{ctrl.name} ({ctrl.port_name})")
