@@ -48,9 +48,8 @@ class ViPErinoErrors(base.ViPErLEEDErrorEnum):
         "update its corresponding configuration file (check also typos!)."
         )
     REQUESTED_ADC_OFFLINE = (153,
-                             "Requested measurement type needs associated "
-                             "ADC to be available for measurements but it is "
-                             "not.")
+                             "Cannot measure {} because its "
+                             "associated ADC was not detected.")
 
 
 class ViPErinoController(MeasureControllerABC):
@@ -107,9 +106,16 @@ class ViPErinoController(MeasureControllerABC):
         if sets_energy:
             self.begin_prepare_todos['set_energy'] = True
         self.continue_prepare_todos['start_autogain'] = True
-        self.__adc_measurement_types = []
-        self.__adc_channels = []
+
         self.hardware = {}
+
+        # __adc_measurement_types[i] contains the QuantityInfo
+        # that should be measured by ADC[i] (ADC0, ADC1, ..., LM35)
+        self.__adc_measurement_types = []
+
+        # __adc_channels[i] contains which channel of ADC[i]
+        # is needed to measure __adc_measurement_types[i]
+        self.__adc_channels = []
 
     @property
     def initial_delay(self):
@@ -199,7 +205,7 @@ class ViPErinoController(MeasureControllerABC):
         #     mandatory_commands.extend([new_command_1, new_command_2, ...])
 
         # pylint: disable=protected-access
-        # Need to access the classe's _mandatory_settings rather
+        # Need to access the class's _mandatory_settings rather
         # than the one of self to prevent mandatory settings from
         # newer firmware versions to stay if settings for earlier
         # versions are loaded.
@@ -330,7 +336,7 @@ class ViPErinoController(MeasureControllerABC):
                 self, ControllerErrors.INVALID_SETTING_WITH_FALLBACK,
                 '', 'measurement_settings/num_meas_to_average', 1
                 )
-        message = [num_meas_to_average, *self.__adc_channels[:2]]
+        message = [num_meas_to_average, *self.__adc_channels[:-1]]
         self.send_message(cmd, message)
 
     @qtc.pyqtSlot()
@@ -394,6 +400,9 @@ class ViPErinoController(MeasureControllerABC):
             # Got hardware info
             with threading.Lock():
                 self.hardware = data
+            # Now that we have info, we can check if the quantities
+            # that we should measure can be measured (ADC present)
+            self.__check_measurements_possible()
             return
 
         # Otherwise it is a list of data: [ADC0, ADC1, LM35]
@@ -422,6 +431,19 @@ class ViPErinoController(MeasureControllerABC):
 
         self.measurements_done()
 
+    def __check_measurements_possible(self):
+        """Check that it is possible to measure stuff, given the hardware."""
+        if not self.hardware:
+            return
+
+        for adc_present, qty in zip(self.hardware,
+                                    self.__adc_measurement_types):
+            if qty is None or adc_present:
+                # Did not ask for anything, or ADC can measure it
+                continue
+            # qty was asked, but its ADC is not available
+            base.emit_error(self, ViPErinoErrors.REQUESTED_ADC_OFFLINE,
+                            qty.label)
     @qtc.pyqtSlot()
     def measure_now(self):
         """Take a measurement.
@@ -527,6 +549,7 @@ class ViPErinoController(MeasureControllerABC):
                 base.emit_error(self, ViPErinoErrors.INVALID_REQUEST, quantity)
                 return
         super().set_measurements(quantities)
+        self.__check_measurements_possible()
 
     @qtc.pyqtSlot(bool)
     def set_continuous_mode(self, continuous=True):
