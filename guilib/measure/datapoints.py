@@ -32,7 +32,9 @@ _ALIASES = {
     'I0': ('i0',),
     'I_Sample': ('isample', 'i_sample',),
     'Temperature': ('temperature',),
+    'Aux': ('aux',),
     'Cold_Junction': ('cold_junction',),
+    'Timestamps': ('timestamps',),
     }
 
 
@@ -52,10 +54,11 @@ class DataErrors(ViPErLEEDErrorEnum):
 
 
 class QuantityInfo(enum.Enum):
-    """Measurement types with unit, scaling, type and name.
+    """Measurement quantities with unit, scaling, type, name, etc.
 
-    New measurement types have to be added here.
+    New measurement quantities have to be added here.
     """
+    # Info:   units,   scale, dtype, label, axis, common_label
     IMAGES = ('Number', None, str, 'Images', None, None)
     ENERGY = ('eV', 'lin', float, 'Energy', 'x', None)
     HV = ('eV', 'lin', float, 'Measured_Energy', 'y', 'Voltage')
@@ -63,6 +66,7 @@ class QuantityInfo(enum.Enum):
     I0 = ('uA', 'lin', float, 'I0', 'y', 'Current')
     ISAMPLE = ('uA', 'lin', float, 'I_Sample', 'y', 'Current')
     TEMPERATURE = ('°C', 'lin', float, 'Temperature', 'y', 'Temperature')
+    AUX = ('mV', 'lin', float, 'Aux', 'y', 'Aux')
     COLD_JUNCTION = ('°C', 'lin', float, 'Cold_Junction', 'y', 'Temperature')
     TIMESTAMPS = ('s', None, str, 'Timestamp', None, None)
 
@@ -442,7 +446,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         if err:
             return
 
-        start = self[0][QuantityInfo.TIMESTAMPS][self.primary_controller][0]
+        start = self[0][QuantityInfo.TIMESTAMPS][self.primary_controller][0]    # TODO: if primary does not measure, we may never have anything in here (IndexError)!
         for ctrl, timestamps in self[-1][QuantityInfo.TIMESTAMPS].items():
             if not ctrl.measures():
                 # No times needed for a non-measuring controller
@@ -672,7 +676,6 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         if cameras:
             data_point[QuantityInfo.IMAGES] = {c: [] for c in cameras}
         self.append(data_point)
-        self.__times_calculated = False
 
     def read_csv(self, csv_name):
         """Read data from csv file.
