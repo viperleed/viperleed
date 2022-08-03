@@ -22,6 +22,7 @@ from viperleed.guilib.measure.controller.abc import (MeasureControllerABC,
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.datapoints import QuantityInfo
 from viperleed.guilib.measure.classes.settings import NotASequenceError
+from viperleed.guilib.measure.classes.thermocouple import Thermocouple
 
 
 _MANDATORY_CMD_NAMES = (
@@ -50,6 +51,12 @@ class ViPErinoErrors(base.ViPErLEEDErrorEnum):
     REQUESTED_ADC_OFFLINE = (153,
                              "Cannot measure {} because its "
                              "associated ADC was not detected.")
+    CANNOT_CONVERT_THERMOCOUPLE = (
+        154,
+        "Invalid/missing setting 'conversions'/'thermocouple_type'. "
+        "Cannot convert temperature to °C. Temperatures will appear in "
+        "millivolts (i.e., thermocouple voltage).{}"
+        )
 
 
 class ViPErinoController(MeasureControllerABC):
@@ -116,6 +123,15 @@ class ViPErinoController(MeasureControllerABC):
         # __adc_channels[i] contains which channel of ADC[i]
         # is needed to measure __adc_measurement_types[i]
         self.__adc_channels = []
+
+        # __added_cold_junction keeps track of whether we would
+        # like to also measure the cold-junction temperature,
+        # even if the user did not ask for it, if possible.
+        self.__added_cold_junction = False
+
+        # The thermocouple.Thermocouple instance for this unit.
+        # None if not present (or if TEMPERATURE was not measured)
+        self.__thermocouple = None
 
     @property
     def initial_delay(self):
@@ -198,6 +214,7 @@ class ViPErinoController(MeasureControllerABC):
                             "controller/firmware_version", "")
             return False
 
+        self.__thermocouple = None  # In case it changed
         mandatory_commands = [("available_commands", cmd)
                               for cmd in _MANDATORY_CMD_NAMES]
         # If new commands are added in newer versions, do:
@@ -414,21 +431,12 @@ class ViPErinoController(MeasureControllerABC):
                 # Was not requested (but measured nonetheless)
                 continue
             if quantity is QuantityInfo.I0:
-                # The value returned by the Arduino is correctly
-                # in microamps only under the assumption that
-                #   (i) in 0--10V range 1uA produces 1V at the BNC
-                #  (ii) in 0--2.5V range 1mA produces 1V at the BNC
-                try:
-                    conv_ = self.settings.getfloat('conversions', 'i0_gain',
-                                                   fallback=1.0)
-                except (TypeError, ValueError):
-                    conv_ = 1.0
-                value *= conv_
+                value = self.__convert_i0_value(value)
             self.measurements[quantity] = [value]
 
-        # TODO: here we should convert the mV of the thermocouple
-        # and the cold junction into a compensated temperature
-
+        # See if we should convert the thermocouple voltages
+        if self.measures(QuantityInfo.TEMPERATURE):
+            self.__convert_thermocouple_voltages()
         self.measurements_done()
 
     def __check_measurements_possible(self):
@@ -442,8 +450,58 @@ class ViPErinoController(MeasureControllerABC):
                 # Did not ask for anything, or ADC can measure it
                 continue
             # qty was asked, but its ADC is not available
+            if (qty == QuantityInfo.COLD_JUNCTION
+                    and self.__added_cold_junction):
+                # We would have liked to measure it even if user did
+                # not ask, but it is not possible. Do not complain.
+                continue
             base.emit_error(self, ViPErinoErrors.REQUESTED_ADC_OFFLINE,
                             qty.label)
+        if (self.measures(QuantityInfo.TEMPERATURE)
+                and not self.measures(QuantityInfo.COLD_JUNCTION)):
+            print("No cold-junction temperature measured. "                     # TODO: non-critical warning
+                  "Thermocouple temperature will be wrong.")
+
+    def __convert_i0_value(self, value):
+        """Convert i0 measurement to microamperes."""
+        # The value returned by the Arduino is correctly
+        # in microamps only under the assumption that
+        #   (i) in 0--10V range 1uA produces 1V at the BNC
+        #  (ii) in 0--2.5V range 1mA produces 1V at the BNC
+        try:
+            conv_ = self.settings.getfloat('conversions', 'i0_gain',
+                                           fallback=1.0)
+        except (TypeError, ValueError):
+            conv_ = 1.0
+        return value * conv_
+
+    def __convert_thermocouple_voltages(self):
+        """Convert TC voltages in measurements to degrees centigrade."""
+        if self.__thermocouple is None:
+            tc_type = self.settings.get('conversions', 'thermocouple_type',
+                                        fallback=None)
+            if tc_type is None:
+                base.emit_error(self,
+                                ViPErinoErrors.CANNOT_CONVERT_THERMOCOUPLE,
+                                '\nInfo: missing entry in settings.')
+                return
+            try:
+                self.__thermocouple = Thermocouple(tc_type)
+            except ValueError as err:
+                # Unknown thermocouple type
+                base.emit_error(self,
+                                ViPErinoErrors.CANNOT_CONVERT_THERMOCOUPLE,
+                                f'\nInfo: {err}.')
+                return
+
+        tc_voltages = self.measurements[QuantityInfo.TEMPERATURE]
+        cjc_temperatures = self.measurements.get(QuantityInfo.COLD_JUNCTION,
+                                                 [None]*len(tc_voltages))
+        self.measurements[QuantityInfo.TEMPERATURE] = [
+            self.__thermocouple.temperature(v, t0)
+            for v, t0 in zip(tc_voltages, cjc_temperatures)
+            ]
+
     @qtc.pyqtSlot()
     def measure_now(self):
         """Take a measurement.
@@ -548,6 +606,20 @@ class ViPErinoController(MeasureControllerABC):
             else:
                 base.emit_error(self, ViPErinoErrors.INVALID_REQUEST, quantity)
                 return
+
+        # Now see if we should also measure the cold-junction
+        # temperature (if possible). Notice: this adds one extra
+        # quantity (which may be saved, and plot-able) that the user
+        # did not ask for. Make sure we don't raise errors if this
+        # quantity cannot be measured (using __added_cold_junction)
+        self.__added_cold_junction = False
+        measurements = self.__adc_measurement_types
+        if (QuantityInfo.TEMPERATURE in measurements
+            and QuantityInfo.COLD_JUNCTION not in measurements
+                and measurements[-1] is not None):
+            quantities = (*quantities, QuantityInfo.COLD_JUNCTION)
+            self.__added_cold_junction = True
+
         super().set_measurements(quantities)
         self.__check_measurements_possible()
 
