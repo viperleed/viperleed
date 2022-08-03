@@ -368,7 +368,9 @@ class Version:
             is not int-able.
         """
         # pylint: disable=redefined-variable
-        # Disabled because it makes it easier
+        # Disabled because it makes it easier to handle different types
+        if isinstance(major, float):
+            major = str(major)
         if isinstance(major, str):
             major, *rest = (int(v) for v in major.split('.'))
             try:
@@ -382,6 +384,10 @@ class Version:
         if not all(isinstance(p, int) for p in (major, minor, patch)):
             raise TypeError(
                 f"{self.__class__.__name__}: Invalid type for one of the parts"
+                )
+        if major < 0:
+            raise ValueError(
+                f"{self.__class__.__name__}: version cannot be negative"
                 )
         self.__has_parts = (True, minor > 0, patch > 0)
         self._parts = (major, max(minor, 0), max(patch, 0))

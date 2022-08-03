@@ -186,15 +186,18 @@ class ViPErinoController(MeasureControllerABC):
 
         Returns
         -------
-        firmware_version: str
-            Firmware version of the form "<major>.<minor>".
+        firmware_version: hardwarebase.Version
+            Firmware version of the device, if the information is
+            available, otherwise the one in self.settings.
         """
         version = self.hardware.get("firmware", None)
-        if not version:
+        if version is None:
             # Get it from the settings. Notice that the are_settings_ok
             # reimplementation already checks that the firmware version
-            # in the settings is present and valid.
-            version = self.settings.get("controller", "firmware_version")
+            # in the settings is present and valid
+            version = base.Version(
+                self.settings.get("controller", "firmware_version")
+                )
         return version
 
     @property
@@ -206,10 +209,8 @@ class ViPErinoController(MeasureControllerABC):
         """Return whether a ViPErLEEDSettings is compatible with self."""
         version = settings.get("controller", "firmware_version", fallback="-1")
         try:
-            fversion = float(version)
+            version = base.Version(version)
         except (TypeError, ValueError):
-            fversion = -1.0
-        if fversion < 0:
             base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
                             "controller/firmware_version", "")
             return False
@@ -217,9 +218,8 @@ class ViPErinoController(MeasureControllerABC):
         self.__thermocouple = None  # In case it changed
         mandatory_commands = [("available_commands", cmd)
                               for cmd in _MANDATORY_CMD_NAMES]
-        # If new commands are added in newer versions, do:
-        # if version >= something:
-        #     mandatory_commands.extend([new_command_1, new_command_2, ...])
+        if version >= "0.7":
+            mandatory_commands.append("PC_DEBUG")
 
         # pylint: disable=protected-access
         # Need to access the class's _mandatory_settings rather
