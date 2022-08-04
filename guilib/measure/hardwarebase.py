@@ -367,28 +367,30 @@ class Version:
             as a string, the exception is raised if one of the parts
             is not int-able.
         """
+        _name = self.__class__.__name__
         # pylint: disable=redefined-variable
         # Disabled because it makes it easier to handle different types
         if isinstance(major, float):
             major = str(major)
         if isinstance(major, str):
+            if not major:
+                # Empty version
+                raise ValueError(f"{_name}: version cannot be an empty string")
             major, *rest = (int(v) for v in major.split('.'))
             try:
                 minor = rest.pop(0)
             except IndexError:
                 minor = -1
             try:
-                patch == rest.pop(0)
+                patch = rest.pop(0)
             except IndexError:
                 patch = -1
         if not all(isinstance(p, int) for p in (major, minor, patch)):
-            raise TypeError(
-                f"{self.__class__.__name__}: Invalid type for one of the parts"
-                )
+            raise TypeError(f"{_name}: Invalid type for one of the parts")
         if major < 0:
-            raise ValueError(
-                f"{self.__class__.__name__}: version cannot be negative"
-                )
+            raise ValueError(f"{_name}: version cannot be negative")
+        if patch > 0 and minor < 0:
+            raise ValueError(f"{_name}: Cannot have 'patch' without 'minor'")
         self.__has_parts = (True, minor > 0, patch > 0)
         self._parts = (major, max(minor, 0), max(patch, 0))
 
