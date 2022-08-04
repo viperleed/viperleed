@@ -207,19 +207,27 @@ class ViPErinoController(MeasureControllerABC):
 
     def are_settings_ok(self, settings):
         """Return whether a ViPErLEEDSettings is compatible with self."""
-        version = settings.get("controller", "firmware_version", fallback="-1")
+        if not settings.has_settings(("controller", "firmware_version")):
+            base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
+                            "controller/firmware_version",
+                            "Info: Entry is missing.")
+            return False
+
         try:
-            version = base.Version(version)
+            version = base.Version(settings["controller"]["firmware_version"])
         except (TypeError, ValueError):
             base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
-                            "controller/firmware_version", "")
+                            "controller/firmware_version",
+                            "Info: Value is invalid")
             return False
 
         self.__thermocouple = None  # In case it changed
-        mandatory_commands = [("available_commands", cmd)
-                              for cmd in _MANDATORY_CMD_NAMES]
+
+        mandatory_cmd_names = list(_MANDATORY_CMD_NAMES)
         if version >= "0.7":
-            mandatory_commands.append("PC_DEBUG")
+            mandatory_cmd_names.append("PC_DEBUG")
+        mandatory_commands = (("available_commands", cmd)
+                              for cmd in mandatory_cmd_names)
 
         # pylint: disable=protected-access
         # Need to access the class's _mandatory_settings rather
