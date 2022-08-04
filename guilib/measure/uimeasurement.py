@@ -502,7 +502,7 @@ class Measure(ViPErLEEDPluginBase):
         self._dialogs['camera_viewers'] = []
 
         config = ViPErLEEDSettings()                                            # TODO: should decide whether to use the 'last_cfg' or the default here! Probably open dialog.
-        file_name = DEFAULT_CONFIG_PATH / 'viperleed_config.ini'                # TODO: will be one "default" per measurement type
+        file_name = DEFAULT_CONFIG_PATH / 'measurement.ini'                     # TODO: will be one "default" per measurement type
         try:
             config.read(file_name)
         except MissingSettingsFileError as err:
@@ -513,7 +513,6 @@ class Measure(ViPErLEEDPluginBase):
         measurement_cls = ALL_MEASUREMENTS[text]
         config.set('measurement_settings', 'measurement_class',                 # TODO: should eventually not do this!
                    measurement_cls.__name__)
-        config.update_file()
 
         self.measurement = measurement_cls(config)
         self.measurement.moveToThread(self.__measurement_thread)
