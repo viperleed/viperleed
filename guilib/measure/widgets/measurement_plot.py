@@ -66,6 +66,7 @@ class MeasurementPlot(qtw.QWidget):
         self.__data_points = None
         self.__canvas = Canvas()
 
+        self.setWindowTitle("Measurement data plot")
         self.__compose()
         self._ctrls['quantities'].check_changed.connect(self.plot_all_data)
 
