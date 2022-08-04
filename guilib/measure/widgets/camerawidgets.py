@@ -623,11 +623,17 @@ class CameraViewer(qtw.QScrollArea):
         self.image_size_changed.connect(self.__update_title)
         self.__img_view.image_scaling_changed.connect(self.__on_image_scaled)
         self.camera.started.connect(self.__on_camera_started)
+        self.camera.error_occurred.connect(self.__on_camera_error)
         self.customContextMenuRequested.connect(self.__show_context_menu)
         self.__children["context_menu"].triggered.connect(
             self.__on_context_menu_triggered
             )
         self.roi.apply_roi_requested.connect(self.__apply_roi)
+
+    @qtc.pyqtSlot(tuple)
+    def __on_camera_error(self, _):
+        """Close viewer when errors occur."""
+        self.close()
 
     @qtc.pyqtSlot()
     def __on_camera_started(self):
