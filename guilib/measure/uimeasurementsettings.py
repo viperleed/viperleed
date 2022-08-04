@@ -50,7 +50,7 @@ class SettingsEditor(qtw.QDialog):
                                  'energy_step_duration')
         self.__para_text = ()
         self.__file_name = (uimeasurement.DEFAULT_CONFIG_PATH
-                            / 'viperleed_config.ini')
+                            / 'measurement.ini')
         self.__settings = None
         self.__read_settings()
         self.__compose()
