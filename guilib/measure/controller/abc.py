@@ -882,7 +882,11 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
 
     def moveToThread(self, thread):
         """Move self and its serial port to a new thread."""
-        self.serial.moveToThread(thread)
+        try:
+            self.serial.moveToThread(thread)
+        except AttributeError:
+            # Probably some error occurred during __init__
+            pass
         super().moveToThread(thread)
 
 
@@ -1204,7 +1208,12 @@ class MeasureControllerABC(ControllerABC):
         -------
         None.
         """
-        base.safe_connect(self.serial.serial_busy, self.set_busy, type=_UNIQUE)
+        try:
+            base.safe_connect(self.serial.serial_busy, self.set_busy,
+                              type=_UNIQUE)
+        except AttributeError:
+            # Probably arrived here due to an __init__ error
+            pass
 
     @property
     @abstractmethod

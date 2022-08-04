@@ -222,10 +222,10 @@ class ViPErinoController(MeasureControllerABC):
 
         try:
             version = base.Version(settings["controller"]["firmware_version"])
-        except (TypeError, ValueError):
+        except (TypeError, ValueError) as err:
             base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
                             "controller/firmware_version",
-                            "Info: Value is invalid")
+                            f"Info: Value is invalid -- {err}")
             return False
 
         self.__thermocouple = None  # In case it changed
@@ -668,7 +668,11 @@ class ViPErinoController(MeasureControllerABC):
         None.
         """
         super().set_continuous_mode(continuous)
-        cmd = self.settings.get('available_commands', 'PC_CHANGE_MEAS_MODE')
+        cmd = self.settings.get('available_commands', 'PC_CHANGE_MEAS_MODE',
+                                fallback=None)
+        if cmd is None:
+            # Probably entered this after an __init__ error
+            return
         mode_on = int(bool(continuous))
         self.send_message(cmd, [mode_on, 0])
 
