@@ -846,7 +846,8 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             self.__bad_pixels.read(bad_pix_path)
         except (FileNotFoundError, ValueError) as err:
             base.emit_error(self, CameraErrors.INVALID_SETTINGS,
-                            'camera_settings/bad_pixels_path', f'\nInfo: {err}')
+                            'camera_settings/bad_pixels_path',
+                            f'\nInfo: {err}')
             return
         self.__bad_pixels.apply_roi()
 
