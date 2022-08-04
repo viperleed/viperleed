@@ -1265,4 +1265,10 @@ class MeasureControllerABC(ControllerABC):
                 self, ControllerErrors.INVALID_SETTING_WITH_FALLBACK,
                 '', 'measurement_settings/num_meas_to_average', nr_average
                 )
+        if nr_average <= 0:
+            base.emit_error(
+                self, ControllerErrors.INVALID_SETTING_WITH_FALLBACK,
+                nr_average, 'measurement_settings/num_meas_to_average', 1
+                )
+            nr_average = 1
         return nr_average
