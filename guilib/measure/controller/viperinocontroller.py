@@ -207,7 +207,8 @@ class ViPErinoController(MeasureControllerABC):
 
     def are_settings_ok(self, settings):
         """Return whether a ViPErLEEDSettings is compatible with self."""
-        if not settings.has_settings(("controller", "firmware_version")):
+        invalid = settings.has_settings(("controller", "firmware_version"))
+        if invalid:
             base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
                             "controller/firmware_version",
                             "Info: Entry is missing.")
