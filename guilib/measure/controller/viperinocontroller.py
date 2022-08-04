@@ -48,14 +48,20 @@ class ViPErinoErrors(base.ViPErLEEDErrorEnum):
         "Cannot measure {0}. If your hardware can measure {0}, "
         "update its corresponding configuration file (check also typos!)."
         )
-    REQUESTED_ADC_OFFLINE = (153,
-                             "Cannot measure {} because its "
-                             "associated ADC was not detected.")
+    REQUESTED_ADC_OFFLINE = (
+        153,
+        "Cannot measure {} because its associated ADC was not detected."
+        )
     CANNOT_CONVERT_THERMOCOUPLE = (
         154,
         "Invalid/missing setting 'conversions'/'thermocouple_type'. "
         "Cannot convert temperature to °C. Temperatures will appear in "
         "millivolts (i.e., thermocouple voltage).{}"
+        )
+    HARDWARE_INFO_MISSING = (
+        155,
+        "No hardware information present. Cannot "
+        "{} before get_hardware() is called."
         )
 
 
@@ -362,7 +368,13 @@ class ViPErinoController(MeasureControllerABC):
                 self, ControllerErrors.INVALID_SETTING_WITH_FALLBACK,
                 '', 'measurement_settings/num_meas_to_average', 1
                 )
-        message = [num_meas_to_average, *self.__adc_channels[:-1]]
+        if not self.hardware:
+            base.emit_error(self, ViPErinoErrors.HARDWARE_INFO_MISSING,
+                'set up the ADCs'
+                )
+            return
+        lm35_idx = list(self.hardware.keys()).index('lm35')
+        message = [num_meas_to_average, *self.__adc_channels[:lm35_idx]]
         self.send_message(cmd, message)
 
     @qtc.pyqtSlot()
@@ -414,7 +426,13 @@ class ViPErinoController(MeasureControllerABC):
             base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
                             'controller/update_rate', '')
             return
-        message = [update_rate, *self.__adc_channels[:-1]]
+        if not self.hardware:
+            base.emit_error(self, ViPErinoErrors.HARDWARE_INFO_MISSING,
+                'calibrate the ADCs'
+                )
+            return
+        lm35_idx = list(self.hardware.keys()).index('lm35')
+        message = [update_rate, *self.__adc_channels[:lm35_idx]]
         self.send_message(cmd, message)
 
     @qtc.pyqtSlot(object)
