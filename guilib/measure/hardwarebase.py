@@ -17,6 +17,7 @@ import inspect
 from pathlib import Path
 import enum
 import sys
+import re
 
 from PyQt5 import (QtWidgets as qtw, QtCore as qtc)
 
@@ -338,6 +339,9 @@ class ViPErLEEDErrorEnum(tuple, enum.Enum):
         return self.value[0]
 
 
+_DOTS_OR_DIGITS = re.compile(r"[.0-9]+")
+
+
 class Version:
     """Simple class to easily handle versions."""
 
@@ -376,6 +380,10 @@ class Version:
             if not major:
                 # Empty version
                 raise ValueError(f"{_name}: version cannot be an empty string")
+            if not _DOTS_OR_DIGITS.match(major):
+                raise ValueError(
+                    f"{_name}: version can contain only digits and dots"
+                    )
             major, *rest = (int(v) for v in major.split('.'))
             try:
                 minor = rest.pop(0)
