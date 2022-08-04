@@ -63,7 +63,7 @@ from viperleed.guilib.measure.controller.abc import ControllerABC
 from viperleed.guilib.measure.measurement.abc import MeasurementABC
 from viperleed.guilib.measure.widgets.camerawidgets import CameraViewer
 from viperleed.guilib.measure.uimeasurementsettings import SettingsEditor
-from viperleed.guilib.measure.datapoints import DataPoints
+from viperleed.guilib.measure.classes.datapoints import DataPoints
 from viperleed.guilib.measure.widgets.measurement_plot import MeasurementPlot
 from viperleed.guilib.measure import dialogs
 from viperleed.guilib.measure.classes.settings import (

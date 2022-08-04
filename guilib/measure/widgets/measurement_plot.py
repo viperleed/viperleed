@@ -20,7 +20,9 @@ from matplotlib.lines import Line2D
 
 from viperleed import guilib as gl
 from viperleed.guilib.basewidgets import MeasurementFigureCanvas as Canvas
-from viperleed.guilib.measure.datapoints import DataPoints, QuantityInfo
+from viperleed.guilib.measure.classes.datapoints import (
+    DataPoints, QuantityInfo
+    )
 from viperleed.guilib.measure.widgets.checkcombobox import CheckComboBox
 
 

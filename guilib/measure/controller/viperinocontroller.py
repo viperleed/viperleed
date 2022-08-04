@@ -20,7 +20,7 @@ from PyQt5 import QtSerialPort as qts
 from viperleed.guilib.measure.controller.abc import (MeasureControllerABC,
                                                      ControllerErrors)
 from viperleed.guilib.measure import hardwarebase as base
-from viperleed.guilib.measure.datapoints import QuantityInfo
+from viperleed.guilib.measure.classes.datapoints import QuantityInfo
 from viperleed.guilib.measure.classes.settings import NotASequenceError
 from viperleed.guilib.measure.classes.thermocouple import Thermocouple
 

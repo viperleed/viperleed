@@ -22,7 +22,7 @@ from numpy.polynomial.polynomial import Polynomial
 from PyQt5 import QtCore as qtc
 
 from viperleed.guilib.measure import hardwarebase as base
-from viperleed.guilib.measure.datapoints import QuantityInfo
+from viperleed.guilib.measure.classes.datapoints import QuantityInfo
 from viperleed.guilib.measure.classes.settings import (
     ViPErLEEDSettings, NoDefaultSettingsError,
     NoSettingsError, NotASequenceError,

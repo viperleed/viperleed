@@ -22,7 +22,7 @@ from zipfile import ZipFile, ZIP_DEFLATED
 from PyQt5 import QtCore as qtc
 
 from viperleed.guilib.measure import hardwarebase as base
-from viperleed.guilib.measure.datapoints import DataPoints
+from viperleed.guilib.measure.classes.datapoints import DataPoints
 from viperleed.guilib.measure.classes.settings import (
     ViPErLEEDSettings, NoSettingsError, get_system_config, NotASequenceError
     )
