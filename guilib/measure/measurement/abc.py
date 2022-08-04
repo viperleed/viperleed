@@ -90,17 +90,17 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
     prepared = qtc.pyqtSignal()
 
     # Abort current tasks on all devices/the primary controller
-    _request_stop_devices = qtc.pyqtSignal()
-    _request_stop_primary = qtc.pyqtSignal()
+    _request_stop_devices = qtc.pyqtSignal()                                    # TODO: Could use QMetaObject.invokeMethod
+    _request_stop_primary = qtc.pyqtSignal()                                    # TODO: May not be needed. See TimeResolved
 
     # __preparation_started: emitted in .begin_preparation right
     # before the first energy is set. Carries pairs of energies and
     # settle times, passed on to .primary_controller.set_energy()
-    __preparation_started = qtc.pyqtSignal(tuple)
+    __preparation_started = qtc.pyqtSignal(tuple)                               # TODO: Could use QMetaObject.invokeMethod
 
     # __preparation_continued: emitted after all controllers have
     # completed the first segment of their preparation
-    __preparation_continued = qtc.pyqtSignal()
+    __preparation_continued = qtc.pyqtSignal()                                  # TODO: Could use QMetaObject.invokeMethod
 
     _mandatory_settings = [
         ('devices', 'primary_controller'),

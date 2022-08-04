@@ -222,7 +222,7 @@ def estimate_frame_loss(frame_times, frame_rate, exposure):
 class ImagingSourceCamera(CameraABC):
     """Concrete subclass of CameraABC handling Imaging Source Hardware."""
 
-    abort_trigger_burst = qtc.pyqtSignal()
+    abort_trigger_burst = qtc.pyqtSignal()                                      # TODO: could be done with QMetaObject.invokeMethod
 
     def __init__(self, *args, settings=None, parent=None, **kwargs):
         """Initialize instance.

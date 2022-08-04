@@ -31,6 +31,8 @@ _MANDATORY_CMD_NAMES = (
     "PC_CHANGE_MEAS_MODE", "PC_STOP", "PC_SET_VOLTAGE_ONLY", "PC_SET_SERIAL_NR"
     )
 
+_INVOKE = qtc.QMetaObject.invokeMethod
+
 
 class ViPErinoErrors(base.ViPErLEEDErrorEnum):
     """Errors specific to Arduino-based ViPErLEED controllers."""
@@ -67,8 +69,6 @@ class ViPErinoErrors(base.ViPErLEEDErrorEnum):
 
 class ViPErinoController(MeasureControllerABC):
     """Controller class for the ViPErLEED Arduino Micro."""
-
-    __request_info = qtc.pyqtSignal()
 
     _mandatory_settings = [
         *MeasureControllerABC._mandatory_settings,
@@ -706,6 +706,8 @@ class ViPErinoController(MeasureControllerABC):
         controllers = []
         for port in ports:
             ctrl = ViPErinoController(port_name=port.portName())
+            if not ctrl.serial:
+                print("Something is wrong with the ViPErino default settings")
             if not ctrl.serial.is_open:
                 # Port is already in use
                 continue
@@ -715,8 +717,7 @@ class ViPErinoController(MeasureControllerABC):
         for thread in threads:
             thread.start(priority=thread.TimeCriticalPriority)
         for ctrl in controllers:
-            self.__request_info.connect(ctrl.get_hardware)
-        self.__request_info.emit()
+            _INVOKE(ctrl, 'get_hardware', qtc.Qt.QueuedConnection)
         if controllers:
             # Notice: The next line is quite critical. Using a simple
             # time.sleep() with the same duration DOES NOT WORK, i.e.,
@@ -728,7 +729,7 @@ class ViPErinoController(MeasureControllerABC):
         for ctrl in controllers:
             with threading.Lock():
                 serial_nr = ctrl.hardware.get('serial_nr', None)
-            ctrl.disconnect_()
+            _INVOKE(ctrl, 'disconnect_', qtc.Qt.BlockingQueuedConnection)
             if serial_nr:
                 device_list.append(f"{ctrl.name} ({ctrl.port_name})")
             else:

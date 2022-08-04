@@ -124,7 +124,7 @@ class BadPixelsFinder(qtc.QObject):
         int   # total tasks in this section
         )
 
-    # Signals to handle camera, in case self is moved to a thread that
+    # Signals to handle camera, in case self is moved to a thread that          # TODO: all this and the next could be done with QMetaObject.invokeMethod()
     # is not the one of its camera. __set_camera_settings (carries the
     # new settings) is needed because camera.stop() may be called
     __start_camera = qtc.pyqtSignal()

@@ -35,7 +35,7 @@ NO_BAD_PX_PATH = "None selected"
 class BadPixelsFinderDialog(qtw.QDialog):
     """Dialog to handle user interaction when finding bad pixels."""
 
-    __start_finder = qtc.pyqtSignal()
+    __start_finder = qtc.pyqtSignal()                                           # TODO: Both could be done with QMetaObject.invokeMethod
     __abort_finder = qtc.pyqtSignal()
 
     def __init__(self, parent=None):

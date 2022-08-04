@@ -103,7 +103,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
     serial_busy = qtc.pyqtSignal(bool)
     about_to_trigger = qtc.pyqtSignal()
 
-    __move_to_thread_requested = qtc.pyqtSignal(bool)  # True==connect
+    __move_to_thread_requested = qtc.pyqtSignal(bool)  # True==connect          # TODO: Can be done with QMetaObject.invokeMethod
 
     _mandatory_settings = [
             ('serial_port_settings', 'MSG_END'),

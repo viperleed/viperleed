@@ -34,7 +34,7 @@ class TimeResolved(MeasurementABC):
                            ('measurement_settings', 'is_continuous'),
                            ('measurement_settings', 'energy_step_duration'),]
 
-    __request_continuous_mode = qtc.pyqtSignal(bool)   # On/Off
+    __request_continuous_mode = qtc.pyqtSignal(bool)   # On/Off                 # TODO: could be done with QMetaObject.invokeMethod
 
     def __init__(self, measurement_settings):
         """Initialise measurement class."""

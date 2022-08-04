@@ -732,6 +732,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         """List all devices of this class."""
         return
 
+    @qtc.pyqtSlot()
     def connect_(self):
         """Connect serial port."""
         # TODO: should we complain if .__port_name is False-y?
@@ -740,6 +741,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
             return
         self.serial.connect_()
 
+    @qtc.pyqtSlot()
     def disconnect_(self):
         """Disconnect serial port."""
         try:
