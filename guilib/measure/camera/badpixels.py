@@ -233,6 +233,9 @@ class BadPixelsFinder(qtc.QObject):
         self.__info.setText(
             f"Frames will be acquired from {name} camera."
             )
+        self.__info.setInformativeText = qtc.pyqtSlot(str)(
+            self.__info.setInformativeText
+            )
         self.__set_info_box_text.connect(self.__info.setInformativeText)
         self.__exec_info_box.connect(self.__info.exec_)
         self.__info.finished.connect(self.__continue_begin_acquiring)
