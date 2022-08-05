@@ -209,7 +209,7 @@ class MainWindow(qtw.QWidget):
     def get_random_sr_byte(self):
         """Get random value."""
         unacceptable_values = [58 + i for i in range(7)]
-        random_value = random.randint(48,90)
+        random_value = random.randint(48, 90)
         if random_value in unacceptable_values:
             random_value = self.get_random_sr_byte()
         return random_value
