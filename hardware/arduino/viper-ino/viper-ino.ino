@@ -16,9 +16,9 @@ Date: 09.02.2022
 
 #define DEBUG   false    // Debug mode, writes to serial line, for use in serial monitor
 
-// Firmware version (MAX: v255.255). CURENTLY: v0.7
+// Firmware version (MAX: v255.255). CURENTLY: v0.8
 #define FIRMWARE_VERSION_MAJOR    0  // max 255
-#define FIRMWARE_VERSION_MINOR    7  // max 255
+#define FIRMWARE_VERSION_MINOR    8  // max 255
 
 
 

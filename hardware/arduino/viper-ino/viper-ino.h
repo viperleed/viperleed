@@ -50,10 +50,10 @@ union floatOrBytes{
 /** ------------------------- Communication with PC ------------------------ **/
 
 // Constants for communication with the PC
-#define MSG_START 254              // Beginning of a serial message
-#define MSG_END 255                // End of a serial message
-#define MSG_SPECIAL_BYTE 251       // Prevents clashing of data with (start, end, error)
-#define MSG_MAX_LENGTH 32          // Max no. of bytes in an incoming serial message
+#define MSG_START         254      // Beginning of a serial message
+#define MSG_END           255      // End of a serial message
+#define MSG_SPECIAL_BYTE  251      // Prevents clashing of data with (start, end, error)
+#define MSG_MAX_LENGTH     63      // Max no. of bytes in an incoming serial message; one less than SERIAL_BUFFER_SIZE
 #ifndef SERIAL_BUFFER_SIZE
     #define SERIAL_BUFFER_SIZE 64  // Arduino limit for serial buffer. If buffer is full, new bytes are DISCARDED
 #endif
@@ -102,7 +102,7 @@ boolean newMessage = false;              // True when a complete, acceptable mes
     replace "data_received" and "data_send" with a single "message" array
     Alternatively, we can have them be a decodedCommand[] and encodedReply[]
 */
-byte data_received[MSG_MAX_LENGTH];      // Real message
+byte data_received[MSG_MAX_LENGTH];      // Real message. NB: it will never reach MSG_MAX_LENGTH because of markers, length, and encoding
 
 
 
