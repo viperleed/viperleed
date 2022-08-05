@@ -13,6 +13,7 @@ Defines the Measure class.
 # FIXED? camera error should close viewer --> check that no frames can arrive
 #        and reopen the viewer. If this is the case, the .close() can be tied
 #        to a timer with a small delay.
+# TESTME: make sure multiple controllers work fine with the new ABC.stop
 
 # BUG: bad_px_finder: camera can time out. Reproducible in Prague.
 #      Seemed to happen very reproducibly especially while trying to
@@ -27,9 +28,7 @@ Defines the Measure class.
 #      the frame rate opt with half the current rate.
 # BUG: list_devices makes TPD COMs stuff go crazy.
 # BUG? ROI increments concern only w/h, but should rather be (w/h - min_w/h) % delta!
-# BUG: abort does not reset energy to zero??
 # BUG: viperleed serial, unknown command error misinterpreted? << not sure what this means
-# BUG: msg too long with weird ecal coefficients??
 
 #   G E N E R I C
 # TODO: init errors cause obfuscation of the original object that had problems

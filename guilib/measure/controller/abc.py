@@ -125,6 +125,15 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         self.__init_err_timer = qtc.QTimer(self)
         self.__init_err_timer.setSingleShot(True)
         self.__init_err_timer.timeout.connect(self.__report_init_errors)
+        
+        # Use to force sending a .stop even if the serial is busy,
+        # as it may be waiting for an OK. This can happen before
+        # the first segment of the preparation is over, where we may
+        # be waiting for a while.
+        self.__force_stop_timer = qtc.QTimer(self)
+        self.__force_stop_timer.setSingleShot(True)
+        self.__force_stop_timer.setInterval(200)
+        self.__force_stop_timer.timeout.connect(self.send_unsent_messages)
 
         self.__port_name = port_name
         self.__energy_calibration = None
@@ -650,15 +659,16 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
             return
         self.serial.send_message(*data, **kwargs)
 
+    @qtc.pyqtSlot()
     @qtc.pyqtSlot(bool)
-    def send_unsent_messages(self, serial_busy):
+    def send_unsent_messages(self, serial_busy=False):
         """Send messages that have been stored.
 
         Parameters
         ----------
-        serial_busy : boolean
-            Busy state of the serial.
-            If not busy, send next unsent message.
+        serial_busy : bool, optional
+            Busy state of the serial. If not busy, send next
+            unsent message. Default is False.
 
         Returns
         -------
@@ -702,13 +712,11 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         -------
         None.
         """
-        try:
-            self.serial.serial_busy.disconnect()
-        except TypeError:
-            pass
-        self.serial.serial_busy.connect(self.send_unsent_messages,
-                                        type=_UNIQUE)
-        self.serial.serial_busy.connect(self.set_busy, type=_UNIQUE)
+        serial_busy = self.serial.serial_busy
+        base.safe_disconnect(serial_busy, self.__do_preparation_step)
+        base.safe_connect(serial_busy, self.send_unsent_messages, type=_UNIQUE)
+        base.safe_connect(serial_busy, self.set_busy, type=_UNIQUE)
+        self.__force_stop_timer.start()
 
     @qtc.pyqtSlot(tuple)
     def __on_init_errors(self, err):
