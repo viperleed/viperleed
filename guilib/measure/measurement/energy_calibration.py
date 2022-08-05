@@ -25,6 +25,9 @@ from viperleed.guilib.measure.classes.datapoints import QuantityInfo
 from viperleed.guilib.measure.classes.settings import NotASequenceError
 
 
+_MEASURED_EGY = QuantityInfo.HV
+
+
 class MeasureEnergyCalibration(MeasurementABC):
     """Energy calibration class."""
 
@@ -121,7 +124,7 @@ class MeasureEnergyCalibration(MeasurementABC):
             Starts the measurement preparation and carries
             a tuple of energies and times with it.
         """
-        if not any(c.measures(QuantityInfo.HV) for c in self.controllers):
+        if not any(c.measures(_MEASURED_EGY) for c in self.controllers):
             base.emit_error(
                 self, MeasurementErrors.INVALID_SETTINGS,
                 'devices/primary_controller or devices/secondary_controllers',
@@ -204,13 +207,13 @@ class MeasureEnergyCalibration(MeasurementABC):
         None.
         """
         data, nominal_energies = (
-            self.data_points.get_energy_resolved_data(QuantityInfo.HV)
+            self.data_points.get_energy_resolved_data(_MEASURED_EGY)
             )
         measured_energies = []
         for ctrl, measurements in data.items():
             # TODO: loop over all controllers, join data. Then
             # calculate polynomial and plot in the future.
-            measured_energies = measurements[QuantityInfo.HV]
+            measured_energies = measurements[_MEASURED_EGY]
             break
 
         primary = self.primary_controller
@@ -224,8 +227,33 @@ class MeasureEnergyCalibration(MeasurementABC):
                             MeasurementErrors.INVALID_SETTING_WITH_FALLBACK,
                             "", 'energy_calibration/domain', domain)
 
-        fit_polynomial = Polynomial.fit(measured_energies, nominal_energies,
-                                        1, domain=domain, window=domain)
+        if len(measured_energies) < 10:
+            base.emit_error(
+                self, MeasurementErrors.RUNTIME_ERROR,
+                "Energy calibration requires at least 10 data points. Found "
+                f"only {len(measured_energies)}.\n\nRepeat measurement on "
+                "a larger energy range."
+                )
+            return
+
+        fit_polynomial, (residuals, *_) = (
+            Polynomial.fit(measured_energies, nominal_energies, deg=1,
+                           domain=domain, window=domain, full=True)
+            )
+
+        # Check quality of fit
+        offs, gain = fit_polynomial.coef
+        if (abs(offs) > 50               # Can't be more than 50 eV off
+            or gain < 1e-3 or gain > 50  # Gain should be >0 and small
+                or residuals > 100):     # Most of the time < 1
+            base.emit_error(
+                self, MeasurementErrors.RUNTIME_ERROR,
+                "Energy calibration fit failed, or fit coefficients "
+                f"are poor:\n\nCoefficients=({offs:.2f}, {gain:.2f}) "
+                f"[expected ~(0, 1)]\nSum of residuals={residuals[0]:.2f}"
+                "\n\nCalibration curve will not be saved."
+                )
+            return
 
         primary.settings.set('energy_calibration', 'coefficients',
                              str(list(fit_polynomial.coef)))
