@@ -133,6 +133,30 @@ class MeasureEnergyCalibration(MeasurementABC):
                 )
             return
 
+        egy_range = self.__end_energy - self.start_energy
+        n_steps = 1 + round(egy_range/self.__delta_energy)
+
+        if egy_range < 10:
+            # Require at least 10 eV for a reasonable calibration
+            base.emit_error(
+                self, MeasurementErrors.INVALID_SETTINGS,
+                'measurement_settings/start_energy and /end_energy',
+                f"\nToo small energy range ({abs(egy_range)} eV) for "
+                "calibration. It should be at least 10 eV."
+                )
+            return
+
+        if n_steps < 10:
+            # Require at least 10 data points for a decent fit
+            base.emit_error(
+                self, MeasurementErrors.INVALID_SETTINGS,
+                'measurement_settings/start_energy, /end_energy, '
+                'and /delta_energy',
+                f"\nToo few energies ({n_steps}) for a reasonable fit "
+                "of the calibration curve. Expected at least 10 energies."
+                )
+            return
+
         self.__old_coefficients = self.primary_controller.settings.get(
             'energy_calibration', 'coefficients', fallback=''
             )
@@ -226,15 +250,6 @@ class MeasureEnergyCalibration(MeasurementABC):
             base.emit_error(self,
                             MeasurementErrors.INVALID_SETTING_WITH_FALLBACK,
                             "", 'energy_calibration/domain', domain)
-
-        if len(measured_energies) < 10:
-            base.emit_error(
-                self, MeasurementErrors.RUNTIME_ERROR,
-                "Energy calibration requires at least 10 data points. Found "
-                f"only {len(measured_energies)}.\n\nRepeat measurement on "
-                "a larger energy range."
-                )
-            return
 
         fit_polynomial, (residuals, *_) = (
             Polynomial.fit(measured_energies, nominal_energies, deg=1,
