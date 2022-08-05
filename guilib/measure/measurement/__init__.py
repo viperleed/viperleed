@@ -10,12 +10,12 @@ Author: Florian Doerr
 
 This package contains classes to perform measurements.
 """
-from viperleed.guilib.measure.measurement.energy_setpoint import (
-    MeasureEnergySetpoint
+from viperleed.guilib.measure.measurement.energy_calibration import (
+    MeasureEnergyCalibration
     )
 from viperleed.guilib.measure.measurement.time_resolved import TimeResolved
 from viperleed.guilib.measure.measurement.iv_video import IVVideo
 
-ALL_MEASUREMENTS = {cls.display_name: cls for cls in (MeasureEnergySetpoint,
+ALL_MEASUREMENTS = {cls.display_name: cls for cls in (MeasureEnergyCalibration,
                                                       TimeResolved,
                                                       IVVideo)}

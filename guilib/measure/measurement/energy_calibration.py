@@ -8,8 +8,10 @@ Created: 2021-07-19
 Author: Michele Riva
 Author: Florian Doerr
 
-This module contains the definition of the MeasureEnergySetpoint class
-which gives commands to the controller classes.
+This module contains the definition of the MeasureEnergyCalibration class
+which acquires a measurement for calibrating the (linear) relationship
+between "energy the user asks" and "values that have to be set in the
+primary controller".
 """
 from configparser import NoSectionError, NoOptionError
 
@@ -23,7 +25,7 @@ from viperleed.guilib.measure.classes.datapoints import QuantityInfo
 from viperleed.guilib.measure.classes.settings import NotASequenceError
 
 
-class MeasureEnergySetpoint(MeasurementABC):
+class MeasureEnergyCalibration(MeasurementABC):
     """Energy calibration class."""
 
     display_name = 'Energy calibration'
