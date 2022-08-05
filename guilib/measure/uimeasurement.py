@@ -117,7 +117,8 @@ class Measure(ViPErLEEDPluginBase):
         self._dialogs = {
             'change_settings': SettingsEditor(),
             'bad_px_finder': dialogs.BadPixelsFinderDialog(),
-            'camera_viewers' : []
+            'camera_viewers' : [],
+            'error_box': qtw.QMessageBox(self),
             }
         self._glob = {
             'plot': MeasurementPlot(),
@@ -125,8 +126,8 @@ class Measure(ViPErLEEDPluginBase):
             # Keep track of the last config used for a measurement.
             # Useful if one wants to repeat a measurement.
             'last_cfg': ViPErLEEDSettings(),
-            'errors': [],       # Report a bunch at once
-            'n_retry_close': 0  # Try at most 50 times, i.e., 2.5 sec
+            'errors': [],        # Report a bunch at once
+            'n_retry_close': 0,  # Try at most 50 times, i.e., 2.5 sec
             }
         self._timers = {
             'report_errors': qtc.QTimer(parent=self),
@@ -139,7 +140,7 @@ class Measure(ViPErLEEDPluginBase):
         self.__measurement_thread.start(_TIME_CRITICAL)
 
         for timer, interval in (('report_errors', 35),
-                                ('start_measurement', 50)):
+                                ('start_measurement', 50),):
             self._timers[timer].setSingleShot(True)
             self._timers[timer].setInterval(interval)
         self._timers['retry_close'].setInterval(50)
@@ -279,6 +280,14 @@ class Measure(ViPErLEEDPluginBase):
         self._glob['plot'].show()
 
         self.__compose_menu()
+        self.__compose_error_box()
+
+    def __compose_error_box(self):
+        """Prepare the message box shown when errors happen."""
+        err_box = self._dialogs['error_box']
+        err_box.setWindowTitle("Error")
+        err_box.setTextInteractionFlags(qtc.Qt.TextSelectableByMouse)
+        err_box.setIcon(err_box.Critical)
 
     def __compose_menu(self):
         """Put together menu."""
@@ -336,9 +345,9 @@ class Measure(ViPErLEEDPluginBase):
         starter = self._timers['start_measurement'].timeout
 
         # Errors
-        measurement.error_occurred.connect(self.error_occurred)
+        measurement.error_occurred.connect(self.__on_error_occurred)
         for device in measurement.devices:
-            device.error_occurred.connect(self.error_occurred)
+            device.error_occurred.connect(self.__on_error_occurred)
 
         # Measurement events and start/stopping
         measurement.new_data_available.connect(self.__on_data_received)
@@ -374,7 +383,7 @@ class Measure(ViPErLEEDPluginBase):
             cfg = ViPErLEEDSettings.from_settings(cfg_path)
             cfg['camera_settings']['mode'] = 'live'
             camera = cam_cls(settings=cfg)
-            camera.error_occurred.connect(self.error_occurred)
+            camera.error_occurred.connect(self.__on_error_occurred)
             viewer = CameraViewer(camera, stop_on_close=True,
                                   roi_visible=False)
             viewers.append(viewer)
@@ -399,12 +408,12 @@ class Measure(ViPErLEEDPluginBase):
         # TEMP FOR VIPERINO ONLY!                                               # TODO: move to a device info dialog (prob. without QThread)
         ctrl.get_hardware()
         ctrl.serial.port.waitForReadyRead(100)  # this always times out, irrespective of how long (but the response arrived and was processed correctly!)
-        ctrl.disconnect_()
 
         # TODO: here would be a good place to check if the serial
         # number in the name and the one in ctrl.hardware match.
         # If not, issue an error and update the device list.
         print(ctrl.hardware)
+        ctrl.disconnect_()
 
     @qtc.pyqtSlot(dict)
     def __on_data_received(self, new_data):
@@ -612,9 +621,9 @@ class Measure(ViPErLEEDPluginBase):
                             f"(Code: {error_code})"
                             f"\n\n{error_message}")
 
-        _ = qtw.QMessageBox.critical(self, "Error",
-                                     "\n\n".join(err_text),
-                                     qtw.QMessageBox.Ok)
+        err_box = self._dialogs['error_box']
+        err_box.setText("\n\n".join(err_text))
+        err_box.exec_()
         self._glob['errors'] = []
 
     def __switch_enabled(self, idle):
