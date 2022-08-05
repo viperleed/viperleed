@@ -950,7 +950,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         Returns
         -------
         instance : camera class object
-            The camara class used for the connected camera.
+            The camera class used for the connected camera.
 
         Raises
         ------
