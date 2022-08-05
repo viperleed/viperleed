@@ -192,6 +192,28 @@ class Measure(ViPErLEEDPluginBase):
 
         super().closeEvent(event)
 
+    def keyPressEvent(self, event):      # pylint: disable=invalid-name
+        """Allow copying (Ctrl+C) device name to clipboard when visible."""
+        if (event.key() != qtc.Qt.Key_C
+                or not event.modifiers() & qtc.Qt.ControlModifier):
+            # Not "Ctrl+C"
+            super().keyPressEvent(event)
+            return
+
+        # See if any of the "Devices" submenus are open
+        menus = [a.menu() for a in self._ctrls['menus']['devices'].actions()]
+        for menu in menus:
+            if menu.isVisible():
+                visible = menu.activeAction()
+                break
+        else:
+            # Nothing visible
+            visible = None
+
+        if visible and visible.text():
+            qtw.qApp.clipboard().setText(visible.text())
+        super().keyPressEvent(event)
+
     def showEvent(self, event):  # pylint: disable=invalid-name
         """Show self."""
         self._glob['n_retry_close'] = 0
