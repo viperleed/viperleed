@@ -121,6 +121,11 @@ class ViPErinoController(MeasureControllerABC):
         self.continue_prepare_todos['start_autogain'] = True
 
         self.hardware = {}
+        
+        # One lock per instance to make the access to self.hardware
+        # safe: when reading/writing instance.hardware, one can
+        # .acquire() instance.lock (or use a context manager).
+        self.lock = threading.Lock()
 
         # __adc_measurement_types[i] contains the QuantityInfo
         # that should be measured by ADC[i] (ADC0, ADC1, ..., LM35)
@@ -442,7 +447,7 @@ class ViPErinoController(MeasureControllerABC):
         # information (a dictionary) and actual measurements
         if isinstance(data, dict):
             # Got hardware info
-            with threading.Lock():
+            with self.lock:
                 self.hardware = data
             # Now that we have info, we can check if the quantities
             # that we should measure can be measured (ADC present)
@@ -727,7 +732,7 @@ class ViPErinoController(MeasureControllerABC):
             # correctly interpreted.
             controllers[0].serial.port.waitForReadyRead(100)
         for ctrl in controllers:
-            with threading.Lock():
+            with ctrl.lock:
                 serial_nr = ctrl.hardware.get('serial_nr', None)
             _INVOKE(ctrl, 'disconnect_', qtc.Qt.BlockingQueuedConnection)
             if serial_nr:
