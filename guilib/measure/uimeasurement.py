@@ -10,15 +10,50 @@ Author: Florian Doerr
 
 Defines the Measure class.
 """
+# FIXED? camera error should close viewer --> check that no frames can arrive
+#        and reopen the viewer. If this is the case, the .close() can be tied
+#        to a timer with a small delay.
 
-# TODO: msg too long with weird ecal coefficients??
+# BUG: bad_px_finder: camera can time out. Reproducible in Prague.
+#      Seemed to happen very reproducibly especially while trying to
+#      acquire the long-dark movie (no frames at all).
+#      May be related to inappropriate (too slow) communication speed.
+#      Could perhaps be solved if we try halving the frame rate when
+#      a timeout occurs (with limits on the number of retries and/or the
+#      slowest sensible frame rate).
+# BUG: IS: hardware may be so slow that all frames are lost when estimating
+#      frame loss. This means that the camera never starts. Possible solution:
+#      start another timeout (see how long it should take at max) that restarts
+#      the frame rate opt with half the current rate.
+# BUG: list_devices makes TPD COMs stuff go crazy.
+# BUG? ROI increments concern only w/h, but should rather be (w/h - min_w/h) % delta!
+# BUG: abort does not reset energy to zero??
+# BUG: viperleed serial, unknown command error misinterpreted? << not sure what this means
+# BUG: msg too long with weird ecal coefficients??
 
-# TODO: energy ramps are not equivalent for iv == calibration != time_resolved
+#   G E N E R I C
+# TODO: init errors cause obfuscation of the original object that had problems
+# TODO: can we use a decorator on class (or __init__) for reporting init errors
+#       with delay? The complication is that one needs to call QObject.__init__
+#       before using object as parent (e.g., timers) and before signals can be
+#       connected. Perhaps we could use some funkiness on QMetaABC.__init__ and
+#       .__call__. QMetaABC.__init__(cls, name, bases, dict_, **clsargs) can be
+#       used to add a class-level .error_occurred signal; while executing
+#       QMetaABC.__call__(cls, *args, **kwargs), super().__call__(*args, **kwargs)
+#       returns an __init__ialized instance that can be modified.
+# TODO: use __init_subclass__(subclass) in base classes to register all concrete
+#       subclasses (check inspect.is_abstract). Could this allow to avoid
+#       explicitly adding new subclasses to the imports? Can also be done in
+#       QMetaABC by extending __new__(mcs, name, bases, dict_, *kwargs). Probably
+#       neither does solve the problem of explicitly importing subclasses, though!
+# TODO: fix the documentation in .ini files
 
-# TODO: out to I0, measure HV --> not constant??
-# TODO: Measurement. If primary does not measure, find a better way
-#       than sending an empty data_ready for getting the times right
-
+#   C A M E R A   &  C O.
+# TODO: completely skip stuff between brackets in camera name (IS only?)
+#       This includes device name in config, as it is just a user-defined stuff
+#       that can change
+# TODO: bad pixels finder top progress bar should scale better, with actual
+#       duration of tasks
 # TODO: it looks like the largest fraction of the time required by
 #       abort_trigger_burst is in fact on the call to _dll_start_live
 #       (97% of the 80ms), while .pause() takes only a short time
@@ -33,15 +68,26 @@ Defines the Measure class.
 #       take for a camera to restart after being paused, as this determines
 #       what 'too short/long' means. It could be potentially an information
 #       to be gathered during preparation.
-# TODO: progress bar for non-endless
-# TODO: quick IV video to find max intensity, and adjust camera
 # TODO: auto-scale contrast on camera viewer
+# TODO: see if possible to not complain about missing bad pixels
+
+#   M E A S U R E M E N T
+# TODO: energy ramps are not equivalent for iv == calibration != time_resolved
+#       will be solved with the EnergyRamp class
+# TODO: Measurement. If primary does not measure, find a better way
+#       than sending an empty data_ready for getting the times right
+# TODO: Ecal coefficients stored only if user OK with it
+
+#   H A R D W A R E
+# TODO: out to I0, measure HV --> not constant??
+
+#   G U I
+# TODO: progress bar for non-endless
 # TODO: busy dialog where appropriate
-# TODO: fix the documentation in .ini files
-# TODO: can we use a decorator on class (or __init__) for reporting init errors
-#       with delay? The complication is that one needs to call QObject.__init__
-#       before using object as parent (e.g., timers) and before signals can be
-#       connected.
+
+#   F E A T U R E S
+# TODO: quick IV video to find max intensity, and adjust camera
+
 
 from copy import deepcopy
 from pathlib import Path
