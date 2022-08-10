@@ -699,6 +699,9 @@ def beamlist_to_array(beams):
     n_E_beams = np.int32(np.zeros([n_beams]))
 
     for i, b in enumerate(beams):
+        # if beam is None -> leave NaN values and continue
+        if b is None:
+            continue
         # write beams into colums of beam_arr
         id_start[i] = np.where(np.isclose(energies, min(b.intens.keys())))[0][0]
         n_E_beams[i] = len(b.intens)
