@@ -658,6 +658,51 @@ def PlotMaker(
     VV_array,
     amplitudes_ref,
     amplitudes_del,
+class DeltaFile:
+    # one Delta file
+    def __init__(self, delta_atom, path, n_energies) -> None:
+        self.delta_atom = delta_atom
+        self.file_path = path
+        self.filename = None # get filename from path
+        
+        self.read(self.file_path, n_energies)
+        
+        if self.n_vib == 1:
+            self.single_vib = True
+            self.min_vib = self.max_vib = None
+        else:
+            self.single_vib = False
+            self.min_vib = np.min(self.vib_delta)
+            self.max_vib = np.max(self.vib_delta)
+        if self.n_geo == 1:
+            self.single_geo = True
+            self.min_geo = self.max_geo = self.geo_step = None
+        else:
+            self.min_geo = np.min(self.geo_delta)
+            self.max_geo = np.max(self.geo_delta)
+            # individual delta files are regularly spaced...
+            self.geo_step = self.geo_delta[1] - self.geo_delta[0]
+        
+    
+    def read(self, file, n_energies):
+        """Reads the file associated with DeltaFile object.
+
+        Args:
+            n_energies (int): number of energies to read
+        """
+        (
+            (self.phi, self.theta),
+            self.trar,
+            (self.n_beams, self.n_geo, self.n_vib),
+            self.beam_indices,
+            self.geo_delta,
+            self.vib_delta,
+            self.e_kin_array,
+            self.v_inner_array,
+            self.amplitudes_ref,
+            self.amplitudes_del,
+        ) = read_delta_file(file, n_energies=n_energies, read_header_only=False)
+    
     n_files,
     NCSurf,
     delta_step_einzeln,
