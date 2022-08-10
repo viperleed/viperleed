@@ -213,7 +213,10 @@ def run_section(index, sl, rp):
         elif index == 2:
             sections.deltas(sl, rp)
         elif index == 3:
-            sections.search(sl, rp)
+            if rp.SEARCH_PREVIEW:
+                sections.new_search(sl, rp)
+            else:
+                sections.search(sl, rp)
         elif index == 31:
             sections.superpos(sl, rp)
         elif index == 5:

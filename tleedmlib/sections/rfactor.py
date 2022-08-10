@@ -126,36 +126,28 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
     logger.debug("Using new R-factor calculation. This is still experimental!")
     
     deg, v0i, n_beams, which_r, n_derivs, real_iv_shift = get_general_rfactor_params(rp, for_error)
+    
+    
     theo_energies = []
     for b in theobeams:
         theo_energies.extend([k for k in b.intens if k not in theo_energies])
     theo_energies.sort()
-    exp_energies = []
-    for b in rp.expbeams:
-        exp_energies.extend([k for k in b.intens if k not in exp_energies])
-    exp_energies.sort()
 
-    # extend energy range if they are close together
-    if abs(min(exp_energies) - rp.THEO_ENERGIES[0]) < abs(real_iv_shift[0]):
-        minen = max(min(exp_energies), rp.THEO_ENERGIES[0]) + real_iv_shift[0]
-    else:
-        minen = max(min(exp_energies), rp.THEO_ENERGIES[0])
-    if abs(max(exp_energies) - rp.THEO_ENERGIES[1]) < abs(real_iv_shift[1]):
-        maxen = (
-            min(max(exp_energies), rp.THEO_ENERGIES[1]) + real_iv_shift[1]
-        )  # TODO: should this be + or - ? I think + ...
-    else:
-        maxen = min(max(exp_energies), rp.THEO_ENERGIES[1])
+    exp_energies = get_exp_energies(rp)
     intpol_step = min(
         exp_energies[1] - exp_energies[0], theo_energies[1] - theo_energies[0]
     )
+
+    out_grid= get_rfactor_energy_grid(rp, real_iv_shift, intpol_step)
+
     if rp.IV_SHIFT_RANGE[2] > 0:
         intpol_step = min(intpol_step, rp.IV_SHIFT_RANGE[2])
 
-    out_grid = np.arange(minen, maxen + intpol_step, intpol_step)
+    
 
     # find correspondence experimental to theoretical beams:
     beamcorr = io.getBeamCorrespondence(sl, rp)
+    
     # integer & fractional beams
     iorf = []
     for (i, beam) in enumerate(rp.expbeams):
@@ -174,80 +166,40 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
     for i in beamcorr:
         if i != -1:
             corr_theobeams.append(theobeams[i])
+    
+    # interpolate & get derivative for experimental beams
+    (
+        exp_e_start_beams_out,
+        exp_n_e_beams_out,
+        exp_intpol_int,
+        exp_intpol_deriv_y
+    ) = perform_full_intpol_deriv(deg, n_derivs, out_grid, n_beams, exp_grid, exp_id_start, exp_n_E_beams, exp_intensities_in)
+    
+    # Same for theoretical beams now
     (
         theo_grid,
         theo_id_start,
         theo_n_E_beams,
         theo_intensities_in,
     ) = io.beamlist_to_array(corr_theobeams)
-
-    deg = rp.INTPOL_DEG
-    v0i = rp.V0_IMAG
-
-    # Should we do reordering averaging etc. using the subroutine? - unused right now... # TODO
-    averaging_scheme = np.int32(np.arange(n_beams) + 1)  # Fortran index
-
-    # create buffer arrays
-    (
-        exp_e_start_beams_out,
-        exp_n_e_beams_out,
-        exp_intpol_int,
-        exp_intpol_deriv_y,
-        ierr,
-    ) = rf.alloc_beams_arrays(n_beams, len(out_grid))
-    check_ierr(ierr, logger)
-
-    # interpolation and derivative
-    ierr = rf.prepare_beams(
-        e_grid_in=exp_grid,
-        intensities=exp_intensities_in,
-        e_start_beams=exp_id_start + 1,  # Fortran indices
-        n_e_beams=exp_n_E_beams,
-        deg=deg,
-        n_derivs=n_derivs,
-        e_grid_out=out_grid,
-        e_start_beams_out=exp_e_start_beams_out,
-        n_e_beams_out=exp_n_e_beams_out,
-        intpol_intensity=exp_intpol_int,
-        intpol_derivative=exp_intpol_deriv_y,
-    )
-    # check for erros
-    check_ierr(ierr, logger)
-
-    # Same for theoretical beams now
-    # create buffer arrays
+    
+    # interpolate & get derivative for theory (Note we only do this once in rfactor section -- in search this is done more efficiently)
     (
         theo_e_start_beams_out,
         theo_n_e_beams_out,
         theo_intpol_int,
-        theo_intpol_deriv_y,
-        ierr,
-    ) = rf.alloc_beams_arrays(n_beams, len(out_grid))
-    check_ierr(ierr, logger)
-
-    # interpolation and derivative
-    ierr = rf.prepare_beams(
-        e_grid_in=theo_grid,
-        intensities=theo_intensities_in,
-        e_start_beams=theo_id_start + 1,  # Fortran indices
-        n_e_beams=theo_n_E_beams,
-        deg=deg,
-        n_derivs=n_derivs,
-        e_grid_out=out_grid,
-        e_start_beams_out=theo_e_start_beams_out,
-        n_e_beams_out=theo_n_e_beams_out,
-        intpol_intensity=theo_intpol_int,
-        intpol_derivative=theo_intpol_deriv_y,
-    )
-    # check for erros
-    check_ierr(ierr, logger)
-
+        theo_intpol_deriv_y
+    ) = perform_full_intpol_deriv(deg, n_derivs, out_grid, n_beams, theo_grid, theo_id_start, theo_n_E_beams, theo_intensities_in)
+    
+    # Beams are now interpolated & derivatives known - continue with Y-function & R-factor
+    
+    
     # For Factor R2 we use intesities for further calculations, otherwise the Y function
     if which_r == 1:
         # Make Y-functions
         rf.pendry_y_beamset(
             exp_intpol_int,
-            exp_intpol_deriv_y,  # derivative is overwritten by the Y function
+            exp_intpol_deriv_y,  # buffer array with derivative is overwritten by the Y function
             exp_e_start_beams_out,
             exp_n_e_beams_out,
             v0i,
@@ -255,7 +207,7 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
 
         rf.pendry_y_beamset(
             theo_intpol_int,
-            theo_intpol_deriv_y,  # derivative is overwritten by the Y function
+            theo_intpol_deriv_y,  # buffer array with derivative is overwritten by the Y function
             theo_e_start_beams_out,
             theo_n_e_beams_out,
             v0i,
@@ -277,7 +229,7 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
     v0r_center = int((v0r_range[0] + v0r_range[1]) / 2)
     start_guess = np.array([v0r_range[0], v0r_center, v0r_range[1]], dtype="int32")
 
-    # TODO: make below into User Parameters
+    # TODO: make below into User Parameters?
     fast_search = False
     tol_r = (1 - 5e-2,)
     tol_r_2 = (1 - 5e-2,)
@@ -429,6 +381,104 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
         )
     rfaclist = list(R_beams)
     return rfaclist
+
+def get_rfactor_energy_grid(rp, real_iv_shift, intpol_step):
+    
+    exp_energies = get_exp_energies(rp)
+    
+    # extend energy range if they are close together
+    if abs(min(exp_energies) - rp.THEO_ENERGIES[0]) < abs(real_iv_shift[0]):
+        min_en = max(min(exp_energies), rp.THEO_ENERGIES[0]) + real_iv_shift[0]
+    else:
+        min_en = max(min(exp_energies), rp.THEO_ENERGIES[0])
+    if abs(max(exp_energies) - rp.THEO_ENERGIES[1]) < abs(real_iv_shift[1]):
+        max_en = (
+            min(max(exp_energies), rp.THEO_ENERGIES[1]) + real_iv_shift[1]
+        )  # TODO: should this be + or - ? I think + ...
+    else:
+        max_en = min(max(exp_energies), rp.THEO_ENERGIES[1])
+        
+    # generate energy grid
+    energy_grid = np.arange(min_en, max_en + intpol_step, intpol_step)
+    
+    return energy_grid
+
+def get_exp_energies(rp):
+    exp_energies = []
+    for b in rp.expbeams:
+        exp_energies.extend([k for k in b.intens if k not in exp_energies])
+    exp_energies.sort()
+    return exp_energies
+
+
+def get_general_rfactor_params(rp, for_error):
+    deg = rp.INTPOL_DEG
+    v0i = rp.V0_IMAG
+    n_beams = len(rp.ivbeams)
+    which_r = rp.R_FACTOR_TYPE
+    if which_r == 1:
+        n_derivs = 1
+    elif which_r == 2:
+        n_derivs = 0
+    else:
+        check_ierr(701, logger)
+        
+    if not for_error:
+        real_iv_shift = rp.IV_SHIFT_RANGE[:2]
+    else:
+        real_iv_shift = [rp.best_v0r] * 2
+        
+    return deg, v0i, n_beams, which_r, n_derivs, real_iv_shift
+
+
+
+
+def perform_full_intpol_deriv(deg, n_derivs, out_grid, n_beams, grid, id_start, n_E_beams, intensities_in):
+    """Performs full (non-optimized i.e slower but more convenient) interpolation and derivative caculation on a beams array.
+
+    Args:
+        deg (int): interpolation degree
+        n_derivs (_type_): _description_
+        out_grid (_type_): _description_
+        n_beams (_type_): _description_
+        grid (_type_): _description_
+        id_start (_type_): _description_
+        n_E_beams (_type_): _description_
+        intensities_in (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
+    # Should we do reordering averaging etc. using the subroutine? - unused right now... # TODO
+    averaging_scheme = np.int32(np.arange(n_beams) + 1)  # Fortran index
+
+    # create buffer arrays
+    (
+        e_start_beams_out,
+        n_e_beams_out,
+        intpol_int,
+        intpol_deriv_y,
+        ierr,
+    ) = rf.alloc_beams_arrays(n_beams, len(out_grid))
+    check_ierr(ierr, logger)
+
+    # interpolation and derivative
+    ierr = rf.prepare_beams(
+        e_grid_in=grid,
+        intensities=intensities_in,
+        e_start_beams=id_start + 1,  # Fortran indices
+        n_e_beams=n_E_beams,
+        deg=deg,
+        n_derivs=n_derivs,
+        e_grid_out=out_grid,
+        e_start_beams_out=e_start_beams_out,
+        n_e_beams_out=n_e_beams_out,
+        intpol_intensity=intpol_int,
+        intpol_derivative=intpol_deriv_y,
+    )
+    # check for errors
+    check_ierr(ierr, logger)
+    return e_start_beams_out,n_e_beams_out,intpol_int,intpol_deriv_y
 
 
 def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
