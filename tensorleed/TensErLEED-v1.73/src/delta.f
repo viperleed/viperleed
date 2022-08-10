@@ -283,6 +283,15 @@ C  end header - begin actual computation
 C  read information on reference calculation, and information on required perturbations
 C  from stdin (unit 5)
 
+      ! TODO: completely remove NATOMS from input and output
+      ! it is unused, confusing and not working (never implemented)
+      ! the new delta & search will only be able to use NATOMS =1 
+
+      if NATOMS > 1 then
+        write(6,*) "NATOMS was != 1 which is not supported. Stopped."
+        STOP
+      end if
+
       call ReadBas(EI,EF,RAR1,RAR2,TV,THETA,FI,FORMIN,PQFEX,NT0,
      +             ES,PHSS,NPSI,NEL,L1,LMAX,FORMOUT,IEL,CUNDISP,
      +             CDISP,NATOMS,NCSTEP,DR0_A,DRPER_A,DRPAR_A,

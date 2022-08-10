@@ -288,7 +288,7 @@ C  THETA, FI are determine angle of incident beam w.r.t. surface
 C            under consideration, in radians (not degrees!)
 C  RAR1,RAR2 are reciprocal lattice vectors of surface
 C  PQFEX is beam list
-C  CUNDISP is undisplaced position of atom under consideration (probably unused)
+C  CUNDISP is undisplaced position of atom under consideration (probably unused) - TODO: remove
 C  CDISP are displaced positions of that atom in variation
 C  AID is array that has a bright past in the history of TLEED and currently no future.
 C  EMK,EMK0 contain energy steps in hartrees for computation of intensities
