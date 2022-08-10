@@ -404,6 +404,7 @@ def bilinear_interpolation_np(xy, x1x2, y1y2, f11f12f21f22):
         x1x2 (_type_): _description_
         y1y2 (_type_): _description_
         f11f12f21f22 (_type_): _description_
+
     Returns:
         _type_: _description_
     """
@@ -411,6 +412,7 @@ def bilinear_interpolation_np(xy, x1x2, y1y2, f11f12f21f22):
     x1, x2 = x1x2
     y1, y2 = y1y2
     f_x1_y1, f_x1_y2, f_x2_y1, f_x2_y2 = f11f12f21f22
+
     # linear interpolation in 1st coordinate
     f_x_y1 = np.interp(x, (x1, x2), (f_x1_y1, f_x2_y1))
     f_x_y2 = np.interp(x, (x1, x2), (f_x1_y2, f_x2_y2))
