@@ -14,10 +14,10 @@ import matplotlib.pyplot as plt
 import scipy
 import os
 from tqdm import tqdm
-from numba import njit, prange
+from numba import njit, prange, config, threading_layer
 
 
-def read_delta_file(filename, n_energies):
+def read_delta_file(filename, n_energies, read_header_only=False):
     """This function reads in one file of data and stores the data in arrays, which can be used in later functions (ex.: GetInt)
     
     Parameters
@@ -35,22 +35,19 @@ def read_delta_file(filename, n_energies):
     Angles of how the beam hits the sample
     
     (trar1, trar2) : tuple of ndarray
-    Vectors of the normal and the reciprocal unit cell of the sample
+    reciprocal lattice vectors
     
-    int0 : int
+    n_beams : int
     Number of beams that are reflected by the sample 
-    
-    n_atoms: int
-    TBD
     
     nc_steps: ndarray
     Number of permutations between direction deltas and vibration deltas
     
-    E_kin_array : ndarray
+    e_kin_array : ndarray
     Array that contains the kinetic energies of the elastically scatted
     electrons inside the crystal. (Not the incidence energy!)
     
-    VPI_array : ndarray
+    v_imag_array : ndarray
     Imaginary part of the inner potential of the surface
     
     VV_array : ndarray
@@ -75,9 +72,8 @@ def read_delta_file(filename, n_energies):
     # Lists and Arrays needed; E,VPI,VV are numpy arrays that get returned, the others are lists that help saving the other data
     HeaderBlock1 = []
     HeaderBlock2 = []
-    e_kin_array = np.full(n_energies, fill_value=np.NaN)
-    v_imag_array = np.full(n_energies, fill_value=np.NaN)
-    v_real_array = np.full(n_energies, fill_value=np.NaN)
+    e_kin_array = np.full(n_energies, fill_value=np.nan)
+    v_inner_array = np.full(n_energies, fill_value=np.nan, dtype=np.complex128)
 
     # we need two fortran format readers
     ff_reader_6E13_7 = ff.FortranRecordReader("6E13.7")
@@ -85,90 +81,118 @@ def read_delta_file(filename, n_energies):
     ff_reader_10F7_4 = ff.FortranRecordReader("10F7.4")
 
     # Reading in the data of a file
-    with open(filename, mode="r") as file:
-        content = file.readlines()
+    try:
+        with open(filename, mode="r") as file:
+            content = file.readlines()
+    except Exception:
+        raise RuntimeError(f"Unable to read Delta file: {filename}")
     # make into an iterator
     file_lines = iter(content)
 
     # 1.Block of Header - only 1 line - theta, phi, trar1, trar2 variables
     line = next(file_lines)
     HeaderBlock1 = ff_reader_6E13_7.read(line)
-    trar1 = [0, 0]
-    trar2 = [0, 0]
-    theta, phi, trar1[0], trar1[1], trar2[0], trar2[1] = HeaderBlock1
-    trar1 = np.array(trar1)
-    trar2 = np.array(trar2)
+    
+    # surface unit cell vectors - what used to be trar1 is now trar[:,0].
+    # Similarly trar2 -> trar[:,1]
+    trar = np.full(shape=(2, 2), dtype=np.float64, fill_value=np.nan)
+    
+    theta, phi, trar[0, 0], trar[0, 1], trar[1, 0], trar[1, 1] = HeaderBlock1
+
 
     # 2.Block of Header - also only 1 line - n_beams, n_atoms, n_geo_vib_grid variables
     line = next(file_lines)
     z2_elemente = line.split()
     for part in z2_elemente:
         HeaderBlock2.append(int(part))
-    n_beams, n_atoms, n_geo_vib_grid = HeaderBlock2
+    
+    if len(HeaderBlock2) == 2:
+        n_beams, n_geo_vib_grid = HeaderBlock2
+    elif len(HeaderBlock2) == 3:
+        n_beams, n_atoms, n_geo_vib_grid = HeaderBlock2
+        if (n_atoms != 1):
+            raise ValueError("A value NATOMS in Delta file was read as != 1. This is not"
+                                "supported. Rerun Refcalc and Delta calulation with a newer"
+                                "TensErLEED version.")
+    else:
+        raise RuntimeError("Error reading Delta file header block."
+                           "Check Delta file format.")
+    
 
     # 3.Block of Header - (h,k) indices of the beams
     beam_indices = read_block(reader=ff_reader_10F10_5, lines=file_lines, shape=(n_beams, 2))
 
+    # TODO: if we decide to throw CUNDISP out of TensErLEED entirely, this block needs to become optional
     # 4.Block of Header - position of undisplaced atom (Coordinates UNDISPlaced)
-    pos_undisplaced = read_block(reader=ff_reader_10F7_4, lines=file_lines, shape=(n_atoms, 3))
+    # Unused quantity - only check if it is zero (as it should be)
+    pos_undisplaced = read_block(reader=ff_reader_10F7_4, lines=file_lines, shape=(3,))
+    if (np.linalg.norm(pos_undisplaced) > 1e-6):
+        raise ValueError("A non-zero value of CUNDISP (undisplaced atom positions) "
+                         "was read from Delta file. This quantity is currently unused "
+                         "and should always be zero. Rerun Refcalc and Delta calulation "
+                         "with a newer TensErLEED version.")
 
     # 5.Block of Header - geometric displacements (Coordinates DISPlaced)
     # For now, this contains, along the first axis, n_vib repetitions of the same
     # displacements. We will figure out n_vib firther below, then reshape this
-    geo_delta = read_block(reader=ff_reader_10F7_4, lines=file_lines, shape=(n_geo_vib_grid, n_atoms, 3))
+    geo_delta = read_block(reader=ff_reader_10F7_4, lines=file_lines, shape=(n_geo_vib_grid, 3))
 
     # 6.Block of Header - list of (vib, 0,0,0,0,..., vib, 0,0,0,0,...)
     vib_delta = read_block(reader=ff_reader_10F7_4, lines=file_lines, shape=(n_geo_vib_grid,))
     n_vib = sum(abs(v)>1e-4 for v in vib_delta)
     n_geo = n_geo_vib_grid // n_vib
     assert n_geo_vib_grid % n_vib == 0
-    geo_delta = geo_delta.reshape(n_vib, n_geo, n_atoms, 3)
+    geo_delta = geo_delta.reshape(n_vib, n_geo, 3)[0, :, :].reshape(n_geo,3)
     # throw out the zeros from array vib_delta
     vib_delta = vib_delta[::n_geo]
+    
+    if read_header_only:
+        amplitudes_ref = None
+        amplitudes_del = None
+    else:
 
-    # Initialize arrays for reference and delta amplitudes
-    amplitudes_ref = np.full(shape=(n_energies, n_beams), fill_value=np.nan, dtype=np.complex128)
-    amplitudes_del = np.full(
-        shape=(n_energies, n_vib, n_geo, n_beams), fill_value=np.nan, dtype=np.complex128
-    )
+        # Initialize arrays for reference and delta amplitudes
+        amplitudes_ref = np.full(shape=(n_energies, n_beams), fill_value=np.nan, dtype=np.complex128)
+        amplitudes_del = np.full(
+            shape=(n_energies, n_vib, n_geo, n_beams), fill_value=np.nan, dtype=np.complex128
+        )
 
-    # maybe working arrays for transfer into amplitude arrays ?
+        # maybe working arrays for transfer into amplitude arrays ?
 
-    # End of the Header - Start of Reading in the Delta Data
-    for e_index, line in enumerate(file_lines):  # Energy loop
+        # End of the Header - Start of Reading in the Delta Data
+        for e_index, line in enumerate(file_lines):  # Energy loop
 
-        # Energy, VPI and VV header
-        e_kin, v_imag, v_real = (v for v in ff_reader_6E13_7.read(line) if v is not None)
-        # Do NOT translate energy to eV!
-        if e_index < n_energies:
-            e_kin_array[e_index] = e_kin
-            v_imag_array[e_index] = v_imag
-            v_real_array[e_index] = v_real
+            # Energy, VPI and VV header
+            e_kin, v_imag, v_real = (v for v in ff_reader_6E13_7.read(line) if v is not None)
+            # Do NOT translate energy to eV!
+            if e_index < n_energies:
+                e_kin_array[e_index] = e_kin
+                v_inner_array[e_index] = v_real + 1j*v_imag
 
-        # Reference amplitudes
-        as_real = read_block(reader=ff_reader_6E13_7, lines=file_lines, shape=(n_beams, 2))
-        if e_index < n_energies:
-            amplitudes_ref[e_index, :] = as_real.view(dtype=np.complex128)[..., 0]
+            # Reference amplitudes
+            as_real = read_block(reader=ff_reader_6E13_7, lines=file_lines, shape=(n_beams, 2))
+            if e_index < n_energies:
+                amplitudes_ref[e_index, :] = as_real.view(dtype=np.complex128)[..., 0]
 
-        # Delta amplitudes
-        as_real = read_block(reader=ff_reader_6E13_7, lines=file_lines, shape=(n_geo_vib_grid*n_beams, 2))
-        as_complex = as_real.view(dtype=np.complex128)
-        if e_index < n_energies:
-            amplitudes_del[e_index, ...] = as_complex.reshape(n_vib, n_geo, n_beams)
+            # Delta amplitudes
+            as_real = read_block(reader=ff_reader_6E13_7, lines=file_lines, shape=(n_geo_vib_grid*n_beams, 2))
+            as_complex = as_real.view(dtype=np.complex128)
+            if e_index < n_energies:
+                amplitudes_del[e_index, ...] = as_complex.reshape(n_vib, n_geo, n_beams)
 
-    if e_index > n_energies:
-        raise ValueError("Number of energies does not match number of blocks in file: "
-                         f"Found {e_index} blocks")
-
+        if e_index > n_energies:
+            raise ValueError("Number of energies does not match number of blocks in file: "
+                            f"Found {e_index} blocks")
+    
     return (
         (phi, theta),
-        (trar1, trar2),
-        (n_beams, n_atoms, n_geo_vib_grid),
+        trar,
+        (n_beams, n_geo, n_vib),
         beam_indices,
-        pos_undisplaced,
         geo_delta,
         vib_delta,
-        (e_kin_array, v_imag_array, v_real_array),
+        e_kin_array,
+        v_inner_array,
         amplitudes_ref,
         amplitudes_del,
     )
