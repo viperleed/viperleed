@@ -362,13 +362,31 @@ def calc_delta_intensities(
 
     return ATSAS_matrix
 
-@njit(fastmath = True, parallel = True, nogil = True)
-def bilinear_interpolation_unit_square(x_vals, y_vals, func_vals):
-    x1, x2, x = x_vals
-    y1, y2, y = y_vals
-    f11, f12, f21, f22 = func_vals
 
-    return (x2-x)*(f11*(y2-y) + f12*(y-y1)) + (x-x1)*(f21*(y2-y) + f22*(y-y1))
+@njit(fastmath = True)
+def bilinear_interpolation_np(xy, x1x2, y1y2, f11f12f21f22):
+    """Bilinear interpolation based on numpy functions.
+
+    Args:
+        xy (_type_): _description_
+        x1x2 (_type_): _description_
+        y1y2 (_type_): _description_
+        f11f12f21f22 (_type_): _description_
+    Returns:
+        _type_: _description_
+    """
+    x, y = xy
+    x1, x2 = x1x2
+    y1, y2 = y1y2
+    f_x1_y1, f_x1_y2, f_x2_y1, f_x2_y2 = f11f12f21f22
+    # linear interpolation in 1st coordinate
+    f_x_y1 = np.interp(x, (x1, x2), (f_x1_y1, f_x2_y1))
+    f_x_y2 = np.interp(x, (x1, x2), (f_x1_y2, f_x2_y2))
+
+    # linear interpolation in 2nd coordinate
+    f_x_y = np.interp(y, (y1, y2), (f_x_y1, f_x_y2))
+
+    return f_x_y
 
 
 @njit(fastmath=True, parallel=True, nogil=True)
