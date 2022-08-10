@@ -421,9 +421,16 @@ def bilinear_interpolation_np(xy, x1x2, y1y2, f11f12f21f22):
     return f_x_y
 
 
+class AtomDeltas:
     
+    def __init__(self, n_energies) -> None:
+        self.n_energies = n_energies
+        self.delta_files = []
 
     
+    def add_file(self, file):
+        new_file = DeltaFile(self, file, n_energies=self.n_energies)
+        self.delta_files.append(new_file)
 
 class DeltaFile:
     # one Delta file
