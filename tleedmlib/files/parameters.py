@@ -28,6 +28,7 @@ knownParams = [
     'PARABOLA_FIT', 'PHASESHIFT_EPS', 'PHASESHIFTS_CALC_OLD',
     'PHASESHIFTS_OUT_OLD', 'PLOT_IV', 'RUN', 'R_FACTOR_LEGACY', 'R_FACTOR_SMOOTH',
     'R_FACTOR_TYPE', 'S_OVL', 'SCREEN_APERTURE', 'SEARCH_BEAMS', 'SEARCH_CONVERGENCE',
+    'SEARCH_PREVIEW', # testing of new search - branch debug only
     'SEARCH_CULL', 'SEARCH_MAX_GEN', 'SEARCH_POPULATION', 'SEARCH_START',
     'SITE_DEF', 'SUPERLATTICE', 'SUPPRESS_EXECUTION', 'SYMMETRIZE_INPUT',
     'SYMMETRY_BULK',
@@ -469,7 +470,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
         # simple bool parameters
         elif param in ['LOG_DEBUG', 'LOG_SEARCH', 'PHASESHIFTS_CALC_OLD',
                        'PHASESHIFTS_OUT_OLD', 'R_FACTOR_LEGACY', 'SUPPRESS_EXECUTION',
-                       'SYMMETRIZE_INPUT', 'SYMMETRY_FIND_ORI']:
+                       'SYMMETRIZE_INPUT', 'SYMMETRY_FIND_ORI', 'SEARCH_PREVIEW']:
             setBoolParameter(rpars, param, llist[0])
         # slightly more complicated bools
         elif param == 'LAYER_STACK_VERTICAL':
