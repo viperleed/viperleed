@@ -213,7 +213,186 @@ def calc_delta_intensities(
     theta,
     trar1,
     trar2,
-    Beam_variables,
+    n_beams,
+    beam_indices,
+    geo_delta, # formerly CDISP in TensErLEED
+    e_kin_array,
+    v_inner_array,
+    amplitudes_ref,
+    amplitudes_del,
+    n_files,
+    n_geo,
+    is_surface_atom,
+    delta_steps,
+):
+    """This function reads in the values of the function Transform and uses them to get the ATSAS_matrix
+    
+    Parameters
+    ----------
+    n_files: int
+    Number of files
+    
+    phi, theta:
+    Angles of how the beam hits the sample
+    
+    trar1, trar2:
+    reciprocal unit vectors
+    
+    n_beams:
+    todo
+    
+    beam_indices:
+    Array with the order of beams
+    
+    ph_CDisp:
+    Geometric displacements of the atom
+    
+    E_kin_array:
+    Array that contains all the energies of the file
+    
+    VPI_array:
+    Imaginary part of the inner potential of the surface
+    
+    VV_array:
+    Real part of the inner potential of the surface
+    
+    amplitudes_ref:
+    Array that contains all values of the reference amplitudes
+    
+    amplitudes_del:
+    Array that contains all values of the delta amplitudes
+    
+    nc_surf: np.array of bool
+    Bool array with flags that decide if atom is considered to be at the surface.
+    
+    delta_steps: np.array of float with shape (n_files, 2) of (n_files*2)
+    Which displacements to use. If given integer values, the values from the Delta
+    file will be used, for float a linear interpolation is used instead.
+    For file i element (i, 0) gives the geometric displacment and element
+    (i, 1) gives the vibrational displacement.
+    If the array was falttened, geometric displacement is element (2*i)
+    and vibrational displacement is element (2*i + 1).
+    
+    number_z_steps:
+    Total number of different delta_z values
+    
+    
+    Returns
+    ----------
+    ATSAS_matrix:
+    Array that contains the intensities of the different beams with each energy
+    """
+    
+    # may be necessary if array was flattened
+    delta_steps = delta_steps.reshape(n_files, 2)
+
+    # Conc will probably be taken as Input parameter aswell
+
+    XDisp = 0
+    Conc = 1
+    number_z_steps = amplitudes_del.shape[2] -1 # not needed any more?
+    
+    n_geo_max = geo_delta.shape[1] # I think?
+
+
+    # below could also be optimized with array operations
+    for i in range(n_files):
+        
+        
+        if is_surface_atom[i]:
+            # out of surface component of geometric displacment
+            interp_y_values = geo_delta[i, :n_geo[i], 0]
+            interp_x_values = np.arange(n_geo[i]) # there is at least one geo displacement (=0.0)
+            z_fraction = delta_steps[i, 0]
+            
+            # use numpy interpolation - this is probably the way to go
+            geo_interp = np.interp(z_fraction, interp_x_values, interp_y_values)
+
+            XDisp += Conc * geo_interp
+        
+        CXDisp = np.min(np.array((XDisp, 1000)))
+
+    # if no surface_atoms were changed, do not change onset height of damping
+    if not np.any(is_surface_atom): # isn't this redundant?
+        CXDisp = 0
+
+
+    intensity_matrix = np.zeros((len(e_kin_array), n_beams))
+    
+    # many optimizations possible here...
+    
+    
+    # Loop over energies
+    for e_index in prange(len(e_kin_array)):
+        # Definieren von Variablen, die in der jeweiligen Energie gleichbleiben
+        E = e_kin_array[e_index]
+        VV = v_inner_array[e_index].real
+        VPI = v_inner_array[e_index].imag
+        # all of the below can be transformed into a neater form with matrix operations
+        AK = sqrt(max(2 * E - 2 * VV, 0))
+        C = AK * cos(theta)
+        BK2 = AK * sin(theta) * cos(phi)
+        BK3 = AK * sin(theta) * sin(phi)
+        BKZ = cmath.sqrt(complex(2 * E - BK2 ** 2 - BK3 ** 2, -2 * VPI))
+        
+        # Loop über die Beams
+        for beam_index in range(n_beams):
+            # Variablen per Beam
+            h = beam_indices[beam_index, 0]
+            k = beam_indices[beam_index, 1]
+            # could be done in matrix form - not sure if that gives better performance
+            AK2 = BK2 + h * trar1[0] + k * trar2[0]
+            AK3 = BK3 + h * trar1[1] + k * trar2[1]
+            AK = 2 * E - AK2 ** 2 - AK3 ** 2
+            AKZ = complex(AK, -2 * VPI)
+            A_perpendicular = AK - 2 * VV
+
+            amplitude = amplitudes_ref[e_index, beam_index]
+            for i in range(n_files):
+                # interpolation of geometric and vibrational displacements
+                
+                geo_fraction = delta_steps[i, 0]
+                geo_id_left = np.int32(np.floor(geo_fraction))
+                geo_id_right = np.int32(np.ceil(geo_fraction))
+                
+                vib_fraction = delta_steps[i, 1]
+                vib_id_left = np.int32(np.floor(vib_fraction))
+                vib_id_right = np.int32(np.ceil(vib_fraction))
+
+                del_l_l = amplitudes_del[i, e_index,
+                                         vib_id_left, geo_id_left, beam_index]
+                del_l_r = amplitudes_del[i, e_index,
+                                         vib_id_left, geo_id_right, beam_index]
+                del_r_l = amplitudes_del[i, e_index,
+                                         vib_id_right, geo_id_left, beam_index]
+                del_r_r = amplitudes_del[i, e_index,
+                                         vib_id_right, geo_id_right, beam_index]
+
+                amp_intpol_value = bilinear_interpolation_np(
+                    xy = (vib_fraction, geo_fraction),
+                    x1x2=(vib_id_left, vib_id_right),
+                    y1y2=(geo_id_left, geo_id_right),
+                    f11f12f21f22=(del_l_l, del_l_r, del_r_l, del_r_r)
+                )
+
+                amplitude += amp_intpol_value
+
+            if A_perpendicular > 0:
+                A = sqrt(A_perpendicular)
+                PRE = (BKZ + AKZ) * CXDisp
+                PRE = cmath.exp(complex(0, -1) * PRE)
+                amp_abs = abs(amplitude)
+                if amp_abs > 10e10:
+                    intensity = 10e20 #saturation condition - do we need this? - can we instead check somewhere else if intensity is too high?
+                else:
+                    intensity = amp_abs * amp_abs * abs(PRE) * abs(PRE) * A / C
+            else:
+                intensity = 0
+
+            intensity_matrix[e_index, beam_index] = intensity
+
+    return intensity_matrix
+
     beam_indices,
     ph_CDisp,
     E_kin_array,
