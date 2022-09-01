@@ -21,4 +21,7 @@ LEED-IV measurements with ViPErLEED.
 
 from viperleed.guilib.measure import controller
 from viperleed.guilib.measure import serial
-from viperleed.guilib.measure import camera
+try:
+    from viperleed.guilib.measure import camera
+except ImportError:
+    print("Trying to import camera failed.")

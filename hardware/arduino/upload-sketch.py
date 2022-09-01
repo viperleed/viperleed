@@ -23,7 +23,6 @@ import requests
 import subprocess
 import shutil
 import sys
-import os
 import json
 import warnings
 
@@ -42,11 +41,12 @@ def get_arduino_cli_from_git():
     """
     latest = requests.get("https://api.github.com/repos/arduino"
                           "/arduino-cli/releases/latest").json()
-    if 'nt' in os.name:
-        correct_name = 'Windows'
-    elif 'mac' in os.name:
+    platform = sys.platform
+    if 'darwin' in platform:
         correct_name = 'macOS'
-    elif 'posix' in os.name:
+    elif 'win' in platform and 'cyg' not in platform:
+        correct_name = 'Windows'
+    elif 'linux' in platform:
         correct_name = 'Linux'
     else:
         raise RuntimeError("Could not find a suitable precompiled "
@@ -117,7 +117,7 @@ def get_arduino_cli(get_from_git=False):                                        
 
     # See if there is the correct executable in arduino-cli
     arduino_cli = 'arduino-cli'
-    if 'win' in sys.platform:
+    if 'win' in sys.platform and not 'darwin' in sys.platform:
         arduino_cli += '.exe'
     arduino_cli = base_path.joinpath(arduino_cli)
     if not arduino_cli.is_file():
@@ -145,7 +145,8 @@ def get_boards():
             "Arduino CLI failed with return code "
             f"{cli.returncode}. The error was:\n{cli.stderr}"
             ) from err
-    return json.loads(cli.stdout)
+    boards = json.loads(cli.stdout)
+    return [b for b in boards if "matching_boards" in b]
 
 
 def install_arduino_core(core_name):                                            # TODO: progress
@@ -252,6 +253,8 @@ def compile_(for_board, upload=False):
     """
     cli = get_arduino_cli()
     viperino = Path(__file__).parent.resolve() / 'viper-ino'
+    if "matching_boards" not in for_board:
+        raise ValueError(f"Invalid Arduino device: {for_board}")
 
     argv = ['compile', '--clean', '-b',
             for_board['matching_boards'][0]['fqbn'],
@@ -273,4 +276,5 @@ if __name__ == '__main__':
     # print(get_boards())
     # install_arduino_core('arduino:avr')
     # print(get_arduino_cores())
+    # print(get_viperleed_hardware())
     compile_(get_viperleed_hardware()[0], upload=True)
