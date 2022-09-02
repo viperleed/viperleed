@@ -75,7 +75,10 @@ def resources_path(dir_name):
     # EVENTUALLY IT IS PROBABLY BETTER TO INCLUDE THE WHOLE /fonts FOLDER from
     # '/guilib' IN THE CORRECT PLACE, AND HAVE resources_path RETURN ITS BASE
     # PATH (i.e., the top-level folder in which the exe is) IF PYINSTALLER IS
-    # USED
+    # USED. This is similarly the case for other resources the user may be
+    # allowed to edit (e.g., config files). For this to work, one can use
+    # Path(sys.executable).resolve().parent as the base path of the .exe
+    # file when running from a bundled --onefile pyinstaller.
     if hasattr(sys, '_MEIPASS'):
         return str(Path(sys._MEIPASS, dir_name).resolve())
     return dir_name
