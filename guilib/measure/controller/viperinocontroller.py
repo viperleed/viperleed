@@ -75,7 +75,7 @@ class ViPErinoController(MeasureControllerABC):
         ('available_commands',),
         ('controller', 'measurement_devices'),
         ('controller', 'firmware_version'),  # also mandatory on serial
-        ('measurement_settings', 'v_ref_dac'),
+        ('energy_calibration', 'v_ref_dac'),
         ]
 
     def __init__(self, parent=None, settings=None,
@@ -163,8 +163,8 @@ class ViPErinoController(MeasureControllerABC):
     @property
     def measurement_interval(self):
         """Return the time interval between measurements (msec)."""
-        update_rate_raw = self.settings.get('controller', 'update_rate',
-                                            fallback='4')
+        update_rate_raw = self.settings.get('measurement_settings',
+                                            'adc_update_rate', fallback='4')
         try:
             meas_f = self.settings.getfloat('adc_update_rate', update_rate_raw,
                                             fallback=50)
@@ -296,11 +296,11 @@ class ViPErinoController(MeasureControllerABC):
         _cmd_name = 'PC_SET_VOLTAGE' if trigger_meas else 'PC_SET_VOLTAGE_ONLY'
         cmd = self.settings.get('available_commands', _cmd_name)
         try:
-            v_ref_dac = self.settings.getfloat('measurement_settings',
+            v_ref_dac = self.settings.getfloat('energy_calibration',
                                                'v_ref_dac')
         except (TypeError, ValueError):
             base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
-                            'measurement_settings/v_ref_dac', "")
+                            'energy_calibration/v_ref_dac', "")
             v_ref_dac = 2.5
 
         dac_out_vs_nominal_energy = 10/1000  # 10 V / 1000 eV
@@ -424,12 +424,12 @@ class ViPErinoController(MeasureControllerABC):
         """
         cmd = self.settings.get('available_commands', 'PC_CALIBRATION')
         try:
-            update_rate = self.settings.getint('controller', 'update_rate',
-                                               fallback=4)
+            update_rate = self.settings.getint('measurement_settings',
+                                               'adc_update_rate', fallback=4)
         except (TypeError, ValueError):
             # Cannot convert to int
             base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
-                            'controller/update_rate', '')
+                            'measurement_settings/adc_update_rate', '')
             return
         if not self.hardware:
             base.emit_error(self, ViPErinoErrors.HARDWARE_INFO_MISSING,
