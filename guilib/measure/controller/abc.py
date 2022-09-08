@@ -125,7 +125,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         self.__init_err_timer = qtc.QTimer(self)
         self.__init_err_timer.setSingleShot(True)
         self.__init_err_timer.timeout.connect(self.__report_init_errors)
-        
+
         # Use to force sending a .stop even if the serial is busy,
         # as it may be waiting for an OK. This can happen before
         # the first segment of the preparation is over, where we may
@@ -345,12 +345,6 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         return settle_t
 
     @property
-    @abstractmethod
-    def name(self):
-        """Return a unique name for this controller."""
-        return ""
-
-    @property
     def measured_quantities(self):
         """Return measured quantities.
 
@@ -364,6 +358,12 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         # empty list, as __measured_quantities cannot be set
         # otherwise.
         return tuple()
+
+    @property
+    @abstractmethod
+    def name(self):
+        """Return a unique name for this controller."""
+        return ""
 
     @property
     def port_name(self):
@@ -518,12 +518,20 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         self._time_to_trigger = 0
         self.__hash = -1
 
-    # pylint: disable=no-self-use,unused-argument
-    # Method is here for consistency with MeasureControllerABC
-    def measures(self, quantity=None):
-        """Return whether this controller measures quantity."""
-        return False
-    # pylint: enable=no-self-use,unused-argument
+    @abstractmethod
+    def abort_and_reset(self):  # TODO: Confusing. Perhaps remove altogether?
+        """Abort current task and reset the controller.
+
+        This method must be extended in subclasses by calling
+        super(). Abort what the controller is doing right now,
+        reset it and return to waiting for further instructions.
+
+        Returns
+        -------
+        None.
+        """
+        self._time_to_trigger = 0
+        # TODO: check other stuff that has to be reset.
 
     @abstractmethod
     def are_settings_ok(self, settings):
@@ -570,70 +578,127 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
             return False
         return True
 
-    @abstractmethod
-    def set_energy(self, energy, settle_time, *more_steps, trigger_meas=True):
-        """Set electron energy on LEED controller.
+    @qtc.pyqtSlot(tuple)
+    def begin_preparation(self, energies_and_times):
+        """Trigger the first step in the preparation for measurements.
 
-        This method must be extended in subclasses by calling super()
-        ant some point. The reimplementation should take the energy
-        value(s) in eV, the wating times (in msec) and the keyword
-        argument trigger_meas, together with other optional data to be
-        read from self.settings, and turn them into messages that can
-        be sent via self.send_message(*messages).
-
-        Conversion from the desired, true electron energy (i.e.,
-        the energy that the electrons will have when exiting the
-        gun) to the setpoint value to be sent to the controller
-        can be done inside this method by calling
-        self.true_energy_to_setpoint(energy).
+        Set self.busy to True, reset all begin_prepare_todos and start
+        first step of the preparation. The .controller_busy() signal
+        will be emitted carrying False once all steps are complete.
 
         Parameters
         ----------
-        energy : float
-            Nominal electron energy in electronvolts.
-        settle_time : integer
-            Interval in milliseconds that the controller will wait
-            before deeming the LEED optics stable at set energy.
-        *more_steps : Number
-            If given, it should be an even number of elements.
-            Odd elements are energies, even ones settle-time intervals.
-            Multiple steps can be executed quickly after each other.
-            The last step will be the final energy that is set and
-            should ensure stabilization of the electronics.
-        trigger_meas : bool, optional
-            True if the controllers are supposed to take measurements
-            after the energy has been set. Default is True. The base
-            ControllerABC cannot take measurements, therefore this
-            parameter is only used to emit an about to trigger if True.
+        energies_and_times : tuple
+            Starting sequence of energies and times the controller
+            will use to set the energy during preparation. These
+            quantities are used only if self.sets_energy is True.
 
         Returns
         -------
         None.
         """
-        self._time_to_trigger = settle_time + sum(more_steps[1::2])
+        self.reset_preparation_todos()
+        self.first_energies_and_times = energies_and_times
 
-    def true_energy_to_setpoint(self, energy):
-        """Take requested energy and convert it to the energy to set.
+        # Clear any unsent messages. Any message that comes during
+        # preparation will not be sent till the end of the whole
+        # preparation. This excludes a call to .stop(), which is
+        # always done as soon as possible.
+        self.__unsent_messages = []
+        self.__can_continue_preparation = False
 
-        The conversion is done by reading a polynomial from
-        the configuration files which is a function of the true
-        energy and yields the energy to set. This polynomial is
-        determined in the energy calibration and written to the
-        config. This function should always be called when
-        setting an energy.
+        self.busy = True
+        base.safe_disconnect(self.serial.serial_busy,
+                             self.send_unsent_messages)
+        base.safe_connect(self.serial.serial_busy, self.__do_preparation_step,
+                          type=_UNIQUE)
+        self.__do_preparation_step()
 
-        Parameters
-        ----------
-        energy : float
-            Requested energy in eV.
+    @qtc.pyqtSlot()
+    def connect_(self):
+        """Connect serial port."""
+        # TODO: should we complain if .__port_name is False-y?
+        if not self.serial or self.serial.is_open:
+            # Invalid or already connected
+            return
+        self.serial.connect_()
+
+    @qtc.pyqtSlot()
+    def continue_preparation(self):
+        """Trigger the second step in the preparation for measurements.
+
+        Set self.busy to true, reset all continue_prepare_todos
+        and start second step of the preparation.
 
         Returns
         -------
-        new_energy : float
-            Energy to set in eV in order to get requested energy.
+        None.
         """
-        to_setpoint = self.energy_calibration_curve
-        return to_setpoint(energy)
+        self.__can_continue_preparation = True
+
+        self.busy = True
+        base.safe_disconnect(self.serial.serial_busy,
+                             self.send_unsent_messages)
+        base.safe_connect(self.serial.serial_busy, self.__do_preparation_step,
+                          type=_UNIQUE)
+        self.__do_preparation_step()
+
+    @qtc.pyqtSlot()
+    def disconnect_(self):
+        """Disconnect serial port."""
+        try:
+            self.serial.disconnect_()
+        except (TypeError, AttributeError):
+            pass
+
+    def flush(self):
+        """Clear unsent messages and set not busy."""
+        self.__unsent_messages = []
+        self.busy = False
+
+    @abstractmethod
+    def list_devices(self):
+        """List all devices of this class."""
+        return
+
+    # pylint: disable=no-self-use,unused-argument
+    # Method is here for consistency with MeasureControllerABC
+    def measures(self, quantity=None):
+        """Return whether this controller measures quantity."""
+        return False
+    # pylint: enable=no-self-use,unused-argument
+
+    def moveToThread(self, thread):      # pylint: disable=invalid-name
+        """Move self and its serial port to a new thread."""
+        try:
+            self.serial.moveToThread(thread)
+        except AttributeError:
+            # Probably some error occurred during __init__
+            pass
+        super().moveToThread(thread)
+
+    def reset_preparation_todos(self):
+        """Reset all the segments of preparation.
+
+        Segments are in the form [key: bool}. Those segments for
+        which the value is True will be done one at a time, in
+        the order in which keys are inserted. Segments are stored
+        in self.begin_prepare_todos and self.continue_prepare_todos.
+
+        This method can be reimplemented in subclasses if some segments
+        are to be skipped (e.g., depending on the firmware version of
+        the hardware).
+
+        The base-class implementation sets all segments to True.
+
+        Returns
+        -------
+        None.
+        """
+        for key in self.begin_prepare_todos:
+            self.begin_prepare_todos[key] = True
+        for key in self.continue_prepare_todos:
+            self.continue_prepare_todos[key] = True
 
     def send_message(self, *data, **kwargs):
         """Use serial to send message.
@@ -680,25 +745,52 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
             data, kwargs = self.__unsent_messages.pop(0)
             self.serial.send_message(*data, **kwargs)
 
-    def flush(self):
-        """Clear unsent messages and set not busy."""
-        self.__unsent_messages = []
-        self.busy = False
-
     @abstractmethod
-    def abort_and_reset(self):  # TODO: Confusing. Perhaps remove altogether?
-        """Abort current task and reset the controller.
+    def set_energy(self, energy, settle_time, *more_steps, trigger_meas=True):
+        """Set electron energy on LEED controller.
 
-        This method must be extended in subclasses by calling
-        super(). Abort what the controller is doing right now,
-        reset it and return to waiting for further instructions.
+        This method must be extended in subclasses by calling super()
+        ant some point. The reimplementation should take the energy
+        value(s) in eV, the wating times (in msec) and the keyword
+        argument trigger_meas, together with other optional data to be
+        read from self.settings, and turn them into messages that can
+        be sent via self.send_message(*messages).
+
+        Conversion from the desired, true electron energy (i.e.,
+        the energy that the electrons will have when exiting the
+        gun) to the setpoint value to be sent to the controller
+        can be done inside this method by calling
+        self.true_energy_to_setpoint(energy).
+
+        Parameters
+        ----------
+        energy : float
+            Nominal electron energy in electronvolts.
+        settle_time : integer
+            Interval in milliseconds that the controller will wait
+            before deeming the LEED optics stable at set energy.
+        *more_steps : Number
+            If given, it should be an even number of elements.
+            Odd elements are energies, even ones settle-time intervals.
+            Multiple steps can be executed quickly after each other.
+            The last step will be the final energy that is set and
+            should ensure stabilization of the electronics.
+        trigger_meas : bool, optional
+            True if the controllers are supposed to take measurements
+            after the energy has been set. Default is True. The base
+            ControllerABC cannot take measurements, therefore this
+            parameter is only used to emit an about to trigger if True.
 
         Returns
         -------
         None.
         """
-        self._time_to_trigger = 0
-        # TODO: check other stuff that has to be reset.
+        self._time_to_trigger = settle_time + sum(more_steps[1::2])
+
+    def set_measurements(self, quantities):
+        """Set measured_quantities property."""
+        if quantities:
+            base.emit_error(self, ControllerErrors.CANNOT_MEASURE)
 
     @abstractmethod
     @qtc.pyqtSlot()
@@ -718,44 +810,28 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         base.safe_connect(serial_busy, self.set_busy, type=_UNIQUE)
         self.__force_stop_timer.start()
 
-    @qtc.pyqtSlot(tuple)
-    def __on_init_errors(self, err):
-        """Collect initialization errors to report later."""
-        self.__init_errors.append(err)
+    def true_energy_to_setpoint(self, energy):
+        """Take requested energy and convert it to the energy to set.
 
-    @qtc.pyqtSlot()
-    def __report_init_errors(self):
-        """Emit error_occurred for each initialization error."""
-        for error in self.__init_errors:
-            self.error_occurred.emit(error)
-        self.__init_errors = []
+        The conversion is done by reading a polynomial from
+        the configuration files which is a function of the true
+        energy and yields the energy to set. This polynomial is
+        determined in the energy calibration and written to the
+        config. This function should always be called when
+        setting an energy.
 
-    def set_measurements(self, quantities):
-        """Set measured_quantities property."""
-        if quantities:
-            base.emit_error(self, ControllerErrors.CANNOT_MEASURE)
+        Parameters
+        ----------
+        energy : float
+            Requested energy in eV.
 
-    @abstractmethod
-    def list_devices(self):
-        """List all devices of this class."""
-        return
-
-    @qtc.pyqtSlot()
-    def connect_(self):
-        """Connect serial port."""
-        # TODO: should we complain if .__port_name is False-y?
-        if not self.serial or self.serial.is_open:
-            # Invalid or already connected
-            return
-        self.serial.connect_()
-
-    @qtc.pyqtSlot()
-    def disconnect_(self):
-        """Disconnect serial port."""
-        try:
-            self.serial.disconnect_()
-        except (TypeError, AttributeError):
-            pass
+        Returns
+        -------
+        new_energy : float
+            Energy to set in eV in order to get requested energy.
+        """
+        to_setpoint = self.energy_calibration_curve
+        return to_setpoint(energy)
 
     @qtc.pyqtSlot(bool)
     def __do_preparation_step(self, serial_busy=False):
@@ -812,92 +888,16 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         self.busy = False
 
     @qtc.pyqtSlot(tuple)
-    def begin_preparation(self, energies_and_times):
-        """Trigger the first step in the preparation for measurements.
-
-        Set self.busy to True, reset all begin_prepare_todos and start
-        first step of the preparation. The .controller_busy() signal
-        will be emitted carrying False once all steps are complete.
-
-        Parameters
-        ----------
-        energies_and_times : tuple
-            Starting sequence of energies and times the controller
-            will use to set the energy during preparation. These
-            quantities are used only if self.sets_energy is True.
-
-        Returns
-        -------
-        None.
-        """
-        self.reset_preparation_todos()
-        self.first_energies_and_times = energies_and_times
-
-        # Clear any unsent messages. Any message that comes during
-        # preparation will not be sent till the end of the whole
-        # preparation. This excludes a call to .stop(), which is
-        # always done as soon as possible.
-        self.__unsent_messages = []
-        self.__can_continue_preparation = False
-
-        self.busy = True
-        base.safe_disconnect(self.serial.serial_busy,
-                             self.send_unsent_messages)
-        base.safe_connect(self.serial.serial_busy, self.__do_preparation_step,
-                          type=_UNIQUE)
-        self.__do_preparation_step()
+    def __on_init_errors(self, err):
+        """Collect initialization errors to report later."""
+        self.__init_errors.append(err)
 
     @qtc.pyqtSlot()
-    def continue_preparation(self):
-        """Trigger the second step in the preparation for measurements.
-
-        Set self.busy to true, reset all continue_prepare_todos
-        and start second step of the preparation.
-
-        Returns
-        -------
-        None.
-        """
-        self.__can_continue_preparation = True
-
-        self.busy = True
-        base.safe_disconnect(self.serial.serial_busy,
-                             self.send_unsent_messages)
-        base.safe_connect(self.serial.serial_busy, self.__do_preparation_step,
-                          type=_UNIQUE)
-        self.__do_preparation_step()
-
-    def reset_preparation_todos(self):
-        """Reset all the segments of preparation.
-
-        Segments are in the form [key: bool}. Those segments for
-        which the value is True will be done one at a time, in
-        the order in which keys are inserted. Segments are stored
-        in self.begin_prepare_todos and self.continue_prepare_todos.
-
-        This method can be reimplemented in subclasses if some segments
-        are to be skipped (e.g., depending on the firmware version of
-        the hardware).
-
-        The base-class implementation sets all segments to True.
-
-        Returns
-        -------
-        None.
-        """
-        for key in self.begin_prepare_todos:
-            self.begin_prepare_todos[key] = True
-        for key in self.continue_prepare_todos:
-            self.continue_prepare_todos[key] = True
-
-    def moveToThread(self, thread):
-        """Move self and its serial port to a new thread."""
-        try:
-            self.serial.moveToThread(thread)
-        except AttributeError:
-            # Probably some error occurred during __init__
-            pass
-        super().moveToThread(thread)
+    def __report_init_errors(self):
+        """Emit error_occurred for each initialization error."""
+        for error in self.__init_errors:
+            self.error_occurred.emit(error)
+        self.__init_errors = []
 
 
 class MeasureControllerABC(ControllerABC):
@@ -999,6 +999,95 @@ class MeasureControllerABC(ControllerABC):
         """
         return 0.0
 
+    @property
+    def nr_averaged_measurements(self):
+        """Return the number of measurements to average over.
+
+        The average is usually performed at the hardware level.
+
+        Returns
+        -------
+        nr_averaged_measurements : int
+            The number of individual measurements that are
+            averaged before a .data_ready signal is emitted
+        """
+        try:
+            nr_average = self.settings.getint('measurement_settings',
+                                              'num_meas_to_average')
+        except (TypeError, ValueError):
+            nr_average = 1
+            base.emit_error(
+                self, ControllerErrors.INVALID_SETTING_WITH_FALLBACK,
+                '', 'measurement_settings/num_meas_to_average', nr_average
+                )
+        if nr_average <= 0:
+            base.emit_error(
+                self, ControllerErrors.INVALID_SETTING_WITH_FALLBACK,
+                nr_average, 'measurement_settings/num_meas_to_average', 1
+                )
+            nr_average = 1
+        return nr_average
+
+    @property
+    @abstractmethod
+    def time_to_first_measurement(self):
+        """Return the interval between trigger and 1st measurement (msec).
+
+        Notice that this duffers from self.initial_delay. This is
+        the total amount of time the controller requires to return
+        its measurement. self.initial_delay is instead the time
+        the measurement was acquired (relative to triggering). The
+        two will coincide only when no averaging is performed by
+        the controller.
+
+        A typical implementation:
+        >>> n_ave = self.nr_averaged_measurements
+        >>> return (self.initial_delay
+                    + (n_ave - 1)/2 * self.measurement_interval)
+
+        Needs to be reimplemented in subclasses.
+
+        Returns
+        -------
+        time_to_first_measurement : float
+            Time interval in milliseconds needed to return a
+            measurement after triggering.
+        """
+        return 0.0
+
+    def measurements_done(self):
+        """Emit measurements and change busy mode.
+
+        The busy attribute will let the measurement class know if
+        it can continue with the next step in the measurement cycle.
+        Once all of the controllers and cameras are not busy anymore,
+        the signal for the next step will be sent.
+
+        Emits
+        -----
+        data_ready
+            A signal containing the collected data, which
+            triggers a check if all controllers and cameras
+            are already done.
+
+        Returns
+        -------
+        None.
+        """
+        self.busy = False
+        self.measurements[QuantityInfo.TIMESTAMPS].append(
+            self.serial.time_stamp + self.time_to_trigger / 1000
+            )
+        self.data_ready.emit(deepcopy(self.measurements))
+        for key in self.measurements:
+            self.measurements[key] = []
+
+    def measures(self, quantity=None):
+        """Return whether this controller measures quantity."""
+        if quantity is None:
+            return bool(self.measured_quantities)
+        return quantity in self.measured_quantities
+
     @abstractmethod
     @qtc.pyqtSlot()
     def measure_now(self):
@@ -1018,12 +1107,6 @@ class MeasureControllerABC(ControllerABC):
         None.
         """
         self._time_to_trigger = 0
-
-    def measures(self, quantity=None):
-        """Return whether this controller measures quantity."""
-        if quantity is None:
-            return bool(self.measured_quantities)
-        return quantity in self.measured_quantities
 
     @abstractmethod
     @qtc.pyqtSlot(object)
@@ -1060,33 +1143,6 @@ class MeasureControllerABC(ControllerABC):
         None.
         """
         self.measurements_done()
-
-    def measurements_done(self):
-        """Emit measurements and change busy mode.
-
-        The busy attribute will let the measurement class know if
-        it can continue with the next step in the measurement cycle.
-        Once all of the controllers and cameras are not busy anymore,
-        the signal for the next step will be sent.
-
-        Emits
-        -----
-        data_ready
-            A signal containing the collected data, which
-            triggers a check if all controllers and cameras
-            are already done.
-
-        Returns
-        -------
-        None.
-        """
-        self.busy = False
-        self.measurements[QuantityInfo.TIMESTAMPS].append(
-            self.serial.time_stamp + self.time_to_trigger / 1000
-            )
-        self.data_ready.emit(deepcopy(self.measurements))
-        for key in self.measurements:
-            self.measurements[key] = []
 
     @abstractmethod
     def set_energy(self, energy, settle_time, *more_steps, trigger_meas=True):
@@ -1159,6 +1215,36 @@ class MeasureControllerABC(ControllerABC):
         self.__measured_quantities = tuple(QuantityInfo.from_label(q)
                                            for q in quantities)
 
+    @abstractmethod
+    @qtc.pyqtSlot(bool)
+    def set_continuous_mode(self, continuous=True):
+        """Set continuous mode.
+
+        Has to be reimplemented in subclasses. If continuous is
+        true the controller has to continue measuring and return
+        data without receiving further instructions. The serial_busy
+        has to be hooked up to the busy state of the controller.
+        Call super() to enable switching of busy state of controller
+        once the continuous mode has been set on the hardware
+        controller.
+
+        Parameters
+        ----------
+        continuous : bool, optional
+            Whether continuous mode should be on.
+            Used in subclass. Default is True.
+
+        Returns
+        -------
+        None.
+        """
+        try:
+            base.safe_connect(self.serial.serial_busy, self.set_busy,
+                              type=_UNIQUE)
+        except AttributeError:
+            # Probably arrived here due to an __init__ error
+            pass
+
     def set_settings(self, new_settings):
         """Set new settings for this controller.
 
@@ -1194,89 +1280,3 @@ class MeasureControllerABC(ControllerABC):
             # about_to_trigger signal.
             base.safe_connect(self.serial.about_to_trigger,
                               self.about_to_trigger, type=_UNIQUE)
-
-    @abstractmethod
-    @qtc.pyqtSlot(bool)
-    def set_continuous_mode(self, continuous=True):
-        """Set continuous mode.
-
-        Has to be reimplemented in subclasses. If continuous is
-        true the controller has to continue measuring and return
-        data without receiving further instructions. The serial_busy
-        has to be hooked up to the busy state of the controller.
-        Call super() to enable switching of busy state of controller
-        once the continuous mode has been set on the hardware
-        controller.
-
-        Parameters
-        ----------
-        continuous : bool, optional
-            Whether continuous mode should be on.
-            Used in subclass. Default is True.
-
-        Returns
-        -------
-        None.
-        """
-        try:
-            base.safe_connect(self.serial.serial_busy, self.set_busy,
-                              type=_UNIQUE)
-        except AttributeError:
-            # Probably arrived here due to an __init__ error
-            pass
-
-    @property
-    @abstractmethod
-    def time_to_first_measurement(self):
-        """Return the interval between trigger and 1st measurement (msec).
-
-        Notice that this duffers from self.initial_delay. This is
-        the total amount of time the controller requires to return
-        its measurement. self.initial_delay is instead the time
-        the measurement was acquired (relative to triggering). The
-        two will coincide only when no averaging is performed by
-        the controller.
-
-        A typical implementation:
-        >>> n_ave = self.nr_averaged_measurements
-        >>> return (self.initial_delay
-                    + (n_ave - 1)/2 * self.measurement_interval)
-
-        Needs to be reimplemented in subclasses.
-
-        Returns
-        -------
-        time_to_first_measurement : float
-            Time interval in milliseconds needed to return a
-            measurement after triggering.
-        """
-        return 0.0
-
-    @property
-    def nr_averaged_measurements(self):
-        """Return the number of measurements to average over.
-
-        The average is usually performed at the hardware level.
-
-        Returns
-        -------
-        nr_averaged_measurements : int
-            The number of individual measurements that are
-            averaged before a .data_ready signal is emitted
-        """
-        try:
-            nr_average = self.settings.getint('measurement_settings',
-                                              'num_meas_to_average')
-        except (TypeError, ValueError):
-            nr_average = 1
-            base.emit_error(
-                self, ControllerErrors.INVALID_SETTING_WITH_FALLBACK,
-                '', 'measurement_settings/num_meas_to_average', nr_average
-                )
-        if nr_average <= 0:
-            base.emit_error(
-                self, ControllerErrors.INVALID_SETTING_WITH_FALLBACK,
-                nr_average, 'measurement_settings/num_meas_to_average', 1
-                )
-            nr_average = 1
-        return nr_average
