@@ -8,7 +8,7 @@ Created: 2021-12-13
 Author: Michele Riva
 Author: Florian Doerr
 
-Defines the CheckComboBox class.
+Defines the CheckComboBox class: a QComboBox with checkable items
 """
 
 from PyQt5 import (QtCore as qtc,
