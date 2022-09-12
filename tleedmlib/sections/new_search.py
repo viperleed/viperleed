@@ -23,7 +23,7 @@ import viperleed.tleedmlib.files.iosearch as io
 import viperleed.tleedmlib.files.iorfactor as iorfactor
 import viperleed.tleedmlib as tl
 from viperleed.tleedmlib.files.displacements import readDISPLACEMENTS_block
-from viperleed.tleedmlib.files.delta_intensities import Transform, calc_delta_intensities
+from viperleed.tleedmlib.files.delta_intensities import *
 from viperleed.tleedmlib.wrapped.rfactor import r_factor_new as rf
 from viperleed.tleedmlib.wrapped.error_codes import error_codes, check_ierr
 from viperleed.tleedmlib.sections.rfactor import get_general_rfactor_params, perform_full_intpol_deriv, get_rfactor_energy_grid

@@ -434,7 +434,7 @@ def get_general_rfactor_params(rp, for_error):
 
 
 def perform_full_intpol_deriv(deg, n_derivs, out_grid, n_beams, grid, id_start, n_E_beams, intensities_in):
-    """Performs full (non-optimized i.e slower but more convenient) interpolation and derivative caculation on a beams array.
+    """Performs full (nonrfacsb.optimized i.e slower but more convenient) interpolation and derivative caculation on a beams array.
 
     Args:
         deg (int): interpolation degree
@@ -524,6 +524,7 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
     if rp.FORTRAN_COMP[0] == "":
         rp.getFortranComp()
     # compile
+    print("--> ", libname)
     ctasks = [
         (rp.FORTRAN_COMP[0] + " -o " + oname + " -c", fname, rp.FORTRAN_COMP[1])
         for (fname, oname) in [(libname, "rfacsb.o"), (srcname, "main.o")]
@@ -618,16 +619,14 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
                     pass
         if rfac == 0:
             logger.error(
-                "ROUT reports R-Factor as zero. This means "
+                "ROUT reports R-Factor as zero. This may mean "
                 "something went wrong in the reference "
                 "calculation or in the R-factor calculation."
             )
-            rp.setHaltingLevel(2)
-            f_name = "R_OUT_" + name + "_" + rp.timestamp
-        else:
-            f_name = "R_OUT_" + name + "_" + rp.timestamp + "_R={:.4f}".format(rfac)
-            rp.last_R = rfac
-            rp.stored_R[name] = (rfac, r_int, r_frac)
+            # rp.setHaltingLevel(2) # maybe this would be a good idea?
+        f_name = "R_OUT_" + name + "_" + rp.timestamp + "_R={:.4f}".format(rfac)
+        rp.last_R = rfac
+        rp.stored_R[name] = (rfac, r_int, r_frac)
         try:
             os.rename("ROUT", f_name)
         except OSError:
