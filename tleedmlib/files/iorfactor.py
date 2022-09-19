@@ -191,7 +191,7 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
     if abs(max(expEnergies) - rp.THEO_ENERGIES[1]) < abs(real_iv_shift[1]):
         maxen = (min(max(expEnergies), rp.THEO_ENERGIES[1])
                  + real_iv_shift[1]) + 0.01
-    step = min(0.5, expEnergies[1]-expEnergies[0],
+    step = min(expEnergies[1]-expEnergies[0],
                theoEnergies[1]-theoEnergies[0])
     if rp.IV_SHIFT_RANGE[2] > 0:
         vincr = rp.IV_SHIFT_RANGE[2]
