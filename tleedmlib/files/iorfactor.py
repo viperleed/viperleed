@@ -484,7 +484,7 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
             yexp = getYfunc(exp, v0i)
 
             plot_analysis(exp, figs, figsize, name, namePos, oritick, plotcolors, rPos, rfact, theo, xlims, yexp, ylims,
-                          ytheo)
+                          ytheo, v0i)
 
         for fig in figs:
             pdf.savefig(fig)
@@ -526,7 +526,7 @@ def prepare_analysis_plot(formatting, xyExp, xyTheo):
     return figs, figsize, namePos, oritick, plotcolors, rPos, xlims, ylims
 
 
-def plot_analysis(exp, figs, figsize, name, namePos, oritick, plotcolors, rPos, rfact, theo, xlims, yexp, ylims, ytheo):
+def plot_analysis(exp, figs, figsize, name, namePos, oritick, plotcolors, rPos, rfact, theo, xlims, yexp, ylims, ytheo, v0i):
     fig, axs = plt.subplots(3, figsize=figsize,
                             squeeze=True)
     fig.subplots_adjust(left=0.06, right=0.94,
@@ -535,6 +535,11 @@ def plot_analysis(exp, figs, figsize, name, namePos, oritick, plotcolors, rPos, 
     figs.append(fig)
     [ax.set_xlim(*xlims) for ax in axs]
     axs[0].set_ylim(*ylims)
+    if v0i is not None: # if is None, don't scale
+        # Y function plot limits:
+        # Y osciallates between +/- 1/(2*abs(v0i))
+        y_range_uni_direc = 1/(2*abs(v0i)) * 1.1 # 10% spacing on either side
+        axs[1].set_ylim(-1*y_range_uni_direc, y_range_uni_direc)
     [ax.get_yaxis().set_ticks([]) for ax in axs]
     [ax.tick_params(bottom=True,
                     top=True,
@@ -670,7 +675,7 @@ def writeRfactorPdf_new(n_beams, labels, rfactor_beams,
             y_theo[:, 1] = y_2[id_start[i] -1: id_start[i] + n_E_beams[i] -1, i]
 
             plot_analysis(exp, figs, figsize, labels[i], namePos, oritick, plotcolors, rPos, rfactor_beams[i],
-                          theo, xlims, y_exp, ylims, y_theo)
+                          theo, xlims, y_exp, ylims, y_theo, v0i)
 
         for fig in figs:
             pdf.savefig(fig)
