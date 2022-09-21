@@ -258,8 +258,12 @@ def runPhaseshiftGen_old(sl, rp,
     output += "'n' |dataflow: print_RhoPot? 'yes'/'no'\n"
     output += "'n' |dataflow: print_PSvsE? 'yes'/'no'\n"
     output += "'n' |dataflow: print_WaveFunction? 'yes'/'no'\n"
+    
+    # Energy step used for phaseshift calculation eeasisss.
+    # Does not need to match theory energy step as phaseshifts will be interpolated anyways.
+    ps_energy_step = max(1.0, round(float(rp.THEO_ENERGIES[2]), 0))
     output += ("0.0," + str(round(float(rp.THEO_ENERGIES[1]) + 20, 1)) # hardcoded lower boundary of 0
-               + ","+str(round(float(rp.THEO_ENERGIES[2]), 1))
+               + ","+str(ps_energy_step)
                + " |'phaseshift'/'dataflow' run: E1->E2,PS_Estep\n")
     output += "100.,100.,1  |'sigma' run: E1->E2,NumVals\n"
     output += "MT OPTIMIZATION (Nelder-Mead):\n"
@@ -331,7 +335,7 @@ def runPhaseshiftGen_old(sl, rp,
                         firstline = line[2:]  # ignore I2 at beginning
                 else:   # line should contain data
                     values = [float(s) for s in line.split()]   # put phaseshift floats into values
-                    if reade < 0 or values[0] == reade + rp.THEO_ENERGIES[2]: # this takes care of multi-line pshifts
+                    if reade < 0 or values[0] == reade + ps_energy_step: # this takes care of multi-line pshifts
                         # new energy value, start phaseshift value list
                         if reade >= 0:
                             ps_of_e[reade] = pslist
@@ -462,7 +466,7 @@ def runPhaseshiftGen(sl, rp, psgensource=os.path.join('tensorleed', 'eeasisss_ne
 
     # Energy grid paramenters
     E2 = round(float(rp.THEO_ENERGIES[1]) + 20, 2)  # add 20 eV to energy range
-    Estep = round(float(rp.THEO_ENERGIES[2]), 2)
+    Estep = round(float(rp.THEO_ENERGIES[2]), 2) # may need a lower limit of 1.0 like the old eeasisss version
 
     ###############################################
     #                 Start code                  #
