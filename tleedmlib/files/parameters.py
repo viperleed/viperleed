@@ -705,8 +705,8 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                     rpars.setHaltingLevel(1)
                     found = True
             if not found:
-                rpars.ELEMENT_MIX[plist[1]] = [el.capitalize()
-                                               for el in llist]
+                rpars.ELEMENT_MIX[plist[1].capitalize()] = [el.capitalize()
+                                                            for el in llist]
         elif param == 'ELEMENT_RENAME':
             ptl = [el.lower() for el in tl.leedbase.periodic_table]
             if llist[0].lower() not in ptl:
@@ -716,7 +716,8 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                     'ignored.'.format(plist[1], llist[0]))
                 rpars.setHaltingLevel(1)
             else:
-                rpars.ELEMENT_RENAME[plist[1]] = llist[0].capitalize()
+                rpars.ELEMENT_RENAME[plist[1].capitalize()] = (llist[0]
+                                                               .capitalize())
         elif param == 'FILAMENT_WF':
             if llist[0].lower() == 'w':
                 rpars.FILAMENT_WF = 4.5
