@@ -594,3 +594,19 @@ def available_cpu_count():
         pass
 
     return -1
+
+
+def make_unique_list(w_duplicates):
+    """Helper function to remove duplicates from list. Does same as creating a set but preservers order.
+
+    Args:
+        w_duplicates (iterable): list with duplicates
+
+    Returns:
+        list: list with duplictes removed
+    """
+    unique_list = []
+    for item in w_duplicates:
+        if item not in unique_list:
+            unique_list.append(item)
+    return unique_list

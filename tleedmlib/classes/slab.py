@@ -26,7 +26,8 @@ except ImportError:
     has_ase = False
 
 from viperleed.tleedmlib.base import (angle, rotation_matrix_order,
-                                      rotation_matrix, dist_from_line)
+                                      rotation_matrix, dist_from_line,
+                                      make_unique_list)
 from viperleed.tleedmlib.classes.atom import Atom
 import viperleed.tleedmlib as tl
 
@@ -92,7 +93,7 @@ class Slab:
     """
     Contains unit cell, element information and atom coordinates. Also has a
     variety of convenience functions for manipulating and updating the atoms.
-    Slabs can be created from an ase.Atoms object using the create_from kwarg.
+    Slabs can be created from an ase.Atoms object by passing an ase.Atoms object.
 
     Attributes
     ----------
@@ -209,7 +210,7 @@ class Slab:
         # initialize from ase_atoms
         self.ucell = np.transpose(ase_atoms.cell[:])
         elems = [v.capitalize() for v in ase_atoms.get_chemical_symbols()]
-        self.elements = sorted(list(set(elems)))
+        self.elements = make_unique_list(elems)
         self.n_per_elem = {k: elems.count(k) for k in self.elements}
         for i, (el, pos) in enumerate(zip(elems,
                                           ase_atoms.get_scaled_positions())):
