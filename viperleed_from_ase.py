@@ -220,15 +220,24 @@ def run_from_ase(
     # Update Slab
     slab.updateAtomNumbers()
     slab.updateElementCount()
+    
+    # Some Parameters may be necessary to set here rather than later
+    preset_params = {}
 
-    # Figure out surface sites
-    site_def = {}
-    surface_atoms = slab.getSurfaceAtoms(rp)
-    # surface species of each element
-    for element in slab.elements:
-        atn = [at.oriN for at in surface_atoms if at.el == element]
-        if atn:
-            site_def[element] = {"surf": atn}
+    # assign site definitions from PARAMETERS if available
+    if not rp.SITE_DEF:
+        # assign default surface sites but warn
+        warnings.warn("Parameter SITE_DEF not specified. "
+                      "Double check PARAMETERS and POSCAR to make sure all sites are recognized correctly.")
+        # figure out surface sites
+        site_def = {}
+        surface_atoms = slab.getSurfaceAtoms(rp)
+        # surface species of each element
+        for element in slab.elements:
+            atn = [at.oriN for at in surface_atoms if at.el == element]
+            if atn:
+                site_def[element] = {"surf": atn}
+        preset_params["SITE_DEF"] = site_def
 
     poscar_name = "POSCAR"
     if (exec_path / poscar_name).exists():
@@ -260,7 +269,7 @@ def run_from_ase(
     try:
         run_tleedm(
             slab=slab,
-            preset_params={"SITE_DEF": site_def},
+            preset_params=preset_params,
             source=os.path.dirname(viperleed.__file__),
         )
     except Exception as err:
