@@ -11,16 +11,16 @@ Author: Florian Doerr
 This module contains drivers for cameras produced by The Imaging Source.
 """
 
-import os
-from viperleed.guilib.measure.camera.drivers.imagingsource.tisgrabber import (
-    WindowsCamera, FrameReadyCallbackType, SinkFormat
-    )
-from viperleed.guilib.measure.camera.drivers.imagingsource.winerrors import (
-    ImagingSourceError
-    )
+import sys
 
-if 'nt' in os.name:
-    ISCamera = WindowsCamera
+if sys.platform.startswith('win'):
+    from viperleed.guilib.measure.camera.drivers.imagingsource.tisgrabber import (
+        WindowsCamera as ISCamera, FrameReadyCallbackType, SinkFormat
+        )
+    from viperleed.guilib.measure.camera.drivers.imagingsource.winerrors import (
+        ImagingSourceError
+        )
+# elif False:
 else:
-    raise EnvironmentError("Imaging Source cameras are unsupported on "
-                           "non-Windows platforms.")
+    raise EnvironmentError("Imaging Source cameras are currently "
+                           "unsupported on non-Windows platforms.")
