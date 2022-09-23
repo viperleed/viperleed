@@ -1,4 +1,4 @@
-"""Module datapoints of viperleed.guilib.measure
+"""Module datapoints of viperleed.guilib.measure.classes.
 
 ===============================================
       ViPErLEED Graphical User Interface
@@ -58,17 +58,33 @@ class QuantityInfo(enum.Enum):
 
     New measurement quantities have to be added here.
     """
-    # Info:   units,   scale, dtype, label, axis, common_label
-    IMAGES = ('Number', None, str, 'Images', None, None)
-    ENERGY = ('eV', 'lin', float, 'Energy', 'x', None)
-    HV = ('eV', 'lin', float, 'Measured_Energy', 'y', 'Voltage')
-    TIMES = ('s', 'lin', float, 'Times', 'x', None)
-    I0 = ('uA', 'lin', float, 'I0', 'y', 'Current')
-    ISAMPLE = ('uA', 'lin', float, 'I_Sample', 'y', 'Current')
-    TEMPERATURE = ('°C', 'lin', float, 'Temperature', 'y', 'Temperature')
-    AUX = ('mV', 'lin', float, 'Aux', 'y', 'Aux')
-    COLD_JUNCTION = ('°C', 'lin', float, 'Cold_Junction', 'y', 'Temperature')
-    TIMESTAMPS = ('s', None, str, 'Timestamp', None, None)
+    # Info:   units,   scale, dtype, label, axis, common_label, tooltip
+    IMAGES = ('Number', None, str, 'Images', None, None, "")
+    ENERGY = ('eV', 'lin', float, 'Energy', 'x', None,
+              "The nominal value of the primary electron energy")
+    HV = ('eV', 'lin', float, 'Measured_Energy', 'y', 'Voltage',
+          "<nobr>The actual value of the primary electron energy"
+          "</nobr> measured on the LEED optics at high voltage")
+    TIMES = ('s', 'lin', float, 'Times', 'x', None, "")
+    I0 = ('µA', 'lin', float, 'I0', 'y', 'Current',
+          "<nobr>The total electron current emitted by the "
+          "electron gun,</nobr> measured on the LEED optics")
+    ISAMPLE = ('µA', 'lin', float, 'I_Sample', 'y', 'Current',
+               "<nobr>The total electron current emitted by the electron "
+               "gun,</nobr> measured by biasing the sample to +33 V via the "
+               "'I_target' BNC connector. This is an alternative to "
+               "I<sub>0</sub> in case your LEED optics does not provide an "
+               "I<sub>0</sub> output. LEED-IV videos should not be acquired "
+               "at the same time to avoid electric-field-induced distortions")
+    TEMPERATURE = ('°C', 'lin', float, 'Temperature', 'y', 'Temperature',
+                   "")
+    AUX = ('mV', 'lin', float, 'Aux', 'y', 'Aux', "")
+    COLD_JUNCTION = ('°C', 'lin', float, 'Cold_Junction', 'y', 'Temperature',
+                     "Reference temperature measured internally in the "
+                     "ViPErLEED unit to convert the measured thermocouple "
+                     "voltage to a temperature")
+    TIMESTAMPS = ('s', None, str, 'Timestamp', None, None, "")
+    UNKNOWN = ('', None, str, '??', None, None, "")
 
     @classmethod
     def from_label(cls, label):
@@ -157,6 +173,11 @@ class QuantityInfo(enum.Enum):
         return self.value[2]
 
     @property
+    def description(self):
+        """Return a descriptive text for this quantity."""
+        return self.value[6]
+
+    @property
     def label(self):
         """Return the unique label of self as a str (e.g., "Energy")."""
         return self.value[3]
@@ -175,7 +196,7 @@ class QuantityInfo(enum.Enum):
 # _EXCEPTIONAL contains quantities that are treated differently
 # while saving data. Either processed separately, or not saved
 _EXCEPTIONAL = (QuantityInfo.IMAGES, QuantityInfo.ENERGY,
-                QuantityInfo.TIMESTAMPS)
+                QuantityInfo.TIMESTAMPS, QuantityInfo.UNKNOWN)
 
 
 # too-many-instance-attributes
