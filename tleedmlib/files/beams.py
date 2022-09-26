@@ -603,7 +603,7 @@ def writeAUXBEAMS(ivbeams=None, beamlist=None, beamsfile='IVBEAMS',
 
 
 def writeAUXEXPBEAMS(beams, filename="AUXEXPBEAMS", header="Unknown system",
-                     write=True, numbers=False, version=0):
+                     write=True, numbers=False, version=0, output_format='12E14.5'):
     """Takes a list of Beam objects and writes them in the format required by
     TensErLEED for experimental beam data. Returns the whole output as a
     string. 'numbers' defines whether a sequence of beam numbers in line 2
@@ -618,9 +618,17 @@ def writeAUXEXPBEAMS(beams, filename="AUXEXPBEAMS", header="Unknown system",
         output += bformatter.write([n+1 for n in range(0, len(beams))]) + "\n"
         if len(beams) % 25 == 0:
             output += "\n"
-    output += " (12F6.2)\n"
-    f62x12 = ff.FortranRecordWriter('12F6.2')
-    i4 = ff.FortranRecordWriter('I4')
+    # Standard format used to be 12F6.2, but this may 
+    # have too little dynamic range for theory-theory comparisons.
+    # Instead we can use 12E14.5 which is the same as used everywhere else.
+    if output_format not in ("12F6.2", "12E14.5"):
+        logger.error(f"Incompatible format requested for AUXEXPEBAMS: {output_format}\n"
+                     f"Possible are '12F6.2' and '12E14.5'.")
+        raise RuntimeError
+    
+    output += f" ({output_format})\n"
+    decimal_writer = ff.FortranRecordWriter(output_format)
+    integer_writer = ff.FortranRecordWriter('I4')
     for beam in beams:
         # renormalize
         minintens = min(beam.intens.values())
