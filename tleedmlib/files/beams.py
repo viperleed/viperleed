@@ -627,15 +627,17 @@ def writeAUXEXPBEAMS(beams, filename="AUXEXPBEAMS", header="Unknown system",
         # Alex March 2022: This is quite important actually!!! Will mess up otherwise if negative values in EXPBEAMS
         offset = max(0, -minintens)  # if beams contain negative values, offset
         scaling = 999.99 / (max(beam.intens.values()) + offset)
+        # working dict to hold normalized beams
+        working_beam = {}
         for k in beam.intens:
-            beam.intens[k] = (beam.intens[k] + offset) * scaling
+            working_beam[k] = (beam.intens[k] + offset) * scaling
         # write
         output += "*"+beam.label.replace("|", " ") + "*\n"
-        ol = i4.write([len(beam.intens)]).ljust(8)
+        ol = integer_writer.write([len(working_beam)]).ljust(8)
         output += ol + '{:10.4E}\n'.format(scaling)
         # zip & flatten energies and values into one list
-        outlist = [val for tup in beam.intens.items() for val in tup]
-        output += f62x12.write(outlist)
+        outlist = [val for tup in working_beam.items() for val in tup]
+        output += decimal_writer.write(outlist)
         if output[-1] != "\n":
             output += "\n"
     if write:
