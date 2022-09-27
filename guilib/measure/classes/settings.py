@@ -83,7 +83,7 @@ class NotASequenceError(Exception):
 class ViPErLEEDSettings(ConfigParser):
     """Class for read/write and handling ViPErLEED settings.
 
-    The class rememebers the path to the last file read, which
+    The class remembers the path to the last file read, which
     can be updated by calling .update_file(), and remembers all
     the comments, which are rewritten to file right below each
     section header.
@@ -97,14 +97,14 @@ class ViPErLEEDSettings(ConfigParser):
     * strict : fixed to True
     * interpolate_paths : bool, optional
         New keyword-only argument used while reading. If True,
-        the parser will try to replace an intial "__CONFIG__"
+        the parser will try to replace an initial "__CONFIG__"
         in the path(s) to be read with the default path of the
         configuration files found in the system-wide settings.
         Defaults to True
     """
 
     def __init__(self, *args, **kwargs):
-        """Init instance with custom defaults."""
+        """Initialize instance with custom defaults."""
         # ConfigParser has 3 positional-or-keyword arguments. We
         # want to set the third (allow_no_value) always to True.
         args = args[:2]  # skip positional allow_no_value
@@ -310,7 +310,7 @@ class ViPErLEEDSettings(ConfigParser):
         """Read and parse a filename or an iterable of filenames.
 
         This extension of the ConfigParser implementation stores
-        the file name of the last succesfully read-in file.
+        the file name of the last successfully read-in file.
         Differently from the base implementation, it also complains
         if any of the files to be read was not.
 
@@ -359,6 +359,16 @@ class ViPErLEEDSettings(ConfigParser):
                 ', '.join(missing)
                 )
         return read_ok
+
+    def read_again(self):
+        """Read once more the last file, returning True if successful."""
+        if not self.last_file or not self.last_file.exists():
+            return False
+        try:
+            self.read(self.last_file)
+        except MissingSettingsFileError:
+            return False
+        return True
 
     def read_file(self, f, source=None):
         """Read from a file-like object."""
