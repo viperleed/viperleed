@@ -75,6 +75,12 @@ class ViPErLEEDHardwareError(base.ViPErLEEDErrorEnum):
         "hardware (v{arduino_version}) does not match the one on "
         "the PC (v{local_version}). May be incompatible."
         )
+    ADC_POWER_FAULT = (
+        17,
+        "Inconsistent hardware configuration from the unit: ADC#1 "
+        "has power, but ADC#0 was not detected. This likely indicates a "
+        "hardware fault on the board. Check that ADC#0 has power."
+        )
 
 
 class ViPErLEEDSerial(SerialABC):
@@ -714,8 +720,8 @@ class ViPErLEEDSerial(SerialABC):
                 'adc_1': False,
                 'lm35': False,
                 'relay': False,
-                'i0_range': '0 -- 10 V',
-                'aux_range': '0 -- 10 V',
+                'i0_range': '0 \u2013 10 V',
+                'aux_range': '0 \u2013 10 V',
                 'serial_nr': 'NO_SERIAL_NR',
                 'firmware': None}
 
@@ -725,15 +731,20 @@ class ViPErLEEDSerial(SerialABC):
             key = key.lower().replace('_present', '')
             if 'closed' in key:
                 if present_or_closed:
-                    present_or_closed = '0 -- 2.5 V'
+                    present_or_closed = '0 \u2013 2.5 V'
                 else:
-                    present_or_closed = '0 -- 10 V'
+                    present_or_closed = '0 \u2013 10 V'
                 key = 'i0_range' if 'i0' in key else 'aux_range'
             info[key] = present_or_closed
         if not (info['adc_0'] or info['adc_1']):
             base.emit_error(self,
                             ViPErLEEDHardwareError.ERROR_NO_HARDWARE_DETECTED)
-        info['serial_nr'] = ''.join([chr(v) for v in message[4:]])
+        if info['adc_1'] and not info['adc_0']:
+            # It cannot be that ADC1 is active while zero isn't.
+            # Probably a hardware fault.
+            base.emit_error(self,
+                            ViPErLEEDHardwareError.ADC_POWER_FAULT)
+        info['serial_nr'] = message[4:].decode('utf-8')
         info['firmware'] = firmware_version
         return info
 
