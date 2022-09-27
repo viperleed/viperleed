@@ -146,6 +146,10 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
 
         self.__port = qts.QSerialPort(port_name, parent=self)
 
+        self.__timeout = qtc.QTimer(parent=self)
+        self.__timeout.setSingleShot(True)
+        self.__timeout.timeout.connect(self.__on_serial_timeout)
+
         # .__serial_settings is set via the following call to
         # set_port_settings() for extra checks and preprocessing
         self.__serial_settings = ViPErLEEDSettings()
@@ -182,9 +186,6 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         # after a .send_message()
         self.__got_unacceptable_response = False
 
-        self.__timeout = qtc.QTimer(parent=self)
-        self.__timeout.setSingleShot(True)
-        self.__timeout.timeout.connect(self.__on_serial_timeout)
 
         self.__open = False
 
@@ -265,7 +266,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
     @property
     def port_name(self):
         """Return the name of the current port as a string."""
-        return self.__port.portName()
+        return self.port.portName()
 
     @port_name.setter
     def port_name(self, new_port_name):
@@ -290,11 +291,12 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         TypeError
             If new_port_name is neither 'str' nor 'QSerialPortInfo'
         """
-        self.__port.close()
+        if self.port:
+            self.disconnect_()
         if isinstance(new_port_name, str):
-            self.__port.setPortName(new_port_name)
+            self.port.setPortName(new_port_name)
         elif isinstance(new_port_name, qts.QSerialPortInfo):
-            self.__port.setPort(new_port_name)
+            self.port.setPort(new_port_name)
         else:
             raise TypeError(
                 f"{self.__class__.__name__}: Invalid port "
@@ -428,7 +430,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             return
 
         self.__serial_settings = new_settings
-        self.__port.close()
+        self.disconnect_()
 
     port_settings = property(__get_port_settings, set_port_settings)
 
@@ -438,8 +440,8 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         This method must be called in the reimplementation of
         identify_error after the error has been correctly identified.
         """
-        if self.__port.error() != qts.QSerialPort.NoError:
-            self.__port.clearError()
+        if self.port.error() != qts.QSerialPort.NoError:
+            self.port.clearError()
         self.__timeout.stop()
         self.__messages_since_error = []
         self.__got_unacceptable_response = False
@@ -793,7 +795,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
                 encoded[:0] = self.msg_markers['START']
             encoded.extend(self.msg_markers['END'])
             encoded_messages += encoded
-        self.__port.write(encoded_messages)
+        self.port.write(encoded_messages)
 
         if self.is_measure_command(sent_command):
             self.time_stamp = time.perf_counter()
@@ -804,7 +806,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         """Connect to currently selected port."""
         if self.is_open:
             return
-        if not self.__port.open(self.__port.ReadWrite):
+        if not self.port.open(self.port.ReadWrite):
             emit_error(self, ExtraSerialErrors.PORT_NOT_OPEN)
             self.__print_port_config()
             self.__open = False
@@ -813,22 +815,22 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         self.__open = True
         self.__set_up_serial_port()
 
-        self.__port.readyRead.connect(self.__on_bytes_ready_to_read)
-        self.__port.errorOccurred.connect(self.__on_serial_error)
-        _ = self.__port.readAll()
+        self.port.readyRead.connect(self.__on_bytes_ready_to_read)
+        self.port.errorOccurred.connect(self.__on_serial_error)
+        _ = self.port.readAll()
 
     def disconnect_(self, *__args):
         """Disconnect from connected serial port."""
         self.clear_errors()
-        self.__port.close()
+        self.port.close()
         self.__open = False
         try:
-            self.__port.readyRead.disconnect(self.__on_bytes_ready_to_read)
+            self.port.readyRead.disconnect(self.__on_bytes_ready_to_read)
         except TypeError:
             # port is already disconnected
             pass
         else:
-            self.__port.errorOccurred.disconnect(self.__on_serial_error)
+            self.port.errorOccurred.disconnect(self.__on_serial_error)
 
     def __check_and_preprocess_message(self, message):
         """Check integrity of message.
@@ -887,7 +889,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             self.__timeout.stop()
             return
 
-        msg = bytes(self.__port.readAll())
+        msg = bytes(self.port.readAll())
         if self.msg_markers['END'] not in msg:
             # Only a fraction of a message has been read.
             self.__last_partial_message.extend(msg)
@@ -979,69 +981,69 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
     def __set_up_serial_port(self):
         """Load settings to serial port."""
         settings = self.port_settings
-        self.__port.setBaudRate(
+        self.port.setBaudRate(
             int(settings.getfloat('serial_port_settings',
                                   'baud_rate',
-                                  fallback=self.__port.baudRate()))
+                                  fallback=self.port.baudRate()))
             )
-        self.__port.setBreakEnabled(
+        self.port.setBreakEnabled(
             settings.getboolean('serial_port_settings',
                                 'break_enabled',
-                                fallback=self.__port.isBreakEnabled())
+                                fallback=self.port.isBreakEnabled())
             )
-        self.__port.setDataBits(
+        self.port.setDataBits(
             settings.getint('serial_port_settings',
                             'data_bits',
-                            fallback=self.__port.dataBits())
+                            fallback=self.port.dataBits())
             )
-        self.__port.setDataTerminalReady(
+        self.port.setDataTerminalReady(
             settings.getboolean('serial_port_settings',
                                 'data_terminal_ready',
-                                fallback=self.__port.isDataTerminalReady())
+                                fallback=self.port.isDataTerminalReady())
             )
 
         try:
             setting = settings.get('serial_port_settings', 'flow_control')
         except (NoSectionError, NoOptionError):
-            flow_control = self.__port.flowControl()
+            flow_control = self.port.flowControl()
         else:
-            flow_control = getattr(self.__port, setting)
-        self.__port.setFlowControl(flow_control)
+            flow_control = getattr(self.port, setting)
+        self.port.setFlowControl(flow_control)
 
         try:
             setting = settings.get('serial_port_settings', 'parity')
         except (NoSectionError, NoOptionError):
-            parity = self.__port.parity()
+            parity = self.port.parity()
         else:
-            parity = getattr(self.__port, setting)
-        self.__port.setParity(parity)
+            parity = getattr(self.port, setting)
+        self.port.setParity(parity)
 
-        if flow_control is not self.__port.HardwareControl:
+        if flow_control is not self.port.HardwareControl:
             # Do the following only if not under HardwareControl,
             # otherwise the following causes UnsupportedOperationError
-            self.__port.setRequestToSend(
+            self.port.setRequestToSend(
                 settings.getboolean('serial_port_settings',
                                     'request_to_send',
-                                    fallback=self.__port.isRequestToSend())
+                                    fallback=self.port.isRequestToSend())
                 )
-        self.__port.setStopBits(
+        self.port.setStopBits(
             settings.getint('serial_port_settings',
                             'stop_bits',
-                            fallback=self.__port.stopBits())
+                            fallback=self.port.stopBits())
             )
 
     def __print_port_config(self):  # For debug
         """Print the configuration of an open port."""
         print(
-            f"### Serial port settings of {self.__port.portName()} ###",
-            f"baudRate: {self.__port.baudRate()}",
-            f"breakEnabled: {self.__port.isBreakEnabled()}",
-            f"dataBits: {self.__port.dataBits()}",
-            f"dataTerminalReady: {self.__port.isDataTerminalReady()}",
-            f"flowControl: {self.__port.flowControl()}",
-            f"parity: {self.__port.parity()}",
-            f"requestToSend: {self.__port.isRequestToSend()}",
-            f"stopBits: {self.__port.stopBits()}",
+            f"### Serial port settings of {self.port.portName()} ###",
+            f"baudRate: {self.port.baudRate()}",
+            f"breakEnabled: {self.port.isBreakEnabled()}",
+            f"dataBits: {self.port.dataBits()}",
+            f"dataTerminalReady: {self.port.isDataTerminalReady()}",
+            f"flowControl: {self.port.flowControl()}",
+            f"parity: {self.port.parity()}",
+            f"requestToSend: {self.port.isRequestToSend()}",
+            f"stopBits: {self.port.stopBits()}",
             sep='\n', end='\n\n'
             )
 
