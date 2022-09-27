@@ -8,7 +8,7 @@ Created: 2021-10-12
 Author: Michele Riva
 Author: Florian Doerr
 
-Defines the Measure class.
+Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 """
 # FIXED? camera error should close viewer --> check that no frames can arrive
 #        and reopen the viewer. If this is the case, the .close() can be tied
@@ -161,8 +161,9 @@ class Measure(ViPErLEEDPluginBase):
         # are set to modal where appropriate (in __compose)
         self._dialogs = {
             'change_settings': SettingsEditor(),
-            'bad_px_finder': dialogs.BadPixelsFinderDialog(),
-            'camera_viewers' : [],
+            'bad_px_finder':
+                dialogs.badpxfinderdialog.BadPixelsFinderDialog(),
+            'camera_viewers': [],
             'error_box': qtw.QMessageBox(self),
             }
         self._glob = {
@@ -171,8 +172,8 @@ class Measure(ViPErLEEDPluginBase):
             # Keep track of the last config used for a measurement.
             # Useful if one wants to repeat a measurement.
             'last_cfg': ViPErLEEDSettings(),
-            'errors': [],        # Report a bunch at once
-            'n_retry_close': 0,  # Try at most 50 times, i.e., 2.5 sec
+            'errors': [],         # Report a bunch at once
+            'n_retry_close': 0,   # Try at most 50 times, i.e., 2.5 sec
             }
         self._timers = {
             'report_errors': qtc.QTimer(parent=self),
@@ -199,7 +200,7 @@ class Measure(ViPErLEEDPluginBase):
 
         self._timestamps = {'start': -1, 'prepared': -1, 'finished': -1}
 
-    def closeEvent(self, event):  # pylint: disable=invalid-name
+    def closeEvent(self, event):         # pylint: disable=invalid-name
         """Reimplement closeEvent to abort measurements as well."""
         if self.measurement and self.measurement.running:
             # TODO: Perhaps would be nicer to ask for confirmation
