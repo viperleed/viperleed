@@ -136,7 +136,7 @@ class MeasurementPlot(qtw.QWidget):
         self.__canvas.ax.clear()
         self._glob['plot_lines'] = defaultdict(dict)
 
-        if self.plotted_quantities:                
+        if self.plotted_quantities:
             if self.data_points.is_time_resolved:
                 self.__plot_all_time_resolved_data()
             else:

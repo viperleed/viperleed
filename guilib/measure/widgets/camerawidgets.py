@@ -1106,13 +1106,13 @@ class RegionOfInterest(qtw.QWidget):
         self.unsetCursor()
         super().leaveEvent(event)
 
-    # pylint: disable=invalid-name,no-self-use
+    # pylint: disable=invalid-name
     # Disable invalid-name no-self-use as the name
     # and signature must stay unaltered
     def mouseDoubleClickEvent(self, event):
         """Reimplement to prevent propagation to parent."""
         event.accept()
-    # pylint: enable=invalid-name,no-self-use
+    # pylint: enable=invalid-name
 
     def mouseMoveEvent(self, event):  # pylint: disable=invalid-name
         """Reimplement mouseMoveEvent to move rubber-band."""
@@ -1133,13 +1133,13 @@ class RegionOfInterest(qtw.QWidget):
         self.origin = self.pos()
         self.__drag_origin = event.globalPos()
 
-    # pylint: disable=invalid-name,no-self-use
+    # pylint: disable=invalid-name
     # Disable invalid-name no-self-use as the name
     # and signature must stay unaltered
     def mouseReleaseEvent(self, event):
         """Reimplement to prevent propagation to parent."""
         event.accept()
-    # pylint: enable=invalid-name,no-self-use
+    # pylint: enable=invalid-name
 
     def resizeEvent(self, event):  # pylint: disable=invalid-name
         """Reimplement to resize the rubber-band."""

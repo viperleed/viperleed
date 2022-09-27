@@ -4,7 +4,7 @@
       ViPErLEED Graphical User Interface
 ===============================================
 
-Created: 2023-09-07
+Created: 2022-09-07
 Author: Michele Riva
 
 Defines the PathSelector class: a QWidget for picking the
@@ -240,7 +240,7 @@ class PathSelector(qtw.QWidget):
 
     def __on_path_edit_finished(self):
         """Check that the new path typed makes sense."""
-        _line = self.__lineedit 
+        _line = self.__lineedit
         _elided = self.__glob['elided_path']
         self.path = Path(_line.text().replace(_ELLIPSIS, _elided))
 
