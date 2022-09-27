@@ -851,6 +851,7 @@ class SettingsDialog(qtw.QDialog):
             # i.e., not a show after minimized
             self.settings.read_again()
             self.handler.update_widgets()
+            self.__ctrls['advanced'].setChecked(False)
             if self.handled_object:
                 self.update_title()
             # Update all settings with the current ones
