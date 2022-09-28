@@ -121,7 +121,7 @@ class ViPErinoController(MeasureControllerABC):
         self.continue_prepare_todos['start_autogain'] = True
 
         self.hardware = {}
-        
+
         # One lock per instance to make the access to self.hardware
         # safe: when reading/writing instance.hardware, one can
         # .acquire() instance.lock (or use a context manager).
@@ -218,6 +218,27 @@ class ViPErinoController(MeasureControllerABC):
         """Return the interval between trigger and 1st measurement (msec)."""
         return (self.nr_averaged_measurements + 2) * self.measurement_interval
 
+    def abort_and_reset(self):
+        """Abort current task and reset the controller.
+
+        Abort what the controller is doing right now, reset
+        it and return to waiting for further instructions.
+
+        Returns
+        -------
+        None.
+        """
+        super().abort_and_reset()
+        pc_reset = self.settings.get('available_commands', 'PC_RESET')
+        self.send_message(pc_reset)
+
+        self.reset_preparation_todos()
+        self.__adc_measurement_types = []
+        self.__adc_channels = []
+        self.hardware = {}
+        self.measurements = {}
+        self.first_energies_and_times = []
+
     def are_settings_ok(self, settings):
         """Return whether a ViPErLEEDSettings is compatible with self."""
         invalid = settings.has_settings(("controller", "firmware_version"))
@@ -252,6 +273,188 @@ class ViPErinoController(MeasureControllerABC):
                                     *mandatory_commands]
 
         return super().are_settings_ok(settings)
+
+    def calibrate_adcs(self):
+        """Calibrate ADCs.
+
+        Set update rate, select channels for calibration and
+        calibrate them. This function has to be run at least once
+        after starting the micro controller. It will store all of
+        the necessary calibration data on the micro controller
+        itself. It is only done for the channels selected. If the
+        controller is trying to measure channels that have not been
+        calibrated yet an error will occur.
+
+        Returns
+        -------
+        None.
+        """
+        cmd = self.settings.get('available_commands', 'PC_CALIBRATION')
+        try:
+            update_rate = self.settings.getint('measurement_settings',
+                                               'adc_update_rate', fallback=4)
+        except (TypeError, ValueError):
+            # Cannot convert to int
+            base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
+                            'measurement_settings/adc_update_rate', '')
+            return
+        with self.lock:
+            hardware = self.hardware.copy()
+        if not hardware:
+            base.emit_error(self, ViPErinoErrors.HARDWARE_INFO_MISSING,
+                'calibrate the ADCs'
+                )
+            return
+        lm35_idx = list(hardware.keys()).index('lm35')
+        message = [update_rate, *self.__adc_channels[:lm35_idx]]
+        self.send_message(cmd, message)
+
+    @qtc.pyqtSlot()
+    def get_hardware(self):
+        """Get hardware connected to micro controller.
+
+        This function determines the hardware controlled by
+        the micro controller. It has to be run at least once
+        after starting the controller up. It will tell both
+        the micro controller and this controller class which
+        hardware is present in the setup. Trying to do
+        anything but getting the hardware or resetting the
+        controller before executing this function will result
+        in an error.
+
+        Upon receiving this command the micro controller will
+        first return the firmware version and then the hardware
+        configuration. The conversion is already handled in the
+        viperleed serial.
+
+        Returns
+        -------
+        None.
+        """
+        cmd = self.settings.get('available_commands', 'PC_CONFIGURATION')
+        self.send_message(cmd)
+
+    def list_devices(self):
+        """List Arduino Micro VipErLEED hardware -- can be slow."""
+        ports = qts.QSerialPortInfo().availablePorts()
+        device_list = []
+        threads = []
+        controllers = []
+        for port in ports:
+            ctrl = ViPErinoController(port_name=port.portName())
+            if not ctrl.serial:
+                print("Something is wrong with the ViPErino default settings")
+                return []
+            if not ctrl.serial.is_open:
+                # Port is already in use
+                continue
+            threads.append(qtc.QThread())
+            ctrl.moveToThread(threads[-1])
+            controllers.append(ctrl)
+        for thread in threads:
+            thread.start(priority=thread.TimeCriticalPriority)
+        for ctrl in controllers:
+            _INVOKE(ctrl, 'get_hardware', qtc.Qt.QueuedConnection)
+        if controllers:
+            # Notice: The next line is quite critical. Using a simple
+            # time.sleep() with the same duration DOES NOT WORK, i.e.,
+            # there's no information in the controller.hardware dict.
+            # However, this line seems to ALWAYS TIME OUT (emitting a
+            # serial timeout error), even if there were bytes read and
+            # correctly interpreted.
+            controllers[0].serial.port.waitForReadyRead(100)
+        for ctrl in controllers:
+            with ctrl.lock:
+                hardware = ctrl.hardware.copy()
+            serial_nr = hardware.get('serial_nr', None)
+            _INVOKE(ctrl, 'disconnect_', qtc.Qt.BlockingQueuedConnection)
+            if serial_nr:
+                device_list.append(f"{ctrl.name} ({ctrl.port_name})")
+            else:
+                print("Not a ViPErLEED controller at", ctrl.port_name,
+                      hardware, flush=True)
+        for thread in threads:
+            thread.quit()
+        for thread in threads:
+            # wait max 100 ms for each thread to quit, then force
+            if not thread.wait(100):
+                thread.terminate()
+                thread.wait()
+        return device_list
+
+    @qtc.pyqtSlot()
+    def measure_now(self):
+        """Take a measurement.
+
+        Measure without setting the energy. This function is
+        supposed to be used in time resolved measurements and
+        by secondary controllers which will not set the energy.
+
+        Returns
+        -------
+        None.
+        """
+        super().measure_now()
+        cmd = self.settings.get('available_commands', 'PC_MEASURE_ONLY')
+        self.send_message(cmd)
+
+    @qtc.pyqtSlot(object)
+    def on_data_ready(self, data):
+        """Receive and store data from the serial."""
+        # We may receive two types of data: hardware&firmware
+        # information (a dictionary) and actual measurements
+        if isinstance(data, dict):
+            # Got hardware info
+            with self.lock:
+                self.hardware = data
+            # Now that we have info, we can check if the quantities
+            # that we should measure can be measured (ADC present)
+            self.__check_measurements_possible()
+            self.hardware_info_arrived.emit()
+            return
+
+        # Otherwise it is a list of data: [ADC0, ADC1, LM35]
+        # The order is the same as stored in the config file under
+        # controller/measurement_devices. The ADC channels chosen
+        # via set_measurements() determine which value was measured
+        for value, quantity in zip(data, self.__adc_measurement_types):
+            if quantity is None:
+                # Was not requested (but measured nonetheless)
+                continue
+            if quantity is QuantityInfo.I0:
+                value = self.__convert_i0_value(value)
+            self.measurements[quantity] = [value]
+
+        # See if we should convert the thermocouple voltages
+        if self.measures(QuantityInfo.TEMPERATURE):
+            self.__convert_thermocouple_voltages()
+        self.measurements_done()
+
+    @qtc.pyqtSlot(bool)
+    def set_continuous_mode(self, continuous=True):
+        """Set continuous mode.
+
+        If continuous is true the controller will continue
+        returning measurements without further instructions.
+
+        Parameters
+        ----------
+        continuous : bool, optional
+            Whether continuous mode should be on.
+            Default is True
+
+        Returns
+        -------
+        None.
+        """
+        super().set_continuous_mode(continuous)
+        cmd = self.settings.get('available_commands', 'PC_CHANGE_MEAS_MODE',
+                                fallback=None)
+        if cmd is None:
+            # Probably entered this after an __init__ error
+            return
+        mode_on = int(bool(continuous))
+        self.send_message(cmd, [mode_on, 0])
 
     def set_energy(self, energy, settle_time, *more_steps, trigger_meas=True):
         """Set energy with associated settling time.
@@ -336,19 +539,88 @@ class ViPErinoController(MeasureControllerABC):
         timeout = max(timeout, 0) + sum(energies_and_times[1::2])
         self.send_message(cmd, energies_and_times, timeout=timeout)
 
-    def start_autogain(self):
-        """Determine starting gain.
+    def set_measurements(self, quantities):
+        """Decide what to measure.
 
-        Determine gain after setting the starting energy.
+        Receive requested measurement types from MeasurementABC
+        class, check if request is valid and set channels
+        accordingly.
+
+        Parameters
+        ----------
+        quantities : Sequence
+            All the quantities to be measured. Each should be
+            convertible to a QuantityInfo.
 
         Returns
         -------
         None.
         """
-        # TODO: Had issues in the beginning back then on omicron
-        # (Gain too high)
-        cmd = self.settings.get('available_commands', 'PC_AUTOGAIN')
-        self.send_message(cmd)
+        if not self.settings:
+            return
+        try:
+            measurement_devices = self.settings.getsequence(
+                'controller', 'measurement_devices'
+                )
+        except NotASequenceError:
+            base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
+                            'controller/measurement_devices', '')
+            return
+        n_devices = len(measurement_devices)
+        self.__adc_measurement_types = [None]*n_devices
+        self.__adc_channels = [0]*n_devices
+        if len(quantities) > n_devices:
+            base.emit_error(self, ViPErinoErrors.TOO_MANY_MEASUREMENT_TYPES,
+                            n_devices, len(quantities))
+            return
+        for quantity in quantities:
+            for i, measurement_device in enumerate(measurement_devices):
+                if quantity not in measurement_device:
+                    continue
+                if self.__adc_measurement_types[i] is not None:
+                    base.emit_error(
+                        self, ViPErinoErrors.OVERLAPPING_MEASUREMENTS,
+                        quantity, self.__adc_measurement_types[i].label
+                        )
+                    return
+
+                try:
+                    channel = self.settings.getint('controller', quantity,
+                                                   fallback=-1)
+                except (TypeError, ValueError):
+                    # pylint: disable=redefined-variable-type
+                    # Seems a pylint bug.
+                    # Cannot convert to int
+                    channel = -1
+                if channel < 0:
+                    base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
+                                    f'controller/{quantity}', '')
+                    return
+
+                self.__adc_channels[i] = channel
+                self.__adc_measurement_types[i] = (
+                    QuantityInfo.from_label(quantity)
+                    )
+                break
+            else:
+                base.emit_error(self, ViPErinoErrors.INVALID_REQUEST, quantity)
+                return
+
+        # Now see if we should also measure the cold-junction
+        # temperature (if possible). Notice: this adds one extra
+        # quantity (which may be saved, and plot-able) that the user
+        # did not ask for. Make sure we don't raise errors if this
+        # quantity cannot be measured (using __added_cold_junction)
+        self.__added_cold_junction = False
+        measurements = self.__adc_measurement_types
+        if (QuantityInfo.TEMPERATURE in measurements
+            and QuantityInfo.COLD_JUNCTION not in measurements
+                and measurements[-1] is not None):
+            quantities = (*quantities, QuantityInfo.COLD_JUNCTION)
+            self.__added_cold_junction = True
+
+        super().set_measurements(quantities)
+        self.__check_measurements_possible()
 
     def set_up_adcs(self):
         """Set up ADCs.
@@ -386,96 +658,41 @@ class ViPErinoController(MeasureControllerABC):
         message = [num_meas_to_average, *self.__adc_channels[:lm35_idx]]
         self.send_message(cmd, message)
 
-    @qtc.pyqtSlot()
-    def get_hardware(self):
-        """Get hardware connected to micro controller.
+    def start_autogain(self):
+        """Determine starting gain.
 
-        This function determines the hardware controlled by
-        the micro controller. It has to be run at least once
-        after starting the controller up. It will tell both
-        the micro controller and this controller class which
-        hardware is present in the setup. Trying to do
-        anything but getting the hardware or resetting the
-        controller before executing this function will result
-        in an error.
-
-        Upon receiving this command the micro controller will
-        first return the firmware version and then the hardware
-        configuration. The conversion is already handled in the
-        viperleed serial.
+        Determine gain after setting the starting energy.
 
         Returns
         -------
         None.
         """
-        cmd = self.settings.get('available_commands', 'PC_CONFIGURATION')
+        # TODO: Had issues in the beginning back then on omicron
+        # (Gain too high)
+        cmd = self.settings.get('available_commands', 'PC_AUTOGAIN')
         self.send_message(cmd)
 
-    def calibrate_adcs(self):
-        """Calibrate ADCs.
+    @qtc.pyqtSlot()
+    def stop(self):
+        """Stop.
 
-        Set update rate, select channels for calibration and
-        calibrate them. This function has to be run at least once
-        after starting the micro controller. It will store all of
-        the necessary calibration data on the micro controller
-        itself. It is only done for the channels selected. If the
-        controller is trying to measure channels that have not been
-        calibrated yet an error will occur.
+        Stop whatever the controller is doing right now
+        and return to idle state.
 
         Returns
         -------
         None.
         """
-        cmd = self.settings.get('available_commands', 'PC_CALIBRATION')
+        if not self.settings:
+            return
         try:
-            update_rate = self.settings.getint('measurement_settings',
-                                               'adc_update_rate', fallback=4)
-        except (TypeError, ValueError):
-            # Cannot convert to int
-            base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
-                            'measurement_settings/adc_update_rate', '')
+            super().stop()
+        except AttributeError:
+            # super().stop accesses serial_busy, which may
+            # not exist if settings are somewhat funky.
             return
-        with self.lock:
-            hardware = self.hardware.copy()
-        if not hardware:
-            base.emit_error(self, ViPErinoErrors.HARDWARE_INFO_MISSING,
-                'calibrate the ADCs'
-                )
-            return
-        lm35_idx = list(hardware.keys()).index('lm35')
-        message = [update_rate, *self.__adc_channels[:lm35_idx]]
-        self.send_message(cmd, message)
-
-    @qtc.pyqtSlot(object)
-    def on_data_ready(self, data):
-        """Receive and store data from the serial."""
-        # We may receive two types of data: hardware&firmware
-        # information (a dictionary) and actual measurements
-        if isinstance(data, dict):
-            # Got hardware info
-            with self.lock:
-                self.hardware = data
-            # Now that we have info, we can check if the quantities
-            # that we should measure can be measured (ADC present)
-            self.__check_measurements_possible()
-            return
-
-        # Otherwise it is a list of data: [ADC0, ADC1, LM35]
-        # The order is the same as stored in the config file under
-        # controller/measurement_devices. The ADC channels chosen
-        # via set_measurements() determine which value was measured
-        for value, quantity in zip(data, self.__adc_measurement_types):
-            if quantity is None:
-                # Was not requested (but measured nonetheless)
-                continue
-            if quantity is QuantityInfo.I0:
-                value = self.__convert_i0_value(value)
-            self.measurements[quantity] = [value]
-
-        # See if we should convert the thermocouple voltages
-        if self.measures(QuantityInfo.TEMPERATURE):
-            self.__convert_thermocouple_voltages()
-        self.measurements_done()
+        stop = self.settings.get('available_commands', 'PC_STOP')
+        self.send_message(stop)
 
     def __check_measurements_possible(self):
         """Check that it is possible to measure stuff, given the hardware."""
@@ -535,7 +752,6 @@ class ViPErinoController(MeasureControllerABC):
                                 ViPErinoErrors.CANNOT_CONVERT_THERMOCOUPLE,
                                 f'\nInfo: {err}.')
                 return
-
         tc_voltages = self.measurements[QuantityInfo.TEMPERATURE]
         cjc_temperatures = self.measurements.get(QuantityInfo.COLD_JUNCTION,
                                                  [None]*len(tc_voltages))
@@ -543,219 +759,3 @@ class ViPErinoController(MeasureControllerABC):
             self.__thermocouple.temperature(v, t0)
             for v, t0 in zip(tc_voltages, cjc_temperatures)
             ]
-
-    @qtc.pyqtSlot()
-    def measure_now(self):
-        """Take a measurement.
-
-        Measure without setting the energy. This function is
-        supposed to be used in time resolved measurements and
-        by secondary controllers which will not set the energy.
-
-        Returns
-        -------
-        None.
-        """
-        super().measure_now()
-        cmd = self.settings.get('available_commands', 'PC_MEASURE_ONLY')
-        self.send_message(cmd)
-
-    def abort_and_reset(self):
-        """Abort current task and reset the controller.
-
-        Abort what the controller is doing right now, reset
-        it and return to waiting for further instructions.
-
-        Returns
-        -------
-        None.
-        """
-        super().abort_and_reset()
-        pc_reset = self.settings.get('available_commands', 'PC_RESET')
-        self.send_message(pc_reset)
-
-        self.reset_preparation_todos()
-        self.__adc_measurement_types = []
-        self.__adc_channels = []
-        self.hardware = {}
-        self.measurements = {}
-        self.first_energies_and_times = []
-
-    def set_measurements(self, quantities):
-        """Decide what to measure.
-
-        Receive requested measurement types from MeasurementABC
-        class, check if request is valid and set channels
-        accordingly.
-
-        Parameters
-        ----------
-        quantities : Sequence
-            All the quantities to be measured. Each should be
-            convertible to a QuantityInfo.
-
-        Returns
-        -------
-        None.
-        """
-        if not self.settings:
-            return
-        try:
-            measurement_devices = self.settings.getsequence(
-                'controller', 'measurement_devices'
-                )
-        except NotASequenceError:
-            base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
-                            'controller/measurement_devices', '')
-            return
-
-        n_devices = len(measurement_devices)
-        self.__adc_measurement_types = [None]*n_devices
-        self.__adc_channels = [0]*n_devices
-        if len(quantities) > n_devices:
-            base.emit_error(self, ViPErinoErrors.TOO_MANY_MEASUREMENT_TYPES,
-                            n_devices, len(quantities))
-            return
-        for quantity in quantities:
-            for i, measurement_device in enumerate(measurement_devices):
-                if quantity not in measurement_device:
-                    continue
-                if self.__adc_measurement_types[i] is not None:
-                    base.emit_error(
-                        self, ViPErinoErrors.OVERLAPPING_MEASUREMENTS,
-                        quantity, self.__adc_measurement_types[i].label
-                        )
-                    return
-
-                try:
-                    channel = self.settings.getint('controller', quantity,
-                                                   fallback=-1)
-                except (TypeError, ValueError):
-                    # pylint: disable=redefined-variable-type
-                    # Seems a pylint bug.
-                    # Cannot convert to int
-                    channel = -1
-                if channel < 0:
-                    base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
-                                    f'controller/{quantity}', '')
-                    return
-
-                self.__adc_channels[i] = channel
-                self.__adc_measurement_types[i] = (
-                    QuantityInfo.from_label(quantity)
-                    )
-                break
-            else:
-                base.emit_error(self, ViPErinoErrors.INVALID_REQUEST, quantity)
-                return
-
-        # Now see if we should also measure the cold-junction
-        # temperature (if possible). Notice: this adds one extra
-        # quantity (which may be saved, and plot-able) that the user
-        # did not ask for. Make sure we don't raise errors if this
-        # quantity cannot be measured (using __added_cold_junction)
-        self.__added_cold_junction = False
-        measurements = self.__adc_measurement_types
-        if (QuantityInfo.TEMPERATURE in measurements
-            and QuantityInfo.COLD_JUNCTION not in measurements
-                and measurements[-1] is not None):
-            quantities = (*quantities, QuantityInfo.COLD_JUNCTION)
-            self.__added_cold_junction = True
-
-        super().set_measurements(quantities)
-        self.__check_measurements_possible()
-
-    @qtc.pyqtSlot(bool)
-    def set_continuous_mode(self, continuous=True):
-        """Set continuous mode.
-
-        If continuous is true the controller will continue
-        returning measurements without further instructions.
-
-        Parameters
-        ----------
-        continuous : bool, optional
-            Whether continuous mode should be on.
-            Default is True
-
-        Returns
-        -------
-        None.
-        """
-        super().set_continuous_mode(continuous)
-        cmd = self.settings.get('available_commands', 'PC_CHANGE_MEAS_MODE',
-                                fallback=None)
-        if cmd is None:
-            # Probably entered this after an __init__ error
-            return
-        mode_on = int(bool(continuous))
-        self.send_message(cmd, [mode_on, 0])
-
-    @qtc.pyqtSlot()
-    def stop(self):
-        """Stop.
-
-        Stop whatever the controller is doing right now
-        and return to idle state.
-
-        Returns
-        -------
-        None.
-        """
-        if not self.settings:
-            return
-        try:
-            super().stop()
-        except AttributeError:
-            # super().stop accesses serial_busy, which may
-            # not exist if settings are somewhat funky.
-            return
-        stop = self.settings.get('available_commands', 'PC_STOP')
-        self.send_message(stop)
-
-    def list_devices(self):
-        """List Arduino Micro VipErLEED hardware -- can be slow."""
-        ports = qts.QSerialPortInfo().availablePorts()
-        device_list = []
-        threads = []
-        controllers = []
-        for port in ports:
-            ctrl = ViPErinoController(port_name=port.portName())
-            if not ctrl.serial:
-                print("Something is wrong with the ViPErino default settings")
-            if not ctrl.serial.is_open:
-                # Port is already in use
-                continue
-            threads.append(qtc.QThread())
-            ctrl.moveToThread(threads[-1])
-            controllers.append(ctrl)
-        for thread in threads:
-            thread.start(priority=thread.TimeCriticalPriority)
-        for ctrl in controllers:
-            _INVOKE(ctrl, 'get_hardware', qtc.Qt.QueuedConnection)
-        if controllers:
-            # Notice: The next line is quite critical. Using a simple
-            # time.sleep() with the same duration DOES NOT WORK, i.e.,
-            # there's no information in the controller.hardware dict.
-            # However, this line seems to ALWAYS TIME OUT (emitting a
-            # serial timeout error), even if there were bytes read and
-            # correctly interpreted.
-            controllers[0].serial.port.waitForReadyRead(100)
-        for ctrl in controllers:
-            with ctrl.lock:
-                hardware = ctrl.hardware.copy()
-            serial_nr = hardware.get('serial_nr', None)
-            _INVOKE(ctrl, 'disconnect_', qtc.Qt.BlockingQueuedConnection)
-            if serial_nr:
-                device_list.append(f"{ctrl.name} ({ctrl.port_name})")
-            else:
-                print("Not a ViPErLEED controller at", ctrl.port_name,
-                      hardware, flush=True)
-        for thread in threads:
-            thread.quit()
-        for thread in threads:
-            # wait max 100 ms for each thread to quit, then force
-            if not thread.wait(100):
-                thread.terminate()
-                thread.wait()
-        return device_list
