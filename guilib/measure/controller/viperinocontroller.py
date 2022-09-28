@@ -262,27 +262,6 @@ class ViPErinoController(MeasureControllerABC):
         """Return the interval between trigger and 1st measurement (msec)."""
         return (self.nr_averaged_measurements + 2) * self.measurement_interval
 
-    def abort_and_reset(self):
-        """Abort current task and reset the controller.
-
-        Abort what the controller is doing right now, reset
-        it and return to waiting for further instructions.
-
-        Returns
-        -------
-        None.
-        """
-        super().abort_and_reset()
-        pc_reset = self.settings.get('available_commands', 'PC_RESET')
-        self.send_message(pc_reset)
-
-        self.reset_preparation_todos()
-        self.__adc_measurement_types = []
-        self.__adc_channels = []
-        self.hardware = {}
-        self.measurements = {}
-        self.first_energies_and_times = []
-
     def are_settings_ok(self, settings):
         """Return whether a ViPErLEEDSettings is compatible with self."""
         invalid = settings.has_settings(("controller", "firmware_version"))

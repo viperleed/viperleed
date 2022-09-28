@@ -519,21 +519,6 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         self.__hash = -1
 
     @abstractmethod
-    def abort_and_reset(self):  # TODO: Confusing. Perhaps remove altogether?
-        """Abort current task and reset the controller.
-
-        This method must be extended in subclasses by calling
-        super(). Abort what the controller is doing right now,
-        reset it and return to waiting for further instructions.
-
-        Returns
-        -------
-        None.
-        """
-        self._time_to_trigger = 0
-        # TODO: check other stuff that has to be reset.
-
-    @abstractmethod
     def are_settings_ok(self, settings):
         """Return whether a ViPErLEEDSettings is compatible with self.
 
