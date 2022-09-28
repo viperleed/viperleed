@@ -194,7 +194,7 @@ class Measure(ViPErLEEDPluginBase):
             'bad_px_finder':
                 dialogs.badpxfinderdialog.BadPixelsFinderDialog(),
             'camera_viewers': [],
-            'error_box': _QMSG(self),                                 # TODO: can look at qtw.QErrorMessage for errors that can be dismissed
+            'error_box': _QMSG(self),                                           # TODO: can look at qtw.QErrorMessage for errors that can be dismissed
             'device_settings': {},     # keys: unique names; No cameras
             }
         self._glob = {
@@ -327,16 +327,15 @@ class Measure(ViPErLEEDPluginBase):
         cameras.setEnabled(bool(cameras.actions()))
         controllers.setEnabled(bool(controllers.actions()))
 
-    def __can_take_camera_from_viewer(self, cam_name, viewer, cfg_path):
+    def __can_take_camera_from_viewer(self, cam_name, viewer):
         """Return whether cam_name can be taken from viewer."""
         camera = viewer.camera
         if cam_name != camera.name:
             return False
         viewer.stop_on_close = True
         cfg = deepcopy(camera.settings)
-        if cfg_path:                                # TODO: TEMP: re-read config to apply changes. Will not be done when I have a settings editor.
-            cfg.read(cfg_path)
-        cfg['camera_settings']['mode'] = 'live'     # TODO: this and the next check will not be useful when we have an editor. Can simply check .mode == 'live'
+        cfg.read_again()                                                        # TODO: TEMP: re-read config to apply changes. Will not be done when I have a settings editor.
+        cfg['camera_settings']['mode'] = 'live'                                 # TODO: this and the next check will not be useful when we have an editor. Can simply check .mode == 'live'
         if cfg != camera.settings:
             if not camera.connected:
                 # There's no speed advantage over recreating the
@@ -476,60 +475,6 @@ class Measure(ViPErLEEDPluginBase):
                 CameraViewer(camera, stop_on_close=False, roi_visible=False)
                 )
 
-    def __on_camera_clicked(self, *_):                                          # TODO: may want to display a busy dialog with "starting camera <name>..."
-        cam_name = self.sender().text()
-        cam_cls = self.sender().data()
-
-        _cfg_dir = self.system_settings['PATHS']['configuration']
-        cfg_path = base.get_device_config(cam_name,
-                                          directory=_cfg_dir,
-                                          prompt_if_invalid=False)
-
-        # Decide whether we can take the camera object
-        # (and its settings) from the known camera viewers
-        viewers = self._dialogs['camera_viewers']
-        for viewer in viewers.copy():
-            if self.__can_take_camera_from_viewer(cam_name, viewer, cfg_path):
-                break
-        else:  # Not already available. Make a new camera.
-            if not cfg_path:
-                print("no config found", cfg_path)                              # TODO: error out here
-                return
-            cfg = ViPErLEEDSettings.from_settings(cfg_path)
-            cfg['camera_settings']['mode'] = 'live'
-            camera = cam_cls(settings=cfg)
-            camera.error_occurred.connect(self.__on_error_occurred)
-            viewer = CameraViewer(camera, stop_on_close=True,
-                                  roi_visible=False)
-            viewers.append(viewer)
-            camera.start()
-
-    def __on_controller_clicked(self, *_):
-        """Show settings of the controller selected."""
-        action = self.sender()
-        ctrl_name = action.text()
-        ctrl_cls = action.data()
-        ctrl_name, ctrl_port = (s.strip() for s in ctrl_name.split("("))
-        ctrl_port = ctrl_port.replace(")", "")
-
-        if ctrl_name not in self._dialogs['device_settings']:
-            self.__make_ctrl_settings_dialog(ctrl_cls, ctrl_name, ctrl_port)
-
-        _dialog = self._dialogs['device_settings'].get(ctrl_name, None)
-        if not _dialog:
-            # Something went wrong with creating the dialog
-            return
-
-        if _dialog.isVisible():                                                 # TODO: we should make sure (regularly?) somewhere that the controller is still where it is supposed to be (COM-wise)
-            move_to_front(_dialog)
-            return
-
-        ctrl = _dialog.handled_object
-        if ctrl_port != ctrl.port_name:
-            ctrl.port_name = ctrl_port
-            ctrl.settings.update_file()
-        ctrl.prepare_to_show_settings()
-
     def __make_ctrl_settings_dialog(self, ctrl_cls, name, port):
         """Make a new settings dialog for a controller."""
         # Find an appropriate settings file, searching in the default
@@ -573,8 +518,61 @@ class Measure(ViPErLEEDPluginBase):
         dialog = dialogs.SettingsDialog(ctrl, parent=self)                      # TODO: modal?
         ctrl.ready_to_show_settings.connect(dialog.show)
         dialog.finished.connect(ctrl.disconnect_)
-        # dialog.settings_changed.connect(????)                                 # TODO: save file on .settings_changed
         self._dialogs['device_settings'][name] = dialog
+
+    def __on_camera_clicked(self, *_):                                          # TODO: may want to display a busy dialog with "starting camera <name>..."
+        cam_name = self.sender().text()
+        cam_cls = self.sender().data()
+
+        _cfg_dir = self.system_settings['PATHS']['configuration']
+        cfg_path = base.get_device_config(cam_name,
+                                          directory=_cfg_dir,
+                                          prompt_if_invalid=False)
+
+        # Decide whether we can take the camera object
+        # (and its settings) from the known camera viewers
+        viewers = self._dialogs['camera_viewers']
+        for viewer in viewers.copy():
+            if self.__can_take_camera_from_viewer(cam_name, viewer):
+                break
+        else:  # Not already available. Make a new camera.
+            if not cfg_path:
+                print("no config found", cfg_path)                              # TODO: error out here
+                return
+            cfg = ViPErLEEDSettings.from_settings(cfg_path)
+            cfg['camera_settings']['mode'] = 'live'
+            camera = cam_cls(settings=cfg)
+            camera.error_occurred.connect(self.__on_error_occurred)
+            viewer = CameraViewer(camera, stop_on_close=True,
+                                  roi_visible=False)
+            viewers.append(viewer)
+            camera.start()
+
+    def __on_controller_clicked(self, *_):
+        """Show settings of the controller selected."""
+        action = self.sender()
+        ctrl_name = action.text()
+        ctrl_cls = action.data()
+        ctrl_name, ctrl_port = (s.strip() for s in ctrl_name.split("("))
+        ctrl_port = ctrl_port.replace(")", "")
+
+        if ctrl_name not in self._dialogs['device_settings']:
+            self.__make_ctrl_settings_dialog(ctrl_cls, ctrl_name, ctrl_port)
+
+        _dialog = self._dialogs['device_settings'].get(ctrl_name, None)
+        if not _dialog:
+            # Something went wrong with creating the dialog
+            return
+
+        if _dialog.isVisible():                                                 # TODO: we should make sure (regularly?) somewhere that the controller is still where it is supposed to be (COM-wise)
+            move_to_front(_dialog)
+            return
+
+        ctrl = _dialog.handled_object
+        if ctrl_port != ctrl.port_name:
+            ctrl.port_name = ctrl_port
+            ctrl.settings.update_file()
+        ctrl.prepare_to_show_settings()
 
     @qtc.pyqtSlot(dict)
     def __on_data_received(self, new_data):
