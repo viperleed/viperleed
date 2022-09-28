@@ -20,6 +20,7 @@ from copy import deepcopy
 
 from numpy.polynomial.polynomial import Polynomial
 from PyQt5 import QtCore as qtc
+from PyQt5 import QtWidgets as qtw
 
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.classes.datapoints import QuantityInfo
@@ -27,6 +28,7 @@ from viperleed.guilib.measure.classes.settings import (
     ViPErLEEDSettings, NoDefaultSettingsError,
     NoSettingsError, NotASequenceError,
     )
+from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
 
 
 _UNIQUE = qtc.Qt.UniqueConnection
@@ -659,6 +661,69 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         self.busy = False
 
     @abstractmethod
+    def get_settings_handler(self):                                             # TODO: ecal
+        """Return a SettingsHandler object for displaying settings.
+
+        This method should be extended in subclasses, i.e., do
+        handler = super().get_settings_handler(), and then add
+        appropriate sections and/or options to it using the
+        handler.add_section, and handler.add_option methods
+
+        The base-class implementation returns a handler that
+        already contains the following settings:
+        - the handler of self.serial                                            # TODO! Probably all settings are advanced, except, perhaps the port name
+
+        and, if self.sets_energy:
+        - 'measurement_settings'/'i0_settle_time'
+        - 'measurement_settings'/'hv_settle_time'
+        - 'measurement_settings'/'first_settle_time'
+        These options are normally set as 'advanced', and are not
+        normally visible. They should usually be made visible in
+        the dialog showing the settings of a measurement.
+
+        Returns
+        -------
+        handler : SettingsHandler
+            The handler used in a SettingsDialog to display the
+            settings of this controller to users.
+        """
+        handler = SettingsHandler(self.settings)
+        if not self.sets_energy:
+            return handler
+
+        handler.add_section('measurement_settings')
+        info = (
+            ('i0_settle_time', 'I<sub>0</sub> settle time',
+             "<nobr>The time interval required for the I<sub>0</sub> "
+             "current</nobr> to reach a stable value after a new energy "
+             "has been set. This should be calibrated for a typical step "
+             "size (e.g., 0.5 eV)."),
+            ('hv_settle_time', 'Energy settle time',
+             "<nobr>The time interval required for the true beam "
+             "energy</nobr> to reach a stable value after a new "
+             "energy has been set. This should be calibrated for "
+             "a typical step size (e.g., 0.5 eV)."),
+            ('first_settle_time', 'First-energy settle time',
+             "<nobr>The time interval required for the true beam energy</nobr>"
+             " to reach a stable value when the first energy of a ramp is set."
+             " This is usually significantly longer than the one used during"
+             " a ramp, as setting the first energy requires a large step.")
+            )
+        _widg = qtw.QDoubleSpinBox
+        for option_name, display_name, tip in info:
+            widget = _widg()
+            widget.setMaximum(float('inf'))
+            widget.setDecimals(0)
+            widget.setSuffix(' ms')
+            widget.setSingleStep(10)
+            handler.add_option(
+                'measurement_settings', option_name, handler_widget=widget,
+                display_name=display_name, tooltip=tip
+                )
+
+        return handler
+
+    @abstractmethod
     def list_devices(self):
         """List all devices of this class."""
         return
@@ -678,6 +743,27 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
             # Probably some error occurred during __init__
             pass
         super().moveToThread(thread)
+
+    @qtc.pyqtSlot()
+    def prepare_to_show_settings(self):
+        """Prepare the controller to present settings to the user.
+
+        This method can be used to initiate a set of tasks (e.g.,
+        requests to the hardware) that fill up runtime information
+        to be presented to the user.
+
+        The base-class implementation .disconnects_() and emits
+        .ready_to_show_settings. Reimplementations should make
+        sure ready_to_show_settings is emitted as soon as all
+        the information was collected. Also, make sure to call
+        self.disconnect_() once all communication is done.
+
+        Returns
+        -------
+        None.
+        """
+        self.disconnect_()
+        self.ready_to_show_settings.emit()
 
     def reset_preparation_todos(self):
         """Reset all the segments of preparation.
@@ -1056,6 +1142,47 @@ class MeasureControllerABC(ControllerABC):
             measurement after triggering.
         """
         return 0.0
+
+    @abstractmethod
+    def get_settings_handler(self):
+        """Return a SettingsHandler object for displaying settings.
+
+        This method should be extended in subclasses, i.e., do
+        handler = super().get_settings_handler(), and then add
+        appropriate sections and/or options to it using the
+        handler.add_section, and handler.add_option methods
+
+        The base-class implementation returns a handler that
+        already contains the following settings:
+        - the handler of self.serial                                            # TODO! Probably all settings are advanced, except, perhaps the port name
+
+        and, if self.sets_energy:
+        - 'measurement_settings'/'i0_settle_time'
+        - 'measurement_settings'/'hv_settle_time'
+        - 'measurement_settings'/'first_settle_time'
+        - 'measurement_settings'/'nr_samples'
+        These options are normally set as 'advanced', and are not
+        normally visible. They should usually be made visible in
+        the dialog showing the settings of a measurement.
+
+        Returns
+        -------
+        handler : SettingsHandler
+            The handler used in a SettingsDialog to display the
+            settings of this controller to users.
+        """
+        handler = super().get_settings_handler()
+        if not handler.has_section('measurement_settings'):
+            handler.add_section('measurement_settings')
+        widget = qtw.QDoubleSpinBox()
+        widget.setMaximum(float('inf'))
+        widget.setDecimals(0)
+        tip = ("<nobr>The number of measurements the controller should"
+               "</nobr> average over before returning a value to the PC")
+        handler.add_option('measurement_settings', 'nr_samples',
+                           handler_widget=widget, display_name='No. samples',
+                           tooltip=tip)
+        return handler
 
     def measurements_done(self):
         """Emit measurements and change busy mode.
