@@ -188,7 +188,8 @@ class ViPErinoController(MeasureControllerABC):
         name : str
             The name of this controller
         """
-        serial_nr = self.hardware.get('serial_nr', 'UNKNOWN_SERIAL_NR')
+        with self.lock:
+            serial_nr = self.hardware.get('serial_nr', 'UNKNOWN_SERIAL_NR')
         return f"ViPErLEED {serial_nr}"
 
     @property
@@ -201,7 +202,8 @@ class ViPErinoController(MeasureControllerABC):
             Firmware version of the device, if the information is
             available, otherwise the one in self.settings.
         """
-        version = self.hardware.get("firmware", None)
+        with self.lock:
+            version = self.hardware.get("firmware", None)
         if version is None:
             # Get it from the settings. Notice that the are_settings_ok
             # reimplementation already checks that the firmware version
@@ -315,11 +317,11 @@ class ViPErinoController(MeasureControllerABC):
                             "Expected an even number of arguments, found "
                             f"{len(more_steps) + 2} arguments.")
 
-        for i, energy in enumerate(energies_and_times[::2]):
-            energy = self.true_energy_to_setpoint(energy)
-            energy = int(round(energy * conversion_factor))
-            energy = max(0, min(energy, 65535))
-            energies_and_times[2*i] = energy
+        for i, egy in enumerate(energies_and_times[::2]):
+            egy = self.true_energy_to_setpoint(egy)
+            egy = int(round(egy * conversion_factor))
+            egy = max(0, min(egy, 65535))
+            energies_and_times[2*i] = egy
 
         # Since we may wait a potentially long time here, we
         # explicitly set the timeout keyword to be the timeout
@@ -373,12 +375,14 @@ class ViPErinoController(MeasureControllerABC):
                 self, ControllerErrors.INVALID_SETTING_WITH_FALLBACK,
                 '', 'measurement_settings/num_meas_to_average', 1
                 )
-        if not self.hardware:
+        with self.lock:
+            hardware = self.hardware.copy()
+        if not hardware:
             base.emit_error(self, ViPErinoErrors.HARDWARE_INFO_MISSING,
                 'set up the ADCs'
                 )
             return
-        lm35_idx = list(self.hardware.keys()).index('lm35')
+        lm35_idx = list(hardware.keys()).index('lm35')
         message = [num_meas_to_average, *self.__adc_channels[:lm35_idx]]
         self.send_message(cmd, message)
 
@@ -431,12 +435,14 @@ class ViPErinoController(MeasureControllerABC):
             base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
                             'measurement_settings/adc_update_rate', '')
             return
-        if not self.hardware:
+        with self.lock:
+            hardware = self.hardware.copy()
+        if not hardware:
             base.emit_error(self, ViPErinoErrors.HARDWARE_INFO_MISSING,
                 'calibrate the ADCs'
                 )
             return
-        lm35_idx = list(self.hardware.keys()).index('lm35')
+        lm35_idx = list(hardware.keys()).index('lm35')
         message = [update_rate, *self.__adc_channels[:lm35_idx]]
         self.send_message(cmd, message)
 
@@ -473,11 +479,12 @@ class ViPErinoController(MeasureControllerABC):
 
     def __check_measurements_possible(self):
         """Check that it is possible to measure stuff, given the hardware."""
-        if not self.hardware:
+        with self.lock:
+            hardware = self.hardware.copy()
+        if not hardware:
             return
 
-        for adc_present, qty in zip(self.hardware,
-                                    self.__adc_measurement_types):
+        for adc_present, qty in zip(hardware, self.__adc_measurement_types):
             if qty is None or adc_present:
                 # Did not ask for anything, or ADC can measure it
                 continue
@@ -733,13 +740,14 @@ class ViPErinoController(MeasureControllerABC):
             controllers[0].serial.port.waitForReadyRead(100)
         for ctrl in controllers:
             with ctrl.lock:
-                serial_nr = ctrl.hardware.get('serial_nr', None)
+                hardware = ctrl.hardware.copy()
+            serial_nr = hardware.get('serial_nr', None)
             _INVOKE(ctrl, 'disconnect_', qtc.Qt.BlockingQueuedConnection)
             if serial_nr:
                 device_list.append(f"{ctrl.name} ({ctrl.port_name})")
             else:
                 print("Not a ViPErLEED controller at", ctrl.port_name,
-                      ctrl.hardware, flush=True)
+                      hardware, flush=True)
         for thread in threads:
             thread.quit()
         for thread in threads:
