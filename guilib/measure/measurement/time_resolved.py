@@ -518,9 +518,7 @@ class TimeResolved(MeasurementABC):
         for ctrl in self.controllers:
             if not ctrl.measures():
                 continue
-            ctrl.settings.set(
-                'measurement_settings', 'num_meas_to_average', '1'
-                )
+            ctrl.settings.set('measurement_settings', 'nr_samples', '1')
             ctrl.continue_prepare_todos['set_continuous_mode'] = True
 
     def _prepare_finalization(self):

@@ -157,7 +157,7 @@ class ViPErinoController(MeasureControllerABC):
             are actually acquired" is the middle time between the
             beginning and the end of the measurement.
         """
-        n_intervals = (3 + (self.nr_averaged_measurements - 1) / 2)
+        n_intervals = (3 + (self.nr_samples - 1) / 2)
         return n_intervals * self.measurement_interval
 
     @property
@@ -260,7 +260,7 @@ class ViPErinoController(MeasureControllerABC):
     @property
     def time_to_first_measurement(self):
         """Return the interval between trigger and 1st measurement (msec)."""
-        return (self.nr_averaged_measurements + 2) * self.measurement_interval
+        return (self.nr_samples + 2) * self.measurement_interval
 
     def are_settings_ok(self, settings):
         """Return whether a ViPErLEEDSettings is compatible with self."""
@@ -658,18 +658,6 @@ class ViPErinoController(MeasureControllerABC):
         None.
         """
         cmd = self.settings.get('available_commands', 'PC_SET_UP_ADCS')
-        try:
-            num_meas_to_average = self.settings.getint(
-                'measurement_settings', 'num_meas_to_average', fallback=1
-                )
-        except (TypeError, ValueError):
-            # pylint: disable=redefined-variable-type
-            # Seems a pylint bug
-            num_meas_to_average = 1
-            base.emit_error(
-                self, ControllerErrors.INVALID_SETTING_WITH_FALLBACK,
-                '', 'measurement_settings/num_meas_to_average', 1
-                )
         with self.lock:
             hardware = self.hardware.copy()
         if not hardware:
@@ -678,7 +666,7 @@ class ViPErinoController(MeasureControllerABC):
                 )
             return
         lm35_idx = list(hardware.keys()).index('lm35')
-        message = [num_meas_to_average, *self.__adc_channels[:lm35_idx]]
+        message = [self.nr_samples, *self.__adc_channels[:lm35_idx]]
         self.send_message(cmd, message)
 
     def start_autogain(self):

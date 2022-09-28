@@ -563,6 +563,17 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         invalid = settings.has_settings(*self._mandatory_settings,
                                         *extra_mandatory)
 
+        # Backwards compatibility fix
+        new = ('measurement_settings', 'nr_samples')
+        old = ('measurement_settings', 'num_meas_to_average')
+        if '/'.join(new) in invalid:
+            _invalid = settings.has_settings(old)
+            if not _invalid:
+                settings.set(*new, settings.get(*old))
+                settings.remove_option(*old)
+                settings.update_file()
+                invalid.remove('/'.join(new))
+
         if invalid:
             base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
                             ', '.join(invalid), '')
@@ -896,7 +907,7 @@ class MeasureControllerABC(ControllerABC):
 
     _mandatory_settings = [
         *ControllerABC._mandatory_settings,
-        ('measurement_settings', 'num_meas_to_average'),
+        ('measurement_settings', 'nr_samples'),
         ]
 
     def __init__(self, parent=None, settings=None,
@@ -991,33 +1002,33 @@ class MeasureControllerABC(ControllerABC):
         return 0.0
 
     @property
-    def nr_averaged_measurements(self):
+    def nr_samples(self):
         """Return the number of measurements to average over.
 
         The average is usually performed at the hardware level.
 
         Returns
         -------
-        nr_averaged_measurements : int
+        nr_samples : int
             The number of individual measurements that are
             averaged before a .data_ready signal is emitted
         """
         try:
-            nr_average = self.settings.getint('measurement_settings',
-                                              'num_meas_to_average')
+            nr_samples = self.settings.getint('measurement_settings',
+                                              'nr_samples')
         except (TypeError, ValueError):
-            nr_average = 1
+            nr_samples = 1
             base.emit_error(
                 self, ControllerErrors.INVALID_SETTING_WITH_FALLBACK,
-                '', 'measurement_settings/num_meas_to_average', nr_average
+                '', 'measurement_settings/nr_samples', nr_samples
                 )
-        if nr_average <= 0:
+        if nr_samples <= 0:
             base.emit_error(
                 self, ControllerErrors.INVALID_SETTING_WITH_FALLBACK,
-                nr_average, 'measurement_settings/num_meas_to_average', 1
+                nr_samples, 'measurement_settings/nr_samples', 1
                 )
-            nr_average = 1
-        return nr_average
+            nr_samples = 1
+        return nr_samples
 
     @property
     @abstractmethod
@@ -1032,7 +1043,7 @@ class MeasureControllerABC(ControllerABC):
         the controller.
 
         A typical implementation:
-        >>> n_ave = self.nr_averaged_measurements
+        >>> n_ave = self.nr_samples
         >>> return (self.initial_delay
                     + (n_ave - 1)/2 * self.measurement_interval)
 
