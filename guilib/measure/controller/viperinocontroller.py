@@ -26,6 +26,10 @@ from viperleed.guilib.measure.classes.datapoints import QuantityInfo
 from viperleed.guilib.measure.classes.settings import NotASequenceError
 from viperleed.guilib.measure.classes.thermocouple import Thermocouple
 
+# For settings dialog:
+from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
+from viperleed.guilib.measure.controller import _vprctrlsettings as _settings
+
 
 _MANDATORY_CMD_NAMES = (
     "PC_AUTOGAIN", "PC_CONFIGURATION", "PC_SET_UP_ADCS", "PC_OK", "PC_RESET",
@@ -79,6 +83,8 @@ class ViPErinoController(MeasureControllerABC):
         ('controller', 'firmware_version'),  # also mandatory on serial
         ('energy_calibration', 'v_ref_dac'),
         ]
+
+    hardware_info_arrived = qtc.pyqtSignal()
 
     def __init__(self, parent=None, settings=None,
                  port_name='', sets_energy=False):
@@ -434,6 +440,22 @@ class ViPErinoController(MeasureControllerABC):
         cmd = self.settings.get('available_commands', 'PC_CONFIGURATION')
         self.send_message(cmd)
 
+    def get_settings_handler(self):
+        # Start by adding info that we want shown on top
+        handler = SettingsHandler(self.settings)
+        handler.add_option('controller', 'firmware_version',
+                           handler_widget=_settings.FWVersionViewer(self),
+                           display_name="Firmware version", read_only=True)
+        handler.add_option('controller', 'device_name',
+                           handler_widget=_settings.SerialNumberEditor(self),
+                           display_name="Serial No.")
+        handler.add_complex_section(
+            _settings.HardwareConfigurationEditor(controller=self)
+            )
+        # And add info from super() ['measurement_settings']
+        handler.add_from_handler(super().get_settings_handler())
+        return handler
+
     def list_devices(self):
         """List Arduino Micro VipErLEED hardware -- can be slow."""
         ports = qts.QSerialPortInfo().availablePorts()
@@ -529,6 +551,28 @@ class ViPErinoController(MeasureControllerABC):
         if self.measures(QuantityInfo.TEMPERATURE):
             self.__convert_thermocouple_voltages()
         self.measurements_done()
+
+    @qtc.pyqtSlot()
+    def prepare_to_show_settings(self):
+        """Prepare the controller to present settings to the user.
+
+        Attempt a connection. Complain if the connection cannot be
+        established. Otherwise initiate a request for hardware
+        information, and prepare to wait for the reply. Will emit
+        .ready_to_show_settings once the reply comes.
+
+        Returns
+        -------
+        None.
+        """
+        self.connect_()
+        if not self.serial or not self.serial.is_open:
+            base.emit_error(self, ExtraSerialErrors.PORT_NOT_OPEN)
+            return
+        base.safe_connect(self.hardware_info_arrived,
+                          self.__almost_ready_to_show_settings,
+                          type=qtc.Qt.UniqueConnection)
+        self.get_hardware()
 
     @qtc.pyqtSlot(bool)
     def set_continuous_mode(self, continuous=True):
@@ -799,6 +843,29 @@ class ViPErinoController(MeasureControllerABC):
             return
         stop = self.settings.get('available_commands', 'PC_STOP')
         self.send_message(stop)
+
+    @qtc.pyqtSlot()
+    def __almost_ready_to_show_settings(self):
+        """Check consistency of serial number, then ready_to_show_settings."""
+        # The box replied with the necessary information
+        base.safe_disconnect(self.hardware_info_arrived,
+                             self.__almost_ready_to_show_settings)
+        self.disconnect_()
+
+        # Check that the serial no. in self.settings and the one in
+        # self.hardware match. Update the serial port if they don't
+        settings_name = self.settings.get("controller", "device_name",
+                                          fallback='')
+        if settings_name != self.name:
+            self._devices.clear()
+            self.list_devices()
+            ports = {name.split(' (')[0]: port
+                     for port, name in self._devices.items()}
+            correct_port = ports.get(self.name, '')
+            if correct_port:
+                self.port_name = correct_port  # Also connects
+                self.disconnect_()
+        self.ready_to_show_settings.emit()
 
     def __check_measurements_possible(self):
         """Check that it is possible to measure stuff, given the hardware."""
