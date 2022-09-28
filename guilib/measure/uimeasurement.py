@@ -46,6 +46,9 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 #       QMetaABC by extending __new__(mcs, name, bases, dict_, *kwargs). Probably
 #       neither does solve the problem of explicitly importing subclasses, though!
 # TODO: fix the documentation in .ini files
+# TODO: get rid of SYS_CFG (and rather use .settings of the settings dialog) as
+#       the settings may change at runtime
+# TODO: proper _ensure_connected instance method decorator for ControllerABC
 
 #   C A M E R A   &  C O.
 # TODO: completely skip stuff between brackets in camera name (IS only?)
@@ -112,7 +115,8 @@ from viperleed.guilib.measure.classes.datapoints import DataPoints
 from viperleed.guilib.measure.widgets.measurement_plot import MeasurementPlot
 from viperleed.guilib.measure import dialogs
 from viperleed.guilib.measure.classes.settings import (
-    ViPErLEEDSettings, MissingSettingsFileError, get_system_config
+    ViPErLEEDSettings, MissingSettingsFileError, get_system_config,
+    SYSTEM_CONFIG_PATH
     )
 
 
@@ -124,6 +128,32 @@ DEFAULT_CONFIG_PATH = Path(
     )
 
 _TIME_CRITICAL = qtc.QThread.TimeCriticalPriority
+
+
+def _get_sys_setting_dialog():
+    """Return a SettingsDialog for system settings."""
+    _sys_settings = ViPErLEEDSettings()
+    _sys_settings.read(SYSTEM_CONFIG_PATH)
+    _dialog = dialogs.SettingsDialog(settings=_sys_settings,
+                                     title="System settings")
+    _dialog.setModal(True)
+
+    # Add some information to the entries
+    handler = _dialog.handler
+    _infos = (
+        ('configuration',
+         "<nobr>This is the directory that contains all the</nobr> "
+         "configuration files for your devices and measurements. "
+         "It must be set before you can run any measurement."),
+        ('measurements',
+         "<nobr>This is the default folder where all your</nobr> "
+         "measurements will be automatically saved. IN THE FUTURE "
+         "you will be able to decide if you want to be asked each "
+         "time a measurement starts."),
+        )
+    for key, info in _infos:
+        handler['PATHS'][key].set_info_text(info)
+    return _dialog
 
 
 class UIErrors(base.ViPErLEEDErrorEnum):
@@ -147,24 +177,25 @@ class Measure(ViPErLEEDPluginBase):
             'measure': qtw.QPushButton("Start Measurement"),
             'abort': qtw.QPushButton("Abort"),
             'select': qtw.QComboBox(),
-            'energy_input': qtw.QLineEdit(''),
+            'energy_input': qtw.QLineEdit(''),                                  # TODO: QDoubleSpinBox?
             'set_energy': qtw.QPushButton("Set energy"),
-            'settings_editor': qtw.QPushButton("Open settings editor"),
             'menus': {
                 'file': qtw.QMenu("&File"),
                 'devices': qtw.QMenu("&Devices"),
                 'tools': qtw.QMenu("&Tools"),
+                'sys_settings': qtw.QAction("&Settings"),
                 },
             }
 
         # Parent-less dialogs show up in the task bar. They
         # are set to modal where appropriate (in __compose)
         self._dialogs = {
-            'change_settings': SettingsEditor(),
+            'sys_settings': _get_sys_setting_dialog(),
             'bad_px_finder':
                 dialogs.badpxfinderdialog.BadPixelsFinderDialog(),
             'camera_viewers': [],
-            'error_box': qtw.QMessageBox(self),
+            'error_box': qtw.QMessageBox(self),                                 # TODO: can look at qtw.QErrorMessage for errors that can be dismissed
+            'device_settings': {},     # keys: unique names; No cameras
             }
         self._glob = {
             'plot': MeasurementPlot(),
@@ -200,6 +231,11 @@ class Measure(ViPErLEEDPluginBase):
 
         self._timestamps = {'start': -1, 'prepared': -1, 'finished': -1}
 
+    @property
+    def system_settings(self):
+        """Return a ViPErLEEDSettings with system settings."""
+        return self._dialogs['sys_settings'].settings
+
     def closeEvent(self, event):         # pylint: disable=invalid-name
         """Reimplement closeEvent to abort measurements as well."""
         if self.measurement and self.measurement.running:
@@ -221,6 +257,10 @@ class Measure(ViPErLEEDPluginBase):
         # safely quit the dialog and its threads
         self._dialogs['bad_px_finder'].accept()
 
+        # Reject all the others (i.e., discard changes)
+        for dialog in self._dialogs['device_settings'].values():
+            dialog.reject()
+
         # Stop all cameras
         for viewer in self._dialogs['camera_viewers']:
             viewer.close()
@@ -236,6 +276,7 @@ class Measure(ViPErLEEDPluginBase):
             event.ignore()
             return
 
+        self._dialogs['sys_settings'].close()
         super().closeEvent(event)
 
     def keyPressEvent(self, event):      # pylint: disable=invalid-name
@@ -260,7 +301,7 @@ class Measure(ViPErLEEDPluginBase):
             qtw.qApp.clipboard().setText(visible.text())
         super().keyPressEvent(event)
 
-    def showEvent(self, event):  # pylint: disable=invalid-name
+    def showEvent(self, event):          # pylint: disable=invalid-name
         """Show self."""
         self._glob['n_retry_close'] = 0
         super().showEvent(event)
@@ -331,7 +372,7 @@ class Measure(ViPErLEEDPluginBase):
 
         font = AllGUIFonts().buttonFont
         for ctrl in ('measure', 'abort', 'select', 'set_energy',
-                     'energy_input', 'settings_editor',):
+                     'energy_input',):
             self._ctrls[ctrl].setFont(font)
             self._ctrls[ctrl].ensurePolished()
         self.__switch_enabled(True)
@@ -343,7 +384,6 @@ class Measure(ViPErLEEDPluginBase):
         layout.addWidget(self._ctrls['select'], 2, 1, 1, 2)
         layout.addWidget(self._ctrls['set_energy'], 3, 1, 1, 1)
         layout.addWidget(self._ctrls['energy_input'], 3, 2, 1, 1)
-        layout.addWidget(self._ctrls['settings_editor'], 4, 1, 1, 2)
 
         self._glob['plot'].show()
 
@@ -387,17 +427,22 @@ class Measure(ViPErLEEDPluginBase):
         act.setEnabled(False)                                                   # TODO: fix when implemented
         # act.triggered.connect(self._dialogs['firmware_upgrade'].show)
 
+        # System settings
+        act = self._ctrls['menus']['sys_settings']
+        menu.insertAction(self.about_action, act)
+        act.triggered.connect(self.__on_sys_settings_triggered)
+
     def __connect(self):
         """Connect signals to appropriate slots."""
         # CONTROLS
         self._ctrls['measure'].clicked.connect(self.__on_start_pressed)
-        self._ctrls['settings_editor'].clicked.connect(
-            self.__on_change_settings_pressed
-            )
         self._ctrls['set_energy'].clicked.connect(self.__on_set_energy)
 
         # OTHERS
         self.error_occurred.connect(self.__on_error_occurred)
+        self._dialogs['sys_settings'].settings_changed.connect(
+            self.__on_sys_settings_changed
+            )
 
         # TIMERS
         slots = (
@@ -457,31 +502,78 @@ class Measure(ViPErLEEDPluginBase):
             viewers.append(viewer)
             camera.start()
 
-    def __on_change_settings_pressed(self):
-        settings = SettingsEditor()
-        self._dialogs['change_settings'] = settings
-        # Change settings is already open
-        if settings:
-            move_to_front(settings)
-            return
-        settings.show()
-
     def __on_controller_clicked(self, *_):
+        """Show settings of the controller selected."""
         action = self.sender()
         ctrl_name = action.text()
         ctrl_cls = action.data()
-        ctrl_port = ctrl_name.split("(")[1].replace(")", "")
-        ctrl = ctrl_cls(port_name=ctrl_port)                                    # TODO: would be better to get the right config file already
+        ctrl_name, ctrl_port = (s.strip() for s in ctrl_name.split("("))
+        ctrl_port = ctrl_port.replace(")", "")
 
-        # TEMP FOR VIPERINO ONLY!                                               # TODO: move to a device info dialog (prob. without QThread)
-        ctrl.get_hardware()
-        ctrl.serial.port.waitForReadyRead(100)  # this always times out, irrespective of how long (but the response arrived and was processed correctly!)
+        if ctrl_name not in self._dialogs['device_settings']:
+            self.__make_ctrl_settings_dialog(ctrl_cls, ctrl_name, ctrl_port)
 
-        # TODO: here would be a good place to check if the serial
-        # number in the name and the one in ctrl.hardware match.
-        # If not, issue an error and update the device list.
-        print(ctrl.hardware)
-        ctrl.disconnect_()
+        _dialog = self._dialogs['device_settings'].get(ctrl_name, None)
+        if not _dialog:
+            # Something went wrong with creating the dialog
+            return
+
+        if _dialog.isVisible():                                                 # TODO: we should make sure (regularly?) somewhere that the controller is still where it is supposed to be (COM-wise)
+            move_to_front(_dialog)
+            return
+
+        # TODO: should I re-read the settings file?
+        ctrl = _dialog.handled_object
+        if ctrl_port != ctrl.port_name:
+            ctrl.port_name = ctrl_port
+        # ctrl.settings.update_file()                                             # TODO: don't do this eventually?
+        ctrl.prepare_to_show_settings()
+
+    def __make_ctrl_settings_dialog(self, ctrl_cls, name, port):
+        """Make a new settings dialog for a controller."""
+        # Find an appropriate settings file, searching in the default
+        # configuration folder, and falling back on the base default
+        _cfg_dir = self.system_settings['PATHS']['configuration']
+        config = base.get_device_config(name, directory=_cfg_dir,
+                                        parent_widget=self)
+        if config:
+            # Found one. Make sure it is in the tree of _cfg_dir,
+            # as the user may have selected another folder
+            ctrl = ctrl_cls(settings=config, port_name=port)
+            print(f"{ctrl.settings.last_file=}")
+            try:
+                ctrl.settings.last_file.relative_to(_cfg_dir)
+            except ValueError:
+                # Not in the same tree. Complain, as we expect the
+                # configuration tree to contain one default config
+                # file per each known device. (Measurements can use
+                # device settings from anywhere, though.)
+                print("Config not in correct folder tree. "
+                      "Consider editing system settings.")                      # TODO
+        else:                                                                   # TODO: ask explicitly for making a file for the device
+            # We did not find one. Fall back onto _defaults
+            ctrl = ctrl_cls(port_name=port)
+            # Check validity of default settings loaded
+            if not ctrl.settings or not ctrl.serial:                            # TODO: from this on it could be a more general function (also for cameras)
+                # Something is wrong with the default configuration file
+                print("SOMETHING WRONG WITH DEFAULT CONFIG")                    # TODO
+                return
+
+            # Make necessary edits, then save to file
+            ctrl.settings['controller']['device_name'] = name
+            new_cfg_path = (Path(_cfg_dir)
+                            / (name.replace(' ', '_') + '.ini'))
+            if new_cfg_path.exists():
+                print("Config file name conflict! "
+                      "Existing file will be overwritten")                      # TODO: error
+            with new_cfg_path.open('w', encoding='utf-8') as fproxy:
+                ctrl.settings.write(fproxy)
+
+        dialog = dialogs.SettingsDialog(ctrl, parent=self)                      # TODO: modal?
+        ctrl.ready_to_show_settings.connect(dialog.show)
+        dialog.finished.connect(ctrl.disconnect_)
+        # dialog.settings_changed.connect(????)                                 # TODO: save file on .settings_changed
+        self._dialogs['device_settings'][name] = dialog
 
     @qtc.pyqtSlot(dict)
     def __on_data_received(self, new_data):
@@ -609,6 +701,34 @@ class Measure(ViPErLEEDPluginBase):
         else:
             timer.start()
 
+    def __on_sys_settings_changed(self):
+        """Save settings file to disk when system settings change."""
+        _dialog = self._dialogs['sys_settings']
+        _msgbox = qtw.QMessageBox
+
+        # Check that the paths exist, ask to create them if not
+        handler = _dialog.handler
+        for option in handler['PATHS'].values():
+            path_widg = option.handler_widget
+            if path_widg.path and path_widg.path.exists():
+                continue
+            _reply = _msgbox.question(
+                _dialog, "Directory does not exist",
+                f"'{option.option_name.title()}' directory "
+                "does not exist. Would you like to create it?",
+                _msgbox.Yes | _msgbox.No
+                )
+            if _reply == _msgbox.Yes:
+                path_widg.path.mkdir(parents=True)
+        # TODO: check that the configuration directory contains appropriate configs. WHICH ONES??
+        self.system_settings.update_file()
+
+    def __on_sys_settings_triggered(self):
+        """React to a user clicking on 'Settings'."""
+        # Update from file, then .show (which updates widgets)
+        self.system_settings.read(SYSTEM_CONFIG_PATH)
+        self._dialogs['sys_settings'].show()
+
     @qtc.pyqtSlot()
     def __print_done(self):
         print("\n#### DONE! ####")
@@ -705,6 +825,5 @@ class Measure(ViPErLEEDPluginBase):
         self._ctrls['measure'].setEnabled(idle)
         self._ctrls['select'].setEnabled(idle)
         self._ctrls['abort'].setEnabled(not idle)
-        self._ctrls['settings_editor'].setEnabled(idle)
         self.menuBar().setEnabled(idle)
         self.statusBar().showMessage('Ready' if idle else 'Busy')
