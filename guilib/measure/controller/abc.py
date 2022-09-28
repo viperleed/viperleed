@@ -81,8 +81,14 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
 
     controller_busy = qtc.pyqtSignal(bool)
 
+    # Emitted when the controller has performed all the tasks necessary
+    # to provide the user with a complete set of settings. The process
+    # is initiated in a call to prepare_to_show_settings().
+    ready_to_show_settings = qtc.pyqtSignal()
+
     _mandatory_settings = [
         ('controller', 'serial_port_class'),
+        ('controller', 'device_name'),
         ]
 
     def __init__(self, parent=None, settings=None,
@@ -380,14 +386,14 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         """Set the port name for this controller."""
         if not isinstance(port_name, str):
             raise TypeError("port_name must be a string")
+        if port_name == self.port_name:
+            return
         self.__port_name = port_name
         if self.settings:
             self.settings.set('controller', 'port_name', port_name)
         if not self.serial:
             return
-        self.serial.port_name = port_name
-        if port_name:
-            self.serial.connect_()
+        self.serial.port = port_name
 
     @property
     def serial(self):
@@ -646,12 +652,12 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         """List all devices of this class."""
         return
 
-    # pylint: disable=no-self-use,unused-argument
+    # pylint: disable=unused-argument
     # Method is here for consistency with MeasureControllerABC
     def measures(self, quantity=None):
         """Return whether this controller measures quantity."""
         return False
-    # pylint: enable=no-self-use,unused-argument
+    # pylint: enable=unused-argument
 
     def moveToThread(self, thread):      # pylint: disable=invalid-name
         """Move self and its serial port to a new thread."""
