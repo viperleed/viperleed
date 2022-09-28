@@ -374,6 +374,12 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         return ""
 
     @property
+    def name_clean(self):
+        """Return a version of .name suitable for file names."""
+        _name = self.name.replace(' ', '_')
+        return _name.replace('[', '').replace(']', '')
+
+    @property
     def port_name(self):
         """Return the name of the serial port for this controller."""
         name = ""

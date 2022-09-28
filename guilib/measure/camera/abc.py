@@ -493,6 +493,12 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         return self.settings.get('camera_settings', 'device_name')
 
     @property
+    def name_clean(self):
+        """Return a version of .name suitable for file names."""
+        _name = self.name.replace(' ', '_')
+        return _name.replace('[', '').replace(']', '')
+
+    @property
     def roi(self):
         """Return the settings of the roi.
 
