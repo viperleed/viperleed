@@ -299,6 +299,76 @@ class ViPErinoController(MeasureControllerABC):
 
         return super().are_settings_ok(settings)
 
+    def available_adcs(self):
+        """Return a list of available ADC measurements.
+
+        Returns
+        -------
+        adcs : list of dict
+            The list is taken from the settings, and is checked
+            against which ADCs are actually available from the
+            hardware configuration, if known. Each element is a
+            {QuantityInfo: channel} dictionary, where channel is
+            the channel to be used for measuring the quantity.
+
+        Raises
+        ------
+        NotASequenceError
+            If the "controller"/"measurement_devices" option in the
+            settings cannot be converted to a sequence.
+        KeyError
+            In case the "controller" section is missing any of the
+            quantities in "measurement_devices" (corresponding to
+            which channel is used for measuring the quantity).
+        TypeError, ValueError
+            If any of the channels in the settings is not an integer
+        ValueError
+            If any of the quantities that are measurable from the
+            ADCs is not a valid QuantityInfo
+        RuntimeError
+            If the settings is inconsistent: (1) ADC quantities
+            are repeated (also accounting for aliases); (2) ADC
+            quantities are measured on the same channel; (3) The
+            number of ADCs in the settings is different from those
+            available at the hardware level (may mean that power
+            is disconnected)
+        """
+        # Start from the settings.
+        # The next line raises NotASequenceError if something is wrong
+        settings_adcs = self.settings.getsequence("controller",
+                                                  "measurement_devices")
+
+        qinfo_adcs = []
+        for quantities in settings_adcs:
+            # Next line raises KeyError if there is no channel for
+            # a quantity, ValueError or TypeError if the channels
+            # cannot be converted to integer, and ValueError if a
+            # quantity is unknown
+            channels_idx = {
+                QuantityInfo.from_label(q): int(self.settings["controller"][q])
+                for q in quantities
+                }
+            if len(quantities) != len(channels_idx):
+                raise RuntimeError(f"Duplicate quantities in {quantities}")
+            if len(channels_idx) != len(set(channels_idx.values())):
+                raise RuntimeError(
+                    f"Some of {quantities} is measured with the same channel"
+                    )
+            qinfo_adcs.append(channels_idx)
+
+        # Now compare with the info in the hardware.
+        with self.lock:
+            hardware = self.hardware.copy()
+        active_adcs = [k for k, present in hardware.items()
+                       if self.__is_adc(k) and present]
+        has_power = any(k for k in active_adcs if 'adc' in k)  # skip LM35
+        if has_power and len(active_adcs) != len(qinfo_adcs):
+            raise RuntimeError(
+                f"Number of measurement_devices ({len(qinfo_adcs)}) "
+                "inconsistent with number of devices detected on board"
+                )
+        return qinfo_adcs
+
     def calibrate_adcs(self):
         """Calibrate ADCs.
 
@@ -589,14 +659,17 @@ class ViPErinoController(MeasureControllerABC):
         if not self.settings:
             return
         try:
-            measurement_devices = self.settings.getsequence(
-                'controller', 'measurement_devices'
-                )
+            available_adcs = self.available_adcs()
         except NotASequenceError:
             base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
                             'controller/measurement_devices', '')
             return
-        n_devices = len(measurement_devices)
+        except (KeyError, ValueError, TypeError, RuntimeError) as err:
+            base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
+                            'controller', err)
+            return
+
+        n_devices = len(available_adcs)
         self.__adc_measurement_types = [None]*n_devices
         self.__adc_channels = [0]*n_devices
         if len(quantities) > n_devices:
@@ -604,8 +677,9 @@ class ViPErinoController(MeasureControllerABC):
                             n_devices, len(quantities))
             return
         for quantity in quantities:
-            for i, measurement_device in enumerate(measurement_devices):
-                if quantity not in measurement_device:
+            _quantity = QuantityInfo.from_label(quantity)
+            for i, measurable_quantities in enumerate(available_adcs):
+                if _quantity not in measurable_quantities:
                     continue
                 if self.__adc_measurement_types[i] is not None:
                     base.emit_error(
@@ -613,24 +687,8 @@ class ViPErinoController(MeasureControllerABC):
                         quantity, self.__adc_measurement_types[i].label
                         )
                     return
-
-                try:
-                    channel = self.settings.getint('controller', quantity,
-                                                   fallback=-1)
-                except (TypeError, ValueError):
-                    # pylint: disable=redefined-variable-type
-                    # Seems a pylint bug.
-                    # Cannot convert to int
-                    channel = -1
-                if channel < 0:
-                    base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
-                                    f'controller/{quantity}', '')
-                    return
-
-                self.__adc_channels[i] = channel
-                self.__adc_measurement_types[i] = (
-                    QuantityInfo.from_label(quantity)
-                    )
+                self.__adc_channels[i] = measurable_quantities[_quantity]
+                self.__adc_measurement_types[i] = _quantity
                 break
             else:
                 base.emit_error(self, ViPErinoErrors.INVALID_REQUEST, quantity)
@@ -793,3 +851,7 @@ class ViPErinoController(MeasureControllerABC):
             self.thermocouple.temperature(v, t0)
             for v, t0 in zip(tc_voltages, cjc_temperatures)
             ]
+
+    @staticmethod
+    def __is_adc(name):
+        return "adc" in name or 'lm35' in name
