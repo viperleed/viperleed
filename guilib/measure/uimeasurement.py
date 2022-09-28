@@ -13,6 +13,8 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 # FIXED? camera error should close viewer --> check that no frames can arrive
 #        and reopen the viewer. If this is the case, the .close() can be tied
 #        to a timer with a small delay.
+# FIXED?: on archive write, .relative_to; fail on network drive
+# FIXED?: camera.ini name brackets
 # TESTME: make sure multiple controllers work fine with the new ABC.stop
 
 # BUG: bad_px_finder: camera can time out. Reproducible in Prague.
@@ -29,6 +31,11 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 # BUG: list_devices makes TPD COMs stuff go crazy.
 # BUG? ROI increments concern only w/h, but should rather be (w/h - min_w/h) % delta!
 # BUG: viperleed serial, unknown command error misinterpreted? << not sure what this means
+# BUG: timing estimate: does not include hv_settle_time
+# BUG: bad pixels: flat goes on forever for wiggly intensities.
+#      Should keep track of the adjustments and decide to pick a value
+#      at some point.
+# BUG: bad pixels: Camera too good?
 
 #   G E N E R I C
 # TODO: init errors cause obfuscation of the original object that had problems
@@ -46,8 +53,6 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 #       QMetaABC by extending __new__(mcs, name, bases, dict_, *kwargs). Probably
 #       neither does solve the problem of explicitly importing subclasses, though!
 # TODO: fix the documentation in .ini files
-# TODO: get rid of SYS_CFG (and rather use .settings of the settings dialog) as
-#       the settings may change at runtime
 # TODO: proper _ensure_connected instance method decorator for ControllerABC
 
 #   C A M E R A   &  C O.
@@ -86,7 +91,6 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 #   G U I
 # TODO: progress bar for non-endless
 # TODO: busy dialog where appropriate
-# TODO: sys settings changed. not looking in new config folder for settings??
 
 #   F E A T U R E S
 # TODO: quick IV video to find max intensity, and adjust camera
@@ -116,19 +120,14 @@ from viperleed.guilib.measure.classes.datapoints import DataPoints
 from viperleed.guilib.measure.widgets.measurement_plot import MeasurementPlot
 from viperleed.guilib.measure import dialogs
 from viperleed.guilib.measure.classes.settings import (
-    ViPErLEEDSettings, MissingSettingsFileError, get_system_config,
-    SYSTEM_CONFIG_PATH
+    ViPErLEEDSettings, MissingSettingsFileError, SYSTEM_CONFIG_PATH
     )
 
 
 TITLE = 'Measure LEED-IV'
 
-SYS_CFG = get_system_config()
-DEFAULT_CONFIG_PATH = Path(
-    SYS_CFG.get("PATHS", 'configuration', fallback='')
-    )
-
 _TIME_CRITICAL = qtc.QThread.TimeCriticalPriority
+_QMSG = qtw.QMessageBox
 
 
 def _get_sys_setting_dialog():
@@ -195,12 +194,13 @@ class Measure(ViPErLEEDPluginBase):
             'bad_px_finder':
                 dialogs.badpxfinderdialog.BadPixelsFinderDialog(),
             'camera_viewers': [],
-            'error_box': qtw.QMessageBox(self),                                 # TODO: can look at qtw.QErrorMessage for errors that can be dismissed
+            'error_box': _QMSG(self),                                 # TODO: can look at qtw.QErrorMessage for errors that can be dismissed
             'device_settings': {},     # keys: unique names; No cameras
             }
         self._glob = {
             'plot': MeasurementPlot(),
-            'last_dir': SYS_CFG.get("PATHS", "measurements", fallback=""),
+            'last_dir': self.sys_settings.get("PATHS", "measurements",
+                                              fallback=""),
             # Keep track of the last config used for a measurement.
             # Useful if one wants to repeat a measurement.
             'last_cfg': ViPErLEEDSettings(),
@@ -524,11 +524,10 @@ class Measure(ViPErLEEDPluginBase):
             move_to_front(_dialog)
             return
 
-        # TODO: should I re-read the settings file?
         ctrl = _dialog.handled_object
         if ctrl_port != ctrl.port_name:
             ctrl.port_name = ctrl_port
-        # ctrl.settings.update_file()                                             # TODO: don't do this eventually?
+            ctrl.settings.update_file()
         ctrl.prepare_to_show_settings()
 
     def __make_ctrl_settings_dialog(self, ctrl_cls, name, port):
@@ -673,7 +672,8 @@ class Measure(ViPErLEEDPluginBase):
         self._dialogs['camera_viewers'] = []
 
         config = ViPErLEEDSettings()                                            # TODO: should decide whether to use the 'last_cfg' or the default here! Probably open dialog.
-        file_name = DEFAULT_CONFIG_PATH / 'measurement.ini'                     # TODO: will be one "default" per measurement type
+        _cfg_dir = Path(self.system_settings['PATHS']['configuration'])
+        file_name = _cfg_dir.resolve() / 'measurement.ini'                      # TODO: will be one "default" per measurement type
         try:
             config.read(file_name)
         except MissingSettingsFileError as err:
@@ -706,7 +706,6 @@ class Measure(ViPErLEEDPluginBase):
     def __on_sys_settings_changed(self):
         """Save settings file to disk when system settings change."""
         _dialog = self._dialogs['sys_settings']
-        _msgbox = qtw.QMessageBox
 
         # Check that the paths exist, ask to create them if not
         handler = _dialog.handler
@@ -714,16 +713,24 @@ class Measure(ViPErLEEDPluginBase):
             path_widg = option.handler_widget
             if path_widg.path and path_widg.path.exists():
                 continue
-            _reply = _msgbox.question(
+            _reply = _QMSG.question(
                 _dialog, "Directory does not exist",
                 f"'{option.option_name.title()}' directory "
                 "does not exist. Would you like to create it?",
-                _msgbox.Yes | _msgbox.No
+                _QMSG.Yes | _QMSG.No
                 )
-            if _reply == _msgbox.Yes:
+            if _reply == _QMSG.Yes:
                 path_widg.path.mkdir(parents=True)
-        # TODO: check that the configuration directory contains appropriate configs. WHICH ONES??
         self.system_settings.update_file()
+
+        # Since older device dialogs may now be still pointing to               # TODO: do the same for cameras
+        # old configuration files, remove them completely. This
+        # will create new settings in the new folder when devices
+        # are selected (unless the new folder contains settings).
+        for dialog in self._dialogs['device_settings'].values():
+            dialog.reject()
+            dialog.deleteLater()
+        self._dialogs['device_settings'] = {}
 
     def __on_sys_settings_triggered(self):
         """React to a user clicking on 'Settings'."""
