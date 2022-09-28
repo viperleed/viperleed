@@ -779,12 +779,8 @@ class BadPixels:
         self.__datetime = datetime.now()
 
         # Prepare a base name used for saving bad-pixel info to disk
-        cam_name = self.__camera.name.replace(' ', '_')
-
-        # Windows does not like square brackets for file names
-        cam_name = cam_name.replace('[', '_').replace(']', '_')
         now = self.__datetime.strftime("%Y%m%d_%H%M%S")
-        self.__base_name = f"{cam_name}_{now}"
+        self.__base_name = f"{self.__camera.name_clean}_{now}"
 
     def __str__(self):
         """Return a string representation of self."""
@@ -1035,8 +1031,7 @@ class BadPixels:
             for the current camera.
         """
         filepath = Path(filepath)
-        cam_name = self.__camera.name.replace(' ', '_')
-        cam_name = cam_name.replace('[', '_').replace(']', '_')
+        cam_name = self.__camera.name_clean
 
         # Search in filepath for bad pixels files of the current camera
         bad_px_files = list(filepath.glob(f"{cam_name}*.badpx"))

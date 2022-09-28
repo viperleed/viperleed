@@ -571,7 +571,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
 
         ctrl_locations = []
         for ctrl in self.controllers:
-            fname = "controller_" + ctrl.name.replace(' ', '_') + ".ini"
+            fname = "controller_" + ctrl.name_clean + ".ini"
             with open(tmp_path / fname, 'w', encoding='utf-8') as fproxy:
                 ctrl.settings.write(fproxy)
             move_to_archive.append(tmp_path / fname)
@@ -579,7 +579,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
 
         cam_locations = []
         for camera in self.cameras:
-            fname = "camera_" + camera.name.replace(' ', '_') + ".ini"
+            fname = "camera_" + camera.name_clean + ".ini"
             with open(tmp_path / fname, 'w', encoding='utf-8') as fproxy:
                 camera.settings.write(fproxy)
             move_to_archive.append(tmp_path / fname)
@@ -1185,7 +1185,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         self.__temp_dir = base_path
 
         for camera in self.cameras:
-            cam_dir = base_path / camera.name
+            cam_dir = base_path / camera.name_clean
             camera.process_info.base_path = str(cam_dir)
             cam_dir.mkdir(exist_ok=True)
 
