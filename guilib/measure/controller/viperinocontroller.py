@@ -214,6 +214,50 @@ class ViPErinoController(MeasureControllerABC):
         return version
 
     @property
+    def thermocouple(self):
+        """Return the Thermocouple used for measuring temperatures.
+
+        Returns
+        -------
+        thermocouple: Thermocouple or None
+            Returns None in case it was not possible to derive
+            the correct thermocouple from the settings.
+        """
+        if self.__thermocouple is None:
+            tc_type = self.settings.get('conversions', 'thermocouple_type',
+                                        fallback=None)
+            if tc_type is None:
+                base.emit_error(self,
+                                ViPErinoErrors.CANNOT_CONVERT_THERMOCOUPLE,
+                                '\nInfo: missing entry in settings.')
+                return None
+            try:
+                self.__thermocouple = Thermocouple(tc_type)
+            except ValueError as err:
+                # Unknown thermocouple type
+                base.emit_error(self,
+                                ViPErinoErrors.CANNOT_CONVERT_THERMOCOUPLE,
+                                f'\nInfo: {err}.')
+                return None
+        return self.__thermocouple
+
+    @thermocouple.setter
+    def thermocouple(self, new_tc):
+        """Set a new thermocouple. The type is stored in settings."""
+        if new_tc is None or isinstance(new_tc, Thermocouple):
+            self.__thermocouple = new_tc
+        else:
+            try:
+                self.__thermocouple = Thermocouple(new_tc)
+            except (ValueError, TypeError):
+                return
+        try:
+            type_ = self.__thermocouple.type_
+        except AttributeError:  # None
+            type_ = 'None'
+        self.settings.set('conversions', 'thermocouple_type', type_)
+
+    @property
     def time_to_first_measurement(self):
         """Return the interval between trigger and 1st measurement (msec)."""
         return (self.nr_averaged_measurements + 2) * self.measurement_interval
@@ -736,26 +780,12 @@ class ViPErinoController(MeasureControllerABC):
 
     def __convert_thermocouple_voltages(self):
         """Convert TC voltages in measurements to degrees centigrade."""
-        if self.__thermocouple is None:
-            tc_type = self.settings.get('conversions', 'thermocouple_type',
-                                        fallback=None)
-            if tc_type is None:
-                base.emit_error(self,
-                                ViPErinoErrors.CANNOT_CONVERT_THERMOCOUPLE,
-                                '\nInfo: missing entry in settings.')
-                return
-            try:
-                self.__thermocouple = Thermocouple(tc_type)
-            except ValueError as err:
-                # Unknown thermocouple type
-                base.emit_error(self,
-                                ViPErinoErrors.CANNOT_CONVERT_THERMOCOUPLE,
-                                f'\nInfo: {err}.')
-                return
+        if self.thermocouple is None:
+            return
         tc_voltages = self.measurements[QuantityInfo.TEMPERATURE]
         cjc_temperatures = self.measurements.get(QuantityInfo.COLD_JUNCTION,
                                                  [None]*len(tc_voltages))
         self.measurements[QuantityInfo.TEMPERATURE] = [
-            self.__thermocouple.temperature(v, t0)
+            self.thermocouple.temperature(v, t0)
             for v, t0 in zip(tc_voltages, cjc_temperatures)
             ]
