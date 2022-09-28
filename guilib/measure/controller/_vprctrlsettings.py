@@ -21,7 +21,8 @@ from PyQt5 import (QtCore as qtc,
                    QtWidgets as qtw,
                    QtGui as qtg)
 
-from viperleed.guilib.widgetslib import change_control_text_color
+from viperleed.guilib.widgetslib import (change_control_text_color,
+                                         move_to_front)
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.classes.datapoints import QuantityInfo
 from viperleed.guilib.measure.classes.settings import NotASequenceError
@@ -464,7 +465,7 @@ class HardwareConfigurationEditor(SettingsDialogSectionBase):
         previous_quantity = this_combo.previous_quantity
         dialog = self.__dialogs.get(quantity, None)
         if dialog:
-            dialog.show()
+            move_to_front(dialog)
         if previous_quantity is quantity:
             return
 
