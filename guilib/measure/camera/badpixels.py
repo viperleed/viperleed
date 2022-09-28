@@ -233,9 +233,6 @@ class BadPixelsFinder(qtc.QObject):
         self.__info.setText(
             f"Frames will be acquired from {name} camera."
             )
-        self.__info.setInformativeText = qtc.pyqtSlot(str)(
-            self.__info.setInformativeText
-            )
         self.__set_info_box_text.connect(self.__info.setInformativeText)
         self.__exec_info_box.connect(self.__info.exec_)
         self.__info.finished.connect(self.__continue_begin_acquiring)
@@ -929,7 +926,7 @@ class BadPixels:
             raise RuntimeError(f"{self.__class__.__name__}: No bad pixels "
                                "to apply a region of interest to.")
 
-        if no_roi:
+        if no_roi or not self.__bad_coords.size:
             self.__bad_coords_roi = self.__bad_coords
             self.__replacements_roi = self.__replacements
             self.__uncorrectable_roi = self.__uncorrectable
