@@ -86,6 +86,7 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 #   G U I
 # TODO: progress bar for non-endless
 # TODO: busy dialog where appropriate
+# TODO: sys settings changed. not looking in new config folder for settings??
 
 #   F E A T U R E S
 # TODO: quick IV video to find max intensity, and adjust camera
@@ -479,8 +480,9 @@ class Measure(ViPErLEEDPluginBase):
         cam_name = self.sender().text()
         cam_cls = self.sender().data()
 
+        _cfg_dir = self.system_settings['PATHS']['configuration']
         cfg_path = base.get_device_config(cam_name,
-                                          directory=DEFAULT_CONFIG_PATH,
+                                          directory=_cfg_dir,
                                           prompt_if_invalid=False)
 
         # Decide whether we can take the camera object
