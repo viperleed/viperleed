@@ -354,6 +354,10 @@ class ViPErinoController(MeasureControllerABC):
         -------
         None.
         """
+        # Make sure we're connected, then send the message
+        self.connect_()
+        if not self.serial or not self.serial.is_open:
+            return
         cmd = self.settings.get('available_commands', 'PC_CONFIGURATION')
         self.send_message(cmd)
 
