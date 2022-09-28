@@ -507,12 +507,15 @@ class ViPErinoController(MeasureControllerABC):
         # in microamps only under the assumption that
         #   (i) in 0--10V range 1uA produces 1V at the BNC
         #  (ii) in 0--2.5V range 1mA produces 1V at the BNC
+        # If, e.g., one uses a larger gain resistor (say, 2kohm)
+        # 1uA will produce 2 V, which the Arduino returns as
+        # the value "2". Here we correct for this:
         try:
-            conv_ = self.settings.getfloat('conversions', 'i0_gain',
+            gain = self.settings.getfloat('conversions', 'i0_gain',
                                            fallback=1.0)
         except (TypeError, ValueError):
-            conv_ = 1.0
-        return value * conv_
+            gain = 1.0
+        return value / gain
 
     def __convert_thermocouple_voltages(self):
         """Convert TC voltages in measurements to degrees centigrade."""
