@@ -571,6 +571,11 @@ class BadPixelsFinder(qtc.QObject):
         """
         long_flicker = self.__imgs['dark-long'].var(axis=0)
         short_flicker = self.__imgs['dark-short'].var(axis=0)
+        
+        assert long_flicker.mean() != 0
+        assert short_flicker.mean() != 0
+        assert np.isfinite(long_flicker.mean())
+        assert np.isfinite(short_flicker.mean())
 
         # '-1' is such that normally flickery pixels have badness == 0
         self.__badness = (long_flicker / long_flicker.mean() - 1
@@ -654,7 +659,7 @@ class BadPixelsFinder(qtc.QObject):
             # Done with all sections. Can proceed to calculations.
             self.find_flickery_pixels()
             self.find_hot_pixels()
-            self.find_dead_pixels()
+            # self.find_dead_pixels()
             self.find_bad_and_replacements()
             self.save_and_cleanup()
         else:
