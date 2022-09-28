@@ -13,12 +13,14 @@ class and its associated ViPErLEEDErrorEnum class ViPErinoErrors
 which gives commands to the ViPErinoSerialWorker class.
 """
 import threading
+import re
 
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtSerialPort as qts
 
 from viperleed.guilib.measure.controller.abc import (MeasureControllerABC,
                                                      ControllerErrors)
+from viperleed.guilib.measure.serial.abc import ExtraSerialErrors
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.classes.datapoints import QuantityInfo
 from viperleed.guilib.measure.classes.settings import NotASequenceError
@@ -357,6 +359,7 @@ class ViPErinoController(MeasureControllerABC):
         # Make sure we're connected, then send the message
         self.connect_()
         if not self.serial or not self.serial.is_open:
+            base.emit_error(self, ExtraSerialErrors.PORT_NOT_OPEN)
             return
         cmd = self.settings.get('available_commands', 'PC_CONFIGURATION')
         self.send_message(cmd)
@@ -672,6 +675,36 @@ class ViPErinoController(MeasureControllerABC):
         lm35_idx = list(hardware.keys()).index('lm35')
         message = [self.nr_samples, *self.__adc_channels[:lm35_idx]]
         self.send_message(cmd, message)
+
+    @qtc.pyqtSlot(str)
+    def set_serial_number(self, new_serial_nr):
+        """Set a 4-characters-long serial number in the electronics."""
+        new_serial_nr = new_serial_nr.upper()
+        with self.lock:
+            old_serial_nr = self.hardware.get('serial_nr', '')
+        if not old_serial_nr:
+            (*_,
+            old_serial_nr) = self.settings['controller']['device_name'].split()
+        if new_serial_nr == old_serial_nr:
+            return
+
+        if not re.match("^[A-Z0-9]{4,4}$", new_serial_nr):
+            raise ValueError(f"Invalid serial number {new_serial_nr}")
+
+        # Ready to communicate. Make sure we are connected:
+        self.connect_()
+        if not self.serial or not self.serial.is_open:
+            base.emit_error(self, ExtraSerialErrors.PORT_NOT_OPEN)
+            return
+
+        # We will send two requests: (1) setting serial number, and
+        # (2) retrieving hardware information. This way our internal
+        # info is surely up to date. For this reason we force self to
+        # be busy here: this way the two messages are queued.
+        self.busy =  True
+        cmd = self.settings.get('available_commands', 'PC_SET_SERIAL_NR')
+        self.send_message(cmd, bytes(new_serial_nr, encoding='utf-8'))
+        self.get_hardware()
 
     def start_autogain(self):
         """Determine starting gain.
