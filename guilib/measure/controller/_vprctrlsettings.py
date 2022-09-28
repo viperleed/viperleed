@@ -357,7 +357,6 @@ class HardwareConfigurationEditor(SettingsDialogSectionBase):
             item = layout.takeAt(0)
             widget = item.widget()
             if widget:
-                widget.setParent(None)
                 widget.deleteLater()
 
     def __compose_static_children(self):
