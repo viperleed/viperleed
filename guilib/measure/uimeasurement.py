@@ -36,6 +36,7 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 #      Should keep track of the adjustments and decide to pick a value
 #      at some point
 # BUG: bad pixels: Camera too good?
+# BUG: update COM and camera name when starting measurement (from known devices)
 
 #   G E N E R I C
 # TODO: init errors cause obfuscation of the original object that had problems
@@ -537,7 +538,9 @@ class Measure(ViPErLEEDPluginBase):
                 return
             cfg = ViPErLEEDSettings.from_settings(cfg_path)
             cfg['camera_settings']['mode'] = 'live'
-            cfg['camera_settings']['device_name'] = cam_name
+            if cfg['camera_settings']['device_name'] != cam_name:
+                cfg['camera_settings']['device_name'] = cam_name
+                cfg.update_file()
             camera = cam_cls(settings=cfg)
             camera.error_occurred.connect(self.__on_error_occurred)
             viewer = CameraViewer(camera, stop_on_close=True,
