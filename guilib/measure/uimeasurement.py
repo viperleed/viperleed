@@ -35,7 +35,6 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 # BUG: bad pixels: flat goes on forever for wiggly intensities.
 #      Should keep track of the adjustments and decide to pick a value
 #      at some point
-# BUG: bad pixels: Camera too good?
 # BUG: update COM and camera name when starting measurement (from known devices)
 
 #   G E N E R I C
