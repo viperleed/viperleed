@@ -441,6 +441,7 @@ class Measure(ViPErLEEDPluginBase):
         self._dialogs['sys_settings'].settings_changed.connect(
             self.__on_sys_settings_changed
             )
+        self.__measurement_thread.finished.connect(self.__switch_enabled)
 
         # TIMERS
         slots = (
@@ -822,7 +823,7 @@ class Measure(ViPErLEEDPluginBase):
         err_box.exec_()
         self._glob['errors'] = []
 
-    def __switch_enabled(self, idle):
+    def __switch_enabled(self, idle=False):
         """Switch enabled status of buttons.
 
         Parameters
