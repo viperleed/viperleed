@@ -1165,9 +1165,11 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
                 base.emit_error(self, MeasurementErrors.WRONG_CONTROLLER_CLASS,
                                 ctrl.port_name)
                 continue
-            self.threads.append(qtc.QThread())
-            ctrl.moveToThread(self.threads[-1])
+            thread = qtc.QThread()
+            thread.finished.connect(thread.deleteLater)
+            ctrl.moveToThread(thread)
             secondary_controllers.append(ctrl)
+            self.threads.append(thread)
         self.secondary_controllers = secondary_controllers
         for thread in self.threads:
             thread.start(priority=thread.TimeCriticalPriority)
@@ -1179,7 +1181,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         if not base_path:                                                       # TODO: emit a SystemSettingsError of some kind
             raise RuntimeError("Invalid path in system config file")
 
-        base_path = Path(base_path) / "__tmp__"
+        base_path = Path(base_path).resolve() / "__tmp__"
         base_path.mkdir(parents=True, exist_ok=True)
 
         self.__temp_dir = base_path
@@ -1260,7 +1262,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         """Archive the latest image saved."""
         if not self.__temp_dir or not self.__temp_dir.exists():
             return
-        img_name = Path(img_name)
+        img_name = Path(img_name).resolve()
         arch_name = self.__temp_dir.with_suffix('.zip')
         with ZipFile(arch_name, 'a', compression=ZIP_DEFLATED,
                      compresslevel=2) as archive:
