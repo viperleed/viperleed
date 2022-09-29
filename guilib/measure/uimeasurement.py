@@ -609,7 +609,6 @@ class Measure(ViPErLEEDPluginBase):
         self._timestamps['start'] = time.perf_counter()
         base.safe_disconnect(self.__measurement_thread.started,
                              self._timers['start_measurement'].start)
-        self.__switch_enabled(False)
 
     def __on_read_pressed(self, *_):
         """Read data from a measurement file."""
@@ -668,6 +667,8 @@ class Measure(ViPErLEEDPluginBase):
             viewer.camera.disconnect_()
             viewer.close()
         self._dialogs['camera_viewers'] = []
+        self.__switch_enabled(False)
+        qtw.qApp.processEvents()
 
         config = ViPErLEEDSettings()                                            # TODO: should decide whether to use the 'last_cfg' or the default here! Probably open dialog.
         _cfg_dir = Path(self.system_settings['PATHS']['configuration'])
