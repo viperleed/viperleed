@@ -24,12 +24,13 @@ from viperleed.guilib.widgetslib import change_control_text_color
 from viperleed.guilib.measure.classes.settings import get_system_config
 
 
-DEFAULT_CONFIG_PATH = Path(
-    get_system_config().get("PATHS", 'configuration', fallback='')
-    )
 NOT_FOUND = "No file found!"
 NOT_SET = "\u2014"
 NO_BAD_PX_PATH = "None selected"
+
+
+def _default_config_path():
+    return get_system_config().get("PATHS", 'configuration', fallback='')
 
 
 class BadPixelsFinderDialog(qtw.QDialog):
@@ -422,7 +423,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
 
         # New camera selected.
         settings = base.get_device_config(camera_name,
-                                          directory=DEFAULT_CONFIG_PATH,
+                                          directory=_default_config_path(),
                                           parent_widget=self)
 
         # Signal errors by picking an invalid entry
