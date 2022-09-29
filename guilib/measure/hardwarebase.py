@@ -112,6 +112,24 @@ def emit_error(sender, error, *msg_args, **msg_kwargs):
     sender.error_occurred.emit((error_code, error_msg))
 
 
+_W_DASH_DOT_RE = re.compile(r'[^-\w.]')
+_MULTI_DASH_RE = re.compile(r'[-]+')
+_MULTI_UNDERSCORE_RE = re.compile(r'[_]+')
+
+def as_valid_filename(name):
+    """Return a valid filename from name."""
+    # - Spaces to underscores;
+    # - Keep alphanumeric, dashes, underscores, dots;
+    # - Keep ASCII only
+    # - Replace multiple dashes/underscores with singles;
+    # - Remove dashes/underscores from the ends;
+    fname = name.replace(' ', '_')
+    fname = _W_DASH_DOT_RE.sub('', fname)
+    fname = fname.encode('ascii', 'ignore').decode('ascii')
+    fname = _MULTI_DASH_RE.sub('-', fname)
+    return _MULTI_UNDERSCORE_RE.sub('_', fname).strip('-_')
+
+
 def get_device_config(device_name, directory=DEFAULTS_PATH,
                       prompt_if_invalid=True, parent_widget=None):
     """Return the configuration file for a specific device.
@@ -127,13 +145,13 @@ def get_device_config(device_name, directory=DEFAULTS_PATH,
         The base of the directory tree in which the
         configuration file should be looked for. The
         search is recursive. Default is the path to
-        the _defaults drectory.
+        the _defaults directory.
     prompt_if_invalid : bool, optional
         In case the search for a config file failed, pop up
         a dialog asking the user for input. The search is
         considered failed in case no config file was found,
         or if multiple config files matched the criterion.
-        Defaul is True.
+        Default is True.
     parent_widget : QWidget or None, optional
         The parent widget of the pop up. Unless parent_widget
         is None, the pop up will be blocking user events for
@@ -143,14 +161,13 @@ def get_device_config(device_name, directory=DEFAULTS_PATH,
     Returns
     -------
     path_to_config : Path or None
-        The path to the only configuration file succesfully
-        found. None if no configuraiton file was found (either
+        The path to the only configuration file successfully
+        found. None if no configuration file was found (either
         because prompt_if_invalid is False, or because the
         user dismissed the pop-up).
     """
-    directory = Path(directory)
-    config_files = [f for f in directory.glob('**/*')
-                    if f.is_file() and f.suffix == '.ini']
+    directory = Path(directory).resolve()
+    config_files = directory.glob('**/*.ini')
     device_config_files = []
     for config_name in config_files:
         with open(config_name, 'r', encoding='utf-8') as config_file:

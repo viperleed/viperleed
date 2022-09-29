@@ -10,6 +10,7 @@ CameraABC meant to handle (GigE only?) cameras from The Imaging Source.
 Created: 2021-10-21
 Author: Michele Riva
 """
+import re
 from time import perf_counter as timer
 from math import ceil
 from ctypes import POINTER, c_ubyte, cast as c_cast
@@ -23,6 +24,8 @@ from viperleed.guilib.measure.camera.drivers.imagingsource import (
     )
 from viperleed.guilib.measure.camera.abc import CameraABC, CameraErrors
 from viperleed.guilib.measure import hardwarebase as base
+
+_CUSTOM_NAME_RE = re.compile(r"\[.*\]")
 
 # TODO: test roi offset increments with models other than IMX265
 
@@ -125,7 +128,7 @@ def _img_ptr_to_numpy(image_start_pixel, camera):
     Returns
     -------
     image : numpy.ndarray
-        Grayscale image. The first index runs along rows,
+        Gray-scale image. The first index runs along rows,
         the second one along pixels within a row.
 
     Raises
@@ -217,7 +220,7 @@ def estimate_frame_loss(frame_times, frame_rate, exposure):
 
 # pylint: disable=too-many-public-methods
 # pylint counts 33, I count 26. Of those, 17 are actually
-# reimplentations of abstract methods that are only supposed
+# reimplementations of abstract methods that are only supposed
 # to be used internally (i.e., they are the driver interface)
 class ImagingSourceCamera(CameraABC):
     """Concrete subclass of CameraABC handling Imaging Source Hardware."""
@@ -379,6 +382,13 @@ class ImagingSourceCamera(CameraABC):
         if self.exposure >= 100:
             return 11
         return 21
+
+    @property
+    def name_clean(self):
+        """Return a version of .name suitable for file names."""
+        # Remove completely the custom part of the name that
+        # is enclosed in square brackets
+        return base.as_valid_filename(_CUSTOM_NAME_RE.sub('', self.name))
 
     @property
     def supports_trigger_burst(self):

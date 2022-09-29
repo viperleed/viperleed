@@ -495,8 +495,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
     @property
     def name_clean(self):
         """Return a version of .name suitable for file names."""
-        _name = self.name.replace(' ', '_')
-        return _name.replace('[', '').replace(']', '')
+        return base.as_valid_filename(self.name)
 
     @property
     def roi(self):
