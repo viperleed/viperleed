@@ -184,7 +184,7 @@ class SerialNumberEditor(qtw.QWidget):
         # The config name must change to keep consistency:
         settings = self.__ctrl.settings
         old_name = settings.last_file
-        new_name = old_name.with_name(f"{self.__ctrl.name}.ini")
+        new_name = old_name.with_name(f"{self.__ctrl.name_clean}.ini")
         with new_name.open('w', encoding='utf-8') as fproxy:
             settings.write(fproxy)
 
