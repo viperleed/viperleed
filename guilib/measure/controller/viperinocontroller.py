@@ -76,6 +76,8 @@ class ViPErinoErrors(base.ViPErLEEDErrorEnum):
 class ViPErinoController(MeasureControllerABC):
     """Controller class for the ViPErLEED Arduino Micro."""
 
+    _devices = {}
+    cls_lock = threading.Lock()  # Access to _devices thread safe
     _mandatory_settings = [
         *MeasureControllerABC._mandatory_settings,
         ('available_commands',),
@@ -132,7 +134,9 @@ class ViPErinoController(MeasureControllerABC):
 
         # One lock per instance to make the access to self.hardware
         # safe: when reading/writing instance.hardware, one can
-        # .acquire() instance.lock (or use a context manager).
+        # .acquire() instance.lock (or use a context manager). The
+        # class-level lock instance.cls_lock should be used if any
+        # attribute common to all instances is to be modified instead.
         self.lock = threading.Lock()
 
         # __adc_measurement_types[i] contains the QuantityInfo
@@ -459,11 +463,19 @@ class ViPErinoController(MeasureControllerABC):
     def list_devices(self):
         """List Arduino Micro VipErLEED hardware -- can be slow."""
         ports = qts.QSerialPortInfo().availablePorts()
+        port_names = [p.portName() for p in ports]
+        with self.cls_lock:
+            for port in self._devices.copy():
+                if port not in port_names:
+                    del self._devices[port]
+            if all(p in self._devices for p in port_names):
+                return list(self._devices.values())
+
         device_list = []
         threads = []
         controllers = []
-        for port in ports:
-            ctrl = ViPErinoController(port_name=port.portName())
+        for port in port_names:
+            ctrl = ViPErinoController(port_name=port)
             if not ctrl.serial:
                 print("Something is wrong with the ViPErino default settings")
                 return []
@@ -491,7 +503,10 @@ class ViPErinoController(MeasureControllerABC):
             serial_nr = hardware.get('serial_nr', None)
             _INVOKE(ctrl, 'disconnect_', qtc.Qt.BlockingQueuedConnection)
             if serial_nr:
-                device_list.append(f"{ctrl.name} ({ctrl.port_name})")
+                txt = f"{ctrl.name} ({ctrl.port_name})"
+                with self.cls_lock:
+                    self._devices[ctrl.port_name] = txt
+                device_list.append(txt)
             else:
                 print("Not a ViPErLEED controller at", ctrl.port_name,
                       hardware, flush=True)
