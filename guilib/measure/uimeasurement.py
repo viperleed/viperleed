@@ -34,7 +34,7 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 # BUG: timing estimate: does not include hv_settle_time
 # BUG: bad pixels: flat goes on forever for wiggly intensities.
 #      Should keep track of the adjustments and decide to pick a value
-#      at some point.
+#      at some point
 # BUG: bad pixels: Camera too good?
 
 #   G E N E R I C
@@ -56,9 +56,6 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 # TODO: proper _ensure_connected instance method decorator for ControllerABC
 
 #   C A M E R A   &  C O.
-# TODO: completely skip stuff between brackets in camera name (IS only?)
-#       This includes device name in config, as it is just a user-defined stuff
-#       that can change
 # TODO: bad pixels finder top progress bar should scale better, with actual
 #       duration of tasks
 # TODO: it looks like the largest fraction of the time required by
@@ -199,8 +196,8 @@ class Measure(ViPErLEEDPluginBase):
             }
         self._glob = {
             'plot': MeasurementPlot(),
-            'last_dir': self.sys_settings.get("PATHS", "measurements",
-                                              fallback=""),
+            'last_dir': self.system_settings.get("PATHS", "measurements",
+                                                 fallback=""),
             # Keep track of the last config used for a measurement.
             # Useful if one wants to repeat a measurement.
             'last_cfg': ViPErLEEDSettings(),
@@ -486,7 +483,6 @@ class Measure(ViPErLEEDPluginBase):
             # Found one. Make sure it is in the tree of _cfg_dir,
             # as the user may have selected another folder
             ctrl = ctrl_cls(settings=config, port_name=port)
-            print(f"{ctrl.settings.last_file=}")
             try:
                 ctrl.settings.last_file.relative_to(_cfg_dir)
             except ValueError:
@@ -541,6 +537,7 @@ class Measure(ViPErLEEDPluginBase):
                 return
             cfg = ViPErLEEDSettings.from_settings(cfg_path)
             cfg['camera_settings']['mode'] = 'live'
+            cfg['camera_settings']['device_name'] = cam_name
             camera = cam_cls(settings=cfg)
             camera.error_occurred.connect(self.__on_error_occurred)
             viewer = CameraViewer(camera, stop_on_close=True,

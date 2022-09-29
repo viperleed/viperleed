@@ -130,8 +130,65 @@ def as_valid_filename(name):
     return _MULTI_UNDERSCORE_RE.sub('_', fname).strip('-_')
 
 
+_MATCH_SQUARES = re.compile(r'(\[)(\[*(?:[^\[\]]*|\[[^\]]*\])*\]*)(\])')
+# All capture groups appear in re.split
+# (\[)                 # open bracket capture group
+# (                    # capture group
+#     \[*              # maybe an open bracket
+#     (?:              # maybe a non-capture group containing
+#         [^\[\]]*     # any except '[' ']'
+#         |            # or
+#         \[           # an open bracket,
+#         [^\]]*       # anything that is not a closed bracket
+#         \]           # a closed bracket
+#     )*
+#     \]*              # maybe a closed bracket
+# )
+# (\])                 # closed bracket capture group
+
+def _device_name_re(name):
+    """Return a re.Pattern object that matches name tolerantly.
+
+    Returns
+    -------
+    pattern : re.Pattern
+        A compiled regular expression to use for matching a name
+        tolerantly. The regular expression will match <text> if:
+        (1) <text> contains exactly name, (2) <text> contains name
+        with its square brackets removed, (3) <text> contains name,
+        but possibly misses parts of name included in square brackets;
+        the text in brackets may be missing, or may be different
+    """
+    # (1) Match exactly
+    _patterns = [re.escape(name)]
+    # (2) Same as name, apart from '[' or ']' characters
+    _patterns.append(re.escape(name.replace('[', '').replace(']', '')))
+    # (3) All parts in name, but possibly excluding those in squares
+    #     This is a bit more involved as we want to replace only
+    #     outer square brackets with an optional capture group, which
+    #     can capture any character. The group can appear zero or once.
+    #     Moreover, we need to escape all characters out of the group,
+    #     and replace ' ' with ' ?' in case parts are missing.
+    _pattern3 = []
+    _in_brackets = False
+    _space = re.escape(' ')
+    for part in _MATCH_SQUARES.split(name):
+        if not part:
+            continue
+        if not _in_brackets and part not in '[]':
+            _pattern3.append(re.escape(part).replace(_space, _space + '?'))
+        elif _in_brackets and part != ']':
+            _pattern3.append(f"({_MATCH_SQUARES.pattern})?")
+        if part == '[':
+            _in_brackets = True
+        elif part == ']':
+            _in_brackets = False
+    _patterns.append(''.join(_pattern3))
+    return re.compile("|".join(_patterns))
+
 def get_device_config(device_name, directory=DEFAULTS_PATH,
-                      prompt_if_invalid=True, parent_widget=None):
+                      tolerant_match=True, prompt_if_invalid=True,
+                      parent_widget=None):
     """Return the configuration file for a specific device.
 
     Only configuration files with a .ini suffix are considered.
@@ -146,6 +203,11 @@ def get_device_config(device_name, directory=DEFAULTS_PATH,
         configuration file should be looked for. The
         search is recursive. Default is the path to
         the _defaults directory.
+    tolerant_match : bool, optional
+        Whether device_name should be looked up tolerantly
+        or not. If False, device_name is matched exactly,
+        otherwise parts of device_name within square brackets
+        are ignored. Default is True.
     prompt_if_invalid : bool, optional
         In case the search for a config file failed, pop up
         a dialog asking the user for input. The search is
@@ -166,12 +228,19 @@ def get_device_config(device_name, directory=DEFAULTS_PATH,
         because prompt_if_invalid is False, or because the
         user dismissed the pop-up).
     """
+    _match_re = _device_name_re(device_name)
+    def _device_name_found(config_file):
+        """Return whether device_name is found in config."""
+        if tolerant_match:
+            return any(_match_re.search(l) for l in config_file)
+        return device_name in config_file.read()
+
     directory = Path(directory).resolve()
     config_files = directory.glob('**/*.ini')
     device_config_files = []
     for config_name in config_files:
         with open(config_name, 'r', encoding='utf-8') as config_file:
-            if device_name in config_file.read():
+            if _device_name_found(config_file):
                 device_config_files.append(config_name)
 
     if device_config_files and len(device_config_files) == 1:

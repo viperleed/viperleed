@@ -133,7 +133,7 @@ class ViPErLEEDSettings(ConfigParser):
         self.__base_dir = ""
 
     @classmethod  # too-complex
-    def from_settings(cls, settings, find_from=None):
+    def from_settings(cls, settings, find_from=None, tolerant_match=False):
         """Return a ViPErLEEDSettings from the settings passed.
 
         Parameters
@@ -146,6 +146,11 @@ class ViPErLEEDSettings(ConfigParser):
             The string to look for in a configuration file to
             be loaded and returned. If None, no search will be
             performed.
+        tolerant_match : bool, optional
+            Whether matching of find_from should be performed in
+            a tolerant way, i.e., neglecting parts of find_from
+            between square brackets. Default is False, i.e., use
+            the whole string given.
 
         Returns
         -------
@@ -191,7 +196,8 @@ class ViPErLEEDSettings(ConfigParser):
 
         # Failed to read from settings. Try with find_from.
         get_cfg = gl.measure.hardwarebase.get_device_config
-        settings = get_cfg(find_from, prompt_if_invalid=False)
+        settings = get_cfg(find_from, prompt_if_invalid=False,
+                           tolerant_match=tolerant_match)
         if settings:
             try:
                 config.read(settings)

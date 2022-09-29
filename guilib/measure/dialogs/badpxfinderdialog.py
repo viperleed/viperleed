@@ -21,7 +21,8 @@ from viperleed.guilib.measure.camera import badpixels
 from viperleed.guilib.measure.camera import abc as camera_abc
 from viperleed.guilib.measure import dialogs
 from viperleed.guilib.widgetslib import change_control_text_color
-from viperleed.guilib.measure.classes.settings import get_system_config
+from viperleed.guilib.measure.classes.settings import (get_system_config,
+                                                       ViPErLEEDSettings)
 
 
 NOT_FOUND = "No file found!"
@@ -422,14 +423,16 @@ class BadPixelsFinderDialog(qtw.QDialog):
             return
 
         # New camera selected.
-        settings = base.get_device_config(camera_name,
-                                          directory=_default_config_path(),
-                                          parent_widget=self)
+        config_name = base.get_device_config(camera_name,
+                                             directory=_default_config_path(),
+                                             parent_widget=self)
 
         # Signal errors by picking an invalid entry
-        if not settings:
+        if not config_name:
             self.__ctrls['camera'].setCurrentIndex(-1)
             return
+        settings = ViPErLEEDSettings.from_settings(config_name)
+        settings['camera_settings']['device_name'] = camera_name
 
         if not self.__camera_busy.isVisible():
             self.__camera_busy.show()
