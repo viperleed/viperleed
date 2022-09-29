@@ -497,7 +497,7 @@ class BadPixelsFinder(qtc.QObject):
         """Detect dead pixels from flat frame.
 
         Dead pixels are those whose intensity is much smaller
-        than the average of the neighbors (excluding flickery
+        than the average of the neighbours (excluding flickery
         and hot pixels). This method adds to the badness the
         ratio I_neighbors/I_pixel - 1.
 
@@ -516,7 +516,7 @@ class BadPixelsFinder(qtc.QObject):
         # ones to zero, (3) convolve with an appropriate
         # averaging kernel, also counting nonzero pixels (i.e.,
         # the good ones). This way, bad ones do not factor in
-        # the neighbor average.
+        # the neighbour average.
 
         offset = 0.1*intensity_range
         flat_bad = flat + offset
@@ -527,7 +527,7 @@ class BadPixelsFinder(qtc.QObject):
         flat_bad[bad_px_mask] = 0
         flat_bad_ones[bad_px_mask] = 0
 
-        # 5x5 kernel for averaging a diamond-shaped patch of neighbors
+        # 5x5 kernel for averaging a diamond-shaped patch of neighbours
         kernel = np.array(((0, 0, 1, 0, 0),
                            (0, 1, 1, 1, 0),
                            (1, 1, 0, 1, 1),
@@ -538,11 +538,11 @@ class BadPixelsFinder(qtc.QObject):
         neighbor_count = convolve2d(flat_bad_ones, kernel, mode='same')
         neighbor_ave = neighbor_sum / neighbor_count - offset
 
-        # Isolated pixels in a patch of bad neighbors
+        # Isolated pixels in a patch of bad neighbours
         # will also be marked as bad.
         neighbor_ave[neighbor_count < 0.5] = np.inf
 
-        # As will those that have both zero neighbor average
+        # As will those that have both zero neighbour average
         # and zero intensity (dead in a cluster of bad ones)
         delta_badness = neighbor_ave / flat - 1
         delta_badness[np.isnan(delta_badness)] = np.inf
@@ -572,9 +572,15 @@ class BadPixelsFinder(qtc.QObject):
         long_flicker = self.__imgs['dark-long'].var(axis=0)
         short_flicker = self.__imgs['dark-short'].var(axis=0)
 
-        # '-1' is such that normally flickery pixels have badness == 0
-        self.__badness = (long_flicker / long_flicker.mean() - 1
-                          + short_flicker / short_flicker.mean() - 1)
+        long_mean, short_mean = long_flicker.mean(), short_flicker.mean()
+        self.__badness = np.zeros_like(long_flicker)
+
+        # The conditional checks prevent division by zero for very good
+        # cameras. '-1' --> badness == 0 for normally flickery pixels 
+        if short_mean:
+            self.__badness += short_flicker / short_mean - 1
+        if long_mean:
+            self.__badness += long_flicker / long_mean - 1
 
     @_report_progress
     def find_hot_pixels(self):
