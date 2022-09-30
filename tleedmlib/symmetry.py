@@ -893,9 +893,9 @@ def setSymmetry(sl, rp, targetsym):
                                                     [np.sqrt(3)/2, -0.5]]),
                                           abst[0]))) > 0.01):
                         chir = -1   # left-handed unit cell -> invert rotations
-                    if (tspar[0], tspar[1]) in [(2, 1), (-2, -1)]:
+                    if (tspar[0], tspar[1]) in [(1, 2), (-1, -2)]:
                         sl.rotateUnitCell(6*chir)  # rotate 60° clockwise
-                    elif (tspar[0], tspar[1]) in [(1, 2), (-1, -2)]:
+                    elif (tspar[0], tspar[1]) in [(2, 1), (-2, -1)]:
                         sl.rotateUnitCell(-6*chir)  # rotate 60° countercl.
                     abst = sl.ucell[:2, :2].T
                     sl.orisymplane = SymPlane(np.array([0, 0]),
@@ -939,9 +939,9 @@ def setSymmetry(sl, rp, targetsym):
                                 np.array([0, 0]), np.dot(tspar, abst), abst)
                     elif (tspar[0], tspar[1]) in [(1, 2), (-1, -2),
                                                   (2, 1), (-2, -1)]:
-                        if (tspar[0], tspar[1]) in [(2, 1), (-2, -1)]:
+                        if (tspar[0], tspar[1]) in [(1, 2), (-1, -2)]:
                             sl.rotateUnitCell(6*chir)  # rotate 60° clockwise
-                        elif (tspar[0], tspar[1]) in [(1, 2), (-1, -2)]:
+                        elif (tspar[0], tspar[1]) in [(2, 1), (-2, -1)]:
                             sl.rotateUnitCell(-6*chir)  # rotate 60° countercl.
                         abst = sl.ucell[:2, :2].T
                         if targetsym == 'cm':
