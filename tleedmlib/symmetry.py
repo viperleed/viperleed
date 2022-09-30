@@ -700,8 +700,9 @@ def setSymmetry(sl, rp, targetsym):
         'p6': ['p1', 'p2', 'p3'],
         'p6m': ['p1', 'p2', 'cm', 'cmm', 'p3', 'p3m1', 'p31m', 'p6']}
     if '[' not in targetsym:
-        if (targetsym in ['pm', 'pg', 'cm', 'rcm', 'pmg']
-                and planegroup != 'pmg'):
+        if ((targetsym in ['pm', 'pg', 'cm', 'rcm', 'pmg']
+                and planegroup != 'pmg')
+                or targetsym == 'cmm' and planegroup == 'p6m'):
             logger.warning(
                 "Symmetry reduction from "+planegroup+" to "+targetsym
                 + " requires a direction, which was not given. Input will be "
@@ -709,7 +710,7 @@ def setSymmetry(sl, rp, targetsym):
             rp.setHaltingLevel(1)
             targetsym = planegroup
     else:
-        rgx = re.compile(r'\s*(?P<group>(pm|pg|cm|rcm|pmg))\s*\[\s*'
+        rgx = re.compile(r'\s*(?P<group>(pm|pg|cm|rcm|pmg|cmm))\s*\[\s*'
                          + r'(?P<i1>[-012]+)\s+(?P<i2>[-012]+)\s*\]')
         m = rgx.match(targetsym)
         targetsym = m.group('group')
@@ -921,9 +922,8 @@ def setSymmetry(sl, rp, targetsym):
                 else:
                     invalidDirectionMessage(rp, planegroup, targetsym)
             elif planegroup == 'p6m':   # reducing to: cm, cmm
-                if targetsym == 'cmm':
-                    sl.planegroup = targetsym
-                elif (tspar[0], tspar[1]) in [
+                # exclusively do 60° rotations, set mirrors accordingly
+                if (tspar[0], tspar[1]) in [
                         (1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (-1, -1),
                         (1, -1), (-1, 1), (1, 2), (-1, -2), (2, 1), (-2, -1)]:
                     sl.planegroup = targetsym
@@ -934,8 +934,9 @@ def setSymmetry(sl, rp, targetsym):
                         chir = -1   # left-handed unit cell
                     if (tspar[0], tspar[1]) in [(1, 1), (-1, -1),
                                                 (1, -1), (-1, 1)]:
-                        sl.orisymplane = SymPlane(np.array([0, 0]),
-                                                  np.dot(tspar, abst), abst)
+                        if targetsym == 'cm':
+                            sl.orisymplane = SymPlane(
+                                np.array([0, 0]), np.dot(tspar, abst), abst)
                     elif (tspar[0], tspar[1]) in [(1, 2), (-1, -2),
                                                   (2, 1), (-2, -1)]:
                         if (tspar[0], tspar[1]) in [(2, 1), (-2, -1)]:
@@ -943,8 +944,9 @@ def setSymmetry(sl, rp, targetsym):
                         elif (tspar[0], tspar[1]) in [(1, 2), (-1, -2)]:
                             sl.rotateUnitCell(-6*chir)  # rotate 60° countercl.
                         abst = sl.ucell[:2, :2].T
-                        sl.orisymplane = SymPlane(np.array([0, 0]),
-                                                  abst[0]-abst[1], abst)
+                        if targetsym == 'cm':
+                            sl.orisymplane = SymPlane(
+                                np.array([0, 0]), abst[0]-abst[1], abst)
                     elif (tspar[0], tspar[1]) in [(1, 0), (-1, 0),
                                                   (0, 1), (0, -1)]:
                         if (tspar[0], tspar[1]) in [(1, 0), (-1, 0)]:
@@ -952,8 +954,9 @@ def setSymmetry(sl, rp, targetsym):
                         elif (tspar[0], tspar[1]) in [(0, 1), (0, -1)]:
                             sl.rotateUnitCell(-6*chir)  # rotate 60° countercl.
                         abst = sl.ucell[:2, :2].T
-                        sl.orisymplane = SymPlane(np.array([0, 0]),
-                                                  abst[0]+abst[1], abst)
+                        if targetsym == 'cm':
+                            sl.orisymplane = SymPlane(
+                                np.array([0, 0]), abst[0]+abst[1], abst)
                 else:
                     invalidDirectionMessage(rp, planegroup, targetsym)
             else:
