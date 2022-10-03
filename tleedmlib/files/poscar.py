@@ -88,6 +88,7 @@ def readPOSCAR(filename='POSCAR'):
                             'Unit cell a and b vectors must not have an '
                             'out-of-surface (Z) component!')
                         raise ValueError('Invalid unit cell vectors in POSCAR')
+                uci = np.linalg.inv(sl.ucell)
         elif linenum == 6:  # element labels
             sl.elements = [v.capitalize() for v in line.split()]
         elif linenum == 7:
@@ -98,19 +99,27 @@ def readPOSCAR(filename='POSCAR'):
             for (ind, val) in enumerate(il):
                 sl.n_per_elem[sl.elements[ind]] = il[ind]
         elif linenum == 8:
+            cartesian = False
             # may be 'Direct'/'Cartesian', or selective dynamics line
             # check whether POSCAR was pre-processed, ie whether the
             #    'Plane group = ...' comment is already there
             if "Plane group = " in line and "  N" in line:
                 if line.split("Plane group = ")[1][0] != "*":
                     sl.preprocessed = True
+            if line.strip().lower().startswith('cartesian'):
+                cartesian = True
         elif linenum == 9:
+            if line.strip().lower().startswith('cartesian'):
+                cartesian = True
+                continue
             # this line might already contain coordinates, or not, depending
             # on whether the "Selective dynamics" line was there
             llist = line.split()
             try:
                 pos = np.array([float(llist[0]), float(llist[1]),
                                 float(llist[2])])
+                if cartesian:
+                    pos = np.dot(uci, pos)
                 if abs(pos[2]) < eps:
                     c0 = True
                 if abs(pos[2]-1) < eps:
@@ -133,6 +142,8 @@ def readPOSCAR(filename='POSCAR'):
             else:
                 pos = np.array([float(llist[0]), float(llist[1]),
                                 float(llist[2])])
+                if cartesian:
+                    pos = np.dot(uci, pos)
                 if abs(pos[2]) < eps:
                     c0 = True
                 if abs(pos[2]-1) < eps:
