@@ -781,7 +781,7 @@ def setSymmetry(sl, rp, targetsym):
                         at.cartpos[:2] -= shiftv
                     sl.ucell_mod.append(('add', -shiftv))
                     sl.getFractionalCoordinates()
-                    sl.orisymplane.type = SymPlane(
+                    sl.orisymplane = SymPlane(
                         np.array([0, 0]), np.array(sl.orisymplane.dir[1],
                                                    -sl.orisymplane.dir[0]),
                         abst)
