@@ -210,7 +210,7 @@ class ViPErinoController(MeasureControllerABC):
 
         Returns
         -------
-        firmware_version: hardwarebase.Version
+        firmware_version : hardwarebase.Version
             Firmware version of the device, if the information is
             available, otherwise the one in self.settings.
         """
@@ -231,7 +231,7 @@ class ViPErinoController(MeasureControllerABC):
 
         Returns
         -------
-        thermocouple: Thermocouple or None
+        thermocouple : Thermocouple or None
             Returns None in case it was not possible to derive
             the correct thermocouple from the settings.
         """

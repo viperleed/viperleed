@@ -21,6 +21,7 @@ try:
     from line_profiler import LineProfiler
 except ImportError:
     pass
+# import memory-profiler   # consider for memory usage!
 
 
 def ensure_decorates_class(superclass=object):

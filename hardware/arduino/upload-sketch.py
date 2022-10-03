@@ -19,7 +19,7 @@ The Arduino CLI is available from https://github.com/arduino/arduino-cli/release
 # boards.txt; (4) compile and upload; (5) undo no.3.
 
 from pathlib import Path
-import requests
+import requests             # Look at https://wiki.qt.io/Download_Data_from_URL
 import subprocess
 import shutil
 import sys

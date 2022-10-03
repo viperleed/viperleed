@@ -700,16 +700,16 @@ class _InputRangeSelector(qtw.QWidget):
 
         Parameters
         ----------
-        parent: QWidget, optional
+        parent : QWidget, optional
             The parent widget of self
-        ranges: Sequence, optional
+        ranges : Sequence, optional
             The ranges among which this selector allows to choose.
             If not given, the keys in tooltips are used as ranges,
             if any. Otherwise fall back to ("0 \u2013 2.5 V",
             "0 \u2013 10 V").
-        tooltips: dict, optional
+        tooltips : dict, optional
             keys are ranges, values as strings to be used as help text
-        help_file: pathlib.Path, optional
+        help_file : pathlib.Path, optional
             Path to the file to be opened when range switching can
             only be performed manually. The file is supposed to help
             users perform the range switch. The user is presented with
