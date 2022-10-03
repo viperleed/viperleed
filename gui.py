@@ -12,6 +12,7 @@ Graphical User Interface
 """
 
 from pathlib import Path
+import signal
 import sys
 
 vpr_path = Path(__file__).resolve().parents[1]
@@ -114,6 +115,11 @@ def gui_main():
     plugin_selector_window.show()
 
     print('Done', flush=True)
+    
+    # An awful hack to allow keyboard interrupts to be accepted also
+    # while the next app.exec_ runs and the python interpreter is not
+    # running. See https://stackoverflow.com/questions/4938723
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     sys.exit(app.exec_())
 
