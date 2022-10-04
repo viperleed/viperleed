@@ -144,7 +144,15 @@ class BadPixelsFinder(qtc.QObject):
         self.__camera.started.connect(self.__trigger_next_frame)
 
         self.__frames_done = 0
-        self.__adjustments = 0  # used for progress reporting
+
+        # __adjustments is used for the exposure/gain of flat;
+        # __force_exposure is a flag keeping track of whether we
+        # are resorting to forcing the exposure/gain to averages.
+        # See __adjust_exposure_and_gain for more info. When we
+        # force the exposure, we will use a looser constraint on
+        # whether __frame_acceptable.
+        self.__adjustments = _Adjustments()
+        self.__force_exposure = False
 
         px_min, px_max = camera.intensity_limits
         self.__limits = {'gain': camera.get_gain_limits(),
@@ -337,7 +345,20 @@ class BadPixelsFinder(qtc.QObject):
         exposure, gain = self.__correct_exposure_gain(exposure, old_gain)
         if exposure is None:
             return
-        self.__adjustments += 1
+        self.__adjustments.add(exposure * 10**(gain / 20))
+
+        # Now decide whether we really want to set these new values. We
+        # do not want this process to take forever, in case there are
+        # oscillations. Use the estimates only in case we have already
+        # done a lot of attempts,  and only if we can provide a reasonable
+        # estimate for the new exposure/gain.
+        self.__force_exposure = False
+        estimate = self.__adjustments.stable_value
+        if len(self.__adjustments) >= 20 and estimate is not None:              # TODO: should we also have a hard limit with a 'retry' button?
+            exposure = estimate * 10**(-gain / 20)
+            exposure, gain = self.__correct_exposure_gain(exposure, gain)
+            self.__force_exposure = True
+
         self.__new_settings.set('measurement_settings', 'exposure',
                                 f'{exposure:.3f}')
         self.__new_settings.set('measurement_settings', 'gain', f'{gain:.1f}')
@@ -372,9 +393,10 @@ class BadPixelsFinder(qtc.QObject):
             exposure = self.__camera.exposure
         section = _FinderSection.from_short_name(self.__current_section)
         name = section.long_name.format(exposure)
+        n_adjustments = len(self.__adjustments)
         self.progress_occurred.emit(name, section.value, section.n_sections,
-                                    self.__frames_done + self.__adjustments,
-                                    section.n_tasks + self.__adjustments)
+                                    self.__frames_done + n_adjustments,
+                                    section.n_tasks + n_adjustments)
 
     def __correct_exposure_gain(self, exposure, gain):
         """Return in-range exposure and gain."""
@@ -607,7 +629,8 @@ class BadPixelsFinder(qtc.QObject):
         relative_intensity = (frame.mean() - pixel_min) / intensity_range
         if 'dark' in self.__current_section:
             return relative_intensity < 0.2
-        return 0.45 < relative_intensity < 0.55
+        _min, _max = (0.45, 0.55) if not self.__force_exposure else (0.3, 0.7)
+        return _min < relative_intensity < _max                                 # TODO: do we want to complain if there are very bright areas (gradients)?
 
     def __restore_settings(self):
         """Restore the original settings of the camera."""
@@ -654,8 +677,197 @@ class BadPixelsFinder(qtc.QObject):
         else:
             self.__current_section = sections[next_idx]
             self.__frames_done = 0
-            self.__adjustments = 0
+            self.__adjustments.clear()
             self.begin_acquiring()
+
+
+class _Adjustments(MutableSequence):
+    """Class for handling Holt-Winters smoothing of camera exposure/gain.
+
+    This is used to assess whether a series of exposures/gains has
+    settled, as well as determining the average value in the settled
+    region. Holt-Winters exponential smoothing is very good to detect
+    'ends of transients'
+    """
+
+    def __init__(self, /, *args, **kwargs):
+        """Initialize instance."""
+        self.__params = {'alpha': 0, 'beta': 0,
+                         'thresholds': kwargs.get('thresholds', (7/100, 0.1))}
+        self.alpha = kwargs.get('alpha', 0.6)
+        self.beta = kwargs.get('alpha', 0.2)
+
+        self.__list = []
+        self.__level, self.__trend = [], []
+        self.__last_settled = None
+        for value in args:
+            self.add(value)
+
+    @property
+    def alpha(self):
+        """Return the smoothing factor for levels."""
+        return self.__params['alpha']
+
+    @alpha.setter
+    def alpha(self, new_alpha):
+        """Set a value for the smoothing factor for levels."""
+        self.__params['alpha'] = new_alpha
+        self.__params['alphac'] = 1 - new_alpha
+
+    @property
+    def beta(self):
+        """Return the smoothing factor for trends."""
+        return self.__params['beta']
+
+    @beta.setter
+    def beta(self, new_beta):
+        """Set a value for the smoothing factor for trends."""
+        self.__params['beta'] = new_beta
+        self.__params['betac'] = 1 - new_beta
+
+    @property
+    def level(self):
+        return self.__level
+
+    @property
+    def trend(self):
+        return self.__trend
+
+    @property
+    def is_settled(self):
+        """Return whether self has settled."""
+        return self.__last_settled is not None
+
+    @property
+    def settled_values(self):
+        """Return the values in the most recent 'settled' region."""
+        return [] if not self.is_settled else self[self.__last_settled:]
+
+    @property
+    def stable_value(self):
+        """Return the mean stable value, or None if not stable."""
+        # Consider stable if the relative standard error of
+        # the mean in settled_values is less than 10%
+        values = np.array(self.settled_values)
+        n_values = len(values)
+        if n_values < 2:  # Need 2 values for s.err calculation
+            return None
+        mean_x, mean_x2 = values.mean(), (values**2).mean()
+        rel_serr = mean_x2 / mean_x**2 - 1
+        rel_serr = np.sqrt(rel_serr / (n_values - 1))
+        if 3 * rel_serr >= self.__stable_thresh:
+            return None
+        return mean_x
+
+    def __delitem__(self, index):
+        """Prevent removal of items at index."""
+        # In principle I could allow removal from the end as
+        # this does not require recomputing anything, but I'm
+        # not going to use it anyway
+        raise NotImplementedError(
+            f"Cannot remove item {item}. Deletion is forbidden."
+            )
+
+    def __getitem__(self, index):
+        """Return item at index."""
+        return self.__list[index]
+
+    def __len__(self):
+        """Return length of self."""
+        return len(self.__list)
+
+    def __repr__(self):
+        """Return a string representation of self."""
+        txt = f"_Adjustments({repr(self.__list)}, "
+        txt += f"alpha={self.alpha}, beta={self.beta}, "
+        txt += f"thresholds={self.__params['thresholds']})"
+        return txt
+
+    def __setitem__(self, index, value):
+        """Prevent setting elements other than at the end."""
+        _invalid = (isinstance(index, slice)
+                    and (index.step != 1 or index.start != len(self)))
+        _invalid |= (isinstance(index, int) and index != len(self))
+        if _invalid:
+            raise NotImplementedError("Can only add elements to the end!")
+        if isinstance(index, int):
+            value = (value,)
+        for val in value:
+            self.add(val)
+
+    def __str__(self):
+        """Return a string representation of self."""
+        return str(self.__list)
+
+    def add(self, value):
+        """Add one value, computing median smoothing, level and trend."""
+        self.__list.append(value)
+
+        # 5-element-window median can still change the i-th element
+        # until the (i+3)-th arrives. Makes no sense to calculate
+        # anything till the 4th element is here.
+        if len(self) < 4:
+            return
+
+        idx = len(self) - 4   # This is the stable value
+        self.__median = ndimage.median_filter(self, 5, mode='nearest')
+        median = self.__median[idx]
+        if not idx:           # First stable median value
+            self.__level.append(median)
+            return
+
+        old_level = self.__level[-1]
+        if not self.__trend:  # Second stable median value
+            self.__trend.append(median - old_level)              # mul: /
+        old_trend = self.__trend[-1]
+        new_level = (self.alpha * median
+                     + self.__alphac * (old_level + old_trend))  # mul: *
+        new_trend = (self.beta * (new_level - old_level)         # mul: /
+                     + self.__betac * old_trend)
+        self.__level.append(new_level)
+        self.__trend.append(new_trend)
+
+        # Now we decide if we are settled, and store the
+        # index if we are. Notice that min(idx) == 1.
+        settled = abs(new_trend) < self.__settle_thresh * median
+        if not self.is_settled and settled:
+            self.__last_settled = idx
+        elif not settled:
+            self.__last_settled = None
+
+    def clear(self):
+        """Clear list."""
+        # No need to clear __median as it is recalculated each time
+        self.__level.clear()
+        self.__trend.clear()
+        self.__last_settled = None
+        super().clear()
+
+    def insert(self, index, value):
+        """Prevent setting elements other than at the end."""
+        if index != len(self):
+            raise NotImplementedError("Can only add elements to the end!")
+        self.add(value)
+
+    @property
+    def __alphac(self):
+        """Return 1 - self.alpha."""
+        return self.__params['alphac']
+
+    @property
+    def __betac(self):
+        """Return 1 - self.alpha."""
+        return self.__params['betac']
+
+    @property
+    def __settle_thresh(self):
+        """Return the threshold for settling."""
+        return self.__params['thresholds'][0]
+
+    @property
+    def __stable_thresh(self):
+        """Return the threshold for settling."""
+        return self.__params['thresholds'][1]
 
 
 # pylint: disable=too-many-instance-attributes
