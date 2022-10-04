@@ -95,10 +95,6 @@ class BadPixelsFinderDialog(qtw.QDialog):
 
         self.setWindowTitle("Find bad pixels")
 
-        # May need to manually decorate self.adjustSize as
-        # pyqtSlot in case we have cameras in non-main threads
-        # self.adjustSize = qtc.pyqtSlot()(self.adjustSize)
-
         self.__compose()
         self.__connect()
 
@@ -107,7 +103,8 @@ class BadPixelsFinderDialog(qtw.QDialog):
         self.__reset_progress_bars()
         self.__progress['group'].hide()
         self.update_available_camera_list()
-        self.__ctrls['camera'].setCurrentIndex(-1)  # TODO: path label not updated correctly
+        self.__ctrls['camera'].setCurrentIndex(-1)
+        self.__ctrls['bad_px_path'].setText(NO_BAD_PX_PATH)
         self.adjustSize()
         super().showEvent(event)
 
@@ -430,6 +427,8 @@ class BadPixelsFinderDialog(qtw.QDialog):
         # Signal errors by picking an invalid entry
         if not config_name:
             self.__ctrls['camera'].setCurrentIndex(-1)
+            self.__ctrls['bad_px_path'].setText(NO_BAD_PX_PATH)
+            self.active_camera = None
             return
         settings = ViPErLEEDSettings.from_settings(config_name)
         settings['camera_settings']['device_name'] = camera_name
