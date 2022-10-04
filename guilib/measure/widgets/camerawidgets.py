@@ -32,6 +32,8 @@ from viperleed.guilib.measure import hardwarebase as base
 # TODO: ROI context menu: precisely set with coordinates
 # TODO: context -- properties
 # TODO: use ROI position increments
+# TODO: If camera is not open at CameraViewer__init__, I never update
+#       the limits! Should use camera.started to fetch them if needed
 
 
 # pylint: disable=too-many-instance-attributes
@@ -138,6 +140,7 @@ class CameraViewer(qtw.QScrollArea):
             # Viewer has been garbage-collected. Remove it from cache.
             cls._viewers.pop(camera)
         new_viewer = super().__new__(cls, camera, *args, **kwargs)
+        new_viewer._initialized = False   # Call __init__ only once
         cls._viewers[camera] = weakref.ref(new_viewer)
         return new_viewer
 
@@ -170,11 +173,11 @@ class CameraViewer(qtw.QScrollArea):
             whenever a new frame arrives from the camera (if
             it is not visible already). Otherwise, it should
             be made explicitly visible by the caller. This
-            behavior can be changed at any time by setting
+            behaviour can be changed at any time by setting
             the .show_auto attribute. Default is True.
         roi_visible : bool, optional
             If True, a region of interest can be set and
-            manipulated. This behavior can be changed at any
+            manipulated. This behaviour can be changed at any
             time by setting the .roi_visible attribute.
             Default is True.
         **kwargs : object
@@ -186,9 +189,13 @@ class CameraViewer(qtw.QScrollArea):
         TypeError
             If camera is not a subclass of CameraABC
         """
+        if self._initialized:
+            return
         if not isinstance(camera, abc.CameraABC):
             raise TypeError(f"{self.__class__.__name__}: camera argument "
                             "must be a subclass of CameraABC.")
+
+        self._initialized = True
 
         super().__init__(*args, parent=parent, **kwargs)
 
