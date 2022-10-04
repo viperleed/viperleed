@@ -557,9 +557,11 @@ def plot_analysis(exp, figs, figsize, name, namePos, oritick, plotcolors, rPos, 
                    for j in range(0, min(len(ytheo), len(yexp)))])
     dysq = np.copy(dy)
     dysq[:, 1] = dysq[:, 1] ** 2
+    
+    eps = 1e-10 # needed to avoid division by 0. Only important for plotting.
     norm_y_squares = np.array(
         [[dysq[j, 0], (dysq[j, 1]
-                       / (y_theo_sq[j, 1] + y_exp_sq[j, 1]))]
+                       / (y_theo_sq[j, 1] + y_exp_sq[j, 1] + eps))]
          for j in range(len(dysq))])
     sum_norm_y_squares = np.array([norm_y_squares[0]])
     for j in range(1, len(norm_y_squares)):
