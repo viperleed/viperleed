@@ -578,18 +578,20 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
                     os.remove(os.path.join(dir_name, f_name))
                 except Exception:
                     pass
-        if rfac == 0:
-            logger.error(
-                "ROUT reports R-Factor as zero. This means "
+        if rfac <= 0.00001:
+            logger.warning(
+                "ROUT reports R-Factor as zero. This may mean "
                 "something went wrong in the reference "
-                "calculation or in the R-factor calculation."
+                "calculation or in the R-factor calculation. "
+                "If you are comparing with pseudo-experiment data, "
+                "you can ignore this warning."
             )
-            rp.setHaltingLevel(2)
-            f_name = "R_OUT_" + name + "_" + rp.timestamp
-        else:
-            f_name = "R_OUT_" + name + "_" + rp.timestamp + "_R={:.4f}".format(rfac)
-            rp.last_R = rfac
-            rp.stored_R[name] = (rfac, r_int, r_frac)
+            # Do not halt - R=0 can be valid for comparisons with pseudo experiments.
+            # rp.setHaltingLevel(2)
+
+        f_name = "R_OUT_" + name + "_" + rp.timestamp + "_R={:.4f}".format(rfac)
+        rp.last_R = rfac
+        rp.stored_R[name] = (rfac, r_int, r_frac)
         try:
             os.rename("ROUT", f_name)
         except OSError:
