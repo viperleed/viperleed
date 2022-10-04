@@ -327,43 +327,19 @@ class BadPixelsFinder(qtc.QObject):
         old_exposure = self.__camera.exposure
         old_gain = self.__camera.gain
         pix_min, intensity_range = self.__limits['intensity']
-        exposure_min, exposure_max = self.__limits['exposure']
 
         intensity = frame.mean() - pix_min
-        new_exposure = old_exposure * 0.5*intensity_range / intensity
-        if new_exposure < exposure_min:
-            # Decrease the gain
-            new_gain = old_gain + 20*np.log10(new_exposure/exposure_min)
-            new_exposure = exposure_min
-        elif new_exposure > exposure_max:
-            # Increase the gain (this is very unlikely to happen)
-            new_gain = old_gain + 20*np.log10(new_exposure/exposure_max)
-            new_exposure = exposure_max
-        else:
-            new_gain = old_gain
-
-        # Now check that the gain is OK: the only cases in which
-        # it cannot be OK is if we need very short or very long
-        # exposures (otherwise the gain stayed the same).
-        min_gain, max_gain = self.__limits['gain']
-        if new_gain < min_gain:
-            # Too much intensity
-            base.emit_error(self, BadPixelsFinderErrors.FLAT_FRAME_WRONG_LIGHT,
-                            'bright')
+        exposure = old_exposure * 0.5 * intensity_range / intensity
+        exposure, gain = self.__correct_exposure_gain(exposure, old_gain)
+        if exposure is None:
             return
-        if new_gain > max_gain:
-            # Too little intensity
-            base.emit_error(self, BadPixelsFinderErrors.FLAT_FRAME_WRONG_LIGHT,
-                            'dark')
-            return
+        self.__adjustments += 1
         self.__new_settings.set('measurement_settings', 'exposure',
-                                f'{new_exposure:.3f}')
-        self.__new_settings.set('measurement_settings', 'gain',
-                                f'{new_gain:.1f}')
+                                f'{exposure:.3f}')
+        self.__new_settings.set('measurement_settings', 'gain', f'{gain:.1f}')
         _INVOKE(self.__camera, 'set_settings',
                 qtc.Q_ARG(object, deepcopy(self.__new_settings)))
-        self.__adjustments += 1
-        self.__report_acquisition_progress(new_exposure)
+        self.__report_acquisition_progress(exposure)
         _INVOKE(self.__camera, 'start')
 
     @qtc.pyqtSlot(np.ndarray)
@@ -395,6 +371,34 @@ class BadPixelsFinder(qtc.QObject):
         self.progress_occurred.emit(name, section.value, section.n_sections,
                                     self.__frames_done + self.__adjustments,
                                     section.n_tasks + self.__adjustments)
+
+    def __correct_exposure_gain(self, exposure, gain):
+        """Return in-range exposure and gain."""
+        exposure_min, exposure_max = self.__limits['exposure']
+        if exposure < exposure_min:
+            # Decrease the gain
+            gain += 20*np.log10(exposure/exposure_min)
+            exposure = exposure_min
+        elif exposure > exposure_max:
+            # Increase the gain (this is very unlikely to happen)
+            gain += 20*np.log10(exposure/exposure_max)
+            exposure = exposure_max
+
+        # Now check that the gain is OK: the only cases in which
+        # it cannot be OK is if we need very short or very long
+        # exposures (otherwise the gain stayed the same).
+        min_gain, max_gain = self.__limits['gain']
+        if gain < min_gain:
+            # Too much intensity
+            base.emit_error(self, BadPixelsFinderErrors.FLAT_FRAME_WRONG_LIGHT,
+                            'bright')
+            return None, None
+        if gain > max_gain:
+            # Too little intensity
+            base.emit_error(self, BadPixelsFinderErrors.FLAT_FRAME_WRONG_LIGHT,
+                            'dark')
+            return None, None
+        return exposure, gain
 
     @_report_progress
     def find_bad_and_replacements(self):
@@ -596,10 +600,10 @@ class BadPixelsFinder(qtc.QObject):
             True if frame is OK.
         """
         pixel_min, intensity_range = self.__limits['intensity']
-        intensity = frame.mean() - pixel_min
+        relative_intensity = (frame.mean() - pixel_min) / intensity_range
         if 'dark' in self.__current_section:
-            return intensity < 0.2*intensity_range
-        return 0.45*intensity_range < intensity < 0.55*intensity_range
+            return relative_intensity < 0.2
+        return 0.45 < relative_intensity < 0.55
 
     def __restore_settings(self):
         """Restore the original settings of the camera."""
@@ -648,21 +652,6 @@ class BadPixelsFinder(qtc.QObject):
             self.__frames_done = 0
             self.__adjustments = 0
             self.begin_acquiring()
-
-
-class _BadPixCalculationThread(qtc.QThread):
-
-    def __init__(self, finder, parent=None):
-        super().__init__(parent=parent)
-        self.__finder = finder
-
-    def run(self):
-        """Run calculations."""
-        self.__finder.find_flickery_pixels()
-        self.__finder.find_hot_pixels()
-        self.__finder.find_dead_pixels()
-        self.__finder.find_bad_and_replacements()
-        self.__finder.save_and_cleanup()
 
 
 # pylint: disable=too-many-instance-attributes
