@@ -217,10 +217,14 @@ class BadPixelsFinder(qtc.QObject):
         self.__info.setWindowTitle(f"Bad pixel detection for {name}")
         self.__info.setIcon(self.__info.Information)
         self.__info.setText(
-            f"Frames will be acquired from {name} camera."
+            f"Frames will be acquired from camera {name}."
             )
+        btn = self.__info.addButton(self.__info.Ok)
+        btn.setText("I'm ready")
+        self.__info.addButton(self.__info.Abort)
         self.__set_info_box_text.connect(self.__info.setInformativeText)
-        self.__info.finished.connect(self.__continue_begin_acquiring)
+        self.__info.accepted.connect(self.__continue_begin_acquiring)
+        self.__info.rejected.connect(self.abort)
 
     @property
     def short_exposure(self):
@@ -253,17 +257,17 @@ class BadPixelsFinder(qtc.QObject):
         """Start acquiring images."""
         if "dark" in self.__current_section:
             self.__set_info_box_text.emit(
-                "A 'dark' movie will be acquired.\nMake sure no light "
-                "enters the camera.\nFor example, you can close the "
-                "lens with its cap.\n\nPress 'OK' when ready."
+                "A 'dark' movie will be acquired.<br>Make sure no light "
+                "enters the camera.<br>For example, you can <b>close the "
+                "lens with its cap.</b>"
                 )
         else:
             self.__set_info_box_text.emit(
-                "A 'flat' frame will be acquired.\nMake sure the camera "
+                "A 'flat' frame will be acquired.<br>Make sure the camera "
                 "is viewing a featureless background with uniform "
-                "illumination.\nFor example, you can place a white "
-                "piece of paper right in front of the lens. Normal room "
-                "light should be uniform enough.\n\nPress 'OK' when ready."
+                "illumination.<br>For example, you can place a <b>white "
+                "piece of paper right in front of the lens</b>. Normal room "
+                "light should be uniform enough."
                 )
         if 'long' not in self.__current_section:
             # Show dialog. When closed, its .finished

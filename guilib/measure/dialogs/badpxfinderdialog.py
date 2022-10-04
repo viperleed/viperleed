@@ -632,6 +632,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
         self.__finder.done.connect(self.__on_finder_done)
         self.__finder.done.connect(self.__finder.deleteLater)
         self.__finder.aborted.connect(self.__finder.deleteLater)
+        self.__finder.aborted.connect(lambda: self.__enable_controls(True))
         self.__finder_thread.finished.connect(self.__finder.deleteLater)
         self.__finder.error_occurred.connect(self.__on_error_occurred)
         self.__start_finder.connect(self.__finder.find)
