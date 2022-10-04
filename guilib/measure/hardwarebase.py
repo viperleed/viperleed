@@ -290,7 +290,8 @@ def get_device_config(device_name, directory=DEFAULTS_PATH,
                 directory=str(directory)
                 )
             if new_path:
-                return get_device_config(device_name, directory=new_path)
+                return get_device_config(device_name, new_path, tolerant_match,
+                                         prompt_if_invalid, parent_widget)
         return None
 
     # Found multiple config files that match.
