@@ -24,8 +24,6 @@ from scipy import ndimage
 from PyQt5 import (QtCore as qtc,
                    QtWidgets as qtw)
 
-# from viperleed.guilib.measure.hardwarebase import (emit_error,
-                                                   # ViPErLEEDErrorEnum)
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.camera import abc
 from viperleed.guilib.measure.camera import tifffile
@@ -159,8 +157,11 @@ class BadPixelsFinder(qtc.QObject):
 
         self.__frames_done = 0
         self.__adjustments = 0  # used for progress reporting
+
+        px_min, px_max = camera.intensity_limits
         self.__limits = {'gain': camera.get_gain_limits(),
-                         'exposure': camera.get_exposure_limits()}
+                         'exposure': camera.get_exposure_limits(),
+                         'intensity': (px_min, px_max - px_min)}
 
         # Keep track of the old camera settings, as we will need to
         # change them on the fly later. Also, store the previous
@@ -340,8 +341,7 @@ class BadPixelsFinder(qtc.QObject):
         """Use a frame to estimate optimal exposure for flat frames."""
         old_exposure = self.__camera.exposure
         old_gain = self.__camera.gain
-        pix_min, pix_max = self.__camera.intensity_limits
-        intensity_range = pix_max - pix_min
+        pix_min, intensity_range = self.__limits['intensity']
         exposure_min, exposure_max = self.__limits['exposure']
 
         intensity = frame.mean() - pix_min
@@ -505,9 +505,7 @@ class BadPixelsFinder(qtc.QObject):
         ------
         None.
         """
-        pix_min, pix_max = self.__camera.intensity_limits
-        intensity_range = pix_max - pix_min
-
+        pix_min, intensity_range = self.__limits['intensity']
         flat = self.__imgs['flat'] - pix_min
 
         # We have to exclude the already-detected bad pixels.
@@ -576,7 +574,7 @@ class BadPixelsFinder(qtc.QObject):
         self.__badness = np.zeros_like(long_flicker)
 
         # The conditional checks prevent division by zero for very good
-        # cameras. '-1' --> badness == 0 for normally flickery pixels 
+        # cameras. '-1' --> badness == 0 for normally flickery pixels
         if short_mean:
             self.__badness += short_flicker / short_mean - 1
         if long_mean:
@@ -585,8 +583,7 @@ class BadPixelsFinder(qtc.QObject):
     @_report_progress
     def find_hot_pixels(self):
         """Set badness of hot pixels to infinity."""
-        pix_min, pix_max = self.__camera.intensity_limits
-        intensity_range = pix_max - pix_min
+        pix_min, intensity_range = self.__limits['intensity']
 
         dark_ave = self.__imgs['dark-long'].mean(axis=0) - pix_min
         hot_pixels = dark_ave >= 0.25*intensity_range
@@ -612,8 +609,7 @@ class BadPixelsFinder(qtc.QObject):
         acceptable : bool
             True if frame is OK.
         """
-        pixel_min, pixel_max = self.__camera.intensity_limits
-        intensity_range = pixel_max - pixel_min
+        pixel_min, intensity_range = self.__limits['intensity']
         intensity = frame.mean() - pixel_min
         if 'dark' in self.__current_section:
             return intensity < 0.2*intensity_range
@@ -887,7 +883,7 @@ class BadPixels:
 
         The coordinates always refer to a region of interest.
         Bad pixels are uncorrectable if they only have bad
-        neighbors (in the allowed replacement directions).
+        neighbours (in the allowed replacement directions).
 
         The array returned should NOT be edited in place. Make a
         .copy() if any editing is needed.
