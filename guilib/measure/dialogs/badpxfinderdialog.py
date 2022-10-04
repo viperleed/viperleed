@@ -185,6 +185,8 @@ class BadPixelsFinderDialog(qtw.QDialog):
         self.active_camera = None
         if self.__finder_thread.isRunning():
             self.__finder_thread.quit()
+            if not self.__finder_thread.wait(100):
+                self.__finder_thread.terminate()
 
     def __compose(self):
         """Place children widgets."""
