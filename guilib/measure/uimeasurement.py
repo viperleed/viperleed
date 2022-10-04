@@ -38,14 +38,6 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 #      Should keep track of the adjustments and decide to pick a value
 #      at some point
 # BUG: update COM and camera name when starting measurement (from known devices)
-# BUG: BadPixelsFinder is creating a CameraViewer with the intent of closing
-#      any viewer that may already exist for that camera. However, the
-#      camera objects used in the BadPixelsFinder and here are distinct.
-#      This means that the CameraViewer route there is useless (commented
-#      out now!). I would need to make CameraABC instances a singleton/Borg
-#      (on name?) or find a good way to prevent accessing the same device
-#      from different objects The most difficult part with the singleton/
-#      Borg is handling movements to threads.
 
 #   G E N E R I C
 # TODO: init errors cause obfuscation of the original object that had problems
@@ -90,8 +82,14 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 #       instance, and instantiate it (optionally using the extra args/kwargs
 #       for it), or (ii) still take an instance, but require its class not
 #       take any args/kwargs at __init__.
-# BUG: CameraViewer can still pop up. Try using with qtc.QSignalBlocker
-#      while entering the closeEvent?
+# TODO: to restore the BadPixelsFinder CameraViewer, see edits in commit
+#       7dadce312c775d63487501cb9c5af42b6680df2b. I would need to make
+#       CameraABC instances a singleton/Borg (on name?) or find a good
+#       way to prevent accessing the same device from different objects.
+#       The most difficult part with the singleton/Borg is handling
+#       movements to threads.
+# TODO: CameraViewer can still pop up. Try using with qtc.QSignalBlocker
+#       while entering the closeEvent?
 
 #   M E A S U R E M E N T
 # TODO: energy ramps are not equivalent for iv == calibration != time_resolved
@@ -278,6 +276,8 @@ class Measure(ViPErLEEDPluginBase):
         retry_later = False
         if self.__measurement_thread.isRunning():
             self.__measurement_thread.quit()
+            if not self.__measurement_thread.wait(100):
+                self.__measurement_thread.terminate()
             retry_later = True
 
         if self._glob['plot']:
