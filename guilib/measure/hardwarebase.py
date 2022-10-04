@@ -157,34 +157,49 @@ def _device_name_re(name):
         (1) <text> contains exactly name, (2) <text> contains name
         with its square brackets removed, (3) <text> contains name,
         but possibly misses parts of name included in square brackets;
-        the text in brackets may be missing, or may be different
+        the text in brackets may be missing, or may be different;
+        (4) <text> may contain parts in between square brackets
+        where there are spaces in name, if name does not contain any
+        quare bracket.
+
+        Matching only occurs toward the end of <text>, apart from an
+        arbitrary numbers of spaces
     """
     # (1) Match exactly
     _patterns = [re.escape(name)]
-    # (2) Same as name, apart from '[' or ']' characters
-    _patterns.append(re.escape(name.replace('[', '').replace(']', '')))
-    # (3) All parts in name, but possibly excluding those in squares
-    #     This is a bit more involved as we want to replace only
-    #     outer square brackets with an optional capture group, which
-    #     can capture any character. The group can appear zero or once.
-    #     Moreover, we need to escape all characters out of the group,
-    #     and replace ' ' with ' ?' in case parts are missing.
-    _pattern3 = []
-    _in_brackets = False
-    _space = re.escape(' ')
-    for part in _MATCH_SQUARES.split(name):
-        if not part:
-            continue
-        if not _in_brackets and part not in '[]':
-            _pattern3.append(re.escape(part).replace(_space, _space + '?'))
-        elif _in_brackets and part != ']':
-            _pattern3.append(f"({_MATCH_SQUARES.pattern})?")
-        if part == '[':
-            _in_brackets = True
-        elif part == ']':
-            _in_brackets = False
-    _patterns.append(''.join(_pattern3))
-    return re.compile("|".join(_patterns))
+
+    # Now things depend on whether we have '[' in name:
+    if '[' not in name:
+        # Allow for squares to appear anywhere where there is a space
+        _patterns.append(re.escape(name).replace('\\ ', '\\ (\\[.*\\]\\ )?'))
+    else:
+        # (2) Same as name, apart from '[' or ']' characters
+        _patterns.append(re.escape(name.replace('[', '').replace(']', '')))
+        # (3) All parts in name, but possibly excluding those in squares
+        #     This is a bit more involved as we want to replace only
+        #     outer square brackets with an optional capture group, which
+        #     can capture any character. The group can appear zero or once.
+        #     Moreover, we need to escape all characters out of the group,
+        #     and replace ' ' with ' ?' in case parts are missing.
+        _pattern3 = []
+        _in_brackets = False
+        _space = re.escape(' ')
+        for part in _MATCH_SQUARES.split(name):
+            if not part:
+                continue
+            if not _in_brackets and part not in '[]':
+                _pattern3.append(re.escape(part).replace(_space, _space + '?'))
+            elif _in_brackets and part != ']':
+                _pattern3.append(f"({_MATCH_SQUARES.pattern})?")
+            if part == '[':
+                _in_brackets = True
+            elif part == ']':
+                _in_brackets = False
+        _patterns.append(''.join(_pattern3))
+    # All patterns should match towards the end of the line,
+    # and can have any characters before
+    return re.compile("|".join(r'^.*' + p + r'\s*$' for p in _patterns))
+
 
 def get_device_config(device_name, directory=DEFAULTS_PATH,
                       tolerant_match=True, prompt_if_invalid=True,
@@ -228,12 +243,17 @@ def get_device_config(device_name, directory=DEFAULTS_PATH,
         because prompt_if_invalid is False, or because the
         user dismissed the pop-up).
     """
-    _match_re = _device_name_re(device_name)
+    def _comment(line):
+        line = line.strip()
+        return any(line.startswith(c) for c in '#;')
+
+    dev_re = _device_name_re(device_name)
+
     def _device_name_found(config_file):
         """Return whether device_name is found in config."""
         if tolerant_match:
-            return any(_match_re.search(l) for l in config_file)
-        return device_name in config_file.read()
+            return any(dev_re.match(l) for l in config_file if not _comment(l))
+        return any(device_name in l for l in config_file if not _comment(l))
 
     directory = Path(directory).resolve()
     config_files = directory.glob('**/*.ini')
@@ -251,7 +271,7 @@ def get_device_config(device_name, directory=DEFAULTS_PATH,
         return None
 
     if not device_config_files:
-        msg_box = qtw.QMessageBox(parent=parent_widget)
+        msg_box = qtw.QMessageBox(parent=parent_widget)                         # TODO: would be more efficient to reuse the instance, but would need a singleton class
         msg_box.setWindowTitle("No settings file found")
         msg_box.setText(
             f"Directory {directory} and its subfolders do not contain "
@@ -262,6 +282,7 @@ def get_device_config(device_name, directory=DEFAULTS_PATH,
         msg_box.addButton(msg_box.Cancel)
         btn = msg_box.addButton("Select path", msg_box.ActionRole)
         msg_box.exec_()
+        msg_box.setParent(None)  # py garbage collector will take care
         if msg_box.clickedButton() is btn:
             new_path = qtw.QFileDialog.getExistingDirectory(
                 parent=parent_widget,
@@ -273,7 +294,7 @@ def get_device_config(device_name, directory=DEFAULTS_PATH,
         return None
 
     # Found multiple config files that match.
-    # Let the use pick which one to use
+    # Let the user pick which one to use
     names = [f.name for f in device_config_files]
     dropdown = vpr_measure.dialogs.DropdownDialog(
         "Found multiple settings files",
