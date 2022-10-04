@@ -85,6 +85,9 @@ class ViPErLEEDSelectPlugin(ViPErLEEDPluginBase):
                 return
             for module in open_modules:
                 module.close()
+        # Now close off all open widgets in the QApplication
+        for widg in qtw.qApp.topLevelWidgets():
+            widg.close()
         super().closeEvent(event)
 
     def keyPressEvent(self, event):  # pylint: disable=invalid-name
