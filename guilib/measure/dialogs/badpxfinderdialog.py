@@ -55,7 +55,10 @@ class BadPixelsFinderDialog(qtw.QDialog):
                 'find': qtw.QPushButton("&Find"),
                 'set_bad_px_path': qtw.QToolButton(),
                 'save_uncorr_mask': qtw.QPushButton(
-                    "Save uncorrectable &mask"
+                    "Save &uncorrectable mask"
+                    ),
+                'save_bad_mask': qtw.QPushButton(
+                    "Save &bad-pixels mask"
                     ),
                 },
             'bad_px_info': {
@@ -185,7 +188,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
         self.active_camera = None
         if self.__finder_thread.isRunning():
             self.__finder_thread.quit()
-            if not self.__finder_thread.wait(100):
+            if not self.__finder_thread.wait(200):
                 self.__finder_thread.terminate()
 
     def __compose(self):
@@ -231,6 +234,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
         layout.addWidget(self.__bad_px_info['n_uncorrectable'], 2, 0)
         layout.addWidget(self.__bad_px_info['n_uncorrectable_old'], 2, 1)
         layout.addWidget(self.__buttons['save_uncorr_mask'], 3, 0, 1, 2)
+        layout.addWidget(self.__buttons['save_bad_mask'], 4, 0, 1, 2)
         group.setLayout(layout)
         return group
 
@@ -282,9 +286,8 @@ class BadPixelsFinderDialog(qtw.QDialog):
         self.__buttons['set_bad_px_path'].triggered.connect(
             self.__on_set_bad_pixel_directory
             )
-        self.__buttons['save_uncorr_mask'].clicked.connect(
-                self.__on_save_mask_clicked
-                )
+        for btn_ in ('save_uncorr_mask', 'save_bad_mask'):
+            self.__buttons[btn_].clicked.connect(self.__on_save_mask_clicked)
 
         self.__ctrls['camera'].textActivated.connect(
             self.__on_camera_selected,
@@ -338,6 +341,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
         self.__buttons['abort'].setEnabled(abort_enabled)
         self.__buttons['find'].setEnabled(find_enabled)
         self.__buttons['save_uncorr_mask'].setEnabled(has_bad_px_info)
+        self.__buttons['save_bad_mask'].setEnabled(has_bad_px_info)
 
     def __get_bad_pixel_info(self, previous=False):
         """Return bad pixel info from the active camera.
@@ -549,15 +553,23 @@ class BadPixelsFinderDialog(qtw.QDialog):
             # This should never happen: the button
             # is disabled if this is the case
             return
+
+        btn = self.sender()
+        if btn is self.__buttons['save_uncorr_mask']:
+            txt = 'uncorrectable'
+            _save = cam.bad_pixels.save_uncorrectable_mask
+        else:
+            txt = 'bad'
+            _save = cam.bad_pixels.save_bad_px_mask
         mask_path = qtw.QFileDialog.getExistingDirectory(
             parent=self,
-            caption="Set directory for uncorrectable pixels mask",
+            caption=f"Set directory for {txt}-pixels mask",
             directory=self.__ctrls['bad_px_path'].text()
             )
         if not mask_path:
             # User exited without selecting
             return
-        cam.bad_pixels.save_uncorrectable_mask(mask_path)
+        _save(mask_path)
 
     def __on_set_bad_pixel_directory(self, *_):
         """React to a user request to set the bad pixel directory."""

@@ -1115,27 +1115,8 @@ class BadPixels:
         RuntimeError
             If called before any bad pixel info is present.
         """
-        if not self.__has_info:
-            raise RuntimeError(f"{self.__class__.__name__}: No "
-                               "bad pixel information present.")
-
-        # Prepare the image
-        width, height, *_ = self.__camera.image_info
-        mask = np.zeros((height, width), dtype='uint8')
-
-        if len(self.uncorrectable):
-            bad_y, bad_x = self.uncorrectable.T
-            mask[bad_y, bad_x] = 255
-
-        date_time = self.__datetime.strftime("%Y:%m:%d %H:%M:%S")
-        filename = Path(filepath, f"{self.__base_name}_uncorr_mask.tiff")
-        tiff = tifffile.TiffFile.from_array(
-            mask,
-            comment=f"Uncorrectable bad pixels mask for {self.__camera.name}",
-            model=self.__camera.name,
-            date_time=date_time
-            )
-        tiff.write(filename)
+        self.__save_mask_base(self.uncorrectable, filepath, 'uncorr',
+                              "Uncorrectable bad pixels")
 
     def save_bad_px_mask(self, filepath=''):
         """Save an image with bad pixels as white.
@@ -1155,6 +1136,11 @@ class BadPixels:
         RuntimeError
             If called before any bad pixel info is present.
         """
+        self.__save_mask_base(self.bad_pixel_coordinates, filepath, 'bad',
+                              "Bad pixels")
+
+    def __save_mask_base(self, coordinates, filepath, extra_name, comment):
+        """Save coordinates as a binary mask in filepath."""
         if not self.__has_info:
             raise RuntimeError(f"{self.__class__.__name__}: No "
                                "bad pixel information present.")
@@ -1163,15 +1149,15 @@ class BadPixels:
         width, height, *_ = self.__camera.image_info
         mask = np.zeros((height, width), dtype='uint8')
 
-        if len(self.bad_pixel_coordinates):
-            bad_y, bad_x = self.bad_pixel_coordinates.T
+        if coordinates.size:
+            bad_y, bad_x = coordinates.T
             mask[bad_y, bad_x] = 255
 
         date_time = self.__datetime.strftime("%Y:%m:%d %H:%M:%S")
-        filename = Path(filepath, f"{self.__base_name}_bad_mask.tiff")
+        filename = Path(filepath, f"{self.__base_name}_{extra_name}_mask.tiff")
         tiff = tifffile.TiffFile.from_array(
             mask,
-            comment=f"Bad pixels mask for {self.__camera.name}",
+            comment=f"{comment} mask for {self.__camera.name}",
             model=self.__camera.name,
             date_time=date_time
             )
