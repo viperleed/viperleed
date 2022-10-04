@@ -138,8 +138,6 @@ class BadPixelsFinder(qtc.QObject):
         super().__init__(parent=parent)
 
         self.__camera = camera
-        self.__viewer = CameraViewer(self.__camera, stop_on_close=False,
-                                     visible=False)
 
         self.__camera.error_occurred.connect(self.error_occurred)
         self.__camera.image_processed.connect(self.__check_and_store_frame)
@@ -164,14 +162,10 @@ class BadPixelsFinder(qtc.QObject):
         # because the camera does some checks for quantities changed
         # to decide whether to recalculate stuff.
         self.__original = {'settings': deepcopy(self.__camera.settings),
-                           'process': self.__camera.process_info.copy(),
-                           'show_auto': self.__viewer.show_auto,
-                           'was_visible': self.__viewer.isVisible()}
+                           'process': self.__camera.process_info.copy()}
 
         # Now set new settings that will be used
         # throughout the rest of the processing.
-        self.__viewer.show_auto = False
-        _INVOKE(self.__viewer, 'hide')
         self.__new_settings = deepcopy(self.__camera.settings)
 
         _, (max_roi_w, max_roi_h), *_ = self.__camera.get_roi_size_limits()
@@ -612,9 +606,6 @@ class BadPixelsFinder(qtc.QObject):
         _INVOKE(self.__camera, 'set_settings',
                 qtc.Q_ARG(object, self.__original['settings']))
         self.__camera.process_info.restore_from(self.__original['process'])
-        self.__viewer.show_auto = self.__original['show_auto']
-        if self.__original['was_visible']:
-            _INVOKE(self.__viewer, 'show')
 
     def save_and_cleanup(self):
         """Save a bad pixels file and finish."""

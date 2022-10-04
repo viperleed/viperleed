@@ -18,6 +18,8 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 # TESTME: make sure multiple controllers work fine with the new ABC.stop
 
 # BUG: bad_px_finder: camera can time out. Reproducible in Prague.
+#      Did not happen at all to me, nor in Julich (Wuttig). They had
+#      fast PC and communication.
 #      Seemed to happen very reproducibly especially while trying to
 #      acquire the long-dark movie (no frames at all).
 #      May be related to inappropriate (too slow) communication speed.
@@ -36,6 +38,14 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 #      Should keep track of the adjustments and decide to pick a value
 #      at some point
 # BUG: update COM and camera name when starting measurement (from known devices)
+# BUG: BadPixelsFinder is creating a CameraViewer with the intent of closing
+#      any viewer that may already exist for that camera. However, the
+#      camera objects used in the BadPixelsFinder and here are distinct.
+#      This means that the CameraViewer route there is useless (commented
+#      out now!). I would need to make CameraABC instances a singleton/Borg
+#      (on name?) or find a good way to prevent accessing the same device
+#      from different objects The most difficult part with the singleton/
+#      Borg is handling movements to threads.
 
 #   G E N E R I C
 # TODO: init errors cause obfuscation of the original object that had problems
@@ -74,6 +84,14 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 #       to be gathered during preparation.
 # TODO: auto-scale contrast on camera viewer
 # TODO: see if possible to not complain about missing bad pixels
+# TODO: moveToThread may be possible if we recreate .driver after we have
+#       moved to the new thread (like we do for .serial in ControllerABC).
+#       This requires either (i) taking a driver CLASS rather than an
+#       instance, and instantiate it (optionally using the extra args/kwargs
+#       for it), or (ii) still take an instance, but require its class not
+#       take any args/kwargs at __init__.
+# BUG: CameraViewer can still pop up. Try using with qtc.QSignalBlocker
+#      while entering the closeEvent?
 
 #   M E A S U R E M E N T
 # TODO: energy ramps are not equivalent for iv == calibration != time_resolved
@@ -88,14 +106,25 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 #   G U I
 # TODO: progress bar for non-endless
 # TODO: busy dialog where appropriate
+# TODO: move_to_front bad-pixels finder dialog when open and click on ui
 
 #   F E A T U R E S
 # TODO: quick IV video to find max intensity, and adjust camera
+# TODO: settle time calculation.
+#       Look at https://link.springer.com/article/10.1007/s00034-017-0560-3
+# TODO: progress report, take inspiration from github.com/verigak/progress/
+# QtBUG: should the file dialog issues with network drives appear, try
+#        also the QFileDialog::DontUseCustomDirectoryIcons option.
+#        Perhaps even QFileDialog::DontResolveSymlinks. The problem was
+#        supposed to be solved in Qt 5.15.1, but is still present. It has
+#        to do with unreachable network drives, and system calls to populate
+#        the list of drives. See bugreports.qt.io/browse/QTBUG-6039
 
 
 from copy import deepcopy
 from pathlib import Path
 from zipfile import ZipFile
+import functools
 import time
 
 import PyQt5.QtCore as qtc
@@ -208,6 +237,7 @@ class Measure(ViPErLEEDPluginBase):
             'report_errors': qtc.QTimer(parent=self),
             'retry_close': qtc.QTimer(parent=self),
             'start_measurement': qtc.QTimer(parent=self),
+            'retry_open_bpx_dialog': qtc.QTimer(parent=self),
             }
 
         self.measurement = None
@@ -215,7 +245,8 @@ class Measure(ViPErLEEDPluginBase):
         self.__measurement_thread.start(_TIME_CRITICAL)
 
         for timer, interval in (('report_errors', 35),
-                                ('start_measurement', 50),):
+                                ('start_measurement', 50),
+                                ('retry_open_bpx_dialog', 50),):
             self._timers[timer].setSingleShot(True)
             self._timers[timer].setInterval(interval)
         self._timers['retry_close'].setInterval(50)
@@ -417,8 +448,7 @@ class Measure(ViPErLEEDPluginBase):
         tools_menu = self._ctrls['menus']['tools']
         menu.insertMenu(self.about_action, tools_menu)
         act = tools_menu.addAction("Find bad pixels...")
-        act.triggered.connect(self._dialogs['bad_px_finder'].show)
-        self._dialogs['bad_px_finder'].setModal(True)
+        act.triggered.connect(self.__on_bad_pixels_selected)
 
         act = tools_menu.addAction("Upload/upgrade firmware...")
         act.setEnabled(False)                                                   # TODO: fix when implemented
@@ -440,6 +470,9 @@ class Measure(ViPErLEEDPluginBase):
         self._dialogs['sys_settings'].settings_changed.connect(
             self.__on_sys_settings_changed
             )
+        self._dialogs['bad_px_finder'].finished.connect(
+            functools.partial(self.__switch_enabled, True)
+            )
         self.__measurement_thread.finished.connect(self.__switch_enabled)
 
         # TIMERS
@@ -447,6 +480,7 @@ class Measure(ViPErLEEDPluginBase):
             ('report_errors', self.__report_errors),
             ('retry_close', self.close),
             ('start_measurement', self.__on_measurement_started),
+            ('retry_open_bpx_dialog', self.__on_bad_pixels_selected),
             )
         for timer, slot in slots:
             self._timers[timer].timeout.connect(slot)
@@ -516,6 +550,24 @@ class Measure(ViPErLEEDPluginBase):
         ctrl.ready_to_show_settings.connect(dialog.show)
         dialog.finished.connect(ctrl.disconnect_)
         self._dialogs['device_settings'][name] = dialog
+
+    def __on_bad_pixels_selected(self):
+        """Stop all cameras, then open the dialog."""
+        _ok_to_open = True
+        for viewer in self._dialogs['camera_viewers']:
+            if viewer.camera.is_running:
+                _ok_to_open &= viewer.camera.stop()
+            viewer.close()
+        if not _ok_to_open:
+            # Retry soon
+            self._timers['retry_open_bpx_dialog'].start()
+            return
+
+        for viewer in self._dialogs['camera_viewers']:
+            viewer.camera.disconnect_()
+        self.__switch_enabled(False)
+        self._ctrls['abort'].setEnabled(False)
+        self._dialogs['bad_px_finder'].show()
 
     def __on_camera_clicked(self, *_):                                          # TODO: may want to display a busy dialog with "starting camera <name>..."
         cam_name = self.sender().text()
@@ -827,8 +879,8 @@ class Measure(ViPErLEEDPluginBase):
 
         Parameters
         ----------
-        idle : boolean
-            False when a measurement is running.
+        idle : bool, optional
+            False when a measurement is running. Default is False.
         """
         self._ctrls['measure'].setEnabled(idle)
         self._ctrls['select'].setEnabled(idle)
