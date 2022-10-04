@@ -31,6 +31,7 @@ from viperleed.guilib.measure.widgets.camerawidgets import CameraViewer
 
 
 N_DARK = 100  # Number of dark frames used for finding bad pixels
+_INVOKE = qtc.QMetaObject.invokeMethod
 
 
 def _report_progress(func):
@@ -122,17 +123,9 @@ class BadPixelsFinder(qtc.QObject):
         int   # total tasks in this section
         )
 
-    # Signals to handle camera, in case self is moved to a thread that          # TODO: all this and the next could be done with QMetaObject.invokeMethod()
-    # is not the one of its camera. __set_camera_settings (carries the
-    # new settings) is needed because camera.stop() may be called
-    __start_camera = qtc.pyqtSignal()
-    __trigger_camera = qtc.pyqtSignal()
-    __set_camera_settings = qtc.pyqtSignal(object)
-
     # Signals to interact with the info dialog. Necessary
     # if self is not living in the main, GUI thread
     __set_info_box_text = qtc.pyqtSignal(str)
-    __exec_info_box = qtc.pyqtSignal()
 
     def __init__(self, camera, parent=None):
         """Initialize object."""
@@ -151,9 +144,6 @@ class BadPixelsFinder(qtc.QObject):
         self.__camera.error_occurred.connect(self.error_occurred)
         self.__camera.image_processed.connect(self.__check_and_store_frame)
         self.__camera.started.connect(self.__trigger_next_frame)
-        self.__start_camera.connect(self.__camera.start)
-        self.__trigger_camera.connect(self.__camera.trigger_now)
-        self.__set_camera_settings.connect(self.__camera.set_settings)
 
         self.__frames_done = 0
         self.__adjustments = 0  # used for progress reporting
@@ -181,7 +171,7 @@ class BadPixelsFinder(qtc.QObject):
         # Now set new settings that will be used
         # throughout the rest of the processing.
         self.__viewer.show_auto = False
-        self.__viewer.hide()
+        _INVOKE(self.__viewer, 'hide')
         self.__new_settings = deepcopy(self.__camera.settings)
 
         _, (max_roi_w, max_roi_h), *_ = self.__camera.get_roi_size_limits()
@@ -194,7 +184,8 @@ class BadPixelsFinder(qtc.QObject):
 
         # And set them into the camera. This stops
         # the camera if it is currently running.
-        self.__set_camera_settings.emit(deepcopy(self.__new_settings))
+        _INVOKE(self.__camera, 'set_settings',
+                qtc.Q_ARG(object, deepcopy(self.__new_settings)))
         self.__camera.process_info.filename = ''
 
         # Clear any bad pixel info in the camera (frames should be raw)
@@ -235,7 +226,6 @@ class BadPixelsFinder(qtc.QObject):
             f"Frames will be acquired from {name} camera."
             )
         self.__set_info_box_text.connect(self.__info.setInformativeText)
-        self.__exec_info_box.connect(self.__info.exec_)
         self.__info.finished.connect(self.__continue_begin_acquiring)
 
     @property
@@ -284,7 +274,7 @@ class BadPixelsFinder(qtc.QObject):
         if 'long' not in self.__current_section:
             # Show dialog. When closed, its .finished
             # signal will trigger __continue_begin_acquiring
-            self.__exec_info_box.emit()
+            _INVOKE(self.__info, 'exec')
             return
         self.__continue_begin_acquiring()
 
@@ -314,9 +304,10 @@ class BadPixelsFinder(qtc.QObject):
         # acquisition of the first frame. Each time a frame is done
         # processing (image_processed) it is checked and stored. Then a
         # new acquisition is triggered, if needed.
-        self.__set_camera_settings.emit(deepcopy(self.__new_settings))
+        _INVOKE(self.__camera, 'set_settings',
+                qtc.Q_ARG(object, deepcopy(self.__new_settings)))
         self.__report_acquisition_progress(exposure)
-        self.__start_camera.emit()
+        _INVOKE(self.__camera, 'start')
 
     def abort(self):
         """Abort finding bad pixels."""
@@ -375,10 +366,11 @@ class BadPixelsFinder(qtc.QObject):
                                 f'{new_exposure:.3f}')
         self.__new_settings.set('measurement_settings', 'gain',
                                 f'{new_gain:.1f}')
-        self.__set_camera_settings.emit(deepcopy(self.__new_settings))
+        _INVOKE(self.__camera, 'set_settings',
+                qtc.Q_ARG(object, deepcopy(self.__new_settings)))
         self.__adjustments += 1
         self.__report_acquisition_progress(new_exposure)
-        self.__start_camera.emit()
+        _INVOKE(self.__camera, 'start')
 
     @qtc.pyqtSlot(np.ndarray)
     def __check_and_store_frame(self, frame):
@@ -617,11 +609,12 @@ class BadPixelsFinder(qtc.QObject):
 
     def __restore_settings(self):
         """Restore the original settings of the camera."""
-        self.__set_camera_settings.emit(self.__original['settings'])
+        _INVOKE(self.__camera, 'set_settings',
+                qtc.Q_ARG(object, self.__original['settings']))
         self.__camera.process_info.restore_from(self.__original['process'])
         self.__viewer.show_auto = self.__original['show_auto']
         if self.__original['was_visible']:
-            self.__viewer.show()
+            _INVOKE(self.__viewer, 'show')
 
     def save_and_cleanup(self):
         """Save a bad pixels file and finish."""
@@ -646,7 +639,7 @@ class BadPixelsFinder(qtc.QObject):
             return
 
         if self.missing_frames:
-            self.__trigger_camera.emit()
+            _INVOKE(self.__camera, 'trigger_now')
             return
 
         # One section over, go to the next one
