@@ -12,6 +12,7 @@ from a camera and computes a pixel-badness array.
 """
 
 from ast import literal_eval
+from collections.abc import MutableSequence
 from copy import deepcopy
 from datetime import datetime
 from enum import Enum
