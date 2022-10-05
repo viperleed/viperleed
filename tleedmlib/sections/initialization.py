@@ -234,6 +234,7 @@ def initialization(sl, rp, subdomain=False):
 
     # write POSCAR_bulk_appended
     n = 1
+    # TODO: @fkraushofer Why exactly do we add different amounts of layers here?
     if len(bsl.sublayers) <= len(bsl.elements)*2:
         n += 1
         if len(bsl.sublayers) <= len(bsl.elements):

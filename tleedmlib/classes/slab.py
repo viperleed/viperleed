@@ -1333,9 +1333,10 @@ class Slab:
         zdiff = 0.
         for _ in range(n):
             blayers = [lay for lay in ts.layers if lay.isBulk]
-            if type(rp.BULK_REPEAT) == np.ndarray:
+            if isinstance(rp.BULK_REPEAT, np.ndarray):
                 bulkc = np.copy(rp.BULK_REPEAT)
                 if bulkc[2] < 0:
+                    # perhaps vector given from surface to bulk instead of reverse...
                     bulkc = -bulkc
             else:
                 cvec = ts.ucell[:, 2]
@@ -1352,13 +1353,27 @@ class Slab:
             cfact = (ts.ucell[2, 2] + abs(bulkc[2])) / ts.ucell[2, 2]
             ts.ucell[:, 2] = ts.ucell[:, 2] * cfact
             bulkc[2] = -bulkc[2]
-            tmplist = ts.atlist[:]
-            for at in tmplist:
+            original_atoms = ts.atlist[:] # all atoms before adding layers
+            
+            # split bulkc into parts parallel and orthogonal to unit cell c
+            # this allows to keep the same ucell and shift correctly the new bulk layers
+            bulkc_project_to_c = np.dot(bulkc, ts.ucell[:, 2]) * ts.ucell[:, 2]
+            bulkc_perp_to_c = bulkc - bulkc_project_to_c
+            added_this_loop = []
+            for at in original_atoms:
                 if at.layer.isBulk and at not in duplicated:
-                    newbulkats.append(at.duplicate())
+                    new_atom = at.duplicate()
+                    newbulkats.append(new_atom)
                     duplicated.append(at)
-                    newbulkats[-1].oriN = len(ts.atlist)
-                at.cartpos = at.cartpos + bulkc
+                    added_this_loop.append(new_atom)
+                    new_atom.oriN = len(ts.atlist)
+                    
+                # old atoms get shifted up along ucell c
+                at.cartpos += bulkc_project_to_c
+            for at in added_this_loop:
+                # new atoms get shifted perpendicular to ucell c
+                at.cartpos -= bulkc_perp_to_c
+            # TODO: could be done outside loop?
             ts.collapseCartesianCoordinates(updateOrigin=True)
             ts.sortOriginal()
         return ts, newbulkats
