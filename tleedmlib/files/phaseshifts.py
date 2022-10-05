@@ -162,17 +162,19 @@ def readPHASESHIFTS(sl, rp, readfile='PHASESHIFTS', check=True,
         else:
             n = 1
         psblocks += n*len([s for s in sl.sitelist if s.el == el])
-    # check for MUFTIN parameters:
-    muftin = True
+    # try extracting muffin tin parameters:
+    muftin = []
     llist = firstline.split()
     if len(llist) >= 6:
         for i in range(1, 5):
             try:
-                float(llist[i])
-            except ValueError:
-                muftin = False
+                muftin.append(float(llist[i]))
+            except (ValueError, IndexError):
+                muftin = []
+                break
     else:
-        muftin = False
+        muftin = []
+        
     if rp.V0_REAL == "default" and not muftin:
         logger.warning(
             "Could not convert first line of PHASESHIFTS file to MUFTIN "
@@ -229,17 +231,12 @@ def readPHASESHIFTS(sl, rp, readfile='PHASESHIFTS', check=True,
                        rp.THEO_ENERGIES[2])
         psmin = round(phaseshifts[0][0]*27.211396, 2)
         psmax = round(phaseshifts[-1][0]*27.211396, 2)
-        if rp.V0_REAL == "default" or type(rp.V0_REAL) == list:
-            if type(rp.V0_REAL) == list:
+        if rp.V0_REAL == "default" or isinstance(rp.V0_REAL, list):
+            if isinstance(rp.V0_REAL, list):
                 c = rp.V0_REAL
             else:
-                llist = firstline.split()
-                c = []
-                try:
-                    for i in range(0, 4):
-                        c.append(float(llist[i+1]))
-                except (ValueError, IndexError):
-                    checkfail = True
+                c = muftin
+                checkfail = not bool(muftin)
             if c and not checkfail:
                 er_inner = [e + (rp.FILAMENT_WF - max(c[0],
                                  c[1] + (c[2]/np.sqrt(e + c[3]
