@@ -17,8 +17,11 @@ import viperleed.tleedmlib as tl
 
 logger = logging.getLogger("tleedm.files.parameters")
 
+# TODO: create a dict of parameter limits here (e.g. LMAX etc.)
+# TODO: change module level globals to ALL_CAPS everywhere
+
 # list of allowed parameters
-knownParams = [
+_KNOWN_PARAMS = [
     'ATTENUATION_EPS', 'AVERAGE_BEAMS', 'BEAM_INCIDENCE', 'BULKDOUBLING_EPS',
     'BULKDOUBLING_MAX', 'BULK_LIKE_BELOW', 'BULK_REPEAT', 'DOMAIN',
     'DOMAIN_STEP', 'ELEMENT_MIX',
@@ -35,8 +38,8 @@ knownParams = [
     'SYMMETRY_FIX', 'TENSOR_INDEX', 'TENSOR_OUTPUT', 'THEO_ENERGIES',
     'TL_VERSION', 'T_DEBYE', 'T_EXPERIMENT', 'V0_IMAG', 'V0_REAL',
     'V0_Z_ONSET', 'VIBR_AMP_SCALE']
-# paramAlias keys should be all lowercase, with no underscores
-paramAlias = {
+# _PARAM_ALIAS keys should be all lowercase, with no underscores
+_PARAM_ALIAS = {
     'bulklike': 'BULK_LIKE_BELOW',
     'bulksymmetry': 'SYMMETRY_BULK',
     'fortrancompile': 'FORTRAN_COMP', 'compiler': 'FORTRAN_COMP',
@@ -45,8 +48,8 @@ paramAlias = {
     'plotrfactor': 'PLOT_IV', 'plotrfactors': 'PLOT_IV', 'ivplot': 'PLOT_IV',
     'overlap': 'S_OVL', 'MT_overlap': 'S_OVL'
               }
-for p in knownParams:
-    paramAlias[p.lower().replace("_", "")] = p
+for p in _KNOWN_PARAMS:
+    _PARAM_ALIAS[p.lower().replace("_", "")] = p
 
 
 def updatePARAMETERS(rp, filename='PARAMETERS', update_from="."):
@@ -88,10 +91,10 @@ def updatePARAMETERS(rp, filename='PARAMETERS', update_from="."):
             plist = param.split()
             if plist:
                 param = plist[0]
-        if (param not in knownParams and
-                param.lower().replace("_", "") in paramAlias):
-            param = paramAlias[param.lower().replace("_", "")]
-        if param not in knownParams:
+        if (param not in _KNOWN_PARAMS and
+                param.lower().replace("_", "") in _PARAM_ALIAS):
+            param = _PARAM_ALIAS[param.lower().replace("_", "")]
+        if param not in _KNOWN_PARAMS:
             continue
         try:
             value = line.split('=', maxsplit=1)[1].rstrip()
@@ -179,10 +182,10 @@ def readPARAMETERS(filename='PARAMETERS'):
         # get rid of spaces and check the leftmost entry.
         plist = param.split()
         param = plist[0]
-        if (param not in knownParams and
-                param.lower().replace("_", "") in paramAlias):
-            param = paramAlias[param.lower().replace("_", "")]
-        if param not in knownParams:
+        if (param not in _KNOWN_PARAMS and
+                param.lower().replace("_", "") in _PARAM_ALIAS):
+            param = _PARAM_ALIAS[param.lower().replace("_", "")]
+        if param not in _KNOWN_PARAMS:
             logger.warning('PARAMETERS file: Parameter '+param+' not '
                            'recognized.')
             rpars.setHaltingLevel(1)
@@ -450,7 +453,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
     # define order that parameters should be read in
     orderedParams = ["LOG_DEBUG", "RUN"]
     checkParams = [p for p in orderedParams if p in rpars.readParams]
-    checkParams.extend([p for p in knownParams if (p in rpars.readParams and
+    checkParams.extend([p for p in _KNOWN_PARAMS if (p in rpars.readParams and
                                                    p not in checkParams)])
     domainsIgnoreParams = [
         'BULK_REPEAT', 'ELEMENT_MIX', 'ELEMENT_RENAME',
