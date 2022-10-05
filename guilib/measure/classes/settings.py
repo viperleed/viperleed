@@ -272,6 +272,8 @@ class ViPErLEEDSettings(ConfigParser):
         -------
         invalid_settings : list
             Invalid required_settings of self as a list of strings.
+            Each entry can be either '<section>', '<section>/<option>',
+            or '<section>/<option> not one of <value1>, <value2>, ...'
 
         Raises
         ------
@@ -279,9 +281,6 @@ class ViPErLEEDSettings(ConfigParser):
             If required_settings contains invalid data (i.e., one
             of the entries is not a Sequence with length <= 3).
         """
-        if not self:
-            return required_settings
-
         invalid_settings = []
         for setting in required_settings:
             if not setting or len(setting) > 3:
@@ -309,7 +308,6 @@ class ViPErLEEDSettings(ConfigParser):
                         "/".join(setting[:2])
                         + " not one of " + ", ".join(admissible_values)
                         )
-
         return invalid_settings
 
     def read(self, filenames, encoding=None):
