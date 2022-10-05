@@ -16,6 +16,7 @@ import shutil
 
 import viperleed.tleedmlib as tl
 from viperleed import fortranformat as ff
+from viperleed.tleedmlib.files.parameter import PARAM_LIMITS
 
 logger = logging.getLogger("tleedm.psgen")
 
@@ -61,7 +62,7 @@ def runPhaseshiftGen_old(sl, rp,
     psgensource = os.path.join(rp.sourcedir, psgensource)
     excosource = os.path.join(shortpath, excosource)
 
-    lmax = 16   # this could be a variable, for now set fixed...
+    lmax = PARAM_LIMITS['LMAX']
     nsl, newbulkats = sl.addBulkLayers(rp)
     outvals = {}
     # dict containing lists of values to output: outvals[energy][block][L]

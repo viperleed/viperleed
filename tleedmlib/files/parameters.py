@@ -38,6 +38,7 @@ _KNOWN_PARAMS = [
     'SYMMETRY_FIX', 'TENSOR_INDEX', 'TENSOR_OUTPUT', 'THEO_ENERGIES',
     'TL_VERSION', 'T_DEBYE', 'T_EXPERIMENT', 'V0_IMAG', 'V0_REAL',
     'V0_Z_ONSET', 'VIBR_AMP_SCALE']
+
 # _PARAM_ALIAS keys should be all lowercase, with no underscores
 _PARAM_ALIAS = {
     'bulklike': 'BULK_LIKE_BELOW',
@@ -48,6 +49,11 @@ _PARAM_ALIAS = {
     'plotrfactor': 'PLOT_IV', 'plotrfactors': 'PLOT_IV', 'ivplot': 'PLOT_IV',
     'overlap': 'S_OVL', 'MT_overlap': 'S_OVL'
               }
+
+PARAM_LIMITS = {
+    'LMAX':(1, 18),
+}
+
 for p in _KNOWN_PARAMS:
     _PARAM_ALIAS[p.lower().replace("_", "")] = p
 
@@ -841,6 +847,8 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                         continue
             rpars.LAYER_CUTS = llist
         elif param == 'LMAX':
+            _min, _max = PARAM_LIMITS[param]
+            
             llist = re.sub(r'[:-]', ' ', value).split()
             try:
                 il = [int(v) for v in llist]
@@ -857,24 +865,25 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                     .format(len(il)))
                 il = il[:2]
             if len(il) == 1:
-                if not 1 < il[0] <= 18:
-                    il[0] = min(max(1, il[0]), 18)
+                if not _min < il[0] <= _max:
+                    _, il[0], _ = sorted((_min, il[0], _max))
                     logger.warning(
-                        'PARAMETERS file: LMAX must be between 1 and 18. '
-                        'Value will be set to {}.'.format(il[0]))
+                        f'PARAMETERS file: LMAX must be between {_min} and {_max}. '
+                        f'Value will be set to {il[0]}.'
+                        )
                 rpars.LMAX = [il[0], il[0]]
             elif len(il) == 2:
                 if il[1] < il[0]:
                     il.reverse()
-                if il[0] < 1:
+                if il[0] < _min:
                     logger.warning('PARAMETERS file: LMAX lower bound must be '
-                                   'positive. Value will be set to 1.')
-                    il[0] = 1
-                if il[1] > 18:
+                                   f'positive. Value will be set to {_min}.')
+                    il[0] = _min
+                if il[1] > _max:
                     logger.warning('PARAMETERS file: LMAX values greater than '
-                                   '18 are currently not supported. Upper '
-                                   'bound will be set to 18.')
-                    il[1] = 18
+                                   f'{_max} are currently not supported. Upper '
+                                   f'bound will be set to {_max}.')
+                    il[1] = _max
                 rpars.LMAX = il
         elif param == 'OPTIMIZE':
             if len(plist) == 1:
