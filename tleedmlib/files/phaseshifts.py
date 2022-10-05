@@ -29,15 +29,53 @@ logger = logging.getLogger("tleedm.files.phaseshifts")
 
 def readPHASESHIFTS(sl, rp, readfile='PHASESHIFTS', check=True,
                     ignoreEnRange=False):
-    """Reads from a PHASESHIFTS file, returns the data as a list of tuples
-    (E, enps), where enps is a list of lists, containing one list of values
-    (for different L) for each element. Therefore, len(phaseshifts) is the
-    number of energies found, len(phaseshifts[0][1]) should match the number
-    of elements, and len(phaseshifts[0][1][0]) is the number of different
-    values of L in the phaseshift file. The "check" parameters controls
-    whether the phaseshifts that were found should be checked against the
-    parameters / slab. If it is set to False, then passing "None" as sl and rp
-    will work."""
+    """Reads from a PHASESHIFTS file.
+    
+    Parameters
+    ----------
+    sl: Slab
+    rp: RunParameters
+    readfile: str, optional
+        filename to be read. Default is 'PHASESHIFTS'
+    check: bool, optional
+        Wether to check for consistence agains sl and rp. Default is True. If False,
+        sl and rp can be None.
+    ignoreEnRange: bool, optional
+        Check wether the energy range in readfile is sufficient to cover the
+        energy range requested in rp. Default is False.
+        
+    Returns
+    -------
+    firstline: str
+        Header line of the readfile, containing Rundgren parameters.
+    phaseshifts: list of tuple
+        Each element is (energy, pahseshifts at energy) where 
+        phaseshifts at energy is [[el0_L0, el0_L1, ...], [el1_L0, ...], ...]
+        where eli_Lj is the phaseshift for element i and angular momentum j.
+        Therefore, len(phaseshifts) is the number of energies found, 
+        len(phaseshifts[0][1]) should match the number of elements, and
+        len(phaseshifts[0][1][0]) is the number of different
+        values of L in the phaseshift file.
+    newpsGen: bool
+        Wether the inconsitency found requires a full recalculation of the phaseshifts.
+        This happens if: 
+            1) an error occurs while parsing,
+            2) if check, rp.V0_real was not given and could not interpret firstline,
+            3) LMAX of readfile is smaller than required in rp,
+            4) if number of blocks inconsitent with elements in sl.
+    newpsWrite: bool
+        Wether the inconsitency found requires writing a new PHASESHIFTS file.
+        This is distinct from newpsGen as we can at times generate a new file 
+        from the information read.
+        This is the case if:
+            5) There are fewer blocks than expected, but the number of blocks
+                matches the number of chemical elements in sl. This means however,
+                that all sites with the same chemical element will use the same
+                phaseshift.
+
+    
+    
+"""
     rf74x10 = ff.FortranRecordReader('10F7.4')
     ri3 = ff.FortranRecordReader('I3')
 
@@ -53,11 +91,10 @@ def readPHASESHIFTS(sl, rp, readfile='PHASESHIFTS', check=True,
     except FileNotFoundError:
         logger.error("PHASESHIFTS file not found.")
         raise
-
-    filelines = []
-    for line in rf:
-        filelines.append(line[:-1])
-    rf.close()
+    else:
+        filelines = rf.readlines()
+    finally:
+        rf.close()
 
     try:
         nel = ri3.read(filelines[0])[0]
@@ -68,119 +105,122 @@ def readPHASESHIFTS(sl, rp, readfile='PHASESHIFTS', check=True,
     phaseshifts = []
 
     firstline = filelines[0]
-    readline = 1
-    linesperblock = 0
-    while readline < len(filelines):
-        if linesperblock:
-            en = rf74x10.read(filelines[readline])[0]
-            enps = []
-            for i in range(0, nel):
-                elps = []
-                for j in range(0, linesperblock):
-                    llist = rf74x10.read(filelines[readline
-                                                   + (i*linesperblock)+j+1])
-                    llist = [f for f in llist if f is not None]
-                    elps.extend(llist)
-                enps.append(elps)
-            phaseshifts.append((en, enps))
-            readline += linesperblock*nel+1
-        else:
-            # first check how many lines until the next energy:
-            lineit = 1
-            llist = rf74x10.read(filelines[readline+lineit])
-            llist = [f for f in llist if f is not None]
-            longestline = len(llist)
-            shortestline = longestline
-            lastlen = longestline
-            cont = True
-            while cont:
-                lineit += 1
-                llist = rf74x10.read(filelines[readline+lineit])
-                llist = [f for f in llist if f is not None]
-                if len(llist) == 1:
-                    if lastlen == 1 or (shortestline > 1
-                                        and shortestline < longestline):
-                        cont = False  # found next energy
-                    else:
-                        shortestline = 1
-                elif len(llist) != longestline:
-                    shortestline = len(llist)
-                lastlen = len(llist)
-            linesperblock = int((lineit-1)/nel)
-            if not linesperblock or (((lineit-1)/nel) - linesperblock != 0.0):
-                logger.warning(
-                    "Error while trying to read PHASESHIFTS: "
-                    "Could not parse file: The number of blocks may not match "
-                    "the number given in the first line. A new PHASESHIFTS "
-                    "file will be generated.")
-                rp.setHaltingLevel(1)
-                return ("", [], True, True)
-            # don't increase readline -> read the same block again afterwards
+    line_idx = 1
+    try:
+        linesperblock = find_block_size(filelines[1:])
+    except ValueError as err:
+        logger.warning(
+            f"Error while trying to read PHASESHIFTS: {err} "
+            "A new PHASESHIFTS file will be generated."
+        )
+        rp.setHaltingLevel(1)
+        return "", [], True, True
+    
+    # check block length is consitent with number of species
+    if (linesperblock-1)%nel:
+        logger.warning(
+            "Error while trying to read PHASESHIFTS: "
+            "Could not parse file: The number of blocks may not match "
+            "the number given in the first line. A new PHASESHIFTS "
+            "file will be generated."
+        )
+        rp.setHaltingLevel(1)
+        return "", [], True, True
 
+    lines_per_element = (linesperblock-1)//nel
+
+    while line_idx < len(filelines):
+        current_line = filelines[line_idx].strip()
+        if not current_line:
+            line_idx += 1
+            continue
+        energy = rf74x10.read(filelines[line_idx])[0] # read energy
+        enps = []
+        for i in range(nel):
+            elps = []
+            for j in range(lines_per_element):
+                llist = rf74x10.read(filelines[line_idx
+                                                + (i*lines_per_element)+j+1])
+                llist = [f for f in llist if f is not None]
+                elps.extend(llist)
+            enps.append(elps)
+        phaseshifts.append((energy, enps))
+        line_idx += lines_per_element*nel+1
+
+    logger.debug(str(rp.LMAX))
+    
     if not check:
-        newpsGen, newpsWrite = False, False
+        return firstline, phaseshifts, False, False
+
+    # check whether the phaseshifts that were found fit the data:
+    newpsGen, newpsWrite = True, True # should new values should be generated / written to file?
+    
+    psblocks = 0
+    for el in sl.elements:
+        if el in rp.ELEMENT_MIX:
+            n = len(rp.ELEMENT_MIX[el])
+        else:
+            n = 1
+        psblocks += n*len([s for s in sl.sitelist if s.el == el])
+    # check for MUFTIN parameters:
+    muftin = True
+    llist = firstline.split()
+    if len(llist) >= 6:
+        for i in range(1, 5):
+            try:
+                float(llist[i])
+            except ValueError:
+                muftin = False
     else:
-        # check whether the phaseshifts that were found fit the data:
-        newpsGen, newpsWrite = True, True
-        # recommend that new values should be generated / written
-        psblocks = 0
-        for el in sl.elements:
-            if el in rp.ELEMENT_MIX:
-                n = len(rp.ELEMENT_MIX[el])
-            else:
-                n = 1
-            psblocks += n*len([s for s in sl.sitelist if s.el == el])
-        # check for MUFTIN parameters:
-        muftin = True
-        llist = firstline.split()
-        if len(llist) >= 6:
-            for i in range(1, 5):
-                try:
-                    float(llist[i])
-                except ValueError:
-                    muftin = False
-        else:
-            muftin = False
-        if rp.V0_REAL == "default" and not muftin:
-            logger.warning(
-                "Could not convert first line of PHASESHIFTS file to MUFTIN "
-                "parameters. A new PHASESHIFTS file will be generated.")
-            rp.setHaltingLevel(1)
-        elif len(phaseshifts[0][1]) == psblocks:
-            logger.debug("Found "+str(psblocks)+" blocks in PHASESHIFTS "
-                         "file, which is consistent with PARAMETERS.")
-            newpsGen, newpsWrite = False, False
-        elif len(phaseshifts[0][1]) == len(sl.chemelem):
-            logger.warning(
-                "Found fewer blocks than expected in the "
-                "PHASESHIFTS file. However, the number of blocks matches "
-                "the number of chemical elements. A new PHASESHIFTS file "
-                "will be generated, assuming that each block in the old "
-                "file should be used for all atoms of one element.")
-            rp.setHaltingLevel(1)
-            oldps = phaseshifts[:]
-            phaseshifts = []
-            for (en, oldenps) in oldps:
-                enps = []
-                j = 0   # block index in old enps
-                for el in sl.elements:
-                    if el in rp.ELEMENT_MIX:
-                        m = len(rp.ELEMENT_MIX[el])
-                    else:
-                        m = 1
-                    n = len([s for s in sl.sitelist if s.el == el])
-                    for i in range(0, m):    # repeat for chemical elements
-                        for k in range(0, n):   # repeat for sites
-                            enps.append(oldenps[j])
-                        j += 1  # count up the block in old enps
-                phaseshifts.append((en, enps))
-            newpsGen = False
-            firstline = str(len(phaseshifts[0][1])).rjust(3) + firstline[3:]
-        else:
-            logger.warning(
-                "PHASESHIFTS file was read but is inconsistent with "
-                "PARAMETERS. A new PHASESHIFTS file will be generated.")
-            rp.setHaltingLevel(1)
+        muftin = False
+    if rp.V0_REAL == "default" and not muftin:
+        logger.warning(
+            "Could not convert first line of PHASESHIFTS file to MUFTIN "
+            "parameters. A new PHASESHIFTS file will be generated.")
+        rp.setHaltingLevel(1)
+    elif len(phaseshifts[0][1]) == psblocks:
+        logger.debug("Found "+str(psblocks)+" blocks in PHASESHIFTS "
+                        "file, which is consistent with PARAMETERS.")
+        newpsGen, newpsWrite = False, False
+    # Check that the phaseshifts read in have sufficient lmax
+    elif len(phaseshifts[0][1][0]) < rp.LMAX[1]:
+        logger.warning(
+            "Maximum angular momentum LMAX in PHASESHIFTS "
+            "file is lower than required by PARAMETERS. A "
+            "new PHASESHIFTS file will be generated."
+            )
+        rp.setHaltineLevel(1)
+    elif len(phaseshifts[0][1]) == len(sl.chemelem):
+        logger.warning(
+            "Found fewer blocks than expected in the "
+            "PHASESHIFTS file. However, the number of blocks matches "
+            "the number of chemical elements. A new PHASESHIFTS file "
+            "will be generated, assuming that each block in the old "
+            "file should be used for all atoms of one element.")
+        rp.setHaltingLevel(1)
+        oldps = phaseshifts[:]
+        phaseshifts = []
+        for (energy, oldenps) in oldps:
+            enps = []
+            j = 0   # block index in old enps
+            for el in sl.elements:
+                if el in rp.ELEMENT_MIX:
+                    m = len(rp.ELEMENT_MIX[el])
+                else:
+                    m = 1
+                n = len([s for s in sl.sitelist if s.el == el])
+                for i in range(0, m):    # repeat for chemical elements
+                    for k in range(0, n):   # repeat for sites
+                        enps.append(oldenps[j])
+                    j += 1  # count up the block in old enps
+            phaseshifts.append((energy, enps))
+        newpsGen = False
+        firstline = str(len(phaseshifts[0][1])).rjust(3) + firstline[3:]
+    else:
+        logger.warning(
+            "PHASESHIFTS file was read but is inconsistent with "
+            "PARAMETERS. A new PHASESHIFTS file will be generated.")
+        rp.setHaltingLevel(1)
 
     if check and not ignoreEnRange:
         # check whether energy range is large enough:
@@ -346,3 +386,27 @@ def plot_phaseshifts(sl, rp, filename="Phaseshifts_plots.pdf"):
         logger.error("plot_phaseshifts: Cannot open file {}. Aborting."
                      .format(filename))
     return
+
+
+def find_block_size(filelines):
+    """Returns the periodicity of lengths found in filelines.
+    
+    """
+    
+    lens_as_chars = "".join(chr(len(l.rstrip())) for l in filelines)
+    
+    # allow empty lines at the end
+    pass
+    while lens_as_chars.endswith(chr(0)):
+        lens_as_chars = lens_as_chars[:-1]
+    pass
+    if chr(0) in lens_as_chars:
+        raise ValueError("Empty line found.")
+    
+    # see stackoverflow.com/questions/29481088
+    period = (lens_as_chars+lens_as_chars).find(lens_as_chars, 1, -1)
+    pass
+    if period == -1:
+        raise ValueError("Could not identify block.")
+    
+    return period
