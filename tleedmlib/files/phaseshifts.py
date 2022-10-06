@@ -72,9 +72,6 @@ def readPHASESHIFTS(sl, rp, readfile='PHASESHIFTS', check=True,
                 matches the number of chemical elements in sl. This means however,
                 that all sites with the same chemical element will use the same
                 phaseshift.
-
-    
-    
 """
     rf74x10 = ff.FortranRecordReader('10F7.4')
     ri3 = ff.FortranRecordReader('I3')
@@ -266,8 +263,8 @@ def readPHASESHIFTS(sl, rp, readfile='PHASESHIFTS', check=True,
                         .format(psmin, min(er_inner)))
                 else:
                     logger.warning(
-                        "The energy range found in the PHASESHIFTS"
-                        " file is smaller than the energy range requested for "
+                        "The energy range found in the PHASESHIFTS "
+                        "file is smaller than the energy range requested for "
                         "theoretical beams. A new PHASESHIFTS file will be "
                         "generated.")
                     newpsGen, newpsWrite = True, True
