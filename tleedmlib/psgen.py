@@ -205,7 +205,7 @@ def runPhaseshiftGen_old(sl, rp,
 
     output += (str(len(nsl.atlist))+"  "+str(len(nsl.atlist))
                + "                  #AtomTypes,#OccupiedAtomTypes\n")
-    ptl = [el.lower() for el in tl.leedbase.periodic_table]
+    ptl = [el.lower() for el in tl.leedbase.PERIODIC_TABLE]
 
     chemels = {}
     chemelspaths = {}
@@ -237,7 +237,7 @@ def runPhaseshiftGen_old(sl, rp,
             if at in subatlists[(site, el)]:
                 chemel = chemels[el]
                 chgdenpath = chemelspaths[el]
-        output += ("1 "+str(tl.leedbase.periodic_table.index(chemel)+1)
+        output += ("1 "+str(tl.leedbase.PERIODIC_TABLE.index(chemel)+1)
                    + ".  0.  0.  '"+chgdenpath+"'\n")
         ol = ""
         for j in range(0, 3):

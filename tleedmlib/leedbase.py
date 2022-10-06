@@ -31,7 +31,7 @@ logger = logging.getLogger("tleedm.leedbase")
 ###############################################
 #                 GLOBALS                     #
 ###############################################
-periodic_table = [
+PERIODIC_TABLE = (
     'H', 'He', 'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne', 'Na',
     'Mg', 'Al', 'Si', 'P', 'S', 'Cl', 'Ar', 'K', 'Ca', 'Sc', 'Ti', 'V', 'Cr',
     'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn', 'Ga', 'Ge', 'As', 'Se', 'Br', 'Kr',
@@ -41,9 +41,10 @@ periodic_table = [
     'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl', 'Pb', 'Bi', 'Po',
     'At', 'Rn', 'Fr', 'Ra', 'Ac', 'Th', 'Pa', 'U', 'Np', 'Pu', 'Am', 'Cm',
     'Bk', 'Cf', 'Es', 'Fm', 'Md', 'No', 'Lr', 'Rf', 'Db', 'Sg', 'Bh', 'Hs',
-    'Mt', 'Ds', 'Rg', 'Cn', 'Nh', 'Fl', 'Mc', 'Lv', 'Ts', 'Og']
+    'Mt', 'Ds', 'Rg', 'Cn', 'Nh', 'Fl', 'Mc', 'Lv', 'Ts', 'Og'
+    )
 
-elementCovalentRadii = {
+COVALENT_RADIUS = {
     "H": 0.31, "He": 0.28, "Li": 1.28, "Be": 0.96,
     "B": 0.84, "C": 0.76, "N": 0.71, "O": 0.66, "F": 0.57, "Ne": 0.58,
     "Na": 1.66, "Mg": 1.41, "Al": 1.21, "Si": 1.11, "P": 1.07, "S": 1.05,
@@ -63,7 +64,7 @@ elementCovalentRadii = {
     "Am": 1.80, "Cm": 1.69}
 # from Cordero et al., 2008 (DOI: 10.1039/B801115J)
 
-elementAtomicMass = {
+ATOMIC_MASS = {
     "H": 1.00797, "He": 4.00260, "Li": 6.941, "Be": 9.01218,
     "B": 10.81, "C": 12.011, "N": 14.0067, "O": 15.9994, "F": 18.998403,
     "Ne": 20.179, "Na": 22.98977, "Mg": 24.305, "Al": 26.98154, "Si": 28.0855,

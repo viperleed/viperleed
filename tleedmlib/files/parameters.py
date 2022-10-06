@@ -17,7 +17,7 @@ import viperleed.tleedmlib as tl
 
 logger = logging.getLogger("tleedm.files.parameters")
 
-# TODO: create a dict of parameter limits here (e.g. LMAX etc.)
+# TODO: fill dict of parameter limits here (e.g. LMAX etc.)
 # TODO: change module level globals to ALL_CAPS everywhere
 
 # list of allowed parameters
@@ -703,7 +703,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
             else:
                 rpars.DOMAIN_STEP = i
         elif param == 'ELEMENT_MIX':
-            ptl = [el.lower() for el in tl.leedbase.periodic_table]
+            ptl = [el.lower() for el in tl.leedbase.PERIODIC_TABLE]
             found = False
             for el in llist:
                 if el.lower() not in ptl:
@@ -717,7 +717,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                 rpars.ELEMENT_MIX[plist[1].capitalize()] = [el.capitalize()
                                                             for el in llist]
         elif param == 'ELEMENT_RENAME':
-            ptl = [el.lower() for el in tl.leedbase.periodic_table]
+            ptl = [el.lower() for el in tl.leedbase.PERIODIC_TABLE]
             if llist[0].lower() not in ptl:
                 logger.warning(
                     'PARAMETERS file: ELEMENT_RENAME for {0}: {1} not found '

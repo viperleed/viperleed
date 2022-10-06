@@ -1620,27 +1620,31 @@ class Slab:
         return ssl
 
     def getSurfaceAtoms(self, rp):
-        """Checks which atoms are 'at the surface', returns them as a list."""
-        testats = copy.deepcopy(self.atlist)
-        testats.sort(key=lambda atom: -atom.pos[2])
-        covered = []
-        surfats = []
-        ptl = [el.lower() for el in tl.leedbase.periodic_table]
-        for ta in testats:
-            if ta.el in rp.ELEMENT_MIX:
+        """Checks which atoms are 'at the surface', returns them as a set."""
+        
+        _PTL = set(el.lower() for el in tl.leedbase.PERIODIC_TABLE)
+        _RADII = tl.leedbase.COVALENT_RADIUS
+        
+        atoms = copy.deepcopy(self.atlist)
+        # run from top to bottom of slab
+        atoms.sort(key=lambda atom: -atom.pos[2])
+        covered = set()
+        surfats = set()
+        for atom in atoms:
+            if atom.el in rp.ELEMENT_MIX:
                 # radius as weighted average
                 totalocc = 0.0
                 r = 0.0
-                for chemel in rp.ELEMENT_MIX[ta.el]:
-                    if chemel.lower() in ptl:
-                        if chemel in ta.site.occ:
-                            r += (tl.leedbase.elementCovalentRadii[
-                                   chemel.capitalize()] * ta.site.occ[chemel])
-                            totalocc += ta.site.occ[chemel]
+                for chemel in rp.ELEMENT_MIX[atom.el]:
+                    if chemel.lower() in _PTL:
+                        if chemel in atom.site.occ:
+                            r += (_RADII[chemel.capitalize()]
+                                  * atom.site.occ[chemel])
+                            totalocc += atom.site.occ[chemel]
                     else:
                         logger.error(
                             "Error identifying surface atoms: Could "
-                            "not identify "+chemel+" as a chemical element.")
+                            f"not identify {chemel} as a chemical element.")
                         rp.setHaltingLevel(2)
                         return []
                 if totalocc == 0:
@@ -1649,20 +1653,21 @@ class Slab:
                 else:
                     r /= totalocc
             else:
-                if ta.el.lower() in ptl:
-                    r = tl.leedbase.elementCovalentRadii[ta.el.capitalize()]
+                if atom.el.lower() in _PTL:
+                    r = _RADII[atom.el.capitalize()]
                 else:
                     logger.error("Error identifying surface atoms: Could not "
-                                 "identify "+ta.el+" as a chemical element.")
+                                 f"identify {atom.el} as a chemical element.")
                     rp.setHaltingLevel(2)
                     return []
-            r *= 1.2    # !!! test if this is enough
-            surfats.extend([a for a in self.atlist if (a.pos[2] >= ta.pos[2]
-                            and a not in covered and a not in surfats)])
-            covered.extend([a for a in self.atlist if a.pos[2] < ta.pos[2]
-                            and a not in covered
-                            and a.isSameXY(ta.cartpos[:2], eps=r)])
-            if len(covered) + len(surfats) >= len(testats):
+            r *= 1.2    # TODO: !!! test if this is enough
+            surfats.update(a for a in self.atlist
+                           if (a.pos[2] >= atom.pos[2]
+                               and a not in covered))
+            covered.update(a for a in self.atlist
+                           if (a.pos[2] < atom.pos[2]
+                               and a.isSameXY(atom.cartpos[:2], eps=r)))
+            if len(covered) + len(surfats) >= len(atoms):
                 break   # that's all of them
         return surfats
 
