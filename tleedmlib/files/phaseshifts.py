@@ -25,7 +25,7 @@ else:
     plotting = True
 
 logger = logging.getLogger("tleedm.files.phaseshifts")
-
+_HARTREE_TO_EV = 27.211396
 
 def readPHASESHIFTS(sl, rp, readfile='PHASESHIFTS', check=True,
                     ignoreEnRange=False):
@@ -148,17 +148,7 @@ def readPHASESHIFTS(sl, rp, readfile='PHASESHIFTS', check=True,
     
     if not check:
         return firstline, phaseshifts, False, False
-
-    # check whether the phaseshifts that were found fit the data:
-    newpsGen, newpsWrite = True, True # should new values should be generated / written to file?
     
-    psblocks = 0
-    for el in sl.elements:
-        if el in rp.ELEMENT_MIX:
-            n = len(rp.ELEMENT_MIX[el])
-        else:
-            n = 1
-        psblocks += n*len([s for s in sl.sitelist if s.el == el])
     # try extracting muffin tin parameters:
     muftin = []
     llist = firstline.split()
@@ -171,25 +161,54 @@ def readPHASESHIFTS(sl, rp, readfile='PHASESHIFTS', check=True,
                 break
     else:
         muftin = []
-        
+
+    (phaseshifts,
+     firstline,
+     newpsGen,
+     newpsWrite) = __check_consistency_rp_elements(sl, rp, phaseshifts, firstline, muftin)
+
+    if not ignoreEnRange:
+       newpsGen, newpsWrite = __check_consistency_energy_range(rp, phaseshifts, muftin, newpsGen, newpsWrite)
+    
+    return firstline, phaseshifts, newpsGen, newpsWrite
+
+
+def __check_consistency_rp_elements(sl, rp, phaseshifts, firstline, muftin):
+    # check whether the phaseshifts that were found fit the data:
+    newpsGen, newpsWrite = True, True # should new values should be generated / written to file?
+    
+    n_l_values = len(phaseshifts[0][1][0])
+    n_el_and_sites = len(phaseshifts[0][1])
+    
+    n_el_and_sites_expected = 0
+    for el in sl.elements:
+        if el in rp.ELEMENT_MIX:
+            n = len(rp.ELEMENT_MIX[el])
+        else:
+            n = 1
+        n_el_and_sites_expected += n*len([s for s in sl.sitelist if s.el == el])
+
     if rp.V0_REAL == "default" and not muftin:
         logger.warning(
             "Could not convert first line of PHASESHIFTS file to MUFTIN "
             "parameters. A new PHASESHIFTS file will be generated.")
         rp.setHaltingLevel(1)
-    elif len(phaseshifts[0][1]) == psblocks:
-        logger.debug("Found "+str(psblocks)+" blocks in PHASESHIFTS "
+
+    elif n_el_and_sites == n_el_and_sites_expected:
+        logger.debug("Found "+str(n_el_and_sites_expected)+" blocks in PHASESHIFTS "
                         "file, which is consistent with PARAMETERS.")
         newpsGen, newpsWrite = False, False
+
     # Check that the phaseshifts read in have sufficient lmax
-    elif len(phaseshifts[0][1][0]) < rp.LMAX[1]:
+    elif n_l_values < rp.LMAX[1] + 1:
         logger.warning(
             "Maximum angular momentum LMAX in PHASESHIFTS "
             "file is lower than required by PARAMETERS. A "
             "new PHASESHIFTS file will be generated."
             )
         rp.setHaltineLevel(1)
-    elif len(phaseshifts[0][1]) == len(sl.chemelem):
+
+    elif n_el_and_sites == len(sl.chemelem):
         logger.warning(
             "Found fewer blocks than expected in the "
             "PHASESHIFTS file. However, the number of blocks matches "
@@ -215,65 +234,73 @@ def readPHASESHIFTS(sl, rp, readfile='PHASESHIFTS', check=True,
             phaseshifts.append((energy, enps))
         newpsGen = False
         firstline = str(len(phaseshifts[0][1])).rjust(3) + firstline[3:]
+
     else:
         logger.warning(
             "PHASESHIFTS file was read but is inconsistent with "
             "PARAMETERS. A new PHASESHIFTS file will be generated.")
         rp.setHaltingLevel(1)
 
-    if check and not ignoreEnRange:
-        # check whether energy range is large enough:
-        checkfail = False
-        er = np.arange(rp.THEO_ENERGIES[0], rp.THEO_ENERGIES[1]+1e-4,
-                       rp.THEO_ENERGIES[2])
-        psmin = round(phaseshifts[0][0]*27.211396, 2)
-        psmax = round(phaseshifts[-1][0]*27.211396, 2)
-        if rp.V0_REAL == "default" or isinstance(rp.V0_REAL, list):
-            if isinstance(rp.V0_REAL, list):
-                c = rp.V0_REAL
-            else:
-                c = muftin
-                checkfail = not bool(muftin)
-            if c and not checkfail:
-                er_inner = [e + (rp.FILAMENT_WF - max(c[0],
-                                 c[1] + (c[2]/np.sqrt(e + c[3]
-                                                      + rp.FILAMENT_WF))))
-                            for e in er]  # energies at which scattering occurs
+    return phaseshifts, firstline, newpsGen, newpsWrite
+
+
+def __check_consistency_energy_range(rp, phaseshifts, muftin, newpsGen, newpsWrite):
+    # check whether energy range is large enough:
+    checkfail = False
+    er = np.arange(rp.THEO_ENERGIES[0], rp.THEO_ENERGIES[1]+1e-4,
+                    rp.THEO_ENERGIES[2])
+    psmin = round(phaseshifts[0][0]*_HARTREE_TO_EV, 2)
+    psmax = round(phaseshifts[-1][0]*_HARTREE_TO_EV, 2)
+    if rp.V0_REAL == "default" or isinstance(rp.V0_REAL, list):
+        if isinstance(rp.V0_REAL, list):
+            c = rp.V0_REAL
         else:
-            try:
-                v0r = float(rp.V0_REAL)
-            except (ValueError, TypeError):
-                checkfail = True
-            else:
-                er_inner = [e + v0r for e in er]
-        if not checkfail:
-            if (psmin > min(er_inner) or psmax < max(er_inner)):
-                if (psmin > min(er_inner) and psmin <= 20.
-                        and psmax >= max(er_inner)):
-                    # can lead to re-calculation of phaseshifts every run if
-                    #  V0r as calculated by EEASiSSS differs from 'real' V0r.
-                    #  Don't automatically correct.
-                    logger.warning(
-                        "Lowest value in PHASESHIFTS file ({:.1f} "
-                        "eV) is larger than the lowest predicted scattering "
-                        "energy ({:.1f} eV). If this causes problems in the "
-                        "reference calculation, try deleting the PHASESHIFTS "
-                        "file to generate a new one, or increase the starting "
-                        "energy in the THEO_ENERGIES parameter."
-                        .format(psmin, min(er_inner)))
-                else:
-                    logger.warning(
-                        "The energy range found in the PHASESHIFTS "
-                        "file is smaller than the energy range requested for "
-                        "theoretical beams. A new PHASESHIFTS file will be "
-                        "generated.")
-                    newpsGen, newpsWrite = True, True
+            c = muftin
+            checkfail = not bool(muftin)
+        if c and not checkfail:
+            # energies at which scattering occurs
+            er_inner = er + rp.FILAMENT_WF
+            er_inner -= np.maximum(
+                c[0],
+                c[1] + (c[2]/np.sqrt(er_inner + c[3]))
+                )
+    else:
+        try:
+            er_inner = er + float(rp.V0_REAL)
+        except (ValueError, TypeError):
+            checkfail = True
+
+    if checkfail:
+        logger.warning(
+            "Could not check energy range in PHASESHIFTS "
+            "file. If energy range is insufficient, try deleting the "
+            "PHASESHIFTS file to generate a new one."
+            )
+        return newpsGen, newpsWrite
+
+    if (psmin > min(er_inner) or psmax < max(er_inner)):
+        if (psmin > min(er_inner) and psmin <= 20.
+                and psmax >= max(er_inner)):
+            # can lead to re-calculation of phaseshifts every run if
+            #  V0r as calculated by EEASiSSS differs from 'real' V0r.
+            #  Don't automatically correct.
+            logger.warning(
+                "Lowest value in PHASESHIFTS file ({:.1f} "
+                "eV) is larger than the lowest predicted scattering "
+                "energy ({:.1f} eV). If this causes problems in the "
+                "reference calculation, try deleting the PHASESHIFTS "
+                "file to generate a new one, or increase the starting "
+                "energy in the THEO_ENERGIES parameter."
+                .format(psmin, min(er_inner)))
         else:
             logger.warning(
-                "Could not check energy range in PHASESHIFTS "
-                "file. If energy range is insufficient, try deleting the "
-                "PHASESHIFTS file to generate a new one.")
-    return (firstline, phaseshifts, newpsGen, newpsWrite)
+                "The energy range found in the PHASESHIFTS "
+                "file is smaller than the energy range requested for "
+                "theoretical beams. A new PHASESHIFTS file will be "
+                "generated.")
+            newpsGen, newpsWrite = True, True
+
+    return newpsGen, newpsWrite
 
 
 def writePHASESHIFTS(firstline, phaseshifts, filename='PHASESHIFTS'):
@@ -334,7 +361,7 @@ def plot_phaseshifts(sl, rp, filename="Phaseshifts_plots.pdf"):
         ps_labels.extend([cel + " in " + s.label + " site"
                           for cel in chemelList
                           for s in sl.sitelist if s.el == el])
-    energies = np.array([ps[0]*27.211396 for ps in rp.phaseshifts])
+    energies = np.array([ps[0]*_HARTREE_TO_EV for ps in rp.phaseshifts])
     ps_vals = np.array([ps[1] for ps in rp.phaseshifts])
 
     figsize = (7, 4)
