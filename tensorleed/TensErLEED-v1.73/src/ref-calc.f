@@ -446,6 +446,7 @@ C         method saves a considerable amount of time.
       DIMENSION TSF(MNSUB,MLMAX1)
       INTEGER LPS,LPSS,NORD
       DIMENSION LPS(MNSUB),LPSS(MNSUB),NORD(MNSUB)
+      REAL POS
       DIMENSION POS(MNSUB,3),POSS(MNSUB,3)
       INTEGER LMT
       REAL TV1

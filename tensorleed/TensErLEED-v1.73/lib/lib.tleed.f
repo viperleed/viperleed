@@ -4803,88 +4803,111 @@ C   XH - working space carried through to ensure proper dimensions              
 C  IN COMMON BLOCKS
 C   E,VPI= CURRENT COMPLEX ENERGY.
       SUBROUTINE TAUMAT(TAU,LMT,NTAU,X,LEV,LEV2,LOD,TSF,
-     +LMMAX,LMAX,FLMS,NL,KLM,LM,CLM,NLM,LXI,NT,PQ,NA,NLL,FLM,
-     +NNSUB,LMAX1,XH)
+     +  LMMAX,LMAX,FLMS,NL,KLM,LM,CLM,NLM,LXI,NT,PQ,NA,NLL,FLM,
+     +  NNSUB,LMAX1,XH)
       INTEGER NNSUB,LMAX1
       DIMENSION CLM(NLM),LXI(LMMAX),PQ(2,NT)                            111181
       DIMENSION BR1(2),BR2(2),AR1(2),AR2(2),RAR1(2),RAR2(2)             111181
       COMPLEX AK,CZ,TAU(LMT,LEV),X(LEV,LEV2),TSF(NNSUB,LMAX1),
-     1FLMS(NL,KLM),DET,FLM(KLM),CI,XA                                   111181
+     1        FLMS(NL,KLM),DET,FLM(KLM),CI,XA                           111181
       COMPLEX XH(LEV)
+      COMPLEX Right_hand_side(LEV, LEV) ! AMI & MR
+      INTEGER pivot(LEV)
+      INTEGER lapack_info, LL, LL2
       COMMON E,AK2,AK3,VPI
       COMMON /SL/BR1,BR2,AR1,AR2,RAR1,RAR2,NL1,NL2                      111181
       CZ=(0.0,0.0)
       CI=(0.0,1.0)                                                      111181
       AK=-0.5/SQRT(CMPLX(2.0*E,-2.0*VPI+0.000001))
-      DO 100 K=1,KLM                                                    111181
-  100 FLM(K)=CZ                                                           .
+      DO K=1,KLM                                                        111181
+          FLM(K)=CZ                                                           .
+      END DO
       BK2=PQ(1,1+NA)
       BK3=PQ(2,1+NA)
       JS=1
       S1=0.
-      DO 130 J=1,NL1
-      S2=0.
-      DO 120 K=1,NL2
-      ADR1=S1*BR1(1)+S2*BR2(1)
-      ADR2=S1*BR1(2)+S2*BR2(2)
-      ABR=ADR1*BK2+ADR2*BK3
-      XA=EXP(ABR*CI)
-      DO 110 I=1,KLM
-110   FLM(I)=FLM(I)+FLMS(JS,I)*XA
-      IF (NLL.EQ.1) GO TO 140
-      JS=JS+1
-  120 S2=S2+1.
-  130 S1=S1+1.                                                            .
+      DO J=1,NL1
+            S2=0.
+            DO K=1,NL2
+                  ADR1=S1*BR1(1)+S2*BR2(1)
+                  ADR2=S1*BR1(2)+S2*BR2(2)
+                  ABR=ADR1*BK2+ADR2*BK3
+                  XA=EXP(ABR*CI)
+                  DO I=1,KLM
+                        FLM(I)=FLM(I)+FLMS(JS,I)*XA
+                  END DO
+                  IF (NLL.EQ.1) GO TO 140
+                  JS=JS+1
+                  S2=S2+1.
+            END DO
+            S1=S1+1.
+      END DO
   140 CONTINUE                                                          111181
       DO 13 IT=1,NTAU
       DO 13 IL=1,2
-      DO 1 I=1,LEV
-      DO 1 J=1,LEV2
-1     X(I,J)=CZ
+      DO I=1,LEV
+            DO J=1,LEV2
+                  X(I,J)=CZ
+            END DO
+      END DO
+      Right_hand_side = CZ ! Zero RHS
       LL=LOD
       IF (IL.EQ.2) LL=LEV
 C  GENERATE MATRIX 1-X FOR L+M= ODD (IL=1), LATER FOR L+M= EVEN (IL=2)
       CALL XMT(IL,FLM,1,X,LEV,LL,TSF,NTAU,IT,LM,LXI,LMMAX,              111181
-     1KLM,CLM,NLM,NST,NNSUB,LMAX1)
+     1         KLM,CLM,NLM,NST,NNSUB,LMAX1)
+
 C
 C  PREPARE QUANTITIES INTO WHICH INVERSE OF 1-X WILL BE MULTIPLIED
-      IF (IL-2) 6,2,2
-2     IS=0
-      LD1=0
-      L=0
-3     LD=LD1+1
-      LD1=LD+L
-      DO 4 I=LD,LD1
-4     X(I,I+LEV)=AK*TSF(IT,L+1)
-      L=L+2
-      IF (L-LMAX) 3,3,5
-5     IS=IS+1
-      L=1
-      IF (IS-1) 3,3,10
+      IF (IL .GE. 2) THEN
+            IS=0
+            LD1=0
+            L=0
+3           LD=LD1+1
+            LD1=LD+L
+            DO I=LD,LD1
+                  !X(I,I+LEV)=AK*TSF(IT,L+1)
+                  Right_hand_side(I, I) = AK*TSF(IT, L+1)
+            END DO
+            L=L+2
+            IF (L-LMAX) 3,3,5
+5           IS=IS+1
+            L=1
+            IF (IS-1) 3,3,10
 C
-6     IS=0
-      LD1=0
-      L=1
-7     LD=LD1+1
-      LD1=LD+L-1
-      DO 8 I=LD,LD1
-8     X(I,I+LOD)=AK*TSF(IT,L+1)
-      L=L+2
-      IF (L-LMAX) 7,7,9
-9     IS=IS+1
-      L=2
-      IF (IS-1) 7,7,10
+      ELSE
+            IS=0
+            LD1=0
+            L=1
+7           LD=LD1+1
+            LD1=LD+L-1
+            DO I=LD,LD1
+                  ! X(I,I+LOD)=AK*TSF(IT,L+1)
+                  Right_hand_side(I, I) = AK*TSF(IT, L+1)
+            END DO
+            L=L+2
+            IF (L-LMAX) 7,7,9
+9           IS=IS+1
+            L=2
+            IF (IS-1) 7,7,10
+      END IF
+
 10    LL2=LL+LL
 C
 C  PERFORM INVERSION AND MULTIPLICATION
-      CALL CXMTXT(X,LEV,LL,LL,LL2,MARK,DET,-1,XH)    ! TODO Michele: Judge if this can be replaced with CGETRF/CGETRS (likely better optimized?)
+      !CALL CXMTXT(X,LEV,LL,LL,LL2,MARK,DET,-1,XH)    ! TODO Michele: Judge if this can be replaced with CGETRF/CGETRS (likely better optimized?)
+      CALL CGETRF(LL, LL, X, LL, pivot, lapack_info)
+      WRITE(6,*) lapack_info
+      CALL CGETRS('N', LL, LL, X, LL, pivot, Right_hand_side,
+     &            LL, lapack_info)
+      WRITE(6,*) lapack_info
 C
       LD=(IT-1)*LMMAX
       IF (IL.EQ.1) LD=LD+LEV
       DO 11 I=1,LL
       DO 11 J=1,LL
 C  PUT RESULT IN TAU
-11    TAU(LD+I,J)=X(I,J+LL)
+11    TAU(LD+I,J)=Right_hand_side(I,J)
 13    CONTINUE
       RETURN
       END
@@ -5392,14 +5415,14 @@ C    XMT IN TAUMAT.
       L2MAX = LMAX + LMAX
 C  IF IL=1, CONSIDER L+M= ODD ONLY
 C  IF IL=2, CONSIDER L+M= EVEN ONLY
-      IF (IL-2) 455,450,450
-450   JSET=0
-      MM=0
-      GO TO 457
-455   JSET = 1
-      MM = LEV
-      N=1
-457   CONTINUE
+      IF (IL .GE. 2) THEN
+            JSET=0
+            MM=0
+      ELSE
+            JSET = 1
+            MM = LEV
+            N=1
+      END IF
   460 J = 1
       L = JSET
   470 M =  - L + JSET
