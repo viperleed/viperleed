@@ -287,6 +287,7 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=",", enrange=None):
                 
     # cleanup of beams
     threshold_intes = 1e-8  # threshold value of TensErLEED (rfacsb.f in subroutine grid)
+    lowest_real_en = 0
     for beam in beams:
 
         unfiltered_intens = copy.deepcopy(list(beam.intens.items())) 
@@ -318,7 +319,7 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=",", enrange=None):
 
     # Add an offset such that intensities are always positive, and warn.
     for beam in beams:
-        min_intensity = min(beam.intens.values())
+        min_intensity = min((0, *beam.intens.values()))
         if min_intensity < 0:
             logger.warning(f"Negative intensity encountered in beam {beam.label} while reading {filename}."
                            f" An offset was added so that the minimum intensity of this beam is 0.")
