@@ -88,6 +88,8 @@ C  Subroutines are included in alphabetical order
 !    Added: 2021-08-26
 
       SUBROUTINE  GET_TOPLAY_PROPAGATORS (WK, PQ, N, INTL_VEC)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
 
       INTEGER I, N
       COMPLEX WK, XX, YY, IU
@@ -164,6 +166,8 @@ C  Subroutines are included in alphabetical order
 
       SUBROUTINE  GET_TOPLAY_MULTSCATT(RTOP_BELOW, RREST_ABOVE, WK,
      +                                 MULT_SCATT, INV_PIVOT, N)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
 
       INTEGER  N
       COMPLEX  RTOP_BELOW, RREST_ABOVE, WK, MULT_SCATT, RU, CZ
@@ -274,6 +278,8 @@ C  Subroutines are included in alphabetical order
 
       SUBROUTINE  ADREF2T (RA, TA, RAM, TAM, RB, ST, ST_PIVOT, WK, XI,
      +                     N, AMP0, AMP1, AMP2, IIN)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
 
 !   Alex: moved ST_PIVOT from complex to int -> should be?
       INTEGER    I, J, N, IIN, ST_PIVOT
@@ -392,6 +398,8 @@ C  Subroutines are included in alphabetical order
 !   Edit 2021-09-10: remove symmetry codes
       SUBROUTINE BEAMS(KNBS, KNB, SPQ, SPQF, KNT, NPU, NPUN, AK2, AK3,
      &                 E, TST, NB, PQ, PQF, NPUC, MPU, NT, NP)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
       INTEGER KNBS, KNBJ, NT, NP, MPU, J, N, K, KK, MPU1, NPUN, I
       INTEGER KNB, NB, NPU, NPUC
       REAL E, AK2, AK3, SPQ, TST, PQ, PQF, SPQF
@@ -441,6 +449,8 @@ C  find no deviations whatsoever. This one is more straightforward though
 C  less elegant. VB.
 
       subroutine BESSEL(BJ, Z, N1)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
 
 C  note N1 is highest angular momentum for which BJ are calculated - here
 C  2 * LMAX + 1. For low LMAX, the sums required when calculating temperature-
@@ -504,6 +514,7 @@ C  AUTHOR  PENDRY
       FUNCTION  BLM (L1, M1, L2, M2, L3, M3, LMAX, NFAC, FAC)
 
       IMPLICIT REAL*8 (A-H,O-Z)
+      implicit INTEGER (I-N)
       REAL BLM
       DOUBLE PRECISION FAC
       DIMENSION FAC(NFAC)
@@ -616,6 +627,8 @@ C
 C-----------------------------------------------------------------------
 C FUNCTION CA PERFORMS SAME PURPOSE FOR CAAA AS BLM DOES FOR CELMG
       FUNCTION  CA (L1, MA1, L2, M2, L3, MA3)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
 C      IMPLICIT REAL*8 (A-H,O-Z)
 C      REAL CA,FACT
       DOUBLE PRECISION FACT, PREF, PREFA, PREFB, PREFT
@@ -663,6 +676,8 @@ C---------------------------------------------------------------------
 C  SUBROUTINE CAAA COMPUTES CLEBSCH-GORDON COEFFICIENTS FOR USE BY
 C  SUBROUTINE GHD IN THE SAME ORDER AS GHD USES THEM
       SUBROUTINE  CAAA (CAA,NCAA,LMMAX)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
       DIMENSION  CAA(NCAA)
       II = 1
       DO 60 I = 1, LMMAX
@@ -706,6 +721,7 @@ C  AUTHOR  PENDRY
 C     DIMENSION  CLM(NLM),           YLM(NN), FAC2(NN), FAC1(N)
 
       IMPLICIT REAL*8 (A-H,O-Z)
+      implicit INTEGER (I-N)
       REAL BLM,  CLM(NLM),           YLM(NN), FAC2(NN), FAC1(N)
       DOUBLE PRECISION FAC
       DIMENSION FAC(NFAC)
@@ -812,6 +828,8 @@ C  composite layer) to local array POS (used in RTINV), ensuring that
 C  the RTINV array dimensions are correct.
 
       SUBROUTINE  COPYPOS(POS,SUBPOS,NLTYPE,NNSUB,NLAY,ILTYPE)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
 
       INTEGER NLTYPE,MNSUB,NLAY
       REAL POS,SUBPOS
@@ -837,6 +855,9 @@ C  PHASE SHIFTS
 C  AUTHOR  PENDRY
 C  DIMENSION 42 REQUIRES N1+N2+N3-1 = 4*LMAX+2 .LE. 42
       SUBROUTINE  CPPP (PPP, N1, N2, N3, NFAC,F)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
+
       ! DOUBLE PRECISION F
       REAL*8 F, SUM  ! MRiva 2021-10-14: Fixes divergence to +-Infinity, leading in turn to NaNs in spectra
       DIMENSION  PPP(N1,N2,N3), F(NFAC)
@@ -1054,6 +1075,8 @@ C
 !  **
       SUBROUTINE DBGT_MOD(RA1, TA1, RA2, TA2, RB1, RAB, ASD, N,                     **T
      &                    PQ, S1, S2, XS, PP, IPL)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
       COMPLEX RAB, RA1, TA1, RB1
       COMPLEX  S1, S2, PP, XS, XX, CZ, IU
       COMPLEX TEMP
@@ -1167,6 +1190,8 @@ C
      &                      RBMP, TBPP, RBPM, TBMM,
      &                      ASD, N, PQ, S1, S2, PP,
      &                      IPL)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
       COMPLEX RAMP, TAPP, RAPM, TAMM, RBPM, TBMM, RBMP, TBPP
       COMPLEX  S1, S2, PP, XX, CZ, IU, C_ONE,
      &         C_M_ONE, P_UP, P_DOWN
@@ -1361,6 +1386,8 @@ C   EDW= OUTPUT DEBYE-WALLER FACTOR (EDW(1,I) FOR REFLECTION, EDW(2,I)
 C    FOR TRANSMISSION).
       SUBROUTINE  DEBWAL (NG, G, GP, E, VPI, AK2, AK3, T, T0, DRX, DRY,
      1D04, EDW)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
       COMPLEX SQRT
       COMPLEX EDW
       DIMENSION  GP(2), G(2,12), EDW(2,NG)
@@ -1414,7 +1441,8 @@ C                    -> perform entire calculation using this beam as inc.
 
       SUBROUTINE DECIDE(NEXIT,KNOWN,EMERGE,PSQ1,PSQ2,AK2,AK3,AK21,AK31,
      +                  KSQ,AK2M,AK3M,NT0,RBR1,RBR2)
-
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
 C  NEXIT is current beam number
 C  EMERGE is 1 if current beam NEXIT propagates in vacuum, 0 otherwise
 C  KNOWN is 1 if scattering matrices for current beam have already been
@@ -1528,6 +1556,8 @@ C---------------------------------------------------------------------
 C  SUBROUTINE DELIMIT WRITES -1 TO OUTPUTFILE FOR AMPLITUDES
 C
       SUBROUTINE DELIMIT(IFILE,IFORM)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
 C
       IF (IFORM.EQ.0) THEN
            WRITE (IFILE) -1
@@ -1544,6 +1574,7 @@ C  EXPANSION FOR L.GT.4. USED IN CA.
 C  expansion works extremely well, much higher than L=15
       DOUBLE PRECISION FUNCTION  FACT (L)
       IMPLICIT DOUBLE PRECISION (A-H,P-Z)
+      implicit INTEGER (I-O)
       IF (L .GT. 4)  GO TO 1600
       IF (L .EQ. 0)  FACT = 1.0
       IF (L .EQ. 1)  FACT = 0.1
@@ -1585,6 +1616,8 @@ C
       SUBROUTINE FINAL1(ALM,A0LM,APLUS,AMINUS,
      1CYLM,XODST,XEVST,IPLO,IPLE,LMAX,LMMAX,
      1LOD,LEV,NT,LX,AEV,AOD,EMACH)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
 C
 C
       COMPLEX AOD(LOD),AEV(LEV)
@@ -1672,6 +1705,8 @@ C---------------------------------------------------------------------
 C  AUTHOR P. ROUS, MODIFIED W. OED 121190
       SUBROUTINE FINALOV(TSTORE,ALM,APLUS,AMINUS,NT,NLAYER,
      1LMN,LMMAX,CAF,LMAX,LXM,E,VPI)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
 C
       INTEGER LXM(LMMAX)
       COMPLEX ALM(LMMAX),CSUM,RSUM,AK,CI
@@ -1756,6 +1791,8 @@ C
 !   AR1,AR2= BASIS VECTORS OF SUPERLATTICE.
       SUBROUTINE  FMAT (FLMS, V, JJS, NL, NLS, DCUT, IDEG, LMAX, KLM,
      &                  SCC, SA)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
       INTEGER ASST ! Used as flag when IDEG=2 to run the sum twice
       COMPLEX  FLMS, SCC, SA, RTAB, CZERO, CI, KAPPA, SC, SD, SE, Z,
      &         ACS, ACC, RF
@@ -1958,6 +1995,8 @@ C   LAY,PQ- SEE GHMAT.
 C   H is auxiliary array HGHD used only here, carried through for var. dimensions
       SUBROUTINE GHD(IZ,IS,GH,LMG,LMMAX,S,LMS,Y,L2M,DRL,NLAY2,
      1               K0,DCUT,CAA,NCAA,LXM,LAY,PQ,H)                       111181
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
       COMPLEX H(L2M)
       COMPLEX GH(LMG,LMMAX),Y(L2M,L2M),S(LMS)
       COMPLEX RU,CI,CZ,K0,FF,Z,Z1,Z2,Z3,ST
@@ -2149,6 +2188,8 @@ C =========================================================================
 C
       SUBROUTINE GHMAT(GH,LMG,LMMAX,MGH,NLAY,NUGH,NGEQ,NGOL,NLAY2,TST,
      & TEST,Y1,L2M,Y,LM,S,LMS,DRL,TV,LXM,LEV,DCUT,CAA,NCAA,LAY,HGHD,PQ)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
 C
       DIMENSION MGH(NLAY,NLAY),NUGH(NLAY2),NGEQ(NLAY2),NGOL(NLAY2)
       DIMENSION RBR1(2),RBR2(2),DRL(NLAY2,3),TEST(NLAY2),LXM(LMMAX)
@@ -2462,6 +2503,8 @@ C   IS=2 FOR PROPAGATION FROM SECOND TO FIRST SUBPLANE.
 C   FF= PREFACTOR OF GH.
 C   LXM= PERMUTATION OF (LM) SEQUENCE
       SUBROUTINE GHSC(IZ,IS,GH,LMG,LMMAX,S,LMS,CAA,NCAA,FF,LXM,NLAY2)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
       COMPLEX GH(LMG,LMMAX),S(LMS),FF
       DIMENSION CAA(NCAA),LXM(LMMAX)
       II=1
@@ -2531,6 +2574,8 @@ C  SUBROUTINE HEAD writes header for fd. output spectrum
 C  enjoy the comments :-)
 
       SUBROUTINE HEAD(IFILE,TITLE,NPUN,NPU,KNT,SPQF,KSYM)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
 
       CHARACTER*80 TITLE
       INTEGER NPUN,KNT
@@ -2591,6 +2636,8 @@ C   LX,LXI,LT,LXM= OUTPUT PERMUTATIONS OF (L,M) SEQUENCE.
 C   LMAX= LARGEST VALUE OF L.
 C   LMMAX= (LMAX+1)**2.
       SUBROUTINE LXGENT(LX,LXI,LT,LXM,LMAX,LMMAX)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
       DIMENSION LX(LMMAX),LXM(LMMAX),LXI(LMMAX),LT(LMMAX)
       LEV=(LMAX+1)*(LMAX+2)/2
       LEE=(LMAX/2+1)**2
@@ -2666,6 +2713,8 @@ C   LMMAX= (LMAX+1)**2.
 !   RT= OUTPUT MATRIX ELEMENTS. 1st index is reflection, second is transmission
 
       SUBROUTINE  MFOLD_SIMPLE (JG, LM, YLM, CYLM, LMMAX, NT, RT)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
 
       INTEGER JG, LM
       COMPLEX  CYLM, YLM, CZ, RU, CI, RA, TA, ST, SM, SL, CY, CTR, CTT
@@ -2779,6 +2828,8 @@ CDIR$ NOVECTOR
       SUBROUTINE  MFOLT_SIMPLE (JG, NA, AK2, AK3, CYLM, N, LMMAX, PQ,
      +                          NT, TS, LMN, RG, RG_R, RG_T, NLAY, JGP,
      +                          LXM, RT_OUT, INC, POSS)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
       INTEGER JG, NA, N, LMMAX, NT, LMN, NLAY, JGP, INC,  ! Input
      +        JGA                                         ! Internal use. TODO: update
       COMPLEX  CYLM, CZ, RU, CI, RT_OUT, ST, SM,
@@ -2922,6 +2973,8 @@ CDIR$ NOVECTOR
 !  Optimized for Fortran memory access - by MR v1.72
 !
       SUBROUTINE MULTAMP_OPT(INAMP,OUTAMP,MATRIX,N)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
       COMPLEX INAMP(N),OUTAMP(N),MATRIX(N,N)
       COMPLEX CZ, TEMP
 
@@ -2944,6 +2997,8 @@ C  SUBROUTINE OPENOUT OPENS THE OUTPUTFILE FOR THE AMPLITUDES
 C  AND SUPPLIES ALL NEEDED GLOBAL INFORMATION
 C
       SUBROUTINE OPENOUT(IFILE,FILENAM,IFORM)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
       CHARACTER*(*) FILENAM
 C
       IF (IFORM.EQ.0) THEN
@@ -2958,7 +3013,9 @@ C---------------------------------------------------------------------
 C  SUBROUTINE OUTAMP WRITES THE OUTPUT AMPLITUDES TO FILE# IFILE
 C
       SUBROUTINE OUTAMP(IFILE,IFORM,NEXIT,PQ1,PQ2,ALM,LMMAX,AK21,AK31)
-      COMPLEX ALM(LMMAX)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
+            COMPLEX ALM(LMMAX)
 C
       IF (IFORM.EQ.0) THEN
 C  UNFORMATTED OUTPUT
@@ -2986,6 +3043,8 @@ C                ORDER BEAM.
 C
       SUBROUTINE OUTXIST(IFILE,IFORM,E,PQF,SPQF,NPU,NT0,NT,XI,XIST,
      1                    L1,CAF)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
 C
       DIMENSION PQF(2,NT),SPQF(2,NT),NPU(NT0)
       COMPLEX XI(NT), XIST(NT0), CAF(L1)
@@ -3042,6 +3101,8 @@ C   bessel-functions. Yield better convergence for higher vibration amplitudes
 C   than original calculation scheme                                     110195
       SUBROUTINE  PSTEMP (PPP, N1, N2, N3, DR0, DR, T0, TEMP, E, PHS,
      1DEL,CTAB,SUM,BJ)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
       COMPLEX  DEL, SUM, CTAB
       COMPLEX*16 BJ(N1)
       COMPLEX  Z, CI, CS, CL
@@ -3121,6 +3182,8 @@ C
      +                   CONC,VIB,NSUB,LBRAV,LCOMP,LATT,STYPE,
      +                   SUBPOS,TSLAB,ASA,TOPLAYB,BOTLAYB,ASBULK,LTYPE,
      +                   LDIST,TENS,LAYFILE,ASB,NL)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
 
 C  include global quantities
 
@@ -3427,6 +3490,8 @@ C   MNEL and MLMAX1 is required for correct dimension of PHSS           070592
       SUBROUTINE READIN(TITLE,TVA,RAR1,RAR2,TVB,
      +IDEG,NL,V,VL,JJS,KNBS,KNB,KNT,SPQF,KSYM,SPQ,TST,TSTS,NPUN,NPU,
      +THETA,FI,NPSI,ES,PHSS,L1,NEL,LMAX1,IFORM,VPI,EI,EF,DE)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
 
       INCLUDE "GLOBAL"
 
@@ -3749,6 +3814,8 @@ C  PHSS STORES THE INPUT PHASE SHIFTS (RADIAN)
       SUBROUTINE RINT_SIMPLE(N,WV,AT,ATP,PQ,PQF,VV,THETA,FI,
      &                       MPU,NPUC,EEV,AP,NPNCH,XIST,
      &                       IFILE,IFILE2)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
       DIMENSION  WV(N), PQ(2,N), PQF(2,N), AT(N)
       DIMENSION  NPUC(MPU),ATP(MPU),XIST(MPU)
       COMPLEX WV, XIST
@@ -3855,6 +3922,8 @@ C  PHSS STORES THE INPUT PHASE SHIFTS (RADIAN)
      &                        LX, LXI, LMMAX, KLM, XEV, XOD, LEV, LOD,
      &                        YLM, YLME, YLMO, IPLE, IPLO, CLM, NLM,
      &                        XEVST, XODST)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
 
       INTEGER  LX, LXI, L1
       COMPLEX XODST(LOD,LOD), XEVST(LEV,LEV)
@@ -4282,6 +4351,8 @@ C   X= COMPLEX ARGUMENT OF BESSEL FUNCTIONS.
 C   HH= OUTPUT COMPLEX BESSEL FUNCTIONS.
 C   N3= LMAX+1.
       SUBROUTINE  SB (X, HH, N3)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
       COMPLEX X
       COMPLEX A, B, C, HH
       DIMENSION  HH(N3)
@@ -4309,6 +4380,8 @@ C   Z= COMPLEX ARGUMENT COS(THETA).
 C   FI= AZIMUTHAL ANGLE.
 C   Y= OUTPUT COMPLEX SPHERICAL HARMONICS.
       SUBROUTINE  SH (NHARM, Z, FI, Y)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
       REAL FI
       COMPLEX  A, ANOR, Q1A, YSTAR, YY, ZNW
       REAL*8     AM              ! Added 2021-10-10 MRiva. Prevent overflow to infinity when calculating factorials below. Increases NHARM range from 28 to 150.
@@ -4369,6 +4442,8 @@ C   AR1,AR2,RAR1,RAR2= BASIS VECTORS OF SUPERLATTICE IN DIRECT AND
 C    RECIPROCAL SPACE.
 C   NL1,NL2= SUPERLATTICE CHARACTERIZATION (SEE MAIN PROGRAM).
       SUBROUTINE  SLIND (V, VL, JJS, NL, IDEG, EPSD)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
       COMPLEX  VL, VLA, VLB, CI
       COMPLEX EXP
       DIMENSION  V(NL,2), JJS(NL,IDEG), VL(NL,2), AR1(2), AR2(2)
@@ -4434,6 +4509,8 @@ C  SAME SUBLATTICE.
 !   ST= SIN(THETA) (COMPLEX).
 !   CF= EXP(I*FI).
       SUBROUTINE  SPHRM_MOD(LMAX, YLM, LMMAX, CT, ST, CF)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
       COMPLEX  YLM
       COMPLEX  CT, ST, CF, SF, SA
 !  (21=LMAX+1; 441=(LMAX+1)**2   FOR LMAX=20 - if you need more (what for???),
@@ -4547,6 +4624,8 @@ C        (note srtlay is superfluous in itself but kept so that DRL, SDRL can
 C        be handled more conveniently - should be removed in a future version)
       SUBROUTINE SRTLAY(POS,POSS,LPS,LPSS,MGH,NLAY,DRL,SDRL,NLAY2,
      1NUGH,NGEQ,NGOL,NEW,NORD)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
       DIMENSION POS(NLAY,3),POSS(NLAY,3),POSA(3),DRL(NLAY2,3),
      1SDRL(NLAY2,3)
       DIMENSION LPS(NLAY),LPSS(NLAY),MGH(NLAY,NLAY),NUGH(NLAY2),
@@ -4696,6 +4775,8 @@ C  STORE PRESENT INTERPLANAR VECTORS FOR LATER COMPARISON
       SUBROUTINE SUBRAS_BLAS (RA, TA, RB, TB, N,
      &                        S1, S2, S3, S4, S5, S6,
      &                        PP, INV_PIVOT, PQ, AS)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
       INTEGER  INV_PIVOT
       COMPLEX  RA, TA, RB, TB, PP, IU, XX
       COMPLEX  S1, S2, S3, S4, S5, S6
@@ -5001,6 +5082,8 @@ C  PUT RESULT IN TAU
 !   JGP= CURRENT INCIDENT BEAM.
       SUBROUTINE TAUY_SIMPLE(TAUG, TAUGM, LTAUG, TAU, LMT, LEV, CYLM,
      &                       NT, LMMAX, LT, NTAU, LOD, LEE, LOE, JGP)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
       COMPLEX CZ, ST, SU, CF, CF1
       COMPLEX TAU(LMT, LEV), CYLM(NT, LMMAX)
       COMPLEX TAUG(LTAUG), TAUGM(LTAUG)
@@ -5059,6 +5142,8 @@ C  PUT RESULT IN TAU
 !   LMNI= NLAY*LMMAX.
       SUBROUTINE THMAT(TH, LMNI, GH, LMG, LMMAX, MGH, NLAY, TAU,
      1                 LMT, LEV, LPS)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
       COMPLEX TH(LMNI, LMNI), GH(LMG, LMMAX), TAU(LMT, LEV)
       COMPLEX RU, CZ, ST, SU
       DIMENSION LPS(NLAY), MGH(NLAY, NLAY)
@@ -5151,6 +5236,8 @@ C  PUT RESULT IN TAU
       SUBROUTINE  TLRTA_BLAS (R1, T1, R2, T2, N,
      &                        S1, S2, R1_P, R2_P, T1_P, T2_P,  ! storage only
      &                        PP, INV_PIVOT)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
       COMPLEX  R1, T1, R2, T2, XX, YY, C_ZERO, PP
       COMPLEX  S1, S2, R1_P, R2_P, T1_P, T2_P
       COMPLEX  P_UP, P_DOWN, C_M_ONE, C_ONE
@@ -5328,6 +5415,8 @@ C   T= CURRENT TEMPERATURE.
 C   TSF0,TSF,AF,CAF  SEE ABOVE.
       SUBROUTINE TSCATF(IEL,L1,ES,PHSS,NPSI,EB,V,PPP,NN1,NN2,NN3,
      +DR0,DRPER,DRPAR,T0,T,AF,CAF,NEL,LMAX1,PHS,DEL,CTAB,SUM,BJ)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
 
       DIMENSION PHSS(NPSI,NEL,LMAX1),PHS(LMAX1),ES(NPSI)
       DIMENSION PPP(NN1,NN2,NN3)
@@ -5398,6 +5487,8 @@ C   CLM= CLEBSCH-GORDON COEFFICIENTS, FROM SUBROUTINE CELMG.
 C   NLM= DIMENSION OF CLM (SEE MAIN PROGRAM).
       SUBROUTINE  XM (FLM,XEV,XOD,LEV,LOD,AF,CAF,LM,LX,LXI,LMMAX,
      1 KLM,CLM,NLM)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
       INTEGER  LX, LXI
       COMPLEX  XEV, XOD, FLM, AF, CZERO, ACC, CAF
       DIMENSION  CLM(NLM), XEV(LEV,LEV), XOD(LOD,LOD), FLM(KLM), AF(LM)
@@ -5553,6 +5644,8 @@ C   NR= FIRST DIMENSION OF A (.GE.NC).
 C   NC= ORDER OF A.
 C   EMACH= MACHINE ACCURACY.
       SUBROUTINE  ZGE (A, INT, NR, NC, EMACH)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
       COMPLEX  A, YR, DUM
       DIMENSION  A(NR,NC), INT(NC)
       N = NC
@@ -5594,6 +5687,8 @@ C   NR= FIRST DIMENSION OF A (.GE.NC).
 C   NC= ORDER OF A.
 C   EMACH= MACHINE ACCURACY.
       SUBROUTINE  ZSU (A, INT, X, NR, NC, EMACH)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
       COMPLEX  A, X, DUM
       DIMENSION  A(NR,NC), X(NC), INT(NC)
       N = NC
@@ -5625,6 +5720,8 @@ CDIR$ IVDEP
 
 C---------------------------------------------------------------------
       SUBROUTINE ZTU(A,INT,X,ND,N,EMACH)
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
 C     ==============
       COMPLEX A,X,Z1,Z2
       DIMENSION A(ND,ND),INT(ND),X(ND)
