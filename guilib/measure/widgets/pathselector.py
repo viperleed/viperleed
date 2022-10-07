@@ -35,13 +35,11 @@ class PathSelector(qtw.QWidget):
 
     path_changed = qtc.pyqtSignal(Path)  # New full path
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, /, **kwargs):
         """Initialize instance.
 
         Parameters
         ----------
-        *args : object
-            Positional arguments passed on to QFileDialog.get...()
         select_file : bool, optional
             Whether this path selector is intended for picking the
             path to a file (if True) or the one to a directory (if
@@ -57,6 +55,9 @@ class PathSelector(qtw.QWidget):
             Maximum number of characters that are to be displayed.
             Paths longer than this will be shown as elided in the
             middle. Values below 10 will be ignored. Default is 35.
+        parent : QWidget, or None, optional
+            Parent of this widget, as well as of the QFileDialog.
+            Default is None.
         **kwargs : object
             Other optional keyword arguments passed on to QFileDialog
 
@@ -69,7 +70,7 @@ class PathSelector(qtw.QWidget):
         self.__glob = {
             'read_only': kwargs.pop('read_only', False),
             'max_chars': max(10, kwargs.pop('max_chars', 35)),
-            'args': (args, kwargs),
+            'kwargs': kwargs,
             'full_path': None,
             'elided_path': ''
             }
@@ -93,6 +94,11 @@ class PathSelector(qtw.QWidget):
         self.__connect()
 
     @property
+    def parent_directory(self):
+        """Return the directory containing the current selection."""
+        return self.path.parent.resolve()
+
+    @property
     def path(self):
         """Return the currently selected path."""
         return self.__glob['full_path']
@@ -114,6 +120,7 @@ class PathSelector(qtw.QWidget):
 
         old_path = self.path
         self.set_path(new_path)
+        self.__glob['kwargs']['directory'] = str(self.parent_directory)
         if old_path is not None and self.path != old_path:
             self.path_changed.emit(self.path)
 
@@ -188,11 +195,11 @@ class PathSelector(qtw.QWidget):
 
     @qtc.pyqtSlot(bool)
     def __on_browse_pressed(self, _):
-        """Open a modal file/directory browser."""
-        args, kwargs = self.__glob['args']
+        """Open a modal file/directory browser, and store the selection."""
+        kwargs = self.__glob['kwargs']
         if 'directory' not in kwargs:
-            kwargs['directory'] = str(self.path.parent)
-        selection = self.__selector(*args, **kwargs)
+            kwargs['directory'] = str(self.parent_directory)
+        selection = self.__selector(**kwargs)
         if not selection:
             return
         if isinstance(selection, tuple):
