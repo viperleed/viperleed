@@ -4009,8 +4009,9 @@ C  PHSS STORES THE INPUT PHASE SHIFTS (RADIAN)
       implicit none
       INTEGER N, NT, NL, NLM, NLAY, NUGH, NGEQ, NGOL, NLAY2
       INTEGER MGH, NCAA, LMNI, IPL
-      INTEGER LXI, LT, LXM, LMMAX, KLM, LEV, LEV2, LMT, LMG, LMN, LM2N
-      INTEGER I, ID, IG, IN, INC, INFO, INSORT, JG, JGP, JGPS, JGS, K
+      INTEGER LXI, LT, LXM, LMMAX, KLM, K
+      INTEGER LEV, LEV2, LMT, LMG, LMN, LM2N
+      INTEGER I, ID, IG, IN, INC, INFO, INSORT, JG, JGP, JGPS, JGS
       INTEGER LAY, LEE, LITER, LM, LMAX, LMS, LOD, LOE, LP, LX, L1
       INTEGER NA, NEW, NLL, NOPT, NS, NTAU
       REAL PI
@@ -4018,8 +4019,8 @@ C  PHSS STORES THE INPUT PHASE SHIFTS (RADIAN)
       REAL CLM, POS, POSS, DRL, SDRL, CAA, PQ, TEST
       REAL AK2, AK3, VPI, BK2, BK3
       REAL B, C, E, DCUT, EPS1, GP
-      COMPLEX XEV, R_TOP, T_TOP, R_BOT, T_BOT, CYLM, AMULT, XA, YA, ST,
-     +        CF, CT, CI, RU, CZ, AM, FLMS, FLM, MFOLT_RT
+      COMPLEX XEV, R_TOP, T_TOP, R_BOT, T_BOT, CYLM, AMULT, XA, YA
+      COMPLEX CF, CT, CI, RU, CZ, AM, FLMS, FLM, MFOLT_RT, ST
       COMPLEX SQRT,EXP
       COMPLEX TH(LMNI, LMNI), TSTORE(2, LMN, NT)
       COMPLEX TAU(LMT, LEV), GH(LMG, LMMAX), RG(2, NLAY, N)            ! May be worth to have 2 as last?
@@ -4876,7 +4877,7 @@ C
 C  PERFORM INVERSION AND MULTIPLICATION
 
       !! replaced by BLAS calls (AMI & MR)
-      call solve_system_w_BLAS(X, LEV, LL, LL, right_hand_side)
+      call solve_system_w_LAPACK(X, LEV, LL, LL, right_hand_side)
       ! CALL CXMTXT(X,LEV,LL,LL,LL2,MARK,DET,-1,XH)
 
 C
@@ -4893,9 +4894,9 @@ C  PUT RESULT IN TAU
       END
 
 !-----------------------------------------------------------------------
-      subroutine solve_system_w_BLAS(X, n_X_cols, n_X_rows,
+      subroutine solve_system_w_LAPACK(X, n_X_cols, n_X_rows,
      &             n_X_systems, B)
-            !! Replaces function of CXMTXT with BLAS calls.
+            !! Replaces function of CXMTXT with BLAS/LAPACK calls.
             !! Authors: A. Imre, M. Riva
             !!
             !! Solves set of linear equations Ax=B where
@@ -4921,7 +4922,7 @@ C  PUT RESULT IN TAU
             integer lapack_pivot(n_X_rows)
 
             ! debug statements
-            ! Write(6, *) "Start of subroutine solve_system_w_BLAS"
+            ! Write(6, *) "Start of subroutine solve_system_w_LAPACK"
             ! Flush(6)
 
             !! take apart X into matrices A and B
@@ -4939,10 +4940,10 @@ C  PUT RESULT IN TAU
      &                  lapack_pivot, B, n_X_cols, lapack_info)
             ! debug statements
             ! write(6, *) "CGETRS info:", lapack_info
-            ! Write(6, *) "solve_system_w_BLAS end"
+            ! Write(6, *) "solve_system_w_LAPACK end"
             ! Flush(6)
 
-      end subroutine solve_system_w_BLAS
+      end subroutine solve_system_w_LAPACK
 !-----------------------------------------------------------------------
 
 !-----------------------------------------------------------------------
