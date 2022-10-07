@@ -3437,6 +3437,7 @@ C   MNEL and MLMAX1 is required for correct dimension of PHSS           070592
       DIMENSION V(NL,2),JJS(NL,IDEG),KNB(KNBS),SPQF(2,KNT),KSYM(2,KNT),
      1SPQ(2,KNT),NPU(NPUN),ES(NPSI),PHSS(NPSI,NEL,LMAX1)
       COMPLEX VL(NL,2)
+      REAL THETA, FI
 C  Format parameter for phaseshift file
       INTEGER PSFMT,PSL1,IFORM
 C  Parameters for calculation of inner potential
@@ -3752,6 +3753,7 @@ C  PHSS STORES THE INPUT PHASE SHIFTS (RADIAN)
       DIMENSION  NPUC(MPU),ATP(MPU),XIST(MPU)
       COMPLEX WV, XIST
       REAL ANGSCALE
+      REAL THETA, FI
       DIMENSION ANGSCALE(N)
       COMMON  E, CK2, CK3, VPI
 
