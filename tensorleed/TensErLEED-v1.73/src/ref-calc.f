@@ -37,6 +37,9 @@ C    before you use it.
 C
       program leed
 
+      implicit REAL (A-H, O-Z)
+      implicit INTEGER (I-N)
+
 C  include parameter statements for dimensions etc
 
       INCLUDE "PARAM"
