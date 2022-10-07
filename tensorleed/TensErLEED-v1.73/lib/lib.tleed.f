@@ -1741,13 +1741,13 @@ CDIR$ VECTOR                                                              170389
 !       (-0.001 TO 0.999)*AR1 AND (0.001 TO 1.001)*AR2                       020780
         B1 = (ADR1 * AR2(2) - ADR2 * AR2(1))/DET
         B2 = (AR1(1) * ADR2 - AR1(2) * ADR1)/DET
-        BP1 = AMOD(B1, 1.)
+        BP1 = MOD(B1, 1.)
         IF (BP1.LT.-.001) THEN
           BP1 = BP1+1.
         ELSEIF (BP1.GT.0.999) THEN
           BP1 = BP1-1.
         ENDIF
-        BP2 = AMOD(B2, 1.)
+        BP2 = MOD(B2, 1.)
         IF (BP2.LT.0.001) THEN
           BP2=BP2+1.
         ENDIF
