@@ -4056,6 +4056,18 @@ C  PHSS STORES THE INPUT PHASE SHIFTS (RADIAN)
      &                 GH, LMG, RG, RG_PERP, TS, LMN, TG, LM2N, VT,
      &                 CAA, NCAA, TH, LMNI, IPL, TSF, LPS, LPSS, NORD,
      &                 NNSUB, LMAX1, XH, HGHD, L2M, RG1, RG2, TSTORE)
+      implicit none
+      INTEGER N, NT, NL, NLM, NLAY, NUGH, NGEQ, NGOL, NLAY2
+      INTEGER MGH, NCAA, LMNI, IPL
+      INTEGER LXI, LT, LXM, LMMAX, KLM, LEV, LEV2, LMT, LMG, LMN, LM2N
+      INTEGER I, ID, IG, IN, INC, INFO, INSORT, JG, JGP, JGPS, JGS, K
+      INTEGER LAY, LEE, LITER, LM, LMAX, LMS, LOD, LOE, LP, LX, L1
+      INTEGER NA, NEW, NLL, NOPT, NS, NTAU
+      REAL PI
+      REAL TST, TV, X
+      REAL CLM, POS, POSS, DRL, SDRL, CAA, PQ, TEST
+      REAL AK2, AK3, VPI, BK2, BK3
+      REAL B, C, E, DCUT, EPS1, GP
       COMPLEX XEV, R_TOP, T_TOP, R_BOT, T_BOT, CYLM, AMULT, XA, YA, ST,
      +        CF, CT, CI, RU, CZ, AM, FLMS, FLM, MFOLT_RT
       COMPLEX SQRT,EXP
@@ -4828,9 +4840,7 @@ C   E,VPI= CURRENT COMPLEX ENERGY.
       CZ=(0.0,0.0)
       CI=(0.0,1.0)                                                      111181
       AK=-0.5/SQRT(CMPLX(2.0*E,-2.0*VPI+0.000001))
-      DO K=1,KLM                                                        111181
-          FLM(K)=CZ                                                           .
-      END DO
+      FLM = CZ
       BK2=PQ(1,1+NA)
       BK3=PQ(2,1+NA)
       JS=1
