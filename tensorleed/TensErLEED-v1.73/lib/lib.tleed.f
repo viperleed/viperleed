@@ -2221,7 +2221,7 @@ C
 C
 C  AKP2= ESTIMATED NO. OF POINTS IN RECIPROCAL LATTICE SUM
 C
-               FACT1=ALOG(TST)/DRL(IZ,1)
+               FACT1=LOG(TST)/DRL(IZ,1)
                AKP2=(2.0*E+FACT1*FACT1)*TV/(4.*3.1415926)
 C
 C  SKIP DIRECT LATTICE SUM, IF RECIPROCAL LATTICE SUM FASTER (BUT NUMBER
@@ -2255,8 +2255,8 @@ C  TEST(I) WILL SERVE AS CUTOFF IN RECIPROCAL LATTICE SUM
 C  Notice that the convergence of the planar sum is not
 C  related to the convergence of the RFS scheme controlled by TST
 C
-CC            TEST(I)=(ALOG(TST)/DRL(I,1))*(ALOG(TST)/DRL(I,1))
-            TEST(I)=8.*ABS(ALOG(.002)/DRL(I,1))
+CC            TEST(I)=(LOG(TST)/DRL(I,1))*(LOG(TST)/DRL(I,1))
+            TEST(I)=8.*ABS(LOG(.002)/DRL(I,1))
             TSTS=AMAX1(TEST(I),TSTS)
          ENDIF
 1     CONTINUE

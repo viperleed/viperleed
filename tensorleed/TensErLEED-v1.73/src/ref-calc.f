@@ -666,7 +666,7 @@ C  correct beam selection criterion TST (formerly done in READIN)
       IF ((TSLAB.eq.1).and.(NSTACK.eq.1)) THEN
         TST = 0.
       ELSE
-        TST=ALOG(TST)/(AMIN1(ASB(1),ASA(1)))
+        TST=LOG(TST)/(AMIN1(ASB(1),ASA(1)))
         TST=TST*TST
       END IF
 
