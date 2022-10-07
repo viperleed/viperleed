@@ -4811,9 +4811,8 @@ C   E,VPI= CURRENT COMPLEX ENERGY.
       COMPLEX AK,CZ,TAU(LMT,LEV),X(LEV,LEV2),TSF(NNSUB,LMAX1),
      1        FLMS(NL,KLM),DET,FLM(KLM),CI,XA                           111181
       COMPLEX XH(LEV)
-      COMPLEX Right_hand_side(LEV, LEV) ! AMI & MR
-      INTEGER pivot(LEV)
-      INTEGER lapack_info, LL, LL2
+      COMPLEX right_hand_side(LEV, LEV) ! AMI & MR
+      INTEGER lapack_info, LL, LL2 ! AMI & MR
       COMMON E,AK2,AK3,VPI
       COMMON /SL/BR1,BR2,AR1,AR2,RAR1,RAR2,NL1,NL2                      111181
       CZ=(0.0,0.0)
@@ -4866,8 +4865,7 @@ C  PREPARE QUANTITIES INTO WHICH INVERSE OF 1-X WILL BE MULTIPLIED
 3           LD=LD1+1
             LD1=LD+L
             DO I=LD,LD1
-                  !X(I,I+LEV)=AK*TSF(IT,L+1)
-                  Right_hand_side(I, I) = AK*TSF(IT, L+1)
+                  X(I,I+LEV)=AK*TSF(IT,L+1)
             END DO
             L=L+2
             IF (L-LMAX) 3,3,5
@@ -4882,8 +4880,7 @@ C
 7           LD=LD1+1
             LD1=LD+L-1
             DO I=LD,LD1
-                  ! X(I,I+LOD)=AK*TSF(IT,L+1)
-                  Right_hand_side(I, I) = AK*TSF(IT, L+1)
+                  X(I,I+LOD)=AK*TSF(IT,L+1)
             END DO
             L=L+2
             IF (L-LMAX) 7,7,9
@@ -4895,22 +4892,76 @@ C
 10    LL2=LL+LL
 C
 C  PERFORM INVERSION AND MULTIPLICATION
-      !CALL CXMTXT(X,LEV,LL,LL,LL2,MARK,DET,-1,XH)    ! TODO Michele: Judge if this can be replaced with CGETRF/CGETRS (likely better optimized?)
-      CALL CGETRF(LL, LL, X, LL, pivot, lapack_info)
-      WRITE(6,*) lapack_info
-      CALL CGETRS('N', LL, LL, X, LL, pivot, Right_hand_side,
-     &            LL, lapack_info)
-      WRITE(6,*) lapack_info
+
+      !! replaced by BLAS calls (AMI & MR)
+      call solve_system_w_BLAS(X, LEV, LL, LL, right_hand_side)
+      ! CALL CXMTXT(X,LEV,LL,LL,LL2,MARK,DET,-1,XH)
+
 C
       LD=(IT-1)*LMMAX
       IF (IL.EQ.1) LD=LD+LEV
       DO 11 I=1,LL
       DO 11 J=1,LL
 C  PUT RESULT IN TAU
-11    TAU(LD+I,J)=Right_hand_side(I,J)
+      ! read from RHS rather than X
+11    TAU(LD+I,J)=right_hand_side(I,J)
+      ! used to be: 11    TAU(LD+I,J)=X(I,J+LL)
 13    CONTINUE
       RETURN
       END
+
+!-----------------------------------------------------------------------
+      subroutine solve_system_w_BLAS(X, n_X_cols, n_X_rows,
+     &             n_X_systems, B)
+            !! Replaces function of CXMTXT with BLAS calls.
+            !! Authors: A. Imre, M. Riva
+            !!
+            !! Solves set of linear equations Ax=B where
+            !! A is a nxn square matrix and B is a matrix giving
+            !! multiple right-hand-sides to be solved for (i.e. multiple
+            !! systems Ax=b where b is a vector of dimension n).
+            !!
+            !! Unfortunately, TensErLEED likes to make things complicated,
+            !! so A and B are contained in a rectangular matrix X which needs
+            !! to be taken apart manually first.
+
+            implicit none
+            integer n_X_cols ! number of colums of X
+            integer n_X_rows ! number of rows of input X
+            integer n_X_systems  ! number of systems of equations
+            complex X(n_X_cols, n_X_rows + n_X_systems)
+            complex A(n_X_cols, n_X_rows) !! matrix A
+            complex B(n_X_cols, n_X_systems) !! B is filled with the right-hand-side
+                               !! and on exit B contains solution to the
+                               !! system of equation.
+
+            integer lapack_info
+            integer lapack_pivot(n_X_rows)
+
+            ! debug statements
+            ! Write(6, *) "Start of subroutine solve_system_w_BLAS"
+            ! Flush(6)
+
+            !! take apart X into matrices A and B
+            A = X(:, 1:n_X_rows)
+            B = X(:, n_X_rows+1:n_X_rows + n_X_systems)
+
+            ! BLAS: LU factorization of A
+            call CGETRF(n_X_cols, n_X_rows, A, n_X_cols, 
+     &                  lapack_pivot, lapack_info)
+            ! debug statements
+            ! write(6, *) "CGETRF info:", lapack_info
+            ! Flush(6)
+
+            call CGETRS('N', n_X_rows, n_X_systems, A, n_X_cols, 
+     &                  lapack_pivot, B, n_X_cols, lapack_info)
+            ! debug statements
+            ! write(6, *) "CGETRS info:", lapack_info
+            ! Write(6, *) "solve_system_w_BLAS end"
+            ! Flush(6)
+
+      end subroutine solve_system_w_BLAS
+!-----------------------------------------------------------------------
 
 !-----------------------------------------------------------------------
 !  SUBROUTINE TAUY_SIMPLE PRODUCES THE QUANTITIES TAU*YLM(G) FOR ALL CHEMICAL
