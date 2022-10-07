@@ -480,7 +480,7 @@ C  repeat the loop defined by 100 ...
           K = K+1
 
 C  ... until TERM really small!
-        IF (CABS(CMPLX(TERM)).gt.1.E-16) GO TO 100
+        IF (ABS(CMPLX(TERM)).gt.1.E-16) GO TO 100
 
 C  evaluate j_L(Z), i.e. BJ(L+1)
 
@@ -939,12 +939,12 @@ C     TRIANGULARIZE A
       IPL = I + 1
 C     DETERMINE PIVOT ELEMENT
       MAX = I
-      AMAX = CABS(A(I,I))
+      AMAX = ABS(A(I,I))
       DO 970 K = IPL, N
-      QZ = CABS(A(K,I))
+      QZ = ABS(A(K,I))
       IF (AMAX-QZ)  960, 970, 970
   960 MAX = K
-      AMAX = CABS(A(K,I))
+      AMAX = ABS(A(K,I))
   970 CONTINUE
       IF (MAX-I)  980, 1000, 980
 C     PIVOTING NECESSARY - INTERCHANGE ROWS
@@ -956,7 +956,7 @@ C     PIVOTING NECESSARY - INTERCHANGE ROWS
 C     ELIMINATE A(I+1,I)---A(N,I)
  1000 DO 1020 J = IPL, N
       TEMP = A(J,I)
-      QZ = CABS(TEMP)
+      QZ = ABS(TEMP)
       IF(QZ .LT. 1.0E-10) GO TO 1020
       CONST =  - TEMP/A(I,I)
       DO 1010 L = I, NPLSY
@@ -967,7 +967,7 @@ C     COMPUTE VALUE OF DETERMINANT
       TEMP = (1.0E + 00,0.0E + 00)
       DO 1030 I = 1, N
       AGG = A(I,I)
-      QZ = CABS(AGG)
+      QZ = ABS(AGG)
       IF(QZ .GT. 1.0E-10) GO TO 1030
 C     MATRIX SINGULAR
 C     WRITE(6,310)
@@ -1482,8 +1482,8 @@ C  another computation is necessary - this feature is currently not implemented.
           DET1 = DET1/(RBR1(1)*RBR2(2)-RBR1(2)*RBR2(1))
           DET2 = DET2/(RBR1(1)*RBR2(2)-RBR1(2)*RBR2(1))
 
-          DET1 = ABS(ABS(DET1)-FLOAT(IFIX(ABS(DET1)+1.E-3)))
-          DET2 = ABS(ABS(DET2)-FLOAT(IFIX(ABS(DET2)+1.E-3)))
+          DET1 = ABS(ABS(DET1)-FLOAT(INT(ABS(DET1)+1.E-3)))
+          DET2 = ABS(ABS(DET2)-FLOAT(INT(ABS(DET2)+1.E-3)))
 
 C  now, if DET1 or DET2 .ne. 0, the current beam can not be related to the
 C  one for which the last computation was performed by a superlattice vector,
@@ -1692,7 +1692,7 @@ C
 2     CSUM = CSUM + TSTORE(1,IN+KLM,JGP)*APLUS(JGP)+
      &TSTORE(2,IN+KLM,JGP)*AMINUS(JGP)
 C
-      IF( CABS(CAF(L+1)).GE.1.0E-06) THEN
+      IF( ABS(CAF(L+1)).GE.1.0E-06) THEN
       CSUM=(CI**L)*CSUM/(CAF(L+1)*AK)
       ELSE
       CSUM=CMPLX(0.0,0.0)
@@ -3099,7 +3099,7 @@ C    to be converted back right after the pstemp call in tscatf. Kept for
 C    the sake of compatibility with van Hove / Tong book only.
 
       DEL(LLL) =  - CI * LOG(SUM(LLL) + (1.0,0.0))/(2.0,0.0)
-      ABSDEL = CABS(DEL(LLL))
+      ABSDEL = ABS(DEL(LLL))
       IL = LLL - 1
       IF (ABSDEL-1.0E-2)  320, 310, 310
   310 ITEST = 0
@@ -4275,7 +4275,7 @@ C   N3= LMAX+1.
       A = (0.0,1.0)
       C = X
       B = A * C
-      F = CABS(X)
+      F = ABS(X)
       IF (DBLE(F)-1.0E-38)  1540, 1540, 1520
  1520 HH(1) = EXP(B) * ( - A)/C
       HH(2) = EXP(B) * (1.0/( - C) - A/C**2)
@@ -4398,7 +4398,7 @@ C  SAME SUBLATTICE.
       VLA = EXP(CI * ADR * A)
       VLB = EXP(CI * ADR * B)
       DO 570 J = 1, NL
-      TEST = CABS(VLA - VL(J,1)) + CABS(VLB - VL(J,2))
+      TEST = ABS(VLA - VL(J,1)) + ABS(VLB - VL(J,2))
       IF (TEST-5.0*EPSD)  580, 580, 570
   570 CONTINUE
   580 JJS(I,K) = J
@@ -5534,7 +5534,7 @@ C   EMACH= MACHINE ACCURACY.
       YR = A(I,I)
       IN = I
       DO 600 J = II, N
-      IF (CABS(YR)-CABS(A(J,I)))  590, 600, 600
+      IF (ABS(YR)-ABS(A(J,I)))  590, 600, 600
   590 YR = A(J,I)
       IN = J
   600 CONTINUE
@@ -5544,9 +5544,9 @@ C   EMACH= MACHINE ACCURACY.
       DUM = A(I,J)
       A(I,J) = A(IN,J)
   620 A(IN,J) = DUM
-  630 IF (CABS(YR)-EMACH)  680, 680, 640
+  630 IF (ABS(YR)-EMACH)  680, 680, 640
   640 DO 670 J = II, N
-      IF (CABS(A(J,I))-EMACH)  670, 670, 650
+      IF (ABS(A(J,I))-EMACH)  670, 670, 650
   650 A(J,I) = A(J,I)/YR
 CDIR$ IVDEP
       DO 660 K = II, N
@@ -5579,7 +5579,7 @@ C   EMACH= MACHINE ACCURACY.
       X(I) = DUM
 CDIR$ IVDEP
   700 DO 720 J = II, N
-      IF (CABS(A(J,I))-EMACH)  720, 720, 710
+      IF (ABS(A(J,I))-EMACH)  720, 720, 710
   710 X(J) = X(J) - A(J,I) * X(I)
   720 CONTINUE
   730 CONTINUE
@@ -5590,7 +5590,7 @@ CDIR$ IVDEP
 CDIR$ IVDEP
   740 DO 750 J = IJ, N
   750 X(I) = X(I) - A(I,J) * X(J)
-  760 IF (CABS(A(I,I))-EMACH*1.0E-5)  770, 780, 780
+  760 IF (ABS(A(I,I))-EMACH*1.0E-5)  770, 780, 780
   770 A(I,I) = EMACH * 1.0E - 5 * (1.0,1.0)
   780 X(I) = X(I)/A(I,I)
       RETURN
