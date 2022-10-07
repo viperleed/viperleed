@@ -4797,8 +4797,9 @@ C   E,VPI= CURRENT COMPLEX ENERGY.
       REAL E, RAR1, RAR2, S1, S2, VPI
       DIMENSION CLM(NLM),LXI(LMMAX),PQ(2,NT)                            111181
       DIMENSION BR1(2),BR2(2),AR1(2),AR2(2),RAR1(2),RAR2(2)             111181
-      COMPLEX AK,CZ,TAU(LMT,LEV),X(LEV,LEV2),TSF(NNSUB,LMAX1),
+      COMPLEX AK,CZ,TAU(LMT,LEV),X(LEV,LEV2),
      1        FLMS(NL,KLM),DET,FLM(KLM),CI,XA                           111181
+      COMPLEX TSF(NNSUB,LMAX1)                                          !! AMI: If this is made a complex*16 the noise disappears, but curves are wrong!
       COMPLEX XH(LEV)
       COMPLEX right_hand_side(LEV, LEV) ! AMI & MR
       INTEGER lapack_info, LL, LL2 ! AMI & MR
