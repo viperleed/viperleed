@@ -4280,10 +4280,10 @@ C   Z= COMPLEX ARGUMENT COS(THETA).
 C   FI= AZIMUTHAL ANGLE.
 C   Y= OUTPUT COMPLEX SPHERICAL HARMONICS.
       SUBROUTINE  SH (NHARM, Z, FI, Y)
-      implicit REAL (A-H, O-Z)
-      implicit INTEGER (I-N)
-      REAL FI
       COMPLEX  A, ANOR, Q1A, YSTAR, YY, ZNW
+      implicit none
+      INTEGER L, LL, NHARM
+      REAL BM, BN, FI, ANORA, RZ
       REAL*8     AM              ! Added 2021-10-10 MRiva. Prevent overflow to infinity when calculating factorials below. Increases NHARM range from 28 to 150.
       COMPLEX*16 BB, BB1, AA     ! Added 2021-10-10 MRiva. Prevent overflow and NaNs.
       COMPLEX  Z, Y(NHARM,NHARM) ! MRiva: still unclear whether one would also like Y to be COMPLEX*16
