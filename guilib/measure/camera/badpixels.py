@@ -418,16 +418,16 @@ class BadPixelsFinder(qtc.QObject):
             # Too much intensity
             base.emit_error(self, BadPixelsFinderErrors.FLAT_FRAME_WRONG_LIGHT,
                             'bright')
-            return None, None
+            return None, 0
         if gain > max_gain:
             # Too little intensity
             base.emit_error(self, BadPixelsFinderErrors.FLAT_FRAME_WRONG_LIGHT,
                             'dark')
-            return None, None
+            return None, 0
         return exposure, gain
 
     @_report_progress
-    def find_bad_and_replacements(self):
+    def find_bad_and_replacements(self):  # too-many-locals
         """Find bad pixels and their optimal replacements.
 
         The best replacements are chosen among opposing
@@ -698,7 +698,7 @@ class _Adjustments(MutableSequence):
         self.beta = kwargs.get('alpha', 0.2)
 
         self.__list = []
-        self.__level, self.__trend = [], []
+        self.__holt_winters = [], []
         self.__last_settled = None
         for value in args:
             self.add(value)
@@ -724,14 +724,6 @@ class _Adjustments(MutableSequence):
         """Set a value for the smoothing factor for trends."""
         self.__params['beta'] = new_beta
         self.__params['betac'] = 1 - new_beta
-
-    @property
-    def level(self):
-        return self.__level
-
-    @property
-    def trend(self):
-        return self.__trend
 
     @property
     def is_settled(self):
@@ -765,7 +757,7 @@ class _Adjustments(MutableSequence):
         # this does not require recomputing anything, but I'm
         # not going to use it anyway
         raise NotImplementedError(
-            f"Cannot remove item {item}. Deletion is forbidden."
+            f"Cannot remove item at positon {index}. Deletion is forbidden."
             )
 
     def __getitem__(self, index):
@@ -809,23 +801,25 @@ class _Adjustments(MutableSequence):
         if len(self) < 4:
             return
 
+        level, trend = self.__holt_winters
+
         idx = len(self) - 4   # This is the stable value
         self.__median = ndimage.median_filter(self, 5, mode='nearest')
         median = self.__median[idx]
         if not idx:           # First stable median value
-            self.__level.append(median)
+            level.append(median)
             return
 
-        old_level = self.__level[-1]
-        if not self.__trend:  # Second stable median value
-            self.__trend.append(median - old_level)              # mul: /
-        old_trend = self.__trend[-1]
+        old_level = level[-1]
+        if not trend:  # Second stable median value
+            trend.append(median - old_level)                     # mul: /
+        old_trend = trend[-1]
         new_level = (self.alpha * median
                      + self.__alphac * (old_level + old_trend))  # mul: *
         new_trend = (self.beta * (new_level - old_level)         # mul: /
                      + self.__betac * old_trend)
-        self.__level.append(new_level)
-        self.__trend.append(new_trend)
+        level.append(new_level)
+        trend.append(new_trend)
 
         # Now we decide if we are settled, and store the
         # index if we are. Notice that min(idx) == 1.
@@ -838,8 +832,8 @@ class _Adjustments(MutableSequence):
     def clear(self):
         """Clear list."""
         # No need to clear __median as it is recalculated each time
-        self.__level.clear()
-        self.__trend.clear()
+        for _list in self.__holt_winters:
+            _list.clear()
         self.__last_settled = None
         super().clear()
 
@@ -1152,6 +1146,9 @@ class BadPixels:
         -------
         None.
         """
+        # pylint: disable=unnecessary-dunder-call
+        # Looks funky, but it is the fastest way to clear every
+        # single attribute of self and remove all bad-pixels info
         self.__init__(self.__camera)
 
     def get_uncorrectable_clusters_sizes(self):
@@ -1191,6 +1188,39 @@ class BadPixels:
             (np.count_nonzero(labelled[c]) for c in clusters)
             )
 
+    def __get_bad_px_file(self, filepath, most_recent):
+        """Return the path to a bad-pixels file for self.camera."""
+        filepath = Path(filepath)
+        cam_name = self.__camera.name_clean
+
+        # Search in filepath for bad pixels files of the current camera
+        bad_px_files = list(filepath.glob(f"{cam_name}*.badpx"))
+        if not bad_px_files:
+            # Invalidate the information, then complain
+            self.__bad_coords = np.ones((1, 2)) * np.nan
+            raise FileNotFoundError(
+                f"{self.__class__.__name__}: could not find a "
+                f"bad pixels file for camera {self.__camera.name} "
+                f"in directory {filepath.resolve()}"
+                )
+
+        idx = 0      # the most recent
+        if not most_recent:
+            idx = 1  # the second most recent
+
+        # Get the correct bad pixels file
+        try:
+            return sorted(((f.stem, f) for f in bad_px_files),
+                          reverse=True)[idx]
+        except IndexError:
+            self.__bad_coords = np.ones((1, 2)) * np.nan
+            raise FileNotFoundError(
+                f"{self.__class__.__name__}: found only one "
+                f"bad pixels file for camera {self.__camera.name} "
+                f"in directory {filepath.resolve()}. Cannot load "
+                "the second-most recent file."
+                ) from None
+
     def read(self, filepath='', most_recent=True):
         """Read bad pixel information from a file path.
 
@@ -1216,41 +1246,11 @@ class BadPixels:
             If filepath contains a corrupt bad pixels file
             for the current camera.
         """
-        filepath = Path(filepath)
-        cam_name = self.__camera.name_clean
-
-        # Search in filepath for bad pixels files of the current camera
-        bad_px_files = list(filepath.glob(f"{cam_name}*.badpx"))
-        if not bad_px_files:
-            # Invalidate the information, then complain
-            self.__bad_coords = np.ones((1, 2)) * np.nan
-            raise FileNotFoundError(
-                f"{self.__class__.__name__}: could not find a "
-                f"bad pixels file for camera {self.__camera.name} "
-                f"in directory {filepath.resolve()}"
-                )
-
-        idx = 0      # the most recent
-        if not most_recent:
-            idx = 1  # the second most recent
-
-        # Get the correct bad pixels file
-        try:
-            base_name, filename = sorted(((f.stem, f) for f in bad_px_files),
-                                         reverse=True)[idx]
-        except IndexError:
-            self.__bad_coords = np.ones((1, 2)) * np.nan
-            raise FileNotFoundError(
-                f"{self.__class__.__name__}: found only one "
-                f"bad pixels file for camera {self.__camera.name} "
-                f"in directory {filepath.resolve()}. Cannot load "
-                "the second-most recent file."
-                ) from None
+        base_name, filename = self.__get_bad_px_file(filepath, most_recent)
 
         bad_pixels = []
         replacements = []
         uncorrectable = []
-
         with open(filename, 'r', encoding='utf-8') as bad_px_file:
             for line in bad_px_file:
                 if line.strip().startswith('#'):  # Comment
