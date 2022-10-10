@@ -128,15 +128,19 @@ class IVVideo(MeasurementABC):
         if self.current_step_nr != 2:
             return
 
+        if profile_duration:
+            txt = "Setting each energy takes"
+            print(txt, f"{profile_duration:>{30-len(txt)}.2f} ms")
         for ctrl in self.controllers:
             if not ctrl.measures():
                 continue
-            ctrl_time = (ctrl.time_to_first_measurement + ctrl.time_to_trigger)
+            ctrl_time = ctrl.time_to_first_measurement + ctrl.time_to_trigger
             txt = f"{ctrl.name} at {ctrl.port_name}:"
             print(txt, f"{ctrl_time:>{30-len(txt)}.2f} ms")
         for cam in self.cameras:
             txt = f"{cam.name}:"
-            print(txt, f"{cam.time_to_image_ready:>{30-len(txt)}.2f} ms")
+            cam_time = camera_delay + cam.time_to_image_ready
+            print(txt, f"{cam_time:>{30-len(txt)}.2f} ms")
 
     def _is_finished(self):
         """Check if the full measurement cycle is done.
