@@ -44,6 +44,8 @@ from PyQt5 import (QtCore as qtc,
 from viperleed.guilib.measure.widgets.pathselector import PathSelector
 from viperleed.guilib.measure.widgets.fieldinfo import FieldInfo
 
+# pylint: disable=too-many-lines
+# We can probably live with 1004 instead of 1000
 
 _MSGBOX = qtw.QMessageBox
 
@@ -337,6 +339,9 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
 
     def __guess_handler_from_value(self, value):
         """Return a handler widget guessed from a config value."""
+        if not value:   # We cannot guess from empty values
+            return None
+
         as_path = Path(value)
         if as_path.is_file(): # A file?
             return PathSelector()
@@ -346,7 +351,8 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
         # See if the value can be interpreted
         try:
             value = ast.literal_eval(value)
-        except (TypeError, ValueError, SyntaxError):
+        except (TypeError, ValueError, SyntaxError,
+                MemoryError, RecursionError):
             return None
 
         return self.handler_from_type(type(value))
@@ -365,6 +371,7 @@ class SettingsDialogOption(qtc.QObject):
     """Class for handling a single settings option."""
 
     value_changed = qtc.pyqtSignal(str)
+    handler_widget_changed = qtc.pyqtSignal()
 
     def __init__(self, option_name, handler_widget, *args, **kwargs):
         """Initialize instance.
@@ -413,7 +420,8 @@ class SettingsDialogOption(qtc.QObject):
         if isinstance(handler_widget, type(qtw.QWidget)):
             handler_widget = handler_widget(*args, **kwargs)
 
-        self.handler_widget = handler_widget
+        self.__handler_widget = handler_widget
+        self.__label = qtw.QLabel()
         self.__info = None
         self.__check_handler()
         self.__connect_handler()
@@ -438,6 +446,27 @@ class SettingsDialogOption(qtc.QObject):
     def advanced(self, is_advanced):
         """Set whether this option is considered advanced."""
         self.__advanced = bool(is_advanced)
+
+    @property
+    def handler_widget(self):
+        """Return the handler widget for this option."""
+        return self.__handler_widget
+
+    @handler_widget.setter
+    def handler_widget(self, new_widget):
+        """Set a new handler widget."""
+        if new_widget is self.handler_widget:
+            return
+        self.__handler_widget = new_widget
+        self.__check_handler()
+        self.__connect_handler()
+        self.__update_handler_from_read_only()
+        self.handler_widget_changed.emit()
+
+    @property
+    def label(self):
+        """Return the QLabel widget for this option's label."""
+        return self.__label
 
     @property
     def read_only(self):
@@ -494,7 +523,7 @@ class SettingsDialogOption(qtc.QObject):
         label_text = label_text.strip()
         if not label_text.endswith(':'):
             label_text += ':'
-        _label = qtw.QLabel(label_text)
+        self.label.setText(label_text)
 
         # Prepare a container widget and its layout
         container = qtw.QWidget()
@@ -503,11 +532,11 @@ class SettingsDialogOption(qtc.QObject):
         layout.setContentsMargins(0, 0, 0, 0)
 
         # Get an appropriate size for the info object
-        info_size = _label.fontMetrics().boundingRect(label_text).height()
+        info_size = self.label.fontMetrics().boundingRect(label_text).height()
         self.__info = FieldInfo(info_text, size=info_size)
 
         # Fill layout
-        layout.addWidget(_label)
+        layout.addWidget(self.label)
         layout.addWidget(self.__info)
 
         # Decide where to place a stretch to keep text & info together
@@ -720,11 +749,24 @@ class SettingsDialogSection(SettingsDialogSectionBase):
         self.__layout.addRow(*option)
         if self.advanced:
             option.advanced = True
+        option.handler_widget_changed.connect(self.__on_option_widget_changed)
 
     def add_options(self, options):
         """Add more SettingsDialogOptions to this section from a Sequence."""
         for option in options:
             self.add_option(option)
+
+    def __on_option_widget_changed(self):
+        """Replace the correct widget in the layout."""
+        option = self.sender()
+        row_idx = self.__options.index(option)
+
+        # Remove the old widget and delete it
+        old_row = self.__layout.takeRow(row_idx)
+        old_row.fieldItem.widget().deleteLater()
+
+        # Add back the new widget
+        self.__layout.insertRow(row_idx, *option)
 
 
 class SettingsDialog(qtw.QDialog):
