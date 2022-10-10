@@ -1084,8 +1084,8 @@ C  copy sublayer positions onto correct grid POS
 
             ENDDO
 
-          END IF  ! Bravais vs composite
 
+          END IF  ! overlay vs bulk for composite layer
 CTest
 c          write(6,*) "Diffraction matrices of layer type ",ILTYPE
 c          call OUTMAT(ROP,TOP,ROM,TOM,NOUT,NT)
@@ -1099,7 +1099,7 @@ c          call OUTMAT(ROP,TOP,ROM,TOM,NOUT,NT)
             ENDDO
           ENDDO
 
-        END IF
+        END IF ! bravais vs composite
 
       ENDDO  ! ILTYPE, loop through layers to construct R,T matrices
 
