@@ -148,7 +148,7 @@ C  PSFMT: Parameter indicating the format of the phaseshift file
       REAL VPI,VPIS,VPIO
       REAL EI,EF,DE
 	  REAL EM,C1,C2,C3,C4,C5,C6,C7,C8,WORKFN,ERED
-	  INTEGER PSFRM
+      INTEGER PSFRM
 
 C  IFORM : Formatted (1) or unformatted (0) Tensor LEED output
 
@@ -747,7 +747,7 @@ c  calculation of energy dependent inner potential from Rundgren's parameters
 
 150   CONTINUE
 
-	  WRITE(6,*)
+      WRITE(6,*)
       WRITE(6,160) WORKFN
       WRITE(6,161) VV
 160   FORMAT(16H work function =,F6.2,3H eV)

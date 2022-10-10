@@ -3596,7 +3596,7 @@ C  ICLEB = FLAG FUER FELDER CLM,YLM,FAC1,FAC2 - obsolete!
       WRITE (6,350)
 
       READ(5,201) PSFMT
-	  WRITE(6,204) PSFMT
+      WRITE(6,204) PSFMT
       READ(5,201) IFORM
       WRITE(6,*) 'IFORM = ', IFORM
       WRITE (6,351)
@@ -3615,7 +3615,7 @@ C  NEL= NO. OF CHEMICAL ELEMENTS FOR WHICH PHASE SHIFTS ARE TO BE READ IN
       ENDIF
 
       WRITE(6,*) "   C1      C2      C3      C4   "
-	  WRITE(6,'(4F8.2)') C1,C2,C3,C4
+      WRITE(6,'(4F8.2)') C1,C2,C3,C4
 
       DO 660 IENER = 1, NPSI
 
@@ -3634,7 +3634,7 @@ C  PHSS STORES THE INPUT PHASE SHIFTS (RADIAN)
         ENDDO
   660 CONTINUE
 
-	  ELSEIF(PSFMT.eq.2) THEN
+      ELSEIF(PSFMT.eq.2) THEN
 
       READ(5,201)NELCHECK
       IF (NELCHECK.ne.NEL) THEN
@@ -3644,33 +3644,33 @@ C  PHSS STORES THE INPUT PHASE SHIFTS (RADIAN)
       ENDIF
 
       READ(5,'(1A8,1A70)') PAR0,PAR1
-	  WRITE(6,'(A70)') PAR1
+      WRITE(6,'(A70)') PAR1
       READ(5,202) PSL1,EM,C1,C2,C3,C4,C5,C6,C7,C8
       WRITE(6,203) EM,C1,C2,C3,C4,C5,C6,C7,C8
 
       DO 661 IEL=1,NEL,1
 
-	    READ(5,*)
+        READ(5,*)
         READ(5,*)
 
         DO IENER = 1, NPSI
 
           READ(5,'(F8.3,20F8.4)')ES(IENER),(PHSS(IENER,IEL,L),L=1,L1)
-		  ES(IENER)=ES(IENER)/HARTREE
+          ES(IENER)=ES(IENER)/HARTREE
 
         ENDDO
   661 CONTINUE
 
-	  ELSE
-	    WRITE(6,*) "Phaseshift format incorrectly assigned!"
-		STOP
-	  ENDIF
+        ELSE
+          WRITE(6,*) "Phaseshift format incorrectly assigned!"
+          STOP
+        ENDIF
 
 
       DO 670 IENER = 1, 1
 
         DO IEL = 1,NEL,1
-		  WRITE(6,359)IEL
+          WRITE(6,359)IEL
           WRITE(6,360)ES(IENER),(PHSS(IENER,IEL,L),L=1,L1)
         ENDDO
 
@@ -4191,7 +4191,7 @@ CVB
 !       Do left multiplication with inverse of TH
         CALL CGETRS('N', LMNI, 1, TH, LMNI, IPL, TS, LMNI, INFO)
 
-!       Include further plane-wave propagating factors, and store
+        !       Include further plane-wave propagating factors, and store
 !       the intra-layer scattering for computing Tensors.
         DO I = 1, NLAY
           IN = (I - 1) * LMMAX
