@@ -1894,6 +1894,7 @@ C   H is auxiliary array HGHD used only here, carried through for var. dimension
       RU=(1.0,0.0)
       CZ=(0.0,0.0)
       CI=(0.0,1.0)
+      PI=3.14159265
       DCUT2=DCUT*DCUT
 
       DO I=1,LMS
@@ -1963,7 +1964,7 @@ C  CUTOFF OF LATTICE SUMMATION AT RADIUS DCUT
             IF (ABS(ABS(CFY)-1.).GT.1.E-6) THEN
               FY= ACOS(CFY)
             ELSE
-              IF (CFY.LT.0.0) FY=3.14159265
+              IF (CFY.LT.0.0) FY=PI
             ENDIF
             IF ((PY+V(3)).LT.0.0) FY=-FY
           ENDIF
@@ -1997,7 +1998,7 @@ C
 C  PRINT NUMBER OF LATTICE POINTS USED IN SUMMATION
 C     WRITE(6,170)NUMR
 C170   FORMAT(28H NO. OF LATT. PTS. FOR GH   ,I5)
-      FF=-8.0*3.14159265*K0
+      FF=-8.0*PI*K0
 
 C  USE SUBROUTINE GHSC TO MULTIPLY LATTICE SUM INTO CLEBSCH-GORDON
 C  COEFFICIENTS
@@ -2100,13 +2101,14 @@ C
 C
       CZ=(0.0,0.0)
       CI=(0.0,1.0)
+      PI=3.14159265
+
       IF (LAY.EQ.1) THEN  ! overlayer
          RXR1(1)=RBR1(1)
          RXR1(2)=RBR1(2)
          RXR2(1)=RBR2(1)
          RXR2(2)=RBR2(2)
       ELSE                ! bulk
-         PI=3.14159265 ! why define PI here ??? used below...... TODO, but dont want to touch this now. WTF
          ATV=2.0*PI/TV
          RXR1(1)=ARA2(2)*ATV
          RXR1(2)=-ARA2(1)*ATV
@@ -2114,7 +2116,7 @@ C
          RXR2(2)=ARA1(1)*ATV
       ENDIF
       K0=SQRT(CMPLX(2.0*E,-2.0*VPI+0.000001))
-      CFAC=-16.0*(3.14159265)*(3.14159265)*CI/TV
+      CFAC=-16.0*PI*PI*CI/TV
       NLYLM=NLAY2*LMMAX
 C
 C  COPY OLD VALUES OF GH ONTO GH WHERE APPROPRIATE
@@ -2151,7 +2153,7 @@ C
 C
 C  TSTS= ESTIMATED NO. OF POINTS IN DIRECT LATTICE SUM
 C
-      TSTS=DCUT*DCUT*3.14159265/TV
+      TSTS=DCUT*DCUT*PI/TV
       DO 10 IZ=1,NLAY2
          IF (NUGH(IZ).NE.0) THEN
             IF (ABS(DRL(IZ,1)).GT.0.001) THEN
@@ -2159,7 +2161,7 @@ C
 C  AKP2= ESTIMATED NO. OF POINTS IN RECIPROCAL LATTICE SUM
 C
                FACT1=LOG(TST)/DRL(IZ,1)
-               AKP2=(2.0*E+FACT1*FACT1)*TV/(4.*3.1415926)
+               AKP2=(2.0*E+FACT1*FACT1)*TV/(4.*PI)
 C
 C  SKIP DIRECT LATTICE SUM, IF RECIPROCAL LATTICE SUM FASTER (BUT NUMBER
 C  OF REC. LATT. POINTS IS TO BE RESTRICTED DUE TO A CONVERGENCE
@@ -2255,7 +2257,7 @@ C
                IF (GK2.GT.1.0E-8) THEN
                   CFY=GKX/SQRT(GK2)
                   IF (ABS(ABS(CFY)-1.).LE.1.E-6) THEN
-                     IF (CFY.LT.0.0) FY=3.14159265
+                     IF (CFY.LT.0.0) FY=PI
                   ELSE
                      FY=ACOS(CFY)
                   ENDIF
