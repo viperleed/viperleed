@@ -14,7 +14,7 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 #        and reopen the viewer. If this is the case, the .close() can be tied
 #        to a timer with a small delay.
 # FIXED?: on archive write, .relative_to; fail on network drive
-# FIXED?: camera.ini name brackets
+# FIXED?: bad pixels: flat goes on forever for wiggly intensities.
 # TESTME: make sure multiple controllers work fine with the new ABC.stop
 
 # BUG: bad_px_finder: camera can time out. Reproducible in Prague.
@@ -32,12 +32,10 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 #      the frame rate opt with half the current rate.
 # BUG: list_devices makes TPD COMs stuff go crazy.
 # BUG? ROI increments concern only w/h, but should rather be (w/h - min_w/h) % delta!
-# BUG: viperleed serial, unknown command error misinterpreted? << not sure what this means
+# ???: viperleed serial, unknown command error misinterpreted? << not sure what this means
 # BUG: timing estimate: does not include hv_settle_time
-# BUG: bad pixels: flat goes on forever for wiggly intensities.
-#      Should keep track of the adjustments and decide to pick a value
-#      at some point
 # BUG: update COM and camera name when starting measurement (from known devices)
+# BUG: measurement start, serial connect failed, attempts to connect three times??
 
 #   G E N E R I C
 # TODO: init errors cause obfuscation of the original object that had problems
@@ -48,14 +46,18 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 #       .__call__. QMetaABC.__init__(cls, name, bases, dict_, **clsargs) can be
 #       used to add a class-level .error_occurred signal; while executing
 #       QMetaABC.__call__(cls, *args, **kwargs), super().__call__(*args, **kwargs)
-#       returns an __init__ialized instance that can be modified.
+#       returns an __init__ialized instance of cls that can be modified.
 # TODO: use __init_subclass__(subclass) in base classes to register all concrete
 #       subclasses (check inspect.is_abstract). Could this allow to avoid
 #       explicitly adding new subclasses to the imports? Can also be done in
-#       QMetaABC by extending __new__(mcs, name, bases, dict_, *kwargs). Probably
+#       QMetaABC by extending __new__(mcs, name, bases, dict_, **clsargs). Probably
 #       neither does solve the problem of explicitly importing subclasses, though!
 # TODO: fix the documentation in .ini files
 # TODO: proper _ensure_connected instance method decorator for ControllerABC
+# TODO: User event tracking for bug report. Possible with eventFilter on
+#       qApp, but see also https://www.qtcentre.org/threads/16182-Logging-Qt-User-Actions
+# TODO: error severity in Enum. Non-fatal errors should not stop everything
+# TODO: catch unhandled exceptions, log to file, show the user.
 
 #   C A M E R A   &  C O.
 # TODO: bad pixels finder top progress bar should scale better, with actual
@@ -88,15 +90,19 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 #       way to prevent accessing the same device from different objects.
 #       The most difficult part with the singleton/Borg is handling
 #       movements to threads.
-# TODO: CameraViewer can still pop up. Try using with qtc.QSignalBlocker
+# TODO: CameraViewer can still pop up. Try using "with qtc.QSignalBlocker:"
 #       while entering the closeEvent?
+# TODO: ImagingSource brightness calibration (also in config file). Brightness
+#       up moves average intensity up, histogram gets chopped if too low.
+#       A good value gives mean = 64*16 for a black frame. Use 20ms, 20dB.
 
 #   M E A S U R E M E N T
 # TODO: energy ramps are not equivalent for iv == calibration != time_resolved
 #       will be solved with the EnergyRamp class
 # TODO: Measurement. If primary does not measure, find a better way
 #       than sending an empty data_ready for getting the times right
-# TODO: Ecal coefficients stored only if user OK with it
+# TODO: Ecal coefficients stored only if user OK with it. Requires plot
+#       of calibration residuals.
 
 #   H A R D W A R E
 # TODO: out to I0, measure HV --> not constant??
@@ -139,7 +145,6 @@ from viperleed.guilib.measure.camera.abc import CameraABC
 from viperleed.guilib.measure.controller.abc import ControllerABC
 from viperleed.guilib.measure.measurement.abc import MeasurementABC
 from viperleed.guilib.measure.widgets.camerawidgets import CameraViewer
-from viperleed.guilib.measure.uimeasurementsettings import SettingsEditor
 from viperleed.guilib.measure.classes.datapoints import DataPoints
 from viperleed.guilib.measure.widgets.measurement_plot import MeasurementPlot
 from viperleed.guilib.measure import dialogs
@@ -504,7 +509,8 @@ class Measure(ViPErLEEDPluginBase):
 
         for camera in measurement.cameras:
             self._dialogs['camera_viewers'].append(
-                CameraViewer(camera, stop_on_close=False, roi_visible=False)
+                CameraViewer(camera, stop_on_close=False, roi_visible=False,
+                             interactions_enabled=False)
                 )
 
     def __make_ctrl_settings_dialog(self, ctrl_cls, name, port):
@@ -651,6 +657,9 @@ class Measure(ViPErLEEDPluginBase):
         for controller in self.measurement.controllers:
             controller.disconnect_()
         self.__switch_enabled(True)
+        for viewer in self._dialogs['camera_viewers']:
+            viewer.stop_on_close = True
+            viewer.interactions_enabled = True
 
     @qtc.pyqtSlot()
     def __on_measurement_prepared(self):
@@ -706,7 +715,7 @@ class Measure(ViPErLEEDPluginBase):
 
     def __on_set_energy(self):
         """Set energy on primary controller."""
-        energy = float(self._ctrls['select'].currentText())
+        # energy = float(self._ctrls['select'].currentText())
         # self.measurement.set_leed_energy(energy, 0, trigger_meas=False)       # NOT NICE! Keeps live the measurement, and appends data at random.
 
     def __on_start_pressed(self):
@@ -749,7 +758,7 @@ class Measure(ViPErLEEDPluginBase):
         timer = self._timers['start_measurement']
         if not self.__measurement_thread.isRunning():
             base.safe_connect(self.__measurement_thread.started,
-                              timer.start, qct.Qt.UniqueConnection)
+                              timer.start, type=qct.Qt.UniqueConnection)
             self.__measurement_thread.start(_TIME_CRITICAL)
         else:
             timer.start()

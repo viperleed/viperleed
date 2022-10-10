@@ -34,6 +34,7 @@ from viperleed.guilib.measure import hardwarebase as base
 # TODO: use ROI position increments
 # TODO: If camera is not open at CameraViewer__init__, I never update
 #       the limits! Should use camera.started to fetch them if needed
+# TODO: too-many-lines
 
 
 # pylint: disable=too-many-instance-attributes
@@ -153,7 +154,8 @@ class CameraViewer(qtw.QScrollArea):
             pass
 
     def __init__(self, camera, *args, parent=None, stop_on_close=True,
-                 show_auto=True, roi_visible=True, **kwargs):
+                 show_auto=True, roi_visible=True, interactions_enabled=True,
+                 **kwargs):
         """Initialize widget.
 
         Parameters
@@ -180,6 +182,11 @@ class CameraViewer(qtw.QScrollArea):
             manipulated. This behaviour can be changed at any
             time by setting the .roi_visible attribute.
             Default is True.
+        interactions_enabled : bool, optional
+            Whether actions in the right-click menu are enabled.
+            This attribute can be set to False in case the user
+            is not supposed to interact with the camera. Default
+            is True.
         **kwargs : object
             Other unused optional arguments, passed to
             QScrollArea.__init__
@@ -189,8 +196,12 @@ class CameraViewer(qtw.QScrollArea):
         TypeError
             If camera is not a subclass of CameraABC
         """
+        # pylint: disable=access-member-before-definition
+        # Attribute is defined in __new__
         if self._initialized:
             return
+        # pylint: enable=access-member-before-definition
+
         if not isinstance(camera, abc.CameraABC):
             raise TypeError(f"{self.__class__.__name__}: camera argument "
                             "must be a subclass of CameraABC.")
@@ -201,7 +212,8 @@ class CameraViewer(qtw.QScrollArea):
 
         self.__flags = {"stop_on_close": bool(stop_on_close),
                         "show_auto": bool(show_auto),
-                        "roi_visible": bool(roi_visible),}
+                        "roi_visible": bool(roi_visible),
+                        "interactions_enabled": bool(interactions_enabled),}
         self.__glob = {"image_size": qtc.QSize(),
                        "camera": camera,
                        "mouse_button": None,
@@ -226,6 +238,19 @@ class CameraViewer(qtw.QScrollArea):
     def camera(self):
         """Return the camera whose frames are displayed."""
         return self.__glob["camera"]
+
+    @property
+    def interactions_enabled(self):
+        """Return whether the user can interact with the camera."""
+        return self.__flags["interactions_enabled"]
+
+    @interactions_enabled.setter
+    def interactions_enabled(self, enabled):
+        """Set whether the user can interact with the camera."""
+        self.__flags["interactions_enabled"] = bool(enabled)
+        _menu = self.__children["context_menu"]
+        for action in _menu.actions():
+            action.setEnabled(self.interactions_enabled)
 
     @property
     def image_size(self):
@@ -624,6 +649,9 @@ class CameraViewer(qtw.QScrollArea):
         act.setChecked(
             qtc.Qt.Checked if self.stop_on_close else qtc.Qt.Unchecked
             )
+
+        for action in menu.actions():
+            action.setEnabled(self.interactions_enabled)
 
     def __connect(self):
         """Connect signals."""
