@@ -770,6 +770,10 @@ class Measure(ViPErLEEDPluginBase):
         else:
             timer.start()
 
+        # The next line is approximate: it is only useful in case
+        # the measurement errors out before the timer fires
+        self._timestamps['start'] = time.perf_counter()
+
     def __on_sys_settings_changed(self):
         """Save settings file to disk when system settings change."""
         _dialog = self._dialogs['sys_settings']
