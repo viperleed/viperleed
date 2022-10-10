@@ -5042,11 +5042,16 @@ C  PUT RESULT IN TAU
 !   TH= OUTPUT MATRIX, STILL TO BE INVERTED.
 !   LMNI= NLAY*LMMAX.
       SUBROUTINE THMAT(TH, LMNI, GH, LMG, LMMAX, MGH, NLAY, TAU,
-     1                 LMT, LEV, LPS)
-      implicit REAL (A-H, O-Z)
-      implicit INTEGER (I-N)
       COMPLEX TH(LMNI, LMNI), GH(LMG, LMMAX), TAU(LMT, LEV)
       COMPLEX RU, CZ, ST, SU
+     &                 LMT, LEV, LPS)
+
+      ! explict type definitions
+      implicit none
+      INTEGER I, IC, ICL, ICV, IDL, IDV, ID, IN, IN1, INP, J, K
+      INTEGER LEV, LMMAX, LMNI, LMG, LMT, LOD, LP, LPS, LP1
+      INTEGER M, MGH, M1, NLAY, NLAY1
+
       DIMENSION LPS(NLAY), MGH(NLAY, NLAY)
 
       LOD = LMMAX - LEV
