@@ -2196,7 +2196,7 @@ C  related to the convergence of the RFS scheme controlled by TST
 C
 CC            TEST(I)=(LOG(TST)/DRL(I,1))*(LOG(TST)/DRL(I,1))
             TEST(I)=8.*ABS(LOG(.002)/DRL(I,1))
-            TSTS=AMAX1(TEST(I),TSTS)
+            TSTS=MAX(TEST(I),TSTS)
          ENDIF
 1     CONTINUE
 
@@ -3727,7 +3727,7 @@ C  PHSS STORES THE INPUT PHASE SHIFTS (RADIAN)
 
    35 FORMAT(1F7.2,1F7.4,4E14.5,/,100(5E14.5,/))                         140779
    36 FORMAT(1F7.2,1F7.4,8E18.10,/,100(10E18.10,/))
-      AK = SQRT(AMAX1(2.0 * E - 2.0 * VV, 0.0))
+      AK = SQRT(MAX(2.0 * E - 2.0 * VV, 0.0))
       BK2 = AK * SIN(THETA) * COS(FI)
       BK3 = AK * SIN(THETA) * SIN(FI)
 
