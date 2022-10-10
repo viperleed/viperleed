@@ -467,7 +467,7 @@ class Version:
 
         Parameters
         ----------
-        major : int, float, or str
+        major : int, float, str, or Version
             When an integer, interpret as the "major" part of
             version; when a string, it should be of the form
             "<major>.<minor>.<patch>", with minor and patch
@@ -475,12 +475,12 @@ class Version:
             interpret the whole as the major and the decimal
             as the minor.
         minor : int, optional
-            Minor portion of the version. This is discarded if
-            major is given as a string or as a float. If negative
+            Minor portion of the version. This is discarded if major
+            is given as a string, a float, or a Version. If negative
             or not given, it is interpreted as "zero".
         minor : int, optional
-            Patch portion of the version. This is discarded if
-            major is given as a string or as a float. If negative
+            Patch portion of the version. This is discarded if major
+            is given as a string, a float, or a Version. If negative
             or not given, it is interpreted as "zero".
 
         Raises
@@ -499,6 +499,8 @@ class Version:
             major = str(major)
         if isinstance(major, str):
             major, minor, patch = self.__from_string(major)
+        elif isinstance(major, Version):
+            major, minor, patch = major
 
         if not all(isinstance(p, int) for p in (major, minor, patch)):
             raise TypeError(f"{_name}: Invalid type for one of the parts")
@@ -542,6 +544,10 @@ class Version:
         if self._parts == other._parts:
             return True
         return NotImplemented
+
+    def __iter__(self):
+        """Return an iterabel version of self."""
+        return iter(self._parts)
 
     def __lt__(self, other):
         """Return whether self < other."""
