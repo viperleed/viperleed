@@ -24,10 +24,7 @@ from PyQt5 import QtWidgets as qtw
 
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.classes.datapoints import QuantityInfo
-from viperleed.guilib.measure.classes.settings import (
-    ViPErLEEDSettings, NoDefaultSettingsError,
-    NoSettingsError, NotASequenceError,
-    )
+from viperleed.guilib.measure.classes import settings as _m_settings
 from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
 
 
@@ -125,7 +122,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         """
         super().__init__(parent=parent)
         self.__sets_energy = sets_energy
-        self.__settings = ViPErLEEDSettings()
+        self.__settings = _m_settings.ViPErLEEDSettings()
         self.__serial = None
         self.__hash = -1
 
@@ -265,7 +262,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
                 coef = self.settings.getsequence('energy_calibration',
                                                  'coefficients',
                                                  fallback=(0, 1))
-            except NotASequenceError:
+            except _m_settings.NotASequenceError:
                 coef = (0, 1)
                 base.emit_error(
                     self, ControllerErrors.INVALID_SETTING_WITH_FALLBACK,
@@ -275,7 +272,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
                 domain = self.settings.getsequence('energy_calibration',
                                                    'domain',
                                                    fallback=(-10, 1100))
-            except NotASequenceError:
+            except _m_settings.NotASequenceError:
                 # pylint: disable=redefined-variable-type
                 # Likely pylint bug? domain is Sequence also before.
                 # No reasonable need to bother the user with this. We
@@ -484,13 +481,15 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         # Look for a default only if no settings are given
         _name = self.__class__.__name__ if not new_settings else None
         try:
-            new_settings = ViPErLEEDSettings.from_settings(new_settings,
-                                                           find_from=_name)
-        except NoDefaultSettingsError:
+            new_settings = _m_settings.ViPErLEEDSettings.from_settings(
+                new_settings,
+                find_from=_name
+                )
+        except _m_settings.NoDefaultSettingsError:
             base.emit_error(self, ControllerErrors.DEFAULT_SETTINGS_CORRUPTED,
                             _name)
             return
-        except NoSettingsError:
+        except _m_settings.NoSettingsError:
             base.emit_error(self, ControllerErrors.MISSING_SETTINGS)
             return
 
@@ -522,7 +521,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
             self.serial.port_settings = new_settings
             self.serial.port_name = self.__port_name
 
-        # Notice that the .connect() will run anyway, even if the
+        # Notice that the .connect_() will run anyway, even if the
         # settings are invalid (i.e., missing mandatory fields for
         # the serial)!
         if self.__port_name:
@@ -1159,7 +1158,7 @@ class MeasureControllerABC(ControllerABC):
 
         The base-class implementation returns a handler that
         already contains the following settings:
-        - the handler of self.serial                                            # TODO! Probably all settings are advanced, except, perhaps the port name
+        - the handler of self.serial
 
         and, if self.sets_energy:
         - 'measurement_settings'/'i0_settle_time'

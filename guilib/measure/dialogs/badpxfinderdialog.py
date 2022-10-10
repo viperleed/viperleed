@@ -20,8 +20,7 @@ from viperleed.guilib import dialogs
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure import camera as _m_camera
 from viperleed.guilib.widgetslib import change_control_text_color
-from viperleed.guilib.measure.classes.settings import (get_system_config,
-                                                       ViPErLEEDSettings)
+from viperleed.guilib.measure.classes import settings as _m_settings
 
 
 NOT_FOUND = "No file found!"
@@ -30,7 +29,7 @@ NO_BAD_PX_PATH = "None selected"
 
 
 def _default_config_path():
-    return get_system_config().get("PATHS", 'configuration', fallback='')
+    return _m_settings.SystemSettings().paths['configuration']
 
 
 class BadPixelsFinderDialog(qtw.QDialog):
@@ -435,7 +434,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
             self.__ctrls['bad_px_path'].setText(NO_BAD_PX_PATH)
             self.active_camera = None
             return
-        settings = ViPErLEEDSettings.from_settings(config_name)
+        settings = _m_settings.ViPErLEEDSettings.from_settings(config_name)
         settings['camera_settings']['device_name'] = camera_name
 
         if not self.__camera_busy.isVisible():

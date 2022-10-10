@@ -24,12 +24,11 @@ from PyQt5 import QtCore as qtc
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.classes.datapoints import DataPoints
 from viperleed.guilib.measure.classes.settings import (
-    ViPErLEEDSettings, NoSettingsError, get_system_config, NotASequenceError
+    ViPErLEEDSettings, SystemSettings, NoSettingsError, NotASequenceError
     )
 from viperleed.guilib.measure.camera.abc import CameraErrors
-from viperleed.guilib.measure.controller.abc import (
-    ControllerErrors, MeasureControllerABC, ControllerABC
-    )
+from viperleed.guilib.measure.controller.abc import (ControllerErrors,
+                                                     MeasureControllerABC)
 
 
 _UNIQUE = qtc.Qt.UniqueConnection
@@ -554,6 +553,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         if self.primary_controller:
             self.primary_controller.moveToThread(thread)
 
+    # too-many-locals, too-complex
     def __save_data(self):                                                        # TODO: clean up after testing zip
         """Save data."""
         if not self.__temp_dir:
@@ -1176,8 +1176,8 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
 
     def __make_tmp_directory_tree(self):
         """Prepare temporary folder tree where data will be saved."""
-        sys_config = get_system_config()
-        base_path = sys_config.get("PATHS", "measurements", fallback=None)
+        sys_config = SystemSettings()
+        base_path = sys_config.paths["measurements"]
         if not base_path:                                                       # TODO: emit a SystemSettingsError of some kind
             raise RuntimeError("Invalid path in system config file")
 

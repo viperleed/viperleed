@@ -9,7 +9,9 @@ Author: Michele Riva
 
 This module defines the ViPErLEEDSettings class, a ConfigParser
 subclass used to read/write and handle configurations for hardware
-equipment and measurements.
+equipment and measurements. It also defines the SystemSettings
+subclass of ViPErLEEDSettings, a singleton providing thread-safe
+access to system settings.
 """
 
 import ast
@@ -18,21 +20,24 @@ from configparser import (ConfigParser, MissingSectionHeaderError,
                           SectionProxy, _UNSET)
 from collections import defaultdict
 from collections.abc import Sequence
+import copy
 import os
 from pathlib import Path
 import sys
 
-from viperleed import guilib as gl
+from wrapt import synchronized  # thread-safety decorator
 
+from viperleed import guilib as gl
+from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
+from viperleed.guilib.measure.widgets.pathselector import PathSelector
+
+
+# TODO: not nice. Also, there's two places where the _defaults
+# path is used. Here and in hardwarebase. However, due to circular
+# imports I cannot use either for the other one. Probably better
+# to move the path in __init__?
 _MEASURE_PATH = Path(__file__).parent.parent
 SYSTEM_CONFIG_PATH = _MEASURE_PATH / "_defaults" / "_system_settings.ini"
-
-
-def get_system_config():                                                        # TODO: move to hardwarebase?
-    """Return a ConfigParser loaded with system settings."""
-    config = ConfigParser()
-    config.read(SYSTEM_CONFIG_PATH)
-    return config
 
 
 def _interpolate_config_path(filenames):
@@ -49,7 +54,12 @@ def _interpolate_config_path(filenames):
         File names to be interpolated. The interpolation is
         done in-place.
     """
-    cfg = get_system_config()
+    # NB: the next lines should NOT use SystemSettings, as
+    # _interpolate_config_path is used in ViPErLEEDSettings,
+    # the ancestor of SystemSettings. This leads to infinite
+    # recursion.
+    cfg = ConfigParser()
+    cfg.read(SYSTEM_CONFIG_PATH)
     _sys_path = cfg.get('PATHS', 'configuration', fallback=None)
     if not _sys_path:
         return
@@ -567,3 +577,137 @@ class ViPErLEEDSettings(ConfigParser):
                     self.__comments[sectname].append(line)
                 return True
         return False
+
+
+@synchronized
+class SystemSettings(ViPErLEEDSettings):
+    """A thread-safe singleton for accessing/editing system settings.
+
+    Deep-copy is possible, but will return a ViPErLEEDSettings instance
+    with a copy of all the system settings at the time of copying.
+    """
+
+    __instance = None
+    __non_null = (
+            ('PATHS', 'configuration'),
+            ('PATHS', 'measurements'),
+        )
+
+    # __mandatory can later be extended as __non_null + (...)
+    # Can also decide to add depending on the Version of viperleed
+    __mandatory = __non_null
+
+    def __new__(cls, *args, **kwargs):
+        """Return an uninitialized instance of cls."""
+        if cls.__instance is None:
+            new_instance = super().__new__(cls, *args, **kwargs)
+            new_instance._initialized = False
+            cls.__instance = new_instance
+        return cls.__instance
+
+    def __deepcopy__(self, memo):
+        """Return a ViPErLEEDSettings with the same contents as self."""
+        fake_copy = ViPErLEEDSettings()
+        fake_copy.read_dict(self)
+        return copy.deepcopy(fake_copy, memo)
+
+    def __init__(self, *args, **kwargs):
+        """Initialize instance once."""
+        if self._initialized:  # pylint: disable=no-member
+            return
+        super().__init__(*args, **kwargs)
+        self.__handler = None
+
+        self.read(SYSTEM_CONFIG_PATH)
+        self.__check_mandatory_settings()
+
+    @property
+    def paths(self):
+        """Return the 'PATHS' section of self."""
+        return self['PATHS']
+
+    @property
+    def valid(self):
+        """Return whether all settings are valid."""
+        return all(self[sec][opt] for sec, opt in self.__non_null)
+
+    @property
+    def settings(self):
+        """Return self."""
+        return self
+
+    def get_settings_handler(self):
+        """Return a SettingsHandler instance for displaying self."""
+        if self.__handler is not None:
+            return self.__handler
+
+        handler = self.__handler = SettingsHandler(self)
+        handler.make_from_config()
+
+        # Add some informative text to the entries
+        _infos = (
+        ('PATHS', 'configuration',
+         "<nobr>This is the directory that contains all the</nobr> "
+         "configuration files for your devices and measurements. "
+         "It must be set before you can run any measurement."),
+        ('PATHS', 'measurements',
+         "<nobr>This is the default folder where all your</nobr> "
+         "measurements will be automatically saved. IN THE FUTURE "
+         "you will be able to decide if you want to be asked each "
+         "time a measurement starts."),
+        )
+        for section, option, info in _infos:
+            handler[section][option].set_info_text(info)
+
+        # Make sure the PATHS are "PathSelector"s even with empty fields
+        for option in handler['PATHS'].values():
+            if not isinstance(option.handler_widget, PathSelector):
+                option.handler_widget = PathSelector(select_file=False)
+
+        # Make it clear which settings are mandatory by
+        # adding a '*' at the beginning of the label text
+        for section, option in self.__mandatory:
+            label = handler[section][option].label
+            unstarred_name = label.text()
+            if unstarred_name.startswith('* '):
+                continue
+            label.setText('* ' + unstarred_name)
+
+        return self.__handler
+
+    def __check_mandatory_settings(self):
+        """Check, and possibly add missing settings.
+
+        Missing, non-null settings are added as empty strings.
+
+        Raises
+        ------
+        RuntimeError
+            If any mandatory setting is missing (after potentially
+            filling the non-null ones)
+        """
+        invalid = self.has_settings(*self.__non_null)
+
+        # We're missing settings. Let's add them back...
+        for missing in invalid:
+            section, option = missing.split('/')
+            if section not in self:
+                self.add_section(section)
+            self.set(section, option, '')
+
+        if invalid:
+            # ...and save changes
+            if self.last_file:
+                self.update_file()
+            else:
+                # We even do not have a system settings file
+                self.write(SYSTEM_CONFIG_PATH)
+
+        # Now check all those that must be there
+        missing = self.has_settings(*self.__mandatory)
+        if missing:
+            raise RuntimeError(
+                f"System settings file at {SYSTEM_CONFIG_PATH} is "
+                "missing the following mandatory sections/options: "
+                "; ".join(missing)
+                )

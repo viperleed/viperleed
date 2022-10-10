@@ -24,9 +24,7 @@ from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.camera.imageprocess import (ImageProcessor,
                                                           ImageProcessInfo)
 from viperleed.guilib.measure.camera import badpixels
-from viperleed.guilib.measure.classes.settings import (
-    ViPErLEEDSettings, NoSettingsError, NotASequenceError
-    )
+from viperleed.guilib.measure.classes import settings as _m_settings
 
 
 # pylint: disable=too-many-lines,too-many-public-methods
@@ -161,7 +159,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         self.driver = driver
         self.__busy = False
         self.__connected = False
-        self.__settings = ViPErLEEDSettings()
+        self.__settings = _m_settings.ViPErLEEDSettings()
         self.__bad_pixels = None
         self.__timeout = qtc.QTimer(parent=self)
         self.__timeout.setSingleShot(True)
@@ -498,7 +496,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         return base.as_valid_filename(self.name)
 
     @property
-    def roi(self):
+    def roi(self):  # too-complex
         """Return the settings of the roi.
 
         Returns
@@ -518,7 +516,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         try:
             roi = self.settings.getsequence('camera_settings', 'roi',
                                             fallback=tuple())
-        except NotASequenceError:  # Invalid ROI string
+        except _m_settings.NotASequenceError:  # Invalid ROI string
             roi = tuple()
 
         try:
@@ -629,8 +627,10 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
                 acquiring each frame.
         """
         try:
-            new_settings = ViPErLEEDSettings.from_settings(new_settings)
-        except (ValueError, NoSettingsError):
+            new_settings = _m_settings.ViPErLEEDSettings.from_settings(
+                new_settings
+                )
+        except (ValueError, _m_settings.NoSettingsError):
             base.emit_error(self, CameraErrors.MISSING_SETTINGS)
             return
 
