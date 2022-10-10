@@ -636,11 +636,7 @@ class Measure(ViPErLEEDPluginBase):
         if _dialog.isVisible():                                                 # TODO: we should make sure (regularly?) somewhere that the controller is still where it is supposed to be (COM-wise)
             move_to_front(_dialog)
             return
-
         ctrl = _dialog.handled_object
-        if ctrl_port != ctrl.port_name:
-            ctrl.port_name = ctrl_port
-            ctrl.settings.update_file()
         ctrl.prepare_to_show_settings()
 
     @qtc.pyqtSlot(dict)

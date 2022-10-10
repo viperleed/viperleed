@@ -496,11 +496,18 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         if not self.are_settings_ok(new_settings):
             return
 
+        # Take care of the port name, syncing the contents of
+        # the future settings and the value in self.__port_name.
+        # Also, save changes to file, unless we have been reading
+        # from the default configuration.
+        _settings_port = new_settings.get('controller', 'port_name',
+                                          fallback=self.__port_name)
         if not self.__port_name:
-            self.__port_name = new_settings.get('controller', 'port_name',
-                                                fallback=self.__port_name)
+            self.__port_name = _settings_port
         else:
             new_settings['controller']['port_name'] = self.__port_name
+            if _name is None:  # Not read from _defaults
+                new_settings.update_file()
 
         serial_cls_name = new_settings.get('controller', 'serial_port_class')
         if self.serial.__class__.__name__ != serial_cls_name:
