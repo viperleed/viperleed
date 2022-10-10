@@ -4525,13 +4525,18 @@ C   NORD stores sublayer order so that reordering can be traced back in TLEED)
 C        (note srtlay is superfluous in itself but kept so that DRL, SDRL can
 C        be handled more conveniently - should be removed in a future version)
       SUBROUTINE SRTLAY(POS,POSS,LPS,LPSS,MGH,NLAY,DRL,SDRL,NLAY2,
-     1NUGH,NGEQ,NGOL,NEW,NORD)
-      implicit REAL (A-H, O-Z)
-      implicit INTEGER (I-N)
-      DIMENSION POS(NLAY,3),POSS(NLAY,3),POSA(3),DRL(NLAY2,3),
-     1SDRL(NLAY2,3)
-      DIMENSION LPS(NLAY),LPSS(NLAY),MGH(NLAY,NLAY),NUGH(NLAY2),
-     1NGEQ(NLAY2),NGOL(NLAY2)
+     &                  NUGH,NGEQ,NGOL,NEW,NORD)
+
+      implicit none
+      ! explicit type definitions
+      INTEGER I, IN, IN1, IO, J, K, KM, LPS, LPSA, LPSS, M, M1, MGH
+      INTEGER  NEW, NGEQ, NGOL, NLAY, NLAY1, NLAY2, NUGH
+      REAL   DRL, POS, POSA, POSS, PM, SDRL
+
+      DIMENSION POS(NLAY,3),POSS(NLAY,3),POSA(3),DRL(NLAY2,3)
+      DIMENSION SDRL(NLAY2,3)
+      DIMENSION LPS(NLAY),LPSS(NLAY),MGH(NLAY,NLAY),NUGH(NLAY2)
+      DIMENSION NGEQ(NLAY2),NGOL(NLAY2)
       INTEGER NORD,NORDA
       DIMENSION NORD(NLAY)
 
