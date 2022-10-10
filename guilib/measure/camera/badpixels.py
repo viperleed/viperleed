@@ -26,9 +26,7 @@ from PyQt5 import (QtCore as qtc,
                    QtWidgets as qtw)
 
 from viperleed.guilib.measure import hardwarebase as base
-from viperleed.guilib.measure.camera import abc
 from viperleed.guilib.measure.camera import tifffile
-from viperleed.guilib.measure.widgets.camerawidgets import CameraViewer
 
 
 N_DARK = 100  # Number of dark frames used for finding bad pixels
@@ -56,12 +54,19 @@ def _report_progress(func):
 
 class BadPixelsFinderErrors(base.ViPErLEEDErrorEnum):
     """Class for bad-pixel-finder errors."""
-    DARK_FRAME_TOO_BRIGHT = (210,
-                             "Dark frame has too much intensity. Camera "
-                             "optics is not appropriately covered.")
-    FLAT_FRAME_WRONG_LIGHT = (211,
-                              "Flat frame is too {}. Cannot automatically "
-                              "adjust exposure time and gain.")
+    DARK_FRAME_TOO_BRIGHT = (
+        210,
+        "Dark frame has too much intensity. Camera "
+        "optics is not appropriately covered."
+        )
+    FLAT_FRAME_WRONG_LIGHT = (
+        211,
+        "Flat frame is too {}. Cannot automatically "
+        "adjust exposure time and gain.")
+    CAMERA_BUSY = (
+        212,
+        "Cannot find bad pixels while camera {} is busy."
+        )
 
 
 class _FinderSection(Enum):
@@ -130,12 +135,6 @@ class BadPixelsFinder(qtc.QObject):
 
     def __init__(self, camera, parent=None):
         """Initialize object."""
-        if not isinstance(camera, abc.CameraABC):
-            raise TypeError(
-                f"{self.__class__.__name__}: invalid type "
-                f"'{type(camera).__name__}' for camera argument. "
-                "Must be a concrete subclass of CameraABC."
-                )
         super().__init__(parent=parent)
 
         self.__camera = camera
@@ -328,8 +327,8 @@ class BadPixelsFinder(qtc.QObject):
         if self.__camera.busy:
             # Cannot start detecting bad pixels as long as the
             # camera is busy (esp. right after it is started)
-            base.emit_error(self, abc.CameraErrors.UNSUPPORTED_WHILE_BUSY,
-                            'find bad pixels')
+            base.emit_error(self, BadPixelsFinderErrors.CAMERA_BUSY,
+                            self.__camera.name)
             return
 
         self.__current_section = "dark-short"
@@ -954,11 +953,6 @@ class BadPixels:
                 f"bad_coordinates ({len(bad_coordinates)}) and of "
                 f"replacement_offsets ({len(replacement_offsets)})."
                 )
-
-        if not isinstance(camera, abc.CameraABC):
-            raise TypeError(f"{self.__class__.__name__}: invalid type "
-                            f"{type(camera).__name__} for camera argument. "
-                            "Expected a subclass of CameraABC.")
 
         self.__camera = camera
         self.__bad_coords = bad_coordinates

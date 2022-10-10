@@ -18,8 +18,7 @@ from PyQt5 import (QtWidgets as qtw,
 
 from viperleed.guilib import dialogs
 from viperleed.guilib.measure import hardwarebase as base
-from viperleed.guilib.measure.camera import badpixels
-from viperleed.guilib.measure.camera import abc as camera_abc
+from viperleed.guilib.measure import camera as _m_camera
 from viperleed.guilib.widgetslib import change_control_text_color
 from viperleed.guilib.measure.classes.settings import (get_system_config,
                                                        ViPErLEEDSettings)
@@ -380,7 +379,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
         if not previous:
             bad_px = cam.bad_pixels
         else:
-            bad_px = badpixels.BadPixels(cam)
+            bad_px = _m_camera.badpixels.BadPixels(cam)
             try:
                 bad_px.read(self.__ctrls['bad_px_path'].text(),
                             most_recent=False)
@@ -454,11 +453,11 @@ class BadPixelsFinderDialog(qtw.QDialog):
         """React to an error situation."""
         error_code, error_msg = error_info
         try:
-            error = camera_abc.CameraErrors.from_code(error_code)
+            error = _m_camera.abc.CameraErrors.from_code(error_code)
         except AttributeError:
             error = None
-        if (error is camera_abc.CameraErrors.MISSING_SETTINGS
-            or (error is camera_abc.CameraErrors.INVALID_SETTINGS
+        if (error is _m_camera.abc.CameraErrors.MISSING_SETTINGS
+            or (error is _m_camera.abc.CameraErrors.INVALID_SETTINGS
                 and ("could not find a bad pixels file" in error_msg
                      or "No bad_pixel_path found" in error_msg))):
             # We don't want to spam messages if the current
@@ -627,7 +626,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
         # bars properly shown immediately.
         qtw.qApp.processEvents()
 
-        self.__finder = badpixels.BadPixelsFinder(self.active_camera)
+        self.__finder = _m_camera.badpixels.BadPixelsFinder(self.active_camera)
         self.__finder.progress_occurred.connect(self.__on_progress)
         self.__finder.done.connect(self.__on_finder_done)
         self.__finder.done.connect(self.__finder.deleteLater)

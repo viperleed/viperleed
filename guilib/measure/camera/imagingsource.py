@@ -22,7 +22,7 @@ from viperleed.guilib.measure.camera.drivers.imagingsource import (
     ISCamera as ImagingSourceDriver, FrameReadyCallbackType,
     ImagingSourceError, SinkFormat,
     )
-from viperleed.guilib.measure.camera.abc import CameraABC, CameraErrors
+from viperleed.guilib.measure.camera import abc
 from viperleed.guilib.measure import hardwarebase as base
 
 _CUSTOM_NAME_RE = re.compile(r"\[.*\]")
@@ -92,7 +92,7 @@ def on_frame_ready_(__grabber_handle, image_start_pixel,
             # TODO: report that frames were lost, i.e., exposure
             # time can be made longer.
         return
-    
+
     # Don't emit frame_ready if we got more frames than expected
     if camera.mode == 'triggered' and n_frames_received > camera.n_frames:
         return
@@ -222,7 +222,7 @@ def estimate_frame_loss(frame_times, frame_rate, exposure):
 # pylint counts 33, I count 26. Of those, 17 are actually
 # reimplementations of abstract methods that are only supposed
 # to be used internally (i.e., they are the driver interface)
-class ImagingSourceCamera(CameraABC):
+class ImagingSourceCamera(abc.CameraABC):
     """Concrete subclass of CameraABC handling Imaging Source Hardware."""
 
     abort_trigger_burst = qtc.pyqtSignal()                                      # TODO: could be done with QMetaObject.invokeMethod
@@ -274,7 +274,7 @@ class ImagingSourceCamera(CameraABC):
     def exceptions(self):
         """Return a tuple of camera exceptions."""
         return (ImagingSourceError,)
-    
+
     @property
     def extra_delay(self):
         """Return the interval spent not measuring when triggered (msec)."""
@@ -340,8 +340,10 @@ class ImagingSourceCamera(CameraABC):
         except (ValueError, ImagingSourceError):
             # pylint: disable=redefined-variable-type
             # Probably a bug.
-            base.emit_error(self, CameraErrors.INVALID_SETTING_WITH_FALLBACK,
-                            color_fmt_s, 'camera_settings/color_format', 'Y16')
+            base.emit_error(
+                self, abc.CameraErrors.INVALID_SETTING_WITH_FALLBACK,
+                color_fmt_s, 'camera_settings/color_format', 'Y16'
+                )
             color_fmt = SinkFormat.Y16
         self.settings.set('camera_settings', 'color_format', color_fmt.name)
         return color_fmt
@@ -354,8 +356,10 @@ class ImagingSourceCamera(CameraABC):
         except (ValueError, ImagingSourceError):
             # pylint: disable=redefined-variable-type
             # Probably a bug.
-            base.emit_error(self, CameraErrors.INVALID_SETTING_WITH_FALLBACK,
-                            color_fmt, 'camera_settings/color_format', 'Y16')
+            base.emit_error(
+                self, abc.CameraErrors.INVALID_SETTING_WITH_FALLBACK,
+                color_fmt, 'camera_settings/color_format', 'Y16'
+                )
             color_fmt = SinkFormat.Y16
         self.settings.set('camera_settings', 'color_format', color_fmt.name)
 
