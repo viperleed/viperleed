@@ -16,10 +16,10 @@ from pathlib import Path
 from PyQt5 import (QtWidgets as qtw,
                    QtCore as qtc)
 
+from viperleed.guilib import dialogs
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.camera import badpixels
 from viperleed.guilib.measure.camera import abc as camera_abc
-from viperleed.guilib.measure import dialogs
 from viperleed.guilib.widgetslib import change_control_text_color
 from viperleed.guilib.measure.classes.settings import (get_system_config,
                                                        ViPErLEEDSettings)

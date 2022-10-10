@@ -11,8 +11,6 @@ This package contains dialogs used in the measurement UI
 of the ViPErLEED graphical user interface.
 """
 
-from viperleed.guilib.measure.dialogs.busywindow import BusyWindow
-from viperleed.guilib.measure.dialogs.dropdowndialog import DropdownDialog
 from viperleed.guilib.measure.dialogs import badpxfinderdialog
 from viperleed.guilib.measure.dialogs.settingsdialog import (
     SettingsDialogOption, SettingsDialogSection, SettingsHandler,

@@ -21,7 +21,7 @@ import re
 
 from PyQt5 import (QtWidgets as qtw, QtCore as qtc)
 
-from viperleed.guilib import measure as vpr_measure
+from viperleed.guilib import dialogs
 
 
 DEFAULTS_PATH = (Path(inspect.getfile(vpr_measure)).parent                      # TODO: get it from system settings
@@ -297,7 +297,7 @@ def get_device_config(device_name, directory=DEFAULTS_PATH,
     # Found multiple config files that match.
     # Let the user pick which one to use
     names = [f.name for f in device_config_files]
-    dropdown = vpr_measure.dialogs.DropdownDialog(
+    dropdown = dialogs.DropdownDialog(
         "Found multiple settings files",
         "Found multiple settings files for device "
         f"{device_name} in {directory} and subfolders.\n"
