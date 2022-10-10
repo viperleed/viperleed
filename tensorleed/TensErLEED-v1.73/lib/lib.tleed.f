@@ -1499,9 +1499,9 @@ C
 C  IPLO(LOD),IPLE(LEV) : ELIMINATION INFORMATION FROM ZGE.
 C
       SUBROUTINE FINAL1(ALM,A0LM,APLUS,AMINUS,
-     1CYLM,XODST,XEVST,IPLO,IPLE,LMAX,LMMAX,
-     1LOD,LEV,NT,LX,AEV,AOD,EMACH)
       implicit REAL (A-H, O-Z)
+     &                  CYLM,XODST,XEVST,IPLO,IPLE,LMAX,LMMAX,
+     &                  LOD,LEV,NT,LX,AEV,AOD,EMACH)
       implicit INTEGER (I-N)
 C
 C
@@ -1589,8 +1589,8 @@ C
 C---------------------------------------------------------------------
 C  AUTHOR P. ROUS, MODIFIED W. OED 121190
       SUBROUTINE FINALOV(TSTORE,ALM,APLUS,AMINUS,NT,NLAYER,
-     1LMN,LMMAX,CAF,LMAX,LXM,E,VPI)
       implicit REAL (A-H, O-Z)
+     &                   LMN,LMMAX,CAF,LMAX,LXM,E,VPI)
       implicit INTEGER (I-N)
 C
       INTEGER LXM(LMMAX)
@@ -1879,8 +1879,8 @@ C   LXM= PERMUTATION OF (LM) SEQUENCE FROM SUBROUTINE LXGENT.
 C   LAY,PQ- SEE GHMAT.
 C   H is auxiliary array HGHD used only here, carried through for var. dimensions
       SUBROUTINE GHD(IZ,IS,GH,LMG,LMMAX,S,LMS,Y,L2M,DRL,NLAY2,
-     1               K0,DCUT,CAA,NCAA,LXM,LAY,PQ,H)                       111181
       implicit REAL (A-H, O-Z)
+     &               K0,DCUT,CAA,NCAA,LXM,LAY,PQ,H)                       111181
       implicit INTEGER (I-N)
       COMPLEX H(L2M)
       COMPLEX GH(LMG,LMMAX),Y(L2M,L2M),S(LMS)
@@ -2940,8 +2940,8 @@ C                FOR EACH ENERGY: =0 IF IG=FRACTIONAL
 C                ORDER BEAM.
 C
       SUBROUTINE OUTXIST(IFILE,IFORM,E,PQF,SPQF,NPU,NT0,NT,XI,XIST,
-     1                    L1,CAF)
       implicit REAL (A-H, O-Z)
+     &                    L1,CAF)
       implicit INTEGER (I-N)
 C
       DIMENSION PQF(2,NT),SPQF(2,NT),NPU(NT0)
@@ -2998,8 +2998,8 @@ C   11.01.95 UL: uses BESSEL from TLEED package to calculate spherical
 C   bessel-functions. Yield better convergence for higher vibration amplitudes
 C   than original calculation scheme                                     110195
       SUBROUTINE  PSTEMP (PPP, N1, N2, N3, DR0, DR, T0, TEMP, E, PHS,
-     1DEL,CTAB,SUM,BJ)
       implicit REAL (A-H, O-Z)
+     &                    DEL,CTAB,SUM,BJ)
       implicit INTEGER (I-N)
       COMPLEX  DEL, SUM, CTAB
       COMPLEX*16 BJ(N1)
@@ -3386,9 +3386,9 @@ C   PHASE-SHIFTS ARE OUTPUT FOR FIRST PHASE-SHIFT ONLY                  070592
 C   MNEL and MLMAX1 is required for correct dimension of PHSS           070592
 
       SUBROUTINE READIN(TITLE,TVA,RAR1,RAR2,TVB,
-     +IDEG,NL,V,VL,JJS,KNBS,KNB,KNT,SPQF,KSYM,SPQ,TST,TSTS,NPUN,NPU,
-     +THETA,FI,NPSI,ES,PHSS,L1,NEL,LMAX1,IFORM,VPI,EI,EF,DE)
       implicit REAL (A-H, O-Z)
+     &    IDEG,NL,V,VL,JJS,KNBS,KNB,KNT,SPQF,KSYM,SPQ,TST,TSTS,NPUN,NPU,
+     &    THETA,FI,NPSI,ES,PHSS,L1,NEL,LMAX1,IFORM,VPI,EI,EF,DE)
       implicit INTEGER (I-N)
 
       INCLUDE "GLOBAL"
@@ -4249,8 +4249,8 @@ CVB
 
 C-----------------------------------------------------------------------
 C  SUBROUTINE SB COMPUTES SPHERICAL BESSEL FUNCTIONS.
-C   X= COMPLEX ARGUMENT OF BESSEL FUNCTIONS.
-C   HH= OUTPUT COMPLEX BESSEL FUNCTIONS.
+C   X= COMPLEX*16 ARGUMENT OF BESSEL FUNCTIONS.
+C   HH= OUTPUT COMPLEX*16 BESSEL FUNCTIONS.
 C   N3= LMAX+1.
       SUBROUTINE  SB (X, HH, N3)
       implicit REAL (A-H, O-Z)
@@ -5330,8 +5330,8 @@ C   T0= TEMPERATURE AT WHICH DRPER AND DRPAR HAVE BEEN COMPUTED.
 C   T= CURRENT TEMPERATURE.
 C   TSF0,TSF,AF,CAF  SEE ABOVE.
       SUBROUTINE TSCATF(IEL,L1,ES,PHSS,NPSI,EB,V,PPP,NN1,NN2,NN3,
-     +DR0,DRPER,DRPAR,T0,T,AF,CAF,NEL,LMAX1,PHS,DEL,CTAB,SUM,BJ)
       implicit REAL (A-H, O-Z)
+     &      DR0,DRPER,DRPAR,T0,T,AF,CAF,NEL,LMAX1,PHS,DEL,CTAB,SUM,BJ)
       implicit INTEGER (I-N)
 
       DIMENSION PHSS(NPSI,NEL,LMAX1),PHS(LMAX1),ES(NPSI)
@@ -5402,8 +5402,8 @@ C   KLM= (2*LMAX+1)*(2*LMAX+2)/2.
 C   CLM= CLEBSCH-GORDON COEFFICIENTS, FROM SUBROUTINE CELMG.
 C   NLM= DIMENSION OF CLM (SEE MAIN PROGRAM).
       SUBROUTINE  XM (FLM,XEV,XOD,LEV,LOD,AF,CAF,LM,LX,LXI,LMMAX,
-     1 KLM,CLM,NLM)
       implicit REAL (A-H, O-Z)
+     &                KLM,CLM,NLM)
       implicit INTEGER (I-N)
       INTEGER  LX, LXI
       COMPLEX  XEV, XOD, FLM, AF, CZERO, ACC, CAF
@@ -5482,7 +5482,7 @@ C   IT= INDEX OF CURRENT CHEMICAL ELEMENT (.LE.NTAU).
 C   N= RUNNING INDEX OF CLM  MAY NOT BE RESET BETWEEN THE TWO CALLS TO
 C    XMT IN TAUMAT.
       SUBROUTINE XMT(IL,FLMS,NL,X,LEV,LL,TSF,NTAU,IT,LM,LXI,LMMAX,
-     1 KLM,CLM,NLM,N,NNSUB,LMAX1)
+     &               KLM,CLM,NLM,N,NNSUB,LMAX1)
       implicit none
       INTEGER IL, NL, LEV, LL, NTAU, IT, LM, LXI, LMMAX
       INTEGER KLM, NLM, N, NNSUB, LMAX1, LMAX
