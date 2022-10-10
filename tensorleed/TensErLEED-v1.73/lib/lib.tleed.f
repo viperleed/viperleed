@@ -3411,7 +3411,7 @@ C  Parameters for calculation of inner potential
       COMMON /SL/ARA1,ARA2,ARB1,ARB2,RBR1,RBR2,NL1,NL2
       COMMON /MS/LMAX,EPS,LITER
       COMMON /ADS/ASE,VPIS,VPIO,VV
-	  COMMON /INPOT/EM,C1,C2,C3,C4,C5,C6,C7,C8,WORKFN
+      COMMON /INPOT/EM,C1,C2,C3,C4,C5,C6,C7,C8,WORKFN
   130 FORMAT(5F9.4)
   140 FORMAT(25H0PARAMETERS FOR INTERIOR )
   160 FORMAT(3F9.4)
@@ -4160,7 +4160,7 @@ CVB
       DO JGP = 1, N
 !       Generate quantities TAUG, TAUGM into which inverse of TH
 !       will be multiplied
-        CALL TAUY_SIMPLE(TAUG, TAUGM, LMT, TAU, LMT, LEV, CYLM, NT,
+        CALL TAUY_SIMPLE(TAUG, TAUGM, TAU, LMT, LEV, CYLM, NT,
      &                   LMMAX, LT, NTAU, LOD, LEE, LOE, JGP)
 
         JGPS = JGP + NS
@@ -4991,7 +4991,7 @@ C  PUT RESULT IN TAU
       COMPLEX TAU(LMT, LEV), CYLM(NT, LMMAX)
       COMPLEX TAUG(LTAUG), TAUGM(LTAUG)
       DIMENSION LT(LMMAX)
-      CZ = CMPLX(0.0, 0.0)
+      CZ = 0
 
 !
 !  PERFORM MATRIX PRODUCT TAU*YLM(G+-) FOR EACH CHEMICAL ELEMENT
@@ -4999,7 +4999,7 @@ C  PUT RESULT IN TAU
         IS = (I - 1) * LMMAX
         DO JLM = 1, LEV
           ST = CZ
-          JTAU = IS + JLM
+          JTAU = IS + JLM !max: LEV+ (NTAU-1)*LMMAX
           DO ILM = 1, LEV
             KLP = LT(ILM)
             IF (ILM.GT.LEE) THEN
