@@ -286,10 +286,9 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         """Check if there is already data in the class."""
         if not self:
             return False
-        times = QuantityInfo.TIMESTAMPS
-        if times not in self[0]:  #  Loaded from file
-            times = QuantityInfo.TIMES
-        return any(self[0][times].values())
+        if QuantityInfo.TIMESTAMPS not in self[0]:  #  Loaded from file
+            return any(self[0][QuantityInfo.TIMES].values())
+        return any(self[0][QuantityInfo.TIMESTAMPS].values())
 
     @property
     def continuous(self):
@@ -320,6 +319,9 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                 f"Cannot set {self.__class__.__name__}"
                 ".continuous after there is already data"
                 )
+        # pylint: disable=compare-to-zero
+        # Complains about the "is False", but we need to check for
+        # "False" and not False-y. None means "undefined"
         if self.__time_resolved is False and continuous:
             raise ValueError(
                 f"{self.__class__.__name__} cannot be "
@@ -366,8 +368,8 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         cls = self.__class__
         result = cls.__new__(cls)
         memo[id(self)] = result
-        for k, v in self.__dict__.items():
-            setattr(result, k, deepcopy(v, memo))
+        for key, value in self.__dict__.items():
+            setattr(result, key, deepcopy(value, memo))
         return result
 
     def __str__(self):
@@ -425,6 +427,12 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         -----
         DataErrors.INVALID_MEASUREMENT
             If new_data contains unexpected quantities.
+
+        Raises
+        ------
+        ValueError
+            If controller is not one of self.controllers. This means
+            that add_data cannot be called before new_data_point().
         """
         if controller not in self.controllers:
             raise ValueError(
@@ -452,11 +460,11 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
             f"{camera.name}/{camera.process_info.filename}"
             )
 
-    def calculate_times(self, complain=True):
+    def calculate_times(self, complain=True):  # too-complex
         """Calculate times for the last data point."""
         err = ""
         if not self.has_data:
-            err = "Cannot calculate_times without data. "
+            err += "Cannot calculate_times without data. "
         if not self.primary_controller:
             err += "Cannot calculate_times without a primary controller. "
         if self and not QuantityInfo.TIMESTAMPS in self[0]:
@@ -716,7 +724,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         with open(csv_name, 'r', encoding='UTF8', newline='') as csv_file:
             self.read_lines(csv_file, source=csv_name)
 
-    def read_lines(self, lines, source=''):
+    def read_lines(self, lines, source=''):   # too-many-locals
         """Read data from an iterable returning lines of data.
 
         Parameters

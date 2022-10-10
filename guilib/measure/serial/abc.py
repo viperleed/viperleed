@@ -95,6 +95,7 @@ class ExtraSerialErrors(ViPErLEEDErrorEnum):
                      "Serial port could not be opened.")
 
 
+# too-many-public-methods, too-many-instance-attributes, too-many-lines
 class SerialABC(qtc.QObject, metaclass=QMetaABC):
     """Base class for serial communication for a ViPErLEED controller."""
 
@@ -325,9 +326,6 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         self.__port = qts.QSerialPort(port_name, parent=self)
         self.connect_()
 
-    # Disable pylint check because of false positive. The method
-    # is used below as the getter for property port_settings
-    # pylint: disable=unused-private-member
     def __get_port_settings(self):
         """Return the current settings for the port.
 
@@ -339,7 +337,6 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             'serial_port_settings'.
         """
         return self.__serial_settings
-    # pylint: enable=unused-private-member
 
     def set_port_settings(self, new_settings):
         """Change settings of the port.
@@ -469,9 +466,6 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             return bytearray()
         return bytearray(message)
 
-    # Disable pylint check as this is supposed
-    # to be the signature for subclasses
-    # pylint: disable=no-self-use
     def encode(self, message):
         """Encode a message to be sent via the serial port.
 
@@ -500,7 +494,6 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             The encoded message
         """
         return message
-    # pylint: enable=no-self-use
 
     @abstractmethod
     def identify_error(self, messages_since_error):
@@ -551,7 +544,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
 
     # Disable pylint check as this is supposed
     # to be the signature for subclasses
-    # pylint: disable=no-self-use,unused-argument
+    # pylint: disable=unused-argument
     def is_decoded_message_acceptable(self, message):
         """Check whether a decoded message is ok.
 
@@ -576,7 +569,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             True if message is acceptable
         """
         return True
-    # pylint: enable=no-self-use,unused-argument
+    # pylint: enable=unused-argument
 
     @abstractmethod
     def is_error_message(self, message):
@@ -602,7 +595,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
 
     # Disable pylint check as this is supposed
     # to be the signature for subclasses
-    # pylint: disable=no-self-use,unused-argument
+    # pylint: disable=unused-argument
     def is_message_supported(self, message):
         """Check whether message is a supported command.
 
@@ -635,7 +628,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             messages will then be sent.
         """
         return True
-    # pylint: enable=no-self-use,unused-argument
+    # pylint: enable=unused-argument
 
     @abstractmethod
     def message_requires_response(self, *messages):
@@ -656,15 +649,14 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         """
         return True
 
-    def moveToThread(self, thread):
+    def moveToThread(self, thread):  # pylint: disable=invalid-name
+        """Move self to a different thread by recreating self.port."""
         was_open = self.is_open
         if was_open:
             self.disconnect_()
         super().moveToThread(thread)
         self.__move_to_thread_requested.emit(was_open)
 
-    # pylint: disable=no-self-use
-    # Method is to be potentially reimplemented
     def prepare_message_for_encoding(self, message, *other_messages):
         """Prepare a message to be encoded.
 
@@ -698,7 +690,6 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             should have one of the types acceptable for encode()
         """
         return message, *other_messages
-    # pylint: enable=no-self-use
 
     @abstractmethod
     def process_received_messages(self):

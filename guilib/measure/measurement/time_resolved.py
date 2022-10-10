@@ -19,13 +19,12 @@ from PyQt5 import QtCore as qtc
 from viperleed.guilib.measure.measurement.abc import (MeasurementABC,
                                                       MeasurementErrors)
 from viperleed.guilib.measure import hardwarebase as base
-from viperleed.guilib.measure.controller.abc import ControllerABC
 
 
 _UNIQUE = qtc.Qt.UniqueConnection
 
 
-class TimeResolved(MeasurementABC):
+class TimeResolved(MeasurementABC):  # too-many-instance-attributes
     """Time resolved measurement class."""
 
     display_name = 'Time resolved'
@@ -233,10 +232,10 @@ class TimeResolved(MeasurementABC):
     @property
     def measurement_interval_min(self):
         """Return the smallest measurement-time interval."""
-        _MIN = 50
+        _min = 50
         if not self.devices:
-            return _MIN
-        min_interval_cam = min_interval_ctrl = _MIN
+            return _min
+        min_interval_cam = min_interval_ctrl = _min
 
         # Controllers:
         measuring_ctrls = [c for c in self.controllers if c.measures()]
@@ -252,7 +251,7 @@ class TimeResolved(MeasurementABC):
                                    for cam in self.cameras)
             min_interval_cam += 5  # Same as controller
 
-        return max(_MIN, round(min_interval_ctrl), round(min_interval_cam))
+        return max(_min, round(min_interval_ctrl), round(min_interval_cam))
 
     @qtc.pyqtSlot()
     def abort(self):

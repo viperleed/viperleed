@@ -23,9 +23,11 @@ from PyQt5 import (QtWidgets as qtw, QtCore as qtc)
 
 from viperleed.guilib import dialogs
 
-
-DEFAULTS_PATH = (Path(inspect.getfile(vpr_measure)).parent                      # TODO: get it from system settings
-                 / '_defaults')
+# TODO: not nice. Also, there's two places where the _defaults
+# path is used. Here and in classes.settings. However, due to circular
+# imports I cannot use either for the other one. Probably better
+# to move the path in __init__?
+DEFAULTS_PATH = Path(__file__).parent / '_defaults'
 
 
 ################################## FUNCTIONS ##################################
@@ -201,6 +203,30 @@ def _device_name_re(name):
     return re.compile("|".join(r'^.*' + p + r'\s*$' for p in _patterns))
 
 
+def _find_matching_configs(device_name, directory, tolerant_match):
+    """Find .ini files for device_name in the tree starting at directory."""
+    def _comment(line):
+        line = line.strip()
+        return any(line.startswith(c) for c in '#;')
+
+    dev_re = _device_name_re(device_name)
+
+    def _device_name_found(config_file):
+        """Return whether device_name is found in config."""
+        if tolerant_match:
+            return any(dev_re.match(l) for l in config_file if not _comment(l))
+        return any(device_name in l for l in config_file if not _comment(l))
+
+    directory = Path(directory).resolve()
+    config_files = directory.glob('**/*.ini')
+    device_config_files = []
+    for config_name in config_files:
+        with open(config_name, 'r', encoding='utf-8') as config_file:
+            if _device_name_found(config_file):
+                device_config_files.append(config_name)
+    return device_config_files
+
+
 def get_device_config(device_name, directory=DEFAULTS_PATH,
                       tolerant_match=True, prompt_if_invalid=True,
                       parent_widget=None):
@@ -243,25 +269,8 @@ def get_device_config(device_name, directory=DEFAULTS_PATH,
         because prompt_if_invalid is False, or because the
         user dismissed the pop-up).
     """
-    def _comment(line):
-        line = line.strip()
-        return any(line.startswith(c) for c in '#;')
-
-    dev_re = _device_name_re(device_name)
-
-    def _device_name_found(config_file):
-        """Return whether device_name is found in config."""
-        if tolerant_match:
-            return any(dev_re.match(l) for l in config_file if not _comment(l))
-        return any(device_name in l for l in config_file if not _comment(l))
-
-    directory = Path(directory).resolve()
-    config_files = directory.glob('**/*.ini')
-    device_config_files = []
-    for config_name in config_files:
-        with open(config_name, 'r', encoding='utf-8') as config_file:
-            if _device_name_found(config_file):
-                device_config_files.append(config_name)
+    device_config_files = _find_matching_configs(device_name, directory,
+                                                 tolerant_match)
 
     if device_config_files and len(device_config_files) == 1:
         # Found exactly one config file
@@ -458,19 +467,21 @@ class Version:
 
         Parameters
         ----------
-        major : int or str
+        major : int, float, or str
             When an integer, interpret as the "major" part of
             version; when a string, it should be of the form
             "<major>.<minor>.<patch>", with minor and patch
-            optional, and each field be int-able.
+            optional, and each field be int-able; when a float,
+            interpret the whole as the major and the decimal
+            as the minor.
         minor : int, optional
-            Minor portion of the version. If major is given as
-            a string, this is discarded. If negative or not given,
-            it is interpreted as "zero".
+            Minor portion of the version. This is discarded if
+            major is given as a string or as a float. If negative
+            or not given, it is interpreted as "zero".
         minor : int, optional
-            Patch portion of the version. If major is given as
-            a string, this is discarded.  If negative or not given,
-            it is interpreted as "zero".
+            Patch portion of the version. This is discarded if
+            major is given as a string or as a float. If negative
+            or not given, it is interpreted as "zero".
 
         Raises
         ------
@@ -478,33 +489,25 @@ class Version:
             If any of the inputs is not an integer. If major is given
             as a string, the exception is raised if one of the parts
             is not int-able.
+        ValueError
+            If major is an empty string, if it does not conform to
+            the <number>[.<number>[.<number>]] syntax, if <major>
+            is negative, if <minor> is not given but <patch> is.
         """
         _name = self.__class__.__name__
-        # pylint: disable=redefined-variable
-        # Disabled because it makes it easier to handle different types
         if isinstance(major, float):
             major = str(major)
         if isinstance(major, str):
-            if not major:
-                # Empty version
-                raise ValueError(f"{_name}: version cannot be an empty string")
-            if not _DOTS_OR_DIGITS.match(major):
-                raise ValueError(
-                    f"{_name}: version can contain only digits and dots"
-                    )
-            major, *rest = (int(v) for v in major.split('.'))
-            try:
-                minor = rest.pop(0)
-            except IndexError:
-                minor = -1
-            try:
-                patch = rest.pop(0)
-            except IndexError:
-                patch = -1
+            major, minor, patch = self.__from_string(major)
+
         if not all(isinstance(p, int) for p in (major, minor, patch)):
             raise TypeError(f"{_name}: Invalid type for one of the parts")
         if major < 0:
             raise ValueError(f"{_name}: version cannot be negative")
+
+        # pylint: disable=chained-comparison
+        # pylint would probably like the next one to be
+        # minor < 0 < patch, but it feels less readable
         if patch > 0 and minor < 0:
             raise ValueError(f"{_name}: Cannot have 'patch' without 'minor'")
         self.__has_parts = (True, minor > 0, patch > 0)
@@ -585,3 +588,24 @@ class Version:
     def __repr__(self):
         """Return a representation of self."""
         return f"{self.__class__.__name__}({self})"
+
+    def __from_string(self, _as_string):
+        """Return major, minor, patch from a string."""
+        _name = self.__class__.__name__
+        if not _as_string:
+            # Empty version
+            raise ValueError(f"{_name}: version cannot be an empty string")
+        if not _DOTS_OR_DIGITS.match(_as_string):
+            raise ValueError(
+                f"{_name}: version can contain only digits and dots"
+                )
+        major, *rest = (int(v) for v in _as_string.split('.'))
+        try:
+            minor = rest.pop(0)
+        except IndexError:
+            minor = -1
+        try:
+            patch = rest.pop(0)
+        except IndexError:
+            patch = -1
+        return major, minor, patch

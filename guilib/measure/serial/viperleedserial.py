@@ -150,6 +150,7 @@ class ViPErLEEDSerial(SerialABC):
 
     @property
     def firmware_version(self):
+        """Return the Version of the firmware stored in settings."""
         return base.Version(
             self.port_settings.get("controller", "firmware_version")
             )
@@ -539,7 +540,7 @@ class ViPErLEEDSerial(SerialABC):
         # all the elements in data are 1-byte-long integers.
         return messages_to_return
 
-    def process_received_messages(self):                                        # TODO: too-complex: split off parts
+    def process_received_messages(self):                                        # TODO: too-complex, too-many-branches, confusing-consecutive-elif: split off parts
         """Convert received data into human understandable information.
 
         Process data according to its type and emit data that will be

@@ -28,14 +28,13 @@ from pathlib import Path
 
 import numpy as np
 from numpy.lib.stride_tricks import as_strided
-from scipy.signal import convolve2d
 from PyQt5 import QtCore as qtc
 
 from viperleed.guilib.measure.camera import tifffile as tiff
 
 
 @dataclass
-class ImageProcessInfo:
+class ImageProcessInfo:  # pylint: disable=too-many-instance-attributes
     """Data class storing information needed for processing images.
 
     Attributes
