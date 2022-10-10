@@ -18,8 +18,7 @@ import re
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtSerialPort as qts
 
-from viperleed.guilib.measure.controller.abc import (MeasureControllerABC,
-                                                     ControllerErrors)
+from viperleed.guilib.measure.controller import abc
 from viperleed.guilib.measure.serial.abc import ExtraSerialErrors
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.classes.datapoints import QuantityInfo
@@ -73,13 +72,15 @@ class ViPErinoErrors(base.ViPErLEEDErrorEnum):
         )
 
 
-class ViPErinoController(MeasureControllerABC):
+# too-many-instance-attributes, too-many-public-methods
+class ViPErinoController(abc.MeasureControllerABC):
     """Controller class for the ViPErLEED Arduino Micro."""
 
     _devices = {}
     cls_lock = threading.Lock()  # Access to _devices thread safe
     _mandatory_settings = [
-        *MeasureControllerABC._mandatory_settings,
+        # pylint: disable=protected-access
+        *abc.MeasureControllerABC._mandatory_settings,
         ('available_commands',),
         ('controller', 'measurement_devices'),
         ('controller', 'firmware_version'),  # also mandatory on serial
@@ -184,7 +185,7 @@ class ViPErinoController(MeasureControllerABC):
             # pylint: disable=redefined-variable-type
             # Seems a pylint bug.
             meas_f = 50.0
-            base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
+            base.emit_error(self, abc.ControllerErrors.INVALID_SETTINGS,
                             f"adc_update_rate/{update_rate_raw}", "")
         return 1000 / meas_f
 
@@ -278,7 +279,7 @@ class ViPErinoController(MeasureControllerABC):
         """Return whether a ViPErLEEDSettings is compatible with self."""
         invalid = settings.has_settings(("controller", "firmware_version"))
         if invalid:
-            base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
+            base.emit_error(self, abc.ControllerErrors.INVALID_SETTINGS,
                             "controller/firmware_version",
                             "Info: Entry is missing.")
             return False
@@ -286,7 +287,7 @@ class ViPErinoController(MeasureControllerABC):
         try:
             version = base.Version(settings["controller"]["firmware_version"])
         except (TypeError, ValueError) as err:
-            base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
+            base.emit_error(self, abc.ControllerErrors.INVALID_SETTINGS,
                             "controller/firmware_version",
                             f"Info: Value is invalid -- {err}")
             return False
@@ -400,7 +401,7 @@ class ViPErinoController(MeasureControllerABC):
                                                'adc_update_rate', fallback=4)
         except (TypeError, ValueError):
             # Cannot convert to int
-            base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
+            base.emit_error(self, abc.ControllerErrors.INVALID_SETTINGS,
                             'measurement_settings/adc_update_rate', '')
             return
         with self.lock:
@@ -460,7 +461,7 @@ class ViPErinoController(MeasureControllerABC):
         handler.add_from_handler(super().get_settings_handler())
         return handler
 
-    def list_devices(self):
+    def list_devices(self):  # too-complex, too-many-branches
         """List Arduino Micro VipErLEED hardware -- can be slow."""
         ports = qts.QSerialPortInfo().availablePorts()
         port_names = [p.portName() for p in ports]
@@ -663,7 +664,7 @@ class ViPErinoController(MeasureControllerABC):
             v_ref_dac = self.settings.getfloat('energy_calibration',
                                                'v_ref_dac')
         except (TypeError, ValueError):
-            base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
+            base.emit_error(self, abc.ControllerErrors.INVALID_SETTINGS,
                             'energy_calibration/v_ref_dac', "")
             v_ref_dac = 2.5
 
@@ -692,13 +693,13 @@ class ViPErinoController(MeasureControllerABC):
             timeout = self.settings.getint("serial_port_settings", "timeout",
                                            fallback=0)
         except (TypeError, ValueError):
-            base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
+            base.emit_error(self, abc.ControllerErrors.INVALID_SETTINGS,
                             'serial_port_settings/timeout', "")
             timeout = 0
         timeout = max(timeout, 0) + sum(energies_and_times[1::2])
         self.send_message(cmd, energies_and_times, timeout=timeout)
 
-    def set_measurements(self, quantities):
+    def set_measurements(self, quantities):  # too-complex
         """Decide what to measure.
 
         Receive requested measurement types from MeasurementABC
@@ -720,11 +721,11 @@ class ViPErinoController(MeasureControllerABC):
         try:
             available_adcs = self.available_adcs()
         except NotASequenceError:
-            base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
+            base.emit_error(self, abc.ControllerErrors.INVALID_SETTINGS,
                             'controller/measurement_devices', '')
             return
         except (KeyError, ValueError, TypeError, RuntimeError) as err:
-            base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
+            base.emit_error(self, abc.ControllerErrors.INVALID_SETTINGS,
                             'controller', err)
             return
 
