@@ -1897,9 +1897,8 @@ C   H is auxiliary array HGHD used only here, carried through for var. dimension
       PI=3.14159265
       DCUT2=DCUT*DCUT
 
-      DO I=1,LMS
-        S(I)=CZ
-      ENDDO
+      ! initialize S to zero
+      S = CZ
 
       V(1)=DRL(IZ,1)                                                    100589
       V(2)=DRL(IZ,2)                                                    100589
