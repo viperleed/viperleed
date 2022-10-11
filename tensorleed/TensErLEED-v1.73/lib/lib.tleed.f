@@ -1499,9 +1499,9 @@ C
 C  IPLO(LOD),IPLE(LEV) : ELIMINATION INFORMATION FROM ZGE.
 C
       SUBROUTINE FINAL1(ALM,A0LM,APLUS,AMINUS,
-      implicit REAL (A-H, O-Z)
      &                  CYLM,XODST,XEVST,IPLO,IPLE,LMAX,LMMAX,
      &                  LOD,LEV,NT,LX,AEV,AOD,EMACH)
+      implicit REAL (A-H, O-Z)
       implicit INTEGER (I-N)
 C
 C
@@ -1589,8 +1589,8 @@ C
 C---------------------------------------------------------------------
 C  AUTHOR P. ROUS, MODIFIED W. OED 121190
       SUBROUTINE FINALOV(TSTORE,ALM,APLUS,AMINUS,NT,NLAYER,
-      implicit REAL (A-H, O-Z)
      &                   LMN,LMMAX,CAF,LMAX,LXM,E,VPI)
+      implicit REAL (A-H, O-Z)
       implicit INTEGER (I-N)
 C
       INTEGER LXM(LMMAX)
@@ -1879,8 +1879,8 @@ C   LXM= PERMUTATION OF (LM) SEQUENCE FROM SUBROUTINE LXGENT.
 C   LAY,PQ- SEE GHMAT.
 C   H is auxiliary array HGHD used only here, carried through for var. dimensions
       SUBROUTINE GHD(IZ,IS,GH,LMG,LMMAX,S,LMS,Y,L2M,DRL,NLAY2,
-      implicit REAL (A-H, O-Z)
      &               K0,DCUT,CAA,NCAA,LXM,LAY,PQ,H)                       111181
+      implicit REAL (A-H, O-Z)
       implicit INTEGER (I-N)
       COMPLEX H(L2M)
       COMPLEX GH(LMG,LMMAX),Y(L2M,L2M),S(LMS)
@@ -2940,8 +2940,8 @@ C                FOR EACH ENERGY: =0 IF IG=FRACTIONAL
 C                ORDER BEAM.
 C
       SUBROUTINE OUTXIST(IFILE,IFORM,E,PQF,SPQF,NPU,NT0,NT,XI,XIST,
-      implicit REAL (A-H, O-Z)
      &                    L1,CAF)
+      implicit REAL (A-H, O-Z)
       implicit INTEGER (I-N)
 C
       DIMENSION PQF(2,NT),SPQF(2,NT),NPU(NT0)
@@ -2998,8 +2998,8 @@ C   11.01.95 UL: uses BESSEL from TLEED package to calculate spherical
 C   bessel-functions. Yield better convergence for higher vibration amplitudes
 C   than original calculation scheme                                     110195
       SUBROUTINE  PSTEMP (PPP, N1, N2, N3, DR0, DR, T0, TEMP, E, PHS,
-      implicit REAL (A-H, O-Z)
      &                    DEL,CTAB,SUM,BJ)
+      implicit REAL (A-H, O-Z)
       implicit INTEGER (I-N)
       COMPLEX  DEL, SUM, CTAB
       COMPLEX*16 BJ(N1)
@@ -3386,9 +3386,9 @@ C   PHASE-SHIFTS ARE OUTPUT FOR FIRST PHASE-SHIFT ONLY                  070592
 C   MNEL and MLMAX1 is required for correct dimension of PHSS           070592
 
       SUBROUTINE READIN(TITLE,TVA,RAR1,RAR2,TVB,
-      implicit REAL (A-H, O-Z)
      &    IDEG,NL,V,VL,JJS,KNBS,KNB,KNT,SPQF,KSYM,SPQ,TST,TSTS,NPUN,NPU,
      &    THETA,FI,NPSI,ES,PHSS,L1,NEL,LMAX1,IFORM,VPI,EI,EF,DE)
+      implicit REAL (A-H, O-Z)
       implicit INTEGER (I-N)
 
       INCLUDE "GLOBAL"
@@ -4282,8 +4282,8 @@ C   Z= COMPLEX ARGUMENT COS(THETA).
 C   FI= AZIMUTHAL ANGLE.
 C   Y= OUTPUT COMPLEX SPHERICAL HARMONICS.
       SUBROUTINE  SH (NHARM, Z, FI, Y)
-      COMPLEX  A, ANOR, Q1A, YSTAR, YY, ZNW
       implicit none
+      COMPLEX  A, ANOR, Q1A, YSTAR, YY, ZNW
       INTEGER L, LL, NHARM
       REAL BM, BN, FI, ANORA, RZ
       REAL*8     AM              ! Added 2021-10-10 MRiva. Prevent overflow to infinity when calculating factorials below. Increases NHARM range from 28 to 150.
@@ -4990,13 +4990,13 @@ C  PUT RESULT IN TAU
 !   JGP= CURRENT INCIDENT BEAM.
       SUBROUTINE TAUY_SIMPLE(TAUG, TAUGM, TAU, LMT, LEV, CYLM,
      &                       NT, LMMAX, LT, NTAU, LOD, LEE, LOE, JGP)
-      COMPLEX CZ, ST, SU, CF, CF1
-      COMPLEX TAU(LMT, LEV), CYLM(NT, LMMAX)
-      COMPLEX TAUG(LTAUG), TAUGM(LTAUG)
       ! explicit type declarations
       implicit none
       INTEGER I, IS, ILM, JGP, JLM, JTAU
       INTEGER NT, NTAU, KLP, LEE, LEV, LOE, LOD, LT, LMMAX, LMT
+      COMPLEX CZ, ST, SU, CF, CF1
+      COMPLEX TAU(LMT, LEV), CYLM(NT, LMMAX)
+      COMPLEX TAUG(LMT), TAUGM(LMT)
 
       DIMENSION LT(LMMAX)
       CZ = 0
@@ -5052,12 +5052,12 @@ C  PUT RESULT IN TAU
 !   TH= OUTPUT MATRIX, STILL TO BE INVERTED.
 !   LMNI= NLAY*LMMAX.
       SUBROUTINE THMAT(TH, LMNI, GH, LMG, LMMAX, MGH, NLAY, TAU,
-      COMPLEX TH(LMNI, LMNI), GH(LMG, LMMAX), TAU(LMT, LEV)
-      COMPLEX RU, CZ, ST, SU
      &                 LMT, LEV, LPS)
 
       ! explict type definitions
       implicit none
+      COMPLEX TH(LMNI, LMNI), GH(LMG, LMMAX), TAU(LMT, LEV)
+      COMPLEX RU, CZ, ST, SU
       INTEGER I, IC, ICL, ICV, IDL, IDV, ID, IN, IN1, INP, J, K
       INTEGER LEV, LMMAX, LMNI, LMG, LMT, LOD, LP, LPS, LP1
       INTEGER M, MGH, M1, NLAY, NLAY1
@@ -5330,8 +5330,9 @@ C   T0= TEMPERATURE AT WHICH DRPER AND DRPAR HAVE BEEN COMPUTED.
 C   T= CURRENT TEMPERATURE.
 C   TSF0,TSF,AF,CAF  SEE ABOVE.
       SUBROUTINE TSCATF(IEL,L1,ES,PHSS,NPSI,EB,V,PPP,NN1,NN2,NN3,
-      implicit REAL (A-H, O-Z)
      &      DR0,DRPER,DRPAR,T0,T,AF,CAF,NEL,LMAX1,PHS,DEL,CTAB,SUM,BJ)
+
+      implicit REAL (A-H, O-Z)
       implicit INTEGER (I-N)
 
       DIMENSION PHSS(NPSI,NEL,LMAX1),PHS(LMAX1),ES(NPSI)
@@ -5402,8 +5403,8 @@ C   KLM= (2*LMAX+1)*(2*LMAX+2)/2.
 C   CLM= CLEBSCH-GORDON COEFFICIENTS, FROM SUBROUTINE CELMG.
 C   NLM= DIMENSION OF CLM (SEE MAIN PROGRAM).
       SUBROUTINE  XM (FLM,XEV,XOD,LEV,LOD,AF,CAF,LM,LX,LXI,LMMAX,
-      implicit REAL (A-H, O-Z)
      &                KLM,CLM,NLM)
+      implicit REAL (A-H, O-Z)
       implicit INTEGER (I-N)
       INTEGER  LX, LXI
       COMPLEX  XEV, XOD, FLM, AF, CZERO, ACC, CAF
