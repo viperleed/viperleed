@@ -8,7 +8,7 @@ C  EMACH is machine accuracy - used in matrix inversion routines
 C  HARTREE is value of 1 H (atomic unit) in eV
 C  BOHR is bohr radius in Angstroem
 
-      REAL MEMACH,HARTREE,BOHR
-      PARAMETER (MEMACH  = 1.0E-6)
+      REAL*8 MEMACH,HARTREE,BOHR
+      PARAMETER (MEMACH  = 1.0E-12)
       PARAMETER (HARTREE = 27.211396)
       PARAMETER (BOHR    = 0.529177)

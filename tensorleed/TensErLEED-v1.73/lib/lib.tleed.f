@@ -88,20 +88,20 @@ C  Subroutines are included in alphabetical order
 !    Added: 2021-08-26
 
       SUBROUTINE  GET_TOPLAY_PROPAGATORS (WK, PQ, N, INTL_VEC)
-      implicit REAL (A-H, O-Z)
+      implicit REAL*8 (A-H, O-Z)
       implicit INTEGER (I-N)
 
       INTEGER I, N
-      COMPLEX WK, XX, YY, IU
+      COMPLEX*16 WK, XX, YY, IU
       DIMENSION WK(N, 3)
-      COMPLEX SQRT, EXP
-      REAL AK, BK2, BK3, PQ, INTL_VEC, X
+      COMPLEX*16 SQRT, EXP
+      REAL*8 AK, BK2, BK3, PQ, INTL_VEC, X
       DIMENSION INTL_VEC(3), PQ(2, N)
 
       COMMON  E, AK2, AK3    !, VPI
       COMMON  /ADS/ ASE, VPIS, VPIO, VV  ! VV necessary (although unused) as this is a named COMMON block from main
 
-      IU = CMPLX(0.0,1.0)
+      IU = DCMPLX(0.0,1.0)
       AK = 2.0 * E
 
       DO I = 1, N
@@ -109,7 +109,7 @@ C  Subroutines are included in alphabetical order
         BK3 = AK3 + PQ(2, I)
 
 !       YY is k_perp in topmost layer
-        YY = CMPLX(AK - BK2 * BK2 - BK3 * BK3,
+        YY = DCMPLX(AK - BK2 * BK2 - BK3 * BK3,
      +             -2.0 * VPIO + 0.000001)
         YY = SQRT(YY)
 
@@ -130,8 +130,8 @@ C  Subroutines are included in alphabetical order
 !  the rest of the stack.
 !  The LU part of the matrix is returned into MULT_SCATT, while PIVOT
 !  stores the permutation pivots of the LU decomposition.
-!  The return values should be used in a subsequent call to CGETRS.
-!  The call to CGETRS is then equivalent to computing
+!  The return values should be used in a subsequent call to ZGETRS.
+!  The call to ZGETRS is then equivalent to computing
 !  AMP1 = MULT_SCATT*AMP2,
 !  with MULT_SCATT(i, j) corresponding to the multiple scattering of
 !  beam j (exiting the top layer) into beam i, which originates from
@@ -166,19 +166,19 @@ C  Subroutines are included in alphabetical order
 
       SUBROUTINE  GET_TOPLAY_MULTSCATT(RTOP_BELOW, RREST_ABOVE, WK,
      +                                 MULT_SCATT, INV_PIVOT, N)
-      implicit REAL (A-H, O-Z)
+      implicit REAL*8 (A-H, O-Z)
       implicit INTEGER (I-N)
 
       INTEGER  N
-      COMPLEX  RTOP_BELOW, RREST_ABOVE, WK, MULT_SCATT, RU, CZ
+      COMPLEX*16  RTOP_BELOW, RREST_ABOVE, WK, MULT_SCATT, RU, CZ
       DIMENSION RTOP_BELOW(N, N), RREST_ABOVE(N, N)
       DIMENSION WK(N, 3)
       DIMENSION MULT_SCATT(N, N)
       INTEGER   INV_PIVOT, INV_INFO   ! For matrix inversion
       DIMENSION INV_PIVOT(N)
 
-      RU = CMPLX(1.0, 0.0)            ! Complex one
-      CZ = CMPLX(0.0, 0.0)            ! Complex zero
+      RU = DCMPLX(1.0, 0.0)            ! Complex one
+      CZ = DCMPLX(0.0, 0.0)            ! Complex zero
 
 !     Prepare the matrix (Id - SINGLE_SCATTERING) that will later be inverted
 
@@ -198,7 +198,7 @@ C  Subroutines are included in alphabetical order
       ENDDO
 
 !     Gaussian-elimination step of matrix inversion (LU decomposition)
-      CALL CGETRF(N, N, MULT_SCATT, N, INV_PIVOT, INV_INFO)
+      CALL ZGETRF(N, N, MULT_SCATT, N, INV_PIVOT, INV_INFO)
 
       RETURN
       END
@@ -278,19 +278,19 @@ C  Subroutines are included in alphabetical order
 
       SUBROUTINE  ADREF2T (RA, TA, RAM, TAM, RB, ST, ST_PIVOT, WK, XI,
      +                     N, AMP0, AMP1, AMP2, IIN)
-      implicit REAL (A-H, O-Z)
+      implicit REAL*8 (A-H, O-Z)
       implicit INTEGER (I-N)
 
 !   Alex: moved ST_PIVOT from complex to int -> should be?
       INTEGER    I, J, N, IIN, ST_PIVOT
-      COMPLEX    RA, TA, RAM, TAM, RB, ST, WK, XI, CZ
+      COMPLEX*16    RA, TA, RAM, TAM, RB, ST, WK, XI, CZ
       DIMENSION  RA(N, N), TA(N, N), RAM(N, N), TAM(N,N), RB(N, N)
       DIMENSION  ST(N, N), ST_PIVOT(N), XI(N)
       DIMENSION  WK(N, 3)
-      COMPLEX    AMP0(N), AMP1(N), AMP2(N)
-      COMPLEX    temp
+      COMPLEX*16    AMP0(N), AMP1(N), AMP2(N)
+      COMPLEX*16    temp
 
-      CZ = CMPLX(0.0, 0.0)
+      CZ = DCMPLX(0.0, 0.0)
 
 !     2021-06-27 Michele Riva: clean up and reimplement.
 !     Now uses the propagators (WK) and the multiple-scattering matrix
@@ -313,7 +313,7 @@ C  Subroutines are included in alphabetical order
 
 !     Now each beam is multiple-scattered between the top and rest. AMP2(I)
 !     contains then the amplitude of beam I right below the top layer.
-      call CGETRS('N', N, 1, ST, N, ST_PIVOT, AMP2, N, INFO)
+      call ZGETRS('N', N, 1, ST, N, ST_PIVOT, AMP2, N, INFO)
 
 !     The quantity we're interested in is the amplitude right above the rest,
 !     though --> Propagate it down.
@@ -398,11 +398,11 @@ C  Subroutines are included in alphabetical order
 !   Edit 2021-09-10: remove symmetry codes
       SUBROUTINE BEAMS(KNBS, KNB, SPQ, SPQF, KNT, NPU, NPUN, AK2, AK3,
      &                 E, TST, NB, PQ, PQF, NPUC, MPU, NT, NP)
-      implicit REAL (A-H, O-Z)
+      implicit REAL*8 (A-H, O-Z)
       implicit INTEGER (I-N)
       INTEGER KNBS, KNBJ, NT, NP, MPU, J, N, K, KK, MPU1, NPUN, I
       INTEGER KNB, NB, NPU, NPUC
-      REAL E, AK2, AK3, SPQ, TST, PQ, PQF, SPQF
+      REAL*8 E, AK2, AK3, SPQ, TST, PQ, PQF, SPQF
       DIMENSION KNB(KNBS), SPQ(2, KNT), SPQF(2, KNT), NPU(NPUN),
      &          NB(KNBS), PQ(2, KNT), PQF(2, KNT), NPUC(NPUN)
 
@@ -453,7 +453,7 @@ C  find no deviations whatsoever. This one is more straightforward though
 C  less elegant. VB.
 
       subroutine BESSEL(BJ, Z, N1)
-      implicit REAL (A-H, O-Z)
+      implicit REAL*8 (A-H, O-Z)
       implicit INTEGER (I-N)
 
 C  note N1 is highest angular momentum for which BJ are calculated - here
@@ -461,7 +461,7 @@ C  2 * LMAX + 1. For low LMAX, the sums required when calculating temperature-
 C  dependent phase shifts do not converge fast enough. For high LMAX, 2*LMAX+1
 C  is a bit of an overkill, I guess ...
 
-      complex Z
+      complex*16 Z
       complex*16 BJ(N1)
 
       complex*16 PRE,TERM,SUM,ZSQ
@@ -494,7 +494,7 @@ C  repeat the loop defined by 100 ...
           K = K+1
 
 C  ... until TERM really small!
-        IF (ABS(CMPLX(TERM)).gt.1.E-16) GO TO 100
+        IF (ABS(DCMPLX(TERM)).gt.1.E-16) GO TO 100
 
 C  evaluate j_L(Z), i.e. BJ(L+1)
 
@@ -519,7 +519,7 @@ C  AUTHOR  PENDRY
 
       IMPLICIT REAL*8 (A-H,O-Z)
       implicit INTEGER (I-N)
-      REAL BLM
+      REAL*8 BLM
       DOUBLE PRECISION FAC
       DIMENSION FAC(NFAC)
       FLOAT(I)=DFLOAT(I)
@@ -631,10 +631,10 @@ C
 C-----------------------------------------------------------------------
 C FUNCTION CA PERFORMS SAME PURPOSE FOR CAAA AS BLM DOES FOR CELMG
       FUNCTION  CA (L1, MA1, L2, M2, L3, MA3)
-      implicit REAL (A-H, O-Z)
+      implicit REAL*8 (A-H, O-Z)
       implicit INTEGER (I-N)
 C      IMPLICIT REAL*8 (A-H,O-Z)
-C      REAL CA,FACT
+C      REAL*8 CA,FACT
       DOUBLE PRECISION FACT, PREF, PREFA, PREFB, PREFT
       M1 =  - MA1
       M3 =  - MA3
@@ -680,7 +680,7 @@ C---------------------------------------------------------------------
 C  SUBROUTINE CAAA COMPUTES CLEBSCH-GORDON COEFFICIENTS FOR USE BY
 C  SUBROUTINE GHD IN THE SAME ORDER AS GHD USES THEM
       SUBROUTINE  CAAA (CAA,NCAA,LMMAX)
-      implicit REAL (A-H, O-Z)
+      implicit REAL*8 (A-H, O-Z)
       implicit INTEGER (I-N)
       DIMENSION  CAA(NCAA)
       II = 1
@@ -726,7 +726,7 @@ C     DIMENSION  CLM(NLM),           YLM(NN), FAC2(NN), FAC1(N)
 
       IMPLICIT REAL*8 (A-H,O-Z)
       implicit INTEGER (I-N)
-      REAL BLM,  CLM(NLM),           YLM(NN), FAC2(NN), FAC1(N)
+      REAL*8 BLM,  CLM(NLM),           YLM(NN), FAC2(NN), FAC1(N)
       DOUBLE PRECISION FAC
       DIMENSION FAC(NFAC)
 
@@ -832,11 +832,11 @@ C  composite layer) to local array POS (used in RTINV), ensuring that
 C  the RTINV array dimensions are correct.
 
       SUBROUTINE  COPYPOS(POS,SUBPOS,NLTYPE,NNSUB,NLAY,ILTYPE)
-      implicit REAL (A-H, O-Z)
+      implicit REAL*8 (A-H, O-Z)
       implicit INTEGER (I-N)
 
       INTEGER NLTYPE,MNSUB,NLAY
-      REAL POS,SUBPOS
+      REAL*8 POS,SUBPOS
       DIMENSION POS(NLAY,3),SUBPOS(NLTYPE,NNSUB,3)
 
       DO IPOS = 1,3
@@ -859,7 +859,7 @@ C  PHASE SHIFTS
 C  AUTHOR  PENDRY
 C  DIMENSION 42 REQUIRES N1+N2+N3-1 = 4*LMAX+2 .LE. 42
       SUBROUTINE  CPPP (PPP, N1, N2, N3, NFAC,F)
-      implicit REAL (A-H, O-Z)
+      implicit REAL*8 (A-H, O-Z)
       implicit INTEGER (I-N)
 
       ! DOUBLE PRECISION F
@@ -960,27 +960,27 @@ C  DIMENSION 42 REQUIRES N1+N2+N3-1 = 4*LMAX+2 .LE. 42
 !  **
       SUBROUTINE DBGT_MOD(RA1, TA1, RA2, TA2, RB1, RAB, ASD, N,                     **T
      &                    PQ, S1, S2, XS, PP, IPL)
-      implicit REAL (A-H, O-Z)
+      implicit REAL*8 (A-H, O-Z)
       implicit INTEGER (I-N)
-      COMPLEX RAB, RA1, TA1, RB1
-      COMPLEX  S1, S2, PP, XS, XX, CZ, IU
-      COMPLEX TEMP
-      COMPLEX RA2(N, N), TA2(N, N)
+      COMPLEX*16 RAB, RA1, TA1, RB1
+      COMPLEX*16  S1, S2, PP, XS, XX, CZ, IU
+      COMPLEX*16 TEMP
+      COMPLEX*16 RA2(N, N), TA2(N, N)
       DIMENSION RA1(N, N), TA1(N, N), RB1(N, N), RAB(N, N),
      &          S1(N, N), S2(N, N)
       DIMENSION PP(N, 2), XS(N), PQ(2, N), IPL(N)
       DIMENSION  ASD(3)
       COMMON  E, AK2, AK3, VPI
 
-      CZ = CMPLX(0.0,0.0)
-      IU = CMPLX(0.0,1.0)
+      CZ = DCMPLX(0.0,0.0)
+      IU = DCMPLX(0.0,1.0)
       AK = 2.0 * E
 
 !     COMPUTE INTERLAYER PROPAGATORS PP
       DO I = 1, N
         BK2 = AK2 + PQ(1, I)
         BK3 = AK3 + PQ(2, I)
-        XX = CMPLX(AK - BK2 * BK2 - BK3 * BK3, - 2.0 * VPI + 0.000001)
+        XX = DCMPLX(AK - BK2 * BK2 - BK3 * BK3, - 2.0 * VPI + 0.000001)
         XX = SQRT(XX) * ASD(1)           ! Phase shift due to perpendicular propagation
         X = BK2 * ASD(2) + BK3 * ASD(3)  ! Phase shift due to parallel propagation
         PP(I, 1) = EXP(IU * (XX + X))
@@ -1004,16 +1004,16 @@ C  DIMENSION 42 REQUIRES N1+N2+N3-1 = 4*LMAX+2 .LE. 42
       ENDDO
 
 !     GAUSSIAN ELIMINATION STEP OF MATRIX INVERSION
-      CALL CGETRF(N, N, S1, N, IPL, INFO)
+      CALL ZGETRF(N, N, S1, N, IPL, INFO)
 
 !     SUBSTITUTION STEP OF MATRIX INVERSION
-      CALL CGETRS('N', N, N, S1, N, IPL, TA1, N, INFO)
+      CALL ZGETRS('N', N, N, S1, N, IPL, TA1, N, INFO)
 
       DO K = 1, N
         DO L = 1, N
           XS(L) = PP(L, 1) * TA1(L, K)
         ENDDO
-        DO J = 1, N  ! This loop can be replaced with a call to CGEMV??
+        DO J = 1, N  ! This loop can be replaced with a call to ZGEMV??
           S1(J, K) = CZ
           DO L = 1, N
             S1(J, K) = S1(J, K) + RB1(J, L) * XS(L)
@@ -1024,7 +1024,7 @@ C  DIMENSION 42 REQUIRES N1+N2+N3-1 = 4*LMAX+2 .LE. 42
           S2(L, K) = XS(L)
           S1(L, K) = PP(L, 2) * S1(L, K)
         ENDDO
-        DO J = 1, N  ! TODO: This loop, with the outer K, can be replaced with a call to CGEMM('N', 'N', N, N, N, (1.0, 0.0), TA2, N, S1, N, (1.0, 0.0), RAB, N), after assigning RAB = RA1
+        DO J = 1, N  ! TODO: This loop, with the outer K, can be replaced with a call to ZGEMM('N', 'N', N, N, N, (1.0, 0.0), TA2, N, S1, N, (1.0, 0.0), RAB, N), after assigning RAB = RA1
           RAB(J, K) = RA1(J, K)
           DO L = 1, N
             RAB(J, K) = RAB(J, K) + TA2(J, L) * S1(L, K)
@@ -1043,7 +1043,7 @@ C  DIMENSION 42 REQUIRES N1+N2+N3-1 = 4*LMAX+2 .LE. 42
 !
 !  Edits: MRiva 2021-09-15 -- remove GOTOs, remove useless arguments
 !         NT, NP (both == N) and EAMCH (unused). Rework code to use
-!         effectively LAPACK (BLAS) routine CGEMM for matrix-matrix
+!         effectively LAPACK (BLAS) routine ZGEMM for matrix-matrix
 !         multiplication. Get rid of S3, S4, and XS, unused as a
 !         result of the reworking of the code.
 !
@@ -1075,10 +1075,10 @@ C  DIMENSION 42 REQUIRES N1+N2+N3-1 = 4*LMAX+2 .LE. 42
      &                      RBMP, TBPP, RBPM, TBMM,
      &                      ASD, N, PQ, S1, S2, PP,
      &                      IPL)
-      implicit REAL (A-H, O-Z)
+      implicit REAL*8 (A-H, O-Z)
       implicit INTEGER (I-N)
-      COMPLEX RAMP, TAPP, RAPM, TAMM, RBPM, TBMM, RBMP, TBPP
-      COMPLEX  S1, S2, PP, XX, CZ, IU, C_ONE,
+      COMPLEX*16 RAMP, TAPP, RAPM, TAMM, RBPM, TBMM, RBMP, TBPP
+      COMPLEX*16  S1, S2, PP, XX, CZ, IU, C_ONE,
      &         C_M_ONE, P_UP, P_DOWN
       DIMENSION  RAMP(N, N), TAPP(N, N), RAPM(N, N), TAMM(N, N)
       DIMENSION  RBPM(N, N), TBMM(N, N), RBMP(N, N), TBPP(N, N)
@@ -1087,17 +1087,17 @@ C  DIMENSION 42 REQUIRES N1+N2+N3-1 = 4*LMAX+2 .LE. 42
       DIMENSION  ASD(3)
       COMMON  E, AK2, AK3, VPI
 
-      CZ = CMPLX(0.0, 0.0)
-      IU = CMPLX(0.0, 1.0)
-      C_ONE = CMPLX(1.0, 0.0)
-      C_M_ONE = CMPLX(-1.0, 0.0)
+      CZ = DCMPLX(0.0, 0.0)
+      IU = DCMPLX(0.0, 1.0)
+      C_ONE = DCMPLX(1.0, 0.0)
+      C_M_ONE = DCMPLX(-1.0, 0.0)
       AK = 2.0 * E
 
 !     Compute interlayer propagators PP
       DO I = 1, N
         BK2 = AK2 + PQ(1, I)
         BK3 = AK3 + PQ(2, I)
-        XX = CMPLX(AK - BK2 * BK2 - BK3 * BK3, - 2.0 * VPI + 0.000001)
+        XX = DCMPLX(AK - BK2 * BK2 - BK3 * BK3, - 2.0 * VPI + 0.000001)
         XX = SQRT(XX) * ASD(1)            ! out-of-plane, propagation phase shift
         X = BK2 * ASD(2) + BK3 * ASD(3)   ! in-plane, propagation phase shift
         PP(I, 1) = EXP(IU * (XX + X))     ! Beam i propagating toward solid
@@ -1151,7 +1151,7 @@ C  DIMENSION 42 REQUIRES N1+N2+N3-1 = 4*LMAX+2 .LE. 42
 !     propagated up, and scattered at top again. This means
 !     X(i, j) = sum_k [RBMP(k, j)     j from above, incl. propagation, scattered into k at bottom
 !                     * RAPM(i, k)]   k then propagated to top and scattered there into i, moving down
-      CALL CGEMM('N', 'N', N, N, N,
+      CALL ZGEMM('N', 'N', N, N, N,
      &           C_M_ONE,  ! notice the C_M_ONE==-1.0 coefficient because of S1 = Id - X
      &           RAPM, N, RBMP, N,
      &           CZ, S1, N)
@@ -1160,25 +1160,25 @@ C  DIMENSION 42 REQUIRES N1+N2+N3-1 = 4*LMAX+2 .LE. 42
       ENDDO
 
 !     LU decomposition for matrix inversion
-      CALL CGETRF(N, N, S1, N, IPL, INFO)
+      CALL ZGETRF(N, N, S1, N, IPL, INFO)
 
 !     Make TAPP = inv(S1)*TAPP, i.e., TAPP(i, j) is then beam j from
 !     above, transmitted through top layer, and multiple-scattered
 !     into beam i, which is right below the top layer, propagating down
-      CALL CGETRS('N', N, N, S1, N, IPL, TAPP, N, INFO)
+      CALL ZGETRS('N', N, N, S1, N, IPL, TAPP, N, INFO)
 
 !     Prepare to compute the total reflection from above (stored in RAMP).
 !     First, propagate-reflect the transmitted beam at the bottom layer
 !     by taking the product S1(i, j) = sum_k RBMP(i, k) TAPP(k, j),
 !     corresponding to incoming beam j from above top layer, and outgoing
 !     beam i right above bottom layer (propagating up).
-      CALL CGEMM('N', 'N', N, N, N,
+      CALL ZGEMM('N', 'N', N, N, N,
      &           C_ONE, RBMP, N, TAPP, N, CZ, S1, N)
 
 !     Then propagate-transmit this at the top layer by multiplying
 !     TAMM(i, k) with S1(k, j). Also, add to this 'reflection due to
 !     multiple scattering in between' the 'specular' reflection RAMP(i, j)
-      CALL CGEMM('N', 'N', N, N, N,
+      CALL ZGEMM('N', 'N', N, N, N,
      &           C_ONE, TAMM, N, S1, N, C_ONE, RAMP, N)
 
 !     Finally, also compute the total transmission from above top layer
@@ -1188,7 +1188,7 @@ C  DIMENSION 42 REQUIRES N1+N2+N3-1 = 4*LMAX+2 .LE. 42
 !     Notice that the calculation is done in S1, and not directly in
 !     TAPP, as the CZ==0 term would zero it as a buffer before it can
 !     be used in the calculation. TAPP = S1 is done later at the end.
-      CALL CGEMM('N', 'N', N, N, N,
+      CALL ZGEMM('N', 'N', N, N, N,
      &           C_ONE, TBPP, N, TAPP, N, CZ, S1, N)
 
 
@@ -1200,7 +1200,7 @@ C  DIMENSION 42 REQUIRES N1+N2+N3-1 = 4*LMAX+2 .LE. 42
 !     propagated up, and scattered at top again. This means
 !     X(i,j) = sum_k [RAPM(k, j)      j from below, incl. propagation, scattered into k at top
 !                     * RBMP(i, k)]   k then propagated to bottom and scattered there into i, propagating up
-      CALL CGEMM('N', 'N', N, N, N,
+      CALL ZGEMM('N', 'N', N, N, N,
      &           C_M_ONE,  ! notice the C_M_ONE==-1.0 coefficient because of S2 = Id - X
      &           RBMP, N, RAPM, N,
      &           CZ, S2, N)
@@ -1209,25 +1209,25 @@ C  DIMENSION 42 REQUIRES N1+N2+N3-1 = 4*LMAX+2 .LE. 42
       ENDDO
 
 !     LU decomposition for matrix inversion
-      CALL CGETRF(N, N, S2, N, IPL, INFO)
+      CALL ZGETRF(N, N, S2, N, IPL, INFO)
 
 !     Make TBMM = inv(S2)*TBMM, i.e., TBMM(i,j) is then beam j from
 !     below, transmitted through bottom layer, and multiple-scattered
 !     into beam i, which is above the bottom layer, propagating up
-      CALL CGETRS('N', N, N, S2, N, IPL, TBMM, N, INFO)
+      CALL ZGETRS('N', N, N, S2, N, IPL, TBMM, N, INFO)
 
 !     Prepare to compute the total reflection from below (stored in RBPM).
 !     First, propagate-reflect the transmitted beam at the top layer
 !     by taking the product S2(i, j) = sum_k RAPM(i, k) TBMM(k, j),
 !     corresponding to incoming beam j from below bottom layer, and outgoing
 !     beam i right below top layer (propagating down).
-      CALL CGEMM('N', 'N', N, N, N,
+      CALL ZGEMM('N', 'N', N, N, N,
      &           C_ONE, RAPM, N, TBMM, N, CZ, S2, N)
 
 !     Then propagate-transmit it at the bottom layer by multiplying
 !     TBPP(i, k) with S2(k, j). Also, add to this 'reflection due to
 !     multiple scattering in between' the 'specular' reflection RBPM(i, j)
-      CALL CGEMM('N', 'N', N, N, N,
+      CALL ZGEMM('N', 'N', N, N, N,
      &           C_ONE, TBPP, N, S2, N, C_ONE, RBPM, N)
 
 !     Finally, also compute the total transmission from below bottom
@@ -1237,7 +1237,7 @@ C  DIMENSION 42 REQUIRES N1+N2+N3-1 = 4*LMAX+2 .LE. 42
 !     Notice that the calculation is done in S2, and not directly in
 !     TBMM, as the CZ==0 term would zero it as a buffer before it can
 !     be used in the calculation. TBMM = S2 is done later at the end.
-      CALL CGEMM('N', 'N', N, N, N,
+      CALL ZGEMM('N', 'N', N, N, N,
      &           C_ONE, TAMM, N, TBMM, N, CZ, S2, N)
 
       DO K = 1, N
@@ -1271,10 +1271,10 @@ C   EDW= OUTPUT DEBYE-WALLER FACTOR (EDW(1,I) FOR REFLECTION, EDW(2,I)
 C    FOR TRANSMISSION).
       SUBROUTINE  DEBWAL (NG, G, GP, E, VPI, AK2, AK3, T, T0, DRX, DRY,
      1D04, EDW)
-      implicit REAL (A-H, O-Z)
+      implicit REAL*8 (A-H, O-Z)
       implicit INTEGER (I-N)
-      COMPLEX SQRT
-      COMPLEX EDW
+      COMPLEX*16 SQRT
+      COMPLEX*16 EDW
       DIMENSION  GP(2), G(2,12), EDW(2,NG)
 
       write(6,*) "Welcome to subroutine Debwal. If you really wish to"
@@ -1283,10 +1283,10 @@ C    FOR TRANSMISSION).
 
       A1 = GP(1) + AK2
       A2 = GP(2) + AK3
-      CC = REAL(SQRT(CMPLX(2.0 * E - A1 * A1 - A2 * A2, - 2.0 * VPI)))
+      CC = REAL(SQRT(DCMPLX(2.0 * E - A1 * A1 - A2 * A2, - 2.0 * VPI)))
       A1 = G(1,1) + AK2
       A2 = G(2,1) + AK3
-      DD = REAL(SQRT(CMPLX(2.0 * E - A1 * A1 - A2 * A2, - 2.0 * VPI)))
+      DD = REAL(SQRT(DCMPLX(2.0 * E - A1 * A1 - A2 * A2, - 2.0 * VPI)))
 C  C IS PERPENDICULAR COMPONENT OF SCATTERING VECTOR FOR REFLECTION,
 C  D IS SAME FOR TRANSMISSION
       C = CC + DD
@@ -1303,8 +1303,8 @@ C  ZERO-TEMPERATURE VIBRATION IS NOW MIXED IN
 C  D2 IS SAME AS ABOVE, BUT FOR PERPENDICULAR COMPONENTS
       D2 = DRX * DRX * T/T0
       D2 = SQRT(D2 * D2 + D04)
-      EDW(1,I) = CMPLX(EXP( - 0.166667 * (A1 + C * C * D2)),0.0)
-  330 EDW(2,I) = CMPLX(EXP( - 0.166667 * (A1 + D * D * D2)),0.0)
+      EDW(1,I) = DCMPLX(EXP( - 0.166667 * (A1 + C * C * D2)),0.0)
+  330 EDW(2,I) = DCMPLX(EXP( - 0.166667 * (A1 + D * D * D2)),0.0)
       RETURN
       END
 
@@ -1326,7 +1326,7 @@ C                    -> perform entire calculation using this beam as inc.
 
       SUBROUTINE DECIDE(NEXIT,KNOWN,EMERGE,PSQ1,PSQ2,AK2,AK3,AK21,AK31,
      +                  KSQ,AK2M,AK3M,NT0,RBR1,RBR2)
-      implicit REAL (A-H, O-Z)
+      implicit REAL*8 (A-H, O-Z)
       implicit INTEGER (I-N)
 C  NEXIT is current beam number
 C  EMERGE is 1 if current beam NEXIT propagates in vacuum, 0 otherwise
@@ -1344,16 +1344,16 @@ C  RBR1,RBR2 are superlattice reciprocal vectors
 
       INTEGER NEXIT
       INTEGER EMERGE,KNOWN
-      REAL PSQ1,PSQ2,AK2,AK3,AK21,AK31,KSQ
-      REAL AK2M,AK3M
+      REAL*8 PSQ1,PSQ2,AK2,AK3,AK21,AK31,KSQ
+      REAL*8 AK2M,AK3M
       DIMENSION AK2M(NT0),AK3M(NT0)
       INTEGER NT0
-      REAL RBR1,RBR2
+      REAL*8 RBR1,RBR2
       DIMENSION RBR1(2),RBR2(2)
 
 C  local variables
 
-      REAL DET1,DET2
+      REAL*8 DET1,DET2
 
 C  end declarations
 
@@ -1441,7 +1441,7 @@ C---------------------------------------------------------------------
 C  SUBROUTINE DELIMIT WRITES -1 TO OUTPUTFILE FOR AMPLITUDES
 C
       SUBROUTINE DELIMIT(IFILE,IFORM)
-      implicit REAL (A-H, O-Z)
+      implicit REAL*8 (A-H, O-Z)
       implicit INTEGER (I-N)
 C
       IF (IFORM.EQ.0) THEN
@@ -1499,23 +1499,23 @@ C
 C  IPLO(LOD),IPLE(LEV) : ELIMINATION INFORMATION FROM ZGE.
 C
       SUBROUTINE FINAL1(ALM,A0LM,APLUS,AMINUS,
-      implicit REAL (A-H, O-Z)
      &                  CYLM,XODST,XEVST,IPLO,IPLE,LMAX,LMMAX,
      &                  LOD,LEV,NT,LX,AEV,AOD,EMACH)
+      implicit REAL*8 (A-H, O-Z)
       implicit INTEGER (I-N)
 C
 C
-      COMPLEX AOD(LOD),AEV(LEV)
-      COMPLEX ALM(LMMAX),A0LM(LMMAX)
-      COMPLEX APLUS(NT),AMINUS(NT),CYLM(NT,LMMAX)
-      COMPLEX XODST(LOD,LOD),XEVST(LEV,LEV)
-      COMPLEX PRE,CZ,CI,ATEMP
+      COMPLEX*16 AOD(LOD),AEV(LEV)
+      COMPLEX*16 ALM(LMMAX),A0LM(LMMAX)
+      COMPLEX*16 APLUS(NT),AMINUS(NT),CYLM(NT,LMMAX)
+      COMPLEX*16 XODST(LOD,LOD),XEVST(LEV,LEV)
+      COMPLEX*16 PRE,CZ,CI,ATEMP
       INTEGER IPLO(LOD),IPLE(LEV),LX(LMMAX)
 C
 C
       PI=4.0*ATAN(1.0)
-      CI=CMPLX(0.0,1.0)
-      CZ=CMPLX(0.0,0.0)
+      CI=DCMPLX(0.0,1.0)
+      CZ=DCMPLX(0.0,0.0)
 C
 C
 C   EVALUATE THE INTIALLY INCIDENT SPHERICAL WAVE AMPLITUDES
@@ -1562,12 +1562,12 @@ C  3  WRITE(6,93)N,AOD(N)
   93  FORMAT(I4,2E14.4)
 C
 C
-C  GAUSSIAN ELLIMINATE TRANSPOSED (1-X) MATRIX       ! Michele: calls can be replaced with CGETRF /TODO
+C  GAUSSIAN ELLIMINATE TRANSPOSED (1-X) MATRIX       ! Michele: calls can be replaced with ZGETRF /TODO
 C
       CALL ZGE(XODST,IPLO,LOD,LOD,EMACH)
       CALL ZGE(XEVST,IPLE,LEV,LEV,EMACH)
 C
-C  INVERT (1-X) & MULTIPLY BY A0LM ON THE RIGHT      ! Michele: calls can be replaced with CGETRS? Check what ZTU does differently than ZSU. Looks like it solves the system A**T X = B for X. /TODO
+C  INVERT (1-X) & MULTIPLY BY A0LM ON THE RIGHT      ! Michele: calls can be replaced with ZGETRS? Check what ZTU does differently than ZSU. Looks like it solves the system A**T X = B for X. /TODO
 C
       CALL ZTU(XODST,IPLO,AOD,LOD,LOD,EMACH)
       CALL ZTU(XEVST,IPLE,AEV,LEV,LEV,EMACH)
@@ -1589,17 +1589,17 @@ C
 C---------------------------------------------------------------------
 C  AUTHOR P. ROUS, MODIFIED W. OED 121190
       SUBROUTINE FINALOV(TSTORE,ALM,APLUS,AMINUS,NT,NLAYER,
-      implicit REAL (A-H, O-Z)
      &                   LMN,LMMAX,CAF,LMAX,LXM,E,VPI)
+      implicit REAL*8 (A-H, O-Z)
       implicit INTEGER (I-N)
 C
       INTEGER LXM(LMMAX)
-      COMPLEX ALM(LMMAX),CSUM,RSUM,AK,CI
-      COMPLEX TSTORE(2,LMN,NT),CAF(LMAX+1)
-      COMPLEX APLUS(NT), AMINUS(NT)
+      COMPLEX*16 ALM(LMMAX),CSUM,RSUM,AK,CI
+      COMPLEX*16 TSTORE(2,LMN,NT),CAF(LMAX+1)
+      COMPLEX*16 APLUS(NT), AMINUS(NT)
 C
-      CI=CMPLX(0.0,1.0)
-      AK=-0.5/SQRT(CMPLX(2.0*E,-2.0*VPI+0.000001))
+      CI=DCMPLX(0.0,1.0)
+      AK=-0.5/SQRT(DCMPLX(2.0*E,-2.0*VPI+0.000001))
 C
       IN=(NLAYER-1)*LMMAX
       K=0
@@ -1607,7 +1607,7 @@ C
       DO 1 M=-L,L
       K=K+1
       KLM=LXM(K)
-      CSUM=CMPLX(0.0,0.0)
+      CSUM=DCMPLX(0.0,0.0)
       DO 2 JGP=1,NT
 2     CSUM = CSUM + TSTORE(1,IN+KLM,JGP)*APLUS(JGP)+
      &TSTORE(2,IN+KLM,JGP)*AMINUS(JGP)
@@ -1615,7 +1615,7 @@ C
       IF( ABS(CAF(L+1)).GE.1.0E-06) THEN
       CSUM=(CI**L)*CSUM/(CAF(L+1)*AK)
       ELSE
-      CSUM=CMPLX(0.0,0.0)
+      CSUM=DCMPLX(0.0,0.0)
       ENDIF
 C
       ALM(K)=CSUM
@@ -1676,12 +1676,12 @@ C
 !   AR1,AR2= BASIS VECTORS OF SUPERLATTICE.
       SUBROUTINE  FMAT (FLMS, V, JJS, NL, NLS, DCUT, IDEG, LMAX, KLM,
      &                  SCC, SA)
-      implicit REAL (A-H, O-Z)
+      implicit REAL*8 (A-H, O-Z)
       implicit INTEGER (I-N)
       INTEGER ASST ! Used as flag when IDEG=2 to run the sum twice
-      COMPLEX  FLMS, SCC, SA, RTAB, CZERO, CI, KAPPA, SC, SD, SE, Z,
+      COMPLEX*16  FLMS, SCC, SA, RTAB, CZERO, CI, KAPPA, SC, SD, SE, Z,
      &         ACS, ACC, RF
-      COMPLEX SQRT, EXP, COS, SIN
+      COMPLEX*16 SQRT, EXP, COS, SIN
       DIMENSION  FLMS(NL,KLM), V(NL,2), JJS(NL, IDEG), BR1(2)
       DIMENSION  BR2(2), SCC(IDEG, 4 * LMAX + 1),
      &           SA(2*LMAX*IDEG), ANC(6), ANS(6), RTAB(4)
@@ -1689,9 +1689,9 @@ C
       COMMON  E, AK, VPI
       COMMON  /SL/BR1, BR2, AR1, AR2, RAR1, RAR2, NL1, NL2
       PI = 3.14159265
-      CZERO = CMPLX(0.0,0.0)
-      CI = CMPLX(0.0,1.0)
-      KAPPA = CMPLX(2.0 * E, - 2.0 * VPI + 0.000001)
+      CZERO = DCMPLX(0.0,0.0)
+      CI = DCMPLX(0.0,1.0)
+      KAPPA = DCMPLX(2.0 * E, - 2.0 * VPI + 0.000001)
       KAPPA = SQRT(KAPPA)
       AG = SQRT(AK(1) * AK(1) + AK(2) * AK(2))
 !
@@ -1774,7 +1774,7 @@ CDIR$ VECTOR                                                              170389
             IF (AR.LE.DCUT2) THEN                                         020780
 !             Lattice sum goes on, not yet reached the limit
               AR = SQRT(AR)                                               020780
-              RTAB(1) =  - CMPLX(R(1)/AR, R(2)/AR)
+              RTAB(1) =  - DCMPLX(R(1)/AR, R(2)/AR)
               ABC = 1.0
               ABB = 0.0
               IF (AG.GT.1.0E-4) THEN  ! off-normal beam
@@ -1871,7 +1871,7 @@ C   S= WORKING SPACE (LATTICE SUM).
 C   LMS= (2*LMAX+1)**2.
 C   Y= WORKING SPACE (SPHERICAL HARMONICS).
 C   L2M= 2*LMAX+1.
-C   K0= COMPLEX MAGNITUDE OF WAVEVECTOR.
+C   K0= COMPLEX*16 MAGNITUDE OF WAVEVECTOR.
 C   DCUT= CUTOFF RADIUS FOR LATTICE SUM.
 C   CAA= CLEBSCH-GORDON COEFFICIENTS FROM SUBROUTINE CAAA.
 C   NCAA= NO. OF C.-G. COEFFICIENTS IN CAA.
@@ -1879,22 +1879,29 @@ C   LXM= PERMUTATION OF (LM) SEQUENCE FROM SUBROUTINE LXGENT.
 C   LAY,PQ- SEE GHMAT.
 C   H is auxiliary array HGHD used only here, carried through for var. dimensions
       SUBROUTINE GHD(IZ,IS,GH,LMG,LMMAX,S,LMS,Y,L2M,DRL,NLAY2,
-      implicit REAL (A-H, O-Z)
      &               K0,DCUT,CAA,NCAA,LXM,LAY,PQ,H)                       111181
+      implicit REAL*8 (A-H, O-Z)
       implicit INTEGER (I-N)
-      COMPLEX H(L2M)
-      COMPLEX GH(LMG,LMMAX),Y(L2M,L2M),S(LMS)
-      COMPLEX RU,CI,CZ,K0,FF,Z,Z1,Z2,Z3,ST
+      COMPLEX*16 H(L2M)
+      COMPLEX*16 GH(LMG,LMMAX),Y(L2M,L2M),S(LMS)
+      COMPLEX*16 RU,CI,CZ,K0,FF,Z,Z1,Z2,Z3,ST
+
+      LOGICAL flag
+      COMPLEX*16 y_times_z3
+      REAL*8  eps_z3
+
       DIMENSION DRL(NLAY2,3),ARA1(2),ARA2(2),ARB1(2),ARB2(2)
       DIMENSION RBR1(2),RBR2(2),CAA(NCAA)
       DIMENSION V(3),LXM(LMMAX),PQ(2)                                     111181
       COMMON E,AK2,AK3,VPI
       COMMON /SL/ ARA1,ARA2,ARB1,ARB2,RBR1,RBR2,NL1,NL2
 
+
       RU=(1.0,0.0)
-      CZ=(0.0,0.0)
+      CZ=0
       CI=(0.0,1.0)
       PI=3.14159265
+      eps_z3 = 5e-3
       DCUT2=DCUT*DCUT
 
       DO I=1,LMS
@@ -1957,7 +1964,7 @@ C  CUTOFF OF LATTICE SUMMATION AT RADIUS DCUT
           X2=SQRT(X1+V(1)**2)
           X1=SQRT(X1)
           Z2=K0*X2
-          Z=CMPLX(V(1)/X2,0.0)
+          Z=DCMPLX(V(1)/X2,0.0)
           FY=0.0
           IF (ABS(X1).GE.1.E-6) THEN
             CFY=(PX+V(2))/X1
@@ -2083,23 +2090,23 @@ C
       INTEGER J1, J2, JJ1, JJ2, JP, JM2, JMP, KK, NG1, NG2
       INTEGER I, II, IP, IMP, IIN, NII, INN, NNI, L1, L2, M1, M2
       INTEGER LMG, LM, LEV, IM1, IN
-      REAL  ARA1,ARA2,ARB1,ARB2,RBR1,RBR2, E,AK2,AK3,VPI
-      REAL  RXR1,RXR2,PQ,CAA, DCUT, FACT1, SIGN
-      REAL  DRL,TEST, PI, ATV, TSTS, TV, AKP2, TST
-      REAL GX, GY, GKX, GKY, GK2, FY, CFY
+      REAL*8  ARA1,ARA2,ARB1,ARB2,RBR1,RBR2, E,AK2,AK3,VPI
+      REAL*8  RXR1,RXR2,PQ,CAA, DCUT, FACT1, SIGN
+      REAL*8  DRL,TEST, PI, ATV, TSTS, TV, AKP2, TST
+      REAL*8 GX, GY, GKX, GKY, GK2, FY, CFY
 C
       DIMENSION MGH(NLAY,NLAY),NUGH(NLAY2),NGEQ(NLAY2),NGOL(NLAY2)
       DIMENSION RBR1(2),RBR2(2),DRL(NLAY2,3),TEST(NLAY2),LXM(LMMAX)
       DIMENSION ARA1(2),ARA2(2),ARB1(2),ARB2(2),CAA(NCAA)
       DIMENSION RXR1(2),RXR2(2),PQ(2)
-      COMPLEX GH(LMG,LMMAX),Y(LM,LM),Y1(L2M,L2M),S(LMS)
-      COMPLEX CI,CZ,KPRG,K0,Z,T1,T1P,T2,T2P,T3,BS,CS,CFAC
-      COMPLEX HGHD(L2M)
+      COMPLEX*16 GH(LMG,LMMAX),Y(LM,LM),Y1(L2M,L2M),S(LMS)
+      COMPLEX*16 CI,CZ,KPRG,K0,Z,T1,T1P,T2,T2P,T3,BS,CS,CFAC
+      COMPLEX*16 HGHD(L2M)
 C
       COMMON E,AK2,AK3,VPI
       COMMON /SL/ARA1,ARA2,ARB1,ARB2,RBR1,RBR2,NL1,NL2
 C
-      CZ=(0.0,0.0)
+      CZ=0
       CI=(0.0,1.0)
       PI=3.14159265
 
@@ -2115,7 +2122,7 @@ C
          RXR2(1)=-ARA1(2)*ATV
          RXR2(2)=ARA1(1)*ATV
       ENDIF
-      K0=SQRT(CMPLX(2.0*E,-2.0*VPI+0.000001))
+      K0=SQRT(DCMPLX(2.0*E,-2.0*VPI+0.000001))
       CFAC=-16.0*PI*PI*CI/TV
       NLYLM=NLAY2*LMMAX
 C
@@ -2247,8 +2254,8 @@ C
 C
 C  TEST FOR CUTOFF
 C
-            KPRG=SQRT(CMPLX(2.0*E-GK2,-2.0*VPI+0.000001))
-            AKP2=AIMAG(KPRG)
+            KPRG=SQRT(DCMPLX(2.0*E-GK2,-2.0*VPI+0.000001))
+            AKP2=IMAG(KPRG)
             IF (AKP2.LE.(TSTS)) THEN
                NUMG=NUMG+1
                NOG=1
@@ -2259,7 +2266,7 @@ C
                   IF (ABS(ABS(CFY)-1.).LE.1.E-6) THEN
                      IF (CFY.LT.0.0) FY=PI
                   ELSE
-                     FY=ACOS(CFY)
+                     FY=DACOS(CFY)
                   ENDIF
                   IF (GKY.LT.0.0) FY=-FY
                ENDIF
@@ -2291,7 +2298,7 @@ C
                            IP=LXM(I)
                            NII=IP+(IZ-1)*LMMAX
                            NNI=NII+NLYLM
-                           L1=INT(SQRT(FLOAT(I-1)+0.00001))
+                           L1=INT(SQRT(REAL(I-1, 8)+0.00001))
                            M1=I-L1-L1*L1-1
                            IF (M1.GT.0) THEN
                               BS=Y(M1,L1+1)
@@ -2300,7 +2307,7 @@ C
                            ENDIF
                            DO 1340 J=1,LMMAX
                               JP=LXM(J)
-                              L2=INT(SQRT(FLOAT(J-1)+0.00001))
+                              L2=INT(SQRT(REAL(J-1, 8)+0.00001))
                               M2=J-L2-L2*L2-1
                               IF (I.EQ.J) THEN
                                  IF (M1.GT.0) GOTO 1340
@@ -2341,13 +2348,13 @@ C
                   IP=LXM(I)
                   NII=IP+(IZ-1)*LMMAX
                   NNI=NII+NLYLM
-                  L1=INT(SQRT(FLOAT(I-1)+0.00001))
+                  L1=INT(SQRT(REAL(I-1, 8)+0.00001))
                   M1=I-L1-L1*L1-1
                   IM1=I-2*M1
                   IMP=LXM(IM1)
                   DO 1430 J=1,LMMAX
                      JP=LXM(J)
-                     L2=INT(SQRT(FLOAT(J-1)+0.00001))
+                     L2=INT(SQRT(REAL(J-1, 8)+0.00001))
                      M2=J-L2-L2*L2-1
                      JM2=J-2*M2
                      JMP=LXM(JM2)
@@ -2401,9 +2408,9 @@ C   IS=2 FOR PROPAGATION FROM SECOND TO FIRST SUBPLANE.
 C   FF= PREFACTOR OF GH.
 C   LXM= PERMUTATION OF (LM) SEQUENCE
       SUBROUTINE GHSC(IZ,IS,GH,LMG,LMMAX,S,LMS,CAA,NCAA,FF,LXM,NLAY2)
-      implicit REAL (A-H, O-Z)
+      implicit REAL*8 (A-H, O-Z)
       implicit INTEGER (I-N)
-      COMPLEX GH(LMG,LMMAX),S(LMS),FF
+      COMPLEX*16 GH(LMG,LMMAX),S(LMS),FF
       DIMENSION CAA(NCAA),LXM(LMMAX)
       II=1
       NLYLM=LMMAX*NLAY2
@@ -2421,14 +2428,14 @@ C  PRODUCE A LIMITED SET OF MATRIX ELEMENTS
       M3=M2-M1
       IL=IABS(L1-L2)
       IM=IABS(M3)
-      LMIN=MAX0(IL,IM+MOD(IL+IM,2))
+      LMIN=MAX(IL,IM+MOD(IL+IM,2))
       LMAX=L1+L2
       LMIN=LMIN+1
       LMAX=LMAX+1
       IF (I-J) 1290,1280,1290
 1280  IF (M1) 1300,1300,1340
 1290  IF (L1.LT.L2.OR.(L1.EQ.L2.AND.(IABS(M1).LT.IABS(M2))))
-     1GO TO 1340
+     &      GO TO 1340
 1300  DO 203 ILA=LMIN,LMAX,2
       LA=ILA-1
       CC=CAA(II)
@@ -2460,7 +2467,7 @@ C  FILL IN MISSING MATRIX ELEMENTS FROM ELEMENTS JUST PRODUCED
       IF (M1.LE.0) GO TO 1430
       GO TO 1420
 1410  IF (L1.GE.L2.AND.(L1.NE.L2.OR.(IABS(M1).GE.IABS(M2))))
-     1GO TO 1430
+     &      GO TO 1430
 1420  GH(NII,JP)=SIGN*GH(NJM,IMP)
 1430  CONTINUE
 1440  CONTINUE
@@ -2472,14 +2479,14 @@ C  SUBROUTINE HEAD writes header for fd. output spectrum
 C  enjoy the comments :-)
 
       SUBROUTINE HEAD(IFILE,TITLE,NPUN,NPU,KNT,SPQF,KSYM)
-      implicit REAL (A-H, O-Z)
+      implicit REAL*8 (A-H, O-Z)
       implicit INTEGER (I-N)
 
       CHARACTER*80 TITLE
       INTEGER NPUN,KNT
       INTEGER NPU,KSYM
       DIMENSION NPU(NPUN),KSYM(2,KNT)
-      REAL SPQF
+      REAL*8 SPQF
       DIMENSION SPQF(2,KNT)
 
   283 FORMAT(I5,2F10.5,I3)
@@ -2534,7 +2541,7 @@ C   LX,LXI,LT,LXM= OUTPUT PERMUTATIONS OF (L,M) SEQUENCE.
 C   LMAX= LARGEST VALUE OF L.
 C   LMMAX= (LMAX+1)**2.
       SUBROUTINE LXGENT(LX,LXI,LT,LXM,LMAX,LMMAX)
-      implicit REAL (A-H, O-Z)
+      implicit REAL*8 (A-H, O-Z)
       implicit INTEGER (I-N)
       DIMENSION LX(LMMAX),LXM(LMMAX),LXI(LMMAX),LT(LMMAX)
       LEV=(LMAX+1)*(LMAX+2)/2
@@ -2611,12 +2618,13 @@ C   LMMAX= (LMAX+1)**2.
 !   RT= OUTPUT MATRIX ELEMENTS. 1st index is reflection, second is transmission
 
       SUBROUTINE  MFOLD_SIMPLE (JG, LM, YLM, CYLM, LMMAX, NT, RT)
-      implicit REAL (A-H, O-Z)
+      implicit REAL*8 (A-H, O-Z)
       implicit INTEGER (I-N)
 
       INTEGER JG, LM
-      COMPLEX  CYLM, YLM, CZ, RU, CI, RA, TA, ST, SM, SL, CY, CTR, CTT
-      COMPLEX  R, T, RT
+      COMPLEX*16  CYLM, YLM, CZ, RU, CI, RA, TA, ST, SM, SL, CY, CTR
+      COMPLEX*16  CTT
+      COMPLEX*16  R, T, RT
       DIMENSION RT(2) ! 1 is reflection, 2 is transmission
       DIMENSION  CYLM(NT, LMMAX), YLM(LMMAX)
 
@@ -2726,23 +2734,23 @@ CDIR$ NOVECTOR
       SUBROUTINE  MFOLT_SIMPLE (JG, NA, AK2, AK3, CYLM, N, LMMAX, PQ,
      +                          NT, TS, LMN, RG, RG_R, RG_T, NLAY, JGP,
      +                          LXM, RT_OUT, INC, POSS)
-      implicit REAL (A-H, O-Z)
+      implicit REAL*8 (A-H, O-Z)
       implicit INTEGER (I-N)
       INTEGER JG, NA, N, LMMAX, NT, LMN, NLAY, JGP, INC,  ! Input
      +        JGA                                         ! Internal use. TODO: update
-      COMPLEX  CYLM, CZ, RU, CI, RT_OUT, ST, SM,
+      COMPLEX*16  CYLM, CZ, RU, CI, RT_OUT, ST, SM,
      +         CY, CTR, CTT, R, T, CR, CT, CS
-      COMPLEX  EDW_R, EDW_T
-      COMPLEX  EXP
-      COMPLEX  TS(LMN), RG(2, NLAY, N)
-      COMPLEX  RG_R(NLAY), RG_T(NLAY)
-      REAL     K_IN, K_OUT          ! K_IN/K_OUT are total wave vectors of incident and scattered beams
+      COMPLEX*16  EDW_R, EDW_T
+      COMPLEX*16  EXP
+      COMPLEX*16  TS(LMN), RG(2, NLAY, N)
+      COMPLEX*16  RG_R(NLAY), RG_T(NLAY)
+      REAL*8     K_IN, K_OUT          ! K_IN/K_OUT are total wave vectors of incident and scattered beams
       DIMENSION  GP(2), PQ(2, NT)   ! GP is the reciprocal-space part of the wave vector of the incident beam
       DIMENSION  CYLM(NT, LMMAX)
       DIMENSION  LXM(LMMAX), POSS(NLAY, 3), RT_OUT(2)
       DIMENSION  K_IN(2), K_OUT(2)
 
-      REAL BR, BT
+      REAL*8 BR, BT
 
       COMMON /MFB/ GP, LM
 
@@ -2871,10 +2879,10 @@ CDIR$ NOVECTOR
 !  Optimized for Fortran memory access - by MR v1.72
 !
       SUBROUTINE MULTAMP_OPT(INAMP,OUTAMP,MATRIX,N)
-      implicit REAL (A-H, O-Z)
+      implicit REAL*8 (A-H, O-Z)
       implicit INTEGER (I-N)
-      COMPLEX INAMP(N),OUTAMP(N),MATRIX(N,N)
-      COMPLEX CZ, TEMP
+      COMPLEX*16 INAMP(N),OUTAMP(N),MATRIX(N,N)
+      COMPLEX*16 CZ, TEMP
 
       CZ = (0.,0.)
       DO I=1,N
@@ -2895,7 +2903,7 @@ C  SUBROUTINE OPENOUT OPENS THE OUTPUTFILE FOR THE AMPLITUDES
 C  AND SUPPLIES ALL NEEDED GLOBAL INFORMATION
 C
       SUBROUTINE OPENOUT(IFILE,FILENAM,IFORM)
-      implicit REAL (A-H, O-Z)
+      implicit REAL*8 (A-H, O-Z)
       implicit INTEGER (I-N)
       CHARACTER*(*) FILENAM
 C
@@ -2911,9 +2919,9 @@ C---------------------------------------------------------------------
 C  SUBROUTINE OUTAMP WRITES THE OUTPUT AMPLITUDES TO FILE# IFILE
 C
       SUBROUTINE OUTAMP(IFILE,IFORM,NEXIT,PQ1,PQ2,ALM,LMMAX,AK21,AK31)
-      implicit REAL (A-H, O-Z)
+      implicit REAL*8 (A-H, O-Z)
       implicit INTEGER (I-N)
-            COMPLEX ALM(LMMAX)
+            COMPLEX*16 ALM(LMMAX)
 C
       IF (IFORM.EQ.0) THEN
 C  UNFORMATTED OUTPUT
@@ -2940,18 +2948,18 @@ C                FOR EACH ENERGY: =0 IF IG=FRACTIONAL
 C                ORDER BEAM.
 C
       SUBROUTINE OUTXIST(IFILE,IFORM,E,PQF,SPQF,NPU,NT0,NT,XI,XIST,
-      implicit REAL (A-H, O-Z)
      &                    L1,CAF)
+      implicit REAL*8 (A-H, O-Z)
       implicit INTEGER (I-N)
 C
       DIMENSION PQF(2,NT),SPQF(2,NT),NPU(NT0)
-      COMPLEX XI(NT), XIST(NT0), CAF(L1)
+      COMPLEX*16 XI(NT), XIST(NT0), CAF(L1)
       COMMON /ADS/ ASE,VPIS,VPIO,VV ! note: V0 removed!
 
 C   START LOOP OVER EXIT BEAMS.
 
        DO IG=1,NT0
-         XIST(IG)=CMPLX(0.0,0.0)
+         XIST(IG)=DCMPLX(0.0,0.0)
          DO JG=1,NT
            P1=ABS(PQF(1,JG)-SPQF(1,NPU(IG)))
            P2=ABS(PQF(2,JG)-SPQF(2,NPU(IG)))
@@ -2991,25 +2999,25 @@ C   DR0= 4TH POWER OF RMS ZERO-TEMPERATURE VIBRATION AMPLITUDES.
 C   DR= ISOTROPIC RMS VIBRATION AMPLITUDE AT REFERENCE TEMPERATURE T0.
 C   T0= ARBITRARY REFERENCE TEMPERATURE FOR DR.
 C   TEMP= ACTUAL TEMPERATURE.
-C   E= CURRENT ENERGY (REAL NUMBER).
+C   E= CURRENT ENERGY (REAL*8 NUMBER).
 C   PHS= INPUT PHASE SHIFTS.
 C   DEL= OUTPUT (COMPLEX) PHASE SHIFTS.
 C   11.01.95 UL: uses BESSEL from TLEED package to calculate spherical
 C   bessel-functions. Yield better convergence for higher vibration amplitudes
 C   than original calculation scheme                                     110195
       SUBROUTINE  PSTEMP (PPP, N1, N2, N3, DR0, DR, T0, TEMP, E, PHS,
-      implicit REAL (A-H, O-Z)
      &                    DEL,CTAB,SUM,BJ)
+      implicit REAL*8 (A-H, O-Z)
       implicit INTEGER (I-N)
-      COMPLEX  DEL, SUM, CTAB
+      COMPLEX*16  DEL, SUM, CTAB
       COMPLEX*16 BJ(N1)
-      COMPLEX  Z, CI, CS, CL
-      COMPLEX EXP,LOG
+      COMPLEX*16  Z, CI, CS, CL
+      COMPLEX*16 EXP,LOG
       DIMENSION  PPP(N1,N2,N3), PHS(N3), DEL(N2), SUM(N2)
       DIMENSION  CTAB(N3)
 
       PI = 3.14159265
-      CI = CMPLX(0.0,1.0)
+      CI = DCMPLX(0.0,1.0)
       DO 170 J = 1, N2
   170 DEL(J) = (0.0,0.0)
       ALFA = DR * DR * TEMP/T0
@@ -3017,7 +3025,7 @@ C   than original calculation scheme                                     110195
       FALFE =  - 4.0 * ALFA * E
       IF (ABS(FALFE)-1.0E-3)  180, 200, 200
   180 DO 190 J = 1, N3
-  190 DEL(J) = CMPLX(PHS(J),0.0)
+  190 DEL(J) = DCMPLX(PHS(J),0.0)
       GO TO 360
 C
 COMMENT BJ(N1) IS LOADED WITH SPHERICAL BESSEL FUNCTIONS OF
@@ -3027,7 +3035,7 @@ c
 c     use subroutine BESSEL
       call bessel(BJ,Z,N1)
 c
-  270 CS = CMPLX(1.0,0.0)
+  270 CS = DCMPLX(1.0,0.0)
       FL = 1.0
       DO 280 I = 1, N1
 
@@ -3045,7 +3053,7 @@ C
       LLLMAX = N2
       FL = 1.0
       DO 350 LLL = 1, N2
-      SUM(LLL) = CMPLX(0.0,0.0)
+      SUM(LLL) = DCMPLX(0.0,0.0)
       DO 300 L = 1, N3
       LLMIN = IABS(L - LLL) + 1
       LLMAX = L + LLL - 1
@@ -3080,7 +3088,7 @@ C
      +                   CONC,VIB,NSUB,LBRAV,LCOMP,LATT,STYPE,
      +                   SUBPOS,TSLAB,ASA,TOPLAYB,BOTLAYB,ASBULK,LTYPE,
      +                   LDIST,TENS,LAYFILE,ASB,NL)
-      implicit REAL (A-H, O-Z)
+      implicit REAL*8 (A-H, O-Z)
       implicit INTEGER (I-N)
 
 C  include global quantities
@@ -3122,19 +3130,19 @@ C          lowest layer
 C  LDIST : interlayer vector between layer ISTACK and lower layer ISTACK+1
 C  TENS  : tensor output for layer ISTACK desired?
 
-      REAL*4 CONC,VIB
+      REAL*8 CONC,VIB
       DIMENSION CONC(NSITE,NEL),VIB(NSITE,NEL)
       INTEGER NSUB,LBRAV,LCOMP,LATT,STYPE
       DIMENSION NSUB(NLTYPE),LBRAV(NLTYPE),LCOMP(NLTYPE)
       DIMENSION LATT(NLTYPE),STYPE(NLTYPE,NNSUB)
-      REAL*4 SUBPOS
+      REAL*8 SUBPOS
       DIMENSION SUBPOS(NLTYPE,NNSUB,3)
       INTEGER TSLAB,TOPLAYB,BOTLAYB
-      REAL*4 ASA,ASBULK
+      REAL*8 ASA,ASBULK
       DIMENSION ASA(3),ASBULK(3)
       INTEGER LTYPE
       DIMENSION LTYPE(NSTACK)
-      REAL*4 LDIST
+      REAL*8 LDIST
       DIMENSION LDIST(NSTACK,3)
       INTEGER TENS
       DIMENSION TENS(NSTACK)
@@ -3145,7 +3153,7 @@ C  ASB interlayer vector with min. interlayer distance. (to be used in the
 C      TST convergence criterion)
 C  NL  number of superlattice sublattices in substrate lattice
 
-      REAL ASB
+      REAL*8 ASB
       DIMENSION ASB(3)
       INTEGER NL
 
@@ -3386,28 +3394,28 @@ C   PHASE-SHIFTS ARE OUTPUT FOR FIRST PHASE-SHIFT ONLY                  070592
 C   MNEL and MLMAX1 is required for correct dimension of PHSS           070592
 
       SUBROUTINE READIN(TITLE,TVA,RAR1,RAR2,TVB,
-      implicit REAL (A-H, O-Z)
      &    IDEG,NL,V,VL,JJS,KNBS,KNB,KNT,SPQF,KSYM,SPQ,TST,TSTS,NPUN,NPU,
      &    THETA,FI,NPSI,ES,PHSS,L1,NEL,LMAX1,IFORM,VPI,EI,EF,DE)
+      implicit REAL*8 (A-H, O-Z)
       implicit INTEGER (I-N)
 
       INCLUDE "GLOBAL"
 
       Character*80 TITLE,PAR0,PAR1
 
-      REAL*4 ARA1, ARA2, ARB1, ARB2, RAR1, RAR2
+      REAL*8 ARA1, ARA2, ARB1, ARB2, RAR1, RAR2
       DIMENSION ARA1(2),ARA2(2),RAR1(2),RAR2(2),
      1ARB1(2),ARB2(2),RBR1(2),RBR2(2)
       DIMENSION V(NL,2),JJS(NL,IDEG),KNB(KNBS),SPQF(2,KNT),KSYM(2,KNT),
      1SPQ(2,KNT),NPU(NPUN),ES(NPSI),PHSS(NPSI,NEL,LMAX1)
-      COMPLEX VL(NL,2)
-      REAL*4 THETA, FI
-      REAL*4 PHSS
+      COMPLEX*16 VL(NL,2)
+      REAL*8 THETA, FI
+      REAL*8 PHSS
 C  Format parameter for phaseshift file
       INTEGER PSFMT,PSL1,IFORM
-      REAL*4 TST
+      REAL*8 TST
 C  Parameters for calculation of inner potential
-	  REAL*4 EM,C1,C2,C3,C4,C5,C6,C7,C8, WORKFN
+      REAL*8 EM,C1,C2,C3,C4,C5,C6,C7,C8, WORKFN
       COMMON /SL/ARA1,ARA2,ARB1,ARB2,RBR1,RBR2,NL1,NL2
       COMMON /MS/LMAX,EPS,LITER
       COMMON /ADS/ASE,VPIS,VPIO,VV
@@ -3715,13 +3723,13 @@ C  PHSS STORES THE INPUT PHASE SHIFTS (RADIAN)
       SUBROUTINE RINT_SIMPLE(N,WV,AT,ATP,PQ,PQF,VV,THETA,FI,
      &                       MPU,NPUC,EEV,AP,NPNCH,XIST,
      &                       IFILE,IFILE2)
-      implicit REAL (A-H, O-Z)
+      implicit REAL*8 (A-H, O-Z)
       implicit INTEGER (I-N)
       DIMENSION  WV(N), PQ(2,N), PQF(2,N), AT(N)
       DIMENSION  NPUC(MPU),ATP(MPU),XIST(MPU)
-      COMPLEX WV, XIST
-      REAL ANGSCALE
-      REAL THETA, FI
+      COMPLEX*16 WV, XIST
+      REAL*8 ANGSCALE
+      REAL*8 THETA, FI
       DIMENSION ANGSCALE(N)
       COMMON  E, CK2, CK3, VPI
 
@@ -3811,7 +3819,7 @@ C  PHSS STORES THE INPUT PHASE SHIFTS (RADIAN)
 !    SET OF ORIGIN SHIFTS (NORMALLY LAY=1 FOR OVERLAYER, LAY=2 FOR
 !    SUBSTRATE LAYERS).
 !  IN COMMON BLOCKS
-!   E,VPI= CURRENT COMPLEX ENERGY.
+!   E,VPI= CURRENT COMPLEX*16 ENERGY.
 !   AK2,AK3= PARALLEL COMPONENTS OF PRIMARY INCIDENT K-VECTOR.
 !   TV= AREA OF UNIT CELL.
 !   EMACH= MACHINE ACCURACY.
@@ -3823,15 +3831,15 @@ C  PHSS STORES THE INPUT PHASE SHIFTS (RADIAN)
      &                        LX, LXI, LMMAX, KLM, XEV, XOD, LEV, LOD,
      &                        YLM, YLME, YLMO, IPLE, IPLO, CLM, NLM,
      &                        XEVST, XODST)
-      implicit REAL (A-H, O-Z)
+      implicit REAL*8 (A-H, O-Z)
       implicit INTEGER (I-N)
 
       INTEGER  LX, LXI, L1
-      COMPLEX XODST(LOD,LOD), XEVST(LEV,LEV)
-      COMPLEX  AF, XEV, XOD, RA, TA, CYLM, YLM, YLME, YLMO,
+      COMPLEX*16 XODST(LOD,LOD), XEVST(LEV,LEV)
+      COMPLEX*16  AF, XEV, XOD, RA, TA, CYLM, YLM, YLME, YLMO,
      &         AMULT, XA, YA, ST, CF, CT, CI, RU, CZ, MFOLD_RT, AM
-      COMPLEX  CAF, FLMS, FLM
-      COMPLEX SQRT, EXP
+      COMPLEX*16  CAF, FLMS, FLM
+      COMPLEX*16 SQRT, EXP
       DIMENSION  MFOLD_RT(2)
       DIMENSION  RA(NT, NT), TA(NT, NT), AMULT(N)
       DIMENSION  XEV(LEV, LEV), XOD(LOD, LOD), CYLM(NT, LMMAX),
@@ -3846,24 +3854,24 @@ C  PHSS STORES THE INPUT PHASE SHIFTS (RADIAN)
       PI = 3.14159265
       L1 = LM
       LEV1 = LEV + 1
-      CI = CMPLX(0.0,1.0)
-      CZ = CMPLX(0.0,0.0)
-      RU = CMPLX(1.0,0.0)
+      CI = DCMPLX(0.0,1.0)
+      CZ = DCMPLX(0.0,0.0)
+      RU = DCMPLX(1.0,0.0)
 
-      YA = CMPLX(2.0 * E, - 2.0 * VPI + 0.000001)
+      YA = DCMPLX(2.0 * E, - 2.0 * VPI + 0.000001)
       YA = SQRT(YA)
       DO IG = 1, N
         JG = IG + N_OFFSET
         BK2 = PQ(1, JG) + AK2
         BK3 = PQ(2, JG) + AK3
         C = BK2 * BK2 + BK3 * BK3
-        XA = CMPLX(2.0 * E - C, - 2.0 * VPI + 0.000001)
+        XA = DCMPLX(2.0 * E - C, - 2.0 * VPI + 0.000001)
         XA = SQRT(XA)
         B = 0.0
         CF = RU
         IF (C.GT.1.0E-7) THEN ! off-normal beam
           B = SQRT(C)
-          CF = CMPLX(BK2/B, BK3/B)
+          CF = DCMPLX(BK2/B, BK3/B)
         ENDIF
         CT = XA/YA
         ST = B/YA
@@ -3876,7 +3884,7 @@ C  PHSS STORES THE INPUT PHASE SHIFTS (RADIAN)
         ENDDO
       ENDDO
 
-!     PERFORM SUM OVER SUBLATTICES. << Could be done by constructing XA=XA(JS) and then CGEMV with FLMS.T (or swap FLMS indices)
+!     PERFORM SUM OVER SUBLATTICES. << Could be done by constructing XA=XA(JS) and then ZGEMV with FLMS.T (or swap FLMS indices)
       DO K = 1, KLM
         FLM(K) = CZ
       ENDDO
@@ -3920,8 +3928,8 @@ C  PHSS STORES THE INPUT PHASE SHIFTS (RADIAN)
 !
 !     PREPARE INVERSION OF 1-X (- SIGN IS PUT IN AMULT) BY GAUSSIAN
 !     ELIMINATION
-      CALL CGETRF(LEV, LEV, XEV, LEV, IPLE, INFO)
-      CALL CGETRF(LOD, LOD, XOD, LOD, IPLO, INFO)
+      CALL ZGETRF(LEV, LEV, XEV, LEV, IPLE, INFO)
+      CALL ZGETRF(LOD, LOD, XOD, LOD, IPLO, INFO)
 
 !     START LOOP OVER SCATTERED BEAMS
       DO JGP = 1, N
@@ -3949,8 +3957,8 @@ C  PHSS STORES THE INPUT PHASE SHIFTS (RADIAN)
         ENDDO
 
 !       Complete inversion and multiplication by back-substitution
-        CALL CGETRS('N', LEV, 1, XEV, LEV, IPLE, YLME, LEV, INFO)
-        CALL CGETRS('N', LOD, 1, XOD, LOD, IPLO, YLMO, LOD, INFO)
+        CALL ZGETRS('N', LEV, 1, XEV, LEV, IPLE, YLME, LEV, INFO)
+        CALL ZGETRS('N', LOD, 1, XOD, LOD, IPLO, YLMO, LOD, INFO)
 !       Reorder (L, M) pairs
         DO JLM = 1, LEV
           JJ = LX(JLM)
@@ -4025,8 +4033,12 @@ C  PHSS STORES THE INPUT PHASE SHIFTS (RADIAN)
      &                 NLAY, DRL, SDRL, NUGH, NGEQ, NGOL, NLAY2, TEST,
      &                 GH, LMG, RG, RG_PERP, TS, LMN, TG, LM2N, VT,
      &                 CAA, NCAA, TH, LMNI, IPL, TSF, LPS, LPSS, NORD,
-     &                 NNSUB, LMAX1, XH, HGHD, L2M, RG1, RG2, TSTORE)
+     &                 NNSUB, LMAX1, XH, HGHD, L2M, RG1, RG2, TSTORE,
+     &                 STYPE, MNLTYPE,MNSUB)
       implicit none
+      INTEGER MNLTYPE, MNSUB
+      INTEGER STYPE ! for debugging
+      DIMENSION STYPE(MNLTYPE,MNSUB)
       INTEGER N, NT, NL, NLM, NLAY, NUGH, NGEQ, NGOL, NLAY2
       INTEGER MGH, NCAA, LMNI, IPL
       INTEGER LXI, LT, LXM, LMMAX, KLM, K
@@ -4034,18 +4046,18 @@ C  PHSS STORES THE INPUT PHASE SHIFTS (RADIAN)
       INTEGER I, ID, IG, IN, INC, INFO, INSORT, JG, JGP, JGPS, JGS
       INTEGER LAY, LEE, LITER, LM, LMAX, LMS, LOD, LOE, LP, LX, L1
       INTEGER NA, NEW, NLL, NOPT, NS, NTAU
-      REAL PI
-      REAL TST, TV, X
-      REAL CLM, POS, POSS, DRL, SDRL, CAA, PQ, TEST
-      REAL AK2, AK3, VPI, BK2, BK3
-      REAL B, C, E, DCUT, EPS1, GP
-      COMPLEX XEV, R_TOP, T_TOP, R_BOT, T_BOT, CYLM, AMULT, XA, YA
-      COMPLEX CF, CT, CI, RU, CZ, AM, FLMS, FLM, MFOLT_RT, ST
-      COMPLEX SQRT,EXP
-      COMPLEX TH(LMNI, LMNI), TSTORE(2, LMN, NT)
-      COMPLEX TAU(LMT, LEV), GH(LMG, LMMAX), RG(2, NLAY, N)            ! May be worth to have 2 as last?
-      COMPLEX RG_PERP(N)
-      COMPLEX TS(LMN), TG(2, LM2N), VT(LM2N), TAUG(LMT), TAUGM(LMT)
+      REAL*8 PI
+      REAL*8 TST, TV, X
+      REAL*8 CLM, POS, POSS, DRL, SDRL, CAA, PQ, TEST
+      REAL*8 AK2, AK3, VPI, BK2, BK3
+      REAL*8 B, C, E, DCUT, EPS1, GP
+      COMPLEX*16 XEV, R_TOP, T_TOP, R_BOT, T_BOT, CYLM, AMULT, XA, YA
+      COMPLEX*16 CF, CT, CI, RU, CZ, AM, FLMS, FLM, MFOLT_RT, ST
+      COMPLEX*16 SQRT,EXP
+      COMPLEX*16 TH(LMNI, LMNI), TSTORE(2, LMN, NT)
+      COMPLEX*16 TAU(LMT, LEV), GH(LMG, LMMAX), RG(2, NLAY, N)            ! May be worth to have 2 as last?
+      COMPLEX*16 RG_PERP(N)
+      COMPLEX*16 TS(LMN), TG(2, LM2N), VT(LM2N), TAUG(LMT), TAUGM(LMT)
       DIMENSION  FLM(KLM)  ! Used in TAUMAT as working space?            BUG? SIZE WAS 4!
       DIMENSION  R_TOP(NT, NT), T_TOP(NT, NT), R_BOT(NT, NT),
      +           T_BOT(NT, NT), AMULT(N)
@@ -4059,14 +4071,14 @@ C  PHSS STORES THE INPUT PHASE SHIFTS (RADIAN)
       DIMENSION  TEST(NLAY2), IPL(LMNI), MFOLT_RT(2)
 CVB
       INTEGER NNSUB, LMAX1
-      COMPLEX TSF
+      COMPLEX*16 TSF
       DIMENSION TSF(NNSUB, LMAX1)
       INTEGER LPS, LPSS, NORD
       DIMENSION LPS(NNSUB), LPSS(NNSUB), NORD(NNSUB)
-      COMPLEX XH(LEV)
+      COMPLEX*16 XH(LEV)
       INTEGER L2M
-      COMPLEX HGHD(L2M)
-      COMPLEX RG1(NLAY), RG2(NLAY), TEMP
+      COMPLEX*16 HGHD(L2M)
+      COMPLEX*16 RG1(NLAY), RG2(NLAY), TEMP
 
       COMMON  E, AK2, AK3, VPI
       COMMON /MFB/ GP, L1
@@ -4079,15 +4091,17 @@ CVB
       LOD = LMMAX - LEV
       LEE = (LMAX/2 + 1)**2
       LOE = ((LMAX - 1)/2 + 1)**2
-      CI = CMPLX(0.0, 1.0)
-      CZ = CMPLX(0.0, 0.0)
-      RU = CMPLX(1.0, 0.0)
+      CI = DCMPLX(0.0, 1.0)
+      CZ = DCMPLX(0.0, 0.0)
+      RU = DCMPLX(1.0, 0.0)
 
       IF (LAY.EQ.1) THEN
         NLL = 1     ! Overlayer
       ELSE
         NLL = NL    ! Substrate (bulk)
       ENDIF
+      write(6, *) "In RTINV; before TAUMAT, TAU", any(isnan(abs(TAU)))
+      write(6, *) "In RTINV; before TAUMAT, CLM", any(isnan(abs(CLM)))
 
 !     Check whether TAU needs recomputing since last call to RTINV_SIMPLE
 !     NB: NEW is always == 1, so the next bit is always executed.
@@ -4097,6 +4111,9 @@ CVB
      &              LMAX, FLMS, NL, KLM, LM, CLM, NLM, LXI, NT, PQ, NA,
      &              NLL, FLM, NNSUB, LMAX1, XH)
       ENDIF
+      write(6, *) "In RTINV; after TAUMAT, TAU", any(isnan(abs(TAU)))
+      write(6, *) "In RTINV; after TAUMAT, XEV", any(isnan(abs(XEV)))
+      write(6, *) "In RTINV; after TAUMAT, CLM", any(isnan(abs(CLM)))
 
 !     Sort subplanes according to increasing position along +x axis,
 !     i.e., from vacuum side towards deeper into the solid.
@@ -4104,21 +4121,31 @@ CVB
 !     and which are mutually identical
       CALL SRTLAY(POS, POSS, LPS, LPSS, MGH, NLAY, DRL, SDRL, NLAY2,
      &            NUGH, NGEQ, NGOL, NEW, NORD)
+      write(6, *) "In RTINV; after SRTLAY, POS", any(isnan(abs(POS)))
+      write(6, *) "In RTINV; after SRTLAY, POSS", any(isnan(abs(POSS)))
+      write(6, *) "In RTINV; after SRTLAY, DRL", any(isnan(abs(DRL)))
+      write(6, *) "In RTINV; after SRTLAY, GH", any(isnan(abs(GH)))
 
 !     Compute (or copy) the GH matrices, i.e., the interlayer
 !     propagators in (LM)-space.
       CALL GHMAT(GH, LMG, LMMAX, MGH, NLAY, NUGH, NGEQ, NGOL, NLAY2,
      &           TST, TEST, VT, L2M, VT, LM, TG, LMS, DRL, TV, LXM,
      &           LEV, DCUT, CAA, NCAA, LAY, HGHD, PQ(1, 1 + NA))
+      write(6, *) "In RTINV; after GHMAT GH", any(isnan(abs(GH)))
+      write(6, *) "In RTINV; after GHMAT CAA", any(isnan(abs(CAA)))
+      write(6, *) "In RTINV; after GHMAT DRL", any(isnan(abs(DRL)))
+
 
 !     Create matrix TH to be inverted in Beeby\s scheme
       CALL THMAT(TH, LMNI, GH, LMG, LMMAX, MGH, NLAY, TAU, LMT,
      &           LEV, LPSS)
 
 !     Prepare TH for inversion (Gaussian elimination)
-      CALL CGETRF(LMNI, LMNI, TH, LMNI, IPL, INFO)
+      CALL ZGETRF(LMNI, LMNI, TH, LMNI, IPL, INFO)
 
-      YA = CMPLX(2.0 * E, - 2.0 * VPI + 0.000001)
+      write(6, *) "In RTINV; after Gauss TH", any(isnan(abs(TH)))
+
+      YA = DCMPLX(2.0 * E, - 2.0 * VPI + 0.000001)
       YA = SQRT(YA)
       DO IG = 1, N
 !       Generate plane-wave propagators for use as prefactors for GH and TH
@@ -4126,7 +4153,7 @@ CVB
         BK2 = PQ(1, JG) + AK2
         BK3 = PQ(2, JG) + AK3
         C = BK2 * BK2 + BK3 * BK3
-        XA = CMPLX(2.0 * E - C, - 2.0 * VPI + 0.000001)
+        XA = DCMPLX(2.0 * E - C, - 2.0 * VPI + 0.000001)
         XA = SQRT(XA)
         RG_PERP(IG) = EXP(CI * XA * (POSS(NLAY, 1) - POSS(1, 1)))
         DO I = 1, NLAY
@@ -4141,7 +4168,7 @@ CVB
           CF = RU
           IF (C.GT.1.0E-7) THEN
             B = SQRT(C)               ! Norm of in-plane wave vector
-            CF = CMPLX(BK2/B, BK3/B)  ! Complex azimuthal incidence angle
+            CF = DCMPLX(BK2/B, BK3/B)  ! Complex azimuthal incidence angle
           ENDIF
           CT = XA/YA  ! Complex cosine of polar incidence angle
           ST = B/YA   ! Complex sine of polar incidence angle
@@ -4189,7 +4216,7 @@ CVB
         ENDDO
 
 !       Do left multiplication with inverse of TH
-        CALL CGETRS('N', LMNI, 1, TH, LMNI, IPL, TS, LMNI, INFO)
+        CALL ZGETRS('N', LMNI, 1, TH, LMNI, IPL, TS, LMNI, INFO)
 
         !       Include further plane-wave propagating factors, and store
 !       the intra-layer scattering for computing Tensors.
@@ -4253,10 +4280,10 @@ C   X= COMPLEX*16 ARGUMENT OF BESSEL FUNCTIONS.
 C   HH= OUTPUT COMPLEX*16 BESSEL FUNCTIONS.
 C   N3= LMAX+1.
       SUBROUTINE  SB (X, HH, N3)
-      implicit REAL (A-H, O-Z)
+      implicit REAL*8 (A-H, O-Z)
       implicit INTEGER (I-N)
-      COMPLEX X
-      COMPLEX A, B, C, HH
+      COMPLEX*16 X
+      COMPLEX*16 A, B, C, HH
       DIMENSION  HH(N3)
   330 FORMAT(1H0,11HSB INFINITE)
       A = (0.0,1.0)
@@ -4278,17 +4305,17 @@ C     WRITE(6,330)
 C-----------------------------------------------------------------------
 C  SUBROUTINE SH COMPUTES SPHERICAL HARMONICS.
 C   NHARM= LMAX+1.
-C   Z= COMPLEX ARGUMENT COS(THETA).
+C   Z= COMPLEX*16 ARGUMENT COS(THETA).
 C   FI= AZIMUTHAL ANGLE.
-C   Y= OUTPUT COMPLEX SPHERICAL HARMONICS.
+C   Y= OUTPUT COMPLEX*16 SPHERICAL HARMONICS.
       SUBROUTINE  SH (NHARM, Z, FI, Y)
-      COMPLEX  A, ANOR, Q1A, YSTAR, YY, ZNW
       implicit none
       INTEGER L, LL, NHARM
-      REAL BM, BN, FI, ANORA, RZ
+      REAL*8 BM, BN, FI, ANORA, RZ
+      COMPLEX*16  A, ANOR, Q1A, YSTAR, YY, ZNW
       REAL*8     AM              ! Added 2021-10-10 MRiva. Prevent overflow to infinity when calculating factorials below. Increases NHARM range from 28 to 150.
       COMPLEX*16 BB, BB1, AA     ! Added 2021-10-10 MRiva. Prevent overflow and NaNs.
-      COMPLEX  Z, Y(NHARM,NHARM) ! MRiva: still unclear whether one would also like Y to be COMPLEX*16
+      COMPLEX*16  Z, Y(NHARM,NHARM) ! MRiva: still unclear whether one would also like Y to be COMPLEX*16
       AM = 1.0
       A = (0.0,1.0) * FI
       RZ = REAL(Z)
@@ -4297,7 +4324,7 @@ C   Y= OUTPUT COMPLEX SPHERICAL HARMONICS.
       YY = (1.0,0.0)
 
       DO L = 1, NHARM
-        BM = FLOAT(L) - 1.0
+        BM = REAL(L,8) - 1.0
         Q1A = EXP(BM * A)
         ANOR = ANORA * Q1A * ( - 1.0)**(L + 1)
         ANORA = ANORA * SQRT(1.0 + 0.5/(BM + 1.0))/(2.0 * BM + 1.0)
@@ -4308,7 +4335,7 @@ C   Y= OUTPUT COMPLEX SPHERICAL HARMONICS.
         AM = AM * (2.0 * BM + 1.0)
         BB = AM * Z * YY
         DO LL = L, NHARM
-          BN = FLOAT(LL)
+          BN = REAL(LL,8)
           Y(LL,L) = AA * ANOR
           IF (L .NE. 1) THEN
             YSTAR = Y(LL,L)/(Q1A * Q1A)
@@ -4344,15 +4371,15 @@ C   AR1,AR2,RAR1,RAR2= BASIS VECTORS OF SUPERLATTICE IN DIRECT AND
 C    RECIPROCAL SPACE.
 C   NL1,NL2= SUPERLATTICE CHARACTERIZATION (SEE MAIN PROGRAM).
       SUBROUTINE  SLIND (V, VL, JJS, NL, IDEG, EPSD)
-      implicit REAL (A-H, O-Z)
+      implicit REAL*8 (A-H, O-Z)
       implicit INTEGER (I-N)
-      COMPLEX  VL, VLA, VLB, CI
-      COMPLEX EXP
+      COMPLEX*16  VL, VLA, VLB, CI
+      COMPLEX*16 EXP
       DIMENSION  V(NL,2), JJS(NL,IDEG), VL(NL,2), AR1(2), AR2(2)
       DIMENSION  BR1(2), BR2(2), RAR1(2), RAR2(2)
       COMMON  /SL/BR1, BR2, AR1, AR2, RAR1, RAR2, NL1, NL2
 C
-      CI = CMPLX(0.0,1.0)
+      CI = DCMPLX(0.0,1.0)
       PI = 3.14159265
 C  SET UP VECTORS V DEFINING SUBLATTICES AND QUANTITIES VL FOR LATER
 C  REFERENCE.
@@ -4405,16 +4432,16 @@ C  SAME SUBLATTICE.
 !
 !
 !   LMAX= LARGEST VALUE OF L.
-!   YLM= OUTPUT COMPLEX SPHERICAL HARMONICS.
+!   YLM= OUTPUT COMPLEX*16 SPHERICAL HARMONICS.
 !   LMMAX= (LMAX+1)**2.
 !   CT= COS(THETA) (COMPLEX).
 !   ST= SIN(THETA) (COMPLEX).
 !   CF= EXP(I*FI).
       SUBROUTINE  SPHRM_MOD(LMAX, YLM, LMMAX, CT, ST, CF)
-      implicit REAL (A-H, O-Z)
+      implicit REAL*8 (A-H, O-Z)
       implicit INTEGER (I-N)
-      COMPLEX  YLM
-      COMPLEX  CT, ST, CF, SF, SA
+      COMPLEX*16  YLM
+      COMPLEX*16  CT, ST, CF, SF, SA
 !  (21=LMAX+1; 441=(LMAX+1)**2   FOR LMAX=20 - if you need more (what for???),
 !   please introduce variable dimensions, carrying the respective quantities through
 !   all calls)
@@ -4459,8 +4486,8 @@ CDIR$ SHORTLOOP
       CL = 1.0
       ASG =  - 1.0
       SF = CF
-      SA = CMPLX(1.0, 0.0)
-      YLM(1) = CMPLX(FAC1(1), 0.0)
+      SA = DCMPLX(1.0, 0.0)
+      YLM(1) = DCMPLX(FAC1(1), 0.0)
 CDIR$ SHORTLOOP
       DO L = 1, LMAX
         LN = LM + L + L + 1
@@ -4531,7 +4558,7 @@ C        be handled more conveniently - should be removed in a future version)
       ! explicit type definitions
       INTEGER I, IN, IN1, IO, J, K, KM, LPS, LPSA, LPSS, M, M1, MGH
       INTEGER  NEW, NGEQ, NGOL, NLAY, NLAY1, NLAY2, NUGH
-      REAL   DRL, POS, POSA, POSS, PM, SDRL
+      REAL*8   DRL, POS, POSA, POSS, PM, SDRL
 
       DIMENSION POS(NLAY,3),POSS(NLAY,3),POSA(3),DRL(NLAY2,3)
       DIMENSION SDRL(NLAY2,3)
@@ -4652,7 +4679,7 @@ C  STORE PRESENT INTERPLANAR VECTORS FOR LATER COMPARISON
 !  away from the solid may be different.
 !
 !  Modified: MRiva 2021-09-10. Get rid of M, get rid of most GOTOs.
-!            Use optimized BLAS routine CGEMM for matrix multiplication
+!            Use optimized BLAS routine ZGEMM for matrix multiplication
 !            in TLRTA_BLAS.
 !            TODO: The only useful output of this is RA, as it is used
 !            only to stack the bulk. Figure out if there is a way to
@@ -4673,7 +4700,7 @@ C  STORE PRESENT INTERPLANAR VECTORS FOR LATER COMPARISON
 !  IN COMMON BLOCKS
 !   EPS= CONVERGENCE CRITERION FOR LAYER DOUBLING
 !   LITER= LIMIT ON NUMBER OF DOUBLINGS.
-!   E,VPI  COMPLEX CURRENT ENERGY.
+!   E,VPI  COMPLEX*16 CURRENT ENERGY.
 !   AK2,AK3  PARALLEL COMPONENTS OF PRIMARY INCIDENT K-VECTOR.
 !  NOTE  DO NOT IN GENERAL ASSIGN THE SAME STORAGE AREA FOR RA AND RB,
 !  AND FOR TA AND TB, IN THE CALLING PROGRAM, EVEN THOUGH RA=RB, TA=TB
@@ -4682,18 +4709,18 @@ C  STORE PRESENT INTERPLANAR VECTORS FOR LATER COMPARISON
       SUBROUTINE SUBRAS_BLAS (RA, TA, RB, TB, N,
      &                        S1, S2, S3, S4, S5, S6,
      &                        PP, INV_PIVOT, PQ, AS)
-      implicit REAL (A-H, O-Z)
+      implicit REAL*8 (A-H, O-Z)
       implicit INTEGER (I-N)
       INTEGER  INV_PIVOT
-      COMPLEX  RA, TA, RB, TB, PP, IU, XX
-      COMPLEX  S1, S2, S3, S4, S5, S6
-      COMPLEX  SQRT, EXP
+      COMPLEX*16  RA, TA, RB, TB, PP, IU, XX
+      COMPLEX*16  S1, S2, S3, S4, S5, S6
+      COMPLEX*16  SQRT, EXP
       DIMENSION  RA(N,N), TA(N,N), RB(N,N), TB(N,N), PP(N,2)
       DIMENSION  S1(N,N), S2(N,N), S3(N,N), S4(N,N), S5(N,N), S6(N,N),
      &           PQ(2,N)
       DIMENSION  AS(3), INV_PIVOT(N)
 
-      COMPLEX TEMP
+      COMPLEX*16 TEMP
 
 ! AMI note: BE CAREFULL, there are convergence criteria EPS and EPS1. A mixup between them caused trouble in v1.72 !
       COMMON  /MS/  LMAX, EPS, LITER
@@ -4703,13 +4730,13 @@ C  STORE PRESENT INTERPLANAR VECTORS FOR LATER COMPARISON
    20 FORMAT(24H NO CONV IN SUBREF AFTER,I3,2X,9HITER, X =,E15.4)
    30 FORMAT(I4,16H  ITER IN SUBREF)
 
-      IU = CMPLX(0.0, 1.0)
+      IU = DCMPLX(0.0, 1.0)
       AK = 2.0 * E
 !     Generate plane-wave propagators between layers
       DO I = 1, N
         BK2 = AK2 + PQ(1, I)
         BK3 = AK3 + PQ(2, I)
-        XX = CMPLX(AK - BK2 * BK2 - BK3 * BK3, - 2.0 * VPI + 0.000001)
+        XX = DCMPLX(AK - BK2 * BK2 - BK3 * BK3, - 2.0 * VPI + 0.000001)
         XX = SQRT(XX) * AS(1)
         X = BK2 * AS(2) + BK3 * AS(3)
         PP(I, 1) = EXP(IU * (XX + X))
@@ -4736,7 +4763,7 @@ C  STORE PRESENT INTERPLANAR VECTORS FOR LATER COMPARISON
 !       propagate beam down [PP(1,1)], reflect there from above [RA(1,1)],
 !       propagate up again [PP(1,2)], then reflect from below [RB(1,1)]
         XX = 1.0
-     +       /(CMPLX(1.0, 0.0) - PP(1,1) * RA(1,1) * PP(1,2) * RB(1,1))
+     +       /(DCMPLX(1.0, 0.0) - PP(1,1) * RA(1,1) * PP(1,2) * RB(1,1))
         TEMP = 1.0 + TA(1,1) * PP(1,1) * TB(1,1) * PP(1,2) * XX
         RA(1,1) = RA(1,1) * TEMP
         RB(1,1) = RB(1,1) * TEMP
@@ -4803,7 +4830,7 @@ C   NT,PQ,NA,NLL- SEE MPERTI,MTINV.                                     111181
 C   FLM- WORKING SPACE.
 C   XH - working space carried through to ensure proper dimensions                                                 111181
 C  IN COMMON BLOCKS
-C   E,VPI= CURRENT COMPLEX ENERGY.
+C   E,VPI= CURRENT COMPLEX*16 ENERGY.
       SUBROUTINE TAUMAT(TAU,LMT,NTAU,X,LEV,LEV2,LOD,TSF,
      +  LMMAX,LMAX,FLMS,NL,KLM,LM,CLM,NLM,LXI,NT,PQ,NA,NLL,FLM,
      +  NNSUB,LMAX1,XH)
@@ -4813,22 +4840,22 @@ C   E,VPI= CURRENT COMPLEX ENERGY.
       INTEGER NL, KLM, LM, NLM, LXI, NA, NLL, NT
       INTEGER I, IL, IS, IT, J, JS, K, L, LD, LD1
       INTEGER NL1, NL2, NST
-      REAL ABR, ADR1, ADR2, AK2, AK3, BK2, BK3, BR1, BR2
-      REAL CLM, PQ, AR1, AR2
-      REAL E, RAR1, RAR2, S1, S2, VPI
+      REAL*8 ABR, ADR1, ADR2, AK2, AK3, BK2, BK3, BR1, BR2
+      REAL*8 CLM, PQ, AR1, AR2
+      REAL*8 E, RAR1, RAR2, S1, S2, VPI
       DIMENSION CLM(NLM),LXI(LMMAX),PQ(2,NT)                            111181
       DIMENSION BR1(2),BR2(2),AR1(2),AR2(2),RAR1(2),RAR2(2)             111181
-      COMPLEX AK,CZ,TAU(LMT,LEV),X(LEV,LEV2),
+      COMPLEX*16 AK,CZ,TAU(LMT,LEV),X(LEV,LEV2),
      1        FLMS(NL,KLM),DET,FLM(KLM),CI,XA                           111181
-      COMPLEX TSF(NNSUB,LMAX1)                                          !! AMI: If this is made a complex*16 the noise disappears, but curves are wrong!
-      COMPLEX XH(LEV)
-      COMPLEX right_hand_side(LEV, LEV) ! AMI & MR
+      COMPLEX*16 TSF(NNSUB,LMAX1)                                          !! AMI: If this is made a complex*16 the noise disappears, but curves are wrong!
+      COMPLEX*16 XH(LEV)
+      COMPLEX*16 right_hand_side(LEV, LEV) ! AMI & MR
       INTEGER lapack_info, LL, LL2 ! AMI & MR
       COMMON E,AK2,AK3,VPI
       COMMON /SL/BR1,BR2,AR1,AR2,RAR1,RAR2,NL1,NL2                      111181
       CZ=(0.0,0.0)
       CI=(0.0,1.0)                                                      111181
-      AK=-0.5/SQRT(CMPLX(2.0*E,-2.0*VPI+0.000001))
+      AK=-0.5/SQRT(DCMPLX(2.0*E,-2.0*VPI+0.000001))
       FLM = CZ
       BK2=PQ(1,1+NA)
       BK3=PQ(2,1+NA)
@@ -4906,6 +4933,7 @@ C  PERFORM INVERSION AND MULTIPLICATION
       call solve_system_w_LAPACK(X, LEV, LL, LL, right_hand_side)
       ! CALL CXMTXT(X,LEV,LL,LL,LL2,MARK,DET,-1,XH)
 
+
 C
       LD=(IT-1)*LMMAX
       IF (IL.EQ.1) LD=LD+LEV
@@ -4938,9 +4966,9 @@ C  PUT RESULT IN TAU
             integer n_X_cols ! number of colums of X
             integer n_X_rows ! number of rows of input X
             integer n_X_systems  ! number of systems of equations
-            complex X(n_X_cols, n_X_rows + n_X_systems)
-            complex A(n_X_cols, n_X_rows) !! matrix A
-            complex B(n_X_cols, n_X_systems) !! B is filled with the right-hand-side
+            complex*16 X(n_X_cols, n_X_rows + n_X_systems)
+            complex*16 A(n_X_cols, n_X_rows) !! matrix A
+            complex*16 B(n_X_cols, n_X_systems) !! B is filled with the right-hand-side
                                !! and on exit B contains solution to the
                                !! system of equation.
 
@@ -4956,16 +4984,15 @@ C  PUT RESULT IN TAU
             B = X(:, n_X_rows+1:n_X_rows + n_X_systems)
 
             ! BLAS: LU factorization of A
-            call CGETRF(n_X_cols, n_X_rows, A, n_X_cols, 
+            call ZGETRF(n_X_cols, n_X_rows, A, n_X_cols, 
      &                  lapack_pivot, lapack_info)
             ! debug statements
-            ! write(6, *) "CGETRF info:", lapack_info
+            ! write(6, *) "ZGETRF info:", lapack_info
             ! Flush(6)
-
-            call CGETRS('N', n_X_rows, n_X_systems, A, n_X_cols, 
+            call ZGETRS('N', n_X_rows, n_X_systems, A, n_X_cols, 
      &                  lapack_pivot, B, n_X_cols, lapack_info)
             ! debug statements
-            ! write(6, *) "CGETRS info:", lapack_info
+            ! write(6, *) "ZGETRS info:", lapack_info
             ! Write(6, *) "solve_system_w_LAPACK end"
             ! Flush(6)
 
@@ -4990,14 +5017,14 @@ C  PUT RESULT IN TAU
 !   JGP= CURRENT INCIDENT BEAM.
       SUBROUTINE TAUY_SIMPLE(TAUG, TAUGM, TAU, LMT, LEV, CYLM,
      &                       NT, LMMAX, LT, NTAU, LOD, LEE, LOE, JGP)
-      COMPLEX CZ, ST, SU, CF, CF1
-      COMPLEX TAU(LMT, LEV), CYLM(NT, LMMAX)
-      COMPLEX TAUG(LTAUG), TAUGM(LTAUG)
       ! explicit type declarations
       implicit none
       INTEGER I, IS, ILM, JGP, JLM, JTAU
       INTEGER NT, NTAU, KLP, LEE, LEV, LOE, LOD, LT, LMMAX, LMT
 
+      COMPLEX*16 CZ, ST, SU, CF, CF1
+      COMPLEX*16 TAU(LMT, LEV), CYLM(NT, LMMAX)
+      COMPLEX*16 TAUG(LMT), TAUGM(LMT)
       DIMENSION LT(LMMAX)
       CZ = 0
 
@@ -5052,8 +5079,6 @@ C  PUT RESULT IN TAU
 !   TH= OUTPUT MATRIX, STILL TO BE INVERTED.
 !   LMNI= NLAY*LMMAX.
       SUBROUTINE THMAT(TH, LMNI, GH, LMG, LMMAX, MGH, NLAY, TAU,
-      COMPLEX TH(LMNI, LMNI), GH(LMG, LMMAX), TAU(LMT, LEV)
-      COMPLEX RU, CZ, ST, SU
      &                 LMT, LEV, LPS)
 
       ! explict type definitions
@@ -5062,6 +5087,8 @@ C  PUT RESULT IN TAU
       INTEGER LEV, LMMAX, LMNI, LMG, LMT, LOD, LP, LPS, LP1
       INTEGER M, MGH, M1, NLAY, NLAY1
 
+      COMPLEX*16 TH(LMNI, LMNI), GH(LMG, LMMAX), TAU(LMT, LEV)
+      COMPLEX*16 RU, CZ, ST, SU
       DIMENSION LPS(NLAY), MGH(NLAY, NLAY)
 
       LOD = LMMAX - LEV
@@ -5137,7 +5164,7 @@ C  PUT RESULT IN TAU
 !  propagation direction.
 !
 !  This modified version is optimized to use the LAPACK/BLAS routine
-!  CGEMM for matrix multiplication, rather than doing explicit looping.
+!  ZGEMM for matrix multiplication, rather than doing explicit looping.
 !
 !   R1,T1,R2,T2
 !    Input reflection and transmission matrices of the two layers.
@@ -5152,19 +5179,19 @@ C  PUT RESULT IN TAU
       SUBROUTINE  TLRTA_BLAS (R1, T1, R2, T2, N,
      &                        S1, S2, R1_P, R2_P, T1_P, T2_P,  ! storage only
      &                        PP, INV_PIVOT)
-      implicit REAL (A-H, O-Z)
+      implicit REAL*8 (A-H, O-Z)
       implicit INTEGER (I-N)
-      COMPLEX  R1, T1, R2, T2, XX, YY, C_ZERO, PP
-      COMPLEX  S1, S2, R1_P, R2_P, T1_P, T2_P
-      COMPLEX  P_UP, P_DOWN, C_M_ONE, C_ONE
+      COMPLEX*16  R1, T1, R2, T2, XX, YY, C_ZERO, PP
+      COMPLEX*16  S1, S2, R1_P, R2_P, T1_P, T2_P
+      COMPLEX*16  P_UP, P_DOWN, C_M_ONE, C_ONE
       DIMENSION  R1(N, N), T1(N, N), R2(N, N), T2(N, N)
       DIMENSION  R1_P(N, N), R2_P(N, N), T1_P(N, N), T2_P(N, N)
       DIMENSION  S1(N, N), S2(N, N), PP(N, 2)
       DIMENSION  INV_PIVOT(N)
 
-      C_ZERO = CMPLX(0.0, 0.0)
-      C_ONE = CMPLX(1.0, 0.0)
-      C_M_ONE = CMPLX(-1.0, 0.0)
+      C_ZERO = DCMPLX(0.0, 0.0)
+      C_ONE = DCMPLX(1.0, 0.0)
+      C_M_ONE = DCMPLX(-1.0, 0.0)
 
 !     Store in R1_P, R2_P, T1_P, and T2_P modified versions of the
 !     reflection/transmission matrices that include also propagation
@@ -5204,7 +5231,7 @@ C  PUT RESULT IN TAU
 !     propagating 'down' (i.e., toward the solid), and right below the
 !     top layer. Use (Id-X)**-1 = sum_k X**k, with single-pass scattering
 !     X(i,j) = sum_k R2_P(i,k) R1_P(k,j)
-      CALL CGEMM('N', 'N', N, N, N,
+      CALL ZGEMM('N', 'N', N, N, N,
      &           C_M_ONE,  ! notice the C_M_ONE==-1.0 coefficient because of S1 = Id - X
      &           R2_P, N, R1_P, N,
      &           C_ZERO, S1, N)
@@ -5213,32 +5240,32 @@ C  PUT RESULT IN TAU
       ENDDO
 
 !     LU decomposition of matrix S1 (multiple scattering, beams moving down)
-      CALL CGETRF(N, N, S1, N, INV_PIVOT, INFO)
+      CALL ZGETRF(N, N, S1, N, INV_PIVOT, INFO)
 
 !     Then multiply with transmission from above, such that T1(i, j) is:
 !     beam j coming from above, transmitted through top and multiple-scattered
 !     into i, which is right below the top layer and propagating down
-      CALL CGETRS('N', N, N, S1, N, INV_PIVOT, T1, N, INFO)
+      CALL ZGETRS('N', N, N, S1, N, INV_PIVOT, T1, N, INFO)
 
 !     Now calculate the total transmission from above into S1(i, j)
 !     by taking S1(i, j) = sum_k [T1(k, j)     ! transmission through top of j into k, with multiple scattering; k right below top.
 !                                 T1_P(i, k)]  ! transmission through bottom of k into i, including propagation down.
 !     S1 will later be copied into T1.
-      CALL CGEMM('N', 'N', N, N, N,
+      CALL ZGEMM('N', 'N', N, N, N,
      &           C_ONE, T1_P, N, T1, N,
      &           C_ZERO, S1, N)
 
 !     Go for the total reflection from above: (1) propagate-reflect
 !     at the bottom layer [==multiply with R1_P(i,k)] the transmitted
 !     and multiple-scattered beam k [==T1(k,j)]. Store this in S2(i,j).
-      CALL CGEMM('N', 'N', N, N, N,
+      CALL ZGEMM('N', 'N', N, N, N,
      &           C_ONE, R1_P, N, T1, N,
      &           C_ZERO, S2, N)
 
 !     Then (2) propagate-transmit at top [==multiply with T2_P(i,k)]
 !     this beam k [==S2(k,j)]. Also, add to this the specular reflection
 !     at the top layer R1(i,j), and store the whole thing in R1.
-      CALL CGEMM('N', 'N', N, N, N,
+      CALL ZGEMM('N', 'N', N, N, N,
      &           C_ONE, T2_P, N, S2, N,
      &           C_ONE, R1, N)
 
@@ -5256,7 +5283,7 @@ C  PUT RESULT IN TAU
 !     propagating 'up' (i.e., away from the solid), and right above the
 !     bottom layer. Use (Id-X)**-1 = sum_k X**k, with single-pass scattering
 !     X(i,j) = sum_k R1_P(i,k) R2_P(k,j)
-      CALL CGEMM('N', 'N', N, N, N,
+      CALL ZGEMM('N', 'N', N, N, N,
      &           C_M_ONE,  ! notice the C_M_ONE==-1.0 coefficient because of S2 = Id - X
      &           R1_P, N, R2_P, N,
      &           C_ZERO, S2, N)
@@ -5265,33 +5292,33 @@ C  PUT RESULT IN TAU
       ENDDO
 
 !     LU decomposition of matrix S2 (multiple scattering, beams moving up)
-      CALL CGETRF(N, N, S2, N, INV_PIVOT, INFO)
+      CALL ZGETRF(N, N, S2, N, INV_PIVOT, INFO)
 
 !     Then multiply with transmission from below, such that T2(i, j) is:
 !     beam j coming from below, transmitted through bottom and multiple-
 !     scattered into i, which is right above the bottom layer and
 !     propagating up
-      CALL CGETRS('N', N, N, S2, N, INV_PIVOT, T2, N, INFO)
+      CALL ZGETRS('N', N, N, S2, N, INV_PIVOT, T2, N, INFO)
 
 !     Now calculate the total transmission from below into S2(i, j)
 !     by taking S2(i, j) = sum_k [T2(k, j)     ! transmission through bottom of j into k, with multiple scattering; k right above bottom.
 !                                 T2_P(i, k)]  ! transmission through top of k into i, including propagation up.
 !     S2 will later be copied into T2.
-      CALL CGEMM('N', 'N', N, N, N,
+      CALL ZGEMM('N', 'N', N, N, N,
      &           C_ONE, T2_P, N, T2, N,
      &           C_ZERO, S2, N)
 
 !     Go for the total reflection from below: (1) propagate-reflect
 !     at the top layer [==multiply with R2_P(i,k)] the transmitted
 !     and multiple-scattered beam k [==T2(k,j)]. Store this in S1(i,j).
-      CALL CGEMM('N', 'N', N, N, N,
+      CALL ZGEMM('N', 'N', N, N, N,
      &           C_ONE, R2_P, N, T2, N,
      &           C_ZERO, S1, N)
 
 !     Then (2) propagate-transmit at bottom [==multiply with T1_P(i,k)]
 !     this beam k [==S1(k,j)]. Also, add to this the specular reflection
 !     at the top layer R2(i,j), and store the whole thing in R2.
-      CALL CGEMM('N', 'N', N, N, N,
+      CALL ZGEMM('N', 'N', N, N, N,
      &           C_ONE, T1_P, N, S1, N,
      &           C_ONE, R2, N)
 
@@ -5330,16 +5357,16 @@ C   T0= TEMPERATURE AT WHICH DRPER AND DRPAR HAVE BEEN COMPUTED.
 C   T= CURRENT TEMPERATURE.
 C   TSF0,TSF,AF,CAF  SEE ABOVE.
       SUBROUTINE TSCATF(IEL,L1,ES,PHSS,NPSI,EB,V,PPP,NN1,NN2,NN3,
-      implicit REAL (A-H, O-Z)
      &      DR0,DRPER,DRPAR,T0,T,AF,CAF,NEL,LMAX1,PHS,DEL,CTAB,SUM,BJ)
+      implicit REAL*8 (A-H, O-Z)
       implicit INTEGER (I-N)
 
       DIMENSION PHSS(NPSI,NEL,LMAX1),PHS(LMAX1),ES(NPSI)
       DIMENSION PPP(NN1,NN2,NN3)
-      COMPLEX CTAB,SUM
+      COMPLEX*16 CTAB,SUM
       DIMENSION CTAB(NN3),SUM(NN2)
       COMPLEX*16 BJ(NN1)
-      COMPLEX CI,DEL(L1),CA,AF(L1),CAF(L1)
+      COMPLEX*16 CI,DEL(L1),CA,AF(L1),CAF(L1)
 
   700 FORMAT(42H TOO LOW ENERGY FOR AVAILABLE PHASE SHIFTS)
       CI=(0.0,1.0)
@@ -5402,15 +5429,15 @@ C   KLM= (2*LMAX+1)*(2*LMAX+2)/2.
 C   CLM= CLEBSCH-GORDON COEFFICIENTS, FROM SUBROUTINE CELMG.
 C   NLM= DIMENSION OF CLM (SEE MAIN PROGRAM).
       SUBROUTINE  XM (FLM,XEV,XOD,LEV,LOD,AF,CAF,LM,LX,LXI,LMMAX,
-      implicit REAL (A-H, O-Z)
      &                KLM,CLM,NLM)
+      implicit REAL*8 (A-H, O-Z)
       implicit INTEGER (I-N)
       INTEGER  LX, LXI
-      COMPLEX  XEV, XOD, FLM, AF, CZERO, ACC, CAF
+      COMPLEX*16  XEV, XOD, FLM, AF, CZERO, ACC, CAF
       DIMENSION  CLM(NLM), XEV(LEV,LEV), XOD(LOD,LOD), FLM(KLM), AF(LM)
       DIMENSION  CAF(LM), LX(LMMAX), LXI(LMMAX)
       LMAX = LM-1
-      CZERO = CMPLX(0.0,0.0)
+      CZERO = DCMPLX(0.0,0.0)
       DO 440 I = 1, LEV
       DO 440 J = 1, LEV
   440 XEV(I,J) = CZERO
@@ -5489,14 +5516,14 @@ C    XMT IN TAUMAT.
       INTEGER J, JL, JLM, JLPP, JX, JSET
       INTEGER K, KX, L, L2MAX, LP1, LPA, LPP
       INTEGER M, MM, MP1, MPA, MPP
-      REAL CLM
-      COMPLEX TSF(NNSUB,LMAX1)
-      COMPLEX X,FLMS,CZERO,ACC,CI,ST,SU,RU
+      REAL*8 CLM
+      COMPLEX*16 TSF(NNSUB,LMAX1)
+      COMPLEX*16 X,FLMS,CZERO,ACC,CI,ST,SU,RU
       DIMENSION CLM(NLM),X(LEV,LL),FLMS(NL,KLM),LXI(LMMAX)
       LMAX = LM-1
       RU=(1.0,0.0)
-      CZERO = CMPLX(0.0,0.0)
-      CI=CMPLX(0.0,1.0)
+      CZERO = DCMPLX(0.0,0.0)
+      CI=DCMPLX(0.0,1.0)
       L2MAX = LMAX + LMAX
 C  IF IL=1, CONSIDER L+M= ODD ONLY
 C  IF IL=2, CONSIDER L+M= EVEN ONLY
@@ -5560,9 +5587,9 @@ C   NR= FIRST DIMENSION OF A (.GE.NC).
 C   NC= ORDER OF A.
 C   EMACH= MACHINE ACCURACY.
       SUBROUTINE  ZGE (A, INT, NR, NC, EMACH)
-      implicit REAL (A-H, O-Z)
+      implicit REAL*8 (A-H, O-Z)
       implicit INTEGER (I-N)
-      COMPLEX  A, YR, DUM
+      COMPLEX*16  A, YR, DUM
       DIMENSION  A(NR,NC), INT(NC)
       N = NC
       DO 680 II = 2, N
@@ -5603,9 +5630,9 @@ C   NR= FIRST DIMENSION OF A (.GE.NC).
 C   NC= ORDER OF A.
 C   EMACH= MACHINE ACCURACY.
       SUBROUTINE  ZSU (A, INT, X, NR, NC, EMACH)
-      implicit REAL (A-H, O-Z)
+      implicit REAL*8 (A-H, O-Z)
       implicit INTEGER (I-N)
-      COMPLEX  A, X, DUM
+      COMPLEX*16  A, X, DUM
       DIMENSION  A(NR,NC), X(NC), INT(NC)
       N = NC
       DO 730 II = 2, N
@@ -5636,10 +5663,10 @@ CDIR$ IVDEP
 
 C---------------------------------------------------------------------
       SUBROUTINE ZTU(A,INT,X,ND,N,EMACH)
-      implicit REAL (A-H, O-Z)
+      implicit REAL*8 (A-H, O-Z)
       implicit INTEGER (I-N)
 C     ==============
-      COMPLEX A,X,Z1,Z2
+      COMPLEX*16 A,X,Z1,Z2
       DIMENSION A(ND,ND),INT(ND),X(ND)
 C
 COMMENT ZTU IS A MODIFIED BACK SUBSTITUTION SUBROUTINE

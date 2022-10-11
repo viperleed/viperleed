@@ -36,8 +36,10 @@ C    convention, sometimes don't. Message: Check each variable's type
 C    before you use it.
 C
       program leed
-
-      implicit REAL (A-H, O-Z)
+      
+      use ieee_arithmetic
+    
+      implicit REAL*8 (A-H, O-Z)
       implicit INTEGER (I-N)
 
 C  include parameter statements for dimensions etc
@@ -73,7 +75,7 @@ C  storage for variable dimensions (see PARAM)
       INTEGER KNBS,KNT,NPUN,NT0,NPSI,NEL,LMAX1
       INTEGER NSITE,NLTYPE,NSTACK,NNSUB,NBRAV
 
-      REAL EMACH
+      REAL*8 EMACH
 
 C  variables for subroutine READIN():
 
@@ -115,39 +117,39 @@ C  PSFMT: Parameter indicating the format of the phaseshift file
 
   ! AMI note: variables SSi and SOi removed in v1.71
       CHARACTER*80 TITLE
-      REAL TVA,TVB
-      REAL ARA1,ARA2,RAR1,RAR2
+      REAL*8 TVA,TVB
+      REAL*8 ARA1,ARA2,RAR1,RAR2
       DIMENSION ARA1(2),ARA2(2),RAR1(2),RAR2(2)
-      REAL ARB1,ARB2,RBR1,RBR2
+      REAL*8 ARB1,ARB2,RBR1,RBR2
       DIMENSION ARB1(2),ARB2(2),RBR1(2),RBR2(2)
-      REAL ASB
+      REAL*8 ASB
       DIMENSION ASB(3)
-      REAL FR,ASE
-      REAL V
+      REAL*8 FR,ASE
+      REAL*8 V
       DIMENSION  V(MNL,2)
-      COMPLEX VL
+      COMPLEX*16 VL
       DIMENSION VL(MNL,2)
       INTEGER JJS
       DIMENSION JJS(MNL,MIDEG)
       INTEGER KNB
       DIMENSION KNB(MKNBS)
-      REAL SPQF,SPQ
+      REAL*8 SPQF,SPQ
       DIMENSION SPQF(2,MKNT),SPQ(2,MKNT)
       INTEGER KSYM
       DIMENSION KSYM(2,MKNT)
-      REAL TST,TSTS
+      REAL*8 TST,TSTS
       INTEGER NPU
       DIMENSION NPU(MNPUN)
-      REAL THETA,FI
-      REAL VV ! AMI note: V0 removed in v1.71
-      REAL EPS
+      REAL*8 THETA,FI
+      REAL*8 VV ! AMI note: V0 removed in v1.71
+      REAL*8 EPS
       INTEGER LITER
       INTEGER LMAX,L1
-      REAL ES,PHSS
+      REAL*8 ES,PHSS
       DIMENSION ES(MNPSI),PHSS(MNPSI,MNEL,MLMAX1)
-      REAL VPI,VPIS,VPIO
-      REAL EI,EF,DE
-	  REAL EM,C1,C2,C3,C4,C5,C6,C7,C8,WORKFN,ERED
+      REAL*8 VPI,VPIS,VPIO
+      REAL*8 EI,EF,DE
+      REAL*8 EM,C1,C2,C3,C4,C5,C6,C7,C8,WORKFN,ERED
       INTEGER PSFRM
 
 C  IFORM : Formatted (1) or unformatted (0) Tensor LEED output
@@ -178,21 +180,21 @@ C          lowest layer
 C  LDIST : interlayer vector between layer ISTACK and lower layer ISTACK+1
 C  TENS  : tensor output for layer ISTACK desired?
 
-      REAL CONC,VIB
+      REAL*8 CONC,VIB
       DIMENSION CONC(MNSITE,MNEL),VIB(MNSITE,MNEL)
       INTEGER NSUB,LATT,STYPE,LBRAV,LCOMP
       DIMENSION NSUB(MNLTYPE),LATT(MNLTYPE),STYPE(MNLTYPE,MNSUB)
       DIMENSION LBRAV(MNLTYPE),LCOMP(MNLTYPE)
-      REAL SUBPOS
+      REAL*8 SUBPOS
       DIMENSION SUBPOS(MNLTYPE,MNSUB,3) ! size on the order of 300
       INTEGER TSLAB,TOPLAYB,BOTLAYB
-      REAL ASA
+      REAL*8 ASA
       DIMENSION ASA(3)
-      REAL ASBULK
+      REAL*8 ASBULK
       DIMENSION ASBULK(3)
       INTEGER LTYPE
       DIMENSION LTYPE(MNSTACK)
-      REAL LDIST
+      REAL*8 LDIST
       DIMENSION LDIST(MNSTACK,3)
       INTEGER TENS
       DIMENSION TENS(MNSTACK)
@@ -234,17 +236,17 @@ C         intra-layer scattering more efficiently
 C  NN1,NN2,NN3: variable dimensions for gaunt coefficients PPP (cf. TSCATF)
 C  PPP  : gaunt coefficients for temperature-dependent phaseshifts
 
-      REAL T0,T
-      REAL AIDENT
+      REAL*8 T0,T
+      REAL*8 AIDENT
       INTEGER LMMAX,KLM,LEV,LOD,LEV2,NCAA
       INTEGER NCA
       DIMENSION NCA(MNDIM)
-      REAL CAA
+      REAL*8 CAA
       DIMENSION CAA(MNLMO)
       INTEGER N,NN,NLM
       INTEGER NLMS
       DIMENSION NLMS(MNDIM)
-      REAL CLM,YLMC,FAC2,FAC1
+      REAL*8 CLM,YLMC,FAC2,FAC1
       DIMENSION CLM(MNLM),YLMC(MNN),FAC2(MNN),FAC1(MN)
       INTEGER NFAC
       DOUBLE PRECISION FAC
@@ -252,7 +254,7 @@ C  PPP  : gaunt coefficients for temperature-dependent phaseshifts
       INTEGER LX,LXI,LXM,LT
       DIMENSION LX(MLMMAX),LXI(MLMMAX),LXM(MLMMAX),LT(MLMMAX)
       INTEGER NN1,NN2,NN3
-      REAL PPP
+      REAL*8 PPP
       DIMENSION PPP(MNN1,MNN2,MNN3) !small, kB
 
 C  variables used in energy loop
@@ -269,10 +271,10 @@ C         incident beam (0,0)
 C  AK2M,AK3M: (negative) absolute lateral momentum of Tensor LEED beams
 C         (for use as incident beams in time-reversed LEED calculation)
 
-      REAL E,EEV
-      REAL DCUTS,DCUTO
-      REAL KSQ,AK,AK2,AK3
-      REAL PSQ,AK2M,AK3M
+      REAL*8 E,EEV
+      REAL*8 DCUTS,DCUTO
+      REAL*8 KSQ,AK,AK2,AK3
+      REAL*8 PSQ,AK2M,AK3M
       DIMENSION PSQ(2,MNT0),AK2M(MNT0),AK3M(MNT0)
 
 C  variables for atomic t-matrix calculation
@@ -288,17 +290,17 @@ C         in RSMF
 C  PHS,DEL,CTAB,SUM,BJ: working spaces for TSCATF and PSTEMP
 C  TMAT : storage array for site-specific atomic t-matrices including ATA
 
-      REAL DR0
-      REAL VSITE
-      COMPLEX AF,CAF
+      REAL*8 DR0
+      REAL*8 VSITE
+      COMPLEX*16 AF,CAF
       DIMENSION AF(MLMAX1),CAF(MLMAX1)
-      REAL PHS
+      REAL*8 PHS
       DIMENSION PHS(MLMAX1)
-      COMPLEX DEL,CTAB,SUM
+      COMPLEX*16 DEL,CTAB,SUM
       DIMENSION DEL(MLMAX1),CTAB(MNN3),SUM(MNN2)
       COMPLEX*16 BJ
       DIMENSION BJ(MNN1)
-      COMPLEX TMAT
+      COMPLEX*16 TMAT
       DIMENSION TMAT(MNSITE,MLMAX1)
 
 C  variables for NEXIT loop
@@ -320,8 +322,8 @@ C         unimplemented - construction of a superstructure not present in
 C         the reference structure via Tensor LEED).
 
       INTEGER NEXIT
-      REAL PSQ1,PSQ2
-      REAL AK21,AK31
+      REAL*8 PSQ1,PSQ2
+      REAL*8 AK21,AK31
       INTEGER EMERGE,KNOWN
 
 C  subroutine beams
@@ -339,7 +341,7 @@ C  NP   : maximum number of beams in a single beamset at current E (used as a di
 
       INTEGER NB
       DIMENSION NB(MKNBS)
-      REAL PQ,PQF,SYM
+      REAL*8 PQ,PQF,SYM
       DIMENSION PQ(2,MKNT),PQF(2,MKNT),SYM(2,MKNT)
       INTEGER NPUC
       DIMENSION NPUC(MNPUN)
@@ -352,7 +354,7 @@ C  FLMS : output lattice sums F_s(l,m) from fmat
 C  SCC,SA: working spaces for FMAT - see there!
 
       INTEGER NLS
-      COMPLEX FLMS,SCC,SA
+      COMPLEX*16 FLMS,SCC,SA
       DIMENSION FLMS(MNL,MKLM),SCC(MIDEG,4*MLMAX+1),SA(2*MLMAX*MIDEG)
 
 C  subroutine rsmf (and rtinv)
@@ -383,22 +385,22 @@ C         unlike TENSOV, these must not be used as pointers.
 
       INTEGER IT
       INTEGER ID,LAY,NLL,NA,NS,NM,NAA
-      COMPLEX ROP,TOP
+      COMPLEX*16 ROP,TOP
       DIMENSION ROP(MKNT,MKNT),TOP(MKNT,MKNT)
-      COMPLEX AMULT,CYLM,FLM
+      COMPLEX*16 AMULT,CYLM,FLM
       DIMENSION AMULT(MKNT),CYLM(MKNT,MLMMAX),FLM(MKLM)
-      COMPLEX XEV,XOD
+      COMPLEX*16 XEV,XOD
       DIMENSION XEV(MLEV,MLEV2),XOD(MLOD,MLOD)
-      COMPLEX YLM,YLME,YLMO
+      COMPLEX*16 YLM,YLME,YLMO
       DIMENSION YLM(MLMMAX),YLME(MLEV),YLMO(MLOD)
-      COMPLEX XEVST,XODST
+      COMPLEX*16 XEVST,XODST
       DIMENSION XEVST(MLEV,MLEV),XODST(MLOD,MLOD)
       INTEGER IPLE,IPLO
       DIMENSION IPLE(MLEV),IPLO(MLOD)
-      COMPLEX REPSTO,TRAPSTO,REMSTO,TRAMSTO
+      COMPLEX*16 REPSTO,TRAPSTO,REMSTO,TRAMSTO
       DIMENSION REPSTO(MNLTYPE,MKNT,MKNT),TRAPSTO(MNLTYPE,MKNT,MKNT) !Huge but used throughout
       DIMENSION REMSTO(MNLTYPE,MKNT,MKNT),TRAMSTO(MNLTYPE,MKNT,MKNT) !Huge but used throughout
-      COMPLEX XEVSTO,XODSTO
+      COMPLEX*16 XEVSTO,XODSTO
       DIMENSION XEVSTO(MLEV,MLEV,MNBRAV2),XODSTO(MLOD,MLOD,MNBRAV2)
 
 C  subroutine rtinv
@@ -445,36 +447,37 @@ C         method saves a considerable amount of time.
       INTEGER NLAY,NLAY2,LMG,NTAU,L2M
       INTEGER TAUNO
       DIMENSION TAUNO(MNSITE)
-      COMPLEX TSF
+      COMPLEX*16 DC_one
+      COMPLEX*16 TSF
       DIMENSION TSF(MNSUB,MLMAX1)
       INTEGER LPS,LPSS,NORD
       DIMENSION LPS(MNSUB),LPSS(MNSUB),NORD(MNSUB)
-      REAL POS
+      REAL*8 POS
       DIMENSION POS(MNSUB,3),POSS(MNSUB,3)
       INTEGER LMT
-      REAL TV1
-      COMPLEX ROM,TOM
+      REAL*8 TV1
+      COMPLEX*16 ROM,TOM
       DIMENSION ROM(MKNT,MKNT),TOM(MKNT,MKNT)
-      COMPLEX TAU,TAUG,TAUGM
+      COMPLEX*16 TAU,TAUG,TAUGM
       DIMENSION TAU(MLMT,MLEV),TAUG(MLMT),TAUGM(MLMT)
       INTEGER MGH
       DIMENSION MGH(MNSUB,MNSUB)
-      REAL DRL,SDRL
+      REAL*8 DRL,SDRL
       DIMENSION DRL(MNSUB2,3),SDRL(MNSUB2,3)
       INTEGER NUGH,NGEQ,NGOL
       DIMENSION NUGH(MNSUB2),NGEQ(MNSUB2),NGOL(MNSUB2)
-      REAL TEST
+      REAL*8 TEST
       DIMENSION TEST(MNSUB2)
-      COMPLEX GH,RG,TS,TG,VT,TH
-      COMPLEX RG_PERP ! Added MRiva 22021-09-21. Replaces the last 'row' of RG, which is now 2 instead of 3
+      COMPLEX*16 GH,RG,TS,TG,VT,TH
+      COMPLEX*16 RG_PERP ! Added MRiva 22021-09-21. Replaces the last 'row' of RG, which is now 2 instead of 3
       DIMENSION GH(MLMG,MLMMAX),RG(2,MNSUB,MKNT),TS(MLMN),TG(2,MLM2N) !make GH, RG allocatable
       DIMENSION RG_PERP(MKNT)
       DIMENSION VT(MLM2N),TH(MLMNI,MLMNI)
       INTEGER IPL
       DIMENSION IPL(MLMNI)
-      COMPLEX XH,HGHD,RG1,RG2
+      COMPLEX*16 XH,HGHD,RG1,RG2
       DIMENSION XH(MLEV),HGHD(MN),RG1(MNSUB),RG2(MNSUB)
-      COMPLEX TENSOV
+      COMPLEX*16 TENSOV
       DIMENSION TENSOV(2,MLMN,MKNT,MNCOMP) ! Huge, Tensors
 
 C  dimensions for layer stacking
@@ -503,28 +506,28 @@ C  APLUS,AMINUS,ADOWN: for current incident beam, total wavefield
 C         impinging on current layer (towards +x), current layer (towards -x),
 C         and impinging downwards, onto next layer (towards +x)
 
-      COMPLEX RAMP,TAPP,RAPM,TAMM,RBPM,TBMM,RBMP,TBPP
+      COMPLEX*16 RAMP,TAPP,RAPM,TAMM,RBPM,TBMM,RBMP,TBPP
       DIMENSION RAMP(MKNT,MKNT),TAPP(MKNT,MKNT)
       DIMENSION RAPM(MKNT,MKNT),TAMM(MKNT,MKNT)
       DIMENSION RBMP(MKNT,MKNT),TBPP(MKNT,MKNT)
       DIMENSION RBPM(MKNT,MKNT),TBMM(MKNT,MKNT)
-      COMPLEX S1,S2,S3,S4
+      COMPLEX*16 S1,S2,S3,S4
       DIMENSION S1(MKNT,MKNT),S2(MKNT,MKNT),S3(MKNT,MKNT),S4(MKNT,MKNT)
-      COMPLEX PP, XS
+      COMPLEX*16 PP, XS
       DIMENSION PP(MKNT, 2), XS(MKNT)        ! MRiva: 2021-09-15. Swap dimensions of PP to improve looping
       INTEGER JNT, PIVOT
       DIMENSION JNT(MKNT), PIVOT(MKNT)
       INTEGER BEAMIN   ! Added 2021-08-27 Michele Riva. Index of current beam in beam set. Used in ADREF2T.
       INTEGER ANY_TENS ! Added 2021-08-30 Michele Riva. Used as flag to decide whether tensor output is required.
-      COMPLEX REBELO,REABOV
+      COMPLEX*16 REBELO,REABOV
       DIMENSION REBELO(MKNT,MKNT),REABOV(MKNT,MKNT)
-      REAL ASV
+      REAL*8 ASV
       DIMENSION ASV(3)
-      COMPLEX EFSCAM,EFSCAP
+      COMPLEX*16 EFSCAM,EFSCAP
       DIMENSION EFSCAM(MKNT,MKNT,MNSTACK),EFSCAP(MKNT,MKNT,MNSTACK)
-      COMPLEX WK
+      COMPLEX*16 WK
       DIMENSION WK(MKNT, 3)  ! 2021-08-30 Michele Riva: Swap dimensions to run loops on first index
-      COMPLEX XI,APLUS,AMINUS,ADOWN
+      COMPLEX*16 XI,APLUS,AMINUS,ADOWN
       DIMENSION XI(MKNT),APLUS(MKNT),AMINUS(MKNT),ADOWN(MKNT)
 
 C  full dyn. output: rint and outxist
@@ -534,9 +537,9 @@ C  ATP  : intensities of requested output beams only, written to file no. 7 (fd.
 C  XIST : storage array for outgoing amplitudes, Tensor LEED
 C         beams only
 
-      REAL AT,ATP
+      REAL*8 AT,ATP
       DIMENSION AT(MKNT),ATP(MNPUN)
-      COMPLEX XIST
+      COMPLEX*16 XIST
       DIMENSION XIST(MNT0)
 
 C  Tensor component production, and output
@@ -545,9 +548,9 @@ C  A0LM  : "initially incident spherical wave amplitudes (Bravais layer atom)"
 C  ALM   : "final incident spherical wave amplitudes (Bravais layer atom)"
 C  AEV,AOD: working space of final1 (even and odd lm-components of ALM)
 
-      COMPLEX A0LM,ALM
+      COMPLEX*16 A0LM,ALM
       DIMENSION A0LM(MLMMAX),ALM(MLMMAX)
-      COMPLEX AEV,AOD
+      COMPLEX*16 AEV,AOD
       DIMENSION AEV(MLEV),AOD(MLOD)
 
 Ctest
@@ -1013,6 +1016,7 @@ C  set some default quantities
 C  set sublattice characterisation
 
           NTAU = 0
+          DC_one = 1
 
           DO ISITE = 1,NSITE,1
             TAUNO(ISITE) = 0
@@ -1026,7 +1030,7 @@ C  set sublattice characterisation
               TAUNO(STYPE(ILTYPE,ISUB)) = NTAU
 
               DO IL=1,LMAX1
-                TSF(NTAU,IL) = TMAT(STYPE(ILTYPE,ISUB),IL)
+                TSF(NTAU,IL) = TMAT(STYPE(ILTYPE,ISUB),IL)*DC_one
               ENDDO
 
             END IF
@@ -1048,7 +1052,6 @@ C  copy sublayer positions onto correct grid POS
             NA  = 0  ! used in RTINV via COMMON
             NS  = 0  ! used in RTINV via COMMON
             NAA = NT
-
             CALL RTINV_SIMPLE(
      +         ROP, TOP, ROM, TOM, NAA, AMULT, CYLM, PQ, NT, FLMS,
      +         FLM, NL, LXI, LT, LXM, LMMAX, KLM, XEV, LEV, LEV2,
@@ -1056,15 +1059,14 @@ C  copy sublayer positions onto correct grid POS
      +         DRL, SDRL, NUGH, NGEQ, NGOL, NLAY2, TEST, GH, LMG, RG,
      +         RG_PERP, TS, LMN, TG, LM2N, VT, CAA, NCAA, TH, LMNI,
      +         IPL, TSF, LPS, LPSS, NORD, NNSUB, LMAX1, XH, HGHD,
-     +         L2M, RG1, RG2, TENSOV(1,1,1,LCOMP(ILTYPE))
-     +         )
+     +         L2M, RG1, RG2, TENSOV(1,1,1,LCOMP(ILTYPE)),
+     +         STYPE,MNLTYPE,MNSUB)
 
           ELSE IF (LAY.eq.2) THEN        ! bulk
 
             TV1 = TVA
             NA = 0
             NS = 0
-
             DO IBS = 1, KNBS
 
               NAA = NB(IBS)
@@ -1076,8 +1078,8 @@ C  copy sublayer positions onto correct grid POS
      +           DRL, SDRL, NUGH, NGEQ, NGOL, NLAY2, TEST, GH, LMG, RG,
      +           RG_PERP, TS, LMN, TG, LM2N, VT, CAA, NCAA, TH, LMNI,
      +           IPL, TSF, LPS, LPSS, NORD, NNSUB, LMAX1, XH, HGHD,
-     +           L2M, RG1, RG2, TENSOV(1,1,1,LCOMP(ILTYPE))
-     +           )
+     +           L2M, RG1, RG2, TENSOV(1,1,1,LCOMP(ILTYPE)),
+     +           STYPE,MNLTYPE,MNSUB)
 
               NA  = NA + NB(IBS)
               NS  = NS + NB(IBS)
@@ -1086,6 +1088,8 @@ C  copy sublayer positions onto correct grid POS
 
 
           END IF  ! overlay vs bulk for composite layer
+          write(6, *) "after RTINV TAUG", any(isnan(abs(TAUG)))
+          write(6, *) "after RTINV TAUGM", any(isnan(abs(TAUGM)))
 CTest
 c          write(6,*) "Diffraction matrices of layer type ",ILTYPE
 c          call OUTMAT(ROP,TOP,ROM,TOM,NOUT,NT)
@@ -1148,7 +1152,7 @@ C  DBLGAS is necessary before!)
 
         DO JBEAM = 1,MKNT,1
           DO IBEAM = 1,MKNT,1
-            REABOV(IBEAM,JBEAM) = CMPLX(0.,0.)
+            REABOV(IBEAM,JBEAM) = DCMPLX(0.,0.)
           ENDDO
         ENDDO
 
