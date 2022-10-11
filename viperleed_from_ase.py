@@ -14,6 +14,7 @@ import numpy as np
 import shutil
 from io import StringIO
 import copy
+import logging
 
 import viperleed
 
@@ -33,6 +34,7 @@ from viperleed.tleedmlib.wrapped.error_codes import error_codes, check_ierr
 from viperleed.tleedmlib.files.ivplot import plot_iv
 from typing import Sequence
 
+LOGGER = logging.getLogger()
 
 def run_from_ase(
     exec_path,
@@ -227,8 +229,11 @@ def run_from_ase(
     # assign site definitions from PARAMETERS if available
     if not rp.SITE_DEF:
         # assign default surface sites but warn
-        warnings.warn("Parameter SITE_DEF not specified. "
-                      "Double check PARAMETERS and POSCAR to make sure all sites are recognized correctly.")
+        LOGGER.warning("Parameter SITE_DEF not specified. "
+                      "Double check PARAMETERS and POSCAR to "
+                      "make sure all sites are recognized correctly. "
+                      "Default *_surf sites definitions will be added "
+                      "for atoms visible from vacuum.")
         # figure out surface sites
         site_def = {}
         surface_atoms = slab.getSurfaceAtoms(rp)
@@ -241,11 +246,10 @@ def run_from_ase(
 
     poscar_name = "POSCAR"
     if (exec_path / poscar_name).exists():
-        warnings.warn(
+        LOGGER.warning(
             "A 'POSCAR' file is already present in exec_path - calculation "
             "aborted. Check if a ViPErLEED calculation was already run in "
-            "this directory.",
-            category=RuntimeWarning,
+            "this directory."
         )
 
     writePOSCAR(slab, poscar_name)
