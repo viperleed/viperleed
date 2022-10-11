@@ -582,7 +582,7 @@ C  common blocks
       COMMON /ADS/ASE,VPIS,VPIO,VV
       COMMON /BT/IT,T,T0,DRPER,DRPAR,DR0
       COMMON /MPT/ NA,NS,ID,LAY,L1,NTAU,TSTS,TV1,DCUTS,NOPT,NEW  ! Used only by RTINV. MRiva: ID is unnecessary and can be removed completely from the whole code. Same is true for NOPT.
-	    COMMON /INPOT/EM,C1,C2,C3,C4,C5,C6,C7,C8, WORKFN
+      COMMON /INPOT/EM,C1,C2,C3,C4,C5,C6,C7,C8, WORKFN
 
 
 C  end header - begin actual computation
