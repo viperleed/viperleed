@@ -6,8 +6,7 @@ Contains basic information about TensErLEED files and code to check their
 checksums before run time compilation. This is supposed to help avoid 
 security vulnerabilities.
 
-We use the common SHA-256 hashing algorithm as available from 
-Pythons hashlib.
+We use the common SHA-256 hashing algorithm as available from Pythons hashlib.
 The check is toggled by parameter TL_IGNORE_CHECKSUM.
 """
 
@@ -20,11 +19,14 @@ KNOWN_TL_VERSIONS = (
     '1.6', '1.61', '1.71', '1.72', '1.73',
 )
 
+# sections of TensErLEED - currently unused
 KNOWN_TL_SECTIONS = (
-    'refcalc', 'deltas', 'search', 'superpos'
+    'ref-calc', 'r-factor', 'deltas', 'search', 'superpos', 'errors'
 )
 
-class TLInputFile:
+class TLSourceFile:
+    """Class that holds information of TensErLEED source files.
+    """
     def __init__(self, name, versions, checksums):
         self.path = Path(name)
         self.name = self.path.name
@@ -90,28 +92,38 @@ def _get_checksums(tl_version, filename):
     return valid_checksums
 
 def get_path_checksum(file_path):
-    # TODO: may raise exception - should we catch it?
-    with file_path.open(mode='rb') as open_file:
-        content = open_file.read()
+    """Calculates and returns the SHA256 hash of the file at file_path.
+
+    Args:
+        file_path (_type_): _description_
+
+    Returns:
+        str: Checksum of file.
+    """
+    
+    try:
+        with file_path.open(mode='rb') as open_file:
+            content = open_file.read()
+    except FileNotFoundError:
+        raise FileNotFoundError(f"Could not calculate checksum of file {file_path}. "
+                                "File not found.")
 
     # get checksum
     file_checksum = hashlib.sha256(content).hexdigest()
     return file_checksum
 
 def validate_checksum(tl_version, filename):
-    """_summary_
+    """Compares checksum for filename with checksums stored 
+    in files/checksums.py.
 
     Args:
         tl_version (str, float): TensErLEED version
         filename (str, path): filename of file to be checked
         
-    Returns:
-    --------
-        (bool): True if checksum matches a known checksum
-
     Raises:
         ValueError: If tl_version or filename have an invalid type.
-        RuntimeError: _description_
+        RuntimeError: If checksum does not match any stored checksums for 
+        that file.
     """
     # ensure TL version is valid
     if not (isinstance(tl_version, str) or isinstance(tl_version, float)):
@@ -142,6 +154,15 @@ def validate_checksum(tl_version, filename):
     return
 
 def validate_multiple_files(files_to_check, logger, calc_part_name, version):
+    """Validates multiple files by calling validate_checksum on each.
+
+    Args:
+        files_to_check (iterable of str of Path): Files to be validated.
+        logger (logger): Logger from logging module to be used.
+        calc_part_name (str): String to be written into log referring to 
+            the part of the calculation (e.g. "refcalc").
+        version (str): TensErLEED version used. To be taken from rp.TL_VERSION_STR.
+    """
     for file_path in files_to_check:
         try:
             validate_checksum(version, file_path)
