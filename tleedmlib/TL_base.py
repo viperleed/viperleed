@@ -150,7 +150,7 @@ def validate_multiple_files(files_to_check, logger, calc_part_name, version):
                         f"{calc_part_name}. Could not verify file {file_path}")
             raise
     # if you arrive here, checksums were successful
-    logger.debug(f"Checksums for {calc_part_name} successfully validated.")
+    logger.debug(f"Checksums of TensErLEED source files for {calc_part_name} validated.")
     return
 
 def _generate_checksums_for_dir(path, patterns = ("*/GLOBAL", "*/*.f*")):
