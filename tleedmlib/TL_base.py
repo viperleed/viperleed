@@ -13,7 +13,7 @@ The check is toggled by parameter TL_IGNORE_CHECKSUM.
 
 import hashlib
 from pathlib import Path
-from viperleed.tleedmlib.files.checksums import INPUT_FILE_VERSIONS
+from viperleed.tleedmlib.files.checksums import SOURCE_FILE_VERSIONS
 
 # TensErLEED Versions
 KNOWN_TL_VERSIONS = (
@@ -59,13 +59,13 @@ class TLInputFile:
 
 # generate set of all files
 TL_INPUT_FILES = set()
-for version, input_files in INPUT_FILE_VERSIONS.items():
+for version, input_files in SOURCE_FILE_VERSIONS.items():
     for file, checksums in input_files.items():
-        version_files = (TLInputFile(file, version, checksums))
+        version_files = (TLSourceFile(file, version, checksums))
         TL_INPUT_FILES.add(version_files)
     
 # check version codes are valid
-assert all(v in KNOWN_TL_VERSIONS for v in INPUT_FILE_VERSIONS.keys())
+assert all(v in KNOWN_TL_VERSIONS for v in SOURCE_FILE_VERSIONS.keys())
 
 def get_TL_version_files(version):
     version_files = tuple(file for file in TL_INPUT_FILES if file.TL_version == version)
