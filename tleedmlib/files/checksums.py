@@ -13,7 +13,7 @@ the required checksums.
 """
 
 # permissible checksums for various TensErLEED version
-# implemented as a dict of dicts - outer key is TL version, inner key is filename
+# implemented as dicts for each version - key is filename
 # allowed checksums for each version are given in a tuple
 
 _TL_1_6_INPUT_FILES = {
