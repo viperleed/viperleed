@@ -164,19 +164,13 @@ def compileDelta(comptask):
         return ("Error encountered by DeltaCompileTask " + comptask.foldername
                 + "while trying to write PARAM file.")
     # get Fortran source files
+    sourcedir = comptask.sourcedir
     try:
-        libpath = os.path.join(comptask.sourcedir, 'lib')
-        libname1 = [f for f in os.listdir(libpath)
-                    if f.startswith('lib.tleed')][0]
+        srcpath, srcname, libpath, libname1, libname2, globalname = get_delta_compile_files(sourcedir)
+        
         shutil.copy2(os.path.join(libpath, libname1), libname1)
-        libname2 = [f for f in os.listdir(libpath)
-                    if f.startswith('lib.delta')][0]
         shutil.copy2(os.path.join(libpath, libname2), libname2)
-        srcpath = os.path.join(comptask.sourcedir, 'src')
-        srcname = [f for f in os.listdir(srcpath)
-                   if f.startswith('delta')][0]
         shutil.copy2(os.path.join(srcpath, srcname), srcname)
-        globalname = "GLOBAL"
         shutil.copy2(os.path.join(srcpath, globalname), globalname)
     except Exception:
         logger.error("Error getting TensErLEED files for "
@@ -184,15 +178,7 @@ def compileDelta(comptask):
         return ("Error encountered by DeltaCompileTask " + comptask.foldername
                 + "while trying to fetch fortran source files")
         
-    # Validate TensErLEED checksums
-    if not rp.TL_IGNORE_CHECKSUM:
-        files_to_check = []
-        files_to_check.append(Path(libpath) / Path(libname1))
-        files_to_check.append(Path(libpath) / Path(libname2)) # there are two libs bound for deltas!
-        files_to_check.append(Path(srcpath) / Path(srcname))
-        files_to_check.append(Path(srcpath) / Path(globalname))
-        
-        validate_multiple_files(files_to_check, logger, "delta calculations")
+
     
     # compile
     ctasks = [(comptask.fortran_comp[0] + " -o " + oname + " -c",
@@ -210,6 +196,19 @@ def compileDelta(comptask):
                 + comptask.foldername)
     os.chdir(home)
     return ""
+
+def get_delta_compile_files(sourcedir):
+    # TODO: would be nice to replace with pathlib here and above
+    srcpath = os.path.join(sourcedir, 'src')
+    srcname = [f for f in os.listdir(srcpath)
+                   if f.startswith('delta')][0]
+    libpath = os.path.join(sourcedir, 'lib')
+    libname1 = [f for f in os.listdir(libpath)
+                    if f.startswith('lib.tleed')][0]
+    libname2 = [f for f in os.listdir(libpath)
+                    if f.startswith('lib.delta')][0]
+    globalname = "GLOBAL"
+    return srcpath,srcname,libpath,libname1,libname2,globalname
 
 
 def deltas(sl, rp, subdomain=False):
@@ -480,13 +479,13 @@ def deltas(sl, rp, subdomain=False):
         except Exception:
             logger.error("No fortran compiler found, cancelling...")
             raise RuntimeError("No Fortran compiler")
-    tlp = tl.leedbase.getTLEEDdir(os.path.abspath(rp.sourcedir),
+    tl_path = tl.leedbase.getTLEEDdir(os.path.abspath(rp.sourcedir),
                                   version=rp.TL_VERSION)
-    if not tlp:
+    if not tl_path:
         raise RuntimeError("TensErLEED code not found.")
     for ct in deltaCompTasks:
         ct.fortran_comp = rp.FORTRAN_COMP
-        ct.sourcedir = tlp
+        ct.sourcedir = tl_path
         ct.basedir = os.getcwd()
 
     if subdomain:   # actual calculations done in deltas_domains
@@ -495,6 +494,18 @@ def deltas(sl, rp, subdomain=False):
         return (deltaCompTasks, deltaRunTasks)
 
     rp.updateCores()
+    
+    # Validate TensErLEED checksums
+    if not rp.TL_IGNORE_CHECKSUM:
+        srcpath, srcname, libpath, libname1, libname2, globalname = get_delta_compile_files(tl_path)
+        files_to_check = []
+        files_to_check.append(Path(libpath) / Path(libname1))
+        files_to_check.append(Path(libpath) / Path(libname2)) # there are two libs bound for deltas!
+        files_to_check.append(Path(srcpath) / Path(srcname))
+        files_to_check.append(Path(srcpath) / Path(globalname))
+        
+        validate_multiple_files(files_to_check, logger, "delta calculations")
+    
     # compile files
     logger.info("Compiling fortran files...")
     poolsize = min(len(deltaCompTasks), rp.N_CORES)
