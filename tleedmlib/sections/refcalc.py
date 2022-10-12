@@ -14,6 +14,7 @@ import copy
 import shutil
 import subprocess
 import numpy as np
+from pathlib import Path
 
 from viperleed import fortranformat as ff
 from viperleed.tleedmlib.leedbase import (
@@ -24,6 +25,7 @@ from viperleed.tleedmlib.files.parameters import modifyPARAMETERS
 import viperleed.tleedmlib.files.beams as beams
 import viperleed.tleedmlib.files.iorefcalc as io
 from viperleed.tleedmlib.files.ivplot import plot_iv
+from viperleed.tleedmlib.TL_base import validate_checksum
 
 logger = logging.getLogger("tleedm.refcalc")
 
@@ -66,9 +68,7 @@ def compile_refcalc(comptask):
     """Function meant to be executed by parallelized workers. Executes a
     RefcalcCompileTask."""
     logger = logging.getLogger("tleedm.refcalc")
-    has_muftin = False
-    if os.path.isfile("muftin.f"):
-        has_muftin = True
+
     workfolder = os.path.join(comptask.basedir, comptask.foldername)
     # make folder and go there:
     if os.path.isdir(workfolder):
@@ -86,19 +86,14 @@ def compile_refcalc(comptask):
         return ("Error encountered by RefcalcCompileTask "
                 + comptask.foldername + "while trying to write PARAM file.")
     # get Fortran source files
+    sourcedir = comptask.sourcedir
+    has_muftin, libpath, libname, srcpath, srcname, globalname, muftinname = get_ref_calc_source_files(sourcedir)
+        
     try:
-        libpath = os.path.join(comptask.sourcedir, 'lib')
-        libname = [f for f in os.listdir(libpath)
-                   if f.startswith('lib.tleed')][0]
         shutil.copy2(os.path.join(libpath, libname), libname)
-        srcpath = os.path.join(comptask.sourcedir, 'src')
-        srcname = [f for f in os.listdir(srcpath)
-                   if f.startswith('ref-calc')][0]
         shutil.copy2(os.path.join(srcpath, srcname), srcname)
-        globalname = "GLOBAL"
         shutil.copy2(os.path.join(srcpath, globalname), globalname)
         if has_muftin:
-            muftinname = "muftin.f"
             shutil.copy2(os.path.join(comptask.basedir, muftinname),
                          muftinname)
     except Exception:
@@ -125,6 +120,22 @@ def compile_refcalc(comptask):
                 + comptask.foldername)
     os.chdir(comptask.basedir)
     return ""
+
+def get_ref_calc_source_files(sourcedir):
+    has_muftin = False
+    if os.path.isfile("muftin.f"):
+        has_muftin = True
+    libpath = os.path.join(sourcedir, 'lib')
+    libname = [f for f in os.listdir(libpath) if f.startswith('lib.tleed')][0]
+    srcpath = os.path.join(sourcedir, 'src')
+    srcname = [f for f in os.listdir(srcpath) if f.startswith('ref-calc')][0]
+    globalname = "GLOBAL"
+    
+    if has_muftin:
+        muftinname = "muftin.f"
+    else:
+        muftinname = None
+    return has_muftin,libpath,libname,srcpath,srcname,globalname,muftinname
 
 
 def run_refcalc(runtask):
@@ -443,7 +454,26 @@ def refcalc(sl, rp, subdomain=False, parent_dir=""):
         ct = comp_tasks[0]
         ref_tasks.append(RefcalcRunTask(fin, -1, ct, logname,
                                         single_threaded=True,
-                                        tl_version=rp.TL_VERSION))
+                                        tl_version=rp.TL_VERSION))    
+    
+    # Validate TensErLEED checksums
+    if not rp.TL_IGNORE_CHECKSUM:
+        _, libpath, libname, srcpath, srcname, globalname, _ = get_ref_calc_source_files(tldir)
+        files_to_check = []
+        files_to_check.append(Path(libpath) / Path(libname))
+        files_to_check.append(Path(srcpath) / Path(srcname))
+        files_to_check.append(Path(srcpath) / Path(globalname))
+        # TODO: is there still a mufin.f? If so, we should check that too!
+        
+        for file_path in files_to_check:
+            try:
+                validate_checksum(rp.TL_VERSION_STR, file_path)
+            except RuntimeError:
+                logger.error("Error in checksum comparison of TensErLEED files for "
+                            f"reference calculation. Could not verify file {file_path}")
+                raise
+        # if you arrive here, checksums were successful
+        logger.debug("Checksums for ref-calc successfully validated.")
 
     if single_threaded:
         home = os.getcwd()
