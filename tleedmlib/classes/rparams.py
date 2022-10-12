@@ -176,6 +176,7 @@ class Rparams:
         self.THEO_ENERGIES = [-1, -1, -1]
         # default: [20, 800, 2], initialized in section INIT
         self.THETA = 0.0        # from BEAM_INCIDENCE
+        self.TL_IGNORE_CHECKSUM = True
         self.TL_VERSION = 0.    # requested TensErLEED version
         self.T_EXPERIMENT = None
         self.T_DEBYE = None
