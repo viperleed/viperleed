@@ -141,6 +141,18 @@ def validate_checksum(tl_version, filename):
                            f"file {filename}.")
     return
 
+def validate_multiple_files(files_to_check, logger, calc_part_name):
+    for file_path in files_to_check:
+        try:
+            validate_checksum(rp.TL_VERSION_STR, file_path)
+        except RuntimeError:
+            logger.error("Error in checksum comparison of TensErLEED files for "
+                        f"{calc_part_name}. Could not verify file {file_path}")
+            raise
+    # if you arrive here, checksums were successful
+    logger.debug(f"Checksums for {calc_part_name} successfully validated.")
+    return
+
 def _generate_checksums_for_dir(path, patterns = ("*/GLOBAL", "*/*.f*")):
     """Function for tleedm developers. Generates copy-paste-able
     string with all checksums for a directory.
