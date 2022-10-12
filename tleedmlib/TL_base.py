@@ -141,7 +141,7 @@ def validate_checksum(tl_version, filename):
                            f"file {filename}.")
     return
 
-def _generate_checksums_for_dir(path, pattern = "*.f*"):
+def _generate_checksums_for_dir(path, patterns = ("*/GLOBAL", "*/*.f*")):
     """Function for tleedm developers. Generates copy-paste-able
     string with all checksums for a directory.
 
@@ -149,7 +149,7 @@ def _generate_checksums_for_dir(path, pattern = "*.f*"):
         path (pathlib path): Directory contaning the files.
         pattern (str, optional): File pattern, e.g. extension. Defaults to "*.f*".
     """
-    
-    for file in Path(path).glob(pattern):
-        checksum = get_path_checksum(file)
-        print(f"    '{str(file)[45:]}':\n        ('{checksum}', ),")
+    for pattern in patterns:
+        for file in Path(path).glob(pattern):
+            checksum = get_path_checksum(file)
+            print(f"    '{str(file)[45:]}':\n        ('{checksum}', ),")
