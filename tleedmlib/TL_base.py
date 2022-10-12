@@ -69,3 +69,16 @@ class TLInputFile:
 def get_TL_version_files(version):
     version_files = (file for file in TL_INPUT_FILES if file.version == version)
     return version_files
+
+def _generate_checksums_for_dir(path, pattern = "*.f*"):
+    """Function for tleedm developers. Generates copy-paste-able
+    string with all checksums for a directory.
+
+    Args:
+        path (pathlib path): Directory contaning the files.
+        pattern (str, optional): File pattern, e.g. extension. Defaults to "*.f*".
+    """
+    
+    for file in Path(path).glob(pattern):
+        checksum = get_path_checksum(file)
+        print(f"    '{str(file)[45:]}':\n        ('{checksum}', ),")
