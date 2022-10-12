@@ -12,10 +12,12 @@ import shutil
 import subprocess
 from tabnanny import check
 import numpy as np
+from pathlib import Path
 
 from viperleed.tleedmlib.files.iorefcalc import readFdOut
 from viperleed.tleedmlib.leedbase import fortran_compile_batch, getTLEEDdir, getTensors
 import viperleed.tleedmlib.files.iorfactor as io
+from viperleed.TL_base import validate_multiple_files
 
 from viperleed.tleedmlib.wrapped.rfactor import r_factor_new as rf
 from viperleed.tleedmlib.wrapped.error_codes import error_codes, check_ierr
@@ -467,9 +469,9 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
             raise RuntimeError("TensErLEED code not found.")
         libpath = os.path.join(tldir, "lib")
         libname = [f for f in os.listdir(libpath) if f.startswith("rfacsb")][0]
-        shutil.copy2(os.path.join(libpath, libname), libname)
         srcpath = os.path.join(tldir, "src")
         srcname = [f for f in os.listdir(srcpath) if f.startswith("rfactor.")][0]
+        shutil.copy2(os.path.join(libpath, libname), libname)
         shutil.copy2(os.path.join(srcpath, srcname), srcname)
     except Exception:
         logger.error("Error getting TensErLEED files for r-factor " "calculation: ")
@@ -481,6 +483,12 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
         )
         rp.setHaltingLevel(3)
         return []
+    # validate checksums
+    if not rp.TL_IGNORE_CHECKSUM:
+        files_to_check = (Path(libpath) / Path(libname),
+                          Path(srcpath) / Path(srcname))
+        validate_multiple_files(files_to_check, logger, "R-factor")
+        
     logger.info("Compiling fortran input files...")
     rfacname = "rfactor-" + rp.timestamp
     if rp.FORTRAN_COMP[0] == "":

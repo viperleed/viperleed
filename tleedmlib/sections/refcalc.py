@@ -25,7 +25,7 @@ from viperleed.tleedmlib.files.parameters import modifyPARAMETERS
 import viperleed.tleedmlib.files.beams as beams
 import viperleed.tleedmlib.files.iorefcalc as io
 from viperleed.tleedmlib.files.ivplot import plot_iv
-from viperleed.tleedmlib.TL_base import validate_checksum
+from viperleed.tleedmlib.TL_base import validate_multiple_files
 
 logger = logging.getLogger("tleedm.refcalc")
 
@@ -465,15 +465,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=""):
         files_to_check.append(Path(srcpath) / Path(globalname))
         # TODO: is there still a mufin.f? If so, we should check that too!
         
-        for file_path in files_to_check:
-            try:
-                validate_checksum(rp.TL_VERSION_STR, file_path)
-            except RuntimeError:
-                logger.error("Error in checksum comparison of TensErLEED files for "
-                            f"reference calculation. Could not verify file {file_path}")
-                raise
-        # if you arrive here, checksums were successful
-        logger.debug("Checksums for ref-calc successfully validated.")
+        validate_multiple_files(files_to_check, logger, "reference calculation")
 
     if single_threaded:
         home = os.getcwd()
