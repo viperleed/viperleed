@@ -504,7 +504,7 @@ def deltas(sl, rp, subdomain=False):
         files_to_check.append(Path(srcpath) / Path(srcname))
         files_to_check.append(Path(srcpath) / Path(globalname))
         
-        validate_multiple_files(files_to_check, logger, "delta calculations")
+        validate_multiple_files(files_to_check, logger, "delta calculations", rp.TL_VERSION_STR)
     
     # compile files
     logger.info("Compiling fortran files...")
