@@ -667,7 +667,7 @@ def search(sl, rp):
         files_to_check.append(Path(srcpath) / Path(globalname))
         files_to_check.append(Path(libpath) / Path(hashname))
 
-        validate_multiple_files(files_to_check, logger, "search")
+        validate_multiple_files(files_to_check, logger, "search", rp.TL_VERSION_STR)
     
     # compile fortran files
     searchname = "search-"+rp.timestamp

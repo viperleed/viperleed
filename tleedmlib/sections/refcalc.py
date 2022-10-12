@@ -465,7 +465,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=""):
         files_to_check.append(Path(srcpath) / Path(globalname))
         # TODO: is there still a mufin.f? If so, we should check that too!
         
-        validate_multiple_files(files_to_check, logger, "reference calculation")
+        validate_multiple_files(files_to_check, logger, "reference calculation", rp.TL_VERSION_STR)
 
     if single_threaded:
         home = os.getcwd()

@@ -141,10 +141,10 @@ def validate_checksum(tl_version, filename):
                            f"file {filename}.")
     return
 
-def validate_multiple_files(files_to_check, logger, calc_part_name):
+def validate_multiple_files(files_to_check, logger, calc_part_name, version):
     for file_path in files_to_check:
         try:
-            validate_checksum(rp.TL_VERSION_STR, file_path)
+            validate_checksum(version, file_path)
         except RuntimeError:
             logger.error("Error in checksum comparison of TensErLEED files for "
                         f"{calc_part_name}. Could not verify file {file_path}")

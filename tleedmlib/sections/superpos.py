@@ -151,7 +151,7 @@ def superpos(sl, rp, subdomain=False, for_error=False, only_vary=None):
         files_to_check.append(Path(srcpath) / Path(globalname))
         # TODO: is there still a mufin.f? If so, we should check that too!
         
-        validate_multiple_files(files_to_check, logger, "superpos")
+        validate_multiple_files(files_to_check, logger, "superpos", rp.TL_VERSION_STR)
     
     # compile fortran files
     sposname = "superpos-"+rp.timestamp
