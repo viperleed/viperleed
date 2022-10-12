@@ -13,6 +13,7 @@ import logging
 import copy
 import shutil
 import subprocess
+from pathlib import Path
 
 import viperleed.tleedmlib.files.iosuperpos as io
 from viperleed.tleedmlib.leedbase import (getDeltas, getTLEEDdir,
@@ -22,6 +23,7 @@ from viperleed.tleedmlib.files.beams import (
 from viperleed.tleedmlib.files.displacements import readDISPLACEMENTS_block
 from viperleed.tleedmlib.files.iosearch import readSDTL_end, readSDTL_blocks
 from viperleed.tleedmlib.files.iorefcalc import readFdOut
+from viperleed.tleedmlib.TL_base import validate_multiple_files
 
 logger = logging.getLogger("tleedm.superpos")
 
@@ -140,6 +142,17 @@ def superpos(sl, rp, subdomain=False, for_error=False, only_vary=None):
     except Exception:
         logger.error("Error getting TensErLEED files for superpos: ")
         raise
+    
+    # Validate checksums
+    if not rp.TL_IGNORE_CHECKSUM:
+        files_to_check = []
+        files_to_check.append(Path(libpath) / Path(libname))
+        files_to_check.append(Path(srcpath) / Path(srcname))
+        files_to_check.append(Path(srcpath) / Path(globalname))
+        # TODO: is there still a mufin.f? If so, we should check that too!
+        
+        validate_multiple_files(files_to_check, logger, "superpos")
+    
     # compile fortran files
     sposname = "superpos-"+rp.timestamp
     logger.info("Compiling fortran input files...")

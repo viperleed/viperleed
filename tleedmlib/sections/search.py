@@ -23,12 +23,14 @@ from sklearn.linear_model import LinearRegression, Ridge, Lasso, ElasticNet
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.pipeline import make_pipeline
 import scipy
+from pathlib import Path
 
 import viperleed.tleedmlib.files.iosearch as io
 import viperleed.tleedmlib as tl
 # from tleedmlib.polynomialfeatures_no_interaction import PolyFeatNoMix
 from viperleed.tleedmlib.leedbase import fortran_compile_batch
 from viperleed.tleedmlib.files.parameters import updatePARAMETERS
+from viperleed.tleedmlib.TL_base import validate_multiple_files
 from viperleed.tleedmlib.files.displacements import readDISPLACEMENTS_block
 from viperleed.tleedmlib.files.searchpdf import (
     writeSearchProgressPdf, writeSearchReportPdf)
@@ -657,6 +659,16 @@ def search(sl, rp):
     except Exception:
         logger.error("Error getting TensErLEED files for search: ")
         raise
+    # Validate TensErLEED input files
+    if not rp.TL_IGNORE_CHECKSUM:
+        files_to_check = []
+        files_to_check.append(Path(libpath) / Path(libname))
+        files_to_check.append(Path(srcpath) / Path(srcname))
+        files_to_check.append(Path(srcpath) / Path(globalname))
+        files_to_check.append(Path(libpath) / Path(hashname))
+
+        validate_multiple_files(files_to_check, logger, "search")
+    
     # compile fortran files
     searchname = "search-"+rp.timestamp
     if usempi:

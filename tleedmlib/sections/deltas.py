@@ -14,6 +14,7 @@ import shutil
 import subprocess
 import hashlib
 import numpy as np
+from pathlib import Path
 
 import viperleed.tleedmlib as tl
 import viperleed.tleedmlib.files.iodeltas as io
@@ -21,6 +22,7 @@ from viperleed.tleedmlib.files.beams import writeAUXBEAMS
 from viperleed.tleedmlib.files.displacements import readDISPLACEMENTS_block
 # from viperleed.tleedmlib.files.parameters import updatePARAMETERS
 from viperleed.tleedmlib.leedbase import monitoredPool, copy_compile_folder
+from viperleed.tleedmlib.TL_base import validate_multiple_files
 
 logger = logging.getLogger("tleedm.deltas")
 
@@ -181,6 +183,17 @@ def compileDelta(comptask):
                      "delta-amplitudes: ", exc_info=True)
         return ("Error encountered by DeltaCompileTask " + comptask.foldername
                 + "while trying to fetch fortran source files")
+        
+    # Validate TensErLEED checksums
+    if not rp.TL_IGNORE_CHECKSUM:
+        files_to_check = []
+        files_to_check.append(Path(libpath) / Path(libname1))
+        files_to_check.append(Path(libpath) / Path(libname2)) # there are two libs bound for deltas!
+        files_to_check.append(Path(srcpath) / Path(srcname))
+        files_to_check.append(Path(srcpath) / Path(globalname))
+        
+        validate_multiple_files(files_to_check, logger, "delta calculations")
+    
     # compile
     ctasks = [(comptask.fortran_comp[0] + " -o " + oname + " -c",
                fname, comptask.fortran_comp[1]) for (fname, oname)
