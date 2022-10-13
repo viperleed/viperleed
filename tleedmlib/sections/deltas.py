@@ -18,7 +18,7 @@ from pathlib import Path
 import numpy as np
 
 import viperleed.tleedmlib as tl
-import viperleed.tleedmlib.files.iodeltas as io
+import viperleed.tleedmlib.files.iodeltas as tl_io
 from viperleed.tleedmlib.files.beams import writeAUXBEAMS
 from viperleed.tleedmlib.files.displacements import readDISPLACEMENTS_block
 # from viperleed.tleedmlib.files.parameters import updatePARAMETERS
@@ -44,6 +44,29 @@ class DeltaCompileTask():
 
         if os.name == 'nt':
             self.exename += '.exe'
+
+    def get_source_files(self):
+        """Return a tuple of files needed for a delta-amplitude compilation."""
+        sourcedir = Path(self.sourcedir).resolve()
+        srcpath = sourcedir / 'src'
+        srcname = next(srcpath.glob('delta*'))
+        libpath = sourcedir / 'lib'
+        lib_tleed = next(libpath.glob('lib.tleed*'))
+        lib_delta = next(libpath.glob('lib.delta*'))
+        globalname = Path("GLOBAL")
+        return (srcpath, srcname, libpath,
+                lib_tleed, lib_delta, globalname)
+
+    def copy_source_files_to_local(self):
+        """Copy delta source files to current directory."""
+        (srcpath, srcname,
+         libpath, libname1,
+         libname2, globalname) = self.get_source_files()
+
+        shutil.copy2(libpath / libname1, libname1)
+        shutil.copy2(libpath / libname2, libname2)
+        shutil.copy2(srcpath / srcname, srcname)
+        shutil.copy2(srcpath / globalname, globalname)
 
 
 class DeltaRunTask():
@@ -168,12 +191,7 @@ def compileDelta(comptask):
     # get Fortran source files
     sourcedir = comptask.sourcedir
     try:
-        srcpath, srcname, libpath, libname1, libname2, globalname = get_delta_compile_files(sourcedir)
-        
-        shutil.copy2(os.path.join(libpath, libname1), libname1)
-        shutil.copy2(os.path.join(libpath, libname2), libname2)
-        shutil.copy2(os.path.join(srcpath, srcname), srcname)
-        shutil.copy2(os.path.join(srcpath, globalname), globalname)
+        comptask.copy_source_files_to_local()
     except Exception:
         logger.error("Error getting TensErLEED files for "
                      "delta-amplitudes: ", exc_info=True)
@@ -199,18 +217,6 @@ def compileDelta(comptask):
     os.chdir(home)
     return ""
 
-
-def get_delta_compile_files(sourcedir):                                         # TODO: this seems like it would fit as a method for the task
-    """Return a tuple of files needed for a delta-amplitude compilation."""
-    sourcedir = Path(sourcedir)
-    srcpath = sourcedir / 'src'
-    srcname = next(srcpath.glob('delta*'))
-    libpath = sourcedir / 'lib'
-    lib_tleed = next(libpath.glob('lib.tleed*'))
-    lib_delta = next(libpath.glob('lib.delta*'))
-    globalname = "GLOBAL"
-    return (str(srcpath), str(srcname), str(libpath),
-            str(lib_tleed), str(lib_delta), globalname)
 
 
 def deltas(sl, rp, subdomain=False):
@@ -238,7 +244,7 @@ def deltas(sl, rp, subdomain=False):
         sl.restoreOriState(keepDisp=True)
     # if there are old deltas, fetch them
     tl.leedbase.getDeltas(rp.TENSOR_INDEX, required=False)
-    dbasic = io.generateDeltaBasic(sl, rp)
+    dbasic = tl_iogenerateDeltaBasic(sl, rp)
     # get AUXBEAMS; if AUXBEAMS is not in work folder, check SUPP folder
     if not os.path.isfile(os.path.join(".", "AUXBEAMS")):
         if os.path.isfile(os.path.join(".", "SUPP", "AUXBEAMS")):
@@ -350,7 +356,7 @@ def deltas(sl, rp, subdomain=False):
                       if f.startswith("DEL_{}_".format(at.oriN) + el)]
             found = False
             for df in dfiles:
-                if io.checkDelta(df, at, el, rp):
+                if tl_iocheckDelta(df, at, el, rp):
                     found = True
                     at.deltasGenerated.append(df)
                     countExisting += 1
@@ -401,7 +407,7 @@ def deltas(sl, rp, subdomain=False):
     deltaRunTasks = []   # which deltas to run
     tensordir = "Tensors_"+str(rp.TENSOR_INDEX).zfill(3)
     for (at, el) in atElTodo:
-        din, din_short, param = io.generateDeltaInput(
+        din, din_short, param = tl_iogenerateDeltaInput(
             at, el, sl, rp, dbasic, auxbeams, phaseshifts)
         h = hashlib.md5(param.encode()).digest()
         found = False
@@ -499,13 +505,17 @@ def deltas(sl, rp, subdomain=False):
     
     # Validate TensErLEED checksums
     if not rp.TL_IGNORE_CHECKSUM:
-        srcpath, srcname, libpath, libname1, libname2, globalname = get_delta_compile_files(tl_path)
-        files_to_check = []
-        files_to_check.append(Path(libpath) / Path(libname1))
-        files_to_check.append(Path(libpath) / Path(libname2)) # there are two libs bound for deltas!
-        files_to_check.append(Path(srcpath) / Path(srcname))
-        files_to_check.append(Path(srcpath) / Path(globalname))
-        
+        (srcpath, srcname,
+         libpath, libname1,
+         libname2, globalname) = deltaCompTasks[0].get_source_files()
+
+        files_to_check = (
+            libpath / libname1,
+            libpath / libname2,  # there are two libs bound for deltas!
+            srcpath / srcname,
+            srcpath / globalname,
+        )
+
         validate_multiple_files(files_to_check, logger, "delta calculations", rp.TL_VERSION_STR)
     
     # compile files
