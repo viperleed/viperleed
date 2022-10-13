@@ -16,6 +16,8 @@ the required checksums.
 # implemented as dicts for each version - key is filename
 # allowed checksums for each version are given in a tuple
 
+__all__ = [SOURCE_FILE_VERSIONS,]
+
 _TL_1_6_INPUT_FILES = {
     'TensErLEED-v1.6/src/GLOBAL':
         ('d78a939f288ad8a9afd63260cc7ba16ee7bc35af7e726f242c99590fbcd9b01e', ),
