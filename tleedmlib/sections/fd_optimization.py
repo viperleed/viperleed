@@ -16,7 +16,7 @@ import numpy as np
 from numpy.polynomial import Polynomial
 
 import viperleed.tleedmlib as tl
-import viperleed.tleedmlib.files.iofdopt as io
+import viperleed.tleedmlib.files.iofdopt as tl_io
 import viperleed.tleedmlib.psgen as psgen
 from viperleed.tleedmlib.files.parameters import modifyPARAMETERS
 
@@ -275,9 +275,9 @@ def fd_optimization(sl, rp):
 
         # write out results
         if len(known_points) != 0:
-            io.write_fd_opt_csv(known_points, which)
+            tl_io.write_fd_opt_csv(known_points, which)
         if len(known_points) > 2:
-            io.write_fd_opt_pdf(known_points, which, parabola=parabola)
+            tl_io.write_fd_opt_pdf(known_points, which, parabola=parabola)
 
         # create test objects tsl, trp and set parameters
         tsl = copy.deepcopy(sl)
@@ -331,9 +331,9 @@ def fd_optimization(sl, rp):
         new_min = current_best[0]
 
     # output analysis
-    io.write_fd_opt_csv(known_points, which)
+    tl_io.write_fd_opt_csv(known_points, which)
     if len(known_points) > 2:
-        io.write_fd_opt_pdf(known_points, which, parabola=parabola)
+        tl_io.write_fd_opt_pdf(known_points, which, parabola=parabola)
 
     # output modified files
     comment = "Found by full-dynamic optimization"
@@ -367,8 +367,8 @@ def fd_optimization(sl, rp):
     # fetch I(V) data from all, plot together
     best_rfactors = rfactor_lists[np.argmin(known_points[:, 1])]
     try:
-        io.write_fd_opt_beams_pdf(rp, known_points, which, tmpdirs,
-                                  best_rfactors)
+        tl_io.write_fd_opt_beams_pdf(rp, known_points, which, tmpdirs,
+                                     best_rfactors)
     except Exception as e:
         logger.warning("Failed to plot I(V) curves from optimization: "
                        + str(e))

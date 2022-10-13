@@ -26,7 +26,7 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.pipeline import make_pipeline
 import scipy
 
-import viperleed.tleedmlib.files.iosearch as io
+import viperleed.tleedmlib.files.iosearch as tl_io
 import viperleed.tleedmlib as tl
 # from tleedmlib.polynomialfeatures_no_interaction import PolyFeatNoMix
 from viperleed.tleedmlib.leedbase import fortran_compile_batch
@@ -62,7 +62,7 @@ def processSearchResults(sl, rp, final=True):
     """
     # get the last block from SD.TL:
     try:
-        lines = io.readSDTL_end(n_expect=rp.SEARCH_POPULATION)
+        lines = tl_io.readSDTL_end(n_expect=rp.SEARCH_POPULATION)
     except FileNotFoundError:
         logger.error("Could not process Search results: SD.TL file not "
                      "found.")
@@ -71,9 +71,9 @@ def processSearchResults(sl, rp, final=True):
         logger.error("Failed to get last block from SD.TL file.")
         raise
     # read the block
-    sdtlContent = io.readSDTL_blocks("\n".join(lines),
-                                     whichR=rp.SEARCH_BEAMS, logInfo=final,
-                                     n_expect=rp.SEARCH_POPULATION)
+    sdtlContent = tl_io.readSDTL_blocks("\n".join(lines),
+                                        whichR=rp.SEARCH_BEAMS, logInfo=final,
+                                        n_expect=rp.SEARCH_POPULATION)
     if not sdtlContent:
         if final:
             logger.error("No data found in SD.TL file!")
@@ -181,9 +181,9 @@ def processSearchResults(sl, rp, final=True):
             for i, sp in enumerate(rp.searchpars):
                 if sp.parabolaFit["min"] is not None:
                     parab_inds[i] = sp.parabolaFit["min"]
-            io.writeSearchOutput(sl, rp, parab_inds, silent=True,
-                                 suffix="_parabola")
-        io.writeSearchOutput(sl, rp, pops[0][1][0][1], silent=(not final))
+            tl_io.writeSearchOutput(sl, rp, parab_inds, silent=True,
+                                    suffix="_parabola")
+        tl_io.writeSearchOutput(sl, rp, pops[0][1][0][1], silent=(not final))
     else:
         home = os.getcwd()
         for (i, dp) in enumerate(rp.domainParams):
@@ -194,10 +194,10 @@ def processSearchResults(sl, rp, final=True):
                     for j, sp in enumerate(dp.rp.searchpars):
                         if sp.parabolaFit["min"] is not None:
                             parab_inds[j] = sp.parabolaFit["min"]
-                    io.writeSearchOutput(dp.sl, dp.rp, parab_inds, silent=True,
-                                         suffix="_parabola")
-                io.writeSearchOutput(dp.sl, dp.rp, pops[0][1][i][1],
-                                     silent=(not final))
+                    tl_io.writeSearchOutput(dp.sl, dp.rp, parab_inds, silent=True,
+                                            suffix="_parabola")
+                tl_io.writeSearchOutput(dp.sl, dp.rp, pops[0][1][i][1],
+                                        silent=(not final))
             except Exception:
                 logger.error("Error while writing search output for domain {}"
                              .format(dp.name), exc_info=rp.LOG_DEBUG)
@@ -293,10 +293,11 @@ def parabolaFit(rp, datafiles, r_best, x0=None, max_configs=0, **kwargs):
     r_cutoff = 1.0
     if datafiles:
         varR = np.sqrt(8*np.abs(rp.V0_IMAG) / rp.total_energy_range())*r_best
-        rc = np.array((io.readDataChem(
+        rc = np.array((tl_io.readDataChem(
             rp, datafiles,
             cutoff=r_best + r_cutoff * varR,
-            max_configs=max_configs)), dtype=object)
+            max_configs=max_configs
+            )), dtype=object)
     if len(rc) < 100*rp.indyPars:
         return None, None
 
@@ -550,14 +551,14 @@ def search(sl, rp):
     rp.updateCores()
     # generate rf.info
     try:
-        rfinfo = io.writeRfInfo(sl, rp, filename="rf.info")
+        rfinfo = tl_io.writeRfInfo(sl, rp, filename="rf.info")
     except Exception:
         logger.error("Error generating search input file rf.info")
         raise
     # generate PARAM and search.steu
     #   needs to go AFTER rf.info, as writeRfInfo may remove expbeams!
     try:
-        io.generateSearchInput(sl, rp)
+        tl_io.generateSearchInput(sl, rp)
     except Exception:
         logger.error("Error generating search input")
         raise
@@ -579,7 +580,7 @@ def search(sl, rp):
             elif type(sp.linkedTo) == tl.SearchPar:
                 rp.searchResultsConfig[i] = (rp.searchpars.index(
                                                     sp.linkedTo) + 1)
-        io.writeSearchOutput(sl, rp)
+        tl_io.writeSearchOutput(sl, rp)
         return None
     if rp.SUPPRESS_EXECUTION:
         logger.warning("SUPPRESS_EXECUTION parameter is on. Search "
@@ -840,11 +841,12 @@ def search(sl, rp):
                     lastEval = t
                     newData = []
                     if os.path.isfile("SD.TL"):
-                        filepos, content = io.readSDTL_next(offset=filepos)
+                        filepos, content = tl_io.readSDTL_next(offset=filepos)
                         if content:
-                            newData = io.readSDTL_blocks(
+                            newData = tl_io.readSDTL_blocks(
                                 content, whichR=rp.SEARCH_BEAMS,
-                                n_expect=rp.SEARCH_POPULATION)
+                                n_expect=rp.SEARCH_POPULATION
+                            )
                     elif t >= 900 and rp.HALTING < 3:
                         stop = True
                         if tried_repeat:
@@ -1027,8 +1029,8 @@ def search(sl, rp):
                 rp.SEARCH_MAX_GEN -= sdtlGenNum
                 markers.append((genOffset, comment))
             try:
-                io.generateSearchInput(sl, rp, steuOnly=True,
-                                       cull=True, info=False)
+                tl_io.generateSearchInput(sl, rp, steuOnly=True,
+                                          cull=True, info=False)
             except Exception:
                 logger.error("Error re-generating search input")
                 raise

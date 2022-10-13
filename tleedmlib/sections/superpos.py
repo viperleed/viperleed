@@ -15,7 +15,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-import viperleed.tleedmlib.files.iosuperpos as io
+import viperleed.tleedmlib.files.iosuperpos as tl_io
 from viperleed.tleedmlib.leedbase import (getDeltas, getTLEEDdir,
                                           fortran_compile)
 from viperleed.tleedmlib.files.beams import (
@@ -101,10 +101,10 @@ def superpos(sl, rp, subdomain=False, for_error=False, only_vary=None):
     contrin = ""
     try:
         if not for_error:
-            contrin = io.writeSuperposInput(sl, rp, config[0][1])
+            contrin = tl_io.writeSuperposInput(sl, rp, config[0][1])
         else:
-            contrin = io.writeSuperposInput(sl, rp, None, for_error=True,
-                                            only_vary=only_vary)
+            contrin = tl_io.writeSuperposInput(sl, rp, None, for_error=True,
+                                               only_vary=only_vary)
         logger.debug("Wrote Superpos input successfully")
     except Exception:
         logger.error("Error getting input data for Superpos: ", exc_info=True)

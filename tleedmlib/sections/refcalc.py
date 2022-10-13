@@ -24,7 +24,7 @@ from viperleed.tleedmlib.leedbase import (
 from viperleed.tleedmlib.base import splitMaxRight
 from viperleed.tleedmlib.files.parameters import modifyPARAMETERS
 import viperleed.tleedmlib.files.beams as beams
-import viperleed.tleedmlib.files.iorefcalc as io
+import viperleed.tleedmlib.files.iorefcalc as tl_io
 from viperleed.tleedmlib.files.ivplot import plot_iv
 from viperleed.tleedmlib.tl_base import validate_multiple_files
 
@@ -289,12 +289,12 @@ def refcalc(sl, rp, subdomain=False, parent_dir=""):
     except FileNotFoundError:
         pass
     try:
-        io.writeAUXLATGEO(sl, rp)
+        tl_io.writeAUXLATGEO(sl, rp)
     except Exception:
         logger.error("Exception during writeAUXLATGEO: ")
         raise
     try:
-        io.writeAUXNONSTRUCT(sl, rp)
+        tl_io.writeAUXNONSTRUCT(sl, rp)
     except Exception:
         logger.error("Exception during writeAUXNONSTRUCT: ")
         raise
@@ -305,12 +305,12 @@ def refcalc(sl, rp, subdomain=False, parent_dir=""):
             logger.error("Exception during writeAUXBEAMS: ")
             raise
     try:
-        io.writeAUXGEO(sl, rp)
+        tl_io.writeAUXGEO(sl, rp)
     except Exception:
         logger.error("Exception during writeAUXGEO: ")
         raise
     try:
-        fin = io.collectFIN(version=rp.TL_VERSION)
+        fin = tl_io.collectFIN(version=rp.TL_VERSION)
     except Exception:
         logger.error("Exception while trying to collect input for "
                      "refcalc FIN: ")
@@ -325,7 +325,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=""):
             "Execution will proceed. The exception was: ", exc_info=True)
     if rp.TL_VERSION < 1.7:   # muftin.f deprecated in version 1.7
         try:
-            io.writeMuftin(sl, rp)
+            tl_io.writeMuftin(sl, rp)
         except Exception:
             logger.error("Exception during writeMuftin: ")
             raise
@@ -399,7 +399,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=""):
     collect_param = ""
     for lm in which_lmax:
         try:
-            param = io.writePARAM(sl, rp, lmax=lm)
+            param = tl_io.writePARAM(sl, rp, lmax=lm)
         except Exception:
             logger.error("Exception during writePARAM: ",
                          exc_info=rp.LOG_DEBUG)
@@ -520,9 +520,9 @@ def refcalc(sl, rp, subdomain=False, parent_dir=""):
                            + ct.foldername)
 
     if not single_threaded:
-        io.combine_fdout(oripath=collection_dir)
+        tl_io.combine_fdout(oripath=collection_dir)
         if 1 in rp.TENSOR_OUTPUT:
-            io.combine_tensors(oripath=collection_dir)
+            tl_io.combine_tensors(oripath=collection_dir)
         try:
             shutil.rmtree(collection_dir)
         except Exception:
@@ -530,7 +530,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=""):
                            + os.path.basename(collection_dir))
 
     try:
-        rp.theobeams["refcalc"], rp.refcalc_fdout = io.readFdOut()
+        rp.theobeams["refcalc"], rp.refcalc_fdout = tl_io.readFdOut()
     except FileNotFoundError:
         logger.error("fd.out not found after reference calculation. "
                      "Check settings and refcalc log.")
