@@ -53,20 +53,13 @@ class DeltaCompileTask():
         libpath = sourcedir / 'lib'
         lib_tleed = next(libpath.glob('lib.tleed*'))
         lib_delta = next(libpath.glob('lib.delta*'))
-        globalname = Path("GLOBAL")
-        return (srcpath, srcname, libpath,
-                lib_tleed, lib_delta, globalname)
+        globalname = srcpath / "GLOBAL"
+        return srcname, lib_tleed, lib_delta, globalname
 
     def copy_source_files_to_local(self):
         """Copy delta source files to current directory."""
-        (srcpath, srcname,
-         libpath, libname1,
-         libname2, globalname) = self.get_source_files()
-
-        shutil.copy2(libpath / libname1, libname1)
-        shutil.copy2(libpath / libname2, libname2)
-        shutil.copy2(srcpath / srcname, srcname)
-        shutil.copy2(srcpath / globalname, globalname)
+        for filepath in self.get_source_files():
+            shutil.copy2(filepath, filepath.name)
 
 
 class DeltaRunTask():
@@ -505,18 +498,10 @@ def deltas(sl, rp, subdomain=False):
     
     # Validate TensErLEED checksums
     if not rp.TL_IGNORE_CHECKSUM:
-        (srcpath, srcname,
-         libpath, libname1,
-         libname2, globalname) = deltaCompTasks[0].get_source_files()
-
-        files_to_check = (
-            libpath / libname1,
-            libpath / libname2,  # there are two libs bound for deltas!
-            srcpath / srcname,
-            srcpath / globalname,
-        )
-
-        validate_multiple_files(files_to_check, logger, "delta calculations", rp.TL_VERSION_STR)
+        validate_multiple_files(deltaCompTasks[0].get_source_files(),
+                                logger,
+                                "delta calculations",
+                                rp.TL_VERSION_STR)
     
     # compile files
     logger.info("Compiling fortran files...")
