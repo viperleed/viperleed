@@ -182,7 +182,6 @@ def compileDelta(comptask):
         return ("Error encountered by DeltaCompileTask " + comptask.foldername
                 + "while trying to write PARAM file.")
     # get Fortran source files
-    sourcedir = comptask.sourcedir
     try:
         comptask.copy_source_files_to_local()
     except Exception:
@@ -190,8 +189,6 @@ def compileDelta(comptask):
                      "delta-amplitudes: ", exc_info=True)
         return ("Error encountered by DeltaCompileTask " + comptask.foldername
                 + "while trying to fetch fortran source files")
-        
-
     
     # compile
     ctasks = [(comptask.fortran_comp[0] + " -o " + oname + " -c",
@@ -209,7 +206,6 @@ def compileDelta(comptask):
                 + comptask.foldername)
     os.chdir(home)
     return ""
-
 
 
 def deltas(sl, rp, subdomain=False):
