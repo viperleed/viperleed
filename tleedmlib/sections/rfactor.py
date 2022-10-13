@@ -10,9 +10,10 @@ import os
 import logging
 import shutil
 import subprocess
-from tabnanny import check
-import numpy as np
+from tabnanny import check   # TODO: unused?
 from pathlib import Path
+
+import numpy as np
 
 from viperleed.tleedmlib.files.iorefcalc import readFdOut
 from viperleed.tleedmlib.leedbase import fortran_compile_batch, getTLEEDdir, getTensors
