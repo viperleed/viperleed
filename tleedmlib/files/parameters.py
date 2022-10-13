@@ -38,23 +38,30 @@ _KNOWN_PARAMS = [
     'SYMMETRY_FIX', 'TENSOR_INDEX', 'TENSOR_OUTPUT', 'THEO_ENERGIES',
     'TL_VERSION', 'TL_IGNORE_CHECKSUM',
     'T_DEBYE', 'T_EXPERIMENT', 'V0_IMAG', 'V0_REAL',
-    'V0_Z_ONSET', 'VIBR_AMP_SCALE']
+    'V0_Z_ONSET', 'VIBR_AMP_SCALE'
+    ]
 
 # _PARAM_ALIAS keys should be all lowercase, with no underscores
 _PARAM_ALIAS = {
     'bulklike': 'BULK_LIKE_BELOW',
     'bulksymmetry': 'SYMMETRY_BULK',
-    'fortrancompile': 'FORTRAN_COMP', 'compiler': 'FORTRAN_COMP',
+    'compiler': 'FORTRAN_COMP',
+    'fortrancompile': 'FORTRAN_COMP',
     'fortrancompiler': 'FORTRAN_COMP',
-    'fdoptimize': 'OPTIMIZE', 'fdoptimization': 'OPTIMIZE',
-    'plotrfactor': 'PLOT_IV', 'plotrfactors': 'PLOT_IV', 'ivplot': 'PLOT_IV',
-    'IGNORE_CHECKSUM': 'TL_IGNORE_CHECKSUM',
-    'overlap': 'S_OVL', 'MT_overlap': 'S_OVL'
-              }
+    'fdoptimize': 'OPTIMIZE',
+    'fdoptimization': 'OPTIMIZE',
+    'plotrfactor': 'PLOT_IV',
+    'plotrfactors': 'PLOT_IV',
+    'ignorechecksum': 'TL_IGNORE_CHECKSUM',
+    'ivplot': 'PLOT_IV',
+    'overlap': 'S_OVL',
+    'MT_overlap': 'S_OVL',                       # TODO: this does not conform with what's written at line 43
+    }
+
 
 PARAM_LIMITS = {
-    'LMAX':(1, 18),
-}
+    'LMAX': (1, 18),
+    }
 
 for p in _KNOWN_PARAMS:
     _PARAM_ALIAS[p.lower().replace("_", "")] = p
