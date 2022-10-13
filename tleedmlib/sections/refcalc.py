@@ -13,8 +13,9 @@ import logging
 import copy
 import shutil
 import subprocess
-import numpy as np
 from pathlib import Path
+
+import numpy as np
 
 from viperleed import fortranformat as ff
 from viperleed.tleedmlib.leedbase import (
