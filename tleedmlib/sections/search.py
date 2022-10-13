@@ -19,11 +19,12 @@ import numpy as np
 import signal
 import re
 import copy
+from pathlib import Path
+
 from sklearn.linear_model import LinearRegression, Ridge, Lasso, ElasticNet
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.pipeline import make_pipeline
 import scipy
-from pathlib import Path
 
 import viperleed.tleedmlib.files.iosearch as io
 import viperleed.tleedmlib as tl
