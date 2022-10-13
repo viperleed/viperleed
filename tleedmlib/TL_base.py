@@ -35,17 +35,19 @@ class InvalidChecksumError(Exception):
 class TLSourceFile:
     """Class that holds information of TensErLEED source files."""
 
-    def __init__(self, name, versions, checksums):                   # TODO: please add types and descriptions
+    def __init__(self, name, version, checksums):                   # TODO: please add types and descriptions
         """Initialize TensErLEED source file instance.
 
         Parameters
         ----------
         name : str, or path-like
             Path to the source file
-        versions : ??Sequence??
-            ??Which types each element???
-        checksums : ??Sequence??
-            ??Which types each element??
+        version : str
+            String with TensErLEED version. Must be part of KNOWN_TL_VERSIONS
+        checksums : Sequence of str
+            Valid checksums for this TensErLEED version and file.
+            Multiple checksums may be permissible per version to allow 
+            for minor patches.
 
         Returns
         -------
@@ -55,13 +57,14 @@ class TLSourceFile:
         self.name = self.path.name
 
         assert version in KNOWN_TL_VERSIONS
-        self._version = versions
+        self._version = version
 
         self._valid_checksums = checksums
 
     @property
-    def valid_checksums(self):                                    # TODO: please add return type instead of ??? [a ?list? of ??]
-        """Return valid checksums as ???."""
+    def valid_checksums(self):
+        """Return valid checksums as a Sequence of str. Will be taken 
+        directly from tleedmlib/files/checksums.py."""
         return self._valid_checksums
 
     @property
