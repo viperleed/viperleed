@@ -19,14 +19,17 @@ from viperleed.tleedmlib.files.checksums import SOURCE_FILE_VERSIONS
 
 # TensErLEED Versions
 KNOWN_TL_VERSIONS = (
-    '1.6', '1.61', '1.71', '1.72', '1.73',                            # TODO: use Version when available
-    )
+    "1.6",
+    "1.61",
+    "1.71",
+    "1.72",
+    "1.73",  # TODO: use Version when available
+)
 
 
 # sections of TensErLEED - currently unused
-KNOWN_TL_SECTIONS = (
-    'ref-calc', 'r-factor', 'deltas', 'search', 'superpos', 'errors'
-    )
+KNOWN_TL_SECTIONS = ("ref-calc", "r-factor", "deltas", "search",
+                     "superpos", "errors")
 
 
 class InvalidChecksumError(Exception):
@@ -136,8 +139,10 @@ def _get_checksums(tl_version, filename):
 
     applicable_files = tuple(f for f in tl_version_files if f.name == filename)
     if not applicable_files:
-        raise ValueError(f"Unrecognized filename '{filename}' "
-                         f"for TensErLEED version {tl_version}.")
+        raise ValueError(
+            f"Unrecognized filename '{filename}' "
+            f"for TensErLEED version {tl_version}."
+        )
 
     nested_valid_checksums = (f.valid_checksums for f in applicable_files)
     valid_checksums = (cs for nest in nested_valid_checksums for cs in nest)
@@ -164,12 +169,15 @@ def get_file_checksum(file_path):
     """
     file_path = Path(file_path)
     if not file_path.exists():
-        raise FileNotFoundError("Could not calculate checksum of file "
-                                f"{file_path}. File not found.")
+        raise FileNotFoundError(
+            f"Could not calculate checksum of file {file_path}. "
+            "File not found."
+        )
     if not file_path.is_file():
-        raise FileNotFoundError("Could not calculate checksum of file "
-                                f"{file_path}. Not a file.")
-    with file_path.open(mode='rb') as open_file:
+        raise FileNotFoundError(
+            f"Could not calculate checksum of file {file_path}. Not a file."
+        )
+    with file_path.open(mode="rb") as open_file:
         content = open_file.read()
     return hashlib.sha256(content).hexdigest()
 
@@ -202,15 +210,15 @@ def validate_checksum(tl_version, filename):
     clean_tl_version = str(tl_version)
 
     if not tl_version in KNOWN_TL_VERSIONS:
-        raise ValueError(
-            f"Unrecognized TensErLEED version: {clean_tl_version}"
-            )
+        raise ValueError(f"Unrecognized TensErLEED version: {clean_tl_version}")
 
     # ensure filename is valid and cleaned up
     if not isinstance(filename, (str, Path)):
-        raise TypeError("Invalid type of filename: "
-                        f"{type(filename).__name__}. "
-                        "Allowed are str and Path.")
+        raise TypeError(
+            "Invalid type of filename: "
+            f"{type(filename).__name__}. "
+            "Allowed are str and Path."
+        )
 
     file_path = Path(filename).resolve()
     filename_clean = file_path.name  # filename without path
@@ -222,8 +230,9 @@ def validate_checksum(tl_version, filename):
     reference_checksums = _get_checksums(tl_version, filename_clean)
 
     if file_checksum not in reference_checksums:
-        raise InvalidChecksumError("SHA-256 checksum comparison failed "
-                                    f"for file {filename}.")
+        raise InvalidChecksumError(
+            f"SHA-256 checksum comparison failed for file {filename}."
+        )
 
 
 def validate_multiple_files(files_to_check, logger, calc_part_name, version):
@@ -258,11 +267,16 @@ def validate_multiple_files(files_to_check, logger, calc_part_name, version):
             problematic.append(file_path)
 
     if problematic:
-        raise InvalidChecksumError("SHA-256 checksum comparison failed "
-                                   f"for files {', '.join(problematic)}.")
+        raise InvalidChecksumError(
+            "SHA-256 checksum comparison failed for files "
+            f"{', '.join(problematic)}."
+        )
 
     # if you arrive here, checksums were successful
-    logger.debug(f"Checksums of TensErLEED source files for {calc_part_name} validated.")
+    logger.debug(
+        f"Checksums of TensErLEED source files for {calc_part_name} validated."
+    )
+
 
 def _generate_checksums_for_dir(path, patterns=("*/GLOBAL", "*/*.f*")):
     """Generate copy-paste-able string with all checksums for a directory.
