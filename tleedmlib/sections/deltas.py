@@ -26,6 +26,7 @@ from viperleed.tleedmlib.TL_base import validate_multiple_files
 
 logger = logging.getLogger("tleedm.deltas")
 
+# TODO: would be nice to all os.path with pathlib
 
 class DeltaCompileTask():
     """Stores information for a worker to compile a delta file, and keeps
@@ -197,18 +198,18 @@ def compileDelta(comptask):
     os.chdir(home)
     return ""
 
-def get_delta_compile_files(sourcedir):
-    # TODO: would be nice to replace with pathlib here and above
-    srcpath = os.path.join(sourcedir, 'src')
-    srcname = [f for f in os.listdir(srcpath)
-                   if f.startswith('delta')][0]
-    libpath = os.path.join(sourcedir, 'lib')
-    libname1 = [f for f in os.listdir(libpath)
-                    if f.startswith('lib.tleed')][0]
-    libname2 = [f for f in os.listdir(libpath)
-                    if f.startswith('lib.delta')][0]
+
+def get_delta_compile_files(sourcedir):                                         # TODO: this seems like it would fit as a method for the task
+    """Return a tuple of files needed for a delta-amplitude compilation."""
+    sourcedir = Path(sourcedir)
+    srcpath = sourcedir / 'src'
+    srcname = next(srcpath.glob('delta*'))
+    libpath = sourcedir / 'lib'
+    lib_tleed = next(libpath.glob('lib.tleed'))
+    lib_delta = next(libpath.glob('lib.delta'))
     globalname = "GLOBAL"
-    return srcpath,srcname,libpath,libname1,libname2,globalname
+    return (str(srcpath), str(srcname), str(libpath),
+            str(lib_tleed), str(lib_delta), globalname)
 
 
 def deltas(sl, rp, subdomain=False):
