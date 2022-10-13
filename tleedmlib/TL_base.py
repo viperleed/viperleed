@@ -12,52 +12,92 @@ The check is toggled by parameter TL_IGNORE_CHECKSUM.
 
 import hashlib
 from pathlib import Path
+
 from viperleed.tleedmlib.files.checksums import SOURCE_FILE_VERSIONS
+
 
 # TensErLEED Versions
 KNOWN_TL_VERSIONS = (
-    '1.6', '1.61', '1.71', '1.72', '1.73',
-)
+    '1.6', '1.61', '1.71', '1.72', '1.73',                            # TODO: use Version when available
+    )
+
 
 # sections of TensErLEED - currently unused
 KNOWN_TL_SECTIONS = (
     'ref-calc', 'r-factor', 'deltas', 'search', 'superpos', 'errors'
-)
+    )
+
+
+class InvalidChecksumError(Exception):
+    """Exception for invalid checksums."""
+
 
 class TLSourceFile:
-    """Class that holds information of TensErLEED source files.
-    """
-    def __init__(self, name, versions, checksums):
-        self.path = Path(name)
+    """Class that holds information of TensErLEED source files."""
+
+    def __init__(self, name, versions, checksums):                   # TODO: please add types and descriptions
+        """Initialize TensErLEED source file instance.
+
+        Parameters
+        ----------
+        name : str, or path-like
+            Path to the source file
+        versions : ??Sequence??
+            ??Which types each element???
+        checksums : ??Sequence??
+            ??Which types each element??
+
+        Returns
+        -------
+        None.
+        """
+        self.path = Path(name).resolve()
         self.name = self.path.name
-        
+
         assert version in KNOWN_TL_VERSIONS
         self._version = versions
-        
+
         self._valid_checksums = checksums
-    
+
     @property
-    def valid_checksums(self):
+    def valid_checksums(self):                                    # TODO: please add return type instead of ??? [a ?list? of ??]
+        """Return valid checksums as ???."""
         return self._valid_checksums
-    
+
     @property
-    def TL_version(self):
+    def TL_version(self):                                         # TODO: please change to "tl_version"
+        """Return the version of this source as a string."""
         return self._version
-    
+
     @property
     def file_subdir(self):
-        # subdir lib or src
+        """Return the subdirectory of this file as a string.
+
+        Returns
+        -------
+        subdir : str
+            Currently this is 'src' or 'lib', depending on
+            whether the file is a "PROGRAM" ('src') or if
+            it contains a library of subroutines.
+        """
         return self.path.parent.name
-    
+
     @property
-    def file_name(self):
-        return self.path.name
-    
+    def file_name(self):                                          # TODO: do we need both a .file_name and a .name?
+        """Return the name of this source file as a string."""
+        return self.name
+
     @property
     def file_name_w_subdir(self):
-        file_name = self.file_name()
-        subdir = self.file_subdir()
-        return str(Path(subdir) / Path(file_name))
+        """Return '<subdir>/<file_name>' as a string."""
+        file_name = self.file_name
+        subdir = self.file_subdir
+        return str(Path(subdir) / file_name)
+
+    
+# check version codes are valid
+assert all(v in KNOWN_TL_VERSIONS for v in SOURCE_FILE_VERSIONS.keys())
+
 
 # generate set of all files
 TL_INPUT_FILES = set()
@@ -65,93 +105,109 @@ for version, input_files in SOURCE_FILE_VERSIONS.items():
     for file, checksums in input_files.items():
         version_files = (TLSourceFile(file, version, checksums))
         TL_INPUT_FILES.add(version_files)
-    
-# check version codes are valid
-assert all(v in KNOWN_TL_VERSIONS for v in SOURCE_FILE_VERSIONS.keys())
+
 
 def get_TL_version_files(version):
-    version_files = tuple(file for file in TL_INPUT_FILES if file.TL_version == version)
-    return version_files
+    """Return a tuple of TLSourceFile instances for a given version."""
+    version_files = (f for f in TL_INPUT_FILES if f.TL_version == version)
+    return tuple(version_files)
+
 
 def _get_checksums(tl_version, filename):
-    """Returns valid checksums for given TL version and filename as a tuple."""
-    
+    """Return a tuple of valid checksums for given version and filename."""
     if tl_version not in KNOWN_TL_VERSIONS:
         raise ValueError(f"Unrecognized TensErLEED Version: {tl_version}")
-    
+
     tl_version_files = get_TL_version_files(tl_version)
-    
-    applicable_files = tuple(file for file in tl_version_files if file.name == filename)
+
+    applicable_files = tuple(f for f in tl_version_files if f.name == filename)
     if not applicable_files:
         raise ValueError(f"Unrecognized filename '{filename}' "
                          f"for TensErLEED version {tl_version}.")
-        
-    nested_valid_checksums = (file.valid_checksums for file in applicable_files)
-    valid_checksums = tuple(cs for nest in nested_valid_checksums for cs in nest)
-    
-    return valid_checksums
 
-def get_path_checksum(file_path):
+    nested_valid_checksums = (f.valid_checksums for f in applicable_files)
+    valid_checksums = (cs for nest in nested_valid_checksums for cs in nest)
+    return tuple(valid_checksums)
+
+
+def get_path_checksum(file_path):                                           # TODO: maybe 'get_file_checksum'?
     """Calculates and returns the SHA256 hash of the file at file_path.
 
-    Args:
-        file_path (_type_): _description_
+    Parameters
+    ----------
+    file_path : str, or path-like
+        Path to the file whose checksum should be calculated.
 
-    Returns:
-        str: Checksum of file.
-    """
+    Returns
+    -------
+    checksum : str
+        Checksum of file.
     
-    try:
-        with file_path.open(mode='rb') as open_file:
-            content = open_file.read()
-    except FileNotFoundError:
-        raise FileNotFoundError(f"Could not calculate checksum of file {file_path}. "
-                                "File not found.")
+    Raises
+    ------
+    FileNotFoundError
+        If file_path does not exist or if it is not a file.
+    """
+    file_path = Path(file_path)
+    if not file_path.exists():
+        raise FileNotFoundError("Could not calculate checksum of file "
+                                f"{file_path}. File not found.")
+    if not file_path.is_file():
+        raise FileNotFoundError("Could not calculate checksum of file "
+                                f"{file_path}. Not a file.")
+    with file_path.open(mode='rb') as open_file:
+        content = open_file.read()
+    return hashlib.sha256(content).hexdigest()
 
-    # get checksum
-    file_checksum = hashlib.sha256(content).hexdigest()
-    return file_checksum
 
 def validate_checksum(tl_version, filename):
-    """Compares checksum for filename with checksums stored 
-    in files/checksums.py.
+    """Compares checksum for filename with known checksums.
 
-    Args:
-        tl_version (str, float): TensErLEED version
-        filename (str, path): filename of file to be checked
-        
-    Raises:
-        ValueError: If tl_version or filename have an invalid type.
-        RuntimeError: If checksum does not match any stored checksums for 
-        that file.
+    The known checksums are stored in files/checksums.py.
+
+    Parameters
+    ----------
+    tl_version : str, or float
+        TensErLEED version
+    filename : str, or path-like
+        filename of file to be checked
+
+    Raises
+    ------
+    TypeError
+        If tl_version or filename have an invalid type.
+    ValueError
+        If filename is not a string nor a Path.
+    InvalidChecksumError
+        If checksum does not match any of the known checksums
+        for the same file.
     """
     # ensure TL version is valid
-    if not (isinstance(tl_version, str) or isinstance(tl_version, float)):
-        raise ValueError("Invalid type for tl_version")
+    if not isinstance(tl_version, (str, float)):
+        raise TypeError("Invalid type for tl_version")
     clean_tl_version = str(tl_version)
-    
+
     if not tl_version in KNOWN_TL_VERSIONS:
         raise ValueError(f"Unrecognized TensErLEED version: {clean_tl_version}")
-    
-    
+
     # ensure filename is valid and cleaned up
-    if not (isinstance(filename, str) or isinstance(filename, Path)):
-        raise ValueError(f"Invalid type of filetype: {type(filename)}."
+    if not isinstance(filename, (str, Path)):
+        raise TypeError(f"Invalid type of filename: {type(filename).__name__}. "
                          "Allowed are str and Path.")
-    
-    file_path = Path(filename)
+
+    file_path = Path(filename).resolve()
     filename_clean = file_path.name # filename without path
-    
+
     # get checksum
     file_checksum = get_path_checksum(file_path)
-    
+
     # get tuple of reference checksums
     reference_checksums = _get_checksums(tl_version, filename_clean)
-    
+
     if not file_checksum in reference_checksums:
-        raise RuntimeError("SHA-256 checksum comparison failed for "
-                           f"file {filename}.")
-    return
+        raise InvalidChecksumError("SHA-256 checksum comparison failed "                    # TODO: catch this when using the check
+                                    f"for file {filename}.")
+
 
 def validate_multiple_files(files_to_check, logger, calc_part_name, version):
     """Validates multiple files by calling validate_checksum on each.
