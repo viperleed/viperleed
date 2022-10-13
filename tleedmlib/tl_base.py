@@ -71,10 +71,13 @@ class TLSourceFile:
         None.
         """
         self.path = Path(name).resolve()
+        # Get tensorleed folder:
+        #            xxx.f  /  src  / TensErLEED- / tensorleed
         base_path = self.path.parent.parent.parent
         self._name = self.path.relative_to(base_path)
 
-        assert version in KNOWN_TL_VERSIONS
+        if version not in KNOWN_TL_VERSIONS:
+            raise UnknownTensErLEEDVersionError(f"Unknown TensErLEED version {version}")
         self._version = version
 
         self._valid_checksums = tuple(checksums)
@@ -97,7 +100,7 @@ class TLSourceFile:
         checksums : tuple of str
             The known checksums for this source file. The values are
             those given at instantiation, and are usually taken from
-            tleedmlib.files.checksums.
+            tl_checksums.dat
         """
         return self._valid_checksums
 
@@ -121,15 +124,8 @@ class TLSourceFile:
 
     @property
     def name(self):
-        """Return the name of this source file as a string."""
+        """Return the qualified name of this source file as a Path."""
         return self._name
-
-    @property
-    def file_name_w_subdir(self):
-        """Return '<subdir>/<file_name>' as a string."""
-        file_name = self.name
-        subdir = self.file_subdir
-        return str(Path(subdir) / file_name)
 
 
 def get_tl_version_files(version):
@@ -194,7 +190,7 @@ def get_file_checksum(file_path):
 def validate_checksum(tl_version, filename):
     """Compare checksum for filename with known checksums.
 
-    The known checksums are stored in tleedmlib.files.checksums.
+    The known checksums are stored (encoded) in tl_checksums.dat.
 
     Parameters
     ----------
@@ -207,8 +203,12 @@ def validate_checksum(tl_version, filename):
     ------
     TypeError
         If tl_version or filename have an invalid type.
-    ValueError
+    UnknownTensErLEEDVersionError
         If tl_version is not one of the known versions.
+    InvalidChecksumFileError
+        If no known checksum exists for filename. Consider
+        running 'python tl_base -p "path/to/tensorleed"' to
+        generate a new checksum file.
     InvalidChecksumError
         If checksum does not match any of the known checksums
         for the same file.
@@ -330,11 +330,13 @@ def decode_checksums(encoded_checksums):
         Keys are TensErLEED versions as strings, values are dicts
         {path:(checksum,)}.
     """
-    encoded_checksums += b"==="
+    encoded_checksums += b"==="  # Prevents padding errors
     bytes_source = base64.b64decode(encoded_checksums)
     try:
         return ast.literal_eval(bytes_source.decode("utf-8"))
-    except UnicodeDecodeError as err:
+    except (TypeError, ValueError,
+            MemoryError, RecursionError,
+            SyntaxError, UnicodeDecodeError) as err:
         raise InvalidChecksumFileError(
             "Looks like the TensErLEED source checksum file "
             "has been tampered with!"
@@ -401,7 +403,8 @@ def _generate_checksums_for_dir(path, patterns=("*/GLOBAL", "*/*.f*")):
     Parameters
     ----------
     path : str, or path-like
-        Directory contaning the files.
+        Directory contaning the files. Typically one of the
+        "TensErLEED-vXXX" directories in tensorleed.
     patterns : tuple of str, optional
         File patterns used to select files (e.g., extension).
         Syntax should be the one expected by glob. Default is
@@ -415,7 +418,7 @@ def _generate_checksums_for_dir(path, patterns=("*/GLOBAL", "*/*.f*")):
     """
     checksum_dict_ = {}
     path = Path(path)
-    base_path = path.parent
+    base_path = path.parent  # /path/to/tensorleed
     for pattern in patterns:
         for file in path.glob(pattern):
             checksum = get_file_checksum(file)
@@ -434,7 +437,7 @@ if __name__ != "__main__":
         assert all(v in KNOWN_TL_VERSIONS for v in SOURCE_FILE_VERSIONS)
     except AssertionError as err:
         raise UnknownTensErLEEDVersionError(
-            "Unknown TensErLEED version detected."
+            "Unknown TensErLEED version detected in checksum file."
         ) from err
 
     # generate set of all files
@@ -443,7 +446,7 @@ if __name__ != "__main__":
         for file_, f_checksums in input_files.items():
             TL_INPUT_FILES.add(TLSourceFile(file_, f_version, f_checksums))
 
-else:
+else:  # Write new checksum file when executed as a module
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-p", "--tlpath",
@@ -454,13 +457,12 @@ else:
     if args[0].tlpath:
         tl_base_path = Path(args[0].tlpath)
     else:
-        raise RuntimeError("No path specified. Use --tlpath")
+        raise RuntimeError("No path specified. Use --tlpath or -p")
 
     if not tl_base_path.exists():
         raise FileNotFoundError(f"Could not find {tl_base_path}")
 
-    tl_folders = list(tl_base_path.glob("TensErLEED*"))
-
+    tl_folders = tuple(tl_base_path.glob("TensErLEED*"))
     if not tl_folders:
         raise FileNotFoundError(
             f"No TensErLEED folders found in {tl_base_path}"
@@ -470,7 +472,9 @@ else:
     for folder in tl_folders:
         version_ = folder.name.split("v")[1]
         if version_ not in KNOWN_TL_VERSIONS:
-            raise RuntimeError(f"Unrecognized TensErLEED version {version_}")
+            raise UnknownTensErLEEDVersionError(
+                    f"Unknown TensErLEED version {version_} in {tl_base_path}"
+            )
         checksums_ = _generate_checksums_for_dir(path=folder)
         checksum_dict[version_] = checksums_
 
