@@ -32,10 +32,10 @@ class InvalidChecksumError(Exception):
     """Exception for invalid checksums."""
 
 
-class TLSourceFile:
+class TLSourceFile:                                                  # TODO: since it's used in a set, we may want to give this a better __hash__ than just using the object id
     """Class that holds information of TensErLEED source files."""
 
-    def __init__(self, name, version, checksums):                   # TODO: please add types and descriptions
+    def __init__(self, name, version, checksums):
         """Initialize TensErLEED source file instance.
 
         Parameters
@@ -43,7 +43,7 @@ class TLSourceFile:
         name : str, or path-like
             Path to the source file
         version : str
-            String with TensErLEED version. Must be part of KNOWN_TL_VERSIONS
+            String with TensErLEED version. Must be part of KNOWN_TL_VERSIONS.
         checksums : Sequence of str
             Valid checksums for this TensErLEED version and file.
             Multiple checksums may be permissible per version to allow 
@@ -59,12 +59,19 @@ class TLSourceFile:
         assert version in KNOWN_TL_VERSIONS
         self._version = version
 
-        self._valid_checksums = checksums
+        self._valid_checksums = tuple(checksums)
 
     @property
     def valid_checksums(self):
-        """Return valid checksums as a Sequence of str. Will be taken 
-        directly from tleedmlib/files/checksums.py."""
+        """Return valid checksums as a tuple of str.
+
+        Returns
+        -------
+        checksums : tuple of str
+            The known checksums for this source file. The values are
+            those given at instantiation, and are usually taken from
+            tleedmlib.files.checksums.
+        """
         return self._valid_checksums
 
     @property
@@ -97,17 +104,16 @@ class TLSourceFile:
         subdir = self.file_subdir
         return str(Path(subdir) / file_name)
 
-    
+
 # check version codes are valid
-assert all(v in KNOWN_TL_VERSIONS for v in SOURCE_FILE_VERSIONS.keys())
+assert all(v in KNOWN_TL_VERSIONS for v in SOURCE_FILE_VERSIONS)
 
 
 # generate set of all files
 TL_INPUT_FILES = set()
 for version, input_files in SOURCE_FILE_VERSIONS.items():
     for file, checksums in input_files.items():
-        version_files = (TLSourceFile(file, version, checksums))
-        TL_INPUT_FILES.add(version_files)
+        TL_INPUT_FILES.add(TLSourceFile(file, version, checksums))
 
 
 def get_tl_version_files(version):
@@ -134,7 +140,7 @@ def _get_checksums(tl_version, filename):
 
 
 def get_file_checksum(file_path):
-    """Calculates and returns the SHA256 hash of the file at file_path.
+    """Return the SHA256 hash of the file at file_path.
 
     Parameters
     ----------
@@ -145,7 +151,7 @@ def get_file_checksum(file_path):
     -------
     checksum : str
         Checksum of file.
-    
+
     Raises
     ------
     FileNotFoundError
@@ -164,23 +170,23 @@ def get_file_checksum(file_path):
 
 
 def validate_checksum(tl_version, filename):
-    """Compares checksum for filename with known checksums.
+    """Compare checksum for filename with known checksums.
 
-    The known checksums are stored in files/checksums.py.
+    The known checksums are stored in tleedmlib.files.checksums.
 
     Parameters
     ----------
     tl_version : str, or float
         TensErLEED version
     filename : str, or path-like
-        filename of file to be checked
+        Path to the file to be checked
 
     Raises
     ------
     TypeError
         If tl_version or filename have an invalid type.
     ValueError
-        If filename is not a string nor a Path.
+        If tl_version is not one of the known versions.
     InvalidChecksumError
         If checksum does not match any of the known checksums
         for the same file.
@@ -199,7 +205,7 @@ def validate_checksum(tl_version, filename):
                          "Allowed are str and Path.")
 
     file_path = Path(filename).resolve()
-    filename_clean = file_path.name # filename without path
+    filename_clean = file_path.name  # filename without path
 
     # get checksum
     file_checksum = get_file_checksum(file_path)
@@ -213,33 +219,62 @@ def validate_checksum(tl_version, filename):
 
 
 def validate_multiple_files(files_to_check, logger, calc_part_name, version):
-    """Validates multiple files by calling validate_checksum on each.
+    """Validate multiple files by calling validate_checksum on each.
 
-    Args:
-        files_to_check (iterable of str of Path): Files to be validated.
-        logger (logger): Logger from logging module to be used.
-        calc_part_name (str): String to be written into log referring to 
-            the part of the calculation (e.g. "refcalc").
-        version (str): TensErLEED version used. To be taken from rp.TL_VERSION_STR.
+    Notice that the check is done in a non-greedy manner. This means            # TODO: perhaps it would be nicer to collect all the offending files and raise only once?
+    that this function will raise InvalidChecksumError at the first
+    file that fails the check. Other files in files_to_check may
+    still fail once the offending file is fixed.
+
+    Parameters
+    ----------
+    files_to_check : iterable of str of Path
+        Files to validate. Notice that the iterable will be consumed.
+    logger : logging.Logger
+        Logger from logging module to be used.
+    calc_part_name : str
+        String to be written into log referring to 
+        the part of the calculation (e.g. "refcalc").
+    version : str
+        TensErLEED version used. To be taken from rp.TL_VERSION_STR.
+
+    Raises
+    ------
+    InvalidChecksumError
+        If any of the files fails the checksum check
     """
     for file_path in files_to_check:
         try:
             validate_checksum(version, file_path)
         except InvalidChecksumError:
-            logger.error("Error in checksum comparison of TensErLEED files for "
-                        f"{calc_part_name}. Could not verify file {file_path}")
+            logger.error(
+                "Error in checksum comparison of TensErLEED files for "
+                f"{calc_part_name}. Could not verify file {file_path}"
+                )
             raise
     # if you arrive here, checksums were successful
     logger.debug(f"Checksums of TensErLEED source files for {calc_part_name} validated.")
     return
 
-def _generate_checksums_for_dir(path, patterns = ("*/GLOBAL", "*/*.f*")):
-    """Function for tleedm developers. Generates copy-paste-able
-    string with all checksums for a directory.
 
-    Args:
-        path (pathlib path): Directory contaning the files.
-        pattern (str, optional): File pattern, e.g. extension. Defaults to "*.f*".
+def _generate_checksums_for_dir(path, patterns=("*/GLOBAL", "*/*.f*")):         # TODO: would be nice for it to return also the stuff it prints. It could be used then to generate the checksum file.
+    """Generate copy-paste-able string with all checksums for a directory.
+
+    This function is intended for tleedm developers. The checksums are
+    printed to standard out.
+
+    Parameters
+    ----------
+    path : str, or path-like
+        Directory contaning the files.
+    patterns : tuple of str, optional
+        File patterns used to select files (e.g., extension).
+        Syntax should be the one expected by glob. Default is
+        ("*/GLOBAL", "*/*.f*").
+
+    Returns
+    -------
+    None.
     """
     for pattern in patterns:
         for file in Path(path).glob(pattern):
