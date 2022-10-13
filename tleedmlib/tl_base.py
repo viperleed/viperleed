@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
-"""
+"""Module tl_base of viperleed.tleedmlib.
+
 @author: Alexander M. Imre
 
 Contains basic information about TensErLEED files and code to check
-their checksums before run time compilation. This is supposed to help 
+their checksums before run time compilation. This is supposed to help
 avoid security vulnerabilities.
 
-We use the common SHA-256 hashing algorithm as available from Pythons 
+We use the common SHA-256 hashing algorithm as available from Pythons
 hashlib. The check is toggled by parameter TL_IGNORE_CHECKSUM.
 """
 
@@ -46,7 +47,7 @@ class TLSourceFile:
             String with TensErLEED version. Must be part of KNOWN_TL_VERSIONS.
         checksums : Sequence of str
             Valid checksums for this TensErLEED version and file.
-            Multiple checksums may be permissible per version to allow 
+            Multiple checksums may be permissible per version to allow
             for minor patches.
 
         Returns
@@ -115,9 +116,9 @@ assert all(v in KNOWN_TL_VERSIONS for v in SOURCE_FILE_VERSIONS)
 
 # generate set of all files
 TL_INPUT_FILES = set()
-for version, input_files in SOURCE_FILE_VERSIONS.items():
-    for file, checksums in input_files.items():
-        TL_INPUT_FILES.add(TLSourceFile(file, version, checksums))
+for f_version, input_files in SOURCE_FILE_VERSIONS.items():
+    for file_, f_checksums in input_files.items():
+        TL_INPUT_FILES.add(TLSourceFile(file_, f_version, f_checksums))
 
 
 def get_tl_version_files(version):
@@ -220,7 +221,7 @@ def validate_checksum(tl_version, filename):
     # get tuple of reference checksums
     reference_checksums = _get_checksums(tl_version, filename_clean)
 
-    if not file_checksum in reference_checksums:
+    if file_checksum not in reference_checksums:
         raise InvalidChecksumError("SHA-256 checksum comparison failed "
                                     f"for file {filename}.")
 
@@ -235,7 +236,7 @@ def validate_multiple_files(files_to_check, logger, calc_part_name, version):
     logger : logging.Logger
         Logger from logging module to be used.
     calc_part_name : str
-        String to be written into log referring to 
+        String to be written into log referring to
         the part of the calculation (e.g. "refcalc").
     version : str
         TensErLEED version used. To be taken from rp.TL_VERSION_STR.
@@ -257,13 +258,11 @@ def validate_multiple_files(files_to_check, logger, calc_part_name, version):
             problematic.append(file_path)
 
     if problematic:
-        raise InvalidChecksumError(""SHA-256 checksum comparison failed "
-                                    f"for files {', '.join(problematic)}."")
+        raise InvalidChecksumError("SHA-256 checksum comparison failed "
+                                   f"for files {', '.join(problematic)}.")
 
     # if you arrive here, checksums were successful
     logger.debug(f"Checksums of TensErLEED source files for {calc_part_name} validated.")
-    return
-
 
 def _generate_checksums_for_dir(path, patterns=("*/GLOBAL", "*/*.f*")):
     """Generate copy-paste-able string with all checksums for a directory.
@@ -283,10 +282,10 @@ def _generate_checksums_for_dir(path, patterns=("*/GLOBAL", "*/*.f*")):
     Returns
     -------
     checksum_dict : dict
-        Keys are filenames, values are a tuple with the checksum for the 
+        Keys are filenames, values are a tuple with the checksum for the
         file contents. The tuple will only contain one item.
     """
-    cheksum_dict = {}
+    checksum_dict = {}
     for pattern in patterns:
         for file in Path(path).glob(pattern):
             checksum = get_file_checksum(file)
