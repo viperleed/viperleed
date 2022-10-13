@@ -457,7 +457,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=""):
     
     # Validate TensErLEED checksums
     if not rp.TL_IGNORE_CHECKSUM:
-        _, libpath, libname, srcpath, srcname, globalname, _ = get_ref_calc_source_files(tldir)
+        libpath, libname, srcpath, srcname, globalname, _ = get_ref_calc_source_files(tldir)
         files_to_check = []
         files_to_check.append(Path(libpath) / Path(libname))
         files_to_check.append(Path(srcpath) / Path(srcname))
