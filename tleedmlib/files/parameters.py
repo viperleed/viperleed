@@ -55,7 +55,7 @@ _PARAM_ALIAS = {
     'ignorechecksum': 'TL_IGNORE_CHECKSUM',
     'ivplot': 'PLOT_IV',
     'overlap': 'S_OVL',
-    'MT_overlap': 'S_OVL',                       # TODO: this does not conform with what's written at line 43
+    'mtoverlap': 'S_OVL',
     }
 
 
