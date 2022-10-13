@@ -13,8 +13,9 @@ import logging
 import shutil
 import subprocess
 import hashlib
-import numpy as np
 from pathlib import Path
+
+import numpy as np
 
 import viperleed.tleedmlib as tl
 import viperleed.tleedmlib.files.iodeltas as io
