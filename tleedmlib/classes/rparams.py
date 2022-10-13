@@ -179,7 +179,7 @@ class Rparams:
         self.THETA = 0.0        # from BEAM_INCIDENCE
         self.TL_IGNORE_CHECKSUM = True
         self.TL_VERSION = 0.    # requested TensErLEED version
-        self.TL_VERSION_STR = None
+        self.TL_VERSION_STR = None  # TODO: replace with Version class once available
         self.T_EXPERIMENT = None
         self.T_DEBYE = None
         self.V0_IMAG = 4.5
