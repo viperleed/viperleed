@@ -121,21 +121,20 @@ def compile_refcalc(comptask):
     os.chdir(comptask.basedir)
     return ""
 
-def get_ref_calc_source_files(sourcedir):
-    has_muftin = False
-    if os.path.isfile("muftin.f"):
-        has_muftin = True
-    libpath = os.path.join(sourcedir, 'lib')
-    libname = [f for f in os.listdir(libpath) if f.startswith('lib.tleed')][0]
-    srcpath = os.path.join(sourcedir, 'src')
-    srcname = [f for f in os.listdir(srcpath) if f.startswith('ref-calc')][0]
+
+def get_ref_calc_source_files(sourcedir):                                      # TODO: could this be a instance method of the task?
+    """Return a tuple of source files needed for running a refcalc."""
+    sourcedir = Path(sourcedir)
+    libpath = sourcedir / 'lib'
+    libname = next(libpath.glob('lib.tleed*'))
+    srcpath = sourcedir / 'src'
+    srcname = next(srcpath.glob('ref-calc*'))
     globalname = "GLOBAL"
-    
-    if has_muftin:
-        muftinname = "muftin.f"
-    else:
-        muftinname = None
-    return has_muftin,libpath,libname,srcpath,srcname,globalname,muftinname
+
+    _muftin = Path("muftin.f")                                                 # TODO: any reason why not in sourcedir?
+    muftinname = str(_muftin) if _muftin.is_file() else ''
+    return (str(has_muftin), str(libpath), str(libname), str(srcpath),
+            str(srcname), str(globalname), str(muftinname))
 
 
 def run_refcalc(runtask):
