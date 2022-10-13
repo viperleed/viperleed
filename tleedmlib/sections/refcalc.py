@@ -87,13 +87,13 @@ def compile_refcalc(comptask):
                 + comptask.foldername + "while trying to write PARAM file.")
     # get Fortran source files
     sourcedir = comptask.sourcedir
-    has_muftin, libpath, libname, srcpath, srcname, globalname, muftinname = get_ref_calc_source_files(sourcedir)
+    libpath, libname, srcpath, srcname, globalname, muftinname = get_ref_calc_source_files(sourcedir)
         
     try:
         shutil.copy2(os.path.join(libpath, libname), libname)
         shutil.copy2(os.path.join(srcpath, srcname), srcname)
         shutil.copy2(os.path.join(srcpath, globalname), globalname)
-        if has_muftin:
+        if muftinname:
             shutil.copy2(os.path.join(comptask.basedir, muftinname),
                          muftinname)
     except Exception:
@@ -103,7 +103,7 @@ def compile_refcalc(comptask):
                 + comptask.foldername + " while trying to fetch fortran "
                 "source files")
     compile_list = [(libname, "lib.tleed.o"), (srcname, "main.o")]
-    if has_muftin:
+    if muftinname:
         compile_list.append((muftinname, "muftin.o"))
     # compile
     ctasks = [(comptask.fortran_comp[0] + " -o " + oname + " -c",
@@ -133,7 +133,7 @@ def get_ref_calc_source_files(sourcedir):                                      #
 
     _muftin = Path("muftin.f")                                                 # TODO: any reason why not in sourcedir?
     muftinname = str(_muftin) if _muftin.is_file() else ''
-    return (str(has_muftin), str(libpath), str(libname), str(srcpath),
+    return (str(libpath), str(libname), str(srcpath),
             str(srcname), str(globalname), str(muftinname))
 
 
