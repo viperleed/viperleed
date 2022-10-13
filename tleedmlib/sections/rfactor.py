@@ -485,8 +485,8 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
         return []
     # validate checksums
     if not rp.TL_IGNORE_CHECKSUM:
-        files_to_check = (Path(libpath) / Path(libname),
-                          Path(srcpath) / Path(srcname))
+        files_to_check = (Path(libpath) / libname,
+                          Path(srcpath) / srcname)
         validate_multiple_files(files_to_check, logger, "R-factor", rp.TL_VERSION_STR)
         
     logger.info("Compiling fortran input files...")
