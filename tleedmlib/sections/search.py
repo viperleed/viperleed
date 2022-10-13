@@ -31,7 +31,7 @@ import viperleed.tleedmlib as tl
 # from tleedmlib.polynomialfeatures_no_interaction import PolyFeatNoMix
 from viperleed.tleedmlib.leedbase import fortran_compile_batch
 from viperleed.tleedmlib.files.parameters import updatePARAMETERS
-from viperleed.tleedmlib.TL_base import validate_multiple_files
+from viperleed.tleedmlib.tl_base import validate_multiple_files
 from viperleed.tleedmlib.files.displacements import readDISPLACEMENTS_block
 from viperleed.tleedmlib.files.searchpdf import (
     writeSearchProgressPdf, writeSearchReportPdf)

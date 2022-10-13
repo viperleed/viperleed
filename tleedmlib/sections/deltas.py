@@ -23,7 +23,7 @@ from viperleed.tleedmlib.files.beams import writeAUXBEAMS
 from viperleed.tleedmlib.files.displacements import readDISPLACEMENTS_block
 # from viperleed.tleedmlib.files.parameters import updatePARAMETERS
 from viperleed.tleedmlib.leedbase import monitoredPool, copy_compile_folder
-from viperleed.tleedmlib.TL_base import validate_multiple_files
+from viperleed.tleedmlib.tl_base import validate_multiple_files
 
 logger = logging.getLogger("tleedm.deltas")
 

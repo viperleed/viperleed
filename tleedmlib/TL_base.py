@@ -2,12 +2,12 @@
 """
 @author: Alexander M. Imre
 
-Contains basic information about TensErLEED files and code to check their 
-checksums before run time compilation. This is supposed to help avoid 
-security vulnerabilities.
+Contains basic information about TensErLEED files and code to check
+their checksums before run time compilation. This is supposed to help 
+avoid security vulnerabilities.
 
-We use the common SHA-256 hashing algorithm as available from Pythons hashlib.
-The check is toggled by parameter TL_IGNORE_CHECKSUM.
+We use the common SHA-256 hashing algorithm as available from Pythons 
+hashlib. The check is toggled by parameter TL_IGNORE_CHECKSUM.
 """
 
 import hashlib
@@ -32,7 +32,7 @@ class InvalidChecksumError(Exception):
     """Exception for invalid checksums."""
 
 
-class TLSourceFile:                                                  # TODO: since it's used in a set, we may want to give this a better __hash__ than just using the object id
+class TLSourceFile:
     """Class that holds information of TensErLEED source files."""
 
     def __init__(self, name, version, checksums):
@@ -54,12 +54,16 @@ class TLSourceFile:                                                  # TODO: sin
         None.
         """
         self.path = Path(name).resolve()
-        self.name = self.path.name
+        self._name = self.path.name
 
         assert version in KNOWN_TL_VERSIONS
         self._version = version
 
         self._valid_checksums = tuple(checksums)
+
+    def __hash__(self):
+        """Return a hash for this instance."""
+        return hash((self._name, self.tl_version))
 
     @property
     def valid_checksums(self):
@@ -93,14 +97,14 @@ class TLSourceFile:                                                  # TODO: sin
         return self.path.parent.name
 
     @property
-    def file_name(self):                                          # TODO: do we need both a .file_name and a .name?
+    def name(self):
         """Return the name of this source file as a string."""
-        return self.name
+        return self._name
 
     @property
     def file_name_w_subdir(self):
         """Return '<subdir>/<file_name>' as a string."""
-        file_name = self.file_name
+        file_name = self.name
         subdir = self.file_subdir
         return str(Path(subdir) / file_name)
 
@@ -197,12 +201,15 @@ def validate_checksum(tl_version, filename):
     clean_tl_version = str(tl_version)
 
     if not tl_version in KNOWN_TL_VERSIONS:
-        raise ValueError(f"Unrecognized TensErLEED version: {clean_tl_version}")
+        raise ValueError(
+            f"Unrecognized TensErLEED version: {clean_tl_version}"
+            )
 
     # ensure filename is valid and cleaned up
     if not isinstance(filename, (str, Path)):
-        raise TypeError(f"Invalid type of filename: {type(filename).__name__}. "
-                         "Allowed are str and Path.")
+        raise TypeError("Invalid type of filename: "
+                        f"{type(filename).__name__}. "
+                        "Allowed are str and Path.")
 
     file_path = Path(filename).resolve()
     filename_clean = file_path.name  # filename without path
@@ -221,11 +228,6 @@ def validate_checksum(tl_version, filename):
 def validate_multiple_files(files_to_check, logger, calc_part_name, version):
     """Validate multiple files by calling validate_checksum on each.
 
-    Notice that the check is done in a non-greedy manner. This means            # TODO: perhaps it would be nicer to collect all the offending files and raise only once?
-    that this function will raise InvalidChecksumError at the first
-    file that fails the check. Other files in files_to_check may
-    still fail once the offending file is fixed.
-
     Parameters
     ----------
     files_to_check : iterable of str of Path
@@ -241,8 +243,9 @@ def validate_multiple_files(files_to_check, logger, calc_part_name, version):
     Raises
     ------
     InvalidChecksumError
-        If any of the files fails the checksum check
+        If any of the files fails the checksum check.
     """
+    problematic = []
     for file_path in files_to_check:
         try:
             validate_checksum(version, file_path)
@@ -251,13 +254,18 @@ def validate_multiple_files(files_to_check, logger, calc_part_name, version):
                 "Error in checksum comparison of TensErLEED files for "
                 f"{calc_part_name}. Could not verify file {file_path}"
                 )
-            raise
+            problematic.append(file_path)
+
+    if problematic:
+        raise InvalidChecksumError(""SHA-256 checksum comparison failed "
+                                    f"for files {', '.join(problematic)}."")
+
     # if you arrive here, checksums were successful
     logger.debug(f"Checksums of TensErLEED source files for {calc_part_name} validated.")
     return
 
 
-def _generate_checksums_for_dir(path, patterns=("*/GLOBAL", "*/*.f*")):         # TODO: would be nice for it to return also the stuff it prints. It could be used then to generate the checksum file.
+def _generate_checksums_for_dir(path, patterns=("*/GLOBAL", "*/*.f*")):
     """Generate copy-paste-able string with all checksums for a directory.
 
     This function is intended for tleedm developers. The checksums are
@@ -274,9 +282,14 @@ def _generate_checksums_for_dir(path, patterns=("*/GLOBAL", "*/*.f*")):         
 
     Returns
     -------
-    None.
+    checksum_dict : dict
+        Keys are filenames, values are a tuple with the checksum for the 
+        file contents. The tuple will only contain one item.
     """
+    cheksum_dict = {}
     for pattern in patterns:
         for file in Path(path).glob(pattern):
             checksum = get_file_checksum(file)
             print(f"    '{str(file)[45:]}':\n        ('{checksum}', ),")
+            checksum_dict[file] = (checksum,)
+    return checksum_dict
