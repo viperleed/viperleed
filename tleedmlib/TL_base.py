@@ -68,7 +68,7 @@ class TLSourceFile:
         return self._valid_checksums
 
     @property
-    def TL_version(self):                                         # TODO: please change to "tl_version"
+    def tl_version(self):
         """Return the version of this source as a string."""
         return self._version
 
@@ -110,9 +110,9 @@ for version, input_files in SOURCE_FILE_VERSIONS.items():
         TL_INPUT_FILES.add(version_files)
 
 
-def get_TL_version_files(version):
+def get_tl_version_files(version):
     """Return a tuple of TLSourceFile instances for a given version."""
-    version_files = (f for f in TL_INPUT_FILES if f.TL_version == version)
+    version_files = (f for f in TL_INPUT_FILES if f.tl_version == version)
     return tuple(version_files)
 
 
@@ -121,7 +121,7 @@ def _get_checksums(tl_version, filename):
     if tl_version not in KNOWN_TL_VERSIONS:
         raise ValueError(f"Unrecognized TensErLEED Version: {tl_version}")
 
-    tl_version_files = get_TL_version_files(tl_version)
+    tl_version_files = get_tl_version_files(tl_version)
 
     applicable_files = tuple(f for f in tl_version_files if f.name == filename)
     if not applicable_files:
@@ -133,7 +133,7 @@ def _get_checksums(tl_version, filename):
     return tuple(valid_checksums)
 
 
-def get_path_checksum(file_path):                                           # TODO: maybe 'get_file_checksum'?
+def get_file_checksum(file_path):
     """Calculates and returns the SHA256 hash of the file at file_path.
 
     Parameters
@@ -202,13 +202,13 @@ def validate_checksum(tl_version, filename):
     filename_clean = file_path.name # filename without path
 
     # get checksum
-    file_checksum = get_path_checksum(file_path)
+    file_checksum = get_file_checksum(file_path)
 
     # get tuple of reference checksums
     reference_checksums = _get_checksums(tl_version, filename_clean)
 
     if not file_checksum in reference_checksums:
-        raise InvalidChecksumError("SHA-256 checksum comparison failed "                    # TODO: catch this when using the check
+        raise InvalidChecksumError("SHA-256 checksum comparison failed "
                                     f"for file {filename}.")
 
 
@@ -225,7 +225,7 @@ def validate_multiple_files(files_to_check, logger, calc_part_name, version):
     for file_path in files_to_check:
         try:
             validate_checksum(version, file_path)
-        except RuntimeError:
+        except InvalidChecksumError:
             logger.error("Error in checksum comparison of TensErLEED files for "
                         f"{calc_part_name}. Could not verify file {file_path}")
             raise
@@ -243,5 +243,5 @@ def _generate_checksums_for_dir(path, patterns = ("*/GLOBAL", "*/*.f*")):
     """
     for pattern in patterns:
         for file in Path(path).glob(pattern):
-            checksum = get_path_checksum(file)
+            checksum = get_file_checksum(file)
             print(f"    '{str(file)[45:]}':\n        ('{checksum}', ),")
