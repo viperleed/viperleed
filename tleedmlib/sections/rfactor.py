@@ -10,7 +10,6 @@ import os
 import logging
 import shutil
 import subprocess
-from tabnanny import check   # TODO: unused?
 from pathlib import Path
 
 import numpy as np

@@ -244,7 +244,7 @@ def deltas(sl, rp, subdomain=False):
         sl.restoreOriState(keepDisp=True)
     # if there are old deltas, fetch them
     tl.leedbase.getDeltas(rp.TENSOR_INDEX, required=False)
-    dbasic = tl_iogenerateDeltaBasic(sl, rp)
+    dbasic = tl_io.generateDeltaBasic(sl, rp)
     # get AUXBEAMS; if AUXBEAMS is not in work folder, check SUPP folder
     if not os.path.isfile(os.path.join(".", "AUXBEAMS")):
         if os.path.isfile(os.path.join(".", "SUPP", "AUXBEAMS")):
@@ -356,7 +356,7 @@ def deltas(sl, rp, subdomain=False):
                       if f.startswith("DEL_{}_".format(at.oriN) + el)]
             found = False
             for df in dfiles:
-                if tl_iocheckDelta(df, at, el, rp):
+                if tl_io.checkDelta(df, at, el, rp):
                     found = True
                     at.deltasGenerated.append(df)
                     countExisting += 1
@@ -407,7 +407,7 @@ def deltas(sl, rp, subdomain=False):
     deltaRunTasks = []   # which deltas to run
     tensordir = "Tensors_"+str(rp.TENSOR_INDEX).zfill(3)
     for (at, el) in atElTodo:
-        din, din_short, param = tl_iogenerateDeltaInput(
+        din, din_short, param = tl_io.generateDeltaInput(
             at, el, sl, rp, dbasic, auxbeams, phaseshifts)
         h = hashlib.md5(param.encode()).digest()
         found = False
