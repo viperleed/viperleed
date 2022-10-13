@@ -205,8 +205,8 @@ def get_delta_compile_files(sourcedir):                                         
     srcpath = sourcedir / 'src'
     srcname = next(srcpath.glob('delta*'))
     libpath = sourcedir / 'lib'
-    lib_tleed = next(libpath.glob('lib.tleed'))
-    lib_delta = next(libpath.glob('lib.delta'))
+    lib_tleed = next(libpath.glob('lib.tleed*'))
+    lib_delta = next(libpath.glob('lib.delta*'))
     globalname = "GLOBAL"
     return (str(srcpath), str(srcname), str(libpath),
             str(lib_tleed), str(lib_delta), globalname)
