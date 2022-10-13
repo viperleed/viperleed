@@ -661,12 +661,10 @@ def search(sl, rp):
         raise
     # Validate TensErLEED input files
     if not rp.TL_IGNORE_CHECKSUM:
-        files_to_check = []
-        files_to_check.append(Path(libpath) / Path(libname))
-        files_to_check.append(Path(srcpath) / Path(srcname))
-        files_to_check.append(Path(srcpath) / Path(globalname))
-        files_to_check.append(Path(libpath) / Path(hashname))
-
+        files_to_check = (Path(libpath) / libname),
+                          Path(srcpath) / srcname),
+                          Path(srcpath) / globalname),
+                          Path(libpath) / hashname))
         validate_multiple_files(files_to_check, logger, "search", rp.TL_VERSION_STR)
     
     # compile fortran files
