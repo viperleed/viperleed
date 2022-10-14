@@ -257,8 +257,10 @@ def validate_multiple_files(files_to_check, logger, calc_part_name, version):
 
     Parameters
     ----------
-    files_to_check : iterable of str of Path
+    files_to_check : iterable of str, pathlike, None
         Files to validate. Notice that the iterable will be consumed.
+        If element is None, it will be skipped. This way we can deal 
+        with optional files.
     logger : logging.Logger
         Logger from logging module to be used.
     calc_part_name : str
@@ -274,6 +276,8 @@ def validate_multiple_files(files_to_check, logger, calc_part_name, version):
     """
     problematic = []
     for file_path in files_to_check:
+        if file_path is None: # may be passed a None for e.g. muftin -> skip
+            continue
         try:
             validate_checksum(version, file_path)
         except (InvalidChecksumError, InvalidChecksumFileError) as err:

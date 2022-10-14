@@ -30,7 +30,7 @@ from viperleed.tleedmlib.tl_base import validate_multiple_files
 
 logger = logging.getLogger("tleedm.refcalc")
 
-
+# TODO: we should have a parent class for compile tasks (issue #43)
 class RefcalcCompileTask():
     """Stores information for a worker to compile a refcalc file, and keeps
     track of the folder that the compiled file is in afterwards."""
@@ -48,6 +48,24 @@ class RefcalcCompileTask():
         if os.name == 'nt':
             self.exename += '.exe'
 
+    def get_ref_calc_source_files(self):
+        """Return a tuple of source files needed for running a refcalc."""
+        sourcedir = Path(self.sourcedir).resolve()
+        libpath = sourcedir / 'lib'
+        srcpath = sourcedir / 'src'
+        lib_tleed = next(libpath.glob('lib.tleed*'))
+        srcname = next(srcpath.glob('ref-calc*'))
+        globalname = srcpath / "GLOBAL"
+        _muftin = Path("muftin.f")                                                 # TODO: any reason why not in sourcedir?
+        muftinname =_muftin if _muftin.is_file() else None
+        return (lib_tleed, srcname, globalname, muftinname)
+
+    def copy_source_files_to_local(self):
+        """Copy ref-calc files to current directory."""
+        for filepath in self.get_ref_calc_source_files():
+            if filepath:
+                shutil.copy2(filepath, filepath.name)
+
 
 class RefcalcRunTask():
     """Stores information for a worker to create a subfolder, copy input there,
@@ -63,6 +81,7 @@ class RefcalcRunTask():
         self.collect_at = collect_at
         self.single_threaded = single_threaded
         self.tl_version = tl_version
+        
 
 
 def compile_refcalc(comptask):
@@ -86,23 +105,23 @@ def compile_refcalc(comptask):
         logger.error("Error writing PARAM file: ", exc_info=True)
         return ("Error encountered by RefcalcCompileTask "
                 + comptask.foldername + "while trying to write PARAM file.")
-    # get Fortran source files
-    sourcedir = comptask.sourcedir
-    libpath, libname, srcpath, srcname, globalname, muftinname = get_ref_calc_source_files(sourcedir)
-        
+
     try:
-        shutil.copy2(os.path.join(libpath, libname), libname)
-        shutil.copy2(os.path.join(srcpath, srcname), srcname)
-        shutil.copy2(os.path.join(srcpath, globalname), globalname)
-        if muftinname:
-            shutil.copy2(os.path.join(comptask.basedir, muftinname),
-                         muftinname)
+        comptask.copy_source_files_to_local()
     except Exception:
         logger.error("Error getting TensErLEED files for "
                      "refcalc-amplitudes: ", exc_info=True)
         return ("Error encountered by RefcalcCompileTask "
                 + comptask.foldername + " while trying to fetch fortran "
                 "source files")
+
+    # TODO: we could skip this, if we implemented a general CompileTask (Issue #43)
+    (libname, srcname,
+     _, muftinname) = (
+         str(fname.name) if fname is not None else None
+         for fname in comptask.get_ref_calc_source_files()
+         )
+
     compile_list = [(libname, "lib.tleed.o"), (srcname, "main.o")]
     if muftinname:
         compile_list.append((muftinname, "muftin.o"))
@@ -122,20 +141,6 @@ def compile_refcalc(comptask):
     os.chdir(comptask.basedir)
     return ""
 
-
-def get_ref_calc_source_files(sourcedir):                                      # TODO: could this be a instance method of the task?
-    """Return a tuple of source files needed for running a refcalc."""
-    sourcedir = Path(sourcedir)
-    libpath = sourcedir / 'lib'
-    libname = next(libpath.glob('lib.tleed*'))
-    srcpath = sourcedir / 'src'
-    srcname = next(srcpath.glob('ref-calc*'))
-    globalname = "GLOBAL"
-
-    _muftin = Path("muftin.f")                                                 # TODO: any reason why not in sourcedir?
-    muftinname = str(_muftin) if _muftin.is_file() else ''
-    return (str(libpath), str(libname), str(srcpath),
-            str(srcname), str(globalname), str(muftinname))
 
 
 def run_refcalc(runtask):
@@ -458,14 +463,10 @@ def refcalc(sl, rp, subdomain=False, parent_dir=""):
     
     # Validate TensErLEED checksums
     if not rp.TL_IGNORE_CHECKSUM:
-        libpath, libname, srcpath, srcname, globalname, _ = get_ref_calc_source_files(tldir)
-        files_to_check = []
-        files_to_check.append(Path(libpath) / Path(libname))
-        files_to_check.append(Path(srcpath) / Path(srcname))
-        files_to_check.append(Path(srcpath) / Path(globalname))
-        # TODO: is there still a mufin.f? If so, we should check that too!
-        
-        validate_multiple_files(files_to_check, logger, "reference calculation", rp.TL_VERSION_STR)
+        # @issue #43: this could be a class method
+        validate_multiple_files(comp_tasks[0].get_ref_calc_source_files(),
+                                logger, "reference calculation",
+                                rp.TL_VERSION_STR)
 
     if single_threaded:
         home = os.getcwd()

@@ -655,7 +655,15 @@ def search(sl, rp):
         else:
             randnamefrom = "random_.o"
         randname = "random_.o"
-        shutil.copy2(os.path.join(libpath, randnamefrom), randname)
+
+        # try to copy random lib object file
+        try:
+            shutil.copy2(os.path.join(libpath, randnamefrom), randname)
+        except FileNotFoundError as f_no_found_err:
+            logger.error("Could not find required random_.o object file."
+                         " You may have forgotten to compile random_.c.")
+            raise f_no_found_err
+
         globalname = "GLOBAL"
         shutil.copy2(os.path.join(srcpath, globalname), globalname)
     except Exception:
@@ -663,12 +671,13 @@ def search(sl, rp):
         raise
     # Validate TensErLEED input files
     if not rp.TL_IGNORE_CHECKSUM:
-        files_to_check = (Path(libpath) / libname),
-                          Path(srcpath) / srcname),
-                          Path(srcpath) / globalname),
-                          Path(libpath) / hashname))
+        files_to_check = (Path(libpath) / libname,
+                          Path(srcpath) / srcname,
+                          Path(srcpath) / globalname,
+                          Path(libpath) / hashname
+                          )
         validate_multiple_files(files_to_check, logger, "search", rp.TL_VERSION_STR)
-    
+
     # compile fortran files
     searchname = "search-"+rp.timestamp
     if usempi:
@@ -677,6 +686,7 @@ def search(sl, rp):
         fcomp = rp.FORTRAN_COMP
     logger.info("Compiling fortran input files...")
     # compile
+    # compile task could be inherited from general CompileTask (issue #43)
     ctasks = [(fcomp[0]+" -o lib.search.o -c", libname, fcomp[1])]
     if hashname:
         ctasks.append((fcomp[0]+" -c", hashname, fcomp[1]))

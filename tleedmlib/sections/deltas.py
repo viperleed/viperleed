@@ -59,7 +59,8 @@ class DeltaCompileTask():
     def copy_source_files_to_local(self):
         """Copy delta source files to current directory."""
         for filepath in self.get_source_files():
-            shutil.copy2(filepath, filepath.name)
+            if filepath:
+                shutil.copy2(filepath, filepath.name)
 
 
 class DeltaRunTask():
@@ -190,11 +191,18 @@ def compileDelta(comptask):
         return ("Error encountered by DeltaCompileTask " + comptask.foldername
                 + "while trying to fetch fortran source files")
     
+    # TODO: we could skip this, if we implemented a general CompileTask (Issue #43)
+    (srcname, lib_tleed,
+     lib_delta, _) = (
+         str(fname.name) if fname is not None else None
+         for fname in comptask.get_source_files()
+         )
+    
     # compile
     ctasks = [(comptask.fortran_comp[0] + " -o " + oname + " -c",
                fname, comptask.fortran_comp[1]) for (fname, oname)
-              in [(srcname, "main.o"), (libname1, "lib.tleed.o"),
-                  (libname2, "lib.delta.o")]]
+              in [(srcname, "main.o"), (lib_tleed, "lib.tleed.o"),
+                  (lib_delta, "lib.delta.o")]]
     ctasks.append((comptask.fortran_comp[0] + " -o " + comptask.exename,
                    "main.o lib.tleed.o lib.delta.o",
                    comptask.fortran_comp[1]))
