@@ -145,8 +145,8 @@ def superpos(sl, rp, subdomain=False, for_error=False, only_vary=None):
     
     # Validate checksums
     if not rp.TL_IGNORE_CHECKSUM:
-        files_to_check = (Path(libpath) / libname),
-                          Path(srcpath) / srcname),
+        files_to_check = (Path(libpath) / libname,
+                          Path(srcpath) / srcname,
                           Path(srcpath) / globalname)
         # TODO: is there still a mufin.f? If so, we should check that too!
         validate_multiple_files(files_to_check, logger, "superpos", rp.TL_VERSION_STR)
