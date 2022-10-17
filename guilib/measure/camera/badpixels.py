@@ -235,22 +235,16 @@ class BadPixelsFinder(qtc.QObject):
         self.__info.rejected.connect(self.abort)
 
     @property
-    def short_exposure(self):
-        """Return a short exposure time in milliseconds."""
-        min_exposure, _ = self.__limits['exposure']
-        return max(20, min_exposure)
+    def large_gain(self):
+        """Return a large gain in decibel."""
+        _, max_gain = self.__limits['gain']
+        return min(20, max_gain)
 
     @property
     def long_exposure(self):
         """Return a long exposure time in milliseconds."""
         _, max_exposure = self.__limits['exposure']
         return min(1000, max_exposure)
-
-    @property
-    def large_gain(self):
-        """Return a large gain in decibel."""
-        _, max_gain = self.__limits['gain']
-        return min(20, max_gain)
 
     @property
     def missing_frames(self):
@@ -260,6 +254,19 @@ class BadPixelsFinder(qtc.QObject):
         else:
             todo = 1
         return self.__frames_done < todo
+
+    @property
+    def short_exposure(self):
+        """Return a short exposure time in milliseconds."""
+        min_exposure, _ = self.__limits['exposure']
+        return max(20, min_exposure)
+
+    def abort(self):
+        """Abort finding bad pixels."""
+        self.__restore_settings()  # Also stops
+        self.__camera.update_bad_pixels()  # Restore old file
+        self.__frames_done = 0
+        self.aborted.emit()
 
     def begin_acquiring(self):
         """Start acquiring images."""
@@ -283,6 +290,26 @@ class BadPixelsFinder(qtc.QObject):
             _INVOKE(self.__info, 'exec')
             return
         self.__continue_begin_acquiring()
+
+    @qtc.pyqtSlot(np.ndarray)
+    def __check_and_store_frame(self, frame):
+        """Store a new frame."""
+        sec = self.__current_section
+        if not self.__frame_acceptable(frame):
+            if 'dark' in sec:
+                base.emit_error(self,
+                                BadPixelsFinderErrors.DARK_FRAME_TOO_BRIGHT)
+            else:
+                self.__adjust_exposure_and_gain(frame)
+            return
+
+        if 'dark' in sec:
+            self.__imgs[sec][self.__frames_done, :, :] = frame
+        else:
+            self.__imgs[sec][:, :] = frame
+        self.__frames_done += 1
+        self.__report_acquisition_progress()
+        self.__trigger_next_frame()
 
     @qtc.pyqtSlot()
     @qtc.pyqtSlot(int)
@@ -315,13 +342,6 @@ class BadPixelsFinder(qtc.QObject):
         self.__report_acquisition_progress(exposure)
         _INVOKE(self.__camera, 'start')
 
-    def abort(self):
-        """Abort finding bad pixels."""
-        self.__restore_settings()  # Also stops
-        self.__camera.update_bad_pixels()  # Restore old file
-        self.__frames_done = 0
-        self.aborted.emit()
-
     def find(self):
         """Find bad pixels in the camera."""
         if self.__camera.busy:
@@ -333,98 +353,6 @@ class BadPixelsFinder(qtc.QObject):
 
         self.__current_section = "dark-short"
         self.begin_acquiring()
-
-    def __adjust_exposure_and_gain(self, frame):
-        """Use a frame to estimate optimal exposure for flat frames."""
-        old_exposure = self.__camera.exposure
-        old_gain = self.__camera.gain
-        pix_min, intensity_range = self.__limits['intensity']
-
-        intensity = frame.mean() - pix_min
-        exposure = old_exposure * 0.5 * intensity_range / intensity
-        exposure, gain = self.__correct_exposure_gain(exposure, old_gain)
-        if exposure is None:
-            return
-        self.__adjustments.add(exposure * 10**(gain / 20))
-
-        # Now decide whether we really want to set these new values. We
-        # do not want this process to take forever, in case there are
-        # oscillations. Use the estimates only in case we have already
-        # done a lot of attempts,  and only if we can provide a reasonable
-        # estimate for the new exposure/gain.
-        self.__force_exposure = False
-        estimate = self.__adjustments.stable_value
-        if len(self.__adjustments) >= 20 and estimate is not None:              # TODO: should we also have a hard limit with a 'retry' button?
-            exposure = estimate * 10**(-gain / 20)
-            exposure, gain = self.__correct_exposure_gain(exposure, gain)
-            self.__force_exposure = True
-
-        self.__new_settings.set('measurement_settings', 'exposure',
-                                f'{exposure:.3f}')
-        self.__new_settings.set('measurement_settings', 'gain', f'{gain:.1f}')
-        _INVOKE(self.__camera, 'set_settings',
-                qtc.Q_ARG(object, deepcopy(self.__new_settings)))
-        self.__report_acquisition_progress(exposure)
-        _INVOKE(self.__camera, 'start')
-
-    @qtc.pyqtSlot(np.ndarray)
-    def __check_and_store_frame(self, frame):
-        """Store a new frame."""
-        sec = self.__current_section
-        if not self.__frame_acceptable(frame):
-            if 'dark' in sec:
-                base.emit_error(self,
-                                BadPixelsFinderErrors.DARK_FRAME_TOO_BRIGHT)
-            else:
-                self.__adjust_exposure_and_gain(frame)
-            return
-
-        if 'dark' in sec:
-            self.__imgs[sec][self.__frames_done, :, :] = frame
-        else:
-            self.__imgs[sec][:, :] = frame
-        self.__frames_done += 1
-        self.__report_acquisition_progress()
-        self.__trigger_next_frame()
-
-    def __report_acquisition_progress(self, exposure=None):
-        """Report progress of acquisition."""
-        if exposure is None:
-            exposure = self.__camera.exposure
-        section = _FinderSection.from_short_name(self.__current_section)
-        name = section.long_name.format(exposure)
-        n_adjustments = len(self.__adjustments)
-        self.progress_occurred.emit(name, section.value, section.n_sections,
-                                    self.__frames_done + n_adjustments,
-                                    section.n_tasks + n_adjustments)
-
-    def __correct_exposure_gain(self, exposure, gain):
-        """Return in-range exposure and gain."""
-        exposure_min, exposure_max = self.__limits['exposure']
-        if exposure < exposure_min:
-            # Decrease the gain
-            gain += 20*np.log10(exposure/exposure_min)
-            exposure = exposure_min
-        elif exposure > exposure_max:
-            # Increase the gain (this is very unlikely to happen)
-            gain += 20*np.log10(exposure/exposure_max)
-            exposure = exposure_max
-
-        # Now check that the gain is OK: the only cases in which
-        # it cannot be OK is if we need very short or very long
-        # exposures (otherwise the gain stayed the same).
-        min_gain, max_gain = self.__limits['gain']
-        if gain < min_gain:
-            # Too much intensity
-            base.emit_error(self, BadPixelsFinderErrors.FLAT_FRAME_WRONG_LIGHT,
-                            'bright')
-            return None, 0
-        if gain > max_gain:
-            # Too little intensity
-            base.emit_error(self, BadPixelsFinderErrors.FLAT_FRAME_WRONG_LIGHT,
-                            'dark')
-            return None, 0
-        return exposure, gain
 
     @_report_progress
     def find_bad_and_replacements(self):  # too-many-locals
@@ -606,38 +534,6 @@ class BadPixelsFinder(qtc.QObject):
 
         self.__badness[hot_pixels] = np.inf
 
-    def __frame_acceptable(self, frame):
-        """Return whether frame has acceptable intensity.
-
-        Whether a frame is acceptable depends on the current
-        'section': if we're acquiring a dark frame, the average
-        intensity should be low. For a flat one, instead, we
-        would like to end up with an average intensity in the
-        middle of the pixel value range.
-
-        Parameters
-        ----------
-        frame : numpy.ndarray
-            The frame to be checked
-
-        Returns
-        -------
-        acceptable : bool
-            True if frame is OK.
-        """
-        pixel_min, intensity_range = self.__limits['intensity']
-        relative_intensity = (frame.mean() - pixel_min) / intensity_range
-        if 'dark' in self.__current_section:
-            return relative_intensity < 0.2
-        _min, _max = (0.45, 0.55) if not self.__force_exposure else (0.3, 0.7)
-        return _min < relative_intensity < _max                                 # TODO: do we want to complain if there are very bright areas (gradients)?
-
-    def __restore_settings(self):
-        """Restore the original settings of the camera."""
-        _INVOKE(self.__camera, 'set_settings',
-                qtc.Q_ARG(object, self.__original['settings']))
-        self.__camera.process_info.restore_from(self.__original['process'])
-
     def save_and_cleanup(self):
         """Save a bad pixels file and finish."""
         bp_path = self.__original['settings'].get("camera_settings",
@@ -679,6 +575,110 @@ class BadPixelsFinder(qtc.QObject):
             self.__frames_done = 0
             self.__adjustments.clear()
             self.begin_acquiring()
+
+    def __adjust_exposure_and_gain(self, frame):
+        """Use a frame to estimate optimal exposure for flat frames."""
+        old_exposure = self.__camera.exposure
+        old_gain = self.__camera.gain
+        pix_min, intensity_range = self.__limits['intensity']
+
+        intensity = frame.mean() - pix_min
+        exposure = old_exposure * 0.5 * intensity_range / intensity
+        exposure, gain = self.__correct_exposure_gain(exposure, old_gain)
+        if exposure is None:
+            return
+        self.__adjustments.add(exposure * 10**(gain / 20))
+
+        # Now decide whether we really want to set these new values. We
+        # do not want this process to take forever, in case there are
+        # oscillations. Use the estimates only in case we have already
+        # done a lot of attempts,  and only if we can provide a reasonable
+        # estimate for the new exposure/gain.
+        self.__force_exposure = False
+        estimate = self.__adjustments.stable_value
+        if len(self.__adjustments) >= 20 and estimate is not None:              # TODO: should we also have a hard limit with a 'retry' button?
+            exposure = estimate * 10**(-gain / 20)
+            exposure, gain = self.__correct_exposure_gain(exposure, gain)
+            self.__force_exposure = True
+
+        self.__new_settings.set('measurement_settings', 'exposure',
+                                f'{exposure:.3f}')
+        self.__new_settings.set('measurement_settings', 'gain', f'{gain:.1f}')
+        _INVOKE(self.__camera, 'set_settings',
+                qtc.Q_ARG(object, deepcopy(self.__new_settings)))
+        self.__report_acquisition_progress(exposure)
+        _INVOKE(self.__camera, 'start')
+
+    def __correct_exposure_gain(self, exposure, gain):
+        """Return in-range exposure and gain."""
+        exposure_min, exposure_max = self.__limits['exposure']
+        if exposure < exposure_min:
+            # Decrease the gain
+            gain += 20*np.log10(exposure/exposure_min)
+            exposure = exposure_min
+        elif exposure > exposure_max:
+            # Increase the gain (this is very unlikely to happen)
+            gain += 20*np.log10(exposure/exposure_max)
+            exposure = exposure_max
+
+        # Now check that the gain is OK: the only cases in which
+        # it cannot be OK is if we need very short or very long
+        # exposures (otherwise the gain stayed the same).
+        min_gain, max_gain = self.__limits['gain']
+        if gain < min_gain:
+            # Too much intensity
+            base.emit_error(self, BadPixelsFinderErrors.FLAT_FRAME_WRONG_LIGHT,
+                            'bright')
+            return None, 0
+        if gain > max_gain:
+            # Too little intensity
+            base.emit_error(self, BadPixelsFinderErrors.FLAT_FRAME_WRONG_LIGHT,
+                            'dark')
+            return None, 0
+        return exposure, gain
+
+    def __frame_acceptable(self, frame):
+        """Return whether frame has acceptable intensity.
+
+        Whether a frame is acceptable depends on the current
+        'section': if we're acquiring a dark frame, the average
+        intensity should be low. For a flat one, instead, we
+        would like to end up with an average intensity in the
+        middle of the pixel value range.
+
+        Parameters
+        ----------
+        frame : numpy.ndarray
+            The frame to be checked
+
+        Returns
+        -------
+        acceptable : bool
+            True if frame is OK.
+        """
+        pixel_min, intensity_range = self.__limits['intensity']
+        relative_intensity = (frame.mean() - pixel_min) / intensity_range
+        if 'dark' in self.__current_section:
+            return relative_intensity < 0.2
+        _min, _max = (0.45, 0.55) if not self.__force_exposure else (0.3, 0.7)
+        return _min < relative_intensity < _max                                 # TODO: do we want to complain if there are very bright areas (gradients)?
+
+    def __report_acquisition_progress(self, exposure=None):
+        """Report progress of acquisition."""
+        if exposure is None:
+            exposure = self.__camera.exposure
+        section = _FinderSection.from_short_name(self.__current_section)
+        name = section.long_name.format(exposure)
+        n_adjustments = len(self.__adjustments)
+        self.progress_occurred.emit(name, section.value, section.n_sections,
+                                    self.__frames_done + n_adjustments,
+                                    section.n_tasks + n_adjustments)
+
+    def __restore_settings(self):
+        """Restore the original settings of the camera."""
+        _INVOKE(self.__camera, 'set_settings',
+                qtc.Q_ARG(object, self.__original['settings']))
+        self.__camera.process_info.restore_from(self.__original['process'])
 
 
 class _Adjustments(MutableSequence):
