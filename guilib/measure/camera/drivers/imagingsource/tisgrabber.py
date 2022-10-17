@@ -1509,9 +1509,18 @@ class WindowsCamera:
 
         Raises
         ------
+        ImagingSourceError
+            If this method is called but the device is not open.
         ValueError
             If the element/interface cannot be picked univocally.
         """
+        if not self.vcd_properties:
+            # Device is not open
+            raise ImagingSourceError(
+                "Cannot access properties when camera is not open",
+                err_code=DLLReturns.NO_DEVICE
+                )
+
         # Get the property
         vcd_prop = self.vcd_properties.get(prop_name, None)
         if vcd_prop is None:
