@@ -23,6 +23,8 @@ from viperleed.guilib.widgetslib import change_control_text_color
 from viperleed.guilib.measure.classes import settings as _m_settings
 
 
+_INVOKE = qtc.QMetaObject.invokeMethod
+
 NOT_FOUND = "No file found!"
 NOT_SET = "\u2014"
 NO_BAD_PX_PATH = "None selected"
@@ -34,9 +36,6 @@ def _default_config_path():
 
 class BadPixelsFinderDialog(qtw.QDialog):
     """Dialog to handle user interaction when finding bad pixels."""
-
-    __start_finder = qtc.pyqtSignal()                                           # TODO: Both could be done with QMetaObject.invokeMethod
-    __abort_finder = qtc.pyqtSignal()
 
     def __init__(self, parent=None):
         """Initialize dialog."""
@@ -168,12 +167,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
 
     def __abort(self, *_):
         """Abort bad-pixel-finder routine."""
-        self.__abort_finder.emit()
-        if self.__finder:
-            # Prevents multiple finders to execute at the same
-            # time, should the current finder not be deleted
-            # by the time the user clicks "Find" again.
-            base.safe_disconnect(self.__start_finder, self.__finder.find)
+        _INVOKE(self.__finder, "abort")
         self.__reset_progress_bars()
         self.__progress['group'].hide()
         self.__enable_controls(True)
@@ -473,8 +467,6 @@ class BadPixelsFinderDialog(qtw.QDialog):
 
     def __on_finder_done(self):
         """React to bad pixels being found."""
-        if self.__finder:
-            base.safe_disconnect(self.__start_finder, self.__finder.find)
         bar_total = self.__progress['total']
         bar_total.setValue(bar_total.maximum())
 
@@ -614,6 +606,8 @@ class BadPixelsFinderDialog(qtw.QDialog):
             "gun to discard the damaged areas of the sensor."
             )
 
+    @qtc.pyqtSlot()
+    @qtc.pyqtSlot(bool)
     def __start(self, *_):
         """Begin finding bad pixels for the selected camera."""
         self.__enable_controls(False)
@@ -633,10 +627,8 @@ class BadPixelsFinderDialog(qtw.QDialog):
         self.__finder.aborted.connect(lambda: self.__enable_controls(True))
         self.__finder_thread.finished.connect(self.__finder.deleteLater)
         self.__finder.error_occurred.connect(self.__on_error_occurred)
-        self.__start_finder.connect(self.__finder.find)
-        self.__abort_finder.connect(self.__finder.abort)
         self.__finder.moveToThread(self.__finder_thread)
-        self.__start_finder.emit()
+        _INVOKE(self.__finder, "find")
 
     def __stop_timers(self):
         """Stop all timers."""
