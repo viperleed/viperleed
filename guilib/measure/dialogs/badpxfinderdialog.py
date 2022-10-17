@@ -168,6 +168,11 @@ class BadPixelsFinderDialog(qtw.QDialog):
     def __abort(self, *_):
         """Abort bad-pixel-finder routine."""
         _INVOKE(self.__finder, "abort")
+        self.__reset_controls()
+
+    @qtc.pyqtSlot()
+    def __reset_controls(self):
+        """Reset runtime controls to 'idle' state."""
         self.__reset_progress_bars()
         self.__progress['group'].hide()
         self.__enable_controls(True)
@@ -624,7 +629,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
         self.__finder.done.connect(self.__on_finder_done)
         self.__finder.done.connect(self.__finder.deleteLater)
         self.__finder.aborted.connect(self.__finder.deleteLater)
-        self.__finder.aborted.connect(lambda: self.__enable_controls(True))
+        self.__finder.aborted.connect(self.__reset_controls)
         self.__finder_thread.finished.connect(self.__finder.deleteLater)
         self.__finder.error_occurred.connect(self.__on_error_occurred)
         self.__finder.moveToThread(self.__finder_thread)
