@@ -124,7 +124,7 @@ def superpos(sl, rp, subdomain=False, for_error=False, only_vary=None):
         return
     if rp.FORTRAN_COMP[0] == "":
         rp.getFortranComp()
-    # get fortran files
+    # get fortran files   # TODO: use CompileTask subclass (Issue #43)
     try:
         tldir = getTLEEDdir(home=rp.sourcedir, version=rp.TL_VERSION)
         if not tldir:
@@ -148,7 +148,6 @@ def superpos(sl, rp, subdomain=False, for_error=False, only_vary=None):
         files_to_check = (Path(libpath) / libname,
                           Path(srcpath) / srcname,
                           Path(srcpath) / globalname)
-        # TODO: is there still a mufin.f? If so, we should check that too!
         validate_multiple_files(files_to_check, logger, "superpos", rp.TL_VERSION_STR)
     
     # compile fortran files
