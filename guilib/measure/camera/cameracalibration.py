@@ -18,7 +18,6 @@ from PyQt5 import QtCore as qtc
 
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.classes.calibrationtask import CalibrationTask
-from viperleed.guilib.measure import camera as _m_camera
 
 
 _INVOKE = qtc.QMetaObject.invokeMethod
@@ -144,15 +143,14 @@ class CameraCalibrationTask(CalibrationTask):
     @staticmethod
     def _is_bad_pixels_error(error_info):
         """Return whether error relates to 'bad pixels'."""
-        error_code, error_msg = error_info
-        _errors = _m_camera.abc.CameraErrors
+        _, error_msg = error_info
         try:
-            error = _errors.from_code(error_code)
+            error_name = error_info.name
         except AttributeError:
             return False
 
         error_msg = error_msg.replace('_', ' ')
-        if error is _errors.INVALID_SETTINGS and "bad pixel" in error_msg:
+        if error_name == "INVALID_SETTINGS" and "bad pixel" in error_msg:
             return True
         return False
 
