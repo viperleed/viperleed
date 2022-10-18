@@ -62,6 +62,7 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 #   C A M E R A   &  C O.
 # TODO: bad pixels finder top progress bar should scale better, with actual
 #       duration of tasks
+# TODO: improve progress for preliminary tasks
 # TODO: it looks like the largest fraction of the time required by
 #       abort_trigger_burst is in fact on the call to _dll_start_live
 #       (97% of the 80ms), while .pause() takes only a short time
@@ -90,11 +91,12 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 #       way to prevent accessing the same device from different objects.
 #       The most difficult part with the singleton/Borg is handling
 #       movements to threads.
-# TODO: CameraViewer can still pop up. Try using "with qtc.QSignalBlocker:"
+# TODO?: CameraViewer can still pop up. Try using "with qtc.QSignalBlocker:"
 #       while entering the closeEvent?
-# TODO: ImagingSource brightness calibration (also in config file). Brightness
-#       up moves average intensity up, histogram gets chopped if too low.
-#       A good value gives mean = 64*16 for a black frame. Use 20ms, 20dB.
+# TODO: Define settings that can be modified without stop-starting the
+#       camera. This can speed up some camera startups.
+# TODO: find a proper way to CameraABC.moveToThread. This would solve the
+#       issue with set_settings holding the UI still.
 
 #   M E A S U R E M E N T
 # TODO: energy ramps are not equivalent for iv == calibration != time_resolved
