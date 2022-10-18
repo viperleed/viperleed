@@ -25,7 +25,9 @@ from viperleed.guilib.measure.camera.drivers.imagingsource import (
 from viperleed.guilib.measure.camera import abc
 from viperleed.guilib.measure import hardwarebase as base
 
+
 _CUSTOM_NAME_RE = re.compile(r"\[.*\]")
+
 
 # TODO: test roi offset increments with models other than IMX265
 
@@ -203,7 +205,7 @@ def estimate_frame_loss(frame_times, frame_rate, exposure):
 
     # Ideally, a frame should take (slightly more) than dt_ideal
     # seconds to be delivered
-    dt_ideal = 1/min(1000/exposure, frame_rate)
+    dt_ideal = 1/min(1000/exposure, frame_rate)                                 # TODO: use .frame_interval
 
     # However, it can take a little longer (or shorter) to do so
     dt_total = frame_times[-1] - frame_times[0]
@@ -224,6 +226,13 @@ def estimate_frame_loss(frame_times, frame_rate, exposure):
 # to be used internally (i.e., they are the driver interface)
 class ImagingSourceCamera(abc.CameraABC):
     """Concrete subclass of CameraABC handling Imaging Source Hardware."""
+
+    _mandatory_settings = [
+        # pylint: disable=protected-access
+        # Needed for extending
+        *abc.CameraABC._mandatory_settings,
+        ('camera_settings', 'black_level'),
+        ]
 
     abort_trigger_burst = qtc.pyqtSignal()                                      # TODO: could be done with QMetaObject.invokeMethod
 
@@ -249,9 +258,11 @@ class ImagingSourceCamera(abc.CameraABC):
         **kwargs : object
             Other unused keyword arguments
         """
-        self.hardware_supported_features.extend(['roi', 'color_format'])
+        self.hardware_supported_features.extend(['roi', 'color_format',
+                                                 'black_level'])
         self.is_finding_best_frame_rate = False
         self.best_next_rate = 1024
+        self.__black_level = -1
         self.__burst_count = -1
         self.__extra_delay = []  # Duration of abort_trigger_burst
 
@@ -331,10 +342,48 @@ class ImagingSourceCamera(abc.CameraABC):
         return running
 
     @property
+    def black_level(self):
+        """Return the black-level setting of the camera.
+
+        The black level is a measure of a minimum photon intensity
+        at pixels. Pixels illuminated with less than this intensity
+        will appear in images as having self.intensity_limits[0]
+        intensity. Therefore, black_level determines the lower limit
+        at which image-intensity histograms are 'cut'.
+        """
+        try:
+            black_level = self.settings.getint('camera_settings',
+                                               'black_level', fallback=-2)
+        except (TypeError, ValueError):
+            black_level = -2
+
+        if black_level == self.__black_level:
+            return black_level
+
+        if black_level == -2:
+            # Was not present. Let's read it from the camera
+            # and store it in the settings.
+            black_level = self.get_black_level()
+            self.settings.set('camera_settings', 'black_level',
+                              str(black_level))
+
+        _min, _max = self.get_black_level_limits()
+        if black_level < _min or black_level > _max:
+            base.emit_error(
+                self, abc.CameraErrors.INVALID_SETTINGS,
+                'camera_settings/black_level',
+                f"{black_level} [out of range ({_min}, {_max})]",
+                )
+            return -2
+
+        self.__black_level = black_level
+        return black_level
+
+    @property
     def color_format(self):
         """Return the the color format used."""
         color_fmt_s = self.settings.get('camera_settings', 'color_format',
-                                          fallback='Y16')
+                                        fallback='Y16')
         try:
             color_fmt = SinkFormat.get(color_fmt_s)
         except (ValueError, ImagingSourceError):
@@ -449,6 +498,23 @@ class ImagingSourceCamera(abc.CameraABC):
             self.__has_callback = True
         self.set_roi()
         return True
+
+    @qtc.pyqtSlot()
+    def get_black_level(self):
+        """Return the black level currently set in the camera."""
+        return self.driver.get_vcd_property("Brightness", "Value")
+
+    @qtc.pyqtSlot()
+    def set_black_level(self):
+        """Set the black level in the camera from settings."""
+        _level = self.black_level
+        if _level < 0:  # Invalid settings
+            return
+        self.driver.set_vcd_property("Brightness", "Value", _level)
+
+    def get_black_level_limits(self):
+        """Return minimum and maximum values for the black level."""
+        return self.driver.get_vcd_property_range("Brightness", "Value")
 
     def set_color_format(self):
         """Set a color format in the camera."""
