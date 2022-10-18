@@ -615,3 +615,104 @@ class Version:
         except IndexError:
             patch = -1
         return major, minor, patch
+
+
+_RESULT_UNKOWN = object()
+
+class QMainThreadDispatcher(qtc.QObject):
+    """Class to always execute a function in the main GUI thread.
+
+    Instances are callable like so:
+    >>> dispatcher = QMainThreadDispatcher(func, *args, **kwargs)
+    >>> dispatcher(*other_args, **other_kwargs)
+
+    Attributes
+    ----------
+    func : callable
+        The function to be called in the main GUI thread
+    args : tuple
+        The positional arguments (excluding self/cls) for the
+        call to func
+    has_result : bool
+        Whether the call to func has returned already, and
+        its result is available in the .result attribute.
+    kwargs : dict
+        The keyword arguments for the call to func
+    result : object
+        The latest result of the call to func(*args, **kwargs)
+
+    Signals
+    -------
+    result_arrived()
+        Emitted whenever the call to func(*args, **kwargs) has been
+        completed in the GUI thread.
+    """
+
+    __dispatch = qtc.pyqtSignal()
+    result_arrived = qtc.pyqtSignal()
+
+    def __init__(self, func, *args, **kwargs):
+        """Create instance, move it to the main thread and call func there.
+
+        Parameters
+        ----------
+        func : callable
+            The function to be executed. It can be accessed (and
+            freely edited) via the .func attribute.
+        *args : object, optional
+            Positional-only arguments for the call to func. They can
+            later be accessed as a tuple via the .args attribute. If
+            func is an instance or class method, do not pass self/cls
+            as part of args, as this is taken care of automatically.
+        call_immediately : bool, optional
+            Whether func(*args, **kwargs) should be called right at
+            the end of the initialization. Default is True.
+        **kwargs : object, optional
+            Keyword-only arguments for the call to func. They can
+            later be accessed as a dictionary via the .kwargs attribute
+
+        Returns
+        -------
+        None.
+        """
+        self.func, self.args, self.kwargs = func, args, kwargs
+        self.__result = _RESULT_UNKOWN
+        super().__init__()
+
+        if self.thread().currentThread() != qtw.qApp.thread():
+            self.moveToThread(qtw.qApp.thread())
+
+        self.__dispatch.connect(self.__call_func)
+        if kwargs.pop('call_immediately', True):
+            self.__dispatch.emit()
+
+    @property
+    def has_result(self):
+        """Return whether the function call has already returned."""
+        return self.__result is _RESULT_UNKOWN
+
+    @property
+    def result(self):
+        """Return the result of func(*args, **kwargs)."""
+        return self.__result
+
+    def __call__(self, *args, **kwargs):
+        """Call func(*args, **kwargs)."""
+        self.__result = _RESULT_UNKOWN
+        if args:
+            self.args = args
+        if kwargs:
+            self.kwargs = kwargs
+        self.__dispatch.emit()
+
+    @qtc.pyqtSlot()
+    def __call_func(self):
+        """Call the method in the main thread, store the result."""
+        assert self.thread().currentThread() == qtw.qApp.thread()
+        self.__result = self.func(*self.args, **self.kwargs)
+        self.result_arrived.emit()
+
+    def moveToThread(self, new_thread):  # pylint: disable=invalid-name
+        """Change thread affinity of self to new_thread."""
+        self.__result = _RESULT_UNKOWN
+        super().moveToThread(new_thread)
