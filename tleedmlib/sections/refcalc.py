@@ -56,7 +56,7 @@ class RefcalcCompileTask():
         lib_tleed = next(libpath.glob('lib.tleed*'))
         srcname = next(srcpath.glob('ref-calc*'))
         globalname = srcpath / "GLOBAL"
-        _muftin = Path("muftin.f")                                                 # TODO: any reason why not in sourcedir?
+        _muftin = Path("muftin.f")
         muftinname =_muftin if _muftin.is_file() else None
         return (lib_tleed, srcname, globalname, muftinname)
 
