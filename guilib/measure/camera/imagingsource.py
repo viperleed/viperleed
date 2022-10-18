@@ -22,7 +22,10 @@ from viperleed.guilib.measure.camera.drivers.imagingsource import (
     ISCamera as ImagingSourceDriver, FrameReadyCallbackType,
     ImagingSourceError, SinkFormat,
     )
-from viperleed.guilib.measure.camera import abc
+from viperleed.guilib.measure.camera import (
+    abc,
+    imagingsourcecalibration as is_calib
+    )
 from viperleed.guilib.measure import hardwarebase as base
 
 
@@ -280,6 +283,32 @@ class ImagingSourceCamera(abc.CameraABC):
         t_start = self.process_info.frame_times[-1]
         self.driver.abort_trigger_burst()
         self.__extra_delay.append(1000*(timer() - t_start))
+
+    @property
+    def calibration_tasks(self):
+        """Return a dictionary of CameraCalibrationTask for self.
+
+        Returns
+        -------
+        tasks : dict
+            Keys can be used to discern when the task is to be
+            performed. Values are lists of CameraCalibrationTask
+            instances. Tasks are executed in order.
+            Typical keys are:
+                'bad_pixels'
+                    Tasks that should be executed before running
+                    the bad-pixels finding CameraCalibrationTask
+                'starting'
+                    Tasks to execute before completing a call to
+                    .start(). The camera will not emit .started
+                    until these tasks have been performed.
+                    CURRENTLY UNUSED.
+        """
+        tasks = super().calibration_tasks
+        if not any(isinstance(t, is_calib.DarkLevelCalibration)
+                   for t in tasks['bad_pixels']):
+            tasks['bad_pixels'].append(is_calib.DarkLevelCalibration(self))
+        return tasks
 
     @property
     def exceptions(self):

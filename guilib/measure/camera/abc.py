@@ -194,6 +194,9 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         # Number of frames accumulated for averaging
         self.n_frames_done = 0
 
+        # Calibration tasks. See calibration_tasks property.
+        self.__calibration_tasks = {'bad_pixels': [], 'starting': []}
+
         try:
             self.set_settings(settings)
         except self.exceptions:
@@ -284,6 +287,33 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         if was_busy is not is_busy:
             self.__busy = is_busy
             self.camera_busy.emit(self.busy)
+
+    @property
+    def calibration_tasks(self):
+        """Return a dictionary of CameraCalibrationTask for self.
+
+        If tasks are to be added, this should be done at runtime,
+        i.e., by extending this property! This ensures that all
+        the information is present in the camera by the time the
+        task is created.
+
+        Returns
+        -------
+        tasks : dict
+            Keys can be used to discern when the task is to be
+            performed. Values are lists of CameraCalibrationTask
+            instances. Tasks are executed in order.
+            Typical keys are:
+                'bad_pixels'
+                    Tasks that should be executed before running
+                    the bad-pixels finding CameraCalibrationTask
+                'starting'
+                    Tasks to execute before completing a call to
+                    .start(). The camera will not emit .started
+                    until these tasks have been performed.
+                    CURRENTLY UNUSED.
+        """
+        return self.__calibration_tasks
 
     @property
     def connected(self):
@@ -822,6 +852,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         """
         return False
 
+    @qtc.pyqtSlot()
     def update_bad_pixels(self):
         """Update the list of bad pixels from the settings.
 
