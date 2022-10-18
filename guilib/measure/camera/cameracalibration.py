@@ -225,7 +225,7 @@ class CameraCalibrationTask(CalibrationTask):
 
         This method is called each time the task is aborted
         or has finished. The original device settings can be
-        accessed via self._original['settings'].
+        accessed via self.original_settings.
 
         Subclasses can extend this method, and may modify the
         _original dictionary before calling super().restore_device()

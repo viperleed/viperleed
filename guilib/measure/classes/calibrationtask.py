@@ -376,7 +376,7 @@ class CalibrationTask(qtc.QObject, metaclass=base.QMetaABC):
 
         This method is called each time the task is aborted
         or has finished. The original device settings can be
-        accessed via self._original['settings'].
+        accessed via self.original_settings.
 
         Subclasses can extend this method, and may modify the
         _original dictionary before calling the base-class
@@ -387,10 +387,10 @@ class CalibrationTask(qtc.QObject, metaclass=base.QMetaABC):
         -------
         None.
         """
-        if self._original['settings'] is None:
+        if self.original_settings is None:
             return
         _INVOKE(self.device, 'set_settings',
-                qtc.Q_ARG(object, self._original['settings']))
+                qtc.Q_ARG(object, original_settings))
 
     def set_info_text(self, text):
         """Set informative text in the info message box."""
