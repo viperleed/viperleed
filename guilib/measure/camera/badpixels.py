@@ -13,40 +13,43 @@ from a camera and computes a pixel-badness array.
 
 from ast import literal_eval
 from collections.abc import MutableSequence
-from copy import deepcopy
 from datetime import datetime
-from enum import Enum
+import functools
 from pathlib import Path
 
 import numpy as np
 from scipy.signal import convolve2d
 from scipy import ndimage
 
-from PyQt5 import (QtCore as qtc,
-                   QtWidgets as qtw)
+from PyQt5 import QtCore as qtc
 
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.camera import tifffile
+from viperleed.guilib.measure.camera import cameracalibration as _calib
+from viperleed.guilib.measure.classes.calibrationtask import (
+    CalibrationTaskOperation
+    )
 
 
 N_DARK = 100  # Number of dark frames used for finding bad pixels
 _INVOKE = qtc.QMetaObject.invokeMethod
+_UNIQUE = qtc.Qt.UniqueConnection
+_unique_connect = functools.partial(base.safe_connect, type=_UNIQUE)
 
 
 def _report_progress(func):
     """Decorate calculation functions."""
 
+    @functools.wraps(func)
     def _wrapper(self, *args, **kwargs):
         """Wrap decorated function."""
         # Names are of the form "find_WHAT_other_stuff"
         _, what, *_ = func.__name__.split('_')
         section = _FinderSection.from_short_name(what)
-        tasks = section.n_tasks
-        self.progress_occurred.emit(section.long_name, section.value,
-                                    section.n_sections, 0, tasks)
+        steps = section.n_steps
+        self.progress_occurred.emit(self.progress_name, *section, 0, steps)
         ret_val = func(self, *args, **kwargs)
-        self.progress_occurred.emit(section.long_name, section.value,
-                                    section.n_sections, tasks, tasks)
+        self.progress_occurred.emit(self.progress_name, *section, steps, steps)
         return ret_val
 
     return _wrapper
@@ -54,22 +57,13 @@ def _report_progress(func):
 
 class BadPixelsFinderErrors(base.ViPErLEEDErrorEnum):
     """Class for bad-pixel-finder errors."""
-    DARK_FRAME_TOO_BRIGHT = (
-        210,
-        "Dark frame has too much intensity. Camera "
-        "optics is not appropriately covered."
-        )
     FLAT_FRAME_WRONG_LIGHT = (
         211,
         "Flat frame is too {}. Cannot automatically "
         "adjust exposure time and gain.")
-    CAMERA_BUSY = (
-        212,
-        "Cannot find bad pixels while camera {} is busy."
-        )
 
 
-class _FinderSection(Enum):
+class _FinderSection(CalibrationTaskOperation):
     """Enumeration class for bad-pixel finder sections."""
 
     ACQUIRE_DARK_SHORT, ACQUIRE_DARK_LONG, ACQUIRE_FLAT = 1, 2, 3
@@ -80,25 +74,20 @@ class _FinderSection(Enum):
     @property
     def long_name(self):
         """Return a long description for this section."""
-        if self.name == 'DONE':
+        if self is _FinderSection.DONE:
             return "Done."
         operation, what, *_ = self.name.split('_')
 
         if operation == "ACQUIRE":
             txt = f"Acquiring {what.lower()} frame"
             txt += "s " if what == "DARK" else " "
-            return txt + "with {:.1f} ms exposure..."
+            return self._format_long_name(txt + "with {:.1f} ms exposure...")
         # Calculating
         return f"Calculating coordinates of {what.lower()} pixels..."
 
     @property
-    def n_sections(self):
-        """Return the total number of sections."""
-        return 8
-
-    @property
-    def n_tasks(self):
-        """Return the number of tasks in this section."""
+    def n_steps(self):
+        """Return the number of steps in this section."""
         if 'DARK' in self.name:
             return N_DARK
         return 1
@@ -115,35 +104,23 @@ class _FinderSection(Enum):
         return getattr(cls, elem)
 
 
-class BadPixelsFinder(qtc.QObject):
+class BadPixelsFinder(_calib.CameraCalibrationTask):
     """Class for finding bad pixels."""
 
-    error_occurred = qtc.pyqtSignal(tuple)
-    done = qtc.pyqtSignal()
-    aborted = qtc.pyqtSignal()
-    progress_occurred = qtc.pyqtSignal(
-        str,  # current operation
-        int,  # current operation index (1-based)
-        int,  # total no. operations
-        int,  # current progress
-        int   # total tasks in this section
+    name = "Bad-pixel detection"
+    progress_name = "Finding bad pixels..."
+    description = (
+        "Detect bad pixels in a camera. Bad pixels are especially "
+        "bright, especially dark, or especially noisy pixels. They "
+        "are corrected by replacing with a suitable average of "
+        "neighbours. This makes your LEED-IV movies significantly "
+        "cleaner. It should be performed regularly (e.g., every 6 "
+        "months), as camera sensors may degrade over time."
         )
 
-    # Signals to interact with the info dialog. Necessary
-    # if self is not living in the main, GUI thread
-    __set_info_box_text = qtc.pyqtSignal(str)
-
-    def __init__(self, camera, parent=None):
-        """Initialize object."""
-        super().__init__(parent=parent)
-
-        self.__camera = camera
-
-        self.__camera.error_occurred.connect(self.error_occurred)
-        self.__camera.image_processed.connect(self.__check_and_store_frame)
-        self.__camera.started.connect(self.__trigger_next_frame)
-
-        self.__frames_done = 0
+    def __init__(self, camera):
+        """Initialize finder task."""
+        super().__init__(camera)
 
         # __adjustments is used for the exposure/gain of flat;
         # __force_exposure is a flag keeping track of whether we
@@ -154,60 +131,36 @@ class BadPixelsFinder(qtc.QObject):
         self.__adjustments = _Adjustments()
         self.__force_exposure = False
 
-        px_min, px_max = camera.intensity_limits
-        self.__limits = {'gain': camera.get_gain_limits(),
-                         'exposure': camera.get_exposure_limits(),
-                         'intensity': (px_min, px_max - px_min)}
-
-        # Keep track of the old camera settings, as we will need to
-        # change them on the fly later. Also, store the previous
-        # visibility state of the viewer. This may not match the
-        # False above, as there can only be one camera viewer per
-        # each camera object.
-        # Notice the deep copies of camera settings, which make sure
-        # that camera.settings, self.__original['settings'] and
-        # self.__new_settings are distinct objects. This is necessary
-        # because the camera does some checks for quantities changed
-        # to decide whether to recalculate stuff.
-        self.__original = {'settings': deepcopy(self.__camera.settings),
-                           'process': self.__camera.process_info.copy()}
-
-        # Now set new settings that will be used
-        # throughout the rest of the processing.
-        self.__new_settings = deepcopy(self.__camera.settings)
-
-        _, (max_roi_w, max_roi_h), *_ = self.__camera.get_roi_size_limits()
+        # Adjust camera settings: full sensor, no binning, no averaging
+        _, (max_roi_w, max_roi_h), *_ = camera.get_roi_size_limits()
         full_roi = f"(0, 0, {max_roi_w}, {max_roi_h})"
-        self.__new_settings.set('camera_settings', 'roi', full_roi)
-        self.__new_settings.set('camera_settings', 'binning', '1')
-        self.__new_settings.set('camera_settings', 'mode', 'triggered')
-        self.__new_settings.set('measurement_settings', 'n_frames', '1')
-        self.__new_settings.set('camera_settings', 'bad_pixels_path', '')
+        self._task_settings.set('camera_settings', 'roi', full_roi)
+        self._task_settings.set('camera_settings', 'binning', '1')
+        self._task_settings.set('measurement_settings', 'n_frames', '1')
+        self._task_settings.set('camera_settings', 'bad_pixels_path', '')
 
-        # And set them into the camera. This stops
-        # the camera if it is currently running.
-        _INVOKE(self.__camera, 'set_settings',
-                qtc.Q_ARG(object, deepcopy(self.__new_settings)))
-        self.__camera.process_info.filename = ''
-
-        # Clear any bad pixel info in the camera (frames should be raw)
-        bad_old = self.__camera.bad_pixels
-        if bad_old:
-            bad_old.clear()
-
-        width, height, n_bytes, _ = self.__camera.image_info
-        dtype = np.uint8 if n_bytes == 1 else np.uint16
+        # Load settings in the camera. This is needed such
+        # that self.frame_info returns the correct values
+        # NB: THIS MAY NOT BE TRUE IF CAMERA IS IN ANOTHER THREAD.
+        # In that case, we would have to ensure there's a way to
+        # distinguish between using a queued and blocking-queued
+        # connection types for the underlying _INVOKE.
+        self.update_device_settings()
 
         # __imgs contains: the short- and long-exposure movies
         # (N_DARK frames each) for the 'dark' frame (i.e., camera
         # with a cap on) and one frame for a 'flat field' (e.g.,
         # white paper right in front of the lens).
+        height, width, dtype = self.frame_info
         self.__imgs = {
-            "dark-short": np.zeros((N_DARK, height, width), dtype=dtype),
-            "dark-long": np.zeros((N_DARK, height, width), dtype=dtype),
-            "flat": np.zeros((height, width), dtype=dtype)
+            _FinderSection.ACQUIRE_DARK_SHORT:
+                np.zeros((N_DARK, height, width), dtype=dtype),
+            _FinderSection.ACQUIRE_DARK_LONG:
+                np.zeros((N_DARK, height, width), dtype=dtype),
+            _FinderSection.ACQUIRE_FLAT:
+                np.zeros((height, width), dtype=dtype)
             }
-        self.__current_section = "dark-short"
+        self.__current_section = _FinderSection.ACQUIRE_DARK_SHORT
 
         # __badness contains a measure of the badness of
         # each pixel. 'Normal' pixels have badness 0, bad
@@ -216,120 +169,106 @@ class BadPixelsFinder(qtc.QObject):
 
         # __bad_pixels will contain info about bad
         # pixel coordinates and their replacements
-        self.__bad_pixels = BadPixels(self.__camera)
-
-        name = camera.name
-
-        self.__info = qtw.QMessageBox(parent=parent)
-        self.__info.setModal(True)
-        self.__info.setWindowTitle(f"Bad pixel detection for {name}")
-        self.__info.setIcon(self.__info.Information)
-        self.__info.setText(
-            f"Frames will be acquired from camera {name}."
-            )
-        btn = self.__info.addButton(self.__info.Ok)
-        btn.setText("I'm ready")
-        self.__info.addButton(self.__info.Abort)
-        self.__set_info_box_text.connect(self.__info.setInformativeText)
-        self.__info.accepted.connect(self.__continue_begin_acquiring)
-        self.__info.rejected.connect(self.abort)
+        self.__bad_pixels = BadPixels(self.camera)
 
     @property
     def large_gain(self):
         """Return a large gain in decibel."""
-        _, max_gain = self.__limits['gain']
+        _, max_gain = self._limits['gain']
         return min(20, max_gain)
 
     @property
     def long_exposure(self):
         """Return a long exposure time in milliseconds."""
-        _, max_exposure = self.__limits['exposure']
+        _, max_exposure = self._limits['exposure']
         return min(1000, max_exposure)
 
     @property
     def missing_frames(self):
         """Return whether frames are missing for the current section."""
-        if 'dark' in self.__current_section:
+        if 'DARK' in self.__current_section.name:
             todo = self.__imgs[self.__current_section].shape[0]
         else:
             todo = 1
-        return self.__frames_done < todo
+        return self._frames_done < todo
 
     @property
     def short_exposure(self):
         """Return a short exposure time in milliseconds."""
-        min_exposure, _ = self.__limits['exposure']
+        min_exposure, _ = self._limits['exposure']
         return max(20, min_exposure)
 
+    @qtc.pyqtSlot()
     def abort(self):
-        """Abort finding bad pixels."""
-        self.__restore_settings()  # Also stops
-        self.__camera.update_bad_pixels()  # Restore old file
-        self.__frames_done = 0
-        self.aborted.emit()
+        """Abort self and any running tasks."""
+        if self.is_aborted:
+            return
+        for task in self.camera.calibration_tasks['bad_pixels']:
+            if task.is_running:
+                _INVOKE(task, 'abort')
+        super().abort()
 
     def begin_acquiring(self):
         """Start acquiring images."""
-        if "dark" in self.__current_section:
-            self.__set_info_box_text.emit(
+        if self.__current_section is _FinderSection.ACQUIRE_DARK_SHORT:
+            self.set_info_text(
                 "A 'dark' movie will be acquired.<br>Make sure no light "
                 "enters the camera.<br>For example, you can <b>close the "
                 "lens with its cap.</b>"
                 )
-        else:
-            self.__set_info_box_text.emit(
+        elif self.__current_section is _FinderSection.ACQUIRE_FLAT:
+            self.set_info_text(
                 "A 'flat' frame will be acquired.<br>Make sure the camera "
                 "is viewing a featureless background with uniform "
                 "illumination.<br>For example, you can place a <b>white "
                 "piece of paper right in front of the lens</b>. Normal room "
                 "light should be uniform enough."
                 )
-        if 'long' not in self.__current_section:
-            # Show dialog. When closed, its .finished
-            # signal will trigger __continue_begin_acquiring
-            _INVOKE(self.__info, 'exec')
+        if self.__current_section is not _FinderSection.ACQUIRE_DARK_LONG:
+            # Show dialog. Its .accepted signal will trigger
+            # .continue_(), its .rejected will trigger .abort()
+            self.show_info()
             return
-        self.__continue_begin_acquiring()
+        self.continue_()
 
     @qtc.pyqtSlot(np.ndarray)
-    def __check_and_store_frame(self, frame):
-        """Store a new frame."""
+    def _check_and_store_frame(self, frame):
+        """Store a new frame if it is acceptable."""
         sec = self.__current_section
         if not self.__frame_acceptable(frame):
-            if 'dark' in sec:
-                base.emit_error(self,
-                                BadPixelsFinderErrors.DARK_FRAME_TOO_BRIGHT)
+            if 'DARK' in sec.name:
+                base.emit_error(
+                    self, _calib.CameraCalibrationErrors.DARK_FRAME_TOO_BRIGHT
+                    )
             else:
                 self.__adjust_exposure_and_gain(frame)
             return
 
-        if 'dark' in sec:
-            self.__imgs[sec][self.__frames_done, :, :] = frame
+        if 'DARK' in sec.name:
+            self.__imgs[sec][self._frames_done, :, :] = frame
         else:
             self.__imgs[sec][:, :] = frame
-        self.__frames_done += 1
+        self._frames_done += 1
         self.__report_acquisition_progress()
-        self.__trigger_next_frame()
+        self._trigger_next_frame()
 
     @qtc.pyqtSlot()
-    @qtc.pyqtSlot(int)
-    def __continue_begin_acquiring(self, *_):
-        if 'dark' in self.__current_section:
-            # Here we set fixed gain and exposure time
-            gain = self.large_gain
-            if 'short' in self.__current_section:
-                exposure = self.short_exposure
-            else:
-                exposure = self.long_exposure
+    def continue_(self, *_):
+        """Continue acquiring after user confirmation."""
+        # In all cases start from the same gain and pick exposure
+        gain = self.large_gain
+        if self.__current_section is _FinderSection.ACQUIRE_DARK_SHORT:
+            exposure = self.short_exposure
+        elif self.__current_section is _FinderSection.ACQUIRE_DARK_LONG:
+            exposure = self.long_exposure
         else:
             # Here we use the large gain and a somewhat short
             # exposure to begin with, but these are adjusted when
             # frames come back to have an average image intensity
-            gain = self.large_gain
             exposure = self.short_exposure
-        self.__new_settings.set("measurement_settings", "gain",
+        self._task_settings.set("measurement_settings", "gain",
                                 str(gain))
-        self.__new_settings.set("measurement_settings", "exposure",
+        self._task_settings.set("measurement_settings", "exposure",
                                 str(exposure))
 
         # Apply the new settings and start the camera. When the camera
@@ -337,22 +276,14 @@ class BadPixelsFinder(qtc.QObject):
         # acquisition of the first frame. Each time a frame is done
         # processing (image_processed) it is checked and stored. Then a
         # new acquisition is triggered, if needed.
-        _INVOKE(self.__camera, 'set_settings',
-                qtc.Q_ARG(object, deepcopy(self.__new_settings)))
+        self.update_device_settings()
         self.__report_acquisition_progress(exposure)
-        _INVOKE(self.__camera, 'start')
+        self.start_camera()
 
+    @qtc.pyqtSlot()
     def find(self):
         """Find bad pixels in the camera."""
-        if self.__camera.busy:
-            # Cannot start detecting bad pixels as long as the
-            # camera is busy (esp. right after it is started)
-            base.emit_error(self, BadPixelsFinderErrors.CAMERA_BUSY,
-                            self.__camera.name)
-            return
-
-        self.__current_section = "dark-short"
-        self.begin_acquiring()
+        self.start()
 
     @_report_progress
     def find_bad_and_replacements(self):  # too-many-locals
@@ -430,7 +361,7 @@ class BadPixelsFinder(qtc.QObject):
         # and store all the info in a BadPixels object.
         best_offset_indices = total_badness.argmin(axis=0)[bad_y, bad_x]
         self.__bad_pixels = BadPixels(
-            self.__camera,
+            self.camera,
             bad_coordinates=np.asarray((bad_y, bad_x)).T,
             replacement_offsets=offsets[best_offset_indices],
             uncorrectable=uncorrectable
@@ -449,8 +380,8 @@ class BadPixelsFinder(qtc.QObject):
         ------
         None.
         """
-        pix_min, intensity_range = self.__limits['intensity']
-        flat = self.__imgs['flat'] - pix_min
+        pix_min, _, intensity_range = self._limits['intensity']
+        flat = self.__imgs[_FinderSection.ACQUIRE_FLAT] - pix_min
 
         # We have to exclude the already-detected bad pixels.
         # For this to happen, we will (1) add a bit to all
@@ -511,8 +442,10 @@ class BadPixelsFinder(qtc.QObject):
         -------
         None.
         """
-        long_flicker = self.__imgs['dark-long'].var(axis=0)
-        short_flicker = self.__imgs['dark-short'].var(axis=0)
+        _long = _FinderSection.ACQUIRE_DARK_LONG
+        _short = _FinderSection.ACQUIRE_DARK_SHORT
+        long_flicker = self.__imgs[_long].var(axis=0)
+        short_flicker = self.__imgs[_short].var(axis=0)
 
         long_mean, short_mean = long_flicker.mean(), short_flicker.mean()
         self.__badness = np.zeros_like(long_flicker)
@@ -527,60 +460,102 @@ class BadPixelsFinder(qtc.QObject):
     @_report_progress
     def find_hot_pixels(self):
         """Set badness of hot pixels to infinity."""
-        pix_min, intensity_range = self.__limits['intensity']
+        pix_min, _, intensity_range = self._limits['intensity']
+        _long = _FinderSection.ACQUIRE_DARK_LONG
 
-        dark_ave = self.__imgs['dark-long'].mean(axis=0) - pix_min
+        dark_ave = self.__imgs[_long].mean(axis=0) - pix_min
         hot_pixels = dark_ave >= 0.25*intensity_range
 
         self.__badness[hot_pixels] = np.inf
 
+    @qtc.pyqtSlot(tuple)
+    def _on_device_error(self, error):
+        """Silence all bad-pixels-related errors."""
+        # The difference with the base-class implementation is that
+        # self IS NOT part of the list of calibration tasks, but
+        # we should nonetheless skip all bad-pixels-related errors
+        if self._is_bad_pixels_error(error):
+            return True
+        return super()._on_device_error(error)
+
+    def restore_device(self):
+        """Restore settings and other device attributes."""
+        # Load either old or newly saved bad pixels file
+        _INVOKE(self.camera, 'update_bad_pixels')
+        for task in self.camera.calibration_tasks['bad_pixels']:
+            task.mark_as_done(False)
+        super().restore_device()
+
     def save_and_cleanup(self):
         """Save a bad pixels file and finish."""
-        bp_path = self.__original['settings'].get("camera_settings",
-                                                  "bad_pixels_path",
-                                                  fallback='')
+        bp_path = self.original_settings.get("camera_settings",
+                                             "bad_pixels_path",
+                                             fallback='')
         self.__bad_pixels.write(bp_path)
-        self.__restore_settings()
+        self.restore_device()
         done = _FinderSection.DONE
-        self.progress_occurred.emit(done.long_name, done.value,
-                                    done.n_sections,
-                                    done.n_tasks, done.n_tasks)
-        self.done.emit()
+        self.progress_occurred.emit(self.progress_name, *done,
+                                    done.n_steps, done.n_steps)
+        self.mark_as_done(True)
 
     @qtc.pyqtSlot()
-    @qtc.pyqtSlot(bool)
-    def __trigger_next_frame(self, *_):
+    def start(self):
+        """Start this task."""
+        if not super().start():
+            return False
+
+        # See if there is any preliminary task to be performed
+        task = self.__get_preliminary_task()
+        if task:
+            # Make sure all tasks have the same original settings
+            task.original_settings.read_dict(self.original_settings)
+            _unique_connect(task.done, self.__on_preliminary_task_done)
+            _unique_connect(task.aborted, self.abort)
+            _unique_connect(task.error_occurred, self.error_occurred)
+            _unique_connect(task.progress_occurred, self.progress_occurred)
+                            # self.__on_preliminary_task_progress)              # TODO: would be nice to have only one "overall" progress bar
+            _INVOKE(task, 'start')
+            return False
+
+        # No more tasks to do. Proceed to finding bad pixels.
+        # Clear any bad pixel info in the camera (frames should be raw)
+        bad_old = self.camera.bad_pixels
+        if bad_old:
+            bad_old.clear()
+        self.__current_section = _FinderSection.ACQUIRE_DARK_SHORT
+        self.begin_acquiring()
+        return True
+
+    @qtc.pyqtSlot()
+    def _trigger_next_frame(self, *_):
         """Trigger acquisition of a new frame if necessary."""
-        if (self.__camera.busy
-            or not self.__camera.is_running
-                or self.__camera.mode != 'triggered'):
+        if not self.can_trigger_camera:
             return
 
         if self.missing_frames:
-            _INVOKE(self.__camera, 'trigger_now')
+            self.trigger_camera()
             return
 
         # One section over, go to the next one
-        sections = tuple(self.__imgs.keys())
-        next_idx = sections.index(self.__current_section) + 1
-        if next_idx >= len(sections):
+        self.__current_section = self.__current_section.next_()
+        if self.__current_section is _FinderSection.CALCULATE_FLICKERY:
             # Done with all sections. Can proceed to calculations.
             self.find_flickery_pixels()
             self.find_hot_pixels()
             self.find_dead_pixels()
             self.find_bad_and_replacements()
             self.save_and_cleanup()
-        else:
-            self.__current_section = sections[next_idx]
-            self.__frames_done = 0
-            self.__adjustments.clear()
-            self.begin_acquiring()
+            return
+        # Proceed with the next acquisition
+        self._frames_done = 0
+        self.__adjustments.clear()
+        self.begin_acquiring()
 
     def __adjust_exposure_and_gain(self, frame):
-        """Use a frame to estimate optimal exposure for flat frames."""
-        old_exposure = self.__camera.exposure
-        old_gain = self.__camera.gain
-        pix_min, intensity_range = self.__limits['intensity']
+        """Use frame to estimate optimal exposure/gain for flat frames."""
+        old_exposure = self.camera.exposure
+        old_gain = self.camera.gain
+        pix_min, _, intensity_range = self._limits['intensity']
 
         intensity = frame.mean() - pix_min
         exposure = old_exposure * 0.5 * intensity_range / intensity
@@ -601,17 +576,16 @@ class BadPixelsFinder(qtc.QObject):
             exposure, gain = self.__correct_exposure_gain(exposure, gain)
             self.__force_exposure = True
 
-        self.__new_settings.set('measurement_settings', 'exposure',
+        self._task_settings.set('measurement_settings', 'exposure',
                                 f'{exposure:.3f}')
-        self.__new_settings.set('measurement_settings', 'gain', f'{gain:.1f}')
-        _INVOKE(self.__camera, 'set_settings',
-                qtc.Q_ARG(object, deepcopy(self.__new_settings)))
+        self._task_settings.set('measurement_settings', 'gain', f'{gain:.1f}')
+        self.update_device_settings()
         self.__report_acquisition_progress(exposure)
-        _INVOKE(self.__camera, 'start')
+        self.start_camera()
 
     def __correct_exposure_gain(self, exposure, gain):
         """Return in-range exposure and gain."""
-        exposure_min, exposure_max = self.__limits['exposure']
+        exposure_min, exposure_max = self._limits['exposure']
         if exposure < exposure_min:
             # Decrease the gain
             gain += 20*np.log10(exposure/exposure_min)
@@ -624,7 +598,7 @@ class BadPixelsFinder(qtc.QObject):
         # Now check that the gain is OK: the only cases in which
         # it cannot be OK is if we need very short or very long
         # exposures (otherwise the gain stayed the same).
-        min_gain, max_gain = self.__limits['gain']
+        min_gain, max_gain = self._limits['gain']
         if gain < min_gain:
             # Too much intensity
             base.emit_error(self, BadPixelsFinderErrors.FLAT_FRAME_WRONG_LIGHT,
@@ -656,29 +630,39 @@ class BadPixelsFinder(qtc.QObject):
         acceptable : bool
             True if frame is OK.
         """
-        pixel_min, intensity_range = self.__limits['intensity']
+        pixel_min, _, intensity_range = self._limits['intensity']
         relative_intensity = (frame.mean() - pixel_min) / intensity_range
-        if 'dark' in self.__current_section:
+        if 'DARK' in self.__current_section.name:
             return relative_intensity < 0.2
         _min, _max = (0.45, 0.55) if not self.__force_exposure else (0.3, 0.7)
         return _min < relative_intensity < _max                                 # TODO: do we want to complain if there are very bright areas (gradients)?
 
+    def __get_preliminary_task(self):
+        """Return a CameraCalibrationTask to run before self, or None."""
+        tasks_to_do = (t for t in self.camera.calibration_tasks['bad_pixels']
+                       if t.to_be_done)
+        return next(tasks_to_do, None)
+
+    @qtc.pyqtSlot()
+    def __on_preliminary_task_done(self):
+        """React to a preliminary task being finished."""
+        task = self.sender()
+
+        # Make sure to update the original settings to the ones
+        # that may have been edited by the task itself
+        self.original_settings.read_dict(task.original_settings)
+        self.start()
+
     def __report_acquisition_progress(self, exposure=None):
         """Report progress of acquisition."""
         if exposure is None:
-            exposure = self.__camera.exposure
-        section = _FinderSection.from_short_name(self.__current_section)
-        name = section.long_name.format(exposure)
+            exposure = self.camera.exposure
+        section = self.__current_section
+        section.set_format(exposure)
         n_adjustments = len(self.__adjustments)
-        self.progress_occurred.emit(name, section.value, section.n_sections,
-                                    self.__frames_done + n_adjustments,
-                                    section.n_tasks + n_adjustments)
-
-    def __restore_settings(self):
-        """Restore the original settings of the camera."""
-        _INVOKE(self.__camera, 'set_settings',
-                qtc.Q_ARG(object, self.__original['settings']))
-        self.__camera.process_info.restore_from(self.__original['process'])
+        self.progress_occurred.emit(self.progress_name, *section,
+                                    self._frames_done + n_adjustments,
+                                    section.n_steps + n_adjustments)
 
 
 class _Adjustments(MutableSequence):

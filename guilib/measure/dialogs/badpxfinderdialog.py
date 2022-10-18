@@ -68,6 +68,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
                 },
             'progress': {
                 'group' : qtw.QGroupBox("Progress"),
+                'total_text': qtw.QLabel(),
                 'total': qtw.QProgressBar(),
                 'section_text': qtw.QLabel(),
                 'section': qtw.QProgressBar(),
@@ -266,7 +267,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
         group = self.__progress['group']
         layout = qtw.QVBoxLayout()
         layout.setAlignment(qtc.Qt.AlignLeft)
-        layout.addWidget(qtw.QLabel("Finding bad pixels..."))
+        layout.addWidget(self.__progress['total_text'])
         layout.addWidget(self.__progress['total'])
         layout.addWidget(self.__progress['section_text'])
         layout.addWidget(self.__progress['section'])
@@ -454,16 +455,10 @@ class BadPixelsFinderDialog(qtw.QDialog):
             error = _m_camera.abc.CameraErrors.from_code(error_code)
         except AttributeError:
             error = None
-        if (error is _m_camera.abc.CameraErrors.MISSING_SETTINGS
-            or (error is _m_camera.abc.CameraErrors.INVALID_SETTINGS
-                and ("could not find a bad pixels file" in error_msg
-                     or "No bad_pixel_path found" in error_msg))):
-            # We don't want to spam messages if the current
-            # folder does not contain a bad pixels file. Also,
-            # we will not allow running anything if there is
-            # no bad_pixel_path option in the configuration,
-            # but we report this 'invalid' situation by having
-            # red text.
+        if error is _m_camera.abc.CameraErrors.MISSING_SETTINGS:
+            # Swallow a MISSING_SETTINGS error since we always
+            # create the active_camera without settings, and give
+            # it settings shortly afterwards.
             return
 
         self.__buttons['abort'].click()
@@ -472,6 +467,11 @@ class BadPixelsFinderDialog(qtw.QDialog):
 
     def __on_finder_done(self):
         """React to bad pixels being found."""
+        # Reconnect the error_occurred, as we should now handle
+        # it ourselves rather than have the finder do it for us
+        base.safe_connect(self.active_camera.error_occurred,
+                          self.__on_error_occurred,
+                          type=qtc.Qt.UniqueConnection)
         bar_total = self.__progress['total']
         bar_total.setValue(bar_total.maximum())
 
@@ -520,10 +520,11 @@ class BadPixelsFinderDialog(qtw.QDialog):
         self.__report_uncorrectable()
         self.__enable_controls(True)
 
-    @qtc.pyqtSlot(str, int, int, int, int)
+    @qtc.pyqtSlot(str, str, int, int, int, int)
     def __on_progress(self, *args):
         """React to a progress report from the finder."""
-        sec_txt, sec_no, tot_secs, progress, n_tasks = args
+        tot_txt, sec_txt, sec_no, tot_secs, progress, n_tasks = args
+        total = self.__progress['total_text']
         bar_total = self.__progress['total']
         section = self.__progress['section_text']
         bar_section = self.__progress['section']
@@ -531,6 +532,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
         if bar_total.maximum() != tot_secs:
             bar_total.setMaximum(tot_secs)
 
+        total.setText(tot_txt)
         section.setText(sec_txt)
         if bar_section.maximum() != n_tasks:
             bar_section.setMaximum(n_tasks)
@@ -586,6 +588,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
             progress_bar.setMinimum(0)
             progress_bar.setValue(0)
         self.__progress['section_text'].setText('')
+        self.__progress['total_text'].setText('')
 
     def __report_uncorrectable(self):
         """Report an error if there are many uncorrectable pixels."""
@@ -633,6 +636,10 @@ class BadPixelsFinderDialog(qtw.QDialog):
         self.__finder_thread.finished.connect(self.__finder.deleteLater)
         self.__finder.error_occurred.connect(self.__on_error_occurred)
         self.__finder.moveToThread(self.__finder_thread)
+
+        # Device errors are handled by the finder while it runs
+        base.safe_disconnect(self.active_camera.error_occurred,
+                             self.__on_error_occurred)
         _INVOKE(self.__finder, "find")
 
     def __stop_timers(self):
