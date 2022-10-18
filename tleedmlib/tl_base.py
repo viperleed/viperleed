@@ -218,7 +218,7 @@ def validate_checksum(tl_version, filename):
         raise TypeError("Invalid type for tl_version")
     clean_tl_version = str(tl_version)
 
-    if not tl_version in KNOWN_TL_VERSIONS:
+    if clean_tl_version not in KNOWN_TL_VERSIONS:
         raise UnknownTensErLEEDVersionError(
             f"Unrecognized TensErLEED version: {clean_tl_version}"
         )
