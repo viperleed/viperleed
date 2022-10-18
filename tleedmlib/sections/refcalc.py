@@ -31,6 +31,12 @@ from viperleed.tleedmlib.tl_base import validate_multiple_files
 logger = logging.getLogger("tleedm.refcalc")
 
 # TODO: we should have a parent class for compile tasks (issue #43)
+# CompileTask subclasses would need a class-level list of
+# glob patterns for retrieving source files. Probably allowing
+# a special "{__sourcedir__}" format specifier to be formatted
+# with .format(__sourcedir__=self.sourcedir) before globbing.
+# Similar considerations regarding the base names for foldername
+# and exename.
 class RefcalcCompileTask():
     """Stores information for a worker to compile a refcalc file, and keeps
     track of the folder that the compiled file is in afterwards."""
