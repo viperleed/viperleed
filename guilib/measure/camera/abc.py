@@ -576,7 +576,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             roi_offsets = ((roi_x // roi_dx) * roi_dx,
                            (roi_y // roi_dy) * roi_dy)
             new_roi = (*roi_offsets, roi_w, roi_h)
-            if not self.__is_valid_roi(roi):
+            if not self.__is_valid_roi(new_roi):
                 base.emit_error(self, CameraErrors.INVALID_SETTINGS,
                                 'camera_settings/roi',
                                 f'\nInfo: ROI {new_roi} is invalid after '
