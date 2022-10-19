@@ -207,7 +207,7 @@ def validate_checksum(tl_version, filename):
         If tl_version is not one of the known versions.
     InvalidChecksumFileError
         If no known checksum exists for filename. Consider
-        running 'python tl_base -p "path/to/tensorleed"' to
+        running 'python checksums -p "path/to/tensorleed"' to
         generate a new checksum file.
     InvalidChecksumError
         If checksum does not match any of the known checksums
