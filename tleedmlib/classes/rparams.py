@@ -25,7 +25,7 @@ else:
 from viperleed.tleedmlib.files.iodeltas import checkDelta
 from viperleed.tleedmlib.leedbase import getMaxTensorIndex
 from viperleed.tleedmlib.base import available_cpu_count
-from viperleed.tleedmlib.tl_base import KNOWN_TL_VERSIONS
+from viperleed.tleedmlib.checksums import KNOWN_TL_VERSIONS
 
 logger = logging.getLogger("tleedm.rparams")
 

@@ -26,7 +26,7 @@ from viperleed.tleedmlib.files.parameters import modifyPARAMETERS
 import viperleed.tleedmlib.files.beams as beams
 import viperleed.tleedmlib.files.iorefcalc as tl_io
 from viperleed.tleedmlib.files.ivplot import plot_iv
-from viperleed.tleedmlib.tl_base import validate_multiple_files
+from viperleed.tleedmlib.checksums import validate_multiple_files
 
 logger = logging.getLogger("tleedm.refcalc")
 

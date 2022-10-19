@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Module tl_base of viperleed.tleedmlib.
+"""Module checksums of viperleed.tleedmlib.
 
 @author: Alexander M. Imre
 
@@ -8,7 +8,7 @@ their checksums before run time compilation. This is supposed to help
 avoid security vulnerabilities.
 
 This module can be executed with argument -p "path/to/tensorleed/folder"
-to generate the file tl_checksums.dat which contains an encoded version
+to generate the file _checksums.dat which contains an encoded version
 of checksums for all TensErLEED Fortran source code files.
 
 We use the common SHA-256 hashing algorithm as available from Pythons
@@ -100,7 +100,7 @@ class TLSourceFile:
         checksums : tuple of str
             The known checksums for this source file. The values are
             those given at instantiation, and are usually taken from
-            tl_checksums.dat
+            _checksums.dat
         """
         return self._valid_checksums
 
@@ -190,7 +190,7 @@ def get_file_checksum(file_path):
 def validate_checksum(tl_version, filename):
     """Compare checksum for filename with known checksums.
 
-    The known checksums are stored (encoded) in tl_checksums.dat.
+    The known checksums are stored (encoded) in _checksums.dat.
 
     Parameters
     ----------
@@ -354,7 +354,7 @@ def read_encoded_checksums(encoded_file_path=None):
     ----------
     encoded_file_path : str, or pathlike, optional
         Optional location of encoded checksum file. If None the default
-        location (tleedmlib/tl_checksums.dat) is assumed. Default is
+        location (tleedmlib/_checksums.dat) is assumed. Default is
         None.
 
     Returns
@@ -366,7 +366,7 @@ def read_encoded_checksums(encoded_file_path=None):
     if encoded_file_path is None:
         # file should be in tleedmlib/
         encoded_file_path = Path(__file__).resolve().parent
-        encoded_file_path /= "tl_checksums.dat"
+        encoded_file_path /= "_checksums.dat"
 
     with open(encoded_file_path, "rb") as file:
         return decode_checksums(file.read())
@@ -382,7 +382,7 @@ def _write_encoded_checksums(source_file_versions, encoded_file_path=None):
         {path:(checksum,)}.
     encoded_file_path : str, or pathlike, optional
         Optional location of encoded checksum file. If None the default
-        location (tleedmlib/tl_checksums.dat) is assumed. Default is
+        location (tleedmlib/_checksums.dat) is assumed. Default is
         None.
 
     Returns
@@ -392,7 +392,7 @@ def _write_encoded_checksums(source_file_versions, encoded_file_path=None):
     if encoded_file_path is None:
         # file should be in tleedmlib/
         encoded_file_path = Path(__file__).resolve().parent
-        encoded_file_path /= "tl_checksums.dat"
+        encoded_file_path /= "_checksums.dat"
 
     with open(encoded_file_path, "wb") as file:
         file.write(encode_checksums(source_file_versions))
@@ -489,4 +489,4 @@ else:  # Write new checksum file when executed as a module
     read_checksums = read_encoded_checksums()
 
     assert read_checksums == checksum_dict
-    print("Wrote tl_checksums.dat successfully!")
+    print("Wrote _checksums.dat successfully!")

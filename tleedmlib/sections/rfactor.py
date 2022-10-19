@@ -17,7 +17,7 @@ import numpy as np
 from viperleed.tleedmlib.files.iorefcalc import readFdOut
 from viperleed.tleedmlib.leedbase import fortran_compile_batch, getTLEEDdir, getTensors
 import viperleed.tleedmlib.files.iorfactor as tl_io
-from viperleed.tleedmlib.tl_base import validate_multiple_files
+from viperleed.tleedmlib.checksums import validate_multiple_files
 
 from viperleed.tleedmlib.wrapped.rfactor import r_factor_new as rf
 from viperleed.tleedmlib.wrapped.error_codes import error_codes, check_ierr
