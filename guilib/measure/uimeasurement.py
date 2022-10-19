@@ -92,7 +92,8 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 #       The most difficult part with the singleton/Borg is handling
 #       movements to threads.
 # TODO?: CameraViewer can still pop up. Try using "with qtc.QSignalBlocker:"
-#       while entering the closeEvent?
+#       while entering the closeEvent? This seems to happen especially when
+#       closing the selector with a running camera.
 # TODO: Define settings that can be modified without stop-starting the
 #       camera. This can speed up some camera startups.
 # TODO: find a proper way to CameraABC.moveToThread. This would solve the
@@ -113,6 +114,10 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 # TODO: progress bar for non-endless
 # TODO: busy dialog where appropriate
 # TODO: move_to_front bad-pixels finder dialog when open and click on ui
+# TODO: more general than previous one: figure out how to keep a window
+#       on top of another set of windows (but NOT with Qt::WindowStaysOnTopHint)
+# TODO: consider using a WaitCursor when stuff takes time.
+# TODO: QDoubleSpinBox subclass that switches automatically SI unit prefix
 
 #   F E A T U R E S
 # TODO: quick IV video to find max intensity, and adjust camera
@@ -368,6 +373,7 @@ class Measure(ViPErLEEDPluginBase):
                 self._dialogs['camera_viewers'].remove(viewer)
                 return False
             camera.settings = cfg
+            camera.settings.update_file()
 
         # Try starting it. If not possible, we probably lost it
         if not camera.is_running:
@@ -609,7 +615,9 @@ class Measure(ViPErLEEDPluginBase):
                 print("no config found", cfg_path)                              # TODO: error out here
                 return
             cfg = ViPErLEEDSettings.from_settings(cfg_path)
-            cfg['camera_settings']['mode'] = 'live'
+            if cfg['camera_settings']['mode'] != 'live':
+                cfg['camera_settings']['mode'] = 'live'
+                cfg.update_file()
             if cfg['camera_settings']['device_name'] != cam_name:
                 cfg['camera_settings']['device_name'] = cam_name
                 cfg.update_file()
