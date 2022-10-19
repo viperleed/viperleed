@@ -54,7 +54,7 @@ def superpos(sl, rp, subdomain=False, for_error=False, only_vary=None):
                 rp.setHaltingLevel(2)
                 return
         else:
-            logger.error("Superpos: Found no stores results from recent "
+            logger.error("Superpos: Found no stored results from recent "
                          "search and no SD.TL file. Cancelling...")
             rp.setHaltingLevel(2)
             return
