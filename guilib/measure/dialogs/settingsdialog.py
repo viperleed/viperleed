@@ -235,11 +235,6 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
                 "Configuration file does not contain a section"
                 f"/option pair {section_name}/{option_name}"
                 )
-        if handler_widget is None and option_type is None:
-            raise ValueError(
-                f"Cannot add a handler for {section_name}/{option_name} "
-                "with neither an explicit handler_widget nor an option_type"
-                )
         if section_name not in self:
             warnings.warn(
                 f"{self.__class__.__name__}: section {section_name} "
@@ -247,7 +242,7 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
                 " will appear without a bounding frame"
                 )
 
-        if handler_widget is None:
+        if handler_widget is None and option_type is not None:
             handler_widget = self.handler_from_type(option_type)
         if handler_widget is None:
             value = self.__config[section_name][option_name]
@@ -779,6 +774,13 @@ class SettingsDialog(qtw.QDialog):
     # slot to update the object whose settings are being edited
     settings_changed = qtc.pyqtSignal()
 
+    # This signal is emitted every time the dialog finishes and if
+    # any change occurred to the settings. It carries True if edited
+    # settings were saved to file, False otherwise. Users can connect
+    # to his signal, and may want to restore the original settings if
+    # False
+    settings_saved = qtc.pyqtSignal(bool)
+
     def __init__(self, handled_obj=None, settings=None, title=None, **kwargs):
         """Initialize dialog instance.
 
@@ -859,9 +861,11 @@ class SettingsDialog(qtw.QDialog):
                 "Would you like to save changes to file?",
                 _MSGBOX.Save | _MSGBOX.Discard
                 )
-            if reply == _MSGBOX.Save:
+            _saved = reply == _MSGBOX.Save
+            if _saved:
                 self.settings.update_file()
                 self.__settings['original'].read_dict(self.settings)
+            self.settings_saved.emit(_saved)
         super().accept()
 
     def reject(self):
@@ -885,6 +889,8 @@ class SettingsDialog(qtw.QDialog):
 
         self.settings.read_dict(self.__settings['original'])
         self.__on_apply_pressed()
+        if self.__settings['original'] != self.__settings['applied']:
+            self.settings_saved.emit(False)
         super().reject()
 
     def showEvent(self, event):          # pylint: disable=invalid-name
