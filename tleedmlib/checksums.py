@@ -20,6 +20,7 @@ import base64
 import ast
 from pathlib import Path
 import argparse
+from warnings import warn
 
 # TensErLEED Versions
 KNOWN_TL_VERSIONS = (
@@ -240,7 +241,7 @@ def validate_checksum(tl_version, filename):
 
     # get tuple of reference checksums
     try:
-        reference_checksums = _get_checksums(tl_version, filename_clean)
+        reference_checksums = _get_checksums(clean_tl_version, filename_clean)
     except ValueError as err:
         raise InvalidChecksumFileError(
             f"Could not find checksum for file {filename_clean}."
@@ -306,8 +307,8 @@ def encode_checksums(source_file_versions):
     Parameters
     ----------
     source_file_versions : dict
-        Keys are TensErLEED versions as strings, values are dicts
-        {path:(checksum,)}.
+        Keys are paths to files as strings, values are sets of known
+        checksums.
 
     Returns
     -------
@@ -331,8 +332,13 @@ def decode_checksums(encoded_checksums):
     Returns
     -------
     source_file_versions : dict
-        Keys are TensErLEED versions as strings, values are dicts
-        {path:(checksum,)}.
+        Keys are paths to files as strings, values are sets of known
+        checksums.
+
+    Raises
+    ------
+    InvalidChecksumFileError
+        If fails to decode existing checksums file.
     """
     encoded_checksums += b"==="  # Prevents padding errors
     bytes_source = base64.b64decode(encoded_checksums)
@@ -360,8 +366,8 @@ def read_encoded_checksums(encoded_file_path=None):
     Returns
     -------
     source_file_versions : dict
-        Keys are TensErLEED versions as strings, values are dicts
-        {path:(checksum,)}.
+        Keys are paths to files as strings, values are sets of known
+        checksums.
     """
     if encoded_file_path is None:
         # file should be in tleedmlib/
@@ -378,8 +384,8 @@ def _write_encoded_checksums(source_file_versions, encoded_file_path=None):
     Parameters
     ----------
     source_file_versions : dict
-        Keys are TensErLEED versions as strings, values are dicts
-        {path:(checksum,)}.
+        Keys are paths to files as strings, values are sets of known
+        checksums.
     encoded_file_path : str, or pathlike, optional
         Optional location of encoded checksum file. If None the default
         location (tleedmlib/_checksums.dat) is assumed. Default is
@@ -398,17 +404,22 @@ def _write_encoded_checksums(source_file_versions, encoded_file_path=None):
         file.write(encode_checksums(source_file_versions))
 
 
-def _generate_checksums_for_dir(path, patterns=("*/GLOBAL", "*/*.f*")):
-    """Generate copy-paste-able string with all checksums for a directory.
+def _add_checksums_for_dir(path, 
+                           checksum_dict_,
+                           patterns=("*/GLOBAL", "*/*.f*")):
+    """Add checksums for files in path into checksum_dict_.
 
-    This function is intended for tleedm developers. The checksums are
-    printed to standard out.
+    This function is intended for tleedm developers.
 
     Parameters
     ----------
     path : str, or path-like
         Directory contaning the files. Typically one of the
         "TensErLEED-vXXX" directories in tensorleed.
+    checksum_dict_ : dict
+        Checksums dict to start with. Should be {path:{checksums}}.
+        New checksums will be appended to existing values.
+        Modified in place.
     patterns : tuple of str, optional
         File patterns used to select files (e.g., extension).
         Syntax should be the one expected by glob. Default is
@@ -416,19 +427,68 @@ def _generate_checksums_for_dir(path, patterns=("*/GLOBAL", "*/*.f*")):
 
     Returns
     -------
-    checksum_dict : dict
-        Keys are filenames, values are a tuple with the checksum for the
-        file contents. The tuple will only contain one item.
+    None.
     """
-    checksum_dict_ = {}
     path = Path(path)
     base_path = path.parent  # /path/to/tensorleed
     for pattern in patterns:
         for file in path.glob(pattern):
             checksum = get_file_checksum(file)
-            checksum_dict_[str(file.relative_to(base_path))] = (checksum,)
-    return checksum_dict_
+            key = str(file.relative_to(base_path))
+            if key not in checksum_dict_:
+                checksum_dict_[key] = set()
+            checksum_dict_[key].add(checksum)
 
+
+def _parse_args(args):
+    """Parse command line arguments.
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        First element returned by ArgumentParser.parse_known_args()
+
+    Returns
+    -------
+    tl_base_path : Path
+        Base path of folder containing TensErLEED source files.
+    tl_folders : tuple
+        Contains Paths to all subfolders contained in tl_base_path
+    checksum_dict : dict
+        Dictionary containing {filename:set(known_checksums)}.
+
+    Raises
+    ------
+    RuntimeError
+        _description_
+    FileNotFoundError
+        If the path given in args does not exist or does not contain
+        source files.
+    """
+    if args.tlpath:
+        tl_base_path = Path(args.tlpath)
+    else:
+        raise RuntimeError("No path specified. Use --tlpath or -p")
+
+    if not tl_base_path.exists():
+        raise FileNotFoundError(f"Could not find {tl_base_path}")
+
+    tl_folders = tuple(tl_base_path.glob("TensErLEED*"))                       # TODO: would need to be changed to include beamgen, etc.
+    if not tl_folders:
+        raise FileNotFoundError(
+            f"No TensErLEED folders found in {tl_base_path}"
+        )
+
+    # check for --no-append flag
+    checksum_dict = {}
+    if not args.no_append:
+        try:
+            checksum_dict = read_encoded_checksums()
+        except (FileNotFoundError, InvalidChecksumFileError) as err:
+            warn("Could not read _checksums.dat file. Creating a new one. "
+                 f"Info: {err}")
+                 
+    return tl_base_path, tl_folders, checksum_dict
 
 if __name__ != "__main__":
     # permissible checksums for various TensErLEED version
@@ -436,19 +496,17 @@ if __name__ != "__main__":
     # allowed checksums for each version are given in a tuple
     SOURCE_FILE_VERSIONS = read_encoded_checksums()
 
-    # check version codes are valid
-    try:
-        assert all(v in KNOWN_TL_VERSIONS for v in SOURCE_FILE_VERSIONS)
-    except AssertionError as err:
-        raise UnknownTensErLEEDVersionError(
-            "Unknown TensErLEED version detected in checksum file."
-        ) from err
-
     # generate set of all files
     TL_INPUT_FILES = set()
-    for f_version, input_files in SOURCE_FILE_VERSIONS.items():
-        for file_, f_checksums in input_files.items():
-            TL_INPUT_FILES.add(TLSourceFile(file_, f_version, f_checksums))
+    for file_, f_checksums in SOURCE_FILE_VERSIONS.items():
+        folder = tuple(Path(file_).parents)[-2]
+        if not folder.name.startswith("TensErLEED"):
+            raise NotImplementedError(
+                "Checksums are only implemented "
+                "for TensErLEED files at the moment."
+                )
+        f_version = folder.name.split("v")[1]
+        TL_INPUT_FILES.add(TLSourceFile(file_, f_version, f_checksums))
 
 else:  # Write new checksum file when executed as a module
     parser = argparse.ArgumentParser()
@@ -456,31 +514,24 @@ else:  # Write new checksum file when executed as a module
         "-p", "--tlpath",
         help=("specify TensErLEED source directory"), type=str
     )
+    parser.add_argument(
+        "-n", "--no-append",
+        help=("Do not read in existing _checksums.dat file and create "
+              "a new one instead containing ONLY the current files. If "
+              "not specified, the default is to append new checksums "
+              "to existing ones."), type=str
+    )
     args = parser.parse_known_args()
 
-    if args[0].tlpath:
-        tl_base_path = Path(args[0].tlpath)
-    else:
-        raise RuntimeError("No path specified. Use --tlpath or -p")
-
-    if not tl_base_path.exists():
-        raise FileNotFoundError(f"Could not find {tl_base_path}")
-
-    tl_folders = tuple(tl_base_path.glob("TensErLEED*"))
-    if not tl_folders:
-        raise FileNotFoundError(
-            f"No TensErLEED folders found in {tl_base_path}"
-        )
-
-    checksum_dict = {}
+    tl_base_path, tl_folders, checksum_dict = _parse_args(args[0])
+    
     for folder in tl_folders:
         version_ = folder.name.split("v")[1]
         if version_ not in KNOWN_TL_VERSIONS:
             raise UnknownTensErLEEDVersionError(
                     f"Unknown TensErLEED version {version_} in {tl_base_path}"
             )
-        checksums_ = _generate_checksums_for_dir(path=folder)
-        checksum_dict[version_] = checksums_
+        _add_checksums_for_dir(folder, checksum_dict)
 
     # write to file
     _write_encoded_checksums(checksum_dict)
