@@ -24,12 +24,18 @@ extensions = [
               'sphinx.ext.viewcode',
               'sphinx.ext.intersphinx',
               'sphinx_rtd_theme',
+              'sphinxcontrib.bibtex' # to use .bib files for bibliography
               ]
 
 source_suffix = '.rst'
 
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+
+# For bibliography
+bibtex_bibfiles = ['references.bib']
+bibtex_default_style = 'unsrt' # use numbers
+bibtex_reference_style = 'label' # use numbers in text too
 
 
 # -- Options for HTML output -------------------------------------------------

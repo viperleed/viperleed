@@ -45,6 +45,11 @@
    Atomic Simulation Environment API<content/utilities/aseapi>
    Bookkeeper<content/utilities/bookkeeper>
 
+.. toctree:: 
+   :maxdepth: 1
+   :caption: References
+
+   References<references>
 
 .. toctree:: 
    :glob:
