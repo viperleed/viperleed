@@ -10,12 +10,14 @@ import os
 import logging
 import shutil
 import subprocess
-from tabnanny import check
+from pathlib import Path
+
 import numpy as np
 
 from viperleed.tleedmlib.files.iorefcalc import readFdOut
 from viperleed.tleedmlib.leedbase import fortran_compile_batch, getTLEEDdir, getTensors
-import viperleed.tleedmlib.files.iorfactor as io
+import viperleed.tleedmlib.files.iorfactor as tl_io
+from viperleed.tleedmlib.checksums import validate_multiple_files
 
 from viperleed.tleedmlib.wrapped.rfactor import r_factor_new as rf
 from viperleed.tleedmlib.wrapped.error_codes import error_codes, check_ierr
@@ -168,7 +170,7 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
     out_grid = np.arange(minen, maxen + intpol_step, intpol_step)
 
     # find correspondence experimental to theoretical beams:
-    beamcorr = io.getBeamCorrespondence(sl, rp)
+    beamcorr = tl_io.getBeamCorrespondence(sl, rp)
     # integer & fractional beams
     iorf = []
     for (i, beam) in enumerate(rp.expbeams):
@@ -179,9 +181,9 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
     iorf.extend([0] * (len(rp.ivbeams) - len(rp.expbeams)))
 
     n_beams = len(beamcorr) - beamcorr.count(-1)  # -1 indicates no correspondence
-    exp_grid, exp_id_start, exp_n_E_beams, exp_intensities_in = io.beamlist_to_array(
-        rp.expbeams
-    )
+    (exp_grid, exp_id_start,
+     exp_n_E_beams,
+     exp_intensities_in) = tl_io.beamlist_to_array(rp.expbeams)
     corr_theobeams = []
     for i in beamcorr:
         if i != -1:
@@ -191,7 +193,7 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
         theo_id_start,
         theo_n_E_beams,
         theo_intensities_in,
-    ) = io.beamlist_to_array(corr_theobeams)
+    ) = tl_io.beamlist_to_array(corr_theobeams)
 
     deg = rp.INTPOL_DEG
     v0i = rp.V0_IMAG
@@ -423,7 +425,7 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
 
         # shifted_E_start_exp must be now same as shifted_E_start_theo -> no need to pass both
         # same for n_e_beams
-        io.writeRfactorPdf_new(
+        tl_io.writeRfactorPdf_new(
             n_beams,
             labels,
             R_beams,
@@ -451,12 +453,12 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
         theospec = rp.superpos_specout
     # WEXPEL before PARAM, to make sure number of exp. beams is correct
     try:
-        io.writeWEXPEL(sl, rp, theobeams, for_error=for_error)
+        tl_io.writeWEXPEL(sl, rp, theobeams, for_error=for_error)
     except Exception:
         logger.error("Exception during writeWEXPEL: ")
         raise
     try:
-        io.writeRfactPARAM(rp, theobeams, for_error=for_error, only_vary=only_vary)
+        tl_io.writeRfactPARAM(rp, theobeams, for_error=for_error, only_vary=only_vary)
     except Exception:
         logger.error("Exception during writeRfactPARAM: ")
         raise
@@ -467,9 +469,9 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
             raise RuntimeError("TensErLEED code not found.")
         libpath = os.path.join(tldir, "lib")
         libname = [f for f in os.listdir(libpath) if f.startswith("rfacsb")][0]
-        shutil.copy2(os.path.join(libpath, libname), libname)
         srcpath = os.path.join(tldir, "src")
         srcname = [f for f in os.listdir(srcpath) if f.startswith("rfactor.")][0]
+        shutil.copy2(os.path.join(libpath, libname), libname)
         shutil.copy2(os.path.join(srcpath, srcname), srcname)
     except Exception:
         logger.error("Error getting TensErLEED files for r-factor " "calculation: ")
@@ -481,6 +483,12 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
         )
         rp.setHaltingLevel(3)
         return []
+    # validate checksums
+    if not rp.TL_IGNORE_CHECKSUM:
+        files_to_check = (Path(libpath) / libname,
+                          Path(srcpath) / srcname)
+        validate_multiple_files(files_to_check, logger, "R-factor", rp.TL_VERSION_STR)
+        
     logger.info("Compiling fortran input files...")
     rfacname = "rfactor-" + rp.timestamp
     if rp.FORTRAN_COMP[0] == "":
@@ -547,14 +555,14 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
     # read output
     if for_error:
         try:
-            rfaclist = io.readROUTSHORT()
+            rfaclist = tl_io.readROUTSHORT()
         except Exception:
             logger.error("Error reading ROUTSHORT file", exc_info=rp.LOG_DEBUG)
             rp.setHaltingLevel(2)
         return rfaclist
 
     try:
-        (rfac, r_int, r_frac), v0rshift, rfaclist = io.readROUT()
+        (rfac, r_int, r_frac), v0rshift, rfaclist = tl_io.readROUT()
     except Exception:  # TODO catch correct exception
         logger.error("Error reading ROUT file", exc_info=rp.LOG_DEBUG)
         rp.setHaltingLevel(2)
@@ -613,7 +621,7 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
                 [beam.getLabel(style=labelstyle)[1] for beam in rp.expbeams]
             )
             try:
-                io.writeRfactorPdf(
+                tl_io.writeRfactorPdf(
                     [
                         (
                             b.getLabel(lwidth=labelwidth, style=labelstyle)[0],

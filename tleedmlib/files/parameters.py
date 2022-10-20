@@ -36,23 +36,32 @@ _KNOWN_PARAMS = [
     'SYMMETRY_BULK',
     'SYMMETRY_CELL_TRANSFORM', 'SYMMETRY_EPS', 'SYMMETRY_FIND_ORI',
     'SYMMETRY_FIX', 'TENSOR_INDEX', 'TENSOR_OUTPUT', 'THEO_ENERGIES',
-    'TL_VERSION', 'T_DEBYE', 'T_EXPERIMENT', 'V0_IMAG', 'V0_REAL',
-    'V0_Z_ONSET', 'VIBR_AMP_SCALE']
+    'TL_VERSION', 'TL_IGNORE_CHECKSUM',
+    'T_DEBYE', 'T_EXPERIMENT', 'V0_IMAG', 'V0_REAL',
+    'V0_Z_ONSET', 'VIBR_AMP_SCALE'
+    ]
 
 # _PARAM_ALIAS keys should be all lowercase, with no underscores
 _PARAM_ALIAS = {
     'bulklike': 'BULK_LIKE_BELOW',
     'bulksymmetry': 'SYMMETRY_BULK',
-    'fortrancompile': 'FORTRAN_COMP', 'compiler': 'FORTRAN_COMP',
+    'compiler': 'FORTRAN_COMP',
+    'fortrancompile': 'FORTRAN_COMP',
     'fortrancompiler': 'FORTRAN_COMP',
-    'fdoptimize': 'OPTIMIZE', 'fdoptimization': 'OPTIMIZE',
-    'plotrfactor': 'PLOT_IV', 'plotrfactors': 'PLOT_IV', 'ivplot': 'PLOT_IV',
-    'overlap': 'S_OVL', 'MT_overlap': 'S_OVL'
-              }
+    'fdoptimize': 'OPTIMIZE',
+    'fdoptimization': 'OPTIMIZE',
+    'plotrfactor': 'PLOT_IV',
+    'plotrfactors': 'PLOT_IV',
+    'ignorechecksum': 'TL_IGNORE_CHECKSUM',
+    'ivplot': 'PLOT_IV',
+    'overlap': 'S_OVL',
+    'mtoverlap': 'S_OVL',
+    }
+
 
 PARAM_LIMITS = {
-    'LMAX':(1, 18),
-}
+    'LMAX': (1, 18),
+    }
 
 for p in _KNOWN_PARAMS:
     _PARAM_ALIAS[p.lower().replace("_", "")] = p
@@ -478,7 +487,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
         # simple bool parameters
         elif param in ['LOG_DEBUG', 'LOG_SEARCH', 'PHASESHIFTS_CALC_OLD',
                        'PHASESHIFTS_OUT_OLD', 'R_FACTOR_LEGACY', 'SUPPRESS_EXECUTION',
-                       'SYMMETRIZE_INPUT', 'SYMMETRY_FIND_ORI']:
+                       'SYMMETRIZE_INPUT', 'SYMMETRY_FIND_ORI', 'TL_IGNORE_CHECKSUM']:
             setBoolParameter(rpars, param, llist[0])
         # slightly more complicated bools
         elif param == 'LAYER_STACK_VERTICAL':

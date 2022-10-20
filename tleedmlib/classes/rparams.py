@@ -25,6 +25,10 @@ else:
 from viperleed.tleedmlib.files.iodeltas import checkDelta
 from viperleed.tleedmlib.leedbase import getMaxTensorIndex
 from viperleed.tleedmlib.base import available_cpu_count
+from viperleed.tleedmlib.checksums import (
+    KNOWN_TL_VERSIONS,
+    UnknownTensErLEEDVersionError
+)
 
 logger = logging.getLogger("tleedm.rparams")
 
@@ -176,7 +180,9 @@ class Rparams:
         self.THEO_ENERGIES = [-1, -1, -1]
         # default: [20, 800, 2], initialized in section INIT
         self.THETA = 0.0        # from BEAM_INCIDENCE
+        self.TL_IGNORE_CHECKSUM = True
         self.TL_VERSION = 0.    # requested TensErLEED version
+        self.TL_VERSION_STR = None  # TODO: replace with Version class once available
         self.T_EXPERIMENT = None
         self.T_DEBYE = None
         self.V0_IMAG = 4.5
@@ -320,6 +326,19 @@ class Rparams:
             self.TL_VERSION = highest
             if highest > 0.:
                 logger.debug("Detected TensErLEED version " + namestr)
+        
+        # TL_VERSION_STR
+        # try simple conversion to string
+        self.TL_VERSION_STR = f"{self.TL_VERSION:.2f}"
+        if self.TL_VERSION_STR not in KNOWN_TL_VERSIONS:
+            # try again without trailing zero
+            if self.TL_VERSION_STR.endswith('0'):
+                self.TL_VERSION_STR = self.TL_VERSION_STR[:-1]
+        if self.TL_VERSION_STR not in KNOWN_TL_VERSIONS:
+            raise UnknownTensErLEEDVersionError(
+                f"Unrecognized TensErLEED version: {self.TL_VERSION_STR}"
+            )
+        
         # SEARCH_CONVERGENCE:
         if self.searchConvInit["gaussian"] is None:
             self.searchConvInit["gaussian"] = self.GAUSSIAN_WIDTH

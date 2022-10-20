@@ -13,6 +13,8 @@ import logging
 import copy
 import shutil
 import subprocess
+from pathlib import Path
+
 import numpy as np
 
 from viperleed import fortranformat as ff
@@ -22,12 +24,19 @@ from viperleed.tleedmlib.leedbase import (
 from viperleed.tleedmlib.base import splitMaxRight
 from viperleed.tleedmlib.files.parameters import modifyPARAMETERS
 import viperleed.tleedmlib.files.beams as beams
-import viperleed.tleedmlib.files.iorefcalc as io
+import viperleed.tleedmlib.files.iorefcalc as tl_io
 from viperleed.tleedmlib.files.ivplot import plot_iv
+from viperleed.tleedmlib.checksums import validate_multiple_files
 
 logger = logging.getLogger("tleedm.refcalc")
 
-
+# TODO: we should have a parent class for compile tasks (issue #43)
+# CompileTask subclasses would need a class-level list of
+# glob patterns for retrieving source files. Probably allowing
+# a special "{__sourcedir__}" format specifier to be formatted
+# with .format(__sourcedir__=self.sourcedir) before globbing.
+# Similar considerations regarding the base names for foldername
+# and exename.
 class RefcalcCompileTask():
     """Stores information for a worker to compile a refcalc file, and keeps
     track of the folder that the compiled file is in afterwards."""
@@ -44,6 +53,26 @@ class RefcalcCompileTask():
 
         if os.name == 'nt':
             self.exename += '.exe'
+
+    def get_source_files(self):
+        """Return a tuple of source files needed for running a refcalc."""
+        sourcedir = Path(self.sourcedir).resolve()
+        libpath = sourcedir / 'lib'
+        srcpath = sourcedir / 'src'
+        lib_tleed = next(libpath.glob('lib.tleed*'), None)
+        srcname = next(srcpath.glob('ref-calc*'), None)
+        globalname = srcpath / "GLOBAL"
+        _muftin = Path("muftin.f")
+        muftinname =_muftin if _muftin.is_file() else None
+        if any(f is None for f in (srcname, lib_tleed)):
+            raise RuntimeError("Source files missing in {sourcedir}")       # TODO: use a more appropriate custom exception in CompileTask (e.g., MissingSourceFileError)
+        return lib_tleed, srcname, globalname, muftinname
+
+    def copy_source_files_to_local(self):
+        """Copy ref-calc files to current directory."""
+        for filepath in self.get_source_files():
+            if filepath:
+                shutil.copy2(filepath, filepath.name)
 
 
 class RefcalcRunTask():
@@ -66,9 +95,7 @@ def compile_refcalc(comptask):
     """Function meant to be executed by parallelized workers. Executes a
     RefcalcCompileTask."""
     logger = logging.getLogger("tleedm.refcalc")
-    has_muftin = False
-    if os.path.isfile("muftin.f"):
-        has_muftin = True
+
     workfolder = os.path.join(comptask.basedir, comptask.foldername)
     # make folder and go there:
     if os.path.isdir(workfolder):
@@ -85,30 +112,25 @@ def compile_refcalc(comptask):
         logger.error("Error writing PARAM file: ", exc_info=True)
         return ("Error encountered by RefcalcCompileTask "
                 + comptask.foldername + "while trying to write PARAM file.")
-    # get Fortran source files
+
     try:
-        libpath = os.path.join(comptask.sourcedir, 'lib')
-        libname = [f for f in os.listdir(libpath)
-                   if f.startswith('lib.tleed')][0]
-        shutil.copy2(os.path.join(libpath, libname), libname)
-        srcpath = os.path.join(comptask.sourcedir, 'src')
-        srcname = [f for f in os.listdir(srcpath)
-                   if f.startswith('ref-calc')][0]
-        shutil.copy2(os.path.join(srcpath, srcname), srcname)
-        globalname = "GLOBAL"
-        shutil.copy2(os.path.join(srcpath, globalname), globalname)
-        if has_muftin:
-            muftinname = "muftin.f"
-            shutil.copy2(os.path.join(comptask.basedir, muftinname),
-                         muftinname)
+        comptask.copy_source_files_to_local()
     except Exception:
         logger.error("Error getting TensErLEED files for "
                      "refcalc-amplitudes: ", exc_info=True)
         return ("Error encountered by RefcalcCompileTask "
                 + comptask.foldername + " while trying to fetch fortran "
                 "source files")
+
+    # TODO: we could skip this, if we implemented a general CompileTask (Issue #43)
+    (libname, srcname,
+     _, muftinname) = (
+         str(fname.name) if fname is not None else None
+         for fname in comptask.get_source_files()
+         )
+
     compile_list = [(libname, "lib.tleed.o"), (srcname, "main.o")]
-    if has_muftin:
+    if muftinname:
         compile_list.append((muftinname, "muftin.o"))
     # compile
     ctasks = [(comptask.fortran_comp[0] + " -o " + oname + " -c",
@@ -278,12 +300,12 @@ def refcalc(sl, rp, subdomain=False, parent_dir=""):
     except FileNotFoundError:
         pass
     try:
-        io.writeAUXLATGEO(sl, rp)
+        tl_io.writeAUXLATGEO(sl, rp)
     except Exception:
         logger.error("Exception during writeAUXLATGEO: ")
         raise
     try:
-        io.writeAUXNONSTRUCT(sl, rp)
+        tl_io.writeAUXNONSTRUCT(sl, rp)
     except Exception:
         logger.error("Exception during writeAUXNONSTRUCT: ")
         raise
@@ -294,12 +316,12 @@ def refcalc(sl, rp, subdomain=False, parent_dir=""):
             logger.error("Exception during writeAUXBEAMS: ")
             raise
     try:
-        io.writeAUXGEO(sl, rp)
+        tl_io.writeAUXGEO(sl, rp)
     except Exception:
         logger.error("Exception during writeAUXGEO: ")
         raise
     try:
-        fin = io.collectFIN(version=rp.TL_VERSION)
+        fin = tl_io.collectFIN(version=rp.TL_VERSION)
     except Exception:
         logger.error("Exception while trying to collect input for "
                      "refcalc FIN: ")
@@ -314,7 +336,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=""):
             "Execution will proceed. The exception was: ", exc_info=True)
     if rp.TL_VERSION < 1.7:   # muftin.f deprecated in version 1.7
         try:
-            io.writeMuftin(sl, rp)
+            tl_io.writeMuftin(sl, rp)
         except Exception:
             logger.error("Exception during writeMuftin: ")
             raise
@@ -388,7 +410,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=""):
     collect_param = ""
     for lm in which_lmax:
         try:
-            param = io.writePARAM(sl, rp, lmax=lm)
+            param = tl_io.writePARAM(sl, rp, lmax=lm)
         except Exception:
             logger.error("Exception during writePARAM: ",
                          exc_info=rp.LOG_DEBUG)
@@ -443,7 +465,14 @@ def refcalc(sl, rp, subdomain=False, parent_dir=""):
         ct = comp_tasks[0]
         ref_tasks.append(RefcalcRunTask(fin, -1, ct, logname,
                                         single_threaded=True,
-                                        tl_version=rp.TL_VERSION))
+                                        tl_version=rp.TL_VERSION))    
+    
+    # Validate TensErLEED checksums
+    if not rp.TL_IGNORE_CHECKSUM:
+        # @issue #43: this could be a class method
+        validate_multiple_files(comp_tasks[0].get_source_files(),
+                                logger, "reference calculation",
+                                rp.TL_VERSION_STR)
 
     if single_threaded:
         home = os.getcwd()
@@ -498,9 +527,9 @@ def refcalc(sl, rp, subdomain=False, parent_dir=""):
                            + ct.foldername)
 
     if not single_threaded:
-        io.combine_fdout(oripath=collection_dir)
+        tl_io.combine_fdout(oripath=collection_dir)
         if 1 in rp.TENSOR_OUTPUT:
-            io.combine_tensors(oripath=collection_dir)
+            tl_io.combine_tensors(oripath=collection_dir)
         try:
             shutil.rmtree(collection_dir)
         except Exception:
@@ -508,7 +537,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=""):
                            + os.path.basename(collection_dir))
 
     try:
-        rp.theobeams["refcalc"], rp.refcalc_fdout = io.readFdOut()
+        rp.theobeams["refcalc"], rp.refcalc_fdout = tl_io.readFdOut()
     except FileNotFoundError:
         logger.error("fd.out not found after reference calculation. "
                      "Check settings and refcalc log.")

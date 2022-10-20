@@ -13,8 +13,9 @@ import logging
 import copy
 import shutil
 import subprocess
+from pathlib import Path
 
-import viperleed.tleedmlib.files.iosuperpos as io
+import viperleed.tleedmlib.files.iosuperpos as tl_io
 from viperleed.tleedmlib.leedbase import (getDeltas, getTLEEDdir,
                                           fortran_compile)
 from viperleed.tleedmlib.files.beams import (
@@ -22,6 +23,7 @@ from viperleed.tleedmlib.files.beams import (
 from viperleed.tleedmlib.files.displacements import readDISPLACEMENTS_block
 from viperleed.tleedmlib.files.iosearch import readSDTL_end, readSDTL_blocks
 from viperleed.tleedmlib.files.iorefcalc import readFdOut
+from viperleed.tleedmlib.checksums import validate_multiple_files
 
 logger = logging.getLogger("tleedm.superpos")
 
@@ -52,7 +54,7 @@ def superpos(sl, rp, subdomain=False, for_error=False, only_vary=None):
                 rp.setHaltingLevel(2)
                 return
         else:
-            logger.error("Superpos: Found no stores results from recent "
+            logger.error("Superpos: Found no stored results from recent "
                          "search and no SD.TL file. Cancelling...")
             rp.setHaltingLevel(2)
             return
@@ -99,10 +101,10 @@ def superpos(sl, rp, subdomain=False, for_error=False, only_vary=None):
     contrin = ""
     try:
         if not for_error:
-            contrin = io.writeSuperposInput(sl, rp, config[0][1])
+            contrin = tl_io.writeSuperposInput(sl, rp, config[0][1])
         else:
-            contrin = io.writeSuperposInput(sl, rp, None, for_error=True,
-                                            only_vary=only_vary)
+            contrin = tl_io.writeSuperposInput(sl, rp, None, for_error=True,
+                                               only_vary=only_vary)
         logger.debug("Wrote Superpos input successfully")
     except Exception:
         logger.error("Error getting input data for Superpos: ", exc_info=True)
@@ -122,7 +124,7 @@ def superpos(sl, rp, subdomain=False, for_error=False, only_vary=None):
         return
     if rp.FORTRAN_COMP[0] == "":
         rp.getFortranComp()
-    # get fortran files
+    # get fortran files   # TODO: use CompileTask subclass (Issue #43)
     try:
         tldir = getTLEEDdir(home=rp.sourcedir, version=rp.TL_VERSION)
         if not tldir:
@@ -140,6 +142,14 @@ def superpos(sl, rp, subdomain=False, for_error=False, only_vary=None):
     except Exception:
         logger.error("Error getting TensErLEED files for superpos: ")
         raise
+    
+    # Validate checksums
+    if not rp.TL_IGNORE_CHECKSUM:
+        files_to_check = (Path(libpath) / libname,
+                          Path(srcpath) / srcname,
+                          Path(srcpath) / globalname)
+        validate_multiple_files(files_to_check, logger, "superpos", rp.TL_VERSION_STR)
+    
     # compile fortran files
     sposname = "superpos-"+rp.timestamp
     logger.info("Compiling fortran input files...")
