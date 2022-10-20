@@ -633,7 +633,6 @@ class Rparams:
             self.FORTRAN_COMP_MPI = ["mpiifort -Ofast", ""]
             logger.debug("Using fortran compiler: mpiifort")
         elif found == "mpifort":
-            # gcc and mpifort need -fallow-argument-mismatch
             self.FORTRAN_COMP_MPI = ["mpifort -Ofast -no-pie", ""]
             logger.debug("Using fortran compiler: mpifort")
         return
