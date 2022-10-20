@@ -46,14 +46,16 @@ class DeltaCompileTask():
             self.exename += '.exe'
 
     def get_source_files(self):
-        """Return a tuple of files needed for a delta-amplitude compilation."""
+        """Return files needed for a delta-amplitude compilation."""
         sourcedir = Path(self.sourcedir).resolve()
         srcpath = sourcedir / 'src'
-        srcname = next(srcpath.glob('delta*'))
+        srcname = next(srcpath.glob('delta*'), None)
         libpath = sourcedir / 'lib'
-        lib_tleed = next(libpath.glob('lib.tleed*'))
-        lib_delta = next(libpath.glob('lib.delta*'))
+        lib_tleed = next(libpath.glob('lib.tleed*'), None)
+        lib_delta = next(libpath.glob('lib.delta*'), None)
         globalname = srcpath / "GLOBAL"
+        if any(f is None for f in (srcname, lib_tleed, lib_delta)):
+            raise RuntimeError("Source files missing in {sourcedir}")          # TODO: use a better custom exception in CompileTask (e.g., MissingSourceFileError)
         return srcname, lib_tleed, lib_delta, globalname
 
     def copy_source_files_to_local(self):
