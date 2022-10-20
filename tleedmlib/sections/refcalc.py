@@ -54,21 +54,23 @@ class RefcalcCompileTask():
         if os.name == 'nt':
             self.exename += '.exe'
 
-    def get_ref_calc_source_files(self):
+    def get_source_files(self):
         """Return a tuple of source files needed for running a refcalc."""
         sourcedir = Path(self.sourcedir).resolve()
         libpath = sourcedir / 'lib'
         srcpath = sourcedir / 'src'
-        lib_tleed = next(libpath.glob('lib.tleed*'))
-        srcname = next(srcpath.glob('ref-calc*'))
+        lib_tleed = next(libpath.glob('lib.tleed*'), None)
+        srcname = next(srcpath.glob('ref-calc*'), None)
         globalname = srcpath / "GLOBAL"
         _muftin = Path("muftin.f")
         muftinname =_muftin if _muftin.is_file() else None
-        return (lib_tleed, srcname, globalname, muftinname)
+        if any(f is None for f in (srcname, lib_tleed)):
+            raise RuntimeError("Source files missing in {sourcedir}")       # TODO: use a more appropriate custom exception in CompileTask (e.g., MissingSourceFileError)
+        return lib_tleed, srcname, globalname, muftinname
 
     def copy_source_files_to_local(self):
         """Copy ref-calc files to current directory."""
-        for filepath in self.get_ref_calc_source_files():
+        for filepath in self.get_source_files():
             if filepath:
                 shutil.copy2(filepath, filepath.name)
 
@@ -125,7 +127,7 @@ def compile_refcalc(comptask):
     (libname, srcname,
      _, muftinname) = (
          str(fname.name) if fname is not None else None
-         for fname in comptask.get_ref_calc_source_files()
+         for fname in comptask.get_source_files()
          )
 
     compile_list = [(libname, "lib.tleed.o"), (srcname, "main.o")]
@@ -470,7 +472,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=""):
     # Validate TensErLEED checksums
     if not rp.TL_IGNORE_CHECKSUM:
         # @issue #43: this could be a class method
-        validate_multiple_files(comp_tasks[0].get_ref_calc_source_files(),
+        validate_multiple_files(comp_tasks[0].get_source_files(),
                                 logger, "reference calculation",
                                 rp.TL_VERSION_STR)
 
