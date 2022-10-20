@@ -21,7 +21,11 @@ a:visited {
     color: #d9d9d9 !important;
 }
 /* Same for some other labels */
-.wy-side-nav-search .wy-dropdown>a,
-.wy-side-nav-search> a:visited {
+.wy-side-nav-search .wy-dropdown a:visited,
+.wy-side-nav-search a:visited {
     color: #d9d9d9 !important;
+}
+/* Same for level 1 in side bar */
+.wy-menu-vertical li.toctree-l1.current a:visited{
+    color: #404040 !important;
 }
