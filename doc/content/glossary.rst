@@ -26,3 +26,6 @@ Glossary
 
     LEED-I(V)
       Energy dependent low energy electron diffraction.
+
+    GUI
+      Graphical User Interface
