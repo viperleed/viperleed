@@ -12,10 +12,12 @@
 .. toctree:: 
    :maxdepth: 1
    :caption: Sections
-
+   
+   Initialization<content/sections/initialization>
    Reference calculation<content/sections/ref-calc>
    Delta-amplitudes<content/sections/deltas>
    Search<content/sections/structure_search>
+   Superpos<content/sections/superpos>
    Domain calculations<content/sections/domain_calculation>
    Error calculations<content/sections/error_calculation>
    Full-dynamic optimization<content/sections/fdoptimization>
@@ -33,14 +35,14 @@
    :maxdepth: 1
    :caption: Files
 
-   POSCAR<content/files/inputs/poscar>
-   VIBROCC<content/files/inputs/viboccin>
+   POSCAR<content/files/input/poscar>
+   VIBROCC<content/files/input/viboccin>
 
 .. toctree:: 
    :maxdepth: 1
    :caption: Utilities
 
-   Atomic Simulation Environment API<content/aseapi>
+   Atomic Simulation Environment API<content/utilities/aseapi>
    Bookkeeper<content/utilities/bookkeeper>
 
 
@@ -60,3 +62,5 @@
    content/displacements/*
 
    content/searchconfig/*
+
+   content/other/*
