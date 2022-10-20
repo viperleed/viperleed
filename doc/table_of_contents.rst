@@ -56,6 +56,7 @@
    content/files/input/*
    content/files/output/*
    content/files/supp/*
+   content/files/raw_tenserleed/*
 
    content/parameters/*
 
