@@ -11,3 +11,17 @@
         overflow: visible !important;
     }
 }
+
+/* Change colors of visited links*/
+a:visited {
+    color: #2980b9 !important;
+}
+/* Same in sidebar */
+.wy-menu-vertical a:visited {
+    color: #d9d9d9 !important;
+}
+/* Same for some other labels */
+.wy-side-nav-search .wy-dropdown>a,
+.wy-side-nav-search> a:visited {
+    color: #d9d9d9 !important;
+}
