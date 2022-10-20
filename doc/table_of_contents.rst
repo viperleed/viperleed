@@ -62,6 +62,4 @@
 
    content/displacements/*
 
-   content/searchconfig/*
-
    content/other/*
