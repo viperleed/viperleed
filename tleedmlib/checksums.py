@@ -38,7 +38,7 @@ KNOWN_TL_SECTIONS = ("ref-calc", "r-factor", "deltas", "search",
                      "superpos", "errors")
 
 
-class UnknownTensErLEEDVersionError(Exception):
+class UnknownTensErLEEDVersionError(ValueError):
     """Exception for invalid TensErLEED version."""
 
 
