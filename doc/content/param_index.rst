@@ -35,7 +35,7 @@ See below for an alphabetical list of all parameters. Alternatively, these pages
 
 .. note::
    While all parameters have a default value, parameters marked with a 
-   "**➜**" usually require user input for simple but non-trivial 
+   "**→**" usually require user input for simple but non-trivial 
    systems.
 
 +----------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
@@ -81,9 +81,9 @@ See below for an alphabetical list of all parameters. Alternatively, these pages
 +----------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
 | :ref:`LOG_SEARCH<LOG_SEARCH>`                            | Output the search log file (may be very large, mostly for debugging)                                                                     |
 +----------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
-| **➜** :ref:`N_BULK_LAYERS<BLAY>`                         | Define how many layers in the :ref:`POSCAR file<POSCAR>`  represent the bulk                                                             |
+| **→** :ref:`N_BULK_LAYERS<BLAY>`                         | Define how many layers in the :ref:`POSCAR file<POSCAR>`  represent the bulk                                                             |
 +----------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
-| **➜** :ref:`N_CORES<NCORES>`                             | The number of CPUs to use                                                                                                                |
+| **→** :ref:`N_CORES<NCORES>`                             | The number of CPUs to use                                                                                                                |
 +----------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
 | :ref:`OPTIMIZE<OPTIMIZE>`                                | Controls behaviour of :ref:`full-dynamic optimization<Fdoptimization>`  runs                                                             |
 +----------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
@@ -93,7 +93,7 @@ See below for an alphabetical list of all parameters. Alternatively, these pages
 +----------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
 | :ref:`PLOT_IV<PLOT_COLORS_RFACTOR>`                      | Change appearance of I(V) plot files like :ref:`Rfactor_plots.pdf<Rfactorplots>`                                                         |
 +----------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
-| **➜** :ref:`RUN<RUN>`                                    | Which parts of ViPErLEED / TensErLEED should be run, in order                                                                            |
+| **→** :ref:`RUN<RUN>`                                    | Which parts of ViPErLEED / TensErLEED should be run, in order                                                                            |
 +----------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
 | :ref:`R_FACTOR_TYPE<RFACTORTYPE>`                        | Which definition of the R-factor to use                                                                                                  |
 +----------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
@@ -115,11 +115,11 @@ See below for an alphabetical list of all parameters. Alternatively, these pages
 +----------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
 | :ref:`SEARCH_START<SEARCHSTART>`                         | How to initialize the search population                                                                                                  |
 +----------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
-| **➜** :ref:`SITE_DEF<SITEDEF>`                           | Define which sites in the :ref:`POSCAR file<POSCAR>`  are special, i.e. have different vibrational amplitude                             |
+| **→** :ref:`SITE_DEF<SITEDEF>`                           | Define which sites in the :ref:`POSCAR file<POSCAR>`  are special, i.e. have different vibrational amplitude                             |
 +----------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
 | :ref:`STOP<STOP>`                                        | Stop execution of ViPErLEED at next opportunity                                                                                          |
 +----------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
-| **➜** :ref:`SUPERLATTICE<SUPERLATTICE>`                  | The relationship between the surface and bulk unit cells                                                                                 |
+| **→** :ref:`SUPERLATTICE<SUPERLATTICE>`                  | The relationship between the surface and bulk unit cells                                                                                 |
 +----------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
 | :ref:`SUPPRESS_EXECUTION<SUPPRESS_EXE>`                  | Generate TensErLEED input files, but stop ViPErLEED before executing TensErLEED (for debugging)                                          |
 +----------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+

@@ -13,6 +13,6 @@ V0_Z_ONSET (original Fortran parameter ASE) defines the *z* position (in Ångstr
 
    V0_Z_ONSET = 0.8
 
-**Acceptable values**: any non-negative floating-point number. Typically 0≤\ ``V0_Z_ONSET``\ ≤2.
+**Acceptable values**: any non-negative floating-point number. Typically 0:math:`\leq` \ ``V0_Z_ONSET``\ :math:`\leq`2 .
 
 **Notes:** In most cases the default value should be accurate enough. The only exceptions are those cases in which the topmost layer is severely rough (e.g., sparse adsorbates with large free areas in between). In this case, it might be a good idea to try out a few different values: moving the plane closer to the surface (i.e., decreasing V0_Z_ONSET) might lead to an improvement.

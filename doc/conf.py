@@ -56,6 +56,10 @@ html_css_files = [
 
 # -- Options for LaTeX output ------------------------------------------------
 # https://www.sphinx-doc.org/en/master/latex.html
-latex_elements = {'papersize': 'a4paper'}
 latex_show_urls = 'inline'
 latex_show_pagerefs = True
+latex_elements = {
+    'papersize': 'a4paper',
+    'preamble': r'''
+    '''
+    }

@@ -10,7 +10,7 @@ groupings :ref:`here<PARAMETERS>`.
 
 .. note::
    While all parameters have a default value, parameters marked with a 
-   "**➜**" usually require user input for simple but non-trivial 
+   "**→**" usually require user input for simple but non-trivial 
    systems.
 
 TLEEDM execution
@@ -27,7 +27,7 @@ Defines what to calculate and where to start.
   +===============================================+==========================================================================+
   | :ref:`HALTING<HALTING>`                       | Sensitivity to things going wrong, i.e. how easily should ViPErLEED stop |
   +-----------------------------------------------+--------------------------------------------------------------------------+
-  | **➜** :ref:`RUN<RUN>`                         | Which parts of ViPErLEED / TensErLEED should be run, in order            |
+  | **→** :ref:`RUN<RUN>`                         | Which parts of ViPErLEED / TensErLEED should be run, in order            |
   +-----------------------------------------------+--------------------------------------------------------------------------+
   | :ref:`STOP<STOP>`                             | Stop execution of ViPErLEED at next opportunity                          |
   +-----------------------------------------------+--------------------------------------------------------------------------+
@@ -59,9 +59,9 @@ Input Structure
   +------------------------------------------+----------------------------------------------------------------------------------+
   | :ref:`LAYER_CUTS<CTRUNC>`                | How to separate the :ref:`POSCAR file<POSCAR>` into layers                       |
   +------------------------------------------+----------------------------------------------------------------------------------+
-  | **➜** :ref:`N_BULK_LAYERS<BLAY>`         | Define how many layers in the :ref:`POSCAR file<POSCAR>` represent the bulk      |
+  | **→** :ref:`N_BULK_LAYERS<BLAY>`         | Define how many layers in the :ref:`POSCAR file<POSCAR>` represent the bulk      |
   +------------------------------------------+----------------------------------------------------------------------------------+
-  | **➜** :ref:`SUPERLATTICE<SUPERLATTICE>`  | The relationship between the surface and bulk unit cells                         |
+  | **→** :ref:`SUPERLATTICE<SUPERLATTICE>`  | The relationship between the surface and bulk unit cells                         |
   +------------------------------------------+----------------------------------------------------------------------------------+
 
 Elements, vibrational amplitudes and element concentrations
@@ -78,7 +78,7 @@ Elements, vibrational amplitudes and element concentrations
   +--------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
   | :ref:`ELEMENT_RENAME<ELDEF>`                                 | Declare that an element in the POSCAR file is actually a different chemical element                                                      |
   +--------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
-  | **➜** :ref:`SITE_DEF<SITEDEF>`                               | Define which sites in the :ref:`POSCAR file<POSCAR>` are special, i.e. have different vibrational amplitude                              |
+  | **→** :ref:`SITE_DEF<SITEDEF>`                               | Define which sites in the :ref:`POSCAR file<POSCAR>` are special, i.e. have different vibrational amplitude                              |
   +--------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
   | :ref:`T_DEBYE<T_DEBYE>`                                      | Debye temperature of the system (only for automatically generating :ref:`VIBROCC<VIBOCCIN>`)                                             |
   +--------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
@@ -156,7 +156,7 @@ Computational setup
   +==============================================================+==========================================================================================================================================+
   | :ref:`FORTRAN_COMP<FORTRAN_COMP>`                            | Which fortran compiler to use, and tags for compiling                                                                                    |
   +--------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
-  | **➜** :ref:`N_CORES<NCORES>`                                 | The number of CPUs to use                                                                                                                |
+  | **→** :ref:`N_CORES<NCORES>`                                 | The number of CPUs to use                                                                                                                |
   +--------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
 
 R-factor

@@ -11,7 +11,7 @@ alphabetical list and other groupings.
 
 .. note::
     While all parameters have a default value, parameters marked with a 
-    "**➜**" usually require user input for simple but non-trivial 
+    "**→**" usually require user input for simple but non-trivial 
     systems.
 
 Initialization
@@ -34,11 +34,11 @@ Initialization
   +--------------------------------------------+--------------------------------------------------------------------------------------------------------------+
   | :ref:`LAYER_CUTS<CTRUNC>`                  | How to separate the :ref:`POSCAR file<POSCAR>`  into layers                                                  |
   +--------------------------------------------+--------------------------------------------------------------------------------------------------------------+
-  | **➜** :ref:`N_BULK_LAYERS<BLAY>`           | Define how many layers in the :ref:`POSCAR file<POSCAR>`  represent the bulk                                 |
+  | **→** :ref:`N_BULK_LAYERS<BLAY>`           | Define how many layers in the :ref:`POSCAR file<POSCAR>`  represent the bulk                                 |
   +--------------------------------------------+--------------------------------------------------------------------------------------------------------------+
-  | **➜** :ref:`SITE_DEF<SITEDEF>`             | Define which sites in the :ref:`POSCAR file<POSCAR>`  are special, i.e. have different vibrational amplitude |
+  | **→** :ref:`SITE_DEF<SITEDEF>`             | Define which sites in the :ref:`POSCAR file<POSCAR>`  are special, i.e. have different vibrational amplitude |
   +--------------------------------------------+--------------------------------------------------------------------------------------------------------------+
-  | **➜** :ref:`SUPERLATTICE<SUPERLATTICE>`    | The relationship between the surface and bulk unit cells                                                     |
+  | **→** :ref:`SUPERLATTICE<SUPERLATTICE>`    | The relationship between the surface and bulk unit cells                                                     |
   +--------------------------------------------+--------------------------------------------------------------------------------------------------------------+
   | :ref:`SYMMETRIZE_INPUT<SYMMETRY_NOMOVE>`   | Whether to move atoms in the :ref:`POSCAR file<POSCAR>`  to perfectly match the symmetry                     |
   +--------------------------------------------+--------------------------------------------------------------------------------------------------------------+
@@ -89,17 +89,17 @@ Reference calculation
   +------------------------------------------+--------------------------------------------------------------------------------------------------------------+
   | :ref:`LMAX<LMAX>`                        | Maximum angular momentum number; usually determined via :ref:`PHASESHIFT_EPS<PHASESHIFTMIN>`                 |
   +------------------------------------------+--------------------------------------------------------------------------------------------------------------+
-  | **➜** :ref:`N_BULK_LAYERS<BLAY>`         | Define how many layers in the :ref:`POSCAR file<POSCAR>`  represent the bulk                                 |
+  | **→** :ref:`N_BULK_LAYERS<BLAY>`         | Define how many layers in the :ref:`POSCAR file<POSCAR>`  represent the bulk                                 |
   +------------------------------------------+--------------------------------------------------------------------------------------------------------------+
-  | **➜** :ref:`N_CORES<NCORES>`             | The number of CPUs to use                                                                                    |
+  | **→** :ref:`N_CORES<NCORES>`             | The number of CPUs to use                                                                                    |
   +------------------------------------------+--------------------------------------------------------------------------------------------------------------+
   | :ref:`PHASESHIFT_EPS<PHASESHIFTMIN>`     | Cutoff in phaseshifts magnitudes to determine :ref:`LMAX<LMAX>`                                              |
   +------------------------------------------+--------------------------------------------------------------------------------------------------------------+
   | :ref:`SCREEN_APERTURE<SCREEN_APERTURE>`  | The aperture of the acceptance cone of the LEED screen                                                       |
   +------------------------------------------+--------------------------------------------------------------------------------------------------------------+
-  | **➜** :ref:`SITE_DEF<SITEDEF>`           | Define which sites in the :ref:`POSCAR file<POSCAR>`  are special, i.e. have different vibrational amplitude |
+  | **→** :ref:`SITE_DEF<SITEDEF>`           | Define which sites in the :ref:`POSCAR file<POSCAR>`  are special, i.e. have different vibrational amplitude |
   +------------------------------------------+--------------------------------------------------------------------------------------------------------------+
-  | **➜** :ref:`SUPERLATTICE<SUPERLATTICE>`  | The relationship between the surface and bulk unit cells                                                     |
+  | **→** :ref:`SUPERLATTICE<SUPERLATTICE>`  | The relationship between the surface and bulk unit cells                                                     |
   +------------------------------------------+--------------------------------------------------------------------------------------------------------------+
   | :ref:`TENSOR_OUTPUT<TOUTPUT>`            | Disable Tensor output for some or all layers                                                                 |
   +------------------------------------------+--------------------------------------------------------------------------------------------------------------+
@@ -132,7 +132,7 @@ R-factor calculation
   +----------------------------------------+--------------------------------------------------------------------------------------------------+
   | :ref:`R_FACTOR_SMOOTH<RFACTORSMOOTH>`  | How strongly experimental beams are smoothed                                                     |
   +----------------------------------------+--------------------------------------------------------------------------------------------------+
-  | **➜** :ref:`SUPERLATTICE<SUPERLATTICE>`| The relationship between the surface and bulk unit cells                                         |
+  | **→** :ref:`SUPERLATTICE<SUPERLATTICE>`| The relationship between the surface and bulk unit cells                                         |
   +----------------------------------------+--------------------------------------------------------------------------------------------------+
   | :ref:`THEO_ENERGIES<REFENERGIES>`      | What energy range to calculate                                                                   |
   +----------------------------------------+--------------------------------------------------------------------------------------------------+
@@ -155,13 +155,13 @@ Behaviour is mainly governed by the :ref:`DISPLACEMENTS file<DISPLACEMENTS>`. So
   +----------------------------------------+--------------------------------------------------------------------------------------------------------------+
   | :ref:`LMAX<LMAX>`                      | Maximum angular momentum number; usually determined via :ref:`PHASESHIFT_EPS<PHASESHIFTMIN>`                 |
   +----------------------------------------+--------------------------------------------------------------------------------------------------------------+
-  | **➜** :ref:`N_CORES<NCORES>`           | The number of CPUs to use                                                                                    |
+  | **→** :ref:`N_CORES<NCORES>`           | The number of CPUs to use                                                                                    |
   +----------------------------------------+--------------------------------------------------------------------------------------------------------------+
   | :ref:`PHASESHIFT_EPS<PHASESHIFTMIN>`   | Cutoff in phaseshifts magnitudes to determine :ref:`LMAX<LMAX>`                                              |
   +----------------------------------------+--------------------------------------------------------------------------------------------------------------+
-  | **➜** :ref:`SITE_DEF<SITEDEF>`         | Define which sites in the :ref:`POSCAR file<POSCAR>`  are special, i.e. have different vibrational amplitude |
+  | **→** :ref:`SITE_DEF<SITEDEF>`         | Define which sites in the :ref:`POSCAR file<POSCAR>`  are special, i.e. have different vibrational amplitude |
   +----------------------------------------+--------------------------------------------------------------------------------------------------------------+
-  | **➜** :ref:`SUPERLATTICE<SUPERLATTICE>`| The relationship between the surface and bulk unit cells                                                     |
+  | **→** :ref:`SUPERLATTICE<SUPERLATTICE>`| The relationship between the surface and bulk unit cells                                                     |
   +----------------------------------------+--------------------------------------------------------------------------------------------------------------+
   | :ref:`TENSOR_INDEX<TENSOR_INDEX>`      | Which Tensor files to use for the delta calculation and search                                               |
   +----------------------------------------+--------------------------------------------------------------------------------------------------------------+
@@ -186,7 +186,7 @@ Behaviour is also governed by the :ref:`DISPLACEMENTS file<DISPLACEMENTS>`. The 
   +------------------------------------------------+--------------------------------------------------------------------------------------------------+
   | :ref:`LOG_SEARCH<LOG_SEARCH>`                  | Output the search log file (may be very large, mostly for debugging)                             |
   +------------------------------------------------+--------------------------------------------------------------------------------------------------+
-  | **➜** :ref:`N_CORES<NCORES>`                   | The number of CPUs to use                                                                        |
+  | **→** :ref:`N_CORES<NCORES>`                   | The number of CPUs to use                                                                        |
   +------------------------------------------------+--------------------------------------------------------------------------------------------------+
   | :ref:`PARABOLA_FIT<PARABOLA_FIT>`              | Parameters for N-dimensional parabola fit during the search                                      |
   +------------------------------------------------+--------------------------------------------------------------------------------------------------+

@@ -14,7 +14,7 @@ BEAM_INCIDENCE defines the incidence angles (in degrees) of the electron beam on
    BEAM_INCIDENCE = THETA 0.3, PHI 10.1
    BEAM_INCIDENCE = 0.3 10.1
 
-**Acceptable values**: -90 ≤ ``theta`` ≤ 90, 0 ≤ ``phi`` < 360. All numbers are considered floats. Negative values for ``theta`` will internally be corrected to positive by adding or subtracting 180° **should be 360°** from ``phi``.
+**Acceptable values**: -90 :math:`\leq` ``theta`` :math:`\leq` 90, 0 :math:`\leq` ``phi`` < 360. All numbers are considered floats. Negative values for ``theta`` will internally be corrected to positive by adding or subtracting 180° **should be 360°** from ``phi``.
 
 ``theta`` and ``phi`` represent tilt and azimuthal angles, respectively, in degrees. Notice that if the flags THETA and PHI are not specified, only the first two floats are considered: the first is taken as the tilt angle theta, the second as the azimuth phi. If you want to use ranges, the flags THETA and PHI are mandatory.
 
@@ -34,4 +34,4 @@ Syntax would then also allow:
 
    BEAM_INCIDENCE = THETA thetamin thetamax thetastep PHI phimin phimax phistep
 
-0≤\ ``theta``\ ≤90, 0≤\ ``phi``\ <360; 0≤\ ``thetamin``\ <``thetamax``\ ≤90, 0≤\ ``phimin``\ <``phimax``\ <360, 0<``thetastep``\ ≤\ ``thetamax`` – ``thetamin``, 0<``phistep``\ ≤\ ``phimax`` – ``phimin``. **AMI**: Isn't this redundant now that we have FD calculations? In my limited experience, this works reasonably well, even without Delta+Search for each angle combination.
+0:math:`\leq`\ ``theta``\ :math:`\leq`90, 0:math:`\leq`\ ``phi``\ <360; 0:math:`\leq`\ ``thetamin``\ <``thetamax``\ :math:`\leq`90, 0:math:`\leq`\ ``phimin``\ <``phimax``\ <360, 0<``thetastep``\ :math:`\leq`\ ``thetamax`` – ``thetamin``, 0<``phistep``\ :math:`\leq`\ ``phimax`` – ``phimin``. **AMI**: Isn't this redundant now that we have FD calculations? In my limited experience, this works reasonably well, even without Delta+Search for each angle combination.
