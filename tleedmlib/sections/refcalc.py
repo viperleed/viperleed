@@ -89,7 +89,6 @@ class RefcalcRunTask():
         self.collect_at = collect_at
         self.single_threaded = single_threaded
         self.tl_version = tl_version
-        
 
 
 def compile_refcalc(comptask):
@@ -148,7 +147,6 @@ def compile_refcalc(comptask):
                 + comptask.foldername)
     os.chdir(comptask.basedir)
     return ""
-
 
 
 def run_refcalc(runtask):
