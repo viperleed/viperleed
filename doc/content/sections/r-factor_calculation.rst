@@ -1,5 +1,6 @@
 .. _r-factor_calculation:
 
+============
 The R factor
 ============
 
