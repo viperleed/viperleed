@@ -1,3 +1,9 @@
+.. _glossary:
+
+========
+Glossary
+========
+
 .. glossary::
 
     LEED
@@ -13,10 +19,10 @@
       The Vienna Package for TensErLEED
 
     VASP
-      Vienna ab initio simulation package (`VASP wiki<https://www.vasp.at/wiki/index.php>`__)
+      Vienna ab initio simulation package (`VASP wiki <https://www.vasp.at/wiki/index.php>`__)
 
     VESTA
-      3D Visualization software for structural models (`Homepage<https://jp-minerals.org/vesta/en/>`__)
+      3D Visualization software for structural models (`Homepage <https://jp-minerals.org/vesta/en/>`__)
 
     LEED-I(V)
       Energy dependent low energy electron diffraction.
