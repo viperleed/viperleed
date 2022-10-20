@@ -7,6 +7,7 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 import datetime
+import sphinx_rtd_theme
 
 project = 'ViPErLEED'
 copyright = f'{datetime.date.today().year}, ViPErLEED-developers'
@@ -22,6 +23,7 @@ extensions = [
               'sphinx.ext.mathjax',
               'sphinx.ext.viewcode',
               'sphinx.ext.intersphinx',
+              'sphinx_rtd_theme',
               ]
 
 source_suffix = '.rst'
@@ -33,9 +35,24 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = 'piccolo_theme'
+html_theme = "sphinx_rtd_theme"
 html_static_path = ['_static']
 
+# RTD theme specific
+html_theme_options = {
+    'logo_only': False,
+    'display_version': True,
+    'prev_next_buttons_location': None,
+    'style_external_links': True,
+    # Toc options
+    'collapse_navigation': True,
+    'sticky_navigation': True,
+    'includehidden': False,
+}
+
+html_css_files = [
+    'css/theme_overrides.css',
+]
 
 # -- Options for LaTeX output ------------------------------------------------
 # https://www.sphinx-doc.org/en/master/latex.html
