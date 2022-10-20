@@ -659,10 +659,10 @@ def search(sl, rp):
         # try to copy random lib object file
         try:
             shutil.copy2(os.path.join(libpath, randnamefrom), randname)
-        except FileNotFoundError as f_no_found_err:
+        except FileNotFoundError:
             logger.error("Could not find required random_.o object file."
                          " You may have forgotten to compile random_.c.")
-            raise f_no_found_err
+            raise
 
         globalname = "GLOBAL"
         shutil.copy2(os.path.join(srcpath, globalname), globalname)
