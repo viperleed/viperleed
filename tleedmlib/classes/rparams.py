@@ -581,7 +581,7 @@ class Rparams:
                 "-lmkl_intel_thread -lmkl_core -liomp5 -lpthread -lm -ldl"]
             logger.debug("Using fortran compiler: ifort")
         elif found == "gfortran":
-            self.FORTRAN_COMP = ["gfortran -O2", "-llapack -lpthread -lblas"]   # TODO: maybe we want the -std=legacy flag for F77 compatibility?
+            self.FORTRAN_COMP = ["gfortran -O2", "-llapack -lpthread -lblas"]
             logger.debug("Using fortran compiler: gfortran")
         return
 
@@ -634,7 +634,7 @@ class Rparams:
             logger.debug("Using fortran compiler: mpiifort")
         elif found == "mpifort":
             # gcc and mpifort need -fallow-argument-mismatch
-            self.FORTRAN_COMP_MPI = ["mpifort -Ofast -no-pie -fallow-argument-mismatch", ""]  # TODO: we should try to fix the reason for the allow-argument-mismatch, as it is very much discouraged as a flag [https://gcc.gnu.org/onlinedocs/gfortran/Fortran-Dialect-Options.html]. I also have in mind that we had removed this default because it generated other problems.
+            self.FORTRAN_COMP_MPI = ["mpifort -Ofast -no-pie", ""]
             logger.debug("Using fortran compiler: mpifort")
         return
 
