@@ -1,4 +1,4 @@
-"""Module camerawidgets of viperleed.guilib.measure.widgets.
+"""Module cameraviewer of viperleed.guilib.measure.widgets.
 
 ========================================
    ViPErLEED Graphical User Interface
@@ -22,6 +22,7 @@ from PyQt5 import (QtCore as qtc,
 
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.camera.imageprocess import ImageProcessor
+from viperleed.guilib.measure.dialogs.settingsdialog import SettingsDialog
 from viperleed.guilib.measure.widgets.imageviewer import ImageViewer
 from viperleed.guilib.measure.widgets.roiwidgets import RegionOfInterest
 from viperleed.guilib.widgetslib import screen_fraction
@@ -214,8 +215,11 @@ class CameraViewer(qtw.QScrollArea):
                        "mouse_button": None,
                        "img_array": None,                                       # TODO: may not be necessary
                        "max_intensity": 2**15 - 1,}
-        self.__children = {"viewer": ImageViewer(),
-                           "context_menu": qtw.QMenu(parent=self)}
+        self.__children = {
+            "viewer": ImageViewer(),
+            "context_menu": qtw.QMenu(parent=self),
+            "settings_dialog": SettingsDialog(handled_obj=camera),
+            }
         self.__children["roi"] = RegionOfInterest(parent=self.__img_view)
 
         try:
@@ -645,6 +649,10 @@ class CameraViewer(qtw.QScrollArea):
             qtc.Qt.Checked if self.stop_on_close else qtc.Qt.Unchecked
             )
 
+        # Device settings
+        menu.addSeparator()
+        menu.addAction("Properties")
+
         for action in menu.actions():
             action.setEnabled(self.interactions_enabled)
 
@@ -658,6 +666,12 @@ class CameraViewer(qtw.QScrollArea):
         self.roi.apply_roi_requested.connect(self.__apply_roi)
         self.__children["context_menu"].triggered.connect(
             self.__on_context_menu_triggered
+            )
+        self.__children["settings_dialog"].settings_changed.connect(
+            self.__on_settings_changed
+            )
+        self.__children["settings_dialog"].settings_saved.connect(
+            self.__on_settings_saved
             )
 
     @qtc.pyqtSlot(tuple)
@@ -699,6 +713,9 @@ class CameraViewer(qtw.QScrollArea):
         if "snap" in text:
             self.__on_snap_image()
             return
+        if "properties" in text:
+            self.__children['settings_dialog'].open()
+            return
         print(action.text(), ": not implemented yet")
 
     def __on_image_scaled(self):
@@ -711,6 +728,25 @@ class CameraViewer(qtw.QScrollArea):
         title += f' - {100*new_scaling:.1f}%'
         self.setWindowTitle(title)
         self.zoom_changed.emit(new_scaling)
+
+    def __on_settings_changed(self):
+        """React to a user press of "Apply" in the settings dialog."""
+        _dialog = self.__children["settings_dialog"]
+        was_running = self.camera.is_running
+        self.camera.settings = _dialog.settings
+        if was_running:
+            self.camera.start()
+
+    def __on_settings_saved(self, saved):
+        """Restore original settings in case of unsaved changes."""
+        if saved:
+            return
+        was_running = self.camera.is_running
+        old_settings = self.camera.settings
+        old_settings.read_again()
+        self.camera.settings = old_settings
+        if was_running:
+            self.camera.start()
 
     def __on_snap_image(self):
         """Save current frame to file."""

@@ -98,6 +98,8 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 #       camera. This can speed up some camera startups.
 # TODO: find a proper way to CameraABC.moveToThread. This would solve the
 #       issue with set_settings holding the UI still.
+# TODO: new CameraViewer contains current one + visible controls that
+#       allow the same operations as in the context menu.
 
 #   M E A S U R E M E N T
 # TODO: energy ramps are not equivalent for iv == calibration != time_resolved
@@ -152,7 +154,7 @@ from viperleed.guilib.measure.camera.abc import CameraABC
 from viperleed.guilib.measure.classes.datapoints import DataPoints
 from viperleed.guilib.measure.controller.abc import ControllerABC
 from viperleed.guilib.measure.measurement.abc import MeasurementABC
-from viperleed.guilib.measure.widgets.camerawidgets import CameraViewer
+from viperleed.guilib.measure.widgets.cameraviewer import CameraViewer
 from viperleed.guilib.measure.widgets.measurement_plot import MeasurementPlot
 from viperleed.guilib.measure import dialogs
 from viperleed.guilib.measure.classes.settings import (
