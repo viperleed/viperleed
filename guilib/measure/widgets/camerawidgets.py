@@ -794,7 +794,7 @@ class CameraViewer(qtw.QScrollArea):
 
         Zooming is limited to:
             direction=='in':
-                At most a factor of 4 of the original image size
+                At most a factor of 8 of the original image size
             direction=='out':
                 At most such that the image occupies >=10% of the screen
 
@@ -808,7 +808,7 @@ class CameraViewer(qtw.QScrollArea):
         -------
         None.
         """
-        if direction == 'in' and self.__img_view.image_scaling < 4:
+        if direction == 'in' and self.__img_view.image_scaling < 8:
             self.scale_image(1.25)
         elif direction == 'out':
             # Limit zoom-out to 10% of the screen size
