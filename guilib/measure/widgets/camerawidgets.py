@@ -20,7 +20,6 @@ from PyQt5 import (QtCore as qtc,
                    QtWidgets as qtw,
                    QtGui as qtg)
 
-from viperleed.guilib.measure.camera import abc
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.camera.imageprocess import ImageProcessor
 from viperleed.guilib.measure.widgets.imageviewer import ImageViewer
@@ -201,10 +200,6 @@ class CameraViewer(qtw.QScrollArea):
         if self._initialized:
             return
         # pylint: enable=access-member-before-definition
-
-        if not isinstance(camera, abc.CameraABC):
-            raise TypeError(f"{self.__class__.__name__}: camera argument "
-                            "must be a subclass of CameraABC.")
 
         self._initialized = True
 
