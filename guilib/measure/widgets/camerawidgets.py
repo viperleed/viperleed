@@ -4,11 +4,11 @@
    ViPErLEED Graphical User Interface
 ========================================
 
-Contains definition of widgets specific to visualizing frames
-from a concrete subclass of CameraABC.
-
 Created: 2021-10-29
 Author: Michele Riva
+
+Defines the CameraViewer class, a QScrollArea that allows
+visualizing frames from a concrete subclass of CameraABC.
 """
 
 import weakref
@@ -16,15 +16,16 @@ from copy import deepcopy
 from time import perf_counter as timer                                          # TEMP: till "saturating" is fixed
 
 import numpy as np
-
 from PyQt5 import (QtCore as qtc,
                    QtWidgets as qtw,
                    QtGui as qtg)
 
 from viperleed.guilib.measure.camera import abc
-from viperleed.guilib.measure.camera.imageprocess import ImageProcessor
-from viperleed.guilib.widgetslib import screen_fraction
 from viperleed.guilib.measure import hardwarebase as base
+from viperleed.guilib.measure.camera.imageprocess import ImageProcessor
+from viperleed.guilib.measure.widgets.imageviewer import ImageViewer
+from viperleed.guilib.measure.widgets.roiwidgets import RegionOfInterest
+from viperleed.guilib.widgetslib import screen_fraction
 
 
 # TODO: ImageViewer.optimum_size is not updated when screen is changed
@@ -34,7 +35,6 @@ from viperleed.guilib.measure import hardwarebase as base
 # TODO: use ROI position increments
 # TODO: If camera is not open at CameraViewer__init__, I never update
 #       the limits! Should use camera.started to fetch them if needed
-# TODO: too-many-lines
 
 
 # pylint: disable=too-many-instance-attributes
@@ -354,7 +354,7 @@ class CameraViewer(qtw.QScrollArea):
     def closeEvent(self, event):  # pylint: disable=invalid-name
         """Extend to stop camera when window is closed by the user."""
         camera = self.camera
-        if (event.spontaneous() and camera.is_running and self.stop_on_close):
+        if event.spontaneous() and camera.is_running and self.stop_on_close:
             # Disconnect signals that may pop up the window
             # again should a frame arrive in the meantime
             if self.show_auto:
@@ -425,7 +425,7 @@ class CameraViewer(qtw.QScrollArea):
             super().mouseDoubleClickEvent(event)
     # pylint: enable=invalid-name
 
-    def mouseMoveEvent(self, event):  # pylint: disable=invalid-name
+    def mouseMoveEvent(self, event):     # pylint: disable=invalid-name
         """Extend mouseMoveEvent to draw a ROI (if visible).
 
         If Control (Command on Mac) is held down, the ROI will
@@ -449,7 +449,7 @@ class CameraViewer(qtw.QScrollArea):
             qtc.QRect(self.roi.origin, mouse_pos)
             )
 
-    def mousePressEvent(self, event):  # pylint: disable=invalid-name
+    def mousePressEvent(self, event):    # pylint: disable=invalid-name
         """Reimplement mousePressEvent to begin drawing a ROI."""
         self.__mouse_button = event.button()
         if not self.roi_visible or event.button() == qtc.Qt.RightButton:
@@ -509,7 +509,7 @@ class CameraViewer(qtw.QScrollArea):
 
         self.__adjust_scroll_bars(by_factor)
 
-    def showEvent(self, event):  # pylint: disable=invalid-name
+    def showEvent(self, event):          # pylint: disable=invalid-name
         """Extend showEvent to rescale self and the image to optimum."""
         super().showEvent(event)
         # Distinguish whether the showEvent was triggered because
@@ -522,13 +522,13 @@ class CameraViewer(qtw.QScrollArea):
             self.adjustSize()
         self.shown.emit()
 
-    def sizeHint(self):  # pylint: disable=invalid-name
+    def sizeHint(self):                  # pylint: disable=invalid-name
         """Reimplement sizeHint to bind to the underlying image."""
         # Adding (2, 2) ensures that scroll bars are
         # visible only if the image does not fit.
         return self.__img_view.sizeHint() + qtc.QSize(2, 2)
 
-    def wheelEvent(self, event):  # pylint: disable=invalid-name
+    def wheelEvent(self, event):         # pylint: disable=invalid-name
         """Extend wheelEvent for zooming while Control is pressed."""
         if not event.modifiers() & qtc.Qt.ControlModifier:
             super().wheelEvent(event)
@@ -660,10 +660,10 @@ class CameraViewer(qtw.QScrollArea):
         self.camera.started.connect(self.__on_camera_started)
         self.camera.error_occurred.connect(self.__on_camera_error)
         self.customContextMenuRequested.connect(self.__show_context_menu)
+        self.roi.apply_roi_requested.connect(self.__apply_roi)
         self.__children["context_menu"].triggered.connect(
             self.__on_context_menu_triggered
             )
-        self.roi.apply_roi_requested.connect(self.__apply_roi)
 
     @qtc.pyqtSlot(tuple)
     def __on_camera_error(self, _):
@@ -720,7 +720,7 @@ class CameraViewer(qtw.QScrollArea):
     def __on_snap_image(self):
         """Save current frame to file."""
         image = self.__glob['img_array'].copy()
-        fname, _ = qtw.QFileDialog.getSaveFileName(                             # TODO: add default filename and directory?
+        fname, _ = qtw.QFileDialog.getSaveFileName(                             # TODO: add default filename with date/time and directory?
             parent=self,
             filter="TIFF Image (*.tiff *.tif)"
             )
@@ -822,492 +822,3 @@ class CameraViewer(qtw.QScrollArea):
                 return
             self.scale_image(0.8)
 # pylint: enable=too-many-instance-attributes
-
-
-class ImageViewer(qtw.QLabel):                                                  # TODO: add children (QLabel?) that holds saturation overlay
-    """A QLabel that displays images in a CameraViewer.
-
-    The images are scaled with a smooth transform, which makes
-    pixels appear blurred at large upscaling factors.
-
-    Attributes
-    ----------
-    optimum_size : QtCore.QSize
-        The size of the image that optimally fits the current
-        screen (i.e., occupies roughly 60% of the screen).
-    image_scaling : float
-        The scaling factor currently used for the image shown.
-    scaled_image_size : QtCore.QSize
-        Size of the image scaled by self.image_scaling
-
-    Public methods
-    --------------
-    scale_to_optimum()
-        Scale self and pixmap to self.optimum_size.
-    scale_to_image()
-        Scale self to fully fit the (scaled) pixmap.
-    set_image(image)
-        Set a QImage to be shown.
-    get_scaling_to_fit(size, size_fraction=1)
-        Return the scaling factor such that the image
-        optimally fits in size*size_fraction.
-
-    Reimplement methods
-    -------------------
-    sizeHint()
-        Return optimal size for self
-
-    Signals
-    -------
-    image_scaling_changed : no argument
-        Emitted every time the scaling factor of the image is changed
-    """
-
-    image_scaling_changed = qtc.pyqtSignal()
-
-    def __init__(self, *args, parent=None, **kwargs):
-        """Initialize widget."""
-        super().__init__(*args, parent=parent, **kwargs)
-
-        self.__image_scaling = 1
-        self.optimum_size = qtc.QSize()
-        self.__optimum_scaling = -1
-        self.__optimal_screen_fraction = 0.6
-
-        self.setBackgroundRole(qtg.QPalette.Base)
-
-        # The QLabel will fill the whole area of the widget containing it,
-        # and can scale its contents rather than itself when adjusted.
-        self.setSizePolicy(qtw.QSizePolicy.Ignored,
-                           qtw.QSizePolicy.Ignored)
-        self.setScaledContents(True)
-
-    @property
-    def image_scaling(self):
-        """Return the currently used pixmap-scaling factor."""
-        return self.__image_scaling
-
-    @image_scaling.setter
-    def image_scaling(self, new_scaling):
-        """Set a new pixmap-scaling factor."""
-        if new_scaling != self.image_scaling:
-            self.__image_scaling = new_scaling
-            self.image_scaling_changed.emit()
-
-    @property
-    def scaled_image_size(self):
-        """Return the scaled size of self.pixmap()."""
-        return self.pixmap().size() * self.image_scaling
-
-    def scale_to_optimum(self):
-        """Resize self to the optimal size."""
-        if self.optimum_size:
-            self.image_scaling = self.__optimum_scaling
-            self.resize(self.optimum_size)
-
-    def scale_to_image(self):
-        """Resize self to the (scaled) size of the current pixmap."""
-        self.resize(self.scaled_image_size)
-
-    def set_image(self, image):
-        """Set an image to be shown."""
-        self.setPixmap(qtg.QPixmap.fromImage(image))
-
-    def get_scaling_to_fit(self, size, size_fraction=1):
-        """Return scaling to best fit pixmap into a fraction of size.
-
-        The scaling is also stored in self.image_scaling.
-
-        Parameters
-        ----------
-        size : QtCore.QSize
-            Reference size into which the pixmap should fit.
-        size_fraction : float, optional
-            The pixmap is made to fit within size_fraction*size.
-            Default is 1.0.
-
-        Returns
-        -------
-        scaling : float
-            Scaling factor as (1.25)**n or (0.8)**m that makes
-            the pixmap fit into size_fraction*size.
-        """
-        scaling = 1
-        fraction = max(self.pixmap().width()/size.width(),
-                       self.pixmap().height()/size.height())
-        while fraction < size_fraction:
-            fraction *= 1.25
-            scaling *= 1.25
-        while fraction > size_fraction:
-            fraction *= 0.8
-            scaling *= 0.8
-        self.image_scaling = scaling
-        return scaling
-
-    def sizeHint(self):  # pylint: disable=invalid-name
-        """Return optimal size for self."""
-        pixmap = self.pixmap()
-        if (not pixmap
-            or not pixmap.size()
-            or not all(s > 0 for s in (pixmap.width(), pixmap.height()))):
-            return super().sizeHint()  # invalid pixmap
-
-        if self.optimum_size:
-            return self.optimum_size
-
-        # When a pixmap is present, return a scaled version of
-        # the pixmap size, trying to keep more or less always
-        # the same true size (relative to the screen).
-        try:
-            screen = self.window().windowHandle().screen()
-        except AttributeError:
-            # Window does not exist yet
-            self.image_scaling = 0.25
-            return self.scaled_image_size
-
-        self.get_scaling_to_fit(screen.availableSize(),
-                                size_fraction=self.__optimal_screen_fraction)
-        self.__optimum_scaling = self.image_scaling
-        self.optimum_size = self.scaled_image_size
-        return self.optimum_size
-
-
-class RegionOfInterest(qtw.QWidget):
-    """Class for a rectangular rubber-band used for ROI.
-
-    Attributes
-    ----------
-    image_scaling : float
-        Current scaling factor of the image on which this
-        rubber-band rectangle is shown. Used to convert
-        screen coordinates into image coordinates.
-    origin : QtCore.QPoint
-        The origin of the ROI while drawing or moving.
-    increments : tuple
-        Two elements. Minimum change of width and height
-        in image coordinates (i.e., pixels).
-    limits : tuple
-        Three elements, corresponding to self.minimum,
-        self.maximum and self.increments.
-    maximum : tuple
-        Two elements. Maximum width and height in image
-        coordinates (i.e., pixels).
-    minimum : tuple
-        Two elements. Minimum width and height in image
-        coordinates (i.e., pixels).
-
-    Reimplement methods
-    -------------------
-    enterEvent(event)
-        Edit mouse cursor when mouse enters the widget.
-    leaveEvent(event)
-        Reset mouse cursor when mouse exits the widget.
-    mouseDoubleClickEvent(event)
-        Reimplement to prevent propagation to parent.
-    mouseMoveEvent(event)
-        Move rubber-band within parent frame.
-    mousePressEvent(event)
-        Initiate rubber-band movement on mouse click.
-    mouseReleaseEvent(event)
-        Reimplement to prevent propagation to parent.
-    resizeEvent(event)
-        Resize also rubber-band.
-
-    Public methods
-    --------------
-    update_size_limits()
-        Update the size limits in current-view coordinates
-        using self.limits and self.image_scaling.
-    scale(delta_scale)
-        Resize self by delta_scale increments in image coordinates.
-    translate(delta_pixels)
-        Move self by delta_pixels pixels in image coordinates.
-    """
-
-    apply_roi_requested = qtc.pyqtSignal()
-
-    def __init__(self, *__args, parent=None, increments=(1, 1), **__kwargs):
-        """Initialize RegionOfInterest instance.
-
-        Parameters
-        ----------
-        parent : QWidget, optional
-            The widget on which this region-of-interest rubber-band
-            is shown. Typically a CameraViewer. Default is None.
-        increments : tuple, optional
-            Two elements. Minimum increments of width and height
-            in image coordinates (i.e., pixels).
-
-        Returns
-        -------
-        None.
-        """
-        super().__init__(parent=parent)
-        self.__rubberband = qtw.QRubberBand(qtw.QRubberBand.Rectangle, self)
-        self.__limits = {'min': (1, 1),
-                         'max': (1000000, 1000000),
-                         'increments': increments,
-                         'pos_increments': (1, 1)}
-        self.__drag_origin = qtc.QPoint(0, 0)
-        self.image_scaling = 1
-        self.origin = qtc.QPoint(0, 0)
-        self.__context_menu = qtw.QMenu(parent=self)
-
-        self.setWindowFlags(qtc.Qt.SubWindow)
-
-        self.__compose()
-        self.update_size_limits()
-
-    @property
-    def image_coordinates(self):
-        """Return position and size in image coordinates.
-
-        Returns
-        -------
-        top_x : int
-            Horizontal position of top-left corner in image
-            coordinates (i.e. pixels). Zero is the leftmost
-            pixel. This coordinate does not account for an
-            already-applied ROI.
-        top_y : int
-            Vertical position of top-left corner in image
-            coordinates (i.e. pixels). Zero is the topmost
-            pixel. This coordinate does not account for an
-            already-applied ROI.
-        width : int
-            Width of the selected region of interest in
-            image coordinates (i.e. pixels).
-        height : int
-            Height of the selected region of interest in
-            image coordinates (i.e. pixels).
-        """
-        # Use the bounding box of the rubber-band rather than that of
-        # self as the former gets its size normalized on resizeEvent,
-        # and will be closer to the correct size when scaled back
-        # by 1/self.image_scaling.
-        rect = self.__rubberband.rect()
-
-        top_left = self.mapToParent(rect.topLeft())
-        top_x, top_y = top_left.x(), top_left.y()
-        width, height = rect.width(), rect.height()
-
-        # Scale back to image coordinates (and round as appropriate)
-        scale = 1/self.image_scaling
-        min_dx, min_dy = self.increments
-        min_w, min_h = self.minimum
-
-        top_x = round(top_x * scale)
-        top_y = round(top_y * scale)
-        width = round((width * scale - min_w) / min_dx) * min_dx + min_w
-        height = round((height * scale - min_h) / min_dy) * min_dy + min_h
-
-        return top_x, top_y, width, height
-
-    @property
-    def increments(self):
-        """Return the smallest change of width/height in image coordinates."""
-        return self.__limits['increments']
-
-    @property
-    def limits(self):
-        """Return .minimum, .maximum., .increments."""
-        return self.minimum, self.maximum, self.increments
-
-    @limits.setter
-    def limits(self, new_limits):
-        """Set .minimum, .maximum., .increments."""
-        (self.__limits['min'],
-         self.__limits['max'],
-         self.__limits['increments'],
-         self.__limits['pos_increments']) = new_limits
-
-    @property
-    def maximum(self):
-        """Return the largest width/height in image coordinates."""
-        return self.__limits['max']
-
-    @property
-    def minimum(self):
-        """Return the smallest width/height in image coordinates."""
-        return self.__limits['min']
-
-    def enterEvent(self, event):  # pylint: disable=invalid-name
-        """Change mouse cursor when entering the widget."""
-        self.setCursor(qtc.Qt.SizeAllCursor)
-        super().enterEvent(event)
-
-    def leaveEvent(self, event):  # pylint: disable=invalid-name
-        """Reset mouse cursor when exiting the widget."""
-        self.unsetCursor()
-        super().leaveEvent(event)
-
-    # pylint: disable=invalid-name
-    # Disable invalid-name no-self-use as the name
-    # and signature must stay unaltered
-    def mouseDoubleClickEvent(self, event):
-        """Reimplement to prevent propagation to parent."""
-        event.accept()
-    # pylint: enable=invalid-name
-
-    def mouseMoveEvent(self, event):  # pylint: disable=invalid-name
-        """Reimplement mouseMoveEvent to move rubber-band."""
-        new_pos = self.origin + event.globalPos() - self.__drag_origin
-        # Make sure that self does not go beyond the frame of the parent
-        parent = self.parent()
-        if parent:
-            new_x = max(0, new_pos.x())
-            new_x -= max(new_x + self.width() - parent.width(), 0)
-            new_y = max(0, new_pos.y())
-            new_y -= max(new_y + self.height() - parent.height(), 0)
-            new_pos.setX(new_x)
-            new_pos.setY(new_y)
-        self.move(new_pos)
-
-    def mousePressEvent(self, event):  # pylint: disable=invalid-name
-        """Reimplement mousePressEvent to initiate rubber-band move."""
-        self.origin = self.pos()
-        self.__drag_origin = event.globalPos()
-
-    # pylint: disable=invalid-name
-    # Disable invalid-name no-self-use as the name
-    # and signature must stay unaltered
-    def mouseReleaseEvent(self, event):
-        """Reimplement to prevent propagation to parent."""
-        event.accept()
-    # pylint: enable=invalid-name
-
-    def resizeEvent(self, event):  # pylint: disable=invalid-name
-        """Reimplement to resize the rubber-band."""
-        self.__rubberband.resize(self.__normalized_size(self.size()))
-        super().resizeEvent(event)
-
-    # pylint: disable=invalid-name
-    def setGeometry(self, new_rect):
-        """Reimplement setGeometry to edit sizes according to increments."""
-        # Make sure the new rectangle does not exceed the parent
-        # frame. This has to be done on a 'normalized' rectangle
-        # with left() < right() and top() < bottom()
-        new_size = new_rect.size()
-        parent = self.parentWidget()
-        if parent:
-            norm_rect = new_rect.normalized()
-            new_left = max(0, norm_rect.left())
-            new_right = min(norm_rect.right(), parent.width())
-            new_top = max(0, norm_rect.top())
-            new_bottom = min(norm_rect.bottom(), parent.height())
-            norm_rect.setLeft(new_left)
-            norm_rect.setRight(new_right)
-            norm_rect.setTop(new_top)
-            norm_rect.setBottom(new_bottom)
-            new_size.setWidth(norm_rect.width() * np.sign(new_size.width()))
-            new_size.setHeight(norm_rect.height() * np.sign(new_size.height()))
-
-        # Force the size to minimum and maximum constraints
-        # as well as to minimum increments in both directions
-        new_rect.setSize(self.__normalized_size(new_size))
-
-        # Swap top/left/bottom/right in case the rectangle
-        # has width()/height() < 0.
-        new_rect = new_rect.normalized()
-
-        # Check again that new_rect fits the parent. This time,
-        # however, keep the size constant and rather translate
-        # the rectangle.
-        if parent:
-            new_x = max(0, new_rect.left())
-            new_x -= max(new_x + new_rect.width() - parent.width(), 0)
-            new_y = max(0, new_rect.top())
-            new_y -= max(new_y + new_rect.height() - parent.height(), 0)
-            new_rect.translate(new_x - new_rect.x(), new_y - new_rect.y())
-
-        super().setGeometry(new_rect)
-    # pylint: enable=invalid-name
-
-    def scale(self, delta_scale):
-        """Resize by delta_scale increments, in image coordinates."""
-        d_width, d_height = self.increments
-        delta_size = qtc.QSize(delta_scale.x()*d_width,
-                               delta_scale.y()*d_height) * self.image_scaling
-        self.resize(self.__normalized_size(self.size() + delta_size))
-
-    def translate(self, delta_pixels):
-        """Translate self by delta_pixels, in image coordinates."""
-        delta_pos = delta_pixels*self.image_scaling
-        if all(abs(p) < 1e-3 for p in (delta_pos.x(), delta_pos.y())):
-            # Image is scaled down so much that no movement
-            # would result from this. Rather use delta_pixels
-            # as shift in the current-view coordinates
-            delta_pos = delta_pixels
-        self.move(self.pos() + delta_pos)
-
-    def update_size_limits(self):
-        """Update the size limits in viewing pixels.
-
-        Essentially converts self.limits into view pixels by
-        scaling with self.image_scaling.
-
-        Returns
-        -------
-        None.
-        """
-        self.setMinimumSize(self.image_scaling * qtc.QSize(*self.minimum))
-        self.setMaximumSize(self.image_scaling * qtc.QSize(*self.maximum))
-
-    def __compose(self):
-        """Place children widgets."""
-        # The layout contains only four size grips for resizing
-        # (at corners), while the rubber-band is parented directly
-        # to self in __init__, and stays on top of all.
-        layout = qtw.QGridLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(qtw.QSizeGrip(self), 0, 0,
-                         qtc.Qt.AlignLeft | qtc.Qt.AlignTop)
-        layout.addWidget(qtw.QSizeGrip(self), 1, 1,
-                         qtc.Qt.AlignRight | qtc.Qt.AlignBottom)
-        layout.addWidget(qtw.QSizeGrip(self), 0, 1,
-                         qtc.Qt.AlignRight | qtc.Qt.AlignTop)
-        layout.addWidget(qtw.QSizeGrip(self), 1, 0,
-                         qtc.Qt.AlignLeft | qtc.Qt.AlignBottom)
-        self.__rubberband.show()
-        self.hide()
-
-        # Set up to receive right-clicks, and prepare
-        # the corresponding context menu. It only contains
-        # a single QAction for applying the ROI
-        self.setContextMenuPolicy(qtc.Qt.CustomContextMenu)
-        self.customContextMenuRequested.connect(self.__show_context_menu)
-        self.__context_menu.triggered.connect(self.__on_context_menu_triggered)
-        self.__context_menu.addAction("Apply ROI")
-        act = self.__context_menu.addAction("Set ROI coordinates")
-        act.setEnabled(False)  # TODO: open up a dialog
-
-    def __normalized_size(self, size):
-        """Return a size that fits with increments."""
-        # Make sure size is within limits
-        signed_width, signed_height = size.width(), size.height()
-        width, height = abs(signed_width), abs(signed_height)
-        min_w, min_h = (m * self.image_scaling for m in self.minimum)
-        max_w, max_h = (m * self.image_scaling for m in self.maximum)
-
-        width = min(max(width, min_w), max_w)
-        height = min(max(height, min_h), max_h)
-
-        # Now handle increments
-        min_dx, min_dy = (i * self.image_scaling for i in self.increments)
-        width = min_w + round((width - min_w)/min_dx) * min_dx
-        height = min_h + round((height - min_h)/min_dy) * min_dy
-
-        size.setWidth(round(width) * np.sign(signed_width))
-        size.setHeight(round(height) * np.sign(signed_height))
-        return size
-
-    def __show_context_menu(self, position):
-        """Show a context menu when right-clicking at position."""
-        self.__context_menu.popup(self.mapToGlobal(position))
-
-    def __on_context_menu_triggered(self, action):
-        """React to a user selection in the context menu."""
-        if "apply" in action.text().lower():
-            self.apply_roi_requested.emit()
-            return
-        print("Set requested")
