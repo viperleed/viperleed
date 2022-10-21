@@ -396,6 +396,10 @@ class SettingsDialogOption(qtc.QObject):
         is_advanced : bool, optional
             Whether this option is to be displayed only in "Advanced"
             mode. Default is False.
+        label_alignment : {'top', 'centre', 'bottom'}
+            Vertical alignment of label field relative to handler_widget.
+            Only the first character matters. Any character other than 'c'
+            or 'b' will be treated as 'top'. Default is 'top'.
         **kwargs : object
             Other keyword arguments passed on to handler_widget if
             only a QWidget class is given.
@@ -406,6 +410,7 @@ class SettingsDialogOption(qtc.QObject):
         """
         display_name = kwargs.pop('display_name', None)
         tooltip = kwargs.pop('tooltip', '')
+        v_align = kwargs.pop('label_alignment', 't')
 
         super().__init__(kwargs.pop('parent', None))
         self.option_name = option_name
@@ -422,7 +427,8 @@ class SettingsDialogOption(qtc.QObject):
         self.__connect_handler()
         self.__update_handler_from_read_only()
 
-        self.display_name = self.__make_label_widget(display_name, tooltip)
+        self.display_name = self.__make_label_widget(display_name, tooltip,
+                                                     v_align)
 
     def __iter__(self):
         """Return the label and the handler for this option."""
@@ -510,7 +516,7 @@ class SettingsDialogOption(qtc.QObject):
             signal = signal()
         signal.connect(self.__notify_change)
 
-    def __make_label_widget(self, label_text, info_text):
+    def __make_label_widget(self, label_text, info_text, v_align):
         """Return a QWidget to act as option label."""
         # Get a reasonable label_text
         if not label_text:
@@ -522,21 +528,36 @@ class SettingsDialogOption(qtc.QObject):
 
         # Prepare a container widget and its layout
         container = qtw.QWidget()
-        container.setLayout(qtw.QHBoxLayout())
-        layout = container.layout()
-        layout.setContentsMargins(0, 0, 0, 0)
+        container.setLayout(qtw.QVBoxLayout())
+        v_align_layout = container.layout()
+        h_align_layout = qtw.QHBoxLayout()
+        v_align_layout.setContentsMargins(0, 0, 0, 0)
+        h_align_layout.setContentsMargins(0, 0, 0, 0)
 
         # Get an appropriate size for the info object
         info_size = self.label.fontMetrics().boundingRect(label_text).height()
         self.__info = FieldInfo(info_text, size=info_size)
 
         # Fill layout
-        layout.addWidget(self.label)
-        layout.addWidget(self.__info)
+        h_align_layout.addWidget(self.label)
+        h_align_layout.addWidget(self.__info)
+        v_align_layout.addLayout(h_align_layout)
 
-        # Decide where to place a stretch to keep text & info together
+        # Sort out vertical alignment, using stretches. "Top"
+        # is the default for QFormLayout, i.e., nothing to do
+        if v_align.startswith('c'):
+            v_align_layout.insertStretch(0, 1)
+            v_align_layout.insertStretch(-1, 1)
+        elif v_align.startswith('b'):
+            # Mimic the Qt implementation for top alignment,
+            # i.e., we leave a little space at the bottom
+            v_align_layout.insertStretch(0, 7)
+            v_align_layout.insertStretch(-1, 1)
+
+        # Now horizontal alignment: Decide where to
+        # place a stretch to keep text & info together
         is_left_align = qtw.QFormLayout().labelAlignment() == qtc.Qt.AlignLeft
-        layout.insertStretch(-1 if is_left_align else 0, 1)
+        h_align_layout.insertStretch(-1 if is_left_align else 0, 1)
 
         self.set_info_text(info_text)
         return container
