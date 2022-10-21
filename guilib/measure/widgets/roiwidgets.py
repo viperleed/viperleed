@@ -18,6 +18,8 @@ RegionOfInterest
     in screen coordinates. This class used to be part of camerawidgets.
 """
 
+import ast
+
 import numpy as np
 from PyQt5 import (QtCore as qtc,
                    QtWidgets as qtw)
@@ -362,3 +364,133 @@ class RegionOfInterest(qtw.QWidget):
             self.apply_roi_requested.emit()
             return
         print("Set requested")
+
+
+class ROIEditor(qtw.QWidget):
+    """Collection of four SpinBox widgets for setting a ROI."""
+
+    roi_changed = qtc.pyqtSignal(tuple)               # x, y, w, h
+    roi_position_changed = qtc.pyqtSignal(int, int)   # x, y
+    roi_size_changed = qtc.pyqtSignal(int, int)       # w, h
+
+    def __init__(self, **kwargs):
+        """Initialize instance."""
+        super().__init__(kwargs.get('parent', None))
+
+        (self.__left,
+         self.__top,
+         self.__width,
+         self.__height) = (qtw.QSpinBox() for _ in range(4))
+
+        self.__compose()
+        self.__connect()
+
+    def get_as_string(self):
+        """Return the values in the widgets as a string."""
+        return str(self.roi)
+
+    def get_roi(self):
+        """Return the region of interest as (left, top, width, height)."""
+        return tuple(c.value() for c in self.__widgets)
+
+    def set_increments(self, delta_left, delta_top, delta_width, delta_height):
+        """Set minimum steps for position and size.
+
+        Parameters
+        ----------
+        delta_left : int
+            Minimum increment of horizontal position of ROI
+        delta_top : int
+            Minimum increment of vertical position of ROI
+        delta_width : int
+            Minimum increment of ROI width
+        delta_height : int
+            Minimum increment of ROI height
+        """
+        args = (delta_left, delta_top, delta_width, delta_height)
+        for delta, widg in zip(args, self.__widgets):
+            widg.setSingleStep(delta)
+
+    def set_ranges(self, size_min, size_max):
+        """Set range of all widgets.
+
+        Parameters
+        ----------
+        size_min : tuple of int
+            Minimum width and minimum height of ROI.
+        size_max : tuple of int
+            Maximum width and maximum height of ROI.
+
+        Returns
+        -------
+        None.
+        """
+        width_range, height_range = zip(size_min, size_max)
+        self.__width.setRange(*width_range)
+        self.__height.setRange(*height_range)
+        self.__left.setRange(0, width_range[1])
+        self.__top.setRange(0, height_range[1])
+
+    def set_from_string(self, string_roi):
+        """Set widgets from a string value."""
+        if string_roi in (None, 'None', 'none'):
+            new_roi = (0, 0, self.__width.maximum(), self.__height.maximum())
+        else:
+            new_roi = ast.literal_eval(string_roi)
+        self.set_roi(new_roi)
+
+    def set_roi(self, new_roi):
+        """Set the values in the widgets from new_roi.
+
+        Parameters
+        ----------
+        new_roi : tuple of int
+            Form should be (left, top, width, height).
+
+        Returns
+        -------
+        None.
+        """
+        for widg, value in zip(self.__widgets, new_roi):
+            widg.setValue(value)
+
+    roi = property(get_roi, set_roi)
+
+    @property
+    def __widgets(self):
+        """Return left, top, width, and height widgets."""
+        return self.__left, self.__top, self.__width, self.__height
+
+    def __compose(self):
+        """Place children widgets."""
+        layout = qtw.QGridLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        _labels = ('Left', 'Top', 'Width', 'Height')
+        for col, (label, widg) in enumerate(zip(_labels, self.__widgets)):
+            layout.setColumnStretch(col, 1)  # Same width for all
+            layout.addWidget(qtw.QLabel(label),
+                             0, col, 1, 1, qtc.Qt.AlignHCenter)
+            layout.addWidget(widg, 1, col)
+            widg.setAccelerated(True)
+        self.setLayout(layout)
+
+    def __connect(self):
+        """Connect signals."""
+        for widg in self.__widgets:
+            widg.valueChanged.connect(self.__on_roi_changed)
+        for widg in (self.__left, self.__top):
+            widg.valueChanged.connect(self.__on_pos_changed)
+        for widg in (self.__width, self.__height):
+            widg.valueChanged.connect(self.__on_size_changed)
+
+    def __on_pos_changed(self):
+        """Emit roi_position_changed."""
+        self.roi_position_changed.emit(*self.roi[:2])
+
+    def __on_size_changed(self):
+        """Emit roi_size_changed."""
+        self.roi_size_changed.emit(*self.roi[2:])
+
+    def __on_roi_changed(self):
+        """Emit roi_changed when any of the control does."""
+        self.roi_changed.emit(self.roi)
