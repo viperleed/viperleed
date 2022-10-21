@@ -524,7 +524,7 @@ C  AUTHOR  PENDRY
       DIMENSION FAC(NFAC)
       FLOAT(I)=DFLOAT(I)
    40 FORMAT(28H INVALID ARGUMENTS FOR BLM  ,6(I3,1H,))
-      PI = 3.14159265
+      PI = 3.14159265358979323846
       IF (M1+M2+M3)  420, 350, 420
   350 IF (L1-LMAX-LMAX)  360, 360, 530
   360 IF (L2-LMAX)  370, 370, 530
@@ -730,7 +730,7 @@ C     DIMENSION  CLM(NLM),           YLM(NN), FAC2(NN), FAC1(N)
       DOUBLE PRECISION FAC
       DIMENSION FAC(NFAC)
 
-      PI = 3.14159265
+      PI = 3.14159265358979323846
       L2MAX = LMAX + LMAX
       NF=4*LMAX+1
 
@@ -1688,7 +1688,7 @@ C
       DIMENSION  AK(2),AR1(2),AR2(2),RAR1(2),RAR2(2),R(2)
       COMMON  E, AK, VPI
       COMMON  /SL/BR1, BR2, AR1, AR2, RAR1, RAR2, NL1, NL2
-      PI = 3.14159265
+      PI = 3.14159265358979323846
       CZERO = CMPLX(0.0,0.0)
       CI = CMPLX(0.0,1.0)
       KAPPA = CMPLX(2.0 * E, - 2.0 * VPI + 0.000001)
@@ -1894,7 +1894,7 @@ C   H is auxiliary array HGHD used only here, carried through for var. dimension
       RU=(1.0,0.0)
       CZ=(0.0,0.0)
       CI=(0.0,1.0)
-      PI=3.14159265
+      PI=3.14159265358979323846
       DCUT2=DCUT*DCUT
 
       ! initialize S to zero
@@ -2100,7 +2100,7 @@ C
 C
       CZ=(0.0,0.0)
       CI=(0.0,1.0)
-      PI=3.14159265
+      PI=3.14159265358979323846
 
       IF (LAY.EQ.1) THEN  ! overlayer
          RXR1(1)=RBR1(1)
@@ -4292,7 +4292,7 @@ C   Y= OUTPUT COMPLEX SPHERICAL HARMONICS.
       A = (0.0,1.0) * FI
       RZ = REAL(Z)
       ZNW = SQRT((1.0,0.0) - Z * Z)
-      ANORA = 0.2820948
+      ANORA = 0.28209479177387814 ! 1/SQRT(4*PI)
       YY = (1.0,0.0)
 
       DO L = 1, NHARM
@@ -4428,7 +4428,7 @@ C  SAME SUBLATTICE.
         STOP
       END IF
 
-      PI = 3.14159265
+      PI = 3.14159265358979323846
       LM = 0
       CL = 0.0
       A = 1.0
