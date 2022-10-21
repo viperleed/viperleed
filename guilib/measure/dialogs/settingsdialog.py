@@ -45,7 +45,7 @@ from viperleed.guilib.measure.widgets.pathselector import PathSelector
 from viperleed.guilib.measure.widgets.fieldinfo import FieldInfo
 
 # pylint: disable=too-many-lines
-# We can probably live with 1004 instead of 1000
+# We can probably live with 1011 instead of 1000
 
 _MSGBOX = qtw.QMessageBox
 
@@ -1000,7 +1000,7 @@ class SettingsDialog(qtw.QDialog):
                 widg.setVisible(_section_visible)
             else:
                 widg.setVisible(visible or not widg.advanced)
-        self.adjustSize()
+        self.adjustSize()   # TODO: does not always adjust when going smaller?
 
     @qtc.pyqtSlot()
     def __update_advanced_btn(self):
