@@ -264,16 +264,16 @@ class RegionOfInterest(qtw.QWidget):
 
         # Check again that new_rect fits the parent. This time,
         # however, keep the size constant and rather translate
-        # the rectangle.
+        # the rectangle. When translating, update self.origin
         if parent:
             new_x = max(0, new_rect.left())
             new_x -= max(new_x + new_rect.width() - parent.width(), 0)
             new_y = max(0, new_rect.top())
             new_y -= max(new_y + new_rect.height() - parent.height(), 0)
             new_rect.translate(new_x - new_rect.x(), new_y - new_rect.y())
+            self.origin = new_rect.topLeft()
 
         super().setGeometry(new_rect)
-    # pylint: enable=invalid-name
 
     def scale(self, delta_scale):
         """Resize by delta_scale increments, in image coordinates.
