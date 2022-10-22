@@ -13,7 +13,7 @@ visualizing frames from a concrete subclass of CameraABC.
 
 import weakref
 from copy import deepcopy
-from time import perf_counter as timer                                          # TEMP: till "saturating" is fixed
+from time import perf_counter as timer                                          # TODO: till "saturating" is fixed
 
 import numpy as np
 from PyQt5 import (QtCore as qtc,
@@ -206,9 +206,11 @@ class CameraViewer(qtw.QScrollArea):
 
         super().__init__(*args, parent=parent, **kwargs)
 
-        self.__flags = {"stop_on_close": bool(stop_on_close),
-                        "show_auto": bool(show_auto),
-                        "roi_visible": bool(roi_visible),
+        # The second item in the flags will be the corresponding
+        # QAction, constructed in __compose_context_menu
+        self.__flags = {"stop_on_close": [bool(stop_on_close), None],
+                        "show_auto": [bool(show_auto), None],
+                        "roi_visible": [bool(roi_visible), None],
                         "interactions_enabled": bool(interactions_enabled),}
         self.__glob = {"image_size": qtc.QSize(),
                        "camera": camera,
@@ -282,12 +284,13 @@ class CameraViewer(qtw.QScrollArea):
     @property
     def roi_visible(self):
         """Return whether the ROI is made visible upon user interaction."""
-        return self.__flags["roi_visible"]
+        return self.__flags["roi_visible"][0]
 
     @roi_visible.setter
     def roi_visible(self, visible):
         """Set the ROI to be made visible upon user interaction."""
-        self.__flags["roi_visible"] = bool(visible)
+        self.__flags["roi_visible"][0] = bool(visible)
+        self.__flags["roi_visible"][1].setChecked(self.roi_visible)
         if not self.roi_visible:
             self.roi.hide()
 
@@ -303,22 +306,24 @@ class CameraViewer(qtw.QScrollArea):
     @property
     def show_auto(self):
         """Return whether self is automatically shown on new frames."""
-        return self.__flags["show_auto"]
+        return self.__flags["show_auto"][0]
 
     @show_auto.setter
     def show_auto(self, enabled):
         """Set if self should be shown automatically on new frames."""
-        self.__flags["show_auto"] = bool(enabled)
+        self.__flags["show_auto"][0] = bool(enabled)
+        self.__flags["show_auto"][1].setChecked(self.show_auto)
 
     @property
     def stop_on_close(self):
         """Return whether the camera is stopped when closing the widget."""
-        return self.__flags["stop_on_close"]
+        return self.__flags["stop_on_close"][0]
 
     @stop_on_close.setter
     def stop_on_close(self, stop):
         """Set whether the camera is stopped when closing the widget."""
-        self.__flags["stop_on_close"] = bool(stop)
+        self.__flags["stop_on_close"][0] = bool(stop)
+        self.__flags["stop_on_close"][1].setChecked(self.stop_on_close)
 
     def changeEvent(self, event):  # pylint: disable=invalid-name
         """Extend changeEvent to react to window maximization."""
@@ -463,6 +468,8 @@ class CameraViewer(qtw.QScrollArea):
         """Extend mouseReleaseEvent to handle ROI drawing."""
         self.__mouse_button = None
         if not self.roi.isVisible():
+            # Allow propagating event to parent only if
+            # not handled already by the ROI movement
             super().mouseReleaseEvent(event)
 
     def scale_image(self, by_factor):
@@ -634,16 +641,19 @@ class CameraViewer(qtw.QScrollArea):
         # Flags
         menu.addSeparator()
         act = menu.addAction("Allow setting ROI")
+        self.__flags["roi_visible"][1] = act
         act.setCheckable(True)
         act.setChecked(
             qtc.Qt.Checked if self.roi_visible else qtc.Qt.Unchecked
             )
         act = menu.addAction("Show on new frames")
+        self.__flags["show_auto"][1] = act
         act.setCheckable(True)
         act.setChecked(
             qtc.Qt.Checked if self.show_auto else qtc.Qt.Unchecked
             )
         act = menu.addAction("Stop camera when closed")
+        self.__flags["stop_on_close"][1] = act
         act.setCheckable(True)
         act.setChecked(
             qtc.Qt.Checked if self.stop_on_close else qtc.Qt.Unchecked
