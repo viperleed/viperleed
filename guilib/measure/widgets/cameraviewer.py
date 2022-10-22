@@ -32,7 +32,6 @@ from viperleed.guilib.widgetslib import screen_fraction
 # TODO: ROI show size in image coordinates as it is resized (tooltip?)
 # TODO: ROI context menu: precisely set with coordinates
 # TODO: context -- properties
-# TODO: use ROI position increments
 # TODO: If camera is not open at CameraViewer__init__, I never update
 #       the limits! Should use camera.started to fetch them if needed
 

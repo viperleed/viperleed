@@ -146,13 +146,14 @@ class RegionOfInterest(qtw.QWidget):
 
         # Scale back to image coordinates (and round as appropriate)
         scale = 1/self.image_scaling
-        min_dx, min_dy = self.increments
+        min_dw, min_dh = self.increments
+        min_dx, min_dy = self.position_increments
         min_w, min_h = self.minimum
 
-        top_x = round(top_x * scale)
-        top_y = round(top_y * scale)
-        width = round((width * scale - min_w) / min_dx) * min_dx + min_w
-        height = round((height * scale - min_h) / min_dy) * min_dy + min_h
+        top_x = round((top_x * scale)/min_dx) * min_dx
+        top_y = round((top_y * scale)/min_dy) * min_dy
+        width = round((width * scale - min_w) / min_dw) * min_dw + min_w
+        height = round((height * scale - min_h) / min_dh) * min_dh + min_h
 
         return top_x, top_y, width, height
 
@@ -184,25 +185,28 @@ class RegionOfInterest(qtw.QWidget):
         """Return the smallest width/height in image coordinates."""
         return self.__limits['min']
 
-    def enterEvent(self, event):  # pylint: disable=invalid-name
+    @property
+    def position_increments(self):
+        """Return the minimum increments in the position in image coordinates."""
+        return self.__limits['pos_increments']
+
+    def enterEvent(self, event):         # pylint: disable=invalid-name
         """Change mouse cursor when entering the widget."""
         self.setCursor(qtc.Qt.SizeAllCursor)
         super().enterEvent(event)
 
-    def leaveEvent(self, event):  # pylint: disable=invalid-name
+    def leaveEvent(self, event):         # pylint: disable=invalid-name
         """Reset mouse cursor when exiting the widget."""
         self.unsetCursor()
         super().leaveEvent(event)
 
     # pylint: disable=invalid-name
-    # Disable invalid-name no-self-use as the name
-    # and signature must stay unaltered
     def mouseDoubleClickEvent(self, event):
         """Reimplement to prevent propagation to parent."""
         event.accept()
     # pylint: enable=invalid-name
 
-    def mouseMoveEvent(self, event):  # pylint: disable=invalid-name
+    def mouseMoveEvent(self, event):     # pylint: disable=invalid-name
         """Reimplement mouseMoveEvent to move rubber-band."""
         new_pos = self.origin + event.globalPos() - self.__drag_origin
         # Make sure that self does not go beyond the frame of the parent
@@ -216,26 +220,21 @@ class RegionOfInterest(qtw.QWidget):
             new_pos.setY(new_y)
         self.move(new_pos)
 
-    def mousePressEvent(self, event):  # pylint: disable=invalid-name
+    def mousePressEvent(self, event):    # pylint: disable=invalid-name
         """Reimplement mousePressEvent to initiate rubber-band move."""
         self.origin = self.pos()
         self.__drag_origin = event.globalPos()
 
-    # pylint: disable=invalid-name
-    # Disable invalid-name no-self-use as the name
-    # and signature must stay unaltered
-    def mouseReleaseEvent(self, event):
+    def mouseReleaseEvent(self, event):  # pylint: disable=invalid-name
         """Reimplement to prevent propagation to parent."""
         event.accept()
-    # pylint: enable=invalid-name
 
-    def resizeEvent(self, event):  # pylint: disable=invalid-name
+    def resizeEvent(self, event):        # pylint: disable=invalid-name
         """Reimplement to resize the rubber-band."""
         self.__rubberband.resize(self.__normalized_size(self.size()))
         super().resizeEvent(event)
 
-    # pylint: disable=invalid-name
-    def setGeometry(self, new_rect):
+    def setGeometry(self, new_rect):     # pylint: disable=invalid-name
         """Reimplement setGeometry to edit sizes according to increments."""
         # Make sure the new rectangle does not exceed the parent
         # frame. This has to be done on a 'normalized' rectangle
@@ -277,20 +276,53 @@ class RegionOfInterest(qtw.QWidget):
     # pylint: enable=invalid-name
 
     def scale(self, delta_scale):
-        """Resize by delta_scale increments, in image coordinates."""
+        """Resize by delta_scale increments, in image coordinates.
+
+        Parameters
+        ----------
+        delta_scale : QtCore.QPoint
+            The number of times the width [.x()] and
+            height [.y()] should be increased by
+            self.increments[0] and self.increments[1]
+
+        Returns
+        -------
+        None.
+        """
         d_width, d_height = self.increments
         delta_size = qtc.QSize(delta_scale.x()*d_width,
                                delta_scale.y()*d_height) * self.image_scaling
         self.resize(self.__normalized_size(self.size() + delta_size))
 
-    def translate(self, delta_pixels):
-        """Translate self by delta_pixels, in image coordinates."""
-        delta_pos = delta_pixels*self.image_scaling
-        if all(abs(p) < 1e-3 for p in (delta_pos.x(), delta_pos.y())):
-            # Image is scaled down so much that no movement
-            # would result from this. Rather use delta_pixels
-            # as shift in the current-view coordinates
-            delta_pos = delta_pixels
+    def translate(self, delta_increments):
+        """Translate self by delta_increments, in image coordinates.
+
+        Parameters
+        ----------
+        delta_increments : QtCore.QPoint
+            The number of times the left [.x()] and top [.y()] should
+            be increased by self.position_increments[0]/[1]. If the
+            image is scaled down very much, i.e., so that no movement
+            would occur, the ROI is translated by delta_increments
+            in screen coordinates instead.
+
+        Returns
+        -------
+        None.
+        """
+        d_left, d_top = self.position_increments
+        _scale = self.image_scaling
+
+        _delta = qtc.QPoint(delta_increments.x() * d_left,
+                            delta_increments.y() * d_top)
+        delta_pos = _delta * _scale
+        if not any(p for p in (delta_pos.x(), delta_pos.y())):
+            # Image is scaled down so much that no movement would
+            # result from this. Rather use delta_increments as a
+            # shift in the current-view coordinates. NB: this may
+            # give an inconsistent ROI! This must be corrected
+            # from outside.
+            delta_pos = delta_increments
         self.move(self.pos() + delta_pos)
 
     def update_size_limits(self):
