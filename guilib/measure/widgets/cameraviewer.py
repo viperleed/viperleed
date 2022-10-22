@@ -459,10 +459,10 @@ class CameraViewer(qtw.QScrollArea):
         if not self.roi_visible or event.button() == qtc.Qt.RightButton:
             super().mousePressEvent(event)
             return
-        if not self.roi.isVisible():
-            self.roi.show()
         self.roi.origin = self.roi.parent().mapFromGlobal(event.globalPos())
         self.roi.setGeometry(qtc.QRect(self.roi.origin, qtc.QSize()))
+        if not self.roi.isVisible():
+            self.roi.show()
 
     def mouseReleaseEvent(self, event):  # pylint: disable=invalid-name
         """Extend mouseReleaseEvent to handle ROI drawing."""
