@@ -409,6 +409,8 @@ class ROIEditor(qtw.QWidget):
         """Initialize instance."""
         super().__init__(kwargs.get('parent', None))
 
+        self.__original_roi = tuple()
+
         (self.__left,
          self.__top,
          self.__width,
@@ -431,6 +433,16 @@ class ROIEditor(qtw.QWidget):
     def minima(self):
         """Return min_left, min_top, min_width, min_height."""
         return tuple(w.minimum() for w in self.__widgets)
+
+    @property
+    def original_roi(self):
+        """Return the reference ROI, before changes were applied."""
+        return self.__original_roi
+
+    @original_roi.setter
+    def original_roi(self, new_roi):
+        """Set a reference ROI that is emitted in roi_changed."""
+        self.__original_roi = tuple(new_roi)
 
     @qtc.pyqtSlot()
     def fix_values(self):
