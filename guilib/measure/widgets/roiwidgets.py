@@ -25,6 +25,10 @@ from PyQt5 import (QtCore as qtc,
                    QtWidgets as qtw)
 
 
+# TODO: resizing with the size grips does not fit increments nicely
+# TODO: RegionOfInterest.setGeometry will emit roi_changed twice if
+#       both moved and resized
+
 class RegionOfInterest(qtw.QWidget):
     """Class for a rectangular rubber-band used for ROI.
 
@@ -78,6 +82,7 @@ class RegionOfInterest(qtw.QWidget):
     """
 
     apply_roi_requested = qtc.pyqtSignal()
+    roi_changed = qtc.pyqtSignal()
 
     def __init__(self, *__args, parent=None, increments=(1, 1), **__kwargs):
         """Initialize RegionOfInterest instance.
@@ -229,10 +234,18 @@ class RegionOfInterest(qtw.QWidget):
         """Reimplement to prevent propagation to parent."""
         event.accept()
 
+    def moveEvent(self, event):
+        """Emit roi_changed when moving."""
+        super().moveEvent(event)
+        if self.isVisible():
+            self.roi_changed.emit()
+
     def resizeEvent(self, event):        # pylint: disable=invalid-name
         """Reimplement to resize the rubber-band."""
         self.__rubberband.resize(self.__normalized_size(self.size()))
         super().resizeEvent(event)
+        if self.isVisible():
+            self.roi_changed.emit()
 
     def setGeometry(self, new_rect):     # pylint: disable=invalid-name
         """Reimplement setGeometry to edit sizes according to increments."""
@@ -272,7 +285,6 @@ class RegionOfInterest(qtw.QWidget):
             new_y -= max(new_y + new_rect.height() - parent.height(), 0)
             new_rect.translate(new_x - new_rect.x(), new_y - new_rect.y())
             self.origin = new_rect.topLeft()
-
         super().setGeometry(new_rect)
 
     def scale(self, delta_scale):
