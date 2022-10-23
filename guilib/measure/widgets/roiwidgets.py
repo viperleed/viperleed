@@ -417,6 +417,28 @@ class ROIEditor(qtw.QWidget):
         self.__compose()
         self.__connect()
 
+    @property
+    def increments(self):
+        """Return d_left, d_top, d_width, d_height."""
+        return tuple(w.singleStep() for w in self.__widgets)
+
+    @property
+    def maxima(self):
+        """Return min_left, min_top, min_width, min_height."""
+        return tuple(w.maximum() for w in self.__widgets)
+
+    @property
+    def minima(self):
+        """Return min_left, min_top, min_width, min_height."""
+        return tuple(w.minimum() for w in self.__widgets)
+
+    @qtc.pyqtSlot()
+    def fix_values(self):
+        """Fix values in controls to fit increments."""
+        # Since set_roi already takes care of this
+        # correctly, it's just a matter of calling it
+        self.set_roi(self.roi)
+
     def get_as_string(self):
         """Return the values in the widgets as a string."""
         return str(self.roi)
@@ -469,8 +491,9 @@ class ROIEditor(qtw.QWidget):
             new_roi = (0, 0, self.__width.maximum(), self.__height.maximum())
         else:
             new_roi = ast.literal_eval(string_roi)
-        self.set_roi(new_roi)
+        self.roi = new_roi
 
+    @qtc.pyqtSlot(tuple)
     def set_roi(self, new_roi):
         """Set the values in the widgets from new_roi.
 
@@ -483,8 +506,29 @@ class ROIEditor(qtw.QWidget):
         -------
         None.
         """
-        for widg, value in zip(self.__widgets, new_roi):
-            widg.setValue(value)
+        # Make sure values fit the increments. Min and
+        # max should already be coerced correctly
+        new_roi = tuple(
+            (round((v - _min)/d)) * d + _min
+            for v, _min, d in zip(new_roi, self.minima, self.increments)
+            )
+        old_roi = self.roi
+
+        # Block signals and emit them selectively
+        # later. This prevents repeated emissions
+        with qtc.QSignalBlocker(self):
+            for widg, value in zip(self.__widgets, new_roi):
+                widg.setValue(value)
+
+        # Now emit the right signals
+        pos_changed = old_roi[:2] != new_roi[:2]
+        size_changed = old_roi[2:] != new_roi[2:]
+        if pos_changed:
+            self.__on_pos_changed()
+        if size_changed:
+            self.__on_size_changed()
+        if pos_changed or size_changed:
+            self.__on_roi_changed()
 
     roi = property(get_roi, set_roi)
 
@@ -510,19 +554,63 @@ class ROIEditor(qtw.QWidget):
         """Connect signals."""
         for widg in self.__widgets:
             widg.valueChanged.connect(self.__on_roi_changed)
+            widg.editingFinished.connect(self.fix_values)
         for widg in (self.__left, self.__top):
             widg.valueChanged.connect(self.__on_pos_changed)
         for widg in (self.__width, self.__height):
             widg.valueChanged.connect(self.__on_size_changed)
 
-    def __on_pos_changed(self):
+    @qtc.pyqtSlot()
+    @qtc.pyqtSlot(int)
+    def __on_pos_changed(self, *_):
         """Emit roi_position_changed."""
-        self.roi_position_changed.emit(*self.roi[:2])
+        if self.__value_fits_increment(self.sender()):
+            self.roi_position_changed.emit(*self.roi[:2])
 
-    def __on_size_changed(self):
+    @qtc.pyqtSlot()
+    @qtc.pyqtSlot(int)
+    def __on_size_changed(self, *_):
         """Emit roi_size_changed."""
-        self.roi_size_changed.emit(*self.roi[2:])
+        if self.__value_fits_increment(self.sender()):
+            self.roi_size_changed.emit(*self.roi[2:])
 
-    def __on_roi_changed(self):
-        """Emit roi_changed when any of the control does."""
-        self.roi_changed.emit(self.roi)
+    @qtc.pyqtSlot()
+    @qtc.pyqtSlot(int)
+    def __on_roi_changed(self, *_):
+        """Check that new values fit with increments."""
+        if self.__value_fits_increment(self.sender()):
+            self.roi_changed.emit(self.roi)
+
+    def __value_fits_increment(self, ctrl):
+        """Check that the value in ctrl fits its increment.
+
+        Parameters
+        ----------
+        ctrl : QSpinBox or None
+            The control to check. If the value does not fit,
+            the text color is changed to red. Notice that we
+            do not force the value to fit the increments
+            because this can be very annoying to the user.
+            However, users can call the fix_values() method
+            to force this on all controls.
+
+        Return
+        ------
+        value_ok : bool
+            Whether the value does fit the increment.
+        """
+        try:
+            idx = self.__widgets.index(ctrl)
+        except ValueError:
+            return True
+
+        _min, _delta = self.minima[idx], self.increments[idx]
+        value = ctrl.value()
+        corrected = round((value - _min)/_delta)*_delta + _min
+
+        value_fits = (value == corrected)
+        color = qtc.Qt.black if value_fits else qtc.Qt.red
+        palette = ctrl.palette()
+        palette.setColor(palette.Text, color)
+        ctrl.setPalette(palette)
+        return value_fits
