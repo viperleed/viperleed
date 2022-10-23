@@ -162,6 +162,18 @@ class RegionOfInterest(qtw.QWidget):
 
         return top_x, top_y, width, height
 
+    @image_coordinates.setter
+    def image_coordinates(self, new_roi):
+        """Set position and size in image coordinates.
+
+        Parameters
+        ----------
+        new_roi : Sequence of int
+            The form should be (top_x, top_y, width, height).
+        """
+        screen_roi = (round(v * self.image_scaling) for v in new_roi)
+        self.setGeometry(qtc.QRect(*screen_roi))
+
     @property
     def increments(self):
         """Return the smallest change of width/height in image coordinates."""
