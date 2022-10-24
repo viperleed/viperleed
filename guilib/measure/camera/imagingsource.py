@@ -17,6 +17,7 @@ from ctypes import POINTER, c_ubyte, cast as c_cast
 
 import numpy as np
 from PyQt5 import QtCore as qtc
+from PyQt5 import QtWidgets as qtw
 
 from viperleed.guilib.measure.camera.drivers.imagingsource import (
     ISCamera as ImagingSourceDriver, FrameReadyCallbackType,
@@ -27,6 +28,7 @@ from viperleed.guilib.measure.camera import (
     imagingsourcecalibration as is_calib
     )
 from viperleed.guilib.measure import hardwarebase as base
+from viperleed.guilib.measure.widgets.mappedcombobox import MappedComboBox
 
 
 _CUSTOM_NAME_RE = re.compile(r"\[.*\]")
@@ -490,6 +492,50 @@ class ImagingSourceCamera(abc.CameraABC):
     def close(self):
         """Close the camera device."""
         self.driver.close()
+
+    def get_settings_handler(self):
+        """Return a SettingsHandler object for displaying settings.
+
+        Adds:
+        - 'camera_settings'/'black_level' (advanced)
+        - 'camera_settings'/color_format' (advanced)
+        """
+        handler = super().get_settings_handler()
+
+        # Black level
+        _widget = qtw.QSpinBox()
+        _widget.setRange(*self.get_black_level_limits())
+        _widget.setAccelerated(True)
+        _tip = (
+            "<nobr>Dark Level, Black Level, or Brightness is a measure of"
+            "</nobr> minimum photon intensity at pixels. Pixels illuminated "
+            "with less than this intensity will appear in images as "
+            f"having minimum intensity (= {self.intensity_limits[0]}). "
+            "Therefore, it determines the lower limit at which image-"
+            "intensity histograms are 'cut'. The dark level is <b>optimized "
+            "automatically</b> before bad pixels are identified with "
+            "<b>Tools->Find bad pixels...</b>"
+            )
+        handler.add_option('camera_settings', 'black_level',
+                           handler_widget=_widget, tooltip=_tip,
+                           is_advanced=True, display_name="Dark Level")
+
+        # Color format
+        _tip = (
+            "<nobr>Color format defines the bit depth of the images</nobr> "
+            "acquired. It should be set to <b>monochrome</b>, and using a "
+            "number of bits <b>as large as possible</b>."
+            )
+        _mapper = lambda items: ((i.display_name, i.name) for i in items)
+        _widget = MappedComboBox(_mapper)
+        _widget.addItems(self.driver.video_formats_available)
+        _widget.set_ = _widget.set_current_data
+        _widget.get_ = _widget.currentData
+        _widget.notify_ = _widget.currentIndexChanged
+        handler.add_option('camera_settings', 'color_format',
+                           handler_widget=_widget, tooltip=_tip,
+                           is_advanced=True)
+        return handler
 
     def list_devices(self):
         """Return a list of available device names.
