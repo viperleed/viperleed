@@ -3900,9 +3900,9 @@ C  PHSS STORES THE INPUT PHASE SHIFTS (RADIAN)
       ENDDO
 !
 !
-!********************************************************************
-! PERTURBATIVE LEED; STORE AWAY THE TRANSPOSE(????) OF (1-X) INTO
-! XODST & XEVST.
+!     ********************************************************************
+!     PERTURBATIVE LEED; STORE AWAY THE TRANSPOSE(????) OF (1-X) INTO
+!     XODST & XEVST.
 
       DO J = 1, LEV
         DO I = 1, LEV
@@ -3915,7 +3915,7 @@ C  PHSS STORES THE INPUT PHASE SHIFTS (RADIAN)
           XODST(I, J) = -XOD(I, J)
         ENDDO
       ENDDO
-!*********************************************************************
+!     *******************************************************************
 !
 !     PREPARE INVERSION OF 1-X (- SIGN IS PUT IN AMULT) BY GAUSSIAN
 !     ELIMINATION
@@ -4146,7 +4146,7 @@ CVB
           ST = B/YA   ! Complex sine of polar incidence angle
 
 !         Generate prefactor of reflection and transmission matrix elements
-          AMULT(IG) =  - 16.0 * PI * PI * CI / (TV * XA)
+          AMULT(IG) =  - 16.0 * PI * PI * CI / (TV * XA)                  ! NOTE: wrt to RSMF_SIMPLE we miss a factor 1/2*YA
 !         Prepare and store the spherical harmonics
           CALL  SPHRM_MOD(LMAX, VT, LMMAX, CT, ST, CF)
           DO K = 1, LMMAX
