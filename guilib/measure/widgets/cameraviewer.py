@@ -574,6 +574,12 @@ class CameraViewer(qtw.QScrollArea):
         """Set the mouse button currently pressed."""
         self.__glob["mouse_button"] = button
 
+    @property
+    def __settings_roi(self):
+        """Return the RoiEditor in the settings dialog."""
+        _dlg = self.__children["settings_dialog"]
+        return _dlg.handler['camera_settings']['roi'].handler_widget
+
     def __adjust_scroll_bars(self, by_factor):
         """Adjust the position of scrollbars when zooming."""
         if self.__img_view.underMouse():
@@ -609,6 +615,7 @@ class CameraViewer(qtw.QScrollArea):
         was_running = self.camera.is_running
         self.camera.settings = settings
         self.camera.settings.update_file()
+        self.__settings_roi.original_roi = self.camera.roi
 
         # Remove the rubber-band, and restart the camera.
         self.roi.hide()
@@ -693,12 +700,13 @@ class CameraViewer(qtw.QScrollArea):
         self.__children["context_menu"].triggered.connect(
             self.__on_context_menu_triggered
             )
-        self.__children["settings_dialog"].settings_changed.connect(
-            self.__on_settings_changed
-            )
-        self.__children["settings_dialog"].settings_saved.connect(
-            self.__on_settings_saved
-            )
+
+        _settings_dlg = self.__children["settings_dialog"]
+        _settings_dlg.settings_changed.connect(self.__on_settings_changed)
+        _settings_dlg.settings_saved.connect(self.__on_settings_saved)
+        self.__settings_roi.roi_changed.connect(self.__on_roi_settings_changed)
+        self.roi.roi_changed.connect(self.__on_roi_rubberband_changed)
+
     def __get_saturation_mask(self, img_array):
         """Return a QRegion saturation mask for image."""
         _min, _max = self.__glob['intensity_limits']
@@ -783,6 +791,32 @@ class CameraViewer(qtw.QScrollArea):
         self.setWindowTitle(title)
         self.zoom_changed.emit(new_scaling)
 
+    @qtc.pyqtSlot()
+    def __on_roi_rubberband_changed(self):
+        """React to a change in the ROI rubber-band."""
+        # The rubber-band knows only coordinates relative
+        # to the currently applied ROI
+        new_roi = self.roi.image_coordinates
+        offs_x, offs_y, *_ = self.__settings_roi.original_roi
+        new_x, new_y, new_w, new_h = new_roi
+        new_roi = (new_x + offs_x, new_y + offs_y, new_w, new_h)
+        if new_roi != self.__settings_roi.roi:
+            self.__settings_roi.roi = new_roi
+
+    @qtc.pyqtSlot(tuple)
+    def __on_roi_settings_changed(self, new_roi):
+        """React to a user change of the ROI coordinates."""
+        if not self.roi_visible:
+            self.roi_visible = True
+        # The image coordinates are relative to the ROI currently applied
+        offs_x, offs_y, *_ = self.__settings_roi.original_roi
+        roi_x, roi_y, roi_w, roi_h = new_roi
+        new_roi = (roi_x - offs_x, roi_y - offs_y, roi_w, roi_h)
+        if new_roi != self.roi.image_coordinates:
+            self.roi.image_coordinates = new_roi
+        if not self.roi.isVisible():
+            self.roi.show()
+
     def __on_settings_changed(self):
         """React to a user press of "Apply" in the settings dialog."""
         _dialog = self.__children["settings_dialog"]
@@ -829,6 +863,7 @@ class CameraViewer(qtw.QScrollArea):
         self.camera.settings.set("camera_settings", "roi",
                                  str(self.camera.get_roi()))
         self.camera.settings.update_file()
+        self.__settings_roi.original_roi = self.camera.roi
         try:
             self.camera.bad_pixels.apply_roi(no_roi=True)
         except RuntimeError:
