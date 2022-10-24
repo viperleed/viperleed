@@ -24,7 +24,7 @@ Created on Mon Nov 21 09:44:40 2016
 # considering that the WindowsCamera class already exceeds the 1000
 # lines limit.
 
-from enum import Enum
+from enum import IntEnum
 from ctypes import (Structure as CStructure, WinDLL, CFUNCTYPE, cast as c_cast,
                     c_int, c_long, c_ulong, c_ubyte, c_float, py_object,
                     POINTER, c_char_p, c_void_p, c_char)
@@ -86,13 +86,13 @@ def _to_bytes(string):
                     "Expected, 'str', 'bytes', or 'bytearray")
 
 
-class SinkFormat(Enum):
+class SinkFormat(IntEnum):
     """Available video formats for Imaging Source cameras."""
 
     Y800 = 0      # Monochrome 1-byte;    top-left
     RGB24 = 1     # 3 bytes: B G R;       top-left
     RGB32 = 2     # 4 bytes: B G R alpha; top-left; alpha unused == 0
-    UYVY = 3      # 4-bytes color;        top-left; see fourcc.org;
+    UYVY = 3      # 4-bytes color;        top-left
     Y16 = 4       # Monochrome 2-bytes;   top-left
     NONE = 5      # Used only as return value to signal 'invalid'
     MEGA = 65536  # Guard for max enum value, i.e., 2**sizeof(int)
@@ -143,6 +143,22 @@ class SinkFormat(Enum):
         return sink_format
 
     @property
+    def display_name(self):
+        """Return a descriptive name for this format."""
+        if self.n_colors == 1:
+            return f"{8*self.n_bytes:d}-bit monochrome"
+        _map = {SinkFormat.RGB24: "RGB color (8-bits)",
+                SinkFormat.RGB32: "RGB+alpha color (8-bits)",
+                SinkFormat.UYVY: "UYVY color"}
+        try:
+            return _map[self]
+        except KeyError:
+            raise ImagingSourceError(
+                f"Format {self} does not have a display_name.",
+                err_code=DLLReturns.INVALID_SINK_FORMAT
+                ) from None
+
+    @property
     def n_colors(self):
         """Return the number of color channels for a format."""
         if self.name.startswith('Y'):
@@ -174,7 +190,7 @@ class SinkFormat(Enum):
 
 
 
-class StreamMode(Enum):
+class StreamMode(IntEnum):
     """Enum for setting the stream mode of the camera.
 
     Attributes
@@ -252,7 +268,8 @@ class WindowsCamera:
         # device, and takes a while to retrieve the first time.
         self.__video_fmt_info = {'min_w': None, 'min_h': None,
                                  'max_w': None, 'max_h': None,
-                                 'd_w': None, 'd_h': None}
+                                 'd_w': None, 'd_h': None,
+                                 'types': None}
         self.__model = ''
 
     @classmethod
@@ -686,16 +703,22 @@ class WindowsCamera:
         if not self.__video_fmt_info['min_w']:
             widths = []
             heights = []
+            types = set()
             for vid_fmt in self.__default_video_formats:
                 # formats are of the form "<type> (wxh)"
-                vid_fmt = vid_fmt.split()[1].replace('(','').replace(')','')
+                fmt_type, vid_fmt = vid_fmt.split()
+                vid_fmt = vid_fmt.replace('(','').replace(')','')
                 width, height = vid_fmt.split('x')
                 widths.append(int(width))
                 heights.append(int(height))
+                types.add(fmt_type)
             self.__video_fmt_info['min_w'] = min(widths)
             self.__video_fmt_info['min_h'] = min(heights)
             self.__video_fmt_info['max_w'] = max(widths)
             self.__video_fmt_info['max_h'] = max(heights)
+            self.__video_fmt_info['types'] = sorted(
+                SinkFormat.get(t) for t in types
+                )
         return (self.__video_fmt_info['min_w'], self.__video_fmt_info['min_h'],
                 self.__video_fmt_info['max_w'], self.__video_fmt_info['max_h'])
 
@@ -750,6 +773,14 @@ class WindowsCamera:
         width = self._dll_video_format_width(self.__handle)
         height = self._dll_video_format_height(self.__handle)
         return width, height
+
+    @property
+    def video_formats_available(self):
+        """Return a list of available SinkFormat for this camera."""
+        if self.__video_fmt_info['types'] is None:
+            # No video_format_shape_range was never called.
+            _ = self.video_format_shape_range
+        return  self.__video_fmt_info['types']
 
     def abort_trigger_burst(self):
         """Abort frame delivery."""
