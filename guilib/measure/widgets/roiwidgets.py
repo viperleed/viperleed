@@ -246,7 +246,7 @@ class RegionOfInterest(qtw.QWidget):
         """Reimplement to prevent propagation to parent."""
         event.accept()
 
-    def moveEvent(self, event):
+    def moveEvent(self, event):          # pylint: disable=invalid-name
         """Emit roi_changed when moving."""
         super().moveEvent(event)
         if self.isVisible():
