@@ -32,8 +32,6 @@ from viperleed.guilib.widgetslib import screen_fraction
 # TODO: ROI show size in image coordinates as it is resized (tooltip?)
 # TODO: ROI context menu: precisely set with coordinates
 # TODO: context -- properties
-# TODO: If camera is not open at CameraViewer__init__, I never update
-#       the limits! Should use camera.started to fetch them if needed
 
 
 # pylint: disable=too-many-instance-attributes
@@ -207,10 +205,13 @@ class CameraViewer(qtw.QScrollArea):
 
         # The second item in the flags will be the corresponding
         # QAction, constructed in __compose_context_menu
-        self.__flags = {"stop_on_close": [bool(stop_on_close), None],
-                        "show_auto": [bool(show_auto), None],
-                        "roi_visible": [bool(roi_visible), None],
-                        "interactions_enabled": bool(interactions_enabled),}
+        self.__flags = {
+            "stop_on_close": [bool(stop_on_close), None],
+            "show_auto": [bool(show_auto), None],
+            "roi_visible": [bool(roi_visible), None],
+            "interactions_enabled": bool(interactions_enabled),
+            "needs_roi_limits": False,
+            }
         self.__glob = {"image_size": qtc.QSize(),
                        "camera": camera,
                        "mouse_button": None,
@@ -227,7 +228,7 @@ class CameraViewer(qtw.QScrollArea):
             self.roi.limits = camera.get_roi_size_limits()
         except camera.exceptions:
             # Most likely camera is not open
-            pass
+            self.__flags["needs_roi_limits"] = True
         else:
             self.roi.update_size_limits()
 
@@ -702,7 +703,11 @@ class CameraViewer(qtw.QScrollArea):
         base.safe_disconnect(disconnect_from, self.__show_image)
         base.safe_connect(connect_to, self.__show_image,
                           type=qtc.Qt.UniqueConnection)
-        _, self.__glob['max_intensity'] = self.camera.intensity_limits
+        _, self.__glob["max_intensity"] = self.camera.intensity_limits
+        if self.__flags["needs_roi_limits"]:
+            self.__flags["needs_roi_limits"] = False
+            self.roi.limits = self.camera.get_roi_size_limits()
+            self.roi.update_size_limits()
 
     def __on_context_menu_triggered(self, action):
         """React to a selection in the context menu."""
