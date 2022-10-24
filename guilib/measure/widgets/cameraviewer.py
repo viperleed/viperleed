@@ -13,7 +13,7 @@ visualizing frames from a concrete subclass of CameraABC.
 
 import weakref
 from copy import deepcopy
-from time import perf_counter as timer                                          # TODO: till "saturating" is fixed
+from math import ceil
 
 import numpy as np
 from PyQt5 import (QtCore as qtc,
@@ -30,9 +30,12 @@ from viperleed.guilib.widgetslib import screen_fraction
 
 # TODO: ImageViewer.optimum_size is not updated when screen is changed
 # TODO: ROI show size in image coordinates as it is resized (tooltip?)
-# TODO: ROI context menu: precisely set with coordinates
-# TODO: context -- properties
+# TODO: CameraViewer add controls for same actions as context menu,
+#       plus some basic properties (probably only exposure & gain).
+#       May be done with a expandable toolbar with a "..." button?
 
+
+_RED_BORDER_WIDTH = 3  # pixels
 
 # pylint: disable=too-many-instance-attributes
 # Disabled because pylint counts also class attributes, but
@@ -211,12 +214,13 @@ class CameraViewer(qtw.QScrollArea):
             "roi_visible": [bool(roi_visible), None],
             "interactions_enabled": bool(interactions_enabled),
             "needs_roi_limits": False,
+            "image_saturated": False,
             }
         self.__glob = {"image_size": qtc.QSize(),
                        "camera": camera,
                        "mouse_button": None,
-                       "img_array": None,                                       # TODO: may not be necessary
-                       "max_intensity": 2**15 - 1,}
+                       "img_array": None,  # Used for snapping images
+                       "intensity_limits": (0, 2**15 - 1),}
         self.__children = {
             "viewer": ImageViewer(),
             "context_menu": qtw.QMenu(parent=self),
@@ -337,7 +341,7 @@ class CameraViewer(qtw.QScrollArea):
             if not was_maximized and self.isMaximized():
                 # If window got maximized, adjust image to fit
                 self.__img_view.get_scaling_to_fit(self.size()
-                                                   - qtc.QSize(2, 2))
+                                                   - self.__extra_size)
                 self.__img_view.scale_to_image()
 
             elif was_maximized and not self.isMaximized():
@@ -492,7 +496,7 @@ class CameraViewer(qtw.QScrollArea):
             self.roi.setGeometry(new_roi)
 
         # Now decide whether it makes sense to scale also self
-        new_self_size = self.__img_view.size() + qtc.QSize(2, 2)
+        new_self_size = self.__img_view.size() + self.__extra_size
         if self.isMaximized():
             # Do not rescale if maximized
             scr_fraction = -1
@@ -530,9 +534,7 @@ class CameraViewer(qtw.QScrollArea):
 
     def sizeHint(self):                  # pylint: disable=invalid-name
         """Reimplement sizeHint to bind to the underlying image."""
-        # Adding (2, 2) ensures that scroll bars are
-        # visible only if the image does not fit.
-        return self.__img_view.sizeHint() + qtc.QSize(2, 2)
+        return self.__img_view.sizeHint() + self.__extra_size
 
     def wheelEvent(self, event):         # pylint: disable=invalid-name
         """Extend wheelEvent for zooming while Control is pressed."""
@@ -542,6 +544,20 @@ class CameraViewer(qtw.QScrollArea):
         # Mouse wheel turned with Ctrl down --> zoom
         direction = 'in' if event.angleDelta().y() > 0 else 'out'
         self.__zoom(direction=direction)
+
+    @property
+    def __extra_size(self):
+        """Return a bit larger size for self."""
+        # Useful so that (i) scroll bars are only visible
+        # if the image does not fit, and (ii) scroll bars
+        # do not appear also in case we have a red border
+        # drawn for saturated images.
+        extra = qtc.QSize(2, 2)
+        if self.__flags["image_saturated"]:
+            # Make a little room for the extra red border
+            _delta = ceil(_RED_BORDER_WIDTH / 2) * 2
+            extra += qtc.QSize(_delta, _delta)
+        return extra
 
     @property
     def __img_view(self):
@@ -683,6 +699,30 @@ class CameraViewer(qtw.QScrollArea):
         self.__children["settings_dialog"].settings_saved.connect(
             self.__on_settings_saved
             )
+    def __get_saturation_mask(self, img_array):
+        """Return a QRegion saturation mask for image."""
+        _min, _max = self.__glob['intensity_limits']
+        height, width = img_array.shape
+
+        # Pick pixels that essentially saturate
+        # TODO: here we may get it wrong if we have
+        # many bad pixels! Consider applying a bad
+        # pixels correction to images before showing.
+        # Alternatively: use self.camera.bad_pixels
+        # to decide depending on how many there are
+        saturation_arr = (img_array - _min) > .99*(_max - _min)
+        if np.sum(saturation_arr) <= 5:
+            return None
+
+        # Now construct a QRegion mask. We will use it as
+        # a clipping region for filling with solid red
+        saturation_arr = np.uint8(255)*saturation_arr
+        mask = qtg.QImage(saturation_arr, width, height,
+                          saturation_arr.strides[0],
+                          qtg.QImage.Format_Grayscale8)
+        mask = mask.convertToFormat(mask.Format_Mono)
+        mask.invertPixels()
+        return qtg.QRegion(qtg.QBitmap.fromImage(mask))
 
     @qtc.pyqtSlot(tuple)
     def __on_camera_error(self, _):
@@ -703,7 +743,7 @@ class CameraViewer(qtw.QScrollArea):
         base.safe_disconnect(disconnect_from, self.__show_image)
         base.safe_connect(connect_to, self.__show_image,
                           type=qtc.Qt.UniqueConnection)
-        _, self.__glob["max_intensity"] = self.camera.intensity_limits
+        self.__glob["intensity_limits"] = self.camera.intensity_limits
         if self.__flags["needs_roi_limits"]:
             self.__flags["needs_roi_limits"] = False
             self.roi.limits = self.camera.get_roi_size_limits()
@@ -820,24 +860,30 @@ class CameraViewer(qtw.QScrollArea):
         if not supports_roi:
             roi_x, roi_y, roi_w, roi_h = self.camera.roi
             img_array = img_array[roi_y:roi_y+roi_h, roi_x:roi_x+roi_w]
-
-        self.__glob['img_array'] = img_array                                    # TODO: used for snapping. Maybe take from ImageViewer?
+        self.__glob['img_array'] = img_array
 
         # Notice the swapping of width and height!
         height, width = img_array.shape
-
-        max_int = self.__glob['max_intensity']
-        if np.sum(img_array > .95*max_int) > 5:
-            print("saturating", timer())                                        # TEMP. Will show overlay
-
         image = qtg.QImage(img_array, width, height,
                            img_array.strides[0],
                            qtg.QImage.Format_Grayscale16)
 
-        self.__img_view.set_image(image)
+        mask = self.__get_saturation_mask(img_array)
+        self.__flags["image_saturated"] = mask is not None
+        self.__update_frame_style()
+
+        self.__img_view.set_image(image, mask)
         self.image_size = image.size()
         if self.show_auto and not self.isVisible():
             self.show()
+
+    def __update_frame_style(self):
+        """Pick frame style depending on whether the image is saturated."""
+        stylesheet = ""
+        if self.__flags["image_saturated"]:
+            stylesheet = (f"{self.__class__.__name__} "
+                         f"{{border: {_RED_BORDER_WIDTH}px solid red}}")
+        self.setStyleSheet(stylesheet)
 
     def __zoom(self, direction='in'):
         """Make image larger(smaller) by 25%(20%).

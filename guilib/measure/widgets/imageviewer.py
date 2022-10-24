@@ -105,9 +105,19 @@ class ImageViewer(qtw.QLabel):
         """Resize self to the (scaled) size of the current pixmap."""
         self.resize(self.scaled_image_size)
 
-    def set_image(self, image):
+    def set_image(self, image, overlay_mask=None):
         """Set an image to be shown."""
-        self.setPixmap(qtg.QPixmap.fromImage(image))
+        pixmap = qtg.QPixmap.fromImage(image)
+        if overlay_mask is not None:
+            # Use overlay_mask as clip region, and paint red inside
+            # on top of the pixmap generated from image. Assume
+            # overlay_mask is a QRegion.
+            painter = qtg.QPainter(pixmap)
+            painter.setClipRegion(overlay_mask)
+            brush = qtg.QBrush(qtc.Qt.red)
+            painter.fillRect(pixmap.rect(), brush)
+            painter.end()
+        self.setPixmap(pixmap)
 
     def get_scaling_to_fit(self, size, size_fraction=1):
         """Return scaling to best fit pixmap into a fraction of size.
