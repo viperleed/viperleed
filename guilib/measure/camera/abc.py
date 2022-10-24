@@ -19,12 +19,15 @@ from abc import abstractmethod
 
 import numpy as np
 from PyQt5 import QtCore as qtc
+from PyQt5 import QtWidgets as qtw
 
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.camera.imageprocess import (ImageProcessor,
                                                           ImageProcessInfo)
 from viperleed.guilib.measure.camera import badpixels
 from viperleed.guilib.measure.classes import settings as _m_settings
+from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
+from viperleed.guilib.measure.widgets.roiwidgets import ROIEditor
 
 
 # pylint: disable=too-many-lines,too-many-public-methods
@@ -789,6 +792,131 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         self.stop()
         self.close()
         self.__connected = False
+
+    def get_settings_handler(self):
+        """Return a SettingsHandler object for displaying settings.
+
+        This method can be extended in subclasses, i.e., do
+        handler = super().get_settings_handler(), and then add
+        appropriate sections and/or options to it using the
+        handler.add_section, and handler.add_option methods.
+
+        The base-class implementation returns a handler that
+        already contains the following settings:
+        - 'camera_settings'/'mode' (read-only, isolated option)
+        - 'measurement_settings'/'exposure'
+        - 'measurement_settings'/'gain'
+        - 'measurement_settings'/'n_frames'
+        - 'camera_settings'/'roi'
+        - 'camera_settings'/'binning'
+        - 'camera_settings'/'bad_pixel_path' (read-only)
+
+        Returns
+        -------
+        handler : SettingsHandler
+            The handler used in a SettingsDialog to display the
+            settings of this controller to users.
+        """
+        handler = SettingsHandler(self.settings)
+        handler.add_option('camera_settings', 'mode',
+                           handler_widget=qtw.QLabel,
+                           read_only=True)
+        handler.add_section('measurement_settings', display_name="Acquisition")
+        handler.add_section('camera_settings', display_name="Image Properties")
+
+        # Exposure time in ms
+        _widget = qtw.QDoubleSpinBox()                                          # TODO: use prefix-adaptive widget
+        _widget.setRange(*self.get_exposure_limits())
+        _widget.setSuffix(" ms")
+        _widget.setStepType(_widget.AdaptiveDecimalStepType)
+        _widget.setSingleStep(5.0)
+        _widget.setAccelerated(True)
+        _tip = (
+            "<nobr>Exposure time used for each frame. For LEED\u2011IV "
+            "videos it is best</nobr> to choose the exposure time <b>as long "
+            "as possible while not causing the camera to saturate</b>. You "
+            "can find the best exposure time by (i) selecting the electron "
+            "energy where you have the maximum intensity of spot(s), and "
+            "(ii) change the exposure time to have close-to-saturated images"
+            )
+        handler.add_option('measurement_settings', 'exposure',
+                           handler_widget=_widget, tooltip=_tip)
+
+        # Gain in dB                                                            # TODO: add also a gain factor!
+        _widget = qtw.QDoubleSpinBox()
+        _widget.setRange(*self.get_gain_limits())
+        _widget.setSuffix(" dB")
+        _widget.setAccelerated(True)
+        _tip = (
+            "<nobr>ADC gain used for each frame. For LEED\u2011IV videos it "
+            "is</nobr> best to choose the gain <b>as small as possible</b>, "
+            "as larger gains <b>amplify noise</b>. Use a longer exposure time "
+            "(without causing saturation) rather than a larger gain"
+            )
+        handler.add_option('measurement_settings', 'gain',
+                           handler_widget=_widget, tooltip=_tip)
+
+        # n_frames
+        _widget = qtw.QDoubleSpinBox()
+        _widget.setMinimum(1)
+        _widget.setMaximum(float('inf'))
+        _widget.setDecimals(0)
+        _widget.setAccelerated(True)
+        _tip = (
+            "<nobr>Number of frames to be averaged for saving images.</nobr> "
+            "This is <b>used only in triggered mode</b> and not when snapping "
+            "an image. For LEED\u2011IV videos it is a good idea to choose "
+            "the number of frames such that acquiring images takes roughly "
+            "the same amount of time as measuring other quantities (e.g., I0)"
+            )
+        handler.add_option('measurement_settings', 'n_frames',
+                           handler_widget=_widget, tooltip=_tip,
+                           display_name="No. frames")
+
+        # ROI
+        _widget = ROIEditor()
+        size_min, size_max, _d_size, _d_offset = self.get_roi_size_limits()
+        _widget.set_increments(*_d_offset, *_d_size)
+        _widget.set_ranges(size_min, size_max)
+        _widget.original_roi = self.roi
+        _widget.set_ = _widget.set_from_string
+        _widget.get_ = _widget.get_as_string
+        _widget.notify_ = _widget.roi_changed
+        _tip = (
+            "<nobr>Region of interest used to crop camera images.</nobr> "
+            "Since a LEED screen is circular, it is best to (i) place "
+            "the camera so that the <b>LEED screen fills most of the field "
+            "of view</b>, and (ii) crop the image to a <b>square-ish "
+            "shape.</b> This reduces file sizes and computation times."
+            )
+        handler.add_option('camera_settings', 'roi', handler_widget=_widget,
+                           display_name="ROI", label_alignment='bottom',
+                           tooltip=_tip)
+
+        # Binning factor                                                        # TODO: add a mention of the image size after processing
+        _widget = qtw.QSpinBox()
+        _widget.setRange(*self.get_binning_limits())
+        _tip = (
+            "<nobr>Binning factor used to reduce the size of images. Binning "
+            "consists</nobr> in averaging pixel intensities over a (bin "
+            "\u00d7 bin) mesh. It is best if images in LEED\u2011IV videos "
+            "are reduced to roughly 500\u2013600 pixels. This saves space and "
+            "makes data extraction faster, without compromising the quality"
+            )
+        handler.add_option('camera_settings', 'binning',
+                           handler_widget=_widget, tooltip=_tip)
+
+        # Bad pixels path + note on using Tools...
+        _tip = (
+            "<nobr>Path to folder containing bad\u2011pixels files. This "
+            "path</nobr> can be set while finding bad pixels <b>using the "
+            "Tools\u2011>Find bad pixels... menu</b>. Bad pixels are "
+            "particularly bright, dark, or noisy pixels that should be "
+            "corrected to improve data quality"
+            )
+        handler.add_option('camera_settings', 'bad_pixels_path',
+                           read_only=True, tooltip=_tip)
+        return handler
 
     @abstractmethod
     def list_devices(self):
