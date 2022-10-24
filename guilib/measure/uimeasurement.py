@@ -100,6 +100,8 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 #       issue with set_settings holding the UI still.
 # TODO: new CameraViewer contains current one + visible controls that
 #       allow the same operations as in the context menu.
+# TODO: camera returns other data with images. Stuff that comes to mind:
+#       max(image); fraction of saturated pixels;
 
 #   M E A S U R E M E N T
 # TODO: energy ramps are not equivalent for iv == calibration != time_resolved
