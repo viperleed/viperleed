@@ -2725,6 +2725,7 @@ CDIR$ NOVECTOR
       SUBROUTINE  MFOLT_SIMPLE (JG, NA, AK2, AK3, CYLM, N, LMMAX, PQ,
      +                          NT, TS, LMN, RG, RG_R, RG_T, NLAY, JGP,
      +                          LXM, RT_OUT, INC, POSS)
+     +                          LXM, RT_OUT, INC, POSS, debug_qnt)
       implicit REAL (A-H, O-Z)
       implicit INTEGER (I-N)
       INTEGER JG, NA, N, LMMAX, NT, LMN, NLAY, JGP, INC,  ! Input
@@ -2735,6 +2736,8 @@ CDIR$ NOVECTOR
       COMPLEX  EXP
       COMPLEX  TS(LMN), RG(2, NLAY, N)
       COMPLEX  RG_R(NLAY), RG_T(NLAY)
+      REAL debug_qnt ! debug quantity
+      REAL AK2, AK3
       REAL     K_IN, K_OUT          ! K_IN/K_OUT are total wave vectors of incident and scattered beams
       DIMENSION  GP(2), PQ(2, NT)   ! GP is the reciprocal-space part of the wave vector of the incident beam
       DIMENSION  CYLM(NT, LMMAX)
@@ -2749,6 +2752,8 @@ CDIR$ NOVECTOR
       CZ = (0.0, 0.0)
       RU = (1.0, 0.0)
       CI = (0.0, 1.0)
+
+      debug_qnt = 0
 
       JGA = JG + NA
       K_OUT(1) = PQ(1, JGA) + AK2
@@ -2856,12 +2861,14 @@ CDIR$ NOVECTOR
           T = T + CTT * CY * CT
           JLM = JLM + 1
           SM =  - SM
+          debug_qnt = debug_qnt + abs(CTR * CY*CR)
         ENDDO
       ENDDO
 
       RT_OUT(1) = R * EDW_R
       RT_OUT(2) = T * EDW_T
 
+      debug_qnt = abs(RT_OUT(2))
       RETURN
       END
 
@@ -4068,6 +4075,8 @@ CVB
       COMPLEX RG1(NLAY), RG2(NLAY), TEMP
 
       COMMON  E, AK2, AK3, VPI
+      REAL*16 DEBUG_sum
+      REAL debug_qnt ! debug quantitity for MFOLT
       COMMON /MFB/ GP, L1
       COMMON /MS/  LMAX, EPS1, LITER
       COMMON /MPT/ NA, NS, ID, LAY, LM, NTAU, TST, TV, DCUT, NOPT, NEW ! NOPT always == 1 for Tensor LEED; ID == 1 (registry shifts), not used anymore
@@ -4082,6 +4091,7 @@ CVB
       CZ = CMPLX(0.0, 0.0)
       RU = CMPLX(1.0, 0.0)
 
+      DEBUG_sum = 0
       IF (LAY.EQ.1) THEN
         NLL = 1     ! Overlayer
       ELSE
@@ -4242,6 +4252,11 @@ CVB
           T_BOT(JGPS, JGPS) = T_BOT(JGPS, JGPS) + RG_PERP(JGP)
         ENDIF
       ENDDO  ! END DO over incident beams (JGP)
+
+      open(UNIT=66, FILE="test.dat", ACTION="WRITE", STATUS="UNKNOWN")
+      write(66, *) E
+      write(66, *) abs(MFOLT_RT(2)) !input_for_MFLOT
+      close(66)
       RETURN
       END
 
