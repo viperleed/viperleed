@@ -225,6 +225,11 @@ def estimate_frame_loss(frame_times, frame_rate, exposure):
     return n_lost, opt_rate
 
 
+def _color_format_mapper(formats):
+    """Return keys and values from formats. Used in settings dialog."""
+    return ((i.display_name, i.name) for i in formats)
+
+
 # pylint: disable=too-many-public-methods
 # pylint counts 33, I count 26. Of those, 17 are actually
 # reimplementations of abstract methods that are only supposed
@@ -502,6 +507,10 @@ class ImagingSourceCamera(abc.CameraABC):
         """
         handler = super().get_settings_handler()
 
+        # pylint: disable=redefined-variable-type
+        # Triggered for _widget. While this is true, it clear what
+        # _widget is used for in each portion of filling the handler
+
         # Black level
         _widget = qtw.QSpinBox()
         _widget.setRange(*self.get_black_level_limits())
@@ -526,8 +535,7 @@ class ImagingSourceCamera(abc.CameraABC):
             "acquired. It should be set to <b>monochrome</b>, and using a "
             "number of bits <b>as large as possible</b>."
             )
-        _mapper = lambda items: ((i.display_name, i.name) for i in items)
-        _widget = MappedComboBox(_mapper)
+        _widget = MappedComboBox(_color_format_mapper)
         _widget.addItems(self.driver.video_formats_available)
         _widget.set_ = _widget.set_current_data
         _widget.get_ = _widget.currentData

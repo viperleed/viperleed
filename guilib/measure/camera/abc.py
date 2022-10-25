@@ -529,7 +529,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         return base.as_valid_filename(self.name)
 
     @property
-    def roi(self):  # too-complex
+    def roi(self):
         """Return the settings of the roi.
 
         Returns
@@ -561,51 +561,23 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         if _stored and _stored == roi:
             return roi
 
-        _, (max_w, max_h), _, (roi_dx, roi_dy) = self.get_roi_size_limits()
+        _, size_max, *_ = limits = self.get_roi_size_limits()
+        full_roi = 0, 0, *size_max
 
-        if not self.__is_valid_roi(roi):
+        if not self.__is_valid_roi(roi, limits):
             base.emit_error(self, CameraErrors.INVALID_SETTINGS,
                             'camera_settings/roi', '\nInfo: ROI is invalid. '
-                            'You can use the full sensor: '
-                            f'roi = (0, 0, {max_w}, {max_h})')
+                            f'You can use the full sensor: roi = {full_roi}')
             self.settings.set('camera_settings', 'roi', 'None')
-            return 0, 0, max_w, max_h
+            return full_roi
 
-        # See if the ROI position offsets fit the
-        # increments, and adjust if necessary
-        *roi_offsets, roi_w, roi_h = roi
-        roi_x, roi_y = roi_offsets
-        if roi_x % roi_dx or roi_y % roi_dy:
-            roi_offsets = ((roi_x // roi_dx) * roi_dx,
-                           (roi_y // roi_dy) * roi_dy)
-            new_roi = (*roi_offsets, roi_w, roi_h)
-            if not self.__is_valid_roi(new_roi):
-                base.emit_error(self, CameraErrors.INVALID_SETTINGS,
-                                'camera_settings/roi',
-                                f'\nInfo: ROI {new_roi} is invalid after '
-                                'adjusting top-left corner position')
-                self.settings.set('camera_settings', 'roi', 'None')
-                return 0, 0, max_w, max_h
-            self.settings.set('camera_settings', 'roi', str(new_roi))
+        # Adjust the ROI position to fit increments, if necessary
+        roi = self.__adjust_roi_position(roi, limits)
+        if not roi:
+            return full_roi
 
-        # See if the ROI width and height fit with the binning factor
-        if roi_w % self.binning or roi_h % self.binning:
-            new_roi_w = (roi_w // self.binning) * self.binning
-            new_roi_h = (roi_h // self.binning) * self.binning
-            error = (CameraErrors.BINNING_ROI_MISMATCH,
-                     roi_w, roi_h, self.binning, new_roi_w, new_roi_h)
-            if not self.__already_reported(error):
-                # base.emit_error(self, *error)                                 # TODO: make this a non-critical warning!
-                self.__reported_errors.add(error)
-            # Update the ROI in the settings only if the
-            # new ROI is a valid one for the camera. The
-            # image processor will anyway crop off the
-            # extra pixels on the lower-right corner of
-            # the image to apply binning.
-            new_roi = (*roi_offsets, new_roi_w, new_roi_h)
-            if self.__is_valid_roi(new_roi):
-                self.settings.set('camera_settings', 'roi', str(new_roi))
-                roi = new_roi
+        # Adjust ROI width and height to fit the binning factor
+        roi = self.__adjust_roi_size_to_bin(roi, limits)
         self.__properties['roi'] = roi
         return roi
 
@@ -824,6 +796,10 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         handler.add_section('measurement_settings', display_name="Acquisition")
         handler.add_section('camera_settings', display_name="Image Properties")
 
+        # pylint: disable=redefined-variable-type
+        # Triggered for _widget. While this is true, it clear what
+        # _widget is used for in each portion of filling the handler
+
         # Exposure time in ms
         _widget = qtw.QDoubleSpinBox()                                          # TODO: use prefix-adaptive widget
         _widget.setRange(*self.get_exposure_limits())
@@ -876,7 +852,13 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         # ROI
         _widget = ROIEditor()
         size_min, size_max, _d_size, _d_offset = self.get_roi_size_limits()
+
+        # pylint: disable=no-value-for-parameter
+        # Seems a bug related to calling a function with variadic
+        # arguments when it has a signature without.
         _widget.set_increments(*_d_offset, *_d_size)
+        # pylint: enable=no-value-for-parameter
+
         _widget.set_ranges(size_min, size_max)
         _widget.original_roi = self.roi
         _widget.set_ = _widget.set_from_string
@@ -1556,6 +1538,60 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         # receive all frames needed for averaging
         self.__timeout.start(int(self.time_to_image_ready + 5000))
 
+    def __adjust_roi_position(self, roi, limits):
+        """Check and adjust the position in roi fits the increments."""
+        pos_increments = limits[-1]
+        *roi_pos, roi_w, roi_h = roi
+        if not any(p % i for p, i in zip(roi_pos, pos_increments)):
+            # Offsets are OK
+            return roi
+
+        # Offsets are not OK. Let's try to fix them.
+        roi_pos = ((p // i) * i for p, i in zip(roi_pos, pos_increments))
+        roi = (*roi_pos, roi_w, roi_h)
+        if self.__is_valid_roi(roi, limits):
+            # Successfully adjusted
+            self.settings.set('camera_settings', 'roi', str(roi))
+            return roi
+
+        base.emit_error(self, CameraErrors.INVALID_SETTINGS,
+                        'camera_settings/roi',
+                        f'\nInfo: ROI {roi} is invalid after '
+                        'adjusting top-left corner position')
+        self.settings.set('camera_settings', 'roi', 'None')
+        return None
+
+    def __adjust_roi_size_to_bin(self, roi, limits):
+        """Check and adjust roi width/height to fit bin size."""
+        _bin = self.binning
+        if _bin == 1:  # Nothing to check. Will always be OK
+            return roi
+
+        *roi_offsets, roi_w, roi_h = roi
+        if not (roi_w % _bin or roi_h % _bin):
+            # Fits binning
+            return roi
+
+        # Does not fit. Fix it, if possible, otherwise
+        # let the image processor take care of this
+        new_roi_w, new_roi_h = ((s // _bin) * _bin for s in (roi_w, roi_h))
+        error = (CameraErrors.BINNING_ROI_MISMATCH,
+                 roi_w, roi_h, self.binning, new_roi_w, new_roi_h)
+        if not self.__already_reported(error):
+            # base.emit_error(self, *error)                                     # TODO: make this a non-critical warning!
+            self.__reported_errors.add(error)
+
+        # Update the ROI in the settings only if the
+        # new ROI is a valid one for the camera. The
+        # image processor will anyway crop off the
+        # extra pixels on the lower-right corner of
+        # the image to apply binning.
+        new_roi = (*roi_offsets, new_roi_w, new_roi_h)
+        if self.__is_valid_roi(new_roi, limits):
+            self.settings.set('camera_settings', 'roi', str(new_roi))
+            roi = new_roi
+        return roi
+
     def __already_reported(self, error_details):
         """Return whether an error was already reported.
 
@@ -1570,34 +1606,38 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         """
         return error_details in self.__reported_errors
 
-    def __is_valid_roi(self, roi):
+    def __is_valid_roi(self, roi, limits):
         """Check that ROI is OK and fits with limits.
 
         Parameters
         ----------
         roi : tuple
             The region of interest to be checked
+        limits : tuple
+            Limits for ROI, used for the check. Elements are
+            2-tuples with the following meaning: size_min,
+            size_max, size_delta, pos_delta. pos_delta is
+            not used here.
 
         Returns
         -------
         roi_OK : bool
-            True if roi is a valid ROI and if it fits in the limits.
+            True if roi is a valid ROI and if it fits limits.
         """
         if not roi:
             return False
         if len(roi) != 4:
             return False
-        roi_x, roi_y, roi_w, roi_h = roi
-        ((min_w, min_h),
-         (max_w, max_h),
-         (d_w, d_h),
-          _) = self.get_roi_size_limits()
+        pos, size = roi[:2], roi[2:]
+        size_min, size_max, size_delta, _ = limits
 
-        roi_outside = (roi_x < 0 or roi_y < 0
-                       or roi_x + roi_w > max_w
-                       or roi_y + roi_h > max_h)
-        roi_small = roi_w < min_w or roi_h < min_h
-        roi_not_multiple = roi_w % d_w or roi_h % d_h
+        roi_outside = any(p < 0 or p + s > s_max
+                          for p, s, s_max in zip(pos, size, size_max))
+        roi_small = any(s < s_min for s, s_min in zip(size, size_min))
+        roi_not_multiple = any(
+            (s - s_min) % d
+            for s, s_min, d in zip(size, size_min, size_delta)
+            )
         return not (roi_outside or roi_small or roi_not_multiple)
 
     @qtc.pyqtSlot(np.ndarray)
@@ -1625,7 +1665,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             # went through self.trigger_now()
             return
 
-        if self.n_frames_done == 0:  # pylint: disable=compare-to-zero
+        if not self.n_frames_done:
             processor = ImageProcessor()
             processor.image_processed.connect(self.image_processed)
             processor.image_saved.connect(self.__on_image_saved)
