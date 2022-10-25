@@ -2667,7 +2667,7 @@ CDIR$ NOVECTOR
 !
 !  Parameters
 !  ----------
-!  JG : real
+!  JG : integer
 !      Index (within this beam set) of scattered beam for which
 !      reflection/transmission are to be computed
 !  NA : real
