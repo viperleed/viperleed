@@ -51,7 +51,6 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 #       QMetaABC by extending __new__(mcs, name, bases, dict_, **clsargs). Probably
 #       neither does solve the problem of explicitly importing subclasses, though!
 # TODO: fix the documentation in .ini files
-# TODO: proper _ensure_connected instance method decorator for ControllerABC
 # TODO: User event tracking for bug report. Possible with eventFilter on
 #       qApp, but see also https://www.qtcentre.org/threads/16182-Logging-Qt-User-Actions
 # TODO: error severity in Enum. Non-fatal errors should not stop everything

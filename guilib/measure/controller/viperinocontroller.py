@@ -19,7 +19,6 @@ from PyQt5 import QtCore as qtc
 from PyQt5 import QtSerialPort as qts
 
 from viperleed.guilib.measure.controller import abc
-from viperleed.guilib.measure.serial.abc import ExtraSerialErrors
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.classes.datapoints import QuantityInfo
 from viperleed.guilib.measure.classes.settings import NotASequenceError
@@ -416,6 +415,7 @@ class ViPErinoController(abc.MeasureControllerABC):
         self.send_message(cmd, message)
 
     @qtc.pyqtSlot()
+    @abc.ensure_connected
     def get_hardware(self):
         """Get hardware connected to micro controller.
 
@@ -437,11 +437,6 @@ class ViPErinoController(abc.MeasureControllerABC):
         -------
         None.
         """
-        # Make sure we're connected, then send the message
-        self.connect_()
-        if not self.serial or not self.serial.is_open:
-            base.emit_error(self, ExtraSerialErrors.PORT_NOT_OPEN)
-            return
         cmd = self.settings.get('available_commands', 'PC_CONFIGURATION')
         self.send_message(cmd)
 
@@ -569,6 +564,7 @@ class ViPErinoController(abc.MeasureControllerABC):
         self.measurements_done()
 
     @qtc.pyqtSlot()
+    @abc.ensure_connected
     def prepare_to_show_settings(self):
         """Prepare the controller to present settings to the user.
 
@@ -581,10 +577,6 @@ class ViPErinoController(abc.MeasureControllerABC):
         -------
         None.
         """
-        self.connect_()
-        if not self.serial or not self.serial.is_open:
-            base.emit_error(self, ExtraSerialErrors.PORT_NOT_OPEN)
-            return
         base.safe_connect(self.hardware_info_arrived,
                           self.__almost_ready_to_show_settings,
                           type=qtc.Qt.UniqueConnection)
@@ -795,6 +787,7 @@ class ViPErinoController(abc.MeasureControllerABC):
         self.send_message(cmd, message)
 
     @qtc.pyqtSlot(str)
+    @abc.ensure_connected
     def set_serial_number(self, new_serial_nr):
         """Set a 4-characters-long serial number in the electronics."""
         new_serial_nr = new_serial_nr.upper()
@@ -808,12 +801,6 @@ class ViPErinoController(abc.MeasureControllerABC):
 
         if not re.match("^[A-Z0-9]{4,4}$", new_serial_nr):
             raise ValueError(f"Invalid serial number {new_serial_nr}")
-
-        # Ready to communicate. Make sure we are connected:
-        self.connect_()
-        if not self.serial or not self.serial.is_open:
-            base.emit_error(self, ExtraSerialErrors.PORT_NOT_OPEN)
-            return
 
         # We will send two requests: (1) setting serial number, and
         # (2) retrieving hardware information. This way our internal

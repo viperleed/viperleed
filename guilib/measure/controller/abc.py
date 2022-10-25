@@ -17,6 +17,7 @@ commands to the LEED electronics.
 from abc import abstractmethod
 from collections import defaultdict
 from copy import deepcopy
+import functools
 
 from numpy.polynomial.polynomial import Polynomial
 from PyQt5 import QtCore as qtc
@@ -29,6 +30,40 @@ from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
 
 
 _UNIQUE = qtc.Qt.UniqueConnection
+
+
+def ensure_connected(method):
+    """Execute a bound method only if its instance connected.
+
+    This decorator should be applied to instance methods of
+    ControllerABC subclasses.
+
+    Parameters
+    ----------
+    method : callable
+        Bound method to be decorated.
+    """
+    @functools.wraps(method)
+    def _wrapper(*args, **kwargs):
+        """Execute method only if connected."""
+        try:
+            self, *_ = args
+        except ValueError:
+            raise ValueError(
+                f"ensure_connected cannot be applied to {method.__name__}. "
+                "Not an instance method of a ControllerABC subclass."
+                ) from None
+        self.connect_()
+        if not self.serial or not self.serial.is_open:
+            base.emit_error(self, ControllerErrors.NOT_CONNECTED,
+            method.__name__, self.name, self.port_name)
+            return None
+        try:
+            return method(*args, **kwargs)
+        except Exception:
+            self.disconnect_()
+            raise
+    return _wrapper
 
 
 class ControllerErrors(base.ViPErLEEDErrorEnum):
@@ -55,6 +90,11 @@ class ControllerErrors(base.ViPErLEEDErrorEnum):
         104,
         "Invalid/unreadable controller settings value {} for setting {!r}. "
         "Using {} instead. Consider fixing your configuration file."
+        )
+    NOT_CONNECTED = (
+        105,
+        "Impossible to execute {} on controller {}. "
+        "Port {} could not be opened."
         )
 
 
@@ -329,7 +369,24 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
 
     @property
     def long_settle_time(self):
-        """Return the first settle time (msec)."""                              # TODO: doc
+        """Return a long settle time (msec).
+
+        This is usually used as the settle time for the first energy
+        in a measurement. In fact, setting the first energy normally
+        requires a larger-than-usual energy step. This usually also
+        implies that energy (and I0) take longer to settle.
+
+        Returns
+        -------
+        long_settle_time : int
+            Settling time in milliseconds.
+
+        Raises
+        ------
+        RuntimeError
+            If this attribute is requested for a controller that
+            is not responsible for setting the energy.
+        """
         if not self.sets_energy:
             raise RuntimeError("Should never ask the long_settle_time for "
                                "a controller that does not .sets_energy")
