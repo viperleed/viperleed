@@ -51,7 +51,8 @@ class RefcalcRunTask():
     compile and run a reference calculation, and copy results back."""
 
     def __init__(self, fin, energy, comptask, logname,
-                 collect_at="", single_threaded=False, tl_version=0.):
+                 collect_at="", single_threaded=False, tl_version=0., 
+                 keep_folders=False):
         self.fin = fin
         self.energy = energy
         self.comptask = comptask
@@ -60,6 +61,7 @@ class RefcalcRunTask():
         self.collect_at = collect_at
         self.single_threaded = single_threaded
         self.tl_version = tl_version
+        self.keep_folders = keep_folders
 
 
 def compile_refcalc(comptask):
@@ -234,10 +236,11 @@ def run_refcalc(runtask):
                            + task_name + ": ", exc_info=True)
     # clean up
     os.chdir(base)
-    try:
-        shutil.rmtree(workfolder)
-    except Exception:
-        logger.warning("Error deleting folder " + runtask.foldername)
+    if not runtask.keep_folders:
+        try:
+            shutil.rmtree(workfolder)
+        except Exception:
+            logger.warning("Error deleting folder " + runtask.foldername)
     return ""
 
 
@@ -438,12 +441,14 @@ def refcalc(sl, rp, subdomain=False, parent_dir=""):
             ref_tasks.append(RefcalcRunTask(fin, en, ct, logname,
                                             collect_at=collection_dir,
                                             single_threaded=False,
-                                            tl_version=rp.TL_VERSION))
+                                            tl_version=rp.TL_VERSION,
+                                            keep_folders=rp.KEEP_REFCALC_DIRS))
     else:
         ct = comp_tasks[0]
         ref_tasks.append(RefcalcRunTask(fin, -1, ct, logname,
                                         single_threaded=True,
-                                        tl_version=rp.TL_VERSION))
+                                        tl_version=rp.TL_VERSION,
+                                        keep_folders=rp.KEEP_REFCALC_DIRS))
 
     if single_threaded:
         home = os.getcwd()

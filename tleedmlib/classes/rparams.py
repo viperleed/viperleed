@@ -123,6 +123,7 @@ class Rparams:
         self.HALTING = 2    # 2: major concerns, 1: minor warnings, 0: always
         self.INTPOL_DEG = 3 # Degree of interpolation spline used in R-factor calculation
         self.IV_SHIFT_RANGE = [-3, 3, -1]  # step of -1: init from data
+        self.KEEP_REFCALC_DIRS = False
         self.LAYER_CUTS = ["dz(1.2)"]  # list of either str or c coordinates
         self.LAYER_STACK_VERTICAL = True
         self.LMAX = [0, 0]    # minimum and maximum LMAX

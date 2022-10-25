@@ -26,7 +26,8 @@ _KNOWN_PARAMS = [
     'BULKDOUBLING_MAX', 'BULK_LIKE_BELOW', 'BULK_REPEAT', 'DOMAIN',
     'DOMAIN_STEP', 'ELEMENT_MIX',
     'ELEMENT_RENAME', 'FILAMENT_WF', 'FORTRAN_COMP', 'HALTING', 'INTPOL_DEG',
-    'IV_SHIFT_RANGE', 'LAYER_CUTS', 'LAYER_STACK_VERTICAL', 'LMAX',
+    'IV_SHIFT_RANGE', 'KEEP_REFCALC_DIRS',
+    'LAYER_CUTS', 'LAYER_STACK_VERTICAL', 'LMAX',
     'LOG_DEBUG', 'LOG_SEARCH', 'N_BULK_LAYERS', 'N_CORES', 'OPTIMIZE',
     'PARABOLA_FIT', 'PHASESHIFT_EPS', 'PHASESHIFTS_CALC_OLD',
     'PHASESHIFTS_OUT_OLD', 'PLOT_IV', 'RUN', 'R_FACTOR_LEGACY', 'R_FACTOR_SMOOTH',
@@ -476,8 +477,10 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
         if param == 'VIBR_AMP_SCALE':
             rpars.VIBR_AMP_SCALE.extend(value.split(","))
         # simple bool parameters
-        elif param in ['LOG_DEBUG', 'LOG_SEARCH', 'PHASESHIFTS_CALC_OLD',
-                       'PHASESHIFTS_OUT_OLD', 'R_FACTOR_LEGACY', 'SUPPRESS_EXECUTION',
+        elif param in ['KEEP_REFCALC_DIRS',
+                       'LOG_DEBUG', 'LOG_SEARCH', 'PHASESHIFTS_CALC_OLD',
+                       'PHASESHIFTS_OUT_OLD', 'R_FACTOR_LEGACY',
+                       'SUPPRESS_EXECUTION',
                        'SYMMETRIZE_INPUT', 'SYMMETRY_FIND_ORI']:
             setBoolParameter(rpars, param, llist[0])
         # slightly more complicated bools
