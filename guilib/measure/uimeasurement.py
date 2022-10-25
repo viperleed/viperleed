@@ -32,7 +32,6 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 #      the frame rate opt with half the current rate.
 # BUG: list_devices makes TPD COMs stuff go crazy.
 # ???: viperleed serial, unknown command error misinterpreted? << not sure what this means
-# BUG: timing estimate: does not include hv_settle_time
 # BUG: update COM and camera name when starting measurement (from known devices)
 # BUG: measurement start, serial connect failed, attempts to connect three times??
 
