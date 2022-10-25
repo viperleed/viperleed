@@ -2724,7 +2724,6 @@ CDIR$ NOVECTOR
 !      POSS(..., 2/3) = x/y (in-plane).
       SUBROUTINE  MFOLT_SIMPLE (JG, NA, AK2, AK3, CYLM, N, LMMAX, PQ,
      +                          NT, TS, LMN, RG, RG_R, RG_T, NLAY, JGP,
-     +                          LXM, RT_OUT, INC, POSS)
      +                          LXM, RT_OUT, INC, POSS, debug_qnt)
       implicit REAL (A-H, O-Z)
       implicit INTEGER (I-N)
