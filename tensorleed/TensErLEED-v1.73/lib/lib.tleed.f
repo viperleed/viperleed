@@ -4156,7 +4156,7 @@ CVB
           ST = B/YA   ! Complex sine of polar incidence angle
 
 !         Generate prefactor of reflection and transmission matrix elements
-          AMULT(IG) =  - 16.0 * PI * PI * CI / (TV * XA)                  ! NOTE: wrt to RSMF_SIMPLE we miss a factor 1/2*YA
+          AMULT(IG) =  - 16.0 * PI * PI * CI / (TV * XA)                  ! NOTE: wrt to RSMF_SIMPLE we miss a factor 1/2*YA -> AMULT(IG) =  - 8.0 * PI * PI * CI/(YA * TV * XA) 
 !         Prepare and store the spherical harmonics
           CALL  SPHRM_MOD(LMAX, VT, LMMAX, CT, ST, CF)
           DO K = 1, LMMAX
