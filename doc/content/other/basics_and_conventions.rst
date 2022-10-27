@@ -11,7 +11,10 @@ Installation
 Directory structure and file names
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Each calculation must have its own directory. The input and output files have fixed names, `see below <index#List of input files>`__. In case of automated multiple search runs (which can be specified in the :ref:`DISPLACEMENTS<DISPLACEMENTS>`  file), tleedm creates a “workhistory” directory and moves a snapshot of all input and output files that may be relevant and may get overwritten into a subfolder there. **TODO** Give an example tree for a LEED project!!
+Each calculation must have its own directory. 
+The input and output files have fixed names, see :ref:`the list of files<_list_input_files>`. 
+In case of automated multiple search runs (which can be specified in the :ref:`DISPLACEMENTS<DISPLACEMENTS>`  file), 
+tleedm creates a “workhistory” directory and moves a snapshot of all input and output files that may be relevant and may get overwritten into a subfolder there. **TODO** Give an example tree for a LEED project!!
 
 Running the program
 ^^^^^^^^^^^^^^^^^^^
