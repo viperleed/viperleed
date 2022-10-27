@@ -21,10 +21,11 @@ tleedm
 POSCAR
 Rfactor
 phaseshift
-
+phaseshifts
 DS
 subfolder
 supercell
 translational
 scatterer
 ok
+programmatically
