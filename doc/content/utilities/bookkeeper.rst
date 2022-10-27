@@ -68,9 +68,9 @@ overwritten.
 Therefore, at this point, a snapshot of all input and output files is 
 created and stored in workhistory; in the final history folder, this 
 snapshot will appear as t001.r001.001_RDS\_\ ``time``. The ".001" marks 
-that it is the first such snapshot taken for this job, and the "RDS" i
-ndicates that a **r**\ eference calculation, **d**\ elta calculation, 
-and **s**\ earch were executed before the snapshot was taken.
+that it is the first such snapshot taken for this job, and the "RDS"
+indicates that a Reference calculation, Delta calculation, 
+and Search were executed before the snapshot was taken.
 If, after the second delta/search execution, the job loops back again, 
 then a second snapshot will be created and end up in t001.r001.002_DS\_\ 
 ``time``. Again, if you are only interested in the final output, you 
