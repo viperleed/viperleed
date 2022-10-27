@@ -20,7 +20,7 @@ VIBROCC file is missing.
 If no :ref:`VIBROCC file<VIBOCCIN>`  is found, or the VIBROCC file 
 contains no value for the vibrational amplitude of a given element, the 
 parameters T_EXPERIMENT and 
-`T_DEBYE </protected/surface/LEEDIV/PARAMETERS/T_DEBYE>`__ will be used 
+:ref:`T_DEBYE` will be used 
 to automatically generate the default vibrational amplitude for that 
 element using:
 

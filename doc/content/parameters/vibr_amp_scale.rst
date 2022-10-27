@@ -3,8 +3,12 @@
 VIBR_AMP_SCALE
 ==============
 
-| VIBR_AMP_SCALE is used when vibrational amplitudes are automatically generated from the `T_EXPERIMENT </protected/surface/LEEDIV/PARAMETERS/T_EXPERIMENT>`__ and `T_DEBYE </protected/surface/LEEDIV/PARAMETERS/T_DEBYE>`__ parameters. E.g., vibrational amplitudes of the surface atoms are normally larger than in the bulk, so one wants to scale the bulk vibration amplitudes.
-| VIBR_AMP_SCALE will **never** be used if the VIBROCC file exists and defines a vibrational amplitude for the site in question.
+VIBR_AMP_SCALE is used when vibrational amplitudes are automatically generated 
+from the :ref:`T_EXPERIMENT` and :ref:`T_DEBYE` parameters.
+E.g., vibrational amplitudes of the surface atoms are normally larger than in the bulk, 
+so one wants to scale the bulk vibration amplitudes.
+VIBR_AMP_SCALE will **never** be used if the VIBROCC file exists and defines 
+a vibrational amplitude for the site in question.
 
 **Default:** 1.0 for every site
 
@@ -18,10 +22,23 @@ VIBR_AMP_SCALE
    ! OR
    VIBR_AMP_SCALE = *surf 1.3
 
-Scaling factors can be defined on a single line (comma delimited pairs), or on multiple lines.
+Scaling factors can be defined on a single line (comma delimited pairs), 
+or on multiple lines.
 
-The site types are labelled as ``El_sitename``, where ``El`` is an element as found in the :ref:`POSCAR file<POSCAR>`, and ``sitename`` is a site name defined in the :ref:`PARAMETERS file<PARAMETERS>`  under :ref:`SITE_DEF<SITEDEF>`. Asterisks ``*`` are treated as wildcard characters, so ``*surf`` in the example above will match both ``Fe_surf`` and ``O_surf``. (The same convention as in the VIBROCC file.)
+The site types are labelled as ``El_sitename``, where ``El`` is an element 
+as found in the :ref:`POSCAR file<POSCAR>`, and ``sitename`` is a site name 
+defined in the :ref:`PARAMETERS file<PARAMETERS>`  under :ref:`SITE_DEF<SITEDEF>`.
+Asterisks ``*`` are treated as wildcard characters, so ``*surf`` in the example 
+above will match both ``Fe_surf`` and ``O_surf``. 
+(The same convention as in the VIBROCC file.)
 
-In the example above, if the vibrational amplitude for Fe has been calculated to be 0.1 Å, the vibrational amplitude for the Fe_surf atoms will be set to 0.13 Å.
+In the example above, if the vibrational amplitude for Fe has been calculated 
+to be 0.1 Å, the vibrational amplitude for the Fe_surf atoms will be set to 0.13 Å.
 
-Note that the parameters VIBR_AMP_SCALE, `T_EXPERIMENT </protected/surface/LEEDIV/PARAMETERS/T_EXPERIMENT>`__ and `T_DEBYE </protected/surface/LEEDIV/PARAMETERS/T_DEBYE>`__ will normally be used only once, to calculate an initial guess for vibrational amplitudes and generate a :ref:`VIBROCC file<VIBOCCIN>`. Afterwards, all three parameters will automatically be commented out in the PARAMETERS file; the vibration amplitudes will be defined in the VIBROCC file instead. Even if the parameters were un-commented again, they would never be used as long as a VIBROCC file is present and defines the amplitude of the respective site.
+Note that the parameters VIBR_AMP_SCALE, :ref:`T_EXPERIMENT` and :ref:`T_DEBYE` 
+will normally be used only once, to calculate an initial guess for vibrational 
+amplitudes and generate a :ref:`VIBROCC file<VIBOCCIN>`.
+Afterwards, all three parameters will automatically be commented out in the PARAMETERS file; 
+the vibration amplitudes will be defined in the VIBROCC file instead.
+Even if the parameters were un-commented again, they would never be used as long 
+as a VIBROCC file is present and defines the amplitude of the respective site.
