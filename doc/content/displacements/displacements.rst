@@ -32,7 +32,20 @@ The exact syntax of the three blocks differs slightly, and is explained in detai
 -  :ref:`Vibrational amplitudes<VIBDELTA>` 
 -  :ref:`Chemical substitution<OCCDELTA>` 
 
-Generally, any displacement applied to one atom will also be applied to all symmetry-equivalent atoms (see Linking in :ref:`POSCAR<POSCAR>`), such that the symmetry is preserved during the search (eg, in-plane geometrical displacements will be mirrored for atoms linked by a mirror symmetry plane). If multiple assignments are made for the same atom, the assignments will be ignored if they are consistent, but the user will be warned and the program may stop if there is a contradiction. For example, if some of the iridium atoms 2-11 in the code above were linked by a mirror plane, assigning a displacement in z direction to all of them would be accepted, but assigning the very same in-plane displacement (not parallel to the mirror plane) to all of them would lead to a contradiction, as this would break the symmetry. In that case, it would be preferable to assign the displacement explicitly to only *one* of the symmetry-equivalent atoms.
+Generally, any displacement applied to one atom will also be applied to 
+all symmetry-equivalent atoms (see Linking in :ref:`POSCAR<POSCAR>`), 
+such that the symmetry is preserved during the search 
+(eg. in-plane geometrical displacements will be mirrored for atoms linked 
+by a mirror symmetry plane). If multiple assignments are made for the same atom, 
+the assignments will be ignored if they are consistent, but the user will be 
+warned and the program may stop if there is a contradiction. For example, if 
+some of the iridium atoms 2-11 in the code above were linked by a mirror 
+plane, assigning a displacement in z direction to all of them would be 
+accepted, but assigning the very same in-plane displacement 
+(not parallel to the mirror plane) to all of them would lead to a 
+contradiction, as this would break the symmetry. In that case, it would 
+be preferable to assign the displacement explicitly to only *one* of the 
+symmetry-equivalent atoms.
 
 .. note::
   See the :ref:`Domain calculations<domain_calculation>` page for information on how to format the DISPLACEMENTS file when optimizing multiple structures simultaneously.
@@ -86,7 +99,10 @@ Running multiple searches
 
 If you want to optimize multiple parameters not simultaneously, but end-to-end (necessary e.g. for geometrical optimization), you can use multiple blocks in the DISPLACEMENTS file to express this. After finishing one set of delta calculations and search, the program will then loop back to execute delta calculations and search again, starting from the optimized results of the previous search.
 
-For example, the following DISPLACEMENTS file would first optimize z position and vibrational amplitudes simultaneously for the given set of atoms, then run another search from the optimized z and vibrational amplitudes, this time optmizing the x coordinate:
+For example, the following DISPLACEMENTS file would first optimize z position 
+and vibrational amplitudes simultaneously for the given set of atoms, 
+then run another search from the optimized z and vibrational amplitudes, 
+this time optimizing the x coordinate:
 
 ::
 

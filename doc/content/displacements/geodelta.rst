@@ -3,7 +3,7 @@
 Geometrical displacements
 =========================
 
-Geometrical displacements to be used during the search must be specifed in a block starting with the
+Geometrical displacements to be used during the search must be specified in a block starting with the
 
 ::
 

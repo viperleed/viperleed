@@ -4,7 +4,7 @@ Chemical substitution for structure optimization
 ================================================
 
 Variations of chemical concentrations at given sites during the search 
-must be specifed in a block starting with the
+must be specified in a block starting with the
 
 ::
 

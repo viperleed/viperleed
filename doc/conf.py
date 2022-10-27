@@ -24,13 +24,17 @@ extensions = [
               'sphinx.ext.viewcode',
               'sphinx.ext.intersphinx',
               'sphinx_rtd_theme',
-              'sphinxcontrib.bibtex' # to use .bib files for bibliography
+              'sphinxcontrib.bibtex',       # to use .bib files for bibliography
+              'sphinxcontrib.spelling',     # spell checking for the docs ;)
               ]
 
 source_suffix = '.rst'
 
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+
+# Wordlist to ignore for spell checker
+spelling_word_list_filename='spelling_wordlist.txt'
 
 # For bibliography
 bibtex_bibfiles = ['references.bib']

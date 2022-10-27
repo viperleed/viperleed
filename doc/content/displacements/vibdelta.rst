@@ -4,7 +4,7 @@
 Vibrational amplitude variations
 ================================
 
-Vibration amplitude variations to be used during the search must be specifed in a block starting with the
+Vibration amplitude variations to be used during the search must be specified in a block starting with the
 
 ::
 
