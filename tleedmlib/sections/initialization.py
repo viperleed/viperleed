@@ -490,8 +490,6 @@ def init_domains(rp):
                 interpretPARAMETERS(dp.rp, slab=dp.sl, silent=True)
                 dp.sl.fullUpdate(dp.rp)   # gets PARAMETERS data into slab
                 dp.rp.fileLoaded["POSCAR"] = True
-                if dp.sl.preprocessed:
-                    dp.rp.SYMMETRY_FIND_ORI = False
                 dp.rp.updateDerivedParams()
                 try:
                     readVIBROCC(dp.rp, dp.sl)
