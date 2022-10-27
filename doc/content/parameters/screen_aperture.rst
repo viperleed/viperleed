@@ -15,4 +15,13 @@ SCREEN_APERTURE defines the aperture (in degrees) of the acceptance cone of the 
 
 **Acceptable values**: integer/floating point number between 0 and 180
 
-**Notes**: a beam with indices (h, k) and corresponding in-plane reciprocal vector **g** = h **a**\ \* + k **b**\ \* is visible at energy *E* (in eV) if *θ* < SCREEN_APERTURE / 2, where sin\ *θ* = *ħ g* / √(2 *m*\ :sub:`e` *e* *E*)
+.. note::
+   A beam with indices :math:`(h, k)` and corresponding in-plane reciprocal 
+   vector :math:`\vec{g} = h \vec{a} + k \vec{b}` is visible at energy 
+   :math:`E` (in eV) if 
+   :math:`\theta <` ``SCREEN_APERTURE`` :math:`\ 2`, 
+   where :math:`\sin{\theta} = \frac{\hbar g}{\sqrt{2 m_e e E}}`.
+   Here :math:`e` and :math:`m_e` are the elementary charge and electron
+   mass respectively.
+
+**TODO** Add source?

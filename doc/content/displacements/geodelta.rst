@@ -37,40 +37,87 @@ Direction
 
 Possible directions for displacements are:
 
--  **z** => Displacements along the direction orthogonal to the surface. Positive *z* values correspond to movements of the atoms away from the bulk.
+.. Using a definition list here. Could also be a bullet list, not sure...
 
-::
+``z``
+   Displacements along the direction orthogonal to the surface. 
+   Positive *z* values correspond to movements of the atoms away from the bulk.
 
-   O 1 z = -0.05 0.05 0.005      ! Oxygen atom 1 (and symmetry-equivalent atoms) will be displaced in z direction over the range [-0.05, 0.05] with step 0.005
+   ::
 
--  **ab[n1 n2]** (or just **[n1 n2]**) => In-plane displacements along the direction identified by the lattice vector with the indices ``n1`` and ``n2`` (space-separated). The first integer refers to the first vector **a** in the :ref:`POSCAR<POSCAR>`  file. The displacement direction will be positive in the direction of the vector **v** = ``n1`` **a** + ``n2`` **b**. ``n1`` and ``n2`` accept floating point values. Notice that the direction vector will be normalized, so ``[1 3]`` and ``[9 27]`` correspond to the same direction.
+      O 1 z = -0.05 0.05 0.005      ! Oxygen atom 1 (and symmetry-equivalent atoms) will be displaced in z direction over the range [-0.05, 0.05] with step 0.005
 
-::
+``ab[n1 n2]`` (or just ``[n1 n2]``)
+   In-plane displacements along the direction identified by the lattice vector with the whitespace-separated indices 
+   ``n1`` (:math:`n_1`) and ``n2`` (:math:`n_2`).
+   The first integer refers to the first vector :math:`\vec{a}` in the 
+   :ref:`POSCAR<POSCAR>` file. 
+   The displacement direction will be positive in the direction of the 
+   vector :math:`\vec{v} = n_1 \vec{a} + n_2 \vec{b}`.
+   ``n1`` and ``n2`` accept floating point values. 
+   Notice that the direction vector will be normalized, so 
+   ``[1 3]`` and ``[9 27]`` correspond to the same direction.
 
-   O 1 [1 0] = -0.05 0.05 0.005      ! Oxygen atom 1 will be displaced along a over the range [-0.05, 0.05] with step 0.005
-   O 1 ab[1 -1] = -0.05 0.05 0.005   ! Oxygen atom 1 will be displaced diagonally along (a-b) over the range [-0.05, 0.05] with step 0.005
-                                     ! Symmetry-equivalent atoms will be displaced such that the symmetry is preserved.
+   ::
 
--  **xy[α β]** => In-plane displacements along the vector **v** = ``α`` **x** + ``β`` **y** where **x** and **y** are the unit vectors along the cartesian axes. The direction vectors will be normalized.
+      O 1 [1 0] = -0.05 0.05 0.005      ! Oxygen atom 1 will be displaced along a over the range [-0.05, 0.05] with step 0.005
+      O 1 ab[1 -1] = -0.05 0.05 0.005   ! Oxygen atom 1 will be displaced diagonally along (a-b) over the range [-0.05, 0.05] with step 0.005
+                                        ! Symmetry-equivalent atoms will be displaced such that the symmetry is preserved.
 
-::
 
-   O 1 xy[0 1] = -0.05 0.05 0.005    ! Oxygen atom 1 will be displaced along y over the range [-0.05, 0.05] with step 0.005
-                                     ! Symmetry-equivalent atoms will be displaced such that the symmetry is preserved.
+``xy[m1 m2]``
 
--  **azi(ab[c1 c2])** => In-plane displacement around a *circular* trajectory centered at a specified point **C**. The same convention as in the previous commands is used to specify the center, i.e.: ``azi(ab[c1 c2])`` or ``azi([c1 c2])`` -> **C** = ``c1`` **a** + ``c2`` **b**, ``azi(xy[αc βc])`` -> **C** = ``αc`` **x** + ``βc`` **y**. The range on the right again defines a range of displacements in Ångström, in this case measured along the defined circular arc. Positive translations will translate to counterclockwise rotation as seen from vacuum. Zero displacement is the original position of the atom. Note that since the displacement is given along the circular arc, the absolute displacement from the original position can be significantly smaller than for a linear displacement when the circle is small.
+   In-plane displacements along the vector 
+   :math:`\vec{v}` = :math:`m1 \vec{x} + m2 \vec{y}` where 
+   :math:`\vec{x}` and math:`\vec{y}` are the unit vectors along the 
+   cartesian axes.
+   The direction vectors will be normalized.
 
-::
+   ::
 
-   O 1 azi([0 0]) = -0.05 0.05 0.005   ! Oxygen atom 1 will be displaced along a circle centered on the origin by ±0.05 Å following the circular arc, with step 0.005
-                                     ! Symmetry-equivalent atoms will be displaced such that the symmetry is preserved.
+      O 1 xy[0 1] = -0.05 0.05 0.005    ! Oxygen atom 1 will be displaced along y over the range [-0.05, 0.05] with step 0.005
+                                        ! Symmetry-equivalent atoms will be displaced such that the symmetry is preserved.
 
--  **r(ab[c1 c2])** => In-plane displacement **r**\ elative (radial) to a specified point **C**. The same convention as in the previous commands is used to specify the point of reference, i.e.: ``r(ab[c1 c2])`` or ``r([c1 c2])`` -> **C** = ``c1`` **a** + ``c2`` **b**, ``r(xy[αc βc])`` -> **C** = ``αc`` **x** + ``βc`` **y**. Positive values are interpreted as moving the atom *away* from point C, negative values move the atoms *towards* point C.
+``azi(ab[c1 c2])``
+   In-plane displacement around a *circular* trajectory centered at a 
+   specified point :math:`C`. 
+   The same convention as in the previous commands is used to specify the center:
 
-::
+   -  ``azi(ab[c1 c2])`` or just ``azi([c1 c2])`` means
+      :math:`C = c_1 \vec{a} + c_2 \vec{b}` and 
+   -  ``azi(xy[c3 c4])`` means
+      :math:`C = c_3 \vec{x} + c_4 \vec{y}`.
 
-   O 1 r([0 0]) = -0.05 0.05 0.005   ! Oxygen atom 1 will be displaced away from the origin over the range [-0.05, 0.05] with step 0.005
-                                     ! Symmetry-equivalent atoms will be displaced such that the symmetry is preserved.
+   The range on the right again defines a range of displacements in 
+   Ångström, in this case measured along the defined circular arc. 
+   Positive translations will translate to counterclockwise rotation as 
+   seen from vacuum. Zero displacement is the original position of the 
+   atom. 
+   Note that since the displacement is given along the circular arc, 
+   the absolute displacement from the original position can be 
+   significantly smaller than for a linear displacement when the circle 
+   is small.
+
+   ::
+
+      O 1 azi([0 0]) = -0.05 0.05 0.005   ! Oxygen atom 1 will be displaced along a circle centered on the origin by ±0.05 Å following the circular arc, with step 0.005
+                                          ! Symmetry-equivalent atoms will be displaced such that the symmetry is preserved.
+
+``r(ab[c1 c2])``
+   In-plane displacement **r**\ elative (radial) to a specified point **C**.
+   The same convention as in the previous commands is used to specify the point of reference, i.e.:
+
+   -  ``r(ab[c1 c2])`` or ``r([c1 c2])`` means 
+      :math:`C = c_1 \vec{a} + c_2 \vec{b}` and
+   -  ``r(xy[c3 c4])`` means :math:`C = c_3 \vec{x} + c_4 \vec{y}`.
+   
+   Positive values are interpreted as moving the atom *away* from point 
+   C, negative values move the atoms *towards* point C.
+
+   ::
+
+      O 1 r([0 0]) = -0.05 0.05 0.005   ! Oxygen atom 1 will be displaced away from the origin over the range [-0.05, 0.05] with step 0.005
+                                       ! Symmetry-equivalent atoms will be displaced such that the symmetry is preserved.
 
 Offset
 ------
