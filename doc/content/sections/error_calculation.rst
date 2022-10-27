@@ -3,16 +3,53 @@
 Error calculations
 ==================
 
-Once a best-fit structure has been determined, it is useful to see how strongly small changes to specific parameters affect the R-factor. In the error calculation, displacements (given by the :ref:`DISPLACEMENTS file<DISPLACEMENTS>`) are applied one parameter at a time, and the R-factor is output for each step of the variation range. If multiple parameters are linked (e.g. by symmetry), these parameters are treated as one, and varied together.
+Once a best-fit structure has been determined, it is useful to see how 
+strongly small changes to specific parameters affect the R-factor. 
+In the error calculation, displacements (given by the 
+:ref:`DISPLACEMENTS file<DISPLACEMENTS>`) are applied one parameter at a 
+time, and the R-factor is output for each step of the variation range. 
+If multiple parameters are linked (e.g. by symmetry), these parameters are 
+treated as one, and varied together.
 
-To run the error calculation, set :literal:`:ref:`RUN<RUN>` = 5` in the :ref:`PARAMETERS<PARAMETERS>`  file. It is recommended to first run a reference calculation in the same run (e.g. :literal:`:ref:`RUN<RUN>` = 1 5`), as the error curves may not be centered otherwise. Expected input files are the same as for running delta calculations + search, i.e. the structural input files, :ref:`experimental beams<EXPBEAMS>`, a set of :ref:`Tensors<Tensorszip>`  from a reference calculation, and a :ref:`DISPLACEMENTS file<DISPLACEMENTS>`  defining what parameters should be varied. Note that defining multiple blocks in the :ref:`DISPLACEMENTS file<DISPLACEMENTS>`, as is possible for the search, is not allowed here: Instead, only the first block of the :ref:`DISPLACEMENTS file<DISPLACEMENTS>`  will be read (or the last, if the error calculation is run following a search). Defining geometrical, vibrational and occupation variations all in the same :ref:`DISPLACEMENTS file<DISPLACEMENTS>`  is allowed, but the different variations will be split up, so the result is the same as executing multiple error calculations.
+To run the error calculation, set :literal:`:ref:`RUN<RUN>` = 5` in the 
+:ref:`PARAMETERS<PARAMETERS>`  file. It is recommended to first run a 
+reference calculation in the same run (e.g. :literal:`:ref:`RUN<RUN>` = 1 5`), 
+as the error curves may not be centered otherwise.
 
-The error calculation does *not* require a set of :ref:`Delta files<Deltaszip>`, since the normal delta calculation routines mix geometrical and vibrational displacements. Instead, the error calculation will run the required delta calculations automatically, splitting the geometrical and vibrational variations into separate delta files to reduce computational cost.
+Required input files are the same as for running delta calculations and a search, 
+i.e. the structural input files, :ref:`experimental beams<EXPBEAMS>`, 
+a set of :ref:`Tensors<Tensorszip>`  from a reference calculation, and a 
+:ref:`DISPLACEMENTS file<DISPLACEMENTS>` defining what parameters should be varied.
+Note that defining multiple blocks in the :ref:`DISPLACEMENTS file<DISPLACEMENTS>`, 
+as is possible for the search, is not allowed here:
+Instead, only the first block of the :ref:`DISPLACEMENTS file<DISPLACEMENTS>` 
+will be read (or the last, if the error calculation is run following a search).
+Defining geometrical, vibrational and occupation variations all in the same 
+:ref:`DISPLACEMENTS file<DISPLACEMENTS>`  is allowed, but the different 
+variations will be split up, so the result is the same as executing 
+multiple error calculations.
 
-**Hints**:
+The error calculation does *not* require a set of :ref:`Delta files<Deltaszip>`, 
+since the normal delta calculation routines mix geometrical and vibrational 
+displacements. Instead, the error calculation will run the required delta 
+calculations automatically, splitting the geometrical and vibrational 
+variations into separate delta files to reduce computational cost.
 
--  If you find that the R factor is very insensitive to the displacement of a given atom (much less sensitivity than for other atoms with a similar depth and similar scattering properties), this is an indication that the respective atom is either absent or its position is far from reality. (In the *z* direction, the R factor can be already insensitive to the position for deviations >0.1 Å from the true position! **TODO** is this value ok? -ms) Note that hydrogen is a very weak scatterer; the R factor depends only weakly on its position.
--  If a site can be occupied by different chemical elements, the site occupation (i.e., the element concentrations) and vibration amplitude can be strongly correlated [1]. In such a case, the increase of the R factor when changing one of these parameters is not a good indication for the error of that parameter.
+.. note::
+    -  If you find that the R factor is very insensitive to the displacement 
+       of a given atom (much less sensitivity than for other atoms with a 
+       similar depth and similar scattering properties), 
+       this is an indication that the respective atom is either absent or 
+       its position is far from reality.
+       (In the *z* direction, the R factor can be already insensitive to 
+       the position for deviations >0.1 Å from the true position! 
+       **TODO** is this value ok? 
+       -ms) Note that hydrogen is a very weak scatterer; the R factor depends only weakly on its position.
+    -  If a site can be occupied by different chemical elements, the site 
+       occupation (i.e., the element concentrations) and vibration amplitude 
+       can be strongly correlated :cite:p:`blumSegregationOrderingFe12001`.
+       In such a case, the increase of the R factor when changing one of 
+       these parameters is not a good indication for the error of that parameter.
 
 **TODO**: Are there any cases where this is not possible? (e.g., mixed atoms with different displacements)
 
