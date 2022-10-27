@@ -17,10 +17,8 @@ sites.
 
 A VIBROCC file containing only some starting guesses for vibrational 
 amplitudes can be generated automatically using the 
-`VIBR_AMP_SCALE </protected/surface/LEEDIV/PARAMETERS/VIBR_AMP_SCALE>`__, 
-`T_EXPERIMENT </protected/surface/LEEDIV/PARAMETERS/T_EXPERIMENT>`__ and 
-`T_DEBYE </protected/surface/LEEDIV/PARAMETERS/T_DEBYE>`__ parameters in
-the :ref:`PARAMETERS<PARAMETERS>` file.
+`VIBR_AMP_SCALE :ref:`VIBR_AMP_SCALE`, :ref:`T_EXPERIMENT` and 
+:ref:`T_DEBYE` parameters in the :ref:`PARAMETERS<PARAMETERS>` file.
 
 Example
 -------
