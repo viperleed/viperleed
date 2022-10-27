@@ -5,7 +5,7 @@ SEARCH_POPULATION
 
 SEARCH_POPULATION defines the number of trial structures used in parallel during the search. The trial structures from this population can be mixed in the genetic algorithm.
 
-See Ref. `[1 <SEARCH_CONVERGENCE#ref1>`__] for an explanation of the search algorithm used by TensErLEED.
+See Ref. :cite:p:`kottckeNewApproachAutomated1997` for an explanation of the search algorithm used by TensErLEED.
 
 **Default:** min(48, 15 + number of independent search parameters), rounded up to a multiple of the number of available cores.
 
@@ -20,5 +20,3 @@ See Ref. `[1 <SEARCH_CONVERGENCE#ref1>`__] for an explanation of the search algo
 For best performance, SEARCH_POPULATION should be an integer multiple of the number of available cores :ref:`N_CORES<NCORES>`.
 
 Since each trial structure evolves by randomly modifying its parameters, there is always a risk of some structures getting stuck in a local minimum, especially when GAUSSIAN_WIDTH (see `SEARCH_CONVERGENCE </protected/surface/LEEDIV/PARAMETERS/SEARCH_CONVERGENCE>`__) is small. Large populations reduce this risk, and it can therefore be useful to scale the population up to deal with large parameter spaces. Note however that every independent parameter adds an extra dimension to the parameter space, and computational cost scales (roughly) linearly with the population size. For a large number of independent parameters, scaling the population up in direct proportion to the size of the parameter space is therefore not realistic, so unreasonably large parameter spaces should be avoided.
-
-M. Kottcke and K. Heinz, *A New Approach to Automated Structure Optimization in LEED Intensity Analysis* `Surf. Sci. 376, 352 (1997) <http://dx.doi.org/10.1016/S0039-6028(96)01307-6>`__.

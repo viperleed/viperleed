@@ -28,7 +28,7 @@ Syntax
 
 V(EE) = :ref:`FILAMENT_WF<FILWF>`  - max(c0,c1+c2/sqrt(EE+c3)),
 
-as per Eq. (A8) in `PRB 68, 125405 (2003) <http://doi.org/10.1103/PhysRevB.68.125405>`__ 
+as per Eq. (A8) in :cite:t:`rundgrenOptimizedSurfaceslabExcitedstate2003` 
 
 **TODO: Find the more recent reference that has 4 constants!**.
 

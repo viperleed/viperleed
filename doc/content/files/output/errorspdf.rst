@@ -41,5 +41,4 @@ is defined as:
 where :math:`V_{0i}` is the imaginary part of the inner potential and 
 :math:`\delta E`
 is the total energy range of the beamset.
-For more information, see 
-`J. Pendry, Reliability factors for LEED calculations. J. Phys. C: Solid State Phys. 1980, 13 (5), 937. <https://iopscience.iop.org/article/10.1088/0022-3719/13/5/024>`__
+For more information, see :cite:t:`pendryReliabilityFactorsLEED1980`.

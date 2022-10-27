@@ -52,5 +52,3 @@ variations into separate delta files to reduce computational cost.
        these parameters is not a good indication for the error of that parameter.
 
 **TODO**: Are there any cases where this is not possible? (e.g., mixed atoms with different displacements)
-
-[1] V. Blum, L. Hammer, W. Meier, K. Heinz, M. Schmid, E. Lundgren, and P. Varga, *Segregation and ordering at Fe\ 1-x\ Al\ x\ (100) surfaces - a model case for binary alloys* `Surf. Sci. 474, 81 (2001) <http://dx.doi.org/10.1016/S0039-6028(00)00987-0>`__.
