@@ -46,7 +46,7 @@ Initialization
   +--------------------------------------------+--------------------------------------------------------------------------------------------------------------+
   | :ref:`SYMMETRY_FIX<ISYM>`                  | Manually set a symmetry, or turn symmetry off                                                                |
   +--------------------------------------------+--------------------------------------------------------------------------------------------------------------+
-  | :ref:`SYMMETRY_FIND_ORI<SYMMETRY_USEORI>`  | Whether the symmetry search should look for the highest-symmetry point.                                      |
+  | :ref:`SYMMETRY_FIND_ORI<SYMMETRY_FIND_ORI>`| Whether the symmetry search should look for the highest-symmetry point.                                      |
   +--------------------------------------------+--------------------------------------------------------------------------------------------------------------+
   | :ref:`THEO_ENERGIES<REFENERGIES>`          | What energy range to calculate                                                                               |
   +--------------------------------------------+--------------------------------------------------------------------------------------------------------------+

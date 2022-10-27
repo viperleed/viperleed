@@ -133,7 +133,7 @@ See below for an alphabetical list of all parameters. Alternatively, these pages
 +----------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
 | :ref:`SYMMETRY_FIX<ISYM>`                                | Manually set a symmetry, or turn symmetry off                                                                                            |
 +----------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
-| :ref:`SYMMETRY_FIND_ORI<SYMMETRY_USEORI>`                | Whether the symmetry search should look for the highest-symmetry point.                                                                  |
+| :ref:`SYMMETRY_FIND_ORI<SYMMETRY_FIND_ORI>`              | Whether the symmetry search should look for the highest-symmetry point.                                                                  |
 +----------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
 | :ref:`TENSOR_INDEX<TENSOR_INDEX>`                        | Which Tensor files to use for the delta calculation and search                                                                           |
 +----------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
