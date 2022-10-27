@@ -20,6 +20,8 @@ Tests/
 
 # sphinx build directory
 doc/_build
+# files from docs spell checker
+*.spelling 
 
 # Ignore compiled versions of random_.c, beamgen, .x files and .so files
 **/random_.o
