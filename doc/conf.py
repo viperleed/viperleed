@@ -71,5 +71,6 @@ latex_show_pagerefs = True
 latex_elements = {
     'papersize': 'a4paper',
     'preamble': r'''
+    \usepackage{braket}
     '''
     }
