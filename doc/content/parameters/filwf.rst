@@ -1,8 +1,11 @@
 .. _filwf:
 
-====== FILAMENT_WF ======
+===========
+FILAMENT_WF
+===========
 
-FILAMENT_WF defines the workfunction of the emitting cathode (in eV). This number will be added to the electron energy when calculating the muffin-tin potentials.
+FILAMENT_WF defines the workfunction of the emitting cathode (in eV).
+This number will be added to the electron energy when calculating the muffin-tin potentials.
 
 **Default**: FILAMENT_WF = 2.65 (LaB6)
 
