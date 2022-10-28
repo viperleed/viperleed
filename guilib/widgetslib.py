@@ -23,6 +23,7 @@ import PyQt5.QtGui as qtg
 import PyQt5.QtWidgets as qtw
 
 from viperleed import guilib as gl
+from viperleed.guilib.decorators import print_thread
 
 
 ###############################################################################
@@ -32,46 +33,88 @@ from viperleed import guilib as gl
 
 def catch_gui_crash(base_log_path):
     """Show unhandled exceptions to the user."""
+
     sys._excepthook = sys.excepthook
 
-    # Prepare a QMessageBox
-    _msg = qtw.QMessageBox()
-    _msg.setIcon(_msg.Critical)
-    btn = _msg.addButton(_msg.Ok)
-    btn.setText("Close Application")
-    _msg.setWindowTitle("Unhandled exception")
-    __repo = 'viperleed-betatest'
-    __issue = ('<a href=\"https://github.com/viperleed/'
-               f'{__repo}/issues\">GitHub Issue</a>')
-    __email = ('<a href="mailto:riva@iap.tuwien.ac.at">'
-               'riva@iap.tuwien.ac.at</a>')
-    __base_text = ("An unhandled exception occurred. This is most likely "
-                   " a bug.<br><br>Please provide us with an appropriate bug "
-                   f"report as a {__issue} or via email to {__email}.<br><br>"
-                   "The application will now close.")
-    __logger = {'log': None, 'fname': None}  # Set up and created only when an exception occurs
+    class _HOOK(qtc.QObject):
+        """Exception hook that runs in the correct thread."""
 
-    def exception_hook(exctype, value, traceback):
-        """Show a message box to the user, then exit normally."""
-        info = "".join(
-               _m_traceback.format_exception(exctype, value, traceback)
-               )
-        logger = __logger['log']
-        if not logger:
-            _now = datetime.now().strftime("%Y%m%d_%H%M%S")
-            _logname = base_log_path / f"exceptions_{_now}.log"
-            __logger['fname'] = _logname
-            logging.basicConfig(filename=_logname, level=logging.ERROR)         # TODO: probably also some more complicated form
-            __logger['log'] = logger = logging.getLogger()
-        logger.error(info)
-        text = f"{__base_text}<br><br>"
-        text += f"Please include file {__logger['fname']} in the report."
-        _msg.setText(text)
-        _msg.setDetailedText(info)
-        _msg.exec_()
-        sys._excepthook(exctype, value, traceback)
-        sys.exit(1)
-    sys.excepthook = exception_hook
+        # Prepare a QMessageBox
+        _msg = qtw.QMessageBox()
+        _msg.setWindowTitle("Unhandled exception")
+        _msg.setIcon(_msg.Critical)
+        btn = _msg.addButton(_msg.Ok)
+        btn.setText("Close Application")
+
+        # Prepare the info text
+        __repo = 'viperleed-betatest'
+        __issue = ('<a href=\"https://github.com/viperleed/'
+                   f'{__repo}/issues\">GitHub Issue</a>')
+        __email = ('<a href="mailto:riva@iap.tuwien.ac.at">'
+                   'riva@iap.tuwien.ac.at</a>')
+        __base_text = ("An unhandled exception occurred. This is most likely "
+                       " a bug.<br><br>Please provide us with an appropriate "
+                       f"bug report as a {__issue} or via email to {__email}."
+                       "<br><br> The application will now close.")
+
+
+        # Signal to call GUI-related methods in the right thread
+        __show_msg_requested = qtc.pyqtSignal(str, str)
+
+        def __init__(self):
+            """Initialize instance."""
+            super().__init__()
+            self._msg.finished.connect(self.__quit_app)
+
+            self.excinfo = ()
+
+            # Logger is set up and created only when an exception occurs
+            self.loginfo = {'log': None, 'fname': None}
+
+        def __call__(self, exctype, value, traceback):
+            """Show the message box to the user, then exit normally."""
+            self.excinfo = (exctype, value, traceback)
+            info = "".join(
+                   _m_traceback.format_exception(exctype, value, traceback)
+                   )
+            logger = self.loginfo['log']
+            if not logger:
+                _now = datetime.now().strftime("%Y%m%d_%H%M%S")
+                _logname = base_log_path / f"exceptions_{_now}.log"
+                self.loginfo['fname'] = _logname
+                logging.basicConfig(filename=_logname, level=logging.ERROR)         # TODO: probably also some more complicated form
+                self.loginfo['log'] = logger = logging.getLogger()
+            logger.error(info)
+            text = (self.__base_text
+                    + "<br><br>Please include file "
+                    f"{self.loginfo['fname']} in the report.")
+
+            # Connect signal differently depending on thread
+            this_thread = self.thread().currentThread()
+            _is_main = this_thread == qtw.qApp.thread()
+            connect_type = qtc.Qt.AutoConnection
+            if not _is_main:
+                # Make sure the other thread is blocked while
+                # handling exceptions
+                connect_type = qtc.Qt.BlockingQueuedConnection
+            self.__show_msg_requested.connect(self.__show_message,
+                                              type=connect_type)
+            self.__show_msg_requested.emit(text, info)
+
+        @qtc.pyqtSlot(str, str)
+        def __show_message(self, text, detailed_text):
+            """Show a message box to the user."""
+            self._msg.setText(text)
+            self._msg.setDetailedText(detailed_text)
+            self._msg.exec_()
+
+        @qtc.pyqtSlot(int)
+        def __quit_app(self, _):
+            """Quit application after exception."""
+            sys._excepthook(*self.excinfo)
+            qtw.qApp.quit()
+
+    sys.excepthook = _HOOK()
 
 
 def change_control_text_color(ctrl, color):
@@ -306,7 +349,7 @@ def raise_on_qt_messages():
             and all modules).
         message : str
             The original Qt message.
-        
+
         Returns
         -------
         None.
@@ -316,12 +359,12 @@ def raise_on_qt_messages():
             message += (f"line: {context.line}, func: {context.function}"
                         f"file: {context.file}")
         msg = _map[severity](message)
-        
+
         if isinstance(msg, (QtDebug, QtWarning, QtInfo)):
             warnings.warn(msg, stacklevel=2)
             return
         raise msg
-    
+
     qtc.qInstallMessageHandler(__handler)
 
 
