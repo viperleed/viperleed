@@ -25,6 +25,8 @@ twice will generally overwrite it.
 An exception are parameters like ``SITE_DEF``, which can be defined for 
 different elements.
 
+.. only:: latex
+
 .. toctree:: 
    
    params_by/param_name

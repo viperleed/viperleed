@@ -141,6 +141,7 @@ def initialization(sl, rp, subdomain=False):
                            "BULK_LIKE_BELOW will be ignored in favour of the "
                            "explicitly defined bulk repeat vector.")
         else:
+            # The modififcations to the PARAMETERS file below are currently not in the docs. Should we add that?
             cvec, cuts = sl.detectBulk(rp)
             rp.BULK_REPEAT = cvec
             vec_str = "[{:.5f} {:.5f} {:.5f}]".format(*rp.BULK_REPEAT)
@@ -766,6 +767,7 @@ def preserve_original_input(rp, init_logger, path=""):
                                     + folder_name)
                 rp.setHaltingLevel(1)
     return
+
 
 def make_compile_logs_dir(rp, init_logger, path=""):
     """

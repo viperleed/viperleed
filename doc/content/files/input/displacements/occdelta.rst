@@ -1,5 +1,6 @@
 .. _occdelta:
 
+================================================
 Chemical substitution for structure optimization
 ================================================
 

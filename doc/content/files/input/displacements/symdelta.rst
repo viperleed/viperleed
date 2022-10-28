@@ -1,8 +1,8 @@
 .. _symdelta:
 
-=========
-SYM_DELTA
-=========
+=================
+The SYM_DELTA tag
+=================
 
 .. warning:: 
   SYM_DELTA is not well tested yet, and has at least one known bug. 
@@ -20,7 +20,7 @@ symmetry group, and end it with one line turning the full symmetry
 back on or changing the symmetry to another group).
 
 Example
-=======
+-------
 
 ::
 
@@ -33,8 +33,9 @@ Example
    = VIB_DELTA
    Ir 1-6 = -0.05 0.05 0.02      ! Vibrational amplitude of iridium atoms 1-6 (and symmetry-equivalent atoms) will be varied over the range [-0.05, 0.05] with step 0.02
 
+
 Acceptable values
-=================
+-----------------
 
 -  ``T``, ``True``, ``F``, ``False`` (not case sensitive): ``False`` turns off symmetry linking entirely, which is equivalent to setting the symmetry group to p1. ``True`` turns symmetry linking back on.
 -  One can also directly specify a symmetry group with ``SYM_DELTA = group``. That group will then be used to restrict geometrical displacements or link symmetry-equivalent atoms. This is functionally equivalent to changing the value of :ref:`SYMMETRY_FIX<ISYM>`, but only for the operations that follow. Note that only symmetry *reduction* from the overall slab symmetry is allowed. See :ref:`SYMMETRY_FIX<ISYM>`  for a more detailed explanation of allowed symmetry changes.

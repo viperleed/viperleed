@@ -4,7 +4,9 @@
 The DISPLACEMENTS file
 ======================
 
-The DISPLACEMENTS files defines the variations of geometry, vibrational amplitudes and element concentrations that should be considered in the search. In other words, the DISPLACEMENTS file defines the parameter room for the search, for each atom.
+
+
+The DISPLACEMENTS file defines the variations of geometry, vibrational amplitudes and element concentrations that should be considered in the search. In other words, the DISPLACEMENTS file defines the parameter room for the search, for each atom.
 
 The file is split into three main blocks: Geometry, Vibrations, and Occupations. The blocks are delimited by lines starting with an equal sign "``=``", as in the following example:
 
@@ -50,8 +52,16 @@ symmetry-equivalent atoms.
 .. note::
   See the :ref:`Domain calculations<domain_calculation>` page for information on how to format the DISPLACEMENTS file when optimizing multiple structures simultaneously.
 
+.. toctree:: 
+   :hidden:
+
+   displacements/geodelta
+   displacements/vibdelta
+   displacements/occdelta
+
+
 Advanced functionality
-----------------------
+======================
 
 **Further constraints: Using CONSTRAIN blocks**
 
@@ -68,31 +78,11 @@ If some displacements should be constrained or linked in ways that go beyond sim
    vib Ir_top = -0.03           ! although a displacement range is defined for Ir_top, fix its value to -0.03 instead
    vib Ir_top = ind(2)          ! same as the line before: Fix index to 2, i.e. the second entry in the displacement range
 
---------------
+.. toctree:: 
+   :hidden:
 
-**The SYM_DELTA tag** 
-
-.. warning::
-  SYM_DELTA is not well tested yet, and has at least one known bug.
-  Use of :ref:`SYMMETRY_FIX<ISYM>` instead of SYM_DELTA is encouraged 
-  where possible.
-
-If specific displacements should be applied only to specific atoms *without* affecting symmetry-equivalent atoms, symmetry can be switched off or modified using the :ref:`SYM_DELTA<SYMDELTA>`  tag, as in the following example:
-
-::
-
-   = GEO_DELTA
-   O 1 z = -0.05 0.05 0.005      ! Oxygen atom 1 (and symmetry-equivalent atoms) will be displaced in z direction over the range [-0.05, 0.05] with step 0.005
-   SYM_DELTA = False
-   Ir 1 3-5 z = -0.05 0.05 0.01  ! Iridium atoms 1 and 3-5 (but NOT their symmetry-equivalent atoms) will be displaced in z direction over the range [-0.05, 0.05] with step 0.01
-   SYM_DELTA = True
-
-   = VIB_DELTA
-   Ir 1-6 = -0.05 0.05 0.02      ! Vibrational amplitude of iridium atoms 1-6 (and symmetry-equivalent atoms) will be varied over the range [-0.05, 0.05] with step 0.02
-
-More specific functions (setting a lower symmetry group instead of turning symmetry off completely) are described on the :ref:`SYM_DELTA<SYMDELTA>`  page.
-
-The use of SYM_DELTA should be reserved for **highly specific** cases and is **generally discouraged**. If the desired effect can be achieved by lowering the *overall* symmetry, then using the :ref:`SYMMETRY_FIX<ISYM>`  tag of the :ref:`PARAMETERS<PARAMETERS>`  file is always preferable.
+   displacements/searchconstraints
+   displacements/symdelta
 
 Running multiple searches
 -------------------------
@@ -120,6 +110,7 @@ this time optimizing the x coordinate:
      Ir L(1-6) xy[1 0] = -0.03 0.03 0.01
 
 The successive search blocks are each introduced by a line starting with ``== SEARCH``. Any text after the ``== SEARCH`` tag in the same line will be treated as a 'name' for the block (in the above example ``z`` and ``x``). The name will be referenced in the log files, but does not have any influence on the behaviour of the program.
+
 
 In-plane optimization shorthand
 -------------------------------
@@ -155,6 +146,7 @@ is equivalent to:
 
      = VIB_DELTA
      Ir = -0.005 0.005 0.0005
+
 
 Looping searches
 ----------------
