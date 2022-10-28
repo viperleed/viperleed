@@ -12,11 +12,11 @@ This module contains base functions and classes shared by the whole GUI
 
 import ast
 import copy
-from collections import defaultdict
-import re
 import sys
-
+import re
+# from fractions import Fraction
 from quicktions import Fraction  # faster version of Fraction (~ factor of 2)
+from collections import defaultdict
 
 import numpy as np
 
@@ -584,6 +584,22 @@ def check_multi_leed_params(leed_parameters):                                   
             raise ValueError("Inconsistent symmetry operations of bulk lattices"
                              " in the input parameters")
     return (leed_parameters, leed_patterns)
+
+
+def catch_gui_crash():
+    """
+    Function that allows to catch exceptions that cause the GUI to crash and
+    to print them to terminal
+    """
+    sys._excepthook = sys.excepthook
+    def exception_hook(exctype, value, traceback):
+        print("########## Caught an exception! ##########")
+        # TODO: here one would like to rather open a parent-less
+        # QMessageBox reporting the exception. Perhaps even log
+        # the event to disk (or have the option in the message).
+        sys._excepthook(exctype, value, traceback)
+        sys.exit(1)
+    sys.excepthook = exception_hook
 
 
 def check_py_version(version_to_check, check_what='earlier'):
