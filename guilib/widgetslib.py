@@ -10,8 +10,12 @@ Created: 2020-01-12
 Author: Michele Riva
 """
 
+from datetime import datetime
 import inspect
+import logging
 import re
+import sys
+import traceback as _m_traceback
 import warnings
 
 import PyQt5.QtCore as qtc
@@ -24,6 +28,50 @@ from viperleed import guilib as gl
 ###############################################################################
 #                                   FUNCTIONS                                 #
 ###############################################################################
+
+
+def catch_gui_crash(base_log_path):
+    """Show unhandled exceptions to the user."""
+    sys._excepthook = sys.excepthook
+
+    # Prepare a QMessageBox
+    _msg = qtw.QMessageBox()
+    _msg.setIcon(_msg.Critical)
+    btn = _msg.addButton(_msg.Ok)
+    btn.setText("Close Application")
+    _msg.setWindowTitle("Unhandled exception")
+    __repo = 'viperleed-betatest'
+    __issue = ('<a href=\"https://github.com/viperleed/'
+               f'{__repo}/issues\">GitHub Issue</a>')
+    __email = ('<a href="mailto:riva@iap.tuwien.ac.at">'
+               'riva@iap.tuwien.ac.at</a>')
+    __base_text = ("An unhandled exception occurred. This is most likely "
+                   " a bug.<br><br>Please provide us with an appropriate bug "
+                   f"report as a {__issue} or via email to {__email}.<br><br>"
+                   "The application will now close.")
+    __logger = {'log': None, 'fname': None}  # Set up and created only when an exception occurs
+
+    def exception_hook(exctype, value, traceback):
+        """Show a message box to the user, then exit normally."""
+        info = "".join(
+               _m_traceback.format_exception(exctype, value, traceback)
+               )
+        logger = __logger['log']
+        if not logger:
+            _now = datetime.now().strftime("%Y%m%d_%H%M%S")
+            _logname = base_log_path / f"exceptions_{_now}.log"
+            __logger['fname'] = _logname
+            logging.basicConfig(filename=_logname, level=logging.ERROR)         # TODO: probably also some more complicated form
+            __logger['log'] = logger = logging.getLogger()
+        logger.error(info)
+        text = f"{__base_text}<br><br>"
+        text += f"Please include file {__logger['fname']} in the report."
+        _msg.setText(text)
+        _msg.setDetailedText(info)
+        _msg.exec_()
+        sys._excepthook(exctype, value, traceback)
+        sys.exit(1)
+    sys.excepthook = exception_hook
 
 
 def change_control_text_color(ctrl, color):
