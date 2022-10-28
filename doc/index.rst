@@ -40,20 +40,22 @@ The Vienna Package for TensErLEED (ViPErLEED) is a collection of tools for moder
    content/param_toc
 
 
+
 .. toctree:: 
-   :maxdepth: 2
+   :maxdepth: 1
+   :caption: Utilities
 
-   content/utilities
-
+   Atomic Simulation Environment API<content/utilities/aseapi>
+   Bookkeeper<content/utilities/bookkeeper>
+   Further Utilities<content/utilities>
 
 .. toctree:: 
    :glob:
-   :hidden:
+   :caption: Various
    :maxdepth: 1
 
+   content/various/*
 
-   content/other/*
-   content/glossary
 
 
 .. toctree:: 
@@ -61,3 +63,4 @@ The Vienna Package for TensErLEED (ViPErLEED) is a collection of tools for moder
    :caption: References
 
    References<references>
+   Glossary<content/glossary>
