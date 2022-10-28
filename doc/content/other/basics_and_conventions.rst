@@ -6,11 +6,24 @@ Basics and conventions
 Coordinate system
 -----------------
 
-The lattice vectors describing the unit cell are named **a**, **b**, and 
-**c**. **a** and **b** must be in the xy plane, and **c** have a positive z component.
-The +z direction is outwards from the surface.
+The lattice vectors describing the unit cell are named :math:`\vec{a}`, 
+:math:`\vec{b}`, and :math:`\vec{c}`.
+:math:`\vec{a}` and :math:`\vec{b}` must be in the :math:`xy` plane, 
+and :math:`\vec{c}` must have a positive :math:`z` component.
+The :math:`+z` direction is considered to be pointing outwards from the surface.
 
 Units
 -----
 
-All distances and vibration amplitudes are in Ångström, energies in eV.!!
+ViPErLEED uses units of Ångström (Å) for all distances and vibrational amplitudes 
+in inputs, and outputs. 
+Some plots may display pico meters (pm), but this will **always** be clearly
+labeled.
+
+Energies are in- and output in units of electron Volts (eV). Note that 
+parts of TensErLEED and certain phaseshift generation scripts my use units
+of `Hartree <https://en.wikipedia.org/wiki/Hartree>`_
+internally (and in raw outputs).
+ViPErLEED takes care of the
+conversion automatically.
+
