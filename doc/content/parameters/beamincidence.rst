@@ -34,4 +34,16 @@ Syntax would then also allow:
 
    BEAM_INCIDENCE = THETA thetamin thetamax thetastep PHI phimin phimax phistep
 
-0:math:`\leq`\ ``theta``\ :math:`\leq`90, 0:math:`\leq`\ ``phi``\ <360; 0:math:`\leq`\ ``thetamin``\ <``thetamax``\ :math:`\leq`90, 0:math:`\leq`\ ``phimin``\ <``phimax``\ <360, 0<``thetastep``\ :math:`\leq`\ ``thetamax`` – ``thetamin``, 0<``phistep``\ :math:`\leq`\ ``phimax`` – ``phimin``. **AMI**: Isn't this redundant now that we have FD calculations? In my limited experience, this works reasonably well, even without Delta+Search for each angle combination.
+:math:`0 \leq \theta` :math:`\leq 90`,
+
+:math:`0 \leq \phi` :math:`< 360`,
+
+:math:`0 \leq \theta_{min} < \theta_{max} \leq 90`,
+
+:math:`0 \leq \phi_{min} < \phi_{max} <360`,
+
+:math:`0 < \theta_{step} \leq \theta_{max} – \theta_{min}`,
+
+:math:`0 < \phi_{step} \leq \phi_{max} – \phi_{min}`.
+
+**AMI**: Isn't this redundant now that we have FD calculations? In my limited experience, this works reasonably well, even without Delta+Search for each angle combination.
