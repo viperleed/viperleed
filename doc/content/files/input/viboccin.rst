@@ -134,6 +134,4 @@ already evaluated (ignoring units), this is equivalent to (results in Å
    u^2 = \sqrt{1+16\frac{T}{\theta_D}^2} * \frac{109.15}{A \theta_D}
 
 with the atomic mass :math:`A`` of the chemical element (in u). These
-formulas are derived from: M. A. Van Hove and S. Y. Tong, *Surface
-crystallography by LEED: theory, computation and structural results*
-(Springer Science & Business Media, 2012), Vol. 2, chapter 3.5.
+formulas are derived from: :cite:t:`vanhoveSurfaceCrystallographyLEED1979`, chapter 3.5.
