@@ -21,7 +21,6 @@ ViPErLEED.
     The structure from the :ref:`POSCAR file<poscar>` and the settings 
     from the :ref:`PARAMETERS file<parameters>` are actually read and 
     interpreted **before** the initialization.
-    The structure and settings are  
     This is important for the :ref:`ASE API<aseapi>`
     where structure and settings may be passed programmatically to 
     tleedm.
