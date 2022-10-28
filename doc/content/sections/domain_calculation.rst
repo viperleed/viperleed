@@ -26,7 +26,9 @@ Then, run the TensErLEED Manager script. A subfolder will be created for each do
 
 To specify which segments should be run, either use the :ref:`RUN<RUN>`  parameter as usual, or set ``RUN = 4`` as a shorthand for a domain calculation. This will be interpreted as ``RUN = 1-3`` or ``RUN = 2-3``, depending on whether the input files are compatible Tensors.zip files or whether a reference calculation is needed. For ``RUN = 4``, reference calculations will only be executed for the domains that need them; specify ``RUN = 1-3`` explicitly to re-run reference calculations for all domains. However, as discussed above, it is recommended you run the reference calculations separately beforehand for better control, and specify ``RUN = 2-3`` explicitly here.
 
-**Note: In the current version, automatic cleanup after domain calculations is implemented only rudimentarily. Domain-specific output files are not copied out from the work folder, and the bookkeeper ``--cont`` functionality will not work.**
+.. warning:: 
+  In the current version, automatic cleanup after domain calculations is implemented only rudimentarily.
+  Domain-specific output files are not copied out from the work folder, and the bookkeeper ``--cont`` functionality will not work.
 
 The DISPLACEMENTS file for domains
 ----------------------------------
