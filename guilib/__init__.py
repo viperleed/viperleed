@@ -28,7 +28,7 @@ from viperleed.guilib.helpers import (conventional_angles,
 from viperleed.guilib.base import (get_equivalent_beams,
                                    project_to_first_domain, check_type,
                                    check_leed_params, check_multi_leed_params,
-                                   catch_gui_crash, check_py_version,
+                                   check_py_version,
                                    string_matrix_to_numpy,
                                    format_floats,  # probably not needed globally
                                    integer_part_length,

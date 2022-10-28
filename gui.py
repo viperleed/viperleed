@@ -11,6 +11,7 @@ This is the module that invokes the execution of the
 Graphical User Interface
 """
 
+import logging
 from pathlib import Path
 import signal
 import sys
@@ -91,14 +92,18 @@ def gui_main():
     Body of the functionality that invokes the ViPErLEED
     Graphical User Interface.
     """
-    gl.catch_gui_crash()
-    gl.widgetslib.raise_on_qt_messages()
+    log_path = Path(__file__).resolve().parent.parent / "_logs"
+    if not log_path.exists():
+        log_path.mkdir()
 
     print('Loading GUI...', flush=True, end='')
     qtg.QGuiApplication.setAttribute(qtc.Qt.AA_EnableHighDpiScaling)
     qtg.QGuiApplication.setAttribute(qtc.Qt.AA_UseHighDpiPixmaps)
     app = qtw.QApplication(sys.argv)
     app.setWindowIcon(qtg.QIcon(gl.pluginsbase.LOGO))
+
+    gl.widgetslib.catch_gui_crash(log_path)
+    gl.widgetslib.raise_on_qt_messages()
 
     # Import some fonts from ./fonts folder
     font_path = resources_path("guilib/fonts")
