@@ -336,7 +336,6 @@ class Measure(ViPErLEEDPluginBase):
         # timer, as for non-spontaneous events showEvent is called
         # BEFORE the widgets are actually shown.
         self._timers['delay_check_settings'].start()
-        raise Exception
 
     def update_device_lists(self):
         """Update entries in "Devices" menu."""
