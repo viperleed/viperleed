@@ -54,7 +54,6 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 # TODO: User event tracking for bug report. Possible with eventFilter on
 #       qApp, but see also https://www.qtcentre.org/threads/16182-Logging-Qt-User-Actions
 # TODO: error severity in Enum. Non-fatal errors should not stop everything
-# TODO: catch unhandled exceptions, log to file, show the user.
 
 #   C A M E R A   &  C O.
 # TODO: bad pixels finder top progress bar should scale better, with actual
