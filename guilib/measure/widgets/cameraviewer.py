@@ -11,9 +11,10 @@ Defines the CameraViewer class, a QScrollArea that allows
 visualizing frames from a concrete subclass of CameraABC.
 """
 
-import weakref
 from copy import deepcopy
+from functools import partial
 from math import ceil
+import weakref
 
 import numpy as np
 from PyQt5 import (QtCore as qtc,
@@ -36,6 +37,16 @@ from viperleed.guilib.widgetslib import screen_fraction
 
 
 _RED_BORDER_WIDTH = 3  # pixels
+
+# Each entry is ("short_name", default_value, "long name")
+# Those with an empty long name will not be added as context
+ # menu entries, and will thus not be editable by the user
+_DEFAULT_FLAGS = (
+    ("roi_visible", True, "Allow setting ROI"),
+    ("show_auto", True, "Show on new frames"),
+    ("stop_on_close", True, "Stop camera when closed"),
+    ("interactions_enabled", True, ""),
+    )
 
 # pylint: disable=too-many-instance-attributes
 # Disabled because pylint counts also class attributes, but
@@ -153,9 +164,7 @@ class CameraViewer(qtw.QScrollArea):
         except AttributeError:
             pass
 
-    def __init__(self, camera, *args, parent=None, stop_on_close=True,
-                 show_auto=True, roi_visible=True, interactions_enabled=True,
-                 **kwargs):
+    def __init__(self, camera, *args, **kwargs):
         """Initialize widget.
 
         Parameters
@@ -197,25 +206,30 @@ class CameraViewer(qtw.QScrollArea):
             If camera is not a subclass of CameraABC
         """
         # pylint: disable=access-member-before-definition
-        # Attribute is defined in __new__
+        # Flagging self._initialized, but attribute is
+        # defined in __new__
+        if not self._initialized:
+            self.__flags = {"needs_roi_limits": False,
+                            "image_saturated": False}
+
+        # Extract acceptable keyword argument flags. The second item
+        # in the flags will be the corresponding QAction, constructed
+        # in __compose_context_menu
+        for key, default, _ in _DEFAULT_FLAGS:
+            enabled = bool(kwargs.pop(key, default))
+            if not self._initialized:
+                self.__flags[key] = [enabled, None]
+                continue
+            # Use property setters to take care of connected actions
+            prop = getattr(self, key)
+            prop.fset(enabled)
+
         if self._initialized:
             return
         # pylint: enable=access-member-before-definition
 
+        super().__init__(*args, **kwargs)
         self._initialized = True
-
-        super().__init__(*args, parent=parent, **kwargs)
-
-        # The second item in the flags will be the corresponding
-        # QAction, constructed in __compose_context_menu
-        self.__flags = {
-            "stop_on_close": [bool(stop_on_close), None],
-            "show_auto": [bool(show_auto), None],
-            "roi_visible": [bool(roi_visible), None],
-            "interactions_enabled": bool(interactions_enabled),
-            "needs_roi_limits": False,
-            "image_saturated": False,
-            }
         self.__glob = {"image_size": qtc.QSize(),
                        "camera": camera,
                        "mouse_button": None,
@@ -239,6 +253,31 @@ class CameraViewer(qtw.QScrollArea):
         self.__compose()
         self.__connect()
 
+    def _flag_getter(self, flag_name=''):
+        """Return a flag value by its name."""
+        return self.__flags[flag_name][0]
+
+    def _flag_setter(self, enabled, flag_name=''):
+        """Enable or disable a flag given its name."""
+        # Usable with functools.partial(_flag_setter, flag_name=...)
+        # as a property setter default in case no peculiar action has
+        # to be done. Otherwise, it can be called directly in a setter
+        enabled = bool(enabled)
+        self.__flags[flag_name][0] = enabled
+        action = self.__flags[flag_name][1]
+        if action:
+            action.setChecked(enabled)
+
+    # Set up simple checkable properties. Those that require
+    # more complex actions on set/get are defined below with
+    # the @property decorator syntax
+    auto_contrast = property(partial(_flag_getter, flag_name='auto_contrast'),
+                             partial(_flag_setter, flag_name='auto_contrast'))
+    show_auto = property(partial(_flag_getter, flag_name='show_auto'),
+                         partial(_flag_setter, flag_name='show_auto'))
+    stop_on_close = property(partial(_flag_getter, flag_name='stop_on_close'),
+                             partial(_flag_setter, flag_name='stop_on_close'))
+
     @property
     def camera(self):
         """Return the camera whose frames are displayed."""
@@ -247,14 +286,13 @@ class CameraViewer(qtw.QScrollArea):
     @property
     def interactions_enabled(self):
         """Return whether the user can interact with the camera."""
-        return self.__flags["interactions_enabled"]
+        return self._flag_getter("interactions_enabled")
 
     @interactions_enabled.setter
     def interactions_enabled(self, enabled):
         """Set whether the user can interact with the camera."""
-        self.__flags["interactions_enabled"] = bool(enabled)
-        _menu = self.__children["context_menu"]
-        for action in _menu.actions():
+        self._flag_setter(enabled, "interactions_enabled")
+        for action in self.__children["context_menu"].actions():
             action.setEnabled(self.interactions_enabled)
 
     @property
@@ -288,13 +326,12 @@ class CameraViewer(qtw.QScrollArea):
     @property
     def roi_visible(self):
         """Return whether the ROI is made visible upon user interaction."""
-        return self.__flags["roi_visible"][0]
+        return self._flag_getter("roi_visible")
 
     @roi_visible.setter
     def roi_visible(self, visible):
         """Set the ROI to be made visible upon user interaction."""
-        self.__flags["roi_visible"][0] = bool(visible)
-        self.__flags["roi_visible"][1].setChecked(self.roi_visible)
+        self._flag_setter(visible, "roi_visible")
         if not self.roi_visible:
             self.roi.hide()
 
@@ -306,28 +343,6 @@ class CameraViewer(qtw.QScrollArea):
         except AttributeError:
             screen = None
         return screen
-
-    @property
-    def show_auto(self):
-        """Return whether self is automatically shown on new frames."""
-        return self.__flags["show_auto"][0]
-
-    @show_auto.setter
-    def show_auto(self, enabled):
-        """Set if self should be shown automatically on new frames."""
-        self.__flags["show_auto"][0] = bool(enabled)
-        self.__flags["show_auto"][1].setChecked(self.show_auto)
-
-    @property
-    def stop_on_close(self):
-        """Return whether the camera is stopped when closing the widget."""
-        return self.__flags["stop_on_close"][0]
-
-    @stop_on_close.setter
-    def stop_on_close(self, stop):
-        """Set whether the camera is stopped when closing the widget."""
-        self.__flags["stop_on_close"][0] = bool(stop)
-        self.__flags["stop_on_close"][1].setChecked(self.stop_on_close)
 
     def changeEvent(self, event):  # pylint: disable=invalid-name
         """Extend changeEvent to react to window maximization."""
@@ -546,6 +561,13 @@ class CameraViewer(qtw.QScrollArea):
         self.__zoom(direction=direction)
 
     @property
+    def __checkable_flags(self):
+        """Return the flags that are user-editable."""
+        return {k: v
+                for k, v in self.__flags.items()
+                if (isinstance(v, list) and v[1])}
+
+    @property
     def __extra_size(self):
         """Return a bit larger size for self."""
         # Useful so that (i) scroll bars are only visible
@@ -663,24 +685,13 @@ class CameraViewer(qtw.QScrollArea):
 
         # Flags
         menu.addSeparator()
-        act = menu.addAction("Allow setting ROI")
-        self.__flags["roi_visible"][1] = act
-        act.setCheckable(True)
-        act.setChecked(
-            qtc.Qt.Checked if self.roi_visible else qtc.Qt.Unchecked
-            )
-        act = menu.addAction("Show on new frames")
-        self.__flags["show_auto"][1] = act
-        act.setCheckable(True)
-        act.setChecked(
-            qtc.Qt.Checked if self.show_auto else qtc.Qt.Unchecked
-            )
-        act = menu.addAction("Stop camera when closed")
-        self.__flags["stop_on_close"][1] = act
-        act.setCheckable(True)
-        act.setChecked(
-            qtc.Qt.Checked if self.stop_on_close else qtc.Qt.Unchecked
-            )
+        for key, _, act_text in _DEFAULT_FLAGS:
+            if not act_text:
+                continue
+            act = self.__flags[key][1] = menu.addAction(act_text)
+            act.setCheckable(True)
+            enabled = getattr(self, key).fget()
+            act.setChecked(qtc.Qt.Checked if enabled else qtc.Qt.Unchecked)
 
         # Device settings
         menu.addSeparator()
@@ -759,18 +770,19 @@ class CameraViewer(qtw.QScrollArea):
 
     def __on_context_menu_triggered(self, action):
         """React to a selection in the context menu."""
+        # See if action is one of the checkable flags
+        checkable = {a: k for k, (_, a) in self.__checkable_flags.items()}
+        key = checkable.get(action, None)
+        if key:
+            # Get the property object, and set its value
+            getattr(self, key).fset(action.isChecked())
+            return
+
+        # Resort to looking at the text, as we
+        # are not storing the other actions
         text = action.text().lower()
-        if "allow" in text:
-            self.roi_visible = action.isChecked()
-            return
-        if "show" in text:
-            self.show_auto = action.isChecked()
-            return
         if "reset" in text:  # reset ROI
             self.__reset_roi()
-            return
-        if "stop" in text:
-            self.stop_on_close = action.isChecked()
             return
         if "snap" in text:
             self.__on_snap_image()
