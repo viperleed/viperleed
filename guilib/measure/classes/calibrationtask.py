@@ -390,7 +390,7 @@ class CalibrationTask(qtc.QObject, metaclass=base.QMetaABC):
         if self.original_settings is None:
             return
         _INVOKE(self.device, 'set_settings',
-                qtc.Q_ARG(object, original_settings))
+                qtc.Q_ARG(object, self.original_settings))
 
     def set_info_text(self, text):
         """Set informative text in the info message box."""
