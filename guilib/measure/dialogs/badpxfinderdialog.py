@@ -168,7 +168,16 @@ class BadPixelsFinderDialog(qtw.QDialog):
 
     def __abort(self, *_):
         """Abort bad-pixel-finder routine."""
-        _INVOKE(self.__finder, "abort")
+        try:
+            _INVOKE(self.__finder, "abort")
+        except RuntimeError:
+            # In case this happens because of an unprocessed
+            # error_occurred before __finder is not None.
+            # This is due to the qApp.processEvents() call
+            # inside __start(). It also guards against trying
+            # to invoke the method if the C++ object wrapped by
+            # self.__finder gets destroyed in the meantime
+            pass
         self.__reset_controls()
 
     @qtc.pyqtSlot()
