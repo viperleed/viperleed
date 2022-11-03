@@ -5,13 +5,13 @@ Constraints for structure optimization
 
 This block of the :ref:`DISPLACEMENTS file<DISPLACEMENTS>` allows you to define specific constraints other than symmetry for the structure optimization routine. The commands are introduced by a header line of the form
 
-::
+..  code-block:: none
 
    = CONSTRAIN
 
 The general syntax for a line in the CONSTRAIN block is (examples given below):
 
-::
+..  code-block:: none
 
    flag atoms[, more atoms] = value
 

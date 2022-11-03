@@ -12,7 +12,7 @@ the surface unit cell.
 For more details consult works that cover the basics of :term:`LEED` and 
 :term:`LEED-I(V)`, e.g.
 Chapter 4 in :cite:t:`fausterSurfacePhysicsFundamentals2020` or 
-chapter 3.2 in :cite:t:`heinzElectronBasedMethods2013`.
+the overview by:cite:t:`heinzElectronBasedMethods2013`.
 For computational details please have a look at the ViPErLEED paper 
 (**TODO**) and the original work describing TensErLEED by Blum and Heinz 
 :cite:p:`blumFastLEEDIntensity2001a`.

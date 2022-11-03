@@ -10,7 +10,7 @@ The DISPLACEMENTS file defines the variations of geometry, vibrational amplitude
 
 The file is split into three main blocks: Geometry, Vibrations, and Occupations. The blocks are delimited by lines starting with an equal sign "``=``", as in the following example:
 
-::
+..  code-block:: none
 
    = GEO_DELTA
    O 1 z = -0.05 0.05 0.005      ! Oxygen atom 1 (and symmetry-equivalent atoms) will be displaced in z direction over the range [-0.05, 0.05] with step 0.005
@@ -63,11 +63,13 @@ symmetry-equivalent atoms.
 Advanced functionality
 ======================
 
+.. note:: Indentation is allowed, but does not affect the function.
+
 **Further constraints: Using CONSTRAIN blocks**
 
 If some displacements should be constrained or linked in ways that go beyond simple symmetry conservation, arbitrary displacements can be linked by using :ref:`CONSTRAIN blocks<SEARCHCONSTRAINTS>`.
 
-::
+..  code-block:: none
 
    = VIB_DELTA
    Ir_top = -0.05 0.05 0.02     ! see above; for example below
@@ -94,11 +96,11 @@ and vibrational amplitudes simultaneously for the given set of atoms,
 then run another search from the optimized z and vibrational amplitudes, 
 this time optimizing the x coordinate:
 
-::
+..  code-block:: none
 
    == SEARCH z
 
-     = GEO_DELTA                     ! Note: Indentation is allowed, but does not affect the function.
+     = GEO_DELTA
      Ir L(1-6) z = -0.05 0.05 0.01
 
      = VIB_DELTA
@@ -117,11 +119,11 @@ In-plane optimization shorthand
 
 If you want to run one search to optimize positions in one in-plane direction (e.g. x), then another search for the other direction, you can either write out two search blocks, or abbreviate by entering just ``xy`` or ``ab`` as the direction, without the :ref:`brackets to indicate a specific direction<GEODELTA>`. This will effectively expand the block into two subsequent blocks, using the ``[1 0]`` direction in the first and the ``[0 1]`` direction in the second one. For example:
 
-::
+..  code-block:: none
 
    == SEARCH xy
 
-     = GEO_DELTA                     ! Note: Indentation is allowed, but does not affect the function.
+     = GEO_DELTA
      Ir L(1-6) xy = -0.03 0.03 0.01
 
      = VIB_DELTA
@@ -129,7 +131,7 @@ If you want to run one search to optimize positions in one in-plane direction (e
 
 is equivalent to:
 
-::
+..  code-block:: none
 
    == SEARCH xy[1 0]
 
@@ -153,12 +155,12 @@ Looping searches
 
 It is possible to have a set of search blocks running in a loop using the tags ``<loop>`` and ``</loop>``. Note that these flags are expected to always be directly before a ``== SEARCH`` statement, or before the end of the file. Loops will end when their latest iteration does not yield a better R-factor than the previous iteration (note that this means each looped block will be executed at least twice). For example, to optimize the z coordinate, then search x based on the optimized z, and then loop back to searching z with the optimized x, the example above could be modified like this:
 
-::
+..  code-block:: none
 
    <loop>
    == SEARCH z
 
-     = GEO_DELTA                     ! Note: Indentation is allowed, but does not affect the function.
+     = GEO_DELTA
      Ir L(1-6) z = -0.05 0.05 0.01
 
      = VIB_DELTA
@@ -173,13 +175,13 @@ It is possible to have a set of search blocks running in a loop using the tags `
 
 You can also nest loops; for example, to optimize z, then loop in-plane optimization to get optimal x and y for that z, then start again with z, you could do:
 
-::
+..  code-block:: none
 
    <loop>
 
    == SEARCH z
 
-     = GEO_DELTA                     ! Note: Indentation is allowed, but does not affect the function.
+     = GEO_DELTA                     
      Ir L(1-6) z = -0.05 0.05 0.01
 
      = VIB_DELTA
@@ -187,10 +189,12 @@ You can also nest loops; for example, to optimize z, then loop in-plane optimiza
 
    <loop>
 
-   == SEARCH xy    ! This block will automatically be split into one block optimizing x and one optimizing y, see above
+   ! This block will automatically be split into separate blocks for optimizing x and y
+   == SEARCH xy    
 
-     = GEO_DELTA                     ! Note: Indentation is allowed, but does not affect the function.
+     = GEO_DELTA                     
      Ir L(1-6) xy = -0.03 0.03 0.01
 
    </loop>
    </loop>
+

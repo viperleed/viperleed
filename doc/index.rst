@@ -7,6 +7,12 @@ The Vienna Package for TensErLEED (ViPErLEED) is a collection of tools for moder
 
 *TODO*: add nice introduction
 
+.. Table of contents in LaTeX pdf called Contents
+.. only:: latex
+
+   .. toctree::
+      :caption: Contents
+
 .. toctree:: 
    :maxdepth: 2
    :caption: Segments

@@ -10,7 +10,8 @@ Generally, elements are separated by whitespace, and ``!``, ``#`` or
 ``%`` mark the beginning of a comment.
 Parameter names should be given at the beginning of a line, e.g.:
 
-::
+..  code-block:: none
+
 
    LAYER_CUTS = 0.09 0.19 0.29 0.39 0.49 
    N_BULK_LAYERS = 2

@@ -1,7 +1,7 @@
 .. _list_input_files:
 
-List of input files
--------------------
+Input files
+-----------
 
 ViPErLEED has a number of input and control files, some of which are optional, 
 depending on the work-segment (:ref:`see above<work-segments>`).

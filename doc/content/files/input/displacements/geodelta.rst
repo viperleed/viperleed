@@ -5,7 +5,7 @@ Geometrical displacements
 
 Geometrical displacements to be used during the search must be specified in a block starting with the
 
-::
+..  code-block:: none
 
    = GEO_DELTA
 
@@ -13,7 +13,7 @@ header flag, followed by a list of displacements for each of the atoms that one 
 
 **Example**:
 
-::
+..  code-block:: none
 
    = GEO_DELTA
    O 1 z = -0.05 0.05 0.005      ! Oxygen atom 1 (and symmetry-equivalent atoms) will be displaced in z direction over the range [-0.05, 0.05] with step 0.005
@@ -26,7 +26,7 @@ The values on the right are interpreted as range of displacements in Ångström.
 
 When multiple searches are executed consecutively or looping, the displacement ranges are per default centered around the optimized position from previous searches. If you define an offset for an atom, the optimized position from previous searches is *discarded* for this atom, and the offset is applied to its original position. If you want to center the displacement range around the original position of the atom, you can also clear the offset without specifying a direction:
 
-::
+..  code-block:: none
 
    O 1 offset = 0         ! center around original atom position, instead of the position resulting from previous searches
    O 1 offset = clear     ! equivalent
@@ -43,7 +43,7 @@ Possible directions for displacements are:
    Displacements along the direction orthogonal to the surface. 
    Positive *z* values correspond to movements of the atoms away from the bulk.
 
-   ::
+   ..  code-block:: none
 
       O 1 z = -0.05 0.05 0.005      ! Oxygen atom 1 (and symmetry-equivalent atoms) will be displaced in z direction over the range [-0.05, 0.05] with step 0.005
 
@@ -58,7 +58,7 @@ Possible directions for displacements are:
    Notice that the direction vector will be normalized, so 
    ``[1 3]`` and ``[9 27]`` correspond to the same direction.
 
-   ::
+   ..  code-block:: none
 
       O 1 [1 0] = -0.05 0.05 0.005      ! Oxygen atom 1 will be displaced along a over the range [-0.05, 0.05] with step 0.005
       O 1 ab[1 -1] = -0.05 0.05 0.005   ! Oxygen atom 1 will be displaced diagonally along (a-b) over the range [-0.05, 0.05] with step 0.005
@@ -73,7 +73,7 @@ Possible directions for displacements are:
    cartesian axes.
    The direction vectors will be normalized.
 
-   ::
+   ..  code-block:: none
 
       O 1 xy[0 1] = -0.05 0.05 0.005    ! Oxygen atom 1 will be displaced along y over the range [-0.05, 0.05] with step 0.005
                                         ! Symmetry-equivalent atoms will be displaced such that the symmetry is preserved.
@@ -98,7 +98,7 @@ Possible directions for displacements are:
    significantly smaller than for a linear displacement when the circle 
    is small.
 
-   ::
+   ..  code-block:: none
 
       O 1 azi([0 0]) = -0.05 0.05 0.005   ! Oxygen atom 1 will be displaced along a circle centered on the origin by ±0.05 Å following the circular arc, with step 0.005
                                           ! Symmetry-equivalent atoms will be displaced such that the symmetry is preserved.
@@ -114,7 +114,7 @@ Possible directions for displacements are:
    Positive values are interpreted as moving the atom *away* from point 
    C, negative values move the atoms *towards* point C.
 
-   ::
+   ..  code-block:: none
 
       O 1 r([0 0]) = -0.05 0.05 0.005   ! Oxygen atom 1 will be displaced away from the origin over the range [-0.05, 0.05] with step 0.005
                                        ! Symmetry-equivalent atoms will be displaced such that the symmetry is preserved.
@@ -124,7 +124,7 @@ Offset
 
 In addition to displacement along a specific direction, an offset along a different direction can be defined. That offset will be added to the "neutral" position of the atom, i.e. apply to **all** points in the displacement range.
 
-::
+..  code-block:: none
 
    O 1 [0 1] offset = 0.02           ! Oxygen atom 1 displacements will be offset by 0.02 A along b
    O 1 ab[0 1] offset = 0.02         ! same as above
@@ -132,7 +132,7 @@ In addition to displacement along a specific direction, an offset along a differ
 
 Unlike the displacement ranges themselves, the offset flag allows multiple assignment, as long as one of the assignments is in-plane and the other one is out-of-plane:
 
-::
+..  code-block:: none
 
    ! in-plane and out-of-plane offsets can be combined:
    O 1 [0 1] offset = 0.02           ! Oxygen atom 1 displacements will be offset by 0.02 A along b ...

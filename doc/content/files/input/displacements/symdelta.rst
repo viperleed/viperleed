@@ -22,7 +22,7 @@ back on or changing the symmetry to another group).
 Example
 -------
 
-::
+..  code-block:: none
 
    = GEO_DELTA
    O 1 z = -0.05 0.05 0.005      ! Oxygen atom 1 (and symmetry-equivalent atoms) will be displaced in z direction over the range [-0.05, 0.05] with step 0.005

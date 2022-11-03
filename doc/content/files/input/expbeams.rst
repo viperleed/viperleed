@@ -10,9 +10,11 @@ extension) at initialization, but can also run without it up to the
 search. Executing search or R-factor calculations is only possible with 
 an EXPBEAMS file as it requires experimental data to compare to.
 
-**Format:**
+Format
+------
 
-::
+..  code-block:: none
+
 
    E, ( 1\| 0), ( 1\| 1), ( 1|-1)
    73.00, 5.40259E+02,         NaN,         NaN

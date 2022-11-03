@@ -14,7 +14,7 @@ Via the ASE interface provided in tleedm, an ASE atoms object can be
 used as surface model for a LEED I(V) calculation.
 
 This can be used to enable automated runs and sample surface structures 
-far beyond what is possible in the Tensor LEED approach :cite:p:`pendryReliabilityFactorsLEED1980`.
+far beyond what is possible in the Tensor LEED approach :cite:p:`rousTheoryTensorLEED1989,rousTensorLEEDTechnique1986`.
 Surface structures passed to tleedm via the application programming 
 interface (API) need to fulfill the same conventions (e.g. vacuum side o
 f surface towards +\ **z** direction) as applicable for POSCAR files.

@@ -20,9 +20,9 @@ in inputs, and outputs.
 Some plots may display pico meters (pm), but this will **always** be clearly
 labeled.
 
-Energies are in- and output in units of electron Volts (eV). Note that 
+Energies are in- and output in units of electron volts (eV). Note that 
 parts of TensErLEED and certain phaseshift generation scripts my use units
-of `Hartree <https://en.wikipedia.org/wiki/Hartree>`_
+of `Hartree <https://en.wikipedia.org/wiki/Hartree>`__
 internally (and in raw outputs).
 ViPErLEED takes care of the
 conversion automatically.

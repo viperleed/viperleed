@@ -19,22 +19,25 @@ V0_REAL is used to provide the real part of the inner potential of the solid.
 Syntax
 ------
 
-::
+..  code-block:: none
 
-   V0_REAL = -1*max(-10.17, -0.08+-74.19/sqrt(EE+19.18))
+   V0_REAL = -1*max(-10.17, -0.08 - 74.19/sqrt(EE+19.18))
    V0_REAL = RUNDGREN -10.17 -0.08 -74.19 19.18
 
-**Acceptable values**: The right-hand side should be any real-valued function of the electron energy. Use only ``EE``, ``ee``, ``eE``, or ``Ee`` to represent the electron energy. The expression will be interpreted by Fortran, so follow Fortran syntax. Acceptable arithmetic/mathematic functions are listed below. The special command ``RUNDGREN`` can be used to choose the following functional form for the real part of the inner potential
+**Acceptable values**: The right-hand side should be any real-valued function of the electron energy (in eV).
+Use only ``EE``, ``ee``, ``eE``, or ``Ee`` to represent the electron energy.
+The expression will be interpreted by Fortran, so follow Fortran syntax.
+Acceptable arithmetic/mathematic functions are listed below. The special command ``RUNDGREN`` can be used to choose the following functional form for the real part of the inner potential
 
 V(EE) = :ref:`FILAMENT_WF<FILWF>`  - max(c0,c1+c2/sqrt(EE+c3)),
 
-as per Eq. (A8) in :cite:t:`rundgrenOptimizedSurfaceslabExcitedstate2003` 
+as per Eq. (A8) in Rundgren's paper, Ref. :cite:p:`rundgrenOptimizedSurfaceslabExcitedstate2003` 
 
-**TODO: Find the more recent reference that has 4 constants!**.
+**TODO: Find the more recent reference that has 4 constants!**. (Rundgren 2007: :cite:p:`rundgrenElasticElectronatomScattering2007`)
 
 The same result can be obtained by the input
 
-::
+..  code-block:: none
 
    V0_REAL = -1*max(c0,c1+c2/sqrt(EE+c3))
 

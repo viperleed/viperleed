@@ -103,8 +103,8 @@ Overview of Planegroups
 .. figure:: /_static/planegroups.pdf
     :alt: Overview of planegroups and possible symmetry operations.
     :align: center
-    :width: 400px
+    :height: 900px
 
-    Overview of planegroups and possible symmetry operations.
+    Overview of plane groups and possible symmetry operations.
 
 .. |click| replace:: :download:`click here to download the PDF</_static/planegroups.pdf>`
