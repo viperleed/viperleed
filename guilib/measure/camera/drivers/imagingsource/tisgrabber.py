@@ -1055,7 +1055,6 @@ class WindowsCamera:
 
     _dll_stop_live = _dll.IC_StopLive
     _dll_stop_live.argtypes = (GrabberHandlePtr,)
-    _dll_stop_live.errcheck = check_dll_return()
 
     def stop(self):
         """Stop the camera."""
