@@ -538,6 +538,9 @@ class BadPixelsFinderDialog(qtw.QDialog):
         section = self.__progress['section_text']
         bar_section = self.__progress['section']
 
+        enabled = False if "done" in sec_txt.lower() else True
+        self.__buttons['abort'].setEnabled(enabled)
+
         if bar_total.maximum() != tot_secs:
             bar_total.setMaximum(tot_secs)
 
@@ -628,6 +631,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
     def __start(self, *_):
         """Begin finding bad pixels for the selected camera."""
         self.__enable_controls(False)
+        self.__buttons['abort'].setEnabled(False)
         self.__reset_progress_bars()
         self.__progress['group'].show()
         self.__camera_busy.show()
