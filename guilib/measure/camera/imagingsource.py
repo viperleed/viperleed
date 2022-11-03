@@ -116,8 +116,17 @@ def on_frame_ready_(__grabber_handle, image_start_pixel,
             and n_frames_received == camera.n_frames > 1):
         camera.abort_trigger_burst.emit()
 
-    # Prepare the actual image and send it out
+    # Prepare the actual image
     image = _img_ptr_to_numpy(image_start_pixel, camera)
+
+    # Check that the minimum intensity fits what the camera reports
+    # This fixes an issue observed for some Imaging Source cameras
+    # for which the lowest bit is set to zero, rather than to 1 as
+    # one would expect from the documentation.
+    if not camera.has_zero_minimum and not image.min():
+        camera.has_zero_minimum = True
+
+    # Send frame out
     camera.frame_ready.emit(image.copy())
 # pylint: enable=useless-param-doc,useless-type-doc
 
@@ -271,6 +280,7 @@ class ImagingSourceCamera(abc.CameraABC):
         self.hardware_supported_features.extend(['roi', 'color_format',
                                                  'black_level'])
         self.is_finding_best_frame_rate = False
+        self.has_zero_minimum = False
         self.best_next_rate = 1024
         self.__black_level = -1
         self.__burst_count = -1
@@ -362,7 +372,7 @@ class ImagingSourceCamera(abc.CameraABC):
         """
         *_, n_bytes, _ = self.image_info
         min_bit = 8*n_bytes - self.driver.dynamic_range
-        if n_bytes == 1:
+        if n_bytes == 1 or self.has_zero_minimum:
             pixel_min = 0
         else:
             pixel_min = 2**min_bit

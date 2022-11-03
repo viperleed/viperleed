@@ -727,7 +727,7 @@ class CameraViewer(qtw.QScrollArea):
         # pixels correction to images before showing.
         # Alternatively: use self.camera.bad_pixels
         # to decide depending on how many there are
-        saturation_arr = (img_array - _min) > .99*(_max - _min)
+        saturation_arr = img_array > _min + .99*(_max - _min)
         if np.sum(saturation_arr) <= 5:
             return None
 
