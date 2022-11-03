@@ -220,9 +220,7 @@ class CameraViewer(qtw.QScrollArea):
             if not self._initialized:
                 self.__flags[key] = [enabled, None]
                 continue
-            # Use property setters to take care of connected actions
-            prop = getattr(self, key)
-            prop.fset(enabled)
+            setattr(self, key, enabled)
 
         if self._initialized:
             return
@@ -690,7 +688,7 @@ class CameraViewer(qtw.QScrollArea):
                 continue
             act = self.__flags[key][1] = menu.addAction(act_text)
             act.setCheckable(True)
-            enabled = getattr(self, key).fget()
+            enabled = getattr(self, key)
             act.setChecked(qtc.Qt.Checked if enabled else qtc.Qt.Unchecked)
 
         # Device settings
@@ -775,7 +773,7 @@ class CameraViewer(qtw.QScrollArea):
         key = checkable.get(action, None)
         if key:
             # Get the property object, and set its value
-            getattr(self, key).fset(action.isChecked())
+            setattr(self, key, action.isChecked())
             return
 
         # Resort to looking at the text, as we
