@@ -135,7 +135,7 @@ class DarkLevelCalibration(_calib.CameraCalibrationTask):
                                 str(self.dark_level))
         self._task_settings.set('measurement_settings', 'n_frames', '1')
         self._task_settings.set("measurement_settings", "exposure",
-                                str(min(1000, max_exposure)))
+                                str(min(500, max_exposure)))
         self._task_settings.set("measurement_settings", "gain",
                                 str(min(20, max_gain)))
 
