@@ -703,6 +703,20 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
                 + interval * (self.n_frames - 1)   # all other frames
                 + self.extra_delay)
 
+    @staticmethod
+    def is_bad_pixels_error(error_info):
+        """Return whether error_info relates to 'bad pixels'."""
+        error_code, error_msg = error_info
+        try:
+            error = CameraErrors.from_code(error_code)
+        except AttributeError:
+            return False
+
+        error_msg = error_msg.replace('_', ' ')
+        if error is CameraErrors.INVALID_SETTINGS and "bad pixel" in error_msg:
+            return True
+        return False
+
     def check_loaded_settings(self):
         """Check that camera and configuration settings are the same.
 

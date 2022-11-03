@@ -140,20 +140,6 @@ class CameraCalibrationTask(CalibrationTask):
         """Return whether this task also saves images to disk."""
         return self.__saves_images
 
-    @staticmethod
-    def _is_bad_pixels_error(error_info):
-        """Return whether error relates to 'bad pixels'."""
-        _, error_msg = error_info
-        try:
-            error_name = error_info.name
-        except AttributeError:
-            return False
-
-        error_msg = error_msg.replace('_', ' ')
-        if error_name == "INVALID_SETTINGS" and "bad pixel" in error_msg:
-            return True
-        return False
-
     @qtc.pyqtSlot(np.ndarray)
     @abstractmethod
     def _check_and_store_frame(self, frame):
@@ -213,7 +199,7 @@ class CameraCalibrationTask(CalibrationTask):
         # If this task is performed before a bad-pixels-finding
         # routine, we should not cause abortion if there's no
         # bad-pixels information.
-        if (self._is_bad_pixels_error(error)
+        if (self.camera.is_bad_pixels_error(error)
                 and self in self.camera.calibration_tasks['bad_pixels']):
             return True
         return super()._on_device_error(error)
