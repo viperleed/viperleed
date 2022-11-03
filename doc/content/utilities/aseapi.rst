@@ -1,7 +1,7 @@
 .. _aseapi:
 
-Atomic Simulation Environment API
-=================================
+Atomic Simulation Environment Interface
+=======================================
 
 The tleedm package of ViPErLEED supports running directly from surface 
 structures from the `Atomic Simulation Environment 

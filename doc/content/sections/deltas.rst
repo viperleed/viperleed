@@ -7,39 +7,14 @@ Delta Calculation
 The delta amplitude calculation (called with :ref:`RUN = 2<run>`) is the 
 second part of a :ref:`Tensor LEED<tensor_leed>` calculation as implemented 
 in ViPErLEED.
-It requires a :ref:`refercence Calculation<ref-calc>` to be completed 
+It requires a :ref:`refercence calculation<ref-calc>` to be completed 
 beforehand and :ref:`tensor files<tensorszip>` to be stored.
 
 In the delta calculation, these :ref:`tensor files<tensorszip>`, i.e. the
-tensor quantities :math:`T^{ref}_{i;l,m;l',m'}`, that only depend on the 
-refercence structure are combined with the requested pertubations 
-(see file :ref:`DISPLACEMENTS<displacements>` for details)
+tensor quantities :math:`T^{ref}_{i;l,m;l',m'}` (see :ref:`tensor leed<tensor_leed>`),
+that only depend on the refercence structure are combined with the requested 
+pertubations (see file :ref:`DISPLACEMENTS<displacements>` for details)
 to calculate amplitude changes.
-
-The individual pertubations to the reference structure may be (arbitrary combinations of) 
-geometrical  displacements, changes in the vibrational amplitudes or 
-chemical substitutions. 
-All of these pertubations are considered on an atom-by-atom basis. For each
-atom :math:`i` and for each requested pertubation :math:`n` to that atom,
-first the perturbed :math:`t`-matrix :math:`\tilde{t_i} = t_i + \delta \tilde{t_i}` and then the 
-expression
-
-.. math:: 
-
-    \delta \tilde{A}_{i,n}^{per} = \sum_{l,m;l',m'} T^{ref}_{i;l,m;l',m'} \braket{\vec{r_i},l,m| \delta t_{i,n} |\vec{r_i},l',m'}
-
-are evaluated to calculate linearly independent amplitude changes 
-:math:`\delta \tilde{A}_{i,n}^{per}`.
-
-The resulting delta-amplitudes are stored in the :ref:`delta files<deltaszip>`
-and will be used in the :ref:`structure search<sec_search>` to calculate
-the intensities and subsequently the :ref:`R-factor<r-factor_calculation>` 
-for each structure candidate. :cite:p:`blumFastLEEDIntensity2001a`
-
-.. note:: 
-    Depending on the size of the unit cell and the requested pertubations,
-    the parameter space (and the :ref:`delta files<deltaszip>`) may become
-    very big.
 
 Delta Calculation in ViPErLEED
 ------------------------------
