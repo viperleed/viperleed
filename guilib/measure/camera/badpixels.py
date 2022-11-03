@@ -356,7 +356,6 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
 
         bad_y, bad_x = bad_y[correctable], bad_x[correctable]
 
-
         # Finally, get the offsets of the replacement pixels,
         # and store all the info in a BadPixels object.
         best_offset_indices = total_badness.argmin(axis=0)[bad_y, bad_x]

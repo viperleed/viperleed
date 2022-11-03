@@ -986,7 +986,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         if not bad_pix_path:
             base.emit_error(self, CameraErrors.INVALID_SETTINGS,
                             'camera_settings/bad_pixels_path',
-                            '\nInfo: No bad_pixel_path found.')
+                            '\nInfo: No bad_pixels_path found.')
             return
         try:
             self.__bad_pixels.read(bad_pix_path)
