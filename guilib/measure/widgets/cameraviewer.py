@@ -45,6 +45,7 @@ _DEFAULT_FLAGS = (
     ("roi_visible", True, "Allow setting ROI"),
     ("show_auto", True, "Show on new frames"),
     ("stop_on_close", True, "Stop camera when closed"),
+    ("auto_contrast", False, "Auto-adjust contrast"),
     ("interactions_enabled", True, ""),
     )
 
@@ -196,6 +197,11 @@ class CameraViewer(qtw.QScrollArea):
             This attribute can be set to False in case the user
             is not supposed to interact with the camera. Default
             is True.
+        auto_contrast : bool, optional
+            Whether the visual representation of images should
+            be automatically adjusted to fit the 5-95% range of
+            pixel intensities. This is only a visual effect. The
+            underlying data is not modified. Default is True.
         **kwargs : object
             Other unused optional arguments, passed to
             QScrollArea.__init__
@@ -228,11 +234,17 @@ class CameraViewer(qtw.QScrollArea):
 
         super().__init__(*args, **kwargs)
         self._initialized = True
-        self.__glob = {"image_size": qtc.QSize(),
-                       "camera": camera,
-                       "mouse_button": None,
-                       "img_array": None,  # Used for snapping images
-                       "intensity_limits": (0, 2**15 - 1),}
+        self.__glob = {
+            "image_size": qtc.QSize(),
+            "camera": camera,
+            "mouse_button": None,
+            "img_array": None,  # Used for snapping images
+            "intensity_limits": (0, 2**15 - 1),
+            # img_square_array is used for auto-contrast to compute
+            # the standard deviation of the current image. See
+            # self.__get_image()
+            "img_square_array": np.zeros(1, dtype=np.uint32),
+            }
         self.__children = {
             "viewer": ImageViewer(),
             "context_menu": qtw.QMenu(parent=self),
@@ -716,6 +728,39 @@ class CameraViewer(qtw.QScrollArea):
         self.__settings_roi.roi_changed.connect(self.__on_roi_settings_changed)
         self.roi.roi_changed.connect(self.__on_roi_rubberband_changed)
 
+    def __get_image(self):
+        """Return a QImage ready for display."""
+        img_array = self.__glob['img_array']
+
+        # Adjust contrast if necessary. Computing 5-95% percentiles
+        # as one would normally do (using numpy.percentile) is too
+        # slow. Let's use mean +- 2.5 * st_dev. The standard deviation
+        # is computed manually, as numpy.std is quite slow. Notice that
+        # we use uint32 for the array that contains the square of the
+        # image, as this prevents overflowing.
+        if self.auto_contrast:
+            _dmax = 65535  # 2**16 - 1
+            _mean = img_array.mean()
+            _square = self.__glob['img_square_array']
+            if _square.shape != img_array.shape:
+                _square = np.zeros_like(img_array, dtype=np.uint32)
+                self.__glob['img_square_array'] = _square
+            _square[:, :] = img_array
+            _square *= _square
+            _std = np.sqrt(_square.mean() - _mean**2)
+            _min = np.uint16(max(_mean - 2.5 * _std, 0))
+            _max = np.uint16(min(_mean + 2.5 *_std, _dmax))
+            _scale = np.uint16(_dmax / (_max - _min))
+            img_array = img_array.clip(_min, _max, dtype=img_array.dtype)
+            # Adjust range to 0 -- (2**16 - 1)
+            img_array -= _min
+            img_array *= _scale
+
+        # Notice the swapping of width and height!
+        height, width = img_array.shape
+        return qtg.QImage(img_array, width, height, img_array.strides[0],
+                          qtg.QImage.Format_Grayscale16)
+
     def __get_saturation_mask(self, img_array):
         """Return a QRegion saturation mask for image."""
         _min, _max = self.__glob['intensity_limits']
@@ -907,12 +952,8 @@ class CameraViewer(qtw.QScrollArea):
             img_array = img_array[roi_y:roi_y+roi_h, roi_x:roi_x+roi_w]
         self.__glob['img_array'] = img_array
 
-        # Notice the swapping of width and height!
-        height, width = img_array.shape
-        image = qtg.QImage(img_array, width, height,
-                           img_array.strides[0],
-                           qtg.QImage.Format_Grayscale16)
-
+        # Get image, including contrast adjustment if necessary
+        image = self.__get_image()
         mask = self.__get_saturation_mask(img_array)
         self.__flags["image_saturated"] = mask is not None
         self.__update_frame_style()
