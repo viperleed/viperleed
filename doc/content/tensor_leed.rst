@@ -168,4 +168,4 @@ in the tensor LEED approximation and also LEED :math:`I(V)` in general:
 
 
 
-.. [1] For details on the algorithm used in TensErLEED, see ref. :cite:t:`kottckeNewApproachAutomated1997`.
+.. [1] For details on the algorithm used in TensErLEED, see ref. :cite:p:`kottckeNewApproachAutomated1997`.
