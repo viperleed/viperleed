@@ -46,6 +46,9 @@ bibtex_reference_style = 'label' # use numbers in text too
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = "sphinx_rtd_theme"
+#html_theme = 'sphinx_book_theme'
+#html_theme = 'piccolo_theme'
+
 html_static_path = ['_static']
 
 # RTD theme specific
@@ -67,7 +70,7 @@ html_css_files = [
 # -- Options for LaTeX output ------------------------------------------------
 # https://www.sphinx-doc.org/en/master/latex.html
 latex_show_urls = 'inline'
-latex_show_pagerefs = True
+latex_show_pagerefs = False # show page numbers
 latex_elements = {
     'papersize': 'a4paper',
     'preamble': r'''
