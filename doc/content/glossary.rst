@@ -31,7 +31,10 @@ Glossary
       Graphical User Interface
 
     MPI
-      Message Passing Interface. (See e.g. `the Wikipedia entry <https://en.wikipedia.org/wiki/Message_Passing_Interface>`)
+      Message Passing Interface. (See e.g. `the Wikipedia entry <https://en.wikipedia.org/wiki/Message_Passing_Interface>`__)
 
     tleedm
       The TensErLEED manager, the Python module of ViPErLEED.
+
+    Python
+      The Python programming language. (See e.g. `the Python homepage <https://www.python.org>`__)

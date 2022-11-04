@@ -1,7 +1,7 @@
 .. _bookkeeper:
 
-The bookkeeper utility
-======================
+Bookkeeper
+==========
 
 The bookkeeper is a small application made to run in between executions 
 of the TensErLEED Manager tleedm. Its purpose is to collect input and 

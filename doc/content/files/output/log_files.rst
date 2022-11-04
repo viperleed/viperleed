@@ -15,13 +15,13 @@ The contents of this file will also be printed to the standard output.
 *If something goes wrong in a ViPErLEED run, this is the first place to look.*
 
 ``refcalc-$timestamp.log``
-=========================
+==========================
 
 The refcalc log contains the output normally created by the TensErLEED :ref:`reference calculation<ref-calc>`, including information on the convergence of the layer doubling scheme of TensErLEED :cite:p:`blumFastLEEDIntensity2001a`.
 Logs from multiple reference calculations will be collected and their order may not be preserved.
 
 ``delta-$timestamp.log``
-=========================
+========================
 
 The log of the :ref:`delta-amplitude calculation<sec_deltas>`.
 It generally does not contain much usefull information, except the ``LMAX`` value used for each energy step.

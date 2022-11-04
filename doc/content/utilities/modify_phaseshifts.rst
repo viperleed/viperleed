@@ -1,12 +1,12 @@
 .. _modify_phaseshifts:
 
-==================
-Modify Phaseshifts
-==================
+=================
+ModifyPhaseshifts
+=================
 
 ``modify_phaseshifts.py`` is a simple :term:`Python` utility script packaged with ViPErLEED.
 It reads a :ref:`PHASESHIFTS file<phaseshifts>` and allows the user to copy and rearrange the blocks.
-This can be helpful if it is desireable to reuse a custom :ref:`PHASESHIFTS file<phaseshifts>` for structures with the same chemical elements but different stoichiometries or different :ref:`site definitions<site_def>`.
+This can be helpful if it is desireable to reuse a custom :ref:`PHASESHIFTS file<phaseshifts>` for structures with the same chemical elements but different stoichiometries or different :ref:`site definitions<sitedef>`.
 
 Usage
 =====

@@ -1,4 +1,4 @@
-.. aux_to_exp:
+.. _aux_to_exp:
 
 =======================
 AUXEXPBEAMS_TO_EXPBEAMS
