@@ -8,8 +8,8 @@ Here, we provide a very rudimentary introduction to the tensor LEED
 approach employed by TensErLEED and consequently also ViPErLEED.
 Please note, that this is not, and does not aim to be a comprehensive or rigourous 
 introduction to the topic.
-The descriptions below are only intended to provided a quick overview of 
-the method and serve as explaination and motivation for the various sections of 
+The descriptions below are only intended to provide a quick overview of 
+the method and serve as explanation and motivation for the various sections of 
 a LEED :math:`I(V)` calculation in ViPErLEED.
 
 For an in-depth description of all parts of the tensor LEED approach, we refer to the 
@@ -55,7 +55,7 @@ using the perturbed atomic :math:`t`-matricies :math:`\delta t_i` and the
 tensor quantities :math:`T^{ref}_{i;l,m;l',m'}`. The sum runs over angular 
 momentum and magnetic quantum numbers :math:`l` and :math:`m`.
 For a more rigourous derivation, refer to the original work by Rous and Pendry 
-:cite:p:`rousTensorLEEDTechnique1986` and the TensErLEED paper by Bulm and 
+:cite:p:`rousTensorLEEDTechnique1986` and the TensErLEED paper by Blum and 
 Heinz :cite:p:`blumFastLEEDIntensity2001a`.
 
 The quantities :math:`T^{ref}_{i;l,m;l',m'}` only depend on the reference structure
@@ -98,6 +98,7 @@ for each structure candidate. :cite:p:`blumFastLEEDIntensity2001a`
     the parameter space (and the :ref:`delta files<deltaszip>`) may become
     very big.
 
+.. _tensor_leed_search:
 
 Structure Search
 ================
@@ -128,13 +129,23 @@ in the tensor LEED approximation and also LEED :math:`I(V)` in general:
     What constitutes a *small* pertubation is naturally system-dependent, but 
     generally, the limit lies in the range of few hundred pm at best :cite:`rousTensorLEEDTechnique1986`.
 
-    As work-around, it is possible to run a new refercence calculation
-    and delta-amplitudes calculation when the structure optimization 
-    trajectory approaches this limit.
+    As work-around, it is possible to run a new refercence calculation and delta-amplitudes calculation when the structure optimization trajectory approaches this limit.
     You can use the the :ref:`RUN parameter<run>`
     to execute multiple reference calculations, delta-amplitude calculations,
     and structure searches in series.
-    
+
+-   The parameter space grows quickly for larger unit cells.
+    Luckily, many symmetries inherent to the surface structure can be exploited to eliminate redundent parameters.
+    For example, geometric displacements of symmetry linked atoms must always happen in a concerted fashion.
+    If that were not the case, the symmetry would be broken and a different LEED pattern would result.
+
+    To make use for these symmetries and the resulting reduced parameter space, it is necessary to know and enforce the surface slab symmetry.
+    While manually finding out the surface slab symmetry is generally an easy task, enforcement is not.
+    This would require manually going throug every symmetry-linked atom and defining matching displacement vectors.
+
+    *Fortunately for the user*, automatic symmetry-detection and enforcement is one of the **main and unique features** of ViPErLEED.
+    See the ViPErLEED paper for details (**TODO**).
+
 -   The R-factor hyper-surfaces tend to be inherently non-smooth. This is 
     a consequence of how the various R-factors are designed.
 
@@ -143,12 +154,17 @@ in the tensor LEED approximation and also LEED :math:`I(V)` in general:
     into two mostly-indepenent stages.
     As a direct consequence, the optimization can **only** be performed 
     on a pre-defined grid of pertubation vectors (as given by the :ref:`DISPLACEMENTS file<displacements>`).
-    Unfortunately, this together with the last point greatly limits the 
-    pool of applicable optimzation algorithms\ [1]_.
-    
+    Unfortunately, this together with the last point greatly limits the pool of applicable optimzation algorithms\ [1]_.
+
     Further, to achieve the best possible fit, this grid
     generally makes it necessary to run multiple sets of delta-amplitude
     calculations and structure optimizatios with varying grid-densities.
+
+-   The structure search implemented in TensErLEED has the additional limitation that geometrical displacements are limited to one dimension per atom.
+    Per search run, atoms can only be displaced along a pre-defined parametrized curve, rather than freely in 3D space.
+    To optimize the position of atoms in 3 dimensions, multiple sequential search runs are required.
+    See the entry on the :ref:`DISPLACEMENTS file<displacements>` for details and work-arounds (such as looping searches).
+
 
 
 

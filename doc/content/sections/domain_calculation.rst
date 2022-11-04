@@ -41,7 +41,7 @@ Instead of specifying :ref:`DISPLACEMENTS<DISPLACEMENTS>`  in each of the input 
 
      == DOMAIN 1x1
     
-       = GEO_DELTA               ! Note: Indentation is allowed, but does not affect the function.
+       = GEO_DELTA
        * L(1) z = -0.1 0.1 0.02
        * L(2) z = -0.05 0.05 0.025
 
@@ -50,3 +50,5 @@ Instead of specifying :ref:`DISPLACEMENTS<DISPLACEMENTS>`  in each of the input 
        = GEO_DELTA
        * L(1-2) z = -0.1 0.1 0.02
        * L(3) z = -0.05 0.05 0.025
+
+.. note:: Indentation is allowed, but does not affect function.
