@@ -10,4 +10,4 @@ run.
 
 For backwards compatibility, old experimental beam files formatted as 
 AUXEXPBEAMS can easily be transformed to the :ref:`EXPBEAMS<EXPBEAMS>` 
-file format with the AUXEXPBEAMS_to_EXPBEAMS utility.
+file format with the :ref:`AUXEXPBEAMS_to_EXPBEAMS utility<aux_to_exp>`.
