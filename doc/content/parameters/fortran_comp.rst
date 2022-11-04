@@ -19,7 +19,7 @@ if ifort is not present, but gfortran is:
 ::
 
    FORTRAN_COMP = 'gfortran -O2'
-   FORTRAN_COMP post = '-llapack -lpthread'
+   FORTRAN_COMP post = '-llapack -lpthread -lblas'
 
 Additionally, if mpirun is present:
 

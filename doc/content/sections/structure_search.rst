@@ -36,7 +36,7 @@ When a structure search is executed in ViPErLEED the following main steps are pe
 #.  ViPErLEED generates and writes the TensErLEED inpute files ``rf.info``, ``PARAM`` and ``search.steu`` based on the slab and :ref:`EXPBEAMS file<expbeams>`.
 #.  Based on the slab symmetry and the :ref:`symmetry settings<symmetry_settings>`, ViPErLEED determines the symmetry-linked parameters and writes the parameter-space input file control.chem.
 #.  ViPErLEED will then, based on :ref:`N_CORES<ncores>` and the presece of ``mpirun`` fetch the corresponding TensErLEED source code files and compile them **at run-time**. **Note** that this will require the pre-compiled object files random_.o or MPIrandom_.o to be present. See the :ref:`getting started section<getting_started>` for details.
-#.  The search log file ``search-$timestamp`` is created and will be filled with progress information as the search continues.
+#.  The :ref:`search log file<log_files>` ``search-$timestamp`` is created and will be filled with progress information as the search continues.
 
 With the preparation finished, the search is now executed (via ``mpirun`` if available).
 Trial surface structures will be sampled using the algorithm described by :cite:t:`kottckeNewApproachAutomated1997`, with a starting configuration as defined by :ref:`SEARCH_START<searchstart>` and :ref:`SEARCH_POPULATION<searchpop>` parallel trial individuals.
