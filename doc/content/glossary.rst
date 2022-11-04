@@ -32,3 +32,6 @@ Glossary
 
     MPI
       Message Passing Interface. (See e.g. `the Wikipedia entry <https://en.wikipedia.org/wiki/Message_Passing_Interface>`)
+
+    tleedm
+      The TensErLEED manager, the Python module of ViPErLEED.
