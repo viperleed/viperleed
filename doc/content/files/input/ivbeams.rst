@@ -7,9 +7,7 @@ The IVBEAMS file lists the beams for which output should be generated.
 These are the beams for which the R-factors will be calculated, as well 
 as those on which the structural optimization will run.
 
-If no IVBEAMS file is found, but the file with experimental :math:`I(V)`
- curves (:ref:`EXPBEAMS file<EXPBEAMS>`) is 
-present, an IVBEAMS file will be generated from the EXPBEAMS file. 
+If no IVBEAMS file is found, but the file with experimental :math:`I(V)` curves (:ref:`EXPBEAMS file<EXPBEAMS>`) is present, an IVBEAMS file will be generated from the EXPBEAMS file. 
 Note that this will only happen once, so later iterations of the 
 program will use the IVBEAMS file created in the first run, if it is 
 not deleted manually.

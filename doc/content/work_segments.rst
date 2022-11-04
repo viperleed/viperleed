@@ -3,8 +3,6 @@
 ViPErLEED work segments
 -----------------------
 
-**Note: not sure where to put this, but here seemed fine for now**
-
 ViPErLEED operates using a set of self-contained work segments (see also the :ref:`RUN<RUN>`  parameter). 
 The three main segments, following the logic of calculations using the Tensor LEED approximation, are:
 
