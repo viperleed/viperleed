@@ -73,7 +73,6 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 #       take for a camera to restart after being paused, as this determines
 #       what 'too short/long' means. It could be potentially an information
 #       to be gathered during preparation.
-# TODO: auto-scale contrast on camera viewer
 # TODO: see if possible to not complain about missing bad pixels
 # TODO: moveToThread may be possible if we recreate .driver after we have
 #       moved to the new thread (like we do for .serial in ControllerABC).
@@ -530,7 +529,7 @@ class Measure(ViPErLEEDPluginBase):
         for camera in measurement.cameras:
             self._dialogs['camera_viewers'].append(
                 CameraViewer(camera, stop_on_close=False, roi_visible=False,
-                             interactions_enabled=False)
+                             auto_contrast=True, interactions_enabled=False)
                 )
 
     def __make_ctrl_settings_dialog(self, ctrl_cls, name, port):
@@ -677,6 +676,7 @@ class Measure(ViPErLEEDPluginBase):
         for viewer in self._dialogs['camera_viewers']:
             viewer.stop_on_close = True
             viewer.interactions_enabled = True
+            viewer.auto_contrast = False
 
     @qtc.pyqtSlot()
     def __on_measurement_prepared(self):
