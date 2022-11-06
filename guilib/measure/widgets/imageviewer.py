@@ -16,14 +16,8 @@ from PyQt5 import (QtCore as qtc,
                    QtGui as qtg)
 
 
-# TODO: add children (QLabel?) that holds saturation overlay
-
-
 class ImageViewer(qtw.QLabel):
     """A QLabel that displays images.
-
-    The images are scaled with a smooth transform, which makes
-    pixels appear blurred at large upscaling factors.
 
     Attributes
     ----------
@@ -51,6 +45,8 @@ class ImageViewer(qtw.QLabel):
     -------------------
     sizeHint()
         Return optimal size for self
+    paintEvent(event)
+        Paint only the visible portion of the image.
 
     Signals
     -------
@@ -71,12 +67,10 @@ class ImageViewer(qtw.QLabel):
 
         self.setBackgroundRole(qtg.QPalette.Base)
 
-        # The QLabel will fill the whole area of the
-        # widget containing it, and can scale its
-        # contents rather than itself when adjusted
+        # The QLabel will not use sizeHint, but fill
+        # the whole area of the widget containing it
         self.setSizePolicy(qtw.QSizePolicy.Ignored,
                            qtw.QSizePolicy.Ignored)
-        self.setScaledContents(True)
 
     @property
     def image_scaling(self):
@@ -150,12 +144,34 @@ class ImageViewer(qtw.QLabel):
         self.image_scaling = scaling
         return scaling
 
+    def paintEvent(self, event):         # pylint: disable=invalid-name
+        """Paint only the visible portion of the image."""
+        # Pretty much rewrite the relevant parts of qlabel.cpp
+        painter = qtg.QPainter(self)
+        self.drawFrame(painter)
+
+        if not self.__has_pixmap:
+            return
+
+        pix = self.pixmap()
+        if not self.isEnabled():
+            style = self.style()
+            options = qtw.QStyleOption()
+            options.initFrom(self)
+            pix = style.generateIconPixmap(qtg.QIcon.Disabled, pix, options)
+
+        # Rather than painting via style, as is done in qlabel.cpp,
+        # use directly the painter. This has an overload that allows
+        # to select only a portion of the image to be painted. The
+        # area that requires repaint is event.rect(). It has to be
+        # rescaled to image coordinates to pick the correct region.
+        image_rect = qtc.QRect(event.rect().topLeft() / self.image_scaling,
+                               event.rect().size() / self.image_scaling)
+        painter.drawPixmap(event.rect(), pix, image_rect)
+
     def sizeHint(self):                  # pylint: disable=invalid-name
         """Return optimal size for self."""
-        pixmap = self.pixmap()
-        if (not pixmap
-            or not pixmap.size()
-            or not all(s > 0 for s in (pixmap.width(), pixmap.height()))):
+        if not self.__has_pixmap:
             return super().sizeHint()  # invalid pixmap
 
         if self.optimum_size:
@@ -176,3 +192,8 @@ class ImageViewer(qtw.QLabel):
         self.__optimum_scaling = self.image_scaling
         self.optimum_size = self.scaled_image_size
         return self.optimum_size
+
+    @property
+    def __has_pixmap(self):
+        """Return whether self has a valid pixmap."""
+        return self.pixmap() and not self.pixmap().isNull()
