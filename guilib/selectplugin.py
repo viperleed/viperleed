@@ -65,6 +65,7 @@ class ViPErLEEDSelectPlugin(ViPErLEEDPluginBase):
         super().__init__(parent)
 
         self._btns = {k: qtw.QPushButton('') for k in self.modules}
+        self._btn_names = {v: k for k, v in self._btns.items()}
         self._open_modules = dict.fromkeys(self.modules)
         self._compose()
 
@@ -84,7 +85,12 @@ class ViPErLEEDSelectPlugin(ViPErLEEDPluginBase):
                 event.ignore()
                 return
             for module in open_modules:
-                module.close()
+                try:
+                    module.close()
+                except RuntimeError:
+                    # Most likely module was already destroyed
+                    pass
+
         # Now close off all open widgets in the QApplication
         for widg in qtw.qApp.topLevelWidgets():
             widg.close()
@@ -153,17 +159,15 @@ class ViPErLEEDSelectPlugin(ViPErLEEDPluginBase):
         RuntimeError
             If the module being opened is not a valid ViPErLEED module
         """
-        # Disable pylint warning, as _on_module_open_requested can
-        # only run if there are buttons, one of which will always be
-        # the sender. Thus name always has a well-defined value.
-
-        # pylint: disable=undefined-loop-variable
-
-        for name, button in self._btns.items():
-            if self.sender() is button:
-                break
-
+        name = self._btn_names[self.sender()]
         module = self._open_modules[name]
+
+        try:
+            module.parent()
+        except (AttributeError, RuntimeError):
+            # AttributeError: module is None
+            # RuntimeError: C++ object destroyed
+            self._open_modules[name] = module = None
 
         # Module is already open
         if module:
