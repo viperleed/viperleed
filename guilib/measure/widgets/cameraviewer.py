@@ -567,6 +567,8 @@ class CameraViewer(qtw.QScrollArea):
     @property
     def __checkable_flags(self):
         """Return the flags that are user-editable."""
+        # pylint: disable=unsubscriptable-object
+        # Appears to be a bug related to control-flow and isinstance
         return {k: v
                 for k, v in self.__flags.items()
                 if (isinstance(v, list) and v[1])}
@@ -629,7 +631,7 @@ class CameraViewer(qtw.QScrollArea):
 
     def __apply_roi(self, *_):
         """Set a new ROI in the camera."""
-        old_roi_x, old_roi_y, *_ = self.camera.roi
+        old_roi_x, old_roi_y, *_ = self.__settings_roi.original_roi
         new_roi_x, new_roi_y, roi_w, roi_h = self.roi.image_coordinates
 
         # Give the camera new, updated settings. This is the easier way
