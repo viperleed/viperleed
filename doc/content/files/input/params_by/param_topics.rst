@@ -42,6 +42,7 @@ Defines what to calculate and where to start.
   | :ref:`TL_IGNORE_CHECKSUM<TL_IGNORE_CHECKSUM>` | Skip calculation of TensErLEED source code checksums                     |
   +-----------------------------------------------+--------------------------------------------------------------------------+
 
+.. _input_structure_settings:
 
 Input Structure
 ===============
