@@ -107,7 +107,7 @@ class RegionOfInterest(qtw.QWidget):
                          'increments': increments,
                          'pos_increments': (1, 1)}
         self.__drag_origin = qtc.QPoint(0, 0)
-        self.image_scaling = 1
+        self.__image_scaling = 1
         self.origin = qtc.QPoint(0, 0)
         self.__context_menu = qtw.QMenu(parent=self)
 
@@ -175,6 +175,19 @@ class RegionOfInterest(qtw.QWidget):
         self.setGeometry(qtc.QRect(*screen_roi))
 
     @property
+    def image_scaling(self):
+        """Return the current scaling factor of the image."""
+        return self.__image_scaling
+
+    @image_scaling.setter
+    def image_scaling(self, new_image_scaling):
+        """Set a new scaling factor for the image."""
+        if new_image_scaling == self.image_scaling:
+            return
+        self.__image_scaling = new_image_scaling
+        self.update_size_limits()
+
+    @property
     def increments(self):
         """Return the smallest change of width/height in image coordinates."""
         return self.__limits['increments']
@@ -192,6 +205,7 @@ class RegionOfInterest(qtw.QWidget):
          self.__limits['increments'],
          self.__limits['pos_increments']) = new_limits
 
+        self.update_size_limits()
     @property
     def maximum(self):
         """Return the largest width/height in image coordinates."""

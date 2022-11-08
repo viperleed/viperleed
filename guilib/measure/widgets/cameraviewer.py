@@ -257,8 +257,6 @@ class CameraViewer(qtw.QScrollArea):
         except camera.exceptions:
             # Most likely camera is not open
             self.__flags["needs_roi_limits"] = True
-        else:
-            self.roi.update_size_limits()
 
         self.__compose()
         self.__connect()
@@ -809,7 +807,6 @@ class CameraViewer(qtw.QScrollArea):
         if self.__flags["needs_roi_limits"]:
             self.__flags["needs_roi_limits"] = False
             self.roi.limits = self.camera.get_roi_size_limits()
-            self.roi.update_size_limits()
 
     def __on_context_menu_triggered(self, action):
         """React to a selection in the context menu."""
@@ -839,7 +836,6 @@ class CameraViewer(qtw.QScrollArea):
         """React to a change of zoom factor."""
         new_scaling = self.__img_view.image_scaling
         self.roi.image_scaling = new_scaling
-        self.roi.update_size_limits()
 
         title, *_ = self.windowTitle().split(' - ')
         title += f' - {100*new_scaling:.1f}%'
