@@ -179,19 +179,33 @@ For actually running, set :ref:`FORTRAN_COMP<fortran_comp>` as follows:
 Directory structure and file names
 ==================================
 
-Each calculation must have its own directory. 
+In ViPErLEED, each calculation must have its own directory. 
 The input and output files have fixed names, see :ref:`the list of files<list_input_files>`. 
-In case of automated multiple search runs (which can be specified in the :ref:`DISPLACEMENTS<DISPLACEMENTS>`  file), 
-tleedm creates a “workhistory” directory and moves a snapshot of all input and output files that may be relevant and may get overwritten into a subfolder there. **TODO** Give an example tree for a LEED project!!
+In case of automated multiple search runs (which can be specified in the :ref:`DISPLACEMENTS<DISPLACEMENTS>`  file), tleedm creates a “workhistory” directory and moves a snapshot of all input and output files that may be relevant and may get overwritten into a subfolder there.
 
-::
+Below, we give an example directory tree with the files needed to start a LEED :math:`I(V)` calculation in ViPErLEED.
+See also the ViPErLEED examples.
 
-    min
 
+
+.. code-block:: console
+    :caption: Minimum input directory tree
+
+    my_surface
     ├── EXPBEAMS.csv
     ├── PARAMETERS
     ├── job.py
     └── POSCAR
+
+The calculation's source directory ``my_surface`` three files excluding the :ref:`job.py<how_to_run>` script:
+
+-   :ref:`EXPBEAMS.csv file<expbeams>` contains the experimentally measured LEED :math:`I(V)` curves.
+-   :ref:`POSCAR file<poscar>` contains the reference surface structure.
+-   :ref:`PARAMETERS<parameters>` contains the settings for the calculation (see :ref:`the list of parameters<paramname>`).
+
+
+
+.. code-block:: console
 
     normal
 
@@ -204,6 +218,8 @@ tleedm creates a “workhistory” directory and moves a snapshot of all input a
     ├── requirements.txt
     └──  server.py          
 
+.. _how_to_run:
+
 Running the program
 ===================
 
@@ -211,6 +227,9 @@ A large number of files are created in the directory that tleedm is executed in.
 Exemplary job scripts are provided.
 These generally create a "work" directory, copy input files there, execute tleedm, and then copy the relevant output files back to the data directory.
 For this purpose, tleedm also creates a "manifest" file that lists the relevant output files which should be copied back.
+
+Minimum information:
+--------------------
 
 ::
 
