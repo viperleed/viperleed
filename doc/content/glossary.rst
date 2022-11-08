@@ -38,3 +38,37 @@ Glossary
 
     Python
       The Python programming language. (`Homepage <https://www.python.org>`__)
+
+    Fortran
+      The Fortran programming language.
+      One of the first high-level programming languages.
+      It is still heavily used in legacy :term:`HPC` applications.
+      TensErLEED is written in Fortran 77 and Fortran 90.
+      (`Wikipedia entry <https://en.wikipedia.org/wiki/Fortran>`__)
+
+    HPC
+      High Performance Computing
+    
+    gcc
+      GNU Compiler Collection (`Homepage <https://gcc.gnu.org>`__)
+
+    gfortran
+      The GNU :term:`Fortran` compiler.
+
+    ifort
+      Intel Fortran Compiler.
+
+    mpifort
+      The :term:`MPI` wrapper for :term:`gfortran`. (`Homepage <https://www.open-mpi.org/doc/v4.1/man1/mpifort.1.php>`__)
+
+    mpiifort
+      The :term:`MPI` wrapper for :term:`gfortran`. (`Homepage <https://www.open-mpi.org/doc/v4.1/man1/mpifort.1.php>`__)
+
+    WSL
+      Windows Subsystem for Linux. (See also `here <https://learn.microsoft.com/en-us/windows/wsl/about>`__)
+
+    BLAS
+      Basic Linear Algebra Subprograms (`Wikipedia entry <https://en.wikipedia.org/wiki/Basic_Linear_Algebra_Subprograms>`__)
+
+    LAPACK
+      Linear Algebra Package. (`Wikipedia entry <https://en.wikipedia.org/wiki/LAPACK>`__)
