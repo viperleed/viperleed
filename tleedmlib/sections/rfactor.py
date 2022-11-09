@@ -13,6 +13,9 @@ import subprocess
 from pathlib import Path
 
 import numpy as np
+from pathlib import Path
+
+from tleedmlib.leedbase import copy_compile_log
 
 from viperleed.tleedmlib.files.iorefcalc import readFdOut
 from viperleed.tleedmlib.leedbase import fortran_compile_batch, getTLEEDdir, getTensors
@@ -506,9 +509,11 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
     compile_log = "compile-rfactor.log"
     try:
         fortran_compile_batch(ctasks, logname=compile_log)
-    except Exception:
+    except Exception as err:
         logger.error("Error compiling fortran files: ", exc_info=True)
-        raise
+        # move compile log to compile_logs directory
+        copy_compile_log(rp, Path(compile_log), "rfactor-compile")
+        raise err
     else:
         # move log file to supp
         try:

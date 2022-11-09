@@ -25,6 +25,9 @@ from sklearn.linear_model import LinearRegression, Ridge, Lasso, ElasticNet
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.pipeline import make_pipeline
 import scipy
+from pathlib import Path
+
+from tleedmlib.leedbase import copy_compile_log
 
 import viperleed.tleedmlib.files.iosearch as tl_io
 import viperleed.tleedmlib as tl
@@ -702,16 +705,13 @@ def search(sl, rp):
     if hashname:
         to_link += " intarr_hashing.o"
     ctasks.append((fcomp[0] + " -o " + searchname, to_link, fcomp[1]))
+    compile_log = "compile-search.log"
     try:
-        compile_log = "compile-search.log"
         fortran_compile_batch(ctasks, logname=compile_log)
-        try:
-            shutil.move(compile_log, os.path.join("compile_logs", compile_log))
-        except Exception:
-            logger.warning("Could not move " + compile_log + " to SUPP")
-    except Exception:
+    except Exception as compile_err:
+        copy_compile_log(rp, Path(compile_log), log_name="search-compile")
         logger.error("Error compiling fortran files: ", exc_info=True)
-        raise
+        raise compile_err
     logger.debug("Compiled fortran files successfully")
     # run
     if rp.LOG_SEARCH:

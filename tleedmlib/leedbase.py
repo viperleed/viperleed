@@ -888,3 +888,11 @@ def copy_compile_folder(ct, rp, compile_log_base=""):
         logger.warning("Error copying refcalc compile log from folder "
                        + ct.foldername)
     return
+
+def copy_compile_log(rp, logfile, log_name = "fortran-compile"):
+
+    try:
+        shutil.copy2(logfile, rp.compile_logs_dir / log_name / ".log")
+    except OSError:
+        logger.warning(f"Unable to copy compilation log file {str(logfile)}")
+        

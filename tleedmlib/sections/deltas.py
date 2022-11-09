@@ -16,13 +16,14 @@ import hashlib
 from pathlib import Path
 
 import numpy as np
+from pathlib import Path
 
 import viperleed.tleedmlib as tl
 import viperleed.tleedmlib.files.iodeltas as tl_io
 from viperleed.tleedmlib.files.beams import writeAUXBEAMS
 from viperleed.tleedmlib.files.displacements import readDISPLACEMENTS_block
 # from viperleed.tleedmlib.files.parameters import updatePARAMETERS
-from viperleed.tleedmlib.leedbase import monitoredPool, copy_compile_folder
+from viperleed.tleedmlib.leedbase import monitoredPool, copy_compile_log
 from viperleed.tleedmlib.checksums import validate_multiple_files
 
 logger = logging.getLogger("tleedm.deltas")
@@ -63,6 +64,16 @@ class DeltaCompileTask():
         for filepath in self.get_source_files():
             if filepath:
                 shutil.copy2(filepath, filepath.name)
+
+        @property
+        def logfile(self):
+            return Path(self.basedir) / self.foldername / "fortran-compile.log"
+
+        @property
+        def compile_log_name(self):
+            # name as it should appear in the compile_logs directory
+            return self.foldername
+
 
 
 class DeltaRunTask():
@@ -512,7 +523,13 @@ def deltas(sl, rp, subdomain=False):
     # compile files
     logger.info("Compiling fortran files...")
     poolsize = min(len(deltaCompTasks), rp.N_CORES)
-    monitoredPool(rp, poolsize, compileDelta, deltaCompTasks)
+    try:
+        monitoredPool(rp, poolsize, compileDelta, deltaCompTasks)
+    except Exception as compile_err:
+        # save log files in case of error:
+        for ct in deltaCompTasks:
+            copy_compile_log(rp, ct.logfile, ct.compile_log_name)
+        raise compile_err
     if rp.STOP:
         return
 

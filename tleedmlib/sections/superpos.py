@@ -15,6 +15,8 @@ import shutil
 import subprocess
 from pathlib import Path
 
+from tleedmlib.leedbase import copy_compile_log
+
 import viperleed.tleedmlib.files.iosuperpos as tl_io
 from viperleed.tleedmlib.leedbase import (getDeltas, getTLEEDdir,
                                           fortran_compile)
@@ -153,17 +155,15 @@ def superpos(sl, rp, subdomain=False, for_error=False, only_vary=None):
     # compile fortran files
     sposname = "superpos-"+rp.timestamp
     logger.info("Compiling fortran input files...")
+    
+    compile_log = "compile-superpos.log"
     try:
-        compile_log = "compile-superpos.log"
         fortran_compile(rp.FORTRAN_COMP[0]+" -o", sposname+" "
                         + srcname + " " + libname, rp.FORTRAN_COMP[1], logname = compile_log)
-        try:
-            shutil.move(compile_log, os.path.join("compile_logs", compile_log))
-        except Exception:
-            logger.warning("Could not move compile-superpos.log to SUPP")
-    except Exception:
+    except Exception as compile_err:
+        copy_compile_log(rp, Path(compile_log), "superpos-compile")
         logger.error("Error compiling fortran files: ", exc_info=True)
-        raise
+        raise compile_err
     logger.info("Starting Superpos calculation...")
     outname = "superpos-spec.out"
     try:
