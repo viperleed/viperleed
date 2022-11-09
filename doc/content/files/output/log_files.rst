@@ -14,6 +14,8 @@ This is the main log file for :term:`tleedm` and contains the most important inf
 The contents of this file will also be printed to the standard output.
 *If something goes wrong in a ViPErLEED run, this is the first place to look.*
 
+.. _log_files_refcalc:
+
 ``refcalc-$timestamp.log``
 ==========================
 
