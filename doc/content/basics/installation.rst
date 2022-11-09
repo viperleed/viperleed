@@ -175,4 +175,10 @@ For actually running, set :ref:`FORTRAN_COMP<fortran_comp>` as follows:
    FORTRAN_COMP post = '-llapack -lblas -lpthread'  # NOTE: order of LAPACK and BLAS is important!
 
 
+Compiling static files
+======================
+
+In addition to the TensErLEED source code, which is compiled *at run-time*, ViPErLEED needs a few auxilary scripts that need compiling before a calculation can be started.
+
+
 .. [#] For other distributions have a look at e.g. this tutorial `<https://fortran-lang.org/en/learn/os_setup/install_gfortran/>`__
