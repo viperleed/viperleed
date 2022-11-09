@@ -175,10 +175,28 @@ For actually running, set :ref:`FORTRAN_COMP<fortran_comp>` as follows:
    FORTRAN_COMP post = '-llapack -lblas -lpthread'  # NOTE: order of LAPACK and BLAS is important!
 
 
+To compile the static files described :ref:`below<static_compile>`, go into ``viperleed/tensorleed`` and call:
+
+.. code-block:: console
+
+   gfortran beamgen_source/beamgen.v1.7.f -o beamgen.v1.7 -Ofast -fno-finite-math-only
+   gfortran eeasisss_code/modified/imported_routines.f90 eeasisss_code/modified/eeasisss.f90 -o EEASiSSS.x -Ofast -fno-finite-math-only
+   del "*.mod"
+
+.. _static_compile:
+
 Compiling static files
 ======================
 
 In addition to the TensErLEED source code, which is compiled *at run-time*, ViPErLEED needs a few auxilary scripts that need compiling before a calculation can be started.
+These can be compiled automatically using a provided Makefile.
+To do this, go into the ``tensorleed`` folder in the ``viperleed`` directory and call:
+
+.. code-block:: console
+
+   $ make all
+
+The Makefile uses the ``gfortran`` compiler by default, if you only have ``ifort`` installed, change the variable ``gcomp`` in the first line of the Makefile accordingly.
 
 
 .. [#] For other distributions have a look at e.g. this tutorial `<https://fortran-lang.org/en/learn/os_setup/install_gfortran/>`__
