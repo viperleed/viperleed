@@ -10,7 +10,7 @@ Below, we give an example directory tree with the files needed to start a LEED :
 See also the ViPErLEED examples section for some of working calculations to help you get started.
 
 Minimum input
--------------
+=============
 
 To set up a ViPErLEED calculation first create a source directory (in this example ``my_surface``) and place all input files inside.
 
@@ -24,29 +24,67 @@ To set up a ViPErLEED calculation first create a source directory (in this examp
     └── job.py
 
 The minimum information required to start a :ref:`refercence calculation<ref-calc>` is contained in three files:
+
 -   :ref:`EXPBEAMS.csv file<expbeams>` contains the experimentally measured LEED :math:`I(V)` curves.
-    Unless specified otherwise in :ref:`PARAMETERS<parameters>`, ViPErLEED will also use the information in the :ref:`EXPBEAMS.csv file<expbeams>` to set energy rangesa and choose which beams to calculate.
+    Unless specified otherwise in :ref:`PARAMETERS<parameters>`, ViPErLEED will also use the information in the :ref:`EXPBEAMS.csv file<expbeams>` to set energy ranges (:ref:`THEO_ENERGIES<theo_energies>`) and choose which beams to calculate (:ref:`file IVBEAMS<ivbeams>`).
 -   :ref:`POSCAR file<poscar>` contains the reference surface structure.
     ViPErLEED will determine the applicable symmetry from the :ref:`POSCAR file<poscar>`. See also the :ref:`symmetry settings<symmetry_settings>` and :ref:`input structure settings<input_structure_settings>`.
 -   :ref:`PARAMETERS<parameters>` contains the settings for the calculation (see :ref:`the list of parameters<paramname>`).
     If no :ref:`VIBROCC file<vibrocc>` is given, :ref:`PARAMETERS<parameters>` needs to contain values for :ref:`T_EXPERIMENT<t_experiment>` and :ref:`T_DEBYE<t_debye>`.
--   The ``job.py`` script. **TODO**
+-   :ref:`job.py<job_script>` is the entry point for the ViPErLEED calculation.
+    Defines the paths to the ViPErLEED source code and the desired ``work`` directory.
 
-To run also a :ref:`delta amplitudes calculation<sec_deltas>` and a :ref:`structure search<sec_search>`, you additionally need to provide a :ref:`DISPLACEMENTS<displacements>` file that contains the requested pertubations of the structure.
+To run also a :ref:`delta amplitudes calculation<sec_deltas>` and a :ref:`structure search<sec_search>`, you additionally need to provide a :ref:`DISPLACEMENTS file<displacements>` that contains the requested pertubations of the structure.
 
 .. note:: 
-    Setting up a :ref:`domain calculation<domains>` with multiple surface structures, requires a slightly different directory tree.
-    See the :ref:`domain calculation page<domains>`.
+    Setting up a :ref:`domain calculation<domain_calculation>` with multiple surface structures, requires a slightly different directory tree.
+    See the :ref:`domain calculation page<domain_calculation>`.
 
-work directory and output files
--------------------------------
+Starting the calculation
+========================
+
+**TODO**
+
+Output organization
+===================
 
 A large number of files are created in the directory that tleedm is executed in.
-Exemplary job scripts are provided.
-These generally create a "work" directory, copy input files there, execute tleedm, and then copy the relevant output files back to the data directory.
+The :ref:`job script<job_script>` defines the path to a ``work`` directory (typically just a subdirectory of the source directory ``my_surface``) that will be used during the calculation.
+ViPErLEED will  copy input files there, execute tleedm, and then copy the relevant output files back to the data directory.
 For this purpose, tleedm also creates a :ref:`manifest` file that lists the relevant output files which should be copied back.
 
+The directory tree after a run may look something like this:
 
+.. code-block:: console
+    :caption: Normal output directory tree
 
+    my_surface
+    ├── EXPBEAMS.csv
+    ├── POSCAR
+    ├── PARAMETERS
+    ├── job.py
+    ├── IVBEAMS
+    ├── VIBROCC
+    ├── PHASESHIFTS
+    ├── DISPLACEMENTS
+    ├── work
+    │   ├── manifest
+    │   └── ...
+    ├── OUT
+    │   ├── THEOBEAMS.csv
+    │   └── ...
+    ├── SUPP
+    │   ├── POSCAR_bulk
+    │   └── ...
+    └── tleedm-$timestamp.log
 
-After the first run, an ``OUT`` directory is created that contains the output files.
+ViPErLEED will create the additional input files :ref:`IVBEAMS<ivbeams>`, :ref:`BEAMLSIT<beamlist>`, :ref:`PHASESHIFTS<phaseshifts>`, and :ref:`VIBROCC<viboccin>` under certain conditions; see the respective pages for details.
+
+After the first run, an ``OUT`` directory is created that contains the output files, see the :ref:`list of output files<output_files>` for details.
+ViPErLEED further prodces additional :ref:`supplementary files<supp_files>` that are required during execution, that contain intermediate results or that may be of interest for debugging purposes.
+These files are stored in the ``SUPP`` subfolder.
+
+If a :ref:`refercence calculation<ref-calc>` is run with :ref:`Tensor output<toutput>`, a ``Tensors`` directory will be created that stores the :ref:`tensor files<tensorszip>`.
+Similarly, if a :ref:`delta-amplitudes<sec_deltas>` calculation is run, a ``Deltas`` directory will be created that contains the resulting :ref:`delta files<deltaszip>`.
+
+In case of automated multiple search runs (which can be specified in the :ref:`DISPLACEMENTS<DISPLACEMENTS>` file), tleedm creates a ``workhistory`` directory and moves a snapshot of all input and output files that may be relevant and may get overwritten into a subfolder there.

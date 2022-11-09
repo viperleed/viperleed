@@ -175,47 +175,4 @@ For actually running, set :ref:`FORTRAN_COMP<fortran_comp>` as follows:
    FORTRAN_COMP post = '-llapack -lblas -lpthread'  # NOTE: order of LAPACK and BLAS is important!
 
 
-
-Directory structure and file names
-==================================
-
-
-In case of automated multiple search runs (which can be specified in the :ref:`DISPLACEMENTS<DISPLACEMENTS>`  file), tleedm creates a “workhistory” directory and moves a snapshot of all input and output files that may be relevant and may get overwritten into a subfolder there.
-
-
-
-
-
-
-
-
-
-.. code-block:: console
-
-    normal
-
-    ├── EXPBEAMS.csv
-    ├── PARAMETERS
-    ├── work          
-    │   ├── area.py
-    │   └── bboxinout.py
-    ├── pywps.cfg          
-    ├── requirements.txt
-    └──  server.py          
-
-
-
-::
-
-    after
-
-    ├── EXPBEAMS.csv
-    ├── PARAMETERS
-    ├── job.py
-    ├── work
-    ├── OUT
-    └── POSCAR
-
-
-
 .. [#] For other distributions have a look at e.g. this tutorial `<https://fortran-lang.org/en/learn/os_setup/install_gfortran/>`__
