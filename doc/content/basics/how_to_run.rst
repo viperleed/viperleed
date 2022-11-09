@@ -43,7 +43,22 @@ To run also a :ref:`delta amplitudes calculation<sec_deltas>` and a :ref:`struct
 Starting the calculation
 ========================
 
-**TODO**
+Once you have set up the input files for the calculation, make sure that all tleedm dependencies are in the Python PATH, i.e. make sure the correct conda or virtual environment is loaded, otherwise this will raise an Error.
+You can then start a ViPErLEED calculation by invocing the :ref:`job script<job_script>` via the command line:
+
+.. code-block:: console
+    
+    $ src_path="path/to/source_dir"
+    $ wrk_path="path/to/work_dir"
+    $
+    $ python job.py -s $src_path -w $wrk_path
+
+You can also set the source and work directory path directly in the job script, rather than specifiying them as command line arugments.
+
+.. tip:: 
+    As a ViPErLEED calculation can take a long time, it is recommended to start the calculation using `nohup <https://en.wikipedia.org/wiki/Nohup>`__ or in a `tmux <https://github.com/tmux/tmux/wiki>`__ session. This way, the calculation will not be aborted if the user is logged out (or the connection of an ``ssh`` session breaks).
+
+If you are running ViPErLEED on an HPC system with a workload scheduler such as `slurm <https://slurm.schedmd.com/documentation.html>`__, make sure to load the required compilers, :term:`MPI` implementations and Python packages in the submission script.
 
 Output organization
 ===================
