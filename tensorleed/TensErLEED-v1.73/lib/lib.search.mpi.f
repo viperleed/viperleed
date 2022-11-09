@@ -602,7 +602,6 @@ C Global variables
       REAL RPEIND,WSK,WIDT,RMUT
       DIMENSION WIDT(NPRMK)
       DIMENSION RPEIND(NPS),WSK(NSTEP)
-      INTEGER random ! connected to random_.o
 
 C Local variables
       INTEGER MKLP1,MKLP2,MKLP5,INDEX
@@ -696,7 +695,7 @@ C  Determination of new random number
 C  note that if name of random subroutine is changed, integer declaration of
 C  random (see above) must also be changed!
 
-      FMKRN=random()
+      FMKRN=rand()
 
 C      write(8,*)"random",FMKRN
 

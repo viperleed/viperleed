@@ -54,6 +54,8 @@ C  V. Blum v105: energy dependent inner potential now taken over from LEED
 C                calculation
 C  V. Blum v106: minor adjustments for TensErLEED; subroutines now in lib.search.f
 C  W. Meyer v107: MPI parallelised search loop for distributed memory clusters
+C  09.11.22
+C  A. Imre: replaced random C funktion with Fortran intrinsic.
 
 **************************************************************************
 
@@ -280,6 +282,7 @@ C  SEANAME: name of search document file
       REAL DMISCH
       integer MAXGEN
       character*10 SEANAME
+      integer test
 
 C  Variables used to read delta amplitude files in ReadFile
 
@@ -613,10 +616,14 @@ C  Broadcast input data to other processes
       CALL MPI_BCAST(DMISCH,1,MPI_REAL,0,MPI_COMM_WORLD, IERR)
       CALL MPI_BCAST(MAXGEN,1,MPI_INTEGER,0,MPI_COMM_WORLD, IERR)
 
-C  initialize random function (is done in C, using system time)
-C  only use randominit if random() is used
+C  initialize random function 
+!  AMI: changed to do this in Fortran directly, rather than C
 
-      call randominit(INIT)
+      if (INIT == 0) then
+            call srand(INIT)
+      else
+            call srand(time())
+      end if
 
 C  initialize variables for HASHTAB
 

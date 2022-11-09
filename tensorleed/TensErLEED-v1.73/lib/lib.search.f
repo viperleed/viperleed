@@ -607,7 +607,6 @@ C Global variables
       REAL RPEIND,WSK,WIDT,RMUT
       DIMENSION WIDT(NPRMK)
       DIMENSION RPEIND(NPS),WSK(NSTEP)
-      INTEGER random
 
 C Local variables
       INTEGER MKLP1,MKLP2,MKLP5,INDEX
@@ -687,11 +686,9 @@ c         write(8,*)"probability of value",IPVAL," is",WSK(IPVAL)
 
 c      write(8,*) "distribution normalised"
 
-C  Determination of new random number
-C  note that if name of random subroutine is changed, integer declaration of
-C  random (see above) must also be changed!
+C  Determination of new random number; AMI: changed to Fortran intrinsic
 
-      FMKRN=random()
+      FMKRN=rand()
 
 C Determination of new parameter
 
