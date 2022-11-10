@@ -16,11 +16,12 @@ import subprocess
 from pathlib import Path
 
 import numpy as np
+from pathlib import Path
 
 from viperleed import fortranformat as ff
 from viperleed.tleedmlib.leedbase import (
     fortran_compile_batch, getTLEEDdir, getMaxTensorIndex, monitoredPool,
-    copy_compile_folder)
+    copy_compile_log)
 from viperleed.tleedmlib.base import splitMaxRight
 from viperleed.tleedmlib.files.parameters import modifyPARAMETERS
 import viperleed.tleedmlib.files.beams as beams
@@ -53,6 +54,16 @@ class RefcalcCompileTask():
 
         if os.name == 'nt':
             self.exename += '.exe'
+            
+    @property
+    def logfile(self):
+        return Path(self.basedir) / self.foldername / "fortran-compile.log"
+        
+    @property
+    def compile_log_name(self):
+        # name as it should appear in the compile_logs directory
+        return self.foldername
+        
 
     def get_source_files(self):
         """Return a tuple of source files needed for running a refcalc."""
@@ -479,6 +490,8 @@ def refcalc(sl, rp, subdomain=False, parent_dir=""):
         try:
             r = compile_refcalc(comp_tasks[0])
         except Exception:
+            # if something goes wrong copy log file to compile logs
+            copy_compile_log(rp, comp_tasks[0].logfile, comp_tasks[0].compile_log_name)
             raise
         finally:
             os.chdir(home)
@@ -504,8 +517,14 @@ def refcalc(sl, rp, subdomain=False, parent_dir=""):
         # compile files
         logger.info("Compiling fortran files...")
         poolsize = min(len(comp_tasks), rp.N_CORES)
-        monitoredPool(rp, poolsize, compile_refcalc, comp_tasks,
-                      update_from=parent_dir)
+        try:
+            monitoredPool(rp, poolsize, compile_refcalc, comp_tasks,
+                          update_from=parent_dir)
+        except Exception:
+            # save log files in case of error:
+            for ct in comp_tasks:
+                copy_compile_log(rp, ct.logfile, ct.compile_log_name)
+            raise
         if rp.STOP:
             return
         # run executions
@@ -519,7 +538,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=""):
 
     # clean up compile folders - AMI: move logs first to compile_logs !
     for ct in comp_tasks:
-        copy_compile_folder(ct, rp, compile_log_base=parent_dir)
+        copy_compile_log(rp, ct.logfile, ct.compile_log_name)
         try:
             shutil.rmtree(os.path.join(ct.basedir, ct.foldername))
         except Exception:
