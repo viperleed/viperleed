@@ -72,3 +72,6 @@ Glossary
 
     LAPACK
       Linear Algebra Package. (`Wikipedia entry <https://en.wikipedia.org/wiki/LAPACK>`__)
+
+    UHV
+      Ultra High Vacuum
