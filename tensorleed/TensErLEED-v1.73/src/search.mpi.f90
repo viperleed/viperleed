@@ -25,7 +25,7 @@ C  of the package is passed on.
 
 C  original Author M. Kottcke
 
-C  current version v1.71
+C  current version v1.74
 
 C  Version R. Backofen, V. Blum, 06.09.95
 C  A. Seubert v90 (Including capability of incoherent domain averaging; 5/97)
@@ -282,7 +282,6 @@ C  SEANAME: name of search document file
       REAL DMISCH
       integer MAXGEN
       character*10 SEANAME
-      integer test
 
 C  Variables used to read delta amplitude files in ReadFile
 
@@ -620,9 +619,9 @@ C  initialize random function
 !  AMI: changed to do this in Fortran directly, rather than C
 
       if (INIT == 0) then
-            call srand(INIT)
-      else
             call srand(time())
+      else
+            call srand(INIT)
       end if
 
 C  initialize variables for HASHTAB

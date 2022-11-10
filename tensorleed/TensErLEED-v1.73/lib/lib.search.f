@@ -688,7 +688,7 @@ c      write(8,*) "distribution normalised"
 
 C  Determination of new random number; AMI: changed to Fortran intrinsic
 
-      FMKRN=rand()
+      FMKRN=irand()
 
 C Determination of new parameter
 

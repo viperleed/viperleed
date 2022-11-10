@@ -695,7 +695,7 @@ C  Determination of new random number
 C  note that if name of random subroutine is changed, integer declaration of
 C  random (see above) must also be changed!
 
-      FMKRN=rand()
+      FMKRN=irand()
 
 C      write(8,*)"random",FMKRN
 
