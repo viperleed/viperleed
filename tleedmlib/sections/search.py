@@ -650,6 +650,20 @@ def search(sl, rp):
             shutil.copy2(os.path.join(libpath, hashname), hashname)
         else:
             hashname = ""
+        if rp.TL_VERSION <= 1.73:
+            if usempi:  # these are short C scripts - use pre-compiled versions
+                randnamefrom = "MPIrandom_.o"
+            else:
+                randnamefrom = "random_.o"
+            randname = "random_.o"
+
+            # try to copy random lib object file
+            try:
+                shutil.copy2(os.path.join(libpath, randnamefrom), randname)
+            except FileNotFoundError:
+                logger.error("Could not find required random_.o object file."
+                             " You may have forgotten to compile random_.c.")
+                raise
 
         globalname = "GLOBAL"
         shutil.copy2(os.path.join(srcpath, globalname), globalname)
@@ -686,6 +700,8 @@ def search(sl, rp):
             format_tag = "--fixed-form"  # different formatting string
     ctasks.append((fcomp[0]+" -o search.o -c "+format_tag, srcname, fcomp[1]))
     to_link = "search.o lib.search.o restrict.o"
+    if rp.TL_VERSION <= 1.73:
+        to_link += " random_.o"
     if hashname:
         to_link += " intarr_hashing.o"
     ctasks.append((fcomp[0] + " -o " + searchname, to_link, fcomp[1]))
