@@ -781,4 +781,3 @@ def make_compile_logs_dir(rp):
     except Exception:
         logger.warning(f"Could not create directory {rp.compile_logs_dir}")
         rp.setHaltingLevel(1)
-    return

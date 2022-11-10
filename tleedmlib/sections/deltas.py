@@ -618,5 +618,3 @@ def deltas_domains(rp):
         except Exception:
             logger.warning("Error deleting delta compile folder "
                            + os.path.relpath(d))
-
-    return
