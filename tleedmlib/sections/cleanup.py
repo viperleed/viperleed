@@ -163,7 +163,7 @@ def organize_workdir(tensor_index, delete_unzipped=False,
 
     # If there are unzipped Tensors or Deltas directories, zip them:
     for folder in ["Tensors", "Deltas"]:
-        todo = tensors if t == "Tensors" else deltas
+        todo = tensors if folder == "Tensors" else deltas
         origin_base = path / folder
         if not origin_base.is_dir():
             continue
@@ -319,7 +319,7 @@ def move_oldruns(rp, prerun=False):
                              tensors=False, deltas=False)
     if prerun:
         filelist = [f for f in os.listdir() if os.path.isfile(f) and
-                    (f.endswith(".log") or f in outfiles or f in _SUPP_FILES)
+                    (f.endswith(".log") or f in _OUTFILES or f in _SUPP_FILES)
                     and f not in rp.manifest and f not in iofiles]
         dirlist = ["SUPP", "OUT"]
     else:
