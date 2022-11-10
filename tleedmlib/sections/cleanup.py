@@ -200,7 +200,8 @@ def sortfiles(tensorIndex, delete_unzipped=False, tensors=True,
             directory_list = supp_dirs
             # Also add log files (except for tleedm) into SUPP
             logs_to_supp = [f for f in os.listdir(path) if f.endswith(".log")
-                            and not f.startswith("tleedm")]
+                            and not f.startswith("tleedm")
+                            and not "compile" in f] # compile logs already go in other folder
             for f in logs_to_supp:
                 filelist.append(f)
         else:

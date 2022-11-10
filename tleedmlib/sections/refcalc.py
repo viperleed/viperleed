@@ -55,14 +55,14 @@ class RefcalcCompileTask():
         if os.name == 'nt':
             self.exename += '.exe'
             
-        @property
-        def logfile(self):
-            return Path(self.basedir) / self.foldername / "fortran-compile.log"
+    @property
+    def logfile(self):
+        return Path(self.basedir) / self.foldername / "fortran-compile.log"
         
-        @property
-        def compile_log_name(self):
-            # name as it should appear in the compile_logs directory
-            return self.foldername
+    @property
+    def compile_log_name(self):
+        # name as it should appear in the compile_logs directory
+        return self.foldername
         
 
     def get_source_files(self):

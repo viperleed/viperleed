@@ -65,14 +65,14 @@ class DeltaCompileTask():
             if filepath:
                 shutil.copy2(filepath, filepath.name)
 
-        @property
-        def logfile(self):
-            return Path(self.basedir) / self.foldername / "fortran-compile.log"
+    @property
+    def logfile(self):
+        return Path(self.basedir) / self.foldername / "fortran-compile.log"
 
-        @property
-        def compile_log_name(self):
-            # name as it should appear in the compile_logs directory
-            return self.foldername
+    @property
+    def compile_log_name(self):
+        # name as it should appear in the compile_logs directory
+        return self.foldername
 
 
 
