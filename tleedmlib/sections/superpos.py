@@ -160,10 +160,10 @@ def superpos(sl, rp, subdomain=False, for_error=False, only_vary=None):
     try:
         fortran_compile(rp.FORTRAN_COMP[0]+" -o", sposname+" "
                         + srcname + " " + libname, rp.FORTRAN_COMP[1], logname = compile_log)
-    except Exception as compile_err:
+    except Exception:
         copy_compile_log(rp, Path(compile_log), "superpos-compile")
         logger.error("Error compiling fortran files: ", exc_info=True)
-        raise compile_err
+        raise
     logger.info("Starting Superpos calculation...")
     outname = "superpos-spec.out"
     try:

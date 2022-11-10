@@ -520,11 +520,11 @@ def refcalc(sl, rp, subdomain=False, parent_dir=""):
         try:
             monitoredPool(rp, poolsize, compile_refcalc, comp_tasks,
                         update_from=parent_dir)
-        except Exception as compile_err:
+        except Exception:
             # save log files in case of error:
             for ct in comp_tasks:
                 copy_compile_log(rp, ct.logfile, ct.compile_log_name)
-            raise compile_err
+            raise
         if rp.STOP:
             return
         # run executions

@@ -708,10 +708,10 @@ def search(sl, rp):
     compile_log = "compile-search.log"
     try:
         fortran_compile_batch(ctasks, logname=compile_log)
-    except Exception as compile_err:
+    except Exception:
         copy_compile_log(rp, Path(compile_log), log_name="search-compile")
         logger.error("Error compiling fortran files: ", exc_info=True)
-        raise compile_err
+        raise
     logger.debug("Compiled fortran files successfully")
     # run
     if rp.LOG_SEARCH:

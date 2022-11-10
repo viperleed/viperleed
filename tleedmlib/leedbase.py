@@ -875,7 +875,7 @@ def getBeamCorrespondence(sl, rp):
             beamcorr_list[i] = rp.expbeams.index(beamcorr[tb])
     return beamcorr_list
 
-
+# TODO: can eventually become part of compileTask class
 def copy_compile_log(rp, logfile, log_name="fortran-compile"):
     """Copy compilation log file to compile_logs (will be moved to SUPP later).
 

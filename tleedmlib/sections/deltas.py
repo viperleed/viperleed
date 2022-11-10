@@ -16,7 +16,6 @@ import hashlib
 from pathlib import Path
 
 import numpy as np
-from pathlib import Path
 
 import viperleed.tleedmlib as tl
 import viperleed.tleedmlib.files.iodeltas as tl_io
@@ -73,7 +72,6 @@ class DeltaCompileTask():
     def compile_log_name(self):
         # name as it should appear in the compile_logs directory
         return self.foldername
-
 
 
 class DeltaRunTask():
@@ -525,11 +523,11 @@ def deltas(sl, rp, subdomain=False):
     poolsize = min(len(deltaCompTasks), rp.N_CORES)
     try:
         monitoredPool(rp, poolsize, compileDelta, deltaCompTasks)
-    except Exception as compile_err:
+    except Exception:
         # save log files in case of error:
         for ct in deltaCompTasks:
             copy_compile_log(rp, ct.logfile, ct.compile_log_name)
-        raise compile_err
+        raise
     if rp.STOP:
         return
 
