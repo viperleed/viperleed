@@ -543,7 +543,7 @@ def deltas(sl, rp, subdomain=False):
 
     # clean up compile folders - AMI: move logs first to compile_logs !
     for ct in deltaCompTasks:
-        copy_compile_folder(ct, rp)
+        copy_compile_log(rp, ct.logfile, ct.compile_log_name)
         try:
             shutil.rmtree(os.path.join(ct.basedir, ct.foldername)) # AMI here
         except Exception:
@@ -613,7 +613,7 @@ def deltas_domains(rp):
 
     # clean up
     for ct in deltaCompTasks:
-        copy_compile_folder(ct, rp) # copy compile folder
+        copy_compile_log(rp, ct.logfile, ct.compile_log_name) # copy compile folder
         d = os.path.join(ct.basedir, ct.foldername)
         try:
             shutil.rmtree(d)

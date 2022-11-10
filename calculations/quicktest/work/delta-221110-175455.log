@@ -1,0 +1,1641 @@
+Logs from multiple delta calculations are collected here. Their order may not be preserved.
+
+
+### STARTING LOG FOR DEL_26_O_1 ###
+
+ quicktest 221110-175455                                                         
+  OUTDELT_DWG: NT0, NATOMS,NCSTEP*NDEB 
+   47    1    5
+current LMAX =  6
+ Current energy    70.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    75.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    80.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    84.9999924      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    90.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    95.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    100.000008      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    105.000008      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    110.000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    115.000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    119.999992      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    125.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    130.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    135.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    140.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    145.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    150.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    155.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    160.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    165.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    170.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    175.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    180.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    185.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    190.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    195.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    200.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    205.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    210.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    214.999985      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    220.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    225.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    230.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    234.999985      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    240.000015      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    245.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    250.000000      eV within given energy range - performing calculation.
+ Correct termination assumed.
+
+
+### STARTING LOG FOR DEL_25_O_1 ###
+
+ quicktest 221110-175455                                                         
+  OUTDELT_DWG: NT0, NATOMS,NCSTEP*NDEB 
+   47    1    5
+current LMAX =  6
+ Current energy    70.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    75.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    80.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    84.9999924      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    90.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    95.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    100.000008      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    105.000008      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    110.000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    115.000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    119.999992      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    125.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    130.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    135.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    140.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    145.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    150.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    155.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    160.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    165.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    170.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    175.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    180.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    185.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    190.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    195.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    200.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    205.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    210.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    214.999985      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    220.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    225.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    230.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    234.999985      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    240.000015      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    245.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    250.000000      eV within given energy range - performing calculation.
+ Correct termination assumed.
+
+
+### STARTING LOG FOR DEL_27_O_1 ###
+
+ quicktest 221110-175455                                                         
+  OUTDELT_DWG: NT0, NATOMS,NCSTEP*NDEB 
+   47    1    5
+current LMAX =  6
+ Current energy    70.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    75.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    80.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    84.9999924      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    90.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    95.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    100.000008      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    105.000008      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    110.000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    115.000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    119.999992      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    125.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    130.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    135.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    140.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    145.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    150.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    155.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    160.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    165.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    170.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    175.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    180.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    185.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    190.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    195.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    200.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    205.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    210.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    214.999985      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    220.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    225.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    230.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    234.999985      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    240.000015      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    245.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    250.000000      eV within given energy range - performing calculation.
+ Correct termination assumed.
+
+
+### STARTING LOG FOR DEL_28_O_1 ###
+
+ quicktest 221110-175455                                                         
+  OUTDELT_DWG: NT0, NATOMS,NCSTEP*NDEB 
+   47    1    5
+current LMAX =  6
+ Current energy    70.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    75.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    80.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    84.9999924      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    90.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    95.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    100.000008      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    105.000008      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    110.000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    115.000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    119.999992      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    125.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    130.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    135.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    140.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    145.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    150.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    155.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    160.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    165.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    170.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    175.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    180.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    185.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    190.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    195.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    200.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    205.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    210.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    214.999985      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    220.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    225.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    230.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    234.999985      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    240.000015      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    245.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    250.000000      eV within given energy range - performing calculation.
+ Correct termination assumed.
+
+
+### STARTING LOG FOR DEL_29_O_1 ###
+
+ quicktest 221110-175455                                                         
+  OUTDELT_DWG: NT0, NATOMS,NCSTEP*NDEB 
+   47    1    5
+current LMAX =  6
+ Current energy    70.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    75.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    80.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    84.9999924      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    90.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    95.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    100.000008      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    105.000008      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    110.000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    115.000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    119.999992      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    125.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    130.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    135.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    140.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    145.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    150.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    155.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    160.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    165.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    170.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    175.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    180.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    185.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    190.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    195.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    200.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    205.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    210.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    214.999985      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    220.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    225.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    230.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    234.999985      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    240.000015      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    245.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    250.000000      eV within given energy range - performing calculation.
+ Correct termination assumed.
+
+
+### STARTING LOG FOR DEL_30_O_1 ###
+
+ quicktest 221110-175455                                                         
+  OUTDELT_DWG: NT0, NATOMS,NCSTEP*NDEB 
+   47    1    5
+current LMAX =  6
+ Current energy    70.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    75.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    80.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    84.9999924      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    90.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    95.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    100.000008      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    105.000008      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    110.000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    115.000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    119.999992      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    125.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    130.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    135.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    140.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    145.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    150.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    155.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    160.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    165.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    170.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    175.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    180.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    185.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    190.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    195.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    200.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    205.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    210.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    214.999985      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    220.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    225.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    230.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    234.999985      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    240.000015      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    245.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    250.000000      eV within given energy range - performing calculation.
+ Correct termination assumed.
+
+
+### STARTING LOG FOR DEL_32_O_1 ###
+
+ quicktest 221110-175455                                                         
+  OUTDELT_DWG: NT0, NATOMS,NCSTEP*NDEB 
+   47    1    5
+current LMAX =  6
+ Current energy    70.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    75.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    80.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    84.9999924      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    90.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    95.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    100.000008      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    105.000008      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    110.000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    115.000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    119.999992      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    125.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    130.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    135.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    140.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    145.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    150.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    155.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    160.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    165.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    170.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    175.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    180.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    185.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    190.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    195.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    200.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    205.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    210.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    214.999985      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    220.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    225.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    230.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    234.999985      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    240.000015      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    245.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    250.000000      eV within given energy range - performing calculation.
+ Correct termination assumed.
+
+
+### STARTING LOG FOR DEL_31_O_1 ###
+
+ quicktest 221110-175455                                                         
+  OUTDELT_DWG: NT0, NATOMS,NCSTEP*NDEB 
+   47    1    5
+current LMAX =  6
+ Current energy    70.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    75.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    80.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    84.9999924      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    90.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    95.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    100.000008      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    105.000008      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    110.000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    115.000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    119.999992      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    125.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    130.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    135.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    140.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    145.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    150.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    155.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    160.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    165.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    170.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    175.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    180.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    185.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    190.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    195.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    200.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    205.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    210.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    214.999985      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    220.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    225.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    230.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    234.999985      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    240.000015      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    245.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    250.000000      eV within given energy range - performing calculation.
+ Correct termination assumed.
+
+
+### STARTING LOG FOR DEL_33_O_1 ###
+
+ quicktest 221110-175455                                                         
+  OUTDELT_DWG: NT0, NATOMS,NCSTEP*NDEB 
+   47    1    5
+current LMAX =  6
+ Current energy    70.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    75.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    80.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    84.9999924      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    90.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    95.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    100.000008      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    105.000008      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    110.000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    115.000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    119.999992      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    125.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    130.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    135.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    140.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    145.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    150.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    155.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    160.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    165.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    170.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    175.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    180.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    185.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    190.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    195.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    200.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    205.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    210.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    214.999985      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    220.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    225.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    230.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    234.999985      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    240.000015      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    245.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    250.000000      eV within given energy range - performing calculation.
+ Correct termination assumed.
+
+
+### STARTING LOG FOR DEL_34_O_1 ###
+
+ quicktest 221110-175455                                                         
+  OUTDELT_DWG: NT0, NATOMS,NCSTEP*NDEB 
+   47    1    5
+current LMAX =  6
+ Current energy    70.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    75.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    80.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    84.9999924      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    90.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    95.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    100.000008      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    105.000008      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    110.000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    115.000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    119.999992      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    125.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    130.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    135.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    140.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    145.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    150.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    155.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    160.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    165.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    170.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    175.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    180.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    185.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    190.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    195.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    200.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    205.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    210.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    214.999985      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    220.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    225.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    230.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    234.999985      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    240.000015      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    245.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    250.000000      eV within given energy range - performing calculation.
+ Correct termination assumed.
+
+
+### STARTING LOG FOR DEL_35_O_1 ###
+
+ quicktest 221110-175455                                                         
+  OUTDELT_DWG: NT0, NATOMS,NCSTEP*NDEB 
+   47    1    5
+current LMAX =  6
+ Current energy    70.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    75.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    80.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    84.9999924      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    90.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    95.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    100.000008      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    105.000008      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    110.000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    115.000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    119.999992      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    125.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    130.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    135.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    140.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    145.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    150.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    155.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    160.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    165.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    170.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    175.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    180.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    185.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    190.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    195.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    200.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    205.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    210.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    214.999985      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    220.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    225.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    230.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    234.999985      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    240.000015      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    245.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    250.000000      eV within given energy range - performing calculation.
+ Correct termination assumed.
+
+
+### STARTING LOG FOR DEL_36_O_1 ###
+
+ quicktest 221110-175455                                                         
+  OUTDELT_DWG: NT0, NATOMS,NCSTEP*NDEB 
+   47    1    5
+current LMAX =  6
+ Current energy    70.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    75.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    80.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    84.9999924      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    90.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    95.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    100.000008      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    105.000008      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    110.000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    115.000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    119.999992      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    125.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    130.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    135.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    140.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    145.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    150.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    155.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    160.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    165.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    170.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    175.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    180.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    185.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    190.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    195.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    200.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    205.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    210.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    214.999985      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    220.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    225.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    230.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    234.999985      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    240.000015      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    245.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    250.000000      eV within given energy range - performing calculation.
+ Correct termination assumed.
+
+
+### STARTING LOG FOR DEL_53_Fe_1 ###
+
+ quicktest 221110-175455                                                         
+  OUTDELT_DWG: NT0, NATOMS,NCSTEP*NDEB 
+   47    1    5
+current LMAX =  6
+ Current energy    70.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    75.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    80.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    84.9999924      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    90.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    95.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    100.000008      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    105.000008      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    110.000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    115.000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    119.999992      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    125.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    130.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    135.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    140.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    145.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    150.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    155.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    160.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    165.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    170.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    175.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    180.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    185.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    190.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    195.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    200.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    205.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    210.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    214.999985      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    220.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    225.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    230.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    234.999985      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    240.000015      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    245.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    250.000000      eV within given energy range - performing calculation.
+ Correct termination assumed.
+
+
+### STARTING LOG FOR DEL_54_Fe_1 ###
+
+ quicktest 221110-175455                                                         
+  OUTDELT_DWG: NT0, NATOMS,NCSTEP*NDEB 
+   47    1    5
+current LMAX =  6
+ Current energy    70.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    75.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    80.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    84.9999924      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    90.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    95.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    100.000008      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    105.000008      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    110.000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    115.000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    119.999992      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    125.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    130.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    135.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    140.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    145.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    150.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    155.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    160.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    165.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    170.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    175.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    180.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    185.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    190.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    195.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    200.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    205.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    210.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    214.999985      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    220.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    225.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    230.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    234.999985      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    240.000015      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    245.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    250.000000      eV within given energy range - performing calculation.
+ Correct termination assumed.
+
+
+### STARTING LOG FOR DEL_56_Fe_1 ###
+
+ quicktest 221110-175455                                                         
+  OUTDELT_DWG: NT0, NATOMS,NCSTEP*NDEB 
+   47    1    5
+current LMAX =  6
+ Current energy    70.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    75.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    80.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    84.9999924      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    90.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    95.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    100.000008      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    105.000008      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    110.000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    115.000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    119.999992      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    125.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    130.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    135.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    140.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    145.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    150.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    155.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    160.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    165.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    170.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    175.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    180.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    185.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    190.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    195.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    200.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    205.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    210.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    214.999985      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    220.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    225.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    230.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    234.999985      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    240.000015      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    245.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    250.000000      eV within given energy range - performing calculation.
+ Correct termination assumed.
+
+
+### STARTING LOG FOR DEL_55_Fe_1 ###
+
+ quicktest 221110-175455                                                         
+  OUTDELT_DWG: NT0, NATOMS,NCSTEP*NDEB 
+   47    1    5
+current LMAX =  6
+ Current energy    70.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    75.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    80.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    84.9999924      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    90.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    95.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    100.000008      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    105.000008      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    110.000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    115.000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    119.999992      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    125.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    130.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    135.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    140.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    145.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    150.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    155.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    160.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    165.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    170.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    175.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    180.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    185.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    190.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    195.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    200.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    205.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    210.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    214.999985      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    220.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    225.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    230.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    234.999985      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    240.000015      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    245.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    250.000000      eV within given energy range - performing calculation.
+ Correct termination assumed.
+
+
+### STARTING LOG FOR DEL_57_Fe_1 ###
+
+ quicktest 221110-175455                                                         
+  OUTDELT_DWG: NT0, NATOMS,NCSTEP*NDEB 
+   47    1    5
+current LMAX =  6
+ Current energy    70.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    75.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    80.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    84.9999924      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    90.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    95.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    100.000008      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    105.000008      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    110.000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    115.000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    119.999992      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    125.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    130.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    135.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    140.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    145.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    150.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    155.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    160.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    165.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    170.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    175.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    180.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    185.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    190.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    195.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    200.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    205.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    210.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    214.999985      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    220.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    225.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    230.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    234.999985      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    240.000015      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    245.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    250.000000      eV within given energy range - performing calculation.
+ Correct termination assumed.
+
+
+### STARTING LOG FOR DEL_58_Fe_1 ###
+
+ quicktest 221110-175455                                                         
+  OUTDELT_DWG: NT0, NATOMS,NCSTEP*NDEB 
+   47    1    5
+current LMAX =  6
+ Current energy    70.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    75.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    80.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    84.9999924      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    90.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    95.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    100.000008      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    105.000008      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    110.000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    115.000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    119.999992      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    125.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    130.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    135.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    140.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    145.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    150.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    155.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    160.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    165.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    170.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    175.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    180.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    185.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    190.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    195.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    200.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    205.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    210.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    214.999985      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    220.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    225.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    230.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    234.999985      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    240.000015      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    245.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    250.000000      eV within given energy range - performing calculation.
+ Correct termination assumed.
+
+
+### STARTING LOG FOR DEL_59_Fe_1 ###
+
+ quicktest 221110-175455                                                         
+  OUTDELT_DWG: NT0, NATOMS,NCSTEP*NDEB 
+   47    1    5
+current LMAX =  6
+ Current energy    70.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    75.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    80.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    84.9999924      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    90.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    95.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    100.000008      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    105.000008      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    110.000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    115.000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    119.999992      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    125.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    130.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    135.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    140.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    145.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    150.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    155.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    160.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    165.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    170.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    175.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    180.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    185.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    190.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    195.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    200.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    205.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    210.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    214.999985      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    220.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    225.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    230.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    234.999985      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    240.000015      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    245.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    250.000000      eV within given energy range - performing calculation.
+ Correct termination assumed.
+
+
+### STARTING LOG FOR DEL_60_Fe_1 ###
+
+ quicktest 221110-175455                                                         
+  OUTDELT_DWG: NT0, NATOMS,NCSTEP*NDEB 
+   47    1    5
+current LMAX =  6
+ Current energy    70.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    75.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    80.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    84.9999924      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    90.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    95.0000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    100.000008      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    105.000008      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    110.000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    115.000000      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    119.999992      eV within given energy range - performing calculation.
+current LMAX =  6
+ Current energy    125.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    130.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    135.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    140.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    145.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    150.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    155.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    160.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    165.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    170.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    175.000000      eV within given energy range - performing calculation.
+current LMAX =  7
+ Current energy    180.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    185.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    190.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    195.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    200.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    205.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    210.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    214.999985      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    220.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    225.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    230.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    234.999985      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    240.000015      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    245.000000      eV within given energy range - performing calculation.
+current LMAX =  8
+ Current energy    250.000000      eV within given energy range - performing calculation.
+ Correct termination assumed.

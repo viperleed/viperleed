@@ -1,0 +1,39 @@
+RUN = 1-3
+
+LOG_DEBUG = True
+N_CORES = 10
+
+!FORTRAN_COMP = 'gfortran -O2'
+!FORTRAN_COMP post = '-llapack -lblas -lpthread -g -pg -fargument-mismatch'
+
+SEARCH_START = control
+
+!OPTIMIZE V0i = 0.5
+
+!PHASESHIFTS_CALC_OLD = False
+
+TL_VERSION = 1.73
+THEO_ENERGIES = 70 250 5
+
+N_BULK_LAYERS = 1
+
+SITE_DEF O = surf top(2)
+SITE_DEF Fe = surf top(2)
+
+TL_IGNORE_CHECKSUM = False
+
+
+!SYMMETRY_EPS = 0.1
+
+BULK_REPEAT = [2.51775 2.33620 3.68229] ! Automatically detected repeat vector
+
+PLOT_RFACTOR perpage = 8
+
+
+! ######################################################
+! #  THE FOLLOWING LINES WERE GENERATED AUTOMATICALLY  #
+! ######################################################
+
+V0_IMAG = 4.0000 ! Found by full-dynamic optimization
+
+LMAX = 6-8
