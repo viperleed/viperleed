@@ -489,10 +489,10 @@ def refcalc(sl, rp, subdomain=False, parent_dir=""):
         home = os.getcwd()
         try:
             r = compile_refcalc(comp_tasks[0])
-        except Exception as err:
+        except Exception:
             # if something goes wrong copy log file to compile logs
             copy_compile_log(rp, comp_tasks[0].logfile, comp_tasks[0].compile_log_name)
-            raise err
+            raise
         finally:
             os.chdir(home)
         if r:
@@ -519,7 +519,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=""):
         poolsize = min(len(comp_tasks), rp.N_CORES)
         try:
             monitoredPool(rp, poolsize, compile_refcalc, comp_tasks,
-                        update_from=parent_dir)
+                          update_from=parent_dir)
         except Exception:
             # save log files in case of error:
             for ct in comp_tasks:
