@@ -777,7 +777,9 @@ def make_compile_logs_dir(rp):
     
     # makes compile_logs directory
     try:
-        os.makedirs(rp.compile_logs_dir, exist_ok=True)
-    except Exception:
+        rp.compile_logs_dir.mkdir()
+    except FileExistsError:
+        pass
+    except OSError:
         logger.warning(f"Could not create directory {rp.compile_logs_dir}")
         rp.setHaltingLevel(1)
