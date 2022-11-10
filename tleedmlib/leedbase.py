@@ -876,7 +876,7 @@ def getBeamCorrespondence(sl, rp):
     return beamcorr_list
 
 
-def copy_compile_log(rp, logfile, log_name = "fortran-compile"):
+def copy_compile_log(rp, logfile, log_name="fortran-compile"):
     """Copy compilation log file to compile_logs (will be moved to SUPP later).
 
     Parameters
@@ -889,8 +889,13 @@ def copy_compile_log(rp, logfile, log_name = "fortran-compile"):
         Name to be used to identify logfile, eg. "refcalc". Default: "fortran-compile"
     """
     _logfile = Path(logfile)
+    if rp.compile_logs_dir is None:
+        # Compile directory not set. Cannot copy. Do not bother complaining.
+        return
+    target_path = (rp.compile_logs_dir / log_name).with_suffix(".log")
     try:
-        shutil.copy2(_logfile, (rp.compile_logs_dir / log_name).with_suffix(".log"))
-    except OSError:
-        logger.warning(f"Unable to copy compilation log file {str(_logfile)}")
-        
+        shutil.copy2(_logfile, target_path)
+    except OSError as err:
+        logger.warning(
+            f"Unable to copy compilation log file {str(_logfile)}. Info: {err}"
+        )
