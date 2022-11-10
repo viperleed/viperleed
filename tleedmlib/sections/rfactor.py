@@ -19,7 +19,11 @@ from viperleed.tleedmlib.leedbase import fortran_compile_batch, getTLEEDdir, get
 import viperleed.tleedmlib.files.iorfactor as tl_io
 from viperleed.tleedmlib.checksums import validate_multiple_files
 
-from viperleed.tleedmlib.wrapped.rfactor import r_factor_new as rf
+try:
+    from viperleed.tleedmlib.wrapped.rfactor import r_factor_new as rf
+except ImportError:
+    logger.warn("Unable to load compiled rfactor module. "
+                "Only legacy rfactor currently available.")
 from viperleed.tleedmlib.wrapped.error_codes import error_codes, check_ierr
 
 
