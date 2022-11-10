@@ -112,6 +112,14 @@ Using the ``brew`` command, you can then easily install gfortran and the Open MP
 
 There is no need to install :term:`BLAS` and :term:`LAPACK`, as MacOS already ships with these libraries pre-installed.
 
+.. warning:: 
+    If the XCode Command Line Tools are not installed before you install :term:`gfortran`, you may get an error stating that the ``-lSystem`` library is not available.
+    If this happens, make sure to install the XCode Command Line Tools and then reinstall :term:`gfortran`:
+
+    .. code-block:: console
+
+        $ brew reinstall gfortran
+
 
 ``ifort`` and ``mpiifort``
 ----------------------------
