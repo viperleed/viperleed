@@ -76,8 +76,8 @@ def prerun_clean(rp, logname=""):
                     try:
                         os.remove(os.path.join(d, f))
                     except Exception:
-                        logger.debug("Failed to delete file {}"
-                                     .format(os.path.join(d, f)))
+                        logger.debug("Failed to delete file "
+                                     f"{os.path.join(d, f)}")
     # clean up old executable files:
     for fn in ["refcalc", "rfactor", "search", "superpos"]:
         p = re.compile(fn+r'-\d{6}-\d{6}')
@@ -86,7 +86,7 @@ def prerun_clean(rp, logname=""):
             try:
                 os.remove(f)
             except Exception:
-                logger.debug("Failed to delete file {}".format(f))
+                logger.debug(f"Failed to delete file {f}")
     # see if there are old logfiles
     oldlogs = [f for f in os.listdir() if os.path.isfile(f) and
                f.endswith(".log") and f != logname]
@@ -173,27 +173,27 @@ def sortfiles(tensorIndex, delete_unzipped=False, tensors=True,
                     o = d
                 else:
                     o = os.path.relpath(os.path.join(path, t, d))
-                logger.info("Packing {}.zip...".format(o))
+                logger.info(f"Packing {o}.zip...")
                 try:
                     shutil.make_archive(os.path.join(path, t, d), "zip",
                                         os.path.join(path, t, d))
                 except Exception:
-                    logger.error("Error packing {}.zip file: ".format(o))
+                    logger.error(f"Error packing {o}.zip file: ")
                     delete = False
             if delete:
                 try:
                     shutil.rmtree(os.path.join(path, t, d))
                 except Exception:
                     logger.warning(
-                        "Error deleting unzipped {} directory. "
+                        f"Error deleting unzipped {t} directory. "
                         "This will increase the size of the work folder, "
-                        "but not cause any problems.".format(t))
+                        "but not cause any problems.")
     # sort SUPP and OUT files:
     for t in ["SUPP", "OUT"]:
         try:
             os.makedirs(os.path.join(path, t), exist_ok=True)
         except Exception:
-            logger.error("Error creating {} folder: ".format(t), exc_info=True)
+            logger.error(f"Error creating {t} folder: ", exc_info=True)
         if t == "SUPP":
             filelist = suppfiles
             # move directories original_inputs and compile_logs to SUPP
@@ -213,7 +213,7 @@ def sortfiles(tensorIndex, delete_unzipped=False, tensors=True,
             try:
                 shutil.copy2(os.path.join(path, f), os.path.join(path, t, f))
             except Exception:
-                logger.error("Error moving {} file {}: ".format(t, f),
+                logger.error(f"Error moving {t} file {f}: ",
                              exc_info=True)
         for d in directory_list:
             if os.path.isdir(os.path.join(path, d)):
@@ -222,7 +222,7 @@ def sortfiles(tensorIndex, delete_unzipped=False, tensors=True,
                                     os.path.join(path, t, d),
                                     dirs_exist_ok=True)
                 except Exception:
-                    logger.error("Error moving {} directory {}: ".format(t, d),
+                    logger.error(f"Error moving {t} directory {d}: ",
                                  exc_info=True)
 
 
