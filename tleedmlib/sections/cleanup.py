@@ -140,60 +140,11 @@ def organize_workdir(tensor_index, delete_unzipped=False,
     for pattern in ("POSCAR_OUT*", "VIBROCC_OUT*", "R_OUT*"):
         outfiles.update(path.glob(pattern))
 
-    # Clean up deltas
-    deltalist = list(path.glob("DEL_*"))
-    if len(deltalist) > 0:
-        destination = path / "Deltas" / f"Deltas_{tensor_index:03d}"
-        try:
-            destination.mdkir()
-        except FileExistsError:
-            pass
-        except OSError:
-            logger.error(f"Failed to create {destination} folder: ",
-                         exc_info=True)
-        if destination.exists():
-            errors = []
-            for delta_file in deltalist:
-                try:
-                    shutil.move(delta_file, destination / delta_file.name)
-                except OSError as err:
-                    errors.append(err)
-            if errors:
-                logger.error(f"Error moving Delta files: {errors}")
+    _collect_deltas(tensor_index, path)
+    _zip_deltas_and_tensors(delete_unzipped, tensors, deltas, path)
+    _organize_supp_out(path, outfiles)
 
-    # If there are unzipped Tensors or Deltas directories, zip them:
-    for folder in ["Tensors", "Deltas"]:
-        todo = tensors if folder == "Tensors" else deltas
-        origin_base = path / folder
-        if not origin_base.is_dir():
-            continue
-        if not todo and not delete_unzipped:
-            continue
-        rgx = re.compile(rf"{folder}_[0-9]{{3}}")                               # TODO: maybe we want "three or more" digits, i.e., {{3,}}? Or could we use tensor_index?
-        for _dir in origin_base.glob("*"):
-            if not _dir.is_dir():
-                continue
-            match = rgx.match(_dir.name)
-            if not match or match.span()[1] != len(folder) + 4:                 # TODO: should this 4 be adjusted to the previous TODO? Unclear what it guards
-                continue
-            delete = delete_unzipped
-            if todo:
-                logger.info(f"Packing {_dir.name}.zip...")
-                try:
-                    shutil.make_archive(_dir, "zip", _dir)
-                except OSError:
-                    logger.error(f"Error packing {_dir.name}.zip file: ",
-                                 exc_info=True)
-                    delete = False
-            if delete:
-                try:
-                    shutil.rmtree(_dir)
-                except OSError:
-                    logger.warning(
-                        f"Error deleting unzipped {folder} directory. "
-                        "This will increase the size of the work folder, "
-                        "but not cause any problems.")
-
+def _organize_supp_out(path, outfiles):
     # sort SUPP and OUT files:
     for folder in ["SUPP", "OUT"]:
         out_path = path / folder
@@ -238,6 +189,64 @@ def organize_workdir(tensor_index, delete_unzipped=False,
             except OSError:
                 logger.error(f"Error moving {folder} directory {_dir.name}: ",
                              exc_info=True)
+
+
+def _zip_deltas_and_tensors(delete_unzipped, tensors, deltas, path):
+    # If there are unzipped Tensors or Deltas directories, zip them:
+    for folder in ["Tensors", "Deltas"]:
+        todo = tensors if folder == "Tensors" else deltas
+        origin_base = path / folder
+        if not origin_base.is_dir():
+            continue
+        if not todo and not delete_unzipped:
+            continue
+        rgx = re.compile(rf"{folder}_[0-9]{{3}}")                               # TODO: maybe we want "three or more" digits, i.e., {{3,}}? Or could we use tensor_index?
+        for _dir in origin_base.glob("*"):
+            if not _dir.is_dir():
+                continue
+            match = rgx.match(_dir.name)
+            if not match or match.span()[1] != len(folder) + 4:                 # TODO: should this 4 be adjusted to the previous TODO? Unclear what it guards
+                continue
+            delete = delete_unzipped
+            if todo:
+                logger.info(f"Packing {_dir.name}.zip...")
+                try:
+                    shutil.make_archive(_dir, "zip", _dir)
+                except OSError:
+                    logger.error(f"Error packing {_dir.name}.zip file: ",
+                                    exc_info=True)
+                    delete = False
+            if delete:
+                try:
+                    shutil.rmtree(_dir)
+                except OSError:
+                    logger.warning(
+                        f"Error deleting unzipped {folder} directory. "
+                        "This will increase the size of the work folder, "
+                        "but not cause any problems.")
+
+
+def _collect_deltas(tensor_index, path):
+    # Clean up deltas
+    deltalist = list(path.glob("DEL_*"))
+    if len(deltalist) > 0:
+        destination = path / "Deltas" / f"Deltas_{tensor_index:03d}"
+        try:
+            destination.mdkir()
+        except FileExistsError:
+            pass
+        except OSError:
+            logger.error(f"Failed to create {destination} folder: ",
+                         exc_info=True)
+        if destination.exists():
+            errors = []
+            for delta_file in deltalist:
+                try:
+                    shutil.move(delta_file, destination / delta_file.name)
+                except OSError as err:
+                    errors.append(err)
+            if errors:
+                logger.error(f"Error moving Delta files: {errors}")
 
 
 def move_oldruns(rp, prerun=False):
