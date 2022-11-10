@@ -13,7 +13,6 @@ import subprocess
 from pathlib import Path
 
 import numpy as np
-from pathlib import Path
 
 from tleedmlib.leedbase import copy_compile_log
 
@@ -509,11 +508,11 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
     compile_log = "compile-rfactor.log"
     try:
         fortran_compile_batch(ctasks, logname=compile_log)
-    except Exception as err:
+    except Exception:
         logger.error("Error compiling fortran files: ", exc_info=True)
         # move compile log to compile_logs directory
         copy_compile_log(rp, Path(compile_log), "rfactor-compile")
-        raise err
+        raise
     else:
         # move log file to supp
         try:
