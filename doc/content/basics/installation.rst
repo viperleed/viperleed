@@ -93,11 +93,11 @@ Finally, install the :term:`gfortran` MPI wrapper ``mpifort``:
     $ sudo apt-get install libopenmpi-dev
 
 
-MacOS
+macOS
 #####
 
 .. note:: 
-    Newer Macs using "Apple Silicon" ARM-based chips are incompatible with the Intel compilers.
+    Newer Macs using "Apple Silicon" ARM-based chips are incompatible with the Intel compilers (since they don't use Intel chips).
     Use :term:`gfortran` and :term:`mpifort` instead.
 
 For running under MacOS, it is recommened to first install a package manager such as `brew <https://brew.sh>`__.
@@ -113,8 +113,8 @@ Using the ``brew`` command, you can then easily install gfortran and the Open MP
 There is no need to install :term:`BLAS` and :term:`LAPACK`, as MacOS already ships with these libraries pre-installed.
 
 .. warning:: 
-    If the XCode Command Line Tools are not installed before you install :term:`gfortran`, you may get an error stating that the ``-lSystem`` library is not available.
-    If this happens, make sure to install the XCode Command Line Tools and then reinstall :term:`gfortran`:
+    If the XCode Command Line Tools are not installed before you install :term:`gfortran`, you will get an error stating that the ``-lSystem`` library is not available.
+    If this happens, make sure to first install the XCode Command Line Tools and then reinstall :term:`gfortran`:
 
     .. code-block:: console
 
