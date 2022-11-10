@@ -16,7 +16,7 @@ test.py
 utilities/recompile_parts.log
 
 # Ignore testing folder
-Tests/
+calculations/
 
 # sphinx build directory
 doc/_build
