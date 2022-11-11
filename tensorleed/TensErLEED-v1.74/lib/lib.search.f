@@ -25,7 +25,7 @@ C  of additional fields ATAV and PQ1.        Oct. 2018 L. Hammer
 C
 C**********************************************************************************
 C
-C  Please read the comment in search.f, v1.7.
+C  Please read the comment in search.f, v1.7 .
 C
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C                                                                          C
@@ -35,7 +35,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
 C  Subroutine r-factor computes either R2 or R-Pe and optimizes for
 C  inner potential V0R using the total, integer or half-order
-C  r-factor depending on flag WHICHR
+C  r-factor depending on flag WHICHG
 
       SUBROUTINE RFAKTOR(ATSMK,NSS,NBTD,NBMD,NETI,PQ,KAV,SYM,ESMK,
      +                   IPR,AE,
@@ -58,7 +58,6 @@ CVB  Include global parameters for dimension statements etc.
       REAL ATSMK,PQ,ESMK,OVLG
       DIMENSION ATSMK(NBTD,NDATT),ATAV(NBTD,NDATT)
       DIMENSION PQ(2,NBTD),PQAV(2,NBTD),ESMK(NDATT)
-
       REAL AT,ET,XPL,YPL,YT,ATP,TSTY2
       DIMENSION AT(NBTD,NDATA),ET(NBTD,NDATA),XPL(NDATA),YPL(NDATA)
       DIMENSION YT(NBTD,NDATA),ATP(NBTD,NDATA),TSTY2(NBTD)
@@ -105,7 +104,7 @@ CVB
 
 C  PERFORM DOMAIN-AVERAGING
       CALL RINTAV(ATSMK,NSS,NBTD,NETI,PQ,PQAV,KAV,SYM,NBT,ESMK,IPR,ATAV)
-	  
+
 
 C  CHECK FOR TOO HIGH THEOR. INTENS.             
       DO 28 IB=1,NBT                             
@@ -255,9 +254,9 @@ C  SKIP SOME BEAMS
       WRITE(6,66) IBE,(BENAME(I,IBE),I=1,5)
 66    FORMAT(14H*EXP. BEAM NO.,1I5,10H SKIPPED (,5A4,1H))
       GO TO 130
-	  
+
 68    CONTINUE
-C     WRITE(6,70)IBE,(BENAME(I,IBE),I=1,5),IBT,(PQAV(I,IBT),I=1,2)
+C69    WRITE(6,70)IBE,(BENAME(I,IBE),I=1,5),IBT,(PQAV(I,IBT),I=1,2)
 C70    FORMAT(9H*BEAM NO.,1I5,10H IN EXP. (,4A4,20H), WHICH IS BEAM NO.,
 C     11I5,12H IN THEORY (,2F12.4,1H))
 
@@ -520,7 +519,7 @@ CVB
 
                    RAVPM(I)=RAZZM(I)/RANNM(I)                            260187
 
-		   END IF	
+               END IF
 
 142   CONTINUE                                                           260187
 
@@ -617,7 +616,8 @@ C Local variables
 C      write(4,*) "now in sea_rcd"
 C      write(4,*) NPS,NPRMK,PNUM
 
-      DO 1856 IPOP=1,NPS
+      DO 1856 IPOP=1,NPS ! populations
+      !  PNUM is total number of parameters (including conc steps), must be equal MNPRMK
       DO 1855 IPARAM=1,PNUM
       
 C If parameter is dependent on another, we can skip everything
@@ -629,6 +629,7 @@ C If parameter is dependent on another, we can skip everything
 
 C      write(8,*) "PARAMETER",IPARAM,"IN POP",IPOP,"started"
 
+        ! probably width of gaussian
       IF(ABS(WIDT(IPARAM)-1).LE.1E-4) THEN
       width=2.
       ELSE
@@ -637,8 +638,10 @@ C      write(8,*) "PARAMETER",IPARAM,"IN POP",IPOP,"started"
 c      WRITE(8,*) 'width=',width
 
 
+!  VARST = variable step
+!  VARST is array containing number of grid points for each parameter
 
-      DO 1851 IPVAL=1,VARST(IPARAM)
+      DO IPVAL=1,VARST(IPARAM)
 
 c      write(8,*) "start probability of",IPVAL
 
@@ -654,16 +657,22 @@ C  open up parameter space completely if r-factor is not good enough
          HELP=RPEIND(IPOP)+0.05
          HELP=HELP*HELP
       ENDIF
+      !  WSK is gaussian probability distribution plus a small constant offset
+      ! in sea_rcd, only used there, but needs variable dimensions
       WSK(IPVAL)=exp(-0.5*FMKSQR/((width*width)*HELP))
 
 c      write(8,*)"probability of value",IPVAL," is",WSK(IPVAL)
 
- 1851 CONTINUE
+      END DO
+      CONTINUE
 
 C Normalization of PB-Distribution
       MKSUM=0.
-      DO 1852 IPVAL=1,VARST(IPARAM)
- 1852    MKSUM=MKSUM+WSK(IPVAL)
+      DO IPVAL=1,VARST(IPARAM)
+         MKSUM=MKSUM+WSK(IPVAL)
+      END DO
+
+C  VARST is array containing number of grid points for each parameter
 
 C  MKSUM is now used to normalise distribution to an integral value of 1.
 C  Instead, the gaussian distribution is now normalised to an integral value
@@ -689,6 +698,8 @@ c      write(8,*) "distribution normalised"
 C  Determination of new random number; AMI: changed to Fortran intrinsic
 
       FMKRN=scaled_random()
+
+C      write(8,*)"random",FMKRN
 
 C Determination of new parameter
 
@@ -722,7 +733,7 @@ C      write(8,*) "random",FMKRN," between",MKHELP1," ",MKHELP2,"?"
       ! The random() function from the C standard library that was previously used
       ! produces an integer in the interval [0, RAND_MAX].
       ! However, it seems that RAND_MAX is not clearly defined; the below 
-      ! value is an example mentioned in the C documentation.
+      ! value is 2^31-1 as mentioned in the C documentation.
       integer, parameter :: RAND_MAX = 2147483647
       real(8) rand_in
       integer tmp
@@ -1192,7 +1203,8 @@ cvb      write(6,'(5000i4)') (NPRAS(IDOM), IDOM = 1, NDOM)
       END
 C
 C #######################################################################
-C
+! AMI March 2022: This subroutine deals with the experimental data preparation
+
       SUBROUTINE PREEXP(AE,EE,NBED,NEE,BENAME,NBEA,IPR,ISMOTH,
      +                  EINCR,VI,YE,NDATA,TSE,TSE2,TSEY2,XPL,YPL,
      +                  AEP,NNN,NBE)
@@ -1288,6 +1300,9 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
   552 FORMAT (1F7.2,4E14.5,/,1000(5E14.5,/))
       END
 C------------------------------------------------------------------------
+! AMI March 2022: keep for now, likely eventually to be superceeded by new interpolation and R-factor
+!
+!
 C  SUBROUTINE READE INPUTS EXPERIMENTAL IV-CURVES
       SUBROUTINE READE(AE,EE,NBED,NEE,NBEA,BENAME,IPR)
 
@@ -1355,6 +1370,9 @@ C  READ (AND MAYBE PRINT) EXP. INTENSITIES
       RETURN
       END
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+! AMI March 2022: keep for now probably
+!
+!
       SUBROUTINE READRF(EMIN,EMAX,EINCR,
      1IPR,VI,V0RR,V01,V02,VINCR,ISMOTH,EOT,
      2IBP,WB,NBTD,NBED,KAV,NSS,MITTEL)
@@ -1410,6 +1428,11 @@ C  NSS is artifact present in many r-factor subroutines
       RETURN
       END
 C-----------------------------------------------------------------------
+!  AMI March 2022: Smooth acts only on experimental data if I understand correctly
+!                  In any case, I think this should be *not necessary* for now in ViPErLEED
+!                  since our philosopy is to preferably smooth experimental data at the
+!                  time of extraction from the movie.
+C
 C  SUBROUTINE SMOOTH SMOOTHES A SET OF DATA (GIVEN ON A NON-UNIFORM
 C  GRID, BUT CHOOSING A SIMPLIFIED FORMULA WHEN EQUAL INTERVALS ARE
 C  FOUND) BY WEIGHTED THREE-POINT AVERAGING
@@ -1448,6 +1471,9 @@ C  IF TOO FEW POINTS, NO SMOOTHING POSSIBLE
 70    RETURN
       END
 C-----------------------------------------------------------------------
+! AMI March 2022: to be superceeded by new interpolation and R-factor
+!
+!
 C  SUBROUTINE INTPOL INTERPOLATES LEED INTENSITIES ONTO A WORKING        230480
 C  GRID (WITH STEPS OF EINCR EV)
       SUBROUTINE INTPOL(A,NS,NBD,NE,IS,NB,E,EINCR,IPR,X,WORYT)
@@ -1514,6 +1540,9 @@ C  INTERPOLATE (AND SET NEGATIVE INTENSITIES TO ZERO)
 90    RETURN
       END
 C-----------------------------------------------------------------------
+! AMI March 2022: to be superceeded by new interpolation and R-factor
+!
+!
 C  SUBROUTINE DER CALCULATES 1ST DERIVATIVE (AFTER ZANAZZI-JONA)
       SUBROUTINE DER(Y,NE,NS,NBD,IS,NB,Y1,H)
 
@@ -1547,6 +1576,9 @@ C  SUBROUTINE DER CALCULATES 1ST DERIVATIVE (AFTER ZANAZZI-JONA)
       RETURN
       END
 C-----------------------------------------------------------------------
+! AMI March 2022: to be superceeded by new interpolation and R-factor
+!
+!
 C  SUBROUTINE YPEND CALCULATES THE PENDRY Y FUNCTION
 C  Y = (A/AP) / ((A/AP)**2 + VI), WHERE AP/A IS THE LOGARITHMIC ! AP == a prime
 C  DERIVATIVE OF THE (TABULATED) FUNCTION A
@@ -1585,6 +1617,9 @@ C     LEVEL 2, A,AP,E,Y
 50    RETURN
       END
 C-----------------------------------------------------------------------
+! AMI March 2022: to be superceeded by new interpolation and R-factor
+!
+!
 C  FUNCTION YVAL INTERPOLATES
       FUNCTION YVAL(X, WORY, WORX, LENGTH,ITIL,ITIH)
       DIMENSION WORY(LENGTH), WORX(LENGTH)
@@ -1610,6 +1645,9 @@ C  DO ACTUAL 3RD-ORDER POLYNOMIAL INTERPOLATION
 20    RETURN
       END
 C-----------------------------------------------------------------------
+! AMI March 2022: to be superceeded by new interpolation and R-factor
+!
+!
 C  SUBROUTINE BINSRX FINDS A REQUIRED INTERPOLATION INTERVAL
 C  BY BINARY SEARCH (SUCCESSIVE HALVING OF INITIAL INTERVAL)
       SUBROUTINE BINSRX(IL, IH, X, WORX, LENGTH)
@@ -1640,6 +1678,9 @@ C  BY BINARY SEARCH (SUCCESSIVE HALVING OF INITIAL INTERVAL)
 110   RETURN
       END
 C------------------------------------------------------------------------
+! AMI March 2022: to be superceeded by new interpolation and R-factor
+!
+!
 C  SUBROUTINE STFPTS FINDS, GIVEN THE INTERPOLATION INTERVAL, THE
 C  FOUR NEAREST GRID POINTS AND THE CORRESPONDING ORDINATE VALUES
       SUBROUTINE STFPTS(IL, IH, WORX, WORY, LENGTH)
@@ -1663,6 +1704,9 @@ C  FOUR NEAREST GRID POINTS AND THE CORRESPONDING ORDINATE VALUES
       RETURN
       END
 C-----------------------------------------------------------------------
+! AMI March 2022: to be superceeded by new interpolation and R-factor
+!
+!
 C  SUBROUTINE XNTERP PERFORMS 3RD-ORDER POLYNOMIAL INTERPOLATION
       FUNCTION XNTERP(X)
       COMMON / DATBLK / X0, X1, X2, X3, Y0, Y1, Y2, Y3
@@ -1681,6 +1725,9 @@ C  SUBROUTINE XNTERP PERFORMS 3RD-ORDER POLYNOMIAL INTERPOLATION
       RETURN
       END
 C-----------------------------------------------------------------------
+! AMI March 2022: to be superceeded by new interpolation and R-factor
+!
+!
 C  SUBROUTINE XNTRP2 PERFORMS 2ND OR 1ST ORDER POLYNOMIAL INTERPOLATION
       SUBROUTINE XNTRP2(X,Y,XS,YS,N)
       DIMENSION XS(N),YS(N)
@@ -1770,6 +1817,9 @@ C  KEEP NAME OF FIRST BEAM ENCOUNTERED IN SET OF BEAMS TO BE AVERAGED
 120   RETURN
       END
 C------------------------------------------------------------------------
+! AMI March 2022: to be superceeded by new interpolation and R-factor
+!
+!
 C  SUBROUTINE VARSUM INTEGRATES OVER VARIOUS COMBINATIONS OF THE INPUT
 C  FUNCTIONS (TABULATED) A1,A2,B1,B2, DEPENDING ON THE VALUE OF NF.
 C  NV IS A RELATIVE SHIFT OF THE X-AXIS BETWEEN FUNCTIONS. IE1,IE2 ARE
@@ -1951,15 +2001,15 @@ C  DETERMINE WEIGHTING FACTOR
       IF (LAV.LE.NB) GO TO 10
       IF (NPRIN.LT.2) RETURN
 C  PRINT OUT AVERAGED INTENSITIES
-C     DO 40 IS=1,NS
+C      DO 40 IS=1,NS
 C     WRITE(6,30)IS,(PQ1(1,IB),PQ1(2,IB),IB=1,LAVM)
-C 30  FORMAT(1H ,//,19H*SURFACE STRUCTURE ,I5,//,45H BEAMS AND BEAM INTE
-C    1NSITIES AFTER AVERAGING  ,500(/,22X,8(1X,2A6),/,28X,8(1X,2A6)))
-C     DO 32 IE=1,NE
+C  30  FORMAT(1H ,//,19H*SURFACE STRUCTURE ,I3,//,45H BEAMS AND BEAM INTE
+C     1NSITIES AFTER AVERAGING  ,500(/,22X,8(1X,2A6),/,28X,8(1X,2A6)))
+C      DO 32 IE=1,NE
 C 32  WRITE(6,35)ES(IE),(AT(IS,IB,IE),IB=1,LAVM)
-C 35  FORMAT(10H ENERGY = ,1F7.2,5H EV  ,8E13.5,500(/,28X,8E13.5,/,22X,
-C    18E13.5))
-C 40  CONTINUE
+C  35  FORMAT(10H ENERGY = ,1F7.2,5H EV  ,8E13.5,500(/,28X,8E13.5,/,22X,
+C     18E13.5))
+C  40  CONTINUE
       RETURN
       END
 C-----------------------------------------------------------------------
@@ -1994,6 +2044,9 @@ C     LEVEL 2, YS,Y,ET
       RETURN
       END
 C-----------------------------------------------------------------------
+! AMI March 2022: to be superceeded by new interpolation and R-factor
+!
+!
 C  SUBROUTINE COMNEI FINDS ENERGY INTERVAL COMMON TO EXP. AND THEORY    040280
       SUBROUTINE COMNEI(EE,NBED,NEE,ET,NBTD,NET,IBE,IBT,V0,EINCR,
      1NE1,NE2,NT1,NT2,EET)
@@ -2025,6 +2078,9 @@ C     LEVEL 2, ET,EE
       END
 
 C---------------------------------------------------------------------
+! AMI March 2022: keep for now probably
+!
+!
 C  SUBROUTINE READT READS IN THEORETICAL IV-CURVES TO BE USED AS 
 C  PSEUDOEXPERIMENT
 C  AUTHOR: R.DOELL, 06.11.92
@@ -2111,6 +2167,9 @@ C
       RETURN
       END
 *******************************************************************************
+! AMI March 2022: we can consider eventually replacing this
+!
+!
 CVB
 C  Subroutine HeadDoc writes header for output file
 
@@ -2167,6 +2226,9 @@ C  Subroutine HeadDoc writes header for output file
       END
 
 **************************************************************************
+! AMI March 2022: keep for now, eventually we may want to replace
+!
+!
 C  Subroutine ReadFile reads in a specified delta amplitude file
 
       Subroutine ReadFile(CNTFIL,NDOM,IDOM,IPLACE,IFILE,NPLACES,NFILES,
@@ -2418,7 +2480,7 @@ C  unformatted files
               READ(CNTFIL,'(6E13.7)') (XISTMK(IDOM,IDATT,I), I=1,NT0)
 
               READ(CNTFIL,'(6E13.7)') 
-     +             ((DELMK(IDATT,I,J,IDOM,IPLACE,IFILE), 
+     +             ((DELMK(IDATT,I,J,IDOM,IPLACE,IFILE),
      +             J=1,NT0), I=1,NCSTEP)
 
             END IF
@@ -2603,8 +2665,8 @@ C  Quantities for dimensions
 
 C  surface, current delta amp set, no of files per place
 
-      INTEGER NSURF, IFNUM, NFIL
-      DIMENSION NSURF(NDOM,MNPLACES),IFNUM(NDOM,MNPLACES,NFILES)
+      INTEGER NSURF, IFNUM, NFIL !surface (flag 0/1), current delta amp set, no of files per place
+      DIMENSION NSURF(NDOM,MNPLACES),IFNUM(NDOM,MNPLACES,NFILES) !nsurf: one index per domain and atom; ifnum: one index per domain, atom and file
       DIMENSION NFIL(NDOM,MNPLACES)
 
 C  concentration, displacement, current concentration parameter
@@ -2827,6 +2889,9 @@ c next energy
       END
 
 ***************************************************************************
+! AMI March 2022: This is important for the search algorithm                @Tobias
+!
+!
 C  Subroutine GetWid calculates the width of the gaussian distribution
 C  that is used for the next generation for each parameter from results
 C  of the current generation.
@@ -3025,6 +3090,9 @@ c      END IF
       END
 
 ********************************************************************************
+! AMI March 2022: Need to have a closer look at this, not sure if we can keep as is              @Tobias
+!
+!
 C Subroutine GetDependency initializes the PARDEP array. For each parameter, if 
 C it should always be equivalent to another parameter via the "Atom number"
 C FILREL, the PARDEP(IPARAM) will be set to the index of that parameter. For 

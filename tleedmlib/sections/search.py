@@ -634,13 +634,14 @@ def search(sl, rp):
             srcname = [f for f in os.listdir(srcpath)
                        if f.startswith('search') and 'mpi' not in f][0]
         shutil.copy2(os.path.join(srcpath, srcname), srcname)
-        libpath = os.path.join(tldir, 'lib')
-        if usempi:
-            libname = [f for f in os.listdir(libpath)
-                       if f.startswith('lib.search.mpi')][0]
-        else:
-            libname = [f for f in os.listdir(libpath)
-                       if f.startswith('lib.search') and 'mpi' not in f][0]
+        libpath = Path(tldir, 'lib')
+        libpattern = "lib.search"
+        if usempi and rp.TL_VERSION <= 1.73:
+            libpattern += ".mpi"
+        libname = next(libpath.glob(libpattern + "*"), None)
+        if libname is None:
+            raise RuntimeError(f"File {libpattern}.f not found.")
+        # copy to work dir
         shutil.copy2(os.path.join(libpath, libname), libname)
         hashing_files = [f for f in os.listdir(libpath)
                          if f.startswith('intarr_hashing')
