@@ -465,6 +465,9 @@ C Some variables for parallel run
       INTEGER   RANK,NUMTASK,IERR
       INTEGER   status(MPI_STATUS_SIZE)
 
+!     For random number generation
+      integer :: seed_size = 1
+      integer, dimension(:), allocatable :: seed
 ***************************************************************************
 
 C  end variable declarations and do something useful now ...
@@ -615,14 +618,21 @@ C  Broadcast input data to other processes
       CALL MPI_BCAST(DMISCH,1,MPI_REAL,0,MPI_COMM_WORLD, IERR)
       CALL MPI_BCAST(MAXGEN,1,MPI_INTEGER,0,MPI_COMM_WORLD, IERR)
 
-C  initialize random function 
+!  initialize random function 
 !  AMI: changed to do this in Fortran directly, rather than C
 
+      call random_seed(size=seed_size) ! set seed size (= number of random numbers) to 1
+      allocate(seed(seed_size)) ! allocate size = 1
+
       if (INIT == 0) then
-            call srand(time())
+            seed = time()
       else
-            call srand(INIT)
+            seed = INIT
       end if
+
+      ! seed random number generator
+      call random_seed(put=seed)
+
 
 C  initialize variables for HASHTAB
 

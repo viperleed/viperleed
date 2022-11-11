@@ -461,6 +461,9 @@ C Some auxiliary variables used for search document
       DIMENSION BRGESHELP(MPS),BRINSHELP(MPS),BRHASHELP(MPS),
      +          BV0HELP(MPS)
 
+!     For random number generation
+      integer :: seed_size = 1
+      integer, dimension(:), allocatable :: seed
 ***************************************************************************
 
 C  end variable declarations and do something useful now ...
@@ -505,14 +508,20 @@ C  initialize population here (may change in readsc)
          PAROLD(IPARAM,IPOP)=1
  1849    PARIND(IPARAM,IPOP)=1
 
-C  initialize random function 
+!  initialize random function 
 !  AMI: changed to do this in Fortran directly, rather than C
 
+      call random_seed(size=seed_size) ! set seed size (= number of random numbers) to 1
+      allocate(seed(seed_size)) ! allocate size = 1
+
       if (INIT == 0) then
-            call srand(time())
+            seed = time()
       else
-            call srand(INIT)
+            seed = INIT
       end if
+
+      ! seed random number generator
+      call random_seed(put=seed)
 
 C Modul 1: READIN INFORMATION FOR rfactor determination from WEXPEL,
 C          such as beam grouping, energy ranges etc.

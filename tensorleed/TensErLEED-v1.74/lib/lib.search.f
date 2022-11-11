@@ -688,7 +688,7 @@ c      write(8,*) "distribution normalised"
 
 C  Determination of new random number; AMI: changed to Fortran intrinsic
 
-      FMKRN=irand()
+      FMKRN=scaled_random()
 
 C Determination of new parameter
 
@@ -711,6 +711,35 @@ C      write(8,*) "random",FMKRN," between",MKHELP1," ",MKHELP2,"?"
 
       RETURN
       END
+
+!
+! ========================================================================
+!     Function scaled_random() by A. M. Imre & M. Riva
+!     Reproduces the random number as was previously calculated by random_.c
+
+      real function scaled_random() result(rand_out)
+
+      ! The random() function from the C standard library that was previously used
+      ! produces an integer in the interval [0, RAND_MAX].
+      ! However, it seems that RAND_MAX is not clearly defined; the below 
+      ! value is an example mentioned in the C documentation.
+      integer, parameter :: RAND_MAX = 2147483647
+      real(8) rand_in
+      integer tmp
+
+      ! get random number
+      call random_number(rand_in)
+
+      ! scale from real interval ]0,1[ to integer interval [0, RAND_MAX]
+      tmp = floor(rand_in*(RAND_MAX + 1))
+
+      ! perform %1000 operation that was in random_.c
+      tmp = mod(tmp, 1000)
+
+      ! convert to real(4) as required by FMKRN
+      rand_out = real(tmp)
+
+      end function scaled_random
 
 C
 C ========================================================================
