@@ -29,6 +29,7 @@ KNOWN_TL_VERSIONS = (
     "1.71",
     "1.72",
     "1.73",  # TODO: use Version when available
+    "1.74",
     "1.8",
 )
 
