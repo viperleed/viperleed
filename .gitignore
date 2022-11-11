@@ -16,7 +16,10 @@ test.py
 utilities/recompile_parts.log
 
 # Ignore testing folder
-Tests/
+calculations/
+
+# built docs
+doc/_build/
 
 # Ignore compiled versions of random_.c, beamgen, .x files and .so files
 **/random_.o
