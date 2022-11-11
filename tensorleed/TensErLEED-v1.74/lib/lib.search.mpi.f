@@ -1,6 +1,6 @@
 C  Tensor LEED subroutines for optimization algorithm 
-C  v1.7, VB 13.04.00
-C  for use with search.f v1.7 
+C  v1.7, VB 13.04.00 modified wrt field limitations by LH 26.03.21
+C  for use with search.f v1.7
 C
 C  as described in 
 C
@@ -37,12 +37,14 @@ C  Subroutine r-factor computes either R2 or R-Pe and optimizes for
 C  inner potential V0R using the total, integer or half-order
 C  r-factor depending on flag WHICHG
 
-      SUBROUTINE RFAKTOR(ATSMK,NSS,NBTD,NBMD,NETI,PQ,KAV,SYM,ESMK,IPR,
-     +     AE,NDATT,NET,AT,ET,EINCR,XPL,YPL,NDATA,ATP,YT,VI,NBED,TSTY2,
-     +     V02,V01,VINCR,ARM,ARPEM,ERANGM,RAZZM,RANNM,RAVPM,XRPEM,NST1,
-     +     NST2,MITTEL,IBP,R2,RPE,EE,NEE,EET,YE,WB,BRGES,BRINS,BRHAS,
-     +     BV0,NPS,V0RR,IPOP,TST,TSE,TSE2,TSEY2,BENAME,NBE,WHICHG,
-     +     WHICHR,BARAV,OVLG)
+      SUBROUTINE RFAKTOR(ATSMK,NSS,NBTD,NBMD,NETI,PQ,KAV,SYM,ESMK,
+     +                   IPR,AE,
+     +                   NDATT,NET,AT,ET,EINCR,XPL,YPL,NDATA,ATP,YT,VI,
+     +                   NBED,TSTY2,V02,V01,VINCR,ARM,ARPEM,ERANGM,
+     +                   RAZZM,RANNM,RAVPM,XRPEM,NST1,NST2,MITTEL,IBP,
+     +                   R2,RPE,EE,NEE,EET,YE,WB,BRGES,BRINS,BRHAS,
+     +                   BV0,NPS,V0RR,IPOP,TST,TSE,TSE2,TSEY2,
+     +                   BENAME,NBE,WHICHG,WHICHR,BARAV,OVLG)
 
 CVB  Include global parameters for dimension statements etc.
 
@@ -102,6 +104,8 @@ CVB
 
 C  PERFORM DOMAIN-AVERAGING
       CALL RINTAV(ATSMK,NSS,NBTD,NETI,PQ,PQAV,KAV,SYM,NBT,ESMK,IPR,ATAV)
+
+
 C  CHECK FOR TOO HIGH THEOR. INTENS.             
       DO 28 IB=1,NBT                             
       CALL MAXINT(ATAV,NSS,NBTD,IB,NETI,AM,NDATT)
@@ -414,8 +418,8 @@ C  R-FACTOR ACCORDING TO PENDRY (MULT. BY 0.5)
       RPE(IBE)=1.0*SY2/(SEY2+STY2)
 
       ARPE=ARPE+WB(IBE)*EET(IBE)*RPE(IBE)
-              RAZZ=RAZZ+SY2*WB(IBE)
-              RANN=RANN+SEY2*WB(IBE)+STY2*WB(IBE)
+      RAZZ=RAZZ+SY2*WB(IBE)
+      RANN=RANN+SEY2*WB(IBE)+STY2*WB(IBE)
 
 CVB
       END IF
@@ -446,7 +450,7 @@ CVB
          ERANGM(KMIT)=ERANGM(KMIT)+WB(IBE)*EET(IBE)                     260187
       ENDIF                                                             260187
 
-      OVL=EET(IBE)
+      OVL=EET(IBE)   ! unused
 C       WRITE(7,4444) (BENAME(I,IBE),I=1,3),IBE,D12,V0R,
 C     * EMIN,EMAX,OVL,RPE(IBE)
       EET(IBE)=WB(IBE)*EET(IBE)
@@ -515,7 +519,7 @@ CVB
 
                    RAVPM(I)=RAZZM(I)/RANNM(I)                            260187
 
-		   END IF	
+               END IF
 
 142   CONTINUE                                                           260187
 
@@ -562,7 +566,7 @@ C  inner potential)
       IF (AR.GE.BARAV) GO TO 145
 
         BARAV=AR
-        BV0(IPOP)=-V0RR+V0
+        BV0(IPOP)=-V0RR+V0  ! TODO: avoid use of IPOP by writing to some fixed variable, pass BV0(IPOP) from search
 
         IF (WHICHR.eq.1) THEN  
 
@@ -592,8 +596,8 @@ C  Beam me up to main! Now!
 
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
-      SUBROUTINE SEA_RCD(NDOM,NPS,NPRMK,NSTEP,PNUM,VARST,PARIND,RPEIND,
-     +                   WSK,WIDT,RMUT,NPAR,PARDEP)
+      SUBROUTINE SEA_RCD(NDOM,NPS,NPRMK,NSTEP,PNUM,VARST,PARIND,
+     +                   RPEIND,WSK,WIDT,RMUT,NPAR,PARDEP)
 
 C Global variables
       INTEGER NDOM,NPS,NPRMK,PNUM,NSTEP,NPAR
@@ -691,9 +695,7 @@ c         write(8,*)"probability of value",IPVAL," is",WSK(IPVAL)
 
 c      write(8,*) "distribution normalised"
 
-C  Determination of new random number
-C  note that if name of random subroutine is changed, integer declaration of
-C  random (see above) must also be changed!
+C  Determination of new random number; AMI: changed to Fortran intrinsic
 
       FMKRN=scaled_random()
 
@@ -731,7 +733,7 @@ C      write(8,*) "random",FMKRN," between",MKHELP1," ",MKHELP2,"?"
       ! The random() function from the C standard library that was previously used
       ! produces an integer in the interval [0, RAND_MAX].
       ! However, it seems that RAND_MAX is not clearly defined; the below 
-      ! value is an example mentioned in the C documentation.
+      ! value is 2^31-1 as mentioned in the C documentation.
       integer, parameter :: RAND_MAX = 2147483647
       real(8) rand_in
       integer tmp
@@ -749,7 +751,6 @@ C      write(8,*) "random",FMKRN," between",MKHELP1," ",MKHELP2,"?"
       rand_out = real(tmp)
 
       end function scaled_random
-
 
 C
 C ========================================================================
@@ -1203,10 +1204,10 @@ cvb      write(6,'(5000i4)') (NPRAS(IDOM), IDOM = 1, NDOM)
 C
 C #######################################################################
 ! AMI March 2022: This subroutine deals with the experimental data preparation
-!
-!
-      SUBROUTINE PREEXP(AE,EE,NBED,NEE,BENAME,NBEA,IPR,ISMOTH,EINCR,VI,
-     +     YE,NDATA,TSE,TSE2,TSEY2,XPL,YPL,AEP,NNN,NBE)
+
+      SUBROUTINE PREEXP(AE,EE,NBED,NEE,BENAME,NBEA,IPR,ISMOTH,
+     +                  EINCR,VI,YE,NDATA,TSE,TSE2,TSEY2,XPL,YPL,
+     +                  AEP,NNN,NBE)
 
 C  Declaration of global variables
 
@@ -1579,7 +1580,7 @@ C-----------------------------------------------------------------------
 !
 !
 C  SUBROUTINE YPEND CALCULATES THE PENDRY Y FUNCTION
-C  Y = (A/AP) / ((A/AP)**2 + VI), WHERE AP/A IS THE LOGARITHMIC
+C  Y = (A/AP) / ((A/AP)**2 + VI), WHERE AP/A IS THE LOGARITHMIC ! AP == a prime
 C  DERIVATIVE OF THE (TABULATED) FUNCTION A
       SUBROUTINE YPEND(A,AP,NS,NBD,IS,NB,NE,E,Y,VI,IPR)
 
@@ -1898,21 +1899,22 @@ C  IS MADE
 110   Y4(N)=B2(IS2,IB2,IES)
       DE=0.1*EINCR
       NN=10*(N-1)+1
-      DO 120 IE=1,NN
-      X=FLOAT(IE-1)*DE
-      ITIL=0
-      ITIH=0
-      AA1=YVAL(X,Y1(1),Y,N,ITIL,ITIH)
-      ITIL=0
-      ITIH=0
-      AA2=YVAL(X,Y2(1),Y,N,ITIL,ITIH)
-      ITIL=0
-      ITIH=0
-      AB1=YVAL(X,Y3(1),Y,N,ITIL,ITIH)
-      ITIL=0
-      ITIH=0
-      AB2=YVAL(X,Y4(1),Y,N,ITIL,ITIH)
-120   YY(IE)=ABS(AB1-C*AB2)*ABS(AA1-C*AA2)/(ABS(AA1)+EPS)
+      DO IE=1,NN
+          X=FLOAT(IE-1)*DE
+          ITIL=0
+          ITIH=0
+          AA1=YVAL(X,Y1(1),Y,N,ITIL,ITIH)
+          ITIL=0
+          ITIH=0
+          AA2=YVAL(X,Y2(1),Y,N,ITIL,ITIH)
+          ITIL=0
+          ITIH=0
+          AB1=YVAL(X,Y3(1),Y,N,ITIL,ITIH)
+          ITIL=0
+          ITIH=0
+          AB2=YVAL(X,Y4(1),Y,N,ITIL,ITIH)
+          YY(IE)=ABS(AB1-C*AB2)*ABS(AA1-C*AA2)/(ABS(AA1)+EPS)
+      END DO
       CALL INTSUM(YY,1,1,1,1,DE,1,NN,S)
       RETURN
       END
@@ -2863,7 +2865,7 @@ C  cutoff for maximum intensity - caution if occurs!!
 
               RPRE = CABS(PRE)
               ATSAS(IDOM, IBEAM, IDATT) = 
-     .             AmpAbs*AmpAbs * RPRE*RPRE * A/ C
+     .             AmpAbs*AmpAbs * RPRE*RPRE * A/C
             END IF
 
           ELSE
