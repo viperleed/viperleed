@@ -14,12 +14,18 @@ from pathlib import Path
 
 import numpy as np
 
+from tleedmlib.leedbase import copy_compile_log
+
 from viperleed.tleedmlib.files.iorefcalc import readFdOut
 from viperleed.tleedmlib.leedbase import fortran_compile_batch, getTLEEDdir, getTensors
 import viperleed.tleedmlib.files.iorfactor as tl_io
 from viperleed.tleedmlib.checksums import validate_multiple_files
 
-from viperleed.tleedmlib.wrapped.rfactor import r_factor_new as rf
+try:
+    from viperleed.tleedmlib.wrapped.rfactor import r_factor_new as rf
+except ImportError:
+    logger.warn("Unable to load compiled rfactor module. "
+                "Only legacy rfactor currently available.")
 from viperleed.tleedmlib.wrapped.error_codes import error_codes, check_ierr
 
 
@@ -508,6 +514,8 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
         fortran_compile_batch(ctasks, logname=compile_log)
     except Exception:
         logger.error("Error compiling fortran files: ", exc_info=True)
+        # move compile log to compile_logs directory
+        copy_compile_log(rp, Path(compile_log), "rfactor-compile")
         raise
     else:
         # move log file to supp

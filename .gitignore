@@ -21,6 +21,9 @@ doc/_build/
 # Ignore testing folder
 calculations/
 
+# built docs
+doc/_build/
+
 # Ignore compiled versions of random_.c, beamgen, .x files and .so files
 **/random_.o
 **/MPIrandom_.o
