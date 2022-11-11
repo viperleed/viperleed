@@ -1,6 +1,6 @@
 C  Tensor LEED optimization algorithm 
-C  v1.7, WM 18.04.09
-C  for use with lib.search.f v1.7, random_.c
+C  v1.7, VB 13.04.00 modified wrt field limitations by LH 26.03.21
+C  for use with lib.search.f v1.7
 C
 C  as described in 
 C
@@ -25,7 +25,7 @@ C  of the package is passed on.
 
 C  original Author M. Kottcke
 
-C  current version v1.71
+C  current version v1.74
 
 C  Version R. Backofen, V. Blum, 06.09.95
 C  A. Seubert v90 (Including capability of incoherent domain averaging; 5/97)
@@ -53,7 +53,9 @@ C  V. Blum v104a: Minor corrections (type declarations adjusted)
 C  V. Blum v105: energy dependent inner potential now taken over from LEED
 C                calculation
 C  V. Blum v106: minor adjustments for TensErLEED; subroutines now in lib.search.f
-C  W. Meyer v107: MPI parallelised search loop for distributed memory clusters
+C  09.11.22
+C  A. Imre: replaced random C funktion with Fortran intrinsic.
+
 
 **************************************************************************
 
@@ -93,10 +95,10 @@ C  no LEED analysis has gone before, will be indebted to you eternally.
 
 *************************************************************************
 
-C This subroutine deals with the experimental data preparation
+C 
+
       PROGRAM SEARCH
       use intarr_hashing
-      include 'mpif.h'
 
 C  Include global parameters for dimension statements etc.
 
@@ -185,7 +187,7 @@ C  OVLG is total energy range (sum of all used experimental beams)
       INTEGER MITTEL
       DIMENSION MITTEL(MNBED)
       
-C  Arrays for data to compare search results to from WEXPEL via READE or READT ! AMI: I thought WEXPEL is no longer used??
+C  Arrays for data to compare search results to from WEXPEL via READE or READT
 
 C  AE is array for measured experimental intensity data (or theor. comparison data
 C     if EOT=1.) 
@@ -397,6 +399,7 @@ C  ATSAS has the same purpose for each domain
       REAL ATSMK, ATSAS
       DIMENSION ATSMK(MNBTD,MNDATT), ATSAS(MNDOM, MNBTD, MNDATT)
 
+
 C  Variables for calculation of r-factor (subroutine Rfaktor)
 C  All these are local variables with variable dimensions.
 
@@ -458,32 +461,19 @@ C Some auxiliary variables used for search document
       DIMENSION BRGESHELP(MPS),BRINSHELP(MPS),BRHASHELP(MPS),
      +          BV0HELP(MPS)
 
-C Some variables for parallel run
-
-      INTEGER   RANK,NUMTASK,IERR
-      INTEGER   status(MPI_STATUS_SIZE)
-
 ***************************************************************************
 
 C  end variable declarations and do something useful now ...
 
 ***************************************************************************
 
-C  initialise MPI run
-
-      call MPI_INIT(IERR)
-      call MPI_COMM_SIZE(MPI_COMM_WORLD, NUMTASK, IERR)
-      call MPI_COMM_RANK(MPI_COMM_WORLD, RANK, IERR)
-
 C  first thing: open control file
 
-      IF (RANK.EQ.0) THEN
       OPEN(8,file='control.chem')
 
 C  open R-factor info file
 
       OPEN(12,file='rf.info', STATUS='OLD')
-      ENDIF
 
 C  set dimension statements for subroutines to desired values
 C  generally, none of these should be set too large in PARAM
@@ -508,7 +498,6 @@ C  both will be repeated later
       NBMD = MNBMD
 
       NSS = 1
-
 C  initialize population here (may change in readsc)
 
       DO 1849 IPOP=1,MPS
@@ -516,107 +505,50 @@ C  initialize population here (may change in readsc)
          PAROLD(IPARAM,IPOP)=1
  1849    PARIND(IPARAM,IPOP)=1
 
+C  initialize random function 
+!  AMI: changed to do this in Fortran directly, rather than C
+
+      if (INIT == 0) then
+            call srand(time())
+      else
+            call srand(INIT)
+      end if
+
 C Modul 1: READIN INFORMATION FOR rfactor determination from WEXPEL,
 C          such as beam grouping, energy ranges etc.
 
-      IF (RANK.EQ.0) THEN
+      CALL READRF(EMIN,EMAX,EINCR,
+     +            IPR,VI,V0RR,V01,V02,VINCR,ISMOTH,EOT,
+     +            IBP,WB,NBTD,NBED,KAV,NSS,MITTEL)
 
-         CALL READRF(EMIN,EMAX,EINCR,IPR,VI,V0RR,V01,V02,VINCR,ISMOTH,
-     +        EOT,IBP,WB,NBTD,NBED,KAV,NSS,MITTEL)
 
 C Modul 2: READIN EXPERIMENTAL
+
 C read data to be compared, either experimental or theoretical
 
-         IF (EOT.eq.1.) THEN
-            CALL READT(AE,EE,NBED,NEE,NBEA,NDATA,BENAME,IPR,MAXI,IOFF)
-         ELSE
-            CALL READE(AE,EE,NBED,NEE,NBEA,BENAME,IPR)
-         END IF      
+      IF (EOT.eq.1.) THEN
+        CALL READT(AE,EE,NBED,NEE,NBEA,NDATA,BENAME,IPR,MAXI,IOFF)
+      ELSE
+
+        CALL READE(AE,EE,NBED,NEE,NBEA,BENAME,IPR)
+
+      END IF
+
 C  end readin of exp. or theor. reference data
-         
+
+
 C Modul 3: PREPARE EXPERIMENTAL DATA FOR LATER USAGE
 
-         CALL PREEXP(AE,EE,NBED,NEE,BENAME,NBEA,IPR,ISMOTH,EINCR,VI,
-     +        YE,NDATA,TSE,TSE2,TSEY2,XPL,YPL,AEP,NNN,NBE)
+      CALL PREEXP(AE,EE,NBED,NEE,BENAME,NBEA,IPR,ISMOTH,
+     +            EINCR,VI,YE,NDATA,TSE,TSE2,TSEY2,XPL,YPL,AEP,NNN,NBE)
 
-      END IF  
-    
-C  Broadcast input data to other processes
-
-      CALL MPI_BCAST(EMIN,1,MPI_REAL,0,MPI_COMM_WORLD,IERR)
-      CALL MPI_BCAST(EMAX,1,MPI_REAL,0,MPI_COMM_WORLD,IERR)
-      CALL MPI_BCAST(EINCR,1,MPI_REAL,0,MPI_COMM_WORLD,IERR)
-      CALL MPI_BCAST(IPR,1,MPI_INTEGER,0,MPI_COMM_WORLD,IERR)
-      CALL MPI_BCAST(VI,1,MPI_REAL,0,MPI_COMM_WORLD,IERR)
-      CALL MPI_BCAST(V0RR,1,MPI_REAL,0,MPI_COMM_WORLD,IERR)
-      CALL MPI_BCAST(V01,1,MPI_REAL,0,MPI_COMM_WORLD,IERR)
-      CALL MPI_BCAST(V02,1,MPI_REAL,0,MPI_COMM_WORLD,IERR)
-      CALL MPI_BCAST(VINCR,1,MPI_REAL,0,MPI_COMM_WORLD,IERR)
-      CALL MPI_BCAST(ISMOTH,1,MPI_INTEGER,0,MPI_COMM_WORLD,IERR)
-      CALL MPI_BCAST(EOT,1,MPI_INTEGER,0,MPI_COMM_WORLD, IERR)
-      CALL MPI_BCAST(IBP,MNBED,MPI_INTEGER,0,MPI_COMM_WORLD,IERR)
-      CALL MPI_BCAST(WB,MNBED,MPI_REAL,0,MPI_COMM_WORLD,IERR)
-      CALL MPI_BCAST(KAV,MNBTD,MPI_INTEGER,0,MPI_COMM_WORLD,IERR)
-      CALL MPI_BCAST(MITTEL,MNBED,MPI_INTEGER,0,MPI_COMM_WORLD,IERR)
-      CALL MPI_BCAST(NEE,MNBED,MPI_INTEGER,0,MPI_COMM_WORLD,IERR)
-      CALL MPI_BCAST(NBEA,MNBED,MPI_INTEGER,0,MPI_COMM_WORLD,IERR)
-      DO I = 1,MNDATA
-         CALL MPI_BCAST(AE(1,I),MNBED,MPI_REAL,0,MPI_COMM_WORLD,IERR)
-         CALL MPI_BCAST(EE(1,I),MNBED,MPI_REAL,0,MPI_COMM_WORLD,IERR)
-         CALL MPI_BCAST(YE(1,I),MNBED,MPI_REAL,0,MPI_COMM_WORLD,IERR)
-      ENDDO
-      CALL MPI_BCAST(TSE,MNBED,MPI_REAL,0,MPI_COMM_WORLD,IERR)
-      CALL MPI_BCAST(TSE2,MNBED,MPI_REAL,0,MPI_COMM_WORLD,IERR)
-      CALL MPI_BCAST(TSEY2,MNBED,MPI_REAL,0,MPI_COMM_WORLD,IERR)
-      DO I = 1,5
-      DO J = 1,MNBED
-         CALL MPI_BCAST(BENAME(I,J),20,MPI_CHARACTER,0,MPI_COMM_WORLD,
-     *        IERR)
-      ENDDO
-      ENDDO
-      CALL MPI_BCAST(NBE,1,MPI_INTEGER,0,MPI_COMM_WORLD, IERR)
 
 C Modul 4: Readin control information for search algorithm
 
-      IF (RANK.EQ.0) THEN
-
-         CALL READSC(NDOM,NPLACES,NFILES,INFILE,NSURF,IFORM,PNUM,VARST,
-     +        NPRMK,NPRAS,PARTYP,NPS,PARIND,STAFLA,OUTINT,FILREL,WHICHG,
-     +        WHICHR,DATOUT,NFIL,NCONCS,CONC,DMISCH,MAXGEN,SEANAME,NPAR,
-     +        RMUT,INIT)
-
-      ENDIF
-
-C     NPLACES = MNPLACES (commented out by F. Kraushofer and line "CALL MPI_BCAST(NPLACES,NDOM,MPI_INTEGER,0,MPI_COMM_WORLD,IERR)" added. 3.12.20)
-
-C  Broadcast input data to other processes
-
-      DO I = 1,MNPLACES
-      CALL MPI_BCAST(NSURF(1,I),NDOM,MPI_INTEGER,0,MPI_COMM_WORLD,IERR)
-      CALL MPI_BCAST(FILREL(1,I),NDOM,MPI_INTEGER,0,MPI_COMM_WORLD,IERR)
-      CALL MPI_BCAST(NFIL(1,I),NDOM,MPI_INTEGER,0,MPI_COMM_WORLD,IERR)
-      DO J = 1,MNFILES
-         CALL MPI_BCAST(PARTYP(1,I,J),NDOM,MPI_INTEGER,0,MPI_COMM_WORLD,
-     *        IERR)
-         DO K = 1,MNCONCS
-            CALL MPI_BCAST(CONC(1,K,I,J),NDOM,MPI_REAL,0,MPI_COMM_WORLD,
-     *           IERR)
-         ENDDO
-      ENDDO
-      ENDDO
-      CALL MPI_BCAST(VARST,MNPRMK,MPI_INTEGER,0,MPI_COMM_WORLD,IERR)
-      CALL MPI_BCAST(NPRAS,NDOM,MPI_INTEGER,0,MPI_COMM_WORLD, IERR)
-      CALL MPI_BCAST(NPLACES,NDOM,MPI_INTEGER,0,MPI_COMM_WORLD,IERR)
-      CALL MPI_BCAST(OUTINT,1,MPI_INTEGER,0,MPI_COMM_WORLD,IERR)
-      CALL MPI_BCAST(WHICHG,1,MPI_INTEGER,0,MPI_COMM_WORLD, IERR)
-      CALL MPI_BCAST(WHICHR,1,MPI_INTEGER,0,MPI_COMM_WORLD, IERR)
-      CALL MPI_BCAST(DMISCH,1,MPI_REAL,0,MPI_COMM_WORLD, IERR)
-      CALL MPI_BCAST(MAXGEN,1,MPI_INTEGER,0,MPI_COMM_WORLD, IERR)
-
-C  initialize random function (is done in C, using system time)
-C  only use randominit if random() is used
-
-      call randominit(INIT)
+      CALL READSC(NDOM,NPLACES,NFILES,INFILE,NSURF,IFORM,
+     +            PNUM,VARST,NPRMK,NPRAS,PARTYP,NPS,PARIND,STAFLA,
+     +            OUTINT,FILREL,WHICHG,WHICHR,DATOUT,NFIL,NCONCS,CONC,
+     +            DMISCH,MAXGEN,SEANAME,NPAR,RMUT,INIT)
 
 C  initialize variables for HASHTAB
 
@@ -634,89 +566,40 @@ C  make sure dimensions are correct
 
 C  CNTFIL is current file number
 
-      IF (RANK.EQ.0) THEN
+      CNTFIL = 10
 
-         CNTFIL = 10
+      DO 2221 IDOM = 1, NDOM
 
-         DO 2221 IDOM = 1, NDOM
+        DO 2222 IPLACE = 1,NPLACES(IDOM),1
 
-            DO 2222 IPLACE = 1,NPLACES(IDOM),1
+          DO 2223 IFILE = 1,NFIL(IDOM,IPLACE),1
 
-               DO 2223 IFILE = 1,NFIL(IDOM,IPLACE),1
+            CNTFIL = CNTFIL + 1
 
-                  CNTFIL = CNTFIL + 1
+            CALL ReadFile(CNTFIL,NDOM,IDOM,IPLACE,IFILE,NPLACES,
+     +                    NFILES,NT0,NNATOMS,NSTEP,NDATT,IFORM,EMIN,
+     +                    EMAX,INFILE,THETA,FI,RAR1,RAR2,PQFEX,
+     +                    CUNDISP,CDISP,AID,EMK,EMK0,ESMK,VPI,VV,
+     +                    XISTMK,DELMK,DATTNO,XIST,DELWV,CUNDVB,CDVB)
 
-                  CALL ReadFile(CNTFIL,NDOM,IDOM,IPLACE,IFILE,NPLACES,
-     +                 NFILES,NT0,NNATOMS,NSTEP,NDATT,IFORM,EMIN,
-     +                 EMAX,INFILE,THETA,FI,RAR1,RAR2,PQFEX,
-     +                 CUNDISP,CDISP,AID,EMK,EMK0,ESMK,VPI,VV,
-     +                 XISTMK,DELMK,DATTNO,XIST,DELWV,CUNDVB,CDVB)
+ 2223     CONTINUE     
 
- 2223          CONTINUE     
+ 2222   CONTINUE
 
- 2222       CONTINUE
-
- 2221    CONTINUE
+ 2221 CONTINUE
 
 
 C  Now check consistency of some of the data read from input files
 
-         CALL CheckVal(NBTD,NBED,PNUM,NDOM,NPLACES,VI,VPI,V0RR,VV,VARST,
-     +        NDATT,DATTNO)
-
-      END IF
-
-C  Broadcast input data to other processes
-
-      CALL MPI_BCAST(THETA,1,MPI_REAL,0,MPI_COMM_WORLD, IERR)
-      CALL MPI_BCAST(FI,1,MPI_REAL,0,MPI_COMM_WORLD, IERR)
-      CALL MPI_BCAST(RAR1,2,MPI_REAL,0,MPI_COMM_WORLD, IERR)
-      CALL MPI_BCAST(RAR2,2,MPI_REAL,0,MPI_COMM_WORLD, IERR)
-      DO I = 1,MNBTD
-         CALL MPI_BCAST(PQFEX(1,I),2,MPI_REAL,0,MPI_COMM_WORLD, IERR)
-      ENDDO
-      DO I = 1,MNATOMS
-         DO J = 1,3
-            DO K = 1,MNDOM
-               DO L = 1,MNPLACES
-                  DO M = 1,MNFILES
-                     CALL MPI_BCAST(CDISP(1,I,J,K,L,M),NSTEP,MPI_REAL,0,
-     *                    MPI_COMM_WORLD,IERR)
-                  ENDDO
-               ENDDO
-            ENDDO
-         ENDDO
-      ENDDO
-      CALL MPI_BCAST(EMK,MNDATT,MPI_REAL,0,MPI_COMM_WORLD, IERR)
-      CALL MPI_BCAST(ESMK,MNDATT,MPI_REAL,0,MPI_COMM_WORLD, IERR)
-      CALL MPI_BCAST(VPI,MNDATT,MPI_REAL,0,MPI_COMM_WORLD,IERR)
-      CALL MPI_BCAST(VV,MNDATT,MPI_REAL,0,MPI_COMM_WORLD,IERR)
-      DO I = 1,MNDATT
-         DO J = 1,MNBTD
-            CALL MPI_BCAST(XISTMK(1,I,J),NDOM,MPI_COMPLEX,0,
-     *           MPI_COMM_WORLD,IERR)
-         ENDDO
-      ENDDO
-      DO I = 1,NSTEP
-         DO J = 1,MNBTD
-            DO K = 1,MNDOM
-               DO L = 1,MNPLACES
-                  DO M = 1,MNFILES
-                     CALL MPI_BCAST(DELMK(1,I,J,K,L,M),NDATT,
-     *                    MPI_COMPLEX,0,MPI_COMM_WORLD,IERR)
-                  ENDDO
-               ENDDO
-            ENDDO
-         ENDDO
-      ENDDO
-      CALL MPI_BCAST(DATTNO,1,MPI_INTEGER,0,MPI_COMM_WORLD, IERR)
+      CALL CheckVal(NBTD,NBED,PNUM,NDOM,NPLACES,VI,VPI,V0RR,VV,VARST,
+     +              NDATT,DATTNO)
 
 C  Open output file and write header (trivial but long if included here)
 
-      IF (RANK.eq.0) THEN
-         OPEN(4,FILE = SEANAME,STATUS='UNKNOWN')
-         call HeadDoc(WHICHR,WHICHG)
-      ENDIF
+      OPEN(4,FILE = SEANAME,STATUS='UNKNOWN')
+
+      call HeadDoc(WHICHR,WHICHG)
+
 
 C  Modul 6: INITIALIZE SOME VALUES
 
@@ -747,22 +630,14 @@ C  determine parameters for first generation
 C  If certain starting position is wanted (STAFLA = 1)
 C  skip randomizing of parameters
 
-      IF (RANK.eq.0) THEN
-         
-         IF (STAFLA.eq.0) THEN
+      IF (STAFLA.eq.0) THEN
 
 C  Determine parameters of new population
 
             CALL SEA_RCD(NDOM,NPS,NPRMK,NSTEP,PNUM,VARST,PARIND,RPEIND,
      +                   WSK,WIDT,RMUT,NPAR,PARDEP)
-            
-         END IF
-      END IF
 
-      DO IPOP = 1,MPS
-         CALL MPI_BCAST(PARIND(1,IPOP),MNPRMK,MPI_INTEGER,0,
-     *        MPI_COMM_WORLD,IERR)
-      ENDDO
+      END IF
 
 C  initialize PMOLD values prior to first generation so that restart runs can be 
 C  successful
@@ -804,7 +679,6 @@ C START NEW GENERATION
 C  increment generation number
 
       IGEN=IGEN+1 
-      IF (RANK.eq.0) THEN
 
 C  close and reopen control file for new generation 
 
@@ -827,11 +701,10 @@ C  write current parameter values to control file
         END IF
 
  2100 continue
-      END IF
 
 C START FOR POPULATION LOOP - STAFLA=0 from now on
 
-      DO 1848 IPOP=RANK+1,MPS,NUMTASK
+      DO 1848 IPOP=1,MPS
 
 C  possibly restrict individual parameters in subroutine restrict
 C  !!! possible todo: restrict could easily also set PARDEP for efficiency
@@ -850,7 +723,6 @@ C  Also imposes the restrictions defined by "atom number" FILREL
         CALL GetGrid(NDOM,NPLACES,NFILES,NPRMK,NPRAS,NPS,IDOM,IPOP,
      .               NFIL,IFNUM,PARTYP,PARIND,VARST,NPARC,FILREL,
      .               PARDEP)
-
  3000 continue
 
 C  before actually calculating anything, check if this combination was done before;
@@ -878,6 +750,7 @@ C        write(6,'("Skip computation: RANK=",I3,", GEN=",I6)') RANK,IGEN
 
       do 3010 IDOM = 1, NDOM
 
+
 C  Compute intensities for current parameter values from delta amplitudes
 
         CALL GetInt(NDOM,IDOM,NPLACES,NFILES,NSTEP,NCONCS,NNATOMS,
@@ -889,7 +762,7 @@ C  Compute intensities for current parameter values from delta amplitudes
 
 C  average TLEED intensities incoherently according to weight of respective domains
 
-        call Mischung(NDOM, NDATT, NT0, NPRMK, NPS, PARIND,
+      call Mischung(NDOM, NDATT, NT0, NPRMK, NPS, PARIND,
      .              PMISCH,DMISCH,ATSAS, ATSMK, DATTNO, IPOP,
      .              VARST)
 
@@ -945,7 +818,7 @@ C  store the R-factor for this configuration
       ENDIF
 
 C  test statement
-C      write(6,'("Rfaktor",I5," ",I2," ok. node:",I3)') IGEN,IPOP,RANK
+C      write(8,'("Rfaktor ",I5," ",I2," ok.")') IGEN,IPOP
 
 C  This applies especially if half-order beams are considered and
 C  the current structure has no superstructure but would be deadly in
@@ -965,46 +838,6 @@ C  continue with next structure
 
  1848 CONTINUE
 
-      IF (RANK.NE.0) THEN
-         DO IPOP = RANK+1,MPS,NUMTASK
-            CALL MPI_SEND(RPEIND(IPOP),1,MPI_REAL,0,IPOP, 
-     &            MPI_COMM_WORLD,IERR)
-            CALL MPI_SEND(BRGES(IPOP),1,MPI_REAL,0,IPOP+MPS, 
-     &            MPI_COMM_WORLD,IERR)
-            CALL MPI_SEND(BRINS(IPOP),1,MPI_REAL,0,IPOP+2*MPS, 
-     &            MPI_COMM_WORLD,IERR)
-            CALL MPI_SEND(BRHAS(IPOP),1,MPI_REAL,0,IPOP+3*MPS, 
-     &            MPI_COMM_WORLD,IERR)
-            CALL MPI_SEND(BV0(IPOP),1,MPI_REAL,0,IPOP+4*MPS, 
-     &            MPI_COMM_WORLD,IERR)
-            CALL MPI_SEND(PMISCH(1,IPOP),NDOM,MPI_INTEGER,0,IPOP+5*MPS, 
-     &            MPI_COMM_WORLD,IERR)
-            CALL MPI_SEND(PARIND(1,IPOP),MNPRMK,MPI_INTEGER,0,
-     *           IPOP+6*MPS,MPI_COMM_WORLD,IERR)
-         ENDDO
-      ELSE
-         DO IRANK = 1,NUMTASK-1
-         DO IPOP = IRANK+1,MPS,NUMTASK
-            CALL MPI_RECV(RPEIND(IPOP),1,MPI_REAL,IRANK,IPOP, 
-     &            MPI_COMM_WORLD,status,IERR)
-            CALL MPI_RECV(BRGES(IPOP),1,MPI_REAL,IRANK,IPOP+MPS, 
-     &            MPI_COMM_WORLD,status,IERR)
-            CALL MPI_RECV(BRINS(IPOP),1,MPI_REAL,IRANK,IPOP+2*MPS, 
-     &            MPI_COMM_WORLD,status,IERR)
-            CALL MPI_RECV(BRHAS(IPOP),1,MPI_REAL,IRANK,IPOP+3*MPS, 
-     &            MPI_COMM_WORLD,status,IERR)
-            CALL MPI_RECV(BV0(IPOP),1,MPI_REAL,IRANK,IPOP+4*MPS, 
-     &            MPI_COMM_WORLD,status,IERR)
-            CALL MPI_RECV(PMISCH(1,IPOP),NDOM,MPI_INTEGER,IRANK,
-     &            IPOP+5*MPS,MPI_COMM_WORLD,status,IERR)
-            CALL MPI_RECV(PARIND(1,IPOP),MNPRMK,MPI_INTEGER,IRANK,
-     &            IPOP+6*MPS,MPI_COMM_WORLD,status,IERR)
-         ENDDO
-         ENDDO
-      ENDIF
-
-      IF (RANK.EQ.0) THEN
-
 C  Possibly write parameter values to control file for test reasons
 
 C        DO 3801 LPOP=1,MPS
@@ -1017,8 +850,8 @@ C 3801   CONTINUE
 
 C  compute width for PB distribution from current results
 
-         CALL GetWid(WIDT,PARIND,PAROLD,RPEIND,RPEOLD,NormInd,
-     +               NPS,NPRMK)
+       CALL GetWid(WIDT,PARIND,PAROLD,RPEIND,RPEOLD,NormInd,
+     +            NPS,NPRMK)
 
 C  perform mutation?
 
@@ -1085,7 +918,7 @@ C  compute current average R-factor AVERNEW
         AVERNEW=AVERNEW/FLOAT(MPS)
 
 C order list of structures as function of (increasing) R-factor
-        
+
         CALL ORDER(RPEIND,PARIND,BRGES,BRINS,BRHAS,BV0,
      +  RPEHELP,BRGESHELP,BRINSHELP,BRHASHELP,BV0HELP,PARHELP,
      +  PMISCH)
@@ -1116,15 +949,11 @@ C  store this as last improved generation
        CALL OUTRF(PARHELP,NDOM,NPLACES,NFILES,NPRMK,NPRAS,NPS,NFIL,
      +  PARTYP,BRGESHELP,BRINSHELP,BRHASHELP,BV0HELP,AVERNEW,IGEN,
      +             WHICHG,WHICHR,PMISCH,DMISCH)
-	 
+
       ENDIF
 
-C  Now treating all ranks again
-
-      END IF
-
       IF ((MOD(IGEN,OUTINT).EQ.0) .AND. USEHASH) THEN
-       CALL HASHTAB%outdata(RANK)
+       CALL HASHTAB%outdata(0)
       ENDIF
 
 C  Here ends a (nearly) endless loop - next generation
@@ -1133,26 +962,12 @@ C  Here ends a (nearly) endless loop - next generation
 
 C  Determine parameters of next population
 
-         IF (RANK.EQ.0) THEN
-            CALL SEA_RCD(NDOM,NPS,NPRMK,NSTEP,PNUM,VARST,PARIND,RPEIND,
-     +                   WSK,WIDT,RMUT,NPAR,PARDEP)
+        CALL SEA_RCD(NDOM,NPS,NPRMK,NSTEP,PNUM,VARST,PARIND,RPEIND,
+     +               WSK,WIDT,RMUT,NPAR,PARDEP)
 
-         END IF
-
-         CALL MPI_BCAST(USEHASH,1,MPI_LOGICAL,0,MPI_COMM_WORLD,IERR)
-         CALL MPI_BCAST(RPEOLD,NPS,MPI_REAL,0,MPI_COMM_WORLD,IERR)
-
-         DO IPOP = 1,NPS
-            CALL MPI_BCAST(PARIND(1,IPOP),NPRMK,MPI_INTEGER,0,
-     *           MPI_COMM_WORLD,IERR)
-         ENDDO
-
-         goto 1492
+        goto 1492
 
       end if
-
-      CALL MPI_BARRIER(MPI_COMM_WORLD,IERR)     ! AMI: TODO remove this, should be unnecessary...
-      CALL MPI_FINALIZE(IERR)
 
       END
 

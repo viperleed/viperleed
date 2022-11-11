@@ -25,7 +25,7 @@ C  of the package is passed on.
 
 C  original Author M. Kottcke
 
-C  current version v1.71
+C  current version v1.74
 
 C  Version R. Backofen, V. Blum, 06.09.95
 C  A. Seubert v90 (Including capability of incoherent domain averaging; 5/97)
@@ -54,6 +54,8 @@ C  V. Blum v105: energy dependent inner potential now taken over from LEED
 C                calculation
 C  V. Blum v106: minor adjustments for TensErLEED; subroutines now in lib.search.f
 C  W. Meyer v107: MPI parallelised search loop for distributed memory clusters
+C  09.11.22
+C  A. Imre: replaced random C funktion with Fortran intrinsic.
 
 **************************************************************************
 
@@ -613,10 +615,14 @@ C  Broadcast input data to other processes
       CALL MPI_BCAST(DMISCH,1,MPI_REAL,0,MPI_COMM_WORLD, IERR)
       CALL MPI_BCAST(MAXGEN,1,MPI_INTEGER,0,MPI_COMM_WORLD, IERR)
 
-C  initialize random function (is done in C, using system time)
-C  only use randominit if random() is used
+C  initialize random function 
+!  AMI: changed to do this in Fortran directly, rather than C
 
-      call randominit(INIT)
+      if (INIT == 0) then
+            call srand(time())
+      else
+            call srand(INIT)
+      end if
 
 C  initialize variables for HASHTAB
 

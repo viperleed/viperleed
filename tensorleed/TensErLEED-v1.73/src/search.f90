@@ -1,6 +1,6 @@
 C  Tensor LEED optimization algorithm 
 C  v1.7, VB 13.04.00 modified wrt field limitations by LH 26.03.21
-C  for use with lib.search.f v1.7
+C  for use with lib.search.f v1.7, random_.c
 C
 C  as described in 
 C
@@ -25,7 +25,7 @@ C  of the package is passed on.
 
 C  original Author M. Kottcke
 
-C  current version v1.74
+C  current version v1.71
 
 C  Version R. Backofen, V. Blum, 06.09.95
 C  A. Seubert v90 (Including capability of incoherent domain averaging; 5/97)
@@ -53,8 +53,6 @@ C  V. Blum v104a: Minor corrections (type declarations adjusted)
 C  V. Blum v105: energy dependent inner potential now taken over from LEED
 C                calculation
 C  V. Blum v106: minor adjustments for TensErLEED; subroutines now in lib.search.f
-C  09.11.22
-C  A. Imre: replaced random C funktion with Fortran intrinsic.
 
 
 **************************************************************************
@@ -505,14 +503,10 @@ C  initialize population here (may change in readsc)
          PAROLD(IPARAM,IPOP)=1
  1849    PARIND(IPARAM,IPOP)=1
 
-C  initialize random function 
-!  AMI: changed to do this in Fortran directly, rather than C
+C  initialize random function (is done in C, using system time)
+C  only use randominit if random() is used
 
-      if (INIT == 0) then
-            call srand(time())
-      else
-            call srand(INIT)
-      end if
+      call randominit(INIT)
 
 C Modul 1: READIN INFORMATION FOR rfactor determination from WEXPEL,
 C          such as beam grouping, energy ranges etc.
