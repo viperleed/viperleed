@@ -194,6 +194,7 @@ class Rparams:
         self.starttime = timer()
         self.sourcedir = os.getcwd()  # where to find 'tensorleed'
         self.workdir = os.getcwd()  # MAIN WORK DIRECTORY; where to find input
+        self.compile_logs_dir = None
         self.searchConvInit = {
             "gaussian": None, "dgen": {"all": None, "best": None, "dec": None}}
         self.searchMaxGenInit = self.SEARCH_MAX_GEN

@@ -15,7 +15,10 @@ import pstats
 from time import perf_counter as timer
 
 import wrapt
-from line_profiler import LineProfiler
+try:
+    from line_profiler import LineProfiler
+except ImportError:
+    pass
 
 
 def ensure_decorates_class(superclass=object):
@@ -85,9 +88,12 @@ def profile_calls(sort_args=['cumulative'], print_args=[10]):
 
 
 def profile_lines(func):
-    """
-    Uses line_profiler for profiling each line of the decorated function
-    """
+    """Profile execution time of each line of the decorated function."""
+    try:
+        LineProfiler
+    except NameError:
+        raise RuntimeError("No line_profiler module found.") from None
+
     def _wrapper(*args, **kwargs):
         profiler = LineProfiler()
         profiled_func = profiler(func)
