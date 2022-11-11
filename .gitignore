@@ -20,6 +20,7 @@ calculations/
 
 # sphinx build directory
 doc/_build
+
 # files from docs spell checker
 *.spelling 
 
