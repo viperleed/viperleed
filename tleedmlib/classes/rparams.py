@@ -335,9 +335,12 @@ class Rparams:
             # try again without trailing zero
             if self.TL_VERSION_STR.endswith('0'):
                 self.TL_VERSION_STR = self.TL_VERSION_STR[:-1]
-        if self.TL_VERSION_STR not in KNOWN_TL_VERSIONS:
+        if (self.TL_VERSION_STR not in KNOWN_TL_VERSIONS 
+                and not self.TL_IGNORE_CHECKSUM):
             raise UnknownTensErLEEDVersionError(
-                f"Unrecognized TensErLEED version: {self.TL_VERSION_STR}"
+                f"Unrecognized TensErLEED version: {self.TL_VERSION_STR}. "
+                "Consider editing KNOWN_TL_VERSIONS global in checksums.py "
+                "or setting TL_IGNORE_CHECKSUM = True."
             )
         
         # SEARCH_CONVERGENCE:

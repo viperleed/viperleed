@@ -29,6 +29,7 @@ KNOWN_TL_VERSIONS = (
     "1.71",
     "1.72",
     "1.73",  # TODO: use Version when available
+    "1.74",
     "1.8",
 )
 
@@ -74,7 +75,7 @@ class TLSourceFile:
         self.path = Path(name).resolve()
         # Get "tensorleed" parent folder:
         #     [2]       [1]         [0] path
-        # tensorleed/TensErLEED-vXX/src/xxx.f 
+        # tensorleed/TensErLEED-vXX/src/xxx.f
         base_path = self.path.parents[2]
         self._name = self.path.relative_to(base_path)
 
@@ -260,7 +261,7 @@ def validate_multiple_files(files_to_check, logger, calc_part_name, version):
     ----------
     files_to_check : iterable of str, pathlike, None
         Files to validate. Notice that the iterable will be consumed.
-        If element is None, it will be skipped. This way we can deal 
+        If element is None, it will be skipped. This way we can deal
         with optional files.
     logger : logging.Logger
         Logger from logging module to be used.
@@ -404,7 +405,7 @@ def _write_encoded_checksums(source_file_checksums, encoded_file_path=None):
         file.write(encode_checksums(source_file_checksums))
 
 
-def _add_checksums_for_dir(path, 
+def _add_checksums_for_dir(path,
                            checksum_dict_,
                            patterns=("*/GLOBAL", "*/*.f*")):
     """Add checksums for files in path into checksum_dict_.
@@ -487,7 +488,7 @@ def _parse_args(args):
         except (FileNotFoundError, InvalidChecksumFileError) as err:
             warn("Could not read _checksums.dat file. Creating a new one. "
                  f"Info: {err}")
-                 
+
     return tl_base_path, tl_folders, checksum_dict
 
 if __name__ != "__main__":
@@ -520,23 +521,23 @@ else:  # Write new checksum file when executed as a module
               "not specified, the default is to append new checksums "
               "to existing ones."), type=str
     )
-    args = parser.parse_known_args()
+    _args = parser.parse_known_args()
 
-    tl_base_path, tl_folders, checksum_dict = _parse_args(args[0])
-    
-    for folder in tl_folders:
+    _tl_base_path, _tl_folders, _checksum_dict = _parse_args(_args[0])
+
+    for folder in _tl_folders:
         version_ = folder.name.split("v")[1]
         if version_ not in KNOWN_TL_VERSIONS:
             raise UnknownTensErLEEDVersionError(
-                    f"Unknown TensErLEED version {version_} in {tl_base_path}"
+                    f"Unknown TensErLEED version {version_} in {_tl_base_path}"
             )
-        _add_checksums_for_dir(folder, checksum_dict)
+        _add_checksums_for_dir(folder, _checksum_dict)
 
     # write to file
-    _write_encoded_checksums(checksum_dict)
+    _write_encoded_checksums(_checksum_dict)
 
     # try to read to make sure it's ok
     read_checksums = read_encoded_checksums()
 
-    assert read_checksums == checksum_dict
+    assert read_checksums == _checksum_dict
     print("Wrote _checksums.dat successfully!")

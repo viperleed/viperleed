@@ -636,13 +636,14 @@ def search(sl, rp):
             srcname = [f for f in os.listdir(srcpath)
                        if f.startswith('search') and 'mpi' not in f][0]
         shutil.copy2(os.path.join(srcpath, srcname), srcname)
-        libpath = os.path.join(tldir, 'lib')
-        if usempi:
-            libname = [f for f in os.listdir(libpath)
-                       if f.startswith('lib.search.mpi')][0]
-        else:
-            libname = [f for f in os.listdir(libpath)
-                       if f.startswith('lib.search') and 'mpi' not in f][0]
+        libpath = Path(tldir, 'lib')
+        libpattern = "lib.search"
+        if usempi and rp.TL_VERSION <= 1.73:
+            libpattern += ".mpi"
+        libname = next(libpath.glob(libpattern + "*"), None)
+        if libname is None:
+            raise RuntimeError(f"File {libpattern}.f not found.")
+        # copy to work dir
         shutil.copy2(os.path.join(libpath, libname), libname)
         hashing_files = [f for f in os.listdir(libpath)
                          if f.startswith('intarr_hashing')
@@ -652,19 +653,20 @@ def search(sl, rp):
             shutil.copy2(os.path.join(libpath, hashname), hashname)
         else:
             hashname = ""
-        if usempi:  # these are short C scripts - use pre-compiled versions
-            randnamefrom = "MPIrandom_.o"
-        else:
-            randnamefrom = "random_.o"
-        randname = "random_.o"
+        if rp.TL_VERSION <= 1.73:
+            if usempi:  # these are short C scripts - use pre-compiled versions
+                randnamefrom = "MPIrandom_.o"
+            else:
+                randnamefrom = "random_.o"
+            randname = "random_.o"
 
-        # try to copy random lib object file
-        try:
-            shutil.copy2(os.path.join(libpath, randnamefrom), randname)
-        except FileNotFoundError:
-            logger.error("Could not find required random_.o object file."
-                         " You may have forgotten to compile random_.c.")
-            raise
+            # try to copy random lib object file
+            try:
+                shutil.copy2(os.path.join(libpath, randnamefrom), randname)
+            except FileNotFoundError:
+                logger.error("Could not find required random_.o object file."
+                             " You may have forgotten to compile random_.c.")
+                raise
 
         globalname = "GLOBAL"
         shutil.copy2(os.path.join(srcpath, globalname), globalname)
@@ -700,7 +702,9 @@ def search(sl, rp):
             # assume that mpifort also uses gfortran
             format_tag = "--fixed-form"  # different formatting string
     ctasks.append((fcomp[0]+" -o search.o -c "+format_tag, srcname, fcomp[1]))
-    to_link = "search.o random_.o lib.search.o restrict.o"
+    to_link = "search.o lib.search.o restrict.o"
+    if rp.TL_VERSION <= 1.73:
+        to_link += " random_.o"
     if hashname:
         to_link += " intarr_hashing.o"
     ctasks.append((fcomp[0] + " -o " + searchname, to_link, fcomp[1]))
