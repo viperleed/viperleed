@@ -174,8 +174,13 @@ def run_tleedm(system_name="", console_output=True, slab=None,
     rp.updateDerivedParams()
 
     prerun_clean(rp, logname)
+    exit_code = section_loop(rp, slab)
 
-    return section_loop(rp, slab)
+    # Finalize logging - if not done, will break unit testing
+    logger.handlers.clear()
+    logging.shutdown()
+
+    return exit_code
 
 
 if __name__ == "__main__":
