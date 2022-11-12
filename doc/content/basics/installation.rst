@@ -130,11 +130,26 @@ As a first step, update the package index:
 
 .. code-block:: console
 
-    $ sudo apt-get update
+    $ sudo apt-get update && sudo apt-get upgrade
 
-Then follow the instructions 
+Then follow the `instructions by Intel to add the Intel oneAPI repository<https://www.intel.com/content/www/us/en/develop/documentation/installation-guide-for-intel-oneapi-toolkits-linux/top/installation/install-using-package-managers/apt.html#apt>`__.
+You can then install the required packages with the package-manager.
+For ViPErLEED you need the Intel Base Toolkit (``intel-basekit``) and the Intel HPC Toolkit (``intel-hpckit``):
 
-For ViPErLEED you need the Intel Base Toolkit (``intel-basekit``) and the Intel HPC Toolkit (``intel-hpckit``).
+.. code-block:: console
+
+    $ sudo apt-get install intel-basekit -y
+    $ sudo apt-get install intel-hpckit -y
+
+.. note:: The toolkits are multiple GB in size and will take a while to download and install.
+
+Now ifort!!
+
+After installation, you can check if the compiler was installed successfully using:
+
+.. code-block:: console
+
+    $ ifort ????
 
 Windows
 #######
