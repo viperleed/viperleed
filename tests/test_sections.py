@@ -41,7 +41,6 @@ class TesTTleedmFromFiles(unittest.TestCase):
         # Remove the directory after the test
         shutil.rmtree(cls.test_dir)
         os.chdir(cls.home)
-        print("torn down", flush=True)
 
 class TestInitializationAg(TesTTleedmFromFiles):
     @classmethod
@@ -63,31 +62,43 @@ class TestCaseInitializationAgRun(TestInitializationAg):
         work_copied = all(file in input_files for file in self.required_files)        
         assert source_copied and work_copied
 
-    def test_initialization_runs(self):
-        print("start init")
-        os.chdir(self.work_path)
-        # run tleedm
-        print(str(Path(self.work_path)))
-        self.exit_code = run_tleedm(source=str(Path(vpr_path) / "viperleed"))
-        assert self.exit_code == 0
 
 class TestCaseInitializationAgFileChecks(TestInitializationAg):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
         os.chdir(cls.work_path)
+        
         # run tleedm
-        run_tleedm(source=str(Path(vpr_path) / "viperleed"))
-
+        cls.exit_code = run_tleedm(source=str(Path(vpr_path) / "viperleed"))
         cls.files_after_run = [file.name for file in Path(cls.work_path).glob('*')]
+
+    def test_initialization_runs(self):
+        assert self.exit_code == 0
 
     def test_IVBEAM_present(self):
         assert 'IVBEAMS' in self.files_after_run
-        print("done IVBEAMS")
-        
+
     def test_BEAMLIST_present(self):
         assert 'BEAMLIST' in self.files_after_run
-        print(str(Path(self.work_path)))
+
+
+class AgRefCalc(TestInitializationAg):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        os.chdir(cls.work_path)
+        # run tleedm
+        run_tleedm(source=str(Path(vpr_path) / "viperleed"),
+                   preset_params={"RUN":[0, 1],
+                                  "TL_VERSION":1.73})
+
+        cls.files_after_run = [file.name for file in Path(cls.work_path).glob('*')]
+
+    def test_THEOBEAMS_csv_present(self):
+        print(self.files_after_run)
+        assert 'THEOBEAMS.csv' in self.files_after_run
+
 
 
 if __name__ == '__main__':

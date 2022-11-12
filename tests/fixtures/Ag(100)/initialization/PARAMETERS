@@ -2,7 +2,7 @@
 
 RUN = 0
 LOG_DEBUG = True
-THEO_ENERGIES =   45 700 3
+THEO_ENERGIES =   50 350 3
 
 
 ! ####### PARAMETERS FOR INTERPRETING THE POSCAR #######
@@ -17,7 +17,7 @@ SUPERLATTICE (1x1)
 ! ####### PARAMETERS FOR REFCALC #######
 
 V0_IMAG bulk = 5.0
-LMAX = 8-14
+LMAX = 8-12
 
 T_DEBYE = 330                      ! create VIBROCC
 T_EXPERIMENT = 100                 ! create VIBROCC
