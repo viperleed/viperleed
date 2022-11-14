@@ -29,24 +29,25 @@ ViPErLEED supports :term:`gfortran` from the GNU Compiler Collection (:term:`gcc
 ViPErLEED will default to using :term:`ifort` if available.
 Use the parameter :ref:`FORTRAN_COMP<fortran_comp>` to adjust this behavior.
 
-The :ref:`structure search section<sec_search>`, which is the computationally most expensive part of ViPErLEED and TensErLEED, supports compillation and execution with :term:`MPI`.
+The :ref:`structure-search section<sec_search>`, which is the computationally most expensive part of ViPErLEED and TensErLEED, supports compilation and execution with :term:`MPI`.
 To use the :term:`MPI` version of TensErLEED, you need to also install an :term:`MPI` implementation and the :term:`MPI` compiler corresponding to your Fortan compiler.
 We recommend using Open MPI on Linux and MacOS.
-The MPI compiler for :term:`gfortran` this is :term:`mpifort`, for :term:`ifort` it is :term:`mpiifort` (sic!).
+The MPI compiler for :term:`gfortran` is :term:`mpifort`, for :term:`ifort` it is :term:`mpiifort` (sic!).
 
 If you are running ViPErLEED on a :term:`HPC` system, appropriate Fortran compilers and a prefered :term:`MPI` implementation are likely already installed.
 Please consult the documentation for your system and the administrators of details regarding their usage.
 
+tleedm can run on Linux, MacOS and Microsoft Windows, but the installation of the compilers in particular differs significantly for each system.
 
 .. note:: 
 
-    -  If you are running on an Intel-processor based system, we recommend using ``ifort``. It is known from experience to give better performance for TensErLEED.
+    -  If you are running on an Intel-processor-based system, we recommend using ``ifort``. It is known from experience to give better performance for TensErLEED.
     -  Using the :term:`MPI` version of TensErLEED is not strictly required, but **highly** recommended.
        Execution times for the :ref:`structure search<sec_search>` may be significantly higher without :term:`MPI`.
-       A working MPI implementation is necessary to make use of multi-processing in the :ref:`structure search section<sec_search>`, even if you are working on a single processor.
+       A working MPI implementation is necessary to make use of multi-processing in the :ref:`structure-search section<sec_search>`, even if you are working on a single processor.
 
 
-tleedm can run on Linux, MacOS and Microsoft Windows, but the installation of the compilers in particular differs significantly for each system.
+
 
 
 ``gfortran`` and ``mpifort``
