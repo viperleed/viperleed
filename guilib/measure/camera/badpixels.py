@@ -473,7 +473,7 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         # The difference with the base-class implementation is that
         # self IS NOT part of the list of calibration tasks, but
         # we should nonetheless skip all bad-pixels-related errors
-        if self._is_bad_pixels_error(error):
+        if self.camera.is_bad_pixels_error(error):
             return True
         return super()._on_device_error(error)
 
