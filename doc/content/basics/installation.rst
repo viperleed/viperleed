@@ -5,9 +5,6 @@ Installation
 ============
 
 
-**TODO** Needs an own docu page. 
-Python 3.8. Info on Fortran compiler currently on FORTRAN_COMP page should be moved there. 
-Does the Windows version require Windows-Subsystem für Linux? !!
 
 Below, we provide a short guide on how to install all required components of tleedm.
 
@@ -16,7 +13,7 @@ Below, we provide a short guide on how to install all required components of tle
 Python
 ======
 
-**TODO**
+**TODO !!! - needs package refactor first**
 
 A conda environment and a pip environment are available.
 
@@ -96,9 +93,6 @@ Finally, install the :term:`gfortran` MPI wrapper ``mpifort``:
 macOS
 #####
 
-.. note:: 
-    Newer Macs using "Apple Silicon" ARM-based chips are incompatible with the Intel compilers (since they don't use Intel chips).
-    Use :term:`gfortran` and :term:`mpifort` instead.
 
 For running under MacOS, it is recommened to first install a package manager such as `brew <https://brew.sh>`__.
 This will also install the XCode Command Line Tools which are required for installing most other components.
@@ -120,44 +114,14 @@ There is no need to install :term:`BLAS` and :term:`LAPACK`, as MacOS already sh
 
         $ brew reinstall gfortran
 
-
-``ifort`` and ``mpiifort``
-----------------------------
-
-**TODO**
-
-As a first step, update the package index:
-
-.. code-block:: console
-
-    $ sudo apt-get update && sudo apt-get upgrade
-
-Then follow the `instructions by Intel to add the Intel oneAPI repository<https://www.intel.com/content/www/us/en/develop/documentation/installation-guide-for-intel-oneapi-toolkits-linux/top/installation/install-using-package-managers/apt.html#apt>`__.
-You can then install the required packages with the package-manager.
-For ViPErLEED you need the Intel Base Toolkit (``intel-basekit``) and the Intel HPC Toolkit (``intel-hpckit``):
-
-.. code-block:: console
-
-    $ sudo apt-get install intel-basekit -y
-    $ sudo apt-get install intel-hpckit -y
-
-.. note:: The toolkits are multiple GB in size and will take a while to download and install.
-
-Now ifort!!
-
-After installation, you can check if the compiler was installed successfully using:
-
-.. code-block:: console
-
-    $ ifort ????
-
 Windows
 #######
 
-To run tleedm and TensErLEED under Windows, we recommend using the :term:`Windows Subsystem for Linux<WSL>`.
-Follow the `instructions by Microsoft to install the WSL <https://learn.microsoft.com/en-us/windows/wsl/install>`__.
-With the :term:`WSL` installed, you can follow the same instructions as provided below for Linux.
-Running natively on Windows is possible (:ref:`see below<native_windows>`), but experimental and *not recommended*.
+.. warning::
+    To run tleedm and TensErLEED under Windows, we recommend using the :term:`Windows Subsystem for Linux<WSL>`.
+    Follow the `instructions by Microsoft to install the WSL <https://learn.microsoft.com/en-us/windows/wsl/install>`__.
+    With the :term:`WSL` installed, you can follow the same instructions as provided below for Linux.
+    Running natively on Windows is possible (:ref:`see below<native_windows>`), but experimental and *not recommended*.
 
 
 .. _native_windows:
@@ -205,6 +169,82 @@ To compile the static files described :ref:`below<static_compile>`, go into ``vi
    gfortran beamgen_source/beamgen.v1.7.f -o beamgen.v1.7 -Ofast -fno-finite-math-only
    gfortran eeasisss_code/modified/imported_routines.f90 eeasisss_code/modified/eeasisss.f90 -o EEASiSSS.x -Ofast -fno-finite-math-only
    del "*.mod"
+
+
+``ifort`` and ``mpiifort``
+----------------------------
+
+Linux
+#####
+
+Installation of the Intel compilers and :term:`MPI` implementation for Linux can be performed using a few shell commands.
+In this manual, we use ``apt-get``, the standard package-manager for Debian based distributions.
+For installation instructions with other package-managers see the `guides by Intel <https://www.intel.com/content/www/us/en/develop/documentation/installation-guide-for-intel-oneapi-toolkits-linux/top.html>`__.
+
+As a first step, update the package index:
+
+.. code-block:: console
+
+    $ sudo apt-get update && sudo apt-get upgrade
+
+Then follow the `instructions by Intel to add the Intel oneAPI repository <https://www.intel.com/content/www/us/en/develop/documentation/installation-guide-for-intel-oneapi-toolkits-linux/top/installation/install-using-package-managers/apt.html#apt>`__.
+Following this, you can install the required packages with the package-manager.
+For ViPErLEED you need the Intel Base Toolkit (``intel-basekit``) and the Intel HPC Toolkit (``intel-hpckit``):
+
+.. code-block:: console
+
+    $ sudo apt-get install intel-basekit -y
+    $ sudo apt-get install intel-hpckit -y
+
+.. note:: The toolkits are multiple GB in size and will take a while to download and install.
+
+After installation, we still need to configure the system and add the compilers to our path (see also `here <https://www.intel.com/content/www/us/en/develop/documentation/get-started-with-intel-oneapi-hpc-linux/top/before-you-begin.html#before-you-begin>`__).
+First, we need to make sure required build tools (such as Cmake) are present:
+
+.. code-block:: console
+
+    $ sudo apt-get install cmake pkg-config build-essential -y
+
+Then, we finally need to configure the Intel one API installation such that it is discovered by by our environment.
+For this, we need to source the file `/opt/intel/oneapi/setvars.sh` which sets the required :term:`CLI` arguments.
+We recommend you do this by adding the following line to the end of your shell startup script (usually `~/.bashrc`):
+
+.. code-block:: console
+
+    . /opt/intel/oneapi/setvars.sh
+
+Afterwards, the required compilers should be available for use.
+You can check if :term:`ifort` is present using:
+
+.. code-block:: console
+
+    $ which ifort
+
+If the result is a path, it means that the shell knows the compiler exists.
+You can do the same check with `mpirun` and `mpiifort` to check that they are properly configured as well.
+
+macOS
+#####
+
+.. warning::
+    Newer Macs using "Apple Silicon" ARM-based chips are incompatible with the Intel compilers (since they don't use Intel chips).
+    Use :term:`gfortran` and :term:`mpifort` instead.
+
+To install the Intel oneAPI Toolkits under macOS please follow `the guide provided by Intel <https://www.intel.com/content/www/us/en/develop/documentation/installation-guide-for-intel-oneapi-toolkits-macos/top.html>`__.
+As for Linux, you will need to instal the Intel Base Toolkit and the Intel HPC Toolkit.
+
+Windows
+#######
+
+.. warning::
+    To run tleedm and TensErLEED under Windows, we recommend using the :term:`Windows Subsystem for Linux<WSL>`.
+    Follow the `instructions by Microsoft to install the WSL <https://learn.microsoft.com/en-us/windows/wsl/install>`__.
+    With the :term:`WSL` installed, you can follow the same instructions as provided below for Linux.
+    Running natively on Windows is possible (:ref:`see below<native_windows>`), but experimental and *not recommended*.
+
+To install the Intel oneAPI Toolkits under Windows please follow `the guide provided by Intel<https://www.intel.com/content/www/us/en/develop/documentation/installation-guide-for-intel-oneapi-toolkits-windows/top.html>`__.
+As for Linux, you will need to instal the Intel Base Toolkit and the Intel HPC Toolkit.
+
 
 .. _static_compile:
 
