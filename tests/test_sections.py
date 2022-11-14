@@ -76,11 +76,12 @@ class TestCaseInitializationAgFileChecks(TestInitializationAg):
     def test_initialization_runs(self):
         assert self.exit_code == 0
 
-    def test_IVBEAM_present(self):
-        assert 'IVBEAMS' in self.files_after_run
+    def test_files_present(self):
+        files_to_test = ('IVBEAMS', 'BEAMLIST', 'VIBROCC')
+        for file in files_to_test:
+            with self.subTest(file=file):
+                self.assertIn(file, self.files_after_run)
 
-    def test_BEAMLIST_present(self):
-        assert 'BEAMLIST' in self.files_after_run
 
 
 class AgRefCalc(TestInitializationAg):
