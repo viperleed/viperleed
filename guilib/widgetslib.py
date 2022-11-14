@@ -88,15 +88,24 @@ def catch_gui_crash(base_log_path):
             text = (self.__base_text
                     + "<br><br>Please include file "
                     f"{self.loginfo['fname']} in the report.")
+            try:
+                self.__call_impl()
+            except RuntimeError:
+                # Probably the C++ QObject underlying self is gone
+                pass
 
+        def __call_impl(self):
+            """Finish calling self."""
             # Connect signal differently depending on thread
-            this_thread = self.thread().currentThread()
+            this_thread = qtc.QThread.currentThread()
             _is_main = this_thread == qtw.qApp.thread()
             connect_type = qtc.Qt.AutoConnection
             if not _is_main:
                 # Make sure the other thread is blocked while
                 # handling exceptions
                 connect_type = qtc.Qt.BlockingQueuedConnection
+
+            self.__show_msg_requested.disconnect()
             self.__show_msg_requested.connect(self.__show_message,
                                               type=connect_type)
             self.__show_msg_requested.emit(text, info)
