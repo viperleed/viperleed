@@ -28,4 +28,8 @@ Parameter scatters are drawn as half-transparent if a parameter is coupled to an
 
 Point size represents the number of population members which have the same value for the parameter. If more than one structure has the same parameter value, the color (i.e. R-factor) is indicated for the best one; for example, if the best and the worst structure both have a given parameter at the center of the displacement range, then the point at the center of the displacement range is nevertheless drawn as black.
 
-If N-dimensional parabola fits to the R-factor data were performed, then the parabola minimum and error bars are also indicated. The minimum is indicated by a red or green diamond (red if neither of the error bars is small enough to fit within the displacement range). Error bars are only drawn if at least one edge falls within the displacement range. The left error bar corresponds to the uncorrelated parameter error, the right to the correlated parameter error. **TODO**: probably need a link to where the parabola fit is explained
+If :ref:`N-dimensional parabola fits<parabola_fit>` to the R-factor data were performed, then the parabola minimum and error bars are also indicated.
+The minimum is indicated by a red or green diamond (red if neither of the error bars is small enough to fit within the displacement range).
+Error bars are only drawn if at least one edge falls within the displacement range.
+The left error bar corresponds to the uncorrelated parameter error, the right to the correlated parameter error.
+

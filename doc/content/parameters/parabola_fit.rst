@@ -5,7 +5,10 @@ PARABOLA_FIT
 
 PARABOLA_FIT allows fitting the R-factor data over the N-dimensional space of fit parameter values with a paraboloid.
 
-**This functionality is experimental. Parabola fits don't appear to be very realiable at the moment. Perform an :ref:`error calculation<Error calculations>`  for more reliable 1D R-factor data.**
+.. warning:: 
+   This functionality is experimental.
+   Parabola fits don't appear to be very realiable at the moment and may be removed or significantly reworked in the future.
+   Perform an :ref:`error calculation<error_calculation>` for more reliable 1D R-factor data.
 
 **Default**: PARABOLA_FIT = off
 
@@ -49,6 +52,8 @@ The prefactor for the penalty term of the ridge, lasso, and elastic net methods 
 
 localize
 --------
+
+**TODO** Comment this section out?
 
 **CURRENTLY NOT ACTIVE - best way to do something like this needs to be discussed.** Currently, the RR value ``RR = 8 * V0i / enrange`` is calculated, where V0i is the imaginary part of the inner potential and enrange the total energy range of all beams. Points farther than 3*RR from the best known R-factor are discarded. Maybe a reasonable 'localize' parameter would be to re-define this prefactor to RR, i.e. influence the R-cutoff.
 
