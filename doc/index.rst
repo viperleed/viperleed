@@ -5,8 +5,8 @@
    \def\Hy@colorlink#1{\begingroup\fontshape{\default}\selectfont}%
    \begingroup
    \sphinxsetup{%
-      InnerLinkColor={rgb}{1.0,0.000,0.000}
-      OuterLinkColor={rgb}{1.0,0.000,0.000}
+      InnerLinkColor={rgb}{0,0.120,0.204}
+      OuterLinkColor={rgb}{0,0.120,0.204}
    }
 
 ViPErLEED documentation

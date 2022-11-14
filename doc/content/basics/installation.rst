@@ -37,7 +37,7 @@ The MPI compiler for :term:`gfortran` is :term:`mpifort`, for :term:`ifort` it i
 If you are running ViPErLEED on a :term:`HPC` system, appropriate Fortran compilers and a prefered :term:`MPI` implementation are likely already installed.
 Please consult the documentation for your system and the administrators of details regarding their usage.
 
-tleedm can run on Linux, MacOS and Microsoft Windows, but the installation of the compilers in particular differs significantly for each system.
+:ref:`tleedm` can run on Linux, MacOS and Microsoft Windows, but the installation of the compilers in particular differs significantly for each system.
 
 .. note:: 
 
@@ -48,8 +48,6 @@ tleedm can run on Linux, MacOS and Microsoft Windows, but the installation of th
 
 
 
-
-
 ``gfortran`` and ``mpifort``
 ----------------------------
 
@@ -57,38 +55,38 @@ Linux
 #####
 
 First, using your distributions package-manager, update the package list and install the newest version of :term:`gfortran`.
-In this manual, we use ``apt-get``, the standard package-manager for Debian based distributions.\ [#]_
+In this manual, we use ``apt``, the standard package-manager for Debian based distributions.\ [#]_
 
 
 .. code-block:: console
 
-    $ sudo apt-get update
-    $ sudo apt-get install gfortran -y
+    $ sudo apt update
+    $ sudo apt install gfortran -y
 
-The compiler can be invoced with the ``gfortran`` command.
-You can show the version and check if :term:`gfortran` was installed properly using:
+The compiler can be invoked with the ``gfortran`` command.
+You can show the version and check if :term:`gfortran` was installed properly using
 
 .. code-block:: console
     
     $ gfortran --version
 
-In addition to :term:`gfortran`, we also need to install the :term:`BLAS` and :term:`LAPACK` libraries, as they are required for the :ref:`reference calculation section<ref-calc>`:
+In addition to :term:`gfortran`, you also need to install the :term:`BLAS` and :term:`LAPACK` libraries, as they are required for the :ref:`reference-calculation section<ref-calc>`
 
 .. code-block:: console
     
-    $ sudo apt-get install libblas-dev liblapack-dev
+    $ sudo apt install libblas-dev liblapack-dev
 
 Next install Open MPI (or alternatively another MPI implementation of your choosing) to make ``mpirun`` available:
 
 .. code-block:: console
     
-    $ sudo apt-get install openmpi-bin
+    $ sudo apt install openmpi-bin
 
 Finally, install the :term:`gfortran` MPI wrapper ``mpifort``:
 
 .. code-block:: console
 
-    $ sudo apt-get install libopenmpi-dev
+    $ sudo apt install libopenmpi-dev
 
 
 macOS
@@ -139,7 +137,11 @@ Hence, execution of the code will be rather slow.
 -  Install gfortran and other useful stuff via ``pacman -S mingw-w64-x86_64-toolchain``
 -  Add the ``<path_to_mingw_installation>/mingw64/bin`` path to your ``Path`` environment variable (this way, calling gfortran from shell will find the one just installed with no need to explicitly passing the whole path)
 -  Install dev tools with ``pacman -S base-devel``
--  Install cmake with ``pacman -S mingw-w64-x86_64-cmake``
+-  Install cmake with
+   
+   .. code-block:: console
+
+       pacman -S mingw-w64-x86_64-cmake
 -  Install git with ``pacman -S git``
 -  Clone the LAPACK git repository with ``git clone https://github.com/msys2/MINGW-packages.git`` This is the 'basic', unoptimized version. There are ways to also build better versions (see `here <https://icl.cs.utk.edu/lapack-for-windows/lapack/>`__).
 -  Move to LAPACK directory with ``cd MINGW-packages/mingw-w64-lapack``
@@ -175,18 +177,20 @@ To compile the static files described :ref:`below<static_compile>`, go into ``vi
 ``ifort`` and ``mpiifort``
 ----------------------------
 
+.. _ifort_linux:
+
 Linux
 #####
 
 Installation of the Intel compilers and :term:`MPI` implementation for Linux can be performed using a few shell commands.
-In this manual, we use ``apt-get``, the standard package-manager for Debian based distributions.
+In this manual, we use ``apt``, the standard package-manager for Debian based distributions.
 For installation instructions with other package-managers see the `guides by Intel <https://www.intel.com/content/www/us/en/develop/documentation/installation-guide-for-intel-oneapi-toolkits-linux/top.html>`__.
 
 As a first step, update the package index:
 
 .. code-block:: console
 
-    $ sudo apt-get update && sudo apt-get upgrade
+    $ sudo apt update && sudo apt upgrade
 
 Then follow the `instructions by Intel to add the Intel oneAPI repository <https://www.intel.com/content/www/us/en/develop/documentation/installation-guide-for-intel-oneapi-toolkits-linux/top/installation/install-using-package-managers/apt.html#apt>`__.
 Following this, you can install the required packages with the package-manager.
@@ -194,8 +198,8 @@ For ViPErLEED you need the Intel Base Toolkit (``intel-basekit``) and the Intel 
 
 .. code-block:: console
 
-    $ sudo apt-get install intel-basekit -y
-    $ sudo apt-get install intel-hpckit -y
+    $ sudo apt install intel-basekit -y
+    $ sudo apt install intel-hpckit -y
 
 .. note:: The toolkits are multiple GB in size and will take a while to download and install.
 
@@ -204,7 +208,7 @@ First, we need to make sure required build tools (such as Cmake) are present:
 
 .. code-block:: console
 
-    $ sudo apt-get install cmake pkg-config build-essential -y
+    $ sudo apt install cmake pkg-config build-essential -y
 
 Then, we finally need to configure the Intel one API installation such that it is discovered by by our environment.
 For this, we need to source the file `/opt/intel/oneapi/setvars.sh` which sets the required :term:`CLI` arguments.
@@ -238,9 +242,9 @@ Windows
 #######
 
 .. warning::
-    To run tleedm and TensErLEED under Windows, we recommend using the :term:`Windows Subsystem for Linux<WSL>`.
+    To run tleedm and TensErLEED under Windows, we recommend using the :term:`Windows Subsystem for Linux<WSL>` (available starting from Windows 10).
     Follow the `instructions by Microsoft to install the WSL <https://learn.microsoft.com/en-us/windows/wsl/install>`__.
-    With the :term:`WSL` installed, you can follow the same instructions as provided below for Linux.
+    With the :term:`WSL` installed, you can follow the same instructions as provided in `the Linux section<ifort_linux>`.
     Running natively on Windows is possible (:ref:`see below<native_windows>`), but experimental and *not recommended*.
 
 To install the Intel oneAPI Toolkits under Windows please follow `the guide provided by Intel<https://www.intel.com/content/www/us/en/develop/documentation/installation-guide-for-intel-oneapi-toolkits-windows/top.html>`__.
@@ -263,4 +267,4 @@ To do this, go into the ``tensorleed`` folder in the ``viperleed`` directory and
 The Makefile uses the ``gfortran`` compiler by default, if you only have ``ifort`` installed, change the variable ``gcomp`` in the first line of the Makefile accordingly.
 
 
-.. [#] For other distributions have a look at e.g. this tutorial `<https://fortran-lang.org/en/learn/os_setup/install_gfortran/>`__
+.. [#] For other distributions have a look at, for example, this tutorial `<https://fortran-lang.org/en/learn/os_setup/install_gfortran/>`__

@@ -7,31 +7,32 @@ Directory Structure and How To Run
 In ViPErLEED, each calculation must have its own directory. 
 The input and output files have fixed names, see :ref:`the list of files<list_input_files>`. 
 Below, we give an example directory tree with the files needed to start a LEED :math:`I(V)` calculation in ViPErLEED.
-See also the ViPErLEED examples section for some of working calculations to help you get started.
+See also the ViPErLEED examples section for some working calculations to help you get started.
 
 Minimum input
 =============
 
-To set up a ViPErLEED calculation first create a source directory (in this example ``my_surface``) and place all input files inside.
+To set up a ViPErLEED calculation, first create a source directory (in this example ``my_surface``) and place all input files inside.
 
 .. code-block:: console
     :caption: Minimum input directory tree
 
     my_surface
-    ├── EXPBEAMS.csv
+    ├── IVEBAMS [and/or EXPBEAMS.csv]
     ├── POSCAR
     ├── PARAMETERS
-    └── job.py
+    └── job.py [or job.sh]
 
 The minimum information required to start a :ref:`refercence calculation<ref-calc>` is contained in three files:
 
--   :ref:`EXPBEAMS.csv file<expbeams>` contains the experimentally measured LEED :math:`I(V)` curves.
-    Unless specified otherwise in :ref:`PARAMETERS<parameters>`, ViPErLEED will also use the information in the :ref:`EXPBEAMS.csv file<expbeams>` to set energy ranges (:ref:`THEO_ENERGIES<theo_energies>`) and choose which beams to calculate (:ref:`file IVBEAMS<ivbeams>`).
+-   :ref:`EXPBEAMS.csv file<expbeams>` contains the experimentally measured LEED-:math:`I(V)` curves.
+    Unless specified otherwise in :ref:`PARAMETERS<parameters>`, ViPErLEED will also use the information in the :ref:`EXPBEAMS.csv file<expbeams>` to set energy ranges (:ref:`THEO_ENERGIES<REFENERGIES>`) and choose which beams should be written to the output file (:ref:`file IVBEAMS<ivbeams>`).
+    Alternatively, you can also provide the :ref:`IVBEAMS file<ivbeams>` directly.
 -   :ref:`POSCAR file<poscar>` contains the reference surface structure.
-    ViPErLEED will determine the applicable symmetry from the :ref:`POSCAR file<poscar>`. See also the :ref:`symmetry settings<symmetry_settings>` and :ref:`input structure settings<input_structure_settings>`.
+    ViPErLEED will determine the applicable symmetry from the :ref:`POSCAR file<poscar>`. See also the :ref:`symmetry settings<symmetry_settings>` and :ref:`input-structure settings<input_structure_settings>`.
 -   :ref:`PARAMETERS<parameters>` contains the settings for the calculation (see :ref:`the list of parameters<paramname>`).
-    If no :ref:`VIBROCC file<vibrocc>` is given, :ref:`PARAMETERS<parameters>` needs to contain values for :ref:`T_EXPERIMENT<t_experiment>` and :ref:`T_DEBYE<t_debye>`.
--   :ref:`job.py<job_script>` is the entry point for the ViPErLEED calculation.
+    If no :ref:`VIBROCC file<vibroccin>` is given, :ref:`PARAMETERS<parameters>` needs to contain values for :ref:`T_EXPERIMENT<t_experiment>` and :ref:`T_DEBYE<t_debye>`.
+-   :ref:`job.py / job.sh<job_script>` is the entry point for the ViPErLEED calculation.
     Defines the paths to the ViPErLEED source code and the desired ``work`` directory.
 
 To run also a :ref:`delta amplitudes calculation<sec_deltas>` and a :ref:`structure search<sec_search>`, you additionally need to provide a :ref:`DISPLACEMENTS file<displacements>` that contains the requested pertubations of the structure.
@@ -44,7 +45,7 @@ Starting the calculation
 ========================
 
 Once you have set up the input files for the calculation, make sure that all tleedm dependencies are in the Python PATH, i.e. make sure the correct conda or virtual environment is loaded, otherwise this will raise an Error.
-You can then start a ViPErLEED calculation by invocing the :ref:`job script<job_script>` via the command line:
+You can then start a ViPErLEED calculation by invoking the :ref:`job script<job_script>` via the command line.
 
 .. code-block:: console
     

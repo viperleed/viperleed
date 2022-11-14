@@ -13,10 +13,10 @@ Glossary
       Density functional theory
 
     TensErLEED
-      Erlangen package for Tensor LEED
+      Erlangen package for tensor LEED
 
     ViPErLEED
-      The Vienna Package for TensErLEED
+      The Vienna Package for Erlangen LEED
 
     VASP
       Vienna ab initio simulation package (`VASP wiki <https://www.vasp.at/wiki/index.php>`__)
@@ -24,7 +24,7 @@ Glossary
     VESTA
       3D Visualization software for structural models (`Homepage <https://jp-minerals.org/vesta/en/>`__)
 
-    LEED-I(V)
+    LEED-:math:`I(V)`
       Energy dependent low energy electron diffraction.
 
     GUI
@@ -62,7 +62,7 @@ Glossary
       The :term:`MPI` wrapper for :term:`gfortran`. (`Homepage <https://www.open-mpi.org/doc/v4.1/man1/mpifort.1.php>`__)
 
     mpiifort
-      The :term:`MPI` wrapper for :term:`gfortran`. (`Homepage <https://www.open-mpi.org/doc/v4.1/man1/mpifort.1.php>`__)
+      The :term:`MPI` wrapper for :term:`ifort`. (`Homepage <https://www.open-mpi.org/doc/v4.1/man1/mpifort.1.php>`__)
 
     WSL
       Windows Subsystem for Linux. (See also `here <https://learn.microsoft.com/en-us/windows/wsl/about>`__)
