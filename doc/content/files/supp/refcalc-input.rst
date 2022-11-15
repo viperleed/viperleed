@@ -37,7 +37,7 @@ Combines (and is completely redundant with) the input from AUXNONSTRUCT, AUXLATG
 muftin.f
 --------
 Only used up to TensErLEED v1.61. Fortran source code file.
-Contains the subroutine defining muffin-tin potentials, based on the :ref:`V0_REAL<MUFTIN>`  and :ref:`V0_IMAG<INPOIM>`  parameters. Gets compiled at runtime, together with the other refcalc fortran files.
+Contains the subroutine defining muffin-tin potentials, based on the :ref:`V0_REAL<MUFTIN>`  and :ref:`V0_IMAG<v0_imag>`  parameters. Gets compiled at runtime, together with the other refcalc fortran files.
 
 refcalc-PARAM
 -------------

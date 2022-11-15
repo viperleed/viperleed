@@ -18,7 +18,7 @@ The OPTIMIZE parameter defines the behaviour of :ref:`full-dynamic optimization<
 
 **Acceptable values**: see below for each flag.
 
-The left-hand side defines which parameter to optimize. Allowed values (not case sensitive) are ``v0i`` for :ref:`V0_IMAG<INPOIM>`, ``theta`` and ``phi`` for the :ref:`BEAM_INCIDENCE<BEAMINCIDENCE>`  angles, ``a``, ``b`` and ``c`` for the unit cell vectors, as well as ``ab`` and ``abc`` for simultaneous, proportional scaling of multiple unit cell vectors.
+The left-hand side defines which parameter to optimize. Allowed values (not case sensitive) are ``v0i`` for :ref:`V0_IMAG<v0_imag>`, ``theta`` and ``phi`` for the :ref:`BEAM_INCIDENCE<BEAMINCIDENCE>`  angles, ``a``, ``b`` and ``c`` for the unit cell vectors, as well as ``ab`` and ``abc`` for simultaneous, proportional scaling of multiple unit cell vectors.
 
 Input on the right-hand side is expected in the form ``flag value``, where the different flags and allowed values are described below. Values for the different flags can be set in one line with comma separation, as in the examples above. Alternatively, you can set different flags by having multiple lines ``OPTIMIZE x = flag value``. If only one value is given, this is assigned as ``step``.
 

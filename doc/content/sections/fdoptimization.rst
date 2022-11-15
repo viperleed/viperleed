@@ -3,7 +3,7 @@
 Full-dynamic optimization
 =========================
 
-LEED-I(V) calculations require setting some parameters that cannot be (exactly) determined in experiment, but that also are not accessible to variation withing the Tensor LEED approximation. These include :ref:`BEAM_INCIDENCE<BEAMINCIDENCE>`, :ref:`V0_IMAG<INPOIM>`  and the exact dimensions of the unit cell. In order to fit these parameters, multiple full-dynamic (i.e. "reference") calculations have to be performed. For performance reasons, Tensor output is always disabled during full-dynamic (FD) optimization.
+LEED-I(V) calculations require setting some parameters that cannot be (exactly) determined in experiment, but that also are not accessible to variation withing the Tensor LEED approximation. These include :ref:`BEAM_INCIDENCE<BEAMINCIDENCE>`, :ref:`V0_IMAG<v0_imag>`  and the exact dimensions of the unit cell. In order to fit these parameters, multiple full-dynamic (i.e. "reference") calculations have to be performed. For performance reasons, Tensor output is always disabled during full-dynamic (FD) optimization.
 
 To set up a full-dynamic optimization, set
 

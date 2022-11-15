@@ -28,7 +28,7 @@ Which of these segments should be executed must be specified using the :ref:`RUN
 Further specialized segments include:
 
 -  :ref:`Error calculations<error_calculation>`: Based on a given reference structure (i.e. after a reference calculation has been run), calculate one-dimensional error curves for variation of a single parameter. Effectively, this calculates delta amplitudes for variations of a single parameter, and outputs the R-factor for every single configuration along that axis.
--  :ref:`Full-dynamic optimization<fdoptimization>`: Optimize parameters that cannot be varied during the search, like :ref:`BEAM_INCIDENCE<BEAMINCIDENCE>`, :ref:`V0_IMAG<INPOIM>`  or unit cell scaling. This is achieved by performing multiple full-dynamic (i.e. "reference") calculations (without Tensor output). Behavior is controlled by the :ref:`OPTIMIZE<OPTIMIZE>`  parameter.
+-  :ref:`Full-dynamic optimization<fdoptimization>`: Optimize parameters that cannot be varied during the search, like :ref:`BEAM_INCIDENCE<BEAMINCIDENCE>`, :ref:`V0_IMAG<v0_imag>`  or unit cell scaling. This is achieved by performing multiple full-dynamic (i.e. "reference") calculations (without Tensor output). Behavior is controlled by the :ref:`OPTIMIZE<OPTIMIZE>`  parameter.
 
 The pages listed above cover normal operation, in which the theoretical beams correspond to only one surface structure. If multiple structures coexist on the sample, the same segments need to be executed, but their behavior is somewhat different, as described here:
 

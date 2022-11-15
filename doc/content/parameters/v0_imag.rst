@@ -1,4 +1,4 @@
-.. _inpoim:
+.. _v0_imag:
 
 V0_IMAG
 =======

@@ -12,7 +12,7 @@ V0_REAL
 **TODO**: Update documentation to match TensErLEED 2.0
 
 V0_REAL is used to provide the real part of the inner potential of the solid.
-(:ref:`V0_IMAG<INPOIM>`  is the imaginary part, instead)
+(:ref:`V0_IMAG<v0_imag>`  is the imaginary part, instead)
 
 **Default**: ``V0_REAL = RUNDGREN c0 c1 c2 c3``, where the ``c``\ \* values are taken from the first line in PHASESHIFTS, as derived from the output of the phase shifts calculation.
 
