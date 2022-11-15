@@ -36,7 +36,19 @@ Or, if ``mpiifort`` is not present, but mpifort is:
 
 ::
 
-   FORTRAN_COMP mpi = 'mpifort -Ofast -no-pie'
+   FORTRAN_COMP mpi = 'mpifort -Ofast -no-pie -fallow-argument-mismatch'
+
+.. warning:: 
+   If you are using an older version of gfortran packaged with GCC 9 or earlier, you need to remove the compiler flag ``-fallow-argument-mismatch``.
+   So, specify in :ref:`PARAMETERS<parameters>`:
+
+   ::
+
+   FORTRAN_COMP mpi = 'mpifort -Ofast -no-pie
+
+   This is necessary, because type-checks were made stricter in GCC 10, making ``-fallow-argument-mismatch`` mandatory to comile unaltered TensErLEED.
+   However, earlier versions of GCC and gfortran may not recognize the flag.
+
 
 **Syntax:**
 
