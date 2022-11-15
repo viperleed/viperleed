@@ -48,7 +48,7 @@ Initialization
   +--------------------------------------------+--------------------------------------------------------------------------------------------------------------+
   | :ref:`SYMMETRY_FIND_ORI<SYMMETRY_FIND_ORI>`| Whether the symmetry search should look for the highest-symmetry point.                                      |
   +--------------------------------------------+--------------------------------------------------------------------------------------------------------------+
-  | :ref:`THEO_ENERGIES<theo_energies>`          | What energy range to calculate                                                                               |
+  | :ref:`THEO_ENERGIES<theo_energies>`        | What energy range to calculate                                                                               |
   +--------------------------------------------+--------------------------------------------------------------------------------------------------------------+
   | :ref:`T_DEBYE<T_DEBYE>`                    | Debye temperature of the system (only for automatically generating :ref:`VIBROCC<VIBOCCIN>`)                 |
   +--------------------------------------------+--------------------------------------------------------------------------------------------------------------+
@@ -105,9 +105,9 @@ Reference calculation
   +---------------------------------------------+--------------------------------------------------------------------------------------------------------------+
   | :ref:`TENSOR_OUTPUT<TOUTPUT>`               | Disable Tensor output for some or all layers                                                                 |
   +---------------------------------------------+--------------------------------------------------------------------------------------------------------------+
-  | :ref:`THEO_ENERGIES<theo_energies>`           | What energy range to calculate                                                                               |
+  | :ref:`THEO_ENERGIES<theo_energies>`         | What energy range to calculate                                                                               |
   +---------------------------------------------+--------------------------------------------------------------------------------------------------------------+
-  | :ref:`V0_IMAG<v0_imag>`                      | Imaginary part of the inner potential                                                                        |
+  | :ref:`V0_IMAG<v0_imag>`                     | Imaginary part of the inner potential                                                                        |
   +---------------------------------------------+--------------------------------------------------------------------------------------------------------------+
   | :ref:`V0_REAL<MUFTIN>`                      | Real part of the inner potential                                                                             |
   +---------------------------------------------+--------------------------------------------------------------------------------------------------------------+
@@ -136,9 +136,9 @@ R-factor calculation
   +----------------------------------------+--------------------------------------------------------------------------------------------------+
   | **→** :ref:`SUPERLATTICE<SUPERLATTICE>`| The relationship between the surface and bulk unit cells                                         |
   +----------------------------------------+--------------------------------------------------------------------------------------------------+
-  | :ref:`THEO_ENERGIES<theo_energies>`      | What energy range to calculate                                                                   |
+  | :ref:`THEO_ENERGIES<theo_energies>`    | What energy range to calculate                                                                   |
   +----------------------------------------+--------------------------------------------------------------------------------------------------+
-  | :ref:`V0_IMAG<v0_imag>`                 | Imaginary part of the inner potential                                                            |
+  | :ref:`V0_IMAG<v0_imag>`                | Imaginary part of the inner potential                                                            |
   +----------------------------------------+--------------------------------------------------------------------------------------------------+
 
 Delta-amplitudes calculation
@@ -167,7 +167,7 @@ Behaviour is mainly governed by the :ref:`DISPLACEMENTS file<DISPLACEMENTS>`. So
   +----------------------------------------+--------------------------------------------------------------------------------------------------------------+
   | :ref:`TENSOR_INDEX<TENSOR_INDEX>`      | Which Tensor files to use for the delta calculation and search                                               |
   +----------------------------------------+--------------------------------------------------------------------------------------------------------------+
-  | :ref:`THEO_ENERGIES<theo_energies>`      | What energy range to calculate                                                                               |
+  | :ref:`THEO_ENERGIES<theo_energies>`    | What energy range to calculate                                                                               |
   +----------------------------------------+--------------------------------------------------------------------------------------------------------------+
 
 Search
@@ -212,9 +212,9 @@ Behaviour is also governed by the :ref:`DISPLACEMENTS file<DISPLACEMENTS>`. The 
   +------------------------------------------------+--------------------------------------------------------------------------------------------------+
   | :ref:`TENSOR_INDEX<TENSOR_INDEX>`              | Which Tensor files to use for the delta calculation and search                                   |
   +------------------------------------------------+--------------------------------------------------------------------------------------------------+
-  | :ref:`THEO_ENERGIES<theo_energies>`              | What energy range to calculate                                                                   |
+  | :ref:`THEO_ENERGIES<theo_energies>`            | What energy range to calculate                                                                   |
   +------------------------------------------------+--------------------------------------------------------------------------------------------------+
-  | :ref:`V0_IMAG<v0_imag>`                         | Imaginary part of the inner potential                                                            |
+  | :ref:`V0_IMAG<v0_imag>`                        | Imaginary part of the inner potential                                                            |
   +------------------------------------------------+--------------------------------------------------------------------------------------------------+
 
 Domain search
