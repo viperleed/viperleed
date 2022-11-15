@@ -35,16 +35,17 @@ The minimum information required to start a :ref:`refercence calculation<ref-cal
 -   :ref:`job.py / job.sh<job_script>` is the entry point for the ViPErLEED calculation.
     Defines the paths to the ViPErLEED source code and the desired ``work`` directory.
 
-To run also a :ref:`delta amplitudes calculation<sec_deltas>` and a :ref:`structure search<sec_search>`, you additionally need to provide a :ref:`DISPLACEMENTS file<displacements>` that contains the requested pertubations of the structure.
+To run also a :ref:`delta amplitudes calculation<sec_deltas>` and a :ref:`structure search<sec_search>`, you additionally need to provide a :ref:`DISPLACEMENTS file<displacements>` that contains the requested perturbations of the structure.
 
 .. note:: 
-    Setting up a :ref:`domain calculation<domain_calculation>` with multiple surface structures, requires a slightly different directory tree.
-    See the :ref:`domain calculation page<domain_calculation>`.
+    Setting up a :ref:`domain calculation<domain_calculation>` with multiple coexisting surface structures, requires a slightly different directory tree.
+    See the :ref:`domain-calculation page<domain_calculation>`.
 
 Starting the calculation
 ========================
 
-Once you have set up the input files for the calculation, make sure that all tleedm dependencies are in the Python PATH, i.e. make sure the correct conda or virtual environment is loaded, otherwise this will raise an Error.
+Once you have set up the input files you are ready to start the calculation.
+If you are running ViPErLEED from Python (recommend), make sure that all tleedm dependencies are in the Python PATH, i.e. make sure the correct conda or virtual environment is loaded, otherwise this will raise an Error.
 You can then start a ViPErLEED calculation by invoking the :ref:`job script<job_script>` via the command line.
 
 .. code-block:: console
@@ -52,14 +53,22 @@ You can then start a ViPErLEED calculation by invoking the :ref:`job script<job_
     $ src_path="path/to/source_dir"
     $ wrk_path="path/to/work_dir"
     $
-    $ python job.py -s $src_path -w $wrk_path
+    $ python3 job.py -s $src_path -w $wrk_path
 
-You can also set the source and work directory path directly in the job script, rather than specifiying them as command line arugments.
+You can also set the source and work directory path directly in the job script, rather than giving them as command line arguments.
+
+If you are running using a pre-packaged version of tleedm, you can start the calculation by running the job shell script ``job.sh``. Make sure to edit the source and work path in the script beforehand.
+
+.. code-block:: console
+    
+    $ ./job.sh
 
 .. tip:: 
     As a ViPErLEED calculation can take a long time, it is recommended to start the calculation using `nohup <https://en.wikipedia.org/wiki/Nohup>`__ or in a `tmux <https://github.com/tmux/tmux/wiki>`__ session. This way, the calculation will not be aborted if the user is logged out (or the connection of an ``ssh`` session breaks).
 
-If you are running ViPErLEED on an HPC system with a workload scheduler such as `slurm <https://slurm.schedmd.com/documentation.html>`__, make sure to load the required compilers, :term:`MPI` implementations and Python packages in the submission script.
+If you are running ViPErLEED on an HPC system with a workload scheduler such as `slurm <https://slurm.schedmd.com/documentation.html>`__, make sure to load the required compilers, :term:`MPI` implementations and Python packages in the submission-script.
+
+**TODO** job submission script example?
 
 Output organization
 ===================
@@ -97,7 +106,7 @@ The directory tree after a run may look something like this:
 ViPErLEED will create the additional input files :ref:`IVBEAMS<ivbeams>`, :ref:`BEAMLSIT<beamlist>`, :ref:`PHASESHIFTS<phaseshifts>`, and :ref:`VIBROCC<viboccin>` under certain conditions; see the respective pages for details.
 
 After the first run, an ``OUT`` directory is created that contains the output files, see the :ref:`list of output files<output_files>` for details.
-ViPErLEED further prodces additional :ref:`supplementary files<supp_files>` that are required during execution, that contain intermediate results or that may be of interest for debugging purposes.
+ViPErLEED further produces additional :ref:`supplementary files<supp_files>` that are required during execution, that contain intermediate results or that may be of interest for debugging purposes.
 These files are stored in the ``SUPP`` subfolder.
 
 If a :ref:`refercence calculation<ref-calc>` is run with :ref:`Tensor output<toutput>`, a ``Tensors`` directory will be created that stores the :ref:`tensor files<tensorszip>`.

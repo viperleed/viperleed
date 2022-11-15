@@ -12,14 +12,14 @@ If ``mpiifort``/``mpifort`` or mpirun are not found on the system, the search wi
 
 See the :ref:`installation section<installation>` for details on how to install the the Fortran compilers, the :term:`MPI` wrappers and ``mpirun``.
 
-**Default:** if :term:`ifort`` is present:
+**Default:** if :term:`ifort` is present:
 
 ::
 
    FORTRAN_COMP = 'ifort -O2 -I/opt/intel/mkl/include'
    FORTRAN_COMP post = '-L/opt/intel/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -liomp5 -lpthread -lm -ldl'
 
-if :term:`ifort`` is not present, but gfortran is:
+if :term:`ifort` is not present, but gfortran is:
 
 ::
 
@@ -62,7 +62,7 @@ This compile statement will be used for all Fortran code compiled while the prog
 Whether the default flags work depends not only on the ifort or gfortran packages being present, but also on additional packages and the local library structure. Therefore, explicitly declaring ``FORTRAN_COMP`` and ``FORTRAN_COMP post`` as strings is generally preferable.
 
 .. note:: 
-   -  **mpifort**: :term:`mpifort`` is only a "wrapper" compiler, which effectively calls an underlying back-end fortran compiler (usually gfortran) with a number of flags suitable for mpi scripts. If there are problems or you want to see exactly what mpifort is doing, use ``mpifort -showme`` to see what the ``mpifort`` command will be interpreted as (see also the `mpifort man page <https://www.open-mpi.org/doc/v4.0/man1/mpifort.1.php>`__). If this does not work well, you may want to try replacing the ``FORTRAN_COMP mpi = mpifort`` with the output of the ``-showme`` command as an explicit string, fixing paths if necessary.
+   -  **mpifort**: :term:`mpifort` is only a "wrapper" compiler, which effectively calls an underlying back-end fortran compiler (usually gfortran) with a number of flags suitable for mpi scripts. If there are problems or you want to see exactly what mpifort is doing, use ``mpifort -showme`` to see what the ``mpifort`` command will be interpreted as (see also the `mpifort man page <https://www.open-mpi.org/doc/v4.0/man1/mpifort.1.php>`__). If this does not work well, you may want to try replacing the ``FORTRAN_COMP mpi = mpifort`` with the output of the ``-showme`` command as an explicit string, fixing paths if necessary.
    -  **mpifort**: if compiling with mpifort causes an error like :literal:`Symbol `time' causes overflow in R_X86_64_PC32 relocation` in the search log (use :ref:`LOG_SEARCH<LOG_SEARCH>`  to produce such a log), this can be resolved by using mpifort with the additional flag ``-no-pie`` (set by default by ViPErLEED for the ``mpifort`` option, see above).
 
 .. warning::
