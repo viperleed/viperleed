@@ -1,0 +1,59 @@
+.. _example_ag_100:
+
+=======================
+Example System: Ag(100)
+=======================
+
+If this is your first time running ViPErLEED, first make sure to follow the :ref:`installation instructions<installation>`.
+
+Initialization Run
+==================
+
+To start off...
+
+Let's have a look at the :ref:`PARAMETERS file<parameters>`:
+
+.. literalinclude :: /_static/example_systems/Ag(100)/PARAMETERS
+   :language: console
+   :caption: PARAMETERS
+
+Since we only want to to run the :ref:`initialization` for now, we set :ref:`RUN<run>` = 0.
+For this example, we also limit our energy range to 50-350 eV, with a step of 3 eV (:ref:`THEO_ENERGIES<theo_energies>`).
+
+We give some infomation on how ViPErLEED should interpret the structure given in the :ref:`POSCAR file<poscar>`.
+Using :ref:`N_BULK_LAYERS<blay>` and :ref:`BULK_REPEAT<bulk_repeat>`, we specify the bulk material below the surface.
+See the pages of those parameters for more details.
+
+With the :ref:`SITE_DEF<sitedef>` command, we further define that the top-most atom (#1 in the POSCAR) should be treated as a distinct different species.
+See the page on the :ref:`SITE_DEF<sitedef>` parameter for details on how this works, and see also the notes on :ref:`avoiding element name collisions<elementnamecollision>`.
+
+In addition to the atomic positions, the calculation of scattering-intensities also requires vibrational amplitudes for every atom in the unit cell.
+While the atomic positions are contained in the :ref:`POSCAR file<poscar>`, the vibrational amplitudes are given in the :ref:`VIBROCC file<viboccin>`.
+However, rather than writing the :ref:`VIBROCC file<viboccin>` ourselvs, we can also let ViPErLEED make an educated guess about the vibrational amplitudes by providing the parameters :ref:`T_DEBYE<t_debye>`, :ref:`T_EXPERIMENT<t_experiment>`, and :ref:`VIBR_AMP_SCALE<VIBR_AMP_SCALE>`.
+
+Finally, in the :ref:`PARAMETERS file<parameters>` above we already specified the parameters :ref:`V0_IMAG<v0_imag>` and :ref:`LMAX` for the reference calculation.
+These set the imaginary part of the inner potential and the maxium angular momentum quantum number to be used in the calculations.
+
+Once the run finishes, we can have a look at the :ref:`log file<log_files>` to see if 
+As expected, ViPErLEED recognized our surface to be of p4m symmetry.
+
+Reference Calculation and R-factor
+==================================
+
+
+
+The :math:`I(V)` curves clearly show a qualitative agreement, but the R-factor of ~0.18 is ...
+
+Delta-Amplitudes and Structure search
+=====================================
+
+We see the R-factor dropp from ... to ...
+
+
+Conculding remarks and next steps
+=================================
+
+Full-dynamic optimization V0i, unit cell, incidence angle...
+
+
+.. [#] The data was obtained by **TODO** For furhter details see  **TODO**
