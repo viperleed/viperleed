@@ -76,5 +76,7 @@ latex_elements = {
     'passoptionstopackages': r'\PassOptionsToPackage{svgnames}{xcolor}',
     'preamble': r'''
     \usepackage{braket}
+    \usepackage{newunicodechar}
+    \newunicodechar{α}{$\alpha$}
     '''
     }
