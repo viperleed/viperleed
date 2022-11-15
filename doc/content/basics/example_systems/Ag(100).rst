@@ -35,7 +35,7 @@ Let's have a look at the :ref:`PARAMETERS file<parameters>`:
    :caption: PARAMETERS
 
 Since we only want to to run the :ref:`initialization` for now, we set :ref:`RUN = 0<run>`.
-For this example, we also limit our energy range to 50-350 eV, with a step of 3 eV (:ref:`THEO_ENERGIES<theo_energies>`).
+For this example, we also limit our energy range to 45-700 eV, with an energy step of 3 eV (:ref:`THEO_ENERGIES<theo_energies>`).
 
 We give some infomation on how ViPErLEED should interpret the structure given in the :ref:`POSCAR file<poscar>`.
 Using :ref:`N_BULK_LAYERS<blay>` and :ref:`BULK_REPEAT<bulk_repeat>`, we specify the bulk material below the surface.
@@ -114,25 +114,56 @@ In ViPErLEED, we give this infomation in the :ref:`DISPLACEMENTS file<displaceme
    :language: console
    :caption: DISPLACEMENTS
 
-Since we only have very few atoms, we can be generous in our settings.
 See the page on the :ref:`DISPLACEMENTS file<displacements>` for details on the syntax.
-Here, we allow the :math:`z` positions of all silver atoms in the first 4 layers to vary by up to :math:`\pm 50` pm with a step-width of 2 pm.
-Addionally, we also sample differnt vibrational amplitudes of the top-most atom.
-This may not seem like much, but this already gives :math:`51^5` grid points (51 per varied parameter).
+Here, we allow the :math:`z` positions of all silver atoms in the first 4 layers to vary by up to :math:`\pm 200` pm with a step-width of 10 pm.
+
 
 After setting up the :ref:`DISPLACEMENTS file<displacements>`, we can now run the delta-amplitudes calculation and structure-optimization back-to-back by setting :ref:`RUN = 2-3<run>` in :ref:`PARAMETERS<parameters>`.
-For a large system, this step can take many hours to finish, but for our simple system it only takes about 10 minutes to converge (using 10 CPU cores).
-At the end, we take another look at our :ref:`log file<log_files_tleedm>`:
+For a large system, this step can take many hours to finish, but for our simple system it only takes about 4 minutes to converge (using 10 CPU cores).
+At the end, when we take another look at our :ref:`log file<log_files_tleedm>`, we already see that the R-factor dropped significantly from :math:`R \approx 0.17` to :math:`R \approx 0.09`.
+That's not bad, but we can do a bit better yet.
 
-....
+Now that we found a better configuration, we can use the :ref:`bookkeeper utility<bookkeeper>` with the ``--cont`` flag to keep the new configuration and use it as our new starting point, overwriting the old POSCAR and VIBROCC files:
 
-We see the R-factor drop from ... to .., but we can also look at a visualization of the R-factor Convergence in the 
+.. code-block:: console
+
+   $ python3 bookkeeper.py --cont [or $ ./bookkeeper --cont]
+
+Sarting from this configuration, let's optimze with a finer grid.
+We change the DISPLACEMENTS accordingly:
+
+.. literalinclude :: /_static/example_systems/Ag(100)/DISPLACEMENTS_fine
+   :language: console
+   :caption: DISPLACEMENTS with a finer grid
+
+Here we allow :math:`\pm 20` pm variation on a 2 pm grid.
+Addionally, we also allow the top-most atom to change its vibrational amplitude.
+This may not seem like much, but this already gives :math:`11^5` grid points (21 per varied parameter) and will take about 3 times as long as the the last run!
+
+.. important::
+   Because we changed our reference structure, we need to re-run starting with the reference calculation by setting :ref:`RUN = 1-3 1<run>`.
+   Note, we also add a second reference-calculation at the end.
+   This will remove errors due to the :ref:`tensor LEED approximation` from the final result.
+
+Once finished, we get a R-factor of about ~:math:`R \approx 0.078`!
+To visualize how our optimization went, we can also take a look at the  :ref:`Search-progress.pdf file<searchprogresspdf>` in the ``OUT`` directory:
+
+.. figure:: /_static/example_systems/Ag(100)/search_convergence_plot.png
+   :width: 450px
+   :align: center
+
+   Search-progress.pdf
+
+Next steps
+==========
+
+Further optizing the structure is possible, but not not very instructive.
+Instead we conclude this example by mentioning two other options on how to proceed with the analysis.
+
+For a more complicated system it may not be clear, which structure parameters are most important.
+In this case we could run an :ref:`error-calculation<error_calculation>`, which can show how much the displacement of any individual atom impacts the R-factor.
+
+Alternatively, we could turn to a :ref:`full-dynamic optimization<fdoptimization>` to also tackle parameters that are not accessible under the tensor LEED approximation such as :math:`V_{0i}`, the unit cell dimensions, or the electron beam incidence angle.
 
 
-Conculding remarks and next steps
-=================================
-
-Full-dynamic optimization V0i, unit cell, incidence angle...
-
-
-.. [#] The data was provided curtesy of **TODO** .For furhter details see  **TODO**
+.. [#] The data was provided curtesy of **TODO** .For further details see  **TODO**
