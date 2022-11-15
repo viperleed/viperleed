@@ -4,6 +4,7 @@
 Example System: Ag(100)
 =======================
 
+In this section, we go through setting up and executing a simple ViPErLEED calculation using the example of the Ag(100)-(1x1) surface.\ [#]_
 If this is your first time running ViPErLEED, first make sure to follow the :ref:`installation instructions<installation>`.
 
 Initialization Run
@@ -17,7 +18,7 @@ Let's have a look at the :ref:`PARAMETERS file<parameters>`:
    :language: console
    :caption: PARAMETERS
 
-Since we only want to to run the :ref:`initialization` for now, we set :ref:`RUN<run>` = 0.
+Since we only want to to run the :ref:`initialization` for now, we set :ref:`RUN = 0<run>`.
 For this example, we also limit our energy range to 50-350 eV, with a step of 3 eV (:ref:`THEO_ENERGIES<theo_energies>`).
 
 We give some infomation on how ViPErLEED should interpret the structure given in the :ref:`POSCAR file<poscar>`.
@@ -34,15 +35,53 @@ However, rather than writing the :ref:`VIBROCC file<viboccin>` ourselvs, we can 
 Finally, in the :ref:`PARAMETERS file<parameters>` above we already specified the parameters :ref:`V0_IMAG<v0_imag>` and :ref:`LMAX` for the reference calculation.
 These set the imaginary part of the inner potential and the maxium angular momentum quantum number to be used in the calculations.
 
-Once the run finishes, we can have a look at the :ref:`log file<log_files>` to see if 
-As expected, ViPErLEED recognized our surface to be of p4m symmetry.
+Once the run finishes, we can have a look at the :ref:`log file<log_files_tleedm>` to see if everything went as expected.
+Unless there was some configuration error, the log should now contain some lines like this:
+
+.. code-block:: console
+
+   ...
+   Found unit cell type: square
+   Starting symmetry search...
+   Found plane group: p4m
+   Checking bulk unit cell...
+   Found SUPERLATTICE = (1x1)
+   ...
+
+As expected, ViPErLEED recognized our surface be of p4m symmetry with a simple (1x1) reconstruction!
+
+With this done, we can now continue to run the actuall scattering calculations.
 
 Reference Calculation and R-factor
 ==================================
 
+Since we already added the parameters relating to the :ref:`reference-calculation<ref-calc>` in the previous step, we can just start the calculation again, after setting :ref:`RUN = 1<run>` to select the :ref:`reference-calculation<ref-calc>`.
+
+Note, that the initialization will still be automatically excuted at the start of every ViPErLEED run.
+Similarly, if an :ref:`EXPBEAMS.csv files<expbeams>` is provided as is the case here, the :ref:`R-factor calculation<rfactor>` will be inserted automatically after the reference-calculation.
+
+Once the reference-calculation finishes (only takes about 30 seconds with the chosen settings) we find a result for the R-factor at the very end of the :ref:`log file<log_files_tleedm>`:
+
+.. code-block:: console
+
+   ...
+   Total elapsed time: 30.21 seconds
+
+   Executed segments: 0 1 11
+   Final R (refcalc): 0.1722
+
+Addionally, in the :ref:`OUT directory<dir_organization_output>`, we find a file :ref:`THEOBEAMS.csv<theobeams>` which contains the calculated theoretical :math:`I(V)` curves and a file :ref:`Rfactor_analysis_refcalc.pdf<rfactorplots>` in which the experimental and theoretical beams are plotted.
+The latter should look something like this:
+
+.. figure:: /_static/example_systems/Ag(100)/refalc_result_plot.png
+   :width: 450px
+   :align: center
+
+   Rfactor_analysis_refcalc.pdf
 
 
-The :math:`I(V)` curves clearly show a qualitative agreement, but the R-factor of ~0.18 is ...
+The :math:`I(V)` curves clearly show a good qualitative agreement, but the R-factor of ~0.17 is not great for such a simple system!
+We therfore proceed to the :ref:`delta-amplitudes<sec-deltas>` calculation and the :ref:`structure-search<sec-search>`.
 
 Delta-Amplitudes and Structure search
 =====================================
@@ -56,4 +95,4 @@ Conculding remarks and next steps
 Full-dynamic optimization V0i, unit cell, incidence angle...
 
 
-.. [#] The data was obtained by **TODO** For furhter details see  **TODO**
+.. [#] The data was provided curtesy of **TODO** .For furhter details see  **TODO**

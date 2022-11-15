@@ -70,6 +70,8 @@ If you are running ViPErLEED on an HPC system with a workload scheduler such as 
 
 **TODO** job submission script example?
 
+.. _dir_organization_output:
+
 Output organization
 ===================
 

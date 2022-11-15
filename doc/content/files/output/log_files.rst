@@ -7,6 +7,8 @@ Log files
 ViPErLEED produces multiple log files with names like ``$section-$timestamp.log`` that contain various information about the ViPErLEED run.
 ``$section`` corresponds to the part of ViPErLEED that produced the log files, while ``$timestamp`` marks the time when the file was *first created* (in the format ``yyMMdd-hhmmss``).
 
+.. _log_files_tleedm:
+
 ``tleedm-$timestamp.log``
 =========================
 
