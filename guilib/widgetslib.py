@@ -82,19 +82,19 @@ def catch_gui_crash(base_log_path):
                 _now = datetime.now().strftime("%Y%m%d_%H%M%S")
                 _logname = base_log_path / f"exceptions_{_now}.log"
                 self.loginfo['fname'] = _logname
-                logging.basicConfig(filename=_logname, level=logging.ERROR)         # TODO: probably also some more complicated form
+                logging.basicConfig(filename=_logname, level=logging.ERROR)      # TODO: probably also some more complicated form
                 self.loginfo['log'] = logger = logging.getLogger()
             logger.error(info)
             text = (self.__base_text
                     + "<br><br>Please include file "
                     f"{self.loginfo['fname']} in the report.")
             try:
-                self.__call_impl()
+                self.__call_impl(text, info)
             except RuntimeError:
                 # Probably the C++ QObject underlying self is gone
                 pass
 
-        def __call_impl(self):
+        def __call_impl(self, text, info):
             """Finish calling self."""
             # Connect signal differently depending on thread
             this_thread = qtc.QThread.currentThread()
@@ -105,7 +105,11 @@ def catch_gui_crash(base_log_path):
                 # handling exceptions
                 connect_type = qtc.Qt.BlockingQueuedConnection
 
-            self.__show_msg_requested.disconnect()
+            try:
+                self.__show_msg_requested.disconnect()                          # TODO: use safe_disconnect
+            except TypeError:
+                # Not connected
+                pass
             self.__show_msg_requested.connect(self.__show_message,
                                               type=connect_type)
             self.__show_msg_requested.emit(text, info)
