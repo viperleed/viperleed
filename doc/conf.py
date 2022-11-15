@@ -73,6 +73,7 @@ latex_show_urls = 'inline'
 latex_show_pagerefs = False # show page numbers
 latex_elements = {
     'papersize': 'a4paper',
+    'passoptionstopackages': r'\PassOptionsToPackage{svgnames}{xcolor}',
     'preamble': r'''
     \usepackage{braket}
     '''

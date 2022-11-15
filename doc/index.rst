@@ -5,15 +5,25 @@
    \def\Hy@colorlink#1{\begingroup\fontshape{\default}\selectfont}%
    \begingroup
    \sphinxsetup{%
-      InnerLinkColor={rgb}{0,0.120,0.204}
+      InnerLinkColor={rgb}{0,0.120,0.204},
       OuterLinkColor={rgb}{0,0.120,0.204}
+
    }
+
+   % use heavy boxes for note, hint, important & tip
+   \renewenvironment{sphinxnote}[1]
+      {\begin{sphinxheavybox}\sphinxstrong{#1} }{\end{sphinxheavybox}}
+   \renewenvironment{sphinxhint}[1]
+      {\begin{sphinxheavybox}\sphinxstrong{#1} }{\end{sphinxheavybox}}
+   \renewenvironment{sphinximportant}[1]
+      {\begin{sphinxheavybox}\sphinxstrong{#1} }{\end{sphinxheavybox}}
+   \renewenvironment{sphinxtip}[1]
+      {\begin{sphinxheavybox}\sphinxstrong{#1} }{\end{sphinxheavybox}}
 
 ViPErLEED documentation
 =======================
 
-Introduction
-____________
+
 
 Welcome to the manual for :term:`ViPErLEED` and the :term:`Python` package :term:`tleedm`.
 See the :ref:`Getting Started page<getting_started>`.
@@ -30,7 +40,7 @@ The package consists of:
 For details please see the ViPErLEED publication series (**TODO**).
 This manual primarily deals with part **1.**.
 
-The goal of any :term:`LEED-I(V)` calculation is the calculation of energy dependent electron scattering amplitudes and intensities.
+The goal of any :term:`LEED-I(V)` calculation is the calculation of energy-dependent electron-scattering amplitudes and intensities.
 These intensity curves [often referred to as :math:`I(V)` curves or spectra]  are very sensitive to the precise position and vibrational amplitudes of each atom in the surface unit cell.
 For more details consult works that cover the basics of :term:`LEED` and :term:`LEED-I(V)`, e.g.
 Chapter 4 in :cite:t:`fausterSurfacePhysicsFundamentals2020` or the overview by :cite:t:`heinzElectronBasedMethods2013`.
@@ -57,9 +67,9 @@ For computational details please have a look at the ViPErLEED paper (**TODO**) a
    :maxdepth: 2
    :caption: Files
 
-   content/input_files<Input files>
-   content/output_files<Output files>
-   content/supp_files<Supplementary files>
+   Input files<content/input_files>
+   Output files<content/output_files>
+   Supplementary files<content/supp_files>
 
 
 .. only:: html
@@ -93,6 +103,7 @@ For computational details please have a look at the ViPErLEED paper (**TODO**) a
 
    References<references>
    Glossary<content/glossary>
+   License<content/license>
 
 .. raw:: latex
 
