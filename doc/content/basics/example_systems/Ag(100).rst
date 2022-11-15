@@ -4,13 +4,29 @@
 Example System: Ag(100)
 =======================
 
-In this section, we go through setting up and executing a simple ViPErLEED calculation using the example of the Ag(100)-(1x1) surface.\ [#]_
-If this is your first time running ViPErLEED, first make sure to follow the :ref:`installation instructions<installation>`.
+In this section, we go through setting up and executing a simple ViPErLEED calculation for the Ag(100)-(1x1) surface.\ [#]_
+
+This tutorial is designed such that you can follow along on your own system.
+You can find the input files for each stage here.
+
+We will start off by setting up our input files and running an :ref:`initialization<initialization>` to check for any errors in them.
+Then, we run a :ref:`reference-calculation<ref-calc>` to get some initial theoretical results.
+Afterwards, we performe a :ref:`delta-amplitudes<sec_deltas>` calculation and :ref:`structure-search<sec_search>` to refine the results.
+
+.. tip:: 
+   If this is your first time running ViPErLEED, first make sure to follow the :ref:`installation instructions<installation>`.
+   For details on how to execute ViPErLEED on your system, see the :ref:`How To Run section<how_to_run>`.
 
 Initialization Run
 ==================
 
-To start off...
+
+Our starting point for this example is:
+-  We have experimental LEED-:math:`I(V)` curves saved in the 
+In this example, we want to set up a ViPErLEED calculation 
+We also assume, we already have a suitable :ref:`PHASESHIFTS file<phaseshifts>`.
+
+**TODO: Explain PHASESHIFTS generation?**
 
 Let's have a look at the :ref:`PARAMETERS file<parameters>`:
 
@@ -50,8 +66,6 @@ Unless there was some configuration error, the log should now contain some lines
 
 As expected, ViPErLEED recognized our surface be of p4m symmetry with a simple (1x1) reconstruction!
 
-With this done, we can now continue to run the actuall scattering calculations.
-
 Reference Calculation and R-factor
 ==================================
 
@@ -83,10 +97,36 @@ The latter should look something like this:
 The :math:`I(V)` curves clearly show a good qualitative agreement, but the R-factor of ~0.17 is not great for such a simple system!
 We therfore proceed to the :ref:`delta-amplitudes<sec-deltas>` calculation and the :ref:`structure-search<sec-search>`.
 
+.. note:: 
+   The :ref:`reference-calculation<ref-calc>` also produces the :ref:`tensor files<tensorszip>` which are saved in the ``Tensors`` directory.
+   They are required as starting point for the delta-amplitude calculation and structure-search and will be recognized automatically by ViPErLEED.
+
 Delta-Amplitudes and Structure search
 =====================================
 
-We see the R-factor dropp from ... to ...
+To improve our R-factor, we can run a local structure-optimization using the :ref:`tensor LEED approach<tensorleed>`.
+To do this in ViPErLEED, we run a :ref:`delta-amplitudes<sec-deltas>` calculation followed by a :ref:`structure-search<sec-search>`.
+
+First, however, we need to provide instructions about which parameters to vary in the optimization.
+In ViPErLEED, we give this infomation in the :ref:`DISPLACEMENTS file<displacements>`:
+
+.. literalinclude :: /_static/example_systems/Ag(100)/DISPLACEMENTS
+   :language: console
+   :caption: DISPLACEMENTS
+
+Since we only have very few atoms, we can be generous in our settings.
+See the page on the :ref:`DISPLACEMENTS file<displacements>` for details on the syntax.
+Here, we allow the :math:`z` positions of all silver atoms in the first 4 layers to vary by up to :math:`\pm 50` pm with a step-width of 2 pm.
+Addionally, we also sample differnt vibrational amplitudes of the top-most atom.
+This may not seem like much, but this already gives :math:`51^5` grid points (51 per varied parameter).
+
+After setting up the :ref:`DISPLACEMENTS file<displacements>`, we can now run the delta-amplitudes calculation and structure-optimization back-to-back by setting :ref:`RUN = 2-3<run>` in :ref:`PARAMETERS<parameters>`.
+For a large system, this step can take many hours to finish, but for our simple system it only takes about 10 minutes to converge (using 10 CPU cores).
+At the end, we take another look at our :ref:`log file<log_files_tleedm>`:
+
+....
+
+We see the R-factor drop from ... to .., but we can also look at a visualization of the R-factor Convergence in the 
 
 
 Conculding remarks and next steps
