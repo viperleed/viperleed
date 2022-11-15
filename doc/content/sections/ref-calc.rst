@@ -22,7 +22,7 @@ Reference Calculation in ViPErLEED
 
 The refercence calculation in ViPErLEED is implemented as a smart wrapper 
 for the TensErLEED refercence calculation and called by setting the :ref:`RUN` parameter = 1.
-Calculations for each energy step (defined by :ref:`THEO_ENERGIES<REFENERGIES>`) are 
+Calculations for each energy step (defined by :ref:`THEO_ENERGIES<theo_energies>`) are 
 performed **independently** and thus the computation time scales roughly 
 linearly with the number of total energy steps.
 Additionally, :ref:`N_CORES<ncores>` refercence calculations are executed 

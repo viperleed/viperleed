@@ -26,7 +26,7 @@ To set up a ViPErLEED calculation, first create a source directory (in this exam
 The minimum information required to start a :ref:`refercence calculation<ref-calc>` is contained in three files:
 
 -   :ref:`EXPBEAMS.csv file<expbeams>` contains the experimentally measured LEED-:math:`I(V)` curves.
-    Unless specified otherwise in :ref:`PARAMETERS<parameters>`, ViPErLEED will also use the information in the :ref:`EXPBEAMS.csv file<expbeams>` to set energy ranges (:ref:`THEO_ENERGIES<REFENERGIES>`) and choose which beams should be written to the output file (:ref:`file IVBEAMS<ivbeams>`).
+    Unless specified otherwise in :ref:`PARAMETERS<parameters>`, ViPErLEED will also use the information in the :ref:`EXPBEAMS.csv file<expbeams>` to set energy ranges (:ref:`THEO_ENERGIES<theo_energies>`) and choose which beams should be written to the output file (:ref:`file IVBEAMS<ivbeams>`).
     Alternatively, you can also provide the :ref:`IVBEAMS file<ivbeams>` directly.
 -   :ref:`POSCAR file<poscar>` contains the reference surface structure.
     ViPErLEED will determine the applicable symmetry from the :ref:`POSCAR file<poscar>`. See also the :ref:`symmetry settings<symmetry_settings>` and :ref:`input-structure settings<input_structure_settings>`.

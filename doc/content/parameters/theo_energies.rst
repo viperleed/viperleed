@@ -1,4 +1,4 @@
-.. _refenergies:
+.. _theo_energies:
 
 THEO_ENERGIES
 =============

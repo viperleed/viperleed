@@ -31,7 +31,7 @@ ViPErLEED.
     each domain.
 #.  Look for an :ref:`EXPBEAMS.csv or EXBEAMS file<expbeams>` 
     containing experimental data and read it if found.
-    If experimental data is found and :ref:`refenergies` is not 
+    If experimental data is found and :ref:`THEO_ENERGIES<theo_energies>` is not 
     defined explicitly, the experimental energy range will be used for
     all calculations.
 #.  If necessary, determine the symmetry and minimal unit cell of the 

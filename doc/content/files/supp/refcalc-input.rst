@@ -20,7 +20,7 @@ parameters :ref:`BEAM_INCIDENCE<BEAMINCIDENCE>`,
 
 AUXLATGEO
 ---------
-Lateral geometry information; contains the energy range to calculate (from :ref:`THEO_ENERGIES<REFENERGIES>`), the surface and bulk unit cell vectors (from :ref:`POSCAR<POSCAR>`  and :ref:`SUPERLATTICE<SUPERLATTICE>`), and :ref:`V0_Z_ONSET<INPOTZ>`.
+Lateral geometry information; contains the energy range to calculate (from :ref:`THEO_ENERGIES<theo_energies>`), the surface and bulk unit cell vectors (from :ref:`POSCAR<POSCAR>`  and :ref:`SUPERLATTICE<SUPERLATTICE>`), and :ref:`V0_Z_ONSET<INPOTZ>`.
 
 .. _auxgeo:
 

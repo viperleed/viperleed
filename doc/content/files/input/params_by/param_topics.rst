@@ -35,7 +35,7 @@ Defines what to calculate and where to start.
   +-----------------------------------------------+--------------------------------------------------------------------------+
   | :ref:`TENSOR_OUTPUT<TOUTPUT>`                 | Disable Tensor output for some or all layers                             |
   +-----------------------------------------------+--------------------------------------------------------------------------+
-  | :ref:`THEO_ENERGIES<REFENERGIES>`             | What energy range to calculate                                           |
+  | :ref:`THEO_ENERGIES<theo_energies>`             | What energy range to calculate                                           |
   +-----------------------------------------------+--------------------------------------------------------------------------+
   | :ref:`TL_VERSION<TL_VERSION>`                 | Which version of TensErLEED to use                                       |
   +-----------------------------------------------+--------------------------------------------------------------------------+

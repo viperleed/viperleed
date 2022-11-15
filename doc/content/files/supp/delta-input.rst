@@ -16,7 +16,7 @@ The input files listed are of two different categories:
     then proceeded by all input files that can use this PARAM.
 -   Input for specific delta calculations:
     Contains the energy range to calculate 
-    (from :ref:`THEO_ENERGIES<REFENERGIES>`), the surface and bulk unit 
+    (from :ref:`THEO_ENERGIES<theo_energies>`), the surface and bulk unit 
     cell vectors (from :ref:`POSCAR<POSCAR>` and 
     :ref:`SUPERLATTICE<SUPERLATTICE>`), and the 
     :ref:`BEAM_INCIDENCE<BEAMINCIDENCE>`.

@@ -12,7 +12,7 @@ Note that TensErLEED requires the different structures to be calculated on the s
 
 In addition to the surface unit cell and SUPERLATTICE, the following settings must also be the same in each of the reference calculations (it is recommended to fix the :ref:`PARAMETERS<PARAMETERS>`  explicitly):
 
--  :ref:`THEO_ENERGIES<REFENERGIES>` 
+-  :ref:`THEO_ENERGIES<theo_energies>` 
 -  :ref:`LMAX<LMAX>` 
 -  :ref:`BEAM_INCIDENCE<BEAMINCIDENCE>` 
 -  :ref:`IVBEAMS<IVBEAMS>` 

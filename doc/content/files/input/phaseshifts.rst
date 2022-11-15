@@ -7,7 +7,7 @@ The PHASESHIFTS file is generated automatically with the EEASiSSS.x script durin
 
 -   The energy range in the PHASESHIFTS file must be at least as large 
     as the energy range to be calculated
-    (:ref:`THEO_ENERGIES<REFENERGIES>`)
+    (:ref:`THEO_ENERGIES<theo_energies>`)
 -   The number of blocks per energy must either match the number of 
     chemical elements (i.e. elements in :ref:`POSCAR<POSCAR>` plus 
     potentially elements added by :ref:`ELEMENT_MIX<ELSPLIT>`), or the 
