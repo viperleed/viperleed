@@ -31,7 +31,7 @@ The minimum information required to start a :ref:`refercence calculation<ref-cal
 -   :ref:`POSCAR file<poscar>` contains the reference surface structure.
     ViPErLEED will determine the applicable symmetry from the :ref:`POSCAR file<poscar>`. See also the :ref:`symmetry settings<symmetry_settings>` and :ref:`input-structure settings<input_structure_settings>`.
 -   :ref:`PARAMETERS<parameters>` contains the settings for the calculation (see :ref:`the list of parameters<paramname>`).
-    If no :ref:`VIBROCC file<vibroccin>` is given, :ref:`PARAMETERS<parameters>` needs to contain values for :ref:`T_EXPERIMENT<t_experiment>` and :ref:`T_DEBYE<t_debye>`.
+    If no :ref:`VIBROCC file<viboccin>` is given, :ref:`PARAMETERS<parameters>` needs to contain values for :ref:`T_EXPERIMENT<t_experiment>` and :ref:`T_DEBYE<t_debye>`.
 -   :ref:`job.py / job.sh<job_script>` is the entry point for the ViPErLEED calculation.
     Defines the paths to the ViPErLEED source code and the desired ``work`` directory.
 
