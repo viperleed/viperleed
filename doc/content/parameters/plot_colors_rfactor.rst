@@ -5,7 +5,8 @@ PLOT_IV
 
 PLOT_IV allows specifying some formatting options for files containing I(V) plots, like the :ref:`Rfactor_plots.pdf<Rfactorplots>`  and :ref:`THEOBEAMS.pdf<THEOBEAMS>`  files. Possible flags are ``axes``, ``colors``, ``legend``, ``overbar`` and ``perpage``, explained below.
 
-**Note**: PLOT_IV was previously called PLOT_RFACTORS. To ensure backwards compatibility, PLOT_RFACTORS is still a permissible alias for PLOT_IV.
+.. note:: 
+   PLOT_IV was previously called PLOT_RFACTORS. To ensure backwards compatibility, PLOT_RFACTORS is still a permissible alias for PLOT_IV.
 
 PLOT_IV axes / borders
 ----------------------
