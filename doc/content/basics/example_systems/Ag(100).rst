@@ -18,11 +18,12 @@ Introduction
 ============
 
 Our starting point for this example is:
+
 -  We have experimental LEED-:math:`I(V)` curves for our surface saved in the file :ref:`EXPBEAMS.csv<expbeams>`.
 -  We would like to compare these intensities with a Ag(100)-(1x1) surface that was hand-made from the bulk crystal structure. It is stored as a :ref:`POSCAR file<poscar>`.
 -  We also assume, we already have a suitable :ref:`PHASESHIFTS file<phaseshifts>`.
 
-In this example, we want to set up a ViPErLEED calculation & structure optimization based on just these inputs.
+In this example, we want to set up a ViPErLEED calculation and structure optimization based on just these inputs.
 Our goal is to get the lowest possible R-factor starting from this reference structure.
 If we manage to get a good agreement between the experimental and theoretical curves, we can be confident that our structure model is correct.
 
