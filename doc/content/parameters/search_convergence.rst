@@ -4,14 +4,10 @@ SEARCH_CONVERGENCE
 ==================
 
 SEARCH_CONVERGENCE defines a number of parameters controlling the behaviour of the Tensor LEED search. 
-See Ref. :cite:t:`kottckeNewApproachAutomated1997` for an explanation of 
-the search algorithm used by TensErLEED.
+See Ref. :cite:t:`kottckeNewApproachAutomated1997` for an explanation of the search algorithm used by TensErLEED.
 
-Most importantly, GAUSSIAN_WIDTH (defined with flag ``gaussian``, corresponds 
-to RMUT parameter in TenErLEED code) controls the step width during the search.
-SEARCH_CONVERGENCE also defines *partial convergence* criteria, at which 
-the search will be stopped to re-scale GAUSSIAN_WIDTH, and the re-scaling 
-factors applied at that point.
+Most importantly, :ref:`GAUSSIAN_WIDTH<rmut>` (defined with flag ``gaussian``, corresponds to RMUT parameter in TenErLEED code) controls the step width during the search.
+SEARCH_CONVERGENCE also defines *partial convergence* criteria, at which the search will be stopped to re-scale :ref:`GAUSSIAN_WIDTH<rmut>`, and the re-scaling factors applied at that point.
 
 **Syntax:**
 
@@ -34,7 +30,7 @@ The specific flags are:
 gaussian
 --------
 
-The flag ``gaussian`` controls GAUSSIAN_WIDTH, a control parameter for the 
+The flag ``gaussian`` controls :ref:`GAUSSIAN_WIDTH<rmut>`, a control parameter for the 
 probability distribution of step width during the search.
 A larger GAUSSIAN_WIDTH corresponds to a higher probability of taking a 
 large step.
@@ -55,7 +51,7 @@ and a scaling factor applied whenever partial convergence is reached.
    SEARCH_CONVERGENCE gaussian = 0.1 0.3  ! initialize with 0.1, scale with factor 0.3 whenever partial convergence is reached
 
 **GAUSSIAN_WIDTH is one of the main parameters controlling convergence**, and appropriate values are highly dependent on the system in use. 
-By default, GAUSSIAN_WIDTH is initialized with a very high value of 0.5, and downscaled by 50% every time partial convergence is reached (see ``dgen`` flag below).
+By default, :ref:`GAUSSIAN_WIDTH<rmut>` is initialized with a very high value of 0.5, and downscaled by 50% every time partial convergence is reached (see ``dgen`` flag below).
 
 dgen
 ----
@@ -63,7 +59,7 @@ dgen
 The flag ``dgen`` defines how many generations should pass without any changes 
 to either the best configuration, or all configurations in the population, 
 before the search is considered converged *for the current value of GAUSSIAN_WIDTH*. 
-Once this condition is met, both GAUSSIAN_WIDTH and the ``dgen`` values themselves 
+Once this condition is met, both :ref:`GAUSSIAN_WIDTH<rmut>` and the ``dgen`` values themselves 
 will be scaled by their respective scaling factors, and the search will be continued. 
 **Full convergence** of the search is considered to be reached when **partial convergence** 
 is reached twice in a row without any changes in the meantime, i.e. when lowering 
@@ -86,4 +82,4 @@ independent of convergence, is given by :ref:`SEARCH_MAX_GEN<SEARCHGENMAX>`.
    SEARCH_CONVERGENCE dgen best = 1000 1.5  ! best structure doesn't change in 1000 generations, then for lowered GAUSSIAN_WIDTH in 1500 generations, then 2250, etc.
    SEARCH_CONVERGENCE dgen all = 200 2      ! the entire population doesn't change in 200 generations, then for lowered GAUSSIAN_WIDTH in 400 generations, etc.
 
-The additional flags "dec", "best" and "all" can be used to specify whether all configurations in the population, the best 10%, or only the best configuration should be considered. If no additional flag is given, ``SEARCH_CONVERGENCE dgen`` will default to checking the best 10% of the population. The scaling factor will default to the inverse of the scaling factor used by GAUSSIAN_WIDTH for any of the three. Defining values for more than one convergence criterion is allowed; in that case, partial convergence will be considered to have been reached once *either* condition is met, but full convergence is reached only once *all* conditions are met.
+The additional flags "dec", "best" and "all" can be used to specify whether all configurations in the population, the best 10%, or only the best configuration should be considered. If no additional flag is given, ``SEARCH_CONVERGENCE dgen`` will default to checking the best 10% of the population. The scaling factor will default to the inverse of the scaling factor used by :ref:`GAUSSIAN_WIDTH<rmut>` for any of the three. Defining values for more than one convergence criterion is allowed; in that case, partial convergence will be considered to have been reached once *either* condition is met, but full convergence is reached only once *all* conditions are met.
