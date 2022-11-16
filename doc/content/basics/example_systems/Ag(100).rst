@@ -43,25 +43,30 @@ We then create a :ref:`PARAMETERS file<parameters>` which tells ViPErLEED what t
    :language: console
    :caption: PARAMETERS
 
-Since we only want to run the :ref:`initialization` for now, we set :ref:`RUN = 0<run>`.
-For this example, we also limit our energy range to 45-700 eV, with an energy step of 3 eV (:ref:`THEO_ENERGIES<theo_energies>`).
+GLOBAL PARAMETERS
+   Since we only want to run the :ref:`initialization` for now, we set :ref:`RUN = 0<run>`.
+   For this example, we also limit our energy range to 45-700 eV, with an energy step of 3 eV (:ref:`THEO_ENERGIES<theo_energies>`).
 
-We then tell ViPErLEED how to interpret the structure given in the :ref:`POSCAR file<poscar>`.
-Using :ref:`N_BULK_LAYERS<blay>` and :ref:`BULK_REPEAT<bulk_repeat>`, we specify the bulk material below the surface.
-See the pages of those parameters for more details.
+PARAMETERS FOR INTERPRETING POSCAR
+   We then tell ViPErLEED how to interpret the structure given in the :ref:`POSCAR file<poscar>`.
+   Using :ref:`N_BULK_LAYERS<blay>` and :ref:`BULK_REPEAT<bulk_repeat>`, we specify the bulk material below the surface.
+   See the pages of those parameters for more details.
 
-With the :ref:`SITE_DEF<sitedef>` command, we further define that the top-most atom (#1 in the POSCAR) should be treated as a distinct different species.
-See the page on the :ref:`SITE_DEF<sitedef>` parameter for details on how this works, and see also the notes on :ref:`avoiding element name collisions<elementnamecollision>`.
+   With the :ref:`SITE_DEF<sitedef>` command, we further define that the top-most atom (#1 in the POSCAR) should be treated as a distinct species.
+   See the page on the :ref:`SITE_DEF<sitedef>` parameter for details on how this works, and see also the notes on :ref:`avoiding element name collisions<elementnamecollision>`.
 
-In addition to the atomic positions, the calculation of scattering-intensities also requires vibrational amplitudes for every atom in the unit cell.
-While the atomic positions are contained in the :ref:`POSCAR file<poscar>`, the vibrational amplitudes are given in the :ref:`VIBROCC file<viboccin>`.
-However, rather than writing the :ref:`VIBROCC file<viboccin>` ourselves, we can also let ViPErLEED make an educated guess about the vibrational amplitudes by providing the parameters :ref:`T_DEBYE<t_debye>`, :ref:`T_EXPERIMENT<t_experiment>`, and :ref:`VIBR_AMP_SCALE<VIBR_AMP_SCALE>`.
+PARAMETERS FOR VIBROCC
+   In addition to the atomic positions, the calculation of scattering-intensities also requires vibrational amplitudes for every atom in the unit cell.
+   While the atomic positions are contained in the :ref:`POSCAR file<poscar>`, the vibrational amplitudes are given in the :ref:`VIBROCC file<viboccin>`.
+   However, rather than writing the :ref:`VIBROCC file<viboccin>` ourselves, we can also let ViPErLEED make an educated guess about the vibrational amplitudes by providing the parameters :ref:`T_DEBYE<t_debye>`, :ref:`T_EXPERIMENT<t_experiment>`, and :ref:`VIBR_AMP_SCALE<VIBR_AMP_SCALE>`.
 
-Finally, in the :ref:`PARAMETERS file<parameters>` above we already specified the parameters :ref:`V0_IMAG<v0_imag>` and :ref:`LMAX` for the reference calculation.
-These set the imaginary part of the inner potential and the maximum angular momentum quantum number to be used in the calculations.
+PARAMETERS FOR THE CALCULATION
+   Finally, in the :ref:`PARAMETERS file<parameters>` above we already specified the parameters :ref:`V0_IMAG<v0_imag>` and :ref:`LMAX` for the reference calculation.
+   These set the imaginary part of the inner potential and the maximum angular momentum quantum number to be used in the calculations.
 
-Once the run finishes, we can have a look at the :ref:`log file<log_files_tleedm>` to see if everything went as expected.
-Unless there was some configuration error, the log should now contain some lines like this:
+That's all the input we need to start the initialization run.
+Once the it finishes, we can have a look at the :ref:`log file<log_files_tleedm>` to see if everything went as expected.
+Unless there was some configuration error, the log should now contain lines like this:
 
 .. code-block:: console
 
@@ -73,15 +78,15 @@ Unless there was some configuration error, the log should now contain some lines
    Found SUPERLATTICE = (1x1)
    ...
 
-As expected, ViPErLEED recognized our surface be of p4m symmetry with a simple (1x1) reconstruction!
+As expected, ViPErLEED recognized our surface be of p4m symmetry with a simple (1x1) reconstruction.
 
 Reference Calculation and R-factor
 ==================================
 
-Since we already added the parameters relating to the :ref:`reference-calculation<ref-calc>` in the previous step, we can just start the calculation again, after setting :ref:`RUN = 1<run>` to select the :ref:`reference-calculation<ref-calc>`.
+Since we already added parameters relating to the :ref:`reference-calculation<ref-calc>` in the previous step, we can just start the calculation again, after setting :ref:`RUN = 1<run>` to select the :ref:`reference-calculation<ref-calc>`.
 
 Note, that the initialization will still be automatically excuted at the start of every ViPErLEED run.
-Similarly, if an :ref:`EXPBEAMS.csv files<expbeams>` is provided as is the case here, the :ref:`R-factor calculation<rfactor>` will be inserted automatically after the reference-calculation.
+Similarly, if an :ref:`EXPBEAMS.csv files<expbeams>` is provided as is the case here, the :ref:`R-factor calculation<rfactor>` will be inserted automatically after each reference-calculation.
 
 Once the reference-calculation finishes (only takes about 30 seconds with the chosen settings) we find a result for the R-factor at the very end of the :ref:`log file<log_files_tleedm>`:
 
@@ -103,7 +108,7 @@ The latter should look something like this:
    Rfactor_analysis_refcalc.pdf
 
 
-The :math:`I(V)` curves clearly show a good qualitative agreement, but the R-factor of ~0.17 is not great for such a simple system!
+The :math:`I(V)` curves clearly show a good qualitative agreement, but the R-factor of :math:`R \approx 0.17` is not great for such a simple system!
 We therefor proceed to the :ref:`delta-amplitudes<sec-deltas>` calculation and the :ref:`structure-search<sec-search>`.
 
 .. note:: 
