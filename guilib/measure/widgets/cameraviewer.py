@@ -33,7 +33,10 @@ from viperleed.guilib.widgetslib import screen_fraction
 # TODO: ROI show size in image coordinates as it is resized (tooltip?)
 # TODO: CameraViewer add controls for same actions as context menu,
 #       plus some basic properties (probably only exposure & gain).
-#       May be done with a expandable toolbar with a "..." button?
+#       May be done with an expandable toolbar with a "..." button?
+#       One could also have an "auto-contrast strength" field that
+#       does not make much sense in a context menu. F5 could be used
+#       for the purpose when "auto-contrast" is active.
 # TODO: WEIRD: auto-contrast + saturation overlay is very slow,
 #       while the two separately are not too bad (saturation mask
 #       seems worse) <-- optimize a bit?
