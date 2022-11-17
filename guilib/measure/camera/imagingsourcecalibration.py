@@ -10,6 +10,7 @@ Author: Michele Riva
 Defines CalibrationTask subclasses to be used with cameras from
 The Imaging Source.
 """
+from copy import deepcopy
 
 from PyQt5 import QtCore as qtc
 import numpy as np
@@ -38,13 +39,16 @@ _N_DARK_LEVEL = 3  # No. of changes of dark level
 
 class _DarkLevelOperation(CalibrationTaskOperation):
     """Enumeration of dark-level calibration operations."""
-    ACQUIRE_IMAGES, VERIFY_DARK_LEVEL, DONE = 1, 2, 3
+    ENSURE_CORRECT_MINIMUM = 1
+    ACQUIRE_IMAGES, VERIFY_DARK_LEVEL, DONE = 2, 3, 4
 
     @property
     def long_name(self):
         """Return a descriptive name for this operation."""
         if self is _DarkLevelOperation.DONE:
             return "Done."
+        if self is _DarkLevelOperation.ENSURE_CORRECT_MINIMUM:
+            txt = "Acquiring dark frame with {exposure:.2f} ms exposure..."
         if self is _DarkLevelOperation.ACQUIRE_IMAGES:
             txt = "Acquiring dark frames with {exposure:.0f} ms exposure "
             txt += "(dark level = {dark})..."
@@ -124,20 +128,8 @@ class DarkLevelCalibration(_calib.CameraCalibrationTask):
         _, dark_range = self._limits['dark']
         self.__dark_delta = dark_range // 4
 
-        _, max_exposure = self._limits['exposure']
-        _, max_gain = self._limits['gain']
-        _, (max_roi_w, max_roi_h), *_ = camera.get_roi_size_limits()
-        full_roi = f"(0, 0, {max_roi_w}, {max_roi_h})"
-
-        self._task_settings.set('camera_settings', 'roi', full_roi)
-        self._task_settings.set('camera_settings', 'binning', '1')
-        self._task_settings.set('camera_settings', 'black_level',
-                                str(self.dark_level))
-        self._task_settings.set('measurement_settings', 'n_frames', '1')
-        self._task_settings.set("measurement_settings", "exposure",
-                                str(min(500, max_exposure)))
-        self._task_settings.set("measurement_settings", "gain",
-                                str(min(20, max_gain)))
+        self.__current_section = _DarkLevelOperation.first()
+        self.__section_settings_dict = self.__prepare_task_settings()
 
     @property
     def dark_level(self):
@@ -156,6 +148,7 @@ class DarkLevelCalibration(_calib.CameraCalibrationTask):
         mean_, stdev = frame.mean(), frame.std(ddof=1)
         int_min, _, int_range = self._limits['intensity']
         mean_ -= int_min
+        intensity = mean_ - 6*stdev
 
         if mean_ > 0.5*int_range:  # Too much for a dark frame
             base.emit_error(
@@ -163,10 +156,19 @@ class DarkLevelCalibration(_calib.CameraCalibrationTask):
                 )
             return
 
-        # Check if we just have done enough frames (see also below)
-        just_finished = self.missing_frames
+        this_section = self.__current_section
+        assert this_section <= _DarkLevelOperation.VERIFY_DARK_LEVEL
+        if this_section is _DarkLevelOperation.ENSURE_CORRECT_MINIMUM:
+            # Will soon start acquiring the actual frames
+            self.__update_limits_and_continue()
+            return
 
-        intensity = mean_ - 6*stdev
+        if (this_section is _DarkLevelOperation.VERIFY_DARK_LEVEL
+                and intensity > 0):
+            # Dark level successfully verified
+            self.__finish()
+            return
+
         if intensity > 0:
             # Store the current results
             _dark = self.__dark_delta
@@ -176,27 +178,26 @@ class DarkLevelCalibration(_calib.CameraCalibrationTask):
             self.__img_data['sum_dark_sq'] += _dark**2
             self._frames_done += 1
 
+        if (this_section is _DarkLevelOperation.ACQUIRE_IMAGES
+                and not self.missing_frames):
+            self.__current_section = this_section.next_()
+
         try:
             self.__calculate_next_dark(intensity)
         except RuntimeError:
             # We reached the maximum. Error already reported.
             return
 
-        # just_finished: We were missing frames before, but we're not
-        # missing frames now. Will check the prospective dark level
-        # by acquiring one more image.
-        just_finished &= not self.missing_frames
-
-        if self.missing_frames or just_finished or intensity <= 0:
-            self._trigger_next_frame()
-            self.__report_progress()
-        else:
-            self.__finish()
+        self._trigger_next_frame()
+        self.__report_progress()
 
     @qtc.pyqtSlot()
     def continue_(self, *_):
         """Start camera after user confirmation."""
+        self._task_settings.read_dict(self.__section_settings)
         self.__report_progress()
+
+        self.update_device_settings()
         self.start_camera()
 
     @qtc.pyqtSlot()
@@ -204,6 +205,10 @@ class DarkLevelCalibration(_calib.CameraCalibrationTask):
         """Start calibrating the dark level."""
         ok_to_start = super().start()
         if ok_to_start:
+            self.__current_section = _DarkLevelOperation.first()
+            if self.camera.has_zero_minimum:
+                # If we already know, skip the first segment
+                self.__current_section = self.__current_section.next_()
             self.set_info_text(
                 "A 'dark' movie will be acquired.<br>Make sure no light "
                 "enters the camera.<br>For example, you can <b>close the "
@@ -217,21 +222,29 @@ class DarkLevelCalibration(_calib.CameraCalibrationTask):
         """Trigger acquisition of a new frame if necessary."""
         if not self.can_trigger_camera:
             return
-        self.camera.settings.set('camera_settings', 'black_level',
-                                 str(self.dark_level))
-        _INVOKE(self.camera, 'set_black_level')
+
+        if self.__current_section >= _DarkLevelOperation.ACQUIRE_IMAGES:
+            self.camera.settings.set('camera_settings', 'black_level',
+                                     str(self.dark_level))
+            _INVOKE(self.camera, 'set_black_level')
+
         self.trigger_camera()
+
+    @property
+    def __section_settings(self):
+        """Return a dictionary of settings for the current section."""
+        return self.__section_settings_dict.get(self.__current_section, {})
 
     def __calculate_next_dark(self, intensity):
         """Appropriately change dark level and scaling."""
-        if not self.missing_frames:
+        if self.__current_section is _DarkLevelOperation.VERIFY_DARK_LEVEL:
             # We have enough frames, try the new dark level
             sum_x, sum_y, sum_xy, sum_xx = self.__img_data.values()
             intercept = round(
                 (sum_x * sum_xy - sum_y * sum_xx)
                 / (self._frames_done * sum_xy - sum_x * sum_y)
                 )
-            self.__dark_delta = round(intercept
+            self.__dark_delta = round(intercept                                 # TODO: here there's potential for delta < 0 --> how to handle? Perhaps try one more time, then fail?
                                       * (1 + self.__scales['intercept']))
             if intensity < 0:
                 self.__scales['intercept'] *= 2
@@ -271,17 +284,63 @@ class DarkLevelCalibration(_calib.CameraCalibrationTask):
                                     done.n_steps, done.n_steps)
         self.mark_as_done(True)  # Also stops camera
 
+    def __prepare_task_settings(self):
+        """Prepare settings to use for the acquisition sections."""
+        min_exposure, max_exposure = self._limits['exposure']
+        min_gain, max_gain = self._limits['gain']
+        min_dark, _ = self._limits['dark']
+        _, (max_roi_w, max_roi_h), *_ = self.camera.get_roi_size_limits()
+        full_roi = f"(0, 0, {max_roi_w}, {max_roi_h})"
+
+        base_settings = {  # Common to both sections
+            'camera_settings': {'roi': full_roi, 'binning': '1'},
+            'measurement_settings': {'n_frames': '1'}
+            }
+        min_set, run_set = deepcopy(base_settings), base_settings
+
+        min_set['camera_settings']['black_level'] = str(min_dark)
+        min_set['measurement_settings']['gain'] = str(min_gain)
+        min_set['measurement_settings']['exposure'] = str(min_exposure)
+
+        run_set['camera_settings']['black_level'] = str(self.dark_level)
+        min_set['measurement_settings']['gain'] = str(min(20, max_gain))
+        run_set['measurement_settings']['exposure'] = str(
+            min(500, max_exposure)
+            )
+
+        return {_DarkLevelOperation.ENSURE_CORRECT_MINIMUM: min_set,
+                _DarkLevelOperation.ACQUIRE_IMAGES: run_set}
+
     def __report_progress(self):
         """Report info about the current state."""
-        steps_done = self._frames_done
-        if self.missing_frames:
-            section = _DarkLevelOperation.ACQUIRE_IMAGES
-            n_steps = section.n_steps
-        else:
-            section = _DarkLevelOperation.VERIFY_DARK_LEVEL
-            steps_done -= _N_DARK_LEVEL
-            n_steps = section.n_steps + steps_done
-        section.set_format(exposure=self.camera.exposure,
-                           dark=self.camera.black_level)
+        section = self.__current_section
+        n_steps = section.n_steps
+
+        steps_done = 0
+        if section is _DarkLevelOperation.ACQUIRE_IMAGES:
+            steps_done = self._frames_done
+        elif section is _DarkLevelOperation.VERIFY_DARK_LEVEL:
+            steps_done = self._frames_done - _N_DARK_LEVEL
+            n_steps += steps_done
+
+        _settings = self._task_settings
+        exposure = _settings.getfloat("measurement_settings", "exposure")
+        section.set_format(exposure=exposure, dark=self.dark_level)
         self.progress_occurred.emit(self.progress_name,
                                     *section, steps_done, n_steps)
+
+    def __update_limits_and_continue(self):
+        """Store new intensity limits, then go to next section."""
+        # This is called once the first frame arrived in section
+        # _DarkLevelOperation.ENSURE_CORRECT_MINIMUM.
+        # Now the camera has updated its has_zero_minimum,
+        # and thus returns the correct stuff in .intensity_limits
+        px_min, px_max = self.camera.intensity_limits
+        self._limits['intensity'] = (px_min, px_max, px_max - px_min)
+
+        self.__current_section = self.__current_section.next_()
+        self._task_settings.read_dict(self.__section_settings)
+        self.__report_progress()
+
+        self.update_device_settings()
+        self.start_camera()
