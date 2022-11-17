@@ -980,9 +980,9 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                 elif s == 'n':  # normal
                     f = 0.05
                 elif s == 'f':  # fine
-                    f = 0.01
+                    f = 0.025
                 elif s == 'e':  # extrafine
-                    f = 0.001
+                    f = 0.01
                 else:
                     logger.warning('PARAMETERS file: PHASESHIFT_EPS: '
                                    'Could not convert value to float. '
