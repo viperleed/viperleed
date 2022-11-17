@@ -41,15 +41,15 @@ from viperleed.guilib.widgetslib import screen_fraction
 
 _RED_BORDER_WIDTH = 3  # pixels
 
-# Each entry is ("short_name", default_value, "long name")
+# Each entry is ("short_name", default_value, "long name", always_active)
 # Those with an empty long name will not be added as context
  # menu entries, and will thus not be editable by the user
 _DEFAULT_FLAGS = (
-    ("roi_visible", True, "Allow setting ROI"),
-    ("show_auto", True, "Show on new frames"),
-    ("stop_on_close", True, "Stop camera when closed"),
-    ("auto_contrast", False, "Auto-adjust contrast"),
-    ("interactions_enabled", True, ""),
+    ("roi_visible", True, "Allow setting ROI", False),
+    ("show_auto", True, "Show on new frames", False),
+    ("stop_on_close", True, "Stop camera when closed", False),
+    ("auto_contrast", False, "Auto-adjust contrast", True),
+    ("interactions_enabled", True, "", None),
     )
 
 # pylint: disable=too-many-instance-attributes
@@ -224,7 +224,7 @@ class CameraViewer(qtw.QScrollArea):
         # Extract acceptable keyword argument flags. The second item
         # in the flags will be the corresponding QAction, constructed
         # in __compose_context_menu
-        for key, default, _ in _DEFAULT_FLAGS:
+        for key, default, *_ in _DEFAULT_FLAGS:
             enabled = bool(kwargs.pop(key, default))
             if not self._initialized:
                 self.__flags[key] = [enabled, None]
@@ -304,8 +304,9 @@ class CameraViewer(qtw.QScrollArea):
     def interactions_enabled(self, enabled):
         """Set whether the user can interact with the camera."""
         self._flag_setter(enabled, "interactions_enabled")
-        for action in self.__children["context_menu"].actions():
-            action.setEnabled(self.interactions_enabled)
+        for action in self.__children["context_menu"]["self"].actions():
+            active = action.data()
+            action.setEnabled(True if active else self.interactions_enabled)
 
     @property
     def image_size(self):
@@ -695,11 +696,12 @@ class CameraViewer(qtw.QScrollArea):
 
         # Flags
         menu.addSeparator()
-        for key, _, act_text in _DEFAULT_FLAGS:
+        for key, _, act_text, always_active in _DEFAULT_FLAGS:
             if not act_text:
                 continue
             act = self.__flags[key][1] = menu.addAction(act_text)
             act.setCheckable(True)
+            act.setData(always_active)
             enabled = getattr(self, key)
             act.setChecked(qtc.Qt.Checked if enabled else qtc.Qt.Unchecked)
 
@@ -708,7 +710,8 @@ class CameraViewer(qtw.QScrollArea):
         menu.addAction("Properties")
 
         for action in menu.actions():
-            action.setEnabled(self.interactions_enabled)
+            active = action.data()
+            action.setEnabled(True if active else self.interactions_enabled)
 
     def __connect(self):
         """Connect signals."""

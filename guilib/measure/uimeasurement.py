@@ -529,7 +529,7 @@ class Measure(ViPErLEEDPluginBase):
         for camera in measurement.cameras:
             self._dialogs['camera_viewers'].append(
                 CameraViewer(camera, stop_on_close=False, roi_visible=False,
-                             auto_contrast=True, interactions_enabled=False)
+                             interactions_enabled=False)
                 )
 
     def __make_ctrl_settings_dialog(self, ctrl_cls, name, port):
@@ -676,7 +676,6 @@ class Measure(ViPErLEEDPluginBase):
         for viewer in self._dialogs['camera_viewers']:
             viewer.stop_on_close = True
             viewer.interactions_enabled = True
-            viewer.auto_contrast = False
 
     @qtc.pyqtSlot()
     def __on_measurement_prepared(self):
