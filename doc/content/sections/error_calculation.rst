@@ -11,9 +11,9 @@ time, and the R-factor is output for each step of the variation range.
 If multiple parameters are linked (e.g. by symmetry), these parameters are 
 treated as one, and varied together.
 
-To run the error calculation, set `:ref:`RUN<RUN>` = 5` in the 
+To run the error calculation, set :ref:`RUN<RUN>` as ``RUN = 5`` in the 
 :ref:`PARAMETERS<PARAMETERS>`  file. It is recommended to first run a 
-reference calculation in the same run (e.g. `:ref:`RUN<RUN>` = 1 5`), 
+reference calculation in the same run (e.g. ``RUN = 1 5``), 
 as the error curves may not be centered otherwise.
 
 Required input files are the same as for running delta calculations and a search, 
