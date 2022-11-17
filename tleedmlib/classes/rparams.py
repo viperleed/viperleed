@@ -170,7 +170,7 @@ class Rparams:
         self.SUPPRESS_EXECUTION = False
         self.SYMMETRIZE_INPUT = True
         self.SYMMETRY_CELL_TRANSFORM = np.identity(2, dtype=float)
-        self.SYMMETRY_EPS = 0.05
+        self.SYMMETRY_EPS = 0.1
         self.SYMMETRY_EPS_Z = 0.1
         self.SYMMETRY_FIND_ORI = True
         self.SYMMETRY_FIX = ''
@@ -367,7 +367,7 @@ class Rparams:
             # LMAX
             min_set = True
             if self.PHASESHIFT_EPS == 0:
-                self.PHASESHIFT_EPS = 0.01
+                self.PHASESHIFT_EPS = 0.05
             if self.LMAX[0] <= 0:
                 self.LMAX[0] = 6
                 min_set = False
