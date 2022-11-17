@@ -170,7 +170,7 @@ class Rparams:
         self.SUPPRESS_EXECUTION = False
         self.SYMMETRIZE_INPUT = True
         self.SYMMETRY_CELL_TRANSFORM = np.identity(2, dtype=float)
-        self.SYMMETRY_EPS = 0.1
+        self.SYMMETRY_EPS = 0.05
         self.SYMMETRY_EPS_Z = 0.1
         self.SYMMETRY_FIND_ORI = True
         self.SYMMETRY_FIX = ''
