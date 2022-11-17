@@ -34,6 +34,9 @@ from viperleed.guilib.widgetslib import screen_fraction
 # TODO: CameraViewer add controls for same actions as context menu,
 #       plus some basic properties (probably only exposure & gain).
 #       May be done with a expandable toolbar with a "..." button?
+# TODO: WEIRD: auto-contrast + saturation overlay is very slow,
+#       while the two separately are not too bad (saturation mask
+#       seems worse) <-- optimize a bit?
 
 
 _RED_BORDER_WIDTH = 3  # pixels
@@ -244,6 +247,7 @@ class CameraViewer(qtw.QScrollArea):
             # the standard deviation of the current image. See
             # self.__get_image()
             "img_square_array": np.zeros(1, dtype=np.uint32),
+            "auto_contrast_info": (0, 1),  # intensity offset & scaling
             }
         self.__children = {
             "viewer": ImageViewer(),
@@ -734,6 +738,7 @@ class CameraViewer(qtw.QScrollArea):
         # is computed manually, as numpy.std is quite slow. Notice that
         # we use uint32 for the array that contains the square of the
         # image, as this prevents overflowing.
+        _min, _scale = 0, 1
         if self.auto_contrast:
             _dmax = 65535  # 2**16 - 1
             _mean = img_array.mean()
@@ -751,6 +756,7 @@ class CameraViewer(qtw.QScrollArea):
             # Adjust range to 0 -- (2**16 - 1)
             img_array -= _min
             img_array *= _scale
+        self.__glob["auto_contrast_info"] = (_min, _scale)
 
         # Notice the swapping of width and height!
         height, width = img_array.shape
@@ -762,13 +768,18 @@ class CameraViewer(qtw.QScrollArea):
         _min, _max = self.__glob['intensity_limits']
         height, width = img_array.shape
 
-        # Pick pixels that essentially saturate
+        # Pick pixels that essentially saturate,
+        # taking into account auto-contrast scaling
+        threshold = _min + .99*(_max - _min)
+        offs, scale = self.__glob["auto_contrast_info"]
+        threshold = scale*(threshold - offs)
+
         # TODO: here we may get it wrong if we have
         # many bad pixels! Consider applying a bad
         # pixels correction to images before showing.
         # Alternatively: use self.camera.bad_pixels
         # to decide depending on how many there are
-        saturation_arr = img_array > _min + .99*(_max - _min)
+        saturation_arr = img_array > threshold
         if np.sum(saturation_arr) <= 5:
             return None
 
