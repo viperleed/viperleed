@@ -640,7 +640,7 @@ def search(sl, rp):
         libpattern = "lib.search"
         if usempi and rp.TL_VERSION <= 1.73:
             libpattern += ".mpi"
-        libname = next(libpath.glob(libpattern + "*"), None)
+        libname = next(libpath.glob(libpattern + "*"), None).name
         if libname is None:
             raise RuntimeError(f"File {libpattern}.f not found.")
         # copy to work dir
