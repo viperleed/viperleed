@@ -367,7 +367,7 @@ class Rparams:
             # LMAX
             min_set = True
             if self.PHASESHIFT_EPS == 0:
-                self.PHASESHIFT_EPS = 0.01
+                self.PHASESHIFT_EPS = 0.05
             if self.LMAX[0] <= 0:
                 self.LMAX[0] = 6
                 min_set = False
