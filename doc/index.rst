@@ -20,6 +20,16 @@
    \renewenvironment{sphinxtip}[1]
       {\begin{sphinxheavybox}\sphinxstrong{#1} }{\end{sphinxheavybox}}
 
+   \AddEverypageHook{
+        \settowidth{\chapterNameLength}{\leftmark}%
+        \begin{textblock}{1}(0,0)%first argument {1} is number of blocks horiz
+        \,\ $\cdot$ \ \hyperlink{link_contents}{$\rightarrow$Inhalt}%
+        \,\ \ \hyperlink{link_index}{$\rightarrow$Index}%
+        \,\ \ \ \Acrobatmenu{GoBack}{$\leftarrow$zur\"uck}%
+        \,\ \Acrobatmenu{GoForward}{vor$\rightarrow$}%
+        \end{textblock}%
+    }%end AddEverypageHook
+
 ViPErLEED documentation
 =======================
 
@@ -52,10 +62,16 @@ For computational details please have a look at the ViPErLEED paper (**TODO**) a
 
 
 .. Table of contents in LaTeX pdf called Contents
+
 .. only:: latex
 
    .. toctree::
       :caption: Contents
+
+.. raw:: latex
+
+   \hypertarget{link_inhaltsverzeichnis}{}
+   \hypertarget{link_index}{}
 
 .. toctree:: 
 
