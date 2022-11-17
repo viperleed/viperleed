@@ -232,7 +232,7 @@ def _collect_deltas(tensor_index, path):
     if len(deltalist) > 0:
         destination = path / "Deltas" / f"Deltas_{tensor_index:03d}"
         try:
-            destination.mkdir()
+            destination.mkdir(parents=True)
         except FileExistsError:
             pass
         except OSError:
