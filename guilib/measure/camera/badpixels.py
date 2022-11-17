@@ -521,7 +521,7 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         bad_old = self.camera.bad_pixels
         if bad_old:
             bad_old.clear()
-        self.__current_section = _FinderSection.ACQUIRE_DARK_SHORT
+        self.__current_section = _FinderSection.first()
         self.begin_acquiring()
         return True
 

@@ -132,6 +132,11 @@ class CalibrationTaskOperation(IntEnum):
         return iter((self.long_name, self.value, self.n_operations()))
 
     @classmethod
+    def first(cls):
+        """Return the first CalibrationTaskOperation."""
+        return min(cls)
+
+    @classmethod
     def n_operations(cls):
         """Return the total number of operations in this Enum."""
         return len(cls)
@@ -140,6 +145,10 @@ class CalibrationTaskOperation(IntEnum):
         """Return a formatted version of name."""
         _args, _kwargs = getattr(self, '_fmt_args', ((), {}))
         return name.format(*_args, **_kwargs)
+
+    def is_last(self):
+        """Return whether this is the last CalibrationTaskOperation."""
+        return self.value >= self.n_operations()
 
     def next_(self):
         """Return the next section (or the first if this is last)."""
