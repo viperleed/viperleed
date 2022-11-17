@@ -21,17 +21,14 @@ Our starting point for this example is:
 
 -  We have experimental LEED-:math:`I(V)` curves for our surface saved in the file :ref:`EXPBEAMS.csv<expbeams>`.
 -  We would like to compare these intensities with a Ag(100)-(1x1) surface that was hand-made from the bulk crystal structure. It is stored as a :ref:`POSCAR file<poscar>`.
--  We also assume, we already have a suitable :ref:`PHASESHIFTS file<phaseshifts>`.
 
 In this example, we want to set up a ViPErLEED calculation and structure optimization based on just these inputs.
 Our goal is to get the lowest possible R-factor starting from this reference structure.
 If we manage to get a good agreement between the experimental and theoretical curves, we can be confident that our structure model is correct.
 
 We will start off by setting up our input files and running an :ref:`initialization<initialization>` to check for any errors in them.
-Then, we run a :ref:`reference-calculation<ref-calc>` to get some initial theoretical results.
+Then, we run a :ref:`reference calculation<ref-calc>` to get some initial theoretical results.
 Afterwards, we perform a :ref:`delta-amplitudes<sec_deltas>` calculation and :ref:`structure-search<sec_search>` to refine the results.
-
-**TODO: Explain PHASESHIFTS generation?**
 
 Initialization Run
 ==================
@@ -52,17 +49,17 @@ PARAMETERS FOR INTERPRETING POSCAR
    Using :ref:`N_BULK_LAYERS<blay>` and :ref:`BULK_REPEAT<bulk_repeat>`, we specify the bulk material below the surface.
    See the pages of those parameters for more details.
 
-   With the :ref:`SITE_DEF<sitedef>` command, we further define that the top-most atom (#1 in the POSCAR) should be treated as a distinct species.
+   With the :ref:`SITE_DEF<sitedef>` command, we further define that the first atom in the POSCAR file (here the topmost atom) should be treated as a distinct species.
    See the page on the :ref:`SITE_DEF<sitedef>` parameter for details on how this works, and see also the notes on :ref:`avoiding element name collisions<elementnamecollision>`.
+
+   .. hint:: Instead of ``SITE_DEF Ag = surf 1``, we could also set ``SITE_DEF Ag = surf top(1)`` to select the topmost silver atom, irrespective of the order in the POSCAR.
 
 PARAMETERS FOR VIBROCC
    In addition to the atomic positions, the calculation of scattering-intensities also requires vibrational amplitudes for every atom in the unit cell.
    While the atomic positions are contained in the :ref:`POSCAR file<poscar>`, the vibrational amplitudes are given in the :ref:`VIBROCC file<viboccin>`.
    However, rather than writing the :ref:`VIBROCC file<viboccin>` ourselves, we can also let ViPErLEED make an educated guess about the vibrational amplitudes by providing the parameters :ref:`T_DEBYE<t_debye>`, :ref:`T_EXPERIMENT<t_experiment>`, and :ref:`VIBR_AMP_SCALE<VIBR_AMP_SCALE>`.
+   The latter parameter means, that all atoms defined as "surf" (with SITE_DEF) have vibration amplitudes 1.3 times higher than calculated from the Debye temperature.
 
-PARAMETERS FOR THE CALCULATION
-   Finally, in the :ref:`PARAMETERS file<parameters>` above we already specified the parameters :ref:`V0_IMAG<v0_imag>` and :ref:`LMAX` for the reference calculation.
-   These set the imaginary part of the inner potential and the maximum angular momentum quantum number to be used in the calculations.
 
 That's all the input we need to start the initialization run.
 Once the it finishes, we can have a look at the :ref:`log file<log_files_tleedm>` to see if everything went as expected.
@@ -78,17 +75,17 @@ Unless there was some configuration error, the log should now contain lines like
    Found SUPERLATTICE = (1x1)
    ...
 
-As expected, ViPErLEED recognized our surface be of p4m symmetry with a simple (1x1) reconstruction.
+As expected, ViPErLEED recognized our surface be of p4m symmetry with a simple (1x1) termination.
 
 Reference Calculation and R-factor
 ==================================
 
-Since we already added parameters relating to the :ref:`reference-calculation<ref-calc>` in the previous step, we can just start the calculation again, after setting :ref:`RUN = 1<run>` to select the :ref:`reference-calculation<ref-calc>`.
+In this simple case, we don't actually need any further settings to run the :ref:`reference calculation<ref-calc>`. We can just start the calculation again, after setting :ref:`RUN = 1<run>` to select the :ref:`reference calculation<ref-calc>` section.-
 
 Note, that the initialization will still be automatically excuted at the start of every ViPErLEED run.
-Similarly, if an :ref:`EXPBEAMS.csv files<expbeams>` is provided as is the case here, the :ref:`R-factor calculation<rfactor>` will be inserted automatically after each reference-calculation.
+Similarly, if an :ref:`EXPBEAMS.csv files<expbeams>` is provided as is the case here, the :ref:`R-factor calculation<rfactor>` will be automatically calculated and reported after each reference calculation.
 
-Once the reference-calculation finishes (only takes about 30 seconds with the chosen settings) we find a result for the R-factor at the very end of the :ref:`log file<log_files_tleedm>`:
+Once the reference calculation finishes (only takes about 30 seconds with the chosen settings) we find a result for the R-factor at the very end of the :ref:`log file<log_files_tleedm>`:
 
 .. code-block:: console
 
@@ -98,21 +95,21 @@ Once the reference-calculation finishes (only takes about 30 seconds with the ch
    Executed segments: 0 1 11
    Final R (refcalc): 0.1722
 
-Additionally, in the :ref:`OUT directory<dir_organization_output>`, we find a file :ref:`THEOBEAMS.csv<theobeams>` which contains the calculated theoretical :math:`I(V)` curves and a file :ref:`Rfactor_analysis_refcalc.pdf<rfactorplots>` in which the experimental and theoretical beams are plotted.
+Additionally, in the :ref:`OUT directory<dir_organization_output>`, we find a file :ref:`THEOBEAMS.csv<theobeams>` which contains the calculated theoretical :math:`I(V)` curves and a file :ref:`Rfactor_plots_refcalc.pdf<rfactorplots>` in which the experimental and theoretical beams are plotted.
 The latter should look something like this:
 
 .. figure:: /_static/example_systems/Ag(100)/refalc_result_plot.png
    :width: 450px
    :align: center
 
-   Rfactor_analysis_refcalc.pdf
+   Rfactor_plots_refcalc.pdf
 
 
 The :math:`I(V)` curves clearly show a good qualitative agreement, but the R-factor of :math:`R \approx 0.17` is not great for such a simple system!
-We therefor proceed to the :ref:`delta-amplitudes<sec-deltas>` calculation and the :ref:`structure-search<sec-search>`.
+We therefore proceed to the :ref:`delta-amplitudes<sec-deltas>` calculation and the :ref:`structure-search<sec-search>`.
 
 .. note:: 
-   The :ref:`reference-calculation<ref-calc>` also produces the :ref:`tensor files<tensorszip>` which are saved in the ``Tensors`` directory.
+   The :ref:`reference calculation<ref-calc>` also produces the :ref:`tensor files<tensorszip>` which are saved in the ``Tensors`` directory.
    They are required as starting point for the delta-amplitude calculation and structure-search and will be recognized automatically by ViPErLEED.
 
 Delta-Amplitudes and Structure search
@@ -141,7 +138,7 @@ Now that we found a better configuration, we can use the :ref:`bookkeeper utilit
 
 .. code-block:: console
 
-   $ python3 bookkeeper.py --cont [or $ ./bookkeeper --cont]
+   $ python3 bookkeeper.py --cont #[or $ ./bookkeeper --cont]
 
 Starting from this configuration, let's optimize with a finer grid.
 We change the DISPLACEMENTS accordingly:
@@ -150,13 +147,13 @@ We change the DISPLACEMENTS accordingly:
    :language: console
    :caption: DISPLACEMENTS with a finer grid
 
-Here we allow :math:`\pm 20` pm variation on a 2 pm grid.
+Here we allow :math:`\pm 20` pm variation on a 4 pm grid.
 Additionally, we also allow the top-most atom to change its vibrational amplitude.
-This may not seem like much, but this already gives :math:`11^5` grid points (21 per varied parameter) and will take about 3 times as long as the the last run!
+This may not seem like much, but this already gives :math:`11^5` grid points (11 per varied parameter) and will take about 3 times as long as the the last run!
 
 .. important::
    Because we changed our reference structure, we need to re-run starting with the reference calculation by setting :ref:`RUN = 1-3 1<run>`.
-   Note, we also add a second reference-calculation at the end.
+   Note, we also add a second reference calculation at the end.
    This will remove errors due to the :ref:`tensor LEED approximation` from the final result.
 
 Once finished, we get a R-factor of :math:`R \approx 0.078`!
@@ -175,7 +172,7 @@ Further optimizing the structure is possible, but not not very instructive.
 Instead we conclude this example by mentioning two other options on how to proceed with the analysis.
 
 For a more complicated system it may not be clear, which structure parameters are most important.
-In this case we could run an :ref:`error-calculation<error_calculation>`, which can show how much the displacement of any individual atom impacts the R-factor.
+In this case we could run an :ref:`error calculation<error_calculation>`, which can show how much the displacement of any individual atom impacts the R-factor.
 
 Alternatively, we could turn to a :ref:`full-dynamic optimization<fdoptimization>` to also tackle parameters that are not accessible under the tensor LEED approximation such as :math:`V_{0i}`, the unit cell dimensions, or the electron beam incidence angle.
 

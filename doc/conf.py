@@ -76,7 +76,14 @@ latex_elements = {
     'passoptionstopackages': r'\PassOptionsToPackage{svgnames}{xcolor}',
     'preamble': r'''
     \usepackage{braket}
+    \usepackage[overlay,absolute]{textpos}% for header in PDF screen version
+    \usepackage{everypage}
     \usepackage{newunicodechar}
     \newunicodechar{α}{$\alpha$}
+    
+    \textblockorigin{28mm}{16.5mm} % position x,y wrt top-left corner of page
+    %\setlength{\TPHorizModule}{\pdfpagewidth} % text block width = page width
+    \setlength{\TPHorizModule}{\textwidth} % text block width = text width
+    \newlength{\chapterNameLength}%
     '''
     }
