@@ -16,9 +16,9 @@ vibrational amplitudes, occupation, or position per element for specific
 sites.
 
 A VIBROCC file containing only some starting guesses for vibrational 
-amplitudes can be generated automatically using the 
-`VIBR_AMP_SCALE :ref:`VIBR_AMP_SCALE`, :ref:`T_EXPERIMENT` and 
-:ref:`T_DEBYE` parameters in the :ref:`PARAMETERS<PARAMETERS>` file.
+amplitudes can be generated automatically using the :ref:`VIBR_AMP_SCALE`, 
+:ref:`T_EXPERIMENT` and :ref:`T_DEBYE` parameters in the 
+:ref:`PARAMETERS<PARAMETERS>` file.
 
 Example
 -------
@@ -56,15 +56,39 @@ block.
 Vibrational amplitudes and occupations
 --------------------------------------
 
-In each block, properties can be defined for each site type (left-hand side of '='). The site types are labelled as ``El_sitename``, where ``El`` is an element as found in the :ref:`POSCAR file<POSCAR>`, and ``sitename`` is a site name defined in the :ref:`PARAMETERS file<PARAMETERS>`  under :ref:`SITE_DEF<SITEDEF>`. By default, an asterisk (``*``) is interpreted as a wildcard character, so "``O*``" will access both "``O_top``" and "``O_def``".
+In each block, properties can be defined for each site type (left-hand side of '='). 
+The site types are labelled as ``El_sitename``, where ``El`` is an element as found in 
+the :ref:`POSCAR file<POSCAR>`, and ``sitename`` is a site name defined in the 
+:ref:`PARAMETERS file<PARAMETERS>`  under :ref:`SITE_DEF<SITEDEF>`. By default, an 
+asterisk (``*``) is interpreted as a wildcard character, so ``O*`` will access both ``O_top`` and ``O_def``.
 
-If required, the left-hand parameters can also be interpreted fully as regular expressions (see also: `python re syntax <https://docs.python.org/3.7/library/re.html>`__ and `python re HOWTO <https://docs.python.org/3/howto/regex.html>`__). This feature is turned off by default to avoid unintentional issues with e.g. full stops in site names (not recommended!), but can be turned on by inserting a line "``= regex on``" at any point in the VIBROCC file, and disabled later by the line "``= regex off``". Note that if regular expressions is on, the asterisk "``*``" will *not* be a wildcard character any more (the equivalent would be "``.*``")!
+If required, the left-hand parameters can also be interpreted fully as regular expressions 
+(see also: `python re syntax <https://docs.python.org/3.7/library/re.html>`__ and 
+`python re HOWTO <https://docs.python.org/3/howto/regex.html>`__). This feature is turned 
+off by default to avoid unintentional issues with e.g. full stops in site names (not recommended!), 
+but can be turned on by inserting a line ``= regex on`` at any point in the VIBROCC file, and 
+disabled later by the line ``= regex off``. Note that if regular expressions is on, the 
+asterisk ``*`` will *not* be a wildcard character any more (the equivalent would be ``.*``)!
 
-On the right-hand side of the '=' sign, you can either give only one value, or give multiple values for different elements. Here, the elements are either the ones found in the :ref:`POSCAR file<POSCAR>`, or the ones defined in :ref:`ELEMENT_MIX<ELSPLIT>`. If element names in the POSCAR file and in ELEMENT_MIX overlap, the assignment will nevertheless be made only for the chemical element, see :ref:`element name collision<ElementNameCollision>`. If only one value is given in the ``Vibrational Amplitudes`` block, the vibrational amplitudes for all elements in this site will be set to this value. If only one value is given in the ``Occupations`` block, this value will be set for the main site element (e.g. O for the O_top site), or for all main elements in a site affected by :ref:`ELEMENT_MIX<ELSPLIT>`. The occupations for all other elements will be set to zero for this site.
+On the right-hand side of the '=' sign, you can either give only one value, or give multiple 
+values for different elements. Here, the elements are either the ones found in the :ref:`POSCAR file<POSCAR>`, 
+or the ones defined in :ref:`ELEMENT_MIX<ELSPLIT>`. If element names in the POSCAR file and in 
+ELEMENT_MIX overlap, the assignment will nevertheless be made only for the chemical element, see 
+:ref:`element name collision<ElementNameCollision>`. If only one value is given in the 
+``Vibrational Amplitudes`` block, the vibrational amplitudes for all elements in this site will be set 
+to this value. If only one value is given in the ``Occupations`` block, this value will be set for the 
+main site element (e.g. O for the O_top site), or for all main elements in a site affected by 
+:ref:`ELEMENT_MIX<ELSPLIT>`. The occupations for all other elements will be set to zero for this site.
 
-Total occupation in a site can be smaller than one, which will be interpreted as the rest being vacancies. Defining an occupation greater than one will throw a warning and may halt execution; if execution proceeds, the occupation will be re-scaled to 1.
+Total occupation in a site can be smaller than one, which will be interpreted as the rest being vacancies. 
+Defining an occupation greater than one will throw a warning and may halt execution; if execution proceeds, 
+the occupation will be re-scaled to 1.
 
-For simple systems, the ``Occupations`` block need not contain values for elements with 100% site occupation, and can even be left out entirely. The default value is 1.0 for the site's main element and 0.0 for all other elements. If the site is affected by :ref:`ELEMENT_MIX<ELSPLIT>`, the occupation will be evenly split between the sub-elements defined in :ref:`ELEMENT_MIX<ELSPLIT>`. A simple example with 100% occupations and no :ref:`ELEMENT_MIX<ELSPLIT>`  might therefore look like this:
+For simple systems, the ``Occupations`` block need not contain values for elements with 100% site 
+occupation, and can even be left out entirely. The default value is 1.0 for the site's main element and 
+0.0 for all other elements. If the site is affected by :ref:`ELEMENT_MIX<ELSPLIT>`, the occupation 
+will be evenly split between the sub-elements defined in :ref:`ELEMENT_MIX<ELSPLIT>`. A simple example 
+with 100% occupations and no :ref:`ELEMENT_MIX<ELSPLIT>`  might therefore look like this:
 
 ::
 
