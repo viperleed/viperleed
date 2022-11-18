@@ -78,3 +78,6 @@ Glossary
 
     CLI
       Command Line Interface
+
+    C
+      The C programming language.

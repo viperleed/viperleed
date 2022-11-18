@@ -310,13 +310,29 @@ Compiling static files
 
 In addition to the TensErLEED source code, which is compiled *at run-time*, ViPErLEED needs a few auxilary scripts that need compiling before a calculation can be started.
 These can be compiled automatically using a provided Makefile.
-To do this, go into the ``tensorleed`` folder in the ``viperleed`` directory and call:
 
-.. code-block:: console
+Beamgen and eeasisss
+--------------------
 
-   $ make all
+These scripts are used by ViPErLEED during the :ref:`initialization`, to generate :ref:`BEAMLIST<beamlist>` and :ref:`PHASESHIFTS<phaseshifts>`.
+If they are not present, ViPErLEED cannot create these files if required.
 
-The Makefile uses the ``gfortran`` compiler by default, if you only have ``ifort`` installed, change the variable ``gcomp`` in the first line of the Makefile accordingly.
+To compile these scripts from source, go into the ``viperleed/tensorleed`` directory.
+From there call either ``make intel`` or ``make gcc``, to compile using the Intel or GCC Fortran compilers, respecitvely.
+
+
+.. _mpirandom:
+
+Randomizer library for TensErLEED <= 1.73
+-----------------------------------------
+
+TensErLEED versions up to 1.73 need the :term:`C`-object files called ``random_.o`` and/or ``MPIrandom_.o``.
+This file needs to be compiled with a C and C MPI compiler before running.
+Makefiles are also provided for this file.
+If you followed the instructions for obtaining the Fortran compilers, a C compiler is already installed as well from either GCC or Intel.
+
+To compile for TensErLEED version ``x.yy``, go into the directory ``viperleed/tensorleed/TensErLEED-x.yy`` and call either ``make intel`` or ``make gcc`` to compile using the Intel or GCC :term:`C` compilers, respecitvely.
+
 
 
 .. [#] See also `here <https://fortran-lang.org/en/learn/os_setup/install_gfortran/>`__ for a guide on how to install gfortran on various operating systems.
