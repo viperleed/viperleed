@@ -24,7 +24,8 @@ from viperleed.tleedmlib.checksums import validate_multiple_files
 try:
     from viperleed.tleedmlib.wrapped.rfactor import r_factor_new as rf
 except ImportError:
-    logger.warn("Unable to load compiled rfactor module. "
+    import warnings
+    warnings.warn("Unable to load compiled rfactor module. "
                 "Only legacy rfactor currently available.")
 from viperleed.tleedmlib.wrapped.error_codes import error_codes, check_ierr
 
