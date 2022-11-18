@@ -1327,7 +1327,7 @@ class Slab:
     def addBulkLayers(self, rp, n=1):
         """Returns a copy of the slab with n bulk units appended at the
         bottom, and a list of the new atoms that were added."""
-        ts = copy.deepcopy(self)
+        ts = copy.deepcopy(self) # temporary slab
         newbulkats = []
         duplicated = []
         zdiff = 0.
@@ -1342,7 +1342,7 @@ class Slab:
                 cvec = ts.ucell[:, 2]
                 if zdiff == 0. and rp.BULK_REPEAT is None:
                     # assume that interlayer vector from bottom non-bulk to top
-                    #  bulk layer is the same as between bulk units
+                    # bulk layer is the same as between bulk units
                     zdiff = (blayers[-1].cartbotz
                              - ts.layers[blayers[0].num-1].cartbotz)
                 elif zdiff == 0. and isinstance(rp.BULK_REPEAT,
@@ -1357,7 +1357,8 @@ class Slab:
             
             # split bulkc into parts parallel and orthogonal to unit cell c
             # this allows to keep the same ucell and shift correctly the new bulk layers
-            bulkc_project_to_c = np.dot(bulkc, ts.ucell[:, 2]) * ts.ucell[:, 2]
+            c_direction = ts.ucell[:, 2] / np.dot(ts.ucell[:, 2], ts.ucell[:, 2])
+            bulkc_project_to_c = np.dot(bulkc, ts.ucell[:, 2]) * c_direction
             bulkc_perp_to_c = bulkc - bulkc_project_to_c
             added_this_loop = []
             for at in original_atoms:
@@ -1367,7 +1368,7 @@ class Slab:
                     duplicated.append(at)
                     added_this_loop.append(new_atom)
                     new_atom.oriN = len(ts.atlist)
-                    
+
                 # old atoms get shifted up along ucell c
                 at.cartpos += bulkc_project_to_c
             for at in added_this_loop:
