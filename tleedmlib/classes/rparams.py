@@ -37,6 +37,15 @@ logger = logging.getLogger("tleedm.rparams")
 ###############################################
 
 
+DEFAULTS = {
+    'PHASESHIFT_EPS': {
+        'r': 0.1,
+        'n': 0.05,
+        'f': 0.01, # this is the default if nothing is given
+        'e': 0.001,
+    }
+}
+
 class SearchPar:
     """Stores properties of ONE parameter of the search, i.e. what variation
     of what atom is linked to this parameter."""
@@ -367,7 +376,7 @@ class Rparams:
             # LMAX
             min_set = True
             if self.PHASESHIFT_EPS == 0:
-                self.PHASESHIFT_EPS = 0.05
+                self.PHASESHIFT_EPS = DEFAULTS['PHASESHIFT_EPS']['f']
             if self.LMAX[0] <= 0:
                 self.LMAX[0] = 6
                 min_set = False
