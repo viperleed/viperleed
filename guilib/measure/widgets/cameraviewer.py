@@ -494,11 +494,13 @@ class CameraViewer(qtw.QScrollArea):
         if not self.roi_visible or event.button() != qtc.Qt.LeftButton:
             super().mousePressEvent(event)
             return
-        self.roi.origin = self.roi.parent().mapFromGlobal(event.globalPos())
+        origin = self.roi.parent().mapFromGlobal(event.globalPos())
+        self.roi.initiate_draw(origin)
 
     def mouseReleaseEvent(self, event):  # pylint: disable=invalid-name
         """Extend mouseReleaseEvent to handle ROI drawing."""
         self.__mouse_button = None
+        self.roi.finish_draw()
         if not self.roi.isVisible():
             # Allow propagating event to parent only if
             # not handled already by the ROI movement
@@ -871,6 +873,10 @@ class CameraViewer(qtw.QScrollArea):
     @qtc.pyqtSlot()
     def __on_roi_rubberband_changed(self):
         """React to a change in the ROI rubber-band."""
+        if not self.roi.is_being_edited:
+            # Not a user-induced edit but just an update
+            return
+
         # The rubber-band knows only coordinates relative
         # to the currently applied ROI
         new_roi = self.roi.image_coordinates
@@ -883,6 +889,9 @@ class CameraViewer(qtw.QScrollArea):
     @qtc.pyqtSlot(tuple)
     def __on_roi_settings_changed(self, new_roi):
         """React to a user change of the ROI coordinates."""
+        if self.roi.is_being_edited:
+            return
+
         if not self.roi_visible:
             self.roi_visible = True
         # The image coordinates are relative to the ROI currently applied
