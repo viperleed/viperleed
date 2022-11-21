@@ -186,12 +186,6 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
         rotorders.append(4)
     if celltype == "hexagonal":
         rotorders.extend([3, 6])
-    # matrices needed to find the axis from two rotation-equivalent atoms:
-    rot_scale_mat = {
-        2: np.eye(2)*0.5,
-        3: rotation_matrix(np.pi/6) / np.sqrt(3),
-        4: rotation_matrix(np.pi/4) / np.sqrt(2),
-        6: rotation_matrix(np.pi/3)}
 
     # check rotation symmetries, starting with highest
     toprotlist = []
@@ -221,8 +215,11 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
                 v = (lowocc_layer.atlist[0].cartpos[:2]
                      - lowocc_layer.atlist[i].cartpos[:2])
                 toprotsym = order
+                rot_scale_mat = -np.linalg.inv(rotation_matrix_order(order)
+                                               - np.eye(2))
                 toprotlist.append(lowocc_layer.atlist[0].cartpos[:2]
-                                  + np.dot(rot_scale_mat[order], v))
+                                  + np.dot(rot_scale_mat, v))
+                logger.info(f"Found axis at {toprotlist[-1]}")
     if toprotsym > 0:
         if output:
             logger.debug("Highest rotation axis has order " + str(toprotsym))
@@ -247,13 +244,14 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
             for (i, j) in test_mirror_dirs:
                 symplanelist.append(SymPlane(pa*abst[0]+pb*abst[1],
                                              i*abst[0]+j*abst[1], abst,
-                                             index2=True))
+                                             index2=True, collapse=False))
     else:
         # check all highest-order rotation axes
         for (k, pos) in enumerate(toprotlist):
             for (i, j) in test_mirror_dirs:
                 symplanelist.append(SymPlane(pos, i*abst[0]+j*abst[1],
-                                             abst, index2=True))
+                                             abst, index2=True,
+                                             collapse=False))
     if output and symplanelist:
         logger.debug(f"Testing {len(symplanelist)} candidates for "
                      "mirror/glide planes...")
@@ -265,8 +263,11 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
             spl.type = "glide"
             glide = True
     if mirror:
-        # drop the glides, they are implied in rotation+mirror
-        symplanelist = [spl for spl in symplanelist if spl.type != "glide"]
+        # only keep mirrors, glides are implied in rotation+mirror
+        symplanelist = [spl for spl in symplanelist if spl.type == "mirror"]
+    else:
+        # just drop the "none"
+        symplanelist = [spl for spl in symplanelist if spl.type != "none"]
 
     # no rotation axes: we had no candidates. generic search for mirrors/glides
     if toprotsym == 0 and (rp.SYMMETRY_FIND_ORI or forceFindOri or bulk):
@@ -1229,9 +1230,9 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
                             break
                 if pn != len(mvslabs) + 1:
                     logger.warning(
-                        "During symmetrization of the slab, not all "
-                        "symmetry-equivalent atoms were found for {}. Atom "
-                        "will not be symmetrized.")
+                        f"During symmetrization of the slab, not all "
+                        f"symmetry-equivalent atoms were found for {at}. Atom "
+                        f"will not be symmetrized.")
                 else:
                     at.cartpos = psum / pn
     sl.collapseCartesianCoordinates(updateOrigin=True)
