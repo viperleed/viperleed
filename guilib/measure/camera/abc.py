@@ -1520,19 +1520,21 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
     def trigger_now(self):
         """Start acquiring one (or more) frames now.
 
-        This method should be reimplemented in concrete subclasses
-        to signal the camera that acquisition of one (or multiple)
+        This method should be extended in concrete subclasses to
+        signal the camera that acquisition of one (or multiple)
         frames should start now.
 
-        The reimplementation must call super().trigger_now() before,
-        as this will emit an error_occurred if the camera mode is
-        inappropriate (i.e., the camera is not in triggered mode).
-        It will set the camera to busy and set n_frames_done to 0
-        as well.
+        Subclasses should proceed only if super().trigger_now()
+        is True. The base-class implementation will (i) emit an
+        error_occurred if the camera mode is inappropriate (i.e.,
+        the camera is not in triggered mode); (ii) mark the camera
+        as busy, (iii) reset n_frames_done to zero, and (iv) start
+        a timeout timer.
 
         Returns
         -------
-        None
+        successfully_triggered : bool
+            True if the camera was successfully triggered.
 
         Emits
         -----
@@ -1541,7 +1543,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         if self.mode != 'triggered':
             base.emit_error(self, CameraErrors.UNSUPPORTED_OPERATION,
                             'trigger', 'live')
-            return
+            return False
         self.busy = True
 
         if self.supports_trigger_burst:
@@ -1551,6 +1553,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         # more than 5 s longer than the expected time to
         # receive all frames needed for averaging
         self.__timeout.start(int(self.time_to_image_ready + 5000))
+        return True
 
     def __adjust_roi_position(self, roi, limits):
         """Check and adjust the position in roi fits the increments."""

@@ -895,11 +895,17 @@ class ImagingSourceCamera(abc.CameraABC):
     def trigger_now(self):
         """Start acquiring one (or more) frames now.
 
+        Returns
+        -------
+        successfully_triggered : bool
+            True if the camera was successfully triggered.
+
         Emits
         -----
         error_occurred(CameraErrors.UNSUPPORTED_OPERATION)
         """
-        super().trigger_now()
+        if not super().trigger_now():
+            return False
         if abs(self.best_next_rate - self.driver.frame_rate) > 1:
             self.driver.frame_rate = self.best_next_rate
         if self.supports_trigger_burst:
@@ -917,4 +923,5 @@ class ImagingSourceCamera(abc.CameraABC):
                 self.driver.trigger_burst_count = burst_count
                 self.__burst_count =  self.driver.trigger_burst_count
         self.driver.send_software_trigger()
+        return True
 # pylint: enable=too-many-public-methods
