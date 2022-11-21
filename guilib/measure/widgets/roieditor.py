@@ -39,6 +39,11 @@ class ROIEditor(qtw.QWidget):
         self.__connect()
 
     @property
+    def current_roi_valid(self):
+        """Return whether the current ROI is acceptable."""
+        return all(getattr(w, "valid_value", False) for w in self.__widgets)
+
+    @property
     def increments(self):
         """Return d_left, d_top, d_width, d_height."""
         return tuple(w.singleStep() for w in self.__widgets)
@@ -195,24 +200,34 @@ class ROIEditor(qtw.QWidget):
     @qtc.pyqtSlot(int)
     def __on_pos_changed(self, *_):
         """Emit roi_position_changed."""
-        if self.__value_fits_increment(self.sender()):
-            self.roi_position_changed.emit(*self.roi[:2])
+        if not self.__value_fits_limits(self.sender()):
+            return
+        self.roi_position_changed.emit(*self.roi[:2])
+
+        # Changing the position may make the size exceed its maximum
+        for widg in self.__widgets[2:]:
+            self.__value_fits_limits(widg, check_max=True)
 
     @qtc.pyqtSlot()
     @qtc.pyqtSlot(int)
     def __on_size_changed(self, *_):
         """Emit roi_size_changed."""
-        if self.__value_fits_increment(self.sender()):
-            self.roi_size_changed.emit(*self.roi[2:])
+        if not self.__value_fits_limits(self.sender()):
+            return
+        self.roi_size_changed.emit(*self.roi[2:])
+
+        # Changing the size may make the position exceed its maximum
+        for widg in self.__widgets[:2]:
+            self.__value_fits_limits(widg, check_max=True)
 
     @qtc.pyqtSlot()
     @qtc.pyqtSlot(int)
     def __on_roi_changed(self, *_):
         """Check that new values fit with increments."""
-        if self.__value_fits_increment(self.sender()):
+        if self.__value_fits_limits(self.sender()):
             self.roi_changed.emit(self.roi)
 
-    def __value_fits_increment(self, ctrl):
+    def __value_fits_limits(self, ctrl, check_max=False):
         """Check that the value in ctrl fits its increment.
 
         Parameters
@@ -237,11 +252,19 @@ class ROIEditor(qtw.QWidget):
 
         _min, _delta = self.minima[idx], self.increments[idx]
         value = ctrl.value()
-        corrected = round((value - _min)/_delta)*_delta + _min
+        corrected = round((value - _min) / _delta) * _delta + _min
+
+        if check_max:
+            # The maximum allowed value depends on the control
+            _buddies = {self.__top: self.__height, self.__height: self.__top,
+                        self.__left: self.__width, self.__width: self.__left}
+            _max = self.maxima[idx]
+            corrected = min(corrected, _max - _buddies[ctrl].value())
 
         value_fits = (value == corrected)
         color = qtc.Qt.black if value_fits else qtc.Qt.red
         palette = ctrl.palette()
         palette.setColor(palette.Text, color)
         ctrl.setPalette(palette)
+        ctrl.valid_value = value_fits
         return value_fits

@@ -44,6 +44,10 @@ from PyQt5 import (QtCore as qtc,
 from viperleed.guilib.measure.widgets.pathselector import PathSelector
 from viperleed.guilib.measure.widgets.fieldinfo import FieldInfo
 
+# TODO: find a proper mechanism to make "invalid" values disable
+# "Apply" or "Ok" (but leave "Cancel" enabled). Probably equip
+# widgets with some universally named, validity-checking method.
+
 # pylint: disable=too-many-lines
 # We can probably live with 1011 instead of 1000
 
@@ -74,14 +78,14 @@ def __notify_qbuttongroup(_self):
 _DEFAULT_HOOKS = {
     qtw.QLabel: ('text', 'setText', None, None),
     qtw.QLineEdit: ('text', 'setText', 'textChanged', None),
-    qtw.QCheckBox: ('isChecked', 'setChecked', 'stateChanged', (str, bool)),
+    qtw.QCheckBox: ('isChecked', 'setChecked', 'stateChanged', (str, bool)),    # BUG: converter(value) == (str, bool)(value) --> tuple not callable
     qtw.QSpinBox: ('cleanText', 'setValue', 'valueChanged', int),
     qtw.QDoubleSpinBox: ('cleanText', 'setValue', 'valueChanged', float),
     qtw.QButtonGroup: (__get_qbuttongroup, __set_qbuttongroup,
                        __notify_qbuttongroup, None),
     qtw.QSlider: ('value', 'setValue', 'valueChanged', int),
-    qtw.QPushButton: ('isChecked', 'setChecked', 'toggled', bool),
-    qtw.QAction: ('isChecked', 'setChecked', 'toggled', bool),
+    qtw.QPushButton: ('isChecked', 'setChecked', 'toggled', bool),              # BUG: converter(value) == bool(value) == True whatever non-empty string value!
+    qtw.QAction: ('isChecked', 'setChecked', 'toggled', bool),                  # BUG: converter(value) == bool(value) == True whatever non-empty string value!
     PathSelector: ('get_posix_path', 'set_path', 'path_changed', None),
     }
 
@@ -125,9 +129,9 @@ def _get_hook(obj):
     try:
         hook = _DEFAULT_HOOKS[key]
     except KeyError:
-        hook = [v for k, v in _DEFAULT_HOOKS.items() if isinstance(obj, k)]
-        if hook:
-            hook = hook[0]
+        hook = next(
+            (v for k, v in _DEFAULT_HOOKS.items() if isinstance(obj, k)),
+            None)
     return hook
 
 
