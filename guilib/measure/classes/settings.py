@@ -142,6 +142,10 @@ class ViPErLEEDSettings(ConfigParser):
         self.__last_file = ""
         self.__base_dir = ""
 
+    def __str__(self):
+        """Return a simple string representation of self."""
+        return str(self.as_dict())
+
     @classmethod  # too-complex
     def from_settings(cls, settings, find_from=None, tolerant_match=False):
         """Return a ViPErLEEDSettings from the settings passed.
@@ -242,6 +246,10 @@ class ViPErLEEDSettings(ConfigParser):
     def last_file(self):
         """Return the path to the last file read."""
         return self.__last_file
+
+    def as_dict(self):
+        """Return a dictionary version of self."""
+        return {sec_name: dict(sec) for sec_name, sec in self.items()}
 
     def getsequence(self, section, option, *, fallback=_UNSET, **kwargs):
         """Return a section/option as a sequence."""
