@@ -52,29 +52,25 @@ class RegionOfInterest(qtw.QWidget):
     minimum : tuple
         Two elements. Minimum width and height in image
         coordinates (i.e., pixels).
-
-    Reimplement methods
-    -------------------
+    Reimplemented methods
+    ---------------------
     enterEvent(event)
         Edit mouse cursor when mouse enters the widget.
     leaveEvent(event)
         Reset mouse cursor when mouse exits the widget.
     mouseDoubleClickEvent(event)
-        Reimplement to prevent propagation to parent.
+        Override to prevent propagation to parent.
     mouseMoveEvent(event)
         Move rubber-band within parent frame.
     mousePressEvent(event)
         Initiate rubber-band movement on mouse click.
     mouseReleaseEvent(event)
-        Reimplement to prevent propagation to parent.
+        Override to prevent propagation to parent.
     resizeEvent(event)
         Resize also rubber-band.
 
     Public methods
     --------------
-    update_size_limits()
-        Update the size limits in current-view coordinates
-        using self.limits and self.image_scaling.
     scale(delta_scale)
         Resize self by delta_scale increments in image coordinates.
     translate(delta_pixels)
@@ -114,7 +110,7 @@ class RegionOfInterest(qtw.QWidget):
         self.setWindowFlags(qtc.Qt.SubWindow)
 
         self.__compose()
-        self.update_size_limits()
+        self.__update_size_limits()
 
     @property
     def image_coordinates(self):
@@ -185,7 +181,7 @@ class RegionOfInterest(qtw.QWidget):
         if new_image_scaling == self.image_scaling:
             return
         self.__image_scaling = new_image_scaling
-        self.update_size_limits()
+        self.__update_size_limits()
 
     @property
     def increments(self):
@@ -205,7 +201,7 @@ class RegionOfInterest(qtw.QWidget):
          self.__limits['increments'],
          self.__limits['pos_increments']) = new_limits
 
-        self.update_size_limits()
+        self.__update_size_limits()
     @property
     def maximum(self):
         """Return the largest width/height in image coordinates."""
@@ -233,15 +229,15 @@ class RegionOfInterest(qtw.QWidget):
 
     # pylint: disable=invalid-name
     def mouseDoubleClickEvent(self, event):
-        """Reimplement to prevent propagation to parent."""
+        """Override to prevent propagation to parent."""
         event.accept()
     # pylint: enable=invalid-name
 
     def mouseMoveEvent(self, event):     # pylint: disable=invalid-name
-        """Reimplement mouseMoveEvent to move rubber-band."""
+        """Override to move rubber-band consistently with increments."""
         new_pos = self.origin + event.globalPos() - self.__drag_origin
         # Make sure that self does not go beyond the frame of the parent
-        parent = self.parent()
+        parent = self.parentWidget()
         if parent:
             new_x = max(0, new_pos.x())
             new_x -= max(new_x + self.width() - parent.width(), 0)
@@ -252,13 +248,13 @@ class RegionOfInterest(qtw.QWidget):
         self.move(new_pos)
 
     def mousePressEvent(self, event):    # pylint: disable=invalid-name
-        """Reimplement mousePressEvent to initiate rubber-band move."""
+        """Override to initiate rubber-band move."""
         self.origin = self.pos()
         self.__drag_origin = event.globalPos()
 
     def mouseReleaseEvent(self, event):  # pylint: disable=invalid-name
-        """Reimplement to prevent propagation to parent."""
         event.accept()
+        """Override to conclude rubber-band move."""
 
     def moveEvent(self, event):          # pylint: disable=invalid-name
         """Emit roi_changed when moving."""
@@ -363,18 +359,7 @@ class RegionOfInterest(qtw.QWidget):
             delta_pos = delta_increments
         self.move(self.pos() + delta_pos)
 
-    def update_size_limits(self):
-        """Update the size limits in viewing pixels.
 
-        Essentially converts self.limits into view pixels by
-        scaling with self.image_scaling.
-
-        Returns
-        -------
-        None.
-        """
-        self.setMinimumSize(self.image_scaling * qtc.QSize(*self.minimum))
-        self.setMaximumSize(self.image_scaling * qtc.QSize(*self.maximum))
 
     def __compose(self):
         """Place children widgets."""
@@ -432,6 +417,20 @@ class RegionOfInterest(qtw.QWidget):
         """React to a user selection in the context menu."""
         if "apply" in action.text().lower():
             self.apply_roi_requested.emit()
+
+    def __update_size_limits(self):
+        """Update the size limits in viewing pixels.
+
+        Essentially converts self.limits into view pixels by
+        scaling with self.image_scaling. This has any effect
+        only when self is inserted in a layout.
+
+        Returns
+        -------
+        None.
+        """
+        self.setMinimumSize(self.image_scaling * qtc.QSize(*self.minimum))
+        self.setMaximumSize(self.image_scaling * qtc.QSize(*self.maximum))
             return
         print("Set requested")
 

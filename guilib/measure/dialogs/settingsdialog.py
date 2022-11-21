@@ -601,8 +601,8 @@ class SettingsDialogSectionBase(qtw.QGroupBox):
 
     # The next signal can be used to notify when any of the
     # editable settings are changed. Emit this signal in
-    # reimplementations of "advanced" sections, as it is
-    # used by the SettingsHandler to notify of changes.
+    # "advanced" sections subclasses, as it is used by the
+    # SettingsHandler to notify of changes.
     settings_changed = qtc.pyqtSignal()
 
     # The next signal is emitted when this section undergoes

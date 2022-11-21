@@ -331,7 +331,7 @@ class DarkLevelCalibration(_calib.CameraCalibrationTask):
 
     def __update_limits_and_continue(self):
         """Store new intensity limits, then go to next section."""
-        # This is called once the first frame arrived in section
+        # This is called after the first frame arrives in section
         # _DarkLevelOperation.ENSURE_CORRECT_MINIMUM.
         # Now the camera has updated its has_zero_minimum,
         # and thus returns the correct stuff in .intensity_limits

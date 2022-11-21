@@ -493,8 +493,6 @@ class ImagingSourceCamera(abc.CameraABC):
     def supports_trigger_burst(self):
         """Return whether the camera allows triggering multiple frames.
 
-        This property should be reimplemented in concrete subclasses.
-
         Returns
         -------
         supported : bool

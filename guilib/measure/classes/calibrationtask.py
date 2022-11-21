@@ -105,8 +105,9 @@ class CalibrationTaskOperation(IntEnum):
     def long_name(self):
         """Return a descriptive name for this operation.
 
-        Must be overridden. Reimplementations should
-        return self._format_long_name(long_name)
+        Must be overridden. Subclasses should return
+        self._format_long_name(long_name) if the name
+        has runtime-formatted portions.
 
         Returns
         -------
@@ -124,7 +125,7 @@ class CalibrationTaskOperation(IntEnum):
 
     @property
     def n_steps(self):
-        """Return the number of steps in this operation. Must be reimplemented."""
+        """Return the number of steps in this operation. Must be overridden."""
         raise NotImplementedError
 
     def __iter__(self):
@@ -299,11 +300,11 @@ class CalibrationTask(qtc.QObject, metaclass=base.QMetaABC):
         """Abort this task.
 
         This slot can be extended in subclasses. This means that
-        reimplementations should call super().abort() at the end of
-        their code. Reimplementations should also make sure to return
-        immediately if self.is_aborted, as this limits the risk of
-        infinite recursion, should aborting occur as a result of an
-        error that may repeat itself when executing abort().
+        subclasses should call super().abort() at the end of their
+        code. Subclasses should also make sure to return immediately
+        if self.is_aborted, as this limits the risk of infinite
+        recursion, should aborting occur as a result of an error that
+        may repeat itself when executing abort().
 
         Emits
         -----
@@ -371,13 +372,17 @@ class CalibrationTask(qtc.QObject, metaclass=base.QMetaABC):
     def on_timeout(self):
         """React to a timeout event.
 
-        This method must be reimplemented in all
+        This method must be overridden in all
         subclasses that can time out.
+
+        Returns
+        -------
+        None.
         """
         if self.__flags['does_time_out']:
             raise NotImplementedError(
                 f"{self.__class__.__name__} does time out, "
-                "but on_timeout() was not reimplemented."
+                "but on_timeout() was not overridden."
                 )
 
     def restore_device(self):
@@ -434,8 +439,8 @@ class CalibrationTask(qtc.QObject, metaclass=base.QMetaABC):
         >>>     self.show_info()
         >>> return ok_to_start
 
-        In both cases, .continue_() should be reimplemented to
-        actually begin execution of the task at the hardware level.
+        In both cases, .continue_() should be extended to actually
+        begin execution of the task at the hardware level.
 
         Returns
         -------

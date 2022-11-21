@@ -256,7 +256,7 @@ class Measure(ViPErLEEDPluginBase):
         return self._dialogs['sys_settings'].settings
 
     def closeEvent(self, event):         # pylint: disable=invalid-name
-        """Reimplement closeEvent to abort measurements as well."""
+        """Extend closeEvent to abort measurements as well."""
         if self.measurement and self.measurement.running:
             # TODO: Perhaps would be nicer to ask for confirmation
             # rather than always (silently) aborting the measurement

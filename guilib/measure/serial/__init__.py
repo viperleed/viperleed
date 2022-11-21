@@ -11,6 +11,6 @@ Author: Florian Doerr
 This package contains classes to communicate with LEED controllers via serial.
 """
 
-# Here import all the concrete reimplementations of abc.SerialABC
-# so that they are available to get_serial()
+# Here import all the concrete subclasses of abc.SerialABC
+# so that they are available to class_by_name()
 from viperleed.guilib.measure.serial.viperleedserial import ViPErLEEDSerial

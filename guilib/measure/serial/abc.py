@@ -174,13 +174,11 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         # after the error has been identified with identify_error()
         self.__messages_since_error = []
 
-        # __busy keeps track of whether the serial line is
-        # currently busy, e.g., a message was sent and we
-        # should wait for the reply to come before we send
-        # another message. Accessed via the .busy property.
-        # Default behavior is not to consider the serial busy.
-        # A reimplementation of is_message_supported can set
-        # the .busy right before returning True.
+        # __busy keeps track of whether the serial line is currently
+        # busy, e.g., a message was sent and we should wait for the
+        # reply to come before we send another message. Accessed via
+        # the .busy property. message_requires_response(message) will
+        # determine whether the serial is busy after sending message
         self.__busy = False
 
         # Keep track of whether we got an unacceptable message
@@ -434,8 +432,12 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
     def clear_errors(self):
         """Clear all errors.
 
-        This method must be called in the reimplementation of
-        identify_error after the error has been correctly identified.
+        This method must be called in the overridden identify_error
+        after the error has been correctly identified.
+
+        Returns
+        -------
+        None.
         """
         if self.port.error() != qts.QSerialPort.NoError:
             self.port.clearError()
@@ -446,10 +448,11 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
     def decode(self, message):
         """Decode a message received from the serial.
 
-        The base implementation of this method is a no-op, i.e.,
-        it returns the same message it got. Subclasses of the
-        SerialABC class should reimplement this function
-        to actually decode possibly encoded messages.
+        The base implementation of this method is a no-op, i.e., it
+        returns the same message it got, unless the message is not
+        acceptable (via is_decoded_message_acceptable). Subclasses
+        can extend this method to decode possibly encoded messages.
+        They should then "return super().decode(message)".
 
         Parameters
         ----------
@@ -471,16 +474,16 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
 
         The base implementation of this method is a no-op, i.e.,
         it returns the same message it got. Subclasses of the
-        SerialABC class should reimplement this function
-        to actually encode messages before sending them to the
-        device via the serial line. The reimplemented method
-        should care about appropriately converting a supported
-        object to an actual message in bytes.
+        SerialABC class should override this method to actually
+        encode messages before sending them to the device via the
+        serial line. The overridden method should care about
+        appropriately converting a supported object to an actual
+        message in bytes.
 
         This method is called on every message right before
         writing it to the serial line.
 
-        The reimplemented encode() should NOT add start and end
+        The overridden encode() should NOT add start and end
         markers, as these are already handled by send_message().
 
         Parameters
@@ -499,8 +502,8 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
     def identify_error(self, messages_since_error):
         """Identify which error occurred.
 
-        This function is called whenever an error occurred. Concrete
-        subclasses must reimplement this function and emit a signal
+        This method is called whenever an error occurred. Concrete
+        subclasses must override this method and emit a signal
         self.error_occurred(ViPErLEEDErrorEnum). New error codes
         should be defined in a specific ViPErLEEDErrorEnum subclass.
 
@@ -509,16 +512,17 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         may be contained in the error message itself, or may come
         as data messages following the error message. All messages
         that are received after an error message and before the error
-        is identified are discarded. New messages can be processed
-        only if identify_error() is successfully completed, i.e.,
-        it calls clear_errors().
+        is identified can be used for identification, and will then
+        be discarded. New messages will be processed only after
+        identify_error() is successfully completed, i.e., it calls
+        clear_errors().
 
-        The function should be a no-op if identification of the error
+        The method should be a no-op if identification of the error
         should fail because the data did not arrive yet.
 
         The reimplementation must call the clear_errors() method to
-        be considered successfully completed. It only makes sense to
-        call clear_errors() only after an error has been successfully
+        be considered successfully completed. It makes sense to call
+        clear_errors() only after an error has been successfully
         identified (or if no error information is expected).
 
         Parameters
@@ -555,8 +559,8 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         discarded, until the next time the method .send_message()
         runs, or after calling .clear_errors().
 
-        Reimplement this method in subclasses. The base
-        implementation always returns True.
+        Override this method in subclasses. The base implementation
+        always returns True.
 
         Parameters
         ----------
@@ -575,7 +579,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
     def is_error_message(self, message):
         """Check if a message corresponds to an error.
 
-        This method must be reimplemented by concrete classes.
+        This method must be overridden by concrete subclasses.
         It should return True if the message is an error message,
         False otherwise. If an error message is received at any
         point, any message that is still unprocessed is discarded
@@ -604,10 +608,10 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         the message. The message will be encoded and sent only
         if this method returns True.
 
-        This method can be reimplemented to (i) keep track of
-        the last 'request' command sent, right before sending
-        it, and (ii) check whether the command requested is one
-        of those supported by the controller, and/or (iii) the
+        This method can be overridden to (i) keep track of the
+        last 'request' command sent, right before sending it,
+        and (ii) check whether the command requested is one of
+        those supported by the controller, and/or (iii) the
         syntax of the command is acceptable.
 
         The base implementation always returns True.
@@ -634,9 +638,9 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
     def message_requires_response(self, *messages):
         """Return whether the messages to be sent require a response.
 
-        Needs to be reimplemented in subclasses. This function
-        should return True if the sent message requires a response
-        from the connected hardware.
+        Needs to be overridden in subclasses. This method should
+        return True if the sent message requires a response from
+        the connected hardware.
 
         Parameters
         ----------
@@ -695,25 +699,24 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
     def process_received_messages(self):
         """Process data received into human-understandable information.
 
-        This function is called every time one (or more) messages
+        This method is called every time one (or more) messages
         arrive on the serial line, unless there currently is an
-        error message that has not yet been handled. Reimplement
+        error message that has not yet been handled. Override
         identify_error() to handle errors.
 
-        This method should be reimplemented by any concrete subclass.
-        The reimplementation should look into the list
-        self.unprocessed_messages and .pop() from there the messages
-        it wants to process. Then it should emit the data_received
-        signal for data that are worth processing (e.g., measurements),
-        as this is caught by the controller class.
+        This method should be overridden by concrete subclass. The
+        reimplementation should look into .unprocessed_messages and
+        .pop() from there the messages it wants to process. Then it
+        should emit the data_received signal for data that are worth
+        processing (e.g., measurements).
 
         Each element in .unprocessed_messages is a bytearray.
 
-        When reimplementing this method, it is a good idea to either
-        not process any message (if not enough messages arrived yet)
-        or to process all .unprocessed_messages. This prevents data
-        loss, should an error message be received while there are
-        still unprocessed messages.
+        When overriding this method, it is a good idea to either not
+        process any message (if not enough messages arrived yet) or
+        to process all .unprocessed_messages. This prevents data loss,
+        should an error message be received while there are still
+        unprocessed messages.
 
         Emits
         -----

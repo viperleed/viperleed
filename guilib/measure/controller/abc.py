@@ -200,7 +200,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         # in the measurement cycle can be done.
         self.__busy = False
 
-        # These dictionaries must be reimplemented in subclasses.
+        # These dictionaries must be filled in subclasses.
         # They must contain all functions the MeasureController has
         # to call in the order to bring the controller into a state
         # ready for setting the energy/taking measurements.
@@ -606,11 +606,11 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         always passed a ViPErLEEDSettings instance. Settings will
         be loaded successfully only if this method returns True.
         The base implementation automatically checks for the
-        presence of all _mandatory_settings. Thus, reimplementations
-        may simply expand _mandatory_settings, then call super().
+        presence of all _mandatory_settings. Thus, subclasses
+        may simply extend _mandatory_settings, then call super().
 
-        Reimplementations can emit self.error_occured to inform
-        users of invalid settings.
+        Subclasses should emit self.error_occured to inform users
+        of invalid settings.
 
         Parameters
         ----------
@@ -836,14 +836,14 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
     def reset_preparation_todos(self):
         """Reset all the segments of preparation.
 
-        Segments are in the form [key: bool}. Those segments for
+        Segments are in the form {key: bool}. Those segments for
         which the value is True will be done one at a time, in
         the order in which keys are inserted. Segments are stored
         in self.begin_prepare_todos and self.continue_prepare_todos.
 
-        This method can be reimplemented in subclasses if some segments
-        are to be skipped (e.g., depending on the firmware version of
-        the hardware).
+        This method can be overridden or extended in subclasses if
+        some segments are to be skipped (e.g., depending on the
+        firmware version of the hardware).
 
         The base-class implementation sets all segments to True.
 
@@ -907,16 +907,15 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
 
         This method must be extended in subclasses by calling super()
         ant some point. The reimplementation should take the energy
-        value(s) in eV, the wating times (in msec) and the keyword
+        value(s) in eV, the waiting times (in msec) and the keyword
         argument trigger_meas, together with other optional data to be
         read from self.settings, and turn them into messages that can
         be sent via self.send_message(*messages).
 
-        Conversion from the desired, true electron energy (i.e.,
-        the energy that the electrons will have when exiting the
-        gun) to the setpoint value to be sent to the controller
-        can be done inside this method by calling
-        self.true_energy_to_setpoint(energy).
+        Conversion from the desired, true electron energy (i.e., the
+        energy that the electrons will have when exiting the gun) to
+        the set-point value to be sent to the controller can be done
+        inside this method by calling .true_energy_to_setpoint(energy).
 
         Parameters
         ----------
@@ -1097,7 +1096,7 @@ class MeasureControllerABC(ControllerABC):
         super().__init__(parent=parent, settings=settings,
                          port_name=port_name, sets_energy=sets_energy)
 
-        # This dictionary must be reimplemented in subclasses.
+        # This dictionary must be overridden in subclasses.
         # It must contain all possible measurement types the controller
         # can receive using the same keys used in the measurement
         # class responsible for receiving data from this controller.
@@ -1201,7 +1200,7 @@ class MeasureControllerABC(ControllerABC):
         >>> return (self.initial_delay
                     + (n_ave - 1)/2 * self.measurement_interval)
 
-        Needs to be reimplemented in subclasses.
+        Must be overridden in subclasses.
 
         Returns
         -------
@@ -1311,16 +1310,15 @@ class MeasureControllerABC(ControllerABC):
         """Receive and store data from the serial.
 
         This method is the slot connected to the data_received
-        signal of self.serial and has to be reimplemented in
-        subclasses.
+        signal of self.serial and must be extended in subclasses.
 
         Measurements received from the serial should be processed,
-        appropriately converted to the correct physical units
-        and stored into self.measurements, a dictionary whose
-        keys are QuantityInfo objects.
+        appropriately converted to the correct physical units and
+        stored into self.measurements, a dictionary whose keys are
+        QuantityInfo objects.
 
-        When all the measurements expected have been received,
-        this method should call self.measurements_done().
+        When all the measurements expected have been received, this
+        method should call self.measurements_done().
 
         Notice that data may also be non-measurement information.
         This should also be processed and stored, if needed. In
@@ -1345,17 +1343,17 @@ class MeasureControllerABC(ControllerABC):
     def set_energy(self, energy, settle_time, *more_steps, trigger_meas=True):
         """Set electron energy on LEED controller.
 
-        This method must be reimplemented in subclasses. The
-        reimplementation should take the energy value in eV
-        and other optional data needed by the serial interface
-        and turn them into a message that can be sent via
-        self.send_message(message, *other_messages).
+        This method must be extended in subclasses by calling super()
+        ant some point. The reimplementation should take the energy
+        value(s) in eV, the waiting times (in msec) and the keyword
+        argument trigger_meas, together with other optional data to be
+        read from self.settings, and turn them into messages that can
+        be sent via self.send_message(*messages).
 
-        Conversion from the desired, true electron energy (i.e.,
-        the energy that the electrons will have when exiting the
-        gun) to the setpoint value to be sent to the controller
-        can be done inside this method by calling
-        self.true_energy_to_setpoint(energy).
+        Conversion from the desired, true electron energy (i.e., the
+        energy that the electrons will have when exiting the gun) to
+        the set-point value to be sent to the controller can be done
+        inside this method by calling .true_energy_to_setpoint(energy).
 
         If this function does not already trigger a measurement
         it should call the measure_now function.
@@ -1389,15 +1387,13 @@ class MeasureControllerABC(ControllerABC):
     def set_measurements(self, quantities):
         """Decide what to measure.
 
-        This method must be reimplemented in subclasses. It
-        should take requested measurement types as strings
-        from the MeasurementABC class (i.e.: I0, I_Sample, ...),
-        check if those types are available and not conflicting
-        with each other and decide which channels to use.
+        This method must be extended in subclasses. It should take
+        requested measurement types as strings (e.g.: I0, I_Sample,
+        ...), check if those types are available and not conflicting
+        with each other and set up the hardware to measure quantities.
 
-        super().set_measurements(requested) must be called in
-        subclasses at the end of the reimplementation to actually
-        store the measured quantities.
+        Subclasses must call super().set_measurements(quantities) at
+        the end to store the measured quantities.
 
         Parameters
         ----------
@@ -1417,19 +1413,17 @@ class MeasureControllerABC(ControllerABC):
     def set_continuous_mode(self, continuous=True):
         """Set continuous mode.
 
-        Has to be reimplemented in subclasses. If continuous is
-        true the controller has to continue measuring and return
-        data without receiving further instructions. The serial_busy
-        has to be hooked up to the busy state of the controller.
-        Call super() to enable switching of busy state of controller
-        once the continuous mode has been set on the hardware
-        controller.
+        Subclasses must extend this method. If continuous is True the
+        controller has to continue measuring and return data without
+        receiving further instructions. The base-class implementation
+        connects the serial_busy with self.busy: when the hardware
+        acknowledges the receipt of the command the controller should
+        turn "not busy".
 
         Parameters
         ----------
         continuous : bool, optional
-            Whether continuous mode should be on.
-            Used in subclass. Default is True.
+            Whether continuous mode should be on. Default is True.
 
         Returns
         -------

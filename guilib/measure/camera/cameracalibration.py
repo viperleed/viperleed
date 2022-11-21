@@ -124,7 +124,7 @@ class CameraCalibrationTask(CalibrationTask):
     def missing_frames(self):
         """Return whether frames are missing to complete acquisition.
 
-        Subclasses can reimplement this property, typically making
+        Subclasses can override this property, typically making
         use of self._frames_done. The base-class implementation
         always returns False.
 
@@ -145,17 +145,16 @@ class CameraCalibrationTask(CalibrationTask):
     def _check_and_store_frame(self, frame):
         """Check that frame is acceptable and store it if it is.
 
-        This slot must be reimplemented in subclasses.
-        If self.camera_is_triggered, reimplemented methods should
-        call self._trigger_next_frame at the end to proceed to
-        acquisition of the next image. This is also a common place
-        to increment self._frames_done to reflect the fact that
-        more frames have been acquired.
+        This slot must be overridden in subclasses. subclasses should
+        call ._trigger_next_frame at the end of the overridden method
+        if .camera_is_triggered. This will proceed to acquisition of
+        the next image. This method is also a common place to increment
+        self._frames_done to reflect the fact that more frames have
+        been acquired.
 
-        This is the slot connected to the camera image_processed
-        signal when self.camera_is_triggered, otherwise to the
-        camera frame_ready signal. It is called every time a new
-        image was acquired.
+        This is the slot connected to the camera image_processed signal
+        when .camera_is_triggered, otherwise to the camera frame_ready
+        signal. It is called every time a new image was acquired.
 
         Parameters
         ----------
@@ -257,11 +256,11 @@ class CameraCalibrationTask(CalibrationTask):
     def _trigger_next_frame(self, *_):
         """Trigger acquisition of a new frame if necessary.
 
-        This slot must be reimplemented in subclasses. This is
+        This slot must be overridden in subclasses. This is
         the slot connected with the camera .started signal if
         self.camera_is_triggered. Otherwise this method should
-        not be used. It is safest to check self.can_trigger_camera
-        and return if this is False-y. Reimplementations can
+        not be used. It is safest to check .can_trigger_camera
+        and return if this is False-y. Subclasses can also
         reset self._frames_done in here, if necessary (e.g.,
         when a new 'acquisition section' has to be started).
 

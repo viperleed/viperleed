@@ -134,7 +134,7 @@ class CameraViewer(qtw.QScrollArea):
     def __new__(cls, camera, *args, **kwargs):
         """Return a CameraViewer instance.
 
-        This method is reimplemented such that only one viewer
+        This method is extended such that only one viewer
         can exists for a given camera.
 
         Parameters
@@ -488,7 +488,7 @@ class CameraViewer(qtw.QScrollArea):
             self.roi.show()
 
     def mousePressEvent(self, event):    # pylint: disable=invalid-name
-        """Reimplement mousePressEvent to begin drawing a ROI."""
+        """Extend mousePressEvent to begin drawing a ROI."""
         self.__mouse_button = event.button()
         if not self.roi_visible or event.button() != qtc.Qt.LeftButton:
             super().mousePressEvent(event)
@@ -560,7 +560,7 @@ class CameraViewer(qtw.QScrollArea):
         self.shown.emit()
 
     def sizeHint(self):                  # pylint: disable=invalid-name
-        """Reimplement sizeHint to bind to the underlying image."""
+        """Override sizeHint to bind to the underlying image."""
         return self.__img_view.sizeHint() + self.__extra_size
 
     def wheelEvent(self, event):         # pylint: disable=invalid-name

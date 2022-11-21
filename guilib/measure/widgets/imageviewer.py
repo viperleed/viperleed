@@ -41,8 +41,8 @@ class ImageViewer(qtw.QLabel):
         Return the scaling factor such that the image
         optimally fits in size*size_fraction.
 
-    Reimplement methods
-    -------------------
+    Reimplemented methods
+    ---------------------
     sizeHint()
         Return optimal size for self
     paintEvent(event)

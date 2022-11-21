@@ -31,6 +31,7 @@ from viperleed.guilib.decorators import print_thread
 ###############################################################################
 
 
+# See also https://fman.io/blog/pyqt-excepthook/
 def catch_gui_crash(base_log_path):
     """Show unhandled exceptions to the user."""
 

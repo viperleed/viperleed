@@ -218,8 +218,8 @@ class ViPErinoController(abc.MeasureControllerABC):
             version = self.hardware.get("firmware", None)
         if version is None:
             # Get it from the settings. Notice that the are_settings_ok
-            # reimplementation already checks that the firmware version
-            # in the settings is present and valid
+            # extension already checks that the firmware version in the
+            # settings is present and valid
             version = base.Version(
                 self.settings.get("controller", "firmware_version")
                 )

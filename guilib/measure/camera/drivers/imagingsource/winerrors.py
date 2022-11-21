@@ -1,7 +1,10 @@
-"""Module ...
+"""Module winerrors of viperleed.guilib.measure.camera.drivers.imagingsource.
 
 Created: 2021-07-21
 Author: Michele Riva
+
+Contains definitions useful for identifying errors reported by
+Imaging Source cameras when used with the windows .dll library.
 """
 from enum import Enum
 
@@ -198,7 +201,7 @@ class DLLReturns(tuple, Enum):
     # like it actually is not.
     @property
     def value(self):
-        """Reimplement .value to return only the numeric code."""
+        """Override .value to return only the numeric code."""
         return self[0]
     # pylint: enable=invalid-overridden-method
 

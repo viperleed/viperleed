@@ -440,7 +440,7 @@ class ViPErLEEDSettings(ConfigParser):
     # The code below is essentially a (simplified) copy of the
     # one in the configparser standard library for RawConfigParser.
     def _read(self, fp, fpname):
-        """Reimplement to preserve comments."""
+        """Override original to preserve comments."""
         elements_added = set()
         cursect = None                        # None, or a dictionary
         sectname = None

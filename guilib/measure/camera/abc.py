@@ -80,10 +80,10 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
 
     # frame_ready should be emitted in any callback function that the
     # camera may call. If the camera does not allow to call a callback
-    # function, the reimplementation should take care of emitting a
-    # frame_ready signal as soon as a new frame arrives at the PC.
-    # Whenever this signal is emitted, the new frame will be processed
-    # (in a separate thread).
+    # function, the subclass should take care of emitting a frame_ready
+    # signal as soon as a new frame arrives at the PC. Whenever this
+    # signal is emitted, the new frame will be processed (in a separate
+    # thread).
     frame_ready = qtc.pyqtSignal(np.ndarray)
 
     # image_processed is emitted when operating in triggered mode
@@ -115,7 +115,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             ]
 
     # _abstract is a list of features for which setter and getter
-    # methods must always be reimplemented in concrete classes
+    # methods must always be overridden in concrete classes
     _abstract = ('exposure', 'gain', 'mode')
 
     # hardware_supported_features contains a list of feature names (as
@@ -587,7 +587,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
 
         The base implementation relies on the results returned
         by .get_roi_size_limits(). This property should be
-        reimplemented if the sensor size is larger than the
+        overridden if the sensor size is larger than the
         largest ROI applicable.
 
         Returns
@@ -666,9 +666,9 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
     def supports_trigger_burst(self):
         """Return whether the camera allows triggering multiple frames.
 
-        This property should be reimplemented in concrete subclasses.
+        This property should be overridden in concrete subclasses.
         Should the camera support trigger burst, get_n_frames_limits
-        should also be reimplemented.
+        should also be overridden.
 
         Returns
         -------
@@ -929,14 +929,14 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
     def load_camera_settings(self):
         """Load settings from self.settings into the camera.
 
-        This method should only be reimplemented if the order in which
+        This method should only be overridden if the order in which
         setter-method calls are performed is inappropriate. The default
         order of the calls is:
             set_exposure(),  set_gain(),  set_mode()
             <setters associated to self.hardware_supported_features>
             [set_binning()], [set_n_frames()], [set_roi()]
         The last 3 are called only if they are not hardware-supported.
-        Should the method be reimplemented, the reimplementation should
+        Should the method be overridden, the new implementation should
         call self.check_loaded_settings() at the end, to verify that
         the settings have been correctly loaded.
 
@@ -966,8 +966,8 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         time .connect_() is called. If the device is already open,
         the method should return True, and typically do nothing.
 
-        The reimplementation can use self.name to access the device
-        name for this camera.
+        Subclasses can use self.name to access the device name for
+        this camera.
 
         Returns
         -------
@@ -1015,7 +1015,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
     def get_binning(self):
         """Return the binning factor internally used for averaging.
 
-        This method should be reimplemented to query the camera for the
+        This method should be overridden to query the camera for the
         current number of pixels used internally for binning. Binning
         is done on a (binning_factor x binning_factor) mesh. Make sure
         to self.open() before querying the camera.
@@ -1033,7 +1033,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
     def set_binning(self, no_binning=False):
         """Define binning factor for images.
 
-        Do not reimplement this method, unless the camera internally
+        Do not override this method, unless the camera internally
         supports binning.  Make sure to self.open() before setting.
 
         Parameters
@@ -1046,13 +1046,13 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         Raises
         ------
         NotImplementedError
-            If this method is not reimplemented for a camera
+            If this method is not overridden for a camera
             that natively supports binning.
         """
         if self.get_binning():
             raise NotImplementedError(
                 f"{self.__class__.__name__} natively supports binning, "
-                "but self.set_binning() was not reimplemented."
+                "but self.set_binning() was not overridden."
                 )
         binning_factor = 1 if no_binning else self.binning
         self.process_info.binning = binning_factor
@@ -1060,7 +1060,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
     def get_binning_limits(self):
         """Return the minimum and maximum value for binning.
 
-        This method should be reimplemented only if the camera
+        This method should be overridden only if the camera
         internally supports binning. Make sure to self.open()
         before querying the camera.
 
@@ -1077,13 +1077,13 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         Raises
         ------
         NotImplementedError
-            If this method is not reimplemented for a camera
+            If this method is not overridden for a camera
             that natively supports binning.
         """
         if self.get_binning():
             raise NotImplementedError(
                 f"{self.__class__.__name__} natively supports binning, "
-                "but self.get_binning_limits() was not reimplemented."
+                "but self.get_binning_limits() was not overridden."
                 )
         min_binning = 1
         _, (max_roi_w, max_roi_h), *_ = self.get_roi_size_limits()
@@ -1107,13 +1107,12 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
     def set_exposure(self):
         """Set the exposure time for one frame.
 
-        This method must be reimplemented to call the internal driver
+        This method must be overridden to call the internal driver
         function that sets the appropriate exposure time in the camera
         device. Make sure to self.open() before setting.
 
-        The reimplementation must use the exposure time (in
-        milliseconds) returned by self.exposure (i.e., the one
-        in self.settings).
+        Subclasses must use the exposure time (in milliseconds) that
+        self.exposure returns (i.e., the one in self.settings).
 
         Returns
         -------
@@ -1138,7 +1137,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
     def get_frame_rate(self):
         """Return the number of frames delivered per second.
 
-        This property should be reimplemented in concrete subclasses.
+        This property should be overridden in concrete subclasses.
 
         Notice that this quantity is unrelated to 1000/self.exposure.
         If self.exposure/1000 is larger than 1/frame_rate, frames are
@@ -1170,12 +1169,12 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
     def set_gain(self):
         """Set the gain of the camera in decibel.
 
-        This method must be reimplemented to call the internal driver
+        This method must be overridden to call the internal driver
         function that sets the appropriate gain in the camera device.
         Make sure to self.open() before setting.
 
-        The reimplementation must use the gain factor (in decibel)
-        returned by self.gain (i.e., the one in self.settings).
+        Subclasses must use the gain factor (in decibel) returned
+        by self.gain (i.e., the one in self.settings).
         """
         return
 
@@ -1196,7 +1195,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
     def get_mode(self):
         """Return the mode set in the camera.
 
-        This method should be reimplemented to query the camera for the
+        This method should be overridden to query the camera for the
         current mode, and return the appropriate string. Make sure to
         self.open() before querying the camera.
 
@@ -1218,7 +1217,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
     def set_mode(self):
         """Set the camera mode from self.settings.
 
-        This method should be reimplemented to instruct the camera
+        This method should be overridden to instruct the camera
         to switch to a desired mode, which must be retrieved with
         self.mode from the settings. Make sure to self.open() before
         setting.
@@ -1236,7 +1235,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
     def get_n_frames(self):
         """Return the number of frames internally used for averaging.
 
-        This method should be reimplemented to query the camera
+        This method should be overridden to query the camera
         for the current number of frames internally used for
         averaging. Make sure to self.open() before querying.
 
@@ -1251,27 +1250,27 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
     def set_n_frames(self):
         """Set the number of frames internally used for averaging.
 
-        This method should be reimplemented to instruct the camera
-        to use self.n_frames frames for averaging internally, before
-        returning the image. Make sure to self.open() before setting.
+        This method should be overridden to instruct the camera to use
+        self.n_frames frames for averaging internally, before returning
+        the image. Make sure to self.open() before setting.
 
         Should the camera not natively support frame averaging, this
-        method should not be reimplemented, as frame averaging will
-        be done via software during image processing.
+        method should not be overridden, as frame averaging will be
+        done via software during image processing.
         """
         if self.get_n_frames():
             raise NotImplementedError(
                 f"{self.__class__.__name__} natively supports frame "
-                "averaging, but self.set_n_frames() was not reimplemented"
+                "averaging, but self.set_n_frames() was not overridden"
                 )
         self.process_info.n_frames = self.n_frames
 
     def get_n_frames_limits(self):
         """Return the minimum and maximum number of frames supported.
 
-        This method should be reimplemented only if the camera
-        internally supports frame averaging. Make sure to .open()
-        before querying the camera.
+        This method should be overridden only if the camera
+        internally supports frame averaging. Make sure to
+        .open() before querying the camera.
 
         Returns
         -------
@@ -1281,19 +1280,19 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         Raises
         ------
         NotImplementedError
-            If this method is not reimplemented for cameras that
+            If this method is not overridden for cameras that
             natively support averaging over multiple frames, or
             for those that natively support a trigger-burst mode
         """
         if self.get_n_frames():
             raise NotImplementedError(
                 f"{self.__class__.__name__} natively supports frame averaging,"
-                " but self.get_n_frames_limits() was not reimplemented"
+                " but self.get_n_frames_limits() was not overridden"
                 )
         if self.supports_trigger_burst:
             raise NotImplementedError(
                 f"{self.__class__.__name__} natively supports trigger burst, "
-                "but self.get_n_frames_limits() was not reimplemented"
+                "but self.get_n_frames_limits() was not overridden"
                 )
         return 1, np.inf
 
@@ -1301,7 +1300,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
     def get_roi(self):
         """Return the region of interest set in the camera.
 
-        This method should be reimplemented in concrete subclasses to
+        This method should be overridden in concrete subclasses to
         query the camera for the current settings of the region of
         interest. Make sure to self.open() before querying the camera
 
@@ -1324,10 +1323,10 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
     def set_roi(self, no_roi=False):
         """Set up region of interest in the camera.
 
-        This method should be reimplemented only if the camera natively
+        This method should be overridden only if the camera natively
         supports setting a region of interest at the hardware level.
-        The reimplementation must retrieve the ROI information using
-        self.roi. Make sure to .open() before setting.
+        Subclasses must retrieve the ROI information using self.roi.
+        Make sure to .open() before setting.
 
         If the camera does not support setting internally a ROI, the
         the ROI setting is used to crop the frames during processing.
@@ -1341,13 +1340,13 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         Raises
         -------
         NotImplementedError
-            If this method is not reimplemented when the camera
+            If this method is not overridden when the camera
             natively supports applying a region of interest.
         """
         if self.get_roi():
             raise NotImplementedError(
                 f"{self.__class__.__name__} natively supports setting a "
-                "region of interest, but self.set_roi() was not reimplemented"
+                "region of interest, but self.set_roi() was not overridden"
                 )
         roi = tuple() if no_roi else self.roi
         self.process_info.roi = roi
@@ -1356,7 +1355,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
     def get_roi_size_limits(self):
         """Return minimum, maximum and granularity of the ROI.
 
-        This method must be reimplemented in concrete subclasses.
+        This method must be overridden in concrete subclasses.
         Typically it would return (1, 1) for the minimum ROI,
         (sensor_width, sensor_height) for the maximum ROI, and
         (1, 1) for the minimum increments. Make sure to .open()

@@ -548,7 +548,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         # Notice that this explicit extension is necessary as
         # relying on parent-child relationships is not enough.
         # In fact, child.moveToThread(thread) is not called,
-        # as is any reimplemented version of the method.
+        # as is any overridden version of the method.
         super().moveToThread(thread)
         if self.primary_controller:
             self.primary_controller.moveToThread(thread)
@@ -925,13 +925,13 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
     def _is_finished(self):
         """Check if the full measurement cycle is done.
 
-        This function must be reimplemented in subclasses. It
-        should check if the measurement cycle is done via the
-        settings.
+        This method must be overridden in subclasses. It should
+        check if the measurement cycle is done via the settings.
 
         Returns
         -------
-        bool
+        finished : bool
+            True when the measurement is finished.
         """
         return True
 
@@ -1284,7 +1284,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         This method is called both when ._is_finished() returns
         True, and while .abort()ing a measurement.
 
-        This function may need to be reimplemented in subclasses.
+        This method may need to be extended in subclasses.
         Ensure that finalization is prepared properly and that
         self._finalize() gets called. Can be only a call to
         self._finalize() if no preparation is needed.
