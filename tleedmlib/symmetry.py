@@ -218,8 +218,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
                 rot_scale_mat = -np.linalg.inv(rotation_matrix_order(order)
                                                - np.eye(2))
                 toprotlist.append(lowocc_layer.atlist[0].cartpos[:2]
-                                  + np.dot(rot_scale_mat, v))
-                logger.info(f"Found axis at {toprotlist[-1]}")
+                                  - np.dot(rot_scale_mat, v))
     if toprotsym > 0:
         if output:
             logger.debug("Highest rotation axis has order " + str(toprotsym))
