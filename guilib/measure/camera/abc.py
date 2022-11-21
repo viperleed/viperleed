@@ -27,7 +27,7 @@ from viperleed.guilib.measure.camera.imageprocess import (ImageProcessor,
 from viperleed.guilib.measure.camera import badpixels
 from viperleed.guilib.measure.classes import settings as _m_settings
 from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
-from viperleed.guilib.measure.widgets.roiwidgets import ROIEditor
+from viperleed.guilib.measure.widgets.roieditor import ROIEditor
 
 
 # pylint: disable=too-many-lines,too-many-public-methods
