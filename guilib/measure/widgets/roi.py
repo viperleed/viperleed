@@ -309,6 +309,7 @@ class RegionOfInterest(qtw.QWidget):
                          'increments': increments,
                          'pos_increments': (1, 1)}
         self.__image_scaling = 1
+        self.__rect = qtc.QRect()   # The actual ROI (in screen coordinates)
 
         # delta_max dict:
         #   "offset": origin shift when resizing left/right/top/bottom
@@ -349,15 +350,8 @@ class RegionOfInterest(qtw.QWidget):
             Height of the selected region of interest in
             image coordinates (i.e. pixels).
         """
-        # Use the bounding box of the rubber-band rather than that of
-        # self as the former gets its size normalized on resizeEvent,
-        # and will be closer to the correct size when scaled back
-        # by 1/self.image_scaling.
-        rect = self.__rubberband.rect()
-
-        top_left = self.mapToParent(rect.topLeft())
-        top_x, top_y = top_left.x(), top_left.y()
-        width, height = rect.width(), rect.height()
+        top_x, top_y = self.__rect.x(), self.__rect.y()
+        width, height = self.__rect.width(), self.__rect.height()
 
         # Scale back to image coordinates (and round as appropriate)
         scale = 1/self.image_scaling
@@ -549,6 +543,11 @@ class RegionOfInterest(qtw.QWidget):
         """Override to conclude rubber-band move."""
         self.is_being_edited = False
 
+    def move(self, new_pos):
+        """Move self to new_pos."""
+        self.__rect.moveTo(new_pos)
+        super().move(new_pos)
+
     def moveEvent(self, event):          # pylint: disable=invalid-name
         """Emit roi_changed when moving and not being resized."""
         super().moveEvent(event)
@@ -562,6 +561,7 @@ class RegionOfInterest(qtw.QWidget):
         _norm_size = self.__normalized_size(new_size)
         super().resize(_norm_size)
         self.__rubberband.resize(_norm_size)
+        self.__rect.setSize(_norm_size)
 
     def resizeEvent(self, event):        # pylint: disable=invalid-name
         """Emit roi_changed when resized."""
@@ -610,6 +610,7 @@ class RegionOfInterest(qtw.QWidget):
     def setGeometry(self, new_rect):     # pylint: disable=invalid-name
         """Edit position and size consistently with increments."""
         norm_rect = self.__normalized_rect(new_rect)
+        self.__rect = norm_rect
         super().setGeometry(norm_rect)
         self.__rubberband.resize(norm_rect.size())
 
@@ -645,7 +646,7 @@ class RegionOfInterest(qtw.QWidget):
                 round(delta_increments.y() / (_scale * d_top)) * d_top
                 )
         new_pos = self.pos() + delta_pos
-        if not _rect_fits(self, qtc.QRect(new_pos, self.size())):
+        if not _rect_fits(self, qtc.QRect(new_pos, self.__rect.size())):
             # New position would move outside the available geometry
             return
         self.move(new_pos)
