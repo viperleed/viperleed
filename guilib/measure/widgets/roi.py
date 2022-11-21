@@ -1,4 +1,4 @@
-"""Module roiwidgets of viperleed.guilib.measure.widgets.
+"""Module roi of viperleed.guilib.measure.widgets.
 
 ========================================
    ViPErLEED Graphical User Interface

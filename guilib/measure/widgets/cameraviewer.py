@@ -25,7 +25,7 @@ from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.camera.imageprocess import ImageProcessor
 from viperleed.guilib.measure.dialogs.settingsdialog import SettingsDialog
 from viperleed.guilib.measure.widgets.imageviewer import ImageViewer
-from viperleed.guilib.measure.widgets.roiwidgets import RegionOfInterest
+from viperleed.guilib.measure.widgets.roi import RegionOfInterest
 from viperleed.guilib.widgetslib import screen_fraction
 
 
