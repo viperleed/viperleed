@@ -254,7 +254,8 @@ class CameraViewer(qtw.QScrollArea):
             }
         self.__children = {
             "viewer": ImageViewer(),
-            "context_menu": qtw.QMenu(parent=self),
+            "context_menu": {"self": qtw.QMenu(parent=self),
+                             "roi":  qtw.QMenu(parent=self)},
             "settings_dialog": SettingsDialog(handled_obj=camera),
             }
         self.__children["roi"] = RegionOfInterest(parent=self.__img_view)
@@ -637,7 +638,7 @@ class CameraViewer(qtw.QScrollArea):
                     + ((by_factor - 1) * scroll_bar.pageStep()/2))
                 )
 
-    def __apply_roi(self, *_):
+    def __apply_roi(self):
         """Set a new ROI in the camera."""
         old_roi_x, old_roi_y, *_ = self.__settings_roi.original_roi
         new_roi_x, new_roi_y, roi_w, roi_h = self.roi.image_coordinates
@@ -667,7 +668,12 @@ class CameraViewer(qtw.QScrollArea):
         self.setAlignment(qtc.Qt.AlignCenter)
         self.adjustSize()
         self.setWindowTitle(self.camera.name)
-        self.__compose_context_menu()
+
+        # Set up to receive context-menu requests (i.e.,
+        # right click), and prepare the context menus
+        self.setContextMenuPolicy(qtc.Qt.CustomContextMenu)
+        self.__compose_context_menu_self()
+        self.__compose_context_menu_roi()
 
     def __update_title(self):
         """Update the window title with camera information."""
@@ -687,13 +693,9 @@ class CameraViewer(qtw.QScrollArea):
             title += f" - {scale}"
         self.setWindowTitle(title)
 
-    def __compose_context_menu(self):
-        """Set up the context menu."""
-        menu = self.__children["context_menu"]
-        # Set up to receive context-menu requests (i.e.,
-        # right click), and prepare the context menu
-        self.setContextMenuPolicy(qtc.Qt.CustomContextMenu)
-
+    def __compose_context_menu_self(self):
+        """Set up the context menu for self."""
+        menu = self.__children["context_menu"]["self"]
         menu.addAction("Reset ROI")
         menu.addAction("Snap image")
 
@@ -716,6 +718,14 @@ class CameraViewer(qtw.QScrollArea):
             active = action.data()
             action.setEnabled(True if active else self.interactions_enabled)
 
+    def __compose_context_menu_roi(self):
+        """Set up the context menu for the ROI rubber-band."""
+        menu = self.__children["context_menu"]["roi"]
+
+        menu.addAction("Apply ROI")
+        act = menu.addAction("Set ROI coordinates")
+        act.setEnabled(False)                                                   # TODO: open up a dialog with a ROIEditor
+
     def __connect(self):
         """Connect signals."""
         self.image_size_changed.connect(self.__update_title)
@@ -723,10 +733,8 @@ class CameraViewer(qtw.QScrollArea):
         self.camera.started.connect(self.__on_camera_started)
         self.camera.error_occurred.connect(self.__on_camera_error)
         self.customContextMenuRequested.connect(self.__show_context_menu)
-        self.roi.apply_roi_requested.connect(self.__apply_roi)
-        self.__children["context_menu"].triggered.connect(
-            self.__on_context_menu_triggered
-            )
+        for menu in self.__children["context_menu"].values():
+            menu.triggered.connect(self.__on_context_menu_triggered)
 
         _settings_dlg = self.__children["settings_dialog"]
         _settings_dlg.settings_changed.connect(self.__on_settings_changed)
@@ -845,6 +853,9 @@ class CameraViewer(qtw.QScrollArea):
         if "properties" in text:
             self.__children['settings_dialog'].open()
             return
+        if "apply" in text:
+            self.__apply_roi()
+            return
         print(action.text(), ": not implemented yet")
 
     def __on_image_scaled(self):
@@ -942,7 +953,11 @@ class CameraViewer(qtw.QScrollArea):
 
     def __show_context_menu(self, position):
         """Show a context menu when right-clicking at position."""
-        self.__children["context_menu"].popup(self.mapToGlobal(position))
+        if self.roi.isVisible() and self.roi.geometry().contains(position):
+            menu = self.__children["context_menu"]["roi"]
+        else:
+            menu = self.__children["context_menu"]["self"]
+        menu.popup(self.mapToGlobal(position))
 
     @qtc.pyqtSlot(np.ndarray)
     def __show_image(self, img_array):

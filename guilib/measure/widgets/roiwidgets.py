@@ -77,7 +77,6 @@ class RegionOfInterest(qtw.QWidget):
         Move self by delta_pixels pixels in image coordinates.
     """
 
-    apply_roi_requested = qtc.pyqtSignal()
     roi_changed = qtc.pyqtSignal()
 
     def __init__(self, *__args, parent=None, increments=(1, 1), **__kwargs):
@@ -105,7 +104,6 @@ class RegionOfInterest(qtw.QWidget):
         self.__drag_origin = qtc.QPoint(0, 0)
         self.__image_scaling = 1
         self.origin = qtc.QPoint(0, 0)
-        self.__context_menu = qtw.QMenu(parent=self)
 
         self.setWindowFlags(qtc.Qt.SubWindow)
 
@@ -350,7 +348,7 @@ class RegionOfInterest(qtw.QWidget):
         _delta = qtc.QPoint(delta_increments.x() * d_left,
                             delta_increments.y() * d_top)
         delta_pos = _delta * _scale
-        if not any(p for p in (delta_pos.x(), delta_pos.y())):
+        if delta_pos.isNull():
             # Image is scaled down so much that no movement would
             # result from this. Rather use delta_increments as a
             # shift in the current-view coordinates. NB: this may
@@ -358,8 +356,6 @@ class RegionOfInterest(qtw.QWidget):
             # from outside.
             delta_pos = delta_increments
         self.move(self.pos() + delta_pos)
-
-
 
     def __compose(self):
         """Place children widgets."""
@@ -378,16 +374,6 @@ class RegionOfInterest(qtw.QWidget):
                          qtc.Qt.AlignLeft | qtc.Qt.AlignBottom)
         self.__rubberband.show()
         self.hide()
-
-        # Set up to receive right-clicks, and prepare
-        # the corresponding context menu. It only contains
-        # a single QAction for applying the ROI
-        self.setContextMenuPolicy(qtc.Qt.CustomContextMenu)
-        self.customContextMenuRequested.connect(self.__show_context_menu)
-        self.__context_menu.triggered.connect(self.__on_context_menu_triggered)
-        self.__context_menu.addAction("Apply ROI")
-        act = self.__context_menu.addAction("Set ROI coordinates")
-        act.setEnabled(False)  # TODO: open up a dialog
 
     def __normalized_size(self, size):
         """Return a size that fits with increments."""
@@ -409,15 +395,6 @@ class RegionOfInterest(qtw.QWidget):
         size.setHeight(round(height) * np.sign(signed_height))
         return size
 
-    def __show_context_menu(self, position):
-        """Show a context menu when right-clicking at position."""
-        self.__context_menu.popup(self.mapToGlobal(position))
-
-    def __on_context_menu_triggered(self, action):
-        """React to a user selection in the context menu."""
-        if "apply" in action.text().lower():
-            self.apply_roi_requested.emit()
-
     def __update_size_limits(self):
         """Update the size limits in viewing pixels.
 
@@ -431,8 +408,6 @@ class RegionOfInterest(qtw.QWidget):
         """
         self.setMinimumSize(self.image_scaling * qtc.QSize(*self.minimum))
         self.setMaximumSize(self.image_scaling * qtc.QSize(*self.maximum))
-            return
-        print("Set requested")
 
 
 class ROIEditor(qtw.QWidget):
