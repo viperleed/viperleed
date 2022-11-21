@@ -320,6 +320,7 @@ class RegionOfInterest(qtw.QWidget):
             "delta_max": {},   # Resizing "offset" and max "expansion"
             "drag_origin": qtc.QPoint(),    # Initial pos when dragged
             }
+        self.__edit_flags = {"moved": False, "resized": False}
 
         self.is_being_edited = False
 
@@ -545,26 +546,30 @@ class RegionOfInterest(qtw.QWidget):
 
     def move(self, new_pos):
         """Move self to new_pos."""
+        self.__edit_flags['moved'] = True
         self.__rect.moveTo(new_pos)
         super().move(new_pos)
 
     def moveEvent(self, event):          # pylint: disable=invalid-name
         """Emit roi_changed when moving and not being resized."""
+        self.__edit_flags['moved'] = False
         super().moveEvent(event)
         # Since resize always happens after move, testing the attribute
         # ensures only one roi_changed is emitted for each setGeometry
-        if self.isVisible() and not self.testAttribute(qtc.Qt.WA_Resized):
+        if self.isVisible() and not self.__edit_flags['resized']:
             self.roi_changed.emit()
 
     def resize(self, new_size):
         """Resize self and rubber-band to new_size after normalizing it."""
         _norm_size = self.__normalized_size(new_size)
+        self.__edit_flags['resized'] = True
         super().resize(_norm_size)
         self.__rubberband.resize(_norm_size)
         self.__rect.setSize(_norm_size)
 
     def resizeEvent(self, event):        # pylint: disable=invalid-name
         """Emit roi_changed when resized."""
+        self.__edit_flags['resized'] = False
         super().resizeEvent(event)
         if self.isVisible():
             self.roi_changed.emit()
@@ -610,6 +615,11 @@ class RegionOfInterest(qtw.QWidget):
     def setGeometry(self, new_rect):     # pylint: disable=invalid-name
         """Edit position and size consistently with increments."""
         norm_rect = self.__normalized_rect(new_rect)
+
+        moved = norm_rect.topLeft() != self.__rect.topLeft()
+        self.__edit_flags['moved'] = moved
+        self.__edit_flags['resized'] = norm_rect.size() != self.__rect.size()
+
         self.__rect = norm_rect
         super().setGeometry(norm_rect)
         self.__rubberband.resize(norm_rect.size())

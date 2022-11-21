@@ -65,7 +65,7 @@ class ROIEditor(qtw.QWidget):
 
     @original_roi.setter
     def original_roi(self, new_roi):
-        """Set a reference ROI that is emitted in roi_changed."""
+        """Set a reference ROI."""
         self.__original_roi = tuple(new_roi)
 
     @qtc.pyqtSlot()
