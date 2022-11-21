@@ -14,8 +14,6 @@ import shutil
 import os
 
 import viperleed.tleedmlib as tl
-from viperleed.tleedmlib.classes.rparams import DEFAULTS as P_DEFAULTS
-
 logger = logging.getLogger("tleedm.files.parameters")
 
 # TODO: fill dict of parameter limits here (e.g. LMAX etc.)
@@ -976,7 +974,8 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                 f = float(llist[0])
             except ValueError:
                 s = llist[0].lower()[0]
-                f = P_DEFAULTS[param].get(s, None)
+                ps_eps_default_dict = rpars.get_default(param)
+                f = ps_eps_default_dict.get(s, None)
                 if f is None:
                     logger.warning('PARAMETERS file: PHASESHIFT_EPS: '
                                    'Could not convert value to float. '

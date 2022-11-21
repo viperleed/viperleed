@@ -266,6 +266,9 @@ class Rparams:
         self.lastParScatterFigs = {}
         # complete figures for each search, with search names as keys
 
+    def get_default(self, param):
+        return DEFAULTS[param]
+
     def total_energy_range(self):
         """Return the total overlapping energy range of experiment and
         theory. Note that this may change if experimental beams are dropped."""
