@@ -255,7 +255,7 @@ class Slab:
                             "ase.Atoms, found unexpected type "
                             + str(type(ase_atoms)))
         # initialize from ase_atoms
-        self.ucell = np.transpose(ase_atoms.cell[:])
+        self.ucell = ase_atoms.cell[:].T
         elems = [v.capitalize() for v in ase_atoms.get_chemical_symbols()]
         self.elements = make_unique_list(elems)
         self.n_per_elem = {k: elems.count(k) for k in self.elements}
@@ -738,19 +738,31 @@ class Slab:
             at.constraints = {1: {}, 2: {}, 3: {}}
         return
 
-    def rotateAtoms(self, order, axis=np.array([0., 0.])):
-        """Translates the atoms in the slab to have the axis in the origin,
-        applies an order-fold rotation matrix to the atom positions, then
-        translates back"""
+    def rotateAtoms(self, order, axis=(0., 0.)):
+        """Apply an order-fold rotation around axis.
+
+        Parameters
+        ----------
+        order : int
+            Order of rotation, as accepted by rotation_matrix_order
+        axis : array-like, optional
+            In-plane cartesian position of the rotation axis. Default
+            is (0, 0) (i.e., the origin).
+
+        Returns
+        -------
+        None.
+        """
         self.getCartesianCoordinates()
         m = rotation_matrix_order(order)
+        axis = np.asarray(axis)
         for at in self.atlist:
             # translate origin to candidate point, rotate, translate back
             at.cartpos[0:2] = np.dot(m, at.cartpos[0:2] - axis) + axis
         self.getFractionalCoordinates()
 
     def rotateUnitCell(self, order, append_ucell_mod=True):
-        """Rotates the unit cell (around the origin), leaving atom positions
+        """Rotate the unit cell (around the origin), leaving atom positions
         the same. Note that this rotates in the opposite direction as
         rotateAtoms."""
         self.getCartesianCoordinates()
