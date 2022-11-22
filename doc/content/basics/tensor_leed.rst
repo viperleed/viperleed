@@ -72,7 +72,7 @@ Delta-Amplitude Calculation
 The individual pertubations to the reference structure may be (arbitrary combinations of) 
 geometrical  displacements, changes in the vibrational amplitudes or 
 chemical substitutions.
-As tensor LEED approach is based on first-order pertubation theory approach,
+As tensor LEED is based on first-order pertubation theory approach,
 we can treat these pertubations on an atom-by-atom basis with the resulting 
 amplitude changes being considered linearly independent.
 
@@ -127,45 +127,44 @@ in the tensor LEED approximation and also LEED :math:`I(V)` in general:
 -   Since the tensor LEED method is a perturbative approach, it only works reliably for
     *small* pertubations.
     What constitutes a *small* pertubation is naturally system-dependent, but 
-    generally, the limit lies in the range of few hundred pm at best :cite:`rousTensorLEEDTechnique1986`.
+    generally, the limit lies in the range of 200 to 300 pm at best :cite:`rousTensorLEEDTechnique1986`.
 
-    As work-around, it is possible to run a new refercence calculation and delta-amplitudes calculation when the structure optimization trajectory approaches this limit.
+    To extend the range of the structural search, as work-around, it is possible to run a new refercence calculation and delta-amplitudes calculation when the structure optimization trajectory approaches this limit.
     You can use the the :ref:`RUN parameter<run>`
     to execute multiple reference calculations, delta-amplitude calculations,
     and structure searches in series.
 
 -   The parameter space grows quickly for larger unit cells.
     Luckily, many symmetries inherent to the surface structure can be exploited to eliminate redundent parameters.
-    For example, geometric displacements of symmetry linked atoms must always happen in a concerted fashion.
-    If that were not the case, the symmetry would be broken and a different LEED pattern would result.
+    For example, geometric displacements of symmetry-linked atoms must always happen in a concerted fashion.
+    If that were not the case, the symmetry would be broken and usually\ [.#] a different LEED pattern would result.
 
     To make use for these symmetries and the resulting reduced parameter space, it is necessary to know and enforce the surface slab symmetry.
     While manually finding out the surface slab symmetry is generally an easy task, enforcement is not.
-    This would require manually going throug every symmetry-linked atom and defining matching displacement vectors.
+    This would require manually going over every symmetry-linked atom and defining matching displacement vectors.
 
-    *Fortunately for the user*, automatic symmetry-detection and enforcement is one of the **main and unique features** of ViPErLEED.
+    *Fortunately for the user*, automatic symmetry-detection and enforcement is one of the **main features** of ViPErLEED.
     See the ViPErLEED paper for details (**TODO**).
 
 -   The R-factor hyper-surfaces tend to be inherently non-smooth. This is 
     a consequence of how the various R-factors are designed.
 
--   As described above, the tensor LEED implementation in TensErLEED separates
-    the calculation of delta-amplitudes and the structure optimization
-    into two mostly-indepenent stages.
-    As a direct consequence, the optimization can **only** be performed 
-    on a pre-defined grid of pertubation vectors (as given by the :ref:`DISPLACEMENTS file<displacements>`).
-    Unfortunately, this together with the last point greatly limits the pool of applicable optimzation algorithms\ [1]_.
-
+-   As described above, the tensor LEED implementation in TensErLEED separates the calculation of delta-amplitudes and the structure optimization into two mostly-indepenent stages.
+    As a direct consequence, the optimization can **only** be performed on a pre-defined grid of pertubation vectors (as given by the :ref:`DISPLACEMENTS file<displacements>`).
     Further, to achieve the best possible fit, this grid
     generally makes it necessary to run multiple sets of delta-amplitude
-    calculations and structure optimizatios with varying grid-densities.
+    calculations and structure optimizations with varying grid-densities.
 
 -   The structure search implemented in TensErLEED has the additional limitation that geometrical displacements are limited to one dimension per atom.
     Per search run, atoms can only be displaced along a pre-defined parametrized curve, rather than freely in 3D space.
     To optimize the position of atoms in 3 dimensions, multiple sequential search runs are required.
     See the entry on the :ref:`DISPLACEMENTS file<displacements>` for details and work-arounds (such as looping searches).
+    
+-    The rough R-factor surface, together with its grid-based nature greatly limits the pool of applicable optimzation algorithms.
+    TensErLEED employes the strategy as descirbed by Kottcke and Heinz :cite:p:`kottckeNewApproachAutomated1997`.
+    In each search step (i.e. "generation")...
 
 
 
-
-.. [1] For details on the algorithm used in TensErLEED, see ref. :cite:p:`kottckeNewApproachAutomated1997`.
+.. [1] There are exceptions, in which the same LEED pattern can result. For example, on an fcc(111) surface, a (2:math:`\times`2) reconstruction and a (1:math:`\times`2) with domains would give the same qualitative pattern.
+.. [2] For details on the algorithm used in TensErLEED, see ref. :cite:p:`kottckeNewApproachAutomated1997`.
