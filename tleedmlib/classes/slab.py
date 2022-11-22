@@ -129,6 +129,7 @@ class SymPlane:
         """
         return SymPlane(pos=self.pos + np.dot(self.perp, ucell)/2,
                         dr=self.dir, ucell=ucell, ty=self.type, index2=True,
+                        collapse=collapse)
 
     def distanceFromOrigin(self, abt):
         pointlist = [(0, 0), (1, 0), (0, 1), (1, 1)]
