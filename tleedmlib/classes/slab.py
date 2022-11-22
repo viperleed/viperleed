@@ -137,13 +137,16 @@ class SymPlane:
                                    p[0]*abt[0]+p[1]*abt[1])
                     for p in pointlist])
 
-    def isEquivalent(self, pl2, abt, eps=0.001):
+    def isEquivalent(self, other, abt, eps=0.001):
         """Checks whether two symmetry planes have the same position and
         direction (including duplicates in next unit cell)"""
-        if not np.array_equal(self.par, pl2.par):
+        if not isinstance(other, SymPlane):
+            raise TypeError(f"Cannot compare {type(self).__name__!r} to "
+                            f"{type(other).__name__!r}.")
+        if not np.array_equal(self.par, other.par):
             return False
         complist = [self.pos]
-        fpos = np.dot(np.linalg.inv(np.transpose(abt)), self.pos) % 1.0
+        fpos = np.dot(np.linalg.inv(abt.T), self.pos) % 1.0
         # if we're close to an edge or corner, also check translations
         for i in range(0, 2):
             releps = eps / np.linalg.norm(abt[i])
@@ -155,7 +158,7 @@ class SymPlane:
             complist.append(complist[1]+complist[2]-complist[0])
 
         for p in complist:
-            if dist_from_line(pl2.pos, pl2.pos+pl2.dir, p) < eps:
+            if tl.base.dist_from_line(other.pos, other.pos+other.dir, p) < eps:
                 return True
         return False
 
