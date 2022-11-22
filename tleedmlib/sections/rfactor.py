@@ -21,8 +21,6 @@ from viperleed.tleedmlib.checksums import validate_multiple_files
 from viperleed.tleedmlib.files import iorfactor as tl_io
 from viperleed.tleedmlib.files.iorefcalc import readFdOut
 
-logger = logging.getLogger("tleedm.rfactor")
-
 try:
     from viperleed.tleedmlib.wrapped.rfactor import r_factor_new as rf
 except ImportError:
@@ -32,7 +30,7 @@ else:
     _HAS_NEW_R_FACTOR = True
 
 
-
+logger = logging.getLogger("tleedm.rfactor")
 
 
 def rfactor(sl, rp, index, for_error=False, only_vary=None):                    # TODO: Parameters __doc__
