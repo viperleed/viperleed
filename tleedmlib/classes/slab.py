@@ -20,9 +20,10 @@ from scipy.spatial import KDTree
 
 try:
     import ase
-    has_ase = True
 except ImportError:
-    has_ase = False
+    _HAS_ASE = False
+else:
+    _HAS_ASE = True
 
 from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib.base import (angle, rotation_matrix_order,
@@ -222,8 +223,6 @@ class Slab:
     """
 
     def __init__(self, ase_atoms=None):
-        global has_ase
-
         self.ucell = np.array([])
         self.poscar_scaling = 1.
         self.chemelem = []
@@ -253,11 +252,11 @@ class Slab:
 
         if ase_atoms is None:
             return
-        if not has_ase:
+        if not _HAS_ASE:
             logger.warning("Slab creation from ase.Atoms not supported: "
                            "Module ase not found.")
             return
-        if type(ase_atoms) != ase.Atoms:
+        if not isinstance(ase_atoms, ase.Atoms):
             raise TypeError("Slab object must be created empty or from "
                             "ase.Atoms, found unexpected type "
                             + str(type(ase_atoms)))
