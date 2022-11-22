@@ -943,7 +943,7 @@ class Slab:
         # unit cell from the beginning (i.e., a, b, c = uc)
         uc = self.ucell.T
         releps = tuple(eps / np.linalg.norm(uc[j, :2]) for j in range(0, 2))
-        cart_coords = np.fromiter(at.cartpos for at in self.atlist)
+        cart_coords = np.array([at.cartpos for at in self.atlist])
         frac_coords = np.dot(cart_coords, np.linalg.inv(uc)) % 1.0
         compare_coords = np.dot(frac_coords, uc)  # already collapsed
         compare_sublayers = [
@@ -961,8 +961,10 @@ class Slab:
             if len(addlist) == 2:
                 # corner - add the diagonally opposed one
                 addlist.append(sum(addlist) - compare_coords[i])
-            compare_coords = np.concatenate((compare_coords, addList))
-            compare_sublayers.extend(compare_sublayers[i]*len(addList))
+            if addlist:
+                compare_coords = np.concatenate((compare_coords, addlist))
+                compare_sublayers.extend(
+                    np.tile(compare_sublayers[i], len(addlist)))
         return compare_coords, np.array(compare_sublayers)
 
     def isTranslationSymmetric_2D(self, tv, eps, compare_to=None):
