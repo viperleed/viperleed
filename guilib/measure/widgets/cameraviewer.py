@@ -43,6 +43,7 @@ from viperleed.guilib.widgetslib import screen_fraction, move_to_front
 
 
 _RED_BORDER_WIDTH = 3  # pixels
+_UNIQUE = qtc.Qt.UniqueConnection
 
 # Each entry is ("short_name", default_value, "long name", always_active)
 # Those with an empty long name will not be added as context
@@ -719,6 +720,7 @@ class CameraViewer(qtw.QScrollArea):
         _settings_dlg = self.__children["settings_dialog"]
         _settings_dlg.settings_changed.connect(self.__on_settings_changed)
         _settings_dlg.settings_saved.connect(self.__on_settings_saved)
+        _settings_dlg.finished.connect(self.__restore_roi_visibility)
         self.__settings_roi.roi_changed.connect(self.__on_roi_settings_changed)
         self.roi.roi_changed.connect(self.__on_roi_rubberband_changed)
 
@@ -815,8 +817,7 @@ class CameraViewer(qtw.QScrollArea):
             disconnect_from = self.camera.image_processed
 
         base.safe_disconnect(disconnect_from, self.__show_image)
-        base.safe_connect(connect_to, self.__show_image,
-                          type=qtc.Qt.UniqueConnection)
+        base.safe_connect(connect_to, self.__show_image, type=_UNIQUE)
         self.__glob["intensity_limits"] = self.camera.intensity_limits
         if self.__flags["needs_roi_limits"]:
             self.__flags["needs_roi_limits"] = False
@@ -888,12 +889,20 @@ class CameraViewer(qtw.QScrollArea):
             self.roi.show()
 
     def __on_settings_changed(self):
-        """React to a user press of "Apply" in the settings dialog."""
+        """React to a user press of "Apply"/"Ok" in the settings dialog."""
         _dialog = self.__children["settings_dialog"]
+        self.__restore_roi_visibility()
         was_running = self.camera.is_running
         self.camera.settings = _dialog.settings
         if was_running:
             self.camera.start()
+
+    def __restore_roi_visibility(self):
+        """Hide rubberband if it was hidden when settings_dialog opened."""
+        dlg = self.__children["settings_dialog"]
+        if not dlg.roi_was_visible:
+            self.roi.hide()
+        self.roi_visible = dlg.roi_was_editable
 
     def __on_settings_dialog_open(self):
         """React to a user requesting to view the settings dialog."""
@@ -902,7 +911,21 @@ class CameraViewer(qtw.QScrollArea):
             move_to_front(dlg)
             return
 
+        # Remember the visibility state of the ROI, so
+        # we can set it back when we close the dialog
+        dlg.roi_was_visible = self.roi.isVisible()
+        dlg.roi_was_editable = self.roi_visible
+        if not self.roi.isVisible():
+            # Temporarily disconnecting prevents that changes
+            # to the values in the ROIEditor upon showEvent
+            # trigger a settings_changed that in turn makes a
+            # hidden ROI visible.
+            base.safe_disconnect(self.__settings_roi.roi_changed,
+                                 self.__on_roi_settings_changed)
         dlg.open()
+
+        base.safe_connect(self.__settings_roi.roi_changed,
+                          self.__on_roi_settings_changed, type=_UNIQUE)
 
     def __on_settings_saved(self, saved):
         """Restore original settings in case of unsaved changes."""
