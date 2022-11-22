@@ -11,7 +11,7 @@ The three main segments, following the logic of calculations using the Tensor LE
    given structure and :ref:`the "Tensors"<Tensorszip>` 
 #. :ref:`Delta-amplitudes generation<sec_deltas>`: 
    The delta-amplitudes specify how paramter chenages affect the beam 
-   intensities within the :ref:?`tensor-LEED approximation<tensor_leed>`.
+   intensities within the :ref:`tensor-LEED approximation<tensor_leed>`.
    This calculation is based on the tensors and a 
    :ref:`set of parameter variations specified by the user<DISPLACEMENTS>`, 
    produces :ref:`"Delta files"<Deltaszip>`.
