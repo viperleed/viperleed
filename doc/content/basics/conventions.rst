@@ -21,3 +21,8 @@ Some plots may display picometers (pm), but this will **always** be clearly labe
 Energies are in- and output in units of electron volts (eV).
 Note that parts of TensErLEED and certain phaseshift generation scripts my use units of `Hartree <https://en.wikipedia.org/wiki/Hartree>`__ internally (and in raw outputs).
 ViPErLEED takes care of the conversion automatically.
+
+Case sensitivity
+----------------
+
+Names of :ref:`input files<list_input_files>` are **case sensitive**, but :ref:`parameter<parameters>` keywords are not.
