@@ -957,7 +957,8 @@ class Slab:
         # unit cell from the beginning (i.e., a, b, c = uc)
         uc = self.ucell.T
         releps = tuple(eps / np.linalg.norm(uc[j, :2]) for j in range(0, 2))
-        cart_coords = np.array([at.cartpos for at in self.atlist])
+        cart_coords = np.fromiter(at.cartpos for at in self.atlist,
+                                  dtype=np.dtype((float, 3)))
         frac_coords = np.dot(cart_coords, np.linalg.inv(uc)) % 1.0
         compare_coords = np.dot(frac_coords, uc)  # already collapsed
         compare_sublayers = [
