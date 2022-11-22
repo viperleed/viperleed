@@ -941,13 +941,13 @@ class Slab:
         eps : float
             Error tolerance for positions (cartesian)
         compare_to : tuple (compare_coords, compare_sublayers), or None
-            compare_coords : numpy.array
-                2D array containing cartesian coordiantes of all atoms,
-                including equivalent positions for atoms at the edge of a unit
-                cell
-            compare_sublayers : numpy.array
-                1D array containing the sublayer index for each atom in the
-                same order as compare_coords. For sublayer-wise comparison.
+        compare_coords : numpy.array
+            2D array containing cartesian coordiantes of all atoms,
+            including equivalent positions for atoms at the edge of a unit
+            cell
+        compare_sublayers : numpy.array
+            1D array containing the sublayer index for each atom in the
+            same order as compare_coords. For sublayer-wise comparison.
 
         Returns
         -------
