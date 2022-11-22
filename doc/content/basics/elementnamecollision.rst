@@ -1,7 +1,7 @@
 .. _elementnamecollision:
 
-Element name collisions
-=======================
+Element names
+=============
 
 The way TensErLEED works leads to a distinction in what an "element" is.
 Two (sometimes overlapping) categories exist:
