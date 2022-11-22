@@ -44,11 +44,11 @@ The package consists of:
 
 
     i.  Hardware and software for data acquisition.
-    #.  Software for extracting :math:`I(V)` curves from the experimental data.
+    #.  Software for extracting :math:`I(V)` curves from the experimental data ("movies").
     #.  Software for calculation of :math:`I(V)` curves for a given structure and structure optimization, by minimizing the difference between the calculated and experimental :math:`I(V)` data.
 
 For details please see the ViPErLEED publication series (**TODO**).
-This manual primarily deals with part **1.**.
+This manual primarily deals with part **iii**.
 
 The goal of any :term:`LEED-I(V)` calculation is the calculation of energy-dependent electron-scattering amplitudes and intensities.
 These intensity curves [often referred to as :math:`I(V)` curves or spectra]  are very sensitive to the precise position and vibrational amplitudes of each atom in the surface unit cell.
