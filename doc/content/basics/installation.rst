@@ -24,11 +24,12 @@ Fortran compilers
 The tleedm (TensErLEED manager) package acts as a wrapper and feature extension to the :term:`TensErLEED` package.
 It requires TensErLEED source files to be present and will compile them (with task-specific adjustments) *at run-time*.
 This requires the presence of a suitable :term:`Fortran` 77 & 90 compiler on the system.
-Unlike the original version of TensErLEED by Blum and Heinz :cite:p:`blumFastLEEDIntensity2001a`, all TensErLEED versions supported by ViPErLEED (TensErLEED >= 1.6) also require :term:`BLAS` and :term:`LAPACK` dependencies to be available.
-By default ViPErLEED supports :term:`gfortran` from the GNU Compiler Collection (:term:`gcc`) and the Intel Fortran compiler :term:`ifort`.
+Unlike the original version of TensErLEED by Blum and Heinz :cite:p:`blumFastLEEDIntensity2001a`, all TensErLEED versions supported by ViPErLEED (TensErLEED >= 1.6) also require :term:`BLAS` and :term:`LAPACK` libraries to be available.
+ViPErLEED supports :term:`gfortran` from the GNU Compiler Collection (:term:`gcc`) and the Intel Fortran compiler :term:`ifort` without additional configuration.
+You can use the :ref:`FORTRAN_COMP<fortran_comp>` parameter to use any other Fortran compiler installed on your system.
 ViPErLEED will default to using :term:`ifort` if available.
 Use the parameter :ref:`FORTRAN_COMP<fortran_comp>` to adjust this behavior.
-You can also use the :ref:`FORTRAN_COMP<fortran_comp>` parameter to use any other compiler installed on your system.
+
 
 The :ref:`structure-search section<sec_search>`, which is the computationally most expensive part of ViPErLEED and TensErLEED, supports compilation and execution with :term:`MPI`.
 To use the :term:`MPI` version of TensErLEED, you need to also install an :term:`MPI` implementation and the :term:`MPI` compiler corresponding to your Fortran compiler.
@@ -78,8 +79,10 @@ For ViPErLEED you need the Intel Base Toolkit (``intel-basekit``) and the Intel 
 
 .. note:: The toolkits are multiple GB in size and will take a while to download and install.
 
+The :term:`BLAS` and :term:`LAPACK` libraries are packaged in the Intel Math Kernel Library (MKL), which is part of the Base Toolkit, while an :term:`MPI` implementation is packaged with the HPC Toolkit.
+
 After installation, we still need to configure the system and add the compilers to our path (see also `here <https://www.intel.com/content/www/us/en/develop/documentation/get-started-with-intel-oneapi-hpc-linux/top/before-you-begin.html#before-you-begin>`__).
-First, we need to make sure required build tools (such as Cmake) are present:
+First, we need to make sure the required build tools (such as Cmake) are present:
 
 .. code-block:: console
 
@@ -117,19 +120,19 @@ Windows
 #######
 
 .. warning::
-    To run tleedm and TensErLEED under Windows, we recommend using the :term:`Windows Subsystem for Linux<WSL>` (available starting from Windows 10).
+    To run tleedm and TensErLEED under Windows, we recommend using the :term:`Windows Subsystem for Linux<WSL>` (WSL, available starting from Windows 10).
     Follow the `instructions by Microsoft to install the WSL <https://learn.microsoft.com/en-us/windows/wsl/install>`__.
     With the :term:`WSL` installed, you can follow the same instructions as provided in `the Linux section<ifort_linux>`.
     Running natively on Windows is possible (:ref:`see below<native_windows>`), but experimental and *not recommended*.
 
 To install the Intel oneAPI Toolkits under Windows please follow `the guide provided by Intel <https://www.intel.com/content/www/us/en/develop/documentation/installation-guide-for-intel-oneapi-toolkits-windows/top.html>`__.
-As for Linux, you will need to instal the Intel Base Toolkit and the Intel HPC Toolkit.
+As for Linux, you will need to install the Intel Base Toolkit and the Intel HPC Toolkit.
 
 
 ``gfortran`` and ``mpifort``
 ----------------------------
 
-Below, we provide a simple guide on how to install the GNU Fortran compiler :term:`gfortran`\ [#.], the Open MPI implementation and the :term:`gfortran` MPI wraper :term:`mpifort`.
+Below, we provide a simple guide on how to install the GNU Fortran compiler :term:`gfortran`\ [#.], the Open MPI implementation and the :term:`gfortran` MPI wrapper :term:`mpifort`.
 
 
 Linux
@@ -215,7 +218,7 @@ Windows
 Natively running on (64-bit) Windows
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Here are some notes on which steps are needed to run (tested up to refcalc) natively on Windows (test only from python source), i.e., get a working Fortran compiler with LAPACK/BLAS
+Here are some notes on which steps are needed to run (tested up to refcalc) natively on Windows (test only from python source), i.e., get a working Fortran compiler with LAPACK/BLAS.
 The notes below are for gfortran (gcc), and for the very basic, unoptimized LAPACK/BLAS versions.
 Hence, execution of the code will be rather slow.
 
@@ -283,14 +286,16 @@ You can then test the LAPACK installation with:
    $ g++ lapack_test.cpp -llapack -o lapack_test     # build
    $ ./lapack_test                                   # run
 
-For actually running, set :ref:`FORTRAN_COMP<fortran_comp>` as follows:
+For actually running, set :ref:`FORTRAN_COMP<fortran_comp>` parameter in the :ref:`PARAMETERS file<parameters>` as follows:
 
 **TODO** Michele: is -std=legacy required on native Windows?
 
 ::
 
-   FORTRAN_COMP = 'gfortran -O2 -std=legacy'        # -std=legacy makes it work for Fortran77
-   FORTRAN_COMP post = '-llapack -lblas -lpthread'  # NOTE: order of LAPACK and BLAS is important!
+   # -std=legacy makes it work for Fortran77
+   FORTRAN_COMP = 'gfortran -O2 -std=legacy'
+   # NOTE: order of LAPACK and BLAS is important!
+   FORTRAN_COMP post = '-llapack -lblas -lpthread'
 
 
 To compile the static files described :ref:`below<static_compile>`, go into ``viperleed/tensorleed`` and call:
@@ -308,7 +313,7 @@ To compile the static files described :ref:`below<static_compile>`, go into ``vi
 Compiling static files
 ======================
 
-In addition to the TensErLEED source code, which is compiled *at run-time*, ViPErLEED needs a few auxilary scripts that need compiling before a calculation can be started.
+In addition to the TensErLEED source code, which is compiled *at run-time*, ViPErLEED needs a few auxilary programs that need compiling before a calculation can be started.
 These can be compiled automatically using a provided Makefile.
 
 Beamgen and eeasisss
