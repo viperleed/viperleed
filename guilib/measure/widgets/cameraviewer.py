@@ -46,7 +46,7 @@ _RED_BORDER_WIDTH = 3  # pixels
 
 # Each entry is ("short_name", default_value, "long name", always_active)
 # Those with an empty long name will not be added as context
- # menu entries, and will thus not be editable by the user
+# menu entries, and will thus not be editable by the user
 _DEFAULT_FLAGS = (
     ("roi_visible", True, "Allow setting ROI", False),
     ("show_auto", True, "Show on new frames", False),
@@ -402,6 +402,7 @@ class CameraViewer(qtw.QScrollArea):
                 base.safe_disconnect(camera.frame_ready, self.__show_image)
             camera.stop()
             qtw.qApp.processEvents()
+        self.__children['settings_dialog'].reject()
         super().closeEvent(event)
 
     def keyPressEvent(self, event):  # pylint: disable=invalid-name
