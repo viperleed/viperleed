@@ -1018,7 +1018,7 @@ class Slab:
             tv = np.append(tv, 0.)
         uc = np.copy(self.ucell)
         uc[:, 2] *= -1   # mirror c vector down
-        uct = np.transpose(uc)
+        uct = uc.T
         releps = [eps / np.linalg.norm(uct[j]) for j in range(0, 3)]
         shiftv = tv.reshape(3, 1)
         # unlike in-plane operations, this one cannot be done sublayer-internal
@@ -1027,12 +1027,12 @@ class Slab:
         oricm = np.array(coordlist)  # original cartesian coordinate matrix
         oricm[:, 2] *= -1
         shiftm[2] *= -1
-        oripm = np.dot(np.linalg.inv(uc), oricm.transpose()) % 1.0
         # collapse (relative) coordinates to base unit cell
-        oricm = np.dot(uc, oripm).transpose()
+        oripm = np.dot(np.linalg.inv(uc), oricm.T) % 1.0
         # original cartesian coordinates collapsed to base unit cell
-        tmpcoords = np.copy(oricm).transpose()
+        oricm = np.dot(uc, oripm).T
         # copy of coordinate matrix to be manipulated
+        tmpcoords = np.copy(oricm).T
         # determine which z to check
         if z_range is None:
             min_z = np.min(tmpcoords[2]) - eps
@@ -1045,12 +1045,12 @@ class Slab:
             # discard atoms that moved out of range in z
             tmpcoords = tmpcoords[:, tmpcoords[2] >= min_z]
             tmpcoords = tmpcoords[:, tmpcoords[2] <= max_z]
-        tmpcoords = np.dot(uc, (np.dot(np.linalg.inv(uc), tmpcoords) % 1.0))
         # collapse coordinates to base unit cell
+        tmpcoords = np.dot(uc, (np.dot(np.linalg.inv(uc), tmpcoords) % 1.0))
         # for every point in matrix, check whether is equal:
         element_per_atom = np.array([at.el for at in self.atlist])
         element_per_atom_extended = np.copy(element_per_atom)
-        for (i, p) in enumerate(oripm.transpose()):
+        for (i, p) in enumerate(oripm.T):
             # get extended comparison list for edges/corners:
             addlist = []
             for j in range(0, 3):
