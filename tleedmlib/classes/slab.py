@@ -42,42 +42,68 @@ class InvalidUnitCellError(SlabError):
     """Exception raised when the unit cell of a slab is inappropriate."""
 
 class SymPlane:
-    """Candidate plane for a symmetry operation. 'ty' pre-defines a type
-    (mirror or glide), 'index2' allows the (1,2) and (2,1) directions if True,
-    and collapse moves pos into the (0,0) unit cell if True."""
+    """Candidate plane for a symmetry operation."""
 
     def __init__(self, pos, dr, abt, ty="none", index2=True, collapse=True):
+        """Initialize instance.
+        
+        Parameters
+        ----------
+        pos : np.ndarray
+            Cartesian position of this symmetry plane. Can later be accessed
+            as the .pos attribute. If collapse=True, self.pos contains the
+            collapsed version of pos.
+        dr : np.ndarray                                                                 # TODO: given the use in symmetry.py, this could become fractional
+            In-plane vector identifying this plane, in cartesian coordinates.
+            A unit vector parallel to dr can be accessed via .dir; a version
+            in fractional coordinates is available in .par, instead.
+        abt : np.ndarray
+            2D unit cell of the slab for which this plane is a candidate
+            symmetry plane. Unit vectors are rows, i.e., a, b = abt.                    # TODO: is this correct? Could change this name to "ucell" or similar
+        ty : {'none', 'mirror', 'glide'}, optional
+            Pre-defines a type for this symmetry plane. This property can
+            later be accessed via the .type attribute. Default is 'none'.
+        index2 : bool, optional
+            Allows also (2,1) and (1,2) directions if True. When False,
+            only (1,0), (0,1), (1,1) and (1,-1) directions are considered.
+            Default is True.
+        collapse : bool, optional
+            Moves pos into the (0,0) unit cell if True. Default is True.
+
+        Returns
+        -------
+        None.
+        """
         self.dir = dr/np.linalg.norm(dr)
-        # normalized vector perpendicular to pos = in-plane
         self.type = ty
-        self.par = []
-        self.perp = []
-        perp_dir = np.dot(rotation_matrix(np.pi/2), self.dir)
+        self.pos = pos
         if collapse:  # collapse to (0,0) cell
-            # normal vector points at origin
-            pos = np.dot(pos, perp_dir) * perp_dir
-            # collapse to base unit cell
-            self.pos = np.dot(abt.T, (np.dot(np.linalg.inv(abt.T), pos) % 1.0))
-        else:
-            self.pos = pos
-        optionlist = [(1, 0), (0, 1), (1, 1), (1, -1)]
-        if index2:
+            self.collapse(abt)
+
+        # Identify fractional directions .par and .perp                                 # TODO: this could be done as (i, j) = np.dot(vec, inv(abt))
+        self.par = []                                                                   # and would give general frac directions, not necessarily ints
+        self.perp = []                                                                  # The current implementation can give errors should this identification
+        optionlist = [(1, 0), (0, 1), (1, 1), (1, -1)]                                  # fail as then .par/.perp are '[]' (e.g., get_implied fails). Giving dr
+        if index2:                                                                      # as fractional would solve at least the 'par' part.
             optionlist.extend([(2, 1), (1, 2)])
+
+        perp_dir = np.dot(rotation_matrix(np.pi/2), self.dir)
         for (i, j) in optionlist:
-            if abs((abs(np.dot(self.dir, (i*abt[0]+j*abt[1])))
-                    / (np.linalg.norm(self.dir)
-                    * np.linalg.norm(i*abt[0]+j*abt[1])))-1.0) < 0.001:
+            cart_dir = i * abt[0] + j * abt[1]
+            cart_dir /= np.linalg.norm(cart_dir)
+            if abs(abs(np.dot(self.dir, cart_dir)) - 1.0) < 0.001:
                 self.par = np.array([i, j])
-            if abs((abs(np.dot(perp_dir, (i*abt[0]+j*abt[1])))
-                    / (np.linalg.norm(perp_dir)
-                    * np.linalg.norm(i*abt[0]+j*abt[1])))-1.0) < 0.001:
+            if abs(abs(np.dot(perp_dir, cart_dir)) - 1.0) < 0.001:
                 self.perp = np.array([i, j])
 
     def __str__(self):
-        return (f"SymPlane(pos = {self.pos}, par = {self.par}, "
-                f"type = {self.type})")
+        return (f"SymPlane(pos={self.pos}, par={self.par}, "
+                f"type={self.type})")
 
     def collapse(self, abt):
+        """Collapse self.pos to the (0, 0) unit cell."""
+        # We need only collapse the component of pos perpendicular to the
+        # plane, as the parallel one does not matter, and can be set to 0
         perp_dir = np.dot(rotation_matrix(np.pi/2), self.dir)
         self.pos = np.dot(self.pos, perp_dir) * perp_dir
         self.pos = np.dot(abt.T,
