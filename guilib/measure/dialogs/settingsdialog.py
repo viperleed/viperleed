@@ -48,6 +48,8 @@ from viperleed.guilib.measure.widgets.fieldinfo import FieldInfo
 # "Apply" or "Ok" (but leave "Cancel" enabled). Probably equip
 # widgets with some universally named, validity-checking method.
 
+# TODO: context menu to "reset" each entry separately.
+
 # pylint: disable=too-many-lines
 # We can probably live with 1011 instead of 1000
 
@@ -927,9 +929,11 @@ class SettingsDialog(qtw.QDialog):
             self.__ctrls['advanced'].setChecked(False)
             if self.handled_object:
                 self.update_title()
-            # Update all settings with the current ones
+            # Update all settings with the current ones, and
+            # fix the enabled state of the "Apply" button
             for key in ('applied', 'original'):
                 self.__settings[key].read_dict(self.settings)
+            self.__update_apply_enabled()
         super().showEvent(event)
 
     def update_title(self, title='', settings=None):
@@ -990,7 +994,7 @@ class SettingsDialog(qtw.QDialog):
         buttons.rejected.connect(self.reject)
         apply_btn.clicked.connect(self.__on_apply_pressed)
         adv_btn.toggled.connect(self.__on_show_advanced_toggled)
-        self.handler.settings_changed.connect(self.__on_settings_edited)
+        self.handler.settings_changed.connect(self.__update_apply_enabled)
         self.handler.redraw_needed.connect(self.__update_advanced_btn)
 
         self.__update_advanced_btn()
@@ -1002,11 +1006,6 @@ class SettingsDialog(qtw.QDialog):
         if self.settings != self.__settings['applied']:
             self.settings_changed.emit()
         self.__settings['applied'].read_dict(self.settings)
-
-    def __on_settings_edited(self):
-        """Enable/disable 'Apply' depending on whether anything changed."""
-        settings_changed = self.settings != self.__settings['applied']
-        self.__ctrls['apply'].setEnabled(settings_changed)
 
     @qtc.pyqtSlot(bool)
     def __on_show_advanced_toggled(self, visible):
@@ -1033,3 +1032,8 @@ class SettingsDialog(qtw.QDialog):
         adv_btn = self.__ctrls['advanced']
         adv_btn.setVisible(self.handler.has_advanced_options())
         self.__on_show_advanced_toggled(adv_btn.isChecked())
+
+    def __update_apply_enabled(self):
+        """Enable/disable 'Apply' depending on whether anything changed."""
+        settings_changed = self.settings != self.__settings['applied']
+        self.__ctrls['apply'].setEnabled(settings_changed)
