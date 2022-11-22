@@ -26,7 +26,7 @@ from viperleed.guilib.measure.camera.imageprocess import ImageProcessor
 from viperleed.guilib.measure.dialogs.settingsdialog import SettingsDialog
 from viperleed.guilib.measure.widgets.imageviewer import ImageViewer
 from viperleed.guilib.measure.widgets.roi import RegionOfInterest
-from viperleed.guilib.widgetslib import screen_fraction
+from viperleed.guilib.widgetslib import screen_fraction, move_to_front
 
 
 # TODO: ImageViewer.optimum_size is not updated when screen is changed
@@ -842,7 +842,7 @@ class CameraViewer(qtw.QScrollArea):
             self.__on_snap_image()
             return
         if "properties" in text:
-            self.__children['settings_dialog'].open()
+            self.__on_settings_dialog_open()
             return
         if "apply" in text:
             self.__apply_roi()
@@ -894,6 +894,15 @@ class CameraViewer(qtw.QScrollArea):
         self.camera.settings = _dialog.settings
         if was_running:
             self.camera.start()
+
+    def __on_settings_dialog_open(self):
+        """React to a user requesting to view the settings dialog."""
+        dlg = self.__children['settings_dialog']
+        if dlg.isVisible():
+            move_to_front(dlg)
+            return
+
+        dlg.open()
 
     def __on_settings_saved(self, saved):
         """Restore original settings in case of unsaved changes."""
