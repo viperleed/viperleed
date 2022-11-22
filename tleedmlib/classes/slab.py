@@ -898,23 +898,23 @@ class Slab:
         return compare_coords, np.array(compare_sublayers)
 
     def isTranslationSymmetric_2D(self, tv, eps, compare_to=None):
-        """
-        Evaluates whether the slab is equivalent to itself under a given 2D
-        translation. Slightly faster than isTranslationSymmetric.
+        """Evaluate if the slab is unchanged when traslated by an in-plane tv.
+
+        Slightly faster than isTranslationSymmetric.
 
         Parameters
         ----------
-        tv : numpy.array
+        tv : numpy.ndarray
             2D or 3D translation vector; third component should be (near) zero.
         eps : float
             Error tolerance for positions (cartesian)
         compare_to : tuple, or None, optional
-            when a tuple it should contain two elements:
-                compare_coords : numpy.array
+            When a tuple, it should contain two elements:
+                compare_coords : numpy.ndarray
                     2D array containing cartesian coordiantes of all atoms,
                     including equivalent positions for atoms at the edge of a unit
                     cell
-                compare_sublayers : numpy.array
+                compare_sublayers : numpy.ndarray
                     1D array containing the sublayer index for each atom in the
                     same order as compare_coords. For sublayer-wise comparison.
             If None or not given, compare_to is self.getCompareCoords(eps).
@@ -924,34 +924,44 @@ class Slab:
         -------
         bool
             True if translation symmetric, else False.
+
+        Raises
+        ------
+        ValueError
+            If tv is not a 2- or 3-D vector.
         """
         if len(tv) not in (2, 3):
             raise ValueError("isTranslationSymmetric_2D: not a 2D or 3D "
                              "vector")
-        uc = self.ucell
         if len(tv) == 2:
             tv = np.append(tv, 0.)
-        # create 2D array of cart. coordinates, collapsed to base unit cell
-        cart_coords = np.dot(
-            uc, np.dot(np.linalg.inv(uc), np.array([at.cartpos for at
-                                                    in self.atlist]).T)
-            % 1.0).T
-        shifted_coords = cart_coords.T + np.tile(tv.reshape(3, 1),
-                                                 len(self.atlist))
-        shifted_coords = np.dot(
-            uc, (np.dot(np.linalg.inv(uc), shifted_coords) % 1.0))
+
+        # Create 2D array of shifted cart. coordinates...
+        shifted_coords = np.fromiter(at.cartpos for at in self.atlist)
+        shifted_coords += tv
+
+        # ...and collapsed to base unit cell
+        # At variance with other methods, use the better version of the
+        # unit cell, i.e., the one with a, b, c = uc
+        uc = self.ucell.T
+        frac_coords = shifted_coords.dot(np.linalg.inv(uc)) % 1.0
+        shifted_coords = frac_coords.dot(uc)
+
         if compare_to is None:
             compare_coords, compare_sublayers = self.getCompareCoords(eps)
         else:
             compare_coords, compare_sublayers = compare_to
-        sublayer_per_atom = np.array(
-            [next(i for i, sl in enumerate(self.sublayers) if at in sl.atlist)
-             for at in self.atlist])
+
+        sublayer_per_atom = np.fromiter(
+            next(i for i, sl in enumerate(self.sublayers) if at in sl.atlist)
+            for at in self.atlist
+            )
         for i in range(len(self.sublayers)):  # sublayer-wise comparison
             distances = sps.distance.cdist(
-                shifted_coords.T[sublayer_per_atom == i],
+                shifted_coords[sublayer_per_atom == i],
                 compare_coords[compare_sublayers == i],
-                'euclidean')
+                'euclidean'
+                )
             if any(min(sublist) > eps for sublist in distances):
                 return False
         return True
