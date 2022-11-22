@@ -643,15 +643,10 @@ class CameraViewer(qtw.QScrollArea):
 
     def __apply_roi(self):
         """Set a new ROI in the camera."""
-        old_roi_x, old_roi_y, *_ = self.__settings_roi.original_roi
-        new_roi_x, new_roi_y, roi_w, roi_h = self.roi.image_coordinates
-
         # Give the camera new, updated settings. This is the easier way
         # to go, as it will update all the information in the camera.
         settings = deepcopy(self.camera.settings)
-        settings.set("camera_settings", "roi",
-                     f"({old_roi_x + new_roi_x}, {old_roi_y + new_roi_y}, "
-                     f"{roi_w}, {roi_h})")
+        settings["camera_settings"]["roi"] = str(self.__get_roi_abs_coords())
         was_running = self.camera.is_running
         self.camera.settings = settings
         self.camera.settings.update_file()
@@ -677,24 +672,6 @@ class CameraViewer(qtw.QScrollArea):
         self.setContextMenuPolicy(qtc.Qt.CustomContextMenu)
         self.__compose_context_menu_self()
         self.__compose_context_menu_roi()
-
-    def __update_title(self):
-        """Update the window title with camera information."""
-        img_w, img_h = self.image_size.width(), self.image_size.height()
-        full_w, full_h = self.camera.sensor_size
-        bin_factor = self.camera.binning
-
-        img_size = f"{img_w}x{img_h}"
-        if bin_factor == 1 and (img_w, img_h) != (full_w, full_h):
-            img_size += f" of {full_w}x{full_h}"
-        try:
-            scale = self.windowTitle().split(' - ')[1]
-        except IndexError:
-            scale = ""
-        title = f"{self.camera.name} ({img_size})"
-        if scale:
-            title += f" - {scale}"
-        self.setWindowTitle(title)
 
     def __compose_context_menu_self(self):
         """Set up the context menu for self."""
@@ -779,6 +756,17 @@ class CameraViewer(qtw.QScrollArea):
         height, width = img_array.shape
         return qtg.QImage(img_array, width, height, img_array.strides[0],
                           qtg.QImage.Format_Grayscale16)
+
+    def __get_roi_abs_coords(self):
+        """Return the absolute coordinates of the current roi."""
+        # This method is necessary because the ROI rubber-band
+        # offset is always relative to the ROI currently applied
+        # in the camera. This method returns, instead the ROI
+        # in the sensor's reference. The currently applied ROI
+        # is stored in self.__settings_roi.original_roi.
+        offs_x, offs_y, *_ = self.__settings_roi.original_roi
+        rel_x, rel_y, width, height = self.roi.image_coordinates
+        return rel_x + offs_x, rel_y + offs_y, width, height
 
     def __get_saturation_mask(self, img_array):
         """Return a QRegion saturation mask for image."""
@@ -878,12 +866,7 @@ class CameraViewer(qtw.QScrollArea):
             # Not a user-induced edit but just an update
             return
 
-        # The rubber-band knows only coordinates relative
-        # to the currently applied ROI
-        new_roi = self.roi.image_coordinates
-        offs_x, offs_y, *_ = self.__settings_roi.original_roi
-        new_x, new_y, new_w, new_h = new_roi
-        new_roi = (new_x + offs_x, new_y + offs_y, new_w, new_h)
+        new_roi = self.__get_roi_abs_coords()
         if new_roi != self.__settings_roi.roi:
             self.__settings_roi.roi = new_roi
 
@@ -1006,6 +989,24 @@ class CameraViewer(qtw.QScrollArea):
             stylesheet = (f"{self.__class__.__name__} "
                          f"{{border: {_RED_BORDER_WIDTH}px solid red}}")
         self.setStyleSheet(stylesheet)
+
+    def __update_title(self):
+        """Update the window title with camera information."""
+        img_w, img_h = self.image_size.width(), self.image_size.height()
+        full_w, full_h = self.camera.sensor_size
+        bin_factor = self.camera.binning
+
+        img_size = f"{img_w}x{img_h}"
+        if bin_factor == 1 and (img_w, img_h) != (full_w, full_h):
+            img_size += f" of {full_w}x{full_h}"
+        try:
+            scale = self.windowTitle().split(' - ')[1]
+        except IndexError:
+            scale = ""
+        title = f"{self.camera.name} ({img_size})"
+        if scale:
+            title += f" - {scale}"
+        self.setWindowTitle(title)
 
     def __zoom(self, direction='in'):
         """Make image larger(smaller) by 25%(20%).
