@@ -1048,8 +1048,9 @@ class Slab:
         # collapse coordinates to base unit cell
         tmpcoords = np.dot(uc, (np.dot(np.linalg.inv(uc), tmpcoords) % 1.0))
         # for every point in matrix, check whether is equal:
-        element_per_atom = np.array([at.el for at in self.atlist])
-        element_per_atom_extended = np.copy(element_per_atom)
+        # use list here, convert to np.array later
+        element_per_atom = [at.el for at in self.atlist]
+        element_per_atom_extended = element_per_atom.copy()
         for (i, p) in enumerate(oripm.T):
             # get extended comparison list for edges/corners:
             addlist = []
@@ -1069,9 +1070,10 @@ class Slab:
                                - 2*oricm[i])
             for v in addlist:
                 oricm = np.concatenate((oricm, v.reshape(1, 3)))
-                element_per_atom_extended = np.append(
-                    element_per_atom_extended, element_per_atom[i])
-        element_per_atom = np.array([at.el for at in self.atlist])
+                element_per_atom_extended.append(element_per_atom[i])
+        # need to convert to array here for use as mask
+        element_per_atom = np.array(element_per_atom)
+        element_per_atom_extended = np.array(element_per_atom_extended)
         for el in self.elements:  # element-wise comparison
             distances = sps.distance.cdist(
                 tmpcoords.T[element_per_atom == el],
