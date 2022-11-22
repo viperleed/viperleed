@@ -908,11 +908,12 @@ class Slab:
         return True
 
     def getCompareCoords(self, eps):
-        """
-        Generates a numpy array containing all atom coordinates, plus
-        equivalent positions for atoms at the edge of the unit cell. Also
-        returns a second numpy array containing the sublayer per atom, for
-        filtering the coordinate array.
+        """Return complete coordinate arrays for comparison.
+        
+        The arrays contain (i) all atom coordinates, collapsed to the (0,0)
+        cell, followed by (ii) appropriate replicas for atoms close to edges
+        (and corners) of the unit cell. Also returns a second numpy array
+        containing the sublayer per atom, for filtering the coordinate array.
 
         Parameters
         ----------
@@ -926,34 +927,32 @@ class Slab:
         compare_sublayers : numpy.array
             1D array containing the sublayer index for each atom in the same
             order as compare_coords. For sublayer-wise comparison.
-
         """
-        uc = self.ucell
-        releps = tuple(eps / np.linalg.norm(uc.T[j, :2]) for j in range(0, 2))
-        frac_coords = np.dot(np.linalg.inv(uc),
-                             np.array([at.cartpos
-                                       for at in self.atlist]).T) % 1.0
-        compare_coords = np.dot(uc, frac_coords).T  # already collapsed
-        compare_sublayers = np.array(
-            [next(i for i, sl in enumerate(self.sublayers) if at in sl.atlist)
-             for at in self.atlist])
-        for (i, p) in enumerate(frac_coords.T):
+        # At variance with other methods, let's use the transposed
+        # unit cell from the beginning (i.e., a, b, c = uc)
+        uc = self.ucell.T
+        releps = tuple(eps / np.linalg.norm(uc[j, :2]) for j in range(0, 2))
+        cart_coords = np.fromiter(at.cartpos for at in self.atlist)
+        frac_coords = np.dot(cart_coords, np.linalg.inv(uc)) % 1.0
+        compare_coords = np.dot(frac_coords, uc)  # already collapsed
+        compare_sublayers = [
+            next(i for i, sl in enumerate(self.sublayers) if at in sl.atlist)
+            for at in self.atlist
+        ]
+        for i, p in enumerate(frac_coords):
             # get extended comparison list for edges/corners:
             addlist = []
             for j in range(0, 2):
-                if abs(p[j]) < releps[j]:
-                    addlist.append(compare_coords[i]+uc.T[j])
-                if abs(p[j]-1) < releps[j]:
-                    addlist.append(compare_coords[i]-uc.T[j])
+                if abs(p[j]) < releps[j]:    # "left" edge
+                    addlist.append(compare_coords[i] + uc[j])
+                if abs(p[j]-1) < releps[j]:  # "right" edge
+                    addlist.append(compare_coords[i] - uc[j])
             if len(addlist) == 2:
                 # corner - add the diagonally opposed one
-                addlist.append(addlist[0]+addlist[1]-compare_coords[i])
-            for v in addlist:
-                compare_coords = np.concatenate((compare_coords,
-                                                 v.reshape(1, 3)))
-                compare_sublayers = np.append(compare_sublayers,
-                                              compare_sublayers[i])
-        return compare_coords, compare_sublayers
+                addlist.append(sum(addlist) - compare_coords[i])
+            compare_coords = np.concatenate((compare_coords, addList))
+            compare_sublayers.extend(compare_sublayers[i]*len(addList))
+        return compare_coords, np.array(compare_sublayers)
 
     def isTranslationSymmetric_2D(self, tv, eps, compare_to=None):
         """
