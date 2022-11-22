@@ -885,7 +885,7 @@ class Slab:
         """
         Generates a numpy array containing all atom coordinates, plus
         equivalent positions for atoms at the edge of the unit cell. Also
-        returns a second numpy array containing the element per atom, for
+        returns a second numpy array containing the sublayer per atom, for
         filtering the coordinate array.
 
         Parameters
@@ -940,7 +940,7 @@ class Slab:
             2D or 3D translation vector; third component should be (near) zero.
         eps : float
             Error tolerance for positions (cartesian)
-        compare_to : tuple (compare_coords, compare_elements), or None
+        compare_to : tuple (compare_coords, compare_sublayers), or None
             compare_coords : numpy.array
                 2D array containing cartesian coordiantes of all atoms,
                 including equivalent positions for atoms at the edge of a unit
