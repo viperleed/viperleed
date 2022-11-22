@@ -807,43 +807,41 @@ class Slab:
     def isRotationSymmetric(self, axis, order, eps):
         """Evaluates whether the slab is equivalent to itself when rotated
         around the axis with the given rotational order"""
-        m = rotation_matrix_order(order)
-        ab = self.ucell[:2, :2]
-        abt = ab.T
-        releps = [eps / np.linalg.norm(abt[j]) for j in range(0, 2)]
-        shiftv = axis.reshape(2, 1)
-        for sl in self.sublayers:
-            coordlist = [at.cartpos[0:2] for at in sl.atlist]
-            shiftm = np.tile(shiftv, len(coordlist))
-            # matrix to shift all coordinates by axis
-            oricm = np.array(coordlist)  # original cartesian coordinate matrix
-            oripm = np.dot(np.linalg.inv(ab), oricm.transpose()) % 1.0
-            # collapse (relative) coordinates to base unit cell
-            oricm = np.dot(ab, oripm).transpose()
-            # original cartesian coordinates collapsed to base unit cell
-            tmpcoords = np.copy(oricm).transpose()
-            # copy of coordinate matrix to be rotated
-            tmpcoords -= shiftm
-            tmpcoords = np.dot(m, tmpcoords)
-            tmpcoords += shiftm
-            tmpcoords = np.dot(ab,
-                               (np.dot(np.linalg.inv(ab), tmpcoords) % 1.0))
-            # collapse coordinates to base unit cell
-            # for every point in matrix, check whether is equal:
-            for (i, p) in enumerate(oripm.transpose()):
-                # get extended comparison list for edges/corners:
+        rot_matrix = rotation_matrix_order(order).T
+        ab = self.ucell[:2, :2].T
+        ab_inv = np.linalg.inv(ab)
+        releps = eps / np.linalg.norm(ab, axis=1)
+        shiftv = np.asarray(axis)
+
+        for layer in self.sublayers:
+            # Collapse fractional coordinates before rotation
+            cart_coords = np.fromiter(at.cartpos[:2] for at in layer.atlist,
+                                      dtype=np.dtype((float, 2)))
+            frac_coords = cart_coords.dot(inv_ab) % 1.0   # collapsed
+            cart_coords = frac_coords.dot(ab)
+
+            # Create a rotated copy, shift, rotate, shift back
+            rot_coords = cart_coords - shiftv
+            rot_coords = rot_coords.dot(rot_matrix) + shiftv
+
+            # Collapse again
+            rot_coords = np.dot(rot_coords.dot(inv_ab) % 1.0, ab)
+
+            # Now add extra atoms close to edges/corners for comparing
+            for i, p in enumerate(frac_coords):
                 addlist = []
                 for j in range(0, 2):
-                    if abs(p[j]) < releps[j]:
-                        addlist.append(oricm[i]+abt[j])
-                    if abs(p[j]-1) < releps[j]:
-                        addlist.append(oricm[i]-abt[j])
+                    if abs(p[j]) < releps[j]:    # "left" edge
+                        addlist.append(cart_coords[i] + ab[j])
+                    if abs(p[j]-1) < releps[j]:  # "right" edge
+                        addlist.append(cart_coords[i] - ab[j])
                 if len(addlist) == 2:
                     # coner - add the diagonally opposed one
-                    addlist.append(addlist[0]+addlist[1]-oricm[i])
-                for v in addlist:
-                    oricm = np.concatenate((oricm, v.reshape(1, 2)))
-            distances = sps.distance.cdist(tmpcoords.transpose(), oricm,
+                    addlist.append(sum(addlist) - cart_coords[i])
+                cart_coords = np.concatenate((cart_coords, addlist))
+
+            # Finally compare interatomic distances
+            distances = sps.distance.cdist(rot_coords, cart_coords,
                                            'euclidean')
             for sublist in distances:
                 if min(sublist) > eps:
@@ -875,7 +873,8 @@ class Slab:
         # unit cell from the beginning (i.e., a, b, c = uc)
         uc = self.ucell.T
         releps = tuple(eps / np.linalg.norm(uc[j, :2]) for j in range(0, 2))
-        cart_coords = np.array([at.cartpos for at in self.atlist])
+        cart_coords = np.fromiter(at.cartpos for at in self.atlist,
+                                  dtype=np.dtype((float, 3)))
         frac_coords = np.dot(cart_coords, np.linalg.inv(uc)) % 1.0
         compare_coords = np.dot(frac_coords, uc)  # already collapsed
         compare_sublayers = [
@@ -893,10 +892,8 @@ class Slab:
             if len(addlist) == 2:
                 # corner - add the diagonally opposed one
                 addlist.append(sum(addlist) - compare_coords[i])
-            if addlist:
-                compare_coords = np.concatenate((compare_coords, addlist))
-                compare_sublayers.extend(
-                    np.tile(compare_sublayers[i], len(addlist)))
+            compare_coords = np.concatenate((compare_coords, addList))
+            compare_sublayers.extend(compare_sublayers[i]*len(addList))
         return compare_coords, np.array(compare_sublayers)
 
     def isTranslationSymmetric_2D(self, tv, eps, compare_to=None):
@@ -939,7 +936,8 @@ class Slab:
             tv = np.append(tv, 0.)
 
         # Create 2D array of shifted cart. coordinates...
-        shifted_coords = np.fromiter(at.cartpos for at in self.atlist)
+        shifted_coords = np.fromiter(at.cartpos for at in self.atlist,
+                                     dtype=np.dtype((float, 3)))
         shifted_coords += tv
 
         # ...and collapsed to base unit cell
@@ -956,7 +954,8 @@ class Slab:
 
         sublayer_per_atom = np.fromiter(
             next(i for i, sl in enumerate(self.sublayers) if at in sl.atlist)
-            for at in self.atlist
+            for at in self.atlist,
+            dtype=int
             )
         for i in range(len(self.sublayers)):  # sublayer-wise comparison
             distances = sps.distance.cdist(
