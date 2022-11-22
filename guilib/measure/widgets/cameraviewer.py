@@ -974,6 +974,8 @@ class CameraViewer(qtw.QScrollArea):
                                  str(self.camera.get_roi()))
         self.camera.settings.update_file()
         self.__settings_roi.original_roi = self.camera.roi
+        self.__settings_roi.roi = self.camera.roi
+        self.roi.hide()
         try:
             self.camera.bad_pixels.apply_roi(no_roi=True)
         except RuntimeError:
