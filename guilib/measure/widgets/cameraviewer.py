@@ -915,6 +915,7 @@ class CameraViewer(qtw.QScrollArea):
         # we can set it back when we close the dialog
         dlg.roi_was_visible = self.roi.isVisible()
         dlg.roi_was_editable = self.roi_visible
+        current_roi = ()
         if not self.roi.isVisible():
             # Temporarily disconnecting prevents that changes
             # to the values in the ROIEditor upon showEvent
@@ -922,8 +923,15 @@ class CameraViewer(qtw.QScrollArea):
             # hidden ROI visible.
             base.safe_disconnect(self.__settings_roi.roi_changed,
                                  self.__on_roi_settings_changed)
+        else:
+            # If the rubberband was already visible, keep track of
+            # its current coordinates, as we will use them to update
+            # the ROI editor in the dialog.
+            current_roi = self.__get_roi_abs_coords()
         dlg.open()
 
+        if current_roi:
+            self.__settings_roi.roi = current_roi
         base.safe_connect(self.__settings_roi.roi_changed,
                           self.__on_roi_settings_changed, type=_UNIQUE)
 
