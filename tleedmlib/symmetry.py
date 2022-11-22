@@ -401,27 +401,6 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
             sl.orisymplane = oriplane
 
     if not planegroup:
-        # !!! THIS SHOULD BE OBSOLETE WITH NEW ALGO - TEST!
-        # start by checking special case: in cmm, there are two inequivalent
-        #  2fold axes, one of which would not have been found yet -> shift
-        #  there (potentially), test
-        if toprotsym == 2 and celltype in ["hexagonal", "rhombic"]:
-            shiftslab = copy.deepcopy(ts)
-            for at in shiftslab.atlist:
-                at.cartpos[:2] -= abst[0]/2
-            shiftslab.getFractionalCoordinates()
-            # test diagonal mirror at shifted origin
-            spl = SymPlane(np.array([0, 0]), (abst[0]+abst[1]), abst)
-            if shiftslab.isMirrorSymmetric(spl, eps):
-                planegroup = "cmm"
-                ts = shiftslab
-                # correct origin
-                for at in sl.atlist:
-                    at.cartpos[0:2] -= abst[0]/2
-                sl.ucell_mod.append(('add', -abst[0]/2))
-                sl.getFractionalCoordinates()
-
-    if not planegroup:
         efftype = ""    # effective cell type
         if celltype == "hexagonal":
             if not (toprotsym == 3 or toprotsym == 6):
