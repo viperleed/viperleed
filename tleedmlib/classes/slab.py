@@ -45,7 +45,7 @@ class InvalidUnitCellError(SlabError):
 class SymPlane:
     """Candidate plane for a symmetry operation."""
 
-    def __init__(self, pos, dr, abt, ty="none", index2=True, collapse=True):
+    def __init__(self, pos, dr, ucell, ty="none", index2=True, collapse=True):
         """Initialize instance.
         
         Parameters
@@ -58,9 +58,9 @@ class SymPlane:
             In-plane vector identifying this plane, in cartesian coordinates.
             A unit vector parallel to dr can be accessed via .dir; a version
             in fractional coordinates is available in .par, instead.
-        abt : np.ndarray
+        ucell : np.ndarray
             2D unit cell of the slab for which this plane is a candidate
-            symmetry plane. Unit vectors are rows, i.e., a, b = abt.                    # TODO: is this correct? Could change this name to "ucell" or similar
+            symmetry plane. Unit vectors are rows, i.e., a, b = ucell.
         ty : {'none', 'mirror', 'glide'}, optional
             Pre-defines a type for this symmetry plane. This property can
             later be accessed via the .type attribute. Default is 'none'.
@@ -79,7 +79,7 @@ class SymPlane:
         self.type = ty
         self.pos = pos
         if collapse:  # collapse to (0,0) cell
-            self.collapse(abt)
+            self.collapse(ucell)
 
         # Identify fractional directions .par and .perp                                 # TODO: this could be done as (i, j) = np.dot(vec, inv(abt))
         self.par = []                                                                   # and would give general frac directions, not necessarily ints
@@ -90,7 +90,7 @@ class SymPlane:
 
         perp_dir = np.dot(rotation_matrix(np.pi/2), self.dir)
         for (i, j) in optionlist:
-            cart_dir = i * abt[0] + j * abt[1]
+            cart_dir = i * ucell[0] + j * ucell[1]
             cart_dir /= np.linalg.norm(cart_dir)
             if abs(abs(np.dot(self.dir, cart_dir)) - 1.0) < 0.001:
                 self.par = np.array([i, j])
@@ -101,19 +101,34 @@ class SymPlane:
         return (f"SymPlane(pos={self.pos}, par={self.par}, "
                 f"type={self.type})")
 
-    def collapse(self, abt):
+    def collapse(self, ucell):
         """Collapse self.pos to the (0, 0) unit cell."""
         # We need only collapse the component of pos perpendicular to the
         # plane, as the parallel one does not matter, and can be set to 0
         perp_dir = np.dot(rotation_matrix(np.pi/2), self.dir)
-        self.pos = np.dot(self.pos, perp_dir) * perp_dir
-        self.pos = np.dot(abt.T,
-                          (np.dot(np.linalg.inv(abt.T), self.pos) % 1.0))
+        pos = np.dot(self.pos, perp_dir) * perp_dir
+        self.pos = np.dot(pos.dot(np.linalg.inv(ucell)) % 1.0,
+                          ucell)
 
-    def get_implied(self, abt, collapse=False):
-        """Return the second symmetry plane that is implied by this one."""
-        return SymPlane(pos=self.pos + np.dot(self.perp, abt)/2,
-                        dr=self.dir, abt=abt, ty=self.type, index2=True,
+    def get_implied(self, ucell, collapse=False):
+        """Return the second symmetry plane that is implied by this one.
+
+        Parameters
+        ----------
+        ucell : numpy.ndarray
+            2D unit cell of the slab. Notice that this is slab.ucell.T,
+            i.e., with a, b = ucell.
+        collapse : bool, optional
+            Whether the position of the plane returned should be collapsed
+            to the (0,0) cell. Default is False.
+
+        Returns
+        -------
+        plane : SymPlane
+            The symmetry plane implied by this one.
+        """
+        return SymPlane(pos=self.pos + np.dot(self.perp, ucell)/2,
+                        dr=self.dir, ucell=ucell, ty=self.type, index2=True,
                         collapse=collapse)
 
     def distanceFromOrigin(self, abt):
