@@ -914,7 +914,6 @@ class Slab:
         -------
         bool
             True if translation symmetric, else False.
-
         """
         if len(tv) not in (2, 3):
             raise ValueError("isTranslationSymmetric_2D: not a 2D or 3D "
@@ -969,7 +968,6 @@ class Slab:
         -------
         bool
             True if translation symmetric, else False.
-
         """
         if len(tv) == 2:  # two-dimensional displacement. append zero for z
             tv = np.append(tv, 0.)
