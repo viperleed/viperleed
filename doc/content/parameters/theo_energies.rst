@@ -13,7 +13,7 @@ THEO_ENERGIES can be defined to set the electron energy range on which the refer
 
    THEO_ENERGIES = 20 600 3
    THEO_ENERGIES = 50
-   THEO_ENERGIES = _ _ 5   ! get Efrom and Eto from experimental data, but use step 5 eV
+   THEO_ENERGIES = _ _ 2   ! get Efrom and Eto from experimental data, but use step 2 eV
 
 **Acceptable values:** Three positive floats for explicit definition, OR one float to calculate only one energy, OR use underscores to leave some values but not others at default (e.g. to be defined by experimental beams).
 

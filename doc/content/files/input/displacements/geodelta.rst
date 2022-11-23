@@ -69,7 +69,7 @@ Possible directions for displacements are:
 
    In-plane displacements along the vector 
    :math:`\vec{v}` = :math:`m1 \vec{x} + m2 \vec{y}` where 
-   :math:`\vec{x}` and math:`\vec{y}` are the unit vectors along the 
+   :math:`\vec{x}` and :math:`\vec{y}` are the unit vectors along the 
    cartesian axes.
    The direction vectors will be normalized.
 

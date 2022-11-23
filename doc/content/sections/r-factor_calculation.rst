@@ -25,7 +25,7 @@ For close-packed surfaces, values above 0.2 indicate a problem such as an incorr
 R factors for more open surfaces, such as missing-row-reconstructed Pt(110), can be higher than 0.2.
 
 Note that some smoothing algorithms applied to both, the experimental and the calculated data, such as the smoothing suggested by Pendry in :cite:p:`pendryReliabilityFactorsLEED1980`, apparently lowers the R factor, because it effectively raises the minima of the :math:`I(V)` curves.
-At minima where the intensities approach zeor, :math:`R_P` is especially 
+At minima, where the intensities approach zero, :math:`R_P` is especially 
 sensitive to small differences; artificially increasing the intensity there leads to lower values of :math:`R_P`.
 Some LEED programs apply such a smoothing; in this case lower R factors than those obtained with ViPErLEED will be reported, but this does not indicate a better agreement between calculated and experimental data. 
 The ViPErLEED package uses only smoothing of the experimental :math:`I(V)` curves to suppress noise; the smoothing algorithm employed does not raise the minima. Smoothing of the experimental data should be done by the :math:`I(V)` curve editor in the Spot Tracker package;

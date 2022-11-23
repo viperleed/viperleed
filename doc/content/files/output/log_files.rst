@@ -4,12 +4,12 @@
 Log files
 =========
 
-ViPErLEED produces multiple log files with names like ``$section-$timestamp.log`` that contain various information about the ViPErLEED run.
-``$section`` corresponds to the part of ViPErLEED that produced the log files, while ``$timestamp`` marks the time when the file was *first created* (in the format ``yyMMdd-hhmmss``).
+ViPErLEED produces multiple log files with names like ``<section>-<timestamp>.log`` that contain various information about the ViPErLEED run.
+``<section>`` corresponds to the part of ViPErLEED that produced the log files, while ``<timestamp>`` marks the time when the file was *first created* (in the format ``yyMMdd-hhmmss``).
 
 .. _log_files_tleedm:
 
-``tleedm-$timestamp.log``
+``tleedm-<timestamp>.log``
 =========================
 
 This is the main log file for :term:`tleedm` and contains the most important information for the run, including all raised warnings, error messages and, :ref:`if enabled<log_debug>`, debug information.
@@ -18,20 +18,20 @@ The contents of this file will also be printed to the standard output.
 
 .. _log_files_refcalc:
 
-``refcalc-$timestamp.log``
+``refcalc-<timestamp>.log``
 ==========================
 
 The refcalc log contains the output normally created by the TensErLEED :ref:`reference calculation<ref-calc>`, including information on the convergence of the layer doubling scheme of TensErLEED :cite:p:`blumFastLEEDIntensity2001a`.
 Logs from multiple reference calculations will be collected and their order may not be preserved.
 
-``delta-$timestamp.log``
+``delta-<timestamp>.log``
 ========================
 
 The log of the :ref:`delta-amplitude calculation<sec_deltas>`.
 It generally does not contain much usefull information, except the ``LMAX`` value used for each energy step.
 Logs from multiple delta calculations will be collected and their order may not be preserved.
 
-``search-$timestamp.log``
+``search-<timestamp>.log``
 =========================
 
 The log file for the :ref:`structure search<sec_search>`.

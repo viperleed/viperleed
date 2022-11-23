@@ -5,14 +5,14 @@ Reference calculation
 =====================
 
 
-ViPErLEED, which is built upon the TensErLEED package as a backend, follows
+ViPErLEED, which is based on the TensErLEED package, follows
 the same scheme as TensErLEED for the calculation of diffraction intensities.
 Taking the reference structure (:ref:`POSCAR file<POSCAR>`) and pre-computed 
-scattering phaseshifts (:ref:`PHASESHIFTS file<phaseshifts>`)as input, 
+scattering phaseshifts (:ref:`PHASESHIFTS file<phaseshifts>`) as input, 
 a so called refercence calculation is performed.
 In the code, the refercence calculation is often shorted to ``ref-calc``.
 
-Following the refercence calculation, a local strucutre optimization can be 
+Following the refercence calculation, a local structure optimization can be 
 performed using the :ref:`Tensor LEED approach<tensor_leed>`.
 This is accomplished by running a :ref:`delta amplitude calculation<sec_deltas>`
 and a :ref:`structure search<sec_search>`.

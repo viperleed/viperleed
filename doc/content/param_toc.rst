@@ -2,8 +2,8 @@
 
 .. This file is necessary to create a proper TOC in html and LaTeX.
 
-Available PARAMETERS
-====================
+Parameters in the PARAMETERS file
+=================================
 
 Below you can find a comprehensive list of all available paramters in 
 alphabetical order. For curated lists with short explainations 

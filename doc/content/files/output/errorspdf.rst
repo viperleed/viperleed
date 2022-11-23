@@ -1,7 +1,7 @@
 .. _errorspdf:
 
-The Errors.pdf and Errors.csv files
-===================================
+Errors.pdf and Errors.csv
+=========================
 
 The **Errors.csv** file contains the data resulting from an 
 :ref:`Error calculation<error_calculation>`.

@@ -25,7 +25,7 @@ ViPErLEED.
     where structure and settings may be passed programmatically to 
     tleedm.
 
-1.  Check if a :ref:`domain calculation<domain_calculation>` is being 
+1.  Check whether a :ref:`domain calculation<domain_calculation>` is being 
     performed.
     If so, perform all following steps and calculations separately for
     each domain.
