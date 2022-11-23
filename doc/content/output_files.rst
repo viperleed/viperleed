@@ -52,6 +52,17 @@ the requested calculations. They are stored in the ``OUT`` subfolder.
 
 
 .. toctree::
-   :glob:
 
-   files/output/*
+   files/output/theobeams
+   files/output/fitbeams
+   files/output/rfactorplots
+   files/output/rfactoranalysis
+   files/output/searchreportpdf
+   files/output/searchprogresspdf
+   files/output/errorspdf
+   files/output/fdoptimizationdata
+   files/output/fdoptimizationbeams
+   files/output/log_files
+   files/output/tensorszip
+   files/output/deltaszip
+

@@ -69,12 +69,8 @@ and :ref:`structure search<sec_search>`.
 Delta-Amplitude Calculation
 ===========================
 
-The individual pertubations to the reference structure may be (arbitrary combinations of) 
-geometrical  displacements, changes in the vibrational amplitudes or 
-chemical substitutions.
-As tensor LEED is based on first-order pertubation theory approach,
-we can treat these pertubations on an atom-by-atom basis with the resulting 
-amplitude changes being considered linearly independent.
+The individual pertubations to the reference structure may be (arbitrary combinations of) geometrical  displacements, changes in the vibrational amplitudes or chemical substitutions.
+As tensor LEED is based on first-order pertubation theory approach, we can treat these pertubations and the resulting amplitude changes on an atom-by-atom basis.
 
 For each
 atom :math:`i` and for each requested pertubation :math:`n` to that atom,
@@ -85,8 +81,7 @@ expression
 
     \delta \tilde{A}_{i,n}^{per} = \sum_{l,m;l',m'} T^{ref}_{i;l,m;l',m'} \braket{\vec{r_i},l,m| \delta t_{i,n} |\vec{r_i},l',m'}
 
-are evaluated to calculate linearly independent amplitude changes 
-:math:`\delta \tilde{A}_{i,n}^{per}`.
+are evaluated to calculate amplitude changes :math:`\delta \tilde{A}_{i,n}^{per}`.
 
 The resulting delta-amplitudes are stored in the :ref:`delta files<deltaszip>`
 and will be used in the :ref:`structure search<sec_search>` to calculate
@@ -159,12 +154,23 @@ in the tensor LEED approximation and also LEED :math:`I(V)` in general:
     Per search run, atoms can only be displaced along a pre-defined parametrized curve, rather than freely in 3D space.
     To optimize the position of atoms in 3 dimensions, multiple sequential search runs are required.
     See the entry on the :ref:`DISPLACEMENTS file<displacements>` for details and work-arounds (such as looping searches).
-    
--    The rough R-factor surface, together with its grid-based nature greatly limits the pool of applicable optimzation algorithms.
-    TensErLEED employes the strategy as descirbed by Kottcke and Heinz :cite:p:`kottckeNewApproachAutomated1997`.
-    In each search step (i.e. "generation")...
+
+Optimization Algorithm
+======================
+
+.. _optimization_algorithm:
+
+The rough R-factor surface, together with its grid-based nature greatly limits the pool of applicable optimzation algorithms.
+TensErLEED employes the modified random sampling strategy with a down-step criterion as described by Kottcke and Heinz :cite:p:`kottckeNewApproachAutomated1997`.
+The optimization is performed in parallel for a set of individuals which are keeping track of their individual current best configuration, as defined by the parameter :ref:`SEARCH_POPULATION<searchpop>`.
+The starting points for the optimization individuals is defined by :ref:`SEARCH_START<searchstart>`.
+
+For each search step (called "generation"), a new grid point in the paramter space is selected *randomly*, but based on a probability distribution centered on the current position.
+The R-factor is calculated for the selected paramter combination and **only if** the R-factor for the new configuration is lower then for the previous configuration, the individual updates their stored best configuration (and thus the center of the proability distribution).
+The width of the probability distribution is determined by the current R-factor and the parameters :ref:`SEARCH_CONVERGENCE<search_convergence>`  and :ref:`GAUSSIAN_WIDTH<rmut>`.
+
+Furthermore, as defined by the paramter :ref:`SEARCH_CULL<search_cull>` when ever :ref:`partial convergence<search_convergence>` is reached, a portion of the search population can be dropped and re-initialized to get out of local minima.
 
 
-
-.. [1] There are exceptions, in which the same LEED pattern can result. For example, on an fcc(111) surface, a (2:math:`\times`2) reconstruction and a (1:math:`\times`2) with domains would give the same qualitative pattern.
+.. [1] There are exceptions, in which the same LEED pattern can result. For example, on an fcc(111) surface, a (:math:`2\times2`) reconstruction and a (:math:`1\times2`) with domains would give the same qualitative pattern.
 .. [2] For details on the algorithm used in TensErLEED, see ref. :cite:p:`kottckeNewApproachAutomated1997`.

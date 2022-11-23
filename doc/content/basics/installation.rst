@@ -132,7 +132,7 @@ As for Linux, you will need to install the Intel Base Toolkit and the Intel HPC 
 ``gfortran`` and ``mpifort``
 ----------------------------
 
-Below, we provide a simple guide on how to install the GNU Fortran compiler :term:`gfortran`\ [#.], the Open MPI implementation and the :term:`gfortran` MPI wrapper :term:`mpifort`.
+Below, we provide a simple guide on how to install the GNU Fortran compiler :term:`gfortran`\ [#]_, the Open MPI implementation and the :term:`gfortran` MPI wrapper :term:`mpifort`.
 
 
 Linux
@@ -235,7 +235,7 @@ Hence, execution of the code will be rather slow.
 
         $ pacman -S mingw-w64-x86_64-toolchain
 
--  Add the ``<path_to_mingw_installation>/mingw64/bin`` path to your ``%PATH%`` environment variable (this way, calling gfortran from shell will find the one just installed with no need to explicitly passing the whole path).
+-  Add the ``<path_to_mingw_installation>/mingw64/bin`` path to your ``%PATH%`` environment variable (this way, calling gfortran from shell will find the one just installed with no need to explicitly passing the whole path). **TODO - Michele:** how is this done on Windows?
 
 -  Install dev tools, cmake and git  with
 
