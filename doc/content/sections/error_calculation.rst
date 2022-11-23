@@ -39,6 +39,7 @@ variations into separate delta files to reduce computational cost.
 The results of the error calculation will be output into the files :ref:`Errors.pdf and Errors.csv<errorspdf>`.
 
 .. note::
+
     -  If you find that the R factor is very insensitive to the displacement 
        of a given atom (much less sensitivity than for other atoms with a 
        similar depth and similar scattering properties), 
@@ -46,7 +47,8 @@ The results of the error calculation will be output into the files :ref:`Errors.
        its position is **far** from reality.
        (In the *z* direction, the R factor can be already insensitive to 
        the position for deviations >0.1 Å from the true position! 
-       **TODO - Michael ** is this value ok?
+       **TODO - Michael** is this value ok?
+
     -  Hydrogen is a very weak scatterer; the R factor depends only weakly on its position.
     -  If a site can be occupied by different chemical elements, the site 
        occupation (i.e., the element concentrations) and vibration amplitude 
@@ -55,4 +57,4 @@ The results of the error calculation will be output into the files :ref:`Errors.
        these parameters is not a good indication for the error of that parameter.
 
 
-**TODO - Florian **: Are there any cases where this is not possible? (e.g., mixed atoms with different displacements)
+**TODO - Florian** : Are there any cases where this is not possible? (e.g., mixed atoms with different displacements)

@@ -1,4 +1,4 @@
-.. job_script:
+.. _job_script:
 
 The job script
 ==============

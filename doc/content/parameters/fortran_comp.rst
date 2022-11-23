@@ -6,9 +6,9 @@ FORTRAN_COMP
 FORTRAN_COMP defines the fortran compile statement that will be used to compile the non-precompiled parts of the TensErLEED program.
 Statements that go *after* the file name can be added with the ``post`` flag.
 
-The :ref:`structure search<sec_search>`` can use mpirun for parallelization.
+The :ref:`structure search<sec_search>` can use mpirun for parallelization.
 This is optional, but highly recommended.
-If you use :term:`MPI`` you require an MPI compiler.
+If you use :term:`MPI` you require an MPI compiler.
 If ``mpiifort`` or ``mpifort`` are present, they will be used automatically.
 Optimization can be customized with the ``mpi`` flag.
 If ``mpiifort``/``mpifort`` or mpirun are not found on the system, the search will be compiled with the standard FORTRAN_COMP compiler and executed *without* parallelization.
@@ -47,7 +47,7 @@ Or, if ``mpiifort`` is not present, but mpifort is:
 
    ::
 
-   FORTRAN_COMP mpi = 'mpifort -Ofast -no-pie
+      FORTRAN_COMP mpi = 'mpifort -Ofast -no-pie'
 
    This is necessary, because type-checks were made stricter in GCC 10, making ``-fallow-argument-mismatch`` mandatory to comile unaltered TensErLEED.
    However, earlier versions of GCC and gfortran may not recognize the flag.

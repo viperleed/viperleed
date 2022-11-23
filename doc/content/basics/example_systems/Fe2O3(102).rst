@@ -1,7 +1,7 @@
 .. _example_Fe2O3:
 
 Hematite (012)-(1×1)
-==================
+====================
 
 **Note FK:** In 3-digit notation I would use (012) to denote our surface. This is (01-12) in 4 digits, equivalent to (1-102), 
 which we mostly use these days. (102), as was previously written here, would be (10-12), equivalent to (-1102), which is NOT 

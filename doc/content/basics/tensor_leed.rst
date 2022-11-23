@@ -132,7 +132,7 @@ in the tensor LEED approximation and also LEED :math:`I(V)` in general:
 -   The parameter space grows quickly for larger unit cells.
     Luckily, many symmetries inherent to the surface structure can be exploited to eliminate redundent parameters.
     For example, geometric displacements of symmetry-linked atoms must always happen in a concerted fashion.
-    If that were not the case, the symmetry would be broken and usually\ [.#] a different LEED pattern would result.
+    If that were not the case, the symmetry would be broken and usually\ [1]_ a different LEED pattern would result.
 
     To make use for these symmetries and the resulting reduced parameter space, it is necessary to know and enforce the surface slab symmetry.
     While manually finding out the surface slab symmetry is generally an easy task, enforcement is not.
@@ -173,4 +173,3 @@ Furthermore, as defined by the paramter :ref:`SEARCH_CULL<search_cull>` when eve
 
 
 .. [1] There are exceptions, in which the same LEED pattern can result. For example, on an fcc(111) surface, a (:math:`2\times2`) reconstruction and a (:math:`1\times2`) with domains would give the same qualitative pattern.
-.. [2] For details on the algorithm used in TensErLEED, see ref. :cite:p:`kottckeNewApproachAutomated1997`.
