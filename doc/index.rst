@@ -23,10 +23,9 @@
    \AddEverypageHook{
         \settowidth{\chapterNameLength}{\leftmark}%
         \begin{textblock}{1}(0,0)%first argument {1} is number of blocks horiz
-        \,\ $\cdot$ \ \hyperlink{link_contents}{$\rightarrow$Inhalt}%
-        \,\ \ \hyperlink{link_index}{$\rightarrow$Index}%
-        \,\ \ \ \Acrobatmenu{GoBack}{$\leftarrow$zur\"uck}%
-        \,\ \Acrobatmenu{GoForward}{vor$\rightarrow$}%
+        \,\ \hyperlink{link_content}{$\rightarrow$Contents}%
+        \,\ \ \ \Acrobatmenu{GoBack}{$\leftarrow$Back}%
+        \,\ \Acrobatmenu{GoForward}{Forward$\rightarrow$}%
         \end{textblock}%
     }%end AddEverypageHook
 
@@ -70,8 +69,7 @@ For computational details please have a look at the ViPErLEED paper (**TODO**) a
 
 .. raw:: latex
 
-   \hypertarget{link_inhaltsverzeichnis}{}
-   \hypertarget{link_index}{}
+   \hypertarget{link_content}{}
 
 .. toctree:: 
 
