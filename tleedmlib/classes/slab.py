@@ -901,9 +901,8 @@ class Slab:
 
         for layer in self.sublayers:
             # Collapse fractional coordinates before rotation
-            cart_coords = np.fromiter(at.cartpos[:2] for at in layer.atlist,
-                                      dtype=np.dtype((float, 2)))
-            frac_coords = cart_coords.dot(inv_ab) % 1.0   # collapsed
+            cart_coords = np.array([at.cartpos[:2] for at in layer.atlist])
+            frac_coords = cart_coords.dot(ab_inv) % 1.0   # collapsed
             cart_coords = frac_coords.dot(ab)
 
             # Create a rotated copy, shift, rotate, shift back
@@ -911,7 +910,7 @@ class Slab:
             rot_coords = rot_coords.dot(rot_matrix) + shiftv
 
             # Collapse again
-            rot_coords = np.dot(rot_coords.dot(inv_ab) % 1.0, ab)
+            rot_coords = np.dot(rot_coords.dot(ab_inv) % 1.0, ab)
 
             # Now add extra atoms close to edges/corners for comparing
             for i, p in enumerate(frac_coords):
@@ -936,7 +935,7 @@ class Slab:
 
     def getCompareCoords(self, eps):
         """Return complete coordinate arrays for comparison.
-        
+
         The arrays contain (i) all atom coordinates, collapsed to the (0,0)
         cell, followed by (ii) appropriate replicas for atoms close to edges
         (and corners) of the unit cell. Also returns a second numpy array
@@ -959,8 +958,7 @@ class Slab:
         # unit cell from the beginning (i.e., a, b, c = uc)
         uc = self.ucell.T
         releps = tuple(eps / np.linalg.norm(uc[j, :2]) for j in range(0, 2))
-        cart_coords = np.fromiter(at.cartpos for at in self.atlist,
-                                  dtype=np.dtype((float, 3)))
+        cart_coords = np.array([at.cartpos for at in self.atlist])
         frac_coords = np.dot(cart_coords, np.linalg.inv(uc)) % 1.0
         compare_coords = np.dot(frac_coords, uc)  # already collapsed
         compare_sublayers = [
@@ -978,8 +976,9 @@ class Slab:
             if len(addlist) == 2:
                 # corner - add the diagonally opposed one
                 addlist.append(sum(addlist) - compare_coords[i])
-            compare_coords = np.concatenate((compare_coords, addList))
-            compare_sublayers.extend(compare_sublayers[i]*len(addList))
+            if addlist:
+                compare_coords = np.concatenate((compare_coords, addlist))
+                compare_sublayers.extend([compare_sublayers[i]]*len(addlist))
         return compare_coords, np.array(compare_sublayers)
 
     def isTranslationSymmetric_2D(self, tv, eps, compare_to=None):
@@ -997,8 +996,8 @@ class Slab:
             When a tuple, it should contain two elements:
                 compare_coords : numpy.ndarray
                     2D array containing cartesian coordiantes of all atoms,
-                    including equivalent positions for atoms at the edge of a unit
-                    cell
+                    including equivalent positions for atoms at the edge of a
+                    unit cell
                 compare_sublayers : numpy.ndarray
                     1D array containing the sublayer index for each atom in the
                     same order as compare_coords. For sublayer-wise comparison.
@@ -1022,8 +1021,7 @@ class Slab:
             tv = np.append(tv, 0.)
 
         # Create 2D array of shifted cart. coordinates...
-        shifted_coords = np.fromiter(at.cartpos for at in self.atlist,
-                                     dtype=np.dtype((float, 3)))
+        shifted_coords = np.array([at.cartpos for at in self.atlist])
         shifted_coords += tv
 
         # ...and collapsed to base unit cell
@@ -1039,8 +1037,8 @@ class Slab:
             compare_coords, compare_sublayers = compare_to
 
         sublayer_per_atom = np.fromiter(
-            next(i for i, sl in enumerate(self.sublayers) if at in sl.atlist)
-            for at in self.atlist,
+            (next(i for i, sl in enumerate(self.sublayers) if at in sl.atlist)
+             for at in self.atlist),
             dtype=int
             )
         for i in range(len(self.sublayers)):  # sublayer-wise comparison
