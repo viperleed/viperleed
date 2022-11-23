@@ -20,14 +20,15 @@ Required input files are the same as for running delta calculations and a search
 i.e. the structural input files, :ref:`experimental beams<EXPBEAMS>`, 
 a set of :ref:`Tensors<Tensorszip>` from a reference calculation, and a 
 :ref:`DISPLACEMENTS file<DISPLACEMENTS>` defining what parameters should be varied.
-Note that defining multiple blocks in the :ref:`DISPLACEMENTS file<DISPLACEMENTS>`, 
+Note that defining multiple search sections in the :ref:`DISPLACEMENTS file<DISPLACEMENTS>`, 
 as is possible for the search, is not allowed here:
-Instead, only the first block of the :ref:`DISPLACEMENTS file<DISPLACEMENTS>` 
+Instead, only the first search section of the :ref:`DISPLACEMENTS file<DISPLACEMENTS>` 
 will be read (or the last, if the error calculation is run following a search).
 Defining geometrical, vibrational and occupation variations all in the same 
 :ref:`DISPLACEMENTS file<DISPLACEMENTS>` is allowed, but the different 
 variations will be split up, so the result is the same as executing 
 multiple error calculations.
+This means, you cannot have error calculations for multiple geometrical displacement directions (e.g. :math:`x` *and* :math:`z`) at the same time since this would require multiple consecutive search sections in the DISPLACEMENTS file.
 
 The error calculation does *not* require a set of :ref:`Delta files<Deltaszip>`, 
 since the normal delta calculation routines mix geometrical and vibrational 
