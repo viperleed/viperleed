@@ -52,7 +52,7 @@ This manual primarily deals with part **iii**.
 The goal of any :term:`LEED-I(V)` calculation is the calculation of energy-dependent electron-scattering amplitudes and intensities.
 These intensity curves [often referred to as :math:`I(V)` curves or spectra]  are very sensitive to the precise position and vibrational amplitudes of each atom in the surface unit cell.
 For more details consult works that cover the basics of :term:`LEED` and :term:`LEED-I(V)`, e.g.
-Chapter 4 in :cite:t:`fausterSurfacePhysicsFundamentals2020` or the overview by :cite:t:`heinzElectronBasedMethods2013`.
+Chapter 4 in :cite:t:`fausterSurfacePhysicsFundamentals2020,fausterOberflachenphysikGrundlagenUnd2013` or the overview by :cite:t:`heinzElectronBasedMethods2013`.
 In ViPErLEED, these calculations are performed by the TensErLEED manager :term:`tleedm`,
 a Python package that is based on, and as a comprehensive feature extension to :term:`TensErLEED`.
 

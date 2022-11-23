@@ -70,7 +70,7 @@ If you are running using a pre-packaged version of tleedm, you can start the cal
 .. tip:: 
     As a ViPErLEED calculation can take a long time, it is recommended to start the calculation using `nohup <https://en.wikipedia.org/wiki/Nohup>`__ or in a `tmux <https://github.com/tmux/tmux/wiki>`__ session. This way, the calculation will not be aborted if the user is logged out (or the connection of an ``ssh`` session breaks).
 
-If you are running ViPErLEED on an HPC system with a workload scheduler such as `slurm <https://slurm.schedmd.com/documentation.html>`__, make sure to load the required compilers, :term:`MPI` implementations and Python packages in the submission-script.
+If you are running ViPErLEED on an HPC system with a workload scheduler such as `slurm <https://slurm.schedmd.com/documentation.html>`__, make sure to load (system-dependent, e.g. ``module load mpiifort``) the required compilers, :term:`MPI` implementations and Python packages in the submission-script.
 
 **TODO** job submission script example?
 
