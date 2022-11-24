@@ -900,9 +900,15 @@ class CameraViewer(qtw.QScrollArea):
     def __restore_roi_visibility(self):
         """Hide rubberband if it was hidden when settings_dialog opened."""
         dlg = self.__children["settings_dialog"]
+        try:
+            self.roi_visible = dlg.roi_was_editable
+        except AttributeError:
+            # Dialog was never opened. No point
+            # doing anything about the ROI
+            return
+
         if not dlg.roi_was_visible:
             self.roi.hide()
-        self.roi_visible = dlg.roi_was_editable
 
     def __on_settings_dialog_open(self):
         """React to a user requesting to view the settings dialog."""
