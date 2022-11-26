@@ -84,7 +84,6 @@ class TestCaseInitializationAgFileChecks(TestInitializationAg):
                 self.assertIn(file, self.files_after_run)
 
 
-
 class AgRefCalc(TestInitializationAg):
     @classmethod
     def setUpClass(cls):
@@ -101,7 +100,58 @@ class AgRefCalc(TestInitializationAg):
         print(self.files_after_run)
         assert 'THEOBEAMS.csv' in self.files_after_run
 
+# POSCAR and symmetry tests
+class TestPOSCAR(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls, filename):
+        # import reading and wrting POSCARS
+        from tleedmlib.files.poscar import readPOSCAR, writePOSCAR
 
+        file_path = Path(__file__).parent / "fixtures" / "POSCARs" / filename
+        cls.slab = readPOSCAR(str(file_path))
+
+    def test_read_in_atoms(self):
+        assert len(self.slab.atlist) > 0
+
+    def test_n_atom_correct(self):
+        assert len(self.slab.atlist) == self.expected_n_atoms
+
+class TestPOSCARSymmetry(TestPOSCAR):
+    @classmethod
+    def setUpClass(cls, filename):
+        super().setUpClass(filename)
+
+        import tleedmlib as tl
+        from tleedmlib.symmetry import findSymmetry, findBulkSymmetry
+        # create dummy Rparams object
+        cls.rp = tl.Rparams()
+        cls.slab.fullUpdate(cls.rp)
+        cls.pg = findSymmetry(cls.slab, cls.rp, output=False)
+
+    def test_returned_pg_is_slab_pg(self):
+        assert self.pg == self.slab.foundplanegroup
+
+    def test_pg_found(self):
+        assert self.pg is not 'unknown'
+    
+    def test_pg_correct(self):
+        self.assertEqual(self.pg, self.expected_pg,
+                         f"POSCAR file {self.filename}: "
+                         f"expected planegroup {self.expected_pg}, found {self.pg}.")
+
+class read_Ag100(TestPOSCARSymmetry):
+    @classmethod
+    def setUpClass(cls):
+        cls.filename = "POSCAR_Ag(100)"
+        cls.expected_n_atoms = 6
+        cls.expected_pg = 'p4m'
+        super().setUpClass(cls.filename)
+
+    def test_all_atoms_are_Ag(self):
+        atoms = self.slab.atlist
+        atom_elems = [atom.el for atom in atoms]
+        atom_is_Ag = [el == 'Ag' for el in atom_elems]
+        assert all(atom_is_Ag)
 
 if __name__ == '__main__':
     unittest.main()
