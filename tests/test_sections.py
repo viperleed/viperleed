@@ -116,6 +116,7 @@ class TestPOSCAR(unittest.TestCase):
     def test_n_atom_correct(self):
         assert len(self.slab.atlist) == self.expected_n_atoms
 
+# for tests with Symmetry recognition
 class TestPOSCARSymmetry(TestPOSCAR):
     @classmethod
     def setUpClass(cls, filename):
@@ -128,12 +129,9 @@ class TestPOSCARSymmetry(TestPOSCAR):
         cls.slab.fullUpdate(cls.rp)
         cls.pg = findSymmetry(cls.slab, cls.rp, output=False)
 
-    def test_returned_pg_is_slab_pg(self):
-        assert self.pg == self.slab.foundplanegroup
-
     def test_pg_found(self):
         assert self.pg is not 'unknown'
-    
+
     def test_pg_correct(self):
         self.assertEqual(self.pg, self.expected_pg,
                          f"POSCAR file {self.filename}: "
@@ -152,6 +150,39 @@ class read_Ag100(TestPOSCARSymmetry):
         atom_elems = [atom.el for atom in atoms]
         atom_is_Ag = [el == 'Ag' for el in atom_elems]
         assert all(atom_is_Ag)
+
+class read_STO_4x1(TestPOSCARSymmetry):
+    @classmethod
+    def setUpClass(cls):
+        cls.filename = "POSCAR_STO(100)-4x1"
+        cls.expected_n_atoms = 136
+        cls.expected_pg = 'pm'
+        super().setUpClass(cls.filename)
+
+# try huge unit cell
+class read_TiO2(TestPOSCARSymmetry):
+    @classmethod
+    def setUpClass(cls):
+        cls.filename = "POSCAR_TiO2"
+        cls.expected_n_atoms = 540
+        cls.expected_pg = 'pmm'
+        super().setUpClass(cls.filename)
+
+class read_diamond(TestPOSCARSymmetry):
+    @classmethod
+    def setUpClass(cls):
+        cls.filename = "POSCAR_diamond"
+        cls.expected_n_atoms = 96
+        cls.expected_pg = 'pm'
+        super().setUpClass(cls.filename)
+
+class read_graphene(TestPOSCARSymmetry):
+    @classmethod
+    def setUpClass(cls):
+        cls.filename = "POSCAR_graphene"
+        cls.expected_n_atoms = 36
+        cls.expected_pg = 'pmm'
+        super().setUpClass(cls.filename)
 
 if __name__ == '__main__':
     unittest.main()
