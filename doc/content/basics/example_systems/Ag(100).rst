@@ -33,7 +33,7 @@ Afterwards, we perform a :ref:`delta-amplitudes<sec_deltas>` calculation and :re
 Initialization Run and Phaseshift generation
 ============================================
 
-To start off, we place the files :ref:`EXPBEAMS.csv<expbeams>`, :ref:`POSCAR<poscar>`, and :ref:`PHASESHIFTS<phaseshifts>` in our source directory.
+To start off, we place the files :ref:`EXPBEAMS.csv<expbeams>` and :ref:`POSCAR<poscar>` in our source directory.
 We then create a :ref:`PARAMETERS file<parameters>` which tells ViPErLEED what to do:
 
 .. literalinclude :: /_static/example_systems/Ag(100)/PARAMETERS
@@ -46,8 +46,7 @@ GLOBAL PARAMETERS
 
 PARAMETERS FOR INTERPRETING POSCAR
    We then tell ViPErLEED how to interpret the structure given in the :ref:`POSCAR file<poscar>`.
-   Using :ref:`N_BULK_LAYERS<blay>` and :ref:`BULK_REPEAT<bulk_repeat>`, we specify the bulk material below the surface.
-   See the pages of those parameters for more details.
+   Using :ref:`BULK_LIKE_BELOW` parameter, we specify that below 0.45 (unit cell fraction along :math:`\vec{c}`) the given structure is bulk-like.
 
    With the :ref:`SITE_DEF<sitedef>` command, we further define that the first atom in the POSCAR file (here the topmost atom) should be treated as a distinct species.
    See the page on the :ref:`SITE_DEF<sitedef>` parameter for details on how this works, and see also the notes on :ref:`avoiding element name collisions<elementnamecollision>`.
