@@ -17,7 +17,17 @@ ViPErLEED supports Pendry' R factor :math:`R_P` :cite:p:`pendryReliabilityFactor
 .. note::
     Using :math:`R_P` is the **default setting** and highly encouraged since tests have shown that it leads to better results than :math:`R_2` :cite:p:`spornAccuracyQuantitativeLEED1998`.
 
-The Pendry R factor :math:`R_P` can have values between 0 and 2.
+The Pendry R factor :math:`R_P` can have values between 0 and 2 and is defined as follows:
+
+.. math:: 
+    R_{\mathrm{P}} = \frac{\sum_g\int (Y_\mathrm{theo} - Y_\text{exp} )^2 dE }{\sum_g\int (Y_\mathrm{theo}^2 + Y_\text{exp}^2) dE}
+
+The R-factor can be calculated for all beams :math:`g` thogether or individually.
+:math:`Y(E)` is the Pendry Y-function that contains the beam intensities :math:`I(E)`, the derivative :math:`I'(E)=\frac{dI{E}}{dE}`, and the imaginary part of the inner potential :math:`V_{0\text{i}}` (see parameter :ref:`V0_imag`).
+
+.. math:: 
+    Y(E) = \frac{I(E)/I'(E)}{[I(E)/I'(E)]^2 + V_{0\text{i}}^2}
+
 It becomes 0 in the case of perfect agreement between curves.
 For uncorrelated data, :math:`R_P` = 1, while values larger than 1 indicate anti-correlation.
 The best values of :math:`R_P` obtained by the Erlangen group are below 0.05. **TODO: cite**
