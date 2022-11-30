@@ -6,7 +6,7 @@
 
 == Search x
     = GEO_DELTA
-        Ir L(1-4) x = -0.20 0.20 0.01
+        Ir L(1-4) xy[1 0] = -0.20 0.20 0.01
 
 == Search u
     = VIB_DELTA

@@ -1,4 +1,4 @@
-.. _example_Ir_O:
+.. _example_Ir(100)-O:
 
 =========================
 Example System: Ir(100)-O
@@ -9,7 +9,8 @@ The structure and analysis is based on the paper by **TODO** and the experimenta
 
 We will begin by running a reference calculation and a rough structure-optimization.
 Following this, we move to a finer search grid and run a :ref:`full-dynamic optimization <fdoptimization>` of the inner potential :math:`V_{0\text{i}}`.
-Finally, once we achive a satisfactory R-factor, we will use the ViPErLEED :ref:`error calculation<error_calculation>` to estimate...
+Finally, once we achive a satisfactory R-factor, we will use the ViPErLEED :ref:`error calculation<error_calculation>` to estimate how much small changes of atomic positions affect the R-factor.
+You can download the input files to follow along :download:`here</_static/example_systems/Ir(100)-O/input_files.zip>`.
 
 .. tip:: 
    If you are new to ViPErLEED, check out :ref:`this<example_ag_100>` tutorial first, which explains the setup in more detail.
@@ -19,7 +20,25 @@ Introduction
 
 We start from experimental LEED-:math:`I(V)` curves which are saved in the file :ref:`EXPBEAMS.csv<expbeams>`.
 As reference structure, we use a :ref:`POSCAR file<poscar>`, containing a hand-made Ir(100) surface, which we hand made from a bulk structure with an additional adsorbed Oxygen atom placed on top.
+See below for a visualization (using :term:`VESTA`) of the structure.
+In this visualization, we also drew a plane through the unit cell orthognal to :math:`c` (at unit cell fraction 0.35).
+We will use the :ref:`BULK_LIKE_BELOW` paramter to declare everything below this cut-off "bulk-like."
 
+.. list-table::
+    :align: center
+    :width: 100%
+
+    * - .. figure:: /_static/example_systems/Ir(100)-O/figures/view_a.png
+
+            POSCAR rendered in :term:`VESTA` view along :math:`a`.
+
+      - .. figure:: /_static/example_systems/Ir(100)-O/figures/view_b.png
+
+            POSCAR rendered in :term:`VESTA` view along :math:`b` (slightly off-axis).
+
+      - .. figure:: /_static/example_systems/Ir(100)-O/figures/view_c.png
+
+            POSCAR rendered in :term:`VESTA` view along :math:`c`.
 
 PARAMETERS and rough DISPLACEMENTS
 ==================================
@@ -31,7 +50,7 @@ We start by setting up a rudimentary :ref:`PARAMETERS file<parameters>`, very si
    :caption: PARAMETERS
 
 GLOBAL PARAMETERS
-    At the top of the file, we specify some general settings, such as the energy range to be used and our initial guess for the imaginary part of the inner potential :math:`V_{0\text{i}}`
+    At the top of the file, we specify some general settings, such as the energy range to be used and our initial guess for the imaginary part of the inner potential :math:`V_{0\text{i}}`.
     We will run a :ref:`reference calculation<ref-calc>`, :ref:`delta-amplitude<sec_deltas>`, and a :ref:`structure search<sec_search>` back-to-back, so we specify :ref:`RUN = 1-3<run>`.
 
     To reduce computation time for this example, we also limit the maximum angular momentum qunatum number to be used in the calculations by TensErLEED with the :ref:`LMAX<lmax>` parameter.
@@ -70,24 +89,123 @@ During the first initialization ViPErLEED will generate :ref:`IVBEAMS<ivbeams>` 
     You will notice that the first time we run a new system, ViPErLEED stops execution after the initialization.
     This is on purpose, and is supposed to give the user a chace to double-check the recognized symmetry and annotated POSCAR.
 
+    You will need to **restart the run manually** after making these checks.
 
-Tensor LEED Error and fine DISPLACEMENTS
+When run is finished (takes ~ TODO), we will see in the log file that the R-factor has decreased quite a bit.
+The first reference-calculation gave a values  :math:`\approx 0.55`, but it has dropped to around :math:`\approx 0.21` over the search - very promising!
+We can get a better idea of how the converge went by taking a look at the file ``Search-progress.pdf`` in the ``SUPP`` directory.
+
+.. figure:: /_static/example_systems/Ir(100)-O/figures/progress_1_page_1.pdf
+   :width: 70%
+   :align: center
+
+   Upper half of page 1 for ``Search-progress.pdf``.
+
+The upper half of the first page shows a plot of the decreasing R-factor during the various stages of the search.
+We clearly see that both geometric optimizations made quick progress in terms of convergence - as should be expected when starting from an un-relaxed surface slab such as here.
+The other pages of the file give us some insight into how each atom moved during the structure optimization.
+
+.. figure:: /_static/example_systems/Ir(100)-O/figures/progress_1_page_2.pdf
+   :width: 70%
+   :align: center
+
+   Page 2-4 of ``Search-progress.pdf`` (whitespace cropped).
+
+Interestingly, we see that the (:math:`z`) position of the Oxygen adsorbate has changed a good amount.
+Further, we see that the vibrational amplitude of the Oxygen atom as gone down, while the amplitude for Iridum has gone up.
+
+.. important::
+    We want to accept the optimized positions as the new starting configuration, so we need to replace our old :ref:`POSCAR<poscar>` and :ref:`VIBROCC<viboccin>` files with the optimized ones.
+    This can be done automatically by calling the :ref:`bookkeeper utility<bookkeeper>` with the ``--cont`` flag:
+
+    .. code-block:: console
+
+        $ python3 bookkeeper.py --cont #[or ./bookkeeper --cont]
+
+Fine DISPLACEMENTS and Tensor LEED Error
 ========================================
 
-When this first run is finished (takes ~ TODO), we will see in the log file and 
+The rough optimization has already significantly brought down the R-factor.
+We should now continue with a more fine-grained search grid.
+For this, we use a similar :ref:`DISPLACEMENTS file<displacements>`, but with much smaller range and step size (see below).
+We now re-run with :ref:`RUN = 1-3<run>` because we need to perform a fresh reference-calculation for the new starting positions.
 
-pages of search-report!!
+.. literalinclude :: /_static/example_systems/Ir(100)-O/DISPLACEMENTS_fine
+   :language: console
+   :caption: DISPLACEMENTS
 
-Optimization of inner potential
-===============================
+When looking at the log file after the reference-calculation, we further notice something important:
+The R-factor of the reference-calculation (:math:`\approx 0.18`) *is different* from the one we obtained from the superposition calculation at the end of the previous run (:math:`\approx 0.21`).
+This comes from the **error of the tensor leed approximation** used for the structure-optimization!
+Fortunately – in this case – the real R-factor (as obtained from the reference-calculation) is lower.
+However, this is not always the case.
+You should **never** rely on the R-factor produced by the superposition as a final result, but rather run a final reference-calculation at the end of your analysis.
 
+Full-dynamic Optimization
+=========================
+
+After the finer search run finishes, we see that the R-factor has again dropped quite a bit.
+The R-factor is now below 0.1, which already incicates good agreement, but we can get better yet.
+
+Remember that in the :ref:`PARAMETERS file<parameters>` above, we had to put in an initial guess for the imaginary part of the inner potential :math:`V_{0\text{i}}`.
+We would now like to also optimize this global parameter – however it is not accessible in :ref:`tensor_leed`, which only can treat pertubations on an atom-by-atom basis.
+Instead, we can use the :ref:`full-dynamic optimization<fdoptimization>` to find an optimal value for :math:`V_{0\text{i}}`.
+
+During the :ref:`full-dynamic optimization<fdoptimization>` multiple reference-calculations will be run while the chosen global parameter is varied.
+ViPErLEED will then try to determine an optimal value using a parabola fit.
+We select :math:`V_{0\text{i}}` for optimization by adding the following line to PARAMETERS:
 
 .. code-block:: console
 
     OPTIMIZE V0i = step 0.5
 
-set :ref:`RUN = 5<run>`.
+We then chose to run the :ref:`full-dynamic optimization<fdoptimization>` by setting the paramter :ref:`RUN = 6<run>` and restarting.
+Once finished, the log file will let us know of the optimized value for the chosen parameter.
+ViPErLEED also produces a file called ``FD_Optimization.pdf`` in the ``OUT`` directory which contains a visulization of the R-factors calculated for the various values of the parameter and fit parabola.
 
+.. figure:: /_static/example_systems/Ir(100)-O/figures/FD_Optimization.pdf
+   :width: 60%
+   :align: center
+
+   ``FD_Optimization.pdf``.
+
+.. note:: 
+    ViPErLEED will also automatically add the new, optimzed value to the :ref:`PARAMETERS file<parameters>` and comment out the line containing the previous value.
+
+Following the :math:`V_{0\text{i}}` optimization we can also run a final structure-optimization, since the new value for :math:`V_{0\text{i}}` may have slightly affected the optimal positions.
+Using a (very fine) :math:`0.002` Å grid (``DISPLACEMENTS_very_fine`` in the provided example files) we manage to get a final R-factor of around :math:`\approx 0.088`.
 
 Error calculation
-===============================
+=================
+
+Now that we have found a good structure fit, we can run a ViPErLEED :ref:`error calculation<error_calculation>` to estimate, how sensitve the R-factor is to small changes of specific parameters.
+As input for the error calculation, we need a :ref:`DISPLACEMENTS file<displacements>` containing the desired range and steps.
+The format of the file is the same as used for the delta-amplitudes calculation and structure search.
+
+.. literalinclude :: /_static/example_systems/Ir(100)-O/DISPLACEMENTS_errors
+   :language: console
+   :caption: DISPLACEMENTS
+
+
+Using this DISPLACEMENTS file, we run the error calculation by selecting the segment :ref:`RUN = 5<run>`.
+The :ref:`result <errorspdf>` result will again be saved in the ``OUT`` directory.
+ViPErLEED generates a plot of the Error curves in ``Errors.pdf`` and stores the raw data in ``Errors.csv``.
+:ref:`Errors.pdf<errorspdf>` shows that displacements of surface atoms even by a few pm drastically increase the R-factor.
+Here, atom 1 is the Oxygen adsorbate and atoms 2 and 3 are the topmost Iridum species.
+
+.. figure:: /_static/example_systems/Ir(100)-O/figures/errors_geo.pdf
+   :width: 50%
+   :align: center
+
+   Part of ``Errors.pdf`` showing the effects of geometric displacements.
+
+Similarly, changes in the vibrational amplitude of the surface atoms also strongly affect the R-factor:
+
+.. figure:: /_static/example_systems/Ir(100)-O/figures/errors_vib.pdf
+   :width: 50%
+   :align: center
+
+   Part of ``Errors.pdf`` showing the effects of changes in vibrational amplitude.
+
+In general error-plots for geometric displacement tend to show a parabolic profile close to the minimum.
+Error plots for vibrational amplitude tend to be more symmetric, as these amplitudes factor into the calculation differntly (Debye-Waller-factor).
