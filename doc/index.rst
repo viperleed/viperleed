@@ -49,7 +49,6 @@ ViPErLEED documentation
 =======================
 
 
-
 Welcome to the manual for :term:`ViPErLEED` and the :term:`Python` package :term:`tleedm`.
 See the :ref:`Getting Started page<getting_started>`.
 

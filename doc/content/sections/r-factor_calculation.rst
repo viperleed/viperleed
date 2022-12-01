@@ -30,7 +30,7 @@ The R-factor can be calculated for all beams :math:`g` thogether or individually
 
 It becomes 0 in the case of perfect agreement between curves.
 For uncorrelated data, :math:`R_P` = 1, while values larger than 1 indicate anti-correlation.
-The best values of :math:`R_P` obtained by the Erlangen group are below 0.05. **TODO: cite**
+The best values of :math:`R_P` obtained by the Erlangen group are below 0.05. **TODO: Lutz cite**
 For close-packed surfaces, values above 0.2 indicate a problem such as an incorrect structure model.
 R factors for more open surfaces, such as missing-row-reconstructed Pt(110), can be higher than 0.2.
 
