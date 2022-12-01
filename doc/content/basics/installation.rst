@@ -219,7 +219,7 @@ Natively running on (64-bit) Windows
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Here are some notes on which steps are needed to run (tested up to refcalc) natively on Windows (test only from python source), i.e., get a working Fortran compiler with LAPACK/BLAS.
-The notes below are for gfortran (gcc), and for the very basic, unoptimized LAPACK/BLAS versions.
+The notes below are for gfortran (gcc), and for the very basic, un-optimized LAPACK/BLAS versions.
 Hence, execution of the code will be rather slow.
 
 -  Install `MSys2 <https://www.msys2.org/>`__, which then installs MinGW, then open the MSys2 shell.
@@ -251,7 +251,7 @@ Hence, execution of the code will be rather slow.
 
         $ git clone https://github.com/msys2/MINGW-packages.git
 
-   This is the 'basic', unoptimized version.
+   This is the 'basic', un-optimized version.
    There are ways to also build better versions (see `here <https://icl.cs.utk.edu/lapack-for-windows/lapack/>`__).
 -  Move to LAPACK directory with 
    

@@ -13,7 +13,7 @@ beforehand and create the :ref:`tensor files<tensorszip>` which are stored.
 In the delta calculation, these :ref:`tensor files<tensorszip>`, i.e. the
 tensor quantities :math:`T^{ref}_{i;l,m;l',m'}` (see :ref:`tensor leed<tensor_leed>`),
 which only depend on the refercence structure, are combined with the requested 
-pertubations (see file :ref:`DISPLACEMENTS<displacements>` for details)
+perturbations (see file :ref:`DISPLACEMENTS<displacements>` for details)
 to calculate amplitude changes.
 
 Delta Calculation in ViPErLEED

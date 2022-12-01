@@ -5,7 +5,7 @@
 Parameters in the PARAMETERS file
 =================================
 
-Below you can find a comprehensive list of all available paramters in 
+Below you can find a comprehensive list of all available parameters in 
 alphabetical order. For curated lists with short explainations 
 take a look at:
 

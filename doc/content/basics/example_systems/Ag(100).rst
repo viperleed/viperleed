@@ -93,7 +93,7 @@ Reference Calculation and R-factor
 
 In this simple case, we don't actually need any further settings to run the :ref:`reference calculation<ref-calc>`. We can just start the calculation again, after setting :ref:`RUN = 1<run>` to select the :ref:`reference calculation<ref-calc>` section.-
 
-Note, that the initialization will still be automatically excuted at the start of every ViPErLEED run.
+Note, that the initialization will still be automatically exceuted at the start of every ViPErLEED run.
 Similarly, if an :ref:`EXPBEAMS.csv files<expbeams>` is provided as is the case here, the :ref:`R-factor calculation<r-factor_calculation>` will be automatically calculated and reported after each reference calculation.
 
 Once the reference calculation finishes (only takes about 1 minute with the chosen settings) we find a result for the R-factor at the very end of the :ref:`log file<log_files_tleedm>`:
@@ -188,4 +188,4 @@ In this case we could run an :ref:`error calculation<error_calculation>`, which 
 Alternatively, we could turn to a :ref:`full-dynamic optimization<fdoptimization>` to also tackle parameters that are not accessible under the tensor LEED approximation such as :math:`V_{0i}`, the unit cell dimensions, or the electron beam incidence angle.
 
 
-.. [#] The data was provided courtesy of Lutz Hammer. For further details see  **TODO**
+.. [#] The data was provided courtesy of Lutz Hammer. For further details see **TODO Lutz**

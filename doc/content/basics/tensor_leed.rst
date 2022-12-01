@@ -6,7 +6,7 @@ The Tensor LEED approach
 
 Here, we provide a very rudimentary introduction to the tensor LEED
 approach employed by TensErLEED and consequently also ViPErLEED.
-Please note, that this is not, and does not aim to be a comprehensive or rigourous 
+Please note, that this is not, and does not aim to be a comprehensive or rigorous 
 introduction to the topic.
 The descriptions below are only intended to provide a quick overview of 
 the method and serve as explanation and motivation for the various sections of 
@@ -14,7 +14,7 @@ a LEED :math:`I(V)` calculation in ViPErLEED.
 
 For an in-depth description of all parts of the tensor LEED approach, we refer to the 
 papers by Rous and Pendry (see Refs. :cite:p:`rousTensorLEEDTechnique1986,rousTheoryTensorLEED1989`)
-and the explaination of how to approach is implemented in TensErLEED in 
+and the explanation of how to approach is implemented in TensErLEED in 
 the software's original publication (see Ref. :cite:p:`blumFastLEEDIntensity2001a`).
 
 Reference Calculation
@@ -27,18 +27,18 @@ structure is calculated.
 In principle, this calculation only yields the scattering amplitudes
 :math:`A_{out}^{ref}` (and intensities) for the requested reference structure.
 However, as shown by Rous and Pendry :cite:p:`rousTensorLEEDTechnique1986`, 
-using a first-order pertubation theory approach, it is possible to obtain
-accurate diffraction amplitudes for small deviations from this refercence structure.
+using a first-order perturbation theory approach, it is possible to obtain
+accurate diffraction amplitudes for small deviations from this reference structure.
 These deviations may be geometrical (altered atom positions), changes to 
 the vibrational amplitude or chemical substitutions.
 
 Each atom :math:`i` is assigned
 an atomic :math:`t`-matrix, :math:`t_i` based on phaseshifts and positions within the unit cell.
 The perturbed structure is consequently characterized by altered atomic 
-:math:`t`-matricies :math:`\tilde{t_i} = t_i + \delta \tilde{t_i}`.
+:math:`t`-matrices :math:`\tilde{t_i} = t_i + \delta \tilde{t_i}`.
 
 In this case, the diffraction amplitudes for a perturbed structure can be written 
-as the refercence amplitudes plus a sum of delta-amplitudes for the 
+as the reference amplitudes plus a sum of delta-amplitudes for the 
 altered atoms (index :math:`i`):
 
 .. math:: 
@@ -51,16 +51,16 @@ These delta-amplitudes can be expressed as
 
     \delta \tilde{A}_{i}^{per} = \sum_{l,m;l',m'} T^{ref}_{i;l,m;l',m'} \braket{\vec{r_i},l,m| \delta t_i |\vec{r_i},l',m'}
 
-using the perturbed atomic :math:`t`-matricies :math:`\delta t_i` and the
+using the perturbed atomic :math:`t`-matrices :math:`\delta t_i` and the
 tensor quantities :math:`T^{ref}_{i;l,m;l',m'}`. The sum runs over angular 
 momentum and magnetic quantum numbers :math:`l` and :math:`m`.
-For a more rigourous derivation, refer to the original work by Rous and Pendry 
+For a more rigorous derivation, refer to the original work by Rous and Pendry 
 :cite:p:`rousTensorLEEDTechnique1986` and the TensErLEED paper by Blum and 
 Heinz :cite:p:`blumFastLEEDIntensity2001a`.
 
 The quantities :math:`T^{ref}_{i;l,m;l',m'}` only depend on the reference structure
 and are commonly just referred to as tensors.
-Importantly, the tensors can be calculated in the refercence calculation, 
+Importantly, the tensors can be calculated in the reference calculation, 
 and saved in the :ref:`tensor files<tensorszip>`. 
 They are the starting point for the subsequent :ref:`delta amplitude calculation<sec_deltas>`
 and :ref:`structure search<sec_search>`.
@@ -69,11 +69,11 @@ and :ref:`structure search<sec_search>`.
 Delta-Amplitude Calculation
 ===========================
 
-The individual pertubations to the reference structure may be (arbitrary combinations of) geometrical  displacements, changes in the vibrational amplitudes or chemical substitutions.
-As tensor LEED is based on first-order pertubation theory approach, we can treat these pertubations and the resulting amplitude changes on an atom-by-atom basis.
+The individual perturbations to the reference structure may be (arbitrary combinations of) geometrical  displacements, changes in the vibrational amplitudes or chemical substitutions.
+As tensor LEED is based on first-order perturbation theory approach, we can treat these perturbations and the resulting amplitude changes on an atom-by-atom basis.
 
 For each
-atom :math:`i` and for each requested pertubation :math:`n` to that atom,
+atom :math:`i` and for each requested perturbation :math:`n` to that atom,
 first the perturbed :math:`t`-matrix :math:`\tilde{t_i} = t_i + \delta \tilde{t_i}` and then the 
 expression
 
@@ -89,7 +89,7 @@ the intensities and subsequently the :ref:`R-factor<r-factor_calculation>`
 for each structure candidate. :cite:p:`blumFastLEEDIntensity2001a`
 
 .. note:: 
-    Depending on the size of the unit cell and the requested pertubations,
+    Depending on the size of the unit cell and the requested perturbations,
     the parameter space (and the :ref:`delta files<deltaszip>`) may become
     very big.
 
@@ -98,7 +98,7 @@ for each structure candidate. :cite:p:`blumFastLEEDIntensity2001a`
 Structure Search
 ================
 
-Once the amplitude changes for all required pertubations have been obtained,
+Once the amplitude changes for all required perturbations have been obtained,
 the final diffraction amplitudes can be calculated using a simple combination.
 Essentially, for any perturbed structure, we compute the amplitudes by 
 simply summing up amplitude changes (deltas) for all affected atoms.
@@ -120,17 +120,17 @@ That being said, there remain some fundamental caveats to the structure optimiza
 in the tensor LEED approximation and also LEED :math:`I(V)` in general:
 
 -   Since the tensor LEED method is a perturbative approach, it only works reliably for
-    *small* pertubations.
-    What constitutes a *small* pertubation is naturally system-dependent, but 
+    *small* perturbations.
+    What constitutes a *small* perturbation is naturally system-dependent, but 
     generally, the limit lies in the range of 200 to 300 pm at best :cite:`rousTensorLEEDTechnique1986`.
 
-    To extend the range of the structural search, as work-around, it is possible to run a new refercence calculation and delta-amplitudes calculation when the structure optimization trajectory approaches this limit.
+    To extend the range of the structural search, as work-around, it is possible to run a new reference calculation and delta-amplitudes calculation when the structure optimization trajectory approaches this limit.
     You can use the the :ref:`RUN parameter<run>`
     to execute multiple reference calculations, delta-amplitude calculations,
     and structure searches in series.
 
 -   The parameter space grows quickly for larger unit cells.
-    Luckily, many symmetries inherent to the surface structure can be exploited to eliminate redundent parameters.
+    Luckily, many symmetries inherent to the surface structure can be exploited to eliminate redundant parameters.
     For example, geometric displacements of symmetry-linked atoms must always happen in a concerted fashion.
     If that were not the case, the symmetry would be broken and usually\ [1]_ a different LEED pattern would result.
 
@@ -145,7 +145,7 @@ in the tensor LEED approximation and also LEED :math:`I(V)` in general:
     a consequence of how the various R-factors are designed.
 
 -   As described above, the tensor LEED implementation in TensErLEED separates the calculation of delta-amplitudes and the structure optimization into two mostly-indepenent stages.
-    As a direct consequence, the optimization can **only** be performed on a pre-defined grid of pertubation vectors (as given by the :ref:`DISPLACEMENTS file<displacements>`).
+    As a direct consequence, the optimization can **only** be performed on a pre-defined grid of perturbation vectors (as given by the :ref:`DISPLACEMENTS file<displacements>`).
     Further, to achieve the best possible fit, this grid
     generally makes it necessary to run multiple sets of delta-amplitude
     calculations and structure optimizations with varying grid-densities.
@@ -165,11 +165,11 @@ TensErLEED employes the modified random sampling strategy with a down-step crite
 The optimization is performed in parallel for a set of individuals which are keeping track of their individual current best configuration, as defined by the parameter :ref:`SEARCH_POPULATION<searchpop>`.
 The starting points for the optimization individuals is defined by :ref:`SEARCH_START<searchstart>`.
 
-For each search step (called "generation"), a new grid point in the paramter space is selected *randomly*, but based on a probability distribution centered on the current position.
-The R-factor is calculated for the selected paramter combination and **only if** the R-factor for the new configuration is lower then for the previous configuration, the individual updates their stored best configuration (and thus the center of the proability distribution).
+For each search step (called "generation"), a new grid point in the parameter space is selected *randomly*, but based on a probability distribution centered on the current position.
+The R-factor is calculated for the selected parameter combination and **only if** the R-factor for the new configuration is lower then for the previous configuration, the individual updates their stored best configuration (and thus the center of the probability distribution).
 The width of the probability distribution is determined by the current R-factor and the parameters :ref:`SEARCH_CONVERGENCE<search_convergence>`  and :ref:`GAUSSIAN_WIDTH<rmut>`.
 
-Furthermore, as defined by the paramter :ref:`SEARCH_CULL<search_cull>` when ever :ref:`partial convergence<search_convergence>` is reached, a portion of the search population can be dropped and re-initialized to get out of local minima.
+Furthermore, as defined by the parameter :ref:`SEARCH_CULL<search_cull>` when ever :ref:`partial convergence<search_convergence>` is reached, a portion of the search population can be dropped and re-initialized to get out of local minima.
 
 
 .. [1] There are exceptions, in which the same LEED pattern can result. For example, on an fcc(111) surface, a (:math:`2\times2`) reconstruction and a (:math:`1\times2`) with domains would give the same qualitative pattern.

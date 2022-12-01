@@ -5,11 +5,11 @@ Example System: Ir(100)-O
 =========================
 
 In this tutorial, we go through a ViPErLEED structure analysis for an Ir(100) surface with adsorbed oxygen, creating a (:math:`2\times1`) reconstruction.
-The structure and analysis is based on the paper by **TODO** and the experimental data was provided courtesy of Lutz Hammer .
+The structure and analysis is based on the paper by **TODO Lutz** and the experimental data was provided courtesy of Lutz Hammer .
 
 We will begin by running a reference calculation and a rough structure-optimization.
 Following this, we move to a finer search grid and run a :ref:`full-dynamic optimization <fdoptimization>` of the inner potential :math:`V_{0\text{i}}`.
-Finally, once we achive a satisfactory R-factor, we will use the ViPErLEED :ref:`error calculation<error_calculation>` to estimate how much small changes of atomic positions affect the R-factor.
+Finally, once we achieve a satisfactory R-factor, we will use the ViPErLEED :ref:`error calculation<error_calculation>` to estimate how much small changes of atomic positions affect the R-factor.
 You can download the input files to follow along :download:`here</_static/example_systems/Ir(100)-O/input_files.zip>`.
 
 .. tip:: 
@@ -21,8 +21,8 @@ Introduction
 We start from experimental LEED-:math:`I(V)` curves which are saved in the file :ref:`EXPBEAMS.csv<expbeams>`.
 As reference structure, we use a :ref:`POSCAR file<poscar>`, containing a hand-made Ir(100) surface, which we hand made from a bulk structure with an additional adsorbed Oxygen atom placed on top.
 See below for a visualization (using :term:`VESTA`) of the structure.
-In this visualization, we also drew a plane through the unit cell orthognal to :math:`c` (at unit cell fraction 0.35).
-We will use the :ref:`BULK_LIKE_BELOW` paramter to declare everything below this cut-off "bulk-like."
+In this visualization, we also drew a plane through the unit cell orthogonal to :math:`c` (at unit cell fraction 0.35).
+We will use the :ref:`BULK_LIKE_BELOW` parameter to declare everything below this cut-off "bulk-like."
 
 .. list-table::
     :align: center
@@ -53,13 +53,13 @@ GLOBAL PARAMETERS
     At the top of the file, we specify some general settings, such as the energy range to be used and our initial guess for the imaginary part of the inner potential :math:`V_{0\text{i}}`.
     We will run a :ref:`reference calculation<ref-calc>`, :ref:`delta-amplitude<sec_deltas>`, and a :ref:`structure search<sec_search>` back-to-back, so we specify :ref:`RUN = 1-3<run>`.
 
-    To reduce computation time for this example, we also limit the maximum angular momentum qunatum number to be used in the calculations by TensErLEED with the :ref:`LMAX<lmax>` parameter.
+    To reduce computation time for this example, we also limit the maximum angular momentum quantum number to be used in the calculations by TensErLEED with the :ref:`LMAX<lmax>` parameter.
 
 PARAMETERS FOR INTERPRETING THE POSCAR
-    As mentioned above, we let ViPErLEED find the bulk-repeat unit by intself. 
+    As mentioned above, we let ViPErLEED find the bulk-repeat unit by itself. 
     For this, we set the :ref:`BULK_LIKE_BELOW` parameter at the height where we drew the plane previously.
 
-    Using the :ref:`SITE_DEF<sitedef>` parameter, we specify that the topmost Iridum atom should be treated sperately.
+    Using the :ref:`SITE_DEF<sitedef>` parameter, we specify that the topmost Iridium atom should be treated separately.
     For completeness, we also specify the site type ``O_ads`` for the adsorbed oxygen atom.
     However, since there is only one Oxygen atom in the structure, this will not change the behaviour and we could also skip that line.
 
@@ -87,7 +87,7 @@ During the first initialization ViPErLEED will generate :ref:`IVBEAMS<ivbeams>` 
 
 .. note:: 
     You will notice that the first time we run a new system, ViPErLEED stops execution after the initialization.
-    This is on purpose, and is supposed to give the user a chace to double-check the recognized symmetry and annotated POSCAR.
+    This is on purpose, and is supposed to give the user a chance to double-check the recognized symmetry and annotated POSCAR.
 
     You will need to **restart the run manually** after making these checks.
 
@@ -109,10 +109,10 @@ The other pages of the file give us some insight into how each atom moved during
    :width: 70%
    :align: center
 
-   Page 2-4 of ``Search-progress.pdf`` (whitespace cropped).
+   Page 2-4 of ``Search-progress.pdf`` (white space cropped).
 
 Interestingly, we see that the (:math:`z`) position of the Oxygen adsorbate has changed a good amount.
-Further, we see that the vibrational amplitude of the Oxygen atom as gone down, while the amplitude for Iridum has gone up.
+Further, we see that the vibrational amplitude of the Oxygen atom as gone down, while the amplitude for Iridium has gone up.
 
 .. important::
     We want to accept the optimized positions as the new starting configuration, so we need to replace our old :ref:`POSCAR<poscar>` and :ref:`VIBROCC<viboccin>` files with the optimized ones.
@@ -145,10 +145,10 @@ Full-dynamic Optimization
 =========================
 
 After the finer search run finishes, we see that the R-factor has again dropped quite a bit.
-The R-factor is now below 0.1, which already incicates good agreement, but we can get better yet.
+The R-factor is now below 0.1, which already indicates good agreement, but we can get better yet.
 
 Remember that in the :ref:`PARAMETERS file<parameters>` above, we had to put in an initial guess for the imaginary part of the inner potential :math:`V_{0\text{i}}`.
-We would now like to also optimize this global parameter – however it is not accessible in :ref:`tensor_leed`, which only can treat pertubations on an atom-by-atom basis.
+We would now like to also optimize this global parameter – however it is not accessible in :ref:`tensor_leed`, which only can treat perturbations on an atom-by-atom basis.
 Instead, we can use the :ref:`full-dynamic optimization<fdoptimization>` to find an optimal value for :math:`V_{0\text{i}}`.
 
 During the :ref:`full-dynamic optimization<fdoptimization>` multiple reference-calculations will be run while the chosen global parameter is varied.
@@ -159,9 +159,9 @@ We select :math:`V_{0\text{i}}` for optimization by adding the following line to
 
     OPTIMIZE V0i = step 0.5
 
-We then chose to run the :ref:`full-dynamic optimization<fdoptimization>` by setting the paramter :ref:`RUN = 6<run>` and restarting.
+We then chose to run the :ref:`full-dynamic optimization<fdoptimization>` by setting the parameter :ref:`RUN = 6<run>` and restarting.
 Once finished, the log file will let us know of the optimized value for the chosen parameter.
-ViPErLEED also produces a file called ``FD_Optimization.pdf`` in the ``OUT`` directory which contains a visulization of the R-factors calculated for the various values of the parameter and fit parabola.
+ViPErLEED also produces a file called ``FD_Optimization.pdf`` in the ``OUT`` directory which contains a visualization of the R-factors calculated for the various values of the parameter and fit parabola.
 
 .. figure:: /_static/example_systems/Ir(100)-O/figures/FD_Optimization.pdf
    :width: 60%
@@ -170,7 +170,7 @@ ViPErLEED also produces a file called ``FD_Optimization.pdf`` in the ``OUT`` dir
    ``FD_Optimization.pdf``.
 
 .. note:: 
-    ViPErLEED will also automatically add the new, optimzed value to the :ref:`PARAMETERS file<parameters>` and comment out the line containing the previous value.
+    ViPErLEED will also automatically add the new, optimized value to the :ref:`PARAMETERS file<parameters>` and comment out the line containing the previous value.
 
 Following the :math:`V_{0\text{i}}` optimization we can also run a final structure-optimization, since the new value for :math:`V_{0\text{i}}` may have slightly affected the optimal positions.
 Using a (very fine) :math:`0.002` Å grid (``DISPLACEMENTS_very_fine`` in the provided example files) we manage to get a final R-factor of around :math:`\approx 0.088`.
@@ -178,7 +178,7 @@ Using a (very fine) :math:`0.002` Å grid (``DISPLACEMENTS_very_fine`` in the pr
 Error calculation
 =================
 
-Now that we have found a good structure fit, we can run a ViPErLEED :ref:`error calculation<error_calculation>` to estimate, how sensitve the R-factor is to small changes of specific parameters.
+Now that we have found a good structure fit, we can run a ViPErLEED :ref:`error calculation<error_calculation>` to estimate, how sensitive the R-factor is to small changes of specific parameters.
 As input for the error calculation, we need a :ref:`DISPLACEMENTS file<displacements>` containing the desired range and steps.
 The format of the file is the same as used for the delta-amplitudes calculation and structure search.
 
@@ -191,7 +191,7 @@ Using this DISPLACEMENTS file, we run the error calculation by selecting the seg
 The :ref:`result <errorspdf>` result will again be saved in the ``OUT`` directory.
 ViPErLEED generates a plot of the Error curves in ``Errors.pdf`` and stores the raw data in ``Errors.csv``.
 :ref:`Errors.pdf<errorspdf>` shows that displacements of surface atoms even by a few pm drastically increase the R-factor.
-Here, atom 1 is the Oxygen adsorbate and atoms 2 and 3 are the topmost Iridum species.
+Here, atom 1 is the Oxygen adsorbate and atoms 2 and 3 are the topmost Iridium species.
 
 .. figure:: /_static/example_systems/Ir(100)-O/figures/errors_geo.pdf
    :width: 50%
@@ -208,4 +208,4 @@ Similarly, changes in the vibrational amplitude of the surface atoms also strong
    Part of ``Errors.pdf`` showing the effects of changes in vibrational amplitude.
 
 In general error-plots for geometric displacement tend to show a parabolic profile close to the minimum.
-Error plots for vibrational amplitude tend to be more symmetric, as these amplitudes factor into the calculation differntly (Debye-Waller-factor).
+Error plots for vibrational amplitude tend to be more symmetric, as these amplitudes factor into the calculation differently (Debye-Waller-factor).
