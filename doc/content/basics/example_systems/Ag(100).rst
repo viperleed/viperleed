@@ -7,7 +7,7 @@ Example System: Ag(100)-(1x1)
 In this section, we go through setting up and executing a simple ViPErLEED calculation for the Ag(100)-(1x1) surface.\ [#]_
 
 This tutorial is designed such that you can follow along on your own system.
-You can find the input files for all stages here.
+You can find the input files for all stages :download:`here</_static/example_systems/Ag(100)/input_files.zip>`.
 
 .. tip:: 
    If this is your first time running ViPErLEED, first make sure to follow the :ref:`installation instructions<installation>`.
