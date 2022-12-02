@@ -26,6 +26,7 @@ extensions = [
               'sphinx_rtd_theme',
               'sphinxcontrib.bibtex',       # to use .bib files for bibliography
               'sphinxcontrib.spelling',     # spell checking for the docs ;)
+              'myst_nb',                    # for including Jupyter notebooks
               ]
 
 source_suffix = '.rst'
