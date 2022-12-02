@@ -1659,7 +1659,12 @@ class WindowsCamera:
             The unique name of the device. An empty string in case of
             failure.
         """
-        name = self._dll_unique_name_from_index(index)
+        try:
+            name = self._dll_unique_name_from_index(index)
+        except ImagingSourceError as err:
+            # Probably some fuckup with the index.
+            print(f"IS driver warning: {err}. {index=} {self.__n_devices=}")    # TODO: remove this
+            name = None
         if name is not None:
             return name.decode()
         return ''
