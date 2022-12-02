@@ -70,8 +70,31 @@ We start with optimizations normal to the surface(:math:`z`) and follow that up 
 Full-dynamic optimization
 =========================
 
+After this initial structure optimization, we want to optimize the parameter :math:`V_{0\text{i}}` the imaginary part of the solid inner potential.
+This parameter strongly affects the R-factor, but is hard to gauge for an unknown system.
+Since we didn't specify a value for :math:`V_{0\text{i}}` in PARAMETERS, ViPErLEED took the default value of 4.5 eV (see :ref:`parameter V0_IMAG<v0_imag>`).
+:math:`V_{0\text{i}}` is not accessible in the tensor LEED approximation, but we can use a :ref:`full-dynamic optimization<fdoptimization>` to find an optimal value.
+To do this, we set :ref:`RUN = 6<run>` and add this line to :ref:`PARAMETERS<parameters>`:
+
+.. code-block:: console
+
+    OPTIMIZE V0i = step 0.5
+
+The optimized value for :math:`V_{0\text{i}}` will be output in the log file and automatically added to the :ref:`PARAMETERS file<parameters>` for subsequent runs.
+Furthermore, ViPErLEED produces the files :ref:`FD_Optimization_beams.pdf<fdoptimizationbeams>` and :ref:`FD_Optimization.pdf<fdoptimizationdata>` in the ``OUT`` directory.
+:ref:`FD_Optimization_beams.pdf<fdoptimizationbeams>` shows the calculated diffraction intensities for different values of the optimized parameter, while :ref:`FD_Optimization.pdf<fdoptimizationdata>` shows the R-factors corresponding to each trial value.
+
+.. figure:: /_static/example_systems/Cu(111)-Te/figures/FD_beams.pdf
+   :width: 100%
+   :align: center
+
+   Part of ``FD_Optimization_beams.pdf`` showing the effects of :math:`V_{0\text{i}}` on the :math:`(0|1)` beam.
+
 Refined structure fit
 =====================
+
+As usual, we can now perform some more refined structure optimization on less coarse grids.
+In particular, we should also optimize the vibrational amplitudes, which we have skipped so far.
 
 Error calculation
 =================
