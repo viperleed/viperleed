@@ -10,7 +10,7 @@ If multiple atoms are linked (e.g. by symmetry), they will be varied together, a
 Note the for geometrical variations, the actual direction of the displacements may not be the same for the entire group.
 The direction given in the ``Errors.csv`` file is the displacement direction for the *first* atom listed in the "Atoms" column.
 
-The same data contained in ``Errors.csv`` is plotted in the ``Errors.pdf`` file.
+The same data contained in ``Errors.csv`` is plotted in the ``Errors.pdf`` file (both placed in ``OUT``).
 Parameter are split by whether they concern geometry, vibrational amplitudes or site occupation.
 However, all parameters of the same type (e.g. all geometrical displacements) are grouped together in the ``Errors.pdf`` file, so if you calculate very different displacements in the same error calculation, these would nevertheless be plotted together.
 
