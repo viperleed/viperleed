@@ -257,7 +257,7 @@ class CameraViewer(qtw.QScrollArea):
             "viewer": ImageViewer(),
             "context_menu": {"self": qtw.QMenu(parent=self),
                              "roi":  qtw.QMenu(parent=self)},
-            "settings_dialog": SettingsDialog(handled_obj=camera),
+            "settings_dialog": None,  # Created upon user request
             }
         self.__children["roi"] = RegionOfInterest(parent=self.__img_view)
 
@@ -403,7 +403,11 @@ class CameraViewer(qtw.QScrollArea):
                 base.safe_disconnect(camera.frame_ready, self.__show_image)
             camera.stop()
             qtw.qApp.processEvents()
-        self.__children['settings_dialog'].reject()
+        try:
+            self.__children['settings_dialog'].reject()
+        except AttributeError:
+            # Probably never requested
+            pass
         super().closeEvent(event)
 
     def keyPressEvent(self, event):  # pylint: disable=invalid-name
@@ -617,8 +621,10 @@ class CameraViewer(qtw.QScrollArea):
 
     @property
     def __settings_roi(self):
-        """Return the RoiEditor in the settings dialog."""
+        """Return the RoiEditor in the settings dialog or None."""
         _dlg = self.__children["settings_dialog"]
+        if _dlg is None:
+            return None
         return _dlg.handler['camera_settings']['roi'].handler_widget
 
     def __adjust_scroll_bars(self, by_factor):
@@ -651,7 +657,8 @@ class CameraViewer(qtw.QScrollArea):
         was_running = self.camera.is_running
         self.camera.settings = settings
         self.camera.settings.update_file()
-        self.__settings_roi.original_roi = self.camera.roi
+        if self.__settings_roi:
+            self.__settings_roi.original_roi = self.camera.roi
 
         # Remove the rubber-band, and restart the camera.
         self.roi.hide()
@@ -716,12 +723,6 @@ class CameraViewer(qtw.QScrollArea):
         self.customContextMenuRequested.connect(self.__show_context_menu)
         for menu in self.__children["context_menu"].values():
             menu.triggered.connect(self.__on_context_menu_triggered)
-
-        _settings_dlg = self.__children["settings_dialog"]
-        _settings_dlg.settings_changed.connect(self.__on_settings_changed)
-        _settings_dlg.settings_saved.connect(self.__on_settings_saved)
-        _settings_dlg.finished.connect(self.__restore_roi_visibility)
-        self.__settings_roi.roi_changed.connect(self.__on_roi_settings_changed)
         self.roi.roi_changed.connect(self.__on_roi_rubberband_changed)
 
     def __get_image(self):
@@ -765,8 +766,14 @@ class CameraViewer(qtw.QScrollArea):
         # offset is always relative to the ROI currently applied
         # in the camera. This method returns, instead the ROI
         # in the sensor's reference. The currently applied ROI
-        # is stored in self.__settings_roi.original_roi.
-        offs_x, offs_y, *_ = self.__settings_roi.original_roi
+        # is stored in self.__settings_roi.original_roi (if a
+        # settings dialog was already created) or in camera.roi
+        # (before a dialog was created)
+        if self.__settings_roi:
+            original_roi = self.__settings_roi
+        else:
+            original_roi = self.camera.roi
+        offs_x, offs_y, *_ = original_roi
         rel_x, rel_y, width, height = self.roi.image_coordinates
         return rel_x + offs_x, rel_y + offs_y, width, height
 
@@ -799,6 +806,21 @@ class CameraViewer(qtw.QScrollArea):
         mask = mask.convertToFormat(mask.Format_Mono)
         mask.invertPixels()
         return qtg.QRegion(qtg.QBitmap.fromImage(mask))
+
+    def __make_settings_dialog(self):
+        """Make and return the camera settings dialog."""
+        dlg = self.__children['settings_dialog']
+        if dlg:
+            return dlg
+
+        dlg = SettingsDialog(handled_obj=self.camera)
+        self.__children['settings_dialog'] = dlg
+
+        dlg.settings_changed.connect(self.__on_settings_changed)
+        dlg.settings_saved.connect(self.__on_settings_saved)
+        dlg.finished.connect(self.__restore_roi_visibility)
+        self.__settings_roi.roi_changed.connect(self.__on_roi_settings_changed)
+        return dlg
 
     @qtc.pyqtSlot(tuple)
     def __on_camera_error(self, _):
@@ -863,8 +885,9 @@ class CameraViewer(qtw.QScrollArea):
     @qtc.pyqtSlot()
     def __on_roi_rubberband_changed(self):
         """React to a change in the ROI rubber-band."""
-        if not self.roi.is_being_edited:
-            # Not a user-induced edit but just an update
+        if not self.roi.is_being_edited or not self.__settings_roi:
+            # Not a user-induced edit but just an update,
+            # or the settings dialog was not created yet
             return
 
         new_roi = self.__get_roi_abs_coords()
@@ -913,6 +936,9 @@ class CameraViewer(qtw.QScrollArea):
     def __on_settings_dialog_open(self):
         """React to a user requesting to view the settings dialog."""
         dlg = self.__children['settings_dialog']
+        if dlg is None:
+            dlg = self.__make_settings_dialog()
+
         if dlg.isVisible():
             move_to_front(dlg)
             return
@@ -979,8 +1005,9 @@ class CameraViewer(qtw.QScrollArea):
         self.camera.settings.set("camera_settings", "roi",
                                  str(self.camera.get_roi()))
         self.camera.settings.update_file()
-        self.__settings_roi.original_roi = self.camera.roi
-        self.__settings_roi.roi = self.camera.roi
+        if self.__settings_roi:
+            self.__settings_roi.original_roi = self.camera.roi
+            self.__settings_roi.roi = self.camera.roi
         self.roi.hide()
         try:
             self.camera.bad_pixels.apply_roi(no_roi=True)
