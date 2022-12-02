@@ -36,6 +36,7 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 # BUG: measurement start, serial connect failed, attempts to connect three times??
 
 #   G E N E R I C
+# TODO: measurement over, restart cameras that were live before?
 # TODO: init errors cause obfuscation of the original object that had problems
 # TODO: can we use a decorator on class (or __init__) for reporting init errors
 #       with delay? The complication is that one needs to call QObject.__init__
@@ -54,6 +55,12 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 # TODO: User event tracking for bug report. Possible with eventFilter on
 #       qApp, but see also https://www.qtcentre.org/threads/16182-Logging-Qt-User-Actions
 # TODO: error severity in Enum. Non-fatal errors should not stop everything
+# TODO: replace all type check complaints with a full_name(object), where
+#       full_name does type(object).__module__ (unless None, 'builtins' or
+#       AttributeError) + type(object).__qualname__. Possibly falling back
+#       to type(object).__name__ in case __qualname__ is missing
+# TODO: take inspiration from https://www.the-compiler.org/tmp/qutebrowser_crash.png
+#       for a nicer bug-reporting dialog
 
 #   C A M E R A   &  C O.
 # TODO: bad pixels finder top progress bar should scale better, with actual
@@ -97,6 +104,8 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 #       allow the same operations as in the context menu.
 # TODO: camera returns other data with images. Stuff that comes to mind:
 #       max(image); fraction of saturated pixels;
+# BUG: exception ignored in ctypes callback: "camera has no exposure"
+#      probably a masked AttributError??
 
 #   M E A S U R E M E N T
 # TODO: energy ramps are not equivalent for iv == calibration != time_resolved
@@ -624,8 +633,14 @@ class Measure(ViPErLEEDPluginBase):
             camera.error_occurred.connect(self.__on_error_occurred)
             viewer = CameraViewer(camera, stop_on_close=True,
                                   roi_visible=False)
-            viewers.append(viewer)
-            camera.start()
+            try:
+                camera.start()
+            except camera.exceptions:
+                # Something wrong, but hopefully already
+                # reported by the failed camera.start()
+                pass
+            else:
+                viewers.append(viewer)
 
     def __on_controller_clicked(self, *_):
         """Show settings of the controller selected."""

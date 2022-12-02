@@ -49,9 +49,10 @@ class CameraErrors(base.ViPErLEEDErrorEnum):
                         "Camera cannot operate without settings. Load "
                         "an appropriate settings file before proceeding.")
     CAMERA_NOT_FOUND = (202,
-                        "Could not find camera {}.\nMake sure the camera is "
-                        "connected and has power. Try (re-)plugging it, and "
-                        "give the camera enough time to boot up.")
+                        "Could not find camera {}.\n\nMake sure the camera "
+                        "is connected, has power, and is not currently in "
+                        "use in an other program.\n\nTry (re-)plugging it, "
+                        "and give the camera enough time to boot up.")
     SETTINGS_MISMATCH = (203,
                          "Different {} settings found in camera and "
                          "configuration file: camera={}, settings={}.")
