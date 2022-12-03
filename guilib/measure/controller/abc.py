@@ -325,6 +325,11 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         return self.__energy_calibration
 
     @property
+    def has_valid_settings(self):
+        """Return whether self.settings is valid for this device."""
+        return bool(self.settings and self.serial)
+
+    @property
     def hv_settle_time(self):
         """Return the time it takes to settle the energy (msec)."""
         if not self.sets_energy:

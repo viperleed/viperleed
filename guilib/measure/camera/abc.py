@@ -437,6 +437,11 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         return gain
 
     @property
+    def has_valid_settings(self):
+        """Return whether self.settings is valid for this device."""
+        return bool(self.settings)
+
+    @property
     @abstractmethod
     def image_info(self):
         """Return information about the last image.
