@@ -1,4 +1,4 @@
-"""Module camera.drivers.imagingsource of viperleed.???
+"""Module camera.drivers.imagingsource of viperleed.guilib.measure.
 
 ========================================
    ViPErLEED Graphical User Interface
@@ -20,7 +20,6 @@ if sys.platform.startswith('win'):
     from viperleed.guilib.measure.camera.drivers.imagingsource.winerrors import (
         ImagingSourceError
         )
-# elif False:
 else:
     raise EnvironmentError("Imaging Source cameras are currently "
                            "unsupported on non-Windows platforms.")

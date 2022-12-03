@@ -67,6 +67,7 @@ SERIAL_ERROR_MESSAGES = {
 
 class ExtraSerialErrors(ViPErLEEDErrorEnum):
     """Data class for basic serial errors not available in QSerialPort."""
+
     NO_MESSAGE_ERROR = (50,
                         "Empty message received from controller.")
     NO_START_MARKER_ERROR = (51,
@@ -1055,6 +1056,5 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
 
     @abstractmethod
     def is_measure_command(self, command):                                      # TODO: not nice. Better say what this is used for (keep track of the time the message was sent).
-        """Returns true if the command sent is a
-        command that will return a measurement."""
-        return
+        """Return whether command causes the unit to return measurements."""
+        return False

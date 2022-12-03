@@ -1,4 +1,4 @@
-"""Module camera.drivers of viperleed.???
+"""Module camera.drivers of viperleed.guilib.measure.
 
 ========================================
    ViPErLEED Graphical User Interface

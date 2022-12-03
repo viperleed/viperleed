@@ -36,6 +36,7 @@ _UNIQUE = qtc.Qt.UniqueConnection
 
 class MeasurementErrors(base.ViPErLEEDErrorEnum):
     """Errors that might occur during a measurement cycle."""
+
     MISSING_SETTINGS = (300,
                         "Measurements cannot be taken without settings. "
                         "Load an appropriate settings file before "
@@ -163,8 +164,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
 
     @cameras.setter
     def cameras(self, new_cameras):
-        """Set the cameras which should be
-        used and handle signals.
+        """Set the cameras which should be used and handle signals.
 
         Parameters
         ----------
@@ -251,8 +251,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
 
     @secondary_controllers.setter
     def secondary_controllers(self, new_controllers):
-        """Set the controllers which should be
-        used and handle signals.
+        """Set the controllers which should be used and handle signals.
 
         Parameters
         ----------

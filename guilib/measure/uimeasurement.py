@@ -1,4 +1,4 @@
-"""Module uimeasurement of viperleed.guilib.measure
+"""Module uimeasurement of viperleed.guilib.measure.
 
 ===============================================
       ViPErLEED Graphical User Interface
@@ -176,6 +176,7 @@ _QMSG = qtw.QMessageBox
 
 class UIErrors(base.ViPErLEEDErrorEnum):
     """Class for errors occurring in the UI."""
+
     FILE_NOT_FOUND_ERROR = (1000, "Could not find file {}.\n{}")
     FILE_UNSUPPORTED = (1001, "Cannot open {}.\n{}")
     RUNTIME_ERROR = (1002, "{}")

@@ -456,7 +456,7 @@ class WindowsCamera:
 
     @gain.setter
     def gain(self, new_gain):
-        """Set gain to new_gain (in decibel)."""
+        """Set a new gain in decibel."""
         self.set_vcd_property("Gain", "Value", new_gain, method=float)
 
     _dll_get_image_description = _dll.IC_GetImageDescription
@@ -527,7 +527,7 @@ class WindowsCamera:
 
     @property
     def is_running(self):
-        """Returns whether the camera is currently running."""
+        """Return whether the camera is currently running."""
         return bool(self._dll_is_running(self.__handle))
 
     _dll_get_sink_format = _dll.IC_GetFormat

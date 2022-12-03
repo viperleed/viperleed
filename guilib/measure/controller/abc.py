@@ -68,6 +68,7 @@ def ensure_connected(method):
 
 class ControllerErrors(base.ViPErLEEDErrorEnum):
     """Class for controller errors."""
+
     # The following three are fatal errors, and should make the GUI
     # essentially unusable, apart from allowing to load appropriate
     # settings.

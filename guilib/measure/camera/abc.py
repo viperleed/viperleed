@@ -548,6 +548,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
                 Width and height of the region of interest in pixels
         """
         try:
+            # pylint: disable=redefined-variable-type  # pylint bug
             roi = self.settings.getsequence('camera_settings', 'roi',
                                             fallback=tuple())
         except _m_settings.NotASequenceError:  # Invalid ROI string

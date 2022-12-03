@@ -15,6 +15,7 @@ from enum import Enum
 
 class _Sensors(Enum):
     """Camera sensors. For now only dynamic range in bits is stored."""
+
     IMX267 = (12,)
     IMX304 = (12,)
     ICX618 = (12,)
@@ -53,6 +54,7 @@ class _Sensors(Enum):
 
 class ISModels(Enum):
     """Available model numbers for Imaging Source cameras."""
+
     # pylint: disable=invalid-name
     # The invalid-name would be issued for camera models
     # that contain the small "e" (PoE models). Easier to

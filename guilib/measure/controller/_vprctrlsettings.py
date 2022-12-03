@@ -264,6 +264,20 @@ class HardwareConfigurationEditor(SettingsDialogSectionBase):
     """
 
     def __init__(self, controller=None, **kwargs):
+        """Initialize instance.
+
+        Parameters
+        ----------
+        controller : ViPErinoController
+            The controller whose hardware configuration
+            settings are managed.
+        **kwargs : dict
+            Optional arguments passed on to SettingsDialogSectionBase
+
+        Returns
+        -------
+        None.
+        """
         self.__ctrl = controller
 
         # Modify arguments for the following super() call

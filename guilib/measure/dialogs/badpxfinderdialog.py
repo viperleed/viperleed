@@ -543,8 +543,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
         section = self.__progress['section_text']
         bar_section = self.__progress['section']
 
-        enabled = False if "done" in sec_txt.lower() else True
-        self.__buttons['abort'].setEnabled(enabled)
+        self.__buttons['abort'].setEnabled("done" not in sec_txt.lower())
 
         if bar_total.maximum() != tot_secs:
             bar_total.setMaximum(tot_secs)

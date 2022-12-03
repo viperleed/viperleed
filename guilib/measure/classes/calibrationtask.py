@@ -375,9 +375,11 @@ class CalibrationTask(qtc.QObject, metaclass=base.QMetaABC):
         This method must be overridden in all
         subclasses that can time out.
 
-        Returns
-        -------
-        None.
+        Raises
+        ------
+        NotImplementedError
+            If the method is not overridden
+            in subclasses that can time out
         """
         if self.__flags['does_time_out']:
             raise NotImplementedError(

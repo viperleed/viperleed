@@ -27,6 +27,7 @@ _INVOKE = qtc.QMetaObject.invokeMethod
 
 class ImagingSourceCalibrationError(base.ViPErLEEDErrorEnum):
     """Class for bad-pixel-finder errors."""
+
     MAXIMUM_DARK_LEVEL_REACHED = (
         530,
         "Failed to calibrate dark level for camera {}. Camera intensity "
@@ -39,6 +40,7 @@ _N_DARK_LEVEL = 3  # No. of changes of dark level
 
 class _DarkLevelOperation(CalibrationTaskOperation):
     """Enumeration of dark-level calibration operations."""
+
     ENSURE_CORRECT_MINIMUM = 1
     ACQUIRE_IMAGES, VERIFY_DARK_LEVEL, DONE = 2, 3, 4
 

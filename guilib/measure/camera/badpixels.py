@@ -57,6 +57,7 @@ def _report_progress(func):
 
 class BadPixelsFinderErrors(base.ViPErLEEDErrorEnum):
     """Class for bad-pixel-finder errors."""
+
     FLAT_FRAME_WRONG_LIGHT = (
         211,
         "Flat frame is too {}. Cannot automatically "

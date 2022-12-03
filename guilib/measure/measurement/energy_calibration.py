@@ -34,7 +34,7 @@ class MeasureEnergyCalibration(MeasurementABC):
     display_name = 'Energy calibration'
 
     def __init__(self, measurement_settings):
-        """Initialise measurement class"""
+        """Initialise instance from settings."""
         super().__init__(measurement_settings)
         self.__old_coefficients = ""
         self.data_points.time_resolved = False
@@ -208,7 +208,7 @@ class MeasureEnergyCalibration(MeasurementABC):
         self.settings.set('devices', 'cameras', '()')
 
     def calibrate_energy_setpoint(self):                                        # TODO: move this to DataPoints?
-        """Calibrate the energy setpoint of the LEED electronics
+        """Calibrate the energy setpoint of the LEED electronics.
 
         The offset is measured in the measure_energy_setpoint()
         function which returns the measured energies and the

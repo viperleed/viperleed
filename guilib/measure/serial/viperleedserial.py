@@ -25,6 +25,7 @@ from viperleed.guilib.measure import hardwarebase as base
 
 class ViPErLEEDHardwareError(base.ViPErLEEDErrorEnum):
     """This class contains all errors related to the Arduino."""
+
     ERROR_NO_ERROR = (0, "No error")
     ERROR_SERIAL_OVERFLOW = (1, "Overflow of the hardware serial.")
     ERROR_MSG_TOO_LONG = (2, "Sent message too long.")
@@ -156,23 +157,19 @@ class ViPErLEEDSerial(SerialABC):
             )
 
     def decode(self, message):
-        """Decodes messages received from the Arduino.
-
-        If there are SPECIAL_BYTEs in the message, decode them and turn
-        them into single bytes. Afterwards, check if message fits the
-        length given in msg_length and check if the function has the
-        length of any data expected. If true return bytearray of data,
-        if false return empty bytearray.
+        """Return a decoded version of message.
 
         Parameters
         ----------
         message : bytes or bytearray
-            The message to be decoded
+            The message to be decoded. SPECIAL_BYTEs and those that
+            follow them are decoded into single bytes.
 
         Returns
         -------
-        message : bytearray
-            The decoded message
+        decoded_message : bytearray
+            The decoded message. decoded_message is an empty
+            bytearray if not is_decoded_message_acceptable().
         """
         special_byte = self.port_settings.getint('serial_port_settings',
                                                  'SPECIAL_BYTE')
@@ -750,12 +747,9 @@ class ViPErLEEDSerial(SerialABC):
         return info
 
     def is_measure_command(self, command):
-        """Returns true if the command sent is a
-        command that will return a measurement."""
+        """Return whether command causes the unit to return measurements."""
         pc_set_voltage = self.port_settings.get('available_commands',
                                                 'PC_SET_VOLTAGE')
         pc_measure_only = self.port_settings.get('available_commands',
                                                  'PC_MEASURE_ONLY')
-        if command in (pc_set_voltage, pc_measure_only):
-            return True
-        return False
+        return command in (pc_set_voltage, pc_measure_only)

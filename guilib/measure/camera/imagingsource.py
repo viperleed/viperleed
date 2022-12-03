@@ -219,7 +219,7 @@ def estimate_frame_loss(frame_times, frame_rate, exposure):
 
     # Ideally, a frame should take (slightly more) than dt_ideal
     # seconds to be delivered
-    dt_ideal = 1/min(1000/exposure, frame_rate)                                 # TODO: use .frame_interval
+    dt_ideal = 1/min(1000/exposure, frame_rate)
 
     # However, it can take a little longer (or shorter) to do so
     dt_total = frame_times[-1] - frame_times[0]

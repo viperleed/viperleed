@@ -412,6 +412,7 @@ class ViPErLEEDErrorEnum(tuple, enum.Enum):
     may also contain formatting directives, that should be .format()ted
     by the controller or by the GUI.
     """
+
     @classmethod
     def as_dict(cls):
         """Return a dictionary of error codes and error names."""

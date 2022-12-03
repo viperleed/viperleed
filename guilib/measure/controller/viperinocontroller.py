@@ -40,6 +40,7 @@ _INVOKE = qtc.QMetaObject.invokeMethod
 
 class ViPErinoErrors(base.ViPErLEEDErrorEnum):
     """Errors specific to Arduino-based ViPErLEED controllers."""
+
     TOO_MANY_MEASUREMENT_TYPES = (
         150,
         "Can measure up to {} quantities (one per ADC), but {} were requested."
@@ -441,6 +442,29 @@ class ViPErinoController(abc.MeasureControllerABC):
         self.send_message(cmd)
 
     def get_settings_handler(self):
+        """Return a SettingsHandler object for displaying settings.
+
+        The handler returned manages the following settings:
+        'controller'/'firmware_version'
+            Read-only text, with color indicating warnings
+        'controller'/'device_name'
+            Displays and allows changing the serial number.
+        'controller' & 'conversions'
+            'measurement_devices', their associated ADC channels,
+            including input ranges, and all the conversion to be
+            used to transform measurements into physical values.
+            This whole complex section is "advanced", and will be
+            shown only if there is something missing.
+        'measurement_settings'/'adc_update_rate'                                # TODO
+            Advanced
+        All the settings handled by MeasureControllerABC.
+
+        Returns
+        -------
+        handler : SettingsHandler
+            The handler used in a SettingsDialog to display the
+            settings of this controller to users.
+        """
         # Start by adding info that we want shown on top
         handler = SettingsHandler(self.settings)
         handler.add_option('controller', 'firmware_version',
@@ -450,7 +474,7 @@ class ViPErinoController(abc.MeasureControllerABC):
                            handler_widget=_settings.SerialNumberEditor(self),
                            display_name="Serial No.")
         handler.add_complex_section(
-            _settings.HardwareConfigurationEditor(controller=self)
+            _settings.HardwareConfigurationEditor(controller=self)              # TODO: add ADC_update rate for measurement
             )
         # And add info from super() ['measurement_settings']
         handler.add_from_handler(super().get_settings_handler())

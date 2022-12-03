@@ -87,6 +87,7 @@ class ImageProcessInfo:  # pylint: disable=too-many-instance-attributes
     copy()
         Return a deep-copy of self
     """
+
     __filename: str = ''
     base_path: str = ''
     n_frames: int = 0

@@ -43,6 +43,7 @@ NAN = float('nan')
 
 class DataErrors(ViPErLEEDErrorEnum):
     """Errors that might occur during a measurement cycle."""
+
     INVALID_MEASUREMENT = (400,
                            "The returned data dictionary contained a key "
                            "that was not specified in the DataPoints class.")
@@ -58,6 +59,7 @@ class QuantityInfo(enum.Enum):
 
     New measurement quantities have to be added here.
     """
+
     # Info:   units,   scale, dtype, label, axis, common_label, tooltip
     IMAGES = ('Number', None, str, 'Images', None, None, "")
     ENERGY = ('eV', 'lin', float, 'Energy', 'x', None,
@@ -202,7 +204,7 @@ _EXCEPTIONAL = (QuantityInfo.IMAGES, QuantityInfo.ENERGY,
 # too-many-instance-attributes
 class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
     """Data storage class."""
-    # Is emitted when an error occurs
+
     error_occurred = qtc.pyqtSignal(tuple)
 
     def __init__(self, *args, primary_controller=None, time_resolved=None,
@@ -366,7 +368,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
     def __deepcopy__(self, memo):
         """Return a deep copy of self."""
         cls = self.__class__
-        result = cls.__new__(cls)
+        result = cls.__new__(cls)  # pylint: disable=E1120  # bug?
         memo[id(self)] = result
         for key, value in self.__dict__.items():
             setattr(result, key, deepcopy(value, memo))

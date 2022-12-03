@@ -1,4 +1,4 @@
-"""Module thermocouple of viperleed.guilib.measure.classes
+"""Module thermocouple of viperleed.guilib.measure.classes.
 
 Created: 2022-07-26
 Author: Michele Riva
