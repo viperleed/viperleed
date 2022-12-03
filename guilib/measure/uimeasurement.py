@@ -15,7 +15,12 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 #        to a timer with a small delay.
 # FIXED?: on archive write, .relative_to; fail on network drive
 # FIXED?: bad pixels: flat goes on forever for wiggly intensities.
+# FIXED?: measurement camera timeout unless started in live mode before
+# FIXED?: measure (timeout), then start viewer --> serial port not open error + wrong camera mode
+# FIXED?: QtWarning infinite recursion on err_box.exec_() in __report_errors
+#         may be related to the weird errors above?
 # TESTME: make sure multiple controllers work fine with the new ABC.stop
+# CANT REPRODUCE: badpx file with one line --> not found?? Cannot reproduce with file from J.Mislivicek
 
 # BUG: bad_px_finder: camera can time out. Reproducible in Prague.
 #      Did not happen at all to me, nor in Julich (Wuttig). They had
@@ -34,6 +39,9 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 # ???: viperleed serial, unknown command error misinterpreted? << not sure what this means
 # BUG: update COM and camera name when starting measurement (from known devices)
 # BUG: measurement start, serial connect failed, attempts to connect three times??
+# BUG?: ICCapture open with some settings, settings are retained in viperleed???
+# BUG?: bad pixels index out of range -- see report by Max Buchta
+# BUG?: IC_SetVideoFormat error -- see 20221123_103752 from Max Buchta
 
 #   G E N E R I C
 # TODO: measurement over, restart cameras that were live before?
@@ -61,6 +69,10 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 #       to type(object).__name__ in case __qualname__ is missing
 # TODO: take inspiration from https://www.the-compiler.org/tmp/qutebrowser_crash.png
 #       for a nicer bug-reporting dialog
+# TODO: would be very nice to always load the default settings first, and
+#       then read in on top of them the ones saved locally. This would allow
+#       to seriously reduce the number of lines in many of the "local"
+#       configuration files.
 
 #   C A M E R A   &  C O.
 # TODO: bad pixels finder top progress bar should scale better, with actual
