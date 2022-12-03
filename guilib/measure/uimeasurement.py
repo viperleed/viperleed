@@ -550,42 +550,9 @@ class Measure(ViPErLEEDPluginBase):
 
     def __make_ctrl_settings_dialog(self, ctrl_cls, name, port):
         """Make a new settings dialog for a controller."""
-        # Find an appropriate settings file, searching in the default
-        # configuration folder, and falling back on the base default
-        _cfg_dir = self.system_settings.paths['configuration']
-        config = base.get_device_config(name, directory=_cfg_dir,
-                                        parent_widget=self)
-        if config:
-            # Found one. Make sure it is in the tree of _cfg_dir,
-            # as the user may have selected another folder
-            ctrl = ctrl_cls(settings=config, port_name=port)
-            try:
-                ctrl.settings.last_file.relative_to(_cfg_dir)
-            except ValueError:
-                # Not in the same tree. Complain, as we expect the
-                # configuration tree to contain one default config
-                # file per each known device. (Measurements can use
-                # device settings from anywhere, though.)
-                print("Config not in correct folder tree. "
-                      "Consider editing system settings.")                      # TODO
-        else:                                                                   # TODO: ask explicitly for making a file for the device
-            # We did not find one. Fall back onto _defaults
-            ctrl = ctrl_cls(port_name=port)
-            # Check validity of default settings loaded
-            if not ctrl.settings or not ctrl.serial:                            # TODO: from this on it could be a more general function (also for cameras)
-                # Something is wrong with the default configuration file
-                print("SOMETHING WRONG WITH DEFAULT CONFIG")                    # TODO
-                return
-
-            # Make necessary edits, then save to file
-            ctrl.settings['controller']['device_name'] = name
-            new_cfg_path = (Path(_cfg_dir)
-                            / (name.replace(' ', '_') + '.ini'))
-            if new_cfg_path.exists():
-                print("Config file name conflict! "
-                      "Existing file will be overwritten")                      # TODO: error
-            with new_cfg_path.open('w', encoding='utf-8') as fproxy:
-                ctrl.settings.write(fproxy)
+        ctrl = self.__make_device(ctrl_cls, name, port_name=port)
+        if not ctrl:
+            return
 
         dialog = dialogs.SettingsDialog(ctrl, parent=self)                      # TODO: modal?
         ctrl.ready_to_show_settings.connect(dialog.open)
@@ -610,44 +577,92 @@ class Measure(ViPErLEEDPluginBase):
         self._ctrls['abort'].setEnabled(False)
         self._dialogs['bad_px_finder'].open()
 
+    def __make_device(self, device_cls, device_name, **other_info):
+        """React to the selection of a device."""
+        # Find an appropriate settings file, searching in the default
+        # configuration folder, and falling back on the base default
+        _cfg_dir = self.system_settings.paths['configuration']
+        kwargs = {"directory": _cfg_dir, "parent_widget": self,
+                  "third_btn_text": "Create a new settings file"}
+        config = base.get_device_config(device_name, **kwargs)
+
+        if config == "":  # pylint: disable=C1901
+            # Did not find one, and user dismissed the dialog.
+            return None
+
+        if config:
+            # Found one. Make sure it is in the tree of _cfg_dir,
+            # as the user may have selected another folder
+            try:
+                config.relative_to(_cfg_dir)
+            except ValueError:
+                # Not in the same tree. Complain, as we expect the
+                # configuration tree to contain one default config
+                # file per each known device. (Measurements can use
+                # device settings from anywhere, though.)
+                print("Config not in correct folder tree. "
+                      "Consider editing system settings.")                      # TODO
+            return device_cls(settings=config, **other_info)
+
+        # Not found, but user wants to make a new one. Use _defaults
+        device = device_cls(**other_info)
+        if not device.has_valid_settings:
+            # Something is wrong with the default configuration file
+            # This would normally be reported by the device, but
+            # we're not going to return it (nor connect to its
+            # error_occurred)
+            print("SOMETHING WRONG WITH DEFAULT CONFIG")                        # TODO
+            return None
+
+        # Edit the device name in the settings, then save to file
+        if issubclass(device_cls, ControllerABC):
+            section = "controller"
+        elif issubclass(device_cls, CameraABC):
+            section = "camera_settings"
+
+        device.settings[section]['device_name'] = device_name
+        new_cfg_path = Path(_cfg_dir) / f"{device.name_clean}.ini"
+        if new_cfg_path.exists():
+            print(f"{section} config file name conflict! Overwriting existing")  # TODO: ask what to do with the (invalid) file
+        with new_cfg_path.open('w', encoding='utf-8') as fproxy:
+            device.settings.write(fproxy)
+
+        return device
+
     def __on_camera_clicked(self, *_):                                          # TODO: may want to display a busy dialog with "starting camera <name>..."
         cam_name = self.sender().text()
         cam_cls = self.sender().data()
-
-        _cfg_dir = self.system_settings['PATHS']['configuration']
-        cfg_path = base.get_device_config(cam_name,
-                                          directory=_cfg_dir,
-                                          prompt_if_invalid=False)
 
         # Decide whether we can take the camera object
         # (and its settings) from the known camera viewers
         viewers = self._dialogs['camera_viewers']
         for viewer in viewers.copy():
             if self.__can_take_camera_from_viewer(cam_name, viewer):
-                break
-        else:  # Not already available. Make a new camera.
-            if not cfg_path:
-                print("no config found", cfg_path)                              # TODO: error out here
                 return
-            cfg = ViPErLEEDSettings.from_settings(cfg_path)
-            if cfg['camera_settings']['mode'] != 'live':
-                cfg['camera_settings']['mode'] = 'live'
-                cfg.update_file()
-            if cfg['camera_settings']['device_name'] != cam_name:
-                cfg['camera_settings']['device_name'] = cam_name
-                cfg.update_file()
-            camera = cam_cls(settings=cfg)
-            viewer = CameraViewer(camera, stop_on_close=True,
-                                  roi_visible=False)
-            try:
-                camera.start()
-            except camera.exceptions:
-                # Something wrong, but hopefully already
-                # reported by the failed camera.start()
-                pass
-            else:
-                viewers.append(viewer)
+
+        # Not already available. Make a new camera.
+        camera = self.__make_device(cam_cls, cam_name)
+        if not camera:
+            return
+
         camera.error_occurred.connect(self.__on_camera_error)
+        if camera.mode != 'live':
+            camera.settings.set('camera_settings', 'mode', 'live')
+            camera.settings.update_file()
+
+        viewer = CameraViewer(camera, stop_on_close=True, roi_visible=False)
+
+        # Make sure that the camera is connected, as when we create
+        # it from the default file it may not yet have a valid name
+        camera.connect_()
+        try:
+            camera.start()
+        except camera.exceptions:
+            # Something wrong, but hopefully already
+            # reported by the failed camera.start()
+            pass
+        else:
+            viewers.append(viewer)
 
     @qtc.pyqtSlot(tuple)
     def __on_camera_error(self, error_info):
