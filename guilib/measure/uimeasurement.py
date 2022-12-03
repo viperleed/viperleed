@@ -819,7 +819,7 @@ class Measure(ViPErLEEDPluginBase):
                 path_widg.path.mkdir(parents=True)
         self.system_settings.update_file()
 
-        # Since older device dialogs may now be still pointing to               # TODO: do the same for cameras
+        # Since older device dialogs may now be still pointing to
         # old configuration files, remove them completely. This
         # will create new settings in the new folder when devices
         # are selected (unless the new folder contains settings).
@@ -827,6 +827,14 @@ class Measure(ViPErLEEDPluginBase):
             dialog.reject()
             dialog.deleteLater()
         self._dialogs['device_settings'] = {}
+
+        # Do the same for all the camera viewers (and their
+        # settings dialogs)
+        for viewer in self._dialogs['camera_viewers']:
+            viewer.close()
+            viewer.deleteLater()
+        CameraViewer.clear_cache()
+        self._dialogs['camera_viewers'] = []
 
     def __on_sys_settings_triggered(self):
         """React to a user clicking on 'Settings'."""

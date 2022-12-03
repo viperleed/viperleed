@@ -270,6 +270,11 @@ class CameraViewer(qtw.QScrollArea):
         self.__compose()
         self.__connect()
 
+    @classmethod
+    def clear_cache(cls):
+        """Clear the cache of known viewers."""
+        cls._viewers = {}
+
     def _flag_getter(self, flag_name=''):
         """Return a flag value by its name."""
         return self.__flags[flag_name][0]
