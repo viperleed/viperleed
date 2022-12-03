@@ -932,7 +932,7 @@ class SettingsDialog(qtw.QDialog):
             # Update all settings with the current ones, and
             # fix the enabled state of the "Apply" button
             for key in ('applied', 'original'):
-                self.__settings[key].read_dict(self.settings)
+                self.__settings[key] = copy.deepcopy(self.settings)
             self.__update_apply_enabled()
         super().showEvent(event)
 
