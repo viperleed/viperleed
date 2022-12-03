@@ -241,7 +241,7 @@ class Measure(ViPErLEEDPluginBase):
 
         _timer_setup = (
             # key,      interval, single shot
-            ('report_errors', 35, True),
+            ('report_errors', 50, True),
             ('retry_close', 50, False),
             ('start_measurement', 50, True),
             ('retry_open_bpx_dialog', 50, True),
@@ -503,6 +503,9 @@ class Measure(ViPErLEEDPluginBase):
         self._dialogs['bad_px_finder'].finished.connect(
             functools.partial(self.__switch_enabled, True)
             )
+        self._dialogs['error_box'].finished.connect(
+            self.__report_errors
+            )
 
         # OTHERS
         self.error_occurred.connect(self.__on_error_occurred)
@@ -631,7 +634,6 @@ class Measure(ViPErLEEDPluginBase):
                 cfg['camera_settings']['device_name'] = cam_name
                 cfg.update_file()
             camera = cam_cls(settings=cfg)
-            camera.error_occurred.connect(self.__on_error_occurred)
             viewer = CameraViewer(camera, stop_on_close=True,
                                   roi_visible=False)
             try:
@@ -642,6 +644,15 @@ class Measure(ViPErLEEDPluginBase):
                 pass
             else:
                 viewers.append(viewer)
+        camera.error_occurred.connect(self.__on_camera_error)
+
+    @qtc.pyqtSlot(tuple)
+    def __on_camera_error(self, error_info):
+        """Stop camera and report errors."""
+        *_, err_msg = error_info
+        if 'bad_pixels' not in err_msg.replace(" ", "_"):
+            self.sender().stop()
+        self.__on_error_occurred(error_info)
 
     def __on_controller_clicked(self, *_):
         """Show settings of the controller selected."""
@@ -679,7 +690,8 @@ class Measure(ViPErLEEDPluginBase):
         error = (sender, *error_info)
         if error not in set(self._glob['errors']):
             self._glob['errors'].append(error)
-        self._timers['report_errors'].start()
+        if self._glob['errors']:
+            self._timers['report_errors'].start()
         self._timers['start_measurement'].stop()
 
     @qtc.pyqtSlot()
@@ -907,6 +919,10 @@ class Measure(ViPErLEEDPluginBase):
         if not self._glob['errors']:
             return
 
+        err_box = self._dialogs['error_box']
+        if err_box.isVisible():
+            return
+
         err_text = []
         for sender, error_code, error_message in self._glob['errors']:
             if isinstance(sender, CameraABC):
@@ -922,9 +938,8 @@ class Measure(ViPErLEEDPluginBase):
                             f"(Code: {error_code})"
                             f"\n\n{error_message}")
 
-        err_box = self._dialogs['error_box']
         err_box.setText("\n\n".join(err_text))
-        err_box.exec_()
+        err_box.open()
         self._glob['errors'] = []
 
     def __switch_enabled(self, idle=False):
