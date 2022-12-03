@@ -72,6 +72,10 @@ class CameraErrors(base.ViPErLEEDErrorEnum):
                "No frames returned by camera {} in the last {} seconds. "
                "Check that the camera is plugged in and powered. If it "
                "is, try rebooting the camera.")
+    DEFAULT_SETTINGS_CORRUPTED = (
+        209,
+        "No or multiple default settings found for camera class {!r}."
+        )
 
 
 class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
@@ -553,6 +557,13 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             roi_width, roi_height : int
                 Width and height of the region of interest in pixels
         """
+        # One special case: when the ROI setting is the empty
+        # string, attempt to get ROI info from the camera
+        if not self.settings.get('camera_settings', 'roi', fallback='_'):
+            roi = self.get_roi()
+            if roi:
+                self.settings.set('camera_settings', 'roi', str(roi))
+
         try:
             # pylint: disable=redefined-variable-type  # pylint bug
             roi = self.settings.getsequence('camera_settings', 'roi',
@@ -626,24 +637,33 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
 
         Parameters
         ----------
-        new_settings : dict or ConfigParser
-            The new settings. The following sections/options
-            are mandatory:
+        new_settings : object or None
+            Whatever can be used to create a ViPErLEEDSettings.
+            If None or False-y, will look for a default settings
+            file in the _defaults directory. The following
+            sections/options are mandatory:
             'camera_settings'/'class_name'
                 Name of the concrete class that implements
                 the abstract methods of CameraABC.
             'camera_settings'/'device_name'
                 Name of the device as it appears in the device
                 list (e.g., "DMK 33GX265").
-            'measurement_settings'/'camera_exposure'
+            'measurement_settings'/'exposure'
                 Exposure time in milliseconds to be used for
                 acquiring each frame.
         """
+        # Look for a default only if no settings are given
+        _name = self.__class__.__name__ if not new_settings else None
         try:
             new_settings = _m_settings.ViPErLEEDSettings.from_settings(
-                new_settings
+                new_settings,
+                find_from=_name
                 )
-        except (ValueError, _m_settings.NoSettingsError):
+        except _m_settings.NoDefaultSettingsError:
+            base.emit_error(self, CameraErrors.DEFAULT_SETTINGS_CORRUPTED,
+                            _name)
+            return
+        except _m_settings.NoSettingsError:
             base.emit_error(self, CameraErrors.MISSING_SETTINGS)
             return
 
@@ -654,16 +674,24 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
                             ', '.join(invalid), '')
             return
 
-        # Keep track of the old ROI: will recalculate
-        # bad pixel coordinates if ROI changes
+        # Will recalculate bad pixel coordinates if ROI changes
         old_roi = tuple()
         if self.settings:
-            old_roi = self.roi
+            try:
+                old_roi = self.roi
+            except self.exceptions:
+                pass
 
         self.__settings = new_settings
         if self.is_running:
             self.stop()
         self.close()
+
+        if _name:
+            # When loading from default settings, there's no point in
+            # trying to connect: the device name is certainly wrong
+            return
+
         self.connect_()  # Also loads self.settings to camera
 
         if self.roi != old_roi and self.bad_pixels:

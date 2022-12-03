@@ -412,7 +412,7 @@ class ImagingSourceCamera(abc.CameraABC):
         if black_level == self.__black_level:
             return black_level
 
-        if black_level == -2:
+        if black_level <= -2:
             # Was not present. Let's read it from the camera
             # and store it in the settings.
             black_level = self.get_black_level()
