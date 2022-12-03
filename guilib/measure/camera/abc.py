@@ -28,6 +28,7 @@ from viperleed.guilib.measure.camera import badpixels
 from viperleed.guilib.measure.classes import settings as _m_settings
 from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
 from viperleed.guilib.measure.widgets.roieditor import ROIEditor
+from viperleed.guilib.measure.widgets.pathselector import PathSelector
 
 
 # pylint: disable=too-many-lines,too-many-public-methods
@@ -891,7 +892,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
                            display_name="ROI", label_alignment='bottom',
                            tooltip=_tip)
 
-        # Binning factor                                                        # TODO: add a mention of the image size after processing
+        # Binning factor                                                        # TODO: add a mention of the image size after processing. Also, add some warning if > 10
         _widget = qtw.QSpinBox()
         _widget.setRange(*self.get_binning_limits())
         _tip = (
@@ -912,8 +913,12 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             "particularly bright, dark, or noisy pixels that should be "
             "corrected to improve data quality"
             )
+        if not self.settings.has_option('camera_settings', 'bad_pixels_path'):
+            # We may ignore errors related to the bad-pixels path
+            self.settings['camera_settings']['bad_pixels_path'] = ''
         handler.add_option('camera_settings', 'bad_pixels_path',
-                           read_only=True, tooltip=_tip)
+                           handler_widget=PathSelector, read_only=True,
+                           tooltip=_tip)
         return handler
 
     @abstractmethod
