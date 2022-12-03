@@ -94,6 +94,12 @@ def emit_error(sender, error, *msg_args, **msg_kwargs):
     ValueError
         If error is not a 2-element tuple
     """
+    try:
+        sender.parent()
+    except RuntimeError:
+        # C++ QObject deleted
+        return
+
     if not hasattr(sender, 'error_occurred'):
         raise TypeError(f"Object {sender} has no error_occurred signal "
                         "to emit. Probably an inappropriate type")

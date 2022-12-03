@@ -126,6 +126,12 @@ def on_frame_ready_(__grabber_handle, image_start_pixel,
     if not camera.has_zero_minimum and not image.min():
         camera.has_zero_minimum = True
 
+    try:
+        camera.parent()
+    except RuntimeError:
+        # Wrapped C++ object deleted
+        return
+
     # Send frame out
     camera.frame_ready.emit(image.copy())
 # pylint: enable=useless-param-doc,useless-type-doc
