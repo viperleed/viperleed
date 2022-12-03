@@ -227,9 +227,68 @@ def _find_matching_configs(device_name, directory, tolerant_match):
     return device_config_files
 
 
-def get_device_config(device_name, directory=DEFAULTS_PATH,
-                      tolerant_match=True, prompt_if_invalid=True,
-                      parent_widget=None):
+def _get_device_config_not_found(device_name, **kwargs):
+    """Return a device config when it was not found in the original path.
+
+    This function is only called as part of get_device_config
+    in case the no config file was found with the original arguments
+    given to get_device_config. Prompts the user for an action.
+
+    Parameters
+    ----------
+    device_name : str
+        String to be looked up in the configuration files
+        to identify that a file is meant for the device.
+    **kwargs : dict
+        The same arguments given to get_device_config
+
+    Returns
+    -------
+    path_to_config : Path, "", or None
+        The path to the only configuration file successfully
+        found. None or "" if no configuration file was found.
+        None is always returned if prompt_if_invalid is False,
+        or because the user dismissed the pop-up. The empty
+        string is returned if an alternative option was given
+        as a third_btn_text parameter, but the user anyway
+        dismissed the dialog.
+    """
+    parent_widget = kwargs.get("parent_widget", None)
+    directory = kwargs.get("directory", DEFAULTS_PATH)
+    third_btn_text = kwargs.get("third_btn_text", "")
+
+    msg_box = qtw.QMessageBox(parent=parent_widget)
+    msg_box.setWindowTitle("No settings file found")
+    msg_box.setText(
+        f"Directory {directory} and its subfolders do not contain "
+        f"any settings file for device {device_name}. Select "
+        "a different directory."
+        )
+    msg_box.setIcon(msg_box.Warning)
+    btn = msg_box.addButton("Select path", msg_box.ActionRole)
+    third_btn = None
+    if third_btn_text:
+        third_btn = msg_box.addButton(third_btn_text, msg_box.AcceptRole)
+    msg_box.addButton(msg_box.Cancel)
+    msg_box.exec_()
+    msg_box.setParent(None)  # py garbage collector will take care
+    _clicked = msg_box.clickedButton()
+    if msg_box.clickedButton() is btn:
+        new_path = qtw.QFileDialog.getExistingDirectory(
+            parent=parent_widget,
+            caption="Choose directory of device settings",
+            directory=str(directory)
+            )
+        if new_path:
+            kwargs["directory"] = new_path
+            return get_device_config(device_name, **kwargs)
+    if third_btn and _clicked is not third_btn:
+        # User had another option but dismissed the dialog
+        return ""
+    return None
+
+
+def get_device_config(device_name, **kwargs):
     """Return the configuration file for a specific device.
 
     Only configuration files with a .ini suffix are considered.
@@ -239,36 +298,51 @@ def get_device_config(device_name, directory=DEFAULTS_PATH,
     device_name : str
         String to be looked up in the configuration files
         to identify that a file is meant for the device.
-    directory : str or Path, optional
-        The base of the directory tree in which the
-        configuration file should be looked for. The
-        search is recursive. Default is the path to
-        the _defaults directory.
-    tolerant_match : bool, optional
-        Whether device_name should be looked up tolerantly
-        or not. If False, device_name is matched exactly,
-        otherwise parts of device_name within square brackets
-        are ignored. Default is True.
-    prompt_if_invalid : bool, optional
-        In case the search for a config file failed, pop up
-        a dialog asking the user for input. The search is
-        considered failed in case no config file was found,
-        or if multiple config files matched the criterion.
-        Default is True.
-    parent_widget : QWidget or None, optional
-        The parent widget of the pop up. Unless parent_widget
-        is None, the pop up will be blocking user events for
-        parent_widget till the user closes it. Used only
-        if prompt_if_invalid is True. Default is None.
+    **kwargs : dict, optional
+        directory : str or Path, optional
+            The base of the directory tree in which the
+            configuration file should be looked for. The
+            search is recursive. Default is the path to
+            the _defaults directory.
+        tolerant_match : bool, optional
+            Whether device_name should be looked up tolerantly
+            or not. If False, device_name is matched exactly,
+            otherwise parts of device_name within square brackets
+            are ignored. Default is True.
+        prompt_if_invalid : bool, optional
+            In case the search for a config file failed, pop up
+            a dialog asking the user for input. The search is
+            considered failed in case no config file was found,
+            or if multiple config files matched the criterion.
+            Default is True.
+        parent_widget : QWidget or None, optional
+            The parent widget of the pop up. Unless parent_widget
+            is None, the pop up will be blocking user events for
+            parent_widget till the user closes it. Used only
+            if prompt_if_invalid is True. Default is None.
+        third_btn_text : str, optional
+            If given and not empty, the string is used as the text
+            for an extra button with "accept role" in the did-not-
+            find-a-config case. This function may return an empty
+            string only if this is given and if the user dismisses
+            the dialog. Default is an empty string.
 
     Returns
     -------
-    path_to_config : Path or None
+    path_to_config : Path, "", or None
         The path to the only configuration file successfully
-        found. None if no configuration file was found (either
-        because prompt_if_invalid is False, or because the
-        user dismissed the pop-up).
+        found. None or "" if no configuration file was found.
+        None is always returned if prompt_if_invalid is False,
+        or because the user dismissed the pop-up. The empty
+        string is returned if an alternative option was given
+        as a third_btn_text parameter, but the user anyway
+        dismissed the dialog.
     """
+    directory = kwargs.get("directory", DEFAULTS_PATH)
+    tolerant_match = kwargs.get("tolerant_match", True)
+    prompt_if_invalid = kwargs.get("prompt_if_invalid", True)
+    parent_widget = kwargs.get("parent_widget", None)
+
     device_config_files = _find_matching_configs(device_name, directory,
                                                  tolerant_match)
 
@@ -280,28 +354,7 @@ def get_device_config(device_name, directory=DEFAULTS_PATH,
         return None
 
     if not device_config_files:
-        msg_box = qtw.QMessageBox(parent=parent_widget)                         # TODO: would be more efficient to reuse the instance, but would need a singleton class
-        msg_box.setWindowTitle("No settings file found")
-        msg_box.setText(
-            f"Directory {directory} and its subfolders do not contain "
-            f"any settings file for device {device_name}. Select "
-            "a different directory."
-            )
-        msg_box.setIcon(msg_box.Critical)
-        msg_box.addButton(msg_box.Cancel)
-        btn = msg_box.addButton("Select path", msg_box.ActionRole)
-        msg_box.exec_()
-        msg_box.setParent(None)  # py garbage collector will take care
-        if msg_box.clickedButton() is btn:
-            new_path = qtw.QFileDialog.getExistingDirectory(
-                parent=parent_widget,
-                caption="Choose directory of device settings",
-                directory=str(directory)
-                )
-            if new_path:
-                return get_device_config(device_name, new_path, tolerant_match,
-                                         prompt_if_invalid, parent_widget)
-        return None
+        return _get_device_config_not_found(device_name, **kwargs)
 
     # Found multiple config files that match.
     # Let the user pick which one to use
