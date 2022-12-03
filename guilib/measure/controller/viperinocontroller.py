@@ -206,6 +206,17 @@ class ViPErinoController(abc.MeasureControllerABC):
         return f"ViPErLEED {serial_nr}"
 
     @property
+    def name_clean(self):
+        """Return a version of .name suitable for file names."""
+        # Fall back on the settings if we have no serial number info
+        with self.lock:
+            try:
+                name = f"ViPErLEED {self.hardware['serial_nr']}"
+            except KeyError:
+                name = self.settings.get("controller", "device_name")
+        return base.as_valid_filename(name)
+
+    @property
     def firmware_version(self):
         """Return firmware version of the hardware (or the settings).
 
