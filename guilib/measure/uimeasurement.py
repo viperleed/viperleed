@@ -106,6 +106,7 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 #       max(image); fraction of saturated pixels;
 # BUG: exception ignored in ctypes callback: "camera has no exposure"
 #      probably a masked AttributError??
+# TODO: bad pixels info not updated on show
 
 #   M E A S U R E M E N T
 # TODO: energy ramps are not equivalent for iv == calibration != time_resolved
@@ -117,6 +118,8 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 
 #   H A R D W A R E
 # TODO: out to I0, measure HV --> not constant??
+# TODO: check that we compare serial number from settings with
+#       the one in the hardware when both are available!
 
 #   G U I
 # TODO: progress bar for non-endless
