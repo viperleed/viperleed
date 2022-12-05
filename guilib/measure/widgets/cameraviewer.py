@@ -166,7 +166,11 @@ class CameraViewer(qtw.QScrollArea):
 
     def __del__(self):
         """Remove self from the dictionary of viewers."""
-        self._viewers.pop(self.camera)
+        try:
+            self._viewers.pop(self.camera)
+        except KeyError:
+            # Probably cache already cleared
+            pass
         try:
             super().__del__()
         except AttributeError:
@@ -218,10 +222,8 @@ class CameraViewer(qtw.QScrollArea):
         TypeError
             If camera is not a subclass of CameraABC
         """
-        # pylint: disable=access-member-before-definition
-        # Flagging self._initialized, but attribute is
-        # defined in __new__
-        if not self._initialized:
+        _initialized = getattr(self, "_initialized", False)
+        if not _initialized:
             self.__flags = {"needs_roi_limits": False,
                             "image_saturated": False}
 
@@ -230,14 +232,13 @@ class CameraViewer(qtw.QScrollArea):
         # in __compose_context_menu
         for key, default, *_ in _DEFAULT_FLAGS:
             enabled = bool(kwargs.pop(key, default))
-            if not self._initialized:
+            if not _initialized:
                 self.__flags[key] = [enabled, None]
                 continue
             setattr(self, key, enabled)
 
-        if self._initialized:
+        if _initialized:
             return
-        # pylint: enable=access-member-before-definition
 
         super().__init__(*args, **kwargs)
         self._initialized = True
@@ -830,7 +831,8 @@ class CameraViewer(qtw.QScrollArea):
     @qtc.pyqtSlot(tuple)
     def __on_camera_error(self, _):
         """Close viewer when errors occur."""
-        self.close()
+        if self.isVisible():                                                    # TODO: a better way -- close only on "fatal" errors [once we have the error levels implemented]
+            self.close()
 
     @qtc.pyqtSlot()
     def __on_camera_started(self):
