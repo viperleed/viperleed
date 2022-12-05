@@ -418,6 +418,7 @@ class ImagingSourceCamera(abc.CameraABC):
             black_level = self.get_black_level()
             self.settings.set('camera_settings', 'black_level',
                               str(black_level))
+            self.settings.update_file()
 
         _min, _max = self.get_black_level_limits()
         if black_level < _min or black_level > _max:

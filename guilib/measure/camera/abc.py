@@ -563,6 +563,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             roi = self.get_roi()
             if roi:
                 self.settings.set('camera_settings', 'roi', str(roi))
+                self.settings.update_file()
 
         try:
             # pylint: disable=redefined-variable-type  # pylint bug
