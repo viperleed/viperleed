@@ -1754,7 +1754,7 @@ void checkMeasurementInADCRange(byte* gain, bool* adcShouldDecreaseGain,
         If the ADC channel used was not calibrated
     Stays unchanged
         Otherwise
-    */
+    **/
     if(abs(adcValue) > (ADC_RANGE_THRESHOLD - abs(ripple>>*gain))
        && (*gain > 0)
        && !(*adcShouldDecreaseGain)){
