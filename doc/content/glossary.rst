@@ -81,3 +81,6 @@ Glossary
 
     C
       The C programming language.
+
+    conda
+      The conda package manager for :term:`Python`. See the `conda homepage <https://docs.conda.io/en/latest/>`__.

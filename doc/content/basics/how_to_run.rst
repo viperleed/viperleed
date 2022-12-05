@@ -70,9 +70,19 @@ If you are running using a pre-packaged version of tleedm, you can start the cal
 .. tip:: 
     As a ViPErLEED calculation can take a long time, it is recommended to start the calculation using `nohup <https://en.wikipedia.org/wiki/Nohup>`__ or in a `tmux <https://github.com/tmux/tmux/wiki>`__ session. This way, the calculation will not be aborted if the user is logged out (or the connection of an ``ssh`` session breaks).
 
-If you are running ViPErLEED on an HPC system with a workload scheduler such as `slurm <https://slurm.schedmd.com/documentation.html>`__, make sure to load (system-dependent, e.g. ``module load mpiifort``) the required compilers, :term:`MPI` implementations and Python packages in the submission-script.
+HPC systems
+-----------
 
-**TODO** job submission script example?
+If you are running ViPErLEED on an :term:`HPC` system with a workload scheduler such as `slurm <https://slurm.schedmd.com/documentation.html>`__, make sure to load the required compilers, :term:`MPI` implementations and Python packages in the submission-script (system-dependent, e.g. ``module load mpiifort``).
+
+Such a submission script usually contains details on the requested hardware (declared via ``#SBATCH`` in slurm) and instructions on which precompiled packages to make available.
+Below, you find an example for a submission script for the `Vienna Scientific Cluster (VSC-4) <https://vsc.ac.at//home/>`__, which uses the slurm workload manager.
+The script first loads the required Intel compilers and :term:`conda` distribution, before executing ViPErLEED using the :ref:`job script<job_script>`.
+
+
+.. literalinclude :: /_static/example_job_script.txt
+   :language: bash
+   :caption: Example submission script for the 
 
 .. _dir_organization_output:
 
