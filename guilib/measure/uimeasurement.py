@@ -73,6 +73,8 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 #       then read in on top of them the ones saved locally. This would allow
 #       to seriously reduce the number of lines in many of the "local"
 #       configuration files.
+# TODO: speed up import time by picking more specific module parts
+# BUG: PathSelector looks weird on Linux
 
 #   C A M E R A   &  C O.
 # TODO: bad pixels finder top progress bar should scale better, with actual
