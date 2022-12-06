@@ -776,7 +776,7 @@ class CameraViewer(qtw.QScrollArea):
         # settings dialog was already created) or in camera.roi
         # (before a dialog was created)
         if self.__settings_roi:
-            original_roi = self.__settings_roi
+            original_roi = self.__settings_roi.roi
         else:
             original_roi = self.camera.roi
         offs_x, offs_y, *_ = original_roi
