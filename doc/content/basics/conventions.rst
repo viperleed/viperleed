@@ -6,11 +6,10 @@ Conventions
 Coordinate system
 -----------------
 
-The lattice vectors describing the unit cell are named :math:`\vec{a}`, 
-:math:`\vec{b}`, and :math:`\vec{c}`.
-:math:`\vec{a}` and :math:`\vec{b}` must be in the :math:`xy` plane, 
-and :math:`\vec{c}` must have a positive :math:`z` component.
+The lattice vectors describing the unit cell are named :math:`\vec{a}`, :math:`\vec{b}`, and :math:`\vec{c}`.
+:math:`\vec{a}` and :math:`\vec{b}` must be in the :math:`xy` plane, and :math:`\vec{c}` must have a positive :math:`z` component.
 The :math:`+z` direction is considered to be pointing outwards from the surface.
+:math:`\vec{a}` should be short than :math:`\vec{b}`, i.e. :math:`\mid \vec{a} \mid < \mid \vec{b} \mid`.
 
 Units
 -----

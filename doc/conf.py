@@ -19,6 +19,7 @@ release = '0.7.2'
 
 extensions = [
               'sphinx.ext.autodoc',
+#              'sphinx.ext.napoleon'        # for Numpy docstrings ?
               'sphinx.ext.extlinks',
               'sphinx.ext.mathjax',
               'sphinx.ext.viewcode',

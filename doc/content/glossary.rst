@@ -84,3 +84,6 @@ Glossary
 
     conda
       The conda package manager for :term:`Python`. See the `conda homepage <https://docs.conda.io/en/latest/>`__.
+
+    fcc
+      Face centered cubic crystal structure.
