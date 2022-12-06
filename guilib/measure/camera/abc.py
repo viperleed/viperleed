@@ -889,8 +889,8 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         else:
             _range = (1, float('inf'))
         _widget = qtw.QDoubleSpinBox()
-        _widget.setRange(_range)
         _widget.setDecimals(0)
+        _widget.setRange(*_range)
         _widget.setAccelerated(True)
         _tip = (
             "<nobr>Number of frames to be averaged for saving images.</nobr> "
