@@ -27,6 +27,7 @@ from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.classes.datapoints import QuantityInfo
 from viperleed.guilib.measure.classes import settings as _m_settings
 from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
+from viperleed.guilib.measure.widgets.spinboxes import InfIntSpinBox
 
 
 _UNIQUE = qtc.Qt.UniqueConnection
@@ -783,11 +784,8 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
              " This is usually significantly longer than the one used during"
              " a ramp, as setting the first energy requires a large step.")
             )
-        _widg = qtw.QDoubleSpinBox
         for option_name, display_name, tip in info:
-            widget = _widg()
-            widget.setMaximum(float('inf'))
-            widget.setDecimals(0)
+            widget = InfIntSpinBox()
             widget.setSuffix(' ms')
             widget.setSingleStep(10)
             handler.add_option(
@@ -1247,9 +1245,8 @@ class MeasureControllerABC(ControllerABC):
         handler = super().get_settings_handler()
         if not handler.has_section('measurement_settings'):
             handler.add_section('measurement_settings')
-        widget = qtw.QDoubleSpinBox()
-        widget.setMaximum(float('inf'))
-        widget.setDecimals(0)
+        widget = InfIntSpinBox()
+        widget.setMinimum(1)
         tip = ("<nobr>The number of measurements the controller should"
                "</nobr> average over before returning a value to the PC")
         handler.add_option('measurement_settings', 'nr_samples',

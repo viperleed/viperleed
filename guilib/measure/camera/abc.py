@@ -29,6 +29,7 @@ from viperleed.guilib.measure.classes import settings as _m_settings
 from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
 from viperleed.guilib.measure.widgets.roieditor import ROIEditor
 from viperleed.guilib.measure.widgets.pathselector import PathSelector
+from viperleed.guilib.measure.widgets.spinboxes import InfIntSpinBox
 
 
 # pylint: disable=too-many-lines,too-many-public-methods
@@ -888,8 +889,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             _range = self.get_n_frames_limits()
         else:
             _range = (1, float('inf'))
-        _widget = qtw.QDoubleSpinBox()
-        _widget.setDecimals(0)
+        _widget = InfIntSpinBox()
         _widget.setRange(*_range)
         _widget.setAccelerated(True)
         _tip = (
