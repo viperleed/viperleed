@@ -1002,6 +1002,10 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         except NotASequenceError:                                               # TODO: probably report the error
             cam_settings = tuple()
 
+        if isinstance(cam_settings, str):
+            # Only one camera, without brackets, or missing comma
+            cam_settings = (cam_settings,)
+
         cameras = []
         for settings in cam_settings:
             try:
@@ -1094,6 +1098,10 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
                             'controller/controller_class',
                             f'Unkown class {cls_name} in {config.last_file}')
             raise RuntimeError from None
+
+        if isinstance(measurements, str):
+            # Only one quantity, with no brackets or no comma
+            meassurements = (measurements,)
 
         if not isinstance(measurements, Sequence):
             section = ('primary_controller' if is_primary
