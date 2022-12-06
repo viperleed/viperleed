@@ -96,6 +96,9 @@ def gui_main():
     if not log_path.exists():
         log_path.mkdir()
 
+    # Ensure we always use "." as decimal separators 
+    qtc.QLocale.setDefault(qtc.QLocale.c())
+
     print('Loading GUI...', flush=True, end='')
     qtg.QGuiApplication.setAttribute(qtc.Qt.AA_EnableHighDpiScaling)
     qtg.QGuiApplication.setAttribute(qtc.Qt.AA_UseHighDpiPixmaps)

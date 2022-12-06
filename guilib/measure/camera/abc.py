@@ -29,7 +29,8 @@ from viperleed.guilib.measure.classes import settings as _m_settings
 from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
 from viperleed.guilib.measure.widgets.roieditor import ROIEditor
 from viperleed.guilib.measure.widgets.pathselector import PathSelector
-from viperleed.guilib.measure.widgets.spinboxes import InfIntSpinBox
+from viperleed.guilib.measure.widgets.spinboxes import (InfIntSpinBox,
+                                                        TolerantCommaSpinBox)
 
 
 # pylint: disable=too-many-lines,too-many-public-methods
@@ -853,7 +854,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         # _widget is used for in each portion of filling the handler
 
         # Exposure time in ms
-        _widget = qtw.QDoubleSpinBox()                                          # TODO: use prefix-adaptive widget
+        _widget = TolerantCommaSpinBox()                                          # TODO: use prefix-adaptive widget
         _widget.setRange(*self.get_exposure_limits())
         _widget.setSuffix(" ms")
         _widget.setStepType(_widget.AdaptiveDecimalStepType)
@@ -871,7 +872,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
                            handler_widget=_widget, tooltip=_tip)
 
         # Gain in dB                                                            # TODO: add also a gain factor!
-        _widget = qtw.QDoubleSpinBox()
+        _widget = TolerantCommaSpinBox()
         _widget.setRange(*self.get_gain_limits())
         _widget.setSuffix(" dB")
         _widget.setAccelerated(True)

@@ -28,19 +28,28 @@ class TolerantCommaSpinBox(qtw.QDoubleSpinBox):
     ---------------------
     keyPressEvent(event)
         Replace comma key-presses with dot key presses.
+    keyReleaseEvent(event)
+        Replace comma key-releases with dot key releases.
     """
 
-    def keyPressEvent(self, event):  # pylint: disable=invalid-name
+    def keyPressEvent(self, event):      # pylint: disable=invalid-name
         """Replace commas with dots."""
-        key = event.key()
-        if key == qtc.Qt.Key_Comma:
-            # Simulate that a dot was actually pressed
-            event = qtg.QKeyEvent(
-                event.type(), qtc.Qt.Key_Period, event.modifiers(),
-                text=event.text().replace(',', '.'),
-                autorep=event.isAutoRepeat(), count=event.count()
-                )
-        super().keyPressEvent(event)
+        super().keyPressEvent(self.__make_dot_key_event(event))
+    
+    def keyReleaseEvent(self, event):    # pylint: disable=invalid-name
+        """Replace commas with dots."""
+        super().keyReleaseEvent(self.__make_dot_key_event(event))
+
+    @staticmethod
+    def __make_dot_key_event(event):
+        """Return a KeyEvent with comma replaced by dot."""
+        if event.key() != qtc.Qt.Key_Comma:
+            return event
+        return qtg.QKeyEvent(
+            event.type(), qtc.Qt.Key_Period, event.modifiers(),
+            text=event.text().replace(',', '.'),
+            autorep=event.isAutoRepeat(), count=event.count()
+            )
 
 
 class InfIntSpinBox(qtw.QDoubleSpinBox):

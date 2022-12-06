@@ -33,6 +33,7 @@ from viperleed.guilib.measure.dialogs.settingsdialog import (
 from viperleed.guilib.measure.serial.viperleedserial import (
     ViPErLEEDHardwareError, ExtraSerialErrors
     )
+from viperleed.guilib.measure.widgets.spinboxes import TolerantCommaSpinBox
 from viperleed.gui import resources_path
 
 # pylint: disable=too-many-lines
@@ -942,7 +943,7 @@ class _I0EditDialog(_EditDialogBase):
             ))
         super().__init__(controller, *args, **kwargs)
 
-        self.__gain = qtw.QDoubleSpinBox()
+        self.__gain = TolerantCommaSpinBox()
         self.__gain_info = None
 
         self.__compose()
