@@ -884,9 +884,12 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
                            handler_widget=_widget, tooltip=_tip)
 
         # n_frames
+        if self.get_n_frames():
+            _range = self.get_n_frames_limits()
+        else:
+            _range = (1, float('inf'))
         _widget = qtw.QDoubleSpinBox()
-        _widget.setMinimum(1)
-        _widget.setMaximum(float('inf'))
+        _widget.setRange(_range)
         _widget.setDecimals(0)
         _widget.setAccelerated(True)
         _tip = (
