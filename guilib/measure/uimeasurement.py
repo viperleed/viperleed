@@ -579,6 +579,9 @@ class Measure(ViPErLEEDPluginBase):
         for viewer in self._dialogs['camera_viewers']:
             if viewer.camera.is_running:
                 _ok_to_open &= viewer.camera.stop()
+            # Since we will delete all of the viewers, we can as well
+            # make sure they won't show up again after we close them
+            viewer.show_auto = False
             viewer.close()
         if not _ok_to_open:
             # Retry soon
@@ -587,6 +590,11 @@ class Measure(ViPErLEEDPluginBase):
 
         for viewer in self._dialogs['camera_viewers']:
             viewer.camera.disconnect_()
+        # After disconnecting cameras, it does not really make
+        # sense to keep the viewers around: we will not reuse
+        # the disconnected cameras anyway
+        self._dialogs['camera_viewers'] = []
+
         self.__switch_enabled(False)
         self._ctrls['abort'].setEnabled(False)
         self._dialogs['bad_px_finder'].open()
