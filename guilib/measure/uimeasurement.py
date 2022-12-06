@@ -75,6 +75,7 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 #       configuration files.
 # TODO: speed up import time by picking more specific module parts
 # BUG: PathSelector looks weird on Linux
+# BUG: system settings: folder renamed with small/capital not detected as change
 
 #   C A M E R A   &  C O.
 # TODO: bad pixels finder top progress bar should scale better, with actual
@@ -121,6 +122,7 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 # BUG: exception ignored in ctypes callback: "camera has no exposure"
 #      probably a masked AttributError??
 # TODO: bad pixels info not updated on show
+# TODO: bad pixels & dark progress bar: text is not always accurate
 
 #   M E A S U R E M E N T
 # TODO: energy ramps are not equivalent for iv == calibration != time_resolved
@@ -129,6 +131,7 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 #       than sending an empty data_ready for getting the times right
 # TODO: Ecal coefficients stored only if user OK with it. Requires plot
 #       of calibration residuals.
+# TODO: filename for measurements: include a progressive number (3 digits?) for each day, ad date_time_NNN
 
 #   H A R D W A R E
 # TODO: out to I0, measure HV --> not constant??
@@ -146,6 +149,10 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 
 #   F E A T U R E S
 # TODO: quick IV video to find max intensity, and adjust camera
+#       Saturation: oversaturating a bit the very highest maxima gives
+#       better S/N on the lower-intensity part of the data, which is most
+#       of them. How to choose the overshooting? Perhaps fraction of pixels
+#       in saturation?
 # TODO: settle time calculation.
 #       Look at https://link.springer.com/article/10.1007/s00034-017-0560-3
 # TODO: progress report, take inspiration from github.com/verigak/progress/
