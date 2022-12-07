@@ -195,7 +195,7 @@ def write_errors_pdf(errors, v0i, energy_range, filename="Errors.pdf"):
             ax.set_xlabel('Site occupation (%)')
         ax.set_ylabel('Pendry R-factor')
         ax.set_title(titles[mode])
-        ylim = (0, rmax + ((rmax-rmin)*0.1))
+        ylim = (0, rmax + max(((rmax-rmin)*0.15), 0.05))
         if var and rmin + var < rmax + (rmax-rmin)*0.1:
             ax.plot(xrange, [rmin + var]*2, color="slategray")
             inters = sorted([x for err in mode_errors
