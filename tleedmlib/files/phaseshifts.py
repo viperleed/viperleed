@@ -144,11 +144,9 @@ def readPHASESHIFTS(sl, rp, readfile='PHASESHIFTS', check=True,
         phaseshifts.append((energy, enps))
         line_idx += lines_per_element*nel+1
 
-    logger.debug(str(rp.LMAX))
-    
     if not check:
         return firstline, phaseshifts, False, False
-    
+
     # try extracting muffin tin parameters:
     muftin = []
     llist = firstline.split()
@@ -176,10 +174,10 @@ def readPHASESHIFTS(sl, rp, readfile='PHASESHIFTS', check=True,
 def __check_consistency_rp_elements(sl, rp, phaseshifts, firstline, muftin):
     # check whether the phaseshifts that were found fit the data:
     newpsGen, newpsWrite = True, True # should new values should be generated / written to file?
-    
+
     n_l_values = len(phaseshifts[0][1][0])
     n_el_and_sites = len(phaseshifts[0][1])
-    
+
     n_el_and_sites_expected = 0
     for el in sl.elements:
         if el in rp.ELEMENT_MIX:

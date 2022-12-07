@@ -19,16 +19,21 @@ import numpy as np
 import signal
 import re
 import copy
+from pathlib import Path
+
 from sklearn.linear_model import LinearRegression, Ridge, Lasso, ElasticNet
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.pipeline import make_pipeline
 import scipy
 
-import viperleed.tleedmlib.files.iosearch as io
+from tleedmlib.leedbase import copy_compile_log
+
+import viperleed.tleedmlib.files.iosearch as tl_io
 import viperleed.tleedmlib as tl
 # from tleedmlib.polynomialfeatures_no_interaction import PolyFeatNoMix
 from viperleed.tleedmlib.leedbase import fortran_compile_batch
 from viperleed.tleedmlib.files.parameters import updatePARAMETERS
+from viperleed.tleedmlib.checksums import validate_multiple_files
 from viperleed.tleedmlib.files.displacements import readDISPLACEMENTS_block
 from viperleed.tleedmlib.files.searchpdf import (
     writeSearchProgressPdf, writeSearchReportPdf)
@@ -59,7 +64,7 @@ def processSearchResults(sl, rp, final=True):
     """
     # get the last block from SD.TL:
     try:
-        lines = io.readSDTL_end(n_expect=rp.SEARCH_POPULATION)
+        lines = tl_io.readSDTL_end(n_expect=rp.SEARCH_POPULATION)
     except FileNotFoundError:
         logger.error("Could not process Search results: SD.TL file not "
                      "found.")
@@ -68,9 +73,9 @@ def processSearchResults(sl, rp, final=True):
         logger.error("Failed to get last block from SD.TL file.")
         raise
     # read the block
-    sdtlContent = io.readSDTL_blocks("\n".join(lines),
-                                     whichR=rp.SEARCH_BEAMS, logInfo=final,
-                                     n_expect=rp.SEARCH_POPULATION)
+    sdtlContent = tl_io.readSDTL_blocks("\n".join(lines),
+                                        whichR=rp.SEARCH_BEAMS, logInfo=final,
+                                        n_expect=rp.SEARCH_POPULATION)
     if not sdtlContent:
         if final:
             logger.error("No data found in SD.TL file!")
@@ -178,9 +183,9 @@ def processSearchResults(sl, rp, final=True):
             for i, sp in enumerate(rp.searchpars):
                 if sp.parabolaFit["min"] is not None:
                     parab_inds[i] = sp.parabolaFit["min"]
-            io.writeSearchOutput(sl, rp, parab_inds, silent=True,
-                                 suffix="_parabola")
-        io.writeSearchOutput(sl, rp, pops[0][1][0][1], silent=(not final))
+            tl_io.writeSearchOutput(sl, rp, parab_inds, silent=True,
+                                    suffix="_parabola")
+        tl_io.writeSearchOutput(sl, rp, pops[0][1][0][1], silent=(not final))
     else:
         home = os.getcwd()
         for (i, dp) in enumerate(rp.domainParams):
@@ -191,10 +196,10 @@ def processSearchResults(sl, rp, final=True):
                     for j, sp in enumerate(dp.rp.searchpars):
                         if sp.parabolaFit["min"] is not None:
                             parab_inds[j] = sp.parabolaFit["min"]
-                    io.writeSearchOutput(dp.sl, dp.rp, parab_inds, silent=True,
-                                         suffix="_parabola")
-                io.writeSearchOutput(dp.sl, dp.rp, pops[0][1][i][1],
-                                     silent=(not final))
+                    tl_io.writeSearchOutput(dp.sl, dp.rp, parab_inds, silent=True,
+                                            suffix="_parabola")
+                tl_io.writeSearchOutput(dp.sl, dp.rp, pops[0][1][i][1],
+                                        silent=(not final))
             except Exception:
                 logger.error("Error while writing search output for domain {}"
                              .format(dp.name), exc_info=rp.LOG_DEBUG)
@@ -290,10 +295,11 @@ def parabolaFit(rp, datafiles, r_best, x0=None, max_configs=0, **kwargs):
     r_cutoff = 1.0
     if datafiles:
         varR = np.sqrt(8*np.abs(rp.V0_IMAG) / rp.total_energy_range())*r_best
-        rc = np.array((io.readDataChem(
+        rc = np.array((tl_io.readDataChem(
             rp, datafiles,
             cutoff=r_best + r_cutoff * varR,
-            max_configs=max_configs)), dtype=object)
+            max_configs=max_configs
+            )), dtype=object)
     if len(rc) < 100*rp.indyPars:
         return None, None
 
@@ -547,14 +553,14 @@ def search(sl, rp):
     rp.updateCores()
     # generate rf.info
     try:
-        rfinfo = io.writeRfInfo(sl, rp, filename="rf.info")
+        rfinfo = tl_io.writeRfInfo(sl, rp, filename="rf.info")
     except Exception:
         logger.error("Error generating search input file rf.info")
         raise
     # generate PARAM and search.steu
     #   needs to go AFTER rf.info, as writeRfInfo may remove expbeams!
     try:
-        io.generateSearchInput(sl, rp)
+        tl_io.generateSearchInput(sl, rp)
     except Exception:
         logger.error("Error generating search input")
         raise
@@ -576,7 +582,7 @@ def search(sl, rp):
             elif type(sp.linkedTo) == tl.SearchPar:
                 rp.searchResultsConfig[i] = (rp.searchpars.index(
                                                     sp.linkedTo) + 1)
-        io.writeSearchOutput(sl, rp)
+        tl_io.writeSearchOutput(sl, rp)
         return None
     if rp.SUPPRESS_EXECUTION:
         logger.warning("SUPPRESS_EXECUTION parameter is on. Search "
@@ -630,13 +636,14 @@ def search(sl, rp):
             srcname = [f for f in os.listdir(srcpath)
                        if f.startswith('search') and 'mpi' not in f][0]
         shutil.copy2(os.path.join(srcpath, srcname), srcname)
-        libpath = os.path.join(tldir, 'lib')
-        if usempi:
-            libname = [f for f in os.listdir(libpath)
-                       if f.startswith('lib.search.mpi')][0]
-        else:
-            libname = [f for f in os.listdir(libpath)
-                       if f.startswith('lib.search') and 'mpi' not in f][0]
+        libpath = Path(tldir, 'lib')
+        libpattern = "lib.search"
+        if usempi and rp.TL_VERSION <= 1.73:
+            libpattern += ".mpi"
+        libname = next(libpath.glob(libpattern + "*"), None).name
+        if libname is None:
+            raise RuntimeError(f"File {libpattern}.f not found.")
+        # copy to work dir
         shutil.copy2(os.path.join(libpath, libname), libname)
         hashing_files = [f for f in os.listdir(libpath)
                          if f.startswith('intarr_hashing')
@@ -646,17 +653,35 @@ def search(sl, rp):
             shutil.copy2(os.path.join(libpath, hashname), hashname)
         else:
             hashname = ""
-        if usempi:  # these are short C scripts - use pre-compiled versions
-            randnamefrom = "MPIrandom_.o"
-        else:
-            randnamefrom = "random_.o"
-        randname = "random_.o"
-        shutil.copy2(os.path.join(libpath, randnamefrom), randname)
+        if rp.TL_VERSION <= 1.73:
+            if usempi:  # these are short C scripts - use pre-compiled versions
+                randnamefrom = "MPIrandom_.o"
+            else:
+                randnamefrom = "random_.o"
+            randname = "random_.o"
+
+            # try to copy random lib object file
+            try:
+                shutil.copy2(os.path.join(libpath, randnamefrom), randname)
+            except FileNotFoundError:
+                logger.error("Could not find required random_.o object file."
+                             " You may have forgotten to compile random_.c.")
+                raise
+
         globalname = "GLOBAL"
         shutil.copy2(os.path.join(srcpath, globalname), globalname)
     except Exception:
         logger.error("Error getting TensErLEED files for search: ")
         raise
+    # Validate TensErLEED input files
+    if not rp.TL_IGNORE_CHECKSUM:
+        files_to_check = (Path(libpath) / libname,
+                          Path(srcpath) / srcname,
+                          Path(srcpath) / globalname,
+                          Path(libpath) / hashname
+                          )
+        validate_multiple_files(files_to_check, logger, "search", rp.TL_VERSION_STR)
+
     # compile fortran files
     searchname = "search-"+rp.timestamp
     if usempi:
@@ -665,6 +690,7 @@ def search(sl, rp):
         fcomp = rp.FORTRAN_COMP
     logger.info("Compiling fortran input files...")
     # compile
+    # compile task could be inherited from general CompileTask (issue #43)
     ctasks = [(fcomp[0]+" -o lib.search.o -c", libname, fcomp[1])]
     if hashname:
         ctasks.append((fcomp[0]+" -c", hashname, fcomp[1]))
@@ -676,18 +702,17 @@ def search(sl, rp):
             # assume that mpifort also uses gfortran
             format_tag = "--fixed-form"  # different formatting string
     ctasks.append((fcomp[0]+" -o search.o -c "+format_tag, srcname, fcomp[1]))
-    to_link = "search.o random_.o lib.search.o restrict.o"
+    to_link = "search.o lib.search.o restrict.o"
+    if rp.TL_VERSION <= 1.73:
+        to_link += " random_.o"
     if hashname:
         to_link += " intarr_hashing.o"
     ctasks.append((fcomp[0] + " -o " + searchname, to_link, fcomp[1]))
+    compile_log = "compile-search.log"
     try:
-        compile_log = "compile-search.log"
         fortran_compile_batch(ctasks, logname=compile_log)
-        try:
-            shutil.move(compile_log, os.path.join("compile_logs", compile_log))
-        except Exception:
-            logger.warning("Could not move " + compile_log + " to SUPP")
     except Exception:
+        copy_compile_log(rp, Path(compile_log), log_name="search-compile")
         logger.error("Error compiling fortran files: ", exc_info=True)
         raise
     logger.debug("Compiled fortran files successfully")
@@ -829,11 +854,12 @@ def search(sl, rp):
                     lastEval = t
                     newData = []
                     if os.path.isfile("SD.TL"):
-                        filepos, content = io.readSDTL_next(offset=filepos)
+                        filepos, content = tl_io.readSDTL_next(offset=filepos)
                         if content:
-                            newData = io.readSDTL_blocks(
+                            newData = tl_io.readSDTL_blocks(
                                 content, whichR=rp.SEARCH_BEAMS,
-                                n_expect=rp.SEARCH_POPULATION)
+                                n_expect=rp.SEARCH_POPULATION
+                            )
                     elif t >= 900 and rp.HALTING < 3:
                         stop = True
                         if tried_repeat:
@@ -1016,8 +1042,8 @@ def search(sl, rp):
                 rp.SEARCH_MAX_GEN -= sdtlGenNum
                 markers.append((genOffset, comment))
             try:
-                io.generateSearchInput(sl, rp, steuOnly=True,
-                                       cull=True, info=False)
+                tl_io.generateSearchInput(sl, rp, steuOnly=True,
+                                          cull=True, info=False)
             except Exception:
                 logger.error("Error re-generating search input")
                 raise

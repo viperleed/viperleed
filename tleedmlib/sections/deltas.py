@@ -13,17 +13,21 @@ import logging
 import shutil
 import subprocess
 import hashlib
+from pathlib import Path
+
 import numpy as np
 
 import viperleed.tleedmlib as tl
-import viperleed.tleedmlib.files.iodeltas as io
+import viperleed.tleedmlib.files.iodeltas as tl_io
 from viperleed.tleedmlib.files.beams import writeAUXBEAMS
 from viperleed.tleedmlib.files.displacements import readDISPLACEMENTS_block
 # from viperleed.tleedmlib.files.parameters import updatePARAMETERS
-from viperleed.tleedmlib.leedbase import monitoredPool, copy_compile_folder
+from viperleed.tleedmlib.leedbase import monitoredPool, copy_compile_log
+from viperleed.tleedmlib.checksums import validate_multiple_files
 
 logger = logging.getLogger("tleedm.deltas")
 
+# TODO: would be nice to all os.path with pathlib
 
 class DeltaCompileTask():
     """Stores information for a worker to compile a delta file, and keeps
@@ -40,6 +44,34 @@ class DeltaCompileTask():
 
         if os.name == 'nt':
             self.exename += '.exe'
+
+    def get_source_files(self):
+        """Return files needed for a delta-amplitude compilation."""
+        sourcedir = Path(self.sourcedir).resolve()
+        srcpath = sourcedir / 'src'
+        srcname = next(srcpath.glob('delta*'), None)
+        libpath = sourcedir / 'lib'
+        lib_tleed = next(libpath.glob('lib.tleed*'), None)
+        lib_delta = next(libpath.glob('lib.delta*'), None)
+        globalname = srcpath / "GLOBAL"
+        if any(f is None for f in (srcname, lib_tleed, lib_delta)):
+            raise RuntimeError("Source files missing in {sourcedir}")          # TODO: use a better custom exception in CompileTask (e.g., MissingSourceFileError)
+        return srcname, lib_tleed, lib_delta, globalname
+
+    def copy_source_files_to_local(self):
+        """Copy delta source files to current directory."""
+        for filepath in self.get_source_files():
+            if filepath:
+                shutil.copy2(filepath, filepath.name)
+
+    @property
+    def logfile(self):
+        return Path(self.basedir) / self.foldername / "fortran-compile.log"
+
+    @property
+    def compile_log_name(self):
+        # name as it should appear in the compile_logs directory
+        return self.foldername
 
 
 class DeltaRunTask():
@@ -163,29 +195,25 @@ def compileDelta(comptask):
                 + "while trying to write PARAM file.")
     # get Fortran source files
     try:
-        libpath = os.path.join(comptask.sourcedir, 'lib')
-        libname1 = [f for f in os.listdir(libpath)
-                    if f.startswith('lib.tleed')][0]
-        shutil.copy2(os.path.join(libpath, libname1), libname1)
-        libname2 = [f for f in os.listdir(libpath)
-                    if f.startswith('lib.delta')][0]
-        shutil.copy2(os.path.join(libpath, libname2), libname2)
-        srcpath = os.path.join(comptask.sourcedir, 'src')
-        srcname = [f for f in os.listdir(srcpath)
-                   if f.startswith('delta')][0]
-        shutil.copy2(os.path.join(srcpath, srcname), srcname)
-        globalname = "GLOBAL"
-        shutil.copy2(os.path.join(srcpath, globalname), globalname)
+        comptask.copy_source_files_to_local()
     except Exception:
         logger.error("Error getting TensErLEED files for "
                      "delta-amplitudes: ", exc_info=True)
         return ("Error encountered by DeltaCompileTask " + comptask.foldername
                 + "while trying to fetch fortran source files")
+    
+    # TODO: we could skip this, if we implemented a general CompileTask (Issue #43)
+    (srcname, lib_tleed,
+     lib_delta, _) = (
+         str(fname.name) if fname is not None else None
+         for fname in comptask.get_source_files()
+         )
+    
     # compile
     ctasks = [(comptask.fortran_comp[0] + " -o " + oname + " -c",
                fname, comptask.fortran_comp[1]) for (fname, oname)
-              in [(srcname, "main.o"), (libname1, "lib.tleed.o"),
-                  (libname2, "lib.delta.o")]]
+              in [(srcname, "main.o"), (lib_tleed, "lib.tleed.o"),
+                  (lib_delta, "lib.delta.o")]]
     ctasks.append((comptask.fortran_comp[0] + " -o " + comptask.exename,
                    "main.o lib.tleed.o lib.delta.o",
                    comptask.fortran_comp[1]))
@@ -224,7 +252,7 @@ def deltas(sl, rp, subdomain=False):
         sl.restoreOriState(keepDisp=True)
     # if there are old deltas, fetch them
     tl.leedbase.getDeltas(rp.TENSOR_INDEX, required=False)
-    dbasic = io.generateDeltaBasic(sl, rp)
+    dbasic = tl_io.generateDeltaBasic(sl, rp)
     # get AUXBEAMS; if AUXBEAMS is not in work folder, check SUPP folder
     if not os.path.isfile(os.path.join(".", "AUXBEAMS")):
         if os.path.isfile(os.path.join(".", "SUPP", "AUXBEAMS")):
@@ -336,7 +364,7 @@ def deltas(sl, rp, subdomain=False):
                       if f.startswith("DEL_{}_".format(at.oriN) + el)]
             found = False
             for df in dfiles:
-                if io.checkDelta(df, at, el, rp):
+                if tl_io.checkDelta(df, at, el, rp):
                     found = True
                     at.deltasGenerated.append(df)
                     countExisting += 1
@@ -387,7 +415,7 @@ def deltas(sl, rp, subdomain=False):
     deltaRunTasks = []   # which deltas to run
     tensordir = "Tensors_"+str(rp.TENSOR_INDEX).zfill(3)
     for (at, el) in atElTodo:
-        din, din_short, param = io.generateDeltaInput(
+        din, din_short, param = tl_io.generateDeltaInput(
             at, el, sl, rp, dbasic, auxbeams, phaseshifts)
         h = hashlib.md5(param.encode()).digest()
         found = False
@@ -467,13 +495,13 @@ def deltas(sl, rp, subdomain=False):
         except Exception:
             logger.error("No fortran compiler found, cancelling...")
             raise RuntimeError("No Fortran compiler")
-    tlp = tl.leedbase.getTLEEDdir(os.path.abspath(rp.sourcedir),
+    tl_path = tl.leedbase.getTLEEDdir(os.path.abspath(rp.sourcedir),
                                   version=rp.TL_VERSION)
-    if not tlp:
+    if not tl_path:
         raise RuntimeError("TensErLEED code not found.")
     for ct in deltaCompTasks:
         ct.fortran_comp = rp.FORTRAN_COMP
-        ct.sourcedir = tlp
+        ct.sourcedir = tl_path
         ct.basedir = os.getcwd()
 
     if subdomain:   # actual calculations done in deltas_domains
@@ -482,10 +510,24 @@ def deltas(sl, rp, subdomain=False):
         return (deltaCompTasks, deltaRunTasks)
 
     rp.updateCores()
+    
+    # Validate TensErLEED checksums
+    if not rp.TL_IGNORE_CHECKSUM:
+        validate_multiple_files(deltaCompTasks[0].get_source_files(),
+                                logger,
+                                "delta calculations",
+                                rp.TL_VERSION_STR)
+    
     # compile files
     logger.info("Compiling fortran files...")
     poolsize = min(len(deltaCompTasks), rp.N_CORES)
-    monitoredPool(rp, poolsize, compileDelta, deltaCompTasks)
+    try:
+        monitoredPool(rp, poolsize, compileDelta, deltaCompTasks)
+    except Exception:
+        # save log files in case of error:
+        for ct in deltaCompTasks:
+            copy_compile_log(rp, ct.logfile, ct.compile_log_name)
+        raise
     if rp.STOP:
         return
 
@@ -499,7 +541,7 @@ def deltas(sl, rp, subdomain=False):
 
     # clean up compile folders - AMI: move logs first to compile_logs !
     for ct in deltaCompTasks:
-        copy_compile_folder(ct, rp)
+        copy_compile_log(rp, ct.logfile, ct.compile_log_name)
         try:
             shutil.rmtree(os.path.join(ct.basedir, ct.foldername)) # AMI here
         except Exception:
@@ -569,12 +611,10 @@ def deltas_domains(rp):
 
     # clean up
     for ct in deltaCompTasks:
-        copy_compile_folder(ct, rp) # copy compile folder
+        copy_compile_log(rp, ct.logfile, ct.compile_log_name) # copy compile folder
         d = os.path.join(ct.basedir, ct.foldername)
         try:
             shutil.rmtree(d)
         except Exception:
             logger.warning("Error deleting delta compile folder "
                            + os.path.relpath(d))
-
-    return

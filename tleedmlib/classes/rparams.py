@@ -25,6 +25,10 @@ else:
 from viperleed.tleedmlib.files.iodeltas import checkDelta
 from viperleed.tleedmlib.leedbase import getMaxTensorIndex
 from viperleed.tleedmlib.base import available_cpu_count
+from viperleed.tleedmlib.checksums import (
+    KNOWN_TL_VERSIONS,
+    UnknownTensErLEEDVersionError
+)
 
 logger = logging.getLogger("tleedm.rparams")
 
@@ -32,6 +36,15 @@ logger = logging.getLogger("tleedm.rparams")
 #                CLASSES                      #
 ###############################################
 
+
+DEFAULTS = {
+    'PHASESHIFT_EPS': {
+        'r': 0.1,
+        'n': 0.05,
+        'f': 0.01, # this is the default if nothing is given
+        'e': 0.001,
+    }
+}
 
 class SearchPar:
     """Stores properties of ONE parameter of the search, i.e. what variation
@@ -176,7 +189,9 @@ class Rparams:
         self.THEO_ENERGIES = [-1, -1, -1]
         # default: [20, 800, 2], initialized in section INIT
         self.THETA = 0.0        # from BEAM_INCIDENCE
+        self.TL_IGNORE_CHECKSUM = True
         self.TL_VERSION = 0.    # requested TensErLEED version
+        self.TL_VERSION_STR = None  # TODO: replace with Version class once available
         self.T_EXPERIMENT = None
         self.T_DEBYE = None
         self.V0_IMAG = 4.5
@@ -188,6 +203,7 @@ class Rparams:
         self.starttime = timer()
         self.sourcedir = os.getcwd()  # where to find 'tensorleed'
         self.workdir = os.getcwd()  # MAIN WORK DIRECTORY; where to find input
+        self.compile_logs_dir = None
         self.searchConvInit = {
             "gaussian": None, "dgen": {"all": None, "best": None, "dec": None}}
         self.searchMaxGenInit = self.SEARCH_MAX_GEN
@@ -249,6 +265,9 @@ class Rparams:
         # (name, gens, min, max, mean) for each search
         self.lastParScatterFigs = {}
         # complete figures for each search, with search names as keys
+
+    def get_default(self, param):
+        return DEFAULTS[param]
 
     def total_energy_range(self):
         """Return the total overlapping energy range of experiment and
@@ -320,6 +339,22 @@ class Rparams:
             self.TL_VERSION = highest
             if highest > 0.:
                 logger.debug("Detected TensErLEED version " + namestr)
+        
+        # TL_VERSION_STR
+        # try simple conversion to string
+        self.TL_VERSION_STR = f"{self.TL_VERSION:.2f}"
+        if self.TL_VERSION_STR not in KNOWN_TL_VERSIONS:
+            # try again without trailing zero
+            if self.TL_VERSION_STR.endswith('0'):
+                self.TL_VERSION_STR = self.TL_VERSION_STR[:-1]
+        if (self.TL_VERSION_STR not in KNOWN_TL_VERSIONS 
+                and not self.TL_IGNORE_CHECKSUM):
+            raise UnknownTensErLEEDVersionError(
+                f"Unrecognized TensErLEED version: {self.TL_VERSION_STR}. "
+                "Consider editing KNOWN_TL_VERSIONS global in checksums.py "
+                "or setting TL_IGNORE_CHECKSUM = True."
+            )
+        
         # SEARCH_CONVERGENCE:
         if self.searchConvInit["gaussian"] is None:
             self.searchConvInit["gaussian"] = self.GAUSSIAN_WIDTH
@@ -344,7 +379,7 @@ class Rparams:
             # LMAX
             min_set = True
             if self.PHASESHIFT_EPS == 0:
-                self.PHASESHIFT_EPS = 0.01
+                self.PHASESHIFT_EPS = DEFAULTS['PHASESHIFT_EPS']['f']
             if self.LMAX[0] <= 0:
                 self.LMAX[0] = 6
                 min_set = False
@@ -614,7 +649,7 @@ class Rparams:
             self.FORTRAN_COMP_MPI = ["mpiifort -Ofast", ""]
             logger.debug("Using fortran compiler: mpiifort")
         elif found == "mpifort":
-            self.FORTRAN_COMP_MPI = ["mpifort -Ofast -no-pie", ""]
+            self.FORTRAN_COMP_MPI = ["mpifort -Ofast -no-pie -fallow-argument-mismatch", ""]
             logger.debug("Using fortran compiler: mpifort")
         return
 

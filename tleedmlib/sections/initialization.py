@@ -13,6 +13,7 @@ import shutil
 import logging
 import copy
 import numpy as np
+from pathlib import Path
 
 import viperleed.tleedmlib as tl
 from viperleed.tleedmlib.base import angle, rotation_matrix
@@ -355,7 +356,7 @@ def initialization(sl, rp, subdomain=False):
         rp.ivbeams_sorted = True
 
     # Create directory compile_logs in which logs from compilation will be saved
-    make_compile_logs_dir(rp, logger)
+    make_compile_logs_dir(rp)
 
     # At the end of initialization preserve the original input files
     preserve_original_input(rp, logger)
@@ -491,8 +492,6 @@ def init_domains(rp):
                 interpretPARAMETERS(dp.rp, slab=dp.sl, silent=True)
                 dp.sl.fullUpdate(dp.rp)   # gets PARAMETERS data into slab
                 dp.rp.fileLoaded["POSCAR"] = True
-                if dp.sl.preprocessed:
-                    dp.rp.SYMMETRY_FIND_ORI = False
                 dp.rp.updateDerivedParams()
                 try:
                     readVIBROCC(dp.rp, dp.sl)
@@ -769,18 +768,21 @@ def preserve_original_input(rp, init_logger, path=""):
     return
 
 
-def make_compile_logs_dir(rp, init_logger, path=""):
+
+def make_compile_logs_dir(rp):
+
     """
     Creates directory compile_logs in which logs from compilation will be saved.
     """
-    folder_name = "compile_logs"
-    if not path:
-        path = "."
-
+    
+    # put into rp
+    rp.compile_logs_dir = Path(rp.workdir) / "compile_logs"
+    
     # makes compile_logs directory
     try:
-        os.makedirs(os.path.join(path, folder_name), exist_ok=True)
-    except Exception:
-        logger.warning("Could not create directory {}".format(folder_name))
+        rp.compile_logs_dir.mkdir()
+    except FileExistsError:
+        pass
+    except OSError:
+        logger.warning(f"Could not create directory {rp.compile_logs_dir}")
         rp.setHaltingLevel(1)
-    return

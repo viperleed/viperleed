@@ -12,36 +12,37 @@ import time
 from timeit import default_timer as timer
 import logging
 import os
+from pathlib import Path                                                     # TODO: use everywhere
 import shutil
 import re
 
 from viperleed.tleedmlib.base import get_elapsed_time_str
 
 # files to go in SUPP
-suppfiles = ["AUXBEAMS", "AUXGEO", "AUXLATGEO", "AUXNONSTRUCT", "BEAMLIST",
-             "POSCAR_oricell", "POSCAR_bulk", "muftin.f",
-             "refcalc-PARAM", "refcalc-FIN", "rfactor-WEXPEL",
-             "rfactor-PARAM", "delta-input", "search.steu",
-             "search-rf.info", "search-PARAM", "AUXEXPBEAMS",
-             "EEASISSS-input.txt", "EEASISSS-log.txt",
-             "eeasisss-input", "searchpars.info", "superpos-PARAM",
-             "superpos-CONTRIN", "POSCAR_bulk_appended", "POSCAR_mincell",
-             "restrict.f", "Phaseshifts_plots.pdf"]
+_SUPP_FILES = ("AUXBEAMS", "AUXGEO", "AUXLATGEO", "AUXNONSTRUCT", "BEAMLIST",
+               "POSCAR_oricell", "POSCAR_bulk", "muftin.f",
+               "refcalc-PARAM", "refcalc-FIN", "rfactor-WEXPEL",
+               "rfactor-PARAM", "delta-input", "search.steu",
+               "search-rf.info", "search-PARAM", "AUXEXPBEAMS",
+               "EEASISSS-input.txt", "EEASISSS-log.txt",
+               "eeasisss-input", "searchpars.info", "superpos-PARAM",
+               "superpos-CONTRIN", "POSCAR_bulk_appended", "POSCAR_mincell",
+               "restrict.f", "Phaseshifts_plots.pdf")
 
-supp_dirs = ["original_inputs", "compile_logs"]
+_SUPP_DIRS = ("original_inputs", "compile_logs")
 
 # files to go in OUT
-outfiles = ["THEOBEAMS.csv", "THEOBEAMS_norm.csv", "THEOBEAMS.pdf",
-            "PatternInfo.tlm", "SD.TL", "refcalc-fd.out", "refcalc-amp.out",
-            "Rfactor_plots_refcalc.pdf", "control.chem",
-            "Search-progress.pdf", "Search-progress.csv",
-            "Search-report.pdf", "FITBEAMS.csv", "FITBEAMS_norm.csv",
-            "superpos-spec.out", "Rfactor_plots_superpos.pdf",
-            "Rfactor_analysis_refcalc.pdf",
-            "Rfactor_analysis_superpos.pdf", "Errors.csv", "Errors.pdf",
-            "FD_Optimization.csv", "FD_Optimization.pdf",
-            "FD_Optimization_beams.pdf", "Complex_amplitudes_imag.csv",
-            "Complex_amplitudes_real.csv"]
+_OUTFILES = ("THEOBEAMS.csv", "THEOBEAMS_norm.csv", "THEOBEAMS.pdf",
+             "PatternInfo.tlm", "SD.TL", "refcalc-fd.out", "refcalc-amp.out",
+             "Rfactor_plots_refcalc.pdf", "control.chem",
+             "Search-progress.pdf", "Search-progress.csv",
+             "Search-report.pdf", "FITBEAMS.csv", "FITBEAMS_norm.csv",
+             "superpos-spec.out", "Rfactor_plots_superpos.pdf",
+             "Rfactor_analysis_refcalc.pdf",
+             "Rfactor_analysis_superpos.pdf", "Errors.csv", "Errors.pdf",
+             "FD_Optimization.csv", "FD_Optimization.pdf",
+             "FD_Optimization_beams.pdf", "Complex_amplitudes_imag.csv",
+             "Complex_amplitudes_real.csv")
 
 # output files that can be used as input in future runs - keep during prerun
 iofiles = ["control.chem", "refcalc-fd.out", "superpos-spec.out"]
@@ -50,9 +51,10 @@ logger = logging.getLogger("tleedm.sections.cleanup")
 
 
 def prerun_clean(rp, logname=""):
-    """
-    Cleans up the work directory before tleedm starts. Deletes workhistory,
-    old executables, and old logfiles. Calls move_oldruns if required.
+    """Clean up the work directory before tleedm starts.
+
+    Delete workhistory, old executables, and old logfiles.
+    Call move_oldruns if required.
 
     Parameters
     ----------
@@ -61,6 +63,9 @@ def prerun_clean(rp, logname=""):
     logname : str, optional
         Name of the current log file, to be excluded from cleanup.
 
+    Returns
+    -------
+    None.
     """
     # clean out the workhistory folder, if there is one
     if os.path.isdir(os.path.join(".", "workhistory")):
@@ -102,133 +107,153 @@ def prerun_clean(rp, logname=""):
             os.remove("fortran-compile.log")
         except Exception:
             pass
-    return
 
 
-def sortfiles(tensorIndex, delete_unzipped=False, tensors=True,
-              deltas=True, path=""):
-    """
-    Makes Tensors and Deltas zip files. Copies files to SUPP and OUT folders
-    as appropriate. If delete_unzipped is set to True, deletes unzipped Deltas
-    and Tensors directories.
+def organize_workdir(tensor_index, delete_unzipped=False,
+                     tensors=True, deltas=True, workdir=""):
+    """Reorganize files in workdir into SUPP, OUT, Tensors and Deltas.
+
+    Tensors and Deltas folders are zipped and moved over. All other
+    files are copied to appropriate locations in SUPP and OUT.
 
     Parameters
     ----------
-    tensorIndex : int
+    tensor_index : int
         Which Delta and Tensor files should be considered.
     delete_unzipped : bool, optional
-        Whether the original Delta- and Tensor-files should be deleted
-        after making the archives. The default is False.
+        Whether the original Delta- and Tensor-files should be
+        deleted after making the archives. The default is False.
     tensors, deltas : bool, optional
-        Whether the Tensor/Delta files contain new information and should be
-        saved. The default is True.
-    path : str, optional
-        The base path to check files in. The default is "".
+        Whether the Tensor/Delta files contain new information
+        and should be saved. The default is True.
+    workdir : str, optional
+        The path to work folder that contains the files to be
+        reorganized. The default is "".
 
     Returns
     -------
     None.
-
     """
-    # move files to SUPP and OUT folders
-
     # outfiles with variable names:
-    if not path:
-        path = "."
-    outfiles.extend([f for f in os.listdir(path)
-                     if (f.startswith("POSCAR_OUT") or
-                         f.startswith("VIBROCC_OUT") or
-                         f.startswith("R_OUT"))])
-    # clean up deltas
-    deltalist = [f for f in os.listdir(path) if f.startswith("DEL_")]
-    if len(deltalist) > 0:
-        fn = "Deltas_"+str(tensorIndex).zfill(3)
-        os.makedirs(os.path.join(path, "Deltas", fn), exist_ok=True)
-        try:
-            for df in deltalist:
-                shutil.move(os.path.join(path, df),
-                            os.path.join(path, "Deltas", fn, df))
-        except Exception:
-            logger.error("Error moving Delta files: ", exc_info=True)
+    path = Path(workdir)
+    outfiles = set(path / f for f in _OUTFILES)
+    for pattern in ("POSCAR_OUT*", "VIBROCC_OUT*", "R_OUT*"):
+        outfiles.update(path.glob(pattern))
 
-    # if there are unzipped Tensors or Deltas directories, zip them:
-    for t in ["Tensors", "Deltas"]:
-        if t == "Tensors":
-            do = tensors
+    _collect_deltas(tensor_index, path)
+    _zip_deltas_and_tensors(delete_unzipped, tensors, deltas, path)
+    _organize_supp_out(path, outfiles)
+
+def _organize_supp_out(path, outfiles):
+    # sort SUPP and OUT files:
+    for folder in ["SUPP", "OUT"]:
+        out_path = path / folder
+        try:
+            out_path.mkdir(parents=True)
+        except FileExistsError:
+            pass
+        except OSError:
+            logger.error(f"Error creating {folder} folder: ", exc_info=True)
+            continue
+
+        if folder == "SUPP":
+            filelist = set(path / f for f in _SUPP_FILES)
+            # move directories original_inputs and compile_logs to SUPP
+            directory_list = (path / d for d in _SUPP_DIRS)
+            # Also add log files into SUPP: skip tleedm logs (they go to
+            # main dir), and compile logs (they go to compile_logs dir)
+            logs_to_supp = (f for f in path.glob("*.log")
+                            if (not f.name.startswith("tleedm")
+                                and "compile" not in f.name))
+            filelist.update(logs_to_supp)
         else:
-            do = deltas
-        rgx = re.compile(t+r'_[0-9]{3}')
-        if not os.path.isdir(os.path.join(path, t)):
+            filelist = outfiles
+            directory_list = ()
+
+        for file in filelist:
+            if not file.is_file():
+                continue
+            # copies files into SUPP and OUT directories
+            try:
+                shutil.copy2(file, out_path / file.name)
+            except OSError:
+                logger.error(f"Error moving {folder} file {file.name}: ",
+                             exc_info=True)
+
+        for _dir in directory_list:
+            if not _dir.is_dir():
+                continue
+            try:
+                shutil.copytree(_dir, out_path / _dir.name,
+                                dirs_exist_ok=True)
+            except OSError:
+                logger.error(f"Error moving {folder} directory {_dir.name}: ",
+                             exc_info=True)
+
+
+def _zip_deltas_and_tensors(delete_unzipped, tensors, deltas, path):
+    # If there are unzipped Tensors or Deltas directories, zip them:
+    for folder in ["Tensors", "Deltas"]:
+        todo = tensors if folder == "Tensors" else deltas
+        origin_base = path / folder
+        if not origin_base.is_dir():
             continue
-        if not (do or delete_unzipped):
+        if not todo and not delete_unzipped:
             continue
-        for d in [d for d in os.listdir(os.path.join(path, t))
-                  if (os.path.isdir(os.path.join(path, t, d))
-                      and rgx.match(d))]:
-            if not rgx.match(d).span()[1] == len(t)+4:
+        rgx = re.compile(rf"{folder}_[0-9]{{3}}")                               # TODO: maybe we want "three or more" digits, i.e., {{3,}}? Or could we use tensor_index?
+        for _dir in origin_base.glob("*"):
+            if not _dir.is_dir():
+                continue
+            match = rgx.match(_dir.name)
+            if not match or match.span()[1] != len(folder) + 4:                 # TODO: should this 4 be adjusted to the previous TODO? Unclear what it guards
                 continue
             delete = delete_unzipped
-            if do:
-                if not path:
-                    o = d
-                else:
-                    o = os.path.relpath(os.path.join(path, t, d))
-                logger.info("Packing {}.zip...".format(o))
+            if todo:
+                logger.info(f"Packing {_dir.name}.zip...")
                 try:
-                    shutil.make_archive(os.path.join(path, t, d), "zip",
-                                        os.path.join(path, t, d))
-                except Exception:
-                    logger.error("Error packing {}.zip file: ".format(o))
+                    shutil.make_archive(_dir, "zip", _dir)
+                except OSError:
+                    logger.error(f"Error packing {_dir.name}.zip file: ",
+                                    exc_info=True)
                     delete = False
             if delete:
                 try:
-                    shutil.rmtree(os.path.join(path, t, d))
-                except Exception:
+                    shutil.rmtree(_dir)
+                except OSError:
                     logger.warning(
-                        "Error deleting unzipped {} directory. "
+                        f"Error deleting unzipped {folder} directory. "
                         "This will increase the size of the work folder, "
-                        "but not cause any problems.".format(t))
-    # sort SUPP and OUT files:
-    for t in ["SUPP", "OUT"]:
+                        "but not cause any problems.")
+
+
+def _collect_deltas(tensor_index, path):
+    # Clean up deltas
+    deltalist = list(path.glob("DEL_*"))
+    if len(deltalist) > 0:
+        destination = path / "Deltas" / f"Deltas_{tensor_index:03d}"
         try:
-            os.makedirs(os.path.join(path, t), exist_ok=True)
-        except Exception:
-            logger.error("Error creating {} folder: ".format(t), exc_info=True)
-        if t == "SUPP":
-            filelist = suppfiles
-            # move directories original_inputs and compile_logs to SUPP
-            directory_list = supp_dirs
-            # Also add log files (except for tleedm) into SUPP
-            logs_to_supp = [f for f in os.listdir(path) if f.endswith(".log")
-                            and not f.startswith("tleedm")]
-            for f in logs_to_supp:
-                filelist.append(f)
-        else:
-            filelist = outfiles
-            directory_list = []
-        for f in [f for f in filelist
-                  if os.path.isfile(os.path.join(path, f))]:
-            # copies files into SUPP and OUT directories
-            try:
-                shutil.copy2(os.path.join(path, f), os.path.join(path, t, f))
-            except Exception:
-                logger.error("Error moving {} file {}: ".format(t, f),
-                             exc_info=True)
-        for d in directory_list:
-            if os.path.isdir(os.path.join(path, d)):
+            destination.mkdir(parents=True)
+        except FileExistsError:
+            pass
+        except OSError:
+            logger.error(f"Failed to create {destination} folder: ",
+                         exc_info=True)
+        if destination.exists():
+            errors = []
+            for delta_file in deltalist:
                 try:
-                    shutil.copytree(os.path.join(path, d),
-                                    os.path.join(path, t, d),
-                                    dirs_exist_ok=True)
-                except Exception:
-                    logger.error("Error moving {} directory {}: ".format(t, d),
-                                 exc_info=True)
+                    shutil.move(delta_file, destination / delta_file.name)
+                except OSError as err:
+                    errors.append(err)
+            if errors:
+                logger.error(f"Error moving Delta files: {errors}")
 
 
 def move_oldruns(rp, prerun=False):
-    """
-    Makes a new folder in 'workhistory'. Copies SUPP, OUT and files in
-    manifest (except main log) to that new folder.
+    """Copy relevant files to a new 'workhistory' subfolder.
+
+    Files are copied from SUPP, OUT and the list in rp.manifest.
+    The main log file is excluded.
 
     Parameters
     ----------
@@ -242,8 +267,7 @@ def move_oldruns(rp, prerun=False):
 
     Returns
     -------
-    None
-
+    None.
     """
     sectionabbrv = {1: "R", 2: "D", 3: "S"}
     try:
@@ -256,7 +280,7 @@ def move_oldruns(rp, prerun=False):
     dl = [n for n in os.listdir("workhistory")
           if os.path.isdir(os.path.join("workhistory", n))]
     maxnum = -1
-    rgx = re.compile(r't'+'{:03d}'.format(rp.TENSOR_INDEX)+r'.r[0-9]{3}_')
+    rgx = re.compile(r't'+'{:03d}'.format(rp.TENSOR_INDEX)+r'.r[0-9]{3}_')             # TODO: would be nicer to use a capture group for the last three digits, used to decide how to number the new folder
     for d in dl:
         m = rgx.match(d)
         if m:
@@ -297,14 +321,14 @@ def move_oldruns(rp, prerun=False):
         logger.error("Error creating workhistory subfolder: ", exc_info=True)
         raise
     if not prerun:
-        sortfiles(rp.TENSOR_INDEX, delete_unzipped=False,
-                  tensors=False, deltas=False)
+        organize_workdir(rp.TENSOR_INDEX, delete_unzipped=False,
+                         tensors=False, deltas=False)
         for dp in rp.domainParams:
-            sortfiles(dp.rp.TENSOR_INDEX, delete_unzipped=False,
-                      tensors=False, deltas=False)
+            organize_workdir(dp.rp.TENSOR_INDEX, delete_unzipped=False,
+                             tensors=False, deltas=False)
     if prerun:
         filelist = [f for f in os.listdir() if os.path.isfile(f) and
-                    (f.endswith(".log") or f in outfiles or f in suppfiles)
+                    (f.endswith(".log") or f in _OUTFILES or f in _SUPP_FILES)
                     and f not in rp.manifest and f not in iofiles]
         dirlist = ["SUPP", "OUT"]
     else:
@@ -377,9 +401,9 @@ def cleanup(manifest, rp=None):
                                 "path": dp.workdir})
     for d in to_sort:
         try:
-            sortfiles(d["tind"], delete_unzipped=True,
-                      tensors=d["newTensors"],
-                      deltas=d["newDeltas"], path=d["path"])
+            organize_workdir(d["tind"], delete_unzipped=True,
+                             tensors=d["newTensors"],
+                             deltas=d["newDeltas"], workdir=d["path"])
         except Exception:
             logger.warning("Error sorting files to SUPP/OUT folders: ",
                            exc_info=True)

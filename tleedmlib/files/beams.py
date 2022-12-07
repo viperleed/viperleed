@@ -67,6 +67,7 @@ def readIVBEAMS(filename='IVBEAMS'):
         raise
     linenum = 1		# iterates the current line being read
     hklist = []
+    # TODO: skip commented out lines (same as PARAMETERS, etc.)
     for line in ivbeamlines:
         # ignore brackets and vbars, except as spacers
         line = line.replace("(", " ")

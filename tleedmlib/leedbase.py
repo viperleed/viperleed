@@ -17,6 +17,7 @@ import copy
 import psutil
 import multiprocessing
 import time
+from pathlib import Path
 from quicktions import Fraction
 
 from viperleed.guilib import get_equivalent_beams
@@ -874,17 +875,27 @@ def getBeamCorrespondence(sl, rp):
             beamcorr_list[i] = rp.expbeams.index(beamcorr[tb])
     return beamcorr_list
 
+# TODO: can eventually become part of compileTask class
+def copy_compile_log(rp, logfile, log_name="fortran-compile"):
+    """Copy compilation log file to compile_logs (will be moved to SUPP later).
 
-def copy_compile_folder(ct, rp, compile_log_base=""):
+    Parameters
+    ----------
+    rp : RunParameters
+        rp object of the calculation.
+    logfile : pathlike or str
+        Path to the logfile that should be copied.
+    log_name : str, optional
+        Name to be used to identify logfile, eg. "refcalc". Default: "fortran-compile"
+    """
+    _logfile = Path(logfile)
+    if rp.compile_logs_dir is None:
+        # Compile directory not set. Cannot copy. Do not bother complaining.
+        return
+    target_path = (rp.compile_logs_dir / log_name).with_suffix(".log")
     try:
-        compile_log_dir = os.path.join(compile_log_base, "compile_logs")
-        log_file_name = "fortran-compile.log"
-        source_file = os.path.join(ct.basedir, ct.foldername, log_file_name)
-        target_file_name = ct.foldername + ".log"
-        target_file = os.path.join(rp.workdir, compile_log_dir,
-                                   target_file_name)
-        shutil.copy2(source_file, target_file)
-    except Exception:
-        logger.warning("Error copying refcalc compile log from folder "
-                       + ct.foldername)
-    return
+        shutil.copy2(_logfile, target_path)
+    except OSError as err:
+        logger.warning(
+            f"Unable to copy compilation log file {str(_logfile)}. Info: {err}"
+        )

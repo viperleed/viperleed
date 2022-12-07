@@ -158,8 +158,6 @@ def run_tleedm(system_name="", console_output=True, slab=None,
     if not domains:
         slab.fullUpdate(rp)   # gets PARAMETERS data into slab
         rp.fileLoaded["POSCAR"] = True
-        if slab.preprocessed:
-            rp.SYMMETRY_FIND_ORI = False
 
     rp.systemName = system_name
     rp.sourcedir = os.path.abspath(source)

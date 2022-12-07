@@ -223,8 +223,8 @@ def generateDeltaInput(atom, targetel, sl, rp, deltaBasic="", auxbeams="",
         except Exception:
             logger.error("generateDeltaInput: Could not read PHASESHIFTS")
             raise
-    MLMAX = [19, 126, 498, 1463, 3549, 7534, 14484, 25821, 43351, 69322,
-             106470, 158067, 227969, 320664, 441320]
+    MNLMB = [19, 126, 498, 1463, 3549, 7534, 14484, 25821, 43351, 69322,
+             106470, 158067, 227969, 320664, 441320, 595833, 790876, 1033942]
     try:
         beamlist, _, _ = writeAUXBEAMS(ivbeams=rp.ivbeams,
                                        beamlist=rp.beamlist, write=False)
@@ -288,13 +288,14 @@ def generateDeltaInput(atom, targetel, sl, rp, deltaBasic="", auxbeams="",
     for disp in geolist:
         ol = f74x3.write([disp[2], disp[0], disp[1]])
         din += ol.ljust(29)+"CDISP(z,x,y) - z pointing towards bulk\n"
+        # TODO: should we allow this if e.g. HALTING = 1 and just warn instead?
         if any([abs(d) >= 1. for d in disp]):
             logger.error(
                 "Displacements for delta amplitudes have to be smaller than "
                 "one Angstrom! Larger displacements are not reasonable "
                 "within the tensor LEED approximation.\n"
                 "Found displacement {} for {}.".format(disp, atom))
-            raise ValueError("Excessive displacements (>1A) detected.")
+            raise ValueError("Excessive displacements (>=1A) detected.")
     din += (
         """-------------------------------------------------------------------
 --- vibrational displacements of atomic site in question        ---
@@ -342,9 +343,9 @@ C  MNLMB: number of Clebsh-Gordon coefficients needed in tmatrix() subroutine -
 C         set according to current LMAX
 """
              "C         MLMAX:  1  2   3    4    5    6    7     8     9     "
-             "10    11     12     13     14     15\n"
+             "10    11     12     13     14     15     16     17     18\n"
              "C         MNLMB: 19 126 498 1463 3549 7534 14484 25821 43351 "
-             "69322 106470 158067 227969 320664 441320\n" """
+             "69322 106470 158067 227969 320664 441320 595833 790876 1033942\n" """
 C  MNPSI: number of phase shift values tabulated in phase shift file
 C  MNEL : number of elements for which phase shifts are tabulated
 C  MNT0 : number of beams for which delta amplitude calculation is required
@@ -355,7 +356,7 @@ C  MNDEB: number of thermal variation steps to be performed (outer var. loop)
 C  MNCSTEP: number of geometric variation steps to be performed """
              + "(inner var. loop)\n\n")
     param += "      PARAMETER( MLMAX = {} )\n".format(rp.LMAX[1])
-    param += "      PARAMETER( MNLMB = {} )\n".format(MLMAX[rp.LMAX[1]-1])
+    param += "      PARAMETER( MNLMB = {} )\n".format(MNLMB[rp.LMAX[1]-1])
     param += ("      PARAMETER( MNPSI = {}, MNEL = {} )\n"
               .format(len(rp.phaseshifts), (len(rp.phaseshifts[0][1]))))
     param += "      PARAMETER( MNT0 = {} )\n".format(len(beamlist))
