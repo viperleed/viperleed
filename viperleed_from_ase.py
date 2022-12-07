@@ -571,9 +571,12 @@ def rfactor_from_csv(
     return best_r, best_v0r
 
 
-
 def plot_iv_from_csv(
-    beam_file, output_file, beam_file_is_content=False, which_beams=[]
+    beam_file,
+    output_file=None,
+    beam_file_is_content=False,
+    which_beams=[],
+    legends=None
 ):
     """Plots LEED-I(V) spectra directly from a CSV file.
 
@@ -593,11 +596,13 @@ def plot_iv_from_csv(
         If set to True, it is assumed that the beam_file
         contains a string with the CSV contents rather than a path to
         the file. For reading, a StringIO will be used internally.
-    output_pdf output_pdf : string
-        Path to the PDF file where the plot will be saved. (File is
-        created.)
+    output_pdf : pathlib Path, string or None; default = None
+        Path to the PDF file where the plot will be saved, if Path or string.
+        (File is created.) If None, returns list of matplotlib figures.
     which_beams : range or Sequence of int or strings
         Indices specifying which beams to plot. Order is the same as in the csv.
+    legends : None or list of strings, default = None
+        Legends to be used for the various files.
 
     Raises
     ------
@@ -605,33 +610,47 @@ def plot_iv_from_csv(
         If which_beams is not Sequence containing just integers or
         strings.
     """
-
-    if beam_file_is_content:
-        beam_file = StringIO(beam_file)
-    beam_list = readOUTBEAMS(filename=beam_file, sep=",")
-
-    if which_beams == [] or which_beams == "all" or which_beams is None:
-        pass
-    elif isinstance(which_beams, range) or all(
-        [type(label) is int for label in which_beams]
-    ):
-        beam_list = [beam_list[i] for i in which_beams]
-    elif all([type(label) is str for label in which_beams]):
-        new_beam_list = []
-        for beam in beam_list:
-            if beam.label in which_beams:
-                new_beam_list.append(beam)
-        beam_list = new_beam_list
+    if isinstance(beam_file, Sequence):
+        n_beams = len(beam_file)
+        assert len(beam_file_is_content) == len(beam_file)
     else:
-        raise RuntimeError("Invalid argument which_beams in plot_iv_from_csv()")
+        n_beams = 1
+        assert type(beam_file_is_content) is bool
+    
+    all_beam_data = []
+    labels = []
+    for file, is_content in zip(beam_file, beam_file_is_content):
+        tmp_file = StringIO(file) if is_content else file
+        beam_list = readOUTBEAMS(filename=tmp_file, sep=",")
 
-    # normalize each beam by the max intensity
-    for beam in beam_list:
-        maxint = max(beam.intens.values())
-        beam.intens = {en: i / maxint for en, i in beam.intens.items()}
+        if which_beams == [] or which_beams == "all" or which_beams is None:
+            pass
+        elif isinstance(which_beams, range) or all(
+            [type(label) is int for label in which_beams]
+        ):
+            beam_list = [beam_list[i] for i in which_beams]
+        elif all([type(label) is str for label in which_beams]):
+            new_beam_list = []
+            for beam in beam_list:
+                if beam.label in which_beams:
+                    new_beam_list.append(beam)
+            beam_list = new_beam_list
+        else:
+            raise RuntimeError("Invalid argument which_beams in plot_iv_from_csv()")
 
-    plot_iv(beam_list, output_file, labels=[beam.label for beam in beam_list])
-    return
+        # normalize each beam by the max intensity
+        for beam in beam_list:
+            maxint = max(beam.intens.values())
+            beam.intens = {en: i / maxint for en, i in beam.intens.items()}
+        beam_labels=[beam.label for beam in beam_list]
+        all_beam_data.append(beam_list)
+        if not labels:
+            labels = beam_labels
+        else:
+            for jj in range(len(beam_labels)):
+                labels[jj] += ", " + beam_labels[jj]
+
+    return plot_iv(all_beam_data, output_file, labels=labels, legends=legends)
 
 
 def rot_mat_a(theta):
