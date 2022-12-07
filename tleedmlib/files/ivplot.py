@@ -37,9 +37,10 @@ def plot_iv(data, filename, labels=[], annotations=[],
             contains I(V) data per beam
         All datasets must contain the same beams in the same order, but beams
         can be empty
-    filename : str
+    filename : str or None
         Name of the file (with or without extension) to which the plots
-        will be saved.
+        will be saved. If None, do not write to file, but return a list
+        of matplotlib figure objects instead.
     labels : kwarg, list of str
         Labels for the individual beams, e.g. (h|k) as strings. Must be same
         length as number of beams. If labels are not passed and at least one
@@ -212,13 +213,6 @@ def plot_iv(data, filename, labels=[], annotations=[],
         if print_axes == 'none':
             axes_visible['bottom'] = False
 
-    try:
-        pdf = PdfPages(filename)
-    except PermissionError:
-        logger.error("writeRfactorPdf: Cannot open file {}. Aborting."
-                     .format(filename))
-        return
-
     # the following will spam the logger with debug messages; disable.
     loglevel = logger.level
     logger.setLevel(logging.INFO)
@@ -320,15 +314,29 @@ def plot_iv(data, filename, labels=[], annotations=[],
         if n_beams % figs_per_page != 0:
             for a in axs[-(figs_per_page - n_beams % figs_per_page):]:
                 a.axis('off')
-
-        for fig in figs:
-            pdf.savefig(fig)
-            plt.close(fig)
     except Exception:
-        logger.error("plot_iv: Error while writing {}: ".format(filename),
-                     exc_info=True)
-    finally:
-        pdf.close()
+        logger.error("plot_iv: Error while compiling figures.", exc_info=True)
         logger.setLevel(loglevel)
 
-    return
+    # if a filename is given write to PDF, else return list of figs
+    if filename is not None:
+        try:
+            pdf = PdfPages(filename)
+        except PermissionError:
+            logger.error(f"writeRfactorPdf: Cannot open file {filename}. "
+                         "Aborting.")
+            return
+
+        try:
+            for fig in figs:
+                pdf.savefig(fig)
+                plt.close(fig)
+        except Exception:
+            logger.error("plot_iv: Error while writing {}: ".format(filename),
+                        exc_info=True)
+        finally:
+            pdf.close()
+            return
+    else:
+        return figs
+
