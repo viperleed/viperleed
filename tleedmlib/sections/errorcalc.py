@@ -148,9 +148,6 @@ def errorcalc(sl, rp):
     if len(errors) == 0:
         logger.info("Error calculation: Returning with no output.")
         return
-    minR = min(r for err in errors for r in err.rfacs)
-    varR = np.sqrt(8*np.abs(rp.V0_IMAG) / rp.total_energy_range()) * minR
-    logger.info("Found var(R) = {:.4f}".format(varR))
     tl_io.write_errors_csv(errors)
-    tl_io.write_errors_pdf(errors, var=varR)
+    tl_io.write_errors_pdf(errors, v0i=rp.V0_IMAG, energy_range=rp.total_energy_range())
     return
