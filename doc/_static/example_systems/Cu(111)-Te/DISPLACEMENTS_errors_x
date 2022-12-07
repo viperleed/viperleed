@@ -1,0 +1,6 @@
+== SEARCH error
+    = GEO_DELTA
+        Te_surf xy[1 0] = -0.10 0.10 0.004
+        Te_def  xy[1 0] = -0.10 0.10 0.004
+        Cu_surf xy[1 0] = -0.10 0.10 0.004
+        Cu_def  xy[1 0] = -0.10 0.10 0.004

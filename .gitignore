@@ -21,11 +21,12 @@ doc/_build/
 # Ignore testing folder
 calculations/
 
-# built docs
-doc/_build/
+# sphinx build directory
+doc/_build
 
-# spelling
-.cspell/*
+# files from docs spell checker
+*.spelling 
+.cspell/
 
 # Ignore compiled versions of random_.c, beamgen, .x files and .so files
 **/random_.o
@@ -44,7 +45,8 @@ tleedmlib/wrapped/source/compile
 tleedmlib/wrapped/verification_data
 
 test_exec
-*.ipynb*
+**/.ipynb_checkpoints/*
+tleedmlib/**/*.ipynb
 tensorleed/eeasisss_new/eeasisss
 tensorleed/eeasisss_new/Fortran_quicktests
 *.plist

@@ -1,0 +1,10 @@
+== Search z
+    = GEO_DELTA
+        O_def     z = -0.04 0.04 0.004
+        Ir_surf   z = -0.04 0.04 0.004
+        Ir L(2-5) z = -0.04 0.04 0.004
+
+== Search u
+    = VIB_DELTA
+        O_def   = -0.02 0.02 0.004
+        Ir_surf = -0.02 0.02 0.004
