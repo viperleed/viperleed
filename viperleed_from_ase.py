@@ -180,7 +180,7 @@ def run_from_ase(
             except FileNotFoundError:
                 pass
 
-    # check for PARAMETERS file - without that we can't proceede
+    # check for PARAMETERS file - without that we can't proceed
     parameters_name = "PARAMETERS"
     if not (exec_path / parameters_name).exists():
         # No PARAMETERS file – Error
@@ -245,14 +245,15 @@ def run_from_ase(
         preset_params["SITE_DEF"] = site_def
 
     poscar_name = "POSCAR"
-    if (exec_path / poscar_name).exists():
+    poscar_path = (exec_path / poscar_name)
+    if poscar_path.exists():
         LOGGER.warning(
             "A 'POSCAR' file is already present in exec_path - calculation "
             "aborted. Check if a ViPErLEED calculation was already run in "
             "this directory."
         )
 
-    writePOSCAR(slab, poscar_name)
+    writePOSCAR(slab, str(poscar_path))
 
     # Take care of input files and work directory
     work_path = exec_path / "work"
