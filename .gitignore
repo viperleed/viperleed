@@ -24,6 +24,9 @@ calculations/
 # built docs
 doc/_build/
 
+# spelling
+.cspell/*
+
 # Ignore compiled versions of random_.c, beamgen, .x files and .so files
 **/random_.o
 **/MPIrandom_.o
