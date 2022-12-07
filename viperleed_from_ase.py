@@ -292,12 +292,18 @@ def run_from_ase(
     amp_real_name = "Complex_amplitudes_real.csv"
     amp_imag_name = "Complex_amplitudes_imag.csv"
 
-    with open(theobeams_name, "r", encoding="utf-8") as fproxy:
-        theobeams_file_str = fproxy.read()
-    with open(amp_real_name, "r", encoding="utf-8") as fproxy:
-        amp_real_file_str = fproxy.read()
-    with open(amp_imag_name, "r", encoding="utf-8") as fproxy:
-        amp_imag_file_str = fproxy.read()
+    content_list = []
+
+    for filename in (theobeams_name, amp_real_name, amp_imag_name):
+        try:
+            with open(filename, "r", encoding="utf-8") as fproxy:
+                content_str = fproxy.read()
+        except FileNotFoundError:
+            LOGGER.error(f"Could not find file {filename}")
+            content_str = ""
+        content_list.append(content_str)
+
+    theobeams_file_str, amp_real_file_str, amp_imag_file_str = content_list
 
     # Move back home
     os.chdir(home)
