@@ -137,6 +137,7 @@ def write_errors_pdf(errors, v0i, energy_range, filename="Errors.pdf"):
         # minimum R-factor and R-factor variance for that mode
         rmin = min(r for err in mode_errors for r in err.rfacs)
         var = np.sqrt(8*np.abs(v0i) / energy_range) * rmin
+        logger.info(f"{titles[mode]} error calculation: Found var(R) = {var:.4f}.")
 
         err_x = {}
         err_y = {}
