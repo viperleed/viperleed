@@ -14,7 +14,7 @@ interface (API) need to fulfill the same conventions (e.g. vacuum side of surfac
 
 The API provides a number of python function that allow calling and 
 starting LEED I(V) calculations.
-For an example of how to use the ASE interface, see :ref:`this tutorial<example_Pt(110)>`.
+For an example of how to use the ASE interface, see :ref:`this tutorial<example_Ni(110)>`.
 
 .. note:: 
     The ViPErLEED ASE interface is an area of active development and may change in the future.
