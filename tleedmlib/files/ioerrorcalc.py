@@ -99,7 +99,21 @@ def write_errors_csv(errors, filename="Errors.csv", sep=","):
     return
 
 
-def write_errors_pdf(errors, filename="Errors.pdf", var=None):
+def write_errors_pdf(errors, v0i, energy_range, filename="Errors.pdf"):
+    """Creates and writes Errors.pdf.
+
+    Parameters
+    ----------
+    errors : list of R_Error
+        contains the R-factors to be plotted
+    v0i : float
+        Imaginary part of inner potential. Can be taken from rp.V0_IMAG.
+    energy_range : float
+        Total energy range used in the calculation (in eV). Can be taken
+        from rp.total_energy_range().
+    filename : str, optional
+        Path of file to be written, by default "Errors.pdf"
+    """
     global plotting
     if not plotting:
         logger.debug("Necessary modules for plotting not found. Skipping "
@@ -115,11 +129,15 @@ def write_errors_pdf(errors, filename="Errors.pdf", var=None):
               "vib": "Vibrational amplitudes",
               "occ": "Site occupation"}
 
-    rmin = min(r for err in errors for r in err.rfacs)
     for mode in ("geo", "vib", "occ"):
         mode_errors = [err for err in errors if err.mode == mode]
         if not mode_errors:
             continue
+
+        # minimum R-factor and R-factor variance for that mode
+        rmin = min(r for err in mode_errors for r in err.rfacs)
+        var = np.sqrt(8*np.abs(v0i) / energy_range) * rmin
+
         err_x = {}
         err_y = {}
         err_x_inters = {}  # x-values of intersections with var(R)
