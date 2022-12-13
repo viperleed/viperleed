@@ -4,7 +4,7 @@ block_cipher = None
 
 
 a = Analysis(['../tleedm.py'],
-             datas=[('../tleedmlib/_checksums.dat', 'tleedmlib/_checksums.dat')],
+             datas=[('../tleedmlib/_checksums.dat', 'viperleed/tleedmlib/')],
              hiddenimports=['sklearn.utils._cython_blas', 'scipy.spatial.transform._rotation_groups', 'scipy.special.cython_special', 'sklearn.utils._weight_vector', 'sklearn.utils._typedefs', 'sklearn.utils._heap', 'sklearn.utils._sorting', 'sklearn.utils._vector_sentinel'],
              hookspath=[],
              runtime_hooks=[],

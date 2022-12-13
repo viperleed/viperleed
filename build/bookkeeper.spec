@@ -3,8 +3,7 @@
 block_cipher = None
 
 
-a = Analysis(['bookkeeper.py'],
-             pathex=['/mnt/d/Google Drive/Synchronized/Surface Physics/ViPErLEED/viperleed/freeze'],
+a = Analysis(['../bookkeeper.py'],
              binaries=[],
              datas=[],
              hiddenimports=[],

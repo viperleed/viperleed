@@ -14,7 +14,7 @@ from pathlib import Path
 
 import numpy as np
 
-from tleedmlib.leedbase import copy_compile_log
+from viperleed.tleedmlib.leedbase import copy_compile_log
 
 from viperleed.tleedmlib.files.iorefcalc import readFdOut
 from viperleed.tleedmlib.leedbase import fortran_compile_batch, getTLEEDdir, getTensors
