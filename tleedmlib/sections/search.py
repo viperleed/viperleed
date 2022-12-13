@@ -26,7 +26,7 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.pipeline import make_pipeline
 import scipy
 
-from tleedmlib.leedbase import copy_compile_log
+from viperleed.tleedmlib.leedbase import copy_compile_log
 
 import viperleed.tleedmlib.files.iosearch as tl_io
 import viperleed.tleedmlib as tl

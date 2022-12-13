@@ -15,7 +15,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from tleedmlib.leedbase import copy_compile_log
+from viperleed.tleedmlib.leedbase import copy_compile_log
 
 import viperleed.tleedmlib.files.iosuperpos as tl_io
 from viperleed.tleedmlib.leedbase import (getDeltas, getTLEEDdir,
