@@ -3,11 +3,9 @@
 block_cipher = None
 
 
-a = Analysis(['tleedm.py'],
-             pathex=['/mnt/c/Users/FF/Google Drive/Synchronized/Surface Physics/ViPErLEED/viperleed/freeze'],
-             binaries=[],
-             datas=[],
-             hiddenimports=['sklearn.utils._cython_blas', 'scipy.spatial.transform._rotation_groups', 'scipy.special.cython_special', 'sklearn.utils._weight_vector'],
+a = Analysis(['../tleedm.py'],
+             datas=[('../tleedmlib/_checksums.dat', 'tleedmlib/_checksums.dat')],
+             hiddenimports=['sklearn.utils._cython_blas', 'scipy.spatial.transform._rotation_groups', 'scipy.special.cython_special', 'sklearn.utils._weight_vector', 'sklearn.utils._typedefs', 'sklearn.utils._heap', 'sklearn.utils._sorting', 'sklearn.utils._vector_sentinel'],
              hookspath=[],
              runtime_hooks=[],
              excludes=[],
