@@ -3,7 +3,7 @@
 block_cipher = None
 
 
-a = Analysis(['../bookkeeper.py'],
+a = Analysis(['../utilities/bookkeeper.py'],
              binaries=[],
              datas=[],
              hiddenimports=[],
