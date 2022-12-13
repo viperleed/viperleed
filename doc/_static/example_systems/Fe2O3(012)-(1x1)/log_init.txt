@@ -1,0 +1,23 @@
+Reading structure from file POSCAR
+
+STARTING SECTION: INITIALIZATION
+No VIBROCC file found, generating vibrational amplitudes from temperature...
+Wrote to VIBROCC successfully
+Loaded EXPBEAMS.csv file containing 41 beams (total energy range: 1.2e+04 eV).
+Found unit cell type: rectangular
+Starting symmetry search...
+Found plane group: pg[0 1]
+Checking bulk unit cell...
+Found SUPERLATTICE = (1x1)
+Starting bulk symmetry search...
+Found bulk plane group: pg[0 1]
+Generating BEAMLIST...
+Finishing section at 14:33:25. Section took 2.8 seconds.
+
+Starting cleanup...
+Wrote manifest file successfully.
+
+Finishing execution at 2022-12-09 14:33:25
+Total elapsed time: 2.81 seconds
+
+Executed segments: 0
