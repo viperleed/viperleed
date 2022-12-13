@@ -87,3 +87,6 @@ Glossary
 
     fcc
       Face centered cubic crystal structure.
+
+    XRD
+      X-ray diffraction.

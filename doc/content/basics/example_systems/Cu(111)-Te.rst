@@ -34,7 +34,7 @@ These beams correspond to a total energy range of around 17500 eV, of which only
 PARAMETERS
 ==========
 
-Similar to the previous examples, we start by setting up a :ref:`PARAMETERS file<parameters>` file:
+Similar to the previous examples, we start by setting up a :ref:`PARAMETERS file<parameters>`:
 
 .. literalinclude :: /_static/example_systems/Cu(111)-Te/PARAMETERS
    :language: console
