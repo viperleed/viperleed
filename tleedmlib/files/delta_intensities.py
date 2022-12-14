@@ -5,7 +5,6 @@
 
 Reads in delta files.
 """
-from re import I
 import sys
 import numpy as np
 from numpy import sin, cos, sqrt
@@ -13,8 +12,10 @@ import fortranformat as ff
 import matplotlib.pyplot as plt
 import scipy
 import os
-from tqdm import tqdm
-import cmath
+import cmath # just used for sqrt
+import warnings
+
+from tqdm import tqdm # progress bar; optional
 from numba import njit, prange, config, threading_layer
 
 
