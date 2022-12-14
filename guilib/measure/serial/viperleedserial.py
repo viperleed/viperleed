@@ -15,6 +15,7 @@ used by ViPErLEED. The serial communication happens in a separate thread
 to prevent stalling the Graphical User Interface.
 """
 
+import re
 import struct
 
 from PyQt5 import QtCore as qtc
@@ -742,7 +743,13 @@ class ViPErLEEDSerial(SerialABC):
             # Probably a hardware fault.
             base.emit_error(self,
                             ViPErLEEDHardwareError.ADC_POWER_FAULT)
-        info['serial_nr'] = message[4:].decode('utf-8')
+        
+        try:
+            serial_nr = message[4:].decode('utf-8')
+        except UnicodeDecodeError:
+            serial_nr = ''
+        if re.match("^[A-Z0-9]{4,4}$", serial_nr):
+            info['serial_nr'] = serial_nr
         info['firmware'] = firmware_version
         return info
 
