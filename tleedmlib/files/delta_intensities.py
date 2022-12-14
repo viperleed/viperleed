@@ -345,7 +345,7 @@ def calc_delta_intensities(
             AK2 = BK2 + h * trar1[0] + k * trar2[0]
             AK3 = BK3 + h * trar1[1] + k * trar2[1]
             AK = 2 * E - AK2 ** 2 - AK3 ** 2
-            AKZ = complex(AK, -2 * VPI)
+            AKZ = complex(AK, -2 * VPI) #TODO: this is missing a sqrt()!! (line 2816 in lib.search in TensErLEED)
             A_perpendicular = AK - 2 * VV
 
             amplitude = amplitudes_ref[e_index, beam_index]
