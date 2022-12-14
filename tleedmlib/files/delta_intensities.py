@@ -250,19 +250,19 @@ def read_block(reader, lines, shape, dtype=np.float64):
 
 @njit(fastmath=True, parallel=True, nogil=True)
 def calc_delta_intensities(
-    phi,
-    theta,
+    phi,  
+    theta, #phi and theta can be grouped in a beam_incidence tuple
     trar1,
-    trar2,
-    n_beams,
+    trar2, #trar1 and trar2 can be grouped into one
+    n_beams, #not needed, can take from the shape of beam_indices
     beam_indices,
     geo_delta, # formerly CDISP in TensErLEED
     e_kin_array,
     v_inner_array,
     amplitudes_ref,
     amplitudes_del,
-    n_files,
-    n_geo,
+    n_files, #can take from shape of geo_delta/n_geo/is_surface_atom
+    n_geo,   #not needed, can take from delta_steps
     is_surface_atom,
     delta_steps,
 ):
@@ -316,36 +316,31 @@ def calc_delta_intensities(
     # may be necessary if array was flattened
     delta_steps = delta_steps.reshape(n_files, 2)
 
-    # Conc will probably be taken as Input parameter aswell
-
-    XDisp = 0
-    Conc = 1
-    number_z_steps = amplitudes_del.shape[2] -1 # not needed any more?
+    sum_z_disp = 0
+    conc = 1    #conc will probably be taken as Input parameter aswell
     
     n_geo_max = geo_delta.shape[1] # I think?
 
 
     # below could also be optimized with array operations
-    for i in range(n_files):
-        
-        
-        if is_surface_atom[i]:
-            # out of surface component of geometric displacment
-            interp_y_values = geo_delta[i, :n_geo[i], 0]
-            interp_x_values = np.arange(n_geo[i]) # there is at least one geo displacement (=0.0)
-            z_fraction = delta_steps[i, 0]
-            
-            # use numpy interpolation - this is probably the way to go
-            geo_interp = np.interp(z_fraction, interp_x_values, interp_y_values)
+    # if uppermost atom in crystal gets displaced up,
+    # then inner potential also starts earlier                                  
+    for atom_index, at_surface in enumerate(is_surface_atom):
+        if not at_surface:
+            continue
 
-            XDisp += Conc * geo_interp
-        
-        CXDisp = np.min(np.array((XDisp, 1000)))
+        # out of surface component of geometric displacment
+        # not less efficient because numpy knows which segment to pick
+        z_values = geo_delta[atom_index, :n_geo[atom_index], 0]
+        z_grid = np.arange(n_geo[atom_index]) 
+        z_fraction = delta_steps[atom_index, 0]
 
-    # if no surface_atoms were changed, do not change onset height of damping
-    if not np.any(is_surface_atom): # isn't this redundant?
-        CXDisp = 0
+        # use numpy interpolation - this is probably the way to go
+        geo_interp = np.interp(z_fraction, z_grid, z_values)
 
+        sum_z_disp += Conc * geo_interp
+
+    CXDisp = min(sum_z_disp, 1000)
 
     intensity_matrix = np.zeros((len(e_kin_array), n_beams))
     
@@ -354,7 +349,7 @@ def calc_delta_intensities(
     
     # Loop over energies
     for e_index in prange(len(e_kin_array)):
-        # Definieren von Variablen, die in der jeweiligen Energie gleichbleiben
+        #Define variables that stay the same for one energy
         E = e_kin_array[e_index]
         VV = v_inner_array[e_index].real
         VPI = v_inner_array[e_index].imag
@@ -365,16 +360,16 @@ def calc_delta_intensities(
         BK3 = AK * sin(theta) * sin(phi)
         BKZ = cmath.sqrt(complex(2 * E - BK2 ** 2 - BK3 ** 2, -2 * VPI))
         
-        # Loop über die Beams
+        #Loop over beams
         for beam_index in range(n_beams):
-            # Variablen per Beam
+            #Variables per beam
             h = beam_indices[beam_index, 0]
             k = beam_indices[beam_index, 1]
             # could be done in matrix form - not sure if that gives better performance
             AK2 = BK2 + h * trar1[0] + k * trar2[0]
             AK3 = BK3 + h * trar1[1] + k * trar2[1]
             AK = 2 * E - AK2 ** 2 - AK3 ** 2
-            AKZ = complex(AK, -2 * VPI) #TODO: this is missing a sqrt()!! (line 2816 in lib.search in TensErLEED)
+            AKZ = cmath.sqrt(complex(AK, -2 * VPI))
             A_perpendicular = AK - 2 * VV
 
             amplitude = amplitudes_ref[e_index, beam_index]
@@ -382,12 +377,12 @@ def calc_delta_intensities(
                 # interpolation of geometric and vibrational displacements
                 
                 geo_fraction = delta_steps[i, 0]
-                geo_id_left = np.int32(np.floor(geo_fraction))
-                geo_id_right = np.int32(np.ceil(geo_fraction))
+                geo_id_left = int(geo_fraction // 1) #floor
+                geo_id_right = -int(geo_fraction // -1)  # ceil(x) = -floor(-x)
                 
                 vib_fraction = delta_steps[i, 1]
-                vib_id_left = np.int32(np.floor(vib_fraction))
-                vib_id_right = np.int32(np.ceil(vib_fraction))
+                vib_id_left = int(vib_fraction // 1) #floor 
+                vib_id_right = -int(vib_fraction // -1)  # ceil(x) = -floor(-x) 
 
                 del_l_l = amplitudes_del[i, e_index,
                                          vib_id_left, geo_id_left, beam_index]
@@ -397,7 +392,9 @@ def calc_delta_intensities(
                                          vib_id_right, geo_id_left, beam_index]
                 del_r_r = amplitudes_del[i, e_index,
                                          vib_id_right, geo_id_right, beam_index]
-
+                
+                # scipy is not supported in numba (JIT); 
+                # could be done in numpy arrays
                 amp_intpol_value = bilinear_interpolation_np(
                     xy = (vib_fraction, geo_fraction),
                     x1x2=(vib_id_left, vib_id_right),
@@ -410,12 +407,12 @@ def calc_delta_intensities(
             if A_perpendicular > 0:
                 A = sqrt(A_perpendicular)
                 PRE = (BKZ + AKZ) * CXDisp
-                PRE = cmath.exp(complex(0, -1) * PRE)
+                PRE = np.exp(-1j*PRE)
                 amp_abs = abs(amplitude)
                 if amp_abs > 10e10:
                     intensity = 10e20 #saturation condition - do we need this? - can we instead check somewhere else if intensity is too high?
                 else:
-                    intensity = amp_abs * amp_abs * abs(PRE) * abs(PRE) * A / C
+                    intensity = amp_abs**2 * abs(PRE)**2 * A / C
             else:
                 intensity = 0
 
