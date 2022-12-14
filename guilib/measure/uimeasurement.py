@@ -123,6 +123,7 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 #      probably a masked AttributError??
 # TODO: bad pixels info not updated on show
 # TODO: bad pixels & dark progress bar: text is not always accurate
+# BUG: imaging source max no. frames should account for the overestimate
 
 #   M E A S U R E M E N T
 # TODO: energy ramps are not equivalent for iv == calibration != time_resolved
@@ -131,12 +132,14 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 #       than sending an empty data_ready for getting the times right
 # TODO: Ecal coefficients stored only if user OK with it. Requires plot
 #       of calibration residuals.
+# TODO: remove default button from Settings dialog
 # TODO: filename for measurements: include a progressive number (3 digits?) for each day, ad date_time_NNN
 
 #   H A R D W A R E
 # TODO: out to I0, measure HV --> not constant??
 # TODO: check that we compare serial number from settings with
 #       the one in the hardware when both are available!
+# TODO: include datasheet of components
 
 #   G U I
 # TODO: progress bar for non-endless
