@@ -20,55 +20,54 @@ from numba import njit, prange, config, threading_layer
 
 
 def read_delta_file(filename, n_energies, read_header_only=False):
-    """This function reads in one file of data and stores the data in arrays, which can be used in later functions (ex.: GetInt)
+    """Read and return the contents of a 
+    TensErLEED delta-amplitude file.
+    
+    This function reads in one file of data and stores the data 
+    in arrays, which can be used in later functions (ex.: GetInt).
     
     Parameters
     ----------
-    filename : string
-    The filename describes which file you want to read in (path from the function location to the file)
-    
-    n_E : int
-    Number of different energy levels. This should be a known factor for your files
-    
+    filename : str
+        The filename describes which file you want to read in 
+        (path from the function location to the file)  
+    n_energies : int
+        Number of different energies. This should be a 
+        known factor for your files.
+        Also possible to just loop the file until the end.
+    read_header_only : bool
+        If True does reads Header only and stops afterwards
     
     Returns
     -------
     (phi, theta): tuple of float
-    Angles of how the beam hits the sample
-    
+        Angles of how the beam hits the sample  
     (trar1, trar2) : tuple of ndarray
-    reciprocal lattice vectors
-    
+        reciprocal lattice vectors 
     n_beams : int
-    Number of beams that are reflected by the sample 
-    
-    nc_steps: ndarray
-    Number of permutations between direction deltas and vibration deltas
-    
-    e_kin_array : ndarray
-    Array that contains the kinetic energies of the elastically scatted
-    electrons inside the crystal. (Not the incidence energy!)
-    
-    v_imag_array : ndarray
-    Imaginary part of the inner potential of the surface
-    
-    VV_array : ndarray
-    Real part of the inner potential of the surface
-    
-    beam_indices : ndarray
-    Array with the order of beams
-    
-    Cundisp : ndarray
-    TBD always 0
-    
+        Number of beams for which delta-amplitudes were present 
+        in the file 
+    nc_steps: numpy.ndarray
+        Number of permutations between direction deltas and 
+        vibration deltas  
+    e_kin_array : numpy.ndarray
+        Array that contains the kinetic energies of the 
+        elastically scattered electrons inside the crystal. 
+        (Not the incidence energy!)  
+    v_imag_array : numpy.ndarray
+        Imaginary part of the inner potential of the surface  
+    VV_array : numpy.ndarray
+        Real part of the inner potential of the surface  
+    beam_indices : numpy.ndarray
+        Array of beam indices, with beam_indices[i] == [h_i, k_i]
+    Cundisp : numpy.ndarray
+        Position of the undisplaced atoms (always 0)   
     CDisp : ndarry
-    Geometric displacement of given delta
-    
-    amplitudes_ref : ndarray
-    Array that contains all values of the reference amplitudes
-    
-    amplitudes_del : ndarray
-    Array that contains all values of the delta amplitudes
+        Geometric displacement of given delta   
+    amplitudes_ref : numpy.ndarray
+        Array that contains all values of the reference amplitudes  
+    amplitudes_del : numpy.ndarray
+        Array that contains all values of the delta amplitudes
     """
 
     # Lists and Arrays needed; E,VPI,VV are numpy arrays that get returned, the others are lists that help saving the other data
@@ -227,45 +226,35 @@ def calc_delta_intensities(
     is_surface_atom,
     delta_steps,
 ):
-    """This function reads in the values of the function Transform and uses them to get the ATSAS_matrix
+    """This function reads in the values of the function Transform and 
+    uses them to get the intensity_matrix
     
     Parameters
     ----------
-    n_files: int
-    Number of files
-    
     phi, theta:
-    Angles of how the beam hits the sample
-    
+        Angles of how the beam hits the sample  
     trar1, trar2:
-    reciprocal unit vectors
-    
+        reciprocal unit vectors    
     n_beams:
-    todo
-    
+        todo    
     beam_indices:
-    Array with the order of beams
-    
+        Array with the order of beams  
     ph_CDisp:
-    Geometric displacements of the atom
-    
-    E_kin_array:
-    Array that contains all the energies of the file
-    
+        Geometric displacements of the atom 
+    e_kin_array:
+        Array that contains all the energies of the file  
     VPI_array:
-    Imaginary part of the inner potential of the surface
-    
+        Imaginary part of the inner potential of the surface   
     VV_array:
-    Real part of the inner potential of the surface
-    
+        Real part of the inner potential of the surface  
     amplitudes_ref:
-    Array that contains all values of the reference amplitudes
-    
+        Array that contains all values of the reference amplitudes    
     amplitudes_del:
-    Array that contains all values of the delta amplitudes
-    
+        Array that contains all values of the delta amplitudes   
     nc_surf: np.array of bool
-    Bool array with flags that decide if atom is considered to be at the surface.
+        Bool array with flags that decide if atom is considered to be at the surface.
+    n_files: int
+        Number of files 
     
     delta_steps: np.array of float with shape (n_files, 2) of (n_files*2)
     Which displacements to use. If given integer values, the values from the Delta
@@ -274,15 +263,14 @@ def calc_delta_intensities(
     (i, 1) gives the vibrational displacement.
     If the array was falttened, geometric displacement is element (2*i)
     and vibrational displacement is element (2*i + 1).
-    
-    number_z_steps:
-    Total number of different delta_z values
+
     
     
     Returns
     ----------
-    ATSAS_matrix:
-    Array that contains the intensities of the different beams with each energy
+    intensity_matrix: numpy.ndarray
+    Array that contains the intensities of the different beams with 
+    each energy; intensity_matrix[e_index,beam_index]
     """
     
     # may be necessary if array was flattened
