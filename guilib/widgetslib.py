@@ -72,8 +72,10 @@ def catch_gui_crash(base_log_path):
             # Logger is set up and created only when an exception occurs
             self.loginfo = {'log': None, 'fname': None}
 
+        @print_thread
         def __call__(self, exctype, value, traceback):
             """Show the message box to the user, then exit normally."""
+            print("called exception hook", flush=True)
             self.excinfo = (exctype, value, traceback)
             info = "".join(
                    _m_traceback.format_exception(exctype, value, traceback)
@@ -97,22 +99,12 @@ def catch_gui_crash(base_log_path):
 
         def __call_impl(self, text, info):
             """Finish calling self."""
-            # Connect signal differently depending on thread
-            this_thread = qtc.QThread.currentThread()
-            _is_main = this_thread == qtw.qApp.thread()
-            connect_type = qtc.Qt.AutoConnection
-            if not _is_main:
-                # Make sure the other thread is blocked while
-                # handling exceptions
-                connect_type = qtc.Qt.BlockingQueuedConnection
-
             try:
                 self.__show_msg_requested.disconnect()                          # TODO: use safe_disconnect
             except TypeError:
                 # Not connected
                 pass
-            self.__show_msg_requested.connect(self.__show_message,
-                                              type=connect_type)
+            self.__show_msg_requested.connect(self.__show_message)
             self.__show_msg_requested.emit(text, info)
 
         @qtc.pyqtSlot(str, str)
