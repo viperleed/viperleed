@@ -357,8 +357,6 @@ def calc_delta_intensities(
         vibrational displacement is element (2*i + 1).
         shape=(n_files, 2)
 
-    
-    
     Returns
     ----------
     intensity_matrix: numpy.ndarray
@@ -366,18 +364,17 @@ def calc_delta_intensities(
         each energy; intensity_matrix[e_index,beam_index]
         shape=(n_energies,n_beams)
     """
-    
     # may be necessary if array was flattened
     delta_steps = delta_steps.reshape(n_files, 2)
 
     sum_z_disp = 0
-    n_geo_max = geo_delta.shape[1] # I think?
     conc = 1    # conc will be taken as input parameter as well
 
+    n_geo_max = geo_delta.shape[1] # I think?
 
     # below could also be optimized with array operations
     # if uppermost atom in crystal gets displaced up,
-    # then inner potential also starts earlier                                  
+    # inner potential also starts higher up (higher z)
     for atom_index, at_surface in enumerate(is_surface_atom):
         if not at_surface:
             continue
@@ -396,80 +393,79 @@ def calc_delta_intensities(
     CXDisp = min(sum_z_disp, 1000)
 
     intensity_matrix = np.zeros((len(e_kin_array), n_beams))
-    
-    # many optimizations possible here...
-    
-    
+
+    trar = [trar1, trar2]
+    e_kin = e_kin_array
+    v_real = v_inner_array.real
+    v_imag = v_inner_array.imag
+
+    # incident wave vector
+    in_k =np.sqrt(np.maximum(0, 2*(e_kin-v_real)))
+    c = in_k*np.cos(theta)
+    in_k_par = in_k*np.sin(theta) # parallel component
+    bk_2 = in_k_par*np.cos(phi)
+    bk_3 = in_k_par*np.sin(phi)
+    bk_z = np.sqrt(complex(2*e_kin - bk_2**2 - bk_3**2, -2*v_imag))
+
+    # outgoing wave vector
+    out_components = np.einsum('j,ei,ij->ej', [bk_2,bk_3], beam_indices, trar)
+    out_k = 2*e_kin + out_components**2
+    out_k_z = np.sqrt(complex(out_k, -2*v_imag))
+    out_k_perp = out_k-2*v_real
+
+    # interpolation bounds
+    _left = np.floor(delta_steps, dtype="int32")
+    _right = np.ceil(delta_steps, dtype="int32")
+    geo_id_left, vib_id_left = _left.T
+    geo_id_right, vib_id_right = _right.T
+
+    # What is left in the loops below could theoretically be vectorized.
+    # However, for now there is no point in doing so, 
+    # since they are optimized by numba.
+
+    delta_amplitudes = np.empty(shape=(n_files, ), dtype=complex)
     # Loop over energies
     for e_index in prange(len(e_kin_array)):
-        #Define variables that stay the same for one energy
-        E = e_kin_array[e_index]
-        VV = v_inner_array[e_index].real
-        VPI = v_inner_array[e_index].imag
-        # all of the below can be transformed into a neater form with matrix operations
-        AK = sqrt(max(2 * E - 2 * VV, 0))
-        C = AK * cos(theta)
-        BK2 = AK * sin(theta) * cos(phi)
-        BK3 = AK * sin(theta) * sin(phi)
-        BKZ = cmath.sqrt(complex(2 * E - BK2 ** 2 - BK3 ** 2, -2 * VPI))
-        
-        #Loop over beams
+        # Loop over beams
         for beam_index in range(n_beams):
-            #Variables per beam
-            h = beam_indices[beam_index, 0]
-            k = beam_indices[beam_index, 1]
-            # could be done in matrix form - not sure if that gives better performance
-            AK2 = BK2 + h * trar1[0] + k * trar2[0]
-            AK3 = BK3 + h * trar1[1] + k * trar2[1]
-            AK = 2 * E - AK2 ** 2 - AK3 ** 2
-            AKZ = cmath.sqrt(complex(AK, -2 * VPI))
-            A_perpendicular = AK - 2 * VV
+            if out_k_perp[e_index] <= 0:
+                intensity = 0
+            else:
+                # get reference amplitudes
+                amplitude = amplitudes_ref[e_index, beam_index]
+                # loop over delta amplitudes
+                delta_amplitudes = 0
+                for file in prange(n_files):
+                    # interpolation of geometric and vibrational displacements
+                    del_l_l = amplitudes_del[file, e_index,
+                                            vib_id_left[file], geo_id_left[file], beam_index]
+                    del_l_r = amplitudes_del[file, e_index,
+                                            vib_id_left[file], geo_id_right[file], beam_index]
+                    del_r_l = amplitudes_del[file, e_index,
+                                            vib_id_right[file], geo_id_left[file], beam_index]
+                    del_r_r = amplitudes_del[file, e_index,
+                                            vib_id_right[file], geo_id_right[file], beam_index]
+                    # values to interpolate to
+                    vib_fraction = delta_steps[file, 1]
+                    geo_fraction = delta_steps[file, 0]
 
-            amplitude = amplitudes_ref[e_index, beam_index]
-            for i in range(n_files):
-                # interpolation of geometric and vibrational displacements
-                
-                geo_fraction = delta_steps[i, 0]
-                geo_id_left = int(geo_fraction // 1) #floor
-                geo_id_right = -int(geo_fraction // -1)  # ceil(x) = -floor(-x)
-                
-                vib_fraction = delta_steps[i, 1]
-                vib_id_left = int(vib_fraction // 1) #floor 
-                vib_id_right = -int(vib_fraction // -1)  # ceil(x) = -floor(-x) 
+                    delta_amplitudes[file] = bilinear_interpolation_np(
+                        xy = (vib_fraction, geo_fraction),
+                        x1x2=(vib_id_left, vib_id_right),
+                        y1y2=(geo_id_left, geo_id_right),
+                        f11f12f21f22=(del_l_l, del_l_r, del_r_l, del_r_r)
+                    )
 
-                del_l_l = amplitudes_del[i, e_index,
-                                         vib_id_left, geo_id_left, beam_index]
-                del_l_r = amplitudes_del[i, e_index,
-                                         vib_id_left, geo_id_right, beam_index]
-                del_r_l = amplitudes_del[i, e_index,
-                                         vib_id_right, geo_id_left, beam_index]
-                del_r_r = amplitudes_del[i, e_index,
-                                         vib_id_right, geo_id_right, beam_index]
-                
-                # scipy is not supported in numba (JIT); 
-                # could be done in numpy arrays
-                amp_intpol_value = bilinear_interpolation_np(
-                    xy = (vib_fraction, geo_fraction),
-                    x1x2=(vib_id_left, vib_id_right),
-                    y1y2=(geo_id_left, geo_id_right),
-                    f11f12f21f22=(del_l_l, del_l_r, del_r_l, del_r_r)
-                )
-
-                amplitude += amp_intpol_value
-
-            if A_perpendicular > 0:
-                A = sqrt(A_perpendicular)
-                PRE = (BKZ + AKZ) * CXDisp
-                PRE = np.exp(-1j*PRE)
+                amplitude += np.sum(delta_amplitudes)
                 amp_abs = abs(amplitude)
+                a = np.sqrt(out_k_perp)
+                prefactor = np.exp(-1j*(bk_z + out_k_z)*CXDisp)
+
                 if amp_abs > 10e10:
                     intensity = 10e20 #saturation condition - do we need this? - can we instead check somewhere else if intensity is too high?
                 else:
-                    intensity = amp_abs**2 * abs(PRE)**2 * A / C
-            else:
-                intensity = 0
-
-            intensity_matrix[e_index, beam_index] = intensity
+                    intensity = amp_abs**2 * abs(prefactor)**2 * a / c
+        intensity_matrix[e_index, beam_index] = intensity
 
     return intensity_matrix
 
