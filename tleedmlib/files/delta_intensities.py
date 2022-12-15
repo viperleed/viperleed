@@ -24,7 +24,8 @@ def read_delta_file(filename, n_energies, read_header_only=False):
     TensErLEED delta-amplitude file.
     
     This function reads in one file of data and stores the data 
-    in arrays, which can be used in later functions (ex.: GetInt).
+    in arrays, which can be used in later functions 
+    (ex.: calc_delta_intensities).
     
     Parameters
     ----------
@@ -41,33 +42,44 @@ def read_delta_file(filename, n_energies, read_header_only=False):
     Returns
     -------
     (phi, theta): tuple of float
-        Angles of how the beam hits the sample  
+        Angles of how the beam hits the sample
     (trar1, trar2) : tuple of ndarray
-        reciprocal lattice vectors 
+        reciprocal lattice vectors
     n_beams : int
-        Number of beams for which delta-amplitudes were present 
+        Number of beams for which delta-amplitudes were present
         in the file 
     nc_steps: numpy.ndarray
-        Number of permutations between direction deltas and 
+        Number of permutations between direction deltas and
         vibration deltas  
     e_kin_array : numpy.ndarray
-        Array that contains the kinetic energies of the 
-        elastically scattered electrons inside the crystal. 
-        (Not the incidence energy!)  
+        Array that contains the kinetic energies of the
+        elastically scattered electrons inside the crystal.
+        shape=(n_energies)
+        (Not the incidence energy!)
     v_imag_array : numpy.ndarray
-        Imaginary part of the inner potential of the surface  
+        Imaginary part of the inner potential of the surface
+        shape=(n_energies)
     VV_array : numpy.ndarray
-        Real part of the inner potential of the surface  
+        Real part of the inner potential of the surface
+        shape=(n_energies)
     beam_indices : numpy.ndarray
-        Array of beam indices, with beam_indices[i] == [h_i, k_i]
+        Array of beam indices, with beam_indices[i] == [h_i, k_i];
+        shape=(n_beams,2)
     Cundisp : numpy.ndarray
-        Position of the undisplaced atoms (always 0)   
-    CDisp : ndarry
-        Geometric displacement of given delta   
+        Position of the undisplaced atoms (always 0)
+        shape=(3)
+    geo_delta : numpy.ndarray
+        Geometric displacement of given delta
+        shape=(n_geo_vib_grid, 3);
+        n_geo_vib_grid read from header_block_2
     amplitudes_ref : numpy.ndarray
-        Array that contains all values of the reference amplitudes  
+        Array that contains all values of the reference amplitudes
+        shape=(n_energies,n_beamsf)
     amplitudes_del : numpy.ndarray
         Array that contains all values of the delta amplitudes
+        shape=(n_energies,n_vib,n_geo,n_beams)
+        n_vib and n_geo read in header_block_6;
+        they are the number of geometric and vibrational displacements
     """
 
     header_block_1 = []
@@ -238,7 +250,28 @@ def read_delta_file(filename, n_energies, read_header_only=False):
         amplitudes_del,
     )
 
+
 def read_block(reader, lines, shape, dtype=np.float64):
+    """ This function reads in the individual blocks of a 
+    TensErLEED delta-amplitude file.
+    
+    Parameters
+    ----------
+    reader: FortranReader object
+        The Fortran reader that is used on this block.
+    lines: iterator
+        Lines of the whole data file.
+    shape: numpy.ndarray
+        Shape of the array that gets filled with information.
+    dtype: np.float64
+        Type of numbers that can be stored in the returned array.
+        
+    Returns
+    -------
+    np.array(llist,dtype): numpy.ndarray
+        Array with the contents of an individual block with the
+        dimensions defined in "shape".
+    """
     llist = []
     len_lim = np.prod(shape)
     for line in lines:
@@ -251,75 +284,95 @@ def read_block(reader, lines, shape, dtype=np.float64):
 @njit(fastmath=True, parallel=True, nogil=True)
 def calc_delta_intensities(
     phi,  
-    theta, #phi and theta can be grouped in a beam_incidence tuple
+    theta, # TODO: phi and theta can be grouped in a beam_incidence tuple
     trar1,
-    trar2, #trar1 and trar2 can be grouped into one
-    n_beams, #not needed, can take from the shape of beam_indices
+    trar2, # TODO: trar1 and trar2 can be grouped into one
+    n_beams, # TODO: not needed, can take from the shape of beam_indices
     beam_indices,
     geo_delta, # formerly CDISP in TensErLEED
     e_kin_array,
     v_inner_array,
     amplitudes_ref,
     amplitudes_del,
-    n_files, #can take from shape of geo_delta/n_geo/is_surface_atom
-    n_geo,   #not needed, can take from delta_steps
+    n_files, # can take from shape of geo_delta/n_geo/is_surface_atom
+    n_geo,   # not needed, can take from delta_steps
     is_surface_atom,
     delta_steps,
 ):
     """This function reads in the values of the function Transform and 
     uses them to get the intensity_matrix
-    
+
     Parameters
     ----------
-    phi, theta:
-        Angles of how the beam hits the sample  
-    trar1, trar2:
-        reciprocal unit vectors    
-    n_beams:
-        todo    
-    beam_indices:
-        Array with the order of beams  
-    ph_CDisp:
-        Geometric displacements of the atom 
-    e_kin_array:
-        Array that contains all the energies of the file  
-    VPI_array:
-        Imaginary part of the inner potential of the surface   
-    VV_array:
-        Real part of the inner potential of the surface  
-    amplitudes_ref:
-        Array that contains all values of the reference amplitudes    
-    amplitudes_del:
-        Array that contains all values of the delta amplitudes   
-    nc_surf: np.array of bool
-        Bool array with flags that decide if atom is considered to be at the surface.
+    phi : float
+        Polar incidence angle.
+    theta : float
+        Azimuthal incidence angle.
+    trar1 : numpy.ndarray
+        Reciprocal lattice vectors; shape=(2, ).
+    trar2 : numpy.ndarray
+        Reciprocal lattice vectors; shape=(2, ).
+    n_beams : int
+        Number of beams for which delta-amplitudes were present
+        in the file   
+    beam_indices : numpy.ndarray
+        Array of beam indices, with beam_indices[i] == [h_i, k_i];
+        shape=(n_beams,2) 
+    geo_delta: numpy.ndarray
+        Geometric displacements of the atoms
+        TODO: formerly CDisp; can be taken from delta_steps
+    e_kin_array : numpy.ndarray
+        Array that contains the kinetic energies of the
+        elastically scattered electrons inside the crystal.
+        shape=(n_energies)
+        (Not the incidence energy!) 
+    v_inner_array: numpy.ndarray
+        Real and imaginary part of the inner potential
+        shape=(n_energies); filled with complex values
+    amplitudes_ref: numpy.ndarray
+        Array that contains all values of the reference amplitudes 
+        shape=(n_energies,n_beams)
+    amplitudes_del: numpy.ndarray
+        Array that contains all values of the delta amplitudes
+        for all atoms/files
+        shape=(n_files,n_energies,n_vib,n_geo,n_beams)
     n_files: int
-        Number of files 
-    
-    delta_steps: np.array of float with shape (n_files, 2) of (n_files*2)
-    Which displacements to use. If given integer values, the values from the Delta
-    file will be used, for float a linear interpolation is used instead.
-    For file i element (i, 0) gives the geometric displacment and element
-    (i, 1) gives the vibrational displacement.
-    If the array was falttened, geometric displacement is element (2*i)
-    and vibrational displacement is element (2*i + 1).
+        Number of files for this surface
+    n_geo: numpy.ndarray
+        Number of geometric displacements
+        shape=(n_files)
+        TODO: can be taken from "delta_steps"
+    is_surface_atom: numpy.ndarray
+        Array filled with Bool that indicates if the atom is
+        on the surface
+        shape=(n_files)
+    delta_steps: numpy.ndarray
+        Filled with the index of the displacement.
+        If given integer values, the values from the Delta
+        file will be used, for float a linear interpolation
+        is used instead. For file i element (i, 0) gives the
+        geometric displacment and element (i, 1) gives the
+        vibrational displacement. If the array was falttened,
+        geometric displacement is element (2*i) and
+        vibrational displacement is element (2*i + 1).
+        shape=(n_files, 2)
 
     
     
     Returns
     ----------
     intensity_matrix: numpy.ndarray
-    Array that contains the intensities of the different beams with 
-    each energy; intensity_matrix[e_index,beam_index]
+        Array that contains the intensities of the different beams with 
+        each energy; intensity_matrix[e_index,beam_index]
+        shape=(n_energies,n_beams)
     """
     
     # may be necessary if array was flattened
     delta_steps = delta_steps.reshape(n_files, 2)
 
     sum_z_disp = 0
-    conc = 1    #conc will probably be taken as Input parameter aswell
-    
     n_geo_max = geo_delta.shape[1] # I think?
+    conc = 1    # conc will be taken as input parameter as well
 
 
     # below could also be optimized with array operations
@@ -425,14 +478,25 @@ def calc_delta_intensities(
 def bilinear_interpolation_np(xy, x1x2, y1y2, f11f12f21f22):
     """Bilinear interpolation based on numpy functions.
 
-    Args:
-        xy (_type_): _description_
-        x1x2 (_type_): _description_
-        y1y2 (_type_): _description_
-        f11f12f21f22 (_type_): _description_
+    Parameter
+    ---------
+    xy: (float, float)
+        floats for the fraction in x and y
+        (fractions in the two dimensions)
+    x1x2: (int, int)
+        x1 and x2, floor and ceiling of x
+        floor and ceiling of the first dimension
+    y1y2: (int, int)
+        y1 and y1, floor and ceiling of y
+        floor and ceiling of the second dimension
+    f11f12f21f22: (float, float, float, float)
+        Values of the four grid points (x1,x2,y1,y2)
+        the values are indexed as f_xi_yi
 
-    Returns:
-        _type_: _description_
+    Returns
+    -------
+    f_x_y: float
+        Interpolated value between the four grid points.
     """
     x, y = xy
     x1, x2 = x1x2
