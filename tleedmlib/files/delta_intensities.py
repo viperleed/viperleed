@@ -147,7 +147,7 @@ def read_delta_file(filename, n_energies, read_header_only=False):
     else:
         raise ValueError(f"Invalid header in file {filename}: "
                          "second line should contain 2 or 3 elements. "
-                         f"Found {len(HeaderBlock2}")
+                         f"Found (len{header_block_2}")
     
 
     # 3.Block of Header - (h,k) indices of the beams
@@ -281,7 +281,7 @@ def read_block(reader, lines, shape, dtype=np.float64):
     return np.array(llist, dtype=dtype).reshape(shape)
 
 
-@njit(fastmath=True, parallel=True, nogil=True)
+#@njit(fastmath=True, parallel=True, nogil=True)
 def calc_delta_intensities(
     phi,  
     theta, # TODO: phi and theta can be grouped in a beam_incidence tuple
@@ -388,53 +388,82 @@ def calc_delta_intensities(
         # use numpy interpolation - this is probably the way to go
         geo_interp = np.interp(z_fraction, z_grid, z_values)
 
-        sum_z_disp += Conc * geo_interp
+        sum_z_disp += conc * geo_interp
 
     CXDisp = min(sum_z_disp, 1000)
 
     intensity_matrix = np.zeros((len(e_kin_array), n_beams))
 
-    trar = [trar1, trar2]
+    trar = np.empty(shape=(2,2), dtype="float")
+    trar[0,:] = trar1
+    trar[1,:] = trar2
+
     e_kin = e_kin_array
+    n_en = len(e_kin)
     v_real = v_inner_array.real
     v_imag = v_inner_array.imag
+    
+    j = complex(0,1)
 
     # incident wave vector
     in_k =np.sqrt(np.maximum(0, 2*(e_kin-v_real)))
-    c = in_k*np.cos(theta)
     in_k_par = in_k*np.sin(theta) # parallel component
-    bk_2 = in_k_par*np.cos(phi)
-    bk_3 = in_k_par*np.sin(phi)
-    bk_z = np.sqrt(complex(2*e_kin - bk_2**2 - bk_3**2, -2*v_imag))
+    bk_2 = in_k_par*np.cos(phi) # shape=(n_energy)
+    bk_3 = in_k_par*np.sin(phi) # shape=(n_energy)
+    bk_z = np.empty_like(e_kin, dtype="complex64")
+    bk_z = 2*e_kin - bk_2**2 - bk_3**2 - 2*j*v_imag
+    bk_z = np.sqrt(bk_z)
 
-    # outgoing wave vector
-    out_components = np.einsum('j,ei,ij->ej', [bk_2,bk_3], beam_indices, trar)
-    out_k = 2*e_kin + out_components**2
-    out_k_z = np.sqrt(complex(out_k, -2*v_imag))
-    out_k_perp = out_k-2*v_real
+    # outgoing wave vector components
+    bk_components = np.stack((bk_2,bk_3))                               # shape=(n_en, 2)
+    bk_components = np.outer(bk_components, np.ones(shape=(n_beams,))
+                             ).reshape((n_en,2,n_beams))                # shape=(n_en, 2, n_beams)
+    out_wave_vec = np.dot(beam_indices, trar)                           # shape=(n_beams, 2)
+    out_wave_vec = np.outer(np.ones_like(e_kin), out_wave_vec
+                            ).reshape((n_en,2,n_beams))                 # shape=(n_en, n_beams)
+    out_components = bk_components + out_wave_vec
+
+    # out k vector
+    out_k = (2*np.outer(e_kin, np.ones(shape=(n_beams,))) # 2*E
+            + bk_components[:,0,:]**2                     # + h**2
+            + bk_components[:,1,:]**2                     # + k**2
+            ).astype(dtype="complex64")
+    # z component
+    out_k_z = np.empty_like(out_k, dtype="complex64")                   # shape=(n_en, n_beams)
+    out_k_z = np.sqrt(out_k - 2*j*np.outer(v_imag, np.ones(shape=(n_beams,))))
+    # perpendicular component
+    out_k_perp = out_k - 2*np.outer(v_real, np.ones(shape=(n_beams,)))  # shape=(n_en, n_beams)
 
     # interpolation bounds
-    _left = np.floor(delta_steps, dtype="int32")
-    _right = np.ceil(delta_steps, dtype="int32")
+    _left = np.floor(delta_steps).astype("int32")
+    _right = np.ceil(delta_steps).astype("int32")
     geo_id_left, vib_id_left = _left.T
     geo_id_right, vib_id_right = _right.T
 
-    # What is left in the loops below could theoretically be vectorized.
-    # However, for now there is no point in doing so, 
-    # since they are optimized by numba.
+    # prefactors (refaction) from amplitudes to intensities
+    a = np.sqrt(out_k_perp)
+    c = in_k*np.cos(theta)
+    prefactor = abs(np.exp(
+        -1j*CXDisp*(
+        np.outer(bk_z, np.ones(shape=(n_beams,))) + out_k_z
+        )))**2 * a/np.outer(c, np.ones(shape=(n_beams,))).real          # shape=(n_en, n_beams)
 
-    delta_amplitudes = np.empty(shape=(n_files, ), dtype=complex)
+    # AMI, TODO:
+    # What is left in the loops below could be vectorized.
+    # However, we can leave them as is for now, since they will be optimized by numba.
+
+    delta_amplitudes = np.empty(shape=(n_files, ), dtype="complex64")
     # Loop over energies
     for e_index in prange(len(e_kin_array)):
         # Loop over beams
         for beam_index in range(n_beams):
-            if out_k_perp[e_index] <= 0:
+            if out_k_perp[e_index, beam_index] <= 0:
                 intensity = 0
             else:
                 # get reference amplitudes
                 amplitude = amplitudes_ref[e_index, beam_index]
                 # loop over delta amplitudes
-                delta_amplitudes = 0
+                delta_amplitudes[...] = 0
                 for file in prange(n_files):
                     # interpolation of geometric and vibrational displacements
                     del_l_l = amplitudes_del[file, e_index,
@@ -451,26 +480,26 @@ def calc_delta_intensities(
 
                     delta_amplitudes[file] = bilinear_interpolation_np(
                         xy = (vib_fraction, geo_fraction),
-                        x1x2=(vib_id_left, vib_id_right),
-                        y1y2=(geo_id_left, geo_id_right),
+                        x1x2=(vib_id_left[file], vib_id_right[file]),
+                        y1y2=(geo_id_left[file], geo_id_right[file]),
                         f11f12f21f22=(del_l_l, del_l_r, del_r_l, del_r_r)
                     )
 
                 amplitude += np.sum(delta_amplitudes)
-                amp_abs = abs(amplitude)
-                a = np.sqrt(out_k_perp)
-                prefactor = np.exp(-1j*(bk_z + out_k_z)*CXDisp)
-
+                # AMI, TODO:
+                # We should remove this saturation check here, since it is very slow (branch in loop).
+                # If needed, rather do it outside as array operation - though I don't see the need for it anyhow...
+                amp_abs = abs(amplitude).real
                 if amp_abs > 10e10:
-                    intensity = 10e20 #saturation condition - do we need this? - can we instead check somewhere else if intensity is too high?
+                    intensity = 10e20
                 else:
-                    intensity = amp_abs**2 * abs(prefactor)**2 * a / c
-        intensity_matrix[e_index, beam_index] = intensity
+                    intensity = amp_abs**2 * prefactor[e_index, beam_index]
+                intensity_matrix[e_index, beam_index] = intensity.real
 
     return intensity_matrix
 
 
-@njit(fastmath = True)
+#@njit(fastmath = True)
 def bilinear_interpolation_np(xy, x1x2, y1y2, f11f12f21f22):
     """Bilinear interpolation based on numpy functions.
 
@@ -505,7 +534,6 @@ def bilinear_interpolation_np(xy, x1x2, y1y2, f11f12f21f22):
 
     # linear interpolation in 2nd coordinate
     f_x_y = np.interp(y, (y1, y2), (f_x_y1, f_x_y2))
-
     return f_x_y
 
 
@@ -544,8 +572,8 @@ class DeltaFile:
             self.max_geo = np.max(self.geo_delta)
             # individual delta files are regularly spaced...
             self.geo_step = self.geo_delta[1] - self.geo_delta[0]
-        
-    
+
+
     def read(self, file, n_energies):
         """Reads the file associated with DeltaFile object.
 
@@ -565,4 +593,3 @@ class DeltaFile:
             self.amplitudes_del,
         ) = read_delta_file(file, n_energies=n_energies, read_header_only=False)
     
-
