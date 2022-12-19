@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "viperleed"
+requires-python = ">=3.7"
+dynamic = ["version"]
+dependencies = [
+    "numpy",
+    "wrapt",
+    "quicktions",
+    "scipy",
+    "sklearn",
+    "matplotlib",
+    "psutil",
+]
+
+[project.optional-dependencies]
+GUI = [
+    "PyQt5",
+    "mplcairo"
+]
+hardware = [
+    "requests"
+]
+dev = [
+    "line_profiler",
+    "sphinx"
+]
