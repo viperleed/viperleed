@@ -46,8 +46,11 @@ if args.work:
 if not (vpr_path and work_path):
     raise ValueError("ViPErLEED source and/or work directory not defined!")
 
+if os.path.abspath(vpr_path) not in sys.path:
+    sys.path.append(os.path.abspath(vpr_path))
+
 try:
-    from bookkeeper import bookkeeper
+    from viperleed.utilities.bookkeeper import bookkeeper
     bookie_exists = True
 except ModuleNotFoundError:
     bookie_exists = False
@@ -56,8 +59,6 @@ delete_workdir = False   # delete the work_path after copying back?
 all_tensors = False      # copy all tensor files or just highest number?
 # !!! TODO: it would be nice if all_tensors automatically checked PARAMETERS
 
-if os.path.abspath(vpr_path) not in sys.path:
-    sys.path.append(os.path.abspath(vpr_path))
 
 import viperleed
 import viperleed.tleedmlib
