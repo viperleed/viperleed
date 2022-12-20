@@ -1402,4 +1402,4 @@ class BadPixels:
 
     def __bool__(self):
         """Return the truth value of self."""
-        return self.__has_info and self.n_bad_pixels_sensor
+        return bool(self.__has_info and self.n_bad_pixels_sensor)
