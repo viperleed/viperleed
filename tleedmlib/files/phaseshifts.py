@@ -117,7 +117,7 @@ def readPHASESHIFTS(sl, rp, readfile='PHASESHIFTS', check=True,
         return "", [], True, True
     
     # check block length is consitent with number of species
-    if (lines_per_block-1)%nel:
+    if (lines_per_block - 1) % nel:
         logger.warning(
             "Error while trying to read PHASESHIFTS: "
             "Could not parse file: The number of blocks may not match "
@@ -127,7 +127,7 @@ def readPHASESHIFTS(sl, rp, readfile='PHASESHIFTS', check=True,
         rp.setHaltingLevel(1)
         return "", [], True, True
 
-    lines_per_element = (lines_per_block-1)//nel
+    lines_per_element = (lines_per_block - 1) // nel
 
     while line_idx < len(filelines):
         current_line = filelines[line_idx].strip()
