@@ -1,11 +1,13 @@
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
+# TODO: check version of setuptools
 
 [project]
 name = "viperleed"
 requires-python = ">=3.7"
 dynamic = ["version"]
+readme = "README.md"
 dependencies = [
     "numpy",
     "wrapt",
@@ -15,6 +17,9 @@ dependencies = [
     "matplotlib",
     "psutil",
 ]
+
+[project.license]
+# TODO: add license information
 
 [project.optional-dependencies]
 GUI = [
