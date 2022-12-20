@@ -392,7 +392,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
                 bad_px.read(self.__ctrls['bad_px_path'].text(),
                             most_recent=False)
             except FileNotFoundError:
-                bad_px = None
+                pass
 
         if not bad_px and not bad_px.file_name:
             return NOT_SET, -1, -1, -1, -1
