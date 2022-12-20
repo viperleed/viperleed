@@ -11,11 +11,13 @@ import subprocess
 import numpy as np
 from viperleed import fortranformat as ff
 
+from viperleed.guilib.base import get_equivalen_beams
+
 logger = logging.getLogger("tleedm.beamgen")
 
 
 def runBeamGen(sl, rp, beamgensource='', domains=False):
-    """Writes necessary input for the beamgen3 code, the runs it. The relevant
+    """Writes necessary input for the beamgen3 code, then runs it. The relevant
     output file will be renamed to BEAMLIST."""
     if rp.TL_VERSION < 1.7:
         beamgensource = os.path.join('tensorleed', 'beamgen3.out')
@@ -99,3 +101,18 @@ def runBeamGen(sl, rp, beamgensource='', domains=False):
         raise
     logger.debug("Wrote to BEAMLIST successfully.")
     return
+
+def beamgen(sl, rp, domain=False):
+    if sl.bulkslab is None:
+        sl.bulkslab = sl.makeBulkSlab(rp)
+
+    leedParameters = {
+        'eMax': rp.THEO_ENERGIES[1],
+        'surfBasis': sl.ucell[:2, :2].T,
+        'SUPERLATTICE': rp.SUPERLATTICE,
+        'surfGroup': sl.foundplanegroup,
+        'bulkGroup': sl.bulkslab.foundplanegroup,
+        'screenAperture': rp.SCREEN_APERTURE,
+    }
+    # TODO: domains!!
+    equivalent_beams = get_equivalent_beams(leedParameters)
