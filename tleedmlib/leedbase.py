@@ -92,7 +92,7 @@ ATOMIC_MASS = {
 ###############################################
 
 def get_atomic_number(element):
-    """Returns atomic number for a given element symbol.
+    """Return atomic number for a given element symbol.
 
     Parameters
     ----------
@@ -103,9 +103,19 @@ def get_atomic_number(element):
     -------
     int
         Atomic number of the element (e.g. 26 for 'Fe').
+
+    Raises
+    ------
+    ValueError
+        If element is not a valid chemical element.
     """
-    # offset by one because of Python indexing
-    return PERIODIC_TABLE.index(element) + 1
+    try:
+        # Offset by one because of Python indexing
+        return PERIODIC_TABLE.index(element) + 1
+    except ValueError:
+        raise ValueError(
+            f"Unknown chemical element {element}"
+            ) from None
 
 def get_element_symbol(atomic_number):
     """Returns element symbol for given atomic number.
@@ -119,9 +129,19 @@ def get_element_symbol(atomic_number):
     -------
     str
         String of the element symbol (e.g. 'Fe').
+
+    Raises
+    ------
+    ValueError
+        If atomic_number is not a valid Z for a chemical element.
     """
-    # offset by one because of Python indexing
-    return PERIODIC_TABLE[atomic_number-1]
+    try:
+        # Offset by one because of Python indexing
+        return PERIODIC_TABLE[atomic_number - 1]
+    except (IndexError, TypeError):
+        raise ValueError(
+            f"Invalid atomic number {atomic_number}."
+            ) from None
 
 def monitoredPool(rp, poolsize, function, tasks, update_from=""):
     """
