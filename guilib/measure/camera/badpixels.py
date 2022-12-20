@@ -1011,6 +1011,8 @@ class BadPixels:
     @property
     def n_uncorrectable_sensor(self):
         """Return the total number of uncorrectable pixels."""
+        if self.__uncorrectable is None:
+            return 0
         return len(self.__uncorrectable)
 
     @property
@@ -1086,40 +1088,42 @@ class BadPixels:
             raise RuntimeError(f"{self.__class__.__name__}: No bad pixels "
                                "to apply a region of interest to.")
 
-        if no_roi or not self.__bad_coords.size:
-            self.__bad_coords_roi = self.__bad_coords
-            self.__replacements_roi = self.__replacements
-            self.__uncorrectable_roi = self.__uncorrectable
+        # Reset all ROI-related info
+        self.__bad_coords_roi = self.__bad_coords
+        self.__replacements_roi = self.__replacements
+        self.__uncorrectable_roi = self.__uncorrectable
+
+        if no_roi:
             return
 
         top_x, top_y, width, height = self.__camera.roi
 
         # Recalculate coordinates based on the new origin
         # NB: the bad coordinates are (row#, col#)!
-        bad_coords = self.__bad_coords - (top_y, top_x)
-        repl_minus = bad_coords - self.__replacements
-        repl_plus = bad_coords + self.__replacements
+        if self.__bad_coords.size:
+            bad_coords = self.__bad_coords - (top_y, top_x)
+            repl_minus = bad_coords - self.__replacements
+            repl_plus = bad_coords + self.__replacements
 
-        # Mask all bad pixels and replacements outside the ROI:
-        mask = np.all((np.all(bad_coords >= (0, 0), axis=1),
-                       np.all(repl_minus >= (0, 0), axis=1),
-                       np.all(repl_plus >= (0, 0), axis=1),
-                       np.all(bad_coords < (height, width), axis=1),
-                       np.all(repl_minus < (height, width), axis=1),
-                       np.all(repl_plus < (height, width), axis=1)),
-                      axis=0)
+            # Mask all bad pixels and replacements outside the ROI:
+            mask = np.all((np.all(bad_coords >= (0, 0), axis=1),
+                           np.all(repl_minus >= (0, 0), axis=1),
+                           np.all(repl_plus >= (0, 0), axis=1),
+                           np.all(bad_coords < (height, width), axis=1),
+                           np.all(repl_minus < (height, width), axis=1),
+                           np.all(repl_plus < (height, width), axis=1)),
+                          axis=0)
 
-        self.__bad_coords_roi = bad_coords[mask]
-        self.__replacements_roi = self.__replacements[mask]
+            self.__bad_coords_roi = bad_coords[mask]
+            self.__replacements_roi = self.__replacements[mask]
 
         # Do the same for uncorrectable pixels (if any)
-        if self.__uncorrectable is None or not self.__uncorrectable.size:
-            return
-        uncorrectable = self.__uncorrectable - (top_y, top_x)
-        mask = np.all((np.all(uncorrectable >= (0, 0), axis=1),
-                       np.all(uncorrectable < (height, width), axis=1)),
-                      axis=0)
-        self.__uncorrectable_roi = uncorrectable[mask]
+        if self.__uncorrectable is not None and self.__uncorrectable.size:
+            uncorrectable = self.__uncorrectable - (top_y, top_x)
+            mask = np.all((np.all(uncorrectable >= (0, 0), axis=1),
+                           np.all(uncorrectable < (height, width), axis=1)),
+                          axis=0)
+            self.__uncorrectable_roi = uncorrectable[mask]
 
     def clear(self):
         """Clear any bad-pixel information in the object.
@@ -1393,12 +1397,9 @@ class BadPixels:
     @property
     def __has_info(self):
         """Return whether bad pixel information is present."""
+        # This means correctly __init__ed, or read from a valid file
         return np.all(np.isfinite(self.__bad_coords))
 
     def __bool__(self):
         """Return the truth value of self."""
-        if not self.__has_info:
-            return False
-        if not self.bad_pixel_coordinates.size:
-            return False
-        return True
+        return self.__has_info and self.n_bad_pixels_sensor

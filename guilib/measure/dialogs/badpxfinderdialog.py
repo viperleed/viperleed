@@ -394,7 +394,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
             except FileNotFoundError:
                 bad_px = None
 
-        if not bad_px or not bad_px.file_name:
+        if not bad_px and not bad_px.file_name:
             return NOT_SET, -1, -1, -1, -1
 
         *_, date, time = bad_px.file_name.split('_')

@@ -13,8 +13,6 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 # FIXED? camera error should close viewer --> check that no frames can arrive
 #        and reopen the viewer. If this is the case, the .close() can be tied
 #        to a timer with a small delay.
-# FIXED?: on archive write, .relative_to; fail on network drive
-# FIXED?: bad pixels: flat goes on forever for wiggly intensities.
 # FIXED?: measurement camera timeout unless started in live mode before
 # FIXED?: measure (timeout), then start viewer --> serial port not open error + wrong camera mode
 # FIXED?: QtWarning infinite recursion on err_box.exec_() in __report_errors
@@ -40,8 +38,8 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 # BUG: update COM and camera name when starting measurement (from known devices)
 # BUG: measurement start, serial connect failed, attempts to connect three times??
 # BUG?: ICCapture open with some settings, settings are retained in viperleed???
-# BUG?: bad pixels index out of range -- see report by Max Buchta
-# BUG?: IC_SetVideoFormat error -- see 20221123_103752 from Max Buchta
+# BUG?: IC_SetVideoFormat error -- see 20221123_103752 from Max Buchta -> probably device not open!
+# BUG: (-1/3|1/3) (-1/3|2/3) (-2/3|2/3) not found in beamlist with Max Buchta's correct POSCAR (2022-12-19)
 
 #   G E N E R I C
 # TODO: measurement over, restart cameras that were live before?
