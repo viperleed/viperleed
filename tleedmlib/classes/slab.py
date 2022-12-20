@@ -1110,6 +1110,7 @@ class Slab:
             such that (a, b) = mincell, i.e., it is transposed
             with respect to self.ucell.
         """
+        # TODO: write a testcase for the reduction of POSCAR Sb on Si(111)
         eps = rp.SYMMETRY_EPS
         epsz = rp.SYMMETRY_EPS_Z
         abst = self.ucell[:2, :2].T
