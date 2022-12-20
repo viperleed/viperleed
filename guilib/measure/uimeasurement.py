@@ -29,6 +29,9 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 #      Could perhaps be solved if we try halving the frame rate when
 #      a timeout occurs (with limits on the number of retries and/or the
 #      slowest sensible frame rate).
+# BUG: Progress bar "Finding bad pixels" gets reproducibly stuck at 12% 
+#      in Prague; then timeout error. Cannot reproduce at all here with
+#      any of my cameras. Should prepare a debug version with some logging
 # BUG: IS: hardware may be so slow that all frames are lost when estimating
 #      frame loss. This means that the camera never starts. Possible solution:
 #      start another timeout (see how long it should take at max) that restarts
@@ -39,7 +42,7 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 # BUG: measurement start, serial connect failed, attempts to connect three times??
 # BUG?: ICCapture open with some settings, settings are retained in viperleed???
 # BUG?: IC_SetVideoFormat error -- see 20221123_103752 from Max Buchta -> probably device not open!
-# BUG: (-1/3|1/3) (-1/3|2/3) (-2/3|2/3) not found in beamlist with Max Buchta's correct POSCAR (2022-12-19)
+# BUG?: (-1/3|1/3) (-1/3|2/3) (-2/3|2/3) not found in beamlist with Max Buchta's correct POSCAR (2022-12-19)
 
 #   G E N E R I C
 # TODO: measurement over, restart cameras that were live before?
