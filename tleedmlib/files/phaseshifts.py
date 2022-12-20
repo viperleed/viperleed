@@ -380,7 +380,7 @@ def __check_consitency_element_order(rp, sl, phaseshifts,
         Phaseshifts list, as read in from a PHASESHIFTS file.
     eps : float, optional
         Epsilon to use when comparing phaseshift values.
-        Default is rp.PHASESHIFTS_EPS.
+        Default is rp.PHASESHIFT_EPS.
     l_max_cutoff : int, optional
         Lower cutoff for angular momentum quantum number to be used for
         comparison of phaseshifts. Heavier elements should always have
@@ -396,7 +396,7 @@ def __check_consitency_element_order(rp, sl, phaseshifts,
         phaseshifts. If no inconsitency is detected, the set is empty.
     """
     if not eps:
-        eps = rp.PHASESHIFTS_EPS
+        eps = rp.PHASESHIFT_EPS
     n_l_values = len(phaseshifts[0][1][0])
     n_sites = len(phaseshifts[0][1])
 
@@ -429,7 +429,7 @@ def __check_consitency_element_order(rp, sl, phaseshifts,
     pair_ps = lambda item : item[1]
     ps_pairs.sort(key=at_number) # sort by atomic number
 
-    # Go through all pairs and check that heavier                     # TODO: use itertools.pairs to check all combinations, shorcut for those that are already in set
+    # Go through all pairs and check that heavier                     # TODO: use itertools.combinations to check all combinations, shortcut for those that are already in set
     # elements have larger phaseshifts
     prev_pair = ps_pairs[0]
     for pair in ps_pairs:
