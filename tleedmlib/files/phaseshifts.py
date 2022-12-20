@@ -365,6 +365,11 @@ def __check_consitency_element_order(rp, sl, phaseshifts,
     This is a very common user mistake, that often occurs when
     using a different POSCAR with pre-existing PHASESHIFTS.
 
+    Warnings will be issued if an inconsistency is found for
+    elements whose atomic numbers differ by at least 2. This
+    means, e.g., that Cr--Ni will not issue warnings for Fe,
+    but Ti and Cu will.
+
     Parameters
     ----------
     rp : Rparams
@@ -407,26 +412,35 @@ def __check_consitency_element_order(rp, sl, phaseshifts,
             ))
         if all(abs(ps_sites) > eps):
             break
-        # could not find any energy where all phaseshifts higher than eps
-        # try lower angular momentum
+        # Could not find any L where all phaseshifts are
+        # higher than eps try lower angular momentum
+    else:
+        # None of the phaseshifts are larger than eps at this energy
+        logger.warning(
+            "Could not check consistency of PHASESHIFTS file: All "
+            f"PHASESHIFTS are smaller than {eps} at the largest energy."
+            )
+        rp.raiseHaltingLevel(1)
+        return
 
     affected_elements = set()
     ps_pairs = list(zip(atomic_numbers, ps_sites))
     at_number = lambda item : item[0]
     pair_ps = lambda item : item[1]
     ps_pairs.sort(key=at_number) # sort by atomic number
-    # go through all pairs and check that heavier elements
-    # have larger phaseshifts
+
+    # Go through all pairs and check that heavier                     # TODO: use itertools.pairs to check all combinations, shorcut for those that are already in set
+    # elements have larger phaseshifts
     prev_pair = ps_pairs[0]
     for pair in ps_pairs:
-        # same element
-        if at_number(pair) == at_number(prev_pair):
+        at_num_change = at_number(pair) - at_number(prev_pair)
+        if not at_num_change:  # Same element
             continue
-        # different element, where
-        # at_number(pair) > at_number(prev_pair)
-        # because the list was sorted
-        elif (abs(pair_ps(pair)) >= abs(pair_ps(prev_pair)) - eps
-              and (at_number(pair) - at_number(prev_pair)) > 2):        # 2 is arbitrary value: ignore if close neigbor elements are similar
+        # Different element. Check that phaseshifts are also
+        # ordered, and complain only if elements are not
+        # close neighbors
+        if (abs(pair_ps(pair)) >= abs(pair_ps(prev_pair)) - eps
+                and at_num_change > 2):
             continue
         affected_elements.update(at_number(prev_pair), at_number(pair))
     affected_elements = set(get_element_symbol(el) for el in affected_elements)
