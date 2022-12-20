@@ -18,14 +18,14 @@ from viperleed.tleedmlib.leedbase import (get_atomic_number,
 
 try:
     import matplotlib
+except ImportError:
+    _CAN_PLOT = False
+else:
     matplotlib.rcParams.update({'figure.max_open_warning': 0})
     matplotlib.use('Agg')
     from matplotlib.backends.backend_pdf import PdfPages
     import matplotlib.pyplot as plt
-except Exception:
-    plotting = False
-else:
-    plotting = True
+    _CAN_PLOT = True
 
 logger = logging.getLogger("tleedm.files.phaseshifts")
 _HARTREE_TO_EV = 27.211396
@@ -486,10 +486,8 @@ def plot_phaseshifts(sl, rp, filename="Phaseshifts_plots.pdf"):
     Returns
     -------
     None.
-
     """
-    global plotting
-    if not plotting:
+    if not _CAN_PLOT:
         logger.debug("Necessary modules for plotting not found. Skipping "
                      "Phaseshift plotting.")
         return
