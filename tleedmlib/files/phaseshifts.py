@@ -295,7 +295,7 @@ def __check_consistency_rp_elements(sl, rp, phaseshifts, firstline, muftin):
 
 
 def __check_consistency_energy_range(rp, phaseshifts, muftin, newpsGen, newpsWrite):
-    # check whether energy range is large enough:
+    """Check that the energy range of phaseshifts is large enough for rp."""
     checkfail = False
     er = np.arange(rp.THEO_ENERGIES[0], rp.THEO_ENERGIES[1]+1e-4,
                     rp.THEO_ENERGIES[2])
@@ -355,46 +355,45 @@ def __check_consistency_energy_range(rp, phaseshifts, muftin, newpsGen, newpsWri
 
 
 def __check_consitency_element_order(sl, phaseshifts, eps):
-    """Tries to determine if sites/elements may have been assigned the
-    wrong phaseshift.
+    """Determine if sites/elements may have been assigned wrong phaseshifts.
 
-    In general at high energies and at high LMAX, heavier elements 
-    (higher atomic number) have larger elastic scattering phaseshifts 
-    than lighter atoms. If this is not the case in the read in 
+    In general at high energies and at high LMAX, heavier elements
+    (higher atomic number) have larger elastic scattering phaseshifts
+    than lighter atoms. If this is not the case in the read in
     PHASESHIFTS file, the ordering in the file may be wrong.
-    This is a very common user mistake, that often occurs when using a
-    different POSCAR with pre-existing PHASESHIFTS.
+    This is a very common user mistake, that often occurs when
+    using a different POSCAR with pre-existing PHASESHIFTS.
 
     Parameters
     ----------
     sl : Slab
         Surface Slab object. Contains site types to check against.
     phaseshifts : list
-        Phaseshifts list. Can be take from rp.phaseshifts.
+        Phaseshifts list, as read in from a PHASESHIFTS file.
     eps : float
         Epsilon to use when comparing phaseshift values.
         Can be taken from rp.PHASESHIFT_EPS.
 
     Returns
     -------
-    set(str)
-        Set of elements which may be assigned the wrong phaseshifts.
-        If no inconsitency is detected, the set is empty.
+    may_have_wrong_phaseshifts : set
+        Set of chemical elements (str) which may be assigned the wrong
+        phaseshifts. If no inconsitency is detected, the set is empty.
     """
     n_ps_energies = len(phaseshifts)
     n_l_values = len(phaseshifts[0][1][0])
     n_sites = len(phaseshifts[0][1])
 
-    # get atomic number of all site types in the order they appear in sl.sitelist
+    # Get atomic number of all site types in the order they appear in sl.sitelist
     atomic_numbers = tuple(get_atomic_number(site.el) for site in sl.sitelist)
 
-    # get phaseshifts at highest LMAX that are larger than eps
-    en_idx = -1 # look at highest energy only, TODO: enough?
-    for l_value in reversed(range(4, n_l_values)): # TODO: may want a higher cutoff than 4?
+    # Get phaseshifts at highest LMAX that are larger than eps
+    en_idx = -1 # look at highest energy only, TODO: enough?                                        # May not be enough if the PS file contains very high E. Could just pick an energy for which at least one PS is larger than eps
+    for l_value in reversed(range(4, n_l_values)): # TODO: may want a higher cutoff than 4?         # Why stop at 4? We could go all the way down
         ps_sites = np.array(list(
             phaseshifts[en_idx][1][site_idx][l_value]
-                    for site_idx in range(n_sites)
-                    ))
+            for site_idx in range(n_sites)
+            ))
         if all(abs(ps_sites) > eps):
             break
         # could not find any energy where all phaseshifts higher than eps
