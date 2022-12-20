@@ -513,24 +513,18 @@ def plot_phaseshifts(sl, rp, filename="Phaseshifts_plots.pdf"):
 
 
 def find_block_size(filelines):
-    """Returns the periodicity of lengths found in filelines.
-    
-    """
-    
+    """Returns the periodicity of lengths found in filelines."""
     lens_as_chars = "".join(chr(len(l.rstrip())) for l in filelines)
-    
-    # allow empty lines at the end
-    pass
+
+    # Allow empty lines at the end
     while lens_as_chars.endswith(chr(0)):
         lens_as_chars = lens_as_chars[:-1]
-    pass
     if chr(0) in lens_as_chars:
         raise ValueError("Empty line found.")
-    
-    # see stackoverflow.com/questions/29481088
-    period = (lens_as_chars+lens_as_chars).find(lens_as_chars, 1, -1)
-    pass
+
+    # See stackoverflow.com/questions/29481088
+    period = (lens_as_chars * 2).find(lens_as_chars, 1, -1)
     if period == -1:
         raise ValueError("Could not identify block.")
-    
+
     return period
