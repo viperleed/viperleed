@@ -1082,74 +1082,119 @@ class Slab:
             self.ucell_mod = self.ucell_mod[:len(restoreTo)]
 
     def getMinUnitCell(self, rp, warn_convention=False):
-        """Checks whether there is a unit cell (a,b) with a smaller area than
-        the current one. If so, returns True and the minimized unit cell, else
-        returns False and the current unit cell."""
+        """Check if there is a 2D unit cell smaller than the current one.
+
+        Parameters
+        ----------
+        rp : RunParams
+            The current parameters. The only attributes
+            used are SYMMETRY_EPS and SYMMETRY_EPS_Z.
+        warn_convention : bool, optional
+            If True, warnings are added to the current
+            logger in case making the reduced unit cell
+            stick to the conventions would result in a
+            sub-optimal superlattice matrix. Default is
+            False.
+
+        Returns
+        -------
+        can_be_reduced : bool
+            True if there is a smaller 2D unit cell. The
+            unit cell is considered minimizable if there
+            is a mincell with area smaller than the one
+            of the current cell. A lower limit for the
+            area of mincell is taken as 1 A**2.
+        mincell : np.ndarray
+            The minimal 2D unit cell, if it can be reduced,
+            otherwise the current one. Notice that mincell is
+            such that (a, b) = mincell, i.e., it is transposed
+            with respect to self.ucell.
+        """
         eps = rp.SYMMETRY_EPS
         epsz = rp.SYMMETRY_EPS_Z
         abst = self.ucell[:2, :2].T
-        # create a testslab: C projected to Z
+
+        # Create a test slab: C projected to Z
         ts = copy.deepcopy(self)
         ts.projectCToZ()
         ts.sortByZ()
         ts.createSublayers(epsz)
-        # find the lowest occupancy sublayer
+
+        # Use the lowest-occupancy sublayer (the one
+        # with fewer atoms of the same site type)
         lowocclayer = ts.getLowOccLayer()
-        minlen = len(lowocclayer.atlist)
-        if minlen < 2:
-            return (False, abst)  # nothing to check
-        # create list of translation vectors to test
+        n_atoms = len(lowocclayer.atlist)
+        if n_atoms < 2:
+            # Cannot be smaller if there's only 1 atom
+            return False, abst
+
+        # Create a list of candidate translation vectors, selecting
+        # only those for which the slab is translation symmetric
         plist = [at.cartpos[0:2] for at in lowocclayer.atlist]
-        vlist = [(p1-p2) for (p1, p2) in itertools.combinations(plist, 2)]
-        # check & make list of real translation vectors
+        vlist = ((p1 - p2) for (p1, p2) in itertools.combinations(plist, 2))
         tvecs = [v for v in vlist if ts.isTranslationSymmetric(v, eps)]
-        if len(tvecs) == 0:
-            return(False, abst)
+        if not tvecs:
+            return False, abst
+
+        # Now try to reduce the cell: test whether we can use a pair of
+        # vectors from [a, b, *tvecs] to make the cell smaller. Keep in
+        # mind that with n_atoms, we cannot reduce the area by more than
+        # a factor 1/n_atoms (which would give 1 atom per mincell).
         mincell = abst.copy()
+        mincell_area = abs(np.linalg.det(mincell))
         smaller = False
-        for v in tvecs:
-            tcell = np.array([mincell[0], v])
-            if (abs(np.linalg.det(tcell)) < (abs(np.linalg.det(mincell)) - eps)
-                    and abs(np.linalg.det(tcell)) > eps):
+        smallest_area = mincell_area / n_atoms
+        for vec in tvecs:
+            # Try first replacing the current second unit vector
+            tcell = np.array([mincell[0], vec])
+            tcell_area = abs(np.linalg.det(tcell))
+            if (tcell_area >= smallest_area - eps**2
+                    and tcell_area < mincell_area - eps**2):
                 mincell = tcell
+                mincell_area = tcell_area
                 smaller = True
-            else:
-                tcell = np.array([mincell[1], v])
-                if (abs(np.linalg.det(tcell)) < (abs(np.linalg.det(mincell))
-                                                 - eps)
-                        and abs(np.linalg.det(tcell)) > eps):
-                    mincell = tcell
-                    smaller = True
+                continue
+
+            # Try replacing the current first unit vector instead
+            tcell = np.array([mincell[1], vec])
+            tcell_area = abs(np.linalg.det(tcell))
+            if (tcell_area >= smallest_area - eps**2
+                    and tcell_area < mincell_area - eps**2):
+                mincell = tcell
+                mincell_area = tcell_area
+                smaller = True
+
         if not smaller:
-            return(False, abst)
-        else:
-            mincell, _, _ = tl.leedbase.reduceUnitCell(mincell)
-            # cosmetic corrections
-            if abs(mincell[0, 0]) < eps and abs(mincell[1, 1]) < eps:
-                # if matrix is diagonal, swap a and b
-                tmp = mincell[1].copy()
-                mincell[1] = mincell[0].copy()
-                mincell[0] = tmp
+            return False, abst
+
+        # Use Minkowski reduction to make mincell high symmetry
+        mincell, _, _ = tl.leedbase.reduceUnitCell(mincell)
+
+        # Cosmetic corrections
+        if abs(mincell[0, 0]) < eps and abs(mincell[1, 1]) < eps:
+            # Swap a and b when matrix is off-diagonal
+            mincell[[0, 1]] = mincell[[1, 0]]
+        if abs(mincell[1, 0]) < eps and abs(mincell[0, 1]) < eps:
+            # If matrix is diagonal, make elements positive
+            mincell = abs(mincell)
+        # By convention, make the shorter vector the first one
+        if np.linalg.norm(mincell[0]) > np.linalg.norm(mincell[1]) + eps:
             if abs(mincell[1, 0]) < eps and abs(mincell[0, 1]) < eps:
-                # if matrix is diagonal, make elements positive
-                mincell = abs(mincell)
-            # by convention, make the shorter vector the first one
-            if np.linalg.norm(mincell[0]) > np.linalg.norm(mincell[1]) + eps:
-                if abs(mincell[1, 0]) < eps and abs(mincell[0, 1]) < eps:
-                    # if matrix is diagonal, DO NOT make it off-diagonal
-                    if warn_convention:
-                        logger.warning(
-                            "The unit cell orientation does not follow "
-                            "standard convention: to keep SUPERLATTICE matrix "
-                            "diagonal, the first bulk vector must be larger "
-                            "than the second. Consider swapping the unit cell "
-                            "vectors.")
-                else:
-                    mincell = np.dot(np.array([[0, 1], [-1, 0]]), mincell)
-            # finally, make sure it's right-handed
-            if angle(mincell[0], mincell[1]) < 0:
-                mincell = np.dot(np.array([[1, 0], [0, -1]]), mincell)
-            return(True, mincell)
+                # if matrix is diagonal, DO NOT make it off-diagonal
+                if warn_convention:
+                    logger.warning(
+                        "The unit cell orientation does not follow "
+                        "standard convention: to keep SUPERLATTICE matrix "
+                        "diagonal, the first bulk vector must be larger "
+                        "than the second. Consider swapping the unit cell "
+                        "vectors."
+                        )
+            else:
+                mincell = np.dot([[0, 1], [-1, 0]], mincell)
+        # Finally, make sure it's right-handed
+        if angle(mincell[0], mincell[1]) < 0:
+            mincell = np.dot([[1, 0], [0, -1]], mincell)
+        return True, mincell
 
     def getBulkRepeat(self, rp):
         """Based on a pre-existing definition of the bulk, tries to identify
