@@ -178,8 +178,7 @@ def readPHASESHIFTS(sl, rp, readfile='PHASESHIFTS', check=True,
 
 
 def __check_consistency_rp_elements(sl, rp, phaseshifts, firstline, muftin):
-    """Check whether the phaseshifts that were found fit the number 
-    of elements and LMAX expected.
+    """Check that phaseshifts fit the expected number of elements and LMAX.
 
     Parameters
     ----------
@@ -191,15 +190,39 @@ def __check_consistency_rp_elements(sl, rp, phaseshifts, firstline, muftin):
         Nested list of phaseshifts.
     firstline : str
         First line of the phaseshifts file.
-    muftin : ??
-        TODO
+    muftin : list
+        Rundgren coefficients interpreted from the firstline.
 
     Returns
     -------
-    ??
-        TODO
+    phaseshifts: list of tuple
+        Each element is (energy, pahseshifts at energy) where 
+        phaseshifts at energy is [[el0_L0, el0_L1, ...], [el1_L0, ...], ...]
+        where eli_Lj is the phaseshift for element i and angular momentum j.
+        Therefore, len(phaseshifts) is the number of energies found, 
+        len(phaseshifts[0][1]) should match the number of elements, and
+        len(phaseshifts[0][1][0]) is the number of different
+        values of L in the phaseshift file.
+    firstline: str
+        Header line of the readfile, containing Rundgren parameters, modified
+        if newpsWrite is True.
+    newpsGen: bool
+        Wether the inconsitency found requires a full recalculation of the phaseshifts.
+        This happens if: 
+            1) rp.V0_real was not given and could not interpret firstline,
+            2) LMAX in phaseshifts is smaller than required in rp,
+            3) if number of blocks inconsitent with elements in sl.
+    newpsWrite: bool
+        Wether the inconsitency found requires writing a new PHASESHIFTS file.
+        This is distinct from newpsGen as we can at times generate a new file 
+        from the information read.
+        This is the case if:
+            4) There are fewer blocks than expected, but the number of blocks
+               matches the number of chemical elements in sl. This means however,
+               that all sites with the same chemical element will use the same
+               phaseshift.
     """
-    newpsGen, newpsWrite = True, True # should new values should be generated / written to file?
+    newpsGen, newpsWrite = True, True  # Should new values be generated / written to file?
 
     n_l_values = len(phaseshifts[0][1][0])
     n_el_and_sites = len(phaseshifts[0][1])
@@ -215,12 +238,13 @@ def __check_consistency_rp_elements(sl, rp, phaseshifts, firstline, muftin):
     if rp.V0_REAL == "default" and not muftin:
         logger.warning(
             "Could not convert first line of PHASESHIFTS file to MUFTIN "
-            "parameters. A new PHASESHIFTS file will be generated.")
+            "parameters. A new PHASESHIFTS file will be generated."
+            )
         rp.setHaltingLevel(1)
 
     elif n_el_and_sites == n_el_and_sites_expected:
-        logger.debug("Found "+str(n_el_and_sites_expected)+" blocks in PHASESHIFTS "
-                        "file, which is consistent with PARAMETERS.")
+        logger.debug(f"Found {n_el_and_sites_expected} blocks in PHASESHIFTS "
+                     "file, which is consistent with PARAMETERS.")
         newpsGen, newpsWrite = False, False
 
     # Check that the phaseshifts read in have sufficient lmax
@@ -238,7 +262,8 @@ def __check_consistency_rp_elements(sl, rp, phaseshifts, firstline, muftin):
             "PHASESHIFTS file. However, the number of blocks matches "
             "the number of chemical elements. A new PHASESHIFTS file "
             "will be generated, assuming that each block in the old "
-            "file should be used for all atoms of one element.")
+            "file should be used for all atoms of one element."
+            )
         rp.setHaltingLevel(1)
         oldps = phaseshifts[:]
         phaseshifts = []
@@ -262,7 +287,8 @@ def __check_consistency_rp_elements(sl, rp, phaseshifts, firstline, muftin):
     else:
         logger.warning(
             "PHASESHIFTS file was read but is inconsistent with "
-            "PARAMETERS. A new PHASESHIFTS file will be generated.")
+            "PARAMETERS. A new PHASESHIFTS file will be generated."
+            )
         rp.setHaltingLevel(1)
 
     return phaseshifts, firstline, newpsGen, newpsWrite
@@ -306,22 +332,23 @@ def __check_consistency_energy_range(rp, phaseshifts, muftin, newpsGen, newpsWri
         if (psmin > min(er_inner) and psmin <= 20.
                 and psmax >= max(er_inner)):
             # can lead to re-calculation of phaseshifts every run if
-            #  V0r as calculated by EEASiSSS differs from 'real' V0r.
-            #  Don't automatically correct.
+            # V0r as calculated by EEASiSSS differs from 'real' V0r.
+            # Don't automatically correct.
             logger.warning(
-                "Lowest value in PHASESHIFTS file ({:.1f} "
-                "eV) is larger than the lowest predicted scattering "
-                "energy ({:.1f} eV). If this causes problems in the "
+                f"Lowest value in PHASESHIFTS file ({psmin:.1f} eV) is "
+                "larger than the lowest predicted scattering energy "
+                f"({min(er_inner):.1f} eV). If this causes problems in the "
                 "reference calculation, try deleting the PHASESHIFTS "
                 "file to generate a new one, or increase the starting "
                 "energy in the THEO_ENERGIES parameter."
-                .format(psmin, min(er_inner)))
+                )
         else:
             logger.warning(
                 "The energy range found in the PHASESHIFTS "
                 "file is smaller than the energy range requested for "
                 "theoretical beams. A new PHASESHIFTS file will be "
-                "generated.")
+                "generated."
+                )
             newpsGen, newpsWrite = True, True
 
     return newpsGen, newpsWrite
