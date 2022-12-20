@@ -13,6 +13,9 @@ import os
 
 from viperleed import fortranformat as ff
 
+from viperleed.tleedmlib.leedbase import (get_atomic_number,
+                                          get_element_symbol)
+
 try:
     import matplotlib
     matplotlib.rcParams.update({'figure.max_open_warning': 0})
@@ -104,7 +107,7 @@ def readPHASESHIFTS(sl, rp, readfile='PHASESHIFTS', check=True,
     firstline = filelines[0]
     line_idx = 1
     try:
-        linesperblock = find_block_size(filelines[1:])
+        lines_per_block = find_block_size(filelines[1:])
     except ValueError as err:
         logger.warning(
             f"Error while trying to read PHASESHIFTS: {err} "
@@ -114,7 +117,7 @@ def readPHASESHIFTS(sl, rp, readfile='PHASESHIFTS', check=True,
         return "", [], True, True
     
     # check block length is consitent with number of species
-    if (linesperblock-1)%nel:
+    if (lines_per_block-1)%nel:
         logger.warning(
             "Error while trying to read PHASESHIFTS: "
             "Could not parse file: The number of blocks may not match "
@@ -124,7 +127,7 @@ def readPHASESHIFTS(sl, rp, readfile='PHASESHIFTS', check=True,
         rp.setHaltingLevel(1)
         return "", [], True, True
 
-    lines_per_element = (linesperblock-1)//nel
+    lines_per_element = (lines_per_block-1)//nel
 
     while line_idx < len(filelines):
         current_line = filelines[line_idx].strip()
@@ -167,12 +170,35 @@ def readPHASESHIFTS(sl, rp, readfile='PHASESHIFTS', check=True,
 
     if not ignoreEnRange:
        newpsGen, newpsWrite = __check_consistency_energy_range(rp, phaseshifts, muftin, newpsGen, newpsWrite)
-    
+
+    # check consitency of phaseshift values
+    __check_consitency_element_order(sl, phaseshifts, eps=rp.PHASESHIFT_EPS)
+
     return firstline, phaseshifts, newpsGen, newpsWrite
 
 
 def __check_consistency_rp_elements(sl, rp, phaseshifts, firstline, muftin):
-    # check whether the phaseshifts that were found fit the data:
+    """Check whether the phaseshifts that were found fit the number 
+    of elements and LMAX expected.
+
+    Parameters
+    ----------
+    sl : Slab
+        Surface Slab object.
+    rp : Rparams
+        Run paramters.
+    phaseshifts : list
+        Nested list of phaseshifts.
+    firstline : str
+        First line of the phaseshifts file.
+    muftin : ??
+        TODO
+
+    Returns
+    -------
+    ??
+        TODO
+    """
     newpsGen, newpsWrite = True, True # should new values should be generated / written to file?
 
     n_l_values = len(phaseshifts[0][1][0])
@@ -299,6 +325,85 @@ def __check_consistency_energy_range(rp, phaseshifts, muftin, newpsGen, newpsWri
             newpsGen, newpsWrite = True, True
 
     return newpsGen, newpsWrite
+
+
+def __check_consitency_element_order(sl, phaseshifts, eps):
+    """Tries to determine if sites/elements may have been assigned the
+    wrong phaseshift.
+
+    In general at high energies and at high LMAX, heavier elements 
+    (higher atomic number) have larger elastic scattering phaseshifts 
+    than lighter atoms. If this is not the case in the read in 
+    PHASESHIFTS file, the ordering in the file may be wrong.
+    This is a very common user mistake, that often occurs when using a
+    different POSCAR with pre-existing PHASESHIFTS.
+
+    Parameters
+    ----------
+    sl : Slab
+        Surface Slab object. Contains site types to check against.
+    phaseshifts : list
+        Phaseshifts list. Can be take from rp.phaseshifts.
+    eps : float
+        Epsilon to use when comparing phaseshift values.
+        Can be taken from rp.PHASESHIFT_EPS.
+
+    Returns
+    -------
+    set(str)
+        Set of elements which may be assigned the wrong phaseshifts.
+        If no inconsitency is detected, the set is empty.
+    """
+    n_ps_energies = len(phaseshifts)
+    n_l_values = len(phaseshifts[0][1][0])
+    n_sites = len(phaseshifts[0][1])
+
+    # get atomic number of all site types in the order they appear in sl.sitelist
+    atomic_numbers = tuple(get_atomic_number(site.el) for site in sl.sitelist)
+
+    # get phaseshifts at highest LMAX that are larger than eps
+    en_idx = -1 # look at highest energy only, TODO: enough?
+    for l_value in reversed(range(4, n_l_values)): # TODO: may want a higher cutoff than 4?
+        ps_sites = np.array(list(
+            phaseshifts[en_idx][1][site_idx][l_value]
+                    for site_idx in range(n_sites)
+                    ))
+        if all(abs(ps_sites) > eps):
+            break
+        # could not find any energy where all phaseshifts higher than eps
+        # try lower angular momentum
+
+    affected_elements = set()
+    ps_pairs = list(zip(atomic_numbers, ps_sites))
+    at_number = lambda item : item[0]
+    pair_ps = lambda item : item[1]
+    ps_pairs.sort(key=at_number) # sort by atomic number
+    # go through all pairs and check that heavier elements
+    # have larger phaseshifts
+    prev_pair = ps_pairs[0]
+    for pair in ps_pairs:
+        # same element
+        if at_number(pair) == at_number(prev_pair):
+            continue
+        # different element, where
+        # at_number(pair) > at_number(prev_pair)
+        # because the list was sorted
+        elif abs(pair_ps(pair)) >= abs(pair_ps(prev_pair)) - eps:
+            continue
+        affected_elements.update(at_number(prev_pair), at_number(pair))
+    affected_elements = set(get_element_symbol(el) for el in affected_elements)
+
+    if affected_elements:
+        elements_str = ", ".join(affected_elements)
+        logger.warning(
+            "Detected inconsitency in PHASESHIFTS: "
+            "Found larger phaseshifts for lighter elements "
+            f"than for heavier elements at LMAX={l_value}. "
+            "This may mean that the blocks in PHASESHIFTS "
+            "are in the wrong order! "
+            f"Affected elements: {elements_str}."
+        )
+    return affected_elements
 
 
 def writePHASESHIFTS(firstline, phaseshifts, filename='PHASESHIFTS'):

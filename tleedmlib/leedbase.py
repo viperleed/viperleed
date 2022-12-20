@@ -91,6 +91,38 @@ ATOMIC_MASS = {
 #                FUNCTIONS                    #
 ###############################################
 
+def get_atomic_number(element):
+    """Returns atomic number for a given element symbol.
+
+    Parameters
+    ----------
+    element : str
+        String of the element symbol (e.g. 'Fe').
+
+    Returns
+    -------
+    int
+        Atomic number of the element (e.g. 26 for 'Fe').
+    """
+    # offset by one because of Python indexing
+    return PERIODIC_TABLE.index(element) + 1
+
+def get_element_symbol(atomic_number):
+    """Returns element symbol for given atomic number.
+
+    Parameters
+    ----------
+    atomic_number : int
+        Atomic number of the element (e.g. 26 for 'Fe').
+
+    Returns
+    -------
+    str
+        String of the element symbol (e.g. 'Fe').
+    """
+    # offset by one because of Python indexing
+    return PERIODIC_TABLE[atomic_number-1]
+
 def monitoredPool(rp, poolsize, function, tasks, update_from=""):
     """
     The 'function' and 'tasks' arguments are passed on to a multiprocessing
