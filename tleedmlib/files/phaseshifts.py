@@ -52,7 +52,7 @@ def readPHASESHIFTS(sl, rp, readfile='PHASESHIFTS', check=True,
     firstline: str
         Header line of the readfile, containing Rundgren parameters.
     phaseshifts: list of tuple
-        Each element is (energy, pahseshifts at energy) where 
+        Each element is (energy, phaseshifts at energy) where 
         phaseshifts at energy is [[el0_L0, el0_L1, ...], [el1_L0, ...], ...]
         where eli_Lj is the phaseshift for element i and angular momentum j.
         Therefore, len(phaseshifts) is the number of energies found, 
@@ -172,7 +172,7 @@ def readPHASESHIFTS(sl, rp, readfile='PHASESHIFTS', check=True,
        newpsGen, newpsWrite = __check_consistency_energy_range(rp, phaseshifts, muftin, newpsGen, newpsWrite)
 
     # check consitency of phaseshift values
-    __check_consitency_element_order(sl, phaseshifts, eps=rp.PHASESHIFT_EPS)
+    __check_consitency_element_order(rp, sl, phaseshifts)
 
     return firstline, phaseshifts, newpsGen, newpsWrite
 
@@ -354,7 +354,8 @@ def __check_consistency_energy_range(rp, phaseshifts, muftin, newpsGen, newpsWri
     return newpsGen, newpsWrite
 
 
-def __check_consitency_element_order(sl, phaseshifts, eps):
+def __check_consitency_element_order(rp, sl, phaseshifts, 
+                                     eps=None, l_max_cutoff=4):
     """Determine if sites/elements may have been assigned wrong phaseshifts.
 
     In general at high energies and at high LMAX, heavier elements
@@ -366,13 +367,22 @@ def __check_consitency_element_order(sl, phaseshifts, eps):
 
     Parameters
     ----------
+    rp : Rparams
+        Run parameters.
     sl : Slab
         Surface Slab object. Contains site types to check against.
     phaseshifts : list
         Phaseshifts list, as read in from a PHASESHIFTS file.
-    eps : float
+    eps : float, optional
         Epsilon to use when comparing phaseshift values.
-        Can be taken from rp.PHASESHIFT_EPS.
+        Default is rp.PHASESHIFTS_EPS.
+    l_max_cutoff : int, optional
+        Lower cutoff for angular momentum quantum number to be used for
+        comparison of phaseshifts. Heavier elements should always have
+        higher phaseshifts in the limit of high energy and high angular
+        momentum. Behaviour for low energy/low angular momentum is not
+        as clear cut, as phaseshifts may cross zero and are pi periodic.
+        Default is 4.
 
     Returns
     -------
@@ -380,7 +390,8 @@ def __check_consitency_element_order(sl, phaseshifts, eps):
         Set of chemical elements (str) which may be assigned the wrong
         phaseshifts. If no inconsitency is detected, the set is empty.
     """
-    n_ps_energies = len(phaseshifts)
+    if not eps:
+        eps = rp.PHASESHIFTS_EPS
     n_l_values = len(phaseshifts[0][1][0])
     n_sites = len(phaseshifts[0][1])
 
@@ -388,8 +399,8 @@ def __check_consitency_element_order(sl, phaseshifts, eps):
     atomic_numbers = tuple(get_atomic_number(site.el) for site in sl.sitelist)
 
     # Get phaseshifts at highest LMAX that are larger than eps
-    en_idx = -1 # look at highest energy only, TODO: enough?                                        # May not be enough if the PS file contains very high E. Could just pick an energy for which at least one PS is larger than eps
-    for l_value in reversed(range(4, n_l_values)): # TODO: may want a higher cutoff than 4?         # Why stop at 4? We could go all the way down
+    en_idx = -1  # look at highest energy only
+    for l_value in reversed(range(l_max_cutoff, n_l_values)):
         ps_sites = np.array(list(
             phaseshifts[en_idx][1][site_idx][l_value]
             for site_idx in range(n_sites)
@@ -414,7 +425,8 @@ def __check_consitency_element_order(sl, phaseshifts, eps):
         # different element, where
         # at_number(pair) > at_number(prev_pair)
         # because the list was sorted
-        elif abs(pair_ps(pair)) >= abs(pair_ps(prev_pair)) - eps:
+        elif (abs(pair_ps(pair)) >= abs(pair_ps(prev_pair)) - eps
+              and (at_number(pair) - at_number(prev_pair)) > 2):        # 2 is arbitrary value: ignore if close neigbor elements are similar
             continue
         affected_elements.update(at_number(prev_pair), at_number(pair))
     affected_elements = set(get_element_symbol(el) for el in affected_elements)
@@ -427,8 +439,11 @@ def __check_consitency_element_order(sl, phaseshifts, eps):
             f"than for heavier elements at LMAX={l_value}. "
             "This may mean that the blocks in PHASESHIFTS "
             "are in the wrong order! "
-            f"Affected elements: {elements_str}."
+            f"Affected elements: {elements_str}. "
+            "You may want to regenerate the PHASESHIFTS file or "
+            "reorder the blocks (see utility ModifyPhaseshifts). "
         )
+        rp.setHaltingLevel(1)
     return affected_elements
 
 
