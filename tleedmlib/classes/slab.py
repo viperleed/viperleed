@@ -253,8 +253,7 @@ class Slab:
     @property
     def reciprocal_vectors(self):
         surf_vecs = self.surface_vectors
-        return (2*np.pi*
-                np.linalg.inv(surf_vecs)/np.linalg.det(surf_vecs))
+        return (2*np.pi*np.linalg.inv(surf_vecs)) # inverse already has factor of 1/det!
 
     def fullUpdate(self, rparams):
         """readPOSCAR initializes the slab with information from POSCAR;
