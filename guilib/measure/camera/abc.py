@@ -16,6 +16,7 @@ concrete subclasses of CameraABC.
 """
 
 from abc import abstractmethod
+import logging
 
 import numpy as np
 from PyQt5 import QtCore as qtc
@@ -32,6 +33,8 @@ from viperleed.guilib.measure.widgets.pathselector import PathSelector
 from viperleed.guilib.measure.widgets.spinboxes import (InfIntSpinBox,
                                                         TolerantCommaSpinBox)
 
+
+LOG = logging.getLogger("Debugging")
 
 # pylint: disable=too-many-lines,too-many-public-methods
 # Disabled too-many-lines because many are documentation
@@ -677,6 +680,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
                             ', '.join(invalid), '')
             return
 
+        LOG.debug("Setting new camera settings")
         # Will recalculate bad pixel coordinates if ROI changes
         old_roi = tuple()
         if self.settings:
@@ -804,7 +808,9 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
 
     def connect_(self):
         """Connect to the camera."""
+        LOG.debug(f"connect_ing camera {self.name}")
         if not self.open():
+            LOG.warning("Failed to connect_ camera")
             base.emit_error(self, CameraErrors.CAMERA_NOT_FOUND, self.name)
             self.__connected = False
             return
@@ -813,6 +819,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
 
     def disconnect_(self):
         """Disconnect the device."""
+        LOG.debug(f"disconnect_ing camera {self.name}")
         self.__reported_errors = set()
         self.stop()
         self.close()
@@ -989,6 +996,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         -------
         None.
         """
+        LOG.debug("Loading camera settings")
         self.busy = True
         self.preparing.emit(self.busy)
         extra = (k for k in ('binning', 'n_frames', 'roi')
@@ -999,9 +1007,11 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         for key in setters:
             setter = getattr(self, f"set_{key}")
             setter()
+        LOG.debug("Settings loaded. Check consistency")
         self.check_loaded_settings()
         self.busy = False
         self.preparing.emit(self.busy)
+        LOG.debug("Finished loading camera settings")
 
     @abstractmethod
     def open(self):
@@ -1484,6 +1494,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         -------
         None.
         """
+        LOG.debug("Starting camera")
         if self.mode == 'triggered':
             self.__process_thread.start()
             self.n_frames_done = 0
@@ -1536,6 +1547,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             yet because some frames are missing.
         """
         if not self.is_running:
+            LOG.debug("Will not try to stop camera that is currently not running")
             return False
 
         # Delay the stopping as long as there are image
@@ -1546,6 +1558,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
                 and any(p.busy for p in self.__image_processors)):
             if not self.__retry_stop_timer.isActive():
                 self.__retry_stop_timer.start(100)
+            LOG.warning("Frames are still missing or being processed. Cannot stop now")
             return False
 
         # Now it is safe to clean up and stop
@@ -1557,6 +1570,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         if self.__process_thread.isRunning():
             self.__process_thread.quit()
         base.safe_disconnect(self.frame_ready, self.__on_frame_ready)
+        LOG.debug("Successfully stopped camera")
         return True
 
     @abstractmethod
@@ -1585,6 +1599,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         error_occurred(CameraErrors.UNSUPPORTED_OPERATION)
         """
         if self.mode != 'triggered':
+            LOG.warning("Cannot trigger in live mode.")
             base.emit_error(self, CameraErrors.UNSUPPORTED_OPERATION,
                             'trigger', 'live')
             return False
@@ -1597,6 +1612,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         # more than 5 s longer than the expected time to
         # receive all frames needed for averaging
         self.__timeout.start(int(self.time_to_image_ready + 5000))
+        LOG.debug(f"Started a {self.__timeout.interval()/1000:.2f} s triggering timeout")
         return True
 
     def __adjust_roi_position(self, roi, limits):
@@ -1724,8 +1740,10 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             # Some frames arrived, but we haven't asked for them:
             # we should be busy if we are in triggered mode and
             # went through self.trigger_now()
+            LOG.warning("Got a new triggered frame, but was not expecting one!")
             return
 
+        LOG.debug("Got a new frame to be processed")
         if not self.n_frames_done:
             processor = ImageProcessor()
             processor.image_processed.connect(self.image_processed)
@@ -1742,6 +1760,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         self.__process_frame.emit(image)
         self.n_frames_done += 1
 
+        LOG.debug(f"Got {self.n_frames_done}/{self.n_frames} frames")
         if self.n_frames_done < self.n_frames:
             # More frames to be acquired
             if self.supports_trigger_burst:
@@ -1749,6 +1768,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             self.trigger_now()
         else:
             # All frames are done
+            LOG.debug(f"All frames arrived in {self.__timeout.interval() - self.__timeout.remainingTime()} ms")
             self.__timeout.stop()
             self.n_frames_done = 0
             self.busy = False

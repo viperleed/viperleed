@@ -525,7 +525,7 @@ class ImagingSourceCamera(abc.CameraABC):
 
     def close(self):
         """Close the camera device."""
-        LOG.debug(f"Closing camera {self.name}")
+        LOG.debug("Closing camera")
         self.driver.close()
 
     def get_settings_handler(self):
@@ -804,7 +804,7 @@ class ImagingSourceCamera(abc.CameraABC):
 
     def start_frame_rate_optimization(self):
         """Start estimation of the best frame rate."""
-        LOG.debug(f"Beginning frame-rate optimization for {self.name}.")
+        LOG.debug("Beginning frame-rate optimization")
         # Connect the busy signal here. The callback
         # takes care of making the camera not busy
         # when done with the estimate.
@@ -860,7 +860,7 @@ class ImagingSourceCamera(abc.CameraABC):
             # call to the camera_busy signal).
             self.start_frame_rate_optimization()
         else:
-            LOG.debug(f"Starting camera {self.name} at max frame rate")
+            LOG.debug("Starting camera at max frame rate")
             self.best_next_rate = 1024
             self.__start_postponed()
 
@@ -884,7 +884,7 @@ class ImagingSourceCamera(abc.CameraABC):
         if self.is_finding_best_frame_rate:
             return
 
-        LOG.debug(f"About to actually start camera {self.name}")
+        LOG.debug("About to actually start camera")
         base.safe_disconnect(self.camera_busy, self.__start_postponed)
 
         # Call base that starts the processing thread if needed
@@ -894,6 +894,7 @@ class ImagingSourceCamera(abc.CameraABC):
         self.process_info.clear_times()
         mode = self.mode if self.mode == 'triggered' else 'continuous'
         self.driver.start(mode)
+        LOG.debug("Just started camera")
         self.preparing.emit(False)
         self.started.emit()
 
@@ -901,6 +902,7 @@ class ImagingSourceCamera(abc.CameraABC):
     def stop(self):
         """Stop the camera."""
         if not super().stop():
+            LOG.warning("Cannot stop camera right now")
             # No need to stop, or cannot stop yet
             return False
 
@@ -908,9 +910,11 @@ class ImagingSourceCamera(abc.CameraABC):
         # One could wrap the next line in if self.is_running,
         # but it seems that there is a bug in the driver that
         # can return True if the device was lost.
+        LOG.debug("Trying to stop camera")
         try:
             self.driver.stop()
         except ImagingSourceError:
+            LOG.warning("Failed to stop camera. Perhaps lost?")
             pass
 
         self.stopped.emit()
@@ -929,7 +933,9 @@ class ImagingSourceCamera(abc.CameraABC):
         -----
         error_occurred(CameraErrors.UNSUPPORTED_OPERATION)
         """
+        LOG.debug("About to trigger camera")
         if not super().trigger_now():
+            LOG.warning("Cannot trigger camera!")
             return False
         if abs(self.best_next_rate - self.driver.frame_rate) > 1:
             self.driver.frame_rate = self.best_next_rate
