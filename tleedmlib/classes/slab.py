@@ -244,14 +244,17 @@ class Slab:
 
     @property
     def surface_vectors(self):
-        if not self.ucell:
+        if self.ucell == np.array([]):
             raise ValueError("Slab does not have a unit cell defined.")
+        # This is the same matrix one would get from the bulk surface
+        # unit cell and the superlattice matrix
         return self.ucell[:2, :2].T
 
     @property
     def reciprocal_vectors(self):
         surf_vecs = self.surface_vectors
-        #math
+        return (2*np.pi*
+                np.linalg.inv(surf_vecs)/np.linalg.det(surf_vecs))
 
     def fullUpdate(self, rparams):
         """readPOSCAR initializes the slab with information from POSCAR;
