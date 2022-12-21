@@ -404,17 +404,28 @@ def __check_consitency_element_order(rp, sl, phaseshifts,
     if not eps:
         eps = rp.PHASESHIFT_EPS
     n_l_values = len(phaseshifts[0][1][0])
-    n_sites = len(phaseshifts[0][1])
+    n_sites_in_ps = len(phaseshifts[0][1]) # number of species in PHASESHIFTS file
 
     # Get atomic number of all site types in the order they appear in sl.sitelist
-    atomic_numbers = tuple(get_atomic_number(site.el) for site in sl.sitelist)
+    # Take into account that some sites may have mixed occupation
+    element_mix = []
+    for site in sl.sitelist:
+        if site.mixedEls:
+            # mixed occupation
+            element_mix.extend(site.mixedEls)
+        else:
+            # single occupation
+            element_mix.append(site.el)
+    # get atomic numbers from element symbols
+    atomic_numbers = tuple(get_atomic_number(el)
+                           for el in element_mix)
 
     # Get phaseshifts at highest LMAX that are larger than eps
     en_idx = -1  # look at highest energy only
     for l_value in reversed(range(l_max_cutoff, n_l_values)):
         ps_sites = np.array(list(
             phaseshifts[en_idx][1][site_idx][l_value]
-            for site_idx in range(n_sites)
+            for site_idx in range(n_sites_in_ps)
             ))
         if all(abs(ps_sites) > eps):
             break
