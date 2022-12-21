@@ -105,9 +105,11 @@ def runBeamGen(sl, rp, beamgensource='', domains=False):
 def beamgen(sl, rp, domain=False):
     if sl.bulkslab is None:
         sl.bulkslab = sl.makeBulkSlab(rp)
+    
+    e_max = rp.THEO_ENERGIES[1]
 
     leedParameters = {
-        'eMax': rp.THEO_ENERGIES[1],
+        'eMax': e_max,
         'surfBasis': sl.ucell[:2, :2].T,
         'SUPERLATTICE': rp.SUPERLATTICE,
         'surfGroup': sl.foundplanegroup,
@@ -116,3 +118,5 @@ def beamgen(sl, rp, domain=False):
     }
     # TODO: domains!!
     equivalent_beams = get_equivalent_beams(leedParameters)
+    # forbidden beams have negative group nr
+    g_max_squared = 2*e_max + (np.log(tst)/d_min)**2
