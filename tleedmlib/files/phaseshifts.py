@@ -10,6 +10,7 @@ Functions for reading and writing the PHASESHIFTS file
 import logging
 import numpy as np
 import os
+from itertools import combinations
 
 from viperleed import fortranformat as ff
 
@@ -436,18 +437,19 @@ def __check_consitency_element_order(rp, sl, phaseshifts,
 
     # Go through all pairs and check that heavier                     # TODO: use itertools.combinations to check all combinations, shortcut for those that are already in set
     # elements have larger phaseshifts
-    prev_pair = ps_pairs[0]
-    for pair in ps_pairs:
-        at_num_change = at_number(pair) - at_number(prev_pair)
-        if not at_num_change:  # Same element
+
+    for pair_1, pair_2 in combinations(ps_pairs, 2):
+        at_num_change = at_number(pair_1) - at_number(pair_2)
+        if at_num_change <= 0:  # Same element or redundant interation
             continue
         # Different element. Check that phaseshifts are also
         # ordered, and complain only if elements are not
         # close neighbors
-        if (abs(pair_ps(pair)) >= abs(pair_ps(prev_pair)) - eps
+        if (abs(pair_ps(pair_1)) >= abs(pair_ps(pair_2)) - eps
                 and at_num_change > 2):
             continue
-        affected_elements.update(at_number(prev_pair), at_number(pair))
+        affected_elements.update((at_number(pair_1), at_number(pair_2)))
+    # get element symbols
     affected_elements = set(get_element_symbol(el) for el in affected_elements)
 
     if affected_elements:
