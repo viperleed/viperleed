@@ -164,10 +164,10 @@ class DarkLevelCalibration(_calib.CameraCalibrationTask):
         this_section = self.__current_section
         assert this_section <= _DarkLevelOperation.VERIFY_DARK_LEVEL
         if this_section is _DarkLevelOperation.ENSURE_CORRECT_MINIMUM:
-            # Will soon start acquiring the actual frames
-            self.__update_limits_and_continue()
             LOG.debug("Acquired frame for minimum-intensity evaluation. "
                       "Restarting camera for actual dark-level calibration")
+            # Will soon start acquiring the actual frames
+            self.__update_limits_and_continue()
             return
 
         if (this_section is _DarkLevelOperation.VERIFY_DARK_LEVEL
@@ -217,11 +217,11 @@ class DarkLevelCalibration(_calib.CameraCalibrationTask):
             LOG.warning("Cannot start right now!")
             return False
 
-        LOG.debug(f"About to start {self.name}")
         self.__current_section = _DarkLevelOperation.first()
         if self.camera.has_zero_minimum:
             # If we already know, skip the first segment
             self.__current_section = self.__current_section.next_()
+        LOG.debug(f"About to start {self.name}. Section: {self.__current_section.name}")
         self.set_info_text(
             "A 'dark' movie will be acquired.<br>Make sure no light "
             "enters the camera.<br>For example, you can <b>close the "

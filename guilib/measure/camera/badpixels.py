@@ -289,7 +289,7 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         # new acquisition is triggered, if needed.
         self.update_device_settings()
         self.__report_acquisition_progress(exposure)
-        LOG.debug("Done setting up camera. About to start it.")
+        LOG.debug("Done invoking change of camera settings. About to invoke start.")
         self.start_camera()
 
     @qtc.pyqtSlot()

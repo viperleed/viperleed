@@ -680,7 +680,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
                             ', '.join(invalid), '')
             return
 
-        LOG.debug("Setting new camera settings")
+        LOG.debug("Setting new camera settings...")
         # Will recalculate bad pixel coordinates if ROI changes
         old_roi = tuple()
         if self.settings:
@@ -697,12 +697,14 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         if _name:
             # When loading from default settings, there's no point in
             # trying to connect: the device name is certainly wrong
+            LOG.debug("New settings done. (From defaults, will not connect_)")
             return
 
         self.connect_()  # Also loads self.settings to camera
 
         if self.roi != old_roi and self.bad_pixels:
             self.bad_pixels.apply_roi()
+        LOG.debug("New settings done.")
 
     @property
     @abstractmethod
@@ -808,7 +810,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
 
     def connect_(self):
         """Connect to the camera."""
-        LOG.debug(f"connect_ing camera {self.name}")
+        LOG.debug(f"connect_()ing camera {self.name}")
         if not self.open():
             LOG.warning("Failed to connect_ camera")
             base.emit_error(self, CameraErrors.CAMERA_NOT_FOUND, self.name)
@@ -816,14 +818,16 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             return
         self.load_camera_settings()
         self.__connected = True
+        LOG.debug("Camera connect_()ed")
 
     def disconnect_(self):
         """Disconnect the device."""
-        LOG.debug(f"disconnect_ing camera {self.name}")
+        LOG.debug(f"disconnect_()ing camera {self.name}...")
         self.__reported_errors = set()
         self.stop()
         self.close()
         self.__connected = False
+        LOG.debug("Camera disconnect_()ed")
 
     def get_settings_handler(self):
         """Return a SettingsHandler object for displaying settings.
@@ -1546,6 +1550,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             the camera was not running, or if it cannot be stopped
             yet because some frames are missing.
         """
+        LOG.debug("Stopping camera...")
         if not self.is_running:
             LOG.debug("Will not try to stop camera that is currently not running")
             return False
@@ -1570,7 +1575,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         if self.__process_thread.isRunning():
             self.__process_thread.quit()
         base.safe_disconnect(self.frame_ready, self.__on_frame_ready)
-        LOG.debug("Successfully stopped camera")
+        LOG.debug("Can proceed to stop camera...")
         return True
 
     @abstractmethod

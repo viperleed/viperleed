@@ -249,7 +249,7 @@ class CameraCalibrationTask(CalibrationTask):
 
     def start_camera(self):
         """Start camera in the correct thread."""
-        LOG.debug(f"About to start camera {self.camera.name}")
+        LOG.debug(f"About to asynchronously start camera {self.camera.name}")
         self._connect_device_signals()
         _INVOKE(self.camera, 'start')
 

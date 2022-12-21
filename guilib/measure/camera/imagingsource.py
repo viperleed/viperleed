@@ -113,7 +113,7 @@ def on_frame_ready_(__grabber_handle, image_start_pixel,
 
     # Don't emit frame_ready if we got more frames than expected
     if camera.mode == 'triggered' and n_frames_received > camera.n_frames:
-        LOG.debug("Got more frames than expected while triggering -> Skip")
+        LOG.debug(f"Got more frames than expected ({camera.n_frames}) while triggering -> Skip")
         return
 
     # Interrupt when all frames arrived. This may happen if the camera
@@ -525,8 +525,9 @@ class ImagingSourceCamera(abc.CameraABC):
 
     def close(self):
         """Close the camera device."""
-        LOG.debug("Closing camera")
+        LOG.debug("Closing camera...")
         self.driver.close()
+        LOG.debug("Closed")
 
     def get_settings_handler(self):
         """Return a SettingsHandler object for displaying settings.
@@ -597,7 +598,7 @@ class ImagingSourceCamera(abc.CameraABC):
         successful : bool
             True if the device was opened successfully.
         """
-        LOG.debug(f"Try opening camera {self.name}")
+        LOG.debug(f"Try opening camera {self.name}...")
         try:
             self.driver.open(self.name)
         except ImagingSourceError:
@@ -612,6 +613,7 @@ class ImagingSourceCamera(abc.CameraABC):
             self.set_callback(on_frame_ready_)
             self.__has_callback = True
         self.set_roi()
+        LOG.debug("Camera successfully open")
         return True
 
     @qtc.pyqtSlot()
@@ -891,6 +893,7 @@ class ImagingSourceCamera(abc.CameraABC):
         super().start()
         if abs(self.best_next_rate - self.driver.frame_rate) > 1:
             self.driver.frame_rate = self.best_next_rate
+            LOG.debug(f"Just set new frame rate to {self.driver.frame_rate} from {self.best_next_rate=}")
         self.process_info.clear_times()
         mode = self.mode if self.mode == 'triggered' else 'continuous'
         self.driver.start(mode)
@@ -910,12 +913,13 @@ class ImagingSourceCamera(abc.CameraABC):
         # One could wrap the next line in if self.is_running,
         # but it seems that there is a bug in the driver that
         # can return True if the device was lost.
-        LOG.debug("Trying to stop camera")
+        LOG.debug("Trying to stop camera...")
         try:
             self.driver.stop()
         except ImagingSourceError:
             LOG.warning("Failed to stop camera. Perhaps lost?")
             pass
+        LOG.debug("Successfully stopped camera")
 
         self.stopped.emit()
         return True
@@ -939,6 +943,7 @@ class ImagingSourceCamera(abc.CameraABC):
             return False
         if abs(self.best_next_rate - self.driver.frame_rate) > 1:
             self.driver.frame_rate = self.best_next_rate
+            LOG.debug(f"Just set new frame rate {self.driver.frame_rate} from {self.best_next_rate=}")
         if self.supports_trigger_burst:
             burst_count = self.n_frames
             if burst_count > 1:
@@ -954,5 +959,6 @@ class ImagingSourceCamera(abc.CameraABC):
                 self.driver.trigger_burst_count = burst_count
                 self.__burst_count =  self.driver.trigger_burst_count
         self.driver.send_software_trigger()
+        LOG.debug("Camera triggered")
         return True
 # pylint: enable=too-many-public-methods
