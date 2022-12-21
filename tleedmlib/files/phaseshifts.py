@@ -450,9 +450,10 @@ def __check_consitency_element_order(rp, sl, phaseshifts,
             continue
         affected_elements.update((at_number(pair_1), at_number(pair_2)))
     # get element symbols
-    affected_elements = set(get_element_symbol(el) for el in affected_elements)
+    may_have_wrong_phaseshifts = set(get_element_symbol(el)
+                                     for el in affected_elements)
 
-    if affected_elements:
+    if may_have_wrong_phaseshifts:
         elements_str = ", ".join(affected_elements)
         logger.warning(
             "Detected inconsitency in PHASESHIFTS: "
@@ -465,7 +466,7 @@ def __check_consitency_element_order(rp, sl, phaseshifts,
             "reorder the blocks (see utility ModifyPhaseshifts). "
         )
         rp.setHaltingLevel(1)
-    return affected_elements
+    return may_have_wrong_phaseshifts
 
 
 def writePHASESHIFTS(firstline, phaseshifts, filename='PHASESHIFTS'):
