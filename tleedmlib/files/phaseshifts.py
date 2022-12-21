@@ -171,13 +171,15 @@ def readPHASESHIFTS(sl, rp, readfile='PHASESHIFTS', check=True,
      newpsWrite) = __check_consistency_rp_elements(sl, rp, phaseshifts,
                                                    firstline, muftin)
 
-    if not ignoreEnRange:
-        newpsGen, newpsWrite = __check_consistency_energy_range(
-            rp, phaseshifts, muftin, newpsGen, newpsWrite
-            )
+    if not ignoreEnRange and not newpsGen:
+        newpsGen = __check_consistency_energy_range(rp, phaseshifts,
+                                                    muftin, newpsGen)
+        newpsWrite |= newpsGen
 
-    # Check consitency of phaseshift values
-    __check_consitency_element_order(rp, sl, phaseshifts)
+    # Check consitency of phaseshift values (unless we
+    # already know we have to make a new file anyway)
+    if not newpsGen:
+        __check_consitency_element_order(rp, sl, phaseshifts)
 
     return firstline, phaseshifts, newpsGen, newpsWrite
 
@@ -299,14 +301,14 @@ def __check_consistency_rp_elements(sl, rp, phaseshifts, firstline, muftin):
     return phaseshifts, firstline, newpsGen, newpsWrite
 
 
-def __check_consistency_energy_range(rp, phaseshifts, muftin,
-                                     newpsGen, newpsWrite):
+def __check_consistency_energy_range(rp, phaseshifts, muftin, newpsGen):
     """Check that the energy range of phaseshifts is large enough for rp."""
     checkfail = False
-    er = np.arange(rp.THEO_ENERGIES[0], rp.THEO_ENERGIES[1]+1e-4,
-                    rp.THEO_ENERGIES[2])
-    psmin = round(phaseshifts[0][0]*_HARTREE_TO_EV, 2)
-    psmax = round(phaseshifts[-1][0]*_HARTREE_TO_EV, 2)
+    er = np.arange(rp.THEO_ENERGIES[0],
+                   rp.THEO_ENERGIES[1] + 1e-4,
+                   rp.THEO_ENERGIES[2])
+    psmin = round(phaseshifts[0][0] * _HARTREE_TO_EV, 2)
+    psmax = round(phaseshifts[-1][0] * _HARTREE_TO_EV, 2)
     if rp.V0_REAL == "default" or isinstance(rp.V0_REAL, list):
         if isinstance(rp.V0_REAL, list):
             c = rp.V0_REAL
@@ -332,7 +334,7 @@ def __check_consistency_energy_range(rp, phaseshifts, muftin,
             "file. If energy range is insufficient, try deleting the "
             "PHASESHIFTS file to generate a new one."
             )
-        return newpsGen, newpsWrite
+        return newpsGen
 
     if (psmin > min(er_inner) or psmax < max(er_inner)):
         if (psmin > min(er_inner) and psmin <= 20.
@@ -355,9 +357,9 @@ def __check_consistency_energy_range(rp, phaseshifts, muftin,
                 "theoretical beams. A new PHASESHIFTS file will be "
                 "generated."
                 )
-            newpsGen, newpsWrite = True, True
+            return True
 
-    return newpsGen, newpsWrite
+    return newpsGen
 
 
 def __check_consitency_element_order(rp, sl, phaseshifts, 
@@ -404,18 +406,17 @@ def __check_consitency_element_order(rp, sl, phaseshifts,
     if not eps:
         eps = rp.PHASESHIFT_EPS
     n_l_values = len(phaseshifts[0][1][0])
-    n_sites_in_ps = len(phaseshifts[0][1]) # number of species in PHASESHIFTS file
+    n_sites_in_ps = len(phaseshifts[0][1])  # No. species in PHASESHIFTS
 
-    # Get atomic number of all site types in the order they appear in sl.sitelist
-    # Take into account that some sites may have mixed occupation
+    # Get atomic number of all site types in the order
+    # they appear in sl.sitelist, taking into account
+    # that some sites may have mixed occupation
     element_mix = []
     for site in sl.sitelist:
-        if site.mixedEls:
-            # mixed occupation
-            element_mix.extend(site.mixedEls)
-        else:
-            # single occupation
-            element_mix.append(site.el)
+        element_mix.extend(
+            site.mixedEls  # Mixed occupation
+            or [site.el]   # Only one element
+            )
     # get atomic numbers from element symbols
     atomic_numbers = tuple(get_atomic_number(el)
                            for el in element_mix)
@@ -429,8 +430,6 @@ def __check_consitency_element_order(rp, sl, phaseshifts,
             ))
         if all(abs(ps_sites) > eps):
             break
-        # Could not find any L where all phaseshifts are
-        # higher than eps try lower angular momentum
     else:
         # None of the phaseshifts are larger than eps at this energy
         logger.warning(
@@ -446,12 +445,11 @@ def __check_consitency_element_order(rp, sl, phaseshifts,
     pair_ps = lambda item : item[1]
     ps_pairs.sort(key=at_number) # sort by atomic number
 
-    # Go through all pairs and check that heavier                     # TODO: use itertools.combinations to check all combinations, shortcut for those that are already in set
+    # Go through all pairs and check that heavier
     # elements have larger phaseshifts
-
     for pair_1, pair_2 in combinations(ps_pairs, 2):
         at_num_change = at_number(pair_1) - at_number(pair_2)
-        if at_num_change <= 0:  # Same element or redundant interation
+        if at_num_change <= 0:  # Same element or redundant iteration
             continue
         # Different element. Check that phaseshifts are also
         # ordered, and complain only if elements are not
