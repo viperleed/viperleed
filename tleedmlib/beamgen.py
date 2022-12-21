@@ -15,6 +15,9 @@ from viperleed.guilib.base import get_equivalent_beams, BeamIndex
 
 logger = logging.getLogger("tleedm.beamgen")
 
+_HARTREE_TO_EV = 27.211396
+_ANGSTROM_TO_BOHR = 0.529177210903
+
 
 def runBeamGen(sl, rp, beamgensource='', domains=False):
     """Writes necessary input for the beamgen3 code, then runs it. The relevant
@@ -107,25 +110,41 @@ def beamgen(sl, rp, domain=False):
         sl.bulkslab = sl.makeBulkSlab(rp)
     
     e_max = rp.THEO_ENERGIES[1]
-    surf_ucell = sl.ucell[:2, :2].T
+    surf_ucell = sl.surface_vectors
+    inv_surf_vectors = sl.reciprocal_vectors
+    # TODO: domains !!
+    # if not domains:
+    #     dmin = sl.getMinLayerSpacing() * 0.7
+    # else:
+    #     dmin = min([dp.sl.getMinLayerSpacing() for dp in rp.domainParams])*0.7
 
+    d_min = sl.getMinLayerSpacing() * 0.7
+    conv_crit = rp.ATTENUATION_EPS  # convergence criterion for refcalc
+    g_max_squared = 2*e_max + (np.log(conv_crit)/d_min)**2
+    
     leedParameters = {
-        'eMax': e_max,
+        'eMax': g_max_squared,
         'surfBasis': surf_ucell,
         'SUPERLATTICE': rp.SUPERLATTICE,
         'surfGroup': sl.foundplanegroup,
         'bulkGroup': sl.bulkslab.foundplanegroup,
-        'screenAperture': rp.SCREEN_APERTURE,
     }
-    # TODO: domains!!
+    # use guilib to generate list of beams
     equivalent_beams = get_equivalent_beams(leedParameters)
-    indices = np.array(list(BeamIndex(beam[0]) for beam in equivalent_beams), dtype="float64")
-    energies = np.sum(np.dot(indices, surf_ucell)**2, axis=1)
-    # forbidden beams have negative group nr
-    g_max_squared = 2*e_max + (np.log(tst)/d_min)**2
-    
-def evanescent_energy(beam_index, ucell):
-    return np.sum(np.dot(beam_index, ucell)**2)
+    # convert to float array
+    indices = np.array(list(BeamIndex(beam[0]) for beam in equivalent_beams),
+                       dtype="float64")
+    # calculate cutoff energy for each beam
+    energies = (np.sum(np.dot(indices, inv_surf_vectors)**2, axis=1)
+                /2 *_HARTREE_TO_EV *_ANGSTROM_TO_BOHR**2) # scale to correct units
+    # NB: The energies calculated here are slightly higher than
+    #     the values from beamgenv3 (and beamgen.v1.7) because we 
+    #     use *more accurate* values for unit conversions.
+    #     The legacy code used these rounded values:
+    #       HARTREE_TO_EV=27.21
+    #       ANGSTROM_TO_BOHR = 0.529
+    logger.debug(f"Highest energy considered in BEAMLIST={np.max(energies)}")
+
 
 def make_beamlist_string(indices, energies):
     n_beams = indices.shape[0]
@@ -140,7 +159,7 @@ def make_beamlist_string(indices, energies):
         )
     # first line contains number of beams
     content = ff.FortranRecordWriter('10I3').write([n_beams]) + '\n'
-    
+
     # iterate over all beams and format lines
     for nr, ((beam_h, beam_k), energy) in enumerate(zip(indices, energies)):
         # nr+1 because of Fortran indices starting at 1
