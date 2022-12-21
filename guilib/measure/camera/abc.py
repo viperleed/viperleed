@@ -692,7 +692,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         self.__settings = new_settings
         if self.is_running:
             self.stop()
-        self.close()
+        self.close()                                                            # TODO: probably should rather use disconnect_()!
 
         if _name:
             # When loading from default settings, there's no point in

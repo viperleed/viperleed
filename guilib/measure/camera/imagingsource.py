@@ -493,7 +493,7 @@ class ImagingSourceCamera(abc.CameraABC):
             Negative values indicate that there is no need
             to optimize (i.e., exposure is very long).
         """
-        if self.exposure >= 1500:
+        if self.exposure > 1000:
             return -1
         if self.exposure >= 500:
             return 4
@@ -944,6 +944,9 @@ class ImagingSourceCamera(abc.CameraABC):
         if abs(self.best_next_rate - self.driver.frame_rate) > 1:
             self.driver.frame_rate = self.best_next_rate
             LOG.debug(f"Just set new frame rate {self.driver.frame_rate} from {self.best_next_rate=}")
+            # Store the value currently used, to avoid trying to
+            # set it multiple times if we're already at maximum
+            self.best_next_rate = self.driver.frame_rate
         if self.supports_trigger_burst:
             burst_count = self.n_frames
             if burst_count > 1:
