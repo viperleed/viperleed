@@ -43,7 +43,7 @@ def readPHASESHIFTS(sl, rp, readfile='PHASESHIFTS', check=True,
         filename to be read. Default is 'PHASESHIFTS'.
     check: bool, optional
         Wether to check for consistence agains sl and rp.
-        If False, sl and rp can be None.Default is True.
+        If False, sl and rp can be None. Default is True.
     ignoreEnRange: bool, optional
         Check wether the energy range in readfile is sufficient to
         cover the energy range requested in rp. Default is False.
