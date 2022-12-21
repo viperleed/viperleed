@@ -242,6 +242,17 @@ class Slab:
                     bulkAtsRenumbered.append(bat)
             at.oriN = i+1
 
+    @property
+    def surface_vectors(self):
+        if not self.ucell:
+            raise ValueError("Slab does not have a unit cell defined.")
+        return self.ucell[:2, :2].T
+
+    @property
+    def reciprocal_vectors(self):
+        surf_vecs = self.surface_vectors
+        #math
+
     def fullUpdate(self, rparams):
         """readPOSCAR initializes the slab with information from POSCAR;
         fullUpdate re-initializes the atom list, then uses the information

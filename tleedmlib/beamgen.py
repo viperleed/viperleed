@@ -11,7 +11,7 @@ import subprocess
 import numpy as np
 from viperleed import fortranformat as ff
 
-from viperleed.guilib.base import get_equivalen_beams
+from viperleed.guilib.base import get_equivalent_beams, BeamIndex
 
 logger = logging.getLogger("tleedm.beamgen")
 
@@ -107,10 +107,11 @@ def beamgen(sl, rp, domain=False):
         sl.bulkslab = sl.makeBulkSlab(rp)
     
     e_max = rp.THEO_ENERGIES[1]
+    surf_ucell = sl.ucell[:2, :2].T
 
     leedParameters = {
         'eMax': e_max,
-        'surfBasis': sl.ucell[:2, :2].T,
+        'surfBasis': surf_ucell,
         'SUPERLATTICE': rp.SUPERLATTICE,
         'surfGroup': sl.foundplanegroup,
         'bulkGroup': sl.bulkslab.foundplanegroup,
@@ -118,5 +119,11 @@ def beamgen(sl, rp, domain=False):
     }
     # TODO: domains!!
     equivalent_beams = get_equivalent_beams(leedParameters)
+    indices = np.array(list(BeamIndex(beam[0]) for beam in equivalent_beams), dtype="float64")
+    energies = np.sum(np.dot(indices, surf_ucell)**2, axis=1)
     # forbidden beams have negative group nr
     g_max_squared = 2*e_max + (np.log(tst)/d_min)**2
+    
+def evanescent_energy(beam_index, ucell):
+    return np.sum(np.dot(beam_index, ucell)**2)
+
