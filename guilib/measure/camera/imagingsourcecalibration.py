@@ -11,6 +11,7 @@ Defines CalibrationTask subclasses to be used with cameras from
 The Imaging Source.
 """
 from copy import deepcopy
+import logging
 
 from PyQt5 import QtCore as qtc
 import numpy as np
@@ -23,6 +24,7 @@ from viperleed.guilib.measure.classes.calibrationtask import (
 
 
 _INVOKE = qtc.QMetaObject.invokeMethod
+LOG = logging.getLogger("Debugging")
 
 
 class ImagingSourceCalibrationError(base.ViPErLEEDErrorEnum):
@@ -147,6 +149,7 @@ class DarkLevelCalibration(_calib.CameraCalibrationTask):
     @qtc.pyqtSlot(np.ndarray)
     def _check_and_store_frame(self, frame):
         """Check that mean - 6*sigma > pix_min."""
+        LOG.debug(f"{self.__current_section.name} - Got a frame to be checked.")
         mean_, stdev = frame.mean(), frame.std(ddof=1)
         int_min, _, int_range = self._limits['intensity']
         mean_ -= int_min
@@ -163,6 +166,8 @@ class DarkLevelCalibration(_calib.CameraCalibrationTask):
         if this_section is _DarkLevelOperation.ENSURE_CORRECT_MINIMUM:
             # Will soon start acquiring the actual frames
             self.__update_limits_and_continue()
+            LOG.debug("Acquired frame for minimum-intensity evaluation. "
+                      "Restarting camera for actual dark-level calibration")
             return
 
         if (this_section is _DarkLevelOperation.VERIFY_DARK_LEVEL
@@ -179,10 +184,12 @@ class DarkLevelCalibration(_calib.CameraCalibrationTask):
             self.__img_data['sum_dark_int'] += _dark*intensity
             self.__img_data['sum_dark_sq'] += _dark**2
             self._frames_done += 1
+            LOG.debug("Stored acceptable frame info")
 
         if (this_section is _DarkLevelOperation.ACQUIRE_IMAGES
                 and not self.missing_frames):
             self.__current_section = this_section.next_()
+            LOG.debug(f"Moving on to {self.__current_section.name}")
 
         try:
             self.__calculate_next_dark(intensity)
@@ -199,37 +206,46 @@ class DarkLevelCalibration(_calib.CameraCalibrationTask):
         self._task_settings.read_dict(self.__section_settings)
         self.__report_progress()
 
+        LOG.debug("User confirmation arrived. About to set up and start camera.")
         self.update_device_settings()
         self.start_camera()
 
     @qtc.pyqtSlot()
     def start(self):
         """Start calibrating the dark level."""
-        ok_to_start = super().start()
-        if ok_to_start:
-            self.__current_section = _DarkLevelOperation.first()
-            if self.camera.has_zero_minimum:
-                # If we already know, skip the first segment
-                self.__current_section = self.__current_section.next_()
-            self.set_info_text(
-                "A 'dark' movie will be acquired.<br>Make sure no light "
-                "enters the camera.<br>For example, you can <b>close the "
-                "lens with its cap.</b>"
-                )
-            self.show_info()
-        return ok_to_start
+        if not super().start():
+            LOG.warning("Cannot start right now!")
+            return False
+
+        LOG.debug(f"About to start {self.name}")
+        self.__current_section = _DarkLevelOperation.first()
+        if self.camera.has_zero_minimum:
+            # If we already know, skip the first segment
+            self.__current_section = self.__current_section.next_()
+        self.set_info_text(
+            "A 'dark' movie will be acquired.<br>Make sure no light "
+            "enters the camera.<br>For example, you can <b>close the "
+            "lens with its cap.</b>"
+            )
+        self.show_info()
+        return True
 
     @qtc.pyqtSlot()
     def _trigger_next_frame(self, *_):
         """Trigger acquisition of a new frame if necessary."""
+        _info_txt = f"{self.__current_section.name}, {self._frames_done=}, "
+        _info_txt += f"{self.camera.is_running=}"
         if not self.can_trigger_camera:
+            LOG.debug("Attempted to trigger frame, but camera is not ready. "
+                      + _info_txt)
             return
 
         if self.__current_section >= _DarkLevelOperation.ACQUIRE_IMAGES:
+            LOG.debug(f"Setting dark level to {self.dark_level}")
             self.camera.settings.set('camera_settings', 'black_level',
                                      str(self.dark_level))
             _INVOKE(self.camera, 'set_black_level')
-
+        LOG.debug(f"Triggering camera. {_info_txt}")
         self.trigger_camera()
 
     @property
@@ -277,6 +293,7 @@ class DarkLevelCalibration(_calib.CameraCalibrationTask):
 
     def __finish(self):
         """Store new dark level and stop camera."""
+        LOG.debug("About to write new dark-level to file.")
         _settings = self._original['settings']
         _settings.set('camera_settings', 'black_level',
                       str(self.camera.black_level))
@@ -285,6 +302,7 @@ class DarkLevelCalibration(_calib.CameraCalibrationTask):
         self.progress_occurred.emit(self.progress_name, *done,
                                     done.n_steps, done.n_steps)
         self.mark_as_done(True)  # Also stops camera
+        LOG.debug(f"Finishing {self.name}")
 
     def __prepare_task_settings(self):
         """Prepare settings to use for the acquisition sections."""

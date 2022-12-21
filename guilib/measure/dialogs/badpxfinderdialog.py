@@ -12,10 +12,13 @@ while finding bad pixels for a camera.
 """
 
 from pathlib import Path
+from datetime import datetime
+import logging
 
 from PyQt5 import (QtWidgets as qtw,
                    QtCore as qtc)
 
+from viperleed import GLOBALS
 from viperleed.guilib import dialogs
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure import camera as _m_camera
@@ -28,6 +31,8 @@ _INVOKE = qtc.QMetaObject.invokeMethod
 NOT_FOUND = "No file found!"
 NOT_SET = "\u2014"
 NO_BAD_PX_PATH = "None selected"
+# LOG = logging.getLogger(__name__)
+LOG = logging.getLogger("Debugging")
 
 
 def _default_config_path():
@@ -179,6 +184,11 @@ class BadPixelsFinderDialog(qtw.QDialog):
             # self.__finder gets destroyed in the meantime
             pass
         self.__reset_controls()
+        LOG.debug("Bad-pixels finding aborted")
+        handler = getattr(self.__finder, 'log_handler', None)
+        if handler:
+            LOG.removeHandler(handler)
+            handler.close()
 
     @qtc.pyqtSlot()
     def __reset_controls(self):
@@ -459,6 +469,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
     @qtc.pyqtSlot(tuple)
     def __on_error_occurred(self, error_info):
         """React to an error situation."""
+        LOG.debug(f"Got error from camera: {error_info}")
         error_code, error_msg = error_info
         try:
             error = _m_camera.abc.CameraErrors.from_code(error_code)
@@ -468,13 +479,16 @@ class BadPixelsFinderDialog(qtw.QDialog):
             # Swallow a MISSING_SETTINGS error since we always
             # create the active_camera without settings, and give
             # it settings shortly afterwards.
+            LOG.debug(f"Swallowed MISSING_SETTINGS error")
             return
         if (error is _m_camera.abc.CameraErrors.INVALID_SETTINGS
                 and "bad_pixel" in error_msg.replace(" ", "_")):
             # Swallow bad-pixels path errors that may occur
             # before the calibration is started
+            LOG.debug(f"Swallowed bad-pixels-related INVALID_SETTINGS error")
             return
 
+        LOG.error(f"Error {error_code} not swallowed.")
         self.__buttons['abort'].click()
         qtw.QMessageBox.critical(self, "Error",
                                  f"{error_msg}\n\n(Code: {error_code})")
@@ -533,6 +547,10 @@ class BadPixelsFinderDialog(qtw.QDialog):
             )
         self.__report_uncorrectable()
         self.__enable_controls(True)
+
+        LOG.debug("Finishing bad-pixel finding routine")
+        LOG.removeHandler(self.__finder.log_handler)
+        self.__finder.log_handler.close()
 
     @qtc.pyqtSlot(str, str, int, int, int, int)
     def __on_progress(self, *args):
@@ -644,7 +662,18 @@ class BadPixelsFinderDialog(qtw.QDialog):
         # bars properly shown immediately.
         qtw.qApp.processEvents()
 
+        # Prepare a logger                                                      # TODO: remove
+        formatter = logging.Formatter('%(levelname)s - %(asctime)s - %(module)s\n\t%(message)s')
+        log_dir = GLOBALS.get('log_path', Path(''))
+        _now = datetime.now().strftime("%Y%m%d_%H%M%S")
+        handler = logging.FileHandler(log_dir / f"bad_px_{_now}.log")
+        handler.setFormatter(formatter)
+        handler.setLevel(logging.DEBUG)
+        LOG.setLevel(logging.DEBUG)
+        LOG.addHandler(handler)
+
         self.__finder = _m_camera.badpixels.BadPixelsFinder(self.active_camera)
+        self.__finder.log_handler = handler
         self.__finder.progress_occurred.connect(self.__on_progress)
         self.__finder.done.connect(self.__on_finder_done)
         self.__finder.done.connect(self.__finder.deleteLater)
@@ -657,6 +686,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
         # Device errors are handled by the finder while it runs
         base.safe_disconnect(self.active_camera.error_occurred,
                              self.__on_error_occurred)
+        LOG.debug("About to begin bad-pixels finding routine")
         _INVOKE(self.__finder, "find")
 
     def __stop_timers(self):

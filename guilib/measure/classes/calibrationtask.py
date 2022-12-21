@@ -13,6 +13,7 @@ as the base class of device-calibration tasks.
 from abc import abstractmethod
 from copy import deepcopy
 from enum import IntEnum
+import logging
 
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
@@ -23,6 +24,7 @@ from viperleed.guilib.measure import hardwarebase as base
 _INVOKE = qtc.QMetaObject.invokeMethod
 _UNIQUE = qtc.Qt.UniqueConnection
 _QUEUED = qtc.Qt.QueuedConnection
+LOG = logging.getLogger("Debugging")
 
 
 class CalibrationTaskError(base.ViPErLEEDErrorEnum):
@@ -313,6 +315,7 @@ class CalibrationTask(qtc.QObject, metaclass=base.QMetaABC):
         """
         if self.is_aborted:
             return
+        LOG.debug(f"Aborting {self.name}")
         self.restore_device()
         self.__flags['aborted'] = True
         self.__flags['running'] = False
@@ -339,6 +342,7 @@ class CalibrationTask(qtc.QObject, metaclass=base.QMetaABC):
         for signal, slot in self._to_be_connected:
             base.safe_disconnect(signal, slot)
         self.done.emit()
+        LOG.debug(f"Completed {self.name}")
 
     @qtc.pyqtSlot(tuple)
     def _on_device_error(self, error):
@@ -365,6 +369,7 @@ class CalibrationTask(qtc.QObject, metaclass=base.QMetaABC):
         self.error_occurred(error)
             Unless it returns True.
         """
+        LOG.warning(f"Got an error from device: {error}")
         self.error_occurred.emit(error)
         return False
 
@@ -404,7 +409,9 @@ class CalibrationTask(qtc.QObject, metaclass=base.QMetaABC):
         None.
         """
         if self.original_settings is None:
+            LOG.debug("Tried to restore device, but no known settings")
             return
+        LOG.debug("About to restore device with original settings")
         _INVOKE(self.device, 'set_settings',
                 qtc.Q_ARG(object, self.original_settings))
 
@@ -415,6 +422,7 @@ class CalibrationTask(qtc.QObject, metaclass=base.QMetaABC):
     @qtc.pyqtSlot()
     def show_info(self):
         """Show the information message box."""
+        LOG.debug("About to show info box to the user")
         _INVOKE(self._info, 'exec')
 
     @qtc.pyqtSlot()
@@ -455,6 +463,7 @@ class CalibrationTask(qtc.QObject, metaclass=base.QMetaABC):
             If .start() is called while the device is busy.
         """
         if self.device is not None and self.device.busy:
+            LOG.warning("Tried to start, but device is busy")
             base.emit_error(self.device, CalibrationTaskError.DEVICE_BUSY,
                             self.name, self.device.name)
             return False

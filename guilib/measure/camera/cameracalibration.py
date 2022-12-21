@@ -12,6 +12,7 @@ cameras.
 """
 
 from abc import abstractmethod
+import logging
 
 import numpy as np
 from PyQt5 import QtCore as qtc
@@ -21,6 +22,7 @@ from viperleed.guilib.measure.classes.calibrationtask import CalibrationTask
 
 
 _INVOKE = qtc.QMetaObject.invokeMethod
+LOG = logging.getLogger("Debugging")
 
 
 class CameraCalibrationErrors(base.ViPErLEEDErrorEnum):
@@ -200,6 +202,7 @@ class CameraCalibrationTask(CalibrationTask):
         # bad-pixels information.
         if (self.camera.is_bad_pixels_error(error)
                 and self in self.camera.calibration_tasks['bad_pixels']):
+            LOG.debug("Swallowed bad-pixels error from camera.")
             return True
         return super()._on_device_error(error)
 
@@ -234,7 +237,9 @@ class CameraCalibrationTask(CalibrationTask):
         ok_to_start : bool
             Whether starting the device is possible.
         """
+        LOG.debug(f"Executing {self.__class__.__name__}.start()")
         if not super().start():
+            LOG.warning(f"Could not start {self.name}")
             return False
         fname = ''
         if self.saves_images:
@@ -244,11 +249,13 @@ class CameraCalibrationTask(CalibrationTask):
 
     def start_camera(self):
         """Start camera in the correct thread."""
+        LOG.debug(f"About to start camera {self.camera.name}")
         self._connect_device_signals()
         _INVOKE(self.camera, 'start')
 
     def trigger_camera(self):
         """Trigger camera in the correct thread."""
+        LOG.debug(f"About to trigger camera {self.camera.name}")
         _INVOKE(self.camera, 'trigger_now')
 
     @qtc.pyqtSlot()

@@ -95,6 +95,7 @@ def gui_main():
     log_path = Path(__file__).resolve().parent.parent / "_logs"
     if not log_path.exists():
         log_path.mkdir()
+    GLOBALS['log_path'] = log_path
 
     # Ensure we always use "." as decimal separators 
     qtc.QLocale.setDefault(qtc.QLocale.c())

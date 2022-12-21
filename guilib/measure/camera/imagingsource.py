@@ -14,6 +14,7 @@ import re
 from time import perf_counter as timer
 from math import ceil
 from ctypes import POINTER, c_ubyte, cast as c_cast
+import logging
 
 import numpy as np
 from PyQt5 import QtCore as qtc
@@ -32,6 +33,7 @@ from viperleed.guilib.measure.widgets.mappedcombobox import MappedComboBox
 
 
 _CUSTOM_NAME_RE = re.compile(r"\[.*\]")
+LOG = logging.getLogger("Debugging")
 
 
 # TODO: test roi offset increments with models other than IMX265
@@ -81,18 +83,27 @@ def on_frame_ready_(__grabber_handle, image_start_pixel,
     camera = process_info.camera
     n_frames_received = len(process_info.frame_times)
 
+    fr_rate, exposure = camera.get_frame_rate(), camera.exposure
+    LOG.debug(f"Got frame from {camera.name}. Info: "
+              f"{n_frames_received=}, {__frame_number=}, "
+              f"{camera.is_finding_best_frame_rate=}, "
+              f"{fr_rate=}, {exposure=}")
+
     if n_frames_received > 2:
         # pylint: disable=unused-variable
         # n_lost is currently unused but will be as soon as
         # the todo below is taken care of.
         n_lost, best_rate = estimate_frame_loss(process_info.frame_times,
-                                                camera.get_frame_rate(),
-                                                camera.exposure)
+                                                fr_rate, exposure)
+                                                # camera.get_frame_rate(),
+                                                # camera.exposure)
         camera.best_next_rate = best_rate
+    LOG.debug(f"{camera.best_next_rate=}")
 
     if camera.is_finding_best_frame_rate:
         # No need to display images while estimating the best frame rate
         if n_frames_received >= camera.n_frames_estimate:
+            LOG.debug("Finished estimating frame rate")
             camera.driver.stop_delivering_frames()
             camera.is_finding_best_frame_rate = False
             camera.busy = False
@@ -102,6 +113,7 @@ def on_frame_ready_(__grabber_handle, image_start_pixel,
 
     # Don't emit frame_ready if we got more frames than expected
     if camera.mode == 'triggered' and n_frames_received > camera.n_frames:
+        LOG.debug("Got more frames than expected while triggering -> Skip")
         return
 
     # Interrupt when all frames arrived. This may happen if the camera
@@ -114,6 +126,7 @@ def on_frame_ready_(__grabber_handle, image_start_pixel,
     if (camera.mode == 'triggered'
         and camera.supports_trigger_burst
             and n_frames_received == camera.n_frames > 1):
+        LOG.debug("Aborting trigger burst")
         camera.abort_trigger_burst.emit()
 
     # Prepare the actual image
@@ -132,6 +145,7 @@ def on_frame_ready_(__grabber_handle, image_start_pixel,
         # Wrapped C++ object deleted
         return
 
+    LOG.debug("About to emit frame_ready")
     # Send frame out
     camera.frame_ready.emit(image.copy())
 # pylint: enable=useless-param-doc,useless-type-doc
@@ -511,6 +525,7 @@ class ImagingSourceCamera(abc.CameraABC):
 
     def close(self):
         """Close the camera device."""
+        LOG.debug(f"Closing camera {self.name}")
         self.driver.close()
 
     def get_settings_handler(self):
@@ -582,9 +597,11 @@ class ImagingSourceCamera(abc.CameraABC):
         successful : bool
             True if the device was opened successfully.
         """
+        LOG.debug(f"Try opening camera {self.name}")
         try:
             self.driver.open(self.name)
         except ImagingSourceError:
+            LOG.warning("Failed to open")
             return False
 
         # Without the next line the camera does not
@@ -787,6 +804,7 @@ class ImagingSourceCamera(abc.CameraABC):
 
     def start_frame_rate_optimization(self):
         """Start estimation of the best frame rate."""
+        LOG.debug(f"Beginning frame-rate optimization for {self.name}.")
         # Connect the busy signal here. The callback
         # takes care of making the camera not busy
         # when done with the estimate.
@@ -842,6 +860,7 @@ class ImagingSourceCamera(abc.CameraABC):
             # call to the camera_busy signal).
             self.start_frame_rate_optimization()
         else:
+            LOG.debug(f"Starting camera {self.name} at max frame rate")
             self.best_next_rate = 1024
             self.__start_postponed()
 
@@ -865,6 +884,7 @@ class ImagingSourceCamera(abc.CameraABC):
         if self.is_finding_best_frame_rate:
             return
 
+        LOG.debug(f"About to actually start camera {self.name}")
         base.safe_disconnect(self.camera_busy, self.__start_postponed)
 
         # Call base that starts the processing thread if needed

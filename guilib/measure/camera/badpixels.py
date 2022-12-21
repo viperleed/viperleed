@@ -16,6 +16,7 @@ from collections.abc import MutableSequence
 from datetime import datetime
 import functools
 from pathlib import Path
+import logging
 
 import numpy as np
 from scipy.signal import convolve2d
@@ -35,6 +36,7 @@ N_DARK = 100  # Number of dark frames used for finding bad pixels
 _INVOKE = qtc.QMetaObject.invokeMethod
 _UNIQUE = qtc.Qt.UniqueConnection
 _unique_connect = functools.partial(base.safe_connect, type=_UNIQUE)
+LOG = logging.getLogger("Debugging")
 
 
 def _report_progress(func):
@@ -204,13 +206,16 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         """Abort self and any running tasks."""
         if self.is_aborted:
             return
+        LOG.debug("Finder aborted. Will stop all running tasks.")
         for task in self.camera.calibration_tasks['bad_pixels']:
             if task.is_running:
+                LOG.debug(f"Stopping running task: {task.name}")
                 _INVOKE(task, 'abort')
         super().abort()
 
     def begin_acquiring(self):
         """Start acquiring images."""
+        LOG.debug(f"Start acquisition section {self.__current_section.name}")
         if self.__current_section is _FinderSection.ACQUIRE_DARK_SHORT:
             self.set_info_text(
                 "A 'dark' movie will be acquired.<br>Make sure no light "
@@ -228,6 +233,7 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         if self.__current_section is not _FinderSection.ACQUIRE_DARK_LONG:
             # Show dialog. Its .accepted signal will trigger
             # .continue_(), its .rejected will trigger .abort()
+            LOG.debug("About to show dialog")
             self.show_info()
             return
         self.continue_()
@@ -236,7 +242,9 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
     def _check_and_store_frame(self, frame):
         """Store a new frame if it is acceptable."""
         sec = self.__current_section
+        LOG.debug(f"{sec.name} - Got a frame to be checked.")
         if not self.__frame_acceptable(frame):
+            LOG.debug(f"Frame is not OK")
             if 'DARK' in sec.name:
                 base.emit_error(
                     self, _calib.CameraCalibrationErrors.DARK_FRAME_TOO_BRIGHT
@@ -245,6 +253,7 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
                 self.__adjust_exposure_and_gain(frame)
             return
 
+        LOG.debug(f"New frame stored")
         if 'DARK' in sec.name:
             self.__imgs[sec][self._frames_done, :, :] = frame
         else:
@@ -256,6 +265,7 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
     @qtc.pyqtSlot()
     def continue_(self, *_):
         """Continue acquiring after user confirmation."""
+        LOG.debug(f"Setting up camera for section {self.__current_section.name}")
         # In all cases start from the same gain and pick exposure
         gain = self.large_gain
         if self.__current_section is _FinderSection.ACQUIRE_DARK_SHORT:
@@ -279,11 +289,13 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         # new acquisition is triggered, if needed.
         self.update_device_settings()
         self.__report_acquisition_progress(exposure)
+        LOG.debug("Done setting up camera. About to start it.")
         self.start_camera()
 
     @qtc.pyqtSlot()
     def find(self):
         """Find bad pixels in the camera."""
+        LOG.debug("Starting bad-pixels finder.")
         self.start()
 
     @_report_progress
@@ -475,12 +487,14 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         # self IS NOT part of the list of calibration tasks, but
         # we should nonetheless skip all bad-pixels-related errors
         if self.camera.is_bad_pixels_error(error):
+            LOG.debug("Swallowed bad-pixels error from camera.")
             return True
         return super()._on_device_error(error)
 
     def restore_device(self):
         """Restore settings and other device attributes."""
         # Load either old or newly saved bad pixels file
+        LOG.debug("Restoring device settings and preliminary tasks status")
         _INVOKE(self.camera, 'update_bad_pixels')
         for task in self.camera.calibration_tasks['bad_pixels']:
             task.mark_as_done(False)
@@ -488,6 +502,7 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
 
     def save_and_cleanup(self):
         """Save a bad pixels file and finish."""
+        LOG.debug("About to write new bad-pixels file.")
         bp_path = self.original_settings.get("camera_settings",
                                              "bad_pixels_path",
                                              fallback='')
@@ -497,16 +512,20 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         self.progress_occurred.emit(self.progress_name, *done,
                                     done.n_steps, done.n_steps)
         self.mark_as_done(True)
+        LOG.debug(f"Finishing {self.name}")
 
     @qtc.pyqtSlot()
     def start(self):
         """Start this task."""
+        LOG.debug(f"Running {self.__class__.__name__}.start()")
         if not super().start():
+            LOG.warning("Cannot start")
             return False
 
         # See if there is any preliminary task to be performed
         task = self.__get_preliminary_task()
         if task:
+            LOG.debug(f"Will start preliminary task {task.name}")
             # Make sure all tasks have the same original settings
             task.original_settings.read_dict(self.original_settings)
             _unique_connect(task.done, self.__on_preliminary_task_done)
@@ -517,6 +536,8 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
             _INVOKE(task, 'start')
             return False
 
+        LOG.debug("All preliminary tasks completed. "
+                  "Proceed to finding bad pixels")
         # No more tasks to do. Proceed to finding bad pixels.
         # Clear any bad pixel info in the camera (frames should be raw)
         bad_old = self.camera.bad_pixels
@@ -529,23 +550,31 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
     @qtc.pyqtSlot()
     def _trigger_next_frame(self, *_):
         """Trigger acquisition of a new frame if necessary."""
+        _info_txt = f"{self.__current_section.name}, {self._frames_done=}, "
+        _info_txt += f"{self.camera.is_running=}"
         if not self.can_trigger_camera:
+            LOG.debug("Attempted to trigger frame, but camera is not ready. "
+                      + _info_txt)
             return
 
         if self.missing_frames:
+            LOG.debug(f"Triggering camera. {_info_txt}")
             self.trigger_camera()
             return
 
         # One section over, go to the next one
         self.__current_section = self.__current_section.next_()
+        LOG.debug(f"Finished acquisition section. Next: {self.__current_section.name}")
         if self.__current_section is _FinderSection.CALCULATE_FLICKERY:
             # Done with all sections. Can proceed to calculations.
+            LOG.debug("Starting calculations.")
             self.find_flickery_pixels()
             self.find_hot_pixels()
             self.find_dead_pixels()
             self.find_bad_and_replacements()
             self.save_and_cleanup()
             return
+
         # Proceed with the next acquisition
         self._frames_done = 0
         self.__adjustments.clear()
@@ -576,6 +605,8 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
             exposure, gain = self.__correct_exposure_gain(exposure, gain)
             self.__force_exposure = True
 
+        LOG.debug("Adjusting exposure and gain: "
+                  f"({old_exposure}, {old_gain}) -> ({exposure}, {gain})")
         self._task_settings.set('measurement_settings', 'exposure',
                                 f'{exposure:.3f}')
         self._task_settings.set('measurement_settings', 'gain', f'{gain:.1f}')
@@ -647,6 +678,7 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
     def __on_preliminary_task_done(self):
         """React to a preliminary task being finished."""
         task = self.sender()
+        LOG.debug(f"Finished preliminary task {task.name}")
 
         # Make sure to update the original settings to the ones
         # that may have been edited by the task itself
