@@ -127,3 +127,24 @@ def beamgen(sl, rp, domain=False):
 def evanescent_energy(beam_index, ucell):
     return np.sum(np.dot(beam_index, ucell)**2)
 
+def make_beamlist_string(indices, energies):
+    n_beams = indices.shape[0]
+    if not energies.shape[0] == n_beams:
+        raise ValueError(
+            f"Incompatible size of indices (shape={indices.shape})"
+            f"and energies (shape={energies.shape}).")
+
+    # set up Fortran format as was used by beamgen
+    beamlist_format = ff.FortranRecordWriter(
+        "2F10.5,2I3,10X,'E =  ',F10.4,' EV',2X,'NR.',I4"
+        )
+    # first line contains number of beams
+    content = ff.FortranRecordWriter('10I3').write([n_beams]) + '\n'
+    
+    # iterate over all beams and format lines
+    for nr, ((beam_h, beam_k), energy) in enumerate(zip(indices, energies)):
+        # nr+1 because of Fortran indices starting at 1
+        line = beamlist_format.write([beam_h, beam_k, 1, 1, energy,nr+1])
+        content += line + '\n'
+
+    return content
