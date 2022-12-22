@@ -639,7 +639,10 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
 
         The new settings are accepted only if valid. Otherwise, the
         previous settings are kept. If valid, the settings are also
-        loaded to the camera hardware.
+        loaded to the camera hardware. It is important to ensure that
+        the camera is currently not waiting to for completion of an
+        image acquisition or image processing step, as this could
+        potentially stall the camera.
 
         Parameters
         ----------
@@ -690,12 +693,10 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
                 pass
 
         self.__settings = new_settings
-        if self.is_running:
-            self.stop()
-        self.close()                                                            # TODO: probably should rather use disconnect_()!
+        self.disconnect_()
 
         if _name:
-            # When loading from default settings, there's no point in
+            # When loading from default settings, there's no point in           # TODO: should also clear bad pixels if present
             # trying to connect: the device name is certainly wrong
             LOG.debug("New settings done. (From defaults, will not connect_)")
             return
