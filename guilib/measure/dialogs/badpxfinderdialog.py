@@ -14,6 +14,7 @@ while finding bad pixels for a camera.
 from pathlib import Path
 from datetime import datetime
 import logging
+import sys
 
 from PyQt5 import (QtWidgets as qtw,
                    QtCore as qtc)
@@ -33,6 +34,12 @@ NOT_SET = "\u2014"
 NO_BAD_PX_PATH = "None selected"
 # LOG = logging.getLogger(__name__)
 LOG = logging.getLogger("Debugging")
+
+if False:
+    _h = logging.StreamHandler(sys.stdout)
+    _h.setLevel(logging.DEBUG)
+    LOG.setLevel(logging.DEBUG)
+    LOG.addHandler(_h)
 
 
 def _default_config_path():
@@ -126,6 +133,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
 
     def update_available_camera_list(self, *_):
         """Update the list of available cameras."""
+        LOG.debug("Updating known camera list...")
         camera_combo = self.__ctrls['camera']
         old_selection = camera_combo.currentText()
         self.__available_cameras = base.get_devices('camera')
@@ -140,6 +148,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
         if not old_selection:
             self.__ctrls['bad_px_path'].setText(NO_BAD_PX_PATH)
         self.__enable_controls(True)
+        LOG.debug("Finished updating known camera list")
 
     @property
     def __bad_px_info(self):
@@ -434,12 +443,15 @@ class BadPixelsFinderDialog(qtw.QDialog):
 
     def __on_camera_selected(self, camera_name):
         """React to selection of a new camera."""
+        LOG.debug(f"    Selected camera with name {camera_name!r}")
         if not camera_name:
             # List is empty
             self.active_camera = None
+            LOG.debug("    No cameras in list")
             return
         if self.active_camera and self.active_camera.name == camera_name:
             # Same selection
+            LOG.debug("    Selection unchanged")
             return
 
         # New camera selected.
@@ -449,10 +461,12 @@ class BadPixelsFinderDialog(qtw.QDialog):
 
         # Signal errors by picking an invalid entry
         if not config_name:
+            LOG.debug("    No configuration file found")
             self.__ctrls['camera'].setCurrentIndex(-1)
             self.__ctrls['bad_px_path'].setText(NO_BAD_PX_PATH)
             self.active_camera = None
             return
+        LOG.debug(f"    Valid config file. Making camera. {self.active_camera=}")
         settings = _m_settings.ViPErLEEDSettings.from_settings(config_name)
         settings['camera_settings']['device_name'] = camera_name
 
@@ -686,7 +700,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
         # Device errors are handled by the finder while it runs
         base.safe_disconnect(self.active_camera.error_occurred,
                              self.__on_error_occurred)
-        LOG.debug("About to begin bad-pixels finding routine")
+        LOG.debug(f"About to begin bad-pixels finding routine. {self.__finder_thread.isRunning()=}")
         _INVOKE(self.__finder, "find")
 
     def __stop_timers(self):
