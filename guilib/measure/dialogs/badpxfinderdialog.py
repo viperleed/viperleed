@@ -111,7 +111,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
         self.__compose()
         self.__connect()
 
-    def showEvent(self, event):  # pylint: disable=invalid-name
+    def showEvent(self, event):          # pylint: disable=invalid-name
         """Extend showEvent to update controls."""
         self.__reset_progress_bars()
         self.__progress['group'].hide()
@@ -119,6 +119,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
         self.__ctrls['camera'].setCurrentIndex(-1)
         self.__ctrls['bad_px_path'].setText(NO_BAD_PX_PATH)
         self.adjustSize()
+        self.__finder_thread.start()
         super().showEvent(event)
 
     def accept(self):
@@ -186,13 +187,13 @@ class BadPixelsFinderDialog(qtw.QDialog):
             _INVOKE(self.__finder, "abort")
         except RuntimeError:
             # In case this happens because of an unprocessed
-            # error_occurred before __finder is not None.
-            # This is due to the qApp.processEvents() call
-            # inside __start(). It also guards against trying
-            # to invoke the method if the C++ object wrapped by
-            # self.__finder gets destroyed in the meantime
-            pass
-        self.__reset_controls()
+            # error_occurred before __finder is not None. This is
+            # due to the qApp.processEvents() call inside __start().
+            # It also guards against trying to invoke the method if
+            # the C++ object wrapped by self.__finder gets destroyed
+            # in the meantime. If the invoke call is successful, the
+            # __reset_controls happens when finder is done aborting
+            self.__reset_controls()
         LOG.debug("Bad-pixels finding aborted")
         handler = getattr(self.__finder, 'log_handler', None)
         if handler:
