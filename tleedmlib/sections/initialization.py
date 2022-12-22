@@ -17,7 +17,7 @@ from pathlib import Path
 
 import viperleed.tleedmlib as tl
 from viperleed.tleedmlib.base import angle, rotation_matrix
-from viperleed.tleedmlib.beamgen import runBeamGen
+from viperleed.tleedmlib.beamgen import generate_beamlist
 from viperleed.tleedmlib.psgen import (runPhaseshiftGen, runPhaseshiftGen_old)
 from viperleed.tleedmlib.files.poscar import readPOSCAR, writePOSCAR
 from viperleed.tleedmlib.files.vibrocc import readVIBROCC
@@ -320,13 +320,8 @@ def initialization(sl, rp, subdomain=False):
 
     # generate beamlist
     logger.info("Generating BEAMLIST...")
-    try:
-        bgenpath = os.path.join('tensorleed', 'beamgen3.out')
-        runBeamGen(sl, rp, beamgensource=bgenpath)
-        # this does NOT read the resulting file!
-    except Exception:
-        logger.error("Exception occurred while calling beamgen.")
-        raise
+    generate_beamlist(sl, rp, beamlist_name="BEAMLIST")
+
     try:
         rp.beamlist = readBEAMLIST()
         rp.fileLoaded["BEAMLIST"] = True
@@ -620,13 +615,10 @@ def init_domains(rp):
     rp.pseudoSlab.bulkslab.ucell = copy.copy(largestDomain.sl.bulkslab.ucell)
     # run beamgen for the whole system
     logger.info("Generating BEAMLIST...")
-    try:
-        bgenpath = os.path.join('tensorleed', 'beamgen3.out')
-        runBeamGen(rp.pseudoSlab, rp, beamgensource=bgenpath, domains=True)
-        # this does NOT read the resulting file!
-    except Exception:
-        logger.error("Exception occurred while calling beamgen.")
-        raise
+    generate_beamlist(rp.pseudoSlab,
+                      rp,
+                      domains=True,
+                      beamlist_name='BEAMLIST')
     try:
         rp.beamlist = readBEAMLIST()
         rp.fileLoaded["BEAMLIST"] = True

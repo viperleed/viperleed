@@ -13,7 +13,7 @@ from pathlib import Path
 
 from viperleed import fortranformat as ff
 
-from viperleed.leedbase import (HARTREE_TO_EV,
+from viperleed.tleedmlib.leedbase import (HARTREE_TO_EV,
                                 BOHR_TO_ANGSTROM,
                                 ANGSTROM_TO_BOHR)
 from viperleed.guilib.base import get_equivalent_beams, BeamIndex
@@ -107,7 +107,7 @@ def runBeamGen(sl, rp, beamgensource='', domains=False):
     logger.debug("Wrote to BEAMLIST successfully.")
     return
 
-def beamgen(sl, rp, domains=False, beamlist_name="BEAMLIST"):
+def generate_beamlist(sl, rp, domains=False, beamlist_name="BEAMLIST"):
     """Calculates and writes the contents for the file BEAMLIST.
 
     BEAMLIST contains a list of all diffraction beams that will be used 
@@ -179,6 +179,10 @@ def beamgen(sl, rp, domains=False, beamlist_name="BEAMLIST"):
     # calculate cutoff energy for each beam
     energies = (np.sum(np.dot(indices, inv_surf_vectors)**2, axis=1)
                 /2 *HARTREE_TO_EV *BOHR_TO_ANGSTROM**2)  # scale to correct units
+
+    # sort beams by energy (same as sorting by |G|)
+    sorting_order = np.argsort(energies)
+    energies, indices = energies[sorting_order], indices[sorting_order]
     logger.debug(f"Highest energy considered in BEAMLIST={np.max(energies)}")
 
     # write to file
