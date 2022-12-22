@@ -116,7 +116,10 @@ def beamgen(sl, rp, domains=False, beamlist_name="BEAMLIST"):
     values and a lower cutoff energy below which the beam is evanescent
     (i.e. does not leave the surface and has intensity 0). The used 
     format is defined in make_beamlist_string and dictated by TensErLEED
-    and the legacy beamgen scripts that were used before.
+    and the legacy beamgen scripts that were used before. Note that
+    BEAMLIST is not read directly by refcalc, but instead all input
+    files for the refcalc are combined into one string (by collectFIN in
+    iorefcalc.py) and then piped in.
 
     NB: The energies calculated here are slightly higher than the values
     from beamgenv3 (and beamgen.v1.7) because we use *more accurate*
@@ -145,7 +148,7 @@ def beamgen(sl, rp, domains=False, beamlist_name="BEAMLIST"):
     """
     if sl.bulkslab is None:
         sl.bulkslab = sl.makeBulkSlab(rp)
-    
+
     e_max = rp.THEO_ENERGIES[1]
     surf_ucell = sl.surface_vectors
     inv_surf_vectors = sl.reciprocal_vectors
@@ -221,7 +224,7 @@ def make_beamlist_string(indices, energies):
 
     # set up Fortran format as was used by beamgen
     beamlist_format = ff.FortranRecordWriter(
-        "2F10.5,2I3,10X,'E =  ',F10.4, 2X,'NR.',I4"
+        "2F10.5,2I3,10X,'E =  ',F10.4,2X,'NR.',I5"  # beamgen v1.7 had I5, beamgen v3 had I4 for some reason
         )
     # first line contains number of beams
     content = ff.FortranRecordWriter('10I3').write([n_beams]) + '\n'
