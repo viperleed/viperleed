@@ -10,71 +10,78 @@ Functions for reading and writing the PHASESHIFTS file
 import logging
 import numpy as np
 import os
+from itertools import combinations
 
 from viperleed import fortranformat as ff
 
+
 from viperleed.tleedmlib.leedbase import HARTREE_TO_EV
+
+from viperleed.tleedmlib.leedbase import (get_atomic_number,
+                                          get_element_symbol,
+                                          HARTREE_TO_EV)
 
 try:
     import matplotlib
+except ImportError:
+    _CAN_PLOT = False
+else:
     matplotlib.rcParams.update({'figure.max_open_warning': 0})
     matplotlib.use('Agg')
     from matplotlib.backends.backend_pdf import PdfPages
     import matplotlib.pyplot as plt
-except Exception:
-    plotting = False
-else:
-    plotting = True
+    _CAN_PLOT = True
 
 logger = logging.getLogger("tleedm.files.phaseshifts")
 
 
 def readPHASESHIFTS(sl, rp, readfile='PHASESHIFTS', check=True,
                     ignoreEnRange=False):
-    """Reads from a PHASESHIFTS file.
-    
+    """Read from a PHASESHIFTS file.
+
     Parameters
     ----------
     sl: Slab
     rp: RunParameters
     readfile: str, optional
-        filename to be read. Default is 'PHASESHIFTS'
+        filename to be read. Default is 'PHASESHIFTS'.
     check: bool, optional
-        Wether to check for consistence agains sl and rp. Default is True. If False,
-        sl and rp can be None.
+        Wether to check for consistence agains sl and rp.
+        If False, sl and rp can be None. Default is True.
     ignoreEnRange: bool, optional
-        Check wether the energy range in readfile is sufficient to cover the
-        energy range requested in rp. Default is False.
-        
+        Check wether the energy range in readfile is sufficient to
+        cover the energy range requested in rp. Default is False.
+
     Returns
     -------
     firstline: str
         Header line of the readfile, containing Rundgren parameters.
     phaseshifts: list of tuple
-        Each element is (energy, pahseshifts at energy) where 
-        phaseshifts at energy is [[el0_L0, el0_L1, ...], [el1_L0, ...], ...]
+        Each element is (energy, phaseshifts_at_energy) with
+        phaseshifts_at_energy = [[el0_L0, el0_L1, ...], [el1_L0, ...], ...]
         where eli_Lj is the phaseshift for element i and angular momentum j.
-        Therefore, len(phaseshifts) is the number of energies found, 
-        len(phaseshifts[0][1]) should match the number of elements, and
+        Therefore, len(phaseshifts) is the number of energies found,
+        len(phaseshifts[0][1]) should match the number of sites, and
         len(phaseshifts[0][1][0]) is the number of different
         values of L in the phaseshift file.
     newpsGen: bool
-        Wether the inconsitency found requires a full recalculation of the phaseshifts.
-        This happens if: 
+        Whether the inconsitency found requires a full recalculation
+        of the phaseshifts. This happens if: 
             1) an error occurs while parsing,
-            2) if check, rp.V0_real was not given and could not interpret firstline,
+            2) if check, rp.V0_real was not given and could not
+               interpret firstline,
             3) LMAX of readfile is smaller than required in rp,
             4) if number of blocks inconsitent with elements in sl.
     newpsWrite: bool
-        Wether the inconsitency found requires writing a new PHASESHIFTS file.
-        This is distinct from newpsGen as we can at times generate a new file 
-        from the information read.
+        Whether the inconsitency found requires writing a new
+        PHASESHIFTS file. This is distinct from newpsGen as we
+        can at times generate a new file from the information read.
         This is the case if:
             5) There are fewer blocks than expected, but the number of blocks
                 matches the number of chemical elements in sl. This means however,
                 that all sites with the same chemical element will use the same
                 phaseshift.
-"""
+    """
     rf74x10 = ff.FortranRecordReader('10F7.4')
     ri3 = ff.FortranRecordReader('I3')
 
@@ -106,7 +113,7 @@ def readPHASESHIFTS(sl, rp, readfile='PHASESHIFTS', check=True,
     firstline = filelines[0]
     line_idx = 1
     try:
-        linesperblock = find_block_size(filelines[1:])
+        lines_per_block = find_block_size(filelines[1:])
     except ValueError as err:
         logger.warning(
             f"Error while trying to read PHASESHIFTS: {err} "
@@ -116,7 +123,7 @@ def readPHASESHIFTS(sl, rp, readfile='PHASESHIFTS', check=True,
         return "", [], True, True
     
     # check block length is consitent with number of species
-    if (linesperblock-1)%nel:
+    if (lines_per_block - 1) % nel:
         logger.warning(
             "Error while trying to read PHASESHIFTS: "
             "Could not parse file: The number of blocks may not match "
@@ -126,7 +133,7 @@ def readPHASESHIFTS(sl, rp, readfile='PHASESHIFTS', check=True,
         rp.setHaltingLevel(1)
         return "", [], True, True
 
-    lines_per_element = (linesperblock-1)//nel
+    lines_per_element = (lines_per_block - 1) // nel
 
     while line_idx < len(filelines):
         current_line = filelines[line_idx].strip()
@@ -165,17 +172,68 @@ def readPHASESHIFTS(sl, rp, readfile='PHASESHIFTS', check=True,
     (phaseshifts,
      firstline,
      newpsGen,
-     newpsWrite) = __check_consistency_rp_elements(sl, rp, phaseshifts, firstline, muftin)
+     newpsWrite) = __check_consistency_rp_elements(sl, rp, phaseshifts,
+                                                   firstline, muftin)
 
-    if not ignoreEnRange:
-       newpsGen, newpsWrite = __check_consistency_energy_range(rp, phaseshifts, muftin, newpsGen, newpsWrite)
-    
+    if not ignoreEnRange and not newpsGen:
+        newpsGen = __check_consistency_energy_range(rp, phaseshifts,
+                                                    muftin, newpsGen)
+        newpsWrite |= newpsGen
+
+    # Check consitency of phaseshift values (unless we
+    # already know we have to make a new file anyway)
+    if not newpsGen:
+        __check_consitency_element_order(rp, sl, phaseshifts)
+
     return firstline, phaseshifts, newpsGen, newpsWrite
 
 
 def __check_consistency_rp_elements(sl, rp, phaseshifts, firstline, muftin):
-    # check whether the phaseshifts that were found fit the data:
-    newpsGen, newpsWrite = True, True # should new values should be generated / written to file?
+    """Check that phaseshifts fit the expected number of elements and LMAX.
+
+    Parameters
+    ----------
+    sl : Slab
+        Surface Slab object.
+    rp : Rparams
+        Run paramters.
+    phaseshifts : list
+        Nested list of phaseshifts.
+    firstline : str
+        First line of the phaseshifts file.
+    muftin : list
+        Rundgren coefficients interpreted from the firstline.
+
+    Returns
+    -------
+    phaseshifts: list of tuple
+        Each element is (energy, pahseshifts_at_energy) with 
+        phaseshifts_at_energy = [[el0_L0, el0_L1, ...], [el1_L0, ...], ...]
+        where eli_Lj is the phaseshift for element i and angular momentum j.
+        Therefore, len(phaseshifts) is the number of energies found, 
+        len(phaseshifts[0][1]) should match the number of sites, and
+        len(phaseshifts[0][1][0]) is the number of different
+        values of L in the phaseshift file.
+    firstline: str
+        Header line of the file read, containing Rundgren parameters,
+        modified if newpsWrite is True.
+    newpsGen: bool
+        Wether the inconsitency found requires a full recalculation
+        of the phaseshifts. This happens if: 
+            1) rp.V0_real was not given and could not interpret firstline,
+            2) LMAX in phaseshifts is smaller than required in rp,
+            3) if number of blocks inconsitent with elements in sl.
+    newpsWrite: bool
+        Wether the inconsitency found requires writing a new
+        PHASESHIFTS file. This is distinct from newpsGen as we
+        can at times generate a new file from the information read.
+        This is the case if:
+            4) There are fewer blocks than expected, but the number of
+               blocks matches the number of chemical elements in sl.
+               This means however, that all sites with the same element
+               will use the same phaseshift.
+    """
+    newpsGen, newpsWrite = True, True
 
     n_l_values = len(phaseshifts[0][1][0])
     n_el_and_sites = len(phaseshifts[0][1])
@@ -191,12 +249,13 @@ def __check_consistency_rp_elements(sl, rp, phaseshifts, firstline, muftin):
     if rp.V0_REAL == "default" and not muftin:
         logger.warning(
             "Could not convert first line of PHASESHIFTS file to MUFTIN "
-            "parameters. A new PHASESHIFTS file will be generated.")
+            "parameters. A new PHASESHIFTS file will be generated."
+            )
         rp.setHaltingLevel(1)
 
     elif n_el_and_sites == n_el_and_sites_expected:
-        logger.debug("Found "+str(n_el_and_sites_expected)+" blocks in PHASESHIFTS "
-                        "file, which is consistent with PARAMETERS.")
+        logger.debug(f"Found {n_el_and_sites_expected} blocks in PHASESHIFTS "
+                     "file, which is consistent with PARAMETERS.")
         newpsGen, newpsWrite = False, False
 
     # Check that the phaseshifts read in have sufficient lmax
@@ -214,7 +273,8 @@ def __check_consistency_rp_elements(sl, rp, phaseshifts, firstline, muftin):
             "PHASESHIFTS file. However, the number of blocks matches "
             "the number of chemical elements. A new PHASESHIFTS file "
             "will be generated, assuming that each block in the old "
-            "file should be used for all atoms of one element.")
+            "file should be used for all atoms of one element."
+            )
         rp.setHaltingLevel(1)
         oldps = phaseshifts[:]
         phaseshifts = []
@@ -238,19 +298,23 @@ def __check_consistency_rp_elements(sl, rp, phaseshifts, firstline, muftin):
     else:
         logger.warning(
             "PHASESHIFTS file was read but is inconsistent with "
-            "PARAMETERS. A new PHASESHIFTS file will be generated.")
+            "PARAMETERS. A new PHASESHIFTS file will be generated."
+            )
         rp.setHaltingLevel(1)
 
     return phaseshifts, firstline, newpsGen, newpsWrite
 
 
-def __check_consistency_energy_range(rp, phaseshifts, muftin, newpsGen, newpsWrite):
-    # check whether energy range is large enough:
+def __check_consistency_energy_range(rp, phaseshifts, muftin, newpsGen):
+    """Check that the energy range of phaseshifts is large enough for rp."""
     checkfail = False
-    er = np.arange(rp.THEO_ENERGIES[0], rp.THEO_ENERGIES[1]+1e-4,
-                    rp.THEO_ENERGIES[2])
-    psmin = round(phaseshifts[0][0]*HARTREE_TO_EV, 2)
-    psmax = round(phaseshifts[-1][0]*HARTREE_TO_EV, 2)
+
+    er = np.arange(rp.THEO_ENERGIES[0],
+                   rp.THEO_ENERGIES[1] + 1e-4,
+                   rp.THEO_ENERGIES[2])
+    psmin = round(phaseshifts[0][0] * HARTREE_TO_EV, 2)
+    psmax = round(phaseshifts[-1][0] * HARTREE_TO_EV, 2)
+
     if rp.V0_REAL == "default" or isinstance(rp.V0_REAL, list):
         if isinstance(rp.V0_REAL, list):
             c = rp.V0_REAL
@@ -276,31 +340,148 @@ def __check_consistency_energy_range(rp, phaseshifts, muftin, newpsGen, newpsWri
             "file. If energy range is insufficient, try deleting the "
             "PHASESHIFTS file to generate a new one."
             )
-        return newpsGen, newpsWrite
+        return newpsGen
 
     if (psmin > min(er_inner) or psmax < max(er_inner)):
         if (psmin > min(er_inner) and psmin <= 20.
                 and psmax >= max(er_inner)):
             # can lead to re-calculation of phaseshifts every run if
-            #  V0r as calculated by EEASiSSS differs from 'real' V0r.
-            #  Don't automatically correct.
+            # V0r as calculated by EEASiSSS differs from 'real' V0r.
+            # Don't automatically correct.
             logger.warning(
-                "Lowest value in PHASESHIFTS file ({:.1f} "
-                "eV) is larger than the lowest predicted scattering "
-                "energy ({:.1f} eV). If this causes problems in the "
+                f"Lowest value in PHASESHIFTS file ({psmin:.1f} eV) is "
+                "larger than the lowest predicted scattering energy "
+                f"({min(er_inner):.1f} eV). If this causes problems in the "
                 "reference calculation, try deleting the PHASESHIFTS "
                 "file to generate a new one, or increase the starting "
                 "energy in the THEO_ENERGIES parameter."
-                .format(psmin, min(er_inner)))
+                )
         else:
             logger.warning(
                 "The energy range found in the PHASESHIFTS "
                 "file is smaller than the energy range requested for "
                 "theoretical beams. A new PHASESHIFTS file will be "
-                "generated.")
-            newpsGen, newpsWrite = True, True
+                "generated."
+                )
+            return True
 
-    return newpsGen, newpsWrite
+    return newpsGen
+
+
+def __check_consitency_element_order(rp, sl, phaseshifts, 
+                                     eps=None, l_max_cutoff=4):
+    """Determine if elements may have been assigned wrong phaseshifts.
+
+    In general at high energies and at high LMAX, heavier elements
+    (higher atomic number) have larger elastic scattering phaseshifts
+    than lighter atoms. If this is not the case in the read in
+    PHASESHIFTS file, the ordering in the file may be wrong.
+    This is a very common user mistake, that often occurs when
+    using a different POSCAR with pre-existing PHASESHIFTS.
+
+    Warnings will be issued if an inconsistency is found for
+    elements whose atomic numbers differ by at least 2. This
+    means, e.g., that Cr--Ni will not issue warnings for Fe,
+    but Ti and Cu will.
+
+    Parameters
+    ----------
+    rp : Rparams
+        Run parameters.
+    sl : Slab
+        Surface Slab object. Contains site types to check against.
+    phaseshifts : list
+        Phaseshifts list, as read in from a PHASESHIFTS file.
+    eps : float, optional
+        Tolerance to use when comparing phaseshift values. If None
+        or not given, eps == rp.PHASESHIFT_EPS. Default is None.
+    l_max_cutoff : int, optional
+        Lower cutoff for angular momentum quantum number to be used for
+        comparison of phaseshifts. Heavier elements should always have
+        higher phaseshifts in the limit of high energy and high angular
+        momentum. Behaviour for low energy/low angular momentum is not
+        as clear cut, as phaseshifts may cross zero and are pi periodic.
+        Default is 4.
+
+    Returns
+    -------
+    may_have_wrong_phaseshifts : set
+        Set of chemical elements (str) which may be assigned the wrong
+        phaseshifts. If no inconsitency is detected, the set is empty.
+    """
+    if not eps:
+        eps = rp.PHASESHIFT_EPS
+    n_l_values = len(phaseshifts[0][1][0])
+    n_sites_in_ps = len(phaseshifts[0][1])  # No. species in PHASESHIFTS
+
+    # Get atomic number of all site types in the order
+    # they appear in sl.sitelist, taking into account
+    # that some sites may have mixed occupation
+    element_mix = []
+    for site in sl.sitelist:
+        element_mix.extend(
+            site.mixedEls  # Mixed occupation
+            or [site.el]   # Only one element
+            )
+    # get atomic numbers from element symbols
+    atomic_numbers = tuple(get_atomic_number(el)
+                           for el in element_mix)
+
+    # Get phaseshifts at highest LMAX that are larger than eps
+    en_idx = -1  # look at highest energy only
+    for l_value in reversed(range(l_max_cutoff, n_l_values)):
+        ps_sites = np.array(list(
+            phaseshifts[en_idx][1][site_idx][l_value]
+            for site_idx in range(n_sites_in_ps)
+            ))
+        if all(abs(ps_sites) > eps):
+            break
+    else:
+        # None of the phaseshifts are larger than eps at this energy
+        logger.warning(
+            "Could not check consistency of PHASESHIFTS file: All "
+            f"PHASESHIFTS are smaller than {eps} at the largest energy."
+            )
+        rp.raiseHaltingLevel(1)
+        return
+
+    affected_elements = set()
+    ps_pairs = list(zip(atomic_numbers, ps_sites))
+    at_number = lambda item : item[0]
+    pair_ps = lambda item : item[1]
+    ps_pairs.sort(key=at_number) # sort by atomic number
+
+    # Go through all pairs and check that heavier
+    # elements have larger phaseshifts
+    for pair_1, pair_2 in combinations(ps_pairs, 2):
+        at_num_change = at_number(pair_1) - at_number(pair_2)
+        if at_num_change <= 0:  # Same element or redundant iteration
+            continue
+        # Different element. Check that phaseshifts are also
+        # ordered, and complain only if elements are not
+        # close neighbors
+        if (abs(pair_ps(pair_1)) >= abs(pair_ps(pair_2)) - eps
+                and at_num_change > 2):
+            continue
+        affected_elements.update((at_number(pair_1), at_number(pair_2)))
+    # get element symbols
+    may_have_wrong_phaseshifts = set(get_element_symbol(el)
+                                     for el in affected_elements)
+
+    if may_have_wrong_phaseshifts:
+        elements_str = ", ".join(affected_elements)
+        logger.warning(
+            "Detected inconsitency in PHASESHIFTS: "
+            "Found larger phaseshifts for lighter elements "
+            f"than for heavier elements at LMAX={l_value}. "
+            "This may mean that the blocks in PHASESHIFTS "
+            "are in the wrong order! "
+            f"Affected elements: {elements_str}. "
+            "You may want to regenerate the PHASESHIFTS file or "
+            "reorder the blocks (see utility ModifyPhaseshifts). "
+        )
+        rp.setHaltingLevel(1)
+    return may_have_wrong_phaseshifts
 
 
 def writePHASESHIFTS(firstline, phaseshifts, filename='PHASESHIFTS'):
@@ -342,10 +523,8 @@ def plot_phaseshifts(sl, rp, filename="Phaseshifts_plots.pdf"):
     Returns
     -------
     None.
-
     """
-    global plotting
-    if not plotting:
+    if not _CAN_PLOT:
         logger.debug("Necessary modules for plotting not found. Skipping "
                      "Phaseshift plotting.")
         return
@@ -410,24 +589,18 @@ def plot_phaseshifts(sl, rp, filename="Phaseshifts_plots.pdf"):
 
 
 def find_block_size(filelines):
-    """Returns the periodicity of lengths found in filelines.
-    
-    """
-    
+    """Returns the periodicity of lengths found in filelines."""
     lens_as_chars = "".join(chr(len(l.rstrip())) for l in filelines)
-    
-    # allow empty lines at the end
-    pass
+
+    # Allow empty lines at the end
     while lens_as_chars.endswith(chr(0)):
         lens_as_chars = lens_as_chars[:-1]
-    pass
     if chr(0) in lens_as_chars:
         raise ValueError("Empty line found.")
-    
-    # see stackoverflow.com/questions/29481088
-    period = (lens_as_chars+lens_as_chars).find(lens_as_chars, 1, -1)
-    pass
+
+    # See stackoverflow.com/questions/29481088
+    period = (lens_as_chars * 2).find(lens_as_chars, 1, -1)
     if period == -1:
         raise ValueError("Could not identify block.")
-    
+
     return period

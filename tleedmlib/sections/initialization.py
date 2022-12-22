@@ -24,7 +24,8 @@ from viperleed.tleedmlib.files.vibrocc import readVIBROCC
 from viperleed.tleedmlib.files.parameters import (
     readPARAMETERS, interpretPARAMETERS, modifyPARAMETERS)
 from viperleed.tleedmlib.files.phaseshifts import (
-    readPHASESHIFTS, writePHASESHIFTS, plot_phaseshifts)
+    readPHASESHIFTS, writePHASESHIFTS, plot_phaseshifts
+    )
 from viperleed.tleedmlib.files.beams import (
     readOUTBEAMS, readBEAMLIST, checkEXPBEAMS, readIVBEAMS, sortIVBEAMS,
     writeIVBEAMS)
