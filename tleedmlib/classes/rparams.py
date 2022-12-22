@@ -23,7 +23,7 @@ else:
     plotting = True
 
 from viperleed.tleedmlib.files.iodeltas import checkDelta
-from viperleed.tleedmlib.leedbase import getMaxTensorIndex
+from viperleed.tleedmlib.leedbase import getMaxTensorIndex, HARTREE_TO_EV
 from viperleed.tleedmlib.base import available_cpu_count
 from viperleed.tleedmlib.checksums import (
     KNOWN_TL_VERSIONS,
@@ -372,7 +372,7 @@ class Rparams:
             hi = len(self.phaseshifts)-1
             if self.THEO_ENERGIES[1] > 0:
                 for i in range(0, len(self.phaseshifts)):
-                    if (self.phaseshifts[i][0]*27.211396
+                    if (self.phaseshifts[i][0]*HARTREE_TO_EV
                             > self.THEO_ENERGIES[1]):
                         hi = i
                         break

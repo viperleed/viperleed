@@ -2,7 +2,7 @@
 """
 Created on Mon Aug 17 15:24:16 2020
 
-@author: Florian Kraushofer
+@author: Florian Kraushofer, Alexander Imre
 """
 
 import os
@@ -13,12 +13,12 @@ from pathlib import Path
 
 from viperleed import fortranformat as ff
 
+from viperleed.leedbase import (HARTREE_TO_EV,
+                                BOHR_TO_ANGSTROM,
+                                ANGSTROM_TO_BOHR)
 from viperleed.guilib.base import get_equivalent_beams, BeamIndex
 
 logger = logging.getLogger("tleedm.beamgen")
-
-_HARTREE_TO_EV = 27.211396
-_BOHR_TO_ANGSTROM = 0.529177210903
 
 
 def runBeamGen(sl, rp, beamgensource='', domains=False):
@@ -158,8 +158,8 @@ def beamgen(sl, rp, domains=False, beamlist_name="BEAMLIST"):
     conv_crit = rp.ATTENUATION_EPS  # convergence criterion for refcalc
     # effective cutoff energy to use (scale to correct units)
     e_max_eff = (2*e_max +
-                 (np.log(conv_crit)/d_min*_BOHR_TO_ANGSTROM)**2
-                 *_HARTREE_TO_EV)
+                 (np.log(conv_crit)/(d_min*ANGSTROM_TO_BOHR))**2
+                 *HARTREE_TO_EV)
 
     # use guilib to generate list of beams
     leedParameters = {
@@ -175,7 +175,7 @@ def beamgen(sl, rp, domains=False, beamlist_name="BEAMLIST"):
                        dtype="float64")
     # calculate cutoff energy for each beam
     energies = (np.sum(np.dot(indices, inv_surf_vectors)**2, axis=1)
-                /2 *_HARTREE_TO_EV *_BOHR_TO_ANGSTROM**2)  # scale to correct units
+                /2 *HARTREE_TO_EV *BOHR_TO_ANGSTROM**2)  # scale to correct units
     logger.debug(f"Highest energy considered in BEAMLIST={np.max(energies)}")
 
     # write to file

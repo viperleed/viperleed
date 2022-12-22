@@ -21,7 +21,7 @@ from pathlib import Path
 from viperleed import fortranformat as ff
 from viperleed.tleedmlib.leedbase import (
     fortran_compile_batch, getTLEEDdir, getMaxTensorIndex, monitoredPool,
-    copy_compile_log)
+    copy_compile_log, HARTREE_TO_EV)
 from viperleed.tleedmlib.base import splitMaxRight
 from viperleed.tleedmlib.files.parameters import modifyPARAMETERS
 import viperleed.tleedmlib.files.beams as beams
@@ -378,7 +378,8 @@ def refcalc(sl, rp, subdomain=False, parent_dir=""):
     else:    # find appropriate LMAX per energy
         if rp.PHASESHIFT_EPS == 0:
             rp.PHASESHIFT_EPS = 0.01
-        ps_en = [(i, ps[0]*27.211396) for (i, ps) in enumerate(rp.phaseshifts)]
+        ps_en = [(i, ps[0]*HARTREE_TO_EV) for (i, ps)
+                 in enumerate(rp.phaseshifts)]
         lmax = {}  # lmax as a function of energy
         warn_small = True
         warn_large = True

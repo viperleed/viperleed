@@ -86,6 +86,11 @@ ATOMIC_MASS = {
     "Po": 209, "At": 210, "Rn": 222, "Fr": 223, "Ra": 226.0254, "Ac": 227.0278,
     "Pa": 231.0359, "Th": 232.0381, "Np": 237.0482, "U": 238.029}
 
+# conversion Angstrom and eV <-> atomic units
+HARTREE_TO_EV = 27.211396
+EV_TO_HARTREE = 1/HARTREE_TO_EV
+BOHR_TO_ANGSTROM = 0.529177210903
+ANGSTROM_TO_BOHR = 1/BOHR_TO_ANGSTROM
 
 ###############################################
 #                FUNCTIONS                    #

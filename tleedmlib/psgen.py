@@ -17,6 +17,7 @@ import shutil
 import viperleed.tleedmlib as tl
 from viperleed import fortranformat as ff
 from viperleed.tleedmlib.files.parameters import PARAM_LIMITS
+from viperleed.tleedmlib.leedbase import EV_TO_HARTREE
 
 logger = logging.getLogger("tleedm.psgen")
 
@@ -429,7 +430,7 @@ def runPhaseshiftGen_old(sl, rp,
     for en in outvalsSorted:
         if len(outvalsSorted[en]) == outvalLength:
             # drop energies where phaseshift was not calculated for all sites
-            phaseshifts.append((en/27.211396, outvalsSorted[en])) # conversion eV to Hartree
+            phaseshifts.append((en*EV_TO_HARTREE, outvalsSorted[en])) # conversion eV to Hartree
     if firstline == "":
         logger.error("Could not find first line for PHASESHIFTS file "
                      "(should contain MUFTIN parameters).")
@@ -1041,7 +1042,7 @@ def convert_eeasisss_output(sl, rp, atom_types, lmax, Emax, Estep, ps_outdir):
                     label = cel + '_in_' + site.label
                     ps.append(phaseshift_averages[(label, cel)][j,:].tolist())
 
-        energy_hartree= energy[j]/27.211396 # conversion from eV to Hartree
+        energy_hartree= energy[j]*EV_TO_HARTREE # conversion from eV to Hartree
         phaseshifts.append([energy_hartree,ps])
 
     # format into old output format – int at beginning of line is skipped in old version too!
