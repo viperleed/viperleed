@@ -13,6 +13,8 @@ a factor of less than ATTENUATION_EPS to interact with the next layer.
 **TODO**: This may be wrong. I (MR) think that all beams whose intensity
 had a relative change I_propagated/I_initial > ATTENUATION_EPS will be 
 kept! To be checked in the code.
+AI: TensErLEED has conflicting comments about it.
+Tt also mentioned in subroutine BEAMS, where it says beams with imaginary out-of-plane wave vector > TST are considered evanescent.
 
 **Default**: ATTENUATION_EPS = 0.001
 
@@ -29,4 +31,4 @@ Typical values < 0.005.
 
 .. note::
   *  This parameter can usually be left to its default value. Tweaking it can help convergence only in those cases in which the minimum interlayer distance goes below 1.0 Å.
-  *  The minimum value is 0.0001 up to TensErLEED 1.61 because FORTRAN reads it as a F7.4
+  *  The minimum value is 1e-4 up to TensErLEED 1.61 because FORTRAN reads it as a F7.4
