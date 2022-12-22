@@ -244,16 +244,44 @@ class Slab:
 
     @property
     def surface_vectors(self):
+        """Returns the real space surface lattice vectors (a, b) as an
+        array.
+
+        This is the same array one would get from the bulk surface
+        unit cell and the superlattice matrix.
+
+        Returns
+        -------
+        np.ndarray, shape=(2, 2)
+            Array of *real space* lattice vectors *as rows*.
+
+        Raises
+        ------
+        ValueError
+            If the Slab was not assigned a unit cell.
+        """
         if self.ucell == np.array([]):
             raise ValueError("Slab does not have a unit cell defined.")
-        # This is the same matrix one would get from the bulk surface
-        # unit cell and the superlattice matrix
         return self.ucell[:2, :2].T
 
     @property
     def reciprocal_vectors(self):
-        surf_vecs = self.surface_vectors
-        return (2*np.pi*np.linalg.inv(surf_vecs)) # inverse already has factor of 1/det!
+        """ Returns the reciprocal lattice vectors as an array.
+
+        Reciprocal vectors are defined by
+        $a_i \dot$ b_j = 2\pi\delta_{ij}$.
+        We need to transpose here again, because of swap row <-> col
+        when going between real and reciprocal space.
+        TensErLEED always does this calculation explicitly and 
+        normalizes to area, but here the inverse already contains a
+        factor of 1/det.
+
+        Returns
+        -------
+        np.ndarray, shape=(2, 2)
+            Array of *reciprocal* lattice vectors *as rows*.
+        """
+        return (2*np.pi*np.linalg.inv(self.surface_vectors).T)
 
     def fullUpdate(self, rparams):
         """readPOSCAR initializes the slab with information from POSCAR;
