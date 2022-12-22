@@ -79,6 +79,10 @@ def on_frame_ready_(__grabber_handle, image_start_pixel,
     """
     process_info.frame_times.append(timer())
     camera = process_info.camera
+    if not camera.connected:
+        return
+
+    process_info.frame_times.append(timer())
     n_frames_received = len(process_info.frame_times)
 
     if n_frames_received > 2:
