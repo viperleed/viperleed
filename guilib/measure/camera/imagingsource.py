@@ -79,8 +79,11 @@ def on_frame_ready_(__grabber_handle, image_start_pixel,
         Each time, except while estimating the frame rate. Carries
         a numpy array with a copy of the image data.
     """
-    process_info.frame_times.append(timer())
     camera = process_info.camera
+    if not camera.connected:
+        return
+
+    process_info.frame_times.append(timer())
     n_frames_received = len(process_info.frame_times)
 
     fr_rate, exposure = camera.get_frame_rate(), camera.exposure
