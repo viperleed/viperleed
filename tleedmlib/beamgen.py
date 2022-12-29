@@ -152,7 +152,7 @@ def generate_beamlist(sl, rp, domains=False, beamlist_name="BEAMLIST"):
 
     e_max = rp.THEO_ENERGIES[1]
     surf_ucell = sl.surface_vectors
-    inv_surf_vectors = sl.reciprocal_vectors
+    inv_bulk_surf_vectors = sl.bulkslab.reciprocal_vectors
 
     if not domains:
         d_min = sl.getMinLayerSpacing() * 0.7
@@ -173,14 +173,15 @@ def generate_beamlist(sl, rp, domains=False, beamlist_name="BEAMLIST"):
         'surfGroup': sl.foundplanegroup,
         'bulkGroup': sl.bulkslab.foundplanegroup,
     }
-    equivalent_beams = get_equivalent_beams(leedParameters)
+    # use **only** beams from domain specified in rp.SUPERLATTICE
+    equivalent_beams = get_equivalent_beams(leedParameters, domains=0)
     # strip away symmetry group information
     beam_indices_raw = list(BeamIndex(beam[0]) for beam in equivalent_beams)
     subset_classes, reduced_indices = get_beam_scattering_subsets(beam_indices_raw)
     # TODO: create test case to check that len(subset_classes) == np.linalg.det(rp.SUPERLATTICE)
 
     # sort beams into scattering subsets
-    beam_subsets = ([]*len(subset_classes),)
+    beam_subsets = [[] for set in range(len(subset_classes))]
     for index, red_index in zip(beam_indices_raw, reduced_indices):
         applicable_subset = subset_classes.index(red_index)
         beam_subsets[applicable_subset].append(index)
@@ -193,7 +194,7 @@ def generate_beamlist(sl, rp, domains=False, beamlist_name="BEAMLIST"):
         # convert to float array
         indices_arr = np.array(beam_indices, dtype="float64")
         # calculate cutoff energy for each beam
-        energies = (np.sum(np.dot(beam_indices, inv_surf_vectors)**2, axis=1)
+        energies = (np.sum(np.dot(indices_arr, inv_bulk_surf_vectors)**2, axis=1)
                     /2 *HARTREE_TO_EV *BOHR_TO_ANGSTROM**2)  # scale to correct units
 
         # sort beams by energy (same as sorting by |G|)
@@ -204,7 +205,8 @@ def generate_beamlist(sl, rp, domains=False, beamlist_name="BEAMLIST"):
         all_indices_arr.append(indices_arr)
         all_energies.append(energies)
     beamlist_content = make_beamlist_string(all_indices_arr, all_energies)
-    logger.debug(f"Highest energy considered in BEAMLIST={max(all_energies)}")
+    max_energy = max((np.max(energies) for energies in all_energies))
+    logger.debug(f"Highest energy considered in BEAMLIST={max_energy}")
 
     # write to file
     write_file_path = Path(beamlist_name)
@@ -246,6 +248,7 @@ def make_beamlist_string(all_indices, all_energies):
         "2F10.5,2I3,10X,'E =  ',F10.4,2X,'NR.',I5"  # beamgen v1.7 had I5, beamgen v3 had I4 for some reason
         )
     line_nr = 0
+    content = ""
     for indices, energies in zip(all_indices, all_energies):
         n_beams = indices.shape[0]
         if not energies.shape == (n_beams,) or not indices.shape == (n_beams, 2):
@@ -254,7 +257,7 @@ def make_beamlist_string(all_indices, all_energies):
                 f"and energies (shape={energies.shape}).")
 
         # first line contains number of beams
-        content = ff.FortranRecordWriter('10I3').write([n_beams]) + '\n'
+        content += ff.FortranRecordWriter('10I3').write([n_beams]) + '\n' # TODO: why limit to 999 beams?
         line_nr += 1
 
         # iterate over all beams and format lines
@@ -302,11 +305,11 @@ def get_beam_scattering_subsets(beam_indices_raw):
         A list of corresponding reduced indices for beam indices_raw.
     """
 
-    reduced_indices = list(BeamIndex(h%1,k%1) for (h,k) in beam_indices_raw)
+    reduced_indices = [(h%1,k%1) for (h,k) in beam_indices_raw]
     subset_classes = set(reduced_indices)
 
-    # sort order of subsets by |(h_red, k_red)|
-    by_h_k_red = lambda index: abs(index[0]) + abs(index[1])
+    # sort order of subsets by |(h_red, k_red)|^2
+    by_h_k_red = lambda index: index[0]**2 + index[1]**2
     subset_classes = tuple(sorted(subset_classes, key= by_h_k_red))
 
     return subset_classes, reduced_indices
