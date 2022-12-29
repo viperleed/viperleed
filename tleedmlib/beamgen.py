@@ -186,6 +186,7 @@ def generate_beamlist(sl, rp, domains=False, beamlist_name="BEAMLIST"):
         beam_subsets[applicable_subset].append(index)
 
     all_energies = []
+    all_indices_arr = []
     beamlist_content = ""
     # for every subset calculate energies, sort and generate partial string
     for beam_indices in beam_subsets:
@@ -197,11 +198,12 @@ def generate_beamlist(sl, rp, domains=False, beamlist_name="BEAMLIST"):
 
         # sort beams by energy (same as sorting by |G|)
         sorting_order = np.argsort(energies)
-        energies, indices = energies[sorting_order], indices_arr[sorting_order]
-        
+        energies, indices_arr = energies[sorting_order], indices_arr[sorting_order]
+
         # generate file contents for beam subset
-        beamlist_content += make_beamlist_string(indices_arr, energies)
-        all_energies.extend(energies.tolist())
+        all_indices_arr.append(indices_arr)
+        all_energies.append(energies)
+    beamlist_content = make_beamlist_string(all_indices_arr, all_energies)
     logger.debug(f"Highest energy considered in BEAMLIST={max(all_energies)}")
 
     # write to file
@@ -217,15 +219,16 @@ def generate_beamlist(sl, rp, domains=False, beamlist_name="BEAMLIST"):
     return
 
 
-def make_beamlist_string(indices, energies):
+def make_beamlist_string(all_indices, all_energies):
     """Creates contents for file BEAMLIST for each beamset in the format
     used be the legacy beamgen scripts by U. Loeffler and R. Doell.
 
     Parameters
     ----------
-    indices : np.ndarray, shape=(n_beams, 2)
-        Indices (diffraction orders) of the beams.
-    energies : np.ndarray, shape=(n_beams,)
+    all_indices : list(np.ndarray, shape=(n_beams_subset, 2))
+        Indices (diffraction orders) of the beams. n_beams_subset is 
+        the number of beams in each subset.
+    all_energies : np.ndarray, shape=(n_beams_subset,)
         Lower cutoff energies for the beams.
 
     Returns
@@ -238,24 +241,28 @@ def make_beamlist_string(indices, energies):
     ValueError
         If indices and energies have incompatible shapes.
     """
-    n_beams = indices.shape[0]
-    if not energies.shape == (n_beams,) or not indices.shape == (n_beams, 2):
-        raise ValueError(
-            f"Incompatible size of indices (shape={indices.shape})"
-            f"and energies (shape={energies.shape}).")
-
     # set up Fortran format as was used by beamgen
     beamlist_format = ff.FortranRecordWriter(
         "2F10.5,2I3,10X,'E =  ',F10.4,2X,'NR.',I5"  # beamgen v1.7 had I5, beamgen v3 had I4 for some reason
         )
-    # first line contains number of beams
-    content = ff.FortranRecordWriter('10I3').write([n_beams]) + '\n'
+    line_nr = 0
+    for indices, energies in zip(all_indices, all_energies):
+        n_beams = indices.shape[0]
+        if not energies.shape == (n_beams,) or not indices.shape == (n_beams, 2):
+            raise ValueError(
+                f"Incompatible size of indices (shape={indices.shape})"
+                f"and energies (shape={energies.shape}).")
 
-    # iterate over all beams and format lines
-    for nr, ((beam_h, beam_k), energy) in enumerate(zip(indices, energies)):
-        # nr+1 because of Fortran indices starting at 1
-        line = beamlist_format.write([beam_h, beam_k, 1, 1, energy,nr+1])
-        content += line + '\n'
+        # first line contains number of beams
+        content = ff.FortranRecordWriter('10I3').write([n_beams]) + '\n'
+        line_nr += 1
+
+        # iterate over all beams and format lines
+        for nr, ((beam_h, beam_k), energy) in enumerate(zip(indices, energies)):
+            # nr+1 because of Fortran indices starting at 1
+            line = beamlist_format.write([beam_h, beam_k, 1, 1, energy,line_nr])
+            content += line + '\n'
+            line_nr += 1
 
     return content
 
