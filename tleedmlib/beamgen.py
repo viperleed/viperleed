@@ -161,9 +161,9 @@ def generate_beamlist(sl, rp, domains=False, beamlist_name="BEAMLIST"):
 
     conv_crit = rp.ATTENUATION_EPS  # convergence criterion for refcalc
     # effective cutoff energy to use (scale to correct units)
-    e_max_eff = (2*e_max +
+    e_max_eff = (e_max +
                  (np.log(conv_crit)/(d_min*ANGSTROM_TO_BOHR))**2
-                 *HARTREE_TO_EV)
+                 / 2 *HARTREE_TO_EV)
 
     # use guilib to generate list of beams
     leedParameters = {
@@ -172,6 +172,7 @@ def generate_beamlist(sl, rp, domains=False, beamlist_name="BEAMLIST"):
         'SUPERLATTICE': rp.SUPERLATTICE,
         'surfGroup': sl.foundplanegroup,
         'bulkGroup': sl.bulkslab.foundplanegroup,
+        'screenAperture': 180,
     }
     # use **only** beams from domain specified in rp.SUPERLATTICE
     equivalent_beams = get_equivalent_beams(leedParameters, domains=0)
