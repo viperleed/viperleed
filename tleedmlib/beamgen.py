@@ -172,7 +172,7 @@ def generate_beamlist(sl, rp, domains=False, beamlist_name="BEAMLIST"):
         'SUPERLATTICE': rp.SUPERLATTICE,
         'surfGroup': sl.foundplanegroup,
         'bulkGroup': sl.bulkslab.foundplanegroup,
-        'screenAperture': 180,
+        'screenAperture': 180,  # all beams, since this is for internal calculation
     }
     # use **only** beams from domain specified in rp.SUPERLATTICE
     equivalent_beams = get_equivalent_beams(leedParameters, domains=0)
@@ -229,7 +229,7 @@ def make_beamlist_string(all_indices, all_energies):
     Parameters
     ----------
     all_indices : list(np.ndarray, shape=(n_beams_subset, 2))
-        Indices (diffraction orders) of the beams. n_beams_subset is 
+        Indices (diffraction orders) of the beams. n_beams_subset is
         the number of beams in each subset.
     all_energies : np.ndarray, shape=(n_beams_subset,)
         Lower cutoff energies for the beams.
