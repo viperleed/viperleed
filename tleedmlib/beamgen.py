@@ -107,6 +107,7 @@ def runBeamGen(sl, rp, beamgensource='', domains=False):
     logger.debug("Wrote to BEAMLIST successfully.")
     return
 
+
 def generate_beamlist(sl, rp, domains=False, beamlist_name="BEAMLIST"):
     """Calculates and writes the contents for the file BEAMLIST.
 
@@ -173,24 +174,41 @@ def generate_beamlist(sl, rp, domains=False, beamlist_name="BEAMLIST"):
         'bulkGroup': sl.bulkslab.foundplanegroup,
     }
     equivalent_beams = get_equivalent_beams(leedParameters)
-    # convert to float array
-    indices = np.array(list(BeamIndex(beam[0]) for beam in equivalent_beams),
-                       dtype="float64")
-    # calculate cutoff energy for each beam
-    energies = (np.sum(np.dot(indices, inv_surf_vectors)**2, axis=1)
-                /2 *HARTREE_TO_EV *BOHR_TO_ANGSTROM**2)  # scale to correct units
+    # strip away symmetry group information
+    beam_indices_raw = list(BeamIndex(beam[0]) for beam in equivalent_beams)
+    subset_classes, reduced_indices = get_beam_scattering_subsets(beam_indices_raw)
+    # TODO: create test case to check that len(subset_classes) == np.linalg.det(rp.SUPERLATTICE)
 
-    # sort beams by energy (same as sorting by |G|)
-    sorting_order = np.argsort(energies)
-    energies, indices = energies[sorting_order], indices[sorting_order]
-    logger.debug(f"Highest energy considered in BEAMLIST={np.max(energies)}")
+    # sort beams into scattering subsets
+    beam_subsets = ([]*len(subset_classes),)
+    for index, red_index in zip(beam_indices_raw, reduced_indices):
+        applicable_subset = subset_classes.index(red_index)
+        beam_subsets[applicable_subset].append(index)
+
+    all_energies = []
+    beamlist_content = ""
+    # for every subset calculate energies, sort and generate partial string
+    for beam_indices in beam_subsets:
+        # convert to float array
+        indices_arr = np.array(beam_indices, dtype="float64")
+        # calculate cutoff energy for each beam
+        energies = (np.sum(np.dot(beam_indices, inv_surf_vectors)**2, axis=1)
+                    /2 *HARTREE_TO_EV *BOHR_TO_ANGSTROM**2)  # scale to correct units
+
+        # sort beams by energy (same as sorting by |G|)
+        sorting_order = np.argsort(energies)
+        energies, indices = energies[sorting_order], indices_arr[sorting_order]
+        
+        # generate file contents for beam subset
+        beamlist_content += make_beamlist_string(indices_arr, energies)
+        all_energies.extend(energies.tolist())
+    logger.debug(f"Highest energy considered in BEAMLIST={max(all_energies)}")
 
     # write to file
-    beamlist_contents = make_beamlist_string(indices, energies)
     write_file_path = Path(beamlist_name)
     try:
         with open(write_file_path, 'w') as file:
-            file.write(beamlist_contents)
+            file.write(beamlist_content)
     except Exception:
         logger.error(f"Unable to write file {beamlist_name}")
         raise
@@ -200,8 +218,8 @@ def generate_beamlist(sl, rp, domains=False, beamlist_name="BEAMLIST"):
 
 
 def make_beamlist_string(indices, energies):
-    """Creates contents for file BEAMLIST in the format used be the 
-    legacy beamgen scripts by U. Loeffler and R. Doell.
+    """Creates contents for file BEAMLIST for each beamset in the format
+    used be the legacy beamgen scripts by U. Loeffler and R. Doell.
 
     Parameters
     ----------
@@ -240,3 +258,48 @@ def make_beamlist_string(indices, energies):
         content += line + '\n'
 
     return content
+
+
+def get_beam_scattering_subsets(beam_indices_raw):
+    """Takes a list of beam_indices and returns the beam scattering
+    subsets and reduced indices for sorting.
+
+    LEED diffraction beams are grouped into subsets for the computation
+    of reflection/transmission matrices. In the full dynamic scattering
+    calculation (refcalc), one needs to consider that one beam can be
+    scattered into another. However, this is only possible, if the
+    beam wave-vectors are related by the *bulk* unit cell. I.e. a beam
+    (1/2,0) can be scattered into (3/2,0), but not into (1,0).
+    This property can be used in the refcalc, to simplify calculations
+    by making the reflection/transmission matrices block-diagonal.
+    To enable this, we need to group the beams accordingly in BEAMLIST.
+
+    This function takes a list of beams (as BeamIndex objects) and
+    calculates reduced indices via h_red = h%1, k_red = k%1 (wrapping
+    the beams back in the first Brillouin zone). It then takes a set
+    of the reduced indices, to generate unique identifiers of the
+    subsets. The first (and possibly only) subset contains, by
+    definition, the integer beams, starting with (0|0).
+
+    Parameters
+    ----------
+    beam_indices_raw : [BeamIndex]
+        List of beam indices.
+
+    Returns
+    -------
+    tuple
+        A tuple containing the unique first Brillouin zone beam indices
+        for the beam subsets. The length gives the number of subsets.
+    list
+        A list of corresponding reduced indices for beam indices_raw.
+    """
+
+    reduced_indices = list(BeamIndex(h%1,k%1) for (h,k) in beam_indices_raw)
+    subset_classes = set(reduced_indices)
+
+    # sort order of subsets by |(h_red, k_red)|
+    by_h_k_red = lambda index: abs(index[0]) + abs(index[1])
+    subset_classes = tuple(sorted(subset_classes, key= by_h_k_red))
+
+    return subset_classes, reduced_indices
