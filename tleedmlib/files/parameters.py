@@ -37,7 +37,7 @@ _KNOWN_PARAMS = [
     'SYMMETRY_FIX', 'TENSOR_INDEX', 'TENSOR_OUTPUT', 'THEO_ENERGIES',
     'TL_VERSION', 'TL_IGNORE_CHECKSUM',
     'T_DEBYE', 'T_EXPERIMENT', 'V0_IMAG', 'V0_REAL',
-    'V0_Z_ONSET', 'VIBR_AMP_SCALE'
+    'V0_Z_ONSET', 'VIBR_AMP_SCALE', 'ZIP_COMPRESSION_LEVEL',
     ]
 
 # _PARAM_ALIAS keys should be all lowercase, with no underscores
@@ -55,6 +55,8 @@ _PARAM_ALIAS = {
     'ivplot': 'PLOT_IV',
     'overlap': 'S_OVL',
     'mtoverlap': 'S_OVL',
+    'compression_level': 'ZIP_COMPRESSION_LEVEL',
+    'compression': 'ZIP_COMPRESSION_LEVEL',
     }
 
 
@@ -1559,6 +1561,9 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
             if type(setTo) == str:
                 setTo = setTo.rstrip()
             rpars.V0_REAL = setTo
+        elif param == 'ZIP_COMPRESSION_LEVEL':
+            setNumericalParameter(rpars, param, llist[0], type_=int,
+                                  range_=(0, 9))
     logger.setLevel(loglevel)
     return
 

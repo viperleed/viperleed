@@ -112,7 +112,8 @@ def prerun_clean(rp, logname=""):
 
 
 def organize_workdir(tensor_index, delete_unzipped=False,
-                     tensors=True, deltas=True, workdir=""):
+                     tensors=True, deltas=True, workdir="",
+                     compression_level=2):
     """Reorganize files in workdir into SUPP, OUT, Tensors and Deltas.
 
     Tensors and Deltas folders are zipped and moved over. All other
@@ -131,6 +132,9 @@ def organize_workdir(tensor_index, delete_unzipped=False,
     workdir : str, optional
         The path to work folder that contains the files to be
         reorganized. The default is "".
+    compression_level : int
+        Compression level to be applied for ZIP archives of Tensors and
+        Deltas. Default is 2.
 
     Returns
     -------
@@ -143,7 +147,8 @@ def organize_workdir(tensor_index, delete_unzipped=False,
         outfiles.update(path.glob(pattern))
 
     _collect_deltas(tensor_index, path)
-    _zip_deltas_and_tensors(delete_unzipped, tensors, deltas, path)
+    _zip_deltas_and_tensors(delete_unzipped, tensors, deltas, path,
+                            compression_level)
     _organize_supp_out(path, outfiles)
 
 def _organize_supp_out(path, outfiles):
@@ -193,7 +198,8 @@ def _organize_supp_out(path, outfiles):
                              exc_info=True)
 
 
-def _zip_deltas_and_tensors(delete_unzipped, tensors, deltas, path):
+def _zip_deltas_and_tensors(delete_unzipped, tensors, deltas, path,
+                            compression_level):
     # If there are unzipped Tensors or Deltas directories, zip them:
     for folder in ["Tensors", "Deltas"]:
         todo = tensors if folder == "Tensors" else deltas
@@ -217,7 +223,7 @@ def _zip_deltas_and_tensors(delete_unzipped, tensors, deltas, path):
                 arch_name = _dir_path.with_suffix(".zip")
                 try:
                     with ZipFile(arch_name, 'a', compression=ZIP_DEFLATED,
-                        compresslevel=2) as archive:
+                        compresslevel=compression_level) as archive:
                         for fname in move_to_archive:
                             archive.write(fname, fname.relative_to(_dir))
                 except OSError:
@@ -330,10 +336,10 @@ def move_oldruns(rp, prerun=False):
         raise
     if not prerun:
         organize_workdir(rp.TENSOR_INDEX, delete_unzipped=False,
-                         tensors=False, deltas=False)
+                         tensors=False, deltas=False, rp.ZIP_COMPRESSION_LEVEL)
         for dp in rp.domainParams:
             organize_workdir(dp.rp.TENSOR_INDEX, delete_unzipped=False,
-                             tensors=False, deltas=False)
+                             tensors=False, deltas=False, rp.ZIP_COMPRESSION_LEVEL)
     if prerun:
         filelist = [f for f in os.listdir() if os.path.isfile(f) and
                     (f.endswith(".log") or f in _OUTFILES or f in _SUPP_FILES)
@@ -392,9 +398,11 @@ def cleanup(manifest, rp=None):
         history = []
         to_sort = [{"newTensors": False, "newDeltas": False, "tind": 0,
                     "path": ""}]
+        compress_level = 2
     else:
         history = rp.runHistory
         rp.closePdfReportFigs()
+        compress_level = rp.ZIP_COMPRESSION_LEVEL
         if not rp.domainParams:
             to_sort = [{"newTensors": ("Tensors" in rp.manifest),
                         "newDeltas": ("Deltas" in rp.manifest),
@@ -411,7 +419,8 @@ def cleanup(manifest, rp=None):
         try:
             organize_workdir(d["tind"], delete_unzipped=True,
                              tensors=d["newTensors"],
-                             deltas=d["newDeltas"], workdir=d["path"])
+                             deltas=d["newDeltas"], workdir=d["path"],
+                             compress_level)
         except Exception:
             logger.warning("Error sorting files to SUPP/OUT folders: ",
                            exc_info=True)

@@ -44,6 +44,7 @@ DEFAULTS = {
         'f': 0.01, # this is the default if nothing is given
         'e': 0.001,
     },
+    'ZIP_COMPRESSION_LEVEL': 2,
     'SEARCH_EVAL_TIME':  60, # time interval between reads of SD.TL, TODO: should be dynamic?
 }
 
@@ -199,6 +200,7 @@ class Rparams:
         self.V0_REAL = "default"   # 'default' will read from PHASESHIFTS
         self.V0_Z_ONSET = 1.0
         self.VIBR_AMP_SCALE = []   # read as list of strings, interpret later
+        self.ZIP_COMPRESSION_LEVEL = DEFAULTS['ZIP_COMPRESSION_LEVEL']
 
         # RUN VARIABLES
         self.starttime = timer()
