@@ -21,8 +21,6 @@ from pathlib import Path
 from quicktions import Fraction
 from zipfile import ZipFile
 
-from viperleed.guilib.decorators import profile_lines
-
 from viperleed.guilib import get_equivalent_beams
 from viperleed.tleedmlib.base import parseMathSqrt, angle, cosvec
 from viperleed.tleedmlib.files.parameters import (
