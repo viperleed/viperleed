@@ -19,6 +19,9 @@ import multiprocessing
 import time
 from pathlib import Path
 from quicktions import Fraction
+from zipfile import ZipFile
+
+from viperleed.guilib.decorators import profile_lines
 
 from viperleed.guilib import get_equivalent_beams
 from viperleed.tleedmlib.base import parseMathSqrt, angle, cosvec
@@ -328,7 +331,7 @@ def getMaxTensorIndex(home=".", zip_only=False):
         return max(indlist)
     return 0
 
-
+@profile_lines
 def getTensors(index, basedir=".", targetdir=".", required=True):
     """Fetches Tensor files from Tensors or archive with specified tensor
     index. If required is set True, an error will be printed if no Tensor
@@ -341,13 +344,14 @@ def getTensors(index, basedir=".", targetdir=".", required=True):
         basedir = os.path.dirname(basedir)
     if not os.path.isdir(os.path.join(basedir, "Tensors", dn)):
         if os.path.isfile(os.path.join(basedir, "Tensors", dn+".zip")):
+            logger.info("Unpacking {}.zip...".format(dn))
+            os.makedirs(os.path.join(targetdir, "Tensors", dn),
+                        exist_ok=True)
+            zip_path = (Path(basedir) / "Tensors" / dn).with_suffix(".zip")
+            unpack_path = (Path(targetdir) / "Tensors" / dn)
             try:
-                logger.info("Unpacking {}.zip...".format(dn))
-                os.makedirs(os.path.join(targetdir, "Tensors", dn),
-                            exist_ok=True)
-                shutil.unpack_archive(os.path.join(basedir, "Tensors",
-                                                   dn+".zip"),
-                                      os.path.join(targetdir, "Tensors", dn))
+                with ZipFile(zip_path, 'r') as zip_ref:
+                    zip_ref.extractall(unpack_path)
             except Exception:
                 logger.error("Failed to unpack {}.zip".format(dn))
                 raise
@@ -383,10 +387,12 @@ def getDeltas(index, basedir=".", targetdir=".", required=True):
                              "work directory")
                 raise
     elif os.path.isfile(os.path.join(basedir, "Deltas", dn+".zip")):
+        logger.info("Unpacking {}.zip...".format(dn))
+        zip_path = (Path(basedir) / "Deltas" / dn).with_suffix(".zip")
+        unpack_path = (Path(targetdir) / "Deltas" / dn)
         try:
-            logger.info("Unpacking {}.zip...".format(dn))
-            shutil.unpack_archive(os.path.join(basedir, "Deltas", dn+".zip"),
-                                  targetdir)
+            with ZipFile(zip_path, 'r') as zip_ref:
+                zip_ref.extractall(unpack_path)
         except Exception:
             logger.error("Failed to unpack {}.zip".format(dn))
             raise
