@@ -14,6 +14,7 @@ import logging
 import copy
 import numpy as np
 from pathlib import Path
+from zipfile import ZipFile
 
 import viperleed.tleedmlib as tl
 from viperleed.tleedmlib.base import angle, rotation_matrix
@@ -465,7 +466,8 @@ def init_domains(rp):
             except Exception:
                 raise
             try:
-                shutil.unpack_archive(path, tensorDir)
+                with ZipFile(path, 'r') as zip_ref:
+                    zip_ref.extractall(tensorDir)
             except Exception:
                 logger.error("Failed to unpack Tensors for domain {} from "
                              "file {}".format(name, path))
