@@ -43,7 +43,8 @@ DEFAULTS = {
         'n': 0.05,
         'f': 0.01, # this is the default if nothing is given
         'e': 0.001,
-    }
+    },
+    'SEARCH_EVAL_TIME':  60, # time interval between reads of SD.TL, TODO: should be dynamic?
 }
 
 class SearchPar:
@@ -206,6 +207,8 @@ class Rparams:
         self.compile_logs_dir = None
         self.searchConvInit = {
             "gaussian": None, "dgen": {"all": None, "best": None, "dec": None}}
+        self.searchEvalTime = DEFAULTS['SEARCH_EVAL_TIME']  # time interval for reading SD.TL
+        self.output_interval = None # changed in updateDerivedParams
         self.searchMaxGenInit = self.SEARCH_MAX_GEN
         self.searchStartInit = None
         # script progress tracking
@@ -339,7 +342,7 @@ class Rparams:
             self.TL_VERSION = highest
             if highest > 0.:
                 logger.debug("Detected TensErLEED version " + namestr)
-        
+
         # TL_VERSION_STR
         # try simple conversion to string
         self.TL_VERSION_STR = f"{self.TL_VERSION:.2f}"
@@ -354,7 +357,7 @@ class Rparams:
                 "Consider editing KNOWN_TL_VERSIONS global in checksums.py "
                 "or setting TL_IGNORE_CHECKSUM = True."
             )
-        
+
         # SEARCH_CONVERGENCE:
         if self.searchConvInit["gaussian"] is None:
             self.searchConvInit["gaussian"] = self.GAUSSIAN_WIDTH
@@ -364,6 +367,10 @@ class Rparams:
                                               1 / self.GAUSSIAN_WIDTH_SCALING)
             if self.searchConvInit["dgen"][k] is None:
                 self.searchConvInit["dgen"][k] = self.SEARCH_MAX_DGEN[k]
+        if self.output_interval is None:
+            # set output interval to SEARCH_CONVERGENCE dgen, but cap at 1000
+            use_dgen = min(dgen for dgen in self.searchConvInit["dgen"].values() if dgen > 0) or 1000
+            self.output_interval = int(min(use_dgen or 1000, 1000))  # default to 1000 if all dgen are 0 (default)
         if self.searchStartInit is None:
             self.searchStartInit = self.SEARCH_START
         # Phaseshifts-based:

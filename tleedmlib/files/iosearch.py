@@ -547,7 +547,7 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
         output += (formatter['int'].write([outdata]).ljust(16)
                    + "Store configurations and write data.chem files for "
                    "parabola fit (0=false)\n")
-    output += formatter['gens'].write([1000]).ljust(16) + "output intervall\n"
+    output += formatter['gens'].write([rp.output_interval]).ljust(16) + "output interval\n"
     output += (formatter['gens'].write([maxgen]).ljust(16)
                + "desired number of generations to be performed\n")
     output += (formatter['int'].write([astep]).ljust(16)

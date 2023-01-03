@@ -3,7 +3,7 @@
 """
 Created on Aug 11 2020
 
-@author: Florian Kraushofer
+@author: Florian Kraushofer, Alexander M. Imre, Michele Riva
 
 Tensor LEED Manager section Search
 """
@@ -755,6 +755,7 @@ def search(sl, rp):
     repeat = True
     first = True
     genOffset = 0
+    last_debug_write_gen = 0
     gens = []  # generation numbers in SD.TL, but continuous if search restarts
     markers = []
     rfaclist = []
@@ -812,11 +813,11 @@ def search(sl, rp):
             logger.error("Error starting search. Check SD.TL file.")
         # MONITOR SEARCH
         searchStartTime = timer()
-        printt = searchStartTime
+        last_debug_print_time = searchStartTime
         filepos = 0
         timestep = 1  # time step to check files
         # !!! evaluation time could be higher - keep low only for debugging; TODO
-        evaluationTime = 60  # how often should SD.TL be evaluated
+        evaluationTime = rp.searchEvalTime  # how often should SD.TL be evaluated
         lastEval = 0  # last evaluation time (s), counting from searchStartTime
         comment = ""
         sdtlGenNum = 0
@@ -881,15 +882,6 @@ def search(sl, rp):
                         gens.append(gen + genOffset)
                         sdtlGenNum = gen
                         rfaclist.append(np.array(rfacs))
-                        if gen % 1000 == 0:
-                            speed = 1000*(timer() - absstarttime)/gens[-1]
-                            logger.debug(
-                                "R = {:.4f} (Generation {}, {:.1f} s "
-                                "since last, {:.1f} s/kG overall)".format(
-                                    min(rfacs), gens[-1], timer() - printt,
-                                    speed))
-                            printt = timer()
-                            check_datafiles = True
                         dgen = {}
                         for k in ["dec", "best", "all"]:
                             dgen[k] = gens[-1] - realLastConfigGen[k]
@@ -920,6 +912,21 @@ def search(sl, rp):
                                         o[k], dgen[k],
                                         int(rp.SEARCH_MAX_DGEN[k])))
                                 break
+                        # decide to write debug info
+                        # will only write once per SD.TL read
+                        time_since_print = timer() - last_debug_print_time
+                        current_gen = gens[-1]
+                        if (current_gen - last_debug_write_gen > rp.output_interval):
+                            speed = 1000*(timer() - absstarttime)/current_gen # in s/kG
+                            logger.debug(
+                                f"R = {min(rfacs)} (Generation {current_gen}, "
+                                f"{time_since_print:.3f} s since "
+                                f"gen. {last_debug_write_gen}, "
+                                f"{speed:.1f} s/kG overall)"
+                            )
+                            last_debug_print_time = timer()
+                            last_debug_write_gen = current_gen
+                            check_datafiles = True
                     if len(newData) > 0:
                         lastconfig = newData[-1][2]
                     if (check_datafiles and not (stop and repeat)
