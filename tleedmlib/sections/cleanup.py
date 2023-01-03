@@ -2,7 +2,7 @@
 """
 Created on Fri Jun  4 16:03:36 2021
 
-@author: Florian Kraushofer
+@author: Florian Kraushofer, Alexander Imre
 
 Cleanup functions, to be used between sections or before/after tleedm
 execution.
@@ -15,8 +15,10 @@ import os
 from pathlib import Path                                                     # TODO: use everywhere
 import shutil
 import re
+from zipfile import ZipFile, ZIP_DEFLATED
 
 from viperleed.tleedmlib.base import get_elapsed_time_str
+
 
 # files to go in SUPP
 _SUPP_FILES = ("AUXBEAMS", "AUXGEO", "AUXLATGEO", "AUXNONSTRUCT", "BEAMLIST",
@@ -210,8 +212,14 @@ def _zip_deltas_and_tensors(delete_unzipped, tensors, deltas, path):
             delete = delete_unzipped
             if todo:
                 logger.info(f"Packing {_dir.name}.zip...")
+                _dir_path = Path(_dir)
+                move_to_archive = _dir_path.glob('*')
+                arch_name = _dir_path.with_suffix(".zip")
                 try:
-                    shutil.make_archive(_dir, "zip", _dir)
+                    with ZipFile(arch_name, 'a', compression=ZIP_DEFLATED,
+                        compresslevel=2) as archive:
+                        for fname in move_to_archive:
+                            archive.write(fname, fname.relative_to(_dir))
                 except OSError:
                     logger.error(f"Error packing {_dir.name}.zip file: ",
                                     exc_info=True)
