@@ -336,10 +336,12 @@ def move_oldruns(rp, prerun=False):
         raise
     if not prerun:
         organize_workdir(rp.TENSOR_INDEX, delete_unzipped=False,
-                         tensors=False, deltas=False, rp.ZIP_COMPRESSION_LEVEL)
+                         tensors=False, deltas=False,
+                         compression_level=rp.ZIP_COMPRESSION_LEVEL)
         for dp in rp.domainParams:
             organize_workdir(dp.rp.TENSOR_INDEX, delete_unzipped=False,
-                             tensors=False, deltas=False, rp.ZIP_COMPRESSION_LEVEL)
+                             tensors=False, deltas=False,
+                             compression_level=rp.ZIP_COMPRESSION_LEVEL)
     if prerun:
         filelist = [f for f in os.listdir() if os.path.isfile(f) and
                     (f.endswith(".log") or f in _OUTFILES or f in _SUPP_FILES)
@@ -420,7 +422,7 @@ def cleanup(manifest, rp=None):
             organize_workdir(d["tind"], delete_unzipped=True,
                              tensors=d["newTensors"],
                              deltas=d["newDeltas"], workdir=d["path"],
-                             compress_level)
+                             compression_level=compress_level)
         except Exception:
             logger.warning("Error sorting files to SUPP/OUT folders: ",
                            exc_info=True)
