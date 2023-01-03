@@ -329,7 +329,7 @@ def getMaxTensorIndex(home=".", zip_only=False):
         return max(indlist)
     return 0
 
-@profile_lines
+
 def getTensors(index, basedir=".", targetdir=".", required=True):
     """Fetches Tensor files from Tensors or archive with specified tensor
     index. If required is set True, an error will be printed if no Tensor
