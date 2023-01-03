@@ -912,21 +912,21 @@ def search(sl, rp):
                                         o[k], dgen[k],
                                         int(rp.SEARCH_MAX_DGEN[k])))
                                 break
-                        # decide to write debug info
-                        # will only write once per SD.TL read
-                        time_since_print = timer() - last_debug_print_time
-                        current_gen = gens[-1]
-                        if (current_gen - last_debug_write_gen > rp.output_interval):
-                            speed = 1000*(timer() - absstarttime)/current_gen # in s/kG
-                            logger.debug(
-                                f"R = {min(rfacs)} (Generation {current_gen}, "
-                                f"{time_since_print:.3f} s since "
-                                f"gen. {last_debug_write_gen}, "
-                                f"{speed:.1f} s/kG overall)"
-                            )
-                            last_debug_print_time = timer()
-                            last_debug_write_gen = current_gen
-                            check_datafiles = True
+                    # decide to write debug info
+                    # will only write once per SD.TL read
+                    time_since_print = timer() - last_debug_print_time
+                    current_gen = gens[-1]
+                    if (current_gen - last_debug_write_gen > rp.output_interval):
+                        speed = 1000*(timer() - absstarttime)/current_gen # in s/kG
+                        logger.debug(
+                            f"R = {min(rfacs)} (Generation {current_gen}, "
+                            f"{time_since_print:.3f} s since "
+                            f"gen. {last_debug_write_gen}, "
+                            f"{speed:.1f} s/kG overall)"
+                        )
+                        last_debug_print_time = timer()
+                        last_debug_write_gen = current_gen
+                        check_datafiles = True
                     if len(newData) > 0:
                         lastconfig = newData[-1][2]
                     if (check_datafiles and not (stop and repeat)
