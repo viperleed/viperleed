@@ -21,7 +21,6 @@ ZIP_COMPRESSION_LEVEL sets the compression level applied to ZIP archives storing
    ZIP_COMPRESSION_LEVEL = 0 ! do not compress files
 
 
-
 The compression level is a trade-off between file size and compression time.
 Higher compression levels reduce the size of stored :ref:`tensor<tensorszip>` and :ref:`delta-amplitude files<deltaszip>` but ViPErLEED will take longer to create the archives.
 You may want to tweak this parameter if you have limited disk space available or if you are working with large unit cells where compression takes a significant amount of time.
