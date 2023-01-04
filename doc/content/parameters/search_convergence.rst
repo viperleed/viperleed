@@ -58,14 +58,19 @@ dgen
 
 The flag ``dgen`` defines how many generations should pass without any changes 
 to either the best configuration, or all configurations in the population, 
-before the search is considered converged *for the current value of GAUSSIAN_WIDTH*. 
+before the search is considered converged *for the current value of GAUSSIAN_WIDTH*.
 Once this condition is met, both :ref:`GAUSSIAN_WIDTH<rmut>` and the ``dgen`` values themselves 
-will be scaled by their respective scaling factors, and the search will be continued. 
+will be scaled by their respective scaling factors, and the search will be continued.
 **Full convergence** of the search is considered to be reached when **partial convergence** 
 is reached twice in a row without any changes in the meantime, i.e. when lowering 
-GAUSSIAN_WIDTH does not lead to any further improvement. Once full convergence 
-is reached, the search will be stopped. Note that an upper limit of generations, 
+GAUSSIAN_WIDTH does not lead to any further improvement.
+Once full convergence is reached, the search will be stopped.
+Note that an upper limit of generations, 
 independent of convergence, is given by :ref:`SEARCH_MAX_GEN<SEARCHGENMAX>`.
+
+.. note::
+   ``dgen`` also affects the output interval for the raw TenErLEED file :ref:`SD.TL<sdtl>`.
+   Low values for ``dgen`` (:math:`\lesssim` 100) may slow down the search due to I/O overhead.
 
 **Default:** partial convergence when best 10% of structures do not change in 
 100 generations, scaling factor = 1/(scaling factor of GAUSSIAN_WIDTH)
