@@ -1,15 +1,16 @@
 .. _example_Ir(100)-O:
 
-=========================
-Example System: Ir(100)-O
-=========================
+===============================
+Example System: Ir(100)-(2×1)-O
+===============================
 
-In this tutorial we go through a ViPErLEED structure analysis for an Ir(100) surface with adsorbed oxygen, creating a (:math:`2\times1`) reconstruction.
-The structure and analysis is based on the paper by **TODO Lutz** and the experimental data was provided courtesy of Lutz Hammer .
+In this tutorial we go through a ViPErLEED structure analysis for an Ir(100) surface with adsorbed oxygen, creating a (:math:`2\times1`) superstructure.
+The structure and analysis is based on the paper by :cite:p:`ferstlStructureOrderingOxygen2016` and the experimental data and input model was provided courtesy of Lutz Hammer .
 
 We will begin by running a reference calculation and a rough structure-optimization.
 Following this, we move to a finer search grid and run a :ref:`full-dynamic optimization <fdoptimization>` of the inner potential :math:`V_{0\text{i}}`.
 Finally, once we achieve a satisfactory R-factor, we will use the ViPErLEED :ref:`error calculation<error_calculation>` to estimate how much small changes of atomic positions affect the R-factor.
+This will give rough margins for the statistical uncertainties of the determined parameters.
 You can download the input files to follow along :download:`here</_static/example_systems/Ir(100)-O/input_files.zip>`.
 
 .. tip:: 
@@ -19,7 +20,8 @@ Introduction
 ============
 
 We start from experimental LEED-:math:`I(V)` curves which are saved in the file :ref:`EXPBEAMS.csv<expbeams>`.
-As reference structure, we use a :ref:`POSCAR file<poscar>`, containing a hand-made Ir(100) surface, which we hand made from a bulk structure with an additional adsorbed Oxygen atom placed on top.
+As reference structure, we use a :ref:`POSCAR file<poscar>`, containing a hand-made Ir(100) surface, which we hand made from a bulk structure with an additional adsorbed Oxygen atom placed at a bridge site in a way of not sharing surface Iridium atoms.
+The height above the surface was chosen according to achieve a reasonable Ir-O bond length.
 See below for a visualization (using :term:`VESTA`) of the structure.
 In this visualization, we also drew a plane through the unit cell orthogonal to :math:`c` (at unit cell fraction 0.35).
 We will use the :ref:`BULK_LIKE_BELOW` parameter to declare everything below this cut-off "bulk-like."
@@ -40,6 +42,15 @@ We will use the :ref:`BULK_LIKE_BELOW` parameter to declare everything below thi
 
             POSCAR rendered in :term:`VESTA` view along :math:`c`.
 
+.. hint::
+   Of course there are other possible structural models like adsorption at hollow, top or Ir-sharing bridge sites.
+   Even surface reconstructions as e.g. missing-row are conceivable.
+   Here, we concentrate exclusively to the correct structural model, which is known from literature :cite:p:`johnsonUnusualBridgedSite2000,ferstlStructureOrderingOxygen2016`.
+
+   Often the principle adsorption site (or generally the structural model) may not be known a priori.
+   In that case, at least a rough analysis has to be performed for each reasonable model in order to find the most promising one(s), before further optimization is performed.
+
+
 PARAMETERS and rough DISPLACEMENTS
 ==================================
 
@@ -59,12 +70,14 @@ PARAMETERS FOR INTERPRETING THE POSCAR
     As mentioned above, we let ViPErLEED find the bulk-repeat unit by itself. 
     For this, we set the :ref:`BULK_LIKE_BELOW` parameter at the height where we drew the plane previously.
 
-    Using the :ref:`SITE_DEF<sitedef>` parameter, we specify that the topmost Iridium atom should be treated separately.
+    Using the :ref:`SITE_DEF<sitedef>` parameter, we specify that the topmost Iridium atoms should be treated separately.
     For completeness, we also specify the site type ``O_ads`` for the adsorbed oxygen atom.
     However, since there is only one Oxygen atom in the structure, this will not change the behaviour and we could also skip that line.
 
 PARAMETERS FOR VIBROCC
     Since we don't have a :ref:`VIBROCC file<viboccin>` yet, we need to specify the parameters :ref:`T_DEBYE<t_debye>`, :ref:`T_EXPERIMENT<t_experiment>`, and :ref:`VIBR_AMP_SCALE<VIBR_AMP_SCALE>`.
+    Note that we can only give one value for the Debye temperature for both oxygen and Iridium.
+    The initial vibrational amplitudes will be calculated as explained in the section on :ref:`T_DEBYE<t_debye>`.
 
 .. tip::
     Grouping the settings in the PARAMETERS file as described above is not required, but it helps with readability.
@@ -103,7 +116,7 @@ We can get a better idea of how the converge went by taking a look at the file `
 
 The upper half of the first page shows a plot of the decreasing R-factor during the various stages of the search.
 We clearly see that both geometric optimizations made quick progress in terms of convergence - as should be expected when starting from an un-relaxed surface slab such as here.
-The other pages of the file give us some insight into how each atom moved during the structure optimization.
+The other pages of the file give us some insight into how each atomic parameter developed during the structure optimization.
 
 .. figure:: /_static/example_systems/Ir(100)-O/figures/progress_1_page_2.pdf
    :width: 70%
@@ -112,7 +125,7 @@ The other pages of the file give us some insight into how each atom moved during
    Page 2-4 of ``Search-progress.pdf`` (white space cropped).
 
 Interestingly, we see that the (:math:`z`) position of the Oxygen adsorbate has changed a good amount.
-Further, we see that the vibrational amplitude of the Oxygen atom as gone down, while the amplitude for Iridium has gone up.
+Further, we see that the vibrational amplitude of the Oxygen atom has gone down, while the amplitude for Iridium has gone up.
 
 .. important::
     We want to accept the optimized positions as the new starting configuration, so we need to replace our old :ref:`POSCAR<poscar>` and :ref:`VIBROCC<viboccin>` files with the optimized ones.
@@ -128,7 +141,8 @@ Fine DISPLACEMENTS and Tensor LEED Error
 The rough optimization has already significantly brought down the R-factor.
 We should now continue with a more fine-grained search grid.
 For this, we use a similar :ref:`DISPLACEMENTS file<displacements>`, but with much smaller range and step size (see below).
-We now re-run with :ref:`RUN = 1-3<run>` because we need to perform a fresh reference-calculation for the new starting positions.
+We now re-run with :ref:`RUN = 1-3<run>` to perform a fresh reference-calculation for the new starting positions.
+This is advisable, because parameter deviations during the previous fit were not negligible.
 
 .. literalinclude :: /_static/example_systems/Ir(100)-O/DISPLACEMENTS_fine
    :language: console
@@ -144,7 +158,7 @@ You should **never** rely on the R-factor produced by the superposition as a fin
 Full-dynamic Optimization
 =========================
 
-After the finer search run finishes, we see that the R-factor has again dropped quite a bit.
+After the finer search run finishes, we see that the R-factor has again dropped quite a lot.
 The R-factor is now below 0.1, which already indicates good agreement, but we can get better yet.
 
 Remember that in the :ref:`PARAMETERS file<parameters>` above, we had to put in an initial guess for the imaginary part of the inner potential :math:`V_{0\text{i}}`.
@@ -188,7 +202,7 @@ The format of the file is the same as used for the delta-amplitudes calculation 
 
 
 Using this DISPLACEMENTS file, we run the error calculation by selecting the segment :ref:`RUN = 5<run>`.
-The :ref:`result <errorspdf>` result will again be saved in the ``OUT`` directory.
+The :ref:`result <errorspdf>` will again be saved in the ``OUT`` directory.
 ViPErLEED generates a plot of the Error curves in ``Errors.pdf`` and stores the raw data in ``Errors.csv``.
 :ref:`Errors.pdf<errorspdf>` shows that displacements of surface atoms even by a few pm drastically increase the R-factor.
 Here, atom 1 is the Oxygen adsorbate and atoms 2 and 3 are the topmost Iridium species.
@@ -199,6 +213,9 @@ Here, atom 1 is the Oxygen adsorbate and atoms 2 and 3 are the topmost Iridium s
 
    Part of ``Errors.pdf`` showing the effects of geometric displacements.
 
+.. note::
+   The point of intersection between the error curve for a parameter and :math:`R + \textrm{var}(R)` gives a measure for the statistical error.
+
 Similarly, changes in the vibrational amplitude of the surface atoms also strongly affect the R-factor:
 
 .. figure:: /_static/example_systems/Ir(100)-O/figures/errors_vib.pdf
@@ -208,4 +225,8 @@ Similarly, changes in the vibrational amplitude of the surface atoms also strong
    Part of ``Errors.pdf`` showing the effects of changes in vibrational amplitude.
 
 In general error-plots for geometric displacement tend to show a parabolic profile close to the minimum.
-Error plots for vibrational amplitude tend to be more symmetric, as these amplitudes factor into the calculation differently (Debye-Waller-factor).
+Error plots for vibrational amplitude tend to be more asymmetric, as these amplitudes enter the calculation differently (Debye-Waller-factor).
+
+.. warning::
+   Error curves are also subject to **tensor LEED errors**.
+   R-factor values obtained for large deviations should be taken with care.
