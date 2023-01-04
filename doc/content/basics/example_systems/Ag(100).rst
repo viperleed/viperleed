@@ -91,10 +91,11 @@ The first page shows the energy-dependent phaseshifts for the surface atom and l
 Reference Calculation and R-factor
 ==================================
 
-In this simple case, we don't actually need any further settings to run the :ref:`reference calculation<ref-calc>`. We can just start the calculation again, after setting :ref:`RUN = 1<run>` to select the :ref:`reference calculation<ref-calc>` section.-
+In this simple case, we don't actually need any further settings to run the :ref:`reference calculation<ref-calc>`. We can just start the calculation again, after setting :ref:`RUN = 1<run>` to select the :ref:`reference calculation<ref-calc>` section.
 
 Note, that the initialization will still be automatically executed at the start of every ViPErLEED run.
 Similarly, if an :ref:`EXPBEAMS.csv files<expbeams>` is provided as is the case here, the :ref:`R-factor calculation<r-factor_calculation>` will be automatically calculated and reported after each reference calculation.
+By default, ViPErLEED will use the :ref:`Pendry R-factor<r-factor_calculation>`.
 
 Once the reference calculation finishes (only takes about 1 minute with the chosen settings) we find a result for the R-factor at the very end of the :ref:`log file<log_files_tleedm>`:
 
@@ -179,7 +180,7 @@ To visualize how our optimization went, we can also take a look at the  :ref:`Se
 Next steps
 ==========
 
-Further optimizing the structure is possible, but not not very instructive.
+Further optimizing the structure is possible, but not very instructive.
 Instead we conclude this example by mentioning two other options on how to proceed with the analysis.
 
 For a more complicated system it may not be clear, which structure parameters are most important.
