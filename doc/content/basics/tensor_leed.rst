@@ -6,24 +6,18 @@ The Tensor LEED approach
 
 Here, we provide a very rudimentary introduction to the tensor LEED
 approach employed by TensErLEED and consequently also ViPErLEED.
-Please note, that this is not, and does not aim to be a comprehensive or rigorous 
-introduction to the topic.
+Please note that this neither is, nor aims to be a comprehensive or rigorous introduction to the topic.
 The descriptions below are only intended to provide a quick overview of 
 the method and serve as explanation and motivation for the various sections of 
 a LEED :math:`I(V)` calculation in ViPErLEED.
 
-For an in-depth description of all parts of the tensor LEED approach, we refer to the 
-papers by Rous and Pendry (see Refs. :cite:p:`rousTensorLEEDTechnique1986,rousTheoryTensorLEED1989`)
-and the explanation of how to approach is implemented in TensErLEED in 
-the software's original publication (see Ref. :cite:p:`blumFastLEEDIntensity2001a`).
+For an in-depth description of all parts of the tensor LEED approach, we refer to the papers by Rous and Pendry (see Refs. :cite:p:`rousTensorLEEDTechnique1986,rousTheoryTensorLEED1989`) and the explanation of how to approach is implemented in TensErLEED in 
+the original publication of the TensErLEED software :cite:p:`blumFastLEEDIntensity2001a`.
 
 Reference Calculation
 =====================
 
-In the :ref:`reference calculation<ref-calc>`,
-the full dynamic, multi-scattering of the 
-incident electron wave (with complex amplitude :math:`A_{in}`) at the reference 
-structure is calculated. 
+In the :ref:`reference calculation<ref-calc>`, the full dynamic scattering (i.e. including all multiple-scattering contributions) of the incident electron wave (with complex amplitude :math:`A_{in}`) at the reference structure is calculated.
 In principle, this calculation only yields the scattering amplitudes
 :math:`A_{out}^{ref}` (and intensities) for the requested reference structure.
 However, as shown by Rous and Pendry :cite:p:`rousTensorLEEDTechnique1986`, 
@@ -70,7 +64,7 @@ Delta-Amplitude Calculation
 ===========================
 
 The individual perturbations to the reference structure may be (arbitrary combinations of) geometrical  displacements, changes in the vibrational amplitudes or chemical substitutions.
-As tensor LEED is based on first-order perturbation theory approach, we can treat these perturbations and the resulting amplitude changes on an atom-by-atom basis.
+As tensor LEED is based on first-order perturbation theory, we can treat these perturbations and the resulting amplitude changes on an atom-by-atom basis.
 
 For each
 atom :math:`i` and for each requested perturbation :math:`n` to that atom,
@@ -79,7 +73,7 @@ expression
 
 .. math:: 
 
-    \delta \tilde{A}_{i,n}^{per} = \sum_{l,m;l',m'} T^{ref}_{i;l,m;l',m'} \braket{\vec{r_i},l,m| \delta t_{i,n} |\vec{r_i},l',m'}
+    \delta \tilde{A}_{i,n}^{per} = \sum_{l,m;l',m'} T^{ref}_{i;l,m;l',m'} \braket{\vec{r_i},l,m| \delta \tilde{t_{i,n}} |\vec{r_i},l',m'}
 
 are evaluated to calculate amplitude changes :math:`\delta \tilde{A}_{i,n}^{per}`.
 
@@ -98,16 +92,13 @@ for each structure candidate. :cite:p:`blumFastLEEDIntensity2001a`
 Structure Search
 ================
 
-Once the amplitude changes for all required perturbations have been obtained,
-the final diffraction amplitudes can be calculated using a simple combination.
-Essentially, for any perturbed structure, we compute the amplitudes by 
-simply summing up amplitude changes (deltas) for all affected atoms.
+Once the amplitude changes for all required perturbations have been obtained, the final diffraction amplitudes can be calculated using a simple superposition.
+Essentially, for any perturbed structure, we compute the amplitudes by simply summing up amplitude changes (deltas) for all affected atoms.
 
 Consequently, using these resulting amplitudes (and intensities via :math:`I = |A|^2`), 
-an R-factor vs. the experimental intensities can now be obtained for any
-structure in the configuration-space. 
-All that is left then, to finding the best-fit structure is an optimization
-in the configuration space over the R-factor.
+an R-factor vs. the experimental intensities can now be obtained for any structure in the configuration-space.
+Then, the best-fit structure must be found by an optimization (minimization of the R factor) in the configuration space.
+
 
 While conceptually simple, this optimization can be practically and computationally 
 very challenging, and generally constitutes the computationally most expensive
@@ -121,13 +112,10 @@ in the tensor LEED approximation and also LEED :math:`I(V)` in general:
 
 -   Since the tensor LEED method is a perturbative approach, it only works reliably for
     *small* perturbations.
-    What constitutes a *small* perturbation is naturally system-dependent, but 
-    generally, the limit lies in the range of 200 to 300 pm at best :cite:`rousTensorLEEDTechnique1986`.
+    What constitutes a *small* perturbation is naturally system-dependent, but generally, the limit lies in the range of 0.2 Å to 0.3 Å at best :cite:`rousTensorLEEDTechnique1986`.
 
-    To extend the range of the structural search, as work-around, it is possible to run a new reference calculation and delta-amplitudes calculation when the structure optimization trajectory approaches this limit.
-    You can use the the :ref:`RUN parameter<run>`
-    to execute multiple reference calculations, delta-amplitude calculations,
-    and structure searches in series.
+    To extend the range of the structural search, it is possible to run a new reference calculation and delta-amplitudes calculation when the structure optimization trajectory approaches this limit.
+    You can use the the :ref:`RUN parameter<run>` to execute multiple reference calculations, delta-amplitude calculations, and structure searches in series.
 
 -   The parameter space grows quickly for larger unit cells.
     Luckily, many symmetries inherent to the surface structure can be exploited to eliminate redundant parameters.
@@ -141,14 +129,13 @@ in the tensor LEED approximation and also LEED :math:`I(V)` in general:
     *Fortunately for the user*, automatic symmetry-detection and enforcement is one of the **main features** of ViPErLEED.
     See the ViPErLEED paper for details (**TODO**).
 
--   The R-factor hyper-surfaces tend to be inherently non-smooth. This is 
-    a consequence of how the various R-factors are designed.
 
--   As described above, the tensor LEED implementation in TensErLEED separates the calculation of delta-amplitudes and the structure optimization into two mostly-indepenent stages.
+-   When using Pendry's R factor, the R factor hyper-surfaces tend to be inherently non-smooth :cite:p:`rousTensorLEEDApproximation1992`.
+    This is a consequence of how this R-factors is designed.
+
+-   As described above, the tensor LEED implementation in TensErLEED separates the calculation of delta-amplitudes and the structure optimization into two mostly indepenent stages.
     As a direct consequence, the optimization can **only** be performed on a pre-defined grid of perturbation vectors (as given by the :ref:`DISPLACEMENTS file<displacements>`).
-    Further, to achieve the best possible fit, this grid
-    generally makes it necessary to run multiple sets of delta-amplitude
-    calculations and structure optimizations with varying grid-densities.
+    Further, to achieve the best possible fit, the grid based nature makes it necessary to run multiple sets of delta-amplitude calculations and structure optimizations with increasingly finer grids.
 
 -   The structure search implemented in TensErLEED has the additional limitation that geometrical displacements are limited to one dimension per atom.
     Per search run, atoms can only be displaced along a pre-defined parametrized curve, rather than freely in 3D space.
@@ -161,15 +148,15 @@ Optimization Algorithm
 .. _optimization_algorithm:
 
 The rough R-factor surface, together with its grid-based nature greatly limits the pool of applicable optimzation algorithms.
-TensErLEED employes the modified random sampling strategy with a down-step criterion as described by Kottcke and Heinz :cite:p:`kottckeNewApproachAutomated1997`.
-The optimization is performed in parallel for a set of individuals which are keeping track of their individual current best configuration, as defined by the parameter :ref:`SEARCH_POPULATION<searchpop>`.
+TensErLEED employes a modified random sampling strategy with a down-step criterion as described by Kottcke and Heinz :cite:p:`kottckeNewApproachAutomated1997`.
+The optimization is performed in parallel for a set of individuals, as defined by the parameter :ref:`SEARCH_POPULATION<searchpop>`.
 The starting points for the optimization individuals is defined by :ref:`SEARCH_START<searchstart>`.
 
-For each search step (called "generation"), a new grid point in the parameter space is selected *randomly*, but based on a probability distribution centered on the current position.
-The R-factor is calculated for the selected parameter combination and **only if** the R-factor for the new configuration is lower then for the previous configuration, the individual updates their stored best configuration (and thus the center of the probability distribution).
+For each search step (called "generation" based on the terminology of genetic algorithms), a new grid point in the parameter space is selected *randomly*, but based on a probability distribution centered on the current position.
+The R-factor is calculated for the selected parameter combination and the new parameter set is accepted **only if** the R-factor for the new configuration is lower then for the previous configuration.
 The width of the probability distribution is determined by the current R-factor and the parameters :ref:`SEARCH_CONVERGENCE<search_convergence>`  and :ref:`GAUSSIAN_WIDTH<rmut>`.
 
-Furthermore, as defined by the parameter :ref:`SEARCH_CULL<search_cull>` when ever :ref:`partial convergence<search_convergence>` is reached, a portion of the search population can be dropped and re-initialized to get out of local minima.
+Furthermore, as defined by the parameter :ref:`SEARCH_CULL<search_cull>`, whenever :ref:`partial convergence<search_convergence>` is reached, a portion of the search population can be dropped and re-initialized to get out of local minima.
 
 
 .. [1] There are exceptions, in which the same LEED pattern can result. For example, on an fcc(111) surface, a (:math:`2\times2`) reconstruction and a (:math:`1\times2`) with domains would give the same qualitative pattern.

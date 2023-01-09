@@ -9,6 +9,9 @@ Glossary
     LEED
       Low energy electron diffraction
 
+    CSV
+      Comma separated value format. See tje `Wikipedia entry <https://en.wikipedia.org/wiki/Comma-separated_values>`__.
+
     DFT
       Density functional theory
 

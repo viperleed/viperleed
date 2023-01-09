@@ -32,6 +32,8 @@ extensions = [
 
 source_suffix = '.rst'
 
+numfig = True # enumerate figures
+
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
@@ -76,6 +78,7 @@ latex_show_pagerefs = False # show page numbers
 latex_elements = {
     'papersize': 'a4paper',
     'passoptionstopackages': r'\PassOptionsToPackage{svgnames}{xcolor}',
+    'figure_align': 'H', # Latex figure (float) alignment
     'preamble': r'''
     \usepackage{braket}
     \usepackage[overlay,absolute]{textpos}% for header in PDF screen version
