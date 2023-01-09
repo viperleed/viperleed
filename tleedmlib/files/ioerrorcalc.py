@@ -195,7 +195,6 @@ def write_errors_pdf(errors, v0i, energy_range, filename="Errors.pdf"):
             ax.set_xlabel('Site occupation (%)')
         ax.set_ylabel('Pendry R-factor')
         ax.set_title(titles[mode])
-        ylim = (0, rmax + max(((rmax-rmin)*0.15), 0.05))
         if var and rmin + var < rmax + (rmax-rmin)*0.1:
             ax.plot(xrange, [rmin + var]*2, color="slategray")
             inters = sorted([x for err in mode_errors
@@ -203,14 +202,14 @@ def write_errors_pdf(errors, v0i, energy_range, filename="Errors.pdf"):
                             + [xrange[0], xrange[1]])
             (ind, diff) = max_diff(inters)
             text_x = inters[ind] - diff/2
-            text_y = rmin + var + (ylim[1] - ylim[0])*0.045
+            text_y = rmin + var + (rmax-rmin)*0.015
             va = "bottom"
             ind_at_text = {err: np.argmin([abs(x - text_x)
                                            for x in err_x[err]])
                            for err in mode_errors}
             if sum([err_y[err][ind_at_text[err]] > rmin + var
                     for err in mode_errors]) > len(mode_errors) / 2:
-                text_y = rmin + var + (ylim[1] - ylim[0])*0.045
+                text_y = rmin + var - (rmax-rmin)*0.015
                 va = "top"
             ax.text(text_x, text_y, "$R_P + var(R_P)$", ha="center", va=va,
                     bbox=dict(facecolor='white', edgecolor='none',
@@ -219,7 +218,7 @@ def write_errors_pdf(errors, v0i, energy_range, filename="Errors.pdf"):
             ax.plot(err_x[err], err_y[err], '-o', label=err_legend[err],
                     markevery=err_x_to_mark[err])
         ax.set_xlim(*xrange)
-        ax.set_ylim(ylim)
+        ax.set_ylim(rmin - ((rmax-rmin)*0.1), rmax + ((rmax-rmin)*0.1))
         ax.legend(fontsize="small")
         fig.tight_layout()
         figs.append(fig)
@@ -242,18 +241,18 @@ def write_errors_pdf(errors, v0i, energy_range, filename="Errors.pdf"):
             xvals = err_disp[err]
             xrange = [min(xvals) - abs(max(xvals) - min(xvals)) * 0.05,
                       max(xvals) + abs(max(xvals) - min(xvals)) * 0.05]
-            ylim = (0, rmax + ((rmax-rmin)*0.1))
             if var and rmin + var < rmax + (rmax-rmin)*0.1:
                 axs[figcount].plot(xrange, [rmin + var]*2, color="slategray",
                                    linewidth=1)
                 inters = sorted(err_x_inters[err] + [xrange[0], xrange[1]])
                 (ind, diff) = max_diff(inters)
                 text_x = inters[ind] - diff/2
-                text_y = rmin + var + (ylim[1]-ylim[0])*0.045
+                text_y = rmin + var + (rmax-rmin)*0.015
                 va = "bottom"
                 ind_at_text = np.argmin([abs(x - text_x)
                                          for x in err_x[err]])
                 if err_y[err][ind_at_text] > rmin + var:
+                    text_y = rmin + var - (rmax-rmin)*0.015
                     va = "top"
                 axs[figcount].text(text_x, text_y, "$R_P + var(R_P)$",
                                    fontsize=6, ha="center", va=va,
@@ -266,6 +265,7 @@ def write_errors_pdf(errors, v0i, energy_range, filename="Errors.pdf"):
                                label=re.sub("along", "\nalong",
                                             err_legend[err]))
             axs[figcount].set_xlim(*xrange)
+            ylim = (rmin - ((rmax-rmin)*0.1), rmax + ((rmax-rmin)*0.1))
             axs[figcount].set_ylim(ylim)
             # determine yticks
             n_ticks = 0
