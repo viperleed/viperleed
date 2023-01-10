@@ -10,7 +10,8 @@ Glossary
       Low energy electron diffraction
 
     CSV
-      Comma separated value format. See tje `Wikipedia entry <https://en.wikipedia.org/wiki/Comma-separated_values>`__.
+      Comma separated value format.
+      See the `Wikipedia entry <https://en.wikipedia.org/wiki/Comma-separated_values>`__.
 
     DFT
       Density functional theory
@@ -22,10 +23,12 @@ Glossary
       The Vienna Package for Erlangen LEED
 
     VASP
-      Vienna ab initio simulation package. See the `VASP wiki <https://www.vasp.at/wiki/index.php>`__.
+      Vienna ab initio simulation package.
+      See the `VASP wiki <https://www.vasp.at/wiki/index.php>`__.
 
     VESTA
-      3D Visualization software for structural models. See the VESTA `homepage <https://jp-minerals.org/vesta/en/>`__.
+      3D Visualization software for structural models :cite:p:`mommaVESTAThreedimensionalVisualization2011`.
+      See also the VESTA `homepage <https://jp-minerals.org/vesta/en/>`__.
 
     LEED-:math:`I(V)`
       Energy dependent low energy electron diffraction.

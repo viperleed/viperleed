@@ -184,7 +184,7 @@ To visualize how our optimization went, we can also take a look at the  :ref:`Se
    First page of the file Search-progress.pdf showing convergence of the structure search (top) and development of atomistic parameters (bottom).
 
 The final result of the optimization (POSCAR with coordinates and VIBROCC with vibrational amplitudes) are saved in the ``OUT`` directory.
-Interatomic distances and angles can easily be measured in a visualization software such as :term:`VESTA`.
+Interatomic distances and angles can easily be measured in a visualization software such as :term:`VESTA` :cite:p:`mommaVESTAThreedimensionalVisualization2011`.
 
 Next steps
 ==========

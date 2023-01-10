@@ -21,8 +21,8 @@ Introduction
 
 We start from experimental LEED-:math:`I(V)` curves which are saved in the file :ref:`EXPBEAMS.csv<expbeams>`.
 As reference structure, we use a :ref:`POSCAR file<poscar>`, containing a hand-made Ir(100) surface, which we hand made from a bulk structure with an additional adsorbed oxygen atom placed at a bridge site, such that each surface iridium atom binds to one oxygen atom.
-The height above the surface was chosen according to achieve a reasonable Ir-O bond length.
-See below for a visualization (using :term:`VESTA`) of the structure.
+The height above the surface was chosen to achieve a reasonable Ir-O bond length.
+See below for a visualization (using :term:`VESTA` :cite:`mommaVESTAThreedimensionalVisualization2011`) of the structure.
 In this visualization, we also drew a plane through the unit cell orthogonal to :math:`c` (at unit cell fraction 0.35).
 We will use the :ref:`BULK_LIKE_BELOW` parameter to declare everything below this cut-off "bulk-like."
 

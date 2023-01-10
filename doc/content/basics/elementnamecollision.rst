@@ -57,4 +57,4 @@ in :ref:`OCC_DELTA<OCCDELTA>`  blocks in the
 .. [#] Mind the fact that `VESTA <https://jp-minerals.org/vesta/en/>`__ 
        will only read in the first 2 characters of the names in a POSCAR
        file, so ``Atom1`` and ``Atom2`` will both appear as species 
-       ``At`` in VESTA.
+       ``At`` in VESTA :cite:p:`mommaVESTAThreedimensionalVisualization2011`.

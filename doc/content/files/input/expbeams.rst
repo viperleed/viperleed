@@ -51,7 +51,7 @@ EXPBEAMS file format with the :ref:`AUXEXPBEAMS_to_EXPBEAMS utility<aux_to_exp>`
     subtraction. Beams with negative intensities will be offset to have 
     minimum intensity equal to zero (issuing warnings of having done so).
     This behavior prevents errors while writing input files for the FORTRAN 
-    routines from TensErLEED. However, as this articial offset affects 
+    routines from TensErLEED. However, as this altricial offset affects 
     the minima of the intensities, the R-factor may be impacted 
     significantly.
     We strongly advise that the problematic beams are fixed or discarded 
@@ -62,9 +62,8 @@ EXPBEAMS file format with the :ref:`AUXEXPBEAMS_to_EXPBEAMS utility<aux_to_exp>`
 
 .. warning::
     Gaps in the experimental beam set (i.e. a beam reappearing at higher 
-    energies) are not currently neither supported in the spot tracker nor 
-    in tleedm. We recommend using only the longest continuous part of any 
-    beam.
+    energies) are currently not supported – neither supported in the spot tracker nor in tleedm.
+    We recommend using only the longest continuous part of any beam.
 
 **TODO** figure out how to (if at all) to include this pdf in Latex.
 

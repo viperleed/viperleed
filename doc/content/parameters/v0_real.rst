@@ -56,8 +56,8 @@ Operation             Symbol  Syntax example
 Exponentiation        \*\*    a**b (a to the power of b)
 Multiplication        \*      a*b (a times b)
 Division              /       a/b (a divided by b)
-Sum                   +       a+b (a plus b)
-Subtraction, Negation -       a-b (a minus b), -a (negative of a)
+Sum                   \+      a+b (a plus b)
+Subtraction, Negation \-      a-b (a minus b), -a (negative of a)
 Absolute value        abs()   abs(a) = \|a\|
 Arc-cosine            acos()  acos(a), result in radians
 Arc-sine              asin()  asin(a), result in radians
