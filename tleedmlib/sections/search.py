@@ -1003,14 +1003,15 @@ def search(sl, rp):
                                         "criteria are defined, not all are "
                                         "met. Search continues.")
                         if repeat:
-                            if rp.GAUSSIAN_WIDTH == 0.0001:
+                            if rp.GAUSSIAN_WIDTH <= 0.0001:
                                 logger.info(
                                     "GAUSSIAN_WIDTH cannot be reduced "
                                     "further, continuing search...")
                             else:
-                                rp.GAUSSIAN_WIDTH *= rp.GAUSSIAN_WIDTH_SCALING
-                                if rp.GAUSSIAN_WIDTH < 0.0001:
-                                    rp.GAUSSIAN_WIDTH = 0.0001
+                                rp.GAUSSIAN_WIDTH = max(
+                                    rp.GAUSSIAN_WIDTH * rp.GAUSSIAN_WIDTH_SCALING,
+                                    0.0001
+                                )
                                 logger.info(
                                     "Reducing GAUSSIAN_WIDTH parameter to {} "
                                     "and restarting search..."
