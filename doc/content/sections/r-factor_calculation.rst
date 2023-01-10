@@ -17,10 +17,13 @@ ViPErLEED supports Pendry' R factor :math:`R_P` :cite:p:`pendryReliabilityFactor
 .. note::
     Using :math:`R_P` is the **default setting** and highly encouraged since tests have shown that it leads to better results than :math:`R_2` :cite:p:`spornAccuracyQuantitativeLEED1998`.
 
-The Pendry R factor :math:`R_P` can have values between 0 and 2 and is defined as follows:
+The Pendry R factor
+-------------------
+
+The Pendry R factor :math:`R_P` can have values between 0 and 2 and is defined as follows :cite:p:`pendryReliabilityFactorsLEED1980,heinzElectronBasedMethods2013`:
 
 .. math:: 
-    R_{\mathrm{P}} = \frac{\sum_g\int (Y_\mathrm{theo} - Y_\mathrm{exp} )^2 dE }{\sum_g\int (Y_\mathrm{theo}^2 + Y_\mathrm{exp}^2) dE}
+    R_{\mathrm{P}} = \frac{\sum_{h,k}\int (Y^\mathrm{theo}_{h,k}(E) - Y^\mathrm{exp}_{h,k}(E) )^2 dE }{\sum_{h,k}\int (Y^\mathrm{theo}_{h,k}(E)^2 + Y^\mathrm{exp}_{h,k}(E)^2) dE}
 
 The R-factor can be calculated for all beams :math:`g` together or individually.
 :math:`Y(E)` is the Pendry Y-function that contains the beam intensities :math:`I(E)`, the derivative :math:`I'(E)=\frac{dI{E}}{dE}`, and the imaginary part of the inner potential :math:`V_{0\text{i}}` (see parameter :ref:`V0_imag`).
