@@ -126,7 +126,7 @@ We can get a better idea of how the search has converged by taking a look at the
 
    Upper half of page 1 for ``Search-progress.pdf``.
 
-The upper half of figure ::numref:`fig_Ir_O_search_progress_1`  shows a plot of the decreasing R-factor during the various stages of the search.
+The upper half of :numref:`fig_Ir_O_search_progress_1`  shows a plot of the decreasing R-factor during the various stages of the search.
 We clearly see that both geometric optimizations made quick progress in terms of convergence - as should be expected when starting from an un-relaxed surface slab such as here.
 The other pages of the file give us some insight into how each atomic parameter developed during the structure optimization.
 
@@ -137,7 +137,7 @@ The other pages of the file give us some insight into how each atomic parameter 
 
    Page 2-4 of ``Search-progress.pdf`` (white space cropped).
 
-Figure :numref:`fig_Ir_O_search_progress_2` shows that the (:math:`z`) position of the oxygen adsorbate has changed a good amount.
+:numref:`fig_Ir_O_search_progress_2` shows that the (:math:`z`) position of the oxygen adsorbate has changed a good amount.
 Further, we see that the vibrational amplitude of the oxygen atom has gone down, while the amplitude for iridium has gone up.
 
 .. important::
@@ -232,7 +232,7 @@ Here, atom 1 is the oxygen adsorbate and atoms 2 and 3 are the topmost iridium s
    Part of ``Errors.pdf`` showing the effects of geometric displacements.
 
 .. note::
-   The point of intersection between the error curve for a parameter and the horizontal line labelled :math:`R + \textrm{var}(R)` gives a measure for the statistical error.
+   The point of intersection between the error curve for a parameter and the horizontal line labeled :math:`R + \textrm{var}(R)` gives a measure for the statistical error (See the section on :ref:`Errors.pdf<errorspdf>`).
 
 Similarly, changes in the vibrational amplitude of the surface atoms also strongly affect the R-factor:
 

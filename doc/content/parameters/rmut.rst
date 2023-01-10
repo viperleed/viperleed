@@ -3,7 +3,10 @@
 GAUSSIAN_WIDTH
 ==============
 
-GAUSSIAN_WIDTH (corresponds to RMUT parameter in fortran) is a control parameter for the probability distribution of step width during the search. A larger GAUSSIAN_WIDTH corresponds to a higher probability of taking a large step. However, the width of the distribution function is not only controlled by GAUSSIAN_WIDTH, but also has contributions from the number of independent parameters and a dynamic parameter that is varied during the search.
+GAUSSIAN_WIDTH (corresponds to RMUT parameter in the TenErLEED code) is a control parameter for the probability distribution of step width during the search.
+RMUT is a scaling factor applied to the standard deviation of the probability distribution (a normal distribution).
+A larger GAUSSIAN_WIDTH corresponds to a higher probability of taking a large step.
+However, the width of the distribution function is not only controlled by GAUSSIAN_WIDTH, but also has contributions from the number of independent parameters and a dynamic parameter that is varied during the search.
 
 **Default:** 0.1
 

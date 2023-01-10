@@ -10,6 +10,14 @@ This system deals with :math:`(5\times \sqrt{3})_{\text{rect}}` superstructure a
 It serves as an example for how a more challenging system can be treated with ViPErLEED.
 In fact, the analysis presented in the original publication was performed using an early development version of ViPErLEED :cite:p:`kisslingerSubmonolayerCopperTelluride2021`.
 
+.. _Cu(111)-Te_LEED_pattern:
+.. figure:: /_static/example_systems/Cu(111)-Te/figures/Cu(111)-Te_LEED_pattern.png
+   :width: 40%
+   :align: center
+
+   Snapshot of the experimental LEED pattern of :math:`(5\times \sqrt{3})_{\text{rect}}` at an incident electron energy of 60 eV.
+   Diffraction spots are labelled by the ViPErLEED spot tracker (**TODO link**).
+
 .. only:: html
 
    All input files needed to follow along on your own machine can be found :download:`here</_static/example_systems/Cu(111)-Te/input_files.zip>`.
@@ -27,15 +35,38 @@ Introduction
 The system we are analyzing is a :math:`(5\times \sqrt{3})_{\text{rect}}` superstructure of copper telluride on the hexagonal Cu(111) substrate.
 The tellurium coverage is 0.40 monolayers, which corresponds to 4 tellurium atoms per surface unit cell.
 
-For our example analysis we start from a qualitatively correct structure model (:ref:`POSCAR file<poscar>`) with correct layer stacking :cite:p:`kisslingerSubmonolayerCopperTelluride2021`.
-However, the initial atom positions in the POSCAR are taken from bulk Cu, so we need to expect significant relaxation during the structure-optimization.
-We will need to run multiple delta-amplitude calculations and structure optimizations.
-The individual :ref:`DISPLACEMENTS files<displacements>` are not all shown in full below, but you can download all input files :download:`here</_static/example_systems/Cu(111)-Te/input_files.zip>`.
-
-**TODO Lutz:** It would be nice if we could put one to three LEED patterns and figures of the structure (like for Ir(100)-O) here. I can't take them directly from the paper for legal reasons – but since you are the author, you could send me the original ones ;)
-
 From experiments, we have a set of 79 beams in our energy range (20 to 500eV) – stored in the file :ref:`EXPBEAMS.csv<expbeams>`.
 These beams correspond to a total energy range of around 17500 eV, of which only around 1800 eV are from integer beams.
+:numref:`Cu(111)-Te_LEED_pattern` shows a Snapshot of the experimental LEED pattern.
+
+For our example analysis we start from a qualitatively correct structure model (:ref:`POSCAR file<poscar>`) with correct layer stacking :cite:p:`kisslingerSubmonolayerCopperTelluride2021`.
+However, the initial atom positions in the POSCAR are taken from bulk Cu, so we need to expect significant relaxation during the structure-optimization.
+Below, you see a rendering of the initial structure (produced using :term:`VESTA` :cite:p:`mommaVESTAThreedimensionalVisualization2011`).
+
+.. only:: html
+
+   We will need to run multiple delta-amplitude calculations and structure optimizations.
+   The individual :ref:`DISPLACEMENTS files<displacements>` are not all shown in full below, but you can download all input files :download:`here</_static/example_systems/Cu(111)-Te/input_files.zip>`.
+
+
+.. _Cu-Te_structure_fig:
+
+.. list-table::
+    :align: center
+    :width: 100%
+
+    * - .. figure:: /_static/example_systems/Cu(111)-Te/figures/view_a.png
+
+            POSCAR rendered in :term:`VESTA` view along :math:`a`.
+
+      - .. figure:: /_static/example_systems/Cu(111)-Te/figures/view_b.png
+
+            POSCAR rendered in :term:`VESTA` view along :math:`b`.
+
+      - .. figure:: /_static/example_systems/Cu(111)-Te/figures/view_c.png
+
+            POSCAR rendered in :term:`VESTA` view along :math:`c`.
+
 
 PARAMETERS
 ==========
