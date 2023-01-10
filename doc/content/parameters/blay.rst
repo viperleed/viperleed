@@ -28,4 +28,4 @@ Correct identification of the bulk layers and bulk repeat vectors can be checked
 
 **See also**: :ref:`BULK_LIKE_BELOW<BULK_LIKE_BELOW>`, another way to specify which layers of the input file are used as bulk.
 
-**TODO**: add some figures to help
+**TODO Alex, Florian, Michele**: add some figures to help

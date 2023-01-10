@@ -24,4 +24,4 @@ SCREEN_APERTURE defines the aperture (in degrees) of the acceptance cone of the 
    Here :math:`e` and :math:`m_e` are the elementary charge and electron
    mass respectively.
 
-**TODO** Add source?
+**TODO Michele, Michael?** Add source?

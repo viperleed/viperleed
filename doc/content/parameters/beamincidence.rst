@@ -24,9 +24,9 @@ BEAM_INCIDENCE defines the incidence angles (in degrees) of the electron beam on
 -  Beam incidence optimization is commonly one of the last refinement steps of the LEED fit.
 -  Even for normal incidence, during the last polishing one can even use a purposely off-normal BEAM_INCIDENCE (``theta`` different from zero) and average the resulting almost-equivalent beams in order to account for the fact that the electron beam has a finite aperture angle. (For averaging, see the :ref:`AVERAGE_BEAMS<AVERAGEBEAMS>`  parameter). This commonly leads to ``theta`` values in the order of 0.3 -- 0.5°. This option makes sense only if the R factor is very low and the surface has sufficiently high symmetry (at least threefold rotation symmetry or mirror/glide planes in two directions), so that averaging simultates incoming beams from several azimuthal directions. The azimuth ``phi`` of the incoming beam should be chosen such that it is midway between the azimuth values of two beams that are symmetry-equivalent at normal incidence.
 
-**TODO**: have a decent default for ``phi``?. One would like to run a refcalc such that the beam impinges midway between mirror/glide planes.
+**TODO Florian, Alex -> move comment elesewher?**: have a decent default for ``phi``?. One would like to run a refcalc such that the beam impinges midway between mirror/glide planes.
 
-**TODO**: it might be worth implementing ranges at a later stage. However, if there are ranges, this requires to (i) run one refcalc at each (theta,phi), (ii) run delta+search -> get best R, and compare with other (theta,phi).
+**TODO Florian, Alex -> move comment elesewher?**: it might be worth implementing ranges at a later stage. However, if there are ranges, this requires to (i) run one refcalc at each (theta,phi), (ii) run delta+search -> get best R, and compare with other (theta,phi).
 
 Syntax would then also allow:
 
@@ -46,4 +46,4 @@ Syntax would then also allow:
 
 :math:`0 < \phi_{step} \leq \phi_{max} – \phi_{min}`.
 
-**AMI**: Isn't this redundant now that we have FD calculations? In my limited experience, this works reasonably well, even without Delta+Search for each angle combination.
+**TODO Florian**: Isn't this redundant now that we have FD calculations? In my limited experience, this works reasonably well, even without Delta+Search for each angle combination.

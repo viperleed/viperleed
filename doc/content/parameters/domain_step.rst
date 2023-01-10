@@ -21,4 +21,4 @@ When fitting multiple domains, one weight parameter per domain is added to the s
 
 DOMAIN_STEP should always be a divisor of 100 because the variation is performed with integer-valued parameters, with the lowest value (1) always corresponding to 0% and the highest value corresponding to 100%.
 
-**TODO**: perhaps it would be more intuitive to interpret the step as the 'resolution' in the area fractions?
+**TODO - needs discussion, move comment**: perhaps it would be more intuitive to interpret the step as the 'resolution' in the area fractions?

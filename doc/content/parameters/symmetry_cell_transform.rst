@@ -13,4 +13,4 @@ SYMMETRY_CELL_TRANSFORM is relevant in the context of :ref:`domain calculations<
 
 Note that the base unit cell defined by SYMMETRY_CELL_TRANSFORM may still be automatically reshaped to a higher-symmetry / lower-circumference form, in the same way as during :ref:`optimization of the POSCAR unit cell<POSCAR>`.
 
-**TODO**: add some figures to help
+**TODO Michele, Florian, Alex**: add some figures to help

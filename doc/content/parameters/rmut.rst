@@ -20,4 +20,4 @@ However, the width of the distribution function is not only controlled by GAUSSI
 
 **GAUSSIAN_WIDTH is one of the main parameters controlling convergence**, and should therefore not be left at the default, but rather adapted as needed. For rough (wide scan) searches, a value of 0.1 is appropriate. The finer the fit, the smaller the steps should be, so RMUT should then be set at 0.01 or even lower.
 
-**TODO: Could use some more advice-style info from Lutz**
+**TODO Lutz: Could use some more advice-style info**

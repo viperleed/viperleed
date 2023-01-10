@@ -65,6 +65,6 @@ EXPBEAMS file format with the :ref:`AUXEXPBEAMS_to_EXPBEAMS utility<aux_to_exp>`
     energies) are currently not supported – neither supported in the spot tracker nor in tleedm.
     We recommend using only the longest continuous part of any beam.
 
-**TODO** figure out how to (if at all) to include this pdf in Latex.
+**TODO Alex** figure out how to (if at all) to include this pdf in Latex.
 
 .. |here| replace:: :download:`here</_static/pattern_file_example.pdf>`

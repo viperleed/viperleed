@@ -101,7 +101,7 @@ After executing a search, a POSCAR_OUT file will be produced in the OUT folder. 
 Overview of Planegroups
 -----------------------
 
-**TODO** We may want to make this it's own page.
+**TODO Alex, Florian** We may want to make this it's own page.
 
 .. figure:: /_static/planegroups.pdf
     :alt: Overview of planegroups and possible symmetry operations.
