@@ -11,7 +11,14 @@ We will begin by running a reference calculation and a rough structure-optimizat
 Following this, we move to a finer search grid and run a :ref:`full-dynamic optimization <fdoptimization>` of the inner potential :math:`V_{0\text{i}}`.
 Finally, once we achieve a satisfactory R-factor, we will use the ViPErLEED :ref:`error calculation<error_calculation>` to estimate how much small changes of atomic positions affect the R-factor.
 This will give rough margins for the statistical uncertainties of the determined parameters.
-You can download the input files to follow along :download:`here</_static/example_systems/Ir(100)-O/input_files.zip>`.
+
+.. only:: html
+
+   You can download the input files to follow along :download:`here</_static/example_systems/Ir(100)-O/input_files.zip>`.
+
+.. only:: not html
+
+   You can download the input files to follow along in the online version of the documentation at `viperleed.org <viperleed.org>`__.
 
 .. tip:: 
    If you are new to ViPErLEED, check out :ref:`the more basic tutorial<example_ag_100>` first, which explains the setup in more detail.

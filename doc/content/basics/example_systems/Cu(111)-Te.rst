@@ -10,7 +10,13 @@ This system deals with :math:`(5\times \sqrt{3})_{\text{rect}}` superstructure a
 It serves as an example for how a more challenging system can be treated with ViPErLEED.
 In fact, the analysis presented in the original publication was performed using an early development version of ViPErLEED :cite:p:`kisslingerSubmonolayerCopperTelluride2021`.
 
-All input files needed to follow along on your own machine can be found :download:`here</_static/example_systems/Cu(111)-Te/input_files.zip>`.
+.. only:: html
+
+   All input files needed to follow along on your own machine can be found :download:`here</_static/example_systems/Cu(111)-Te/input_files.zip>`.
+
+.. only:: not html
+
+   You can download the input files to follow along in the online version of the documentation at `viperleed.org <viperleed.org>`__.
 
 .. tip:: 
    If you are new to ViPErLEED, check out :ref:`the more basic tutorial<example_ag_100>` first, which explains the basics in more detail.
@@ -96,13 +102,20 @@ For this stage, a choice of 10 pm range with 1 pm steps (0.1 Å range with 0.01 
 
 .. hint:: 
     In preparing this example we found that the default search parameters lead to rather slow convergence in this and the following steps.
-    To speed up the process, we recommend using these settings for :ref:`SEARCH_START<searchstart>` and  :ref:`SEARCH_CONVERGENCE<search_convergence>` (simply append the lines to PARAMETERS):
+    To speed up the process, we recommend using these settings for :ref:`SEARCH_START<searchstart>` and :ref:`SEARCH_CONVERGENCE<search_convergence>` (simply append the lines to PARAMETERS):
 
         .. code-block:: console
 
             SEARCH_START = centered
             SEARCH_CONVERGENCE gaussian = 0.05 0.5
             SEARCH_CONVERGENCE dgen dec = 50 1.5
+   
+   After the previous search steps, the parameters are close to the optimum.
+   Therefore, the danger of getting trapped in a local R-factor minimum close to the starting position is low, and we can initialize the search at the previously determined values.
+   The :ref:`SEARCH_CONVERGENCE<search_convergence>` dgen parameter ensures that the search range shrinks more rapidly than with standard parameters.
+
+   Of course, this is not the only possible (or necessarily best) choice of hyper parameters to speed up this section.
+   One could, for example, also reduce the search population size (:ref:`SEARCH_POPULATION<searchpop>`) or limit the maximum number of generations (:ref:`SEARCH_MAX_GEN<searchgenmax>`).
 
 The optimization on the 1 pm (0.01 Å) grid allows us to further reduce the R-factor to about :math:`\approx 0.23`, which is again a good improvement on the previous value of :math:`\approx 0.33`.
 
