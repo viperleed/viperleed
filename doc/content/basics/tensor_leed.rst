@@ -154,9 +154,12 @@ The starting points for the optimization individuals is defined by :ref:`SEARCH_
 
 For each search step (called "generation" based on the terminology of genetic algorithms), a new grid point in the parameter space is selected *randomly*, but based on a probability distribution centered on the current position.
 The R-factor is calculated for the selected parameter combination and the new parameter set is accepted **only if** the R-factor for the new configuration is lower then for the previous configuration.
-The width of the probability distribution is determined by the current R-factor and the parameters :ref:`SEARCH_CONVERGENCE<search_convergence>`  and :ref:`GAUSSIAN_WIDTH<rmut>`.
+The width of the probability distribution is determined by the current R-factor and the parameters :ref:`SEARCH_CONVERGENCE<search_convergence>` and :ref:`GAUSSIAN_WIDTH<rmut>`.
 
+ViPErLEED enables more sophisticated control over the search process than is possible with TensErLEED alone.
+Different types of convergence criteria and an automatic scaling of the probability distribution can be set using :ref:`SEARCH_CONVERGENCE<search_convergence>`.
 Furthermore, as defined by the parameter :ref:`SEARCH_CULL<search_cull>`, whenever :ref:`partial convergence<search_convergence>` is reached, a portion of the search population can be dropped and re-initialized to get out of local minima.
+By default, the search population is re-initialized using a custom genetic algorithm (see :ref:`SEARCH_CULL<search_cull>` for details).
 
 
 .. [1] There are exceptions, in which the same LEED pattern can result. For example, on an fcc(111) surface, a (:math:`2\times2`) reconstruction and a (:math:`1\times2`) with domains would give the same qualitative pattern.
