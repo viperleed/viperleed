@@ -6,7 +6,8 @@ The DISPLACEMENTS file
 
 
 
-The DISPLACEMENTS file defines the variations of geometry, vibrational amplitudes and element concentrations that should be considered in the search. In other words, the DISPLACEMENTS file defines the parameter room for the search, for each atom.
+The DISPLACEMENTS file defines the variations of geometry, vibrational amplitudes and element concentrations that should be considered in the search.
+In other words, the DISPLACEMENTS file defines the parameter space for the search.
 
 The file is split into three main blocks: Geometry, Vibrations, and Occupations. The blocks are delimited by lines starting with an equal sign "``=``", as in the following example:
 

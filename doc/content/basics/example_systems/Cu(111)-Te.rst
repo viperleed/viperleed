@@ -111,10 +111,10 @@ Full-dynamic Optimization
 
 If we now visually compare experimental with calculated :math:`I(V)` curves, we already notice a good qualitative agreement.
 However, we find that the peak-widths in the experimental dataset seem to be consistently narrower than in our calculation.
-This is generally a sign that the imaginary part of the crystal inner potential (:math:`V_{0\text{i}}`) of our calculation is off.
+This is generally a sign that the imaginary part of the inner potential (:math:`V_{0\text{i}}`) of our calculation is off.
 To be more precise, :math:`V_{0\text{i}}` is likely too large, as higher :math:`V_{0\text{i}}` increases peak-widths and smoothens out the curves.
 
-:math:`V_{0\text{i}}` strongly affects the R-factor, but is hard to gauge for an unknown system.
+:math:`V_{0\text{i}}` strongly affects the R-factor, but is hard to estimate for an unknown system.
 Since we didn't specify a value for :math:`V_{0\text{i}}` in PARAMETERS, ViPErLEED took the default value of 4.5 eV (see :ref:`V0_IMAG<v0_imag>`).
 The parameter :math:`V_{0\text{i}}` is not accessible in the tensor LEED approximation, but we can use a :ref:`full-dynamic optimization<fdoptimization>` to find an optimal value.
 To do this, we set :ref:`RUN = 6<run>` and add this line to :ref:`PARAMETERS<parameters>`:
@@ -142,14 +142,14 @@ Furthermore, ViPErLEED produces the files :ref:`FD_Optimization_beams.pdf<fdopti
    :width: 90%
    :align: center
 
-   Part of ``FD_Optimization_beams.pdf`` showing the effects of :math:`V_{0\text{i}}` on the :math:`(0|1)` beam.
+   Part of ``FD_Optimization_beams.pdf`` showing the effects of :math:`V_{0\text{i}}` on the :math:`(1|0)` beam.
 
 Refined structure fit
 =====================
 
 As usual, we can now perform some final structure fits with a fine-grained (sub pm steps) grid.
 In particular, we should also optimize the **vibrational amplitudes**, which we have skipped so far.
-We recommend starting with the vibrational amplitudes here, since we have not "touched" them at all yet:
+We recommend starting with the vibrational amplitudes here, since we have not touched them at all in the previous optimization step:
 
 .. literalinclude :: /_static/example_systems/Cu(111)-Te/DISPLACEMENTS_fine_1
    :language: console

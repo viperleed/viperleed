@@ -6,7 +6,7 @@ The R factor
 
 The reliability factor (R factor) is a measure for the deviation between
 two :math:`I(V)` curves or two sets of :math:`I(V)` curves. 
-Structure optimization (:ref:`search<Search>`) minimizes the R factor between the calculated and experimental :math:`I(V)` curves.
+Structure optimization (:ref:`search section<sec_search>`) minimizes the R factor between the calculated and experimental :math:`I(V)` curves.
 
 As the comparison of two curves is not an unambiguous task, multiple R factors implementations exist. The used R factor is chosen via the :ref:`R_FACTOR_TYPE<RFACTORTYPE>` parameter.
 ViPErLEED supports Pendry' R factor :math:`R_P` :cite:p:`pendryReliabilityFactorsLEED1980` and :math:`R_2` :cite:p:`spornAccuracyQuantitativeLEED1998`.
@@ -20,15 +20,15 @@ ViPErLEED supports Pendry' R factor :math:`R_P` :cite:p:`pendryReliabilityFactor
 The Pendry R factor :math:`R_P` can have values between 0 and 2 and is defined as follows:
 
 .. math:: 
-    R_{\mathrm{P}} = \frac{\sum_g\int (Y_\mathrm{theo} - Y_\text{exp} )^2 dE }{\sum_g\int (Y_\mathrm{theo}^2 + Y_\text{exp}^2) dE}
+    R_{\mathrm{P}} = \frac{\sum_g\int (Y_\mathrm{theo} - Y_\mathrm{exp} )^2 dE }{\sum_g\int (Y_\mathrm{theo}^2 + Y_\mathrm{exp}^2) dE}
 
-The R-factor can be calculated for all beams :math:`g` thogether or individually.
+The R-factor can be calculated for all beams :math:`g` together or individually.
 :math:`Y(E)` is the Pendry Y-function that contains the beam intensities :math:`I(E)`, the derivative :math:`I'(E)=\frac{dI{E}}{dE}`, and the imaginary part of the inner potential :math:`V_{0\text{i}}` (see parameter :ref:`V0_imag`).
 
 .. math:: 
     Y(E) = \frac{I(E)/I'(E)}{[I(E)/I'(E)]^2 + V_{0\text{i}}^2}
 
-It becomes 0 in the case of perfect agreement between curves.
+:math:`R_P` becomes 0 in the case of perfect agreement between curves.
 For uncorrelated data, :math:`R_P` = 1, while values larger than 1 indicate anti-correlation.
 The best values of :math:`R_P` obtained by the Erlangen group are below 0.05. **TODO: Lutz cite**
 For close-packed surfaces, values above 0.2 indicate a problem such as an incorrect structure model.

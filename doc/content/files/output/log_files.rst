@@ -28,7 +28,7 @@ Logs from multiple reference calculations will be collected and their order may 
 =========================
 
 The log of the :ref:`delta-amplitude calculation<sec_deltas>`.
-It generally does not contain much usefull information, except the ``LMAX`` value used for each energy step.
+It generally does not contain much useful information, except the ``LMAX`` value used for each energy step.
 Logs from multiple delta calculations will be collected and their order may not be preserved.
 
 ``search-<timestamp>.log``

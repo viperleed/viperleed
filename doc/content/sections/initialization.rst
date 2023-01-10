@@ -44,7 +44,7 @@ The major steps are listed below in order of execution.
     :ref:`PatternInfo.tld<patterninfo>`, and 
     :ref:`IVBEAMS<ivbeams>` files.
 #.  Create the directory ``original_imputs`` in which all files used to 
-    start the calculation are stored. This way, even if e.g. the 
-    PARAMETERS file is altered by the user during the run, it is possible
-    to look up the used settings.
+    start the calculation are stored.
+    This way it is possible to look up the used settings, even if, for example, the 
+    PARAMETERS file was altered by the user during the run.
     

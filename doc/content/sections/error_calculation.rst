@@ -5,11 +5,8 @@ Error calculations
 
 Once a best-fit structure has been determined, it is useful to see how 
 strongly small changes to specific parameters affect the R-factor. 
-In the error calculation, displacements (given by the 
-:ref:`DISPLACEMENTS file<DISPLACEMENTS>`) are applied one parameter at a 
-time, and the R-factor is output for each step of the variation range. 
-If multiple parameters are linked (e.g. by symmetry), these parameters are 
-treated as one, and varied together.
+In the error calculation, displacements (given by the :ref:`DISPLACEMENTS file<DISPLACEMENTS>`) are applied one parameter at a time, and the R-factor is output for each step of the variation range.
+If multiple parameters are linked (e.g. by symmetry), these parameters are treated as one, and varied together.
 
 To run the error calculation, set :ref:`RUN<run>` as ``RUN = 5`` in the 
 :ref:`PARAMETERS<PARAMETERS>` file. It is recommended to first run a 
