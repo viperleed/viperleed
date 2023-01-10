@@ -72,10 +72,9 @@ independent of convergence, is given by :ref:`SEARCH_MAX_GEN<SEARCHGENMAX>`.
 
 .. note::
    ``dgen`` also affects the output interval for the raw TenErLEED file :ref:`SD.TL<sdtl>`.
-   Low values for ``dgen`` (:math:`\lesssim` 100) may slow down the search due to I/O overhead.
+   Very values for ``dgen`` (:math:`\lesssim` 10) may slow down the search due to I/O overhead.
 
-**Default:** partial convergence when best 10% of structures do not change in 
-100 generations, scaling factor = 1/(scaling factor of GAUSSIAN_WIDTH)
+**Default:** partial convergence when best 10% of structures do not change in 100 generations, scaling factor = 1/(scaling factor of GAUSSIAN_WIDTH)
 
 **Allowed values:** one or two values > 1
 
@@ -107,7 +106,11 @@ Wenn auf Breite * 0.5 skaliert wird, sollte es überall '0.5' oder überall '2' 
 Eine Änderung sollte natürlich in den 'Change notes' oder dgl. stehen.
 
 Defining values for more than one convergence criterion is allowed; in that case, partial convergence will be considered to have been reached once *either* condition is met, but full convergence is reached only once *all* conditions are met.
-**TODO Florian, Alex, Michele– comment by Michael; needs discussion:** Verstehe ich nicht: ich hätte gedacht, full convergance ist durch search_max_dgen_best gegeben (oder es bricht wegen zu vieler Generationen ab).
+**TODO Florian, Alex, Michele– comment by Michael; needs discussion:** Verstehe ich nicht: ich hätte gedacht, full convergence ist durch search_max_dgen_best gegeben (oder es bricht wegen zu vieler Generationen ab).
 Wenn es mehrere dgen all, dgen best etc Kriterien gibt, wird ja beim Erreichen eines der Kriterien die Gauss-Breite verringert, und die anderen Kriterien können nicht mehr eintreten. Oder habe ich da etwas falsch verstanden?
 
-Gibt's eine Grenze, wenn der Gaussian zu schmal wird? (dann landet man ja immer am Ausgangspunkt, und die Suche bringt nichts. Man sollte jedenfalls vermeiden, di)-Kurven für den aktuellen Punkt wiederholt zu berechnen, wenn der neue Parametersatz gleich dem aktuellen ist).
+Gibt's eine Grenze, wenn der Gaussian zu schmal wird? (dann landet man ja immer am Ausgangspunkt, und die Suche bringt nichts. Man sollte jedenfalls vermeiden, die-Kurven für den aktuellen Punkt wiederholt zu berechnen, wenn der neue Parametersatz gleich dem aktuellen ist).
+Wenn wir den zweiten Parameter (scaling factor) von SEARCH_CONVERGENCE dgen dec = 1000 1.5
+auf den Kehrwert ändern, sollte es mit alten Files kompatibel bleiben.
+Da dieser Parameter ja immer den Bereich verkleinern muss, könnte man Werte > 1 als 1/Wert interpretieren. Dann ist es egal, ob man 0.5 oder 2.0 tippt, es wird der Suchbereich immer auf die Hälfte verringert.
+

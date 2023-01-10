@@ -24,7 +24,9 @@ header flag, followed by a list of displacements for each of the atoms that one 
 
 The values on the right are interpreted as range of displacements in Ångström. How atoms are addressed on the left is described on the main :ref:`DISPLACEMENTS<DISPLACEMENTS>`  page. However, The GEO_DELTA block contains one additional value on the left, which defines the *direction* of the displacement, as described below.
 
-When multiple searches are executed consecutively or looping, the displacement ranges are per default centered around the optimized position from previous searches. If you define an offset for an atom, the optimized position from previous searches is *discarded* for this atom, and the offset is applied to its original position. If you want to center the displacement range around the original position of the atom, you can also clear the offset without specifying a direction:
+When multiple searches are executed consecutively or in a loop, the displacement ranges are centered around the optimized position from previous searches per default.
+If you define an offset for an atom, the optimized position from previous searches is *discarded* for this atom, and the offset is applied to its original position.
+If you want to center the displacement range around the original position of the atom, you can also clear the offset without specifying a direction:
 
 ..  code-block:: none
 
@@ -93,7 +95,7 @@ Possible directions for displacements are:
    Positive translations will translate to counterclockwise rotation as 
    seen from vacuum. Zero displacement is the original position of the 
    atom. 
-   Note that since the displacement is given along the circular arc, 
+   Note that, since the displacement is given along the circular arc, 
    the absolute displacement from the original position can be 
    significantly smaller than for a linear displacement when the circle 
    is small.
