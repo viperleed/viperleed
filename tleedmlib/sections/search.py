@@ -915,7 +915,7 @@ def search(sl, rp):
                     # decide to write debug info
                     # will only write once per SD.TL read
                     time_since_print = timer() - last_debug_print_time
-                    current_gen = gens[-1]
+                    current_gen = gens[-1] if gens else 0
                     if (current_gen - last_debug_write_gen > rp.output_interval):
                         speed = 1000*(timer() - absstarttime)/current_gen # in s/kG
                         logger.debug(
