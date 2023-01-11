@@ -53,7 +53,7 @@ The prefactor for the penalty term of the ridge, lasso, and elastic net methods 
 localize
 --------
 
-**TODO Florian ** Comment this section out?
+**TODO Florian** Comment this section out?
 
 **CURRENTLY NOT ACTIVE - best way to do something like this needs to be discussed.** Currently, the RR value ``RR = 8 * V0i / enrange`` is calculated, where V0i is the imaginary part of the inner potential and enrange the total energy range of all beams. Points farther than 3*RR from the best known R-factor are discarded. Maybe a reasonable 'localize' parameter would be to re-define this prefactor to RR, i.e. influence the R-cutoff.
 

@@ -232,7 +232,7 @@ Here, atom 1 is the oxygen adsorbate and atoms 2 and 3 are the topmost iridium s
    Part of ``Errors.pdf`` showing the effects of geometric displacements.
 
 .. note::
-   The point of intersection between the error curve for a parameter and the horizontal line labeled :math:`R + \textrm{var}(R)` gives a measure for the statistical error (See the section on :ref:`Errors.pdf<errorspdf>`).
+   The point of intersection between the error curve for a parameter and the horizontal line labeled :math:`R + \textrm{var}(R)` gives a measure for the statistical error :cite:p:`heinzElectronBasedMethods2013` (see also the section on :ref:`Errors.pdf<errorspdf>`).
 
 Similarly, changes in the vibrational amplitude of the surface atoms also strongly affect the R-factor:
 

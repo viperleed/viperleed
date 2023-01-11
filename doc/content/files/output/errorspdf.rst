@@ -26,4 +26,4 @@ When using Pendry's R factor, the variance provides an indication of the uncerta
 where :math:`R` is the R-factor of the best-fit structurewhere, :math:`V_{0i}` is the imaginary part of the inner potential, and :math:`\delta E` is the total energy range of the beamset.
 For more information, see :cite:t:`pendryReliabilityFactorsLEED1980`.
 When using the Pendry R-factor, the value of :math:`R + \textrm{var}(R)` will also be drawn as a horizontal line in ``Errors.pdf``.
-The point of intersection between the error curve and :math:`R + \textrm{var}(R)` can be taken as a measure of the statistical error for each parameter.
+The point of intersection between the error curve and :math:`R + \textrm{var}(R)` can be taken as a measure of the statistical error for each parameter :cite:p:`heinzElectronBasedMethods2013`.

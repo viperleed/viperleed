@@ -27,7 +27,7 @@ For an example of how to use the ASE interface, see :ref:`this tutorial<example_
 Automatic site definitions
 --------------------------
 
-To facilitate batch processing of structures, the ASE interface allows for a simplistic automated assignment of site definitions (usually done via the :ref:`parameter SITE_DEF<sitedef>`.
+To facilitate batch processing of structures, the ASE interface allows for a simplistic automated assignment of site definitions (usually done via the :ref:`parameter SITE_DEF<sitedef>`).
 
 If the SITE_DEF parameter is not defined in a ViPErLEED run using the ASE interface, ViPErLEED will try to assign "surface" sites on its own.
 For this calculation, every atom is considered as a solid sphere with a radius proportional to the elements' covalent radius.
