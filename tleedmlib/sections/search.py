@@ -1021,7 +1021,7 @@ def search(sl, rp):
                             for k in ["dec", "best", "all"]:
                                 rp.SEARCH_MAX_DGEN[k] *= (
                                             rp.SEARCH_MAX_DGEN_SCALING[k])
-                                realLastConfigGen[k] = gens[-1]
+                                realLastConfigGen[k] = gens[-1] if gens else 0
         except KeyboardInterrupt:
             if not os.path.isfile("SD.TL"):
                 # try saving by waiting for SD.TL to be created...
