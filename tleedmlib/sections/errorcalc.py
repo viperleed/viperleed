@@ -148,6 +148,7 @@ def errorcalc(sl, rp):
     if len(errors) == 0:
         logger.info("Error calculation: Returning with no output.")
         return
+    er = 0 #dummy breakpoint
     tl_io.write_errors_csv(errors)
     tl_io.write_errors_pdf(errors, v0i=rp.V0_IMAG, energy_range=rp.total_energy_range())
     return

@@ -30,6 +30,8 @@ logger = logging.getLogger("tleedm.files.ioerrorcalc")
 logger.setLevel(logging.INFO)
 
 
+
+
 def write_errors_csv(errors, filename="Errors.csv", sep=","):
     """
     Writes errors from the error calculation into a CSV file
@@ -98,6 +100,28 @@ def write_errors_csv(errors, filename="Errors.csv", sep=","):
         logger.warning("Failed to write "+filename + ": " + str(e))
     return
 
+
+
+def new_errors_csv(errors, v0i, energy_range, sep=";"):
+
+    for param_err in errors:
+        columns = {"at": ["Atoms"],
+        "mode": ["Mode"],
+        "dir": None,
+        "disp": ["Displacement [A]"],
+        "rfac": ["R"]}
+        
+        ats = range_to_str([at.oriN for at in param_err.atoms])
+        if param_err.mode == "geo":
+            columns["dir"] = ["Disp. along (1st atom)"]
+        elif param_err.mode == "vib":
+            columns["dir"] = ["Occupation"]
+        elif param_err.mode == "occ":
+            columns["dir"] = ["Vibrational amplitude"]
+        else:
+            raise ValueError(f'Unknown mode "{param_err.mode}"')
+        
+        
 
 def write_errors_pdf(errors, v0i, energy_range, filename="Errors.pdf"):
     """Creates and writes Errors.pdf.
