@@ -11,6 +11,8 @@ import numpy as np
 import logging
 import re
 from scipy import interpolate
+from zipfile import ZipFile, ZIP_DEFLATED
+
 from viperleed.tleedmlib.base import range_to_str, max_diff
 
 try:
@@ -28,8 +30,6 @@ else:
 
 logger = logging.getLogger("tleedm.files.ioerrorcalc")
 logger.setLevel(logging.INFO)
-
-
 
 
 def write_errors_csv(errors, filename="Errors.csv", sep=","):
@@ -101,6 +101,29 @@ def write_errors_csv(errors, filename="Errors.csv", sep=","):
     return
 
 
+def write_errors_summary_csv(summary_content, summary_path,
+                             summary_fname="Errors_summary.csv"):
+    try:
+        with open(summary_path/summary_fname, "w") as wf:
+            wf.write(summary_content)
+    except Exception as err:
+        logger.error("Failed to write error calculation summary "
+                     f"{summary_fname}:\n{err}")
+
+
+def write_errors_archive(individual_files,
+                         archive_path,
+                         compression_level=2,
+                         archive_fname="Errors.zip"):
+    try:
+        with ZipFile(archive_path/archive_fname, 'w',
+                     compression=ZIP_DEFLATED,
+                     compresslevel=compression_level) as err_archive:
+            for fname, content in individual_files.items():
+                err_archive.writestr(fname, content)
+    except Exception as err:
+        logger.error("Failed to write error calculation archive "
+                     f"{archive_fname}:\n{err}")
 
 
 def generate_errors_csv(errors, sep=","):
@@ -135,7 +158,7 @@ def generate_errors_csv(errors, sep=","):
         summary_columns["d_p_plus"].append(d_p_plus)
 
         # create_filename for individual files
-        indiv_fname = f"{param_err.mode}_errors_atoms_str.csv"
+        indiv_fname = f"Errors_{param_err.mode}_atoms#{atoms_str} .csv"
 
         if param_err.mode == "geo":
             param_columns = geo_errors_csv_content(param_err)
