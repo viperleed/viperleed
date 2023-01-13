@@ -298,11 +298,11 @@ class Atom:
             self.disp_lin_steps["geo"] = disp_lin_steps
         elif mode == 2:
             td = self.disp_vib
-            self.disp_labels["vib"] = disp_label
+            self.disp_labels["vib"] = "N/A"  # direction not applicable for vib
             self.disp_lin_steps["vib"] = disp_lin_steps
         elif mode == 3:
             td = self.disp_occ
-            self.disp_labels["occ"] = disp_label
+            self.disp_labels["occ"] = "N/A"  # direction not applicabel for occ
             self.disp_lin_steps["occ"] = disp_lin_steps
         elif mode == 4:
             td = self.disp_geo_offset

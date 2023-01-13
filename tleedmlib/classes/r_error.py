@@ -111,10 +111,24 @@ class R_Error():
 
     @property
     def get_r_min(self):
+        """Returns minimum R-factor of error.
+
+        Returns
+        -------
+        float
+            Minimum R-factor stored in self.rfacs.
+        """
         return min(self.rfacs)
 
     @property
     def get_p_min(self):
+        """Returns parameter value at minimum R-factor.
+
+        Returns
+        -------
+        float
+            parameter value at minium R-factor (self.rfacs).
+        """
         return self.lin_disp[self.rfacs.index(self.get_r_min)]
 
 
