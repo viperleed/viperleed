@@ -241,7 +241,7 @@ def format_col_content(content):
     elif isinstance(content, int):
         return str(content)
     elif isinstance(content, float):
-        return f"{content:.3f}"
+        return f"{content:.4f}"
     elif content is None:
         return "N/A"
     else:
