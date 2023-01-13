@@ -10,6 +10,11 @@ calc after they have been calculated.
 
 import numpy as np
 import copy
+import logging
+
+from viperleed.tleedmlib.base import range_to_str
+
+logger = logging.getLogger("tleedm.classes.r_error")
 
 
 class R_Error():
@@ -20,12 +25,14 @@ class R_Error():
     linked.
     """
 
-    def __init__(self, atoms, mode, rfacs):
+    def __init__(self, atoms, mode, rfacs, disp_label, lin_disp, 
+                 v0i=None, energy_range=None):
         self.atoms = atoms  # atoms that have been varied together
         self.mode = mode    # vib, geo, or occ
         self.rfacs = rfacs  # the r-factors from the variations
-        self.displacements = []   # displacements of atoms[0]
-        self.lin_disp = None  # linearized displacement
+        self.displacements = []   # displacements of atoms[0]#
+        self.disp_label = disp_label
+        self.lin_disp = lin_disp  # linearized displacement
         self.main_element = ""    # element occupation displayed in output
         d = {}
         at = atoms[0]   # store displacements for this one; main element
@@ -49,38 +56,39 @@ class R_Error():
             else:
                 k = "all"
             self.displacements = copy.deepcopy(d[k])
-        self.get_linear_displacements()
+            
+        if v0i and energy_range:
+            self.calc_var_r(v0i, energy_range)
 
 
-    def get_linear_displacements(self):
-        
-        if self.mode == "geo":
-            dir_vec = ((self.displacements[-1] - self.displacements[0])
-                * np.array([1, 1, -1]))
-            dir_vec = dir_vec / np.linalg.norm(dir_vec)
-            self.lin_disp = np.dot(dir_vec * np.array([1, 1, -1]),
-                              self.displacements)
-        else:
-            self.lin_disp = self.displacements
+    def calc_var_r(self, v0i, energy_range):
+        self.var_r = np.sqrt(8*np.abs(v0i) / energy_range) * self.get_r_min
 
 
-    def get_error_estimates(self, R_min, var_R):
+    @property
+    def get_error_estimates(self):
     # decide if estimate errors
+
+        r_min = self.get_r_min
+        if self.var_r is None:
+            logger.warning("Cannot calculate statistical errors for "
+                           f'atoms {range_to_str([at.oriN for at in self.atoms])}')
+            return (None, None)
 
         if self.lin_disp is None:
             raise ValueError("Linear displacements not initialized.")
 
         # more than 4 points
-        if len(self.rfacs) < 3 or not var_R:
+        if len(self.rfacs) < 3 or not self.var_r:
             return (None, None)
 
         # minimum R factor of this error is not necessarily the same as
         # the overall minimum R factor
         err_min_R = min(self.rfacs)
 
-        if (err_min_R > R_min + var_R or              # minimum R is below line
-            self.rfacs[0] < R_min + var_R or        # left max R is below line
-            self.rfacs[-1] < R_min + var_R):        # right max R is below line
+        if (err_min_R > r_min + self.var_r or              # minimum R is below line
+            self.rfacs[0] < r_min + self.var_r or        # left max R is below line
+            self.rfacs[-1] < r_min + self.var_r):        # right max R is below line
             return (None, None)
 
         # treat upper and lower half of error curve
@@ -95,12 +103,19 @@ class R_Error():
                                 zip(right_rfacs, right_lin_disp)):
             # find zero crossing 
             if (len(rfacs) < 3 or                                    # too few points
-                get_n_zero_crossings(rfacs - (R_min + var_R)) != 1): # unclear crossing of line
+                get_n_zero_crossings(rfacs - (r_min + self.var_r)) != 1): # unclear crossing of line
                 error_estimates.append(None)
                 continue
             error_estimates.append(get_zero_crossing(lin_disp, rfacs))
-
         return tuple(error_estimates)
+
+    @property
+    def get_r_min(self):
+        return min(self.rfacs)
+
+    @property
+    def get_p_min(self):
+        return self.lin_disp[self.rfacs.index(self.get_r_min)]
 
 
 def get_n_zero_crossings(x_arr):

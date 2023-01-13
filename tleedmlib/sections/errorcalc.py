@@ -13,47 +13,10 @@ import numpy as np
 import os
 
 import viperleed.tleedmlib as tl
+from viperleed.tleedmlib.classes.r_error import R_Error
 import viperleed.tleedmlib.files.ioerrorcalc as tl_io
 
 logger = logging.getLogger("tleedm.error")
-
-
-class R_Error():
-    """
-    Data structure for storing errors after they have been calculated.
-    Stores the displacements that led to the R-factors even if they are
-    modified later. Displacements are stored for one atom only, the other are
-    linked.
-    """
-
-    def __init__(self, atoms, mode, rfacs):
-        self.atoms = atoms  # atoms that have been varied together
-        self.mode = mode    # vib, geo, or occ
-        self.rfacs = rfacs  # the r-factors from the variations
-        self.displacements = []   # displacements of atoms[0]
-        self.main_element = ""    # element occupation displayed in output
-        d = {}
-        at = atoms[0]   # store displacements for this one; main element
-        if mode == "occ":
-            if atoms[0].el in atoms[0].disp_occ:
-                self.main_element = atoms[0].el  # main site element
-            else:
-                # element with highest occupation in refcalc
-                self.main_element = max(atoms[0].site.occ,
-                                        key=lambda k: atoms[0].site.occ[k])
-            self.displacements = copy.deepcopy(atoms[0].disp_occ[
-                                                        self.main_element])
-        else:
-            if mode == "geo":
-                d = atoms[0].disp_geo
-            elif mode == "vib":
-                d = atoms[0].disp_vib
-        if len(d) > 0:
-            if at.el in d:
-                k = at.el
-            else:
-                k = "all"
-            self.displacements = copy.deepcopy(d[k])
 
 
 def errorcalc(sl, rp):
@@ -142,13 +105,20 @@ def errorcalc(sl, rp):
                                            only_vary=only_vary)
             logger.info("Finished with " + seg_info[mode] + " errors for "
                         "atom group: " + ", ".join(str(at) for at in ag))
-            errors.append(R_Error(ag, mode, rfaclist))
+            error_disp_label = ag[0].displist[0].disp_labels[mode]
+            error_lin_disps = ag[0].displist[0].disp_lin_steps[mode]
+            errors.append(R_Error(ag, mode, rfaclist,
+                                  error_disp_label,
+                                  error_lin_disps,
+                                  v0i=rp.V0_IMAG,
+                                  energy_range=rp.total_energy_range()))
             if rp.halt >= rp.HALTING:
                 return
     if len(errors) == 0:
         logger.info("Error calculation: Returning with no output.")
         return
     er = 0 #dummy breakpoint
+    summary_csv_content, individual_files = tl_io.generate_errors_csv(errors)
     tl_io.write_errors_csv(errors)
     tl_io.write_errors_pdf(errors, v0i=rp.V0_IMAG, energy_range=rp.total_energy_range())
     return

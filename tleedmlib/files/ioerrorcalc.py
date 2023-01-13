@@ -102,29 +102,126 @@ def write_errors_csv(errors, filename="Errors.csv", sep=","):
 
 
 
-def new_errors_csv(errors, v0i, energy_range, sep=";"):
+
+def generate_errors_csv(errors, sep=","):
+
+    summary_columns = {
+        "at": ["Atoms"],
+        "mode": ["Mode"],
+        "dir": ["Direction"],
+        "r_min" : ["R_min"],
+        "var_r" : ["var(R)"],
+        "p_min": ["p_min"],
+        "d_p_minus": ["-Δp"],
+        "d_p_plus": ["+Δp"],
+    }
+
+    # individual files
+    indiv_files = {}
 
     for param_err in errors:
-        columns = {"at": ["Atoms"],
-        "mode": ["Mode"],
-        "dir": None,
-        "disp": ["Displacement [Å]"],
-        "rfac": ["R"]}
-        
-        ats = range_to_str([at.oriN for at in param_err.atoms])
+
+        atoms_str = range_to_str([at.oriN for at in param_err.atoms])
+        summary_columns["at"].append(atoms_str)
+        summary_columns["dir"].append(param_err.disp_label)
+        summary_columns["mode"].append(param_err.mode)
+        summary_columns["r_min"].append(param_err.get_r_min)
+        summary_columns["var_r"].append(param_err.var_r)
+        summary_columns["p_min"].append(param_err.get_p_min)
+
+        # statistical error estimates
+        d_p_minus, d_p_plus = param_err.get_error_estimates
+        summary_columns["d_p_minus"].append(d_p_minus)
+        summary_columns["d_p_plus"].append(d_p_plus)
+
+        # create_filename for individual files
+        indiv_fname = f"{param_err.mode}_errors_atoms_str.csv"
+
         if param_err.mode == "geo":
-            columns["disp"] = ["Displacement amount [Å]"]
-            columns["dir"] = ["Disp. direction (1st atom)"]
+            param_columns = geo_errors_csv_content(param_err)
         elif param_err.mode == "vib":
-            columns["disp"] = ["Vibrational amplitude change [Å]"]
-            columns["dir"] = [""]
+            param_columns = vib_errors_csv_content(param_err)
         elif param_err.mode == "occ":
-            columns["dir"] = ["Main Element"]
-            columns["disp"] = ["Occupation (Main Element)"]
+            param_columns = occ_errors_csv_content(param_err)
         else:
             raise ValueError(f'Unknown mode "{param_err.mode}"')
+        file_content = get_string_from_columns(param_columns, sep)
+        indiv_files[indiv_fname] = file_content
         
-        
+    summary_csv_content = get_string_from_columns(summary_columns, sep)
+    
+    return summary_csv_content, indiv_files
+
+
+def geo_errors_csv_content(error):
+    columns = {
+        "dir" : ["Disp. direction (1st atom)"],
+        "disp" : ["Displacement amount [Å]"],
+        "rfac" : ["R"]
+    }
+    dir_vector = error.disp_label
+    rfacs = error.rfacs
+    for line in range(0, len(error.rfacs)):
+        columns["dir"].append(dir_vector)
+        columns["disp"].append(error.lin_disp[line])
+        columns["rfac"].append(error.rfacs[line])
+    return columns
+
+
+def vib_errors_csv_content(error):
+    columns = {
+        "disp" : ["Vibrational amplitude change [Å]"],
+        "rfac" : ["R"]
+    }
+    rfacs = error.rfacs
+    for line in range(0, len(error.rfacs)):
+        columns["disp"].append(error.lin_disp[line])
+        columns["rfac"].append(error.rfacs[line])
+    return columns
+
+
+def occ_errors_csv_content(error):
+    columns = {
+        "disp" : ["Occupation (Main Element)"],
+        "rfac" : ["R"]
+    }
+    rfacs = error.rfacs
+    for line in range(0, len(error.rfacs)):
+        columns["disp"].append(error.lin_disp[line])
+        columns["rfac"].append(error.rfacs[line])
+    return columns
+
+
+def get_string_from_columns(columns, sep):
+    # this would be a lot cleaner to do with pandas
+    
+    widths = {}
+    for col in columns:
+        widths[col] = max(len(
+            format_col_content(col_content)
+            ) for col_content in columns[col]) + 1
+
+    content = ""
+    for i in range(len(next(iter(columns.values())))):
+        for col in columns:
+            col_content = format_col_content(columns[col][i])
+            content += col_content.rjust(widths[col]) + sep
+        content = content[:-1] + "\n"
+    return content
+
+
+def format_col_content(content):
+    if isinstance(content, str):
+        return content
+    elif isinstance(content, int):
+        return str(content)
+    elif isinstance(content, float):
+        return f"{content:.4f}"
+    elif content is None:
+        return "N/A"
+    else:
+        raise ValueError("Cannot format value for writing to Errors CSV"
+                         f" file: {content}")
 
 def write_errors_pdf(errors, v0i, energy_range, filename="Errors.pdf"):
     """Creates and writes Errors.pdf.
