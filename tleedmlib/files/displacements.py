@@ -696,7 +696,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                     if allowed:
                         if "offset" not in dr:
                             at.assignDisp(mode, disprange, targetel,
-                                          disp_label=pside,
+                                          disp_label=dr,
                                           disp_lin_steps=drange)
                         else:
                             at.clearOffset(1, targetel)
@@ -736,7 +736,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                             disprange = [f*drvec for f in drange]
                             if "offset" not in dr:
                                 at.assignDisp(mode, disprange, targetel,
-                                              disp_label=pside,
+                                              disp_label=dr,
                                               disp_lin_steps=drange)
                             else:
                                 at.assignDisp(4, disprange, targetel)
@@ -754,7 +754,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                                 disprange.append(np.append(np.dot(tm, r), 0.))
                             if "offset" not in dr:
                                 at.assignDisp(mode, disprange, targetel,
-                                              disp_label=pside,
+                                              disp_label=dr,
                                               disp_lin_steps=drange)
                             else:
                                 at.clearOffset(1, targetel)
@@ -777,7 +777,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                     at.clearOffset(mode, targetel)
                 if not (len(drange) == 1 and drange[0] == 0.):
                     at.assignDisp(mode, drange, targetel,
-                                  disp_label=pside,
+                                  disp_label="N/A",
                                   disp_lin_steps=drange)
                 deltas_required = True
         elif mode == 3:
@@ -855,7 +855,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                 for (at, _) in targetAtEls:
                     if targetel in at.disp_occ:
                         at.assignDisp(mode, drange, targetel,
-                                      disp_label=pside,
+                                      disp_label="N/A",
                                       disp_lin_steps=drange)
                         deltas_required = True
                     else:
