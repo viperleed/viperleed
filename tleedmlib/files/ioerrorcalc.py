@@ -108,16 +108,19 @@ def new_errors_csv(errors, v0i, energy_range, sep=";"):
         columns = {"at": ["Atoms"],
         "mode": ["Mode"],
         "dir": None,
-        "disp": ["Displacement [A]"],
+        "disp": ["Displacement [Å]"],
         "rfac": ["R"]}
         
         ats = range_to_str([at.oriN for at in param_err.atoms])
         if param_err.mode == "geo":
-            columns["dir"] = ["Disp. along (1st atom)"]
+            columns["disp"] = ["Displacement amount [Å]"]
+            columns["dir"] = ["Disp. direction (1st atom)"]
         elif param_err.mode == "vib":
-            columns["dir"] = ["Occupation"]
+            columns["disp"] = ["Vibrational amplitude change [Å]"]
+            columns["dir"] = [""]
         elif param_err.mode == "occ":
-            columns["dir"] = ["Vibrational amplitude"]
+            columns["dir"] = ["Main Element"]
+            columns["disp"] = ["Occupation (Main Element)"]
         else:
             raise ValueError(f'Unknown mode "{param_err.mode}"')
         
