@@ -11,6 +11,7 @@ import logging
 import copy
 import numpy as np
 import os
+from pathlib import Path
 
 import viperleed.tleedmlib as tl
 from viperleed.tleedmlib.classes.r_error import R_Error
@@ -118,7 +119,14 @@ def errorcalc(sl, rp):
         logger.info("Error calculation: Returning with no output.")
         return
     er = 0 #dummy breakpoint
+    save_path =Path(rp.workdir) # TODO: do we have a 
     summary_csv_content, individual_files = tl_io.generate_errors_csv(errors)
-    tl_io.write_errors_csv(errors)
+    tl_io.write_errors_archive(individual_files,
+                               archive_path=save_path,
+                               compression_level=rp.ZIP_COMPRESSION_LEVEL,
+                               archive_fname="Errors.zip")
+    tl_io.write_errors_summary_csv(summary_csv_content,
+                                   summary_path=save_path,
+                                   summary_fname="Errors_summary.csv")
     tl_io.write_errors_pdf(errors, v0i=rp.V0_IMAG, energy_range=rp.total_energy_range())
     return
