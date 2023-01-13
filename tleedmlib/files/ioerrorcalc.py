@@ -158,7 +158,10 @@ def generate_errors_csv(errors, sep=","):
         summary_columns["d_p_plus"].append(d_p_plus)
 
         # create_filename for individual files
-        indiv_fname = f"Errors_{param_err.mode}_atoms#{atoms_str} .csv"
+        indiv_fname = f"Errors_{param_err.mode}_atoms#{atoms_str}"
+        if param_err.mode == "geo":
+            indiv_fname += f"_{param_err.disp_label}"
+        indiv_fname += ".csv"
 
         if param_err.mode == "geo":
             param_columns = geo_errors_csv_content(param_err)
@@ -178,14 +181,11 @@ def generate_errors_csv(errors, sep=","):
 
 def geo_errors_csv_content(error):
     columns = {
-        "dir" : ["Disp. direction (1st atom)"],
-        "disp" : ["Displacement amount [Å]"],
+        "disp" : [f"Displacement ({error.disp_label}) [Å]"],
         "rfac" : ["R"]
     }
-    dir_vector = error.disp_label
     rfacs = error.rfacs
     for line in range(0, len(error.rfacs)):
-        columns["dir"].append(dir_vector)
         columns["disp"].append(error.lin_disp[line])
         columns["rfac"].append(error.rfacs[line])
     return columns
@@ -193,7 +193,7 @@ def geo_errors_csv_content(error):
 
 def vib_errors_csv_content(error):
     columns = {
-        "disp" : ["Vibrational amplitude change [Å]"],
+        "disp" : ["Vib. Amp. change [Å]"],
         "rfac" : ["R"]
     }
     rfacs = error.rfacs
@@ -204,13 +204,15 @@ def vib_errors_csv_content(error):
 
 
 def occ_errors_csv_content(error):
-    columns = {
-        "disp" : ["Occupation (Main Element)"],
-        "rfac" : ["R"]
-    }
+    columns = {}
+    for elem in error.elem_occ.keys():
+        columns[elem] = [f"Occupation {elem} [%]",]
+    columns["rfac"] = ["R",]
+
     rfacs = error.rfacs
     for line in range(0, len(error.rfacs)):
-        columns["disp"].append(error.lin_disp[line])
+        for elem, el_occ in error.elem_occ.items():
+            columns[elem].append(el_occ[line]*100)  # in %
         columns["rfac"].append(error.rfacs[line])
     return columns
 
@@ -239,7 +241,7 @@ def format_col_content(content):
     elif isinstance(content, int):
         return str(content)
     elif isinstance(content, float):
-        return f"{content:.4f}"
+        return f"{content:.3f}"
     elif content is None:
         return "N/A"
     else:

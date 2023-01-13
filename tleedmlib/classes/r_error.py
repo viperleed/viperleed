@@ -34,6 +34,7 @@ class R_Error():
         self.disp_label = disp_label
         self.lin_disp = lin_disp  # linearized displacement
         self.main_element = ""    # element occupation displayed in output
+        self.elem_occ = None
         d = {}
         at = atoms[0]   # store displacements for this one; main element
         if mode == "occ":
@@ -45,6 +46,13 @@ class R_Error():
                                         key=lambda k: atoms[0].site.occ[k])
             self.displacements = copy.deepcopy(atoms[0].disp_occ[
                                                         self.main_element])
+            self.lin_disp = copy.deepcopy(self.displacements)
+            self.elem_occ = copy.deepcopy(atoms[0].disp_occ)
+            vac_occ = np.ones_like(self.lin_disp)
+            for el_occ in self.elem_occ.values():
+                vac_occ -= el_occ
+            if np.sum(vac_occ) > 1e-4:  # If vacancies, put them into output CSV
+                self.elem_occ["Vac"] = vac_occ
         else:
             if mode == "geo":
                 d = atoms[0].disp_geo

@@ -856,7 +856,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                     if targetel in at.disp_occ:
                         at.assignDisp(mode, drange, targetel,
                                       disp_label="N/A",
-                                      disp_lin_steps=drange)
+                                      disp_lin_steps=None)  # for occupation, we figure it out in r_error
                         deltas_required = True
                     else:
                         logger.warning(
