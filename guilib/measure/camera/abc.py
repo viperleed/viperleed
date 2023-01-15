@@ -1618,7 +1618,9 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         # more than 5 s longer than the expected time to
         # receive all frames needed for averaging
         self.__timeout.start(int(self.time_to_image_ready + 5000))
-        LOG.debug(f"Started a {self.__timeout.interval()/1000:.2f} s triggering timeout")
+        LOG.debug(f"Started a {self.__timeout.interval()/1000:.2f} s "
+                  f"triggering timeout. Info: {self.get_exposure()=}, "
+                  f"{self.get_frame_rate()=}, {self.connected=}")
         return True
 
     def __adjust_roi_position(self, roi, limits):

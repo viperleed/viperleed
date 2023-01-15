@@ -81,6 +81,7 @@ def on_frame_ready_(__grabber_handle, image_start_pixel,
     """
     camera = process_info.camera
     if not camera.connected:
+        LOG.warning(f"Got frame from {camera.name}, but not fully connected.")
         return
 
     process_info.frame_times.append(timer())
