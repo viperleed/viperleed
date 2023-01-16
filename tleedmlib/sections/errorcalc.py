@@ -108,7 +108,8 @@ def errorcalc(sl, rp):
                         "atom group: " + ", ".join(str(at) for at in ag))
             error_disp_label = ag[0].displist[0].disp_labels[mode]
             error_lin_disps = ag[0].displist[0].disp_lin_steps[mode]
-            errors.append(R_Error(ag, mode, rfaclist,
+            errors.append(R_Error(rp.R_FACTOR_TYPE,
+                                  ag, mode, rfaclist,
                                   error_disp_label,
                                   error_lin_disps,
                                   v0i=rp.V0_IMAG,
@@ -118,7 +119,14 @@ def errorcalc(sl, rp):
     if len(errors) == 0:
         logger.info("Error calculation: Returning with no output.")
         return
-    er = 0 #dummy breakpoint
+
+    # Inform user that statistical error estimates are only available
+    # for Pendry R-factor.
+    if rp.R_FACTOR_TYPE != 1:
+        logger.info("Estimates for statistical uncertainties "
+                    "of parameters are only available for the Pendry "
+                    "R-factor.")
+    
     save_path =Path(rp.workdir) # TODO: do we have a 
     summary_csv_content, individual_files = tl_io.generate_errors_csv(errors)
     tl_io.write_errors_archive(individual_files,

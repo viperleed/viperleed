@@ -25,8 +25,9 @@ class R_Error():
     linked.
     """
 
-    def __init__(self, atoms, mode, rfacs, disp_label, lin_disp, 
+    def __init__(self, r_type, atoms, mode, rfacs, disp_label, lin_disp, 
                  v0i=None, energy_range=None):
+        self.r_type = r_type # Type of R-factor (int). Only Pendry R-factor (r_type=1) can give statistical error estimates.
         self.atoms = atoms  # atoms that have been varied together
         self.mode = mode    # vib, geo, or occ
         self.rfacs = rfacs  # the r-factors from the variations
