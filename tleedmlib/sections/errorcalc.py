@@ -126,8 +126,21 @@ def errorcalc(sl, rp):
         logger.info("Estimates for statistical uncertainties "
                     "of parameters are only available for the Pendry "
                     "R-factor.")
-    
-    save_path =Path(rp.workdir) # TODO: do we have a 
+    else:
+        # Write var(R) to log as info.
+        var_r_info = tl_io.extract_var_r(errors)
+        if any(var_r_info.values()):
+            var_str = []
+            for mode, var_r in var_r_info:
+                var_str.append(f"{mode}: {tl_io.format_col_content(var_r)}")
+            var_str = ", ".join(var_str)
+            logger.info(f"Found values for var(R): {var_str}")
+        else:
+            logger.info("Could not estimate var(R) for any error mode.")
+
+    save_path = Path(rp.workdir)
+
+    # Errors_summary.csv and Errors.zip
     summary_csv_content, individual_files = tl_io.generate_errors_csv(errors)
     tl_io.write_errors_archive(individual_files,
                                archive_path=save_path,
@@ -136,5 +149,8 @@ def errorcalc(sl, rp):
     tl_io.write_errors_summary_csv(summary_csv_content,
                                    summary_path=save_path,
                                    summary_fname="Errors_summary.csv")
-    tl_io.write_errors_pdf(errors, v0i=rp.V0_IMAG, energy_range=rp.total_energy_range())
+
+    # Errors.pdf
+    errors_figs = tl_io.make_errors_figs(errors)
+    tl_io.write_errors_pdf(errors_figs, filename = "Errors.pdf")
     return

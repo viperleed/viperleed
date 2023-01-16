@@ -31,6 +31,7 @@ class R_Error():
         self.atoms = atoms  # atoms that have been varied together
         self.mode = mode    # vib, geo, or occ
         self.rfacs = rfacs  # the r-factors from the variations
+        self.var_r = None
         self.displacements = []   # displacements of atoms[0]#
         self.disp_label = disp_label
         self.lin_disp = lin_disp  # linearized displacement

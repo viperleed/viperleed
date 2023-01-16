@@ -31,6 +31,16 @@ else:
 logger = logging.getLogger("tleedm.files.ioerrorcalc")
 logger.setLevel(logging.INFO)
 
+def extract_var_r(errors):
+    var_r_info = {
+        "geo": None,
+        "vib": None,
+        "occ": None,
+    }
+    for mode in var_r_info.keys():
+        mode_errors = [err for err in errors if err.mode = mode and err.r_type==1]
+        if mode_errors:
+            var_r_info[mode] = mode_errors[0].var_r
 
 def write_errors_csv(errors, filename="Errors.csv", sep=","):
     """
@@ -343,18 +353,14 @@ def format_col_content(content):
         raise ValueError("Cannot format value for writing to Errors CSV"
                          f" file: {content}")
 
-def write_errors_pdf(errors, v0i, energy_range, filename="Errors.pdf"):
+
+def make_errors_figs(errors):
     """Creates and writes Errors.pdf.
 
     Parameters
     ----------
     errors : list of R_Error
         contains the R-factors to be plotted
-    v0i : float
-        Imaginary part of inner potential. Can be taken from rp.V0_IMAG.
-    energy_range : float
-        Total energy range used in the calculation (in eV). Can be taken
-        from rp.total_energy_range().
     filename : str, optional
         Path of file to be written, by default "Errors.pdf"
     """
@@ -377,11 +383,6 @@ def write_errors_pdf(errors, v0i, energy_range, filename="Errors.pdf"):
         mode_errors = [err for err in errors if err.mode == mode]
         if not mode_errors:
             continue
-
-        # minimum R-factor and R-factor variance for that mode
-        rmin = min(r for err in mode_errors for r in err.rfacs)
-        var = np.sqrt(8*np.abs(v0i) / energy_range) * rmin
-        logger.info(f"{titles[mode]} error calculation: Found var(R) = {var:.4f}.")
 
         err_x = {}
         err_y = {}
@@ -412,6 +413,8 @@ def write_errors_pdf(errors, v0i, energy_range, filename="Errors.pdf"):
         xrange = [min(xvals) - abs(max(xvals) - min(xvals)) * 0.05,
                   max(xvals) + abs(max(xvals) - min(xvals)) * 0.05]
         for err in mode_errors:
+            rmin = err.get_rmin
+            var = err.var_r
             disp = err_disp[err]
             tck = interpolate.splrep(disp, err.rfacs)
             x = np.arange(min(xvals), max(xvals)+0.01,
@@ -546,12 +549,16 @@ def write_errors_pdf(errors, v0i, energy_range, filename="Errors.pdf"):
         fig.tight_layout(rect=(0, 0, 1, 0.965))
         fig.suptitle(titles[mode])
         figs.append(fig)
+    return figs
+
+
+def write_errors_pdf(figs, filname="Errors.pdf"):
     try:
         pdf = PdfPages(filename)
         for fig in figs:
             pdf.savefig(fig)
     except PermissionError:
-        logger.warning("Failed to write to " + filename
+        logger.warning("Failed to write to file " + filename
                        + ": Permission denied.")
     except KeyboardInterrupt:
         raise
