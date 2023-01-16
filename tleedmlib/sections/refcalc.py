@@ -76,7 +76,7 @@ class RefcalcCompileTask():
         _muftin = Path("muftin.f")
         muftinname =_muftin if _muftin.is_file() else None
         if any(f is None for f in (srcname, lib_tleed)):
-            raise RuntimeError("Source files missing in {sourcedir}")       # TODO: use a more appropriate custom exception in CompileTask (e.g., MissingSourceFileError)
+            raise RuntimeError(f"Source files missing in {sourcedir}")       # TODO: use a more appropriate custom exception in CompileTask (e.g., MissingSourceFileError)
         return lib_tleed, srcname, globalname, muftinname
 
     def copy_source_files_to_local(self):
