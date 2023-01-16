@@ -180,6 +180,27 @@ def generate_errors_csv(errors, sep=","):
 
 
 def geo_errors_csv_content(error):
+    """Generate columns dict for geometrical errors containing the
+    contents of a file to be written into Errors.zip.
+
+    Parameters
+    ----------
+    error : R_Error
+        Error object for geometrical errors.
+
+    Returns
+    -------
+    dict
+        columns dict containing displacements and R-factors.
+        
+    Raises
+    ------
+    ValueError
+        If error.mode is not "geo".
+    """
+    
+    if error.mode != "geo":
+        raise ValueError(f'Cannot format errors of type "{error.mode}"')
     columns = {
         "disp" : [f"Displacement ({error.disp_label}) [Å]"],
         "rfac" : ["R"]
@@ -192,6 +213,26 @@ def geo_errors_csv_content(error):
 
 
 def vib_errors_csv_content(error):
+    """Generate columns dict for vibrational errors containing the
+    contents of a file to be written into Errors.zip.
+
+    Parameters
+    ----------
+    error : R_Error
+        Error object for vibrational errors.
+
+    Returns
+    -------
+    dict
+        columns dict containing displacements and R-factors.
+        
+    Raises
+    ------
+    ValueError
+        If error.mode is not "vib".
+    """
+    if error.mode != "vib":
+        raise ValueError(f'Cannot format errors of type "{error.mode}"')
     columns = {
         "disp" : ["Vib. Amp. change [Å]"],
         "rfac" : ["R"]
@@ -204,6 +245,26 @@ def vib_errors_csv_content(error):
 
 
 def occ_errors_csv_content(error):
+    """Generate columns dict for occupational errors containing the
+    contents of a file to be written into Errors.zip.
+
+    Parameters
+    ----------
+    error : R_Error
+        Error object for occupational errors.
+
+    Returns
+    -------
+    dict
+        columns dict containing displacements and R-factors.
+        
+    Raises
+    ------
+    ValueError
+        If error.mode is not "occ".
+    """
+    if error.mode != "occ":
+        raise ValueError(f'Cannot format errors of type "{error.mode}"')
     columns = {}
     for elem in error.elem_occ.keys():
         columns[elem] = [f"Occupation {elem} [%]",]
@@ -217,9 +278,24 @@ def occ_errors_csv_content(error):
     return columns
 
 
-def get_string_from_columns(columns, sep):
-    # this would be a lot cleaner to do with pandas
-    
+def get_string_from_columns(columns, sep=","):
+    """Formats a columns dictionary into a string conforming to the CSV
+    format.
+
+    Parameters
+    ----------
+    columns : dict
+        dict holding the contents to be written in the CSV. Keys are not
+        used, values must be a list of entries for each column. Entries 
+        can be str, int, float or None.
+    sep : str
+        CSV separator character to be used. Default is ",".
+
+    Returns
+    -------
+    str
+        str containing the formatted contents of the CSV file.
+    """
     widths = {}
     for col in columns:
         widths[col] = max(len(
@@ -236,6 +312,25 @@ def get_string_from_columns(columns, sep):
 
 
 def format_col_content(content):
+    """Formats a value into a string suitable for writing to errors CSV
+    files.
+
+    Parameters
+    ----------
+    content : str, int, float or None
+        _description_
+
+    Returns
+    -------
+    str
+        Formatted string. If float, 4 decimal places are used; if
+        content is None, return "N/A".
+
+    Raises
+    ------
+    ValueError
+        If content is neither, str, int, float or None.
+    """
     if isinstance(content, str):
         return content
     elif isinstance(content, int):

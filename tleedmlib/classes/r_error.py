@@ -66,18 +66,67 @@ class R_Error():
                 k = "all"
             self.displacements = copy.deepcopy(d[k])
             
-        if v0i and energy_range:
+        if v0i and energy_range and r_type==1:
             self.calc_var_r(v0i, energy_range)
 
 
     def calc_var_r(self, v0i, energy_range):
+        """Calculates the variance of the Pendry R-factor.
+        
+        The variance of the Pendry R-factor can be estimated from the 
+        imaginary part of the inner potential and the measurement energy
+        range as:
+
+        .. math::
+            \mathrm{var}(R_p) = \sqrt{ \frac{8V_{0\mathrm{i}}}{E_{\mathrm{range}}}}R_{\mathrm{min}}
+
+        Parameters
+        ----------
+        v0i : float
+            Imaginary part of the inner potential (eV).
+        energy_range : float
+            Energy range in eV.
+
+        Raises
+        ------
+        ValueError:
+            If v0i or energy_range are not float values.
+        ValueError:
+            If v0i or energy_range are negative. This would be
+            unphysical.
+        """
+        if self.r_type != 1:
+            raise ValueError("Var(R) can only be calculated when using the ")
+        if not isinstance(v0i, float) and isinstance(energy_range, float):
+            raise ValueError("v0i and energy_range must be float values.")
+        if v0i<= 0 or energy_range <= 0:
+            raise ValueError("v0i and energy range must be positive ")
         self.var_r = np.sqrt(8*np.abs(v0i) / energy_range) * self.get_r_min
 
 
     @property
     def get_error_estimates(self):
-    # decide if estimate errors
+        """Decide if statistical error estimates can be given and
+        calculates them.
 
+        Returns
+        -------
+        tuple of float or None
+            A tuple containing upper and lower error bounds, es
+            estimated from the variance of R_P, if errors can be
+            estimated. If either bound can not be estimates (e.g. no
+            intersection with line R_min + var(R)), the element is None.
+            If neither bound can be estimated, both values are None.
+
+        Raises
+        ------
+        ValueError
+            If self.lin_disp is not initialized.
+        """
+    
+        # error estimates are only available for Pendry R-factor
+        if self.r_type != 1:  #TODO: when we introduce a new R-factor, make sure to update this.
+            return (None, None)
         r_min = self.get_r_min
         if self.var_r is None:
             logger.warning("Cannot calculate statistical errors for "
@@ -95,7 +144,7 @@ class R_Error():
         # the overall minimum R factor
         err_min_R = min(self.rfacs)
 
-        if (err_min_R > r_min + self.var_r or              # minimum R is below line
+        if (err_min_R > r_min + self.var_r or            # minimum R is below line
             self.rfacs[0] < r_min + self.var_r or        # left max R is below line
             self.rfacs[-1] < r_min + self.var_r):        # right max R is below line
             return (None, None)
@@ -111,7 +160,7 @@ class R_Error():
         for lin_disp, rfacs in (zip(left_rfacs, left_lin_disp),
                                 zip(right_rfacs, right_lin_disp)):
             # find zero crossing 
-            if (len(rfacs) < 3 or                                    # too few points
+            if (len(rfacs) < 3 or                                         # too few points
                 get_n_zero_crossings(rfacs - (r_min + self.var_r)) != 1): # unclear crossing of line
                 error_estimates.append(None)
                 continue
