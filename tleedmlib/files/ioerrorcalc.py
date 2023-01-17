@@ -596,7 +596,7 @@ def draw_error(axis, bound, error, r_interval):
                   arrowprops=dict(arrowstyle='<-', lw=0.75, color="slategray"))
     # label error under arrow
     axis.annotate(
-        text=f"{format_col_content(abs(r_min-bound))}",
+        text=f"{format_col_content(bound-p_best)}",
         xy=((p_best+bound)/2,r_min - r_interval*0.022),
         ha='center', va='top', fontsize=4.5)
 
