@@ -518,14 +518,21 @@ def draw_error(axis, bound, error, r_interval):
     var_r =error.var_r
 
     # put vertical line at minimum R-factor
-    axis.vlines(x=p_best, color="black", ymin=0, ymax=2, lw=0.5)
+    #axis.vlines(x=p_best, color="black", ymin=0, ymax=2, lw=0.5)
     # put dashed line at bound
-    axis.vlines(x = bound, ymin = 0, ymax = 2, ls=":", lw=0.5,
+    axis.vlines(x = bound, ymin = r_min - r_interval*0.024, ymax = r_min+var_r, ls=":", lw=0.5,
             color='slategrey')
+
+    # make arrow "notch"
+    axis.vlines(x=p_best,
+                ymin= r_min - r_interval*0.032,
+                ymax= r_min - r_interval*0.007,
+                lw=0.75, color="slategrey")
     # arrow from min R to intersection x
     axis.annotate('', xy=(p_best,r_min - r_interval*0.007),
                   xytext=(bound,r_min - r_interval*0.007),
-                  arrowprops=dict(arrowstyle='<-', lw=0.75, color="slategray"))
+                  arrowprops=dict(arrowstyle='<-', lw=0.75,
+                                  color="slategray", shrinkA=0, shrinkB=0))
     # label error under arrow
     axis.annotate(
         text=f"{format_col_content(bound-p_best)}",

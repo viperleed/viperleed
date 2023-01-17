@@ -43,6 +43,16 @@ The information given for each parameter is:
 
 For geometrical displacements the column ``Direction`` lists the direction requested in :ref:`DISPLACEMENTS<displacements>`.
 
+The contents of ``Errors_summary.csv`` may look something like this:
+
+.. code-block::
+
+   Atoms, Mode, Direction,  R_min, var(R),  p_min,    -Δp,    +Δp
+       1,  geo,         z, 0.0870, 0.0187, 0.0000, 0.0110, 0.0064
+       2,  geo,         z, 0.0870, 0.0187, 0.0000, 0.0090, 0.0083
+       1,  vib,       N/A, 0.0870, 0.0187, 0.0000,    N/A, 0.0161
+       1,  occ,       N/A, 0.0883, 0.0190, 0.9500,    N/A,    N/A
+
 
 Errors.zip
 ==========
