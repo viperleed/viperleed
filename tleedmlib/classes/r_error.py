@@ -32,7 +32,7 @@ class R_Error():
         self.mode = mode    # vib, geo, or occ
         self.rfacs = rfacs  # the r-factors from the variations
         self.var_r = None
-        self.displacements = []   # displacements of atoms[0]#
+        self.displacements = []   # displacements of atoms[0]
         self.disp_label = disp_label
         self.lin_disp = lin_disp  # linearized displacement
         self.main_element = ""    # element occupation displayed in output

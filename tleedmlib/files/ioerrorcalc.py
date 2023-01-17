@@ -400,11 +400,16 @@ def make_errors_figs(errors):
             ats += " " + range_to_str([at.oriN for at in err.atoms])
             if mode == "geo":
                 direction = err.disp_label
-                disp = err.lin_disp
+                disp = err.lin_disp  # in A
                 err_legend[err] = ats + " along " + direction
-            else:
-                disp = err.displacements[:] * 100   # in pm for vib, % for occ #TODO: change to A?
+            elif mode == "vib":
+                disp = err.displacements[:]  # in A
                 err_legend[err] = ats
+            elif mode == "occ":
+                disp = err.displacements[:] * 100   # in % for occ
+                err_legend[err] = ats
+            else:
+                raise ValueError(f'Unknown mode "{mode}"')
             err_disp[err] = disp
         xvals = [d for k in err_disp for d in err_disp[k]]
         xrange = [min(xvals) - abs(max(xvals) - min(xvals)) * 0.05,
@@ -414,7 +419,7 @@ def make_errors_figs(errors):
             var = err.var_r
             disp = err_disp[err]
             interp_f = interpolate.interp1d(disp, err.rfacs, bounds_error=False)
-            x = np.arange(min(xvals), max(xvals)+0.01,
+            x = np.arange(min(xvals), max(xvals),
                           (xrange[1] - xrange[0])*1e-4)
             y = interp_f(x)
             indmark = [np.argmin(abs(x - v)) for v in disp]
@@ -434,7 +439,7 @@ def make_errors_figs(errors):
         fig = plt.figure(figsize=(5.8, 5.8))
         ax = fig.add_subplot(1, 1, 1)
         if mode != "occ":
-            ax.set_xlabel('Deviation from bestfit value (pm)')
+            ax.set_xlabel('Deviation from bestfit value (Å)')
         else:
             ax.set_xlabel('Site occupation (%)')
         ax.set_ylabel('Pendry R-factor')
@@ -533,7 +538,7 @@ def make_errors_figs(errors):
             axs[figcount].xaxis.set_major_locator(plt.MaxNLocator(5))
             axs[figcount].tick_params(labelsize=6)
             if mode != "occ":
-                axs[figcount].set_xlabel('Deviation from bestfit value (pm)',
+                axs[figcount].set_xlabel('Deviation from bestfit value (Å)',
                                          fontsize=8)
             else:
                 axs[figcount].set_xlabel('Site occupation (%)', fontsize=8)
@@ -541,37 +546,13 @@ def make_errors_figs(errors):
             # add uncertainties in plot
             r_min = min(err.rfacs)
             p_best = err.lin_disp[err.rfacs.index(r_min)]
-            var_r  =err.var_r
             error_estimates = err.get_error_estimates
-            axs[figcount].vlines(x=p_best, color="black", ymin=0, ymax=2, lw=0.5)
             if error_estimates[0]:
                 l_bound = p_best-error_estimates[0]
-                # highligh intersection point
-                #axs[figcount].scatter(x = l_bound, y = r_min+var_r,
-                #                      marker="<", color='orange')
-                axs[figcount].vlines(x = l_bound, ymin = 0,
-                                     ymax = 2, ls=":", lw=0.5,
-                                     color='slategrey')
-                axs[figcount].annotate('', xy=(l_bound,r_min - (rmax-rmin)*0.004), xytext=(p_best,r_min - (rmax-rmin)*0.004),
-                                       arrowprops=dict(arrowstyle='->', lw=0.75, color="slategray"))
-                axs[figcount].annotate(
-                    text=f"{format_col_content(error_estimates[0])}",
-                    xy=((p_best+l_bound)/2,r_min - abs(rmax-rmin)*0.019),
-                    ha='center', va='top', fontsize=4.5)
+                draw_error(axs[figcount], l_bound, err, r_interval=(rmax-rmin))
             if error_estimates[1]:
                 u_bound = p_best+error_estimates[1]
-                #axs[figcount].scatter(x = u_bound, y = r_min+var_r,
-                #                     marker=">", color='orange')
-                axs[figcount].vlines(x = u_bound, ymin = 0,
-                                     ymax = 2, ls=":", lw=0.5,
-                                     color = 'slategrey')
-                axs[figcount].annotate('', xy=(p_best,r_min - (rmax-rmin)*0.004), xytext=(u_bound,r_min - (rmax-rmin)*0.004),
-                                       arrowprops=dict(arrowstyle='<-', lw=0.75, color="slategray"))
-                axs[figcount].annotate(
-                    text=f"{format_col_content(error_estimates[1])}",
-                    xy=((p_best+u_bound)/2,r_min - (rmax-rmin)*0.019),
-                    ha='center', va='top', fontsize=4.5)
-
+                draw_error(axs[figcount], u_bound, err, r_interval=(rmax-rmin))
             axs[figcount].set_ylabel('Pendry R-factor', fontsize=8)
             axs[figcount].legend(fontsize="x-small", frameon=False)
             # axs[figcount].set_title(err_legend[err], fontsize=8)
@@ -583,6 +564,41 @@ def make_errors_figs(errors):
         figs.append(fig)
     return figs
 
+
+def draw_error(axis, bound, error, r_interval):
+    """Adds annotation for statistical error estimates to individual
+    error plots.
+
+    Parameters
+    ----------
+    axis : matplotlib axis
+        axis of the error plot to be annotated.
+    bound : float
+        Error bound == p_min \pm \sigma(p).
+    error : R_Error
+        Error object used for error estimation.
+    r_interval : float
+        R-factor range shown in the plot (rmax - rmin). Used for
+        graphical scaling.
+    """
+    r_min = min(error.rfacs)
+    p_best = error.lin_disp[error.rfacs.index(r_min)]
+    var_r =error.var_r
+
+    # put vertical line at minimum R-factor
+    axis.vlines(x=p_best, color="black", ymin=0, ymax=2, lw=0.5)
+    # put dashed line at bound
+    axis.vlines(x = bound, ymin = 0, ymax = 2, ls=":", lw=0.5,
+            color='slategrey')
+    # arrow from min R to intersection x
+    axis.annotate('', xy=(p_best,r_min - r_interval*0.007),
+                  xytext=(bound,r_min - r_interval*0.007),
+                  arrowprops=dict(arrowstyle='<-', lw=0.75, color="slategray"))
+    # label error under arrow
+    axis.annotate(
+        text=f"{format_col_content(abs(r_min-bound))}",
+        xy=((p_best+bound)/2,r_min - r_interval*0.022),
+        ha='center', va='top', fontsize=4.5)
 
 def write_errors_pdf(figs, filename="Errors.pdf"):
     try:
