@@ -2,7 +2,7 @@
 """
 Created on Thu Mar 18 17:22:20 2021
 
-@author: Florian Kraushofer
+@author: Florian Kraushofer, Alexander Imre
 
 Functions for reading and writing files relevant to the error calculation
 """
@@ -11,6 +11,8 @@ import numpy as np
 import logging
 import re
 from scipy import interpolate
+from zipfile import ZipFile, ZIP_DEFLATED
+
 from viperleed.tleedmlib.base import range_to_str, max_diff
 
 try:
@@ -29,88 +31,270 @@ else:
 logger = logging.getLogger("tleedm.files.ioerrorcalc")
 logger.setLevel(logging.INFO)
 
+def extract_var_r(errors):
+    var_r_info = {
+        "geo": None,
+        "vib": None,
+        "occ": None,
+    }
+    for mode in var_r_info.keys():
+        mode_errors = [err for err in errors
+                       if (err.mode == mode and err.r_type==1)]
+        if mode_errors:
+            var_r_info[mode] = mode_errors[0].var_r
+    return var_r_info
 
-def write_errors_csv(errors, filename="Errors.csv", sep=","):
-    """
-    Writes errors from the error calculation into a CSV file
+
+def write_errors_summary_csv(summary_content, summary_path,
+                             summary_fname="Errors_summary.csv"):
+    try:
+        with open(summary_path/summary_fname, "w") as wf:
+            wf.write(summary_content)
+    except Exception as err:
+        logger.error("Failed to write error calculation summary "
+                     f"{summary_fname}:\n{err}")
+
+
+def write_errors_archive(individual_files,
+                         archive_path,
+                         compression_level=2,
+                         archive_fname="Errors.zip"):
+    try:
+        with ZipFile(archive_path/archive_fname, 'w',
+                     compression=ZIP_DEFLATED,
+                     compresslevel=compression_level) as err_archive:
+            for fname, content in individual_files.items():
+                err_archive.writestr(fname, content)
+    except Exception as err:
+        logger.error("Failed to write error calculation archive "
+                     f"{archive_fname}:\n{err}")
+
+
+def generate_errors_csv(errors, sep=","):
+
+    summary_columns = {
+        "at": ["Atoms"],
+        "mode": ["Mode"],
+        "dir": ["Direction"],
+        "r_min" : ["R_min"],
+        "var_r" : ["var(R)"],
+        "p_min": ["p_min"],
+        "d_p_minus": ["-Δp"],
+        "d_p_plus": ["+Δp"],
+    }
+
+    # individual files
+    indiv_files = {}
+
+    for param_err in errors:
+
+        atoms_str = range_to_str([at.oriN for at in param_err.atoms])
+        summary_columns["at"].append(atoms_str)
+        summary_columns["dir"].append(param_err.disp_label)
+        summary_columns["mode"].append(param_err.mode)
+        summary_columns["r_min"].append(param_err.get_r_min)
+        summary_columns["var_r"].append(param_err.var_r)
+        summary_columns["p_min"].append(param_err.get_p_min)
+
+        # statistical error estimates
+        d_p_minus, d_p_plus = param_err.get_error_estimates
+        summary_columns["d_p_minus"].append(d_p_minus)
+        summary_columns["d_p_plus"].append(d_p_plus)
+
+        # create_filename for individual files
+        indiv_fname = f"Errors_{param_err.mode}_atoms#{atoms_str}"
+        if param_err.mode == "geo":
+            indiv_fname += f"_{param_err.disp_label}"
+        indiv_fname += ".csv"
+
+        if param_err.mode == "geo":
+            param_columns = geo_errors_csv_content(param_err)
+        elif param_err.mode == "vib":
+            param_columns = vib_errors_csv_content(param_err)
+        elif param_err.mode == "occ":
+            param_columns = occ_errors_csv_content(param_err)
+        else:
+            raise ValueError(f'Unknown mode "{param_err.mode}"')
+        file_content = get_string_from_columns(param_columns, sep)
+        indiv_files[indiv_fname] = file_content
+
+    summary_csv_content = get_string_from_columns(summary_columns, sep)
+
+    return summary_csv_content, indiv_files
+
+
+def geo_errors_csv_content(error):
+    """Generate columns dict for geometrical errors containing the
+    contents of a file to be written into Errors.zip.
 
     Parameters
     ----------
-    errors : R_Error
-        Data structure from sections.errorcalc containing the information
-    filename : str, optional
-        Name of the csv file to write. The default is "Errors.csv".
-    sep : str, optional
-        The separator to use. The default is ",".
+    error : R_Error
+        Error object for geometrical errors.
 
     Returns
     -------
-    None.
-
+    dict
+        columns dict containing displacements and R-factors.
+        
+    Raises
+    ------
+    ValueError
+        If error.mode is not "geo".
     """
-    # contents of the columns; start with only titles:
-    columns = {"at": ["Atoms"],
-               "mode": ["Mode"],
-               "dir": ["Disp. along (1st atom)"],
-               "disp": ["Displacement [A]"],
-               "rfac": ["R"]}
-    for err in errors:
-        ats = range_to_str([at.oriN for at in err.atoms])
-        if isinstance(err.displacements[0], np.ndarray):
-            dirvec = ((err.displacements[-1] - err.displacements[0])
-                      * np.array([1, 1, -1]))
-            dirvec = dirvec / np.linalg.norm(dirvec)
-            direction = ("[" + ", ".join([str(round(f, 4))
-                                          for f in dirvec]) + "]")
-        for i in range(0, len(err.rfacs)):
-            columns["at"].append(ats)
-            columns["mode"].append(err.mode)
-            if err.main_element:
-                columns["dir"].append(err.main_element)
-                disp = err.displacements[i]
-            elif isinstance(err.displacements[i], np.ndarray):
-                columns["dir"].append(direction)
-                disp = np.dot(dirvec * np.array([1, 1, -1]),
-                              err.displacements[i])
-            else:
-                columns["dir"].append("")
-                disp = err.displacements[i]
-            columns["disp"].append("{:.4f}".format(disp))
-            columns["rfac"].append("{:.4f}".format(err.rfacs[i]))
+    
+    if error.mode != "geo":
+        raise ValueError(f'Cannot format errors of type "{error.mode}"')
+    columns = {
+        "disp" : [f"Displacement ({error.disp_label}) [Å]"],
+        "rfac" : ["R"]
+    }
+    rfacs = error.rfacs
+    for line in range(0, len(error.rfacs)):
+        columns["disp"].append(error.lin_disp[line])
+        columns["rfac"].append(error.rfacs[line])
+    return columns
 
-    if all(s == "" for s in columns["dir"][1:]):
-        del columns["dir"]
 
+def vib_errors_csv_content(error):
+    """Generate columns dict for vibrational errors containing the
+    contents of a file to be written into Errors.zip.
+
+    Parameters
+    ----------
+    error : R_Error
+        Error object for vibrational errors.
+
+    Returns
+    -------
+    dict
+        columns dict containing displacements and R-factors.
+        
+    Raises
+    ------
+    ValueError
+        If error.mode is not "vib".
+    """
+    if error.mode != "vib":
+        raise ValueError(f'Cannot format errors of type "{error.mode}"')
+    columns = {
+        "disp" : ["Vib. Amp. change [Å]"],
+        "rfac" : ["R"]
+    }
+    rfacs = error.rfacs
+    for line in range(0, len(error.rfacs)):
+        columns["disp"].append(error.lin_disp[line])
+        columns["rfac"].append(error.rfacs[line])
+    return columns
+
+
+def occ_errors_csv_content(error):
+    """Generate columns dict for occupational errors containing the
+    contents of a file to be written into Errors.zip.
+
+    Parameters
+    ----------
+    error : R_Error
+        Error object for occupational errors.
+
+    Returns
+    -------
+    dict
+        columns dict containing displacements and R-factors.
+        
+    Raises
+    ------
+    ValueError
+        If error.mode is not "occ".
+    """
+    if error.mode != "occ":
+        raise ValueError(f'Cannot format errors of type "{error.mode}"')
+    columns = {}
+    for elem in error.elem_occ.keys():
+        columns[elem] = [f"Occupation {elem} [%]",]
+    columns["rfac"] = ["R",]
+
+    rfacs = error.rfacs
+    for line in range(0, len(error.rfacs)):
+        for elem, el_occ in error.elem_occ.items():
+            columns[elem].append(el_occ[line]*100)  # in %
+        columns["rfac"].append(error.rfacs[line])
+    return columns
+
+
+def get_string_from_columns(columns, sep=","):
+    """Formats a columns dictionary into a string conforming to the CSV
+    format.
+
+    Parameters
+    ----------
+    columns : dict
+        dict holding the contents to be written in the CSV. Keys are not
+        used, values must be a list of entries for each column. Entries 
+        can be str, int, float or None.
+    sep : str
+        CSV separator character to be used. Default is ",".
+
+    Returns
+    -------
+    str
+        str containing the formatted contents of the CSV file.
+    """
     widths = {}
-    for k in columns:
-        widths[k] = max(len(s) for s in columns[k]) + 1
+    for col in columns:
+        widths[col] = max(len(
+            format_col_content(col_content)
+            ) for col_content in columns[col]) + 1
 
-    output = ""
+    content = ""
     for i in range(len(next(iter(columns.values())))):
-        for k in columns:
-            output += columns[k][i].rjust(widths[k]) + sep
-        output = output[:-1] + "\n"
-
-    try:
-        with open(filename, "w") as wf:
-            wf.write(output)
-    except Exception as e:
-        logger.warning("Failed to write "+filename + ": " + str(e))
-    return
+        for col in columns:
+            col_content = format_col_content(columns[col][i])
+            content += col_content.rjust(widths[col]) + sep
+        content = content[:-1] + "\n"
+    return content
 
 
-def write_errors_pdf(errors, v0i, energy_range, filename="Errors.pdf"):
+def format_col_content(content):
+    """Formats a value into a string suitable for writing to errors CSV
+    files.
+
+    Parameters
+    ----------
+    content : str, int, float or None
+        _description_
+
+    Returns
+    -------
+    str
+        Formatted string. If float, 4 decimal places are used; if
+        content is None, return "N/A".
+
+    Raises
+    ------
+    ValueError
+        If content is neither, str, int, float or None.
+    """
+    if isinstance(content, str):
+        return content
+    elif isinstance(content, int):
+        return str(content)
+    elif isinstance(content, float):
+        return f"{content:.4f}"
+    elif content is None:
+        return "N/A"
+    else:
+        raise ValueError("Cannot format value for writing to Errors CSV"
+                         f" file: {content}")
+
+
+def make_errors_figs(errors):
     """Creates and writes Errors.pdf.
 
     Parameters
     ----------
     errors : list of R_Error
         contains the R-factors to be plotted
-    v0i : float
-        Imaginary part of inner potential. Can be taken from rp.V0_IMAG.
-    energy_range : float
-        Total energy range used in the calculation (in eV). Can be taken
-        from rp.total_energy_range().
     filename : str, optional
         Path of file to be written, by default "Errors.pdf"
     """
@@ -134,11 +318,6 @@ def write_errors_pdf(errors, v0i, energy_range, filename="Errors.pdf"):
         if not mode_errors:
             continue
 
-        # minimum R-factor and R-factor variance for that mode
-        rmin = min(r for err in mode_errors for r in err.rfacs)
-        var = np.sqrt(8*np.abs(v0i) / energy_range) * rmin
-        logger.info(f"{titles[mode]} error calculation: Found var(R) = {var:.4f}.")
-
         err_x = {}
         err_y = {}
         err_x_inters = {}  # x-values of intersections with var(R)
@@ -152,27 +331,29 @@ def write_errors_pdf(errors, v0i, energy_range, filename="Errors.pdf"):
                 ats += "s"
             ats += " " + range_to_str([at.oriN for at in err.atoms])
             if mode == "geo":
-                dirvec = ((err.displacements[-1] - err.displacements[0])
-                          * np.array([1, 1, -1]))
-                dirvec = dirvec / np.linalg.norm(dirvec)
-                direction = ("[" + ", ".join([str(round(f, 2))
-                                              for f in dirvec]) + "]")
-                disp = [np.dot(dirvec * np.array([1, 1, -1]), v) * 100
-                        for v in err.displacements]
+                direction = err.disp_label
+                disp = err.lin_disp  # in A
                 err_legend[err] = ats + " along " + direction
-            else:
-                disp = err.displacements[:] * 100   # in pm
+            elif mode == "vib":
+                disp = err.displacements[:]  # in A
                 err_legend[err] = ats
+            elif mode == "occ":
+                disp = err.displacements[:] * 100   # in % for occ
+                err_legend[err] = ats
+            else:
+                raise ValueError(f'Unknown mode "{mode}"')
             err_disp[err] = disp
         xvals = [d for k in err_disp for d in err_disp[k]]
         xrange = [min(xvals) - abs(max(xvals) - min(xvals)) * 0.05,
                   max(xvals) + abs(max(xvals) - min(xvals)) * 0.05]
         for err in mode_errors:
+            rmin = err.get_r_min
+            var = err.var_r
             disp = err_disp[err]
-            tck = interpolate.splrep(disp, err.rfacs)
-            x = np.arange(min(xvals), max(xvals)+0.01,
+            interp_f = interpolate.interp1d(disp, err.rfacs, bounds_error=False)
+            x = np.arange(min(xvals), max(xvals),
                           (xrange[1] - xrange[0])*1e-4)
-            y = interpolate.splev(x, tck)
+            y = interp_f(x)
             indmark = [np.argmin(abs(x - v)) for v in disp]
             err_x_to_mark[err] = indmark
             err_x[err] = x[indmark[0]:indmark[-1]+1]
@@ -190,7 +371,7 @@ def write_errors_pdf(errors, v0i, energy_range, filename="Errors.pdf"):
         fig = plt.figure(figsize=(5.8, 5.8))
         ax = fig.add_subplot(1, 1, 1)
         if mode != "occ":
-            ax.set_xlabel('Deviation from bestfit value (pm)')
+            ax.set_xlabel('Deviation from bestfit value (Å)')
         else:
             ax.set_xlabel('Site occupation (%)')
         ax.set_ylabel('Pendry R-factor')
@@ -289,10 +470,21 @@ def write_errors_pdf(errors, v0i, energy_range, filename="Errors.pdf"):
             axs[figcount].xaxis.set_major_locator(plt.MaxNLocator(5))
             axs[figcount].tick_params(labelsize=6)
             if mode != "occ":
-                axs[figcount].set_xlabel('Deviation from bestfit value (pm)',
+                axs[figcount].set_xlabel('Deviation from bestfit value (Å)',
                                          fontsize=8)
             else:
                 axs[figcount].set_xlabel('Site occupation (%)', fontsize=8)
+
+            # add uncertainties in plot
+            r_min = min(err.rfacs)
+            p_best = err.lin_disp[err.rfacs.index(r_min)]
+            error_estimates = err.get_error_estimates
+            if error_estimates[0]:
+                l_bound = p_best-error_estimates[0]
+                draw_error(axs[figcount], l_bound, err, r_interval=(rmax-rmin))
+            if error_estimates[1]:
+                u_bound = p_best+error_estimates[1]
+                draw_error(axs[figcount], u_bound, err, r_interval=(rmax-rmin))
             axs[figcount].set_ylabel('Pendry R-factor', fontsize=8)
             axs[figcount].legend(fontsize="x-small", frameon=False)
             # axs[figcount].set_title(err_legend[err], fontsize=8)
@@ -302,12 +494,58 @@ def write_errors_pdf(errors, v0i, energy_range, filename="Errors.pdf"):
         fig.tight_layout(rect=(0, 0, 1, 0.965))
         fig.suptitle(titles[mode])
         figs.append(fig)
+    return figs
+
+
+def draw_error(axis, bound, error, r_interval):
+    """Adds annotation for statistical error estimates to individual
+    error plots.
+
+    Parameters
+    ----------
+    axis : matplotlib axis
+        axis of the error plot to be annotated.
+    bound : float
+        Error bound == p_min \pm \sigma(p).
+    error : R_Error
+        Error object used for error estimation.
+    r_interval : float
+        R-factor range shown in the plot (rmax - rmin). Used for
+        graphical scaling.
+    """
+    r_min = min(error.rfacs)
+    p_best = error.lin_disp[error.rfacs.index(r_min)]
+    var_r =error.var_r
+
+    # put vertical line at minimum R-factor
+    #axis.vlines(x=p_best, color="black", ymin=0, ymax=2, lw=0.5)
+    # put dashed line at bound
+    axis.vlines(x = bound, ymin = r_min - r_interval*0.024, ymax = r_min+var_r, ls=":", lw=0.5,
+            color='slategrey')
+
+    # make arrow "notch"
+    axis.vlines(x=p_best,
+                ymin= r_min - r_interval*0.032,
+                ymax= r_min - r_interval*0.007,
+                lw=0.75, color="slategrey")
+    # arrow from min R to intersection x
+    axis.annotate('', xy=(p_best,r_min - r_interval*0.007),
+                  xytext=(bound,r_min - r_interval*0.007),
+                  arrowprops=dict(arrowstyle='<-', lw=0.75,
+                                  color="slategray", shrinkA=0, shrinkB=0))
+    # label error under arrow
+    axis.annotate(
+        text=f"{format_col_content(bound-p_best)}",
+        xy=((p_best+bound)/2,r_min - r_interval*0.022),
+        ha='center', va='top', fontsize=4.5)
+
+def write_errors_pdf(figs, filename="Errors.pdf"):
     try:
         pdf = PdfPages(filename)
         for fig in figs:
             pdf.savefig(fig)
     except PermissionError:
-        logger.warning("Failed to write to " + filename
+        logger.warning("Failed to write to file " + filename
                        + ": Permission denied.")
     except KeyboardInterrupt:
         raise

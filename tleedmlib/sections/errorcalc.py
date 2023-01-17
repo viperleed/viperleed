@@ -2,7 +2,7 @@
 """
 Created on Thu Mar 18 10:28:52 2021
 
-@author: Florian Kraushofer
+@author: Florian Kraushofer, Alexander M. Imre
 
 TensErLEED Manager section Error calculation
 """
@@ -11,55 +11,20 @@ import logging
 import copy
 import numpy as np
 import os
+from pathlib import Path
 
 import viperleed.tleedmlib as tl
+from viperleed.tleedmlib.classes.r_error import R_Error
 import viperleed.tleedmlib.files.ioerrorcalc as tl_io
 
 logger = logging.getLogger("tleedm.error")
-
-
-class R_Error():
-    """
-    Data structure for storing errors after they have been calculated.
-    Stores the displacements that led to the R-factors even if they are
-    modified later. Displacements are stored for one atom only, the other are
-    linked.
-    """
-
-    def __init__(self, atoms, mode, rfacs):
-        self.atoms = atoms  # atoms that have been varied together
-        self.mode = mode    # vib, geo, or occ
-        self.rfacs = rfacs  # the r-factors from the variations
-        self.displacements = []   # displacements of atoms[0]
-        self.main_element = ""    # element occupation displayed in output
-        d = {}
-        at = atoms[0]   # store displacements for this one; main element
-        if mode == "occ":
-            if atoms[0].el in atoms[0].disp_occ:
-                self.main_element = atoms[0].el  # main site element
-            else:
-                # element with highest occupation in refcalc
-                self.main_element = max(atoms[0].site.occ,
-                                        key=lambda k: atoms[0].site.occ[k])
-            self.displacements = copy.deepcopy(atoms[0].disp_occ[
-                                                        self.main_element])
-        else:
-            if mode == "geo":
-                d = atoms[0].disp_geo
-            elif mode == "vib":
-                d = atoms[0].disp_vib
-        if len(d) > 0:
-            if at.el in d:
-                k = at.el
-            else:
-                k = "all"
-            self.displacements = copy.deepcopy(d[k])
 
 
 def errorcalc(sl, rp):
     """Runs 1D error calculations based on DISPLACEMENTS."""
 
     if rp.domainParams:
+        # TODO!! requested by Tilman!!
         # !!! Should be straightforward. Just take the beams from other domains
         # as constant (from refcalc), vary for the one domain as always
         logger.error("Error calculation not implemented for multiple domains.")
@@ -142,12 +107,52 @@ def errorcalc(sl, rp):
                                            only_vary=only_vary)
             logger.info("Finished with " + seg_info[mode] + " errors for "
                         "atom group: " + ", ".join(str(at) for at in ag))
-            errors.append(R_Error(ag, mode, rfaclist))
+            error_disp_label = ag[0].displist[0].disp_labels[mode]
+            error_lin_disps = ag[0].displist[0].disp_lin_steps[mode]
+            errors.append(R_Error(rp.R_FACTOR_TYPE,
+                                  ag, mode, rfaclist,
+                                  error_disp_label,
+                                  error_lin_disps,
+                                  v0i=rp.V0_IMAG,
+                                  energy_range=rp.total_energy_range()))
             if rp.halt >= rp.HALTING:
                 return
     if len(errors) == 0:
         logger.info("Error calculation: Returning with no output.")
         return
-    tl_io.write_errors_csv(errors)
-    tl_io.write_errors_pdf(errors, v0i=rp.V0_IMAG, energy_range=rp.total_energy_range())
+
+    # Inform user that statistical error estimates are only available
+    # for Pendry R-factor.
+    if rp.R_FACTOR_TYPE != 1:
+        logger.info("Estimates for statistical uncertainties "
+                    "of parameters are only available for the Pendry "
+                    "R-factor.")
+    else:
+        # Write var(R) to log as info.
+        var_r_info = tl_io.extract_var_r(errors)
+        if any(var_r_info.values()):
+            var_str = []
+            for mode, var_r in var_r_info.items():
+                if var_r:
+                    var_str.append(f"{mode}: {tl_io.format_col_content(var_r)}")
+            var_str = ", ".join(var_str)
+            logger.info(f"Found values for var(R): {var_str}")
+        else:
+            logger.info("Could not estimate var(R) for any error mode.")
+
+    save_path = Path(rp.workdir)
+
+    # Errors_summary.csv and Errors.zip
+    summary_csv_content, individual_files = tl_io.generate_errors_csv(errors)
+    tl_io.write_errors_archive(individual_files,
+                               archive_path=save_path,
+                               compression_level=rp.ZIP_COMPRESSION_LEVEL,
+                               archive_fname="Errors.zip")
+    tl_io.write_errors_summary_csv(summary_csv_content,
+                                   summary_path=save_path,
+                                   summary_fname="Errors_summary.csv")
+
+    # Errors.pdf
+    errors_figs = tl_io.make_errors_figs(errors)
+    tl_io.write_errors_pdf(errors_figs, filename = "Errors.pdf")
     return

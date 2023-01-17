@@ -695,7 +695,9 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                             allowed = False
                     if allowed:
                         if "offset" not in dr:
-                            at.assignDisp(mode, disprange, targetel)
+                            at.assignDisp(mode, disprange, targetel,
+                                          disp_label=dr,
+                                          disp_lin_steps=drange)
                         else:
                             at.clearOffset(1, targetel)
                             at.assignDisp(4, disprange, targetel)
@@ -733,7 +735,9 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                             drvec[:2] = v
                             disprange = [f*drvec for f in drange]
                             if "offset" not in dr:
-                                at.assignDisp(mode, disprange, targetel)
+                                at.assignDisp(mode, disprange, targetel,
+                                              disp_label=dr,
+                                              disp_lin_steps=drange)
                             else:
                                 at.assignDisp(4, disprange, targetel)
                             deltas_required = True
@@ -749,7 +753,9 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                                                [np.sin(ar), np.cos(ar)-1]])
                                 disprange.append(np.append(np.dot(tm, r), 0.))
                             if "offset" not in dr:
-                                at.assignDisp(mode, disprange, targetel)
+                                at.assignDisp(mode, disprange, targetel,
+                                              disp_label=dr,
+                                              disp_lin_steps=drange)
                             else:
                                 at.clearOffset(1, targetel)
                                 at.assignDisp(4, disprange, targetel)
@@ -770,7 +776,9 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                 if "offset" in pside:
                     at.clearOffset(mode, targetel)
                 if not (len(drange) == 1 and drange[0] == 0.):
-                    at.assignDisp(mode, drange, targetel)
+                    at.assignDisp(mode, drange, targetel,
+                                  disp_label="N/A",
+                                  disp_lin_steps=drange)
                 deltas_required = True
         elif mode == 3:
             # occupations, get ranges:
@@ -839,14 +847,16 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                 if subl[0].capitalize() in sl.chemelem:
                     targetel = subl[0]
                 else:
-                    logger.warning('DISPLACEMENTS file: '+subl[0]+'not '
+                    logger.warning('DISPLACEMENTS file: '+subl[0]+' not '
                                    'found in element list. No assignment '
                                    'will be made.')
                     rp.setHaltingLevel(1)
                     continue
                 for (at, _) in targetAtEls:
                     if targetel in at.disp_occ:
-                        at.assignDisp(mode, drange, targetel)
+                        at.assignDisp(mode, drange, targetel,
+                                      disp_label="N/A",
+                                      disp_lin_steps=None)  # for occupation, we figure it out in r_error
                         deltas_required = True
                     else:
                         logger.warning(

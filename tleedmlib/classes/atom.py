@@ -90,6 +90,16 @@ class Atom:
         self.disp_vib = {"all": [0.]}
         self.disp_geo = {"all": [np.zeros(3)]}
         self.disp_occ = {el: [1.]}
+        self.disp_labels = {
+            "geo": "",
+            "vib": "",
+            "occ": "",
+        }
+        self.disp_lin_steps = {
+            "geo": [],
+            "vib": [],
+            "occ": [],
+        }
         self.disp_geo_offset = {"all": [np.zeros(3)]}
         self.disp_center_index = {"vib": {"all": 0},
                                   "geo": {"all": 0},
@@ -246,7 +256,7 @@ class Atom:
         return
 
     def assignDisp(self, mode, disprange, targetel="", primary=True,
-                   displist=[]):
+                   displist=[], disp_label="", disp_lin_steps = []):
         """
         Assigns a list of displacements to this atom, for all or a given
         element.
@@ -284,10 +294,16 @@ class Atom:
         # to make sure multiple atoms do not get the same list object
         if mode == 1:
             td = self.disp_geo
+            self.disp_labels["geo"] = disp_label
+            self.disp_lin_steps["geo"] = disp_lin_steps
         elif mode == 2:
             td = self.disp_vib
+            self.disp_labels["vib"] = "N/A"  # direction not applicable for vib
+            self.disp_lin_steps["vib"] = disp_lin_steps
         elif mode == 3:
             td = self.disp_occ
+            self.disp_labels["occ"] = "N/A"  # direction not applicabel for occ
+            self.disp_lin_steps["occ"] = disp_lin_steps
         elif mode == 4:
             td = self.disp_geo_offset
         else:
@@ -373,7 +389,9 @@ class Atom:
                 else:
                     newdr = dr[:]
                 at.assignDisp(mode, newdr, targetel, primary=False,
-                              displist=self.displist)
+                              displist=self.displist,
+                              disp_label=disp_label,
+                              disp_lin_steps=disp_lin_steps)
             return
         if displist != self.displist and len(self.displist) > 0:
             logger.warning(
