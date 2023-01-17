@@ -145,27 +145,32 @@ class R_Error():
         # the overall minimum R factor
         err_min_R = min(self.rfacs)
 
-        if (err_min_R > r_min + self.var_r or            # minimum R is below line
-            self.rfacs[0] < r_min + self.var_r or        # left max R is below line
-            self.rfacs[-1] < r_min + self.var_r):        # right max R is below line
+        # TODO change!!!!!
+        if err_min_R > r_min + self.var_r:
             return (None, None)
 
         # treat upper and lower half of error curve
         err_min_R_id = self.rfacs.index(err_min_R)
+        best_param = self.lin_disp[self.rfacs.index(err_min_R)]
         left_rfacs = self.rfacs[:err_min_R_id+1]
         left_lin_disp = self.lin_disp[:err_min_R_id+1]
         right_rfacs = self.rfacs[err_min_R_id:]
         right_lin_disp = self.lin_disp[err_min_R_id:]
 
         error_estimates = []
-        for lin_disp, rfacs in (zip(left_rfacs, left_lin_disp),
-                                zip(right_rfacs, right_lin_disp)):
-            # find zero crossing 
+        for rfacs, lin_disp in ((left_rfacs, left_lin_disp),
+                                (right_rfacs, right_lin_disp)):
+            # find zero crossing
+            offset_rfacs = rfacs - (r_min + self.var_r)
             if (len(rfacs) < 3 or                                         # too few points
-                get_n_zero_crossings(rfacs - (r_min + self.var_r)) != 1): # unclear crossing of line
+                get_n_zero_crossings(offset_rfacs) != 1): # unclear crossing of line
                 error_estimates.append(None)
-                continue
-            error_estimates.append(get_zero_crossing(lin_disp, rfacs))
+            elif(max(rfacs) <= r_min + self.var_r):       # maximum R below r_min + var(R) line
+                error_estimates.append(None)
+            else:
+                crossing_point = get_zero_crossing(lin_disp, offset_rfacs)
+                delta = abs(best_param - crossing_point)
+                error_estimates.append(delta)
         return tuple(error_estimates)
 
     @property
@@ -210,11 +215,11 @@ def get_n_zero_crossings(x_arr):
         Number of times the discrete input data crossed the zero line.
     """
     arr = np.array(x_arr)
-    n_zero_crossings = int((1 - np.sign((arr[:-1]*arr[1:]))).sum())
+    n_zero_crossings = int((1 - np.sign((arr[:-1]*arr[1:]))).sum()/2)
     return n_zero_crossings
 
 
-def get_zero_crossing(x_arr, y_arr):
+def get_zero_crossing(x_arr, y_arr, eps=1e-6):
     """Computes and returns the x_value where the provided dataset
     crosses the zero line.
     
@@ -233,6 +238,8 @@ def get_zero_crossing(x_arr, y_arr):
         Must in ascending order.
     y_arr : _type_
         _description_
+    eps: float
+        Numerical accuracy of comparison.
 
     Returns
     -------
@@ -248,19 +255,18 @@ def get_zero_crossing(x_arr, y_arr):
         if the values of x_arr are not monotonically increasing.
     """
 
-    eps = 1e-6
     if len(x_arr) != len(y_arr):
         raise ValueError("Different sized arrays supplied.")
     # make sure x_arr is monotonically increasing
-    if not np.all(x_arr[:, 1:] >= x_arr[:, :-1], axis=1):
+    if not np.all(x_arr[1:] >= x_arr[:-1]):
         raise ValueError("Values in x_arr are not monotonically increasing")
 
     # find location of zero crossing
-    for id in range(len(x_arr)):
+    for id in range(len(x_arr)-1):
         if y_arr[id]*y_arr[id+1] <= 0:
             R_jump = y_arr[id+1]-y_arr[id]
             if R_jump < eps:  # avoid division by zero
                 return (x_arr[id]+x_arr[id+1])/2
-            return -y_arr[id]*(x_arr[id+1]-x_arr[id])/(y_arr[id+1]-y_arr[id])
+            return x_arr[id]-y_arr[id]*(x_arr[id+1]-x_arr[id])/(y_arr[id+1]-y_arr[id])
     # return None if no zero crossing found
     return None

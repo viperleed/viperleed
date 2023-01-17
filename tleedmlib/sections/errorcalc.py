@@ -2,7 +2,7 @@
 """
 Created on Thu Mar 18 10:28:52 2021
 
-@author: Florian Kraushofer
+@author: Florian Kraushofer, Alexander M. Imre
 
 TensErLEED Manager section Error calculation
 """
@@ -24,6 +24,7 @@ def errorcalc(sl, rp):
     """Runs 1D error calculations based on DISPLACEMENTS."""
 
     if rp.domainParams:
+        # TODO!! requested by Tilman!!
         # !!! Should be straightforward. Just take the beams from other domains
         # as constant (from refcalc), vary for the one domain as always
         logger.error("Error calculation not implemented for multiple domains.")
@@ -131,8 +132,9 @@ def errorcalc(sl, rp):
         var_r_info = tl_io.extract_var_r(errors)
         if any(var_r_info.values()):
             var_str = []
-            for mode, var_r in var_r_info:
-                var_str.append(f"{mode}: {tl_io.format_col_content(var_r)}")
+            for mode, var_r in var_r_info.items():
+                if var_r:
+                    var_str.append(f"{mode}: {tl_io.format_col_content(var_r)}")
             var_str = ", ".join(var_str)
             logger.info(f"Found values for var(R): {var_str}")
         else:

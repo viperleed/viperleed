@@ -2,7 +2,7 @@
 """
 Created on Thu Mar 18 17:22:20 2021
 
-@author: Florian Kraushofer
+@author: Florian Kraushofer, Alexander Imre
 
 Functions for reading and writing files relevant to the error calculation
 """
@@ -38,9 +38,11 @@ def extract_var_r(errors):
         "occ": None,
     }
     for mode in var_r_info.keys():
-        mode_errors = [err for err in errors if err.mode = mode and err.r_type==1]
+        mode_errors = [err for err in errors
+                       if (err.mode == mode and err.r_type==1)]
         if mode_errors:
             var_r_info[mode] = mode_errors[0].var_r
+    return var_r_info
 
 def write_errors_csv(errors, filename="Errors.csv", sep=","):
     """
@@ -183,9 +185,9 @@ def generate_errors_csv(errors, sep=","):
             raise ValueError(f'Unknown mode "{param_err.mode}"')
         file_content = get_string_from_columns(param_columns, sep)
         indiv_files[indiv_fname] = file_content
-        
+
     summary_csv_content = get_string_from_columns(summary_columns, sep)
-    
+
     return summary_csv_content, indiv_files
 
 
@@ -397,29 +399,24 @@ def make_errors_figs(errors):
                 ats += "s"
             ats += " " + range_to_str([at.oriN for at in err.atoms])
             if mode == "geo":
-                dirvec = ((err.displacements[-1] - err.displacements[0])
-                          * np.array([1, 1, -1]))
-                dirvec = dirvec / np.linalg.norm(dirvec)
-                direction = ("[" + ", ".join([str(round(f, 2))
-                                              for f in dirvec]) + "]")
-                disp = [np.dot(dirvec * np.array([1, 1, -1]), v) * 100
-                        for v in err.displacements]
+                direction = err.disp_label
+                disp = err.lin_disp
                 err_legend[err] = ats + " along " + direction
             else:
-                disp = err.displacements[:] * 100   # in pm
+                disp = err.displacements[:] * 100   # in pm for vib, % for occ #TODO: change to A?
                 err_legend[err] = ats
             err_disp[err] = disp
         xvals = [d for k in err_disp for d in err_disp[k]]
         xrange = [min(xvals) - abs(max(xvals) - min(xvals)) * 0.05,
                   max(xvals) + abs(max(xvals) - min(xvals)) * 0.05]
         for err in mode_errors:
-            rmin = err.get_rmin
+            rmin = err.get_r_min
             var = err.var_r
             disp = err_disp[err]
-            tck = interpolate.splrep(disp, err.rfacs)
+            interp_f = interpolate.interp1d(disp, err.rfacs, bounds_error=False)
             x = np.arange(min(xvals), max(xvals)+0.01,
                           (xrange[1] - xrange[0])*1e-4)
-            y = interpolate.splev(x, tck)
+            y = interp_f(x)
             indmark = [np.argmin(abs(x - v)) for v in disp]
             err_x_to_mark[err] = indmark
             err_x[err] = x[indmark[0]:indmark[-1]+1]
@@ -540,6 +537,41 @@ def make_errors_figs(errors):
                                          fontsize=8)
             else:
                 axs[figcount].set_xlabel('Site occupation (%)', fontsize=8)
+
+            # add uncertainties in plot
+            r_min = min(err.rfacs)
+            p_best = err.lin_disp[err.rfacs.index(r_min)]
+            var_r  =err.var_r
+            error_estimates = err.get_error_estimates
+            axs[figcount].vlines(x=p_best, color="black", ymin=0, ymax=2, lw=0.5)
+            if error_estimates[0]:
+                l_bound = p_best-error_estimates[0]
+                # highligh intersection point
+                #axs[figcount].scatter(x = l_bound, y = r_min+var_r,
+                #                      marker="<", color='orange')
+                axs[figcount].vlines(x = l_bound, ymin = 0,
+                                     ymax = 2, ls=":", lw=0.5,
+                                     color='slategrey')
+                axs[figcount].annotate('', xy=(l_bound,r_min - (rmax-rmin)*0.004), xytext=(p_best,r_min - (rmax-rmin)*0.004),
+                                       arrowprops=dict(arrowstyle='->', lw=0.75, color="slategray"))
+                axs[figcount].annotate(
+                    text=f"{format_col_content(error_estimates[0])}",
+                    xy=((p_best+l_bound)/2,r_min - abs(rmax-rmin)*0.019),
+                    ha='center', va='top', fontsize=4.5)
+            if error_estimates[1]:
+                u_bound = p_best+error_estimates[1]
+                #axs[figcount].scatter(x = u_bound, y = r_min+var_r,
+                #                     marker=">", color='orange')
+                axs[figcount].vlines(x = u_bound, ymin = 0,
+                                     ymax = 2, ls=":", lw=0.5,
+                                     color = 'slategrey')
+                axs[figcount].annotate('', xy=(p_best,r_min - (rmax-rmin)*0.004), xytext=(u_bound,r_min - (rmax-rmin)*0.004),
+                                       arrowprops=dict(arrowstyle='<-', lw=0.75, color="slategray"))
+                axs[figcount].annotate(
+                    text=f"{format_col_content(error_estimates[1])}",
+                    xy=((p_best+u_bound)/2,r_min - (rmax-rmin)*0.019),
+                    ha='center', va='top', fontsize=4.5)
+
             axs[figcount].set_ylabel('Pendry R-factor', fontsize=8)
             axs[figcount].legend(fontsize="x-small", frameon=False)
             # axs[figcount].set_title(err_legend[err], fontsize=8)
@@ -552,7 +584,7 @@ def make_errors_figs(errors):
     return figs
 
 
-def write_errors_pdf(figs, filname="Errors.pdf"):
+def write_errors_pdf(figs, filename="Errors.pdf"):
     try:
         pdf = PdfPages(filename)
         for fig in figs:
