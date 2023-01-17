@@ -17,6 +17,8 @@ ViPErLEED supports Pendry' R factor :math:`R_P` :cite:p:`pendryReliabilityFactor
 .. note::
     Using :math:`R_P` is the **default setting** and highly encouraged since tests have shown that it leads to better results than :math:`R_2` :cite:p:`spornAccuracyQuantitativeLEED1998`.
 
+.. _pendry_r:
+
 The Pendry R factor
 -------------------
 
