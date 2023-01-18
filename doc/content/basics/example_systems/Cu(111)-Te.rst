@@ -103,6 +103,12 @@ For details on the used syntax, see the entry on the :ref:`DISPLACEMENTS file<di
     Normally, this is not recommended, because :ref:`tensor LEED approximation<tensor_leed>` will lead to substation errors for displacement of 0.3 Å.
 
 As usual, we can see a visualization of the optimization convergence in the file :ref:`Search-progress.pdf<searchprogresspdf>` in the ``OUT`` directory.
+:numref:`example_Cu111_Te_search_report` shows the first page output of :ref:`Search-progress.pdf<searchprogresspdf>`.
+The upper figure shows the R-factor as a function of the search progress (search generations).
+The lower figure shows the deviation of the structural parameters over time.
+Together, these two plots give an idea, of how converged the search is.
+
+.. _example_Cu111_Te_search_report:
 
 .. figure:: /_static/example_systems/Cu(111)-Te/figures/Search-report_rough.pdf
    :width: 60%
