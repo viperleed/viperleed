@@ -93,3 +93,8 @@ Glossary
 
     fcc
       Face centered cubic crystal structure.
+
+    Jupyter
+      The Jupyter project for interactive computing.
+      Jupyter notebooks are commonly used as interactive Python environments.
+      See also the `project Jupyter homepage <https://jupyter.org>`__.
