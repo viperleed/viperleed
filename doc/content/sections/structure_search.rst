@@ -40,14 +40,18 @@ When a structure search is executed in ViPErLEED the following main steps are pe
 #.  The :ref:`search log file<log_files>` ``search-$timestamp`` is created and will be filled with progress information as the search continues.
 
 With the preparation finished, the search is now executed (via ``mpirun`` if available).
-Trial surface structures will be sampled using the algorithm described by :cite:t:`kottckeNewApproachAutomated1997`, with a starting configuration as defined by :ref:`SEARCH_START<searchstart>` and :ref:`SEARCH_POPULATION<searchpop>` parallel trial individuals.
+Trial surface structures will be sampled using the algorithm described by :cite:t:`kottckeNewApproachAutomated1997`, with a starting configuration as defined by :ref:`SEARCH_START<searchstart>` and :ref:`SEARCH_POPULATION<searchpop>` parallel trial individuals. See also the section on the :ref:`optimization algorithm used in ViPErLEED<optimization_algorithm>`.
+
 ViPErLEED periodically monitors the search progress by reading the :ref:`SDTL` file and will report on the current best R-factor and the amount of sampled structures.
 From this information, the files :ref:`search-progress.pdf<searchprogresspdf>` and :ref:`search-report.pdf<searchreportpdf>` will be generated and updated, which provides a graphical overview of the structure search progress and convergence.
-If multiple structure optimizatios are run, the file :ref:`search-progress.pdf<searchprogresspdf>` will contain information related to the current run, whereas :ref:`search-report.pdf<searchreportpdf>` summarizes overall progress.
+:ref:`search-progress.pdf<searchprogresspdf>` contains information related exclusively to the current TensErLEED structure-optimization, i.e. one block in the :ref:`DISPLACEMENTS file<displacements>`.
+ViPErLEED enables the user to chain and/or loop multiple TensErLEED structure-optimizations (see the :ref:`DISPLACEMENTS file<displacements>` syntax for details).
+In that case, :ref:`search-report.pdf<searchreportpdf>` summarizes the overall progress over all optimization runs.
 
 Once all required convergence criteria are met, the search will be cleanly aborted, the resulting files will be processed and :ref:`search-progress.pdf<searchprogresspdf>` and :ref:`search-report.pdf<searchreportpdf>` will be updated one last time with the final values.
 After this, the structure search section is finished and ViPErLEED will continue with the next section as defined in the :ref:`RUN parameter<run>` (or stop if there are none).
 
 .. warning:: 
   **Remember** to call the :ref:`bookkeeper utility<bookkeeper>` with the ``-c`` flag after a ViPErLEED run containing a structure search, if you want to continue from the found best-fit structure.
-  **Otherwise the progress will be discarded** and following runs will start again from the refercence structure.
+  **Otherwise the progress will be discarded** and following runs will start again from the refercence structure, unless :ref:`POSCAR<poscar>` and :ref:`VIBROCC<viboccin>` are manually copied from the ``OUT`` directory.
+
