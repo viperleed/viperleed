@@ -8,7 +8,7 @@ The Search-progress.pdf file is meant to give an overview of the current status 
 R-factor / Generations
 ~~~~~~~~~~~~~~~~~~~~~~
 
-The total number of generations is a reasonably good represenation of the elapsed time, so plotting the R-factors over generations gives an impression on how much progress is being made. The best R-factor (i.e. corresponding to the current best-fit structure) is drawn as a black line. The blue line tracks the average R-factor over all members of the population; the grey area plots the range between the current best and current worst structure. Note that both the range and the average may sometimes increase, for example if the population is re-initialized (partly) at random, or if new population members are generated due to :ref:`SEARCH_CULL<SEARCH_CULL>`.
+The total number of generations is a reasonably good measure of the elapsed time, so plotting the R-factors over generations gives an impression on how much progress is being made. The best R-factor (i.e. corresponding to the current best-fit structure) is drawn as a black line. The blue line tracks the average R-factor over all members of the population; the grey area plots the range between the current best and current worst structure. Note that both the range and the average may sometimes increase, for example if the population is re-initialized (partly) at random, or if new population members are generated due to :ref:`SEARCH_CULL<SEARCH_CULL>`.
 
 At regular intervals, the R-factor scatter for the entire population is plotted as points. The best-fit population is black, the worst-fit population is red, and the rest is shaded relative to their distance from the two. If multiple population members share the same R-factor, they are drawn as a bigger point.
 
