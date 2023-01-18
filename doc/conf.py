@@ -73,6 +73,7 @@ html_css_files = [
 
 # -- Options for LaTeX output ------------------------------------------------
 # https://www.sphinx-doc.org/en/master/latex.html
+nb_output_stderr = "remove-warn" # remove matplotlib user warnings
 latex_show_urls = 'inline'
 latex_show_pagerefs = False # show page numbers
 latex_elements = {
@@ -85,6 +86,7 @@ latex_elements = {
     \usepackage{everypage}
     \usepackage{newunicodechar}
     \newunicodechar{α}{$\alpha$}
+    \newunicodechar{Δ}{$\Delta$}
     
     \textblockorigin{28mm}{16.5mm} % position x,y wrt top-left corner of page
     %\setlength{\TPHorizModule}{\pdfpagewidth} % text block width = page width
