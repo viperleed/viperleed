@@ -782,6 +782,7 @@ def search(sl, rp):
                        os.path.join(".", searchname)]
         else:
             command = os.path.join('.', searchname)
+        log_exists = os.path.isfile(searchlogname)
         try:
             if not rp.LOG_SEARCH:
                 proc = subprocess.Popen(
@@ -789,9 +790,8 @@ def search(sl, rp):
                     stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT,
                     preexec_fn=os.setsid)
             else:
-                logExists = os.path.isfile(searchlogname)
                 with open(searchlogname, "a") as log:
-                    if logExists:
+                    if log_exists:
                         log.write("\n\n-------\nRESTARTING\n-------\n\n")
                     proc = subprocess.Popen(
                         command, encoding="ascii",
@@ -803,7 +803,8 @@ def search(sl, rp):
             raise
         if proc is None:
             logger.error("Error starting search subprocess... Stopping.")
-            raise RuntimeError("Error running search")
+            raise RuntimeError("Error running search."
+                               f'Could not start process using "{command}".')
         # FEED INPUT
         try:
             proc.communicate(input=rfinfo, timeout=0.1)
