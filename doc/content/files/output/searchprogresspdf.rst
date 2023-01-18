@@ -33,3 +33,14 @@ The minimum is indicated by a red or green diamond (red if neither of the error 
 Error bars are only drawn if at least one edge falls within the displacement range.
 The left error bar corresponds to the uncorrelated parameter error, the right to the correlated parameter error.
 
+**TODO Florian, Alex: comment by Ulli: this may need more clarification in the paper/examples**
+
+
+Example
+~~~~~~~
+
+**TODO Alex: comment here on example/ maybe replace with example figure from Hematite once ready...**
+
+.. figure:: /_static/example_systems/Cu(111)-Te/figures/Search-report_rough.pdf
+   :width: 60%
+   :align: center
