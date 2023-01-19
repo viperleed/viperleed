@@ -108,6 +108,11 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
     started = qtc.pyqtSignal()
     stopped = qtc.pyqtSignal()
 
+    # camera_connected is emitted any time the camera is connected
+    # or disconnected. It carries the connection state. May be emitted
+    # multiple times with the same connection state.
+    camera_connected = qtc.pyqtSignal(bool)
+
     # preparing is emitted every time a camera begins (True)
     # or finishes (False) any pre-acquisition tasks.
     preparing = qtc.pyqtSignal(bool)
@@ -339,6 +344,12 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             True if the camera is connected.
         """
         return self.__connected
+
+    @connected.setter
+    def connected(self, is_connected):
+        """Set whether the camera is currently connected. For internal use."""
+        self.__connected = bool(is_connected)
+        self.camera_connected.emit(self.connected)
 
     @property
     @abstractmethod
@@ -807,17 +818,17 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         """Connect to the camera."""
         if not self.open():
             base.emit_error(self, CameraErrors.CAMERA_NOT_FOUND, self.name)
-            self.__connected = False
+            self.connected = False
             return
         self.load_camera_settings()
-        self.__connected = True
+        self.connected = True
 
     def disconnect_(self):
         """Disconnect the device."""
         self.__reported_errors = set()
         self.stop()
         self.close()
-        self.__connected = False
+        self.connected = False
 
     def get_settings_handler(self):
         """Return a SettingsHandler object for displaying settings.

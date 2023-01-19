@@ -73,7 +73,9 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 # TODO: would be very nice to always load the default settings first, and
 #       then read in on top of them the ones saved locally. This would allow
 #       to seriously reduce the number of lines in many of the "local"
-#       configuration files.
+#       configuration files. This also make it possible to have default
+#       config files for the same object type, differentiated by some
+#       other search criterion.
 # TODO: speed up import time by picking more specific module parts
 # BUG: PathSelector looks weird on Linux
 # BUG: system settings: folder renamed with small/capital not detected as change
@@ -82,6 +84,8 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 # TODO: bad pixels finder top progress bar should scale better, with actual
 #       duration of tasks
 # TODO: improve progress for preliminary tasks
+# TODO: BadPX - Camera without settings file does not prompt to make a new
+#       one from defaults
 # TODO: it looks like the largest fraction of the time required by
 #       abort_trigger_burst is in fact on the call to _dll_start_live
 #       (97% of the 80ms), while .pause() takes only a short time
@@ -124,6 +128,9 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 #      probably a masked AttributError??
 # TODO: bad pixels info not updated on show
 # TODO: bad pixels & dark progress bar: text is not always accurate
+# TODO: camera extra time should consider that delivery of the
+#       first frame in a trigger burst also takes a bit longer
+# BUG: Try opening Camera properties with camera lost. OSError? See exceptions_20230119_174155.log
 # BUG: imaging source max no. frames should account for the overestimate
 
 #   M E A S U R E M E N T
@@ -141,6 +148,9 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 # TODO: check that we compare serial number from settings with
 #       the one in the hardware when both are available!
 # TODO: include datasheet of components
+# MUST DO IN 1.0: Add a HWID byte to the info returned by ?
+#       for future-proofing to be able to reuse the same protocol
+#       and classes for other boxes (e.g., B field compensation)
 
 #   G U I
 # TODO: progress bar for non-endless

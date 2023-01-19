@@ -253,6 +253,7 @@ class CameraViewer(qtw.QScrollArea):
             # self.__get_image()
             "img_square_array": np.zeros(1, dtype=np.uint32),
             "auto_contrast_info": (0, 1),  # intensity offset & scaling
+            "actions_with_connected_camera": set(),
             }
         self.__children = {
             "viewer": ImageViewer(),
@@ -315,9 +316,7 @@ class CameraViewer(qtw.QScrollArea):
     def interactions_enabled(self, enabled):
         """Set whether the user can interact with the camera."""
         self._flag_setter(enabled, "interactions_enabled")
-        for action in self.__children["context_menu"]["self"].actions():
-            active = action.data()
-            action.setEnabled(True if active else self.interactions_enabled)
+        self.__update_context_menu_action_state()
 
     @property
     def image_size(self):
@@ -706,11 +705,11 @@ class CameraViewer(qtw.QScrollArea):
 
         # Device settings
         menu.addSeparator()
-        menu.addAction("Properties")
+        act = menu.addAction("Properties")
+        self.__glob['actions_with_connected_camera'].add(act)
+        act.setData(self.camera.connected)
 
-        for action in menu.actions():
-            active = action.data()
-            action.setEnabled(True if active else self.interactions_enabled)
+        self.__update_context_menu_action_state()
 
     def __compose_context_menu_roi(self):
         """Set up the context menu for the ROI rubber-band."""
@@ -722,6 +721,7 @@ class CameraViewer(qtw.QScrollArea):
 
     def __connect(self):
         """Connect signals."""
+        self.camera.camera_connected.connect(self.__on_camera_connected)
         self.image_size_changed.connect(self.__update_title)
         self.__img_view.image_scaling_changed.connect(self.__on_image_scaled)
         self.camera.started.connect(self.__on_camera_started)
@@ -827,6 +827,18 @@ class CameraViewer(qtw.QScrollArea):
         dlg.finished.connect(self.__restore_roi_visibility)
         self.__settings_roi.roi_changed.connect(self.__on_roi_settings_changed)
         return dlg
+
+    @qtc.pyqtSlot(bool)
+    def __on_camera_connected(self, connected):
+        """React to a connection status change of the camera."""
+        # Enable/disable stuff that should only be accessed when a
+        # camera is currently connected. Also, store information
+        # in the action data, so it can be correctly restored
+        # when interactions are enabled/disables externally.
+        enabled = self.interactions_enabled and connected
+        for action in self.__glob['actions_with_connected_camera']:
+            action.setEnabled(enabled)
+            action.setData(connected)
 
     @qtc.pyqtSlot(tuple)
     def __on_camera_error(self, _):
@@ -1063,6 +1075,17 @@ class CameraViewer(qtw.QScrollArea):
         self.image_size = image.size()
         if self.show_auto and not self.isVisible():
             self.show()
+
+    def __update_context_menu_action_state(self):
+        """Update enabled state of action in the context menu."""
+        camera_connected_only = self.__glob['actions_with_connected_camera']
+        for action in self.__children["context_menu"]["self"].actions():
+            active = action.data()
+            if action in camera_connected_only:
+                enable = active and self.interactions_enabled
+            else:
+                enable = active or self.interactions_enabled
+            action.setEnabled(enable)
 
     def __update_frame_style(self):
         """Pick frame style depending on whether the image is saturated."""
