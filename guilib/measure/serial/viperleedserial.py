@@ -741,9 +741,8 @@ class ViPErLEEDSerial(SerialABC):
         if info['adc_1'] and not info['adc_0']:
             # It cannot be that ADC1 is active while zero isn't.
             # Probably a hardware fault.
-            base.emit_error(self,
-                            ViPErLEEDHardwareError.ADC_POWER_FAULT)
-        
+            base.emit_error(self, ViPErLEEDHardwareError.ADC_POWER_FAULT)
+
         try:
             serial_nr = message[4:].decode('utf-8')
         except UnicodeDecodeError:

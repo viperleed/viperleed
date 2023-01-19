@@ -522,11 +522,17 @@ class ImagingSourceCamera(abc.CameraABC):
         Adds:
         - 'camera_settings'/'black_level' (advanced)
         - 'camera_settings'/color_format' (advanced)
+
+        Returns
+        -------
+        handler : SettingsHandler
+            The handler used in a SettingsDialog to display the
+            settings of this controller to users.
         """
         handler = super().get_settings_handler()
 
         # pylint: disable=redefined-variable-type
-        # Triggered for _widget. While this is true, it clear what
+        # Triggered for _widget. While this is true, it is clear what
         # _widget is used for in each portion of filling the handler
 
         # Black level
