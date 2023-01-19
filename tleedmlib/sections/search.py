@@ -41,7 +41,7 @@ from viperleed.tleedmlib.files.searchpdf import (
 logger = logging.getLogger("tleedm.search")
 
 
-def processSearchResults(sl, rp, final=True):
+def processSearchResults(sl, rp, search_log_path, final=True):
     """
     Looks at the final block in the SD.TL file and gets the data from the
     best structure in into the slab.
@@ -52,6 +52,10 @@ def processSearchResults(sl, rp, final=True):
         The Slab object to be modified
     rp : Rparams
         Run parameters.
+    search_log_path : Pathlike or None
+        Path to the search log. Will be checked for TensErLEED errors
+        messages. If None, assumes search was not logged and skips
+        checks.
     final : bool, optional
         Defines whether this is the final interpretation that *must* work and
         should go into the log, or if this will be repeated anyway. The
@@ -72,6 +76,18 @@ def processSearchResults(sl, rp, final=True):
     except Exception:
         logger.error("Failed to get last block from SD.TL file.")
         raise
+    # read search log if available and check for errors:
+    if search_log_path is not None:
+        gen_err_msg = ("Execution will continue, but TensErLEED errors "
+                      "related to the search may not be detected "
+                      "properly.")
+        try:
+            with open(search_log_path, "r") as search_log:
+                log_content = search_log.read()
+            check_search_log_content(log_content)  # may raise RuntimeError
+        except OSError:
+            logger.error(f"Could not read search logfile {search_log_path}. "
+                         f"{gen_err_msg}")
     # read the block
     sdtlContent = tl_io.readSDTL_blocks("\n".join(lines),
                                         whichR=rp.SEARCH_BEAMS, logInfo=final,
@@ -208,6 +224,36 @@ def processSearchResults(sl, rp, final=True):
             finally:
                 os.chdir(home)
     return
+
+
+def check_search_log_content(log_content):
+    """Checks the search log content for fatal TensErLEED error
+    messages.
+
+    Parameters
+    ----------
+    log_content : str
+        Contents of the search log.
+
+    Raises
+    ------
+    RuntimeError
+        If an error message is found in the search log file that
+        corresponds to a fatal TensErLEED error.
+    """
+    # check for TensErLEED termination due to uphysically high amplitude values
+    if ("MAX. INTENS. IN THEOR. BEAM" in log_content
+        and "IS SUSPECT" in log_content
+        and "****** STOP PROGRAM ******" in log_content):
+        logger.error(
+            "TensErLEED stopped due to an unphysically high beam amplitude.\n"
+            "This is often caused by scatterers with very small distances "
+            "as a result of very large displacements used in DISPLACEMENTS. "
+            "Check your input files and consider decreasing "
+            "the DISPLACEMENTS ranges."
+        )
+    raise RuntimeError("TensErLEED Error encountered in search. "
+                       "Execution cannot proceed.")
 
 
 def parabolaFit(rp, datafiles, r_best, x0=None, max_configs=0, **kwargs):
@@ -553,7 +599,8 @@ def search(sl, rp):
     rp.updateCores()
     # generate rf.info
     try:
-        rfinfo = tl_io.writeRfInfo(sl, rp, filename="rf.info")
+        rf_info_path = Path(rp.workdir) / "rf.info"
+        tl_io.writeRfInfo(sl, rp, file_path=rf_info_path)
     except Exception:
         logger.error("Error generating search input file rf.info")
         raise
@@ -718,8 +765,10 @@ def search(sl, rp):
     logger.debug("Compiled fortran files successfully")
     # run
     if rp.LOG_SEARCH:
-        searchlogname = searchname+".log"
-        logger.info("Search log will be written to file "+searchlogname)
+        search_log_path = (Path(rp.workdir) / searchname).with_suffix(".log")
+        logger.info(f"Search log will be written to file {search_log_path}.")
+    else:
+        search_log_path = None
     # if there is an old SD.TL file, it needs to be removed
     if os.path.isfile("SD.TL"):
         try:
@@ -782,36 +831,42 @@ def search(sl, rp):
                        os.path.join(".", searchname)]
         else:
             command = os.path.join('.', searchname)
-        log_exists = os.path.isfile(searchlogname)
+        # if LOG_SEARCH -> log search
+        if search_log_path:
+            log_exists = os.path.isfile(search_log_path)
+            search_log_f = open(search_log_path, "a")
+            if log_exists:  # log file existed before
+                search_log_f.write("\n\n-------\nRESTARTING\n-------\n\n")
+        else:
+            search_log_f = subprocess.DEVNULL
+        # NB: log file may be open and must be closed!
         try:
-            if not rp.LOG_SEARCH:
-                proc = subprocess.Popen(
-                    command, encoding="ascii",
-                    stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT,
-                    preexec_fn=os.setsid)
-            else:
-                with open(searchlogname, "a") as log:
-                    if log_exists:
-                        log.write("\n\n-------\nRESTARTING\n-------\n\n")
-                    proc = subprocess.Popen(
-                        command, encoding="ascii",
-                        stdout=log, stderr=log,
-                        preexec_fn=os.setsid)
+            rf_info_f = open(rf_info_path, "r")
+        except OSError:
+            logger.error(f"Could not read file {rf_info_path}.")
+        # Create search process
+        try:
+            proc = subprocess.Popen(
+                command, encoding="ascii",
+                stdin=rf_info_f,
+                stdout=search_log_f,       # if LOG_SEARCH is False, this is DEVNULL
+                stderr=subprocess.STDOUT,  # pipe to whatever stdout is
+                preexec_fn=os.setsid
+            )
             pgid = os.getpgid(proc.pid)
-        except Exception:
+        except Exception:  # This should not fail unless the shell is very broken.
             logger.error("Error starting search. Check SD.TL file.")
+            if search_log_path:
+                search_log_f.close()
+            rf_info_f.close()
             raise
         if proc is None:
             logger.error("Error starting search subprocess... Stopping.")
+            if search_log_path:
+                search_log_f.close()
+            rf_info_f.close()
             raise RuntimeError("Error running search."
                                f'Could not start process using "{command}".')
-        # FEED INPUT
-        try:
-            proc.communicate(input=rfinfo, timeout=0.1)
-        except subprocess.TimeoutExpired:
-            pass  # started successfully; monitoring below
-        except Exception:
-            logger.error("Error starting search. Check SD.TL file.")
         # MONITOR SEARCH
         searchStartTime = timer()
         last_debug_print_time = searchStartTime
@@ -974,7 +1029,7 @@ def search(sl, rp):
                     if (len(gens) > 1 and os.path.isfile("SD.TL")
                             and (repeat or checkrepeat or not stop)):
                         try:
-                            processSearchResults(sl, rp, final=False)
+                            processSearchResults(sl, rp, search_log_path, final=False)
                         except Exception as e: # too general
                             logger.warning("Failed to update POSCAR_OUT "
                                            "and VIBROCC_OUT: " + str(e))
@@ -1044,6 +1099,11 @@ def search(sl, rp):
             logger.error("Error during search. Check SD.TL file.")
             kill_process(proc, default_pgid=pgid)
             raise
+        finally:
+            # close open input and log files
+            if search_log_path:
+                search_log_f.close()
+            rf_info_f.close()
         if repeat:
             rp.SEARCH_START = "control"
             if gens:
@@ -1098,7 +1158,7 @@ def search(sl, rp):
                            exc_info=True)
     # process SD.TL to get POSCAR_OUT, VIBROCC_OUT
     try:
-        processSearchResults(sl, rp)
+        processSearchResults(sl, rp, search_log_path)
     except FileNotFoundError:
         logger.error("Cannot interpret search results without SD.TL file.")
         rp.setHaltingLevel(2)

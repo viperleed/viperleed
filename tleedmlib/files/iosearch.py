@@ -14,6 +14,7 @@ import copy
 import os
 import random
 import shutil
+from pathlib import Path
 
 from viperleed.tleedmlib.files.beams import writeAUXEXPBEAMS
 from viperleed.tleedmlib.files.poscar import writePOSCAR
@@ -253,7 +254,7 @@ def readDataChem(rp, source, cutoff=0, max_configs=0):
     return returnList
 
 
-def writeRfInfo(sl, rp, filename="rf.info"):
+def writeRfInfo(sl, rp, file_path="rf.info"):
     """
     Generates r-factor parameters for the search, combines them with the
     experimental beams in AUXEXPBEAMS format to make the entire input for the
@@ -266,8 +267,9 @@ def writeRfInfo(sl, rp, filename="rf.info"):
         equivalent beams.
     rp : Rparams
         Run parameters.
-    filename : str, optional
-        Name of the output file. The default is "rf.info".
+    filename : pathlike or str
+        Path to or name of the output file. If str uses
+        Path(rp.workdir)/filename. The default is "rf.info".
 
     Returns
     -------
@@ -349,13 +351,17 @@ def writeRfInfo(sl, rp, filename="rf.info"):
                                    version=rp.TL_VERSION)
     output += auxexpbeams
 
+    if isinstance(file_path, str):
+        _file_path = Path(rp.workdir) / file_path
+    else:
+        _file_path = file_path
     try:
-        with open(filename, 'w') as wf:
+        with open(_file_path, 'w') as wf:
             wf.write(output)
     except Exception:
-        logger.error("Failed to write "+filename)
+        logger.error(f"Failed to write {_file_path}")
         raise
-    logger.debug("Wrote to "+filename+" successfully")
+    logger.debug(f"Wrote to {_file_path} successfully")
     return output
 
 
