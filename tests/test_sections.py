@@ -1,4 +1,5 @@
 import unittest   # The test framework
+from parameterized import parameterized, parameterized_class
 import shutil, tempfile
 import sys
 import os
@@ -15,24 +16,26 @@ from viperleed.tleedm import run_tleedm
 ALWAYS_REQUIRED_FILES = ('PARAMETERS', 'EXPBEAMS.csv', 'POSCAR')
 
 
-class TesTTleedmFromFiles(unittest.TestCase):
+class TestTleedmFromFiles(unittest.TestCase):
     @classmethod
-    def setUpClass(cls, surface_name, required_files):
+    def setUpClass(cls, surface_name, required_files, section_dir):
         cls.surface_name = surface_name
         cls.required_files = set(ALWAYS_REQUIRED_FILES)
+        cls.section_dir = section_dir
         # add additional files
         cls.required_files.update(required_files)
 
-        cls.input_files_dir = Path(__file__).parent / "fixtures" / cls.surface_name / "initialization"
-        
+        cls.fixtures_dir = Path(__file__).parent / "fixtures" / cls.surface_name
+        cls.input_files_dir = cls.fixtures_dir / cls.section_dir
+
         # Create a temporary directory to run in
         cls.test_dir = Path(tempfile.mkdtemp())
         cls.work_path = str(cls.test_dir / "work")
         os.makedirs(cls.work_path, exist_ok=True)
-        
+
         shutil.copytree(cls.input_files_dir, cls.test_dir, dirs_exist_ok=True)
         shutil.copytree(cls.input_files_dir, cls.work_path, dirs_exist_ok=True)
-        
+
         # get current work directory
         cls.home = os.getcwd()
 
@@ -42,10 +45,16 @@ class TesTTleedmFromFiles(unittest.TestCase):
         shutil.rmtree(cls.test_dir)
         os.chdir(cls.home)
 
-class TestInitializationAg(TesTTleedmFromFiles):
+
+    def expected_file_exists(self, expected_file):
+        expected_path = Path(self.work_path) / expected_file
+        assert expected_file.exists()
+
+
+class TestInitializationAg(TestTleedmFromFiles):
     @classmethod
     def setUpClass(cls):
-        super().setUpClass(surface_name="Ag(100)", required_files=('PHASESHIFTS',))
+        super().setUpClass(surface_name="Ag(100)", required_files=('PHASESHIFTS',), section_dir="initialization")
 
 
 class TestCaseInitializationAgRun(TestInitializationAg):
@@ -90,15 +99,94 @@ class AgRefCalc(TestInitializationAg):
         super().setUpClass()
         os.chdir(cls.work_path)
         # run tleedm
-        run_tleedm(source=str(Path(vpr_path) / "viperleed"),
+        cls.exit_code = run_tleedm(source=str(Path(vpr_path) / "viperleed"),
                    preset_params={"RUN":[0, 1],
                                   "TL_VERSION":1.73})
 
         cls.files_after_run = [file.name for file in Path(cls.work_path).glob('*')]
 
     def test_THEOBEAMS_csv_present(self):
+        """Check if THEOBEAMS.csv is present
+        """
         print(self.files_after_run)
         assert 'THEOBEAMS.csv' in self.files_after_run
+
+
+    def test_exit_code_0(self):
+        """Checks if tleedm exits with exit code 0.
+        """
+        assert self.exit_code == 0
+
+
+
+@parameterized_class(('displacements_name'), [('DISPLACEMENTS_z',), ('DISPLACEMENTS_vib',), ('DISPLACEMENTS_z+vib',)])
+class AgDeltas(TestTleedmFromFiles):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass(surface_name="Ag(100)",
+                           required_files=('PHASESHIFTS','Tensors/Tensors001.zip'),
+                           section_dir="deltas")
+        os.chdir(cls.work_path)
+
+        # copy DISPLACEMENTS
+        disp_f = cls.fixtures_dir / "displacements" / cls.displacements_name
+        shutil.copy(disp_f, Path(cls.work_path) / 'DISPLACEMENTS')
+
+        # run Delta calculation
+        cls.exit_code = run_tleedm(source=str(Path(vpr_path) / "viperleed"),
+                   preset_params={"RUN":[0, 2],
+                                  "TL_VERSION":1.73})
+
+    def expected_file_exists(self, expected_file):
+        expected_path = Path(self.work_path) / expected_file
+        assert expected_file.exists()
+
+    def test_delta_input_written(self):
+        self.expected_file_exists("delta-input")
+
+
+    def test_exit_code_0(self):
+        assert self.exit_code == 0
+
+
+    def test_raw_output_exitsts(self):
+        self.expected_file_exists("DEL_1_Ag_1")
+
+
+    def test_deltas_zip_created(self):
+        self.expected_file_exists(Path("Deltas") / "Deltas_001.zip")
+
+@parameterized_class(('displacements_name', 'deltas_name'),
+                     [('DISPLACEMENTS_z', 'Deltas_z.zip'),
+                      ('DISPLACEMENTS_vib', 'Deltas_vib.zip'),
+                      ('DISPLACEMENTS_z+vib', 'Deltas_z+vib.zip')])
+class AgSearch(TestTleedmFromFiles):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass(surface_name="Ag(100)",
+                           required_files=('PHASESHIFTS'),
+                           section_dir="search")
+        os.chdir(cls.work_path)
+
+        # copy DISPLACEMENTS
+        disp_f = cls.fixtures_dir / "displacements" / cls.displacements_name
+        shutil.copy(disp_f, Path(cls.work_path) / 'DISPLACEMENTS')
+
+
+        # copy Deltas
+        deltas_f = cls.fixtures_dir / "search" / "Deltas" / cls.deltas_name
+        shutil.copy(deltas_f, Path(cls.work_path) / "Deltas" / "Deltas_001.zip")
+
+        # run Delta calculation
+        cls.exit_code = run_tleedm(source=str(Path(vpr_path) / "viperleed"),
+                   preset_params={"RUN":[0, 3],
+                                  "TL_VERSION":1.73})
+
+
+    @parameterized.expand(('SD.TL', 'control.chem'))
+    def test_search_file_exists(self, req_file):
+        self.expected_file_exists(req_file)
+
 
 # POSCAR and symmetry tests
 class TestPOSCAR(unittest.TestCase):
@@ -121,6 +209,7 @@ class TestPOSCARSymmetry(TestPOSCAR):
     @classmethod
     def setUpClass(cls, filename):
         super().setUpClass(filename)
+        cls.filename = filename
 
         import tleedmlib as tl
         from tleedmlib.symmetry import findSymmetry, findBulkSymmetry
