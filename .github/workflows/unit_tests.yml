@@ -19,10 +19,11 @@ jobs:
       run: |
         # $CONDA is an environment variable pointing to the root of the miniconda directory
         echo $CONDA/bin >> $GITHUB_PATH
-    - name: Install dependencies
+    - name: Install Python dependencies
       run: |
-        conda env create -n viperleed_base --file environments/viperleed_base.yml
+        conda env create -n viperleed --file environments/viperleed_base.yml
+        conda activate viperleed
     - name: Test with pytest
       run: |
-        conda install pytest
+        conda install pytest wrapt parameterized
         pytest
