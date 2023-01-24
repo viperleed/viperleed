@@ -173,7 +173,8 @@ class AgSearch(TestTleedmFromFiles):
         # copy Deltas
         deltas_f = cls.fixtures_dir / "search" / "Deltas" / cls.deltas_name
         shutil.copy(deltas_f, Path(cls.test_dir) / "Deltas" / "Deltas_001.zip")
-        #ZipFile(deltas_f, 'r').extractall(cls.work_path)
+        shutil.copy(deltas_f, Path(cls.work_path) / "Deltas" / "Deltas_001.zip")
+        ZipFile(deltas_f, 'r').extractall(cls.work_path)
         pass
 
         # run Delta calculation
