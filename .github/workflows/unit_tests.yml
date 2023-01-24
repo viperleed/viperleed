@@ -30,11 +30,11 @@ jobs:
     - name: compile static
       run: |
         tree
-        cd viperleed/viperleed/tensorleed
+        cd tensorleed
         make gcc
-        cd ../../..
+        cd ..
     - name: Test with pytest
       run: |
         conda install pytest wrapt parameterized
-        cd viperleed/tests
+        cd tests
         pytest
