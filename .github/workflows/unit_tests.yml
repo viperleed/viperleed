@@ -29,11 +29,12 @@ jobs:
         sudo apt install libblas-dev liblapack-dev -y
     - name: compile static
       run: |
-        cd viperleed/tensorleed
+        tree
+        cd viperleed/viperleed/tensorleed
         make gcc
-        cd ../..
+        cd ../../..
     - name: Test with pytest
       run: |
         conda install pytest wrapt parameterized
-        cd tests
+        cd viperleed/tests
         pytest
