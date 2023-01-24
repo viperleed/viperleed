@@ -22,7 +22,18 @@ jobs:
     - name: Install Python dependencies
       run: |
         conda env update -n base --file environments/viperleed_base.yml
+    - name: Install gfortran and LAPACK/BLAS
+      run: |
+        sudo apt update
+        sudo apt install gfortran -y
+        sudo apt install libblas-dev liblapack-dev -y
+    - name: compile static
+      run: |
+        cd viperleed/tensorleed
+        make gcc
+        cd ../..
     - name: Test with pytest
       run: |
         conda install pytest wrapt parameterized
+        cd tests
         pytest
