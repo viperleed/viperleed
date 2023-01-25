@@ -23,7 +23,8 @@ ALWAYS_REQUIRED_FILES = ('PARAMETERS', 'EXPBEAMS.csv', 'POSCAR')
 INPUTS_ORIGIN = Path(__file__).parent / "fixtures"
 
 
-
+AG_100_DISPLACEMENTS_NAMES = ['DISPLACEMENTS_z', 'DISPLACEMENTS_vib', 'DISPLACEMENTS_z+vib']
+AG_100_DELTAS_NAMES = ['Deltas_z.zip', 'Deltas_vib.zip', 'Deltas_z+vib.zip']
 
 
 class BaseTleedmFilesSetup():
@@ -104,9 +105,7 @@ def refcalc_files(request, tmp_path_factory):
     return files
 
 
-@pytest.fixture(params=['DISPLACEMENTS_z',
-                        'DISPLACEMENTS_vib',
-                        'DISPLACEMENTS_z+vib'])
+@pytest.fixture(params=AG_100_DISPLACEMENTS_NAMES, ids=AG_100_DISPLACEMENTS_NAMES)
 def delta_files_ag100(request, tmp_path_factory):
     displacements_name = request.param
     surface_name = 'Ag(100)'
@@ -130,9 +129,8 @@ def delta_files_ag100(request, tmp_path_factory):
     return files
 
 
-@pytest.fixture(params=[('DISPLACEMENTS_z', 'Deltas_z.zip'),
-                        ('DISPLACEMENTS_vib', 'Deltas_vib.zip'),
-                        ('DISPLACEMENTS_z+vib', 'Deltas_z+vib.zip')]) #TODO add ids
+@pytest.fixture(params=list(zip(AG_100_DISPLACEMENTS_NAMES, AG_100_DELTAS_NAMES)),
+                ids=AG_100_DISPLACEMENTS_NAMES)
 def search_files_ag100(request, tmp_path_factory):
     surface_name = 'Ag(100)'
     displacements_name, deltas_name = request.param
