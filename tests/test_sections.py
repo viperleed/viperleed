@@ -132,7 +132,7 @@ def search_files_ag100(request, tmp_path):
     displacements_name, deltas_name = request.param
     run = [0, 3] # init and search
     required_files = []
-    copy_dirs=["initialization", "search"]
+    copy_dirs=["initialization", "deltas", "search"]
     files = BaseTleedmFilesSetup(surface_dir=surface_name,
                                 tmp_test_path=tmp_path,
                                 required_files=required_files,
@@ -195,10 +195,12 @@ class TestDeltasAg100(TestSetup):
 class TestSearchAg100(TestSetup):
     def test_exit_code_0(self, search_files_ag100):
         assert search_files_ag100.exit_code == 0
-        
-    @pytest.mark.parametrize('expected_file', (('SD.TL',), ('control.chem',)))
-    def test_search_running_files_written(self, search_files_ag100, expected_file):
+
+    @pytest.mark.parametrize('expected_file', ('SD.TL', 'control.chem'))
+    def test_search_raw_files_exist(self, search_files_ag100, expected_file):
         assert search_files_ag100.expected_file_exists(expected_file)
+
+
 
 
 @pytest.fixture(scope="class", params=[('POSCAR_STO(100)-4x1', 136, 'pm'),
