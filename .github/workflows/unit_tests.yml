@@ -29,10 +29,11 @@ jobs:
         sudo apt install libblas-dev liblapack-dev -y
     - name: compile static
       run: |
-        tree
         cd tensorleed
         make gcc
-        cd ..
+        cd TensErLEED-v1.73
+        make gcc
+        cd ../..
     - name: Test with pytest
       run: |
         conda install pytest wrapt parameterized
