@@ -1,5 +1,6 @@
 import unittest   # The test framework
 from parameterized import parameterized, parameterized_class
+import pytest
 import shutil, tempfile
 import sys
 import os
@@ -10,269 +11,232 @@ vpr_path = str(Path(__file__).parent.parent.parent)
 if os.path.abspath(vpr_path) not in sys.path:
     sys.path.append(os.path.abspath(vpr_path))
 
+
 import viperleed
 import viperleed.tleedmlib
 from viperleed.tleedm import run_tleedm
 
+from tleedmlib.files.poscar import readPOSCAR
+import tleedmlib as tl
+from tleedmlib.symmetry import findSymmetry
+
+SOURCE_STR = str(Path(vpr_path) / "viperleed")
 ALWAYS_REQUIRED_FILES = ('PARAMETERS', 'EXPBEAMS.csv', 'POSCAR')
+INPUTS_ORIGIN = Path(__file__).parent / "fixtures"
 
 
-class TestTleedmFromFiles(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls, surface_name, required_files, section_dirs):
-        cls.surface_name = surface_name
-        cls.required_files = set(ALWAYS_REQUIRED_FILES)
-        cls.section_dirs = section_dirs
-        # add additional files
-        cls.required_files.update(required_files)
 
-        # Create a temporary directory to run in
-        cls.test_dir = Path(tempfile.mkdtemp())
-        cls.work_path = str(cls.test_dir / "work")
-        os.makedirs(cls.work_path, exist_ok=True)
-        
-        cls.fixtures_dir = Path(__file__).parent / "fixtures" / cls.surface_name
-        cls.input_files_dirs = []
+class BaseTleedmFilesSetup():
+    def __init__(self, surface_dir, tmp_test_path, required_files=(), copy_dirs=()):
+        self.surface_name = surface_dir
+        self.required_files = set(ALWAYS_REQUIRED_FILES)
+        self.required_files.update(required_files)
+        self.copy_dirs = copy_dirs
+        self.test_path = tmp_test_path
 
-        for dir in section_dirs:
-            cur_input_dir = cls.fixtures_dir / dir
-            cls.input_files_dirs.append(cur_input_dir)
-            shutil.copytree(cur_input_dir, cls.test_dir, dirs_exist_ok=True)
-            shutil.copytree(cur_input_dir, cls.work_path, dirs_exist_ok=True)
+        self.work_path = self.test_path / "work"
+        self.inputs_path = INPUTS_ORIGIN / self.surface_name
+        self.input_files_paths = []
 
-        # get current work directory
-        cls.home = os.getcwd()
+        for pth in self.copy_dirs:
+            cur_input_dir = self.inputs_path / pth
+            self.input_files_paths.append(cur_input_dir)
+            shutil.copytree(cur_input_dir, self.test_path, dirs_exist_ok=True)
+            shutil.copytree(cur_input_dir, self.work_path, dirs_exist_ok=True)
 
-    @classmethod
-    def tearDownClass(cls):
-        # Remove the directory after the test
-        #shutil.rmtree(cls.test_dir)
-        os.chdir(cls.home)
+        self.home = os.getcwd()
+        self.exit_code = None
 
+    def run_tleedm_from_setup(self, source, preset_params):
+        os.chdir(self.work_path)
+        exit_code = run_tleedm(source=source,
+                                preset_params=preset_params)
+        self.exit_code = exit_code
+        self.work_files_after_run = [file.name for file in Path(self.work_path).glob('*')]
+        os.chdir(self.home)
 
     def expected_file_exists(self, expected_file):
         expected_path = Path(self.work_path) / expected_file
         return expected_path.exists()
 
+    def copy_displacements(self, displacements_path):
+        shutil.copy(displacements_path, self.work_path / 'DISPLACEMENTS')
+        
+    def copy_deltas(self, deltas_path):
+        shutil.copy(deltas_path, self.test_path / "Deltas" / "Deltas_001.zip")
+        shutil.copy(deltas_path, self.work_path / "Deltas" / "Deltas_001.zip")
+        shutil.copy(deltas_path, self.work_path / "Deltas_001.zip")
+        ZipFile(deltas_path, 'r').extractall(self.work_path)
 
-class TestInitializationAg(TestTleedmFromFiles):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass(surface_name="Ag(100)",
-                           required_files=('PHASESHIFTS',),
-                           section_dirs=("initialization",))
+@pytest.fixture(params=[('Ag(100)')], ids=['Ag(100)',])
+def init_files(request, tmp_path):
+    surface_name = request.param
+    run = [0,] # only initialization
+    files = BaseTleedmFilesSetup(surface_dir=surface_name,
+                                tmp_test_path=tmp_path,
+                                required_files=["PHASESHIFTS",],
+                                copy_dirs=["initialization"])
+    files.run_tleedm_from_setup(source=SOURCE_STR,
+                                preset_params={
+                                    "RUN":run,
+                                    "TL_VERSION":1.73,
+                                })
+    return files
 
 
-class TestCaseInitializationAgRun(TestInitializationAg):
-    def test_work_path_exists(self):
+@pytest.fixture(params=[('Ag(100)')], ids=['Ag(100)',])
+def refcalc_files(request, tmp_path):
+    surface_name = request.param
+    run = [0, 1] # initialization and refcalc
+    files = BaseTleedmFilesSetup(surface_dir=surface_name,
+                                tmp_test_path=tmp_path,
+                                required_files=["PHASESHIFTS",],
+                                copy_dirs=["initialization"])
+    files.run_tleedm_from_setup(source=SOURCE_STR,
+                                preset_params={
+                                    "RUN":run,
+                                    "TL_VERSION":1.73,
+                                })
+    return files
+
+
+@pytest.fixture(params=['DISPLACEMENTS_z',
+                        'DISPLACEMENTS_vib',
+                        'DISPLACEMENTS_z+vib'])
+def delta_files_ag100(request, tmp_path):
+    displacements_name = request.param
+    surface_name = 'Ag(100)'
+    run = [0, 2] # init and deltas
+    required_files = ["PHASESHIFTS",]
+    copy_dirs=["initialization", "deltas"]
+    # correct DISPLACEMENTS
+    files = BaseTleedmFilesSetup(surface_dir=surface_name,
+                                tmp_test_path=tmp_path,
+                                required_files=required_files,
+                                copy_dirs=copy_dirs)
+    disp_source = files.inputs_path / "displacements" / displacements_name
+    files.copy_displacements(displacements_path=disp_source)
+    files.run_tleedm_from_setup(source=SOURCE_STR,
+                                preset_params={
+                                    "RUN":run,
+                                    "TL_VERSION":1.73,
+                                })
+    return files
+
+
+@pytest.fixture(params=[('DISPLACEMENTS_z', 'Deltas_z.zip'),
+                        ('DISPLACEMENTS_vib', 'Deltas_vib.zip'),
+                        ('DISPLACEMENTS_z+vib', 'Deltas_z+vib.zip')]) #TODO add ids
+def search_files_ag100(request, tmp_path):
+    surface_name = 'Ag(100)'
+    displacements_name, deltas_name = request.param
+    run = [0, 3] # init and search
+    required_files = []
+    copy_dirs=["initialization", "search"]
+    files = BaseTleedmFilesSetup(surface_dir=surface_name,
+                                tmp_test_path=tmp_path,
+                                required_files=required_files,
+                                copy_dirs=copy_dirs)
+    disp_source = files.inputs_path / "displacements" / displacements_name
+    deltas_source = files.inputs_path / "search" / "Deltas" / deltas_name
+    files.copy_displacements(disp_source)
+    files.copy_deltas(deltas_source)
+    files.run_tleedm_from_setup(source=SOURCE_STR,
+                                preset_params={
+                                    "RUN":run,
+                                    "TL_VERSION":1.73,
+                                })
+    return files
+
+class TestSetup:
+    def test_work_path_exists(self, init_files):
         """Check that work_path was created properly."""
-        assert Path(self.work_path).is_dir()
+        assert init_files.work_path.is_dir()
 
-    def test_files_copied_correctly(self):
+    def test_files_copied_correctly(self, init_files):
         """Check if all files were copied correctly."""
-        input_files = [file.name for file in self.test_dir.glob('*')]
-        source_copied = all(file in input_files for file in self.required_files)
-        input_files = [file.name for file in Path(self.work_path).glob('*')]
-        work_copied = all(file in input_files for file in self.required_files)
+        input_files = [file.name for file in init_files.test_path.glob('*')]
+        source_copied = all(file in input_files for file in init_files.required_files)
+        input_files = [file.name for file in Path(init_files.work_path).glob('*')]
+        work_copied = all(file in input_files for file in init_files.required_files)
         assert source_copied and work_copied
 
 
-class TestCaseInitializationAgFileChecks(TestInitializationAg):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        os.chdir(cls.work_path)
-        
-        # run tleedm
-        cls.exit_code = run_tleedm(source=str(Path(vpr_path) / "viperleed"))
-        cls.files_after_run = [file.name for file in Path(cls.work_path).glob('*')]
-
-    def test_initialization_runs(self):
+class TestInitialization(TestSetup):
+    def test_exit_code_0(self, init_files):
         """Test if initialization gives exit code 0."""
-        assert self.exit_code == 0
+        assert init_files.exit_code == 0
 
-    def test_files_present(self):
+    @pytest.mark.parametrize('expected_file', (('IVBEAMS'), ('BEAMLIST'), ('VIBROCC')))
+    def test_init_files_present(self, init_files, expected_file):
         """Checks if files are present after initialization"""
-        files_to_test = ('IVBEAMS', 'BEAMLIST', 'VIBROCC')
-        for file in files_to_test:
-            with self.subTest(file=file):
-                self.assertIn(file, self.files_after_run)
+        assert init_files.expected_file_exists(expected_file)
 
 
-class AgRefCalc(TestInitializationAg):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        os.chdir(cls.work_path)
-        # run tleedm
-        cls.exit_code = run_tleedm(source=str(Path(vpr_path) / "viperleed"),
-                   preset_params={"RUN":[0, 1],
-                                  "TL_VERSION":1.73})
-
-        cls.files_after_run = [file.name for file in Path(cls.work_path).glob('*')]
-
-    def test_THEOBEAMS_csv_present(self):
-        """Check if THEOBEAMS.csv is present
-        """
-        assert 'THEOBEAMS.csv' in self.files_after_run
+class TestRefCalc(TestInitialization):
+    @pytest.mark.parametrize('expected_file', (('THEOBEAMS.csv',)))
+    def test_refcalc_files_present(self, refcalc_files, expected_file):
+        assert refcalc_files.expected_file_exists(expected_file)
 
 
-    def test_exit_code_0(self):
-        """Checks if tleedm exits with exit code 0.
-        """
-        assert self.exit_code == 0
+class TestDeltasAg100(TestSetup):
+    def test_delta_input_written(self, delta_files_ag100):
+        assert delta_files_ag100.expected_file_exists("delta-input")
 
 
-@parameterized_class(('displacements_name'), [('DISPLACEMENTS_z',), ('DISPLACEMENTS_vib',), ('DISPLACEMENTS_z+vib',)])
-class AgDeltas(TestTleedmFromFiles):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass(surface_name="Ag(100)",
-                           required_files=('PHASESHIFTS','Tensors/Tensors001.zip'),
-                           section_dirs=("initialization", "deltas"))
-        os.chdir(cls.work_path)
-
-        # copy DISPLACEMENTS
-        disp_f = cls.fixtures_dir / "displacements" / cls.displacements_name
-        shutil.copy(disp_f, Path(cls.work_path) / 'DISPLACEMENTS')
-
-        # run Delta calculation
-        cls.exit_code = run_tleedm(source=str(Path(vpr_path) / "viperleed"),
-                   preset_params={"RUN":[0, 2],
-                                  "TL_VERSION":1.73})
-
-    def test_delta_input_written(self):
-        assert self.expected_file_exists("delta-input")
+    def test_exit_code_0(self, delta_files_ag100):
+        assert delta_files_ag100.exit_code == 0
 
 
-    def test_exit_code_0(self):
-        assert self.exit_code == 0
+    def test_deltas_zip_created(self, delta_files_ag100):
+        assert delta_files_ag100.expected_file_exists(Path("Deltas") / "Deltas_001.zip")
 
 
-    def test_deltas_zip_created(self):
-        assert self.expected_file_exists(Path("Deltas") / "Deltas_001.zip")
+class TestSearchAg100(TestSetup):
+    def test_exit_code_0(self, search_files_ag100):
+        assert search_files_ag100.exit_code == 0
+        
+    @pytest.mark.parametrize('expected_file', (('SD.TL',), ('control.chem',)))
+    def test_search_running_files_written(self, search_files_ag100, expected_file):
+        assert search_files_ag100.expected_file_exists(expected_file)
 
 
-@parameterized_class(('displacements_name', 'deltas_name'),
-                     [('DISPLACEMENTS_z', 'Deltas_z.zip'),
-                      ('DISPLACEMENTS_vib', 'Deltas_vib.zip'),
-                      ('DISPLACEMENTS_z+vib', 'Deltas_z+vib.zip')])
-class AgSearch(TestTleedmFromFiles):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass(surface_name="Ag(100)",
-                           required_files=('PHASESHIFTS'),
-                           section_dirs=("initialization", "deltas", "search"))
-        os.chdir(cls.work_path)
+@pytest.fixture(scope="class", params=[('POSCAR_STO(100)-4x1', 136, 'pm'),
+                                       ("POSCAR_TiO2", 540, 'pmm'),
+                                       ("POSCAR_diamond", 96, 'pm'),
+                                       ("POSCAR_graphene", 36, 'pmm')])
+def slab_and_expectations(request):
+    filename, expected_n_atoms, expected_pg = request.param
+    file_path = Path(__file__).parent / "fixtures" / "POSCARs" / filename
+    pos_slab = readPOSCAR(str(file_path))
+    return (pos_slab, expected_n_atoms, expected_pg)
 
-        # copy DISPLACEMENTS
-        disp_f = cls.fixtures_dir / "displacements" / cls.displacements_name
-        shutil.copy(disp_f, Path(cls.work_path) / 'DISPLACEMENTS')
-
-
-        # copy Deltas
-        deltas_f = cls.fixtures_dir / "search" / "Deltas" / cls.deltas_name
-        shutil.copy(deltas_f, Path(cls.test_dir) / "Deltas" / "Deltas_001.zip")
-        shutil.copy(deltas_f, Path(cls.work_path) / "Deltas" / "Deltas_001.zip")
-        ZipFile(deltas_f, 'r').extractall(cls.work_path)
-        pass
-
-        # run Delta calculation
-        cls.exit_code = run_tleedm(source=str(Path(vpr_path) / "viperleed"),
-                   preset_params={"RUN":[0, 3],
-                                  "TL_VERSION":1.73})
+@pytest.fixture()
+def slab_pg(slab_and_expectations):
+    slab, *_ = slab_and_expectations
+    rp = tl.Rparams()
+    slab.fullUpdate(rp)
+    pg = findSymmetry(slab, rp, output=False)
+    return pg
 
 
-    @parameterized.expand(('SD.TL', 'control.chem'))
-    def test_search_file_exists(self, req_file):
-        print(self.work_path)
-        self.assertTrue(self.expected_file_exists(req_file))
+class TestPOSCARRead:
+    def test_read_in_atoms(self, slab_and_expectations):
+        slab, *_ = slab_and_expectations
+        assert len(slab.atlist) > 0
+
+    def test_n_atom_correct(self, slab_and_expectations):
+        slab, expected_n_atoms, _ = slab_and_expectations
+        assert len(slab.atlist) == expected_n_atoms
 
 
-# POSCAR and symmetry tests
-class TestPOSCAR(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls, filename):
-        # import reading and wrting POSCARS
-        from tleedmlib.files.poscar import readPOSCAR, writePOSCAR
+class TestPOSCARSymmetry(TestPOSCARRead):
+    def test_pg_found(self, slab_pg):
+        assert slab_pg != 'unknown'
 
-        file_path = Path(__file__).parent / "fixtures" / "POSCARs" / filename
-        cls.slab = readPOSCAR(str(file_path))
-
-    def test_read_in_atoms(self):
-        assert len(self.slab.atlist) > 0
-
-    def test_n_atom_correct(self):
-        assert len(self.slab.atlist) == self.expected_n_atoms
-
-# for tests with Symmetry recognition
-class TestPOSCARSymmetry(TestPOSCAR):
-    @classmethod
-    def setUpClass(cls, filename):
-        super().setUpClass(filename)
-        cls.filename = filename
-
-        import tleedmlib as tl
-        from tleedmlib.symmetry import findSymmetry, findBulkSymmetry
-        # create dummy Rparams object
-        cls.rp = tl.Rparams()
-        cls.slab.fullUpdate(cls.rp)
-        cls.pg = findSymmetry(cls.slab, cls.rp, output=False)
-
-    def test_pg_found(self):
-        assert self.pg != 'unknown'
-
-    def test_pg_correct(self):
-        self.assertEqual(self.pg, self.expected_pg,
-                         f"POSCAR file {self.filename}: "
-                         f"expected planegroup {self.expected_pg}, found {self.pg}.")
-
-class read_Ag100(TestPOSCARSymmetry):
-    @classmethod
-    def setUpClass(cls):
-        cls.filename = "POSCAR_Ag(100)"
-        cls.expected_n_atoms = 6
-        cls.expected_pg = 'p4m'
-        super().setUpClass(cls.filename)
-
-    def test_all_atoms_are_Ag(self):
-        atoms = self.slab.atlist
-        atom_elems = [atom.el for atom in atoms]
-        atom_is_Ag = [el == 'Ag' for el in atom_elems]
-        assert all(atom_is_Ag)
-
-class read_STO_4x1(TestPOSCARSymmetry):
-    @classmethod
-    def setUpClass(cls):
-        cls.filename = "POSCAR_STO(100)-4x1"
-        cls.expected_n_atoms = 136
-        cls.expected_pg = 'pm'
-        super().setUpClass(cls.filename)
-
-# try huge unit cell
-class read_TiO2(TestPOSCARSymmetry):
-    @classmethod
-    def setUpClass(cls):
-        cls.filename = "POSCAR_TiO2"
-        cls.expected_n_atoms = 540
-        cls.expected_pg = 'pmm'
-        super().setUpClass(cls.filename)
-
-class read_diamond(TestPOSCARSymmetry):
-    @classmethod
-    def setUpClass(cls):
-        cls.filename = "POSCAR_diamond"
-        cls.expected_n_atoms = 96
-        cls.expected_pg = 'pm'
-        super().setUpClass(cls.filename)
-
-class read_graphene(TestPOSCARSymmetry):
-    @classmethod
-    def setUpClass(cls):
-        cls.filename = "POSCAR_graphene"
-        cls.expected_n_atoms = 36
-        cls.expected_pg = 'pmm'
-        super().setUpClass(cls.filename)
+    def test_pg_correct(self, slab_and_expectations, slab_pg):
+        _, _, expected_pg = slab_and_expectations
+        assert slab_pg == expected_pg
 
 
 if __name__ == '__main__':
