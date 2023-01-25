@@ -1,5 +1,3 @@
-import unittest   # The test framework
-from parameterized import parameterized, parameterized_class
 import pytest
 import shutil, tempfile
 import sys
@@ -23,6 +21,8 @@ from tleedmlib.symmetry import findSymmetry
 SOURCE_STR = str(Path(vpr_path) / "viperleed")
 ALWAYS_REQUIRED_FILES = ('PARAMETERS', 'EXPBEAMS.csv', 'POSCAR')
 INPUTS_ORIGIN = Path(__file__).parent / "fixtures"
+
+
 
 
 
@@ -61,7 +61,7 @@ class BaseTleedmFilesSetup():
 
     def copy_displacements(self, displacements_path):
         shutil.copy(displacements_path, self.work_path / 'DISPLACEMENTS')
-        
+
     def copy_deltas(self, deltas_path):
         shutil.copy(deltas_path, self.test_path / "Deltas" / "Deltas_001.zip")
         shutil.copy(deltas_path, self.work_path / "Deltas" / "Deltas_001.zip")
@@ -69,8 +69,10 @@ class BaseTleedmFilesSetup():
         ZipFile(deltas_path, 'r').extractall(self.work_path)
 
 @pytest.fixture(params=[('Ag(100)')], ids=['Ag(100)',])
-def init_files(request, tmp_path):
+def init_files(request, tmp_path_factory):
     surface_name = request.param
+    tmp_dir_name = f'{surface_name}_inti'
+    tmp_path = tmp_path_factory.mktemp(basename=surface_name, numbered=True)
     run = [0,] # only initialization
     files = BaseTleedmFilesSetup(surface_dir=surface_name,
                                 tmp_test_path=tmp_path,
@@ -85,8 +87,10 @@ def init_files(request, tmp_path):
 
 
 @pytest.fixture(params=[('Ag(100)')], ids=['Ag(100)',])
-def refcalc_files(request, tmp_path):
+def refcalc_files(request, tmp_path_factory):
     surface_name = request.param
+    tmp_dir_name = f'{surface_name}_refcalc'
+    tmp_path = tmp_path_factory.mktemp(basename=tmp_dir_name, numbered=True)
     run = [0, 1] # initialization and refcalc
     files = BaseTleedmFilesSetup(surface_dir=surface_name,
                                 tmp_test_path=tmp_path,
@@ -103,9 +107,11 @@ def refcalc_files(request, tmp_path):
 @pytest.fixture(params=['DISPLACEMENTS_z',
                         'DISPLACEMENTS_vib',
                         'DISPLACEMENTS_z+vib'])
-def delta_files_ag100(request, tmp_path):
+def delta_files_ag100(request, tmp_path_factory):
     displacements_name = request.param
     surface_name = 'Ag(100)'
+    tmp_dir_name = tmp_dir_name = f'{surface_name}_deltas_{displacements_name}'
+    tmp_path = tmp_path_factory.mktemp(basename=tmp_dir_name, numbered=True)
     run = [0, 2] # init and deltas
     required_files = ["PHASESHIFTS",]
     copy_dirs=["initialization", "deltas"]
@@ -127,9 +133,11 @@ def delta_files_ag100(request, tmp_path):
 @pytest.fixture(params=[('DISPLACEMENTS_z', 'Deltas_z.zip'),
                         ('DISPLACEMENTS_vib', 'Deltas_vib.zip'),
                         ('DISPLACEMENTS_z+vib', 'Deltas_z+vib.zip')]) #TODO add ids
-def search_files_ag100(request, tmp_path):
+def search_files_ag100(request, tmp_path_factory):
     surface_name = 'Ag(100)'
     displacements_name, deltas_name = request.param
+    tmp_dir_name = tmp_dir_name = f'{surface_name}_search_{displacements_name}'
+    tmp_path = tmp_path_factory.mktemp(basename=tmp_dir_name, numbered=True)
     run = [0, 3] # init and search
     required_files = []
     copy_dirs=["initialization", "deltas", "search"]
@@ -195,11 +203,18 @@ class TestDeltasAg100(TestSetup):
 class TestSearchAg100(TestSetup):
     def test_exit_code_0(self, search_files_ag100):
         assert search_files_ag100.exit_code == 0
+        
+    @pytest.mark.parametrize('expected_file', ('rf.info', 'search.steu'))
+    def test_search_input_exist(self, search_files_ag100, expected_file):
+        assert search_files_ag100.expected_file_exists(expected_file)
 
     @pytest.mark.parametrize('expected_file', ('SD.TL', 'control.chem'))
     def test_search_raw_files_exist(self, search_files_ag100, expected_file):
         assert search_files_ag100.expected_file_exists(expected_file)
 
+    @pytest.mark.parametrize('expected_file', ('Search-report.pdf', 'Search-progress.pdf'))
+    def test_search_pdf_files_exist(self, search_files_ag100, expected_file):
+        assert search_files_ag100.expected_file_exists(expected_file)
 
 
 
@@ -241,5 +256,3 @@ class TestPOSCARSymmetry(TestPOSCARRead):
         assert slab_pg == expected_pg
 
 
-if __name__ == '__main__':
-    unittest.main()
