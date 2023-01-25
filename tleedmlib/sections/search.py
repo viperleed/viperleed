@@ -252,8 +252,8 @@ def check_search_log_content(log_content):
             "Check your input files and consider decreasing "
             "the DISPLACEMENTS ranges."
         )
-    raise RuntimeError("TensErLEED Error encountered in search. "
-                       "Execution cannot proceed.")
+        raise RuntimeError("TensErLEED Error encountered in search. "
+                        "Execution cannot proceed.")
 
 
 def parabolaFit(rp, datafiles, r_best, x0=None, max_configs=0, **kwargs):
