@@ -27,6 +27,10 @@ jobs:
         sudo apt update
         sudo apt install gfortran -y
         sudo apt install libblas-dev liblapack-dev -y
+    - name: Install MPI & mpifort,mpicc
+      run: |
+        sudo apt install openmpi-bin
+        sudo apt install libopenmpi-dev
     - name: compile static
       run: |
         cd tensorleed
