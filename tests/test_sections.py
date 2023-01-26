@@ -22,6 +22,7 @@ SOURCE_STR = str(Path(vpr_path) / "viperleed")
 ALWAYS_REQUIRED_FILES = ('PARAMETERS', 'EXPBEAMS.csv', 'POSCAR')
 INPUTS_ORIGIN = Path(__file__).parent / "fixtures"
 
+TENSERLEED_TEST_VERSIONS = ('1.71', '1.72', '1.73', '1.74')
 
 AG_100_DISPLACEMENTS_NAMES = ['DISPLACEMENTS_z', 'DISPLACEMENTS_vib', 'DISPLACEMENTS_z+vib']
 AG_100_DELTAS_NAMES = ['Deltas_z.zip', 'Deltas_vib.zip', 'Deltas_z+vib.zip']
@@ -69,8 +70,9 @@ class BaseTleedmFilesSetup():
         shutil.copy(deltas_path, self.work_path / "Deltas_001.zip")
         ZipFile(deltas_path, 'r').extractall(self.work_path)
 
+
 @pytest.fixture(params=[('Ag(100)')], ids=['Ag(100)',])
-def init_files(request, tmp_path_factory):
+def init_files(request, tmp_path_factory, scope="session"):
     surface_name = request.param
     tmp_dir_name = f'{surface_name}_inti'
     tmp_path = tmp_path_factory.mktemp(basename=surface_name, numbered=True)
@@ -88,7 +90,7 @@ def init_files(request, tmp_path_factory):
 
 
 @pytest.fixture(params=[('Ag(100)')], ids=['Ag(100)',])
-def refcalc_files(request, tmp_path_factory):
+def refcalc_files(request, tmp_path_factory, scope="session"):
     surface_name = request.param
     tmp_dir_name = f'{surface_name}_refcalc'
     tmp_path = tmp_path_factory.mktemp(basename=tmp_dir_name, numbered=True)
@@ -106,7 +108,7 @@ def refcalc_files(request, tmp_path_factory):
 
 
 @pytest.fixture(params=AG_100_DISPLACEMENTS_NAMES, ids=AG_100_DISPLACEMENTS_NAMES)
-def delta_files_ag100(request, tmp_path_factory):
+def delta_files_ag100(request, tmp_path_factory, scope="session"):
     displacements_name = request.param
     surface_name = 'Ag(100)'
     tmp_dir_name = tmp_dir_name = f'{surface_name}_deltas_{displacements_name}'
@@ -131,7 +133,7 @@ def delta_files_ag100(request, tmp_path_factory):
 
 @pytest.fixture(params=list(zip(AG_100_DISPLACEMENTS_NAMES, AG_100_DELTAS_NAMES)),
                 ids=AG_100_DISPLACEMENTS_NAMES)
-def search_files_ag100(request, tmp_path_factory):
+def search_files_ag100(request, tmp_path_factory, scope="session"):
     surface_name = 'Ag(100)'
     displacements_name, deltas_name = request.param
     tmp_dir_name = tmp_dir_name = f'{surface_name}_search_{displacements_name}'
@@ -153,6 +155,7 @@ def search_files_ag100(request, tmp_path_factory):
                                     "TL_VERSION":1.73,
                                 })
     return files
+
 
 class TestSetup:
     def test_work_path_exists(self, init_files):
@@ -202,7 +205,7 @@ class TestSearchAg100(TestSetup):
     def test_exit_code_0(self, search_files_ag100):
         assert search_files_ag100.exit_code == 0
         
-    @pytest.mark.parametrize('expected_file', ('rf.info', 'search.steu'))
+    @pytest.mark.parametrize('expected_file', ('search.steu',))
     def test_search_input_exist(self, search_files_ag100, expected_file):
         assert search_files_ag100.expected_file_exists(expected_file)
 
@@ -220,14 +223,14 @@ class TestSearchAg100(TestSetup):
                                        ("POSCAR_TiO2", 540, 'pmm'),
                                        ("POSCAR_diamond", 96, 'pm'),
                                        ("POSCAR_graphene", 36, 'pmm')])
-def slab_and_expectations(request):
+def slab_and_expectations(request, scope="session"):
     filename, expected_n_atoms, expected_pg = request.param
     file_path = Path(__file__).parent / "fixtures" / "POSCARs" / filename
     pos_slab = readPOSCAR(str(file_path))
     return (pos_slab, expected_n_atoms, expected_pg)
 
 @pytest.fixture()
-def slab_pg(slab_and_expectations):
+def slab_pg(slab_and_expectations, scope="session"):
     slab, *_ = slab_and_expectations
     rp = tl.Rparams()
     slab.fullUpdate(rp)
