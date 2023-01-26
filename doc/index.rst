@@ -130,6 +130,13 @@ For computational details please have a look at the ViPErLEED paper (**TODO**) a
    Glossary<content/glossary>
    License<content/license>
 
+
+.. toctree:: 
+   :maxdepth: 1
+   :caption: Hardware
+
+   Overview<content/hardware/hardware_index>
+
 .. raw:: latex
 
    \endgroup
