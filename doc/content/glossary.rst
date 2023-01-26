@@ -98,3 +98,9 @@ Glossary
       The Jupyter project for interactive computing.
       Jupyter notebooks are commonly used as interactive Python environments.
       See also the `project Jupyter homepage <https://jupyter.org>`__.
+
+    SPECS
+      SPECS GmbH; a German company producing surface analysis instruments. See the `company homepage <https://www.specs-group.com>`__.
+
+    ErLEED
+      The product name of the :term:`LEED` setup produced and distributed by the :term:`SPECS` company.

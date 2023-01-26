@@ -16,4 +16,5 @@ ViPErLEED Data Acquisition
    :maxdepth: 1
    
    State Machine<state_machine>
+   ErLEED Modification<erleed_modifications>
 
