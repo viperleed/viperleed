@@ -5,6 +5,7 @@ ErLEED Modification Guide
 #########################
 The :term:`ErLEED` LEED electronics produced by :term:`SPECS` are commonly used in many surface science laboratories.
 The ViPErLEED electronics are designed (and tested) to work with the ErLEED electronics.
+
 **TODO Michele, Michael, Alex: Details on which versions numbers are supported; why we perform the modifications, warnings etc.**
 
 
@@ -110,26 +111,27 @@ Placing the beam current pin
     :align: center
     :width: 100%
 
-    * - .. _fig_resistors_2:
+    * - .. _fig_pin_location_zoomed_out:
   
         .. figure:: /_static/hardware/ErLEED_modification/pin_location/location_medium.svg
 
-            Bending resistor wire around the pin.
+            Filament output and highlighted location of new pin.
 
-      - .. _fig_resistors_3:
+      - .. _fig_pin_location_zoomed_in:
 
         .. figure:: /_static/hardware/ErLEED_modification/pin_location/location_large.svg
 
-            Two resistors soldered to the pin.
+            Zoomed in filament output and marked solder spots.
 
 
+# TODO: markup the two aboves figures
 
-.. _fig_connector_soldered:
+.. _fig_pin_soldered:
 .. figure:: /_static/hardware/ErLEED_modification/pin_location/connector_soldered.svg
     :width: 50%
     :align: center
 
-    Components ...
+    Beam HV pin soldered to the board.
 
 Reassambeling
 =============
