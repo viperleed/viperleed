@@ -5,7 +5,7 @@ ViPErLEED Data Acquisition
 ##########################
 
 
-** TODO Michele, Alex, Michael: This chapter is a placeholder so far. Needs filling for Hardware paper.**
+**TODO Michele, Alex, Michael: This chapter is a placeholder so far. Needs filling for Hardware paper.**
 
 
 

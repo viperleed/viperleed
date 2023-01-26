@@ -100,7 +100,12 @@ Glossary
       See also the `project Jupyter homepage <https://jupyter.org>`__.
 
     SPECS
-      SPECS GmbH; a German company producing surface analysis instruments. See the `company homepage <https://www.specs-group.com>`__.
+      SPECS GmbH; a German company producing surface analysis instruments.
+      See the `company homepage <https://www.specs-group.com>`__.
 
     ErLEED
       The product name of the :term:`LEED` setup produced and distributed by the :term:`SPECS` company.
+
+    Scienta Omicron
+      Scienta Omicron GmbH; an international company producing instruments for surface science and nanotechnology.
+      See the `company homepage <https://scientaomicron.com/en>`__.
