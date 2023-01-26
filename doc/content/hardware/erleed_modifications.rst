@@ -3,16 +3,21 @@
 #########################
 ErLEED Modification Guide
 #########################
-
 The :term:`ErLEED` LEED electronics produced by :term:`SPECS` are commonly used in many surface science laboratories.
 The ViPErLEED electronics are designed (and tested) to work with the ErLEED electronics.
-** TODO Michele, Michael, Alex: Details on which version numbers are supported; why we perform the modifications, etc. **
+**TODO Michele, Michael, Alex: Details on which versions numbers are supported; why we perform the modifications, warnings etc.**
 
 
 Opening up the electronics
 =======================
 
-# image of electronics inside
+
+.. _fig_connector_soldered:
+.. figure:: /_static/hardware/ErLEED_modification/electronics_overview.svg
+    :width: 75%
+    :align: center
+
+    LEED control unit with cover plate removed.
 
 Removing the back plate
 =======================
@@ -24,17 +29,31 @@ Removing the back plate
 New port
 ========
 
+**TODO Michele, Michael: names/numbers of HV connector components & hole-punch machine**
 
-First, we will make a new plug reading the beam current.
+To read out the beam voltage during operation, we need access to the new pin from the outside.
+For this, we will need to fashion a new port on the control unit cassis.
+Fortunately, there is ample space on the backplate, next to the existing connectors.
+We recommend placing the "Beam HV" port below the ":math:`I0_{\text{MON}}`" port, as shown in :numref:`fig_new_port_location`.
 
 
-Beam current port
-=================
+.. _fig_new_port_location:
+.. figure:: /_static/hardware/ErLEED_modification/new_port_location.svg
+    :width: 75%
+    :align: center
+
+    Components ...
+
+
+Making the beam HV connector
+============================
+
+In the following steps, you will build and place a simple pin connector which allows reading out the beam potential.
 
 You will need two 330 :math:`\Omega` resistors, a (?) and a short shrink tube as shown in :numref:`fig_resistors_1`.
 
 .. _fig_resistors_1:
-.. figure:: /_static/hardware/ErLEED_modification/resistors/resistors_1.jpeg
+.. figure:: /_static/hardware/ErLEED_modification/resistors/resistors_1.png
     :width: 20%
     :align: center
 
@@ -53,25 +72,25 @@ Finally, cut off protruding wires (see :numref:`fig_resistors_4`) from the resis
 
     * - .. _fig_resistors_2:
   
-        .. figure:: /_static/hardware/ErLEED_modification/resistors/resistors_2.jpeg
+        .. figure:: /_static/hardware/ErLEED_modification/resistors/resistors_2.png
 
             Bending resistor wire around the pin.
 
       - .. _fig_resistors_3:
 
-        .. figure:: /_static/hardware/ErLEED_modification/resistors/resistors_3.jpeg
+        .. figure:: /_static/hardware/ErLEED_modification/resistors/resistors_3.png
 
             Two resistors soldered to the pin.
 
       - .. _fig_resistors_4:
 
-        .. figure:: /_static/hardware/ErLEED_modification/resistors/resistors_4.jpeg
+        .. figure:: /_static/hardware/ErLEED_modification/resistors/resistors_4.png
 
             Protruding wires removed.
 
       - .. _fig_resistors_5:
 
-        .. figure:: /_static/hardware/ErLEED_modification/resistors/resistors_5.jpeg
+        .. figure:: /_static/hardware/ErLEED_modification/resistors/resistors_5.png
 
             Finished connector with shrink tube.
 
@@ -82,18 +101,35 @@ Finally, cut off protruding wires (see :numref:`fig_resistors_4`) from the resis
 
     Components ...
 
+
+
+Placing the beam current pin
+============================
+
+.. list-table::
+    :align: center
+    :width: 100%
+
+    * - .. _fig_resistors_2:
+  
+        .. figure:: /_static/hardware/ErLEED_modification/pin_location/location_medium.svg
+
+            Bending resistor wire around the pin.
+
+      - .. _fig_resistors_3:
+
+        .. figure:: /_static/hardware/ErLEED_modification/pin_location/location_large.svg
+
+            Two resistors soldered to the pin.
+
+
+
 .. _fig_connector_soldered:
-.. figure:: /_static/hardware/ErLEED_modification/connector_soldered.jpeg
-    :width: 25%
+.. figure:: /_static/hardware/ErLEED_modification/pin_location/connector_soldered.svg
+    :width: 50%
     :align: center
 
     Components ...
-
-Placing beam current pin
-========================
-
-# zoomed in images
-
 
 Reassambeling
 =============
