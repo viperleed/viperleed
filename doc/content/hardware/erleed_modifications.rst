@@ -3,8 +3,20 @@
 #########################
 ErLEED Modification Guide
 #########################
+
 The :term:`ErLEED` LEED electronics produced by :term:`SPECS` are commonly used in many surface science laboratories.
 The ViPErLEED electronics are designed (and tested) to work with the ErLEED electronics.
+However, while the ErLEED electronics enable external control over beam energy, they do not allow direct read-out of the applied voltage.
+
+When available, ViPErLEED can directly measure the beam voltage and use this value to automatically calibrate the electron energy.
+This is not strictly required, but **highly recommend** to prevent distortions of the :math:`I(V)` curves.
+
+It is possible to make the beam voltage accessible for read out in the ErLEED electronics by making a small modification to the control unit.
+
+.. warning::
+    The modifications described below **will** void any warranty unless you explicitly get a permission by the supplier.
+    The ViPErLEED developers take no responsibility for any malfunction of that may occur as a result of modifications to the LEED electronics.
+
 
 **TODO Michele, Michael, Alex: Details on which versions numbers are supported; why we perform the modifications, warnings etc.**
 
