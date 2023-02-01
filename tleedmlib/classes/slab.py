@@ -1893,4 +1893,27 @@ class Slab:
         self.ucell = self.ucell.dot(scaling_mat)
             
         self.getCartesianCoordinates(updateOrigin=True) # update cartesian values
+
+
+    @property
+    def get_angle_between_ucell_and_coord_sys(self):
+        """Returns angle between first Slab unit cell vector and carthesian
+        coordinate system.
+
+        Returns
+        -------
+        float
+            Angle between first Slab unit cell vector and carthesian
+        coordinate system.
         
+        Raises
+        ______
+        ValueError
+            If the unit cell was not initialized.
+        """
+        if not self.ucell:
+            raise ValueError("Salb unit cell not initialized.")
+
+        a1_x, a1_y = self.ucell[0,0], self.ucell[1,0]
+        angle_x_a1 = np.rad2deg(np.arctan2(a1_y, a1_x))  # NB: arctan2 require order (y,x)
+        return angle_x_a1

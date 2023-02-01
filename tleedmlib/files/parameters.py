@@ -610,7 +610,10 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
             if d['THETA'] < 0:
                 d['THETA'] = abs(d['THETA'])
                 d['PHI'] = (d['PHI'] + 180) % 360
-            # finally set
+            # make phi relative to first unit cell vector
+            if slab:
+                d['PHI'] += slab.get_angle_between_ucell_and_coord_sys
+            # finally set theta and phi
             if param == 'AVERAGE_BEAMS':
                 rpars.AVERAGE_BEAMS = (d['THETA'], d['PHI'])
             else:

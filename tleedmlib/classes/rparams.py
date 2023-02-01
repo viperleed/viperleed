@@ -45,7 +45,9 @@ DEFAULTS = {
         'e': 0.001,
     },
     'ZIP_COMPRESSION_LEVEL': 2,
-    'SEARCH_EVAL_TIME':  60, # time interval between reads of SD.TL, TODO: should be dynamic?
+    'SEARCH_EVAL_TIME': 60, # time interval between reads of SD.TL, TODO: should be dynamic?
+    'THETA': 0,   # perpendicular incidence
+    'PHI': 0,     # not needed in case of perpendicular incidence
 }
 
 class SearchPar:
@@ -153,7 +155,7 @@ class Rparams:
         self.PHASESHIFT_EPS = DEFAULTS['PHASESHIFT_EPS']['f'] # changed in updateDerivedParams
         self.PHASESHIFTS_CALC_OLD = True # use old EEASiSSS version # TODO: once established, set to False or remove
         self.PHASESHIFTS_OUT_OLD = True  # output old PHASESHIFTS file # TODO: once established, set to False or remove
-        self.PHI = 0.0           # from BEAM_INCIDENCE
+        self.PHI = DEFAULTS['PHI']           # from BEAM_INCIDENCE
         self.PLOT_IV = {'plot': True, 'axes': 'all', 'colors': [],
                         'legend': 'all', 'overbar': False, 'perpage': 2}
         self.RUN = [0, 1, 2, 3]        # what segments should be run
@@ -190,7 +192,7 @@ class Rparams:
         self.TENSOR_OUTPUT = []  # per layer: write Tensor output? (0/1)
         self.THEO_ENERGIES = [-1, -1, -1]
         # default: [20, 800, 2], initialized in section INIT
-        self.THETA = 0.0        # from BEAM_INCIDENCE
+        self.THETA = DEFAULTS['THETA']        # from BEAM_INCIDENCE
         self.TL_IGNORE_CHECKSUM = True
         self.TL_VERSION = 0.    # requested TensErLEED version
         self.TL_VERSION_STR = None  # TODO: replace with Version class once available
