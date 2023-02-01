@@ -165,6 +165,7 @@ Secure the coaxial connector in place by tightening the nut that came with it on
 Finally, re-attach the power and screen plugs if you had to remove them.
 At this point, we highly recommend labeling the newly fashioned port appropriately (e.g. "Beam HV").
 
+
 **TODO Michele: How is this port & machine called?**
 
 
@@ -173,7 +174,7 @@ At this point, we highly recommend labeling the newly fashioned port appropriate
     :width: 75%
     :align: center
 
-    Components ...
+    Location of the new beam HV port.
 
 
 
@@ -223,12 +224,12 @@ Finally, connect the new pin to the cable leading to the new port.
 
     Beam HV pin soldered to the board.
 
-Reassembling
-============
+**TODO Michael, Michele: Quick test to see if working as intended??**
 
-We highly recommend securing all cables in place with cable ties.
+Reassembly
+==========
 
-- place all plugs
-- reconnect (tests?)
-- screw on back plate
-- put back cover plate
+At this point, the modification is complete and you can reassemble the control unit.
+Plug in all connectors on the motherboard and make sure they are securely connected, including the newly placed beam HV pin.
+We also highly recommend you replace all cable ties that you cut during disassembly.
+Finally, screw the back plate and the cover plate back on.
