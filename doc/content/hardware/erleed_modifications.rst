@@ -23,21 +23,33 @@ It is possible to make the beam voltage accessible for read out in the ErLEED el
 Required Components
 ===================
 
+Before you start with the modifications, make sure you have all required components and tools.
 
-**TODO**
 
-- components for pin
-- components for plug
-- machines
-- solder iron
-- cable ?
+For the beam HV pin:
+    - 2 330 :math:`\Omega` resistors,
+    - **TODO: name of pin component**
+    - a short shrink tube (~1.5 cm),
+
+For the beam HV port:
+    - **TODO: cable, components**
+
+
+Additionally, you will need the following tools to perform the modifications:
+    - a suitable set of Phillips and flat head screw drivers,
+    - a soldering iron and solder,
+    - tweezers,
+    - cable clippers,
+    - **TODO: name of hole punch machine**
+    - a cable tie cutter,
+    - a heat gun for shrink tubes.
 
 .. _fig_resistors_1:
 .. figure:: /_static/hardware/ErLEED_modification/resistors/resistors_1.png
     :width: 20%
     :align: center
 
-    Components ...
+    Components for the beam HV pin.
 
 **TODO Michele, Michael: names/numbers of HV connector components & hole-punch machine**
 
@@ -65,7 +77,7 @@ Start to open up the electronics unit by removing all screws that hold the cover
 Removing the back plate
 =======================
 
-To make the required modifications, it is necessary to partially take off the back plate of the control unit.
+To make the required modifications, it is also necessary to partially take off the back plate of the control unit.
 There is no need to completely disconnect the back plate from the rest of the electronics, but fashioning the new port, as described below will likely require tiling the plate horizontally.
 
 For best accessibility, you most likely want to remove the power plug and screen connection from the back plate (compare :numref:`fig_new_port_location`).
@@ -82,45 +94,18 @@ Ultimately, you should be able to remove and tilt back the back plate of the uni
 
     Removing the back plate of the control unit.
 
-New port
-========
-
-
-To read out the beam voltage during operation, we need access to the new pin from the outside.
-For this, we will need to fashion a new port on the control unit cassis.
-Fortunately, there is ample space on the backplate, next to the existing connectors.
-We recommend placing the "Beam HV" port below the ":math:`I0_{\text{MON}}`" port, as shown in :numref:`fig_new_port_location`.
-
-**TODO Michele: How is this port & machine called?**
-
-
-- punch hole
-- make cable (how long?)
-- place new plug
-- solder on cable
-- reattach plugs
-
-.. _fig_new_port_location:
-.. figure:: /_static/hardware/ErLEED_modification/new_port_location.svg
-    :width: 75%
-    :align: center
-
-    Components ...
-
 
 Beam HV pin
 ===========
 
 In the following steps, you will build and place a simple pin connector which allows reading out the beam potential.
-
-You will need two 330 :math:`\Omega` resistors, a (?) and a short shrink tube as shown in :numref:`fig_resistors_1`.
+A suitable pin can easily be improvised from two 330 :math:`\Omega` resistors, a (?) and a short shrink tube as shown in :numref:`fig_resistors_1`.
 
 
 First, bend the wires of the resistors around the (?) as shown in :numref:`fig_resistors_1`.
 Then, place the (?) in the loop and solder it in place and repeat the procedure with the second resistor (see :numref:`fig_resistors_3` and :numref:`fig_resistors_4`).
 Make sure the soldered spot is stable and the connection across both resistors and to the pin is intact.
 Finally, cut off protruding wires (see :numref:`fig_resistors_4`) from the resistors and place a shrink tube over the resistors and soldered spot (see :numref:`fig_resistors_5`).
-
 
 
 .. list-table::
@@ -151,9 +136,41 @@ Finally, cut off protruding wires (see :numref:`fig_resistors_4`) from the resis
 
             Finished connector with shrink tube.
 
+To read out the beam voltage during operation, we need access to the new pin from the outside.
+For this, there needs to be a connection from the pin on the motherboard to the backside of the chassis.
+To make the connection cable, take the **TODO cable specifications**, strip off ~0.5 cm of the insulation on both side, and solder the **TODO name of female pin part** to the cable.
+You should be able to firmly connect the cable to the pin as shown in :numref:`fig_resistors_cable_attached`.
+
 .. _fig_resistors_cable_attached:
 .. figure:: /_static/hardware/ErLEED_modification/resistors_cable_attached.jpeg
     :width: 25%
+    :align: center
+
+    New beam HV pin with connection cable attached.
+
+
+New port
+========
+
+
+Next, we will need to fashion a new port on the control unit cassis.
+Fortunately, there is ample space on the backplate, next to the existing connectors.
+We recommend placing the "Beam HV" port below the ":math:`I0_{\text{MON}}`" port, as shown in :numref:`fig_new_port_location`.
+
+Carefully punch a hole in the backplate of the chassis in the desired location.
+This may require removing the power plug and screen connector from the backplate.
+Then, place the new high-voltage coaxial connector, solder the connection wire to it and place a shrink tube over he solder spot.
+Secure the coaxial connector in place by tightening the nut that came with it on the inside of the backplate.
+
+Finally, re-attach the power and screen plugs if you had to remove them.
+At this point, we highly recommend labeling the newly fashioned port appropriately (e.g. "Beam HV").
+
+**TODO Michele: How is this port & machine called?**
+
+
+.. _fig_new_port_location:
+.. figure:: /_static/hardware/ErLEED_modification/new_port_location.svg
+    :width: 75%
     :align: center
 
     Components ...
