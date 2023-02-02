@@ -591,7 +591,7 @@ def plot_analysis(exp, figs, figsize, name, namePos, oritick, plotcolors, rPos, 
         axs[1].plot(ytheo[:, 0], ytheo[:, 1], label='Theoretical',
                     color=plotcolors[0], linewidth=0.75)
         axs[1].plot(yexp[:, 0], yexp[:, 1], label="Experimental",
-                    color=plotcolors[0], linewidth=0.75)
+                    color=plotcolors[1], linewidth=0.75)
     axs[1].plot(dy[:, 0], dy[:, 1], label="\u0394Y", color="black",
                 linewidth=0.5)
     axs[1].fill_between(dy[:, 0], dy[:, 1], 0., facecolor='grey',
