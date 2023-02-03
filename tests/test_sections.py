@@ -4,6 +4,8 @@ import sys
 import os
 from pathlib import Path
 from zipfile import ZipFile
+from copy import deepcopy
+import numpy as np
 
 vpr_path = str(Path(__file__).parent.parent.parent)
 if os.path.abspath(vpr_path) not in sys.path:
@@ -15,7 +17,7 @@ import viperleed.tleedmlib
 from viperleed.tleedm import run_tleedm
 
 from tleedmlib.files.poscar import readPOSCAR
-import tleedmlib as tl
+from viperleed import tleedmlib as tl
 from tleedmlib.symmetry import findSymmetry
 
 SOURCE_STR = str(Path(vpr_path) / "viperleed")
@@ -222,7 +224,7 @@ class TestSearchAg100(TestSetup):
 @pytest.fixture(scope="class", params=[('POSCAR_STO(100)-4x1', 136, 'pm'),
                                        ("POSCAR_TiO2", 540, 'pmm'),
                                        ("POSCAR_diamond", 96, 'pm'),
-                                       ("POSCAR_graphene", 36, 'pmm')])
+                                       ("POSCAR_p6m_36C", 36, 'p6m')])
 def slab_and_expectations(request, scope="session"):
     filename, expected_n_atoms, expected_pg = request.param
     file_path = Path(__file__).parent / "fixtures" / "POSCARs" / filename
@@ -257,3 +259,44 @@ class TestPOSCARSymmetry(TestPOSCARRead):
         assert slab_pg == expected_pg
 
 
+# Test Slab with p6m symmetry by Michele and Alex
+
+@pytest.fixture(scope="function")
+def p6m_carbon_slab():
+    poscar_path = Path(__file__).parent / "fixtures" / "POSCARs" / "POSCAR_p6m_36C"
+    return readPOSCAR(str(poscar_path))
+
+
+@pytest.fixture(scope="function")
+def p6m_carbon_setup(p6m_carbon_slab):
+    param = tl.classes.rparams.Rparams()
+    param.BULK_REPEAT = 3.0
+    tl.files.parameters.interpretPARAMETERS(param, p6m_carbon_slab)
+    param.updateDerivedParams()
+    p6m_carbon_slab.fullUpdate(param)
+    return p6m_carbon_slab, param
+
+
+def test_recognize_p6m_symmetry(p6m_carbon_setup):
+    p6m_carbon_slab, param = p6m_carbon_setup
+    assert tl.symmetry.findSymmetry(p6m_carbon_slab, param) == 'p6m'
+
+
+def test_preserve_p6m_symmetry_with_displacement(p6m_carbon_setup):
+    p6m_carbon_slab, param = p6m_carbon_setup
+    tl.symmetry.findSymmetry(p6m_carbon_slab, param)
+    tl.symmetry.enforceSymmetry(p6m_carbon_slab, param)
+    disp_path = Path(__file__).parent / "fixtures" / "p6m_Carbon" / "DISPLACEMENTS"
+    tl.files.displacements.readDISPLACEMENTS(param, str(disp_path))
+    tl.files.displacements.readDISPLACEMENTS_block(param,
+                                                   p6m_carbon_slab,
+                                                   param.disp_blocks[0])
+
+    sl_copy = deepcopy(p6m_carbon_slab)
+
+    for at in sl_copy.atlist:
+        disp = at.disp_geo_offset['all'][0]
+        at.cartpos += disp
+    sl_copy.getFractionalCoordinates()
+
+    assert tl.symmetry.findSymmetry(sl_copy, deepcopy(param)) == 'p6m'
