@@ -18,7 +18,7 @@ from viperleed.tleedm import run_tleedm
 
 from tleedmlib.files.poscar import readPOSCAR
 from viperleed import tleedmlib as tl
-from tleedmlib.symmetry import findSymmetry
+from tleedmlib.symmetry import findSymmetry, enforceSymmetry
 
 SOURCE_STR = str(Path(vpr_path) / "viperleed")
 ALWAYS_REQUIRED_FILES = ('PARAMETERS', 'EXPBEAMS.csv', 'POSCAR')
@@ -29,6 +29,12 @@ TENSERLEED_TEST_VERSIONS = ('1.71', '1.72', '1.73', '1.74')
 AG_100_DISPLACEMENTS_NAMES = ['DISPLACEMENTS_z', 'DISPLACEMENTS_vib', 'DISPLACEMENTS_z+vib']
 AG_100_DELTAS_NAMES = ['Deltas_z.zip', 'Deltas_vib.zip', 'Deltas_z+vib.zip']
 
+_EXAMPLE_POSCARs = [("POSCAR_Ag(100)", 6, 'p4m', 0),
+                    ("POSCAR_STO(100)-4x1", 136, 'pm', 0),
+                    ("POSCAR_TiO2", 540, 'pmm', -1),
+                    ("POSCAR_diamond", 96, 'pm', 89),
+                    ("POSCAR_36C_p6m", 36, 'p6m', 0),
+                    ("POSCAR_36C_cm", 36,'cm', 0)]
 
 class BaseTleedmFilesSetup():
     def __init__(self, surface_dir, tmp_test_path, required_files=(), copy_dirs=()):
@@ -220,24 +226,21 @@ class TestSearchAg100(TestSetup):
         assert search_files_ag100.expected_file_exists(expected_file)
 
 
-
-@pytest.fixture(scope="class", params=[('POSCAR_STO(100)-4x1', 136, 'pm'),
-                                       ("POSCAR_TiO2", 540, 'pmm'),
-                                       ("POSCAR_diamond", 96, 'pm'),
-                                       ("POSCAR_p6m_36C", 36, 'p6m')])
-def slab_and_expectations(request, scope="session"):
-    filename, expected_n_atoms, expected_pg = request.param
+@pytest.fixture(scope="function", params=_EXAMPLE_POSCARs)
+def slab_and_expectations(request):
+    filename, expected_n_atoms, expected_pg, offset_at = request.param
     file_path = Path(__file__).parent / "fixtures" / "POSCARs" / filename
     pos_slab = readPOSCAR(str(file_path))
-    return (pos_slab, expected_n_atoms, expected_pg)
+    return (pos_slab, expected_n_atoms, expected_pg, offset_at)
 
-@pytest.fixture()
-def slab_pg(slab_and_expectations, scope="session"):
+@pytest.fixture(scope="function")
+def slab_pg_rp(slab_and_expectations):
     slab, *_ = slab_and_expectations
     rp = tl.Rparams()
     slab.fullUpdate(rp)
     pg = findSymmetry(slab, rp, output=False)
-    return pg
+    enforceSymmetry(slab, rp)
+    return pg, rp
 
 
 class TestPOSCARRead:
@@ -246,64 +249,35 @@ class TestPOSCARRead:
         assert len(slab.atlist) > 0
 
     def test_n_atom_correct(self, slab_and_expectations):
-        slab, expected_n_atoms, _ = slab_and_expectations
+        slab, expected_n_atoms, *_ = slab_and_expectations
         assert len(slab.atlist) == expected_n_atoms
 
 
 class TestPOSCARSymmetry(TestPOSCARRead):
-    def test_pg_found(self, slab_pg):
+    def test_any_pg_found(self, slab_pg_rp):
+        slab_pg, _ = slab_pg_rp
         assert slab_pg != 'unknown'
 
-    def test_pg_correct(self, slab_and_expectations, slab_pg):
-        _, _, expected_pg = slab_and_expectations
+    def test_pg_correct(self, slab_and_expectations, slab_pg_rp):
+        _, _, expected_pg, _ = slab_and_expectations
+        slab_pg, _ = slab_pg_rp
         assert slab_pg == expected_pg
 
+    @pytest.mark.parametrize("displacement", [(4, (np.array([0.2, 0, 0]),)),
+                                            (4, (np.array([0, 0.2, 0]),)),
+                                            (4, (np.array([0, 0, 0.2]),)),
+                                            ])
+    def test_preserve_symmetry_with_displacement(self, displacement, slab_and_expectations, slab_pg_rp):
+        slab, _, expected_pg, offset_at = slab_and_expectations
+        _, rp = slab_pg_rp
+        sl_copy = deepcopy(slab)
+        
+        # manually assign displacements
+        sl_copy.atlist[offset_at].assignDisp(*displacement)
 
-# Test Slab with p6m symmetry by Michele and Alex
+        for at in sl_copy.atlist:
+            disp = at.disp_geo_offset['all'][0]
+            at.cartpos += disp
+        sl_copy.getFractionalCoordinates()
 
-_CARBON_SLABS = (('POSCAR_p6m_36C','p6m'),
-                 ('POSCAR_36C_slanted_cm','cm'))
-_CARBON_SLAB_NAMES = [name for name, _ in _CARBON_SLABS]
-
-@pytest.fixture(params=_CARBON_SLABS, ids=_CARBON_SLAB_NAMES, scope="function")
-def carbon_slab(request):
-    poscar_name, expected_group = request.param
-    poscar_path = Path(__file__).parent / "fixtures" / "POSCARs" / poscar_name
-    slab = readPOSCAR(str(poscar_path))
-    slab.expected_group = expected_group
-    return slab
-
-
-@pytest.fixture(scope="function")
-def carbon_setup(carbon_slab):
-    param = tl.classes.rparams.Rparams()
-    param.BULK_REPEAT = 3.0
-    tl.files.parameters.interpretPARAMETERS(param, carbon_slab)
-    param.updateDerivedParams()
-    carbon_slab.fullUpdate(param)
-    return carbon_slab, param
-
-def test_recognize_carbon_symmetry(carbon_setup):
-    slab, param = carbon_setup
-    assert tl.symmetry.findSymmetry(slab, param) == slab.expected_group
-
-
-@pytest.mark.parametrize("displacement", [(4, (np.array([0.2, 0, 0]),)),
-                                          (4, (np.array([0, 0.2, 0]),)),
-                                          (4, (np.array([0, 0, 0.2]),)),
-                                          ])
-def test_preserve_carbon_symmetry_with_displacement(displacement, carbon_setup):
-    carbon_slab, param = carbon_setup
-    tl.symmetry.findSymmetry(carbon_slab, param)
-    tl.symmetry.enforceSymmetry(carbon_slab, param)
-    sl_copy = deepcopy(carbon_slab)
-
-    # manually assign displacements
-    sl_copy.atlist[0].assignDisp(*displacement)
-
-    for at in sl_copy.atlist:
-        disp = at.disp_geo_offset['all'][0]
-        at.cartpos += disp
-    sl_copy.getFractionalCoordinates()
-
-    assert tl.symmetry.findSymmetry(sl_copy, deepcopy(param)) == sl_copy.expected_group
+        assert findSymmetry(sl_copy, rp) == expected_pg
