@@ -261,42 +261,49 @@ class TestPOSCARSymmetry(TestPOSCARRead):
 
 # Test Slab with p6m symmetry by Michele and Alex
 
-@pytest.fixture(scope="function")
-def p6m_carbon_slab():
-    poscar_path = Path(__file__).parent / "fixtures" / "POSCARs" / "POSCAR_p6m_36C"
-    return readPOSCAR(str(poscar_path))
+_CARBON_SLABS = (('POSCAR_p6m_36C','p6m'),
+                 ('POSCAR_36C_slanted_cm','cm'))
+_CARBON_SLAB_NAMES = [name for name, _ in _CARBON_SLABS]
+
+@pytest.fixture(params=_CARBON_SLABS, ids=_CARBON_SLAB_NAMES, scope="function")
+def carbon_slab(request):
+    poscar_name, expected_group = request.param
+    poscar_path = Path(__file__).parent / "fixtures" / "POSCARs" / poscar_name
+    slab = readPOSCAR(str(poscar_path))
+    slab.expected_group = expected_group
+    return slab
 
 
 @pytest.fixture(scope="function")
-def p6m_carbon_setup(p6m_carbon_slab):
+def carbon_setup(carbon_slab):
     param = tl.classes.rparams.Rparams()
     param.BULK_REPEAT = 3.0
-    tl.files.parameters.interpretPARAMETERS(param, p6m_carbon_slab)
+    tl.files.parameters.interpretPARAMETERS(param, carbon_slab)
     param.updateDerivedParams()
-    p6m_carbon_slab.fullUpdate(param)
-    return p6m_carbon_slab, param
+    carbon_slab.fullUpdate(param)
+    return carbon_slab, param
+
+def test_recognize_carbon_symmetry(carbon_setup):
+    slab, param = carbon_setup
+    assert tl.symmetry.findSymmetry(slab, param) == slab.expected_group
 
 
-def test_recognize_p6m_symmetry(p6m_carbon_setup):
-    p6m_carbon_slab, param = p6m_carbon_setup
-    assert tl.symmetry.findSymmetry(p6m_carbon_slab, param) == 'p6m'
+@pytest.mark.parametrize("displacement", [(4, (np.array([0.2, 0, 0]),)),
+                                          (4, (np.array([0, 0.2, 0]),)),
+                                          (4, (np.array([0, 0, 0.2]),)),
+                                          ])
+def test_preserve_carbon_symmetry_with_displacement(displacement, carbon_setup):
+    carbon_slab, param = carbon_setup
+    tl.symmetry.findSymmetry(carbon_slab, param)
+    tl.symmetry.enforceSymmetry(carbon_slab, param)
+    sl_copy = deepcopy(carbon_slab)
 
-
-def test_preserve_p6m_symmetry_with_displacement(p6m_carbon_setup):
-    p6m_carbon_slab, param = p6m_carbon_setup
-    tl.symmetry.findSymmetry(p6m_carbon_slab, param)
-    tl.symmetry.enforceSymmetry(p6m_carbon_slab, param)
-    disp_path = Path(__file__).parent / "fixtures" / "p6m_Carbon" / "DISPLACEMENTS"
-    tl.files.displacements.readDISPLACEMENTS(param, str(disp_path))
-    tl.files.displacements.readDISPLACEMENTS_block(param,
-                                                   p6m_carbon_slab,
-                                                   param.disp_blocks[0])
-
-    sl_copy = deepcopy(p6m_carbon_slab)
+    # manually assign displacements
+    sl_copy.atlist[0].assignDisp(*displacement)
 
     for at in sl_copy.atlist:
         disp = at.disp_geo_offset['all'][0]
         at.cartpos += disp
     sl_copy.getFractionalCoordinates()
 
-    assert tl.symmetry.findSymmetry(sl_copy, deepcopy(param)) == 'p6m'
+    assert tl.symmetry.findSymmetry(sl_copy, deepcopy(param)) == sl_copy.expected_group
