@@ -285,9 +285,9 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
                         enumerate(lowocc_layer.atlist)]
             # also check translations by whole unit vectors
             # this is necessary to detect the glide planes in e.g. cm
-            to_check.extend([(0, lowocc_layer.atlist[0].cartpos[:2]
-                             + va*abst[0] + vb*abst[1])
-                             for (va, vb) in ((1, 0), (0, 1), (1, 1))])
+            for _, coord in to_check.copy():
+                to_check.extend([(0, coord + va*abst[0] + vb*abst[1])
+                                 for (va, vb) in ((1, 0), (0, 1), (1, 1))])
             for (k, cartpos) in to_check:
                 translation = (cartpos
                                - lowocc_mirrored.atlist[0].cartpos[:2])
