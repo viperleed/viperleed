@@ -74,7 +74,7 @@ def get_fd_r(sl, rp, work_dir=".", home_dir=""):
             logger.error("Error running reference calculation")
             raise
         try:
-            logger.info("Starting r-factor calculation")
+            logger.info("Starting R-factor calculation...")
             rfaclist = tl.sections.rfactor(sl, rp, 11)
         except Exception:
             logger.error("Error running rfactor calculation")
