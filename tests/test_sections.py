@@ -281,3 +281,39 @@ class TestPOSCARSymmetry(TestPOSCARRead):
         sl_copy.getFractionalCoordinates()
 
         assert findSymmetry(sl_copy, rp) == expected_pg
+
+
+@pytest.fixture(scope='function')
+def manual_slab_3_atoms():
+    slab = tl.Slab()
+    slab.ucell = np.diag([3., 4., 5.])
+    positions = (np.array([-0.25, 0, 0]),
+                 np.array([0.00, 0, 0]),
+                 np.array([0.25, 0, 0]))
+    slab.atlist = [tl.Atom('C', pos, i+1, slab)
+                   for i, pos in enumerate(positions)]
+    param = tl.Rparams()
+    slab.fullUpdate(param)
+    return slab
+
+class TestSlabTransforms:
+    def test_mirror(self, manual_slab_3_atoms):
+        slab = manual_slab_3_atoms
+        mirrored_slab = deepcopy(slab)
+        symplane = tl.classes.slab.SymPlane(pos=(0,0),
+                                            dr=np.array([0,1]),
+                                            abt=slab.ucell.T[:2,:2])
+        mirrored_slab.mirror(symplane)
+        mirrored_slab.collapseCartesianCoordinates()
+        assert all(at.isSameXY(mir_at.cartpos[:2])
+                for at, mir_at in
+                zip(slab.atlist, reversed(mirrored_slab.atlist)))
+
+    def test_180_rotation(self, manual_slab_3_atoms):
+        slab = manual_slab_3_atoms
+        rotated_slab = deepcopy(slab)
+        rotated_slab.rotateAtoms((0,0), order=2)
+        rotated_slab.collapseCartesianCoordinates()
+        assert all(at.isSameXY(mir_at.cartpos[:2])
+                for at, mir_at in
+                zip(slab.atlist, reversed(rotated_slab.atlist)))
