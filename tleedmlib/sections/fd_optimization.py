@@ -56,7 +56,7 @@ def get_fd_r(sl, rp, work_dir=".", home_dir=""):
         rp.PHI += 180
     rp.THETA = min(rp.THETA, 90.)
     rp.PHI = rp.PHI % 360
-    # create work directoy, go there, execute
+    # create work directory, go there, execute
     try:
         if work_dir != ".":
             os.makedirs(work_dir, exist_ok=True)
@@ -67,14 +67,14 @@ def get_fd_r(sl, rp, work_dir=".", home_dir=""):
             except Exception:
                 logger.error("Error copying " + fn + " to subfolder.")
                 raise
+        logger.info("Starting full-dynamic calculation")
         try:
-            logger.info("Starting full-dynamic calculation")
             tl.sections.refcalc(sl, rp, parent_dir=home_dir)
         except Exception:
             logger.error("Error running reference calculation")
             raise
+        logger.info("Starting R-factor calculation...")
         try:
-            logger.info("Starting R-factor calculation...")
             rfaclist = tl.sections.rfactor(sl, rp, 11)
         except Exception:
             logger.error("Error running rfactor calculation")
