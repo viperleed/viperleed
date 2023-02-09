@@ -849,7 +849,7 @@ def search(sl, rp):
                 preexec_fn=os.setsid
             )
             pgid = os.getpgid(proc.pid)
-            logger.debug(f'Started search process with command "{' '.join(command)}".')
+            logger.debug(f'Started search process with command "{" ".join(command)}".')
         except Exception:  # This should not fail unless the shell is very broken.
             logger.error("Error starting search. Check SD.TL file.")
             if search_log_path:
