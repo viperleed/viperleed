@@ -841,6 +841,7 @@ def search(sl, rp):
             search_log_f = subprocess.DEVNULL
         # NB: log file may be open and must be closed!
         # Create search process
+        logger.debug(f'Starting search process with command "{" ".join(command)}".')
         try:
             proc = subprocess.Popen(
                 command, encoding="ascii",
@@ -848,13 +849,13 @@ def search(sl, rp):
                 stderr=subprocess.STDOUT,  # pipe to whatever stdout is
                 preexec_fn=os.setsid
             )
-            pgid = os.getpgid(proc.pid)
-            logger.debug(f'Started search process with command "{" ".join(command)}".')
-        except Exception:  # This should not fail unless the shell is very broken.
+        except OSError:  # This should not fail unless the shell is very broken.
             logger.error("Error starting search. Check SD.TL file.")
             if search_log_path:
                 search_log_f.close()
             raise
+        else:
+            pgid = os.getpgid(proc.pid)
         if proc is None:
             logger.error("Error starting search subprocess... Stopping.")
             if search_log_path:
@@ -866,9 +867,10 @@ def search(sl, rp):
             proc.communicate(input=rf_info_content, timeout=0.2)
         except subprocess.TimeoutExpired:
             pass  # started successfully; monitoring below
-        except Exception:
+        except (OSError, subprocess.SubprocessError):
             logger.error("Error feeding input to search process. "
                          "Check files SD.TL and rf.info.")
+
         # MONITOR SEARCH
         searchStartTime = timer()
         last_debug_print_time = searchStartTime
