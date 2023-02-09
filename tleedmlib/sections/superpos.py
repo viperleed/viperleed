@@ -178,7 +178,7 @@ def superpos(sl, rp, subdomain=False, for_error=False, only_vary=None):
         logger.error("Error during Superpos calculation.")
         raise
     err_log = "\n".join([line for line in err_log.split("\n")
-                         if "STOP .  CORRECT TERMINATION" not in line])
+                         if ".  CORRECT TERMINATION" not in line])
     if err_log:
         logger.warning("Superpos output contained the following warnings/"
                        "error messages:\n"+err_log)
