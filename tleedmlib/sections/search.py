@@ -600,7 +600,7 @@ def search(sl, rp):
     # generate rf.info
     try:
         rf_info_path = Path(rp.workdir) / "rf.info"
-        tl_io.writeRfInfo(sl, rp, file_path=rf_info_path)
+        rf_info_content = tl_io.writeRfInfo(sl, rp, file_path=rf_info_path)
     except Exception:
         logger.error("Error generating search input file rf.info")
         raise
@@ -840,33 +840,35 @@ def search(sl, rp):
         else:
             search_log_f = subprocess.DEVNULL
         # NB: log file may be open and must be closed!
-        try:
-            rf_info_f = open(rf_info_path, "r")
-        except OSError:
-            logger.error(f"Could not read file {rf_info_path}.")
         # Create search process
         try:
             proc = subprocess.Popen(
                 command, encoding="ascii",
-                stdin=rf_info_f,
                 stdout=search_log_f,       # if LOG_SEARCH is False, this is DEVNULL
                 stderr=subprocess.STDOUT,  # pipe to whatever stdout is
                 preexec_fn=os.setsid
             )
             pgid = os.getpgid(proc.pid)
+            logger.debug(f'Started search process with command "{' '.join(command)}".')
         except Exception:  # This should not fail unless the shell is very broken.
             logger.error("Error starting search. Check SD.TL file.")
             if search_log_path:
                 search_log_f.close()
-            rf_info_f.close()
             raise
         if proc is None:
             logger.error("Error starting search subprocess... Stopping.")
             if search_log_path:
                 search_log_f.close()
-            rf_info_f.close()
             raise RuntimeError("Error running search."
                                f'Could not start process using "{command}".')
+        # FEED INPUT
+        try:
+            proc.communicate(input=rf_info_content, timeout=0.2)
+        except subprocess.TimeoutExpired:
+            pass  # started successfully; monitoring below
+        except Exception:
+            logger.error("Error feeding input to search process. "
+                         "Check files SD.TL and rf.info.")
         # MONITOR SEARCH
         searchStartTime = timer()
         last_debug_print_time = searchStartTime
@@ -1103,7 +1105,6 @@ def search(sl, rp):
             # close open input and log files
             if search_log_path:
                 search_log_f.close()
-            rf_info_f.close()
         if repeat:
             rp.SEARCH_START = "control"
             if gens:
