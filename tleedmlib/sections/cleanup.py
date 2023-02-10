@@ -113,7 +113,7 @@ def prerun_clean(rp, logname=""):
 
 
 def organize_workdir(tensor_index, delete_unzipped=False,
-                     tensors=True, deltas=True, workdir="",
+                     tensors=True, deltas=True, workdir=Path(),
                      compression_level=2):
     """Reorganize files in workdir into SUPP, OUT, Tensors and Deltas.
 
@@ -130,7 +130,7 @@ def organize_workdir(tensor_index, delete_unzipped=False,
     tensors, deltas : bool, optional
         Whether the Tensor/Delta files contain new information
         and should be saved. The default is True.
-    workdir : str, optional
+    workdir : pathlike, optional
         The path to work folder that contains the files to be
         reorganized. The default is "".
     compression_level : int

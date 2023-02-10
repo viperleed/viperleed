@@ -395,13 +395,13 @@ def init_domains(rp):
         rp.setHaltingLevel(3)
         return
     checkFiles = ["POSCAR", "PARAMETERS", "VIBROCC", "PHASESHIFTS"]
-    home = os.getcwd()
+    home = Path(os.getcwd())
     for (name, path) in rp.DOMAINS:
         # determine the target path
-        target = os.path.abspath("Domain_"+name)
+        target = Path(os.path.abspath("Domain_"+name))
         dp = tl.DomainParameters(target, home, name)
         if os.path.isdir(target):
-            logger.warning("Folder "+target+" already exists. "
+            logger.warning(f"Folder {target} already exists. "
                            "Contents may get overwritten.")
         else:
             os.mkdir(target)
@@ -417,16 +417,14 @@ def init_domains(rp):
                     tensorIndex = 0
                     logger.warning("Error fetching Tensors: " + str(e))
             if tensorIndex != 0:
-                tensorDir = os.path.join(target, "Tensors",
-                                         "Tensors_"+str(tensorIndex).zfill(3))
+                tensorDir = target / "Tensors" / ("Tensors_"+str(tensorIndex).zfill(3))
                 for file in (checkFiles + ["IVBEAMS"]):
-                    if os.path.isfile(os.path.join(tensorDir, file)):
-                        shutil.copy2(os.path.join(tensorDir, file),
-                                     os.path.join(target, file))
+                    if os.path.isfile(tensorDir / file):
+                        shutil.copy2(tensorDir / file, target / file)
                     else:
-                        logger.warning("Input file {} is missing in Tensors "
+                        logger.warning(f"Input file {file} is missing in Tensors "
                                        "directory. A new reference "
-                                       "calculation is required.".format(file))
+                                       "calculation is required.")
                         tensorIndex = 0
                         break
             if tensorIndex != 0:
@@ -458,11 +456,9 @@ def init_domains(rp):
                 tensorIndex = tl.leedbase.getMaxTensorIndex(target)
             except Exception:
                 tensorIndex = 0
-            tensorDir = os.path.join(target, "Tensors",
-                                     "Tensors_"+str(tensorIndex+1).zfill(3))
+            tensorDir = target / "Tensors" / ("Tensors_"+str(tensorIndex+1).zfill(3))
             try:
-                os.makedirs(os.path.join(target, "Tensors", tensorDir),
-                            exist_ok=True)
+                os.makedirs(target / "Tensors" / tensorDir, exist_ok=True)
             except Exception:
                 raise
             try:
@@ -473,9 +469,8 @@ def init_domains(rp):
                              "file {}".format(name, path))
                 raise RuntimeError("Error getting domain input files")
             for file in (checkFiles + ["IVBEAMS"]):
-                if os.path.isfile(os.path.join(tensorDir, file)):
-                    shutil.copy2(os.path.join(tensorDir, file),
-                                 os.path.join(target, file))
+                if os.path.isfile(tensorDir / file):
+                    shutil.copy2(tensorDir / file, target / file)
                 else:
                     logger.error("Required file {} for domain {} not found in "
                                  "Tensor directory {}".format(file, name,
@@ -773,7 +768,6 @@ def preserve_original_input(rp, init_logger, path=""):
 
 
 def make_compile_logs_dir(rp):
-
     """
     Creates directory compile_logs in which logs from compilation will be saved.
     """

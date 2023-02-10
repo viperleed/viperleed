@@ -267,9 +267,9 @@ def writeRfInfo(sl, rp, file_path="rf.info"):
         equivalent beams.
     rp : Rparams
         Run parameters.
-    filename : pathlike or str
-        Path to or name of the output file. If str uses
-        Path(rp.workdir)/filename. The default is "rf.info".
+    file_path : pathlike or str
+        Pathlike to or name of the output file. If str uses
+        rp.workdir /filename. The default is "rf.info".
 
     Returns
     -------
@@ -352,7 +352,7 @@ def writeRfInfo(sl, rp, file_path="rf.info"):
     output += auxexpbeams
 
     if isinstance(file_path, str):
-        _file_path = Path(rp.workdir) / file_path
+        _file_path = rp.workdir / file_path
     else:
         _file_path = file_path
     try:
@@ -601,7 +601,7 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                 + "No. of different files for Atom no. {}\n".format(i+1))
             for (j, deltafile) in enumerate(at.deltasGenerated):
                 name = deltafile
-                if frompath:  # need to get the file
+                if frompath:  # need to get the file; if True frompath is Path
                     name = "D{}_".format(k+1) + deltafile
                     if len(name) > 15:
                         un = 1
@@ -610,11 +610,11 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                         name = "D{}_DEL_{}".format(k+1, un)
                         uniquenames.append(name)
                     try:
-                        shutil.copy2(os.path.join(frompath, deltafile), name)
+                        shutil.copy2(frompath / deltafile, name)
                     except Exception:
                         logger.error("Error getting Delta file {} for search"
                                      .format(os.path.relpath(
-                                         os.path.join(frompath, deltafile))))
+                                         frompath / deltafile)))
                         raise
                 output += "****Information about file {}:\n".format(j+1)
                 output += (name.ljust(16) + "Name of file {} (max. 15 "

@@ -12,6 +12,7 @@ import os
 import logging
 import copy
 import shutil
+from pathlib import Path
 import numpy as np
 from numpy.polynomial import Polynomial
 
@@ -24,7 +25,7 @@ from viperleed.tleedmlib.files.parameters import modifyPARAMETERS
 logger = logging.getLogger("tleedm.fdopt")
 
 
-def get_fd_r(sl, rp, work_dir=".", home_dir=""):
+def get_fd_r(sl, rp, work_dir=Path(), home_dir=Path()):
     """
     Runs reference calculation and r-factor calculation, returns R.
 
@@ -34,9 +35,9 @@ def get_fd_r(sl, rp, work_dir=".", home_dir=""):
         Object containing atomic configuration
     rp : Rparams
         Object containing run parameters
-    work_dir : str, optional
+    work_dir : pathlike, optional
         The directory to execute the calculations in. The default is ".".
-    home_dir : str, optional
+    home_dir : pathlike, optional
         The directory to return to after finishing. The default is the current
         working directory.
 
@@ -46,10 +47,8 @@ def get_fd_r(sl, rp, work_dir=".", home_dir=""):
         The r-factor obtained for the sl, rp combination
 
     """
-    if not home_dir:
-        home_dir = os.getcwd()
     rp.TENSOR_OUTPUT = [0]
-    rp.workdir = work_dir
+    rp.workdir = Path(work_dir)
     # internally transform theta, phi to within range
     if rp.THETA < 0:
         rp.THETA = abs(rp.THETA)
@@ -63,7 +62,7 @@ def get_fd_r(sl, rp, work_dir=".", home_dir=""):
             os.chdir(work_dir)
         for fn in ["BEAMLIST", "PHASESHIFTS"]:
             try:
-                shutil.copy2(os.path.join(home_dir, fn), fn)
+                shutil.copy2(home_dir / fn, fn)
             except Exception:
                 logger.error("Error copying " + fn + " to subfolder.")
                 raise
@@ -301,7 +300,7 @@ def fd_optimization(sl, rp):
             dname = which + "_{}".format(x)
         else:
             dname = which + "_{:.4f}".format(x)
-        workdir = os.path.join(rp.workdir, dname)
+        workdir = rp.workdir / dname
         tmpdirs.append(workdir)
         logger.info("STARTING CALCULATION AT {} = {:.4f}".format(which, x))
         r, rfaclist = get_fd_r(tsl, trp, work_dir=workdir, home_dir=rp.workdir)

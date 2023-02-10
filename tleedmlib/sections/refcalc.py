@@ -42,12 +42,12 @@ class RefcalcCompileTask():
     track of the folder that the compiled file is in afterwards."""
 
     def __init__(self, param, lmax, fortran_comp, sourcedir,
-                 basedir=os.getcwd()):
+                 basedir=Path()):
         self.param = param
         self.lmax = lmax
         self.fortran_comp = fortran_comp
         self.sourcedir = sourcedir  # where the fortran files are
-        self.basedir = basedir    # where the calculation is based
+        self.basedir = Path(basedir)    # where the calculation is based
         self.foldername = "refcalc-compile_LMAX{}".format(lmax)
         self.exename = "refcalc-{}".format(lmax)
 
@@ -56,7 +56,7 @@ class RefcalcCompileTask():
             
     @property
     def logfile(self):
-        return Path(self.basedir) / self.foldername / "fortran-compile.log"
+        return self.basedir / self.foldername / "fortran-compile.log"
         
     @property
     def compile_log_name(self):
@@ -296,7 +296,7 @@ def edit_fin_energy_lmax(runtask):
     return fin
 
 
-def refcalc(sl, rp, subdomain=False, parent_dir=""):
+def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
     """Main function to execute the reference calculation segment."""
     if rp.domainParams:
         refcalc_domains(rp)
@@ -697,7 +697,7 @@ def _reinitialize_deltas(param, slab):
     """
     # delete old delta files in main work folder, if necessary
     for df in [f for f in os.listdir(param.workdir) if f.startswith("DEL_") and
-               os.path.isfile(os.path.join(param.workdir, f))]:
+               os.path.isfile(param.workdir / f)]:
         try:
             os.remove(df)
         except Exception:

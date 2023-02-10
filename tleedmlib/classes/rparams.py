@@ -14,6 +14,7 @@ import os
 import random
 import shutil
 from timeit import default_timer as timer
+from pathlib import Path
 
 try:
     import matplotlib.pyplot as plt
@@ -103,8 +104,8 @@ class DomainParameters:
     """Stores workdir, slab and runparams objects for each domain"""
 
     def __init__(self, workdir, homedir, name):
-        self.workdir = workdir  # path to sub-directory for domain calculation
-        self.homedir = homedir  # path to main tleedm working directory
+        self.workdir = Path(workdir)  # path to sub-directory for domain calculation
+        self.homedir = Path(homedir)  # path to main tleedm working directory
         self.name = name        # domain name as defined by user
         self.sl = None
         self.rp = None
@@ -205,7 +206,7 @@ class Rparams:
         # RUN VARIABLES
         self.starttime = timer()
         self.sourcedir = os.getcwd()  # where to find 'tensorleed'
-        self.workdir = os.getcwd()  # MAIN WORK DIRECTORY; where to find input
+        self.workdir = Path(os.getcwd())  # MAIN WORK DIRECTORY; where to find input
         self.compile_logs_dir = None
         self.searchConvInit = {
             "gaussian": None, "dgen": {"all": None, "best": None, "dec": None}}

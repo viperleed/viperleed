@@ -12,6 +12,7 @@ import numpy as np
 import re
 import shutil
 import os
+from pathlib import Path
 
 import viperleed.tleedmlib as tl
 logger = logging.getLogger("tleedm.files.parameters")
@@ -68,7 +69,7 @@ for p in _KNOWN_PARAMS:
     _PARAM_ALIAS[p.lower().replace("_", "")] = p
 
 
-def updatePARAMETERS(rp, filename='PARAMETERS', update_from="."):
+def updatePARAMETERS(rp, filename='PARAMETERS', update_from=Path()):
     """
     Reads PARAMETERS file again, but ignores everything not concerning the
     search or STOP. Updates the given Rparams object accordingly.
@@ -80,14 +81,16 @@ def updatePARAMETERS(rp, filename='PARAMETERS', update_from="."):
         parameters have changed.
     filename : string, optional
         The file to be read. The default is 'PARAMETERS'.
+    update_from : pathlike, optional
 
     Returns
     -------
     None.
 
     """
+    _update_from = Path(update_from)
     try:
-        with open(os.path.join(update_from, filename), 'r') as rf:
+        with open(_update_from / filename, 'r') as rf:
             lines = rf.readlines()
     except FileNotFoundError:
         logger.warning("updatePARAMETERS routine: PARAMETERS file not found.")
@@ -1568,7 +1571,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
     return
 
 
-def modifyPARAMETERS(rp, modpar, new="", comment="", path="",
+def modifyPARAMETERS(rp, modpar, new="", comment="", path=Path(),
                      suppress_ori=False, include_left=False):
     """
     Looks for 'modpar' in the PARAMETERS file, comments that line out, and
@@ -1585,7 +1588,7 @@ def modifyPARAMETERS(rp, modpar, new="", comment="", path="",
         will be commented out without replacement.
     comment : str, optional
         A comment to be added in the new line in PARAMETERS.
-    path : str, optional
+    path : pathlike, str, optional
         Where to find the PARAMETERS file that should be modified.
     suppress_ori : bool, optional
         If True, no 'PARAMETERS_original' file will be created.
@@ -1597,12 +1600,11 @@ def modifyPARAMETERS(rp, modpar, new="", comment="", path="",
     Returns
     -------
     None.
-
     """
-
-    file = os.path.join(path, "PARAMETERS")
+    _path = Path(path)
+    file = _path / "PARAMETERS"
     oriname = "PARAMETERS_ori_"+rp.timestamp
-    ori = os.path.join(path, oriname)
+    ori = _path / oriname
     if (oriname not in rp.manifest and not suppress_ori
             and os.path.isfile(file)):
         try:
@@ -1612,7 +1614,7 @@ def modifyPARAMETERS(rp, modpar, new="", comment="", path="",
                 "modifyPARAMETERS: Could not copy PARAMETERS file "
                 "to PARAMETERS_ori. Proceeding, original file will be lost.")
         rp.manifest.append(oriname)
-    if "PARAMETERS" not in rp.manifest and not path:
+    if "PARAMETERS" not in rp.manifest and _path is Path():
         rp.manifest.append("PARAMETERS")
     output = ""
     headerPrinted = False

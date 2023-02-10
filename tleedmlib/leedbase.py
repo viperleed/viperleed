@@ -144,7 +144,7 @@ def get_element_symbol(atomic_number):
             f"Invalid atomic number {atomic_number}."
             ) from None
 
-def monitoredPool(rp, poolsize, function, tasks, update_from=""):
+def monitoredPool(rp, poolsize, function, tasks, update_from=Path()):
     """
     The 'function' and 'tasks' arguments are passed on to a multiprocessing
     pool of size 'poolsize' with apply_async. While waiting for the pool to
@@ -162,7 +162,7 @@ def monitoredPool(rp, poolsize, function, tasks, update_from=""):
     tasks : list of arguments
         treated like the arguments of pool.map, i.e. each element is passed on
         in a seperate call of 'function' via multiprocessing.Pool.apply_async
-    update_from : str
+    update_from : pathlike
         directory from which PARAMETERS should be read for updates
 
     Returns

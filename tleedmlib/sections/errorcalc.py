@@ -140,7 +140,7 @@ def errorcalc(sl, rp):
         else:
             logger.info("Could not estimate var(R) for any error mode.")
 
-    save_path = Path(rp.workdir)
+    save_path = rp.workdir
 
     # Errors_summary.csv and Errors.zip
     summary_csv_content, individual_files = tl_io.generate_errors_csv(errors)
