@@ -64,7 +64,6 @@ def processSearchResults(sl, rp, search_log_path, final=True):
     Returns
     -------
     None
-
     """
     # get the last block from SD.TL:
     try:
