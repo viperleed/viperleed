@@ -46,8 +46,8 @@ class RefcalcCompileTask():
         self.param = param
         self.lmax = lmax
         self.fortran_comp = fortran_comp
-        self.sourcedir = sourcedir  # where the fortran files are
-        self.basedir = Path(basedir)    # where the calculation is based
+        self.sourcedir = Path(sourcedir)  # where the fortran files are
+        self.basedir = Path(basedir)      # where the calculation is based
         self.foldername = "refcalc-compile_LMAX{}".format(lmax)
         self.exename = "refcalc-{}".format(lmax)
 

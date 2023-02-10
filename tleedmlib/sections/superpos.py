@@ -131,25 +131,25 @@ def superpos(sl, rp, subdomain=False, for_error=False, only_vary=None):
         tldir = getTLEEDdir(home=rp.sourcedir, version=rp.TL_VERSION)
         if not tldir:
             raise RuntimeError("TensErLEED code not found.")
-        srcpath = os.path.join(tldir, 'src')
+        srcpath = tldir / 'src'
         srcname = [f for f in os.listdir(srcpath)
                    if f.startswith('superpos')][0]
-        shutil.copy2(os.path.join(srcpath, srcname), srcname)
-        libpath = os.path.join(tldir, 'lib')
+        shutil.copy2(srcpath / srcname, srcname)
+        libpath = tldir / 'lib'
         libname = [f for f in os.listdir(libpath)
                    if f.startswith('lib.superpos')][0]
-        shutil.copy2(os.path.join(libpath, libname), libname)
+        shutil.copy2(libpath / libname, libname)
         globalname = "GLOBAL"
-        shutil.copy2(os.path.join(srcpath, globalname), globalname)
+        shutil.copy2(srcpath / globalname, globalname)
     except Exception:
         logger.error("Error getting TensErLEED files for superpos: ")
         raise
     
     # Validate checksums
     if not rp.TL_IGNORE_CHECKSUM:
-        files_to_check = (Path(libpath) / libname,
-                          Path(srcpath) / srcname,
-                          Path(srcpath) / globalname)
+        files_to_check = (libpath / libname,
+                          srcpath / srcname,
+                          srcpath / globalname)
         validate_multiple_files(files_to_check, logger, "superpos", rp.TL_VERSION_STR)
     
     # compile fortran files

@@ -39,8 +39,8 @@ class DeltaCompileTask():
         self.foldername = "Delta_Compile_{}".format(index)
         self.exename = "delta-{}".format(index)
         self.fortran_comp = ["", ""]
-        self.sourcedir = ""  # where the fortran files are
-        self.basedir = ""    # where the calculation is based
+        self.sourcedir = Path()  # where the fortran files are
+        self.basedir = Path()    # where the calculation is based
 
         if os.name == 'nt':
             self.exename += '.exe'

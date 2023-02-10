@@ -674,14 +674,14 @@ def search(sl, rp):
                                         version=rp.TL_VERSION)
         if not tldir:
             raise RuntimeError("TensErLEED code not found.")
-        srcpath = os.path.join(tldir, 'src')
+        srcpath = tldir / 'src'
         if usempi:
             srcname = [f for f in os.listdir(srcpath)
                        if f.startswith('search.mpi')][0]
         else:
             srcname = [f for f in os.listdir(srcpath)
                        if f.startswith('search') and 'mpi' not in f][0]
-        shutil.copy2(os.path.join(srcpath, srcname), srcname)
+        shutil.copy2(srcpath / srcname, srcname)
         libpath = Path(tldir, 'lib')
         libpattern = "lib.search"
         if usempi and rp.TL_VERSION <= 1.73:
@@ -715,7 +715,7 @@ def search(sl, rp):
                 raise
 
         globalname = "GLOBAL"
-        shutil.copy2(os.path.join(srcpath, globalname), globalname)
+        shutil.copy2(srcpath / globalname, globalname)
     except Exception:
         logger.error("Error getting TensErLEED files for search: ")
         raise
