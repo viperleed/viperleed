@@ -654,6 +654,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
             drange = [offval]
         if mode == 1:
             if dr.strip() == "offset":
+                # No direction
                 if offval != 0.:
                     logger.warning('DISPLACEMENTS file: cannot assign '
                                    'geo offset : no direction given: '+pside)

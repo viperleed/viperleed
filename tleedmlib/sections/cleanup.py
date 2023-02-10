@@ -329,9 +329,11 @@ def move_oldruns(rp, prerun=False):
                 dirname += sectionabbrv[ind]
         rp.lastOldruns = rp.runHistory[:]
         dirname += "_" + rp.timestamp
-    dirpath = os.path.join(".", "workhistory", dirname)
+
+    # make workhistory directory
+    work_hist_path = Path(".") / "workhistory" / dirname
     try:
-        os.mkdir(dirpath)
+        os.mkdir(work_hist_path)
     except Exception:
         logger.error("Error creating workhistory subfolder: ", exc_info=True)
         raise
@@ -356,23 +358,21 @@ def move_oldruns(rp, prerun=False):
     for f in filelist:
         try:
             if not prerun or f in iofiles:
-                shutil.copy2(f, os.path.join(dirpath, f))
+                shutil.copy2(f, work_hist_path / f)
             else:
-                shutil.move(f, os.path.join(dirpath, f))
+                shutil.move(f, work_hist_path / f)
         except Exception:
-            logger.warning("Error copying "+f+" to "
-                           + os.path.join(dirpath, f)
-                           + ". File may get overwritten.")
+            logger.warning(f"Error copying {f} to {work_hist_path / f}."
+                           " File may get overwritten.")
     for d in dirlist:
         try:
             if not prerun:
-                shutil.copytree(d, os.path.join(dirpath, d))
+                shutil.copytree(d, work_hist_path / d)
             else:
-                shutil.move(d, os.path.join(dirpath, d))
+                shutil.move(d, work_hist_path / d)
         except Exception:
-            logger.warning("Error copying "+d+" to "
-                           + os.path.join(dirpath, d)
-                           + ". Files in directory may get overwritten.")
+            logger.warning(f"Error copying {d} to {work_hist_path / d}."
+                           " Files in directory may get overwritten.")
     return
 
 
