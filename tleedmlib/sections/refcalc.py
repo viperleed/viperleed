@@ -474,7 +474,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=""):
         ref_tasks.append(RefcalcRunTask(fin, -1, ct, logname,
                                         single_threaded=True,
                                         tl_version=rp.TL_VERSION))    
-    
+
     # Validate TensErLEED checksums
     if not rp.TL_IGNORE_CHECKSUM:
         # @issue #43: this could be a class method
@@ -676,10 +676,28 @@ def refcalc(sl, rp, subdomain=False, parent_dir=""):
                          suppress_ori=True)
         modifyPARAMETERS(rp, "LMAX", new="{}-{}".format(*rp.LMAX),
                          path=os.path.join("Tensors", dn), suppress_ori=True)
+
+    # remove references to Deltas from old tensors
+    _reinitialize_deltas(rp, sl)
+
+    return
+
+
+def _reinitialize_deltas(param, slab):
+    """Removes references to deltas from previous tensors.
+    Delete old delta files in main work folder, if necessary.
+    (there should not be any, unless there was an error)
+    Also empty all atom.deltasGenerated because they would refer to
+    previous tensors.
+
+    Parameters
+    ----------
+    param : Rparam
+    slab : Slab
+    """
     # delete old delta files in main work folder, if necessary
-    #   (there should not be any, unless there was an error)
-    for df in [f for f in os.listdir(".") if f.startswith("DEL_") and
-               os.path.isfile(os.path.join(".", f))]:
+    for df in [f for f in os.listdir(param.workdir) if f.startswith("DEL_") and
+               os.path.isfile(os.path.join(param.workdir, f))]:
         try:
             os.remove(df)
         except Exception:
@@ -687,7 +705,10 @@ def refcalc(sl, rp, subdomain=False, parent_dir=""):
                 "Error deleting old Delta file in work directory. This may "
                 "cause the delta file to incorrectly be labelled as belonging "
                 "with the new set of tensors.")
-    return
+
+    # empty atom.deltasGenerated
+    for at in slab.atlist:
+        at.deltasGenerated = []
 
 
 def runDomainRefcalc(dp):
