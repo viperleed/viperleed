@@ -16,7 +16,6 @@ import subprocess
 from pathlib import Path
 
 import numpy as np
-from pathlib import Path
 
 from viperleed import fortranformat as ff
 from viperleed.tleedmlib.leedbase import (
