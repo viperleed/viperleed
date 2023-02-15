@@ -270,13 +270,14 @@ def getYfunc(ivfunc, v0i):
     return yfunc
 
 
-def getTLEEDdir(home="", version=0.):
+def getTLEEDdir(home=Path(), version=0.):
     """Finds directories in the 'tensorleed' folder that have names starting
     with 'TensErLEED', then picks the one with the highest version number.
     Returnsa relative path to that directory, eg
     './tensorleed/TensErLEED-v1.6'."""
-    sd = os.path.join(home, 'tensorleed')
-    ls = [dn for dn in os.listdir(sd) if (os.path.isdir(os.path.join(sd, dn))
+    _home = Path(home)
+    sd = _home / 'tensorleed'
+    ls = [dn for dn in os.listdir(sd) if (os.path.isdir(sd / dn)
                                           and dn.startswith('TensErLEED'))]
     highest = 0.0
     founddir = ''
@@ -294,9 +295,9 @@ def getTLEEDdir(home="", version=0.):
     if founddir != '':
         if version != 0 and f != version:
             logger.error("getTLEEDdir: Could not find requested "
-                         "TensErLEED version {}".format(version))
+                         f"TensErLEED version {version}")
             return ''
-        return os.path.join(sd, dn)
+        return sd / dn
     else:
         return ''
 
