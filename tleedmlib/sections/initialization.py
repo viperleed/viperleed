@@ -672,9 +672,10 @@ def init_domains(rp):
             dp.refcalcRequired = True
         # check beam incidence
         if rp.THETA != dp.rp.THETA or rp.PHI != dp.rp.PHI:
-            logger.info("BEAM_INCIDENCE angles are mismatched between "
-                        "domains. If this is not intentional, change "
-                        "domain PARAMETERS files accordingly.")
+            logger.warning("BEAM_INCIDENCE angles are mismatched between "
+                           "domains. If this is not intentional, change "
+                           "domain PARAMETERS files accordingly.")
+            rp.setHaltingLevel(2)
         # check IVBEAMS
         if not dp.rp.fileLoaded["IVBEAMS"]:
             logger.info(new_refcalc_msg+"No IVBEAMS file loaded")
