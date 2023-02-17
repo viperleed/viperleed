@@ -298,6 +298,18 @@ def manual_slab_3_atoms():
     slab.fullUpdate(param)
     return slab
 
+
+@pytest.fixture()
+def manual_slab_1_atom_trigonal():
+    slab = tl.Slab()
+    slab.ucell = np.array([[ 1, 0, 0],
+                           [-2, 3, 0],
+                           [ 1, 2, 3]],dtype=float)
+    slab.atlist = [tl.Atom('C', np.array([0.2, 0.7, 0.1]), 1, slab),]  # "random" position
+    param = tl.Rparams()
+    slab.fullUpdate(param)
+    return slab
+
 class TestSlabTransforms:
     def test_mirror(self, manual_slab_3_atoms):
         slab = manual_slab_3_atoms
@@ -360,3 +372,19 @@ class TestPhaseshifts:
     def test_phaseshifts_not_empty(self, run_phaseshift):
         _, _, _, phaseshift = run_phaseshift
         assert len(phaseshift) > 0
+
+
+# Slab Matrix operations
+
+def test_rotation_on_trigonal_slab(manual_slab_1_atom_trigonal):
+    rot_15 = np.array([[ 0.96592583, -0.25881905,  0.        ],
+                       [ 0.25881905,  0.96592583,  0.        ],
+                       [ 0.        ,  0.        ,  1.        ]])
+    expected_cell = np.array([[ 0.44828774, -2.1906707 ,  1.        ],
+                              [ 0.77645714,  2.89777748,  2.        ],
+                              [ 0.        ,  0.        ,  3.        ]])
+    expected_atom_cartpos = [0.63317754, 1.5903101]
+    slab = manual_slab_1_atom_trigonal
+    slab.apply_matrix_transformation(rot_15)
+    assert np.allclose(slab.ucell.T, expected_cell)
+    assert np.allclose(slab.atlist[0].cartpos[:2], expected_atom_cartpos)
