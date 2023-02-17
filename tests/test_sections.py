@@ -25,6 +25,7 @@ SOURCE_STR = str(Path(vpr_path) / "viperleed")
 TENSORLEED_PATH = Path(vpr_path) / "viperleed" / "tensorleed"
 ALWAYS_REQUIRED_FILES = ('PARAMETERS', 'EXPBEAMS.csv', 'POSCAR')
 INPUTS_ORIGIN = Path(__file__).parent / "fixtures"
+POSCAR_PATHS = INPUTS_ORIGIN / "POSCARs"
 
 TENSERLEED_TEST_VERSIONS = ('1.71', '1.72', '1.73', '1.74')
 
@@ -388,3 +389,33 @@ def test_rotation_on_trigonal_slab(manual_slab_1_atom_trigonal):
     slab.apply_matrix_transformation(rot_15)
     assert np.allclose(slab.ucell.T, expected_cell)
     assert np.allclose(slab.atlist[0].cartpos[:2], expected_atom_cartpos)
+
+@pytest.fixture()
+def fe3o4_bulk_slab():
+    file_name = "POSCAR_Fe3O4_(001)_cod1010369"
+    file_path = POSCAR_PATHS / file_name
+    slab = readPOSCAR(str(file_path))
+    param = tl.Rparams()
+    param.LAYER_CUTS = [0.1, 0.2, '<', 'dz(1.0)']
+    param.N_BULK_LAYERS = 2
+    param.SYMMETRY_EPS =0.3
+    param.SYMMETRY_EPS_Z = 0.3
+    param.BULK_REPEAT = np.array([-0.0, -4.19199991, 4.19199991])
+    slab.fullUpdate(param)
+    bulk_slab = slab.makeBulkSlab(param)
+    return slab, bulk_slab, param
+
+@pytest.fixture()
+def fe3o4_thick_bulk_slab(fe3o4_bulk_slab):
+    slab, thin_bulk, param = fe3o4_bulk_slab
+    thick_bulk = thin_bulk.doubleBulkSlab()
+    return slab, thick_bulk, param
+
+
+@pytest.mark.parametrize('fixture', ('fe3o4_bulk_slab', 'fe3o4_thick_bulk_slab'))
+def test_bulk_symmetry_thin(fixture, request):
+    _, bulk, param = request.getfixturevalue(fixture)
+    from viperleed.tleedmlib.symmetry import findBulkSymmetry
+    findBulkSymmetry(bulk, param)
+    assert bulk.bulk_screws == [4]
+    assert len(bulk.bulk_glides) == 2
