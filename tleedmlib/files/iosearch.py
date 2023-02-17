@@ -440,19 +440,19 @@ def generateSearchInput(sl, rp, steuOnly=False, cull=False, info=True):
                 else:
                     at.disp_occ[el] = [v + at.offset_occ[el]
                                        for v in at.disp_occ[el]]
-                    del at.disp_occ[el]
-            for (d, o) in [(at.disp_geo, at.offset_geo),
+                    del at.disp_occ[el] # TODO: why? we write and then delete? Should be offset_occ? If yes, loop should go over .copy
+            for (disp, offset) in [(at.disp_geo, at.offset_geo),
                            (at.disp_vib, at.offset_vib),
                            (at.disp_geo, at.disp_geo_offset)]:
                 dl = []
-                for el in o:
-                    if el not in d:
-                        d[el] = copy.copy(d["all"])
-                    d[el] = [v + o[el] for v in d[el]]
+                for el in offset:
+                    if el not in disp:
+                        disp[el] = copy.copy(disp["all"])
+                    disp[el] = [v + offset[el] for v in disp[el]]
                     dl.append(el)
                 for el in dl:
-                    if o != at.disp_geo_offset:
-                        del o[el]
+                    if offset != at.disp_geo_offset:
+                        del offset[el]
             at.disp_geo_offset = {"all": [np.array([0., 0., 0.])]}
 
     # PARAM
@@ -630,11 +630,11 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                 else:
                     # geo0 = True
                     vib0 = True
-                    for (mode, d) in [(1, at.disp_geo), (2, at.disp_vib)]:
-                        if el in d:
-                            dl = d[el]
+                    for (mode, disp) in [(1, at.disp_geo), (2, at.disp_vib)]:
+                        if el in disp:
+                            dl = disp[el]
                         else:
-                            dl = d["all"]
+                            dl = disp["all"]
                         if mode == 1:
                             geo = len(dl)
                             # if geo == 1 and np.linalg.norm(dl[0]) >= 1e-4:
