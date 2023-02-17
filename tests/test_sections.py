@@ -19,8 +19,10 @@ from viperleed.tleedm import run_tleedm
 from tleedmlib.files.poscar import readPOSCAR
 from viperleed import tleedmlib as tl
 from tleedmlib.symmetry import findSymmetry, enforceSymmetry
+from tleedmlib.psgen import runPhaseshiftGen_old
 
 SOURCE_STR = str(Path(vpr_path) / "viperleed")
+TENSORLEED_PATH = Path(vpr_path) / "viperleed" / "tensorleed"
 ALWAYS_REQUIRED_FILES = ('PARAMETERS', 'EXPBEAMS.csv', 'POSCAR')
 INPUTS_ORIGIN = Path(__file__).parent / "fixtures"
 
@@ -240,7 +242,7 @@ def slab_pg_rp(slab_and_expectations):
     slab.fullUpdate(rp)
     pg = findSymmetry(slab, rp, output=False)
     enforceSymmetry(slab, rp)
-    return pg, rp
+    return slab, pg, rp
 
 
 class TestPOSCARRead:
@@ -255,12 +257,12 @@ class TestPOSCARRead:
 
 class TestPOSCARSymmetry(TestPOSCARRead):
     def test_any_pg_found(self, slab_pg_rp):
-        slab_pg, _ = slab_pg_rp
+        _, slab_pg, _ = slab_pg_rp
         assert slab_pg != 'unknown'
 
     def test_pg_correct(self, slab_and_expectations, slab_pg_rp):
         _, _, expected_pg, _ = slab_and_expectations
-        slab_pg, _ = slab_pg_rp
+        _, slab_pg, _ = slab_pg_rp
         assert slab_pg == expected_pg
 
     @pytest.mark.parametrize("displacement", [(4, (np.array([0.2, 0, 0]),)),
@@ -269,7 +271,7 @@ class TestPOSCARSymmetry(TestPOSCARRead):
                                             ])
     def test_preserve_symmetry_with_displacement(self, displacement, slab_and_expectations, slab_pg_rp):
         slab, _, expected_pg, offset_at = slab_and_expectations
-        _, rp = slab_pg_rp
+        _, _, rp = slab_pg_rp
         sl_copy = deepcopy(slab)
         
         # manually assign displacements
@@ -317,3 +319,44 @@ class TestSlabTransforms:
         assert all(at.isSameXY(mir_at.cartpos[:2])
                 for at, mir_at in
                 zip(slab.atlist, reversed(rotated_slab.atlist)))
+
+
+@pytest.fixture()
+def run_phaseshift(slab_pg_rp, tmp_path_factory):
+    slab, _,  param = slab_pg_rp
+    param.workdir = tmp_path_factory.mktemp(basename="phaseshifts", numbered=True)
+    # run EEASISSS
+    firstline, phaseshift = runPhaseshiftGen_old(slab,
+                                                 param,
+                                                 psgensource = TENSORLEED_PATH/'EEASiSSS.x',
+                                                 excosource=TENSORLEED_PATH/'seSernelius',
+                                                 atdenssource=TENSORLEED_PATH/'atom_density_files')
+    return param, slab, firstline, phaseshift
+
+
+class TestPhaseshifts:
+    def test_phaseshifts_firstline_not_empty(self, run_phaseshift):
+        _, _, firstline, _ = run_phaseshift
+        assert firstline
+
+    def test_phaseshifts_firstline_len(self, run_phaseshift):
+        _, _, firstline, _ = run_phaseshift
+        potential_param = firstline.split()
+        assert len(potential_param) >= 4
+
+
+    def test_phaseshift_log_exists(self, run_phaseshift):
+        param, _, _, _ = run_phaseshift
+        assert len(list(param.workdir.glob('phaseshift*.log'))) > 0
+
+
+    def test_write_phaseshifts(self, run_phaseshift):
+        from tleedmlib.files.phaseshifts import writePHASESHIFTS
+        param, _, firstline, phaseshift = run_phaseshift
+        writePHASESHIFTS(firstline, phaseshift, file_path=param.workdir/'PHASESHIFTS')
+        assert len(list(param.workdir.glob('PHASESHIFTS'))) > 0
+
+
+    def test_phaseshifts_not_empty(self, run_phaseshift):
+        _, _, _, phaseshift = run_phaseshift
+        assert len(phaseshift) > 0
