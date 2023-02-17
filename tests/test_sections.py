@@ -37,7 +37,8 @@ _EXAMPLE_POSCARs = [("POSCAR_Ag(100)", 6, 'p4m', 0),
                     ("POSCAR_TiO2", 540, 'pmm', -1),
                     ("POSCAR_diamond", 96, 'pm', 89),
                     ("POSCAR_36C_p6m", 36, 'p6m', 0),
-                    ("POSCAR_36C_cm", 36,'cm', 0)]
+                    ("POSCAR_36C_cm", 36,'cm', 0),
+                    ("POSCAR_Fe3O4_SCV", 83, 'cmm', 50)]  #TODO: Phaseshift generation fails. Why? @Fkraushofer (worked in fkpCurie:Florian_OldLocalTests/Fe3O4-001-SCV/history/t000.r013_211220-133452)
 
 class BaseTleedmFilesSetup():
     def __init__(self, surface_dir, tmp_test_path, required_files=(), copy_dirs=()):
