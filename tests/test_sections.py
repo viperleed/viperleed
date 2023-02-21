@@ -420,3 +420,98 @@ def test_bulk_symmetry_thin(fixture, request):
     findBulkSymmetry(bulk, param)
     assert bulk.bulk_screws == [4]
     assert len(bulk.bulk_glides) == 2
+    
+from tleedmlib.classes import atom
+from tleedmlib.files.vibrocc import readVIBROCC
+from tleedmlib.files.displacements import readDISPLACEMENTS, readDISPLACEMENTS_block
+
+@pytest.fixture(scope="function")
+def atom_with_disp_and_offset():
+    slab = readPOSCAR(POSCAR_PATHS / "POSCAR_STO(100)-4x1")
+    atom = slab.atlist[0]
+    el = atom.el
+    atom.disp_geo[el] = [-0.2, 0.0, 0.2]
+    atom.disp_vib[el] = [-0.1, 0.0, 0.1]
+    atom.disp_occ[el] = [0.7, 0.8, 0.9, 1.0]
+    return atom
+
+@pytest.fixture()
+def ag100_slab_param():
+    slab = readPOSCAR(POSCAR_PATHS / "POSCAR_Ag(100)")
+    param = tl.Rparams()
+    param.N_BULK_LAYERS = 1
+    slab.fullUpdate(param)
+    return slab, param
+
+@pytest.fixture()
+def ag100_slab_with_displacements_and_offsets(ag100_slab_param):
+    slab, param = ag100_slab_param
+    vibrocc_path = INPUTS_ORIGIN / "Ag(100)" / "mergeDisp" / "VIBROCC"
+    displacements_path = INPUTS_ORIGIN / "Ag(100)" / "mergeDisp" / "DISPLACEMENTS_mixed"
+    readVIBROCC(param, slab, str(vibrocc_path))
+    readDISPLACEMENTS(param, str(displacements_path))
+    readDISPLACEMENTS_block(param, slab, param.disp_blocks[param.search_index])
+    return slab, param
+
+
+class Test_Atom_mergeDisp:
+    def test_atom_mergeDisp_allowed(self, atom_with_disp_and_offset):
+        """Test method mergeDisp of Atom.
+        Offsets are allowed and should be combined with stored
+        displacements.
+        """
+        atom = atom_with_disp_and_offset
+        el = atom.el
+        atom.offset_geo[el] = +0.1
+        atom.offset_vib[el] = +0.1
+        atom.offset_occ[el] = -0.1
+        atom.mergeDisp(el)
+        assert np.allclose(atom.disp_geo[el], [-0.1, 0.1, 0.3])
+        assert np.allclose(atom.disp_vib[el], [0.0, 0.1, 0.2])
+        assert np.allclose(atom.disp_occ[el], [0.6, 0.7, 0.8, 0.9])
+
+    def test_atom_mergeDisp_not_allowed(self, atom_with_disp_and_offset):
+        """Test method mergeDisp of Atom.
+        Offsets are not allowed and should not be combined with stored
+        displacements. Instead the final displacements should be unchanged.
+        """
+        atom = atom_with_disp_and_offset
+        el = atom.el
+        atom.offset_vib[el] = -0.1
+        atom.offset_occ[el] = +0.2
+        atom.mergeDisp(el)
+        assert np.allclose(atom.disp_vib[el], [-0.1, 0.0, 0.1])
+        assert np.allclose(atom.disp_occ[el], [0.7, 0.8, 0.9, 1.0])
+
+
+class Test_readDISPLACEMENTS:
+    def test_read_DISPLACEMENTS_geo(self, ag100_slab_with_displacements_and_offsets):
+        slab, param = ag100_slab_with_displacements_and_offsets
+        assert np.allclose(np.array(slab.atlist[0].disp_geo['all'])[:, 2], [0.2, 0.1, 0.0, -0.1, -0.2])
+
+    def test_read_DISPLACEMENTS_vib(self, ag100_slab_with_displacements_and_offsets):
+        slab, param = ag100_slab_with_displacements_and_offsets
+        assert np.allclose(slab.atlist[0].disp_vib['all'], [-0.1, 0.0, 0.1])
+
+    def test_read_DISPLACEMENTS_occ(self, ag100_slab_with_displacements_and_offsets):
+        slab, param = ag100_slab_with_displacements_and_offsets
+        assert np.allclose(slab.atlist[0].disp_occ['Ag'], [0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
+
+
+class Test_readVIBROCC:
+    def test_read_VIBROCC_offset_occ(self, ag100_slab_with_displacements_and_offsets):
+        slab, param = ag100_slab_with_displacements_and_offsets
+        assert np.allclose(slab.atlist[0].offset_occ['Ag'], -0.1)
+
+    def test_interpret_VIBROCC_offset_allowed(self, ag100_slab_with_displacements_and_offsets):
+        slab, param = ag100_slab_with_displacements_and_offsets
+        for atom in slab.atlist:
+            atom.mergeDisp(atom.el)
+        assert np.allclose(slab.atlist[0].disp_occ['Ag'], [0.4, 0.5, 0.6, 0.7, 0.8, 0.9])
+
+    def test_interpret_VIBROCC_offset_not_allowed(self, ag100_slab_with_displacements_and_offsets):
+        slab, param = ag100_slab_with_displacements_and_offsets
+        atom = slab.atlist[0]
+        atom.offset_occ[atom.el] = +0.2
+        atom.mergeDisp(atom.el)
+        assert np.allclose(atom.disp_occ['Ag'], [0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
