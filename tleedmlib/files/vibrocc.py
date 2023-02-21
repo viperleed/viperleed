@@ -167,6 +167,7 @@ def readVIBROCC(rp, slab, filename='VIBROCC', silent=False):
                                     'VIBROCC file: Error reading value '
                                     + sl[1] + ' at parameter ' + param)
                                 raise
+        # Search Offsets
         if mode == 3:
             try:
                 ind = int(plist[1])

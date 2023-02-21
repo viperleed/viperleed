@@ -156,36 +156,53 @@ class Atom:
         """
         Merges the offsets from VIBROCC and DISPLACEMENTS into the
         displacements lists from DISPLACEMENTS for the given element.
+
+        For vibrational and occupational offsets a consistency check is
+        performed. The offset lists will be emptied.
         """
         self.storeOriState()
-        for (d, offsetlist) in [(self.disp_geo, self.offset_geo),
-                                (self.disp_vib, self.offset_vib),
-                                (self.disp_occ, self.offset_occ),
-                                (self.disp_geo, self.disp_geo_offset)]:
-            if offsetlist == self.disp_geo_offset:
-                if el not in offsetlist:
-                    offset = offsetlist["all"][0]
-                else:
-                    offset = offsetlist[el][0]
+        # geometric offsets from DISPLACEMENTS
+        geo_d_offset = self.disp_geo_offset.get(el,
+                                          self.disp_geo_offset['all'])[0]
+        if el not in self.disp_geo:
+            self.disp_geo[el] = copy.copy(list(self.disp_geo['all'][0]))
+        self.disp_geo[el] = list(self.disp_geo[el] + geo_d_offset)
+        self.disp_geo_offset = {"all": [np.zeros(3)]}
+
+        # geometric offsets from VIBROCC
+        if el in self.offset_geo:
+            geo_offset = self.offset_geo[el]
+            self.disp_geo[el] = [geo_step + geo_offset for geo_step in self.disp_geo[el]]
+            del self.offset_geo[el]
+
+        # vibrational offsets from VIBROCC
+        if el not in self.disp_vib:
+            self.disp_vib[el] = copy.copy(self.disp_vib['all'])
+        if el in self.offset_vib:
+            vib_offset = self.offset_vib[el]
+            final_vib_steps = [vib_step + vib_offset for vib_step in self.disp_vib[el]]
+            if any(np.array(final_vib_steps) < 0):
+                logger.error(f"Vibrational offset for {self} defined in "
+                             "VIBROCC would result in negative vibrational"
+                             "amplitude. Offset will be ignored.")
             else:
-                if el in offsetlist:
-                    offset = offsetlist[el]
-                else:
-                    continue
-            if el not in d:
-                if d != self.disp_occ:
-                    d[el] = copy.copy(d["all"])
-                else:
-                    logger.error(
-                        "{} has occupation offset defined for element {}, but "
-                        "element was not found in atom occupation list."
-                        .format(self, el))
-            if el in d:
-                d[el] = [v + offset for v in d[el]]
-                if offsetlist != self.disp_geo_offset:
-                    del offsetlist[el]
-            if offsetlist == self.disp_geo_offset:
-                self.disp_geo_offset = {"all": [np.zeros(3)]}
+                self.disp_vib[el] = final_vib_steps
+            del self.offset_vib[el]
+
+        # vibrational offsets from VIBROCC
+        if el not in self.disp_occ:
+            self.disp_occ[el] = copy.copy(self.disp_occ['all'])
+        if el in self.offset_occ:
+            occ_offset = self.offset_occ[el]
+            final_occ_steps = [occ_step + occ_offset for occ_step in self.disp_occ[el]]
+            if any(np.array(final_occ_steps) < 0) or any(np.array(final_occ_steps) > 1):
+                logger.error(f"Occupational offset for {self} defined in "
+                            "VIBROCC would result in unphysical concentration"
+                            "(occupation <0 or >1). Offset will be ignored.")
+            else:
+                self.disp_occ[el] = final_occ_steps
+            del self.offset_occ[el]
+
 
     def clearOffset(self, mode, targetel="", primary=True, displist=[]):
         """
