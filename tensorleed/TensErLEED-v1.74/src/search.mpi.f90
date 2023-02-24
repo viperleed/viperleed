@@ -631,7 +631,7 @@ C  Broadcast input data to other processes
             seed = INIT
             call random_seed(put=seed)
       end if
-      
+
 
 C  initialize variables for HASHTAB
 

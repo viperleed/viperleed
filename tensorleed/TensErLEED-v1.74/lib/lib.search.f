@@ -742,7 +742,7 @@ C      write(8,*) "random",FMKRN," between",MKHELP1," ",MKHELP2,"?"
       call random_number(rand_in)
 
       ! scale from real interval ]0,1[ to integer interval [0, RAND_MAX]
-      tmp = floor(rand_in*(RAND_MAX + 1))
+      tmp = floor(rand_in*(RAND_MAX))
 
       ! perform %1000 operation that was in random_.c
       tmp = mod(tmp, 1000)
