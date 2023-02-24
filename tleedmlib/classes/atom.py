@@ -165,7 +165,7 @@ class Atom:
         geo_d_offset = self.disp_geo_offset.get(el,
                                           self.disp_geo_offset['all'])[0]
         if el not in self.disp_geo:
-            self.disp_geo[el] = copy.copy(list(self.disp_geo['all'][0]))
+            self.disp_geo[el] = copy.copy(list(self.disp_geo['all']))
         self.disp_geo[el] = list(self.disp_geo[el] + geo_d_offset)
         self.disp_geo_offset = {"all": [np.zeros(3)]}
 
