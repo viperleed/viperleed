@@ -1773,7 +1773,7 @@ class Slab:
 
         return NN_dict
 
-    def apply_matrix_transformation(self, trafo_matrix):
+    def apply_matrix_transformation(self, trafo_matrix, update_origin=True):
         """Apply an orthogonal transformation to the unit cell and all atoms.
 
         The transformation is given as an orthogonal transformation
@@ -1789,12 +1789,25 @@ class Slab:
         the latter rotates the unit cell but not the atoms. Here both
         unit cell and atoms are transformed.
 
+        If the transformation is an out-of-plane rotation/mirror (i.e.,
+        it changes the z components of unit vectors), layers, bulkslab,
+        and sublayers are discarded and will need to be recalculated.
+        Otherwise, the same coordinate transform is also applied to
+        the `bulkslab`, if present.
+
         Parameters
         ----------
         trafo_matrix : Sequence
             `trafo_matrix` must be an orthogonal 3-by-3 matrix.
             Contains the transformation matrix (O) describing
             the applied transformation.
+        update_origin : bool or None, optional
+            Whether the position of the topmost atom should be
+            recalculated. If True, the origin is actually updated
+            only if `trafo_matrix` changes the z components of any
+            of the unit vectors. If the `bulkslab` is transformed,
+            its origin is not changed. Default is True.
+
         Raises
         ------
         ValueError
@@ -1824,9 +1837,19 @@ class Slab:
 
         self.ucell = trafo_matrix.dot(self.ucell)
         self.ucell[abs(self.ucell) < 1e-5] = 0.
-        self.getCartesianCoordinates(updateOrigin=changes_z)
+        self.getCartesianCoordinates(updateOrigin=update_origin and changes_z)
 
-    def apply_scaling(self, *scaling):
+        # Update also 'layers', sublayers and bulkslab: if the
+        # transformation touched 'z' we invalidate everything
+        if changes_z:
+            self.layers.clear()
+            self.sublayers.clear()
+            self.bulkslab = None
+        elif self.bulkslab:
+            self.bulkslab.apply_matrix_transformation(trafo_matrix,
+                                                      update_origin=False)
+
+    def apply_scaling(self, *scaling, update_origin=True):
         """Rescale the unit-cell vectors.
 
         This can be used to stretch/compress along unit cell vectors
@@ -1835,6 +1858,9 @@ class Slab:
         (orthogonal) transformations (e.g., rotation, flipping), use
         `apply_matrix_transformation`.
 
+        The same scaling is also applied to `bulkslab`, if this slab
+        has one. In that case, however, the origin is NOT updated.              # TODO: that's how it was done in the fd_optimization implementation. Do we really need that?
+
         Parameters
         ----------
         *scaling : Sequence
@@ -1842,6 +1868,10 @@ class Slab:
             the unit cell and atom positions. If a sequence with
             three entries, the scaling will be applied along the
             unit-cell vectors in the given order.
+        update_origin : bool or None, optional
+            Whether the position of the topmost atom should be
+            recalculated. If True, the origin is actually updated
+            only if the c vector is scaled. Default is True.
 
         Returns
         -------
@@ -1886,7 +1916,12 @@ class Slab:
         # columns (i.e., a = ucell[:, 0])
         scaling_matrix = np.diag(scaling)
         self.ucell = self.ucell.dot(scaling_matrix)
+        self.getCartesianCoordinates(
+            updateOrigin=update_origin and scaling[2] != 1
+            )
 
-
-        self.getCartesianCoordinates(updateOrigin=scaling[2] != 1)
+        try:
+            self.bulkslab.apply_scaling(scaling, update_origin=False)
+        except AttributeError:
+            pass
         return scaling_matrix
