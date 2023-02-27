@@ -244,22 +244,8 @@ def run_from_ase(
     if 1 not in rparams.RUN:
         return "", "", "", rparams.V0_IMAG
 
-    # read out the THEOBEAMS.csv file and complex amplitudes:
-    theobeams_name = "THEOBEAMS.csv"
-    amp_real_name = "Complex_amplitudes_real.csv"
-    amp_imag_name = "Complex_amplitudes_imag.csv"
-
-    content_list = []
-
-    for filename in (theobeams_name, amp_real_name, amp_imag_name):
-        try:
-            with open(filename, "r", encoding="utf-8") as fproxy:
-                content_str = fproxy.read()
-        except FileNotFoundError:
-            LOGGER.error(f"Could not find file {filename}")
-            content_str = ""
-        content_list.append(content_str)
-
+    # read out the THEOBEAMS.csv file and complex amplitudes
+    content_list = _read_refcalc_output(rparams)
 
     # Move back home
     os.chdir(home)
@@ -310,6 +296,28 @@ def _make_work_dir(exec_path):
         except FileNotFoundError:
             pass
     return work_path
+
+
+def _read_refcalc_output(rparams):
+    """Return the contents of the output files produced by a refcalc."""
+    # List of file name and earliest version in which it appeared
+    output_files = (
+        ("THEOBEAMS.csv", 0),
+        ("Complex_amplitudes_real.csv", 1.73),
+        ("Complex_amplitudes_imag.csv", 1.73),
+        )
+
+    content_list = []
+    for filename, min_version in output_files:
+        _path = Path(filename).resolve()
+        content_str = ""
+        if _path.is_file():
+            with _path.open("r", encoding="utf-8") as fproxy:
+                content_str = fproxy.read()
+        elif rparams.TL_VERSION >= min_version:
+            LOGGER.error(f"Could not find file {filename}")
+        content_list.append(content_str)
+    return content_list
 
 
 def _write_poscar(slab, exec_path):                                             # TODO: could be done with a flag on writePOSCAR
