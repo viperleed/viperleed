@@ -133,15 +133,8 @@ class _ImmutableSlabTransform(SlabTransform):
         raise FrozenInstanceError(f"cannot assign to field {name!r}")
 
 
-def run_from_ase(
-    exec_path,
-    ase_object,
-    inputs_path=None,
-    cut_cell_c_fraction=0.4,
-    uc_transformation_matrix=None,
-    uc_scaling=None,
-    cleanup_work=False,
-):
+def run_from_ase(exec_path, ase_object, inputs_path=None,
+                 slab_transforms=(SlabTransform(),), cleanup_work=False):
     """Perform a ViPErLEED calculation starting from an ase.Atoms object.
 
     This function is a core part of the API for ViPErLEED. It allows
@@ -165,47 +158,28 @@ def run_from_ase(
         already in `exec_path`. Temporary files will be stored in a
         subdirectory called work.
     ase_object : ase.Atoms
-        ASE-type object that contains the atoms for the slab to be used with
-        ViPErLEED. This is expected to contain a simulation cell which will
-        be cut as described below.
-    cut_cell_c_fraction : float, default=0.4
-        Where to cut the ase object cell (ViPErLEED expects the cell to have
-        the surface at the "top" -- i.e., at high z coordinates, and bulk-like
-        layers at the bottom). Cutting will be performed along the vector c
-        AFTER all transformations (see uc_transformation_matrix) are applied.
-        Only the part of the cell above (i.e., >=) this value will be
-        kept and everything else will be discarded.
-    uc_transformation_matrix : np.ndarray, optional
-        3x3 array, can contain an arbitray orthogonal transforamtion (i.e.,
-        a combination of mirroring and rotations) that will be applied to the
-        cell. Default is None, i.e., no transformation. The transformation is
-        applied BEFORE scaling, i.e., using the original unit cell.
-        The transformation is described by an orthogonal transfomation matrix
-        (O) which is applied to both the unit cell and all atomic positions.
-        This transformation is essentially equivalent to a change of basis.
-        The transformation of the unit cell (U) is of the form OUO^T. Atom
-        positions (v, both fractional and cartesian) are transformed as Ov.
-        This parameter can be used to switch indices, rotate the slab, etc..
+        ASE-type object that contains the atoms for the slab to be used
+        with ViPErLEED. This is expected to contain a simulation cell,
+        which will be transformed using `slab_transforms`.
     inputs_path: str or Path or None, optional
         Path to directory containing input files (PARAMETERS, VIBROCC,
         etc.) for ViPErLEED calculation. If provided, files will be
         copied from `inputs_path` to `exec_path` (silently overwriting
         existing files there!). If None or not given, no copying
         occurs. Default is None.
-        Make sure that vectors a & b do not have any components in z
-        direction after transformation as this is not allowed and will raise
-        an error.
-    uc_scaling : float or list of floats, optional
-        Scaling to be applied to the cell. Default is None, i.e., no scaling.
-        Scaling will be applied AFTER the transformation, i.e. along the new
-        unit cell vectors. This can be used to apply an isotropic scaling in
-        all directions or to strech/compress along unit cell vectors in order
-        to change lattice constants in some direction. If the scaling is given
-        as a number or a 1-element sequence, an isotropic scaling will be
-        applied to the unit cell and atom positions. If a sequence with 3
-        entries is provided, the scaling will be applied along the unit cell
-        vectors in the given order. Given uc_scaling == (s1, s2, s3), the
-        new unit cell vectors will be a' = a * s1, b' = b * s2, c' = c * s3.
+    slab_transforms : SlabTransform or Sequence thereof, optional
+        Sequence of transformation operations to be applied to the Slab
+        constructed from ase_object. These include optional "change of
+        basis" operations, optional `uc_scaling` for scaling the unit
+        vector lengths, and a `cut_cell_c_fraction` for selecting only
+        a portion of the `ase_object`.  See help(SlabTransform) for
+        further details.  The transforms are applied in the order
+        given. The `cut_cell_c_fraction` is taken only from the LAST
+        SlabTransform given. Make sure that vectors a & b do not have
+        any components in z after transformation as this is not allowed
+        and will raise a ValueError.
+        Default is a single SlabTransform(), corresponding to no
+        transformation and cut at c>=0.4.
     cleanup_work : bool, optional
         Whether the work directory created during execution of the
         calculation is to be removed at the end. Default is False.
@@ -242,28 +216,35 @@ def run_from_ase(
         If no PARAMETERS file was found in `exec_path`, after
         potentially copying over from `inputs_path`
     ValueError
+        If either of the first two unit cell vectors have a
+        component perpendicular to the surface (i.e., along
+        the z coordinate) after transformation of the unit cell
     RuntimeError
-        If either of the first two unit cell vectors have a component
-        perpendicular to the surface (i.e., along the z coordinate)
-        after transformation of the unit cell
-    
+        If the ViPErLEED calculation fails.
+
     Notes
     -------
-    The parameter uc_transformation_matrix can be used to apply some useful
-    transformations to the Slab object. Examples include swapping vectors b
-    and c, rotations around an axis and flipping the cell along c (in case
-    the lower part has to be kept, rather than the top one). For these standard
-    applications, have a look at the matrices we provide as part of this module:
-        switch_b_c_mat : Switches vectors b & c
-        switch_a_b_mat : Switches vectors a & b
-        flip_c_mat : Flips (i.e., mirrors) cell along c
-    For applying multiple operations, the order does matter. You can combine
-    operations via matrix multiplication (@ symbol or np.dot); the left-most
-    matrix is applied last.
+    The parameter slab_transform and its `orthogonal_matrix` attribute
+    can be used to apply some useful transformations to the Slab.
+    Examples include rotations around an axis and flipping the cell
+    along c (in case the lower part has to be kept, rather than the
+    upper one). A few special SlabTransform objects are also provided
+    for swapping unit-cell vectors. Have a look at the matrices
+    provided as part of this module (use as the `orthogonal_matrix`
+    attribute of a SlabTransform):
         rot_mat_x(theta) : Rotation matrix around x by theta (deg)
         rot_mat_z(theta) : Rotation matrix around z by theta (deg)
         rot_mat_axis(axis, theta): Rotation around axis by theta (deg)
         flip_c_mat : Mirror matrix that flips the cell along c
+    For applying multiple operations, the order does matter. You
+    can: (i) Combine multiple orthogonal transformation matrices
+    via matrix multiplication (@ symbol or np.dot) into a single
+    SlabTransform object (into its `orthogonal_matrix` attribute):
+    in this case the leftmost matrix is applied last. (ii) Provide
+    a sequence of SlabTransform objects in `slab_transforms`: here
+    transformations are applied in the order given (i.e., the
+    leftmost is the applied first). (iii) A combination of the
+    previous two.
     """
     exec_path = Path(exec_path).resolve()
     if not exec_path.is_dir():
@@ -282,38 +263,9 @@ def run_from_ase(
         # No PARAMETERS file – Error
         raise FileNotFoundError("No PARAMETERS file found – this is required")
 
-    # Transfer ASE object into slab object for ViPErLEED
-    slab = Slab(ase_atoms=ase_object)
-
-    # Get temporary parameters object
-    rparams = readPARAMETERS(exec_path / parameters_name)
-    interpretPARAMETERS(rparams, slab=slab)
-
-    # Transformation of slab object: Rotation or isotropic streching/shrinking
-    if uc_transformation_matrix is not None:
-        slab.apply_matrix_transformation(uc_transformation_matrix)
-    if uc_scaling is not None:
-        slab.apply_scaling(*uc_scaling)
-
-    # check if the now transformed slab has any z components in vectors a & b
-    # raise an error because this would mess up parts of the TensErleed
-    # calculations (as we pass on only the first two components).
-
-    a, b, _ = slab.ucell.T
-    if abs(a[2]) > 1e-5 or abs(b[2]) > 1e-5:
-        raise RuntimeError(
-            "z component found in unit cell vector a or b. This is not "
-            "allowed in the TensErLEED calculation. Check eventual "
-            "transformations applied to the unit cell and make sure a "
-            "and b are parallel to the surface."
-        )
-
-    # Cut the slab as given in cut_cell_c_fraction - very important
-    slab.atlist = [at for at in slab.atlist if at.pos[2] >= cut_cell_c_fraction]
-    # Update Slab
-    slab.updateAtomNumbers()
-    slab.updateElementCount()
-
+    # Transfer ASE object into slab object for ViPErLEED,
+    # and save it as a POSCAR file for debug purposes.
+    slab = _make_and_check_slab(ase_object, slab_transforms)
     _write_poscar(slab, exec_path)
 
     # Take care of input files and work directory
@@ -323,6 +275,10 @@ def run_from_ase(
 
     home = Path.cwd()
     os.chdir(work_path)
+
+    # Get temporary parameters object
+    rparams = readPARAMETERS(exec_path / parameters_name)
+    interpretPARAMETERS(rparams, slab=slab)
 
     # We are ready to run ViPErLEED! Have fun!
     try:
@@ -366,6 +322,53 @@ def _copy_inputs_to_exec_path(inputs_path, exec_path):
             shutil.copy2(inputs_path / file, exec_path / file)
         except FileNotFoundError:
             pass
+
+
+def _apply_transform(slab, transform, apply_cut=False):
+    """Apply a single SlabTransform `transform` to `slab`."""
+    if transform.orthogonal_matrix is not None:
+        slab.apply_matrix_transformation(transform.orthogonal_matrix)
+    if transform.uc_scaling is not None:
+        if isinstance(transform.uc_scaling, Real):
+            transform.uc_scaling = (transform.uc_scaling,)
+        slab.apply_scaling(*transform.uc_scaling)
+
+    if not apply_cut or not transform.cut_cell_c_fraction:
+        return
+
+    # Cut the slab as given in cut_cell_c_fraction - very important
+    if transform.cut_cell_c_fraction:
+        slab.atlist = [at for at in slab
+                       if at.pos[2] >= transform.cut_cell_c_fraction]
+    slab.updateAtomNumbers()
+    slab.updateElementCount()
+
+
+def _make_and_check_slab(ase_object, transforms):
+    """Return a Slab from ase.Atoms with transformations applied."""
+    slab = Slab(ase_object=ase_object)
+
+    # Transformations of slab:
+    # Mirror/rotation/swapping and/or stretching/shrinking
+    if isinstance(transforms, SlabTransform):
+        transforms = (transforms,)
+    last_transform = transforms[-1]
+    for transform in transforms:
+        _apply_transform(slab, transform,
+                         apply_cut=transform is last_transform)
+
+    # Check if the now transformed slab has any z components in vectors
+    # a & b. Error out as this would mess up parts of the TensErLEED
+    # calculations, as we always pass on only the first two components.
+    ab_vecs = slab.ucell.T[:2]
+    if any(ab_vecs[:, 2] > 1e-5):
+        raise ValueError(
+            f"z component found in unit cell vector a ({ab_vecs[0]}) or b "
+            f"({ab_vecs[1]}). This is not allowed in a TensErLEED calculation."
+            " Check eventual transformations applied to the unit cell and make"
+            " sure a and b are in the (x,y) plane."
+            )
+    return slab
 
 
 def _make_preset_params(rparams, slab):
