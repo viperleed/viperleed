@@ -176,14 +176,7 @@ def run_from_ase(
             + "existent" if not exec_path.exists() else "a directory"
             )
 
-    # Copy all files in the input Path
-    if inputs_path is not None:
-        inputs_path = Path(inputs_path)
-        for file in input_files:
-            try:
-                shutil.copy2(inputs_path / file, exec_path / file)
-            except FileNotFoundError:
-                pass
+    _copy_inputs_to_exec_path(inputs_path, exec_path)
 
     # Check for PARAMETERS file - without that we can't proceed
     # Files PHASESHIFTS and VIBROCC are not required and can be
@@ -313,6 +306,18 @@ def run_from_ase(
     os.chdir(home)
 
     return theobeams_file_str, amp_real_file_str, amp_imag_file_str, v0i
+
+
+def _copy_inputs_to_exec_path(inputs_path, exec_path):
+    """Copy all tleedm input files from inputs_path to exec_path."""
+    if inputs_path is None:
+        return
+    inputs_path = Path(inputs_path)
+    for file in _INPUT_FILES:
+        try:
+            shutil.copy2(inputs_path / file, exec_path / file)
+        except FileNotFoundError:
+            pass
 
 
 def rfactor_from_csv(
