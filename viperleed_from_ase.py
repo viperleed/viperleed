@@ -41,7 +41,7 @@ except ImportError:
 else:
     _HAS_NEW_RFACTOR = True
 
-LOGGER = logging.getLogger()
+_LOGGER = logging.getLogger()
 _INPUT_FILES = (
     "PARAMETERS",
     "VIBROCC",
@@ -313,7 +313,7 @@ def run_from_ase(exec_path, ase_object, inputs_path=None,
         try:
             shutil.rmtree(work_path)
         except OSError as err:
-            LOGGER.warning(
+            _LOGGER.warning(
                 f"Failed to remove work directory {work_path}. Info: {err}"
                 )
     return *content_list, rparams.V0_IMAG
@@ -402,10 +402,10 @@ def _make_preset_params(rparams, slab):
 
     # When no sites are explicitly defined, give all
     # atoms visible from vacuum a '_surf' site label
-    LOGGER.warning("Parameter SITE_DEF not specified. Double check "
-                   "PARAMETERS and POSCAR to make sure all sites are "
-                   "recognized correctly. Default *_surf sites definitions "
-                   "will be added for atoms visible from vacuum.")
+    _LOGGER.warning("Parameter SITE_DEF not specified. Double check "
+                    "PARAMETERS and POSCAR to make sure all sites are "
+                    "recognized correctly. Default *_surf sites definitions "
+                    "will be added for atoms visible from vacuum.")
     preset_params = {}
     site_def = defaultdict(list)
     for atom in slab.getSurfaceAtoms():
@@ -445,7 +445,7 @@ def _read_refcalc_output(rparams):
             with _path.open("r", encoding="utf-8") as fproxy:
                 content_str = fproxy.read()
         elif rparams.TL_VERSION >= min_version:
-            LOGGER.error(f"Could not find file {filename}")
+            _LOGGER.error(f"Could not find file {filename}")
         content_list.append(content_str)
     return content_list
 
@@ -454,9 +454,9 @@ def _write_poscar(slab, exec_path):                                             
     """Save slab as a POSCAR file, but warn if one is already there."""
     poscar_path = exec_path / "POSCAR"
     if poscar_path.exists():
-        LOGGER.warning("A 'POSCAR' file is already present in "
-                       f"{exec_path} and will be overwritten.")
     poscar.writePOSCAR(slab, poscar_path)
+        _LOGGER.warning("A 'POSCAR' file is already present in "
+                        f"{exec_path} and will be overwritten.")
 
 
 def rfactor_from_csv(
