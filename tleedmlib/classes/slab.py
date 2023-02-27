@@ -1872,13 +1872,14 @@ class Slab:
         if len(scaling) == 1:
             scaling *= 3
         if any(abs(s) < 1e-5 for s in scaling):
-            raise ValueError("Slab.apply_scaling: cannot reduce unit"
-                             "vector(s) to zero length")
-        scaling_mat = np.diag(scaling)
+            raise ValueError(f"{type(self).__name__}.apply_scaling: cannot "
+                             "reduce unit vector(s) to zero length")
 
-        # Apply to unit cell (basis). Notice the inverted order, because the
-        # unit cell is stored with unit vectors as columns (i.e., a = ucell[:, 0])
-        self.ucell = self.ucell.dot(scaling_mat)
-        
+        # Apply to unit cell (basis). Notice the inverted order,
+        # because the unit cell is stored with unit vectors as
+        # columns (i.e., a = ucell[:, 0])
+        scaling_matrix = np.diag(scaling)
+        self.ucell = self.ucell.dot(scaling_matrix)
+
 
         self.getCartesianCoordinates(updateOrigin=scaling[2] != 1)
