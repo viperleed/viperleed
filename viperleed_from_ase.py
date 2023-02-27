@@ -28,10 +28,15 @@ from viperleed.tleedmlib.files.parameters import (readPARAMETERS,
 # for rfactor_from_csv
 from viperleed.tleedmlib.files.beams import readOUTBEAMS
 from viperleed.tleedmlib.files.iorfactor import beamlist_to_array
-from viperleed.tleedmlib.wrapped.rfactor import r_factor_new as rf
 from viperleed.tleedmlib.files.ivplot import plot_iv  # for plot_iv_from_csv
 from viperleed.tleedmlib.wrapped.error_codes import check_ierr
 
+try:
+    from viperleed.tleedmlib.wrapped.rfactor import r_factor_new as rf          # TODO: pylint complains if not compiled
+except ImportError:
+    _HAS_NEW_RFACTOR = False
+else:
+    _HAS_NEW_RFACTOR = True
 
 LOGGER = logging.getLogger()
 _INPUT_FILES = (
@@ -361,8 +366,16 @@ def rfactor_from_csv(
     best_v0r : float
         The v0r value for which the best R-factor was found.
     """
-    # Use Pendry R-factor - TODO: dicuss if this should be a user parameter
-    #         in the API (if so, the code below will need a few ajustments)
+    if not _HAS_NEW_RFACTOR:
+        raise ModuleNotFoundError(
+            "Missing R-factor compiled Fortran extension module. "
+            "Run make in viperleed/tleedmlib/wrapped, then try again",
+            name='viperleed.tleedmlib.wrapped.rfactor'
+            )
+
+    # Use Pendry R-factor - TODO: discuss if this should be a user
+    # parameter in the API (if so, the code below will need a few
+    # adjustments)
     which_r = 1
 
     # Check compilation of wrapped R-factor code
