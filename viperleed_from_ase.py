@@ -35,6 +35,15 @@ from viperleed.tleedmlib.files.ivplot import plot_iv
 from typing import Sequence
 
 LOGGER = logging.getLogger()
+_INPUT_FILES = (
+    "PARAMETERS",
+    "VIBROCC",
+    "IVBEAMS",
+    "PHASESHIFTS",
+    "DISPLACEMENTS",
+    "EXPBEAMS",
+    "EXPBEAMS.csv",
+    )
 
 def run_from_ase(
     exec_path,
@@ -160,16 +169,6 @@ def run_from_ase(
     if not exec_path.is_dir():
         # Invalid path given
         raise ValueError("Invalid exec_path: not existent, or not a directory")
-
-    input_files = [
-        "PARAMETERS",
-        "VIBROCC",
-        "IVBEAMS",
-        "PHASESHIFTS",
-        "DISPLACEMENTS",
-        "EXPBEAMS",
-        "EXPBEAMS.csv",
-    ]
 
     # Copy all files in the input Path
     if inputs_path is not None:
