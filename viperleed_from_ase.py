@@ -7,7 +7,6 @@ based on tleedm_from_ase.py by Florian Kraushofer
 Requires viperleed to be in the system path (or on PYTHONPATH).
 """
 
-import copy
 from collections import defaultdict
 from dataclasses import dataclass, FrozenInstanceError
 from io import StringIO
