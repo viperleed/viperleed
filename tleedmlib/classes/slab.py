@@ -13,7 +13,6 @@ import copy
 import re
 import itertools
 from numbers import Real
-from typing import Sequence
 
 import numpy as np
 import scipy.spatial as sps
@@ -1823,57 +1822,51 @@ class Slab:
         self.ucell[abs(self.ucell) < 1e-5] = 0.
         self.getCartesianCoordinates(updateOrigin=True)
     
-    def apply_scaling(self, scaling):
-        """Applies a scaling along the unit cell vectors.
-        
-        This can be used to apply an isotropic scaling in all directions
-        or to strech/compress along unit cell vectors in order to change
-        lattice constants in some direction. To apply other (orthogonal)
-        transformations (e.g. rotation, flipping), use apply_matrix_transformation.
-        
+    def apply_scaling(self, *scaling):
+        """Rescale the unit-cell vectors.
+
+        This can be used to stretch/compress along unit cell vectors
+        in order to change lattice constants in some direction or to
+        apply an isotropic scaling in all directions. To apply other
+        (orthogonal) transformations (e.g., rotation, flipping), use
+        `apply_matrix_transformation`.
+
         Parameters
         ----------
-        scaling : Real, Sequence
-            If the scaling is given as a number or a list containing one item, an
-            isotropic scaling will be applied to the unit cell and atom positions.
-            If a list with 3 entries is provided, the scaling will be applied along
-            the unit cell vector in the given order.
-        
+        *scaling : Sequence
+            If only one number, an isotropic scaling is applied to
+            the unit cell and atom positions. If a sequence with
+            three entries, the scaling will be applied along the
+            unit-cell vectors in the given order.
         Raises
         ------
         TypeError
-            If scaling is not a real number nor a sequence
+            If `scaling` has neither 1 nor three elements, or
+            any of the elements is not a number.
         ValueError
-            If scaling is a Sequence with length different than 1 or 3,
-            or if scaling would make the unit cell singular (i.e., reduce
-            the length of a unit vecotr to zero).
-        
+            If `scaling` would make the unit cell singular
+            (i.e., reduce the length of a unit vector to zero)
+
         Examples
         ----------
+        Stretch the unit cell by a factor of 2 along a, b and c.
+        This doubles the lattice constant and increases the volume
+        8-fold:
         >>> slab.apply_scaling(2)
-        
-            Streches the unit cell by a factor of two along a, b and c. This doubles
-            the lattice constant and increases the volume 8-fold. 
-        >>> slab.apply_scaling([1,1,1/3])
-        
-            Compresses the unit cell by a factor of 3 along c.
+
+        Compresses the unit cell by a factor of 3 along c:
+        >>> slab.apply_scaling(1, 1, 1/3)
         """
-        if isinstance(scaling, Real):
-            scaling = (scaling,)*3
-        elif isinstance(scaling, (np.ndarray, Sequence)):
-            if (len(scaling) not in (1, 3)
-                    or len(np.shape(scaling)) != 1):
-                raise ValueError(
-                    "Slab.apply_scaling: only 1-, or 3-sequences allowed"
-                    )
-            if len(scaling) == 1:
-                scaling = (scaling[0],)*3
-        else:
-            raise TypeError(
-                f"Slab.apply_scaling: invalid type {type(scaling)}. "
-                f"Expected number or Sequence."
-            )
-        
+        if len(scaling) not in (1, 3):
+            raise TypeError(f"{type(self).__name__}.apply_scaling: "
+                            "invalid number of arguments. Expected "
+                            f"one or three, got {len(scaling)}.")
+        if not all(isinstance(s, Real) for s in scaling):
+            raise TypeError(f"{type(self).__name__}.apply_scaling: "
+                            f"invalid scaling factor. Expected one "
+                            "or three numbers.")
+        if len(scaling) == 1:
+            scaling *= 3
         if any(abs(s) < 1e-5 for s in scaling):
             raise ValueError("Slab.apply_scaling: cannot reduce unit"
                              "vector(s) to zero length")

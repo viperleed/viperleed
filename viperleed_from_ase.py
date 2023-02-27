@@ -202,7 +202,7 @@ def run_from_ase(
     if uc_transformation_matrix is not None:
         slab.apply_matrix_transformation(uc_transformation_matrix)
     if uc_scaling is not None:
-        slab.apply_scaling(uc_scaling)
+        slab.apply_scaling(*uc_scaling)
 
     # check if the now transformed slab has any z components in vectors a & b
     # raise an error because this would mess up parts of the TensErleed
