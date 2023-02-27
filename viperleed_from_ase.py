@@ -11,6 +11,7 @@ from collections import defaultdict
 from dataclasses import dataclass, FrozenInstanceError
 from io import StringIO
 import logging
+from numbers import Real
 import os
 from pathlib import Path
 import shutil
@@ -172,14 +173,16 @@ def run_from_ase(exec_path, ase_object, inputs_path=None,
         constructed from ase_object. These include optional "change of
         basis" operations, optional `uc_scaling` for scaling the unit
         vector lengths, and a `cut_cell_c_fraction` for selecting only
-        a portion of the `ase_object`.  See help(SlabTransform) for
-        further details.  The transforms are applied in the order
-        given. The `cut_cell_c_fraction` is taken only from the LAST
-        SlabTransform given. Make sure that vectors a & b do not have
-        any components in z after transformation as this is not allowed
-        and will raise a ValueError.
-        Default is a single SlabTransform(), corresponding to no
-        transformation and cut at c>=0.4.
+        a portion of the `ase_object`. In addition, some special
+        SlabTransform objects that swap unit cell axes can also be used
+        (swap_a_b, swap_b_c, and swap_c_a). See help(SlabTransform) and
+        help(swap_*_*) for further details. The transforms are applied
+        in the order given. The `cut_cell_c_fraction` is taken only
+        from the LAST SlabTransform given. Make sure that vectors a & b
+        do not have any components in z after transformation as this is
+        not allowed and will raise a ValueError. Default is a single
+        SlabTransform(), corresponding to no transformation and cut
+        at c>=0.4.
     cleanup_work : bool, optional
         Whether the work directory created during execution of the
         calculation is to be removed at the end. Default is False.
@@ -236,6 +239,10 @@ def run_from_ase(exec_path, ase_object, inputs_path=None,
         rot_mat_z(theta) : Rotation matrix around z by theta (deg)
         rot_mat_axis(axis, theta): Rotation around axis by theta (deg)
         flip_c_mat : Mirror matrix that flips the cell along c
+    and the special SlabTransform objects:
+        swap_a_b : Swap vectors a & b (changes handedness)
+        swap_b_c : Swap vectors b & c (changes handedness)
+        swap_c_a : Swap vectors c & a (changes handedness)
     For applying multiple operations, the order does matter. You
     can: (i) Combine multiple orthogonal transformation matrices
     via matrix multiplication (@ symbol or np.dot) into a single
@@ -326,6 +333,23 @@ def _copy_inputs_to_exec_path(inputs_path, exec_path):
 
 def _apply_transform(slab, transform, apply_cut=False):
     """Apply a single SlabTransform `transform` to `slab`."""
+    indices = None       # Unit-cell and position indices to be swapped
+    if transform is swap_a_b:
+        indices = (0, 1), (1, 0)
+    elif transform is swap_b_c:
+        indices = (2, 1), (1, 2)
+    elif transform is swap_c_a:
+        indices = (0, 2), (2, 0)
+
+    if indices:
+        # Swapping axes will require to make a new bulk slab for sure
+        slab.bulkslab = None
+        new_axes, old_axes = ((ind,) for ind in indices)
+        slab.ucell.T[new_axes] = slab.ucell.T[old_axes]
+        for atom in slab:
+            atom.pos[new_axes] = atom.pos[old_axes]
+        return  # No scaling nor cutting
+
     if transform.orthogonal_matrix is not None:
         slab.apply_matrix_transformation(transform.orthogonal_matrix)
     if transform.uc_scaling is not None:
@@ -861,13 +885,30 @@ def rot_mat_axis(axis, theta):
             + (1 - np.cos(theta)) * u_outer)
 
 
-# some other useful matrices
+# Some other useful transformations
+# Swapping unit cell vectors
+swap_a_b = swap_b_a = _ImmutableSlabTransform()
+swap_b_c = swap_c_b = _ImmutableSlabTransform()
+swap_c_a = swap_a_c = _ImmutableSlabTransform()
 
-# Be careful: These WILL change chirality (handedness) of the cell -
-# use rotation around a or c if you want to avoid this. (Chirality
-# changes can not be expressed via rotations.)
-switch_b_c_mat = np.array([[1, 0, 0], [0, 0, 1], [0, 1, 0]])  # swap b and c
-switch_a_b_mat = np.array([[0, 1, 0], [1, 0, 0], [0, 0, 1]])  # swap a and b
+
+# Notice: the __doc__ edit will work fine in python >=3.10, but earlier
+# versions print out type(obj).__doc__ when help is called. There's no
+# good way around this, other than making each a separate class.
+_fmt_doc = """
+    This SlabTransform swaps the '{}' and '{}' unit cell vectors,
+    but does not change the Cartesian coordinates of the atoms.
+
+    Be careful, as this transform WILL CHANGE THE HANDEDNESS of the
+    unit cell. To avoid this, you can instead use a rotation around an
+    appropriate axis. For orthogonal cells, you can use a 90 degrees
+    rotation around '{}'.
+"""
+
+swap_a_b.__doc__ += _fmt_doc.format('a', 'b', 'c')
+swap_b_c.__doc__ += _fmt_doc.format('b', 'c', 'a')
+swap_c_a.__doc__ += _fmt_doc.format('c', 'a', 'b')
+
 
 # flip the cell along c (useful if the lower half of the cell is to be kept)
 flip_c_mat = np.array([[1, 0, 0], [0, 1, 0], [0, 0, -1]])
