@@ -1818,10 +1818,14 @@ class Slab:
             raise ValueError("apply_matrix_transformation: matrix is not "
                              "orthogonal. Consider using apply_scaling.")
 
+        # Determine whether trafo_matrix will change
+        # the z component of the unit vectors
+        changes_z = not np.allclose(trafo_matrix[2], (0, 0, 1))
+
         self.ucell = trafo_matrix.dot(self.ucell)
         self.ucell[abs(self.ucell) < 1e-5] = 0.
-        self.getCartesianCoordinates(updateOrigin=True)
-    
+        self.getCartesianCoordinates(updateOrigin=changes_z)
+
     def apply_scaling(self, *scaling):
         """Rescale the unit-cell vectors.
 
@@ -1875,6 +1879,6 @@ class Slab:
         # Apply to unit cell (basis). Notice the inverted order, because the
         # unit cell is stored with unit vectors as columns (i.e., a = ucell[:, 0])
         self.ucell = self.ucell.dot(scaling_mat)
-            
-        self.getCartesianCoordinates(updateOrigin=True) # update cartesian values
         
+
+        self.getCartesianCoordinates(updateOrigin=scaling[2] != 1)
