@@ -375,23 +375,23 @@ def getDeltas(index, basedir=".", targetdir=".", required=True):
     basedir is the directory in which the Delta directory is based.
     targetdir is the directory to which the Tensor files should be moved."""
     dn = "Deltas_"+str(index).zfill(3)
-    if os.path.isdir(os.path.join(basedir, "Deltas", dn)):
-        for f in [f for f in os.listdir(os.path.join(basedir, "Deltas", dn))
-                  if (os.path.isfile(os.path.join(basedir, "Deltas", dn, f))
+    _basedir, _targetdir = Path(basedir), Path(targetdir)
+    zip_path=(_basedir / "Deltas" / dn).with_suffix(".zip")
+    if os.path.isdir(_basedir / "Deltas" / dn):
+        for f in [f for f in os.listdir(_basedir / "Deltas" / dn)
+                  if (os.path.isfile(_basedir / "Deltas" / dn / f)
                       and f.startswith("DEL_"))]:
             try:
-                shutil.copy2(os.path.join(basedir, "Deltas", dn, f), targetdir)
+                shutil.copy2(_basedir / "Deltas" / dn / f, targetdir)
             except Exception:
                 logger.error("Could not copy existing delta files to "
                              "work directory")
                 raise
-    elif os.path.isfile(os.path.join(basedir, "Deltas", dn+".zip")):
+    elif os.path.isfile(zip_path):
         logger.info("Unpacking {}.zip...".format(dn))
-        zip_path = (Path(basedir) / "Deltas" / dn).with_suffix(".zip")
-        unpack_path = (Path(targetdir) / "Deltas" / dn)
         try:
             with ZipFile(zip_path, 'r') as zip_ref:
-                zip_ref.extractall(unpack_path)
+                zip_ref.extractall(_targetdir)
         except Exception:
             logger.error("Failed to unpack {}.zip".format(dn))
             raise
