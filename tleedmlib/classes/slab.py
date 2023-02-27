@@ -1822,7 +1822,6 @@ class Slab:
         self.ucell = trafo_matrix.dot(self.ucell)
         self.ucell[abs(self.ucell) < 1e-5] = 0.
         self.getCartesianCoordinates(updateOrigin=True)
-        self.collapseFractionalCoordinates()
     
     def apply_scaling(self, scaling):
         """Applies a scaling along the unit cell vectors.
