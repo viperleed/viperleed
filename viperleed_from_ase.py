@@ -246,6 +246,7 @@ def run_from_ase(
     # ViPErLEED should have suceeded if you arrive here. However, we may not
     # have run a refcalc (id == 1). In that case, return empty strings.
     if 1 not in rparams.RUN:
+        os.chdir(home)
         return "", "", "", rparams.V0_IMAG
 
     # read out the THEOBEAMS.csv file and complex amplitudes
