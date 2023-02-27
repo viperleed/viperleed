@@ -23,6 +23,7 @@ import numpy as np
 # for run_from_ase
 import viperleed
 from viperleed.tleedm import run_tleedm
+from viperleed.tleedmlib.base import rotation_matrix
 from viperleed.tleedmlib.classes.slab import Slab
 from viperleed.tleedmlib.files import poscar
 from viperleed.tleedmlib.files.parameters import (readPARAMETERS,
@@ -257,11 +258,13 @@ def run_from_ase(
         switch_b_c_mat : Switches vectors b & c
         switch_a_b_mat : Switches vectors a & b
         flip_c_mat : Flips (i.e., mirrors) cell along c
-        rot_mat_c(theta) : Returns a rotation matrix around c (by theta rad.)
-        rot_mat_a(theta) : Returns a rotation matrix around a (by theta rad.)
     For applying multiple operations, the order does matter. You can combine
     operations via matrix multiplication (@ symbol or np.dot); the left-most
     matrix is applied last.
+        rot_mat_x(theta) : Rotation matrix around x by theta (deg)
+        rot_mat_z(theta) : Rotation matrix around z by theta (deg)
+        rot_mat_axis(axis, theta): Rotation around axis by theta (deg)
+        flip_c_mat : Mirror matrix that flips the cell along c
     """
     exec_path = Path(exec_path).resolve()
     if not exec_path.is_dir():
@@ -780,42 +783,80 @@ def plot_iv_from_csv(
     return plot_iv(all_beam_data, output_file, labels=labels, legends=legends)
 
 
-def rot_mat_a(theta):
-    """Generates a rotation matrix around the a axis.
-    
-    The rotation is positive, i.e. clockwise when looking along a.
-    
+def rot_mat_x(theta):
+    """Return a rotation matrix around the x axis.
+
+    The rotation is positive, i.e., clockwise when looking along x,
+    when applied from the left to column vectors. The same rotation
+    for row vectors can be obtained by multiplying on the right with
+    the transpose of the return value.
+
     Parameters
     ----------
     theta : float
-        Angle of rotation in degrees. (Use np.degrees to convert)
+        Angle of rotation in degrees.
+
+    Returns
+    -------
+    rot_mat : numpy.ndarray
+        Shape (3, 3). Rotation matrix around the x axis.
     """
     theta = np.radians(theta)
-    rot_mat = [
-        [1, 0, 0],
-        [0, np.cos(theta), -np.sin(theta)],
-        [0, np.sin(theta), np.cos(theta)],
-    ]
-    return np.array(rot_mat)
+    rot_mat = np.identity(3)
+    rot_mat[1:, 1:] = rotation_matrix(theta, dim=2)
+    return rot_mat
 
 
-def rot_mat_c(theta):
-    """Generates a rotation matrix around the c axis.
-    
-    The rotation is positive, i.e. clockwise when looking along c.
-    
+def rot_mat_z(theta):
+    """Return a rotation matrix around the z axis.
+
+    The rotation is positive, i.e. clockwise when looking along z,
+    when applied from the left to column vectors. The same rotation
+    for row vectors can be obtained by multiplying on the right with
+    the transpose of the return value.
+
     Parameters
     ----------
     theta : float
-        Angle of rotation in degrees. (Use np.degrees to convert)
+        Angle of rotation in degrees.
+
+    Returns
+    -------
+    rot_mat : numpy.ndarray
+        Shape (3, 3). Rotation matrix around the z axis.
     """
     theta = np.radians(theta)
-    rot_mat = [
-        [np.cos(theta), -np.sin(theta), 0],
-        [np.sin(theta), np.cos(theta), 0],
-        [0, 0, 1],
-    ]
-    return np.array(rot_mat)
+    return rotation_matrix(theta, dim=3)
+
+
+def rot_mat_axis(axis, theta):
+    """Return a 3D rotation matrix by `theta` around `axis`.
+
+    Parameters
+    ----------
+    axis : numpy.ndarray
+        A vector parallel to the rotation axis. Shape (3,).
+    theta : float
+        Rotation angle in degrees.
+
+    Returns
+    -------
+    rotation_matrix : numpy.ndarray
+        Rotation matrix around `axis` by `theta`. The rotation is
+        counter-clockwise when applied to column vectors from
+        the left.
+    """
+    # We use the 'concise form' of the axis--angle formulation from
+    # en.wikipedia.org/wiki/Rotation_matrix#Rotation_matrix_from_axis_and_angle
+    axis_dir = axis / np.linalg.norm(axis)
+
+    # Cross-product matrix from stackoverflow.com/questions/66707295
+    u_cross = np.cross(axis_dir, -np.identity(3))
+    u_outer = np.outer(axis_dir)
+    theta = np.radians(theta)
+    return (np.cos(theta) * np.identity(3)
+            + np.sin(theta) * u_cross
+            + (1 - np.cos(theta)) * u_outer)
 
 
 # some other useful matrices
