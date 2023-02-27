@@ -243,18 +243,11 @@ def run_from_ase(
     _write_poscar(slab, exec_path)
 
     # Take care of input files and work directory
-    work_path = exec_path / "work"
-    work_path.mkdir(exist_ok=True)
-    # copy input files to work directory
     # NOTE: PARAMETERS should NOT contain SITE_DEF flags.
     # VIBROCC should contain *_surf sites for all elements.
-    for file in input_files:
-        try:
-            shutil.copy2(exec_path / file, work_path / file)
-        except FileNotFoundError:
-            pass
+    work_path = _make_work_dir(exec_path)
 
-    home = Path(".").resolve()
+    home = Path.cwd()
     os.chdir(work_path)
 
     # We are ready to run ViPErLEED! Have fun!
@@ -308,6 +301,19 @@ def _copy_inputs_to_exec_path(inputs_path, exec_path):
             shutil.copy2(inputs_path / file, exec_path / file)
         except FileNotFoundError:
             pass
+
+
+def _make_work_dir(exec_path):
+    """Return exec_path/'work' after copying there all input files."""
+    work_path = exec_path / "work"
+    work_path.mkdir(exist_ok=True)
+    # copy input files to work directory
+    for file in _INPUT_FILES:
+        try:
+            shutil.copy2(exec_path / file, work_path / file)
+        except FileNotFoundError:
+            pass
+    return work_path
 
 
 def _write_poscar(slab, exec_path):                                             # TODO: could be done with a flag on writePOSCAR
