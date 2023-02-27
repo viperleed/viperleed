@@ -1842,6 +1842,12 @@ class Slab:
             the unit cell and atom positions. If a sequence with
             three entries, the scaling will be applied along the
             unit-cell vectors in the given order.
+
+        Returns
+        -------
+        scaling_matrix : numpy.ndarray
+            The matrix used for scaling the unit vectors.
+
         Raises
         ------
         TypeError
@@ -1883,3 +1889,4 @@ class Slab:
 
 
         self.getCartesianCoordinates(updateOrigin=scaling[2] != 1)
+        return scaling_matrix
