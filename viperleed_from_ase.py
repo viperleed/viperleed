@@ -190,9 +190,8 @@ def run_from_ase(
     slab = Slab(ase_atoms=ase_object)
 
     # Get temporary parameters object
-    rp = readPARAMETERS(exec_path / parameters_name)
-    interpretPARAMETERS(rp, slab = slab)
-    v0i = rp.V0_IMAG
+    rparams = readPARAMETERS(exec_path / parameters_name)
+    interpretPARAMETERS(rparams, slab=slab)
 
     # Transformation of slab object: Rotation or isotropic streching/shrinking
     if uc_transformation_matrix is not None:
@@ -223,7 +222,7 @@ def run_from_ase(
     preset_params = {}
 
     # assign site definitions from PARAMETERS if available
-    if not rp.SITE_DEF:
+    if not rparams.SITE_DEF:
         # assign default surface sites but warn
         LOGGER.warning("Parameter SITE_DEF not specified. "
                       "Double check PARAMETERS and POSCAR to "
@@ -264,8 +263,8 @@ def run_from_ase(
 
     # ViPErLEED should have suceeded if you arrive here. However, we may not
     # have run a refcalc (id == 1). In that case, return empty strings.
-    if 1 not in rp.RUN:
-        return "", "", "", v0i
+    if 1 not in rparams.RUN:
+        return "", "", "", rparams.V0_IMAG
 
     # read out the THEOBEAMS.csv file and complex amplitudes:
     theobeams_name = "THEOBEAMS.csv"
@@ -283,12 +282,11 @@ def run_from_ase(
             content_str = ""
         content_list.append(content_str)
 
-    theobeams_file_str, amp_real_file_str, amp_imag_file_str = content_list
 
     # Move back home
     os.chdir(home)
 
-    return theobeams_file_str, amp_real_file_str, amp_imag_file_str, v0i
+    return *content_list, rparams.V0_IMAG
 
 
 def _copy_inputs_to_exec_path(inputs_path, exec_path):
