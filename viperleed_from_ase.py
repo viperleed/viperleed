@@ -9,12 +9,13 @@ Requires viperleed to be in the system path (or on PYTHONPATH).
 
 import copy
 from collections import defaultdict
+from dataclasses import dataclass, FrozenInstanceError
 from io import StringIO
 import logging
 import os
 from pathlib import Path
 import shutil
-from typing import Sequence
+from typing import Sequence, Any
 import warnings
 
 import numpy as np
@@ -49,6 +50,88 @@ _INPUT_FILES = (
     "EXPBEAMS",
     "EXPBEAMS.csv",
     )
+
+
+@dataclass
+class SlabTransform:
+    """A container for unit-cell transformations.
+
+    Attributes
+    ----------
+    orthogonal_matrix : numpy.ndarray, optional
+        Shape (3, 3). Can contain an arbitrary orthogonal transform
+        (i.e., a combination of mirroring and rotations) that will
+        be applied to the cell. The transformation is applied BEFORE
+        scaling, i.e., using the original unit cell. The matrix (O)
+        is applied to both the unit cell and all Cartesian atomic
+        positions. The unit cell U (unit vectors as columns) is
+        transformed to O @ U. Atom Cartesian coordinates (v) are
+        transformed to O @ v. This attribute can be used, e.g., to
+        apply a rotation or a mirroring of the slab.
+    uc_scaling : float or Sequence of float, optional
+        Scaling to be applied to the cell. Scaling is applied AFTER
+        the transformation, i.e., along the new unit cell vectors. This
+        can be used to apply an isotropic scaling in all directions or
+        to stretch/compress along unit cell vectors in order to change
+        lattice constants in some direction. If the scaling is given as
+        a number or a 1-element sequence, an isotropic scaling will be
+        applied to the unit cell and atom positions. If a sequence with
+        three entries is provided, the scaling will be applied along
+        the unit cell vectors in the given order. Specifically, given
+        uc_scaling == (s1, s2, s3), the new unit cell vectors will be
+        a' = a * s1, b' = b * s2, c' = c * s3. Default is None, i.e.,
+        no scaling.
+    cut_cell_c_fraction : float, optional
+        Fractional position along the c vector to cut the slab.
+        (ViPErLEED expects the cell to have the surface at the
+        "top" -- i.e., at high z coordinates, and bulk-like layers
+        at the bottom). Cutting will be performed along the vector
+        c AFTER all transformations (see uc_transformation_matrix)
+        are applied. Only the part of the cell above (i.e., >=)
+        this value will be kept. Everything else is discarded.
+        Default is 0.4.
+    """
+
+    orthogonal_matrix: Any = None
+    uc_scaling: Any = None
+    cut_cell_c_fraction: float = 0.4
+
+
+# We would really like to use frozen=True here, but since python 3.8.10
+# a frozen cannot inherit from a non-frozen. We're forced to emulate
+# the frozen-ness by overriding __setattr__ and __delattr__, and using
+# the __init__ implementation for frozen dataclasses. It is NOT A GOOD
+# IDEA TO INHERIT FROM THIS WORKAROUND CLASS.
+@dataclass
+class _ImmutableSlabTransform(SlabTransform):
+    """A container for immutable slab transformations.
+
+    This class is meant exclusively as the type for Slab
+    transformations that cannot be represented via a left-
+    multiplication of the unit cell with an orthogonal
+    matrix. These transforms cannot perform any scaling
+    nor cutting of the unit cell. They should be combined
+    with SlabTransform instances for that purpose.
+    """
+
+    def __init__(self):
+        """Initialize instance attributes."""
+        object.__setattr__(self, 'orthogonal_matrix', None)
+        object.__setattr__(self, 'uc_scaling', None)
+        object.__setattr__(self, 'cut_cell_c_fraction', 0.)
+
+    def __setattr__(self, name, value, /):
+        """Raise FrozenInstanceError."""
+        if name == '__doc__':
+            # One exception to allow nicer 'help' for instances
+            super().__setattr__(name, value)
+            return
+        raise FrozenInstanceError(f"cannot assign to field {name!r}")
+
+    def __delattr__(self, name, /):
+        """Raise FrozenInstanceError."""
+        raise FrozenInstanceError(f"cannot assign to field {name!r}")
+
 
 def run_from_ase(
     exec_path,
