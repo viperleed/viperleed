@@ -7,32 +7,31 @@ based on tleedm_from_ase.py by Florian Kraushofer
 Requires viperleed to be in the system path (or on PYTHONPATH).
 """
 
-import os
-import warnings
-from pathlib import Path
-import numpy as np
-import shutil
-from io import StringIO
 import copy
+from io import StringIO
 import logging
+import os
+from pathlib import Path
+import shutil
+from typing import Sequence
+import warnings
 
-import viperleed
+import numpy as np
 
 # for run_from_ase
+import viperleed
 from viperleed.tleedm import run_tleedm
-from viperleed.tleedmlib import Slab, Rparams
+from viperleed.tleedmlib.classes.slab import Slab
 from viperleed.tleedmlib.files.poscar import writePOSCAR
-from viperleed.tleedmlib.files.parameters import readPARAMETERS, interpretPARAMETERS
-
+from viperleed.tleedmlib.files.parameters import (readPARAMETERS,
+                                                  interpretPARAMETERS)
 # for rfactor_from_csv
 from viperleed.tleedmlib.files.beams import readOUTBEAMS
 from viperleed.tleedmlib.files.iorfactor import beamlist_to_array
 from viperleed.tleedmlib.wrapped.rfactor import r_factor_new as rf
-from viperleed.tleedmlib.wrapped.error_codes import error_codes, check_ierr
+from viperleed.tleedmlib.files.ivplot import plot_iv  # for plot_iv_from_csv
+from viperleed.tleedmlib.wrapped.error_codes import check_ierr
 
-# for plot_iv_from_csv
-from viperleed.tleedmlib.files.ivplot import plot_iv
-from typing import Sequence
 
 LOGGER = logging.getLogger()
 _INPUT_FILES = (
