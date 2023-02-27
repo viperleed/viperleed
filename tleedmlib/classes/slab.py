@@ -1400,7 +1400,7 @@ class Slab:
             ts.ucell[:, 2] = ts.ucell[:, 2] * cfact
             bulkc[2] = -bulkc[2]
             original_atoms = ts.atlist[:] # all atoms before adding layers
-            
+
             # split bulkc into parts parallel and orthogonal to unit cell c
             # this allows to keep the same ucell and shift correctly the new bulk layers
             c_direction = ts.ucell[:, 2] / np.dot(ts.ucell[:, 2], ts.ucell[:, 2])
@@ -1535,7 +1535,7 @@ class Slab:
             err_txt = "Less than two layers detected. Check POSCAR and consider modifying LAYER_CUTS."
             logger.error(err_txt)
             raise RuntimeError(err_txt)
-            
+
         # construct bulk slab
         bsl = copy.deepcopy(self)
         bsl.resetSymmetry()
@@ -1562,7 +1562,7 @@ class Slab:
             if  abs(zdiff) < 1e-5:
                 err_txt = "Unable to detect bulk interlayer vector. Check POSCAR and consider explicitly setting BULK_REPEAT."
                 logger.error(err_txt)
-                raise RuntimeError(err_txt)   
+                raise RuntimeError(err_txt)
             bulkc = cvec * zdiff / cvec[2]
         bsl.ucell[:, 2] = bulkc
         # reduce dimensions in xy
@@ -1668,10 +1668,10 @@ class Slab:
 
     def getSurfaceAtoms(self, rp):
         """Checks which atoms are 'at the surface', returns them as a set."""
-        
+
         _PTL = set(el.lower() for el in tl.leedbase.PERIODIC_TABLE)
         _RADII = tl.leedbase.COVALENT_RADIUS
-        
+
         atoms = copy.deepcopy(self.atlist)
         # run from top to bottom of slab
         atoms.sort(key=lambda atom: -atom.pos[2])
@@ -1775,60 +1775,52 @@ class Slab:
         return NN_dict
 
     def apply_matrix_transformation(self, trafo_matrix):
-        """Applies an orthogonal transformation to the unit cell and all atoms.
-        
-        The transformation is described by an orthogonal transfomation matrix
-        (O) which is applied to both the unit cell and all atomic positions.
-        
-        This transformation is essentially equivalent to a change of basis.
-        The transformation of the unit cell (U) is applied as U' = OUO^T.
-        Fractional and cartesian atomic positions (v) are transformed as Ov.
-        This method can be used to switch indices, rotate the slab, etc..
-        
+        """Apply an orthogonal transformation to the unit cell and all atoms.
+
+        The transformation is given as an orthogonal transformation
+        matrix (O) which is applied to BOTH the unit cell and all
+        Cartesian atomic coordinates. The unit cell (U, unit vectors
+        as columns) is transformed to U' = O @ U. Atomic coordinates
+        (v, as column vectors) are transformed to v' = O @ v. This
+        transformation is essentially equivalent to a change of basis.
+
+        This method differs from `rotate_atoms`, `mirror_atoms` and
+        `rotate_unit_cell` in that the former two only cause a
+        rotation of the atoms, but not of the unit cell, whereas
+        the latter rotates the unit cell but not the atoms. Here both
+        unit cell and atoms are transformed.
+
         Parameters
         ----------
         trafo_matrix : Sequence
-                trafo_matrix must be an orthogonal 3-by-3 matrix.
-                Contains the transformation matrix (O) describing
-                the applied transformation.
-        
+            `trafo_matrix` must be an orthogonal 3-by-3 matrix.
+            Contains the transformation matrix (O) describing
+            the applied transformation.
         Raises
         ------
         ValueError
-            If trafo_matrix is not 3-by-3 or not orthogonal.
-        
+            If `trafo_matrix` is not 3-by-3 or not orthogonal.
+
         Examples
         --------
+        Apply a rotation by 90 deg around the z axis to the unit cell
+        (in positive direction, i.e. clockwise when looking along z)
         >>> theta = np.pi/2
         >>> rot_mat = [[np.cos(theta), -np.sin(theta), 0],
                        [np.sin(theta),  np.cos(theta), 0],
                        [0, 0, 1]]
         >>> slab.apply_matrix_transformation(rot_mat)
-                
-            Applies a rotation by 90 deg around the z axis to the unit cell.
-            (In positive direction, i.e. clockwise looking along z)
-            
-        >>> swap_b_c = [[1, 0, 0],
-                        [0, 0, 1],
-                        [0, 1, 0]]
-        >>> slab.apply_matrix_transformation(swap_b_c)
-                
-            Applies a transformation that switches the unit cell vectors b
-            and c in a non-handedness-conserving manner.
         """
         trafo_matrix = np.asarray(trafo_matrix)
         if trafo_matrix.shape != (3, 3):
-            raise ValueError(
-                "apply_matrix_transformation: not a 3-by-3 matrix"
-            )
-        
+            raise ValueError("apply_matrix_transformation: "
+                             "not a 3-by-3 matrix")
         if not np.allclose(np.linalg.inv(trafo_matrix), trafo_matrix.T):
             raise ValueError("apply_matrix_transformation: matrix is not "
-                             "orthogonal. Consider unsing apply_scaling.")
-        
-        self.ucell = trafo_matrix.dot(self.ucell).dot(trafo_matrix.T)
-        for atom in self.atlist:
-            atom.pos = trafo_matrix.dot(atom.pos)
+                             "orthogonal. Consider using apply_scaling.")
+
+        self.ucell = trafo_matrix.dot(self.ucell)
+        self.ucell[abs(self.ucell) < 1e-5] = 0.
         self.getCartesianCoordinates(updateOrigin=True)
         self.collapseFractionalCoordinates()
     
