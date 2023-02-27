@@ -57,6 +57,7 @@ def run_from_ase(
     cut_cell_c_fraction=0.4,
     uc_transformation_matrix=None,
     uc_scaling=None,
+    cleanup_work=False,
 ):
     """Perform a ViPErLEED calulation starting from an ase.Atoms object.
     
@@ -118,6 +119,9 @@ def run_from_ase(
         entries is provided, the scaling will be applied along the unit cell
         vectors in the given order. Given uc_scaling == (s1, s2, s3), the
         new unit cell vectors will be a' = a * s1, b' = b * s2, c' = c * s3.
+    cleanup_work : bool, optional
+        Whether the work directory created during execution of the
+        calculation is to be removed at the end. Default is False.
 
     Returns
     -------
@@ -250,6 +254,13 @@ def run_from_ase(
     # Move back home
     os.chdir(home)
 
+    if cleanup_work:
+        try:
+            shutil.rmtree(work_path)
+        except OSError as err:
+            LOGGER.warning(
+                f"Failed to remove work directory {work_path}. Info: {err}"
+                )
     return *content_list, rparams.V0_IMAG
 
 
