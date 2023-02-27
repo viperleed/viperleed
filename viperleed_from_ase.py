@@ -8,6 +8,7 @@ Requires viperleed to be in the system path (or on PYTHONPATH).
 """
 
 import copy
+from collections import defaultdict
 from io import StringIO
 import logging
 import os
@@ -217,27 +218,6 @@ def run_from_ase(
     # Update Slab
     slab.updateAtomNumbers()
     slab.updateElementCount()
-    
-    # Some Parameters may be necessary to set here rather than later
-    preset_params = {}
-
-    # assign site definitions from PARAMETERS if available
-    if not rparams.SITE_DEF:
-        # assign default surface sites but warn
-        LOGGER.warning("Parameter SITE_DEF not specified. "
-                      "Double check PARAMETERS and POSCAR to "
-                      "make sure all sites are recognized correctly. "
-                      "Default *_surf sites definitions will be added "
-                      "for atoms visible from vacuum.")
-        # figure out surface sites
-        site_def = {}
-        surface_atoms = slab.getSurfaceAtoms(rp)
-        # surface species of each element
-        for element in slab.elements:
-            atn = [at.oriN for at in surface_atoms if at.el == element]
-            if atn:
-                site_def[element] = {"surf": atn}
-        preset_params["SITE_DEF"] = site_def
 
     _write_poscar(slab, exec_path)
 
@@ -251,15 +231,13 @@ def run_from_ase(
 
     # We are ready to run ViPErLEED! Have fun!
     try:
-        run_tleedm(
-            slab=slab,
-            preset_params=preset_params,
-            source=os.path.dirname(viperleed.__file__),
-        )
+        run_tleedm(slab=slab,
+                   preset_params=_make_preset_params(rparams, slab),
+                   source=Path(viperleed.__file__).parent,)
     except Exception as err:
         # If ViPErLEED fails, move back to home directory
         os.chdir(home)
-        raise RuntimeError("ViPErLEED calculation failed.") from err
+        raise RuntimeError("ViPErLEED calculation failed") from err
 
     # ViPErLEED should have suceeded if you arrive here. However, we may not
     # have run a refcalc (id == 1). In that case, return empty strings.
@@ -299,6 +277,26 @@ def _copy_inputs_to_exec_path(inputs_path, exec_path):
             shutil.copy2(inputs_path / file, exec_path / file)
         except FileNotFoundError:
             pass
+
+
+def _make_preset_params(rparams, slab):
+    """Return preset parameters to use when running tleedm."""
+    if rparams.SITE_DEF:
+        return {}
+
+    # When no sites are explicitly defined, give all
+    # atoms visible from vacuum a '_surf' site label
+    LOGGER.warning("Parameter SITE_DEF not specified. Double check "
+                   "PARAMETERS and POSCAR to make sure all sites are "
+                   "recognized correctly. Default *_surf sites definitions "
+                   "will be added for atoms visible from vacuum.")
+    preset_params = {}
+    site_def = defaultdict(list)
+    for atom in slab.getSurfaceAtoms():
+        site_def[atom.el].append(atom.oriN)
+    preset_params["SITE_DEF"] = site_def
+
+    return preset_params
 
 
 def _make_work_dir(exec_path):
