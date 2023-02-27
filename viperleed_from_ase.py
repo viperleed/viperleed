@@ -142,34 +142,32 @@ def run_from_ase(
     uc_scaling=None,
     cleanup_work=False,
 ):
-    """Perform a ViPErLEED calulation starting from an ase.Atoms object.
-    
-    This function is a core part of the API for ViPErLEED. It allows to run
-    a calulation from an ASE-type object.  The ASE object which is expected
-    to contain a simulation cell will be cut at a specified height fraction,
+    """Perform a ViPErLEED calculation starting from an ase.Atoms object.
+
+    This function is a core part of the API for ViPErLEED. It allows
+    to run a calculation from an ASE (Atomic Simulation Environment)
+    Atoms object. The ase.Atoms object, which is expected to contain
+    a simulation cell, will be cut at a specified height fraction,
     transformed into a ViPErLEED Slab and written to a POSCAR file. The
-    ViPErLEED calculation will then be executed on the given structure using
-    the input files found either in inputs_path or exec_path. The type of
-    calculation performed depends on the value of the RUN parameter in the
-    PARAMETERS file. If RUN = 1, this ultimately yields reference electron
-    scattering amplitudes and intensities. These are collected in CSV files
-    which are returned as strings for further processing.
-    
+    ViPErLEED calculation is then executed on the structure using the
+    input files found either in `inputs_path` or `exec_path`. The type
+    of calculation performed depends on the value of the RUN parameter
+    in the PARAMETERS file. If RUN = 1, this yields reference electron
+    scattering amplitudes and intensities. These are collected in CSV
+    files, which are returned as strings for further processing.
+
     Parameters
     ----------
-    exec_path: string
-        Path where to execute the reference calculation. The directory needs
-        to exist. Input files will be copied from inputs_path, if provided.
-        Otherwise it is assumed that all input files are already in exec_path.
-        Temporary files will be stored in a subdirectory called work.
+    exec_path: string or Path
+        Path where to execute the ViPErLEED calculation. The directory
+        needs to exist. Input files will be copied from `inputs_path`,
+        if provided. Otherwise it is assumed that all input files are
+        already in `exec_path`. Temporary files will be stored in a
+        subdirectory called work.
     ase_object : ase.Atoms
         ASE-type object that contains the atoms for the slab to be used with
         ViPErLEED. This is expected to contain a simulation cell which will
         be cut as described below.
-    inputs_path: string, optional
-        Path to directory containing input files (PARAMETERS, VIBROCC, etc.)
-        for ViPErLEED calculation. If provided, files will be copied from
-        inputs_path to exec_path (overwriting existing files there!).
     cut_cell_c_fraction : float, default=0.4
         Where to cut the ase object cell (ViPErLEED expects the cell to have
         the surface at the "top" -- i.e., at high z coordinates, and bulk-like
@@ -188,6 +186,12 @@ def run_from_ase(
         The transformation of the unit cell (U) is of the form OUO^T. Atom
         positions (v, both fractional and cartesian) are transformed as Ov.
         This parameter can be used to switch indices, rotate the slab, etc..
+    inputs_path: str or Path or None, optional
+        Path to directory containing input files (PARAMETERS, VIBROCC,
+        etc.) for ViPErLEED calculation. If provided, files will be
+        copied from `inputs_path` to `exec_path` (silently overwriting
+        existing files there!). If None or not given, no copying
+        occurs. Default is None.
         Make sure that vectors a & b do not have any components in z
         direction after transformation as this is not allowed and will raise
         an error.
@@ -208,26 +212,28 @@ def run_from_ase(
 
     Returns
     -------
-    theobeams_file_str : string
-        String containg the contents of the file "THEOBEAMS.csv", i.e. the
-        scattering intensities as calculated in the reference calculation.
-        An empty string is returned if no reference calculation was run.
-    amp_real_file_str : string
-        String containg the contents of the file "Complex_amplitudes_real.csv",
-        i.e., the real part of the scattering amplitudes as calculated in the
-        reference calculation. An empty string is returned if no reference
-        calculation was run.
-    amp_imag_file_str : string
-        String containg the contents of the file "Complex_amplitudes_imag.csv",
-        i.e., the imaginary part of the scattering amplitudes as calculated in
-        the reference calculation. An empty string is returned if no reference
-        calculation was run.
+    theobeams_file_str : str
+        Contents of the file "THEOBEAMS.csv", i.e. the scattering
+        intensities as calculated in the reference calculation. An
+        empty string is returned if no reference calculation was run.
+    amp_real_file_str : str
+        Contents of the file "Complex_amplitudes_real.csv", i.e.,
+        the real part of the scattering amplitudes as calculated
+        in the reference calculation. An empty string is returned
+        if no reference calculation was run or if the file was not
+        found.
+    amp_imag_file_str : str
+        Contents of the file "Complex_amplitudes_imag.csv", i.e., the
+        imaginary part of the scattering amplitudes as calculated in
+        the reference calculation. An empty string is returned if no
+        reference calculation was run or if the file was not found.
     v0i : float
-        Imaginary part of the inner potential as read from "PARAMETERS". This is
-        returned here since it is an input parameter for the R-factor calculation.
-        The value is read from PARAMETERS and left unchanged - it is not a result
-        of the calculation and is returned here for convenience only.
-    
+        Imaginary part of the inner potential as read from the
+        PARAMETERS file. This is returned here since it is an input
+        parameter for the R-factor calculation. The value is read
+        from PARAMETERS and left unchanged - it is not a result of
+        the calculation and is returned here for convenience only.
+
     Raises
     ------
     FileNotFoundError
