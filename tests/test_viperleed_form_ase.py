@@ -54,6 +54,7 @@ _ASE_ATOMS = (
 
 @pytest.fixture(name="ase_ni_100_1x1_cell")
 def fixture_ase_nickel_cell():
+    """Return an ase.Atoms Ni(100)-1x1 with 6 layers."""
     element = 'Ni'
     cell_1x1 = ase.build.fcc110(element, size=(1,1,6), vacuum=3)
     return cell_1x1
@@ -73,6 +74,7 @@ def slab_from_ase(ase_atoms):
 
 @pytest.mark.parametrize("ase_atoms", _ASE_ATOMS)
 def test_n_atoms_from_ase(ase_atoms):
+    """Make sure the number of atoms in Slab match those in ase.Atoms."""
     slab = slab_from_ase(ase_atoms)
     assert len(ase_atoms.positions) == len(slab.atlist)
 
@@ -86,6 +88,7 @@ THETA = 14.7  # degrees
 
 @pytest.mark.parametrize("ase_atoms", _ASE_ATOMS)
 def test_rot_mat_c(ase_atoms):
+    """Assert correct rotation around z axis."""
     slab = slab_from_ase(ase_atoms)
     rot_mat = vpr_ase.rot_mat_c(THETA)
     ucell_before = slab.ucell.T.copy()
@@ -100,8 +103,32 @@ def test_rot_mat_c(ase_atoms):
     assert np.allclose(ucell_before[2], ucell_after[2])
 
 
+# TODO: find a nice way to generate multiple fixtures dynamically.
+# See also notes in helpers.py. Difficulties:
+# - make temp path dependent on the name of the first argument in
+#   the signature
+# - pick the right folder in "initialization"
 @pytest.fixture(name="run_from_ase_initialization")
 def fixture_run_from_ase_initialization(ase_ni_100_1x1_cell, tmp_path_factory):
+    """Return the results of an initialization run.
+
+    Parameters
+    ----------
+    ase_ni_100_1x1_cell : pytest.fixture
+        The ase.Atoms object from which to run.
+    tmp_path_factory : pytest.fixture
+        The pytest default name for the temporary directory factory.
+
+    Returns
+    -------
+    results : tuple
+        The return value of the call to run_from_ase.
+    exec_path : Path
+        The pat to the temporary directory created where the
+        calculation was run.
+    ase_atoms : ase.Atoms
+        The Atoms object fed to run_from_ase.
+    """
     ase_atoms = ase_ni_100_1x1_cell
     exec_path = tmp_path_factory.mktemp(basename='from_ase_Ni_100_init',
                                         numbered=True)
@@ -115,11 +142,34 @@ def fixture_run_from_ase_initialization(ase_ni_100_1x1_cell, tmp_path_factory):
     return results, exec_path, ase_atoms
 
 
+# TODO: find a nice way to generate multiple fixtures dynamically.
 @pytest.fixture(name="run_from_ase_refcalc",
                 params=_TRANSFORMATIONS_FOR_REFCALC)
 def fixture_run_from_ase_refcalc(ase_ni_100_1x1_cell,
                                  tmp_path_factory, request):
-    uc_transformation_matrix, uc_scaling = request.param
+    """Return the results of a reference calculation run.
+
+    Parameters
+    ----------
+    ase_ni_100_1x1_cell : pytest.fixture
+        The ase.Atoms object from which to run.
+    tmp_path_factory : pytest.fixture
+        The pytest default name for the temporary directory factory.
+    request : pytest.fixture
+        The pytest default `equest` fixture for accessing
+        fixture-level parameters. Used to access the transform
+        to be applied to the slab.
+
+    Returns
+    -------
+    results : tuple
+        The return value of the call to run_from_ase.
+    exec_path : Path
+        The pat to the temporary directory created where the
+        calculation was run.
+    ase_atoms : ase.Atoms
+        The Atoms object fed to run_from_ase.
+    """
     ase_atoms = ase_ni_100_1x1_cell
     exec_path = tmp_path_factory.mktemp(basename='from_ase_Ni_100_init',
                                         numbered=True)
@@ -151,6 +201,8 @@ def test_init_writes_POSCAR(run_from_ase_initialization):
     assert (exec_path / "POSCAR").is_file()
 
 
+# TODO: perhaps it would be even better to store somewhere
+# checksums for files to be generated, and check them over here
 def test_init_writes_sensible_poscar(run_from_ase_initialization):
     """Ensure that written POSCAR has the right number of atoms."""
     _, exec_path, ase_atoms = run_from_ase_initialization
