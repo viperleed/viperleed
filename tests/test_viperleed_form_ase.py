@@ -209,18 +209,11 @@ def test_returns_v0i(run_from_ase_initialization):
     assert isinstance(v0i, float)
 
 
-@pytest.mark.parametrize('file', ('POSCAR', 'VIBROCC'))
+@pytest.mark.parametrize('file', ('POSCAR', 'work/VIBROCC'))
 def test_init_writes_file(run_from_ase_initialization, file):
     """Ensure that run_from_ase writes `file` during initialization."""
     _, exec_path, _ = run_from_ase_initialization
     assert (exec_path / file).is_file()
-
-
-@pytest.mark.parametrize('file', ('POSCAR', 'VIBROCC'))
-def test_init_writes_workfile(run_from_ase_initialization, file):
-    """Ensure that run_from_ase writes work/`file` during initialization."""
-    _, exec_path, _ = run_from_ase_initialization
-    assert (exec_path / "work"/ file).is_file()
 
 
 # TODO: perhaps it would be even better to store somewhere
