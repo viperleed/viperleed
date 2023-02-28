@@ -1,3 +1,13 @@
+"""Run tests for functionality in viperleed_from_ase.
+
+Created on 2023-02-23
+
+@author: Alex M. Imre
+@author: Michele Riva
+
+Define fixtures and test cases appropriate for the functionality
+available in the viperleed_from_ase module of viperleed.
+"""
 
 from io import StringIO
 from pathlib import Path
