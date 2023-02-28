@@ -190,6 +190,12 @@ def fixture_refcalc_thoeobeams(run_from_ase_refcalc):
     return readOUTBEAMS(StringIO(theobeams))
 
 
+def test_init_output_empty(run_from_ase_initialization):
+    """Ensure that run_from_ase initialization returns an empty output."""
+    (*all_except_v0i, _), *_ = run_from_ase_initialization
+    assert all(not s for s in all_except_v0i)
+
+
 def test_returns_v0i(run_from_ase_initialization):
     """Make sure the last return of run_from_ase is V0i."""
     (*_, v0i), *_ = run_from_ase_initialization
