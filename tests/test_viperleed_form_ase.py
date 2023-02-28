@@ -77,11 +77,12 @@ def test_n_atoms_from_ase(ase_atoms):
     assert len(ase_atoms.positions) == len(slab.atlist)
 
 
+THETA = 14.7  # degrees
+
 @pytest.mark.parametrize("ase_atoms", _ASE_ATOMS)
 def test_rot_mat_c(ase_atoms):
     slab = slab_from_ase(ase_atoms)
-    theta = 30 # degrees
-    rot_mat = vpr_ase.rot_mat_c(theta)
+    rot_mat = vpr_ase.rot_mat_c(THETA)
     ucell_before = slab.ucell.T.copy()
     slab.apply_matrix_transformation(rot_mat)
     ucell_after = slab.ucell.T
@@ -89,7 +90,7 @@ def test_rot_mat_c(ase_atoms):
     # a and b unit vectors
     for _before, _after in zip(ucell_before[:2], ucell_after[:2]):
         assert np.isclose(_before[2], _after[2])  # Same z
-        assert np.isclose(np.degrees(angle(_before, _after)), theta)
+        assert np.isclose(np.degrees(angle(_before, _after)), THETA)
     # c unit vector
     assert np.allclose(ucell_before[2], ucell_after[2])
 
