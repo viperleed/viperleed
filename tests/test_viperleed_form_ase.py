@@ -196,9 +196,18 @@ def test_returns_v0i(run_from_ase_initialization):
     assert isinstance(v0i, float)
 
 
-def test_init_writes_POSCAR(run_from_ase_initialization):
+@pytest.mark.parametrize('file', ('POSCAR', 'VIBROCC'))
+def test_init_writes_file(run_from_ase_initialization, file):
+    """Ensure that run_from_ase writes `file` during initialization."""
     _, exec_path, _ = run_from_ase_initialization
-    assert (exec_path / "POSCAR").is_file()
+    assert (exec_path / file).is_file()
+
+
+@pytest.mark.parametrize('file', ('POSCAR', 'VIBROCC'))
+def test_init_writes_workfile(run_from_ase_initialization, file):
+    """Ensure that run_from_ase writes work/`file` during initialization."""
+    _, exec_path, _ = run_from_ase_initialization
+    assert (exec_path / "work"/ file).is_file()
 
 
 # TODO: perhaps it would be even better to store somewhere
@@ -208,11 +217,6 @@ def test_init_writes_sensible_poscar(run_from_ase_initialization):
     _, exec_path, ase_atoms = run_from_ase_initialization
     slab = readPOSCAR(exec_path / "POSCAR")
     assert len(slab.atlist) == len(ase_atoms.positions)
-
-
-def test_init_generates_VIBROCC(run_from_ase_initialization):
-    _, exec_path, _ = run_from_ase_initialization
-    assert (exec_path / "work" / "VIBROCC").is_file()
 
 
 @pytest.mark.parametrize('file', ('BEAMLIST', 'VIBROCC', 'IVBEAMS'))
