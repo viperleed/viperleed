@@ -46,6 +46,12 @@ _TRANSFORMATIONS_FOR_REFCALC = (
     )
 
 
+_ASE_ATOMS = (
+    "ase_ni_100_1x1_cell",
+    "ase_ni_100_1x1_cell",
+    )
+
+
 @pytest.fixture(name="ase_Ni_100_1x1_cell")
 def fixture_ase_nickel_cell():
     element = 'Ni'
@@ -58,15 +64,16 @@ def test_ase_cell_correct(ase_Ni_100_1x1_cell):
     assert len(cell.positions) == 6
 
 # @Michele: replace with Slab.from_ase method
-def test_Ni_slab_from_ase(ase_Ni_100_1x1_cell):
-    ase_cell = ase_Ni_100_1x1_cell
-    slab = Slab(ase_cell)
-    assert len(ase_cell.positions) == len(slab.atlist)
+@pytest.mark.parametrize("ase_atoms", _ASE_ATOMS)
+def test_Ni_slab_from_ase(ase_atoms):
+    slab = Slab(ase_atoms)
+    assert len(ase_atoms.positions) == len(slab.atlist)
 
 
 # @Michele: replace with new function - currently not working
-def test_rot_mat_c(ase_Ni_100_1x1_cell):
-    slab = Slab(ase_Ni_100_1x1_cell)
+@pytest.mark.parametrize("ase_atoms", _ASE_ATOMS)
+def test_rot_mat_c(ase_atoms):
+    slab = Slab(ase_atoms)
     a_before, b_before = slab.ucell[:,0], slab.ucell[:,1]
     theta = 30 # degrees
     rot_mat = vpr_ase.rot_mat_c(theta)
